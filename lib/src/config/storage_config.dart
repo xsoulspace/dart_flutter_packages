@@ -1,7 +1,7 @@
 /// {@template storage_config}
 /// Base class for storage provider configurations.
 /// {@endtemplate}
-abstract class StorageConfig {
+abstract interface class StorageConfig {
   /// {@macro storage_config}
   const StorageConfig();
 

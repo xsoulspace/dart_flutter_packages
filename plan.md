@@ -276,19 +276,20 @@ Offline-first provider using a local Git repository, with explicit remote synchr
     - Handle authentication considerations for Git.
     - Extensive testing with actual Git remotes (e.g., a dedicated test GitHub repo).
 
-4.  **Stage 4: `OfflineGitStorageProvider` - API-Assisted Features (Optional)**
+4.  **Stage 4: `OfflineGitStorageProvider` - API-Assisted Features**
 
-    - Integrate `package:github` for optional API interactions (e.g., check/create remote repo during `init` if `remoteApiSettings` are provided).
+    - Integrate `package:github` for API interactions (e.g., check/create remote repo during `init` if `remoteApiSettings` are provided).
 
-5.  **Stage 5: (Optional) Lightweight API-Only Providers**
+5.  **Stage 5: Refinements & Documentation**
 
-    - If deemed necessary, implement `GithubApiProvider`.
-
-6.  **Stage 6: Refinements & Documentation**
-    - Structured configuration classes/helpers.
-    - Comprehensive examples (especially for Flutter).
-    - Address binary data handling.
+    - Validate the API and the implementation.
+    - Validate the examples.
+    - Validate the structured configuration classes/helpers.
+    - Validate the comprehensive examples (especially for Flutter).
     - Finalize documentation.
+
+6.  **Stage 6: Binary Data Handling**
+    - Address binary data handling.
 
 ## 8. Important Considerations
 

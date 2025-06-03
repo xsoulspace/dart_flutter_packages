@@ -134,3 +134,60 @@ class RemoteAccessDeniedException extends AuthenticationException {
   @override
   String toString() => 'RemoteAccessDeniedException: $message';
 }
+
+// Stage 4: GitHub API specific exceptions
+
+/// {@template github_api_exception}
+/// Thrown when GitHub API operations fail.
+/// {@endtemplate}
+class GitHubApiException extends NetworkException {
+  /// {@macro github_api_exception}
+  const GitHubApiException(super.message);
+
+  @override
+  String toString() => 'GitHubApiException: $message';
+}
+
+/// {@template repository_creation_exception}
+/// Thrown when GitHub repository creation fails.
+/// {@endtemplate}
+class RepositoryCreationException extends GitHubApiException {
+  /// {@macro repository_creation_exception}
+  const RepositoryCreationException(super.message);
+
+  @override
+  String toString() => 'RepositoryCreationException: $message';
+}
+
+/// {@template github_rate_limit_exception}
+/// Thrown when GitHub API rate limit is exceeded.
+/// {@endtemplate}
+class GitHubRateLimitException extends GitHubApiException {
+  /// {@macro github_rate_limit_exception}
+  const GitHubRateLimitException(super.message);
+
+  @override
+  String toString() => 'GitHubRateLimitException: $message';
+}
+
+/// {@template file_already_exists_exception}
+/// Thrown when attempting to create a file that already exists.
+/// {@endtemplate}
+class FileAlreadyExistsException extends StorageException {
+  /// {@macro file_already_exists_exception}
+  const FileAlreadyExistsException(super.message);
+
+  @override
+  String toString() => 'FileAlreadyExistsException: $message';
+}
+
+/// {@template configuration_exception}
+/// Thrown when configuration is invalid or missing.
+/// {@endtemplate}
+class ConfigurationException extends StorageException {
+  /// {@macro configuration_exception}
+  const ConfigurationException(super.message);
+
+  @override
+  String toString() => 'ConfigurationException: $message';
+}
