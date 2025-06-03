@@ -77,6 +77,47 @@ Future<void> main() async {
 }
 ```
 
+### Git-based Storage with Version Control
+
+```dart
+import 'package:universal_storage_sync/universal_storage_sync.dart';
+
+Future<void> main() async {
+  // Create a Git-based storage service
+  final provider = OfflineGitStorageProvider();
+  final storageService = StorageService(provider);
+
+  // Initialize with Git configuration
+  await storageService.initialize({
+    'localPath': '/path/to/git/repository',
+    'branchName': 'main',
+    'authorName': 'Your Name',
+    'authorEmail': 'your.email@example.com',
+  });
+
+  // Save a file with automatic Git commit
+  await storageService.saveFile(
+    'README.md',
+    '# My Project\n\nThis is version controlled!',
+    message: 'docs: Add initial README',
+  );
+
+  // Update the file with another commit
+  await storageService.saveFile(
+    'README.md',
+    '# My Project\n\nThis is version controlled!\n\n## Features\n- Git integration',
+    message: 'docs: Add features section',
+  );
+
+  // Restore file to previous version
+  await storageService.restoreData('README.md');
+
+  // The file is now restored to its previous state
+  final content = await storageService.readFile('README.md');
+  print(content); // Original content without features section
+}
+```
+
 ## Available Storage Providers
 
 ### FileSystemStorageProvider
@@ -96,17 +137,26 @@ Uses the local file system for storage operations.
 - ❌ Version control
 - ❌ Remote synchronization
 
-### OfflineGitStorageProvider (Coming in Stage 2)
+### OfflineGitStorageProvider
 
 Uses a local Git repository with optional remote synchronization.
 
-**Planned Features:**
+**Configuration:**
+
+- `localPath` (required): Path to the local Git repository
+- `branchName` (required): Primary local and remote branch name
+- `authorName` (optional): Author name for Git commits
+- `authorEmail` (optional): Author email for Git commits
+
+**Features:**
 
 - ✅ All filesystem operations
 - ✅ Version control with Git
-- ✅ Remote synchronization
-- ✅ Conflict resolution strategies
-- ✅ "Client is always right" merge strategy
+- ✅ Automatic Git commits for all operations
+- ✅ File restoration to previous versions
+- ✅ Git-aware file listing (excludes .git directory)
+- ⏳ Remote synchronization (Stage 3)
+- ⏳ Conflict resolution strategies (Stage 3)
 
 ## API Reference
 
@@ -169,11 +219,13 @@ try {
 - Basic tests and examples
 - Configuration system
 
-### 🚧 Stage 2: OfflineGitStorageProvider - Local Operations (In Progress)
+### ✅ Stage 2: OfflineGitStorageProvider - Local Operations
 
 - Local Git repository operations
 - File versioning and history
 - Git-based file operations
+- Automatic commit generation
+- File restoration capabilities
 
 ### 📋 Stage 3: OfflineGitStorageProvider - Remote Sync (Planned)
 

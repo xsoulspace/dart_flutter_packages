@@ -55,14 +55,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `build_runner: ^2.4.7`
 - `lints: ^3.0.0`
 
+## [0.2.0] - 2024-01-XX
+
+### Added
+
+- **Stage 2 Complete**: OfflineGitStorageProvider with local Git operations
+- Full `OfflineGitStorageProvider` implementation with local Git repository support
+- Automatic Git repository initialization and configuration
+- Git-based file operations with automatic commits:
+  - `createFile()` with `git add` and `git commit`
+  - `updateFile()` with `git add` and `git commit`
+  - `deleteFile()` with `git rm` and `git commit`
+  - `getFile()` from working directory
+  - `listFiles()` with Git-aware filtering (excludes .git directory)
+- Version control features:
+  - `restore()` method for file restoration to previous versions
+  - Support for restoring to specific commit hashes or HEAD
+  - Automatic commit hash generation and return
+- Git repository management:
+  - Automatic repository initialization if not exists
+  - Branch creation and switching
+  - Git user configuration (name and email)
+  - Initial commit creation for empty repositories
+- Enhanced error handling for Git operations
+- Comprehensive test suite with 36 passing tests covering:
+  - Repository initialization scenarios
+  - File operations with Git integration
+  - Version control features
+  - Error scenarios and edge cases
+  - Integration with StorageService
+- `example/git_usage.dart` demonstrating Git-specific features
+- Updated documentation with Git usage examples
+
+### Features
+
+- All Stage 1 features plus:
+- Local Git version control
+- Automatic commit generation with meaningful default messages
+- File restoration to previous versions
+- Git-aware directory listing
+- Support for nested directory creation with Git tracking
+- Commit hash returns for tracking changes
+
 ## [Unreleased]
-
-### Planned for Stage 2
-
-- `OfflineGitStorageProvider` local Git operations
-- File versioning and history
-- Git-based file operations (add, commit, rm)
-- Local Git repository initialization
 
 ### Planned for Stage 3
 
