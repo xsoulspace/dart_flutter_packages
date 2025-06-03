@@ -250,8 +250,7 @@ void main() {
             await provider.createFile(filePath, version1Content);
 
         // Update file (version 2)
-        final version2Hash =
-            await provider.updateFile(filePath, version2Content);
+        await provider.updateFile(filePath, version2Content);
 
         // Verify current content is version 2
         expect(await provider.getFile(filePath), equals(version2Content));
@@ -346,11 +345,24 @@ void main() {
     });
 
     group('Sync Support', () {
-      test('should indicate sync support', () async {
+      test('should indicate no sync support without remote URL', () async {
+        await provider.init({
+          'localPath': tempDir,
+          'branchName': 'main',
+        });
+        expect(provider.supportsSync, isFalse);
+      });
+
+      test('should indicate sync support with remote URL', () async {
+        await provider.init({
+          'localPath': tempDir,
+          'branchName': 'main',
+          'remoteUrl': 'https://github.com/test/repo.git',
+        });
         expect(provider.supportsSync, isTrue);
       });
 
-      test('should throw exception for sync (Stage 3 feature)', () async {
+      test('should throw exception for sync without remote URL', () async {
         await provider.init({
           'localPath': tempDir,
           'branchName': 'main',
@@ -358,7 +370,7 @@ void main() {
 
         expect(
           () => provider.sync(),
-          throwsA(isA<UnsupportedOperationException>()),
+          throwsA(isA<AuthenticationException>()),
         );
       });
     });

@@ -77,3 +77,60 @@ class UnsupportedOperationException extends StorageException {
   @override
   String toString() => 'UnsupportedOperationException: $message';
 }
+
+// Stage 3: Remote operation exceptions
+
+/// {@template remote_not_found_exception}
+/// Thrown when a remote repository is not found or accessible.
+/// {@endtemplate}
+class RemoteNotFoundException extends NetworkException {
+  /// {@macro remote_not_found_exception}
+  const RemoteNotFoundException(super.message);
+
+  @override
+  String toString() => 'RemoteNotFoundException: $message';
+}
+
+/// {@template authentication_failed_exception}
+/// Thrown when Git authentication fails for remote operations.
+/// {@endtemplate}
+class AuthenticationFailedException extends AuthenticationException {
+  /// {@macro authentication_failed_exception}
+  const AuthenticationFailedException(super.message);
+
+  @override
+  String toString() => 'AuthenticationFailedException: $message';
+}
+
+/// {@template merge_conflict_exception}
+/// Thrown when Git merge operations encounter unresolvable conflicts.
+/// {@endtemplate}
+class MergeConflictException extends GitConflictException {
+  /// {@macro merge_conflict_exception}
+  const MergeConflictException(super.message);
+
+  @override
+  String toString() => 'MergeConflictException: $message';
+}
+
+/// {@template network_timeout_exception}
+/// Thrown when network operations timeout.
+/// {@endtemplate}
+class NetworkTimeoutException extends NetworkException {
+  /// {@macro network_timeout_exception}
+  const NetworkTimeoutException(super.message);
+
+  @override
+  String toString() => 'NetworkTimeoutException: $message';
+}
+
+/// {@template remote_access_denied_exception}
+/// Thrown when access to remote repository is denied.
+/// {@endtemplate}
+class RemoteAccessDeniedException extends AuthenticationException {
+  /// {@macro remote_access_denied_exception}
+  const RemoteAccessDeniedException(super.message);
+
+  @override
+  String toString() => 'RemoteAccessDeniedException: $message';
+}

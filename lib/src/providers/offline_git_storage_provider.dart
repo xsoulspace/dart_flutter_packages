@@ -2,7 +2,9 @@ import 'dart:io';
 
 import 'package:git/git.dart';
 import 'package:path/path.dart' as path;
+import 'package:retry/retry.dart';
 
+import '../config/storage_config.dart';
 import '../exceptions/storage_exceptions.dart';
 import '../storage_provider.dart';
 
@@ -20,6 +22,23 @@ class OfflineGitStorageProvider extends StorageProvider {
   String? _branchName;
   String? _authorName;
   String? _authorEmail;
+
+  // Remote configuration
+  String? _remoteUrl;
+  String _remoteName = 'origin';
+  String? _remoteType;
+  Map<String, dynamic>? _remoteApiSettings;
+
+  // Sync strategies
+  String _defaultPullStrategy = 'merge';
+  String _defaultPushStrategy = 'rebase-local';
+  ConflictResolutionStrategy _conflictResolution =
+      ConflictResolutionStrategy.clientAlwaysRight;
+
+  // Authentication
+  String? _sshKeyPath;
+  String? _httpsToken;
+
   bool _isInitialized = false;
 
   @override
@@ -43,6 +62,30 @@ class OfflineGitStorageProvider extends StorageProvider {
     _branchName = branchName;
     _authorName = config['authorName'] as String?;
     _authorEmail = config['authorEmail'] as String?;
+
+    // Remote configuration
+    _remoteUrl = config['remoteUrl'] as String?;
+    _remoteName = config['remoteName'] as String? ?? 'origin';
+    _remoteType = config['remoteType'] as String?;
+    _remoteApiSettings = config['remoteApiSettings'] as Map<String, dynamic>?;
+
+    // Sync strategies
+    _defaultPullStrategy = config['defaultPullStrategy'] as String? ?? 'merge';
+    _defaultPushStrategy =
+        config['defaultPushStrategy'] as String? ?? 'rebase-local';
+
+    // Parse conflict resolution strategy
+    final conflictResolutionStr = config['conflictResolution'] as String?;
+    if (conflictResolutionStr != null) {
+      _conflictResolution = ConflictResolutionStrategy.values.firstWhere(
+        (e) => e.name == conflictResolutionStr,
+        orElse: () => ConflictResolutionStrategy.clientAlwaysRight,
+      );
+    }
+
+    // Authentication
+    _sshKeyPath = config['sshKeyPath'] as String?;
+    _httpsToken = config['httpsToken'] as String?;
 
     await _initializeRepository();
     _isInitialized = true;
@@ -195,18 +238,294 @@ class OfflineGitStorageProvider extends StorageProvider {
   }
 
   @override
-  bool get supportsSync => true; // Will support sync when implemented
+  bool get supportsSync => _remoteUrl != null;
 
   @override
   Future<void> sync({
     String? pullMergeStrategy,
     String? pushConflictStrategy,
   }) async {
-    // TODO: Implement in Stage 3
-    throw const UnsupportedOperationException(
-      'OfflineGitStorageProvider sync is not yet implemented. '
-      'This will be available in Stage 3 of development.',
-    );
+    _ensureInitialized();
+
+    if (_remoteUrl == null) {
+      throw const AuthenticationException(
+        'Remote URL not configured. Cannot sync without remote repository.',
+      );
+    }
+
+    try {
+      // 1. Setup remote if not exists
+      await _ensureRemoteSetup();
+
+      // 2. Fetch latest changes
+      await _fetchRemoteChanges();
+
+      // 3. Pull with merge strategy
+      await _pullWithStrategy(pullMergeStrategy ?? _defaultPullStrategy);
+
+      // 4. Push local changes
+      await _pushWithStrategy(pushConflictStrategy ?? _defaultPushStrategy);
+    } on StorageException {
+      rethrow;
+    } catch (e) {
+      throw NetworkException('Sync operation failed: $e');
+    }
+  }
+
+  /// Ensures remote repository is properly configured.
+  Future<void> _ensureRemoteSetup() async {
+    try {
+      // Check if remote already exists
+      final result =
+          await _gitDir!.runCommand(['remote', 'get-url', _remoteName]);
+      final existingUrl = result.stdout.toString().trim();
+
+      if (existingUrl != _remoteUrl) {
+        // Update remote URL if different
+        await _gitDir!
+            .runCommand(['remote', 'set-url', _remoteName, _remoteUrl!]);
+      }
+    } catch (e) {
+      // Remote doesn't exist, add it
+      try {
+        await _gitDir!.runCommand(['remote', 'add', _remoteName, _remoteUrl!]);
+      } catch (e) {
+        throw RemoteNotFoundException('Failed to add remote $_remoteName: $e');
+      }
+    }
+
+    // Validate remote accessibility
+    await _validateRemoteAccess();
+  }
+
+  /// Validates that the remote repository is accessible.
+  Future<void> _validateRemoteAccess() async {
+    try {
+      await retry(
+        () => _gitDir!.runCommand(['ls-remote', '--heads', _remoteName]),
+        retryIf: (e) => e is Exception,
+        maxAttempts: 3,
+      );
+    } catch (e) {
+      if (e.toString().contains('Authentication failed') ||
+          e.toString().contains('access denied')) {
+        throw AuthenticationFailedException(
+          'Authentication failed for remote $_remoteName. Check credentials.',
+        );
+      } else if (e.toString().contains('not found') ||
+          e.toString().contains('does not exist')) {
+        throw RemoteNotFoundException(
+          'Remote repository not found: $_remoteUrl',
+        );
+      } else if (e.toString().contains('timeout') ||
+          e.toString().contains('timed out')) {
+        throw const NetworkTimeoutException(
+          'Network timeout while accessing remote repository',
+        );
+      } else {
+        throw NetworkException('Failed to access remote repository: $e');
+      }
+    }
+  }
+
+  /// Fetches latest changes from remote repository.
+  Future<void> _fetchRemoteChanges() async {
+    try {
+      await retry(
+        () => _gitDir!.runCommand(['fetch', _remoteName]),
+        retryIf: (e) => !e.toString().contains('Authentication'),
+        maxAttempts: 3,
+      );
+    } catch (e) {
+      throw NetworkException('Failed to fetch from remote: $e');
+    }
+  }
+
+  /// Pulls changes from remote with specified strategy.
+  Future<void> _pullWithStrategy(String strategy) async {
+    try {
+      switch (strategy) {
+        case 'merge':
+          await _gitDir!.runCommand(['pull', _remoteName, _branchName!]);
+          break;
+        case 'rebase':
+          await _gitDir!
+              .runCommand(['pull', '--rebase', _remoteName, _branchName!]);
+          break;
+        case 'ff-only':
+          await _gitDir!
+              .runCommand(['pull', '--ff-only', _remoteName, _branchName!]);
+          break;
+        default:
+          await _gitDir!.runCommand(['pull', _remoteName, _branchName!]);
+      }
+    } catch (e) {
+      if (e.toString().contains('CONFLICT') ||
+          e.toString().contains('conflict')) {
+        await _handlePullConflicts();
+      } else if (e.toString().contains('non-fast-forward') ||
+          e.toString().contains('fast-forward')) {
+        throw const SyncConflictException(
+          'Cannot fast-forward. Use different pull strategy or resolve conflicts manually.',
+        );
+      } else {
+        throw GitConflictException('Pull operation failed: $e');
+      }
+    }
+  }
+
+  /// Handles pull conflicts based on resolution strategy.
+  Future<void> _handlePullConflicts() async {
+    switch (_conflictResolution) {
+      case ConflictResolutionStrategy.clientAlwaysRight:
+        await _resolveConflictsClientWins();
+        break;
+      case ConflictResolutionStrategy.serverAlwaysRight:
+        await _resolveConflictsServerWins();
+        break;
+      case ConflictResolutionStrategy.manualResolution:
+        throw const MergeConflictException(
+          'Merge conflicts detected. Manual resolution required.',
+        );
+      case ConflictResolutionStrategy.lastWriteWins:
+        await _resolveConflictsLastWriteWins();
+        break;
+    }
+  }
+
+  /// Resolves conflicts by preferring local (client) changes.
+  Future<void> _resolveConflictsClientWins() async {
+    try {
+      // Get list of conflicted files
+      final result =
+          await _gitDir!.runCommand(['diff', '--name-only', '--diff-filter=U']);
+      final conflictedFiles = result.stdout
+          .toString()
+          .trim()
+          .split('\n')
+          .where((line) => line.isNotEmpty)
+          .toList();
+
+      for (final file in conflictedFiles) {
+        // Use local version (ours)
+        await _gitDir!.runCommand(['checkout', '--ours', file]);
+        await _gitDir!.runCommand(['add', file]);
+      }
+
+      // Complete the merge
+      await _gitDir!.runCommand(['commit', '--no-edit']);
+    } catch (e) {
+      throw MergeConflictException(
+        'Failed to resolve conflicts with client-wins strategy: $e',
+      );
+    }
+  }
+
+  /// Resolves conflicts by preferring remote (server) changes.
+  Future<void> _resolveConflictsServerWins() async {
+    try {
+      // Get list of conflicted files
+      final result =
+          await _gitDir!.runCommand(['diff', '--name-only', '--diff-filter=U']);
+      final conflictedFiles = result.stdout
+          .toString()
+          .trim()
+          .split('\n')
+          .where((line) => line.isNotEmpty)
+          .toList();
+
+      for (final file in conflictedFiles) {
+        // Use remote version (theirs)
+        await _gitDir!.runCommand(['checkout', '--theirs', file]);
+        await _gitDir!.runCommand(['add', file]);
+      }
+
+      // Complete the merge
+      await _gitDir!.runCommand(['commit', '--no-edit']);
+    } catch (e) {
+      throw MergeConflictException(
+        'Failed to resolve conflicts with server-wins strategy: $e',
+      );
+    }
+  }
+
+  /// Resolves conflicts using timestamp-based resolution.
+  Future<void> _resolveConflictsLastWriteWins() async {
+    try {
+      // For simplicity, this implementation uses client-wins
+      // In a real implementation, you would compare file timestamps
+      await _resolveConflictsClientWins();
+    } catch (e) {
+      throw MergeConflictException(
+        'Failed to resolve conflicts with last-write-wins strategy: $e',
+      );
+    }
+  }
+
+  /// Pushes local changes to remote with specified strategy.
+  Future<void> _pushWithStrategy(String strategy) async {
+    try {
+      switch (strategy) {
+        case 'rebase-local':
+          await _pushWithRebaseLocal();
+          break;
+        case 'force-with-lease':
+          await _gitDir!.runCommand(
+            ['push', '--force-with-lease', _remoteName, _branchName!],
+          );
+          break;
+        case 'fail-on-conflict':
+          await _gitDir!.runCommand(['push', _remoteName, _branchName!]);
+          break;
+        default:
+          await _pushWithRebaseLocal();
+      }
+    } catch (e) {
+      if (e.toString().contains('non-fast-forward') ||
+          e.toString().contains('rejected')) {
+        if (strategy == 'fail-on-conflict') {
+          throw const SyncConflictException(
+            'Push rejected due to non-fast-forward. Remote has newer commits.',
+          );
+        } else {
+          throw GitConflictException('Push operation failed: $e');
+        }
+      } else if (e.toString().contains('Authentication') ||
+          e.toString().contains('access denied')) {
+        throw AuthenticationFailedException('Push authentication failed: $e');
+      } else {
+        throw NetworkException('Push operation failed: $e');
+      }
+    }
+  }
+
+  /// Pushes with rebase-local strategy (client is always right).
+  Future<void> _pushWithRebaseLocal() async {
+    try {
+      // Try normal push first
+      await _gitDir!.runCommand(['push', _remoteName, _branchName!]);
+    } catch (e) {
+      if (e.toString().contains('non-fast-forward') ||
+          e.toString().contains('rejected')) {
+        // Rebase local commits on top of remote
+        try {
+          await _gitDir!
+              .runCommand(['pull', '--rebase', _remoteName, _branchName!]);
+          await _gitDir!.runCommand(['push', _remoteName, _branchName!]);
+        } catch (rebaseError) {
+          if (rebaseError.toString().contains('CONFLICT')) {
+            // Handle rebase conflicts with client-wins strategy
+            await _handlePullConflicts();
+            await _gitDir!.runCommand(['rebase', '--continue']);
+            await _gitDir!.runCommand(['push', _remoteName, _branchName!]);
+          } else {
+            throw GitConflictException('Rebase operation failed: $rebaseError');
+          }
+        }
+      } else {
+        rethrow;
+      }
+    }
   }
 
   /// Initializes the Git repository if it doesn't exist.
@@ -275,7 +594,7 @@ class OfflineGitStorageProvider extends StorageProvider {
   /// Commits changes with the given message.
   Future<String> _commitChanges(String message) async {
     try {
-      final result = await _gitDir!.runCommand(['commit', '-m', message]);
+      await _gitDir!.runCommand(['commit', '-m', message]);
 
       // Get the commit hash
       final hashResult = await _gitDir!.runCommand(['rev-parse', 'HEAD']);

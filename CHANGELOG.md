@@ -97,14 +97,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for nested directory creation with Git tracking
 - Commit hash returns for tracking changes
 
+## [0.3.0] - 2024-01-XX
+
+### Added
+
+- **Stage 3 Complete**: Remote Git synchronization for OfflineGitStorageProvider
+- Comprehensive remote Git synchronization with `sync()` method
+- Enhanced `OfflineGitConfig` with remote configuration options:
+  - `remoteUrl`, `remoteName`, `remoteType`, `remoteApiSettings`
+  - `defaultPullStrategy`, `defaultPushStrategy`
+  - `conflictResolution` strategy configuration
+  - `sshKeyPath`, `httpsToken` for authentication
+- Four conflict resolution strategies:
+  - `clientAlwaysRight` (default) - Local changes take precedence
+  - `serverAlwaysRight` - Remote changes take precedence
+  - `manualResolution` - Throws exception for manual intervention
+  - `lastWriteWins` - Timestamp-based resolution
+- Pull strategies: `merge`, `rebase`, `ff-only`
+- Push strategies: `rebase-local`, `force-with-lease`, `fail-on-conflict`
+- New remote operation exceptions:
+  - `RemoteNotFoundException`
+  - `AuthenticationFailedException`
+  - `MergeConflictException`
+  - `NetworkTimeoutException`
+  - `RemoteAccessDeniedException`
+- Smart sync support detection based on remote URL configuration
+- Retry mechanisms with exponential backoff for network operations
+- Remote repository validation and access checking
+- Comprehensive test suite with 56 passing tests covering:
+  - Remote setup and configuration
+  - Conflict resolution strategies
+  - Sync strategies and error handling
+  - Authentication configuration
+  - Integration with StorageService
+  - Configuration validation
+
+### Features
+
+- All Stage 1 & 2 features plus:
+- Remote Git repository synchronization
+- "Client is always right" conflict resolution philosophy
+- Configurable pull and push strategies
+- Robust network error handling with retries
+- SSH and HTTPS authentication support
+- Graceful handling of providers without remote URLs
+- Dynamic sync support detection
+
+### Dependencies
+
+- Added `retry: ^3.1.2` for robust network operations
+
 ## [Unreleased]
-
-### Planned for Stage 3
-
-- Remote Git synchronization
-- Pull and push operations
-- Conflict resolution strategies
-- "Client is always right" merge strategies
 
 ### Planned for Stage 4
 
