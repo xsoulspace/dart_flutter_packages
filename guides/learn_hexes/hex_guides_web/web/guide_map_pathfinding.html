@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Hex Grid: Map Storage & Pathfinding</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        #controls div { margin-bottom: 8px; }
+        #controls button { margin: 2px 4px; }
+        #infoPanel p { margin: 5px 0; }
+        #pathfindingControls button { background-color: #e7e7e7; }
+    </style>
+</head>
+<body>
+    <h1>Hex Grid: Map Storage & Pathfinding</h1>
+    <p><em>These guides are based on the excellent <a href='https://www.redblobgames.com/grids/hexagons/' target='_blank'>Hexagonal Grids article by Red Blob Games</a>. Refer to it for in-depth explanations.</em></p>
+    <p>
+        <a href="index.html">Geo & Coords</a> |
+        <a href="guide_conversions.html">Conversions</a> |
+        <a href="guide_neighbors_distances.html">Neighbors & Distances</a> |
+        <a href="guide_line_drawing.html">Line Drawing</a> |
+        <a href="guide_range_fov.html">Range & FOV</a> |
+        <a href="guide_rotation_reflection.html">Rotation & Reflection</a> |
+        <a href="guide_hex_pixel.html">Hex↔Pixel</a>
+    </p>
+
+    <div id="controls">
+        <div>
+            <label for="mode">Demo Mode:</label>
+            <select id="mode">
+                <option value="map_storage" selected>Map Storage Concepts</option>
+                <option value="pathfinding">Pathfinding (A*)</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="mapStorageControls" style="margin-bottom:10px;">
+        <p><strong>Map Storage Demo:</strong> Click a hex to see potential storage mappings.</p>
+        <p><em>(This is illustrative; actual data structures are not deeply simulated here.)</em></p>
+    </div>
+
+    <div id="pathfindingControls" style="display:none; margin-bottom:10px;">
+        <p><strong>Pathfinding Demo:</strong></p>
+        <button id="setStartButton">Set Start</button>
+        <button id="setEndButton">Set End</button>
+        <button id="toggleObstacleButton">Toggle Obstacle</button>
+        <button id="findPathButton">Find Path</button>
+        <button id="resetPathButton">Reset Pathfinding</button>
+        <br>
+        <span id="pfInstructionText">Select an action, then click on the grid.</span>
+    </div>
+
+    <canvas id="hexMapPathCanvas" width="800" height="500"></canvas>
+
+    <div id="infoPanel">
+        <p>Current Hex: <span id="currentHexInfo">-</span></p>
+        <div id="mapStorageInfoPanel">
+             <p>Axial: <span id="msAxial">-</span>, Cube: <span id="msCube">-</span></p>
+             <p>Odd-R Offset: <span id="msOddR">-</span></p>
+             <p>Example Array Index (Odd-R, row major, if map width 10): <span id="msArrayIndex">-</span></p>
+             <p>Example Hash Key: <span id="msHashKey">-</span></p>
+        </div>
+        <div id="pathfindingInfoPanel" style="display:none;">
+            <p>Start: <span id="pfStart">-</span>, End: <span id="pfEnd">-</span></p>
+            <p>Obstacles: <span id="pfObstaclesCount">0</span></p>
+            <p>Path Length: <span id="pfPathLength">-</span></p>
+            <p>Status: <span id="pfStatus">-</span></p>
+        </div>
+    </div>
+
+    <script defer src="guide_map_pathfinding.dart.js"></script>
+</body>
+</html>

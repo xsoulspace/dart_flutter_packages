@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hex Grid: Geometry & Coordinates</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>Hexagonal Grid: Geometry & Coordinate Systems</h1>
+    <p><em>These guides are based on the excellent <a href='https://www.redblobgames.com/grids/hexagons/' target='_blank'>Hexagonal Grids article by Red Blob Games</a>. Refer to it for in-depth explanations.</em></p>
+    <p><a href='guide_conversions.html'>Go to Coordinate Conversions Guide</a> | <a href='guide_neighbors_distances.html'>Go to Neighbors & Distances Guide</a> | <a href='guide_line_drawing.html'>Go to Line Drawing Guide</a> | <a href='guide_range_fov.html'>Go to Range & FOV Guide</a> | <a href='guide_rotation_reflection.html'>Go to Rotation & Reflection Guide</a> | <a href='guide_hex_pixel.html'>Go to Hex↔Pixel Guide</a> | <a href='guide_map_pathfinding.html'>Go to Map Storage & Pathfinding Guide</a></p>
+
+    <div>
+        <label>Grid Orientation:</label>
+        <input type="radio" id="pointyTop" name="orientation" value="pointy" checked>
+        <label for="pointyTop">Pointy Top</label>
+        <input type="radio" id="flatTop" name="orientation" value="flat">
+        <label for="flatTop">Flat Top</label>
+    </div>
+
+    <div>
+        <label for="offsetType">Offset Type:</label>
+        <select id="offsetType">
+            <option value="odd-r" selected>Odd-R (Pointy)</option>
+            <option value="even-r">Even-R (Pointy)</option>
+            <option value="odd-q">Odd-Q (Flat)</option>
+            <option value="even-q">Even-Q (Flat)</option>
+        </select>
+    </div>
+
+    <canvas id="hexCanvas" width="800" height="600"></canvas>
+
+    <div id="infoPanel">
+        <h2>Hovered Hex Info</h2>
+        <p>Pixel: <span id="pixelCoords">-</span></p>
+        <p>Cube: <span id="cubeCoords">-</span></p>
+        <p>Axial: <span id="axialCoords">-</span></p>
+        <p>Selected Offset: <span id="offsetCoords">-</span></p>
+    </div>
+
+    <script defer src="main.dart.js"></script>
+</body>
+</html>

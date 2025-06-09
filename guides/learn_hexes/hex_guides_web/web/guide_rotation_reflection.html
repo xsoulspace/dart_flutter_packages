@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Hex Grid: Rotation & Reflection</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        #controls div { margin-bottom: 8px; }
+        #controls button { margin: 2px; }
+        #infoPanel p { margin: 5px 0; }
+    </style>
+</head>
+<body>
+    <h1>Hex Grid: Rotation & Reflection</h1>
+    <p><em>These guides are based on the excellent <a href='https://www.redblobgames.com/grids/hexagons/' target='_blank'>Hexagonal Grids article by Red Blob Games</a>. Refer to it for in-depth explanations.</em></p>
+    <p>
+        <a href="index.html">Geo & Coords</a> |
+        <a href="guide_conversions.html">Conversions</a> |
+        <a href="guide_neighbors_distances.html">Neighbors & Distances</a> |
+        <a href="guide_line_drawing.html">Line Drawing</a> |
+        <a href="guide_range_fov.html">Range & FOV</a> |
+        <a href='guide_hex_pixel.html'>Go to Hex↔Pixel Guide</a> |
+        <a href='guide_map_pathfinding.html'>Go to Map Storage & Pathfinding Guide</a>
+    </p>
+
+    <div id="controls">
+        <div>
+            Current Mode: <strong id="currentModeDisplay">Selecting Hexes</strong>
+        </div>
+        <div>
+            <button id="modeSelectHexesButton">Select Pattern Hexes</button>
+            <button id="modeSelectCenterButton">Select Operation Center</button>
+        </div>
+        <div>
+            <button id="rotateRightButton" title="Rotate Clockwise">Rotate Right ↻</button>
+            <button id="rotateLeftButton" title="Rotate Counter-Clockwise">Rotate Left ↺</button>
+        </div>
+        <div>
+            <button id="reflectQButton">Reflect Q-axis</button>
+            <button id="reflectRButton">Reflect R-axis</button>
+            <button id="reflectSButton">Reflect S-axis</button>
+            <span style="font-size:0.8em;">(Reflections are relative to center)</span>
+        </div>
+        <div>
+            <button id="clearAllButton">Clear All (Pattern & Center)</button>
+        </div>
+        <span id="instructionText">Click hexes to add/remove from pattern. Then select an operation center.</span>
+    </div>
+
+    <canvas id="hexTransformCanvas" width="800" height="600"></canvas>
+
+    <div id="infoPanel">
+        <p>Pattern Hexes: <span id="patternHexesCount">0</span></p>
+        <p>Operation Center: <span id="centerHexCoords">-</span></p>
+        <p>Transformed Hexes: <span id="transformedHexesCount">0</span></p>
+    </div>
+
+    <script defer src="guide_rotation_reflection.dart.js"></script>
+</body>
+</html>

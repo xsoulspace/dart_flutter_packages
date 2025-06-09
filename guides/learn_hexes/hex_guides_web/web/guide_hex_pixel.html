@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Hex Grid: Hex ↔ Pixel</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        #controls div, #conversionSections div { margin-bottom: 8px; }
+        #controls input[type="number"] { width: 60px; }
+        .io-section { padding: 10px; border: 1px solid #eee; margin-top:10px; }
+        .io-section h3 { margin-top:0; }
+    </style>
+</head>
+<body>
+    <h1>Hex Grid: Hex ↔ Pixel Conversions</h1>
+    <p><em>These guides are based on the excellent <a href='https://www.redblobgames.com/grids/hexagons/' target='_blank'>Hexagonal Grids article by Red Blob Games</a>. Refer to it for in-depth explanations.</em></p>
+    <p>
+        <a href="index.html">Geo & Coords</a> |
+        <a href="guide_conversions.html">Conversions</a> |
+        <a href="guide_neighbors_distances.html">Neighbors & Distances</a> |
+        <a href="guide_line_drawing.html">Line Drawing</a> |
+        <a href="guide_range_fov.html">Range & FOV</a> |
+        <a href="guide_rotation_reflection.html">Rotation & Reflection</a> |
+        <a href='guide_map_pathfinding.html'>Go to Map Storage & Pathfinding Guide</a>
+    </p>
+
+    <div id="controls">
+        <div>
+            <label for="hexSizeInput">Hex Size (radius):</label>
+            <input type="number" id="hexSizeInput" value="30" min="10" max="50">
+            <label style="margin-left: 10px;">Grid Orientation:</label>
+            <input type="radio" id="pointyTopRadio" name="orientation" value="pointy" checked>
+            <label for="pointyTopRadio">Pointy Top</label>
+            <input type="radio" id="flatTopRadio" name="orientation" value="flat">
+            <label for="flatTopRadio">Flat Top</label>
+        </div>
+    </div>
+
+    <canvas id="hexPixelCanvas" width="800" height="400"></canvas>
+
+    <div id="conversionSections" style="display: flex; justify-content: space-around;">
+        <div class="io-section" id="hexToPixelSection">
+            <h3>Hex to Pixel</h3>
+            <p>Enter Axial Coordinates:</p>
+            Axial q: <input type="number" id="axialQ_in" value="0">
+            Axial r: <input type="number" id="axialR_in" value="0">
+            <button id="doHexToPixelButton">Convert to Pixel</button>
+            <p>Calculated Pixel: <strong id="pixelResult">(x: -, y: -)</strong></p>
+        </div>
+
+        <div class="io-section" id="pixelToHexSection">
+            <h3>Pixel to Hex</h3>
+            <p>Click on the canvas above.</p>
+            <p>Clicked Pixel: <strong id="clickedPixelInfo">(x: -, y: -)</strong></p>
+            <p>Resulting Axial: <strong id="axialResult">q: -, r: -</strong></p>
+            <p>Resulting Cube: <strong id="cubeResult">q: -, r: -, s: -</strong></p>
+        </div>
+    </div>
+    <p id="instructionText" style="margin-top:10px; text-align:center;">Adjust grid parameters. Use forms below or click canvas.</p>
+
+    <script defer src="guide_hex_pixel.dart.js"></script>
+</body>
+</html>

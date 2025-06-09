@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Hex Grid: Coordinate Conversions</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .coord-group { margin-bottom: 15px; padding: 10px; border: 1px solid #eee; border-radius: 4px; }
+        .coord-group label { display: inline-block; width: 50px; }
+        .coord-group input[type="number"] { width: 60px; margin-right: 5px; }
+        .output-coords p { margin: 2px 0; font-family: monospace; }
+        .highlight { color: blue; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Hex Grid: Coordinate Conversions</h1>
+    <p><em>These guides are based on the excellent <a href='https://www.redblobgames.com/grids/hexagons/' target='_blank'>Hexagonal Grids article by Red Blob Games</a>. Refer to it for in-depth explanations.</em></p>
+    <p><a href="index.html">Back to Geometry & Coordinates Guide</a> | <a href='guide_neighbors_distances.html'>Go to Neighbors & Distances Guide</a> | <a href='guide_line_drawing.html'>Go to Line Drawing Guide</a> | <a href='guide_range_fov.html'>Go to Range & FOV Guide</a> | <a href='guide_rotation_reflection.html'>Go to Rotation & Reflection Guide</a> | <a href='guide_hex_pixel.html'>Go to Hex↔Pixel Guide</a> | <a href='guide_map_pathfinding.html'>Go to Map Storage & Pathfinding Guide</a></p>
+
+    <div class="coord-group">
+        <label for="inputType">Input System:</label>
+        <select id="inputType">
+            <option value="cube" selected>Cube</option>
+            <option value="axial">Axial</option>
+            <option value="offset">Offset</option>
+        </select>
+        <label for="offsetInputType" style="margin-left:10px; width:auto;" id="offsetInputTypeLabel">Offset Type (for input):</label>
+        <select id="offsetInputType">
+            <option value="odd-r" selected>Odd-R</option>
+            <option value="even-r">Even-R</option>
+            <option value="odd-q">Odd-Q</option>
+            <option value="even-q">Even-Q</option>
+        </select>
+    </div>
+
+    <div class="coord-group" id="cubeInputGroup">
+        <label>Cube:</label>
+        q: <input type="number" id="cubeQ_in" value="0">
+        r: <input type="number" id="cubeR_in" value="0">
+        s: <input type="number" id="cubeS_in" value="0" readonly title="s is usually q+r+s=0">
+        <span id="cubeInputError" style="color:red;"></span>
+    </div>
+    <div class="coord-group" id="axialInputGroup" style="display:none;">
+        <label>Axial:</label>
+        q: <input type="number" id="axialQ_in" value="0">
+        r: <input type="number" id="axialR_in" value="0">
+    </div>
+    <div class="coord-group" id="offsetInputGroup" style="display:none;">
+        <label>Offset:</label>
+        col: <input type="number" id="offsetCol_in" value="0">
+        row: <input type="number" id="offsetRow_in" value="0">
+    </div>
+
+    <button id="convertButton">Convert & Visualize</button>
+
+    <hr>
+    <h2>Converted Values:</h2>
+    <div class="output-coords">
+        <p>Cube: <span id="cube_out">-</span></p>
+        <p>Axial: <span id="axial_out">-</span></p>
+        <p>Offset (Odd-R): <span id="offset_oddr_out">-</span> (Pointy Top)</p>
+        <p>Offset (Even-R): <span id="offset_evenr_out">-</span> (Pointy Top)</p>
+        <p>Offset (Odd-Q): <span id="offset_oddq_out">-</span> (Flat Top)</p>
+        <p>Offset (Even-Q): <span id="offset_evenq_out">-</span> (Flat Top)</p>
+    </div>
+
+    <canvas id="hexDisplayCanvas" width="600" height="400"></canvas>
+
+    <script defer src="guide_conversions.dart.js"></script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Hex Grid: Line Drawing</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        #controls { margin-bottom: 10px; }
+        #infoPanel p { margin: 5px 0; }
+        #lineHexList { list-style-type: none; padding-left: 0; max-height: 150px; overflow-y: auto; background: #f9f9f9; border: 1px solid #eee; padding: 5px;}
+        #lineHexList li { font-family: monospace; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <h1>Hex Grid: Line Drawing</h1>
+    <p><em>These guides are based on the excellent <a href='https://www.redblobgames.com/grids/hexagons/' target='_blank'>Hexagonal Grids article by Red Blob Games</a>. Refer to it for in-depth explanations.</em></p>
+    <p>
+        <a href="index.html">Back to Geometry & Coordinates</a> |
+        <a href="guide_conversions.html">Coordinate Conversions</a> |
+        <a href="guide_neighbors_distances.html">Neighbors & Distances</a> |
+        <a href='guide_range_fov.html'>Go to Range & FOV Guide</a> |
+        <a href='guide_rotation_reflection.html'>Go to Rotation & Reflection Guide</a> |
+        <a href='guide_hex_pixel.html'>Go to Hex↔Pixel Guide</a> |
+        <a href='guide_map_pathfinding.html'>Go to Map Storage & Pathfinding Guide</a>
+    </p>
+
+    <div id="controls">
+        <button id="resetButton">Reset Selection</button>
+        <span id="instructionText">Click on the grid to select the start hex (A).</span>
+    </div>
+
+    <canvas id="hexLineCanvas" width="800" height="500"></canvas>
+
+    <div id="infoPanel">
+        <p>Start Hex (A): <span id="hexA_coords">-</span></p>
+        <p>End Hex (B): <span id="hexB_coords">-</span></p>
+        <p>Hexes in Line (A to B):</p>
+        <ul id="lineHexList">
+            <li>-</li>
+        </ul>
+    </div>
+
+    <script defer src="guide_line_drawing.dart.js"></script>
+</body>
+</html>
