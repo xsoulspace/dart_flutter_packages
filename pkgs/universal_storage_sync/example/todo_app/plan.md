@@ -1,3 +1,9 @@
+# Flutter Todo App – **MVP Plan**
+
+_(FileSystem provider · Provider + ChangeNotifier · YAML · macOS)_
+
+---
+
 ## 0. TL ; DR
 
 Build a macOS Flutter demo that proves universal_storage_sync’s FileSystem provider via:
@@ -12,11 +18,11 @@ Success = green unit + widget + integration tests, clear README, and usage of th
 
 ## 1. Scope & Goals
 
-✔ Folder selection and persistence  
-✔ Create / Read / Update / Delete todos  
-✔ Basic list & editor UI  
-✔ Error handling for read-only / invalid folders  
-✖ Git / GitHub / remote sync  
+✔ Folder selection and persistence
+✔ Create / Read / Update / Delete todos
+✔ Basic list & editor UI
+✔ Error handling for read-only / invalid folders
+✖ Git / GitHub / remote sync
 ✖ File-watchers, merge conflict UI, collaboration features
 
 ---
@@ -24,10 +30,11 @@ Success = green unit + widget + integration tests, clear README, and usage of th
 ## 2. Filesystem Layout & Data Model
 
 ```
+
 <workspace>/
-└── todos/
-    ├── e3b1c0d9-…​.yaml
-    └── …
+├── e3b1c0d9-…​.yaml
+└── …
+
 ```
 
 YAML schema for a todo:
@@ -40,6 +47,40 @@ isCompleted: false
 createdAt: 2025-06-18T09:22:15Z
 completedAt: null
 tags: ["groceries"]
+```
+
+The corresponding Dart models, using extension types for type-safety and zero overhead:
+
+```dart
+import 'package:from_json_to_json/from_json_to_json.dart';
+
+/// Type-safe identifier for a Todo item.
+extension type const TodoId(String value) {
+  factory TodoId.fromJson(final dynamic json) => TodoId(jsonDecodeString(json));
+  String toJson() => value;
+  bool get isEmpty => value.isEmpty;
+  static const empty = TodoId('');
+}
+
+/// Zero-cost, type-safe wrapper for Todo data.
+extension type const Todo(Map<String, dynamic> value) {
+  factory Todo.fromJson(final dynamic json) => Todo(jsonDecodeMap(json));
+
+  TodoId get id => TodoId.fromJson(value['id']);
+  String get title => jsonDecodeString(value['title']);
+  String get description => jsonDecodeString(value['description']);
+  bool get isCompleted => jsonDecodeBool(value['isCompleted']);
+  DateTime get createdAt =>
+      dateTimeFromIso8601String(jsonDecodeString(value['createdAt'])) ??
+      DateTime.now();
+  DateTime? get completedAt =>
+      dateTimeFromIso8601String(jsonDecodeString(value['completedAt']));
+  List<String> get tags => jsonDecodeListAs<String>(value['tags']);
+
+  Map<String, dynamic> toJson() => value;
+
+  static const empty = Todo({});
+}
 ```
 
 • Filenames use `uuid_v4` to avoid collisions.  
@@ -73,7 +114,7 @@ class AppState extends ChangeNotifier {
   Future<void> pickFolder();     // folder selection + persistence
   Future<void> loadTodos();      // reads all YAML files
   Future<void> saveTodo(Todo t); // create/update
-  Future<void> deleteTodo(String id);
+  Future<void> deleteTodo(TodoId id);
 }
 ```
 
@@ -128,6 +169,7 @@ Add hardened-runtime & notarisation notes in README for external testers.
 dependencies:
   flutter: sdk
   universal_storage_sync: ^1.0.0
+  from_json_to_json: ^0.2.0
   file_selector: ^1.1.0 # folder picker (supports macOS)
   shared_preferences: ^2.2.0
   yaml: ^3.1.2
