@@ -1,223 +1,193 @@
-I'll analyze the current state of the universal_storage_sync package and plan the Flutter example application. Let me start by reading the key documents.
-Read file: stage_5.md
-Read file: plan.md
-Let me read the correct files from the universal_storage_sync package:
-Read file: pkgs/universal_storage_sync/stage_5.md
-Read file: pkgs/universal_storage_sync/plan.md
-Now let me also check the current structure and understand what's already implemented:
-Read file: pkgs/universal_storage_sync/lib/universal_storage_sync.dart
-Ran tool
-Perfect! Now I understand the current state. Based on the Stage 5 documentation and the plan, I can see that the universal_storage_sync package is fully implemented with all providers working. Let me plan the Flutter example application.
+## 0. TL ; DR
 
-## 📋 **Flutter Todo App Planning - Universal Storage Sync Demonstration**
+Build a macOS Flutter demo that proves universal_storage_sync’s FileSystem provider via:
 
-### **PDSA Analysis (Plan-Do-Study-Act)**
+1. VS Code–style folder picker that persists the last-used directory.
+2. CRUD operations on todos where **each todo is a single YAML file**.
+3. Provider/ChangeNotifier state-management (no Riverpod, no Git/PAT, no cloud).
 
-#### **Cycle 1-5 Strategic Planning:**
-
-**Plan**: Create a comprehensive Flutter app that showcases real-world usage of universal_storage_sync  
-**Do**: Design the architecture with VSCode-like folder management + individual todo files  
-**Study**: The current package supports FileSystem, OfflineGit, and GitHub API providers perfectly  
-**Act**: Build a demo that can switch between storage providers to show versatility
+Success = green unit + widget + integration tests, clear README, and usage of the new **FileSystemConfig.builder()** API (Stage-5 requirement).
 
 ---
 
-## **🎯 Core Application Architecture**
+## 1. Scope & Goals
 
-### **1. Folder Management System**
+✔ Folder selection and persistence  
+✔ Create / Read / Update / Delete todos  
+✔ Basic list & editor UI  
+✔ Error handling for read-only / invalid folders  
+✖ Git / GitHub / remote sync  
+✖ File-watchers, merge conflict UI, collaboration features
 
-- **VSCode-style folder picker** with native file dialog
-- **Persistent storage** of last opened folder using `shared_preferences`
-- **Folder validation** ensuring write permissions
-- **Breadcrumb navigation** showing current working directory
+---
 
-### **2. Todo File Structure**
+## 2. Filesystem Layout & Data Model
+
+```
+<workspace>/
+└── todos/
+    ├── e3b1c0d9-…​.yaml
+    └── …
+```
+
+YAML schema for a todo:
 
 ```yaml
-Selected Folder/
-├── todos/
-│   ├── todo_001.yaml    # Individual todo files
-│   ├── todo_002.yaml
-│   └── ...
-└── .todo_config.yaml   # App configuration
+id: e3b1c0d9-…
+title: "Buy milk"
+description: "2 L oat milk"
+isCompleted: false
+createdAt: 2025-06-18T09:22:15Z
+completedAt: null
+tags: ["groceries"]
 ```
 
-### **3. Storage Provider Integration**
-
-- **Dynamic provider switching** (FileSystem → OfflineGit → GitHub API)
-- **Provider-specific UI** showing current sync status
-- **Graceful fallbacks** when providers fail
-- **Real-time sync indicators**
+• Filenames use `uuid_v4` to avoid collisions.  
+• The `todos/` directory is lazily created on first save.
 
 ---
 
-## **🏗️ Technical Implementation Plan**
-
-### **Phase 1: Core Infrastructure**
+## 3. Structured Config Validation
 
 ```dart
-// App-level state management
-class TodoAppState {
-  String? selectedFolderPath;
-  StorageProvider currentProvider;
-  List<Todo> todos;
-  bool isLoading;
-  String? errorMessage;
-}
+final config = FileSystemConfig.builder()
+  .basePath(workspacePath)
+  .build();
 
-// Todo model matching YAML structure
-class Todo {
-  String id;
-  String title;
-  String description;
-  bool isCompleted;
-  DateTime createdAt;
-  DateTime? completedAt;
-  List<String> tags;
-}
+await storageService.initialize(config);
 ```
 
-### **Phase 2: Storage Integration**
+This exercises Stage-5’s new typed builder API instead of raw `Map`.
+
+---
+
+## 4. State-Management Stack
 
 ```dart
-// Wrapper service for provider management
-class TodoStorageService {
-  late StorageService _storageService;
-  late String _baseFolderPath;
+class AppState extends ChangeNotifier {
+  String? workspacePath;         // persisted in SharedPreferences
+  List<Todo> todos = [];
+  bool busy = false;
+  String? error;
 
-  // Initialize with selected folder + provider
-  Future<void> initializeProvider(StorageProviderType type, String folderPath);
-
-  // Todo-specific operations
-  Future<void> saveTodo(Todo todo);
-  Future<Todo?> loadTodo(String todoId);
-  Future<List<Todo>> loadAllTodos();
-  Future<void> deleteTodo(String todoId);
+  Future<void> pickFolder();     // folder selection + persistence
+  Future<void> loadTodos();      // reads all YAML files
+  Future<void> saveTodo(Todo t); // create/update
+  Future<void> deleteTodo(String id);
 }
 ```
 
-### **Phase 3: UI Components**
+Registered with:
 
-#### **Folder Management UI**
-
-- `FolderSelectionWidget` - Folder picker + recent folders
-- `FolderBreadcrumbWidget` - Current path display
-- `ProviderSwitchWidget` - Toggle between storage providers
-
-#### **Todo Management UI**
-
-- `TodoListWidget` - Grid/list view of todos
-- `TodoEditorWidget` - Create/edit individual todos
-- `TodoCardWidget` - Individual todo display
-- `SyncStatusWidget` - Provider sync status
-
----
-
-## **🚀 Provider-Specific Features Demo**
-
-### **FileSystem Provider**
-
-- **Instant local storage** - No setup required
-- **File system watching** - Auto-reload on external changes
-- **Bulk operations** - Import/export functionality
-
-### **OfflineGit Provider**
-
-- **Version history** - See todo evolution over time
-- **Branch switching** - Different todo contexts
-- **Commit visualization** - Git log integration
-
-### **GitHub API Provider**
-
-- **Cross-device sync** - Same todos across devices
-- **Collaboration features** - Share todo lists via GitHub
-- **Online/offline modes** - Graceful degradation
-
----
-
-## **📱 UI/UX Flow Design**
-
-### **Initial App Launch**
-
-1. **Splash screen** → Check for previous folder
-2. **Folder selection** → Native file picker or recent folders
-3. **Provider selection** → Choose storage backend
-4. **Todo list view** → Main application interface
-
-### **Primary User Journey**
-
-```
-Open Folder → Select Provider → View Todos → Create/Edit → Auto-Save → Sync (if supported)
-     ↓              ↓            ↓           ↓          ↓            ↓
-  VSCode-like    FileSystem    YAML files   Form UI   Background   Status UI
-  experience     Git/GitHub    individual   validation operations  indicators
+```dart
+runApp(
+  ChangeNotifierProvider(
+    create: (_) => AppState(),
+    child: const TodoApp(),
+  ),
+);
 ```
 
-### **Advanced Features**
+---
 
-- **Search & filter** todos across all files
-- **Bulk operations** (mark complete, delete, export)
-- **Settings panel** for provider configuration
-- **Sync conflict resolution** UI for Git providers
+## 5. UI Blueprint
+
+1. **Splash / Bootstrap** – checks stored folder, routes accordingly.
+2. **FolderPickerPage** – `file_selector` dialog, recent folders list.
+3. **TodoListPage** – list of todos, FAB to add.
+4. **TodoEditorDialog** – form to create/edit.
+5. **StatusBar** – shows workspace path & todo count.
+
+All widgets ≤50 LOC when possible (see flutter_ui_dev rules).
 
 ---
 
-## **🎨 Technical Stack**
+## 6. Error Handling & UX
 
-### **Flutter Dependencies**
+• Wrap storage calls in `try … on StorageException` → SnackBar.  
+• Detect read-only directories → explanatory dialog with “Choose another folder”.  
+• Guard against >1 GB folder size with a soft limit warning.
+
+---
+
+## 7. macOS Specifics
+
+`macos/Runner/DebugProfile.entitlements`
+
+```xml
+<key>com.apple.security.files.user-selected.read-write</key><true/>
+```
+
+Add hardened-runtime & notarisation notes in README for external testers.
+
+---
+
+## 8. Dependencies
 
 ```yaml
 dependencies:
   flutter: sdk
   universal_storage_sync: ^1.0.0
-  file_picker: ^6.0.0 # Folder selection
-  shared_preferences: ^2.2.0 # Persist last folder
-  yaml: ^3.1.2 # Todo file format
-  provider: ^2.4.0 # State management + ChangeNotifier
-  go_router: ^12.0.0 # Navigation
-  flutter_animate: ^4.3.0 # UI animations
-```
-
-### **macOS-Specific Setup**
-
-```xml
-<!-- macos/Runner/DebugProfile.entitlements -->
-<key>com.apple.security.files.user-selected.read-write</key>
-<true/>
-<key>com.apple.security.network.client</key>
-<true/>
+  file_selector: ^1.1.0 # folder picker (supports macOS)
+  shared_preferences: ^2.2.0
+  yaml: ^3.1.2
+  provider: ^6.0.5
+  go_router: ^12.0.0 # simple routing
+  flutter_animate: ^4.3.0 # optional UI polish
+dev_dependencies:
+  flutter_test:
+  integration_test:
+  mocktail: ^1.0.0
 ```
 
 ---
 
-## **📊 Success Metrics & Demo Scenarios**
+## 9. Testing Strategy
 
-### **Core Functionality Validation**
-
-- ✅ **Folder persistence** - Remembers last opened folder across sessions
-- ✅ **File operations** - Create, read, update, delete todos seamlessly
-- ✅ **Provider switching** - Change storage backend without data loss
-- ✅ **Sync operations** - Git/GitHub sync with conflict resolution
-
-### **Demo Scenarios**
-
-1. **Local Development** - FileSystem provider for quick prototyping
-2. **Version Control** - OfflineGit for tracking todo changes
-3. **Team Collaboration** - GitHub API for shared todo lists
-4. **Offline Resilience** - Works without internet, syncs when available
+• **Unit** – FileSystemConfigBuilder validation, AppState CRUD with mocked StorageService.  
+• **Widget** – FolderPickerPage, TodoEditorDialog save flow.  
+• **Integration** – happy-path: pick folder → add todo → restart → todo persists.
 
 ---
 
-## **🔄 Next Steps**
+## 10. Documentation Deliverables
 
-**Immediate Actions:**
+`/example/README.md` must include:
 
-1. Create Flutter app project structure
-2. Implement folder selection with persistence
-3. Design Todo model and YAML serialization
-4. Build basic CRUD operations with FileSystem provider
-5. Add provider switching capability
-6. Implement Git and GitHub provider integration
-7. Polish UI/UX and add advanced features
+1. Build/run steps & macOS entitlements.
+2. Limitations (FileSystem-only, no sync).
+3. Link to Stage-5 structured-config docs.
 
-This plan creates a **real-world demonstration** of the universal_storage_sync package that's both **functionally complete** and **educationally valuable** for developers evaluating the package.
+Code: add dartdoc to public classes, use `{@template}` / `{@macro}` snippets.
+
+---
+
+## 11. Milestones
+
+| Week | Deliverable                                      |
+| ---- | ------------------------------------------------ |
+| 0    | Project skeleton, entitlements, FolderPickerPage |
+| 1    | AppState + FileSystemConfig builder + CRUD wired |
+| 2    | Unit & widget tests, error handling polish       |
+| 3    | Integration test, README, UI polish, internal QA |
+
+---
+
+## 12. Risks & Mitigations
+
+| Risk                         | Mitigation                   |
+| ---------------------------- | ---------------------------- |
+| User selects massive folder  | Size check & warning dialog  |
+| SharedPreferences corruption | Fallback to FolderPickerPage |
+| Sandbox permission denied    | Clear error with help link   |
+
+---
+
+## 13. Immediate Next Steps
+
+1. Create `example/todo_app` Flutter project scaffold.
+2. Implement FileSelector + SharedPreferences persistence.
+3. Add `FileSystemConfig.builder()` usage with `StorageService`.
+4. Basic Todo model (`freezed` optional) + YAML helpers.
+5. Build TodoListPage & TodoEditorDialog.
+6. Write first unit test (AppState.loadTodos).
