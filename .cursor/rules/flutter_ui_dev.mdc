@@ -5,7 +5,7 @@ alwaysApply: false
 ---
 # Flutter widgets and concepts:
 
-   - Dart 3.7 syntax for null safety, pattern matching, and more
+   - Dart 3.8 syntax for null safety, pattern matching, and more
    - Appropriate use of StatelessWidget, HookWidget (from flutter_hooks) or Stateful widgets
    - Custom reusable widgets (use ui_kit) instead of methods
    - Cupertino or Material Design as appropriate
@@ -18,7 +18,7 @@ alwaysApply: false
    - Prefer fewer, more cohesive widgets over many tiny widgets
    - Extract new widget classes only when they are:
    - Reused in multiple places
-   - Complex enough to warrant separation (>50 lines)
+   - Complex enough to warrant separation (>150 lines)
    - Logically independent with clear boundaries
    - For simpler UIs, use a single widget with well-commented sections
 
