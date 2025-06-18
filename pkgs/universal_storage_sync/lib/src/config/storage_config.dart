@@ -22,11 +22,54 @@ class FileSystemConfig extends StorageConfig {
   /// Database name for web platforms using IndexedDB.
   final String? databaseName;
 
+  /// Creates a new FileSystemConfig builder
+  static FileSystemConfigBuilder builder() => FileSystemConfigBuilder();
+
   @override
   Map<String, dynamic> toMap() => {
         'basePath': basePath,
         if (databaseName != null) 'databaseName': databaseName,
       };
+}
+
+/// {@template filesystem_config_builder}
+/// Builder for creating FileSystemConfig instances with validation.
+/// {@endtemplate}
+class FileSystemConfigBuilder {
+  String? _basePath;
+  String? _databaseName;
+
+  /// {@macro filesystem_config_builder}
+  FileSystemConfigBuilder();
+
+  /// Sets the base path for file operations
+  FileSystemConfigBuilder basePath(String path) {
+    if (path.isEmpty) {
+      throw ArgumentError('Base path cannot be empty');
+    }
+    _basePath = path;
+    return this;
+  }
+
+  /// Sets the database name for web platforms
+  FileSystemConfigBuilder databaseName(String name) {
+    if (name.isEmpty) {
+      throw ArgumentError('Database name cannot be empty');
+    }
+    _databaseName = name;
+    return this;
+  }
+
+  /// Builds the FileSystemConfig with validation
+  FileSystemConfig build() {
+    if (_basePath == null) {
+      throw StateError('Base path is required');
+    }
+    return FileSystemConfig(
+      basePath: _basePath!,
+      databaseName: _databaseName,
+    );
+  }
 }
 
 /// Conflict resolution strategies for remote synchronization.
