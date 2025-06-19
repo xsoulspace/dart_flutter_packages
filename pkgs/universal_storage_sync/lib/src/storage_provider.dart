@@ -1,3 +1,4 @@
+import 'config/storage_config.dart';
 import 'exceptions/storage_exceptions.dart';
 
 /// {@template storage_provider}
@@ -7,8 +8,20 @@ abstract class StorageProvider {
   /// {@template storage_provider.init}
   /// Initializes the storage provider with the given [config].
   /// The [config] map contains provider-specific settings.
+  ///
+  /// @deprecated Use [initWithConfig] instead for better type safety.
   /// {@endtemplate}
+  @Deprecated('Use initWithConfig instead for better type safety')
   Future<void> init(Map<String, dynamic> config);
+
+  /// {@template storage_provider.initWithConfig}
+  /// Initializes the storage provider with the given typed [config].
+  /// This method provides better type safety than the legacy [init] method.
+  /// {@endtemplate}
+  Future<void> initWithConfig(StorageConfig config) async {
+    // Default implementation delegates to the legacy init method
+    await init(config.toMap());
+  }
 
   /// {@template storage_provider.isAuthenticated}
   /// Checks if the provider is currently authenticated or properly configured.

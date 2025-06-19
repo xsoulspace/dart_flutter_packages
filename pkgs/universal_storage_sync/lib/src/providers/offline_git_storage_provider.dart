@@ -25,13 +25,13 @@ class OfflineGitStorageProvider extends StorageProvider {
 
   // Remote configuration
   String? _remoteUrl;
-  String _remoteName = 'origin';
+  var _remoteName = 'origin';
   String? _remoteType;
   Map<String, dynamic>? _remoteApiSettings;
 
   // Sync strategies
-  String _defaultPullStrategy = 'merge';
-  String _defaultPushStrategy = 'rebase-local';
+  var _defaultPullStrategy = 'merge';
+  var _defaultPushStrategy = 'rebase-local';
   ConflictResolutionStrategy _conflictResolution =
       ConflictResolutionStrategy.clientAlwaysRight;
 
@@ -39,10 +39,10 @@ class OfflineGitStorageProvider extends StorageProvider {
   String? _sshKeyPath;
   String? _httpsToken;
 
-  bool _isInitialized = false;
+  var _isInitialized = false;
 
   @override
-  Future<void> init(Map<String, dynamic> config) async {
+  Future<void> init(final Map<String, dynamic> config) async {
     final localPath = config['localPath'] as String?;
     final branchName = config['branchName'] as String?;
 
@@ -78,7 +78,7 @@ class OfflineGitStorageProvider extends StorageProvider {
     final conflictResolutionStr = config['conflictResolution'] as String?;
     if (conflictResolutionStr != null) {
       _conflictResolution = ConflictResolutionStrategy.values.firstWhere(
-        (e) => e.name == conflictResolutionStr,
+        (final e) => e.name == conflictResolutionStr,
         orElse: () => ConflictResolutionStrategy.clientAlwaysRight,
       );
     }
@@ -96,9 +96,9 @@ class OfflineGitStorageProvider extends StorageProvider {
 
   @override
   Future<String> createFile(
-    String filePath,
-    String content, {
-    String? commitMessage,
+    final String filePath,
+    final String content, {
+    final String? commitMessage,
   }) async {
     _ensureInitialized();
 
@@ -106,13 +106,13 @@ class OfflineGitStorageProvider extends StorageProvider {
     final file = File(fullPath);
 
     // Check if file already exists
-    if (await file.exists()) {
+    if (file.existsSync()) {
       throw FileNotFoundException('File already exists at path: $filePath');
     }
 
     // Ensure parent directory exists
     final parentDir = file.parent;
-    if (!await parentDir.exists()) {
+    if (!parentDir.existsSync()) {
       await parentDir.create(recursive: true);
     }
 
@@ -129,13 +129,13 @@ class OfflineGitStorageProvider extends StorageProvider {
   }
 
   @override
-  Future<String?> getFile(String filePath) async {
+  Future<String?> getFile(final String filePath) async {
     _ensureInitialized();
 
     final fullPath = path.join(_localPath!, filePath);
     final file = File(fullPath);
 
-    if (!await file.exists()) {
+    if (!file.existsSync()) {
       return null;
     }
 
@@ -148,16 +148,16 @@ class OfflineGitStorageProvider extends StorageProvider {
 
   @override
   Future<String> updateFile(
-    String filePath,
-    String content, {
-    String? commitMessage,
+    final String filePath,
+    final String content, {
+    final String? commitMessage,
   }) async {
     _ensureInitialized();
 
     final fullPath = path.join(_localPath!, filePath);
     final file = File(fullPath);
 
-    if (!await file.exists()) {
+    if (!file.existsSync()) {
       throw FileNotFoundException('File not found at path: $filePath');
     }
 
@@ -174,13 +174,16 @@ class OfflineGitStorageProvider extends StorageProvider {
   }
 
   @override
-  Future<void> deleteFile(String filePath, {String? commitMessage}) async {
+  Future<void> deleteFile(
+    final String filePath, {
+    final String? commitMessage,
+  }) async {
     _ensureInitialized();
 
     final fullPath = path.join(_localPath!, filePath);
     final file = File(fullPath);
 
-    if (!await file.exists()) {
+    if (!file.existsSync()) {
       throw FileNotFoundException('File not found at path: $filePath');
     }
 
@@ -192,13 +195,13 @@ class OfflineGitStorageProvider extends StorageProvider {
   }
 
   @override
-  Future<List<String>> listFiles(String directoryPath) async {
+  Future<List<String>> listFiles(final String directoryPath) async {
     _ensureInitialized();
 
     final fullPath = path.join(_localPath!, directoryPath);
     final directory = Directory(fullPath);
 
-    if (!await directory.exists()) {
+    if (!directory.existsSync()) {
       throw FileNotFoundException(
         'Directory not found at path: $directoryPath',
       );
@@ -221,7 +224,7 @@ class OfflineGitStorageProvider extends StorageProvider {
   }
 
   @override
-  Future<void> restore(String filePath, {String? versionId}) async {
+  Future<void> restore(final String filePath, {final String? versionId}) async {
     _ensureInitialized();
 
     try {
@@ -242,8 +245,8 @@ class OfflineGitStorageProvider extends StorageProvider {
 
   @override
   Future<void> sync({
-    String? pullMergeStrategy,
-    String? pushConflictStrategy,
+    final String? pullMergeStrategy,
+    final String? pushConflictStrategy,
   }) async {
     _ensureInitialized();
 
@@ -276,14 +279,21 @@ class OfflineGitStorageProvider extends StorageProvider {
   Future<void> _ensureRemoteSetup() async {
     try {
       // Check if remote already exists
-      final result =
-          await _gitDir!.runCommand(['remote', 'get-url', _remoteName]);
+      final result = await _gitDir!.runCommand([
+        'remote',
+        'get-url',
+        _remoteName,
+      ]);
       final existingUrl = result.stdout.toString().trim();
 
       if (existingUrl != _remoteUrl) {
         // Update remote URL if different
-        await _gitDir!
-            .runCommand(['remote', 'set-url', _remoteName, _remoteUrl!]);
+        await _gitDir!.runCommand([
+          'remote',
+          'set-url',
+          _remoteName,
+          _remoteUrl!,
+        ]);
       }
     } catch (e) {
       // Remote doesn't exist, add it
@@ -303,7 +313,7 @@ class OfflineGitStorageProvider extends StorageProvider {
     try {
       await retry(
         () => _gitDir!.runCommand(['ls-remote', '--heads', _remoteName]),
-        retryIf: (e) => e is Exception,
+        retryIf: (final e) => e is Exception,
         maxAttempts: 3,
       );
     } catch (e) {
@@ -333,7 +343,7 @@ class OfflineGitStorageProvider extends StorageProvider {
     try {
       await retry(
         () => _gitDir!.runCommand(['fetch', _remoteName]),
-        retryIf: (e) => !e.toString().contains('Authentication'),
+        retryIf: (final e) => !e.toString().contains('Authentication'),
         maxAttempts: 3,
       );
     } catch (e) {
@@ -342,20 +352,25 @@ class OfflineGitStorageProvider extends StorageProvider {
   }
 
   /// Pulls changes from remote with specified strategy.
-  Future<void> _pullWithStrategy(String strategy) async {
+  Future<void> _pullWithStrategy(final String strategy) async {
     try {
       switch (strategy) {
         case 'merge':
           await _gitDir!.runCommand(['pull', _remoteName, _branchName!]);
-          break;
         case 'rebase':
-          await _gitDir!
-              .runCommand(['pull', '--rebase', _remoteName, _branchName!]);
-          break;
+          await _gitDir!.runCommand([
+            'pull',
+            '--rebase',
+            _remoteName,
+            _branchName!,
+          ]);
         case 'ff-only':
-          await _gitDir!
-              .runCommand(['pull', '--ff-only', _remoteName, _branchName!]);
-          break;
+          await _gitDir!.runCommand([
+            'pull',
+            '--ff-only',
+            _remoteName,
+            _branchName!,
+          ]);
         default:
           await _gitDir!.runCommand(['pull', _remoteName, _branchName!]);
       }
@@ -379,17 +394,14 @@ class OfflineGitStorageProvider extends StorageProvider {
     switch (_conflictResolution) {
       case ConflictResolutionStrategy.clientAlwaysRight:
         await _resolveConflictsClientWins();
-        break;
       case ConflictResolutionStrategy.serverAlwaysRight:
         await _resolveConflictsServerWins();
-        break;
       case ConflictResolutionStrategy.manualResolution:
         throw const MergeConflictException(
           'Merge conflicts detected. Manual resolution required.',
         );
       case ConflictResolutionStrategy.lastWriteWins:
         await _resolveConflictsLastWriteWins();
-        break;
     }
   }
 
@@ -397,13 +409,16 @@ class OfflineGitStorageProvider extends StorageProvider {
   Future<void> _resolveConflictsClientWins() async {
     try {
       // Get list of conflicted files
-      final result =
-          await _gitDir!.runCommand(['diff', '--name-only', '--diff-filter=U']);
+      final result = await _gitDir!.runCommand([
+        'diff',
+        '--name-only',
+        '--diff-filter=U',
+      ]);
       final conflictedFiles = result.stdout
           .toString()
           .trim()
           .split('\n')
-          .where((line) => line.isNotEmpty)
+          .where((final line) => line.isNotEmpty)
           .toList();
 
       for (final file in conflictedFiles) {
@@ -425,13 +440,16 @@ class OfflineGitStorageProvider extends StorageProvider {
   Future<void> _resolveConflictsServerWins() async {
     try {
       // Get list of conflicted files
-      final result =
-          await _gitDir!.runCommand(['diff', '--name-only', '--diff-filter=U']);
+      final result = await _gitDir!.runCommand([
+        'diff',
+        '--name-only',
+        '--diff-filter=U',
+      ]);
       final conflictedFiles = result.stdout
           .toString()
           .trim()
           .split('\n')
-          .where((line) => line.isNotEmpty)
+          .where((final line) => line.isNotEmpty)
           .toList();
 
       for (final file in conflictedFiles) {
@@ -463,20 +481,20 @@ class OfflineGitStorageProvider extends StorageProvider {
   }
 
   /// Pushes local changes to remote with specified strategy.
-  Future<void> _pushWithStrategy(String strategy) async {
+  Future<void> _pushWithStrategy(final String strategy) async {
     try {
       switch (strategy) {
         case 'rebase-local':
           await _pushWithRebaseLocal();
-          break;
         case 'force-with-lease':
-          await _gitDir!.runCommand(
-            ['push', '--force-with-lease', _remoteName, _branchName!],
-          );
-          break;
+          await _gitDir!.runCommand([
+            'push',
+            '--force-with-lease',
+            _remoteName,
+            _branchName!,
+          ]);
         case 'fail-on-conflict':
           await _gitDir!.runCommand(['push', _remoteName, _branchName!]);
-          break;
         default:
           await _pushWithRebaseLocal();
       }
@@ -509,8 +527,12 @@ class OfflineGitStorageProvider extends StorageProvider {
           e.toString().contains('rejected')) {
         // Rebase local commits on top of remote
         try {
-          await _gitDir!
-              .runCommand(['pull', '--rebase', _remoteName, _branchName!]);
+          await _gitDir!.runCommand([
+            'pull',
+            '--rebase',
+            _remoteName,
+            _branchName!,
+          ]);
           await _gitDir!.runCommand(['push', _remoteName, _branchName!]);
         } catch (rebaseError) {
           if (rebaseError.toString().contains('CONFLICT')) {
@@ -533,13 +555,13 @@ class OfflineGitStorageProvider extends StorageProvider {
     final directory = Directory(_localPath!);
 
     // Create directory if it doesn't exist
-    if (!await directory.exists()) {
+    if (!directory.existsSync()) {
       await directory.create(recursive: true);
     }
 
     // Check if it's already a Git repository
     final gitDirectory = Directory(path.join(_localPath!, '.git'));
-    if (await gitDirectory.exists()) {
+    if (gitDirectory.existsSync()) {
       // Open existing repository
       _gitDir = await GitDir.fromExisting(_localPath!);
     } else {
@@ -592,7 +614,7 @@ class OfflineGitStorageProvider extends StorageProvider {
   }
 
   /// Commits changes with the given message.
-  Future<String> _commitChanges(String message) async {
+  Future<String> _commitChanges(final String message) async {
     try {
       await _gitDir!.runCommand(['commit', '-m', message]);
 

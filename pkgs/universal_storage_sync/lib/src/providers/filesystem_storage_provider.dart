@@ -13,10 +13,10 @@ class FileSystemStorageProvider extends StorageProvider {
   /// {@macro filesystem_storage_provider}
   FileSystemStorageProvider();
   String? _basePath;
-  bool _isInitialized = false;
+  var _isInitialized = false;
 
   @override
-  Future<void> init(Map<String, dynamic> config) async {
+  Future<void> init(final Map<String, dynamic> config) async {
     final basePath = config['basePath'] as String?;
     if (basePath == null || basePath.isEmpty) {
       throw const AuthenticationException(
@@ -28,7 +28,7 @@ class FileSystemStorageProvider extends StorageProvider {
 
     // Ensure the base directory exists
     final directory = Directory(_basePath!);
-    if (!await directory.exists()) {
+    if (!directory.existsSync()) {
       await directory.create(recursive: true);
     }
 
@@ -40,9 +40,9 @@ class FileSystemStorageProvider extends StorageProvider {
 
   @override
   Future<String> createFile(
-    String filePath,
-    String content, {
-    String? commitMessage,
+    final String filePath,
+    final String content, {
+    final String? commitMessage,
   }) async {
     _ensureInitialized();
 
@@ -50,13 +50,13 @@ class FileSystemStorageProvider extends StorageProvider {
     final file = File(fullPath);
 
     // Check if file already exists
-    if (await file.exists()) {
+    if (file.existsSync()) {
       throw FileNotFoundException('File already exists at path: $filePath');
     }
 
     // Ensure parent directory exists
     final parentDir = file.parent;
-    if (!await parentDir.exists()) {
+    if (!parentDir.existsSync()) {
       await parentDir.create(recursive: true);
     }
 
@@ -65,13 +65,13 @@ class FileSystemStorageProvider extends StorageProvider {
   }
 
   @override
-  Future<String?> getFile(String filePath) async {
+  Future<String?> getFile(final String filePath) async {
     _ensureInitialized();
 
     final fullPath = path.join(_basePath!, filePath);
     final file = File(fullPath);
 
-    if (!await file.exists()) {
+    if (!file.existsSync()) {
       return null;
     }
 
@@ -84,16 +84,16 @@ class FileSystemStorageProvider extends StorageProvider {
 
   @override
   Future<String> updateFile(
-    String filePath,
-    String content, {
-    String? commitMessage,
+    final String filePath,
+    final String content, {
+    final String? commitMessage,
   }) async {
     _ensureInitialized();
 
     final fullPath = path.join(_basePath!, filePath);
     final file = File(fullPath);
 
-    if (!await file.exists()) {
+    if (!file.existsSync()) {
       throw FileNotFoundException('File not found at path: $filePath');
     }
 
@@ -102,13 +102,16 @@ class FileSystemStorageProvider extends StorageProvider {
   }
 
   @override
-  Future<void> deleteFile(String filePath, {String? commitMessage}) async {
+  Future<void> deleteFile(
+    final String filePath, {
+    final String? commitMessage,
+  }) async {
     _ensureInitialized();
 
     final fullPath = path.join(_basePath!, filePath);
     final file = File(fullPath);
 
-    if (!await file.exists()) {
+    if (!file.existsSync()) {
       throw FileNotFoundException('File not found at path: $filePath');
     }
 
@@ -116,13 +119,13 @@ class FileSystemStorageProvider extends StorageProvider {
   }
 
   @override
-  Future<List<String>> listFiles(String directoryPath) async {
+  Future<List<String>> listFiles(final String directoryPath) async {
     _ensureInitialized();
 
     final fullPath = path.join(_basePath!, directoryPath);
     final directory = Directory(fullPath);
 
-    if (!await directory.exists()) {
+    if (!directory.existsSync()) {
       throw FileNotFoundException(
         'Directory not found at path: $directoryPath',
       );
@@ -140,9 +143,9 @@ class FileSystemStorageProvider extends StorageProvider {
   }
 
   @override
-  Future<void> restore(String filePath, {String? versionId}) async {
-    // For filesystem provider, restore is not meaningful without version control
-    // This could be extended to support backup/snapshot functionality
+  Future<void> restore(final String filePath, {final String? versionId}) {
+    // For filesystem provider, restore is not meaningful without version
+    // control. This could be extended to support backup/snapshot functionality.
     throw const UnsupportedOperationException(
       'Restore operation is not supported by FileSystemStorageProvider. '
       'Consider using OfflineGitStorageProvider for version control features.',

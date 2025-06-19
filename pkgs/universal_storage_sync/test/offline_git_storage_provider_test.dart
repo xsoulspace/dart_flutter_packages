@@ -20,7 +20,7 @@ void main() {
     tearDown(() async {
       // Clean up temporary directory
       final directory = Directory(tempDir);
-      if (await directory.exists()) {
+      if (directory.existsSync()) {
         await directory.delete(recursive: true);
       }
     });
@@ -39,22 +39,16 @@ void main() {
 
         // Verify .git directory exists
         final gitDir = Directory('$tempDir/.git');
-        expect(await gitDir.exists(), isTrue);
+        expect(gitDir.existsSync(), isTrue);
       });
 
       test('should handle existing repository', () async {
         // Initialize repository first time
-        await provider.init({
-          'localPath': tempDir,
-          'branchName': 'main',
-        });
+        await provider.init({'localPath': tempDir, 'branchName': 'main'});
 
         // Initialize again with same path
         final provider2 = OfflineGitStorageProvider();
-        await provider2.init({
-          'localPath': tempDir,
-          'branchName': 'main',
-        });
+        await provider2.init({'localPath': tempDir, 'branchName': 'main'});
 
         expect(await provider2.isAuthenticated(), isTrue);
       });
@@ -246,8 +240,10 @@ void main() {
         const version2Content = 'Version 2';
 
         // Create file (version 1)
-        final version1Hash =
-            await provider.createFile(filePath, version1Content);
+        final version1Hash = await provider.createFile(
+          filePath,
+          version1Content,
+        );
 
         // Update file (version 2)
         await provider.updateFile(filePath, version2Content);
@@ -281,10 +277,7 @@ void main() {
       });
 
       test('should throw exception for duplicate file creation', () async {
-        await provider.init({
-          'localPath': tempDir,
-          'branchName': 'main',
-        });
+        await provider.init({'localPath': tempDir, 'branchName': 'main'});
 
         const filePath = 'test.txt';
         await provider.createFile(filePath, 'content');
@@ -296,10 +289,7 @@ void main() {
       });
 
       test('should throw exception when updating non-existent file', () async {
-        await provider.init({
-          'localPath': tempDir,
-          'branchName': 'main',
-        });
+        await provider.init({'localPath': tempDir, 'branchName': 'main'});
 
         expect(
           () => provider.updateFile('non_existent.txt', 'content'),
@@ -308,10 +298,7 @@ void main() {
       });
 
       test('should throw exception when deleting non-existent file', () async {
-        await provider.init({
-          'localPath': tempDir,
-          'branchName': 'main',
-        });
+        await provider.init({'localPath': tempDir, 'branchName': 'main'});
 
         expect(
           () => provider.deleteFile('non_existent.txt'),
@@ -320,10 +307,7 @@ void main() {
       });
 
       test('should throw exception for invalid directory listing', () async {
-        await provider.init({
-          'localPath': tempDir,
-          'branchName': 'main',
-        });
+        await provider.init({'localPath': tempDir, 'branchName': 'main'});
 
         expect(
           () => provider.listFiles('non_existent_dir'),
@@ -332,10 +316,7 @@ void main() {
       });
 
       test('should throw exception for invalid restore', () async {
-        await provider.init({
-          'localPath': tempDir,
-          'branchName': 'main',
-        });
+        await provider.init({'localPath': tempDir, 'branchName': 'main'});
 
         expect(
           () => provider.restore('non_existent.txt', versionId: 'invalid_hash'),
@@ -346,10 +327,7 @@ void main() {
 
     group('Sync Support', () {
       test('should indicate no sync support without remote URL', () async {
-        await provider.init({
-          'localPath': tempDir,
-          'branchName': 'main',
-        });
+        await provider.init({'localPath': tempDir, 'branchName': 'main'});
         expect(provider.supportsSync, isFalse);
       });
 
@@ -363,15 +341,9 @@ void main() {
       });
 
       test('should throw exception for sync without remote URL', () async {
-        await provider.init({
-          'localPath': tempDir,
-          'branchName': 'main',
-        });
+        await provider.init({'localPath': tempDir, 'branchName': 'main'});
 
-        expect(
-          () => provider.sync(),
-          throwsA(isA<AuthenticationException>()),
-        );
+        expect(() => provider.sync(), throwsA(isA<AuthenticationException>()));
       });
     });
   });
@@ -401,7 +373,7 @@ void main() {
     tearDown(() async {
       // Clean up temporary directory
       final directory = Directory(tempDir);
-      if (await directory.exists()) {
+      if (directory.existsSync()) {
         await directory.delete(recursive: true);
       }
     });

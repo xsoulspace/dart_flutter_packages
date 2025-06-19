@@ -24,7 +24,7 @@ void main() {
     tearDown(() async {
       // Clean up temporary directory
       final directory = Directory(tempDir);
-      if (await directory.exists()) {
+      if (directory.existsSync()) {
         await directory.delete(recursive: true);
       }
     });

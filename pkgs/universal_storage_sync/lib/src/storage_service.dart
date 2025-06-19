@@ -1,3 +1,4 @@
+import 'config/storage_config.dart';
 import 'exceptions/storage_exceptions.dart';
 import 'storage_provider.dart';
 
@@ -6,26 +7,36 @@ import 'storage_provider.dart';
 /// using a configured [StorageProvider].
 /// {@endtemplate}
 class StorageService {
-  final StorageProvider _provider;
-
   /// {@macro storage_service}
   StorageService(this._provider);
+  final StorageProvider _provider;
 
   /// {@template storage_service.initialize}
   /// Initializes the underlying storage provider with [config].
   /// Must be called before other operations.
+  ///
+  /// @deprecated Use [initializeWithConfig] instead for better type safety.
   /// {@endtemplate}
-  Future<void> initialize(Map<String, dynamic> config) =>
+  @Deprecated('Use initializeWithConfig instead for better type safety')
+  Future<void> initialize(final Map<String, dynamic> config) =>
       _provider.init(config);
+
+  /// {@template storage_service.initializeWithConfig}
+  /// Initializes the underlying storage provider with typed [config].
+  /// Must be called before other operations.
+  /// Provides better type safety than the legacy [initialize] method.
+  /// {@endtemplate}
+  Future<void> initializeWithConfig(final StorageConfig config) =>
+      _provider.initWithConfig(config);
 
   /// {@template storage_service.saveFile}
   /// Saves (creates or updates) a file at [path] with [content].
   /// Uses [message] as commit message for version-controlled storage.
   /// {@endtemplate}
   Future<String> saveFile(
-    String path,
-    String content, {
-    String? message,
+    final String path,
+    final String content, {
+    final String? message,
   }) async {
     try {
       final existingContent = await _provider.getFile(path);
@@ -42,23 +53,24 @@ class StorageService {
   /// {@template storage_service.readFile}
   /// Reads content of file at [path]. Returns `null` if not found.
   /// {@endtemplate}
-  Future<String?> readFile(String path) => _provider.getFile(path);
+  Future<String?> readFile(final String path) => _provider.getFile(path);
 
   /// {@template storage_service.removeFile}
   /// Removes file at [path]. [message] for version-controlled storage.
   /// {@endtemplate}
-  Future<void> removeFile(String path, {String? message}) =>
+  Future<void> removeFile(final String path, {final String? message}) =>
       _provider.deleteFile(path, commitMessage: message);
 
   /// {@template storage_service.listDirectory}
   /// Lists files/subdirectories within [path].
   /// {@endtemplate}
-  Future<List<String>> listDirectory(String path) => _provider.listFiles(path);
+  Future<List<String>> listDirectory(final String path) =>
+      _provider.listFiles(path);
 
   /// {@template storage_service.restoreData}
   /// Restores data at [path], optionally to [versionId].
   /// {@endtemplate}
-  Future<void> restoreData(String path, {String? versionId}) =>
+  Future<void> restoreData(final String path, {final String? versionId}) =>
       _provider.restore(path, versionId: versionId);
 
   /// {@template storage_service.syncRemote}
@@ -66,8 +78,8 @@ class StorageService {
   /// if supported.
   /// {@endtemplate}
   Future<void> syncRemote({
-    String? pullMergeStrategy,
-    String? pushConflictStrategy,
+    final String? pullMergeStrategy,
+    final String? pushConflictStrategy,
   }) async {
     if (_provider.supportsSync) {
       await _provider.sync(
@@ -82,4 +94,10 @@ class StorageService {
       // Optionally throw UnsupportedOperationException
     }
   }
+
+  /// Gets the underlying storage provider for advanced operations
+  StorageProvider get provider => _provider;
+
+  /// Checks if the provider is authenticated
+  Future<bool> isAuthenticated() => _provider.isAuthenticated();
 }

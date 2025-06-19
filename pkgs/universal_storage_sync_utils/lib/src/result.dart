@@ -5,18 +5,20 @@ sealed class PickResult {}
 
 /// Represents a successful directory pick.
 class PickSuccess extends PickResult {
+  /// {@macro pick_success}
+  PickSuccess(this.path);
+
   /// The absolute path of the selected directory.
   final String path;
-
-  PickSuccess(this.path);
 }
 
 /// Represents a failed directory pick.
 class PickFailure extends PickResult {
+  /// {@macro pick_failure}
+  PickFailure(this.reason);
+
   /// The reason for the failure.
   final FailureReason reason;
-
-  PickFailure(this.reason);
 }
 
 /// Represents the user cancelling the directory picker.

@@ -20,7 +20,7 @@ void main() {
     tearDown(() async {
       // Clean up temporary directory
       final directory = Directory(tempDir);
-      if (await directory.exists()) {
+      if (directory.existsSync()) {
         await directory.delete(recursive: true);
       }
     });
@@ -34,10 +34,7 @@ void main() {
           'authorEmail': 'test@example.com',
         });
 
-        expect(
-          () => provider.sync(),
-          throwsA(isA<AuthenticationException>()),
-        );
+        expect(() => provider.sync(), throwsA(isA<AuthenticationException>()));
       });
 
       test('should handle invalid remote URL gracefully', () async {
@@ -49,10 +46,7 @@ void main() {
           'remoteUrl': 'https://invalid-url-that-does-not-exist.com/repo.git',
         });
 
-        expect(
-          () => provider.sync(),
-          throwsA(isA<NetworkException>()),
-        );
+        expect(() => provider.sync(), throwsA(isA<NetworkException>()));
       });
 
       test('should configure remote settings from config', () async {
@@ -85,8 +79,9 @@ void main() {
 
         // Test serverAlwaysRight
         final provider2 = OfflineGitStorageProvider();
-        final tempDir2 =
-            (await Directory.systemTemp.createTemp('git_test_')).path;
+        final tempDir2 = (await Directory.systemTemp.createTemp(
+          'git_test_',
+        )).path;
         await provider2.init({
           'localPath': tempDir2,
           'branchName': 'main',
@@ -98,15 +93,17 @@ void main() {
         await Directory(tempDir2).delete(recursive: true);
       });
 
-      test('should default to clientAlwaysRight for invalid strategy',
-          () async {
-        await provider.init({
-          'localPath': tempDir,
-          'branchName': 'main',
-          'conflictResolution': 'invalidStrategy',
-        });
-        expect(await provider.isAuthenticated(), isTrue);
-      });
+      test(
+        'should default to clientAlwaysRight for invalid strategy',
+        () async {
+          await provider.init({
+            'localPath': tempDir,
+            'branchName': 'main',
+            'conflictResolution': 'invalidStrategy',
+          });
+          expect(await provider.isAuthenticated(), isTrue);
+        },
+      );
     });
 
     group('Sync Strategies', () {
@@ -121,10 +118,7 @@ void main() {
       });
 
       test('should use default strategies when not specified', () async {
-        await provider.init({
-          'localPath': tempDir,
-          'branchName': 'main',
-        });
+        await provider.init({'localPath': tempDir, 'branchName': 'main'});
         expect(await provider.isAuthenticated(), isTrue);
       });
     });
@@ -157,10 +151,7 @@ void main() {
           'remoteUrl': 'https://httpstat.us/408', // Returns timeout
         });
 
-        expect(
-          () => provider.sync(),
-          throwsA(isA<NetworkException>()),
-        );
+        expect(() => provider.sync(), throwsA(isA<NetworkException>()));
       });
 
       test('should handle authentication failure', () async {
@@ -170,10 +161,7 @@ void main() {
           'remoteUrl': 'https://github.com/private/repo.git', // Requires auth
         });
 
-        expect(
-          () => provider.sync(),
-          throwsA(isA<NetworkException>()),
-        );
+        expect(() => provider.sync(), throwsA(isA<NetworkException>()));
       });
     });
 
@@ -218,35 +206,25 @@ void main() {
       test('should validate required configuration parameters', () async {
         // Missing localPath
         expect(
-          () => provider.init({
-            'branchName': 'main',
-          }),
+          () => provider.init({'branchName': 'main'}),
           throwsA(isA<AuthenticationException>()),
         );
 
         // Missing branchName
         expect(
-          () => provider.init({
-            'localPath': tempDir,
-          }),
+          () => provider.init({'localPath': tempDir}),
           throwsA(isA<AuthenticationException>()),
         );
 
         // Empty localPath
         expect(
-          () => provider.init({
-            'localPath': '',
-            'branchName': 'main',
-          }),
+          () => provider.init({'localPath': '', 'branchName': 'main'}),
           throwsA(isA<AuthenticationException>()),
         );
 
         // Empty branchName
         expect(
-          () => provider.init({
-            'localPath': tempDir,
-            'branchName': '',
-          }),
+          () => provider.init({'localPath': tempDir, 'branchName': ''}),
           throwsA(isA<AuthenticationException>()),
         );
       });
@@ -292,10 +270,7 @@ void main() {
       });
 
       test('should handle minimal OfflineGitConfig', () async {
-        final config = OfflineGitConfig(
-          localPath: tempDir,
-          branchName: 'main',
-        );
+        final config = OfflineGitConfig(localPath: tempDir, branchName: 'main');
 
         await provider.init(config.toMap());
         expect(await provider.isAuthenticated(), isTrue);

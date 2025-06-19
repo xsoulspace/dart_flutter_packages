@@ -12,15 +12,16 @@ import 'result.dart';
 ///
 /// This function will:
 /// 1. Check if folder picking is supported on the current platform.
-/// 2. Request necessary permissions on mobile if applicable (though currently unsupported).
+/// 2. Request necessary permissions on mobile if applicable
+/// (though currently unsupported).
 /// 3. Show the folder picker to the user.
 /// 4. Validate that the selected path is a writable directory.
 ///
 /// It returns a [PickResult] which can be one of [PickSuccess],
 /// [PickFailure], or [PickCancelled].
 Future<PickResult> pickWritableDirectory({
-  BuildContext? context,
-  String? initialDirectory,
+  final BuildContext? context,
+  final String? initialDirectory,
 }) async {
   // 1. Check for platform support first.
   // getDirectoryPath is not supported on iOS or Android.
@@ -28,7 +29,8 @@ Future<PickResult> pickWritableDirectory({
     return PickFailure(FailureReason.platformNotSupported);
   }
 
-  // 2. Request permissions if needed (primarily for potential future mobile support).
+  // 2. Request permissions if needed (primarily for potential future
+  // mobile support).
   // On desktop, this is generally not required for the picker itself, but
   // good practice if the app needs broader file access.
   if (Platform.isAndroid || Platform.isIOS) {

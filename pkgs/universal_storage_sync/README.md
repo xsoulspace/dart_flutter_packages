@@ -1,15 +1,20 @@
 # Universal Storage Sync
 
-A cross-platform Dart package providing a unified API for file storage operations with support for local filesystem and Git-based version control.
+A cross-platform Dart package providing a unified API for file storage operations with support for local filesystem, GitHub API, and Git-based version control.
 
 ## Features
 
 - **Unified API**: Single interface for different storage providers
 - **Cross-platform**: Works on desktop, mobile, and web platforms
 - **Extensible**: Easy to add new storage providers
-- **Type-safe Configuration**: Structured configuration classes for each provider
-- **Version Control Ready**: Built-in support for Git-based storage (coming in Stage 2)
+- **Type-safe Configuration**: Builder pattern for configurations with validation
+- **Auto Provider Selection**: Smart recommendations based on requirements
+- **Storage Factory**: Automatic provider creation from configurations
+- **Version Control Ready**: Built-in support for Git-based storage
+- **GitHub Integration**: Direct GitHub API integration for cloud storage
 - **Offline-first**: Local operations with optional remote synchronization
+- **Retry Logic**: Built-in retry mechanisms for network operations
+- **Path Normalization**: Cross-platform path handling
 
 ## Installation
 
@@ -17,7 +22,7 @@ Add this to your package's `pubspec.yaml` file:
 
 ```yaml
 dependencies:
-  universal_storage_sync: ^0.1.0
+  universal_storage_sync: ^1.0.0
 ```
 
 Then run:
@@ -28,235 +33,344 @@ dart pub get
 
 ## Quick Start
 
-### Basic File Operations
+### Using StorageFactory (Recommended)
 
 ```dart
 import 'package:universal_storage_sync/universal_storage_sync.dart';
-import 'dart:io';
 
 Future<void> main() async {
-  // Create a storage service with filesystem provider
-  final provider = FileSystemStorageProvider();
-  final storageService = StorageService(provider);
+  // Build configuration using type-safe builders
+  final config = FileSystemConfig.builder()
+      .basePath('/path/to/storage')
+      .build();
 
-  // Initialize with a base path
-  await storageService.initialize({
-    'basePath': '/path/to/your/storage/directory',
-  });
+  // Create service automatically using factory
+  final storageService = await StorageFactory.create(config);
 
-  // Save a file
+  // File operations are ready to use
   await storageService.saveFile('hello.txt', 'Hello, World!');
-
-  // Read a file
   final content = await storageService.readFile('hello.txt');
   print(content); // Output: Hello, World!
-
-  // List files in a directory
-  final files = await storageService.listDirectory('.');
-  print(files); // Output: [hello.txt]
-
-  // Delete a file
-  await storageService.removeFile('hello.txt');
 }
 ```
 
-### Using Typed Configuration
+### Auto Provider Selection
 
 ```dart
 import 'package:universal_storage_sync/universal_storage_sync.dart';
 
 Future<void> main() async {
-  // Use typed configuration for better type safety
-  final config = FileSystemConfig(basePath: '/path/to/storage');
-  final provider = FileSystemStorageProvider();
-  final storageService = StorageService(provider);
+  // Define your requirements
+  final requirements = const ProviderRequirements(
+    needsVersionControl: true,
+    needsOffline: true,
+    hasGitCli: true,
+  );
 
-  await storageService.initialize(config.toMap());
+  // Get recommendation
+  final recommendation = ProviderSelector.recommend(requirements);
+  print('Recommended: ${recommendation.providerType}');
+  print('Reason: ${recommendation.reason}');
 
-  // Your file operations here...
+  // Create service using recommendation
+  final service = await StorageFactory.create(recommendation.configTemplate);
 }
 ```
 
-### Git-based Storage with Version Control
+### Use Case-Based Selection
 
 ```dart
-import 'package:universal_storage_sync/universal_storage_sync.dart';
+// Quick selection based on use case description
+final requirements = ProviderSelector.fromUseCase('team collaboration project');
+final recommendation = ProviderSelector.recommend(requirements);
+final service = await StorageFactory.create(recommendation.configTemplate);
+```
 
-Future<void> main() async {
-  // Create a Git-based storage service
-  final provider = OfflineGitStorageProvider();
-  final storageService = StorageService(provider);
+## Storage Providers
 
-  // Initialize with Git configuration
-  await storageService.initialize({
-    'localPath': '/path/to/git/repository',
-    'branchName': 'main',
-    'authorName': 'Your Name',
-    'authorEmail': 'your.email@example.com',
-  });
+### 🏠 FileSystem Provider
 
-  // Save a file with automatic Git commit
-  await storageService.saveFile(
-    'README.md',
-    '# My Project\n\nThis is version controlled!',
-    message: 'docs: Add initial README',
-  );
+Local file system storage with excellent performance.
 
-  // Update the file with another commit
-  await storageService.saveFile(
-    'README.md',
-    '# My Project\n\nThis is version controlled!\n\n## Features\n- Git integration',
-    message: 'docs: Add features section',
-  );
+```dart
+final config = FileSystemConfig.builder()
+    .basePath('/path/to/data')
+    .databaseName('app_db') // For web platforms
+    .build();
 
-  // Restore file to previous version
-  await storageService.restoreData('README.md');
+final service = await StorageFactory.createFileSystem(config);
+```
 
-  // The file is now restored to its previous state
-  final content = await storageService.readFile('README.md');
-  print(content); // Original content without features section
+**Best for:** Simple apps, offline-first, high performance local storage
+
+### 🌐 GitHub API Provider
+
+Cloud storage using GitHub repositories via REST API.
+
+```dart
+final config = GitHubApiConfig.builder()
+    .authToken('ghp_your_token_here')
+    .repositoryOwner('your-username')
+    .repositoryName('your-repo')
+    .branchName('main')
+    .build();
+
+final service = await StorageFactory.createGitHubApi(config);
+```
+
+**Best for:** Web apps, collaboration, cloud sync, no local Git required
+
+### 🔄 Offline Git Provider
+
+Local Git repository with optional remote synchronization.
+
+```dart
+final config = OfflineGitConfig.builder()
+    .localPath('/path/to/repo')
+    .branchName('main')
+    .authorName('Your Name')
+    .authorEmail('your@email.com')
+    .remoteUrl('https://github.com/user/repo.git')
+    .authentication()
+    .sshKey('/path/to/ssh/key')
+    .build();
+
+final service = await StorageFactory.createOfflineGit(config);
+```
+
+**Best for:** Desktop apps, full Git features, offline capability, advanced workflows
+
+## Provider Comparison
+
+| Feature          | FileSystem | GitHub API   | Offline Git    |
+| ---------------- | ---------- | ------------ | -------------- |
+| Offline Support  | ✅ Full    | ❌ None      | ✅ Full        |
+| Version Control  | ❌ None    | ✅ Git       | ✅ Full Git    |
+| Collaboration    | ❌ None    | ✅ Excellent | ✅ With Remote |
+| Setup Complexity | 🟢 Simple  | 🟡 Medium    | 🔴 Complex     |
+| Web Support      | 🟡 Limited | ✅ Full      | ❌ None        |
+| Performance      | 🟢 Fastest | 🟡 Network   | 🟢 Fast        |
+
+## Advanced Features
+
+### Configuration Builders
+
+Type-safe configuration with validation:
+
+```dart
+// FileSystem with validation
+final fsConfig = FileSystemConfig.builder()
+    .basePath('/valid/path')  // Will validate path
+    .build();
+
+// GitHub with fluent API
+final ghConfig = GitHubApiConfig.builder()
+    .authToken('token')
+    .repositoryOwner('owner')
+    .repositoryName('repo')
+    .branchName('develop')
+    .build();
+
+// Git with authentication methods
+final gitConfig = OfflineGitConfig.builder()
+    .localPath('/repo/path')
+    .branchName('main')
+    .remoteUrl('git@github.com:user/repo.git')
+    .authentication()
+    .sshKey('/path/to/key')  // or .httpsToken('token')
+    .conflictResolution(ConflictResolutionStrategy.lastWriteWins)
+    .build();
+```
+
+### Path Normalization
+
+Cross-platform path handling:
+
+```dart
+final path = 'folder\\subfolder//file.txt';
+
+// Normalize for different providers
+final fsPath = PathNormalizer.normalize(path, ProviderType.filesystem);
+final ghPath = PathNormalizer.normalize(path, ProviderType.github);
+final gitPath = PathNormalizer.normalize(path, ProviderType.git);
+
+// Validate paths
+final isValid = PathNormalizer.isSafePath('docs/api.md', ProviderType.github);
+
+// Join path segments
+final joined = PathNormalizer.join(['docs', 'api', 'index.md'], ProviderType.github);
+```
+
+### Retry Operations
+
+Built-in retry logic for robust operations:
+
+```dart
+// GitHub operations automatically retry on network errors
+await RetryableOperation.github(() async {
+  return await githubProvider.createFile('test.txt', 'content');
+});
+
+// Custom retry configuration
+await RetryableOperation.execute(
+  () => someNetworkOperation(),
+  maxAttempts: 5,
+  initialDelay: Duration(milliseconds: 1000),
+  retryIf: (exception) => exception is NetworkException,
+);
+```
+
+### Provider Selection API
+
+Get all recommendations ranked by score:
+
+```dart
+final requirements = const ProviderRequirements(
+  isWeb: true,
+  needsRemoteSync: true,
+  needsCollaboration: true,
+);
+
+final recommendations = ProviderSelector.getAllRecommendations(requirements);
+for (final rec in recommendations) {
+  print('${rec.providerType}: ${rec.score}/100 - ${rec.reason}');
 }
 ```
 
-## Available Storage Providers
+## Migration Guide
 
-### FileSystemStorageProvider
+### From Map-based to Builder Configurations
 
-Uses the local file system for storage operations.
+**Before (Stage 4):**
 
-**Configuration:**
+```dart
+await storageService.initialize({
+  'authToken': 'token',
+  'repositoryOwner': 'owner',
+  'repositoryName': 'repo',
+});
+```
 
-- `basePath` (required): Base directory path for file operations
-- `databaseName` (optional): Database name for web platforms using IndexedDB
+**After (Stage 5):**
 
-**Features:**
+```dart
+final config = GitHubApiConfig.builder()
+    .authToken('token')
+    .repositoryOwner('owner')
+    .repositoryName('repo')
+    .build();
 
-- ✅ Create, read, update, delete files
-- ✅ List directory contents
-- ✅ Nested directory creation
-- ❌ Version control
-- ❌ Remote synchronization
+final service = await StorageFactory.create(config);
+```
 
-### OfflineGitStorageProvider
+### Benefits of Migration
 
-Uses a local Git repository with optional remote synchronization.
-
-**Configuration:**
-
-- `localPath` (required): Path to the local Git repository
-- `branchName` (required): Primary local and remote branch name
-- `authorName` (optional): Author name for Git commits
-- `authorEmail` (optional): Author email for Git commits
-
-**Features:**
-
-- ✅ All filesystem operations
-- ✅ Version control with Git
-- ✅ Automatic Git commits for all operations
-- ✅ File restoration to previous versions
-- ✅ Git-aware file listing (excludes .git directory)
-- ⏳ Remote synchronization (Stage 3)
-- ⏳ Conflict resolution strategies (Stage 3)
+- **Type Safety**: Catch configuration errors at compile time
+- **Validation**: Builder validates required fields and formats
+- **IDE Support**: Better autocomplete and documentation
+- **Maintainability**: Clear, self-documenting configuration code
 
 ## API Reference
 
+### StorageFactory
+
+Factory for creating configured storage services:
+
+```dart
+// Auto-detect provider from config type
+static Future<StorageService> create(StorageConfig config)
+
+// Provider-specific factory methods
+static Future<StorageService> createFileSystem(FileSystemConfig config)
+static Future<StorageService> createGitHubApi(GitHubApiConfig config)
+static Future<StorageService> createOfflineGit(OfflineGitConfig config)
+```
+
+### ProviderSelector
+
+Smart provider recommendation:
+
+```dart
+// Get recommendation based on requirements
+static ProviderRecommendation recommend(ProviderRequirements requirements)
+
+// Get all recommendations ranked by score
+static List<ProviderRecommendation> getAllRecommendations(ProviderRequirements requirements)
+
+// Quick selection from use case description
+static ProviderRequirements fromUseCase(String useCase)
+```
+
+### Configuration Builders
+
+Type-safe configuration builders:
+
+- `FileSystemConfig.builder()` - FileSystem configuration
+- `GitHubApiConfig.builder()` - GitHub API configuration
+- `OfflineGitConfig.builder()` - Offline Git configuration
+
 ### StorageService
 
-The main entry point for all storage operations.
+Enhanced service API:
 
-#### Methods
+```dart
+// New type-safe initialization (recommended)
+Future<void> initializeWithConfig(StorageConfig config)
 
-- `initialize(Map<String, dynamic> config)` - Initialize the storage provider
-- `saveFile(String path, String content, {String? message})` - Save (create or update) a file
-- `readFile(String path)` - Read file content, returns `null` if not found
-- `removeFile(String path, {String? message})` - Delete a file
-- `listDirectory(String path)` - List files and directories
-- `restoreData(String path, {String? versionId})` - Restore file to previous version
-- `syncRemote({String? pullMergeStrategy, String? pushConflictStrategy})` - Sync with remote storage
+// Legacy map-based initialization (deprecated)
+@Deprecated('Use initializeWithConfig instead')
+Future<void> initialize(Map<String, dynamic> config)
 
-### StorageProvider
+// All existing file operations remain the same
+Future<String> saveFile(String path, String content, {String? message})
+Future<String?> readFile(String path)
+Future<void> removeFile(String path, {String? message})
+Future<List<String>> listDirectory(String path)
+Future<void> restoreData(String path, {String? versionId})
+Future<void> syncRemote({String? pullMergeStrategy, String? pushConflictStrategy})
 
-Abstract base class for all storage providers.
-
-### Configuration Classes
-
-- `FileSystemConfig` - Configuration for filesystem storage
-- `OfflineGitConfig` - Configuration for Git-based storage (Stage 2)
-- `GitHubApiConfig` - Configuration for GitHub API storage (Stage 5)
+// New utility methods
+StorageProvider get provider
+Future<bool> isAuthenticated()
+```
 
 ## Error Handling
 
-The package provides specific exception types for different error scenarios:
+Enhanced exception hierarchy:
 
 ```dart
 try {
-  await storageService.readFile('nonexistent.txt');
+  await storageService.readFile('file.txt');
 } on FileNotFoundException catch (e) {
   print('File not found: $e');
 } on NetworkException catch (e) {
   print('Network error: $e');
 } on AuthenticationException catch (e) {
   print('Authentication failed: $e');
+} on GitHubRateLimitException catch (e) {
+  print('Rate limit exceeded: $e');
+} on ConfigurationException catch (e) {
+  print('Configuration error: $e');
 }
 ```
 
-### Exception Types
+## Examples
 
-- `StorageException` - Base exception for all storage errors
-- `FileNotFoundException` - File or directory not found
-- `NetworkException` - Network-related errors
-- `AuthenticationException` - Authentication or configuration errors
-- `GitConflictException` - Git operation conflicts (Stage 2)
-- `SyncConflictException` - Synchronization conflicts (Stage 3)
-- `UnsupportedOperationException` - Operation not supported by provider
+Check out the `example/` directory for comprehensive usage examples:
 
-## Development Roadmap
-
-### ✅ Stage 1: Core Abstractions & FileSystem Provider
-
-- Core interfaces and service class
-- FileSystem storage provider
-- Basic tests and examples
-- Configuration system
-
-### ✅ Stage 2: OfflineGitStorageProvider - Local Operations
-
-- Local Git repository operations
-- File versioning and history
-- Git-based file operations
-- Automatic commit generation
-- File restoration capabilities
-
-### 📋 Stage 3: OfflineGitStorageProvider - Remote Sync (Planned)
-
-- Remote Git synchronization
-- Conflict resolution strategies
-- "Client is always right" merge strategies
-
-### 📋 Stage 4: API-Assisted Features (Planned)
-
-- GitHub API integration for repository management
-- Enhanced remote operations
-
-### 📋 Stage 5: Lightweight API-Only Providers (Planned)
-
-- Direct GitHub API provider
-- Other cloud storage providers
+- `config_builder_usage.dart` - Configuration builder patterns
+- `provider_factory_usage.dart` - StorageFactory and ProviderSelector usage
+- `basic_usage.dart` - Simple file operations
+- `github_api_usage.dart` - GitHub API integration
+- `git_usage.dart` - Git-based storage
 
 ## Contributing
 
-Contributions are welcome! Please read our contributing guidelines and submit pull requests to our repository.
+Contributions are welcome! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Examples
-
-Check out the `example/` directory for more comprehensive examples:
-
-- `basic_usage.dart` - Basic file operations and error handling
-- More examples coming with each development stage
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Platform Support
 

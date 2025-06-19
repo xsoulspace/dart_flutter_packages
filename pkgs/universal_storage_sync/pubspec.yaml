@@ -4,20 +4,21 @@ version: 0.1.0
 homepage: https://github.com/xsoulspace/universal_storage_sync
 
 environment:
-  sdk: ">=3.0.0 <4.0.0"
+  sdk: ">=3.8.1 <4.0.0"
 
 dependencies:
   git: ^2.3.1
   github: ^9.25.0
-  http: ^1.1.0
-  path: ^1.8.3
-  meta: ^1.9.1
+  http: ^1.4.0
+  path: ^1.9.1
+  meta: ^1.17.0
   retry: ^3.1.2
 
 dev_dependencies:
-  test: ^1.24.0
-  mockito: ^5.4.2
-  build_runner: ^2.4.7
-  lints: ^3.0.0
+  test: ^1.26.2
+  mockito: ^5.4.6
+  build_runner: ^2.5.2
+  lints: ^6.0.0
+  xsoulspace_lints: ^0.1.0
 # For web support - add specific dependencies as needed
 # dependency_overrides:
