@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:github/github.dart';
 import 'package:retry/retry.dart';
 
+import '../config/storage_config.dart';
 import '../exceptions/storage_exceptions.dart';
 import '../storage_provider.dart';
 
@@ -10,8 +11,11 @@ import '../storage_provider.dart';
 /// A storage provider that uses GitHub API directly for all operations.
 ///
 /// This provider does not maintain local Git repositories and operates
-/// entirely through GitHub's REST API. It's suited for scenarios where
-/// no local offline capability is needed or where Git CLI is unavailable.
+/// entirely through GitHub's REST API. It's suited for scenarios where:
+/// - No local offline capability is needed
+/// - Git CLI is unavailable
+/// - You want direct API-based file operations
+/// - OAuth authentication is preferred over manual tokens
 /// {@endtemplate}
 class GitHubApiStorageProvider extends StorageProvider {
   /// {@macro github_api_storage_provider}
@@ -21,11 +25,146 @@ class GitHubApiStorageProvider extends StorageProvider {
   String? _authToken;
   String? _repositoryOwner;
   String? _repositoryName;
-  String _branchName = 'main';
-  bool _isInitialized = false;
+  var _branchName = 'main';
+  var _isInitialized = false;
+
+  // OAuth support
+  GitHubOAuthConfig? _oauthConfig;
+  GitHubRepositoryConfig? _repositoryConfig;
 
   @override
-  Future<void> init(Map<String, dynamic> config) async {
+  Future<void> init(final Map<String, dynamic> config) async {
+    // Try to parse as GitHubApiConfig first
+    if (config.containsKey('oauthConfig')) {
+      await _initializeWithOAuth(config);
+    } else {
+      await _initializeWithToken(config);
+    }
+  }
+
+  @override
+  Future<void> initWithConfig(final StorageConfig config) async {
+    if (config is GitHubApiConfig) {
+      if (config.usesOAuth) {
+        await _initializeWithOAuthConfig(config);
+      } else {
+        await _initializeWithTokenConfig(config);
+      }
+    } else {
+      throw ArgumentError(
+        'Expected GitHubApiConfig, got ${config.runtimeType}',
+      );
+    }
+  }
+
+  /// Initialize with OAuth configuration
+  Future<void> _initializeWithOAuthConfig(final GitHubApiConfig config) async {
+    _oauthConfig = config.oauthConfig;
+    _repositoryConfig = config.repositoryConfig;
+    _branchName = config.branchName;
+
+    // Start OAuth flow
+    final authResult = await _performOAuthFlow();
+    _authToken = authResult.accessToken;
+
+    // Handle repository selection/creation
+    if (_repositoryConfig != null) {
+      final repoResult = await _handleRepositorySelection();
+      _repositoryOwner = repoResult.owner;
+      _repositoryName = repoResult.name;
+    } else if (config.repositoryOwner != null &&
+        config.repositoryName != null) {
+      _repositoryOwner = config.repositoryOwner;
+      _repositoryName = config.repositoryName;
+    } else {
+      throw const ConfigurationException(
+        'Repository must be specified or repository selection must be enabled',
+      );
+    }
+
+    // Initialize GitHub client
+    _github = GitHub(auth: Authentication.withToken(_authToken));
+    await _initializeRepository();
+    _isInitialized = true;
+  }
+
+  /// Initialize with token configuration (legacy)
+  Future<void> _initializeWithTokenConfig(final GitHubApiConfig config) async {
+    _authToken = config.authToken;
+    _repositoryOwner = config.repositoryOwner;
+    _repositoryName = config.repositoryName;
+    _branchName = config.branchName;
+
+    if (_authToken == null ||
+        _repositoryOwner == null ||
+        _repositoryName == null) {
+      throw const ConfigurationException(
+        'authToken, repositoryOwner, and repositoryName are required for manual mode',
+      );
+    }
+
+    // Initialize GitHub client
+    _github = GitHub(auth: Authentication.withToken(_authToken));
+    await _initializeRepository();
+    _isInitialized = true;
+  }
+
+  /// Initialize with OAuth from map (legacy)
+  Future<void> _initializeWithOAuth(final Map<String, dynamic> config) async {
+    final oauthConfigMap = config['oauthConfig'] as Map<String, dynamic>;
+    _oauthConfig = GitHubOAuthConfig(
+      clientId: oauthConfigMap['clientId'] as String,
+      clientSecret: oauthConfigMap['clientSecret'] as String?,
+      redirectUri: oauthConfigMap['redirectUri'] as String?,
+      scopes:
+          (oauthConfigMap['scopes'] as List<dynamic>?)?.cast<String>() ??
+          ['repo'],
+      deviceFlowEnabled: oauthConfigMap['deviceFlowEnabled'] as bool? ?? true,
+    );
+
+    if (config.containsKey('repositoryConfig')) {
+      final repoConfigMap = config['repositoryConfig'] as Map<String, dynamic>;
+      _repositoryConfig = GitHubRepositoryConfig(
+        allowSelection: repoConfigMap['allowSelection'] as bool? ?? true,
+        allowCreation: repoConfigMap['allowCreation'] as bool? ?? true,
+        defaultName: repoConfigMap['defaultName'] as String?,
+        defaultDescription: repoConfigMap['defaultDescription'] as String?,
+        defaultPrivate: repoConfigMap['defaultPrivate'] as bool? ?? true,
+        templateRepository: repoConfigMap['templateRepository'] as String?,
+        suggestedName: repoConfigMap['suggestedName'] as String?,
+      );
+    }
+
+    _branchName = config['branchName'] as String? ?? 'main';
+
+    // Start OAuth flow
+    final authResult = await _performOAuthFlow();
+    _authToken = authResult.accessToken;
+
+    // Handle repository selection/creation
+    if (_repositoryConfig != null) {
+      final repoResult = await _handleRepositorySelection();
+      _repositoryOwner = repoResult.owner;
+      _repositoryName = repoResult.name;
+    } else {
+      _repositoryOwner = config['repositoryOwner'] as String?;
+      _repositoryName = config['repositoryName'] as String?;
+
+      if (_repositoryOwner == null || _repositoryName == null) {
+        throw const ConfigurationException(
+          'Repository must be specified or repository selection must be enabled',
+        );
+      }
+    }
+
+    // Initialize GitHub client
+    _github = GitHub(auth: Authentication.withToken(_authToken));
+    await _initializeRepository();
+    _isInitialized = true;
+  }
+
+  /// Initialize with token from map (legacy)
+  Future<void> _initializeWithToken(final Map<String, dynamic> config) async {
     _authToken = config['authToken'] as String?;
     _repositoryOwner = config['repositoryOwner'] as String?;
     _repositoryName = config['repositoryName'] as String?;
@@ -41,10 +180,113 @@ class GitHubApiStorageProvider extends StorageProvider {
 
     // Initialize GitHub client
     _github = GitHub(auth: Authentication.withToken(_authToken));
-
-    // Validate repository access
     await _initializeRepository();
     _isInitialized = true;
+  }
+
+  /// Performs OAuth flow and returns access token
+  Future<GitHubOAuthResult> _performOAuthFlow() async {
+    if (_oauthConfig == null) {
+      throw const ConfigurationException('OAuth configuration is required');
+    }
+
+    // For web applications with redirect URI
+    if (_oauthConfig!.redirectUri != null) {
+      return _performWebOAuthFlow();
+    }
+
+    // For desktop/CLI applications using device flow
+    if (_oauthConfig!.deviceFlowEnabled) {
+      return _performDeviceOAuthFlow();
+    }
+
+    throw const ConfigurationException(
+      'Either redirectUri or deviceFlowEnabled must be configured for OAuth',
+    );
+  }
+
+  /// Performs web-based OAuth flow
+  Future<GitHubOAuthResult> _performWebOAuthFlow() async {
+    // Implementation would integrate with platform-specific OAuth handling
+    // This is a placeholder for the actual OAuth implementation
+    throw const UnsupportedOperationException(
+      'Web OAuth flow requires platform-specific implementation. '
+      'Please implement GitHubOAuthHandler for your platform.',
+    );
+  }
+
+  /// Performs device-based OAuth flow for CLI/desktop apps
+  Future<GitHubOAuthResult> _performDeviceOAuthFlow() async {
+    // Implementation would handle GitHub device flow
+    // This is a placeholder for the actual OAuth implementation
+    throw const UnsupportedOperationException(
+      'Device OAuth flow requires platform-specific implementation. '
+      'Please implement GitHubDeviceFlowHandler for your platform.',
+    );
+  }
+
+  /// Handles repository selection or creation
+  Future<GitHubRepositoryResult> _handleRepositorySelection() async {
+    if (_repositoryConfig == null || _github == null) {
+      throw const ConfigurationException(
+        'Repository configuration is required',
+      );
+    }
+
+    final currentUser = await _github!.users.getCurrentUser();
+    final username = currentUser.login!;
+
+    // If repository selection is allowed, show user their repositories
+    if (_repositoryConfig!.allowSelection) {
+      final repositories = await _github!.repositories
+          .listRepositories()
+          .toList();
+
+      // For CLI/desktop apps, this would show a selection interface
+      // For web apps, this would provide data for UI selection
+      // This is a placeholder for actual repository selection UI
+
+      // For now, use suggested name or first repository
+      if (_repositoryConfig!.suggestedName != null) {
+        final suggested = repositories.firstWhere(
+          (final repo) => repo.name == _repositoryConfig!.suggestedName,
+          orElse: () => repositories.first,
+        );
+        return GitHubRepositoryResult(
+          owner: suggested.owner!.login,
+          name: suggested.name,
+          isNew: false,
+        );
+      }
+    }
+
+    // If repository creation is allowed and needed
+    if (_repositoryConfig!.allowCreation) {
+      final repoName =
+          _repositoryConfig!.suggestedName ??
+          _repositoryConfig!.defaultName ??
+          'universal-storage-${DateTime.now().millisecondsSinceEpoch}';
+
+      final newRepo = await _github!.repositories.createRepository(
+        CreateRepository(
+          repoName,
+          description:
+              _repositoryConfig!.defaultDescription ??
+              'Created by Universal Storage Sync',
+          private: _repositoryConfig!.defaultPrivate,
+        ),
+      );
+
+      return GitHubRepositoryResult(
+        owner: username,
+        name: newRepo.name,
+        isNew: true,
+      );
+    }
+
+    throw const ConfigurationException(
+      'No repository selection or creation options are enabled',
+    );
   }
 
   @override
@@ -61,9 +303,9 @@ class GitHubApiStorageProvider extends StorageProvider {
 
   @override
   Future<String> createFile(
-    String filePath,
-    String content, {
-    String? commitMessage,
+    final String filePath,
+    final String content, {
+    final String? commitMessage,
   }) async {
     _ensureInitialized();
 
@@ -100,7 +342,7 @@ class GitHubApiStorageProvider extends StorageProvider {
   }
 
   @override
-  Future<String?> getFile(String filePath) async {
+  Future<String?> getFile(final String filePath) async {
     _ensureInitialized();
 
     try {
@@ -119,9 +361,9 @@ class GitHubApiStorageProvider extends StorageProvider {
 
   @override
   Future<String> updateFile(
-    String filePath,
-    String content, {
-    String? commitMessage,
+    final String filePath,
+    final String content, {
+    final String? commitMessage,
   }) async {
     _ensureInitialized();
 
@@ -154,7 +396,10 @@ class GitHubApiStorageProvider extends StorageProvider {
   }
 
   @override
-  Future<void> deleteFile(String filePath, {String? commitMessage}) async {
+  Future<void> deleteFile(
+    final String filePath, {
+    final String? commitMessage,
+  }) async {
     _ensureInitialized();
 
     try {
@@ -183,7 +428,7 @@ class GitHubApiStorageProvider extends StorageProvider {
   }
 
   @override
-  Future<List<String>> listFiles(String directoryPath) async {
+  Future<List<String>> listFiles(final String directoryPath) async {
     _ensureInitialized();
 
     try {
@@ -197,28 +442,24 @@ class GitHubApiStorageProvider extends StorageProvider {
         maxAttempts: 3,
       );
 
-      final filePaths = <String>[];
-      if (contents.isDirectory && contents.tree != null) {
-        for (final item in contents.tree!) {
-          if (item.path != null) {
-            filePaths.add(item.path!);
-          }
-        }
+      if (contents.isFile) {
+        return [contents.file!.name!];
+      } else {
+        return contents.tree!.map((final item) => item.name!).toList();
       }
-
-      return filePaths;
     } catch (e) {
       if (e.toString().contains('404') || e.toString().contains('Not Found')) {
-        throw FileNotFoundException(
-          'Directory not found at path: $directoryPath',
-        );
+        return [];
       }
-      throw _handleGitHubError(e, 'Failed to list files in: $directoryPath');
+      throw _handleGitHubError(
+        e,
+        'Failed to list files in: ${directoryPath.isEmpty ? '/' : directoryPath}',
+      );
     }
   }
 
   @override
-  Future<void> restore(String filePath, {String? versionId}) async {
+  Future<void> restore(final String filePath, {final String? versionId}) async {
     _ensureInitialized();
 
     if (versionId == null) {
@@ -316,7 +557,7 @@ class GitHubApiStorageProvider extends StorageProvider {
   }
 
   /// Gets file content from GitHub API.
-  Future<GitHubFile?> _getFileFromGitHub(String filePath) async {
+  Future<GitHubFile?> _getFileFromGitHub(final String filePath) async {
     try {
       final contents = await retry(
         () => _github!.repositories.getContents(
@@ -338,7 +579,10 @@ class GitHubApiStorageProvider extends StorageProvider {
   }
 
   /// Handles GitHub API errors and converts them to appropriate storage exceptions.
-  StorageException _handleGitHubError(Object error, String context) {
+  StorageException _handleGitHubError(
+    final Object error,
+    final String context,
+  ) {
     final errorStr = error.toString().toLowerCase();
 
     if (errorStr.contains('rate limit') || errorStr.contains('403')) {
@@ -357,7 +601,7 @@ class GitHubApiStorageProvider extends StorageProvider {
   }
 
   /// Determines if an error is retryable.
-  bool _isRetryableError(Object error) {
+  bool _isRetryableError(final Object error) {
     final errorStr = error.toString().toLowerCase();
     return errorStr.contains('timeout') ||
         errorStr.contains('network') ||
@@ -374,4 +618,32 @@ class GitHubApiStorageProvider extends StorageProvider {
       );
     }
   }
+}
+
+/// Result of GitHub OAuth authentication
+class GitHubOAuthResult {
+  const GitHubOAuthResult({
+    required this.accessToken,
+    this.refreshToken,
+    this.scope,
+    this.tokenType = 'bearer',
+  });
+
+  final String accessToken;
+  final String? refreshToken;
+  final String? scope;
+  final String tokenType;
+}
+
+/// Result of GitHub repository selection/creation
+class GitHubRepositoryResult {
+  const GitHubRepositoryResult({
+    required this.owner,
+    required this.name,
+    required this.isNew,
+  });
+
+  final String owner;
+  final String name;
+  final bool isNew;
 }

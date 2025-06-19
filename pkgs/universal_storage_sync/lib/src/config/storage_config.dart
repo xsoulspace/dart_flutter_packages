@@ -1,3 +1,5 @@
+import 'package:meta/meta.dart';
+
 /// {@template storage_config}
 /// Base class for storage provider configurations.
 /// {@endtemplate}
@@ -12,6 +14,7 @@ abstract interface class StorageConfig {
 /// {@template filesystem_config}
 /// Configuration for filesystem storage provider.
 /// {@endtemplate}
+@reopen
 class FileSystemConfig extends StorageConfig {
   /// {@macro filesystem_config}
   const FileSystemConfig({required this.basePath, this.databaseName});
@@ -27,9 +30,9 @@ class FileSystemConfig extends StorageConfig {
 
   @override
   Map<String, dynamic> toMap() => {
-        'basePath': basePath,
-        if (databaseName != null) 'databaseName': databaseName,
-      };
+    'basePath': basePath,
+    if (databaseName != null) 'databaseName': databaseName,
+  };
 }
 
 /// {@template filesystem_config_builder}
@@ -42,7 +45,7 @@ class FileSystemConfigBuilder {
   String? _databaseName;
 
   /// Sets the base path for file operations
-  FileSystemConfigBuilder basePath(String path) {
+  FileSystemConfigBuilder basePath(final String path) {
     if (path.isEmpty) {
       throw ArgumentError('Base path cannot be empty');
     }
@@ -51,7 +54,7 @@ class FileSystemConfigBuilder {
   }
 
   /// Sets the database name for web platforms
-  FileSystemConfigBuilder databaseName(String name) {
+  FileSystemConfigBuilder databaseName(final String name) {
     if (name.isEmpty) {
       throw ArgumentError('Database name cannot be empty');
     }
@@ -64,10 +67,7 @@ class FileSystemConfigBuilder {
     if (_basePath == null) {
       throw StateError('Base path is required');
     }
-    return FileSystemConfig(
-      basePath: _basePath!,
-      databaseName: _databaseName,
-    );
+    return FileSystemConfig(basePath: _basePath!, databaseName: _databaseName);
   }
 }
 
@@ -89,6 +89,7 @@ enum ConflictResolutionStrategy {
 /// {@template offline_git_config}
 /// Configuration for offline Git storage provider with remote sync capabilities.
 /// {@endtemplate}
+@reopen
 class OfflineGitConfig extends StorageConfig {
   /// {@macro offline_git_config}
   const OfflineGitConfig({
@@ -157,20 +158,20 @@ class OfflineGitConfig extends StorageConfig {
 
   @override
   Map<String, dynamic> toMap() => {
-        'localPath': localPath,
-        'branchName': branchName,
-        if (authorName != null) 'authorName': authorName,
-        if (authorEmail != null) 'authorEmail': authorEmail,
-        'remoteName': remoteName,
-        if (remoteUrl != null) 'remoteUrl': remoteUrl,
-        if (remoteType != null) 'remoteType': remoteType,
-        if (remoteApiSettings != null) 'remoteApiSettings': remoteApiSettings,
-        'defaultPullStrategy': defaultPullStrategy,
-        'defaultPushStrategy': defaultPushStrategy,
-        'conflictResolution': conflictResolution.name,
-        if (sshKeyPath != null) 'sshKeyPath': sshKeyPath,
-        if (httpsToken != null) 'httpsToken': httpsToken,
-      };
+    'localPath': localPath,
+    'branchName': branchName,
+    if (authorName != null) 'authorName': authorName,
+    if (authorEmail != null) 'authorEmail': authorEmail,
+    'remoteName': remoteName,
+    if (remoteUrl != null) 'remoteUrl': remoteUrl,
+    if (remoteType != null) 'remoteType': remoteType,
+    if (remoteApiSettings != null) 'remoteApiSettings': remoteApiSettings,
+    'defaultPullStrategy': defaultPullStrategy,
+    'defaultPushStrategy': defaultPushStrategy,
+    'conflictResolution': conflictResolution.name,
+    if (sshKeyPath != null) 'sshKeyPath': sshKeyPath,
+    if (httpsToken != null) 'httpsToken': httpsToken,
+  };
 }
 
 /// {@template offline_git_config_builder}
@@ -185,18 +186,18 @@ class OfflineGitConfigBuilder {
   String? _authorName;
   String? _authorEmail;
   String? _remoteUrl;
-  String _remoteName = 'origin';
+  var _remoteName = 'origin';
   String? _remoteType;
   Map<String, dynamic>? _remoteApiSettings;
-  String _defaultPullStrategy = 'merge';
-  String _defaultPushStrategy = 'rebase-local';
+  var _defaultPullStrategy = 'merge';
+  var _defaultPushStrategy = 'rebase-local';
   ConflictResolutionStrategy _conflictResolution =
       ConflictResolutionStrategy.clientAlwaysRight;
   String? _sshKeyPath;
   String? _httpsToken;
 
   /// Sets the local Git repository path
-  OfflineGitConfigBuilder localPath(String path) {
+  OfflineGitConfigBuilder localPath(final String path) {
     if (path.isEmpty) {
       throw ArgumentError('Local path cannot be empty');
     }
@@ -205,7 +206,7 @@ class OfflineGitConfigBuilder {
   }
 
   /// Sets the branch name
-  OfflineGitConfigBuilder branchName(String branch) {
+  OfflineGitConfigBuilder branchName(final String branch) {
     if (branch.isEmpty) {
       throw ArgumentError('Branch name cannot be empty');
     }
@@ -214,7 +215,7 @@ class OfflineGitConfigBuilder {
   }
 
   /// Sets the Git author name
-  OfflineGitConfigBuilder authorName(String name) {
+  OfflineGitConfigBuilder authorName(final String name) {
     if (name.isEmpty) {
       throw ArgumentError('Author name cannot be empty');
     }
@@ -223,7 +224,7 @@ class OfflineGitConfigBuilder {
   }
 
   /// Sets the Git author email
-  OfflineGitConfigBuilder authorEmail(String email) {
+  OfflineGitConfigBuilder authorEmail(final String email) {
     if (email.isEmpty) {
       throw ArgumentError('Author email cannot be empty');
     }
@@ -232,7 +233,7 @@ class OfflineGitConfigBuilder {
   }
 
   /// Sets the remote repository URL
-  OfflineGitConfigBuilder remoteUrl(String url) {
+  OfflineGitConfigBuilder remoteUrl(final String url) {
     if (url.isEmpty) {
       throw ArgumentError('Remote URL cannot be empty');
     }
@@ -241,7 +242,7 @@ class OfflineGitConfigBuilder {
   }
 
   /// Sets the remote name (defaults to 'origin')
-  OfflineGitConfigBuilder remoteName(String name) {
+  OfflineGitConfigBuilder remoteName(final String name) {
     if (name.isEmpty) {
       throw ArgumentError('Remote name cannot be empty');
     }
@@ -250,7 +251,7 @@ class OfflineGitConfigBuilder {
   }
 
   /// Sets the remote type ('github', 'gitlab', 'custom')
-  OfflineGitConfigBuilder remoteType(String type) {
+  OfflineGitConfigBuilder remoteType(final String type) {
     if (type.isEmpty) {
       throw ArgumentError('Remote type cannot be empty');
     }
@@ -259,13 +260,15 @@ class OfflineGitConfigBuilder {
   }
 
   /// Sets API-specific settings for remote operations
-  OfflineGitConfigBuilder remoteApiSettings(Map<String, dynamic> settings) {
+  OfflineGitConfigBuilder remoteApiSettings(
+    final Map<String, dynamic> settings,
+  ) {
     _remoteApiSettings = Map.from(settings);
     return this;
   }
 
   /// Sets the default pull strategy
-  OfflineGitConfigBuilder defaultPullStrategy(String strategy) {
+  OfflineGitConfigBuilder defaultPullStrategy(final String strategy) {
     if (strategy.isEmpty) {
       throw ArgumentError('Pull strategy cannot be empty');
     }
@@ -274,7 +277,7 @@ class OfflineGitConfigBuilder {
   }
 
   /// Sets the default push strategy
-  OfflineGitConfigBuilder defaultPushStrategy(String strategy) {
+  OfflineGitConfigBuilder defaultPushStrategy(final String strategy) {
     if (strategy.isEmpty) {
       throw ArgumentError('Push strategy cannot be empty');
     }
@@ -284,7 +287,8 @@ class OfflineGitConfigBuilder {
 
   /// Sets the conflict resolution strategy
   OfflineGitConfigBuilder conflictResolution(
-      ConflictResolutionStrategy strategy) {
+    final ConflictResolutionStrategy strategy,
+  ) {
     _conflictResolution = strategy;
     return this;
   }
@@ -294,12 +298,12 @@ class OfflineGitConfigBuilder {
       OfflineGitConfigAuthenticationBuilder(this);
 
   /// Internal method to set SSH key path
-  void _setSshKeyPath(String path) {
+  void _setSshKeyPath(final String path) {
     _sshKeyPath = path;
   }
 
   /// Internal method to set HTTPS token
-  void _setHttpsToken(String token) {
+  void _setHttpsToken(final String token) {
     _httpsToken = token;
   }
 
@@ -339,7 +343,7 @@ class OfflineGitConfigAuthenticationBuilder {
   final OfflineGitConfigBuilder _parentBuilder;
 
   /// Sets SSH key authentication
-  OfflineGitConfigBuilder sshKey(String keyPath) {
+  OfflineGitConfigBuilder sshKey(final String keyPath) {
     if (keyPath.isEmpty) {
       throw ArgumentError('SSH key path cannot be empty');
     }
@@ -348,7 +352,7 @@ class OfflineGitConfigAuthenticationBuilder {
   }
 
   /// Sets HTTPS token authentication
-  OfflineGitConfigBuilder httpsToken(String token) {
+  OfflineGitConfigBuilder httpsToken(final String token) {
     if (token.isEmpty) {
       throw ArgumentError('HTTPS token cannot be empty');
     }
@@ -360,37 +364,138 @@ class OfflineGitConfigAuthenticationBuilder {
 /// {@template github_api_config}
 /// Configuration for GitHub API storage provider.
 /// {@endtemplate}
+@reopen
 class GitHubApiConfig extends StorageConfig {
   /// {@macro github_api_config}
   const GitHubApiConfig({
-    required this.authToken,
-    required this.repositoryOwner,
-    required this.repositoryName,
+    this.authToken,
+    this.repositoryOwner,
+    this.repositoryName,
     this.branchName = 'main',
+    this.oauthConfig,
+    this.repositoryConfig,
   });
 
-  /// GitHub authentication token.
-  final String authToken;
+  /// GitHub authentication token (for manual token mode).
+  final String? authToken;
 
   /// Repository owner (username or organization).
-  final String repositoryOwner;
+  final String? repositoryOwner;
 
   /// Repository name.
-  final String repositoryName;
+  final String? repositoryName;
 
   /// Branch name to work with.
   final String branchName;
+
+  /// OAuth configuration for automatic authentication.
+  final GitHubOAuthConfig? oauthConfig;
+
+  /// Repository configuration for automatic selection/creation.
+  final GitHubRepositoryConfig? repositoryConfig;
+
+  /// Whether this config uses OAuth flow
+  bool get usesOAuth => oauthConfig != null;
+
+  /// Whether this config has repository auto-selection
+  bool get hasRepositorySelection => repositoryConfig != null;
 
   /// Creates a new GitHubApiConfig builder
   static GitHubApiConfigBuilder builder() => GitHubApiConfigBuilder();
 
   @override
   Map<String, dynamic> toMap() => {
-        'authToken': authToken,
-        'repositoryOwner': repositoryOwner,
-        'repositoryName': repositoryName,
-        'branchName': branchName,
-      };
+    if (authToken != null) 'authToken': authToken,
+    if (repositoryOwner != null) 'repositoryOwner': repositoryOwner,
+    if (repositoryName != null) 'repositoryName': repositoryName,
+    'branchName': branchName,
+    if (oauthConfig != null) 'oauthConfig': oauthConfig!.toMap(),
+    if (repositoryConfig != null) 'repositoryConfig': repositoryConfig!.toMap(),
+  };
+}
+
+/// {@template github_oauth_config}
+/// OAuth configuration for GitHub authentication.
+/// {@endtemplate}
+class GitHubOAuthConfig {
+  /// {@macro github_oauth_config}
+  const GitHubOAuthConfig({
+    required this.clientId,
+    this.clientSecret,
+    this.redirectUri,
+    this.scopes = const ['repo'],
+    this.deviceFlowEnabled = true,
+  });
+
+  /// GitHub App client ID
+  final String clientId;
+
+  /// GitHub App client secret (optional for public apps)
+  final String? clientSecret;
+
+  /// Redirect URI for OAuth flow
+  final String? redirectUri;
+
+  /// Requested OAuth scopes
+  final List<String> scopes;
+
+  /// Whether to enable device flow for CLI/desktop apps
+  final bool deviceFlowEnabled;
+
+  Map<String, dynamic> toMap() => {
+    'clientId': clientId,
+    if (clientSecret != null) 'clientSecret': clientSecret,
+    if (redirectUri != null) 'redirectUri': redirectUri,
+    'scopes': scopes,
+    'deviceFlowEnabled': deviceFlowEnabled,
+  };
+}
+
+/// {@template github_repository_config}
+/// Configuration for repository selection and creation.
+/// {@endtemplate}
+class GitHubRepositoryConfig {
+  /// {@macro github_repository_config}
+  const GitHubRepositoryConfig({
+    this.allowSelection = true,
+    this.allowCreation = true,
+    this.defaultName,
+    this.defaultDescription,
+    this.defaultPrivate = true,
+    this.templateRepository,
+    this.suggestedName,
+  });
+
+  /// Whether to allow user to select from existing repositories
+  final bool allowSelection;
+
+  /// Whether to allow user to create new repositories
+  final bool allowCreation;
+
+  /// Default repository name for creation
+  final String? defaultName;
+
+  /// Default repository description for creation
+  final String? defaultDescription;
+
+  /// Whether created repositories should be private by default
+  final bool defaultPrivate;
+
+  /// Template repository to use for creation (owner/repo format)
+  final String? templateRepository;
+
+  /// Suggested repository name based on app context
+  final String? suggestedName;
+
+  Map<String, dynamic> toMap() => {
+    'allowSelection': allowSelection,
+    'allowCreation': allowCreation,
+    if (defaultName != null) 'defaultName': defaultName,
+    if (defaultDescription != null) 'defaultDescription': defaultDescription,
+    'defaultPrivate': defaultPrivate,
+    if (templateRepository != null) 'templateRepository': templateRepository,
+    if (suggestedName != null) 'suggestedName': suggestedName,
+  };
 }
 
 /// {@template github_api_config_builder}
@@ -403,10 +508,12 @@ class GitHubApiConfigBuilder {
   String? _authToken;
   String? _repositoryOwner;
   String? _repositoryName;
-  String _branchName = 'main';
+  var _branchName = 'main';
+  GitHubOAuthConfig? _oauthConfig;
+  GitHubRepositoryConfig? _repositoryConfig;
 
-  /// Sets the GitHub authentication token
-  GitHubApiConfigBuilder authToken(String token) {
+  /// Sets the GitHub authentication token (manual mode)
+  GitHubApiConfigBuilder authToken(final String token) {
     if (token.isEmpty) {
       throw ArgumentError('Auth token cannot be empty');
     }
@@ -415,7 +522,7 @@ class GitHubApiConfigBuilder {
   }
 
   /// Sets the repository owner (username or organization)
-  GitHubApiConfigBuilder repositoryOwner(String owner) {
+  GitHubApiConfigBuilder repositoryOwner(final String owner) {
     if (owner.isEmpty) {
       throw ArgumentError('Repository owner cannot be empty');
     }
@@ -424,7 +531,7 @@ class GitHubApiConfigBuilder {
   }
 
   /// Sets the repository name
-  GitHubApiConfigBuilder repositoryName(String name) {
+  GitHubApiConfigBuilder repositoryName(final String name) {
     if (name.isEmpty) {
       throw ArgumentError('Repository name cannot be empty');
     }
@@ -433,7 +540,7 @@ class GitHubApiConfigBuilder {
   }
 
   /// Sets the branch name (defaults to 'main')
-  GitHubApiConfigBuilder branchName(String branch) {
+  GitHubApiConfigBuilder branchName(final String branch) {
     if (branch.isEmpty) {
       throw ArgumentError('Branch name cannot be empty');
     }
@@ -441,21 +548,94 @@ class GitHubApiConfigBuilder {
     return this;
   }
 
+  /// Configures OAuth authentication
+  GitHubApiConfigBuilder oauth({
+    required final String clientId,
+    final String? clientSecret,
+    final String? redirectUri,
+    final List<String> scopes = const ['repo'],
+    final bool deviceFlowEnabled = true,
+  }) {
+    _oauthConfig = GitHubOAuthConfig(
+      clientId: clientId,
+      clientSecret: clientSecret,
+      redirectUri: redirectUri,
+      scopes: scopes,
+      deviceFlowEnabled: deviceFlowEnabled,
+    );
+    return this;
+  }
+
+  /// Configures repository selection/creation
+  GitHubApiConfigBuilder repository({
+    final bool allowSelection = true,
+    final bool allowCreation = true,
+    final String? defaultName,
+    final String? defaultDescription,
+    final bool defaultPrivate = true,
+    final String? templateRepository,
+    final String? suggestedName,
+  }) {
+    _repositoryConfig = GitHubRepositoryConfig(
+      allowSelection: allowSelection,
+      allowCreation: allowCreation,
+      defaultName: defaultName,
+      defaultDescription: defaultDescription,
+      defaultPrivate: defaultPrivate,
+      templateRepository: templateRepository,
+      suggestedName: suggestedName,
+    );
+    return this;
+  }
+
+  /// Convenience method for OAuth-only configuration (no manual repo selection)
+  GitHubApiConfigBuilder autoOAuth({
+    required final String clientId,
+    final String? clientSecret,
+    final String? redirectUri,
+    final String? suggestedRepoName,
+    final String? repoDescription,
+    final bool privateRepo = true,
+  }) =>
+      oauth(
+        clientId: clientId,
+        clientSecret: clientSecret,
+        redirectUri: redirectUri,
+      ).repository(
+        suggestedName: suggestedRepoName,
+        defaultDescription: repoDescription,
+        defaultPrivate: privateRepo,
+      );
+
   /// Builds the GitHubApiConfig with validation
   GitHubApiConfig build() {
+    // OAuth mode validation
+    if (_oauthConfig != null) {
+      // OAuth mode - repository selection is handled during auth flow
+      return GitHubApiConfig(
+        branchName: _branchName,
+        oauthConfig: _oauthConfig,
+        repositoryConfig: _repositoryConfig,
+      );
+    }
+
+    // Manual mode validation
     if (_authToken == null) {
-      throw StateError('Auth token is required');
+      throw StateError(
+        'Auth token is required for manual mode, or use oauth() for OAuth mode',
+      );
     }
     if (_repositoryOwner == null) {
-      throw StateError('Repository owner is required');
+      throw StateError('Repository owner is required for manual mode');
     }
     if (_repositoryName == null) {
-      throw StateError('Repository name is required');
+      throw StateError('Repository name is required for manual mode');
     }
+
     return GitHubApiConfig(
-      authToken: _authToken!,
-      repositoryOwner: _repositoryOwner!,
-      repositoryName: _repositoryName!,
+      authToken: _authToken,
+      repositoryOwner: _repositoryOwner,
+      repositoryName: _repositoryName,
       branchName: _branchName,
     );
   }
