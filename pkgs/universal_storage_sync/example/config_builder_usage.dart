@@ -26,7 +26,7 @@ void main() async {
     '   Repository: ${githubConfig.repositoryOwner}/${githubConfig.repositoryName}',
   );
   print('   Branch: ${githubConfig.branchName}');
-  print('   Has Token: ${githubConfig.authToken.isNotEmpty}\n');
+  print('   Has Token: ${githubConfig.authToken?.isNotEmpty}\n');
 
   // Example 3: Offline Git Config Builder (Basic)
   print('3. Offline Git Configuration Builder (Basic):');
