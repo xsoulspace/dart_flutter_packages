@@ -12,8 +12,8 @@ import '../storage/secure_credential_storage.dart';
 
 /// GitHub OAuth implementation using oauth2_client
 class GitHubOAuthProvider implements OAuthProvider {
-  GitHubOAuthProvider(this._config, [CredentialStorage? storage])
-      : _storage = storage ?? SecureCredentialStorage();
+  GitHubOAuthProvider(this._config, [final CredentialStorage? storage])
+    : _storage = storage ?? SecureCredentialStorage();
 
   final GitHubOAuthConfig _config;
   final CredentialStorage _storage;
@@ -41,7 +41,8 @@ class GitHubOAuthProvider implements OAuthProvider {
 
       if (tokenResponse.accessToken == null) {
         throw const AuthenticationException(
-            'Authentication failed: No access token received.');
+          'Authentication failed: No access token received.',
+        );
       }
 
       final credentials = StoredCredentials(
@@ -58,16 +59,19 @@ class GitHubOAuthProvider implements OAuthProvider {
       return OAuthResult(credentials: credentials, user: user);
     } on Exception catch (e) {
       throw AuthenticationException(
-          'GitHub authentication failed', e.toString());
+        'GitHub authentication failed',
+        e.toString(),
+      );
     }
   }
 
   @override
-  Future<OAuthResult> refreshToken(String refreshToken) async {
+  Future<OAuthResult> refreshToken(final String refreshToken) async {
     // GitHub tokens don't expire by default, but this could be implemented
     // if the token has an expiration and refresh capability
     throw const AuthenticationException(
-        'GitHub tokens do not support refresh by default');
+      'GitHub tokens do not support refresh by default',
+    );
   }
 
   @override
@@ -91,8 +95,9 @@ class GitHubOAuthProvider implements OAuthProvider {
     if (client == null) return null;
 
     try {
-      final response =
-          await client.get(Uri.parse('${platform.apiBaseUrl}/user'));
+      final response = await client.get(
+        Uri.parse('${platform.apiBaseUrl}/user'),
+      );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         return OAuthUser(
@@ -116,7 +121,9 @@ class GitHubOAuthProvider implements OAuthProvider {
         throw const ApiException.unauthorized();
       } else {
         throw ApiException(
-            'Failed to get user information', 'HTTP ${response.statusCode}');
+          'Failed to get user information',
+          'HTTP ${response.statusCode}',
+        );
       }
     } on Exception catch (e) {
       if (e is ApiException) rethrow;
@@ -142,7 +149,7 @@ class GitHubOAuthProvider implements OAuthProvider {
       oauth2Credentials,
       identifier: _config.clientId,
       secret: _config.clientSecret,
-      onCredentialsRefreshed: (newCreds) async {
+      onCredentialsRefreshed: (final newCreds) async {
         await _storage.storeCredentials(
           platform,
           StoredCredentials.fromOauth2Credentials(newCreds),
@@ -154,9 +161,7 @@ class GitHubOAuthProvider implements OAuthProvider {
   }
 
   /// Get an HTTP client for making authenticated API requests
-  Future<http.Client?> getHttpClient() async {
-    return await _getAuthenticatedClient();
-  }
+  Future<http.Client?> getHttpClient() async => _getAuthenticatedClient();
 
   /// Test the current authentication by trying to fetch user info
   Future<bool> testAuthentication() async {

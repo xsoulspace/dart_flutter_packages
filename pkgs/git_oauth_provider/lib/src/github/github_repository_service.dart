@@ -26,7 +26,8 @@ class GitHubRepositoryService implements RepositoryService {
 
   @override
   Future<List<RepositoryInfo>> getOrganizationRepositories(
-      String orgName) async {
+    final String orgName,
+  ) async {
     final github = await _getGitHubClient();
 
     try {
@@ -36,13 +37,16 @@ class GitHubRepositoryService implements RepositoryService {
       return repos.map(_convertRepository).toList();
     } catch (e) {
       throw ApiException(
-          'Failed to fetch organization repositories', e.toString());
+        'Failed to fetch organization repositories',
+        e.toString(),
+      );
     }
   }
 
   @override
   Future<RepositoryInfo> createRepository(
-      CreateRepositoryRequest request) async {
+    final CreateRepositoryRequest request,
+  ) async {
     final github = await _getGitHubClient();
 
     try {
@@ -66,12 +70,16 @@ class GitHubRepositoryService implements RepositoryService {
   }
 
   @override
-  Future<RepositoryInfo?> getRepository(String owner, String name) async {
+  Future<RepositoryInfo?> getRepository(
+    final String owner,
+    final String name,
+  ) async {
     final github = await _getGitHubClient();
 
     try {
-      final repo = await github.repositories
-          .getRepository(gh.RepositorySlug(owner, name));
+      final repo = await github.repositories.getRepository(
+        gh.RepositorySlug(owner, name),
+      );
       return _convertRepository(repo);
     } catch (e) {
       if (e.toString().contains('404')) {
@@ -82,8 +90,10 @@ class GitHubRepositoryService implements RepositoryService {
   }
 
   @override
-  Future<List<RepositoryInfo>> searchRepositories(String query,
-      {int? limit}) async {
+  Future<List<RepositoryInfo>> searchRepositories(
+    final String query, {
+    final int? limit,
+  }) async {
     final github = await _getGitHubClient();
 
     try {
@@ -101,12 +111,13 @@ class GitHubRepositoryService implements RepositoryService {
   }
 
   @override
-  Future<void> deleteRepository(String owner, String name) async {
+  Future<void> deleteRepository(final String owner, final String name) async {
     final github = await _getGitHubClient();
 
     try {
-      await github.repositories
-          .deleteRepository(gh.RepositorySlug(owner, name));
+      await github.repositories.deleteRepository(
+        gh.RepositorySlug(owner, name),
+      );
     } catch (e) {
       if (e.toString().contains('404')) {
         throw RepositoryException.notFound('$owner/$name');
@@ -119,7 +130,10 @@ class GitHubRepositoryService implements RepositoryService {
   }
 
   @override
-  Future<List<String>> getRepositoryBranches(String owner, String name) async {
+  Future<List<String>> getRepositoryBranches(
+    final String owner,
+    final String name,
+  ) async {
     final github = await _getGitHubClient();
 
     try {
@@ -127,20 +141,25 @@ class GitHubRepositoryService implements RepositoryService {
           .listBranches(gh.RepositorySlug(owner, name))
           .toList();
       return branches
-          .map((branch) => branch.name ?? '')
-          .where((name) => name.isNotEmpty)
+          .map((final branch) => branch.name ?? '')
+          .where((final name) => name.isNotEmpty)
           .toList();
     } catch (e) {
       if (e.toString().contains('404')) {
         throw RepositoryException.notFound('$owner/$name');
       }
       throw RepositoryException(
-          'Failed to get repository branches', e.toString());
+        'Failed to get repository branches',
+        e.toString(),
+      );
     }
   }
 
   @override
-  Future<List<String>> getRepositoryTags(String owner, String name) async {
+  Future<List<String>> getRepositoryTags(
+    final String owner,
+    final String name,
+  ) async {
     final github = await _getGitHubClient();
 
     try {
@@ -148,8 +167,8 @@ class GitHubRepositoryService implements RepositoryService {
           .listTags(gh.RepositorySlug(owner, name))
           .toList();
       return tags
-          .map((tag) => tag.name ?? '')
-          .where((name) => name.isNotEmpty)
+          .map((final tag) => tag.name)
+          .where((final name) => name.isNotEmpty)
           .toList();
     } catch (e) {
       if (e.toString().contains('404')) {
@@ -177,49 +196,49 @@ class GitHubRepositoryService implements RepositoryService {
     final httpClient = await _oauthProvider.getHttpClient();
     if (httpClient == null) {
       throw const AuthenticationException(
-          'Failed to get authenticated HTTP client');
+        'Failed to get authenticated HTTP client',
+      );
     }
 
     _github = gh.GitHub(client: httpClient);
     return _github!;
   }
 
-  RepositoryInfo _convertRepository(gh.Repository repo) {
-    return RepositoryInfo(
-      id: repo.id.toString(),
-      name: repo.name,
-      fullName: repo.fullName,
-      owner: RepositoryOwner(
-        id: repo.owner?.id.toString() ?? '',
-        login: repo.owner?.login ?? '',
-        type: _getOwnerType(repo.owner),
-        avatarUrl: repo.owner?.avatarUrl,
-        htmlUrl: repo.owner?.htmlUrl,
-      ),
-      description: repo.description,
-      isPrivate: repo.isPrivate,
-      defaultBranch: repo.defaultBranch,
-      cloneUrl: repo.cloneUrl,
-      sshUrl: repo.sshUrl,
-      htmlUrl: repo.htmlUrl,
-      createdAt: repo.createdAt,
-      updatedAt: repo.updatedAt,
-      permissions: _convertPermissions(repo.permissions),
-      language: repo.language,
-      starCount: repo.stargazersCount,
-      forkCount: repo.forksCount,
-      size: repo.size,
-    );
-  }
+  RepositoryInfo _convertRepository(final gh.Repository repo) => RepositoryInfo(
+    id: repo.id.toString(),
+    name: repo.name,
+    fullName: repo.fullName,
+    owner: RepositoryOwner(
+      id: repo.owner?.id.toString() ?? '',
+      login: repo.owner?.login ?? '',
+      type: _getOwnerType(repo.owner),
+      avatarUrl: repo.owner?.avatarUrl,
+      htmlUrl: repo.owner?.htmlUrl,
+    ),
+    description: repo.description,
+    isPrivate: repo.isPrivate,
+    defaultBranch: repo.defaultBranch,
+    cloneUrl: repo.cloneUrl,
+    sshUrl: repo.sshUrl,
+    htmlUrl: repo.htmlUrl,
+    createdAt: repo.createdAt,
+    updatedAt: repo.updatedAt,
+    permissions: _convertPermissions(repo.permissions),
+    language: repo.language,
+    starCount: repo.stargazersCount,
+    forkCount: repo.forksCount,
+    size: repo.size,
+  );
 
-  RepositoryOwnerType _getOwnerType(gh.UserInformation? owner) {
+  RepositoryOwnerType _getOwnerType(final gh.UserInformation? owner) {
     // Since we can't access the type field directly, we can infer it
     // from other properties or default to user
     return RepositoryOwnerType.user;
   }
 
   RepositoryPermissions? _convertPermissions(
-      gh.RepositoryPermissions? permissions) {
+    final gh.RepositoryPermissions? permissions,
+  ) {
     if (permissions == null) return null;
 
     return RepositoryPermissions(

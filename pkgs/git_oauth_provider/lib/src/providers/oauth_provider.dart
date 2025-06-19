@@ -12,7 +12,7 @@ abstract class OAuthProvider {
   Future<OAuthResult> authenticate();
 
   /// Refresh access token if possible
-  Future<OAuthResult> refreshToken(String refreshToken);
+  Future<OAuthResult> refreshToken(final String refreshToken);
 
   /// Check if currently authenticated
   Future<bool> isAuthenticated();

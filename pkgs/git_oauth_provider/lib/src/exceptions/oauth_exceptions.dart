@@ -32,17 +32,17 @@ class ConfigurationException extends OAuthException {
 class ApiException extends OAuthException {
   const ApiException(super.message, [super.details]);
 
-  const ApiException.network([String? details])
-      : super('Network error occurred', details);
+  const ApiException.network([final String? details])
+    : super('Network error occurred', details);
 
-  const ApiException.unauthorized([String? details])
-      : super('Unauthorized access', details);
+  const ApiException.unauthorized([final String? details])
+    : super('Unauthorized access', details);
 
-  const ApiException.rateLimited([String? details])
-      : super('Rate limit exceeded', details);
+  const ApiException.rateLimited([final String? details])
+    : super('Rate limit exceeded', details);
 
-  const ApiException.notFound([String? details])
-      : super('Resource not found', details);
+  const ApiException.notFound([final String? details])
+    : super('Resource not found', details);
 
   @override
   String toString() =>
@@ -53,14 +53,14 @@ class ApiException extends OAuthException {
 class RepositoryException extends OAuthException {
   const RepositoryException(super.message, [super.details]);
 
-  const RepositoryException.notFound(String repoName)
-      : super('Repository not found', repoName);
+  const RepositoryException.notFound(final String repoName)
+    : super('Repository not found', repoName);
 
-  const RepositoryException.accessDenied(String repoName)
-      : super('Access denied to repository', repoName);
+  const RepositoryException.accessDenied(final String repoName)
+    : super('Access denied to repository', repoName);
 
-  const RepositoryException.alreadyExists(String repoName)
-      : super('Repository already exists', repoName);
+  const RepositoryException.alreadyExists(final String repoName)
+    : super('Repository already exists', repoName);
 
   @override
   String toString() =>
@@ -72,10 +72,10 @@ class StorageException extends OAuthException {
   const StorageException(super.message, [super.details]);
 
   const StorageException.secureStorageUnavailable()
-      : super('Secure storage is not available on this platform');
+    : super('Secure storage is not available on this platform');
 
-  const StorageException.corruptedData(String dataType)
-      : super('Corrupted stored data', dataType);
+  const StorageException.corruptedData(final String dataType)
+    : super('Corrupted stored data', dataType);
 
   @override
   String toString() =>

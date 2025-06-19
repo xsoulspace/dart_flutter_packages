@@ -21,14 +21,14 @@ class CreateRepositoryRequest {
   final String? licenseTemplate;
 
   Map<String, dynamic> toJson() => {
-        'name': name,
-        'description': description,
-        'isPrivate': isPrivate,
-        'organizationName': organizationName,
-        'autoInit': autoInit,
-        'gitignoreTemplate': gitignoreTemplate,
-        'licenseTemplate': licenseTemplate,
-      };
+    'name': name,
+    'description': description,
+    'isPrivate': isPrivate,
+    'organizationName': organizationName,
+    'autoInit': autoInit,
+    'gitignoreTemplate': gitignoreTemplate,
+    'licenseTemplate': licenseTemplate,
+  };
 
   @override
   String toString() =>
@@ -41,23 +41,33 @@ abstract class RepositoryService {
   Future<List<RepositoryInfo>> getUserRepositories();
 
   /// Get list of organization repositories
-  Future<List<RepositoryInfo>> getOrganizationRepositories(String orgName);
+  Future<List<RepositoryInfo>> getOrganizationRepositories(
+    final String orgName,
+  );
 
   /// Create a new repository
-  Future<RepositoryInfo> createRepository(CreateRepositoryRequest request);
+  Future<RepositoryInfo> createRepository(
+    final CreateRepositoryRequest request,
+  );
 
   /// Get repository by name
-  Future<RepositoryInfo?> getRepository(String owner, String name);
+  Future<RepositoryInfo?> getRepository(final String owner, final String name);
 
   /// Search repositories
-  Future<List<RepositoryInfo>> searchRepositories(String query, {int? limit});
+  Future<List<RepositoryInfo>> searchRepositories(
+    final String query, {
+    final int? limit,
+  });
 
   /// Delete a repository (if permissions allow)
-  Future<void> deleteRepository(String owner, String name);
+  Future<void> deleteRepository(final String owner, final String name);
 
   /// Get repository branches
-  Future<List<String>> getRepositoryBranches(String owner, String name);
+  Future<List<String>> getRepositoryBranches(
+    final String owner,
+    final String name,
+  );
 
   /// Get repository tags
-  Future<List<String>> getRepositoryTags(String owner, String name);
+  Future<List<String>> getRepositoryTags(final String owner, final String name);
 }

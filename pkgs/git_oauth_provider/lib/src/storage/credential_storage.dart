@@ -11,6 +11,25 @@ class StoredCredentials {
     this.scopes,
   });
 
+  factory StoredCredentials.fromJson(final Map<String, dynamic> json) =>
+      StoredCredentials(
+        accessToken: json['accessToken'] as String,
+        refreshToken: json['refreshToken'] as String?,
+        expiresAt: json['expiresAt'] != null
+            ? DateTime.parse(json['expiresAt'] as String)
+            : null,
+        scopes: (json['scopes'] as List<dynamic>?)?.cast<String>(),
+      );
+
+  factory StoredCredentials.fromOauth2Credentials(
+    final oauth2.Credentials credentials,
+  ) => StoredCredentials(
+    accessToken: credentials.accessToken,
+    refreshToken: credentials.refreshToken,
+    expiresAt: credentials.expiration,
+    scopes: credentials.scopes,
+  );
+
   final String accessToken;
   final String? refreshToken;
   final DateTime? expiresAt;
@@ -28,28 +47,6 @@ class StoredCredentials {
     'scopes': scopes,
   };
 
-  factory StoredCredentials.fromJson(Map<String, dynamic> json) {
-    return StoredCredentials(
-      accessToken: json['accessToken'] as String,
-      refreshToken: json['refreshToken'] as String?,
-      expiresAt: json['expiresAt'] != null
-          ? DateTime.parse(json['expiresAt'] as String)
-          : null,
-      scopes: (json['scopes'] as List<dynamic>?)?.cast<String>(),
-    );
-  }
-
-  factory StoredCredentials.fromOauth2Credentials(
-    oauth2.Credentials credentials,
-  ) {
-    return StoredCredentials(
-      accessToken: credentials.accessToken,
-      refreshToken: credentials.refreshToken,
-      expiresAt: credentials.expiration,
-      scopes: credentials.scopes,
-    );
-  }
-
   @override
   String toString() =>
       'StoredCredentials(token: ${accessToken.substring(0, 8)}..., expires: $expiresAt)';
@@ -59,19 +56,19 @@ class StoredCredentials {
 abstract class CredentialStorage {
   /// Store credentials for a platform
   Future<void> storeCredentials(
-    GitPlatform platform,
-    StoredCredentials credentials,
+    final GitPlatform platform,
+    final StoredCredentials credentials,
   );
 
   /// Retrieve credentials for a platform
-  Future<StoredCredentials?> getCredentials(GitPlatform platform);
+  Future<StoredCredentials?> getCredentials(final GitPlatform platform);
 
   /// Clear credentials for a platform
-  Future<void> clearCredentials(GitPlatform platform);
+  Future<void> clearCredentials(final GitPlatform platform);
 
   /// Clear all stored credentials
   Future<void> clearAllCredentials();
 
   /// Check if credentials exist for a platform
-  Future<bool> hasCredentials(GitPlatform platform);
+  Future<bool> hasCredentials(final GitPlatform platform);
 }

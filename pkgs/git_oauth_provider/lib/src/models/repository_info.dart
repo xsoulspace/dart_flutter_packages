@@ -17,6 +17,18 @@ class RepositoryOwner {
     this.htmlUrl,
   });
 
+  factory RepositoryOwner.fromJson(final Map<String, dynamic> json) =>
+      RepositoryOwner(
+        id: json['id'].toString(),
+        login: json['login'] as String,
+        type: RepositoryOwnerType.values.firstWhere(
+          (final e) => e.name == json['type'],
+          orElse: () => RepositoryOwnerType.user,
+        ),
+        avatarUrl: json['avatarUrl'] as String?,
+        htmlUrl: json['htmlUrl'] as String?,
+      );
+
   final String id;
   final String login;
   final RepositoryOwnerType type;
@@ -24,24 +36,12 @@ class RepositoryOwner {
   final String? htmlUrl;
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'login': login,
-        'type': type.name,
-        'avatarUrl': avatarUrl,
-        'htmlUrl': htmlUrl,
-      };
-
-  factory RepositoryOwner.fromJson(Map<String, dynamic> json) =>
-      RepositoryOwner(
-        id: json['id'].toString(),
-        login: json['login'] as String,
-        type: RepositoryOwnerType.values.firstWhere(
-          (e) => e.name == json['type'],
-          orElse: () => RepositoryOwnerType.user,
-        ),
-        avatarUrl: json['avatarUrl'] as String?,
-        htmlUrl: json['htmlUrl'] as String?,
-      );
+    'id': id,
+    'login': login,
+    'type': type.name,
+    'avatarUrl': avatarUrl,
+    'htmlUrl': htmlUrl,
+  };
 
   @override
   String toString() => 'RepositoryOwner(login: $login, type: $type)';
@@ -55,22 +55,18 @@ class RepositoryPermissions {
     required this.pull,
   });
 
-  final bool admin;
-  final bool push;
-  final bool pull;
-
-  Map<String, dynamic> toJson() => {
-        'admin': admin,
-        'push': push,
-        'pull': pull,
-      };
-
-  factory RepositoryPermissions.fromJson(Map<String, dynamic> json) =>
+  factory RepositoryPermissions.fromJson(final Map<String, dynamic> json) =>
       RepositoryPermissions(
         admin: json['admin'] as bool,
         push: json['push'] as bool,
         pull: json['pull'] as bool,
       );
+
+  final bool admin;
+  final bool push;
+  final bool pull;
+
+  Map<String, dynamic> toJson() => {'admin': admin, 'push': push, 'pull': pull};
 
   @override
   String toString() =>
@@ -84,8 +80,8 @@ class RepositoryInfo {
     required this.name,
     required this.fullName,
     required this.owner,
-    this.description,
     required this.isPrivate,
+    this.description,
     this.defaultBranch,
     this.cloneUrl,
     this.sshUrl,
@@ -98,6 +94,35 @@ class RepositoryInfo {
     this.forkCount,
     this.size,
   });
+
+  factory RepositoryInfo.fromJson(final Map<String, dynamic> json) =>
+      RepositoryInfo(
+        id: json['id'].toString(),
+        name: json['name'] as String,
+        fullName: json['fullName'] as String,
+        owner: RepositoryOwner.fromJson(json['owner'] as Map<String, dynamic>),
+        description: json['description'] as String?,
+        isPrivate: json['isPrivate'] as bool,
+        defaultBranch: json['defaultBranch'] as String?,
+        cloneUrl: json['cloneUrl'] as String?,
+        sshUrl: json['sshUrl'] as String?,
+        htmlUrl: json['htmlUrl'] as String?,
+        createdAt: json['createdAt'] != null
+            ? DateTime.parse(json['createdAt'] as String)
+            : null,
+        updatedAt: json['updatedAt'] != null
+            ? DateTime.parse(json['updatedAt'] as String)
+            : null,
+        permissions: json['permissions'] != null
+            ? RepositoryPermissions.fromJson(
+                json['permissions'] as Map<String, dynamic>,
+              )
+            : null,
+        language: json['language'] as String?,
+        starCount: json['starCount'] as int?,
+        forkCount: json['forkCount'] as int?,
+        size: json['size'] as int?,
+      );
 
   final String id;
   final String name;
@@ -118,57 +143,30 @@ class RepositoryInfo {
   final int? size;
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'fullName': fullName,
-        'owner': owner.toJson(),
-        'description': description,
-        'isPrivate': isPrivate,
-        'defaultBranch': defaultBranch,
-        'cloneUrl': cloneUrl,
-        'sshUrl': sshUrl,
-        'htmlUrl': htmlUrl,
-        'createdAt': createdAt?.toIso8601String(),
-        'updatedAt': updatedAt?.toIso8601String(),
-        'permissions': permissions?.toJson(),
-        'language': language,
-        'starCount': starCount,
-        'forkCount': forkCount,
-        'size': size,
-      };
-
-  factory RepositoryInfo.fromJson(Map<String, dynamic> json) => RepositoryInfo(
-        id: json['id'].toString(),
-        name: json['name'] as String,
-        fullName: json['fullName'] as String,
-        owner: RepositoryOwner.fromJson(json['owner'] as Map<String, dynamic>),
-        description: json['description'] as String?,
-        isPrivate: json['isPrivate'] as bool,
-        defaultBranch: json['defaultBranch'] as String?,
-        cloneUrl: json['cloneUrl'] as String?,
-        sshUrl: json['sshUrl'] as String?,
-        htmlUrl: json['htmlUrl'] as String?,
-        createdAt: json['createdAt'] != null
-            ? DateTime.parse(json['createdAt'] as String)
-            : null,
-        updatedAt: json['updatedAt'] != null
-            ? DateTime.parse(json['updatedAt'] as String)
-            : null,
-        permissions: json['permissions'] != null
-            ? RepositoryPermissions.fromJson(
-                json['permissions'] as Map<String, dynamic>)
-            : null,
-        language: json['language'] as String?,
-        starCount: json['starCount'] as int?,
-        forkCount: json['forkCount'] as int?,
-        size: json['size'] as int?,
-      );
+    'id': id,
+    'name': name,
+    'fullName': fullName,
+    'owner': owner.toJson(),
+    'description': description,
+    'isPrivate': isPrivate,
+    'defaultBranch': defaultBranch,
+    'cloneUrl': cloneUrl,
+    'sshUrl': sshUrl,
+    'htmlUrl': htmlUrl,
+    'createdAt': createdAt?.toIso8601String(),
+    'updatedAt': updatedAt?.toIso8601String(),
+    'permissions': permissions?.toJson(),
+    'language': language,
+    'starCount': starCount,
+    'forkCount': forkCount,
+    'size': size,
+  };
 
   @override
   String toString() => 'RepositoryInfo(name: $fullName, private: $isPrivate)';
 
   @override
-  bool operator ==(Object other) =>
+  bool operator ==(final Object other) =>
       identical(this, other) ||
       other is RepositoryInfo &&
           runtimeType == other.runtimeType &&

@@ -16,6 +16,24 @@ class OAuthUser {
     this.createdAt,
   });
 
+  factory OAuthUser.fromJson(final Map<String, dynamic> json) => OAuthUser(
+    id: json['id'].toString(),
+    login: json['login'] as String,
+    email: json['email'] as String?,
+    name: json['name'] as String?,
+    avatarUrl: json['avatarUrl'] as String?,
+    bio: json['bio'] as String?,
+    location: json['location'] as String?,
+    company: json['company'] as String?,
+    htmlUrl: json['htmlUrl'] as String?,
+    publicRepos: json['publicRepos'] as int?,
+    followers: json['followers'] as int?,
+    following: json['following'] as int?,
+    createdAt: json['createdAt'] != null
+        ? DateTime.parse(json['createdAt'] as String)
+        : null,
+  );
+
   final String id;
   final String login;
   final String? email;
@@ -46,29 +64,11 @@ class OAuthUser {
     'createdAt': createdAt?.toIso8601String(),
   };
 
-  factory OAuthUser.fromJson(Map<String, dynamic> json) => OAuthUser(
-    id: json['id'].toString(),
-    login: json['login'] as String,
-    email: json['email'] as String?,
-    name: json['name'] as String?,
-    avatarUrl: json['avatarUrl'] as String?,
-    bio: json['bio'] as String?,
-    location: json['location'] as String?,
-    company: json['company'] as String?,
-    htmlUrl: json['htmlUrl'] as String?,
-    publicRepos: json['publicRepos'] as int?,
-    followers: json['followers'] as int?,
-    following: json['following'] as int?,
-    createdAt: json['createdAt'] != null
-        ? DateTime.parse(json['createdAt'] as String)
-        : null,
-  );
-
   @override
   String toString() => 'OAuthUser(id: $id, login: $login, name: $name)';
 
   @override
-  bool operator ==(Object other) =>
+  bool operator ==(final Object other) =>
       identical(this, other) ||
       other is OAuthUser &&
           runtimeType == other.runtimeType &&
