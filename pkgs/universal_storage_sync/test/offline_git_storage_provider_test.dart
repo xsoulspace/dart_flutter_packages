@@ -362,12 +362,13 @@ void main() {
       final provider = OfflineGitStorageProvider();
       storageService = StorageService(provider);
 
-      await storageService.initialize({
-        'localPath': tempDir,
-        'branchName': 'main',
-        'authorName': 'Test User',
-        'authorEmail': 'test@example.com',
-      });
+      final config = OfflineGitConfig(
+        localPath: tempDir.path,
+        branchName: 'main',
+        authorName: 'Test User',
+        authorEmail: 'test@example.com',
+      );
+      await storageService.initializeWithConfig(config);
     });
 
     tearDown(() async {

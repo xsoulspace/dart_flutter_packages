@@ -11,16 +11,6 @@ class StorageService {
   StorageService(this._provider);
   final StorageProvider _provider;
 
-  /// {@template storage_service.initialize}
-  /// Initializes the underlying storage provider with [config].
-  /// Must be called before other operations.
-  ///
-  /// @deprecated Use [initializeWithConfig] instead for better type safety.
-  /// {@endtemplate}
-  @Deprecated('Use initializeWithConfig instead for better type safety')
-  Future<void> initialize(final Map<String, dynamic> config) =>
-      _provider.init(config);
-
   /// {@template storage_service.initializeWithConfig}
   /// Initializes the underlying storage provider with typed [config].
   /// Must be called before other operations.

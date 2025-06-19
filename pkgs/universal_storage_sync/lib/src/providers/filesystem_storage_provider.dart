@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:path/path.dart' as path;
 
+import '../config/storage_config.dart';
 import '../exceptions/storage_exceptions.dart';
 import '../storage_provider.dart';
 
@@ -16,15 +17,14 @@ class FileSystemStorageProvider extends StorageProvider {
   var _isInitialized = false;
 
   @override
-  Future<void> init(final Map<String, dynamic> config) async {
-    final basePath = config['basePath'] as String?;
-    if (basePath == null || basePath.isEmpty) {
-      throw const AuthenticationException(
-        'basePath is required for FileSystemStorageProvider',
+  Future<void> initWithConfig(final StorageConfig config) async {
+    if (config is! FileSystemConfig) {
+      throw ArgumentError(
+        'Expected FileSystemConfig, got ${config.runtimeType}',
       );
     }
 
-    _basePath = basePath;
+    _basePath = config.basePath;
 
     // Ensure the base directory exists
     final directory = Directory(_basePath!);

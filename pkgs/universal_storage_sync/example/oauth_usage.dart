@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'package:universal_storage_sync/universal_storage_sync.dart';
 
 /// Example demonstrating GitHub OAuth authentication with automatic repository selection.

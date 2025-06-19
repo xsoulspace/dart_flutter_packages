@@ -33,16 +33,6 @@ class GitHubApiStorageProvider extends StorageProvider {
   GitHubRepositoryConfig? _repositoryConfig;
 
   @override
-  Future<void> init(final Map<String, dynamic> config) async {
-    // Try to parse as GitHubApiConfig first
-    if (config.containsKey('oauthConfig')) {
-      await _initializeWithOAuth(config);
-    } else {
-      await _initializeWithToken(config);
-    }
-  }
-
-  @override
   Future<void> initWithConfig(final StorageConfig config) async {
     if (config is GitHubApiConfig) {
       if (config.usesOAuth) {
@@ -100,81 +90,6 @@ class GitHubApiStorageProvider extends StorageProvider {
         _repositoryName == null) {
       throw const ConfigurationException(
         'authToken, repositoryOwner, and repositoryName are required for manual mode',
-      );
-    }
-
-    // Initialize GitHub client
-    _github = GitHub(auth: Authentication.withToken(_authToken));
-    await _initializeRepository();
-    _isInitialized = true;
-  }
-
-  /// Initialize with OAuth from map (legacy)
-  Future<void> _initializeWithOAuth(final Map<String, dynamic> config) async {
-    final oauthConfigMap = config['oauthConfig'] as Map<String, dynamic>;
-    _oauthConfig = GitHubOAuthConfig(
-      clientId: oauthConfigMap['clientId'] as String,
-      clientSecret: oauthConfigMap['clientSecret'] as String?,
-      redirectUri: oauthConfigMap['redirectUri'] as String?,
-      scopes:
-          (oauthConfigMap['scopes'] as List<dynamic>?)?.cast<String>() ??
-          ['repo'],
-      deviceFlowEnabled: oauthConfigMap['deviceFlowEnabled'] as bool? ?? true,
-    );
-
-    if (config.containsKey('repositoryConfig')) {
-      final repoConfigMap = config['repositoryConfig'] as Map<String, dynamic>;
-      _repositoryConfig = GitHubRepositoryConfig(
-        allowSelection: repoConfigMap['allowSelection'] as bool? ?? true,
-        allowCreation: repoConfigMap['allowCreation'] as bool? ?? true,
-        defaultName: repoConfigMap['defaultName'] as String?,
-        defaultDescription: repoConfigMap['defaultDescription'] as String?,
-        defaultPrivate: repoConfigMap['defaultPrivate'] as bool? ?? true,
-        templateRepository: repoConfigMap['templateRepository'] as String?,
-        suggestedName: repoConfigMap['suggestedName'] as String?,
-      );
-    }
-
-    _branchName = config['branchName'] as String? ?? 'main';
-
-    // Start OAuth flow
-    final authResult = await _performOAuthFlow();
-    _authToken = authResult.accessToken;
-
-    // Handle repository selection/creation
-    if (_repositoryConfig != null) {
-      final repoResult = await _handleRepositorySelection();
-      _repositoryOwner = repoResult.owner;
-      _repositoryName = repoResult.name;
-    } else {
-      _repositoryOwner = config['repositoryOwner'] as String?;
-      _repositoryName = config['repositoryName'] as String?;
-
-      if (_repositoryOwner == null || _repositoryName == null) {
-        throw const ConfigurationException(
-          'Repository must be specified or repository selection must be enabled',
-        );
-      }
-    }
-
-    // Initialize GitHub client
-    _github = GitHub(auth: Authentication.withToken(_authToken));
-    await _initializeRepository();
-    _isInitialized = true;
-  }
-
-  /// Initialize with token from map (legacy)
-  Future<void> _initializeWithToken(final Map<String, dynamic> config) async {
-    _authToken = config['authToken'] as String?;
-    _repositoryOwner = config['repositoryOwner'] as String?;
-    _repositoryName = config['repositoryName'] as String?;
-    _branchName = config['branchName'] as String? ?? 'main';
-
-    if (_authToken == null ||
-        _repositoryOwner == null ||
-        _repositoryName == null) {
-      throw const ConfigurationException(
-        'authToken, repositoryOwner, and repositoryName are required',
       );
     }
 

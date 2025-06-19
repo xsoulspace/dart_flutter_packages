@@ -173,12 +173,13 @@ void main() {
       });
 
       test('should sync through StorageService', () async {
-        await storageService.initialize({
-          'localPath': tempDir,
-          'branchName': 'main',
-          'authorName': 'Test User',
-          'authorEmail': 'test@example.com',
-        });
+        final config = OfflineGitConfig(
+          localPath: tempDir.path,
+          branchName: 'main',
+          authorName: 'Test User',
+          authorEmail: 'test@example.com',
+        );
+        await storageService.initializeWithConfig(config);
 
         // Should not throw for provider without remote URL
         // (StorageService handles this gracefully)

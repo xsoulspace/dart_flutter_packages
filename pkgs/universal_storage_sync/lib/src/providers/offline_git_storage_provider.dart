@@ -42,50 +42,32 @@ class OfflineGitStorageProvider extends StorageProvider {
   var _isInitialized = false;
 
   @override
-  Future<void> init(final Map<String, dynamic> config) async {
-    final localPath = config['localPath'] as String?;
-    final branchName = config['branchName'] as String?;
-
-    if (localPath == null || localPath.isEmpty) {
-      throw const AuthenticationException(
-        'localPath is required for OfflineGitStorageProvider',
+  Future<void> initWithConfig(final StorageConfig config) async {
+    if (config is! OfflineGitConfig) {
+      throw ArgumentError(
+        'Expected OfflineGitConfig, got ${config.runtimeType}',
       );
     }
 
-    if (branchName == null || branchName.isEmpty) {
-      throw const AuthenticationException(
-        'branchName is required for OfflineGitStorageProvider',
-      );
-    }
-
-    _localPath = localPath;
-    _branchName = branchName;
-    _authorName = config['authorName'] as String?;
-    _authorEmail = config['authorEmail'] as String?;
+    _localPath = config.localPath;
+    _branchName = config.branchName;
+    _authorName = config.authorName;
+    _authorEmail = config.authorEmail;
 
     // Remote configuration
-    _remoteUrl = config['remoteUrl'] as String?;
-    _remoteName = config['remoteName'] as String? ?? 'origin';
-    _remoteType = config['remoteType'] as String?;
-    _remoteApiSettings = config['remoteApiSettings'] as Map<String, dynamic>?;
+    _remoteUrl = config.remoteUrl;
+    _remoteName = config.remoteName;
+    _remoteType = config.remoteType;
+    _remoteApiSettings = config.remoteApiSettings;
 
     // Sync strategies
-    _defaultPullStrategy = config['defaultPullStrategy'] as String? ?? 'merge';
-    _defaultPushStrategy =
-        config['defaultPushStrategy'] as String? ?? 'rebase-local';
-
-    // Parse conflict resolution strategy
-    final conflictResolutionStr = config['conflictResolution'] as String?;
-    if (conflictResolutionStr != null) {
-      _conflictResolution = ConflictResolutionStrategy.values.firstWhere(
-        (final e) => e.name == conflictResolutionStr,
-        orElse: () => ConflictResolutionStrategy.clientAlwaysRight,
-      );
-    }
+    _defaultPullStrategy = config.defaultPullStrategy;
+    _defaultPushStrategy = config.defaultPushStrategy;
+    _conflictResolution = config.conflictResolution;
 
     // Authentication
-    _sshKeyPath = config['sshKeyPath'] as String?;
-    _httpsToken = config['httpsToken'] as String?;
+    _sshKeyPath = config.sshKeyPath;
+    _httpsToken = config.httpsToken;
 
     await _initializeRepository();
     _isInitialized = true;

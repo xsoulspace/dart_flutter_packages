@@ -256,7 +256,7 @@ class AppState extends ChangeNotifier {
     final config = FileSystemConfig.builder().basePath(workspacePath!).build();
 
     _storageService = StorageService(FileSystemStorageProvider());
-    await _storageService!.initialize(config.toMap());
+    await _storageService!.initializeWithConfig(config);
   }
 
   String _todoToYaml(Todo todo) {

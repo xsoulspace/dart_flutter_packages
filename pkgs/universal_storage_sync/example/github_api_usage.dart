@@ -15,12 +15,14 @@ Future<void> main() async {
 
   try {
     // Configure the provider with GitHub API settings
-    await provider.init({
-      'authToken': 'your_github_personal_access_token_here',
-      'repositoryOwner': 'your-username',
-      'repositoryName': 'your-repository-name',
-      'branchName': 'main', // Optional, defaults to 'main'
-    });
+    final config = GitHubApiConfig.builder()
+        .authToken('your_github_personal_access_token_here')
+        .repositoryOwner('your-username')
+        .repositoryName('your-repository-name')
+        .branchName('main')
+        .build();
+
+    await provider.initWithConfig(config);
 
     print('✅ GitHub API provider initialized successfully');
 
@@ -151,17 +153,17 @@ Future<void> storageServiceExample() async {
   final service = StorageService(GitHubApiStorageProvider());
 
   try {
-    await service.initialize({
-      'authToken': 'your_github_personal_access_token_here',
-      'repositoryOwner': 'your-username',
-      'repositoryName': 'your-repository-name',
-    });
+    final config = GitHubApiConfig.builder()
+        .authToken('your_github_personal_access_token_here')
+        .repositoryOwner('your-username')
+        .repositoryName('your-repository-name')
+        .branchName('main')
+        .build();
+
+    await service.initializeWithConfig(config);
 
     // Use StorageService methods
-    await service.saveFile(
-      'service-example.txt',
-      'Hello from StorageService!',
-    );
+    await service.saveFile('service-example.txt', 'Hello from StorageService!');
     final content = await service.readFile('service-example.txt');
     print('Content via StorageService: $content');
 

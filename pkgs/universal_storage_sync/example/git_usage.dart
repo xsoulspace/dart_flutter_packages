@@ -19,7 +19,7 @@ Future<void> main() async {
   }
 }
 
-Future<void> demonstrateGitFeatures(String repoPath) async {
+Future<void> demonstrateGitFeatures(final String repoPath) async {
   print('📁 Repository path: $repoPath\n');
 
   // 1. Repository Initialization
@@ -36,7 +36,13 @@ Future<void> demonstrateGitFeatures(String repoPath) async {
     'authorEmail': 'demo@example.com',
   };
 
-  await storageService.initialize(config);
+  const offlineGitConfig = OfflineGitConfig(
+    localPath: './my_git_repo',
+    branchName: 'main',
+    authorName: 'Your Name',
+    authorEmail: 'your.email@example.com',
+  );
+  await storageService.initializeWithConfig(offlineGitConfig);
   print('✅ Git repository initialized successfully');
   print('📂 Branch: main');
   print('👤 Author: Demo User <demo@example.com>\n');
@@ -128,7 +134,8 @@ This is a sample project demonstrating Git-based storage.
   // Manually modify the README (simulating external change)
   final readmeFile = File('$repoPath/$readmePath');
   await readmeFile.writeAsString(
-      '# Corrupted Content\n\nThis file was modified externally.');
+    '# Corrupted Content\n\nThis file was modified externally.',
+  );
 
   print('⚠️  README.md was modified externally');
   final corruptedContent = await storageService.readFile(readmePath);
@@ -140,34 +147,27 @@ This is a sample project demonstrating Git-based storage.
 
   final restoredContent = await storageService.readFile(readmePath);
   print(
-      '📄 Restored content preview: ${restoredContent?.substring(0, 50)}...\n');
+    '📄 Restored content preview: ${restoredContent?.substring(0, 50)}...\n',
+  );
 
   // 4. Advanced Git Operations
   print('4️⃣ Advanced Git Operations');
   print('=' * 40);
 
   // Create a subdirectory with files
-  await storageService.saveFile(
-    'src/main.dart',
-    '''
+  await storageService.saveFile('src/main.dart', '''
 void main() {
   print('Hello, Git World!');
 }
-''',
-    message: 'feat: Add main application entry point',
-  );
+''', message: 'feat: Add main application entry point');
 
-  await storageService.saveFile(
-    'src/utils/helpers.dart',
-    '''
+  await storageService.saveFile('src/utils/helpers.dart', '''
 class StringHelper {
   static String capitalize(String text) {
     return text.isEmpty ? text : text[0].toUpperCase() + text.substring(1);
   }
 }
-''',
-    message: 'feat: Add string helper utilities',
-  );
+''', message: 'feat: Add string helper utilities');
 
   print('✅ Created source files in subdirectories');
 
@@ -211,7 +211,8 @@ class StringHelper {
   print('=' * 40);
 
   print(
-      '🔄 Sync support: ${provider.supportsSync ? "✅ Enabled" : "❌ Disabled"}');
+    '🔄 Sync support: ${provider.supportsSync ? "✅ Enabled" : "❌ Disabled"}',
+  );
   print('📡 Remote sync will be available in Stage 3');
 
   try {
@@ -231,7 +232,10 @@ class StringHelper {
 }
 
 /// Helper function to recursively list all files
-Future<List<String>> _listAllFiles(StorageService service, String dir) async {
+Future<List<String>> _listAllFiles(
+  final StorageService service,
+  final String dir,
+) async {
   final allFiles = <String>[];
   final items = await service.listDirectory(dir);
 
