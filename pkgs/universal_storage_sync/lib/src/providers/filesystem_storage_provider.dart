@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart' as path;
@@ -11,11 +10,10 @@ import '../storage_provider.dart';
 /// Supports both desktop/mobile (using dart:io) and web (using IndexedDB simulation).
 /// {@endtemplate}
 class FileSystemStorageProvider extends StorageProvider {
-  String? _basePath;
-  bool _isInitialized = false;
-
   /// {@macro filesystem_storage_provider}
   FileSystemStorageProvider();
+  String? _basePath;
+  bool _isInitialized = false;
 
   @override
   Future<void> init(Map<String, dynamic> config) async {
@@ -38,9 +36,7 @@ class FileSystemStorageProvider extends StorageProvider {
   }
 
   @override
-  Future<bool> isAuthenticated() async {
-    return _isInitialized && _basePath != null;
-  }
+  Future<bool> isAuthenticated() async => _isInitialized && _basePath != null;
 
   @override
   Future<String> createFile(
@@ -64,7 +60,7 @@ class FileSystemStorageProvider extends StorageProvider {
       await parentDir.create(recursive: true);
     }
 
-    await file.writeAsString(content, encoding: utf8);
+    await file.writeAsString(content);
     return fullPath;
   }
 
@@ -80,7 +76,7 @@ class FileSystemStorageProvider extends StorageProvider {
     }
 
     try {
-      return await file.readAsString(encoding: utf8);
+      return await file.readAsString();
     } catch (e) {
       throw NetworkException('Failed to read file at $filePath: $e');
     }
@@ -101,7 +97,7 @@ class FileSystemStorageProvider extends StorageProvider {
       throw FileNotFoundException('File not found at path: $filePath');
     }
 
-    await file.writeAsString(content, encoding: utf8);
+    await file.writeAsString(content);
     return fullPath;
   }
 
@@ -136,7 +132,7 @@ class FileSystemStorageProvider extends StorageProvider {
     final relativePaths = <String>[];
 
     for (final entity in entities) {
-      final relativePath = path.relative(entity.path, from: _basePath!);
+      final relativePath = path.relative(entity.path, from: _basePath);
       relativePaths.add(relativePath);
     }
 

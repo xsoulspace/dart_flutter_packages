@@ -36,11 +36,10 @@ class FileSystemConfig extends StorageConfig {
 /// Builder for creating FileSystemConfig instances with validation.
 /// {@endtemplate}
 class FileSystemConfigBuilder {
-  String? _basePath;
-  String? _databaseName;
-
   /// {@macro filesystem_config_builder}
   FileSystemConfigBuilder();
+  String? _basePath;
+  String? _databaseName;
 
   /// Sets the base path for file operations
   FileSystemConfigBuilder basePath(String path) {

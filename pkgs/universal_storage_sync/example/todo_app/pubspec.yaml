@@ -47,6 +47,12 @@ dependencies:
   uuid: ^4.2.0
   path: ^1.8.3
 
+  # Additional dependencies
+  universal_storage_sync_utils:
+    path: ../../../universal_storage_sync_utils
+
+  cupertino_icons: ^1.0.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
