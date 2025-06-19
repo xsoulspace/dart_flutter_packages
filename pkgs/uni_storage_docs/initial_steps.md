@@ -39,7 +39,7 @@ dependencies:
 **File:** `lib/src/providers/oauth_provider.dart`
 
 ```dart
-import '../models/models.dart';
+import '../../models/models.dart';
 
 /// Base interface for OAuth providers
 abstract class OAuthProvider {
@@ -71,7 +71,7 @@ abstract class OAuthProvider {
 **File:** `lib/src/services/repository_service.dart`
 
 ```dart
-import '../models/models.dart';
+import '../../models/models.dart';
 
 /// Service for managing repositories
 abstract class RepositoryService {
@@ -194,10 +194,10 @@ import 'package:oauth2/oauth2.dart' as oauth2;
 import 'package:oauth2_client/github_oauth2_client.dart';
 import 'package:oauth2_client/access_token_response.dart';
 
-import '../providers/oauth_provider.dart';
-import '../models/models.dart';
-import '../exceptions/exceptions.dart';
-import '../storage/storage.dart';
+import '../../providers/oauth_provider.dart';
+import '../../models/models.dart';
+import '../../exceptions/exceptions.dart';
+import '../../storage/storage.dart';
 
 /// GitHub OAuth implementation using oauth2_client
 class GitHubOAuthProvider implements OAuthProvider {
@@ -326,10 +326,10 @@ class GitHubOAuthProvider implements OAuthProvider {
 import 'dart:convert';
 import 'package:github/github.dart';
 
-import '../services/repository_service.dart';
-import '../models/models.dart';
-import '../exceptions/exceptions.dart';
-import 'github_oauth_provider.dart';
+import '../../services/repository_service.dart';
+import '../../models/models.dart';
+import '../../exceptions/exceptions.dart';
+import '../docs/github_oauth_provider.dart'vider.dart';
 
 /// GitHub repository management service
 class GitHubRepositoryService implements RepositoryService {
@@ -464,7 +464,7 @@ class GitHubRepositoryService implements RepositoryService {
 **File:** `lib/src/storage/credential_storage.dart`
 
 ```dart
-import '../models/models.dart';
+import '../../models/models.dart';
 
 /// Stored OAuth credentials
 class StoredCredentials {
@@ -531,8 +531,8 @@ abstract class CredentialStorage {
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-import 'credential_storage.dart';
-import '../models/models.dart';
+import '../docs/credential_storage.dart'orage.dart';
+import '../../models/models.dart';
 
 /// Secure credential storage using platform keychain/keystore
 class SecureCredentialStorage implements CredentialStorage {
