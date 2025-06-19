@@ -24,33 +24,33 @@ void main() {
     });
   });
 
-  group('GitHubOAuthConfig', () {
+  group('OAuthConfig GitHub', () {
     test('should create valid configuration', () {
-      const config = GitHubOAuthConfig(
-        clientId: 'test_client_id',
-        clientSecret: 'test_client_secret',
-        redirectUri: 'test://callback',
-        customUriScheme: 'test',
+      final config = OAuthConfig.github(
+        clientId: const OAuthClientId('test_client_id'),
+        clientSecret: const OAuthClientSecret('test_client_secret'),
+        redirectUri: const OAuthRedirectUri('test://callback'),
+        customUriScheme: const OAuthCustomUriScheme('test'),
       );
 
       expect(config.platform, GitPlatform.github);
-      expect(config.clientId, 'test_client_id');
-      expect(config.clientSecret, 'test_client_secret');
-      expect(config.redirectUri, 'test://callback');
-      expect(config.customUriScheme, 'test');
-      expect(config.scopes, ['repo', 'user:email']);
+      expect(config.clientId.value, 'test_client_id');
+      expect(config.clientSecret.value, 'test_client_secret');
+      expect(config.redirectUri.value, 'test://callback');
+      expect(config.customUriScheme.value, 'test');
+      expect(config.scopes.value, ['repo', 'user:email']);
     });
 
     test('should allow custom scopes', () {
-      const config = GitHubOAuthConfig(
-        clientId: 'test_client_id',
-        clientSecret: 'test_client_secret',
-        redirectUri: 'test://callback',
-        customUriScheme: 'test',
-        scopes: ['read:user', 'public_repo'],
+      final config = OAuthConfig.github(
+        clientId: const OAuthClientId('test_client_id'),
+        clientSecret: const OAuthClientSecret('test_client_secret'),
+        redirectUri: const OAuthRedirectUri('test://callback'),
+        customUriScheme: const OAuthCustomUriScheme('test'),
+        scopes: const OAuthScopes(['read:user', 'public_repo']),
       );
 
-      expect(config.scopes, ['read:user', 'public_repo']);
+      expect(config.scopes.value, ['read:user', 'public_repo']);
     });
   });
 
@@ -61,7 +61,7 @@ void main() {
         'login': 'testuser',
         'email': 'test@example.com',
         'name': 'Test User',
-        'avatarUrl': 'https://example.com/avatar.png',
+        'avatar_url': 'https://example.com/avatar.png',
       };
 
       final user = OAuthUser.fromJson(json);
@@ -74,10 +74,7 @@ void main() {
     });
 
     test('should handle missing optional fields', () {
-      final json = {
-        'id': '12345',
-        'login': 'testuser',
-      };
+      final json = {'id': '12345', 'login': 'testuser'};
 
       final user = OAuthUser.fromJson(json);
 
@@ -89,12 +86,12 @@ void main() {
     });
 
     test('should convert to JSON', () {
-      const user = OAuthUser(
-        id: '12345',
-        login: 'testuser',
-        email: 'test@example.com',
-        name: 'Test User',
-      );
+      const user = OAuthUser({
+        'id': '12345',
+        'login': 'testuser',
+        'email': 'test@example.com',
+        'name': 'Test User',
+      });
 
       final json = user.toJson();
 
@@ -107,8 +104,8 @@ void main() {
 
   group('StoredCredentials', () {
     test('should detect expired credentials', () {
-      final expiredCredentials = StoredCredentials(
-        accessToken: 'token',
+      final expiredCredentials = StoredCredentials.create(
+        accessToken: const OAuthAccessToken('token'),
         expiresAt: DateTime.now().subtract(const Duration(hours: 1)),
       );
 
@@ -116,8 +113,8 @@ void main() {
     });
 
     test('should detect valid credentials', () {
-      final validCredentials = StoredCredentials(
-        accessToken: 'token',
+      final validCredentials = StoredCredentials.create(
+        accessToken: const OAuthAccessToken('token'),
         expiresAt: DateTime.now().add(const Duration(hours: 1)),
       );
 
@@ -125,17 +122,17 @@ void main() {
     });
 
     test('should handle null expiration', () {
-      const credentialsWithoutExpiration = StoredCredentials(
-        accessToken: 'token',
+      final credentialsWithoutExpiration = StoredCredentials.create(
+        accessToken: const OAuthAccessToken('token'),
       );
 
       expect(credentialsWithoutExpiration.isExpired, isFalse);
     });
 
     test('should serialize to and from JSON', () {
-      final credentials = StoredCredentials(
-        accessToken: 'access_token',
-        refreshToken: 'refresh_token',
+      final credentials = StoredCredentials.create(
+        accessToken: const OAuthAccessToken('access_token'),
+        refreshToken: const OAuthRefreshToken('refresh_token'),
         expiresAt: DateTime.parse('2024-12-31T23:59:59Z'),
         scopes: ['repo', 'user:email'],
       );
@@ -143,8 +140,8 @@ void main() {
       final json = credentials.toJson();
       final restored = StoredCredentials.fromJson(json);
 
-      expect(restored.accessToken, credentials.accessToken);
-      expect(restored.refreshToken, credentials.refreshToken);
+      expect(restored.accessToken.value, credentials.accessToken.value);
+      expect(restored.refreshToken?.value, credentials.refreshToken?.value);
       expect(restored.expiresAt, credentials.expiresAt);
       expect(restored.scopes, credentials.scopes);
     });
@@ -179,20 +176,25 @@ void main() {
 
   group('Exceptions', () {
     test('AuthenticationException should format message correctly', () {
-      const exception =
-          AuthenticationException('Login failed', 'Invalid credentials');
+      const exception = AuthenticationException(
+        'Login failed',
+        'Invalid credentials',
+      );
 
       expect(exception.message, 'Login failed');
       expect(exception.details, 'Invalid credentials');
-      expect(exception.toString(),
-          'AuthenticationException: Login failed (Invalid credentials)');
+      expect(
+        exception.toString(),
+        'AuthenticationException: Login failed (Invalid credentials)',
+      );
     });
 
     test('ApiException should have convenience constructors', () {
       const networkException = ApiException.network('Connection timeout');
       const unauthorizedException = ApiException.unauthorized();
-      const rateLimitedException =
-          ApiException.rateLimited('Too many requests');
+      const rateLimitedException = ApiException.rateLimited(
+        'Too many requests',
+      );
 
       expect(networkException.message, 'Network error occurred');
       expect(networkException.details, 'Connection timeout');
