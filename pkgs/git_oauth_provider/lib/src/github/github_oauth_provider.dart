@@ -23,7 +23,7 @@ class GitHubOAuthProvider implements OAuthProvider {
   GitPlatform get platform => GitPlatform.github;
 
   @override
-  OAuthConfig get config => _config;
+  OAuthConfig get config => _config.config;
 
   @override
   Future<OAuthResult> authenticate() async {
@@ -45,9 +45,11 @@ class GitHubOAuthProvider implements OAuthProvider {
         );
       }
 
-      final credentials = StoredCredentials(
-        accessToken: tokenResponse.accessToken!,
-        refreshToken: tokenResponse.refreshToken,
+      final credentials = StoredCredentials.create(
+        accessToken: OAuthAccessToken(tokenResponse.accessToken!),
+        refreshToken: tokenResponse.refreshToken != null
+            ? OAuthRefreshToken(tokenResponse.refreshToken!)
+            : null,
         expiresAt: tokenResponse.expirationDate,
         scopes: _config.scopes,
       );
@@ -55,8 +57,13 @@ class GitHubOAuthProvider implements OAuthProvider {
       await _storage.storeCredentials(platform, credentials);
 
       final user = await getCurrentUser();
+      if (user == null) {
+        throw const AuthenticationException(
+          'Failed to get user information after authentication.',
+        );
+      }
 
-      return OAuthResult(credentials: credentials, user: user);
+      return OAuthResult.success(credentials: credentials, user: user);
     } on Exception catch (e) {
       throw AuthenticationException(
         'GitHub authentication failed',
@@ -100,23 +107,7 @@ class GitHubOAuthProvider implements OAuthProvider {
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return OAuthUser(
-          id: data['id'].toString(),
-          login: data['login'] as String,
-          email: data['email'] as String?,
-          name: data['name'] as String?,
-          avatarUrl: data['avatar_url'] as String?,
-          bio: data['bio'] as String?,
-          location: data['location'] as String?,
-          company: data['company'] as String?,
-          htmlUrl: data['html_url'] as String?,
-          publicRepos: data['public_repos'] as int?,
-          followers: data['followers'] as int?,
-          following: data['following'] as int?,
-          createdAt: data['created_at'] != null
-              ? DateTime.parse(data['created_at'] as String)
-              : null,
-        );
+        return OAuthUser.fromJson(data);
       } else if (response.statusCode == 401) {
         throw const ApiException.unauthorized();
       } else {
@@ -129,7 +120,6 @@ class GitHubOAuthProvider implements OAuthProvider {
       if (e is ApiException) rethrow;
       throw ApiException('Failed to get user information', e.toString());
     }
-    return null;
   }
 
   Future<oauth2.Client?> _getAuthenticatedClient() async {
@@ -139,8 +129,8 @@ class GitHubOAuthProvider implements OAuthProvider {
     if (credentials == null) return null;
 
     final oauth2Credentials = oauth2.Credentials(
-      credentials.accessToken,
-      refreshToken: credentials.refreshToken,
+      credentials.accessToken.value,
+      refreshToken: credentials.refreshToken?.value,
       expiration: credentials.expiresAt,
       scopes: credentials.scopes,
     );

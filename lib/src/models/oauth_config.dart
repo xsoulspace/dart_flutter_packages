@@ -7,7 +7,7 @@ import 'git_platform.dart';
 /// Type-safe wrapper around OAuth client identifiers to prevent mixing
 /// with other string types at compile time.
 extension type const OAuthClientId(String value) {
-  factory OAuthClientId.fromJson(final value) =>
+  factory OAuthClientId.fromJson(final dynamic value) =>
       OAuthClientId(jsonDecodeString(value));
 
   String toJson() => value;
@@ -26,7 +26,7 @@ extension type const OAuthClientId(String value) {
 /// Type-safe wrapper around OAuth client secrets to prevent mixing
 /// with other string types at compile time.
 extension type const OAuthClientSecret(String value) {
-  factory OAuthClientSecret.fromJson(final value) =>
+  factory OAuthClientSecret.fromJson(final dynamic value) =>
       OAuthClientSecret(jsonDecodeString(value));
 
   String toJson() => value;
@@ -45,7 +45,7 @@ extension type const OAuthClientSecret(String value) {
 /// Type-safe wrapper around OAuth redirect URIs to prevent mixing
 /// with other string types at compile time.
 extension type const OAuthRedirectUri(String value) {
-  factory OAuthRedirectUri.fromJson(final value) =>
+  factory OAuthRedirectUri.fromJson(final dynamic value) =>
       OAuthRedirectUri(jsonDecodeString(value));
 
   String toJson() => value;
@@ -64,7 +64,7 @@ extension type const OAuthRedirectUri(String value) {
 /// Type-safe wrapper around custom URI schemes to prevent mixing
 /// with other string types at compile time.
 extension type const OAuthCustomUriScheme(String value) {
-  factory OAuthCustomUriScheme.fromJson(final value) =>
+  factory OAuthCustomUriScheme.fromJson(final dynamic value) =>
       OAuthCustomUriScheme(jsonDecodeString(value));
 
   String toJson() => value;
@@ -83,13 +83,13 @@ extension type const OAuthCustomUriScheme(String value) {
 /// Type-safe wrapper around OAuth scopes with convenient methods
 /// for managing scope collections.
 extension type const OAuthScopes(List<String> value) {
-  factory OAuthScopes.fromJson(final jsonData) {
+  factory OAuthScopes.fromJson(final dynamic jsonData) {
     final list = jsonDecodeList(jsonData);
     return OAuthScopes(jsonDecodeListAs<String>(list));
   }
 
   /// Create scopes from individual scope strings
-  factory OAuthScopes.from(final List<String> scopes) => OAuthScopes(scopes);
+  factory OAuthScopes.from(List<String> scopes) => OAuthScopes(scopes);
 
   List<String> toJson() => value;
 
@@ -98,15 +98,15 @@ extension type const OAuthScopes(List<String> value) {
   int get length => value.length;
 
   /// Check if a specific scope is included
-  bool contains(final String scope) => value.contains(scope);
+  bool contains(String scope) => value.contains(scope);
 
   /// Add a scope if not already present
-  OAuthScopes addScope(final String scope) =>
+  OAuthScopes addScope(String scope) =>
       contains(scope) ? this : OAuthScopes([...value, scope]);
 
   /// Remove a scope if present
-  OAuthScopes removeScope(final String scope) =>
-      OAuthScopes(value.where((final s) => s != scope).toList());
+  OAuthScopes removeScope(String scope) =>
+      OAuthScopes(value.where((s) => s != scope).toList());
 
   /// Join scopes into a space-separated string (common OAuth format)
   String get asSpaceSeparatedString => value.join(' ');
@@ -131,7 +131,7 @@ extension type const OAuthScopes(List<String> value) {
 ///
 /// Uses from_json_to_json for type-safe JSON handling.
 extension type const OAuthConfig(Map<String, dynamic> value) {
-  factory OAuthConfig.fromJson(final jsonData) {
+  factory OAuthConfig.fromJson(final dynamic jsonData) {
     final map = jsonDecodeMap(jsonData);
     return OAuthConfig(map);
   }
@@ -188,7 +188,7 @@ extension type const OAuthConfig(Map<String, dynamic> value) {
   GitPlatform get platform {
     final platformName = jsonDecodeString(value['platform']);
     return GitPlatform.values.firstWhere(
-      (final p) => p.name == platformName,
+      (p) => p.name == platformName,
       orElse: () => GitPlatform.github,
     );
   }
@@ -223,47 +223,4 @@ extension type const OAuthConfig(Map<String, dynamic> value) {
   Map<String, dynamic> toJson() => value;
 
   static const empty = OAuthConfig({});
-}
-
-/// GitHub-specific OAuth configuration.
-///
-/// Extension type that provides a convenient way to create GitHub OAuth configurations
-/// with sensible defaults for GitHub-specific use cases.
-extension type const GitHubOAuthConfig._(OAuthConfig config) {
-  /// Create a GitHub OAuth configuration
-  factory GitHubOAuthConfig({
-    required final String clientId,
-    required final String clientSecret,
-    required final String redirectUri,
-    required final String customUriScheme,
-    final List<String>? scopes,
-  }) => GitHubOAuthConfig._(
-    OAuthConfig.github(
-      clientId: OAuthClientId(clientId),
-      clientSecret: OAuthClientSecret(clientSecret),
-      redirectUri: OAuthRedirectUri(redirectUri),
-      customUriScheme: OAuthCustomUriScheme(customUriScheme),
-      scopes: scopes != null ? OAuthScopes(scopes) : null,
-    ),
-  );
-
-  /// OAuth client ID
-  String get clientId => config.clientId.value;
-
-  /// OAuth client secret
-  String get clientSecret => config.clientSecret.value;
-
-  /// OAuth redirect URI
-  String get redirectUri => config.redirectUri.value;
-
-  /// Custom URI scheme for mobile deep links
-  String get customUriScheme => config.customUriScheme.value;
-
-  /// OAuth scopes requested
-  List<String> get scopes => config.scopes.value;
-
-  /// Git platform (always GitHub)
-  GitPlatform get platform => config.platform;
-
-  Map<String, dynamic> toJson() => config.toJson();
 }

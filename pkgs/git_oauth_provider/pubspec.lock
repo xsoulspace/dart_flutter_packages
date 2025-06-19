@@ -288,6 +288,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  from_json_to_json:
+    dependency: "direct main"
+    description:
+      name: from_json_to_json
+      sha256: "70412f0aaf5d99b5839f8dfcb24a0c86efc45fbcd488e4b5558c75d9fb4cad98"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.2.0"
   frontend_server_client:
     dependency: transitive
     description:
@@ -352,6 +360,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.5"
+  is_dart_empty_or_not:
+    dependency: transitive
+    description:
+      name: is_dart_empty_or_not
+      sha256: "31fef508da3e89ab8cd4634d7149f72a0a2e54c841c96b72f393dfc882fdde81"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.2.3"
   js:
     dependency: transitive
     description:

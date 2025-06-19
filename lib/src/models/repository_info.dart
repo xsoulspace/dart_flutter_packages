@@ -5,7 +5,7 @@ import 'package:from_json_to_json/from_json_to_json.dart';
 /// Type-safe wrapper around repository identifiers to prevent mixing
 /// with other string types at compile time.
 extension type const RepositoryId(String value) {
-  factory RepositoryId.fromJson(final value) =>
+  factory RepositoryId.fromJson(final dynamic value) =>
       RepositoryId(jsonDecodeString(value));
 
   String toJson() => value;
@@ -21,24 +21,18 @@ extension type const RepositoryId(String value) {
 /// Extension type that represents repository owner type.
 ///
 /// Distinguishes between user and organization accounts in a type-safe manner.
-enum RepositoryOwnerType {
-  user('User'),
-  organization('Organization'),
-  unknown('Unknown');
-
-  const RepositoryOwnerType(this.value);
-
-  factory RepositoryOwnerType.fromJson(final String value) =>
-      RepositoryOwnerType.values.firstWhere(
-        (final type) => type.value == value,
-        orElse: () => unknown,
-      );
-  final String value;
+extension type const RepositoryOwnerType(String value) {
+  factory RepositoryOwnerType.fromJson(final dynamic value) =>
+      RepositoryOwnerType(jsonDecodeString(value));
 
   String toJson() => value;
 
-  bool get isUser => this == user;
-  bool get isOrganization => this == organization;
+  bool get isUser => value == 'User';
+  bool get isOrganization => value == 'Organization';
+
+  static const user = RepositoryOwnerType('User');
+  static const organization = RepositoryOwnerType('Organization');
+  static const unknown = RepositoryOwnerType('Unknown');
 }
 
 /// Extension type that represents a repository owner.
@@ -46,7 +40,7 @@ enum RepositoryOwnerType {
 /// Contains information about the user or organization that owns a repository.
 /// Provides type-safe access to owner data with graceful handling of missing fields.
 extension type const RepositoryOwner(Map<String, dynamic> value) {
-  factory RepositoryOwner.fromJson(final jsonData) {
+  factory RepositoryOwner.fromJson(final dynamic jsonData) {
     final map = jsonDecodeMap(jsonData);
     return RepositoryOwner(map);
   }
@@ -73,8 +67,7 @@ extension type const RepositoryOwner(Map<String, dynamic> value) {
   String get login => jsonDecodeString(value['login']);
 
   /// Type of owner (user or organization)
-  RepositoryOwnerType get type =>
-      RepositoryOwnerType.fromJson(jsonDecodeString(value['type']));
+  RepositoryOwnerType get type => RepositoryOwnerType.fromJson(value['type']);
 
   /// URL to owner's avatar image (may be null)
   String? get avatarUrl {
@@ -98,7 +91,7 @@ extension type const RepositoryOwner(Map<String, dynamic> value) {
 /// Contains permission flags for repository access levels.
 /// Used to determine what operations a user can perform on a repository.
 extension type const RepositoryPermissions(Map<String, dynamic> value) {
-  factory RepositoryPermissions.fromJson(final jsonData) {
+  factory RepositoryPermissions.fromJson(final dynamic jsonData) {
     final map = jsonDecodeMap(jsonData);
     return RepositoryPermissions(map);
   }
@@ -147,7 +140,7 @@ extension type const RepositoryPermissions(Map<String, dynamic> value) {
 ///
 /// Uses from_json_to_json for type-safe JSON handling.
 extension type const RepositoryInfo(Map<String, dynamic> value) {
-  factory RepositoryInfo.fromJson(final jsonData) {
+  factory RepositoryInfo.fromJson(final dynamic jsonData) {
     final map = jsonDecodeMap(jsonData);
     return RepositoryInfo(map);
   }
@@ -167,10 +160,6 @@ extension type const RepositoryInfo(Map<String, dynamic> value) {
     final DateTime? createdAt,
     final DateTime? updatedAt,
     final RepositoryPermissions? permissions,
-    final String? language,
-    final int starCount = 0,
-    final int forkCount = 0,
-    final int size = 0,
   }) => RepositoryInfo({
     'id': id,
     'name': name,
@@ -185,10 +174,6 @@ extension type const RepositoryInfo(Map<String, dynamic> value) {
     'created_at': createdAt?.toIso8601String(),
     'updated_at': updatedAt?.toIso8601String(),
     'permissions': permissions?.toJson(),
-    'language': language,
-    'stargazers_count': starCount,
-    'forks_count': forkCount,
-    'size': size,
   });
 
   /// Repository unique identifier
@@ -266,21 +251,6 @@ extension type const RepositoryInfo(Map<String, dynamic> value) {
 
   /// Whether user has admin access to this repository
   bool get canAdmin => permissions?.admin ?? false;
-
-  /// Primary programming language (may be null)
-  String? get language {
-    final str = jsonDecodeString(value['language']);
-    return str.isEmpty ? null : str;
-  }
-
-  /// Number of stars/stargazers
-  int get starCount => jsonDecodeInt(value['stargazers_count']);
-
-  /// Number of forks
-  int get forkCount => jsonDecodeInt(value['forks_count']);
-
-  /// Repository size in KB
-  int get size => jsonDecodeInt(value['size']);
 
   Map<String, dynamic> toJson() => value;
 

@@ -7,7 +7,7 @@ import 'package:from_json_to_json/from_json_to_json.dart';
 ///
 /// Uses from_json_to_json for type-safe JSON handling.
 extension type const OAuthUser(Map<String, dynamic> value) {
-  factory OAuthUser.fromJson(final jsonData) {
+  factory OAuthUser.fromJson(final dynamic jsonData) {
     final map = jsonDecodeMap(jsonData);
     return OAuthUser(map);
   }

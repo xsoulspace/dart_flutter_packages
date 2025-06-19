@@ -204,31 +204,32 @@ class GitHubRepositoryService implements RepositoryService {
     return _github!;
   }
 
-  RepositoryInfo _convertRepository(final gh.Repository repo) => RepositoryInfo(
-    id: repo.id.toString(),
-    name: repo.name,
-    fullName: repo.fullName,
-    owner: RepositoryOwner(
-      id: repo.owner?.id.toString() ?? '',
-      login: repo.owner?.login ?? '',
-      type: _getOwnerType(repo.owner),
-      avatarUrl: repo.owner?.avatarUrl,
-      htmlUrl: repo.owner?.htmlUrl,
-    ),
-    description: repo.description,
-    isPrivate: repo.isPrivate,
-    defaultBranch: repo.defaultBranch,
-    cloneUrl: repo.cloneUrl,
-    sshUrl: repo.sshUrl,
-    htmlUrl: repo.htmlUrl,
-    createdAt: repo.createdAt,
-    updatedAt: repo.updatedAt,
-    permissions: _convertPermissions(repo.permissions),
-    language: repo.language,
-    starCount: repo.stargazersCount,
-    forkCount: repo.forksCount,
-    size: repo.size,
-  );
+  RepositoryInfo _convertRepository(final gh.Repository repo) =>
+      RepositoryInfo.create(
+        id: repo.id.toString(),
+        name: repo.name,
+        fullName: repo.fullName,
+        owner: RepositoryOwner.create(
+          id: repo.owner?.id.toString() ?? '',
+          login: repo.owner?.login ?? '',
+          type: _getOwnerType(repo.owner),
+          avatarUrl: repo.owner?.avatarUrl,
+          htmlUrl: repo.owner?.htmlUrl,
+        ),
+        description: repo.description,
+        isPrivate: repo.isPrivate,
+        defaultBranch: repo.defaultBranch,
+        cloneUrl: repo.cloneUrl,
+        sshUrl: repo.sshUrl,
+        htmlUrl: repo.htmlUrl,
+        createdAt: repo.createdAt,
+        updatedAt: repo.updatedAt,
+        permissions: _convertPermissions(repo.permissions),
+        language: repo.language,
+        starCount: repo.stargazersCount,
+        forkCount: repo.forksCount,
+        size: repo.size,
+      );
 
   RepositoryOwnerType _getOwnerType(final gh.UserInformation? owner) {
     // Since we can't access the type field directly, we can infer it
@@ -241,7 +242,7 @@ class GitHubRepositoryService implements RepositoryService {
   ) {
     if (permissions == null) return null;
 
-    return RepositoryPermissions(
+    return RepositoryPermissions.create(
       admin: permissions.admin,
       push: permissions.push,
       pull: permissions.pull,
