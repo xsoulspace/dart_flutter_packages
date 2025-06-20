@@ -363,138 +363,44 @@ class OfflineGitConfigAuthenticationBuilder {
 
 /// {@template github_api_config}
 /// Configuration for GitHub API storage provider.
+///
+/// This provider requires a pre-acquired access token and explicit
+/// repository information. It does not handle authentication flows
+/// or repository selection - these concerns are handled by external
+/// components.
 /// {@endtemplate}
 @reopen
 class GitHubApiConfig extends StorageConfig {
   /// {@macro github_api_config}
   const GitHubApiConfig({
-    this.authToken,
-    this.repositoryOwner,
-    this.repositoryName,
+    required this.authToken,
+    required this.repositoryOwner,
+    required this.repositoryName,
     this.branchName = 'main',
-    this.oauthConfig,
-    this.repositoryConfig,
   });
 
-  /// GitHub authentication token (for manual token mode).
-  final String? authToken;
+  /// GitHub authentication token (required).
+  /// Must be a valid Personal Access Token or OAuth token with appropriate permissions.
+  final String authToken;
 
-  /// Repository owner (username or organization).
-  final String? repositoryOwner;
+  /// Repository owner (username or organization) (required).
+  final String repositoryOwner;
 
-  /// Repository name.
-  final String? repositoryName;
+  /// Repository name (required).
+  final String repositoryName;
 
-  /// Branch name to work with.
+  /// Branch name to work with (defaults to 'main').
   final String branchName;
-
-  /// OAuth configuration for automatic authentication.
-  final GitHubOAuthConfig? oauthConfig;
-
-  /// Repository configuration for automatic selection/creation.
-  final GitHubRepositoryConfig? repositoryConfig;
-
-  /// Whether this config uses OAuth flow
-  bool get usesOAuth => oauthConfig != null;
-
-  /// Whether this config has repository auto-selection
-  bool get hasRepositorySelection => repositoryConfig != null;
 
   /// Creates a new GitHubApiConfig builder
   static GitHubApiConfigBuilder builder() => GitHubApiConfigBuilder();
 
   @override
   Map<String, dynamic> toMap() => {
-    if (authToken != null) 'authToken': authToken,
-    if (repositoryOwner != null) 'repositoryOwner': repositoryOwner,
-    if (repositoryName != null) 'repositoryName': repositoryName,
+    'authToken': authToken,
+    'repositoryOwner': repositoryOwner,
+    'repositoryName': repositoryName,
     'branchName': branchName,
-    if (oauthConfig != null) 'oauthConfig': oauthConfig!.toMap(),
-    if (repositoryConfig != null) 'repositoryConfig': repositoryConfig!.toMap(),
-  };
-}
-
-/// {@template github_oauth_config}
-/// OAuth configuration for GitHub authentication.
-/// {@endtemplate}
-class GitHubOAuthConfig {
-  /// {@macro github_oauth_config}
-  const GitHubOAuthConfig({
-    required this.clientId,
-    this.clientSecret,
-    this.redirectUri,
-    this.scopes = const ['repo'],
-    this.deviceFlowEnabled = true,
-  });
-
-  /// GitHub App client ID
-  final String clientId;
-
-  /// GitHub App client secret (optional for public apps)
-  final String? clientSecret;
-
-  /// Redirect URI for OAuth flow
-  final String? redirectUri;
-
-  /// Requested OAuth scopes
-  final List<String> scopes;
-
-  /// Whether to enable device flow for CLI/desktop apps
-  final bool deviceFlowEnabled;
-
-  Map<String, dynamic> toMap() => {
-    'clientId': clientId,
-    if (clientSecret != null) 'clientSecret': clientSecret,
-    if (redirectUri != null) 'redirectUri': redirectUri,
-    'scopes': scopes,
-    'deviceFlowEnabled': deviceFlowEnabled,
-  };
-}
-
-/// {@template github_repository_config}
-/// Configuration for repository selection and creation.
-/// {@endtemplate}
-class GitHubRepositoryConfig {
-  /// {@macro github_repository_config}
-  const GitHubRepositoryConfig({
-    this.allowSelection = true,
-    this.allowCreation = true,
-    this.defaultName,
-    this.defaultDescription,
-    this.defaultPrivate = true,
-    this.templateRepository,
-    this.suggestedName,
-  });
-
-  /// Whether to allow user to select from existing repositories
-  final bool allowSelection;
-
-  /// Whether to allow user to create new repositories
-  final bool allowCreation;
-
-  /// Default repository name for creation
-  final String? defaultName;
-
-  /// Default repository description for creation
-  final String? defaultDescription;
-
-  /// Whether created repositories should be private by default
-  final bool defaultPrivate;
-
-  /// Template repository to use for creation (owner/repo format)
-  final String? templateRepository;
-
-  /// Suggested repository name based on app context
-  final String? suggestedName;
-
-  Map<String, dynamic> toMap() => {
-    'allowSelection': allowSelection,
-    'allowCreation': allowCreation,
-    if (defaultName != null) 'defaultName': defaultName,
-    if (defaultDescription != null) 'defaultDescription': defaultDescription,
-    'defaultPrivate': defaultPrivate,
-    if (templateRepository != null) 'templateRepository': templateRepository,
-    if (suggestedName != null) 'suggestedName': suggestedName,
   };
 }
 
@@ -509,10 +415,8 @@ class GitHubApiConfigBuilder {
   String? _repositoryOwner;
   String? _repositoryName;
   var _branchName = 'main';
-  GitHubOAuthConfig? _oauthConfig;
-  GitHubRepositoryConfig? _repositoryConfig;
 
-  /// Sets the GitHub authentication token (manual mode)
+  /// Sets the GitHub authentication token (required)
   GitHubApiConfigBuilder authToken(final String token) {
     if (token.isEmpty) {
       throw ArgumentError('Auth token cannot be empty');
@@ -521,7 +425,7 @@ class GitHubApiConfigBuilder {
     return this;
   }
 
-  /// Sets the repository owner (username or organization)
+  /// Sets the repository owner (username or organization) (required)
   GitHubApiConfigBuilder repositoryOwner(final String owner) {
     if (owner.isEmpty) {
       throw ArgumentError('Repository owner cannot be empty');
@@ -530,7 +434,7 @@ class GitHubApiConfigBuilder {
     return this;
   }
 
-  /// Sets the repository name
+  /// Sets the repository name (required)
   GitHubApiConfigBuilder repositoryName(final String name) {
     if (name.isEmpty) {
       throw ArgumentError('Repository name cannot be empty');
@@ -548,94 +452,22 @@ class GitHubApiConfigBuilder {
     return this;
   }
 
-  /// Configures OAuth authentication
-  GitHubApiConfigBuilder oauth({
-    required final String clientId,
-    final String? clientSecret,
-    final String? redirectUri,
-    final List<String> scopes = const ['repo'],
-    final bool deviceFlowEnabled = true,
-  }) {
-    _oauthConfig = GitHubOAuthConfig(
-      clientId: clientId,
-      clientSecret: clientSecret,
-      redirectUri: redirectUri,
-      scopes: scopes,
-      deviceFlowEnabled: deviceFlowEnabled,
-    );
-    return this;
-  }
-
-  /// Configures repository selection/creation
-  GitHubApiConfigBuilder repository({
-    final bool allowSelection = true,
-    final bool allowCreation = true,
-    final String? defaultName,
-    final String? defaultDescription,
-    final bool defaultPrivate = true,
-    final String? templateRepository,
-    final String? suggestedName,
-  }) {
-    _repositoryConfig = GitHubRepositoryConfig(
-      allowSelection: allowSelection,
-      allowCreation: allowCreation,
-      defaultName: defaultName,
-      defaultDescription: defaultDescription,
-      defaultPrivate: defaultPrivate,
-      templateRepository: templateRepository,
-      suggestedName: suggestedName,
-    );
-    return this;
-  }
-
-  /// Convenience method for OAuth-only configuration (no manual repo selection)
-  GitHubApiConfigBuilder autoOAuth({
-    required final String clientId,
-    final String? clientSecret,
-    final String? redirectUri,
-    final String? suggestedRepoName,
-    final String? repoDescription,
-    final bool privateRepo = true,
-  }) =>
-      oauth(
-        clientId: clientId,
-        clientSecret: clientSecret,
-        redirectUri: redirectUri,
-      ).repository(
-        suggestedName: suggestedRepoName,
-        defaultDescription: repoDescription,
-        defaultPrivate: privateRepo,
-      );
-
   /// Builds the GitHubApiConfig with validation
   GitHubApiConfig build() {
-    // OAuth mode validation
-    if (_oauthConfig != null) {
-      // OAuth mode - repository selection is handled during auth flow
-      return GitHubApiConfig(
-        branchName: _branchName,
-        oauthConfig: _oauthConfig,
-        repositoryConfig: _repositoryConfig,
-      );
-    }
-
-    // Manual mode validation
     if (_authToken == null) {
-      throw StateError(
-        'Auth token is required for manual mode, or use oauth() for OAuth mode',
-      );
+      throw StateError('Auth token is required');
     }
     if (_repositoryOwner == null) {
-      throw StateError('Repository owner is required for manual mode');
+      throw StateError('Repository owner is required');
     }
     if (_repositoryName == null) {
-      throw StateError('Repository name is required for manual mode');
+      throw StateError('Repository name is required');
     }
 
     return GitHubApiConfig(
-      authToken: _authToken,
-      repositoryOwner: _repositoryOwner,
-      repositoryName: _repositoryName,
+      authToken: _authToken!,
+      repositoryOwner: _repositoryOwner!,
+      repositoryName: _repositoryName!,
       branchName: _branchName,
     );
   }

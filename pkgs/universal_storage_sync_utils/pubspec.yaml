@@ -13,6 +13,9 @@ dependencies:
   file_selector: ^1.0.3
   path: ^1.9.0
   permission_handler: ^12.0.0+1
+  github: ^9.24.0
+  universal_storage_sync:
+    path: ../universal_storage_sync
 
 dev_dependencies:
   flutter_test:
