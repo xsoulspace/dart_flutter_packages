@@ -1,4 +1,4 @@
-# Refactoring Plan: `git_oauth_provider` & `universal_storage_sync`
+# Refactoring Plan: `universal_storage_oauth` & `universal_storage_sync`
 
 ## 1. Objective
 
@@ -44,7 +44,7 @@ The focus here is to strip the `GitHubApiStorageProvider` down to its essential 
 
 ---
 
-### **Phase 2: `git_oauth_provider` Package**
+### **Phase 2: `universal_storage_oauth` Package**
 
 This package will become the single source of truth for handling Git provider authentication.
 
@@ -83,10 +83,10 @@ This new package will house the reusable, high-level logic that connects the UI 
 - **What to Change**:
   - **Documentation**:
     - Update all public API documentation (`///`) in all affected packages to accurately describe the new roles, parameters, and responsibilities.
-    - Modify `README.md` files to explain the new architectural pattern: how `git_oauth_provider` provides a token, `universal_storage_sync` uses it, and `universal_storage_sync_utils` helps orchestrate common workflows.
+    - Modify `README.md` files to explain the new architectural pattern: how `universal_storage_oauth` provides a token, `universal_storage_sync` uses it, and `universal_storage_sync_utils` helps orchestrate common workflows.
   - **Examples**:
     - Rewrite all examples from the ground up. The primary example should showcase the intended end-to-end flow:
-      1.  Using `git_oauth_provider` with a `FlowDelegate` to get a token.
+      1.  Using `universal_storage_oauth` with a `FlowDelegate` to get a token.
       2.  Passing that token to initialize `GitHubApiStorageProvider`.
       3.  Using a helper from `universal_storage_sync_utils` to select a repository.
       4.  Performing a file operation.
@@ -100,7 +100,7 @@ This new package will house the reusable, high-level logic that connects the UI 
 
 Upon completion, the ecosystem will be composed of three distinct and decoupled modules with comprehensive and up-to-date documentation, examples, and tests.
 
-1.  **`git_oauth_provider`**: Handles authentication and produces a token.
+1.  **`universal_storage_oauth`**: Handles authentication and produces a token.
 2.  **`universal_storage_sync`**: A low-level library for file operations on a pre-configured backend.
 3.  **`universal_storage_sync_utils`**: High-level, reusable helpers for common application workflows.
 

@@ -23,12 +23,12 @@
 
 To streamline the OAuth 2.0 flow, this guide has been updated to use the [`oauth2_client`](https://pub.dev/packages/oauth2_client) package. This will handle the complexities of web-based authentication and token exchange, particularly for mobile and desktop platforms.
 
-First, add the dependency to your `git_oauth_provider` package's `pubspec.yaml`:
+First, add the dependency to your `universal_storage_oauth` package's `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  git_oauth_provider:
-    path: ../git_oauth_provider
+  universal_storage_oauth:
+    path: ../universal_storage_oauth
   oauth2_client: ^_latest_version_
 ```
 
@@ -603,8 +603,8 @@ class SecureCredentialStorage implements CredentialStorage {
 
 ```yaml
 dependencies:
-  git_oauth_provider:
-    path: ../git_oauth_provider
+  universal_storage_oauth:
+    path: ../universal_storage_oauth
 ```
 
 #### **Step 4.2: Update GitHubApiStorageProvider**
@@ -613,7 +613,7 @@ dependencies:
 
 ```dart
 // Add imports
-import 'package:git_oauth_provider/git_oauth_provider.dart';
+import 'package:universal_storage_oauth/universal_storage_oauth.dart';
 
 class GitHubApiStorageProvider extends StorageProvider {
   // Add OAuth provider

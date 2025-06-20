@@ -2,7 +2,7 @@
 
 ## Overview
 
-The refactoring plan for `git_oauth_provider` and `universal_storage_sync` packages has been successfully implemented, establishing a clean separation of concerns between authentication, storage, and application/UI logic.
+The refactoring plan for `universal_storage_oauth` and `universal_storage_sync` packages has been successfully implemented, establishing a clean separation of concerns between authentication, storage, and application/UI logic.
 
 ## Phase 1: `universal_storage_sync` Package ✅ COMPLETED
 
@@ -32,7 +32,7 @@ The refactoring plan for `git_oauth_provider` and `universal_storage_sync` packa
   - `Future<List<Branch>> listBranches()`
   - `Future<User> getCurrentUser()`
 
-## Phase 2: `git_oauth_provider` Package ✅ COMPLETED
+## Phase 2: `universal_storage_oauth` Package ✅ COMPLETED
 
 ### Task 2.1: Implement the `OAuthFlowDelegate` Pattern ✅
 
@@ -85,7 +85,7 @@ The refactoring plan for `git_oauth_provider` and `universal_storage_sync` packa
 
 ### 1. Separation of Concerns ✅
 
-- **Authentication**: `git_oauth_provider` handles OAuth flows exclusively
+- **Authentication**: `universal_storage_oauth` handles OAuth flows exclusively
 - **Storage**: `universal_storage_sync` performs file I/O with pre-acquired tokens
 - **Application Logic**: `universal_storage_sync_utils` provides high-level workflows
 

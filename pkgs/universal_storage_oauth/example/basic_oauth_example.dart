@@ -1,4 +1,4 @@
-import 'package:git_oauth_provider/git_oauth_provider.dart';
+import 'package:universal_storage_oauth/universal_storage_oauth.dart';
 
 void main() async {
   await runGitHubOAuthExample();
@@ -97,7 +97,7 @@ Future<void> createRepositoryExample(
   try {
     final request = CreateRepositoryRequest(
       name: 'test-repo-${DateTime.now().millisecondsSinceEpoch}',
-      description: 'Test repository created by git_oauth_provider',
+      description: 'Test repository created by universal_storage_oauth',
       autoInit: true,
     );
 

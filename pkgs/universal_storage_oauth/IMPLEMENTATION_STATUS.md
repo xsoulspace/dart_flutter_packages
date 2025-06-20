@@ -39,9 +39,9 @@
 ## 📦 **Package Structure**
 
 ```
-git_oauth_provider/
+universal_storage_oauth/
 ├── lib/
-│   ├── git_oauth_provider.dart        # Main library export
+│   ├── universal_storage_oauth.dart        # Main library export
 │   └── src/
 │       ├── models/                    # Data models
 │       ├── exceptions/                # Exception classes
@@ -52,7 +52,7 @@ git_oauth_provider/
 ├── example/
 │   └── basic_oauth_example.dart       # Usage example
 ├── test/
-│   └── git_oauth_provider_test.dart   # Unit tests
+│   └── universal_storage_oauth_test.dart   # Unit tests
 ├── pubspec.yaml                       # Dependencies
 └── README.md                          # Documentation
 ```

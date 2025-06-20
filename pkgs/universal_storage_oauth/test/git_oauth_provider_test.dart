@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:git_oauth_provider/git_oauth_provider.dart';
+import 'package:universal_storage_oauth/universal_storage_oauth.dart';
 
 void main() {
   group('GitPlatform', () {

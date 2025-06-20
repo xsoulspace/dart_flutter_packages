@@ -26,8 +26,8 @@ Add this to your package's `pubspec.yaml` file:
 
 ```yaml
 dependencies:
-  git_oauth_provider:
-    path: ../git_oauth_provider
+  universal_storage_oauth:
+    path: ../universal_storage_oauth
 ```
 
 ## Quick Start
@@ -35,7 +35,7 @@ dependencies:
 ### 1. GitHub OAuth Setup
 
 ```dart
-import 'package:git_oauth_provider/git_oauth_provider.dart';
+import 'package:universal_storage_oauth/universal_storage_oauth.dart';
 
 // Create OAuth configuration
 final config = GitHubOAuthConfig(
@@ -83,7 +83,7 @@ print('Found ${repos.length} repositories');
 final newRepo = await repoService.createRepository(
   CreateRepositoryRequest(
     name: 'my-new-repo',
-    description: 'Created with git_oauth_provider',
+    description: 'Created with universal_storage_oauth',
     isPrivate: false,
   ),
 );
@@ -225,6 +225,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Support
 
-- 📚 [Documentation](https://github.com/your-org/git_oauth_provider)
-- 🐛 [Issue Tracker](https://github.com/your-org/git_oauth_provider/issues)
-- 💬 [Discussions](https://github.com/your-org/git_oauth_provider/discussions)
+- 📚 [Documentation](https://github.com/your-org/universal_storage_oauth)
+- 🐛 [Issue Tracker](https://github.com/your-org/universal_storage_oauth/issues)
+- 💬 [Discussions](https://github.com/your-org/universal_storage_oauth/discussions)

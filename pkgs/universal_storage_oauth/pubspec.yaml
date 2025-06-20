@@ -1,4 +1,4 @@
-name: git_oauth_provider
+name: universal_storage_oauth
 description: OAuth provider for Git platforms (GitHub, GitLab, etc.) with secure
   credential management
 version: 0.1.0
