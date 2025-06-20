@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_annotating_with_dynamic
+
 import 'package:from_json_to_json/from_json_to_json.dart';
 
 /// Extension type that represents a version control repository.
@@ -7,7 +9,7 @@ import 'package:from_json_to_json/from_json_to_json.dart';
 ///
 /// Uses from_json_to_json for type-safe JSON handling.
 extension type const VcRepository(Map<String, dynamic> value) {
-  factory VcRepository.fromJson(final jsonData) {
+  factory VcRepository.fromJson(final dynamic jsonData) {
     final map = jsonDecodeMap(jsonData);
     return VcRepository(map);
   }
@@ -49,7 +51,7 @@ extension type const VcRepository(Map<String, dynamic> value) {
 /// Provider-agnostic model for branch information across different
 /// version control systems.
 extension type const VcBranch(Map<String, dynamic> value) {
-  factory VcBranch.fromJson(final jsonData) {
+  factory VcBranch.fromJson(final dynamic jsonData) {
     final map = jsonDecodeMap(jsonData);
     return VcBranch(map);
   }

@@ -5,7 +5,9 @@ import 'package:retry/retry.dart';
 
 import '../config/storage_config.dart';
 import '../exceptions/storage_exceptions.dart';
+import '../models/version_control_models.dart';
 import '../storage_provider.dart';
+import 'version_control_service.dart';
 
 /// {@template github_api_storage_provider}
 /// A storage provider that uses GitHub API directly for file operations.
@@ -21,7 +23,8 @@ import '../storage_provider.dart';
 /// - Direct API-based file operations only
 /// - Exposes low-level repository management primitives
 /// {@endtemplate}
-class GitHubApiStorageProvider extends StorageProvider {
+class GitHubApiStorageProvider extends StorageProvider
+    implements VersionControlService {
   /// {@macro github_api_storage_provider}
   GitHubApiStorageProvider();
 
@@ -85,30 +88,68 @@ class GitHubApiStorageProvider extends StorageProvider {
   // ========== Low-Level Repository Primitives ==========
 
   /// Lists all repositories accessible to the authenticated user
-  Future<List<Repository>> listRepositories() async {
+  @override
+  Future<List<VcRepository>> listRepositories() async {
     _ensureInitialized();
 
     try {
-      return await retry(
+      final repos = await retry(
         () => _github!.repositories.listRepositories().toList(),
         retryIf: _isRetryableError,
         maxAttempts: 3,
       );
+      return repos
+          .map(
+            (final repo) => VcRepository({
+              'id': repo.id.toString(),
+              'name': repo.name,
+              'description': repo.description,
+              'clone_url': repo.cloneUrl,
+              'default_branch': repo.defaultBranch,
+              'is_private': repo.isPrivate,
+              'owner': repo.owner?.login ?? '',
+              'full_name': repo.fullName,
+              'web_url': repo.htmlUrl,
+            }),
+          )
+          .toList();
     } catch (e) {
       throw _handleGitHubError(e, 'Failed to list repositories');
     }
   }
 
   /// Creates a new repository
-  Future<Repository> createRepository(final CreateRepository details) async {
+  @override
+  Future<VcRepository> createRepository(
+    final VcCreateRepositoryRequest details,
+  ) async {
     _ensureInitialized();
 
     try {
-      return await retry(
-        () => _github!.repositories.createRepository(details),
+      final repo = await retry(
+        () => _github!.repositories.createRepository(
+          CreateRepository(
+            details.name,
+            description: details.description,
+            private: details.isPrivate,
+            autoInit: details.initializeWithReadme,
+            licenseTemplate: details.license,
+          ),
+        ),
         retryIf: _isRetryableError,
         maxAttempts: 3,
       );
+      return VcRepository({
+        'id': repo.id.toString(),
+        'name': repo.name,
+        'description': repo.description,
+        'clone_url': repo.cloneUrl,
+        'default_branch': repo.defaultBranch,
+        'is_private': repo.isPrivate,
+        'owner': repo.owner?.login ?? '',
+        'full_name': repo.fullName,
+        'web_url': repo.htmlUrl,
+      });
     } catch (e) {
       throw _handleGitHubError(
         e,
@@ -118,32 +159,54 @@ class GitHubApiStorageProvider extends StorageProvider {
   }
 
   /// Gets information about the current repository
-  Future<Repository> getRepositoryInfo() async {
+  @override
+  Future<VcRepository> getRepositoryInfo() async {
     _ensureInitialized();
 
     try {
       final slug = RepositorySlug(_repositoryOwner!, _repositoryName!);
-      return await retry(
+      final repo = await retry(
         () => _github!.repositories.getRepository(slug),
         retryIf: _isRetryableError,
         maxAttempts: 3,
       );
+      return VcRepository({
+        'id': repo.id.toString(),
+        'name': repo.name,
+        'description': repo.description,
+        'clone_url': repo.cloneUrl,
+        'default_branch': repo.defaultBranch,
+        'is_private': repo.isPrivate,
+        'owner': repo.owner?.login ?? '',
+        'full_name': repo.fullName,
+        'web_url': repo.htmlUrl,
+      });
     } catch (e) {
       throw _handleGitHubError(e, 'Failed to get repository info');
     }
   }
 
   /// Lists branches in the current repository
-  Future<List<Branch>> listBranches() async {
+  @override
+  Future<List<VcBranch>> listBranches() async {
     _ensureInitialized();
 
     try {
       final slug = RepositorySlug(_repositoryOwner!, _repositoryName!);
-      return await retry(
+      final branches = await retry(
         () => _github!.repositories.listBranches(slug).toList(),
         retryIf: _isRetryableError,
         maxAttempts: 3,
       );
+      return branches
+          .map(
+            (final branch) => VcBranch({
+              'name': branch.name,
+              'commit_sha': branch.commit?.sha ?? '',
+              'is_default': branch.name == _branchName,
+            }),
+          )
+          .toList();
     } catch (e) {
       throw _handleGitHubError(e, 'Failed to list branches');
     }
@@ -431,5 +494,20 @@ class GitHubApiStorageProvider extends StorageProvider {
     }
 
     return GitHubApiException('$context: $errorString');
+  }
+
+  @override
+  Future<void> cloneRepository(
+    final VcRepository repository,
+    final String localPath,
+  ) {
+    // TODO: implement cloneRepository
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> setRepository(final VcRepositoryId repositoryId) {
+    // TODO: implement setRepository
+    throw UnimplementedError();
   }
 }

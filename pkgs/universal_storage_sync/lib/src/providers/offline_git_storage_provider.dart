@@ -6,7 +6,9 @@ import 'package:retry/retry.dart';
 
 import '../config/storage_config.dart';
 import '../exceptions/storage_exceptions.dart';
+import '../models/version_control_models.dart';
 import '../storage_provider.dart';
+import 'version_control_service.dart';
 
 /// {@template offline_git_storage_provider}
 /// A storage provider that uses a local Git repository for storage operations
@@ -14,7 +16,8 @@ import '../storage_provider.dart';
 ///
 /// This provider is offline-first and supports version control features.
 /// {@endtemplate}
-class OfflineGitStorageProvider extends StorageProvider {
+class OfflineGitStorageProvider extends StorageProvider
+    implements VersionControlService {
   /// {@macro offline_git_storage_provider}
   OfflineGitStorageProvider();
   GitDir? _gitDir;
@@ -614,5 +617,51 @@ class OfflineGitStorageProvider extends StorageProvider {
         'Provider not initialized. Call init() first.',
       );
     }
+  }
+
+  Future<void> _runGitCommand(final List<String> args) async {
+    await _gitDir!.runCommand(args);
+  }
+
+  @override
+  Future<void> cloneRepository(
+    final VcRepository repository,
+    final String localPath,
+  ) => throw UnsupportedError('Offline Git does not support cloning');
+
+  @override
+  Future<VcRepository> createRepository(
+    final VcCreateRepositoryRequest details,
+  ) async {
+    await _runGitCommand(['init', '-b', details.name]);
+    return VcRepository({
+      'id': '1',
+      'name': details.name,
+      'description': details.description,
+    });
+  }
+
+  @override
+  Future<VcRepository> getRepositoryInfo() {
+    // TODO: implement getRepositoryInfo
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<VcBranch>> listBranches() {
+    // TODO: implement listBranches
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<VcRepository>> listRepositories() {
+    // TODO: implement listRepositories
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> setRepository(final VcRepositoryId repositoryId) {
+    // TODO: implement setRepository
+    throw UnimplementedError();
   }
 }
