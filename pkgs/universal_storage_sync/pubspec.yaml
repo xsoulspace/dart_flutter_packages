@@ -13,6 +13,7 @@ dependencies:
   path: ^1.9.1
   meta: ^1.16.0
   retry: ^3.1.2
+  from_json_to_json: ^0.2.0
 
 dev_dependencies:
   test: ^1.26.2

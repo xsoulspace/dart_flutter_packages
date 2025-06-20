@@ -113,7 +113,7 @@ class RepositoryManager<R, B, C> {
   /// {@macro repository_manager}
   const RepositoryManager(this._service, this._ui);
 
-  final StorageService _service;
+  final VersionControlService<R, B, C> _service;
   final RepositorySelectionUI<R, C> _ui;
 
   /// Selects or creates a repository based on configuration.
@@ -284,7 +284,7 @@ class RepositoryManager<R, B, C> {
   /// expose a `name` getter. As a fallback this method tries to invoke `name`
   /// via `Object?` reflection (using `noSuchMethod`). If not available it
   /// returns null, disabling suggested-name pre-selection.
-  String? _extractName(final repo) {
+  String? _extractName(final R repo) {
     try {
       // ignore: avoid_dynamic_calls
       return repo.name as String?;

@@ -8,6 +8,7 @@ export 'src/exceptions/storage_exceptions.dart';
 export 'src/providers/filesystem_storage_provider.dart';
 export 'src/providers/github_api_storage_provider.dart';
 export 'src/providers/offline_git_storage_provider.dart';
+export 'src/providers/version_control_service.dart';
 // Stage 5 Refinement Exports
 export 'src/storage_factory.dart';
 export 'src/storage_provider.dart';
