@@ -59,9 +59,9 @@ class RepositorySelectionConfig {
 /// - Collecting repository creation details
 /// - Showing progress during operations
 /// {@endtemplate}
-abstract interface class RepositorySelectionUI<R, C> {
+abstract interface class RepositorySelectionUIDelegate<R, C> {
   /// {@macro repository_selection_ui}
-  const RepositorySelectionUI();
+  const RepositorySelectionUIDelegate();
 
   /// Shows repository selection dialog to user.
   ///
@@ -111,10 +111,10 @@ abstract interface class RepositorySelectionUI<R, C> {
 /// {@endtemplate}
 class RepositoryManager<R, B, C> {
   /// {@macro repository_manager}
-  const RepositoryManager(this._service, this._ui);
+  const RepositoryManager({required this.service, required this.ui});
 
-  final VersionControlService<R, B, C> _service;
-  final RepositorySelectionUI<R, C> _ui;
+  final VersionControlService service;
+  final RepositorySelectionUIDelegate<R, C> ui;
 
   /// Selects or creates a repository based on configuration.
   ///
@@ -132,15 +132,15 @@ class RepositoryManager<R, B, C> {
     final RepositorySelectionConfig config,
   ) async {
     try {
-      await _ui.showProgress('Loading repositories...');
+      await ui.showProgress('Loading repositories...');
 
       // Step 1: List existing repositories if selection is allowed
       List<R> repositories = [];
       if (config.allowSelection) {
-        repositories = await _service.listRepositories();
+        repositories = await service.listRepositories();
       }
 
-      await _ui.hideProgress();
+      await ui.hideProgress();
 
       // Step 2: Check for suggested repository in existing list
       if (config.suggestedName != null && repositories.isNotEmpty) {
@@ -158,7 +158,7 @@ class RepositoryManager<R, B, C> {
 
       // Step 3: Present selection UI if repositories are available
       if (config.allowSelection && repositories.isNotEmpty) {
-        final selected = await _ui.selectRepository(
+        final selected = await ui.selectRepository(
           repositories,
           suggestedName: config.suggestedName,
         );
@@ -180,10 +180,10 @@ class RepositoryManager<R, B, C> {
         'No repository selected and creation is not allowed',
       );
     } catch (e) {
-      await _ui.hideProgress();
+      await ui.hideProgress();
       if (e is RepositorySelectionException) rethrow;
 
-      await _ui.showError(
+      await ui.showError(
         'Repository Selection Failed',
         'Failed to select or create repository: $e',
       );
@@ -196,24 +196,24 @@ class RepositoryManager<R, B, C> {
     final RepositorySelectionConfig config,
   ) async {
     // Get creation details from user
-    final C? createDetails = await _ui.getRepositoryCreationDetails(config);
+    final C? createDetails = await ui.getRepositoryCreationDetails(config);
     if (createDetails == null) {
       throw const RepositorySelectionException('Repository creation cancelled');
     }
 
-    await _ui.showProgress('Creating repository...');
+    await ui.showProgress('Creating repository...');
 
     try {
-      final repository = await _service.createRepository(createDetails);
-      await _ui.hideProgress();
+      final repository = await service.createRepository(createDetails);
+      await ui.hideProgress();
 
       return RepositorySelectionResult<R>(
         repository: repository,
         wasCreated: true,
       );
     } catch (e) {
-      await _ui.hideProgress();
-      await _ui.showError(
+      await ui.hideProgress();
+      await ui.showError(
         'Repository Creation Failed',
         'Failed to create repository: $e',
       );
@@ -225,14 +225,14 @@ class RepositoryManager<R, B, C> {
   ///
   /// This is a convenience wrapper around the provider's listRepositories method.
   Future<List<R>> listRepositories() async {
-    await _ui.showProgress('Loading repositories...');
+    await ui.showProgress('Loading repositories...');
     try {
-      final repositories = await _service.listRepositories();
-      await _ui.hideProgress();
+      final repositories = await service.listRepositories();
+      await ui.hideProgress();
       return repositories;
     } catch (e) {
-      await _ui.hideProgress();
-      await _ui.showError(
+      await ui.hideProgress();
+      await ui.showError(
         'Failed to Load Repositories',
         'Could not load repositories: $e',
       );
@@ -244,14 +244,14 @@ class RepositoryManager<R, B, C> {
   ///
   /// This is a convenience wrapper around the provider's getRepositoryInfo method.
   Future<R> getRepositoryInfo() async {
-    await _ui.showProgress('Loading repository information...');
+    await ui.showProgress('Loading repository information...');
     try {
-      final repository = await _service.getRepositoryInfo();
-      await _ui.hideProgress();
+      final repository = await service.getRepositoryInfo();
+      await ui.hideProgress();
       return repository;
     } catch (e) {
-      await _ui.hideProgress();
-      await _ui.showError(
+      await ui.hideProgress();
+      await ui.showError(
         'Failed to Load Repository Info',
         'Could not load repository information: $e',
       );
@@ -263,14 +263,14 @@ class RepositoryManager<R, B, C> {
   ///
   /// This is a convenience wrapper around the provider's listBranches method.
   Future<List<B>> listBranches() async {
-    await _ui.showProgress('Loading branches...');
+    await ui.showProgress('Loading branches...');
     try {
-      final branches = await _service.listBranches();
-      await _ui.hideProgress();
+      final branches = await service.listBranches();
+      await ui.hideProgress();
       return branches;
     } catch (e) {
-      await _ui.hideProgress();
-      await _ui.showError(
+      await ui.hideProgress();
+      await ui.showError(
         'Failed to Load Branches',
         'Could not load branches: $e',
       );
