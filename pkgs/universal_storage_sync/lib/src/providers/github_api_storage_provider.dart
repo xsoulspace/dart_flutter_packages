@@ -62,7 +62,8 @@ class GitHubApiStorageProvider extends StorageProvider {
 
       if (repo.name != _repositoryName) {
         throw ConfigurationException(
-          'Repository verification failed: expected $_repositoryName, got ${repo.name}',
+          'Repository verification failed: '
+          'expected $_repositoryName, got ${repo.name}',
         );
       }
     } catch (e) {
@@ -330,7 +331,8 @@ class GitHubApiStorageProvider extends StorageProvider {
       }
       throw _handleGitHubError(
         e,
-        'Failed to list files in: ${directoryPath.isEmpty ? '/' : directoryPath}',
+        'Failed to list files in: '
+        '${directoryPath.isEmpty ? '/' : directoryPath}',
       );
     }
   }
@@ -341,7 +343,8 @@ class GitHubApiStorageProvider extends StorageProvider {
 
     if (versionId == null) {
       throw const UnsupportedOperationException(
-        'GitHub API provider requires versionId (commit SHA) for restore operations',
+        'GitHub API provider requires '
+        'versionId (commit SHA) for restore operations',
       );
     }
 
@@ -364,7 +367,7 @@ class GitHubApiStorageProvider extends StorageProvider {
       // Update current file with content from the specified version
       await updateFile(
         filePath,
-        contents.file!.text ?? '',
+        contents.file?.text ?? '',
         commitMessage: 'Restore $filePath to version $versionId',
       );
     } catch (e) {
@@ -403,7 +406,7 @@ class GitHubApiStorageProvider extends StorageProvider {
   }
 
   /// Handles GitHub API errors and converts them to appropriate exceptions
-  Exception _handleGitHubError(final error, final String context) {
+  Exception _handleGitHubError(final Object error, final String context) {
     final errorString = error.toString();
 
     if (errorString.contains('401') || errorString.contains('Unauthorized')) {

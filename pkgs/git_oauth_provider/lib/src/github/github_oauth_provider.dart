@@ -1,9 +1,8 @@
 import 'dart:convert';
-import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:oauth2/oauth2.dart' as oauth2;
-import 'package:oauth2_client/access_token_response.dart';
 import 'package:oauth2_client/github_oauth2_client.dart';
 
 import '../exceptions/oauth_exceptions.dart';
@@ -35,7 +34,7 @@ class GitHubOAuthProvider implements OAuthProvider {
   Future<OAuthResult> authenticate() async {
     try {
       // Choose authentication flow based on configuration
-      final credentials = _config.redirectUri != null
+      final credentials = _config.redirectUri.isNotEmpty || kIsWeb
           ? await _performWebOAuthFlow()
           : await _performDeviceOAuthFlow();
 
@@ -87,17 +86,11 @@ class GitHubOAuthProvider implements OAuthProvider {
       customUriScheme: Uri.parse(_config.redirectUri).scheme,
     );
 
-    AccessTokenResponse tokenResp;
-
-    try {
-      tokenResp = await client.getTokenWithAuthCodeFlow(
-        clientId: _config.clientId,
-        clientSecret: _config.clientSecret,
-        scopes: _config.scopes,
-      );
-    } on Exception catch (e) {
-      throw AuthenticationException('OAuth flow failed: $e');
-    }
+    final tokenResp = await client.getTokenWithAuthCodeFlow(
+      clientId: _config.clientId,
+      clientSecret: _config.clientSecret,
+      scopes: _config.scopes,
+    );
 
     if (tokenResp.error != null || tokenResp.accessToken == null) {
       throw AuthenticationException(
@@ -142,19 +135,6 @@ class GitHubOAuthProvider implements OAuthProvider {
     );
   }
 
-  /// Builds the GitHub authorization URL
-  Uri _buildAuthorizationUrl(final String state) {
-    final params = <String, String>{
-      'client_id': _config.clientId,
-      'redirect_uri': _config.redirectUri,
-      'scope': _config.scopes.join(' '),
-      'state': state,
-      'response_type': 'code',
-    };
-
-    return Uri.https('github.com', '/login/oauth/authorize', params);
-  }
-
   /// Requests device and user codes from GitHub
   Future<Map<String, dynamic>> _requestDeviceCodes() async {
     final response = await http.post(
@@ -173,7 +153,8 @@ class GitHubOAuthProvider implements OAuthProvider {
 
     if (data['error'] != null) {
       throw AuthenticationException(
-        'Device code request failed: ${data['error_description'] ?? data['error']}',
+        'Device code request failed: '
+        '${data['error_description'] ?? data['error']}',
       );
     }
 
@@ -241,21 +222,8 @@ class GitHubOAuthProvider implements OAuthProvider {
     throw const AuthenticationException('Device authorization timed out');
   }
 
-  /// Generates a random state parameter for OAuth security
-  String _generateState() {
-    final random = Random.secure();
-    const chars =
-        'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    return String.fromCharCodes(
-      Iterable.generate(
-        32,
-        (_) => chars.codeUnitAt(random.nextInt(chars.length)),
-      ),
-    );
-  }
-
   @override
-  Future<OAuthResult> refreshToken(final String refreshToken) async {
+  Future<OAuthResult> refreshToken(final String refreshToken) {
     // GitHub tokens don't expire by default, but this could be implemented
     // if the token has an expiration and refresh capability
     throw const AuthenticationException(
@@ -317,7 +285,7 @@ class GitHubOAuthProvider implements OAuthProvider {
       scopes: credentials.scopes,
     );
 
-    _client = oauth2.Client(
+    return _client = oauth2.Client(
       oauth2Credentials,
       identifier: _config.clientId,
       secret: _config.clientSecret,
@@ -328,12 +296,10 @@ class GitHubOAuthProvider implements OAuthProvider {
         );
       },
     );
-
-    return _client;
   }
 
   /// Get an HTTP client for making authenticated API requests
-  Future<http.Client?> getHttpClient() async => _getAuthenticatedClient();
+  Future<http.Client?> getHttpClient() => _getAuthenticatedClient();
 
   /// Test the current authentication by trying to fetch user info
   Future<bool> testAuthentication() async {
@@ -344,11 +310,4 @@ class GitHubOAuthProvider implements OAuthProvider {
       return false;
     }
   }
-
-  // The manual _exchangeCodeForToken implementation has been replaced by the
-  // oauth2_client flow above, but it is kept for reference (and for potential
-  // device-flow reuse) and marked as deprecated.
-  @Deprecated('Replaced by oauth2_client flow')
-  Future<StoredCredentials> _exchangeCodeForToken(final String code) =>
-      throw UnimplementedError();
 }
