@@ -1,4 +1,4 @@
-import 'config/storage_config.dart';
+import 'models/models.dart';
 import 'providers/filesystem_storage_provider.dart';
 import 'providers/github_api_storage_provider.dart';
 import 'providers/offline_git_storage_provider.dart';

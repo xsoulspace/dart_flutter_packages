@@ -1,4 +1,4 @@
-import '../config/storage_config.dart';
+import '../models/models.dart';
 import 'path_normalizer.dart';
 
 /// {@template provider_recommendation}

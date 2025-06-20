@@ -4,9 +4,8 @@ import 'package:github/github.dart';
 import 'package:retry/retry.dart';
 
 import '../capabilities/version_control_service.dart';
-import '../config/storage_config.dart';
-import '../exceptions/storage_exceptions.dart';
-import '../models/version_control_models.dart';
+import '../models/models.dart';
+import '../storage_exceptions.dart';
 import '../storage_provider.dart';
 
 /// {@template github_api_storage_provider}

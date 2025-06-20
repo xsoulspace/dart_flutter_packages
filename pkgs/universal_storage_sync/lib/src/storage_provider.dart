@@ -1,5 +1,5 @@
-import 'config/storage_config.dart';
-import 'exceptions/storage_exceptions.dart';
+import 'models/models.dart';
+import 'storage_exceptions.dart';
 
 /// {@template storage_provider}
 /// Defines the contract for a storage provider.

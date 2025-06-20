@@ -1,4 +1,4 @@
-import '../exceptions/storage_exceptions.dart';
+import '../storage_exceptions.dart';
 
 /// {@template version_control_capable}
 /// Mixin for storage providers that support version control operations.

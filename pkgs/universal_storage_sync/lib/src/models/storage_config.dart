@@ -1,3 +1,5 @@
+import 'conflict_resolution_strategy.dart';
+
 /// {@template storage_config}
 /// Base class for storage provider configurations.
 /// {@endtemplate}
@@ -37,7 +39,8 @@ class FileSystemConfig extends StorageConfig {
 }
 
 /// {@template offline_git_config}
-/// Configuration for offline Git storage provider with remote sync capabilities.
+/// Configuration for offline Git storage provider with remote sync
+/// capabilities.
 /// {@endtemplate}
 class OfflineGitConfig extends StorageConfig {
   /// {@macro offline_git_config}
@@ -123,7 +126,8 @@ class OfflineGitConfig extends StorageConfig {
   /// Default pull strategy: 'merge', 'rebase', 'ff-only'.
   final String defaultPullStrategy;
 
-  /// Default push strategy: 'rebase-local', 'force-with-lease', 'fail-on-conflict'.
+  /// Default push strategy: 'rebase-local', 'force-with-lease',
+  /// 'fail-on-conflict'.
   final String defaultPushStrategy;
 
   /// Conflict resolution strategy for merge conflicts.
@@ -205,19 +209,4 @@ class GitHubApiConfig extends StorageConfig {
     'repositoryName': repositoryName,
     'branchName': branchName,
   };
-}
-
-/// Conflict resolution strategies for remote synchronization.
-enum ConflictResolutionStrategy {
-  /// Local changes always take precedence over remote changes.
-  clientAlwaysRight,
-
-  /// Remote changes always take precedence over local changes.
-  serverAlwaysRight,
-
-  /// Throw exception for manual conflict resolution.
-  manualResolution,
-
-  /// Use timestamp-based resolution (last write wins).
-  lastWriteWins,
 }

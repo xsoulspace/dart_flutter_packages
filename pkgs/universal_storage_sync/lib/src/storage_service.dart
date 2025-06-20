@@ -1,5 +1,5 @@
-import 'config/storage_config.dart';
-import 'exceptions/storage_exceptions.dart';
+import 'models/models.dart';
+import 'storage_exceptions.dart';
 import 'storage_provider.dart';
 
 /// {@template storage_service}

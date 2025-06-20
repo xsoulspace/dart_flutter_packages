@@ -1,7 +1,7 @@
 /// {@template storage_exception}
 /// Base exception for all storage-related errors.
 /// {@endtemplate}
-abstract class StorageException implements Exception {
+sealed class StorageException implements Exception {
   /// {@macro storage_exception}
   const StorageException(this.message);
 

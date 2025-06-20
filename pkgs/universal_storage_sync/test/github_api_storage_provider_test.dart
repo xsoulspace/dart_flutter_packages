@@ -1,6 +1,5 @@
 import 'package:test/test.dart';
-import 'package:universal_storage_sync/src/config/storage_config.dart';
-import 'package:universal_storage_sync/src/providers/github_api_storage_provider.dart';
+import 'package:universal_storage_sync/universal_storage_sync.dart';
 
 void main() {
   group('GitHubApiStorageProvider', () {

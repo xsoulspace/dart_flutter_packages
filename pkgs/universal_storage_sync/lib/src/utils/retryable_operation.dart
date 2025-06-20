@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
-import '../exceptions/storage_exceptions.dart';
+import '../storage_exceptions.dart';
 
 /// {@template retryable_operation}
 /// Utility class for executing operations with retry logic.

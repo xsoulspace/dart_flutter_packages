@@ -1,5 +1,5 @@
-import '../config/storage_config.dart';
-import '../exceptions/storage_exceptions.dart';
+import '../models/models.dart';
+import '../storage_exceptions.dart';
 
 /// {@template remote_sync_capable}
 /// Mixin for storage providers that support remote synchronization.
