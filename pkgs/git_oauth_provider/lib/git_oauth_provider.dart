@@ -1,5 +1,5 @@
 /// OAuth provider for Git platforms (GitHub, GitLab, etc.) with secure credential management
-library git_oauth_provider;
+library;
 
 // Exceptions
 export 'src/exceptions/exceptions.dart';
@@ -8,6 +8,7 @@ export 'src/github/github_oauth_provider.dart';
 export 'src/github/github_repository_service.dart';
 // Models
 export 'src/models/models.dart';
+export 'src/providers/oauth_flow_delegate.dart';
 // Providers
 export 'src/providers/oauth_provider.dart';
 // Services

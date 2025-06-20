@@ -11,7 +11,7 @@ dependencies:
   github: ^9.25.0
   http: ^1.4.0
   path: ^1.9.1
-  meta: ^1.17.0
+  meta: ^1.16.0
   retry: ^3.1.2
 
 dev_dependencies:
