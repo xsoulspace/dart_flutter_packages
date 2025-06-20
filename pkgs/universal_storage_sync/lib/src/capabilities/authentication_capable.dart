@@ -48,7 +48,8 @@ mixin AuthenticatedProvider {
 
     if (errorString.contains('401') || errorString.contains('unauthorized')) {
       return AuthenticationException(
-        'Authentication failed during $operation. Please check your credentials.',
+        'Authentication failed during $operation. '
+        'Please check your credentials.',
       );
     }
 

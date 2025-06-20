@@ -1,11 +1,11 @@
 import '../config/storage_config.dart';
 import '../exceptions/storage_exceptions.dart';
 
-/// {@template sync_capable}
+/// {@template remote_sync_capable}
 /// Mixin for storage providers that support remote synchronization.
 /// Provides standardized sync operations and conflict resolution.
 /// {@endtemplate}
-mixin SyncCapable {
+mixin RemoteSyncCapable {
   /// Indicates if the provider supports remote synchronization
   bool get supportsSync => true;
 

@@ -32,48 +32,35 @@ mixin PathNormalizer {
   }
 
   /// Normalizes paths for filesystem operations
-  static String _normalizeFilesystemPath(final String path) {
-    // Convert forward slashes to platform-specific separators
-    // Remove redundant separators and resolve relative paths
-    return path
-        .replaceAll(RegExp(r'[/\\]+'), _platformSeparator)
-        .replaceAll(RegExp(r'^[/\\]+'), '') // Remove leading separators
-        .replaceAll(RegExp(r'[/\\]+$'), ''); // Remove trailing separators
-  }
+  // Convert forward slashes to platform-specific separators
+  // Remove redundant separators and resolve relative paths
+  static String _normalizeFilesystemPath(final String path) => path
+      .replaceAll(RegExp(r'[/\\]+'), _platformSeparator)
+      .replaceAll(RegExp(r'^[/\\]+'), '') // Remove leading separators
+      .replaceAll(RegExp(r'[/\\]+$'), ''); // Remove trailing separators
 
   /// Normalizes paths for GitHub API operations
-  static String _normalizeGitHubPath(final String path) {
-    // GitHub API always uses forward slashes
-    // Remove leading/trailing slashes and resolve relative paths
-    return path
-        .replaceAll(
-          RegExp(r'\\+'),
-          '/',
-        ) // Convert backslashes to forward slashes
-        .replaceAll(RegExp('/+'), '/') // Remove duplicate slashes
-        .replaceAll(RegExp('^/+'), '') // Remove leading slashes
-        .replaceAll(RegExp(r'/+$'), ''); // Remove trailing slashes
-  }
+  // GitHub API always uses forward slashes
+  // Remove leading/trailing slashes and resolve relative paths
+  static String _normalizeGitHubPath(final String path) => path
+      .replaceAll(RegExp(r'\\+'), '/') // Convert backslashes to forward slashes
+      .replaceAll(RegExp('/+'), '/') // Remove duplicate slashes
+      .replaceAll(RegExp('^/+'), '') // Remove leading slashes
+      .replaceAll(RegExp(r'/+$'), ''); // Remove trailing slashes
 
   /// Normalizes paths for Git operations
-  static String _normalizeGitPath(final String path) {
-    // Git uses forward slashes regardless of platform
-    return path
-        .replaceAll(
-          RegExp(r'\\+'),
-          '/',
-        ) // Convert backslashes to forward slashes
-        .replaceAll(RegExp('/+'), '/') // Remove duplicate slashes
-        .replaceAll(RegExp('^/+'), '') // Remove leading slashes
-        .replaceAll(RegExp(r'/+$'), ''); // Remove trailing slashes
-  }
+  // Git uses forward slashes regardless of platform
+  static String _normalizeGitPath(final String path) => path
+      .replaceAll(RegExp(r'\\+'), '/') // Convert backslashes to forward slashes
+      .replaceAll(RegExp('/+'), '/') // Remove duplicate slashes
+      .replaceAll(RegExp('^/+'), '') // Remove leading slashes
+      .replaceAll(RegExp(r'/+$'), ''); // Remove trailing slashes
 
   /// Gets the platform-specific path separator
-  static String get _platformSeparator {
-    // This is a simplified version - in real implementation,
-    // you'd use dart:io's Platform.pathSeparator
-    return '/'; // Default to forward slash for cross-platform compatibility
-  }
+  // This is a simplified version - in real implementation,
+  // you'd use dart:io's Platform.pathSeparator
+  static String get _platformSeparator =>
+      '/'; // Default to forward slash for cross-platform compatibility
 
   /// Validates if a path is safe for the given provider
   static bool isSafePath(final String path, final ProviderType providerType) {
@@ -103,31 +90,28 @@ mixin PathNormalizer {
   }
 
   /// Validates GitHub API path requirements
-  static bool _isValidGitHubPath(final String path) {
-    // GitHub has specific requirements for file paths
-    return path.length <= 255 && // Max path length
-        !path.startsWith('.') && // No hidden files at root
-        !path.endsWith('.') && // No paths ending with dot
-        !path.contains(RegExp(r'[<>:"|?*\x00-\x1f]')); // No control characters
-  }
+  // GitHub has specific requirements for file paths
+  static bool _isValidGitHubPath(final String path) =>
+      path.length <= 255 && // Max path length
+      !path.startsWith('.') && // No hidden files at root
+      !path.endsWith('.') && // No paths ending with dot
+      !path.contains(RegExp(r'[<>:"|?*\x00-\x1f]')); // No control characters
 
   /// Validates filesystem path requirements
-  static bool _isValidFilesystemPath(final String path) {
-    // Basic filesystem validation
-    return path.length <= 260 && // Windows MAX_PATH limit
-        !path.contains(RegExp(r'[<>:"|?*\x00-\x1f]')); // No invalid characters
-  }
+  // Basic filesystem validation
+  static bool _isValidFilesystemPath(final String path) =>
+      path.length <= 260 && // Windows MAX_PATH limit
+      !path.contains(RegExp(r'[<>:"|?*\x00-\x1f]')); // No invalid characters
 
   /// Validates Git path requirements
-  static bool _isValidGitPath(final String path) {
-    // Git path validation
-    return path.length <= 255 && // Max path length
-            !path.contains(
-              RegExp(r'[<>:"|?*\x00-\x1f]'),
-            ) && // No control characters
-            !path.contains(' ') || // Prefer no spaces or properly escaped
-        path.contains(RegExp(r'^[a-zA-Z0-9._/-]+$')); // Only safe characters
-  }
+  // Git path validation
+  static bool _isValidGitPath(final String path) =>
+      path.length <= 255 && // Max path length
+          !path.contains(
+            RegExp(r'[<>:"|?*\x00-\x1f]'),
+          ) && // No control characters
+          !path.contains(' ') || // Prefer no spaces or properly escaped
+      path.contains(RegExp(r'^[a-zA-Z0-9._/-]+$')); // Only safe characters
 
   /// Joins path segments with the appropriate separator for the provider
   static String join(
