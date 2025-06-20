@@ -16,12 +16,9 @@ enum ProviderType {
 /// Utility class for normalizing file paths across different storage providers.
 /// Each provider may have different path requirements and conventions.
 /// {@endtemplate}
-class PathNormalizer {
-  /// {@macro path_normalizer}
-  const PathNormalizer();
-
+mixin PathNormalizer {
   /// Normalizes a path for the specified provider type
-  static String normalize(String path, ProviderType providerType) {
+  static String normalize(final String path, final ProviderType providerType) {
     if (path.isEmpty) return path;
 
     switch (providerType) {
@@ -35,7 +32,7 @@ class PathNormalizer {
   }
 
   /// Normalizes paths for filesystem operations
-  static String _normalizeFilesystemPath(String path) {
+  static String _normalizeFilesystemPath(final String path) {
     // Convert forward slashes to platform-specific separators
     // Remove redundant separators and resolve relative paths
     return path
@@ -45,23 +42,27 @@ class PathNormalizer {
   }
 
   /// Normalizes paths for GitHub API operations
-  static String _normalizeGitHubPath(String path) {
+  static String _normalizeGitHubPath(final String path) {
     // GitHub API always uses forward slashes
     // Remove leading/trailing slashes and resolve relative paths
     return path
         .replaceAll(
-            RegExp(r'\\+'), '/') // Convert backslashes to forward slashes
+          RegExp(r'\\+'),
+          '/',
+        ) // Convert backslashes to forward slashes
         .replaceAll(RegExp('/+'), '/') // Remove duplicate slashes
         .replaceAll(RegExp('^/+'), '') // Remove leading slashes
         .replaceAll(RegExp(r'/+$'), ''); // Remove trailing slashes
   }
 
   /// Normalizes paths for Git operations
-  static String _normalizeGitPath(String path) {
+  static String _normalizeGitPath(final String path) {
     // Git uses forward slashes regardless of platform
     return path
         .replaceAll(
-            RegExp(r'\\+'), '/') // Convert backslashes to forward slashes
+          RegExp(r'\\+'),
+          '/',
+        ) // Convert backslashes to forward slashes
         .replaceAll(RegExp('/+'), '/') // Remove duplicate slashes
         .replaceAll(RegExp('^/+'), '') // Remove leading slashes
         .replaceAll(RegExp(r'/+$'), ''); // Remove trailing slashes
@@ -75,7 +76,7 @@ class PathNormalizer {
   }
 
   /// Validates if a path is safe for the given provider
-  static bool isSafePath(String path, ProviderType providerType) {
+  static bool isSafePath(final String path, final ProviderType providerType) {
     if (path.isEmpty) return false;
 
     // Check for dangerous path patterns
@@ -102,7 +103,7 @@ class PathNormalizer {
   }
 
   /// Validates GitHub API path requirements
-  static bool _isValidGitHubPath(String path) {
+  static bool _isValidGitHubPath(final String path) {
     // GitHub has specific requirements for file paths
     return path.length <= 255 && // Max path length
         !path.startsWith('.') && // No hidden files at root
@@ -111,43 +112,51 @@ class PathNormalizer {
   }
 
   /// Validates filesystem path requirements
-  static bool _isValidFilesystemPath(String path) {
+  static bool _isValidFilesystemPath(final String path) {
     // Basic filesystem validation
     return path.length <= 260 && // Windows MAX_PATH limit
         !path.contains(RegExp(r'[<>:"|?*\x00-\x1f]')); // No invalid characters
   }
 
   /// Validates Git path requirements
-  static bool _isValidGitPath(String path) {
+  static bool _isValidGitPath(final String path) {
     // Git path validation
     return path.length <= 255 && // Max path length
             !path.contains(
-                RegExp(r'[<>:"|?*\x00-\x1f]')) && // No control characters
+              RegExp(r'[<>:"|?*\x00-\x1f]'),
+            ) && // No control characters
             !path.contains(' ') || // Prefer no spaces or properly escaped
         path.contains(RegExp(r'^[a-zA-Z0-9._/-]+$')); // Only safe characters
   }
 
   /// Joins path segments with the appropriate separator for the provider
-  static String join(List<String> segments, ProviderType providerType) {
+  static String join(
+    final List<String> segments,
+    final ProviderType providerType,
+  ) {
     if (segments.isEmpty) return '';
 
-    final separator =
-        providerType == ProviderType.filesystem ? _platformSeparator : '/';
+    final separator = providerType == ProviderType.filesystem
+        ? _platformSeparator
+        : '/';
 
     return segments
-        .where((segment) => segment.isNotEmpty)
-        .map((segment) => normalize(segment, providerType))
+        .where((final segment) => segment.isNotEmpty)
+        .map((final segment) => normalize(segment, providerType))
         .join(separator);
   }
 
   /// Splits a path into its component segments
-  static List<String> split(String path, ProviderType providerType) {
+  static List<String> split(
+    final String path,
+    final ProviderType providerType,
+  ) {
     final normalizedPath = normalize(path, providerType);
     if (normalizedPath.isEmpty) return [];
 
     return normalizedPath
         .split(RegExp(r'[/\\]'))
-        .where((segment) => segment.isNotEmpty)
+        .where((final segment) => segment.isNotEmpty)
         .toList();
   }
 }

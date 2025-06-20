@@ -8,7 +8,8 @@ import '../models/git_platform.dart';
 /// Type-safe wrapper around OAuth access tokens to prevent mixing
 /// with other string types at compile time.
 extension type const OAuthAccessToken(String value) {
-  factory OAuthAccessToken.fromJson(final value) =>
+  // ignore: avoid_annotating_with_dynamic
+  factory OAuthAccessToken.fromJson(final dynamic value) =>
       OAuthAccessToken(jsonDecodeString(value));
 
   String toJson() => value;
@@ -32,7 +33,8 @@ extension type const OAuthAccessToken(String value) {
 /// Type-safe wrapper around OAuth refresh tokens to prevent mixing
 /// with other string types at compile time.
 extension type const OAuthRefreshToken(String value) {
-  factory OAuthRefreshToken.fromJson(final value) =>
+  // ignore: avoid_annotating_with_dynamic
+  factory OAuthRefreshToken.fromJson(final dynamic value) =>
       OAuthRefreshToken(jsonDecodeString(value));
 
   String toJson() => value;
@@ -54,7 +56,8 @@ extension type const OAuthRefreshToken(String value) {
 ///
 /// Uses from_json_to_json for type-safe JSON handling.
 extension type const StoredCredentials(Map<String, dynamic> value) {
-  factory StoredCredentials.fromJson(final jsonData) {
+  // ignore: avoid_annotating_with_dynamic
+  factory StoredCredentials.fromJson(final dynamic jsonData) {
     final map = jsonDecodeMap(jsonData);
     return StoredCredentials(map);
   }

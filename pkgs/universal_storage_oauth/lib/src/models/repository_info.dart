@@ -5,7 +5,8 @@ import 'package:from_json_to_json/from_json_to_json.dart';
 /// Type-safe wrapper around repository identifiers to prevent mixing
 /// with other string types at compile time.
 extension type const RepositoryId(String value) {
-  factory RepositoryId.fromJson(final value) =>
+  // ignore: avoid_annotating_with_dynamic
+  factory RepositoryId.fromJson(final dynamic value) =>
       RepositoryId(jsonDecodeString(value));
 
   String toJson() => value;
@@ -46,7 +47,8 @@ enum RepositoryOwnerType {
 /// Contains information about the user or organization that owns a repository.
 /// Provides type-safe access to owner data with graceful handling of missing fields.
 extension type const RepositoryOwner(Map<String, dynamic> value) {
-  factory RepositoryOwner.fromJson(final jsonData) {
+  // ignore: avoid_annotating_with_dynamic
+  factory RepositoryOwner.fromJson(final dynamic jsonData) {
     final map = jsonDecodeMap(jsonData);
     return RepositoryOwner(map);
   }
@@ -98,7 +100,8 @@ extension type const RepositoryOwner(Map<String, dynamic> value) {
 /// Contains permission flags for repository access levels.
 /// Used to determine what operations a user can perform on a repository.
 extension type const RepositoryPermissions(Map<String, dynamic> value) {
-  factory RepositoryPermissions.fromJson(final jsonData) {
+  // ignore: avoid_annotating_with_dynamic
+  factory RepositoryPermissions.fromJson(final dynamic jsonData) {
     final map = jsonDecodeMap(jsonData);
     return RepositoryPermissions(map);
   }
@@ -147,7 +150,8 @@ extension type const RepositoryPermissions(Map<String, dynamic> value) {
 ///
 /// Uses from_json_to_json for type-safe JSON handling.
 extension type const RepositoryInfo(Map<String, dynamic> value) {
-  factory RepositoryInfo.fromJson(final jsonData) {
+  // ignore: avoid_annotating_with_dynamic
+  factory RepositoryInfo.fromJson(final dynamic jsonData) {
     final map = jsonDecodeMap(jsonData);
     return RepositoryInfo(map);
   }

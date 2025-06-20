@@ -69,7 +69,7 @@ mixin AuthenticatedProvider {
   }
 
   /// Checks if an error is authentication-related
-  bool isAuthenticationError(final error) {
+  bool isAuthenticationError(final Object error) {
     if (error is AuthenticationException) return true;
 
     final errorString = error.toString().toLowerCase();

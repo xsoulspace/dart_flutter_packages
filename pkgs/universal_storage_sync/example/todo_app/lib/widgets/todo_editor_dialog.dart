@@ -49,78 +49,77 @@ class _TodoEditorDialogState extends State<TodoEditorDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: Text(_isEditing ? 'Edit Todo' : 'New Todo'),
-    content: SizedBox(
-      width: 400,
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Title field
-            TextFormField(
-              controller: _titleController,
-              decoration: const InputDecoration(
-                labelText: 'Title',
-                hintText: 'Enter todo title',
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Title is required';
-                }
-                return null;
-              },
-              autofocus: true,
-            ),
-            const SizedBox(height: 16),
+        title: Text(_isEditing ? 'Edit Todo' : 'New Todo'),
+        content: SizedBox(
+          width: 400,
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Title field
+                TextFormField(
+                  controller: _titleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Title',
+                    hintText: 'Enter todo title',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Title is required';
+                    }
+                    return null;
+                  },
+                  autofocus: true,
+                ),
+                const SizedBox(height: 16),
 
-            // Description field
-            TextFormField(
-              controller: _descriptionController,
-              decoration: const InputDecoration(
-                labelText: 'Description',
-                hintText: 'Enter todo description (optional)',
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 3,
-              minLines: 3,
-            ),
-            const SizedBox(height: 16),
+                // Description field
+                TextFormField(
+                  controller: _descriptionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Description',
+                    hintText: 'Enter todo description (optional)',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                  minLines: 3,
+                ),
+                const SizedBox(height: 16),
 
-            // Tags field
-            TextFormField(
-              controller: _tagsController,
-              decoration: const InputDecoration(
-                labelText: 'Tags',
-                hintText: 'Enter tags separated by commas (optional)',
-                border: OutlineInputBorder(),
-              ),
+                // Tags field
+                TextFormField(
+                  controller: _tagsController,
+                  decoration: const InputDecoration(
+                    labelText: 'Tags',
+                    hintText: 'Enter tags separated by commas (optional)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
-      ),
-    ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Cancel'),
-      ),
-
-      Consumer<AppState>(
-        builder: (context, appState, child) => ElevatedButton(
-          onPressed: appState.busy ? null : _saveTodo,
-          child: appState.busy
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : Text(_isEditing ? 'Update' : 'Create'),
-        ),
-      ),
-    ],
-  );
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          Consumer<AppState>(
+            builder: (context, appState, child) => ElevatedButton(
+              onPressed: appState.busy ? null : _saveTodo,
+              child: appState.busy
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(_isEditing ? 'Update' : 'Create'),
+            ),
+          ),
+        ],
+      );
 
   Future<void> _saveTodo() async {
     if (!_formKey.currentState!.validate()) return;
@@ -145,10 +144,10 @@ class _TodoEditorDialogState extends State<TodoEditorDialog> {
       } else {
         // Create new todo
         await context.read<AppState>().createTodo(
-          title: title,
-          description: description,
-          tags: tags,
-        );
+              title: title,
+              description: description,
+              tags: tags,
+            );
       }
 
       if (mounted) {

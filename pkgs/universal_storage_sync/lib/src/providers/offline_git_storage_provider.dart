@@ -4,11 +4,11 @@ import 'package:git/git.dart';
 import 'package:path/path.dart' as path;
 import 'package:retry/retry.dart';
 
+import '../capabilities/version_control_service.dart';
 import '../config/storage_config.dart';
 import '../exceptions/storage_exceptions.dart';
 import '../models/version_control_models.dart';
 import '../storage_provider.dart';
-import 'version_control_service.dart';
 
 /// {@template offline_git_storage_provider}
 /// A storage provider that uses a local Git repository for storage operations

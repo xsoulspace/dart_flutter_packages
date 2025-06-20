@@ -9,15 +9,14 @@ import 'credential_storage.dart';
 /// Secure credential storage using platform keychain/keystore
 class SecureCredentialStorage implements CredentialStorage {
   SecureCredentialStorage([FlutterSecureStorage? storage])
-      : _storage = storage ??
-            const FlutterSecureStorage(
-              aOptions: AndroidOptions(
-                encryptedSharedPreferences: true,
-              ),
-              iOptions: IOSOptions(
-                accessibility: KeychainAccessibility.first_unlock_this_device,
-              ),
-            );
+    : _storage =
+          storage ??
+          const FlutterSecureStorage(
+            aOptions: AndroidOptions(encryptedSharedPreferences: true),
+            iOptions: IOSOptions(
+              accessibility: KeychainAccessibility.first_unlock_this_device,
+            ),
+          );
 
   final FlutterSecureStorage _storage;
 
@@ -25,15 +24,18 @@ class SecureCredentialStorage implements CredentialStorage {
 
   @override
   Future<void> storeCredentials(
-      GitPlatform platform, StoredCredentials credentials) async {
+    GitPlatform platform,
+    StoredCredentials credentials,
+  ) async {
     try {
       final key = _getKey(platform);
       final value = jsonEncode(credentials.toJson());
       await _storage.write(key: key, value: value);
     } catch (e) {
       throw StorageException(
-          'Failed to store credentials for ${platform.displayName}',
-          e.toString());
+        'Failed to store credentials for ${platform.displayName}',
+        e.toString(),
+      );
     }
   }
 
@@ -55,7 +57,8 @@ class SecureCredentialStorage implements CredentialStorage {
         // Ignore clear errors
       }
       throw StorageException.corruptedData(
-          'credentials for ${platform.displayName}');
+        'credentials for ${platform.displayName}',
+      );
     }
   }
 
@@ -66,8 +69,9 @@ class SecureCredentialStorage implements CredentialStorage {
       await _storage.delete(key: key);
     } catch (e) {
       throw StorageException(
-          'Failed to clear credentials for ${platform.displayName}',
-          e.toString());
+        'Failed to clear credentials for ${platform.displayName}',
+        e.toString(),
+      );
     }
   }
 
@@ -85,7 +89,9 @@ class SecureCredentialStorage implements CredentialStorage {
 
     if (errors.isNotEmpty) {
       throw StorageException(
-          'Failed to clear some credentials', errors.join(', '));
+        'Failed to clear some credentials',
+        errors.join(', '),
+      );
     }
   }
 

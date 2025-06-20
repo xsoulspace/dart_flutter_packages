@@ -34,15 +34,16 @@ extension type const Todo(Map<String, dynamic> value) {
     DateTime? createdAt,
     DateTime? completedAt,
     List<String> tags = const [],
-  }) => Todo({
-    'id': id.value,
-    'title': title,
-    'description': description,
-    'isCompleted': isCompleted,
-    'createdAt': (createdAt ?? DateTime.now()).toIso8601String(),
-    'completedAt': completedAt?.toIso8601String(),
-    'tags': tags,
-  });
+  }) =>
+      Todo({
+        'id': id.value,
+        'title': title,
+        'description': description,
+        'isCompleted': isCompleted,
+        'createdAt': (createdAt ?? DateTime.now()).toIso8601String(),
+        'completedAt': completedAt?.toIso8601String(),
+        'tags': tags,
+      });
 
   /// Todo ID
   TodoId get id => TodoId.fromJson(value['id']);
@@ -77,15 +78,16 @@ extension type const Todo(Map<String, dynamic> value) {
     DateTime? createdAt,
     DateTime? completedAt,
     List<String>? tags,
-  }) => Todo({
-    'id': (id ?? this.id).value,
-    'title': title ?? this.title,
-    'description': description ?? this.description,
-    'isCompleted': isCompleted ?? this.isCompleted,
-    'createdAt': (createdAt ?? this.createdAt).toIso8601String(),
-    'completedAt': (completedAt ?? this.completedAt)?.toIso8601String(),
-    'tags': tags ?? this.tags,
-  });
+  }) =>
+      Todo({
+        'id': (id ?? this.id).value,
+        'title': title ?? this.title,
+        'description': description ?? this.description,
+        'isCompleted': isCompleted ?? this.isCompleted,
+        'createdAt': (createdAt ?? this.createdAt).toIso8601String(),
+        'completedAt': (completedAt ?? this.completedAt)?.toIso8601String(),
+        'tags': tags ?? this.tags,
+      });
 
   /// Converts to JSON representation
   Map<String, dynamic> toJson() => value;

@@ -7,7 +7,8 @@ import 'git_platform.dart';
 /// Type-safe wrapper around OAuth client identifiers to prevent mixing
 /// with other string types at compile time.
 extension type const OAuthClientId(String value) {
-  factory OAuthClientId.fromJson(final value) =>
+  // ignore: avoid_annotating_with_dynamic
+  factory OAuthClientId.fromJson(final dynamic value) =>
       OAuthClientId(jsonDecodeString(value));
 
   String toJson() => value;
@@ -26,7 +27,8 @@ extension type const OAuthClientId(String value) {
 /// Type-safe wrapper around OAuth client secrets to prevent mixing
 /// with other string types at compile time.
 extension type const OAuthClientSecret(String value) {
-  factory OAuthClientSecret.fromJson(final value) =>
+  // ignore: avoid_annotating_with_dynamic
+  factory OAuthClientSecret.fromJson(final dynamic value) =>
       OAuthClientSecret(jsonDecodeString(value));
 
   String toJson() => value;
@@ -45,7 +47,8 @@ extension type const OAuthClientSecret(String value) {
 /// Type-safe wrapper around OAuth redirect URIs to prevent mixing
 /// with other string types at compile time.
 extension type const OAuthRedirectUri(String value) {
-  factory OAuthRedirectUri.fromJson(final value) =>
+  // ignore: avoid_annotating_with_dynamic
+  factory OAuthRedirectUri.fromJson(final dynamic value) =>
       OAuthRedirectUri(jsonDecodeString(value));
 
   String toJson() => value;
@@ -64,7 +67,8 @@ extension type const OAuthRedirectUri(String value) {
 /// Type-safe wrapper around custom URI schemes to prevent mixing
 /// with other string types at compile time.
 extension type const OAuthCustomUriScheme(String value) {
-  factory OAuthCustomUriScheme.fromJson(final value) =>
+  // ignore: avoid_annotating_with_dynamic
+  factory OAuthCustomUriScheme.fromJson(final dynamic value) =>
       OAuthCustomUriScheme(jsonDecodeString(value));
 
   String toJson() => value;
@@ -83,7 +87,8 @@ extension type const OAuthCustomUriScheme(String value) {
 /// Type-safe wrapper around OAuth scopes with convenient methods
 /// for managing scope collections.
 extension type const OAuthScopes(List<String> value) {
-  factory OAuthScopes.fromJson(final jsonData) {
+  // ignore: avoid_annotating_with_dynamic
+  factory OAuthScopes.fromJson(final dynamic jsonData) {
     final list = jsonDecodeList(jsonData);
     return OAuthScopes(jsonDecodeListAs<String>(list));
   }
@@ -131,7 +136,8 @@ extension type const OAuthScopes(List<String> value) {
 ///
 /// Uses from_json_to_json for type-safe JSON handling.
 extension type const OAuthConfig(Map<String, dynamic> value) {
-  factory OAuthConfig.fromJson(final jsonData) {
+  // ignore: avoid_annotating_with_dynamic
+  factory OAuthConfig.fromJson(final dynamic jsonData) {
     final map = jsonDecodeMap(jsonData);
     return OAuthConfig(map);
   }

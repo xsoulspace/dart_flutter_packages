@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print, avoid_catches_without_on_clauses
+
 import 'dart:io';
 
 import 'package:universal_storage_sync/universal_storage_sync.dart';
@@ -36,7 +38,7 @@ Future<void> demonstrateGitFeatures(final String repoPath) async {
     'authorEmail': 'demo@example.com',
   };
 
-  const offlineGitConfig = OfflineGitConfig(
+  final offlineGitConfig = OfflineGitConfig(
     localPath: './my_git_repo',
     branchName: 'main',
     authorName: 'Your Name',

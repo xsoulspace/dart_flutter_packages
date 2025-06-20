@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
 import 'package:todo_app/models/todo.dart';
-import 'package:todo_app/state/app_state.dart';
 import 'package:todo_app/widgets/todo_editor_dialog.dart';
 
 import '../test_helpers.dart';

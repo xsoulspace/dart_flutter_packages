@@ -103,14 +103,13 @@ enum SecurityLevel {
 /// {@template provider_selector}
 /// Utility class for recommending storage providers based on requirements.
 /// {@endtemplate}
-class ProviderSelector {
-  /// {@macro provider_selector}
-  const ProviderSelector();
-
+mixin ProviderSelector {
   /// Recommends the best provider based on requirements
-  static ProviderRecommendation recommend(ProviderRequirements requirements) {
+  static ProviderRecommendation recommend(
+    final ProviderRequirements requirements,
+  ) {
     final candidates = _evaluateProviders(requirements);
-    candidates.sort((a, b) => b.score.compareTo(a.score));
+    candidates.sort((final a, final b) => b.score.compareTo(a.score));
 
     final primary = candidates.first;
     final alternatives = candidates.skip(1).take(2).toList();
@@ -126,24 +125,26 @@ class ProviderSelector {
 
   /// Gets all provider recommendations ranked by suitability
   static List<ProviderRecommendation> getAllRecommendations(
-      ProviderRequirements requirements) {
+    final ProviderRequirements requirements,
+  ) {
     final candidates = _evaluateProviders(requirements);
-    candidates.sort((a, b) => b.score.compareTo(a.score));
+    candidates.sort((final a, final b) => b.score.compareTo(a.score));
     return candidates;
   }
 
   /// Evaluates all available providers against requirements
   static List<ProviderRecommendation> _evaluateProviders(
-          ProviderRequirements requirements) =>
-      [
-        _evaluateFileSystem(requirements),
-        _evaluateGitHub(requirements),
-        _evaluateOfflineGit(requirements),
-      ];
+    final ProviderRequirements requirements,
+  ) => [
+    _evaluateFileSystem(requirements),
+    _evaluateGitHub(requirements),
+    _evaluateOfflineGit(requirements),
+  ];
 
   /// Evaluates FileSystem provider
   static ProviderRecommendation _evaluateFileSystem(
-      ProviderRequirements requirements) {
+    final ProviderRequirements requirements,
+  ) {
     var score = 50; // Base score
     final reasons = <String>[];
 
@@ -205,7 +206,8 @@ class ProviderSelector {
 
   /// Evaluates GitHub API provider
   static ProviderRecommendation _evaluateGitHub(
-      ProviderRequirements requirements) {
+    final ProviderRequirements requirements,
+  ) {
     var score = 50; // Base score
     final reasons = <String>[];
 
@@ -252,7 +254,7 @@ class ProviderSelector {
       reasons.add('requires API token setup');
     }
 
-    const configTemplate = GitHubApiConfig(
+    final configTemplate = GitHubApiConfig(
       authToken: 'YOUR_GITHUB_TOKEN',
       repositoryOwner: 'your-username',
       repositoryName: 'your-repo',
@@ -268,7 +270,8 @@ class ProviderSelector {
 
   /// Evaluates Offline Git provider
   static ProviderRecommendation _evaluateOfflineGit(
-      ProviderRequirements requirements) {
+    final ProviderRequirements requirements,
+  ) {
     var score = 50; // Base score
     final reasons = <String>[];
 
@@ -320,7 +323,7 @@ class ProviderSelector {
       reasons.add('limited collaboration without remote sync');
     }
 
-    const configTemplate = OfflineGitConfig(
+    final configTemplate = OfflineGitConfig(
       localPath: '/path/to/git/repo',
       branchName: 'main',
       authorName: 'Your Name',
@@ -337,7 +340,7 @@ class ProviderSelector {
   }
 
   /// Creates requirements from simple use case descriptions
-  static ProviderRequirements fromUseCase(String useCase) {
+  static ProviderRequirements fromUseCase(final String useCase) {
     final lowerCase = useCase.toLowerCase();
 
     // Simple local storage
@@ -376,10 +379,7 @@ class ProviderSelector {
     if (lowerCase.contains('web') ||
         lowerCase.contains('browser') ||
         lowerCase.contains('online')) {
-      return const ProviderRequirements(
-        isWeb: true,
-        needsRemoteSync: true,
-      );
+      return const ProviderRequirements(isWeb: true, needsRemoteSync: true);
     }
 
     // Offline-first

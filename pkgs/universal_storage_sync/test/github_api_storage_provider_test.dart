@@ -15,42 +15,49 @@ void main() {
     });
 
     test('should throw ArgumentError when wrong config type is provided', () {
-      const config = FileSystemConfig(basePath: '/test');
+      final config = FileSystemConfig(basePath: '/test');
       expect(
         () => provider.initWithConfig(config),
         throwsA(isA<ArgumentError>()),
       );
     });
 
-    test('should throw ConfigurationException when '
-        'authToken is missing in manual mode', () {
-      final config = GitHubApiConfig.builder()
-          .repositoryOwner('test')
-          .repositoryName('test-repo')
-          .build;
-
-      expect(config, throwsA(isA<StateError>()));
-    });
-
-    test('should throw ConfigurationException when '
-        'repositoryOwner is missing in manual mode', () {
+    test('should throw ArgumentError when '
+        'authToken'
+        ' is missing in manual mode', () {
       expect(
-        () => GitHubApiConfig.builder()
-            .authToken('test-token')
-            .repositoryName('test-repo')
-            .build(),
-        throwsA(isA<StateError>()),
+        () => GitHubApiConfig(
+          repositoryOwner: 'test',
+          repositoryName: 'test-repo',
+          authToken: '',
+        ),
+        throwsA(isA<ArgumentError>()),
       );
     });
 
-    test('should throw ConfigurationException when '
-        'repositoryName is missing in manual mode', () {
+    test('should throw ArgumentError when '
+        'repositoryOwner'
+        ' is missing in manual mode', () {
       expect(
-        () => GitHubApiConfig.builder()
-            .authToken('test-token')
-            .repositoryOwner('test')
-            .build(),
-        throwsA(isA<StateError>()),
+        () => GitHubApiConfig(
+          authToken: 'test-token',
+          repositoryName: 'test-repo',
+          repositoryOwner: '',
+        ),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
+
+    test('should throw ArgumentError when '
+        'repositoryName'
+        ' is missing in manual mode', () {
+      expect(
+        () => GitHubApiConfig(
+          authToken: 'test-token',
+          repositoryOwner: 'test',
+          repositoryName: '',
+        ),
+        throwsA(isA<ArgumentError>()),
       );
     });
 
@@ -67,11 +74,11 @@ void main() {
     );
 
     test('should build valid manual config', () {
-      final config = GitHubApiConfig.builder()
-          .authToken('test-token')
-          .repositoryOwner('test-owner')
-          .repositoryName('test-repo')
-          .build();
+      final config = GitHubApiConfig(
+        authToken: 'test-token',
+        repositoryOwner: 'test-owner',
+        repositoryName: 'test-repo',
+      );
 
       expect(config.authToken, equals('test-token'));
       expect(config.repositoryOwner, equals('test-owner'));

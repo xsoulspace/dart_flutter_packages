@@ -1,5 +1,3 @@
-// ignore_for_file: avoid_annotating_with_dynamic
-
 import 'package:from_json_to_json/from_json_to_json.dart';
 
 /// Extension type that represents a version control repository.
@@ -9,6 +7,7 @@ import 'package:from_json_to_json/from_json_to_json.dart';
 ///
 /// Uses from_json_to_json for type-safe JSON handling.
 extension type const VcRepository(Map<String, dynamic> value) {
+  // ignore: avoid_annotating_with_dynamic
   factory VcRepository.fromJson(final dynamic jsonData) {
     final map = jsonDecodeMap(jsonData);
     return VcRepository(map);
@@ -51,6 +50,7 @@ extension type const VcRepository(Map<String, dynamic> value) {
 /// Provider-agnostic model for branch information across different
 /// version control systems.
 extension type const VcBranch(Map<String, dynamic> value) {
+  // ignore: avoid_annotating_with_dynamic
   factory VcBranch.fromJson(final dynamic jsonData) {
     final map = jsonDecodeMap(jsonData);
     return VcBranch(map);
@@ -78,7 +78,8 @@ extension type const VcBranch(Map<String, dynamic> value) {
 /// Provider-agnostic model for repository creation parameters that
 /// can be adapted to different version control platforms.
 extension type const VcCreateRepositoryRequest(Map<String, dynamic> value) {
-  factory VcCreateRepositoryRequest.fromJson(final jsonData) {
+  // ignore: avoid_annotating_with_dynamic
+  factory VcCreateRepositoryRequest.fromJson(final dynamic jsonData) {
     final map = jsonDecodeMap(jsonData);
     return VcCreateRepositoryRequest(map);
   }
@@ -115,7 +116,8 @@ extension type const VcCreateRepositoryRequest(Map<String, dynamic> value) {
 /// Simple string-based identifier for referencing repositories
 /// across different providers.
 extension type const VcRepositoryId(String value) {
-  factory VcRepositoryId.fromJson(final value) =>
+  // ignore: avoid_annotating_with_dynamic
+  factory VcRepositoryId.fromJson(final dynamic value) =>
       VcRepositoryId(jsonDecodeString(value));
 
   String toJson() => value;
@@ -134,7 +136,8 @@ extension type const VcRepositoryId(String value) {
 /// Simple string-based identifier for branch names that provides
 /// type safety and common branch operations.
 extension type const VcBranchName(String value) {
-  factory VcBranchName.fromJson(final value) =>
+  // ignore: avoid_annotating_with_dynamic
+  factory VcBranchName.fromJson(final dynamic value) =>
       VcBranchName(jsonDecodeString(value));
 
   String toJson() => value;

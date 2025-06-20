@@ -253,7 +253,7 @@ class AppState extends ChangeNotifier {
   Future<void> _initializeStorage() async {
     if (workspacePath == null) return;
 
-    final config = FileSystemConfig.builder().basePath(workspacePath!).build();
+    final config = FileSystemConfig(basePath: workspacePath!);
 
     _storageService = StorageService(FileSystemStorageProvider());
     await _storageService!.initializeWithConfig(config);

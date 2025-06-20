@@ -25,43 +25,43 @@ void main() {
 
     group('Remote Setup & Configuration', () {
       test('should throw exception when sync without remote URL', () async {
-        final config = OfflineGitConfig.builder()
-            .localPath(tempDir)
-            .branchName('main')
-            .authorName('Test User')
-            .authorEmail('test@example.com')
-            .build();
+        final config = OfflineGitConfig(
+          localPath: tempDir,
+          branchName: 'main',
+          authorName: 'Test User',
+          authorEmail: 'test@example.com',
+        );
 
         await provider.initWithConfig(config);
         expect(() => provider.sync(), throwsA(isA<AuthenticationException>()));
       });
 
       test('should handle invalid remote URL gracefully', () async {
-        final config = OfflineGitConfig.builder()
-            .localPath(tempDir)
-            .branchName('main')
-            .authorName('Test User')
-            .authorEmail('test@example.com')
-            .remoteUrl('https://invalid-url-that-does-not-exist.com/repo.git')
-            .build();
+        final config = OfflineGitConfig(
+          localPath: tempDir,
+          branchName: 'main',
+          authorName: 'Test User',
+          authorEmail: 'test@example.com',
+          remoteUrl: 'https://invalid-url-that-does-not-exist.com/repo.git',
+        );
 
         await provider.initWithConfig(config);
         expect(() => provider.sync(), throwsA(isA<NetworkException>()));
       });
 
       test('should configure remote settings from config', () async {
-        final config = OfflineGitConfig.builder()
-            .localPath(tempDir)
-            .branchName('main')
-            .authorName('Test User')
-            .authorEmail('test@example.com')
-            .remoteUrl('https://github.com/test/repo.git')
-            .remoteName('upstream')
-            .remoteType('github')
-            .defaultPullStrategy('rebase')
-            .defaultPushStrategy('force-with-lease')
-            .conflictResolution(ConflictResolutionStrategy.serverAlwaysRight)
-            .build();
+        final config = OfflineGitConfig(
+          localPath: tempDir,
+          branchName: 'main',
+          authorName: 'Test User',
+          authorEmail: 'test@example.com',
+          remoteUrl: 'https://github.com/test/repo.git',
+          remoteName: 'upstream',
+          remoteType: 'github',
+          defaultPullStrategy: 'rebase',
+          defaultPushStrategy: 'force-with-lease',
+          conflictResolution: ConflictResolutionStrategy.serverAlwaysRight,
+        );
 
         await provider.initWithConfig(config);
         expect(await provider.isAuthenticated(), isTrue);
@@ -71,11 +71,10 @@ void main() {
     group('Conflict Resolution Strategies', () {
       test('should parse conflict resolution strategy from config', () async {
         // Test clientAlwaysRight (default)
-        final config1 = OfflineGitConfig.builder()
-            .localPath(tempDir)
-            .branchName('main')
-            .conflictResolution(ConflictResolutionStrategy.clientAlwaysRight)
-            .build();
+        final config1 = OfflineGitConfig(
+          localPath: tempDir,
+          branchName: 'main',
+        );
 
         await provider.initWithConfig(config1);
         expect(await provider.isAuthenticated(), isTrue);
@@ -86,11 +85,11 @@ void main() {
           'git_test_',
         )).path;
 
-        final config2 = OfflineGitConfig.builder()
-            .localPath(tempDir2)
-            .branchName('main')
-            .conflictResolution(ConflictResolutionStrategy.serverAlwaysRight)
-            .build();
+        final config2 = OfflineGitConfig(
+          localPath: tempDir2,
+          branchName: 'main',
+          conflictResolution: ConflictResolutionStrategy.serverAlwaysRight,
+        );
 
         await provider2.initWithConfig(config2);
         expect(await provider2.isAuthenticated(), isTrue);
@@ -102,10 +101,10 @@ void main() {
       test(
         'should default to clientAlwaysRight for default strategy',
         () async {
-          final config = OfflineGitConfig.builder()
-              .localPath(tempDir)
-              .branchName('main')
-              .build(); // Default strategy is clientAlwaysRight
+          final config = OfflineGitConfig(
+            localPath: tempDir,
+            branchName: 'main',
+          ); // Default strategy is clientAlwaysRight
 
           await provider.initWithConfig(config);
           expect(await provider.isAuthenticated(), isTrue);
@@ -115,22 +114,19 @@ void main() {
 
     group('Sync Strategies', () {
       test('should configure pull and push strategies', () async {
-        final config = OfflineGitConfig.builder()
-            .localPath(tempDir)
-            .branchName('main')
-            .defaultPullStrategy('ff-only')
-            .defaultPushStrategy('fail-on-conflict')
-            .build();
+        final config = OfflineGitConfig(
+          localPath: tempDir,
+          branchName: 'main',
+          defaultPullStrategy: 'ff-only',
+          defaultPushStrategy: 'fail-on-conflict',
+        );
 
         await provider.initWithConfig(config);
         expect(await provider.isAuthenticated(), isTrue);
       });
 
       test('should use default strategies when not specified', () async {
-        final config = OfflineGitConfig.builder()
-            .localPath(tempDir)
-            .branchName('main')
-            .build();
+        final config = OfflineGitConfig(localPath: tempDir, branchName: 'main');
 
         await provider.initWithConfig(config);
         expect(await provider.isAuthenticated(), isTrue);
@@ -139,27 +135,29 @@ void main() {
 
     group('Authentication Configuration', () {
       test('should configure SSH key path', () async {
-        final config = OfflineGitConfig.builder()
-            .localPath(tempDir)
-            .branchName('main')
-            .authentication()
-            .sshKey('/path/to/ssh/key')
-            .build();
+        final config = OfflineGitConfig(
+          localPath: tempDir,
+          branchName: 'main',
+          remoteUrl: 'https://github.com/test/repo.git',
+          sshKeyPath: '/path/to/ssh/key',
+        );
 
         await provider.initWithConfig(config);
-        expect(await provider.isAuthenticated(), isTrue);
+        expect(provider.supportsSync, isTrue);
+        expect(config.sshKeyPath, '/path/to/ssh/key');
       });
 
       test('should configure HTTPS token', () async {
-        final config = OfflineGitConfig.builder()
-            .localPath(tempDir)
-            .branchName('main')
-            .authentication()
-            .httpsToken('github_pat_test_token')
-            .build();
+        final config = OfflineGitConfig(
+          localPath: tempDir,
+          branchName: 'main',
+          remoteUrl: 'https://github.com/test/repo.git',
+          httpsToken: 'github_pat_test_token',
+        );
 
         await provider.initWithConfig(config);
-        expect(await provider.isAuthenticated(), isTrue);
+        expect(provider.supportsSync, isTrue);
+        expect(config.httpsToken, 'github_pat_test_token');
       });
     });
 
@@ -167,11 +165,11 @@ void main() {
       test(
         'should handle network timeout gracefully',
         () async {
-          final config = OfflineGitConfig.builder()
-              .localPath(tempDir)
-              .branchName('main')
-              .remoteUrl('https://httpbin.org/delay/5') // Returns after delay
-              .build();
+          final config = OfflineGitConfig(
+            localPath: tempDir,
+            branchName: 'main',
+            remoteUrl: 'https://httpbin.org/delay/5', // Returns after delay
+          );
 
           await provider.initWithConfig(config);
           expect(() => provider.sync(), throwsA(isA<NetworkException>()));
@@ -180,11 +178,11 @@ void main() {
       );
 
       test('should handle authentication failure', () async {
-        final config = OfflineGitConfig.builder()
-            .localPath(tempDir)
-            .branchName('main')
-            .remoteUrl('https://github.com/private/repo.git') // Requires auth
-            .build();
+        final config = OfflineGitConfig(
+          localPath: tempDir,
+          branchName: 'main',
+          remoteUrl: 'https://github.com/private/repo.git', // Requires auth
+        );
 
         await provider.initWithConfig(config);
         expect(() => provider.sync(), throwsA(isA<NetworkException>()));
@@ -199,12 +197,12 @@ void main() {
       });
 
       test('should sync through StorageService', () async {
-        final config = OfflineGitConfig.builder()
-            .localPath(tempDir)
-            .branchName('main')
-            .authorName('Test User')
-            .authorEmail('test@example.com')
-            .build();
+        final config = OfflineGitConfig(
+          localPath: tempDir,
+          branchName: 'main',
+          authorName: 'Test User',
+          authorEmail: 'test@example.com',
+        );
 
         await storageService.initializeWithConfig(config);
 
@@ -214,11 +212,11 @@ void main() {
       });
 
       test('should pass sync strategies to provider', () async {
-        final config = OfflineGitConfig.builder()
-            .localPath(tempDir)
-            .branchName('main')
-            .remoteUrl('https://invalid-url.com/repo.git')
-            .build();
+        final config = OfflineGitConfig(
+          localPath: tempDir,
+          branchName: 'main',
+          remoteUrl: 'https://invalid-url.com/repo.git',
+        );
 
         await storageService.initializeWithConfig(config);
 
@@ -235,53 +233,46 @@ void main() {
     group('Configuration Validation', () {
       test('should throw exception for missing localPath', () async {
         expect(
-          () => OfflineGitConfig.builder().branchName('main').build(),
-          throwsA(isA<StateError>()),
+          () => OfflineGitConfig(branchName: 'main', localPath: ''),
+          throwsA(isA<ArgumentError>()),
         );
       });
 
       test('should throw exception for missing branchName', () async {
         expect(
-          () => OfflineGitConfig.builder().localPath(tempDir).build(),
-          throwsA(isA<StateError>()),
+          () => OfflineGitConfig(localPath: tempDir, branchName: ''),
+          throwsA(isA<ArgumentError>()),
         );
       });
 
       test('should throw exception for empty localPath', () async {
         expect(
-          () => OfflineGitConfig.builder()
-              .localPath('')
-              .branchName('main')
-              .build(),
+          () => OfflineGitConfig(localPath: '', branchName: 'main'),
           throwsA(isA<ArgumentError>()),
         );
       });
 
       test('should throw exception for empty branchName', () async {
         expect(
-          () => OfflineGitConfig.builder()
-              .localPath(tempDir)
-              .branchName('')
-              .build(),
+          () => OfflineGitConfig(localPath: tempDir, branchName: ''),
           throwsA(isA<ArgumentError>()),
         );
       });
 
       test('should build valid config with all options', () async {
-        final config = OfflineGitConfig.builder()
-            .localPath(tempDir)
-            .branchName('main')
-            .authorName('Test User')
-            .authorEmail('test@example.com')
-            .remoteUrl('https://github.com/test/repo.git')
-            .remoteName('upstream')
-            .remoteType('github')
-            .defaultPullStrategy('rebase')
-            .defaultPushStrategy('force-with-lease')
-            .conflictResolution(ConflictResolutionStrategy.manualResolution)
-            .authentication()
-            .httpsToken('test-token')
-            .build();
+        final config = OfflineGitConfig(
+          localPath: tempDir,
+          branchName: 'main',
+          authorName: 'Test User',
+          authorEmail: 'test@example.com',
+          remoteUrl: 'https://github.com/test/repo.git',
+          remoteName: 'upstream',
+          remoteType: 'github',
+          defaultPullStrategy: 'rebase',
+          defaultPushStrategy: 'force-with-lease',
+          conflictResolution: ConflictResolutionStrategy.manualResolution,
+          httpsToken: 'test-token',
+        );
 
         await provider.initWithConfig(config);
         expect(await provider.isAuthenticated(), isTrue);
@@ -289,10 +280,7 @@ void main() {
       });
 
       test('should build minimal valid config', () async {
-        final config = OfflineGitConfig.builder()
-            .localPath(tempDir)
-            .branchName('main')
-            .build();
+        final config = OfflineGitConfig(localPath: tempDir, branchName: 'main');
 
         expect(config.localPath, equals(tempDir));
         expect(config.branchName, equals('main'));

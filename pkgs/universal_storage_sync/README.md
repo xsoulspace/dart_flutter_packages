@@ -125,15 +125,14 @@ final service = await StorageFactory.createGitHubApi(config);
 Local Git repository with optional remote synchronization.
 
 ```dart
-final config = OfflineGitConfig.builder()
-    .localPath('/path/to/repo')
-    .branchName('main')
-    .authorName('Your Name')
-    .authorEmail('your@email.com')
-    .remoteUrl('https://github.com/user/repo.git')
-    .authentication()
-    .sshKey('/path/to/ssh/key')
-    .build();
+final config = OfflineGitConfig(
+    localPath: '/path/to/repo',
+    branchName: 'main',
+    authorName: 'Your Name',
+    authorEmail: 'your@email.com',
+    remoteUrl: 'https://github.com/user/repo.git',
+    sshKeyPath: '/path/to/ssh/key',
+);
 
 final service = await StorageFactory.createOfflineGit(config);
 ```
@@ -159,27 +158,26 @@ Type-safe configuration with validation:
 
 ```dart
 // FileSystem with validation
-final fsConfig = FileSystemConfig.builder()
-    .basePath('/valid/path')  // Will validate path
-    .build();
+final fsConfig = FileSystemConfig(
+    basePath: '/valid/path',  // Will validate path
+);
 
 // GitHub with fluent API
-final ghConfig = GitHubApiConfig.builder()
-    .authToken('token')
-    .repositoryOwner('owner')
-    .repositoryName('repo')
-    .branchName('develop')
-    .build();
+final ghConfig = GitHubApiConfig(
+    authToken: 'token',
+    repositoryOwner: 'owner',
+    repositoryName: 'repo',
+    branchName: 'develop',
+);
 
 // Git with authentication methods
-final gitConfig = OfflineGitConfig.builder()
-    .localPath('/repo/path')
-    .branchName('main')
-    .remoteUrl('git@github.com:user/repo.git')
-    .authentication()
-    .sshKey('/path/to/key')  // or .httpsToken('token')
-    .conflictResolution(ConflictResolutionStrategy.lastWriteWins)
-    .build();
+final gitConfig = OfflineGitConfig(
+    localPath: '/repo/path',
+    branchName: 'main',
+    remoteUrl: 'git@github.com:user/repo.git',
+    sshKeyPath: '/path/to/key',  // or httpsToken: 'token'
+    conflictResolution: ConflictResolutionStrategy.lastWriteWins,
+);
 ```
 
 ### Path Normalization

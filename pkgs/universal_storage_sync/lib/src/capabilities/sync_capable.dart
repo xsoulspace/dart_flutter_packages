@@ -11,33 +11,33 @@ mixin SyncCapable {
 
   /// Synchronizes local data with remote repository
   Future<void> sync({
-    String? pullMergeStrategy,
-    String? pushConflictStrategy,
+    final String? pullMergeStrategy,
+    final String? pushConflictStrategy,
   });
 
   /// Pushes local changes to remote repository
-  Future<void> push({String? strategy}) async {
+  Future<void> push({final String? strategy}) {
     throw const UnsupportedOperationException(
       'Push operation must be implemented by the provider',
     );
   }
 
   /// Pulls remote changes to local repository
-  Future<void> pull({String? strategy}) async {
+  Future<void> pull({final String? strategy}) {
     throw const UnsupportedOperationException(
       'Pull operation must be implemented by the provider',
     );
   }
 
   /// Checks if there are local changes to be synchronized
-  Future<bool> hasLocalChanges() async {
+  Future<bool> hasLocalChanges() {
     throw const UnsupportedOperationException(
       'hasLocalChanges must be implemented by the provider',
     );
   }
 
   /// Checks if there are remote changes to be synchronized
-  Future<bool> hasRemoteChanges() async {
+  Future<bool> hasRemoteChanges() {
     throw const UnsupportedOperationException(
       'hasRemoteChanges must be implemented by the provider',
     );
@@ -60,7 +60,7 @@ mixin SyncCapable {
   }
 
   /// Forces a complete synchronization, potentially losing local changes
-  Future<void> forceSync({bool preferLocal = false}) async {
+  Future<void> forceSync({final bool preferLocal = false}) async {
     if (preferLocal) {
       await push(strategy: 'force');
     } else {
@@ -70,7 +70,7 @@ mixin SyncCapable {
 
   /// Resolves conflicts during synchronization
   Future<void> resolveConflicts({
-    ConflictResolutionStrategy? strategy,
+    final ConflictResolutionStrategy? strategy,
   }) async {
     throw const UnsupportedOperationException(
       'resolveConflicts must be implemented by the provider',

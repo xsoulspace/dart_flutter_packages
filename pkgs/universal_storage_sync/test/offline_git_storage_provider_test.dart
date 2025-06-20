@@ -27,12 +27,12 @@ void main() {
 
     group('Repository Initialization', () {
       test('should initialize new repository with required config', () async {
-        final config = OfflineGitConfig.builder()
-            .localPath(tempDir)
-            .branchName('main')
-            .authorName('Test User')
-            .authorEmail('test@example.com')
-            .build();
+        final config = OfflineGitConfig(
+          localPath: tempDir,
+          branchName: 'main',
+          authorName: 'Test User',
+          authorEmail: 'test@example.com',
+        );
 
         await provider.initWithConfig(config);
         expect(await provider.isAuthenticated(), isTrue);
@@ -44,10 +44,7 @@ void main() {
 
       test('should handle existing repository', () async {
         // Initialize repository first time
-        final config = OfflineGitConfig.builder()
-            .localPath(tempDir)
-            .branchName('main')
-            .build();
+        final config = OfflineGitConfig(localPath: tempDir, branchName: 'main');
         await provider.initWithConfig(config);
 
         // Initialize again with same path
@@ -59,25 +56,25 @@ void main() {
 
       test('should throw exception for missing localPath', () async {
         expect(
-          () => OfflineGitConfig.builder().branchName('main').build(),
-          throwsA(isA<StateError>()),
+          () => OfflineGitConfig(branchName: 'main', localPath: ''),
+          throwsA(isA<ArgumentError>()),
         );
       });
 
       test('should throw exception for missing branchName', () async {
         expect(
-          () => OfflineGitConfig.builder().localPath(tempDir).build(),
-          throwsA(isA<StateError>()),
+          () => OfflineGitConfig(localPath: tempDir, branchName: ''),
+          throwsA(isA<ArgumentError>()),
         );
       });
 
       test('should configure Git user settings when provided', () async {
-        final config = OfflineGitConfig.builder()
-            .localPath(tempDir)
-            .branchName('main')
-            .authorName('Test User')
-            .authorEmail('test@example.com')
-            .build();
+        final config = OfflineGitConfig(
+          localPath: tempDir,
+          branchName: 'main',
+          authorName: 'Test User',
+          authorEmail: 'test@example.com',
+        );
 
         await provider.initWithConfig(config);
         expect(await provider.isAuthenticated(), isTrue);
@@ -86,12 +83,12 @@ void main() {
 
     group('File Operations', () {
       setUp(() async {
-        final config = OfflineGitConfig.builder()
-            .localPath(tempDir)
-            .branchName('main')
-            .authorName('Test User')
-            .authorEmail('test@example.com')
-            .build();
+        final config = OfflineGitConfig(
+          localPath: tempDir,
+          branchName: 'main',
+          authorName: 'Test User',
+          authorEmail: 'test@example.com',
+        );
 
         await provider.initWithConfig(config);
       });
@@ -251,12 +248,12 @@ void main() {
 
     group('Version Control Operations', () {
       setUp(() async {
-        final config = OfflineGitConfig.builder()
-            .localPath(tempDir)
-            .branchName('main')
-            .authorName('Test User')
-            .authorEmail('test@example.com')
-            .build();
+        final config = OfflineGitConfig(
+          localPath: tempDir,
+          branchName: 'main',
+          authorName: 'Test User',
+          authorEmail: 'test@example.com',
+        );
 
         await provider.initWithConfig(config);
       });
@@ -307,34 +304,30 @@ void main() {
 
     group('Remote Sync Configuration', () {
       test('should configure remote URL', () async {
-        final config = OfflineGitConfig.builder()
-            .localPath(tempDir)
-            .branchName('main')
-            .remoteUrl('https://github.com/test/repo.git')
-            .build();
+        final config = OfflineGitConfig(
+          localPath: tempDir,
+          branchName: 'main',
+          remoteUrl: 'https://github.com/test/repo.git',
+        );
 
         await provider.initWithConfig(config);
         expect(provider.supportsSync, isTrue);
       });
 
       test('should not support sync without remote URL', () async {
-        final config = OfflineGitConfig.builder()
-            .localPath(tempDir)
-            .branchName('main')
-            .build();
+        final config = OfflineGitConfig(localPath: tempDir, branchName: 'main');
 
         await provider.initWithConfig(config);
         expect(provider.supportsSync, isFalse);
       });
 
       test('should configure authentication options', () async {
-        final config = OfflineGitConfig.builder()
-            .localPath(tempDir)
-            .branchName('main')
-            .remoteUrl('https://github.com/test/repo.git')
-            .authentication()
-            .httpsToken('test-token')
-            .build();
+        final config = OfflineGitConfig(
+          localPath: tempDir,
+          branchName: 'main',
+          remoteUrl: 'https://github.com/test/repo.git',
+          httpsToken: 'test-token',
+        );
 
         await provider.initWithConfig(config);
         expect(provider.supportsSync, isTrue);
@@ -356,12 +349,12 @@ void main() {
       final provider = OfflineGitStorageProvider();
       storageService = StorageService(provider);
 
-      final config = OfflineGitConfig.builder()
-          .localPath(tempDir)
-          .branchName('main')
-          .authorName('Test User')
-          .authorEmail('test@example.com')
-          .build();
+      final config = OfflineGitConfig(
+        localPath: tempDir,
+        branchName: 'main',
+        authorName: 'Test User',
+        authorEmail: 'test@example.com',
+      );
       await storageService.initializeWithConfig(config);
     });
 

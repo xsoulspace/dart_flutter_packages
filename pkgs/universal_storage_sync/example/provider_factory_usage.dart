@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'package:universal_storage_sync/universal_storage_sync.dart';
 
 void main() async {
@@ -7,16 +9,16 @@ void main() async {
     // Example 1: Auto-detect provider from config type
     print('1. Auto-detect Provider from Configuration:');
 
-    final fileConfig = FileSystemConfig.builder().basePath('/tmp/demo').build();
+    final fileConfig = FileSystemConfig(basePath: '/tmp/demo');
 
     final service1 = await StorageFactory.create(fileConfig);
     print('   Created FileSystem service automatically');
 
-    final gitHubConfig = GitHubApiConfig.builder()
-        .authToken('demo_token')
-        .repositoryOwner('demo-user')
-        .repositoryName('demo-repo')
-        .build();
+    final gitHubConfig = GitHubApiConfig(
+      authToken: 'demo_token',
+      repositoryOwner: 'demo-user',
+      repositoryName: 'demo-repo',
+    );
 
     final service2 = await StorageFactory.create(gitHubConfig);
     print('   Created GitHub API service automatically\n');
@@ -24,26 +26,24 @@ void main() async {
     // Example 2: Specific factory methods
     print('2. Specific Factory Methods:');
 
-    final fsConfig =
-        FileSystemConfig.builder().basePath('/path/to/data').build();
+    final fsConfig = FileSystemConfig(basePath: '/path/to/data');
     final fsService = await StorageFactory.createFileSystem(fsConfig);
     print('   Created FileSystem service with specific method');
 
-    final ghConfig = GitHubApiConfig.builder()
-        .authToken('ghp_demo_token_123')
-        .repositoryOwner('myorg')
-        .repositoryName('myproject')
-        .branchName('develop')
-        .build();
+    final ghConfig = GitHubApiConfig(
+      authToken: 'ghp_demo_token_123',
+      repositoryOwner: 'myorg',
+      repositoryName: 'myproject',
+    );
     final ghService = await StorageFactory.createGitHubApi(ghConfig);
     print('   Created GitHub service with specific method');
 
-    final gitConfig = OfflineGitConfig.builder()
-        .localPath('/path/to/repo')
-        .branchName('main')
-        .authorName('Demo User')
-        .authorEmail('demo@example.com')
-        .build();
+    final gitConfig = OfflineGitConfig(
+      localPath: '/path/to/repo',
+      branchName: 'main',
+      authorName: 'Demo User',
+      authorEmail: 'demo@example.com',
+    );
     final gitService = await StorageFactory.createOfflineGit(gitConfig);
     print('   Created Offline Git service with specific method\n');
 
@@ -62,8 +62,9 @@ void main() async {
     print('   Reason: ${recommendation.reason}');
 
     // Create service using recommended config template
-    final recommendedService =
-        await StorageFactory.create(recommendation.configTemplate);
+    final recommendedService = await StorageFactory.create(
+      recommendation.configTemplate,
+    );
     print('   Service created using recommendation\n');
 
     // Example 4: Use case-based selection
@@ -75,15 +76,17 @@ void main() async {
       '   For "simple local storage": ${simpleRec.providerType} (score: ${simpleRec.score})',
     );
 
-    final collabReq =
-        ProviderSelector.fromUseCase('team collaboration project');
+    final collabReq = ProviderSelector.fromUseCase(
+      'team collaboration project',
+    );
     final collabRec = ProviderSelector.recommend(collabReq);
     print(
       '   For "team collaboration": ${collabRec.providerType} (score: ${collabRec.score})',
     );
 
-    final versionReq =
-        ProviderSelector.fromUseCase('version control and backup');
+    final versionReq = ProviderSelector.fromUseCase(
+      'version control and backup',
+    );
     final versionRec = ProviderSelector.recommend(versionReq);
     print(
       '   For "version control": ${versionRec.providerType} (score: ${versionRec.score})\n',
