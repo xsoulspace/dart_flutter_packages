@@ -4,7 +4,7 @@ import 'package:universal_storage_sync/universal_storage_sync.dart';
 /// {@template repository_selection_result}
 /// Result of repository selection or creation operation.
 /// {@endtemplate}
-class RepositorySelectionResult<R> {
+class RepositorySelectionResult {
   /// {@macro repository_selection_result}
   const RepositorySelectionResult({
     required this.repository,
@@ -12,7 +12,7 @@ class RepositorySelectionResult<R> {
   });
 
   /// The selected or created repository.
-  final R repository;
+  final VcRepository repository;
 
   /// Whether the repository was newly created.
   final bool wasCreated;
@@ -59,7 +59,7 @@ class RepositorySelectionConfig {
 /// - Collecting repository creation details
 /// - Showing progress during operations
 /// {@endtemplate}
-abstract interface class RepositorySelectionUIDelegate<R, C> {
+abstract interface class RepositorySelectionUIDelegate {
   /// {@macro repository_selection_ui}
   const RepositorySelectionUIDelegate();
 
@@ -69,8 +69,8 @@ abstract interface class RepositorySelectionUIDelegate<R, C> {
   /// [suggestedName] - Suggested repository name to highlight
   ///
   /// Returns the selected repository or null if cancelled.
-  Future<R?> selectRepository(
-    final List<R> repositories, {
+  Future<VcRepository?> selectRepository(
+    final List<VcRepository> repositories, {
     final String? suggestedName,
   });
 
@@ -79,7 +79,7 @@ abstract interface class RepositorySelectionUIDelegate<R, C> {
   /// [config] - Configuration with defaults and suggestions
   ///
   /// Returns repository creation details or null if cancelled.
-  Future<C?> getRepositoryCreationDetails(
+  Future<VcCreateRepositoryRequest?> getRepositoryCreationDetails(
     final RepositorySelectionConfig config,
   );
 
@@ -109,12 +109,12 @@ abstract interface class RepositorySelectionUIDelegate<R, C> {
 /// orchestrating common repository workflows while remaining UI-agnostic
 /// through the RepositorySelectionUI delegate pattern.
 /// {@endtemplate}
-class RepositoryManager<R, B, C> {
+class RepositoryManager {
   /// {@macro repository_manager}
   const RepositoryManager({required this.service, required this.ui});
 
   final VersionControlService service;
-  final RepositorySelectionUIDelegate<R, C> ui;
+  final RepositorySelectionUIDelegate ui;
 
   /// Selects or creates a repository based on configuration.
   ///
@@ -128,14 +128,14 @@ class RepositoryManager<R, B, C> {
   ///
   /// Returns the selected or created repository details.
   /// Throws [RepositorySelectionException] if operation fails or is cancelled.
-  Future<RepositorySelectionResult<R>> selectOrCreateRepository(
+  Future<RepositorySelectionResult> selectOrCreateRepository(
     final RepositorySelectionConfig config,
   ) async {
     try {
       await ui.showProgress('Loading repositories...');
 
       // Step 1: List existing repositories if selection is allowed
-      List<R> repositories = [];
+      List<VcRepository> repositories = [];
       if (config.allowSelection) {
         repositories = await service.listRepositories();
       }
@@ -149,7 +149,7 @@ class RepositoryManager<R, B, C> {
             .firstOrNull;
 
         if (suggested != null) {
-          return RepositorySelectionResult<R>(
+          return RepositorySelectionResult(
             repository: suggested,
             wasCreated: false,
           );
@@ -164,7 +164,7 @@ class RepositoryManager<R, B, C> {
         );
 
         if (selected != null) {
-          return RepositorySelectionResult<R>(
+          return RepositorySelectionResult(
             repository: selected,
             wasCreated: false,
           );
@@ -192,11 +192,12 @@ class RepositoryManager<R, B, C> {
   }
 
   /// Creates a new repository with user input.
-  Future<RepositorySelectionResult<R>> _createNewRepository(
+  Future<RepositorySelectionResult> _createNewRepository(
     final RepositorySelectionConfig config,
   ) async {
     // Get creation details from user
-    final C? createDetails = await ui.getRepositoryCreationDetails(config);
+    final VcCreateRepositoryRequest? createDetails = await ui
+        .getRepositoryCreationDetails(config);
     if (createDetails == null) {
       throw const RepositorySelectionException('Repository creation cancelled');
     }
@@ -207,7 +208,7 @@ class RepositoryManager<R, B, C> {
       final repository = await service.createRepository(createDetails);
       await ui.hideProgress();
 
-      return RepositorySelectionResult<R>(
+      return RepositorySelectionResult(
         repository: repository,
         wasCreated: true,
       );
@@ -224,7 +225,7 @@ class RepositoryManager<R, B, C> {
   /// Lists all repositories accessible to the authenticated user.
   ///
   /// This is a convenience wrapper around the provider's listRepositories method.
-  Future<List<R>> listRepositories() async {
+  Future<List<VcRepository>> listRepositories() async {
     await ui.showProgress('Loading repositories...');
     try {
       final repositories = await service.listRepositories();
@@ -243,7 +244,7 @@ class RepositoryManager<R, B, C> {
   /// Gets information about the current repository.
   ///
   /// This is a convenience wrapper around the provider's getRepositoryInfo method.
-  Future<R> getRepositoryInfo() async {
+  Future<VcRepository> getRepositoryInfo() async {
     await ui.showProgress('Loading repository information...');
     try {
       final repository = await service.getRepositoryInfo();
@@ -262,7 +263,7 @@ class RepositoryManager<R, B, C> {
   /// Lists branches in the current repository.
   ///
   /// This is a convenience wrapper around the provider's listBranches method.
-  Future<List<B>> listBranches() async {
+  Future<List<VcBranch>> listBranches() async {
     await ui.showProgress('Loading branches...');
     try {
       final branches = await service.listBranches();
@@ -280,14 +281,11 @@ class RepositoryManager<R, B, C> {
 
   /// Helper to extract repository name in a provider-agnostic way.
   ///
-  /// Implementations can supply an [extension] on their repository type to
-  /// expose a `name` getter. As a fallback this method tries to invoke `name`
-  /// via `Object?` reflection (using `noSuchMethod`). If not available it
-  /// returns null, disabling suggested-name pre-selection.
-  String? _extractName(final R repo) {
+  /// VcRepository extension type provides a name getter that can be used
+  /// to extract the repository name for suggested-name pre-selection.
+  String? _extractName(final VcRepository repo) {
     try {
-      // ignore: avoid_dynamic_calls
-      return repo.name as String?;
+      return repo.name;
     } catch (_) {
       return null;
     }

@@ -54,7 +54,8 @@ Future<void> runGitHubOAuthExample() async {
 }
 
 Future<void> demonstrateRepositoryService(
-    GitHubOAuthProvider oauthProvider) async {
+  final GitHubOAuthProvider oauthProvider,
+) async {
   print('\n📁 Repository Service Demo');
 
   final repoService = GitHubRepositoryService(oauthProvider);
@@ -89,14 +90,14 @@ Future<void> demonstrateRepositoryService(
 
 // Example of creating a repository
 Future<void> createRepositoryExample(
-    GitHubRepositoryService repoService) async {
+  final GitHubRepositoryService repoService,
+) async {
   print('\n🏗️ Creating Repository Example');
 
   try {
     final request = CreateRepositoryRequest(
       name: 'test-repo-${DateTime.now().millisecondsSinceEpoch}',
       description: 'Test repository created by git_oauth_provider',
-      isPrivate: false,
       autoInit: true,
     );
 

@@ -1,10 +1,12 @@
-/// Universal Storage Sync - A cross-platform Dart package for unified file storage operations
+/// Universal Storage Sync - A cross-platform Dart package for unified
+/// file storage operations
 library;
 
 export 'src/capabilities/sync_capable.dart';
 export 'src/capabilities/version_control_capable.dart';
 export 'src/config/storage_config.dart';
 export 'src/exceptions/storage_exceptions.dart';
+export 'src/models/models.dart';
 export 'src/providers/filesystem_storage_provider.dart';
 export 'src/providers/github_api_storage_provider.dart';
 export 'src/providers/offline_git_storage_provider.dart';

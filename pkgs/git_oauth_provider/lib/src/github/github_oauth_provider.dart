@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:oauth2/oauth2.dart' as oauth2;
 import 'package:oauth2_client/github_oauth2_client.dart';
@@ -34,7 +33,7 @@ class GitHubOAuthProvider implements OAuthProvider {
   Future<OAuthResult> authenticate() async {
     try {
       // Choose authentication flow based on configuration
-      final credentials = _config.redirectUri.isNotEmpty || kIsWeb
+      final credentials = _config.redirectUri.isNotEmpty
           ? await _performWebOAuthFlow()
           : await _performDeviceOAuthFlow();
 
