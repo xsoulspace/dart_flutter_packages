@@ -15,7 +15,7 @@ class StatusBar extends StatelessWidget {
         builder: (context, appState, child) => Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceVariant,
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
             border: Border(
               bottom:
                   BorderSide(color: Theme.of(context).dividerColor, width: 1),

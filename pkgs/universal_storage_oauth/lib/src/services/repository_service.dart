@@ -2,6 +2,13 @@ import '../models/models.dart';
 
 /// Request model for creating repositories
 class CreateRepositoryRequest {
+  /// Creates a new repository request.
+  ///
+  /// Parameters:
+  /// - [name]: The name of the repository.
+  /// - [description]: The description of the repository.
+  /// - [isPrivate]: Whether the repository is private.
+  /// - [organizationName]: The name of the organization.
   const CreateRepositoryRequest({
     required this.name,
     this.description,
@@ -12,14 +19,30 @@ class CreateRepositoryRequest {
     this.licenseTemplate,
   });
 
+  /// The name of the repository.
   final String name;
+
+  /// The description of the repository.
   final String? description;
+
+  /// Whether the repository is private.
   final bool isPrivate;
+
+  /// The name of the organization.
   final String? organizationName;
+
+  /// Whether to initialize the repository with a README.
   final bool autoInit;
+
+  /// The Gitignore template to use.
   final String? gitignoreTemplate;
+
+  /// The license template to use.
   final String? licenseTemplate;
 
+  /// Converts the repository request to JSON format.
+  ///
+  /// Returns the underlying map of strings to dynamic values directly.
   Map<String, dynamic> toJson() => {
     'name': name,
     'description': description,

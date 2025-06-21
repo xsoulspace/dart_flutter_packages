@@ -1,4 +1,7 @@
+// ignore_for_file: avoid_catches_without_on_clauses
+
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:http/http.dart' as http;
 import 'package:oauth2/oauth2.dart' as oauth2;
@@ -10,17 +13,25 @@ import '../providers/oauth_flow_delegate.dart';
 import '../providers/oauth_provider.dart';
 import '../storage/secure_credential_storage.dart';
 
-/// GitHub OAuth implementation using delegate pattern for platform-agnostic authentication
+/// GitHub OAuth implementation using delegate pattern
+/// for platform-agnostic authentication
 class GitHubOAuthProvider implements OAuthProvider {
+  /// {@macro github_oauth_provider}
   GitHubOAuthProvider(
     this._config,
     this._delegate, [
     final CredentialStorage? storage,
   ]) : _storage = storage ?? SecureCredentialStorage();
 
+  /// The OAuth configuration.
   final GitHubOAuthConfig _config;
+
+  /// The OAuth flow delegate.
   final OAuthFlowDelegate _delegate;
+
+  /// The credential storage.
   final CredentialStorage _storage;
+
   oauth2.Client? _client;
 
   @override
@@ -288,10 +299,10 @@ class GitHubOAuthProvider implements OAuthProvider {
       oauth2Credentials,
       identifier: _config.clientId,
       secret: _config.clientSecret,
-      onCredentialsRefreshed: (final newCreds) async {
+      onCredentialsRefreshed: (final newCredentials) async {
         await _storage.storeCredentials(
           platform,
-          StoredCredentials.fromOauth2Credentials(newCreds),
+          StoredCredentials.fromOauth2Credentials(newCredentials),
         );
       },
     );
@@ -305,7 +316,8 @@ class GitHubOAuthProvider implements OAuthProvider {
     try {
       final user = await getCurrentUser();
       return user != null;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      log('Error: $e', stackTrace: stackTrace);
       return false;
     }
   }

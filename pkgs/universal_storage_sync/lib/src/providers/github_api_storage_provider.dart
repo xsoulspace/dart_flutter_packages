@@ -496,13 +496,13 @@ class GitHubApiStorageProvider extends StorageProvider
     final VcRepository repository,
     final String localPath,
   ) {
-    // TODO: implement cloneRepository
+    // TODO(arenukvern): implement cloneRepository
     throw UnimplementedError();
   }
 
   @override
   Future<void> setRepository(final VcRepositoryName repositoryId) {
-    // TODO: implement setRepository
+    // TODO(arenukvern): implement setRepository
     throw UnimplementedError();
   }
 }

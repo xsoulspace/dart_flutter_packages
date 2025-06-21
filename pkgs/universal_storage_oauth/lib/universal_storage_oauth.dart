@@ -1,4 +1,5 @@
-/// OAuth provider for Git platforms (GitHub, GitLab, etc.) with secure credential management
+/// OAuth provider for Git platforms (GitHub, GitLab, etc.) with
+/// secure credential management
 library;
 
 // Exceptions

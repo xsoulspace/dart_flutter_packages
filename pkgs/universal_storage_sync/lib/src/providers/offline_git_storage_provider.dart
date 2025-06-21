@@ -644,25 +644,25 @@ class OfflineGitStorageProvider extends StorageProvider
 
   @override
   Future<VcRepository> getRepositoryInfo() {
-    // TODO: implement getRepositoryInfo
+    // TODO(arenukvern): implement getRepositoryInfo
     throw UnimplementedError();
   }
 
   @override
   Future<List<VcBranch>> listBranches() {
-    // TODO: implement listBranches
+    // TODO(arenukvern): implement listBranches
     throw UnimplementedError();
   }
 
   @override
   Future<List<VcRepository>> listRepositories() {
-    // TODO: implement listRepositories
+    // TODO(arenukvern): implement listRepositories
     throw UnimplementedError();
   }
 
   @override
   Future<void> setRepository(final VcRepositoryName repositoryId) {
-    // TODO: implement setRepository
+    // TODO(arenukvern): implement setRepository
     throw UnimplementedError();
   }
 }

@@ -33,9 +33,11 @@ class _FolderPickerPageState extends State<FolderPickerPage> {
         await appState.setWorkspacePath(path, macOSBookmark: macOSBookmark);
 
         // Navigate to the main app screen after setting the path
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const TodoListPage()),
-        );
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const TodoListPage()),
+          );
+        }
         break;
       case PickFailure(reason: final FailureReason reason):
         _showErrorDialog(reason.name);

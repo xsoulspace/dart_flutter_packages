@@ -1,3 +1,7 @@
+// ignore_for_file: avoid_catches_without_on_clauses
+
+import 'dart:developer';
+
 import 'package:collection/collection.dart';
 import 'package:universal_storage_sync/universal_storage_sync.dart';
 
@@ -113,7 +117,10 @@ class RepositoryManager {
   /// {@macro repository_manager}
   const RepositoryManager({required this.service, required this.ui});
 
+  /// The version control service to use.
   final VersionControlService service;
+
+  /// The UI delegate to use.
   final RepositorySelectionUIDelegate ui;
 
   /// Selects or creates a repository based on configuration.
@@ -179,7 +186,8 @@ class RepositoryManager {
       throw const RepositorySelectionException(
         'No repository selected and creation is not allowed',
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      log('Error: $e', stackTrace: stackTrace);
       await ui.hideProgress();
       if (e is RepositorySelectionException) rethrow;
 
@@ -212,7 +220,8 @@ class RepositoryManager {
         repository: repository,
         wasCreated: true,
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      log('Error: $e', stackTrace: stackTrace);
       await ui.hideProgress();
       await ui.showError(
         'Repository Creation Failed',
@@ -224,14 +233,16 @@ class RepositoryManager {
 
   /// Lists all repositories accessible to the authenticated user.
   ///
-  /// This is a convenience wrapper around the provider's listRepositories method.
+  /// This is a convenience wrapper around the provider's
+  /// listRepositories method.
   Future<List<VcRepository>> listRepositories() async {
     await ui.showProgress('Loading repositories...');
     try {
       final repositories = await service.listRepositories();
       await ui.hideProgress();
       return repositories;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      log('Error: $e', stackTrace: stackTrace);
       await ui.hideProgress();
       await ui.showError(
         'Failed to Load Repositories',
@@ -243,14 +254,16 @@ class RepositoryManager {
 
   /// Gets information about the current repository.
   ///
-  /// This is a convenience wrapper around the provider's getRepositoryInfo method.
+  /// This is a convenience wrapper around the provider's
+  /// getRepositoryInfo method.
   Future<VcRepository> getRepositoryInfo() async {
     await ui.showProgress('Loading repository information...');
     try {
       final repository = await service.getRepositoryInfo();
       await ui.hideProgress();
       return repository;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      log('Error: $e', stackTrace: stackTrace);
       await ui.hideProgress();
       await ui.showError(
         'Failed to Load Repository Info',
@@ -269,7 +282,8 @@ class RepositoryManager {
       final branches = await service.listBranches();
       await ui.hideProgress();
       return branches;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      log('Error: $e', stackTrace: stackTrace);
       await ui.hideProgress();
       await ui.showError(
         'Failed to Load Branches',

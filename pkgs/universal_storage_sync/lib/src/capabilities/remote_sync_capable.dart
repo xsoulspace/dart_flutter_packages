@@ -69,9 +69,7 @@ mixin RemoteSyncCapable {
   }
 
   /// Resolves conflicts during synchronization
-  Future<void> resolveConflicts({
-    final ConflictResolutionStrategy? strategy,
-  }) async {
+  Future<void> resolveConflicts({final ConflictResolutionStrategy? strategy}) {
     throw const UnsupportedOperationException(
       'resolveConflicts must be implemented by the provider',
     );

@@ -3,23 +3,30 @@ import 'package:from_json_to_json/from_json_to_json.dart';
 /// Extension type that represents an authenticated OAuth user.
 ///
 /// Wraps user information from OAuth providers like GitHub, GitLab, etc.
-/// Provides type-safe access to user data with graceful handling of missing fields.
+/// Provides type-safe access to user data with graceful handling
+/// of missing fields.
 ///
 /// Uses from_json_to_json for type-safe JSON handling.
 extension type const OAuthUser(Map<String, dynamic> value) {
+  /// Creates an OAuthUser from JSON data.
+  ///
+  /// Decodes the JSON value to a map and wraps it in an OAuthUser.
+  ///
+  /// Parameters:
+  /// - [jsonData]: The JSON data to decode, typically a map or dynamic value.
   // ignore: avoid_annotating_with_dynamic
   factory OAuthUser.fromJson(final dynamic jsonData) {
     final map = jsonDecodeMap(jsonData);
     return OAuthUser(map);
   }
 
-  /// Unique identifier for the user
+  /// The unique identifier for the user.
   String get id => jsonDecodeString(value['id']);
 
-  /// Username/login handle
+  /// The username/login handle.
   String get login => jsonDecodeString(value['login']);
 
-  /// Email address (may be null if not public/accessible)
+  /// The email address (may be null if not public/accessible).
   String? get email {
     final str = jsonDecodeString(value['email']);
     return str.isEmpty ? null : str;
@@ -76,7 +83,13 @@ extension type const OAuthUser(Map<String, dynamic> value) {
     return dateStr.isEmpty ? null : dateTimeFromIso8601String(dateStr);
   }
 
+  /// Converts this [OAuthUser] to JSON.
+  ///
+  /// Returns the underlying map of strings to dynamic values directly.
   Map<String, dynamic> toJson() => value;
 
+  /// An empty OAuthUser instance.
+  ///
+  /// Represents a user with no information.
   static const empty = OAuthUser({});
 }

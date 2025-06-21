@@ -1,3 +1,7 @@
+// ignore_for_file: avoid_catches_without_on_clauses
+
+import 'dart:developer';
+
 import 'package:github/github.dart' as gh;
 
 import '../exceptions/oauth_exceptions.dart';
@@ -5,11 +9,17 @@ import '../models/models.dart';
 import '../services/repository_service.dart';
 import 'github_oauth_provider.dart';
 
+/// {@template github_repository_service}
 /// GitHub repository management service
+/// {@endtemplate}
 class GitHubRepositoryService implements RepositoryService {
+  /// {@macro github_repository_service}
   GitHubRepositoryService(this._oauthProvider);
 
+  /// The OAuth provider.
   final GitHubOAuthProvider _oauthProvider;
+
+  /// The GitHub client.
   gh.GitHub? _github;
 
   @override
@@ -19,7 +29,8 @@ class GitHubRepositoryService implements RepositoryService {
     try {
       final repos = await github.repositories.listRepositories().toList();
       return repos.map(_convertRepository).toList();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      log('Error: $e', stackTrace: stackTrace);
       throw ApiException('Failed to fetch repositories', e.toString());
     }
   }
@@ -35,7 +46,8 @@ class GitHubRepositoryService implements RepositoryService {
           .listOrganizationRepositories(orgName)
           .toList();
       return repos.map(_convertRepository).toList();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      log('Error: $e', stackTrace: stackTrace);
       throw ApiException(
         'Failed to fetch organization repositories',
         e.toString(),
@@ -61,7 +73,8 @@ class GitHubRepositoryService implements RepositoryService {
 
       final repo = await github.repositories.createRepository(createRepo);
       return _convertRepository(repo);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      log('Error: $e', stackTrace: stackTrace);
       if (e.toString().contains('422')) {
         throw RepositoryException.alreadyExists(request.name);
       }
@@ -81,7 +94,8 @@ class GitHubRepositoryService implements RepositoryService {
         gh.RepositorySlug(owner, name),
       );
       return _convertRepository(repo);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      log('Error: $e', stackTrace: stackTrace);
       if (e.toString().contains('404')) {
         return null;
       }
@@ -105,7 +119,8 @@ class GitHubRepositoryService implements RepositoryService {
         final allResults = await results.toList();
         return allResults.map(_convertRepository).toList();
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      log('Error: $e', stackTrace: stackTrace);
       throw ApiException('Failed to search repositories', e.toString());
     }
   }
@@ -118,7 +133,8 @@ class GitHubRepositoryService implements RepositoryService {
       await github.repositories.deleteRepository(
         gh.RepositorySlug(owner, name),
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      log('Error: $e', stackTrace: stackTrace);
       if (e.toString().contains('404')) {
         throw RepositoryException.notFound('$owner/$name');
       }
@@ -144,7 +160,8 @@ class GitHubRepositoryService implements RepositoryService {
           .map((final branch) => branch.name ?? '')
           .where((final name) => name.isNotEmpty)
           .toList();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      log('Error: $e', stackTrace: stackTrace);
       if (e.toString().contains('404')) {
         throw RepositoryException.notFound('$owner/$name');
       }
@@ -170,7 +187,8 @@ class GitHubRepositoryService implements RepositoryService {
           .map((final tag) => tag.name)
           .where((final name) => name.isNotEmpty)
           .toList();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      log('Error: $e', stackTrace: stackTrace);
       if (e.toString().contains('404')) {
         throw RepositoryException.notFound('$owner/$name');
       }
@@ -178,6 +196,7 @@ class GitHubRepositoryService implements RepositoryService {
     }
   }
 
+  /// Gets a GitHub client.
   Future<gh.GitHub> _getGitHubClient() async {
     if (_github != null) return _github!;
 
@@ -204,6 +223,7 @@ class GitHubRepositoryService implements RepositoryService {
     return _github!;
   }
 
+  /// Converts a GitHub repository to a [RepositoryInfo].
   RepositoryInfo _convertRepository(final gh.Repository repo) =>
       RepositoryInfo.create(
         id: repo.id.toString(),
@@ -231,12 +251,13 @@ class GitHubRepositoryService implements RepositoryService {
         size: repo.size,
       );
 
-  RepositoryOwnerType _getOwnerType(final gh.UserInformation? owner) {
-    // Since we can't access the type field directly, we can infer it
-    // from other properties or default to user
-    return RepositoryOwnerType.user;
-  }
+  /// Gets the type of owner for a repository.
+  // Since we can't access the type field directly, we can infer it
+  // from other properties or default to user
+  RepositoryOwnerType _getOwnerType(final gh.UserInformation? owner) =>
+      RepositoryOwnerType.user;
 
+  /// Converts GitHub repository permissions to a [RepositoryPermissions].
   RepositoryPermissions? _convertPermissions(
     final gh.RepositoryPermissions? permissions,
   ) {

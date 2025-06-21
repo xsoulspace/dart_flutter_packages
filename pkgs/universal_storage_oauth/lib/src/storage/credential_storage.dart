@@ -8,23 +8,46 @@ import '../models/git_platform.dart';
 /// Type-safe wrapper around OAuth access tokens to prevent mixing
 /// with other string types at compile time.
 extension type const OAuthAccessToken(String value) {
+  /// Creates an OAuth access token from JSON data.
+  ///
+  /// Decodes the JSON value to a string and wraps it in an OAuthAccessToken.
+  ///
+  /// Parameters:
+  /// - [value]: The JSON data to decode, typically a string or dynamic value.
   // ignore: avoid_annotating_with_dynamic
   factory OAuthAccessToken.fromJson(final dynamic value) =>
       OAuthAccessToken(jsonDecodeString(value));
 
+  /// Converts the OAuth access token to JSON format.
+  ///
+  /// Returns the underlying string value, which can be directly serialized
+  /// to JSON.
   String toJson() => value;
 
+  /// Whether the OAuth access token is empty.
   bool get isEmpty => value.isEmpty;
+
+  /// Whether the OAuth access token is not empty.
   bool get isNotEmpty => value.isNotEmpty;
 
-  /// Get a safe representation for logging (first 8 characters + ...)
+  /// Get a safe representation for logging (first 8 characters + ...).
   String get safeRepresentation => isEmpty
       ? 'empty'
       : '${value.substring(0, value.length < 8 ? value.length : 8)}...';
 
+  /// Returns this OAuth access token if not empty, otherwise returns the
+  /// provided fallback.
+  ///
+  /// Useful for providing default values when an OAuth access token might be
+  /// empty.
+  ///
+  /// [other]: The fallback OAuth access token to use if this one is empty.
   OAuthAccessToken whenEmptyUse(final OAuthAccessToken other) =>
       isEmpty ? other : this;
 
+  /// An empty OAuth access token instance.
+  ///
+  /// Represents an OAuth access token with no information.
   static const empty = OAuthAccessToken('');
 }
 
@@ -33,18 +56,41 @@ extension type const OAuthAccessToken(String value) {
 /// Type-safe wrapper around OAuth refresh tokens to prevent mixing
 /// with other string types at compile time.
 extension type const OAuthRefreshToken(String value) {
+  /// Creates an OAuth refresh token from JSON data.
+  ///
+  /// Decodes the JSON value to a string and wraps it in an OAuthRefreshToken.
+  ///
+  /// Parameters:
+  /// - [value]: The JSON data to decode, typically a string or dynamic value.
   // ignore: avoid_annotating_with_dynamic
   factory OAuthRefreshToken.fromJson(final dynamic value) =>
       OAuthRefreshToken(jsonDecodeString(value));
 
+  /// Converts the OAuth refresh token to JSON format.
+  ///
+  /// Returns the underlying string value, which can be directly serialized
+  /// to JSON.
   String toJson() => value;
 
+  /// Whether the OAuth refresh token is empty.
   bool get isEmpty => value.isEmpty;
+
+  /// Whether the OAuth refresh token is not empty.
   bool get isNotEmpty => value.isNotEmpty;
 
+  /// Returns this OAuth refresh token if not empty, otherwise returns the
+  /// provided fallback.
+  ///
+  /// Useful for providing default values when an OAuth refresh token might be
+  /// empty.
+  ///
+  /// [other]: The fallback OAuth refresh token to use if this one is empty.
   OAuthRefreshToken whenEmptyUse(final OAuthRefreshToken other) =>
       isEmpty ? other : this;
 
+  /// An empty OAuth refresh token instance.
+  ///
+  /// Represents an OAuth refresh token with no information.
   static const empty = OAuthRefreshToken('');
 }
 
@@ -56,6 +102,12 @@ extension type const OAuthRefreshToken(String value) {
 ///
 /// Uses from_json_to_json for type-safe JSON handling.
 extension type const StoredCredentials(Map<String, dynamic> value) {
+  /// Creates stored credentials from JSON data.
+  ///
+  /// Decodes the JSON value to a map and wraps it in a StoredCredentials.
+  ///
+  /// Parameters:
+  /// - [jsonData]: The JSON data to decode, typically a map or dynamic value.
   // ignore: avoid_annotating_with_dynamic
   factory StoredCredentials.fromJson(final dynamic jsonData) {
     final map = jsonDecodeMap(jsonData);
@@ -135,8 +187,14 @@ extension type const StoredCredentials(Map<String, dynamic> value) {
   /// Check if a specific scope is included
   bool containsScope(final String scope) => scopes?.contains(scope) ?? false;
 
+  /// Converts the stored credentials to JSON format.
+  ///
+  /// Returns the underlying map of strings to dynamic values directly.
   Map<String, dynamic> toJson() => value;
 
+  /// An empty stored credentials instance.
+  ///
+  /// Represents stored credentials with no information.
   static const empty = StoredCredentials({});
 }
 

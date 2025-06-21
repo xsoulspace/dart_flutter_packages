@@ -3,19 +3,67 @@ import 'package:from_json_to_json/from_json_to_json.dart';
 /// Extension type that represents a repository ID.
 ///
 /// Type-safe wrapper around repository identifiers to prevent mixing
-/// with other string types at compile time.
+/// with other string types at compile time. This ensures that repository IDs
+/// are handled consistently throughout the codebase and prevents accidental
+/// type mismatches.
+///
+/// Example usage:
+/// ```dart
+/// final repoId = RepositoryId('123456789');
+/// final isEmpty = repoId.isEmpty; // false
+/// final fallbackId = repoId.whenEmptyUse(RepositoryId('default'));
+/// ```
 extension type const RepositoryId(String value) {
+  /// Creates a RepositoryId from JSON data.
+  ///
+  /// Safely decodes the input value to a string and wraps it in a RepositoryId.
+  /// Handles null values and invalid JSON gracefully.
+  ///
+  /// [value] - The JSON value to decode, typically a string or number
+  /// Returns a new RepositoryId instance
   // ignore: avoid_annotating_with_dynamic
   factory RepositoryId.fromJson(final dynamic value) =>
       RepositoryId(jsonDecodeString(value));
 
+  /// Converts the RepositoryId back to JSON format.
+  ///
+  /// Returns the underlying string value, which can be directly serialized
+  /// to JSON.
+  ///
+  /// Returns the repository ID as a string
   String toJson() => value;
 
+  /// Checks if the repository ID is empty.
+  ///
+  /// Returns true if the underlying string value is empty or contains only
+  /// whitespace characters.
+  ///
+  /// Returns true if the repository ID is empty, false otherwise
   bool get isEmpty => value.isEmpty;
+
+  /// Checks if the repository ID is not empty.
+  ///
+  /// Returns true if the underlying string value contains at least one
+  /// non-whitespace character.
+  ///
+  /// Returns true if the repository ID is not empty, false otherwise
   bool get isNotEmpty => value.isNotEmpty;
 
+  /// Returns this repository ID if not empty, otherwise returns
+  /// the provided fallback.
+  ///
+  /// Useful for providing default values when a repository ID might be empty.
+  /// This method ensures that you always have a valid repository ID to work
+  /// with.
+  ///
+  /// [other] - The fallback repository ID to use if this one is empty
+  /// Returns this repository ID if not empty, otherwise returns [other]
   RepositoryId whenEmptyUse(final RepositoryId other) => isEmpty ? other : this;
 
+  /// An empty repository ID instance.
+  ///
+  /// Useful as a default value or for representing missing repository IDs.
+  /// This is a singleton instance that can be safely shared.
   static const empty = RepositoryId('');
 }
 
@@ -23,8 +71,13 @@ extension type const RepositoryId(String value) {
 ///
 /// Distinguishes between user and organization accounts in a type-safe manner.
 enum RepositoryOwnerType {
+  /// A user account.
   user('User'),
+
+  /// An organization account.
   organization('Organization'),
+
+  /// An unknown account.
   unknown('Unknown');
 
   const RepositoryOwnerType(this.value);
@@ -34,26 +87,42 @@ enum RepositoryOwnerType {
         (final type) => type.value == value,
         orElse: () => unknown,
       );
+
+  /// The value of the repository owner type.
   final String value;
 
+  /// Converts the repository owner type to JSON format.
+  ///
+  /// Returns the underlying string value, which can be directly serialized
+  /// to JSON.
   String toJson() => value;
 
+  /// Whether the repository owner is a user.
   bool get isUser => this == user;
+
+  /// Whether the repository owner is an organization.
   bool get isOrganization => this == organization;
 }
 
 /// Extension type that represents a repository owner.
 ///
 /// Contains information about the user or organization that owns a repository.
-/// Provides type-safe access to owner data with graceful handling of missing fields.
+/// Provides type-safe access to owner data with graceful handling of missing
+/// fields.
 extension type const RepositoryOwner(Map<String, dynamic> value) {
+  /// Creates a repository owner from JSON data.
+  ///
+  /// Decodes the JSON value to a map and wraps it in a RepositoryOwner.
+  ///
+  /// Parameters:
+  /// - [jsonData]: The JSON data to decode, typically a map or dynamic value.
   // ignore: avoid_annotating_with_dynamic
   factory RepositoryOwner.fromJson(final dynamic jsonData) {
     final map = jsonDecodeMap(jsonData);
     return RepositoryOwner(map);
   }
 
-  /// Create a repository owner with required fields
+  /// Creates a repository owner with required fields.
   factory RepositoryOwner.create({
     required final String id,
     required final String login,
@@ -68,10 +137,10 @@ extension type const RepositoryOwner(Map<String, dynamic> value) {
     'html_url': htmlUrl,
   });
 
-  /// Unique identifier for the owner
+  /// The unique identifier for the owner.
   String get id => jsonDecodeString(value['id']);
 
-  /// Username/login handle
+  /// The username/login handle.
   String get login => jsonDecodeString(value['login']);
 
   /// Type of owner (user or organization)
@@ -90,8 +159,14 @@ extension type const RepositoryOwner(Map<String, dynamic> value) {
     return str.isEmpty ? null : str;
   }
 
+  /// Converts the repository owner to JSON format.
+  ///
+  /// Returns the underlying map of strings to dynamic values directly.
   Map<String, dynamic> toJson() => value;
 
+  /// An empty repository owner instance.
+  ///
+  /// Represents a repository owner with no information.
   static const empty = RepositoryOwner({});
 }
 
@@ -100,6 +175,12 @@ extension type const RepositoryOwner(Map<String, dynamic> value) {
 /// Contains permission flags for repository access levels.
 /// Used to determine what operations a user can perform on a repository.
 extension type const RepositoryPermissions(Map<String, dynamic> value) {
+  /// Creates repository permissions from JSON data.
+  ///
+  /// Decodes the JSON value to a map and wraps it in a RepositoryPermissions.
+  ///
+  /// Parameters:
+  /// - [jsonData]: The JSON data to decode, typically a map or dynamic value.
   // ignore: avoid_annotating_with_dynamic
   factory RepositoryPermissions.fromJson(final dynamic jsonData) {
     final map = jsonDecodeMap(jsonData);
@@ -128,14 +209,28 @@ extension type const RepositoryPermissions(Map<String, dynamic> value) {
   /// Whether user has read access
   bool get canRead => pull || push || admin;
 
+  /// Converts the repository permissions to JSON format.
+  ///
+  /// Returns the underlying map of strings to dynamic values directly.
   Map<String, dynamic> toJson() => value;
 
+  /// An empty repository permissions instance.
+  ///
+  /// Represents repository permissions with no information.
   static const empty = RepositoryPermissions({});
+
+  /// A read-only repository permissions instance.
+  ///
+  /// Represents repository permissions with read-only access.
   static const readOnly = RepositoryPermissions({
     'admin': false,
     'push': false,
     'pull': true,
   });
+
+  /// A full access repository permissions instance.
+  ///
+  /// Represents repository permissions with full access.
   static const fullAccess = RepositoryPermissions({
     'admin': true,
     'push': true,
@@ -150,6 +245,12 @@ extension type const RepositoryPermissions(Map<String, dynamic> value) {
 ///
 /// Uses from_json_to_json for type-safe JSON handling.
 extension type const RepositoryInfo(Map<String, dynamic> value) {
+  /// Creates a repository info from JSON data.
+  ///
+  /// Decodes the JSON value to a map and wraps it in a RepositoryInfo.
+  ///
+  /// Parameters:
+  /// - [jsonData]: The JSON data to decode, typically a map or dynamic value.
   // ignore: avoid_annotating_with_dynamic
   factory RepositoryInfo.fromJson(final dynamic jsonData) {
     final map = jsonDecodeMap(jsonData);
@@ -286,7 +387,13 @@ extension type const RepositoryInfo(Map<String, dynamic> value) {
   /// Repository size in KB
   int get size => jsonDecodeInt(value['size']);
 
+  /// Converts the repository info to JSON format.
+  ///
+  /// Returns the underlying map of strings to dynamic values directly.
   Map<String, dynamic> toJson() => value;
 
+  /// An empty repository info instance.
+  ///
+  /// Represents repository info with no information.
   static const empty = RepositoryInfo({});
 }

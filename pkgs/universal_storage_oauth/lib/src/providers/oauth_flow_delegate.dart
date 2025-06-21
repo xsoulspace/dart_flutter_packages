@@ -18,7 +18,8 @@ abstract interface class OAuthFlowDelegate {
   /// Obtains authorization code through platform-specific OAuth flow.
   ///
   /// This method should handle the complete authorization flow:
-  /// 1. Open the authorization URL in appropriate manner (browser, webview, etc.)
+  /// 1. Open the authorization URL in appropriate manner
+  /// (browser, webview, etc.)
   /// 2. Handle the redirect/callback with authorization code
   /// 3. Return the authorization code for token exchange
   ///
@@ -36,8 +37,8 @@ abstract interface class OAuthFlowDelegate {
 
   /// Handles device flow verification for CLI/desktop applications.
   ///
-  /// This method should display the device code and verification URL to the user
-  /// and wait for them to complete the authorization on another device.
+  /// This method should display the device code and verification URL to the
+  /// user and wait for them to complete the authorization on another device.
   ///
   /// [deviceCode] - The device code to display to the user
   /// [userCode] - The user-friendly code to display
@@ -113,5 +114,6 @@ class OAuthFlowException implements Exception {
 
   @override
   String toString() =>
-      'OAuthFlowException: $message${cause != null ? ' (caused by: $cause)' : ''}';
+      'OAuthFlowException: '
+      '$message${cause != null ? ' (caused by: $cause)' : ''}';
 }
