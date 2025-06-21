@@ -5,7 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.0] - 2024-01-XX
+## [0.1.0-dev.1] - 2025-06-21
+
+### Added
+
+- `MacOSBookmark` class for macOS security-scoped bookmarks
+- `MacOSBookmarkManager` class for managing macOS security-scoped bookmarks
+- `MacOSBookmark.fromBase64` constructor
+- `MacOSBookmark.fromDirectory` constructor
+
+## [0.0.0] - 2025-06-21
 
 ### Added
 
@@ -55,7 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `build_runner: ^2.4.7`
 - `lints: ^3.0.0`
 
-## [0.2.0] - 2024-01-XX
+## [0.0.0] - 2025-06-21
 
 ### Added
 
@@ -97,7 +106,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for nested directory creation with Git tracking
 - Commit hash returns for tracking changes
 
-## [0.3.0] - 2024-01-XX
+## [0.0.0] - 2025-06-21
 
 ### Added
 
