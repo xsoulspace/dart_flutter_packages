@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:universal_storage_sync/universal_storage_sync.dart';
+import 'package:universal_storage_sync_utils/universal_storage_sync_utils.dart';
 import 'package:uuid/uuid.dart';
 import 'package:yaml/yaml.dart';
 
@@ -15,11 +16,15 @@ import '../models/todo.dart';
 /// {@endtemplate}
 class AppState extends ChangeNotifier {
   static const String _workspacePathKey = 'workspace_path';
+  static const String _macOSBookmarkKey = 'macos_bookmark';
   static const String _todosDirectoryName = 'todos';
   final Uuid _uuid = const Uuid();
 
   /// Current workspace path
   String? workspacePath;
+
+  /// Current macOS bookmark
+  MacOSBookmark? macOSBookmark;
 
   /// List of all todos
   List<Todo> todos = [];
@@ -48,7 +53,8 @@ class AppState extends ChangeNotifier {
   int get pendingCount => todos.where((todo) => !todo.isCompleted).length;
 
   /// Sets the workspace path and initializes storage
-  Future<void> setWorkspacePath(String pathValue) async {
+  Future<void> setWorkspacePath(String pathValue,
+      {MacOSBookmark? macOSBookmark}) async {
     await _setBusy(true);
     try {
       // Validate directory exists and is writable
@@ -67,7 +73,7 @@ class AppState extends ChangeNotifier {
       }
 
       workspacePath = pathValue;
-      await _storeWorkspacePath(pathValue);
+      await _storeWorkspacePath(pathValue, macOSBookmark: macOSBookmark);
       await _initializeStorage();
       await loadTodos();
       _clearError();
@@ -222,8 +228,21 @@ class AppState extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       final stored = prefs.getString(_workspacePathKey);
-      if (stored != null && Directory(stored).existsSync()) {
+      final macOSBookmarkString = prefs.getString(_macOSBookmarkKey);
+
+      final directory = await resolvePlatformDirectory(
+        path: stored ?? '',
+        bookmark: macOSBookmarkString != null
+            ? MacOSBookmark.fromBase64(macOSBookmarkString)
+            : null,
+      );
+      if (directory != null && directory.existsSync()) {
         workspacePath = stored;
+        if (macOSBookmarkString != null) {
+          macOSBookmark = MacOSBookmark.fromBase64(macOSBookmarkString);
+        } else {
+          macOSBookmark = null;
+        }
         await _initializeStorage();
         await loadTodos();
       }
@@ -232,10 +251,19 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<void> _storeWorkspacePath(String pathValue) async {
+  Future<void> _storeWorkspacePath(
+    String pathValue, {
+    MacOSBookmark? macOSBookmark,
+  }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_workspacePathKey, pathValue);
+      if (macOSBookmark != null) {
+        await prefs.setString(
+          _macOSBookmarkKey,
+          macOSBookmark.value,
+        );
+      }
     } catch (e) {
       print('Failed to store workspace path: $e');
     }
@@ -245,6 +273,7 @@ class AppState extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_workspacePathKey);
+      await prefs.remove(_macOSBookmarkKey);
     } catch (e) {
       print('Failed to clear stored workspace path: $e');
     }

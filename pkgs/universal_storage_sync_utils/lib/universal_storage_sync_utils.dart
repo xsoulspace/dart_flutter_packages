@@ -3,6 +3,7 @@
 library;
 
 export 'src/folder_picker.dart';
+export 'src/macos_bookmark_manager.dart';
 export 'src/path_validator.dart';
 export 'src/repository_manager.dart';
 export 'src/result.dart';

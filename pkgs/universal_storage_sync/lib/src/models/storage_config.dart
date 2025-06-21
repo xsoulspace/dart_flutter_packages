@@ -21,9 +21,6 @@ class FileSystemConfig extends StorageConfig {
     if (basePath.isEmpty) {
       throw ArgumentError('Base path cannot be empty');
     }
-    if (databaseName.isEmpty) {
-      throw ArgumentError('Database name cannot be empty');
-    }
   }
 
   /// Base path for file operations (non-web platforms).
