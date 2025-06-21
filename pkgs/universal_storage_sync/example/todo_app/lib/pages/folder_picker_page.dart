@@ -29,8 +29,9 @@ class _FolderPickerPageState extends State<FolderPickerPage> {
     if (!mounted) return;
 
     switch (result) {
-      case PickSuccess(path: final String path):
-        await appState.setWorkspacePath(path);
+      case PickSuccess(:final path, :final macOSBookmark):
+        await appState.setWorkspacePath(path, macOSBookmark: macOSBookmark);
+
         // Navigate to the main app screen after setting the path
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const TodoListPage()),

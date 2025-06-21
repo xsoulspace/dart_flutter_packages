@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print, avoid_catches_without_on_clauses
+
 import 'package:universal_storage_sync/universal_storage_sync.dart';
 
 /// Example demonstrating GitHub API Storage Provider usage.
@@ -15,12 +17,13 @@ Future<void> main() async {
 
   try {
     // Configure the provider with GitHub API settings
-    await provider.init({
-      'authToken': 'your_github_personal_access_token_here',
-      'repositoryOwner': 'your-username',
-      'repositoryName': 'your-repository-name',
-      'branchName': 'main', // Optional, defaults to 'main'
-    });
+    final config = GitHubApiConfig(
+      authToken: 'your_github_personal_access_token_here',
+      repositoryOwner: const VcRepositoryOwner('your-username'),
+      repositoryName: const VcRepositoryName('your-repository-name'),
+    );
+
+    await provider.initWithConfig(config);
 
     print('✅ GitHub API provider initialized successfully');
 
@@ -90,7 +93,8 @@ Future<void> main() async {
     try {
       await provider.createFile(
         'docs/api-guide.md',
-        '# API Guide\n\nThis file was created using the GitHub API Storage Provider.',
+        '# API Guide\n\nThis file was created using '
+            'the GitHub API Storage Provider.',
         commitMessage: 'Add API guide documentation',
       );
       print('✅ File created in subdirectory successfully');
@@ -102,7 +106,8 @@ Future<void> main() async {
     print('\n🔄 Restore functionality...');
     print('ℹ️  To restore a file, you need a specific commit SHA.');
     print(
-      "   Example: await provider.restore('example.txt', versionId: 'commit-sha-here');",
+      "   Example: await provider.restore('example.txt', "
+      "versionId: 'commit-sha-here');",
     );
 
     // Example 7: Delete a file
@@ -121,7 +126,8 @@ Future<void> main() async {
   } on ConfigurationException catch (e) {
     print('❌ Configuration error: ${e.message}');
     print(
-      '💡 Make sure to provide valid authToken, repositoryOwner, and repositoryName',
+      '💡 Make sure to provide valid authToken, '
+      'repositoryOwner, and repositoryName',
     );
   } on AuthenticationFailedException catch (e) {
     print('❌ Authentication failed: ${e.message}');
@@ -151,17 +157,16 @@ Future<void> storageServiceExample() async {
   final service = StorageService(GitHubApiStorageProvider());
 
   try {
-    await service.initialize({
-      'authToken': 'your_github_personal_access_token_here',
-      'repositoryOwner': 'your-username',
-      'repositoryName': 'your-repository-name',
-    });
+    final config = GitHubApiConfig(
+      authToken: 'your_github_personal_access_token_here',
+      repositoryOwner: const VcRepositoryOwner('your-username'),
+      repositoryName: const VcRepositoryName('your-repository-name'),
+    );
+
+    await service.initializeWithConfig(config);
 
     // Use StorageService methods
-    await service.saveFile(
-      'service-example.txt',
-      'Hello from StorageService!',
-    );
+    await service.saveFile('service-example.txt', 'Hello from StorageService!');
     final content = await service.readFile('service-example.txt');
     print('Content via StorageService: $content');
 
@@ -194,7 +199,8 @@ void configurationTips() {
   print('   - Each operation makes HTTP requests to GitHub API');
   print('   - Rate limits apply (5000 requests/hour for authenticated users)');
   print(
-    '   - No local caching - consider OfflineGitStorageProvider for offline support',
+    '   - No local caching - consider OfflineGitStorageProvider '
+    'for offline support',
   );
 
   print('\n🔒 Security Best Practices:');

@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'dart:io';
 
 import 'package:universal_storage_sync/universal_storage_sync.dart';
@@ -24,9 +26,8 @@ Future<void> fileSystemExample() async {
     final storageService = StorageService(provider);
 
     // Initialize with configuration
-    await storageService.initialize({
-      'basePath': tempDir.path,
-    });
+    final config = FileSystemConfig(basePath: tempDir.path);
+    await storageService.initializeWithConfig(config);
 
     // Create and save a file
     const content = 'Hello, Universal Storage Sync!';
@@ -48,7 +49,9 @@ Future<void> fileSystemExample() async {
 
     // Create a file in a subdirectory
     await storageService.saveFile(
-        'docs/readme.md', '# My Project\n\nThis is a readme file.');
+      'docs/readme.md',
+      '# My Project\n\nThis is a readme file.',
+    );
     print('Created file in subdirectory');
 
     // List files in the root directory
@@ -75,8 +78,9 @@ Future<void> fileSystemExample() async {
 
 Future<void> fileSystemTypedConfigExample() async {
   // Create a temporary directory for this example
-  final tempDir =
-      await Directory.systemTemp.createTemp('storage_typed_example_');
+  final tempDir = await Directory.systemTemp.createTemp(
+    'storage_typed_example_',
+  );
 
   try {
     // Initialize using typed configuration
@@ -84,7 +88,7 @@ Future<void> fileSystemTypedConfigExample() async {
     final provider = FileSystemStorageProvider();
     final storageService = StorageService(provider);
 
-    await storageService.initialize(config.toMap());
+    await storageService.initializeWithConfig(config);
 
     // Save some configuration data
     const configData = '''
@@ -112,18 +116,21 @@ Future<void> fileSystemTypedConfigExample() async {
 }
 
 Future<void> errorHandlingExample() async {
-  final tempDir =
-      await Directory.systemTemp.createTemp('storage_error_example_');
+  final tempDir = await Directory.systemTemp.createTemp(
+    'storage_error_example_',
+  );
 
   try {
     final provider = FileSystemStorageProvider();
     final storageService = StorageService(provider);
 
-    await storageService.initialize({'basePath': tempDir.path});
+    final config = FileSystemConfig(basePath: tempDir.path);
+    await storageService.initializeWithConfig(config);
 
     // Try to read a non-existent file
-    final nonExistentContent =
-        await storageService.readFile('does_not_exist.txt');
+    final nonExistentContent = await storageService.readFile(
+      'does_not_exist.txt',
+    );
     print('Non-existent file content: $nonExistentContent');
 
     // Try to delete a non-existent file (this will throw an exception)
@@ -137,12 +144,17 @@ Future<void> errorHandlingExample() async {
     await storageService.syncRemote();
     print('Sync completed (or gracefully handled)');
 
-    // Demonstrate OfflineGitStorageProvider placeholder
+    // Demonstrate OfflineGitStorageProvider with proper config
     try {
       final gitProvider = OfflineGitStorageProvider();
-      await gitProvider.init({});
-    } on UnsupportedOperationException catch (e) {
-      print('Git provider not yet implemented: $e');
+      final gitConfig = OfflineGitConfig(
+        localPath: tempDir.path,
+        branchName: VcBranchName.main,
+      );
+      await gitProvider.initWithConfig(gitConfig);
+      print('Git provider initialized successfully');
+    } catch (e) {
+      print('Git provider initialization failed: $e');
     }
   } finally {
     // Clean up

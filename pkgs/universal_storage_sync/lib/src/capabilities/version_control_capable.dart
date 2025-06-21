@@ -1,15 +1,19 @@
-import '../exceptions/storage_exceptions.dart';
+import '../storage_exceptions.dart';
 
 /// {@template version_control_capable}
 /// Mixin for storage providers that support version control operations.
-/// Provides standardized version control functionality like commits, history, and branching.
+/// Provides standardized version control functionality like commits, history,
+/// and branching.
 /// {@endtemplate}
 mixin VersionControlCapable {
   /// Indicates if the provider supports version control
   bool get supportsVersionControl => true;
 
   /// Creates a commit with the specified message
-  Future<String> commit(String message, {List<String>? files}) async {
+  Future<String> commit(
+    final String message, {
+    final List<String>? files,
+  }) async {
     throw const UnsupportedOperationException(
       'Commit operation must be implemented by the provider',
     );
@@ -17,9 +21,9 @@ mixin VersionControlCapable {
 
   /// Gets the commit history for a file or the entire repository
   Future<List<CommitInfo>> getHistory({
-    String? filePath,
-    int? limit,
-    String? since,
+    final String? filePath,
+    final int? limit,
+    final String? since,
   }) async {
     throw const UnsupportedOperationException(
       'getHistory must be implemented by the provider',
@@ -27,14 +31,17 @@ mixin VersionControlCapable {
   }
 
   /// Gets information about a specific commit
-  Future<CommitInfo?> getCommit(String commitId) async {
+  Future<CommitInfo?> getCommit(final String commitId) async {
     throw const UnsupportedOperationException(
       'getCommit must be implemented by the provider',
     );
   }
 
   /// Gets the content of a file at a specific commit
-  Future<String?> getFileAtCommit(String filePath, String commitId) async {
+  Future<String?> getFileAtCommit(
+    final String filePath,
+    final String commitId,
+  ) async {
     throw const UnsupportedOperationException(
       'getFileAtCommit must be implemented by the provider',
     );
@@ -42,9 +49,9 @@ mixin VersionControlCapable {
 
   /// Gets the differences between two commits
   Future<List<FileDiff>> getDiff({
-    String? fromCommit,
-    String? toCommit,
-    String? filePath,
+    final String? fromCommit,
+    final String? toCommit,
+    final String? filePath,
   }) async {
     throw const UnsupportedOperationException(
       'getDiff must be implemented by the provider',
@@ -52,21 +59,24 @@ mixin VersionControlCapable {
   }
 
   /// Reverts changes to a specific commit
-  Future<void> revert(String commitId, {String? message}) async {
+  Future<void> revert(final String commitId, {final String? message}) async {
     throw const UnsupportedOperationException(
       'revert must be implemented by the provider',
     );
   }
 
   /// Creates a new branch
-  Future<void> createBranch(String branchName, {String? fromCommit}) async {
+  Future<void> createBranch(
+    final String branchName, {
+    final String? fromCommit,
+  }) async {
     throw const UnsupportedOperationException(
       'createBranch must be implemented by the provider',
     );
   }
 
   /// Switches to a different branch
-  Future<void> switchBranch(String branchName) async {
+  Future<void> switchBranch(final String branchName) async {
     throw const UnsupportedOperationException(
       'switchBranch must be implemented by the provider',
     );
@@ -87,14 +97,20 @@ mixin VersionControlCapable {
   }
 
   /// Merges another branch into the current branch
-  Future<void> mergeBranch(String branchName, {String? message}) async {
+  Future<void> mergeBranch(
+    final String branchName, {
+    final String? message,
+  }) async {
     throw const UnsupportedOperationException(
       'mergeBranch must be implemented by the provider',
     );
   }
 
   /// Deletes a branch
-  Future<void> deleteBranch(String branchName, {bool force = false}) async {
+  Future<void> deleteBranch(
+    final String branchName, {
+    final bool force = false,
+  }) async {
     throw const UnsupportedOperationException(
       'deleteBranch must be implemented by the provider',
     );
@@ -108,14 +124,14 @@ mixin VersionControlCapable {
   }
 
   /// Stages files for commit
-  Future<void> stageFiles(List<String> filePaths) async {
+  Future<void> stageFiles(final List<String> filePaths) async {
     throw const UnsupportedOperationException(
       'stageFiles must be implemented by the provider',
     );
   }
 
   /// Unstages files from commit
-  Future<void> unstageFiles(List<String> filePaths) async {
+  Future<void> unstageFiles(final List<String> filePaths) async {
     throw const UnsupportedOperationException(
       'unstageFiles must be implemented by the provider',
     );
@@ -123,9 +139,9 @@ mixin VersionControlCapable {
 
   /// Tags a specific commit
   Future<void> createTag(
-    String tagName,
-    String commitId, {
-    String? message,
+    final String tagName,
+    final String commitId, {
+    final String? message,
   }) async {
     throw const UnsupportedOperationException(
       'createTag must be implemented by the provider',
@@ -182,10 +198,7 @@ class CommitInfo {
 /// {@endtemplate}
 class AuthorInfo {
   /// {@macro author_info}
-  const AuthorInfo({
-    required this.name,
-    required this.email,
-  });
+  const AuthorInfo({required this.name, required this.email});
 
   /// Author's name
   final String name;

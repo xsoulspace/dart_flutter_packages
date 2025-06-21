@@ -18,7 +18,8 @@ void main() {
       final provider = FileSystemStorageProvider();
       storageService = StorageService(provider);
 
-      await storageService.initialize({'basePath': tempDir});
+      final config = FileSystemConfig(basePath: tempDir);
+      await storageService.initializeWithConfig(config);
     });
 
     tearDown(() async {
@@ -122,7 +123,8 @@ void main() {
       final tempDirectory = await Directory.systemTemp.createTemp(
         'storage_test_',
       );
-      await storageService.initialize({'basePath': tempDirectory.path});
+      final config = FileSystemConfig(basePath: tempDirectory.path);
+      await storageService.initializeWithConfig(config);
 
       // Should not throw, just print message
       await storageService.syncRemote();

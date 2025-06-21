@@ -1,5 +1,8 @@
+// ignore_for_file: avoid_catches_without_on_clauses
+
 import 'dart:io';
 
+import 'package:flutter/widgets.dart';
 import 'package:path/path.dart' as p;
 
 /// A utility class to validate path properties.
@@ -15,12 +18,14 @@ mixin PathValidator {
         return false;
       }
       final tempFile = File(
-        p.join(path, '.usspw'),
+        p.join(path, '.gitkeep'),
       ); // Universal Storage Sync Path Writable
       await tempFile.create();
       await tempFile.delete();
       return true;
-    } catch (_) {
+    } catch (e, stackTrace) {
+      debugPrint('Failed to validate path: $e');
+      debugPrint('Stack trace: $stackTrace');
       // Catches FileSystemException, etc.
       return false;
     }

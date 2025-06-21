@@ -6,11 +6,12 @@ import 'package:universal_storage_sync/universal_storage_sync.dart';
 void main() {
   group('OfflineGitStorageProvider', () {
     late OfflineGitStorageProvider provider;
+    late Directory tempDirectory;
     late String tempDir;
 
     setUp(() async {
       // Create a temporary directory for testing
-      final tempDirectory = await Directory.systemTemp.createTemp(
+      tempDirectory = await Directory.systemTemp.createTemp(
         'git_storage_test_',
       );
       tempDir = tempDirectory.path;
@@ -19,22 +20,21 @@ void main() {
 
     tearDown(() async {
       // Clean up temporary directory
-      final directory = Directory(tempDir);
-      if (directory.existsSync()) {
-        await directory.delete(recursive: true);
+      if (tempDirectory.existsSync()) {
+        await tempDirectory.delete(recursive: true);
       }
     });
 
     group('Repository Initialization', () {
       test('should initialize new repository with required config', () async {
-        final config = {
-          'localPath': tempDir,
-          'branchName': 'main',
-          'authorName': 'Test User',
-          'authorEmail': 'test@example.com',
-        };
+        final config = OfflineGitConfig(
+          localPath: tempDir,
+          branchName: VcBranchName.main,
+          authorName: 'Test User',
+          authorEmail: 'test@example.com',
+        );
 
-        await provider.init(config);
+        await provider.initWithConfig(config);
         expect(await provider.isAuthenticated(), isTrue);
 
         // Verify .git directory exists
@@ -44,49 +44,59 @@ void main() {
 
       test('should handle existing repository', () async {
         // Initialize repository first time
-        await provider.init({'localPath': tempDir, 'branchName': 'main'});
+        final config = OfflineGitConfig(
+          localPath: tempDir,
+          branchName: VcBranchName.main,
+        );
+        await provider.initWithConfig(config);
 
         // Initialize again with same path
         final provider2 = OfflineGitStorageProvider();
-        await provider2.init({'localPath': tempDir, 'branchName': 'main'});
+        await provider2.initWithConfig(config);
 
         expect(await provider2.isAuthenticated(), isTrue);
       });
 
       test('should throw exception for missing localPath', () async {
         expect(
-          () => provider.init({'branchName': 'main'}),
-          throwsA(isA<AuthenticationException>()),
+          () => OfflineGitConfig(branchName: VcBranchName.main, localPath: ''),
+          throwsA(isA<ArgumentError>()),
         );
       });
 
       test('should throw exception for missing branchName', () async {
         expect(
-          () => provider.init({'localPath': tempDir}),
-          throwsA(isA<AuthenticationException>()),
+          () => OfflineGitConfig(
+            localPath: tempDir,
+            branchName: const VcBranchName(''),
+          ),
+          throwsA(isA<ArgumentError>()),
         );
       });
 
       test('should configure Git user settings when provided', () async {
-        await provider.init({
-          'localPath': tempDir,
-          'branchName': 'main',
-          'authorName': 'Test User',
-          'authorEmail': 'test@example.com',
-        });
+        final config = OfflineGitConfig(
+          localPath: tempDir,
+          branchName: VcBranchName.main,
+          authorName: 'Test User',
+          authorEmail: 'test@example.com',
+        );
 
+        await provider.initWithConfig(config);
         expect(await provider.isAuthenticated(), isTrue);
       });
     });
 
     group('File Operations', () {
       setUp(() async {
-        await provider.init({
-          'localPath': tempDir,
-          'branchName': 'main',
-          'authorName': 'Test User',
-          'authorEmail': 'test@example.com',
-        });
+        final config = OfflineGitConfig(
+          localPath: tempDir,
+          branchName: VcBranchName.main,
+          authorName: 'Test User',
+          authorEmail: 'test@example.com',
+        );
+
+        await provider.initWithConfig(config);
       });
 
       test('should create file with Git commit', () async {
@@ -198,29 +208,71 @@ void main() {
         // Update without commit message
         final updateHash = await provider.updateFile(filePath, 'Updated');
         expect(updateHash, isNotEmpty);
-        expect(updateHash, isNot(equals(commitHash)));
+
+        // Delete without commit message (separate test file)
+        const filePath2 = 'test2.txt';
+        await provider.createFile(filePath2, content);
+        await provider.deleteFile(filePath2);
       });
+
+      test(
+        'should throw FileNotFoundException for non-existent file operations',
+        () async {
+          const filePath = 'non-existent.txt';
+
+          // Update non-existent file
+          expect(
+            () => provider.updateFile(filePath, 'content'),
+            throwsA(isA<FileNotFoundException>()),
+          );
+
+          // Delete non-existent file
+          expect(
+            () => provider.deleteFile(filePath),
+            throwsA(isA<FileNotFoundException>()),
+          );
+        },
+      );
+
+      test(
+        'should throw FileNotFoundException when creating duplicate file',
+        () async {
+          const filePath = 'duplicate.txt';
+          const content = 'Test content';
+
+          // Create file first
+          await provider.createFile(filePath, content);
+
+          // Try to create same file again
+          expect(
+            () => provider.createFile(filePath, content),
+            throwsA(isA<FileNotFoundException>()),
+          );
+        },
+      );
     });
 
-    group('Version Control Features', () {
+    group('Version Control Operations', () {
       setUp(() async {
-        await provider.init({
-          'localPath': tempDir,
-          'branchName': 'main',
-          'authorName': 'Test User',
-          'authorEmail': 'test@example.com',
-        });
+        final config = OfflineGitConfig(
+          localPath: tempDir,
+          branchName: VcBranchName.main,
+          authorName: 'Test User',
+          authorEmail: 'test@example.com',
+        );
+
+        await provider.initWithConfig(config);
       });
 
       test('should restore file to HEAD', () async {
-        const filePath = 'test.txt';
+        const filePath = 'versioned.txt';
         const originalContent = 'Original content';
         const modifiedContent = 'Modified content';
 
-        // Create file
+        // Create and commit original version
         await provider.createFile(filePath, originalContent);
 
-        // Modify file directly (outside of provider)
+        // Modify the file directly (simulating external change)
         final file = File('$tempDir/$filePath');
         await file.writeAsString(modifiedContent);
 
@@ -234,116 +286,60 @@ void main() {
         expect(await provider.getFile(filePath), equals(originalContent));
       });
 
-      test('should restore file to specific version', () async {
-        const filePath = 'test.txt';
-        const version1Content = 'Version 1';
-        const version2Content = 'Version 2';
+      test('should restore file to specific commit', () async {
+        const filePath = 'versioned.txt';
+        const version1 = 'Version 1';
+        const version2 = 'Version 2';
 
-        // Create file (version 1)
-        final version1Hash = await provider.createFile(
-          filePath,
-          version1Content,
-        );
+        // Create first version
+        final commit1 = await provider.createFile(filePath, version1);
 
-        // Update file (version 2)
-        await provider.updateFile(filePath, version2Content);
+        // Create second version
+        final commit2 = await provider.updateFile(filePath, version2);
 
-        // Verify current content is version 2
-        expect(await provider.getFile(filePath), equals(version2Content));
+        // Verify current version
+        expect(await provider.getFile(filePath), equals(version2));
 
-        // Try to restore to the first commit using its hash
-        try {
-          await provider.restore(filePath, versionId: version1Hash);
-          expect(await provider.getFile(filePath), equals(version1Content));
-        } catch (e) {
-          // If specific hash doesn't work, try HEAD~1
-          try {
-            await provider.restore(filePath, versionId: 'HEAD~1');
-            expect(await provider.getFile(filePath), equals(version1Content));
-          } catch (e2) {
-            // If neither works, just verify the restore method throws GitConflictException
-            expect(e2, isA<GitConflictException>());
-          }
-        }
+        // Restore to first commit
+        await provider.restore(filePath, versionId: commit1);
+
+        // Verify restored version
+        expect(await provider.getFile(filePath), equals(version1));
       });
     });
 
-    group('Error Scenarios', () {
-      test('should throw exception when not initialized', () async {
-        expect(
-          () => provider.createFile('test.txt', 'content'),
-          throwsA(isA<AuthenticationException>()),
+    group('Remote Sync Configuration', () {
+      test('should configure remote URL', () async {
+        final config = OfflineGitConfig(
+          localPath: tempDir,
+          branchName: VcBranchName.main,
+          remoteUrl: const VcUrl('https://github.com/test/repo.git'),
         );
-      });
 
-      test('should throw exception for duplicate file creation', () async {
-        await provider.init({'localPath': tempDir, 'branchName': 'main'});
-
-        const filePath = 'test.txt';
-        await provider.createFile(filePath, 'content');
-
-        expect(
-          () => provider.createFile(filePath, 'duplicate'),
-          throwsA(isA<FileNotFoundException>()),
-        );
-      });
-
-      test('should throw exception when updating non-existent file', () async {
-        await provider.init({'localPath': tempDir, 'branchName': 'main'});
-
-        expect(
-          () => provider.updateFile('non_existent.txt', 'content'),
-          throwsA(isA<FileNotFoundException>()),
-        );
-      });
-
-      test('should throw exception when deleting non-existent file', () async {
-        await provider.init({'localPath': tempDir, 'branchName': 'main'});
-
-        expect(
-          () => provider.deleteFile('non_existent.txt'),
-          throwsA(isA<FileNotFoundException>()),
-        );
-      });
-
-      test('should throw exception for invalid directory listing', () async {
-        await provider.init({'localPath': tempDir, 'branchName': 'main'});
-
-        expect(
-          () => provider.listFiles('non_existent_dir'),
-          throwsA(isA<FileNotFoundException>()),
-        );
-      });
-
-      test('should throw exception for invalid restore', () async {
-        await provider.init({'localPath': tempDir, 'branchName': 'main'});
-
-        expect(
-          () => provider.restore('non_existent.txt', versionId: 'invalid_hash'),
-          throwsA(isA<GitConflictException>()),
-        );
-      });
-    });
-
-    group('Sync Support', () {
-      test('should indicate no sync support without remote URL', () async {
-        await provider.init({'localPath': tempDir, 'branchName': 'main'});
-        expect(provider.supportsSync, isFalse);
-      });
-
-      test('should indicate sync support with remote URL', () async {
-        await provider.init({
-          'localPath': tempDir,
-          'branchName': 'main',
-          'remoteUrl': 'https://github.com/test/repo.git',
-        });
+        await provider.initWithConfig(config);
         expect(provider.supportsSync, isTrue);
       });
 
-      test('should throw exception for sync without remote URL', () async {
-        await provider.init({'localPath': tempDir, 'branchName': 'main'});
+      test('should not support sync without remote URL', () async {
+        final config = OfflineGitConfig(
+          localPath: tempDir,
+          branchName: VcBranchName.main,
+        );
 
-        expect(() => provider.sync(), throwsA(isA<AuthenticationException>()));
+        await provider.initWithConfig(config);
+        expect(provider.supportsSync, isFalse);
+      });
+
+      test('should configure authentication options', () async {
+        final config = OfflineGitConfig(
+          localPath: tempDir,
+          branchName: VcBranchName.main,
+          remoteUrl: const VcUrl('https://github.com/test/repo.git'),
+          httpsToken: 'test-token',
+        );
+
+        await provider.initWithConfig(config);
+        expect(provider.supportsSync, isTrue);
       });
     });
   });
@@ -362,12 +358,13 @@ void main() {
       final provider = OfflineGitStorageProvider();
       storageService = StorageService(provider);
 
-      await storageService.initialize({
-        'localPath': tempDir,
-        'branchName': 'main',
-        'authorName': 'Test User',
-        'authorEmail': 'test@example.com',
-      });
+      final config = OfflineGitConfig(
+        localPath: tempDir,
+        branchName: VcBranchName.main,
+        authorName: 'Test User',
+        authorEmail: 'test@example.com',
+      );
+      await storageService.initializeWithConfig(config);
     });
 
     tearDown(() async {

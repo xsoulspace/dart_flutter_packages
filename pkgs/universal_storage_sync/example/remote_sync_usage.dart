@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'dart:io';
 
 import 'package:universal_storage_sync/universal_storage_sync.dart';
@@ -20,13 +22,13 @@ Future<void> main() async {
   }
 }
 
-Future<void> demonstrateRemoteSync(String localPath) async {
+Future<void> demonstrateRemoteSync(final String localPath) async {
   print('1. Creating OfflineGitStorageProvider with remote configuration...');
 
   // Configure with remote repository
   final config = OfflineGitConfig(
     localPath: localPath,
-    branchName: 'main',
+    branchName: VcBranchName.main,
     authorName: 'Example User',
     authorEmail: 'user@example.com',
     // Remote configuration (commented out for example - would need real repo)
@@ -41,7 +43,7 @@ Future<void> demonstrateRemoteSync(String localPath) async {
   );
 
   final provider = OfflineGitStorageProvider();
-  await provider.init(config.toMap());
+  await provider.initWithConfig(config);
 
   print('✓ Provider initialized successfully');
   print('  - Local path: $localPath');
@@ -105,7 +107,7 @@ Future<void> demonstrateRemoteSync(String localPath) async {
   print('\n6. Using StorageService for graceful sync handling...');
 
   final storageService = StorageService(provider);
-  await storageService.initialize(config.toMap());
+  await storageService.initializeWithConfig(config);
 
   // StorageService handles non-sync providers gracefully
   await storageService.syncRemote();
@@ -126,11 +128,11 @@ Future<void> demonstrateRemoteSync(String localPath) async {
   // Example configuration with remote URL (for demonstration)
   final remoteConfig = OfflineGitConfig(
     localPath: localPath,
-    branchName: 'main',
+    branchName: VcBranchName.main,
     authorName: 'Example User',
     authorEmail: 'user@example.com',
     // This would enable sync support
-    remoteUrl: 'https://github.com/example/repo.git',
+    remoteUrl: const VcUrl('https://github.com/example/repo.git'),
     defaultPushStrategy: 'force-with-lease',
     conflictResolution: ConflictResolutionStrategy.serverAlwaysRight,
     httpsToken: 'your_github_token_here',
@@ -146,7 +148,7 @@ Future<void> demonstrateRemoteSync(String localPath) async {
 
   // Create a new provider with remote config to show sync support
   final remoteProvider = OfflineGitStorageProvider();
-  await remoteProvider.init(remoteConfig.toMap());
+  await remoteProvider.initWithConfig(remoteConfig);
   print('  - Supports sync: ${remoteProvider.supportsSync}');
 
   print('\n=== Remote Sync Example Complete ===');

@@ -18,16 +18,16 @@ class TodoApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ChangeNotifierProvider(
-    create: (_) => AppState(),
-    child: MaterialApp(
-      title: 'Todo App - Universal Storage Sync Demo',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        useMaterial3: true,
-      ),
-      home: const _AppRouter(),
-    ),
-  );
+        create: (_) => AppState(),
+        child: MaterialApp(
+          title: 'Todo App - Universal Storage Sync Demo',
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+            useMaterial3: true,
+          ),
+          home: const _AppRouter(),
+        ),
+      );
 }
 
 /// {@template app_router}
@@ -40,12 +40,12 @@ class _AppRouter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Consumer<AppState>(
-    builder: (context, appState, child) {
-      if (appState.hasWorkspace) {
-        return const TodoListPage();
-      } else {
-        return const FolderPickerPage();
-      }
-    },
-  );
+        builder: (context, appState, child) {
+          if (appState.hasWorkspace) {
+            return const TodoListPage();
+          } else {
+            return const FolderPickerPage();
+          }
+        },
+      );
 }

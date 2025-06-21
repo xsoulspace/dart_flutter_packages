@@ -1,18 +1,25 @@
+import 'macos_bookmark_manager.dart';
+
 // For PickResult sealed class
 
 /// A sealed class representing the outcome of a directory picking operation.
 sealed class PickResult {}
 
-/// Represents a successful directory pick.
+/// {@template pick_success}
+/// Represents a successful folder pick.
+/// {@endtemplate}
 class PickSuccess extends PickResult {
   /// {@macro pick_success}
-  PickSuccess(this.path);
+  PickSuccess(this.path, {this.macOSBookmark});
 
-  /// The absolute path of the selected directory.
+  /// The path of the selected directory.
   final String path;
+
+  /// An optional security-scoped bookmark for macOS.
+  final MacOSBookmark? macOSBookmark;
 }
 
-/// Represents a failed directory pick.
+/// Represents a failed folder pick.
 class PickFailure extends PickResult {
   /// {@macro pick_failure}
   PickFailure(this.reason);

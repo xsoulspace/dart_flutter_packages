@@ -1,4 +1,4 @@
-import '../exceptions/storage_exceptions.dart';
+import '../storage_exceptions.dart';
 
 /// {@template authenticated_provider}
 /// Mixin providing common authentication functionality for storage providers.
@@ -21,7 +21,7 @@ mixin AuthenticatedProvider {
   }
 
   /// Validates authentication token format (basic validation)
-  bool isValidTokenFormat(String? token) {
+  bool isValidTokenFormat(final String? token) {
     if (token == null || token.isEmpty) return false;
 
     // Basic token validation - must be at least 8 characters
@@ -43,12 +43,13 @@ mixin AuthenticatedProvider {
   }
 
   /// Handles authentication-related errors uniformly
-  StorageException handleAuthError(error, String operation) {
+  StorageException handleAuthError(final Object error, final String operation) {
     final errorString = error.toString().toLowerCase();
 
     if (errorString.contains('401') || errorString.contains('unauthorized')) {
       return AuthenticationException(
-        'Authentication failed during $operation. Please check your credentials.',
+        'Authentication failed during $operation. '
+        'Please check your credentials.',
       );
     }
 
@@ -60,17 +61,16 @@ mixin AuthenticatedProvider {
 
     if (errorString.contains('token') || errorString.contains('auth')) {
       return AuthenticationFailedException(
-        'Authentication error during $operation: ${error.toString()}',
+        'Authentication error during $operation: $error',
       );
     }
 
     // Return generic network exception for other errors
-    return NetworkException(
-        'Network error during $operation: ${error.toString()}');
+    return NetworkException('Network error during $operation: $error');
   }
 
   /// Checks if an error is authentication-related
-  bool isAuthenticationError(error) {
+  bool isAuthenticationError(final Object error) {
     if (error is AuthenticationException) return true;
 
     final errorString = error.toString().toLowerCase();

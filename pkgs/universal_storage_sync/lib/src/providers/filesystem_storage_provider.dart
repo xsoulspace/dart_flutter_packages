@@ -2,12 +2,15 @@ import 'dart:io';
 
 import 'package:path/path.dart' as path;
 
-import '../exceptions/storage_exceptions.dart';
+import '../models/models.dart';
+import '../storage_exceptions.dart';
 import '../storage_provider.dart';
 
 /// {@template filesystem_storage_provider}
 /// A storage provider that uses the local file system for storage operations.
-/// Supports both desktop/mobile (using dart:io) and web (using IndexedDB simulation).
+/// Supports both desktop/mobile (using dart:io).
+///
+/// This provider is not supported on web.
 /// {@endtemplate}
 class FileSystemStorageProvider extends StorageProvider {
   /// {@macro filesystem_storage_provider}
@@ -16,15 +19,14 @@ class FileSystemStorageProvider extends StorageProvider {
   var _isInitialized = false;
 
   @override
-  Future<void> init(final Map<String, dynamic> config) async {
-    final basePath = config['basePath'] as String?;
-    if (basePath == null || basePath.isEmpty) {
-      throw const AuthenticationException(
-        'basePath is required for FileSystemStorageProvider',
+  Future<void> initWithConfig(final StorageConfig config) async {
+    if (config is! FileSystemConfig) {
+      throw ArgumentError(
+        'Expected FileSystemConfig, got ${config.runtimeType}',
       );
     }
 
-    _basePath = basePath;
+    _basePath = config.basePath;
 
     // Ensure the base directory exists
     final directory = Directory(_basePath!);
