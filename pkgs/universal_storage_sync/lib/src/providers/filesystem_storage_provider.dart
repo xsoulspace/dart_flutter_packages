@@ -8,7 +8,9 @@ import '../storage_provider.dart';
 
 /// {@template filesystem_storage_provider}
 /// A storage provider that uses the local file system for storage operations.
-/// Supports both desktop/mobile (using dart:io) and web (using IndexedDB simulation).
+/// Supports both desktop/mobile (using dart:io).
+///
+/// This provider is not supported on web.
 /// {@endtemplate}
 class FileSystemStorageProvider extends StorageProvider {
   /// {@macro filesystem_storage_provider}

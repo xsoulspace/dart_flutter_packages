@@ -19,8 +19,8 @@ Future<void> main() async {
     // Configure the provider with GitHub API settings
     final config = GitHubApiConfig(
       authToken: 'your_github_personal_access_token_here',
-      repositoryOwner: 'your-username',
-      repositoryName: 'your-repository-name',
+      repositoryOwner: const VcRepositoryOwner('your-username'),
+      repositoryName: const VcRepositoryName('your-repository-name'),
     );
 
     await provider.initWithConfig(config);
@@ -159,8 +159,8 @@ Future<void> storageServiceExample() async {
   try {
     final config = GitHubApiConfig(
       authToken: 'your_github_personal_access_token_here',
-      repositoryOwner: 'your-username',
-      repositoryName: 'your-repository-name',
+      repositoryOwner: const VcRepositoryOwner('your-username'),
+      repositoryName: const VcRepositoryName('your-repository-name'),
     );
 
     await service.initializeWithConfig(config);

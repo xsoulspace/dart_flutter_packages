@@ -27,7 +27,7 @@ void main() {
       test('should throw exception when sync without remote URL', () async {
         final config = OfflineGitConfig(
           localPath: tempDir,
-          branchName: 'main',
+          branchName: VcBranchName.main,
           authorName: 'Test User',
           authorEmail: 'test@example.com',
         );
@@ -39,10 +39,12 @@ void main() {
       test('should handle invalid remote URL gracefully', () async {
         final config = OfflineGitConfig(
           localPath: tempDir,
-          branchName: 'main',
+          branchName: VcBranchName.main,
           authorName: 'Test User',
           authorEmail: 'test@example.com',
-          remoteUrl: 'https://invalid-url-that-does-not-exist.com/repo.git',
+          remoteUrl: const VcUrl(
+            'https://invalid-url-that-does-not-exist.com/repo.git',
+          ),
         );
 
         await provider.initWithConfig(config);
@@ -52,10 +54,10 @@ void main() {
       test('should configure remote settings from config', () async {
         final config = OfflineGitConfig(
           localPath: tempDir,
-          branchName: 'main',
+          branchName: VcBranchName.main,
           authorName: 'Test User',
           authorEmail: 'test@example.com',
-          remoteUrl: 'https://github.com/test/repo.git',
+          remoteUrl: const VcUrl('https://github.com/test/repo.git'),
           remoteName: 'upstream',
           remoteType: 'github',
           defaultPullStrategy: 'rebase',
@@ -73,7 +75,7 @@ void main() {
         // Test clientAlwaysRight (default)
         final config1 = OfflineGitConfig(
           localPath: tempDir,
-          branchName: 'main',
+          branchName: VcBranchName.main,
         );
 
         await provider.initWithConfig(config1);
@@ -87,7 +89,7 @@ void main() {
 
         final config2 = OfflineGitConfig(
           localPath: tempDir2,
-          branchName: 'main',
+          branchName: VcBranchName.main,
           conflictResolution: ConflictResolutionStrategy.serverAlwaysRight,
         );
 
@@ -103,7 +105,7 @@ void main() {
         () async {
           final config = OfflineGitConfig(
             localPath: tempDir,
-            branchName: 'main',
+            branchName: VcBranchName.main,
           ); // Default strategy is clientAlwaysRight
 
           await provider.initWithConfig(config);
@@ -116,7 +118,7 @@ void main() {
       test('should configure pull and push strategies', () async {
         final config = OfflineGitConfig(
           localPath: tempDir,
-          branchName: 'main',
+          branchName: VcBranchName.main,
           defaultPullStrategy: 'ff-only',
           defaultPushStrategy: 'fail-on-conflict',
         );
@@ -126,7 +128,10 @@ void main() {
       });
 
       test('should use default strategies when not specified', () async {
-        final config = OfflineGitConfig(localPath: tempDir, branchName: 'main');
+        final config = OfflineGitConfig(
+          localPath: tempDir,
+          branchName: VcBranchName.main,
+        );
 
         await provider.initWithConfig(config);
         expect(await provider.isAuthenticated(), isTrue);
@@ -137,8 +142,8 @@ void main() {
       test('should configure SSH key path', () async {
         final config = OfflineGitConfig(
           localPath: tempDir,
-          branchName: 'main',
-          remoteUrl: 'https://github.com/test/repo.git',
+          branchName: VcBranchName.main,
+          remoteUrl: const VcUrl('https://github.com/test/repo.git'),
           sshKeyPath: '/path/to/ssh/key',
         );
 
@@ -150,8 +155,8 @@ void main() {
       test('should configure HTTPS token', () async {
         final config = OfflineGitConfig(
           localPath: tempDir,
-          branchName: 'main',
-          remoteUrl: 'https://github.com/test/repo.git',
+          branchName: VcBranchName.main,
+          remoteUrl: const VcUrl('https://github.com/test/repo.git'),
           httpsToken: 'github_pat_test_token',
         );
 
@@ -167,8 +172,10 @@ void main() {
         () async {
           final config = OfflineGitConfig(
             localPath: tempDir,
-            branchName: 'main',
-            remoteUrl: 'https://httpbin.org/delay/5', // Returns after delay
+            branchName: VcBranchName.main,
+            remoteUrl: const VcUrl(
+              'https://httpbin.org/delay/5',
+            ), // Returns after delay
           );
 
           await provider.initWithConfig(config);
@@ -180,8 +187,10 @@ void main() {
       test('should handle authentication failure', () async {
         final config = OfflineGitConfig(
           localPath: tempDir,
-          branchName: 'main',
-          remoteUrl: 'https://github.com/private/repo.git', // Requires auth
+          branchName: VcBranchName.main,
+          remoteUrl: const VcUrl(
+            'https://github.com/private/repo.git',
+          ), // Requires auth
         );
 
         await provider.initWithConfig(config);
@@ -199,7 +208,7 @@ void main() {
       test('should sync through StorageService', () async {
         final config = OfflineGitConfig(
           localPath: tempDir,
-          branchName: 'main',
+          branchName: VcBranchName.main,
           authorName: 'Test User',
           authorEmail: 'test@example.com',
         );
@@ -214,8 +223,8 @@ void main() {
       test('should pass sync strategies to provider', () async {
         final config = OfflineGitConfig(
           localPath: tempDir,
-          branchName: 'main',
-          remoteUrl: 'https://invalid-url.com/repo.git',
+          branchName: VcBranchName.main,
+          remoteUrl: const VcUrl('https://invalid-url.com/repo.git'),
         );
 
         await storageService.initializeWithConfig(config);
@@ -233,28 +242,34 @@ void main() {
     group('Configuration Validation', () {
       test('should throw exception for missing localPath', () async {
         expect(
-          () => OfflineGitConfig(branchName: 'main', localPath: ''),
+          () => OfflineGitConfig(branchName: VcBranchName.main, localPath: ''),
           throwsA(isA<ArgumentError>()),
         );
       });
 
       test('should throw exception for missing branchName', () async {
         expect(
-          () => OfflineGitConfig(localPath: tempDir, branchName: ''),
+          () => OfflineGitConfig(
+            localPath: tempDir,
+            branchName: VcBranchName.main,
+          ),
           throwsA(isA<ArgumentError>()),
         );
       });
 
       test('should throw exception for empty localPath', () async {
         expect(
-          () => OfflineGitConfig(localPath: '', branchName: 'main'),
+          () => OfflineGitConfig(localPath: '', branchName: VcBranchName.main),
           throwsA(isA<ArgumentError>()),
         );
       });
 
       test('should throw exception for empty branchName', () async {
         expect(
-          () => OfflineGitConfig(localPath: tempDir, branchName: ''),
+          () => OfflineGitConfig(
+            localPath: tempDir,
+            branchName: VcBranchName.main,
+          ),
           throwsA(isA<ArgumentError>()),
         );
       });
@@ -262,10 +277,10 @@ void main() {
       test('should build valid config with all options', () async {
         final config = OfflineGitConfig(
           localPath: tempDir,
-          branchName: 'main',
+          branchName: VcBranchName.main,
           authorName: 'Test User',
           authorEmail: 'test@example.com',
-          remoteUrl: 'https://github.com/test/repo.git',
+          remoteUrl: const VcUrl('https://github.com/test/repo.git'),
           remoteName: 'upstream',
           remoteType: 'github',
           defaultPullStrategy: 'rebase',
@@ -280,10 +295,13 @@ void main() {
       });
 
       test('should build minimal valid config', () async {
-        final config = OfflineGitConfig(localPath: tempDir, branchName: 'main');
+        final config = OfflineGitConfig(
+          localPath: tempDir,
+          branchName: VcBranchName.main,
+        );
 
         expect(config.localPath, equals(tempDir));
-        expect(config.branchName, equals('main'));
+        expect(config.branchName, equals(VcBranchName.main));
         expect(
           config.conflictResolution,
           equals(ConflictResolutionStrategy.clientAlwaysRight),

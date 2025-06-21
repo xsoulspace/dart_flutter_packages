@@ -149,7 +149,7 @@ Future<void> errorHandlingExample() async {
       final gitProvider = OfflineGitStorageProvider();
       final gitConfig = OfflineGitConfig(
         localPath: tempDir.path,
-        branchName: 'main',
+        branchName: VcBranchName.main,
       );
       await gitProvider.initWithConfig(gitConfig);
       print('Git provider initialized successfully');

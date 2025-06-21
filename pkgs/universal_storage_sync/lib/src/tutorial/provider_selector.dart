@@ -1,5 +1,5 @@
 import '../models/models.dart';
-import 'path_normalizer.dart';
+import '../utils/path_normalizer.dart';
 
 /// {@template provider_recommendation}
 /// Recommendation for a storage provider based on requirements.
@@ -193,7 +193,7 @@ mixin ProviderSelector {
 
     final configTemplate = FileSystemConfig(
       basePath: requirements.isWeb ? 'app_data' : '/path/to/data',
-      databaseName: requirements.isWeb ? 'app_database' : null,
+      databaseName: requirements.isWeb ? 'app_database' : '',
     );
 
     return ProviderRecommendation(
@@ -256,8 +256,8 @@ mixin ProviderSelector {
 
     final configTemplate = GitHubApiConfig(
       authToken: 'YOUR_GITHUB_TOKEN',
-      repositoryOwner: 'your-username',
-      repositoryName: 'your-repo',
+      repositoryOwner: const VcRepositoryOwner('your-username'),
+      repositoryName: const VcRepositoryName('your-repo'),
     );
 
     return ProviderRecommendation(
@@ -325,10 +325,12 @@ mixin ProviderSelector {
 
     final configTemplate = OfflineGitConfig(
       localPath: '/path/to/git/repo',
-      branchName: 'main',
+      branchName: const VcBranchName('main'),
       authorName: 'Your Name',
       authorEmail: 'your.email@example.com',
-      remoteUrl: 'https://github.com/your-username/your-repo.git',
+      remoteUrl: const VcUrl('https://github.com'),
+      remoteRepositoryName: const VcRepositoryName('your-repo'),
+      remoteRepositoryOwner: const VcRepositoryOwner('your-username'),
     );
 
     return ProviderRecommendation(

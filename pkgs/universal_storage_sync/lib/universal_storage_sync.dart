@@ -12,6 +12,6 @@ export 'src/storage_exceptions.dart';
 export 'src/storage_factory.dart';
 export 'src/storage_provider.dart';
 export 'src/storage_service.dart';
+export 'src/tutorial/provider_selector.dart';
 export 'src/utils/path_normalizer.dart';
-export 'src/utils/provider_selector.dart';
 export 'src/utils/retryable_operation.dart';

@@ -26,12 +26,14 @@ class GitHubApiStorageProvider extends StorageProvider
     implements VersionControlService {
   /// {@macro github_api_storage_provider}
   GitHubApiStorageProvider();
-
+  var _config = GitHubApiConfig.empty;
   GitHub? _github;
-  String? _authToken;
-  String? _repositoryOwner;
-  String? _repositoryName;
-  var _branchName = 'main';
+  String? get _authToken => _config.authToken;
+  VcRepositoryOwner get _repositoryOwner => _config.repositoryOwner;
+  VcRepositoryName get _repositoryName => _config.repositoryName;
+  RepositorySlug get _repositorySlug =>
+      RepositorySlug(_repositoryOwner.value, _repositoryName.value);
+  VcBranchName get _branchName => _config.branchName;
   var _isInitialized = false;
 
   @override
@@ -41,11 +43,7 @@ class GitHubApiStorageProvider extends StorageProvider
         'Expected GitHubApiConfig, got ${config.runtimeType}',
       );
     }
-
-    _authToken = config.authToken;
-    _repositoryOwner = config.repositoryOwner;
-    _repositoryName = config.repositoryName;
-    _branchName = config.branchName;
+    _config = config;
 
     // Initialize GitHub client with the provided token
     _github = GitHub(auth: Authentication.withToken(_authToken));
@@ -59,10 +57,9 @@ class GitHubApiStorageProvider extends StorageProvider
   Future<void> _initializeRepository() async {
     try {
       // Verify repository access by getting repository information
-      final slug = RepositorySlug(_repositoryOwner!, _repositoryName!);
-      final repo = await _github!.repositories.getRepository(slug);
+      final repo = await _github!.repositories.getRepository(_repositorySlug);
 
-      if (repo.name != _repositoryName) {
+      if (repo.name != _repositoryName.value) {
         throw ConfigurationException(
           'Repository verification failed: '
           'expected $_repositoryName, got ${repo.name}',
@@ -163,9 +160,8 @@ class GitHubApiStorageProvider extends StorageProvider
     _ensureInitialized();
 
     try {
-      final slug = RepositorySlug(_repositoryOwner!, _repositoryName!);
       final repo = await retry(
-        () => _github!.repositories.getRepository(slug),
+        () => _github!.repositories.getRepository(_repositorySlug),
         retryIf: _isRetryableError,
         maxAttempts: 3,
       );
@@ -191,9 +187,8 @@ class GitHubApiStorageProvider extends StorageProvider
     _ensureInitialized();
 
     try {
-      final slug = RepositorySlug(_repositoryOwner!, _repositoryName!);
       final branches = await retry(
-        () => _github!.repositories.listBranches(slug).toList(),
+        () => _github!.repositories.listBranches(_repositorySlug).toList(),
         retryIf: _isRetryableError,
         maxAttempts: 3,
       );
@@ -202,7 +197,7 @@ class GitHubApiStorageProvider extends StorageProvider
             (final branch) => VcBranch({
               'name': branch.name,
               'commit_sha': branch.commit?.sha ?? '',
-              'is_default': branch.name == _branchName,
+              'is_default': branch.name == _branchName.value,
             }),
           )
           .toList();
@@ -263,14 +258,11 @@ class GitHubApiStorageProvider extends StorageProvider
         message: message,
         content: base64.encode(utf8.encode(content)),
         path: filePath,
-        branch: _branchName,
+        branch: _branchName.value,
       );
 
       final createResult = await retry(
-        () => _github!.repositories.createFile(
-          RepositorySlug(_repositoryOwner!, _repositoryName!),
-          createFile,
-        ),
+        () => _github!.repositories.createFile(_repositorySlug, createFile),
         retryIf: _isRetryableError,
         maxAttempts: 3,
       );
@@ -318,12 +310,12 @@ class GitHubApiStorageProvider extends StorageProvider
       final message = commitMessage ?? 'Update file: $filePath';
       final updateResult = await retry(
         () => _github!.repositories.updateFile(
-          RepositorySlug(_repositoryOwner!, _repositoryName!),
+          _repositorySlug,
           filePath,
           message,
           base64.encode(utf8.encode(content)),
           existingFile.sha!,
-          branch: _branchName,
+          branch: _branchName.value,
         ),
         retryIf: _isRetryableError,
         maxAttempts: 3,
@@ -353,11 +345,11 @@ class GitHubApiStorageProvider extends StorageProvider
       final message = commitMessage ?? 'Delete file: $filePath';
       await retry(
         () => _github!.repositories.deleteFile(
-          RepositorySlug(_repositoryOwner!, _repositoryName!),
+          _repositorySlug,
           filePath,
           message,
           existingFile.sha!,
-          _branchName,
+          _branchName.value,
         ),
         retryIf: _isRetryableError,
         maxAttempts: 3,
@@ -374,9 +366,9 @@ class GitHubApiStorageProvider extends StorageProvider
     try {
       final contents = await retry(
         () => _github!.repositories.getContents(
-          RepositorySlug(_repositoryOwner!, _repositoryName!),
+          _repositorySlug,
           directoryPath.isEmpty ? '/' : directoryPath,
-          ref: _branchName,
+          ref: _branchName.value,
         ),
         retryIf: _isRetryableError,
         maxAttempts: 3,
@@ -414,7 +406,7 @@ class GitHubApiStorageProvider extends StorageProvider
       // Get file content from specific commit
       final contents = await retry(
         () => _github!.repositories.getContents(
-          RepositorySlug(_repositoryOwner!, _repositoryName!),
+          _repositorySlug,
           filePath,
           ref: versionId,
         ),
@@ -443,9 +435,9 @@ class GitHubApiStorageProvider extends StorageProvider
   Future<GitHubFile?> _getFileFromGitHub(final String filePath) async {
     try {
       final contents = await _github!.repositories.getContents(
-        RepositorySlug(_repositoryOwner!, _repositoryName!),
+        _repositorySlug,
         filePath,
-        ref: _branchName,
+        ref: _branchName.value,
       );
       return contents.isFile ? contents.file : null;
     } catch (e) {
@@ -505,7 +497,7 @@ class GitHubApiStorageProvider extends StorageProvider
   }
 
   @override
-  Future<void> setRepository(final VcRepositoryId repositoryId) {
+  Future<void> setRepository(final VcRepositoryName repositoryId) {
     // TODO: implement setRepository
     throw UnimplementedError();
   }

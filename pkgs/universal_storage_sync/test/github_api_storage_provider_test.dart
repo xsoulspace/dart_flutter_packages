@@ -26,8 +26,8 @@ void main() {
         ' is missing in manual mode', () {
       expect(
         () => GitHubApiConfig(
-          repositoryOwner: 'test',
-          repositoryName: 'test-repo',
+          repositoryOwner: const VcRepositoryOwner('test'),
+          repositoryName: const VcRepositoryName('test-repo'),
           authToken: '',
         ),
         throwsA(isA<ArgumentError>()),
@@ -40,8 +40,8 @@ void main() {
       expect(
         () => GitHubApiConfig(
           authToken: 'test-token',
-          repositoryName: 'test-repo',
-          repositoryOwner: '',
+          repositoryName: const VcRepositoryName('test-repo'),
+          repositoryOwner: const VcRepositoryOwner(''),
         ),
         throwsA(isA<ArgumentError>()),
       );
@@ -53,8 +53,8 @@ void main() {
       expect(
         () => GitHubApiConfig(
           authToken: 'test-token',
-          repositoryOwner: 'test',
-          repositoryName: '',
+          repositoryOwner: const VcRepositoryOwner('test'),
+          repositoryName: const VcRepositoryName(''),
         ),
         throwsA(isA<ArgumentError>()),
       );
@@ -75,8 +75,8 @@ void main() {
     test('should build valid manual config', () {
       final config = GitHubApiConfig(
         authToken: 'test-token',
-        repositoryOwner: 'test-owner',
-        repositoryName: 'test-repo',
+        repositoryOwner: const VcRepositoryOwner('test-owner'),
+        repositoryName: const VcRepositoryName('test-repo'),
       );
 
       expect(config.authToken, equals('test-token'));

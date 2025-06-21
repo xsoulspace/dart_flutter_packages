@@ -21,11 +21,12 @@ mixin RetryableOperation {
     for (var attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         return await operation();
-      } catch (e) {
+        // ignore: avoid_catches_without_on_clauses
+      } catch (e, _) {
         lastException = e is Exception ? e : Exception(e.toString());
 
         // Don't retry on final attempt
-        if (attempt == maxAttempts) break;
+        if (attempt >= maxAttempts) break;
 
         // Check if we should retry this exception
         if (retryIf != null && !retryIf(lastException)) {
@@ -38,14 +39,12 @@ mixin RetryableOperation {
         }
 
         // Calculate delay with exponential backoff
-        final delay = Duration(
-          milliseconds:
-              (initialDelay.inMilliseconds *
-                      pow(backoffMultiplier, attempt - 1))
-                  .round(),
-        );
+        final ms =
+            (initialDelay.inMilliseconds * pow(backoffMultiplier, attempt - 1))
+                .round();
+        final delay = Duration(milliseconds: ms);
 
-        await Future.delayed(delay);
+        await Future<void>.delayed(delay);
       }
     }
 
@@ -91,12 +90,11 @@ mixin RetryableOperation {
   }) => execute(
     operation,
     maxAttempts: maxAttempts,
-    retryIf: (final exception) {
+    // Don't retry rate limits immediately
+    retryIf: (final exception) => switch (exception) {
       // Special handling for GitHub rate limits
-      if (exception is GitHubRateLimitException) {
-        return false; // Don't retry rate limits immediately
-      }
-      return _shouldRetryByDefault(exception);
+      GitHubRateLimitException() => false,
+      _ => _shouldRetryByDefault(exception),
     },
   );
 
@@ -107,13 +105,10 @@ mixin RetryableOperation {
   }) => execute(
     operation,
     maxAttempts: maxAttempts,
-    retryIf: (final exception) {
-      // Don't retry Git conflicts or authentication failures
-      if (exception is GitConflictException ||
-          exception is AuthenticationFailedException) {
-        return false;
-      }
-      return _shouldRetryByDefault(exception);
+    // Don't retry Git conflicts or authentication failures
+    retryIf: (final exception) => switch (exception) {
+      GitConflictException() || AuthenticationFailedException() => false,
+      _ => _shouldRetryByDefault(exception),
     },
   );
 }

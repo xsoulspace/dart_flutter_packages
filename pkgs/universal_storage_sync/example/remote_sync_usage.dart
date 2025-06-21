@@ -28,7 +28,7 @@ Future<void> demonstrateRemoteSync(final String localPath) async {
   // Configure with remote repository
   final config = OfflineGitConfig(
     localPath: localPath,
-    branchName: 'main',
+    branchName: VcBranchName.main,
     authorName: 'Example User',
     authorEmail: 'user@example.com',
     // Remote configuration (commented out for example - would need real repo)
@@ -128,11 +128,11 @@ Future<void> demonstrateRemoteSync(final String localPath) async {
   // Example configuration with remote URL (for demonstration)
   final remoteConfig = OfflineGitConfig(
     localPath: localPath,
-    branchName: 'main',
+    branchName: VcBranchName.main,
     authorName: 'Example User',
     authorEmail: 'user@example.com',
     // This would enable sync support
-    remoteUrl: 'https://github.com/example/repo.git',
+    remoteUrl: const VcUrl('https://github.com/example/repo.git'),
     defaultPushStrategy: 'force-with-lease',
     conflictResolution: ConflictResolutionStrategy.serverAlwaysRight,
     httpsToken: 'your_github_token_here',

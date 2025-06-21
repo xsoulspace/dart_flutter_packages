@@ -19,8 +19,8 @@ void main() {
   print('2. GitHub API Configuration:');
   final githubConfig = GitHubApiConfig(
     authToken: 'ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-    repositoryOwner: 'your-username',
-    repositoryName: 'your-repository',
+    repositoryOwner: const VcRepositoryOwner('your-username'),
+    repositoryName: const VcRepositoryName('your-repository'),
   );
 
   print(
@@ -33,7 +33,7 @@ void main() {
   print('3. Offline Git Configuration (Basic):');
   final basicGitConfig = OfflineGitConfig(
     localPath: '/path/to/git/repository',
-    branchName: 'main',
+    branchName: VcBranchName.main,
     authorName: 'John Doe',
     authorEmail: 'john.doe@example.com',
   );
@@ -48,10 +48,10 @@ void main() {
   print('4. Offline Git Configuration (Advanced):');
   final advancedGitConfig = OfflineGitConfig(
     localPath: '/path/to/advanced/git/repository',
-    branchName: 'develop',
+    branchName: VcBranchName.develop,
     authorName: 'Jane Smith',
     authorEmail: 'jane.smith@company.com',
-    remoteUrl: 'https://github.com/company/project.git',
+    remoteUrl: const VcUrl('https://github.com/company/project.git'),
     remoteName: 'upstream',
     remoteType: 'github',
     defaultPullStrategy: 'rebase',
@@ -72,10 +72,10 @@ void main() {
   print('5. Offline Git Configuration with SSH Authentication:');
   final sshGitConfig = OfflineGitConfig(
     localPath: '/path/to/ssh/git/repository',
-    branchName: 'main',
+    branchName: VcBranchName.main,
     authorName: 'Dev User',
     authorEmail: 'dev@company.com',
-    remoteUrl: 'git@github.com:company/secure-project.git',
+    remoteUrl: const VcUrl('git@github.com:company/secure-project.git'),
     sshKeyPath: '/home/user/.ssh/id_rsa',
   );
 
@@ -87,10 +87,10 @@ void main() {
   print('6. Offline Git Configuration with HTTPS Token:');
   final httpsGitConfig = OfflineGitConfig(
     localPath: '/path/to/https/git/repository',
-    branchName: 'main',
+    branchName: VcBranchName.main,
     authorName: 'API User',
     authorEmail: 'api@company.com',
-    remoteUrl: 'https://github.com/company/api-project.git',
+    remoteUrl: const VcUrl('https://github.com/company/api-project.git'),
     httpsToken: 'ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
   );
 
@@ -103,8 +103,8 @@ void main() {
     // This will throw because required fields are missing
     GitHubApiConfig(
       authToken: '',
-      repositoryOwner: '',
-      repositoryName: 'test-repo',
+      repositoryOwner: const VcRepositoryOwner(''),
+      repositoryName: const VcRepositoryName('test-repo'),
     );
   } catch (e) {
     print('   Expected error: $e');

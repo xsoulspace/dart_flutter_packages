@@ -16,8 +16,8 @@ void main() async {
 
     final gitHubConfig = GitHubApiConfig(
       authToken: 'demo_token',
-      repositoryOwner: 'demo-user',
-      repositoryName: 'demo-repo',
+      repositoryOwner: const VcRepositoryOwner('demo-user'),
+      repositoryName: const VcRepositoryName('demo-repo'),
     );
 
     final service2 = await StorageFactory.create(gitHubConfig);
@@ -32,15 +32,15 @@ void main() async {
 
     final ghConfig = GitHubApiConfig(
       authToken: 'ghp_demo_token_123',
-      repositoryOwner: 'myorg',
-      repositoryName: 'myproject',
+      repositoryOwner: const VcRepositoryOwner('myorg'),
+      repositoryName: const VcRepositoryName('myproject'),
     );
     final ghService = await StorageFactory.createGitHubApi(ghConfig);
     print('   Created GitHub service with specific method');
 
     final gitConfig = OfflineGitConfig(
       localPath: '/path/to/repo',
-      branchName: 'main',
+      branchName: VcBranchName.main,
       authorName: 'Demo User',
       authorEmail: 'demo@example.com',
     );

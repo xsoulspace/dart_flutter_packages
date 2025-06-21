@@ -1,4 +1,5 @@
 import 'conflict_resolution_strategy.dart';
+import 'version_control_models.dart';
 
 /// {@template storage_config}
 /// Base class for storage provider configurations.
@@ -16,11 +17,11 @@ sealed class StorageConfig {
 /// {@endtemplate}
 class FileSystemConfig extends StorageConfig {
   /// {@macro filesystem_config}
-  FileSystemConfig({required this.basePath, this.databaseName}) {
+  FileSystemConfig({required this.basePath, this.databaseName = ''}) {
     if (basePath.isEmpty) {
       throw ArgumentError('Base path cannot be empty');
     }
-    if (databaseName != null && databaseName!.isEmpty) {
+    if (databaseName.isEmpty) {
       throw ArgumentError('Database name cannot be empty');
     }
   }
@@ -29,12 +30,12 @@ class FileSystemConfig extends StorageConfig {
   final String basePath;
 
   /// Database name for web platforms using IndexedDB.
-  final String? databaseName;
+  final String databaseName;
 
   @override
   Map<String, dynamic> toMap() => {
     'basePath': basePath,
-    if (databaseName != null) 'databaseName': databaseName,
+    if (databaseName.isNotEmpty) 'databaseName': databaseName,
   };
 }
 
@@ -50,7 +51,9 @@ class OfflineGitConfig extends StorageConfig {
     this.authorName,
     this.authorEmail,
     // Remote configuration
-    this.remoteUrl,
+    this.remoteUrl = VcUrl.empty,
+    this.remoteRepositoryName = VcRepositoryName.empty,
+    this.remoteRepositoryOwner = VcRepositoryOwner.empty,
     this.remoteName = 'origin',
     this.remoteType,
     this.remoteApiSettings,
@@ -101,7 +104,7 @@ class OfflineGitConfig extends StorageConfig {
   final String localPath;
 
   /// Primary local and remote branch name.
-  final String branchName;
+  final VcBranchName branchName;
 
   /// Author name for Git commits.
   final String? authorName;
@@ -109,9 +112,33 @@ class OfflineGitConfig extends StorageConfig {
   /// Author email for Git commits.
   final String? authorEmail;
 
-  // Remote configuration
+  /// Remote configuration
   /// URL of the remote Git repository.
-  final String? remoteUrl;
+  ///
+  /// For example:
+  /// https://github.com/owner/repo.git
+  final VcUrl remoteUrl;
+
+  /// ID of the remote Git repository.
+  ///
+  /// For example:
+  /// repo-name
+  final VcRepositoryName remoteRepositoryName;
+
+  /// Owner of the remote Git repository.
+  ///
+  /// For example:
+  /// owner
+  final VcRepositoryOwner remoteRepositoryOwner;
+
+  /// Slug of the remote Git repository.
+  ///
+  /// For example:
+  /// owner/repo-name
+  VcRepositorySlug get remoteRepositorySlug => VcRepositorySlug.fromJson(
+    repositoryName: remoteRepositoryName,
+    repositoryOwner: remoteRepositoryOwner,
+  );
 
   /// Name of the remote (defaults to 'origin').
   final String remoteName;
@@ -148,6 +175,12 @@ class OfflineGitConfig extends StorageConfig {
     if (authorEmail != null) 'authorEmail': authorEmail,
     'remoteName': remoteName,
     if (remoteUrl != null) 'remoteUrl': remoteUrl,
+    if (remoteRepositorySlug != null)
+      'remoteRepositorySlug': remoteRepositorySlug,
+    if (remoteRepositoryName != null)
+      'remoteRepositoryName': remoteRepositoryName,
+    if (remoteRepositoryOwner != null)
+      'remoteRepositoryOwner': remoteRepositoryOwner,
     if (remoteType != null) 'remoteType': remoteType,
     if (remoteApiSettings != null) 'remoteApiSettings': remoteApiSettings,
     'defaultPullStrategy': defaultPullStrategy,
@@ -156,6 +189,19 @@ class OfflineGitConfig extends StorageConfig {
     if (sshKeyPath != null) 'sshKeyPath': sshKeyPath,
     if (httpsToken != null) 'httpsToken': httpsToken,
   };
+
+  /// Empty offline Git configuration instance.
+  static final empty = OfflineGitConfig(
+    localPath: '',
+    branchName: VcBranchName.empty,
+    authorName: '',
+    authorEmail: '',
+    remoteName: '',
+    remoteType: '',
+    remoteApiSettings: {},
+    sshKeyPath: '',
+    httpsToken: '',
+  );
 }
 
 /// {@template github_api_config}
@@ -172,7 +218,7 @@ class GitHubApiConfig extends StorageConfig {
     required this.authToken,
     required this.repositoryOwner,
     required this.repositoryName,
-    this.branchName = 'main',
+    this.branchName = VcBranchName.main,
   }) {
     if (authToken.isEmpty) {
       throw ArgumentError('Auth token cannot be empty');
@@ -194,13 +240,13 @@ class GitHubApiConfig extends StorageConfig {
   final String authToken;
 
   /// Repository owner (username or organization) (required).
-  final String repositoryOwner;
+  final VcRepositoryOwner repositoryOwner;
 
   /// Repository name (required).
-  final String repositoryName;
+  final VcRepositoryName repositoryName;
 
   /// Branch name to work with (defaults to 'main').
-  final String branchName;
+  final VcBranchName branchName;
 
   @override
   Map<String, dynamic> toMap() => {
@@ -209,4 +255,12 @@ class GitHubApiConfig extends StorageConfig {
     'repositoryName': repositoryName,
     'branchName': branchName,
   };
+
+  /// Empty GitHub API configuration instance.
+  static final empty = GitHubApiConfig(
+    authToken: '',
+    repositoryOwner: VcRepositoryOwner.empty,
+    repositoryName: VcRepositoryName.empty,
+    branchName: VcBranchName.empty,
+  );
 }

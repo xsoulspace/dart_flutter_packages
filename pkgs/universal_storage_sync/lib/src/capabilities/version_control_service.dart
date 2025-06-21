@@ -26,7 +26,7 @@ abstract interface class VersionControlService {
   Future<List<VcBranch>> listBranches();
 
   /// Set the current repository context by ID or full name.
-  Future<void> setRepository(final VcRepositoryId repositoryId);
+  Future<void> setRepository(final VcRepositoryName repositoryId);
 
   /// Clone a repository to a local path.
   Future<void> cloneRepository(

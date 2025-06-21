@@ -40,7 +40,7 @@ Future<void> demonstrateGitFeatures(final String repoPath) async {
 
   final offlineGitConfig = OfflineGitConfig(
     localPath: './my_git_repo',
-    branchName: 'main',
+    branchName: VcBranchName.main,
     authorName: 'Your Name',
     authorEmail: 'your.email@example.com',
   );
