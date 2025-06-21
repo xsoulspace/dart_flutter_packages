@@ -1,4 +1,7 @@
+// ignore_for_file: avoid_catches_without_on_clauses
+
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:github/github.dart';
 import 'package:retry/retry.dart';
@@ -230,7 +233,8 @@ class GitHubApiStorageProvider extends StorageProvider
     try {
       await getCurrentUser();
       return true;
-    } catch (e) {
+    } catch (e, st) {
+      log('Error: $e stackTrace: $st');
       return false;
     }
   }

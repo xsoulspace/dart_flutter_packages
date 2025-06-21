@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'models/models.dart';
 import 'storage_exceptions.dart';
 import 'storage_provider.dart';
@@ -78,8 +80,9 @@ class StorageService {
       );
     } else {
       // Log or handle providers not supporting sync
-      print(
-        'The configured storage provider does not support remote synchronization.',
+      log(
+        'The configured storage provider does not support remote '
+        'synchronization.',
       );
       // Optionally throw UnsupportedOperationException
     }

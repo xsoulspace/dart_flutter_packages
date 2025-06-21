@@ -97,7 +97,7 @@ void main() {
       expect(content, isNull);
     });
 
-    test('should throw exception when removing non-existent file', () async {
+    test('should throw exception when removing non-existent file', () {
       expect(
         () => storageService.removeFile('non_existent.txt'),
         throwsA(isA<FileNotFoundException>()),

@@ -10,10 +10,7 @@ mixin VersionControlCapable {
   bool get supportsVersionControl => true;
 
   /// Creates a commit with the specified message
-  Future<String> commit(
-    final String message, {
-    final List<String>? files,
-  }) async {
+  Future<String> commit(final String message, {final List<String>? files}) {
     throw const UnsupportedOperationException(
       'Commit operation must be implemented by the provider',
     );
@@ -24,14 +21,14 @@ mixin VersionControlCapable {
     final String? filePath,
     final int? limit,
     final String? since,
-  }) async {
+  }) {
     throw const UnsupportedOperationException(
       'getHistory must be implemented by the provider',
     );
   }
 
   /// Gets information about a specific commit
-  Future<CommitInfo?> getCommit(final String commitId) async {
+  Future<CommitInfo?> getCommit(final String commitId) {
     throw const UnsupportedOperationException(
       'getCommit must be implemented by the provider',
     );
@@ -41,7 +38,7 @@ mixin VersionControlCapable {
   Future<String?> getFileAtCommit(
     final String filePath,
     final String commitId,
-  ) async {
+  ) {
     throw const UnsupportedOperationException(
       'getFileAtCommit must be implemented by the provider',
     );
@@ -52,14 +49,14 @@ mixin VersionControlCapable {
     final String? fromCommit,
     final String? toCommit,
     final String? filePath,
-  }) async {
+  }) {
     throw const UnsupportedOperationException(
       'getDiff must be implemented by the provider',
     );
   }
 
   /// Reverts changes to a specific commit
-  Future<void> revert(final String commitId, {final String? message}) async {
+  Future<void> revert(final String commitId, {final String? message}) {
     throw const UnsupportedOperationException(
       'revert must be implemented by the provider',
     );
@@ -69,38 +66,35 @@ mixin VersionControlCapable {
   Future<void> createBranch(
     final String branchName, {
     final String? fromCommit,
-  }) async {
+  }) {
     throw const UnsupportedOperationException(
       'createBranch must be implemented by the provider',
     );
   }
 
   /// Switches to a different branch
-  Future<void> switchBranch(final String branchName) async {
+  Future<void> switchBranch(final String branchName) {
     throw const UnsupportedOperationException(
       'switchBranch must be implemented by the provider',
     );
   }
 
   /// Lists all available branches
-  Future<List<String>> listBranches() async {
+  Future<List<String>> listBranches() {
     throw const UnsupportedOperationException(
       'listBranches must be implemented by the provider',
     );
   }
 
   /// Gets the current branch name
-  Future<String> getCurrentBranch() async {
+  Future<String> getCurrentBranch() {
     throw const UnsupportedOperationException(
       'getCurrentBranch must be implemented by the provider',
     );
   }
 
   /// Merges another branch into the current branch
-  Future<void> mergeBranch(
-    final String branchName, {
-    final String? message,
-  }) async {
+  Future<void> mergeBranch(final String branchName, {final String? message}) {
     throw const UnsupportedOperationException(
       'mergeBranch must be implemented by the provider',
     );
@@ -110,28 +104,28 @@ mixin VersionControlCapable {
   Future<void> deleteBranch(
     final String branchName, {
     final bool force = false,
-  }) async {
+  }) {
     throw const UnsupportedOperationException(
       'deleteBranch must be implemented by the provider',
     );
   }
 
   /// Gets the status of working directory changes
-  Future<WorkingDirectoryStatus> getStatus() async {
+  Future<WorkingDirectoryStatus> getStatus() {
     throw const UnsupportedOperationException(
       'getStatus must be implemented by the provider',
     );
   }
 
   /// Stages files for commit
-  Future<void> stageFiles(final List<String> filePaths) async {
+  Future<void> stageFiles(final List<String> filePaths) {
     throw const UnsupportedOperationException(
       'stageFiles must be implemented by the provider',
     );
   }
 
   /// Unstages files from commit
-  Future<void> unstageFiles(final List<String> filePaths) async {
+  Future<void> unstageFiles(final List<String> filePaths) {
     throw const UnsupportedOperationException(
       'unstageFiles must be implemented by the provider',
     );
@@ -142,14 +136,14 @@ mixin VersionControlCapable {
     final String tagName,
     final String commitId, {
     final String? message,
-  }) async {
+  }) {
     throw const UnsupportedOperationException(
       'createTag must be implemented by the provider',
     );
   }
 
   /// Lists all tags
-  Future<List<String>> listTags() async {
+  Future<List<String>> listTags() {
     throw const UnsupportedOperationException(
       'listTags must be implemented by the provider',
     );
@@ -190,7 +184,8 @@ class CommitInfo {
 
   @override
   String toString() =>
-      'CommitInfo(id: $id, message: $message, author: $author, timestamp: $timestamp)';
+      'CommitInfo(id: $id, message: $message, '
+      'author: $author, timestamp: $timestamp)';
 }
 
 /// {@template author_info}
@@ -244,7 +239,8 @@ class FileDiff {
 
   @override
   String toString() =>
-      'FileDiff(filePath: $filePath, changeType: $changeType, +$additions -$deletions)';
+      'FileDiff(filePath: $filePath, changeType: '
+      '$changeType, +$additions -$deletions)';
 }
 
 /// {@template file_change_type}
@@ -313,5 +309,7 @@ class WorkingDirectoryStatus {
 
   @override
   String toString() =>
-      'WorkingDirectoryStatus(modified: ${modifiedFiles.length}, added: ${addedFiles.length}, deleted: ${deletedFiles.length}, untracked: ${untrackedFiles.length}, staged: ${stagedFiles.length})';
+      'WorkingDirectoryStatus(modified: ${modifiedFiles.length}, '
+      'added: ${addedFiles.length}, deleted: ${deletedFiles.length},'
+      ' untracked: ${untrackedFiles.length}, staged: ${stagedFiles.length})';
 }

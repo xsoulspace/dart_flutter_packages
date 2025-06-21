@@ -31,7 +31,8 @@ class ProviderRecommendation {
 
   @override
   String toString() =>
-      'ProviderRecommendation(type: $providerType, score: $score, reason: $reason)';
+      'ProviderRecommendation(type: $providerType, score: $score, '
+      'reason: $reason)';
 }
 
 /// {@template provider_requirements}
@@ -108,8 +109,8 @@ mixin ProviderSelector {
   static ProviderRecommendation recommend(
     final ProviderRequirements requirements,
   ) {
-    final candidates = _evaluateProviders(requirements);
-    candidates.sort((final a, final b) => b.score.compareTo(a.score));
+    final candidates = _evaluateProviders(requirements)
+      ..sort((final a, final b) => b.score.compareTo(a.score));
 
     final primary = candidates.first;
     final alternatives = candidates.skip(1).take(2).toList();
@@ -127,8 +128,8 @@ mixin ProviderSelector {
   static List<ProviderRecommendation> getAllRecommendations(
     final ProviderRequirements requirements,
   ) {
-    final candidates = _evaluateProviders(requirements);
-    candidates.sort((final a, final b) => b.score.compareTo(a.score));
+    final candidates = _evaluateProviders(requirements)
+      ..sort((final a, final b) => b.score.compareTo(a.score));
     return candidates;
   }
 
@@ -325,7 +326,6 @@ mixin ProviderSelector {
 
     final configTemplate = OfflineGitConfig(
       localPath: '/path/to/git/repo',
-      branchName: const VcBranchName('main'),
       authorName: 'Your Name',
       authorEmail: 'your.email@example.com',
       remoteUrl: const VcUrl('https://github.com'),

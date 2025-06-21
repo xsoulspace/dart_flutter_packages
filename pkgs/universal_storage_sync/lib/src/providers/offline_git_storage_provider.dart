@@ -1,3 +1,6 @@
+// ignore_for_file: avoid_catches_without_on_clauses
+
+import 'dart:developer';
 import 'dart:io';
 
 import 'package:git/git.dart';
@@ -30,18 +33,12 @@ class OfflineGitStorageProvider extends StorageProvider
   // Remote configuration
   VcUrl get _remoteUrl => _config.remoteUrl;
   String get _remoteName => _config.remoteName;
-  String? get _remoteType => _config.remoteType;
-  Map<String, dynamic>? get _remoteApiSettings => _config.remoteApiSettings;
 
   // Sync strategies
   String get _defaultPullStrategy => _config.defaultPullStrategy;
   String get _defaultPushStrategy => _config.defaultPushStrategy;
   ConflictResolutionStrategy get _conflictResolution =>
       _config.conflictResolution;
-
-  // Authentication
-  String? get _sshKeyPath => _config.sshKeyPath;
-  String? get _httpsToken => _config.httpsToken;
 
   var _isInitialized = false;
 
@@ -109,7 +106,8 @@ class OfflineGitStorageProvider extends StorageProvider
 
     try {
       return await file.readAsString();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      log('Error: $e', stackTrace: stackTrace);
       throw NetworkException('Failed to read file at $filePath: $e');
     }
   }
@@ -203,7 +201,8 @@ class OfflineGitStorageProvider extends StorageProvider
         // Restore to HEAD (latest commit)
         await _gitDir!.runCommand(['checkout', 'HEAD', '--', filePath]);
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      log('Error: $e', stackTrace: stackTrace);
       throw GitConflictException('Failed to restore $filePath: $e');
     }
   }
@@ -238,7 +237,8 @@ class OfflineGitStorageProvider extends StorageProvider
       await _pushWithStrategy(pushConflictStrategy ?? _defaultPushStrategy);
     } on StorageException {
       rethrow;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      log('Error: $e', stackTrace: stackTrace);
       throw NetworkException('Sync operation failed: $e');
     }
   }
@@ -263,7 +263,8 @@ class OfflineGitStorageProvider extends StorageProvider
           _remoteUrl!.value,
         ]);
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      log('Error: $e', stackTrace: stackTrace);
       // Remote doesn't exist, add it
       try {
         await _gitDir!.runCommand([
@@ -318,7 +319,8 @@ class OfflineGitStorageProvider extends StorageProvider
         retryIf: (final e) => !e.toString().contains('Authentication'),
         maxAttempts: 3,
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      log('Error: $e', stackTrace: stackTrace);
       throw NetworkException('Failed to fetch from remote: $e');
     }
   }
@@ -346,14 +348,16 @@ class OfflineGitStorageProvider extends StorageProvider
         default:
           await _gitDir!.runCommand(['pull', _remoteName, _branchName!.value]);
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      log('Error: $e', stackTrace: stackTrace);
       if (e.toString().contains('CONFLICT') ||
           e.toString().contains('conflict')) {
         await _handlePullConflicts();
       } else if (e.toString().contains('non-fast-forward') ||
           e.toString().contains('fast-forward')) {
         throw const SyncConflictException(
-          'Cannot fast-forward. Use different pull strategy or resolve conflicts manually.',
+          'Cannot fast-forward. Use different pull strategy '
+          'or resolve conflicts manually.',
         );
       } else {
         throw GitConflictException('Pull operation failed: $e');
@@ -432,7 +436,8 @@ class OfflineGitStorageProvider extends StorageProvider
 
       // Complete the merge
       await _gitDir!.runCommand(['commit', '--no-edit']);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      log('Error: $e', stackTrace: stackTrace);
       throw MergeConflictException(
         'Failed to resolve conflicts with server-wins strategy: $e',
       );
@@ -445,7 +450,8 @@ class OfflineGitStorageProvider extends StorageProvider
       // For simplicity, this implementation uses client-wins
       // In a real implementation, you would compare file timestamps
       await _resolveConflictsClientWins();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      log('Error: $e', stackTrace: stackTrace);
       throw MergeConflictException(
         'Failed to resolve conflicts with last-write-wins strategy: $e',
       );
@@ -470,7 +476,8 @@ class OfflineGitStorageProvider extends StorageProvider
         default:
           await _pushWithRebaseLocal();
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      log('Error: $e', stackTrace: stackTrace);
       if (e.toString().contains('non-fast-forward') ||
           e.toString().contains('rejected')) {
         if (strategy == 'fail-on-conflict') {
@@ -494,7 +501,8 @@ class OfflineGitStorageProvider extends StorageProvider
     try {
       // Try normal push first
       await _gitDir!.runCommand(['push', _remoteName, _branchName!.value]);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      log('Error: $e', stackTrace: stackTrace);
       if (e.toString().contains('non-fast-forward') ||
           e.toString().contains('rejected')) {
         // Rebase local commits on top of remote
@@ -506,7 +514,8 @@ class OfflineGitStorageProvider extends StorageProvider
             _branchName!.value,
           ]);
           await _gitDir!.runCommand(['push', _remoteName, _branchName!.value]);
-        } catch (rebaseError) {
+        } catch (rebaseError, stackTrace) {
+          log('Rebase error: $rebaseError', stackTrace: stackTrace);
           if (rebaseError.toString().contains('CONFLICT')) {
             // Handle rebase conflicts with client-wins strategy
             await _handlePullConflicts();
@@ -597,7 +606,8 @@ class OfflineGitStorageProvider extends StorageProvider
       // Get the commit hash
       final hashResult = await _gitDir!.runCommand(['rev-parse', 'HEAD']);
       return hashResult.stdout.toString().trim();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      log('Error: $e', stackTrace: stackTrace);
       throw GitConflictException('Failed to commit changes: $e');
     }
   }

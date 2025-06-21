@@ -29,7 +29,6 @@ void main() {
       test('should initialize new repository with required config', () async {
         final config = OfflineGitConfig(
           localPath: tempDir,
-          branchName: VcBranchName.main,
           authorName: 'Test User',
           authorEmail: 'test@example.com',
         );
@@ -44,10 +43,7 @@ void main() {
 
       test('should handle existing repository', () async {
         // Initialize repository first time
-        final config = OfflineGitConfig(
-          localPath: tempDir,
-          branchName: VcBranchName.main,
-        );
+        final config = OfflineGitConfig(localPath: tempDir);
         await provider.initWithConfig(config);
 
         // Initialize again with same path
@@ -57,14 +53,14 @@ void main() {
         expect(await provider2.isAuthenticated(), isTrue);
       });
 
-      test('should throw exception for missing localPath', () async {
+      test('should throw exception for missing localPath', () {
         expect(
-          () => OfflineGitConfig(branchName: VcBranchName.main, localPath: ''),
+          () => OfflineGitConfig(localPath: ''),
           throwsA(isA<ArgumentError>()),
         );
       });
 
-      test('should throw exception for missing branchName', () async {
+      test('should throw exception for missing branchName', () {
         expect(
           () => OfflineGitConfig(
             localPath: tempDir,
@@ -77,7 +73,6 @@ void main() {
       test('should configure Git user settings when provided', () async {
         final config = OfflineGitConfig(
           localPath: tempDir,
-          branchName: VcBranchName.main,
           authorName: 'Test User',
           authorEmail: 'test@example.com',
         );
@@ -91,7 +86,6 @@ void main() {
       setUp(() async {
         final config = OfflineGitConfig(
           localPath: tempDir,
-          branchName: VcBranchName.main,
           authorName: 'Test User',
           authorEmail: 'test@example.com',
         );
@@ -217,7 +211,7 @@ void main() {
 
       test(
         'should throw FileNotFoundException for non-existent file operations',
-        () async {
+        () {
           const filePath = 'non-existent.txt';
 
           // Update non-existent file
@@ -256,7 +250,6 @@ void main() {
       setUp(() async {
         final config = OfflineGitConfig(
           localPath: tempDir,
-          branchName: VcBranchName.main,
           authorName: 'Test User',
           authorEmail: 'test@example.com',
         );
@@ -296,6 +289,7 @@ void main() {
 
         // Create second version
         final commit2 = await provider.updateFile(filePath, version2);
+        expect(commit2, isNotEmpty);
 
         // Verify current version
         expect(await provider.getFile(filePath), equals(version2));
@@ -312,7 +306,6 @@ void main() {
       test('should configure remote URL', () async {
         final config = OfflineGitConfig(
           localPath: tempDir,
-          branchName: VcBranchName.main,
           remoteUrl: const VcUrl('https://github.com/test/repo.git'),
         );
 
@@ -321,10 +314,7 @@ void main() {
       });
 
       test('should not support sync without remote URL', () async {
-        final config = OfflineGitConfig(
-          localPath: tempDir,
-          branchName: VcBranchName.main,
-        );
+        final config = OfflineGitConfig(localPath: tempDir);
 
         await provider.initWithConfig(config);
         expect(provider.supportsSync, isFalse);
@@ -333,7 +323,6 @@ void main() {
       test('should configure authentication options', () async {
         final config = OfflineGitConfig(
           localPath: tempDir,
-          branchName: VcBranchName.main,
           remoteUrl: const VcUrl('https://github.com/test/repo.git'),
           httpsToken: 'test-token',
         );
@@ -360,7 +349,6 @@ void main() {
 
       final config = OfflineGitConfig(
         localPath: tempDir,
-        branchName: VcBranchName.main,
         authorName: 'Test User',
         authorEmail: 'test@example.com',
       );
