@@ -1,4 +1,4 @@
-// ignore_for_file: avoid_print
+// ignore_for_file: avoid_print, avoid_catches_without_on_clauses
 
 import 'dart:io';
 
@@ -147,10 +147,7 @@ Future<void> errorHandlingExample() async {
     // Demonstrate OfflineGitStorageProvider with proper config
     try {
       final gitProvider = OfflineGitStorageProvider();
-      final gitConfig = OfflineGitConfig(
-        localPath: tempDir.path,
-        branchName: VcBranchName.main,
-      );
+      final gitConfig = OfflineGitConfig(localPath: tempDir.path);
       await gitProvider.initWithConfig(gitConfig);
       print('Git provider initialized successfully');
     } catch (e) {

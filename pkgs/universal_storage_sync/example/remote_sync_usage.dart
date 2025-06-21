@@ -1,4 +1,4 @@
-// ignore_for_file: avoid_print
+// ignore_for_file: avoid_print, avoid_catches_without_on_clauses, lines_longer_than_80_chars
 
 import 'dart:io';
 
@@ -28,7 +28,6 @@ Future<void> demonstrateRemoteSync(final String localPath) async {
   // Configure with remote repository
   final config = OfflineGitConfig(
     localPath: localPath,
-    branchName: VcBranchName.main,
     authorName: 'Example User',
     authorEmail: 'user@example.com',
     // Remote configuration (commented out for example - would need real repo)
@@ -128,7 +127,6 @@ Future<void> demonstrateRemoteSync(final String localPath) async {
   // Example configuration with remote URL (for demonstration)
   final remoteConfig = OfflineGitConfig(
     localPath: localPath,
-    branchName: VcBranchName.main,
     authorName: 'Example User',
     authorEmail: 'user@example.com',
     // This would enable sync support

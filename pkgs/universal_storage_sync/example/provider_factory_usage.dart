@@ -1,4 +1,4 @@
-// ignore_for_file: avoid_print
+// ignore_for_file: avoid_print, lines_longer_than_80_chars, avoid_catches_without_on_clauses
 
 import 'package:universal_storage_sync/universal_storage_sync.dart';
 
@@ -12,6 +12,7 @@ void main() async {
     final fileConfig = FileSystemConfig(basePath: '/tmp/demo');
 
     final service1 = await StorageFactory.create(fileConfig);
+    await service1.initializeWithConfig(fileConfig);
     print('   Created FileSystem service automatically');
 
     final gitHubConfig = GitHubApiConfig(
@@ -21,6 +22,7 @@ void main() async {
     );
 
     final service2 = await StorageFactory.create(gitHubConfig);
+    await service2.initializeWithConfig(gitHubConfig);
     print('   Created GitHub API service automatically\n');
 
     // Example 2: Specific factory methods
@@ -28,6 +30,7 @@ void main() async {
 
     final fsConfig = FileSystemConfig(basePath: '/path/to/data');
     final fsService = await StorageFactory.createFileSystem(fsConfig);
+    await fsService.initializeWithConfig(fsConfig);
     print('   Created FileSystem service with specific method');
 
     final ghConfig = GitHubApiConfig(
@@ -36,15 +39,16 @@ void main() async {
       repositoryName: const VcRepositoryName('myproject'),
     );
     final ghService = await StorageFactory.createGitHubApi(ghConfig);
+    await ghService.initializeWithConfig(ghConfig);
     print('   Created GitHub service with specific method');
 
     final gitConfig = OfflineGitConfig(
       localPath: '/path/to/repo',
-      branchName: VcBranchName.main,
       authorName: 'Demo User',
       authorEmail: 'demo@example.com',
     );
     final gitService = await StorageFactory.createOfflineGit(gitConfig);
+    await gitService.initializeWithConfig(gitConfig);
     print('   Created Offline Git service with specific method\n');
 
     // Example 3: Using provider selector to choose optimal config
@@ -63,6 +67,9 @@ void main() async {
 
     // Create service using recommended config template
     final recommendedService = await StorageFactory.create(
+      recommendation.configTemplate,
+    );
+    await recommendedService.initializeWithConfig(
       recommendation.configTemplate,
     );
     print('   Service created using recommendation\n');

@@ -31,16 +31,8 @@ Future<void> demonstrateGitFeatures(final String repoPath) async {
   final provider = OfflineGitStorageProvider();
   final storageService = StorageService(provider);
 
-  final config = {
-    'localPath': repoPath,
-    'branchName': 'main',
-    'authorName': 'Demo User',
-    'authorEmail': 'demo@example.com',
-  };
-
   final offlineGitConfig = OfflineGitConfig(
-    localPath: './my_git_repo',
-    branchName: VcBranchName.main,
+    localPath: repoPath,
     authorName: 'Your Name',
     authorEmail: 'your.email@example.com',
   );
@@ -250,6 +242,11 @@ Future<List<String>> _listAllFiles(
     try {
       // Try to list as directory
       final subItems = await service.listDirectory(itemPath);
+      if (subItems.isEmpty) {
+        allFiles.add(itemPath);
+        continue;
+      }
+
       // If successful, it's a directory - recurse
       final subFiles = await _listAllFiles(service, itemPath);
       allFiles.addAll(subFiles);

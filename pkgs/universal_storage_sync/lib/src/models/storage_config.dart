@@ -43,8 +43,8 @@ class FileSystemConfig extends StorageConfig {
 class OfflineGitConfig extends StorageConfig {
   /// {@macro offline_git_config}
   OfflineGitConfig({
-    required this.localPath,
-    required this.branchName,
+    this.localPath = './',
+    this.branchName = VcBranchName.main,
     this.authorName,
     this.authorEmail,
     // Remote configuration
@@ -74,26 +74,12 @@ class OfflineGitConfig extends StorageConfig {
     if (authorEmail != null && authorEmail!.isEmpty) {
       throw ArgumentError('Author email cannot be empty');
     }
-    if (remoteUrl != null && remoteUrl!.isEmpty) {
-      throw ArgumentError('Remote URL cannot be empty');
-    }
-    if (remoteName.isEmpty) {
-      throw ArgumentError('Remote name cannot be empty');
-    }
-    if (remoteType != null && remoteType!.isEmpty) {
-      throw ArgumentError('Remote type cannot be empty');
-    }
+
     if (defaultPullStrategy.isEmpty) {
       throw ArgumentError('Pull strategy cannot be empty');
     }
     if (defaultPushStrategy.isEmpty) {
       throw ArgumentError('Push strategy cannot be empty');
-    }
-    if (sshKeyPath != null && sshKeyPath!.isEmpty) {
-      throw ArgumentError('SSH key path cannot be empty');
-    }
-    if (httpsToken != null && httpsToken!.isEmpty) {
-      throw ArgumentError('HTTPS token cannot be empty');
     }
   }
 
@@ -188,17 +174,7 @@ class OfflineGitConfig extends StorageConfig {
   };
 
   /// Empty offline Git configuration instance.
-  static final empty = OfflineGitConfig(
-    localPath: '',
-    branchName: VcBranchName.empty,
-    authorName: '',
-    authorEmail: '',
-    remoteName: '',
-    remoteType: '',
-    remoteApiSettings: {},
-    sshKeyPath: '',
-    httpsToken: '',
-  );
+  static final empty = OfflineGitConfig();
 }
 
 /// {@template github_api_config}
