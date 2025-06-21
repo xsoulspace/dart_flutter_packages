@@ -14,11 +14,11 @@ dependencies:
   flutter:
     sdk: flutter
   github: ^9.24.0
+  macos_secure_bookmarks: ^0.2.1
   path: ^1.8.0
   permission_handler: ^11.0.0
   universal_storage_sync:
     path: ../universal_storage_sync
-  macos_secure_bookmarks: ^0.2.1
 
 dev_dependencies:
   flutter_test:
