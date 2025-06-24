@@ -33,7 +33,7 @@ dependencies:
 
   # Universal Storage Sync - our main package
   universal_storage_sync:
-    path: ../../
+    path: ../../../universal_storage_sync
 
   # Core dependencies
   from_json_to_json: ^0.2.0
