@@ -647,17 +647,19 @@ packages:
   universal_storage_sync:
     dependency: "direct main"
     description:
-      path: "../.."
-      relative: true
-    source: path
-    version: "0.1.0"
+      name: universal_storage_sync
+      sha256: "2671ded3fa46f1bcf7e81f52d858cd93a22d7d4f724cc8b86f946459af27fdec"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.0-dev.2"
   universal_storage_sync_utils:
     dependency: "direct main"
     description:
-      path: "../../../universal_storage_sync_utils"
-      relative: true
-    source: path
-    version: "0.1.0"
+      name: universal_storage_sync_utils
+      sha256: "01a30406cbea348e83003a649eba24d326160a15ed6fc6d586c44946702f3b68"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.0-dev.1"
   uuid:
     dependency: "direct main"
     description:
