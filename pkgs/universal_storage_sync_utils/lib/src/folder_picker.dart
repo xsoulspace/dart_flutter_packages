@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/widgets.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:universal_storage_sync/universal_storage_sync.dart';
 
 import 'macos_bookmark_manager.dart';
 import 'path_validator.dart';

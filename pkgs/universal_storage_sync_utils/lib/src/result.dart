@@ -1,4 +1,4 @@
-import 'macos_bookmark_manager.dart';
+import 'package:universal_storage_sync/universal_storage_sync.dart';
 
 // For PickResult sealed class
 

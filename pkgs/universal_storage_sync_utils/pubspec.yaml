@@ -1,7 +1,7 @@
 name: universal_storage_sync_utils
 description: Utility functions for universal_storage_sync, including a
   cross-platform folder picker.
-version: 0.1.0-dev.1
+version: 0.1.0-dev.2
 homepage: https://github.com/xsoulspace/universal_storage_sync/tree/main/pkgs/universal_storage_sync_utils
 
 environment:
@@ -18,7 +18,7 @@ dependencies:
   macos_secure_bookmarks: ^0.2.1
   path: ^1.8.0
   permission_handler: ^11.0.0
-  universal_storage_sync: ^0.1.0-dev.2
+  universal_storage_sync: ^0.1.0-dev.3
 
 dev_dependencies:
   flutter_test:
