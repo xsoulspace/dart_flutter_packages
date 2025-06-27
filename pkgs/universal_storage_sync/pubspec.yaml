@@ -2,7 +2,7 @@ name: universal_storage_sync
 description: A cross-platform Dart package providing unified API for file
   storage operations with support for local filesystem and Git-based version
   control.
-version: 0.1.0-dev.2
+version: 0.1.0-dev.3
 homepage: https://github.com/xsoulspace/universal_storage_sync
 
 environment:

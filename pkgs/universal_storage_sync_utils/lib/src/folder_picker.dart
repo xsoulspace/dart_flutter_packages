@@ -15,13 +15,17 @@ import 'result.dart';
 ///
 /// It's important to call [MacOSBookmarkManager.stopAccessing] when you're done
 /// accessing the entity.
-Future<FileSystemEntity?> resolvePlatformDirectory({
+Future<Directory?> resolvePlatformDirectory({
   required final String path,
   final MacOSBookmark? bookmark,
 }) async {
   if (Platform.isMacOS) {
     if (bookmark != null) {
-      return MacOSBookmarkManager().resolveBookmark(bookmark);
+      final resolved = await MacOSBookmarkManager().resolveBookmark(bookmark);
+      if (resolved is Directory) {
+        return resolved;
+      }
+      return null;
     }
     // if no bookmark, return null since we don't have a way to resolve it
     return null;
