@@ -2,6 +2,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:xsoulspace_foundation/xsoulspace_foundation.dart';
+import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
 import '../purchases/purchase_manager.dart';
 import 'monetization_utils.dart';
@@ -43,9 +44,9 @@ class SubscriptionManager extends ChangeNotifier {
   final PurchaseManager purchaseManager;
   final MonetizationStatusResource monetizationTypeResource;
 
-  PurchaseDetails? _activeSubscription;
-  PurchaseDetails? get activeSubscription => _activeSubscription;
-  void setActiveSubscription(final PurchaseDetails? value) {
+  PurchaseDetailsModel? _activeSubscription;
+  PurchaseDetailsModel? get activeSubscription => _activeSubscription;
+  void setActiveSubscription(final PurchaseDetailsModel? value) {
     _activeSubscription = value;
     notifyListeners();
   }
@@ -57,17 +58,17 @@ class SubscriptionManager extends ChangeNotifier {
     notifyListeners();
   }
 
-  PurchaseProductDetails? getSubscription(final PurchaseProductId id) =>
+  PurchaseProductDetailsModel? getSubscription(final PurchaseProductId id) =>
       subscriptions.value.firstWhereOrNull((final e) => e.productId == id);
   bool get isLoading => state == SubscriptionManagerStatus.pending;
 
   /// The current state of user access.
   SubscriptionManagerStatus get state =>
       monetizationTypeResource.type == MonetizationType.free
-          ? SubscriptionManagerStatus.subscribed
-          : _state;
+      ? SubscriptionManagerStatus.subscribed
+      : _state;
 
-  LoadableContainer<List<PurchaseProductDetails>> subscriptions =
+  LoadableContainer<List<PurchaseProductDetailsModel>> subscriptions =
       const LoadableContainer(value: []);
   var _isInitialized = false;
   bool get isInitialized => _isInitialized;
@@ -98,7 +99,7 @@ class SubscriptionManager extends ChangeNotifier {
 
   /// Updates the state based on a purchase update.
   Future<void> handleSubscriptionUpdate(
-    final PurchaseVerificationDto dto,
+    final PurchaseVerificationDtoModel dto,
   ) async {
     switch (dto.status) {
       case PurchaseStatus.restored:
@@ -118,7 +119,7 @@ class SubscriptionManager extends ChangeNotifier {
     }
   }
 
-  Future<bool> subscribe(final PurchaseProductDetails details) async {
+  Future<bool> subscribe(final PurchaseProductDetailsModel details) async {
     if (_state == SubscriptionManagerStatus.subscribed) return false;
     _state = SubscriptionManagerStatus.pending;
     notifyListeners();
@@ -126,28 +127,30 @@ class SubscriptionManager extends ChangeNotifier {
     return _handleSubscriptionResult(result);
   }
 
-  Future<void> cancel(final PurchaseProductDetails details) async {
-    final result = await purchaseManager.cancel(details);
-    switch (result) {
-      case CancelSuccess():
+  Future<void> cancel(final PurchaseProductDetailsModel details) async {
+    final result = await purchaseManager.cancel(details.productId);
+    switch (result.type) {
+      case ResultType.success:
         _setSubscriptionAsFree();
-      case CancelFailure():
+      case ResultType.failure:
       // Handle failure if needed
     }
     notifyListeners();
   }
 
-  Future<bool> _confirmPurchase(final PurchaseVerificationDto details) async {
+  Future<bool> _confirmPurchase(
+    final PurchaseVerificationDtoModel details,
+  ) async {
     if (details.status
         case PurchaseStatus.error ||
             PurchaseStatus.purchased ||
             PurchaseStatus.restored) {
       final result = await purchaseManager.completePurchase(details);
-      switch (result) {
-        case CompletePurchaseSuccess():
+      switch (result.type) {
+        case ResultType.success:
           if (details.status
               case (PurchaseStatus.purchased || PurchaseStatus.restored)) {
-            final purchaseInfo = await purchaseManager.getPurchaseInfo(
+            final purchaseInfo = await purchaseManager.getPurchaseDetails(
               details.purchaseId,
             );
             setActiveSubscription(purchaseInfo);
@@ -155,7 +158,7 @@ class SubscriptionManager extends ChangeNotifier {
             notifyListeners();
             return true;
           }
-        case CompletePurchaseFailure():
+        case ResultType.failure:
           // Handle failure if needed
           return false;
       }
@@ -164,11 +167,13 @@ class SubscriptionManager extends ChangeNotifier {
     return false;
   }
 
-  Future<bool> _handleSubscriptionResult(final PurchaseResult result) async {
-    switch (result) {
-      case PurchaseSuccess(:final details):
-        return _confirmPurchase(details.toVerificationDto());
-      case PurchaseFailure():
+  Future<bool> _handleSubscriptionResult(
+    final PurchaseResultModel result,
+  ) async {
+    switch (result.type) {
+      case ResultType.success:
+        return _confirmPurchase(result.details!.toVerificationDto());
+      case ResultType.failure:
         _setSubscriptionAsFree();
     }
     return false;

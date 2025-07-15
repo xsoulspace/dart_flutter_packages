@@ -22,50 +22,54 @@ class YandexAdProvider implements AdProvider {
   }
 
   @override
-  Future<void> showRewardedAd({required String adUnitId}) async {
+  Future<void> showRewardedAd({required final String adUnitId}) async {
     final completer = Completer<RewardedAd>();
     final adLoader = await RewardedAdLoader.create(
-      onAdFailedToLoad: (error) => completer.completeError(error),
-      onAdLoaded: (ad) => completer.complete(ad),
+      onAdFailedToLoad: completer.completeError,
+      onAdLoaded: completer.complete,
     );
     await adLoader.loadAd(
       adRequestConfiguration: AdRequestConfiguration(adUnitId: adUnitId),
     );
     final ad = await completer.future;
     await ad.setAdEventListener(
-      onAdFailedToShow: (error) => debugPrint(error.toString()),
+      onAdFailedToShow: (final error) => debugPrint(error.toString()),
       onAdShown: () => debugPrint('ad shown'),
       onAdDismissed: () => debugPrint('ad dismissed'),
       onAdClicked: () => debugPrint('ad clicked'),
-      onImpression: (data) => debugPrint(data.toString()),
-      onAdRewarded: (reward) => debugPrint(reward.toString()),
+      onImpression: (final data) => debugPrint(data.toString()),
+      onAdRewarded: (final reward) => debugPrint(reward.toString()),
     );
     await ad.show();
   }
 
   @override
-  Future<void> showInterstitialAd({required String adUnitId}) async {
+  Future<void> showInterstitialAd({required final String adUnitId}) async {
     final adLoader = InterstitialAdLoader();
     await adLoader.load(adUnitId: adUnitId);
 
     final ad = await adLoader.waitForAd();
     ad.setAdEventListener(
-      onAdFailedToShow: (error) => debugPrint(error.toString()),
+      onAdFailedToShow: (final error) => debugPrint(error.toString()),
       onAdShown: () => debugPrint('ad shown'),
       onAdDismissed: () => debugPrint('ad dismissed'),
       onAdClicked: () => debugPrint('ad clicked'),
-      onImpression: (data) => debugPrint(data.toString()),
+      onImpression: (final data) => debugPrint(data.toString()),
     );
     await ad.show();
   }
 
   @override
-  Widget buildBannerAd({required String adUnitId, required Object adSize}) {
+  Widget buildBannerAd({
+    required final String adUnitId,
+    required final Object adSize,
+  }) {
     if (adSize is! BannerAdSize) {
       throw ArgumentError(
         'adSize must be of type BannerAdSize for YandexAdProvider',
       );
     }
-    return BannerAd(adUnitId: adUnitId, adSize: adSize);
+    throw UnimplementedError();
+    // return BannerAd(adUnitId: adUnitId, adSize: adSize);
   }
 }

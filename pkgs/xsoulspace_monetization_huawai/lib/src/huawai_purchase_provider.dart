@@ -2,6 +2,7 @@
 
 import 'dart:async';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:huawei_iap/huawei_iap.dart';
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
@@ -16,9 +17,10 @@ class HuawaiPurchaseProvider implements PurchaseProvider {
   final bool enableLogger;
 
   final _purchaseStreamController =
-      StreamController<List<PurchaseDetails>>.broadcast();
+      StreamController<List<PurchaseDetailsModel>>.broadcast();
 
-  Future<void> init() async {
+  @override
+  Future<bool> init() async {
     try {
       if (enableLogger) {
         await IapClient.enableLogger();
@@ -31,53 +33,64 @@ class HuawaiPurchaseProvider implements PurchaseProvider {
       }
     } catch (e) {
       debugPrint('HuawaiPurchaseProvider.init: $e');
+      return false;
     }
-  }
-
-  void dispose() {
-    _purchaseStreamController.close();
+    return true;
   }
 
   @override
-  Stream<List<PurchaseDetails>> get purchaseStream =>
-      _purchaseStreamController.stream;
+  Future<CancelResultModel> cancel(final PurchaseProductId productId) async {
+    // TODO(arenukvern): implement cancellation
+    return CancelResultModel.success();
+  }
 
+  @override
+  Future<void> dispose() => _purchaseStreamController.close();
+
+  @override
+  Stream<List<PurchaseDetailsModel>> get purchaseStream =>
+      _purchaseStreamController.stream;
   @override
   Future<bool> isAvailable() async {
     try {
       final result = await IapClient.isEnvReady();
+
+      /// - `0`: Success
+      /// - `1`: Failure
+      /// - `404`: No resource found
+      /// - `500`: Internal error
       return result.status?.statusCode == 0;
     } catch (e) {
-      debugPrint('HuawaiPurchaseProvider.isAvailable: $e');
+      debugPrint('HuaweiIapManager.isAvailable: $e');
       return false;
     }
   }
 
   @override
-  Future<CompletePurchaseResult> completePurchase(
-    PurchaseVerificationDto purchase,
+  Future<CompletePurchaseResultModel> completePurchase(
+    PurchaseVerificationDtoModel purchase,
   ) async {
     try {
       if (purchase.productType != PurchaseProductType.consumable) {
-        return const CompletePurchaseResult.success();
+        return CompletePurchaseResultModel.success();
       }
       final result = await IapClient.consumeOwnedPurchase(
         ConsumeOwnedPurchaseReq(purchaseToken: purchase.purchaseToken!),
       );
       if (result.returnCode == '0') {
-        return const CompletePurchaseResult.success();
+        return CompletePurchaseResultModel.success();
       } else {
-        return CompletePurchaseResult.failure(
+        return CompletePurchaseResultModel.failure(
           'Failed to complete purchase: ${result.errMsg}',
         );
       }
     } catch (e) {
-      return CompletePurchaseResult.failure(e.toString());
+      return CompletePurchaseResultModel.failure(e.toString());
     }
   }
 
   @override
-  Future<List<PurchaseProductDetails>> getProductDetails(
+  Future<List<PurchaseProductDetailsModel>> getProductDetails(
     List<PurchaseProductId> productIds,
   ) async {
     final response = await IapClient.obtainProductInfo(
@@ -93,15 +106,17 @@ class HuawaiPurchaseProvider implements PurchaseProvider {
   }
 
   @override
-  Future<PurchaseResult> purchase(PurchaseProductDetails productDetails) async {
+  Future<PurchaseResultModel> purchaseNonConsumable(
+    PurchaseProductDetailsModel productDetails,
+  ) async {
     try {
       final result = await IapClient.createPurchaseIntent(
-        CreatePurchaseIntentReq(
+        PurchaseIntentReq(
           priceType: _mapProductTypeToHuawei(productDetails.productType),
           productId: productDetails.productId.value,
         ),
       );
-      if (result.returnCode == OrderStatusCode.orderStateSuccess) {
+      if (result.returnCode == '0') {
         // Huawei IAP returns purchase data directly. We can wrap it and
         // also push to the stream for consistency.
         final details = _mapIntentToPurchaseDetails(
@@ -109,41 +124,41 @@ class HuawaiPurchaseProvider implements PurchaseProvider {
           productDetails,
         );
         _purchaseStreamController.add([details]);
-        return PurchaseResult.success(details);
+        return PurchaseResultModel.success(details);
       } else {
-        return PurchaseResult.failure('Purchase failed: ${result.errMsg}');
+        return PurchaseResultModel.failure('Purchase failed: ${result.errMsg}');
       }
     } catch (e) {
-      return PurchaseResult.failure(e.toString());
+      return PurchaseResultModel.failure(e.toString());
     }
   }
 
   @override
-  Future<RestoreResult> restorePurchases() async {
+  Future<RestoreResultModel> restorePurchases() async {
     try {
       final result = await IapClient.obtainOwnedPurchases(
         OwnedPurchasesReq(priceType: 1), // Needs to query all types
       );
-      if (result.returnCode == OrderStatusCode.orderStateSuccess) {
+      if (result.returnCode == '0') {
         final restored =
             result.inAppPurchaseDataList
                 ?.map((p) => _mapOwnedToPurchaseDetails(p))
                 .toList() ??
             [];
         _purchaseStreamController.add(restored);
-        return RestoreResult.success(restored);
+        return RestoreResultModel.success(restored);
       } else {
-        return RestoreResult.failure(
+        return RestoreResultModel.failure(
           'Failed to restore purchases: ${result.errMsg}',
         );
       }
     } catch (e) {
-      return RestoreResult.failure(e.toString());
+      return RestoreResultModel.failure(e.toString());
     }
   }
 
-  PurchaseProductDetails _mapToProductDetails(ProductInfo product) {
-    return PurchaseProductDetails(
+  PurchaseProductDetailsModel _mapToProductDetails(ProductInfo product) {
+    return PurchaseProductDetailsModel(
       productId: PurchaseProductId(product.productId!),
       productType: _mapHuaweiToProductType(product.priceType),
       name: product.productName ?? '',
@@ -151,29 +166,32 @@ class HuawaiPurchaseProvider implements PurchaseProvider {
       price: double.tryParse(product.microsPrice?.toString() ?? '0')! / 1000000,
       currency: product.currency ?? '',
       description: product.productDesc ?? '',
+
+      duration: _getDurationFromPeriod(product.subPeriod ?? ''),
+      freeTrialDuration: PurchaseDurationModel(years: 0, months: 0, days: 0),
     );
   }
 
-  PurchaseDetails _mapIntentToPurchaseDetails(
+  PurchaseDetailsModel _mapIntentToPurchaseDetails(
     InAppPurchaseData data,
-    PurchaseProductDetails product,
+    PurchaseProductDetailsModel? product,
   ) {
-    return PurchaseDetails(
+    return PurchaseDetailsModel(
       purchaseId: PurchaseId(data.orderId!),
       productId: PurchaseProductId(data.productId!),
-      name: product.name,
-      formattedPrice: product.formattedPrice,
+      name: product?.name ?? '',
+      formattedPrice: product?.formattedPrice ?? '',
       status: _mapHuaweiToPurchaseStatus(data.purchaseState),
-      price: product.price,
-      currency: product.currency,
+      price: product?.price ?? 0,
+      currency: product?.currency ?? '',
       purchaseDate: DateTime.fromMillisecondsSinceEpoch(data.purchaseTime!),
-      purchaseType: product.productType,
-      purchaseToken: data.purchaseToken,
+      purchaseType: product?.productType ?? PurchaseProductType.nonConsumable,
+      purchaseToken: data.purchaseToken ?? '',
     );
   }
 
-  PurchaseDetails _mapOwnedToPurchaseDetails(InAppPurchaseData data) {
-    return PurchaseDetails(
+  PurchaseDetailsModel _mapOwnedToPurchaseDetails(InAppPurchaseData data) {
+    return PurchaseDetailsModel(
       purchaseId: PurchaseId(data.orderId!),
       productId: PurchaseProductId(data.productId!),
       name: '', // Not available in owned purchases
@@ -183,20 +201,24 @@ class HuawaiPurchaseProvider implements PurchaseProvider {
       currency: data.currency ?? '',
       purchaseDate: DateTime.fromMillisecondsSinceEpoch(data.purchaseTime!),
       purchaseType: _mapHuaweiToProductType(data.kind),
-      purchaseToken: data.purchaseToken,
+      purchaseToken: data.purchaseToken ?? '',
     );
   }
 
+  /// 0: Consumable
+  /// 1: Non-consumable
+  /// 2: Auto-renewable subscription
+
   int _mapProductTypeToHuawei(PurchaseProductType type) => switch (type) {
-    PurchaseProductType.consumable => PriceType.priceTypeConsumable,
-    PurchaseProductType.nonConsumable => PriceType.priceTypeNonconsumable,
-    PurchaseProductType.subscription => PriceType.priceTypeSubscription,
+    PurchaseProductType.consumable => 0,
+    PurchaseProductType.nonConsumable => 1,
+    PurchaseProductType.subscription => 2,
   };
 
   PurchaseProductType _mapHuaweiToProductType(int? type) => switch (type) {
-    PriceType.priceTypeConsumable => PurchaseProductType.consumable,
-    PriceType.priceTypeNonconsumable => PurchaseProductType.nonConsumable,
-    PriceType.priceTypeSubscription => PurchaseProductType.subscription,
+    0 => PurchaseProductType.consumable,
+    1 => PurchaseProductType.nonConsumable,
+    2 => PurchaseProductType.subscription,
     _ => PurchaseProductType.nonConsumable, // Default or throw
   };
 
@@ -207,4 +229,97 @@ class HuawaiPurchaseProvider implements PurchaseProvider {
     2 => PurchaseStatus.restored, // Refunded
     _ => PurchaseStatus.error,
   };
+
+  /// ISO 8601
+  Duration _getDurationFromPeriod(final String period) {
+    final regex = RegExp(r'P(\d+)([DWMY])');
+    final match = regex.firstMatch(period);
+    const defaultDuration = Duration(days: 30);
+    if (match != null) {
+      final value = int.parse(match.group(1)!);
+      final unit = match.group(2);
+      return switch (unit) {
+        'D' => Duration(days: value),
+        'W' => Duration(days: value * 7),
+        'M' => Duration(days: value * 30),
+        'Y' => Duration(days: value * 365),
+        _ => defaultDuration,
+      };
+    }
+    return defaultDuration;
+  }
+
+  @override
+  Future<List<PurchaseProductDetailsModel>> getConsumables(
+    final List<PurchaseProductId> productIds,
+  ) async {
+    // TODO(arenukvern): implement identification of consumables
+    final response = await IapClient.obtainProductInfo(
+      ProductInfoReq(
+        priceType: 0,
+        skuIds: productIds.map((id) => id.value).toList(),
+      ),
+    );
+    return response.productInfoList?.map(_mapToProductDetails).toList() ?? [];
+  }
+
+  @override
+  Future<List<PurchaseProductDetailsModel>> getNonConsumables(
+    final List<PurchaseProductId> productIds,
+  ) async {
+    // TODO(arenukvern): implement identification of non-consumables
+    final response = await IapClient.obtainProductInfo(
+      ProductInfoReq(
+        priceType: 1,
+        skuIds: productIds.map((id) => id.value).toList(),
+      ),
+    );
+    return response.productInfoList?.map(_mapToProductDetails).toList() ?? [];
+  }
+
+  @override
+  Future<List<PurchaseProductDetailsModel>> getSubscriptions(
+    final List<PurchaseProductId> productIds,
+  ) async {
+    // TODO(arenukvern): implement identification of subscriptions
+    final response = await IapClient.obtainProductInfo(
+      ProductInfoReq(
+        priceType: 2,
+        skuIds: productIds.map((id) => id.value).toList(),
+      ),
+    );
+    return response.productInfoList?.map(_mapToProductDetails).toList() ?? [];
+  }
+
+  @override
+  Future<PurchaseResultModel> subscribe(
+    final PurchaseProductDetailsModel productDetails,
+  ) async {
+    return purchaseNonConsumable(productDetails);
+  }
+
+  @override
+  Future<void> openSubscriptionManagement() async {
+    // TODO(arenukvern): implement opening of subscription management
+  }
+
+  @override
+  Future<PurchaseDetailsModel> getPurchaseDetails(
+    final PurchaseId purchaseId,
+  ) async {
+    // TODO(arenukvern): implement getting of purchase details
+    final response = await IapClient.obtainOwnedPurchases(
+      OwnedPurchasesReq(priceType: 1), // Needs to query all types
+    );
+    final purchase = response.inAppPurchaseDataList?.firstWhereOrNull(
+      (p) => p.orderId == purchaseId.value,
+    );
+
+    if (purchase == null) {
+      throw Exception('Purchase not found');
+    }
+
+    // TODO(arenukvern): implement getting of purchase details
+    return _mapIntentToPurchaseDetails(purchase, null);
+  }
 }

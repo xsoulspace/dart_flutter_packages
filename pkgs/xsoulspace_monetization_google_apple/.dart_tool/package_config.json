@@ -51,9 +51,15 @@
     },
     {
       "name": "freezed_annotation",
-      "rootUri": "file:///Users/antonio/.pub-cache/hosted/pub.dev/freezed_annotation-2.4.4",
+      "rootUri": "file:///Users/antonio/.pub-cache/hosted/pub.dev/freezed_annotation-3.1.0",
       "packageUri": "lib/",
       "languageVersion": "3.0"
+    },
+    {
+      "name": "from_json_to_json",
+      "rootUri": "file:///Users/antonio/.pub-cache/hosted/pub.dev/from_json_to_json-0.2.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.7"
     },
     {
       "name": "in_app_purchase",
@@ -78,6 +84,12 @@
       "rootUri": "file:///Users/antonio/.pub-cache/hosted/pub.dev/in_app_purchase_storekit-0.4.3",
       "packageUri": "lib/",
       "languageVersion": "3.6"
+    },
+    {
+      "name": "is_dart_empty_or_not",
+      "rootUri": "file:///Users/antonio/.pub-cache/hosted/pub.dev/is_dart_empty_or_not-0.2.3",
+      "packageUri": "lib/",
+      "languageVersion": "3.7"
     },
     {
       "name": "json_annotation",

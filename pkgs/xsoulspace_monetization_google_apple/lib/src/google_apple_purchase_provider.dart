@@ -13,10 +13,11 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
   late StreamSubscription<List<iap.PurchaseDetails>> _purchaseSubscription;
 
   final _purchaseStreamController =
-      StreamController<List<PurchaseDetails>>.broadcast();
+      StreamController<List<PurchaseDetailsModel>>.broadcast();
 
   /// Initializes the purchase provider.
-  Future<void> init() async {
+  @override
+  Future<bool> init() async {
     _purchaseSubscription = _inAppPurchase.purchaseStream.listen(
       (purchaseDetailsList) {
         final purchases = purchaseDetailsList
@@ -27,23 +28,25 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
       onDone: () => _purchaseStreamController.close(),
       onError: (error) => _purchaseStreamController.addError(error),
     );
-  }
-
-  void dispose() {
-    _purchaseSubscription.cancel();
-    _purchaseStreamController.close();
+    return true;
   }
 
   @override
-  Stream<List<PurchaseDetails>> get purchaseStream =>
+  Future<void> dispose() async {
+    _purchaseSubscription.cancel();
+    await _purchaseStreamController.close();
+  }
+
+  @override
+  Stream<List<PurchaseDetailsModel>> get purchaseStream =>
       _purchaseStreamController.stream;
 
   @override
   Future<bool> isAvailable() => _inAppPurchase.isAvailable();
 
   @override
-  Future<CompletePurchaseResult> completePurchase(
-    PurchaseVerificationDto purchase,
+  Future<CompletePurchaseResultModel> completePurchase(
+    PurchaseVerificationDtoModel purchase,
   ) async {
     // This is a simplified mapping. You might need a more robust way
     // to find the original iap.PurchaseDetails object.
@@ -61,14 +64,14 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
 
     try {
       await _inAppPurchase.completePurchase(iapPurchase);
-      return const CompletePurchaseResult.success();
+      return CompletePurchaseResultModel.success();
     } catch (e) {
-      return CompletePurchaseResult.failure(e.toString());
+      return CompletePurchaseResultModel.failure(e.toString());
     }
   }
 
   @override
-  Future<List<PurchaseProductDetails>> getProductDetails(
+  Future<List<PurchaseProductDetailsModel>> getProductDetails(
     List<PurchaseProductId> productIds,
   ) async {
     final response = await _inAppPurchase.queryProductDetails(
@@ -81,15 +84,17 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
   }
 
   @override
-  Future<PurchaseResult> purchase(PurchaseProductDetails productDetails) async {
+  Future<PurchaseResultModel> purchaseNonConsumable(
+    PurchaseProductDetailsModel productDetails,
+  ) async {
     final response = await _inAppPurchase.queryProductDetails({
       productDetails.productId.value,
     });
     if (response.error != null) {
-      return PurchaseResult.failure(response.error!.message);
+      return PurchaseResultModel.failure(response.error!.message);
     }
     if (response.productDetails.isEmpty) {
-      return PurchaseResult.failure(
+      return PurchaseResultModel.failure(
         'Product not found: ${productDetails.productId.value}',
       );
     }
@@ -109,7 +114,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
       if (success) {
         // A proper success would be to return the PurchaseDetails from the stream,
         // but this method must return. We assume 'pending' and let the stream update.
-        return PurchaseResult.success(
+        return PurchaseResultModel.success(
           _mapToPurchaseDetails(
             iap.PurchaseDetails(
               productID: productDetails.productId.value,
@@ -125,27 +130,27 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
           ),
         );
       } else {
-        return const PurchaseResult.failure('Purchase initiation failed.');
+        return PurchaseResultModel.failure('Purchase initiation failed.');
       }
     } catch (e) {
-      return PurchaseResult.failure(e.toString());
+      return PurchaseResultModel.failure(e.toString());
     }
   }
 
   @override
-  Future<RestoreResult> restorePurchases() async {
+  Future<RestoreResultModel> restorePurchases() async {
     try {
       await _inAppPurchase.restorePurchases();
       // Restore results are also delivered via the purchaseStream.
       // This method simply triggers the process.
-      return const RestoreResult.success([]);
+      return RestoreResultModel.success([]);
     } catch (e) {
-      return RestoreResult.failure(e.toString());
+      return RestoreResultModel.failure(e.toString());
     }
   }
 
-  PurchaseProductDetails _mapToProductDetails(iap.ProductDetails product) {
-    return PurchaseProductDetails(
+  PurchaseProductDetailsModel _mapToProductDetails(iap.ProductDetails product) {
+    return PurchaseProductDetailsModel(
       productId: PurchaseProductId(product.id),
       // This logic needs to be robust. Assuming type from ID is brittle.
       productType: product.id.contains('subscription')
@@ -162,11 +167,13 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
           : (product.id.contains('month')
                 ? const Duration(days: 30)
                 : Duration.zero),
+      // TODO: Implement free trial duration
+      freeTrialDuration: PurchaseDurationModel.zero,
     );
   }
 
-  PurchaseDetails _mapToPurchaseDetails(iap.PurchaseDetails purchase) {
-    return PurchaseDetails(
+  PurchaseDetailsModel _mapToPurchaseDetails(iap.PurchaseDetails purchase) {
+    return PurchaseDetailsModel(
       purchaseId: PurchaseId(purchase.purchaseID ?? ''),
       productId: PurchaseProductId(purchase.productID),
       name: '', // Not available in iap.PurchaseDetails
@@ -194,9 +201,75 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
         iap.PurchaseStatus.error => PurchaseStatus.error,
         iap.PurchaseStatus.restored => PurchaseStatus.restored,
         iap.PurchaseStatus.canceled => PurchaseStatus.canceled,
-        // iap.PurchaseStatus.deferred is not in all versions
-        _ => PurchaseStatus.pending,
       };
+
+  @override
+  Future<List<PurchaseProductDetailsModel>> getConsumables(
+    final List<PurchaseProductId> productIds,
+  ) async {
+    // TODO(arenukvern): implement identification of consumables
+    final response = await _inAppPurchase.queryProductDetails(
+      productIds.map((id) => id.value).toSet(),
+    );
+    if (response.error != null) {
+      throw Exception(response.error!.message);
+    }
+    return response.productDetails.map(_mapToProductDetails).toList();
+  }
+
+  @override
+  Future<List<PurchaseProductDetailsModel>> getNonConsumables(
+    final List<PurchaseProductId> productIds,
+  ) async {
+    // TODO(arenukvern): implement identification of non-consumables
+    final response = await _inAppPurchase.queryProductDetails(
+      productIds.map((id) => id.value).toSet(),
+    );
+    if (response.error != null) {
+      throw Exception(response.error!.message);
+    }
+    return response.productDetails.map(_mapToProductDetails).toList();
+  }
+
+  @override
+  Future<List<PurchaseProductDetailsModel>> getSubscriptions(
+    final List<PurchaseProductId> productIds,
+  ) async {
+    // TODO(arenukvern): implement identification of subscriptions
+    final response = await _inAppPurchase.queryProductDetails(
+      productIds.map((id) => id.value).toSet(),
+    );
+    if (response.error != null) {
+      throw Exception(response.error!.message);
+    }
+    return response.productDetails.map(_mapToProductDetails).toList();
+  }
+
+  @override
+  Future<PurchaseResultModel> subscribe(
+    final PurchaseProductDetailsModel productDetails,
+  ) async {
+    return purchaseNonConsumable(productDetails);
+  }
+
+  @override
+  Future<void> openSubscriptionManagement() async {
+    // TODO(arenukvern): implement opening of subscription management
+  }
+
+  @override
+  Future<PurchaseDetailsModel> getPurchaseDetails(
+    final PurchaseId purchaseId,
+  ) async {
+    // TODO(arenukvern): implement getting of purchase details
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<CancelResultModel> cancel(PurchaseProductId productId) async {
+    // TODO(arenukvern): implement cancellation
+    throw UnimplementedError();
+  }
 }
 
 extension on PurchaseStatus {

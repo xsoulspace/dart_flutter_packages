@@ -11,6 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
   freezed_annotation: ^3.0.0
+  from_json_to_json: ^0.2.1
   json_annotation: ^4.9.0
 
 dev_dependencies:
