@@ -10,6 +10,7 @@
 .history
 .svn/
 .swiftpm/
+pubspec.lock
 migrate_working_dir/
 
 # IntelliJ related
