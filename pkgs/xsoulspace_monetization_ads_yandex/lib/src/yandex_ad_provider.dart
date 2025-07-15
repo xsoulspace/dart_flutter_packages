@@ -33,28 +33,37 @@ class YandexAdProvider implements AdProvider {
     );
     final ad = await completer.future;
     await ad.setAdEventListener(
-      onAdFailedToShow: (final error) => debugPrint(error.toString()),
-      onAdShown: () => debugPrint('ad shown'),
-      onAdDismissed: () => debugPrint('ad dismissed'),
-      onAdClicked: () => debugPrint('ad clicked'),
-      onImpression: (final data) => debugPrint(data.toString()),
-      onAdRewarded: (final reward) => debugPrint(reward.toString()),
+      eventListener: RewardedAdEventListener(
+        onAdFailedToShow: (final error) => debugPrint(error.toString()),
+        onAdShown: () => debugPrint('ad shown'),
+        onAdDismissed: () => debugPrint('ad dismissed'),
+        onAdClicked: () => debugPrint('ad clicked'),
+        onAdImpression: (final data) => debugPrint(data.toString()),
+        onRewarded: (final reward) => debugPrint(reward.toString()),
+      ),
     );
     await ad.show();
   }
 
   @override
   Future<void> showInterstitialAd({required final String adUnitId}) async {
-    final adLoader = InterstitialAdLoader();
-    await adLoader.load(adUnitId: adUnitId);
-
-    final ad = await adLoader.waitForAd();
-    ad.setAdEventListener(
-      onAdFailedToShow: (final error) => debugPrint(error.toString()),
-      onAdShown: () => debugPrint('ad shown'),
-      onAdDismissed: () => debugPrint('ad dismissed'),
-      onAdClicked: () => debugPrint('ad clicked'),
-      onImpression: (final data) => debugPrint(data.toString()),
+    final completer = Completer<InterstitialAd>();
+    final adLoader = await InterstitialAdLoader.create(
+      onAdLoaded: completer.complete,
+      onAdFailedToLoad: completer.completeError,
+    );
+    await adLoader.loadAd(
+      adRequestConfiguration: AdRequestConfiguration(adUnitId: adUnitId),
+    );
+    final ad = await completer.future;
+    await ad.setAdEventListener(
+      eventListener: InterstitialAdEventListener(
+        onAdFailedToShow: (final error) => debugPrint(error.toString()),
+        onAdShown: () => debugPrint('ad shown'),
+        onAdDismissed: () => debugPrint('ad dismissed'),
+        onAdClicked: () => debugPrint('ad clicked'),
+        onAdImpression: (final data) => debugPrint(data.toString()),
+      ),
     );
     await ad.show();
   }
