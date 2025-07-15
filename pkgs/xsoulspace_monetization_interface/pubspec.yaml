@@ -1,4 +1,4 @@
-name: xsoulspace_monetization_ads_foundation
+name: xsoulspace_monetization_interface
 description: A new Flutter package.
 version: 0.0.1
 publish_to: "none"
@@ -10,10 +10,13 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  xsoulspace_monetization_ads_interface:
-    path: ../xsoulspace_monetization_ads_interface
+  freezed_annotation: ^3.0.0
+  json_annotation: ^4.9.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   lints: ^3.0.0
+  freezed: ^3.0.0
+  build_runner: ^2.4.15
+  json_serializable: ^6.9.4

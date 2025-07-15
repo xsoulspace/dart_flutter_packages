@@ -1,4 +1,4 @@
-name: xsoulspace_monetization_ads_foundation
+name: xsoulspace_monetization_ads_yandex
 description: A new Flutter package.
 version: 0.0.1
 publish_to: "none"
@@ -10,6 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  yandex_mobileads: ^7.4.0
   xsoulspace_monetization_ads_interface:
     path: ../xsoulspace_monetization_ads_interface
 

@@ -1,4 +1,4 @@
-name: xsoulspace_monetization_ads_foundation
+name: xsoulspace_monetization_rustore
 description: A new Flutter package.
 version: 0.0.1
 publish_to: "none"
@@ -10,8 +10,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  xsoulspace_monetization_ads_interface:
-    path: ../xsoulspace_monetization_ads_interface
+  flutter_rustore_billing: ^8.0.0
+  xsoulspace_monetization_interface:
+    path: ../xsoulspace_monetization_interface
+  xsoulspace_foundation: ^0.2.0 # Or latest
+  universal_io: ^2.2.2
 
 dev_dependencies:
   flutter_test:
