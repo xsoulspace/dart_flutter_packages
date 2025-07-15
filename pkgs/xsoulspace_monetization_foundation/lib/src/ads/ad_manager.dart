@@ -1,17 +1,23 @@
 import 'package:flutter/widgets.dart';
+import 'package:xsoulspace_monetization_ads_interface/xsoulspace_monetization_ads_interface.dart';
 
-/// {@template abstract_ad_manager}
-/// An abstract class defining the interface for ad management.
+/// {@template ad_manager}
+/// Manages advertisements by delegating to a specific [AdProvider].
 /// {@endtemplate}
-abstract class AdManager {
-  Future<void> init();
+class AdManager {
+  AdManager(this.provider);
+  final AdProvider provider;
 
-  /// Shows a rewarded ad.
-  Future<void> showRewardedAd();
+  Future<void> init() => provider.init();
 
-  /// Shows an interstitial ad.
-  Future<void> showInterstitialAd();
+  Future<void> showRewardedAd({required final String adUnitId}) =>
+      provider.showRewardedAd(adUnitId: adUnitId);
 
-  /// Builds a banner ad widget.
-  Widget buildBannerAd();
+  Future<void> showInterstitialAd({required final String adUnitId}) =>
+      provider.showInterstitialAd(adUnitId: adUnitId);
+
+  Widget buildBannerAd({
+    required final String adUnitId,
+    required final Object adSize,
+  }) => provider.buildBannerAd(adUnitId: adUnitId, adSize: adSize);
 }

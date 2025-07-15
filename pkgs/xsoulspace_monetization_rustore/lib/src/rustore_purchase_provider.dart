@@ -5,8 +5,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_rustore_billing/flutter_rustore_billing.dart';
 import 'package:flutter_rustore_billing/pigeons/rustore.dart';
+import 'package:from_json_to_json/from_json_to_json.dart';
 import 'package:universal_io/io.dart';
-import 'package:xsoulspace_foundation/xsoulspace_foundation.dart';
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
 typedef DurationFromProductId = Duration Function(PurchaseProductId);
@@ -20,7 +20,7 @@ class RustorePurchaseProvider implements PurchaseProvider {
     required this.deeplinkScheme,
     this.enableLogger = false,
     this.productTypeChecker,
-    DurationFromProductId getDurationFromProductId = _getDurationFromProductId,
+    DurationFromProductId getDurationFromProductId = getDurationFromProductId,
   }) : _getDurationFromProductId = getDurationFromProductId;
 
   final String consoleApplicationId;
@@ -55,9 +55,14 @@ class RustorePurchaseProvider implements PurchaseProvider {
       _purchaseStreamController.stream;
 
   @override
-  Future<bool> isAvailable() => RustoreBillingClient.available()
-      .then((value) => value.isSuccess)
-      .catchError((_) => false);
+  Future<bool> isAvailable() async {
+    final isAuthorized = await RustoreBillingClient.getAuthorizationStatus();
+    if (isAuthorized) {
+      final result = await RustoreBillingClient.available();
+      return result.type == PurchaseAvailabilityType.available;
+    }
+    return false;
+  }
 
   @override
   Future<CompletePurchaseResult> completePurchase(
@@ -112,7 +117,6 @@ class RustorePurchaseProvider implements PurchaseProvider {
     try {
       final purchase = await RustoreBillingClient.purchase(
         details.productId.value,
-        null,
       );
       if (purchase.successPurchase == null) {
         return PurchaseResult.failure(
@@ -149,21 +153,22 @@ class RustorePurchaseProvider implements PurchaseProvider {
       final restored = purchases.purchases.nonNulls.map((p) {
         final productType = _productTypeFromRustoreJson(
           p.productType,
-          PurchaseProductId(p.productId),
+          PurchaseProductId(p.productId ?? ''),
         );
         return PurchaseDetails(
-          purchaseId: PurchaseId(p.purchaseId),
-          productId: PurchaseProductId(p.productId),
+          purchaseId: PurchaseId(p.purchaseId ?? ''),
+          productId: PurchaseProductId(p.productId ?? ''),
           name: '',
           formattedPrice: '',
           status: _purchaseStatusFromRustoreState(p.purchaseState),
           price: 0,
           currency: '',
-          purchaseDate: DateTime.fromMillisecondsSinceEpoch(p.purchaseTime),
+          purchaseDate:
+              dateTimeFromIso8601String(p.purchaseTime) ?? DateTime.now(),
           purchaseType: productType,
-          expiryDate: p.subscription?.finishTime != null
-              ? DateTime.fromMillisecondsSinceEpoch(p.subscription!.finishTime!)
-              : null,
+          // expiryDate: p.finishTime != null
+          //     ? dateTimeFromIso8601String(p.finishTime)
+          //     : null,
         );
       }).toList();
 
@@ -188,7 +193,7 @@ class RustorePurchaseProvider implements PurchaseProvider {
       productType: productType,
       name: product.title ?? '',
       formattedPrice: product.priceLabel ?? '',
-      price: doubleFromJson(product.price ?? '0'),
+      price: jsonDecodeDouble(product.price ?? '0'),
       currency: product.currency ?? '',
       duration: duration,
       freeTrialDuration: PurchaseDuration(
@@ -215,9 +220,25 @@ class RustorePurchaseProvider implements PurchaseProvider {
     };
   }
 
-  static Duration _getDurationFromProductId(PurchaseProductId productId) {
-    // Implement your logic to determine duration from product ID
-    return Duration.zero;
+  static Duration getDurationFromProductId(final PurchaseProductId id) {
+    final parts = id.value.split('_');
+    final unitIndex = parts.indexWhere(
+      (final part) => ['day', 'month', 'year'].contains(part),
+    );
+
+    if (unitIndex == -1 || unitIndex + 1 >= parts.length) return Duration.zero;
+
+    final unit = parts[unitIndex];
+    final count = int.tryParse(parts[unitIndex + 1]) ?? 0;
+
+    if (count == 0) return Duration.zero;
+
+    return switch (unit) {
+      'day' => Duration(days: count),
+      'month' => Duration(days: count * 30),
+      'year' => Duration(days: count * 365),
+      _ => Duration.zero,
+    };
   }
 }
 

@@ -5,16 +5,16 @@ publish_to: "none"
 
 environment:
   sdk: ">=3.8.0 <4.0.0"
-  flutter: ">=1.17.0"
 
 dependencies:
   flutter:
     sdk: flutter
-  yandex_mobileads: ^7.4.0
+  yandex_mobileads: ^7.13.0
   xsoulspace_monetization_ads_interface:
     path: ../xsoulspace_monetization_ads_interface
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  lints: ^3.0.0
+  lints: ^6.0.0
+  xsoulspace_lints: ^0.1.0

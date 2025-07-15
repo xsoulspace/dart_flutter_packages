@@ -10,13 +10,15 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_rustore_billing: ^8.0.0
+  flutter_rustore_billing: ^9.1.0
   xsoulspace_monetization_interface:
     path: ../xsoulspace_monetization_interface
-  xsoulspace_foundation: ^0.2.0 # Or latest
+  xsoulspace_foundation: ^0.2.0
   universal_io: ^2.2.2
+  from_json_to_json: ^0.2.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  lints: ^3.0.0
+  lints: ^6.0.0
+  xsoulspace_lints: ^0.1.0
