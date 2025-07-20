@@ -2,20 +2,26 @@ import 'dart:async';
 
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
-import 'subscription_manager.dart';
+import 'commands/commands.dart';
+import 'models/models.dart';
+import 'resources/resources.dart';
 
 class PurchaseInitializer {
   PurchaseInitializer({
     required this.monetizationTypeResource,
-    required this.subscriptionManager,
     required this.purchaseProvider,
+    required this.restorePurchasesCommand,
+    required this.handlePurchaseUpdateCommand,
+    required this.loadSubscriptionsCommand,
   });
   final MonetizationStatusResource monetizationTypeResource;
   final PurchaseProvider purchaseProvider;
-  final SubscriptionManager subscriptionManager;
+  final RestorePurchasesCommand restorePurchasesCommand;
+  final HandlePurchaseUpdateCommand handlePurchaseUpdateCommand;
+  final LoadSubscriptionsCommand loadSubscriptionsCommand;
 
   StreamSubscription<List<PurchaseDetailsModel>>? _purchaseUpdateSubscription;
-  Future<void> restore() => _restore();
+  Future<void> restore() => restorePurchasesCommand.execute();
 
   Future<void> init() async {
     monetizationTypeResource.setStatus(MonetizationStatus.loading);
@@ -28,40 +34,23 @@ class PurchaseInitializer {
     );
     if (!isInitialized) return;
 
+    await loadSubscriptionsCommand.execute();
     await _restoreAndListen();
   }
 
   Future<void> _restoreAndListen() async {
-    await _restore();
+    await restorePurchasesCommand.execute();
     await _purchaseUpdateSubscription?.cancel();
     _purchaseUpdateSubscription = purchaseProvider.purchaseStream.listen(
       _handlePurchaseUpdate,
     );
   }
 
-  Future<void> _restore() async {
-    final result = await purchaseProvider.restorePurchases();
-    switch (result.type) {
-      case ResultType.success:
-        for (final purchase in result.restoredPurchases) {
-          if (!purchase.isActive) continue;
-          await subscriptionManager.handleSubscriptionUpdate(
-            purchase.toVerificationDto(),
-          );
-        }
-      case ResultType.failure:
-        // Handle failure if needed
-        break;
-    }
-  }
-
   Future<void> _handlePurchaseUpdate(
     final List<PurchaseDetailsModel> purchases,
   ) async {
     for (final purchase in purchases) {
-      await subscriptionManager.handleSubscriptionUpdate(
-        purchase.toVerificationDto(),
-      );
+      await handlePurchaseUpdateCommand.execute(purchase.toVerificationDto());
     }
   }
 
