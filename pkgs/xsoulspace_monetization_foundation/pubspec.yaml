@@ -11,23 +11,14 @@ dependencies:
   collection: ^1.19.0
   flutter:
     sdk: flutter
-  intl: ^0.19.0
-  universal_io: ^2.2.2
-  url_launcher: ^6.3.1
   xsoulspace_foundation: ^0.2.0
-  xsoulspace_monetization_interface:
-    path: ../xsoulspace_monetization_interface
   xsoulspace_monetization_ads_interface:
     path: ../xsoulspace_monetization_ads_interface
+  xsoulspace_monetization_interface:
+    path: ../xsoulspace_monetization_interface
 
 dev_dependencies:
-  build_runner: ^2.4.15
   flutter_test:
     sdk: flutter
-  freezed: ^3.0.3
-  json_serializable: ^6.9.4
-  lints: ^5.1.1
-  xsoulspace_lints: ^0.0.14
-
-dependency_overrides:
-  go_router: ^14.3.0
+  lints: ^6.0.0
+  xsoulspace_lints: ^0.1.0
