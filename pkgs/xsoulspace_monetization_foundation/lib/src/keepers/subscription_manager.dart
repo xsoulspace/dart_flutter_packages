@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:xsoulspace_foundation/xsoulspace_foundation.dart';
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
-import '../purchases/purchase_manager.dart';
 import 'monetization_utils.dart';
 
 /// Represents the state of user access to premium features.
@@ -36,12 +35,12 @@ class MonetizationStatusResource extends ChangeNotifier {
 /// {@endtemplate}
 class SubscriptionManager extends ChangeNotifier {
   SubscriptionManager({
-    required this.purchaseManager,
+    required this.purchaseProvider,
     required this.monetizationTypeResource,
     required this.productIds,
   });
   final List<PurchaseProductId> productIds;
-  final PurchaseManager purchaseManager;
+  final PurchaseProvider purchaseProvider;
   final MonetizationStatusResource monetizationTypeResource;
 
   PurchaseDetailsModel? _activeSubscription;
@@ -82,7 +81,7 @@ class SubscriptionManager extends ChangeNotifier {
   Future<void> getSubscriptions() async {
     try {
       subscriptions = LoadableContainer.loaded(
-        await purchaseManager.getSubscriptions(productIds),
+        await purchaseProvider.getSubscriptions(productIds),
       );
       notifyListeners();
     } on PlatformException catch (e, stackTrace) {
@@ -123,12 +122,12 @@ class SubscriptionManager extends ChangeNotifier {
     if (_state == SubscriptionManagerStatus.subscribed) return false;
     _state = SubscriptionManagerStatus.pending;
     notifyListeners();
-    final result = await purchaseManager.subscribe(details);
+    final result = await purchaseProvider.subscribe(details);
     return _handleSubscriptionResult(result);
   }
 
   Future<void> cancel(final PurchaseProductDetailsModel details) async {
-    final result = await purchaseManager.cancel(details.productId);
+    final result = await purchaseProvider.cancel(details.productId);
     switch (result.type) {
       case ResultType.success:
         _setSubscriptionAsFree();
@@ -145,12 +144,12 @@ class SubscriptionManager extends ChangeNotifier {
         case PurchaseStatus.error ||
             PurchaseStatus.purchased ||
             PurchaseStatus.restored) {
-      final result = await purchaseManager.completePurchase(details);
+      final result = await purchaseProvider.completePurchase(details);
       switch (result.type) {
         case ResultType.success:
           if (details.status
               case (PurchaseStatus.purchased || PurchaseStatus.restored)) {
-            final purchaseInfo = await purchaseManager.getPurchaseDetails(
+            final purchaseInfo = await purchaseProvider.getPurchaseDetails(
               details.purchaseId,
             );
             setActiveSubscription(purchaseInfo);

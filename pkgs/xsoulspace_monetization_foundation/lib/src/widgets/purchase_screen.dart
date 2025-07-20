@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
-import '../purchases/purchase_manager.dart';
-
 /// {@template purchase_screen}
 /// A widget that displays available one-time purchases and allows users
 /// to buy them.
@@ -10,13 +8,13 @@ import '../purchases/purchase_manager.dart';
 class PurchaseScreen extends StatelessWidget {
   /// {@macro purchase_screen}
   const PurchaseScreen({
-    required this.purchaseManager,
+    required this.purchaseProvider,
     required this.productIds,
     super.key,
   });
 
-  /// The purchase manager to handle purchase operations.
-  final PurchaseManager purchaseManager;
+  /// The purchase provider to handle purchase operations.
+  final PurchaseProvider purchaseProvider;
   final List<PurchaseProductId> productIds;
 
   @override
@@ -24,7 +22,7 @@ class PurchaseScreen extends StatelessWidget {
     appBar: AppBar(title: const Text('Purchase Options')),
     body: FutureBuilder<List<PurchaseProductDetailsModel>>(
       // ignore: discarded_futures
-      future: purchaseManager.getNonConsumables(productIds),
+      future: purchaseProvider.getNonConsumables(productIds),
       builder: (final context, final snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -42,7 +40,7 @@ class PurchaseScreen extends StatelessWidget {
               subtitle: Text('${purchase.price} ${purchase.currency}'),
               trailing: ElevatedButton(
                 onPressed: () async {
-                  await purchaseManager.purchaseNonConsumable(purchase);
+                  await purchaseProvider.purchaseNonConsumable(purchase);
                 },
                 child: const Text('Buy'),
               ),

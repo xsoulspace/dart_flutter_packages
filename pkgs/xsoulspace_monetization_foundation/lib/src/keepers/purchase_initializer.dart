@@ -2,17 +2,16 @@ import 'dart:async';
 
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
-import '../purchases/purchase_manager.dart';
 import 'subscription_manager.dart';
 
 class PurchaseInitializer {
   PurchaseInitializer({
     required this.monetizationTypeResource,
     required this.subscriptionManager,
-    required this.purchaseManager,
+    required this.purchaseProvider,
   });
   final MonetizationStatusResource monetizationTypeResource;
-  final PurchaseManager purchaseManager;
+  final PurchaseProvider purchaseProvider;
   final SubscriptionManager subscriptionManager;
 
   StreamSubscription<List<PurchaseDetailsModel>>? _purchaseUpdateSubscription;
@@ -20,7 +19,7 @@ class PurchaseInitializer {
 
   Future<void> init() async {
     monetizationTypeResource.setStatus(MonetizationStatus.loading);
-    final isInitialized = await purchaseManager.init();
+    final isInitialized = await purchaseProvider.init();
 
     monetizationTypeResource.setStatus(
       isInitialized
@@ -35,13 +34,13 @@ class PurchaseInitializer {
   Future<void> _restoreAndListen() async {
     await _restore();
     await _purchaseUpdateSubscription?.cancel();
-    _purchaseUpdateSubscription = purchaseManager.purchaseStream.listen(
+    _purchaseUpdateSubscription = purchaseProvider.purchaseStream.listen(
       _handlePurchaseUpdate,
     );
   }
 
   Future<void> _restore() async {
-    final result = await purchaseManager.restorePurchases();
+    final result = await purchaseProvider.restorePurchases();
     switch (result.type) {
       case ResultType.success:
         for (final purchase in result.restoredPurchases) {

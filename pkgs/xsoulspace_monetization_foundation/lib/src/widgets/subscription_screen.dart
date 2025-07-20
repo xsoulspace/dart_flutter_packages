@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
-import '../purchases/purchase_manager.dart';
-
 /// {@template subscription_screen}
 /// A widget that displays available subscriptions and allows
 /// users to subscribe.
@@ -10,20 +8,20 @@ import '../purchases/purchase_manager.dart';
 class SubscriptionScreen extends StatelessWidget {
   /// {@macro subscription_screen}
   const SubscriptionScreen({
-    required this.purchaseManager,
+    required this.purchaseProvider,
     required this.productIds,
     super.key,
   });
 
-  /// The purchase manager to handle subscription operations.
-  final PurchaseManager purchaseManager;
+  /// The purchase provider to handle subscription operations.
+  final PurchaseProvider purchaseProvider;
   final List<PurchaseProductId> productIds;
   @override
   Widget build(final BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Subscription Options')),
     body: FutureBuilder<List<PurchaseProductDetailsModel>>(
       // ignore: discarded_futures
-      future: purchaseManager.getSubscriptions(productIds),
+      future: purchaseProvider.getSubscriptions(productIds),
       builder: (final context, final snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -43,7 +41,7 @@ class SubscriptionScreen extends StatelessWidget {
               ),
               trailing: ElevatedButton(
                 onPressed: () async {
-                  final result = await purchaseManager.subscribe(subscription);
+                  final result = await purchaseProvider.subscribe(subscription);
                   switch (result.type) {
                     case ResultType.success:
                       ScaffoldMessenger.of(context).showSnackBar(

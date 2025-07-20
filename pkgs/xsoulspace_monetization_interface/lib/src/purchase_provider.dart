@@ -16,6 +16,32 @@ abstract class PurchaseProvider {
   ///
   /// Listen to this stream to be notified of any changes in purchase states,
   /// such as new purchases, cancellations, or restorations.
+
+  // TODO(arenukvern): adjust this to all implementations
+  /// Currently copied from in_app_purchase_manager.dart:
+  ///
+  /// Listen to this broadcast stream to get real time update for purchases.
+  /// This stream will never close as long as the app is active.
+  ///
+  /// Purchase updates can happen in several situations:
+  ///
+  /// When a purchase is triggered by user in the app.
+  /// When a purchase is triggered by user from the platform-specific
+  /// store front.
+  /// When a purchase is restored on the device by the user in the app.
+  /// If a purchase is not completed ([completePurchase] is not called
+  /// on the purchase object) from the last app session. Purchase updates
+  /// will happen when a new app session starts instead.
+  ///
+  /// IMPORTANT! You must subscribe to this stream as soon as your app
+  /// launches, preferably before returning your main App Widget in main().
+  /// Otherwise you will miss purchase updated made before this
+  /// stream is subscribed to.
+  ///
+  /// We also recommend listening to the stream with one subscription
+  /// at a given time. If you choose to have multiple subscription at the
+  /// same time, you should be careful at the fact that each subscription
+  /// will receive all the events after they start to listen.
   Stream<List<PurchaseDetailsModel>> get purchaseStream;
 
   /// Checks if the payment provider is available on the current device.
