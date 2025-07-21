@@ -8,13 +8,13 @@ import 'resources/resources.dart';
 
 class PurchaseInitializer {
   PurchaseInitializer({
-    required this.monetizationTypeResource,
+    required this.monetizationStatusResource,
     required this.purchaseProvider,
     required this.restorePurchasesCommand,
     required this.handlePurchaseUpdateCommand,
     required this.loadSubscriptionsCommand,
   });
-  final MonetizationStatusResource monetizationTypeResource;
+  final MonetizationStatusResource monetizationStatusResource;
   final PurchaseProvider purchaseProvider;
   final RestorePurchasesCommand restorePurchasesCommand;
   final HandlePurchaseUpdateCommand handlePurchaseUpdateCommand;
@@ -24,10 +24,10 @@ class PurchaseInitializer {
   Future<void> restore() => restorePurchasesCommand.execute();
 
   Future<void> init() async {
-    monetizationTypeResource.setStatus(MonetizationStatus.loading);
+    monetizationStatusResource.setStatus(MonetizationStatus.loading);
     final isInitialized = await purchaseProvider.init();
 
-    monetizationTypeResource.setStatus(
+    monetizationStatusResource.setStatus(
       isInitialized
           ? MonetizationStatus.loaded
           : MonetizationStatus.notAvailable,
