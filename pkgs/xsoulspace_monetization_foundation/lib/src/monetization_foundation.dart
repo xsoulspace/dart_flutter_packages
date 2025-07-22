@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/widgets.dart';
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
 import 'commands/commands.dart';
@@ -36,33 +37,20 @@ class MonetizationFoundation {
   MonetizationFoundation({
     required final MonetizationResources resources,
     required this.purchaseProvider,
-  }) : _srcs = resources;
+  }) : srcs = resources;
 
   /// {@macro purchase_provider}
   final PurchaseProvider purchaseProvider;
-  final MonetizationResources _srcs;
+
+  /// {@macro monetization_resources}
+  @protected
+  @visibleForTesting
+  final MonetizationResources srcs;
 
   StreamSubscription<List<PurchaseDetailsModel>>? _purchaseUpdateSubscription;
 
   /// Restores previous purchases without full initialization.
   Future<void> restore() => _restorePurchasesCommand.execute();
-
-  RestorePurchasesCommand get _restorePurchasesCommand =>
-      RestorePurchasesCommand(
-        purchaseProvider: purchaseProvider,
-        handlePurchaseUpdateCommand: _handlePurchaseUpdateCommand,
-      );
-
-  HandlePurchaseUpdateCommand get _handlePurchaseUpdateCommand =>
-      HandlePurchaseUpdateCommand(
-        activeSubscriptionResource: _srcs.activeSubscription,
-        subscriptionStatusResource: _srcs.subscriptionStatus,
-        confirmPurchaseCommand: ConfirmPurchaseCommand(
-          purchaseProvider: purchaseProvider,
-          activeSubscriptionResource: _srcs.activeSubscription,
-          subscriptionStatusResource: _srcs.subscriptionStatus,
-        ),
-      );
 
   /// {@template init}
   /// Initializes the complete monetization system.
@@ -75,17 +63,20 @@ class MonetizationFoundation {
   /// 5. Load subscriptions if initialized
   /// 6. Restore purchases and set up listeners
   /// {@endtemplate}
-  Future<void> init({required final List<PurchaseProductId> productIds}) async {
-    _srcs.status.setStatus(MonetizationStatus.loading);
+  Future<void> init({
+    required final List<PurchaseProductId> productIds,
+    final bool restorePurchases = true,
+  }) async {
+    srcs.status.setStatus(MonetizationStatus.loading);
     final isAvailable = await purchaseProvider.isAvailable();
     if (!isAvailable) {
-      _srcs.status.setStatus(MonetizationStatus.notAvailable);
+      srcs.status.setStatus(MonetizationStatus.notAvailable);
       return;
     }
 
     final isInitialized = await purchaseProvider.init();
 
-    _srcs.status.setStatus(
+    srcs.status.setStatus(
       isInitialized
           ? MonetizationStatus.loaded
           : MonetizationStatus.notAvailable,
@@ -94,16 +85,18 @@ class MonetizationFoundation {
 
     await LoadSubscriptionsCommand(
       purchaseProvider: purchaseProvider,
-      monetizationStatusResource: _srcs.status,
-      availableSubscriptionsResource: _srcs.availableSubscriptions,
+      monetizationStatusResource: srcs.status,
+      availableSubscriptionsResource: srcs.availableSubscriptions,
       productIds: productIds,
     ).execute();
-    await _restoreAndListen();
+
+    if (restorePurchases) await _restorePurchasesCommand.execute();
+
+    await _listenUpdates();
   }
 
   /// Restores purchases and sets up purchase update listeners.
-  Future<void> _restoreAndListen() async {
-    await _restorePurchasesCommand.execute();
+  Future<void> _listenUpdates() async {
     await _purchaseUpdateSubscription?.cancel();
     _purchaseUpdateSubscription = purchaseProvider.purchaseStream.listen(
       _handlePurchaseUpdate,
@@ -123,4 +116,39 @@ class MonetizationFoundation {
   Future<void> dispose() async {
     await _purchaseUpdateSubscription?.cancel();
   }
+
+  /// {@template subscribe}
+  /// Subscribes to a product.
+  /// {@endtemplate}
+  Future<bool> subscribe(final PurchaseProductDetailsModel details) async =>
+      SubscribeCommand(
+        purchaseProvider: purchaseProvider,
+        subscriptionStatusResource: srcs.subscriptionStatus,
+        confirmPurchaseCommand: _confirmPurchaseCommand,
+      ).execute(details);
+}
+
+extension on MonetizationFoundation {
+  ConfirmPurchaseCommand get _confirmPurchaseCommand => ConfirmPurchaseCommand(
+    purchaseProvider: purchaseProvider,
+    activeSubscriptionResource: srcs.activeSubscription,
+    subscriptionStatusResource: srcs.subscriptionStatus,
+  );
+
+  RestorePurchasesCommand get _restorePurchasesCommand =>
+      RestorePurchasesCommand(
+        purchaseProvider: purchaseProvider,
+        handlePurchaseUpdateCommand: _handlePurchaseUpdateCommand,
+      );
+
+  HandlePurchaseUpdateCommand get _handlePurchaseUpdateCommand =>
+      HandlePurchaseUpdateCommand(
+        activeSubscriptionResource: srcs.activeSubscription,
+        subscriptionStatusResource: srcs.subscriptionStatus,
+        confirmPurchaseCommand: ConfirmPurchaseCommand(
+          purchaseProvider: purchaseProvider,
+          activeSubscriptionResource: srcs.activeSubscription,
+          subscriptionStatusResource: srcs.subscriptionStatus,
+        ),
+      );
 }
