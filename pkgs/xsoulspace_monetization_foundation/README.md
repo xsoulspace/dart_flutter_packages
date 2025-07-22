@@ -1,6 +1,6 @@
 # XSoulSpace Monetization Foundation
 
-A comprehensive Flutter monetization framework that provides a unified interface for ads, subscriptions, and purchases across multiple platforms.
+Unified Flutter monetization framework for ads, subscriptions, and purchases across multiple platforms.
 
 ## 🎯 Purpose
 
@@ -12,21 +12,8 @@ This package serves as the foundation for implementing monetization strategies i
 
 - **Command Pattern**: Business logic encapsulated in immutable command objects
 - **Resource Pattern**: Reactive state management with ChangeNotifier
-- **Provider Pattern**: Platform-specific implementations behind common interfaces
+- **Purchase Provider Pattern**: Platform-specific implementations behind common interfaces
 - **Strategy Pattern**: Different monetization types (subscription, ads, free)
-
-### Key Components
-
-```
-lib/
-├── ads/                    # Ad management
-├── commands/              # Business logic commands
-├── models/                # Core enums and types
-├── noop_providers/        # Testing implementations
-├── resources/             # State management
-├── widgets/               # UI components
-└── purchase_initializer.dart  # Main orchestrator
-```
 
 ## 🔧 Core Concepts
 
@@ -43,82 +30,116 @@ lib/
 - `ActiveSubscriptionResource`: Current subscription details
 - `AvailableSubscriptionsResource`: Available products
 
-### 3. Command Pattern
+## 📦 Installation
 
-Commands encapsulate business logic:
-
-- `SubscribeCommand`: Handle subscription purchases
-- `ConfirmPurchaseCommand`: Complete purchase verification
-- `RestorePurchasesCommand`: Restore previous purchases
-- `LoadSubscriptionsCommand`: Load available products
+```yaml
+dependencies:
+  xsoulspace_monetization_foundation: ^1.0.0
+```
 
 ## 🚀 Quick Start
 
 ```dart
-// 1. Initialize resources
-final monetizationStatus = MonetizationStatusResource();
-final subscriptionStatus = SubscriptionStatusResource();
-final activeSubscription = ActiveSubscriptionResource();
-final availableSubscriptions = AvailableSubscriptionsResource();
-
-// 2. Create commands
-final confirmPurchase = ConfirmPurchaseCommand(
-  purchaseProvider: yourProvider,
-  activeSubscriptionResource: activeSubscription,
-  subscriptionStatusResource: subscriptionStatus,
+// 1. Create resources
+final resources = (
+  status: MonetizationStatusResource(),
+  type: MonetizationTypeResource(MonetizationType.subscription),
+  activeSubscription: ActiveSubscriptionResource(),
+  subscriptionStatus: SubscriptionStatusResource(),
+  availableSubscriptions: AvailableSubscriptionsResource(),
 );
 
-// 3. Initialize system
-final initializer = PurchaseInitializer(
-  monetizationStatusResource: monetizationStatus,
-  purchaseProvider: yourProvider,
-  restorePurchasesCommand: RestorePurchasesCommand(...),
-  handlePurchaseUpdateCommand: HandlePurchaseUpdateCommand(...),
-  loadSubscriptionsCommand: LoadSubscriptionsCommand(...),
+// 2. Initialize foundation
+final foundation = MonetizationFoundation(
+  resources: resources,
+  purchaseProvider: yourPlatformProvider, // Google Play, App Store, etc.
 );
 
-await initializer.init();
+// 3. Start monetization system
+await foundation.init(productIds: ['premium_monthly', 'premium_yearly']);
+
+// 4. Subscribe to a product
+final success = await foundation.subscribe(productDetails);
+```
+
+## 🏗️ Core Concepts
+
+- **Command Pattern**: Business logic in immutable commands (`SubscribeCommand`, `ConfirmPurchaseCommand`)
+- **Resource Pattern**: Reactive state management with `ChangeNotifier` (subscription status, available products)
+- **Provider Pattern**: Platform-specific implementations behind common interfaces
+
+## 🏛️ Architectural Patterns
+
+### Command Pattern
+
+```dart
+// Immutable business logic objects
+final subscribeCommand = SubscribeCommand(
+  purchaseProvider: provider,
+  subscriptionStatusResource: statusResource,
+  confirmPurchaseCommand: confirmCommand,
+);
+await subscribeCommand.execute(productDetails);
+```
+
+### Resource Pattern
+
+```dart
+// Reactive state management
+final statusResource = SubscriptionStatusResource();
+statusResource.addListener(() {
+  // UI updates automatically
+  if (statusResource.isSubscribed) {
+    // Show premium features
+  }
+});
+```
+
+### Purchase Provider Pattern
+
+```dart
+// Platform-agnostic interface
+abstract class PurchaseProvider {
+  Future<PurchaseResultModel> subscribe(ProductDetails details);
+  Future<List<ProductDetails>> getSubscriptions(List<String> ids);
+}
+
+// Use platform-specific implementations
+final provider = GooglePlayPurchaseProvider();
 ```
 
 ## 📱 Platform Support
 
-- **Google Play**: Via `xsoulspace_monetization_google_apple`
-- **App Store**: Via `xsoulspace_monetization_google_apple`
-- **RuStore**: Via `xsoulspace_monetization_rustore`
-- **Huawei**: Via `xsoulspace_monetization_huawai`
-- **Yandex Ads**: Via `xsoulspace_monetization_ads_yandex`
+| Platform                | Package                                | Status |
+| ----------------------- | -------------------------------------- | ------ |
+| Google Play & App Store | `xsoulspace_monetization_google_apple` | ✅     |
+| RuStore                 | `xsoulspace_monetization_rustore`      | ✅     |
+| Huawei                  | `xsoulspace_monetization_huawai`       | ✅     |
+| Yandex Ads              | `xsoulspace_monetization_ads_yandex`   | ✅     |
 
 ## 🧪 Testing
 
-Use `NoopAdProvider` and `NoopPurchaseProvider` for testing without real transactions.
+Use noop providers for testing without real transactions:
 
-## 🔄 State Flow
-
-```
-App Start → PurchaseInitializer.init()
-    ↓
-Load Subscriptions → Restore Purchases → Listen for Updates
-    ↓
-State Resources Updated → UI Reacts
+```dart
+final testProvider = NoopPurchaseProvider();
+final testAdProvider = NoopAdProvider();
 ```
 
-## 🎨 UI Components
+## 🏛️ Architecture
 
-- `SubscriptionScreen`: Display and manage subscriptions
-- `PurchaseScreen`: One-time purchase options
-- `PurchaseGuardScreen`: Protect premium features
-- `PricingScreen`: Show pricing structure
-- `AdFreeScreen`: Ad removal options
-- `FamilyPlanScreen`: Family/team plans
+```
+lib/
+├── ads/           # Ad management (AdManager)
+├── commands/      # Business logic (SubscribeCommand, etc.)
+├── models/        # Core types (MonetizationStatus, MonetizationType)
+├── resources/     # State management (ChangeNotifier-based)
+├── widgets/       # UI components (SubscriptionScreen, etc.)
+└── noop_providers/ # Testing implementations
+```
 
-## 🔐 Security
+## 🔗 Related Packages
 
-- Purchase verification through platform providers
-- Secure credential storage via OAuth integration
-- Platform-specific security measures
-
-## 📚 Related Packages
-
-- `xsoulspace_monetization_interface`: Core interfaces
-- `xsoulspace_monetization_ads_interface`: Ad provider interface
+- `xsoulspace_monetization_interface` - Core interfaces
+- `xsoulspace_monetization_ads_interface` - Ad provider interface
 - Platform-specific implementations in separate packages
