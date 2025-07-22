@@ -1,10 +1,12 @@
+import 'package:flutter/widgets.dart';
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
 import '../resources/resources.dart';
 import 'confirm_purchase.cmd.dart';
 
+@immutable
 class SubscribeCommand {
-  SubscribeCommand({
+  const SubscribeCommand({
     required this.purchaseProvider,
     required this.subscriptionStatusResource,
     required this.confirmPurchaseCommand,

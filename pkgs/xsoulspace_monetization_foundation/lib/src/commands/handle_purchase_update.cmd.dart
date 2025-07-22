@@ -1,10 +1,12 @@
+import 'package:flutter/widgets.dart';
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
 import '../resources/resources.dart';
 import 'confirm_purchase.cmd.dart';
 
+@immutable
 class HandlePurchaseUpdateCommand {
-  HandlePurchaseUpdateCommand({
+  const HandlePurchaseUpdateCommand({
     required this.confirmPurchaseCommand,
     required this.subscriptionStatusResource,
     required this.activeSubscriptionResource,

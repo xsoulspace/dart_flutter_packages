@@ -1,9 +1,11 @@
+import 'package:flutter/widgets.dart';
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
 import 'handle_purchase_update.cmd.dart';
 
+@immutable
 class RestorePurchasesCommand {
-  RestorePurchasesCommand({
+  const RestorePurchasesCommand({
     required this.purchaseProvider,
     required this.handlePurchaseUpdateCommand,
   });

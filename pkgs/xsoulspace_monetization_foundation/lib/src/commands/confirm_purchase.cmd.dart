@@ -1,9 +1,11 @@
+import 'package:flutter/widgets.dart';
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
 import '../resources/resources.dart';
 
+@immutable
 class ConfirmPurchaseCommand {
-  ConfirmPurchaseCommand({
+  const ConfirmPurchaseCommand({
     required this.purchaseProvider,
     required this.activeSubscriptionResource,
     required this.subscriptionStatusResource,

@@ -6,8 +6,9 @@ import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interf
 import '../models/models.dart';
 import '../resources/resources.dart';
 
+@immutable
 class LoadSubscriptionsCommand {
-  LoadSubscriptionsCommand({
+  const LoadSubscriptionsCommand({
     required this.purchaseProvider,
     required this.monetizationStatusResource,
     required this.availableSubscriptionsResource,
