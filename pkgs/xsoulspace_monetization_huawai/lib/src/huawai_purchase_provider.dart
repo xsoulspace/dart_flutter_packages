@@ -159,7 +159,8 @@ class HuawaiPurchaseProvider implements PurchaseProvider {
 
   PurchaseProductDetailsModel _mapToProductDetails(ProductInfo product) {
     return PurchaseProductDetailsModel(
-      productId: PurchaseProductId(product.productId!),
+      productId: PurchaseProductId.fromJson(product.productId!),
+      priceId: PurchasePriceId.fromJson(product.productId!),
       productType: _mapHuaweiToProductType(product.priceType),
       name: product.productName ?? '',
       formattedPrice: product.price ?? '',
@@ -177,8 +178,9 @@ class HuawaiPurchaseProvider implements PurchaseProvider {
     PurchaseProductDetailsModel? product,
   ) {
     return PurchaseDetailsModel(
-      purchaseId: PurchaseId(data.orderId!),
-      productId: PurchaseProductId(data.productId!),
+      purchaseId: PurchaseId.fromJson(data.orderId!),
+      productId: PurchaseProductId.fromJson(data.productId!),
+      priceId: PurchasePriceId.fromJson(data.productId!),
       name: product?.name ?? '',
       formattedPrice: product?.formattedPrice ?? '',
       status: _mapHuaweiToPurchaseStatus(data.purchaseState),
@@ -192,8 +194,9 @@ class HuawaiPurchaseProvider implements PurchaseProvider {
 
   PurchaseDetailsModel _mapOwnedToPurchaseDetails(InAppPurchaseData data) {
     return PurchaseDetailsModel(
-      purchaseId: PurchaseId(data.orderId!),
-      productId: PurchaseProductId(data.productId!),
+      purchaseId: PurchaseId.fromJson(data.orderId!),
+      productId: PurchaseProductId.fromJson(data.productId!),
+      priceId: PurchasePriceId.fromJson(data.productId!),
       name: '', // Not available in owned purchases
       formattedPrice: '', // Not available
       status: _mapHuaweiToPurchaseStatus(data.purchaseState),

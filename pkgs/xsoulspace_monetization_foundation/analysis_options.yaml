@@ -1,4 +1,4 @@
-include: package:xsoulspace_lints/library.yaml
+include: package:xsoulspace_lints/public_library.yaml
 
 analyzer:
   exclude:

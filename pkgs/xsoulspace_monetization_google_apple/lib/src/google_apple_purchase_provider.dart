@@ -151,7 +151,8 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
 
   PurchaseProductDetailsModel _mapToProductDetails(iap.ProductDetails product) {
     return PurchaseProductDetailsModel(
-      productId: PurchaseProductId(product.id),
+      productId: PurchaseProductId.fromJson(product.id),
+      priceId: PurchasePriceId.fromJson(product.id),
       // This logic needs to be robust. Assuming type from ID is brittle.
       productType: product.id.contains('subscription')
           ? PurchaseProductType.subscription
@@ -174,8 +175,9 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
 
   PurchaseDetailsModel _mapToPurchaseDetails(iap.PurchaseDetails purchase) {
     return PurchaseDetailsModel(
-      purchaseId: PurchaseId(purchase.purchaseID ?? ''),
-      productId: PurchaseProductId(purchase.productID),
+      purchaseId: PurchaseId.fromJson(purchase.purchaseID ?? ''),
+      productId: PurchaseProductId.fromJson(purchase.productID),
+      priceId: PurchasePriceId.fromJson(purchase.productID),
       name: '', // Not available in iap.PurchaseDetails
       formattedPrice: '', // Not available in iap.PurchaseDetails
       status: _mapPurchaseStatus(purchase.status),

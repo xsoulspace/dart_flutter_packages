@@ -130,9 +130,10 @@ class RustorePurchaseProvider implements PurchaseProvider {
           status: details.productType == PurchaseProductType.consumable
               ? PurchaseStatus.restored
               : PurchaseStatus.purchased,
-          purchaseId: PurchaseId(purchase.successPurchase!.purchaseId),
+          purchaseId: PurchaseId.fromJson(purchase.successPurchase!.purchaseId),
           purchaseType: details.productType,
           productId: details.productId,
+          priceId: details.priceId,
           name: details.name,
           formattedPrice: details.formattedPrice,
           price: details.price,
@@ -155,11 +156,12 @@ class RustorePurchaseProvider implements PurchaseProvider {
       final restored = purchases.purchases.nonNulls.map((final p) {
         final productType = _productTypeFromRustoreJson(
           p.productType,
-          PurchaseProductId(p.productId ?? ''),
+          PurchaseProductId.fromJson(p.productId),
         );
         return PurchaseDetailsModel(
-          purchaseId: PurchaseId(p.purchaseId ?? ''),
-          productId: PurchaseProductId(p.productId ?? ''),
+          purchaseId: PurchaseId.fromJson(p.purchaseId),
+          productId: PurchaseProductId.fromJson(p.productId),
+          priceId: PurchasePriceId.fromJson(p.productId),
           status: _purchaseStatusFromRustoreState(p.purchaseState),
           purchaseDate:
               dateTimeFromIso8601String(p.purchaseTime) ?? DateTime.now(),
@@ -180,7 +182,7 @@ class RustorePurchaseProvider implements PurchaseProvider {
   PurchaseProductDetailsModel _mapToPurchaseProductDetails(
     final Product product,
   ) {
-    final productId = PurchaseProductId(product.productId);
+    final productId = PurchaseProductId.fromJson(product.productId);
     final duration = _getDurationFromProductId(productId);
     final freeTrialDuration = product.subscription?.freeTrialPeriod;
     final productType = _productTypeFromRustoreJson(
@@ -308,7 +310,8 @@ class RustorePurchaseProvider implements PurchaseProvider {
     final purchase = await RustoreBillingClient.purchaseInfo(purchaseId.value);
     return PurchaseDetailsModel(
       purchaseId: purchaseId,
-      productId: PurchaseProductId(purchase.productId ?? ''),
+      productId: PurchaseProductId.fromJson(purchase.productId ?? ''),
+      priceId: PurchasePriceId.fromJson(purchase.productId ?? ''),
       status: _purchaseStatusFromRustoreState(purchase.purchaseState),
       purchaseDate:
           dateTimeFromIso8601String(purchase.purchaseTime) ?? DateTime.now(),

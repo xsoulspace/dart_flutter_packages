@@ -1,16 +1,25 @@
 import 'package:from_json_to_json/from_json_to_json.dart';
 
 /// Extension type that represents a unique identifier for a product.
-///
-/// Uses from_json_to_json for type-safe JSON handling.
-/// Provides type safety for product IDs in the monetization domain.
-extension type const PurchaseProductId(String value) {
+extension type const PurchaseProductId._(String value) {
   factory PurchaseProductId.fromJson(final dynamic value) =>
-      PurchaseProductId(jsonDecodeString(value));
+      PurchaseProductId._(jsonDecodeString(value));
   String toJson() => value;
   bool get isEmpty => value.isEmpty;
   bool get isNotEmpty => value.isNotEmpty;
-  static const empty = PurchaseProductId('');
+  static const empty = PurchaseProductId._('');
+}
+
+/// Extension type that represents a unique identifier for a product price.
+///
+/// Usually one Product has multiple prices.
+extension type const PurchasePriceId._(String value) {
+  factory PurchasePriceId.fromJson(final dynamic value) =>
+      PurchasePriceId._(jsonDecodeString(value));
+  String toJson() => value;
+  bool get isEmpty => value.isEmpty;
+  bool get isNotEmpty => value.isNotEmpty;
+  static const empty = PurchasePriceId._('');
 }
 
 /// Extension on List<PurchaseProductId> to convert to JSON.
@@ -20,22 +29,16 @@ extension ProductListX on List<PurchaseProductId> {
 }
 
 /// Extension type that represents a unique identifier for a purchase.
-///
-/// Uses from_json_to_json for type-safe JSON handling.
-/// Provides type safety for purchase IDs in the monetization domain.
-extension type const PurchaseId(String value) {
+extension type const PurchaseId._(String value) {
   factory PurchaseId.fromJson(final dynamic value) =>
-      PurchaseId(jsonDecodeString(value));
+      PurchaseId._(jsonDecodeString(value));
   String toJson() => value;
   bool get isEmpty => value.isEmpty;
   bool get isNotEmpty => value.isNotEmpty;
-  static const empty = PurchaseId('');
+  static const empty = PurchaseId._('');
 }
 
 /// Extension type that represents a purchase duration.
-///
-/// Wraps a Map<String, dynamic> for years, months, days.
-/// Uses from_json_to_json for type-safe JSON handling.
 extension type const PurchaseDurationModel._(Map<String, dynamic> value) {
   factory PurchaseDurationModel.fromJson(final dynamic json) =>
       PurchaseDurationModel._(jsonDecodeMapAs(json));
@@ -71,15 +74,13 @@ enum PurchaseProductType {
 }
 
 /// Extension type that represents the details of a purchasable product.
-///
-/// Wraps a Map<String, dynamic> for all product details fields.
-/// Uses from_json_to_json for type-safe JSON handling.
 extension type const PurchaseProductDetailsModel._(Map<String, dynamic> value) {
   factory PurchaseProductDetailsModel.fromJson(final dynamic json) =>
       PurchaseProductDetailsModel._(jsonDecodeMapAs(json));
   factory PurchaseProductDetailsModel({
     required PurchaseDurationModel freeTrialDuration,
     final PurchaseProductId productId = PurchaseProductId.empty,
+    final PurchasePriceId priceId = PurchasePriceId.empty,
     final PurchaseProductType productType = PurchaseProductType.consumable,
     final String name = '',
     final String formattedPrice = '',
@@ -89,6 +90,7 @@ extension type const PurchaseProductDetailsModel._(Map<String, dynamic> value) {
     final Duration duration = Duration.zero,
   }) => PurchaseProductDetailsModel._({
     'productId': productId.toJson(),
+    'priceId': priceId.toJson(),
     'productType': productType.toJson(),
     'name': name,
     'formattedPrice': formattedPrice,
@@ -100,6 +102,7 @@ extension type const PurchaseProductDetailsModel._(Map<String, dynamic> value) {
   });
   PurchaseProductId get productId =>
       PurchaseProductId.fromJson(value['productId']);
+  PurchasePriceId get priceId => PurchasePriceId.fromJson(value['priceId']);
   PurchaseProductType get productType =>
       PurchaseProductType.fromJson(value['productType']);
   String get name => jsonDecodeString(value['name']);
@@ -131,6 +134,7 @@ extension type const PurchaseDetailsModel._(Map<String, dynamic> value) {
   factory PurchaseDetailsModel({
     final PurchaseId purchaseId = PurchaseId.empty,
     final PurchaseProductId productId = PurchaseProductId.empty,
+    final PurchasePriceId priceId = PurchasePriceId.empty,
     final PurchaseStatus status = PurchaseStatus.pending,
     final PurchaseProductType purchaseType = PurchaseProductType.consumable,
     required final DateTime purchaseDate,
@@ -148,6 +152,7 @@ extension type const PurchaseDetailsModel._(Map<String, dynamic> value) {
   }) => PurchaseDetailsModel._({
     'purchaseId': purchaseId.toJson(),
     'productId': productId.toJson(),
+    'priceId': priceId.toJson(),
     'status': status.name,
     'purchaseType': purchaseType.name,
     'purchaseDate': purchaseDate.toIso8601String(),
@@ -166,6 +171,7 @@ extension type const PurchaseDetailsModel._(Map<String, dynamic> value) {
   PurchaseId get purchaseId => PurchaseId.fromJson(value['purchaseId']);
   PurchaseProductId get productId =>
       PurchaseProductId.fromJson(value['productId']);
+  PurchasePriceId get priceId => PurchasePriceId.fromJson(value['priceId']);
   PurchaseStatus get status => PurchaseStatusX.fromJson(value['status']);
   PurchaseProductType get purchaseType =>
       PurchaseProductType.fromJson(value['purchaseType']);
@@ -386,6 +392,7 @@ extension type const PurchaseVerificationDtoModel._(
     required final DateTime transactionDate,
     final PurchaseId purchaseId = PurchaseId.empty,
     final PurchaseProductId productId = PurchaseProductId.empty,
+    final PurchasePriceId priceId = PurchasePriceId.empty,
     final PurchaseStatus status = PurchaseStatus.pending,
     final PurchaseProductType productType = PurchaseProductType.consumable,
     final String purchaseToken = '',
@@ -395,6 +402,7 @@ extension type const PurchaseVerificationDtoModel._(
   }) => PurchaseVerificationDtoModel._({
     'purchaseId': purchaseId.toJson(),
     'productId': productId.toJson(),
+    'priceId': priceId.toJson(),
     'status': status.name,
     'productType': productType.name,
     'transactionDate': transactionDate.toIso8601String(),
@@ -406,6 +414,7 @@ extension type const PurchaseVerificationDtoModel._(
   PurchaseId get purchaseId => PurchaseId.fromJson(value['purchaseId']);
   PurchaseProductId get productId =>
       PurchaseProductId.fromJson(value['productId']);
+  PurchasePriceId get priceId => PurchasePriceId.fromJson(value['priceId']);
   PurchaseStatus get status => PurchaseStatusX.fromJson(value['status']);
   PurchaseProductType get productType =>
       PurchaseProductType.fromJson(value['productType']);

@@ -6,54 +6,116 @@ import 'commands/commands.dart';
 import 'models/models.dart';
 import 'resources/resources.dart';
 
+/// {@template purchase_initializer}
+/// Main orchestrator for the monetization system.
+///
+/// This class coordinates the initialization sequence:
+/// 1. Sets initial loading state
+/// 2. Initializes the purchase provider
+/// 3. Loads available subscriptions
+/// 4. Restores previous purchases
+/// 5. Sets up purchase update listeners
+///
+/// ## Usage
+/// ```dart
+/// final initializer = PurchaseInitializer(
+///   monetizationStatusResource: monetizationStatus,
+///   purchaseProvider: yourProvider,
+///   restorePurchasesCommand: restoreCommand,
+///   handlePurchaseUpdateCommand: updateCommand,
+///   loadSubscriptionsCommand: loadCommand,
+/// );
+///
+/// await initializer.init();
+/// ```
+/// {@endtemplate}
 class PurchaseInitializer {
+  /// {@macro purchase_initializer}
   PurchaseInitializer({
-    required this.monetizationStatusResource,
+    required final MonetizationResources resources,
     required this.purchaseProvider,
-    required this.restorePurchasesCommand,
-    required this.handlePurchaseUpdateCommand,
-    required this.loadSubscriptionsCommand,
-  });
-  final MonetizationStatusResource monetizationStatusResource;
+  }) : _srcs = resources;
   final PurchaseProvider purchaseProvider;
-  final RestorePurchasesCommand restorePurchasesCommand;
-  final HandlePurchaseUpdateCommand handlePurchaseUpdateCommand;
-  final LoadSubscriptionsCommand loadSubscriptionsCommand;
+  final MonetizationResources _srcs;
 
   StreamSubscription<List<PurchaseDetailsModel>>? _purchaseUpdateSubscription;
-  Future<void> restore() => restorePurchasesCommand.execute();
 
-  Future<void> init() async {
-    monetizationStatusResource.setStatus(MonetizationStatus.loading);
+  /// Restores previous purchases without full initialization.
+  Future<void> restore() => _restorePurchasesCommand.execute();
+
+  RestorePurchasesCommand get _restorePurchasesCommand =>
+      RestorePurchasesCommand(
+        purchaseProvider: purchaseProvider,
+        handlePurchaseUpdateCommand: _handlePurchaseUpdateCommand,
+      );
+
+  HandlePurchaseUpdateCommand get _handlePurchaseUpdateCommand =>
+      HandlePurchaseUpdateCommand(
+        activeSubscriptionResource: _srcs.activeSubscription,
+        subscriptionStatusResource: _srcs.subscriptionStatus,
+        confirmPurchaseCommand: ConfirmPurchaseCommand(
+          purchaseProvider: purchaseProvider,
+          activeSubscriptionResource: _srcs.activeSubscription,
+          subscriptionStatusResource: _srcs.subscriptionStatus,
+        ),
+      );
+
+  /// {@template init}
+  /// Initializes the complete monetization system.
+  ///
+  /// **Sequence:**
+  /// 1. Set loading state
+  /// 2. Check if purchase provider is available
+  /// 3. Initialize purchase provider
+  /// 4. Update status based on initialization result
+  /// 5. Load subscriptions if initialized
+  /// 6. Restore purchases and set up listeners
+  /// {@endtemplate}
+  Future<void> init({required final List<PurchaseProductId> productIds}) async {
+    _srcs.status.setStatus(MonetizationStatus.loading);
+    final isAvailable = await purchaseProvider.isAvailable();
+    if (!isAvailable) {
+      _srcs.status.setStatus(MonetizationStatus.notAvailable);
+      return;
+    }
+
     final isInitialized = await purchaseProvider.init();
 
-    monetizationStatusResource.setStatus(
+    _srcs.status.setStatus(
       isInitialized
           ? MonetizationStatus.loaded
           : MonetizationStatus.notAvailable,
     );
     if (!isInitialized) return;
 
-    await loadSubscriptionsCommand.execute();
+    await LoadSubscriptionsCommand(
+      purchaseProvider: purchaseProvider,
+      monetizationStatusResource: _srcs.status,
+      availableSubscriptionsResource: _srcs.availableSubscriptions,
+      productIds: productIds,
+    ).execute();
     await _restoreAndListen();
   }
 
+  /// Restores purchases and sets up purchase update listeners.
   Future<void> _restoreAndListen() async {
-    await restorePurchasesCommand.execute();
+    await _restorePurchasesCommand.execute();
     await _purchaseUpdateSubscription?.cancel();
     _purchaseUpdateSubscription = purchaseProvider.purchaseStream.listen(
       _handlePurchaseUpdate,
     );
   }
 
+  /// Handles incoming purchase updates from the provider.
   Future<void> _handlePurchaseUpdate(
     final List<PurchaseDetailsModel> purchases,
   ) async {
     for (final purchase in purchases) {
-      await handlePurchaseUpdateCommand.execute(purchase.toVerificationDto());
+      await _handlePurchaseUpdateCommand.execute(purchase.toVerificationDto());
     }
   }
 
+  /// Cleans up resources and cancels subscriptions.
   Future<void> dispose() async {
     await _purchaseUpdateSubscription?.cancel();
   }
