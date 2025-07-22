@@ -6,7 +6,7 @@ import 'commands/commands.dart';
 import 'models/models.dart';
 import 'resources/resources.dart';
 
-/// {@template purchase_initializer}
+/// {@template monetization_foundation}
 /// Main orchestrator for the monetization system.
 ///
 /// This class coordinates the initialization sequence:
@@ -18,23 +18,27 @@ import 'resources/resources.dart';
 ///
 /// ## Usage
 /// ```dart
-/// final initializer = PurchaseInitializer(
-///   monetizationStatusResource: monetizationStatus,
+/// final foundation = MonetizationFoundation(
+///   resources: (
+///     activeSubscription: ActiveSubscriptionResource(),
+///     availableSubscriptions: AvailableSubscriptionsResource(),
+///     subscriptionStatus: SubscriptionStatusResource(),
+///     status: MonetizationStatusResource(),
+///   ),
 ///   purchaseProvider: yourProvider,
-///   restorePurchasesCommand: restoreCommand,
-///   handlePurchaseUpdateCommand: updateCommand,
-///   loadSubscriptionsCommand: loadCommand,
 /// );
 ///
-/// await initializer.init();
+/// await foundation.init();
 /// ```
 /// {@endtemplate}
-class PurchaseInitializer {
-  /// {@macro purchase_initializer}
-  PurchaseInitializer({
+class MonetizationFoundation {
+  /// {@macro monetization_foundation}
+  MonetizationFoundation({
     required final MonetizationResources resources,
     required this.purchaseProvider,
   }) : _srcs = resources;
+
+  /// {@macro purchase_provider}
   final PurchaseProvider purchaseProvider;
   final MonetizationResources _srcs;
 

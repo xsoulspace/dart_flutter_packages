@@ -71,10 +71,10 @@ export 'src/ads/ad_manager.dart';
 export 'src/commands/commands.dart';
 // Core Models and Types
 export 'src/models/models.dart';
+// Main Orchestrator
+export 'src/monetization_foundation.dart';
 // Testing Implementations
 export 'src/noop_providers/noop_providers.dart';
-// Main Orchestrator
-export 'src/purchase_initializer.dart';
 // State Management Resources
 export 'src/resources/resources.dart';
 // UI Components
