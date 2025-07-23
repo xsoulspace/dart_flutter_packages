@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'android/rustore_billing_android.dart';
 import 'rustore_api.g.dart';
+import 'rustore_billing_platform.dart';
 
 /// {@template rustore_billing_client}
 /// Main client for RuStore billing operations.
@@ -13,24 +15,28 @@ class RustoreBillingClient {
   RustoreBillingClient._();
 
   static RustoreBillingClient? _instance;
+  // ignore: prefer_constructors_over_static_methods
   static RustoreBillingClient get instance =>
       _instance ??= RustoreBillingClient._();
 
-  final _api = RustoreBillingApi();
-  RustoreBillingCallbackApi? _callbackApi;
-
-  final _purchaseResultController =
-      StreamController<RustorePaymentResult>.broadcast();
-  final _errorController = StreamController<RustoreError>.broadcast();
+  /// Get the platform instance
+  RustoreBillingPlatform get _platform => RustoreBillingPlatform.instance;
 
   /// Stream of purchase results from payment flows
-  Stream<RustorePaymentResult> get purchaseResults =>
-      _purchaseResultController.stream;
+  Stream<RustorePaymentResult> get purchaseResults {
+    if (_platform is RustoreBillingAndroid) {
+      return (_platform as RustoreBillingAndroid).purchaseResults;
+    }
+    return const Stream.empty();
+  }
 
   /// Stream of errors from billing operations
-  Stream<RustoreError> get errors => _errorController.stream;
-
-  var _initialized = false;
+  Stream<RustoreError> get errors {
+    if (_platform is RustoreBillingAndroid) {
+      return (_platform as RustoreBillingAndroid).errors;
+    }
+    return const Stream.empty();
+  }
 
   /// Initialize the RuStore billing client
   ///
@@ -43,20 +49,8 @@ class RustoreBillingClient {
   ///
   /// Throws [RustoreBillingException] if initialization fails.
   Future<void> initialize(final RustoreBillingConfig config) async {
-    if (_initialized) {
-      throw const RustoreBillingException('Billing client already initialized');
-    }
-
     try {
-      // Set up callback API for receiving events
-      _callbackApi = RustoreBillingCallbackApiImpl(
-        onPurchaseResultCallback: _purchaseResultController.add,
-        onErrorCallback: _errorController.add,
-      );
-      RustoreBillingCallbackApi.setUp(_callbackApi);
-
-      await _api.initialize(config);
-      _initialized = true;
+      await _platform.initialize(config);
     } catch (e) {
       throw RustoreBillingException('Failed to initialize billing client: $e');
     }
@@ -66,9 +60,8 @@ class RustoreBillingClient {
   ///
   /// Should be called when your app receives a deep link related to payments.
   /// Typically called from your main activity's onNewIntent method.
-  Future<void> onNewIntent(final String? intentData) async {
-    _ensureInitialized();
-    await _api.onNewIntent(intentData);
+  void onNewIntent(final String? intentData) {
+    _platform.onNewIntent(intentData);
   }
 
   /// Get available products by their IDs
@@ -80,10 +73,8 @@ class RustoreBillingClient {
   Future<List<RustoreProduct>> getProducts(
     final List<String> productIds,
   ) async {
-    _ensureInitialized();
-
     try {
-      return await _api.getProducts(productIds);
+      return await _platform.getProducts(productIds);
     } catch (e) {
       throw RustoreBillingException('Failed to get products: $e');
     }
@@ -94,10 +85,8 @@ class RustoreBillingClient {
   /// Returns list of [RustorePurchase] objects representing current purchases.
   /// Throws [RustoreBillingException] if operation fails.
   Future<List<RustorePurchase>> getPurchases() async {
-    _ensureInitialized();
-
     try {
-      return await _api.getPurchases();
+      return await _platform.getPurchases();
     } catch (e) {
       throw RustoreBillingException('Failed to get purchases: $e');
     }
@@ -115,10 +104,11 @@ class RustoreBillingClient {
     final String productId, {
     final String? developerPayload,
   }) async {
-    _ensureInitialized();
-
     try {
-      return await _api.purchaseProduct(productId, developerPayload);
+      return await _platform.purchaseProduct(
+        productId,
+        developerPayload: developerPayload,
+      );
     } catch (e) {
       throw RustoreBillingException('Failed to purchase product: $e');
     }
@@ -137,10 +127,11 @@ class RustoreBillingClient {
     final String purchaseId, {
     final String? developerPayload,
   }) async {
-    _ensureInitialized();
-
     try {
-      await _api.confirmPurchase(purchaseId, developerPayload);
+      await _platform.confirmPurchase(
+        purchaseId,
+        developerPayload: developerPayload,
+      );
     } catch (e) {
       throw RustoreBillingException('Failed to confirm purchase: $e');
     }
@@ -154,10 +145,8 @@ class RustoreBillingClient {
   ///
   /// Throws [RustoreBillingException] if operation fails.
   Future<void> deletePurchase(final String purchaseId) async {
-    _ensureInitialized();
-
     try {
-      await _api.deletePurchase(purchaseId);
+      await _platform.deletePurchase(purchaseId);
     } catch (e) {
       throw RustoreBillingException('Failed to delete purchase: $e');
     }
@@ -165,40 +154,9 @@ class RustoreBillingClient {
 
   /// Dispose resources and close streams
   Future<void> dispose() async {
-    await _purchaseResultController.close();
-    await _errorController.close();
-    RustoreBillingCallbackApi.setUp(null);
-    _callbackApi = null;
-    _initialized = false;
-  }
-
-  void _ensureInitialized() {
-    if (!_initialized) {
-      throw const RustoreBillingException(
-        'Billing client not initialized. Call initialize() first.',
-      );
+    if (_platform is RustoreBillingAndroid) {
+      await (_platform as RustoreBillingAndroid).dispose();
     }
-  }
-}
-
-/// Implementation of callback API for receiving events from native side
-class RustoreBillingCallbackApiImpl extends RustoreBillingCallbackApi {
-  RustoreBillingCallbackApiImpl({
-    required this.onPurchaseResultCallback,
-    required this.onErrorCallback,
-  });
-
-  final void Function(RustorePaymentResult) onPurchaseResultCallback;
-  final void Function(RustoreError) onErrorCallback;
-
-  @override
-  void onPurchaseResult(final RustorePaymentResult result) {
-    onPurchaseResultCallback(result);
-  }
-
-  @override
-  void onError(final RustoreError error) {
-    onErrorCallback(error);
   }
 }
 

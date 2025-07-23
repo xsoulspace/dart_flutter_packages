@@ -13,14 +13,14 @@ import 'package:pigeon/pigeon.dart';
 abstract class RustoreBillingApi {
   /// Initialize the RuStore billing client
   @async
-  void initialize(RustoreBillingConfig config);
+  void initialize(final RustoreBillingConfig config);
 
   /// Handle deep link intent (for payment flows)
-  void onNewIntent(String? intentData);
+  void onNewIntent(final String? intentData);
 
   /// Get available products by IDs
   @async
-  List<RustoreProduct> getProducts(List<String> productIds);
+  List<RustoreProduct> getProducts(final List<String> productIds);
 
   /// Get existing purchases
   @async
@@ -29,26 +29,26 @@ abstract class RustoreBillingApi {
   /// Start purchase flow for a product
   @async
   RustorePaymentResult purchaseProduct(
-    String productId,
-    String? developerPayload,
+    final String productId,
+    final String? developerPayload,
   );
 
   /// Confirm a successful purchase
   @async
-  void confirmPurchase(String purchaseId, String? developerPayload);
+  void confirmPurchase(final String purchaseId, final String? developerPayload);
 
   /// Delete a purchase
   @async
-  void deletePurchase(String purchaseId);
+  void deletePurchase(final String purchaseId);
 }
 
 @FlutterApi()
 abstract class RustoreBillingCallbackApi {
   /// Called when purchase state changes
-  void onPurchaseResult(RustorePaymentResult result);
+  void onPurchaseResult(final RustorePaymentResult result);
 
   /// Called when an error occurs
-  void onError(RustoreError error);
+  void onError(final RustoreError error);
 }
 
 // Configuration

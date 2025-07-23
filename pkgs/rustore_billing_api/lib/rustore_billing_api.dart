@@ -40,5 +40,9 @@ export 'src/rustore_api.g.dart'
         RustoreProduct,
         RustorePurchase,
         RustorePurchaseState;
+// Export Android registration
+export 'src/rustore_billing_api_android.dart';
 // Export the main client
 export 'src/rustore_billing_client.dart';
+// Export the platform interface
+export 'src/rustore_billing_platform.dart';

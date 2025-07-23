@@ -17,6 +17,7 @@ import ru.rustore.sdk.billingclient.model.product.Product
 import ru.rustore.sdk.billingclient.model.purchase.PaymentResult
 import ru.rustore.sdk.billingclient.model.purchase.Purchase
 import ru.rustore.sdk.billingclient.model.purchase.PurchaseState
+import io.flutter.plugin.common.MethodChannel
 
 /** RustoreBillingApiPlugin */
 class RustoreBillingApiPlugin: FlutterPlugin, ActivityAware, RustoreBillingApi {
@@ -30,6 +31,18 @@ class RustoreBillingApiPlugin: FlutterPlugin, ActivityAware, RustoreBillingApi {
         context = flutterPluginBinding.applicationContext
         RustoreBillingApi.setUp(flutterPluginBinding.binaryMessenger, this)
         callbackApi = RustoreBillingCallbackApi(flutterPluginBinding.binaryMessenger)
+        
+        // Register the Android implementation
+        val channel = MethodChannel(flutterPluginBinding.binaryMessenger, "rustore_billing_api")
+        channel.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "registerWith" -> {
+                    // This will be handled by the Dart side
+                    result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        }
     }
 
     override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {

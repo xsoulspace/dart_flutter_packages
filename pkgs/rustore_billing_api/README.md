@@ -81,6 +81,11 @@ class MainActivity : FlutterActivity() {
 ```dart
 import 'package:rustore_billing_api/rustore_billing_api.dart';
 
+// Register the Android implementation (call this in main() on Android)
+if (Platform.isAndroid) {
+  registerWith();
+}
+
 // Get the billing client instance
 final billingClient = RustoreBillingClient.instance;
 
@@ -177,12 +182,20 @@ for (final purchase in purchases) {
 ### Complete Example
 
 ```dart
+import 'dart:io';
+import 'package:rustore_billing_api/rustore_billing_api.dart';
+
 class BillingService {
   final _billingClient = RustoreBillingClient.instance;
   bool _initialized = false;
 
-  Future<void> initialize() async {
+    Future<void> initialize() async {
     if (_initialized) return;
+
+    // Register Android implementation
+    if (Platform.isAndroid) {
+      registerWith();
+    }
 
     // Set up listeners
     _billingClient.purchaseResults.listen(_handlePurchaseResult);

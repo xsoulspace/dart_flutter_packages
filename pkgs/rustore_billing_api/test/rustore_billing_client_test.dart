@@ -15,7 +15,7 @@ void main() {
       expect(client1, equals(client2));
     });
 
-    test('should throw exception when not initialized', () {
+    test('should throw exception when platform not implemented', () {
       expect(
         () => client.getProducts(['test']),
         throwsA(isA<RustoreBillingException>()),
@@ -23,11 +23,11 @@ void main() {
     });
 
     test(
-      'should throw exception when calling onNewIntent without initialization',
+      'should throw exception when calling onNewIntent without platform',
       () {
         expect(
           () => client.onNewIntent('test'),
-          throwsA(isA<RustoreBillingException>()),
+          throwsA(isA<UnimplementedError>()),
         );
       },
     );
@@ -97,6 +97,12 @@ void main() {
           RustorePaymentResultType.values,
           contains(RustorePaymentResultType.cancelled),
         );
+      });
+    });
+
+    group('Platform Interface', () {
+      test('should have placeholder implementation by default', () {
+        expect(RustoreBillingPlatform.instance, isA<RustoreBillingPlatform>());
       });
     });
   });
