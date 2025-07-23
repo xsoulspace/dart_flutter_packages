@@ -44,11 +44,11 @@ class RustorePurchaseProvider implements PurchaseProvider {
         deeplinkScheme,
         enableLogger,
       );
+      return await _isAvailable();
     } catch (e) {
       debugPrint('RustorePurchaseProvider.init: $e');
       return false;
     }
-    return true;
   }
 
   @override
@@ -58,15 +58,19 @@ class RustorePurchaseProvider implements PurchaseProvider {
   Stream<List<PurchaseDetailsModel>> get purchaseStream =>
       _purchaseStreamController.stream;
 
-  @override
-  Future<bool> isAvailable() async {
+  Future<bool> _isAvailable() async {
     final isAuthorized = await RustoreBillingClient.getAuthorizationStatus();
-    if (isAuthorized) {
+    final isInstalled = await RustoreBillingClient.isRustoreInstalled();
+    if (isAuthorized && isInstalled) {
       final result = await RustoreBillingClient.available();
       return result.type == PurchaseAvailabilityType.available;
     }
+
     return false;
   }
+
+  @override
+  Future<bool> isAvailable() async => true;
 
   @override
   Future<CompletePurchaseResultModel> completePurchase(
