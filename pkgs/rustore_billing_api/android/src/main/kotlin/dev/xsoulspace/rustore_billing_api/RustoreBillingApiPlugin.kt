@@ -135,7 +135,9 @@ class RustoreBillingApiPlugin: FlutterPlugin, ActivityAware, RustoreBillingApi {
         coroutineScope.launch {
             try {
 
-               val availability =  RuStoreBillingClient.checkPurchasesAvailability().await()
+               val availability = withContext(Dispatchers.IO) {
+                   RuStoreBillingClient.checkPurchasesAvailability().await()
+               }
                 val result = when (availability) {
                     is PurchaseAvailabilityResult.Available -> RustorePurchaseAvailabilityResult(
                         RustorePurchaseAvailabilityType.AVAILABLE
