@@ -16,6 +16,7 @@ dependencies:
   xsoulspace_foundation: ^0.2.0
   universal_io: ^2.2.2
   from_json_to_json: ^0.2.1
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:

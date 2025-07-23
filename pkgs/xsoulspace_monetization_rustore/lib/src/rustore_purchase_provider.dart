@@ -7,6 +7,7 @@ import 'package:flutter_rustore_billing/flutter_rustore_billing.dart';
 import 'package:flutter_rustore_billing/pigeons/rustore.dart';
 import 'package:from_json_to_json/from_json_to_json.dart';
 import 'package:universal_io/io.dart';
+import 'package:url_launcher/url_launcher_string.dart';
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
 typedef DurationFromProductId = Duration Function(PurchaseProductId);
@@ -299,7 +300,8 @@ class RustorePurchaseProvider implements PurchaseProvider {
 
   @override
   Future<void> openSubscriptionManagement() async {
-    // TODO(arenukvern): implement opening of subscription management
+    // https://www.rustore.ru/help/sdk/rustore-deeplinks
+    await launchUrlString('rustore://profile/subscriptions');
   }
 
   @override
