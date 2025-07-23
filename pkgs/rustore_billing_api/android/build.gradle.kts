@@ -2,23 +2,39 @@ group = "com.xsoulspace.rustore_billing_api"
 version = "1.0-SNAPSHOT"
 
 buildscript {
-    val kotlinVersion = "1.9.10"
+    val kotlinVersion = "2.1.10"
     repositories {
         google()
         mavenCentral()
+        maven {
+            url = uri("https://artifactory-external.vkpartner.ru/artifactory/maven")
+        }
     }
 
     dependencies {
-        classpath("com.android.tools.build:gradle:8.1.0")
+        classpath("com.android.tools.build:gradle:8.10.0")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
+    }
+}
+
+rootProject.allprojects {
+    repositories {
+        maven {
+            url = uri("https://artifactory-external.vkpartner.ru/artifactory/maven")
+        }
+        google()
+        mavenCentral()
     }
 }
 
 allprojects {
     repositories {
+        maven {
+            url = uri("https://artifactory-external.vkpartner.ru/artifactory/maven")
+        }
         google()
         mavenCentral()
-        maven { url = uri("https://artifactory-external.vkpartner.ru/artifactory/vkid-sdk-andorid/") }
+
     }
 }
 
@@ -28,7 +44,7 @@ plugins {
 }
 
 android {
-    compileSdk = 34
+    compileSdk = 36
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
@@ -53,28 +69,19 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    testOptions {
-        unitTests.all {
-            it.useJUnitPlatform()
-
-            it.testLogging {
-                events("passed", "skipped", "failed", "standardOut", "standardError")
-                outputs.upToDateWhen { false }
-                showStandardStreams = true
-            }
-        }
-    }
 }
 
 dependencies {
-    val kotlinVersion = "1.9.10"
+    val kotlinVersion = "2.1.10"
     
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion")
-    implementation("androidx.annotation:annotation:1.7.0")
-    
+    implementation("androidx.annotation:annotation:1.9.1")
+    implementation(platform("ru.rustore.sdk:bom:2025.02.01"))
+    implementation("ru.rustore.sdk:billingclient")
+
     // RuStore SDK
-    implementation("ru.rustore.sdk:billingclient:9.1.0")
+//    implementation("ru.rustore.sdk:billingclient:9.1.0")
     
     // Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
 } 
