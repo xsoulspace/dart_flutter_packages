@@ -394,6 +394,7 @@ class RustorePurchase {
   RustorePurchase({
     this.purchaseId,
     this.productId,
+    this.productType,
     this.invoiceId,
     this.description,
     this.language,
@@ -410,6 +411,8 @@ class RustorePurchase {
   String? purchaseId;
 
   String? productId;
+
+  RustoreProductType? productType;
 
   String? invoiceId;
 
@@ -437,6 +440,7 @@ class RustorePurchase {
     return <Object?>[
       purchaseId,
       productId,
+      productType,
       invoiceId,
       description,
       language,
@@ -459,17 +463,18 @@ class RustorePurchase {
     return RustorePurchase(
       purchaseId: result[0] as String?,
       productId: result[1] as String?,
-      invoiceId: result[2] as String?,
-      description: result[3] as String?,
-      language: result[4] as String?,
-      purchaseTime: result[5] as String?,
-      orderId: result[6] as String?,
-      amountLabel: result[7] as String?,
-      amount: result[8] as int?,
-      currency: result[9] as String?,
-      quantity: result[10] as int?,
-      purchaseState: result[11] as RustorePurchaseState?,
-      developerPayload: result[12] as String?,
+      productType: result[2] as RustoreProductType?,
+      invoiceId: result[3] as String?,
+      description: result[4] as String?,
+      language: result[5] as String?,
+      purchaseTime: result[6] as String?,
+      orderId: result[7] as String?,
+      amountLabel: result[8] as String?,
+      amount: result[9] as int?,
+      currency: result[10] as String?,
+      quantity: result[11] as int?,
+      purchaseState: result[12] as RustorePurchaseState?,
+      developerPayload: result[13] as String?,
     );
   }
 

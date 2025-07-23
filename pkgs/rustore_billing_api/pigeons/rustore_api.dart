@@ -160,6 +160,7 @@ class RustorePurchase {
   const RustorePurchase({
     this.purchaseId,
     this.productId,
+    this.productType,
     this.invoiceId,
     this.description,
     this.language,
@@ -175,6 +176,7 @@ class RustorePurchase {
 
   final String? purchaseId;
   final String? productId;
+  final RustoreProductType? productType;
   final String? invoiceId;
   final String? description;
   final String? language;

@@ -367,6 +367,7 @@ data class RustoreProductSubscription (
 data class RustorePurchase (
   val purchaseId: String? = null,
   val productId: String? = null,
+  val productType: RustoreProductType? = null,
   val invoiceId: String? = null,
   val description: String? = null,
   val language: String? = null,
@@ -384,24 +385,26 @@ data class RustorePurchase (
     fun fromList(pigeonVar_list: List<Any?>): RustorePurchase {
       val purchaseId = pigeonVar_list[0] as String?
       val productId = pigeonVar_list[1] as String?
-      val invoiceId = pigeonVar_list[2] as String?
-      val description = pigeonVar_list[3] as String?
-      val language = pigeonVar_list[4] as String?
-      val purchaseTime = pigeonVar_list[5] as String?
-      val orderId = pigeonVar_list[6] as String?
-      val amountLabel = pigeonVar_list[7] as String?
-      val amount = pigeonVar_list[8] as Long?
-      val currency = pigeonVar_list[9] as String?
-      val quantity = pigeonVar_list[10] as Long?
-      val purchaseState = pigeonVar_list[11] as RustorePurchaseState?
-      val developerPayload = pigeonVar_list[12] as String?
-      return RustorePurchase(purchaseId, productId, invoiceId, description, language, purchaseTime, orderId, amountLabel, amount, currency, quantity, purchaseState, developerPayload)
+      val productType = pigeonVar_list[2] as RustoreProductType?
+      val invoiceId = pigeonVar_list[3] as String?
+      val description = pigeonVar_list[4] as String?
+      val language = pigeonVar_list[5] as String?
+      val purchaseTime = pigeonVar_list[6] as String?
+      val orderId = pigeonVar_list[7] as String?
+      val amountLabel = pigeonVar_list[8] as String?
+      val amount = pigeonVar_list[9] as Long?
+      val currency = pigeonVar_list[10] as String?
+      val quantity = pigeonVar_list[11] as Long?
+      val purchaseState = pigeonVar_list[12] as RustorePurchaseState?
+      val developerPayload = pigeonVar_list[13] as String?
+      return RustorePurchase(purchaseId, productId, productType, invoiceId, description, language, purchaseTime, orderId, amountLabel, amount, currency, quantity, purchaseState, developerPayload)
     }
   }
   fun toList(): List<Any?> {
     return listOf(
       purchaseId,
       productId,
+      productType,
       invoiceId,
       description,
       language,

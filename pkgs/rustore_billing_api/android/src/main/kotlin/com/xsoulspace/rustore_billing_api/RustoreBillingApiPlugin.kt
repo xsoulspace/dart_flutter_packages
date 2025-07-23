@@ -272,6 +272,7 @@ class RustoreBillingApiPlugin: FlutterPlugin, ActivityAware, RustoreBillingApi {
                     RustorePurchase(
                         purchaseId = purchase.purchaseId,
                         productId = purchase.productId,
+                        productType = mapProductType(purchase.productType),
                         invoiceId = purchase.invoiceId,
                         description = null,
                         language = purchase.language,
@@ -388,6 +389,15 @@ class RustoreBillingApiPlugin: FlutterPlugin, ActivityAware, RustoreBillingApi {
             PurchaseState.CLOSED -> RustorePurchaseState.CLOSED
             PurchaseState.PAUSED -> RustorePurchaseState.PAUSED
             PurchaseState.TERMINATED -> RustorePurchaseState.TERMINATED
+            null -> null
+        }
+    }
+
+    private fun mapProductType(productType: ProductType?): RustoreProductType? {
+        return when (productType) {
+            ProductType.NON_CONSUMABLE -> RustoreProductType.NON_CONSUMABLE
+            ProductType.CONSUMABLE -> RustoreProductType.CONSUMABLE
+            ProductType.SUBSCRIPTION -> RustoreProductType.SUBSCRIPTION
             null -> null
         }
     }
