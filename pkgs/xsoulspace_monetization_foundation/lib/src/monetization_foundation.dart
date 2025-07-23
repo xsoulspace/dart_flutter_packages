@@ -87,7 +87,10 @@ class MonetizationFoundation {
           ? MonetizationStatus.loaded
           : MonetizationStatus.notAvailable,
     );
-    if (!isInitialized) return;
+    if (!isInitialized) {
+      _initCompleter.complete(false);
+      return;
+    }
 
     await LoadSubscriptionsCommand(
       purchaseProvider: purchaseProvider,

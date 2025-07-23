@@ -63,12 +63,7 @@ class RustorePurchaseProvider implements PurchaseProvider {
     final isAuthorized = await RustoreBillingClient.getAuthorizationStatus();
     final isInstalled = await RustoreBillingClient.isRustoreInstalled();
 
-    if (isInstalled) {
-      final result = await RustoreBillingClient.available();
-      return result.type == PurchaseAvailabilityType.available;
-    }
-
-    return false;
+    return isInstalled;
   }
 
   @override
