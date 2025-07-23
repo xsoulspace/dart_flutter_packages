@@ -52,6 +52,11 @@ class MonetizationFoundation {
   /// Restores previous purchases without full initialization.
   Future<bool> restore() => _restorePurchasesCommand.execute();
 
+  final _initCompleter = Completer<bool>();
+
+  /// Future that completes when the initialization is complete.
+  Future<bool> get initFuture => _initCompleter.future;
+
   /// {@template init}
   /// Initializes the complete monetization system.
   ///
@@ -67,6 +72,7 @@ class MonetizationFoundation {
     required final List<PurchaseProductId> productIds,
     final bool restorePurchases = true,
   }) async {
+    if (_initCompleter.isCompleted) return;
     srcs.status.setStatus(MonetizationStatus.loading);
     final isAvailable = await purchaseProvider.isAvailable();
     if (!isAvailable) {
@@ -93,6 +99,7 @@ class MonetizationFoundation {
     if (restorePurchases) await _restorePurchasesCommand.execute();
 
     await _listenUpdates();
+    _initCompleter.complete(true);
   }
 
   /// Restores purchases and sets up purchase update listeners.

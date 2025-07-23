@@ -59,9 +59,11 @@ class RustorePurchaseProvider implements PurchaseProvider {
       _purchaseStreamController.stream;
 
   Future<bool> _isAvailable() async {
+    // always returns false
     final isAuthorized = await RustoreBillingClient.getAuthorizationStatus();
     final isInstalled = await RustoreBillingClient.isRustoreInstalled();
-    if (isAuthorized && isInstalled) {
+
+    if (isInstalled) {
       final result = await RustoreBillingClient.available();
       return result.type == PurchaseAvailabilityType.available;
     }
