@@ -118,12 +118,42 @@ class RustoreProduct {
   final String? priceLabel;
   final String? currency;
   final String? language;
-  final RustoreSubscription? subscription;
+  final RustoreProductSubscription? subscription;
 }
 
 enum RustoreProductType { nonConsumable, consumable, subscription }
 
-class RustoreSubscription {}
+// Subscription period model
+class RustoreSubscriptionPeriod {
+  const RustoreSubscriptionPeriod({
+    required this.years,
+    required this.months,
+    required this.days,
+  });
+
+  final int years;
+  final int months;
+  final int days;
+}
+
+// Product subscription model
+class RustoreProductSubscription {
+  const RustoreProductSubscription({
+    this.subscriptionPeriod,
+    this.freeTrialPeriod,
+    this.gracePeriod,
+    this.introductoryPrice,
+    this.introductoryPriceAmount,
+    this.introductoryPricePeriod,
+  });
+
+  final RustoreSubscriptionPeriod? subscriptionPeriod;
+  final RustoreSubscriptionPeriod? freeTrialPeriod;
+  final RustoreSubscriptionPeriod? gracePeriod;
+  final String? introductoryPrice;
+  final String? introductoryPriceAmount;
+  final RustoreSubscriptionPeriod? introductoryPricePeriod;
+}
 
 // Purchase model
 class RustorePurchase {

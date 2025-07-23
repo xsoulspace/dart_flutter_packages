@@ -243,7 +243,8 @@ data class RustoreProduct (
   val price: Long? = null,
   val priceLabel: String? = null,
   val currency: String? = null,
-  val language: String? = null
+  val language: String? = null,
+  val subscription: RustoreProductSubscription? = null
 )
  {
   companion object {
@@ -256,7 +257,8 @@ data class RustoreProduct (
       val priceLabel = pigeonVar_list[5] as String?
       val currency = pigeonVar_list[6] as String?
       val language = pigeonVar_list[7] as String?
-      return RustoreProduct(productId, productType, title, description, price, priceLabel, currency, language)
+      val subscription = pigeonVar_list[8] as RustoreProductSubscription?
+      return RustoreProduct(productId, productType, title, description, price, priceLabel, currency, language, subscription)
     }
   }
   fun toList(): List<Any?> {
@@ -269,10 +271,88 @@ data class RustoreProduct (
       priceLabel,
       currency,
       language,
+      subscription,
     )
   }
   override fun equals(other: Any?): Boolean {
     if (other !is RustoreProduct) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    return RustoreApiPigeonUtils.deepEquals(toList(), other.toList())  }
+
+  override fun hashCode(): Int = toList().hashCode()
+}
+
+/** Generated class from Pigeon that represents data sent in messages. */
+data class RustoreSubscriptionPeriod (
+  val years: Long,
+  val months: Long,
+  val days: Long
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): RustoreSubscriptionPeriod {
+      val years = pigeonVar_list[0] as Long
+      val months = pigeonVar_list[1] as Long
+      val days = pigeonVar_list[2] as Long
+      return RustoreSubscriptionPeriod(years, months, days)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      years,
+      months,
+      days,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other !is RustoreSubscriptionPeriod) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    return RustoreApiPigeonUtils.deepEquals(toList(), other.toList())  }
+
+  override fun hashCode(): Int = toList().hashCode()
+}
+
+/** Generated class from Pigeon that represents data sent in messages. */
+data class RustoreProductSubscription (
+  val subscriptionPeriod: RustoreSubscriptionPeriod? = null,
+  val freeTrialPeriod: RustoreSubscriptionPeriod? = null,
+  val gracePeriod: RustoreSubscriptionPeriod? = null,
+  val introductoryPrice: String? = null,
+  val introductoryPriceAmount: String? = null,
+  val introductoryPricePeriod: RustoreSubscriptionPeriod? = null
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): RustoreProductSubscription {
+      val subscriptionPeriod = pigeonVar_list[0] as RustoreSubscriptionPeriod?
+      val freeTrialPeriod = pigeonVar_list[1] as RustoreSubscriptionPeriod?
+      val gracePeriod = pigeonVar_list[2] as RustoreSubscriptionPeriod?
+      val introductoryPrice = pigeonVar_list[3] as String?
+      val introductoryPriceAmount = pigeonVar_list[4] as String?
+      val introductoryPricePeriod = pigeonVar_list[5] as RustoreSubscriptionPeriod?
+      return RustoreProductSubscription(subscriptionPeriod, freeTrialPeriod, gracePeriod, introductoryPrice, introductoryPriceAmount, introductoryPricePeriod)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      subscriptionPeriod,
+      freeTrialPeriod,
+      gracePeriod,
+      introductoryPrice,
+      introductoryPriceAmount,
+      introductoryPricePeriod,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other !is RustoreProductSubscription) {
       return false
     }
     if (this === other) {
@@ -501,20 +581,30 @@ private open class RustoreApiPigeonCodec : StandardMessageCodec() {
       }
       138.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          RustorePurchase.fromList(it)
+          RustoreSubscriptionPeriod.fromList(it)
         }
       }
       139.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          RustorePaymentResult.fromList(it)
+          RustoreProductSubscription.fromList(it)
         }
       }
       140.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          RustoreError.fromList(it)
+          RustorePurchase.fromList(it)
         }
       }
       141.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
+          RustorePaymentResult.fromList(it)
+        }
+      }
+      142.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
+          RustoreError.fromList(it)
+        }
+      }
+      143.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
           RustoreException.fromList(it)
         }
@@ -560,20 +650,28 @@ private open class RustoreApiPigeonCodec : StandardMessageCodec() {
         stream.write(137)
         writeValue(stream, value.toList())
       }
-      is RustorePurchase -> {
+      is RustoreSubscriptionPeriod -> {
         stream.write(138)
         writeValue(stream, value.toList())
       }
-      is RustorePaymentResult -> {
+      is RustoreProductSubscription -> {
         stream.write(139)
         writeValue(stream, value.toList())
       }
-      is RustoreError -> {
+      is RustorePurchase -> {
         stream.write(140)
         writeValue(stream, value.toList())
       }
-      is RustoreException -> {
+      is RustorePaymentResult -> {
         stream.write(141)
+        writeValue(stream, value.toList())
+      }
+      is RustoreError -> {
+        stream.write(142)
+        writeValue(stream, value.toList())
+      }
+      is RustoreException -> {
+        stream.write(143)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)

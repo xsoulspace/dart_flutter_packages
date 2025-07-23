@@ -202,6 +202,7 @@ class RustoreProduct {
     this.priceLabel,
     this.currency,
     this.language,
+    this.subscription,
   });
 
   String productId;
@@ -220,6 +221,8 @@ class RustoreProduct {
 
   String? language;
 
+  RustoreProductSubscription? subscription;
+
   List<Object?> _toList() {
     return <Object?>[
       productId,
@@ -230,6 +233,7 @@ class RustoreProduct {
       priceLabel,
       currency,
       language,
+      subscription,
     ];
   }
 
@@ -247,6 +251,7 @@ class RustoreProduct {
       priceLabel: result[5] as String?,
       currency: result[6] as String?,
       language: result[7] as String?,
+      subscription: result[8] as RustoreProductSubscription?,
     );
   }
 
@@ -254,6 +259,123 @@ class RustoreProduct {
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
   bool operator ==(Object other) {
     if (other is! RustoreProduct || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(encode(), other.encode());
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => Object.hashAll(_toList())
+;
+}
+
+class RustoreSubscriptionPeriod {
+  RustoreSubscriptionPeriod({
+    required this.years,
+    required this.months,
+    required this.days,
+  });
+
+  int years;
+
+  int months;
+
+  int days;
+
+  List<Object?> _toList() {
+    return <Object?>[
+      years,
+      months,
+      days,
+    ];
+  }
+
+  Object encode() {
+    return _toList();  }
+
+  static RustoreSubscriptionPeriod decode(Object result) {
+    result as List<Object?>;
+    return RustoreSubscriptionPeriod(
+      years: result[0]! as int,
+      months: result[1]! as int,
+      days: result[2]! as int,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! RustoreSubscriptionPeriod || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(encode(), other.encode());
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => Object.hashAll(_toList())
+;
+}
+
+class RustoreProductSubscription {
+  RustoreProductSubscription({
+    this.subscriptionPeriod,
+    this.freeTrialPeriod,
+    this.gracePeriod,
+    this.introductoryPrice,
+    this.introductoryPriceAmount,
+    this.introductoryPricePeriod,
+  });
+
+  RustoreSubscriptionPeriod? subscriptionPeriod;
+
+  RustoreSubscriptionPeriod? freeTrialPeriod;
+
+  RustoreSubscriptionPeriod? gracePeriod;
+
+  String? introductoryPrice;
+
+  String? introductoryPriceAmount;
+
+  RustoreSubscriptionPeriod? introductoryPricePeriod;
+
+  List<Object?> _toList() {
+    return <Object?>[
+      subscriptionPeriod,
+      freeTrialPeriod,
+      gracePeriod,
+      introductoryPrice,
+      introductoryPriceAmount,
+      introductoryPricePeriod,
+    ];
+  }
+
+  Object encode() {
+    return _toList();  }
+
+  static RustoreProductSubscription decode(Object result) {
+    result as List<Object?>;
+    return RustoreProductSubscription(
+      subscriptionPeriod: result[0] as RustoreSubscriptionPeriod?,
+      freeTrialPeriod: result[1] as RustoreSubscriptionPeriod?,
+      gracePeriod: result[2] as RustoreSubscriptionPeriod?,
+      introductoryPrice: result[3] as String?,
+      introductoryPriceAmount: result[4] as String?,
+      introductoryPricePeriod: result[5] as RustoreSubscriptionPeriod?,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! RustoreProductSubscription || other.runtimeType != runtimeType) {
       return false;
     }
     if (identical(this, other)) {
@@ -562,17 +684,23 @@ class _PigeonCodec extends StandardMessageCodec {
     }    else if (value is RustoreProduct) {
       buffer.putUint8(137);
       writeValue(buffer, value.encode());
-    }    else if (value is RustorePurchase) {
+    }    else if (value is RustoreSubscriptionPeriod) {
       buffer.putUint8(138);
       writeValue(buffer, value.encode());
-    }    else if (value is RustorePaymentResult) {
+    }    else if (value is RustoreProductSubscription) {
       buffer.putUint8(139);
       writeValue(buffer, value.encode());
-    }    else if (value is RustoreError) {
+    }    else if (value is RustorePurchase) {
       buffer.putUint8(140);
       writeValue(buffer, value.encode());
-    }    else if (value is RustoreException) {
+    }    else if (value is RustorePaymentResult) {
       buffer.putUint8(141);
+      writeValue(buffer, value.encode());
+    }    else if (value is RustoreError) {
+      buffer.putUint8(142);
+      writeValue(buffer, value.encode());
+    }    else if (value is RustoreException) {
+      buffer.putUint8(143);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -607,12 +735,16 @@ class _PigeonCodec extends StandardMessageCodec {
       case 137: 
         return RustoreProduct.decode(readValue(buffer)!);
       case 138: 
-        return RustorePurchase.decode(readValue(buffer)!);
+        return RustoreSubscriptionPeriod.decode(readValue(buffer)!);
       case 139: 
-        return RustorePaymentResult.decode(readValue(buffer)!);
+        return RustoreProductSubscription.decode(readValue(buffer)!);
       case 140: 
-        return RustoreError.decode(readValue(buffer)!);
+        return RustorePurchase.decode(readValue(buffer)!);
       case 141: 
+        return RustorePaymentResult.decode(readValue(buffer)!);
+      case 142: 
+        return RustoreError.decode(readValue(buffer)!);
+      case 143: 
         return RustoreException.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);

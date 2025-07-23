@@ -193,11 +193,43 @@ class RustoreBillingApiPlugin: FlutterPlugin, ActivityAware, RustoreBillingApi {
 
                 
                 val rustoreProducts = products.map(fun(product: Product): RustoreProduct {
-                    val kSubscription  = product.subscription
+                    val kSubscription = product.subscription
 
-                    val subscription =  RustoreProductSubscription(
-                        freeTrial: kSubscription.
-                    );
+                    val subscription = kSubscription?.let { sub ->
+                        RustoreProductSubscription(
+                            subscriptionPeriod = sub.subscriptionPeriod?.let { period ->
+                                RustoreSubscriptionPeriod(
+                                    years = period.years.toLong(),
+                                    months = period.months.toLong(),
+                                    days = period.days.toLong()
+                                )
+                            },
+                            freeTrialPeriod = sub.freeTrialPeriod?.let { period ->
+                                RustoreSubscriptionPeriod(
+                                    years = period.years.toLong(),
+                                    months = period.months.toLong(),
+                                    days = period.days.toLong()
+                                )
+                            },
+                            gracePeriod = sub.gracePeriod?.let { period ->
+                                RustoreSubscriptionPeriod(
+                                    years = period.years.toLong(),
+                                    months = period.months.toLong(),
+                                    days = period.days.toLong()
+                                )
+                            },
+                            introductoryPrice = sub.introductoryPrice,
+                            introductoryPriceAmount = sub.introductoryPriceAmount,
+                            introductoryPricePeriod = sub.introductoryPricePeriod?.let { period ->
+                                RustoreSubscriptionPeriod(
+                                    years = period.years.toLong(),
+                                    months = period.months.toLong(),
+                                    days = period.days.toLong()
+                                )
+                            }
+                        )
+                    }
+
                     return RustoreProduct(
                         productId = product.productId,
                         productType = when (product.productType) {
@@ -209,8 +241,7 @@ class RustoreBillingApiPlugin: FlutterPlugin, ActivityAware, RustoreBillingApi {
                         title = product.title,
                         description = product.description,
                         price = product.price?.toLong(),
-                        subscription =,
-
+                        subscription = subscription,
                         priceLabel = product.priceLabel,
                         currency = product.currency,
                         language = product.language
