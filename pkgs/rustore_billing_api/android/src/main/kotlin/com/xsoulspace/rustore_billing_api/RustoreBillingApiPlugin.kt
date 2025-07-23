@@ -1,4 +1,4 @@
-package com.xsoulspace.rustore_billing_api
+package dev.xsoulspace.rustore_billing_api
 
 import android.app.Activity
 import android.content.Context

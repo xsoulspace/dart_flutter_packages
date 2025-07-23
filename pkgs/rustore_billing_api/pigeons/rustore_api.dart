@@ -5,7 +5,7 @@ import 'package:pigeon/pigeon.dart';
     dartOut: 'lib/src/rustore_api.g.dart',
     kotlinOut:
         'android/src/main/kotlin/com/xsoulspace/rustore_billing_api/RustoreApi.g.kt',
-    kotlinOptions: KotlinOptions(package: 'com.xsoulspace.rustore_billing_api'),
+    kotlinOptions: KotlinOptions(package: 'dev.xsoulspace.rustore_billing_api'),
   ),
 )
 // Data Models

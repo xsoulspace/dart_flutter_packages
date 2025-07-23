@@ -1,4 +1,4 @@
-group = "com.xsoulspace.rustore_billing_api"
+group = "dev.xsoulspace.rustore_billing_api"
 version = "1.0-SNAPSHOT"
 
 buildscript {
@@ -44,6 +44,7 @@ plugins {
 }
 
 android {
+    namespace = "dev.xsoulspace.rustore_billing_api"
     compileSdk = 36
 
     compileOptions {

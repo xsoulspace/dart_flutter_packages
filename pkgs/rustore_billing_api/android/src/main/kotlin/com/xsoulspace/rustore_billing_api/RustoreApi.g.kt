@@ -2,7 +2,7 @@
 // See also: https://pub.dev/packages/pigeon
 @file:Suppress("UNCHECKED_CAST", "ArrayInDataClass")
 
-package com.xsoulspace.rustore_billing_api
+package dev.xsoulspace.rustore_billing_api
 
 import android.util.Log
 import io.flutter.plugin.common.BasicMessageChannel
