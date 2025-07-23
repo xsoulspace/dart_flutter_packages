@@ -1,6 +1,6 @@
 name: xsoulspace_monetization_rustore
 description: A new Flutter package.
-version: 0.7.0
+version: 0.8.0
 publish_to: "none"
 
 environment:
@@ -10,15 +10,15 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  from_json_to_json: ^0.2.1
   # flutter_rustore_billing: ^9.1.0
   rustore_billing_api:
     path: ../rustore_billing_api
+  universal_io: ^2.2.2
+  url_launcher: ^6.3.2
+  xsoulspace_foundation: ^0.2.0
   xsoulspace_monetization_interface:
     path: ../xsoulspace_monetization_interface
-  xsoulspace_foundation: ^0.2.0
-  universal_io: ^2.2.2
-  from_json_to_json: ^0.2.1
-  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:

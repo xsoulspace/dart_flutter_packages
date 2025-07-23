@@ -160,6 +160,7 @@ class RustorePurchaseProvider implements PurchaseProvider {
           purchaseDate:
               dateTimeFromIso8601String(p.purchaseTime) ?? DateTime.now(),
           purchaseType: productType,
+
           // expiryDate: p.finishTime != null
           //     ? dateTimeFromIso8601String(p.finishTime)
           //     : null,
