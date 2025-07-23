@@ -14,7 +14,7 @@ class NoopPurchaseProvider implements PurchaseProvider {
       _purchaseStreamController.stream;
 
   @override
-  Future<bool> init() async => true;
+  Future<MonetizationStatus> init() async => MonetizationStatus.notAvailable;
 
   @override
   Future<CompletePurchaseResultModel> completePurchase(

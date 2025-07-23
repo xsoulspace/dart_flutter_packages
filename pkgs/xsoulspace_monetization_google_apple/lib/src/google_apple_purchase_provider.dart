@@ -17,7 +17,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
 
   /// Initializes the purchase provider.
   @override
-  Future<bool> init() async {
+  Future<MonetizationStatus> init() async {
     _purchaseSubscription = _inAppPurchase.purchaseStream.listen(
       (purchaseDetailsList) {
         final purchases = purchaseDetailsList
@@ -28,7 +28,15 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
       onDone: () => _purchaseStreamController.close(),
       onError: (error) => _purchaseStreamController.addError(error),
     );
-    return true;
+    final isAvailable = await isStoreInstalled();
+    if (!isAvailable) {
+      return MonetizationStatus.notAvailable;
+    }
+    final isAuthorized = await isUserAuthorized();
+    if (!isAuthorized) {
+      return MonetizationStatus.storeNotAuthorized;
+    }
+    return MonetizationStatus.loaded;
   }
 
   @override

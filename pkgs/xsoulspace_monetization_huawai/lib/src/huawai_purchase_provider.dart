@@ -20,7 +20,7 @@ class HuawaiPurchaseProvider implements PurchaseProvider {
       StreamController<List<PurchaseDetailsModel>>.broadcast();
 
   @override
-  Future<bool> init() async {
+  Future<MonetizationStatus> init() async {
     try {
       if (enableLogger) {
         await IapClient.enableLogger();
@@ -33,9 +33,9 @@ class HuawaiPurchaseProvider implements PurchaseProvider {
       }
     } catch (e) {
       debugPrint('HuawaiPurchaseProvider.init: $e');
-      return false;
+      return MonetizationStatus.notAvailable;
     }
-    return true;
+    return MonetizationStatus.loaded;
   }
 
   @override

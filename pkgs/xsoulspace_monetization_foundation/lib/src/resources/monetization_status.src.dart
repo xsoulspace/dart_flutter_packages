@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:xsoulspace_foundation/xsoulspace_foundation.dart';
-
-import '../models/models.dart';
+import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
 /// {@template monetization_status_resource}
 /// Resource that manages the overall status of the monetization system.

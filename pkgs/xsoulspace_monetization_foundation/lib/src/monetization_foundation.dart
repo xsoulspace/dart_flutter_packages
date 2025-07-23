@@ -4,7 +4,6 @@ import 'package:flutter/widgets.dart';
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
 import 'commands/commands.dart';
-import 'models/models.dart';
 import 'resources/resources.dart';
 
 /// {@template monetization_foundation}
@@ -80,17 +79,9 @@ class MonetizationFoundation {
       return;
     }
 
-    final isInitialized = await purchaseProvider.init();
+    final status = await purchaseProvider.init();
 
-    srcs.status.setStatus(
-      isInitialized
-          ? MonetizationStatus.loaded
-          : MonetizationStatus.notAvailable,
-    );
-    if (!isInitialized) {
-      _initCompleter.complete(false);
-      return;
-    }
+    srcs.status.setStatus(status);
 
     await LoadSubscriptionsCommand(
       purchaseProvider: purchaseProvider,

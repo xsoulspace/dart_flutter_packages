@@ -38,8 +38,8 @@ class RustorePurchaseProvider implements PurchaseProvider {
   final RustoreBillingClient _client = RustoreBillingClient.instance;
 
   @override
-  Future<bool> init() async {
-    if (!Platform.isAndroid) return false;
+  Future<MonetizationStatus> init() async {
+    if (!Platform.isAndroid) return MonetizationStatus.notAvailable;
     try {
       await _client.initialize(
         RustoreBillingConfig(
@@ -68,12 +68,16 @@ class RustorePurchaseProvider implements PurchaseProvider {
 
       final isAvailable = await isStoreInstalled();
       if (!isAvailable) {
-        return false;
+        return MonetizationStatus.notAvailable;
       }
-      return true;
+      final isAuthorized = await isUserAuthorized();
+      if (!isAuthorized) {
+        return MonetizationStatus.storeNotAuthorized;
+      }
+      return MonetizationStatus.loaded;
     } catch (e) {
       debugPrint('RustorePurchaseProvider.init: $e');
-      return false;
+      return MonetizationStatus.notAvailable;
     }
   }
 
