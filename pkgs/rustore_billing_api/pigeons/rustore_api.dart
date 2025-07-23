@@ -107,6 +107,7 @@ class RustoreProduct {
     this.priceLabel,
     this.currency,
     this.language,
+    this.subscription,
   });
 
   final String productId;
@@ -117,9 +118,12 @@ class RustoreProduct {
   final String? priceLabel;
   final String? currency;
   final String? language;
+  final RustoreSubscription? subscription;
 }
 
 enum RustoreProductType { nonConsumable, consumable, subscription }
+
+class RustoreSubscription {}
 
 // Purchase model
 class RustorePurchase {

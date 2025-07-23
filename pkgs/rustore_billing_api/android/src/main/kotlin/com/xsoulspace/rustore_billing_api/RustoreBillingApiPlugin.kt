@@ -189,11 +189,18 @@ class RustoreBillingApiPlugin: FlutterPlugin, ActivityAware, RustoreBillingApi {
                 val products = withContext(Dispatchers.IO) {
                     client.products.getProducts(productIds).await()
                 }
+
+
                 
-                val rustoreProducts = products.map { product ->
-                    RustoreProduct(
+                val rustoreProducts = products.map(fun(product: Product): RustoreProduct {
+                    val kSubscription  = product.subscription
+
+                    val subscription =  RustoreProductSubscription(
+                        freeTrial: kSubscription.
+                    );
+                    return RustoreProduct(
                         productId = product.productId,
-                        productType = when(product.productType) {
+                        productType = when (product.productType) {
                             ProductType.NON_CONSUMABLE -> RustoreProductType.NON_CONSUMABLE
                             ProductType.CONSUMABLE -> RustoreProductType.CONSUMABLE
                             ProductType.SUBSCRIPTION -> RustoreProductType.SUBSCRIPTION
@@ -202,11 +209,13 @@ class RustoreBillingApiPlugin: FlutterPlugin, ActivityAware, RustoreBillingApi {
                         title = product.title,
                         description = product.description,
                         price = product.price?.toLong(),
+                        subscription =,
+
                         priceLabel = product.priceLabel,
                         currency = product.currency,
                         language = product.language
                     )
-                }
+                })
                 
                 callback(Result.success(rustoreProducts))
             } catch (e: Exception) {

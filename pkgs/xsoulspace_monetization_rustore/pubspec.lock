@@ -86,14 +86,6 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
-  flutter_rustore_billing:
-    dependency: "direct main"
-    description:
-      name: flutter_rustore_billing
-      sha256: "31cfaae4ba9c83a4c23893e0bc14cf73df6cea9560eecae54416e5e846e38811"
-      url: "https://pub.dev"
-    source: hosted
-    version: "9.1.0"
   flutter_test:
     dependency: "direct dev"
     description: flutter
@@ -240,6 +232,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.8"
+  rustore_billing_api:
+    dependency: "direct main"
+    description:
+      path: "../rustore_billing_api"
+      relative: true
+    source: path
+    version: "0.1.0"
   shared_preferences:
     dependency: transitive
     description:
@@ -499,7 +498,7 @@ packages:
       path: "../xsoulspace_monetization_interface"
       relative: true
     source: path
-    version: "0.3.0"
+    version: "0.6.0"
 sdks:
   dart: ">=3.8.1 <4.0.0"
   flutter: ">=3.27.0"

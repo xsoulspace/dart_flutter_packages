@@ -10,7 +10,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_rustore_billing: ^9.1.0
+  # flutter_rustore_billing: ^9.1.0
+  rustore_billing_api:
+    path: ../rustore_billing_api
   xsoulspace_monetization_interface:
     path: ../xsoulspace_monetization_interface
   xsoulspace_foundation: ^0.2.0

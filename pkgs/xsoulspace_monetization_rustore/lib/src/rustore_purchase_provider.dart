@@ -3,9 +3,10 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter_rustore_billing/flutter_rustore_billing.dart';
-import 'package:flutter_rustore_billing/pigeons/rustore.dart';
 import 'package:from_json_to_json/from_json_to_json.dart';
+// import 'package:flutter_rustore_billing/flutter_rustore_billing.dart';
+// import 'package:flutter_rustore_billing/pigeons/rustore.dart';
+import 'package:rustore_billing_api/rustore_billing_api.dart';
 import 'package:universal_io/io.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
@@ -34,15 +35,18 @@ class RustorePurchaseProvider implements PurchaseProvider {
 
   final _purchaseStreamController =
       StreamController<List<PurchaseDetailsModel>>.broadcast();
+  final RustoreBillingClient _client = RustoreBillingClient.instance;
 
   @override
   Future<bool> init() async {
     if (!Platform.isAndroid) return false;
     try {
-      await RustoreBillingClient.initialize(
-        consoleApplicationId,
-        deeplinkScheme,
-        enableLogger,
+      await _client.initialize(
+        RustoreBillingConfig(
+          consoleApplicationId: consoleApplicationId,
+          deeplinkScheme: deeplinkScheme,
+          debugLogs: enableLogger,
+        ),
       );
       return await _isAvailable();
     } catch (e) {
@@ -60,10 +64,10 @@ class RustorePurchaseProvider implements PurchaseProvider {
 
   Future<bool> _isAvailable() async {
     // always returns false
-    final isAuthorized = await RustoreBillingClient.getAuthorizationStatus();
-    final isInstalled = await RustoreBillingClient.isRustoreInstalled();
+    // final isAuthorized = await RustoreBillingClient.getAuthorizationStatus();
+    // final isInstalled = await RustoreBillingClient.isRustoreInstalled();
 
-    return isInstalled;
+    return _client.isRuStoreInstalled();
   }
 
   @override
@@ -77,16 +81,8 @@ class RustorePurchaseProvider implements PurchaseProvider {
       if (purchase.productType != PurchaseProductType.consumable) {
         return CompletePurchaseResultModel.success();
       }
-      final result = await RustoreBillingClient.confirm(
-        purchase.purchaseId.value,
-      );
-      if (result.success) {
-        return CompletePurchaseResultModel.success();
-      } else {
-        return CompletePurchaseResultModel.failure(
-          'Failed to complete purchase: ${result.errorMessage}',
-        );
-      }
+      await _client.confirmPurchase(purchase.purchaseId.value);
+      return CompletePurchaseResultModel.success();
     } catch (e) {
       return CompletePurchaseResultModel.failure(e.toString());
     }
@@ -96,12 +92,10 @@ class RustorePurchaseProvider implements PurchaseProvider {
   Future<List<PurchaseProductDetailsModel>> getProductDetails(
     final List<PurchaseProductId> productIds,
   ) async {
-    final productsResponse = await RustoreBillingClient.products(
+    final products = await _client.getProducts(
       productIds.map((final p) => p.value).toList(),
     );
-    return productsResponse.products.nonNulls
-        .map(_mapToPurchaseProductDetails)
-        .toList();
+    return products.nonNulls.map(_mapToPurchaseProductDetails).toList();
   }
 
   @override
@@ -182,7 +176,7 @@ class RustorePurchaseProvider implements PurchaseProvider {
   }
 
   PurchaseProductDetailsModel _mapToPurchaseProductDetails(
-    final Product product,
+    final RustoreProduct product,
   ) {
     final productId = PurchaseProductId.fromJson(product.productId);
     final duration = _getDurationFromProductId(productId);
