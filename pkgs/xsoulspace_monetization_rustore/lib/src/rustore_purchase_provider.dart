@@ -66,14 +66,6 @@ class RustorePurchaseProvider implements PurchaseProvider {
         }
       });
 
-      final isAvailable = await isStoreInstalled();
-      if (!isAvailable) {
-        return MonetizationStatus.notAvailable;
-      }
-      final isAuthorized = await isUserAuthorized();
-      if (!isAuthorized) {
-        return MonetizationStatus.storeNotAuthorized;
-      }
       return MonetizationStatus.loaded;
     } catch (e) {
       debugPrint('RustorePurchaseProvider.init: $e');

@@ -73,13 +73,16 @@ class MonetizationFoundation {
   }) async {
     if (_initCompleter.isCompleted) return;
     srcs.status.setStatus(MonetizationStatus.loading);
-    final isAvailable = await purchaseProvider.isUserAuthorized();
-    if (!isAvailable) {
-      srcs.status.setStatus(MonetizationStatus.notAvailable);
-      return;
-    }
 
-    final status = await purchaseProvider.init();
+    var status = await purchaseProvider.init();
+
+    final isAvailable = await purchaseProvider.isStoreInstalled();
+    final isAuthorized = await purchaseProvider.isUserAuthorized();
+    if (!isAvailable) {
+      status = MonetizationStatus.notAvailable;
+    } else if (!isAuthorized) {
+      status = MonetizationStatus.storeNotAuthorized;
+    }
 
     srcs.status.setStatus(status);
 

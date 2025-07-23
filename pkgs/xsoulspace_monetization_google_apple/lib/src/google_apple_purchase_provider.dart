@@ -28,14 +28,6 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
       onDone: () => _purchaseStreamController.close(),
       onError: (error) => _purchaseStreamController.addError(error),
     );
-    final isAvailable = await isStoreInstalled();
-    if (!isAvailable) {
-      return MonetizationStatus.notAvailable;
-    }
-    final isAuthorized = await isUserAuthorized();
-    if (!isAuthorized) {
-      return MonetizationStatus.storeNotAuthorized;
-    }
     return MonetizationStatus.loaded;
   }
 
