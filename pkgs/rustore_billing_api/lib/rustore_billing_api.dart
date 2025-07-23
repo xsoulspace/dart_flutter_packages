@@ -34,11 +34,16 @@ library;
 export 'src/rustore_api.g.dart'
     show
         RustoreBillingConfig,
+        RustoreBillingTheme,
         RustoreError,
+        RustoreException,
+        RustoreExceptionType,
         RustorePaymentResult,
         RustorePaymentResultType,
         RustoreProduct,
         RustorePurchase,
+        RustorePurchaseAvailabilityResult,
+        RustorePurchaseAvailabilityType,
         RustorePurchaseState;
 // Export Android registration
 export 'src/rustore_billing_api_android.dart';

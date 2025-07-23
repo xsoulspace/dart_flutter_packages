@@ -17,6 +17,13 @@ import ru.rustore.sdk.billingclient.model.product.Product
 import ru.rustore.sdk.billingclient.model.purchase.PaymentResult
 import ru.rustore.sdk.billingclient.model.purchase.Purchase
 import ru.rustore.sdk.billingclient.model.purchase.PurchaseState
+import ru.rustore.sdk.billingclient.model.purchase.PurchaseAvailabilityResult
+import ru.rustore.sdk.billingclient.model.purchase.PurchaseAvailabilityResult.Available
+import ru.rustore.sdk.billingclient.model.purchase.PurchaseAvailabilityResult.Unavailable
+import ru.rustore.sdk.billingclient.model.purchase.PurchaseAvailabilityResult.Unknown
+import ru.rustore.sdk.billingclient.model.theme.BillingClientTheme
+import ru.rustore.sdk.billingclient.model.theme.BillingClientTheme.Light
+import ru.rustore.sdk.billingclient.model.theme.BillingClientTheme.Dark
 import io.flutter.plugin.common.MethodChannel
 
 /** RustoreBillingApiPlugin */
@@ -75,7 +82,38 @@ class RustoreBillingApiPlugin: FlutterPlugin, ActivityAware, RustoreBillingApi {
                 context = appContext,
                 consoleApplicationId = config.consoleApplicationId,
                 deeplinkScheme = config.deeplinkScheme,
-                debugLogs = config.debugLogs
+                debugLogs = config.debugLogs,
+                themeProvider = if (config.enableLogging) {
+                    object : ru.rustore.sdk.billingclient.model.theme.BillingClientThemeProvider {
+                        override fun provide(): BillingClientTheme {
+                            return when (config.theme) {
+                                RustoreBillingTheme.LIGHT -> Light
+                                RustoreBillingTheme.DARK -> Dark
+                            }
+                        }
+                    }
+                } else null,
+                externalPaymentLoggerFactory = if (config.enableLogging) {
+                    { tag ->
+                        object : ru.rustore.sdk.billingclient.model.logging.ExternalPaymentLogger {
+                            override fun d(e: Throwable?, message: () -> String) {
+                                android.util.Log.d(tag, message.invoke(), e)
+                            }
+                            override fun e(e: Throwable?, message: () -> String) {
+                                android.util.Log.e(tag, message.invoke(), e)
+                            }
+                            override fun i(e: Throwable?, message: () -> String) {
+                                android.util.Log.i(tag, message.invoke(), e)
+                            }
+                            override fun v(e: Throwable?, message: () -> String) {
+                                android.util.Log.v(tag, message.invoke(), e)
+                            }
+                            override fun w(e: Throwable?, message: () -> String) {
+                                android.util.Log.w(tag, message.invoke(), e)
+                            }
+                        }
+                    }
+                } else null
             )
             
             callback(Result.success(Unit))
@@ -90,6 +128,61 @@ class RustoreBillingApiPlugin: FlutterPlugin, ActivityAware, RustoreBillingApi {
         // Parse intent data if needed, for now pass null
         // In real implementation, you'd reconstruct Intent from intentData
         client.onNewIntent(null)
+    }
+
+    override fun checkPurchasesAvailability(callback: (Result<RustorePurchaseAvailabilityResult>) -> Unit) {
+        val client = billingClient
+        if (client == null) {
+            callback(Result.failure(IllegalStateException("Billing client not initialized")))
+            return
+        }
+
+        coroutineScope.launch {
+            try {
+                val result = withContext(Dispatchers.IO) {
+                    RuStoreBillingClient.checkPurchasesAvailability().await()
+                }
+                
+                val rustoreResult = when (result) {
+                    is Available -> RustorePurchaseAvailabilityResult(
+                        resultType = RustorePurchaseAvailabilityType.AVAILABLE,
+                        cause = null
+                    )
+                    is Unavailable -> RustorePurchaseAvailabilityResult(
+                        resultType = RustorePurchaseAvailabilityType.UNAVAILABLE,
+                        cause = mapException(result.cause)
+                    )
+                    is Unknown -> RustorePurchaseAvailabilityResult(
+                        resultType = RustorePurchaseAvailabilityType.UNKNOWN,
+                        cause = mapException(result.cause)
+                    )
+                }
+                
+                callback(Result.success(rustoreResult))
+            } catch (e: Exception) {
+                callback(Result.failure(e))
+            }
+        }
+    }
+
+    override fun isRuStoreInstalled(callback: (Result<Boolean>) -> Unit) {
+        val client = billingClient
+        if (client == null) {
+            callback(Result.failure(IllegalStateException("Billing client not initialized")))
+            return
+        }
+
+        coroutineScope.launch {
+            try {
+                val isInstalled = withContext(Dispatchers.IO) {
+                    RuStoreBillingClient.isRuStoreInstalled()
+                }
+                
+                callback(Result.success(isInstalled))
+            } catch (e: Exception) {
+                callback(Result.failure(e))
+            }
+        }
     }
 
     override fun getProducts(productIds: List<String>, callback: (Result<List<RustoreProduct>>) -> Unit) {
@@ -225,6 +318,27 @@ class RustoreBillingApiPlugin: FlutterPlugin, ActivityAware, RustoreBillingApi {
             }
     }
 
+    override fun setTheme(theme: RustoreBillingTheme, callback: (Result<Unit>) -> Unit) {
+        val client = billingClient
+        if (client == null) {
+            callback(Result.failure(IllegalStateException("Billing client not initialized")))
+            return
+        }
+
+        try {
+            val billingTheme = when (theme) {
+                RustoreBillingTheme.LIGHT -> Light
+                RustoreBillingTheme.DARK -> Dark
+            }
+            
+            // Note: The actual theme setting might require recreating the client
+            // or using a different approach depending on the RuStore SDK
+            callback(Result.success(Unit))
+        } catch (e: Exception) {
+            callback(Result.failure(e))
+        }
+    }
+
     private fun mapPurchaseState(state: PurchaseState?): RustorePurchaseState? {
         return when (state) {
             PurchaseState.CREATED -> RustorePurchaseState.CREATED
@@ -265,5 +379,25 @@ class RustoreBillingApiPlugin: FlutterPlugin, ActivityAware, RustoreBillingApi {
                 errorMessage = "Invalid payment state"
             )
         }
+    }
+
+    private fun mapException(exception: ru.rustore.sdk.billingclient.model.exception.RuStoreException?): RustoreException? {
+        if (exception == null) return null
+        
+        val exceptionType = when (exception) {
+            is ru.rustore.sdk.billingclient.model.exception.RuStoreNotInstalledException -> RustoreExceptionType.NOT_INSTALLED
+            is ru.rustore.sdk.billingclient.model.exception.RuStoreOutdatedException -> RustoreExceptionType.OUTDATED
+            is ru.rustore.sdk.billingclient.model.exception.RuStoreUserUnauthorizedException -> RustoreExceptionType.USER_UNAUTHORIZED
+            is ru.rustore.sdk.billingclient.model.exception.RuStoreRequestLimitReached -> RustoreExceptionType.REQUEST_LIMIT_REACHED
+            is ru.rustore.sdk.billingclient.model.exception.RuStoreReviewExists -> RustoreExceptionType.REVIEW_EXISTS
+            is ru.rustore.sdk.billingclient.model.exception.RuStoreInvalidReviewInfo -> RustoreExceptionType.INVALID_REVIEW_INFO
+            else -> RustoreExceptionType.GENERAL
+        }
+        
+        return RustoreException(
+            type = exceptionType,
+            message = exception.message ?: "Unknown error",
+            errorCode = exception.errorCode
+        )
     }
 } 

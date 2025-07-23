@@ -18,6 +18,14 @@ abstract class RustoreBillingApi {
   /// Handle deep link intent (for payment flows)
   void onNewIntent(final String? intentData);
 
+  /// Check if purchases are available on this device
+  @async
+  RustorePurchaseAvailabilityResult checkPurchasesAvailability();
+
+  /// Check if RuStore is installed on the device
+  @async
+  bool isRuStoreInstalled();
+
   /// Get available products by IDs
   @async
   List<RustoreProduct> getProducts(final List<String> productIds);
@@ -40,6 +48,10 @@ abstract class RustoreBillingApi {
   /// Delete a purchase
   @async
   void deletePurchase(final String purchaseId);
+
+  /// Set the billing client theme
+  @async
+  void setTheme(final RustoreBillingTheme theme);
 }
 
 @FlutterApi()
@@ -57,12 +69,32 @@ class RustoreBillingConfig {
     required this.consoleApplicationId,
     required this.deeplinkScheme,
     this.debugLogs = false,
+    this.theme = RustoreBillingTheme.light,
+    this.enableLogging = false,
   });
 
   final String consoleApplicationId;
   final String deeplinkScheme;
   final bool debugLogs;
+  final RustoreBillingTheme theme;
+  final bool enableLogging;
 }
+
+// Billing theme enum
+enum RustoreBillingTheme { light, dark }
+
+// Purchase availability result
+class RustorePurchaseAvailabilityResult {
+  const RustorePurchaseAvailabilityResult({
+    required this.resultType,
+    this.cause,
+  });
+
+  final RustorePurchaseAvailabilityType resultType;
+  final RustoreException? cause;
+}
+
+enum RustorePurchaseAvailabilityType { available, unavailable, unknown }
 
 // Product model
 class RustoreProduct {
@@ -164,4 +196,27 @@ class RustoreError {
   final String code;
   final String message;
   final String? description;
+}
+
+// RuStore exception types
+class RustoreException {
+  const RustoreException({
+    required this.type,
+    required this.message,
+    this.errorCode,
+  });
+
+  final RustoreExceptionType type;
+  final String message;
+  final String? errorCode;
+}
+
+enum RustoreExceptionType {
+  notInstalled,
+  outdated,
+  userUnauthorized,
+  requestLimitReached,
+  reviewExists,
+  invalidReviewInfo,
+  general,
 }

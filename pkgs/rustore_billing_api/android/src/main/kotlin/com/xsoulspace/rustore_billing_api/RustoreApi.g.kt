@@ -81,6 +81,29 @@ class FlutterError (
   val details: Any? = null
 ) : Throwable()
 
+enum class RustoreBillingTheme(val raw: Int) {
+  LIGHT(0),
+  DARK(1);
+
+  companion object {
+    fun ofRaw(raw: Int): RustoreBillingTheme? {
+      return values().firstOrNull { it.raw == raw }
+    }
+  }
+}
+
+enum class RustorePurchaseAvailabilityType(val raw: Int) {
+  AVAILABLE(0),
+  UNAVAILABLE(1),
+  UNKNOWN(2);
+
+  companion object {
+    fun ofRaw(raw: Int): RustorePurchaseAvailabilityType? {
+      return values().firstOrNull { it.raw == raw }
+    }
+  }
+}
+
 enum class RustorePurchaseState(val raw: Int) {
   CREATED(0),
   INVOICE_CREATED(1),
@@ -110,11 +133,29 @@ enum class RustorePaymentResultType(val raw: Int) {
   }
 }
 
+enum class RustoreExceptionType(val raw: Int) {
+  NOT_INSTALLED(0),
+  OUTDATED(1),
+  USER_UNAUTHORIZED(2),
+  REQUEST_LIMIT_REACHED(3),
+  REVIEW_EXISTS(4),
+  INVALID_REVIEW_INFO(5),
+  GENERAL(6);
+
+  companion object {
+    fun ofRaw(raw: Int): RustoreExceptionType? {
+      return values().firstOrNull { it.raw == raw }
+    }
+  }
+}
+
 /** Generated class from Pigeon that represents data sent in messages. */
 data class RustoreBillingConfig (
   val consoleApplicationId: String,
   val deeplinkScheme: String,
-  val debugLogs: Boolean
+  val debugLogs: Boolean,
+  val theme: RustoreBillingTheme,
+  val enableLogging: Boolean
 )
  {
   companion object {
@@ -122,7 +163,9 @@ data class RustoreBillingConfig (
       val consoleApplicationId = pigeonVar_list[0] as String
       val deeplinkScheme = pigeonVar_list[1] as String
       val debugLogs = pigeonVar_list[2] as Boolean
-      return RustoreBillingConfig(consoleApplicationId, deeplinkScheme, debugLogs)
+      val theme = pigeonVar_list[3] as RustoreBillingTheme
+      val enableLogging = pigeonVar_list[4] as Boolean
+      return RustoreBillingConfig(consoleApplicationId, deeplinkScheme, debugLogs, theme, enableLogging)
     }
   }
   fun toList(): List<Any?> {
@@ -130,10 +173,43 @@ data class RustoreBillingConfig (
       consoleApplicationId,
       deeplinkScheme,
       debugLogs,
+      theme,
+      enableLogging,
     )
   }
   override fun equals(other: Any?): Boolean {
     if (other !is RustoreBillingConfig) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    return RustoreApiPigeonUtils.deepEquals(toList(), other.toList())  }
+
+  override fun hashCode(): Int = toList().hashCode()
+}
+
+/** Generated class from Pigeon that represents data sent in messages. */
+data class RustorePurchaseAvailabilityResult (
+  val resultType: RustorePurchaseAvailabilityType,
+  val cause: RustoreException? = null
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): RustorePurchaseAvailabilityResult {
+      val resultType = pigeonVar_list[0] as RustorePurchaseAvailabilityType
+      val cause = pigeonVar_list[1] as RustoreException?
+      return RustorePurchaseAvailabilityResult(resultType, cause)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      resultType,
+      cause,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other !is RustorePurchaseAvailabilityResult) {
       return false
     }
     if (this === other) {
@@ -327,42 +403,101 @@ data class RustoreError (
 
   override fun hashCode(): Int = toList().hashCode()
 }
+
+/** Generated class from Pigeon that represents data sent in messages. */
+data class RustoreException (
+  val type: RustoreExceptionType,
+  val message: String,
+  val errorCode: String? = null
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): RustoreException {
+      val type = pigeonVar_list[0] as RustoreExceptionType
+      val message = pigeonVar_list[1] as String
+      val errorCode = pigeonVar_list[2] as String?
+      return RustoreException(type, message, errorCode)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      type,
+      message,
+      errorCode,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other !is RustoreException) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    return RustoreApiPigeonUtils.deepEquals(toList(), other.toList())  }
+
+  override fun hashCode(): Int = toList().hashCode()
+}
 private open class RustoreApiPigeonCodec : StandardMessageCodec() {
   override fun readValueOfType(type: Byte, buffer: ByteBuffer): Any? {
     return when (type) {
       129.toByte() -> {
         return (readValue(buffer) as Long?)?.let {
-          RustorePurchaseState.ofRaw(it.toInt())
+          RustoreBillingTheme.ofRaw(it.toInt())
         }
       }
       130.toByte() -> {
         return (readValue(buffer) as Long?)?.let {
-          RustorePaymentResultType.ofRaw(it.toInt())
+          RustorePurchaseAvailabilityType.ofRaw(it.toInt())
         }
       }
       131.toByte() -> {
-        return (readValue(buffer) as? List<Any?>)?.let {
-          RustoreBillingConfig.fromList(it)
+        return (readValue(buffer) as Long?)?.let {
+          RustorePurchaseState.ofRaw(it.toInt())
         }
       }
       132.toByte() -> {
-        return (readValue(buffer) as? List<Any?>)?.let {
-          RustoreProduct.fromList(it)
+        return (readValue(buffer) as Long?)?.let {
+          RustorePaymentResultType.ofRaw(it.toInt())
         }
       }
       133.toByte() -> {
-        return (readValue(buffer) as? List<Any?>)?.let {
-          RustorePurchase.fromList(it)
+        return (readValue(buffer) as Long?)?.let {
+          RustoreExceptionType.ofRaw(it.toInt())
         }
       }
       134.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          RustorePaymentResult.fromList(it)
+          RustoreBillingConfig.fromList(it)
         }
       }
       135.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
+          RustorePurchaseAvailabilityResult.fromList(it)
+        }
+      }
+      136.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
+          RustoreProduct.fromList(it)
+        }
+      }
+      137.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
+          RustorePurchase.fromList(it)
+        }
+      }
+      138.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
+          RustorePaymentResult.fromList(it)
+        }
+      }
+      139.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
           RustoreError.fromList(it)
+        }
+      }
+      140.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
+          RustoreException.fromList(it)
         }
       }
       else -> super.readValueOfType(type, buffer)
@@ -370,32 +505,52 @@ private open class RustoreApiPigeonCodec : StandardMessageCodec() {
   }
   override fun writeValue(stream: ByteArrayOutputStream, value: Any?)   {
     when (value) {
-      is RustorePurchaseState -> {
+      is RustoreBillingTheme -> {
         stream.write(129)
         writeValue(stream, value.raw)
       }
-      is RustorePaymentResultType -> {
+      is RustorePurchaseAvailabilityType -> {
         stream.write(130)
         writeValue(stream, value.raw)
       }
-      is RustoreBillingConfig -> {
+      is RustorePurchaseState -> {
         stream.write(131)
-        writeValue(stream, value.toList())
+        writeValue(stream, value.raw)
       }
-      is RustoreProduct -> {
+      is RustorePaymentResultType -> {
         stream.write(132)
-        writeValue(stream, value.toList())
+        writeValue(stream, value.raw)
       }
-      is RustorePurchase -> {
+      is RustoreExceptionType -> {
         stream.write(133)
-        writeValue(stream, value.toList())
+        writeValue(stream, value.raw)
       }
-      is RustorePaymentResult -> {
+      is RustoreBillingConfig -> {
         stream.write(134)
         writeValue(stream, value.toList())
       }
-      is RustoreError -> {
+      is RustorePurchaseAvailabilityResult -> {
         stream.write(135)
+        writeValue(stream, value.toList())
+      }
+      is RustoreProduct -> {
+        stream.write(136)
+        writeValue(stream, value.toList())
+      }
+      is RustorePurchase -> {
+        stream.write(137)
+        writeValue(stream, value.toList())
+      }
+      is RustorePaymentResult -> {
+        stream.write(138)
+        writeValue(stream, value.toList())
+      }
+      is RustoreError -> {
+        stream.write(139)
+        writeValue(stream, value.toList())
+      }
+      is RustoreException -> {
+        stream.write(140)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)
@@ -410,6 +565,10 @@ interface RustoreBillingApi {
   fun initialize(config: RustoreBillingConfig, callback: (Result<Unit>) -> Unit)
   /** Handle deep link intent (for payment flows) */
   fun onNewIntent(intentData: String?)
+  /** Check if purchases are available on this device */
+  fun checkPurchasesAvailability(callback: (Result<RustorePurchaseAvailabilityResult>) -> Unit)
+  /** Check if RuStore is installed on the device */
+  fun isRuStoreInstalled(callback: (Result<Boolean>) -> Unit)
   /** Get available products by IDs */
   fun getProducts(productIds: List<String>, callback: (Result<List<RustoreProduct>>) -> Unit)
   /** Get existing purchases */
@@ -420,6 +579,8 @@ interface RustoreBillingApi {
   fun confirmPurchase(purchaseId: String, developerPayload: String?, callback: (Result<Unit>) -> Unit)
   /** Delete a purchase */
   fun deletePurchase(purchaseId: String, callback: (Result<Unit>) -> Unit)
+  /** Set the billing client theme */
+  fun setTheme(theme: RustoreBillingTheme, callback: (Result<Unit>) -> Unit)
 
   companion object {
     /** The codec used by RustoreBillingApi. */
@@ -462,6 +623,42 @@ interface RustoreBillingApi {
               RustoreApiPigeonUtils.wrapError(exception)
             }
             reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.rustore_billing_api.RustoreBillingApi.checkPurchasesAvailability$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            api.checkPurchasesAvailability{ result: Result<RustorePurchaseAvailabilityResult> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(RustoreApiPigeonUtils.wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(RustoreApiPigeonUtils.wrapResult(data))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.rustore_billing_api.RustoreBillingApi.isRuStoreInstalled$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            api.isRuStoreInstalled{ result: Result<Boolean> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(RustoreApiPigeonUtils.wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(RustoreApiPigeonUtils.wrapResult(data))
+              }
+            }
           }
         } else {
           channel.setMessageHandler(null)
@@ -553,6 +750,25 @@ interface RustoreBillingApi {
             val args = message as List<Any?>
             val purchaseIdArg = args[0] as String
             api.deletePurchase(purchaseIdArg) { result: Result<Unit> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(RustoreApiPigeonUtils.wrapError(error))
+              } else {
+                reply.reply(RustoreApiPigeonUtils.wrapResult(null))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.rustore_billing_api.RustoreBillingApi.setTheme$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val themeArg = args[0] as RustoreBillingTheme
+            api.setTheme(themeArg) { result: Result<Unit> ->
               val error = result.exceptionOrNull()
               if (error != null) {
                 reply.reply(RustoreApiPigeonUtils.wrapError(error))

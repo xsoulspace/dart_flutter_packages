@@ -3,426 +3,339 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:rustore_billing_api/rustore_billing_api.dart';
 
-void main() {
-  runApp(const RustoreBillingExampleApp());
-}
-
-class RustoreBillingExampleApp extends StatelessWidget {
-  const RustoreBillingExampleApp({super.key});
-
-  @override
-  Widget build(BuildContext context) => MaterialApp(
-    title: 'RuStore Billing Example',
-    theme: ThemeData(
-      colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      useMaterial3: true,
-    ),
-    home: const BillingExamplePage(),
-  );
-}
-
-class BillingExamplePage extends StatefulWidget {
-  const BillingExamplePage({super.key});
+/// {@template rustore_billing_example}
+/// Example demonstrating RuStore billing API usage
+/// {@endtemplate}
+class RustoreBillingExample extends StatefulWidget {
+  /// {@macro rustore_billing_example}
+  const RustoreBillingExample({super.key});
 
   @override
-  State<BillingExamplePage> createState() => _BillingExamplePageState();
+  State<RustoreBillingExample> createState() => _RustoreBillingExampleState();
 }
 
-class _BillingExamplePageState extends State<BillingExamplePage> {
-  final RustoreBillingClient _billingClient = RustoreBillingClient.instance;
-
-  bool _initialized = false;
-  bool _loading = false;
-  String _status = 'Not initialized';
-
+class _RustoreBillingExampleState extends State<RustoreBillingExample> {
+  final _client = RustoreBillingClient.instance;
+  var _isInitialized = false;
+  var _isRuStoreInstalled = false;
+  var _purchasesAvailable = false;
   List<RustoreProduct> _products = [];
   List<RustorePurchase> _purchases = [];
-
-  StreamSubscription<RustorePaymentResult>? _purchaseSubscription;
-  StreamSubscription<RustoreError>? _errorSubscription;
-
-  // Example product IDs - replace with your actual product IDs
-  final List<String> _productIds = ['productId1', 'productId2', 'productId3'];
+  var _status = 'Not initialized';
 
   @override
   void initState() {
     super.initState();
-    _setupListeners();
+    unawaited(_setupBilling());
   }
 
   @override
   void dispose() {
-    _purchaseSubscription?.cancel();
-    _errorSubscription?.cancel();
+    unawaited(_client.dispose());
     super.dispose();
   }
 
-  void _setupListeners() {
-    _purchaseSubscription = _billingClient.purchaseResults.listen((result) {
-      setState(() {
-        _status = 'Purchase result: ${result.resultType}';
-      });
-
-      if (result.resultType == RustorePaymentResultType.success) {
-        _confirmPurchase(result.purchaseId!);
-      }
-    });
-
-    _errorSubscription = _billingClient.errors.listen((error) {
-      setState(() {
-        _status = 'Error: ${error.message}';
-      });
-      _showErrorDialog(error);
-    });
-  }
-
-  Future<void> _initializeBilling() async {
-    setState(() {
-      _loading = true;
-      _status = 'Initializing...';
-    });
-
+  /// Initialize the billing client
+  Future<void> _setupBilling() async {
     try {
-      await _billingClient.initialize(
+      setState(() => _status = 'Initializing...');
+
+      // Initialize with configuration
+      await _client.initialize(
         RustoreBillingConfig(
-          consoleApplicationId: '123456789', // Replace with your app ID
-          deeplinkScheme: 'rustoresdkexamplescheme', // Replace with your scheme
+          consoleApplicationId: 'your_app_id_here',
+          deeplinkScheme: 'yourappscheme',
           debugLogs: true,
+          enableLogging: true,
         ),
       );
 
-      setState(() {
-        _initialized = true;
-        _status = 'Initialized successfully';
-      });
+      setState(() => _isInitialized = true);
+      setState(() => _status = 'Initialized successfully');
 
-      // Load products and purchases after initialization
-      await _loadProducts();
-      await _loadPurchases();
+      // Check RuStore installation
+      await _checkRuStoreInstallation();
+
+      // Check purchase availability
+      await _checkPurchaseAvailability();
+
+      // Listen to purchase results
+      _client.purchaseResults.listen(_handlePurchaseResult);
+      _client.errors.listen(_handleError);
     } catch (e) {
-      setState(() {
-        _status = 'Initialization failed: $e';
-      });
-    } finally {
-      setState(() {
-        _loading = false;
-      });
+      setState(() => _status = 'Initialization failed: $e');
     }
   }
 
-  Future<void> _loadProducts() async {
-    if (!_initialized) return;
-
-    setState(() {
-      _loading = true;
-      _status = 'Loading products...';
-    });
-
+  /// Check if RuStore is installed
+  Future<void> _checkRuStoreInstallation() async {
     try {
-      final products = await _billingClient.getProducts(_productIds);
+      final isInstalled = await _client.isRuStoreInstalled();
+      setState(() => _isRuStoreInstalled = isInstalled);
+    } catch (e) {
+      setState(() => _status = 'Failed to check RuStore installation: $e');
+    }
+  }
+
+  /// Check if purchases are available
+  Future<void> _checkPurchaseAvailability() async {
+    try {
+      final result = await _client.checkPurchasesAvailability();
+      setState(() {
+        _purchasesAvailable =
+            result.resultType == RustorePurchaseAvailabilityType.available;
+        if (result.resultType == RustorePurchaseAvailabilityType.unavailable) {
+          _status = 'Purchases unavailable: ${result.cause?.message}';
+        }
+      });
+    } catch (e) {
+      setState(() => _status = 'Failed to check purchase availability: $e');
+    }
+  }
+
+  /// Load products
+  Future<void> _loadProducts() async {
+    try {
+      setState(() => _status = 'Loading products...');
+
+      final products = await _client.getProducts([
+        'product_id_1',
+        'product_id_2',
+        'subscription_id_1',
+      ]);
+
       setState(() {
         _products = products;
         _status = 'Loaded ${products.length} products';
       });
     } catch (e) {
-      setState(() {
-        _status = 'Failed to load products: $e';
-      });
-    } finally {
-      setState(() {
-        _loading = false;
-      });
+      setState(() => _status = 'Failed to load products: $e');
     }
   }
 
+  /// Load purchases
   Future<void> _loadPurchases() async {
-    if (!_initialized) return;
-
-    setState(() {
-      _loading = true;
-      _status = 'Loading purchases...';
-    });
-
     try {
-      final purchases = await _billingClient.getPurchases();
+      setState(() => _status = 'Loading purchases...');
+
+      final purchases = await _client.getPurchases();
+
       setState(() {
         _purchases = purchases;
         _status = 'Loaded ${purchases.length} purchases';
       });
-
-      // Process unfinished purchases
-      await _processUnfinishedPurchases(purchases);
     } catch (e) {
-      setState(() {
-        _status = 'Failed to load purchases: $e';
-      });
-    } finally {
-      setState(() {
-        _loading = false;
-      });
+      setState(() => _status = 'Failed to load purchases: $e');
     }
   }
 
-  Future<void> _processUnfinishedPurchases(
-    List<RustorePurchase> purchases,
-  ) async {
-    for (final purchase in purchases) {
-      if (purchase.purchaseState == RustorePurchaseState.paid &&
-          purchase.purchaseId != null) {
-        // Auto-confirm paid purchases
-        await _confirmPurchase(purchase.purchaseId!);
-      }
-    }
-  }
-
-  Future<void> _purchaseProduct(RustoreProduct product) async {
-    setState(() {
-      _loading = true;
-      _status = 'Purchasing ${product.title ?? product.productId}...';
-    });
-
+  /// Purchase a product
+  Future<void> _purchaseProduct(final String productId) async {
     try {
-      final result = await _billingClient.purchaseProduct(
-        product.productId,
+      setState(() => _status = 'Starting purchase...');
+
+      final result = await _client.purchaseProduct(
+        productId,
         developerPayload:
-            'example_payload_${DateTime.now().millisecondsSinceEpoch}',
+            'custom_payload_${DateTime.now().millisecondsSinceEpoch}',
       );
 
-      setState(() {
-        _status = 'Purchase initiated: ${result.resultType}';
-      });
+      _handlePurchaseResult(result);
     } catch (e) {
-      setState(() {
-        _status = 'Purchase failed: $e';
-      });
-    } finally {
-      setState(() {
-        _loading = false;
-      });
+      setState(() => _status = 'Purchase failed: $e');
     }
   }
 
-  Future<void> _confirmPurchase(String purchaseId) async {
+  /// Handle purchase result
+  void _handlePurchaseResult(final RustorePaymentResult result) {
     setState(() {
-      _loading = true;
-      _status = 'Confirming purchase...';
+      switch (result.resultType) {
+        case RustorePaymentResultType.success:
+          _status = 'Purchase successful: ${result.purchaseId}';
+          // Confirm the purchase
+          if (result.purchaseId != null) {
+            unawaited(_confirmPurchase(result.purchaseId!));
+          }
+        case RustorePaymentResultType.cancelled:
+          _status = 'Purchase cancelled';
+        case RustorePaymentResultType.failure:
+          _status = 'Purchase failed: ${result.errorMessage}';
+        case RustorePaymentResultType.invalid_payment_state:
+          _status = 'Invalid payment state: ${result.errorMessage}';
+      }
     });
+  }
 
+  /// Confirm a purchase
+  Future<void> _confirmPurchase(final String purchaseId) async {
     try {
-      await _billingClient.confirmPurchase(purchaseId);
-      setState(() {
-        _status = 'Purchase confirmed successfully';
-      });
-
-      // Reload purchases to reflect changes
+      await _client.confirmPurchase(purchaseId);
+      setState(() => _status = 'Purchase confirmed: $purchaseId');
+      // Reload purchases after confirmation
       await _loadPurchases();
     } catch (e) {
-      setState(() {
-        _status = 'Failed to confirm purchase: $e';
-      });
-    } finally {
-      setState(() {
-        _loading = false;
-      });
+      setState(() => _status = 'Failed to confirm purchase: $e');
     }
   }
 
-  void _showErrorDialog(RustoreError error) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Billing Error'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Code: ${error.code}'),
-            const SizedBox(height: 8),
-            Text('Message: ${error.message}'),
-            if (error.description != null) ...[
-              const SizedBox(height: 8),
-              Text('Description: ${error.description}'),
-            ],
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
+  /// Handle errors
+  void _handleError(final RustoreError error) {
+    setState(() => _status = 'Error: ${error.message} (${error.code})');
+  }
+
+  RustoreBillingTheme _theme = RustoreBillingTheme.light;
+
+  /// Toggle theme
+  Future<void> _toggleTheme() async {
+    try {
+      _theme = _theme == RustoreBillingTheme.light
+          ? RustoreBillingTheme.dark
+          : RustoreBillingTheme.light;
+
+      await _client.setTheme(_theme);
+      setState(() => _status = 'Theme changed to ${_theme.name}');
+    } catch (e) {
+      setState(() => _status = 'Failed to change theme: $e');
+    }
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: const Text('RuStore Billing Example'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Status section
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Status',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(_status),
-                    if (_loading) ...[
-                      const SizedBox(height: 8),
-                      const LinearProgressIndicator(),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Action buttons
-            if (!_initialized) ...[
-              ElevatedButton(
-                onPressed: _loading ? null : _initializeBilling,
-                child: const Text('Initialize Billing'),
-              ),
-            ] else ...[
-              Row(
+  Widget build(final BuildContext context) => Scaffold(
+    appBar: AppBar(
+      title: const Text('RuStore Billing Example'),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.palette),
+          onPressed: _isInitialized ? _toggleTheme : null,
+          tooltip: 'Toggle theme',
+        ),
+      ],
+    ),
+    body: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Status section
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _loading ? null : _loadProducts,
-                      child: const Text('Load Products'),
-                    ),
+                  Text(
+                    'Status: $_status',
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _loading ? null : _loadPurchases,
-                      child: const Text('Load Purchases'),
-                    ),
-                  ),
+                  const SizedBox(height: 8),
+                  Text('Initialized: $_isInitialized'),
+                  Text('RuStore Installed: $_isRuStoreInstalled'),
+                  Text('Purchases Available: $_purchasesAvailable'),
                 ],
               ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Action buttons
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ElevatedButton(
+                onPressed: _isInitialized ? _loadProducts : null,
+                child: const Text('Load Products'),
+              ),
+              ElevatedButton(
+                onPressed: _isInitialized ? _loadPurchases : null,
+                child: const Text('Load Purchases'),
+              ),
+              ElevatedButton(
+                onPressed: _isInitialized ? _checkRuStoreInstallation : null,
+                child: const Text('Check RuStore'),
+              ),
+              ElevatedButton(
+                onPressed: _isInitialized ? _checkPurchaseAvailability : null,
+                child: const Text('Check Availability'),
+              ),
             ],
+          ),
 
-            const SizedBox(height: 16),
+          const SizedBox(height: 16),
 
-            // Products section
+          // Products section
+          if (_products.isNotEmpty) ...[
+            Text(
+              'Products (${_products.length})',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
             Expanded(
-              child: DefaultTabController(
-                length: 2,
-                child: Column(
-                  children: [
-                    const TabBar(
-                      tabs: [
-                        Tab(text: 'Products'),
-                        Tab(text: 'Purchases'),
-                      ],
-                    ),
-                    Expanded(
-                      child: TabBarView(
-                        children: [_buildProductsList(), _buildPurchasesList()],
+              child: ListView.builder(
+                itemCount: _products.length,
+                itemBuilder: (final context, final index) {
+                  final product = _products[index];
+                  return Card(
+                    child: ListTile(
+                      title: Text(product.title ?? product.productId),
+                      subtitle: Text(product.description ?? ''),
+                      trailing: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (product.priceLabel != null)
+                            Text(product.priceLabel!),
+                          if (product.price != null)
+                            Text('${product.price} ${product.currency ?? ''}'),
+                        ],
                       ),
+                      onTap: _purchasesAvailable
+                          ? () => _purchaseProduct(product.productId)
+                          : null,
                     ),
-                  ],
-                ),
+                  );
+                },
               ),
             ),
           ],
-        ),
+
+          // Purchases section
+          if (_purchases.isNotEmpty) ...[
+            Text(
+              'Purchases (${_purchases.length})',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: ListView.builder(
+                itemCount: _purchases.length,
+                itemBuilder: (final context, final index) {
+                  final purchase = _purchases[index];
+                  return Card(
+                    child: ListTile(
+                      title: Text(purchase.productId ?? 'Unknown Product'),
+                      subtitle: Text(
+                        purchase.purchaseState?.name ?? 'Unknown State',
+                      ),
+                      trailing: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (purchase.amountLabel != null)
+                            Text(purchase.amountLabel!),
+                          if (purchase.amount != null)
+                            Text(
+                              '${purchase.amount} ${purchase.currency ?? ''}',
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ],
       ),
-    );
-  }
-
-  Widget _buildProductsList() {
-    if (_products.isEmpty) {
-      return const Center(
-        child: Text(
-          'No products loaded. Tap "Load Products" to fetch products.',
-        ),
-      );
-    }
-
-    return ListView.builder(
-      itemCount: _products.length,
-      itemBuilder: (context, index) {
-        final product = _products[index];
-        return Card(
-          child: ListTile(
-            title: Text(product.title ?? product.productId),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (product.description != null) Text(product.description!),
-                if (product.priceLabel != null)
-                  Text('Price: ${product.priceLabel}'),
-                Text('Type: ${product.productType}'),
-              ],
-            ),
-            trailing: ElevatedButton(
-              onPressed: _loading ? null : () => _purchaseProduct(product),
-              child: const Text('Buy'),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildPurchasesList() {
-    if (_purchases.isEmpty) {
-      return const Center(
-        child: Text('No purchases found. Make a purchase to see it here.'),
-      );
-    }
-
-    return ListView.builder(
-      itemCount: _purchases.length,
-      itemBuilder: (context, index) {
-        final purchase = _purchases[index];
-        return Card(
-          child: ListTile(
-            title: Text(purchase.productId ?? 'Unknown Product'),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('State: ${purchase.purchaseState}'),
-                if (purchase.purchaseId != null)
-                  Text('ID: ${purchase.purchaseId}'),
-                if (purchase.amountLabel != null)
-                  Text('Amount: ${purchase.amountLabel}'),
-                if (purchase.purchaseTime != null)
-                  Text('Time: ${purchase.purchaseTime}'),
-              ],
-            ),
-            trailing:
-                purchase.purchaseState == RustorePurchaseState.paid &&
-                    purchase.purchaseId != null
-                ? ElevatedButton(
-                    onPressed: _loading
-                        ? null
-                        : () => _confirmPurchase(purchase.purchaseId!),
-                    child: const Text('Confirm'),
-                  )
-                : null,
-          ),
-        );
-      },
-    );
-  }
+    ),
+  );
 }

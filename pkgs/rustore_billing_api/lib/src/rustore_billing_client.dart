@@ -46,6 +46,8 @@ class RustoreBillingClient {
   /// - consoleApplicationId: Your app ID from RuStore console
   /// - deeplinkScheme: Deep link scheme for payment flows
   /// - debugLogs: Enable debug logging (default: false)
+  /// - theme: Billing client theme (default: light)
+  /// - enableLogging: Enable external payment logging (default: false)
   ///
   /// Throws [RustoreBillingException] if initialization fails.
   Future<void> initialize(final RustoreBillingConfig config) async {
@@ -62,6 +64,35 @@ class RustoreBillingClient {
   /// Typically called from your main activity's onNewIntent method.
   void onNewIntent(final String? intentData) {
     _platform.onNewIntent(intentData);
+  }
+
+  /// Check if purchases are available on this device
+  ///
+  /// Returns [RustorePurchaseAvailabilityResult] indicating whether purchases
+  /// can be made on this device. This checks if RuStore is installed and
+  /// properly configured.
+  ///
+  /// Throws [RustoreBillingException] if operation fails.
+  Future<RustorePurchaseAvailabilityResult> checkPurchasesAvailability() async {
+    try {
+      return await _platform.checkPurchasesAvailability();
+    } catch (e) {
+      throw RustoreBillingException(
+        'Failed to check purchases availability: $e',
+      );
+    }
+  }
+
+  /// Check if RuStore is installed on the device
+  ///
+  /// Returns true if RuStore is installed, false otherwise.
+  /// Throws [RustoreBillingException] if operation fails.
+  Future<bool> isRuStoreInstalled() async {
+    try {
+      return await _platform.isRuStoreInstalled();
+    } catch (e) {
+      throw RustoreBillingException('Failed to check RuStore installation: $e');
+    }
   }
 
   /// Get available products by their IDs
@@ -149,6 +180,21 @@ class RustoreBillingClient {
       await _platform.deletePurchase(purchaseId);
     } catch (e) {
       throw RustoreBillingException('Failed to delete purchase: $e');
+    }
+  }
+
+  /// Set the billing client theme
+  ///
+  /// Changes the theme of the billing interface dynamically.
+  ///
+  /// [theme] The theme to apply (light or dark)
+  ///
+  /// Throws [RustoreBillingException] if operation fails.
+  Future<void> setTheme(final RustoreBillingTheme theme) async {
+    try {
+      await _platform.setTheme(theme);
+    } catch (e) {
+      throw RustoreBillingException('Failed to set theme: $e');
     }
   }
 

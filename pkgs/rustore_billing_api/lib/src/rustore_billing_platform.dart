@@ -31,6 +31,18 @@ abstract class RustoreBillingPlatform extends PlatformInterface {
     throw UnimplementedError('onNewIntent() has not been implemented.');
   }
 
+  /// Check if purchases are available on this device
+  Future<RustorePurchaseAvailabilityResult> checkPurchasesAvailability() {
+    throw UnimplementedError(
+      'checkPurchasesAvailability() has not been implemented.',
+    );
+  }
+
+  /// Check if RuStore is installed on the device
+  Future<bool> isRuStoreInstalled() {
+    throw UnimplementedError('isRuStoreInstalled() has not been implemented.');
+  }
+
   /// Get available products by their IDs
   Future<List<RustoreProduct>> getProducts(final List<String> productIds) {
     throw UnimplementedError('getProducts() has not been implemented.');
@@ -60,6 +72,11 @@ abstract class RustoreBillingPlatform extends PlatformInterface {
   /// Delete a purchase
   Future<void> deletePurchase(final String purchaseId) {
     throw UnimplementedError('deletePurchase() has not been implemented.');
+  }
+
+  /// Set the billing client theme
+  Future<void> setTheme(final RustoreBillingTheme theme) {
+    throw UnimplementedError('setTheme() has not been implemented.');
   }
 
   /// Set up callback API for receiving events

@@ -39,6 +39,17 @@ bool _deepEquals(Object? a, Object? b) {
 }
 
 
+enum RustoreBillingTheme {
+  light,
+  dark,
+}
+
+enum RustorePurchaseAvailabilityType {
+  available,
+  unavailable,
+  unknown,
+}
+
 enum RustorePurchaseState {
   created,
   invoice_created,
@@ -56,11 +67,23 @@ enum RustorePaymentResultType {
   invalid_payment_state,
 }
 
+enum RustoreExceptionType {
+  notInstalled,
+  outdated,
+  userUnauthorized,
+  requestLimitReached,
+  reviewExists,
+  invalidReviewInfo,
+  general,
+}
+
 class RustoreBillingConfig {
   RustoreBillingConfig({
     required this.consoleApplicationId,
     required this.deeplinkScheme,
     this.debugLogs = false,
+    this.theme = RustoreBillingTheme.light,
+    this.enableLogging = false,
   });
 
   String consoleApplicationId;
@@ -69,11 +92,17 @@ class RustoreBillingConfig {
 
   bool debugLogs;
 
+  RustoreBillingTheme theme;
+
+  bool enableLogging;
+
   List<Object?> _toList() {
     return <Object?>[
       consoleApplicationId,
       deeplinkScheme,
       debugLogs,
+      theme,
+      enableLogging,
     ];
   }
 
@@ -86,6 +115,8 @@ class RustoreBillingConfig {
       consoleApplicationId: result[0]! as String,
       deeplinkScheme: result[1]! as String,
       debugLogs: result[2]! as bool,
+      theme: result[3]! as RustoreBillingTheme,
+      enableLogging: result[4]! as bool,
     );
   }
 
@@ -93,6 +124,52 @@ class RustoreBillingConfig {
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
   bool operator ==(Object other) {
     if (other is! RustoreBillingConfig || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(encode(), other.encode());
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => Object.hashAll(_toList())
+;
+}
+
+class RustorePurchaseAvailabilityResult {
+  RustorePurchaseAvailabilityResult({
+    required this.resultType,
+    this.cause,
+  });
+
+  RustorePurchaseAvailabilityType resultType;
+
+  RustoreException? cause;
+
+  List<Object?> _toList() {
+    return <Object?>[
+      resultType,
+      cause,
+    ];
+  }
+
+  Object encode() {
+    return _toList();  }
+
+  static RustorePurchaseAvailabilityResult decode(Object result) {
+    result as List<Object?>;
+    return RustorePurchaseAvailabilityResult(
+      resultType: result[0]! as RustorePurchaseAvailabilityType,
+      cause: result[1] as RustoreException?,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! RustorePurchaseAvailabilityResult || other.runtimeType != runtimeType) {
       return false;
     }
     if (identical(this, other)) {
@@ -391,6 +468,57 @@ class RustoreError {
 ;
 }
 
+class RustoreException {
+  RustoreException({
+    required this.type,
+    required this.message,
+    this.errorCode,
+  });
+
+  RustoreExceptionType type;
+
+  String message;
+
+  String? errorCode;
+
+  List<Object?> _toList() {
+    return <Object?>[
+      type,
+      message,
+      errorCode,
+    ];
+  }
+
+  Object encode() {
+    return _toList();  }
+
+  static RustoreException decode(Object result) {
+    result as List<Object?>;
+    return RustoreException(
+      type: result[0]! as RustoreExceptionType,
+      message: result[1]! as String,
+      errorCode: result[2] as String?,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! RustoreException || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(encode(), other.encode());
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => Object.hashAll(_toList())
+;
+}
+
 
 class _PigeonCodec extends StandardMessageCodec {
   const _PigeonCodec();
@@ -399,26 +527,41 @@ class _PigeonCodec extends StandardMessageCodec {
     if (value is int) {
       buffer.putUint8(4);
       buffer.putInt64(value);
-    }    else if (value is RustorePurchaseState) {
+    }    else if (value is RustoreBillingTheme) {
       buffer.putUint8(129);
       writeValue(buffer, value.index);
-    }    else if (value is RustorePaymentResultType) {
+    }    else if (value is RustorePurchaseAvailabilityType) {
       buffer.putUint8(130);
       writeValue(buffer, value.index);
-    }    else if (value is RustoreBillingConfig) {
+    }    else if (value is RustorePurchaseState) {
       buffer.putUint8(131);
-      writeValue(buffer, value.encode());
-    }    else if (value is RustoreProduct) {
+      writeValue(buffer, value.index);
+    }    else if (value is RustorePaymentResultType) {
       buffer.putUint8(132);
-      writeValue(buffer, value.encode());
-    }    else if (value is RustorePurchase) {
+      writeValue(buffer, value.index);
+    }    else if (value is RustoreExceptionType) {
       buffer.putUint8(133);
-      writeValue(buffer, value.encode());
-    }    else if (value is RustorePaymentResult) {
+      writeValue(buffer, value.index);
+    }    else if (value is RustoreBillingConfig) {
       buffer.putUint8(134);
       writeValue(buffer, value.encode());
-    }    else if (value is RustoreError) {
+    }    else if (value is RustorePurchaseAvailabilityResult) {
       buffer.putUint8(135);
+      writeValue(buffer, value.encode());
+    }    else if (value is RustoreProduct) {
+      buffer.putUint8(136);
+      writeValue(buffer, value.encode());
+    }    else if (value is RustorePurchase) {
+      buffer.putUint8(137);
+      writeValue(buffer, value.encode());
+    }    else if (value is RustorePaymentResult) {
+      buffer.putUint8(138);
+      writeValue(buffer, value.encode());
+    }    else if (value is RustoreError) {
+      buffer.putUint8(139);
+      writeValue(buffer, value.encode());
+    }    else if (value is RustoreException) {
+      buffer.putUint8(140);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -430,20 +573,33 @@ class _PigeonCodec extends StandardMessageCodec {
     switch (type) {
       case 129: 
         final int? value = readValue(buffer) as int?;
-        return value == null ? null : RustorePurchaseState.values[value];
+        return value == null ? null : RustoreBillingTheme.values[value];
       case 130: 
         final int? value = readValue(buffer) as int?;
-        return value == null ? null : RustorePaymentResultType.values[value];
+        return value == null ? null : RustorePurchaseAvailabilityType.values[value];
       case 131: 
-        return RustoreBillingConfig.decode(readValue(buffer)!);
+        final int? value = readValue(buffer) as int?;
+        return value == null ? null : RustorePurchaseState.values[value];
       case 132: 
-        return RustoreProduct.decode(readValue(buffer)!);
+        final int? value = readValue(buffer) as int?;
+        return value == null ? null : RustorePaymentResultType.values[value];
       case 133: 
-        return RustorePurchase.decode(readValue(buffer)!);
+        final int? value = readValue(buffer) as int?;
+        return value == null ? null : RustoreExceptionType.values[value];
       case 134: 
-        return RustorePaymentResult.decode(readValue(buffer)!);
+        return RustoreBillingConfig.decode(readValue(buffer)!);
       case 135: 
+        return RustorePurchaseAvailabilityResult.decode(readValue(buffer)!);
+      case 136: 
+        return RustoreProduct.decode(readValue(buffer)!);
+      case 137: 
+        return RustorePurchase.decode(readValue(buffer)!);
+      case 138: 
+        return RustorePaymentResult.decode(readValue(buffer)!);
+      case 139: 
         return RustoreError.decode(readValue(buffer)!);
+      case 140: 
+        return RustoreException.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
     }
@@ -508,6 +664,64 @@ class RustoreBillingApi {
       );
     } else {
       return;
+    }
+  }
+
+  /// Check if purchases are available on this device
+  Future<RustorePurchaseAvailabilityResult> checkPurchasesAvailability() async {
+    final String pigeonVar_channelName = 'dev.flutter.pigeon.rustore_billing_api.RustoreBillingApi.checkPurchasesAvailability$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final List<Object?>? pigeonVar_replyList =
+        await pigeonVar_sendFuture as List<Object?>?;
+    if (pigeonVar_replyList == null) {
+      throw _createConnectionError(pigeonVar_channelName);
+    } else if (pigeonVar_replyList.length > 1) {
+      throw PlatformException(
+        code: pigeonVar_replyList[0]! as String,
+        message: pigeonVar_replyList[1] as String?,
+        details: pigeonVar_replyList[2],
+      );
+    } else if (pigeonVar_replyList[0] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
+    } else {
+      return (pigeonVar_replyList[0] as RustorePurchaseAvailabilityResult?)!;
+    }
+  }
+
+  /// Check if RuStore is installed on the device
+  Future<bool> isRuStoreInstalled() async {
+    final String pigeonVar_channelName = 'dev.flutter.pigeon.rustore_billing_api.RustoreBillingApi.isRuStoreInstalled$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final List<Object?>? pigeonVar_replyList =
+        await pigeonVar_sendFuture as List<Object?>?;
+    if (pigeonVar_replyList == null) {
+      throw _createConnectionError(pigeonVar_channelName);
+    } else if (pigeonVar_replyList.length > 1) {
+      throw PlatformException(
+        code: pigeonVar_replyList[0]! as String,
+        message: pigeonVar_replyList[1] as String?,
+        details: pigeonVar_replyList[2],
+      );
+    } else if (pigeonVar_replyList[0] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
+    } else {
+      return (pigeonVar_replyList[0] as bool?)!;
     }
   }
 
@@ -631,6 +845,30 @@ class RustoreBillingApi {
       binaryMessenger: pigeonVar_binaryMessenger,
     );
     final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[purchaseId]);
+    final List<Object?>? pigeonVar_replyList =
+        await pigeonVar_sendFuture as List<Object?>?;
+    if (pigeonVar_replyList == null) {
+      throw _createConnectionError(pigeonVar_channelName);
+    } else if (pigeonVar_replyList.length > 1) {
+      throw PlatformException(
+        code: pigeonVar_replyList[0]! as String,
+        message: pigeonVar_replyList[1] as String?,
+        details: pigeonVar_replyList[2],
+      );
+    } else {
+      return;
+    }
+  }
+
+  /// Set the billing client theme
+  Future<void> setTheme(RustoreBillingTheme theme) async {
+    final String pigeonVar_channelName = 'dev.flutter.pigeon.rustore_billing_api.RustoreBillingApi.setTheme$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[theme]);
     final List<Object?>? pigeonVar_replyList =
         await pigeonVar_sendFuture as List<Object?>?;
     if (pigeonVar_replyList == null) {

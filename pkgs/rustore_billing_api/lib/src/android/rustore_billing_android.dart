@@ -44,6 +44,13 @@ class RustoreBillingAndroid extends RustoreBillingPlatform {
   }
 
   @override
+  Future<RustorePurchaseAvailabilityResult> checkPurchasesAvailability() =>
+      _api.checkPurchasesAvailability();
+
+  @override
+  Future<bool> isRuStoreInstalled() => _api.isRuStoreInstalled();
+
+  @override
   Future<List<RustoreProduct>> getProducts(final List<String> productIds) =>
       _api.getProducts(productIds);
 
@@ -67,6 +74,11 @@ class RustoreBillingAndroid extends RustoreBillingPlatform {
   @override
   Future<void> deletePurchase(final String purchaseId) async {
     await _api.deletePurchase(purchaseId);
+  }
+
+  @override
+  Future<void> setTheme(final RustoreBillingTheme theme) async {
+    await _api.setTheme(theme);
   }
 
   @override

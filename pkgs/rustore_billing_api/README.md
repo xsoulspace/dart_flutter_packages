@@ -1,365 +1,395 @@
 # RuStore Billing API
 
-A Flutter plugin for integrating RuStore billing functionality into your Flutter applications. This plugin provides a comprehensive API for managing products, handling purchases, and processing payments through the RuStore platform.
+A Flutter plugin for integrating RuStore billing functionality into your Flutter applications. This plugin provides a comprehensive interface to the RuStore billing SDK, allowing you to handle in-app purchases, subscriptions, and payment flows.
 
 ## Features
 
 - ✅ Initialize RuStore billing client
-- ✅ Retrieve available products
-- ✅ Handle purchase flows
-- ✅ Confirm and manage purchases
-- ✅ Process deep link payments
-- ✅ Stream-based event handling
+- ✅ Check RuStore installation status
+- ✅ Check purchase availability
+- ✅ Retrieve product information
+- ✅ Get existing purchases
+- ✅ Start purchase flows
+- ✅ Confirm purchases
+- ✅ Delete purchases
+- ✅ Handle deep link intents
+- ✅ Dynamic theme switching (Light/Dark)
+- ✅ External payment logging
 - ✅ Comprehensive error handling
-- ✅ Full RuStore SDK 9.1.0 support
+- ✅ Stream-based purchase result notifications
 
 ## Installation
 
-Add this to your package's `pubspec.yaml` file:
+Add this dependency to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  rustore_billing_api: ^0.1.0
+  rustore_billing_api: ^1.0.0
 ```
 
-## Android Setup
+## Setup
 
-### 1. Add RuStore Repository
+### 1. Android Configuration
 
-In your `android/build.gradle` file, add the RuStore repository:
+Add the RuStore repository to your `android/build.gradle`:
 
 ```gradle
 allprojects {
     repositories {
-        google()
-        mavenCentral()
-        maven { url "https://artifactory-external.vkpartner.ru/artifactory/vkid-sdk-andorid/" }
+        maven { url = uri("https://artifactory-external.vkpartner.ru/artifactory/maven") }
     }
 }
 ```
 
-### 2. Configure Deep Links
+Add the RuStore BOM dependency to your `android/app/build.gradle`:
 
-Add the following to your `android/app/src/main/AndroidManifest.xml`:
+```gradle
+dependencies {
+    implementation(platform("ru.rustore.sdk:bom:2025.06.01"))
+    implementation("ru.rustore.sdk:billingclient")
+}
+```
+
+### 2. AndroidManifest.xml Configuration
+
+Add deep link handling to your `android/app/src/main/AndroidManifest.xml`:
 
 ```xml
 <activity
     android:name=".MainActivity"
-    android:exported="true"
-    android:launchMode="singleTop"
-    android:theme="@style/LaunchTheme">
-
-    <!-- Existing intent filters -->
-
-    <!-- RuStore deep link -->
-    <intent-filter android:autoVerify="true">
+    android:launchMode="singleTask">
+    <intent-filter>
         <action android:name="android.intent.action.VIEW" />
         <category android:name="android.intent.category.DEFAULT" />
         <category android:name="android.intent.category.BROWSABLE" />
-        <data android:scheme="your_deeplink_scheme" />
+        <data android:scheme="yourappscheme" />
     </intent-filter>
 </activity>
 ```
 
-### 3. Handle Deep Links in MainActivity
+### 3. Activity Configuration
 
-Update your `MainActivity.kt` to handle deep links:
+Update your main activity to handle deep links:
 
 ```kotlin
-class MainActivity : FlutterActivity() {
-    override fun onNewIntent(intent: Intent) {
+class MainActivity: FlutterActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        if (savedInstanceState == null) {
+            // Handle deep link intent
+            rustoreBillingClient.onNewIntent(intent)
+        }
+    }
+
+    override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
-        // The plugin will automatically handle the intent
+        // Handle deep link intent
+        rustoreBillingClient.onNewIntent(intent)
     }
 }
 ```
 
 ## Usage
 
-### Basic Setup
+### 1. Initialize the Billing Client
 
 ```dart
 import 'package:rustore_billing_api/rustore_billing_api.dart';
 
-// Register the Android implementation (call this in main() on Android)
-if (Platform.isAndroid) {
-  registerWith();
-}
+final client = RustoreBillingClient.instance;
 
-// Get the billing client instance
-final billingClient = RustoreBillingClient.instance;
-
-// Initialize the client
-await billingClient.initialize(
+await client.initialize(
   RustoreBillingConfig(
-    consoleApplicationId: 'your_app_id_from_rustore_console',
-    deeplinkScheme: 'your_deeplink_scheme',
-    debugLogs: true, // Enable for development
+    consoleApplicationId: 'your_app_id_here',
+    deeplinkScheme: 'yourappscheme',
+    debugLogs: true,
+    theme: RustoreBillingTheme.light,
+    enableLogging: true,
   ),
 );
 ```
 
-### Listen to Events
+### 2. Check RuStore Installation and Availability
 
 ```dart
-// Listen to purchase results
-billingClient.purchaseResults.listen((result) {
-  switch (result.resultType) {
-    case RustorePaymentResultType.success:
-      print('Purchase successful: ${result.purchaseId}');
-      // Confirm the purchase
-      await billingClient.confirmPurchase(result.purchaseId!);
-      break;
-    case RustorePaymentResultType.cancelled:
-      print('Purchase cancelled');
-      break;
-    case RustorePaymentResultType.failure:
-      print('Purchase failed: ${result.errorMessage}');
-      break;
-  }
-});
+// Check if RuStore is installed
+final isInstalled = await client.isRuStoreInstalled();
 
-// Listen to errors
-billingClient.errors.listen((error) {
-  print('Billing error: ${error.message}');
-});
+// Check if purchases are available
+final availability = await client.checkPurchasesAvailability();
+switch (availability.resultType) {
+  case RustorePurchaseAvailabilityType.available:
+    print('Purchases are available');
+    break;
+  case RustorePurchaseAvailabilityType.unavailable:
+    print('Purchases unavailable: ${availability.cause?.message}');
+    break;
+  case RustorePurchaseAvailabilityType.unknown:
+    print('Purchase availability unknown');
+    break;
+}
 ```
 
-### Get Products
+### 3. Load Products
 
 ```dart
-final productIds = ['product1', 'product2', 'premium_subscription'];
-final products = await billingClient.getProducts(productIds);
+final products = await client.getProducts([
+  'product_id_1',
+  'product_id_2',
+  'subscription_id_1',
+]);
 
 for (final product in products) {
   print('Product: ${product.title} - ${product.priceLabel}');
 }
 ```
 
-### Purchase a Product
+### 4. Load Purchases
 
 ```dart
-try {
-  final result = await billingClient.purchaseProduct(
-    'product_id',
-    developerPayload: 'optional_payload_for_verification',
-  );
-
-  if (result.resultType == RustorePaymentResultType.success) {
-    // Purchase initiated successfully
-    // The actual result will come through the purchaseResults stream
-  }
-} catch (e) {
-  print('Purchase failed: $e');
-}
-```
-
-### Confirm Purchase
-
-```dart
-// After receiving a successful purchase result
-await billingClient.confirmPurchase(
-  purchaseId,
-  developerPayload: 'optional_payload',
-);
-```
-
-### Get Existing Purchases
-
-```dart
-final purchases = await billingClient.getPurchases();
+final purchases = await client.getPurchases();
 
 for (final purchase in purchases) {
   print('Purchase: ${purchase.productId} - ${purchase.purchaseState}');
-
-  // Auto-confirm paid purchases
-  if (purchase.purchaseState == RustorePurchaseState.paid) {
-    await billingClient.confirmPurchase(purchase.purchaseId!);
-  }
 }
 ```
 
-### Complete Example
+### 5. Start Purchase Flow
 
 ```dart
-import 'dart:io';
-import 'package:rustore_billing_api/rustore_billing_api.dart';
+final result = await client.purchaseProduct(
+  'product_id_1',
+  developerPayload: 'custom_payload_${DateTime.now().millisecondsSinceEpoch}',
+);
 
-class BillingService {
-  final _billingClient = RustoreBillingClient.instance;
-  bool _initialized = false;
-
-    Future<void> initialize() async {
-    if (_initialized) return;
-
-    // Register Android implementation
-    if (Platform.isAndroid) {
-      registerWith();
-    }
-
-    // Set up listeners
-    _billingClient.purchaseResults.listen(_handlePurchaseResult);
-    _billingClient.errors.listen(_handleError);
-
-    // Initialize
-    await _billingClient.initialize(
-      RustoreBillingConfig(
-        consoleApplicationId: 'your_app_id',
-        deeplinkScheme: 'your_scheme',
-        debugLogs: false,
-      ),
-    );
-
-    _initialized = true;
-
-    // Process any existing purchases
-    await _processExistingPurchases();
-  }
-
-  Future<void> _processExistingPurchases() async {
-    final purchases = await _billingClient.getPurchases();
-
-    for (final purchase in purchases) {
-      if (purchase.purchaseState == RustorePurchaseState.paid) {
-        // Deliver the product to the user
-        await _deliverProduct(purchase.productId!);
-        // Confirm the purchase
-        await _billingClient.confirmPurchase(purchase.purchaseId!);
-      }
-    }
-  }
-
-  void _handlePurchaseResult(RustorePaymentResult result) async {
-    if (result.resultType == RustorePaymentResultType.success) {
-      // Deliver the product
-      await _deliverProduct(result.purchaseId!);
-      // Confirm the purchase
-      await _billingClient.confirmPurchase(result.purchaseId!);
-    }
-  }
-
-  void _handleError(RustoreError error) {
-    print('Billing error: ${error.message}');
-  }
-
-  Future<void> _deliverProduct(String productId) async {
-    // Implement your product delivery logic here
-    print('Delivering product: $productId');
-  }
-
-  void dispose() {
-    _billingClient.dispose();
-  }
+switch (result.resultType) {
+  case RustorePaymentResultType.success:
+    print('Purchase successful: ${result.purchaseId}');
+    // Confirm the purchase
+    await client.confirmPurchase(result.purchaseId!);
+    break;
+  case RustorePaymentResultType.cancelled:
+    print('Purchase cancelled');
+    break;
+  case RustorePaymentResultType.failure:
+    print('Purchase failed: ${result.errorMessage}');
+    break;
+  case RustorePaymentResultType.invalid_payment_state:
+    print('Invalid payment state: ${result.errorMessage}');
+    break;
 }
+```
+
+### 6. Listen to Purchase Results
+
+```dart
+// Listen to purchase results
+client.purchaseResults.listen((result) {
+  print('Purchase result: ${result.resultType}');
+});
+
+// Listen to errors
+client.errors.listen((error) {
+  print('Error: ${error.message} (${error.code})');
+});
+```
+
+### 7. Theme Management
+
+```dart
+// Change theme dynamically
+await client.setTheme(RustoreBillingTheme.dark);
+```
+
+### 8. Handle Deep Links
+
+In your main activity, call `onNewIntent` when receiving deep links:
+
+```dart
+// This should be called from your Android activity's onNewIntent method
+client.onNewIntent(intentData);
 ```
 
 ## API Reference
 
-### RustoreBillingClient
+### RustoreBillingConfig
 
-The main client for RuStore billing operations.
-
-#### Methods
-
-- `initialize(RustoreBillingConfig config)` - Initialize the billing client
-- `getProducts(List<String> productIds)` - Get available products
-- `getPurchases()` - Get existing purchases
-- `purchaseProduct(String productId, {String? developerPayload})` - Start purchase flow
-- `confirmPurchase(String purchaseId, {String? developerPayload})` - Confirm purchase
-- `deletePurchase(String purchaseId)` - Delete purchase
-- `onNewIntent(String? intentData)` - Handle deep link intents
-- `dispose()` - Clean up resources
-
-#### Streams
-
-- `purchaseResults` - Stream of purchase results
-- `errors` - Stream of billing errors
-
-### Models
-
-#### RustoreBillingConfig
-
-Configuration for the billing client.
-
-#### RustoreProduct
-
-Represents a product available for purchase.
-
-#### RustorePurchase
-
-Represents a user's purchase.
-
-#### RustorePaymentResult
-
-Result of a payment operation.
-
-#### RustoreError
-
-Error information from billing operations.
-
-## Error Handling
-
-The plugin provides comprehensive error handling through:
-
-1. **Exceptions**: Synchronous operations throw `RustoreBillingException`
-2. **Error Stream**: Asynchronous errors are emitted through `billingClient.errors`
-3. **Result Types**: Payment results include error information
+Configuration for the RuStore billing client.
 
 ```dart
-try {
-  await billingClient.getProducts(['product1']);
-} on RustoreBillingException catch (e) {
-  print('Billing error: ${e.message}');
+class RustoreBillingConfig {
+  final String consoleApplicationId;  // Your app ID from RuStore console
+  final String deeplinkScheme;        // Deep link scheme for payment flows
+  final bool debugLogs;               // Enable debug logging
+  final RustoreBillingTheme theme;    // Billing client theme
+  final bool enableLogging;           // Enable external payment logging
 }
 ```
 
-## Testing
+### RustoreProduct
 
-Run the example app to test the integration:
+Represents a product available for purchase.
 
-```bash
-cd example
-flutter run
+```dart
+class RustoreProduct {
+  final String productId;
+  final String productType;
+  final String? title;
+  final String? description;
+  final int? price;
+  final String? priceLabel;
+  final String? currency;
+  final String? language;
+}
 ```
+
+### RustorePurchase
+
+Represents a purchase made by the user.
+
+```dart
+class RustorePurchase {
+  final String? purchaseId;
+  final String? productId;
+  final String? invoiceId;
+  final String? description;
+  final String? language;
+  final String? purchaseTime;
+  final String? orderId;
+  final String? amountLabel;
+  final int? amount;
+  final String? currency;
+  final int? quantity;
+  final RustorePurchaseState? purchaseState;
+  final String? developerPayload;
+}
+```
+
+### RustorePaymentResult
+
+Result of a purchase operation.
+
+```dart
+class RustorePaymentResult {
+  final RustorePaymentResultType resultType;
+  final String? purchaseId;
+  final String? errorCode;
+  final String? errorMessage;
+}
+```
+
+### Error Handling
+
+The plugin provides comprehensive error handling with specific error types:
+
+```dart
+enum RustoreExceptionType {
+  notInstalled,        // RuStore is not installed
+  outdated,           // RuStore version is outdated
+  userUnauthorized,   // User is not authorized
+  requestLimitReached, // Request limit reached
+  reviewExists,       // Review already exists
+  invalidReviewInfo,  // Invalid review information
+  general,            // General error
+}
+```
+
+## Error Codes
+
+The plugin handles various error codes from the RuStore SDK:
+
+| HTTP Code | Error Code | Description                              |
+| --------- | ---------- | ---------------------------------------- |
+| 400       | 40001      | Incorrect request parameters             |
+| 400       | 40003      | App not found                            |
+| 400       | 40004      | App status: inactive                     |
+| 400       | 40005      | Product not found                        |
+| 400       | 40006      | Product status: inactive                 |
+| 400       | 40007      | Invalid product type                     |
+| 400       | 40008      | Order with this order_id already exists  |
+| 400       | 40009      | Active order exists for this product     |
+| 400       | 40010      | Order in paid state needs to be consumed |
+| 400       | 40011      | Non-consumable product already purchased |
+| 400       | 40012      | Subscription already purchased           |
+| 400       | 40013      | Service data not received                |
+| 400       | 40014      | Mandatory attribute missing              |
+| 400       | 40015      | Failed to change order status            |
+| 400       | 40016      | Quantity > 1 for non-consumable product  |
+| 400       | 40017      | Product deleted                          |
+| 400       | 40018      | Cannot consume products with this type   |
+| 401       | 40101      | Invalid token                            |
+| 401       | 40102      | Token lifetime expired                   |
+| 403       | 40301      | Access denied                            |
+| 403       | 40302      | Method not allowed                       |
+| 403       | 40303      | App ID doesn't match token               |
+| 403       | 40305      | Incorrect token type                     |
+| 404       | 40401      | Not found                                |
+| 408       | 40801      | Notification timeout expired             |
+| 500       | 50\*\*\*   | Payment service internal error           |
+
+## Best Practices
+
+1. **Always check RuStore installation** before attempting billing operations
+2. **Verify purchase availability** to ensure the device supports purchases
+3. **Handle all purchase result types** including cancellations and failures
+4. **Confirm purchases** after receiving successful payment results
+5. **Use developer payloads** for tracking and verification
+6. **Implement proper error handling** for all billing operations
+7. **Listen to purchase result streams** for real-time updates
+8. **Test with debug logging enabled** during development
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **Initialization fails**: Check your app ID and deep link scheme
-2. **Products not loading**: Verify product IDs in RuStore console
-3. **Purchase fails**: Ensure proper deep link configuration
-4. **Deep links not working**: Check AndroidManifest.xml configuration
+1. **"Billing client not initialized"**
 
-### Debug Mode
+   - Ensure you call `initialize()` before any other operations
+   - Check that your `consoleApplicationId` is correct
 
-Enable debug logs during development:
+2. **"Purchases unavailable"**
+
+   - Verify RuStore is installed on the device
+   - Check that your app is properly configured in RuStore Console
+   - Ensure the device supports purchases
+
+3. **Deep link issues**
+
+   - Verify the scheme in `AndroidManifest.xml` matches your config
+   - Ensure your activity handles `onNewIntent` properly
+
+4. **Product not found**
+   - Check that product IDs exist in RuStore Console
+   - Verify product status is active
+   - Ensure product type is supported
+
+### Debug Logging
+
+Enable debug logging to troubleshoot issues:
 
 ```dart
-RustoreBillingConfig(
-  // ... other config
-  debugLogs: true,
-)
+await client.initialize(
+  RustoreBillingConfig(
+    consoleApplicationId: 'your_app_id',
+    deeplinkScheme: 'yourappscheme',
+    debugLogs: true,  // Enable debug logs
+    enableLogging: true,  // Enable external logging
+  ),
+);
 ```
-
-## Requirements
-
-- Flutter >=3.0.0
-- Android API level 21+
-- RuStore app installed on device
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Contributing
 
-Contributions are welcome! Please read our contributing guidelines and submit pull requests to our repository.
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Support
 
-For support and questions:
+For issues and questions:
 
-- Check the example app for implementation details
-- Review the API documentation
-- Open an issue on our GitHub repository
+- Check the [RuStore documentation](https://www.rustore.ru/help/en/sdk/payments/kotlin-java/9-1-0)
+- Open an issue on GitHub
+- Contact the maintainers
