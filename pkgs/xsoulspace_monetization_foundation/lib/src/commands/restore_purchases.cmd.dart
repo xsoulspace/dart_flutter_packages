@@ -57,7 +57,7 @@ class RestorePurchasesCommand {
   /// to `HandlePurchaseUpdateCommand` to maintain consistency with
   /// the purchase update flow.
   /// {@endtemplate}
-  Future<void> execute() async {
+  Future<bool> execute() async {
     final result = await purchaseProvider.restorePurchases();
     switch (result.type) {
       case ResultType.success:
@@ -67,9 +67,10 @@ class RestorePurchasesCommand {
             purchase.toVerificationDto(),
           );
         }
+        return true;
       case ResultType.failure:
         // Handle failure if needed
-        break;
+        return false;
     }
   }
 }
