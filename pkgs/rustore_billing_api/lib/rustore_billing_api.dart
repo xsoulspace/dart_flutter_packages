@@ -41,10 +41,13 @@ export 'src/rustore_api.g.dart'
         RustorePaymentResult,
         RustorePaymentResultType,
         RustoreProduct,
+        RustoreProductSubscription,
+        RustoreProductType,
         RustorePurchase,
         RustorePurchaseAvailabilityResult,
         RustorePurchaseAvailabilityType,
-        RustorePurchaseState;
+        RustorePurchaseState,
+        RustoreSubscriptionPeriod;
 // Export Android registration
 export 'src/rustore_billing_api_android.dart';
 // Export the main client

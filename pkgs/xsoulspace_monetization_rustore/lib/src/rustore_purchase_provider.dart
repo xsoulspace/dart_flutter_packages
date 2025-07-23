@@ -71,7 +71,7 @@ class RustorePurchaseProvider implements PurchaseProvider {
   }
 
   @override
-  Future<bool> isAvailable() async => true;
+  Future<bool> isAvailable() => Future.value(true);
 
   @override
   Future<CompletePurchaseResultModel> completePurchase(
@@ -95,7 +95,7 @@ class RustorePurchaseProvider implements PurchaseProvider {
     final products = await _client.getProducts(
       productIds.map((final p) => p.value).toList(),
     );
-    return products.nonNulls.map(_mapToPurchaseProductDetails).toList();
+    return products.map(_mapToPurchaseProductDetails).toList();
   }
 
   @override
@@ -103,8 +103,8 @@ class RustorePurchaseProvider implements PurchaseProvider {
     final PurchaseProductDetailsModel productDetails,
   ) async {
     final result = await _processPurchase(productDetails);
-    if (result.isSuccess) {
-      _purchaseStreamController.add([?result.details]);
+    if (result.isSuccess && result.details != null) {
+      _purchaseStreamController.add([result.details!]);
     }
     return result;
   }
@@ -113,12 +113,10 @@ class RustorePurchaseProvider implements PurchaseProvider {
     final PurchaseProductDetailsModel details,
   ) async {
     try {
-      final purchase = await RustoreBillingClient.purchase(
-        details.productId.value,
-      );
-      if (purchase.successPurchase == null) {
+      final purchase = await _client.purchaseProduct(details.productId.value);
+      if (purchase.resultType != RustorePaymentResultType.success) {
         return PurchaseResultModel.failure(
-          'Purchase failed. ${purchase.invalidPurchase} ${purchase.invalidInvoice}',
+          'Purchase failed. ${purchase.errorMessage}',
         );
       }
       return PurchaseResultModel.success(
@@ -126,7 +124,7 @@ class RustorePurchaseProvider implements PurchaseProvider {
           status: details.productType == PurchaseProductType.consumable
               ? PurchaseStatus.restored
               : PurchaseStatus.purchased,
-          purchaseId: PurchaseId.fromJson(purchase.successPurchase!.purchaseId),
+          purchaseId: PurchaseId.fromJson(purchase.purchaseId ?? ''),
           purchaseType: details.productType,
           productId: details.productId,
           priceId: details.priceId,
@@ -148,16 +146,16 @@ class RustorePurchaseProvider implements PurchaseProvider {
   @override
   Future<RestoreResultModel> restorePurchases() async {
     try {
-      final purchases = await RustoreBillingClient.purchases();
-      final restored = purchases.purchases.nonNulls.map((final p) {
+      final purchases = await _client.getPurchases();
+      final restored = purchases.map((final p) {
         final productType = _productTypeFromRustoreJson(
           p.productType,
-          PurchaseProductId.fromJson(p.productId),
+          PurchaseProductId.fromJson(p.productId ?? ''),
         );
         return PurchaseDetailsModel(
-          purchaseId: PurchaseId.fromJson(p.purchaseId),
-          productId: PurchaseProductId.fromJson(p.productId),
-          priceId: PurchasePriceId.fromJson(p.productId),
+          purchaseId: PurchaseId.fromJson(p.purchaseId ?? ''),
+          productId: PurchaseProductId.fromJson(p.productId ?? ''),
+          priceId: PurchasePriceId.fromJson(p.productId ?? ''),
           status: _purchaseStatusFromRustoreState(p.purchaseState),
           purchaseDate:
               dateTimeFromIso8601String(p.purchaseTime) ?? DateTime.now(),
@@ -191,7 +189,7 @@ class RustorePurchaseProvider implements PurchaseProvider {
       productType: productType,
       name: product.title ?? '',
       formattedPrice: product.priceLabel ?? '',
-      price: jsonDecodeDouble(product.price ?? '0'),
+      price: (product.price ?? 0).toDouble(),
       currency: product.currency ?? '',
       duration: duration,
       freeTrialDuration: PurchaseDurationModel(
@@ -203,20 +201,14 @@ class RustorePurchaseProvider implements PurchaseProvider {
   }
 
   PurchaseProductType _productTypeFromRustoreJson(
-    final String? json,
+    final RustoreProductType? json,
     final PurchaseProductId productId,
-  ) {
-    if (json == null || json == '') {
-      final productType = productTypeChecker?.call(productId);
-      if (productType != null) return productType;
-    }
-    return switch (json) {
-      'NON_CONSUMABLE' => PurchaseProductType.nonConsumable,
-      'CONSUMABLE' => PurchaseProductType.consumable,
-      'SUBSCRIPTION' => PurchaseProductType.subscription,
-      _ => throw Exception('Invalid purchase type: $json'),
-    };
-  }
+  ) => switch (json) {
+    RustoreProductType.nonConsumable => PurchaseProductType.nonConsumable,
+    RustoreProductType.consumable => PurchaseProductType.consumable,
+    RustoreProductType.subscription => PurchaseProductType.subscription,
+    _ => throw Exception('Invalid purchase type: $json'),
+  };
 
   static Duration getDurationFromProductId(final PurchaseProductId id) {
     final parts = id.value.split('_');
@@ -242,7 +234,7 @@ class RustorePurchaseProvider implements PurchaseProvider {
   @override
   Future<CancelResultModel> cancel(final PurchaseProductId productId) async {
     try {
-      await RustoreBillingClient.deletePurchase(productId.value);
+      await _client.deletePurchase(productId.value);
       return CancelResultModel.success();
     } catch (e) {
       return CancelResultModel.failure(e.toString());
@@ -254,12 +246,10 @@ class RustorePurchaseProvider implements PurchaseProvider {
     final List<PurchaseProductId> productIds,
   ) async {
     // TODO(arenukvern): implement identification of consumables
-    final products = await RustoreBillingClient.products(
+    final products = await _client.getProducts(
       productIds.map((final p) => p.value).toList(),
     );
-    return products.products.nonNulls
-        .map(_mapToPurchaseProductDetails)
-        .toList();
+    return products.map(_mapToPurchaseProductDetails).toList();
   }
 
   @override
@@ -267,12 +257,10 @@ class RustorePurchaseProvider implements PurchaseProvider {
     final List<PurchaseProductId> productIds,
   ) async {
     // TODO(arenukvern): implement identification of non-consumables
-    final products = await RustoreBillingClient.products(
+    final products = await _client.getProducts(
       productIds.map((final p) => p.value).toList(),
     );
-    return products.products.nonNulls
-        .map(_mapToPurchaseProductDetails)
-        .toList();
+    return products.map(_mapToPurchaseProductDetails).toList();
   }
 
   @override
@@ -280,12 +268,10 @@ class RustorePurchaseProvider implements PurchaseProvider {
     final List<PurchaseProductId> productIds,
   ) async {
     // TODO(arenukvern): implement identification of subscriptions
-    final products = await RustoreBillingClient.products(
+    final products = await _client.getProducts(
       productIds.map((final p) => p.value).toList(),
     );
-    return products.products.nonNulls
-        .map(_mapToPurchaseProductDetails)
-        .toList();
+    return products.map(_mapToPurchaseProductDetails).toList();
   }
 
   @override
@@ -304,7 +290,11 @@ class RustorePurchaseProvider implements PurchaseProvider {
     final PurchaseId purchaseId,
   ) async {
     // TODO(arenukvern): implement getting of purchase details
-    final purchase = await RustoreBillingClient.purchaseInfo(purchaseId.value);
+    final purchases = await _client.getPurchases();
+    final purchase = purchases.firstWhere(
+      (final p) => p.purchaseId == purchaseId.value,
+      orElse: RustorePurchase.new,
+    );
     return PurchaseDetailsModel(
       purchaseId: purchaseId,
       productId: PurchaseProductId.fromJson(purchase.productId ?? ''),
@@ -314,17 +304,23 @@ class RustorePurchaseProvider implements PurchaseProvider {
           dateTimeFromIso8601String(purchase.purchaseTime) ?? DateTime.now(),
       name: purchase.amountLabel ?? '',
       formattedPrice: purchase.amountLabel ?? '',
-      price: jsonDecodeDouble(purchase.amount ?? '0'),
+      price: (purchase.amount ?? 0).toDouble(),
       currency: purchase.currency ?? '',
     );
   }
 }
 
-PurchaseStatus _purchaseStatusFromRustoreState(final String? json) =>
-    switch (json) {
-      'CREATED' || 'INVOICE_CREATED' || 'PAUSED' => PurchaseStatus.pending,
-      'PAID' => PurchaseStatus.restored,
-      'CANCELLED' || 'CLOSED' || 'TERMINATED' => PurchaseStatus.canceled,
-      'CONSUMED' || 'CONFIRMED' => PurchaseStatus.purchased,
-      _ => throw Exception('Invalid purchase status: $json'),
-    };
+PurchaseStatus _purchaseStatusFromRustoreState(
+  final RustorePurchaseState? state,
+) => switch (state) {
+  RustorePurchaseState.created ||
+  RustorePurchaseState.invoice_created ||
+  RustorePurchaseState.paused => PurchaseStatus.pending,
+  RustorePurchaseState.paid => PurchaseStatus.restored,
+  RustorePurchaseState.cancelled ||
+  RustorePurchaseState.closed ||
+  RustorePurchaseState.terminated => PurchaseStatus.canceled,
+  RustorePurchaseState.consumed ||
+  RustorePurchaseState.confirmed => PurchaseStatus.purchased,
+  null => PurchaseStatus.pending,
+};
