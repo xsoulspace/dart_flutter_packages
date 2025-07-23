@@ -873,8 +873,8 @@ class RustoreBillingApi {
   }
 
   /// Check if RuStore is installed on the device
-  Future<bool> isRuStoreInstalled() async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.rustore_billing_api.RustoreBillingApi.isRuStoreInstalled$pigeonVar_messageChannelSuffix';
+  Future<bool> isRustoreUserAuthorized() async {
+    final String pigeonVar_channelName = 'dev.flutter.pigeon.rustore_billing_api.RustoreBillingApi.isRustoreUserAuthorized$pigeonVar_messageChannelSuffix';
     final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,

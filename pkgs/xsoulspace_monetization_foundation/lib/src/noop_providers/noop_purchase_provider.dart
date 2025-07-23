@@ -52,7 +52,7 @@ class NoopPurchaseProvider implements PurchaseProvider {
     final List<PurchaseProductId> productIds,
   ) async => [];
   @override
-  Future<bool> isAvailable() async => false;
+  Future<bool> isUserAuthorized() async => false;
 
   @override
   Future<void> openSubscriptionManagement() async =>
@@ -76,4 +76,7 @@ class NoopPurchaseProvider implements PurchaseProvider {
   Future<List<PurchaseProductDetailsModel>> getProductDetails(
     final List<PurchaseProductId> productIds,
   ) async => [];
+
+  @override
+  Future<bool> isStoreInstalled() async => false;
 }

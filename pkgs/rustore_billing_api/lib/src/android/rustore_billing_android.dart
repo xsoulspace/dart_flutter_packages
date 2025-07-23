@@ -47,7 +47,7 @@ class RustoreBillingAndroid extends RustoreBillingPlatform {
       _api.checkPurchasesAvailability();
 
   @override
-  Future<bool> isRuStoreInstalled() => _api.isRuStoreInstalled();
+  Future<bool> isRustoreUserAuthorized() => _api.isRustoreUserAuthorized();
 
   @override
   Future<List<RustoreProduct>> getProducts(final List<String> productIds) =>

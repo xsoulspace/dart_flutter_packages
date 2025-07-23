@@ -113,7 +113,7 @@ await client.initialize(
 
 ```dart
 // Check if RuStore is installed
-final isInstalled = await client.isRuStoreInstalled();
+final isAuthorized = await client.isRustoreUserAuthorized();
 
 // Check if purchases are available
 final availability = await client.checkPurchasesAvailability();

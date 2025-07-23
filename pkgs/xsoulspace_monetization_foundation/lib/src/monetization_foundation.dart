@@ -74,7 +74,7 @@ class MonetizationFoundation {
   }) async {
     if (_initCompleter.isCompleted) return;
     srcs.status.setStatus(MonetizationStatus.loading);
-    final isAvailable = await purchaseProvider.isAvailable();
+    final isAvailable = await purchaseProvider.isUserAuthorized();
     if (!isAvailable) {
       srcs.status.setStatus(MonetizationStatus.notAvailable);
       return;

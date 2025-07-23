@@ -24,7 +24,7 @@ abstract class RustoreBillingApi {
 
   /// Check if RuStore is installed on the device
   @async
-  bool isRuStoreInstalled();
+  bool isRustoreUserAuthorized();
 
   /// Get available products by IDs
   @async

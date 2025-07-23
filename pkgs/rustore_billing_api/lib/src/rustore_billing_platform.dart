@@ -39,8 +39,10 @@ abstract class RustoreBillingPlatform extends PlatformInterface {
   }
 
   /// Check if RuStore is installed on the device
-  Future<bool> isRuStoreInstalled() {
-    throw UnimplementedError('isRuStoreInstalled() has not been implemented.');
+  Future<bool> isRustoreUserAuthorized() {
+    throw UnimplementedError(
+      'isRustoreUserAuthorized() has not been implemented.',
+    );
   }
 
   /// Get available products by their IDs

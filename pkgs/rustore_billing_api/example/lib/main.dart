@@ -17,7 +17,7 @@ class RustoreBillingExample extends StatefulWidget {
 class _RustoreBillingExampleState extends State<RustoreBillingExample> {
   final _client = RustoreBillingClient.instance;
   var _isInitialized = false;
-  var _isRuStoreInstalled = false;
+  var _isRustoreUserAuthorized = false;
   var _purchasesAvailable = false;
   List<RustoreProduct> _products = [];
   List<RustorePurchase> _purchases = [];
@@ -76,8 +76,8 @@ class _RustoreBillingExampleState extends State<RustoreBillingExample> {
   /// Check if RuStore is installed
   Future<void> _checkRuStoreInstallation() async {
     try {
-      final isInstalled = await _client.isRuStoreInstalled();
-      setState(() => _isRuStoreInstalled = isInstalled);
+      final isInstalled = await _client.isRustoreUserAuthorized();
+      setState(() => _isRustoreUserAuthorized = isInstalled);
     } catch (e) {
       setState(() => _status = 'Failed to check RuStore installation: $e');
     }
@@ -235,7 +235,7 @@ class _RustoreBillingExampleState extends State<RustoreBillingExample> {
                   ),
                   const SizedBox(height: 8),
                   Text('Initialized: $_isInitialized'),
-                  Text('RuStore Installed: $_isRuStoreInstalled'),
+                  Text('RuStore User Authorized: $_isRustoreUserAuthorized'),
                   Text('Purchases Available: $_purchasesAvailable'),
                 ],
               ),

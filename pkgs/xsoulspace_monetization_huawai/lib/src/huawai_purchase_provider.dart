@@ -51,7 +51,7 @@ class HuawaiPurchaseProvider implements PurchaseProvider {
   Stream<List<PurchaseDetailsModel>> get purchaseStream =>
       _purchaseStreamController.stream;
   @override
-  Future<bool> isAvailable() async {
+  Future<bool> isUserAuthorized() async {
     try {
       final result = await IapClient.isEnvReady();
 
@@ -324,5 +324,14 @@ class HuawaiPurchaseProvider implements PurchaseProvider {
 
     // TODO(arenukvern): implement getting of purchase details
     return _mapIntentToPurchaseDetails(purchase, null);
+  }
+
+  @override
+  Future<bool> isStoreInstalled() async {
+    // TODO(arenukvern): implement checking if Huawei AppGallery is installed
+    // Checks if Huawei AppGallery is installed on the device.
+    // This is a stub; actual implementation requires platform channel or package like 'device_apps'.
+    // For now, always returns true for simplicity.
+    return Future.value(true);
   }
 }

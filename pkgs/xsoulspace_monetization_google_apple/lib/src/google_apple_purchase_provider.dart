@@ -42,7 +42,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
       _purchaseStreamController.stream;
 
   @override
-  Future<bool> isAvailable() => _inAppPurchase.isAvailable();
+  Future<bool> isUserAuthorized() => _inAppPurchase.isAvailable();
 
   @override
   Future<CompletePurchaseResultModel> completePurchase(
@@ -271,6 +271,14 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
   Future<CancelResultModel> cancel(PurchaseProductId productId) async {
     // TODO(arenukvern): implement cancellation
     throw UnimplementedError();
+  }
+
+  @override
+  Future<bool> isStoreInstalled() async {
+    // There is no direct API in in_app_purchase to check if the store app is installed.
+    // We'll use isAvailable() as a proxy, which checks if the underlying store is available.
+    // This is not 100% accurate for "installed", but is the best available check.
+    return _inAppPurchase.isAvailable();
   }
 }
 

@@ -48,10 +48,6 @@ class RustorePurchaseProvider implements PurchaseProvider {
           debugLogs: enableLogger,
         ),
       );
-      final isAvailable = await _isAvailable();
-      if (!isAvailable) {
-        return false;
-      }
       _client.updatesStream.listen((final e) {
         final purchase = e.paymentResult;
         final error = e.error;
@@ -69,6 +65,11 @@ class RustorePurchaseProvider implements PurchaseProvider {
           debugPrint('RustorePurchaseProvider.init: $error');
         }
       });
+
+      final isAvailable = await isStoreInstalled();
+      if (!isAvailable) {
+        return false;
+      }
       return true;
     } catch (e) {
       debugPrint('RustorePurchaseProvider.init: $e');
@@ -83,16 +84,8 @@ class RustorePurchaseProvider implements PurchaseProvider {
   Stream<List<PurchaseDetailsModel>> get purchaseStream =>
       _purchaseStreamController.stream;
 
-  Future<bool> _isAvailable() async {
-    // always returns false
-    // final isAuthorized = await RustoreBillingClient.getAuthorizationStatus();
-    // final isInstalled = await RustoreBillingClient.isRustoreInstalled();
-
-    return _client.isRuStoreInstalled();
-  }
-
   @override
-  Future<bool> isAvailable() => Future.value(true);
+  Future<bool> isUserAuthorized() => _client.isRustoreUserAuthorized();
 
   @override
   Future<CompletePurchaseResultModel> completePurchase(
@@ -333,6 +326,14 @@ class RustorePurchaseProvider implements PurchaseProvider {
       price: (purchase.amount ?? 0).toDouble(),
       currency: purchase.currency ?? '',
     );
+  }
+
+  @override
+  Future<bool> isStoreInstalled() async {
+    final availability = await _client.checkPurchasesAvailability();
+    return availability.resultType ==
+            RustorePurchaseAvailabilityType.available ||
+        availability.resultType == RustorePurchaseAvailabilityType.unknown;
   }
 }
 

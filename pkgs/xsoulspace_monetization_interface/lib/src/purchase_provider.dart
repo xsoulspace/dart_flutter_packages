@@ -44,8 +44,14 @@ abstract class PurchaseProvider {
   /// will receive all the events after they start to listen.
   Stream<List<PurchaseDetailsModel>> get purchaseStream;
 
-  /// Checks if the payment provider is available on the current device.
-  Future<bool> isAvailable();
+  /// Checks if the store has authorized user.
+  ///
+  /// This is important if store (for example) Google Play has not authorized
+  /// user yet - then the purchase flow will not work.
+  Future<bool> isUserAuthorized();
+
+  /// Checks if the store is installed on the device.
+  Future<bool> isStoreInstalled();
 
   /// Retrieves the details of a list of consumables.
   Future<List<PurchaseProductDetailsModel>> getConsumables(

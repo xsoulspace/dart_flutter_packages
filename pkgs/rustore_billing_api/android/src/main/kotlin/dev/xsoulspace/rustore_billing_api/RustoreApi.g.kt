@@ -707,7 +707,7 @@ interface RustoreBillingApi {
   /** Check if purchases are available on this device */
   fun checkPurchasesAvailability(callback: (Result<RustorePurchaseAvailabilityResult>) -> Unit)
   /** Check if RuStore is installed on the device */
-  fun isRuStoreInstalled(callback: (Result<Boolean>) -> Unit)
+  fun isRustoreUserAuthorized(callback: (Result<Boolean>) -> Unit)
   /** Get available products by IDs */
   fun getProducts(productIds: List<String>, callback: (Result<List<RustoreProduct>>) -> Unit)
   /** Get existing purchases */
@@ -786,10 +786,10 @@ interface RustoreBillingApi {
         }
       }
       run {
-        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.rustore_billing_api.RustoreBillingApi.isRuStoreInstalled$separatedMessageChannelSuffix", codec)
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.rustore_billing_api.RustoreBillingApi.isRustoreUserAuthorized$separatedMessageChannelSuffix", codec)
         if (api != null) {
           channel.setMessageHandler { _, reply ->
-            api.isRuStoreInstalled{ result: Result<Boolean> ->
+            api.isRustoreUserAuthorized{ result: Result<Boolean> ->
               val error = result.exceptionOrNull()
               if (error != null) {
                 reply.reply(RustoreApiPigeonUtils.wrapError(error))

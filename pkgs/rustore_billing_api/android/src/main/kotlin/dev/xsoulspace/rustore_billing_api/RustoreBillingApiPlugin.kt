@@ -157,7 +157,7 @@ class RustoreBillingApiPlugin: FlutterPlugin, ActivityAware, RustoreBillingApi {
         }
     }
 
-    override fun isRuStoreInstalled(callback: (Result<Boolean>) -> Unit) {
+    override fun isRustoreUserAuthorized(callback: (Result<Boolean>) -> Unit) {
         val client = billingClient
         if (client == null) {
             callback(Result.failure(IllegalStateException("Billing client not initialized")))

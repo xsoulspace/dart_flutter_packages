@@ -78,13 +78,15 @@ class RustoreBillingClient {
 
   /// Check if RuStore is installed on the device
   ///
-  /// Returns true if RuStore is installed, false otherwise.
+  /// Returns true if RuStore user is authorized, false otherwise.
   /// Throws [RustoreBillingException] if operation fails.
-  Future<bool> isRuStoreInstalled() async {
+  Future<bool> isRustoreUserAuthorized() async {
     try {
-      return await _platform.isRuStoreInstalled();
+      return await _platform.isRustoreUserAuthorized();
     } catch (e) {
-      throw RustoreBillingException('Failed to check RuStore installation: $e');
+      throw RustoreBillingException(
+        'Failed to check RuStore user authorization: $e',
+      );
     }
   }
 
