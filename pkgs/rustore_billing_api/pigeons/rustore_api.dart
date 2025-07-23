@@ -110,7 +110,7 @@ class RustoreProduct {
   });
 
   final String productId;
-  final String productType;
+  final RustoreProductType productType;
   final String? title;
   final String? description;
   final int? price;
@@ -118,6 +118,8 @@ class RustoreProduct {
   final String? currency;
   final String? language;
 }
+
+enum RustoreProductType { nonConsumable, consumable, subscription }
 
 // Purchase model
 class RustorePurchase {
@@ -161,6 +163,8 @@ enum RustorePurchaseState {
   cancelled,
   consumed,
   closed,
+  paused,
+  terminated,
 }
 
 // Payment result

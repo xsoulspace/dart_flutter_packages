@@ -104,6 +104,18 @@ enum class RustorePurchaseAvailabilityType(val raw: Int) {
   }
 }
 
+enum class RustoreProductType(val raw: Int) {
+  NON_CONSUMABLE(0),
+  CONSUMABLE(1),
+  SUBSCRIPTION(2);
+
+  companion object {
+    fun ofRaw(raw: Int): RustoreProductType? {
+      return values().firstOrNull { it.raw == raw }
+    }
+  }
+}
+
 enum class RustorePurchaseState(val raw: Int) {
   CREATED(0),
   INVOICE_CREATED(1),
@@ -111,7 +123,9 @@ enum class RustorePurchaseState(val raw: Int) {
   PAID(3),
   CANCELLED(4),
   CONSUMED(5),
-  CLOSED(6);
+  CLOSED(6),
+  PAUSED(7),
+  TERMINATED(8);
 
   companion object {
     fun ofRaw(raw: Int): RustorePurchaseState? {
@@ -223,7 +237,7 @@ data class RustorePurchaseAvailabilityResult (
 /** Generated class from Pigeon that represents data sent in messages. */
 data class RustoreProduct (
   val productId: String,
-  val productType: String,
+  val productType: RustoreProductType,
   val title: String? = null,
   val description: String? = null,
   val price: Long? = null,
@@ -235,7 +249,7 @@ data class RustoreProduct (
   companion object {
     fun fromList(pigeonVar_list: List<Any?>): RustoreProduct {
       val productId = pigeonVar_list[0] as String
-      val productType = pigeonVar_list[1] as String
+      val productType = pigeonVar_list[1] as RustoreProductType
       val title = pigeonVar_list[2] as String?
       val description = pigeonVar_list[3] as String?
       val price = pigeonVar_list[4] as Long?
@@ -452,50 +466,55 @@ private open class RustoreApiPigeonCodec : StandardMessageCodec() {
       }
       131.toByte() -> {
         return (readValue(buffer) as Long?)?.let {
-          RustorePurchaseState.ofRaw(it.toInt())
+          RustoreProductType.ofRaw(it.toInt())
         }
       }
       132.toByte() -> {
         return (readValue(buffer) as Long?)?.let {
-          RustorePaymentResultType.ofRaw(it.toInt())
+          RustorePurchaseState.ofRaw(it.toInt())
         }
       }
       133.toByte() -> {
         return (readValue(buffer) as Long?)?.let {
-          RustoreExceptionType.ofRaw(it.toInt())
+          RustorePaymentResultType.ofRaw(it.toInt())
         }
       }
       134.toByte() -> {
-        return (readValue(buffer) as? List<Any?>)?.let {
-          RustoreBillingConfig.fromList(it)
+        return (readValue(buffer) as Long?)?.let {
+          RustoreExceptionType.ofRaw(it.toInt())
         }
       }
       135.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          RustorePurchaseAvailabilityResult.fromList(it)
+          RustoreBillingConfig.fromList(it)
         }
       }
       136.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          RustoreProduct.fromList(it)
+          RustorePurchaseAvailabilityResult.fromList(it)
         }
       }
       137.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          RustorePurchase.fromList(it)
+          RustoreProduct.fromList(it)
         }
       }
       138.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          RustorePaymentResult.fromList(it)
+          RustorePurchase.fromList(it)
         }
       }
       139.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          RustoreError.fromList(it)
+          RustorePaymentResult.fromList(it)
         }
       }
       140.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
+          RustoreError.fromList(it)
+        }
+      }
+      141.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
           RustoreException.fromList(it)
         }
@@ -513,44 +532,48 @@ private open class RustoreApiPigeonCodec : StandardMessageCodec() {
         stream.write(130)
         writeValue(stream, value.raw)
       }
-      is RustorePurchaseState -> {
+      is RustoreProductType -> {
         stream.write(131)
         writeValue(stream, value.raw)
       }
-      is RustorePaymentResultType -> {
+      is RustorePurchaseState -> {
         stream.write(132)
         writeValue(stream, value.raw)
       }
-      is RustoreExceptionType -> {
+      is RustorePaymentResultType -> {
         stream.write(133)
         writeValue(stream, value.raw)
       }
-      is RustoreBillingConfig -> {
+      is RustoreExceptionType -> {
         stream.write(134)
-        writeValue(stream, value.toList())
+        writeValue(stream, value.raw)
       }
-      is RustorePurchaseAvailabilityResult -> {
+      is RustoreBillingConfig -> {
         stream.write(135)
         writeValue(stream, value.toList())
       }
-      is RustoreProduct -> {
+      is RustorePurchaseAvailabilityResult -> {
         stream.write(136)
         writeValue(stream, value.toList())
       }
-      is RustorePurchase -> {
+      is RustoreProduct -> {
         stream.write(137)
         writeValue(stream, value.toList())
       }
-      is RustorePaymentResult -> {
+      is RustorePurchase -> {
         stream.write(138)
         writeValue(stream, value.toList())
       }
-      is RustoreError -> {
+      is RustorePaymentResult -> {
         stream.write(139)
         writeValue(stream, value.toList())
       }
-      is RustoreException -> {
+      is RustoreError -> {
         stream.write(140)
+        writeValue(stream, value.toList())
+      }
+      is RustoreException -> {
+        stream.write(141)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)

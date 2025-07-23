@@ -18,10 +18,15 @@ import ru.rustore.sdk.billingclient.model.purchase.PaymentResult
 import ru.rustore.sdk.billingclient.model.purchase.Purchase
 import ru.rustore.sdk.billingclient.model.purchase.PurchaseState
 import io.flutter.plugin.common.MethodChannel
+import ru.rustore.sdk.billingclient.model.product.ProductType
 import ru.rustore.sdk.billingclient.model.purchase.PurchaseAvailabilityResult
 import ru.rustore.sdk.billingclient.presentation.BillingClientTheme
 import ru.rustore.sdk.billingclient.provider.BillingClientThemeProvider
 import ru.rustore.sdk.billingclient.utils.pub.checkPurchasesAvailability
+import ru.rustore.sdk.core.exception.RuStoreException
+import ru.rustore.sdk.core.exception.RuStoreNotInstalledException
+import ru.rustore.sdk.core.exception.RuStoreOutdatedException
+import ru.rustore.sdk.core.exception.RuStoreUserUnauthorizedException
 
 /** RustoreBillingApiPlugin */
 class RustoreBillingApiPlugin: FlutterPlugin, ActivityAware, RustoreBillingApi {
@@ -83,27 +88,27 @@ class RustoreBillingApiPlugin: FlutterPlugin, ActivityAware, RustoreBillingApi {
                 themeProvider = BillingClientThemeProviderImpl(
                     config
                 ),
-                externalPaymentLoggerFactory = if (config.enableLogging) {
-                    { tag ->
-                        object : ru.rustore.sdk.billingclient.model.logging.ExternalPaymentLogger {
-                            override fun d(e: Throwable?, message: () -> String) {
-                                android.util.Log.d(tag, message.invoke(), e)
-                            }
-                            override fun e(e: Throwable?, message: () -> String) {
-                                android.util.Log.e(tag, message.invoke(), e)
-                            }
-                            override fun i(e: Throwable?, message: () -> String) {
-                                android.util.Log.i(tag, message.invoke(), e)
-                            }
-                            override fun v(e: Throwable?, message: () -> String) {
-                                android.util.Log.v(tag, message.invoke(), e)
-                            }
-                            override fun w(e: Throwable?, message: () -> String) {
-                                android.util.Log.w(tag, message.invoke(), e)
-                            }
-                        }
-                    }
-                } else null
+//                externalPaymentLoggerFactory = if (config.enableLogging) {
+//                    { tag ->
+//                        object : ru.rustore.sdk.billingclient.model.logging.ExternalPaymentLogger {
+//                            override fun d(e: Throwable?, message: () -> String) {
+//                                android.util.Log.d(tag, message.invoke(), e)
+//                            }
+//                            override fun e(e: Throwable?, message: () -> String) {
+//                                android.util.Log.e(tag, message.invoke(), e)
+//                            }
+//                            override fun i(e: Throwable?, message: () -> String) {
+//                                android.util.Log.i(tag, message.invoke(), e)
+//                            }
+//                            override fun v(e: Throwable?, message: () -> String) {
+//                                android.util.Log.v(tag, message.invoke(), e)
+//                            }
+//                            override fun w(e: Throwable?, message: () -> String) {
+//                                android.util.Log.w(tag, message.invoke(), e)
+//                            }
+//                        }
+//                    }
+//                } else null
             )
             
             callback(Result.success(Unit))
@@ -129,30 +134,23 @@ class RustoreBillingApiPlugin: FlutterPlugin, ActivityAware, RustoreBillingApi {
 
         coroutineScope.launch {
             try {
-                val result = withContext(Dispatchers.IO) {
-                    RuStoreBillingClient.checkPurchasesAvailability().await()
+
+               val availability =  RuStoreBillingClient.checkPurchasesAvailability().await()
+                val result = when (availability) {
+                    is PurchaseAvailabilityResult.Available -> RustorePurchaseAvailabilityResult(
+                        RustorePurchaseAvailabilityType.AVAILABLE
+                    )
+
+                    is PurchaseAvailabilityResult.Unavailable -> RustorePurchaseAvailabilityResult (
+                        RustorePurchaseAvailabilityType.UNAVAILABLE
+                    )
+
+                    is PurchaseAvailabilityResult.Unknown -> RustorePurchaseAvailabilityResult(
+                        RustorePurchaseAvailabilityType.UNKNOWN
+                    )
                 }
 
-                val rustoreResult = when (result) {
-                    is Available -> RustorePurchaseAvailabilityResult(
-                        resultType = RustorePurchaseAvailabilityType.AVAILABLE,
-                        cause = null
-                    )
-                    is Unavailable -> RustorePurchaseAvailabilityResult(
-                        resultType = RustorePurchaseAvailabilityType.UNAVAILABLE,
-                        cause = mapException(result.cause)
-                    )
-                    is Unknown -> RustorePurchaseAvailabilityResult(
-                        resultType = RustorePurchaseAvailabilityType.UNKNOWN,
-                        cause = mapException(result.cause)
-                    )
-
-                    PurchaseAvailabilityResult.Available -> TODO()
-                    is PurchaseAvailabilityResult.Unavailable -> TODO()
-                    PurchaseAvailabilityResult.Unknown -> TODO()
-                }
-
-                callback(Result.success(rustoreResult))
+                callback(Result.success(result))
             } catch (e: Exception) {
                 callback(Result.failure(e))
             }
@@ -168,11 +166,11 @@ class RustoreBillingApiPlugin: FlutterPlugin, ActivityAware, RustoreBillingApi {
 
         coroutineScope.launch {
             try {
-                val isInstalled = withContext(Dispatchers.IO) {
-                    RuStoreBillingClient.isRuStoreInstalled()
+                val result = withContext(Dispatchers.IO) {
+                    client.userInfo.getAuthorizationStatus().await()
                 }
-                
-                callback(Result.success(isInstalled))
+
+                callback(Result.success(result.authorized))
             } catch (e: Exception) {
                 callback(Result.failure(e))
             }
@@ -195,7 +193,12 @@ class RustoreBillingApiPlugin: FlutterPlugin, ActivityAware, RustoreBillingApi {
                 val rustoreProducts = products.map { product ->
                     RustoreProduct(
                         productId = product.productId,
-                        productType = product.productType ?: "",
+                        productType = when(product.productType) {
+                            ProductType.NON_CONSUMABLE -> RustoreProductType.NON_CONSUMABLE
+                            ProductType.CONSUMABLE -> RustoreProductType.CONSUMABLE
+                            ProductType.SUBSCRIPTION -> RustoreProductType.SUBSCRIPTION
+                            null -> RustoreProductType.SUBSCRIPTION
+                        },
                         title = product.title,
                         description = product.description,
                         price = product.price?.toLong(),
@@ -230,9 +233,9 @@ class RustoreBillingApiPlugin: FlutterPlugin, ActivityAware, RustoreBillingApi {
                         purchaseId = purchase.purchaseId,
                         productId = purchase.productId,
                         invoiceId = purchase.invoiceId,
-                        description = purchase.description,
+                        description = null,
                         language = purchase.language,
-                        purchaseTime = purchase.purchaseTime,
+                        purchaseTime = purchase.purchaseTime.toString(),
                         orderId = purchase.orderId,
                         amountLabel = purchase.amountLabel,
                         amount = purchase.amount?.toLong(),
@@ -320,10 +323,11 @@ class RustoreBillingApiPlugin: FlutterPlugin, ActivityAware, RustoreBillingApi {
         }
 
         try {
-            val billingTheme = when (theme) {
-                RustoreBillingTheme.LIGHT -> Light
-                RustoreBillingTheme.DARK -> Dark
-            }
+//            val billingTheme = when (theme) {
+//                RustoreBillingTheme.LIGHT -> Light
+//                RustoreBillingTheme.DARK -> Dark
+//            }
+
             
             // Note: The actual theme setting might require recreating the client
             // or using a different approach depending on the RuStore SDK
@@ -342,6 +346,8 @@ class RustoreBillingApiPlugin: FlutterPlugin, ActivityAware, RustoreBillingApi {
             PurchaseState.CANCELLED -> RustorePurchaseState.CANCELLED
             PurchaseState.CONSUMED -> RustorePurchaseState.CONSUMED
             PurchaseState.CLOSED -> RustorePurchaseState.CLOSED
+            PurchaseState.PAUSED -> RustorePurchaseState.PAUSED
+            PurchaseState.TERMINATED -> RustorePurchaseState.TERMINATED
             null -> null
         }
     }
@@ -375,23 +381,19 @@ class RustoreBillingApiPlugin: FlutterPlugin, ActivityAware, RustoreBillingApi {
         }
     }
 
-    private fun mapException(exception: ru.rustore.sdk.billingclient.model.exception.RuStoreException?): RustoreException? {
+    private fun mapException(exception: RuStoreException?): RustoreException? {
         if (exception == null) return null
         
         val exceptionType = when (exception) {
-            is ru.rustore.sdk.billingclient.model.exception.RuStoreNotInstalledException -> RustoreExceptionType.NOT_INSTALLED
-            is ru.rustore.sdk.billingclient.model.exception.RuStoreOutdatedException -> RustoreExceptionType.OUTDATED
-            is ru.rustore.sdk.billingclient.model.exception.RuStoreUserUnauthorizedException -> RustoreExceptionType.USER_UNAUTHORIZED
-            is ru.rustore.sdk.billingclient.model.exception.RuStoreRequestLimitReached -> RustoreExceptionType.REQUEST_LIMIT_REACHED
-            is ru.rustore.sdk.billingclient.model.exception.RuStoreReviewExists -> RustoreExceptionType.REVIEW_EXISTS
-            is ru.rustore.sdk.billingclient.model.exception.RuStoreInvalidReviewInfo -> RustoreExceptionType.INVALID_REVIEW_INFO
+            is RuStoreNotInstalledException -> RustoreExceptionType.NOT_INSTALLED
+            is RuStoreOutdatedException -> RustoreExceptionType.OUTDATED
+            is RuStoreUserUnauthorizedException -> RustoreExceptionType.USER_UNAUTHORIZED
             else -> RustoreExceptionType.GENERAL
         }
         
         return RustoreException(
             type = exceptionType,
             message = exception.message ?: "Unknown error",
-            errorCode = exception.errorCode
         )
     }
 }
@@ -399,12 +401,11 @@ class RustoreBillingApiPlugin: FlutterPlugin, ActivityAware, RustoreBillingApi {
 
 
 
-class BillingClientThemeProviderImpl: BillingClientThemeProvider {
-    BillingClientThemeProviderImpl(RustoreBillingConfig config)
+class BillingClientThemeProviderImpl(val config: RustoreBillingConfig ): BillingClientThemeProvider {
 
     override fun provide(): BillingClientTheme {
 
-        if(darkTheme){
+        return if(config.theme == RustoreBillingTheme.DARK){
             BillingClientTheme.Dark
         } else {
             BillingClientTheme.Light

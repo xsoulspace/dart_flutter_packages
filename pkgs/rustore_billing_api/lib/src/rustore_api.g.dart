@@ -50,6 +50,12 @@ enum RustorePurchaseAvailabilityType {
   unknown,
 }
 
+enum RustoreProductType {
+  nonConsumable,
+  consumable,
+  subscription,
+}
+
 enum RustorePurchaseState {
   created,
   invoice_created,
@@ -58,6 +64,8 @@ enum RustorePurchaseState {
   cancelled,
   consumed,
   closed,
+  paused,
+  terminated,
 }
 
 enum RustorePaymentResultType {
@@ -198,7 +206,7 @@ class RustoreProduct {
 
   String productId;
 
-  String productType;
+  RustoreProductType productType;
 
   String? title;
 
@@ -232,7 +240,7 @@ class RustoreProduct {
     result as List<Object?>;
     return RustoreProduct(
       productId: result[0]! as String,
-      productType: result[1]! as String,
+      productType: result[1]! as RustoreProductType,
       title: result[2] as String?,
       description: result[3] as String?,
       price: result[4] as int?,
@@ -533,35 +541,38 @@ class _PigeonCodec extends StandardMessageCodec {
     }    else if (value is RustorePurchaseAvailabilityType) {
       buffer.putUint8(130);
       writeValue(buffer, value.index);
-    }    else if (value is RustorePurchaseState) {
+    }    else if (value is RustoreProductType) {
       buffer.putUint8(131);
       writeValue(buffer, value.index);
-    }    else if (value is RustorePaymentResultType) {
+    }    else if (value is RustorePurchaseState) {
       buffer.putUint8(132);
       writeValue(buffer, value.index);
-    }    else if (value is RustoreExceptionType) {
+    }    else if (value is RustorePaymentResultType) {
       buffer.putUint8(133);
       writeValue(buffer, value.index);
-    }    else if (value is RustoreBillingConfig) {
+    }    else if (value is RustoreExceptionType) {
       buffer.putUint8(134);
-      writeValue(buffer, value.encode());
-    }    else if (value is RustorePurchaseAvailabilityResult) {
+      writeValue(buffer, value.index);
+    }    else if (value is RustoreBillingConfig) {
       buffer.putUint8(135);
       writeValue(buffer, value.encode());
-    }    else if (value is RustoreProduct) {
+    }    else if (value is RustorePurchaseAvailabilityResult) {
       buffer.putUint8(136);
       writeValue(buffer, value.encode());
-    }    else if (value is RustorePurchase) {
+    }    else if (value is RustoreProduct) {
       buffer.putUint8(137);
       writeValue(buffer, value.encode());
-    }    else if (value is RustorePaymentResult) {
+    }    else if (value is RustorePurchase) {
       buffer.putUint8(138);
       writeValue(buffer, value.encode());
-    }    else if (value is RustoreError) {
+    }    else if (value is RustorePaymentResult) {
       buffer.putUint8(139);
       writeValue(buffer, value.encode());
-    }    else if (value is RustoreException) {
+    }    else if (value is RustoreError) {
       buffer.putUint8(140);
+      writeValue(buffer, value.encode());
+    }    else if (value is RustoreException) {
+      buffer.putUint8(141);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -579,26 +590,29 @@ class _PigeonCodec extends StandardMessageCodec {
         return value == null ? null : RustorePurchaseAvailabilityType.values[value];
       case 131: 
         final int? value = readValue(buffer) as int?;
-        return value == null ? null : RustorePurchaseState.values[value];
+        return value == null ? null : RustoreProductType.values[value];
       case 132: 
         final int? value = readValue(buffer) as int?;
-        return value == null ? null : RustorePaymentResultType.values[value];
+        return value == null ? null : RustorePurchaseState.values[value];
       case 133: 
         final int? value = readValue(buffer) as int?;
-        return value == null ? null : RustoreExceptionType.values[value];
+        return value == null ? null : RustorePaymentResultType.values[value];
       case 134: 
-        return RustoreBillingConfig.decode(readValue(buffer)!);
+        final int? value = readValue(buffer) as int?;
+        return value == null ? null : RustoreExceptionType.values[value];
       case 135: 
-        return RustorePurchaseAvailabilityResult.decode(readValue(buffer)!);
+        return RustoreBillingConfig.decode(readValue(buffer)!);
       case 136: 
-        return RustoreProduct.decode(readValue(buffer)!);
+        return RustorePurchaseAvailabilityResult.decode(readValue(buffer)!);
       case 137: 
-        return RustorePurchase.decode(readValue(buffer)!);
+        return RustoreProduct.decode(readValue(buffer)!);
       case 138: 
-        return RustorePaymentResult.decode(readValue(buffer)!);
+        return RustorePurchase.decode(readValue(buffer)!);
       case 139: 
-        return RustoreError.decode(readValue(buffer)!);
+        return RustorePaymentResult.decode(readValue(buffer)!);
       case 140: 
+        return RustoreError.decode(readValue(buffer)!);
+      case 141: 
         return RustoreException.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);

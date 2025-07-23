@@ -76,11 +76,11 @@ dependencies {
     
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion")
     implementation("androidx.annotation:annotation:1.9.1")
-    implementation(platform("ru.rustore.sdk:bom:2025.02.01"))
-    implementation("ru.rustore.sdk:billingclient")
+//    implementation(platform("ru.rustore.sdk:bom:2025.02.01"))
+//    implementation("ru.rustore.sdk:billingclient")
 
     // RuStore SDK
-//    implementation("ru.rustore.sdk:billingclient:9.1.0")
+    implementation("ru.rustore.sdk:billingclient:9.1.0")
     
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
