@@ -433,23 +433,38 @@ data class RustorePurchase (
 /** Generated class from Pigeon that represents data sent in messages. */
 data class RustorePaymentResult (
   val resultType: RustorePaymentResultType,
-  val purchaseId: String? = null,
-  val errorCode: String? = null,
-  val errorMessage: String? = null
+  val productId: String,
+  val orderId: String,
+  val subscriptionToken: String,
+  val invoiceId: String,
+  val sandbox: Boolean,
+  val purchaseId: String,
+  val errorCode: String,
+  val errorMessage: String
 )
  {
   companion object {
     fun fromList(pigeonVar_list: List<Any?>): RustorePaymentResult {
       val resultType = pigeonVar_list[0] as RustorePaymentResultType
-      val purchaseId = pigeonVar_list[1] as String?
-      val errorCode = pigeonVar_list[2] as String?
-      val errorMessage = pigeonVar_list[3] as String?
-      return RustorePaymentResult(resultType, purchaseId, errorCode, errorMessage)
+      val productId = pigeonVar_list[1] as String
+      val orderId = pigeonVar_list[2] as String
+      val subscriptionToken = pigeonVar_list[3] as String
+      val invoiceId = pigeonVar_list[4] as String
+      val sandbox = pigeonVar_list[5] as Boolean
+      val purchaseId = pigeonVar_list[6] as String
+      val errorCode = pigeonVar_list[7] as String
+      val errorMessage = pigeonVar_list[8] as String
+      return RustorePaymentResult(resultType, productId, orderId, subscriptionToken, invoiceId, sandbox, purchaseId, errorCode, errorMessage)
     }
   }
   fun toList(): List<Any?> {
     return listOf(
       resultType,
+      productId,
+      orderId,
+      subscriptionToken,
+      invoiceId,
+      sandbox,
       purchaseId,
       errorCode,
       errorMessage,

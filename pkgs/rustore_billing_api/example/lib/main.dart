@@ -60,8 +60,14 @@ class _RustoreBillingExampleState extends State<RustoreBillingExample> {
       await _checkPurchaseAvailability();
 
       // Listen to purchase results
-      _client.purchaseResults.listen(_handlePurchaseResult);
-      _client.errors.listen(_handleError);
+      _client.updatesStream.listen(
+        (final e) => switch (e.type) {
+          RustoreBillingResultType.payment => _handlePurchaseResult(
+            e.paymentResult!,
+          ),
+          RustoreBillingResultType.error => _handleError(e.error!),
+        },
+      );
     } catch (e) {
       setState(() => _status = 'Initialization failed: $e');
     }
@@ -153,14 +159,14 @@ class _RustoreBillingExampleState extends State<RustoreBillingExample> {
         case RustorePaymentResultType.success:
           _status = 'Purchase successful: ${result.purchaseId}';
           // Confirm the purchase
-          if (result.purchaseId != null) {
-            unawaited(_confirmPurchase(result.purchaseId!));
+          if (result.purchaseId.isNotEmpty) {
+            unawaited(_confirmPurchase(result.purchaseId));
           }
         case RustorePaymentResultType.cancelled:
           _status = 'Purchase cancelled';
         case RustorePaymentResultType.failure:
           _status = 'Purchase failed: ${result.errorMessage}';
-        case RustorePaymentResultType.invalid_payment_state:
+        case RustorePaymentResultType.invalidPaymentState:
           _status = 'Invalid payment state: ${result.errorMessage}';
       }
     });

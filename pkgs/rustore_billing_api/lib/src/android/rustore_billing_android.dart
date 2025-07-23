@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../models/rustore_billing_result.dart';
 import '../rustore_api.g.dart';
 import '../rustore_billing_platform.dart';
 
@@ -15,23 +16,21 @@ class RustoreBillingAndroid extends RustoreBillingPlatform {
   final _api = RustoreBillingApi();
   RustoreBillingCallbackApi? _callbackApi;
 
-  final _purchaseResultController =
-      StreamController<RustorePaymentResult>.broadcast();
-  final _errorController = StreamController<RustoreError>.broadcast();
+  final _billingResultController =
+      StreamController<RustoreBillingResult>.broadcast();
 
-  /// Stream of purchase results from payment flows
-  Stream<RustorePaymentResult> get purchaseResults =>
-      _purchaseResultController.stream;
-
-  /// Stream of errors from billing operations
-  Stream<RustoreError> get errors => _errorController.stream;
+  /// Unified stream of billing results (both payment results and errors)
+  Stream<RustoreBillingResult> get updatesStream =>
+      _billingResultController.stream;
 
   @override
   Future<void> initialize(final RustoreBillingConfig config) async {
     // Set up callback API for receiving events
     _callbackApi = RustoreBillingCallbackApiImpl(
-      onPurchaseResultCallback: _purchaseResultController.add,
-      onErrorCallback: _errorController.add,
+      onPurchaseResultCallback: (final result) =>
+          _billingResultController.add(RustoreBillingResult.payment(result)),
+      onErrorCallback: (final error) =>
+          _billingResultController.add(RustoreBillingResult.error(error)),
     );
     RustoreBillingCallbackApi.setUp(_callbackApi);
 
@@ -89,8 +88,7 @@ class RustoreBillingAndroid extends RustoreBillingPlatform {
 
   /// Dispose resources and close streams
   Future<void> dispose() async {
-    await _purchaseResultController.close();
-    await _errorController.close();
+    await _billingResultController.close();
     RustoreBillingCallbackApi.setUp(null);
     _callbackApi = null;
   }

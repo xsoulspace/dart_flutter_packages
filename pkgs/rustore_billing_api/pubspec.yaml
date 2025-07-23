@@ -9,6 +9,7 @@ dependencies:
   flutter:
     sdk: flutter
   plugin_platform_interface: ^2.1.8
+  from_json_to_json: ^0.2.0
 
 dev_dependencies:
   flutter_test:

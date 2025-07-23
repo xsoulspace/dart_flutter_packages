@@ -48,7 +48,14 @@ class RustorePurchaseProvider implements PurchaseProvider {
           debugLogs: enableLogger,
         ),
       );
-      return await _isAvailable();
+      final isAvailable = await _isAvailable();
+      if (!isAvailable) {
+        return false;
+      }
+      _client.updatesStream.listen((final e) {
+        if (e.isPayment) {}
+      });
+      return true;
     } catch (e) {
       debugPrint('RustorePurchaseProvider.init: $e');
       return false;
@@ -124,7 +131,7 @@ class RustorePurchaseProvider implements PurchaseProvider {
           status: details.productType == PurchaseProductType.consumable
               ? PurchaseStatus.restored
               : PurchaseStatus.purchased,
-          purchaseId: PurchaseId.fromJson(purchase.purchaseId ?? ''),
+          purchaseId: PurchaseId.fromJson(purchase.purchaseId),
           purchaseType: details.productType,
           productId: details.productId,
           priceId: details.priceId,
@@ -160,10 +167,14 @@ class RustorePurchaseProvider implements PurchaseProvider {
           purchaseDate:
               dateTimeFromIso8601String(p.purchaseTime) ?? DateTime.now(),
           purchaseType: productType,
+          name: p.amountLabel ?? '',
+          formattedPrice: p.amountLabel ?? '',
+          price: (p.amount ?? 0).toDouble(),
+          currency: p.currency ?? '',
 
-          // expiryDate: p.finishTime != null
-          //     ? dateTimeFromIso8601String(p.finishTime)
-          //     : null,
+          // expiryDate: (p.purchaseTime != null
+          //     ? dateTimeFromIso8601String(p.purchaseTime)
+          //     : null) + p.subscription?.period,
         );
       }).toList();
       _purchaseStreamController.add(restored);
@@ -315,7 +326,7 @@ PurchaseStatus _purchaseStatusFromRustoreState(
   final RustorePurchaseState? state,
 ) => switch (state) {
   RustorePurchaseState.created ||
-  RustorePurchaseState.invoice_created ||
+  RustorePurchaseState.invoiceCreated ||
   RustorePurchaseState.paused => PurchaseStatus.pending,
   RustorePurchaseState.paid => PurchaseStatus.restored,
   RustorePurchaseState.cancelled ||

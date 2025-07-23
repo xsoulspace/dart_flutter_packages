@@ -4,7 +4,7 @@ import 'package:pigeon/pigeon.dart';
   PigeonOptions(
     dartOut: 'lib/src/rustore_api.g.dart',
     kotlinOut:
-        'android/src/main/kotlin/com/xsoulspace/rustore_billing_api/RustoreApi.g.kt',
+        'android/src/main/kotlin/dev/xsoulspace/rustore_billing_api/RustoreApi.g.kt',
     kotlinOptions: KotlinOptions(package: 'dev.xsoulspace.rustore_billing_api'),
   ),
 )
@@ -193,7 +193,7 @@ class RustorePurchase {
 // Purchase state enum
 enum RustorePurchaseState {
   created,
-  invoice_created,
+  invoiceCreated,
   confirmed,
   paid,
   cancelled,
@@ -207,22 +207,32 @@ enum RustorePurchaseState {
 class RustorePaymentResult {
   const RustorePaymentResult({
     required this.resultType,
-    this.purchaseId,
-    this.errorCode,
-    this.errorMessage,
+    this.productId = '',
+    this.invoiceId = '',
+    this.orderId = '',
+    this.subscriptionToken = '',
+    this.purchaseId = '',
+    this.errorCode = '',
+    this.errorMessage = '',
+    this.sandbox = false,
   });
 
   final RustorePaymentResultType resultType;
-  final String? purchaseId;
-  final String? errorCode;
-  final String? errorMessage;
+  final String productId;
+  final String orderId;
+  final String subscriptionToken;
+  final String invoiceId;
+  final bool sandbox;
+  final String purchaseId;
+  final String errorCode;
+  final String errorMessage;
 }
 
 enum RustorePaymentResultType {
   success,
   cancelled,
   failure,
-  invalid_payment_state,
+  invalidPaymentState,
 }
 
 // Error model

@@ -26,11 +26,21 @@
 /// if (result.resultType == RustorePaymentResultType.success) {
 ///   await client.confirmPurchase(result.purchaseId!);
 /// }
+///
+/// // Listen to unified billing results
+/// client.billingResults.listen((result) {
+///   result.when(
+///     payment: (paymentResult) => print('Payment: ${paymentResult.resultType}'),
+///     error: (error) => print('Error: ${error.message}'),
+///   );
+/// });
 /// ```
 /// {@endtemplate}
 library;
 
 export 'src/android/rustore_billing_android.dart';
+// Export the unified billing result model
+export 'src/models/rustore_billing_result.dart';
 // Export the generated pigeon models and APIs
 export 'src/rustore_api.g.dart'
     show

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'android/rustore_billing_android.dart';
+import 'models/rustore_billing_result.dart';
 import 'rustore_api.g.dart';
 import 'rustore_billing_platform.dart';
 
@@ -22,18 +23,10 @@ class RustoreBillingClient {
   /// Get the platform instance
   RustoreBillingPlatform get _platform => RustoreBillingPlatform.instance;
 
-  /// Stream of purchase results from payment flows
-  Stream<RustorePaymentResult> get purchaseResults {
+  /// Unified stream of billing results (both payment results and errors)
+  Stream<RustoreBillingResult> get updatesStream {
     if (_platform is RustoreBillingAndroid) {
-      return (_platform as RustoreBillingAndroid).purchaseResults;
-    }
-    return const Stream.empty();
-  }
-
-  /// Stream of errors from billing operations
-  Stream<RustoreError> get errors {
-    if (_platform is RustoreBillingAndroid) {
-      return (_platform as RustoreBillingAndroid).errors;
+      return (_platform as RustoreBillingAndroid).updatesStream;
     }
     return const Stream.empty();
   }

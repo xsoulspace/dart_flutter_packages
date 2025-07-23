@@ -58,7 +58,7 @@ enum RustoreProductType {
 
 enum RustorePurchaseState {
   created,
-  invoice_created,
+  invoiceCreated,
   confirmed,
   paid,
   cancelled,
@@ -72,7 +72,7 @@ enum RustorePaymentResultType {
   success,
   cancelled,
   failure,
-  invalid_payment_state,
+  invalidPaymentState,
 }
 
 enum RustoreExceptionType {
@@ -499,22 +499,42 @@ class RustorePurchase {
 class RustorePaymentResult {
   RustorePaymentResult({
     required this.resultType,
-    this.purchaseId,
-    this.errorCode,
-    this.errorMessage,
+    this.productId = '',
+    this.orderId = '',
+    this.subscriptionToken = '',
+    this.invoiceId = '',
+    this.sandbox = false,
+    this.purchaseId = '',
+    this.errorCode = '',
+    this.errorMessage = '',
   });
 
   RustorePaymentResultType resultType;
 
-  String? purchaseId;
+  String productId;
 
-  String? errorCode;
+  String orderId;
 
-  String? errorMessage;
+  String subscriptionToken;
+
+  String invoiceId;
+
+  bool sandbox;
+
+  String purchaseId;
+
+  String errorCode;
+
+  String errorMessage;
 
   List<Object?> _toList() {
     return <Object?>[
       resultType,
+      productId,
+      orderId,
+      subscriptionToken,
+      invoiceId,
+      sandbox,
       purchaseId,
       errorCode,
       errorMessage,
@@ -528,9 +548,14 @@ class RustorePaymentResult {
     result as List<Object?>;
     return RustorePaymentResult(
       resultType: result[0]! as RustorePaymentResultType,
-      purchaseId: result[1] as String?,
-      errorCode: result[2] as String?,
-      errorMessage: result[3] as String?,
+      productId: result[1]! as String,
+      orderId: result[2]! as String,
+      subscriptionToken: result[3]! as String,
+      invoiceId: result[4]! as String,
+      sandbox: result[5]! as bool,
+      purchaseId: result[6]! as String,
+      errorCode: result[7]! as String,
+      errorMessage: result[8]! as String,
     );
   }
 

@@ -407,25 +407,45 @@ class RustoreBillingApiPlugin: FlutterPlugin, ActivityAware, RustoreBillingApi {
             is PaymentResult.Success -> RustorePaymentResult(
                 resultType = RustorePaymentResultType.SUCCESS,
                 purchaseId = result.purchaseId,
-                errorCode = null,
-                errorMessage = null
+                productId = result.productId,
+                subscriptionToken = result.subscriptionToken,
+                sandbox = result.sandbox,
+                orderId = result.orderId,
+                invoiceId = result.invoiceId,
+                errorCode = "",
+                errorMessage = ""
             )
             is PaymentResult.Cancelled -> RustorePaymentResult(
                 resultType = RustorePaymentResultType.CANCELLED,
-                purchaseId = null,
-                errorCode = null,
-                errorMessage = "Payment cancelled"
-            )
+                errorCode = "",
+                errorMessage = "Payment cancelled",
+                purchaseId = result.purchaseId,
+                productId = "",
+                invoiceId = "",
+                orderId = "",
+                subscriptionToken = "",
+                sandbox = result.sandbox
+                )
             is PaymentResult.Failure -> RustorePaymentResult(
                 resultType = RustorePaymentResultType.FAILURE,
-                purchaseId = null,
-                errorCode = result.purchaseId, // This might contain error info
+                purchaseId = result.purchaseId,
+                productId = result.productId,
+                invoiceId = result.invoiceId,
+                orderId = result.orderId,
+                subscriptionToken = "",
+                sandbox = result.sandbox,
+                errorCode = "",
                 errorMessage = "Payment failed"
             )
             is PaymentResult.InvalidPaymentState -> RustorePaymentResult(
                 resultType = RustorePaymentResultType.INVALID_PAYMENT_STATE,
-                purchaseId = null,
-                errorCode = null,
+                purchaseId = "",
+                productId = "",
+                invoiceId = "",
+                orderId = "",
+                subscriptionToken = "",
+                sandbox = false,
+                errorCode = "",
                 errorMessage = "Invalid payment state"
             )
         }
