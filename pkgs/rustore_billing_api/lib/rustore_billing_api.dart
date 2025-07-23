@@ -30,6 +30,7 @@
 /// {@endtemplate}
 library;
 
+export 'src/android/rustore_billing_android.dart';
 // Export the generated pigeon models and APIs
 export 'src/rustore_api.g.dart'
     show
