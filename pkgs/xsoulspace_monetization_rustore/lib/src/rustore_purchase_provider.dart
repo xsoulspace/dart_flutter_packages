@@ -53,7 +53,21 @@ class RustorePurchaseProvider implements PurchaseProvider {
         return false;
       }
       _client.updatesStream.listen((final e) {
-        if (e.isPayment) {}
+        final purchase = e.paymentResult;
+        final error = e.error;
+        if (purchase != null) {
+          _purchaseStreamController.add([
+            PurchaseDetailsModel(
+              purchaseId: PurchaseId.fromJson(purchase.purchaseId),
+              productId: PurchaseProductId.fromJson(purchase.productId),
+              purchaseDate: DateTime.now(),
+              purchaseType: PurchaseProductType.nonConsumable,
+              priceId: PurchasePriceId.fromJson(purchase.productId),
+            ),
+          ]);
+        } else if (error != null) {
+          debugPrint('RustorePurchaseProvider.init: $error');
+        }
       });
       return true;
     } catch (e) {

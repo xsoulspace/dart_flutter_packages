@@ -408,9 +408,9 @@ class RustoreBillingApiPlugin: FlutterPlugin, ActivityAware, RustoreBillingApi {
                 resultType = RustorePaymentResultType.SUCCESS,
                 purchaseId = result.purchaseId,
                 productId = result.productId,
-                subscriptionToken = result.subscriptionToken,
+                subscriptionToken = result.subscriptionToken ?: "",
                 sandbox = result.sandbox,
-                orderId = result.orderId,
+                orderId = result.orderId ?:"",
                 invoiceId = result.invoiceId,
                 errorCode = "",
                 errorMessage = ""
@@ -428,10 +428,10 @@ class RustoreBillingApiPlugin: FlutterPlugin, ActivityAware, RustoreBillingApi {
                 )
             is PaymentResult.Failure -> RustorePaymentResult(
                 resultType = RustorePaymentResultType.FAILURE,
-                purchaseId = result.purchaseId,
-                productId = result.productId,
-                invoiceId = result.invoiceId,
-                orderId = result.orderId,
+                purchaseId = result.purchaseId ?: "",
+                productId = result.productId ?: "",
+                invoiceId = result.invoiceId ?: "",
+                orderId = result.orderId ?: "",
                 subscriptionToken = "",
                 sandbox = result.sandbox,
                 errorCode = "",
