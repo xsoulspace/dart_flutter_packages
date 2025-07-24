@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:xsoulspace_foundation/xsoulspace_foundation.dart';
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
-import '../models/models.dart';
 import '../resources/resources.dart';
 
 /// {@template load_subscriptions_command}
@@ -78,13 +77,6 @@ class LoadSubscriptionsCommand {
       );
     } on PlatformException catch (e, stackTrace) {
       debugPrint('Failed to get subscriptions: $e $stackTrace');
-      if (e.code == 'RuStoreUserUnauthorizedException') {
-        monetizationStatusResource.setStatus(
-          MonetizationStatus.storeNotAuthorized,
-        );
-      } else {
-        monetizationStatusResource.setStatus(MonetizationStatus.notAvailable);
-      }
     }
   }
 }

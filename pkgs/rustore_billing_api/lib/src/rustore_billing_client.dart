@@ -46,8 +46,11 @@ class RustoreBillingClient {
   Future<void> initialize(final RustoreBillingConfig config) async {
     try {
       await _platform.initialize(config);
-    } catch (e) {
-      throw RustoreBillingException('Failed to initialize billing client: $e');
+    } catch (e, stackTrace) {
+      throw RustoreBillingException(
+        'Failed to initialize billing client: $e',
+        stackTrace,
+      );
     }
   }
 
@@ -69,9 +72,10 @@ class RustoreBillingClient {
   Future<RustorePurchaseAvailabilityResult> checkPurchasesAvailability() async {
     try {
       return await _platform.checkPurchasesAvailability();
-    } catch (e) {
+    } catch (e, stackTrace) {
       throw RustoreBillingException(
         'Failed to check purchases availability: $e',
+        stackTrace,
       );
     }
   }
@@ -83,9 +87,10 @@ class RustoreBillingClient {
   Future<bool> isRustoreUserAuthorized() async {
     try {
       return await _platform.isRustoreUserAuthorized();
-    } catch (e) {
+    } catch (e, stackTrace) {
       throw RustoreBillingException(
         'Failed to check RuStore user authorization: $e',
+        stackTrace,
       );
     }
   }
@@ -101,8 +106,8 @@ class RustoreBillingClient {
   ) async {
     try {
       return await _platform.getProducts(productIds);
-    } catch (e) {
-      throw RustoreBillingException('Failed to get products: $e');
+    } catch (e, stackTrace) {
+      throw RustoreBillingException('Failed to get products: $e', stackTrace);
     }
   }
 
@@ -113,8 +118,8 @@ class RustoreBillingClient {
   Future<List<RustorePurchase>> getPurchases() async {
     try {
       return await _platform.getPurchases();
-    } catch (e) {
-      throw RustoreBillingException('Failed to get purchases: $e');
+    } catch (e, stackTrace) {
+      throw RustoreBillingException('Failed to get purchases: $e', stackTrace);
     }
   }
 
@@ -135,8 +140,11 @@ class RustoreBillingClient {
         productId,
         developerPayload: developerPayload,
       );
-    } catch (e) {
-      throw RustoreBillingException('Failed to purchase product: $e');
+    } catch (e, stackTrace) {
+      throw RustoreBillingException(
+        'Failed to purchase product: $e',
+        stackTrace,
+      );
     }
   }
 
@@ -158,8 +166,11 @@ class RustoreBillingClient {
         purchaseId,
         developerPayload: developerPayload,
       );
-    } catch (e) {
-      throw RustoreBillingException('Failed to confirm purchase: $e');
+    } catch (e, stackTrace) {
+      throw RustoreBillingException(
+        'Failed to confirm purchase: $e',
+        stackTrace,
+      );
     }
   }
 
@@ -173,8 +184,11 @@ class RustoreBillingClient {
   Future<void> deletePurchase(final String purchaseId) async {
     try {
       await _platform.deletePurchase(purchaseId);
-    } catch (e) {
-      throw RustoreBillingException('Failed to delete purchase: $e');
+    } catch (e, stackTrace) {
+      throw RustoreBillingException(
+        'Failed to delete purchase: $e',
+        stackTrace,
+      );
     }
   }
 
@@ -188,8 +202,8 @@ class RustoreBillingClient {
   Future<void> setTheme(final RustoreBillingTheme theme) async {
     try {
       await _platform.setTheme(theme);
-    } catch (e) {
-      throw RustoreBillingException('Failed to set theme: $e');
+    } catch (e, stackTrace) {
+      throw RustoreBillingException('Failed to set theme: $e', stackTrace);
     }
   }
 
@@ -203,10 +217,11 @@ class RustoreBillingClient {
 
 /// Exception thrown by RuStore billing operations
 class RustoreBillingException implements Exception {
-  const RustoreBillingException(this.message);
+  const RustoreBillingException(this.message, this.stackTrace);
 
   final String message;
+  final StackTrace stackTrace;
 
   @override
-  String toString() => 'RustoreBillingException: $message';
+  String toString() => 'RustoreBillingException: $message\n$stackTrace';
 }

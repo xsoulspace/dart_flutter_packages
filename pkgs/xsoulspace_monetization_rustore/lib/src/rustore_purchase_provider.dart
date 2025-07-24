@@ -3,6 +3,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:from_json_to_json/from_json_to_json.dart';
 // import 'package:flutter_rustore_billing/flutter_rustore_billing.dart';
 // import 'package:flutter_rustore_billing/pigeons/rustore.dart';
@@ -282,11 +283,20 @@ class RustorePurchaseProvider implements PurchaseProvider {
   Future<List<PurchaseProductDetailsModel>> getSubscriptions(
     final List<PurchaseProductId> productIds,
   ) async {
-    // TODO(arenukvern): implement identification of subscriptions
-    final products = await _client.getProducts(
-      productIds.map((final p) => p.value).toList(),
-    );
-    return products.map(_mapToPurchaseProductDetails).toList();
+    try {
+      // TODO(arenukvern): implement identification of subscriptions
+      final products = await _client.getProducts(
+        productIds.map((final p) => p.value).toList(),
+      );
+      return products.map(_mapToPurchaseProductDetails).toList();
+    } on RustoreBillingException catch (e) {
+      throw PlatformException(
+        code: 'RustoreBillingException',
+        message: e.message,
+        details: e,
+        stacktrace: e.stackTrace.toString(),
+      );
+    }
   }
 
   @override

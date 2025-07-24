@@ -115,7 +115,9 @@ class MonetizationFoundation {
   }
 
   /// Loads products from the purchase provider.
-  Future<void> loadProducts(final List<PurchaseProductId> productIds) async {
+  Future<void> loadSubscriptions({
+    final List<PurchaseProductId> productIds = const [],
+  }) async {
     final effectiveIds = productIds.isEmpty ? _productIds : productIds;
     _assignProductIds(effectiveIds);
     await LoadSubscriptionsCommand(

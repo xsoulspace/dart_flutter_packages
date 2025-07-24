@@ -57,7 +57,10 @@ void main() {
 
     group('RustoreBillingException', () {
       test('should create exception with message', () {
-        const exception = RustoreBillingException('Test error');
+        final exception = RustoreBillingException(
+          'Test error',
+          StackTrace.current,
+        );
         expect(exception.message, equals('Test error'));
         expect(
           exception.toString(),
