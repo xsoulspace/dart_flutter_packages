@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:xsoulspace_foundation/xsoulspace_foundation.dart';
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
@@ -70,13 +69,7 @@ class LoadSubscriptionsCommand {
   /// - `MonetizationStatusResource`: Updated based on availability
   /// {@endtemplate}
   Future<void> execute() async {
-    try {
-      final subscriptions = await purchaseProvider.getSubscriptions(productIds);
-      availableSubscriptionsResource.set(
-        LoadableContainer.loaded(subscriptions),
-      );
-    } on PlatformException catch (e, stackTrace) {
-      debugPrint('Failed to get subscriptions: $e $stackTrace');
-    }
+    final subscriptions = await purchaseProvider.getSubscriptions(productIds);
+    availableSubscriptionsResource.set(LoadableContainer.loaded(subscriptions));
   }
 }
