@@ -51,7 +51,7 @@ class MonetizationFoundation {
   /// Restores previous purchases without full initialization.
   Future<bool> restore() => _restorePurchasesCommand.execute();
 
-  final _initCompleter = Completer<bool>();
+  var _initCompleter = Completer<bool>();
 
   /// Future that completes when the initialization is complete.
   Future<bool> get initFuture => _initCompleter.future;
@@ -70,8 +70,14 @@ class MonetizationFoundation {
   Future<void> init({
     required final List<PurchaseProductId> productIds,
     final bool restorePurchases = true,
+    final bool force = false,
   }) async {
-    if (_initCompleter.isCompleted) return;
+    if (force) {
+      _initCompleter.complete(false);
+      _initCompleter = Completer<bool>();
+    } else if (_initCompleter.isCompleted) {
+      return;
+    }
     srcs.status.setStatus(MonetizationStatus.loading);
 
     var status = await purchaseProvider.init();
@@ -86,14 +92,15 @@ class MonetizationFoundation {
 
     srcs.status.setStatus(status);
 
-    await LoadSubscriptionsCommand(
-      purchaseProvider: purchaseProvider,
-      monetizationStatusResource: srcs.status,
-      availableSubscriptionsResource: srcs.availableSubscriptions,
-      productIds: productIds,
-    ).execute();
-
-    if (restorePurchases) await _restorePurchasesCommand.execute();
+    if (status case MonetizationStatus.loaded) {
+      await LoadSubscriptionsCommand(
+        purchaseProvider: purchaseProvider,
+        monetizationStatusResource: srcs.status,
+        availableSubscriptionsResource: srcs.availableSubscriptions,
+        productIds: productIds,
+      ).execute();
+      if (restorePurchases) await _restorePurchasesCommand.execute();
+    }
 
     await _listenUpdates();
     _initCompleter.complete(true);

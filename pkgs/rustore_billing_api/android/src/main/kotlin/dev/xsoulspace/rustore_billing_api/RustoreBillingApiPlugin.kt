@@ -119,6 +119,7 @@ class RustoreBillingApiPlugin: FlutterPlugin, ActivityAware, RustoreBillingApi {
 
     override fun onNewIntent(intentData: String?) {
         val client = billingClient ?: return
+
         
         // Parse intent data if needed, for now pass null
         // In real implementation, you'd reconstruct Intent from intentData
@@ -136,7 +137,7 @@ class RustoreBillingApiPlugin: FlutterPlugin, ActivityAware, RustoreBillingApi {
             try {
 
                val availability = withContext(Dispatchers.IO) {
-                   RuStoreBillingClient.checkPurchasesAvailability().await()
+                   client.purchases.checkPurchasesAvailability().await()
                }
                 val result = when (availability) {
                     is PurchaseAvailabilityResult.Available -> RustorePurchaseAvailabilityResult(
