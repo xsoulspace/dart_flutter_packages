@@ -56,11 +56,11 @@ class MonetizationFoundation {
   /// Future that completes when the initialization is complete.
   Future<bool> get initFuture => _initCompleter.future;
 
-  final _productIds = <PurchaseProductId>{};
+  final _productIds = <PurchaseProductId>[];
   void _assignProductIds(final Iterable<PurchaseProductId> productIds) {
     _productIds
       ..clear()
-      ..addAll(productIds);
+      ..addAll([...productIds]);
   }
 
   /// {@template init}
@@ -105,7 +105,7 @@ class MonetizationFoundation {
         purchaseProvider: purchaseProvider,
         monetizationStatusResource: srcs.status,
         availableSubscriptionsResource: srcs.availableSubscriptions,
-        productIds: productIds,
+        productIds: _productIds,
       ).execute();
       if (restorePurchases) await _restorePurchasesCommand.execute();
     }
@@ -118,13 +118,12 @@ class MonetizationFoundation {
   Future<void> loadSubscriptions({
     final List<PurchaseProductId> productIds = const [],
   }) async {
-    final effectiveIds = productIds.isEmpty ? _productIds : productIds;
-    _assignProductIds(effectiveIds);
+    _assignProductIds(productIds);
     await LoadSubscriptionsCommand(
       purchaseProvider: purchaseProvider,
       monetizationStatusResource: srcs.status,
       availableSubscriptionsResource: srcs.availableSubscriptions,
-      productIds: effectiveIds.toList(),
+      productIds: _productIds,
     ).execute();
   }
 
@@ -159,7 +158,7 @@ class MonetizationFoundation {
   /// {@template subscribe}
   /// Subscribes to a product.
   /// {@endtemplate}
-  Future<bool> subscribe(final PurchaseProductDetailsModel details) async =>
+  Future<bool> subscribe(final PurchaseProductDetailsModel details) =>
       SubscribeCommand(
         purchaseProvider: purchaseProvider,
         subscriptionStatusResource: srcs.subscriptionStatus,
