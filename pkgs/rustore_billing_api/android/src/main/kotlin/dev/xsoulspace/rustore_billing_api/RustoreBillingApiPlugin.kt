@@ -27,6 +27,9 @@ import ru.rustore.sdk.core.exception.RuStoreException
 import ru.rustore.sdk.core.exception.RuStoreNotInstalledException
 import ru.rustore.sdk.core.exception.RuStoreOutdatedException
 import ru.rustore.sdk.core.exception.RuStoreUserUnauthorizedException
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 
 /** RustoreBillingApiPlugin */
 class RustoreBillingApiPlugin: FlutterPlugin, ActivityAware, RustoreBillingApi {
@@ -279,7 +282,7 @@ class RustoreBillingApiPlugin: FlutterPlugin, ActivityAware, RustoreBillingApi {
                         invoiceId = purchase.invoiceId,
                         description = null,
                         language = purchase.language,
-                        purchaseTime = purchase.purchaseTime.toString(),
+                        purchaseTime = formatDateToIso8601(purchase.purchaseTime),
                         orderId = purchase.orderId,
                         amountLabel = purchase.amountLabel,
                         amount = purchase.amount?.toLong(),
@@ -484,4 +487,12 @@ class BillingClientThemeProviderImpl(val config: RustoreBillingConfig ): Billing
             BillingClientTheme.Light
         }
     }
+}
+
+private fun formatDateToIso8601(date: java.util.Date?): String? {
+    if (date == null) return null
+    
+    val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
+    dateFormat.timeZone = TimeZone.getTimeZone("UTC")
+    return dateFormat.format(date)
 }

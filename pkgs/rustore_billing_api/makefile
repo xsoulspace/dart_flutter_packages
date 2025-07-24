@@ -1,2 +1,2 @@
 gen:
-  dart run pigeon --input pigeons/rustore_api.dart
+	dart run pigeon --input pigeons/rustore_api.dart

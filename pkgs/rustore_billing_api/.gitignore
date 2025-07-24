@@ -6,6 +6,7 @@
 .DS_Store
 .atom/
 .build/
+android/.gradle
 pubspec.lock
 .buildlog/
 .history
