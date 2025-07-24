@@ -320,13 +320,14 @@ class RustorePurchaseProvider implements PurchaseProvider {
       (final p) => p.purchaseId == purchaseId.value,
       orElse: RustorePurchase.new,
     );
+    final purchaseDate =
+        dateTimeFromIso8601String(purchase.purchaseTime) ?? DateTime.now();
     return PurchaseDetailsModel(
       purchaseId: purchaseId,
       productId: PurchaseProductId.fromJson(purchase.productId ?? ''),
       priceId: PurchasePriceId.fromJson(purchase.productId ?? ''),
       status: _purchaseStatusFromRustoreState(purchase.purchaseState),
-      purchaseDate:
-          dateTimeFromIso8601String(purchase.purchaseTime) ?? DateTime.now(),
+      purchaseDate: purchaseDate,
       name: purchase.amountLabel ?? '',
       formattedPrice: purchase.amountLabel ?? '',
       price: (purchase.amount ?? 0).toDouble(),
