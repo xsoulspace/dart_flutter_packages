@@ -106,6 +106,12 @@ class MonetizationFoundation {
     _initCompleter.complete(true);
   }
 
+  /// Checks if the user is authorized to use the purchase provider.
+  Future<bool> isUserAuthorized() => purchaseProvider.isUserAuthorized();
+
+  /// Checks if the store is installed on the device.
+  Future<bool> isStoreInstalled() => purchaseProvider.isStoreInstalled();
+
   /// Restores purchases and sets up purchase update listeners.
   Future<void> _listenUpdates() async {
     await _purchaseUpdateSubscription?.cancel();
