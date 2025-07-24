@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
 import '../resources/resources.dart';
+import 'cancel_subscription.cmd.dart';
 import 'confirm_purchase.cmd.dart';
 
 /// {@template subscribe_command}
@@ -31,10 +32,12 @@ class SubscribeCommand {
     required this.purchaseProvider,
     required this.subscriptionStatusResource,
     required this.confirmPurchaseCommand,
+    required this.cancelSubscriptionCommand,
   });
   final SubscriptionStatusResource subscriptionStatusResource;
   final PurchaseProvider purchaseProvider;
   final ConfirmPurchaseCommand confirmPurchaseCommand;
+  final CancelSubscriptionCommand cancelSubscriptionCommand;
 
   /// {@template execute}
   /// Executes the subscription purchase flow.
@@ -58,8 +61,11 @@ class SubscribeCommand {
           result.details!.toVerificationDto(),
         );
       case ResultType.failure:
+
+        /// handle case when upgrading / downgrading subscription
         subscriptionStatusResource.set(SubscriptionStatus.free);
+        await cancelSubscriptionCommand.execute(productId: details.productId);
+        return false;
     }
-    return false;
   }
 }

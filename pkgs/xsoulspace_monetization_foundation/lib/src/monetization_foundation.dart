@@ -156,6 +156,13 @@ class MonetizationFoundation {
     await _purchaseUpdateSubscription?.cancel();
   }
 
+  /// {@template cancel_subscription}
+  /// Cancels a subscription.
+  /// {@endtemplate}
+  Future<CancelResultModel> cancelSubscription({
+    final PurchaseProductId productId = PurchaseProductId.empty,
+  }) => _cancelSubscriptionCommand.execute(productId: productId);
+
   /// {@template subscribe}
   /// Subscribes to a product.
   /// {@endtemplate}
@@ -164,6 +171,7 @@ class MonetizationFoundation {
         purchaseProvider: purchaseProvider,
         subscriptionStatusResource: srcs.subscriptionStatus,
         confirmPurchaseCommand: _confirmPurchaseCommand,
+        cancelSubscriptionCommand: _cancelSubscriptionCommand,
       ).execute(details);
 }
 
@@ -173,6 +181,12 @@ extension on MonetizationFoundation {
     activeSubscriptionResource: srcs.activeSubscription,
     subscriptionStatusResource: srcs.subscriptionStatus,
   );
+
+  CancelSubscriptionCommand get _cancelSubscriptionCommand =>
+      CancelSubscriptionCommand(
+        purchaseProvider: purchaseProvider,
+        activeSubscriptionResource: srcs.activeSubscription,
+      );
 
   RestorePurchasesCommand get _restorePurchasesCommand =>
       RestorePurchasesCommand(
