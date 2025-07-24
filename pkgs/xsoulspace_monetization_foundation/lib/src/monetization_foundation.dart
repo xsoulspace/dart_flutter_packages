@@ -58,6 +58,7 @@ class MonetizationFoundation {
 
   final _productIds = <PurchaseProductId>[];
   void _assignProductIds(final Iterable<PurchaseProductId> productIds) {
+    if (productIds.isEmpty) return;
     _productIds
       ..clear()
       ..addAll([...productIds]);
