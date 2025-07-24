@@ -66,8 +66,9 @@ class RestorePurchasesCommand {
           await handlePurchaseUpdateCommand.execute(
             purchase.toVerificationDto(),
           );
+          if (purchase.isActive) return true;
         }
-        return true;
+        return false;
       case ResultType.failure:
         // Handle failure if needed
         return false;
