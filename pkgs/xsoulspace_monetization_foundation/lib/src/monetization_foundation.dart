@@ -56,6 +56,13 @@ class MonetizationFoundation {
   /// Future that completes when the initialization is complete.
   Future<bool> get initFuture => _initCompleter.future;
 
+  final _productIds = <PurchaseProductId>{};
+  void _assignProductIds(final Iterable<PurchaseProductId> productIds) {
+    _productIds
+      ..clear()
+      ..addAll(productIds);
+  }
+
   /// {@template init}
   /// Initializes the complete monetization system.
   ///
@@ -78,6 +85,7 @@ class MonetizationFoundation {
     } else if (_initCompleter.isCompleted) {
       return;
     }
+    _assignProductIds(productIds);
     srcs.status.setStatus(MonetizationStatus.loading);
 
     var status = await purchaseProvider.init();
@@ -104,6 +112,18 @@ class MonetizationFoundation {
 
     await _listenUpdates();
     _initCompleter.complete(true);
+  }
+
+  /// Loads products from the purchase provider.
+  Future<void> loadProducts(final List<PurchaseProductId> productIds) async {
+    final effectiveIds = productIds.isEmpty ? _productIds : productIds;
+    _assignProductIds(effectiveIds);
+    await LoadSubscriptionsCommand(
+      purchaseProvider: purchaseProvider,
+      monetizationStatusResource: srcs.status,
+      availableSubscriptionsResource: srcs.availableSubscriptions,
+      productIds: effectiveIds.toList(),
+    ).execute();
   }
 
   /// Checks if the user is authorized to use the purchase provider.
