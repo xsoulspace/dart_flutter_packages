@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
+import '../resources/resources.dart';
 import 'handle_purchase_update.cmd.dart';
 
 /// {@template restore_purchases_command}
@@ -39,9 +40,11 @@ class RestorePurchasesCommand {
   const RestorePurchasesCommand({
     required this.purchaseProvider,
     required this.handlePurchaseUpdateCommand,
+    required this.subscriptionStatusResource,
   });
   final PurchaseProvider purchaseProvider;
   final HandlePurchaseUpdateCommand handlePurchaseUpdateCommand;
+  final SubscriptionStatusResource subscriptionStatusResource;
 
   /// {@template execute_restore_purchases}
   /// Executes the purchase restoration process.
@@ -58,6 +61,7 @@ class RestorePurchasesCommand {
   /// the purchase update flow.
   /// {@endtemplate}
   Future<bool> execute() async {
+    subscriptionStatusResource.set(SubscriptionStatus.restoring);
     final result = await purchaseProvider.restorePurchases();
     switch (result.type) {
       case ResultType.success:
@@ -66,7 +70,10 @@ class RestorePurchasesCommand {
           await handlePurchaseUpdateCommand.execute(
             purchase.toVerificationDto(),
           );
-          if (purchase.isActive) return true;
+          if (purchase.isActive) {
+            subscriptionStatusResource.set(SubscriptionStatus.subscribed);
+            return true;
+          }
         }
         return false;
       case ResultType.failure:

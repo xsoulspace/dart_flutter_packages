@@ -1,6 +1,6 @@
 import 'package:xsoulspace_monetization_interface/src/models.dart';
 
-import 'monetization_status.dart';
+import 'monetization_store_status.dart';
 
 /// {@template purchase_provider}
 /// An abstract interface for handling in-app purchases.
@@ -12,7 +12,7 @@ import 'monetization_status.dart';
 abstract class PurchaseProvider {
   /// Initializes the purchase provider. Returns true if the provider is
   /// initialized successfully, false otherwise.
-  Future<MonetizationStatus> init();
+  Future<MonetizationStoreStatus> init();
 
   /// Stream that emits purchase updates.
   ///

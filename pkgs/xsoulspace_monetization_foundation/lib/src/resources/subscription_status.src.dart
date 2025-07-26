@@ -1,7 +1,19 @@
 import 'package:flutter/foundation.dart';
 
 /// Represents the state of user access to premium features.
-enum SubscriptionStatus { free, subscribed, pending }
+enum SubscriptionStatus {
+  free,
+
+  /// if user restoring subscription, then
+  /// user should not be allowed to purchase new subscription
+  restoring,
+
+  /// if user purchasing subscription, then
+  /// user should not be allowed to purchase new subscription
+  purchasing,
+  pendingPaymentConfirmation,
+  subscribed,
+}
 
 /// Resource that manages the status of the subscription.
 class SubscriptionStatusResource extends ChangeNotifier {
@@ -15,6 +27,8 @@ class SubscriptionStatusResource extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool get isLoading => status == SubscriptionStatus.pending;
+  bool get isPurchasing => status == SubscriptionStatus.purchasing;
+  bool get isPendingConfirmation =>
+      status == SubscriptionStatus.pendingPaymentConfirmation;
   bool get isSubscribed => status == SubscriptionStatus.subscribed;
 }

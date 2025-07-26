@@ -47,7 +47,7 @@ class LoadSubscriptionsCommand {
   });
   final List<PurchaseProductId> productIds;
   final PurchaseProvider purchaseProvider;
-  final MonetizationStatusResource monetizationStatusResource;
+  final MonetizationStoreStatusResource monetizationStatusResource;
   final AvailableSubscriptionsResource availableSubscriptionsResource;
 
   /// {@template execute_load_subscriptions}

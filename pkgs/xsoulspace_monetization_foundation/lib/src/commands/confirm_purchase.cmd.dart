@@ -36,10 +36,12 @@ class ConfirmPurchaseCommand {
     required this.purchaseProvider,
     required this.activeSubscriptionResource,
     required this.subscriptionStatusResource,
+    required this.purchasePaywallErrorResource,
   });
   final ActiveSubscriptionResource activeSubscriptionResource;
   final SubscriptionStatusResource subscriptionStatusResource;
   final PurchaseProvider purchaseProvider;
+  final PurchasePaywallErrorResource purchasePaywallErrorResource;
 
   /// {@template execute_confirm_purchase}
   /// Executes the purchase confirmation process.
@@ -60,29 +62,28 @@ class ConfirmPurchaseCommand {
   /// - `SubscriptionStatusResource`: Set to subscribed status
   /// {@endtemplate}
   Future<bool> execute(final PurchaseVerificationDtoModel details) async {
-    if (details.status
-        case PurchaseStatus.error ||
-            PurchaseStatus.purchased ||
-            PurchaseStatus.restored) {
-      final result = await purchaseProvider.completePurchase(details);
-      switch (result.type) {
-        case ResultType.success:
-          if (details.status
-              case (PurchaseStatus.purchased || PurchaseStatus.restored)) {
-            final purchaseInfo = await purchaseProvider.getPurchaseDetails(
-              details.purchaseId,
-            );
-            activeSubscriptionResource.set(purchaseInfo);
-            subscriptionStatusResource.set(SubscriptionStatus.subscribed);
-
-            return true;
-          }
-        case ResultType.failure:
-          // Handle failure if needed
-          return false;
-      }
+    if (details.status case PurchaseStatus.pending || PurchaseStatus.canceled) {
+      return false;
     }
+    final result = await purchaseProvider.completePurchase(details);
+    switch (result.type) {
+      case ResultType.success:
+        if (details.status
+            case (PurchaseStatus.purchased || PurchaseStatus.restored)) {
+          final purchaseInfo = await purchaseProvider.getPurchaseDetails(
+            details.purchaseId,
+          );
+          activeSubscriptionResource.set(purchaseInfo);
+          subscriptionStatusResource.set(SubscriptionStatus.subscribed);
 
+          return true;
+        }
+      case ResultType.failure:
+        purchasePaywallErrorResource.error = result.error;
+        subscriptionStatusResource.set(SubscriptionStatus.free);
+        // Handle failure if needed
+        return false;
+    }
     return false;
   }
 }

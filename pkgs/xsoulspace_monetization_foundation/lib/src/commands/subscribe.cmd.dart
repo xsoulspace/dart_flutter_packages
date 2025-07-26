@@ -33,11 +33,13 @@ class SubscribeCommand {
     required this.subscriptionStatusResource,
     required this.confirmPurchaseCommand,
     required this.cancelSubscriptionCommand,
+    required this.purchasePaywallErrorResource,
   });
   final SubscriptionStatusResource subscriptionStatusResource;
   final PurchaseProvider purchaseProvider;
   final ConfirmPurchaseCommand confirmPurchaseCommand;
   final CancelSubscriptionCommand cancelSubscriptionCommand;
+  final PurchasePaywallErrorResource purchasePaywallErrorResource;
 
   /// {@template execute}
   /// Executes the subscription purchase flow.
@@ -53,14 +55,20 @@ class SubscribeCommand {
   /// {@endtemplate}
   Future<bool> execute(final PurchaseProductDetailsModel details) async {
     if (subscriptionStatusResource.isSubscribed) return false;
-    subscriptionStatusResource.set(SubscriptionStatus.pending);
+    subscriptionStatusResource.set(SubscriptionStatus.purchasing);
+    purchasePaywallErrorResource.clear();
+
     final result = await purchaseProvider.subscribe(details);
     switch (result.type) {
       case ResultType.success:
+        subscriptionStatusResource.set(
+          SubscriptionStatus.pendingPaymentConfirmation,
+        );
         return confirmPurchaseCommand.execute(
           result.details!.toVerificationDto(),
         );
       case ResultType.failure:
+        purchasePaywallErrorResource.error = result.error;
 
         /// handle case when upgrading / downgrading subscription
         subscriptionStatusResource.set(SubscriptionStatus.free);

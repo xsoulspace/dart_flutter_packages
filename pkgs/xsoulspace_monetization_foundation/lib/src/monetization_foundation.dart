@@ -87,27 +87,22 @@ class MonetizationFoundation {
       return;
     }
     _assignProductIds(productIds);
-    srcs.status.setStatus(MonetizationStatus.loading);
+    srcs.status.setStatus(MonetizationStoreStatus.loading);
 
     var status = await purchaseProvider.init();
 
     final isAvailable = await purchaseProvider.isStoreInstalled();
     final isAuthorized = await purchaseProvider.isUserAuthorized();
     if (!isAvailable) {
-      status = MonetizationStatus.notAvailable;
+      status = MonetizationStoreStatus.notAvailable;
     } else if (!isAuthorized) {
-      status = MonetizationStatus.storeNotAuthorized;
+      status = MonetizationStoreStatus.userNotAuthorized;
     }
 
     srcs.status.setStatus(status);
 
-    if (status case MonetizationStatus.loaded) {
-      await LoadSubscriptionsCommand(
-        purchaseProvider: purchaseProvider,
-        monetizationStatusResource: srcs.status,
-        availableSubscriptionsResource: srcs.availableSubscriptions,
-        productIds: _productIds,
-      ).execute();
+    if (status case MonetizationStoreStatus.loaded) {
+      await _loadSubscriptionsCommand.execute();
       if (restorePurchases) await _restorePurchasesCommand.execute();
     }
 
@@ -120,12 +115,7 @@ class MonetizationFoundation {
     final List<PurchaseProductId> productIds = const [],
   }) async {
     _assignProductIds(productIds);
-    await LoadSubscriptionsCommand(
-      purchaseProvider: purchaseProvider,
-      monetizationStatusResource: srcs.status,
-      availableSubscriptionsResource: srcs.availableSubscriptions,
-      productIds: _productIds,
-    ).execute();
+    await _loadSubscriptionsCommand.execute();
   }
 
   /// Checks if the user is authorized to use the purchase provider.
@@ -167,19 +157,23 @@ class MonetizationFoundation {
   /// Subscribes to a product.
   /// {@endtemplate}
   Future<bool> subscribe(final PurchaseProductDetailsModel details) =>
-      SubscribeCommand(
-        purchaseProvider: purchaseProvider,
-        subscriptionStatusResource: srcs.subscriptionStatus,
-        confirmPurchaseCommand: _confirmPurchaseCommand,
-        cancelSubscriptionCommand: _cancelSubscriptionCommand,
-      ).execute(details);
+      _subscribeCommand.execute(details);
 }
 
 extension on MonetizationFoundation {
+  SubscribeCommand get _subscribeCommand => SubscribeCommand(
+    purchaseProvider: purchaseProvider,
+    subscriptionStatusResource: srcs.subscriptionStatus,
+    confirmPurchaseCommand: _confirmPurchaseCommand,
+    cancelSubscriptionCommand: _cancelSubscriptionCommand,
+    purchasePaywallErrorResource: srcs.purchasePaywallError,
+  );
+
   ConfirmPurchaseCommand get _confirmPurchaseCommand => ConfirmPurchaseCommand(
     purchaseProvider: purchaseProvider,
     activeSubscriptionResource: srcs.activeSubscription,
     subscriptionStatusResource: srcs.subscriptionStatus,
+    purchasePaywallErrorResource: srcs.purchasePaywallError,
   );
 
   CancelSubscriptionCommand get _cancelSubscriptionCommand =>
@@ -192,16 +186,21 @@ extension on MonetizationFoundation {
       RestorePurchasesCommand(
         purchaseProvider: purchaseProvider,
         handlePurchaseUpdateCommand: _handlePurchaseUpdateCommand,
+        subscriptionStatusResource: srcs.subscriptionStatus,
       );
 
   HandlePurchaseUpdateCommand get _handlePurchaseUpdateCommand =>
       HandlePurchaseUpdateCommand(
         activeSubscriptionResource: srcs.activeSubscription,
         subscriptionStatusResource: srcs.subscriptionStatus,
-        confirmPurchaseCommand: ConfirmPurchaseCommand(
-          purchaseProvider: purchaseProvider,
-          activeSubscriptionResource: srcs.activeSubscription,
-          subscriptionStatusResource: srcs.subscriptionStatus,
-        ),
+        confirmPurchaseCommand: _confirmPurchaseCommand,
+      );
+
+  LoadSubscriptionsCommand get _loadSubscriptionsCommand =>
+      LoadSubscriptionsCommand(
+        purchaseProvider: purchaseProvider,
+        monetizationStatusResource: srcs.status,
+        availableSubscriptionsResource: srcs.availableSubscriptions,
+        productIds: _productIds,
       );
 }

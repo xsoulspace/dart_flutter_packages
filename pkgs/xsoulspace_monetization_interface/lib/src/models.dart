@@ -279,7 +279,7 @@ extension type const PurchaseResultModel._(Map<String, dynamic> value) {
   );
   PurchaseDetailsModel? get details =>
       isSuccess ? PurchaseDetailsModel.fromJson(value['details']) : null;
-  String? get error => !isSuccess ? jsonDecodeString(value['error']) : null;
+  String get error => !isSuccess ? jsonDecodeString(value['error']) : '';
   Map<String, dynamic> toJson() => value;
   static final empty = PurchaseResultModel(details: PurchaseDetailsModel.empty);
 }
@@ -321,7 +321,7 @@ extension type const RestoreResultModel._(Map<String, dynamic> value) {
           value['restoredPurchases'],
         ).map(PurchaseDetailsModel.fromJson).toList()
       : [];
-  String? get error => !isSuccess ? jsonDecodeString(value['error']) : null;
+  String get error => !isSuccess ? jsonDecodeString(value['error']) : '';
   Map<String, dynamic> toJson() => value;
   static final empty = RestoreResultModel();
 }
@@ -349,7 +349,7 @@ extension type const CancelResultModel._(Map<String, dynamic> value) {
     (e) => e.name == jsonDecodeString(value['type']),
     orElse: () => ResultType.failure,
   );
-  String? get error => !isSuccess ? jsonDecodeString(value['error']) : null;
+  String get error => !isSuccess ? jsonDecodeString(value['error']) : '';
   Map<String, dynamic> toJson() => value;
   static final empty = CancelResultModel();
 }
@@ -374,7 +374,7 @@ extension type const CompletePurchaseResultModel._(Map<String, dynamic> value) {
     (e) => e.name == jsonDecodeString(value['type']),
     orElse: () => ResultType.failure,
   );
-  String? get error => !isSuccess ? jsonDecodeString(value['error']) : null;
+  String get error => !isSuccess ? jsonDecodeString(value['error']) : '';
   Map<String, dynamic> toJson() => value;
   static final empty = CompletePurchaseResultModel();
 }

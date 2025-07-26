@@ -76,7 +76,9 @@ class HandlePurchaseUpdateCommand {
         // TODO(arenukvern): add error notification
         await confirmPurchaseCommand.execute(dto);
       case PurchaseStatus.pending:
-        subscriptionStatusResource.set(SubscriptionStatus.pending);
+        subscriptionStatusResource.set(
+          SubscriptionStatus.pendingPaymentConfirmation,
+        );
         return;
       case PurchaseStatus.canceled:
         activeSubscriptionResource.set(null);

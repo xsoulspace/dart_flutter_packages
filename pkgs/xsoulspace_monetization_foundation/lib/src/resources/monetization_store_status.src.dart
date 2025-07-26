@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:xsoulspace_foundation/xsoulspace_foundation.dart';
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
-/// {@template monetization_status_resource}
+/// {@template monetization_store_status_resource}
 /// Resource that manages the overall status of the monetization system.
 ///
 /// This resource tracks the initialization and availability state of the
@@ -16,7 +16,7 @@ import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interf
 ///
 /// ## Usage
 /// ```dart
-/// final statusResource = MonetizationStatusResource();
+/// final statusResource = MonetizationStoreStatusResource();
 ///
 /// // Listen for changes
 /// statusResource.addListener(() {
@@ -30,20 +30,20 @@ import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interf
 /// ```
 /// {@endtemplate}
 @stateDistributor
-class MonetizationStatusResource extends ChangeNotifier {
-  /// {@macro monetization_status_resource}
-  MonetizationStatusResource();
+class MonetizationStoreStatusResource extends ChangeNotifier {
+  /// {@macro monetization_store_status_resource}
+  MonetizationStoreStatusResource();
 
-  MonetizationStatus _status = MonetizationStatus.loading;
+  MonetizationStoreStatus _status = MonetizationStoreStatus.loading;
 
   /// Returns `true` if the monetization system is fully initialized and ready.
-  bool get isInitialized => _status == MonetizationStatus.loaded;
+  bool get isInitialized => _status == MonetizationStoreStatus.loaded;
 
   /// Current status of the monetization system.
-  MonetizationStatus get status => _status;
+  MonetizationStoreStatus get status => _status;
 
   /// Updates the monetization system status and notifies listeners.
-  void setStatus(final MonetizationStatus value) {
+  void setStatus(final MonetizationStoreStatus value) {
     _status = value;
     notifyListeners();
   }

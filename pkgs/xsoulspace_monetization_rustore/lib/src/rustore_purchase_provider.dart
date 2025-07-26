@@ -39,8 +39,8 @@ class RustorePurchaseProvider implements PurchaseProvider {
   final RustoreBillingClient _client = RustoreBillingClient.instance;
 
   @override
-  Future<MonetizationStatus> init() async {
-    if (!Platform.isAndroid) return MonetizationStatus.notAvailable;
+  Future<MonetizationStoreStatus> init() async {
+    if (!Platform.isAndroid) return MonetizationStoreStatus.notAvailable;
     try {
       await _client.initialize(
         RustoreBillingConfig(
@@ -67,10 +67,10 @@ class RustorePurchaseProvider implements PurchaseProvider {
         }
       });
 
-      return MonetizationStatus.loaded;
+      return MonetizationStoreStatus.loaded;
     } catch (e) {
       debugPrint('RustorePurchaseProvider.init: $e');
-      return MonetizationStatus.notAvailable;
+      return MonetizationStoreStatus.notAvailable;
     }
   }
 
