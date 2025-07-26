@@ -20,6 +20,9 @@ class PaywallSelectedSubscriptionResource extends ChangeNotifier {
   PurchaseProductId get selectedProductId => _selectedProductId;
   PurchaseProductDetailsModel? get selectedProductDetails =>
       _selectedProductDetails;
+  bool get isLoading => !isLoaded;
+  bool get isLoaded =>
+      selectedProductId.isNotEmpty && selectedProductDetails != null;
 
   void setSelectedProductId({
     required final PurchaseProductId selectedProductId,
