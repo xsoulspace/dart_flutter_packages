@@ -27,6 +27,8 @@ class SubscriptionStatusResource extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool get isFree => status == SubscriptionStatus.free;
+  bool get isRestoring => status == SubscriptionStatus.restoring;
   bool get isPurchasing => status == SubscriptionStatus.purchasing;
   bool get isPendingConfirmation =>
       status == SubscriptionStatus.pendingPaymentConfirmation;
