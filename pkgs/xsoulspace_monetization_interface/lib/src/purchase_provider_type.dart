@@ -4,7 +4,13 @@ enum PurchaseProviderType {
   /// The purchase provider is the mobile Google Apple Pay.
   /// based on [in_app_purchase](https://pub.dev/packages/in_app_purchase)
   /// {@endtemplate}
-  mobileGoogleApplePay,
+  mobileGooglePlay,
+
+  /// {@template purchase_provider_type_mobile_app_store}
+  /// The purchase provider is the mobile Apple App Store.
+  /// based on [in_app_purchase](https://pub.dev/packages/in_app_purchase)
+  /// {@endtemplate}
+  mobileAppleAppStore,
 
   /// {@template purchase_provider_type_rustore}
   /// The purchase provider is the rustore.
