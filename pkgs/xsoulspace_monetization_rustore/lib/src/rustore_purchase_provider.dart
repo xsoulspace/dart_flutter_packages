@@ -82,7 +82,15 @@ class RustorePurchaseProvider implements PurchaseProvider {
       _purchaseStreamController.stream;
 
   @override
-  Future<bool> isUserAuthorized() => _client.isRustoreUserAuthorized();
+  Future<bool> isUserAuthorized() async {
+    try {
+      return await _client.isRustoreUserAuthorized();
+    } catch (e, stackTrace) {
+      debugPrint('RustorePurchaseProvider.isUserAuthorized: $e');
+      debugPrint('RustorePurchaseProvider.isUserAuthorized: $stackTrace');
+      return false;
+    }
+  }
 
   @override
   Future<CompletePurchaseResultModel> completePurchase(
@@ -337,10 +345,16 @@ class RustorePurchaseProvider implements PurchaseProvider {
 
   @override
   Future<bool> isStoreInstalled() async {
-    final availability = await _client.checkPurchasesAvailability();
-    return availability.resultType ==
-            RustorePurchaseAvailabilityType.available ||
-        availability.resultType == RustorePurchaseAvailabilityType.unknown;
+    try {
+      final availability = await _client.checkPurchasesAvailability();
+      return availability.resultType ==
+              RustorePurchaseAvailabilityType.available ||
+          availability.resultType == RustorePurchaseAvailabilityType.unknown;
+    } catch (e, stackTrace) {
+      debugPrint('RustorePurchaseProvider.isStoreInstalled: $e');
+      debugPrint('RustorePurchaseProvider.isStoreInstalled: $stackTrace');
+      return false;
+    }
   }
 }
 
