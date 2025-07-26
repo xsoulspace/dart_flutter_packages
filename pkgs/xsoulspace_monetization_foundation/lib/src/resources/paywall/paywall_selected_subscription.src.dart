@@ -32,4 +32,10 @@ class PaywallSelectedSubscriptionResource extends ChangeNotifier {
     _selectedProductDetails = selectedProductDetails;
     notifyListeners();
   }
+
+  void clear() {
+    _selectedProductId = PurchaseProductId.empty;
+    _selectedProductDetails = null;
+    notifyListeners();
+  }
 }
