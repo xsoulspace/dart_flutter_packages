@@ -66,7 +66,15 @@ class RestorePurchasesCommand {
     switch (result.type) {
       case ResultType.success:
         for (final purchase in result.restoredPurchases) {
-          if (!purchase.isActive) continue;
+          if (!purchase.isActive) {
+            try {
+              await purchaseProvider.cancel(purchase.productId);
+              // ignore: avoid_catches_without_on_clauses
+            } catch (e, stackTrace) {
+              debugPrint('RestorePurchasesCommand.execute: $e $stackTrace');
+            }
+            continue;
+          }
           await handlePurchaseUpdateCommand.execute(
             purchase.toVerificationDto(),
           );
@@ -75,10 +83,10 @@ class RestorePurchasesCommand {
             return true;
           }
         }
-        return false;
       case ResultType.failure:
-        // Handle failure if needed
-        return false;
+      // Handle failure if needed
     }
+    subscriptionStatusResource.set(SubscriptionStatus.free);
+    return false;
   }
 }
