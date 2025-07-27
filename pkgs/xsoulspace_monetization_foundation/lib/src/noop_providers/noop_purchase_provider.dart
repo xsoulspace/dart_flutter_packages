@@ -40,7 +40,7 @@ class NoopPurchaseProvider implements PurchaseProvider {
   ) async => [];
 
   @override
-  Future<CancelResultModel> cancel(final PurchaseProductId productId) async =>
+  Future<CancelResultModel> cancel(final String purchaseOrProductId) async =>
       CancelResultModel.success();
 
   @override

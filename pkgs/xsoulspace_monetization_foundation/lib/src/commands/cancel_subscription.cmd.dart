@@ -37,7 +37,7 @@ class CancelSubscriptionCommand {
       }
       effectiveProductId = activeSubscription.productId;
     }
-    final result = await purchaseProvider.cancel(effectiveProductId);
+    final result = await purchaseProvider.cancel(effectiveProductId.value);
     return result;
   }
 }

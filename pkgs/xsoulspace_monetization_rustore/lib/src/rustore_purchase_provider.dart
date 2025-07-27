@@ -256,9 +256,9 @@ class RustorePurchaseProvider implements PurchaseProvider {
   }
 
   @override
-  Future<CancelResultModel> cancel(final PurchaseProductId productId) async {
+  Future<CancelResultModel> cancel(final String purchaseId) async {
     try {
-      await _client.deletePurchase(productId.value);
+      await _client.deletePurchase(purchaseId);
       return CancelResultModel.success();
     } catch (e) {
       return CancelResultModel.failure(e.toString());

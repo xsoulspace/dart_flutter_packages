@@ -68,7 +68,12 @@ class RestorePurchasesCommand {
         for (final purchase in result.restoredPurchases) {
           if (!purchase.isActive) {
             try {
-              await purchaseProvider.cancel(purchase.productId);
+              // TODO(arenukvern): implement gentle choose of
+              // porduct or purchase id for cancel
+              if (purchase.isPending) {
+                await purchaseProvider.cancel(purchase.productId.value);
+                await purchaseProvider.cancel(purchase.purchaseId.value);
+              }
               // ignore: avoid_catches_without_on_clauses
             } catch (e, stackTrace) {
               debugPrint('RestorePurchasesCommand.execute: $e $stackTrace');

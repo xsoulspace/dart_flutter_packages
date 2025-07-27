@@ -268,7 +268,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
   }
 
   @override
-  Future<CancelResultModel> cancel(PurchaseProductId productId) async {
+  Future<CancelResultModel> cancel(String purchaseOrProductId) async {
     // TODO(arenukvern): implement cancellation
     throw UnimplementedError();
   }

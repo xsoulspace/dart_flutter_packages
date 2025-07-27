@@ -106,7 +106,11 @@ abstract class PurchaseProvider {
   );
 
   /// Cancels a purchase.
-  Future<CancelResultModel> cancel(PurchaseProductId productId);
+  ///
+  /// Can be purchaseId or productId but it depends on the provider implementation.
+  ///
+  /// For RuStore its purchaseId.
+  Future<CancelResultModel> cancel(String purchaseOrProductId);
 
   /// Opens the subscription management page.
   Future<void> openSubscriptionManagement();

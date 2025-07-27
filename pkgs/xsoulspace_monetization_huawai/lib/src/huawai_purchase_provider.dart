@@ -39,7 +39,7 @@ class HuawaiPurchaseProvider implements PurchaseProvider {
   }
 
   @override
-  Future<CancelResultModel> cancel(final PurchaseProductId productId) async {
+  Future<CancelResultModel> cancel(final String purchaseOrProductId) async {
     // TODO(arenukvern): implement cancellation
     return CancelResultModel.success();
   }
