@@ -11,9 +11,11 @@ class CancelSubscriptionCommand {
   const CancelSubscriptionCommand({
     required this.purchaseProvider,
     required this.activeSubscriptionResource,
+    required this.subscriptionStatusResource,
   });
   final PurchaseProvider purchaseProvider;
   final ActiveSubscriptionResource activeSubscriptionResource;
+  final SubscriptionStatusResource subscriptionStatusResource;
 
   /// {@template execute}
   /// Executes the cancel subscription flow.
@@ -29,6 +31,7 @@ class CancelSubscriptionCommand {
   Future<CancelResultModel> execute({
     final PurchaseProductId productId = PurchaseProductId.empty,
   }) async {
+    subscriptionStatusResource.set(SubscriptionStatus.cancelling);
     var effectiveProductId = productId;
     if (productId.isEmpty) {
       final activeSubscription = activeSubscriptionResource.subscription;
@@ -38,6 +41,9 @@ class CancelSubscriptionCommand {
       effectiveProductId = activeSubscription.productId;
     }
     final result = await purchaseProvider.cancel(effectiveProductId.value);
+    if (result.isSuccess) {
+      subscriptionStatusResource.set(SubscriptionStatus.free);
+    }
     return result;
   }
 }

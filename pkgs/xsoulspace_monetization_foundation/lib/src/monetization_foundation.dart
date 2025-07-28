@@ -180,6 +180,7 @@ extension on MonetizationFoundation {
       CancelSubscriptionCommand(
         purchaseProvider: purchaseProvider,
         activeSubscriptionResource: srcs.activeSubscription,
+        subscriptionStatusResource: srcs.subscriptionStatus,
       );
 
   RestorePurchasesCommand get _restorePurchasesCommand =>

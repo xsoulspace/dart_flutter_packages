@@ -13,6 +13,7 @@ enum SubscriptionStatus {
   purchasing,
   pendingPaymentConfirmation,
   subscribed,
+  cancelling,
 }
 
 /// Resource that manages the status of the subscription.
@@ -33,4 +34,5 @@ class SubscriptionStatusResource extends ChangeNotifier {
   bool get isPendingConfirmation =>
       status == SubscriptionStatus.pendingPaymentConfirmation;
   bool get isSubscribed => status == SubscriptionStatus.subscribed;
+  bool get isCancelling => status == SubscriptionStatus.cancelling;
 }
