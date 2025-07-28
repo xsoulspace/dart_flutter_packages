@@ -1,6 +1,7 @@
 // ignore_for_file: lines_longer_than_80_chars
 
 import 'package:flutter/foundation.dart';
+import 'package:is_dart_empty_or_not/is_dart_empty_or_not.dart';
 
 import 'models/models.dart';
 import 'models/support_config.dart';
@@ -126,13 +127,7 @@ class SupportManager {
     }
 
     // Merge additional context
-    final mergedContext = <String, String>{};
-    if (config.additionalContext != null) {
-      mergedContext.addAll(config.additionalContext!);
-    }
-    if (additionalContext != null) {
-      mergedContext.addAll(additionalContext);
-    }
+    final mergedContext = <String, String>{...config.additionalContext};
 
     return SupportRequest(
       subject: subject,
@@ -150,8 +145,8 @@ class SupportManager {
     final SupportRequest request,
     final SupportConfig config,
   ) {
-    if (config.emailTemplate != null) {
-      return _applyTemplate(config.emailTemplate!, request);
+    if (config.emailTemplate.isNotEmpty) {
+      return _applyTemplate(config.emailTemplate, request);
     }
 
     return _getDefaultEmailTemplate(request, config);
@@ -164,8 +159,11 @@ class SupportManager {
   ) => template
       .replaceAll('{{subject}}', request.subject)
       .replaceAll('{{description}}', request.description)
-      .replaceAll('{{userEmail}}', request.userEmail ?? 'Not provided')
-      .replaceAll('{{userName}}', request.userName ?? 'Not provided')
+      .replaceAll(
+        '{{userEmail}}',
+        request.userEmail.whenEmptyUse('Not provided'),
+      )
+      .replaceAll('{{userName}}', request.userName.whenEmptyUse('Not provided'))
       .replaceAll('{{appVersion}}', request.appInfo.version)
       .replaceAll('{{appBuild}}', request.appInfo.buildNumber)
       .replaceAll('{{appName}}', request.appInfo.appName ?? 'Unknown')
@@ -212,22 +210,21 @@ class SupportManager {
       buffer.writeln();
     }
 
-    if (request.userEmail != null) {
+    if (request.userEmail.isNotEmpty) {
       buffer
         ..writeln('**Contact Email:** ${request.userEmail}')
         ..writeln();
     }
 
-    if (request.userName != null) {
+    if (request.userName.isNotEmpty) {
       buffer
         ..writeln('**User Name:** ${request.userName}')
         ..writeln();
     }
 
-    if (request.additionalContext != null &&
-        request.additionalContext!.isNotEmpty) {
+    if (request.additionalContext.isNotEmpty) {
       buffer.writeln('**Additional Context:**');
-      for (final entry in request.additionalContext!.entries) {
+      for (final entry in request.additionalContext.entries) {
         buffer.writeln('- ${entry.key}: ${entry.value}');
       }
       buffer.writeln();
@@ -255,9 +252,6 @@ class SupportManager {
   );
 
   /// Gets default device info when collection fails.
-  static DeviceInfo _getDefaultDeviceInfo() => const DeviceInfo(
-    platform: 'Unknown',
-    model: 'Unknown',
-    osVersion: 'Unknown',
-  );
+  static DeviceInfo _getDefaultDeviceInfo() =>
+      DeviceInfo(platform: 'Unknown', model: 'Unknown', osVersion: 'Unknown');
 }

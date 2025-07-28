@@ -1,46 +1,71 @@
+import 'package:from_json_to_json/from_json_to_json.dart';
+
 import 'app_info.dart';
 import 'device_info.dart';
 
-/// {@template support_request}
-/// Encapsulates all information needed for a support request.
+/// Extension type that represents a support request.
 ///
-/// This model contains user-provided information along with
-/// automatically collected app and device metadata.
-/// {@endtemplate}
-class SupportRequest {
-  /// {@macro support_request}
-  const SupportRequest({
-    required this.subject,
-    required this.description,
-    required this.appInfo,
-    required this.deviceInfo,
-    this.userEmail,
-    this.userName,
-    this.additionalContext,
-    this.attachments,
+/// Encapsulates all information needed for a support request including
+/// user-provided information along with automatically collected app and device metadata.
+///
+/// Uses from_json_to_json for type-safe JSON handling.
+///
+/// Can be used to create, serialize, and deserialize support requests
+/// for customer support systems.
+///
+/// Provides functionality to handle JSON serialization/deserialization
+/// and support request data management.
+extension type const SupportRequest._(Map<String, dynamic> value) {
+  factory SupportRequest({
+    required final String subject,
+    required final String description,
+    required final AppInfo appInfo,
+    required final DeviceInfo deviceInfo,
+    final String? userEmail,
+    final String? userName,
+    final Map<String, String>? additionalContext,
+    final List<String>? attachments,
+  }) => SupportRequest._({
+    'subject': subject,
+    'description': description,
+    'app_info': appInfo.toJson(),
+    'device_info': deviceInfo.toJson(),
+    'user_email': userEmail,
+    'user_name': userName,
+    'additional_context': additionalContext,
+    'attachments': attachments,
   });
 
+  factory SupportRequest.fromJson(final dynamic json) =>
+      SupportRequest._(jsonDecodeMap(json));
+
   /// The subject/title of the support request
-  final String subject;
+  String get subject => jsonDecodeString(value['subject']);
 
   /// The detailed description of the issue or request
-  final String description;
+  String get description => jsonDecodeString(value['description']);
 
   /// Application information (version, build, etc.)
-  final AppInfo appInfo;
+  AppInfo get appInfo => AppInfo.fromJson(value['app_info']);
 
   /// Device information (platform, model, OS, etc.)
-  final DeviceInfo deviceInfo;
+  DeviceInfo get deviceInfo => DeviceInfo.fromJson(value['device_info']);
 
   /// User's email address for follow-up communication
-  final String? userEmail;
+  String get userEmail => jsonDecodeString(value['user_email']);
 
   /// User's name (optional)
-  final String? userName;
+  String get userName => jsonDecodeString(value['user_name']);
 
   /// Additional context or metadata about the request
-  final Map<String, String>? additionalContext;
+  Map<String, String> get additionalContext =>
+      jsonDecodeMapAs<String, String>(value['additional_context']);
 
   /// List of attachment file paths (if any)
-  final List<String>? attachments;
+  List<String> get attachments =>
+      jsonDecodeListAs<String>(value['attachments']);
+
+  Map<String, dynamic> toJson() => value;
+
+  static const empty = SupportRequest._({});
 }

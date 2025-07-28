@@ -83,7 +83,7 @@ class DeviceInfoService {
   }
 
   /// Returns fallback device information when platform detection fails.
-  DeviceInfo _getUnknownDeviceInfo() => const DeviceInfo(
+  DeviceInfo _getUnknownDeviceInfo() => DeviceInfo(
     platform: 'Unknown',
     model: 'Unknown',
     osVersion: 'Unknown',

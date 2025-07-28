@@ -39,7 +39,7 @@ class AppInfoService {
   }
 
   /// Returns fallback app information when package info retrieval fails.
-  AppInfo _getFallbackAppInfo() => const AppInfo(
+  AppInfo _getFallbackAppInfo() => AppInfo(
     version: 'Unknown',
     buildNumber: 'Unknown',
     packageName: 'unknown.package',
