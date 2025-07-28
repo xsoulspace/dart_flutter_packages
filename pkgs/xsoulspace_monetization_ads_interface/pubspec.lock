@@ -87,10 +87,10 @@ packages:
     dependency: "direct dev"
     description:
       name: lints
-      sha256: cbf8d4b858bb0134ef3ef87841abdf8d63bfc255c266b7bf6b39daa1085c4290
+      sha256: a5e2b223cb7c9c8efdc663ef484fdd95bb243bff242ef5b13e26883547fce9a0
       url: "https://pub.dev"
     source: hosted
-    version: "3.0.0"
+    version: "6.0.0"
   matcher:
     dependency: transitive
     description:
@@ -192,6 +192,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "15.0.0"
+  xsoulspace_lints:
+    dependency: "direct dev"
+    description:
+      name: xsoulspace_lints
+      sha256: "63f6c3f34eb3409af30bbcb188ab5cd1c355474d227f6bf26fc9d1100ed1631f"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.0"
 sdks:
-  dart: ">=3.8.0 <4.0.0"
+  dart: ">=3.8.1 <4.0.0"
   flutter: ">=3.18.0-18.0.pre.54"

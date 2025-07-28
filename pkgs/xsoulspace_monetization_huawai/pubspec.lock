@@ -59,14 +59,6 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
-  freezed_annotation:
-    dependency: transitive
-    description:
-      name: freezed_annotation
-      sha256: "7294967ff0a6d98638e7acb774aac3af2550777accd8149c90af5b014e6d44d8"
-      url: "https://pub.dev"
-    source: hosted
-    version: "3.1.0"
   from_json_to_json:
     dependency: transitive
     description:
@@ -91,14 +83,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.2.3"
-  json_annotation:
-    dependency: transitive
-    description:
-      name: json_annotation
-      sha256: "1ce844379ca14835a50d2f019a3099f419082cfdd231cd86a142af94dd5c6bb1"
-      url: "https://pub.dev"
-    source: hosted
-    version: "4.9.0"
   leak_tracker:
     dependency: transitive
     description:
@@ -127,10 +111,10 @@ packages:
     dependency: "direct dev"
     description:
       name: lints
-      sha256: cbf8d4b858bb0134ef3ef87841abdf8d63bfc255c266b7bf6b39daa1085c4290
+      sha256: a5e2b223cb7c9c8efdc663ef484fdd95bb243bff242ef5b13e26883547fce9a0
       url: "https://pub.dev"
     source: hosted
-    version: "3.0.0"
+    version: "6.0.0"
   matcher:
     dependency: transitive
     description:
@@ -232,13 +216,21 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "15.0.0"
+  xsoulspace_lints:
+    dependency: "direct dev"
+    description:
+      name: xsoulspace_lints
+      sha256: "63f6c3f34eb3409af30bbcb188ab5cd1c355474d227f6bf26fc9d1100ed1631f"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.0"
   xsoulspace_monetization_interface:
     dependency: "direct main"
     description:
       path: "../xsoulspace_monetization_interface"
       relative: true
     source: path
-    version: "0.0.1"
+    version: "0.6.0"
 sdks:
-  dart: ">=3.8.0 <4.0.0"
+  dart: ">=3.8.1 <4.0.0"
   flutter: ">=3.18.0-18.0.pre.54"

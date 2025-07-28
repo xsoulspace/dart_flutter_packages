@@ -81,7 +81,7 @@ class HandlePurchaseUpdateCommand {
         );
         return;
       case PurchaseStatus.canceled:
-        activeSubscriptionResource.set(null);
+        activeSubscriptionResource.set(PurchaseDetailsModel.empty);
         subscriptionStatusResource.set(SubscriptionStatus.free);
         return;
     }
