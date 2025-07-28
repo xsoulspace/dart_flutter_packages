@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
 import '../resources/resources.dart';
+import 'restore_purchases.cmd.dart';
 
 /// {@template cancel_subscription_command}
 /// Command to cancel a subscription.
@@ -12,10 +13,12 @@ class CancelSubscriptionCommand {
     required this.purchaseProvider,
     required this.activeSubscriptionResource,
     required this.subscriptionStatusResource,
+    required this.restorePurchasesCommand,
   });
   final PurchaseProvider purchaseProvider;
   final ActiveSubscriptionResource activeSubscriptionResource;
   final SubscriptionStatusResource subscriptionStatusResource;
+  final RestorePurchasesCommand restorePurchasesCommand;
 
   /// {@template execute}
   /// Executes the cancel subscription flow.
@@ -28,22 +31,34 @@ class CancelSubscriptionCommand {
   /// 3. Attempt subscription via provider
   /// 4. On success: confirm purchase and return true
   /// {@endtemplate}
-  Future<CancelResultModel> execute({
+  Future<bool> execute({
     final PurchaseProductId productId = PurchaseProductId.empty,
   }) async {
+    final oldStatus = subscriptionStatusResource.status;
     subscriptionStatusResource.set(SubscriptionStatus.cancelling);
     var effectiveProductId = productId;
     if (productId.isEmpty) {
       final activeSubscription = activeSubscriptionResource.subscription;
       if (activeSubscription == null) {
-        return CancelResultModel.failure('No active subscription');
+        return false;
       }
       effectiveProductId = activeSubscription.productId;
     }
     final result = await purchaseProvider.cancel(effectiveProductId.value);
     if (result.isSuccess) {
-      subscriptionStatusResource.set(SubscriptionStatus.free);
+      subscriptionStatusResource.set(oldStatus);
+      return true;
     }
-    return result;
+
+    bool isCancelled = false;
+    if (result.isFailure) {
+      await purchaseProvider.openSubscriptionManagement();
+      await Future.delayed(const Duration(seconds: 1));
+      // check if subscription is cancelled
+      await restorePurchasesCommand.execute();
+      isCancelled = activeSubscriptionResource.subscription.isCancelled;
+    }
+    subscriptionStatusResource.set(oldStatus);
+    return isCancelled;
   }
 }

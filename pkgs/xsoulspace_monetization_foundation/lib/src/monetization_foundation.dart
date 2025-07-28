@@ -148,8 +148,12 @@ class MonetizationFoundation {
 
   /// {@template cancel_subscription}
   /// Cancels a subscription.
+  ///
+  /// Returns isCancelled if subscription was cancelled.
+  ///
+  /// Redirects to store if subscription was not cancelled using API.
   /// {@endtemplate}
-  Future<CancelResultModel> cancelSubscription({
+  Future<bool> cancelSubscription({
     final PurchaseProductId productId = PurchaseProductId.empty,
   }) => _cancelSubscriptionCommand.execute(productId: productId);
 
@@ -181,6 +185,7 @@ extension on MonetizationFoundation {
         purchaseProvider: purchaseProvider,
         activeSubscriptionResource: srcs.activeSubscription,
         subscriptionStatusResource: srcs.subscriptionStatus,
+        restorePurchasesCommand: _restorePurchasesCommand,
       );
 
   RestorePurchasesCommand get _restorePurchasesCommand =>

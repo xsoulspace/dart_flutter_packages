@@ -67,7 +67,7 @@ enum PurchaseProductType {
   static PurchaseProductType fromJson(final dynamic value) {
     final str = jsonDecodeString(value);
     return PurchaseProductType.values.firstWhere(
-      (e) => e.name == str,
+      (final e) => e.name == str,
       orElse: () => PurchaseProductType.consumable,
     );
   }
@@ -78,7 +78,7 @@ extension type const PurchaseProductDetailsModel._(Map<String, dynamic> value) {
   factory PurchaseProductDetailsModel.fromJson(final dynamic json) =>
       PurchaseProductDetailsModel._(jsonDecodeMapAs(json));
   factory PurchaseProductDetailsModel({
-    required PurchaseDurationModel freeTrialDuration,
+    required final PurchaseDurationModel freeTrialDuration,
     final PurchaseProductId productId = PurchaseProductId.empty,
     final PurchasePriceId priceId = PurchasePriceId.empty,
     final PurchaseProductType productType = PurchaseProductType.consumable,
@@ -132,12 +132,12 @@ extension type const PurchaseDetailsModel._(Map<String, dynamic> value) {
   factory PurchaseDetailsModel.fromJson(final dynamic json) =>
       PurchaseDetailsModel._(jsonDecodeMapAs(json));
   factory PurchaseDetailsModel({
+    required final DateTime purchaseDate,
     final PurchaseId purchaseId = PurchaseId.empty,
     final PurchaseProductId productId = PurchaseProductId.empty,
     final PurchasePriceId priceId = PurchasePriceId.empty,
     final PurchaseStatus status = PurchaseStatus.pending,
     final PurchaseProductType purchaseType = PurchaseProductType.consumable,
-    required final DateTime purchaseDate,
     final Duration freeTrialDuration = Duration.zero,
     final Duration duration = Duration.zero,
     final DateTime? expiryDate,
@@ -197,10 +197,13 @@ extension type const PurchaseDetailsModel._(Map<String, dynamic> value) {
   bool get isOneTimePurchase => duration.inDays == 0;
   bool get isSubscription => !isOneTimePurchase;
   bool get isPending => status == PurchaseStatus.pending;
+  bool get isCancelled => status == PurchaseStatus.canceled;
   bool get isActive {
     if (purchaseType case PurchaseProductType.subscription) {
       final expiry = expiryDate;
-      return status == PurchaseStatus.purchased &&
+      return (status == PurchaseStatus.purchased ||
+              status == PurchaseStatus.restored ||
+              status == PurchaseStatus.canceled) &&
           expiry != null &&
           expiry.isAfter(DateTime.now());
     }
@@ -246,7 +249,7 @@ extension PurchaseStatusX on PurchaseStatus {
   static PurchaseStatus fromJson(final dynamic value) {
     final str = jsonDecodeString(value);
     return PurchaseStatus.values.firstWhere(
-      (e) => e.name == str,
+      (final e) => e.name == str,
       orElse: () => PurchaseStatus.pending,
     );
   }
@@ -260,7 +263,7 @@ extension type const PurchaseResultModel._(Map<String, dynamic> value) {
   factory PurchaseResultModel.fromJson(final dynamic json) =>
       PurchaseResultModel._(jsonDecodeMapAs(json));
   factory PurchaseResultModel({
-    PurchaseDetailsModel? details,
+    final PurchaseDetailsModel? details,
     final ResultType type = ResultType.success,
     final String? error,
   }) => PurchaseResultModel._({
@@ -269,12 +272,12 @@ extension type const PurchaseResultModel._(Map<String, dynamic> value) {
     'error': error,
   });
   factory PurchaseResultModel.success(final PurchaseDetailsModel details) =>
-      PurchaseResultModel(details: details, type: ResultType.success);
+      PurchaseResultModel(details: details);
   factory PurchaseResultModel.failure(final String error) =>
       PurchaseResultModel(error: error, type: ResultType.failure);
   bool get isSuccess => value['type'] == ResultType.success.name;
   ResultType get type => ResultType.values.firstWhere(
-    (e) => e.name == jsonDecodeString(value['type']),
+    (final e) => e.name == jsonDecodeString(value['type']),
     orElse: () => ResultType.failure,
   );
   PurchaseDetailsModel? get details =>
@@ -304,15 +307,12 @@ extension type const RestoreResultModel._(Map<String, dynamic> value) {
   });
   factory RestoreResultModel.success(
     final List<PurchaseDetailsModel> restoredPurchases,
-  ) => RestoreResultModel(
-    restoredPurchases: restoredPurchases,
-    type: ResultType.success,
-  );
+  ) => RestoreResultModel(restoredPurchases: restoredPurchases);
   factory RestoreResultModel.failure(final String error) =>
       RestoreResultModel(error: error, type: ResultType.failure);
   bool get isSuccess => value['type'] == ResultType.success.name;
   ResultType get type => ResultType.values.firstWhere(
-    (e) => e.name == jsonDecodeString(value['type']),
+    (final e) => e.name == jsonDecodeString(value['type']),
     orElse: () => ResultType.failure,
   );
 
@@ -340,13 +340,13 @@ extension type const CancelResultModel._(Map<String, dynamic> value) {
     final ResultType type = ResultType.success,
     final String? error,
   }) => CancelResultModel._({'type': type.name, 'error': error});
-  factory CancelResultModel.success() =>
-      CancelResultModel(type: ResultType.success);
+  factory CancelResultModel.success() => CancelResultModel();
   factory CancelResultModel.failure(final String error) =>
       CancelResultModel(error: error, type: ResultType.failure);
-  bool get isSuccess => value['type'] == ResultType.success.name;
+  bool get isSuccess => type == ResultType.success;
+  bool get isFailure => type == ResultType.failure;
   ResultType get type => ResultType.values.firstWhere(
-    (e) => e.name == jsonDecodeString(value['type']),
+    (final e) => e.name == jsonDecodeString(value['type']),
     orElse: () => ResultType.failure,
   );
   String get error => !isSuccess ? jsonDecodeString(value['error']) : '';
@@ -366,12 +366,12 @@ extension type const CompletePurchaseResultModel._(Map<String, dynamic> value) {
     final String? error,
   }) => CompletePurchaseResultModel._({'type': type.name, 'error': error});
   factory CompletePurchaseResultModel.success() =>
-      CompletePurchaseResultModel(type: ResultType.success);
+      CompletePurchaseResultModel();
   factory CompletePurchaseResultModel.failure(final String error) =>
       CompletePurchaseResultModel(error: error, type: ResultType.failure);
   bool get isSuccess => value['type'] == ResultType.success.name;
   ResultType get type => ResultType.values.firstWhere(
-    (e) => e.name == jsonDecodeString(value['type']),
+    (final e) => e.name == jsonDecodeString(value['type']),
     orElse: () => ResultType.failure,
   );
   String get error => !isSuccess ? jsonDecodeString(value['error']) : '';

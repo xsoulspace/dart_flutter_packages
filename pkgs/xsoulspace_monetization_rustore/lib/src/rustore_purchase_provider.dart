@@ -260,7 +260,10 @@ class RustorePurchaseProvider implements PurchaseProvider {
     try {
       await _client.deletePurchase(purchaseId);
       return CancelResultModel.success();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('RustorePurchaseProvider.cancel: $e');
+      debugPrint('RustorePurchaseProvider.cancel: $stackTrace');
+
       return CancelResultModel.failure(e.toString());
     }
   }
