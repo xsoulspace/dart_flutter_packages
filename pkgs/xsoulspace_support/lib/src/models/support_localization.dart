@@ -53,8 +53,8 @@ class SupportLocalization {
     helloSupportTeam: LocalizedMap(value: {_en: 'Hello,', _ru: 'Добрый день,'}),
     experiencingIssue: LocalizedMap(
       value: {
-        _en: "I'm experiencing an issue with the {appName} app.",
-        _ru: 'У меня возникла проблема с приложением {appName}.',
+        _en: "I'm experiencing an issue with the app.",
+        _ru: 'У меня возникла проблема с приложением.',
       },
     ),
     issueDescription: LocalizedMap(

@@ -204,7 +204,12 @@ class SupportManager {
       .replaceAll(
         '{{appName}}',
         request.appInfo.appName ??
-            _getLocalizedString(config, SupportLocalization.unknown, 'Unknown', language),
+            _getLocalizedString(
+              config,
+              SupportLocalization.unknown,
+              'Unknown',
+              language,
+            ),
       )
       .replaceAll('{{platform}}', request.deviceInfo.platform)
       .replaceAll('{{deviceModel}}', request.deviceInfo.model)
@@ -247,7 +252,12 @@ class SupportManager {
       ..writeln();
 
     if (request.appInfo.version !=
-        _getLocalizedString(config, SupportLocalization.unknown, 'Unknown', language)) {
+        _getLocalizedString(
+          config,
+          SupportLocalization.unknown,
+          'Unknown',
+          language,
+        )) {
       buffer
         ..writeln(
           _getLocalizedString(
@@ -272,7 +282,12 @@ class SupportManager {
     }
 
     if (request.deviceInfo.platform !=
-        _getLocalizedString(config, SupportLocalization.unknown, 'Unknown', language)) {
+        _getLocalizedString(
+          config,
+          SupportLocalization.unknown,
+          'Unknown',
+          language,
+        )) {
       buffer
         ..writeln(
           _getLocalizedString(
@@ -356,9 +371,9 @@ class SupportManager {
         _getLocalizedString(
           config,
           SupportLocalization.sentFromApp,
-          'Sent from ${config.appName} app',
+          'Sent from {appName} app',
           language,
-        ),
+        ).replaceAll('{appName}', config.appName),
       );
 
     return buffer.toString();
