@@ -1,4 +1,7 @@
 import 'package:from_json_to_json/from_json_to_json.dart';
+import 'package:xsoulspace_locale/xsoulspace_locale.dart';
+
+import 'support_localization.dart';
 
 /// Extension type that represents support system configuration.
 ///
@@ -22,6 +25,7 @@ extension type const SupportConfig._(Map<String, dynamic> value) {
     final bool includeDeviceInfo = true,
     final bool includeAppInfo = true,
     final Map<String, String>? additionalContext,
+    final LocalizedMap? localization,
   }) => SupportConfig._({
     'support_email': supportEmail,
     'app_name': appName,
@@ -30,6 +34,7 @@ extension type const SupportConfig._(Map<String, dynamic> value) {
     'include_device_info': includeDeviceInfo,
     'include_app_info': includeAppInfo,
     'additional_context': additionalContext,
+    'localization': localization?.toJson(),
   });
 
   /// {@template support_config}
@@ -63,6 +68,15 @@ extension type const SupportConfig._(Map<String, dynamic> value) {
   /// Additional context to include in all support emails
   Map<String, String> get additionalContext =>
       jsonDecodeMapAs<String, String>(value['additional_context']);
+
+  /// Localization map for support strings
+  LocalizedMap get localization {
+    final locData = value['localization'];
+    if (locData != null) {
+      return LocalizedMap.fromJson(locData);
+    }
+    return SupportLocalization.defaultLocalization;
+  }
 
   Map<String, dynamic> toJson() => value;
 

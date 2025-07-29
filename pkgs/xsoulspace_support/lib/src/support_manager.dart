@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:is_dart_empty_or_not/is_dart_empty_or_not.dart';
 
 import 'models/models.dart';
-import 'models/support_config.dart';
 import 'services/services.dart';
 
 /// {@template support_manager}
@@ -79,8 +78,18 @@ class SupportManager {
     final String? additionalInfo,
   }) => sendSupportEmail(
     config: config,
-    subject: 'App Feedback',
-    description: additionalInfo ?? 'User feedback or bug report',
+    subject: _getLocalizedString(
+      config,
+      SupportLocalization.appFeedback,
+      'App Feedback',
+    ),
+    description:
+        additionalInfo ??
+        _getLocalizedString(
+          config,
+          SupportLocalization.userFeedbackOrBugReport,
+          'User feedback or bug report',
+        ),
     userEmail: userEmail,
   );
 
@@ -133,7 +142,7 @@ class SupportManager {
       subject: subject,
       description: description,
       appInfo: appInfo ?? _getDefaultAppInfo(config),
-      deviceInfo: deviceInfo ?? _getDefaultDeviceInfo(),
+      deviceInfo: deviceInfo ?? _getDefaultDeviceInfo(config),
       userEmail: userEmail,
       userName: userName,
       additionalContext: mergedContext.isNotEmpty ? mergedContext : null,
@@ -146,7 +155,7 @@ class SupportManager {
     final SupportConfig config,
   ) {
     if (config.emailTemplate.isNotEmpty) {
-      return _applyTemplate(config.emailTemplate, request);
+      return _applyTemplate(config.emailTemplate, request, config);
     }
 
     return _getDefaultEmailTemplate(request, config);
@@ -156,17 +165,37 @@ class SupportManager {
   static String _applyTemplate(
     final String template,
     final SupportRequest request,
+    final SupportConfig config,
   ) => template
       .replaceAll('{{subject}}', request.subject)
       .replaceAll('{{description}}', request.description)
       .replaceAll(
         '{{userEmail}}',
-        request.userEmail.whenEmptyUse('Not provided'),
+        request.userEmail.whenEmptyUse(
+          _getLocalizedString(
+            config,
+            SupportLocalization.notProvided,
+            'Not provided',
+          ),
+        ),
       )
-      .replaceAll('{{userName}}', request.userName.whenEmptyUse('Not provided'))
+      .replaceAll(
+        '{{userName}}',
+        request.userName.whenEmptyUse(
+          _getLocalizedString(
+            config,
+            SupportLocalization.notProvided,
+            'Not provided',
+          ),
+        ),
+      )
       .replaceAll('{{appVersion}}', request.appInfo.version)
       .replaceAll('{{appBuild}}', request.appInfo.buildNumber)
-      .replaceAll('{{appName}}', request.appInfo.appName ?? 'Unknown')
+      .replaceAll(
+        '{{appName}}',
+        request.appInfo.appName ??
+            _getLocalizedString(config, SupportLocalization.unknown, 'Unknown'),
+      )
       .replaceAll('{{platform}}', request.deviceInfo.platform)
       .replaceAll('{{deviceModel}}', request.deviceInfo.model)
       .replaceAll('{{osVersion}}', request.deviceInfo.osVersion);
@@ -177,53 +206,107 @@ class SupportManager {
     final SupportConfig config,
   ) {
     final buffer = StringBuffer()
-      ..writeln('Hello Support Team,')
+      ..writeln(
+        _getLocalizedString(
+          config,
+          SupportLocalization.helloSupportTeam,
+          'Hello Support Team,',
+        ),
+      )
       ..writeln()
-      ..writeln("I'm experiencing an issue with the ${config.appName} app.")
+      ..writeln(
+        _getLocalizedString(
+          config,
+          SupportLocalization.experiencingIssue,
+          "I'm experiencing an issue with the ${config.appName} app.",
+        ),
+      )
       ..writeln()
-      ..writeln('**Issue Description:**')
+      ..writeln(
+        _getLocalizedString(
+          config,
+          SupportLocalization.issueDescription,
+          '**Issue Description:**',
+        ),
+      )
       ..writeln(request.description)
       ..writeln();
 
-    if (request.appInfo.version != 'Unknown') {
+    if (request.appInfo.version !=
+        _getLocalizedString(config, SupportLocalization.unknown, 'Unknown')) {
       buffer
-        ..writeln('**App Information:**')
         ..writeln(
-          '- Version: ${request.appInfo.version} (${request.appInfo.buildNumber})',
+          _getLocalizedString(
+            config,
+            SupportLocalization.appInformation,
+            '**App Information:**',
+          ),
         )
-        ..writeln('- Package: ${request.appInfo.packageName}');
+        ..writeln(
+          '- ${_getLocalizedString(config, SupportLocalization.version, 'Version')}: ${request.appInfo.version} (${request.appInfo.buildNumber})',
+        )
+        ..writeln(
+          '- ${_getLocalizedString(config, SupportLocalization.package, 'Package')}: ${request.appInfo.packageName}',
+        );
       if (request.appInfo.appName != null) {
-        buffer.writeln('- App Name: ${request.appInfo.appName}');
+        buffer.writeln(
+          '- ${_getLocalizedString(config, SupportLocalization.appName, 'App Name')}: ${request.appInfo.appName}',
+        );
       }
       buffer.writeln();
     }
 
-    if (request.deviceInfo.platform != 'Unknown') {
+    if (request.deviceInfo.platform !=
+        _getLocalizedString(config, SupportLocalization.unknown, 'Unknown')) {
       buffer
-        ..writeln('**Device Information:**')
-        ..writeln('- Platform: ${request.deviceInfo.platform}')
-        ..writeln('- Model: ${request.deviceInfo.model}')
-        ..writeln('- OS Version: ${request.deviceInfo.osVersion}');
+        ..writeln(
+          _getLocalizedString(
+            config,
+            SupportLocalization.deviceInformation,
+            '**Device Information:**',
+          ),
+        )
+        ..writeln(
+          '- ${_getLocalizedString(config, SupportLocalization.platform, 'Platform')}: ${request.deviceInfo.platform}',
+        )
+        ..writeln(
+          '- ${_getLocalizedString(config, SupportLocalization.model, 'Model')}: ${request.deviceInfo.model}',
+        )
+        ..writeln(
+          '- ${_getLocalizedString(config, SupportLocalization.osVersion, 'OS Version')}: ${request.deviceInfo.osVersion}',
+        );
       if (request.deviceInfo.manufacturer != null) {
-        buffer.writeln('- Manufacturer: ${request.deviceInfo.manufacturer}');
+        buffer.writeln(
+          '- ${_getLocalizedString(config, SupportLocalization.manufacturer, 'Manufacturer')}: ${request.deviceInfo.manufacturer}',
+        );
       }
       buffer.writeln();
     }
 
     if (request.userEmail.isNotEmpty) {
       buffer
-        ..writeln('**Contact Email:** ${request.userEmail}')
+        ..writeln(
+          '${_getLocalizedString(config, SupportLocalization.contactEmail, '**Contact Email:**')} ${request.userEmail}',
+        )
         ..writeln();
     }
 
     if (request.userName.isNotEmpty) {
       buffer
-        ..writeln('**User Name:** ${request.userName}')
+        ..writeln(
+          '${_getLocalizedString(config, SupportLocalization.userName, '**User Name:**')} ${request.userName}',
+        )
         ..writeln();
     }
 
     if (request.additionalContext.isNotEmpty) {
-      buffer.writeln('**Additional Context:**');
+      buffer.writeln(
+        _getLocalizedString(
+          config,
+          SupportLocalization.additionalContext,
+          '**Additional Context:**',
+        ),
+      );
       for (final entry in request.additionalContext.entries) {
         buffer.writeln('- ${entry.key}: ${entry.value}');
       }
@@ -231,27 +314,80 @@ class SupportManager {
     }
 
     buffer
-      ..writeln('**Additional Details:**')
-      ..writeln('Please provide any additional context about your issue below:')
+      ..writeln(
+        _getLocalizedString(
+          config,
+          SupportLocalization.additionalDetails,
+          '**Additional Details:**',
+        ),
+      )
+      ..writeln(
+        _getLocalizedString(
+          config,
+          SupportLocalization.provideAdditionalContext,
+          'Please provide any additional context about your issue below:',
+        ),
+      )
       ..writeln()
       ..writeln()
       ..writeln()
       ..writeln()
       ..writeln('---')
-      ..writeln('Sent from ${config.appName} app');
+      ..writeln(
+        _getLocalizedString(
+          config,
+          SupportLocalization.sentFromApp,
+          'Sent from ${config.appName} app',
+        ),
+      );
 
     return buffer.toString();
   }
 
   /// Gets default app info when collection fails.
   static AppInfo _getDefaultAppInfo(final SupportConfig config) => AppInfo(
-    version: 'Unknown',
-    buildNumber: 'Unknown',
+    version: _getLocalizedString(
+      config,
+      SupportLocalization.unknown,
+      'Unknown',
+    ),
+    buildNumber: _getLocalizedString(
+      config,
+      SupportLocalization.unknown,
+      'Unknown',
+    ),
     packageName: 'unknown.package',
     appName: config.appName,
   );
 
   /// Gets default device info when collection fails.
-  static DeviceInfo _getDefaultDeviceInfo() =>
-      DeviceInfo(platform: 'Unknown', model: 'Unknown', osVersion: 'Unknown');
+  static DeviceInfo _getDefaultDeviceInfo(final SupportConfig config) =>
+      DeviceInfo(
+        platform: _getLocalizedString(
+          config,
+          SupportLocalization.unknown,
+          'Unknown',
+        ),
+        model: _getLocalizedString(
+          config,
+          SupportLocalization.unknown,
+          'Unknown',
+        ),
+        osVersion: _getLocalizedString(
+          config,
+          SupportLocalization.unknown,
+          'Unknown',
+        ),
+      );
+
+  /// Gets a localized string from the config or falls back to default
+  static String _getLocalizedString(
+    final SupportConfig config,
+    final String key,
+    final String fallback,
+  ) => SupportLocalization.getLocalizedString(
+    config.localization,
+    key,
+    fallback,
+  );
 }

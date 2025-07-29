@@ -15,6 +15,7 @@ dependencies:
   is_dart_empty_or_not: ^0.2.3
   package_info_plus: ^8.0.2
   url_launcher: ^6.3.2
+  xsoulspace_locale: ^0.2.0
 
 dev_dependencies:
   flutter_test:
