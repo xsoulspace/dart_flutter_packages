@@ -3,7 +3,7 @@
 /// This package provides comprehensive support for creating and sending
 /// support emails with automatic context collection, including app and
 /// device information.
-library xsoulspace_support;
+library;
 
 export 'src/models/models.dart';
 export 'src/services/services.dart';

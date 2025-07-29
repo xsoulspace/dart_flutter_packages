@@ -2,6 +2,7 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:is_dart_empty_or_not/is_dart_empty_or_not.dart';
+import 'package:xsoulspace_locale/xsoulspace_locale.dart';
 
 import 'models/models.dart';
 import 'services/services.dart';
@@ -40,6 +41,7 @@ class SupportManager {
     final String? userEmail,
     final String? userName,
     final Map<String, String>? additionalContext,
+    final UiLanguage? language,
   }) async {
     try {
       final supportRequest = await _createSupportRequest(
@@ -51,7 +53,7 @@ class SupportManager {
         additionalContext: additionalContext,
       );
 
-      final emailBody = _composeEmailBody(supportRequest, config);
+      final emailBody = _composeEmailBody(supportRequest, config, language);
       final emailSubject = '${config.emailSubjectPrefix}: $subject';
 
       return await _emailService.sendEmail(
@@ -76,12 +78,14 @@ class SupportManager {
     required final SupportConfig config,
     final String? userEmail,
     final String? additionalInfo,
+    final UiLanguage? language,
   }) => sendSupportEmail(
     config: config,
     subject: _getLocalizedString(
       config,
       SupportLocalization.appFeedback,
       'App Feedback',
+      language,
     ),
     description:
         additionalInfo ??
@@ -89,8 +93,10 @@ class SupportManager {
           config,
           SupportLocalization.userFeedbackOrBugReport,
           'User feedback or bug report',
+          language,
         ),
     userEmail: userEmail,
+    language: language,
   );
 
   /// {@template create_support_request}
@@ -153,12 +159,13 @@ class SupportManager {
   static String _composeEmailBody(
     final SupportRequest request,
     final SupportConfig config,
+    final UiLanguage? language,
   ) {
     if (config.emailTemplate.isNotEmpty) {
-      return _applyTemplate(config.emailTemplate, request, config);
+      return _applyTemplate(config.emailTemplate, request, config, language);
     }
 
-    return _getDefaultEmailTemplate(request, config);
+    return _getDefaultEmailTemplate(request, config, language);
   }
 
   /// Applies a custom email template with support request data.
@@ -166,6 +173,7 @@ class SupportManager {
     final String template,
     final SupportRequest request,
     final SupportConfig config,
+    final UiLanguage? language,
   ) => template
       .replaceAll('{{subject}}', request.subject)
       .replaceAll('{{description}}', request.description)
@@ -176,6 +184,7 @@ class SupportManager {
             config,
             SupportLocalization.notProvided,
             'Not provided',
+            language,
           ),
         ),
       )
@@ -186,6 +195,7 @@ class SupportManager {
             config,
             SupportLocalization.notProvided,
             'Not provided',
+            language,
           ),
         ),
       )
@@ -194,7 +204,7 @@ class SupportManager {
       .replaceAll(
         '{{appName}}',
         request.appInfo.appName ??
-            _getLocalizedString(config, SupportLocalization.unknown, 'Unknown'),
+            _getLocalizedString(config, SupportLocalization.unknown, 'Unknown', language),
       )
       .replaceAll('{{platform}}', request.deviceInfo.platform)
       .replaceAll('{{deviceModel}}', request.deviceInfo.model)
@@ -204,6 +214,7 @@ class SupportManager {
   static String _getDefaultEmailTemplate(
     final SupportRequest request,
     final SupportConfig config,
+    final UiLanguage? language,
   ) {
     final buffer = StringBuffer()
       ..writeln(
@@ -211,6 +222,7 @@ class SupportManager {
           config,
           SupportLocalization.helloSupportTeam,
           'Hello Support Team,',
+          language,
         ),
       )
       ..writeln()
@@ -219,6 +231,7 @@ class SupportManager {
           config,
           SupportLocalization.experiencingIssue,
           "I'm experiencing an issue with the ${config.appName} app.",
+          language,
         ),
       )
       ..writeln()
@@ -227,57 +240,60 @@ class SupportManager {
           config,
           SupportLocalization.issueDescription,
           '**Issue Description:**',
+          language,
         ),
       )
       ..writeln(request.description)
       ..writeln();
 
     if (request.appInfo.version !=
-        _getLocalizedString(config, SupportLocalization.unknown, 'Unknown')) {
+        _getLocalizedString(config, SupportLocalization.unknown, 'Unknown', language)) {
       buffer
         ..writeln(
           _getLocalizedString(
             config,
             SupportLocalization.appInformation,
             '**App Information:**',
+            language,
           ),
         )
         ..writeln(
-          '- ${_getLocalizedString(config, SupportLocalization.version, 'Version')}: ${request.appInfo.version} (${request.appInfo.buildNumber})',
+          '- ${_getLocalizedString(config, SupportLocalization.version, 'Version', language)}: ${request.appInfo.version} (${request.appInfo.buildNumber})',
         )
         ..writeln(
-          '- ${_getLocalizedString(config, SupportLocalization.package, 'Package')}: ${request.appInfo.packageName}',
+          '- ${_getLocalizedString(config, SupportLocalization.package, 'Package', language)}: ${request.appInfo.packageName}',
         );
       if (request.appInfo.appName != null) {
         buffer.writeln(
-          '- ${_getLocalizedString(config, SupportLocalization.appName, 'App Name')}: ${request.appInfo.appName}',
+          '- ${_getLocalizedString(config, SupportLocalization.appName, 'App Name', language)}: ${request.appInfo.appName}',
         );
       }
       buffer.writeln();
     }
 
     if (request.deviceInfo.platform !=
-        _getLocalizedString(config, SupportLocalization.unknown, 'Unknown')) {
+        _getLocalizedString(config, SupportLocalization.unknown, 'Unknown', language)) {
       buffer
         ..writeln(
           _getLocalizedString(
             config,
             SupportLocalization.deviceInformation,
             '**Device Information:**',
+            language,
           ),
         )
         ..writeln(
-          '- ${_getLocalizedString(config, SupportLocalization.platform, 'Platform')}: ${request.deviceInfo.platform}',
+          '- ${_getLocalizedString(config, SupportLocalization.platform, 'Platform', language)}: ${request.deviceInfo.platform}',
         )
         ..writeln(
-          '- ${_getLocalizedString(config, SupportLocalization.model, 'Model')}: ${request.deviceInfo.model}',
+          '- ${_getLocalizedString(config, SupportLocalization.model, 'Model', language)}: ${request.deviceInfo.model}',
         )
         ..writeln(
-          '- ${_getLocalizedString(config, SupportLocalization.osVersion, 'OS Version')}: ${request.deviceInfo.osVersion}',
+          '- ${_getLocalizedString(config, SupportLocalization.osVersion, 'OS Version', language)}: ${request.deviceInfo.osVersion}',
         );
       if (request.deviceInfo.manufacturer != null) {
         buffer.writeln(
-          '- ${_getLocalizedString(config, SupportLocalization.manufacturer, 'Manufacturer')}: ${request.deviceInfo.manufacturer}',
+          '- ${_getLocalizedString(config, SupportLocalization.manufacturer, 'Manufacturer', language)}: ${request.deviceInfo.manufacturer}',
         );
       }
       buffer.writeln();
@@ -286,7 +302,7 @@ class SupportManager {
     if (request.userEmail.isNotEmpty) {
       buffer
         ..writeln(
-          '${_getLocalizedString(config, SupportLocalization.contactEmail, '**Contact Email:**')} ${request.userEmail}',
+          '${_getLocalizedString(config, SupportLocalization.contactEmail, '**Contact Email:**', language)} ${request.userEmail}',
         )
         ..writeln();
     }
@@ -294,7 +310,7 @@ class SupportManager {
     if (request.userName.isNotEmpty) {
       buffer
         ..writeln(
-          '${_getLocalizedString(config, SupportLocalization.userName, '**User Name:**')} ${request.userName}',
+          '${_getLocalizedString(config, SupportLocalization.userName, '**User Name:**', language)} ${request.userName}',
         )
         ..writeln();
     }
@@ -305,6 +321,7 @@ class SupportManager {
           config,
           SupportLocalization.additionalContext,
           '**Additional Context:**',
+          language,
         ),
       );
       for (final entry in request.additionalContext.entries) {
@@ -319,6 +336,7 @@ class SupportManager {
           config,
           SupportLocalization.additionalDetails,
           '**Additional Details:**',
+          language,
         ),
       )
       ..writeln(
@@ -326,6 +344,7 @@ class SupportManager {
           config,
           SupportLocalization.provideAdditionalContext,
           'Please provide any additional context about your issue below:',
+          language,
         ),
       )
       ..writeln()
@@ -338,6 +357,7 @@ class SupportManager {
           config,
           SupportLocalization.sentFromApp,
           'Sent from ${config.appName} app',
+          language,
         ),
       );
 
@@ -350,11 +370,13 @@ class SupportManager {
       config,
       SupportLocalization.unknown,
       'Unknown',
+      null,
     ),
     buildNumber: _getLocalizedString(
       config,
       SupportLocalization.unknown,
       'Unknown',
+      null,
     ),
     packageName: 'unknown.package',
     appName: config.appName,
@@ -367,16 +389,19 @@ class SupportManager {
           config,
           SupportLocalization.unknown,
           'Unknown',
+          null,
         ),
         model: _getLocalizedString(
           config,
           SupportLocalization.unknown,
           'Unknown',
+          null,
         ),
         osVersion: _getLocalizedString(
           config,
           SupportLocalization.unknown,
           'Unknown',
+          null,
         ),
       );
 
@@ -385,9 +410,9 @@ class SupportManager {
     final SupportConfig config,
     final String key,
     final String fallback,
-  ) => SupportLocalization.getLocalizedString(
-    config.localization,
-    key,
-    fallback,
-  );
+    final UiLanguage? language,
+  ) {
+    final targetLanguage = language ?? SupportLocalization.defaultLanguage;
+    return config.getLocalizedString(key, targetLanguage, fallback);
+  }
 }

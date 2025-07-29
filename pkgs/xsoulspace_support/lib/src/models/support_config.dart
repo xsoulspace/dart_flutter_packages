@@ -25,7 +25,7 @@ extension type const SupportConfig._(Map<String, dynamic> value) {
     final bool includeDeviceInfo = true,
     final bool includeAppInfo = true,
     final Map<String, String>? additionalContext,
-    final LocalizedMap? localization,
+    final Map<String, LocalizedMap>? localization,
   }) => SupportConfig._({
     'support_email': supportEmail,
     'app_name': appName,
@@ -34,7 +34,9 @@ extension type const SupportConfig._(Map<String, dynamic> value) {
     'include_device_info': includeDeviceInfo,
     'include_app_info': includeAppInfo,
     'additional_context': additionalContext,
-    'localization': localization?.toJson(),
+    'localization': localization?.map(
+      (final key, final value) => MapEntry(key, value.toJson()),
+    ),
   });
 
   /// {@template support_config}
@@ -69,13 +71,45 @@ extension type const SupportConfig._(Map<String, dynamic> value) {
   Map<String, String> get additionalContext =>
       jsonDecodeMapAs<String, String>(value['additional_context']);
 
-  /// Localization map for support strings
-  LocalizedMap get localization {
-    final locData = value['localization'];
-    if (locData != null) {
-      return LocalizedMap.fromJson(locData);
+  /// Custom localization map for support strings
+  Map<String, LocalizedMap> get customLocalization {
+    final locData = jsonDecodeMapAs<String, dynamic>(value['localization']);
+    return locData.map(
+      (final key, final value) => MapEntry(key, LocalizedMap.fromJson(value)),
+    );
+  }
+
+  /// Gets a localized string for the specified key and language
+  ///
+  /// Returns the localized string for the given key and language.
+  /// If the language is not available, falls back to the default language.
+  /// If the key is not found, returns the fallback string.
+  String getLocalizedString(
+    final String key,
+    final UiLanguage language,
+    final String fallback,
+  ) {
+    // Try custom localization first
+    final customLoc = customLocalization;
+    if (customLoc.isNotEmpty) {
+      final customLocalizedMap = customLoc[key];
+      if (customLocalizedMap != null) {
+        final customValue = customLocalizedMap.value[language];
+        if (customValue != null) {
+          return customValue;
+        }
+
+        // Fallback to default language in custom localization
+        final customDefaultValue =
+            customLocalizedMap.value[SupportLocalization.defaultLanguage];
+        if (customDefaultValue != null) {
+          return customDefaultValue;
+        }
+      }
     }
-    return SupportLocalization.defaultLocalization;
+
+    // Fallback to default localization
+    return SupportLocalization.getLocalizedString(key, language, fallback);
   }
 
   Map<String, dynamic> toJson() => value;

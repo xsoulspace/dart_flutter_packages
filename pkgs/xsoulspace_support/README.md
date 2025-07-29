@@ -11,7 +11,7 @@ A reusable Flutter package for email support functionality with automatic contex
 - 🔧 **Configurable**: Flexible configuration for different app requirements
 - 🛡️ **Error Handling**: Graceful fallbacks when information collection fails
 - 📋 **Context Management**: Support for additional context and metadata
-- 🌍 **Localization Support**: Full localization support using xsoulspace_locale
+- 🌍 **Localization Support**: Full localization support using xsoulspace_locale with English and Russian translations
 
 ## Installation
 
@@ -20,6 +20,7 @@ Add this to your `pubspec.yaml`:
 ```yaml
 dependencies:
   xsoulspace_support:
+  xsoulspace_locale: ^0.2.0
 ```
 
 ## Quick Start
@@ -114,7 +115,7 @@ class SupportConfig {
     bool includeDeviceInfo = true,
     bool includeAppInfo = true,
     Map<String, String>? additionalContext,
-    LocalizedMap? localization, // New localization parameter
+    Map<String, LocalizedMap>? localization, // Localization support
   });
 }
 ```
@@ -150,7 +151,7 @@ Service for email composition and sending.
 
 ## Localization Support
 
-The package now supports full localization using `xsoulspace_locale`. All email templates, labels, and messages can be localized.
+The package now supports full localization using `xsoulspace_locale`. All email templates, labels, and messages can be localized. Currently supports English and Russian languages.
 
 ### Setup
 
@@ -159,7 +160,7 @@ The package now supports full localization using `xsoulspace_locale`. All email 
 ```yaml
 dependencies:
   xsoulspace_support: ^0.1.0
-  xsoulspace_locale: ^0.0.2
+  xsoulspace_locale: ^0.2.0
 ```
 
 2. Initialize the localization configuration:
@@ -168,15 +169,14 @@ dependencies:
 import 'package:xsoulspace_locale/xsoulspace_locale.dart';
 
 void main() {
-  final languages = (
+  const languages = (
     en: UiLanguage('en', 'English'),
-    es: UiLanguage('es', 'Español'),
-    fr: UiLanguage('fr', 'Français'),
+    ru: UiLanguage('ru', 'Russian'),
   );
 
   LocalizationConfig.initialize(
     LocalizationConfig(
-      supportedLanguages: [languages.en, languages.es, languages.fr],
+      supportedLanguages: [languages.en, languages.ru],
       fallbackLanguage: languages.en,
     ),
   );
@@ -185,90 +185,60 @@ void main() {
 }
 ```
 
-### Localized Support Configuration
+### Using Localized Support
 
 ```dart
 import 'package:xsoulspace_support/xsoulspace_support.dart';
 import 'package:xsoulspace_locale/xsoulspace_locale.dart';
 
-// Create localized support config
-final localizedSupportConfig = SupportConfig(
-  supportEmail: 'support@example.com',
-  appName: 'My App',
-  localization: LocalizedMap(
-    value: {
-      UiLanguage('en', 'English'): {
-        SupportLocalization.helloSupportTeam: 'Hello Support Team,',
-        SupportLocalization.experiencingIssue: "I'm experiencing an issue with the {appName} app.",
-        SupportLocalization.issueDescription: '**Issue Description:**',
-        SupportLocalization.appInformation: '**App Information:**',
-        SupportLocalization.deviceInformation: '**Device Information:**',
-        SupportLocalization.contactEmail: '**Contact Email:**',
-        SupportLocalization.userName: '**User Name:**',
-        SupportLocalization.additionalContext: '**Additional Context:**',
-        SupportLocalization.additionalDetails: '**Additional Details:**',
-        SupportLocalization.provideAdditionalContext: 'Please provide any additional context about your issue below:',
-        SupportLocalization.sentFromApp: 'Sent from {appName} app',
-        SupportLocalization.appFeedback: 'App Feedback',
-        SupportLocalization.userFeedbackOrBugReport: 'User feedback or bug report',
-        SupportLocalization.notProvided: 'Not provided',
-        SupportLocalization.unknown: 'Unknown',
-        SupportLocalization.version: 'Version',
-        SupportLocalization.build: 'Build',
-        SupportLocalization.package: 'Package',
-        SupportLocalization.appName: 'App Name',
-        SupportLocalization.platform: 'Platform',
-        SupportLocalization.model: 'Model',
-        SupportLocalization.osVersion: 'OS Version',
-        SupportLocalization.manufacturer: 'Manufacturer',
-      },
-      UiLanguage('es', 'Español'): {
-        SupportLocalization.helloSupportTeam: 'Hola Equipo de Soporte,',
-        SupportLocalization.experiencingIssue: 'Estoy experimentando un problema con la aplicación {appName}.',
-        SupportLocalization.issueDescription: '**Descripción del Problema:**',
-        SupportLocalization.appInformation: '**Información de la Aplicación:**',
-        SupportLocalization.deviceInformation: '**Información del Dispositivo:**',
-        SupportLocalization.contactEmail: '**Correo de Contacto:**',
-        SupportLocalization.userName: '**Nombre de Usuario:**',
-        SupportLocalization.additionalContext: '**Contexto Adicional:**',
-        SupportLocalization.additionalDetails: '**Detalles Adicionales:**',
-        SupportLocalization.provideAdditionalContext: 'Por favor proporcione cualquier contexto adicional sobre su problema a continuación:',
-        SupportLocalization.sentFromApp: 'Enviado desde la aplicación {appName}',
-        SupportLocalization.appFeedback: 'Comentarios de la Aplicación',
-        SupportLocalization.userFeedbackOrBugReport: 'Comentarios del usuario o reporte de error',
-        SupportLocalization.notProvided: 'No proporcionado',
-        SupportLocalization.unknown: 'Desconocido',
-        SupportLocalization.version: 'Versión',
-        SupportLocalization.build: 'Compilación',
-        SupportLocalization.package: 'Paquete',
-        SupportLocalization.appName: 'Nombre de la Aplicación',
-        SupportLocalization.platform: 'Plataforma',
-        SupportLocalization.model: 'Modelo',
-        SupportLocalization.osVersion: 'Versión del SO',
-        SupportLocalization.manufacturer: 'Fabricante',
-      },
-    },
-  ),
-);
-```
-
-### Using Localized Support
-
-```dart
-// Send a localized support email
+// Send a localized support email (English)
 final success = await SupportManager.instance.sendSupportEmail(
-  config: localizedSupportConfig,
+  config: supportConfig,
   subject: 'Bug Report',
   description: 'The app crashes when I try to save data.',
   userEmail: 'user@example.com',
   userName: 'John Doe',
+  language: const UiLanguage('en', 'English'),
+);
+
+// Send a localized support email (Russian)
+final russianSuccess = await SupportManager.instance.sendSupportEmail(
+  config: supportConfig,
+  subject: 'Сообщение об ошибке',
+  description: 'Приложение вылетает при попытке сохранить данные.',
+  userEmail: 'user@example.com',
+  userName: 'Иван Иванов',
+  language: const UiLanguage('ru', 'Russian'),
 );
 
 // Send a simple localized support email
 final simpleSuccess = await SupportManager.instance.sendSimpleSupportEmail(
-  config: localizedSupportConfig,
+  config: supportConfig,
   userEmail: 'user@example.com',
   additionalInfo: 'Quick feedback about the new feature.',
+  language: const UiLanguage('en', 'English'),
+);
+```
+
+### Custom Localization
+
+You can provide custom localization by passing a `Map<String, LocalizedMap>` to the `SupportConfig`:
+
+```dart
+final localizedSupportConfig = SupportConfig(
+  supportEmail: 'support@example.com',
+  appName: 'My App',
+  localization: {
+    SupportLocalization.helloSupportTeam: LocalizedMap(value: {
+      const UiLanguage('en', 'English'): 'Hello Support Team,',
+      const UiLanguage('ru', 'Russian'): 'Здравствуйте, команда поддержки,',
+    }),
+    SupportLocalization.experiencingIssue: LocalizedMap(value: {
+      const UiLanguage('en', 'English'): "I'm experiencing an issue with the {appName} app.",
+      const UiLanguage('ru', 'Russian'): 'У меня возникла проблема с приложением {appName}.',
+    }),
+    // ... add more custom translations
+  },
 );
 ```
 
@@ -308,9 +278,16 @@ The following localization keys are available in `SupportLocalization`:
 - `osVersion` - OS version label
 - `manufacturer` - Manufacturer label
 
+### Supported Languages
+
+Currently supported languages:
+
+- **English** (`en`) - Default language
+- **Russian** (`ru`) - Full translation support
+
 ### Backward Compatibility
 
-The localization support is fully backward compatible. If no `LocalizedMap` is provided, the system will use default English strings.
+The localization support is fully backward compatible. If no `language` parameter is provided, the system will use the default language (English). If no custom localization is provided, the system will use the built-in default translations.
 
 ## Email Template Variables
 
@@ -327,73 +304,6 @@ When using custom email templates, you can use these variables:
 - `{{deviceModel}}` - Device model
 - `{{osVersion}}` - Operating system version
 
-## Generated Email Example
+## Example
 
-When a user sends a support email, it will look like this:
-
-```
-Subject: Support Request: App crashes on data save
-
-Hello Support Team,
-
-I'm experiencing an issue with the My Awesome App app.
-
-**Issue Description:**
-The app crashes every time I try to save my data. This happens on the main screen after filling out the form.
-
-**App Information:**
-- Version: 1.0.0 (1)
-- Package: com.example.myapp
-- App Name: My Awesome App
-
-**Device Information:**
-- Platform: iOS
-- Model: iPhone 15 Pro
-- OS Version: iOS 17.2
-- Manufacturer: Apple
-
-**Contact Email:** user@example.com
-**User Name:** John Doe
-
-**Additional Context:**
-- Screen: Main Form
-- Action: Save Data
-- Data Type: User Profile
-
-**Additional Details:**
-Please provide any additional context about your issue below:
-
-
-
-
----
-Sent from My Awesome App app
-```
-
-## Error Handling
-
-The package includes comprehensive error handling:
-
-- **Device Info Collection**: Falls back to "Unknown" values if collection fails
-- **App Info Collection**: Falls back to default values if package info unavailable
-- **Email Client**: Returns `false` if no email client is available
-- **Template Processing**: Gracefully handles missing template variables
-
-## Platform Support
-
-- ✅ Android
-- ✅ iOS
-- ✅ Web
-- ✅ macOS
-- ✅ Windows
-- ✅ Linux
-
-## Dependencies
-
-- `url_launcher` - For opening email clients
-- `package_info_plus` - For app information
-- `device_info_plus` - For device information
-
-## License
-
-This package is licensed under the MIT License.
+See the `example/localized_support_example.dart` file for a complete example of how to use the localized support system with both English and Russian translations.
