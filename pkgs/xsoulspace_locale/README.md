@@ -14,34 +14,60 @@ Also added boilerplate for keyboard languages and languages changes.
 Initialize supported languages before any locale operations:
 
 ```dart
+const languages = (
+  en: UiLanguage('en', 'English'),
+  es: UiLanguage('es', 'Spanish'),
+  fr: UiLanguage('fr', 'French'),
+);
+const supportedLanguages = [
+  languages.en,
+  languages.es,
+  languages.fr,
+];
+
+const localeLogic = LocaleLogic();
+
+final uiLocaleResource = await localeLogic.createUiLocaleResource();
+
 LocalizationConfig.initialize(LocalizationConfig(
-  supportedLanguages: [
-    UiLanguage('en', 'English'),
-    UiLanguage('es', 'Spanish'),
-    UiLanguage('fr', 'French'),
-  ],
-  fallbackLanguage: UiLanguage('en', 'English'),
+  supportedLanguages: supportedLanguages,
+  fallbackLanguage: uiLocaleResource.value.language,
 ));
+
+localeLogic.initUiLocaleResource(uiLocaleResource: uiLocaleResource);
 ```
 
 ### 2. Locale Logic Flow
 
 ```dart
-// 1. Initialize logic and resource
-final logic = LocaleLogic();
-final resource = await logic.initUiLocaleResource();
+// 1. Create and initialize resource
+const logic = LocaleLogic();
+final resource = await logic.createUiLocaleResource();
 
 // 2. Use resource for reactive UI
 ValueListenableBuilder<Locale>(
   valueListenable: resource,
   builder: (context, locale, child) => Text(locale.languageCode),
 )
+```
 
+or with provider:
+
+````dart
+// 2.1. Use resource for reactive UI with provider
+final locale = context.watch<UiLocaleResource>().value;
+
+```dart
+// 2.2. Create a hook
+Locale useLocale() => context.watch<UiLocaleResource>().value;
+```
+
+```dart
 // 3. Update locale at runtime
 final result = await logic.updateLocale(
-  newLocale: Locale('es'),
+  newLocale: newLocale,
   oldLocale: currentLocale,
-  uiLocale: currentUiLocale,
+  uiLocale: uiLocaleResource.value,
   onLocaleChanged: (locale) => S.delegate.load(locale),
 );
 ```
@@ -52,14 +78,15 @@ final result = await logic.updateLocale(
 
 - **Purpose**: Core locale management operations
 - **Key Methods**:
-  - `initUiLocaleResource()` - Initialize with system locale
+  - `createUiLocaleResource()` - Create resource with system locale
+  - `initUiLocaleResource()` - Initialize with validated locale
   - `updateLocale()` - Runtime locale changes with Intl reload
-- **AI Usage**: Always call init first, then use update for changes
+- **AI Usage**: Create resource first, then initialize with config
 
 ### UiLocaleResource
 
 - **Purpose**: Reactive locale state container
-- **Usage**: Use with ValueListenableBuilder for UI updates
+- **Usage**: Use with ValueListenableBuilder or context.watch for UI updates
 - **AI Usage**: Always contains valid locale, ready for display
 
 ### LocalizationConfig
@@ -104,8 +131,8 @@ DropdownButton<NamedLocale>(
 
 ```dart
 final localized = LocalizedMap({
-  UiLanguage('en', 'English'): 'Hello',
-  UiLanguage('es', 'Spanish'): 'Hola',
+  languages.en: 'Hello',
+  languages.es: 'Hola',
 });
 
 // Get value for current locale
@@ -117,14 +144,25 @@ final spanishGreeting = localized.getValueByLanguage(
 );
 ```
 
+### Provider Integration
+
+```dart
+// With provider pattern
+final locale = context.watch<UiLocaleResource>().value;
+
+// Or create a custom hook
+Locale useLocale() => context.watch<UiLocaleResource>().value;
+```
+
 ## AI Agent Guidelines
 
-1. **Always initialize LocalizationConfig first**
-2. **Use LocaleLogic for all locale operations**
+1. **Always initialize LocalizationConfig first with createUiLocaleResource**
+2. **Use LocaleLogic.createUiLocaleResource() then initUiLocaleResource()**
 3. **UiLocaleResource is always valid for display**
 4. **Provide onLocaleChanged callback for Intl reload**
 5. **Use LocalizedMap for multi-language content**
 6. **Check return values from updateLocale for changes**
+7. **Use const for language definitions to improve performance**
 
 ## Architecture
 
@@ -135,7 +173,8 @@ LocaleLogic (operations)
     ↓ creates/updates
 UiLocaleResource (reactive state)
     ↓ used by
-UI Components (ValueListenableBuilder)
+UI Components (ValueListenableBuilder/Provider)
 ```
 
 The package provides a complete locale management solution with reactive UI support, Intl integration, and type-safe multi-language content handling.
+````
