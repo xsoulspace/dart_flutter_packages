@@ -1,0 +1,26 @@
+name: rustore_billing_example
+description: Example app demonstrating RuStore billing integration
+
+publish_to: "none" # Remove this line if you wish to publish to pub.dev
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.8.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  rustore_billing_api:
+    path: ../
+  cupertino_icons: ^1.0.2
+  from_json_to_json: ^0.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  lints: ^6.0.0
+  xsoulspace_lints: ^0.1.0
+
+flutter:
+  uses-material-design: true

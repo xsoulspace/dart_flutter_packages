@@ -1,15 +1,23 @@
 {
   "cSpell.words": [
     "collab",
+    "deeplink",
     "myapp",
     "myorg",
     "myproject",
     "prefs",
     "pubspec",
     "Retryable",
+    "Rustore",
     "Schyler",
+    "srcs",
     "testuser",
     "Unstages",
     "writability"
-  ]
+  ],
+  "cSpell.language": "en,ru",
+  "python.analysis.typeCheckingMode": "off",
+  "python.analysis.autoImportCompletions": true,
+  "python.analysis.autoSearchPaths": true,
+  "python.analysis.useLibraryCodeForTypes": true
 }

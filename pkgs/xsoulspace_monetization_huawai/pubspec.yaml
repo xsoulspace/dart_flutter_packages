@@ -1,0 +1,22 @@
+name: xsoulspace_monetization_huawai
+description: A new Flutter package.
+version: 0.0.1
+publish_to: "none"
+
+environment:
+  sdk: ">=3.8.0 <4.0.0"
+  flutter: ">=1.17.0"
+
+dependencies:
+  collection: ^1.19.1
+  flutter:
+    sdk: flutter
+  huawei_iap: ^6.13.0+302
+  xsoulspace_monetization_interface:
+    path: ../xsoulspace_monetization_interface
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  lints: ^6.0.0
+  xsoulspace_lints: ^0.1.0

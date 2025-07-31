@@ -1,0 +1,19 @@
+name: xsoulspace_monetization_ads_foundation
+description: A new Flutter package.
+version: 0.0.1
+publish_to: "none"
+
+environment:
+  sdk: ">=3.8.0 <4.0.0"
+  flutter: ">=1.17.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  xsoulspace_monetization_ads_interface:
+    path: ../xsoulspace_monetization_ads_interface
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  lints: ^3.0.0
