@@ -57,7 +57,6 @@ or with provider:
 // 2.1. Use resource for reactive UI with provider
 final locale = context.watch<UiLocaleResource>().value;
 
-```dart
 // 2.2. Create a hook
 Locale useLocale() => context.watch<UiLocaleResource>().value;
 ```
