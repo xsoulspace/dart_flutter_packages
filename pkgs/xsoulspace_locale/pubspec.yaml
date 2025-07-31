@@ -1,7 +1,7 @@
 name: xsoulspace_locale
 description: Unified locale wrapper to make localization easier.
-version: 0.2.0
-homepage: https://github.com/xsoulspace/life_hooks
+version: 0.3.0
+homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_locale
 
 environment:
   sdk: ">=3.8.1 <4.0.0"
