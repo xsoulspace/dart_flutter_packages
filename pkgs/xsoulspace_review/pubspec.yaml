@@ -1,7 +1,8 @@
 name: xsoulspace_review
-repository: https://github.com/xsoulspace/life_hooks/tree/main/packages/xsoulspace_review
 description: Useful tools for review for stores and user feedback
 version: 0.2.1
+homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_review
+repository: https://github.com/xsoulspace/dart_flutter_packages
 
 environment:
   sdk: ">=3.8.1 <4.0.0"
