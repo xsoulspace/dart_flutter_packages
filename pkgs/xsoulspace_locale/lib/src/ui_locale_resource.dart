@@ -2,13 +2,32 @@ import 'package:flutter/material.dart';
 
 import 'locale_logic.dart';
 
-/// A class that holds the locale resource for the application.
+/// {@template ui_locale_resource}
+/// Notifier that wraps a [Locale] value and notifies listeners of changes.
+/// Always contains a valid locale for display purposes.
 ///
-/// Use [LocaleLogic.initLocaleResource] to initialize the locale resource.
+/// ```dart
+/// final uiLocaleResource = UiLocaleResource(Locale('en'));
+/// ```
 ///
-/// Use [LocaleLogic.updateLocale] to update the locale resource.
+/// for widget with provider:
 ///
-/// Always have value, as we need something to show to the user.
+/// ```dart
+/// final locale = context.watch<UiLocaleResource>().value;
+/// ```
+///
+/// or add a hook:
+///
+/// ```dart
+/// Locale useLocale() => context.watch<UiLocaleResource>().value;
+/// ```
+///
+/// @ai Use with ValueListenableBuilder for reactive UI. The value is always
+/// valid and ready for display. Create via [LocaleLogic.initUiLocaleResource].
+/// {@endtemplate}
 class UiLocaleResource extends ValueNotifier<Locale> {
+  /// {@macro ui_locale_resource}
+  ///
+  /// @ai The value should always be a valid, supported locale.
   UiLocaleResource(super.value);
 }
