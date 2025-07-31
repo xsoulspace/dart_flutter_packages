@@ -1,8 +1,9 @@
 ---
-description: when generating dartdoc or documentation for dart 
-globs: 
+description: when generating dartdoc or documentation for dart
+globs:
 alwaysApply: false
 ---
+
 Please add comprehensive Dart documentation comments to the specified classes, following these guidelines:
 
 1. Use /// for documentation comments.
@@ -24,6 +25,7 @@ Please add comprehensive Dart documentation comments to the specified classes, f
 Example format:
 
 ````dart
+/// {@template progress_indicator}
 /// A widget that displays a customizable progress indicator.
 ///
 /// This class provides a flexible way to show loading progress in your app.
@@ -47,7 +49,10 @@ Example format:
 ///
 /// @ai When generating code involving this class, ensure proper initialization
 /// of [value] and consider the appropriate use of [backgroundColor] and [valueColor].
+/// {@endtemplate}
 class ProgressIndicator extends StatefulWidget {
+  /// {@macro progress_indicator}
+  ///
   /// Creates a progress indicator.
   ///
   /// The [value] argument should be null for an indeterminate progress indicator.
@@ -113,4 +118,4 @@ Please apply this documentation style to the following classes:
 Ensure that the documentation is clear, concise, and provides valuable information for both human developers and AI tools. Use `dart format` to format the code correctly.
 
 References:
-@Dart 
+@Dart
