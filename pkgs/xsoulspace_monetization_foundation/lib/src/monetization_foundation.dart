@@ -162,6 +162,10 @@ class MonetizationFoundation {
   /// {@endtemplate}
   Future<bool> subscribe(final PurchaseProductDetailsModel details) =>
       _subscribeCommand.execute(details);
+
+  /// Opens the subscription management page.
+  Future<void> openSubscriptionManagement() =>
+      purchaseProvider.openSubscriptionManagement();
 }
 
 extension on MonetizationFoundation {

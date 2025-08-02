@@ -33,6 +33,7 @@ class CancelSubscriptionCommand {
   /// {@endtemplate}
   Future<bool> execute({
     final PurchaseProductId productId = PurchaseProductId.empty,
+    final bool openSubscriptionManagement = true,
   }) async {
     final oldStatus = subscriptionStatusResource.status;
     subscriptionStatusResource.set(SubscriptionStatus.cancelling);
@@ -51,7 +52,7 @@ class CancelSubscriptionCommand {
     }
 
     bool isCancelled = false;
-    if (result.isFailure) {
+    if (result.isFailure && openSubscriptionManagement) {
       await purchaseProvider.openSubscriptionManagement();
       await Future.delayed(const Duration(seconds: 1));
       // check if subscription is cancelled

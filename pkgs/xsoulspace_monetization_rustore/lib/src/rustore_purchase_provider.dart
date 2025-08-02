@@ -21,7 +21,7 @@ class RustorePurchaseProvider implements PurchaseProvider {
   RustorePurchaseProvider({
     required this.consoleApplicationId,
     required this.deeplinkScheme,
-    this.enableLogger = false,
+    this.enableLogging = false,
     this.productTypeChecker,
     final DurationFromProductId getDurationFromProductId =
         getDurationFromProductId,
@@ -30,7 +30,7 @@ class RustorePurchaseProvider implements PurchaseProvider {
   final String consoleApplicationId;
   final String deeplinkScheme;
   final DurationFromProductId _getDurationFromProductId;
-  final bool enableLogger;
+  final bool enableLogging;
   final PurchaseProductType? Function(PurchaseProductId productId)?
   productTypeChecker;
 
@@ -46,7 +46,8 @@ class RustorePurchaseProvider implements PurchaseProvider {
         RustoreBillingConfig(
           consoleApplicationId: consoleApplicationId,
           deeplinkScheme: deeplinkScheme,
-          debugLogs: enableLogger,
+          debugLogs: enableLogging,
+          enableLogging: enableLogging,
         ),
       );
       _client.updatesStream.listen((final e) {

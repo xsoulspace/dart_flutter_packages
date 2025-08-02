@@ -68,11 +68,20 @@ class SubscribeCommand {
           result.details!.toVerificationDto(),
         );
       case ResultType.failure:
+        final details = result.details;
+        if (details == null) {
+          return false;
+        } else if (details.isCancelled) {
+          return false;
+        }
         purchasePaywallErrorResource.error = result.error;
 
         /// handle case when upgrading / downgrading subscription
         subscriptionStatusResource.set(SubscriptionStatus.free);
-        await cancelSubscriptionCommand.execute(productId: details.productId);
+        await cancelSubscriptionCommand.execute(
+          productId: details.productId,
+          openSubscriptionManagement: false,
+        );
         return false;
     }
   }
