@@ -11,6 +11,8 @@ enum SubscriptionStatus {
   /// if user purchasing subscription, then
   /// user should not be allowed to purchase new subscription
   purchasing,
+
+  /// is required in some stores to confirm payment (apple pay)
   pendingPaymentConfirmation,
   subscribed,
   cancelling,
