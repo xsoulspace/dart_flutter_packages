@@ -197,7 +197,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
         iap.PurchaseStatus.pending => PurchaseStatus.pending,
         iap.PurchaseStatus.purchased => PurchaseStatus.purchased,
         iap.PurchaseStatus.error => PurchaseStatus.error,
-        iap.PurchaseStatus.restored => PurchaseStatus.restored,
+        iap.PurchaseStatus.restored => PurchaseStatus.pendingConfirmation,
         iap.PurchaseStatus.canceled => PurchaseStatus.canceled,
       };
 
@@ -281,7 +281,7 @@ extension on PurchaseStatus {
     PurchaseStatus.pending => iap.PurchaseStatus.pending,
     PurchaseStatus.purchased => iap.PurchaseStatus.purchased,
     PurchaseStatus.error => iap.PurchaseStatus.error,
-    PurchaseStatus.restored => iap.PurchaseStatus.restored,
+    PurchaseStatus.pendingConfirmation => iap.PurchaseStatus.restored,
     PurchaseStatus.canceled => iap.PurchaseStatus.canceled,
   };
 }

@@ -60,7 +60,7 @@ class RestorePurchasesCommand {
   /// to `HandlePurchaseUpdateCommand` to maintain consistency with
   /// the purchase update flow.
   /// {@endtemplate}
-  Future<bool> execute() async {
+  Future<void> execute() async {
     subscriptionStatusResource.set(SubscriptionStatus.restoring);
     final result = await purchaseProvider.restorePurchases();
     switch (result.type) {
@@ -68,11 +68,14 @@ class RestorePurchasesCommand {
         for (final purchase in result.restoredPurchases) {
           if (!purchase.isActive) {
             try {
-              // TODO(arenukvern): implement gentle choose of
-              // porduct or purchase id for cancel
               if (purchase.isPending) {
                 await purchaseProvider.cancel(purchase.productId.value);
                 await purchaseProvider.cancel(purchase.purchaseId.value);
+              }
+              if (purchase.isPendingConfirmation) {
+                await handlePurchaseUpdateCommand.execute(
+                  purchase.toVerificationDto(),
+                );
               }
               // ignore: avoid_catches_without_on_clauses
             } catch (e, stackTrace) {
@@ -83,15 +86,10 @@ class RestorePurchasesCommand {
           await handlePurchaseUpdateCommand.execute(
             purchase.toVerificationDto(),
           );
-          if (purchase.isActive) {
-            subscriptionStatusResource.set(SubscriptionStatus.subscribed);
-            return true;
-          }
         }
       case ResultType.failure:
       // Handle failure if needed
     }
     subscriptionStatusResource.set(SubscriptionStatus.free);
-    return false;
   }
 }

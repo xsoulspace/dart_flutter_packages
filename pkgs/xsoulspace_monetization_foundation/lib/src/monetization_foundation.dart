@@ -49,7 +49,7 @@ class MonetizationFoundation {
   StreamSubscription<List<PurchaseDetailsModel>>? _purchaseUpdateSubscription;
 
   /// Restores previous purchases without full initialization.
-  Future<bool> restore() => _restorePurchasesCommand.execute();
+  Future<void> restore() => _restorePurchasesCommand.execute();
 
   var _initCompleter = Completer<bool>();
 

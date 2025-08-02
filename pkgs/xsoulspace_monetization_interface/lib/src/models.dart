@@ -198,11 +198,13 @@ extension type const PurchaseDetailsModel._(Map<String, dynamic> value) {
   bool get isSubscription => !isOneTimePurchase;
   bool get isPending => status == PurchaseStatus.pending;
   bool get isCancelled => status == PurchaseStatus.canceled;
+  bool get isPendingConfirmation =>
+      status == PurchaseStatus.pendingConfirmation;
   bool get isActive {
     if (purchaseType case PurchaseProductType.subscription) {
       final expiry = expiryDate;
       return (status == PurchaseStatus.purchased ||
-              status == PurchaseStatus.restored ||
+              status == PurchaseStatus.pendingConfirmation ||
               status == PurchaseStatus.canceled) &&
           expiry != null &&
           expiry.isAfter(DateTime.now());
@@ -238,7 +240,7 @@ enum PurchaseStatus {
   /// You should validate the purchase and if valid deliver the content.
   /// Once the content has been delivered or if the receipt is invalid
   /// you should finish the purchase by calling the completePurchase method.
-  restored,
+  pendingConfirmation,
   canceled;
 
   String toJson() => name;
@@ -396,6 +398,7 @@ extension type const PurchaseVerificationDtoModel._(
     final PurchaseStatus status = PurchaseStatus.pending,
     final PurchaseProductType productType = PurchaseProductType.consumable,
     final String purchaseToken = '',
+    final DateTime? expiryDate,
     final String? localVerificationData,
     final String? serverVerificationData,
     final String? source,
@@ -407,6 +410,7 @@ extension type const PurchaseVerificationDtoModel._(
     'productType': productType.name,
     'transactionDate': transactionDate.toIso8601String(),
     'purchaseToken': purchaseToken,
+    'expiryDate': expiryDate?.toIso8601String(),
     'localVerificationData': localVerificationData,
     'serverVerificationData': serverVerificationData,
     'source': source,
@@ -421,6 +425,11 @@ extension type const PurchaseVerificationDtoModel._(
   DateTime? get transactionDate =>
       dateTimeFromIso8601String(jsonDecodeString(value['transactionDate']));
   String? get purchaseToken => jsonDecodeString(value['purchaseToken']);
+  DateTime? get expiryDate =>
+      dateTimeFromIso8601String(jsonDecodeString(value['expiryDate']));
+  bool get isExpired =>
+      expiryDate != null && expiryDate!.isBefore(DateTime.now());
+  bool get isNotExpired => !isExpired;
   String? get localVerificationData =>
       jsonDecodeString(value['localVerificationData']);
   String? get serverVerificationData =>

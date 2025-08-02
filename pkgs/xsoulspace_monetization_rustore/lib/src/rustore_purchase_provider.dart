@@ -142,7 +142,7 @@ class RustorePurchaseProvider implements PurchaseProvider {
       return PurchaseResultModel.success(
         PurchaseDetailsModel(
           status: details.productType == PurchaseProductType.consumable
-              ? PurchaseStatus.restored
+              ? PurchaseStatus.pendingConfirmation
               : PurchaseStatus.purchased,
           purchaseId: PurchaseId.fromJson(purchase.purchaseId),
           purchaseType: details.productType,
@@ -368,7 +368,7 @@ PurchaseStatus _purchaseStatusFromRustoreState(
   RustorePurchaseState.created ||
   RustorePurchaseState.invoiceCreated ||
   RustorePurchaseState.paused => PurchaseStatus.pending,
-  RustorePurchaseState.paid => PurchaseStatus.restored,
+  RustorePurchaseState.paid => PurchaseStatus.pendingConfirmation,
   RustorePurchaseState.cancelled ||
   RustorePurchaseState.closed ||
   RustorePurchaseState.terminated => PurchaseStatus.canceled,

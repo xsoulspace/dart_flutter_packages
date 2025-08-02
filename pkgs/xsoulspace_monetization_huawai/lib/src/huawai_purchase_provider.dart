@@ -229,7 +229,7 @@ class HuawaiPurchaseProvider implements PurchaseProvider {
     -1 => PurchaseStatus.pending, // Initial
     0 => PurchaseStatus.purchased,
     1 => PurchaseStatus.canceled,
-    2 => PurchaseStatus.restored, // Refunded
+    2 => PurchaseStatus.pendingConfirmation, // Refunded
     _ => PurchaseStatus.error,
   };
 

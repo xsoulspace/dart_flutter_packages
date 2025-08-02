@@ -69,7 +69,8 @@ class ConfirmPurchaseCommand {
     switch (result.type) {
       case ResultType.success:
         if (details.status
-            case (PurchaseStatus.purchased || PurchaseStatus.restored)) {
+            case (PurchaseStatus.purchased ||
+                PurchaseStatus.pendingConfirmation)) {
           final purchaseInfo = await purchaseProvider.getPurchaseDetails(
             details.purchaseId,
           );
