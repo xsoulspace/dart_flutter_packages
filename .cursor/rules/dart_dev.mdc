@@ -23,13 +23,10 @@ You are a senior Dart programmer specializing in Flutter, Flame and Game develop
    - Document all parameters with `///`
    - Add warning comments for important usage notes
    - Reference concrete implementations in the codebase
-   - Add @ai comments to the codebase to help you generate code
 
    ```dart
    /// {@template game_button}
    /// Custom button widget for game interactions
-   ///
-   /// @ai - use this template to create a custom button widget for game interactions
    /// {@endtemplate}
    class GameButton extends StatelessWidget {
      /// {@macro game_button}
@@ -49,6 +46,8 @@ You are a senior Dart programmer specializing in Flutter, Flame and Game develop
    - Use required commas linter rule in dart
    - Prefer arrow functions style for dart
    - Prefer const constructors with named parameters with const values instead of nullable ones
+   - Constructor Order: All constructors (factory or otherwise) must be defined before any other members like getters or methods.
+   - Modern Color API: Prefer using Color.withValues() for its flexibility over the older withOpacity().
 
 4. Flutter widgets and concepts:
 

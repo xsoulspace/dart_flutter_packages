@@ -1,39 +1,33 @@
 // ignore_for_file: invalid_annotation_target, avoid_annotating_with_dynamic
 part of 'localization.dart';
 
-/// A class representing a named locale for user selection.
+/// User-friendly locale representation for language selection UI.
 ///
-/// This class is used to display a list of supported [UiLanguage]s
-/// and allows the user to choose one of them.
-///
-/// Use [NamedLocale] to create instances that pair a user-friendly
-/// name with a corresponding [Locale].
+/// Pairs a display name with a Flutter locale for user interface.
 ///
 /// ```dart
-/// final namedLocale = NamedLocale(name: 'English',
-/// locale: Locale('en', 'US'));
+/// final namedLocale = NamedLocale(
+///   name: 'English',
+///   locale: Locale('en'),
+/// );
 /// ```
 ///
-/// @ai When using this class, ensure to provide meaningful names
-/// for better user experience.
+/// @ai Use for language selection dropdowns and UI components. The [name]
+/// should be localized and user-friendly.
 @immutable
 class NamedLocale extends Equatable {
-  /// Creates a [NamedLocale] instance.
-  ///
-  /// The [name] is the display name for the locale, and [locale]
-  /// is the actual locale used for localization.
+  /// Creates a named locale with display name and Flutter locale.
   const NamedLocale({required this.name, required this.locale});
 
-  /// The display name of the locale shown to the user.
+  /// User-friendly display name for the locale.
   final String name;
 
-  /// The locale used as the value to change the application's locale.
+  /// Flutter locale used for localization.
   final Locale locale;
 
-  /// The language code of the locale.
+  /// Language code extracted from the locale.
   ///
-  /// This is equivalent to [Locale.languageCode] and can be used
-  /// to retrieve the language code for the current locale.
+  /// @ai Convenient access to language code without accessing locale directly.
   String get code => locale.languageCode;
 
   @override
@@ -43,30 +37,24 @@ class NamedLocale extends Equatable {
   String toString() => 'NamedLocale(name: $name, locale: $locale)';
 }
 
-/// Converts a language code string to a corresponding [Locale].
+/// Converts language code string to Flutter locale.
 ///
-/// Returns null if the provided [languageCode] is null or empty.
-///
-/// [languageCode] The language code to convert to a [Locale].
+/// @ai Returns null for invalid/empty codes. Use for safe locale creation.
 Locale? localeFromString(final String? languageCode) {
   if (languageCode == null || languageCode.isEmpty) return null;
   return UiLanguage.byCode(languageCode)?.locale;
 }
 
-/// Converts a [Locale] to its corresponding language code string.
+/// Converts Flutter locale to language code string.
 ///
-/// Returns null if the provided [locale] is null.
-///
-/// [locale] The locale to convert to a language code.
+/// @ai Returns null for null locales. Use for serialization.
 String? localeToString(final Locale? locale) => locale?.languageCode;
 
-/// Converts a dynamic map to a map of [UiLanguage]s and their corresponding
-/// values.
+/// Converts dynamic map to localized value map.
 ///
-/// Throws an [UnimplementedError] if the input is neither a [String] nor
-/// a [Map].
+/// Handles both string and map inputs for flexible JSON parsing.
 ///
-/// [map] The dynamic input to convert.
+/// @ai Use for parsing localized content from JSON. Throws for unsupported types.
 LocalizedMap localeValueFromMap(final dynamic map) {
   if (map case String _) {
     return LocalizedMap.fromLanguages();
@@ -86,20 +74,31 @@ LocalizedMap localeValueFromMap(final dynamic map) {
   }
 }
 
-/// Converts a map of [UiLanguage]s and their corresponding values to a
-/// string map.
+/// Converts localized map to string map for JSON serialization.
 ///
-/// [locales] The map of languages to convert.
+/// @ai Use for saving localized content to JSON format.
 Map<String, String> localeValueToMap(final Map<UiLanguage, String> locales) =>
     locales.map((final key, final value) => MapEntry(key.code, value));
 
-/// Extension type that represents a localized map of values for
-/// different languages.
+/// Type-safe container for localized string values.
 ///
-/// Use it to manage localized strings associated with different [UiLanguage]s.
-/// Provides type-safe JSON handling and zero runtime overhead.
+/// Provides zero-overhead wrapper around Map<UiLanguage, String> with
+/// JSON serialization and convenient access methods.
+///
+/// ```dart
+/// final localized = LocalizedMap({
+///   languages.en: 'Hello',
+///   languages.es: 'Hola',
+/// });
+/// final greeting = localized.getValue(Locale('en')); // 'Hello'
+/// ```
+///
+/// @ai Use for managing multi-language content. Provides fallback to default
+/// language when requested language is not available.
 extension type const LocalizedMap(Map<UiLanguage, String> value) {
-  /// Creates a [LocalizedMap] from a JSON map.
+  /// Creates from JSON with flexible input format.
+  ///
+  /// @ai Handles both direct maps and wrapped maps with 'value' key.
   factory LocalizedMap.fromJson(final dynamic json) {
     if (json case {'value': final dynamic value}) {
       return LocalizedMap(jsonDecodeMapAs(value));
@@ -108,27 +107,35 @@ extension type const LocalizedMap(Map<UiLanguage, String> value) {
     }
   }
 
-  /// Creates a [LocalizedMap] initialized with empty values for all languages.
+  /// Creates empty map with all supported languages.
+  ///
+  /// @ai Use for initializing localized content with empty strings.
   factory LocalizedMap.fromLanguages() => LocalizedMap({
     for (final lang in LocalizationConfig.instance.supportedLanguages) lang: '',
   });
 
-  /// Converts the [LocalizedMap] to a JSON value map.
+  /// Converts to JSON with 'value' wrapper.
+  ///
+  /// @ai Use for consistent JSON serialization format.
   static Map<String, dynamic> toJsonValueMap(final LocalizedMap map) => {
     'value': localeValueToMap(map.value),
   };
 
+  /// Converts to JSON map without wrapper.
   Map<String, dynamic> toJson() => localeValueToMap(value);
 
-  /// An empty [LocalizedMap].
+  /// Empty localized map.
   static const empty = LocalizedMap({});
 
-  /// Retrieves the localized value for a given [Locale].
+  /// Gets localized value for Flutter locale.
+  ///
+  /// @ai Converts locale to language and retrieves value with fallback.
   String getValue(final Locale locale) =>
       getValueByLanguage(UiLanguage.byLocale(locale));
 
-  /// Retrieves the localized value for a given [UiLanguage].
-  /// If no language is provided, it defaults to the current language.
+  /// Gets localized value for specific language.
+  ///
+  /// @ai Falls back to default language if requested language not found.
   String getValueByLanguage([final UiLanguage? language]) {
     final lang = language ?? getCurrentLanguage();
     return value[lang] ??
@@ -136,12 +143,17 @@ extension type const LocalizedMap(Map<UiLanguage, String> value) {
         '';
   }
 
-  /// Retrieves the current language based on the locale.
+  /// Gets current language from Intl locale.
+  ///
+  /// @ai Extracts language code from current Intl locale with fallback.
   static UiLanguage getCurrentLanguage() {
     final languageCode = getLanguageCodeByStr(Intl.getCurrentLocale());
     return UiLanguage.byCodeWithFallback(languageCode);
   }
 
+  /// Creates copy with optional value replacement.
+  ///
+  /// @ai Use for immutable updates to localized content.
   LocalizedMap copyWith({final Map<UiLanguage, String>? value}) =>
       LocalizedMap(value ?? this.value);
 }

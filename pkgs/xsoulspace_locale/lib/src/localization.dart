@@ -7,8 +7,8 @@ import 'package:intl/intl.dart';
 import 'localization_config.dart';
 
 export 'locale_logic.dart';
-export 'locale_notifier.dart';
 export 'localization_config.dart';
+export 'ui_locale_resource.dart';
 
 part 'language.dart';
 part 'named_locale.dart';

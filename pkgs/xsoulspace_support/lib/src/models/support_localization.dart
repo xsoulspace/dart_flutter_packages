@@ -50,77 +50,63 @@ class SupportLocalization {
 
   /// Default localization map with English and Russian translations
   static Map<String, LocalizedMap> get defaultLocalization => {
-    helloSupportTeam: LocalizedMap(value: {_en: 'Hello,', _ru: 'Добрый день,'}),
-    experiencingIssue: LocalizedMap(
-      value: {
-        _en: "I'm experiencing an issue with the app.",
-        _ru: 'У меня возникла проблема с приложением.',
-      },
-    ),
-    issueDescription: LocalizedMap(
-      value: {_en: '**Issue Description:**', _ru: '**Описание проблемы:**'},
-    ),
-    appInformation: LocalizedMap(
-      value: {_en: '**App Information:**', _ru: '**Информация о приложении:**'},
-    ),
-    deviceInformation: LocalizedMap(
-      value: {
-        _en: '**Device Information:**',
-        _ru: '**Информация об устройстве:**',
-      },
-    ),
-    contactEmail: LocalizedMap(
-      value: {_en: '**Contact Email:**', _ru: '**Email для связи:**'},
-    ),
-    userName: LocalizedMap(
-      value: {_en: '**User Name:**', _ru: '**Имя пользователя:**'},
-    ),
-    additionalContext: LocalizedMap(
-      value: {
-        _en: '**Additional Context:**',
-        _ru: '**Дополнительный контекст:**',
-      },
-    ),
-    additionalDetails: LocalizedMap(
-      value: {
-        _en: '**Additional Details:**',
-        _ru: '**Дополнительные детали:**',
-      },
-    ),
-    provideAdditionalContext: LocalizedMap(
-      value: {
-        _en: 'Please provide any additional context about your issue below:',
-        _ru:
-            'Пожалуйста, предоставьте дополнительную информацию о вашей проблеме ниже:',
-      },
-    ),
-    sentFromApp: LocalizedMap(
-      value: {
-        _en: 'Sent from {appName} app',
-        _ru: 'Отправлено из приложения {appName}',
-      },
-    ),
-    appFeedback: LocalizedMap(
-      value: {_en: 'App Feedback', _ru: 'Отзыв о приложении'},
-    ),
-    userFeedbackOrBugReport: LocalizedMap(
-      value: {
-        _en: 'User feedback or bug report',
-        _ru: 'Отзыв пользователя или сообщение об ошибке',
-      },
-    ),
-    notProvided: LocalizedMap(value: {_en: 'Not provided', _ru: 'Не указано'}),
-    unknown: LocalizedMap(value: {_en: 'Unknown', _ru: 'Неизвестно'}),
-    version: LocalizedMap(value: {_en: 'Version', _ru: 'Версия'}),
-    build: LocalizedMap(value: {_en: 'Build', _ru: 'Сборка'}),
-    package: LocalizedMap(value: {_en: 'Package', _ru: 'Пакет'}),
-    appName: LocalizedMap(value: {_en: 'App Name', _ru: 'Название приложения'}),
-    platform: LocalizedMap(value: {_en: 'Platform', _ru: 'Платформа'}),
-    model: LocalizedMap(value: {_en: 'Model', _ru: 'Модель'}),
-    osVersion: LocalizedMap(value: {_en: 'OS Version', _ru: 'Версия ОС'}),
-    manufacturer: LocalizedMap(
-      value: {_en: 'Manufacturer', _ru: 'Производитель'},
-    ),
+    helloSupportTeam: LocalizedMap({_en: 'Hello,', _ru: 'Добрый день,'}),
+    experiencingIssue: LocalizedMap({
+      _en: "I'm experiencing an issue with the app.",
+      _ru: 'У меня возникла проблема с приложением.',
+    }),
+    issueDescription: LocalizedMap({
+      _en: '**Issue Description:**',
+      _ru: '**Описание проблемы:**',
+    }),
+    appInformation: LocalizedMap({
+      _en: '**App Information:**',
+      _ru: '**Информация о приложении:**',
+    }),
+    deviceInformation: LocalizedMap({
+      _en: '**Device Information:**',
+      _ru: '**Информация об устройстве:**',
+    }),
+    contactEmail: LocalizedMap({
+      _en: '**Contact Email:**',
+      _ru: '**Email для связи:**',
+    }),
+    userName: LocalizedMap({
+      _en: '**User Name:**',
+      _ru: '**Имя пользователя:**',
+    }),
+    additionalContext: LocalizedMap({
+      _en: '**Additional Context:**',
+      _ru: '**Дополнительный контекст:**',
+    }),
+    additionalDetails: LocalizedMap({
+      _en: '**Additional Details:**',
+      _ru: '**Дополнительные детали:**',
+    }),
+    provideAdditionalContext: LocalizedMap({
+      _en: 'Please provide any additional context about your issue below:',
+      _ru:
+          'Пожалуйста, предоставьте дополнительную информацию о вашей проблеме ниже:',
+    }),
+    sentFromApp: LocalizedMap({
+      _en: 'Sent from {appName} app',
+      _ru: 'Отправлено из приложения {appName}',
+    }),
+    appFeedback: LocalizedMap({_en: 'App Feedback', _ru: 'Отзыв о приложении'}),
+    userFeedbackOrBugReport: LocalizedMap({
+      _en: 'User feedback or bug report',
+      _ru: 'Отзыв пользователя или сообщение об ошибке',
+    }),
+    notProvided: LocalizedMap({_en: 'Not provided', _ru: 'Не указано'}),
+    unknown: LocalizedMap({_en: 'Unknown', _ru: 'Неизвестно'}),
+    version: LocalizedMap({_en: 'Version', _ru: 'Версия'}),
+    build: LocalizedMap({_en: 'Build', _ru: 'Сборка'}),
+    package: LocalizedMap({_en: 'Package', _ru: 'Пакет'}),
+    appName: LocalizedMap({_en: 'App Name', _ru: 'Название приложения'}),
+    platform: LocalizedMap({_en: 'Platform', _ru: 'Платформа'}),
+    model: LocalizedMap({_en: 'Model', _ru: 'Модель'}),
+    osVersion: LocalizedMap({_en: 'OS Version', _ru: 'Версия ОС'}),
+    manufacturer: LocalizedMap({_en: 'Manufacturer', _ru: 'Производитель'}),
   };
 
   /// Gets a localized string for the specified key and language

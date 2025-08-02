@@ -24,113 +24,100 @@ void main() async {
     supportEmail: 'support@example.com',
     appName: 'My App',
     localization: {
-      SupportLocalization.helloSupportTeam: LocalizedMap(
-        value: {languages.en: 'Hello,', languages.ru: 'Добрый день,'},
-      ),
-      SupportLocalization.experiencingIssue: LocalizedMap(
-        value: {
-          languages.en: "I'm experiencing an issue with the {appName} app.",
-          languages.ru: 'У меня возникла проблема с приложением {appName}.',
-        },
-      ),
-      SupportLocalization.issueDescription: LocalizedMap(
-        value: {
-          languages.en: '**Issue Description:**',
-          languages.ru: '**Описание проблемы:**',
-        },
-      ),
-      SupportLocalization.appInformation: LocalizedMap(
-        value: {
-          languages.en: '**App Information:**',
-          languages.ru: '**Информация о приложении:**',
-        },
-      ),
-      SupportLocalization.deviceInformation: LocalizedMap(
-        value: {
-          languages.en: '**Device Information:**',
-          languages.ru: '**Информация об устройстве:**',
-        },
-      ),
-      SupportLocalization.contactEmail: LocalizedMap(
-        value: {
-          languages.en: '**Contact Email:**',
-          languages.ru: '**Email для связи:**',
-        },
-      ),
-      SupportLocalization.userName: LocalizedMap(
-        value: {
-          languages.en: '**User Name:**',
-          languages.ru: '**Имя пользователя:**',
-        },
-      ),
-      SupportLocalization.additionalContext: LocalizedMap(
-        value: {
-          languages.en: '**Additional Context:**',
-          languages.ru: '**Дополнительный контекст:**',
-        },
-      ),
-      SupportLocalization.additionalDetails: LocalizedMap(
-        value: {
-          languages.en: '**Additional Details:**',
-          languages.ru: '**Дополнительные детали:**',
-        },
-      ),
-      SupportLocalization.provideAdditionalContext: LocalizedMap(
-        value: {
-          languages.en:
-              'Please provide any additional context about your issue below:',
-          languages.ru:
-              'Пожалуйста, предоставьте дополнительную информацию о вашей проблеме ниже:',
-        },
-      ),
-      SupportLocalization.sentFromApp: LocalizedMap(
-        value: {
-          languages.en: 'Sent from {appName} app',
-          languages.ru: 'Отправлено из приложения {appName}',
-        },
-      ),
-      SupportLocalization.appFeedback: LocalizedMap(
-        value: {
-          languages.en: 'App Feedback',
-          languages.ru: 'Отзыв о приложении',
-        },
-      ),
-      SupportLocalization.userFeedbackOrBugReport: LocalizedMap(
-        value: {
-          languages.en: 'User feedback or bug report',
-          languages.ru: 'Отзыв пользователя или сообщение об ошибке',
-        },
-      ),
-      SupportLocalization.notProvided: LocalizedMap(
-        value: {languages.en: 'Not provided', languages.ru: 'Не указано'},
-      ),
-      SupportLocalization.unknown: LocalizedMap(
-        value: {languages.en: 'Unknown', languages.ru: 'Неизвестно'},
-      ),
-      SupportLocalization.version: LocalizedMap(
-        value: {languages.en: 'Version', languages.ru: 'Версия'},
-      ),
-      SupportLocalization.build: LocalizedMap(
-        value: {languages.en: 'Build', languages.ru: 'Сборка'},
-      ),
-      SupportLocalization.package: LocalizedMap(
-        value: {languages.en: 'Package', languages.ru: 'Пакет'},
-      ),
-      SupportLocalization.appName: LocalizedMap(
-        value: {languages.en: 'App Name', languages.ru: 'Название приложения'},
-      ),
-      SupportLocalization.platform: LocalizedMap(
-        value: {languages.en: 'Platform', languages.ru: 'Платформа'},
-      ),
-      SupportLocalization.model: LocalizedMap(
-        value: {languages.en: 'Model', languages.ru: 'Модель'},
-      ),
-      SupportLocalization.osVersion: LocalizedMap(
-        value: {languages.en: 'OS Version', languages.ru: 'Версия ОС'},
-      ),
-      SupportLocalization.manufacturer: LocalizedMap(
-        value: {languages.en: 'Manufacturer', languages.ru: 'Производитель'},
-      ),
+      SupportLocalization.helloSupportTeam: LocalizedMap({
+        languages.en: 'Hello,',
+        languages.ru: 'Добрый день,',
+      }),
+      SupportLocalization.experiencingIssue: LocalizedMap({
+        languages.en: "I'm experiencing an issue with the {appName} app.",
+        languages.ru: 'У меня возникла проблема с приложением {appName}.',
+      }),
+      SupportLocalization.issueDescription: LocalizedMap({
+        languages.en: '**Issue Description:**',
+        languages.ru: '**Описание проблемы:**',
+      }),
+      SupportLocalization.appInformation: LocalizedMap({
+        languages.en: '**App Information:**',
+        languages.ru: '**Информация о приложении:**',
+      }),
+      SupportLocalization.deviceInformation: LocalizedMap({
+        languages.en: '**Device Information:**',
+        languages.ru: '**Информация об устройстве:**',
+      }),
+      SupportLocalization.contactEmail: LocalizedMap({
+        languages.en: '**Contact Email:**',
+        languages.ru: '**Email для связи:**',
+      }),
+      SupportLocalization.userName: LocalizedMap({
+        languages.en: '**User Name:**',
+        languages.ru: '**Имя пользователя:**',
+      }),
+      SupportLocalization.additionalContext: LocalizedMap({
+        languages.en: '**Additional Context:**',
+        languages.ru: '**Дополнительный контекст:**',
+      }),
+      SupportLocalization.additionalDetails: LocalizedMap({
+        languages.en: '**Additional Details:**',
+        languages.ru: '**Дополнительные детали:**',
+      }),
+      SupportLocalization.provideAdditionalContext: LocalizedMap({
+        languages.en:
+            'Please provide any additional context about your issue below:',
+        languages.ru:
+            'Пожалуйста, предоставьте дополнительную информацию о вашей проблеме ниже:',
+      }),
+      SupportLocalization.sentFromApp: LocalizedMap({
+        languages.en: 'Sent from {appName} app',
+        languages.ru: 'Отправлено из приложения {appName}',
+      }),
+      SupportLocalization.appFeedback: LocalizedMap({
+        languages.en: 'App Feedback',
+        languages.ru: 'Отзыв о приложении',
+      }),
+      SupportLocalization.userFeedbackOrBugReport: LocalizedMap({
+        languages.en: 'User feedback or bug report',
+        languages.ru: 'Отзыв пользователя или сообщение об ошибке',
+      }),
+      SupportLocalization.notProvided: LocalizedMap({
+        languages.en: 'Not provided',
+        languages.ru: 'Не указано',
+      }),
+      SupportLocalization.unknown: LocalizedMap({
+        languages.en: 'Unknown',
+        languages.ru: 'Неизвестно',
+      }),
+      SupportLocalization.version: LocalizedMap({
+        languages.en: 'Version',
+        languages.ru: 'Версия',
+      }),
+      SupportLocalization.build: LocalizedMap({
+        languages.en: 'Build',
+        languages.ru: 'Сборка',
+      }),
+      SupportLocalization.package: LocalizedMap({
+        languages.en: 'Package',
+        languages.ru: 'Пакет',
+      }),
+      SupportLocalization.appName: LocalizedMap({
+        languages.en: 'App Name',
+        languages.ru: 'Название приложения',
+      }),
+      SupportLocalization.platform: LocalizedMap({
+        languages.en: 'Platform',
+        languages.ru: 'Платформа',
+      }),
+      SupportLocalization.model: LocalizedMap({
+        languages.en: 'Model',
+        languages.ru: 'Модель',
+      }),
+      SupportLocalization.osVersion: LocalizedMap({
+        languages.en: 'OS Version',
+        languages.ru: 'Версия ОС',
+      }),
+      SupportLocalization.manufacturer: LocalizedMap({
+        languages.en: 'Manufacturer',
+        languages.ru: 'Производитель',
+      }),
     },
   );
 
