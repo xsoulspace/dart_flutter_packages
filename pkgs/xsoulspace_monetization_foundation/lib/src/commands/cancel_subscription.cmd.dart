@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
 import '../resources/resources.dart';
+import '../utils/chain.dart';
 import 'restore_purchases.cmd.dart';
 
 /// {@template cancel_subscription_command}
 /// Command to cancel a subscription.
 /// {@endtemplate}
 @immutable
-class CancelSubscriptionCommand {
+class CancelSubscriptionCommand implements ChainCommand {
   const CancelSubscriptionCommand({
     required this.purchaseProvider,
     required this.activeSubscriptionResource,
@@ -31,7 +32,7 @@ class CancelSubscriptionCommand {
   /// 3. Attempt subscription via provider
   /// 4. On success: confirm purchase and return true
   /// {@endtemplate}
-  Future<bool> execute({
+  Future<void> execute({
     final PurchaseProductId productId = PurchaseProductId.empty,
     final bool openSubscriptionManagement = true,
   }) async {
@@ -41,25 +42,22 @@ class CancelSubscriptionCommand {
     if (productId.isEmpty) {
       final activeSubscription = activeSubscriptionResource.subscription;
       if (activeSubscription == null) {
-        return false;
+        return;
       }
       effectiveProductId = activeSubscription.productId;
     }
     final result = await purchaseProvider.cancel(effectiveProductId.value);
     if (result.isSuccess) {
       subscriptionStatusResource.set(oldStatus);
-      return true;
+      return;
     }
 
-    bool isCancelled = false;
     if (result.isFailure && openSubscriptionManagement) {
       await purchaseProvider.openSubscriptionManagement();
       await Future.delayed(const Duration(seconds: 1));
       // check if subscription is cancelled
       await restorePurchasesCommand.execute();
-      isCancelled = activeSubscriptionResource.subscription.isCancelled;
     }
     subscriptionStatusResource.set(oldStatus);
-    return isCancelled;
   }
 }

@@ -157,6 +157,7 @@ class RustorePurchaseProvider implements PurchaseProvider {
               ? DateTime.now().add(details.duration)
               : null,
         ),
+        shouldConfirmPurchase: true,
       );
     } catch (e) {
       return PurchaseResultModel.failure(e.toString());

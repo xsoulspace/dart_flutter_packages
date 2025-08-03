@@ -64,16 +64,15 @@ class SubscribeCommand {
         subscriptionStatusResource.set(
           SubscriptionStatus.pendingPaymentConfirmation,
         );
-        return confirmPurchaseCommand.execute(
-          result.details!.toVerificationDto(),
-        );
+        if (result.shouldConfirmPurchase) {
+          return confirmPurchaseCommand.execute(
+            result.details!.toVerificationDto(),
+          );
+        }
+        return true;
       case ResultType.failure:
         final details = result.details;
-        if (details == null) {
-          return false;
-        } else if (details.isCancelled) {
-          return false;
-        }
+        if (details == null || details.isCancelled) return false;
         purchasePaywallErrorResource.error = result.error;
 
         /// handle case when upgrading / downgrading subscription

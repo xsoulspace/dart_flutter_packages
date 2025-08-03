@@ -153,7 +153,7 @@ class MonetizationFoundation {
   ///
   /// Redirects to store if subscription was not cancelled using API.
   /// {@endtemplate}
-  Future<bool> cancelSubscription({
+  Future<void> cancelSubscription({
     final PurchaseProductId productId = PurchaseProductId.empty,
   }) => _cancelSubscriptionCommand.execute(productId: productId);
 

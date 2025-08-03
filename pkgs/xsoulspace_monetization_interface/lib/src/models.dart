@@ -267,14 +267,21 @@ extension type const PurchaseResultModel._(Map<String, dynamic> value) {
   factory PurchaseResultModel({
     final PurchaseDetailsModel? details,
     final ResultType type = ResultType.success,
+    final bool shouldConfirmPurchase = false,
     final String? error,
   }) => PurchaseResultModel._({
     'type': type.name,
     'details': details?.toJson(),
+    'shouldConfirmPurchase': shouldConfirmPurchase,
     'error': error,
   });
-  factory PurchaseResultModel.success(final PurchaseDetailsModel details) =>
-      PurchaseResultModel(details: details);
+  factory PurchaseResultModel.success(
+    final PurchaseDetailsModel details, {
+    required final bool shouldConfirmPurchase,
+  }) => PurchaseResultModel(
+    details: details,
+    shouldConfirmPurchase: shouldConfirmPurchase,
+  );
   factory PurchaseResultModel.failure(final String error) =>
       PurchaseResultModel(error: error, type: ResultType.failure);
   bool get isSuccess => value['type'] == ResultType.success.name;
@@ -282,6 +289,11 @@ extension type const PurchaseResultModel._(Map<String, dynamic> value) {
     (final e) => e.name == jsonDecodeString(value['type']),
     orElse: () => ResultType.failure,
   );
+  bool get shouldConfirmPurchase =>
+      isSuccess &&
+      details != null &&
+      details!.status == PurchaseStatus.pendingConfirmation &&
+      jsonDecodeBool(value['shouldConfirmPurchase']);
   PurchaseDetailsModel? get details =>
       isSuccess ? PurchaseDetailsModel.fromJson(value['details']) : null;
   String get error => !isSuccess ? jsonDecodeString(value['error']) : '';

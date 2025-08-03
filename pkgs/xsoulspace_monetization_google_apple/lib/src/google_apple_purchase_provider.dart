@@ -128,6 +128,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
               ),
             ),
           ),
+          shouldConfirmPurchase: false,
         );
       } else {
         return PurchaseResultModel.failure('Purchase initiation failed.');
