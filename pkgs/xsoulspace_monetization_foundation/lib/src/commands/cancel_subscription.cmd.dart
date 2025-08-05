@@ -38,15 +38,12 @@ class CancelSubscriptionCommand implements ChainCommand {
   }) async {
     final oldStatus = subscriptionStatusResource.status;
     subscriptionStatusResource.set(SubscriptionStatus.cancelling);
-    var effectiveProductId = productId;
-    if (productId.isEmpty) {
-      final activeSubscription = activeSubscriptionResource.subscription;
-      if (activeSubscription == null) {
-        return;
-      }
-      effectiveProductId = activeSubscription.productId;
+    final activeSubscription = activeSubscriptionResource.subscription;
+    if (productId.isEmpty || activeSubscription == null) {
+      throw Exception('No active subscription to cancel');
     }
-    final result = await purchaseProvider.cancel(effectiveProductId.value);
+    final purchaseId = activeSubscription.purchaseId;
+    final result = await purchaseProvider.cancel(purchaseId.value);
     if (result.isSuccess) {
       subscriptionStatusResource.set(oldStatus);
       return;
