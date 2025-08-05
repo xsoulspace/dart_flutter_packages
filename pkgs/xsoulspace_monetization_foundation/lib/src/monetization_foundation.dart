@@ -155,7 +155,11 @@ class MonetizationFoundation {
   /// {@endtemplate}
   Future<void> cancelSubscription({
     final PurchaseProductId productId = PurchaseProductId.empty,
-  }) => _cancelSubscriptionCommand.execute(productId: productId);
+    final PurchaseId purchaseId = PurchaseId.empty,
+  }) => _cancelSubscriptionCommand.execute(
+    productId: productId,
+    purchaseId: purchaseId,
+  );
 
   /// {@template subscribe}
   /// Subscribes to a product.

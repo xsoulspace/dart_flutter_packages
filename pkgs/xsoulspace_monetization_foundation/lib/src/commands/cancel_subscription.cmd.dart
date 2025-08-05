@@ -34,16 +34,17 @@ class CancelSubscriptionCommand implements ChainCommand {
   /// {@endtemplate}
   Future<void> execute({
     final PurchaseProductId productId = PurchaseProductId.empty,
+    final PurchaseId purchaseId = PurchaseId.empty,
     final bool openSubscriptionManagement = true,
   }) async {
     final oldStatus = subscriptionStatusResource.status;
     subscriptionStatusResource.set(SubscriptionStatus.cancelling);
     final activeSubscription = activeSubscriptionResource.subscription;
-    if (productId.isEmpty || activeSubscription == null) {
+    if (activeSubscription == null) {
       throw Exception('No active subscription to cancel');
     }
-    final purchaseId = activeSubscription.purchaseId;
-    final result = await purchaseProvider.cancel(purchaseId.value);
+    final purchaseId = activeSubscription.purchaseId.value;
+    final result = await purchaseProvider.cancel(purchaseId);
     if (result.isSuccess) {
       subscriptionStatusResource.set(oldStatus);
       return;
