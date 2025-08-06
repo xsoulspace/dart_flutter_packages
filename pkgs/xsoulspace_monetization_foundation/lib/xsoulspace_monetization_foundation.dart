@@ -69,6 +69,8 @@ library;
 export 'src/ads/ad_manager.dart';
 // Business Logic Commands
 export 'src/commands/commands.dart';
+// Local API
+export 'src/local_api/local_api.dart';
 // Core Models and Types
 export 'src/models/models.dart';
 // Main Orchestrator
