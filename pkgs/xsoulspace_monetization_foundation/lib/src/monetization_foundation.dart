@@ -54,7 +54,8 @@ class MonetizationFoundation {
   StreamSubscription<List<PurchaseDetailsModel>>? _purchaseUpdateSubscription;
 
   /// Restores previous purchases without full initialization.
-  Future<void> restore() => _restorePurchasesCommand.execute();
+  Future<void> restore({final bool shouldAwaitRestore = true}) =>
+      _restorePurchasesCommand.execute(shouldAwaitRestore: shouldAwaitRestore);
 
   var _initCompleter = Completer<bool>();
 
@@ -179,6 +180,7 @@ class MonetizationFoundation {
   /// Check if user has an active subscription
   Future<void> checkActiveSubscription({
     final bool shouldRestore = true,
+    final bool shouldAwaitRestore = true,
   }) async {
     try {
       final isInitialized = await initFuture;
@@ -187,8 +189,7 @@ class MonetizationFoundation {
       final isAuthorized = await isUserAuthorized();
       if (!isAuthorized) return;
       if (!shouldRestore) return;
-      await restore();
-      // TODO: check if subscription is active
+      await restore(shouldAwaitRestore: shouldAwaitRestore);
       // ignore: avoid_catches_without_on_clauses
     } catch (e) {
       // If we can't check subscription status, assume no active subscription
