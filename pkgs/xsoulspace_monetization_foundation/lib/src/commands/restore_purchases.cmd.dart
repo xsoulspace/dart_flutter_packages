@@ -62,6 +62,9 @@ class RestorePurchasesCommand {
   /// 4. Handle each purchase through the update command
   /// 5. On failure: silently handle (no state changes)
   ///
+  /// Will await restore even if `shouldAwaitRestore` is `false` if there is no
+  /// active subscription.
+  ///
   /// **Note:** This command delegates the actual purchase processing
   /// to `HandlePurchaseUpdateCommand` to maintain consistency with
   /// the purchase update flow.
@@ -76,7 +79,7 @@ class RestorePurchasesCommand {
       subscriptionStatusResource.set(SubscriptionStatus.subscribed);
     }
 
-    if (shouldAwaitRestore) {
+    if (shouldAwaitRestore || !activeSubscription.isActive) {
       await _runStoreRestore();
     } else {
       unawaited(_runStoreRestore());
