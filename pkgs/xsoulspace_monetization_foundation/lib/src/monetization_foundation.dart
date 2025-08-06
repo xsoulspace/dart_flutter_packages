@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
 import 'commands/commands.dart';
+import 'local_api/local_api.dart';
 import 'resources/resources.dart';
 
 /// {@template monetization_foundation}
@@ -36,10 +37,14 @@ class MonetizationFoundation {
   MonetizationFoundation({
     required final MonetizationResources resources,
     required this.purchaseProvider,
+    required this.purchasesLocalApi,
   }) : srcs = resources;
 
   /// {@macro purchase_provider}
   final PurchaseProvider purchaseProvider;
+
+  /// {@macro purchases_local_api}
+  final PurchasesLocalApi purchasesLocalApi;
 
   /// {@macro monetization_resources}
   @protected
@@ -137,7 +142,7 @@ class MonetizationFoundation {
     final List<PurchaseDetailsModel> purchases,
   ) async {
     for (final purchase in purchases) {
-      await _handlePurchaseUpdateCommand.execute(purchase.toVerificationDto());
+      await _handlePurchaseUpdateCommand.execute(purchase);
     }
   }
 
@@ -170,6 +175,26 @@ class MonetizationFoundation {
   /// Opens the subscription management page.
   Future<void> openSubscriptionManagement() =>
       purchaseProvider.openSubscriptionManagement();
+
+  /// Check if user has an active subscription
+  Future<void> checkActiveSubscription({
+    final bool shouldRestore = true,
+  }) async {
+    try {
+      final isInitialized = await initFuture;
+      if (!isInitialized) return;
+
+      final isAuthorized = await isUserAuthorized();
+      if (!isAuthorized) return;
+      if (!shouldRestore) return;
+      await restore();
+      // TODO: check if subscription is active
+      // ignore: avoid_catches_without_on_clauses
+    } catch (e) {
+      // If we can't check subscription status, assume no active subscription
+      return;
+    }
+  }
 }
 
 extension on MonetizationFoundation {
@@ -199,6 +224,7 @@ extension on MonetizationFoundation {
   RestorePurchasesCommand get _restorePurchasesCommand =>
       RestorePurchasesCommand(
         purchaseProvider: purchaseProvider,
+        purchasesLocalApi: purchasesLocalApi,
         handlePurchaseUpdateCommand: _handlePurchaseUpdateCommand,
         subscriptionStatusResource: srcs.subscriptionStatus,
       );
@@ -208,6 +234,7 @@ extension on MonetizationFoundation {
         activeSubscriptionResource: srcs.activeSubscription,
         subscriptionStatusResource: srcs.subscriptionStatus,
         confirmPurchaseCommand: _confirmPurchaseCommand,
+        purchasesLocalApi: purchasesLocalApi,
       );
 
   LoadSubscriptionsCommand get _loadSubscriptionsCommand =>

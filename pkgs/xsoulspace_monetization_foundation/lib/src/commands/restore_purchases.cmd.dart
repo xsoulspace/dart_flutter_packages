@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
+import '../local_api/local_api.dart';
 import '../resources/resources.dart';
 import 'handle_purchase_update.cmd.dart';
 
@@ -37,12 +40,15 @@ import 'handle_purchase_update.cmd.dart';
 /// {@endtemplate}
 @immutable
 class RestorePurchasesCommand {
+  /// {@macro restore_purchases_command}
   const RestorePurchasesCommand({
     required this.purchaseProvider,
+    required this.purchasesLocalApi,
     required this.handlePurchaseUpdateCommand,
     required this.subscriptionStatusResource,
   });
   final PurchaseProvider purchaseProvider;
+  final PurchasesLocalApi purchasesLocalApi;
   final HandlePurchaseUpdateCommand handlePurchaseUpdateCommand;
   final SubscriptionStatusResource subscriptionStatusResource;
 
@@ -60,32 +66,46 @@ class RestorePurchasesCommand {
   /// to `HandlePurchaseUpdateCommand` to maintain consistency with
   /// the purchase update flow.
   /// {@endtemplate}
-  Future<void> execute() async {
+  Future<void> execute({final bool shouldAwaitRestore = true}) async {
     subscriptionStatusResource.set(SubscriptionStatus.restoring);
+
+    final activeSubscription = await purchasesLocalApi.getActiveSubscription();
+    if (activeSubscription.isActive) {
+      // since we have an active subscription and it is not expired,
+      // we can run the rest of the command silently
+      subscriptionStatusResource.set(SubscriptionStatus.subscribed);
+    }
+
+    if (shouldAwaitRestore) {
+      await _runStoreRestore();
+    } else {
+      unawaited(_runStoreRestore());
+    }
+  }
+
+  Future<void> _runStoreRestore() async {
     final result = await purchaseProvider.restorePurchases();
     switch (result.type) {
       case ResultType.success:
         for (final purchase in result.restoredPurchases) {
-          if (!purchase.isActive) {
+          if (purchase.isActive) {
+            await handlePurchaseUpdateCommand.execute(purchase);
+          } else if (purchase.isPending) {
             try {
-              if (purchase.isPending) {
-                await purchaseProvider.cancel(purchase.productId.value);
-                await purchaseProvider.cancel(purchase.purchaseId.value);
-              }
-              if (purchase.isPendingConfirmation) {
-                await handlePurchaseUpdateCommand.execute(
-                  purchase.toVerificationDto(),
-                );
-              }
+              await purchaseProvider.cancel(purchase.productId.value);
               // ignore: avoid_catches_without_on_clauses
-            } catch (e, stackTrace) {
-              debugPrint('RestorePurchasesCommand.execute: $e $stackTrace');
+            } catch (e) {
+              debugPrint('RestorePurchasesCommand.execute: $e');
             }
-            continue;
+            try {
+              await purchaseProvider.cancel(purchase.purchaseId.value);
+              // ignore: avoid_catches_without_on_clauses
+            } catch (e) {
+              debugPrint('RestorePurchasesCommand.execute: $e');
+            }
+          } else if (purchase.isPendingConfirmation) {
+            await handlePurchaseUpdateCommand.execute(purchase);
           }
-          await handlePurchaseUpdateCommand.execute(
-            purchase.toVerificationDto(),
-          );
         }
       case ResultType.failure:
       // Handle failure if needed

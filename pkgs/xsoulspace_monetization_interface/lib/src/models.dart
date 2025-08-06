@@ -1,4 +1,5 @@
 import 'package:from_json_to_json/from_json_to_json.dart';
+import 'package:is_dart_empty_or_not/is_dart_empty_or_not.dart';
 
 /// Extension type that represents a unique identifier for a product.
 extension type const PurchaseProductId._(String value) {
@@ -126,11 +127,13 @@ extension type const PurchaseProductDetailsModel._(Map<String, dynamic> value) {
 
 /// Extension type that represents the details of a purchase.
 ///
-/// Wraps a Map<String, dynamic> for all purchase details fields.
+/// Wraps a `Map<String, dynamic>` for all purchase details fields.
 /// Uses from_json_to_json for type-safe JSON handling.
 extension type const PurchaseDetailsModel._(Map<String, dynamic> value) {
   factory PurchaseDetailsModel.fromJson(final dynamic json) =>
-      PurchaseDetailsModel._(jsonDecodeMapAs(json));
+      PurchaseDetailsModel._(
+        jsonDecodeMapAs<String, dynamic>(json).whenEmptyUse(empty.toJson()),
+      );
   factory PurchaseDetailsModel({
     required final DateTime purchaseDate,
     final PurchaseId purchaseId = PurchaseId.empty,
