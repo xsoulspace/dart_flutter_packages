@@ -171,7 +171,7 @@ class MonetizationFoundation {
   /// {@template subscribe}
   /// Subscribes to a product.
   /// {@endtemplate}
-  Future<bool> subscribe(final PurchaseProductDetailsModel details) =>
+  Future<void> subscribe(final PurchaseProductDetailsModel details) =>
       _subscribeCommand.execute(details);
 
   /// Opens the subscription management page.

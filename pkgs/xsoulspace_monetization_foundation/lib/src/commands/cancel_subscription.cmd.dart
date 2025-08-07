@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:is_dart_empty_or_not/is_dart_empty_or_not.dart';
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
 import '../resources/resources.dart';
@@ -48,11 +49,9 @@ class CancelSubscriptionCommand implements ChainCommand {
       return;
     }
 
-    final idToCancel = purchaseId.isNotEmpty
-        ? purchaseId.value
-        : (productId.isNotEmpty
-              ? productId.value
-              : activeSubscription.purchaseId.value);
+    final idToCancel = purchaseId.value
+        .whenEmptyUse(productId.value)
+        .whenEmptyUse(activeSubscription.purchaseId.value);
 
     final result = await purchaseProvider.cancel(idToCancel);
     if (result.isSuccess) {
