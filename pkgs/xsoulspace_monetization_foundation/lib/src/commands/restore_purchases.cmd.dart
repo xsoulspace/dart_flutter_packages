@@ -113,6 +113,12 @@ class RestorePurchasesCommand {
       case ResultType.failure:
       // Handle failure if needed
     }
-    subscriptionStatusResource.set(SubscriptionStatus.free);
+    // Finalize state based on actual active subscription presence
+    final locallyActive = await purchasesLocalApi.getActiveSubscription();
+    if (subscriptionStatusResource.isSubscribed || locallyActive.isActive) {
+      subscriptionStatusResource.set(SubscriptionStatus.subscribed);
+    } else {
+      subscriptionStatusResource.set(SubscriptionStatus.free);
+    }
   }
 }

@@ -150,6 +150,7 @@ class MonetizationFoundation {
   /// Cleans up resources and cancels subscriptions.
   Future<void> dispose() async {
     await _purchaseUpdateSubscription?.cancel();
+    await purchaseProvider.dispose();
   }
 
   /// {@template cancel_subscription}
