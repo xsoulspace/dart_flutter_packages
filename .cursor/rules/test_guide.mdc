@@ -1,41 +1,82 @@
 ---
-description: 
+description: Concise, practical test-writing guidance using harness, builders, matchers, and data-driven patterns for Dart/Flutter
 globs: *_test.dart
 alwaysApply: false
 ---
 
-# Test Guidelines
+## Test Guidelines
 
-This guide outlines concise rules for writing and modifying tests in this project.
+Focused, maintainable tests that read like specifications. Use the shared test harness and helpers.
 
-## 1. Data-Driven Structure
+### 1) Quick-start checklist
 
-- Use maps (e.g., `Map<String, ({...})>`) to define test cases.
-- Iterate over cases with `forEach` to minimize boilerplate.
-- Prefer table-style maps for inputs/expected outputs to keep tests compact.
+- Use `test/support/harness.dart` env with `setUp()`/`tearDown()`.
+- Create data via `test/support/builders.dart`.
+- Assert via `test/support/matchers.dart` and clear `reason`s.
+- Prefer table-driven cases over copy/paste.
+- Avoid deep constructor chains; use harness factories.
 
-## 2. Test Organization
+### 2) Organization
 
-- Group related tests using `group()` and individual cases using `test()`.
-- Name tests and groups descriptively (e.g., "parses various currency formats", "formats EUR in different locales").
-- Keep groups focused on one unit (command/class) per file when feasible.
+- One subject per file (`group('SubscribeCommand', ...)`).
+- Descriptive names: what behavior, when, then.
+- Keep arrange/act/assert minimal using harness helpers.
 
-## 3. Input & Expected Outputs
+### 3) Harness usage
 
-- Define inputs and expected outputs clearly in your maps.
-- Separate cases for different locales or edge conditions.
-- Use small helper builders for domain objects (e.g., `purchase(active: true)`).
+- Import `support/harness.dart` and call:
+  - `final env = MonetizationTestEnv()..setUp();` in `setUp()`; `tearDown()` to dispose.
+  - Configure scenarios: `env.givenSubscribeSuccess()`, `env.givenRestoreFailure('net')`, etc.
+  - Build SUTs via factories: `env.makeSubscribeCommand()`, `env.makeRestorePurchasesCommand()`, `env.makeFoundation()`.
 
-## 4. Assertions
+### 4) Builders
 
-- Use `expect()` with a clear `reason` to explain failures.
-- Assert each property (price, symbols, code) individually.
-- Prefer observing public resource state changes over mocking internals.
+- Use small builders with sensible defaults: `aPurchase(...)`, `aProduct(...)`, `aVerification(...)`.
+- Pass only what matters to the scenario; defaults handle the rest.
 
-## 5. General Best Practices
+### 5) Assertions
 
-- Keep tests self-contained and independent.
-- Write concise, readable tests that are easy to update.
-- Use data-driven approaches to facilitate modifications and extensions.
-- Use lightweight fakes over heavy mocks. Capture call counts/params in fakes.
-- Put reusable fakes/utilities under `test/support/`.
+- Prefer resource state matchers: `isSubscribed()`, `isFreeStatus()`, `isPendingConfirmationStatus()`, `hasError([contains])`, `hasNoError()`.
+- Add a `reason` when the intent isn’t obvious.
+- Validate side-effects (e.g., provider call counters) only when essential.
+
+### 6) Data-driven tests
+
+- Define maps of named cases and iterate for compact coverage:
+
+```dart
+final cases = <String, ({bool shouldConfirm, bool expectSubscribed})>{
+  'confirms and subscribes': (shouldConfirm: true, expectSubscribed: true),
+  'leaves pending without confirm': (shouldConfirm: false, expectSubscribed: false),
+};
+
+cases.forEach((name, c) {
+  test(name, () async {
+    env.givenSubscribeSuccess(shouldConfirm: c.shouldConfirm);
+    final cmd = env.makeSubscribeCommand();
+    await cmd.execute(aProduct());
+    expect(env.subscriptionStatus.isSubscribed, c.expectSubscribed);
+  });
+});
+```
+
+### 7) Async & streams
+
+- Use async/await; avoid `then`.
+- For stream-driven flows, expose explicit `emit()` style helpers in fakes/harness to drive updates deterministically.
+- Avoid timers; use `await pumpEventQueue()` only when strictly needed.
+
+### 8) Fakes vs mocks
+
+- Prefer lightweight fakes under `test/support/fakes/` with counters and captured params.
+- Mock only when verifying complex interactions or argument matching is required.
+
+### 9) Keep it stable
+
+- Tests must not depend on implementation details; assert public outcomes.
+- Update harness factories when signatures change; do not fan out fixes across tests.
+
+### 10) Cross-references
+
+- Creating a harness from scratch: see [create-test-support-system.mdc](mdc:.cursor/rules/create-test-support-system.mdc)
+- Maintaining an existing harness: see [maintain-test-support-system.mdc](mdc:.cursor/rules/maintain-test-support-system.mdc)
