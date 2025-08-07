@@ -110,7 +110,11 @@ void main() {
     test('on failure sets free and triggers cancel flow for upgrades', () async {
       final status = SubscriptionStatusResource();
       final provider = FakeProvider(
-        subscribeResult: PurchaseResultModel.failure('err'),
+        subscribeResult: PurchaseResultModel(
+          details: purchase(),
+          type: ResultType.failure,
+          error: 'err',
+        ),
       );
       final cmd = SubscribeCommand(
         purchaseProvider: provider,
@@ -150,6 +154,7 @@ void main() {
           freeTrialDuration: PurchaseDurationModel.zero,
         ),
       );
+      await Future<void>.delayed(Duration.zero);
       expect(ok, isFalse);
       expect(status.isFree, isTrue);
       expect(
