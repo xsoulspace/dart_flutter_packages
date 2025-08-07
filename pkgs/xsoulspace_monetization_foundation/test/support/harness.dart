@@ -85,6 +85,20 @@ class MonetizationTestEnv {
     );
   }
 
+  /// Configure provider to return restore failure with [error].
+  void givenRestoreFailure([final String error = 'err']) {
+    provider = FakeProvider(restoreResult: RestoreResultModel.failure(error));
+  }
+
+  /// Configure provider to return restore success with [purchases].
+  void givenRestoreSuccess([
+    final List<PurchaseDetailsModel> purchases = const [],
+  ]) {
+    provider = FakeProvider(
+      restoreResult: RestoreResultModel.success(purchases),
+    );
+  }
+
   /// Configure provider with available [products].
   void withSubscriptions(final List<PurchaseProductDetailsModel> products) {
     provider = FakeProvider(subscriptions: products);
@@ -121,6 +135,15 @@ class MonetizationTestEnv {
         activeSubscriptionResource: activeSubscription,
         subscriptionStatusResource: subscriptionStatus,
         restorePurchasesCommand: _makeRestorePurchasesCommand(),
+      );
+
+  /// Expose restore purchases command.
+  RestorePurchasesCommand makeRestorePurchasesCommand() =>
+      RestorePurchasesCommand(
+        purchaseProvider: provider,
+        purchasesLocalApi: purchasesLocalApi,
+        handlePurchaseUpdateCommand: makeHandlePurchaseUpdateCommand(),
+        subscriptionStatusResource: subscriptionStatus,
       );
 
   SubscribeCommand makeSubscribeCommand() => SubscribeCommand(
