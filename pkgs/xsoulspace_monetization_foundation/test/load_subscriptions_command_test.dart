@@ -1,37 +1,31 @@
 import 'package:flutter_test/flutter_test.dart';
+// ignore_for_file: unused_import
 import 'package:xsoulspace_monetization_foundation/xsoulspace_monetization_foundation.dart';
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
-import 'support/fakes.dart';
+import 'support/builders.dart';
+import 'support/harness.dart';
 
 void main() {
+  late MonetizationTestEnv env;
+
+  setUp(() => env = MonetizationTestEnv()..setUp());
+  tearDown(() => env.tearDown());
+
   group('LoadSubscriptionsCommand', () {
     test('loads subscriptions into resource', () async {
-      final available = AvailableSubscriptionsResource();
-      final provider = FakeProvider(
-        subscriptions: [
-          PurchaseProductDetailsModel(
-            productId: PurchaseProductId.fromJson('prod'),
-            priceId: PurchasePriceId.fromJson('price'),
-            productType: PurchaseProductType.subscription,
-            name: 'Premium',
-            price: 1,
-            currency: 'USD',
-            duration: const Duration(days: 30),
-            freeTrialDuration: PurchaseDurationModel.zero,
-          ),
-        ],
-      );
-      final cmd = LoadSubscriptionsCommand(
-        purchaseProvider: provider,
-        monetizationStatusResource: MonetizationStoreStatusResource(),
-        availableSubscriptionsResource: available,
+      env.withSubscriptions([
+        aProduct(id: PurchaseProductId.fromJson('prod'), name: 'Premium'),
+      ]);
+      final cmd = env.makeLoadSubscriptionsCommand(
         productIds: [PurchaseProductId.fromJson('prod')],
       );
       await cmd.execute();
-      expect(available.subscriptions.isLoaded, isTrue);
+      expect(env.availableSubscriptions.subscriptions.isLoaded, isTrue);
       expect(
-        available.getSubscription(PurchaseProductId.fromJson('prod'))?.name,
+        env.availableSubscriptions
+            .getSubscription(PurchaseProductId.fromJson('prod'))
+            ?.name,
         'Premium',
       );
     });

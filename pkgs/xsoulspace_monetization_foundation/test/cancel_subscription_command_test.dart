@@ -1,64 +1,27 @@
 import 'package:flutter_test/flutter_test.dart';
+// ignore_for_file: unused_import
 import 'package:xsoulspace_monetization_foundation/xsoulspace_monetization_foundation.dart';
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
-import 'support/fakes.dart';
+import 'support/harness.dart';
 
 void main() {
+  late MonetizationTestEnv env;
+
+  setUp(() => env = MonetizationTestEnv()..setUp());
+  tearDown(() => env.tearDown());
+
   group('CancelSubscriptionCommand', () {
     test('no active and no ids -> no-op', () async {
-      final status = SubscriptionStatusResource();
-      final cmd = CancelSubscriptionCommand(
-        purchaseProvider: FakeProvider(),
-        activeSubscriptionResource: ActiveSubscriptionResource(),
-        subscriptionStatusResource: status,
-        restorePurchasesCommand: RestorePurchasesCommand(
-          purchaseProvider: FakeProvider(),
-          purchasesLocalApi: PurchasesLocalApi(localDb: FakeLocalDb()),
-          handlePurchaseUpdateCommand: HandlePurchaseUpdateCommand(
-            confirmPurchaseCommand: ConfirmPurchaseCommand(
-              purchaseProvider: FakeProvider(),
-              activeSubscriptionResource: ActiveSubscriptionResource(),
-              subscriptionStatusResource: status,
-              purchasePaywallErrorResource: PurchasePaywallErrorResource(),
-            ),
-            subscriptionStatusResource: status,
-            activeSubscriptionResource: ActiveSubscriptionResource(),
-            purchasesLocalApi: PurchasesLocalApi(localDb: FakeLocalDb()),
-          ),
-          subscriptionStatusResource: status,
-        ),
-      );
+      final cmd = env.makeCancelSubscriptionCommand();
       await cmd.execute();
-      expect(status.isCancelling, isFalse);
+      expect(env.subscriptionStatus.isCancelling, isFalse);
     });
 
     test('uses explicit purchaseId when provided', () async {
-      final status = SubscriptionStatusResource();
-      final provider = FakeProvider();
-      final cmd = CancelSubscriptionCommand(
-        purchaseProvider: provider,
-        activeSubscriptionResource: ActiveSubscriptionResource(),
-        subscriptionStatusResource: status,
-        restorePurchasesCommand: RestorePurchasesCommand(
-          purchaseProvider: provider,
-          purchasesLocalApi: PurchasesLocalApi(localDb: FakeLocalDb()),
-          handlePurchaseUpdateCommand: HandlePurchaseUpdateCommand(
-            confirmPurchaseCommand: ConfirmPurchaseCommand(
-              purchaseProvider: provider,
-              activeSubscriptionResource: ActiveSubscriptionResource(),
-              subscriptionStatusResource: status,
-              purchasePaywallErrorResource: PurchasePaywallErrorResource(),
-            ),
-            subscriptionStatusResource: status,
-            activeSubscriptionResource: ActiveSubscriptionResource(),
-            purchasesLocalApi: PurchasesLocalApi(localDb: FakeLocalDb()),
-          ),
-          subscriptionStatusResource: status,
-        ),
-      );
+      final cmd = env.makeCancelSubscriptionCommand();
       await cmd.execute(purchaseId: PurchaseId.fromJson('abc'));
-      expect(provider.cancelCalls, 1);
+      expect(env.provider.cancelCalls, 1);
     });
   });
 }

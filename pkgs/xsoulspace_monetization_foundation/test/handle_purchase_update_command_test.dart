@@ -1,66 +1,41 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:xsoulspace_monetization_foundation/xsoulspace_monetization_foundation.dart';
+// ignore_for_file: unused_import
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
-import 'support/fakes.dart';
+import 'support/builders.dart';
+import 'support/harness.dart';
+import 'support/matchers.dart';
 
 void main() {
+  late MonetizationTestEnv env;
+
+  setUp(() => env = MonetizationTestEnv()..setUp());
+  tearDown(() => env.tearDown());
+
   group('HandlePurchaseUpdateCommand', () {
     test('pending sets purchasing', () async {
-      final status = SubscriptionStatusResource();
-      final cmd = HandlePurchaseUpdateCommand(
-        confirmPurchaseCommand: ConfirmPurchaseCommand(
-          purchaseProvider: FakeProvider(),
-          activeSubscriptionResource: ActiveSubscriptionResource(),
-          subscriptionStatusResource: status,
-          purchasePaywallErrorResource: PurchasePaywallErrorResource(),
-        ),
-        subscriptionStatusResource: status,
-        activeSubscriptionResource: ActiveSubscriptionResource(),
-        purchasesLocalApi: PurchasesLocalApi(localDb: FakeLocalDb()),
-      );
-      await cmd.execute(purchase(pending: true));
-      expect(status.isPurchasing, isTrue);
+      final cmd = env.makeHandlePurchaseUpdateCommand();
+      await cmd.execute(aPurchase(pending: true));
+      expect(env.subscriptionStatus, isPurchasingStatus());
     });
 
     test('purchased delegates to confirm and saves active', () async {
-      final status = SubscriptionStatusResource();
-      final active = ActiveSubscriptionResource();
-      final local = PurchasesLocalApi(localDb: FakeLocalDb());
-      final provider = FakeProvider(
-        completeResult: CompletePurchaseResultModel.success(),
-      );
-      final cmd = HandlePurchaseUpdateCommand(
-        confirmPurchaseCommand: ConfirmPurchaseCommand(
-          purchaseProvider: provider,
-          activeSubscriptionResource: active,
-          subscriptionStatusResource: status,
-          purchasePaywallErrorResource: PurchasePaywallErrorResource(),
-        ),
-        subscriptionStatusResource: status,
-        activeSubscriptionResource: active,
-        purchasesLocalApi: local,
-      );
-      await cmd.execute(purchase(active: true));
-      expect(status.isSubscribed, isTrue);
+      env.givenCompleteSuccess();
+      // Need to rewire confirm command with the new provider in env
+      final cmd = env.makeHandlePurchaseUpdateCommand();
+      await cmd.execute(aPurchase(active: true));
+      expect(env.subscriptionStatus, isSubscribed());
     });
 
     test('canceled clears to free', () async {
-      final status = SubscriptionStatusResource();
-      final active = ActiveSubscriptionResource(purchase(active: true));
-      final cmd = HandlePurchaseUpdateCommand(
-        confirmPurchaseCommand: ConfirmPurchaseCommand(
-          purchaseProvider: FakeProvider(),
-          activeSubscriptionResource: active,
-          subscriptionStatusResource: status,
-          purchasePaywallErrorResource: PurchasePaywallErrorResource(),
-        ),
-        subscriptionStatusResource: status,
-        activeSubscriptionResource: active,
-        purchasesLocalApi: PurchasesLocalApi(localDb: FakeLocalDb()),
+      // Seed active subscription in env
+      env.activeSubscription = ActiveSubscriptionResource(
+        aPurchase(active: true),
       );
-      await cmd.execute(purchase(cancelled: true));
-      expect(status.isFree, isTrue);
+      final cmd = env.makeHandlePurchaseUpdateCommand();
+      await cmd.execute(aPurchase(cancelled: true));
+      expect(env.subscriptionStatus, isFreeStatus());
     });
   });
 }

@@ -1,54 +1,45 @@
 import 'package:flutter_test/flutter_test.dart';
+// ignore_for_file: unused_import
 import 'package:xsoulspace_monetization_foundation/xsoulspace_monetization_foundation.dart';
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
-import 'support/fakes.dart';
+import 'support/builders.dart';
+import 'support/harness.dart';
+import 'support/matchers.dart';
 
 void main() {
+  late MonetizationTestEnv env;
+
+  setUp(() => env = MonetizationTestEnv()..setUp());
+  tearDown(() => env.tearDown());
+
   group('ConfirmPurchaseCommand', () {
     test('ignores pending/canceled', () async {
-      final status = SubscriptionStatusResource();
-      final cmd = ConfirmPurchaseCommand(
-        purchaseProvider: FakeProvider(),
-        activeSubscriptionResource: ActiveSubscriptionResource(),
-        subscriptionStatusResource: status,
-        purchasePaywallErrorResource: PurchasePaywallErrorResource(),
+      final cmd = env.makeConfirmPurchaseCommand();
+      expect(await cmd.execute(aVerification()), isTrue);
+      // cancel and pure pending should return false
+      expect(
+        await cmd.execute(aVerification(status: PurchaseStatus.canceled)),
+        isFalse,
       );
-      final pending = PurchaseVerificationDtoModel(
-        transactionDate: DateTime.now(),
+      expect(
+        await cmd.execute(aVerification(status: PurchaseStatus.pending)),
+        isFalse,
       );
-      final canceled = PurchaseVerificationDtoModel(
-        transactionDate: DateTime.now(),
-        status: PurchaseStatus.canceled,
-      );
-      expect(await cmd.execute(pending), isFalse);
-      expect(await cmd.execute(canceled), isFalse);
     });
 
     test(
       'sets subscribed when provider completes success and status is purchased',
       () async {
-        final status = SubscriptionStatusResource();
-        final active = ActiveSubscriptionResource();
-        final provider = FakeProvider(
-          completeResult: CompletePurchaseResultModel.success(),
-        );
-        final cmd = ConfirmPurchaseCommand(
-          purchaseProvider: provider,
-          activeSubscriptionResource: active,
-          subscriptionStatusResource: status,
-          purchasePaywallErrorResource: PurchasePaywallErrorResource(),
-        );
-        final ok = await cmd.execute(
-          PurchaseVerificationDtoModel(
-            transactionDate: DateTime.now(),
-            status: PurchaseStatus.purchased,
-          ),
-        );
+        env.givenCompleteSuccess();
+        final cmd = env.makeConfirmPurchaseCommand();
+
+        final ok = await cmd.execute(aVerification());
+
         expect(ok, isTrue);
-        expect(status.isSubscribed, isTrue);
+        expect(env.subscriptionStatus, isSubscribed());
         expect(
-          active.isActive,
+          env.activeSubscription.isActive,
           isFalse,
           reason: 'active details set via getPurchaseDetails minimal stub',
         );
@@ -56,25 +47,14 @@ void main() {
     );
 
     test('sets error and free on failure', () async {
-      final status = SubscriptionStatusResource();
-      final err = PurchasePaywallErrorResource();
-      final cmd = ConfirmPurchaseCommand(
-        purchaseProvider: FakeProvider(
-          completeResult: CompletePurchaseResultModel.failure('e'),
-        ),
-        activeSubscriptionResource: ActiveSubscriptionResource(),
-        subscriptionStatusResource: status,
-        purchasePaywallErrorResource: err,
-      );
+      env.givenCompleteFailure('e');
+      final cmd = env.makeConfirmPurchaseCommand();
       final ok = await cmd.execute(
-        PurchaseVerificationDtoModel(
-          transactionDate: DateTime.now(),
-          status: PurchaseStatus.pendingConfirmation,
-        ),
+        aVerification(status: PurchaseStatus.pendingConfirmation),
       );
       expect(ok, isFalse);
-      expect(err.hasError, isTrue);
-      expect(status.isFree, isTrue);
+      expect(env.purchasePaywallError, hasError());
+      expect(env.subscriptionStatus, isFreeStatus());
     });
   });
 }
