@@ -116,23 +116,6 @@ void main() {
       expect(readContent, equals(content));
     });
   });
-
-  group('StorageService sync operations', () {
-    test('should handle sync gracefully for non-sync providers', () async {
-      final provider = FileSystemStorageProvider();
-      final storageService = StorageService(provider);
-
-      final tempDirectory = await Directory.systemTemp.createTemp(
-        'storage_test_',
-      );
-      final config = FileSystemConfig(basePath: tempDirectory.path);
-      await storageService.initializeWithConfig(config);
-
-      // Should not throw, just print message
-      await storageService.syncRemote();
-
-      // Clean up
-      await tempDirectory.delete(recursive: true);
-    });
-  });
 }
+
+

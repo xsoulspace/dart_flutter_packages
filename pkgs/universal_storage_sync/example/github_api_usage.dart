@@ -1,6 +1,7 @@
 // ignore_for_file: avoid_print, avoid_catches_without_on_clauses
 
-import 'package:universal_storage_sync/universal_storage_sync.dart';
+import 'package:universal_storage_interface/universal_storage_interface.dart';
+import 'package:universal_storage_github_api/universal_storage_github_api.dart';
 
 /// Example demonstrating GitHub API Storage Provider usage.
 ///

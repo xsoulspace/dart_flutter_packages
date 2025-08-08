@@ -1,8 +1,8 @@
 import 'package:universal_storage_interface/universal_storage_interface.dart';
 
-import 'providers/filesystem_storage_provider.dart';
-import 'providers/github_api_storage_provider.dart';
-import 'providers/offline_git_storage_provider.dart';
+import 'package:universal_storage_filesystem/universal_storage_filesystem.dart';
+import 'package:universal_storage_github_api/universal_storage_github_api.dart';
+import 'package:universal_storage_git_offline/universal_storage_git_offline.dart';
 import 'storage_service.dart';
 
 /// {@template storage_factory}

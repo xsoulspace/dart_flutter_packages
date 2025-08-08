@@ -10,15 +10,14 @@ environment:
   sdk: ">=3.8.1 <4.0.0"
 
 dependencies:
-  from_json_to_json: ^0.2.0
-  git: ^2.3.1
-  github: ^9.25.0
-  http: ^1.4.0
-  meta: ^1.16.0
-  path: ^1.9.1
-  retry: ^3.1.2
   universal_storage_interface:
     path: ../universal_storage_interface
+  universal_storage_filesystem:
+    path: ../universal_storage_filesystem
+  universal_storage_github_api:
+    path: ../universal_storage_github_api
+  universal_storage_git_offline:
+    path: ../universal_storage_git_offline
 
 dev_dependencies:
   build_runner: ^2.5.2

@@ -2,6 +2,12 @@
 
 A cross-platform Dart package providing a unified API for file storage operations with support for local filesystem, GitHub API, and Git-based version control.
 
+Note: In Phase 2, providers have moved to dedicated packages:
+
+- Filesystem: `package:universal_storage_filesystem/universal_storage_filesystem.dart`
+- GitHub API: `package:universal_storage_github_api/universal_storage_github_api.dart`
+- Offline Git: `package:universal_storage_git_offline/universal_storage_git_offline.dart`
+
 ## Features
 
 - **Unified API**: Single interface for different storage providers through `StorageService`
@@ -31,21 +37,18 @@ dart pub get
 
 ## Quick Start
 
-### Basic Usage with FileSystem Provider
+### Basic Usage with FileSystem Provider (via StorageFactory)
 
 ```dart
+import 'package:universal_storage_interface/universal_storage_interface.dart';
 import 'package:universal_storage_sync/universal_storage_sync.dart';
 
 Future<void> main() async {
   // Create and configure the storage service
-  final provider = FileSystemStorageProvider();
-  final storageService = StorageService(provider);
-
-  // Initialize with configuration
   final config = FileSystemConfig(basePath: '/path/to/storage');
-  await storageService.initializeWithConfig(config);
+  final storageService = await StorageFactory.create(config);
 
-  // File operations
+  // File operations (now ready immediately)
   await storageService.saveFile('hello.txt', 'Hello, World!');
   final content = await storageService.readFile('hello.txt');
   print(content); // Output: Hello, World!

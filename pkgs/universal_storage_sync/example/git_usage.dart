@@ -2,7 +2,8 @@
 
 import 'dart:io';
 
-import 'package:universal_storage_sync/universal_storage_sync.dart';
+import 'package:universal_storage_interface/universal_storage_interface.dart';
+import 'package:universal_storage_git_offline/universal_storage_git_offline.dart';
 
 /// Example demonstrating Git-specific features of OfflineGitStorageProvider
 Future<void> main() async {

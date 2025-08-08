@@ -1,7 +1,8 @@
 import 'dart:io';
 
 import 'package:test/test.dart';
-import 'package:universal_storage_sync/universal_storage_sync.dart';
+import 'package:universal_storage_interface/universal_storage_interface.dart';
+import 'package:universal_storage_git_offline/universal_storage_git_offline.dart';
 
 void main() {
   group('OfflineGitStorageProvider Remote Sync', () {
