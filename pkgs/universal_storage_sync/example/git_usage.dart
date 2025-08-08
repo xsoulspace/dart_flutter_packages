@@ -58,13 +58,13 @@ This is a sample project demonstrating Git-based storage.
 - File restoration
 ''';
 
-  final createCommitHash = await storageService.saveFile(
+  final createResult = await storageService.saveFile(
     readmePath,
     readmeContent,
     message: 'docs: Add initial README',
   );
   print('✅ Created README.md');
-  print('📝 Commit hash: ${createCommitHash.substring(0, 8)}...\n');
+  print('📝 Commit hash: ${createResult.revisionId.substring(0, 8)}...\n');
 
   // Create another file
   const configPath = 'config.yaml';
@@ -100,24 +100,24 @@ This is a sample project demonstrating Git-based storage.
 3. Run the application
 ''';
 
-  final updateCommitHash = await storageService.saveFile(
+  final updateResult = await storageService.saveFile(
     readmePath,
     updatedReadmeContent,
     message: 'docs: Update README with getting started section',
   );
   print('✅ Updated README.md');
-  print('📝 Commit hash: ${updateCommitHash.substring(0, 8)}...\n');
+  print('📝 Commit hash: ${updateResult.revisionId.substring(0, 8)}...\n');
 
   // 3. Version Control Features
   print('3️⃣ Version Control Features');
   print('=' * 40);
 
   // List files
-  final files = await storageService.listDirectory('.');
+  final entries = await storageService.listDirectory('.');
   print('📋 Files in repository:');
-  for (final file in files) {
-    if (!file.startsWith('.')) {
-      print('   - $file');
+  for (final entry in entries) {
+    if (!entry.name.startsWith('.')) {
+      print('   - ${entry.name}${entry.isDirectory ? '/' : ''}');
     }
   }
   print('');
@@ -234,15 +234,16 @@ Future<List<String>> _listAllFiles(
   final items = await service.listDirectory(dir);
 
   for (final item in items) {
-    final itemPath = dir == '.' ? item : '$dir/$item';
+    final name = item.name;
+    final itemPath = dir == '.' ? name : '$dir/$name';
 
     // Skip hidden files and directories
-    if (item.startsWith('.')) continue;
+    if (name.startsWith('.')) continue;
 
     try {
       // Try to list as directory
       final subItems = await service.listDirectory(itemPath);
-      if (subItems.isEmpty) {
+      if (subItems.isEmpty && !item.isDirectory) {
         allFiles.add(itemPath);
         continue;
       }

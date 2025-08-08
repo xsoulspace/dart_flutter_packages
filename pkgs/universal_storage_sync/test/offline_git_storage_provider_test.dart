@@ -97,14 +97,14 @@ void main() {
         const filePath = 'test.txt';
         const content = 'Hello, World!';
 
-        final commitHash = await provider.createFile(
+        final result = await provider.createFile(
           filePath,
           content,
           commitMessage: 'Add test file',
         );
 
-        expect(commitHash, isNotEmpty);
-        expect(commitHash.length, equals(40)); // Git SHA-1 hash length
+        expect(result.revisionId, isNotEmpty);
+        expect(result.revisionId.length, equals(40)); // Git SHA-1 hash length
 
         // Verify file exists and has correct content
         final readContent = await provider.getFile(filePath);
@@ -120,13 +120,13 @@ void main() {
         await provider.createFile(filePath, initialContent);
 
         // Update file
-        final commitHash = await provider.updateFile(
+        final result = await provider.updateFile(
           filePath,
           updatedContent,
           commitMessage: 'Update test file',
         );
 
-        expect(commitHash, isNotEmpty);
+        expect(result.revisionId, isNotEmpty);
 
         // Verify updated content
         final readContent = await provider.getFile(filePath);
@@ -172,13 +172,14 @@ void main() {
         await provider.createFile('subdir/file3.txt', 'Content 3');
 
         // List files in root directory
-        final files = await provider.listFiles('.');
+        final entries = await provider.listDirectory('.');
 
-        expect(files, contains('file1.txt'));
-        expect(files, contains('file2.txt'));
-        expect(files, contains('subdir'));
-        expect(files, isNot(contains('.git')));
-        expect(files, isNot(contains('.gitkeep')));
+        final names = entries.map((final e) => e.name).toList();
+        expect(names, contains('file1.txt'));
+        expect(names, contains('file2.txt'));
+        expect(names, contains('subdir'));
+        expect(names, isNot(contains('.git')));
+        expect(names, isNot(contains('.gitkeep')));
       });
 
       test('should handle nested directory creation', () async {
@@ -196,12 +197,12 @@ void main() {
         const content = 'Test content';
 
         // Create without commit message
-        final commitHash = await provider.createFile(filePath, content);
-        expect(commitHash, isNotEmpty);
+        final commitRes = await provider.createFile(filePath, content);
+        expect(commitRes.revisionId, isNotEmpty);
 
         // Update without commit message
-        final updateHash = await provider.updateFile(filePath, 'Updated');
-        expect(updateHash, isNotEmpty);
+        final updateRes = await provider.updateFile(filePath, 'Updated');
+        expect(updateRes.revisionId, isNotEmpty);
 
         // Delete without commit message (separate test file)
         const filePath2 = 'test2.txt';
@@ -238,9 +239,9 @@ void main() {
           await provider.createFile(filePath, content);
 
           // Try to create same file again
-          expect(
+          await expectLater(
             () => provider.createFile(filePath, content),
-            throwsA(isA<FileNotFoundException>()),
+            throwsA(isA<FileAlreadyExistsException>()),
           );
         },
       );
@@ -289,13 +290,13 @@ void main() {
 
         // Create second version
         final commit2 = await provider.updateFile(filePath, version2);
-        expect(commit2, isNotEmpty);
+        expect(commit2.revisionId, isNotEmpty);
 
         // Verify current version
         expect(await provider.getFile(filePath), equals(version2));
 
         // Restore to first commit
-        await provider.restore(filePath, versionId: commit1);
+        await provider.restore(filePath, versionId: commit1.revisionId);
 
         // Verify restored version
         expect(await provider.getFile(filePath), equals(version1));
@@ -373,7 +374,7 @@ void main() {
         content,
         message: 'Add test file via service',
       );
-      expect(savedResult, isNotEmpty);
+      expect(savedResult.revisionId, isNotEmpty);
 
       // Read file
       final readContent = await storageService.readFile(filePath);
@@ -441,12 +442,13 @@ void main() {
       await storageService.saveFile('subdir/file3.txt', 'Content 3');
 
       // List files in root directory
-      final files = await storageService.listDirectory('.');
+      final entries = await storageService.listDirectory('.');
+      final names = entries.map((final e) => e.name).toList();
 
-      expect(files, contains('file1.txt'));
-      expect(files, contains('file2.txt'));
-      expect(files, contains('subdir'));
-      expect(files, isNot(contains('.git')));
+      expect(names, contains('file1.txt'));
+      expect(names, contains('file2.txt'));
+      expect(names, contains('subdir'));
+      expect(names, isNot(contains('.git')));
     });
   });
 }

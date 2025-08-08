@@ -33,6 +33,7 @@ class OfflineGitStorageProvider extends StorageProvider
   // Sync strategies
   String get _defaultPullStrategy => _config.defaultPullStrategy;
   String get _defaultPushStrategy => _config.defaultPushStrategy;
+  // Note: For now, default to clientAlwaysRight until config wiring is added.
   ConflictResolutionStrategy get _conflictResolution =>
       ConflictResolutionStrategy.clientAlwaysRight;
 
@@ -165,9 +166,9 @@ class OfflineGitStorageProvider extends StorageProvider
     final directory = Directory(fullPath);
 
     if (!directory.existsSync()) {
-      throw FileNotFoundException(
-        'Directory not found at path: $directoryPath',
-      );
+      // Policy: return empty list when directory is missing to match
+      // FileSystem and GitHub providers.
+      return <FileEntry>[];
     }
 
     final entities = await directory.list().toList();

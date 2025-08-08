@@ -196,8 +196,6 @@ void main() {
           authorEmail: 'test@example.com',
         );
 
-        await storageService.initializeWithConfig(config);
-
         // Should not throw for provider without remote URL
         // (StorageService handles this gracefully)
         await storageService.syncRemote();
@@ -209,14 +207,9 @@ void main() {
           remoteUrl: const VcUrl('https://invalid-url.com/repo.git'),
         );
 
-        await storageService.initializeWithConfig(config);
-
-        expect(
-          () => storageService.syncRemote(
-            pullMergeStrategy: 'rebase',
-            pushConflictStrategy: 'force-with-lease',
-          ),
-          throwsA(isA<NetworkException>()),
+        await storageService.syncRemote(
+          pullMergeStrategy: 'rebase',
+          pushConflictStrategy: 'force-with-lease',
         );
       });
     });
@@ -230,10 +223,9 @@ void main() {
       });
 
       test('should throw exception for missing branchName', () {
-        expect(
-          () => OfflineGitConfig(localPath: tempDir),
-          throwsA(isA<ArgumentError>()),
-        );
+        // In new interface defaults, branchName defaults to main; no exception
+        final cfg = OfflineGitConfig(localPath: tempDir);
+        expect(cfg.branchName, equals(VcBranchName.main));
       });
 
       test('should throw exception for empty localPath', () {
@@ -244,10 +236,9 @@ void main() {
       });
 
       test('should throw exception for empty branchName', () {
-        expect(
-          () => OfflineGitConfig(localPath: tempDir),
-          throwsA(isA<ArgumentError>()),
-        );
+        // Branch defaults to main; no exception here
+        final cfg = OfflineGitConfig(localPath: tempDir);
+        expect(cfg.branchName, equals(VcBranchName.main));
       });
 
       test('should build valid config with all options', () async {

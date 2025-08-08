@@ -25,12 +25,7 @@ class GitHubApiStorageProvider extends StorageProvider
     implements VersionControlService {
   /// {@macro github_api_storage_provider}
   GitHubApiStorageProvider();
-  var _config = GitHubApiConfig(
-    authToken: '',
-    repositoryOwner: const VcRepositoryOwner(''),
-    repositoryName: const VcRepositoryName(''),
-    branchName: const VcBranchName(''),
-  );
+  late GitHubApiConfig _config;
   GitHub? _github;
   String? get _authToken => _config.authToken;
   VcRepositoryOwner get _repositoryOwner => _config.repositoryOwner;
@@ -102,14 +97,14 @@ class GitHubApiStorageProvider extends StorageProvider
           .map(
             (final repo) => VcRepository(
               id: repo.id.toString(),
-              name: repo.name ?? '',
-              description: repo.description ?? '',
-              cloneUrl: repo.cloneUrl ?? '',
-              defaultBranch: repo.defaultBranch ?? '',
-              isPrivate: repo.isPrivate ?? false,
+              name: repo.name,
+              description: repo.description,
+              cloneUrl: repo.cloneUrl,
+              defaultBranch: repo.defaultBranch,
+              isPrivate: repo.isPrivate,
               owner: repo.owner?.login ?? '',
-              fullName: repo.fullName ?? '',
-              webUrl: repo.htmlUrl ?? '',
+              fullName: repo.fullName,
+              webUrl: repo.htmlUrl,
             ),
           )
           .toList();
@@ -142,13 +137,13 @@ class GitHubApiStorageProvider extends StorageProvider
       return VcRepository(
         id: repo.id.toString(),
         name: repo.name,
-        description: repo.description ?? '',
-        cloneUrl: repo.cloneUrl ?? '',
-        defaultBranch: repo.defaultBranch ?? '',
-        isPrivate: repo.isPrivate ?? false,
+        description: repo.description,
+        cloneUrl: repo.cloneUrl,
+        defaultBranch: repo.defaultBranch,
+        isPrivate: repo.isPrivate,
         owner: repo.owner?.login ?? '',
-        fullName: repo.fullName ?? '',
-        webUrl: repo.htmlUrl ?? '',
+        fullName: repo.fullName,
+        webUrl: repo.htmlUrl,
       );
     } catch (e) {
       throw _handleGitHubError(
@@ -171,14 +166,14 @@ class GitHubApiStorageProvider extends StorageProvider
       );
       return VcRepository(
         id: repo.id.toString(),
-        name: repo.name ?? '',
-        description: repo.description ?? '',
-        cloneUrl: repo.cloneUrl ?? '',
-        defaultBranch: repo.defaultBranch ?? '',
-        isPrivate: repo.isPrivate ?? false,
+        name: repo.name,
+        description: repo.description,
+        cloneUrl: repo.cloneUrl,
+        defaultBranch: repo.defaultBranch,
+        isPrivate: repo.isPrivate,
         owner: repo.owner?.login ?? '',
-        fullName: repo.fullName ?? '',
-        webUrl: repo.htmlUrl ?? '',
+        fullName: repo.fullName,
+        webUrl: repo.htmlUrl,
       );
     } catch (e) {
       throw _handleGitHubError(e, 'Failed to get repository info');
@@ -350,7 +345,7 @@ class GitHubApiStorageProvider extends StorageProvider
 
       // Delete the file
       final message = commitMessage ?? 'Delete file: $filePath';
-      final delResult = await retry(
+      await retry(
         () => _github!.repositories.deleteFile(
           _repositorySlug,
           filePath,

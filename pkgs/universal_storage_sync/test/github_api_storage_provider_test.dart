@@ -80,8 +80,8 @@ void main() {
       );
 
       expect(config.authToken, equals('test-token'));
-      expect(config.repositoryOwner, equals('test-owner'));
-      expect(config.repositoryName, equals('test-repo'));
+      expect(config.repositoryOwner.value, equals('test-owner'));
+      expect(config.repositoryName.value, equals('test-repo'));
     });
   });
 }

@@ -35,8 +35,8 @@ void main() {
       const content = 'Hello, World!';
 
       // Save file
-      final savedPath = await storageService.saveFile(filePath, content);
-      expect(savedPath, contains(filePath));
+      final savedResult = await storageService.saveFile(filePath, content);
+      expect(savedResult.path, contains(filePath));
 
       // Read file
       final readContent = await storageService.readFile(filePath);
@@ -85,11 +85,12 @@ void main() {
       await storageService.saveFile('subdir/file3.txt', 'Content 3');
 
       // List files in root directory
-      final files = await storageService.listDirectory('.');
+      final entries = await storageService.listDirectory('.');
+      final names = entries.map((final e) => e.name).toList();
 
-      expect(files, contains('file1.txt'));
-      expect(files, contains('file2.txt'));
-      expect(files, contains('subdir'));
+      expect(names, contains('file1.txt'));
+      expect(names, contains('file2.txt'));
+      expect(names, contains('subdir'));
     });
 
     test('should return null for non-existent file', () async {

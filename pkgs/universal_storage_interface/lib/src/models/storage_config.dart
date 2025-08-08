@@ -1,3 +1,4 @@
+import 'conflict_resolution_strategy.dart';
 import 'version_control_models.dart';
 
 sealed class StorageConfig {
@@ -32,7 +33,7 @@ class OfflineGitConfig extends StorageConfig {
     this.remoteApiSettings,
     this.defaultPullStrategy = 'merge',
     this.defaultPushStrategy = 'rebase-local',
-    this.conflictResolution = 'client-always-right',
+    this.conflictResolution = ConflictResolutionStrategy.clientAlwaysRight,
     this.sshKeyPath,
     this.httpsToken,
   }) {
@@ -59,7 +60,7 @@ class OfflineGitConfig extends StorageConfig {
   final Map<String, dynamic>? remoteApiSettings;
   final String defaultPullStrategy;
   final String defaultPushStrategy;
-  final String conflictResolution;
+  final ConflictResolutionStrategy conflictResolution;
   final String? sshKeyPath;
   final String? httpsToken;
 
@@ -81,7 +82,7 @@ class OfflineGitConfig extends StorageConfig {
     if (remoteApiSettings != null) 'remoteApiSettings': remoteApiSettings,
     'defaultPullStrategy': defaultPullStrategy,
     'defaultPushStrategy': defaultPushStrategy,
-    'conflictResolution': conflictResolution,
+    'conflictResolution': conflictResolution.name,
     if (sshKeyPath != null) 'sshKeyPath': sshKeyPath,
     if (httpsToken != null) 'httpsToken': httpsToken,
   };

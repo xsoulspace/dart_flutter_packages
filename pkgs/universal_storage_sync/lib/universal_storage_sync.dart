@@ -6,7 +6,6 @@ export 'package:universal_storage_interface/universal_storage_interface.dart';
 
 export 'src/capabilities/authentication_capable.dart';
 export 'src/capabilities/capabilities.dart';
-export 'src/models/models.dart';
 export 'src/providers/filesystem_storage_provider.dart';
 export 'src/providers/github_api_storage_provider.dart';
 export 'src/providers/offline_git_storage_provider.dart';

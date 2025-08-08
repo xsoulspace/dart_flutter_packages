@@ -10,9 +10,7 @@ void main() async {
     print('1. Auto-detect Provider from Configuration:');
 
     final fileConfig = FileSystemConfig(basePath: '/tmp/demo');
-
-    final service1 = await StorageFactory.create(fileConfig);
-    await service1.initializeWithConfig(fileConfig);
+    await StorageFactory.create(fileConfig);
     print('   Created FileSystem service automatically');
 
     final gitHubConfig = GitHubApiConfig(
@@ -21,16 +19,14 @@ void main() async {
       repositoryName: const VcRepositoryName('demo-repo'),
     );
 
-    final service2 = await StorageFactory.create(gitHubConfig);
-    await service2.initializeWithConfig(gitHubConfig);
+    await StorageFactory.create(gitHubConfig);
     print('   Created GitHub API service automatically\n');
 
     // Example 2: Specific factory methods
     print('2. Specific Factory Methods:');
 
     final fsConfig = FileSystemConfig(basePath: '/path/to/data');
-    final fsService = await StorageFactory.createFileSystem(fsConfig);
-    await fsService.initializeWithConfig(fsConfig);
+    await StorageFactory.createFileSystem(fsConfig);
     print('   Created FileSystem service with specific method');
 
     final ghConfig = GitHubApiConfig(
@@ -38,8 +34,7 @@ void main() async {
       repositoryOwner: const VcRepositoryOwner('myorg'),
       repositoryName: const VcRepositoryName('myproject'),
     );
-    final ghService = await StorageFactory.createGitHubApi(ghConfig);
-    await ghService.initializeWithConfig(ghConfig);
+    await StorageFactory.createGitHubApi(ghConfig);
     print('   Created GitHub service with specific method');
 
     final gitConfig = OfflineGitConfig(
@@ -47,8 +42,7 @@ void main() async {
       authorName: 'Demo User',
       authorEmail: 'demo@example.com',
     );
-    final gitService = await StorageFactory.createOfflineGit(gitConfig);
-    await gitService.initializeWithConfig(gitConfig);
+    await StorageFactory.createOfflineGit(gitConfig);
     print('   Created Offline Git service with specific method\n');
 
     // Example 3: Using provider selector to choose optimal config
@@ -65,14 +59,9 @@ void main() async {
     print('   Score: ${recommendation.score}/100');
     print('   Reason: ${recommendation.reason}');
 
-    // Create service using recommended config template
-    final recommendedService = await StorageFactory.create(
-      recommendation.configTemplate,
-    );
-    await recommendedService.initializeWithConfig(
-      recommendation.configTemplate,
-    );
-    print('   Service created using recommendation\n');
+    // Create service using recommended config template (omitted here due to
+    // example-internal type differences; use your own typed config instead)
+    print('   Recommendation ready to use with your chosen config\n');
 
     // Example 4: Use case-based selection
     print('4. Use Case-based Provider Selection:');
