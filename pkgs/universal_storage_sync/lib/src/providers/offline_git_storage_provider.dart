@@ -34,7 +34,7 @@ class OfflineGitStorageProvider extends StorageProvider
   String get _defaultPullStrategy => _config.defaultPullStrategy;
   String get _defaultPushStrategy => _config.defaultPushStrategy;
   ConflictResolutionStrategy get _conflictResolution =>
-      _config.conflictResolution;
+      ConflictResolutionStrategy.clientAlwaysRight;
 
   var _isInitialized = false;
 
@@ -632,11 +632,11 @@ class OfflineGitStorageProvider extends StorageProvider
     final VcCreateRepositoryRequest details,
   ) async {
     await _runGitCommand(['init', '-b', details.name]);
-    return VcRepository({
-      'id': '1',
-      'name': details.name,
-      'description': details.description,
-    });
+    return VcRepository(
+      id: '1',
+      name: details.name,
+      description: details.description,
+    );
   }
 
   @override

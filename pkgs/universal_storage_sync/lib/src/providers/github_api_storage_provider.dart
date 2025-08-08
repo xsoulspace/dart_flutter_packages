@@ -27,9 +27,9 @@ class GitHubApiStorageProvider extends StorageProvider
   GitHubApiStorageProvider();
   var _config = GitHubApiConfig(
     authToken: '',
-    repositoryOwner: VcRepositoryOwner(''),
-    repositoryName: VcRepositoryName(''),
-    branchName: VcBranchName(''),
+    repositoryOwner: const VcRepositoryOwner(''),
+    repositoryName: const VcRepositoryName(''),
+    branchName: const VcBranchName(''),
   );
   GitHub? _github;
   String? get _authToken => _config.authToken;
@@ -100,17 +100,17 @@ class GitHubApiStorageProvider extends StorageProvider
       );
       return repos
           .map(
-            (final repo) => VcRepository({
-              'id': repo.id.toString(),
-              'name': repo.name,
-              'description': repo.description,
-              'clone_url': repo.cloneUrl,
-              'default_branch': repo.defaultBranch,
-              'is_private': repo.isPrivate,
-              'owner': repo.owner?.login ?? '',
-              'full_name': repo.fullName,
-              'web_url': repo.htmlUrl,
-            }),
+            (final repo) => VcRepository(
+              id: repo.id.toString(),
+              name: repo.name ?? '',
+              description: repo.description ?? '',
+              cloneUrl: repo.cloneUrl ?? '',
+              defaultBranch: repo.defaultBranch ?? '',
+              isPrivate: repo.isPrivate ?? false,
+              owner: repo.owner?.login ?? '',
+              fullName: repo.fullName ?? '',
+              webUrl: repo.htmlUrl ?? '',
+            ),
           )
           .toList();
     } catch (e) {
@@ -139,17 +139,17 @@ class GitHubApiStorageProvider extends StorageProvider
         retryIf: _isRetryableError,
         maxAttempts: 3,
       );
-      return VcRepository({
-        'id': repo.id.toString(),
-        'name': repo.name,
-        'description': repo.description,
-        'clone_url': repo.cloneUrl,
-        'default_branch': repo.defaultBranch,
-        'is_private': repo.isPrivate,
-        'owner': repo.owner?.login ?? '',
-        'full_name': repo.fullName,
-        'web_url': repo.htmlUrl,
-      });
+      return VcRepository(
+        id: repo.id.toString(),
+        name: repo.name,
+        description: repo.description ?? '',
+        cloneUrl: repo.cloneUrl ?? '',
+        defaultBranch: repo.defaultBranch ?? '',
+        isPrivate: repo.isPrivate ?? false,
+        owner: repo.owner?.login ?? '',
+        fullName: repo.fullName ?? '',
+        webUrl: repo.htmlUrl ?? '',
+      );
     } catch (e) {
       throw _handleGitHubError(
         e,
@@ -169,17 +169,17 @@ class GitHubApiStorageProvider extends StorageProvider
         retryIf: _isRetryableError,
         maxAttempts: 3,
       );
-      return VcRepository({
-        'id': repo.id.toString(),
-        'name': repo.name,
-        'description': repo.description,
-        'clone_url': repo.cloneUrl,
-        'default_branch': repo.defaultBranch,
-        'is_private': repo.isPrivate,
-        'owner': repo.owner?.login ?? '',
-        'full_name': repo.fullName,
-        'web_url': repo.htmlUrl,
-      });
+      return VcRepository(
+        id: repo.id.toString(),
+        name: repo.name ?? '',
+        description: repo.description ?? '',
+        cloneUrl: repo.cloneUrl ?? '',
+        defaultBranch: repo.defaultBranch ?? '',
+        isPrivate: repo.isPrivate ?? false,
+        owner: repo.owner?.login ?? '',
+        fullName: repo.fullName ?? '',
+        webUrl: repo.htmlUrl ?? '',
+      );
     } catch (e) {
       throw _handleGitHubError(e, 'Failed to get repository info');
     }
@@ -198,11 +198,11 @@ class GitHubApiStorageProvider extends StorageProvider
       );
       return branches
           .map(
-            (final branch) => VcBranch({
-              'name': branch.name,
-              'commit_sha': branch.commit?.sha ?? '',
-              'is_default': branch.name == _branchName.value,
-            }),
+            (final branch) => VcBranch(
+              name: VcBranchName(branch.name ?? ''),
+              commitSha: branch.commit?.sha ?? '',
+              isDefault: (branch.name ?? '') == _branchName.value,
+            ),
           )
           .toList();
     } catch (e) {
