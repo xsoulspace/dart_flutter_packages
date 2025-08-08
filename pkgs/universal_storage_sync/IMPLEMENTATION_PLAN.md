@@ -8,6 +8,10 @@ Context
   - `pkgs/universal_storage_interface` (new, contracts/models)
   - `pkgs/universal_storage_sync` (providers/factory/service)
   - `pkgs/universal_storage_sync_utils` (utility consumers; follow-up alignment)
+  - Planned provider packages (split by concrete backend, see Phase 2 below):
+    - `pkgs/universal_storage_filesystem` (FileSystem provider)
+    - `pkgs/universal_storage_github_api` (GitHub API provider)
+    - `pkgs/universal_storage_git_offline` (Offline Git provider)
 
 What’s already done
 
@@ -147,3 +151,91 @@ Notes / design decisions
 Done criteria
 
 - Analyzer clean, tests updated, providers compiled, typed models everywhere (no map-based init), README migration notes added.
+
+---
+
+## Phase 2 – Split providers into separate packages (align with architecture.md)
+
+Objective
+
+- Adopt the Interface → Providers → Foundation structure (as in monetization architecture) to improve modularity, testability, and independent release cadence per provider.
+
+Target package topology
+
+- Interfaces
+
+  - `pkgs/universal_storage_interface` (already done)
+
+- Providers (new)
+
+  - `pkgs/universal_storage_filesystem`
+    - Depends on: `universal_storage_interface`
+    - Exposes: `FileSystemStorageProvider`
+  - `pkgs/universal_storage_github_api`
+    - Depends on: `universal_storage_interface`, `github`, `retry`
+    - Exposes: `GitHubApiStorageProvider`
+  - `pkgs/universal_storage_git_offline`
+    - Depends on: `universal_storage_interface`, `git`, `path`, `retry`
+    - Exposes: `OfflineGitStorageProvider`
+
+- Foundation
+  - `pkgs/universal_storage_sync` (current)
+    - Depends on: `universal_storage_interface`, the three provider packages above
+    - Exposes: `StorageService`, `StorageFactory`, provider selector/tutorials
+
+Deliverables
+
+- Provider code moved out of `universal_storage_sync/lib/src/providers/` into their respective packages with unchanged public class names.
+- `StorageFactory` imports updated to use provider packages.
+- Provider-specific unit tests live with their respective provider packages; keep integration/service tests in `universal_storage_sync`.
+- README migration notes and examples updated for new import paths.
+
+Step-by-step
+
+1. Create provider package skeletons
+
+- For each package (`filesystem`, `github_api`, `git_offline`):
+  - `pubspec.yaml`: name, description, version, environment, dependencies (see above)
+  - `analysis_options.yaml`: include org lints
+  - `lib/<package_name>.dart`: export the provider class and any internal src files
+  - `lib/src/...`: move provider implementation files
+  - `test/`: move provider-specific tests
+  - `README.md`: brief usage and dependency notes
+
+2. Move code
+
+- Move files from `universal_storage_sync/lib/src/providers/*.dart` into corresponding provider packages under `lib/src/`.
+- Adjust imports to `package:universal_storage_interface/universal_storage_interface.dart` exclusively.
+
+3. Update foundation (`universal_storage_sync`)
+
+- Remove moved provider files from `src/providers/`.
+- Add dependencies on the three provider packages in `pubspec.yaml`.
+- Update `src/storage_factory.dart` to import providers from their packages and keep the same selection logic by `StorageConfig` type.
+- Ensure `universal_storage_sync.dart` continues to export the interface first, then foundation API (do not re-export provider packages).
+
+4. Tests & examples
+
+- Move provider-specific tests into provider packages; leave `StorageService` integration tests here.
+- Update example imports:
+  - Direct provider usage examples should import provider packages directly.
+  - Service-based examples remain unchanged, as `StorageFactory` delegates to providers.
+
+5. CI and quality gates
+
+- Add analyze/test jobs for each new package.
+- Ensure all packages build and analyze cleanly.
+
+6. Migration notes
+
+- Breaking import changes for direct provider usage:
+  - `FileSystemStorageProvider`: `package:universal_storage_filesystem/universal_storage_filesystem.dart`
+  - `GitHubApiStorageProvider`: `package:universal_storage_github_api/universal_storage_github_api.dart`
+  - `OfflineGitStorageProvider`: `package:universal_storage_git_offline/universal_storage_git_offline.dart`
+- `StorageService` and `StorageFactory` continue to be imported from `package:universal_storage_sync/universal_storage_sync.dart`.
+
+Acceptance for Phase 2
+
+- New provider packages compile, analyze clean, and pass their unit tests.
+- `universal_storage_sync` depends on provider packages and passes all integration tests.
+- Examples and README updated to reflect new import paths.
