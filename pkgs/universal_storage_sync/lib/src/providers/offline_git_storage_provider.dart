@@ -72,7 +72,9 @@ class OfflineGitStorageProvider extends StorageProvider
 
     // Check if file already exists
     if (file.existsSync()) {
-      throw FileNotFoundException('File already exists at path: $filePath');
+      throw FileAlreadyExistsException(
+        'File already exists at path: $filePath',
+      );
     }
 
     // Ensure parent directory exists
@@ -208,7 +210,7 @@ class OfflineGitStorageProvider extends StorageProvider
   }
 
   @override
-  bool get supportsSync => _remoteUrl != null;
+  bool get supportsSync => _remoteUrl.isNotEmpty;
 
   @override
   Future<void> sync({
@@ -217,7 +219,7 @@ class OfflineGitStorageProvider extends StorageProvider
   }) async {
     _ensureInitialized();
 
-    if (_remoteUrl == null) {
+    if (_remoteUrl.isEmpty) {
       throw const AuthenticationException(
         'Remote URL not configured. Cannot sync without remote repository.',
       );
@@ -336,17 +338,17 @@ class OfflineGitStorageProvider extends StorageProvider
             'pull',
             '--rebase',
             _remoteName,
-            _branchName!.value,
+            _branchName.value,
           ]);
         case 'ff-only':
           await _gitDir!.runCommand([
             'pull',
             '--ff-only',
             _remoteName,
-            _branchName!.value,
+            _branchName.value,
           ]);
         default:
-          await _gitDir!.runCommand(['pull', _remoteName, _branchName!.value]);
+          await _gitDir!.runCommand(['pull', _remoteName, _branchName.value]);
       }
     } catch (e, stackTrace) {
       log('Error: $e', stackTrace: stackTrace);
@@ -469,7 +471,7 @@ class OfflineGitStorageProvider extends StorageProvider
             'push',
             '--force-with-lease',
             _remoteName,
-            _branchName!.value,
+            _branchName.value,
           ]);
         case 'fail-on-conflict':
           await _gitDir!.runCommand(['push', _remoteName, _branchName!.value]);
@@ -500,7 +502,7 @@ class OfflineGitStorageProvider extends StorageProvider
   Future<void> _pushWithRebaseLocal() async {
     try {
       // Try normal push first
-      await _gitDir!.runCommand(['push', _remoteName, _branchName!.value]);
+      await _gitDir!.runCommand(['push', _remoteName, _branchName.value]);
     } catch (e, stackTrace) {
       log('Error: $e', stackTrace: stackTrace);
       if (e.toString().contains('non-fast-forward') ||
@@ -511,9 +513,9 @@ class OfflineGitStorageProvider extends StorageProvider
             'pull',
             '--rebase',
             _remoteName,
-            _branchName!.value,
+            _branchName.value,
           ]);
-          await _gitDir!.runCommand(['push', _remoteName, _branchName!.value]);
+          await _gitDir!.runCommand(['push', _remoteName, _branchName.value]);
         } catch (rebaseError, stackTrace) {
           log('Rebase error: $rebaseError', stackTrace: stackTrace);
           if (rebaseError.toString().contains('CONFLICT')) {
@@ -570,16 +572,16 @@ class OfflineGitStorageProvider extends StorageProvider
   Future<void> _ensureBranch() async {
     try {
       // Try to checkout the branch
-      await _gitDir!.runCommand(['checkout', _branchName!.value]);
+      await _gitDir!.runCommand(['checkout', _branchName.value]);
     } catch (e) {
       // Branch doesn't exist, create it
       try {
-        await _gitDir!.runCommand(['checkout', '-b', _branchName!.value]);
+        await _gitDir!.runCommand(['checkout', '-b', _branchName.value]);
       } catch (e) {
         // If we can't create the branch, we might be in an empty repo
         // Create an initial commit first
         await _createInitialCommit();
-        await _gitDir!.runCommand(['checkout', '-b', _branchName!.value]);
+        await _gitDir!.runCommand(['checkout', '-b', _branchName.value]);
       }
     }
   }

@@ -53,7 +53,9 @@ class FileSystemStorageProvider extends StorageProvider {
 
     // Check if file already exists
     if (file.existsSync()) {
-      throw FileNotFoundException('File already exists at path: $filePath');
+      throw FileAlreadyExistsException(
+        'File already exists at path: $filePath',
+      );
     }
 
     // Ensure parent directory exists
@@ -128,9 +130,8 @@ class FileSystemStorageProvider extends StorageProvider {
     final directory = Directory(fullPath);
 
     if (!directory.existsSync()) {
-      throw FileNotFoundException(
-        'Directory not found at path: $directoryPath',
-      );
+      // Align provider behavior: return empty list for missing directories
+      return <String>[];
     }
 
     final entities = await directory.list().toList();

@@ -157,12 +157,12 @@ class OfflineGitConfig extends StorageConfig {
     if (authorName != null) 'authorName': authorName,
     if (authorEmail != null) 'authorEmail': authorEmail,
     'remoteName': remoteName,
-    if (remoteUrl != null) 'remoteUrl': remoteUrl,
-    if (remoteRepositorySlug != null)
+    if (remoteUrl.isNotEmpty) 'remoteUrl': remoteUrl,
+    if (remoteRepositorySlug.isNotEmpty)
       'remoteRepositorySlug': remoteRepositorySlug,
-    if (remoteRepositoryName != null)
+    if (remoteRepositoryName.isNotEmpty)
       'remoteRepositoryName': remoteRepositoryName,
-    if (remoteRepositoryOwner != null)
+    if (remoteRepositoryOwner.isNotEmpty)
       'remoteRepositoryOwner': remoteRepositoryOwner,
     if (remoteType != null) 'remoteType': remoteType,
     if (remoteApiSettings != null) 'remoteApiSettings': remoteApiSettings,
