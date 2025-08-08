@@ -59,19 +59,19 @@ class SubscribeCommand {
     purchasePaywallErrorResource.clear();
 
     final result = await purchaseProvider.subscribe(details);
+    final resultDetails = result.details;
     switch (result.type) {
       case ResultType.success:
         subscriptionStatusResource.set(
           SubscriptionStatus.pendingPaymentConfirmation,
         );
-        if (result.shouldConfirmPurchase) {
+        if (result.shouldConfirmPurchase && resultDetails != null) {
           await confirmPurchaseCommand.execute(
-            result.details!.toVerificationDto(),
+            resultDetails.toVerificationDto(),
           );
         }
       case ResultType.failure:
-        final details = result.details;
-        if (details == null || details.isCancelled) return;
+        if (resultDetails == null || resultDetails.isCancelled) return;
         purchasePaywallErrorResource.error = result.error;
 
         /// handle case when upgrading / downgrading subscription

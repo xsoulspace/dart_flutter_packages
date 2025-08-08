@@ -8,7 +8,7 @@
 /// {@endtemplate}
 typedef ChainThenRecord<TResult> = ({ChainCommand? type, TResult result});
 
-/// {@template chain_command}
+/// {@template chain_command_exe}
 /// Signature for a chain command function that takes a [ChainThenRecord] and returns a [Future] of the next [ChainThenRecord].
 ///
 /// Used in [ChainCommands] to define the steps in a command chain.
@@ -91,7 +91,7 @@ class Chain<TStartWith, TThenResult> {
   }
 }
 
-/// {@template chain_command}
+/// {@template chain_command_interface}
 /// A marker interface for chain commands.
 ///
 /// @ai Use this interface to define the types of commands that can be executed in a chain.
