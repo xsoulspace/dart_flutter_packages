@@ -19,5 +19,3 @@ dev_dependencies:
   mockito: ^5.4.6
   test: ^1.26.2
   xsoulspace_lints: ^0.1.0
-# For web support - add specific dependencies as needed
-# dependency_overrides:

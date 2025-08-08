@@ -1,5 +1,6 @@
 // ignore_for_file: avoid_catches_without_on_clauses
 
+import 'dart:async';
 import 'dart:developer';
 import 'dart:io';
 
@@ -288,7 +289,9 @@ class OfflineGitStorageProvider extends StorageProvider
   Future<void> _validateRemoteAccess() async {
     try {
       await retry(
-        () => _gitDir!.runCommand(['ls-remote', '--heads', _remoteName]),
+        () => _gitDir!
+            .runCommand(['ls-remote', '--heads', _remoteName])
+            .timeout(const Duration(seconds: 3)),
         maxAttempts: 3,
       );
     } catch (e) {
@@ -317,7 +320,9 @@ class OfflineGitStorageProvider extends StorageProvider
   Future<void> _fetchRemoteChanges() async {
     try {
       await retry(
-        () => _gitDir!.runCommand(['fetch', _remoteName]),
+        () => _gitDir!
+            .runCommand(['fetch', _remoteName])
+            .timeout(const Duration(seconds: 5)),
         retryIf: (final e) => !e.toString().contains('Authentication'),
         maxAttempts: 3,
       );
@@ -664,5 +669,3 @@ class OfflineGitStorageProvider extends StorageProvider
     throw UnimplementedError();
   }
 }
-
-

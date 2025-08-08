@@ -1,12 +1,12 @@
 import 'dart:io';
 
 import 'package:test/test.dart';
-import 'package:universal_storage_interface/universal_storage_interface.dart';
 import 'package:universal_storage_filesystem/universal_storage_filesystem.dart';
+import 'package:universal_storage_interface/universal_storage_interface.dart';
 
 void main() {
-  group('StorageService with FileSystemStorageProvider', () {
-    late StorageService storageService;
+  group('FileSystemStorageProvider', () {
+    late FileSystemStorageProvider provider;
     late String tempDir;
 
     setUp(() async {
@@ -16,11 +16,9 @@ void main() {
       );
       tempDir = tempDirectory.path;
 
-      final provider = FileSystemStorageProvider();
-      storageService = StorageService(provider);
-
+      provider = FileSystemStorageProvider();
       final config = FileSystemConfig(basePath: tempDir);
-      await storageService.initializeWithConfig(config);
+      await provider.initWithConfig(config);
     });
 
     tearDown(() async {
@@ -36,11 +34,11 @@ void main() {
       const content = 'Hello, World!';
 
       // Save file
-      final savedResult = await storageService.saveFile(filePath, content);
+      final savedResult = await provider.createFile(filePath, content);
       expect(savedResult.path, contains(filePath));
 
       // Read file
-      final readContent = await storageService.readFile(filePath);
+      final readContent = await provider.getFile(filePath);
       expect(readContent, equals(content));
     });
 
@@ -50,13 +48,13 @@ void main() {
       const updatedContent = 'Updated content';
 
       // Create initial file
-      await storageService.saveFile(filePath, initialContent);
+      await provider.createFile(filePath, initialContent);
 
       // Update file
-      await storageService.saveFile(filePath, updatedContent);
+      await provider.updateFile(filePath, updatedContent);
 
       // Verify updated content
-      final readContent = await storageService.readFile(filePath);
+      final readContent = await provider.getFile(filePath);
       expect(readContent, equals(updatedContent));
     });
 
@@ -65,28 +63,28 @@ void main() {
       const content = 'Content to be deleted';
 
       // Create file
-      await storageService.saveFile(filePath, content);
+      await provider.createFile(filePath, content);
 
       // Verify file exists
-      final contentBeforeDelete = await storageService.readFile(filePath);
+      final contentBeforeDelete = await provider.getFile(filePath);
       expect(contentBeforeDelete, equals(content));
 
       // Remove file
-      await storageService.removeFile(filePath);
+      await provider.deleteFile(filePath);
 
       // Verify file is gone
-      final contentAfterDelete = await storageService.readFile(filePath);
+      final contentAfterDelete = await provider.getFile(filePath);
       expect(contentAfterDelete, isNull);
     });
 
     test('should list files in directory', () async {
       // Create some test files
-      await storageService.saveFile('file1.txt', 'Content 1');
-      await storageService.saveFile('file2.txt', 'Content 2');
-      await storageService.saveFile('subdir/file3.txt', 'Content 3');
+      await provider.createFile('file1.txt', 'Content 1');
+      await provider.createFile('file2.txt', 'Content 2');
+      await provider.createFile('subdir/file3.txt', 'Content 3');
 
       // List files in root directory
-      final entries = await storageService.listDirectory('.');
+      final entries = await provider.listDirectory('.');
       final names = entries.map((final e) => e.name).toList();
 
       expect(names, contains('file1.txt'));
@@ -95,13 +93,13 @@ void main() {
     });
 
     test('should return null for non-existent file', () async {
-      final content = await storageService.readFile('non_existent.txt');
+      final content = await provider.getFile('non_existent.txt');
       expect(content, isNull);
     });
 
     test('should throw exception when removing non-existent file', () {
       expect(
-        () => storageService.removeFile('non_existent.txt'),
+        () => provider.deleteFile('non_existent.txt'),
         throwsA(isA<FileNotFoundException>()),
       );
     });
@@ -110,12 +108,10 @@ void main() {
       const filePath = 'deep/nested/directory/file.txt';
       const content = 'Nested content';
 
-      await storageService.saveFile(filePath, content);
+      await provider.createFile(filePath, content);
 
-      final readContent = await storageService.readFile(filePath);
+      final readContent = await provider.getFile(filePath);
       expect(readContent, equals(content));
     });
   });
 }
-
-
