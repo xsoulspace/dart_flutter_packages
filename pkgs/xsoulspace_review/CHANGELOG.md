@@ -1,3 +1,7 @@
+## 0.3.0-beta.2
+
+- silent review assignment during onLoad.
+
 ## 0.3.0-beta.1
 
 - Temporary disabled detection of install source to exclude store checker so `createForInstallSource` is not working. Use `createForTargetStore` instead.
