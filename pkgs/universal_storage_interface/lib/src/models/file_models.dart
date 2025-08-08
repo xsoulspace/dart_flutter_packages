@@ -1,4 +1,5 @@
 /// File and directory data models used across providers.
+library;
 
 /// Represents an entry in a directory listing.
 class FileEntry {
@@ -6,8 +7,18 @@ class FileEntry {
     required this.name,
     required this.isDirectory,
     this.size = 0,
-    DateTime? modifiedAt,
+    final DateTime? modifiedAt,
   }) : modifiedAt = modifiedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+
+  factory FileEntry.fromJson(final Map<String, dynamic> json) => FileEntry(
+    name: json['name'] as String? ?? '',
+    isDirectory: json['is_directory'] as bool? ?? false,
+    size: json['size'] as int? ?? 0,
+    modifiedAt: json['modified_at'] != null
+        ? DateTime.tryParse(json['modified_at'] as String) ??
+              DateTime.fromMillisecondsSinceEpoch(0)
+        : null,
+  );
 
   final String name;
   final bool isDirectory;
@@ -20,16 +31,6 @@ class FileEntry {
     'size': size,
     'modified_at': modifiedAt.toIso8601String(),
   };
-
-  factory FileEntry.fromJson(final Map<String, dynamic> json) => FileEntry(
-    name: json['name'] as String? ?? '',
-    isDirectory: json['is_directory'] as bool? ?? false,
-    size: json['size'] as int? ?? 0,
-    modifiedAt: json['modified_at'] != null
-        ? DateTime.tryParse(json['modified_at'] as String) ??
-              DateTime.fromMillisecondsSinceEpoch(0)
-        : null,
-  );
 }
 
 /// Unified result for file operations (create/update/delete).
@@ -39,6 +40,13 @@ class FileOperationResult {
     this.revisionId = '',
     this.isNew = false,
   });
+
+  factory FileOperationResult.fromJson(final Map<String, dynamic> json) =>
+      FileOperationResult(
+        path: json['path'] as String? ?? '',
+        revisionId: json['revision_id'] as String? ?? '',
+        isNew: json['is_new'] as bool? ?? false,
+      );
 
   final String path;
   final String revisionId;
@@ -50,13 +58,6 @@ class FileOperationResult {
     'is_new': isNew,
   };
 
-  factory FileOperationResult.fromJson(final Map<String, dynamic> json) =>
-      FileOperationResult(
-        path: json['path'] as String? ?? '',
-        revisionId: json['revision_id'] as String? ?? '',
-        isNew: json['is_new'] as bool? ?? false,
-      );
-
   static FileOperationResult created({
     required final String path,
     final String revisionId = '',
@@ -65,10 +66,10 @@ class FileOperationResult {
   static FileOperationResult updated({
     required final String path,
     final String revisionId = '',
-  }) => FileOperationResult(path: path, revisionId: revisionId, isNew: false);
+  }) => FileOperationResult(path: path, revisionId: revisionId);
 
   static FileOperationResult deleted({
     required final String path,
     final String revisionId = '',
-  }) => FileOperationResult(path: path, revisionId: revisionId, isNew: false);
+  }) => FileOperationResult(path: path, revisionId: revisionId);
 }

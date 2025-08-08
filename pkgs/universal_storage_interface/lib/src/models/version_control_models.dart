@@ -1,4 +1,5 @@
 /// Version control models shared across providers.
+library;
 
 class VcRepository {
   const VcRepository({
@@ -12,6 +13,19 @@ class VcRepository {
     this.fullName = '',
     this.webUrl = '',
   });
+
+  factory VcRepository.fromJson(final Map<String, dynamic> json) =>
+      VcRepository(
+        id: (json['id'] ?? '').toString(),
+        name: json['name'] as String? ?? '',
+        description: json['description'] as String? ?? '',
+        cloneUrl: json['clone_url'] as String? ?? '',
+        defaultBranch: json['default_branch'] as String? ?? '',
+        isPrivate: json['is_private'] as bool? ?? false,
+        owner: json['owner'] as String? ?? '',
+        fullName: json['full_name'] as String? ?? '',
+        webUrl: json['web_url'] as String? ?? '',
+      );
 
   final String id;
   final String name;
@@ -35,19 +49,6 @@ class VcRepository {
     'web_url': webUrl,
   };
 
-  factory VcRepository.fromJson(final Map<String, dynamic> json) =>
-      VcRepository(
-        id: (json['id'] ?? '').toString(),
-        name: json['name'] as String? ?? '',
-        description: json['description'] as String? ?? '',
-        cloneUrl: json['clone_url'] as String? ?? '',
-        defaultBranch: json['default_branch'] as String? ?? '',
-        isPrivate: json['is_private'] as bool? ?? false,
-        owner: json['owner'] as String? ?? '',
-        fullName: json['full_name'] as String? ?? '',
-        webUrl: json['web_url'] as String? ?? '',
-      );
-
   static const empty = VcRepository(id: '', name: '');
 }
 
@@ -58,6 +59,13 @@ class VcBranch {
     this.isDefault = false,
     this.isProtected = false,
   });
+
+  factory VcBranch.fromJson(final Map<String, dynamic> json) => VcBranch(
+    name: VcBranchName(json['name'] as String? ?? ''),
+    commitSha: json['commit_sha'] as String? ?? '',
+    isDefault: json['is_default'] as bool? ?? false,
+    isProtected: json['is_protected'] as bool? ?? false,
+  );
 
   final VcBranchName name;
   final String commitSha;
@@ -70,13 +78,6 @@ class VcBranch {
     'is_default': isDefault,
     'is_protected': isProtected,
   };
-
-  factory VcBranch.fromJson(final Map<String, dynamic> json) => VcBranch(
-    name: VcBranchName(json['name'] as String? ?? ''),
-    commitSha: json['commit_sha'] as String? ?? '',
-    isDefault: json['is_default'] as bool? ?? false,
-    isProtected: json['is_protected'] as bool? ?? false,
-  );
 
   static const empty = VcBranch(name: VcBranchName(''));
 }
@@ -91,6 +92,17 @@ class VcCreateRepositoryRequest {
     this.gitignoreTemplate = '',
     this.organization = '',
   });
+
+  factory VcCreateRepositoryRequest.fromJson(final Map<String, dynamic> json) =>
+      VcCreateRepositoryRequest(
+        name: json['name'] as String? ?? '',
+        description: json['description'] as String? ?? '',
+        isPrivate: json['is_private'] as bool? ?? true,
+        initializeWithReadme: json['initialize_with_readme'] as bool? ?? true,
+        license: json['license'] as String? ?? '',
+        gitignoreTemplate: json['gitignore_template'] as String? ?? '',
+        organization: json['organization'] as String? ?? '',
+      );
 
   final String name;
   final String description;
@@ -109,17 +121,6 @@ class VcCreateRepositoryRequest {
     'gitignore_template': gitignoreTemplate,
     'organization': organization,
   };
-
-  factory VcCreateRepositoryRequest.fromJson(final Map<String, dynamic> json) =>
-      VcCreateRepositoryRequest(
-        name: json['name'] as String? ?? '',
-        description: json['description'] as String? ?? '',
-        isPrivate: json['is_private'] as bool? ?? true,
-        initializeWithReadme: json['initialize_with_readme'] as bool? ?? true,
-        license: json['license'] as String? ?? '',
-        gitignoreTemplate: json['gitignore_template'] as String? ?? '',
-        organization: json['organization'] as String? ?? '',
-      );
 
   static const empty = VcCreateRepositoryRequest(name: '');
 }
