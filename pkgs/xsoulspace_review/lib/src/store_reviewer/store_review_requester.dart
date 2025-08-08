@@ -75,7 +75,7 @@ class StoreReviewRequester extends ChangeNotifier {
   /// If no previous request exists, it schedules the first review request.
   /// Otherwise, it schedules based on the elapsed time and review count.
   Future<void> onLoad() async {
-    _storeReviewer = await StoreReviewerFactory.create();
+    _storeReviewer = await StoreReviewerFactory.createForInstallSource();
     isAvailable = await _storeReviewer.onLoad();
     if (!isAvailable) return;
 
@@ -87,8 +87,9 @@ class StoreReviewRequester extends ChangeNotifier {
     if (lastReviewRequest == 0) {
       _scheduleReviewRequest(initialDelay: firstReviewPeriod);
     } else {
-      final lastRequestTime =
-          DateTime.fromMillisecondsSinceEpoch(lastReviewRequest);
+      final lastRequestTime = DateTime.fromMillisecondsSinceEpoch(
+        lastReviewRequest,
+      );
       final timeSinceLastRequest = DateTime.now().difference(lastRequestTime);
       final currentPeriod = reviewCount == 0 ? firstReviewPeriod : reviewPeriod;
 

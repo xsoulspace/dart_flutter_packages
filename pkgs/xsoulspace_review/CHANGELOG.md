@@ -1,3 +1,9 @@
+## 0.3.0-beta.1
+
+- Temporary disabled detection of install source to exclude store checker so `createForInstallSource` is not working. Use `createForTargetStore` instead.
+- Renamed `create` to `createForInstallSource`.
+- Added `InstallationTargetStore`.
+
 ## 0.2.1
 
 - Updated:

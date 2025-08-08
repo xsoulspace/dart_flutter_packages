@@ -19,11 +19,20 @@ Currently, the package supports the following stores:
 import 'package:xsoulspace_review/xsoulspace_review.dart';
 
 void onLoad() {
+
+  /// this will create a store reviewer specific to
+  /// target store. This is made via
+  /// [xsoulspace_installation_store](https://pub.dev/packages/xsoulspace_installation_store)
+  /// package.
+  StoreReviewerFactory.createForTargetStore(
+    targetStore: InstallationTargetStore.mobileGooglePlay,
+  );
+
   /// this will create a store reviewer specific to
   /// installation source. This is made via
   /// [store_checker](https://pub.dev/packages/store_checker)
   /// package and additional methods from [xsoulspace_foundation](https://pub.dev/packages/xsoulspace_foundation).
-  StoreReviewerFactory.create();
+  StoreReviewerFactory.createForInstallSource();
 }
 ```
 

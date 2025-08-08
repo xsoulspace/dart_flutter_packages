@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:meta/meta.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:xsoulspace_ui_foundation/xsoulspace_ui_foundation.dart';
+import 'package:xsoulspace_installation_store/xsoulspace_installation_store.dart';
 
 import 'consent_screen.dart';
 import 'reviewers/reviewers.dart';
@@ -87,6 +87,23 @@ base class StoreReviewer {
 class StoreReviewerFactory {
   StoreReviewerFactory._();
 
+  /// Creates a [StoreReviewer] instance based on the app's target store.
+  ///
+  /// [targetStore] is required to create the correct [StoreReviewer] instance.
+  /// [fallbackConsentBuilder] is required for some Reviewers to show
+  /// a consent dialog before redirecting to the store as these stores
+  /// do not support native in-app review prompt.
+  static Future<StoreReviewer> createForTargetStore({
+    required final InstallationTargetStore targetStore,
+    final ReviewerFallbackConsentBuilder fallbackConsentBuilder =
+        defaultFallbackConsentBuilder,
+  }) async => switch (targetStore) {
+    InstallationTargetStore.rustore => RuStoreReviewer(),
+    InstallationTargetStore.huawei => HuaweiStoreReviewer(),
+    InstallationTargetStore.mobileGooglePlay => GoogleAppleStoreReviewer(),
+    InstallationTargetStore.mobileAppleAppStore => GoogleAppleStoreReviewer(),
+  };
+
   /// Creates a [StoreReviewer] instance based on the app's installation source.
   ///
   /// [snapPackageName] is required for SnapStoreReviewer to redirect to
@@ -97,25 +114,25 @@ class StoreReviewerFactory {
   ///
   /// @ai When calling this method, provide the [snapPackageName] if targeting
   /// Linux platforms.
-  static Future<StoreReviewer> create({
+  static Future<StoreReviewer> createForInstallSource({
     final String snapPackageName = '',
     final String androidPackageName = '',
     final ReviewerFallbackConsentBuilder fallbackConsentBuilder =
         defaultFallbackConsentBuilder,
   }) async {
-    const appStoreUtils = AppStoreUtils();
-    final installSource = await appStoreUtils.getInstallationSource();
+    final installSource = await const InstallationStoreUtils()
+        .getInstallationSource();
     return switch (installSource) {
-      InstallSource.androidRustore => RuStoreReviewer(
+      InstallationStoreSource.androidRuStore => RuStoreReviewer(
         consentBuilder: fallbackConsentBuilder,
         packageName: androidPackageName,
       ),
-      InstallSource.androidHuawaiAppGallery => HuaweiStoreReviewer(),
-      InstallSource.androidApk ||
-      InstallSource.androidGooglePlay ||
-      InstallSource.androidGooglePlayInstaller ||
+      InstallationStoreSource.androidHuaweiAppGallery => HuaweiStoreReviewer(),
+      InstallationStoreSource.androidApk ||
+      InstallationStoreSource.androidGooglePlay ||
+      InstallationStoreSource.androidGooglePlayInstaller ||
       _ when installSource.isApple => GoogleAppleStoreReviewer(),
-      InstallSource.linuxSnap ||
+      InstallationStoreSource.linuxSnap ||
       _ when installSource.isLinux => SnapStoreReviewer(
         packageName: snapPackageName,
         consentBuilder: fallbackConsentBuilder,
