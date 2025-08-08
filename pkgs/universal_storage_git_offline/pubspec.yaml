@@ -1,6 +1,6 @@
 name: universal_storage_git_offline
 description: Offline Git storage provider for universal_storage_interface with optional remote sync.
-version: 0.1.0-dev.1
+version: 0.1.0-dev.2
 publish_to: none
 
 environment:
