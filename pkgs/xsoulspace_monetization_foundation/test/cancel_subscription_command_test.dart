@@ -16,6 +16,7 @@ void main() {
       final cmd = env.makeCancelSubscriptionCommand();
       await cmd.execute();
       expect(env.subscriptionStatus.isCancelling, isFalse);
+      expect(env.provider.cancelCalls, 0);
     });
 
     test('uses explicit purchaseId when provided', () async {

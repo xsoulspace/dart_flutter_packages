@@ -2,6 +2,7 @@
 
 import 'dart:async';
 
+import 'package:from_json_to_json/from_json_to_json.dart';
 import 'package:in_app_purchase/in_app_purchase.dart' as iap;
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
@@ -33,7 +34,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
 
   @override
   Future<void> dispose() async {
-    _purchaseSubscription.cancel();
+    await _purchaseSubscription.cancel();
     await _purchaseStreamController.close();
   }
 
@@ -176,22 +177,26 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
 
   PurchaseDetailsModel _mapToPurchaseDetails(
     final iap.PurchaseDetails purchase,
-  ) => PurchaseDetailsModel(
-    purchaseId: PurchaseId.fromJson(purchase.purchaseID ?? ''),
-    productId: PurchaseProductId.fromJson(purchase.productID),
-    priceId: PurchasePriceId.fromJson(purchase.productID),
-    status: _mapPurchaseStatus(purchase.status),
-    purchaseDate: purchase.transactionDate != null
-        ? DateTime.fromMillisecondsSinceEpoch(
-            int.parse(purchase.transactionDate!),
-          )
-        : DateTime.now(),
-    purchaseType: PurchaseProductType
-        .nonConsumable, // This needs to be determined properly
-    localVerificationData: purchase.verificationData.localVerificationData,
-    serverVerificationData: purchase.verificationData.serverVerificationData,
-    source: purchase.verificationData.source,
-  );
+  ) {
+    final transactionDate = purchase.transactionDate;
+    final transactionDateInt = int.tryParse(transactionDate ?? '');
+    final purchaseDate = (purchase.transactionDate != null
+        ? dateTimeFromMilisecondsSinceEpoch(transactionDateInt)
+        : null);
+
+    return PurchaseDetailsModel(
+      purchaseId: PurchaseId.fromJson(purchase.purchaseID ?? ''),
+      productId: PurchaseProductId.fromJson(purchase.productID),
+      priceId: PurchasePriceId.fromJson(purchase.productID),
+      status: _mapPurchaseStatus(purchase.status),
+      purchaseDate: purchaseDate ?? DateTime.now(),
+      purchaseType: PurchaseProductType
+          .nonConsumable, // This needs to be determined properly
+      localVerificationData: purchase.verificationData.localVerificationData,
+      serverVerificationData: purchase.verificationData.serverVerificationData,
+      source: purchase.verificationData.source,
+    );
+  }
 
   PurchaseStatus _mapPurchaseStatus(final iap.PurchaseStatus status) =>
       switch (status) {
