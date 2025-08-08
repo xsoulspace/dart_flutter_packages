@@ -55,5 +55,3 @@ print(target.name); // "Google Play"
 ### License
 
 MIT
-
-

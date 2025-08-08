@@ -6,8 +6,14 @@ import 'installation_store_source.dart';
 
 /// IO implementation to detect install source on mobile/desktop.
 class InstallationStoreUtils {
+  /// {@template installation_store_utils_constructor}
+  /// Constructor for the InstallationStoreUtils class.
+  /// {@endtemplate}
   const InstallationStoreUtils();
 
+  /// {@template installation_store_utils_get_installation_source}
+  /// Detects the source from which the application was installed.
+  /// {@endtemplate}
   Future<InstallationStoreSource> getInstallationSource() async {
     // final Source installationSource = await StoreChecker.getSource;
 
