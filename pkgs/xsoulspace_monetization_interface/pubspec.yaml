@@ -11,6 +11,8 @@ dependencies:
     sdk: flutter
   from_json_to_json: ^0.2.1
   is_dart_empty_or_not: ^0.2.3
+  xsoulspace_store_utils:
+    path: ../xsoulspace_store_utils
 
 dev_dependencies:
   flutter_test:

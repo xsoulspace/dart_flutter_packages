@@ -18,7 +18,6 @@ dependencies:
   wiredash: ^2.5.0
   xsoulspace_foundation: ^0.2.0
   xsoulspace_locale: ^0.2.0
-  xsoulspace_ui_foundation: ^0.1.0
 
 dev_dependencies:
   lints: ^6.0.0
