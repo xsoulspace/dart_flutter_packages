@@ -19,7 +19,7 @@ class InstallationStoreUtils {
     //   Source.IS_INSTALLED_FROM_AMAZON_APP_STORE =>
     //     InstallSource.androidAmazonAppStore,
     //   Source.IS_INSTALLED_FROM_HUAWEI_APP_GALLERY =>
-    //     InstallSource.androidHuawaiAppGallery,
+    //     InstallSource.androidHuaweiAppGallery,
     //   Source.IS_INSTALLED_FROM_SAMSUNG_GALAXY_STORE =>
     //     InstallSource.androidSamsungGalaxyStore,
     //   Source.IS_INSTALLED_FROM_SAMSUNG_SMART_SWITCH_MOBILE =>
@@ -31,7 +31,7 @@ class InstallationStoreUtils {
     //   Source.IS_INSTALLED_FROM_VIVO_APP_STORE =>
     //     InstallSource.androidVivoAppStore,
     //   Source.IS_INSTALLED_FROM_OTHER_SOURCE => InstallSource.androidApk,
-    //   Source.IS_INSTALLED_FROM_RU_STORE => InstallSource.androidRustore,
+    //   Source.IS_INSTALLED_FROM_RU_STORE => InstallSource.androidRuStore,
 
     //   // Apple
     //   Source.IS_INSTALLED_FROM_APP_STORE when Platform.isIOS =>

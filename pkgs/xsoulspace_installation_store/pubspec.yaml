@@ -2,7 +2,24 @@ name: xsoulspace_installation_store
 description: Utilities for detecting install sources and targeting app stores across platforms.
 version: 0.1.0
 repository: https://github.com/xsoulspace/xsoulspace_packages
-publish_to: none
+
+homepage: https://github.com/xsoulspace/xsoulspace_packages/tree/main/pkgs/xsoulspace_installation_store
+issue_tracker: https://github.com/xsoulspace/xsoulspace_packages/issues
+
+topics:
+  - install-source
+  - app-store
+  - store-detection
+  - platform
+  - xsoulspace
+
+platforms:
+  android:
+  ios:
+  linux:
+  macos:
+  windows:
+  web:
 
 environment:
   sdk: ">=3.8.0 <4.0.0"
