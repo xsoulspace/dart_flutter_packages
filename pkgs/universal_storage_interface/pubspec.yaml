@@ -1,0 +1,11 @@
+name: universal_storage_interface
+description: Interfaces and core models for universal storage providers (file, VCS, cloud). Shared contracts and exceptions.
+version: 0.1.0-dev.1
+homepage: https://github.com/xsoulspace/universal_storage_sync
+
+environment:
+  sdk: ">=3.8.1 <4.0.0"
+
+dependencies:
+  from_json_to_json: ^0.2.1
+  meta: ^1.16.0
