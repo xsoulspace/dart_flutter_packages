@@ -15,9 +15,7 @@ import 'store_reviewer.dart';
 ///
 /// Example usage:
 /// ```dart
-/// final myStoreReviewer = await StoreReviewerFactory.createForInstallSource();
-/// // or
-/// final myStoreReviewer = await StoreReviewerFactory.createForTargetStore(
+/// final myStoreReviewer = StoreReviewerFactory.createForTargetStore(
 ///   targetStore: InstallationTargetStore.mobileGooglePlay,
 /// );
 ///
@@ -29,6 +27,18 @@ import 'store_reviewer.dart';
 ///   localDb: myLocalDb,
 /// );
 /// await reviewRequester.onLoad();
+///
+/// // or
+/// final reviewRequester = StoreReviewRequester(
+///   firstReviewPeriod: Duration(days: 1),
+///   reviewPeriod: Duration(days: 30),
+///   maxReviewCount: 3,
+///   localDb: myLocalDb,
+/// );
+/// final myStoreReviewer = await StoreReviewerFactory.createForInstallSource();
+/// await reviewRequester.onLoad(
+///   storeReviewer: myStoreReviewer,
+/// );
 /// ```
 ///
 /// [StoreReviewer.onLoad] will be called during [onLoad]
@@ -60,7 +70,7 @@ class StoreReviewRequester extends ChangeNotifier {
   final int maxReviewCount;
 
   /// The [StoreReviewer] instance used to request reviews.
-  final StoreReviewer _storeReviewer;
+  StoreReviewer _storeReviewer;
 
   /// The local database interface for storing review request data.
   final LocalDbI localDb;
@@ -81,6 +91,7 @@ class StoreReviewRequester extends ChangeNotifier {
   /// If no previous request exists, it schedules the first review request.
   /// Otherwise, it schedules based on the elapsed time and review count.
   Future<void> onLoad({final StoreReviewer? storeReviewer}) async {
+    if (storeReviewer != null) _storeReviewer = storeReviewer;
     await _storeReviewer.onLoad();
     isAvailable = await _storeReviewer.onLoad();
     if (!isAvailable) return;

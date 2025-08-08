@@ -93,11 +93,11 @@ class StoreReviewerFactory {
   /// [fallbackConsentBuilder] is required for some Reviewers to show
   /// a consent dialog before redirecting to the store as these stores
   /// do not support native in-app review prompt.
-  static Future<StoreReviewer> createForTargetStore({
+  static StoreReviewer createForTargetStore({
     required final InstallationTargetStore targetStore,
     final ReviewerFallbackConsentBuilder fallbackConsentBuilder =
         defaultFallbackConsentBuilder,
-  }) async => switch (targetStore) {
+  }) => switch (targetStore) {
     InstallationTargetStore.rustore => RuStoreReviewer(),
     InstallationTargetStore.huawei => HuaweiStoreReviewer(),
     InstallationTargetStore.mobileGooglePlay => GoogleAppleStoreReviewer(),
