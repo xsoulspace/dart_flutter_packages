@@ -1,4 +1,5 @@
 import 'package:from_json_to_json/from_json_to_json.dart';
+import 'package:is_dart_empty_or_not/is_dart_empty_or_not.dart';
 
 /// Extension type that represents a unique identifier for a product.
 extension type const PurchaseProductId._(String value) {
@@ -126,11 +127,13 @@ extension type const PurchaseProductDetailsModel._(Map<String, dynamic> value) {
 
 /// Extension type that represents the details of a purchase.
 ///
-/// Wraps a Map<String, dynamic> for all purchase details fields.
+/// Wraps a `Map<String, dynamic>` for all purchase details fields.
 /// Uses from_json_to_json for type-safe JSON handling.
 extension type const PurchaseDetailsModel._(Map<String, dynamic> value) {
   factory PurchaseDetailsModel.fromJson(final dynamic json) =>
-      PurchaseDetailsModel._(jsonDecodeMapAs(json));
+      PurchaseDetailsModel._(
+        jsonDecodeMapAs<String, dynamic>(json).whenEmptyUse(empty.toJson()),
+      );
   factory PurchaseDetailsModel({
     required final DateTime purchaseDate,
     final PurchaseId purchaseId = PurchaseId.empty,
@@ -198,11 +201,13 @@ extension type const PurchaseDetailsModel._(Map<String, dynamic> value) {
   bool get isSubscription => !isOneTimePurchase;
   bool get isPending => status == PurchaseStatus.pending;
   bool get isCancelled => status == PurchaseStatus.canceled;
+  bool get isPendingConfirmation =>
+      status == PurchaseStatus.pendingConfirmation;
   bool get isActive {
     if (purchaseType case PurchaseProductType.subscription) {
       final expiry = expiryDate;
       return (status == PurchaseStatus.purchased ||
-              status == PurchaseStatus.restored ||
+              status == PurchaseStatus.pendingConfirmation ||
               status == PurchaseStatus.canceled) &&
           expiry != null &&
           expiry.isAfter(DateTime.now());
@@ -238,7 +243,7 @@ enum PurchaseStatus {
   /// You should validate the purchase and if valid deliver the content.
   /// Once the content has been delivered or if the receipt is invalid
   /// you should finish the purchase by calling the completePurchase method.
-  restored,
+  pendingConfirmation,
   canceled;
 
   String toJson() => name;
@@ -265,14 +270,21 @@ extension type const PurchaseResultModel._(Map<String, dynamic> value) {
   factory PurchaseResultModel({
     final PurchaseDetailsModel? details,
     final ResultType type = ResultType.success,
+    final bool shouldConfirmPurchase = false,
     final String? error,
   }) => PurchaseResultModel._({
     'type': type.name,
     'details': details?.toJson(),
+    'shouldConfirmPurchase': shouldConfirmPurchase,
     'error': error,
   });
-  factory PurchaseResultModel.success(final PurchaseDetailsModel details) =>
-      PurchaseResultModel(details: details);
+  factory PurchaseResultModel.success(
+    final PurchaseDetailsModel details, {
+    required final bool shouldConfirmPurchase,
+  }) => PurchaseResultModel(
+    details: details,
+    shouldConfirmPurchase: shouldConfirmPurchase,
+  );
   factory PurchaseResultModel.failure(final String error) =>
       PurchaseResultModel(error: error, type: ResultType.failure);
   bool get isSuccess => value['type'] == ResultType.success.name;
@@ -280,6 +292,11 @@ extension type const PurchaseResultModel._(Map<String, dynamic> value) {
     (final e) => e.name == jsonDecodeString(value['type']),
     orElse: () => ResultType.failure,
   );
+  bool get shouldConfirmPurchase =>
+      isSuccess &&
+      details != null &&
+      details!.status == PurchaseStatus.pendingConfirmation &&
+      jsonDecodeBool(value['shouldConfirmPurchase']);
   PurchaseDetailsModel? get details =>
       isSuccess ? PurchaseDetailsModel.fromJson(value['details']) : null;
   String get error => !isSuccess ? jsonDecodeString(value['error']) : '';
@@ -396,6 +413,7 @@ extension type const PurchaseVerificationDtoModel._(
     final PurchaseStatus status = PurchaseStatus.pending,
     final PurchaseProductType productType = PurchaseProductType.consumable,
     final String purchaseToken = '',
+    final DateTime? expiryDate,
     final String? localVerificationData,
     final String? serverVerificationData,
     final String? source,
@@ -407,6 +425,7 @@ extension type const PurchaseVerificationDtoModel._(
     'productType': productType.name,
     'transactionDate': transactionDate.toIso8601String(),
     'purchaseToken': purchaseToken,
+    'expiryDate': expiryDate?.toIso8601String(),
     'localVerificationData': localVerificationData,
     'serverVerificationData': serverVerificationData,
     'source': source,
@@ -421,6 +440,11 @@ extension type const PurchaseVerificationDtoModel._(
   DateTime? get transactionDate =>
       dateTimeFromIso8601String(jsonDecodeString(value['transactionDate']));
   String? get purchaseToken => jsonDecodeString(value['purchaseToken']);
+  DateTime? get expiryDate =>
+      dateTimeFromIso8601String(jsonDecodeString(value['expiryDate']));
+  bool get isExpired =>
+      expiryDate != null && expiryDate!.isBefore(DateTime.now());
+  bool get isNotExpired => !isExpired;
   String? get localVerificationData =>
       jsonDecodeString(value['localVerificationData']);
   String? get serverVerificationData =>

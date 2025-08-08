@@ -50,11 +50,11 @@ class SubscribeCommand {
   /// 1. Check if already subscribed → return false
   /// 2. Set status to pending
   /// 3. Attempt subscription via provider
-  /// 4. On success: confirm purchase and return true
-  /// 5. On failure: reset to free status and return false
+  /// 4. On success: confirm purchase
+  /// 5. On failure: reset to free status
   /// {@endtemplate}
-  Future<bool> execute(final PurchaseProductDetailsModel details) async {
-    if (subscriptionStatusResource.isSubscribed) return false;
+  Future<void> execute(final PurchaseProductDetailsModel details) async {
+    if (subscriptionStatusResource.isSubscribed) return;
     subscriptionStatusResource.set(SubscriptionStatus.purchasing);
     purchasePaywallErrorResource.clear();
 
@@ -64,16 +64,22 @@ class SubscribeCommand {
         subscriptionStatusResource.set(
           SubscriptionStatus.pendingPaymentConfirmation,
         );
-        return confirmPurchaseCommand.execute(
-          result.details!.toVerificationDto(),
-        );
+        if (result.shouldConfirmPurchase) {
+          await confirmPurchaseCommand.execute(
+            result.details!.toVerificationDto(),
+          );
+        }
       case ResultType.failure:
+        final details = result.details;
+        if (details == null || details.isCancelled) return;
         purchasePaywallErrorResource.error = result.error;
 
         /// handle case when upgrading / downgrading subscription
         subscriptionStatusResource.set(SubscriptionStatus.free);
-        await cancelSubscriptionCommand.execute(productId: details.productId);
-        return false;
+        await cancelSubscriptionCommand.execute(
+          productId: details.productId,
+          openSubscriptionManagement: false,
+        );
     }
   }
 }

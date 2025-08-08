@@ -19,14 +19,14 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
   @override
   Future<MonetizationStoreStatus> init() async {
     _purchaseSubscription = _inAppPurchase.purchaseStream.listen(
-      (purchaseDetailsList) {
+      (final purchaseDetailsList) {
         final purchases = purchaseDetailsList
             .map(_mapToPurchaseDetails)
             .toList();
         _purchaseStreamController.add(purchases);
       },
-      onDone: () => _purchaseStreamController.close(),
-      onError: (error) => _purchaseStreamController.addError(error),
+      onDone: _purchaseStreamController.close,
+      onError: (final error) => _purchaseStreamController.addError(error),
     );
     return MonetizationStoreStatus.loaded;
   }
@@ -46,7 +46,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
 
   @override
   Future<CompletePurchaseResultModel> completePurchase(
-    PurchaseVerificationDtoModel purchase,
+    final PurchaseVerificationDtoModel purchase,
   ) async {
     // This is a simplified mapping. You might need a more robust way
     // to find the original iap.PurchaseDetails object.
@@ -72,10 +72,10 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
 
   @override
   Future<List<PurchaseProductDetailsModel>> getProductDetails(
-    List<PurchaseProductId> productIds,
+    final List<PurchaseProductId> productIds,
   ) async {
     final response = await _inAppPurchase.queryProductDetails(
-      productIds.map((id) => id.value).toSet(),
+      productIds.map((final id) => id.value).toSet(),
     );
     if (response.error != null) {
       throw Exception(response.error!.message);
@@ -85,7 +85,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
 
   @override
   Future<PurchaseResultModel> purchaseNonConsumable(
-    PurchaseProductDetailsModel productDetails,
+    final PurchaseProductDetailsModel productDetails,
   ) async {
     final response = await _inAppPurchase.queryProductDetails({
       productDetails.productId.value,
@@ -128,6 +128,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
               ),
             ),
           ),
+          shouldConfirmPurchase: false,
         );
       } else {
         return PurchaseResultModel.failure('Purchase initiation failed.');
@@ -149,59 +150,55 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
     }
   }
 
-  PurchaseProductDetailsModel _mapToProductDetails(iap.ProductDetails product) {
-    return PurchaseProductDetailsModel(
-      productId: PurchaseProductId.fromJson(product.id),
-      priceId: PurchasePriceId.fromJson(product.id),
-      // This logic needs to be robust. Assuming type from ID is brittle.
-      productType: product.id.contains('subscription')
-          ? PurchaseProductType.subscription
-          : PurchaseProductType.nonConsumable,
-      name: product.title,
-      formattedPrice: product.price,
-      price: product.rawPrice,
-      currency: product.currencyCode,
-      description: product.description,
-      // This duration logic is also an assumption and needs to be solid.
-      duration: product.id.contains('year')
-          ? const Duration(days: 365)
-          : (product.id.contains('month')
-                ? const Duration(days: 30)
-                : Duration.zero),
-      // TODO: Implement free trial duration
-      freeTrialDuration: PurchaseDurationModel.zero,
-    );
-  }
+  PurchaseProductDetailsModel _mapToProductDetails(
+    final iap.ProductDetails product,
+  ) => PurchaseProductDetailsModel(
+    productId: PurchaseProductId.fromJson(product.id),
+    priceId: PurchasePriceId.fromJson(product.id),
+    // This logic needs to be robust. Assuming type from ID is brittle.
+    productType: product.id.contains('subscription')
+        ? PurchaseProductType.subscription
+        : PurchaseProductType.nonConsumable,
+    name: product.title,
+    formattedPrice: product.price,
+    price: product.rawPrice,
+    currency: product.currencyCode,
+    description: product.description,
+    // This duration logic is also an assumption and needs to be solid.
+    duration: product.id.contains('year')
+        ? const Duration(days: 365)
+        : (product.id.contains('month')
+              ? const Duration(days: 30)
+              : Duration.zero),
+    // TODO: Implement free trial duration
+    freeTrialDuration: PurchaseDurationModel.zero,
+  );
 
-  PurchaseDetailsModel _mapToPurchaseDetails(iap.PurchaseDetails purchase) {
-    return PurchaseDetailsModel(
-      purchaseId: PurchaseId.fromJson(purchase.purchaseID ?? ''),
-      productId: PurchaseProductId.fromJson(purchase.productID),
-      priceId: PurchasePriceId.fromJson(purchase.productID),
-      name: '', // Not available in iap.PurchaseDetails
-      formattedPrice: '', // Not available in iap.PurchaseDetails
-      status: _mapPurchaseStatus(purchase.status),
-      price: 0.0, // Not available in iap.PurchaseDetails
-      currency: '', // Not available in iap.PurchaseDetails
-      purchaseDate: purchase.transactionDate != null
-          ? DateTime.fromMillisecondsSinceEpoch(
-              int.parse(purchase.transactionDate!),
-            )
-          : DateTime.now(),
-      purchaseType: PurchaseProductType
-          .nonConsumable, // This needs to be determined properly
-      localVerificationData: purchase.verificationData.localVerificationData,
-      serverVerificationData: purchase.verificationData.serverVerificationData,
-      source: purchase.verificationData.source,
-    );
-  }
+  PurchaseDetailsModel _mapToPurchaseDetails(
+    final iap.PurchaseDetails purchase,
+  ) => PurchaseDetailsModel(
+    purchaseId: PurchaseId.fromJson(purchase.purchaseID ?? ''),
+    productId: PurchaseProductId.fromJson(purchase.productID),
+    priceId: PurchasePriceId.fromJson(purchase.productID),
+    status: _mapPurchaseStatus(purchase.status),
+    purchaseDate: purchase.transactionDate != null
+        ? DateTime.fromMillisecondsSinceEpoch(
+            int.parse(purchase.transactionDate!),
+          )
+        : DateTime.now(),
+    purchaseType: PurchaseProductType
+        .nonConsumable, // This needs to be determined properly
+    localVerificationData: purchase.verificationData.localVerificationData,
+    serverVerificationData: purchase.verificationData.serverVerificationData,
+    source: purchase.verificationData.source,
+  );
 
-  PurchaseStatus _mapPurchaseStatus(iap.PurchaseStatus status) =>
+  PurchaseStatus _mapPurchaseStatus(final iap.PurchaseStatus status) =>
       switch (status) {
         iap.PurchaseStatus.pending => PurchaseStatus.pending,
         iap.PurchaseStatus.purchased => PurchaseStatus.purchased,
         iap.PurchaseStatus.error => PurchaseStatus.error,
-        iap.PurchaseStatus.restored => PurchaseStatus.restored,
+        iap.PurchaseStatus.restored => PurchaseStatus.pendingConfirmation,
         iap.PurchaseStatus.canceled => PurchaseStatus.canceled,
       };
 
@@ -211,7 +208,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
   ) async {
     // TODO(arenukvern): implement identification of consumables
     final response = await _inAppPurchase.queryProductDetails(
-      productIds.map((id) => id.value).toSet(),
+      productIds.map((final id) => id.value).toSet(),
     );
     if (response.error != null) {
       throw Exception(response.error!.message);
@@ -225,7 +222,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
   ) async {
     // TODO(arenukvern): implement identification of non-consumables
     final response = await _inAppPurchase.queryProductDetails(
-      productIds.map((id) => id.value).toSet(),
+      productIds.map((final id) => id.value).toSet(),
     );
     if (response.error != null) {
       throw Exception(response.error!.message);
@@ -239,7 +236,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
   ) async {
     // TODO(arenukvern): implement identification of subscriptions
     final response = await _inAppPurchase.queryProductDetails(
-      productIds.map((id) => id.value).toSet(),
+      productIds.map((final id) => id.value).toSet(),
     );
     if (response.error != null) {
       throw Exception(response.error!.message);
@@ -250,9 +247,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
   @override
   Future<PurchaseResultModel> subscribe(
     final PurchaseProductDetailsModel productDetails,
-  ) async {
-    return purchaseNonConsumable(productDetails);
-  }
+  ) async => purchaseNonConsumable(productDetails);
 
   @override
   Future<void> openSubscriptionManagement() async {
@@ -268,7 +263,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
   }
 
   @override
-  Future<CancelResultModel> cancel(String purchaseOrProductId) async {
+  Future<CancelResultModel> cancel(final String purchaseOrProductId) async {
     // TODO(arenukvern): implement cancellation
     throw UnimplementedError();
   }
@@ -287,7 +282,7 @@ extension on PurchaseStatus {
     PurchaseStatus.pending => iap.PurchaseStatus.pending,
     PurchaseStatus.purchased => iap.PurchaseStatus.purchased,
     PurchaseStatus.error => iap.PurchaseStatus.error,
-    PurchaseStatus.restored => iap.PurchaseStatus.restored,
+    PurchaseStatus.pendingConfirmation => iap.PurchaseStatus.restored,
     PurchaseStatus.canceled => iap.PurchaseStatus.canceled,
   };
 }

@@ -21,7 +21,7 @@ class RustorePurchaseProvider implements PurchaseProvider {
   RustorePurchaseProvider({
     required this.consoleApplicationId,
     required this.deeplinkScheme,
-    this.enableLogger = false,
+    this.enableLogging = false,
     this.productTypeChecker,
     final DurationFromProductId getDurationFromProductId =
         getDurationFromProductId,
@@ -30,7 +30,7 @@ class RustorePurchaseProvider implements PurchaseProvider {
   final String consoleApplicationId;
   final String deeplinkScheme;
   final DurationFromProductId _getDurationFromProductId;
-  final bool enableLogger;
+  final bool enableLogging;
   final PurchaseProductType? Function(PurchaseProductId productId)?
   productTypeChecker;
 
@@ -46,7 +46,8 @@ class RustorePurchaseProvider implements PurchaseProvider {
         RustoreBillingConfig(
           consoleApplicationId: consoleApplicationId,
           deeplinkScheme: deeplinkScheme,
-          debugLogs: enableLogger,
+          debugLogs: enableLogging,
+          enableLogging: enableLogging,
         ),
       );
       _client.updatesStream.listen((final e) {
@@ -141,7 +142,7 @@ class RustorePurchaseProvider implements PurchaseProvider {
       return PurchaseResultModel.success(
         PurchaseDetailsModel(
           status: details.productType == PurchaseProductType.consumable
-              ? PurchaseStatus.restored
+              ? PurchaseStatus.pendingConfirmation
               : PurchaseStatus.purchased,
           purchaseId: PurchaseId.fromJson(purchase.purchaseId),
           purchaseType: details.productType,
@@ -156,6 +157,7 @@ class RustorePurchaseProvider implements PurchaseProvider {
               ? DateTime.now().add(details.duration)
               : null,
         ),
+        shouldConfirmPurchase: true,
       );
     } catch (e) {
       return PurchaseResultModel.failure(e.toString());
@@ -367,7 +369,7 @@ PurchaseStatus _purchaseStatusFromRustoreState(
   RustorePurchaseState.created ||
   RustorePurchaseState.invoiceCreated ||
   RustorePurchaseState.paused => PurchaseStatus.pending,
-  RustorePurchaseState.paid => PurchaseStatus.restored,
+  RustorePurchaseState.paid => PurchaseStatus.pendingConfirmation,
   RustorePurchaseState.cancelled ||
   RustorePurchaseState.closed ||
   RustorePurchaseState.terminated => PurchaseStatus.canceled,

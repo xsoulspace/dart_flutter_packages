@@ -68,7 +68,7 @@ class HuawaiPurchaseProvider implements PurchaseProvider {
 
   @override
   Future<CompletePurchaseResultModel> completePurchase(
-    PurchaseVerificationDtoModel purchase,
+    final PurchaseVerificationDtoModel purchase,
   ) async {
     try {
       if (purchase.productType != PurchaseProductType.consumable) {
@@ -91,12 +91,12 @@ class HuawaiPurchaseProvider implements PurchaseProvider {
 
   @override
   Future<List<PurchaseProductDetailsModel>> getProductDetails(
-    List<PurchaseProductId> productIds,
+    final List<PurchaseProductId> productIds,
   ) async {
     final response = await IapClient.obtainProductInfo(
       ProductInfoReq(
         priceType: 1, // This needs to be dynamic based on product types
-        skuIds: productIds.map((id) => id.value).toList(),
+        skuIds: productIds.map((final id) => id.value).toList(),
       ),
     );
     if (response.status?.statusCode != 0) {
@@ -107,7 +107,7 @@ class HuawaiPurchaseProvider implements PurchaseProvider {
 
   @override
   Future<PurchaseResultModel> purchaseNonConsumable(
-    PurchaseProductDetailsModel productDetails,
+    final PurchaseProductDetailsModel productDetails,
   ) async {
     try {
       final result = await IapClient.createPurchaseIntent(
@@ -124,7 +124,10 @@ class HuawaiPurchaseProvider implements PurchaseProvider {
           productDetails,
         );
         _purchaseStreamController.add([details]);
-        return PurchaseResultModel.success(details);
+        return PurchaseResultModel.success(
+          details,
+          shouldConfirmPurchase: true,
+        );
       } else {
         return PurchaseResultModel.failure('Purchase failed: ${result.errMsg}');
       }
@@ -142,7 +145,7 @@ class HuawaiPurchaseProvider implements PurchaseProvider {
       if (result.returnCode == '0') {
         final restored =
             result.inAppPurchaseDataList
-                ?.map((p) => _mapOwnedToPurchaseDetails(p))
+                ?.map(_mapOwnedToPurchaseDetails)
                 .toList() ??
             [];
         _purchaseStreamController.add(restored);
@@ -157,81 +160,78 @@ class HuawaiPurchaseProvider implements PurchaseProvider {
     }
   }
 
-  PurchaseProductDetailsModel _mapToProductDetails(ProductInfo product) {
-    return PurchaseProductDetailsModel(
-      productId: PurchaseProductId.fromJson(product.productId!),
-      priceId: PurchasePriceId.fromJson(product.productId!),
-      productType: _mapHuaweiToProductType(product.priceType),
-      name: product.productName ?? '',
-      formattedPrice: product.price ?? '',
-      price: double.tryParse(product.microsPrice?.toString() ?? '0')! / 1000000,
-      currency: product.currency ?? '',
-      description: product.productDesc ?? '',
+  PurchaseProductDetailsModel _mapToProductDetails(final ProductInfo product) =>
+      PurchaseProductDetailsModel(
+        productId: PurchaseProductId.fromJson(product.productId),
+        priceId: PurchasePriceId.fromJson(product.productId),
+        productType: _mapHuaweiToProductType(product.priceType),
+        name: product.productName ?? '',
+        formattedPrice: product.price ?? '',
+        price:
+            double.tryParse(product.microsPrice?.toString() ?? '0')! / 1000000,
+        currency: product.currency ?? '',
+        description: product.productDesc ?? '',
 
-      duration: _getDurationFromPeriod(product.subPeriod ?? ''),
-      freeTrialDuration: PurchaseDurationModel(years: 0, months: 0, days: 0),
-    );
-  }
+        duration: _getDurationFromPeriod(product.subPeriod ?? ''),
+        freeTrialDuration: PurchaseDurationModel(),
+      );
 
   PurchaseDetailsModel _mapIntentToPurchaseDetails(
-    InAppPurchaseData data,
-    PurchaseProductDetailsModel? product,
-  ) {
-    return PurchaseDetailsModel(
-      purchaseId: PurchaseId.fromJson(data.orderId!),
-      productId: PurchaseProductId.fromJson(data.productId!),
-      priceId: PurchasePriceId.fromJson(data.productId!),
-      name: product?.name ?? '',
-      formattedPrice: product?.formattedPrice ?? '',
-      status: _mapHuaweiToPurchaseStatus(data.purchaseState),
-      price: product?.price ?? 0,
-      currency: product?.currency ?? '',
-      purchaseDate: DateTime.fromMillisecondsSinceEpoch(data.purchaseTime!),
-      purchaseType: product?.productType ?? PurchaseProductType.nonConsumable,
-      purchaseToken: data.purchaseToken ?? '',
-    );
-  }
+    final InAppPurchaseData data,
+    final PurchaseProductDetailsModel? product,
+  ) => PurchaseDetailsModel(
+    purchaseId: PurchaseId.fromJson(data.orderId),
+    productId: PurchaseProductId.fromJson(data.productId),
+    priceId: PurchasePriceId.fromJson(data.productId),
+    name: product?.name ?? '',
+    formattedPrice: product?.formattedPrice ?? '',
+    status: _mapHuaweiToPurchaseStatus(data.purchaseState),
+    price: product?.price ?? 0,
+    currency: product?.currency ?? '',
+    purchaseDate: DateTime.fromMillisecondsSinceEpoch(data.purchaseTime!),
+    purchaseType: product?.productType ?? PurchaseProductType.nonConsumable,
+    purchaseToken: data.purchaseToken ?? '',
+  );
 
-  PurchaseDetailsModel _mapOwnedToPurchaseDetails(InAppPurchaseData data) {
-    return PurchaseDetailsModel(
-      purchaseId: PurchaseId.fromJson(data.orderId!),
-      productId: PurchaseProductId.fromJson(data.productId!),
-      priceId: PurchasePriceId.fromJson(data.productId!),
-      name: '', // Not available in owned purchases
-      formattedPrice: '', // Not available
-      status: _mapHuaweiToPurchaseStatus(data.purchaseState),
-      price: 0, // Not available
-      currency: data.currency ?? '',
-      purchaseDate: DateTime.fromMillisecondsSinceEpoch(data.purchaseTime!),
-      purchaseType: _mapHuaweiToProductType(data.kind),
-      purchaseToken: data.purchaseToken ?? '',
-    );
-  }
+  PurchaseDetailsModel _mapOwnedToPurchaseDetails(
+    final InAppPurchaseData data,
+  ) => PurchaseDetailsModel(
+    purchaseId: PurchaseId.fromJson(data.orderId),
+    productId: PurchaseProductId.fromJson(data.productId),
+    priceId: PurchasePriceId.fromJson(data.productId),
+    status: _mapHuaweiToPurchaseStatus(data.purchaseState),
+    currency: data.currency ?? '',
+    purchaseDate: DateTime.fromMillisecondsSinceEpoch(data.purchaseTime!),
+    purchaseType: _mapHuaweiToProductType(data.kind),
+    purchaseToken: data.purchaseToken ?? '',
+  );
 
   /// 0: Consumable
   /// 1: Non-consumable
   /// 2: Auto-renewable subscription
 
-  int _mapProductTypeToHuawei(PurchaseProductType type) => switch (type) {
+  int _mapProductTypeToHuawei(final PurchaseProductType type) => switch (type) {
     PurchaseProductType.consumable => 0,
     PurchaseProductType.nonConsumable => 1,
     PurchaseProductType.subscription => 2,
   };
 
-  PurchaseProductType _mapHuaweiToProductType(int? type) => switch (type) {
-    0 => PurchaseProductType.consumable,
-    1 => PurchaseProductType.nonConsumable,
-    2 => PurchaseProductType.subscription,
-    _ => PurchaseProductType.nonConsumable, // Default or throw
-  };
+  PurchaseProductType _mapHuaweiToProductType(final int? type) =>
+      switch (type) {
+        0 => PurchaseProductType.consumable,
+        1 => PurchaseProductType.nonConsumable,
+        2 => PurchaseProductType.subscription,
+        _ => PurchaseProductType.nonConsumable, // Default or throw
+      };
 
-  PurchaseStatus _mapHuaweiToPurchaseStatus(int? state) => switch (state) {
-    -1 => PurchaseStatus.pending, // Initial
-    0 => PurchaseStatus.purchased,
-    1 => PurchaseStatus.canceled,
-    2 => PurchaseStatus.restored, // Refunded
-    _ => PurchaseStatus.error,
-  };
+  PurchaseStatus _mapHuaweiToPurchaseStatus(final int? state) =>
+      switch (state) {
+        -1 => PurchaseStatus.pending, // Initial
+        0 => PurchaseStatus.purchased,
+        1 => PurchaseStatus.canceled,
+        2 => PurchaseStatus.pendingConfirmation, // Refunded
+        _ => PurchaseStatus.error,
+      };
 
   /// ISO 8601
   Duration _getDurationFromPeriod(final String period) {
@@ -260,7 +260,7 @@ class HuawaiPurchaseProvider implements PurchaseProvider {
     final response = await IapClient.obtainProductInfo(
       ProductInfoReq(
         priceType: 0,
-        skuIds: productIds.map((id) => id.value).toList(),
+        skuIds: productIds.map((final id) => id.value).toList(),
       ),
     );
     return response.productInfoList?.map(_mapToProductDetails).toList() ?? [];
@@ -274,7 +274,7 @@ class HuawaiPurchaseProvider implements PurchaseProvider {
     final response = await IapClient.obtainProductInfo(
       ProductInfoReq(
         priceType: 1,
-        skuIds: productIds.map((id) => id.value).toList(),
+        skuIds: productIds.map((final id) => id.value).toList(),
       ),
     );
     return response.productInfoList?.map(_mapToProductDetails).toList() ?? [];
@@ -288,7 +288,7 @@ class HuawaiPurchaseProvider implements PurchaseProvider {
     final response = await IapClient.obtainProductInfo(
       ProductInfoReq(
         priceType: 2,
-        skuIds: productIds.map((id) => id.value).toList(),
+        skuIds: productIds.map((final id) => id.value).toList(),
       ),
     );
     return response.productInfoList?.map(_mapToProductDetails).toList() ?? [];
@@ -297,9 +297,7 @@ class HuawaiPurchaseProvider implements PurchaseProvider {
   @override
   Future<PurchaseResultModel> subscribe(
     final PurchaseProductDetailsModel productDetails,
-  ) async {
-    return purchaseNonConsumable(productDetails);
-  }
+  ) async => purchaseNonConsumable(productDetails);
 
   @override
   Future<void> openSubscriptionManagement() async {
@@ -315,7 +313,7 @@ class HuawaiPurchaseProvider implements PurchaseProvider {
       OwnedPurchasesReq(priceType: 1), // Needs to query all types
     );
     final purchase = response.inAppPurchaseDataList?.firstWhereOrNull(
-      (p) => p.orderId == purchaseId.value,
+      (final p) => p.orderId == purchaseId.value,
     );
 
     if (purchase == null) {

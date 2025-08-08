@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
+import '../local_api/local_api.dart';
 import '../resources/resources.dart';
 import 'confirm_purchase.cmd.dart';
 
@@ -45,10 +46,12 @@ class HandlePurchaseUpdateCommand {
     required this.confirmPurchaseCommand,
     required this.subscriptionStatusResource,
     required this.activeSubscriptionResource,
+    required this.purchasesLocalApi,
   });
   final ConfirmPurchaseCommand confirmPurchaseCommand;
   final SubscriptionStatusResource subscriptionStatusResource;
   final ActiveSubscriptionResource activeSubscriptionResource;
+  final PurchasesLocalApi purchasesLocalApi;
 
   /// {@template execute_purchase_update}
   /// Executes the purchase update handling process.
@@ -66,24 +69,29 @@ class HandlePurchaseUpdateCommand {
   /// - `SubscriptionStatusResource`: Updated based on purchase status
   /// - `ActiveSubscriptionResource`: Cleared on cancellation
   /// {@endtemplate}
-  Future<void> execute(final PurchaseVerificationDtoModel dto) async {
+  Future<void> execute(final PurchaseDetailsModel details) async {
+    bool hasActiveSubscription = false;
+    final dto = details.toVerificationDto();
     switch (dto.status) {
-      case PurchaseStatus.restored:
-      case PurchaseStatus.purchased:
-        await confirmPurchaseCommand.execute(dto);
-        return;
+      case PurchaseStatus.pendingConfirmation || PurchaseStatus.purchased:
+        hasActiveSubscription = await confirmPurchaseCommand.execute(dto);
+      case PurchaseStatus.canceled when dto.isNotExpired:
+        hasActiveSubscription = await confirmPurchaseCommand.execute(dto);
       case PurchaseStatus.error:
         // TODO(arenukvern): add error notification
         await confirmPurchaseCommand.execute(dto);
+        hasActiveSubscription = false;
       case PurchaseStatus.pending:
-        subscriptionStatusResource.set(
-          SubscriptionStatus.pendingPaymentConfirmation,
-        );
-        return;
+        subscriptionStatusResource.set(SubscriptionStatus.purchasing);
+        hasActiveSubscription = false;
       case PurchaseStatus.canceled:
         activeSubscriptionResource.set(PurchaseDetailsModel.empty);
         subscriptionStatusResource.set(SubscriptionStatus.free);
-        return;
+        hasActiveSubscription = false;
+    }
+    if (hasActiveSubscription) {
+      await purchasesLocalApi.saveActiveSubscription(details);
+      subscriptionStatusResource.set(SubscriptionStatus.subscribed);
     }
   }
 }

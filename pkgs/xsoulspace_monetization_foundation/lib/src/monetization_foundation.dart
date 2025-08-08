@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
 import 'commands/commands.dart';
+import 'local_api/local_api.dart';
 import 'resources/resources.dart';
 
 /// {@template monetization_foundation}
@@ -36,10 +37,14 @@ class MonetizationFoundation {
   MonetizationFoundation({
     required final MonetizationResources resources,
     required this.purchaseProvider,
+    required this.purchasesLocalApi,
   }) : srcs = resources;
 
   /// {@macro purchase_provider}
   final PurchaseProvider purchaseProvider;
+
+  /// {@macro purchases_local_api}
+  final PurchasesLocalApi purchasesLocalApi;
 
   /// {@macro monetization_resources}
   @protected
@@ -49,7 +54,8 @@ class MonetizationFoundation {
   StreamSubscription<List<PurchaseDetailsModel>>? _purchaseUpdateSubscription;
 
   /// Restores previous purchases without full initialization.
-  Future<bool> restore() => _restorePurchasesCommand.execute();
+  Future<void> restore({final bool shouldAwaitRestore = true}) =>
+      _restorePurchasesCommand.execute(shouldAwaitRestore: shouldAwaitRestore);
 
   var _initCompleter = Completer<bool>();
 
@@ -137,13 +143,14 @@ class MonetizationFoundation {
     final List<PurchaseDetailsModel> purchases,
   ) async {
     for (final purchase in purchases) {
-      await _handlePurchaseUpdateCommand.execute(purchase.toVerificationDto());
+      await _handlePurchaseUpdateCommand.execute(purchase);
     }
   }
 
   /// Cleans up resources and cancels subscriptions.
   Future<void> dispose() async {
     await _purchaseUpdateSubscription?.cancel();
+    await purchaseProvider.dispose();
   }
 
   /// {@template cancel_subscription}
@@ -153,15 +160,43 @@ class MonetizationFoundation {
   ///
   /// Redirects to store if subscription was not cancelled using API.
   /// {@endtemplate}
-  Future<bool> cancelSubscription({
+  Future<void> cancelSubscription({
     final PurchaseProductId productId = PurchaseProductId.empty,
-  }) => _cancelSubscriptionCommand.execute(productId: productId);
+    final PurchaseId purchaseId = PurchaseId.empty,
+  }) => _cancelSubscriptionCommand.execute(
+    productId: productId,
+    purchaseId: purchaseId,
+  );
 
   /// {@template subscribe}
   /// Subscribes to a product.
   /// {@endtemplate}
-  Future<bool> subscribe(final PurchaseProductDetailsModel details) =>
+  Future<void> subscribe(final PurchaseProductDetailsModel details) =>
       _subscribeCommand.execute(details);
+
+  /// Opens the subscription management page.
+  Future<void> openSubscriptionManagement() =>
+      purchaseProvider.openSubscriptionManagement();
+
+  /// Check if user has an active subscription
+  Future<void> checkActiveSubscription({
+    final bool shouldRestore = true,
+    final bool shouldAwaitRestore = true,
+  }) async {
+    try {
+      final isInitialized = await initFuture;
+      if (!isInitialized) return;
+
+      final isAuthorized = await isUserAuthorized();
+      if (!isAuthorized) return;
+      if (!shouldRestore) return;
+      await restore(shouldAwaitRestore: shouldAwaitRestore);
+      // ignore: avoid_catches_without_on_clauses
+    } catch (e) {
+      // If we can't check subscription status, assume no active subscription
+      return;
+    }
+  }
 }
 
 extension on MonetizationFoundation {
@@ -191,6 +226,7 @@ extension on MonetizationFoundation {
   RestorePurchasesCommand get _restorePurchasesCommand =>
       RestorePurchasesCommand(
         purchaseProvider: purchaseProvider,
+        purchasesLocalApi: purchasesLocalApi,
         handlePurchaseUpdateCommand: _handlePurchaseUpdateCommand,
         subscriptionStatusResource: srcs.subscriptionStatus,
       );
@@ -200,6 +236,7 @@ extension on MonetizationFoundation {
         activeSubscriptionResource: srcs.activeSubscription,
         subscriptionStatusResource: srcs.subscriptionStatus,
         confirmPurchaseCommand: _confirmPurchaseCommand,
+        purchasesLocalApi: purchasesLocalApi,
       );
 
   LoadSubscriptionsCommand get _loadSubscriptionsCommand =>
