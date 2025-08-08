@@ -186,7 +186,7 @@ packages:
     source: hosted
     version: "1.1.1"
   from_json_to_json:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: from_json_to_json
       sha256: "5597cc68dbbe8d2439f6f8d41609a3fda099f9d67b9a84c5e9df2c58ea9f1b9d"
@@ -201,22 +201,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.0.0"
-  git:
-    dependency: "direct main"
-    description:
-      name: git
-      sha256: de678c6f0d5e2761c2c3643d31b1010883cc4d3e352949ef7c15f98f27d676ea
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.3.1"
-  github:
-    dependency: "direct main"
-    description:
-      name: github
-      sha256: c88cd9f11e131a05b1910e1c742c80e6dc7708701884d1fcf28147fc95933aa8
-      url: "https://pub.dev"
-    source: hosted
-    version: "9.25.0"
   glob:
     dependency: transitive
     description:
@@ -234,7 +218,7 @@ packages:
     source: hosted
     version: "2.3.2"
   http:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: http
       sha256: "2c11f3f94c687ee9bad77c171151672986360b2b001d109814ee7140b2cf261b"
@@ -314,7 +298,7 @@ packages:
     source: hosted
     version: "0.12.17"
   meta:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: meta
       sha256: "23f08335362185a5ea2ad3a4e597f1375e78bce8a040df5c600c8d3552ef2394"
@@ -354,7 +338,7 @@ packages:
     source: hosted
     version: "2.2.0"
   path:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: path
       sha256: "75cca69d1490965be98c73ceaea117e8a04dd21217b37b292c9ddbec0d955bc5"
@@ -385,14 +369,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.5.0"
-  retry:
-    dependency: "direct main"
-    description:
-      name: retry
-      sha256: "822e118d5b3aafed083109c72d5f484c6dc66707885e07c0fbcb8b986bba7efc"
-      url: "https://pub.dev"
-    source: hosted
-    version: "3.1.2"
   shelf:
     dependency: transitive
     description:

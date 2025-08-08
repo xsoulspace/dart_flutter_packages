@@ -1,4 +1,5 @@
 import 'package:universal_storage_interface/universal_storage_interface.dart';
+
 import 'storage_provider_registry.dart';
 import 'storage_service.dart';
 
@@ -16,10 +17,6 @@ mixin StorageFactory {
     await provider.initWithConfig(config);
     return StorageService(provider);
   }
-
-  /// Creates the appropriate storage provider based on config type
-  static StorageProvider _createProvider(final StorageConfig config) =>
-      StorageProviderRegistry.resolve(config);
 
   /// Creates a FileSystem storage service
   static Future<StorageService> createFileSystem(
