@@ -1,10 +1,7 @@
 import 'dart:io';
 
 import 'package:path/path.dart' as path;
-
-import '../models/models.dart';
-import '../storage_exceptions.dart';
-import '../storage_provider.dart';
+import 'package:universal_storage_interface/universal_storage_interface.dart';
 
 /// {@template filesystem_storage_provider}
 /// A storage provider that uses the local file system for storage operations.
@@ -41,7 +38,7 @@ class FileSystemStorageProvider extends StorageProvider {
   Future<bool> isAuthenticated() async => _isInitialized && _basePath != null;
 
   @override
-  Future<String> createFile(
+  Future<FileOperationResult> createFile(
     final String filePath,
     final String content, {
     final String? commitMessage,
@@ -65,7 +62,7 @@ class FileSystemStorageProvider extends StorageProvider {
     }
 
     await file.writeAsString(content);
-    return fullPath;
+    return FileOperationResult.created(path: fullPath);
   }
 
   @override
@@ -87,7 +84,7 @@ class FileSystemStorageProvider extends StorageProvider {
   }
 
   @override
-  Future<String> updateFile(
+  Future<FileOperationResult> updateFile(
     final String filePath,
     final String content, {
     final String? commitMessage,
@@ -102,11 +99,11 @@ class FileSystemStorageProvider extends StorageProvider {
     }
 
     await file.writeAsString(content);
-    return fullPath;
+    return FileOperationResult.updated(path: fullPath);
   }
 
   @override
-  Future<void> deleteFile(
+  Future<FileOperationResult> deleteFile(
     final String filePath, {
     final String? commitMessage,
   }) async {
@@ -120,10 +117,11 @@ class FileSystemStorageProvider extends StorageProvider {
     }
 
     await file.delete();
+    return FileOperationResult.deleted(path: fullPath);
   }
 
   @override
-  Future<List<String>> listFiles(final String directoryPath) async {
+  Future<List<FileEntry>> listDirectory(final String directoryPath) async {
     _ensureInitialized();
 
     final fullPath = path.join(_basePath!, directoryPath);
@@ -131,18 +129,24 @@ class FileSystemStorageProvider extends StorageProvider {
 
     if (!directory.existsSync()) {
       // Align provider behavior: return empty list for missing directories
-      return <String>[];
+      return <FileEntry>[];
     }
 
     final entities = await directory.list().toList();
-    final relativePaths = <String>[];
-
+    final items = <FileEntry>[];
     for (final entity in entities) {
-      final relativePath = path.relative(entity.path, from: _basePath);
-      relativePaths.add(relativePath);
+      final stat = await entity.stat();
+      final name = path.relative(entity.path, from: _basePath);
+      items.add(
+        FileEntry(
+          name: name,
+          isDirectory: stat.type == FileSystemEntityType.directory,
+          size: stat.size,
+          modifiedAt: stat.modified,
+        ),
+      );
     }
-
-    return relativePaths;
+    return items;
   }
 
   @override

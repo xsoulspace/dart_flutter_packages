@@ -6,11 +6,7 @@ import 'dart:io';
 import 'package:git/git.dart';
 import 'package:path/path.dart' as path;
 import 'package:retry/retry.dart';
-
-import '../capabilities/version_control_service.dart';
-import '../models/models.dart';
-import '../storage_exceptions.dart';
-import '../storage_provider.dart';
+import 'package:universal_storage_interface/universal_storage_interface.dart';
 
 /// {@template offline_git_storage_provider}
 /// A storage provider that uses a local Git repository for storage operations
@@ -23,7 +19,7 @@ class OfflineGitStorageProvider extends StorageProvider
   /// {@macro offline_git_storage_provider}
   OfflineGitStorageProvider();
 
-  var _config = OfflineGitConfig.empty;
+  var _config = OfflineGitConfig();
   GitDir? _gitDir;
   String get _localPath => _config.localPath;
   VcBranchName get _branchName => _config.branchName;
@@ -60,7 +56,7 @@ class OfflineGitStorageProvider extends StorageProvider
   Future<bool> isAuthenticated() async => _isInitialized && _gitDir != null;
 
   @override
-  Future<String> createFile(
+  Future<FileOperationResult> createFile(
     final String filePath,
     final String content, {
     final String? commitMessage,
@@ -91,8 +87,7 @@ class OfflineGitStorageProvider extends StorageProvider
 
     final message = commitMessage ?? 'Create file: $filePath';
     final commitHash = await _commitChanges(message);
-
-    return commitHash;
+    return FileOperationResult.created(path: fullPath, revisionId: commitHash);
   }
 
   @override
@@ -115,7 +110,7 @@ class OfflineGitStorageProvider extends StorageProvider
   }
 
   @override
-  Future<String> updateFile(
+  Future<FileOperationResult> updateFile(
     final String filePath,
     final String content, {
     final String? commitMessage,
@@ -137,12 +132,11 @@ class OfflineGitStorageProvider extends StorageProvider
 
     final message = commitMessage ?? 'Update file: $filePath';
     final commitHash = await _commitChanges(message);
-
-    return commitHash;
+    return FileOperationResult.updated(path: fullPath, revisionId: commitHash);
   }
 
   @override
-  Future<void> deleteFile(
+  Future<FileOperationResult> deleteFile(
     final String filePath, {
     final String? commitMessage,
   }) async {
@@ -159,11 +153,12 @@ class OfflineGitStorageProvider extends StorageProvider
     await _gitDir!.runCommand(['rm', filePath]);
 
     final message = commitMessage ?? 'Delete file: $filePath';
-    await _commitChanges(message);
+    final commitHash = await _commitChanges(message);
+    return FileOperationResult.deleted(path: fullPath, revisionId: commitHash);
   }
 
   @override
-  Future<List<String>> listFiles(final String directoryPath) async {
+  Future<List<FileEntry>> listDirectory(final String directoryPath) async {
     _ensureInitialized();
 
     final fullPath = path.join(_localPath, directoryPath);
@@ -176,19 +171,23 @@ class OfflineGitStorageProvider extends StorageProvider
     }
 
     final entities = await directory.list().toList();
-    final relativePaths = <String>[];
-
+    final items = <FileEntry>[];
     for (final entity in entities) {
-      final relativePath = path.relative(entity.path, from: _localPath);
-
-      // Skip .git directory and other hidden files/directories
-      if (!relativePath.startsWith('.git') &&
-          !path.basename(relativePath).startsWith('.')) {
-        relativePaths.add(relativePath);
+      final rel = path.relative(entity.path, from: _localPath);
+      if (rel.startsWith('.git') || path.basename(rel).startsWith('.')) {
+        continue;
       }
+      final stat = await entity.stat();
+      items.add(
+        FileEntry(
+          name: rel,
+          isDirectory: stat.type == FileSystemEntityType.directory,
+          size: stat.size,
+          modifiedAt: stat.modified,
+        ),
+      );
     }
-
-    return relativePaths;
+    return items;
   }
 
   @override
@@ -256,13 +255,13 @@ class OfflineGitStorageProvider extends StorageProvider
       ]);
       final existingUrl = result.stdout.toString().trim();
 
-      if (existingUrl != _remoteUrl!.value) {
+      if (existingUrl != _remoteUrl.value) {
         // Update remote URL if different
         await _gitDir!.runCommand([
           'remote',
           'set-url',
           _remoteName,
-          _remoteUrl!.value,
+          _remoteUrl.value,
         ]);
       }
     } catch (e, stackTrace) {
@@ -273,7 +272,7 @@ class OfflineGitStorageProvider extends StorageProvider
           'remote',
           'add',
           _remoteName,
-          _remoteUrl!.value,
+          _remoteUrl.value,
         ]);
       } catch (e) {
         throw RemoteNotFoundException('Failed to add remote $_remoteName: $e');
@@ -332,7 +331,7 @@ class OfflineGitStorageProvider extends StorageProvider
     try {
       switch (strategy) {
         case 'merge':
-          await _gitDir!.runCommand(['pull', _remoteName, _branchName!.value]);
+          await _gitDir!.runCommand(['pull', _remoteName, _branchName.value]);
         case 'rebase':
           await _gitDir!.runCommand([
             'pull',
@@ -474,7 +473,7 @@ class OfflineGitStorageProvider extends StorageProvider
             _branchName.value,
           ]);
         case 'fail-on-conflict':
-          await _gitDir!.runCommand(['push', _remoteName, _branchName!.value]);
+          await _gitDir!.runCommand(['push', _remoteName, _branchName.value]);
         default:
           await _pushWithRebaseLocal();
       }
@@ -522,11 +521,7 @@ class OfflineGitStorageProvider extends StorageProvider
             // Handle rebase conflicts with client-wins strategy
             await _handlePullConflicts();
             await _gitDir!.runCommand(['rebase', '--continue']);
-            await _gitDir!.runCommand([
-              'push',
-              _remoteName,
-              _branchName!.value,
-            ]);
+            await _gitDir!.runCommand(['push', _remoteName, _branchName.value]);
           } else {
             throw GitConflictException('Rebase operation failed: $rebaseError');
           }

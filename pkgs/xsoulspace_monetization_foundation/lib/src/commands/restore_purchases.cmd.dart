@@ -70,16 +70,12 @@ class RestorePurchasesCommand {
   /// the purchase update flow.
   /// {@endtemplate}
   Future<void> execute({final bool shouldAwaitRestore = true}) async {
-    subscriptionStatusResource.set(SubscriptionStatus.restoring);
-
-    final activeSubscription = await purchasesLocalApi.getActiveSubscription();
-    if (activeSubscription.isActive) {
-      // since we have an active subscription and it is not expired,
-      // we can run the rest of the command silently
-      subscriptionStatusResource.set(SubscriptionStatus.subscribed);
+    // Do not downgrade status when already subscribed locally; just run restore.
+    if (!subscriptionStatusResource.isSubscribed) {
+      subscriptionStatusResource.set(SubscriptionStatus.restoring);
     }
 
-    if (shouldAwaitRestore || !activeSubscription.isActive) {
+    if (shouldAwaitRestore) {
       await _runStoreRestore();
     } else {
       unawaited(_runStoreRestore());

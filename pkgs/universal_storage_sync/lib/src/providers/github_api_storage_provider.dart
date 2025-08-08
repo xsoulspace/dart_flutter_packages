@@ -5,11 +5,7 @@ import 'dart:developer';
 
 import 'package:github/github.dart';
 import 'package:retry/retry.dart';
-
-import '../capabilities/version_control_service.dart';
-import '../models/models.dart';
-import '../storage_exceptions.dart';
-import '../storage_provider.dart';
+import 'package:universal_storage_interface/universal_storage_interface.dart';
 
 /// {@template github_api_storage_provider}
 /// A storage provider that uses GitHub API directly for file operations.
@@ -29,7 +25,12 @@ class GitHubApiStorageProvider extends StorageProvider
     implements VersionControlService {
   /// {@macro github_api_storage_provider}
   GitHubApiStorageProvider();
-  var _config = GitHubApiConfig.empty;
+  var _config = GitHubApiConfig(
+    authToken: '',
+    repositoryOwner: VcRepositoryOwner(''),
+    repositoryName: VcRepositoryName(''),
+    branchName: VcBranchName(''),
+  );
   GitHub? _github;
   String? get _authToken => _config.authToken;
   VcRepositoryOwner get _repositoryOwner => _config.repositoryOwner;
@@ -240,7 +241,7 @@ class GitHubApiStorageProvider extends StorageProvider
   }
 
   @override
-  Future<String> createFile(
+  Future<FileOperationResult> createFile(
     final String filePath,
     final String content, {
     final String? commitMessage,
@@ -271,7 +272,8 @@ class GitHubApiStorageProvider extends StorageProvider
         maxAttempts: 3,
       );
 
-      return createResult.commit?.sha ?? '';
+      final sha = createResult.commit?.sha ?? '';
+      return FileOperationResult.created(path: filePath, revisionId: sha);
     } catch (e) {
       throw _handleGitHubError(e, 'Failed to create file: $filePath');
     }
@@ -296,7 +298,7 @@ class GitHubApiStorageProvider extends StorageProvider
   }
 
   @override
-  Future<String> updateFile(
+  Future<FileOperationResult> updateFile(
     final String filePath,
     final String content, {
     final String? commitMessage,
@@ -325,14 +327,15 @@ class GitHubApiStorageProvider extends StorageProvider
         maxAttempts: 3,
       );
 
-      return updateResult.commit?.sha ?? '';
+      final sha = updateResult.commit?.sha ?? '';
+      return FileOperationResult.updated(path: filePath, revisionId: sha);
     } catch (e) {
       throw _handleGitHubError(e, 'Failed to update file: $filePath');
     }
   }
 
   @override
-  Future<void> deleteFile(
+  Future<FileOperationResult> deleteFile(
     final String filePath, {
     final String? commitMessage,
   }) async {
@@ -347,7 +350,7 @@ class GitHubApiStorageProvider extends StorageProvider
 
       // Delete the file
       final message = commitMessage ?? 'Delete file: $filePath';
-      await retry(
+      final delResult = await retry(
         () => _github!.repositories.deleteFile(
           _repositorySlug,
           filePath,
@@ -358,13 +361,15 @@ class GitHubApiStorageProvider extends StorageProvider
         retryIf: _isRetryableError,
         maxAttempts: 3,
       );
+      // GitHub delete API doesn't return a commit SHA directly; follow-up could fetch latest
+      return FileOperationResult.deleted(path: filePath);
     } catch (e) {
       throw _handleGitHubError(e, 'Failed to delete file: $filePath');
     }
   }
 
   @override
-  Future<List<String>> listFiles(final String directoryPath) async {
+  Future<List<FileEntry>> listDirectory(final String directoryPath) async {
     _ensureInitialized();
 
     try {
@@ -379,10 +384,25 @@ class GitHubApiStorageProvider extends StorageProvider
       );
 
       if (contents.isFile) {
-        return [contents.file!.name!];
-      } else {
-        return contents.tree!.map((final item) => item.name!).toList();
+        final f = contents.file!;
+        return [
+          FileEntry(
+            name: f.name ?? '',
+            isDirectory: false,
+            size: f.size ?? 0,
+            modifiedAt: DateTime.fromMillisecondsSinceEpoch(0),
+          ),
+        ];
       }
+      return contents.tree!
+          .map(
+            (final item) => FileEntry(
+              name: item.name ?? '',
+              isDirectory: item.type == 'dir',
+              modifiedAt: DateTime.fromMillisecondsSinceEpoch(0),
+            ),
+          )
+          .toList();
     } catch (e) {
       if (e.toString().contains('404') || e.toString().contains('Not Found')) {
         return [];

@@ -4,6 +4,7 @@ description: A cross-platform Dart package providing unified API for file
   control.
 version: 0.1.0-dev.3
 homepage: https://github.com/xsoulspace/universal_storage_sync
+publish_to: none
 
 environment:
   sdk: ">=3.8.1 <4.0.0"
@@ -16,6 +17,8 @@ dependencies:
   meta: ^1.16.0
   path: ^1.9.1
   retry: ^3.1.2
+  universal_storage_interface:
+    path: ../universal_storage_interface
 
 dev_dependencies:
   build_runner: ^2.5.2
