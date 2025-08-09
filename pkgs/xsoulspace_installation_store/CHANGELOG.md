@@ -1,3 +1,7 @@
+## 0.1.1
+
+- fix: conditional export from web to js_interop
+
 ## 0.1.0
 
 - Initial release.
