@@ -28,7 +28,7 @@ Add the dependency to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  universal_storage_sync_utils: ^0.1.0-dev.1
+  universal_storage_sync_utils: ^0.1.0-dev.3
 ```
 
 ## Usage

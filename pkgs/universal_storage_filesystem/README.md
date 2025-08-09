@@ -6,8 +6,8 @@ Filesystem provider implementing `StorageProvider` using the local filesystem.
 
 ```yaml
 dependencies:
-  universal_storage_interface: ^0.1.0-dev.2
-  universal_storage_filesystem: ^0.1.0-dev.2
+  universal_storage_interface: ^0.1.0-dev.3
+  universal_storage_filesystem: ^0.1.0-dev.3
 ```
 
 ## Usage

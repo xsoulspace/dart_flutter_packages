@@ -1,7 +1,10 @@
 name: universal_storage_filesystem
 description: Filesystem storage provider for universal_storage_interface.
 version: 0.1.0-dev.3
-publish_to: none
+homepage: https://github.com/xsoulspace/universal_storage_sync
+repository: https://github.com/xsoulspace/universal_storage_sync
+issue_tracker: https://github.com/xsoulspace/universal_storage_sync/issues
+documentation: https://github.com/xsoulspace/universal_storage_sync/tree/main/pkgs/universal_storage_filesystem
 
 environment:
   sdk: ">=3.8.1 <4.0.0"

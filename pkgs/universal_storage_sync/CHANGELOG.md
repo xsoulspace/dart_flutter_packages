@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-dev.3] - 2025-08-09
+
+### Changed
+
+- Stabilized APIs for initial public release
+- Promoted previous `-dev` changes to stable
+- Updated documentation and links for publication
+
 ## [0.1.0-dev.3] - 2025-06-27
 
 - feat: Add `FilePathConfig` and `FilePath` models for storing file path and macOS bookmark.
