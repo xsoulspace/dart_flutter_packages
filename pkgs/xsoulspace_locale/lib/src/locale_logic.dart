@@ -4,7 +4,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:intl/intl_standalone.dart'
-    if (dart.library.web) 'package:intl/intl_browser.dart';
+    if (dart.library.js_interop) 'package:intl/intl_browser.dart';
 
 import 'localization.dart';
 

@@ -1,5 +1,4 @@
-import '../models/models.dart';
-import '../storage_exceptions.dart';
+import 'package:universal_storage_interface/universal_storage_interface.dart';
 
 /// {@template remote_sync_capable}
 /// Mixin for storage providers that support remote synchronization.

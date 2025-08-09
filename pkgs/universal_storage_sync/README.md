@@ -1,84 +1,103 @@
 # Universal Storage Sync
 
-A cross-platform Dart package providing a unified API for file storage operations with support for local filesystem, GitHub API, and Git-based version control.
+A lightweight foundation that provides a unified, type-safe API for file storage operations across multiple providers (Filesystem, GitHub API, Offline Git).
+
+Important: Provider implementations live in dedicated packages. Add and register the providers you want to use in your app:
+
+- Filesystem: `universal_storage_filesystem`
+- GitHub API: `universal_storage_github_api`
+- Offline Git: `universal_storage_git_offline`
 
 ## Features
 
-- **Unified API**: Single interface for different storage providers through `StorageService`
-- **Cross-platform**: Works on desktop, mobile, and web platforms
-- **Multiple Providers**: FileSystem, GitHub API, and Offline Git storage
-- **Type-safe Configuration**: Strongly typed configuration classes with validation
-- **Smart Provider Selection**: Automatic recommendations based on requirements
-- **Version Control Ready**: Built-in support for Git-based storage with commit messages
-- **Offline-first**: Local operations with optional remote synchronization
-- **Retry Logic**: Built-in retry mechanisms for network operations
-- **Path Normalization**: Cross-platform path handling
+- **Unified API**: Use `StorageService` regardless of provider
+- **Type-safe configuration**: `FileSystemConfig`, `GitHubApiConfig`, `OfflineGitConfig`
+- **Factory + Registry**: Create ready-to-use services via `StorageFactory` after provider registration
+- **Version-control aware**: Commit messages, restore, and sync (for Git-based providers)
+- **Retry + paths**: Helpers for retryable ops and cross-platform path normalization
 
 ## Installation
 
-Add this to your package's `pubspec.yaml` file:
+Add the core package plus the providers you need. While this package is in active development, use path or git dependencies as appropriate.
 
 ```yaml
 dependencies:
-  universal_storage_sync: ^1.0.0
+  universal_storage_sync:
+    path: ../universal_storage_sync
+
+  # Choose one or more providers
+  universal_storage_filesystem:
+    path: ../universal_storage_filesystem
+  universal_storage_github_api:
+    path: ../universal_storage_github_api
+  universal_storage_git_offline:
+    path: ../universal_storage_git_offline
 ```
 
-Then run:
+After adding a provider, register it at app startup so `StorageFactory` can resolve it:
 
-```bash
-dart pub get
+```dart
+import 'package:universal_storage_sync/universal_storage_sync.dart';
+import 'package:universal_storage_filesystem/universal_storage_filesystem.dart';
+import 'package:universal_storage_github_api/universal_storage_github_api.dart';
+import 'package:universal_storage_git_offline/universal_storage_git_offline.dart';
+
+void bootstrapStorageRegistry() {
+  StorageProviderRegistry.register<FileSystemConfig>(
+    () => FileSystemStorageProvider(),
+  );
+  StorageProviderRegistry.register<GitHubApiConfig>(
+    () => GitHubApiStorageProvider(),
+  );
+  StorageProviderRegistry.register<OfflineGitConfig>(
+    () => OfflineGitStorageProvider(),
+  );
+}
 ```
 
 ## Quick Start
 
-### Basic Usage with FileSystem Provider
+### Option A: Direct provider (simple)
 
 ```dart
+import 'package:universal_storage_interface/universal_storage_interface.dart';
+import 'package:universal_storage_filesystem/universal_storage_filesystem.dart';
 import 'package:universal_storage_sync/universal_storage_sync.dart';
 
 Future<void> main() async {
-  // Create and configure the storage service
-  final provider = FileSystemStorageProvider();
-  final storageService = StorageService(provider);
+  final service = StorageService(FileSystemStorageProvider());
+  await service.initializeWithConfig(FileSystemConfig(basePath: '/path/to/storage'));
 
-  // Initialize with configuration
-  final config = FileSystemConfig(basePath: '/path/to/storage');
-  await storageService.initializeWithConfig(config);
+  await service.saveFile('hello.txt', 'Hello, World!');
+  final content = await service.readFile('hello.txt');
+  print(content);
 
-  // File operations
-  await storageService.saveFile('hello.txt', 'Hello, World!');
-  final content = await storageService.readFile('hello.txt');
-  print(content); // Output: Hello, World!
-
-  // List files
-  final files = await storageService.listDirectory('.');
-  print('Files: $files');
-
-  // Delete file
-  await storageService.removeFile('hello.txt');
+  final entries = await service.listDirectory('.');
+  print(entries.map((e) => e.name).toList());
 }
 ```
 
-### Using StorageFactory (Recommended)
+### Option B: Factory + registry (recommended for apps)
 
 ```dart
 import 'package:universal_storage_sync/universal_storage_sync.dart';
+import 'package:universal_storage_filesystem/universal_storage_filesystem.dart';
 
 Future<void> main() async {
-  // Create service using factory - automatically initialized
-  final config = FileSystemConfig(basePath: '/path/to/storage');
-  final storageService = await StorageFactory.create(config);
+  // one-time registration in your app bootstrap
+  StorageProviderRegistry.register<FileSystemConfig>(() => FileSystemStorageProvider());
 
-  // Ready to use immediately
-  await storageService.saveFile('hello.txt', 'Hello, World!');
-  final content = await storageService.readFile('hello.txt');
-  print(content);
+  final service = await StorageFactory.create(
+    FileSystemConfig(basePath: '/path/to/storage'),
+  );
+
+  await service.saveFile('hello.txt', 'Hello, World!');
 }
 ```
 
 ## Real-World Example: Todo App
 
-Here's how the library is used in a real Flutter todo application:
+How this foundation is used in a Flutter todo app (simplified):
 
 ```dart
 import 'package:universal_storage_sync/universal_storage_sync.dart';
@@ -95,12 +114,6 @@ class TodoAppState extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Validate directory
-      final directory = Directory(pathValue);
-      if (!await directory.exists()) {
-        throw Exception('Directory does not exist: $pathValue');
-      }
-
       // Initialize storage
       final config = FileSystemConfig(basePath: pathValue);
       _storageService = StorageService(FileSystemStorageProvider());
@@ -122,12 +135,12 @@ class TodoAppState extends ChangeNotifier {
     if (_storageService == null) return;
 
     try {
-      final fileList = await _storageService!.listDirectory('todos');
+      final entries = await _storageService!.listDirectory('todos');
       final loadedTodos = <Todo>[];
 
-      for (final fileName in fileList) {
-        if (fileName.endsWith('.yaml')) {
-          final content = await _storageService!.readFile(fileName);
+      for (final entry in entries) {
+        if (!entry.isDirectory && entry.name.endsWith('.yaml')) {
+          final content = await _storageService!.readFile(entry.name);
           if (content != null) {
             final todoData = loadYaml(content) as Map;
             loadedTodos.add(Todo.fromJson(Map<String, dynamic>.from(todoData)));
@@ -197,42 +210,30 @@ class TodoAppState extends ChangeNotifier {
 
 ### 🏠 FileSystem Provider
 
-Local file system storage with excellent performance.
+Local filesystem. High performance. Not supported on web.
 
 ```dart
-final config = FileSystemConfig(
-  basePath: '/path/to/data',
-  databaseName: 'app_db', // For web platforms
-);
-
-final service = await StorageFactory.createFileSystem(config);
+final service = StorageService(FileSystemStorageProvider());
+await service.initializeWithConfig(FileSystemConfig(basePath: '/path/to/data'));
 ```
 
 **Best for:** Desktop/mobile apps, offline-first, high performance local storage
 
-**Features:**
-
-- Fast local file operations
-- Cross-platform path handling
-- Web support via IndexedDB
-- No external dependencies
-
 ### 🌐 GitHub API Provider
 
-Cloud storage using GitHub repositories via REST API.
+Cloud storage via GitHub REST API. No local Git required.
 
 ```dart
-final config = GitHubApiConfig(
+final service = StorageService(GitHubApiStorageProvider());
+await service.initializeWithConfig(GitHubApiConfig(
   authToken: 'ghp_your_token_here',
-  repositoryOwner: 'your-username',
-  repositoryName: 'your-repo',
-  branchName: 'main',
-);
-
-final service = await StorageFactory.createGitHubApi(config);
+  repositoryOwner: const VcRepositoryOwner('your-username'),
+  repositoryName: const VcRepositoryName('your-repo'),
+  branchName: VcBranchName.main,
+));
 ```
 
-**Best for:** Web apps, collaboration, cloud sync, no local Git required
+**Best for:** Web apps, collaboration, cloud sync
 
 **Features:**
 
@@ -244,19 +245,18 @@ final service = await StorageFactory.createGitHubApi(config);
 
 ### 🔄 Offline Git Provider
 
-Local Git repository with optional remote synchronization.
+Local Git repository with optional remote sync.
 
 ```dart
-final config = OfflineGitConfig(
+final service = StorageService(OfflineGitStorageProvider());
+await service.initializeWithConfig(OfflineGitConfig(
   localPath: '/path/to/repo',
-  branchName: 'main',
+  branchName: VcBranchName.main,
   authorName: 'Your Name',
-  authorEmail: 'your@email.com',
-  remoteUrl: 'https://github.com/user/repo.git',
+  authorEmail: 'you@example.com',
+  remoteUrl: const VcUrl('https://github.com/user/repo.git'),
   sshKeyPath: '/path/to/ssh/key',
-);
-
-final service = await StorageFactory.createOfflineGit(config);
+));
 ```
 
 **Best for:** Desktop apps, full Git features, offline capability, advanced workflows
@@ -277,45 +277,40 @@ final service = await StorageFactory.createOfflineGit(config);
 | Version Control  | ❌ None    | ✅ Git       | ✅ Full Git    |
 | Collaboration    | ❌ None    | ✅ Excellent | ✅ With Remote |
 | Setup Complexity | 🟢 Simple  | 🟡 Medium    | 🔴 Complex     |
-| Web Support      | 🟡 Limited | ✅ Full      | ❌ None        |
+| Web Support      | ❌ None    | ✅ Full      | ❌ None        |
 | Performance      | 🟢 Fastest | 🟡 Network   | 🟢 Fast        |
 
 ## StorageService API
 
 The main interface for all storage operations:
 
-### Core Methods
+### Core Methods (current signatures)
 
 ```dart
 class StorageService {
-  /// Initialize with typed configuration
   Future<void> initializeWithConfig(StorageConfig config);
 
-  /// Save file with optional commit message
-  Future<String> saveFile(String path, String content, {String? message});
+  Future<FileOperationResult> saveFile(
+    String path,
+    String content, {
+    String? message,
+  });
 
-  /// Read file content, returns null if not found
   Future<String?> readFile(String path);
 
-  /// Remove file with optional commit message
-  Future<void> removeFile(String path, {String? message});
+  Future<FileOperationResult> removeFile(String path, {String? message});
 
-  /// List files in directory
-  Future<List<String>> listDirectory(String path);
+  Future<List<FileEntry>> listDirectory(String path);
 
-  /// Restore file to previous version
   Future<void> restoreData(String path, {String? versionId});
 
-  /// Sync with remote (if supported)
   Future<void> syncRemote({
     String? pullMergeStrategy,
     String? pushConflictStrategy,
   });
 
-  /// Check authentication status
   Future<bool> isAuthenticated();
 
-  /// Access underlying provider
   StorageProvider get provider;
 }
 ```
@@ -324,33 +319,30 @@ class StorageService {
 
 ```dart
 // FileSystem configuration
-final fsConfig = FileSystemConfig(
-  basePath: '/path/to/data',
-  databaseName: 'app_db', // For web
-);
+final fsConfig = FileSystemConfig(basePath: '/path/to/data');
 
 // GitHub API configuration
 final ghConfig = GitHubApiConfig(
   authToken: 'token',
-  repositoryOwner: 'owner',
-  repositoryName: 'repo',
-  branchName: 'main',
+  repositoryOwner: const VcRepositoryOwner('owner'),
+  repositoryName: const VcRepositoryName('repo'),
+  branchName: VcBranchName.main,
 );
 
 // Offline Git configuration
 final gitConfig = OfflineGitConfig(
   localPath: '/repo/path',
-  branchName: 'main',
+  branchName: VcBranchName.main,
   authorName: 'Author Name',
   authorEmail: 'author@email.com',
-  remoteUrl: 'https://github.com/user/repo.git',
+  remoteUrl: const VcUrl('https://github.com/user/repo.git'),
   sshKeyPath: '/path/to/key', // or httpsToken: 'token'
 );
 ```
 
 ## Smart Provider Selection
 
-Let the library recommend the best provider for your needs:
+Let the library recommend a provider based on your requirements (tutorial utility):
 
 ```dart
 // Define your requirements
@@ -401,7 +393,7 @@ final joined = PathNormalizer.join(['docs', 'api', 'index.md'], ProviderType.git
 
 ### Retry Operations
 
-Built-in retry logic for robust operations:
+Retry helpers for robust operations (useful for network providers):
 
 ```dart
 // GitHub operations automatically retry on network errors
@@ -420,7 +412,7 @@ await RetryableOperation.execute(
 
 ### Version Control Features
 
-When using Git-based providers, you can leverage version control features:
+With Git-based providers you can leverage VC features:
 
 ```dart
 // Save with meaningful commit messages
@@ -442,7 +434,7 @@ await storageService.syncRemote(
 
 ## Error Handling
 
-Comprehensive exception hierarchy:
+Unified exception hierarchy (thrown by providers):
 
 ```dart
 try {
@@ -519,7 +511,7 @@ Future<void> loadData() async {
 
 ## Testing
 
-### Mock Storage for Testing
+### Simple test using FileSystem provider
 
 ```dart
 // Create a test storage service
@@ -536,31 +528,31 @@ test('should save and retrieve data', () async {
 
 ## Platform Support
 
-| Platform | FileSystem   | GitHub API | Offline Git |
-| -------- | ------------ | ---------- | ----------- |
-| Desktop  | ✅ Full      | ✅ Full    | ✅ Full     |
-| Mobile   | ✅ Full      | ✅ Full    | ✅ Limited  |
-| Web      | ❌ IndexedDB | ✅ Full    | ❌ None     |
+| Platform | FileSystem | GitHub API | Offline Git |
+| -------- | ---------- | ---------- | ----------- |
+| Desktop  | ✅ Full    | ✅ Full    | ✅ Full     |
+| Mobile   | ✅ Full    | ✅ Full    | ✅ Limited  |
+| Web      | ❌ None    | ✅ Full    | ❌ None     |
 
 ## Requirements
 
-- Dart SDK: `>=3.0.0 <4.0.0`
-- Flutter: `>=3.0.0` (for Flutter projects)
-- For Git operations: Git CLI installed and in PATH
+- Dart SDK: `>=3.8.1 <4.0.0`
+- Flutter (optional): `>=3.0.0`
+- For Git operations: Git CLI installed and on PATH
 
 ## Examples
 
-Check out the comprehensive examples in the `example/` directory:
+See `example/` for runnable samples:
 
-- **`todo_app/`** - Complete Flutter todo application
-- **`basic_usage.dart`** - Simple file operations
-- **`github_api_usage.dart`** - GitHub API integration
-- **`git_usage.dart`** - Git-based storage
-- **`provider_factory_usage.dart`** - StorageFactory usage patterns
+- `basic_usage.dart` – Filesystem operations
+- `github_api_usage.dart` – GitHub API integration
+- `git_usage.dart` – Offline Git with VC features
+- `provider_factory_usage.dart` – Factory + registry patterns
+- `todo_file_app/` and `todo_git_app/` – Full Flutter examples
 
 ## Contributing
 
-Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+Contributions welcome. Please read the Contributing Guide before submitting PRs.
 
 ## License
 
@@ -568,4 +560,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-For more information and detailed documentation, visit our [GitHub repository](https://github.com/xsoulspace/universal_storage_sync).
+For more information and detailed documentation, visit the repository.

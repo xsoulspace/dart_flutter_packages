@@ -1,4 +1,4 @@
-import '../storage_exceptions.dart';
+import 'package:universal_storage_interface/universal_storage_interface.dart';
 
 /// {@template authenticated_provider}
 /// Mixin providing common authentication functionality for storage providers.

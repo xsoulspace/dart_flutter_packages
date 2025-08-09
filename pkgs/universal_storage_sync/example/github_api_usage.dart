@@ -1,6 +1,7 @@
 // ignore_for_file: avoid_print, avoid_catches_without_on_clauses
 
-import 'package:universal_storage_sync/universal_storage_sync.dart';
+import 'package:universal_storage_interface/universal_storage_interface.dart';
+import 'package:universal_storage_github_api/universal_storage_github_api.dart';
 
 /// Example demonstrating GitHub API Storage Provider usage.
 ///
@@ -41,12 +42,12 @@ Future<void> main() async {
     // Example 1: Create a new file
     print('\n📝 Creating a new file...');
     try {
-      final commitSha = await provider.createFile(
+      final result = await provider.createFile(
         'example.txt',
         'Hello from GitHub API Storage Provider!',
         commitMessage: 'Add example file via API',
       );
-      print('✅ File created successfully. Commit SHA: $commitSha');
+      print('✅ File created successfully. Commit SHA: ${result.revisionId}');
     } on FileAlreadyExistsException catch (e) {
       print('⚠️  File already exists: ${e.message}');
     }
@@ -63,12 +64,14 @@ Future<void> main() async {
     // Example 3: Update file content
     print('\n✏️  Updating file content...');
     try {
-      final updateSha = await provider.updateFile(
+      final updateResult = await provider.updateFile(
         'example.txt',
         'Updated content from GitHub API Storage Provider!',
         commitMessage: 'Update example file via API',
       );
-      print('✅ File updated successfully. Commit SHA: $updateSha');
+      print(
+        '✅ File updated successfully. Commit SHA: ${updateResult.revisionId}',
+      );
     } on FileNotFoundException catch (e) {
       print('❌ File not found for update: ${e.message}');
     }
@@ -76,13 +79,13 @@ Future<void> main() async {
     // Example 4: List files in repository root
     print('\n📂 Listing files in repository root...');
     try {
-      final files = await provider.listFiles('');
-      print('✅ Files found: ${files.length}');
-      for (final file in files.take(5)) {
-        print('  - $file');
+      final entries = await provider.listDirectory('');
+      print('✅ Files found: ${entries.length}');
+      for (final file in entries.take(5)) {
+        print('  - ${file.name}${file.isDirectory ? '/' : ''}');
       }
-      if (files.length > 5) {
-        print('  ... and ${files.length - 5} more files');
+      if (entries.length > 5) {
+        print('  ... and ${entries.length - 5} more files');
       }
     } catch (e) {
       print('❌ Error listing files: $e');

@@ -26,6 +26,7 @@ void main() {
       final cmd = env.makeHandlePurchaseUpdateCommand();
       await cmd.execute(aPurchase(active: true));
       expect(env.subscriptionStatus, isSubscribed());
+      expect(env.provider.completeCalls, 1);
     });
 
     test('canceled clears to free', () async {

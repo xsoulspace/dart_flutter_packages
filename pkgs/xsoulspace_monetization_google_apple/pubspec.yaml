@@ -11,6 +11,7 @@ dependencies:
   collection: ^1.19.1
   flutter:
     sdk: flutter
+  from_json_to_json: ^0.2.1
   in_app_purchase: ^3.2.0
   xsoulspace_monetization_interface:
     path: ../xsoulspace_monetization_interface

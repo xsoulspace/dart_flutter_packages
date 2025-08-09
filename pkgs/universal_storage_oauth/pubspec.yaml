@@ -1,7 +1,7 @@
 name: universal_storage_oauth
 description: OAuth provider for Git platforms (GitHub, GitLab, etc.) with secure
   credential management
-version: 0.1.0-dev.1
+version: 0.1.0-dev.2
 
 environment:
   sdk: ">=3.8.0 <4.0.0"
