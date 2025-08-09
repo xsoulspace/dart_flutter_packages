@@ -1,6 +1,6 @@
 name: universal_storage_filesystem
 description: Filesystem storage provider for universal_storage_interface.
-version: 0.1.0-dev.2
+version: 0.1.0-dev.3
 publish_to: none
 
 environment:
@@ -8,8 +8,7 @@ environment:
 
 dependencies:
   path: ^1.9.1
-  universal_storage_interface:
-    path: ../universal_storage_interface
+  universal_storage_interface: ^0.1.0-dev.3
 
 dev_dependencies:
   lints: ^6.0.0
