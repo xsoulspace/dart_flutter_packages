@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
-import '../storage_exceptions.dart';
+import 'package:universal_storage_interface/universal_storage_interface.dart';
 
 /// {@template retryable_operation}
 /// Utility class for executing operations with retry logic.

@@ -1,4 +1,4 @@
-import '../models/models.dart';
+import 'package:universal_storage_interface/universal_storage_interface.dart';
 
 /// Generic service interface for version-control repository operations.
 ///

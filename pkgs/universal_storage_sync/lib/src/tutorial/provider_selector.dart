@@ -1,4 +1,5 @@
-import '../models/models.dart';
+import 'package:universal_storage_interface/universal_storage_interface.dart';
+
 import '../utils/path_normalizer.dart';
 
 /// {@template provider_recommendation}
