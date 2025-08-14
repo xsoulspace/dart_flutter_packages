@@ -115,6 +115,7 @@ class RestorePurchasesCommand {
       subscriptionStatusResource.set(SubscriptionStatus.subscribed);
     } else {
       subscriptionStatusResource.set(SubscriptionStatus.free);
+      await purchasesLocalApi.clearActiveSubscription();
     }
   }
 }
