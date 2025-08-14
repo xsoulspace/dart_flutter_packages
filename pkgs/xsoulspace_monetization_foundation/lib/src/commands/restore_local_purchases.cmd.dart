@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
 import '../local_api/local_api.dart';
 import '../resources/resources.dart';
@@ -32,10 +33,14 @@ class RestoreLocalPurchasesCommand {
   /// {@endtemplate}
   Future<bool> execute() async {
     final activeSubscription = await purchasesLocalApi.getActiveSubscription();
-    if (activeSubscription.isActive) {
-      subscriptionStatusResource.set(SubscriptionStatus.subscribed);
-      return true;
-    }
-    return false;
+    subscriptionStatusResource.set(switch (activeSubscription.status) {
+      PurchaseStatus.pending => SubscriptionStatus.free,
+      PurchaseStatus.purchased => SubscriptionStatus.subscribed,
+      PurchaseStatus.pendingConfirmation =>
+        SubscriptionStatus.pendingPaymentConfirmation,
+      PurchaseStatus.canceled => SubscriptionStatus.free,
+      PurchaseStatus.error => SubscriptionStatus.free,
+    });
+    return activeSubscription.isActive;
   }
 }

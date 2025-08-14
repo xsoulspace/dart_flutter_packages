@@ -84,6 +84,8 @@ class MonetizationFoundation {
   /// 4. Update status based on initialization result
   /// 5. Load subscriptions if initialized
   /// 6. Restore purchases and set up listeners
+  ///
+  /// Always call `initLocal` before `init` to ensure local state is restored.
   /// {@endtemplate}
   Future<void> init({
     required final List<PurchaseProductId> productIds,
@@ -91,8 +93,12 @@ class MonetizationFoundation {
     final bool force = false,
   }) async {
     if (force) {
-      _initCompleter.complete(false);
-      _initLocalCompleter.complete(false);
+      if (!_initCompleter.isCompleted) {
+        _initCompleter.complete(false);
+      }
+      if (!_initLocalCompleter.isCompleted) {
+        _initLocalCompleter.complete(false);
+      }
       _initCompleter = Completer<bool>();
       _initLocalCompleter = Completer<bool>();
       unawaited(initLocal());
@@ -140,10 +146,14 @@ class MonetizationFoundation {
     try {
       srcs.status.setStatus(MonetizationStoreStatus.loading);
       await _restoreLocalPurchasesCommand.execute();
-      _initLocalCompleter.complete(true);
+      if (!_initLocalCompleter.isCompleted) {
+        _initLocalCompleter.complete(true);
+      }
       // ignore: avoid_catches_without_on_clauses
     } catch (_) {
-      _initLocalCompleter.complete(false);
+      if (!_initLocalCompleter.isCompleted) {
+        _initLocalCompleter.complete(false);
+      }
     }
   }
 
