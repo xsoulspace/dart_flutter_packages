@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
-import '../resources/resources.dart';
+import '../../xsoulspace_monetization_foundation.dart';
 
 /// {@template confirm_purchase_command}
 /// Command to confirm and complete purchase transactions.
@@ -37,11 +37,13 @@ class ConfirmPurchaseCommand {
     required this.activeSubscriptionResource,
     required this.subscriptionStatusResource,
     required this.purchasePaywallErrorResource,
+    required this.purchasesLocalApi,
   });
   final ActiveSubscriptionResource activeSubscriptionResource;
   final SubscriptionStatusResource subscriptionStatusResource;
   final PurchaseProvider purchaseProvider;
   final PurchasePaywallErrorResource purchasePaywallErrorResource;
+  final PurchasesLocalApi purchasesLocalApi;
 
   /// {@template execute_confirm_purchase}
   /// Executes the purchase confirmation process.
@@ -76,7 +78,7 @@ class ConfirmPurchaseCommand {
           );
           activeSubscriptionResource.set(purchaseInfo);
           subscriptionStatusResource.set(SubscriptionStatus.subscribed);
-
+          await purchasesLocalApi.saveActiveSubscription(purchaseInfo);
           return true;
         }
       case ResultType.failure:

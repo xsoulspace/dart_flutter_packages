@@ -111,6 +111,7 @@ class MonetizationTestEnv {
     activeSubscriptionResource: activeSubscription,
     subscriptionStatusResource: subscriptionStatus,
     purchasePaywallErrorResource: purchasePaywallError,
+    purchasesLocalApi: purchasesLocalApi,
   );
 
   HandlePurchaseUpdateCommand makeHandlePurchaseUpdateCommand() =>

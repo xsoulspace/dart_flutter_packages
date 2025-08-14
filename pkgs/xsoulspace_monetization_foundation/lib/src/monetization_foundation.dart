@@ -254,6 +254,7 @@ extension on MonetizationFoundation {
     activeSubscriptionResource: srcs.activeSubscription,
     subscriptionStatusResource: srcs.subscriptionStatus,
     purchasePaywallErrorResource: srcs.purchasePaywallError,
+    purchasesLocalApi: purchasesLocalApi,
   );
 
   CancelSubscriptionCommand get _cancelSubscriptionCommand =>
