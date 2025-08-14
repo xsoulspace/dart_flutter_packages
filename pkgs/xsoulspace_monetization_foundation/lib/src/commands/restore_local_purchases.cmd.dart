@@ -35,7 +35,9 @@ class RestoreLocalPurchasesCommand {
     final activeSubscription = await purchasesLocalApi.getActiveSubscription();
     subscriptionStatusResource.set(switch (activeSubscription.status) {
       PurchaseStatus.pending => SubscriptionStatus.free,
-      PurchaseStatus.purchased => SubscriptionStatus.subscribed,
+      PurchaseStatus.purchased when activeSubscription.isActive =>
+        SubscriptionStatus.subscribed,
+      PurchaseStatus.purchased => SubscriptionStatus.free,
       PurchaseStatus.pendingConfirmation =>
         SubscriptionStatus.pendingPaymentConfirmation,
       PurchaseStatus.canceled => SubscriptionStatus.free,
