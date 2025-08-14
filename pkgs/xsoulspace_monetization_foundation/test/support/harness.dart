@@ -111,6 +111,7 @@ class MonetizationTestEnv {
     activeSubscriptionResource: activeSubscription,
     subscriptionStatusResource: subscriptionStatus,
     purchasePaywallErrorResource: purchasePaywallError,
+    purchasesLocalApi: purchasesLocalApi,
   );
 
   HandlePurchaseUpdateCommand makeHandlePurchaseUpdateCommand() =>
@@ -121,20 +122,12 @@ class MonetizationTestEnv {
         purchasesLocalApi: purchasesLocalApi,
       );
 
-  RestorePurchasesCommand _makeRestorePurchasesCommand() =>
-      RestorePurchasesCommand(
-        purchaseProvider: provider,
-        purchasesLocalApi: purchasesLocalApi,
-        handlePurchaseUpdateCommand: makeHandlePurchaseUpdateCommand(),
-        subscriptionStatusResource: subscriptionStatus,
-      );
-
   CancelSubscriptionCommand makeCancelSubscriptionCommand() =>
       CancelSubscriptionCommand(
         purchaseProvider: provider,
         activeSubscriptionResource: activeSubscription,
         subscriptionStatusResource: subscriptionStatus,
-        restorePurchasesCommand: _makeRestorePurchasesCommand(),
+        restorePurchasesCommand: makeRestorePurchasesCommand(),
       );
 
   /// Expose restore purchases command.

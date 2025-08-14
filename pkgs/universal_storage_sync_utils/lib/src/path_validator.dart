@@ -18,8 +18,11 @@ mixin PathValidator {
         return false;
       }
       final tempFile = File(
-        p.join(path, '.gitkeep'),
-      ); // Universal Storage Sync Path Writable
+        p.join(
+          path,
+          '.uss_write_test_${DateTime.now().microsecondsSinceEpoch}',
+        ),
+      );
       await tempFile.create();
       await tempFile.delete();
       return true;

@@ -83,9 +83,9 @@ Future<void> demonstrateRemoteSync(final String localPath) async {
 
   // List files
   print('\n4. Listing files in repository...');
-  final files = await provider.listFiles('.');
-  for (final file in files) {
-    print('  - $file');
+  final entries = await provider.listDirectory('.');
+  for (final e in entries) {
+    print('  - ${e.name}${e.isDirectory ? '/' : ''}');
   }
 
   print('\n5. Demonstrating sync behavior...');

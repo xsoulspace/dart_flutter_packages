@@ -35,4 +35,13 @@ class PurchasesLocalApi {
         fromJson: PurchaseDetailsModel.fromJson,
         defaultValue: PurchaseDetailsModel.empty,
       );
+
+  /// {@template clear_active_subscription}
+  /// Clears the active subscription from the local database.
+  /// {@endtemplate}
+  Future<void> clearActiveSubscription() => localDb.setItem(
+    key: activeSubscriptionKey,
+    value: PurchaseDetailsModel.empty,
+    toJson: (final value) => value.toJson(),
+  );
 }

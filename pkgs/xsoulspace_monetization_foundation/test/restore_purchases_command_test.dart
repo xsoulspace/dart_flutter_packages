@@ -11,7 +11,7 @@ void main() {
     setUp(() => env = MonetizationTestEnv()..setUp());
     tearDown(() => env.tearDown());
 
-    test('keeps subscribed if local active exists even on failure', () async {
+    test('does not downgrade when already subscribed locally', () async {
       final active = aPurchase(active: true);
       await env.purchasesLocalApi.saveActiveSubscription(active);
 

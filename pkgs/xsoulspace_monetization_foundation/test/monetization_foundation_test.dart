@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:xsoulspace_monetization_foundation/xsoulspace_monetization_foundation.dart';
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
+import 'support/builders.dart';
 import 'support/harness.dart';
 
 void main() {
@@ -25,6 +26,22 @@ void main() {
       final foundation = env.makeFoundation();
       await foundation.init(productIds: []);
       await foundation.dispose();
+    });
+
+    test('initLocal updates status from local without waiting init', () async {
+      final foundation = env.makeFoundation();
+      // Save active locally
+      await env.purchasesLocalApi.saveActiveSubscription(
+        aPurchase(active: true),
+      );
+
+      // Call initLocal first
+      await foundation.initLocal();
+      expect(env.subscriptionStatus.isSubscribed, true);
+
+      // Ensure init awaits initLocal (should already be completed)
+      await foundation.init(productIds: [PurchaseProductId.fromJson('p')]);
+      expect(env.monetizationStatus.status, MonetizationStoreStatus.loaded);
     });
   });
 }

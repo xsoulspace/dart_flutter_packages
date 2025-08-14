@@ -1,4 +1,5 @@
 // Providers barrel file
-export 'filesystem_storage_provider.dart';
-export 'github_api_storage_provider.dart';
-export 'offline_git_storage_provider.dart';
+// Providers moved to dedicated packages:
+// - package:universal_storage_filesystem/universal_storage_filesystem.dart
+// - package:universal_storage_github_api/universal_storage_github_api.dart
+// - package:universal_storage_git_offline/universal_storage_git_offline.dart
