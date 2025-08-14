@@ -97,8 +97,12 @@ class StoreReviewerFactory {
     required final InstallationTargetStore targetStore,
     final ReviewerFallbackConsentBuilder fallbackConsentBuilder =
         defaultFallbackConsentBuilder,
+    final String androidPackageName = '',
   }) => switch (targetStore) {
-    InstallationTargetStore.rustore => RuStoreReviewer(),
+    InstallationTargetStore.rustore => RuStoreReviewer(
+      packageName: androidPackageName,
+      consentBuilder: fallbackConsentBuilder,
+    ),
     InstallationTargetStore.huawei => HuaweiStoreReviewer(),
     InstallationTargetStore.mobileGooglePlay => GoogleAppleStoreReviewer(),
     InstallationTargetStore.mobileAppleAppStore => GoogleAppleStoreReviewer(),

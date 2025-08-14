@@ -1,6 +1,6 @@
 name: xsoulspace_review
 description: Useful tools for review for stores (via plugins) and user feedback (via Wiredash)
-version: 0.3.0-beta.3
+version: 0.3.0-beta.4
 homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_review
 repository: https://github.com/xsoulspace/dart_flutter_packages
 issue_tracker: https://github.com/xsoulspace/xsoulspace_packages/issues

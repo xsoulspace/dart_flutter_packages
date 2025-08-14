@@ -1,3 +1,7 @@
+## 0.3.0-beta.4
+
+- Added `androidPackageName` to `createForTargetStore`.
+
 ## 0.3.0-beta.3
 
 - changed method to initialize `StoreReviewer`:
