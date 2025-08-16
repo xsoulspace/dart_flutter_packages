@@ -70,10 +70,9 @@ class RestorePurchasesCommand {
   /// the purchase update flow.
   /// {@endtemplate}
   Future<void> execute({final bool shouldAwaitRestore = true}) async {
-    // Do not downgrade status when already subscribed locally; just run restore.
-    if (!subscriptionStatusResource.isSubscribed) {
-      subscriptionStatusResource.set(SubscriptionStatus.restoring);
-    }
+    // Make not downgrade status when already subscribed locally; just
+    // run restore.
+    subscriptionStatusResource.set(SubscriptionStatus.restoring);
 
     if (shouldAwaitRestore) {
       await _runStoreRestore();
