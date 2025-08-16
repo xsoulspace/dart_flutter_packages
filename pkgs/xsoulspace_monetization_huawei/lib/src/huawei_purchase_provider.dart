@@ -7,11 +7,11 @@ import 'package:flutter/foundation.dart';
 import 'package:huawei_iap/huawei_iap.dart';
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
-/// {@template huawai_purchase_provider}
+/// {@template huawei_purchase_provider}
 /// Implementation of [PurchaseProvider] using Huawei IAP.
 /// {@endtemplate}
-class HuawaiPurchaseProvider implements PurchaseProvider {
-  HuawaiPurchaseProvider({this.isSandbox = false, this.enableLogger = false});
+class HuaweiPurchaseProvider implements PurchaseProvider {
+  HuaweiPurchaseProvider({this.isSandbox = false, this.enableLogger = false});
 
   final bool isSandbox;
   final bool enableLogger;
@@ -32,7 +32,7 @@ class HuawaiPurchaseProvider implements PurchaseProvider {
         }
       }
     } catch (e) {
-      debugPrint('HuawaiPurchaseProvider.init: $e');
+      debugPrint('HuaweiPurchaseProvider.init: $e');
       return MonetizationStoreStatus.notAvailable;
     }
     return MonetizationStoreStatus.loaded;

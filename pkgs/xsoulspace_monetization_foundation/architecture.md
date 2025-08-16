@@ -25,7 +25,7 @@ Each provider package implements an interface from an interface package. It cont
 
 - `xsoulspace_monetization_google_apple`: Implements `PurchaseProvider` using the `in_app_purchase` package for the App Store and Google Play.
 - `xsoulspace_monetization_rustore`: Implements `PurchaseProvider` using the `flutter_rustore_billing` package.
-- `xsoulspace_monetization_huawai`: Implements `PurchaseProvider` using the `huawei_iap` package.
+- `xsoulspace_monetization_huawei`: Implements `PurchaseProvider` using the `huawei_iap` package.
 - `xsoulspace_monetization_ads_yandex`: Implements `AdProvider` using the `yandex_mobileads` package.
 
 ### 3. Foundation Packages
@@ -58,7 +58,7 @@ graph TD
     subgraph Providers
         P_IAP_GA[monetization_google_apple]
         P_IAP_RS[monetization_rustore]
-        P_IAP_HW[monetization_huawai]
+        P_IAP_HW[monetization_huawei]
         P_ADS_YA[monetization_ads_yandex]
     end
 
