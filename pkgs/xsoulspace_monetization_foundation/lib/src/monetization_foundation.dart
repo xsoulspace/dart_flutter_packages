@@ -238,9 +238,18 @@ class MonetizationFoundation {
       return;
     }
   }
+
+  /// {@template clear_local_subscription}
+  /// Clears local subscription using local api.
+  /// {@endtemplate}
+  Future<void> clearLocalSubscription() =>
+      _clearLocalSubscriptionCommand.execute();
 }
 
 extension on MonetizationFoundation {
+  ClearLocalSubscriptionCommand get _clearLocalSubscriptionCommand =>
+      ClearLocalSubscriptionCommand(purchasesLocalApi: purchasesLocalApi);
+
   SubscribeCommand get _subscribeCommand => SubscribeCommand(
     purchaseProvider: purchaseProvider,
     subscriptionStatusResource: srcs.subscriptionStatus,
