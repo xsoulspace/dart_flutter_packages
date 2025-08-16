@@ -1,7 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
-import '../../xsoulspace_monetization_foundation.dart';
+import '../local_api/local_api.dart';
+import '../resources/resources.dart';
 
 /// {@template confirm_purchase_command}
 /// Command to confirm and complete purchase transactions.
@@ -64,22 +65,24 @@ class ConfirmPurchaseCommand {
   /// - `SubscriptionStatusResource`: Set to subscribed status
   /// {@endtemplate}
   Future<bool> execute(final PurchaseVerificationDtoModel details) async {
-    if (details.status case PurchaseStatus.pending || PurchaseStatus.canceled) {
-      return false;
-    }
+    if (details.status case PurchaseStatus.pending) return false;
+
     final result = await purchaseProvider.completePurchase(details);
     switch (result.type) {
       case ResultType.success:
-        if (details.status
-            case (PurchaseStatus.purchased ||
-                PurchaseStatus.pendingConfirmation)) {
-          final purchaseInfo = await purchaseProvider.getPurchaseDetails(
-            details.purchaseId,
-          );
+        final purchaseInfo = await purchaseProvider.getPurchaseDetails(
+          details.purchaseId,
+        );
+
+        if (purchaseInfo.isActive) {
           activeSubscriptionResource.set(purchaseInfo);
           subscriptionStatusResource.set(SubscriptionStatus.subscribed);
           await purchasesLocalApi.saveActiveSubscription(purchaseInfo);
           return true;
+        } else {
+          activeSubscriptionResource.set(PurchaseDetailsModel.empty);
+          subscriptionStatusResource.set(SubscriptionStatus.free);
+          return false;
         }
       case ResultType.failure:
         purchasePaywallErrorResource.error = result.error;
@@ -87,6 +90,5 @@ class ConfirmPurchaseCommand {
         // Handle failure if needed
         return false;
     }
-    return false;
   }
 }

@@ -55,6 +55,7 @@ class SubscribeCommand {
   /// {@endtemplate}
   Future<void> execute(final PurchaseProductDetailsModel details) async {
     if (subscriptionStatusResource.isSubscribed) return;
+    final previousStatus = subscriptionStatusResource.status;
     subscriptionStatusResource.set(SubscriptionStatus.purchasing);
     purchasePaywallErrorResource.clear();
 
@@ -71,11 +72,12 @@ class SubscribeCommand {
           );
         }
       case ResultType.failure:
+        subscriptionStatusResource.set(previousStatus);
         if (resultDetails == null || resultDetails.isCancelled) return;
+
         purchasePaywallErrorResource.error = result.error;
 
         /// handle case when upgrading / downgrading subscription
-        subscriptionStatusResource.set(SubscriptionStatus.free);
         await cancelSubscriptionCommand.execute(
           productId: details.productId,
           openSubscriptionManagement: false,
