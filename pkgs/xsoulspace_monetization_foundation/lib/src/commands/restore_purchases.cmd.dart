@@ -89,6 +89,7 @@ class RestorePurchasesCommand {
         for (final purchase in result.restoredPurchases) {
           if (purchase.isActive) {
             await handlePurchaseUpdateCommand.execute(purchase);
+            continue;
           } else if (purchase.isPending) {
             try {
               await purchaseProvider.cancel(purchase.productId.value);
