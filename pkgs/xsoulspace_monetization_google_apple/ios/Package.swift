@@ -8,7 +8,7 @@ let package = Package(
     ],
     products: [
         .library(
-            name: "xsoulspace_monetization_google_apple",
+            name: "xsoulspace-monetization-google-apple",
             targets: ["xsoulspace_monetization_google_apple"])
     ],
     dependencies: [],
