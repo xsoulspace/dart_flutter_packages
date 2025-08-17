@@ -265,12 +265,25 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
   Future<PurchaseDetailsModel> getPurchaseDetails(
     final PurchaseId purchaseId,
   ) async {
-    throw UnimplementedError();
+    try {
+      final purchases = await purchaseStream.firstWhere(
+        (final list) =>
+            list.any((final p) => p.purchaseId.value == purchaseId.value),
+        orElse: () => throw Exception('Purchase not found'),
+      );
+      if (purchases.isEmpty) {
+        throw Exception('Purchase not found');
+      }
+      return purchases.firstWhere(
+        (final p) => p.purchaseId.value == purchaseId.value,
+      );
+    } catch (e) {
+      throw Exception('Failed to get purchase details: $e');
+    }
   }
 
   @override
   Future<CancelResultModel> cancel(final String purchaseOrProductId) async {
-    // TODO(arenukvern): implement cancellation
     throw UnimplementedError();
   }
 
