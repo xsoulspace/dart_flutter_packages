@@ -9,13 +9,13 @@ import 'package:from_json_to_json/from_json_to_json.dart';
 import 'package:in_app_purchase/in_app_purchase.dart' as iap;
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
+import 'apple_native_purchase_provider.dart';
+
 /// {@template google_apple_purchase_provider}
 /// Implementation of [PurchaseProvider] using the `in_app_purchase` package.
 /// {@endtemplate}
 class GoogleApplePurchaseProvider implements PurchaseProvider {
-  static const _cancelSubChannel = MethodChannel(
-    'dev.xsoulspace.monetization/cancelSubscription',
-  );
+  final _appleNativeProvider = AppleNativePurchaseProvider();
 
   /// assume by default that the user is signed in
   static var _isUserSignedInToStore = true;
@@ -86,6 +86,9 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
   Future<List<PurchaseProductDetailsModel>> getProductDetails(
     final List<PurchaseProductId> productIds,
   ) async {
+    if (Platform.isIOS) {
+      return _appleNativeProvider.fetchProducts(productIds);
+    }
     final response = await _inAppPurchase.queryProductDetails(
       productIds.map((final id) => id.value).toSet(),
     );
@@ -99,6 +102,9 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
   Future<PurchaseResultModel> purchaseNonConsumable(
     final PurchaseProductDetailsModel productDetails,
   ) async {
+    if (Platform.isIOS) {
+      return _appleNativeProvider.purchaseProduct(productDetails);
+    }
     final response = await _inAppPurchase.queryProductDetails({
       productDetails.productId.value,
     });
@@ -177,11 +183,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
     currency: product.currencyCode,
     description: product.description,
     // This duration logic is also an assumption and needs to be solid.
-    duration: product.id.contains('year')
-        ? const Duration(days: 365)
-        : (product.id.contains('month')
-              ? const Duration(days: 30)
-              : Duration.zero),
+    duration: _extractDurationFromProductId(product.id).duration,
     // TODO: Implement free trial duration
     freeTrialDuration: PurchaseDurationModel.zero,
   );
@@ -190,10 +192,8 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
     final iap.PurchaseDetails purchase,
   ) {
     final transactionDate = purchase.transactionDate;
-    final transactionDateInt = jsonDecodeInt(transactionDate ?? '');
-    final purchaseDate = (purchase.transactionDate != null
-        ? dateTimeFromMilisecondsSinceEpoch(transactionDateInt)
-        : null);
+    // "2025-08-17 7:44:54 AM"
+    final purchaseDate = dateTimeFromIso8601String(transactionDate);
 
     return PurchaseDetailsModel(
       purchaseId: PurchaseId.fromJson(purchase.purchaseID ?? ''),
@@ -201,12 +201,16 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
       priceId: PurchasePriceId.fromJson(purchase.productID),
       status: _mapPurchaseStatus(purchase.status),
       purchaseDate: purchaseDate ?? DateTime.now(),
-      purchaseType: PurchaseProductType
-          .nonConsumable, // This needs to be determined properly
+      // This needs to be determined properly
+      purchaseType: PurchaseProductType.nonConsumable,
       localVerificationData: purchase.verificationData.localVerificationData,
       serverVerificationData: purchase.verificationData.serverVerificationData,
       source: purchase.verificationData.source,
       name: purchase.productID,
+      duration: _extractDurationFromProductId(purchase.productID).duration,
+      freeTrialDuration: _extractDurationFromProductId(
+        purchase.productID,
+      ).duration,
     );
   }
 
@@ -306,8 +310,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
   Future<CancelResultModel> cancel(final String purchaseOrProductId) async {
     try {
       if (Platform.isIOS) {
-        await _cancelSubChannel.invokeMethod('showCancelSubSheet');
-        return CancelResultModel.success();
+        return _appleNativeProvider.cancelSubscription();
       } else {
         await openSubscriptionManagement();
         return CancelResultModel.success();
@@ -324,6 +327,16 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
   Future<bool> isStoreInstalled() => _inAppPurchase.isAvailable();
 }
 
+PurchaseDurationModel _extractDurationFromProductId(final String productId) {
+  if (productId.contains('year')) {
+    return PurchaseDurationModel(years: 1);
+  } else if (productId.contains('month')) {
+    return PurchaseDurationModel(months: 1);
+  } else {
+    return PurchaseDurationModel.zero;
+  }
+}
+
 extension on PurchaseStatus {
   iap.PurchaseStatus _toFlutterIAPStatus() => switch (this) {
     PurchaseStatus.pending => iap.PurchaseStatus.pending,
@@ -333,3 +346,16 @@ extension on PurchaseStatus {
     PurchaseStatus.canceled => iap.PurchaseStatus.canceled,
   };
 }
+
+// extension on PurchaseProductId {
+//   // the product should have clear structure in its id
+//   Duration toDuration() {
+//     if (value.contains('year')) {
+//       return const Duration(days: 365);
+//     } else if (value.contains('month')) {
+//       return const Duration(days: 30);
+//     } else {
+//       return Duration.zero;
+//     }
+//   }
+// }
