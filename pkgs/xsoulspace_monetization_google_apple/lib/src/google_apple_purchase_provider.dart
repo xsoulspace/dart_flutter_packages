@@ -1,8 +1,10 @@
 // ignore_for_file: avoid_catches_without_on_clauses
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:app_settings/app_settings.dart';
+import 'package:flutter/services.dart';
 import 'package:from_json_to_json/from_json_to_json.dart';
 import 'package:in_app_purchase/in_app_purchase.dart' as iap;
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
@@ -11,6 +13,10 @@ import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interf
 /// Implementation of [PurchaseProvider] using the `in_app_purchase` package.
 /// {@endtemplate}
 class GoogleApplePurchaseProvider implements PurchaseProvider {
+  static const _cancelSubChannel = MethodChannel(
+    'dev.xsoulspace.monetization/cancelSubscription',
+  );
+
   final iap.InAppPurchase _inAppPurchase = iap.InAppPurchase.instance;
   late StreamSubscription<List<iap.PurchaseDetails>> _purchaseSubscription;
 
@@ -284,16 +290,24 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
 
   @override
   Future<CancelResultModel> cancel(final String purchaseOrProductId) async {
-    throw UnimplementedError();
+    try {
+      if (Platform.isIOS) {
+        await _cancelSubChannel.invokeMethod('showCancelSubSheet');
+        return CancelResultModel.success();
+      } else {
+        await openSubscriptionManagement();
+        return CancelResultModel.success();
+      }
+    } on PlatformException catch (e) {
+      return CancelResultModel.failure(e.message ?? 'Unknown error');
+    }
   }
 
+  // There is no direct API in in_app_purchase to check if the store app is installed.
+  // We'll use isAvailable() as a proxy, which checks if the underlying store is available.
+  // This is not 100% accurate for "installed", but is the best available check.
   @override
-  Future<bool> isStoreInstalled() async {
-    // There is no direct API in in_app_purchase to check if the store app is installed.
-    // We'll use isAvailable() as a proxy, which checks if the underlying store is available.
-    // This is not 100% accurate for "installed", but is the best available check.
-    return _inAppPurchase.isAvailable();
-  }
+  Future<bool> isStoreInstalled() async => _inAppPurchase.isAvailable();
 }
 
 extension on PurchaseStatus {
