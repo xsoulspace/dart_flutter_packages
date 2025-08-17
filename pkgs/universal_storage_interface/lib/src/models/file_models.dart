@@ -1,6 +1,8 @@
 /// File and directory data models used across providers.
 library;
 
+import 'package:from_json_to_json/from_json_to_json.dart';
+
 /// Represents an entry in a directory listing.
 class FileEntry {
   FileEntry({
@@ -11,11 +13,11 @@ class FileEntry {
   }) : modifiedAt = modifiedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
 
   factory FileEntry.fromJson(final Map<String, dynamic> json) => FileEntry(
-    name: json['name'] as String? ?? '',
-    isDirectory: json['is_directory'] as bool? ?? false,
-    size: json['size'] as int? ?? 0,
+    name: jsonDecodeString(json['name']),
+    isDirectory: jsonDecodeBool(json['is_directory']),
+    size: jsonDecodeInt(json['size']),
     modifiedAt: json['modified_at'] != null
-        ? DateTime.tryParse(json['modified_at'] as String) ??
+        ? DateTime.tryParse(jsonDecodeString(json['modified_at'])) ??
               DateTime.fromMillisecondsSinceEpoch(0)
         : null,
   );
@@ -43,9 +45,9 @@ class FileOperationResult {
 
   factory FileOperationResult.fromJson(final Map<String, dynamic> json) =>
       FileOperationResult(
-        path: json['path'] as String? ?? '',
-        revisionId: json['revision_id'] as String? ?? '',
-        isNew: json['is_new'] as bool? ?? false,
+        path: jsonDecodeString(json['path']),
+        revisionId: jsonDecodeString(json['revision_id']),
+        isNew: jsonDecodeBool(json['is_new']),
       );
 
   final String path;

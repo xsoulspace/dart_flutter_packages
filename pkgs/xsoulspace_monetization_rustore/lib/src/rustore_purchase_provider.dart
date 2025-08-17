@@ -228,7 +228,7 @@ class RustorePurchaseProvider implements PurchaseProvider {
     if (unitIndex == -1 || unitIndex + 1 >= parts.length) return Duration.zero;
 
     final unit = parts[unitIndex];
-    final count = int.tryParse(parts[unitIndex + 1]) ?? 0;
+    final count = jsonDecodeInt(parts[unitIndex + 1]);
 
     if (count == 0) return Duration.zero;
 

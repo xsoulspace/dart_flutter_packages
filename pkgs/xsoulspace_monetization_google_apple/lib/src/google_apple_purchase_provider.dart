@@ -2,6 +2,7 @@
 
 import 'dart:async';
 
+import 'package:app_settings/app_settings.dart';
 import 'package:from_json_to_json/from_json_to_json.dart';
 import 'package:in_app_purchase/in_app_purchase.dart' as iap;
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
@@ -179,7 +180,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
     final iap.PurchaseDetails purchase,
   ) {
     final transactionDate = purchase.transactionDate;
-    final transactionDateInt = int.tryParse(transactionDate ?? '');
+    final transactionDateInt = jsonDecodeInt(transactionDate ?? '');
     final purchaseDate = (purchase.transactionDate != null
         ? dateTimeFromMilisecondsSinceEpoch(transactionDateInt)
         : null);
@@ -195,6 +196,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
       localVerificationData: purchase.verificationData.localVerificationData,
       serverVerificationData: purchase.verificationData.serverVerificationData,
       source: purchase.verificationData.source,
+      name: purchase.productID,
     );
   }
 
@@ -252,18 +254,17 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
   @override
   Future<PurchaseResultModel> subscribe(
     final PurchaseProductDetailsModel productDetails,
-  ) async => purchaseNonConsumable(productDetails);
+  ) => purchaseNonConsumable(productDetails);
 
   @override
   Future<void> openSubscriptionManagement() async {
-    // TODO(arenukvern): implement opening of subscription management
+    await AppSettings.openAppSettings(type: AppSettingsType.subscriptions);
   }
 
   @override
   Future<PurchaseDetailsModel> getPurchaseDetails(
     final PurchaseId purchaseId,
   ) async {
-    // TODO(arenukvern): implement getting of purchase details
     throw UnimplementedError();
   }
 

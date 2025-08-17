@@ -4,6 +4,7 @@ import 'dart:async';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
+import 'package:from_json_to_json/from_json_to_json.dart';
 import 'package:huawei_iap/huawei_iap.dart';
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
@@ -168,7 +169,7 @@ class HuaweiPurchaseProvider implements PurchaseProvider {
         name: product.productName ?? '',
         formattedPrice: product.price ?? '',
         price:
-            double.tryParse(product.microsPrice?.toString() ?? '0')! / 1000000,
+            jsonDecodeDouble(product.microsPrice?.toString() ?? '0') / 1000000,
         currency: product.currency ?? '',
         description: product.productDesc ?? '',
 
