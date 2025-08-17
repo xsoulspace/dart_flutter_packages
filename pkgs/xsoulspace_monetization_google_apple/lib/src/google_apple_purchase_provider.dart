@@ -17,6 +17,9 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
     'dev.xsoulspace.monetization/cancelSubscription',
   );
 
+  /// assume by default that the user is signed in
+  static var _isUserSignedInToStore = true;
+
   final iap.InAppPurchase _inAppPurchase = iap.InAppPurchase.instance;
   late StreamSubscription<List<iap.PurchaseDetails>> _purchaseSubscription;
 
@@ -36,6 +39,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
       onDone: _purchaseStreamController.close,
       onError: (final error) => _purchaseStreamController.addError(error),
     );
+
     return MonetizationStoreStatus.loaded;
   }
 
@@ -50,7 +54,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
       _purchaseStreamController.stream;
 
   @override
-  Future<bool> isUserAuthorized() => _inAppPurchase.isAvailable();
+  Future<bool> isUserAuthorized() async => _isUserSignedInToStore;
 
   @override
   Future<CompletePurchaseResultModel> completePurchase(
@@ -215,6 +219,13 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
         iap.PurchaseStatus.canceled => PurchaseStatus.canceled,
       };
 
+  void _catchNoResponse(final iap.IAPError error) {
+    // iOS has no user signed
+    if (error.code == 'storekit_no_response') {
+      _isUserSignedInToStore = false;
+    }
+  }
+
   @override
   Future<List<PurchaseProductDetailsModel>> getConsumables(
     final List<PurchaseProductId> productIds,
@@ -224,6 +235,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
       productIds.map((final id) => id.value).toSet(),
     );
     if (response.error != null) {
+      _catchNoResponse(response.error!);
       throw Exception(response.error!.message);
     }
     return response.productDetails.map(_mapToProductDetails).toList();
@@ -238,6 +250,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
       productIds.map((final id) => id.value).toSet(),
     );
     if (response.error != null) {
+      _catchNoResponse(response.error!);
       throw Exception(response.error!.message);
     }
     return response.productDetails.map(_mapToProductDetails).toList();
@@ -252,6 +265,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
       productIds.map((final id) => id.value).toSet(),
     );
     if (response.error != null) {
+      _catchNoResponse(response.error!);
       throw Exception(response.error!.message);
     }
     return response.productDetails.map(_mapToProductDetails).toList();
@@ -307,7 +321,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
   // We'll use isAvailable() as a proxy, which checks if the underlying store is available.
   // This is not 100% accurate for "installed", but is the best available check.
   @override
-  Future<bool> isStoreInstalled() async => _inAppPurchase.isAvailable();
+  Future<bool> isStoreInstalled() => _inAppPurchase.isAvailable();
 }
 
 extension on PurchaseStatus {

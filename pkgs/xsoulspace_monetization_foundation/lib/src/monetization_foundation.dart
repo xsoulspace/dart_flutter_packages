@@ -122,14 +122,17 @@ class MonetizationFoundation {
     }
 
     srcs.status.setStatus(status);
-
-    if (status case MonetizationStoreStatus.loaded) {
-      await _loadSubscriptionsCommand.execute();
-      if (restorePurchases) await _restorePurchasesCommand.execute();
-    }
-
     await _listenUpdates();
-    _initCompleter.complete(true);
+
+    try {
+      if (status case MonetizationStoreStatus.loaded) {
+        /// may throw exception
+        await _loadSubscriptionsCommand.execute();
+        if (restorePurchases) await _restorePurchasesCommand.execute();
+      }
+    } finally {
+      _initCompleter.complete(true);
+    }
   }
 
   /// {@template init_local}

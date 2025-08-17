@@ -69,7 +69,18 @@ class LoadSubscriptionsCommand {
   /// - `MonetizationStatusResource`: Updated based on availability
   /// {@endtemplate}
   Future<void> execute() async {
-    final subscriptions = await purchaseProvider.getSubscriptions(productIds);
-    availableSubscriptionsResource.set(LoadableContainer.loaded(subscriptions));
+    try {
+      final subscriptions = await purchaseProvider.getSubscriptions(productIds);
+      availableSubscriptionsResource.set(
+        LoadableContainer.loaded(subscriptions),
+      );
+    } catch (e) {
+      if (!await purchaseProvider.isUserAuthorized()) {
+        monetizationStatusResource.setStatus(
+          MonetizationStoreStatus.userNotAuthorized,
+        );
+      }
+      rethrow;
+    }
   }
 }
