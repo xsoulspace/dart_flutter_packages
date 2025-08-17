@@ -8,15 +8,11 @@ public class GoogleApplePurchaseProviderPlugin: NSObject, FlutterPlugin {
 
   public static func register(with registrar: FlutterPluginRegistrar) {
     let channel = FlutterMethodChannel(
-      name: "dev.xsoulspace.monetization/cancelSubscription", binaryMessenger: registrar.messenger()
+      name: "dev.xsoulspace.monetization/purchases", binaryMessenger: registrar.messenger()
     )
     let instance = GoogleApplePurchaseProviderPlugin()
     registrar.addMethodCallDelegate(instance, channel: channel)
-
-    let purchasesChannel = FlutterMethodChannel(
-      name: "dev.xsoulspace.monetization/purchases", binaryMessenger: registrar.messenger()
-    )
-    purchasesChannel.setMethodCallHandler(instance.handle)
+    channel.setMethodCallHandler(instance.handle)
   }
 
   public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {

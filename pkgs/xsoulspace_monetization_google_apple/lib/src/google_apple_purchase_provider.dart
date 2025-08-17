@@ -1,4 +1,4 @@
-// ignore_for_file: avoid_catches_without_on_clauses
+// ignore_for_file: avoid_catches_without_on_clauses, lines_longer_than_80_chars
 
 import 'dart:async';
 import 'dart:io';
@@ -264,6 +264,15 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
   Future<List<PurchaseProductDetailsModel>> getSubscriptions(
     final List<PurchaseProductId> productIds,
   ) async {
+    if (Platform.isIOS) {
+      final products = await _appleNativeProvider.fetchProducts(productIds);
+      return products
+          .where(
+            (final product) =>
+                product.productType == PurchaseProductType.subscription,
+          )
+          .toList();
+    }
     // TODO(arenukvern): implement identification of subscriptions
     final response = await _inAppPurchase.queryProductDetails(
       productIds.map((final id) => id.value).toSet(),
