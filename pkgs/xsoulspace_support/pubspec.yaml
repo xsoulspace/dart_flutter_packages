@@ -12,7 +12,7 @@ dependencies:
   device_info_plus: ^10.1.0
   flutter:
     sdk: flutter
-  from_json_to_json: ^0.2.0
+  from_json_to_json: ^0.3.0
   is_dart_empty_or_not: ^0.2.3
   package_info_plus: ^8.0.2
   url_launcher: ^6.3.2

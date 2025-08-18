@@ -10,7 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  from_json_to_json: ^0.2.0
+  from_json_to_json: ^0.3.0
   plugin_platform_interface: ^2.1.8
 
 dev_dependencies:

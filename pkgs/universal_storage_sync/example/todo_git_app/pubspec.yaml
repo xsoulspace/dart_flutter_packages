@@ -35,7 +35,7 @@ dependencies:
   universal_storage_sync: ^0.1.0-dev.3
 
   # Core dependencies
-  from_json_to_json: ^0.2.0
+  from_json_to_json: ^0.3.0
   file_selector: ^1.0.3
   shared_preferences: ^2.2.0
   yaml: ^3.1.2

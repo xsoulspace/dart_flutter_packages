@@ -16,7 +16,7 @@ Always use the `from_json_to_json` package for type-safe JSON handling:
 
 ```yaml
 dependencies:
-  from_json_to_json: ^0.2.0
+  from_json_to_json: ^0.3.0
 ```
 
 Import in your Dart files:
