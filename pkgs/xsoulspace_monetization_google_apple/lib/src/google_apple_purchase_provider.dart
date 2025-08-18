@@ -7,6 +7,7 @@ import 'package:app_settings/app_settings.dart';
 import 'package:flutter/services.dart';
 import 'package:from_json_to_json/from_json_to_json.dart';
 import 'package:in_app_purchase/in_app_purchase.dart' as iap;
+import 'package:in_app_purchase_storekit/in_app_purchase_storekit.dart' as sk2;
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
 import 'apple_native_purchase_provider.dart';
@@ -62,19 +63,34 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
   ) async {
     // This is a simplified mapping. You might need a more robust way
     // to find the original iap.PurchaseDetails object.
-    final iapPurchase = iap.PurchaseDetails(
-      purchaseID: purchase.purchaseId.value,
-      productID: purchase.productId.value,
-      transactionDate: purchase.transactionDate?.toIso8601String(),
-      status: purchase.status._toFlutterIAPStatus(),
-      verificationData: iap.PurchaseVerificationData(
-        localVerificationData: purchase.localVerificationData ?? '',
-        serverVerificationData: purchase.serverVerificationData ?? '',
-        source: purchase.source ?? '',
-      ),
-    );
+    iap.PurchaseDetails iapPurchase;
 
     try {
+      if (Platform.isIOS) {
+        iapPurchase = sk2.SK2PurchaseDetails(
+          purchaseID: purchase.purchaseId.value,
+          productID: purchase.productId.value,
+          transactionDate: purchase.transactionDate?.toIso8601String(),
+          status: purchase.status._toFlutterIAPStatus(),
+          verificationData: iap.PurchaseVerificationData(
+            localVerificationData: purchase.localVerificationData ?? '',
+            serverVerificationData: purchase.serverVerificationData ?? '',
+            source: purchase.source ?? '',
+          ),
+        );
+      } else {
+        iapPurchase = iap.PurchaseDetails(
+          purchaseID: purchase.purchaseId.value,
+          productID: purchase.productId.value,
+          transactionDate: purchase.transactionDate?.toIso8601String(),
+          status: purchase.status._toFlutterIAPStatus(),
+          verificationData: iap.PurchaseVerificationData(
+            localVerificationData: purchase.localVerificationData ?? '',
+            serverVerificationData: purchase.serverVerificationData ?? '',
+            source: purchase.source ?? '',
+          ),
+        );
+      }
       await _inAppPurchase.completePurchase(iapPurchase);
       return CompletePurchaseResultModel.success();
     } catch (e) {
