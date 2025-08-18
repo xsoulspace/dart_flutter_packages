@@ -61,7 +61,7 @@ class AppleNativePurchaseProvider {
     final recurringPeriod = jsonDecodeString(
       firstOffer['recurringSubscriptionPeriod'],
     );
-    final duration = _parseDurationFromISO8601(recurringPeriod);
+    final duration = jsonDecodeDurationFromISO8601(recurringPeriod);
 
     // TODO: Extract free trial information when available in the API response
     final freeTrialDuration = PurchaseDurationModel.zero;
@@ -97,39 +97,6 @@ class AppleNativePurchaseProvider {
             ? PurchaseProductType.subscription
             : PurchaseProductType.nonConsumable,
     };
-  }
-
-  /// Parses ISO 8601 duration format (e.g., "P1Y", "P1M", "P1W", "P1D") to Duration
-  Duration _parseDurationFromISO8601(final String? iso8601Duration) {
-    if (iso8601Duration == null || iso8601Duration.isEmpty) {
-      return Duration.zero;
-    }
-
-    // Remove 'P' prefix if present
-    final duration = iso8601Duration.startsWith('P')
-        ? iso8601Duration.substring(1)
-        : iso8601Duration;
-
-    // Parse different units
-    if (duration.endsWith('Y')) {
-      final years =
-          int.tryParse(duration.substring(0, duration.length - 1)) ?? 0;
-      return Duration(days: years * 365);
-    } else if (duration.endsWith('M')) {
-      final months =
-          int.tryParse(duration.substring(0, duration.length - 1)) ?? 0;
-      return Duration(days: months * 30);
-    } else if (duration.endsWith('W')) {
-      final weeks =
-          int.tryParse(duration.substring(0, duration.length - 1)) ?? 0;
-      return Duration(days: weeks * 7);
-    } else if (duration.endsWith('D')) {
-      final days =
-          int.tryParse(duration.substring(0, duration.length - 1)) ?? 0;
-      return Duration(days: days);
-    }
-
-    return Duration.zero;
   }
 
   /// Extracts duration from transaction product data (simplified version)
