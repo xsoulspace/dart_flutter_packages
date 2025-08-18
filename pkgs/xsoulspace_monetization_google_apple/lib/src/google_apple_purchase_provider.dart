@@ -265,6 +265,16 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
   Future<List<PurchaseProductDetailsModel>> getNonConsumables(
     final List<PurchaseProductId> productIds,
   ) async {
+    if (Platform.isIOS) {
+      final products = await _appleNativeProvider.fetchProducts(productIds);
+      return products
+          .where(
+            (final product) =>
+                product.productType == PurchaseProductType.nonConsumable ||
+                product.productType == PurchaseProductType.subscription,
+          )
+          .toList();
+    }
     // TODO(arenukvern): implement identification of non-consumables
     final response = await _inAppPurchase.queryProductDetails(
       productIds.map((final id) => id.value).toSet(),

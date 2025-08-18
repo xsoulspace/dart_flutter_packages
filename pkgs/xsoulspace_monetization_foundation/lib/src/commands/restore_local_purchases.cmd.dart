@@ -33,6 +33,7 @@ class RestoreLocalPurchasesCommand {
   /// {@endtemplate}
   Future<bool> execute() async {
     final activeSubscription = await purchasesLocalApi.getActiveSubscription();
+
     subscriptionStatusResource.set(switch (activeSubscription.status) {
       PurchaseStatus.pending => SubscriptionStatus.free,
       PurchaseStatus.purchased when activeSubscription.isActive =>
@@ -43,6 +44,10 @@ class RestoreLocalPurchasesCommand {
       PurchaseStatus.canceled => SubscriptionStatus.free,
       PurchaseStatus.error => SubscriptionStatus.free,
     });
+    if (subscriptionStatusResource.status != SubscriptionStatus.subscribed) {
+      await purchasesLocalApi.clearActiveSubscription();
+      return false;
+    }
     return activeSubscription.isActive;
   }
 }

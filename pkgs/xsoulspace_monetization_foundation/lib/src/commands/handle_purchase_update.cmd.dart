@@ -70,28 +70,22 @@ class HandlePurchaseUpdateCommand {
   /// - `ActiveSubscriptionResource`: Cleared on cancellation
   /// {@endtemplate}
   Future<void> execute(final PurchaseDetailsModel details) async {
-    bool hasActiveSubscription = false;
     final dto = details.toVerificationDto();
     switch (dto.status) {
       case PurchaseStatus.pendingConfirmation || PurchaseStatus.purchased:
-        hasActiveSubscription = await confirmPurchaseCommand.execute(dto);
+        await confirmPurchaseCommand.execute(dto);
       case PurchaseStatus.canceled when dto.isNotExpired:
-        hasActiveSubscription = await confirmPurchaseCommand.execute(dto);
+        await confirmPurchaseCommand.execute(dto);
       case PurchaseStatus.error:
         // TODO(arenukvern): add error notification
         await confirmPurchaseCommand.execute(dto);
-        hasActiveSubscription = false;
       case PurchaseStatus.pending:
         subscriptionStatusResource.set(SubscriptionStatus.purchasing);
-        hasActiveSubscription = false;
       case PurchaseStatus.canceled:
+        // protection if subscription is active
+        if (activeSubscriptionResource.isActive) return;
         activeSubscriptionResource.set(PurchaseDetailsModel.empty);
         subscriptionStatusResource.set(SubscriptionStatus.free);
-        hasActiveSubscription = false;
-    }
-    if (hasActiveSubscription) {
-      await purchasesLocalApi.saveActiveSubscription(details);
-      subscriptionStatusResource.set(SubscriptionStatus.subscribed);
     }
   }
 }

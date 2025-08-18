@@ -80,12 +80,16 @@ class ConfirmPurchaseCommand {
           await purchasesLocalApi.saveActiveSubscription(purchaseInfo);
           return true;
         } else {
+          // protection if subscription is active
+          if (activeSubscriptionResource.isActive) return false;
           activeSubscriptionResource.set(PurchaseDetailsModel.empty);
           subscriptionStatusResource.set(SubscriptionStatus.free);
           return false;
         }
       case ResultType.failure:
         purchasePaywallErrorResource.error = result.error;
+        // protection if subscription is active
+        if (activeSubscriptionResource.isActive) return false;
         subscriptionStatusResource.set(SubscriptionStatus.free);
         // Handle failure if needed
         return false;
