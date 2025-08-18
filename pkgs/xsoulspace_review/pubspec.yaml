@@ -17,9 +17,9 @@ dependencies:
   universal_io: ^2.2.2
   url_launcher: ^6.3.2
   wiredash: ^2.5.0
-  xsoulspace_foundation: ^0.2.0
-  xsoulspace_installation_store: ^0.1.0
-  xsoulspace_locale: ^0.3.0
+  xsoulspace_foundation: ^0.2.1
+  xsoulspace_installation_store: ^0.1.2
+  xsoulspace_locale: ^0.3.2
 
 dev_dependencies:
   lints: ^6.0.0

@@ -12,7 +12,7 @@ dependencies:
   flutter:
     sdk: flutter
   is_dart_empty_or_not: ^0.2.3
-  xsoulspace_foundation: ^0.2.0
+  xsoulspace_foundation: ^0.2.1
   xsoulspace_monetization_ads_interface:
     path: ../xsoulspace_monetization_ads_interface
   xsoulspace_monetization_interface:
