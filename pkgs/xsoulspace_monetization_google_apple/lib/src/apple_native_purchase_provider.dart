@@ -13,7 +13,7 @@ class AppleNativePurchaseProvider {
     try {
       final result = await _purchasesChannel.invokeMethod<List<dynamic>>(
         'fetchProducts',
-        productIds.map((final e) => e.value).toSet(),
+        productIds.map((final e) => e.value).toList(),
       );
       if (result == null) return [];
 

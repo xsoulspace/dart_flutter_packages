@@ -10,7 +10,7 @@ import StoreKit
   private var purchasedProductIDs: Set<String> = []
 
   @objc public func fetchProducts(
-    productIdentifiers: Set<String>, completion: @escaping ([String]?, Error?) -> Void
+    productIdentifiers: [String], completion: @escaping ([String]?, Error?) -> Void
   ) {
     Task {
       do {
