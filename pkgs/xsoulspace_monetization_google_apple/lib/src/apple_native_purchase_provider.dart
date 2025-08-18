@@ -23,7 +23,7 @@ class AppleNativePurchaseProvider {
     }
   }
 
-  /// Maps StoreKit product data to PurchaseProductDetailsModel
+  /// Maps App Store Connect API product data to PurchaseProductDetailsModel
   PurchaseProductDetailsModel _mapStoreKitProductToModel(
     final dynamic productDataRaw,
   ) {
@@ -32,21 +32,39 @@ class AppleNativePurchaseProvider {
       throw Exception('Invalid product data format');
     }
 
+    // Extract basic product information
     final productId = jsonDecodeString(productData['id']);
-    final displayName = jsonDecodeString(productData['displayName']);
-    final description = jsonDecodeString(productData['description']);
-    final price = jsonDecodeDouble(productData['price']);
-    final currencyCode = jsonDecodeString(productData['currencyCode']);
-    final displayPrice = jsonDecodeString(productData['displayPrice']);
+    final attributes = jsonDecodeMapAs<String, dynamic>(
+      productData['attributes'],
+    );
 
-    // Determine product type based on StoreKit type
-    final type = jsonDecodeString(productData['type']);
-    final productType = _mapStoreKitTypeToProductType(type);
+    // Extract product name and description
+    final displayName = jsonDecodeString(attributes['name']);
+    final descriptionData = jsonDecodeNullableMap(attributes['description']);
+    final description = jsonDecodeString(descriptionData?['standard']);
 
-    // Extract subscription information if available
-    final subscription = jsonDecodeNullableMap(productData['subscription']);
-    final duration = _extractDurationFromSubscription(subscription);
-    final freeTrialDuration = _extractFreeTrialDuration(subscription);
+    // Determine product type from attributes
+    final kind = jsonDecodeString(attributes['kind']);
+    final isSubscription = jsonDecodeBool(attributes['isSubscription']);
+    final productType = _mapAppStoreKindToProductType(kind, isSubscription);
+
+    // Extract pricing information from first offer
+    final offers = jsonDecodeListAs<Map<String, dynamic>>(attributes['offers']);
+    final firstOffer = offers.isNotEmpty ? offers.first : <String, dynamic>{};
+
+    final price =
+        jsonDecodeDouble(firstOffer['price']) / 100; // Convert from cents
+    final currencyCode = jsonDecodeString(firstOffer['currencyCode']);
+    final displayPrice = jsonDecodeString(firstOffer['priceFormatted']);
+
+    // Extract subscription duration from recurring period
+    final recurringPeriod = jsonDecodeString(
+      firstOffer['recurringSubscriptionPeriod'],
+    );
+    final duration = _parseDurationFromISO8601(recurringPeriod);
+
+    // TODO: Extract free trial information when available in the API response
+    final freeTrialDuration = PurchaseDurationModel.zero;
 
     return PurchaseProductDetailsModel(
       productId: PurchaseProductId.fromJson(productId),
@@ -62,62 +80,80 @@ class AppleNativePurchaseProvider {
     );
   }
 
-  /// Maps StoreKit product type to PurchaseProductType
-  PurchaseProductType _mapStoreKitTypeToProductType(
-    final String storeKitType,
-  ) => switch (storeKitType.toLowerCase()) {
-    'consumable' => PurchaseProductType.consumable,
-    'nonconsumable' => PurchaseProductType.nonConsumable,
-    'autorenewable' => PurchaseProductType.subscription,
-    // TODO(arenukvern): figure out what this is
-    'nonrenewable' => PurchaseProductType.subscription,
-    _ => PurchaseProductType.nonConsumable,
-  };
-
-  /// Helper to extract period unit and value from a subscription period map
-  (String unit, int value)? _extractPeriodUnitValue(
-    final Map<String, dynamic>? period,
+  /// Maps App Store Connect API kind to PurchaseProductType
+  PurchaseProductType _mapAppStoreKindToProductType(
+    final String kind,
+    final bool isSubscription,
   ) {
-    if (period == null) return null;
-    final unit = jsonDecodeString(period['unit']);
-    final value = jsonDecodeInt(period['value']);
-    return (unit, value);
+    if (isSubscription) return PurchaseProductType.subscription;
+    return switch (kind.toLowerCase()) {
+      'auto-renewable subscription' ||
+      'non-renewable subscription' ||
+      'autorenewable' => PurchaseProductType.subscription,
+      'consumable' => PurchaseProductType.consumable,
+      'non-consumable' || 'nonconsumable' => PurchaseProductType.nonConsumable,
+      _ =>
+        isSubscription
+            ? PurchaseProductType.subscription
+            : PurchaseProductType.nonConsumable,
+    };
   }
 
-  /// Extracts duration from subscription data
-  Duration _extractDurationFromSubscription(
-    final Map<String, dynamic>? subscription,
+  /// Parses ISO 8601 duration format (e.g., "P1Y", "P1M", "P1W", "P1D") to Duration
+  Duration _parseDurationFromISO8601(final String? iso8601Duration) {
+    if (iso8601Duration == null || iso8601Duration.isEmpty) {
+      return Duration.zero;
+    }
+
+    // Remove 'P' prefix if present
+    final duration = iso8601Duration.startsWith('P')
+        ? iso8601Duration.substring(1)
+        : iso8601Duration;
+
+    // Parse different units
+    if (duration.endsWith('Y')) {
+      final years =
+          int.tryParse(duration.substring(0, duration.length - 1)) ?? 0;
+      return Duration(days: years * 365);
+    } else if (duration.endsWith('M')) {
+      final months =
+          int.tryParse(duration.substring(0, duration.length - 1)) ?? 0;
+      return Duration(days: months * 30);
+    } else if (duration.endsWith('W')) {
+      final weeks =
+          int.tryParse(duration.substring(0, duration.length - 1)) ?? 0;
+      return Duration(days: weeks * 7);
+    } else if (duration.endsWith('D')) {
+      final days =
+          int.tryParse(duration.substring(0, duration.length - 1)) ?? 0;
+      return Duration(days: days);
+    }
+
+    return Duration.zero;
+  }
+
+  /// Extracts duration from transaction product data (simplified version)
+  Duration _extractDurationFromTransactionProduct(
+    final Map<String, dynamic>? productData,
   ) {
-    final period = jsonDecodeNullableMap(subscription?['subscriptionPeriod']);
-    final periodData = _extractPeriodUnitValue(period);
-    if (periodData == null) return Duration.zero;
-    final (unit, value) = periodData;
+    if (productData == null) return Duration.zero;
+
+    // Try to find subscription period in transaction product data
+    final subscription = jsonDecodeNullableMap(productData['subscription']);
+    if (subscription == null) return Duration.zero;
+
+    final period = jsonDecodeNullableMap(subscription['subscriptionPeriod']);
+    if (period == null) return Duration.zero;
+
+    final unit = jsonDecodeString(period['unit']);
+    final value = jsonDecodeInt(period['value']);
+
     return switch (unit.toLowerCase()) {
       'day' => Duration(days: value),
       'week' => Duration(days: value * 7),
       'month' => Duration(days: value * 30),
       'year' => Duration(days: value * 365),
       _ => Duration.zero,
-    };
-  }
-
-  /// Extracts free trial duration from subscription data
-  PurchaseDurationModel _extractFreeTrialDuration(
-    final Map<String, dynamic>? subscription,
-  ) {
-    final introOffer = jsonDecodeNullableMap(
-      subscription?['introductoryOffer'],
-    );
-    final period = jsonDecodeNullableMap(introOffer?['subscriptionPeriod']);
-    final periodData = _extractPeriodUnitValue(period);
-    if (periodData == null) return PurchaseDurationModel.zero;
-    final (unit, value) = periodData;
-    return switch (unit.toLowerCase()) {
-      'day' => PurchaseDurationModel(days: value),
-      'week' => PurchaseDurationModel(days: value * 7),
-      'month' => PurchaseDurationModel(months: value),
-      'year' => PurchaseDurationModel(years: value),
-      _ => PurchaseDurationModel.zero,
     };
   }
 
@@ -218,9 +254,11 @@ class AppleNativePurchaseProvider {
     );
     final name = jsonDecodeString(productData?['displayName']);
     final formattedPrice = jsonDecodeString(productData?['displayPrice']);
-    final subscription = jsonDecodeNullableMap(productData?['subscription']);
-    final duration = _extractDurationFromSubscription(subscription);
-    final freeTrialDuration = _extractFreeTrialDuration(subscription).duration;
+    // For transaction data, we might not have the same detailed subscription info
+    // Try to extract from product data if available, otherwise use defaults
+    final duration = _extractDurationFromTransactionProduct(productData);
+    const freeTrialDuration =
+        Duration.zero; // Transaction data typically doesn't include trial info
 
     return PurchaseDetailsModel(
       purchaseId: PurchaseId.fromJson(purchaseId),
@@ -232,7 +270,6 @@ class AppleNativePurchaseProvider {
       source: 'app_store',
       name: name,
       duration: duration,
-      freeTrialDuration: freeTrialDuration,
       expiryDate: expiryDate,
       formattedPrice: formattedPrice,
     );
