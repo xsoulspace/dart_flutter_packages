@@ -52,8 +52,7 @@ class AppleNativePurchaseProvider {
     final offers = jsonDecodeListAs<Map<String, dynamic>>(attributes['offers']);
     final firstOffer = offers.isNotEmpty ? offers.first : <String, dynamic>{};
 
-    final price =
-        jsonDecodeDouble(firstOffer['price']) / 100; // Convert from cents
+    final price = jsonDecodeDouble(firstOffer['price']);
     final currencyCode = jsonDecodeString(firstOffer['currencyCode']);
     final displayPrice = jsonDecodeString(firstOffer['priceFormatted']);
 
@@ -96,31 +95,6 @@ class AppleNativePurchaseProvider {
         isSubscription
             ? PurchaseProductType.subscription
             : PurchaseProductType.nonConsumable,
-    };
-  }
-
-  /// Extracts duration from transaction product data (simplified version)
-  Duration _extractDurationFromTransactionProduct(
-    final Map<String, dynamic>? productData,
-  ) {
-    if (productData == null) return Duration.zero;
-
-    // Try to find subscription period in transaction product data
-    final subscription = jsonDecodeNullableMap(productData['subscription']);
-    if (subscription == null) return Duration.zero;
-
-    final period = jsonDecodeNullableMap(subscription['subscriptionPeriod']);
-    if (period == null) return Duration.zero;
-
-    final unit = jsonDecodeString(period['unit']);
-    final value = jsonDecodeInt(period['value']);
-
-    return switch (unit.toLowerCase()) {
-      'day' => Duration(days: value),
-      'week' => Duration(days: value * 7),
-      'month' => Duration(days: value * 30),
-      'year' => Duration(days: value * 365),
-      _ => Duration.zero,
     };
   }
 
@@ -208,22 +182,32 @@ class AppleNativePurchaseProvider {
     final Map<String, dynamic> transactionData,
   ) {
     final productData = jsonDecodeNullableMap(transactionData['product']);
-    final productId = jsonDecodeString(transactionData['productID']);
+    final attributes = jsonDecodeNullableMap(productData?['attributes']);
+    final productId = jsonDecodeString(transactionData['productId']);
     final purchaseId = jsonDecodeString(transactionData['id']);
     final purchaseDate =
         dateTimeFromMillisecondsSinceEpoch(transactionData['purchaseDate']) ??
         DateTime.now();
-    final status = _mapTransactionStatus(
-      jsonDecodeString(transactionData['status']),
-    );
+
     final expiryDate = dateTimeFromMillisecondsSinceEpoch(
       transactionData['expiresDate'],
     );
-    final name = jsonDecodeString(productData?['displayName']);
-    final formattedPrice = jsonDecodeString(productData?['displayPrice']);
+    final status = expiryDate?.isAfter(DateTime.now()) == true
+        ? PurchaseStatus.purchased
+        : PurchaseStatus.canceled;
+    final name = jsonDecodeString(attributes?['name']);
+    final offers = jsonDecodeListAs<Map<String, dynamic>>(
+      attributes?['offers'],
+    );
+    final firstOffer = offers.isNotEmpty ? offers.first : <String, dynamic>{};
+    final price = jsonDecodeDouble(transactionData['price']);
+    final currencyCode = jsonDecodeString(transactionData['currencyCode']);
+    final formattedPrice = jsonDecodeString(firstOffer['priceFormatted']);
     // For transaction data, we might not have the same detailed subscription info
     // Try to extract from product data if available, otherwise use defaults
-    final duration = _extractDurationFromTransactionProduct(productData);
+    final duration = jsonDecodeDurationFromISO8601(
+      firstOffer['recurringSubscriptionPeriod'],
+    );
     const freeTrialDuration =
         Duration.zero; // Transaction data typically doesn't include trial info
 
@@ -236,19 +220,11 @@ class AppleNativePurchaseProvider {
       purchaseType: PurchaseProductType.nonConsumable,
       source: 'app_store',
       name: name,
+      price: price,
+      currency: currencyCode,
+      formattedPrice: formattedPrice,
       duration: duration,
       expiryDate: expiryDate,
-      formattedPrice: formattedPrice,
     );
   }
-
-  PurchaseStatus _mapTransactionStatus(final String status) =>
-      switch (status.toLowerCase()) {
-        'purchased' => PurchaseStatus.purchased,
-        'pending' => PurchaseStatus.pending,
-        'failed' => PurchaseStatus.error,
-        'deferred' => PurchaseStatus.pending,
-        'restored' => PurchaseStatus.purchased,
-        _ => PurchaseStatus.error,
-      };
 }
