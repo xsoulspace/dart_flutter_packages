@@ -204,30 +204,130 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
     freeTrialDuration: PurchaseDurationModel.zero,
   );
 
+  /// Maps in_app_purchase [PurchaseDetails] to our [PurchaseDetailsModel].
+  ///
+  /// Extracts comprehensive purchase information from the local verification data JSON,
+  /// which contains rich details like actual purchase dates, expiry dates, prices,
+  /// currency, and purchase types directly from Apple's servers.
+  ///
+  /// Example verification data structure:
+  /// ```json
+  /// {
+  ///   "transactionId": "2000000985775000",
+  ///   "productId": "2025_year_1",
+  ///   "purchaseDate": 1755492333000,
+  ///   "expiresDate": 1755578733000,
+  ///   "price": 499000,
+  ///   "currency": "RUB",
+  ///   "type": "Auto-Renewable Subscription"
+  /// }
+  /// ```
   PurchaseDetailsModel _mapToPurchaseDetails(
     final iap.PurchaseDetails purchase,
   ) {
-    final transactionDate = purchase.transactionDate;
-    // "2025-08-17 7:44:54 AM"
-    final purchaseDate = dateTimeFromYYYYMMDDHMMSSAM(transactionDate);
+    // Parse local verification data JSON to extract rich purchase information
+    Map<String, dynamic>? verificationJson;
+    if (purchase.verificationData.localVerificationData.isNotEmpty) {
+      verificationJson = jsonDecodeMapAs<String, dynamic>(
+        purchase.verificationData.localVerificationData,
+      );
+    }
+
+    // Extract data from verification JSON with fallbacks
+    final purchaseDate = _extractPurchaseDate(
+      verificationJson,
+      purchase.transactionDate,
+    );
+    final expiryDate = _extractExpiryDate(verificationJson);
+
+    final purchaseType = _extractPurchaseType(
+      verificationJson,
+      purchase.productID,
+    );
+
+    final transactionId = jsonDecodeString(
+      verificationJson?['transactionId'] ?? purchase.purchaseID ?? '',
+    );
 
     return PurchaseDetailsModel(
-      purchaseId: PurchaseId.fromJson(purchase.purchaseID ?? ''),
+      purchaseId: PurchaseId.fromJson(transactionId),
       productId: PurchaseProductId.fromJson(purchase.productID),
       priceId: PurchasePriceId.fromJson(purchase.productID),
       status: _mapPurchaseStatus(purchase.status),
-      purchaseDate: purchaseDate ?? DateTime.now(),
-      // This needs to be determined properly
-      purchaseType: PurchaseProductType.nonConsumable,
+      purchaseDate: purchaseDate,
+      purchaseType: purchaseType,
+      expiryDate: expiryDate,
       localVerificationData: purchase.verificationData.localVerificationData,
       serverVerificationData: purchase.verificationData.serverVerificationData,
       source: purchase.verificationData.source,
       name: purchase.productID,
+      price: jsonDecodeDouble(verificationJson?['price']),
+      currency: jsonDecodeString(verificationJson?['currency']),
+      formattedPrice: jsonDecodeString(verificationJson?['formattedPrice']),
+      purchaseToken: jsonDecodeString(verificationJson?['appTransactionId']),
       duration: _extractDurationFromProductId(purchase.productID).duration,
       freeTrialDuration: _extractDurationFromProductId(
         purchase.productID,
       ).duration,
     );
+  }
+
+  /// Extracts purchase date from verification data or falls back to transaction date
+  DateTime _extractPurchaseDate(
+    final Map<String, dynamic>? verificationJson,
+    final String? transactionDate,
+  ) {
+    if (verificationJson != null) {
+      // Try to get purchaseDate from verification data (milliseconds since epoch)
+      final purchaseDateMs = jsonDecodeInt(verificationJson['purchaseDate']);
+      if (purchaseDateMs > 0) {
+        return DateTime.fromMillisecondsSinceEpoch(purchaseDateMs);
+      }
+    }
+
+    // Fallback to parsing transaction date string
+    // "2025-08-17 7:44:54 AM"
+    final fallbackDate = dateTimeFromYYYYMMDDHMMSSAM(transactionDate);
+    return fallbackDate ?? DateTime.now();
+  }
+
+  /// Extracts expiry date from verification data for subscriptions
+  DateTime? _extractExpiryDate(final Map<String, dynamic>? verificationJson) {
+    if (verificationJson == null) return null;
+
+    final expiresDateMs = jsonDecodeInt(verificationJson['expiresDate']);
+    if (expiresDateMs > 0) {
+      return DateTime.fromMillisecondsSinceEpoch(expiresDateMs);
+    }
+
+    return null;
+  }
+
+  /// Extracts purchase type from verification data
+  PurchaseProductType _extractPurchaseType(
+    final Map<String, dynamic>? verificationJson,
+    final String productId,
+  ) {
+    if (verificationJson != null) {
+      final type = jsonDecodeString(verificationJson['type']);
+      if (type.isNotEmpty) {
+        switch (type.toLowerCase()) {
+          case 'auto-renewable subscription':
+          case 'non-renewing subscription':
+            return PurchaseProductType.subscription;
+          case 'consumable':
+            return PurchaseProductType.consumable;
+          case 'non-consumable':
+            return PurchaseProductType.nonConsumable;
+        }
+      }
+    }
+
+    // Fallback to product ID analysis
+    if (productId.contains('subscription')) {
+      return PurchaseProductType.subscription;
+    }
+    return PurchaseProductType.nonConsumable;
   }
 
   PurchaseStatus _mapPurchaseStatus(final iap.PurchaseStatus status) =>
