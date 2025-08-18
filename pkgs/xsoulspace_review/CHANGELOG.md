@@ -1,3 +1,12 @@
+# Changelog
+
+## 0.3.0-beta.5
+
+- chore: xsoulspace_lints 0.1.2
+- chore: xsoulspace_foundation 0.2.1
+- chore: xsoulspace_installation_store 0.1.2
+- chore: xsoulspace_locale 0.3.2
+
 ## 0.3.0-beta.4
 
 - Added `androidPackageName` to `createForTargetStore`.

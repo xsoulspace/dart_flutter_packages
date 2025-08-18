@@ -1,6 +1,6 @@
 name: xsoulspace_installation_store
 description: Utilities for targeting app stores across platforms.
-version: 0.1.1
+version: 0.1.2
 repository: https://github.com/xsoulspace/xsoulspace_packages
 
 homepage: https://github.com/xsoulspace/xsoulspace_packages/tree/main/pkgs/xsoulspace_installation_store

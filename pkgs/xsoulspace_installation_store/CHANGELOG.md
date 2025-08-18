@@ -1,3 +1,9 @@
+# Changelog
+
+## 0.1.2
+
+- chore: xsoulspace_lints 0.1.2
+
 ## 0.1.1
 
 - fix: conditional export from web to js_interop

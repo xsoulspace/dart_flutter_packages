@@ -1,3 +1,9 @@
+# Changelog
+
+## 0.2.1
+
+- chore: xsoulspace_lints 0.1.2
+
 ## 0.2.0
 
 - chore: sdk: ">=3.8.1 <4.0.0"
