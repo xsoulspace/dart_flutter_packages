@@ -67,16 +67,24 @@ import StoreKit
   }
 
   private func enrichTransaction(_ transaction: Transaction) async -> String? {
-    guard let product = products.first(where: { $0.id == transaction.productID }) else {
+    guard let product: Product = products.first(where: { $0.id == transaction.productID }) else {
       return transaction.jsonRepresentation
     }
 
-    var transactionDict = transaction.dictionaryRepresentation
-    transactionDict["product"] = product.dictionaryRepresentation
+    // Create a new dictionary like Dart Map
+    var enrichedDict: [String: Any] = [:]
+
+    // Spread transaction data (equivalent to Dart's ... operator)
+    if let transactionData = transaction.jsonRepresentation as? [String: Any] {
+      enrichedDict.merge(transactionData) { _, new in new }
+    }
+
+    // Add product with key "product"
+    enrichedDict["product"] = product.jsonRepresentation
 
     do {
       let jsonData = try JSONSerialization.data(
-        withJSONObject: transactionDict, options: .prettyPrinted)
+        withJSONObject: enrichedDict, options: .prettyPrinted)
       return String(data: jsonData, encoding: .utf8)
     } catch {
       return transaction.jsonRepresentation
