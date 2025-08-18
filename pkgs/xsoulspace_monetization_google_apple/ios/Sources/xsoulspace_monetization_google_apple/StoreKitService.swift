@@ -18,7 +18,9 @@ import UIKit
         let products = try await Product.products(for: productIdentifiers)
         self.products = products
 
-        let jsonStrings = products.map { $0.jsonRepresentation }
+        let jsonStrings = products.compactMap { product in
+          String(data: product.jsonRepresentation, encoding: .utf8)
+        }
         completion(jsonStrings, nil)
       } catch {
         completion(nil, error)
@@ -93,26 +95,32 @@ import UIKit
 
   private func enrichTransaction(_ transaction: Transaction) async -> String? {
     guard let product: Product = products.first(where: { $0.id == transaction.productID }) else {
-      return transaction.jsonRepresentation
+      return String(data: transaction.jsonRepresentation, encoding: .utf8)
     }
 
     // Create a new dictionary like Dart Map
     var enrichedDict: [String: Any] = [:]
 
     // Spread transaction data (equivalent to Dart's ... operator)
-    if let transactionData = transaction.jsonRepresentation as? [String: Any] {
-      enrichedDict.merge(transactionData) { _, new in new }
-    }
-
-    // Add product with key "product"
-    enrichedDict["product"] = product.jsonRepresentation
-
     do {
+      if let transactionData = try JSONSerialization.jsonObject(
+        with: transaction.jsonRepresentation, options: []) as? [String: Any]
+      {
+        enrichedDict.merge(transactionData) { _, new in new }
+      }
+
+      // Add product data
+      if let productData = try JSONSerialization.jsonObject(
+        with: product.jsonRepresentation, options: []) as? [String: Any]
+      {
+        enrichedDict["product"] = productData
+      }
+
       let jsonData = try JSONSerialization.data(
         withJSONObject: enrichedDict, options: .prettyPrinted)
       return String(data: jsonData, encoding: .utf8)
     } catch {
-      return transaction.jsonRepresentation
+      return String(data: transaction.jsonRepresentation, encoding: .utf8)
     }
   }
 
