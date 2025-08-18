@@ -60,6 +60,40 @@ public class GoogleApplePurchaseProviderPlugin: NSObject, FlutterPlugin {
         result(productID)
       }
 
+    case "getPurchaseDetails":
+      guard let productIdentifier = call.arguments as? String else {
+        result(
+          FlutterError(
+            code: "INVALID_ARGUMENT", message: "Product identifier is required", details: nil))
+        return
+      }
+      storeKitService.getLatestTransaction(productIdentifier: productIdentifier) {
+        transaction, error in
+        if let error = error {
+          result(
+            FlutterError(
+              code: "FETCH_TRANSACTION_FAILED", message: error.localizedDescription, details: nil))
+          return
+        }
+        result(transaction)
+      }
+
+    case "getPurchaseDetailsByPurchaseId":
+      guard let purchaseId = call.arguments as? String else {
+        result(
+          FlutterError(code: "INVALID_ARGUMENT", message: "Purchase ID is required", details: nil))
+        return
+      }
+      storeKitService.getTransaction(for: purchaseId) { transaction, error in
+        if let error = error {
+          result(
+            FlutterError(
+              code: "FETCH_TRANSACTION_FAILED", message: error.localizedDescription, details: nil))
+          return
+        }
+        result(transaction)
+      }
+
     default:
       result(FlutterMethodNotImplemented)
     }

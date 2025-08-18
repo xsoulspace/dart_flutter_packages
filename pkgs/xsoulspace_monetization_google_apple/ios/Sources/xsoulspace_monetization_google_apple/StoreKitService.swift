@@ -42,7 +42,7 @@ import StoreKit
           let transaction = try self.checkVerified(verification)
           self.purchasedProductIDs.insert(transaction.productID)
           await transaction.finish()
-          completion(transaction.productID, nil)
+          completion("\(transaction.id)", nil)
         case .userCancelled, .pending:
           completion(nil, nil)
         default:
@@ -63,6 +63,83 @@ import StoreKit
       throw URLError(.cancelled)
     case .verified(let safe):
       return safe
+    }
+  }
+
+  private func enrichTransaction(_ transaction: Transaction) async -> String? {
+    guard let product = products.first(where: { $0.id == transaction.productID }) else {
+      return transaction.jsonRepresentation
+    }
+
+    var transactionDict = transaction.dictionaryRepresentation
+    transactionDict["product"] = product.dictionaryRepresentation
+
+    do {
+      let jsonData = try JSONSerialization.data(
+        withJSONObject: transactionDict, options: .prettyPrinted)
+      return String(data: jsonData, encoding: .utf8)
+    } catch {
+      return transaction.jsonRepresentation
+    }
+  }
+
+  @objc public func getLatestTransaction(
+    productIdentifier: String, completion: @escaping (String?, Error?) -> Void
+  ) {
+    Task {
+      guard let result = await Transaction.latest(for: productIdentifier) else {
+        completion(nil, nil)
+        return
+      }
+
+      do {
+        let transaction = try self.checkVerified(result)
+        let enrichedTransaction = await self.enrichTransaction(transaction)
+        completion(enrichedTransaction, nil)
+      } catch {
+        completion(nil, error)
+      }
+    }
+  }
+
+  @objc public func getTransaction(
+    for purchaseId: String, completion: @escaping (String?, Error?) -> Void
+  ) {
+    Task {
+      var allTransactions: [Transaction] = []
+      for await result in Transaction.all {
+        do {
+          let transaction = try self.checkVerified(result)
+          allTransactions.append(transaction)
+        } catch {
+          // Ignore unverified transactions
+        }
+      }
+
+      let transaction = allTransactions.first { "\($0.id)" == purchaseId }
+      if let transaction = transaction {
+        let enrichedTransaction = await self.enrichTransaction(transaction)
+        completion(enrichedTransaction, nil)
+      } else {
+        completion(nil, nil)
+      }
+    }
+  }
+
+  @objc public func showManageSubscriptions(completion: @escaping (Error?) -> Void) {
+    Task {
+      do {
+        guard let windowScene = await UIApplication.shared.connectedScenes.first as? UIWindowScene
+        else {
+          // TODO: Create a custom error here
+          completion(nil)
+          return
+        }
+        try await AppStore.showManageSubscriptions(in: windowScene)
+        completion(nil)
+      } catch {
+        completion(error)
+      }
     }
   }
 }

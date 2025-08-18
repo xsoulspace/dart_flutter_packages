@@ -299,6 +299,9 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
     final PurchaseId purchaseId,
   ) async {
     try {
+      if (Platform.isIOS) {
+        return _appleNativeProvider.getPurchaseDetailsByPurchaseId(purchaseId);
+      }
       final purchases = await purchaseStream.firstWhere(
         (final list) =>
             list.any((final p) => p.purchaseId.value == purchaseId.value),

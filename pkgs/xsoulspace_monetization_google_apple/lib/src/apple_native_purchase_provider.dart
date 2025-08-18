@@ -159,4 +159,91 @@ class AppleNativePurchaseProvider {
       return CancelResultModel.failure(e.message ?? 'Unknown error');
     }
   }
+
+  Future<PurchaseDetailsModel> getPurchaseDetails(
+    final PurchaseProductId productId,
+  ) async {
+    try {
+      final result = await _purchasesChannel.invokeMethod<String>(
+        'getPurchaseDetails',
+        productId.value,
+      );
+      if (result == null) {
+        throw Exception('Failed to get purchase details.');
+      }
+
+      return _mapTransactionToPurchaseDetails(
+        jsonDecodeMapAs<String, dynamic>(result),
+      );
+    } on PlatformException catch (e) {
+      throw Exception(e.message);
+    }
+  }
+
+  Future<PurchaseDetailsModel> getPurchaseDetailsByPurchaseId(
+    final PurchaseId purchaseId,
+  ) async {
+    try {
+      final result = await _purchasesChannel.invokeMethod<String>(
+        'getPurchaseDetailsByPurchaseId',
+        purchaseId.value,
+      );
+      if (result == null) {
+        throw Exception('Failed to get purchase details.');
+      }
+
+      return _mapTransactionToPurchaseDetails(
+        jsonDecodeMapAs<String, dynamic>(result),
+      );
+    } on PlatformException catch (e) {
+      throw Exception(e.message);
+    }
+  }
+
+  PurchaseDetailsModel _mapTransactionToPurchaseDetails(
+    final Map<String, dynamic> transactionData,
+  ) {
+    final productData = jsonDecodeNullableMap(transactionData['product']);
+    final productId = jsonDecodeString(transactionData['productID']);
+    final purchaseId = jsonDecodeString(transactionData['id']);
+    final purchaseDate =
+        dateTimeFromIso8601String(transactionData['purchaseDate']) ??
+        DateTime.now();
+    final status = _mapTransactionStatus(
+      jsonDecodeString(transactionData['status']),
+    );
+    final expiryDate = dateTimeFromIso8601String(
+      transactionData['expirationDate'],
+    );
+    final name = jsonDecodeString(productData?['displayName']);
+    final formattedPrice = jsonDecodeString(productData?['displayPrice']);
+    final subscription = jsonDecodeNullableMap(productData?['subscription']);
+    final duration = _extractDurationFromSubscription(subscription);
+    final freeTrialDuration = _extractFreeTrialDuration(subscription).duration;
+
+    return PurchaseDetailsModel(
+      purchaseId: PurchaseId.fromJson(purchaseId),
+      productId: PurchaseProductId.fromJson(productId),
+      priceId: PurchasePriceId.fromJson(productId),
+      status: status,
+      purchaseDate: purchaseDate,
+      purchaseType: PurchaseProductType.nonConsumable,
+      source: 'app_store',
+      name: name,
+      duration: duration,
+      freeTrialDuration: freeTrialDuration,
+      expiryDate: expiryDate,
+      formattedPrice: formattedPrice,
+    );
+  }
+
+  PurchaseStatus _mapTransactionStatus(final String status) =>
+      switch (status.toLowerCase()) {
+        'purchased' => PurchaseStatus.purchased,
+        'pending' => PurchaseStatus.pending,
+        'failed' => PurchaseStatus.error,
+        'deferred' => PurchaseStatus.pending,
+        'restored' => PurchaseStatus.purchased,
+        _ => PurchaseStatus.error,
+      };
 }
