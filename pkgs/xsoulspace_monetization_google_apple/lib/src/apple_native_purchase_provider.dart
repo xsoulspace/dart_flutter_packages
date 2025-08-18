@@ -211,13 +211,13 @@ class AppleNativePurchaseProvider {
     final productId = jsonDecodeString(transactionData['productID']);
     final purchaseId = jsonDecodeString(transactionData['id']);
     final purchaseDate =
-        dateTimeFromIso8601String(transactionData['purchaseDate']) ??
+        dateTimeFromMillisecondsSinceEpoch(transactionData['purchaseDate']) ??
         DateTime.now();
     final status = _mapTransactionStatus(
       jsonDecodeString(transactionData['status']),
     );
-    final expiryDate = dateTimeFromIso8601String(
-      transactionData['expirationDate'],
+    final expiryDate = dateTimeFromMillisecondsSinceEpoch(
+      transactionData['expiresDate'],
     );
     final name = jsonDecodeString(productData?['displayName']);
     final formattedPrice = jsonDecodeString(productData?['displayPrice']);

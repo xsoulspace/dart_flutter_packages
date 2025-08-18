@@ -209,7 +209,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
   ) {
     final transactionDate = purchase.transactionDate;
     // "2025-08-17 7:44:54 AM"
-    final purchaseDate = dateTimeFromIso8601String(transactionDate);
+    final purchaseDate = dateTimeFromYYYYMMDDHMMSSAM(transactionDate);
 
     return PurchaseDetailsModel(
       purchaseId: PurchaseId.fromJson(purchase.purchaseID ?? ''),
