@@ -10,9 +10,9 @@ environment:
   sdk: ">=3.8.1 <4.0.0"
 
 dependencies:
-  from_json_to_json: ^0.2.1
+  from_json_to_json: ^0.3.0
   meta: ^1.16.0
 
 dev_dependencies:
   lints: ^6.0.0
-  xsoulspace_lints: ^0.1.0
+  xsoulspace_lints: ^0.1.2

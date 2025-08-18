@@ -54,13 +54,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Dependencies
 
-- `from_json_to_json: ^0.2.1` - JSON serialization utilities
+- `from_json_to_json: ^0.3.0` - JSON serialization utilities
 - `meta: ^1.16.0` - Metadata annotations
 
 ### Development Dependencies
 
 - `lints: ^6.0.0` - Dart linting rules
-- `xsoulspace_lints: ^0.1.0` - Custom linting rules
+- `xsoulspace_lints: ^0.1.2` - Custom linting rules
 
 ## [Unreleased]
 

@@ -22,7 +22,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   lints: ^6.0.0
-  xsoulspace_lints: ^0.1.0
+  xsoulspace_lints: ^0.1.2
 
 flutter:
   uses-material-design: true

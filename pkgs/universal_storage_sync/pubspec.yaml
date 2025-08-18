@@ -13,7 +13,7 @@ environment:
   sdk: ">=3.8.1 <4.0.0"
 
 dependencies:
-  from_json_to_json: ^0.2.1
+  from_json_to_json: ^0.3.0
   universal_storage_interface: ^0.1.0-dev.5
 
 dev_dependencies:
@@ -21,4 +21,4 @@ dev_dependencies:
   lints: ^6.0.0
   mockito: ^5.4.6
   test: ^1.26.2
-  xsoulspace_lints: ^0.1.0
+  xsoulspace_lints: ^0.1.2

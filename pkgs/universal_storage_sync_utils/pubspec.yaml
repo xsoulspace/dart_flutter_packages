@@ -18,7 +18,7 @@ dependencies:
   file_selector: ^1.0.3
   flutter:
     sdk: flutter
-  from_json_to_json: ^0.2.1
+  from_json_to_json: ^0.3.0
   github: ^9.24.0
   macos_secure_bookmarks: ^0.2.1
   path: ^1.8.0
@@ -29,7 +29,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   lints: ^6.0.0
-  xsoulspace_lints: ^0.1.0
+  xsoulspace_lints: ^0.1.2
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 # The following section is specific to Flutter packages.

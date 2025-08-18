@@ -9,11 +9,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  from_json_to_json: ^0.2.1
+  from_json_to_json: ^0.3.0
   is_dart_empty_or_not: ^0.2.3
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   lints: ^6.0.0
-  xsoulspace_lints: ^0.1.0
+  xsoulspace_lints: ^0.1.2
