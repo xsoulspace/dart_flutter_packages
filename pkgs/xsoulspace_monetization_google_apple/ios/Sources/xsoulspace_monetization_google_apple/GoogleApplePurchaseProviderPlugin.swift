@@ -12,7 +12,6 @@ public class GoogleApplePurchaseProviderPlugin: NSObject, FlutterPlugin {
     )
     let instance = GoogleApplePurchaseProviderPlugin()
     registrar.addMethodCallDelegate(instance, channel: channel)
-    channel.setMethodCallHandler(instance.handle)
   }
 
   public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -30,8 +29,10 @@ public class GoogleApplePurchaseProviderPlugin: NSObject, FlutterPlugin {
 
     case "fetchProducts":
       guard let productIdentifiers = call.arguments as? [String] else {
-        // TODO: Create a custom error here
-        result(nil)
+        result(
+          FlutterError(
+            code: "INVALID_ARGUMENT", message: "Product identifiers array is required", details: nil
+          ))
         return
       }
       storeKitService.fetchProducts(productIdentifiers: productIdentifiers) { products, error in
@@ -46,8 +47,9 @@ public class GoogleApplePurchaseProviderPlugin: NSObject, FlutterPlugin {
 
     case "purchaseProduct":
       guard let productIdentifier = call.arguments as? String else {
-        // TODO: Create a custom error here
-        result(nil)
+        result(
+          FlutterError(
+            code: "INVALID_ARGUMENT", message: "Product identifier is required", details: nil))
         return
       }
       storeKitService.purchaseProduct(productIdentifier: productIdentifier) { productID, error in
