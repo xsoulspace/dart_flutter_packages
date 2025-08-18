@@ -33,10 +33,10 @@ class AppleNativePurchaseProvider {
     }
 
     // Extract basic product information
-    final productId = jsonDecodeString(productData['id']);
     final attributes = jsonDecodeMapAs<String, dynamic>(
       productData['attributes'],
     );
+    final productId = jsonDecodeString(attributes['offerName']);
 
     // Extract product name and description
     final displayName = jsonDecodeString(attributes['name']);
