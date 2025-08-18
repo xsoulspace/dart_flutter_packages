@@ -24,3 +24,4 @@ linter:
   # producing the lint.
   rules:
     public_member_api_docs: true
+    omit_obvious_property_types: false
