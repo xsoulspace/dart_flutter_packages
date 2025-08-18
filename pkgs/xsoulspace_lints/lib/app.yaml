@@ -44,7 +44,7 @@ linter:
     strict_top_level_inference: true
     unsafe_variance: true
     prefer_inlined_adds: true
-    omit_obvious_property_types: true
+    omit_obvious_property_types: false
     null_closures: true
     avoid_unnecessary_containers: true
     unnecessary_underscores: true

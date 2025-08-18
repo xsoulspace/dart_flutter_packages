@@ -2,7 +2,9 @@
   "cSpell.words": [
     "Appstore",
     "collab",
+    "combinators",
     "deeplink",
+    "ints",
     "itchio",
     "myapp",
     "myorg",
@@ -17,9 +19,12 @@
     "sideloaded",
     "srcs",
     "Subtags",
+    "tearoffs",
     "testuser",
+    "unawaited",
     "Unstages",
     "visionos",
+    "wheretype",
     "writability"
   ],
   "cSpell.language": "en,ru",
