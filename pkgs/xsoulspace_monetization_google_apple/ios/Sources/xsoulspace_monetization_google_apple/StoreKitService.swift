@@ -1,4 +1,5 @@
 import StoreKit
+import UIKit
 
 // https://medium.com/@aisultanios/implement-inn-app-subscriptions-using-swift-and-storekit2-serverless-and-share-active-purchases-7d50f9ecdc09
 
@@ -29,8 +30,12 @@ import StoreKit
     productIdentifier: String, completion: @escaping (String?, Error?) -> Void
   ) {
     guard let product = products.first(where: { $0.id == productIdentifier }) else {
-      // TODO: Create a custom error here
-      completion(nil, nil)
+      let error = NSError(
+        domain: "StoreKitService", code: 404,
+        userInfo: [
+          NSLocalizedDescriptionKey: "Product not found: \(productIdentifier)"
+        ])
+      completion(nil, error)
       return
     }
 
@@ -43,10 +48,27 @@ import StoreKit
           self.purchasedProductIDs.insert(transaction.productID)
           await transaction.finish()
           completion("\(transaction.id)", nil)
-        case .userCancelled, .pending:
-          completion(nil, nil)
+        case .userCancelled:
+          let error = NSError(
+            domain: "StoreKitService", code: 1001,
+            userInfo: [
+              NSLocalizedDescriptionKey: "Purchase was cancelled by user"
+            ])
+          completion(nil, error)
+        case .pending:
+          let error = NSError(
+            domain: "StoreKitService", code: 1002,
+            userInfo: [
+              NSLocalizedDescriptionKey: "Purchase is pending approval"
+            ])
+          completion(nil, error)
         default:
-          completion(nil, nil)
+          let error = NSError(
+            domain: "StoreKitService", code: 1003,
+            userInfo: [
+              NSLocalizedDescriptionKey: "Purchase failed with unknown status"
+            ])
+          completion(nil, error)
         }
       } catch {
         completion(nil, error)
@@ -59,8 +81,11 @@ import StoreKit
     case .unverified:
       // Successful purchase but transaction/receipt can't be verified
       // Could be a jailbroken phone
-      // TODO: Create a custom error here
-      throw URLError(.cancelled)
+      throw NSError(
+        domain: "StoreKitService", code: 2001,
+        userInfo: [
+          NSLocalizedDescriptionKey: "Transaction verification failed"
+        ])
     case .verified(let safe):
       return safe
     }
@@ -96,7 +121,12 @@ import StoreKit
   ) {
     Task {
       guard let result = await Transaction.latest(for: productIdentifier) else {
-        completion(nil, nil)
+        let error = NSError(
+          domain: "StoreKitService", code: 3001,
+          userInfo: [
+            NSLocalizedDescriptionKey: "No transaction found for product: \(productIdentifier)"
+          ])
+        completion(nil, error)
         return
       }
 
@@ -129,7 +159,12 @@ import StoreKit
         let enrichedTransaction = await self.enrichTransaction(transaction)
         completion(enrichedTransaction, nil)
       } else {
-        completion(nil, nil)
+        let error = NSError(
+          domain: "StoreKitService", code: 4001,
+          userInfo: [
+            NSLocalizedDescriptionKey: "Transaction not found for purchase ID: \(purchaseId)"
+          ])
+        completion(nil, error)
       }
     }
   }
@@ -139,8 +174,12 @@ import StoreKit
       do {
         guard let windowScene = await UIApplication.shared.connectedScenes.first as? UIWindowScene
         else {
-          // TODO: Create a custom error here
-          completion(nil)
+          let error = NSError(
+            domain: "StoreKitService", code: 5001,
+            userInfo: [
+              NSLocalizedDescriptionKey: "No window scene available for showing subscriptions"
+            ])
+          completion(error)
           return
         }
         try await AppStore.showManageSubscriptions(in: windowScene)
