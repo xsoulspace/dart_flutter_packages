@@ -25,9 +25,10 @@ class AppleNativePurchaseProvider {
 
   /// Maps StoreKit product data to PurchaseProductDetailsModel
   PurchaseProductDetailsModel _mapStoreKitProductToModel(
-    final dynamic productData,
+    final dynamic productDataRaw,
   ) {
-    if (productData is! Map<String, dynamic>) {
+    final productData = jsonDecodeMapAs<String, dynamic>(productDataRaw);
+    if (productData.isEmpty) {
       throw Exception('Invalid product data format');
     }
 
