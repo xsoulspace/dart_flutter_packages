@@ -37,11 +37,6 @@ void main() {
             expectedResult: false,
             statusMatcher: isFreeStatus(),
           ),
-          'pending subscription': (
-            purchase: () => aPurchase(pending: true),
-            expectedResult: false,
-            statusMatcher: isFreeStatus(),
-          ),
           'canceled subscription': (
             purchase: () => aPurchase(cancelled: true),
             expectedResult: false,
@@ -90,7 +85,6 @@ void main() {
       () async {
         final pendingActiveSubscription = PurchaseDetailsModel(
           purchaseDate: DateTime.now(),
-          status: PurchaseStatus.pendingVerification,
           purchaseType: PurchaseProductType.subscription,
           expiryDate: DateTime.now().add(const Duration(days: 30)),
         );

@@ -201,14 +201,11 @@ class FakeProvider implements PurchaseProvider {
 
 PurchaseDetailsModel purchase({
   final bool active = false,
-  final bool pending = false,
   final bool pendingConfirmation = false,
   final bool cancelled = false,
   final PurchaseProductType type = PurchaseProductType.subscription,
 }) {
-  final status = pending
-      ? PurchaseStatus.pending
-      : pendingConfirmation
+  final status = pendingConfirmation
       ? PurchaseStatus.pendingVerification
       : cancelled
       ? PurchaseStatus.canceled

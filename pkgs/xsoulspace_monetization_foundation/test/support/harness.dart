@@ -45,14 +45,10 @@ class MonetizationTestEnv {
   // ---------- Configuration (Given) helpers ----------
 
   /// Configure provider to return subscribe success.
-  void givenSubscribeSuccess({
-    final bool shouldConfirm = true,
-    final PurchaseDetailsModel? details,
-  }) {
+  void givenSubscribeSuccess({final PurchaseDetailsModel? details}) {
     provider = FakeProvider(
       subscribeResult: PurchaseResultModel.success(
         details ?? aPurchase(pendingConfirmation: true),
-        shouldConfirmPurchase: shouldConfirm,
       ),
     );
   }
@@ -131,6 +127,7 @@ class MonetizationTestEnv {
         subscriptionStatusResource: subscriptionStatus,
         activeSubscriptionResource: activeSubscription,
         purchasesLocalApi: purchasesLocalApi,
+        cancelSubscriptionCommand: makeCancelSubscriptionCommand(),
       );
 
   CancelSubscriptionCommand makeCancelSubscriptionCommand() =>
@@ -145,15 +142,12 @@ class MonetizationTestEnv {
   RestorePurchasesCommand makeRestorePurchasesCommand() =>
       RestorePurchasesCommand(
         purchaseProvider: provider,
-        purchasesLocalApi: purchasesLocalApi,
-        handlePurchaseUpdateCommand: makeHandlePurchaseUpdateCommand(),
         subscriptionStatusResource: subscriptionStatus,
       );
 
   SubscribeCommand makeSubscribeCommand() => SubscribeCommand(
     purchaseProvider: provider,
     subscriptionStatusResource: subscriptionStatus,
-    confirmPurchaseCommand: makeConfirmPurchaseCommand(),
     cancelSubscriptionCommand: makeCancelSubscriptionCommand(),
     purchasePaywallErrorResource: purchasePaywallError,
   );

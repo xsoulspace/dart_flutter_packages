@@ -3,14 +3,11 @@ import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interf
 /// Purchase details builder
 PurchaseDetailsModel aPurchase({
   final bool active = false,
-  final bool pending = false,
   final bool pendingConfirmation = false,
   final bool cancelled = false,
   final PurchaseProductType type = PurchaseProductType.subscription,
 }) {
-  final status = pending
-      ? PurchaseStatus.pending
-      : pendingConfirmation
+  final status = pendingConfirmation
       ? PurchaseStatus.pendingVerification
       : cancelled
       ? PurchaseStatus.canceled
