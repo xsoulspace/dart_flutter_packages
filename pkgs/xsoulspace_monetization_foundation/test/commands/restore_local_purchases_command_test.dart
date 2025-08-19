@@ -3,88 +3,13 @@ import 'package:xsoulspace_monetization_foundation/xsoulspace_monetization_found
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
 import '../support/builders.dart';
-
-/// Fake implementation of PurchasesLocalApi that records calls and values
-class FakePurchasesLocalApi {
-  FakePurchasesLocalApi();
-
-  PurchaseDetailsModel _activeSubscription = PurchaseDetailsModel.empty;
-  int _getActiveSubscriptionCalls = 0;
-  int _clearActiveSubscriptionCalls = 0;
-
-  /// Configure the active subscription to return
-  void givenActiveSubscription(PurchaseDetailsModel subscription) {
-    _activeSubscription = subscription;
-  }
-
-  /// Get the number of times getActiveSubscription was called
-  int get getActiveSubscriptionCalls => _getActiveSubscriptionCalls;
-
-  /// Get the number of times clearActiveSubscription was called
-  int get clearActiveSubscriptionCalls => _clearActiveSubscriptionCalls;
-
-  /// Reset all call counters
-  void reset() {
-    _getActiveSubscriptionCalls = 0;
-    _clearActiveSubscriptionCalls = 0;
-  }
-
-  Future<PurchaseDetailsModel> getActiveSubscription() async {
-    _getActiveSubscriptionCalls++;
-    return _activeSubscription;
-  }
-
-  Future<void> clearActiveSubscription() async {
-    _clearActiveSubscriptionCalls++;
-  }
-}
-
-/// Fake implementation of SubscriptionStatusResource that records calls
-class FakeSubscriptionStatusResource {
-  FakeSubscriptionStatusResource();
-
-  SubscriptionStatus _status = SubscriptionStatus.free;
-  final List<SubscriptionStatus> _setCalls = [];
-
-  /// Get the current status
-  SubscriptionStatus get status => _status;
-
-  /// Get all set() calls in order
-  List<SubscriptionStatus> get setCalls => List.unmodifiable(_setCalls);
-
-  /// Reset all recorded calls
-  void reset() {
-    _setCalls.clear();
-  }
-
-  void set(SubscriptionStatus status) {
-    _status = status;
-    _setCalls.add(status);
-  }
-
-  bool get isFree => status == SubscriptionStatus.free;
-  bool get isSubscribed => status == SubscriptionStatus.subscribed;
-  bool get isPendingConfirmation => status == SubscriptionStatus.pendingPaymentConfirmation;
-}
+import '../support/harness.dart';
 
 void main() {
-  late FakePurchasesLocalApi fakeLocalApi;
-  late FakeSubscriptionStatusResource fakeSubscriptionStatus;
-  late RestoreLocalPurchasesCommand command;
+  late MonetizationTestEnv env;
 
-  setUp(() {
-    fakeLocalApi = FakePurchasesLocalApi();
-    fakeSubscriptionStatus = FakeSubscriptionStatusResource();
-    command = RestoreLocalPurchasesCommand(
-      purchasesLocalApi: fakeLocalApi,
-      subscriptionStatusResource: fakeSubscriptionStatus,
-    );
-  });
-
-  tearDown(() {
-    fakeLocalApi.reset();
-    fakeSubscriptionStatus.reset();
-  });
+  setUp(() => env = MonetizationTestEnv()..setUp());
+  tearDown(() => env.tearDown());
 
   group('RestoreLocalPurchasesCommand', () {
     test(
@@ -92,17 +17,16 @@ void main() {
       () async {
         // Arrange
         final activePurchase = aPurchase(active: true);
-        fakeLocalApi.givenActiveSubscription(activePurchase);
+        await env.givenLocalActiveSubscription(activePurchase);
+        final command = env.makeRestoreLocalPurchasesCommand();
 
         // Act
         final result = await command.execute();
 
         // Assert
         expect(result, isTrue);
-        expect(fakeSubscriptionStatus.status, SubscriptionStatus.subscribed);
-        expect(fakeSubscriptionStatus.setCalls, [SubscriptionStatus.subscribed]);
-        expect(fakeLocalApi.getActiveSubscriptionCalls, 1);
-        expect(fakeLocalApi.clearActiveSubscriptionCalls, 0);
+        expect(env.subscriptionStatus.status, SubscriptionStatus.subscribed);
+        expect(env.subscriptionStatus.setCalls, 1);
       },
     );
 
@@ -111,17 +35,21 @@ void main() {
       () async {
         // Arrange
         final pendingPurchase = aPurchase(pendingConfirmation: true);
-        fakeLocalApi.givenActiveSubscription(pendingPurchase);
+        await env.givenLocalActiveSubscription(pendingPurchase);
+        final command = env.makeRestoreLocalPurchasesCommand();
 
         // Act
         final result = await command.execute();
 
         // Assert
         expect(result, isFalse);
-        expect(fakeSubscriptionStatus.status, SubscriptionStatus.pendingPaymentConfirmation);
-        expect(fakeSubscriptionStatus.setCalls, [SubscriptionStatus.pendingPaymentConfirmation]);
-        expect(fakeLocalApi.getActiveSubscriptionCalls, 1);
-        expect(fakeLocalApi.clearActiveSubscriptionCalls, 1);
+        expect(
+          env.subscriptionStatus.status,
+          SubscriptionStatus.pendingPaymentConfirmation,
+        );
+        expect(env.subscriptionStatus.setCalls, [
+          SubscriptionStatus.pendingPaymentConfirmation,
+        ]);
       },
     );
 
@@ -129,96 +57,82 @@ void main() {
       'PurchaseStatus.purchased with isActive==false: sets free, clears, returns false',
       () async {
         // Arrange
-        final inactivePurchase = aPurchase(active: false);
-        fakeLocalApi.givenActiveSubscription(inactivePurchase);
+        final inactivePurchase = aPurchase();
+        await env.givenLocalActiveSubscription(inactivePurchase);
+        final command = env.makeRestoreLocalPurchasesCommand();
 
         // Act
         final result = await command.execute();
 
         // Assert
         expect(result, isFalse);
-        expect(fakeSubscriptionStatus.status, SubscriptionStatus.free);
-        expect(fakeSubscriptionStatus.setCalls, [SubscriptionStatus.free]);
-        expect(fakeLocalApi.getActiveSubscriptionCalls, 1);
-        expect(fakeLocalApi.clearActiveSubscriptionCalls, 1);
+        expect(env.subscriptionStatus.status, SubscriptionStatus.free);
+        expect(env.subscriptionStatus.setCalls, [SubscriptionStatus.free]);
       },
     );
 
-    test(
-      'PurchaseStatus.pending: sets free, clears, returns false',
-      () async {
-        // Arrange
-        final pendingPurchase = aPurchase(pending: true);
-        fakeLocalApi.givenActiveSubscription(pendingPurchase);
+    test('PurchaseStatus.pending: sets free, clears, returns false', () async {
+      // Arrange
+      final pendingPurchase = aPurchase(pending: true);
+      await env.givenLocalActiveSubscription(pendingPurchase);
+      final command = env.makeRestoreLocalPurchasesCommand();
 
-        // Act
-        final result = await command.execute();
+      // Act
+      final result = await command.execute();
 
-        // Assert
-        expect(result, isFalse);
-        expect(fakeSubscriptionStatus.status, SubscriptionStatus.free);
-        expect(fakeSubscriptionStatus.setCalls, [SubscriptionStatus.free]);
-        expect(fakeLocalApi.getActiveSubscriptionCalls, 1);
-        expect(fakeLocalApi.clearActiveSubscriptionCalls, 1);
-      },
-    );
+      // Assert
+      expect(result, isFalse);
+      expect(env.subscriptionStatus.status, SubscriptionStatus.free);
+      expect(env.subscriptionStatus.setCalls, [SubscriptionStatus.free]);
+    });
 
-    test(
-      'PurchaseStatus.canceled: sets free, clears, returns false',
-      () async {
-        // Arrange
-        final canceledPurchase = aPurchase(cancelled: true);
-        fakeLocalApi.givenActiveSubscription(canceledPurchase);
+    test('PurchaseStatus.canceled: sets free, clears, returns false', () async {
+      // Arrange
+      final canceledPurchase = aPurchase(cancelled: true);
+      await env.givenLocalActiveSubscription(canceledPurchase);
+      final command = env.makeRestoreLocalPurchasesCommand();
 
-        // Act
-        final result = await command.execute();
+      // Act
+      final result = await command.execute();
 
-        // Assert
-        expect(result, isFalse);
-        expect(fakeSubscriptionStatus.status, SubscriptionStatus.free);
-        expect(fakeSubscriptionStatus.setCalls, [SubscriptionStatus.free]);
-        expect(fakeLocalApi.getActiveSubscriptionCalls, 1);
-        expect(fakeLocalApi.clearActiveSubscriptionCalls, 1);
-      },
-    );
+      // Assert
+      expect(result, isFalse);
+      expect(env.subscriptionStatus.status, SubscriptionStatus.free);
+      expect(env.subscriptionStatus.setCalls, [SubscriptionStatus.free]);
+    });
 
-    test(
-      'PurchaseStatus.error: sets free, clears, returns false',
-      () async {
-        // Arrange
-        final errorPurchase = PurchaseDetailsModel(
-          purchaseDate: DateTime.now(),
-          status: PurchaseStatus.error,
-        );
-        fakeLocalApi.givenActiveSubscription(errorPurchase);
+    test('PurchaseStatus.error: sets free, clears, returns false', () async {
+      // Arrange
+      final errorPurchase = PurchaseDetailsModel(
+        purchaseDate: DateTime.now(),
+        status: PurchaseStatus.error,
+      );
+      await env.givenLocalActiveSubscription(errorPurchase);
+      final command = env.makeRestoreLocalPurchasesCommand();
 
-        // Act
-        final result = await command.execute();
+      // Act
+      final result = await command.execute();
 
-        // Assert
-        expect(result, isFalse);
-        expect(fakeSubscriptionStatus.status, SubscriptionStatus.free);
-        expect(fakeSubscriptionStatus.setCalls, [SubscriptionStatus.free]);
-        expect(fakeLocalApi.getActiveSubscriptionCalls, 1);
-        expect(fakeLocalApi.clearActiveSubscriptionCalls, 1);
-      },
-    );
+      // Assert
+      expect(result, isFalse);
+      expect(env.subscriptionStatus.status, SubscriptionStatus.free);
+      expect(env.subscriptionStatus.setCalls, [SubscriptionStatus.free]);
+    });
 
     test(
       'empty purchase (default): sets free, clears, returns false',
       () async {
         // Arrange
-        fakeLocalApi.givenActiveSubscription(PurchaseDetailsModel.empty);
+        await env.givenLocalActiveSubscription(PurchaseDetailsModel.empty);
+        final command = env.makeRestoreLocalPurchasesCommand();
 
         // Act
         final result = await command.execute();
 
         // Assert
         expect(result, isFalse);
-        expect(fakeSubscriptionStatus.status, SubscriptionStatus.free);
-        expect(fakeSubscriptionStatus.setCalls, [SubscriptionStatus.free]);
-        expect(fakeLocalApi.getActiveSubscriptionCalls, 1);
-        expect(fakeLocalApi.clearActiveSubscriptionCalls, 1);
+        expect(env.subscriptionStatus.status, SubscriptionStatus.free);
+        expect(env.subscriptionStatus.setCalls, [SubscriptionStatus.free]);
       },
     );
 
@@ -229,19 +143,19 @@ void main() {
         final activeConsumable = PurchaseDetailsModel(
           purchaseDate: DateTime.now(),
           status: PurchaseStatus.purchased,
-          purchaseType: PurchaseProductType.consumable,
         );
-        fakeLocalApi.givenActiveSubscription(activeConsumable);
+        await env.givenLocalActiveSubscription(activeConsumable);
+        final command = env.makeRestoreLocalPurchasesCommand();
 
         // Act
         final result = await command.execute();
 
         // Assert
         expect(result, isTrue);
-        expect(fakeSubscriptionStatus.status, SubscriptionStatus.subscribed);
-        expect(fakeSubscriptionStatus.setCalls, [SubscriptionStatus.subscribed]);
-        expect(fakeLocalApi.getActiveSubscriptionCalls, 1);
-        expect(fakeLocalApi.clearActiveSubscriptionCalls, 0);
+        expect(env.subscriptionStatus.status, SubscriptionStatus.subscribed);
+        expect(env.subscriptionStatus.setCalls, [
+          SubscriptionStatus.subscribed,
+        ]);
       },
     );
 
@@ -255,17 +169,21 @@ void main() {
           purchaseType: PurchaseProductType.subscription,
           expiryDate: DateTime.now().add(const Duration(days: 30)),
         );
-        fakeLocalApi.givenActiveSubscription(pendingActiveSubscription);
+        await env.givenLocalActiveSubscription(pendingActiveSubscription);
+        final command = env.makeRestoreLocalPurchasesCommand();
 
         // Act
         final result = await command.execute();
 
         // Assert
         expect(result, isFalse);
-        expect(fakeSubscriptionStatus.status, SubscriptionStatus.pendingPaymentConfirmation);
-        expect(fakeSubscriptionStatus.setCalls, [SubscriptionStatus.pendingPaymentConfirmation]);
-        expect(fakeLocalApi.getActiveSubscriptionCalls, 1);
-        expect(fakeLocalApi.clearActiveSubscriptionCalls, 1);
+        expect(
+          env.subscriptionStatus.status,
+          SubscriptionStatus.pendingPaymentConfirmation,
+        );
+        expect(env.subscriptionStatus.setCalls, [
+          SubscriptionStatus.pendingPaymentConfirmation,
+        ]);
       },
     );
   });

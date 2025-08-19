@@ -87,10 +87,11 @@ class AppleNativePurchaseProvider {
     if (isSubscription) return PurchaseProductType.subscription;
     return switch (kind.toLowerCase()) {
       'auto-renewable subscription' ||
-      'non-renewable subscription' ||
       'autorenewable' => PurchaseProductType.subscription,
       'consumable' => PurchaseProductType.consumable,
-      'non-consumable' || 'nonconsumable' => PurchaseProductType.nonConsumable,
+      'non-renewable subscription' ||
+      'non-consumable' ||
+      'nonconsumable' => PurchaseProductType.nonConsumable,
       _ =>
         isSubscription
             ? PurchaseProductType.subscription

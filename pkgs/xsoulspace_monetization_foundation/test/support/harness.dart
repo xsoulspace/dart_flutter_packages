@@ -104,6 +104,17 @@ class MonetizationTestEnv {
     provider = FakeProvider(subscriptions: products);
   }
 
+  /// Configure local API to return [subscription] for getActiveSubscription.
+  Future<void> givenLocalActiveSubscription(
+    final PurchaseDetailsModel subscription,
+  ) async {
+    await localDb.setItem(
+      key: PurchasesLocalApi.activeSubscriptionKey,
+      value: subscription,
+      toJson: (final value) => value.toJson(),
+    );
+  }
+
   // ---------- Command factories (use shared resources/provider) ----------
 
   ConfirmPurchaseCommand makeConfirmPurchaseCommand() => ConfirmPurchaseCommand(
@@ -155,6 +166,12 @@ class MonetizationTestEnv {
     availableSubscriptionsResource: availableSubscriptions,
     productIds: productIds,
   );
+
+  RestoreLocalPurchasesCommand makeRestoreLocalPurchasesCommand() =>
+      RestoreLocalPurchasesCommand(
+        purchasesLocalApi: purchasesLocalApi,
+        subscriptionStatusResource: subscriptionStatus,
+      );
 
   /// Convenience accessor for the named resources record used by
   /// [MonetizationFoundation].

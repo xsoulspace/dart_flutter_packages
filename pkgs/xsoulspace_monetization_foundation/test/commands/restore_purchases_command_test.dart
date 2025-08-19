@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'support/builders.dart';
-import 'support/harness.dart';
-import 'support/matchers.dart';
+import '../support/builders.dart';
+import '../support/harness.dart';
+import '../support/matchers.dart';
 
 void main() {
   group('RestorePurchasesCommand', () {

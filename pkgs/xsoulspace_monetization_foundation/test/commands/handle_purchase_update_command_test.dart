@@ -3,9 +3,9 @@ import 'package:xsoulspace_monetization_foundation/xsoulspace_monetization_found
 // ignore_for_file: unused_import
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
-import 'support/builders.dart';
-import 'support/harness.dart';
-import 'support/matchers.dart';
+import '../support/builders.dart';
+import '../support/harness.dart';
+import '../support/matchers.dart';
 
 void main() {
   late MonetizationTestEnv env;
