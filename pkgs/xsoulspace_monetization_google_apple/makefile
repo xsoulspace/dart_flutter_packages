@@ -1,2 +1,2 @@
 compile-swift:
-	swift build
+	swift build --package-path ios

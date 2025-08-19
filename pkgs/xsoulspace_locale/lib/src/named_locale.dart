@@ -54,7 +54,8 @@ String? localeToString(final Locale? locale) => locale?.languageCode;
 ///
 /// Handles both string and map inputs for flexible JSON parsing.
 ///
-/// @ai Use for parsing localized content from JSON. Throws for unsupported types.
+/// @ai Use for parsing localized content from JSON. Throws for
+/// unsupported types.
 LocalizedMap localeValueFromMap(final dynamic map) {
   if (map case String _) {
     return LocalizedMap.fromLanguages();
@@ -82,6 +83,7 @@ Map<String, String> localeValueToMap(final Map<UiLanguage, String> locales) =>
 
 /// Type-safe container for localized string values.
 ///
+// ignore: unintended_html_in_doc_comment
 /// Provides zero-overhead wrapper around Map<UiLanguage, String> with
 /// JSON serialization and convenient access methods.
 ///
