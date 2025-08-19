@@ -132,7 +132,7 @@ class AppleNativePurchaseProvider {
 
   Future<CancelResultModel> cancelSubscription() async {
     try {
-      await _purchasesChannel.invokeMethod('showCancelSubSheet');
+      await _purchasesChannel.invokeMethod('showCancelSubscriptionSheet');
       return CancelResultModel.success();
     } on PlatformException catch (e) {
       return CancelResultModel.failure(e.message ?? 'Unknown error');
