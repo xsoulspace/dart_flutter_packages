@@ -1,8 +1,9 @@
 name: xsoulspace_review
-description: Useful tools for review for stores and user feedback
-version: 0.2.1
+description: Useful tools for review for stores (via plugins) and user feedback (via Wiredash)
+version: 0.3.0-beta.5
 homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_review
 repository: https://github.com/xsoulspace/dart_flutter_packages
+issue_tracker: https://github.com/xsoulspace/xsoulspace_packages/issues
 
 environment:
   sdk: ">=3.8.1 <4.0.0"
@@ -10,16 +11,16 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_rustore_review: ^9.0.2
+  flutter_rustore_review: ^9.1.0
   in_app_review: ^2.0.10
   meta: ^1.16.0
   universal_io: ^2.2.2
-  url_launcher: ^6.3.1
+  url_launcher: ^6.3.2
   wiredash: ^2.5.0
-  xsoulspace_foundation: ^0.2.0
-  xsoulspace_locale: ^0.2.0
-  xsoulspace_ui_foundation: ^0.1.0
+  xsoulspace_foundation: ^0.2.1
+  xsoulspace_installation_store: ^0.1.2
+  xsoulspace_locale: ^0.3.2
 
 dev_dependencies:
   lints: ^6.0.0
-  xsoulspace_lints: ^0.1.0
+  xsoulspace_lints: ^0.1.2

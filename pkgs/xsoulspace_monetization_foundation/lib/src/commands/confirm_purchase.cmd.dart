@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
+import '../local_api/local_api.dart';
 import '../resources/resources.dart';
 
 /// {@template confirm_purchase_command}
@@ -37,11 +38,13 @@ class ConfirmPurchaseCommand {
     required this.activeSubscriptionResource,
     required this.subscriptionStatusResource,
     required this.purchasePaywallErrorResource,
+    required this.purchasesLocalApi,
   });
   final ActiveSubscriptionResource activeSubscriptionResource;
   final SubscriptionStatusResource subscriptionStatusResource;
   final PurchaseProvider purchaseProvider;
   final PurchasePaywallErrorResource purchasePaywallErrorResource;
+  final PurchasesLocalApi purchasesLocalApi;
 
   /// {@template execute_confirm_purchase}
   /// Executes the purchase confirmation process.
@@ -62,29 +65,35 @@ class ConfirmPurchaseCommand {
   /// - `SubscriptionStatusResource`: Set to subscribed status
   /// {@endtemplate}
   Future<bool> execute(final PurchaseVerificationDtoModel details) async {
-    if (details.status case PurchaseStatus.pending || PurchaseStatus.canceled) {
+    if (details.status case PurchaseStatus.pending) return false;
+
+    Future<bool> cleanUp() async {
+      // protection if subscription is active
+      if (activeSubscriptionResource.isActive) return false;
+      activeSubscriptionResource.set(PurchaseDetailsModel.empty);
+      subscriptionStatusResource.set(SubscriptionStatus.free);
+      await purchasesLocalApi.clearActiveSubscription();
       return false;
     }
+
     final result = await purchaseProvider.completePurchase(details);
     switch (result.type) {
       case ResultType.success:
-        if (details.status
-            case (PurchaseStatus.purchased ||
-                PurchaseStatus.pendingConfirmation)) {
-          final purchaseInfo = await purchaseProvider.getPurchaseDetails(
-            details.purchaseId,
-          );
+        final purchaseInfo = await purchaseProvider.getPurchaseDetails(
+          details.purchaseId,
+        );
+
+        if (purchaseInfo.isActive) {
           activeSubscriptionResource.set(purchaseInfo);
           subscriptionStatusResource.set(SubscriptionStatus.subscribed);
-
+          await purchasesLocalApi.saveActiveSubscription(purchaseInfo);
           return true;
+        } else {
+          return cleanUp();
         }
       case ResultType.failure:
         purchasePaywallErrorResource.error = result.error;
-        subscriptionStatusResource.set(SubscriptionStatus.free);
-        // Handle failure if needed
-        return false;
+        return cleanUp();
     }
-    return false;
   }
 }

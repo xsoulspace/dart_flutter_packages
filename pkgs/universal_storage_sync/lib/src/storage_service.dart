@@ -1,8 +1,6 @@
 import 'dart:developer';
 
-import 'models/models.dart';
-import 'storage_exceptions.dart';
-import 'storage_provider.dart';
+import 'package:universal_storage_interface/universal_storage_interface.dart';
 
 /// {@template storage_service}
 /// A service class providing a unified API for file storage operations
@@ -25,7 +23,7 @@ class StorageService {
   /// Saves (creates or updates) a file at [path] with [content].
   /// Uses [message] as commit message for version-controlled storage.
   /// {@endtemplate}
-  Future<String> saveFile(
+  Future<FileOperationResult> saveFile(
     final String path,
     final String content, {
     final String? message,
@@ -50,14 +48,16 @@ class StorageService {
   /// {@template storage_service.removeFile}
   /// Removes file at [path]. [message] for version-controlled storage.
   /// {@endtemplate}
-  Future<void> removeFile(final String path, {final String? message}) =>
-      _provider.deleteFile(path, commitMessage: message);
+  Future<FileOperationResult> removeFile(
+    final String path, {
+    final String? message,
+  }) => _provider.deleteFile(path, commitMessage: message);
 
   /// {@template storage_service.listDirectory}
   /// Lists files/subdirectories within [path].
   /// {@endtemplate}
-  Future<List<String>> listDirectory(final String path) =>
-      _provider.listFiles(path);
+  Future<List<FileEntry>> listDirectory(final String path) =>
+      _provider.listDirectory(path);
 
   /// {@template storage_service.restoreData}
   /// Restores data at [path], optionally to [versionId].

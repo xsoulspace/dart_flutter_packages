@@ -1,3 +1,11 @@
+## 0.1.2
+
+- fix: public_member_api_docs now false for app.yaml and library.yaml
+
+## 0.1.1
+
+- fix: omit_obvious_property_types: false for public_library.yaml
+
 ## 0.1.0
 
 - chore: dart sdk: ">=3.8.1 <4.0.0"

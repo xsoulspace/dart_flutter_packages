@@ -2,6 +2,9 @@
 
 import 'dart:io';
 
+import 'package:universal_storage_interface/universal_storage_interface.dart';
+import 'package:universal_storage_filesystem/universal_storage_filesystem.dart';
+import 'package:universal_storage_git_offline/universal_storage_git_offline.dart';
 import 'package:universal_storage_sync/universal_storage_sync.dart';
 
 Future<void> main() async {

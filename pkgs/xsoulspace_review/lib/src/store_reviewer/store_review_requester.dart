@@ -15,6 +15,10 @@ import 'store_reviewer.dart';
 ///
 /// Example usage:
 /// ```dart
+/// final myStoreReviewer = StoreReviewerFactory.createForTargetStore(
+///   targetStore: InstallationTargetStore.mobileGooglePlay,
+/// );
+///
 /// final reviewRequester = StoreReviewRequester(
 ///   firstReviewPeriod: Duration(days: 1),
 ///   reviewPeriod: Duration(days: 30),
@@ -23,6 +27,18 @@ import 'store_reviewer.dart';
 ///   localDb: myLocalDb,
 /// );
 /// await reviewRequester.onLoad();
+///
+/// // or
+/// final reviewRequester = StoreReviewRequester(
+///   firstReviewPeriod: Duration(days: 1),
+///   reviewPeriod: Duration(days: 30),
+///   maxReviewCount: 3,
+///   localDb: myLocalDb,
+/// );
+/// final myStoreReviewer = await StoreReviewerFactory.createForInstallSource();
+/// await reviewRequester.onLoad(
+///   storeReviewer: myStoreReviewer,
+/// );
 /// ```
 ///
 /// [StoreReviewer.onLoad] will be called during [onLoad]
@@ -60,9 +76,9 @@ class StoreReviewRequester extends ChangeNotifier {
   final LocalDbI localDb;
 
   Timer? _timer;
-  static const String _lastReviewRequestKey = 'last_review_request';
-  static const String _reviewCountKey = 'review_count';
-  bool _isAvailable = false;
+  static const _lastReviewRequestKey = 'last_review_request';
+  static const _reviewCountKey = 'review_count';
+  var _isAvailable = false;
   bool get isAvailable => _isAvailable;
   set isAvailable(final bool value) {
     _isAvailable = value;
@@ -74,8 +90,9 @@ class StoreReviewRequester extends ChangeNotifier {
   ///
   /// If no previous request exists, it schedules the first review request.
   /// Otherwise, it schedules based on the elapsed time and review count.
-  Future<void> onLoad() async {
-    _storeReviewer = await StoreReviewerFactory.create();
+  Future<void> onLoad({final StoreReviewer? storeReviewer}) async {
+    if (storeReviewer != null) _storeReviewer = storeReviewer;
+    await _storeReviewer.onLoad();
     isAvailable = await _storeReviewer.onLoad();
     if (!isAvailable) return;
 
@@ -87,8 +104,9 @@ class StoreReviewRequester extends ChangeNotifier {
     if (lastReviewRequest == 0) {
       _scheduleReviewRequest(initialDelay: firstReviewPeriod);
     } else {
-      final lastRequestTime =
-          DateTime.fromMillisecondsSinceEpoch(lastReviewRequest);
+      final lastRequestTime = DateTime.fromMillisecondsSinceEpoch(
+        lastReviewRequest,
+      );
       final timeSinceLastRequest = DateTime.now().difference(lastRequestTime);
       final currentPeriod = reviewCount == 0 ? firstReviewPeriod : reviewPeriod;
 

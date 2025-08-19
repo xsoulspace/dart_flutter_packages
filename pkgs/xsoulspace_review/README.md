@@ -4,39 +4,57 @@ The main purpose of this package is to unite and simplify the process of request
 
 Currently, the package supports the following stores:
 
-## Native support:
+## Supported Stores
 
-- Google Play and App Store (via [in_app_review](https://pub.dev/packages/in_app_review))
-- RuStore
+### Native Support
 
-## Non-native support (using Consent Screen and then asking to go to the store):
+- **Google Play and App Store** - Uses [in_app_review](https://pub.dev/packages/in_app_review) for native in-app review dialogs
+- **RuStore** - Russian app store with native review functionality
 
-- Snapstore
+### Non-Native Support
+
+- **Snapstore** - Uses consent screen followed by store redirection
 
 ## Usage
+
+### Basic Usage
 
 ```dart
 import 'package:xsoulspace_review/xsoulspace_review.dart';
 
-void onLoad() {
-  /// this will create a store reviewer specific to
-  /// installation source. This is made via
-  /// [store_checker](https://pub.dev/packages/store_checker)
-  /// package and additional methods from [xsoulspace_foundation](https://pub.dev/packages/xsoulspace_foundation).
-  StoreReviewerFactory.create();
-}
+final myStoreReviewer = StoreReviewerFactory.createForTargetStore(
+  targetStore: InstallationTargetStore.mobileGooglePlay,
+);
+final reviewRequester = StoreReviewRequester(
+  firstReviewPeriod: Duration(days: 1),
+  reviewPeriod: Duration(days: 30),
+  maxReviewCount: 3,
+  storeReviewer: myStoreReviewer,
+  localDb: myLocalDb,
+);
+
+await reviewRequester.onLoad();
 ```
 
-or use `StoreReviewRequester` to initialize the store review requester and schedule reviews.
+Or if you want to create a store reviewer based on the installation source (temporary disabled):
 
 ```dart
-final storeReviewRequester = StoreReviewRequester();
-
-Future<void> onLoad() async {
-  await storeReviewRequester.onLoad();
-}
-
-void dispose() {
-  storeReviewRequester.dispose();
-}
+final reviewRequester = StoreReviewRequester(
+  firstReviewPeriod: Duration(days: 1),
+  reviewPeriod: Duration(days: 30),
+  maxReviewCount: 3,
+  localDb: myLocalDb,
+);
+final myStoreReviewer = await StoreReviewerFactory.createForInstallSource();
+await reviewRequester.onLoad(
+  storeReviewer: myStoreReviewer,
+);
 ```
+
+## Features
+
+- **Cross-platform support** for multiple app stores
+- **Automatic store detection** based on installation source
+- **Native in-app review dialogs** where supported
+- **Fallback mechanisms** for stores without native review support
+- **Configurable review scheduling** and timing

@@ -1,14 +1,26 @@
-// ignore_for_file: avoid_catches_without_on_clauses
+// ignore_for_file: avoid_catches_without_on_clauses, lines_longer_than_80_chars
 
 import 'dart:async';
+import 'dart:io';
 
+import 'package:app_settings/app_settings.dart';
+import 'package:flutter/services.dart';
+import 'package:from_json_to_json/from_json_to_json.dart';
 import 'package:in_app_purchase/in_app_purchase.dart' as iap;
+import 'package:in_app_purchase_storekit/in_app_purchase_storekit.dart' as sk2;
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
+
+import 'apple_native_purchase_provider.dart';
 
 /// {@template google_apple_purchase_provider}
 /// Implementation of [PurchaseProvider] using the `in_app_purchase` package.
 /// {@endtemplate}
 class GoogleApplePurchaseProvider implements PurchaseProvider {
+  final _appleNativeProvider = AppleNativePurchaseProvider();
+
+  /// assume by default that the user is signed in
+  static var _isUserSignedInToStore = true;
+
   final iap.InAppPurchase _inAppPurchase = iap.InAppPurchase.instance;
   late StreamSubscription<List<iap.PurchaseDetails>> _purchaseSubscription;
 
@@ -28,12 +40,13 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
       onDone: _purchaseStreamController.close,
       onError: (final error) => _purchaseStreamController.addError(error),
     );
+
     return MonetizationStoreStatus.loaded;
   }
 
   @override
   Future<void> dispose() async {
-    _purchaseSubscription.cancel();
+    await _purchaseSubscription.cancel();
     await _purchaseStreamController.close();
   }
 
@@ -42,7 +55,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
       _purchaseStreamController.stream;
 
   @override
-  Future<bool> isUserAuthorized() => _inAppPurchase.isAvailable();
+  Future<bool> isUserAuthorized() async => _isUserSignedInToStore;
 
   @override
   Future<CompletePurchaseResultModel> completePurchase(
@@ -50,19 +63,34 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
   ) async {
     // This is a simplified mapping. You might need a more robust way
     // to find the original iap.PurchaseDetails object.
-    final iapPurchase = iap.PurchaseDetails(
-      purchaseID: purchase.purchaseId.value,
-      productID: purchase.productId.value,
-      transactionDate: purchase.transactionDate?.toIso8601String(),
-      status: purchase.status._toFlutterIAPStatus(),
-      verificationData: iap.PurchaseVerificationData(
-        localVerificationData: purchase.localVerificationData ?? '',
-        serverVerificationData: purchase.serverVerificationData ?? '',
-        source: purchase.source ?? '',
-      ),
-    );
+    iap.PurchaseDetails iapPurchase;
 
     try {
+      if (Platform.isIOS) {
+        iapPurchase = sk2.SK2PurchaseDetails(
+          purchaseID: purchase.purchaseId.value,
+          productID: purchase.productId.value,
+          transactionDate: purchase.transactionDate?.toIso8601String(),
+          status: purchase.status._toFlutterIAPStatus(),
+          verificationData: iap.PurchaseVerificationData(
+            localVerificationData: purchase.localVerificationData ?? '',
+            serverVerificationData: purchase.serverVerificationData ?? '',
+            source: purchase.source ?? '',
+          ),
+        );
+      } else {
+        iapPurchase = iap.PurchaseDetails(
+          purchaseID: purchase.purchaseId.value,
+          productID: purchase.productId.value,
+          transactionDate: purchase.transactionDate?.toIso8601String(),
+          status: purchase.status._toFlutterIAPStatus(),
+          verificationData: iap.PurchaseVerificationData(
+            localVerificationData: purchase.localVerificationData ?? '',
+            serverVerificationData: purchase.serverVerificationData ?? '',
+            source: purchase.source ?? '',
+          ),
+        );
+      }
       await _inAppPurchase.completePurchase(iapPurchase);
       return CompletePurchaseResultModel.success();
     } catch (e) {
@@ -74,6 +102,9 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
   Future<List<PurchaseProductDetailsModel>> getProductDetails(
     final List<PurchaseProductId> productIds,
   ) async {
+    if (Platform.isIOS) {
+      return _appleNativeProvider.fetchProducts(productIds);
+    }
     final response = await _inAppPurchase.queryProductDetails(
       productIds.map((final id) => id.value).toSet(),
     );
@@ -87,6 +118,9 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
   Future<PurchaseResultModel> purchaseNonConsumable(
     final PurchaseProductDetailsModel productDetails,
   ) async {
+    if (Platform.isIOS) {
+      return _appleNativeProvider.purchaseProduct(productDetails);
+    }
     final response = await _inAppPurchase.queryProductDetails({
       productDetails.productId.value,
     });
@@ -165,33 +199,136 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
     currency: product.currencyCode,
     description: product.description,
     // This duration logic is also an assumption and needs to be solid.
-    duration: product.id.contains('year')
-        ? const Duration(days: 365)
-        : (product.id.contains('month')
-              ? const Duration(days: 30)
-              : Duration.zero),
+    duration: _extractDurationFromProductId(product.id).duration,
     // TODO: Implement free trial duration
     freeTrialDuration: PurchaseDurationModel.zero,
   );
 
+  /// Maps in_app_purchase [PurchaseDetails] to our [PurchaseDetailsModel].
+  ///
+  /// Extracts comprehensive purchase information from the local verification data JSON,
+  /// which contains rich details like actual purchase dates, expiry dates, prices,
+  /// currency, and purchase types directly from Apple's servers.
+  ///
+  /// Example verification data structure:
+  /// ```json
+  /// {
+  ///   "transactionId": "2000000985775000",
+  ///   "productId": "2025_year_1",
+  ///   "purchaseDate": 1755492333000,
+  ///   "expiresDate": 1755578733000,
+  ///   "price": 499000,
+  ///   "currency": "RUB",
+  ///   "type": "Auto-Renewable Subscription"
+  /// }
+  /// ```
   PurchaseDetailsModel _mapToPurchaseDetails(
     final iap.PurchaseDetails purchase,
-  ) => PurchaseDetailsModel(
-    purchaseId: PurchaseId.fromJson(purchase.purchaseID ?? ''),
-    productId: PurchaseProductId.fromJson(purchase.productID),
-    priceId: PurchasePriceId.fromJson(purchase.productID),
-    status: _mapPurchaseStatus(purchase.status),
-    purchaseDate: purchase.transactionDate != null
-        ? DateTime.fromMillisecondsSinceEpoch(
-            int.parse(purchase.transactionDate!),
-          )
-        : DateTime.now(),
-    purchaseType: PurchaseProductType
-        .nonConsumable, // This needs to be determined properly
-    localVerificationData: purchase.verificationData.localVerificationData,
-    serverVerificationData: purchase.verificationData.serverVerificationData,
-    source: purchase.verificationData.source,
-  );
+  ) {
+    // Parse local verification data JSON to extract rich purchase information
+    Map<String, dynamic>? verificationJson;
+    if (purchase.verificationData.localVerificationData.isNotEmpty) {
+      verificationJson = jsonDecodeMapAs<String, dynamic>(
+        purchase.verificationData.localVerificationData,
+      );
+    }
+
+    // Extract data from verification JSON with fallbacks
+    final purchaseDate = _extractPurchaseDate(
+      verificationJson,
+      purchase.transactionDate,
+    );
+    final expiryDate = _extractExpiryDate(verificationJson);
+
+    final purchaseType = _extractPurchaseType(
+      verificationJson,
+      purchase.productID,
+    );
+
+    final transactionId = jsonDecodeString(
+      verificationJson?['transactionId'] ?? purchase.purchaseID ?? '',
+    );
+
+    return PurchaseDetailsModel(
+      purchaseId: PurchaseId.fromJson(transactionId),
+      productId: PurchaseProductId.fromJson(purchase.productID),
+      priceId: PurchasePriceId.fromJson(purchase.productID),
+      status: _mapPurchaseStatus(purchase.status),
+      purchaseDate: purchaseDate,
+      purchaseType: purchaseType,
+      expiryDate: expiryDate,
+      localVerificationData: purchase.verificationData.localVerificationData,
+      serverVerificationData: purchase.verificationData.serverVerificationData,
+      source: purchase.verificationData.source,
+      name: purchase.productID,
+      price: jsonDecodeDouble(verificationJson?['price']),
+      currency: jsonDecodeString(verificationJson?['currency']),
+      formattedPrice: jsonDecodeString(verificationJson?['formattedPrice']),
+      purchaseToken: jsonDecodeString(verificationJson?['appTransactionId']),
+      duration: _extractDurationFromProductId(purchase.productID).duration,
+      freeTrialDuration: _extractDurationFromProductId(
+        purchase.productID,
+      ).duration,
+    );
+  }
+
+  /// Extracts purchase date from verification data or falls back to transaction date
+  DateTime _extractPurchaseDate(
+    final Map<String, dynamic>? verificationJson,
+    final String? transactionDate,
+  ) {
+    if (verificationJson != null) {
+      // Try to get purchaseDate from verification data (milliseconds since epoch)
+      final purchaseDateMs = jsonDecodeInt(verificationJson['purchaseDate']);
+      if (purchaseDateMs > 0) {
+        return DateTime.fromMillisecondsSinceEpoch(purchaseDateMs);
+      }
+    }
+
+    // Fallback to parsing transaction date string
+    // "2025-08-17 7:44:54 AM"
+    final fallbackDate = dateTimeFromYYYYMMDDHMMSSAM(transactionDate);
+    return fallbackDate ?? DateTime.now();
+  }
+
+  /// Extracts expiry date from verification data for subscriptions
+  DateTime? _extractExpiryDate(final Map<String, dynamic>? verificationJson) {
+    if (verificationJson == null) return null;
+
+    final expiresDateMs = jsonDecodeInt(verificationJson['expiresDate']);
+    if (expiresDateMs > 0) {
+      return DateTime.fromMillisecondsSinceEpoch(expiresDateMs);
+    }
+
+    return null;
+  }
+
+  /// Extracts purchase type from verification data
+  PurchaseProductType _extractPurchaseType(
+    final Map<String, dynamic>? verificationJson,
+    final String productId,
+  ) {
+    if (verificationJson != null) {
+      final type = jsonDecodeString(verificationJson['type']);
+      if (type.isNotEmpty) {
+        switch (type.toLowerCase()) {
+          case 'auto-renewable subscription':
+          case 'non-renewing subscription':
+            return PurchaseProductType.subscription;
+          case 'consumable':
+            return PurchaseProductType.consumable;
+          case 'non-consumable':
+            return PurchaseProductType.nonConsumable;
+        }
+      }
+    }
+
+    // Fallback to product ID analysis
+    if (productId.contains('subscription')) {
+      return PurchaseProductType.subscription;
+    }
+    return PurchaseProductType.nonConsumable;
+  }
 
   PurchaseStatus _mapPurchaseStatus(final iap.PurchaseStatus status) =>
       switch (status) {
@@ -202,6 +339,13 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
         iap.PurchaseStatus.canceled => PurchaseStatus.canceled,
       };
 
+  void _catchNoResponse(final iap.IAPError error) {
+    // iOS has no user signed
+    if (error.code == 'storekit_no_response') {
+      _isUserSignedInToStore = false;
+    }
+  }
+
   @override
   Future<List<PurchaseProductDetailsModel>> getConsumables(
     final List<PurchaseProductId> productIds,
@@ -211,6 +355,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
       productIds.map((final id) => id.value).toSet(),
     );
     if (response.error != null) {
+      _catchNoResponse(response.error!);
       throw Exception(response.error!.message);
     }
     return response.productDetails.map(_mapToProductDetails).toList();
@@ -220,11 +365,22 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
   Future<List<PurchaseProductDetailsModel>> getNonConsumables(
     final List<PurchaseProductId> productIds,
   ) async {
+    if (Platform.isIOS) {
+      final products = await _appleNativeProvider.fetchProducts(productIds);
+      return products
+          .where(
+            (final product) =>
+                product.productType == PurchaseProductType.nonConsumable ||
+                product.productType == PurchaseProductType.subscription,
+          )
+          .toList();
+    }
     // TODO(arenukvern): implement identification of non-consumables
     final response = await _inAppPurchase.queryProductDetails(
       productIds.map((final id) => id.value).toSet(),
     );
     if (response.error != null) {
+      _catchNoResponse(response.error!);
       throw Exception(response.error!.message);
     }
     return response.productDetails.map(_mapToProductDetails).toList();
@@ -234,11 +390,21 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
   Future<List<PurchaseProductDetailsModel>> getSubscriptions(
     final List<PurchaseProductId> productIds,
   ) async {
+    if (Platform.isIOS) {
+      final products = await _appleNativeProvider.fetchProducts(productIds);
+      return products
+          .where(
+            (final product) =>
+                product.productType == PurchaseProductType.subscription,
+          )
+          .toList();
+    }
     // TODO(arenukvern): implement identification of subscriptions
     final response = await _inAppPurchase.queryProductDetails(
       productIds.map((final id) => id.value).toSet(),
     );
     if (response.error != null) {
+      _catchNoResponse(response.error!);
       throw Exception(response.error!.message);
     }
     return response.productDetails.map(_mapToProductDetails).toList();
@@ -247,33 +413,65 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
   @override
   Future<PurchaseResultModel> subscribe(
     final PurchaseProductDetailsModel productDetails,
-  ) async => purchaseNonConsumable(productDetails);
+  ) => purchaseNonConsumable(productDetails);
 
   @override
   Future<void> openSubscriptionManagement() async {
-    // TODO(arenukvern): implement opening of subscription management
+    await AppSettings.openAppSettings(type: AppSettingsType.subscriptions);
   }
 
   @override
   Future<PurchaseDetailsModel> getPurchaseDetails(
     final PurchaseId purchaseId,
   ) async {
-    // TODO(arenukvern): implement getting of purchase details
-    throw UnimplementedError();
+    try {
+      if (Platform.isIOS) {
+        return _appleNativeProvider.getPurchaseDetailsByPurchaseId(purchaseId);
+      }
+      final purchases = await purchaseStream.firstWhere(
+        (final list) =>
+            list.any((final p) => p.purchaseId.value == purchaseId.value),
+        orElse: () => throw Exception('Purchase not found'),
+      );
+      if (purchases.isEmpty) {
+        throw Exception('Purchase not found');
+      }
+      return purchases.firstWhere(
+        (final p) => p.purchaseId.value == purchaseId.value,
+      );
+    } catch (e) {
+      throw Exception('Failed to get purchase details: $e');
+    }
   }
 
   @override
   Future<CancelResultModel> cancel(final String purchaseOrProductId) async {
-    // TODO(arenukvern): implement cancellation
-    throw UnimplementedError();
+    try {
+      if (Platform.isIOS) {
+        return _appleNativeProvider.cancelSubscription();
+      } else {
+        await openSubscriptionManagement();
+        return CancelResultModel.success();
+      }
+    } on PlatformException catch (e) {
+      return CancelResultModel.failure(e.message ?? 'Unknown error');
+    }
   }
 
+  // There is no direct API in in_app_purchase to check if the store app is installed.
+  // We'll use isAvailable() as a proxy, which checks if the underlying store is available.
+  // This is not 100% accurate for "installed", but is the best available check.
   @override
-  Future<bool> isStoreInstalled() async {
-    // There is no direct API in in_app_purchase to check if the store app is installed.
-    // We'll use isAvailable() as a proxy, which checks if the underlying store is available.
-    // This is not 100% accurate for "installed", but is the best available check.
-    return _inAppPurchase.isAvailable();
+  Future<bool> isStoreInstalled() => _inAppPurchase.isAvailable();
+}
+
+PurchaseDurationModel _extractDurationFromProductId(final String productId) {
+  if (productId.contains('year')) {
+    return PurchaseDurationModel(years: 1);
+  } else if (productId.contains('month')) {
+    return PurchaseDurationModel(months: 1);
+  } else {
+    return PurchaseDurationModel.zero;
   }
 }
 
@@ -286,3 +484,16 @@ extension on PurchaseStatus {
     PurchaseStatus.canceled => iap.PurchaseStatus.canceled,
   };
 }
+
+// extension on PurchaseProductId {
+//   // the product should have clear structure in its id
+//   Duration toDuration() {
+//     if (value.contains('year')) {
+//       return const Duration(days: 365);
+//     } else if (value.contains('month')) {
+//       return const Duration(days: 30);
+//     } else {
+//       return Duration.zero;
+//     }
+//   }
+// }

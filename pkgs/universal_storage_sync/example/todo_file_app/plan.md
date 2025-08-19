@@ -169,7 +169,7 @@ Add hardened-runtime & notarisation notes in README for external testers.
 dependencies:
   flutter: sdk
   universal_storage_sync: ^1.0.0
-  from_json_to_json: ^0.2.0
+  from_json_to_json: ^0.3.0
   file_selector: ^1.1.0 # folder picker (supports macOS)
   shared_preferences: ^2.2.0
   yaml: ^3.1.2

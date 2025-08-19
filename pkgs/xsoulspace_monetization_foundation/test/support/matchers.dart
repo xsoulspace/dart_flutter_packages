@@ -26,9 +26,11 @@ Matcher hasNoError() => predicate<PurchasePaywallErrorResource>(
   'PurchasePaywallErrorResource.hasError == false',
 );
 
-Matcher hasError([final String? contains]) =>
-    predicate<PurchasePaywallErrorResource>(
-      (final e) =>
-          e.hasError && (contains == null || e.error.contains(contains)),
-      'PurchasePaywallErrorResource.hasError == true and contains "$contains"',
-    );
+Matcher hasError([
+  final String? contains,
+]) => predicate<PurchasePaywallErrorResource>(
+  (final e) => e.hasError && (contains == null || e.error.contains(contains)),
+  contains == null
+      ? 'PurchasePaywallErrorResource.hasError == true'
+      : 'PurchasePaywallErrorResource.hasError == true and contains "$contains"',
+);

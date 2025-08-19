@@ -58,9 +58,13 @@ class MonetizationFoundation {
       _restorePurchasesCommand.execute(shouldAwaitRestore: shouldAwaitRestore);
 
   var _initCompleter = Completer<bool>();
+  var _initLocalCompleter = Completer<bool>();
 
   /// Future that completes when the initialization is complete.
   Future<bool> get initFuture => _initCompleter.future;
+
+  /// Future that completes when the local initialization is complete.
+  Future<bool> get initLocalFuture => _initLocalCompleter.future;
 
   final _productIds = <PurchaseProductId>[];
   void _assignProductIds(final Iterable<PurchaseProductId> productIds) {
@@ -80,6 +84,8 @@ class MonetizationFoundation {
   /// 4. Update status based on initialization result
   /// 5. Load subscriptions if initialized
   /// 6. Restore purchases and set up listeners
+  ///
+  /// Always call `initLocal` before `init` to ensure local state is restored.
   /// {@endtemplate}
   Future<void> init({
     required final List<PurchaseProductId> productIds,
@@ -87,11 +93,21 @@ class MonetizationFoundation {
     final bool force = false,
   }) async {
     if (force) {
-      _initCompleter.complete(false);
+      if (!_initCompleter.isCompleted) {
+        _initCompleter.complete(false);
+      }
+      if (!_initLocalCompleter.isCompleted) {
+        _initLocalCompleter.complete(false);
+      }
       _initCompleter = Completer<bool>();
+      _initLocalCompleter = Completer<bool>();
+      unawaited(initLocal());
     } else if (_initCompleter.isCompleted) {
       return;
     }
+
+    // Ensure local init is finished before proceeding
+    await _initLocalCompleter.future;
     _assignProductIds(productIds);
     srcs.status.setStatus(MonetizationStoreStatus.loading);
 
@@ -106,14 +122,42 @@ class MonetizationFoundation {
     }
 
     srcs.status.setStatus(status);
-
-    if (status case MonetizationStoreStatus.loaded) {
-      await _loadSubscriptionsCommand.execute();
-      if (restorePurchases) await _restorePurchasesCommand.execute();
-    }
-
     await _listenUpdates();
-    _initCompleter.complete(true);
+
+    try {
+      if (status case MonetizationStoreStatus.loaded) {
+        /// may throw exception
+        await _loadSubscriptionsCommand.execute();
+        if (restorePurchases) await _restorePurchasesCommand.execute();
+      }
+    } finally {
+      _initCompleter.complete(true);
+    }
+  }
+
+  /// {@template init_local}
+  /// Initializes local monetization state quickly from local storage.
+  ///
+  /// This method updates `SubscriptionStatusResource` immediately if a local
+  /// active subscription exists. It can be called before `init` completes.
+  ///
+  /// `init` will always await this method's completion before continuing.
+  /// {@endtemplate}
+  Future<void> initLocal() async {
+    if (_initLocalCompleter.isCompleted) return;
+
+    try {
+      srcs.status.setStatus(MonetizationStoreStatus.loading);
+      await _restoreLocalPurchasesCommand.execute();
+      if (!_initLocalCompleter.isCompleted) {
+        _initLocalCompleter.complete(true);
+      }
+      // ignore: avoid_catches_without_on_clauses
+    } catch (_) {
+      if (!_initLocalCompleter.isCompleted) {
+        _initLocalCompleter.complete(false);
+      }
+    }
   }
 
   /// Loads products from the purchase provider.
@@ -197,9 +241,18 @@ class MonetizationFoundation {
       return;
     }
   }
+
+  /// {@template clear_local_subscription}
+  /// Clears local subscription using local api.
+  /// {@endtemplate}
+  Future<void> clearLocalSubscription() =>
+      _clearLocalSubscriptionCommand.execute();
 }
 
 extension on MonetizationFoundation {
+  ClearLocalSubscriptionCommand get _clearLocalSubscriptionCommand =>
+      ClearLocalSubscriptionCommand(purchasesLocalApi: purchasesLocalApi);
+
   SubscribeCommand get _subscribeCommand => SubscribeCommand(
     purchaseProvider: purchaseProvider,
     subscriptionStatusResource: srcs.subscriptionStatus,
@@ -213,6 +266,7 @@ extension on MonetizationFoundation {
     activeSubscriptionResource: srcs.activeSubscription,
     subscriptionStatusResource: srcs.subscriptionStatus,
     purchasePaywallErrorResource: srcs.purchasePaywallError,
+    purchasesLocalApi: purchasesLocalApi,
   );
 
   CancelSubscriptionCommand get _cancelSubscriptionCommand =>
@@ -228,6 +282,12 @@ extension on MonetizationFoundation {
         purchaseProvider: purchaseProvider,
         purchasesLocalApi: purchasesLocalApi,
         handlePurchaseUpdateCommand: _handlePurchaseUpdateCommand,
+        subscriptionStatusResource: srcs.subscriptionStatus,
+      );
+
+  RestoreLocalPurchasesCommand get _restoreLocalPurchasesCommand =>
+      RestoreLocalPurchasesCommand(
+        purchasesLocalApi: purchasesLocalApi,
         subscriptionStatusResource: srcs.subscriptionStatus,
       );
 

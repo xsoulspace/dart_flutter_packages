@@ -1,8 +1,6 @@
-import 'models/models.dart';
-import 'providers/filesystem_storage_provider.dart';
-import 'providers/github_api_storage_provider.dart';
-import 'providers/offline_git_storage_provider.dart';
-import 'storage_provider.dart';
+import 'package:universal_storage_interface/universal_storage_interface.dart';
+
+import 'storage_provider_registry.dart';
 import 'storage_service.dart';
 
 /// {@template storage_factory}
@@ -15,43 +13,23 @@ mixin StorageFactory {
   /// [config] type.
   /// The returned service is already initialized and ready to use.
   static Future<StorageService> create(final StorageConfig config) async {
-    final provider = _createProvider(config);
+    final provider = StorageProviderRegistry.resolve(config);
     await provider.initWithConfig(config);
     return StorageService(provider);
   }
-
-  /// Creates the appropriate storage provider based on config type
-  static StorageProvider _createProvider(final StorageConfig config) =>
-      switch (config) {
-        FileSystemConfig() => FileSystemStorageProvider(),
-        GitHubApiConfig() => GitHubApiStorageProvider(),
-        OfflineGitConfig() => OfflineGitStorageProvider(),
-      };
 
   /// Creates a FileSystem storage service
   static Future<StorageService> createFileSystem(
     final FileSystemConfig config,
-  ) async {
-    final provider = FileSystemStorageProvider();
-    await provider.initWithConfig(config);
-    return StorageService(provider);
-  }
+  ) async => create(config);
 
   /// Creates a GitHub API storage service
   static Future<StorageService> createGitHubApi(
     final GitHubApiConfig config,
-  ) async {
-    final provider = GitHubApiStorageProvider();
-    await provider.initWithConfig(config);
-    return StorageService(provider);
-  }
+  ) async => create(config);
 
   /// Creates an Offline Git storage service
   static Future<StorageService> createOfflineGit(
     final OfflineGitConfig config,
-  ) async {
-    final provider = OfflineGitStorageProvider();
-    await provider.initWithConfig(config);
-    return StorageService(provider);
-  }
+  ) async => create(config);
 }

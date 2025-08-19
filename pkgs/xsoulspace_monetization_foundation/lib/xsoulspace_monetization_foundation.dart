@@ -51,7 +51,7 @@
 ///
 /// - Google Play & App Store via `xsoulspace_monetization_google_apple`
 /// - RuStore via `xsoulspace_monetization_rustore`
-/// - Huawei via `xsoulspace_monetization_huawai`
+/// - Huawei via `xsoulspace_monetization_huawei`
 /// - Yandex Ads via `xsoulspace_monetization_ads_yandex`
 ///
 /// ## 🧪 Testing

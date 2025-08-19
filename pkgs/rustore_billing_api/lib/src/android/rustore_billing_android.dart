@@ -54,7 +54,7 @@ class RustoreBillingAndroid extends RustoreBillingPlatform {
       _api.getProducts(productIds);
 
   @override
-  Future<List<RustorePurchase>> getPurchases() async => _api.getPurchases();
+  Future<List<RustorePurchase>> getPurchases() => _api.getPurchases();
 
   @override
   Future<RustorePaymentResult> purchaseProduct(

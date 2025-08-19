@@ -54,8 +54,10 @@
 library;
 
 export 'cancel_subscription.cmd.dart';
+export 'clear_local_subscription.cmd.dart';
 export 'confirm_purchase.cmd.dart';
 export 'handle_purchase_update.cmd.dart';
 export 'load_subscriptions.cmd.dart';
+export 'restore_local_purchases.cmd.dart';
 export 'restore_purchases.cmd.dart';
 export 'subscribe.cmd.dart';

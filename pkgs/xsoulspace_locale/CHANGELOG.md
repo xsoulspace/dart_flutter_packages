@@ -1,3 +1,14 @@
+# Changelog
+
+## 0.3.2
+
+- chore: from_json_to_json 0.3.0
+- chore: xsoulspace_lints 0.1.2
+
+## 0.3.1
+
+- fix: conditional export from web to js_interop
+
 ## 0.3.0
 
 BREAKING:

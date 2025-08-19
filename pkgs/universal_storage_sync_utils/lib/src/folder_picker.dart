@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/widgets.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:universal_storage_sync/universal_storage_sync.dart';
 
 import 'macos_bookmark_manager.dart';
@@ -55,10 +54,8 @@ Future<PickResult> pickWritableDirectory({
   // On desktop, this is generally not required for the picker itself, but
   // good practice if the app needs broader file access.
   if (Platform.isAndroid || Platform.isIOS) {
-    final status = await Permission.storage.request();
-    if (status.isDenied) {
-      return PickFailure(FailureReason.permissionDenied);
-    }
+    // Currently not supported on mobile platforms
+    return PickFailure(FailureReason.platformNotSupported);
   }
 
   // 3. Show the folder picker.

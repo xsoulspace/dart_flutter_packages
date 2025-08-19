@@ -1,27 +1,24 @@
 name: universal_storage_sync
-description: A cross-platform Dart package providing unified API for file
-  storage operations with support for local filesystem and Git-based version
+description: |
+  A cross-platform Dart package providing unified API for file
+  storage operations with support for local filesystem and Git-based
   control.
-version: 0.1.0-dev.3
+version: 0.1.0-dev.5
 homepage: https://github.com/xsoulspace/universal_storage_sync
+repository: https://github.com/xsoulspace/universal_storage_sync
+issue_tracker: https://github.com/xsoulspace/universal_storage_sync/issues
+documentation: https://github.com/xsoulspace/universal_storage_sync/tree/main/pkgs/universal_storage_sync
 
 environment:
   sdk: ">=3.8.1 <4.0.0"
 
 dependencies:
-  from_json_to_json: ^0.2.0
-  git: ^2.3.1
-  github: ^9.25.0
-  http: ^1.4.0
-  meta: ^1.16.0
-  path: ^1.9.1
-  retry: ^3.1.2
+  from_json_to_json: ^0.3.0
+  universal_storage_interface: ^0.1.0-dev.5
 
 dev_dependencies:
   build_runner: ^2.5.2
   lints: ^6.0.0
   mockito: ^5.4.6
   test: ^1.26.2
-  xsoulspace_lints: ^0.1.0
-# For web support - add specific dependencies as needed
-# dependency_overrides:
+  xsoulspace_lints: ^0.1.2

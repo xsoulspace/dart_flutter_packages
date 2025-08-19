@@ -1,0 +1,19 @@
+name: universal_storage_git_offline
+description: Offline Git storage provider for universal_storage_interface with optional remote sync.
+version: 0.1.0-dev.2
+publish_to: none
+
+environment:
+  sdk: ">=3.8.1 <4.0.0"
+
+dependencies:
+  git: ^2.3.1
+  path: ^1.9.1
+  retry: ^3.1.2
+  universal_storage_interface:
+    path: ../universal_storage_interface
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.26.2
+  xsoulspace_lints: ^0.1.2

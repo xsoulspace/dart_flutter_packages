@@ -1,6 +1,6 @@
 name: xsoulspace_locale
 description: Unified locale wrapper to make localization easier.
-version: 0.3.0
+version: 0.3.2
 homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_locale
 repository: https://github.com/xsoulspace/dart_flutter_packages
 
@@ -14,11 +14,11 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
-  from_json_to_json: ^0.2.1
+  from_json_to_json: ^0.3.0
   intl: ^0.20.2
-  xsoulspace_foundation: ^0.2.0
+  xsoulspace_foundation: ^0.2.1
 
 dev_dependencies:
   build_runner: ^2.4.15
   lints: ^6.0.0
-  xsoulspace_lints: ^0.1.0
+  xsoulspace_lints: ^0.1.2

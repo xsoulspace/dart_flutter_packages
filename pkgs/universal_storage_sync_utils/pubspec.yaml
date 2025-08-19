@@ -1,8 +1,12 @@
 name: universal_storage_sync_utils
-description: Utility functions for universal_storage_sync, including a
+description: |
+  Utility functions for universal_storage_sync, including a
   cross-platform folder picker.
-version: 0.1.0-dev.2
+version: 0.1.0-dev.5
 homepage: https://github.com/xsoulspace/universal_storage_sync/tree/main/pkgs/universal_storage_sync_utils
+repository: https://github.com/xsoulspace/universal_storage_sync
+issue_tracker: https://github.com/xsoulspace/universal_storage_sync/issues
+documentation: https://github.com/xsoulspace/universal_storage_sync/tree/main/pkgs/universal_storage_sync_utils
 
 environment:
   sdk: ">=3.8.1 <4.0.0"
@@ -10,21 +14,22 @@ environment:
 
 dependencies:
   collection: ^1.18.0
+  crypto: ^3.0.6
   file_selector: ^1.0.3
   flutter:
     sdk: flutter
-  from_json_to_json: ^0.2.1
+  from_json_to_json: ^0.3.0
   github: ^9.24.0
   macos_secure_bookmarks: ^0.2.1
   path: ^1.8.0
   permission_handler: ^11.0.0
-  universal_storage_sync: ^0.1.0-dev.3
+  universal_storage_sync: ^0.1.0-dev.5
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   lints: ^6.0.0
-  xsoulspace_lints: ^0.1.0
+  xsoulspace_lints: ^0.1.2
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 # The following section is specific to Flutter packages.

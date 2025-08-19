@@ -55,10 +55,16 @@ final foundation = MonetizationFoundation(
   purchaseProvider: yourPlatformProvider, // Google Play, App Store, etc.
 );
 
-// 3. Start monetization system
+// 2.1. Initialize local api
+await foundation.initLocal();
+
+// 2.2. Start monetization system with await
 await foundation.init(productIds: ['premium_monthly', 'premium_yearly']);
 
-// 4. Subscribe to a product
+// 2.3. or don't await
+unawaited(foundation.init());
+
+// 3. Subscribe to a product
 final success = await foundation.subscribe(productDetails);
 ```
 
@@ -112,10 +118,9 @@ final provider = GooglePlayPurchaseProvider();
 
 | Platform                | Package                                | Status |
 | ----------------------- | -------------------------------------- | ------ |
-| Google Play & App Store | `xsoulspace_monetization_google_apple` | ✅     |
+| Google Play & App Store | `xsoulspace_monetization_google_apple` | 🚧     |
 | RuStore                 | `xsoulspace_monetization_rustore`      | ✅     |
-| Huawei                  | `xsoulspace_monetization_huawai`       | ✅     |
-| Yandex Ads              | `xsoulspace_monetization_ads_yandex`   | ✅     |
+| Huawei                  | `xsoulspace_monetization_huawei`       | 🚧     |
 
 ## 🧪 Testing
 

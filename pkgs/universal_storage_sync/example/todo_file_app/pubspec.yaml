@@ -35,7 +35,7 @@ dependencies:
   flutter_animate: ^4.3.0
 
   # Core dependencies
-  from_json_to_json: ^0.2.0
+  from_json_to_json: ^0.3.0
   path: ^1.8.3
   provider: ^6.0.5
   shared_preferences: ^2.2.0
