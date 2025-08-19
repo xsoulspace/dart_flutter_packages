@@ -66,9 +66,8 @@ void main() {
             await env.givenLocalActiveSubscription(testCase.purchase());
             final cmd = env.makeRestoreLocalPurchasesCommand();
 
-            final result = await cmd.execute();
+            await cmd.execute();
 
-            expect(result, testCase.expectedResult);
             expect(env.subscriptionStatus, testCase.statusMatcher);
           });
         });
@@ -81,9 +80,8 @@ void main() {
       await env.givenLocalActiveSubscription(activeConsumable);
       final cmd = env.makeRestoreLocalPurchasesCommand();
 
-      final result = await cmd.execute();
+      await cmd.execute();
 
-      expect(result, isTrue);
       expect(env.subscriptionStatus, isSubscribed());
     });
 
@@ -92,16 +90,15 @@ void main() {
       () async {
         final pendingActiveSubscription = PurchaseDetailsModel(
           purchaseDate: DateTime.now(),
-          status: PurchaseStatus.pendingConfirmation,
+          status: PurchaseStatus.pendingVerification,
           purchaseType: PurchaseProductType.subscription,
           expiryDate: DateTime.now().add(const Duration(days: 30)),
         );
         await env.givenLocalActiveSubscription(pendingActiveSubscription);
         final cmd = env.makeRestoreLocalPurchasesCommand();
 
-        final result = await cmd.execute();
+        await cmd.execute();
 
-        expect(result, isFalse);
         expect(env.subscriptionStatus, isPendingConfirmationStatus());
       },
     );

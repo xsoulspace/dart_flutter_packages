@@ -50,7 +50,7 @@ void main() {
       env.givenCompleteFailure('e');
       final cmd = env.makeConfirmPurchaseCommand();
       final ok = await cmd.execute(
-        aVerification(status: PurchaseStatus.pendingConfirmation),
+        aVerification(status: PurchaseStatus.pendingVerification),
       );
       expect(ok, isFalse);
       expect(env.purchasePaywallError, hasError());

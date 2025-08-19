@@ -123,7 +123,6 @@ class AppleNativePurchaseProvider {
           duration: productDetails.duration,
           freeTrialDuration: productDetails.freeTrialDuration.duration,
         ),
-        shouldConfirmPurchase: true,
       );
     } on PlatformException catch (e) {
       return PurchaseResultModel.failure(e.message ?? 'Unknown error');

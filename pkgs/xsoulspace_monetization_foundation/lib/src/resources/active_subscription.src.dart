@@ -6,9 +6,9 @@ class ActiveSubscriptionResource extends ChangeNotifier {
     : _value = details ?? PurchaseDetailsModel.empty;
   PurchaseDetailsModel _value;
   PurchaseDetailsModel get subscription => _value;
-  bool get isActive => _value.isActive;
+  bool get isActive => _value.isPurchased;
   bool get isNotActive => !isActive;
-  bool get isPending => _value.isPending;
+  bool get isPendingVerification => _value.isPendingVerification;
   bool get isCancelled => _value.isCancelled;
 
   void set(final PurchaseDetailsModel value) {

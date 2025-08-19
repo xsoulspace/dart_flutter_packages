@@ -162,7 +162,6 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
               ),
             ),
           ),
-          shouldConfirmPurchase: false,
         );
       } else {
         return PurchaseResultModel.failure('Purchase initiation failed.');
@@ -332,10 +331,10 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
 
   PurchaseStatus _mapPurchaseStatus(final iap.PurchaseStatus status) =>
       switch (status) {
-        iap.PurchaseStatus.pending => PurchaseStatus.pending,
+        iap.PurchaseStatus.pending => PurchaseStatus.pendingVerification,
         iap.PurchaseStatus.purchased => PurchaseStatus.purchased,
         iap.PurchaseStatus.error => PurchaseStatus.error,
-        iap.PurchaseStatus.restored => PurchaseStatus.pendingConfirmation,
+        iap.PurchaseStatus.restored => PurchaseStatus.pendingVerification,
         iap.PurchaseStatus.canceled => PurchaseStatus.canceled,
       };
 
@@ -477,10 +476,9 @@ PurchaseDurationModel _extractDurationFromProductId(final String productId) {
 
 extension on PurchaseStatus {
   iap.PurchaseStatus _toFlutterIAPStatus() => switch (this) {
-    PurchaseStatus.pending => iap.PurchaseStatus.pending,
+    PurchaseStatus.pendingVerification => iap.PurchaseStatus.pending,
     PurchaseStatus.purchased => iap.PurchaseStatus.purchased,
     PurchaseStatus.error => iap.PurchaseStatus.error,
-    PurchaseStatus.pendingConfirmation => iap.PurchaseStatus.restored,
     PurchaseStatus.canceled => iap.PurchaseStatus.canceled,
   };
 }

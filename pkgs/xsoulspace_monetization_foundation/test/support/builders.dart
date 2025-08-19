@@ -11,7 +11,7 @@ PurchaseDetailsModel aPurchase({
   final status = pending
       ? PurchaseStatus.pending
       : pendingConfirmation
-      ? PurchaseStatus.pendingConfirmation
+      ? PurchaseStatus.pendingVerification
       : cancelled
       ? PurchaseStatus.canceled
       : PurchaseStatus.purchased;

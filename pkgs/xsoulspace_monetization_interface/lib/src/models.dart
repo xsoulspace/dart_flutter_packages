@@ -139,7 +139,7 @@ extension type const PurchaseDetailsModel._(Map<String, dynamic> value) {
     final PurchaseId purchaseId = PurchaseId.empty,
     final PurchaseProductId productId = PurchaseProductId.empty,
     final PurchasePriceId priceId = PurchasePriceId.empty,
-    final PurchaseStatus status = PurchaseStatus.pending,
+    final PurchaseStatus status = PurchaseStatus.pendingVerification,
     final PurchaseProductType purchaseType = PurchaseProductType.consumable,
     final Duration freeTrialDuration = Duration.zero,
     final Duration duration = Duration.zero,
@@ -199,15 +199,13 @@ extension type const PurchaseDetailsModel._(Map<String, dynamic> value) {
   bool get hasFreeTrial => freeTrialDuration.inDays > 0;
   bool get isOneTimePurchase => duration.inDays == 0;
   bool get isSubscription => !isOneTimePurchase;
-  bool get isPending => status == PurchaseStatus.pending;
   bool get isCancelled => status == PurchaseStatus.canceled;
-  bool get isPendingConfirmation =>
-      status == PurchaseStatus.pendingConfirmation;
-  bool get isActive {
+  bool get isPendingVerification =>
+      status == PurchaseStatus.pendingVerification;
+  bool get isPurchased {
     if (purchaseType case PurchaseProductType.subscription) {
       final expiry = expiryDate;
       return (status == PurchaseStatus.purchased ||
-              status == PurchaseStatus.pendingConfirmation ||
               status == PurchaseStatus.canceled) &&
           expiry != null &&
           expiry.isAfter(DateTime.now());
@@ -233,7 +231,6 @@ extension type const PurchaseDetailsModel._(Map<String, dynamic> value) {
 /// Enum representing the status of a purchase.
 
 enum PurchaseStatus {
-  pending,
   purchased,
   error,
 
@@ -243,7 +240,7 @@ enum PurchaseStatus {
   /// You should validate the purchase and if valid deliver the content.
   /// Once the content has been delivered or if the receipt is invalid
   /// you should finish the purchase by calling the completePurchase method.
-  pendingConfirmation,
+  pendingVerification,
   canceled;
 
   String toJson() => name;
@@ -255,7 +252,7 @@ extension PurchaseStatusX on PurchaseStatus {
     final str = jsonDecodeString(value);
     return PurchaseStatus.values.firstWhere(
       (final e) => e.name == str,
-      orElse: () => PurchaseStatus.pending,
+      orElse: () => PurchaseStatus.pendingVerification,
     );
   }
 }
@@ -270,21 +267,14 @@ extension type const PurchaseResultModel._(Map<String, dynamic> value) {
   factory PurchaseResultModel({
     final PurchaseDetailsModel? details,
     final ResultType type = ResultType.success,
-    final bool shouldConfirmPurchase = false,
     final String? error,
   }) => PurchaseResultModel._({
     'type': type.name,
     'details': details?.toJson(),
-    'shouldConfirmPurchase': shouldConfirmPurchase,
     'error': error,
   });
-  factory PurchaseResultModel.success(
-    final PurchaseDetailsModel details, {
-    required final bool shouldConfirmPurchase,
-  }) => PurchaseResultModel(
-    details: details,
-    shouldConfirmPurchase: shouldConfirmPurchase,
-  );
+  factory PurchaseResultModel.success(final PurchaseDetailsModel details) =>
+      PurchaseResultModel(details: details);
   factory PurchaseResultModel.failure(final String error) =>
       PurchaseResultModel(error: error, type: ResultType.failure);
   bool get isSuccess => value['type'] == ResultType.success.name;
@@ -292,11 +282,6 @@ extension type const PurchaseResultModel._(Map<String, dynamic> value) {
     (final e) => e.name == jsonDecodeString(value['type']),
     orElse: () => ResultType.failure,
   );
-  bool get shouldConfirmPurchase =>
-      isSuccess &&
-      details != null &&
-      details!.status == PurchaseStatus.pendingConfirmation &&
-      jsonDecodeBool(value['shouldConfirmPurchase']);
   PurchaseDetailsModel? get details =>
       isSuccess ? PurchaseDetailsModel.fromJson(value['details']) : null;
   String get error => !isSuccess ? jsonDecodeString(value['error']) : '';
@@ -410,7 +395,7 @@ extension type const PurchaseVerificationDtoModel._(
     final PurchaseId purchaseId = PurchaseId.empty,
     final PurchaseProductId productId = PurchaseProductId.empty,
     final PurchasePriceId priceId = PurchasePriceId.empty,
-    final PurchaseStatus status = PurchaseStatus.pending,
+    final PurchaseStatus status = PurchaseStatus.pendingVerification,
     final PurchaseProductType productType = PurchaseProductType.consumable,
     final String purchaseToken = '',
     final DateTime? expiryDate,

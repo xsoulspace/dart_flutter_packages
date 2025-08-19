@@ -64,18 +64,7 @@ class ConfirmPurchaseCommand {
   /// - `ActiveSubscriptionResource`: Set to current purchase details
   /// - `SubscriptionStatusResource`: Set to subscribed status
   /// {@endtemplate}
-  Future<bool> execute(final PurchaseVerificationDtoModel details) async {
-    if (details.status case PurchaseStatus.pending) return false;
-
-    Future<bool> cleanUp() async {
-      // protection if subscription is active
-      if (activeSubscriptionResource.isActive) return false;
-      activeSubscriptionResource.set(PurchaseDetailsModel.empty);
-      subscriptionStatusResource.set(SubscriptionStatus.free);
-      await purchasesLocalApi.clearActiveSubscription();
-      return false;
-    }
-
+  Future<void> execute(final PurchaseVerificationDtoModel details) async {
     final result = await purchaseProvider.completePurchase(details);
     switch (result.type) {
       case ResultType.success:
@@ -83,17 +72,16 @@ class ConfirmPurchaseCommand {
           details.purchaseId,
         );
 
-        if (purchaseInfo.isActive) {
+        if (!purchaseInfo.isPurchased) return;
+
+        if (purchaseInfo.isSubscription) {
           activeSubscriptionResource.set(purchaseInfo);
           subscriptionStatusResource.set(SubscriptionStatus.subscribed);
           await purchasesLocalApi.saveActiveSubscription(purchaseInfo);
-          return true;
-        } else {
-          return cleanUp();
         }
+
       case ResultType.failure:
         purchasePaywallErrorResource.error = result.error;
-        return cleanUp();
     }
   }
 }

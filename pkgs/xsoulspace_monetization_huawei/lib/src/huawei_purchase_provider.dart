@@ -125,10 +125,7 @@ class HuaweiPurchaseProvider implements PurchaseProvider {
           productDetails,
         );
         _purchaseStreamController.add([details]);
-        return PurchaseResultModel.success(
-          details,
-          shouldConfirmPurchase: true,
-        );
+        return PurchaseResultModel.success(details);
       } else {
         return PurchaseResultModel.failure('Purchase failed: ${result.errMsg}');
       }
@@ -227,10 +224,10 @@ class HuaweiPurchaseProvider implements PurchaseProvider {
 
   PurchaseStatus _mapHuaweiToPurchaseStatus(final int? state) =>
       switch (state) {
-        -1 => PurchaseStatus.pending, // Initial
+        -1 => PurchaseStatus.pendingVerification, // Initial ??
         0 => PurchaseStatus.purchased,
         1 => PurchaseStatus.canceled,
-        2 => PurchaseStatus.pendingConfirmation, // Refunded
+        2 => PurchaseStatus.pendingVerification, // Refunded ??
         _ => PurchaseStatus.error,
       };
 
