@@ -86,6 +86,11 @@ class HandlePurchaseUpdateCommand {
         if (activeSubscriptionResource.isActive) return;
         activeSubscriptionResource.set(PurchaseDetailsModel.empty);
         subscriptionStatusResource.set(SubscriptionStatus.free);
+        // protection if subscription is active
+        if (activeSubscriptionResource.isActive) return;
+        activeSubscriptionResource.set(PurchaseDetailsModel.empty);
+        subscriptionStatusResource.set(SubscriptionStatus.free);
+        await purchasesLocalApi.clearActiveSubscription();
     }
   }
 }
