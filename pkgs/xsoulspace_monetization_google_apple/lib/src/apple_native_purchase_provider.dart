@@ -208,8 +208,9 @@ class AppleNativePurchaseProvider {
     final duration = jsonDecodeDurationFromISO8601(
       firstOffer['recurringSubscriptionPeriod'],
     );
-    const freeTrialDuration =
-        Duration.zero; // Transaction data typically doesn't include trial info
+    final kind = jsonDecodeString(attributes?['kind']);
+    final isSubscription = jsonDecodeBool(attributes?['isSubscription']);
+    final inferredType = _mapAppStoreKindToProductType(kind, isSubscription);
 
     return PurchaseDetailsModel(
       purchaseId: PurchaseId.fromJson(purchaseId),
@@ -217,8 +218,9 @@ class AppleNativePurchaseProvider {
       priceId: PurchasePriceId.fromJson(productId),
       status: status,
       purchaseDate: purchaseDate,
-      purchaseType: PurchaseProductType.nonConsumable,
+      purchaseType: inferredType,
       source: 'app_store',
+
       name: name,
       price: price,
       currency: currencyCode,
