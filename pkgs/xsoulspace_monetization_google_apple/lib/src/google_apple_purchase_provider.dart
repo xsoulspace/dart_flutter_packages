@@ -118,9 +118,9 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
   Future<PurchaseResultModel> purchaseNonConsumable(
     final PurchaseProductDetailsModel productDetails,
   ) async {
-    if (Platform.isIOS) {
-      return _appleNativeProvider.purchaseProduct(productDetails);
-    }
+    // if (Platform.isIOS) {
+    //   return _appleNativeProvider.purchaseProduct(productDetails);
+    // }
     final response = await _inAppPurchase.queryProductDetails({
       productDetails.productId.value,
     });
