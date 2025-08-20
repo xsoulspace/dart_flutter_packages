@@ -48,7 +48,7 @@ class RestoreLocalPurchasesCommand {
       });
     }
 
-    if (subscriptionStatusResource.status != SubscriptionStatus.subscribed) {
+    if (!subscriptionStatusResource.isSubscribed) {
       await purchasesLocalApi.clearActiveSubscription();
     }
   }

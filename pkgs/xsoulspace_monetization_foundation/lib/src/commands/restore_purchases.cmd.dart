@@ -65,9 +65,13 @@ class RestorePurchasesCommand {
     }
 
     await purchaseProvider.restorePurchases();
-
+    await Future.delayed(const Duration(seconds: 2));
     if (subscriptionStatusResource.isRestoring) {
-      subscriptionStatusResource.set(oldStatus);
+      if (oldStatus == SubscriptionStatus.restoring) {
+        subscriptionStatusResource.set(SubscriptionStatus.free);
+      } else {
+        subscriptionStatusResource.set(oldStatus);
+      }
     }
   }
 }
