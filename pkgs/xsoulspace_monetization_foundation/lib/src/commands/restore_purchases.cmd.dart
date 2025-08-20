@@ -55,6 +55,7 @@ class RestorePurchasesCommand {
   /// the stream, so every result would be handled there.
   /// {@endtemplate}
   Future<void> execute() async {
+    if (subscriptionStatusResource.isRestoring) return;
     final oldStatus = subscriptionStatusResource.status;
     final shouldSetStatus = !subscriptionStatusResource.isSubscribed;
     if (shouldSetStatus) {
