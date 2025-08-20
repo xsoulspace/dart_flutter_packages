@@ -69,7 +69,7 @@ class SubscribeCommand {
 
       case ResultType.failure:
         subscriptionStatusResource.set(previousStatus);
-        if (resultDetails == null || resultDetails.isCancelled) return;
+        if (resultDetails?.isCancelled == true) return;
 
         purchasePaywallErrorResource.error = result.error;
 
