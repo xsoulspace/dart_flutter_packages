@@ -66,7 +66,7 @@ class RestorePurchasesCommand {
 
     await purchaseProvider.restorePurchases();
 
-    if (shouldSetStatus) {
+    if (oldStatus == SubscriptionStatus.restoring) {
       subscriptionStatusResource.set(oldStatus);
     }
   }

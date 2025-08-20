@@ -188,7 +188,7 @@ class MonetizationFoundation {
     for (final purchase in purchases) {
       await _handlePurchaseUpdateCommand.execute(purchase);
     }
-    if (!srcs.subscriptionStatus.isSubscribed) {
+    if (srcs.subscriptionStatus.isRestoring) {
       srcs.subscriptionStatus.set(SubscriptionStatus.free);
     }
   }
