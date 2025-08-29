@@ -116,4 +116,13 @@ class OrderedMapNotifier<K, V> extends ImmutableOrderedMap<K, V>
     super.clear();
     notifyListeners();
   }
+
+  /// {@template ordered_map_notifier_contains_key}
+  /// Whether this map contains the specified [key].
+  ///
+  /// Returns `true` if the map contains a mapping for the specified key.
+  ///
+  /// @ai This method has O(1) average time complexity for hash-based keys.
+  /// {@endtemplate}
+  bool containsKey(final K key) => _items.containsKey(key);
 }
