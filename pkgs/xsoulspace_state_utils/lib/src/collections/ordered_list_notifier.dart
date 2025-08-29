@@ -89,8 +89,9 @@ class OrderedListNotifier<V> extends ImmutableOrderedList<V>
   @override
   @mustCallSuper
   void remove(final V value) {
+    final previousLength = length;
     super.remove(value);
-    notifyListeners();
+    if (length != previousLength) notifyListeners();
   }
 
   /// {@template ordered_list_notifier_clear}
@@ -104,7 +105,8 @@ class OrderedListNotifier<V> extends ImmutableOrderedList<V>
   @override
   @mustCallSuper
   void clear() {
+    final hadItems = isNotEmpty;
     super.clear();
-    notifyListeners();
+    if (hadItems) notifyListeners();
   }
 }

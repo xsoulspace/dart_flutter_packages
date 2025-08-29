@@ -17,26 +17,32 @@ void main() {
   });
 
   group('OrderedMapNotifier', () {
-    late String Function(TestUser) toKey;
+    late String Function(String) stringToKey;
 
     setUp(() {
-      toKey = userToId;
+      stringToKey = (final key) => key;
     });
 
     group('initialization', () {
       test('starts empty', () {
-        final notifier = env.makeOrderedMapNotifier<String, String>(toKey);
+        final notifier = env.makeOrderedMapNotifier<String, String>(
+          stringToKey,
+        );
         expect(notifier, isEmpty);
         expect(notifier.length, 0);
       });
 
       test('can be used as ImmutableOrderedMap', () {
-        final notifier = env.makeOrderedMapNotifier<String, String>(toKey);
+        final notifier = env.makeOrderedMapNotifier<String, String>(
+          stringToKey,
+        );
         expect(notifier, isA<ImmutableOrderedMap<String, String>>());
       });
 
       test('can be used as ChangeNotifier', () {
-        final notifier = env.makeOrderedMapNotifier<String, String>(toKey);
+        final notifier = env.makeOrderedMapNotifier<String, String>(
+          stringToKey,
+        );
         expect(notifier, isA<ChangeNotifier>());
       });
 
@@ -50,7 +56,9 @@ void main() {
 
     group('upsert with notifications', () {
       test('adds new key-value pair and notifies listeners', () {
-        final notifier = env.makeOrderedMapNotifier<String, String>(toKey);
+        final notifier = env.makeOrderedMapNotifier<String, String>(
+          stringToKey,
+        );
         var notified = false;
 
         notifier.addListener(() => notified = true);
@@ -63,7 +71,9 @@ void main() {
       });
 
       test('maintains insertion order', () {
-        final notifier = env.makeOrderedMapNotifier<String, String>(toKey);
+        final notifier = env.makeOrderedMapNotifier<String, String>(
+          stringToKey,
+        );
         final operations = <String>[];
 
         notifier.addListener(
@@ -83,7 +93,9 @@ void main() {
       });
 
       test('updates existing key and notifies', () {
-        final notifier = env.makeOrderedMapNotifier<String, String>(toKey);
+        final notifier = env.makeOrderedMapNotifier<String, String>(
+          stringToKey,
+        );
         notifier.upsert('key1', 'value1');
 
         var notified = false;
@@ -98,7 +110,9 @@ void main() {
       });
 
       test('putFirst places key at beginning and notifies', () {
-        final notifier = env.makeOrderedMapNotifier<String, String>(toKey);
+        final notifier = env.makeOrderedMapNotifier<String, String>(
+          stringToKey,
+        );
         notifier.upsert('key1', 'value1');
         notifier.upsert('key2', 'value2');
 
@@ -113,7 +127,9 @@ void main() {
       });
 
       test('maintains order when updating with putFirst', () {
-        final notifier = env.makeOrderedMapNotifier<String, String>(toKey);
+        final notifier = env.makeOrderedMapNotifier<String, String>(
+          stringToKey,
+        );
         notifier.upsert('key1', 'value1');
         notifier.upsert('key2', 'value2');
 
@@ -130,7 +146,9 @@ void main() {
 
     group('remove with notifications', () {
       test('removes existing key-value pair and notifies', () {
-        final notifier = env.makeOrderedMapNotifier<String, String>(toKey);
+        final notifier = env.makeOrderedMapNotifier<String, String>(
+          stringToKey,
+        );
         notifier.upsert('key1', 'value1');
         notifier.upsert('key2', 'value2');
 
@@ -147,7 +165,9 @@ void main() {
       });
 
       test('maintains order after removal', () {
-        final notifier = env.makeOrderedMapNotifier<String, String>(toKey);
+        final notifier = env.makeOrderedMapNotifier<String, String>(
+          stringToKey,
+        );
         notifier.upsert('key1', 'value1');
         notifier.upsert('key2', 'value2');
         notifier.upsert('key3', 'value3');
@@ -163,7 +183,9 @@ void main() {
       });
 
       test('does nothing when key not found', () {
-        final notifier = env.makeOrderedMapNotifier<String, String>(toKey);
+        final notifier = env.makeOrderedMapNotifier<String, String>(
+          stringToKey,
+        );
         notifier.upsert('key1', 'value1');
 
         var notified = false;
@@ -181,7 +203,9 @@ void main() {
       });
 
       test('handles empty map', () {
-        final notifier = env.makeOrderedMapNotifier<String, String>(toKey);
+        final notifier = env.makeOrderedMapNotifier<String, String>(
+          stringToKey,
+        );
 
         var notified = false;
         notifier.addListener(() => notified = true);
@@ -195,7 +219,9 @@ void main() {
 
     group('clear with notifications', () {
       test('removes all key-value pairs and notifies', () {
-        final notifier = env.makeOrderedMapNotifier<String, String>(toKey);
+        final notifier = env.makeOrderedMapNotifier<String, String>(
+          stringToKey,
+        );
         notifier.upsert('key1', 'value1');
         notifier.upsert('key2', 'value2');
         notifier.upsert('key3', 'value3');
@@ -211,7 +237,9 @@ void main() {
       });
 
       test('can add items after clear and notifies', () {
-        final notifier = env.makeOrderedMapNotifier<String, String>(toKey);
+        final notifier = env.makeOrderedMapNotifier<String, String>(
+          stringToKey,
+        );
         notifier.upsert('key1', 'value1');
         notifier.clear();
 
@@ -227,7 +255,9 @@ void main() {
       });
 
       test('does not notify when already empty', () {
-        final notifier = env.makeOrderedMapNotifier<String, String>(toKey);
+        final notifier = env.makeOrderedMapNotifier<String, String>(
+          stringToKey,
+        );
 
         var notified = false;
         notifier.addListener(() => notified = true);
@@ -241,7 +271,9 @@ void main() {
 
     group('inheritance from ImmutableOrderedMap', () {
       test('inherits all immutable operations', () {
-        final notifier = env.makeOrderedMapNotifier<String, String>(toKey);
+        final notifier = env.makeOrderedMapNotifier<String, String>(
+          stringToKey,
+        );
 
         // Test assignAll
         notifier.assignAll({'key1': 'value1', 'key2': 'value2'});
@@ -258,7 +290,9 @@ void main() {
       });
 
       test('immutable operations create new instances', () {
-        final notifier = env.makeOrderedMapNotifier<String, String>(toKey);
+        final notifier = env.makeOrderedMapNotifier<String, String>(
+          stringToKey,
+        );
         notifier.upsert('original', 'value1');
 
         final originalLength = notifier.length;
@@ -273,7 +307,9 @@ void main() {
 
     group('listener management', () {
       test('multiple listeners are notified', () {
-        final notifier = env.makeOrderedMapNotifier<String, String>(toKey);
+        final notifier = env.makeOrderedMapNotifier<String, String>(
+          stringToKey,
+        );
 
         var listener1Notified = false;
         var listener2Notified = false;
@@ -288,7 +324,9 @@ void main() {
       });
 
       test('removed listeners are not notified', () {
-        final notifier = env.makeOrderedMapNotifier<String, String>(toKey);
+        final notifier = env.makeOrderedMapNotifier<String, String>(
+          stringToKey,
+        );
 
         var notified = false;
         void listener() => notified = true;
@@ -302,7 +340,9 @@ void main() {
       });
 
       test('dispose removes all listeners', () {
-        final notifier = env.makeOrderedMapNotifier<String, String>(toKey);
+        final notifier = env.makeOrderedMapNotifier<String, String>(
+          stringToKey,
+        );
 
         var notified = false;
         notifier.addListener(() => notified = true);
@@ -316,7 +356,9 @@ void main() {
 
     group('complex scenarios with notifications', () {
       test('mixed operations trigger appropriate notifications', () {
-        final notifier = env.makeOrderedMapNotifier<String, String>(toKey);
+        final notifier = env.makeOrderedMapNotifier<String, String>(
+          stringToKey,
+        );
         final operations = <String>[];
 
         notifier.addListener(() {
@@ -356,7 +398,9 @@ void main() {
       });
 
       test('handles rapid successive operations', () {
-        final notifier = env.makeOrderedMapNotifier<String, String>(toKey);
+        final notifier = env.makeOrderedMapNotifier<String, String>(
+          stringToKey,
+        );
         final notificationCount = <int>[];
 
         notifier.addListener(() => notificationCount.add(notifier.length));
@@ -374,7 +418,9 @@ void main() {
       });
 
       test('works with large number of items', () {
-        final notifier = env.makeOrderedMapNotifier<String, String>(toKey);
+        final notifier = env.makeOrderedMapNotifier<String, String>(
+          stringToKey,
+        );
         var notificationCount = 0;
 
         notifier.addListener(() => notificationCount++);
@@ -400,7 +446,9 @@ void main() {
 
     group('dispose behavior', () {
       test('dispose prevents further notifications', () {
-        final notifier = env.makeOrderedMapNotifier<String, String>(toKey);
+        final notifier = env.makeOrderedMapNotifier<String, String>(
+          stringToKey,
+        );
 
         var notified = false;
         notifier.addListener(() => notified = true);
@@ -416,7 +464,9 @@ void main() {
       });
 
       test('dispose handles multiple calls gracefully', () {
-        final notifier = env.makeOrderedMapNotifier<String, String>(toKey);
+        final notifier = env.makeOrderedMapNotifier<String, String>(
+          stringToKey,
+        );
         notifier.dispose();
         expect(notifier.dispose, returnsNormally);
       });
@@ -442,7 +492,9 @@ void main() {
       });
 
       test('handles empty strings', () {
-        final notifier = env.makeOrderedMapNotifier<String, String>(toKey);
+        final notifier = env.makeOrderedMapNotifier<String, String>(
+          stringToKey,
+        );
 
         var notified = false;
         notifier.addListener(() => notified = true);
@@ -473,7 +525,7 @@ void main() {
         ); // Move to front
         userNotifier.remove(users[1].id);
 
-        expect(userNotifier, hasLength(3));
+        expect(userNotifier, hasLength(2)); // 3 users - 1 removed = 2 users
         expect(userNotifier.first, users[0].id);
         expect(userNotifier.orderedValues.first, users[0]);
         expect(notified, isTrue);
@@ -484,15 +536,15 @@ void main() {
           (final user) => 'same-key',
         );
         final users = someTestUsers();
-
         var notified = false;
+
         userNotifier.addListener(() => notified = true);
 
         userNotifier.assignAllOrdered(users); // All users get same key
 
         expect(userNotifier, hasLength(1)); // Only last user remains
         expect(userNotifier.keys, ['same-key']);
-        expect(notifier, isTrue);
+        expect(notified, isTrue);
       });
     });
 
@@ -531,7 +583,7 @@ void main() {
 
       test('handles cache-like behavior', () {
         final cacheNotifier = env.makeOrderedMapNotifier<String, String>(
-          (final key) => key,
+          stringToKey,
         );
         const maxSize = 5;
         var notificationCount = 0;

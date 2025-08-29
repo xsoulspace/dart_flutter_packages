@@ -335,20 +335,22 @@ void main() {
 
   group('ImmutableOrderedMap', () {
     late String Function(TestUser) toKey;
+    late String Function(String) stringToKey;
 
     setUp(() {
       toKey = userToId;
+      stringToKey = (final key) => key;
     });
 
     group('initialization', () {
       test('starts empty', () {
-        final map = env.makeImmutableOrderedMap<String, String>(toKey);
+        final map = env.makeImmutableOrderedMap<String, String>(stringToKey);
         expect(map, isEmpty);
         expect(map.length, 0);
       });
 
       test('can be used as Iterable', () {
-        final map = env.makeImmutableOrderedMap<String, String>(toKey);
+        final map = env.makeImmutableOrderedMap<String, String>(stringToKey);
         expect(map, isA<Iterable<String>>());
       });
 
@@ -362,7 +364,7 @@ void main() {
 
     group('upsert', () {
       test('adds new key-value pair at end by default', () {
-        final map = env.makeImmutableOrderedMap<String, String>(toKey);
+        final map = env.makeImmutableOrderedMap<String, String>(stringToKey);
         map.upsert('key1', 'value1');
 
         expect(map, hasLength(1));
@@ -371,7 +373,7 @@ void main() {
       });
 
       test('maintains insertion order', () {
-        final map = env.makeImmutableOrderedMap<String, String>(toKey);
+        final map = env.makeImmutableOrderedMap<String, String>(stringToKey);
         map.upsert('key1', 'value1');
         map.upsert('key2', 'value2');
         map.upsert('key3', 'value3');
@@ -381,7 +383,7 @@ void main() {
       });
 
       test('updates existing key', () {
-        final map = env.makeImmutableOrderedMap<String, String>(toKey);
+        final map = env.makeImmutableOrderedMap<String, String>(stringToKey);
         map.upsert('key1', 'value1');
         map.upsert('key1', 'updated');
 
@@ -391,7 +393,7 @@ void main() {
       });
 
       test('putFirst places key at beginning', () {
-        final map = env.makeImmutableOrderedMap<String, String>(toKey);
+        final map = env.makeImmutableOrderedMap<String, String>(stringToKey);
         map.upsert('key1', 'value1');
         map.upsert('key2', 'value2');
         map.upsert('key3', 'value3', putFirst: true);
@@ -401,7 +403,7 @@ void main() {
       });
 
       test('maintains order when updating with putFirst', () {
-        final map = env.makeImmutableOrderedMap<String, String>(toKey);
+        final map = env.makeImmutableOrderedMap<String, String>(stringToKey);
         map.upsert('key1', 'value1');
         map.upsert('key2', 'value2');
         map.upsert('key1', 'updated', putFirst: true); // Move to front
@@ -413,14 +415,14 @@ void main() {
 
     group('operator []', () {
       test('retrieves existing value', () {
-        final map = env.makeImmutableOrderedMap<String, String>(toKey);
+        final map = env.makeImmutableOrderedMap<String, String>(stringToKey);
         map.upsert('key1', 'value1');
 
         expect(map['key1'], 'value1');
       });
 
       test('returns null for non-existent key', () {
-        final map = env.makeImmutableOrderedMap<String, String>(toKey);
+        final map = env.makeImmutableOrderedMap<String, String>(stringToKey);
         map.upsert('key1', 'value1');
 
         expect(map['nonexistent'], isNull);
@@ -428,7 +430,7 @@ void main() {
 
       test('handles null keys', () {
         final map = env.makeImmutableOrderedMap<String?, String>(
-          (final v) => v ?? 'null',
+          (final v) => v ?? 'null-key',
         );
         map.upsert(null, 'nullValue');
 
@@ -438,7 +440,7 @@ void main() {
 
     group('operator []=', () {
       test('is equivalent to upsert with default parameters', () {
-        final map = env.makeImmutableOrderedMap<String, String>(toKey);
+        final map = env.makeImmutableOrderedMap<String, String>(stringToKey);
         map['key1'] = 'value1';
         map['key2'] = 'value2';
 
@@ -449,7 +451,7 @@ void main() {
 
     group('keys', () {
       test('returns unmodifiable list of keys in order', () {
-        final map = env.makeImmutableOrderedMap<String, String>(toKey);
+        final map = env.makeImmutableOrderedMap<String, String>(stringToKey);
         map.upsert('key1', 'value1');
         map.upsert('key2', 'value2');
 
@@ -461,7 +463,7 @@ void main() {
 
     group('orderedValues', () {
       test('returns values in insertion order', () {
-        final map = env.makeImmutableOrderedMap<String, String>(toKey);
+        final map = env.makeImmutableOrderedMap<String, String>(stringToKey);
         map.upsert('key1', 'value1');
         map.upsert('key2', 'value2');
 
@@ -469,7 +471,7 @@ void main() {
       });
 
       test('returns unmodifiable list', () {
-        final map = env.makeImmutableOrderedMap<String, String>(toKey);
+        final map = env.makeImmutableOrderedMap<String, String>(stringToKey);
         map.upsert('key1', 'value1');
 
         final values = map.orderedValues;
@@ -477,7 +479,7 @@ void main() {
       });
 
       test('caches result for performance', () {
-        final map = env.makeImmutableOrderedMap<String, String>(toKey);
+        final map = env.makeImmutableOrderedMap<String, String>(stringToKey);
         map.upsert('key1', 'value1');
         map.upsert('key2', 'value2');
 
@@ -488,7 +490,7 @@ void main() {
       });
 
       test('invalidates cache after mutation', () {
-        final map = env.makeImmutableOrderedMap<String, String>(toKey);
+        final map = env.makeImmutableOrderedMap<String, String>(stringToKey);
         map.upsert('key1', 'value1');
 
         final before = map.orderedValues;
@@ -502,7 +504,7 @@ void main() {
 
     group('assignAll', () {
       test('replaces all items with new map', () {
-        final map = env.makeImmutableOrderedMap<String, String>(toKey);
+        final map = env.makeImmutableOrderedMap<String, String>(stringToKey);
         map.upsert('old1', 'value1');
         map.upsert('old2', 'value2');
 
@@ -513,7 +515,7 @@ void main() {
       });
 
       test('handles empty assignment', () {
-        final map = env.makeImmutableOrderedMap<String, String>(toKey);
+        final map = env.makeImmutableOrderedMap<String, String>(stringToKey);
         map.upsert('key1', 'value1');
 
         map.assignAll({});
@@ -560,7 +562,7 @@ void main() {
 
     group('remove', () {
       test('removes existing key-value pair', () {
-        final map = env.makeImmutableOrderedMap<String, String>(toKey);
+        final map = env.makeImmutableOrderedMap<String, String>(stringToKey);
         map.upsert('key1', 'value1');
         map.upsert('key2', 'value2');
 
@@ -572,7 +574,7 @@ void main() {
       });
 
       test('maintains order after removal', () {
-        final map = env.makeImmutableOrderedMap<String, String>(toKey);
+        final map = env.makeImmutableOrderedMap<String, String>(stringToKey);
         map.upsert('key1', 'value1');
         map.upsert('key2', 'value2');
         map.upsert('key3', 'value3');
@@ -584,7 +586,7 @@ void main() {
       });
 
       test('does nothing when key not found', () {
-        final map = env.makeImmutableOrderedMap<String, String>(toKey);
+        final map = env.makeImmutableOrderedMap<String, String>(stringToKey);
         map.upsert('key1', 'value1');
 
         map.remove('nonexistent');
@@ -596,7 +598,7 @@ void main() {
 
     group('clear', () {
       test('removes all key-value pairs', () {
-        final map = env.makeImmutableOrderedMap<String, String>(toKey);
+        final map = env.makeImmutableOrderedMap<String, String>(stringToKey);
         map.upsert('key1', 'value1');
         map.upsert('key2', 'value2');
 
@@ -607,7 +609,7 @@ void main() {
       });
 
       test('can add items after clear', () {
-        final map = env.makeImmutableOrderedMap<String, String>(toKey);
+        final map = env.makeImmutableOrderedMap<String, String>(stringToKey);
         map.upsert('key1', 'value1');
         map.clear();
         map.upsert('key2', 'value2');
@@ -619,7 +621,7 @@ void main() {
 
     group('iteration', () {
       test('iterates over keys in insertion order', () {
-        final map = env.makeImmutableOrderedMap<String, String>(toKey);
+        final map = env.makeImmutableOrderedMap<String, String>(stringToKey);
         map.upsert('key1', 'value1');
         map.upsert('key2', 'value2');
 
@@ -628,7 +630,7 @@ void main() {
       });
 
       test('works with for-in loops', () {
-        final map = env.makeImmutableOrderedMap<String, String>(toKey);
+        final map = env.makeImmutableOrderedMap<String, String>(stringToKey);
         map.upsert('a', '1');
         map.upsert('b', '2');
 
@@ -643,7 +645,7 @@ void main() {
 
     group('immutability guarantees', () {
       test('each operation returns new instance', () {
-        final map = env.makeImmutableOrderedMap<String, String>(toKey);
+        final map = env.makeImmutableOrderedMap<String, String>(stringToKey);
         map.upsert('key1', 'value1');
 
         final step1 = map..upsert('key2', 'value2');
@@ -658,7 +660,9 @@ void main() {
       });
 
       test('original remains unchanged after multiple operations', () {
-        final original = env.makeImmutableOrderedMap<String, String>(toKey);
+        final original = env.makeImmutableOrderedMap<String, String>(
+          stringToKey,
+        );
         original.upsert('original', 'value1');
 
         // Perform various operations
@@ -674,7 +678,7 @@ void main() {
 
     group('complex scenarios', () {
       test('handles mixed operations with immutability', () {
-        final map = env.makeImmutableOrderedMap<String, String>(toKey);
+        final map = env.makeImmutableOrderedMap<String, String>(stringToKey);
 
         // Build up a map
         map.upsert('key1', 'value1');
@@ -696,7 +700,7 @@ void main() {
       });
 
       test('handles large number of operations', () {
-        final map = env.makeImmutableOrderedMap<String, String>(toKey);
+        final map = env.makeImmutableOrderedMap<String, String>(stringToKey);
 
         // Add many items
         for (var i = 0; i < 100; i++) {

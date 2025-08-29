@@ -98,8 +98,11 @@ class OrderedMapNotifier<K, V> extends ImmutableOrderedMap<K, V>
   @override
   @mustCallSuper
   void remove(final K key) {
+    final hadKey = containsKey(key);
     super.remove(key);
-    notifyListeners();
+    if (hadKey) {
+      notifyListeners();
+    }
   }
 
   /// {@template ordered_map_notifier_clear}
@@ -113,7 +116,16 @@ class OrderedMapNotifier<K, V> extends ImmutableOrderedMap<K, V>
   @override
   @mustCallSuper
   void clear() {
+    final hadItems = isNotEmpty;
     super.clear();
+    if (hadItems) {
+      notifyListeners();
+    }
+  }
+
+  @override
+  void assignAllOrdered(final List<V> items) {
+    super.assignAllOrdered(items);
     notifyListeners();
   }
 }

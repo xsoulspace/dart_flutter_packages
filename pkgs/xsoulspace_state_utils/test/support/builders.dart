@@ -43,6 +43,18 @@ class TestUser {
   final String? email;
   final int age;
 
+  TestUser copyWith({
+    final String? id,
+    final String? name,
+    final String? email,
+    final int? age,
+  }) => TestUser(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    email: email ?? this.email,
+    age: age ?? this.age,
+  );
+
   @override
   bool operator ==(final Object other) =>
       identical(this, other) ||

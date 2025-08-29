@@ -40,7 +40,7 @@ class MutableOrderedMap<K, V> with Iterable<K> {
   /// {@endtemplate}
   MutableOrderedMap();
   final _items = <K, V>{};
-  final _orderedKeys = <K>[];
+  final _orderedKeys = <K>{};
 
   /// {@template mutable_ordered_map_contains_key}
   /// Whether this map contains the specified [key].
@@ -91,15 +91,6 @@ class MutableOrderedMap<K, V> with Iterable<K> {
     }
     return values;
   }
-
-  /// {@template mutable_ordered_map_contains_key}
-  /// Whether this map contains the specified [key].
-  ///
-  /// Returns `true` if the map contains a mapping for the specified key.
-  ///
-  /// @ai This method has O(1) average time complexity for hash-based keys.
-  /// {@endtemplate}
-  bool containsKey(final K key) => _items.containsKey(key);
 
   /// {@template mutable_ordered_map_upsert}
   /// Inserts or updates the mapping for the specified [key] and [value].
@@ -203,8 +194,18 @@ class ImmutableOrderedMap<K, V> with Iterable<K> {
   // ignore: unsafe_variance
   final MutableOrderedMapToKeyFunction<K, V> toKey;
   Map<K, V> _items = const {};
-  List<K> _orderedKeys = const [];
   List<V>? _valuesListCache;
+  void _setItems(final Map<K, V> items) {
+    _items = items.unmodifiable;
+    _valuesListCache = null;
+  }
+
+  Set<K> _orderedKeys = const {};
+  List<K>? _orderedKeysListCache;
+  void _setOrderedKeys(final Set<K> keys) {
+    _orderedKeys = keys.unmodifiable;
+    _orderedKeysListCache = null;
+  }
 
   /// {@template immutable_ordered_map_contains_key}
   /// Whether this map contains the specified [key].
@@ -226,7 +227,8 @@ class ImmutableOrderedMap<K, V> with Iterable<K> {
   ///
   /// @ai Use this property when you need to iterate over keys in insertion order.
   /// {@endtemplate}
-  List<K> get keys => _orderedKeys.unmodifiable;
+  List<K> get keys =>
+      _orderedKeysListCache ??= _orderedKeys.toList().unmodifiable;
 
   /// {@template immutable_ordered_map_ordered_values}
   /// Returns an unmodifiable list of all values in insertion order.
@@ -277,9 +279,8 @@ class ImmutableOrderedMap<K, V> with Iterable<K> {
   /// @ai Use this method for bulk updates rather than multiple individual upsert() calls.
   /// {@endtemplate}
   void assignAll(final Map<K, V> map) {
-    _items = map.unmodifiable;
-    _orderedKeys = map.keys.toList().unmodifiable;
-    _valuesListCache = null;
+    _setItems(map);
+    _orderedKeys = map.keys.toSet().unmodifiable;
   }
 
   /// {@template immutable_ordered_map_assign_all_ordered}
@@ -292,16 +293,15 @@ class ImmutableOrderedMap<K, V> with Iterable<K> {
   /// @ai Use this method when you have ordered data that needs key-based access.
   /// {@endtemplate}
   void assignAllOrdered(final List<V> items) {
-    final newKeys = <K>[];
+    final newKeys = <K>{};
     final map = <K, V>{};
     for (final item in items) {
       final key = toKey(item);
       map[key] = item;
       newKeys.add(key);
     }
-    _items = map.unmodifiable;
-    _orderedKeys = newKeys.unmodifiable;
-    _valuesListCache = null;
+    _setItems(map);
+    _setOrderedKeys(newKeys);
   }
 
   /// {@template immutable_ordered_map_upsert}
@@ -318,14 +318,13 @@ class ImmutableOrderedMap<K, V> with Iterable<K> {
   void upsert(final K key, final V value, {final bool putFirst = true}) {
     final items = {..._items, key: value}.unmodifiable;
     final putLast = !putFirst;
-    final orderedKeys = [
+    final orderedKeys = {
       if (putFirst) key,
       ..._orderedKeys,
       if (putLast) key,
-    ].unmodifiable;
-    _items = items.unmodifiable;
-    _orderedKeys = orderedKeys.unmodifiable;
-    _valuesListCache = null;
+    }.unmodifiable;
+    _setItems(items);
+    _setOrderedKeys(orderedKeys);
   }
 
   /// {@template immutable_ordered_map_remove}
@@ -339,10 +338,9 @@ class ImmutableOrderedMap<K, V> with Iterable<K> {
   @mustCallSuper
   void remove(final K key) {
     final items = {..._items}..remove(key);
-    final orderedKeys = [..._orderedKeys]..remove(key);
-    _items = items.unmodifiable;
-    _orderedKeys = orderedKeys.unmodifiable;
-    _valuesListCache = null;
+    final orderedKeys = {..._orderedKeys}..remove(key);
+    _setItems(items);
+    _setOrderedKeys(orderedKeys);
   }
 
   /// {@template immutable_ordered_map_clear}
@@ -355,8 +353,7 @@ class ImmutableOrderedMap<K, V> with Iterable<K> {
   /// {@endtemplate}
   @mustCallSuper
   void clear() {
-    _items = <K, V>{}.unmodifiable;
-    _orderedKeys = <K>[].unmodifiable;
-    _valuesListCache = null;
+    _setItems(<K, V>{});
+    _setOrderedKeys(<K>{});
   }
 }
