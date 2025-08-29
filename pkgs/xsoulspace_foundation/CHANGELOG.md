@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.2
+
+- fixed: flutter sdk added to dependencies
+- perf: moved state experiments to xsoulspace_state_utils
+
 ## 0.2.1
 
 - chore: xsoulspace_lints 0.1.2
