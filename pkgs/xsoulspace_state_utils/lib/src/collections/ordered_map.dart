@@ -42,6 +42,15 @@ class MutableOrderedMap<K, V> with Iterable<K> {
   final _items = <K, V>{};
   final _orderedKeys = <K>[];
 
+  /// {@template mutable_ordered_map_contains_key}
+  /// Whether this map contains the specified [key].
+  ///
+  /// Returns `true` if the map contains a mapping for the specified key.
+  ///
+  /// @ai This method has O(1) average time complexity for hash-based keys.
+  /// {@endtemplate}
+  bool containsKey(final K key) => _items.containsKey(key);
+
   /// {@template mutable_ordered_map_values}
   /// Returns an iterable of all values in this map.
   ///
@@ -178,18 +187,33 @@ class MutableOrderedMap<K, V> with Iterable<K> {
 class ImmutableOrderedMap<K, V> with Iterable<K> {
   /// {@template immutable_ordered_map_constructor}
   /// Creates an immutable ordered map with the specified key extraction function.
+  /// {@endtemplate}
   ///
-  /// [toKey] - A function that converts values to their corresponding keys.
+  /// [toKey]
+  /// {@macro immutable_ordered_map_to_key}
+  ImmutableOrderedMap({required this.toKey});
+
+  /// {@template immutable_ordered_map_to_key}
+  /// A function that converts values to their corresponding keys.
+  ///
   /// This function is used internally to generate keys when values are added.
   ///
   /// @ai Provide a consistent [toKey] function to ensure reliable key generation.
   /// {@endtemplate}
-  ImmutableOrderedMap({required this.toKey});
   // ignore: unsafe_variance
   final MutableOrderedMapToKeyFunction<K, V> toKey;
   Map<K, V> _items = const {};
   List<K> _orderedKeys = const [];
   List<V>? _valuesListCache;
+
+  /// {@template immutable_ordered_map_contains_key}
+  /// Whether this map contains the specified [key].
+  ///
+  /// Returns `true` if the map contains a mapping for the specified key.
+  ///
+  /// @ai This method has O(1) average time complexity for hash-based keys.
+  /// {@endtemplate}
+  bool containsKey(final K key) => _items.containsKey(key);
 
   @override
   Iterator<K> get iterator => _orderedKeys.iterator;
