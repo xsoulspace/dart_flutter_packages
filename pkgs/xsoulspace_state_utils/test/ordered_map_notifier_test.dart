@@ -70,7 +70,7 @@ void main() {
         expect(notified, isTrue);
       });
 
-      test('maintains insertion order', () {
+      test('maintains insertion order ', () {
         final notifier = env.makeOrderedMapNotifier<String, String>(
           stringToKey,
         );
@@ -109,7 +109,7 @@ void main() {
         expect(notified, isTrue);
       });
 
-      test('putFirst places key at beginning and notifies', () {
+      test('putFirst places key at the beginning and notifies', () {
         final notifier = env.makeOrderedMapNotifier<String, String>(
           stringToKey,
         );
@@ -132,14 +132,15 @@ void main() {
         );
         notifier.upsert('key1', 'value1');
         notifier.upsert('key2', 'value2');
+        notifier.upsert('key3', 'value3');
 
         var notified = false;
         notifier.addListener(() => notified = true);
 
-        notifier.upsert('key1', 'updated', putFirst: true); // Move to front
+        notifier.upsert('key3', 'updated', putFirst: true); // Move to front
 
-        expect(notifier.keys, ['key1', 'key2']);
-        expect(notifier.orderedValues, ['updated', 'value2']);
+        expect(notifier.keys, ['key3', 'key1', 'key2']);
+        expect(notifier.orderedValues, ['updated', 'value1', 'value2']);
         expect(notified, isTrue);
       });
     });
@@ -339,7 +340,7 @@ void main() {
         expect(notified, isFalse);
       });
 
-      test('dispose removes all listeners', () {
+      test('dispose does not remove all listeners', () {
         final notifier = env.makeOrderedMapNotifier<String, String>(
           stringToKey,
         );
@@ -348,8 +349,10 @@ void main() {
         notifier.addListener(() => notified = true);
 
         notifier.dispose();
-        notifier.upsert('key1', 'value1'); // This should not crash
-
+        expect(
+          () => notifier.upsert('key1', 'value1'),
+          throwsA(isA<AssertionError>()),
+        );
         expect(notified, isFalse);
       });
     });
@@ -389,8 +392,8 @@ void main() {
         expect(operations, [
           'length: 1, keys: key1',
           'length: 2, keys: key1,key2',
-          'length: 2, keys: key1,key2', // Update doesn't change order
-          'length: 3, keys: key3,key1,key2', // putFirst changes order
+          'length: 2, keys: key2,key1', // Update changes the order
+          'length: 3, keys: key3,key2,key1', // putFirst changes order
           'length: 2, keys: key3,key1', // Remove changes order
           'length: 0, keys: ', // Clear
           'length: 1, keys: final', // Final add
@@ -445,7 +448,7 @@ void main() {
     });
 
     group('dispose behavior', () {
-      test('dispose prevents further notifications', () {
+      test('dispose does not prevent further notifications', () {
         final notifier = env.makeOrderedMapNotifier<String, String>(
           stringToKey,
         );
@@ -455,20 +458,20 @@ void main() {
 
         notifier.dispose();
 
-        // These should not cause notifications or crashes
-        notifier.upsert('key1', 'value1');
-        notifier.remove('nonexistent');
-        notifier.clear();
-
+        // These should cause notifications or crashes
+        expect(
+          () => notifier.upsert('key1', 'value1'),
+          throwsA(isA<AssertionError>()),
+        );
         expect(notified, isFalse);
       });
 
-      test('dispose handles multiple calls gracefully', () {
+      test('dispose does not throw on multiple calls', () {
         final notifier = env.makeOrderedMapNotifier<String, String>(
           stringToKey,
         );
         notifier.dispose();
-        expect(notifier.dispose, returnsNormally);
+        expect(notifier.dispose, throwsA(isA<AssertionError>()));
       });
     });
 

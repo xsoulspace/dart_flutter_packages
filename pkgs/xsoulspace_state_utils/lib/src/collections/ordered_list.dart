@@ -133,6 +133,7 @@ class ImmutableOrderedList<V> with Iterable<V> {
   /// {@endtemplate}
   @mustCallSuper
   bool addUnique(final V value) {
+    // TODO(arenukvern): rewrite to use index
     if (_items.contains(value)) return false;
     add(value);
     return true;
@@ -148,8 +149,23 @@ class ImmutableOrderedList<V> with Iterable<V> {
   /// {@endtemplate}
   @mustCallSuper
   void remove(final V value) {
-    _items = _items.where((final item) => item != value).toList().unmodifiable;
+    final index = _items.indexOf(value);
+    if (index == -1) return;
+    final newItems = [..._items]..removeAt(index);
+    _items = newItems.unmodifiable;
   }
+
+  /// {@template immutable_ordered_list_remove_all}
+  /// Removes all occurrences of the specified [value] from this ordered list.
+  ///
+  /// This creates a new unmodifiable list without the specified value,
+  /// preserving the order of remaining items.
+  ///
+  /// @ai This operation has O(n) time complexity due to filtering and list creation.
+  /// {@endtemplate}
+  @mustCallSuper
+  void removeAll(final V value) =>
+      _items = [..._items].where((final v) => v != value).toList().unmodifiable;
 
   /// {@template immutable_ordered_list_clear}
   /// Removes all items from this ordered list.

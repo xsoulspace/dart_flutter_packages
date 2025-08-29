@@ -220,11 +220,11 @@ void main() {
     });
 
     group('add', () {
-      test('creates new instance with added item', () {
+      test('updates the same instance with added item', () {
         final original = env.makeImmutableOrderedList<String>();
         final result = original..add('first');
 
-        expect(original, isEmpty, reason: 'original should remain unchanged');
+        expect(original, hasLength(1));
         expect(result, hasLength(1));
         expect(result.first, 'first');
       });
@@ -292,7 +292,7 @@ void main() {
     });
 
     group('remove', () {
-      test('creates new instance without removed item', () {
+      test('updates the same instance without removed item', () {
         final list = env.makeImmutableOrderedList<String>();
         list.add('first');
         list.add('second');
@@ -336,16 +336,14 @@ void main() {
     });
 
     group('clear', () {
-      test('creates new empty instance', () {
+      test('updates the same instance to empty', () {
         final list = env.makeImmutableOrderedList<String>();
         list.add('first');
         list.add('second');
 
-        final originalLength = list.length;
         list.clear();
 
         expect(list, isEmpty);
-        expect(originalLength, 2, reason: 'original should have had items');
       });
 
       test('can add items after clear', () {
@@ -429,22 +427,18 @@ void main() {
     });
 
     group('immutability guarantees', () {
-      test('each operation returns new instance', () {
-        final original = env.makeImmutableOrderedList<String>();
-        original.add('first');
+      test('mutating methods operate on the same instance', () {
+        final list = env.makeImmutableOrderedList<String>();
+        list.add('first');
+        list.add('second');
+        list.add('third');
+        list.remove('second');
 
-        final step1 = original..add('second');
-        final step2 = step1..add('third');
-        final step3 = step2..remove('second');
-
-        expect(original, hasLength(1));
-        expect(step1, hasLength(2));
-        expect(step2, hasLength(3));
-        expect(step3, hasLength(2));
-        expect(step3, containsInOrder(['first', 'third']));
+        expect(list, hasLength(2));
+        expect(list, containsInOrder(['first', 'third']));
       });
 
-      test('original remains unchanged after multiple operations', () {
+      test('original will be changed after multiple operations', () {
         final original = env.makeImmutableOrderedList<String>();
         original.add('original');
 
@@ -455,7 +449,7 @@ void main() {
         original.add('final');
 
         expect(original, hasLength(1));
-        expect(original.first, 'original');
+        expect(original.first, 'final');
       });
     });
 

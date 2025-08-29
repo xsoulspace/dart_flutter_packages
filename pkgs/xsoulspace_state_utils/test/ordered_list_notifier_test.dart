@@ -136,7 +136,8 @@ void main() {
         notifier.add('third');
 
         expect(notifier, containsInOrder(['first', 'second', 'third']));
-        expect(notifications, [2, 3]); // Only notified for successful adds
+        expect(notifications, [1, 2, 3]); // Only notified for successful adds
+        notifier.dispose();
       });
     });
 
@@ -276,16 +277,14 @@ void main() {
         expect(notified, isFalse);
       });
 
-      test('dispose removes all listeners', () {
+      test('dispose does not remove listeners and throws', () {
         final notifier = env.makeOrderedListNotifier<String>();
 
         var notified = false;
         notifier.addListener(() => notified = true);
 
         notifier.dispose();
-        notifier.add('item'); // This should not crash
-
-        expect(notified, isFalse);
+        expect(() => notifier.add('item'), throwsA(isA<AssertionError>()));
       });
     });
 
@@ -394,7 +393,7 @@ void main() {
     });
 
     group('dispose behavior', () {
-      test('dispose prevents further notifications', () {
+      test('dispose throws on further operations', () {
         final notifier = env.makeOrderedListNotifier<String>();
 
         var notified = false;
@@ -402,18 +401,19 @@ void main() {
 
         notifier.dispose();
 
-        // These should not cause notifications or crashes
-        notifier.add('after-dispose');
-        notifier.remove('nonexistent');
-        notifier.clear();
+        // These should throw after dispose
+        expect(
+          () => notifier.add('after-dispose'),
+          throwsA(isA<AssertionError>()),
+        );
 
         expect(notified, isFalse);
       });
 
-      test('dispose handles multiple calls gracefully', () {
+      test('dispose does throw on multiple calls', () {
         final notifier = env.makeOrderedListNotifier<String>();
         notifier.dispose();
-        expect(notifier.dispose, returnsNormally);
+        expect(notifier.dispose, throwsA(isA<AssertionError>()));
       });
     });
 

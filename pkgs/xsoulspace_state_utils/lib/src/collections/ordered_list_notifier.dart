@@ -46,6 +46,13 @@ import 'ordered_list.dart';
 /// {@endtemplate}
 class OrderedListNotifier<V> extends ImmutableOrderedList<V>
     with ChangeNotifier {
+  /// {@macro ordered_list_notifier}
+  OrderedListNotifier() {
+    if (kFlutterMemoryAllocationsEnabled) {
+      ChangeNotifier.maybeDispatchObjectCreation(this);
+    }
+  }
+
   /// {@template ordered_list_notifier_add}
   /// Adds the specified [value] to the end of this ordered list and notifies listeners.
   ///
@@ -72,11 +79,7 @@ class OrderedListNotifier<V> extends ImmutableOrderedList<V>
   /// {@endtemplate}
   @override
   @mustCallSuper
-  bool addUnique(final V value) {
-    final result = super.addUnique(value);
-    if (result) notifyListeners();
-    return result;
-  }
+  bool addUnique(final V value) => super.addUnique(value);
 
   /// {@template ordered_list_notifier_remove}
   /// Removes the first occurrence of the specified [value] from this ordered list and notifies listeners.

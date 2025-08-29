@@ -315,12 +315,12 @@ class ImmutableOrderedMap<K, V> with Iterable<K> {
   /// Use [putFirst] to control insertion position in the ordered sequence.
   /// {@endtemplate}
   @mustCallSuper
-  void upsert(final K key, final V value, {final bool putFirst = true}) {
+  void upsert(final K key, final V value, {final bool putFirst = false}) {
     final items = {..._items, key: value}.unmodifiable;
     final putLast = !putFirst;
     final orderedKeys = {
       if (putFirst) key,
-      ..._orderedKeys,
+      ...{..._orderedKeys}..remove(key),
       if (putLast) key,
     }.unmodifiable;
     _setItems(items);
