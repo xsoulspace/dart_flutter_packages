@@ -1,3 +1,5 @@
+// ignore_for_file: cascade_invocations
+
 import 'package:test/test.dart' hide hasLength, isEmpty;
 
 import 'support/harness.dart';
@@ -140,9 +142,7 @@ void main() {
         list.add('c');
 
         final result = <String>[];
-        for (final item in list) {
-          result.add(item);
-        }
+        list.forEach(result.add);
 
         expect(result, ['a', 'b', 'c']);
       });
@@ -406,9 +406,7 @@ void main() {
         list.add('c');
 
         final result = <String>[];
-        for (final item in list) {
-          result.add(item);
-        }
+        list.forEach(result.add);
 
         expect(result, ['a', 'b', 'c']);
       });

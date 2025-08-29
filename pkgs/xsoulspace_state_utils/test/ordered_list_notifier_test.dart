@@ -1,3 +1,5 @@
+// ignore_for_file: cascade_invocations
+
 import 'package:flutter/foundation.dart';
 import 'package:test/test.dart' hide hasLength, isEmpty;
 
@@ -280,6 +282,7 @@ void main() {
       test('dispose does not remove listeners and throws', () {
         final notifier = env.makeOrderedListNotifier<String>();
 
+        // ignore: unused_local_variable
         var notified = false;
         notifier.addListener(() => notified = true);
 

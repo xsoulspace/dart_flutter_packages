@@ -1,3 +1,5 @@
+// ignore_for_file: cascade_invocations
+
 import 'package:flutter/foundation.dart';
 import 'package:test/test.dart' hide hasLength, isEmpty;
 
@@ -478,7 +480,7 @@ void main() {
     group('edge cases', () {
       test('handles null keys', () {
         final notifier = env.makeOrderedMapNotifier<String?, String>(
-          (final k) => k ?? 'null-key',
+          (final k) => k,
         );
 
         var notified = false;

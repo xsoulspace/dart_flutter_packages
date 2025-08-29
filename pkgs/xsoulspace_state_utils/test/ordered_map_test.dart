@@ -1,3 +1,5 @@
+// ignore_for_file: cascade_invocations
+
 import 'package:test/test.dart' hide hasLength, isEmpty;
 
 import 'support/builders.dart';
@@ -271,9 +273,7 @@ void main() {
         map.upsert('c', '3');
 
         final result = <String>[];
-        for (final key in map) {
-          result.add(key);
-        }
+        map.forEach(result.add);
 
         expect(result, ['a', 'b', 'c']);
       });
@@ -334,11 +334,9 @@ void main() {
   });
 
   group('ImmutableOrderedMap', () {
-    late String Function(TestUser) toKey;
     late String Function(String) stringToKey;
 
     setUp(() {
-      toKey = userToId;
       stringToKey = (final key) => key;
     });
 
@@ -430,7 +428,7 @@ void main() {
 
       test('handles null keys', () {
         final map = env.makeImmutableOrderedMap<String?, String>(
-          (final v) => v ?? 'null-key',
+          (final v) => v,
         );
         map.upsert(null, 'nullValue');
 
@@ -635,9 +633,7 @@ void main() {
         map.upsert('b', '2');
 
         final result = <String>[];
-        for (final key in map) {
-          result.add(key);
-        }
+        map.forEach(result.add);
 
         expect(result, ['a', 'b']);
       });
