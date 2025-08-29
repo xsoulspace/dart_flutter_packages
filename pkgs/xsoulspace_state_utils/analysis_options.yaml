@@ -1,6 +1,8 @@
-include: package:xsoulspace_lints/library.yaml
+include: package:xsoulspace_lints/public_library.yaml
 
 analyzer:
+  errors:
+    lines_longer_than_80_chars: ignore
 
 linter:
   # The lint rules applied to this project can be customized in the

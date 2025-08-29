@@ -10,3 +10,4 @@ Always review the changelog before upgrading to a new version.
 
 - Initial release of `xsoulspace_state_utils`.
 - Added `OrderedList`, `OrderedListNotifier`, `OrderedMap`, and `OrderedMapNotifier` collections.
+- Added `lib_ai_use` folder with AI Agent usage patterns.
