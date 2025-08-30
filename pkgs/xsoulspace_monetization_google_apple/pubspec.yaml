@@ -2,6 +2,9 @@ name: xsoulspace_monetization_google_apple
 description: A Flutter package for integrating Google Play and Apple App Store
   in-app purchases.
 version: 0.8.0
+repository: https://github.com/xsoulspace/dart_flutter_packages
+homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_monetization_google_apple
+issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
 
 environment:
   sdk: ">=3.8.0 <4.0.0"
