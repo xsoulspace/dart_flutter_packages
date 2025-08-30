@@ -1,22 +1,8 @@
-# RuStore Billing API
+# RuStore Billing API (WIP)
+
+Note: this package is a work in progress and is not ready for production use.
 
 A Flutter plugin for integrating RuStore billing functionality into your Flutter applications. This plugin provides a comprehensive interface to the RuStore billing SDK, allowing you to handle in-app purchases, subscriptions, and payment flows.
-
-## Features
-
-- ✅ Initialize RuStore billing client
-- ✅ Check RuStore installation status
-- ✅ Check purchase availability
-- ✅ Retrieve product information
-- ✅ Get existing purchases
-- ✅ Start purchase flows
-- ✅ Confirm purchases
-- ✅ Delete purchases
-- ✅ Handle deep link intents
-- ✅ Dynamic theme switching (Light/Dark)
-- ✅ External payment logging
-- ✅ Comprehensive error handling
-- ✅ Stream-based purchase result notifications
 
 ## Installation
 
