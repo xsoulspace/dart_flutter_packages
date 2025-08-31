@@ -34,9 +34,7 @@ class MutableOrderedList<V> with Iterable<V> {
   /// @ai Ensure proper validation is performed in subclasses before calling super.add().
   /// {@endtemplate}
   @mustCallSuper
-  void add(final V value) {
-    _items.add(value);
-  }
+  void add(final V value) => _items.add(value);
 
   /// {@template mutable_ordered_list_remove}
   /// Removes the first occurrence of the specified [value] from this ordered list.
@@ -47,9 +45,7 @@ class MutableOrderedList<V> with Iterable<V> {
   /// @ai Consider the performance implications when removing items from large collections.
   /// {@endtemplate}
   @mustCallSuper
-  void remove(final V value) {
-    _items.remove(value);
-  }
+  void remove(final V value) => _items.remove(value);
 
   /// {@template mutable_ordered_list_clear}
   /// Removes all items from this ordered list.
@@ -60,9 +56,7 @@ class MutableOrderedList<V> with Iterable<V> {
   /// @ai Use this method when you need to reset the collection but maintain its type.
   /// {@endtemplate}
   @mustCallSuper
-  void clear() {
-    _items.clear();
-  }
+  void clear() => _items.clear();
 }
 
 /// {@template immutable_ordered_list}
@@ -106,9 +100,7 @@ class ImmutableOrderedList<V> with Iterable<V> {
   ///
   /// @ai Use this method for bulk updates rather than multiple individual add() calls.
   /// {@endtemplate}
-  void assignAll(final List<V> items) {
-    _items = items.unmodifiable;
-  }
+  void assignAll(final List<V> items) => _items = items.unmodifiable;
 
   /// {@template immutable_ordered_list_add}
   /// Adds the specified [value] to the end of this ordered list.
@@ -119,9 +111,7 @@ class ImmutableOrderedList<V> with Iterable<V> {
   /// @ai This operation has O(n) time complexity due to list copying.
   /// {@endtemplate}
   @mustCallSuper
-  void add(final V value) {
-    _items = [..._items, value].unmodifiable;
-  }
+  void add(final V value) => _items = [..._items, value].unmodifiable;
 
   /// {@template immutable_ordered_list_add_unique}
   /// Adds the specified [value] to the end of this ordered list if it doesn't already exist.
@@ -175,7 +165,5 @@ class ImmutableOrderedList<V> with Iterable<V> {
   /// @ai Use this method to reset the collection while preserving its immutable nature.
   /// {@endtemplate}
   @mustCallSuper
-  void clear() {
-    _items = <V>[].unmodifiable;
-  }
+  void clear() => _items = <V>[].unmodifiable;
 }

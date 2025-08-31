@@ -74,8 +74,9 @@ class CollectionsTestEnv {
   ///
   /// @ai Use this factory to ensure consistent test setup for MutableOrderedMap instances.
   /// {@endtemplate}
-  MutableOrderedMap<K, V> makeMutableOrderedMap<K, V>() =>
-      MutableOrderedMap<K, V>();
+  MutableOrderedMap<K, V> makeMutableOrderedMap<K, V>(
+    final OrderedMapToKeyFunction<K, V> toKey,
+  ) => MutableOrderedMap<K, V>(toKey: toKey);
 
   /// {@template collections_test_env_make_immutable_ordered_map}
   /// Creates a new ImmutableOrderedMap for testing with the specified key function.
@@ -83,7 +84,7 @@ class CollectionsTestEnv {
   /// @ai Use this factory to ensure consistent test setup for ImmutableOrderedMap instances.
   /// {@endtemplate}
   ImmutableOrderedMap<K, V> makeImmutableOrderedMap<K, V>(
-    final MutableOrderedMapToKeyFunction<K, V> toKey,
+    final OrderedMapToKeyFunction<K, V> toKey,
   ) => ImmutableOrderedMap<K, V>(toKey: toKey);
 
   /// {@template collections_test_env_make_ordered_map_notifier}
@@ -92,6 +93,6 @@ class CollectionsTestEnv {
   /// @ai Use this factory to ensure consistent test setup for OrderedMapNotifier instances.
   /// {@endtemplate}
   OrderedMapNotifier<K, V> makeOrderedMapNotifier<K, V>(
-    final MutableOrderedMapToKeyFunction<K, V> toKey,
+    final OrderedMapToKeyFunction<K, V> toKey,
   ) => OrderedMapNotifier<K, V>(toKey: toKey);
 }

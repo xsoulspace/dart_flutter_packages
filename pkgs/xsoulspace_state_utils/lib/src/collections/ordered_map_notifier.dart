@@ -86,8 +86,8 @@ class OrderedMapNotifier<K, V> extends ImmutableOrderedMap<K, V>
   /// {@endtemplate}
   @override
   @mustCallSuper
-  void upsert(final K key, final V value, {final bool putFirst = false}) {
-    super.upsert(key, value, putFirst: putFirst);
+  void upsert(final V value, {final bool putFirst = false, final K? key}) {
+    super.upsert(value, putFirst: putFirst, key: key);
     notifyListeners();
   }
 

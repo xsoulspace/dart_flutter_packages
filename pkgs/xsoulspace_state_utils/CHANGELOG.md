@@ -6,6 +6,14 @@ Always review the changelog before upgrading to a new version.
 
 # Changelog
 
+## 0.3.0
+
+BREAKING CHANGES:
+
+- `ImmutableOrderedMap` and `MutableOrderedMap` now use the `toKey` function to generate keys from values.
+- `key` parameter is now optional for `upsert` method in `ImmutableOrderedMap` and `MutableOrderedMap`.
+- added update method for `ImmutableOrderedMap` and `MutableOrderedMap`.
+
 ## 0.2.0
 
 - Added `ImmutableOrderedSet` and `MutableOrderedSet` collections.

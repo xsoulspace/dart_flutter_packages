@@ -64,7 +64,7 @@ void main() {
         var notified = false;
 
         notifier.addListener(() => notified = true);
-        notifier.upsert('key1', 'value1');
+        notifier.upsert('value1', key: 'key1');
 
         expect(notifier, hasLength(1));
         expect(notifier['key1'], 'value1');
@@ -81,9 +81,9 @@ void main() {
         notifier.addListener(
           () => operations.add('keys: ${notifier.keys.join(",")}'),
         );
-        notifier.upsert('key1', 'value1');
-        notifier.upsert('key2', 'value2');
-        notifier.upsert('key3', 'value3');
+        notifier.upsert('value1', key: 'key1');
+        notifier.upsert('value2', key: 'key2');
+        notifier.upsert('value3', key: 'key3');
 
         expect(notifier.keys, ['key1', 'key2', 'key3']);
         expect(notifier.orderedValues, ['value1', 'value2', 'value3']);
@@ -98,12 +98,12 @@ void main() {
         final notifier = env.makeOrderedMapNotifier<String, String>(
           stringToKey,
         );
-        notifier.upsert('key1', 'value1');
+        notifier.upsert('value1', key: 'key1');
 
         var notified = false;
         notifier.addListener(() => notified = true);
 
-        notifier.upsert('key1', 'updated');
+        notifier.upsert('updated', key: 'key1');
 
         expect(notifier, hasLength(1));
         expect(notifier['key1'], 'updated');
@@ -115,13 +115,13 @@ void main() {
         final notifier = env.makeOrderedMapNotifier<String, String>(
           stringToKey,
         );
-        notifier.upsert('key1', 'value1');
-        notifier.upsert('key2', 'value2');
+        notifier.upsert('value1', key: 'key1');
+        notifier.upsert('value2', key: 'key2');
 
         var notified = false;
         notifier.addListener(() => notified = true);
 
-        notifier.upsert('key3', 'value3', putFirst: true);
+        notifier.upsert('value3', putFirst: true, key: 'key3');
 
         expect(notifier.keys, ['key3', 'key1', 'key2']);
         expect(notifier.orderedValues, ['value3', 'value1', 'value2']);
@@ -132,14 +132,18 @@ void main() {
         final notifier = env.makeOrderedMapNotifier<String, String>(
           stringToKey,
         );
-        notifier.upsert('key1', 'value1');
-        notifier.upsert('key2', 'value2');
-        notifier.upsert('key3', 'value3');
+        notifier.upsert('value1', key: 'key1');
+        notifier.upsert('value2', key: 'key2');
+        notifier.upsert('value3', key: 'key3');
 
         var notified = false;
         notifier.addListener(() => notified = true);
 
-        notifier.upsert('key3', 'updated', putFirst: true); // Move to front
+        notifier.upsert(
+          'updated',
+          putFirst: true,
+          key: 'key3',
+        ); // Move to front
 
         expect(notifier.keys, ['key3', 'key1', 'key2']);
         expect(notifier.orderedValues, ['updated', 'value1', 'value2']);
@@ -152,8 +156,8 @@ void main() {
         final notifier = env.makeOrderedMapNotifier<String, String>(
           stringToKey,
         );
-        notifier.upsert('key1', 'value1');
-        notifier.upsert('key2', 'value2');
+        notifier.upsert('value1', key: 'key1');
+        notifier.upsert('value2', key: 'key2');
 
         var notified = false;
         notifier.addListener(() => notified = true);
@@ -171,9 +175,9 @@ void main() {
         final notifier = env.makeOrderedMapNotifier<String, String>(
           stringToKey,
         );
-        notifier.upsert('key1', 'value1');
-        notifier.upsert('key2', 'value2');
-        notifier.upsert('key3', 'value3');
+        notifier.upsert('value1', key: 'key1');
+        notifier.upsert('value2', key: 'key2');
+        notifier.upsert('value3', key: 'key3');
 
         var notified = false;
         notifier.addListener(() => notified = true);
@@ -189,7 +193,7 @@ void main() {
         final notifier = env.makeOrderedMapNotifier<String, String>(
           stringToKey,
         );
-        notifier.upsert('key1', 'value1');
+        notifier.upsert('value1', key: 'key1');
 
         var notified = false;
         notifier.addListener(() => notified = true);
@@ -225,9 +229,9 @@ void main() {
         final notifier = env.makeOrderedMapNotifier<String, String>(
           stringToKey,
         );
-        notifier.upsert('key1', 'value1');
-        notifier.upsert('key2', 'value2');
-        notifier.upsert('key3', 'value3');
+        notifier.upsert('value1', key: 'key1');
+        notifier.upsert('value2', key: 'key2');
+        notifier.upsert('value3', key: 'key3');
 
         var notified = false;
         notifier.addListener(() => notified = true);
@@ -243,16 +247,17 @@ void main() {
         final notifier = env.makeOrderedMapNotifier<String, String>(
           stringToKey,
         );
-        notifier.upsert('key1', 'value1');
+        notifier.upsert('value1', key: 'key1');
         notifier.clear();
 
         var notified = false;
         notifier.addListener(() => notified = true);
 
-        notifier.upsert('key2', 'value2');
+        notifier.upsert('value2', key: 'key2');
 
         expect(notifier, hasLength(1));
         expect(notifier['key2'], 'value2');
+        expect(notifier.orderedValues, ['value2']);
         expect(notifier.keys, ['key2']);
         expect(notified, isTrue);
       });
@@ -296,13 +301,15 @@ void main() {
         final notifier = env.makeOrderedMapNotifier<String, String>(
           stringToKey,
         );
-        notifier.upsert('original', 'value1');
+        notifier.upsert('value1', key: 'key1');
 
         final originalLength = notifier.length;
 
         // Immutable operation
         notifier.assignAll({'new1': 'value1', 'new2': 'value2'});
 
+        expect(notifier.keys, ['new1', 'new2']);
+        expect(notifier.orderedValues, ['value1', 'value2']);
         expect(notifier, hasLength(2));
         expect(originalLength, 1, reason: 'Original should not be affected');
       });
@@ -320,7 +327,7 @@ void main() {
         notifier.addListener(() => listener1Notified = true);
         notifier.addListener(() => listener2Notified = true);
 
-        notifier.upsert('key1', 'value1');
+        notifier.upsert('value1', key: 'key1');
 
         expect(listener1Notified, isTrue);
         expect(listener2Notified, isTrue);
@@ -337,7 +344,7 @@ void main() {
         notifier.addListener(listener);
         notifier.removeListener(listener);
 
-        notifier.upsert('key1', 'value1');
+        notifier.upsert('value1', key: 'key1');
 
         expect(notified, isFalse);
       });
@@ -352,7 +359,7 @@ void main() {
 
         notifier.dispose();
         expect(
-          () => notifier.upsert('key1', 'value1'),
+          () => notifier.upsert('value1', key: 'key1'),
           throwsA(isA<AssertionError>()),
         );
         expect(notified, isFalse);
@@ -373,14 +380,14 @@ void main() {
         });
 
         // Add some items
-        notifier.upsert('key1', 'value1');
-        notifier.upsert('key2', 'value2');
+        notifier.upsert('value1', key: 'key1');
+        notifier.upsert('value2', key: 'key2');
 
         // Update existing
-        notifier.upsert('key1', 'updated');
+        notifier.upsert('updated', key: 'key1');
 
         // Add with putFirst
-        notifier.upsert('key3', 'value3', putFirst: true);
+        notifier.upsert('value3', putFirst: true, key: 'key3');
 
         // Remove item
         notifier.remove('key2');
@@ -389,7 +396,7 @@ void main() {
         notifier.clear();
 
         // Add after clear
-        notifier.upsert('final', 'value');
+        notifier.upsert('value', key: 'final');
 
         expect(operations, [
           'length: 1, keys: key1',
@@ -411,12 +418,12 @@ void main() {
         notifier.addListener(() => notificationCount.add(notifier.length));
 
         // Rapid operations
-        notifier.upsert('key1', 'value1');
-        notifier.upsert('key2', 'value2');
-        notifier.upsert('key3', 'value3');
-        notifier.upsert('key2', 'updated'); // Update
+        notifier.upsert('value1', key: 'key1');
+        notifier.upsert('value2', key: 'key2');
+        notifier.upsert('value3', key: 'key3');
+        notifier.upsert('updated', key: 'key2'); // Update
         notifier.remove('key1');
-        notifier.upsert('key4', 'value4');
+        notifier.upsert('value4', key: 'key4');
         notifier.clear();
 
         expect(notificationCount, [1, 2, 3, 3, 2, 3, 0]);
@@ -432,7 +439,7 @@ void main() {
 
         // Add many items
         for (var i = 0; i < 1000; i++) {
-          notifier.upsert('key$i', 'value$i');
+          notifier.upsert('value$i', key: 'key$i');
         }
 
         expect(notifier, hasLength(1000));
@@ -441,7 +448,7 @@ void main() {
         // Update every other item
         notificationCount = 0; // Reset counter
         for (var i = 0; i < 1000; i += 2) {
-          notifier.upsert('key$i', 'updated$i');
+          notifier.upsert('updated$i', key: 'key$i');
         }
 
         expect(notifier, hasLength(1000));
@@ -462,7 +469,7 @@ void main() {
 
         // These should cause notifications or crashes
         expect(
-          () => notifier.upsert('key1', 'value1'),
+          () => notifier.upsert('value1', key: 'key1'),
           throwsA(isA<AssertionError>()),
         );
         expect(notified, isFalse);
@@ -478,7 +485,7 @@ void main() {
     });
 
     group('edge cases', () {
-      test('handles null keys', () {
+      test('in case if key is null, value is used', () {
         final notifier = env.makeOrderedMapNotifier<String?, String>(
           (final k) => k,
         );
@@ -486,12 +493,15 @@ void main() {
         var notified = false;
         notifier.addListener(() => notified = true);
 
-        notifier.upsert(null, 'nullValue');
-        notifier.upsert('key1', 'value1');
+        notifier.upsert('nullValue', key: null);
+        notifier.upsert('value1', key: 'key1');
         notifier.remove(null);
 
-        expect(notifier, hasLength(1));
+        expect(notifier, hasLength(2));
         expect(notifier.containsKey(null), isFalse);
+        expect(notifier.containsKey('nullValue'), isTrue);
+        notifier.remove('nullValue');
+        expect(notifier, hasLength(1));
         expect(notifier['key1'], 'value1');
         expect(notified, isTrue);
       });
@@ -504,8 +514,8 @@ void main() {
         var notified = false;
         notifier.addListener(() => notified = true);
 
-        notifier.upsert('', 'emptyKey');
-        notifier.upsert('non-empty', 'value');
+        notifier.upsert('emptyKey', key: '');
+        notifier.upsert('value', key: 'non-empty');
         notifier.remove('');
 
         expect(notifier, hasLength(1));
@@ -523,11 +533,7 @@ void main() {
         userNotifier.addListener(() => notified = true);
 
         userNotifier.assignAllOrdered(users);
-        userNotifier.upsert(
-          users[0].id,
-          users[0],
-          putFirst: true,
-        ); // Move to front
+        userNotifier.upsert(users[0], putFirst: true); // Move to front
         userNotifier.remove(users[1].id);
 
         expect(userNotifier, hasLength(2)); // 3 users - 1 removed = 2 users
@@ -572,11 +578,11 @@ void main() {
 
         // Add a new user at the beginning (most recent)
         final newUser = aTestUser(name: 'New User');
-        userNotifier.upsert(newUser.id, newUser, putFirst: true);
+        userNotifier.upsert(newUser, putFirst: true, key: newUser.id);
 
         // Update an existing user
         final updatedUser = users[1].copyWith(name: 'Updated Name');
-        userNotifier.upsert(updatedUser.id, updatedUser);
+        userNotifier.upsert(updatedUser, key: updatedUser.id);
 
         // Remove a user
         userNotifier.remove(users[0].id);
@@ -597,14 +603,14 @@ void main() {
 
         // Add items until max size
         for (var i = 1; i <= maxSize; i++) {
-          cacheNotifier.upsert('key$i', 'value$i');
+          cacheNotifier.upsert('value$i', key: 'key$i');
         }
 
         // Update existing item (should move to front if implementing LRU)
-        cacheNotifier.upsert('key3', 'updated-value3', putFirst: true);
+        cacheNotifier.upsert('updated-value3', putFirst: true, key: 'key3');
 
         // Add new item (would trigger eviction in real LRU cache)
-        cacheNotifier.upsert('key6', 'value6');
+        cacheNotifier.upsert('value6', key: 'key6');
 
         expect(cacheNotifier, hasLength(6));
         expect(cacheNotifier.first, 'key3'); // Most recently updated
