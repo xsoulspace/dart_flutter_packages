@@ -6,6 +6,10 @@ Always review the changelog before upgrading to a new version.
 
 # Changelog
 
+## 0.2.0
+
+- Added `ImmutableOrderedSet` and `MutableOrderedSet` collections.
+
 ## 0.1.0
 
 - Initial release of `xsoulspace_state_utils`.

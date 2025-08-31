@@ -44,6 +44,8 @@ userNotifier.upsert('alice', User(name: 'Alice')); // Triggers listener
 - **`ImmutableOrderedMap<K, V>`** - Immutable ordered map
 - **`MutableOrderedList<V>`** - Ordered list with mutable operations
 - **`ImmutableOrderedList<V>`** - Immutable ordered list
+- **`MutableOrderedSet<V>`** - Ordered set with mutable operations
+- **`ImmutableOrderedSet<V>`** - Immutable ordered set
 
 ### State Notifiers
 

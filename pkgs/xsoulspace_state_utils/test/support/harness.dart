@@ -53,6 +53,22 @@ class CollectionsTestEnv {
   OrderedListNotifier<V> makeOrderedListNotifier<V>() =>
       OrderedListNotifier<V>();
 
+  /// {@template collections_test_env_make_mutable_ordered_set}
+  /// Creates a new MutableOrderedSet for testing.
+  ///
+  /// @ai Use this factory to ensure consistent test setup for MutableOrderedSet instances.
+  /// {@endtemplate}
+  MutableOrderedSet<V> makeMutableOrderedSet<V>() => MutableOrderedSet<V>();
+
+  /// {@template collections_test_env_make_immutable_ordered_set}
+  /// Creates a new ImmutableOrderedSet for testing.
+  ///
+  /// @ai Use this factory to ensure consistent test setup for ImmutableOrderedSet instances.
+  /// {@endtemplate}
+  ImmutableOrderedSet<V> makeImmutableOrderedSet<V>([
+    final Iterable<V>? initial,
+  ]) => ImmutableOrderedSet<V>(initial);
+
   /// {@template collections_test_env_make_mutable_ordered_map}
   /// Creates a new MutableOrderedMap for testing.
   ///

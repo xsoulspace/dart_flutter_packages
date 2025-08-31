@@ -280,7 +280,7 @@ class ImmutableOrderedMap<K, V> with Iterable<K> {
   /// {@endtemplate}
   void assignAll(final Map<K, V> map) {
     _setItems(map);
-    _orderedKeys = map.keys.toSet().unmodifiable;
+    _setOrderedKeys(map.keys.toSet());
   }
 
   /// {@template immutable_ordered_map_assign_all_ordered}
