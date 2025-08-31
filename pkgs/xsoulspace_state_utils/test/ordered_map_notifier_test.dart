@@ -1,7 +1,7 @@
 // ignore_for_file: cascade_invocations
 
 import 'package:flutter/foundation.dart';
-import 'package:test/test.dart' hide hasLength, isEmpty;
+import 'package:flutter_test/flutter_test.dart' hide hasLength, isEmpty;
 
 import 'support/builders.dart';
 import 'support/harness.dart';

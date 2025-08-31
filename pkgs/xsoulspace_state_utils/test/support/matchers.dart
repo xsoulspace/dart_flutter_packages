@@ -1,4 +1,4 @@
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart' hide hasLength, isEmpty;
 import 'package:xsoulspace_state_utils/xsoulspace_state_utils.dart';
 
 /// {@template collection_matchers}
