@@ -1,6 +1,6 @@
 name: xsoulspace_state_utils
 description: Different utilities for state management.
-version: 0.3.0
+version: 0.3.1
 homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_state_utils
 repository: https://github.com/xsoulspace/dart_flutter_packages
 issue_tracker: https://github.com/xsoulspace/xsoulspace_packages/issues

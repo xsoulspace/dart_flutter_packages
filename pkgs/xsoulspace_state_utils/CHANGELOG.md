@@ -6,6 +6,11 @@ Always review the changelog before upgrading to a new version.
 
 # Changelog
 
+## 0.3.1
+
+- fix: `ImmutableOrderedMap` and `MutableOrderedMap` toKey is now optional.
+- fix: `ImmutableOrderedMap` and `MutableOrderedMap` and `OrderedMapNotifier` assignAllOrdered now accepts Iterable.
+
 ## 0.3.0
 
 BREAKING CHANGES:

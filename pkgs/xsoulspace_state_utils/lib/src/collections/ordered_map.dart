@@ -38,7 +38,7 @@ class MutableOrderedMap<K, V> with Iterable<K> {
   /// The map starts with no key-value pairs and maintains insertion order
   /// for all subsequent operations.
   /// {@endtemplate}
-  MutableOrderedMap({required this.toKey});
+  MutableOrderedMap({this.toKey});
   final _items = <K, V>{};
   final _orderedKeys = <K>{};
 
@@ -50,7 +50,7 @@ class MutableOrderedMap<K, V> with Iterable<K> {
   /// @ai Provide a consistent [toKey] function to ensure reliable key generation.
   /// {@endtemplate}
   // ignore: unsafe_variance
-  final OrderedMapToKeyFunction<K, V> toKey;
+  final OrderedMapToKeyFunction<K, V>? toKey;
 
   /// {@template mutable_ordered_map_contains_key}
   /// Whether this map contains the specified [key].
@@ -113,9 +113,37 @@ class MutableOrderedMap<K, V> with Iterable<K> {
   /// {@endtemplate}
   @mustCallSuper
   void upsert(final V value, {final K? key}) {
-    final effectiveKey = key ?? toKey(value);
+    final effectiveKey = key ?? toKey?.call(value);
+    if (effectiveKey == null) {
+      throw ArgumentError.value(value, 'key', 'Key not provided');
+    }
     _items[effectiveKey] = value;
     _orderedKeys.add(effectiveKey);
+  }
+
+  /// {@template mutable_ordered_map_update}
+  /// Updates the value associated with the specified [key] using the provided
+  /// [update] function.
+  ///
+  /// @ai Use this method to update the value associated with a key in the map.
+  /// {@endtemplate}
+  void update(
+    final K key,
+    final V Function(V) update, {
+    final V Function()? ifAbsent,
+  }) {
+    final value = _items[key];
+    V? updatedValue;
+    if (value != null) {
+      updatedValue = update(value);
+    } else if (ifAbsent != null) {
+      updatedValue = ifAbsent();
+    }
+    if (updatedValue != null) {
+      upsert(updatedValue, key: key);
+    } else {
+      throw ArgumentError.value(key, 'value', 'Value not provided');
+    }
   }
 
   /// {@template mutable_ordered_map_getter}
@@ -194,7 +222,7 @@ class ImmutableOrderedMap<K, V> with Iterable<K> {
   ///
   /// [toKey]
   /// {@macro immutable_ordered_map_to_key}
-  ImmutableOrderedMap({required this.toKey});
+  ImmutableOrderedMap({this.toKey});
 
   /// {@template immutable_ordered_map_to_key}
   /// A function that converts values to their corresponding keys.
@@ -204,7 +232,7 @@ class ImmutableOrderedMap<K, V> with Iterable<K> {
   /// @ai Provide a consistent [toKey] function to ensure reliable key generation.
   /// {@endtemplate}
   // ignore: unsafe_variance
-  final OrderedMapToKeyFunction<K, V> toKey;
+  final OrderedMapToKeyFunction<K, V>? toKey;
   Map<K, V> _items = const {};
   List<V>? _valuesListCache;
   void _setItems(final Map<K, V> items) {
@@ -304,11 +332,14 @@ class ImmutableOrderedMap<K, V> with Iterable<K> {
   ///
   /// @ai Use this method when you have ordered data that needs key-based access.
   /// {@endtemplate}
-  void assignAllOrdered(final List<V> items) {
+  void assignAllOrdered(final Iterable<V> items) {
     final newKeys = <K>{};
     final map = <K, V>{};
     for (final item in items) {
-      final key = toKey(item);
+      final key = toKey?.call(item);
+      if (key == null) {
+        throw ArgumentError.value(item, 'item', 'Key not provided');
+      }
       map[key] = item;
       newKeys.add(key);
     }
@@ -328,7 +359,10 @@ class ImmutableOrderedMap<K, V> with Iterable<K> {
   /// {@endtemplate}
   @mustCallSuper
   void upsert(final V value, {final bool putFirst = false, final K? key}) {
-    final effectiveKey = key ?? toKey(value);
+    final effectiveKey = key ?? toKey?.call(value);
+    if (effectiveKey == null) {
+      throw ArgumentError.value(value, 'key', 'Key not provided');
+    }
     final items = {..._items, effectiveKey: value}.unmodifiable;
     final putLast = !putFirst;
     final orderedKeys = {

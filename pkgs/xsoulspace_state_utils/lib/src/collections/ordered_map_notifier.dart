@@ -128,7 +128,7 @@ class OrderedMapNotifier<K, V> extends ImmutableOrderedMap<K, V>
   }
 
   @override
-  void assignAllOrdered(final List<V> items) {
+  void assignAllOrdered(final Iterable<V> items) {
     super.assignAllOrdered(items);
     notifyListeners();
   }
