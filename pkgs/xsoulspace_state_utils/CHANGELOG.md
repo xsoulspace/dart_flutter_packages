@@ -6,6 +6,10 @@ Always review the changelog before upgrading to a new version.
 
 # Changelog
 
+## 0.3.2
+
+- added: `operator []` and `operator []=` for `MutableOrderedList` and `ImmutableOrderedList`.
+
 ## 0.3.1
 
 - fix: `ImmutableOrderedMap` and `MutableOrderedMap` toKey is now optional.

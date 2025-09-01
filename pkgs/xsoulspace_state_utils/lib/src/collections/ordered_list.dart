@@ -57,6 +57,20 @@ class MutableOrderedList<V> with Iterable<V> {
   /// {@endtemplate}
   @mustCallSuper
   void clear() => _items.clear();
+
+  /// {@template mutable_ordered_list_getter}
+  /// Retrieves the item at the specified [index].
+  ///
+  /// @ai Use this operator for standard list access.
+  /// {@endtemplate}
+  V operator [](final int index) => _items[index];
+
+  /// {@template mutable_ordered_list_setter}
+  /// Sets the item at the specified [index] to the specified [value].
+  ///
+  /// @ai Use this operator for standard list mutation.
+  /// {@endtemplate}
+  void operator []=(final int index, final V value) => _items[index] = value;
 }
 
 /// {@template immutable_ordered_list}
@@ -91,6 +105,22 @@ class ImmutableOrderedList<V> with Iterable<V> {
 
   @override
   Iterator<V> get iterator => _items.iterator;
+
+  /// {@template immutable_ordered_list_getter}
+  /// Retrieves the item at the specified [index].
+  ///
+  /// @ai Use this operator for standard list access.
+  /// {@endtemplate}
+  V operator [](final int index) => _items[index];
+
+  /// {@template immutable_ordered_list_setter}
+  /// Sets the item at the specified [index] to the specified [value].
+  ///
+  /// @ai Use this operator for standard list access.
+  /// {@endtemplate}
+  void operator []=(final int index, final V value) {
+    _items = ([..._items]..[index] = value).unmodifiable;
+  }
 
   /// {@template immutable_ordered_list_assign_all}
   /// Replaces all items in this collection with the provided [items].
