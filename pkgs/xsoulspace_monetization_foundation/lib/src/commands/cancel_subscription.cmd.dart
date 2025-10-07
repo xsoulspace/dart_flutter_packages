@@ -40,7 +40,7 @@ class CancelSubscriptionCommand {
     final oldStatus = subscriptionStatusResource.status;
     subscriptionStatusResource.set(SubscriptionStatus.cancelling);
     final activeSubscription = activeSubscriptionResource.subscription;
-    if (!activeSubscription.isActive &&
+    if (!activeSubscription.isPurchased &&
         purchaseId.isEmpty &&
         productId.isEmpty) {
       // Nothing to cancel
@@ -61,9 +61,10 @@ class CancelSubscriptionCommand {
     if (result.isFailure && openSubscriptionManagement) {
       await purchaseProvider.openSubscriptionManagement();
       await Future.delayed(const Duration(seconds: 1));
-      // check if subscription is cancelled
+      // run check if subscription is cancelled
       await restorePurchasesCommand.execute();
+    } else {
+      subscriptionStatusResource.set(oldStatus);
     }
-    subscriptionStatusResource.set(oldStatus);
   }
 }

@@ -134,10 +134,11 @@ class RustorePurchaseProvider implements PurchaseProvider {
           'Purchase failed. ${purchase.errorMessage}',
         );
       }
-      return PurchaseResultModel.success(
+
+      final result = PurchaseResultModel.success(
         PurchaseDetailsModel(
           status: details.productType == PurchaseProductType.consumable
-              ? PurchaseStatus.pendingConfirmation
+              ? PurchaseStatus.pendingVerification
               : PurchaseStatus.purchased,
           purchaseId: PurchaseId.fromJson(purchase.purchaseId),
           purchaseType: details.productType,
@@ -154,8 +155,9 @@ class RustorePurchaseProvider implements PurchaseProvider {
           duration: details.duration,
           freeTrialDuration: details.freeTrialDuration.toDuration(),
         ),
-        shouldConfirmPurchase: true,
       );
+      _purchaseStreamController.add([result.details!]);
+      return result;
     } catch (e) {
       return PurchaseResultModel.failure(e.toString());
     }
@@ -372,14 +374,14 @@ PurchaseStatus _purchaseStatusFromRustoreState(
 ) => switch (state) {
   RustorePurchaseState.created ||
   RustorePurchaseState.invoiceCreated ||
-  RustorePurchaseState.paused => PurchaseStatus.pending,
-  RustorePurchaseState.paid => PurchaseStatus.pendingConfirmation,
+  RustorePurchaseState.paused => PurchaseStatus.pendingVerification,
+  RustorePurchaseState.paid => PurchaseStatus.pendingVerification,
   RustorePurchaseState.cancelled ||
   RustorePurchaseState.closed ||
   RustorePurchaseState.terminated => PurchaseStatus.canceled,
   RustorePurchaseState.consumed ||
   RustorePurchaseState.confirmed => PurchaseStatus.purchased,
-  null => PurchaseStatus.pending,
+  null => PurchaseStatus.pendingVerification,
 };
 
 extension on PurchaseDurationModel {

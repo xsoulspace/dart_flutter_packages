@@ -110,22 +110,38 @@ class AppleNativePurchaseProvider {
       if (result == null) {
         return PurchaseResultModel.failure('Purchase failed.');
       }
-      return PurchaseResultModel.success(
-        PurchaseDetailsModel(
-          purchaseId: PurchaseId.fromJson(result),
-          productId: productDetails.productId,
-          priceId: productDetails.priceId,
-          status: PurchaseStatus.purchased,
-          purchaseDate: DateTime.now(),
-          purchaseType: PurchaseProductType.nonConsumable,
-          source: 'app_store',
-          name: productDetails.name,
-          duration: productDetails.duration,
-          freeTrialDuration: productDetails.freeTrialDuration.duration,
-        ),
-        shouldConfirmPurchase: true,
+      final model = PurchaseDetailsModel(
+        purchaseId: PurchaseId.fromJson(result),
+        productId: productDetails.productId,
+        priceId: productDetails.priceId,
+        status: PurchaseStatus.purchased,
+        purchaseDate: DateTime.now(),
+        purchaseType: PurchaseProductType.nonConsumable,
+        source: 'app_store',
+        name: productDetails.name,
+        duration: productDetails.duration,
+        freeTrialDuration: productDetails.freeTrialDuration.duration,
       );
+      return PurchaseResultModel.success(model);
     } on PlatformException catch (e) {
+      final lowerCode = e.code.toLowerCase();
+      final lowerMessage = e.message?.toLowerCase();
+      if (lowerCode.contains('cancel') ||
+          lowerMessage?.contains('cancel') == true) {
+        return PurchaseResultModel.success(
+          PurchaseDetailsModel(
+            productId: productDetails.productId,
+            priceId: productDetails.priceId,
+            status: PurchaseStatus.canceled,
+            purchaseDate: DateTime.now(),
+            purchaseType: PurchaseProductType.nonConsumable,
+            source: 'app_store',
+            name: productDetails.name,
+            duration: productDetails.duration,
+            freeTrialDuration: productDetails.freeTrialDuration.duration,
+          ),
+        );
+      }
       return PurchaseResultModel.failure(e.message ?? 'Unknown error');
     }
   }

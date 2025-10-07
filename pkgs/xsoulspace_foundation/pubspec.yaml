@@ -1,6 +1,6 @@
 name: xsoulspace_foundation
 description: Shared utils, extensions, and helpers.
-version: 0.2.1
+version: 0.2.2
 homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_foundation
 repository: https://github.com/xsoulspace/dart_flutter_packages
 
@@ -8,6 +8,8 @@ environment:
   sdk: ">=3.8.1 <4.0.0"
 
 dependencies:
+  flutter:
+    sdk: flutter
   collection: ^1.19.1
   freezed_annotation: ^3.0.0
   shared_preferences: ^2.5.3

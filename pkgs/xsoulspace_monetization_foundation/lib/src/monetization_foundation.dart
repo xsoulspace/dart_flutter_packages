@@ -54,8 +54,7 @@ class MonetizationFoundation {
   StreamSubscription<List<PurchaseDetailsModel>>? _purchaseUpdateSubscription;
 
   /// Restores previous purchases without full initialization.
-  Future<void> restore({final bool shouldAwaitRestore = true}) =>
-      _restorePurchasesCommand.execute(shouldAwaitRestore: shouldAwaitRestore);
+  Future<void> restore() => _restorePurchasesCommand.execute();
 
   var _initCompleter = Completer<bool>();
   var _initLocalCompleter = Completer<bool>();
@@ -189,6 +188,9 @@ class MonetizationFoundation {
     for (final purchase in purchases) {
       await _handlePurchaseUpdateCommand.execute(purchase);
     }
+    if (srcs.subscriptionStatus.isRestoring) {
+      srcs.subscriptionStatus.set(SubscriptionStatus.free);
+    }
   }
 
   /// Cleans up resources and cancels subscriptions.
@@ -225,7 +227,6 @@ class MonetizationFoundation {
   /// Check if user has an active subscription
   Future<void> checkActiveSubscription({
     final bool shouldRestore = true,
-    final bool shouldAwaitRestore = true,
   }) async {
     try {
       final isInitialized = await initFuture;
@@ -234,7 +235,7 @@ class MonetizationFoundation {
       final isAuthorized = await isUserAuthorized();
       if (!isAuthorized) return;
       if (!shouldRestore) return;
-      await restore(shouldAwaitRestore: shouldAwaitRestore);
+      await restore();
       // ignore: avoid_catches_without_on_clauses
     } catch (e) {
       // If we can't check subscription status, assume no active subscription
@@ -256,7 +257,6 @@ extension on MonetizationFoundation {
   SubscribeCommand get _subscribeCommand => SubscribeCommand(
     purchaseProvider: purchaseProvider,
     subscriptionStatusResource: srcs.subscriptionStatus,
-    confirmPurchaseCommand: _confirmPurchaseCommand,
     cancelSubscriptionCommand: _cancelSubscriptionCommand,
     purchasePaywallErrorResource: srcs.purchasePaywallError,
   );
@@ -271,17 +271,15 @@ extension on MonetizationFoundation {
 
   CancelSubscriptionCommand get _cancelSubscriptionCommand =>
       CancelSubscriptionCommand(
+        restorePurchasesCommand: _restorePurchasesCommand,
         purchaseProvider: purchaseProvider,
         activeSubscriptionResource: srcs.activeSubscription,
         subscriptionStatusResource: srcs.subscriptionStatus,
-        restorePurchasesCommand: _restorePurchasesCommand,
       );
 
   RestorePurchasesCommand get _restorePurchasesCommand =>
       RestorePurchasesCommand(
         purchaseProvider: purchaseProvider,
-        purchasesLocalApi: purchasesLocalApi,
-        handlePurchaseUpdateCommand: _handlePurchaseUpdateCommand,
         subscriptionStatusResource: srcs.subscriptionStatus,
       );
 
@@ -297,6 +295,7 @@ extension on MonetizationFoundation {
         subscriptionStatusResource: srcs.subscriptionStatus,
         confirmPurchaseCommand: _confirmPurchaseCommand,
         purchasesLocalApi: purchasesLocalApi,
+        cancelSubscriptionCommand: _cancelSubscriptionCommand,
       );
 
   LoadSubscriptionsCommand get _loadSubscriptionsCommand =>

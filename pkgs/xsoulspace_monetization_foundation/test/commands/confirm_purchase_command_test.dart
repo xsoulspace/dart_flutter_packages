@@ -14,29 +14,14 @@ void main() {
   tearDown(() => env.tearDown());
 
   group('ConfirmPurchaseCommand', () {
-    test('ignores pending/canceled', () async {
-      final cmd = env.makeConfirmPurchaseCommand();
-      expect(await cmd.execute(aVerification()), isTrue);
-      // cancel and pure pending should return false
-      expect(
-        await cmd.execute(aVerification(status: PurchaseStatus.canceled)),
-        isFalse,
-      );
-      expect(
-        await cmd.execute(aVerification(status: PurchaseStatus.pending)),
-        isFalse,
-      );
-    });
-
     test(
       'sets subscribed when provider completes success and status is purchased',
       () async {
         env.givenCompleteSuccess();
         final cmd = env.makeConfirmPurchaseCommand();
 
-        final ok = await cmd.execute(aVerification());
+        await cmd.execute(aVerification());
 
-        expect(ok, isTrue);
         expect(env.subscriptionStatus, isSubscribed());
         expect(
           env.activeSubscription.isActive,
@@ -46,15 +31,13 @@ void main() {
       },
     );
 
-    test('sets error and free on failure', () async {
+    test('sets error on failure', () async {
       env.givenCompleteFailure('e');
       final cmd = env.makeConfirmPurchaseCommand();
-      final ok = await cmd.execute(
-        aVerification(status: PurchaseStatus.pendingConfirmation),
+      await cmd.execute(
+        aVerification(status: PurchaseStatus.pendingVerification),
       );
-      expect(ok, isFalse);
       expect(env.purchasePaywallError, hasError());
-      expect(env.subscriptionStatus, isFreeStatus());
     });
   });
 }

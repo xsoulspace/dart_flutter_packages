@@ -3,7 +3,6 @@ import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interf
 
 import '../resources/resources.dart';
 import 'cancel_subscription.cmd.dart';
-import 'confirm_purchase.cmd.dart';
 
 /// {@template subscribe_command}
 /// Command to handle subscription purchases.
@@ -31,13 +30,11 @@ class SubscribeCommand {
   const SubscribeCommand({
     required this.purchaseProvider,
     required this.subscriptionStatusResource,
-    required this.confirmPurchaseCommand,
     required this.cancelSubscriptionCommand,
     required this.purchasePaywallErrorResource,
   });
   final SubscriptionStatusResource subscriptionStatusResource;
   final PurchaseProvider purchaseProvider;
-  final ConfirmPurchaseCommand confirmPurchaseCommand;
   final CancelSubscriptionCommand cancelSubscriptionCommand;
   final PurchasePaywallErrorResource purchasePaywallErrorResource;
 
@@ -50,8 +47,11 @@ class SubscribeCommand {
   /// 1. Check if already subscribed → return false
   /// 2. Set status to pending
   /// 3. Attempt subscription via provider
-  /// 4. On success: confirm purchase
+  /// 4. On success: since the transaction will be sent to the stream,
+  /// the stream handler will handle the purchase confirmation.
   /// 5. On failure: reset to free status
+  ///
+  /// The result will be sent to the stream.
   /// {@endtemplate}
   Future<void> execute(final PurchaseProductDetailsModel details) async {
     if (subscriptionStatusResource.isSubscribed) return;
@@ -66,14 +66,10 @@ class SubscribeCommand {
         subscriptionStatusResource.set(
           SubscriptionStatus.pendingPaymentConfirmation,
         );
-        if (result.shouldConfirmPurchase && resultDetails != null) {
-          await confirmPurchaseCommand.execute(
-            resultDetails.toVerificationDto(),
-          );
-        }
+
       case ResultType.failure:
         subscriptionStatusResource.set(previousStatus);
-        if (resultDetails == null || resultDetails.isCancelled) return;
+        if (resultDetails?.isCancelled == true) return;
 
         purchasePaywallErrorResource.error = result.error;
 

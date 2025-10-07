@@ -1,0 +1,3 @@
+# xsoulspace_monetization_interface
+
+Common interfaces for xsoulspace_monetization_foundation.

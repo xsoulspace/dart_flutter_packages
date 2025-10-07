@@ -3,6 +3,7 @@ import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interf
 
 import '../local_api/local_api.dart';
 import '../resources/resources.dart';
+import 'cancel_subscription.cmd.dart';
 import 'confirm_purchase.cmd.dart';
 
 /// {@template handle_purchase_update_command}
@@ -47,11 +48,13 @@ class HandlePurchaseUpdateCommand {
     required this.subscriptionStatusResource,
     required this.activeSubscriptionResource,
     required this.purchasesLocalApi,
+    required this.cancelSubscriptionCommand,
   });
   final ConfirmPurchaseCommand confirmPurchaseCommand;
   final SubscriptionStatusResource subscriptionStatusResource;
   final ActiveSubscriptionResource activeSubscriptionResource;
   final PurchasesLocalApi purchasesLocalApi;
+  final CancelSubscriptionCommand cancelSubscriptionCommand;
 
   /// {@template execute_purchase_update}
   /// Executes the purchase update handling process.
@@ -72,25 +75,18 @@ class HandlePurchaseUpdateCommand {
   Future<void> execute(final PurchaseDetailsModel details) async {
     final dto = details.toVerificationDto();
     switch (dto.status) {
-      case PurchaseStatus.pendingConfirmation || PurchaseStatus.purchased:
-        await confirmPurchaseCommand.execute(dto);
-      case PurchaseStatus.canceled when dto.isNotExpired:
-        await confirmPurchaseCommand.execute(dto);
       case PurchaseStatus.error:
         // TODO(arenukvern): add error notification
-        await confirmPurchaseCommand.execute(dto);
-      case PurchaseStatus.pending:
-        subscriptionStatusResource.set(SubscriptionStatus.purchasing);
+        await cancelSubscriptionCommand.execute(
+          productId: dto.productId,
+          purchaseId: dto.purchaseId,
+          openSubscriptionManagement: false,
+        );
       case PurchaseStatus.canceled:
-        // protection if subscription is active
-        if (activeSubscriptionResource.isActive) return;
-        activeSubscriptionResource.set(PurchaseDetailsModel.empty);
-        subscriptionStatusResource.set(SubscriptionStatus.free);
-        // protection if subscription is active
-        if (activeSubscriptionResource.isActive) return;
-        activeSubscriptionResource.set(PurchaseDetailsModel.empty);
-        subscriptionStatusResource.set(SubscriptionStatus.free);
-        await purchasesLocalApi.clearActiveSubscription();
+        // noop
+        break;
+      case PurchaseStatus.pendingVerification || PurchaseStatus.purchased:
+        await confirmPurchaseCommand.execute(dto);
     }
   }
 }

@@ -40,7 +40,7 @@ void main() {
     });
 
     test('success without confirmation leaves status pending', () async {
-      env.givenSubscribeSuccess(shouldConfirm: false);
+      env.givenSubscribeSuccess();
       final cmd = env.makeSubscribeCommand();
 
       await cmd.execute(aProduct(freeTrial: PurchaseDurationModel.zero));

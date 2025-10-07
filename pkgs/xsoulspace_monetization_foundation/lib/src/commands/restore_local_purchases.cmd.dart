@@ -31,23 +31,25 @@ class RestoreLocalPurchasesCommand {
   /// Does not set the status to `free` if not found, to avoid overriding any
   /// concurrent flows. Returns whether an active subscription was detected.
   /// {@endtemplate}
-  Future<bool> execute() async {
+  Future<void> execute() async {
     final activeSubscription = await purchasesLocalApi.getActiveSubscription();
-
-    subscriptionStatusResource.set(switch (activeSubscription.status) {
-      PurchaseStatus.pending => SubscriptionStatus.free,
-      PurchaseStatus.purchased when activeSubscription.isActive =>
-        SubscriptionStatus.subscribed,
-      PurchaseStatus.purchased => SubscriptionStatus.free,
-      PurchaseStatus.pendingConfirmation =>
-        SubscriptionStatus.pendingPaymentConfirmation,
-      PurchaseStatus.canceled => SubscriptionStatus.free,
-      PurchaseStatus.error => SubscriptionStatus.free,
-    });
-    if (subscriptionStatusResource.status != SubscriptionStatus.subscribed) {
-      await purchasesLocalApi.clearActiveSubscription();
-      return false;
+    final status = activeSubscription?.status;
+    if (activeSubscription == null || status == null) {
+      subscriptionStatusResource.set(SubscriptionStatus.free);
+    } else {
+      subscriptionStatusResource.set(switch (status) {
+        PurchaseStatus.purchased when activeSubscription.isPurchased =>
+          SubscriptionStatus.subscribed,
+        PurchaseStatus.purchased => SubscriptionStatus.free,
+        PurchaseStatus.pendingVerification =>
+          SubscriptionStatus.pendingPaymentConfirmation,
+        PurchaseStatus.canceled => SubscriptionStatus.free,
+        PurchaseStatus.error => SubscriptionStatus.free,
+      });
     }
-    return activeSubscription.isActive;
+
+    if (!subscriptionStatusResource.isSubscribed) {
+      await purchasesLocalApi.clearActiveSubscription();
+    }
   }
 }

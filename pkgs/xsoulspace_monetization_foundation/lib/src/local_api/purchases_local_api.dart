@@ -29,19 +29,20 @@ class PurchasesLocalApi {
   /// Gets the active subscription from the local database.
   /// Will return an empty purchase if no active subscription is found.
   /// {@endtemplate}
-  Future<PurchaseDetailsModel> getActiveSubscription() =>
-      localDb.getItem<PurchaseDetailsModel>(
+  Future<PurchaseDetailsModel?> getActiveSubscription() =>
+      localDb.getItem<PurchaseDetailsModel?>(
         key: activeSubscriptionKey,
         fromJson: PurchaseDetailsModel.fromJson,
-        defaultValue: PurchaseDetailsModel.empty,
+        defaultValue: null,
       );
 
   /// {@template clear_active_subscription}
   /// Clears the active subscription from the local database.
   /// {@endtemplate}
-  Future<void> clearActiveSubscription() => localDb.setItem(
-    key: activeSubscriptionKey,
-    value: PurchaseDetailsModel.empty,
-    toJson: (final value) => value.toJson(),
-  );
+  Future<void> clearActiveSubscription() =>
+      localDb.setItem<PurchaseDetailsModel?>(
+        key: activeSubscriptionKey,
+        value: null,
+        toJson: (final value) => {},
+      );
 }

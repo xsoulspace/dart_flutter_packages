@@ -14,10 +14,10 @@ void main() {
   tearDown(() => env.tearDown());
 
   group('HandlePurchaseUpdateCommand', () {
-    test('pending sets purchasing', () async {
+    test('pending verification sets pending status', () async {
       final cmd = env.makeHandlePurchaseUpdateCommand();
-      await cmd.execute(aPurchase(pending: true));
-      expect(env.subscriptionStatus, isPurchasingStatus());
+      await cmd.execute(aPurchase(pendingConfirmation: true));
+      expect(env.subscriptionStatus, isPendingConfirmationStatus());
     });
 
     test('purchased delegates to confirm and saves active', () async {
@@ -31,9 +31,7 @@ void main() {
 
     test('canceled clears to free', () async {
       // Seed active subscription in env
-      env.activeSubscription = ActiveSubscriptionResource(
-        aPurchase(active: true),
-      );
+      env.activeSubscription.set(aPurchase(active: true));
       final cmd = env.makeHandlePurchaseUpdateCommand();
       await cmd.execute(aPurchase(cancelled: true));
       expect(env.subscriptionStatus, isFreeStatus());

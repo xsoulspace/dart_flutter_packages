@@ -3,9 +3,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
-import '../local_api/local_api.dart';
 import '../resources/resources.dart';
-import 'handle_purchase_update.cmd.dart';
 
 /// {@template restore_purchases_command}
 /// Command to restore previous purchases from the store.
@@ -43,79 +41,37 @@ class RestorePurchasesCommand {
   /// {@macro restore_purchases_command}
   const RestorePurchasesCommand({
     required this.purchaseProvider,
-    required this.purchasesLocalApi,
-    required this.handlePurchaseUpdateCommand,
     required this.subscriptionStatusResource,
   });
   final PurchaseProvider purchaseProvider;
-  final PurchasesLocalApi purchasesLocalApi;
-  final HandlePurchaseUpdateCommand handlePurchaseUpdateCommand;
   final SubscriptionStatusResource subscriptionStatusResource;
 
   /// {@template execute_restore_purchases}
   /// Executes the purchase restoration process.
   ///
-  /// **Flow:**
-  /// 1. Request restoration from the purchase provider
-  /// 2. On success: process each restored purchase
-  /// 3. Filter for active purchases only (skip expired/canceled)
-  /// 4. Handle each purchase through the update command
-  /// 5. On failure: silently handle (no state changes)
-  ///
-  /// Will await restore even if `shouldAwaitRestore` is `false` if there is no
-  /// active subscription.
-  ///
-  /// **Note:** This command delegates the actual purchase processing
-  /// to `HandlePurchaseUpdateCommand` to maintain consistency with
-  /// the purchase update flow.
+  /// This simple function just sets the status to restoring and runs the
+  /// restore.
+  /// From native side, it loops through the transactions and sends it to
+  /// the stream, so every result would be handled there.
   /// {@endtemplate}
-  Future<void> execute({final bool shouldAwaitRestore = true}) async {
-    // Make not downgrade status when already subscribed locally; just
-    // run restore.
-    subscriptionStatusResource.set(SubscriptionStatus.restoring);
-
-    if (shouldAwaitRestore) {
-      await _runStoreRestore();
-    } else {
-      unawaited(_runStoreRestore());
+  Future<void> execute() async {
+    if (subscriptionStatusResource.isRestoring) return;
+    final oldStatus = subscriptionStatusResource.status;
+    final shouldSetStatus = !subscriptionStatusResource.isSubscribed;
+    if (shouldSetStatus) {
+      // Make not downgrade status when already subscribed locally; just
+      // run restore.
+      subscriptionStatusResource.set(SubscriptionStatus.restoring);
     }
-  }
 
-  Future<void> _runStoreRestore() async {
-    final result = await purchaseProvider.restorePurchases();
-    switch (result.type) {
-      case ResultType.success:
-        for (final purchase in result.restoredPurchases) {
-          if (purchase.isActive) {
-            await handlePurchaseUpdateCommand.execute(purchase);
-            continue;
-          } else if (purchase.isPending) {
-            try {
-              await purchaseProvider.cancel(purchase.productId.value);
-              // ignore: avoid_catches_without_on_clauses
-            } catch (e) {
-              debugPrint('RestorePurchasesCommand.execute: $e');
-            }
-            try {
-              await purchaseProvider.cancel(purchase.purchaseId.value);
-              // ignore: avoid_catches_without_on_clauses
-            } catch (e) {
-              debugPrint('RestorePurchasesCommand.execute: $e');
-            }
-          } else if (purchase.isPendingConfirmation) {
-            await handlePurchaseUpdateCommand.execute(purchase);
-          }
-        }
-      case ResultType.failure:
-      // Handle failure if needed
-    }
-    // Finalize state based on actual active subscription presence
-    final locallyActive = await purchasesLocalApi.getActiveSubscription();
-    if (subscriptionStatusResource.isSubscribed || locallyActive.isActive) {
-      subscriptionStatusResource.set(SubscriptionStatus.subscribed);
-    } else {
-      subscriptionStatusResource.set(SubscriptionStatus.free);
-      await purchasesLocalApi.clearActiveSubscription();
+    await purchaseProvider.restorePurchases();
+    await Future.delayed(const Duration(seconds: 2));
+    if (subscriptionStatusResource.isRestoring) {
+      if (oldStatus == SubscriptionStatus.restoring) {
+        subscriptionStatusResource.set(SubscriptionStatus.free);
+      } else {
+        subscriptionStatusResource.set(oldStatus);
+      }
     }
   }
 }
