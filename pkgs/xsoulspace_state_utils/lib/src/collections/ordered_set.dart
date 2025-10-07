@@ -37,7 +37,7 @@ class MutableOrderedSet<V> with Iterable<V> {
   @mustCallSuper
   void assignAll(final Iterable<V> items) => _items
     ..clear()
-    ..addAll(_items);
+    ..addAll(items);
 
   /// {@template mutable_ordered_set_add}
   /// Adds the specified [value] to this ordered set if it doesn't already exist.
