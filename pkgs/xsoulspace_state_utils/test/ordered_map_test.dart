@@ -212,6 +212,40 @@ void main() {
       });
     });
 
+    group('assignAll', () {
+      test('replaces all items with new map', () {
+        final map = env.makeMutableOrderedMap<String, String>(stringToKey);
+        map.upsert('value1', key: 'key1');
+        map.upsert('value2', key: 'key2');
+        map.assignAll({'key3': 'value3'});
+
+        expect(map, hasLength(1));
+        expect(map['key3'], 'value3');
+      });
+
+      test('handles empty assignment', () {
+        final map = env.makeMutableOrderedMap<String, String>(stringToKey);
+        map.upsert('value1', key: 'key1');
+        map.assignAll({});
+
+        expect(map, isEmpty);
+      });
+    });
+
+    group('assignAllOrdered', () {
+      test('replaces all items with new list', () {
+        final map = env.makeMutableOrderedMap<String, String>(stringToKey);
+        map.upsert('value1', key: 'key1');
+        map.upsert('value2', key: 'key2');
+
+        map.assignAllOrdered(['value3', 'value4']);
+
+        expect(map, hasLength(2));
+        expect(map['value3'], 'value3');
+        expect(map['value4'], 'value4');
+      });
+    });
+
     group('orderedValues', () {
       test('returns values in insertion order', () {
         final map = env.makeMutableOrderedMap<String, String>(stringToKey);
@@ -365,7 +399,7 @@ void main() {
 
       test('requires toKey function', () {
         expect(
-          () => ImmutableOrderedMap<String, String>(toKey: null as dynamic),
+          ImmutableOrderedMap<String, String>.new,
           throwsA(isA<TypeError>()),
         );
       });

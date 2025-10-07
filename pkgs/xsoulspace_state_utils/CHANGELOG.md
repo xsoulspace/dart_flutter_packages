@@ -6,6 +6,11 @@ Always review the changelog before upgrading to a new version.
 
 # Changelog
 
+## 0.4.0
+
+- chore: xsoulspace_foundation 0.2.2
+- added: `assignAll` and `assignAllOrdered` for `MutableOrderedMap`.
+
 ## 0.3.2
 
 - added: `operator []` and `operator []=` for `MutableOrderedList` and `ImmutableOrderedList`.

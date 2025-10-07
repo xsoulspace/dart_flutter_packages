@@ -40,7 +40,28 @@ class MutableOrderedMap<K, V> with Iterable<K> {
   /// {@endtemplate}
   MutableOrderedMap({this.toKey});
   final _items = <K, V>{};
+  List<V>? _valuesListCache;
   final _orderedKeys = <K>{};
+
+  /// {@template mutable_ordered_map_ordered_values}
+  /// Returns an unmodifiable list of all values in insertion order.
+  ///
+  /// This property provides ordered access to values with caching for performance.
+  /// The first call computes the ordered list, subsequent calls return the cached result
+  /// until the map is modified.
+  ///
+  /// @ai This property is cached for performance - use it when you need ordered values frequently.
+  /// {@endtemplate}
+  List<V> get orderedValues {
+    if (_valuesListCache != null) return _valuesListCache!;
+    final values = <V>[];
+    for (final key in _orderedKeys) {
+      final value = _items[key];
+      if (value == null) continue;
+      values.add(value);
+    }
+    return _valuesListCache ??= values.unmodifiable;
+  }
 
   /// {@template mutable_ordered_map_to_key}
   /// A function that converts values to their corresponding keys.
@@ -84,24 +105,6 @@ class MutableOrderedMap<K, V> with Iterable<K> {
   @override
   Iterator<K> get iterator => _orderedKeys.iterator;
 
-  /// {@template mutable_ordered_map_ordered_values}
-  /// Returns a list of all values in insertion order.
-  ///
-  /// This property provides ordered access to values, which is not available
-  /// through the standard [values] property.
-  ///
-  /// @ai Use this property when you need values in the order they were added.
-  /// {@endtemplate}
-  List<V> get orderedValues {
-    final values = <V>[];
-    for (final key in _orderedKeys) {
-      final value = _items[key];
-      if (value == null) continue;
-      values.add(value);
-    }
-    return values;
-  }
-
   /// {@template mutable_ordered_map_upsert}
   /// Inserts or updates the mapping for the specified [key] and [value].
   ///
@@ -119,6 +122,7 @@ class MutableOrderedMap<K, V> with Iterable<K> {
     }
     _items[effectiveKey] = value;
     _orderedKeys.add(effectiveKey);
+    _valuesListCache = null;
   }
 
   /// {@template mutable_ordered_map_update}
@@ -144,6 +148,7 @@ class MutableOrderedMap<K, V> with Iterable<K> {
     } else {
       throw ArgumentError.value(key, 'value', 'Value not provided');
     }
+    _valuesListCache = null;
   }
 
   /// {@template mutable_ordered_map_getter}
@@ -167,6 +172,51 @@ class MutableOrderedMap<K, V> with Iterable<K> {
   void remove(final K key) {
     _items.remove(key);
     _orderedKeys.remove(key);
+    _valuesListCache = null;
+  }
+
+  /// {@template mutable_ordered_map_assign_all}
+  /// Replaces all items in this collection with the provided [map].
+  ///
+  /// @ai Use this method for bulk updates rather than multiple individual upsert() calls.
+  /// {@endtemplate}
+  void assignAll(final Map<K, V> map) {
+    _items
+      ..clear()
+      ..addAll(map);
+    _orderedKeys
+      ..clear()
+      ..addAll(map.keys);
+    _valuesListCache = null;
+  }
+
+  /// {@template mutable_ordered_map_assign_all_ordered}
+  /// Replaces all items in this collection with values from the provided [items] list.
+  ///
+  /// This method uses the [toKey] function to generate keys for each value,
+  /// maintaining the order specified in the input list. This is useful when
+  /// you have a list of values that need to be converted to a map with specific ordering.
+  ///
+  /// @ai Use this method when you have ordered data that needs key-based access.
+  /// {@endtemplate}
+  void assignAllOrdered(final Iterable<V> items) {
+    final newKeys = <K>{};
+    final map = <K, V>{};
+    for (final item in items) {
+      final key = toKey?.call(item);
+      if (key == null) {
+        throw ArgumentError.value(item, 'item', 'Key not provided');
+      }
+      map[key] = item;
+      newKeys.add(key);
+    }
+    _items
+      ..clear()
+      ..addAll(map);
+    _orderedKeys
+      ..clear()
+      ..addAll(newKeys);
+    _valuesListCache = null;
   }
 
   /// {@template mutable_ordered_map_clear}
@@ -181,6 +231,7 @@ class MutableOrderedMap<K, V> with Iterable<K> {
   void clear() {
     _items.clear();
     _orderedKeys.clear();
+    _valuesListCache = null;
   }
 }
 
