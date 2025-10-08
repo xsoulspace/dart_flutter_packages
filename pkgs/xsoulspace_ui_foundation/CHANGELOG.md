@@ -1,3 +1,27 @@
+## Versioning
+
+This project follows [Semantic Versioning](https://semver.org/) (semver).  
+Breaking changes will increment the major version, new features the minor, and bugfixes the patch.  
+Always review the changelog before upgrading to a new version.
+
+## 0.2.0
+
+- **BREAKING**: Updated `infinite_scroll_pagination` from 4.1.0 to 5.1.1
+  - `infinite_scroll_pagination_utils` module has been refactored to work with the new API
+  - `HashPagingController` constructor now requires `getNextPageKey` and `fetchPage` callbacks
+  - `BasePagingController` usage remains backward compatible - no changes required for existing implementations
+  - Internal pagination state structure changed from `itemList` to `pages` (list of lists)
+  - Removed deprecated listener-based pattern in favor of callback-based approach
+- Changed:
+
+  - `HashPagingController`: Now automatically applies hash-based deduplication during pagination
+  - `BasePagingController.onLoad()`: Simplified to directly call `loadFirstPage()`
+  - Updated `infinite_scroll_pagination_utils` README with corrected API examples and comprehensive method documentation
+
+- Fixed:
+  - Item count listeners now work correctly with the new pages structure
+  - Proper end-of-pagination detection using `hasNextPage` boolean
+
 ## 0.1.0
 
 - chore: sdk: ">=3.8.1 <4.0.0"

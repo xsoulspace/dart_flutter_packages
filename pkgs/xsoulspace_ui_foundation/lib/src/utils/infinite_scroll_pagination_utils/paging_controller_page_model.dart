@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:from_json_to_json/from_json_to_json.dart';
 
 @immutable
 class PagingControllerPageModel<E> {
@@ -33,9 +34,9 @@ PagingControllerPageModel<E> _$PagingControllerPageModelFromJson<E>(
   final Map<String, dynamic> json,
   final E Function(Object? json) fromJsonE,
 ) => PagingControllerPageModel<E>(
-  values: (json['values'] as List<dynamic>).map(fromJsonE).toList(),
-  currentPage: (json['currentPage'] as num).toInt(),
-  pagesCount: (json['pagesCount'] as num).toInt(),
+  values: jsonDecodeListAs<dynamic>(json['values']).map(fromJsonE).toList(),
+  currentPage: jsonDecodeInt(json['currentPage']),
+  pagesCount: jsonDecodeInt(json['pagesCount']),
 );
 
 Map<String, dynamic> _$PagingControllerPageModelToJson<E>(

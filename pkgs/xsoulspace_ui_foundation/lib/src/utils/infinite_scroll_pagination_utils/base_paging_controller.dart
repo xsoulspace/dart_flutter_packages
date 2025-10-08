@@ -13,12 +13,25 @@ abstract class PagingControllerRequestsBuilder<TModel> {
   final PagingControllerLoadFunction<TModel> onLoadData;
 }
 
-/// To initialize the class use [onLoad] and [loadFirstPage]
-/// or call [addDataListener].
+/// {@template base_paging_controller}
+/// Base paging controller for paginated data loading with built-in support
+/// for empty items and request building.
 ///
-/// In case of [addDataListener]
-/// don't forget to call [removeDataListener] in your class dispose method.
+/// Usage:
+/// ```dart
+/// class MyPagingController extends BasePagingController<MyItem> {
+///   @override
+///   PagingControllerRequestsBuilder<MyItem> get requestBuilder =>
+///     PagingControllerRequestsBuilder(onLoadData: _loadData);
+///
+///   Future<PagingControllerPageModel<MyItem>> _loadData(int page) async {
+///     // Load and return page data
+///   }
+/// }
+/// ```
+/// {@endtemplate}
 abstract base class BasePagingController<TItem> implements Disposable {
+  /// {@macro base_paging_controller}
   BasePagingController({
     this.addEmptyFirstItem = false,
     this.emptyItemBuilder,
@@ -35,23 +48,32 @@ abstract base class BasePagingController<TItem> implements Disposable {
   final bool addEmptyFirstItem;
   final ValueGetter<TItem>? emptyItemBuilder;
   late final pager = HashPagingController<int, TItem>(
-    firstPageKey: _firstPageKey,
+    getNextPageKey: (final state) {
+      if (_isLastPage) return null;
+      final lastKey = state.keys?.lastOrNull ?? 0;
+      return lastKey + 1;
+    },
+    fetchPage: _fetchPage,
   );
   final id = UnifiedPagingControllerId(IdCreator.create());
-  List<TItem> get items => pager.itemList ?? [];
+  List<TItem> get items {
+    final pages = pager.value.pages;
+    if (pages == null) return [];
+    return pages.expand((final page) => page).toList();
+  }
+
   final _itemsCountListeners = <ValueChanged<int>>{};
   var _lastItemsCount = 0;
 
   PagingControllerRequestsBuilder<TItem> get requestBuilder;
 
-  void onLoad() => addDataListener();
+  void onLoad() => loadFirstPage();
 
   /// ********************************************
   /// *      PAGER LISTENERS START
   /// ********************************************
   void _onPagerChanged() {
-    // ignore: unnecessary_parenthesis
-    final newCount = (pager.itemList?.length) ?? 0;
+    final newCount = items.length;
     if (newCount != _lastItemsCount) {
       _lastItemsCount = newCount;
       _itemsCountListeners.forEach(_onItemsCountChanged);
@@ -75,31 +97,40 @@ abstract base class BasePagingController<TItem> implements Disposable {
   /// *      PAGER LISTENERS END
   /// ********************************************
 
-  void addDataListener() => pager.addPageRequestListener(_onPageRequest);
-  void removeDataListener() => pager.removePageRequestListener(_onPageRequest);
-
-  Future<void> _onPageRequest(final int pageKey) async {
+  Future<List<TItem>> _fetchPage(final int pageKey) async {
     final response = await requestBuilder.onLoadData(pageKey);
-    final values = response.values;
-    if (pager.value.nextPageKey == null) return;
-    if (pageKey == pager.firstPageKey && addEmptyFirstItem) {
+    final values = [...response.values];
+
+    if (pageKey == _firstPageKey && addEmptyFirstItem) {
       values.insert(0, emptyItemBuilder!());
     }
-    if (response.currentPage <
-        (pager.value.nextPageKey ?? pager.firstPageKey)) {
-      return;
+
+    if (response.currentPage < pageKey) {
+      return [];
     }
-    if (response.pagesCount == 0 ||
-        response.pagesCount == response.currentPage) {
-      pager.appendLastPage(response.values);
-    } else {
-      pager.appendPage(response.values, response.currentPage + 1);
-    }
+
+    // Update hasNextPage based on whether we've reached the last page
+    final hasNextPage =
+        response.pagesCount > 0 && response.currentPage < response.pagesCount;
+
+    // Store whether this is the last page for use in the controller
+    _isLastPage = !hasNextPage;
+
+    return values;
   }
 
-  void loadFirstPage() => pager.notifyPageRequestListeners(pager.firstPageKey);
-  void refresh() => pager.refresh();
-  void refreshWithoutNotify() => pager.refreshWithoutNotify();
+  bool _isLastPage = false;
+
+  void loadFirstPage() => pager.fetchNextPage();
+  void refresh() {
+    _isLastPage = false;
+    pager.refresh();
+  }
+
+  void refreshWithoutNotify() {
+    _isLastPage = false;
+    pager.refreshWithoutNotify();
+  }
 
   void insertItem(final TItem item, {final int at = 0}) =>
       pager.insertElements([item], at: at);
@@ -157,9 +188,8 @@ abstract base class BasePagingController<TItem> implements Disposable {
   @override
   void dispose() {
     _itemsCountListeners.clear();
-    pager.removeListener(_onPagerChanged);
-
-    removeDataListener();
-    pager.dispose();
+    pager
+      ..removeListener(_onPagerChanged)
+      ..dispose();
   }
 }

@@ -1,3 +1,5 @@
+// ignore_for_file: unsafe_variance
+
 import 'dart:collection';
 
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
@@ -5,81 +7,144 @@ import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 typedef PagingControllerHashFunction<TItem> = int Function(TItem);
 typedef PagingControllerEqualityFunction<TItem> = bool Function(TItem, TItem);
 
+/// {@template hash_paging_controller}
+/// A [PagingController] extension that uses hash-based deduplication
+/// to prevent duplicate items in the paginated list.
+/// {@endtemplate}
 class HashPagingController<TKey, TItem> extends PagingController<TKey, TItem> {
+  /// {@macro hash_paging_controller}
   HashPagingController({
-    required super.firstPageKey,
-    super.invisibleItemsThreshold,
+    required super.getNextPageKey,
+    required final FetchPageCallback<TKey, TItem> fetchPage,
+    super.value,
     this.hashFunction,
     this.equalityFunction,
-  });
+  }) : _userFetchPage = fetchPage,
+       _getNextPageKey = getNextPageKey,
+       super(fetchPage: (final pageKey) => []);
 
   final PagingControllerHashFunction<TItem>? hashFunction;
   final PagingControllerEqualityFunction<TItem>? equalityFunction;
+  final FetchPageCallback<TKey, TItem> _userFetchPage;
+  final NextPageKeyCallback<TKey, TItem> _getNextPageKey;
 
-  /// Appends [newItems] to the previously loaded ones and sets the next page
-  /// key to `null`.
-  void prependLastPage(final List<TItem> newItems) =>
-      prependPage(newItems, null);
+  @override
+  Future<void> fetchNextPage() async {
+    // We override fetchNextPage to apply deduplication
+    if (operation != null) return;
 
-  void prependPage(final List<TItem> newItems, final TKey? nextPageKey) {
+    final op = operation = Object();
+
+    value = value.copyWith(isLoading: true, error: null);
+
+    PagingState<TKey, TItem> state = value;
+
+    try {
+      if (!state.hasNextPage) return;
+
+      final nextPageKey = _getNextPageKey(state);
+      if (nextPageKey == null) {
+        state = state.copyWith(hasNextPage: false);
+        return;
+      }
+
+      final fetchResult = _userFetchPage(nextPageKey);
+      List<TItem> newItems;
+
+      if (fetchResult is Future) {
+        newItems = await fetchResult;
+      } else {
+        newItems = fetchResult;
+      }
+
+      state = value;
+
+      // Apply deduplication before adding to state
+      final existingItems =
+          state.pages?.expand((final page) => page).toList() ?? [];
+      final deduplicatedItems = _deduplicateItems(existingItems, newItems);
+
+      state = state.copyWith(
+        pages: [...?state.pages, deduplicatedItems],
+        keys: [...?state.keys, nextPageKey],
+      );
+    } catch (error) {
+      state = state.copyWith(error: error);
+
+      if (error is! Exception) {
+        rethrow;
+      }
+    } finally {
+      if (op == operation) {
+        value = state.copyWith(isLoading: false);
+        operation = null;
+      }
+    }
+  }
+
+  /// Appends [newItems] to the previously loaded ones and sets hasNextPage
+  /// to false.
+  void appendLastPage(final List<TItem> newItems) =>
+      appendPageWithDeduplication(newItems, hasNextPage: false);
+
+  /// Appends [newItems] to the previously loaded ones.
+  void appendPageWithDeduplication(
+    final List<TItem> newItems, {
+    required final bool hasNextPage,
+  }) {
     if (!_mounted) return;
-    final previousItems = LinkedHashSet<TItem>(
-      hashCode: hashFunction ?? (final e) => e.hashCode,
-      equals:
-          equalityFunction ?? (final a, final b) => a.hashCode == b.hashCode,
-    )
-      ..addAll(newItems)
-      ..addAll(value.itemList ?? []);
-    value = PagingState<TKey, TItem>(
-      itemList: previousItems.toList(),
-      nextPageKey: nextPageKey,
+    final deduplicatedItems = _deduplicateItems(items ?? [], newItems);
+    value = value.copyWith(
+      pages: [...?value.pages, deduplicatedItems],
+      hasNextPage: hasNextPage,
     );
   }
 
-  @override
-  void appendPage(final List<TItem> newItems, final TKey? nextPageKey) {
+  /// Prepends [newItems] to the previously loaded ones and sets hasNextPage
+  /// to the provided value.
+  void prependLastPage(final List<TItem> newItems) =>
+      prependPage(newItems, hasNextPage: false);
+
+  void prependPage(
+    final List<TItem> newItems, {
+    required final bool hasNextPage,
+  }) {
     if (!_mounted) return;
-    final previousItems = LinkedHashSet<TItem>(
-      hashCode: hashFunction ?? (final e) => e.hashCode,
-      equals:
-          equalityFunction ?? (final a, final b) => a.hashCode == b.hashCode,
-    )
-      ..addAll(value.itemList ?? [])
-      ..addAll(newItems);
-    value = PagingState<TKey, TItem>(
-      itemList: previousItems.toList(),
-      nextPageKey: nextPageKey,
+    final deduplicatedItems = _deduplicateItems(newItems, items ?? []);
+    value = value.copyWith(
+      pages: [deduplicatedItems],
+      hasNextPage: hasNextPage,
     );
+  }
+
+  List<TItem> _deduplicateItems(
+    final List<TItem> existingItems,
+    final List<TItem> newItems,
+  ) {
+    final allItems =
+        LinkedHashSet<TItem>(
+            hashCode: hashFunction ?? (final e) => e.hashCode,
+            equals:
+                equalityFunction ??
+                (final a, final b) => a.hashCode == b.hashCode,
+          )
+          ..addAll(existingItems)
+          ..addAll(newItems);
+    return allItems.toList();
   }
 
   void refreshWithoutNotify() {
-    value = value.copyWith(
-      nextPageKey: null,
-      error: null,
-      itemList: null,
-    );
+    value = value.reset();
   }
 
-  void insertElement(
-    final TItem element, {
-    final int at = 0,
-  }) {
-    final newItems = [...?itemList]..insert(at, element);
-
-    value = value.copyWith(
-      itemList: newItems,
-    );
+  void insertElement(final TItem element, {final int at = 0}) {
+    final newItems = [...?items]..insert(at, element);
+    _updateItemList(newItems);
   }
 
-  void insertElements(
-    final Iterable<TItem> elements, {
-    final int at = 0,
-  }) {
-    final newItems = [...?itemList]..insertAll(at, elements);
-
-    value = value.copyWith(
-      itemList: newItems,
-    );
+  void insertElements(final Iterable<TItem> elements, {final int at = 0}) {
+    final newItems = [...?items]..insertAll(at, elements);
+    _updateItemList(newItems);
   }
 
   /// removes element from listing at given [oldIndex], then reinserts it
@@ -92,38 +157,34 @@ class HashPagingController<TKey, TItem> extends PagingController<TKey, TItem> {
     final int newIndex = 0,
   }) {
     if (oldIndex < 0) return;
-    final newItems = [...?itemList]
+    final newItems = [...?items]
       ..removeAt(oldIndex)
       ..insert(newIndex, element);
-    value = value.copyWith(itemList: newItems);
+    _updateItemList(newItems);
   }
 
   /// removes element from listing at given [index]
-  TItem? removeElementByIndex({
-    required final int index,
-  }) {
+  TItem? removeElementByIndex({required final int index}) {
     if (index < 0) return null;
-    final items = itemList ?? [];
-    if (items.isEmpty) return null;
-    final item = items[index];
-    final newItems = [...items]..removeAt(index);
-    value = value.copyWith(
-      itemList: newItems,
-    );
+    final currentItems = items ?? [];
+    if (currentItems.isEmpty) return null;
+    final item = currentItems[index];
+    final newItems = [...currentItems]..removeAt(index);
+    _updateItemList(newItems);
     return item;
   }
 
   TItem? removeElementWhere({
     required final bool Function(TItem element) test,
   }) {
-    final int index = value.itemList?.indexWhere(test) ?? -1;
+    final int index = items?.indexWhere(test) ?? -1;
     return removeElementByIndex(index: index);
   }
 
   List<TItem> removeElementsWhere({
     required final bool Function(TItem element) test,
   }) {
-    final list = [...?value.itemList];
+    final list = [...?items];
     if (list.isEmpty) return [];
     final itemsToDelete = list.indexed.where((final e) => test(e.$2)).toList()
       ..sort(
@@ -138,11 +199,8 @@ class HashPagingController<TKey, TItem> extends PagingController<TKey, TItem> {
     return deletedItems;
   }
 
-  void removeElement({
-    required final TItem element,
-  }) {
-    final int index =
-        value.itemList?.indexWhere((final a) => a == element) ?? -1;
+  void removeElement({required final TItem element}) {
+    final int index = items?.indexWhere((final a) => a == element) ?? -1;
     removeElementByIndex(index: index);
   }
 
@@ -158,12 +216,10 @@ class HashPagingController<TKey, TItem> extends PagingController<TKey, TItem> {
         return;
       }
     } else {
-      final newItems = [...?itemList]
+      final newItems = [...?items]
         ..removeAt(index)
         ..insert(index, element);
-      value = value.copyWith(
-        itemList: newItems,
-      );
+      _updateItemList(newItems);
     }
   }
 
@@ -176,7 +232,7 @@ class HashPagingController<TKey, TItem> extends PagingController<TKey, TItem> {
     final bool Function(TItem) comparator = equals == null
         ? ((final a) => a == element)
         : (final a) => equals(a, element);
-    final int eIndex = index ?? (value.itemList?.indexWhere(comparator) ?? -1);
+    final int eIndex = index ?? (items?.indexWhere(comparator) ?? -1);
 
     replaceElementByIndex(
       index: eIndex,
@@ -185,24 +241,14 @@ class HashPagingController<TKey, TItem> extends PagingController<TKey, TItem> {
     );
   }
 
+  void _updateItemList(final List<TItem> newItems) {
+    value = value.copyWith(pages: [newItems]);
+  }
+
   bool _mounted = true;
   @override
   void dispose() {
     _mounted = false;
     super.dispose();
   }
-}
-
-extension PagingStateExtension<TPageKey, TItem>
-    on PagingState<TPageKey, TItem> {
-  PagingState<TPageKey, TItem> copyWith({
-    final dynamic error,
-    final List<TItem>? itemList,
-    final TPageKey? nextPageKey,
-  }) =>
-      PagingState(
-        error: error ?? this.error,
-        itemList: itemList ?? this.itemList,
-        nextPageKey: nextPageKey ?? this.nextPageKey,
-      );
 }
