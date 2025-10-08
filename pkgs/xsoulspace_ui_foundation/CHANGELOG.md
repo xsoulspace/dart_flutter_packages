@@ -4,6 +4,11 @@ This project follows [Semantic Versioning](https://semver.org/) (semver).
 Breaking changes will increment the major version, new features the minor, and bugfixes the patch.  
 Always review the changelog before upgrading to a new version.
 
+## 0.2.1
+
+- Fixed:
+  - `HashPagingController` now correctly merges new pages with existing pages
+
 ## 0.2.0
 
 - **BREAKING**: Updated `infinite_scroll_pagination` from 4.1.0 to 5.1.1

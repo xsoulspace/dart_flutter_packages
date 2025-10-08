@@ -65,7 +65,7 @@ class HashPagingController<TKey, TItem> extends PagingController<TKey, TItem> {
       final deduplicatedItems = _deduplicateItems(existingItems, newItems);
 
       state = state.copyWith(
-        pages: [...?state.pages, deduplicatedItems],
+        pages: [deduplicatedItems],
         keys: [...?state.keys, nextPageKey],
       );
     } catch (error) {
