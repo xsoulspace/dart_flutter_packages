@@ -7,6 +7,30 @@ import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 typedef PagingControllerHashFunction<TItem> = int Function(TItem);
 typedef PagingControllerEqualityFunction<TItem> = bool Function(TItem, TItem);
 
+extension _ListX<T> on List<T> {
+  /// Splits [items] into [sublistCount] sublists, distributing items as evenly as possible.
+  ///
+  /// Returns an iterable of sublists where each sublist represents a page.
+  /// If items cannot be divided evenly, the first pages will have one extra item.
+  Iterable<List<T>> splitIntoSublists(final int sublistCount) sync* {
+    if (sublistCount <= 0 || isEmpty) return;
+
+    final int totalItems = length;
+    final int baseSize = totalItems ~/ sublistCount;
+    final int remainder = totalItems % sublistCount;
+    int start = 0;
+
+    for (int i = 0; i < sublistCount; i++) {
+      final extra = i < remainder ? 1 : 0;
+      final end = start + baseSize + extra;
+      if (start < totalItems) {
+        yield sublist(start, end.clamp(start, totalItems));
+      }
+      start = end;
+    }
+  }
+}
+
 /// {@template hash_paging_controller}
 /// A [PagingController] extension that uses hash-based deduplication
 /// to prevent duplicate items in the paginated list.
@@ -63,11 +87,9 @@ class HashPagingController<TKey, TItem> extends PagingController<TKey, TItem> {
       final existingItems =
           state.pages?.expand((final page) => page).toList() ?? [];
       final deduplicatedItems = _deduplicateItems(existingItems, newItems);
-
-      state = state.copyWith(
-        pages: [deduplicatedItems],
-        keys: [...?state.keys, nextPageKey],
-      );
+      final keys = [...?state.keys, nextPageKey];
+      final pages = deduplicatedItems.splitIntoSublists(keys.length).toList();
+      state = state.copyWith(pages: pages, keys: keys);
     } catch (error) {
       state = state.copyWith(error: error);
 
