@@ -10,10 +10,10 @@ typedef PagingControllerEqualityFunction<TItem> = bool Function(TItem, TItem);
 extension _ListX<T> on List<T> {
   /// Splits [items] into [sublistCount] sublists, distributing items as evenly as possible.
   ///
-  /// Returns an iterable of sublists where each sublist represents a page.
+  /// Always returns exactly [sublistCount] sublists, even if some are empty.
   /// If items cannot be divided evenly, the first pages will have one extra item.
   Iterable<List<T>> splitIntoSublists(final int sublistCount) sync* {
-    if (sublistCount <= 0 || isEmpty) return;
+    if (sublistCount <= 0) return;
 
     final int totalItems = length;
     final int baseSize = totalItems ~/ sublistCount;
@@ -25,6 +25,8 @@ extension _ListX<T> on List<T> {
       final end = start + baseSize + extra;
       if (start < totalItems) {
         yield sublist(start, end.clamp(start, totalItems));
+      } else {
+        yield <T>[]; // Always yield an empty list if no items left
       }
       start = end;
     }
