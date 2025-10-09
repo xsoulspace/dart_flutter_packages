@@ -8,6 +8,19 @@ Usually, I review these rules once a year and update them based on the latest Fl
 
 Hope this helps! :)
 
+## Agentic Executable (AE) Support
+
+This package is now an **Agentic Executable** - meaning AI agents can autonomously install, configure, update, and manage it in your projects.
+
+See the `ae_use/` directory for:
+
+- `ae_install.md` - AI-guided installation with automatic project type detection
+- `ae_uninstall.md` - Complete removal with state restoration
+- `ae_update.md` - Version migration handling
+- `ae_use.md` - Generate AI agent usage rules for ongoing assistance
+
+AI agents can use these files to provide seamless integration and ongoing development support.
+
 # Available rules:
 
 - `app.yaml` - useful for developing application or its parts.
