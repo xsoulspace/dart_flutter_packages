@@ -2,8 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:xsoulspace_foundation/xsoulspace_foundation.dart';
-
-import 'store_reviewer.dart';
+import 'package:xsoulspace_review_interface/xsoulspace_review_interface.dart';
 
 /// {@template store_review_requester}
 /// A class responsible for managing review requests for a store.
@@ -15,30 +14,15 @@ import 'store_reviewer.dart';
 ///
 /// Example usage:
 /// ```dart
-/// final myStoreReviewer = StoreReviewerFactory.createForTargetStore(
-///   targetStore: InstallationTargetStore.mobileGooglePlay,
-/// );
-///
-/// final reviewRequester = StoreReviewRequester(
-///   firstReviewPeriod: Duration(days: 1),
-///   reviewPeriod: Duration(days: 30),
-///   maxReviewCount: 3,
-///   storeReviewer: myStoreReviewer,
-///   localDb: myLocalDb,
-/// );
-/// await reviewRequester.onLoad();
-///
-/// // or
 /// final reviewRequester = StoreReviewRequester(
 ///   firstReviewPeriod: Duration(days: 1),
 ///   reviewPeriod: Duration(days: 30),
 ///   maxReviewCount: 3,
 ///   localDb: myLocalDb,
 /// );
-/// final myStoreReviewer = await StoreReviewerFactory.createForInstallSource();
-/// await reviewRequester.onLoad(
-///   storeReviewer: myStoreReviewer,
-/// );
+///
+/// final myStoreReviewer = GoogleAppleStoreReviewer();
+/// await reviewRequester.onLoad(storeReviewer: myStoreReviewer);
 /// ```
 ///
 /// [StoreReviewer.onLoad] will be called during [onLoad]
@@ -58,6 +42,8 @@ class StoreReviewRequester extends ChangeNotifier {
     this.maxReviewCount = 3,
     this.getLocale,
   }) : _storeReviewer = storeReviewer;
+
+  /// Callback to get current locale
   final ValueGetter<Locale>? getLocale;
 
   /// The duration before the first review request.
@@ -79,6 +65,8 @@ class StoreReviewRequester extends ChangeNotifier {
   static const _lastReviewRequestKey = 'last_review_request';
   static const _reviewCountKey = 'review_count';
   var _isAvailable = false;
+
+  /// Whether the review functionality is available
   bool get isAvailable => _isAvailable;
   set isAvailable(final bool value) {
     _isAvailable = value;

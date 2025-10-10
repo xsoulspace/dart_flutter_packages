@@ -1,4 +1,18 @@
-# Changelog
+## 0.4.0-beta.1
+
+- BREAKING CHANGE: `xsoulspace_review` package is now split into several packages:
+  - `xsoulspace_review_interface` - interface package
+  - `xsoulspace_review` - foundation package
+  - `xsoulspace_review_google_apple` - Google/Apple only
+  - `xsoulspace_review_rustore` - RuStore only
+  - `xsoulspace_review_huawei` - Huawei only
+  - `xsoulspace_review_snapstore` - Snap only
+  - `xsoulspace_review_web` - Web only
+- `ReviewFoundation` container class with dependency injection
+- `StoreReviewRequester` for automatic review scheduling
+- User feedback support via Wiredash
+- Multilingual consent dialogs
+- `defaultFallbackConsentBuilder` for stores requiring consent
 
 ## 0.3.0-beta.5
 

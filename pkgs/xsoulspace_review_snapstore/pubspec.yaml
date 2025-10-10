@@ -1,7 +1,7 @@
-name: xsoulspace_review
-description: Foundation package for xsoulspace_review with core orchestration and UI
-version: 0.4.0-beta.1
-homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_review
+name: xsoulspace_review_snapstore
+description: Linux Snap Store review implementation for xsoulspace_review
+version: 0.1.0
+homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_review_snapstore
 repository: https://github.com/xsoulspace/dart_flutter_packages
 issue_tracker: https://github.com/xsoulspace/xsoulspace_packages/issues
 
@@ -11,11 +11,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  meta: ^1.16.0
-  url_launcher: ^6.3.2
-  wiredash: ^2.5.0
-  xsoulspace_foundation: ^0.2.1
-  xsoulspace_locale: ^0.3.2
   xsoulspace_review_interface:
     path: ../xsoulspace_review_interface
 

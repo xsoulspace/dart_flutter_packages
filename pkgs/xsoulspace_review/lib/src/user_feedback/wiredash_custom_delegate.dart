@@ -7,8 +7,12 @@ import 'package:wiredash/assets/l10n/wiredash_localizations_en.g.dart';
 import 'package:wiredash/assets/l10n/wiredash_localizations_it.g.dart';
 
 // TODO(arenukvern): create PR for wiredash
+/// Custom localizations delegate for Wiredash.
+///
+/// Provides custom translations for Wiredash UI elements.
 class CustomWiredashTranslationsDelegate
     extends LocalizationsDelegate<WiredashLocalizations> {
+  /// Creates a custom Wiredash translations delegate.
   const CustomWiredashTranslationsDelegate();
 
   /// You have to define all languages that should be overridden
@@ -37,6 +41,7 @@ class _RuOverrides extends _RuDefaultOverrides {
   @override
   String get feedbackStep2LabelsDescription =>
       'Выбор правильной категории поможет нам решить вопрос быстрее';
+
   @override
   String get feedbackStep4EmailTitle =>
       'Получите обновления на email о вашей проблеме';
@@ -44,6 +49,7 @@ class _RuOverrides extends _RuDefaultOverrides {
 
 class _RuDefaultOverrides extends WiredashLocalizationsEn {
   _RuDefaultOverrides() : super('ru');
+
   @override
   String get feedbackStep1MessageTitle => 'Отправьте свой отзыв';
 

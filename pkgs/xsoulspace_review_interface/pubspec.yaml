@@ -1,0 +1,19 @@
+name: xsoulspace_review_interface
+description: Common interfaces for xsoulspace_review packages
+version: 0.1.0
+homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_review_interface
+repository: https://github.com/xsoulspace/dart_flutter_packages
+issue_tracker: https://github.com/xsoulspace/xsoulspace_packages/issues
+
+environment:
+  sdk: ">=3.8.1 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  meta: ^1.16.0
+  url_launcher: ^6.3.2
+
+dev_dependencies:
+  lints: ^6.0.0
+  xsoulspace_lints: ^0.1.2

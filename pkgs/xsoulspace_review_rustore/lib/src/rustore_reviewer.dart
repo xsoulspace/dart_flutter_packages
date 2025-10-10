@@ -1,15 +1,25 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_rustore_review/flutter_rustore_review.dart';
+import 'package:xsoulspace_review_interface/xsoulspace_review_interface.dart';
 
-import '../store_reviewer.dart';
-
+/// {@template rustore_reviewer}
+/// Store reviewer implementation for RuStore.
+///
+/// Uses the `flutter_rustore_review` package to display review prompts
+/// for Russian app store.
+/// {@endtemplate}
 final class RuStoreReviewer extends StoreReviewer {
-  RuStoreReviewer({
-    super.consentBuilder,
+  /// {@macro rustore_reviewer}
+  const RuStoreReviewer({
+    required this.consentBuilder,
     super.defaultLocale,
     super.packageName,
   });
+  
+  /// A builder for the consent screen when review limit is reached
+  final ReviewerFallbackConsentBuilder consentBuilder;
+  
   @override
   Future<bool> onLoad() async {
     await RustoreReviewClient.initialize();
@@ -40,10 +50,11 @@ final class RuStoreReviewer extends StoreReviewer {
           }
           return;
         case 'RuStoreReviewExists':
-          // TODO(arenukvern): handle this case
+          // User already has a review
           return;
       }
       rethrow;
     }
   }
 }
+
