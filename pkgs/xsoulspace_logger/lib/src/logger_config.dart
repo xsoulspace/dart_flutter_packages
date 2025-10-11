@@ -5,6 +5,54 @@ import 'log_level.dart';
 
 /// Configuration for logger behavior
 class LoggerConfig {
+
+  const LoggerConfig({
+    required this.minLevel,
+    required this.enableConsole,
+    required this.enableFile,
+    this.logDirectory,
+    this.enableRotation = true,
+    this.maxFileSizeMB = 10,
+    this.maxFileCount = 5,
+  });
+
+  /// Debug preset: verbose logging to console and file
+  factory LoggerConfig.debug({final String? logDirectory}) => LoggerConfig(
+    minLevel: LogLevel.verbose,
+    enableConsole: true,
+    enableFile: true,
+    logDirectory: logDirectory,
+  );
+
+  /// Production preset: info level, file only
+  factory LoggerConfig.production({final String? logDirectory}) => LoggerConfig(
+    minLevel: LogLevel.info,
+    enableConsole: false,
+    enableFile: true,
+    logDirectory: logDirectory,
+    maxFileSizeMB: 50,
+  );
+
+  /// Verbose preset: all logs to console and file
+  factory LoggerConfig.verbose({final String? logDirectory}) => LoggerConfig(
+    minLevel: LogLevel.verbose,
+    enableConsole: true,
+    enableFile: true,
+    logDirectory: logDirectory,
+    maxFileSizeMB: 100,
+  );
+
+  /// Silent preset: errors only to file
+  factory LoggerConfig.silent({final String? logDirectory}) => LoggerConfig(
+    minLevel: LogLevel.error,
+    enableConsole: false,
+    enableFile: true,
+    logDirectory: logDirectory,
+  );
+
+  /// Console-only preset for testing
+  factory LoggerConfig.consoleOnly({final LogLevel level = LogLevel.debug}) =>
+      LoggerConfig(minLevel: level, enableConsole: true, enableFile: false);
   /// Minimum log level to output
   final LogLevel minLevel;
 
@@ -25,55 +73,4 @@ class LoggerConfig {
 
   /// Maximum number of log files to keep
   final int maxFileCount;
-
-  const LoggerConfig({
-    required this.minLevel,
-    required this.enableConsole,
-    required this.enableFile,
-    this.logDirectory,
-    this.enableRotation = true,
-    this.maxFileSizeMB = 10,
-    this.maxFileCount = 5,
-  });
-
-  /// Debug preset: verbose logging to console and file
-  factory LoggerConfig.debug({String? logDirectory}) => LoggerConfig(
-    minLevel: LogLevel.verbose,
-    enableConsole: true,
-    enableFile: true,
-    logDirectory: logDirectory,
-    enableRotation: true,
-  );
-
-  /// Production preset: info level, file only
-  factory LoggerConfig.production({String? logDirectory}) => LoggerConfig(
-    minLevel: LogLevel.info,
-    enableConsole: false,
-    enableFile: true,
-    logDirectory: logDirectory,
-    enableRotation: true,
-    maxFileSizeMB: 50,
-  );
-
-  /// Verbose preset: all logs to console and file
-  factory LoggerConfig.verbose({String? logDirectory}) => LoggerConfig(
-    minLevel: LogLevel.verbose,
-    enableConsole: true,
-    enableFile: true,
-    logDirectory: logDirectory,
-    enableRotation: true,
-    maxFileSizeMB: 100,
-  );
-
-  /// Silent preset: errors only to file
-  factory LoggerConfig.silent({String? logDirectory}) => LoggerConfig(
-    minLevel: LogLevel.error,
-    enableConsole: false,
-    enableFile: true,
-    logDirectory: logDirectory,
-  );
-
-  /// Console-only preset for testing
-  factory LoggerConfig.consoleOnly({LogLevel level = LogLevel.debug}) =>
-      LoggerConfig(minLevel: level, enableConsole: true, enableFile: false);
 }

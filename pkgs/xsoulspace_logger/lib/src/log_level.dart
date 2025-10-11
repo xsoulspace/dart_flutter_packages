@@ -18,16 +18,16 @@ enum LogLevel {
   /// Error messages for serious problems
   error(4, 'ERROR');
 
+  const LogLevel(this.value, this.name);
+
   /// Numeric value for comparison
   final int value;
 
   /// Display name
   final String name;
 
-  const LogLevel(this.value, this.name);
-
   /// Check if this level is enabled given a minimum level
-  bool isEnabled(LogLevel minLevel) => value >= minLevel.value;
+  bool isEnabled(final LogLevel minLevel) => value >= minLevel.value;
 
   /// Console color emoji for this level
   String get emoji => switch (this) {

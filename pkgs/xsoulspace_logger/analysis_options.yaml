@@ -1,10 +1,7 @@
-include: package:lints/recommended.yaml
+include: package:xsoulspace_lints/library.yaml
 
+# Custom rules preserved from previous configuration
+# Note: Most rules are already included in xsoulspace_lints/library.yaml
 linter:
   rules:
-    - prefer_const_constructors
-    - prefer_const_declarations
-    - prefer_final_fields
-    - require_trailing_commas
-    - always_declare_return_types
-    - avoid_print
+    # Add custom overrides here if needed

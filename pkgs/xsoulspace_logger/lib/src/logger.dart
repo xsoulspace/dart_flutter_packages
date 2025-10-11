@@ -9,25 +9,26 @@ import 'logger_config.dart';
 
 /// Main logger class with singleton pattern
 class Logger {
+
+  /// Get or create logger instance
+  factory Logger([final LoggerConfig? config]) {
+    if (_instance == null && config != null) {
+      _instance = Logger._internal(config);
+    } else {
+      _instance ??= Logger._internal(LoggerConfig.consoleOnly());
+    }
+    return _instance!;
+  }
+
+  Logger._internal(this.config)
+    : _fileWriter = config.enableFile ? FileWriter(config) : null;
   static Logger? _instance;
 
   final LoggerConfig config;
   final FileWriter? _fileWriter;
 
-  Logger._internal(this.config)
-    : _fileWriter = config.enableFile ? FileWriter(config) : null;
-
-  /// Get or create logger instance
-  factory Logger([LoggerConfig? config]) {
-    if (_instance == null && config != null) {
-      _instance = Logger._internal(config);
-    } else
-      _instance ??= Logger._internal(LoggerConfig.consoleOnly());
-    return _instance!;
-  }
-
   /// Reset logger with new configuration
-  static Future<void> reset([LoggerConfig? config]) async {
+  static Future<void> reset([final LoggerConfig? config]) async {
     if (_instance?._fileWriter != null) {
       await _instance!._fileWriter!.dispose();
     }
@@ -36,12 +37,12 @@ class Logger {
 
   /// Log a message at specified level
   void log(
-    LogLevel level,
-    String category,
-    String message, {
-    Map<String, dynamic>? data,
-    Object? error,
-    StackTrace? stackTrace,
+    final LogLevel level,
+    final String category,
+    final String message, {
+    final Map<String, dynamic>? data,
+    final Object? error,
+    final StackTrace? stackTrace,
   }) {
     if (!level.isEnabled(config.minLevel)) return;
 
@@ -77,27 +78,27 @@ class Logger {
   }
 
   /// Log verbose message
-  void verbose(String category, String message, {Map<String, dynamic>? data}) =>
+  void verbose(final String category, final String message, {final Map<String, dynamic>? data}) =>
       log(LogLevel.verbose, category, message, data: data);
 
   /// Log debug message
-  void debug(String category, String message, {Map<String, dynamic>? data}) =>
+  void debug(final String category, final String message, {final Map<String, dynamic>? data}) =>
       log(LogLevel.debug, category, message, data: data);
 
   /// Log info message
-  void info(String category, String message, {Map<String, dynamic>? data}) =>
+  void info(final String category, final String message, {final Map<String, dynamic>? data}) =>
       log(LogLevel.info, category, message, data: data);
 
   /// Log warning message
-  void warning(String category, String message, {Map<String, dynamic>? data}) =>
+  void warning(final String category, final String message, {final Map<String, dynamic>? data}) =>
       log(LogLevel.warning, category, message, data: data);
 
   /// Log error message
   void error(
-    String category,
-    String message, {
-    Object? error,
-    StackTrace? stackTrace,
+    final String category,
+    final String message, {
+    final Object? error,
+    final StackTrace? stackTrace,
   }) => log(
     LogLevel.error,
     category,
@@ -108,13 +109,13 @@ class Logger {
 
   /// Format message for console (concise, colored)
   String _formatMessage(
-    DateTime timestamp,
-    LogLevel level,
-    String category,
-    String message, {
-    Map<String, dynamic>? data,
-    Object? error,
-    StackTrace? stackTrace,
+    final DateTime timestamp,
+    final LogLevel level,
+    final String category,
+    final String message, {
+    final Map<String, dynamic>? data,
+    final Object? error,
+    final StackTrace? stackTrace,
   }) {
     final time = _formatTime(timestamp);
     final emoji = level.emoji;
@@ -134,13 +135,13 @@ class Logger {
 
   /// Format message for file (detailed, structured)
   String _formatFileMessage(
-    DateTime timestamp,
-    LogLevel level,
-    String category,
-    String message, {
-    Map<String, dynamic>? data,
-    Object? error,
-    StackTrace? stackTrace,
+    final DateTime timestamp,
+    final LogLevel level,
+    final String category,
+    final String message, {
+    final Map<String, dynamic>? data,
+    final Object? error,
+    final StackTrace? stackTrace,
   }) {
     final time = timestamp.toIso8601String();
     final buffer = StringBuffer();
@@ -148,7 +149,7 @@ class Logger {
     buffer.writeln('[$time] [${level.name}] [$category] $message');
 
     if (data != null && data.isNotEmpty) {
-      data.forEach((key, value) {
+      data.forEach((final key, final value) {
         // Truncate very long values
         final valueStr = value.toString();
         final truncated = valueStr.length > 1000
@@ -165,7 +166,7 @@ class Logger {
     if (stackTrace != null) {
       buffer.writeln('  stackTrace:');
       buffer.writeln(
-        stackTrace.toString().split('\n').map((line) => '    $line').join('\n'),
+        stackTrace.toString().split('\n').map((final line) => '    $line').join('\n'),
       );
     }
 
@@ -173,7 +174,7 @@ class Logger {
   }
 
   /// Format time for console (HH:mm:ss)
-  String _formatTime(DateTime timestamp) {
+  String _formatTime(final DateTime timestamp) {
     final h = timestamp.hour.toString().padLeft(2, '0');
     final m = timestamp.minute.toString().padLeft(2, '0');
     final s = timestamp.second.toString().padLeft(2, '0');
@@ -181,12 +182,10 @@ class Logger {
   }
 
   /// Format data map concisely
-  String _formatData(Map<String, dynamic> data) {
-    return data.entries.map((e) => '${e.key}=${e.value}').join(', ');
-  }
+  String _formatData(final Map<String, dynamic> data) => data.entries.map((final e) => '${e.key}=${e.value}').join(', ');
 
   /// Write to console with appropriate output stream
-  void _writeToConsole(LogLevel level, String message) {
+  void _writeToConsole(final LogLevel level, final String message) {
     if (level == LogLevel.error) {
       stderr.writeln(message);
     } else {

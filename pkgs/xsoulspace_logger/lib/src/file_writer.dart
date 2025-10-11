@@ -8,16 +8,15 @@ import 'logger_config.dart';
 
 /// Handles writing log messages to files with rotation support
 class FileWriter {
+  FileWriter(this.config) {
+    unawaited(_initializeFile());
+    _startPeriodicFlush();
+  }
   final LoggerConfig config;
   final List<String> _buffer = [];
   File? _currentFile;
   Timer? _flushTimer;
   bool _disposed = false;
-
-  FileWriter(this.config) {
-    _initializeFile();
-    _startPeriodicFlush();
-  }
 
   /// Initialize log file with timestamp
   Future<void> _initializeFile() async {
@@ -47,14 +46,14 @@ class FileWriter {
   }
 
   /// Write log message to buffer
-  void write(String message) {
+  void write(final String message) {
     if (_disposed || !config.enableFile) return;
 
     _buffer.add(message);
 
     // Flush if buffer is large
     if (_buffer.length >= 100) {
-      _flush();
+      unawaited(_flush());
     }
   }
 
@@ -71,7 +70,7 @@ class FileWriter {
 
       // Check file size and rotate if needed
       if (config.enableRotation) {
-        final stat = await _currentFile!.stat();
+        final stat = _currentFile!.statSync();
         final sizeMB = stat.size / (1024 * 1024);
         if (sizeMB >= config.maxFileSizeMB) {
           await _rotateFile();
@@ -90,18 +89,20 @@ class FileWriter {
   }
 
   /// Clean old log files
-  Future<void> _cleanOldFiles(Directory directory) async {
+  Future<void> _cleanOldFiles(final Directory directory) async {
     try {
       final files = await directory
           .list()
-          .where((entity) => entity is File && entity.path.endsWith('.log'))
+          .where(
+            (final entity) => entity is File && entity.path.endsWith('.log'),
+          )
           .cast<File>()
           .toList();
 
       if (files.length <= config.maxFileCount) return;
 
       // Sort by modification time
-      files.sort((a, b) {
+      files.sort((final a, final b) {
         final aStat = a.statSync();
         final bStat = b.statSync();
         return aStat.modified.compareTo(bStat.modified);
@@ -120,7 +121,7 @@ class FileWriter {
   /// Start periodic flush timer
   void _startPeriodicFlush() {
     _flushTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      _flush();
+      unawaited(_flush());
     });
   }
 

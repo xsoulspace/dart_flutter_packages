@@ -2,7 +2,7 @@
 ///
 /// Provides console and file logging with configurable levels,
 /// rotation, and structured output.
-library xsoulspace_logger;
+library;
 
 export 'src/file_writer.dart';
 export 'src/log_level.dart';

@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- chore: xsoulspace_lints 0.1.2
 - Initial beta release.
 - Basic logger with multiple log levels: VERBOSE, DEBUG, INFO, WARNING, ERROR.
 - Console and file configurable outputs.
