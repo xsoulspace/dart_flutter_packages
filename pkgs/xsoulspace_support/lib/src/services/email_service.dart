@@ -1,4 +1,5 @@
 import 'package:url_launcher/url_launcher.dart';
+import 'package:xsoulspace_logger/xsoulspace_logger.dart';
 
 /// {@template email_service}
 /// Service for composing and sending support emails.
@@ -8,11 +9,9 @@ import 'package:url_launcher/url_launcher.dart';
 /// {@endtemplate}
 class EmailService {
   /// {@macro email_service}
-  factory EmailService() => _instance;
-  const EmailService._();
+  const EmailService({final Logger? logger}) : _logger = logger;
 
-  /// {@macro email_service}
-  static const _instance = EmailService._();
+  final Logger? _logger;
 
   /// {@template compose_email_url}
   /// Composes a mailto URL with all support request parameters.
@@ -65,6 +64,18 @@ class EmailService {
     final List<String>? cc,
     final List<String>? bcc,
   }) async {
+    _logger?.debug(
+      'EMAIL_SERVICE',
+      'Composing email',
+      data: {
+        'to': to,
+        'hasSubject': subject != null,
+        'hasBody': body != null,
+        'hasCc': cc != null && cc.isNotEmpty,
+        'hasBcc': bcc != null && bcc.isNotEmpty,
+      },
+    );
+
     final emailUrl = composeEmailUrl(
       to: to,
       subject: subject,
@@ -75,11 +86,34 @@ class EmailService {
 
     final uri = Uri.parse(emailUrl);
 
-    if (await canLaunchUrl(uri)) {
-      return launchUrl(uri, mode: LaunchMode.externalApplication);
+    try {
+      if (await canLaunchUrl(uri)) {
+        final launched = await launchUrl(
+          uri,
+          mode: LaunchMode.externalApplication,
+        );
+        if (launched) {
+          _logger?.info('EMAIL_SERVICE', 'Email client opened successfully');
+        } else {
+          _logger?.warning('EMAIL_SERVICE', 'Failed to launch email client');
+        }
+        return launched;
+      } else {
+        _logger?.warning(
+          'EMAIL_SERVICE',
+          'Cannot launch email URL - no email client available',
+        );
+        return false;
+      }
+    } catch (e, stackTrace) {
+      _logger?.error(
+        'EMAIL_SERVICE',
+        'Failed to send email',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return false;
     }
-
-    return false;
   }
 
   /// {@template validate_email}

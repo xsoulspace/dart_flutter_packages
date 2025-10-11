@@ -1,5 +1,6 @@
 import 'package:from_json_to_json/from_json_to_json.dart';
 import 'package:xsoulspace_locale/xsoulspace_locale.dart';
+import 'package:xsoulspace_logger/xsoulspace_logger.dart';
 
 import 'support_localization.dart';
 
@@ -26,6 +27,7 @@ extension type const SupportConfig._(Map<String, dynamic> value) {
     final bool includeAppInfo = true,
     final Map<String, String>? additionalContext,
     final Map<String, LocalizedMap>? localization,
+    final Logger? logger,
   }) => SupportConfig._({
     'support_email': supportEmail,
     'app_name': appName,
@@ -37,6 +39,7 @@ extension type const SupportConfig._(Map<String, dynamic> value) {
     'localization': localization?.map(
       (final key, final value) => MapEntry(key, value.toJson()),
     ),
+    'logger': logger,
   });
 
   /// {@template support_config}
@@ -78,6 +81,9 @@ extension type const SupportConfig._(Map<String, dynamic> value) {
       (final key, final value) => MapEntry(key, LocalizedMap.fromJson(value)),
     );
   }
+
+  /// Optional logger instance for diagnostic output
+  Logger? get logger => value['logger'] as Logger?;
 
   /// Gets a localized string for the specified key and language
   ///
