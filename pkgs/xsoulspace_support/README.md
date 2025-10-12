@@ -12,6 +12,7 @@ A reusable Flutter package for email support functionality with automatic contex
 - 🛡️ **Error Handling**: Graceful fallbacks when information collection fails
 - 📋 **Context Management**: Support for additional context and metadata
 - 🌍 **Localization Support**: Full localization support using xsoulspace_locale with English and Russian translations
+- 📝 **Logging Integration**: Optional logging support via xsoulspace_logger for diagnostic output
 
 ## Installation
 
@@ -148,6 +149,149 @@ Service for email composition and sending.
 - `AppInfo` - Application information
 - `DeviceInfo` - Device information
 - `SupportLocalization` - Localization keys and default values
+
+## Logging Support
+
+The package integrates with `xsoulspace_logger` for comprehensive diagnostic output. Logging is **optional** and can be enabled by passing a `Logger` instance through the `SupportConfig`.
+
+### Setup with Logging
+
+1. Add the dependencies:
+
+```yaml
+dependencies:
+  xsoulspace_support: ^0.1.0
+  xsoulspace_logger: ^0.1.0
+```
+
+2. Initialize and use with logger:
+
+```dart
+import 'package:xsoulspace_support/xsoulspace_support.dart';
+
+void main() {
+  // Initialize logger with desired configuration
+  final logger = Logger(LoggerConfig.debug());
+
+  // Configure support with logger
+  final supportConfig = SupportConfig(
+    supportEmail: 'support@yourapp.com',
+    appName: 'My Awesome App',
+    logger: logger, // Pass logger to config
+  );
+
+  // Use support manager normally
+  runApp(MyApp());
+}
+```
+
+### What Gets Logged
+
+The logger captures the following operations:
+
+**SUPPORT_MANAGER** (High-level operations):
+
+- `INFO`: Email send attempts and results
+- `DEBUG`: Request creation, email composition
+- `VERBOSE`: Template application details
+- `WARNING`: Email client unavailable
+- `ERROR`: Failed operations with full stack traces
+
+**APP_INFO_SERVICE** (App info collection):
+
+- `DEBUG`: Collection start
+- `INFO`: Successful collection with version details
+- `ERROR`: Collection failures
+
+**DEVICE_INFO_SERVICE** (Device info collection):
+
+- `DEBUG`: Collection start
+- `INFO`: Successful collection with platform details
+- `ERROR`: Collection failures
+
+**EMAIL_SERVICE** (Email operations):
+
+- `DEBUG`: Email composition
+- `INFO`: Email client launched successfully
+- `WARNING`: Cannot launch email URL
+- `ERROR`: Email sending failures
+
+### Usage Examples
+
+#### With Debug Logging (Development)
+
+```dart
+void main() {
+  final logger = Logger(LoggerConfig.debug());
+
+  final config = SupportConfig(
+    supportEmail: 'support@example.com',
+    appName: 'My App',
+    logger: logger,
+  );
+
+  // All operations will be logged to console and file
+  await SupportManager.instance.sendSupportEmail(
+    config: config,
+    subject: 'Bug Report',
+    description: 'App crashes',
+  );
+
+  // Dispose logger before exit
+  await logger.dispose();
+}
+```
+
+#### With Production Logging
+
+```dart
+void main() {
+  final logger = Logger(LoggerConfig.production());
+
+  final config = SupportConfig(
+    supportEmail: 'support@example.com',
+    appName: 'My App',
+    logger: logger,
+  );
+
+  // Only INFO+ logs to file, no console output
+  runApp(MyApp());
+}
+```
+
+#### Without Logging (Default)
+
+```dart
+// Logger is optional - omit for silent operation
+const config = SupportConfig(
+  supportEmail: 'support@example.com',
+  appName: 'My App',
+  // No logger - no logging overhead
+);
+```
+
+### Log Output Example
+
+```
+[12:34:56] 🔵 INFO    [SUPPORT_MANAGER] Sending support email | subject=Bug Report, hasUserEmail=true, includeAppInfo=true
+[12:34:56] 🟣 DEBUG   [SUPPORT_MANAGER] Creating support request
+[12:34:56] 🟣 DEBUG   [APP_INFO_SERVICE] Collecting app information
+[12:34:56] 🟢 INFO    [APP_INFO_SERVICE] App info collected successfully | version=1.0.0, buildNumber=1, packageName=com.example.app
+[12:34:56] 🟣 DEBUG   [DEVICE_INFO_SERVICE] Collecting device information
+[12:34:56] 🟢 INFO    [DEVICE_INFO_SERVICE] Device info collected successfully | platform=Android, model=Pixel 6, osVersion=13 (API 33)
+[12:34:56] 🟣 DEBUG   [SUPPORT_MANAGER] Support request data collected | hasAppInfo=true, hasDeviceInfo=true
+[12:34:56] 🟣 DEBUG   [EMAIL_SERVICE] Composing email | to=support@example.com, hasSubject=true, hasBody=true
+[12:34:56] 🟢 INFO    [EMAIL_SERVICE] Email client opened successfully
+[12:34:56] 🟢 INFO    [SUPPORT_MANAGER] Support email sent successfully
+```
+
+### Benefits of Logging
+
+- **Debugging**: Trace the entire support email flow
+- **Monitoring**: Track success/failure rates
+- **Error Diagnosis**: Full stack traces for failures
+- **Performance**: Measure info collection time
+- **Audit Trail**: File-based logs for later analysis
 
 ## Localization Support
 

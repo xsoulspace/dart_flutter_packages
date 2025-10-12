@@ -2,6 +2,7 @@ import 'dart:io' show Platform;
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
+import 'package:xsoulspace_logger/xsoulspace_logger.dart';
 
 import '../models/models.dart';
 
@@ -13,11 +14,9 @@ import '../models/models.dart';
 /// {@endtemplate}
 class DeviceInfoService {
   /// {@macro device_info_service}
-  factory DeviceInfoService() => _instance;
-  const DeviceInfoService._();
+  const DeviceInfoService({final Logger? logger}) : _logger = logger;
 
-  /// {@macro device_info_service}
-  static const _instance = DeviceInfoService._();
+  final Logger? _logger;
 
   /// {@template get_device_info}
   /// Retrieves comprehensive device information for the current platform.
@@ -26,19 +25,39 @@ class DeviceInfoService {
   /// and manufacturer information.
   /// {@endtemplate}
   Future<DeviceInfo> getDeviceInfo() async {
+    _logger?.debug('DEVICE_INFO_SERVICE', 'Collecting device information');
     try {
       final deviceInfoPlugin = DeviceInfoPlugin();
 
+      final DeviceInfo deviceInfo;
       if (Platform.isAndroid) {
-        return await _getAndroidDeviceInfo(deviceInfoPlugin);
+        deviceInfo = await _getAndroidDeviceInfo(deviceInfoPlugin);
       } else if (Platform.isIOS) {
-        return await _getIOSDeviceInfo(deviceInfoPlugin);
+        deviceInfo = await _getIOSDeviceInfo(deviceInfoPlugin);
       } else if (kIsWeb) {
-        return await _getWebDeviceInfo(deviceInfoPlugin);
+        deviceInfo = await _getWebDeviceInfo(deviceInfoPlugin);
       } else {
-        return _getUnknownDeviceInfo();
+        deviceInfo = _getUnknownDeviceInfo();
       }
-    } catch (e) {
+
+      _logger?.info(
+        'DEVICE_INFO_SERVICE',
+        'Device info collected successfully',
+        data: {
+          'platform': deviceInfo.platform,
+          'model': deviceInfo.model,
+          'osVersion': deviceInfo.osVersion,
+        },
+      );
+
+      return deviceInfo;
+    } catch (e, stackTrace) {
+      _logger?.error(
+        'DEVICE_INFO_SERVICE',
+        'Failed to get device info',
+        error: e,
+        stackTrace: stackTrace,
+      );
       debugPrint('Failed to get device info: $e');
       return _getUnknownDeviceInfo();
     }

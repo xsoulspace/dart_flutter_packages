@@ -3,6 +3,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:is_dart_empty_or_not/is_dart_empty_or_not.dart';
 import 'package:xsoulspace_locale/xsoulspace_locale.dart';
+import 'package:xsoulspace_logger/xsoulspace_logger.dart';
 
 import 'models/models.dart';
 import 'services/services.dart';
@@ -21,9 +22,18 @@ class SupportManager {
   /// {@macro support_manager}
   static final instance = SupportManager._();
 
-  final _appInfoService = AppInfoService();
-  final _deviceInfoService = DeviceInfoService();
-  final _emailService = EmailService();
+  AppInfoService? _appInfoService;
+  DeviceInfoService? _deviceInfoService;
+  EmailService? _emailService;
+
+  AppInfoService _getAppInfoService(final Logger? logger) =>
+      _appInfoService ??= AppInfoService(logger: logger);
+
+  DeviceInfoService _getDeviceInfoService(final Logger? logger) =>
+      _deviceInfoService ??= DeviceInfoService(logger: logger);
+
+  EmailService _getEmailService(final Logger? logger) =>
+      _emailService ??= EmailService(logger: logger);
 
   /// {@template send_support_email}
   /// Sends a comprehensive support email with automatic context collection.
@@ -43,6 +53,19 @@ class SupportManager {
     final Map<String, String>? additionalContext,
     final UiLanguage? language,
   }) async {
+    final logger = config.logger;
+    logger?.info(
+      'SUPPORT_MANAGER',
+      'Sending support email',
+      data: {
+        'subject': subject,
+        'hasUserEmail': userEmail != null,
+        'hasUserName': userName != null,
+        'includeAppInfo': config.includeAppInfo,
+        'includeDeviceInfo': config.includeDeviceInfo,
+      },
+    );
+
     try {
       final supportRequest = await _createSupportRequest(
         config: config,
@@ -53,16 +76,35 @@ class SupportManager {
         additionalContext: additionalContext,
       );
 
+      logger?.debug('SUPPORT_MANAGER', 'Support request created');
+
       final emailBody = _composeEmailBody(supportRequest, config, language);
       final emailSubject = '${config.emailSubjectPrefix}: $subject';
 
-      return await _emailService.sendEmail(
+      logger?.debug('SUPPORT_MANAGER', 'Email body composed');
+
+      final emailService = _getEmailService(logger);
+      final result = await emailService.sendEmail(
         to: config.supportEmail,
         subject: emailSubject,
         body: emailBody,
       );
+
+      if (result) {
+        logger?.info('SUPPORT_MANAGER', 'Support email sent successfully');
+      } else {
+        logger?.warning('SUPPORT_MANAGER', 'Failed to open email client');
+      }
+
+      return result;
       // ignore: avoid_catches_without_on_clauses
     } catch (e, stackTrace) {
+      logger?.error(
+        'SUPPORT_MANAGER',
+        'Failed to send support email',
+        error: e,
+        stackTrace: stackTrace,
+      );
       debugPrint('Failed to send support email: $e');
       debugPrint('Stack trace: $stackTrace');
       return false;
@@ -130,19 +172,34 @@ class SupportManager {
     final String? userName,
     final Map<String, String>? additionalContext,
   }) async {
+    final logger = config.logger;
+    logger?.debug('SUPPORT_MANAGER', 'Creating support request');
+
     AppInfo? appInfo;
     DeviceInfo? deviceInfo;
 
     if (config.includeAppInfo) {
-      appInfo = await _appInfoService.getAppInfo();
+      final appInfoService = _getAppInfoService(logger);
+      appInfo = await appInfoService.getAppInfo();
     }
 
     if (config.includeDeviceInfo) {
-      deviceInfo = await _deviceInfoService.getDeviceInfo();
+      final deviceInfoService = _getDeviceInfoService(logger);
+      deviceInfo = await deviceInfoService.getDeviceInfo();
     }
 
     // Merge additional context
     final mergedContext = <String, String>{...config.additionalContext};
+
+    logger?.debug(
+      'SUPPORT_MANAGER',
+      'Support request data collected',
+      data: {
+        'hasAppInfo': appInfo != null,
+        'hasDeviceInfo': deviceInfo != null,
+        'additionalContextCount': mergedContext.length,
+      },
+    );
 
     return SupportRequest(
       subject: subject,
@@ -161,6 +218,13 @@ class SupportManager {
     final SupportConfig config,
     final UiLanguage? language,
   ) {
+    final logger = config.logger;
+    logger?.verbose(
+      'SUPPORT_MANAGER',
+      'Composing email body',
+      data: {'hasCustomTemplate': config.emailTemplate.isNotEmpty},
+    );
+
     if (config.emailTemplate.isNotEmpty) {
       return _applyTemplate(config.emailTemplate, request, config, language);
     }

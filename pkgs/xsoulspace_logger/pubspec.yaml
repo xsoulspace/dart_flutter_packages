@@ -1,7 +1,10 @@
 name: xsoulspace_logger
 description: Generic configurable logger with console and file output support. Pure Dart package for reusable logging across projects.
 version: 0.1.0-beta.1
-publish_to: none
+issue_tracker: https://github.com/xsoulspace/xsoulspace_packages/issues
+documentation: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_logger
+homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_logger
+topics: [logging, dart, xsoulspace]
 
 environment:
   sdk: ">=3.8.0 <4.0.0"
