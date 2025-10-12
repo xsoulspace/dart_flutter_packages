@@ -41,9 +41,12 @@ license: MIT
 
 ### Logger Lifecycle
 
-1. **Initialization**: Create Logger singleton with LoggerConfig
-2. **Usage**: Log throughout application lifecycle
-3. **Disposal**: Flush file buffer on exit (for file output)
+1. **Creation**: Create Logger singleton with LoggerConfig
+2. **Initialization**: Call `await logger.init()` for async setup
+3. **Usage**: Log throughout application lifecycle
+4. **Disposal**: Flush file buffer on exit (for file output)
+
+**Important:** Explicit `await logger.init()` is required after Logger instantiation. This ensures proper async initialization and prevents race conditions, even for console-only configurations.
 
 ### Key Components
 
@@ -67,12 +70,14 @@ license: MIT
 
 ### Integration Points
 
-1. **Application Entry**: Initialize logger in `main()` or app setup
+1. **Application Entry**: Initialize logger in `main()` or app setup, always call `await logger.init()`
 2. **Service Layer**: Log API calls, database operations, business logic
 3. **State Management**: Log state changes, user actions
 4. **UI Layer**: Log critical errors, user interactions
 5. **Error Boundaries**: Catch and log unhandled exceptions
 6. **Lifecycle Management**: Dispose logger on app exit/background
+
+**Note:** The init() call must be awaited before using any logging methods to ensure file writers and other async components are properly initialized.
 
 ### Configuration Parameters
 
@@ -112,6 +117,7 @@ license: MIT
 
 - Add dependency to pubspec.yaml
 - Initialize Logger singleton early in app lifecycle
+- **Always call `await logger.init()` after Logger creation**
 - Choose appropriate configuration preset or create custom config
 - Integrate logging at key application points
 - Set up cleanup for file output
@@ -162,7 +168,7 @@ license: MIT
 
 ## Best Practices
 
-1. **Initialization**: Set up logger before any other operations
+1. **Initialization**: Set up logger before any other operations and **always call `await logger.init()`**
 2. **Presets**: Use built-in configs for common scenarios
 3. **Categories**: Use consistent, hierarchical category names
 4. **Structured Data**: Prefer data maps over string interpolation

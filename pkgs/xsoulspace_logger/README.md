@@ -18,9 +18,10 @@ Generic configurable logger for Dart applications with console and file output s
 ```dart
 import 'package:xsoulspace_logger/xsoulspace_logger.dart';
 
-void main() {
+Future<void> main() async {
   // Initialize logger with debug preset
   final logger = Logger(LoggerConfig.debug());
+  await logger.init();
 
   logger.info('APP', 'Application started');
   logger.debug('AUTH', 'User logged in', data: {'userId': '123'});
@@ -33,19 +34,24 @@ void main() {
 
 ```dart
 // Debug mode: VERBOSE level, console + file
-Logger(LoggerConfig.debug());
+final logger = Logger(LoggerConfig.debug());
+await logger.init();
 
 // Production: INFO level, file only
-Logger(LoggerConfig.production());
+final logger = Logger(LoggerConfig.production());
+await logger.init();
 
 // Verbose: All logs, console + file, large files
-Logger(LoggerConfig.verbose());
+final logger = Logger(LoggerConfig.verbose());
+await logger.init();
 
 // Silent: Errors only
-Logger(LoggerConfig.silent());
+final logger = Logger(LoggerConfig.silent());
+await logger.init();
 
 // Console only (no files)
-Logger(LoggerConfig.consoleOnly());
+final logger = Logger(LoggerConfig.consoleOnly());
+await logger.init();
 ```
 
 ### Custom Configuration
@@ -62,6 +68,7 @@ final config = LoggerConfig(
 );
 
 final logger = Logger(config);
+await logger.init();
 ```
 
 ### Log Methods
@@ -105,9 +112,13 @@ logger.info('API', 'Request completed', data: {
     #1      DatabaseClient.connect (package:myapp/db.dart:45)
 ```
 
-### Cleanup
+### Initialization and Cleanup
 
 ```dart
+// Initialize logger after creation
+final logger = Logger(LoggerConfig.debug());
+await logger.init();
+
 // Flush remaining buffer before exit
 await logger.dispose();
 ```
