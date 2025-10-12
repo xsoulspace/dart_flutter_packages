@@ -9,7 +9,6 @@ import 'logger_config.dart';
 
 /// Main logger class with singleton pattern
 class Logger {
-
   /// Get or create logger instance
   factory Logger([final LoggerConfig? config]) {
     if (_instance == null && config != null) {
@@ -78,20 +77,68 @@ class Logger {
   }
 
   /// Log verbose message
-  void verbose(final String category, final String message, {final Map<String, dynamic>? data}) =>
-      log(LogLevel.verbose, category, message, data: data);
+  void verbose(
+    final String category,
+    final String message, {
+    final Map<String, dynamic>? data,
+    final StackTrace? stackTrace,
+    final Object? error,
+  }) => log(
+    LogLevel.verbose,
+    category,
+    message,
+    data: data,
+    stackTrace: stackTrace,
+    error: error,
+  );
 
   /// Log debug message
-  void debug(final String category, final String message, {final Map<String, dynamic>? data}) =>
-      log(LogLevel.debug, category, message, data: data);
+  void debug(
+    final String category,
+    final String message, {
+    final Map<String, dynamic>? data,
+    final StackTrace? stackTrace,
+    final Object? error,
+  }) => log(
+    LogLevel.debug,
+    category,
+    message,
+    data: data,
+    stackTrace: stackTrace,
+    error: error,
+  );
 
   /// Log info message
-  void info(final String category, final String message, {final Map<String, dynamic>? data}) =>
-      log(LogLevel.info, category, message, data: data);
+  void info(
+    final String category,
+    final String message, {
+    final Map<String, dynamic>? data,
+    final StackTrace? stackTrace,
+    final Object? error,
+  }) => log(
+    LogLevel.info,
+    category,
+    message,
+    data: data,
+    stackTrace: stackTrace,
+    error: error,
+  );
 
   /// Log warning message
-  void warning(final String category, final String message, {final Map<String, dynamic>? data}) =>
-      log(LogLevel.warning, category, message, data: data);
+  void warning(
+    final String category,
+    final String message, {
+    final Map<String, dynamic>? data,
+    final StackTrace? stackTrace,
+    final Object? error,
+  }) => log(
+    LogLevel.warning,
+    category,
+    message,
+    data: data,
+    stackTrace: stackTrace,
+    error: error,
+  );
 
   /// Log error message
   void error(
@@ -166,7 +213,11 @@ class Logger {
     if (stackTrace != null) {
       buffer.writeln('  stackTrace:');
       buffer.writeln(
-        stackTrace.toString().split('\n').map((final line) => '    $line').join('\n'),
+        stackTrace
+            .toString()
+            .split('\n')
+            .map((final line) => '    $line')
+            .join('\n'),
       );
     }
 
@@ -182,7 +233,8 @@ class Logger {
   }
 
   /// Format data map concisely
-  String _formatData(final Map<String, dynamic> data) => data.entries.map((final e) => '${e.key}=${e.value}').join(', ');
+  String _formatData(final Map<String, dynamic> data) =>
+      data.entries.map((final e) => '${e.key}=${e.value}').join(', ');
 
   /// Write to console with appropriate output stream
   void _writeToConsole(final LogLevel level, final String message) {

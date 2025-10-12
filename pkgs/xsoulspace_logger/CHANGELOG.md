@@ -6,6 +6,12 @@ Always review the changelog before upgrading to a new version.
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.0-beta.2] - 2025-10-12
+
+### Added
+
+- added stackTrace and error parameters to the log methods
+
 ## [0.1.0-beta.1] - 2025-10-12
 
 ### Added
