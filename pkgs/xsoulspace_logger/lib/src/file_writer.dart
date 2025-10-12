@@ -8,10 +8,13 @@ import 'logger_config.dart';
 
 /// Handles writing log messages to files with rotation support
 class FileWriter {
-  FileWriter(this.config) {
-    unawaited(_initializeFile());
+  FileWriter(this.config);
+
+  Future<void> init() async {
+    await _initializeFile();
     _startPeriodicFlush();
   }
+
   final LoggerConfig config;
   final List<String> _buffer = [];
   File? _currentFile;

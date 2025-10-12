@@ -34,6 +34,10 @@ class Logger {
     _instance = config != null ? Logger._internal(config) : null;
   }
 
+  Future<void> init() async {
+    await _fileWriter?.init();
+  }
+
   /// Log a message at specified level
   void log(
     final LogLevel level,
