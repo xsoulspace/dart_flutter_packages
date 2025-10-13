@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:xsoulspace_locale/xsoulspace_locale.dart';
+import 'package:xsoulspace_logger/xsoulspace_logger.dart';
 
 const _languages = (
   en: UiLanguage('en', 'English'),
@@ -26,68 +27,85 @@ class _ConsentScreen extends StatelessWidget {
   ///
   /// The [locale] argument is required to determine the language of the
   /// dialog content.
+  /// The [logger] argument is optional for debugging and monitoring.
   ///
   /// @ai Ensure the [locale] is set correctly to provide the user with
   /// localized content.
-  const _ConsentScreen({required this.locale});
+  const _ConsentScreen({required this.locale, this.logger});
   final Locale locale;
+  final Logger? logger;
 
   @override
-  Widget build(final BuildContext context) => AlertDialog(
-    title: Text(
-      LocalizedMap({
-        _languages.en: 'Leave a Review?',
-        _languages.ru: 'Оставить отзыв?',
-        _languages.it: 'Lasciare una recensione?',
-        _languages.zh: '留下评论？',
-        _languages.es: 'Dejar una reseña?',
-        _languages.pt: 'Deixar uma avaliação?',
-        _languages.ja: 'レビューを書きますか？',
-      }).getValue(locale),
-    ),
-    content: Text(
-      LocalizedMap({
-        _languages.en: 'Would you like to leave a review for our app?',
-        _languages.ru: 'Хотите оставить отзыв о нашем приложении?',
-        _languages.it: 'Vorresti lasciare una recensione per la nostra app?',
-        _languages.ja: 'アプリのレビューを書いていただけますか？',
-        _languages.zh: '您想为我们的应用程序留下评论吗？',
-        _languages.es: '¿Te gustaría dejar una reseña para nuestra aplicación?',
-        _languages.pt:
-            'Você gostaria de deixar uma avaliação para a nossa aplicação?',
-      }).getValue(locale),
-    ),
-    actions: <Widget>[
-      TextButton(
-        child: Text(
-          LocalizedMap({
-            _languages.en: 'No',
-            _languages.ru: 'Нет',
-            _languages.it: 'No',
-            _languages.ja: 'いいえ',
-            _languages.zh: '不',
-            _languages.es: 'No',
-            _languages.pt: 'Não',
-          }).getValue(locale),
-        ),
-        onPressed: () => Navigator.of(context).pop(false),
+  Widget build(final BuildContext context) {
+    logger?.debug(
+      'CONSENT',
+      'Displaying consent screen',
+      data: {'locale': locale.toString()},
+    );
+
+    return AlertDialog(
+      title: Text(
+        LocalizedMap({
+          _languages.en: 'Leave a Review?',
+          _languages.ru: 'Оставить отзыв?',
+          _languages.it: 'Lasciare una recensione?',
+          _languages.zh: '留下评论？',
+          _languages.es: 'Dejar una reseña?',
+          _languages.pt: 'Deixar uma avaliação?',
+          _languages.ja: 'レビューを書きますか？',
+        }).getValue(locale),
       ),
-      TextButton(
-        child: Text(
-          LocalizedMap({
-            _languages.en: 'Yes',
-            _languages.ru: 'Да',
-            _languages.it: 'Sì',
-            _languages.ja: 'はい',
-            _languages.zh: '是',
-            _languages.es: 'Sí',
-            _languages.pt: 'Sim',
-          }).getValue(locale),
-        ),
-        onPressed: () => Navigator.of(context).pop(true),
+      content: Text(
+        LocalizedMap({
+          _languages.en: 'Would you like to leave a review for our app?',
+          _languages.ru: 'Хотите оставить отзыв о нашем приложении?',
+          _languages.it: 'Vorresti lasciare una recensione per la nostra app?',
+          _languages.ja: 'アプリのレビューを書いていただけますか？',
+          _languages.zh: '您想为我们的应用程序留下评论吗？',
+          _languages.es:
+              '¿Te gustaría dejar una reseña para nuestra aplicación?',
+          _languages.pt:
+              'Você gostaria de deixar uma avaliação para a nossa aplicação?',
+        }).getValue(locale),
       ),
-    ],
-  );
+      actions: <Widget>[
+        TextButton(
+          child: Text(
+            LocalizedMap({
+              _languages.en: 'No',
+              _languages.ru: 'Нет',
+              _languages.it: 'No',
+              _languages.ja: 'いいえ',
+              _languages.zh: '不',
+              _languages.es: 'No',
+              _languages.pt: 'Não',
+            }).getValue(locale),
+          ),
+          onPressed: () {
+            logger?.info('CONSENT', 'User declined review consent');
+            Navigator.of(context).pop(false);
+          },
+        ),
+        TextButton(
+          child: Text(
+            LocalizedMap({
+              _languages.en: 'Yes',
+              _languages.ru: 'Да',
+              _languages.it: 'Sì',
+              _languages.ja: 'はい',
+              _languages.zh: '是',
+              _languages.es: 'Sí',
+              _languages.pt: 'Sim',
+            }).getValue(locale),
+          ),
+          onPressed: () {
+            logger?.info('CONSENT', 'User granted review consent');
+            Navigator.of(context).pop(true);
+          },
+        ),
+      ],
+    );
+  }
 }
 
 /// Displays a consent dialog and returns the user's response.
@@ -98,6 +116,7 @@ class _ConsentScreen extends StatelessWidget {
 ///
 /// @param context The [BuildContext] used to display the dialog.
 /// @param locale The [Locale] used to determine the language of the dialog.
+/// @param logger Optional [Logger] for debugging and monitoring.
 ///
 /// @return A [Future<bool>] indicating the user's consent response.
 ///
@@ -105,11 +124,18 @@ class _ConsentScreen extends StatelessWidget {
 /// effectively.
 Future<bool> defaultFallbackConsentBuilder(
   final BuildContext context,
-  final Locale locale,
-) async {
+  final Locale locale, {
+  final Logger? logger,
+}) async {
+  logger?.debug('CONSENT', 'Showing consent dialog');
   final result = await showDialog<bool>(
     context: context,
-    builder: (final context) => _ConsentScreen(locale: locale),
+    builder: (final context) => _ConsentScreen(locale: locale, logger: logger),
+  );
+  logger?.info(
+    'CONSENT',
+    'Consent dialog result',
+    data: {'result': result ?? false},
   );
   return result ?? false;
 }

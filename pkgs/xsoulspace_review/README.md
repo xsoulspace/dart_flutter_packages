@@ -161,6 +161,75 @@ final reviewer = RuStoreReviewer(
 
 - `xsoulspace_review_interface` - Base abstractions
 
+## Logging (Optional)
+
+The package supports optional integration with `xsoulspace_logger` for debugging and monitoring. Logging is completely optional - the library works perfectly without it.
+
+### Why Optional?
+
+Pass a logger instance only when you need debugging or monitoring capabilities. When not provided, there's zero overhead.
+
+### Basic Usage
+
+```dart
+import 'package:flutter/foundation.dart';
+import 'package:xsoulspace_logger/xsoulspace_logger.dart';
+import 'package:xsoulspace_review/xsoulspace_review.dart';
+
+// Initialize logger in your app
+final logger = Logger(
+  kDebugMode
+      ? LoggerConfig.debug()
+      : LoggerConfig.production(),
+);
+await logger.init();
+
+// Pass logger to components
+final requester = StoreReviewRequester(
+  localDb: yourLocalDb,
+  logger: logger, // Optional
+);
+
+final reviewFoundation = ReviewFoundation(
+  storeReviewer: storeReviewer,
+  requester: requester,
+  logger: logger, // Optional
+);
+```
+
+### Configuration Presets
+
+Use `ReviewLoggerConfig` for environment-aware presets:
+
+```dart
+// Debug mode: verbose logging, console + file
+final debugConfig = ReviewLoggerConfig.getConfig(isDebugMode: true);
+
+// Production: info level, optional file logging
+final prodConfig = ReviewLoggerConfig.getConfig(
+  isDebugMode: false,
+  enableFileLogging: true,
+);
+
+// Testing: console only, warnings and above
+final testConfig = ReviewLoggerConfig.testing;
+```
+
+### Log Categories
+
+When logger is provided, these categories are used:
+
+- `REVIEW` - Store review operations
+- `FEEDBACK` - User feedback operations
+- `CONSENT` - User consent management
+
+### Benefits
+
+- **Development**: Detailed debugging information
+- **Production**: Monitor review flow and issues
+- **Testing**: Track user interactions
+- **Optional**: No overhead when not used
+
 ## Migration from Old xsoulspace_review
 
 See [MIGRATION.md](MIGRATION.md) for detailed migration guide.

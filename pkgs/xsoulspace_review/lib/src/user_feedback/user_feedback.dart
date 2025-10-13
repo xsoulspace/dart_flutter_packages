@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:wiredash/wiredash.dart';
+import 'package:xsoulspace_logger/xsoulspace_logger.dart';
 
 export 'wiredash_custom_delegate.dart';
 
@@ -65,6 +66,7 @@ class UserFeedbackWiredashDto {
 ///     projectId: 'your-project-id',
 ///     secret: 'your-secret',
 ///   ),
+///   logger: myLogger, // Optional
 ///   child: MyApp(),
 /// );
 /// ```
@@ -74,6 +76,7 @@ class UserFeedback extends StatelessWidget {
   const UserFeedback.wiredash({
     required this.child,
     required final UserFeedbackWiredashDto dto,
+    this.logger,
     super.key,
   }) : wiredashDto = dto;
 
@@ -83,22 +86,38 @@ class UserFeedback extends StatelessWidget {
   /// Wiredash configuration
   final UserFeedbackWiredashDto wiredashDto;
 
+  /// Optional logger for debugging and monitoring
+  final Logger? logger;
+
   /// Shows the feedback form.
   ///
   /// Call this method to manually trigger the feedback form.
-  static Future<void> show(final BuildContext context) =>
-      Wiredash.of(context).show();
+  ///
+  /// [context] - Build context for accessing Wiredash
+  /// [logger] - Optional logger for debugging
+  static Future<void> show(final BuildContext context, {final Logger? logger}) {
+    logger?.debug('FEEDBACK', 'Opening feedback form');
+    return Wiredash.of(context).show();
+  }
 
   @override
-  Widget build(final BuildContext context) => Wiredash(
-    projectId: wiredashDto.projectId,
-    secret: wiredashDto.secret,
-    collectMetaData: wiredashDto.collectMetaData,
-    feedbackOptions: wiredashDto.feedbackOptions,
-    psOptions: wiredashDto.psOptions,
-    theme: wiredashDto.theme,
-    options: wiredashDto.options,
-    padding: wiredashDto.padding,
-    child: child,
-  );
+  Widget build(final BuildContext context) {
+    logger?.debug(
+      'FEEDBACK',
+      'Initializing Wiredash feedback system',
+      data: {'projectId': wiredashDto.projectId},
+    );
+
+    return Wiredash(
+      projectId: wiredashDto.projectId,
+      secret: wiredashDto.secret,
+      collectMetaData: wiredashDto.collectMetaData,
+      feedbackOptions: wiredashDto.feedbackOptions,
+      psOptions: wiredashDto.psOptions,
+      theme: wiredashDto.theme,
+      options: wiredashDto.options,
+      padding: wiredashDto.padding,
+      child: child,
+    );
+  }
 }

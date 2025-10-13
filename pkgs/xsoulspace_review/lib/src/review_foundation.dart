@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:xsoulspace_logger/xsoulspace_logger.dart';
 import 'package:xsoulspace_review_interface/xsoulspace_review_interface.dart';
 
 import 'store_review_requester.dart';
@@ -16,6 +17,7 @@ import 'store_review_requester.dart';
 /// final foundation = ReviewFoundation(
 ///   storeReviewer: GoogleAppleStoreReviewer(),
 ///   requester: StoreReviewRequester(localDb: yourLocalDb),
+///   logger: myLogger, // Optional
 /// );
 ///
 /// await foundation.init();
@@ -24,7 +26,11 @@ import 'store_review_requester.dart';
 /// {@endtemplate}
 class ReviewFoundation {
   /// {@macro review_foundation}
-  ReviewFoundation({required this.storeReviewer, required this.requester});
+  ReviewFoundation({
+    required this.storeReviewer,
+    required this.requester,
+    this.logger,
+  });
 
   /// {@macro store_reviewer}
   final StoreReviewer storeReviewer;
@@ -32,13 +38,28 @@ class ReviewFoundation {
   /// {@macro store_review_requester}
   final StoreReviewRequester requester;
 
+  /// Optional logger for debugging and monitoring
+  final Logger? logger;
+
   /// Initializes the review system.
   ///
   /// Calls [StoreReviewer.onLoad] and [StoreReviewRequester.onLoad]
   /// to prepare the review functionality.
   Future<void> init() async {
-    await storeReviewer.onLoad();
-    await requester.onLoad(storeReviewer: storeReviewer);
+    logger?.info('REVIEW', 'Initializing review foundation');
+    try {
+      await storeReviewer.onLoad();
+      await requester.onLoad(storeReviewer: storeReviewer);
+      logger?.info('REVIEW', 'Review foundation initialized successfully');
+    } catch (e, stack) {
+      logger?.error(
+        'REVIEW',
+        'Failed to initialize review foundation',
+        error: e,
+        stackTrace: stack,
+      );
+      rethrow;
+    }
   }
 
   /// Requests a review from the user.
@@ -53,8 +74,18 @@ class ReviewFoundation {
     final BuildContext context, {
     final Locale? locale,
     final bool force = false,
-  }) => requester.requestReview(context: context, locale: locale);
+  }) {
+    logger?.debug(
+      'REVIEW',
+      'Review requested via foundation',
+      data: {'force': force, 'hasLocale': locale != null},
+    );
+    return requester.requestReview(context: context, locale: locale);
+  }
 
   /// Disposes of resources.
-  void dispose() => requester.dispose();
+  void dispose() {
+    logger?.debug('REVIEW', 'Disposing review foundation');
+    requester.dispose();
+  }
 }

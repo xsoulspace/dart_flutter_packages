@@ -16,9 +16,12 @@ dependencies:
   wiredash: ^2.5.0
   xsoulspace_foundation: ^0.2.1
   xsoulspace_locale: ^0.3.2
+  xsoulspace_logger: ^0.2.0-beta.1
   xsoulspace_review_interface:
     path: ../xsoulspace_review_interface
 
 dev_dependencies:
+  flutter_test:
+    sdk: flutter
   lints: ^6.0.0
   xsoulspace_lints: ^0.1.2
