@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:xsoulspace_locale/xsoulspace_locale.dart';
 import 'package:xsoulspace_logger/xsoulspace_logger.dart';
 
+import 'logger_extensions.dart';
+
 const _languages = (
   en: UiLanguage('en', 'English'),
   ru: UiLanguage('ru', 'Russian'),
@@ -37,8 +39,7 @@ class _ConsentScreen extends StatelessWidget {
 
   @override
   Widget build(final BuildContext context) {
-    logger?.debug(
-      'CONSENT',
+    logger.logConsent(
       'Displaying consent screen',
       data: {'locale': locale.toString()},
     );
@@ -82,7 +83,7 @@ class _ConsentScreen extends StatelessWidget {
             }).getValue(locale),
           ),
           onPressed: () {
-            logger?.info('CONSENT', 'User declined review consent');
+            logger.logConsent('User declined review consent');
             Navigator.of(context).pop(false);
           },
         ),
@@ -99,7 +100,7 @@ class _ConsentScreen extends StatelessWidget {
             }).getValue(locale),
           ),
           onPressed: () {
-            logger?.info('CONSENT', 'User granted review consent');
+            logger.logConsent('User granted review consent');
             Navigator.of(context).pop(true);
           },
         ),
@@ -127,15 +128,11 @@ Future<bool> defaultFallbackConsentBuilder(
   final Locale locale, {
   final Logger? logger,
 }) async {
-  logger?.debug('CONSENT', 'Showing consent dialog');
+  logger.logConsent('Showing consent dialog');
   final result = await showDialog<bool>(
     context: context,
     builder: (final context) => _ConsentScreen(locale: locale, logger: logger),
   );
-  logger?.info(
-    'CONSENT',
-    'Consent dialog result',
-    data: {'result': result ?? false},
-  );
+  logger.logConsent('Consent dialog result', data: {'result': result ?? false});
   return result ?? false;
 }

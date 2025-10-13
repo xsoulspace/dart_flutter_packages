@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:wiredash/wiredash.dart';
 import 'package:xsoulspace_logger/xsoulspace_logger.dart';
 
+import '../logger_extensions.dart';
+
 export 'wiredash_custom_delegate.dart';
 
 /// {@template user_feedback_wiredash_dto}
@@ -96,14 +98,13 @@ class UserFeedback extends StatelessWidget {
   /// [context] - Build context for accessing Wiredash
   /// [logger] - Optional logger for debugging
   static Future<void> show(final BuildContext context, {final Logger? logger}) {
-    logger?.debug('FEEDBACK', 'Opening feedback form');
+    logger.logFeedback('Opening feedback form');
     return Wiredash.of(context).show();
   }
 
   @override
   Widget build(final BuildContext context) {
-    logger?.debug(
-      'FEEDBACK',
+    logger.logFeedback(
       'Initializing Wiredash feedback system',
       data: {'projectId': wiredashDto.projectId},
     );

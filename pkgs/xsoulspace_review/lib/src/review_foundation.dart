@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:xsoulspace_logger/xsoulspace_logger.dart';
 import 'package:xsoulspace_review_interface/xsoulspace_review_interface.dart';
 
+import 'logger_extensions.dart';
 import 'store_review_requester.dart';
 
 /// {@template review_foundation}
@@ -46,18 +47,13 @@ class ReviewFoundation {
   /// Calls [StoreReviewer.onLoad] and [StoreReviewRequester.onLoad]
   /// to prepare the review functionality.
   Future<void> init() async {
-    logger?.info('REVIEW', 'Initializing review foundation');
+    logger.logReviewDebug('Initializing review foundation');
     try {
       await storeReviewer.onLoad();
       await requester.onLoad(storeReviewer: storeReviewer);
-      logger?.info('REVIEW', 'Review foundation initialized successfully');
+      logger.logReviewDebug('Review foundation initialized successfully');
     } catch (e, stack) {
-      logger?.error(
-        'REVIEW',
-        'Failed to initialize review foundation',
-        error: e,
-        stackTrace: stack,
-      );
+      logger.logReviewError('Failed to initialize review foundation', e, stack);
       rethrow;
     }
   }
@@ -75,8 +71,7 @@ class ReviewFoundation {
     final Locale? locale,
     final bool force = false,
   }) {
-    logger?.debug(
-      'REVIEW',
+    logger.logReviewDebug(
       'Review requested via foundation',
       data: {'force': force, 'hasLocale': locale != null},
     );
@@ -85,7 +80,7 @@ class ReviewFoundation {
 
   /// Disposes of resources.
   void dispose() {
-    logger?.debug('REVIEW', 'Disposing review foundation');
+    logger.logReviewDebug('Disposing review foundation');
     requester.dispose();
   }
 }

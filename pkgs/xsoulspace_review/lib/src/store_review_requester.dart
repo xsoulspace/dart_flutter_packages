@@ -5,6 +5,8 @@ import 'package:xsoulspace_foundation/xsoulspace_foundation.dart';
 import 'package:xsoulspace_logger/xsoulspace_logger.dart';
 import 'package:xsoulspace_review_interface/xsoulspace_review_interface.dart';
 
+import 'logger_extensions.dart';
+
 /// {@template store_review_requester}
 /// A class responsible for managing review requests for a store.
 ///
@@ -84,22 +86,21 @@ class StoreReviewRequester extends ChangeNotifier {
   /// If no previous request exists, it schedules the first review request.
   /// Otherwise, it schedules based on the elapsed time and review count.
   Future<void> onLoad({final StoreReviewer? storeReviewer}) async {
-    logger?.debug('REVIEW', 'Initializing review requester');
+    logger.logReviewDebug('Initializing review requester');
 
     if (storeReviewer != null) _storeReviewer = storeReviewer;
     await _storeReviewer.onLoad();
     isAvailable = await _storeReviewer.onLoad();
 
     if (!isAvailable) {
-      logger?.warning('REVIEW', 'Store reviewer is not available');
+      logger.logReviewWarning('Store reviewer is not available');
       return;
     }
 
     final lastReviewRequest = await localDb.getInt(key: _lastReviewRequestKey);
     final reviewCount = await localDb.getInt(key: _reviewCountKey);
 
-    logger?.debug(
-      'REVIEW',
+    logger.logReviewDebug(
       'Review state loaded',
       data: {
         'lastReviewRequest': lastReviewRequest,
@@ -109,8 +110,7 @@ class StoreReviewRequester extends ChangeNotifier {
     );
 
     if (reviewCount >= maxReviewCount) {
-      logger?.info(
-        'REVIEW',
+      logger.logReviewDebug(
         'Maximum review count reached',
         data: {'reviewCount': reviewCount, 'maxReviewCount': maxReviewCount},
       );
@@ -118,8 +118,7 @@ class StoreReviewRequester extends ChangeNotifier {
     }
 
     if (lastReviewRequest == 0) {
-      logger?.debug(
-        'REVIEW',
+      logger.logReviewDebug(
         'First review scheduled',
         data: {'delay': firstReviewPeriod.toString()},
       );
@@ -132,15 +131,11 @@ class StoreReviewRequester extends ChangeNotifier {
       final currentPeriod = reviewCount == 0 ? firstReviewPeriod : reviewPeriod;
 
       if (timeSinceLastRequest >= currentPeriod) {
-        logger?.debug(
-          'REVIEW',
-          'Review period elapsed, scheduling immediately',
-        );
+        logger.logReviewDebug('Review period elapsed, scheduling immediately');
         _scheduleReviewRequest();
       } else {
         final remainingTime = currentPeriod - timeSinceLastRequest;
-        logger?.debug(
-          'REVIEW',
+        logger.logReviewDebug(
           'Scheduling review',
           data: {'remainingTime': remainingTime.toString()},
         );
@@ -154,11 +149,7 @@ class StoreReviewRequester extends ChangeNotifier {
     if (!isAvailable) return;
     _timer?.cancel();
     final delay = initialDelay ?? reviewPeriod;
-    logger?.debug(
-      'REVIEW',
-      'Timer scheduled',
-      data: {'delay': delay.toString()},
-    );
+    logger.logReviewDebug('Timer scheduled', data: {'delay': delay.toString()});
     _timer = Timer(delay, requestReview);
   }
 
@@ -169,15 +160,14 @@ class StoreReviewRequester extends ChangeNotifier {
     final Locale? locale,
   }) async {
     if (!isAvailable) {
-      logger?.warning('REVIEW', 'Review request skipped - not available');
+      logger.logReviewWarning('Review request skipped - not available');
       return;
     }
 
     final isManual = context != null;
     final reviewCount = await localDb.getInt(key: _reviewCountKey);
 
-    logger?.info(
-      'REVIEW',
+    logger.logReviewDebug(
       'Review request initiated',
       data: {
         'isManual': isManual,
@@ -187,8 +177,7 @@ class StoreReviewRequester extends ChangeNotifier {
     );
 
     if (reviewCount >= maxReviewCount && !isManual) {
-      logger?.warning(
-        'REVIEW',
+      logger.logReviewWarning(
         'Review request skipped - max count reached',
         data: {'reviewCount': reviewCount, 'maxReviewCount': maxReviewCount},
       );
@@ -206,25 +195,16 @@ class StoreReviewRequester extends ChangeNotifier {
         await _updateLastReviewRequestTime();
         await _incrementReviewCount();
 
-        logger?.info(
-          'REVIEW',
+        logger.logReviewDebug(
           'Review request completed successfully',
           data: {'newCount': reviewCount + 1},
         );
       } catch (e, stack) {
-        logger?.error(
-          'REVIEW',
-          'Failed to request review',
-          error: e,
-          stackTrace: stack,
-        );
+        logger.logReviewError('Failed to request review', e, stack);
         rethrow;
       }
     } else {
-      logger?.warning(
-        'REVIEW',
-        'Review request skipped - no context available',
-      );
+      logger.logReviewWarning('Review request skipped - no context available');
     }
     _scheduleReviewRequest();
   }

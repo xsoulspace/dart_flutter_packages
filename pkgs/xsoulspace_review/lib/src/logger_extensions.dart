@@ -60,4 +60,15 @@ extension ReviewLoggerExtensions on Logger? {
   void logReviewDebug(String message, {Map<String, dynamic>? data}) {
     this?.debug('REVIEW', message, data: data);
   }
+
+  /// Log review-related warning
+  ///
+  /// Logs to 'REVIEW' category at warning level.
+  /// Safe to call on null logger.
+  ///
+  /// - [message] - Warning message
+  /// - [data] - Optional structured data
+  void logReviewWarning(String message, {Map<String, dynamic>? data}) {
+    this?.warning('REVIEW', message, data: data);
+  }
 }
