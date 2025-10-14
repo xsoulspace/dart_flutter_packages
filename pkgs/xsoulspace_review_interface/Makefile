@@ -1,12 +1,17 @@
 get:
-	dart pub get
+	flutter pub get
 
 test:
-	dart test
+	flutter test
 
 analyze:
-	dart analyze
+	flutter analyze
 
 format:
 	dart format .
 
+publish-dry:
+	flutter pub publish --dry-run
+
+publish:
+	flutter pub publish
