@@ -1,4 +1,4 @@
-## 0.1.0
+## 0.4.0-beta.2
 
 - Initial release
 - Linux Snap Store support via snap:// scheme

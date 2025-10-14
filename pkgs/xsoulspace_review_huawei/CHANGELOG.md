@@ -1,4 +1,4 @@
-## 0.1.0
+## 0.4.0-beta.2
 
 - Initial release
 - Placeholder implementation for Huawei AppGallery
