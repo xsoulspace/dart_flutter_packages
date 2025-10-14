@@ -1,6 +1,6 @@
 name: xsoulspace_review_interface
 description: Common interfaces for xsoulspace_review packages
-version: 0.1.0
+version: 0.4.0-beta.2
 homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_review_interface
 repository: https://github.com/xsoulspace/dart_flutter_packages
 issue_tracker: https://github.com/xsoulspace/xsoulspace_packages/issues

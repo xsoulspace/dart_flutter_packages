@@ -12,8 +12,7 @@ dependencies:
   flutter:
     sdk: flutter
   in_app_review: ^2.0.10
-  xsoulspace_review_interface:
-    path: ../xsoulspace_review_interface
+  xsoulspace_review_interface: ^0.4.0-beta.2
 
 dev_dependencies:
   lints: ^6.0.0

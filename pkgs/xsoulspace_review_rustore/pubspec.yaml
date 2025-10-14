@@ -12,8 +12,7 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_rustore_review: ^9.1.0
-  xsoulspace_review_interface:
-    path: ../xsoulspace_review_interface
+  xsoulspace_review_interface: ^0.4.0-beta.2
 
 dev_dependencies:
   lints: ^6.0.0
