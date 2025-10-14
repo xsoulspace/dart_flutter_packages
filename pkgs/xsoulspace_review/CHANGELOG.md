@@ -1,3 +1,24 @@
+## Unreleased
+
+### Added
+
+- Optional `xsoulspace_logger` integration for structured logging and debugging
+- `ReviewLoggerConfig` with environment-aware configuration presets
+- Optional logger parameter in all major components:
+  - `StoreReviewRequester` accepts optional `Logger? logger`
+  - `UserFeedback` accepts optional `Logger? logger`
+  - `ConsentScreen` accepts optional `Logger? logger`
+  - `ReviewFoundation` accepts optional `Logger? logger`
+- `ReviewLoggerExtensions` for convenient domain-specific logging helpers
+- Comprehensive logging integration tests
+
+### Changed
+
+- Components now support dependency injection for logger
+- Enhanced debugging capabilities when logger provided
+- Library remains fully functional without logger (zero overhead)
+- Improved error handling with optional detailed logging
+
 ## 0.4.0-beta.1
 
 - BREAKING CHANGE: `xsoulspace_review` package is now split into several packages:
