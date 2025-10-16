@@ -30,10 +30,22 @@ orderedMap.upsert('bob', User(name: 'Bob'));
 print(orderedMap['alice']); // User(name: 'Alice')
 print(orderedMap.orderedValues); // [User(Alice), User(Bob)]
 
-// Reactive notifier for state management
+// Efficient batch operations
+final users = [
+  User(id: 'user1', name: 'Alice'),
+  User(id: 'user2', name: 'Bob'),
+  User(id: 'user3', name: 'Charlie'),
+];
+
+// Batch insert multiple users efficiently (single cache invalidation)
+orderedMap.upsertAll(users);
+
+// Reactive notifier for state management with efficient batch updates
 final userNotifier = OrderedMapNotifier<String, User>();
 userNotifier.addListener(() => print('Users changed'));
-userNotifier.upsert('alice', User(name: 'Alice')); // Triggers listener
+
+// Batch update with single notification (prevents excessive UI rebuilds)
+userNotifier.upsertAll(users);
 ```
 
 ## Core Components

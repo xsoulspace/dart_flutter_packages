@@ -146,7 +146,7 @@ class MutableOrderedMap<K, V> with Iterable<K> {
   /// map.upsertAll([
   ///   User(id: 'user3', name: 'Charlie'),
   ///   User(id: 'user4', name: 'David'),
-  /// ], keyOverride: (user) => 'custom_${user.id}');
+  /// ], toKey: (user) => 'custom_${user.id}');
   /// ```
   ///
   /// @ai Use this method for efficient batch updates instead of multiple individual upsert() calls.
@@ -493,7 +493,7 @@ class ImmutableOrderedMap<K, V> with Iterable<K> {
   /// // Using custom key extraction
   /// map.upsertAll([
   ///   User(id: 'user5', name: 'Eve'),
-  /// ], keyOverride: (user) => 'custom_${user.id}');
+  /// ], toKey: (user) => 'custom_${user.id}');
   /// ```
   ///
   /// @ai Use this method for efficient batch updates instead of multiple individual upsert() calls.

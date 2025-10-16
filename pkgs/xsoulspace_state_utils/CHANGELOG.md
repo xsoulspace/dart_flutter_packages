@@ -6,6 +6,12 @@ Always review the changelog before upgrading to a new version.
 
 # Changelog
 
+## 0.5.0
+
+- added: `upsertAll` method for `MutableOrderedMap` with optional `toKey` parameter for efficient batch operations.
+- added: `upsertAll` method for `ImmutableOrderedMap` with optional `putFirst` and `toKey` parameters for efficient batch operations.
+- added: `upsertAll` method for `OrderedMapNotifier` with single notification for efficient reactive batch operations.
+
 ## 0.4.0
 
 - chore: xsoulspace_foundation 0.2.2

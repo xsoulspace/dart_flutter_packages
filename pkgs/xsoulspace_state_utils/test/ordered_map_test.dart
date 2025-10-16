@@ -461,7 +461,7 @@ void main() {
         expect(map['key1'], 'value1');
       });
 
-      test('uses keyOverride function when provided', () {
+      test('uses toKey function when provided', () {
         final map = env.makeMutableOrderedMap<String, String>(stringToKey);
         map.upsert('value1', key: 'key1');
 
@@ -1045,7 +1045,7 @@ void main() {
           expect(map['key1'], 'value1');
         });
 
-        test('uses keyOverride function when provided', () {
+        test('uses toKey function when provided', () {
           final map = env.makeImmutableOrderedMap<String, String>(stringToKey);
           map.upsert('value1', key: 'key1');
 

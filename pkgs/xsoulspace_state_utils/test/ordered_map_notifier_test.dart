@@ -740,7 +740,7 @@ void main() {
           );
         });
 
-        test('uses keyOverride function when provided', () {
+        test('uses toKey function when provided', () {
           final notifier = env.makeOrderedMapNotifier<String, String>(
             stringToKey,
           );
