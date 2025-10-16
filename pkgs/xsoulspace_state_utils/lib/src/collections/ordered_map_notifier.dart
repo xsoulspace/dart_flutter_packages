@@ -68,7 +68,7 @@ class OrderedMapNotifier<K, V> extends ImmutableOrderedMap<K, V>
   ///
   /// @ai Provide a consistent [toKey] function to ensure reliable key generation and reactive updates.
   /// {@endtemplate}
-  OrderedMapNotifier({required super.toKey}) {
+  OrderedMapNotifier({super.toKey}) {
     if (kFlutterMemoryAllocationsEnabled) {
       ChangeNotifier.maybeDispatchObjectCreation(this);
     }
@@ -119,10 +119,12 @@ class OrderedMapNotifier<K, V> extends ImmutableOrderedMap<K, V>
   void upsertAll(
     final Iterable<V> values, {
     final bool putFirst = false,
-    final K? Function(V)? keyOverride,
+    final K? Function(V)? toKey,
   }) {
-    super.upsertAll(values, putFirst: putFirst, keyOverride: keyOverride);
-    notifyListeners(); // Single notification at the end
+    super.upsertAll(values, putFirst: putFirst, toKey: toKey);
+    if (values.isNotEmpty) {
+      notifyListeners();
+    }
   }
 
   /// {@template ordered_map_notifier_remove}

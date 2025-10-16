@@ -47,13 +47,6 @@ void main() {
         );
         expect(notifier, isA<ChangeNotifier>());
       });
-
-      test('requires toKey function', () {
-        expect(
-          () => OrderedMapNotifier<String, String>(toKey: null as dynamic),
-          throwsA(isA<TypeError>()),
-        );
-      });
     });
 
     group('upsert with notifications', () {
@@ -615,6 +608,279 @@ void main() {
         expect(cacheNotifier, hasLength(6));
         expect(cacheNotifier.first, 'key3'); // Most recently updated
         expect(notificationCount, 7); // 5 adds + 1 update + 1 new add
+      });
+
+      group('upsertAll with notifications', () {
+        test('adds multiple items and notifies once', () {
+          final notifier = env.makeOrderedMapNotifier<String, String>(
+            stringToKey,
+          );
+          var notificationCount = 0;
+
+          notifier.addListener(() => notificationCount++);
+          notifier.upsertAll([
+            'value1',
+            'value2',
+          ], toKey: (final v) => v.replaceAll('value', 'key'));
+
+          expect(notifier, hasLength(2));
+          expect(notifier['key1'], 'value1');
+          expect(notifier['key2'], 'value2');
+          expect(notifier.keys, ['key1', 'key2']);
+          expect(
+            notificationCount,
+            1,
+            reason: 'Should notify only once for batch operation',
+          );
+        });
+
+        test('updates multiple items and notifies once', () {
+          final notifier = env.makeOrderedMapNotifier<String, String>(
+            stringToKey,
+          );
+          notifier.upsert('value1', key: 'key1');
+          notifier.upsert('value2', key: 'key2');
+
+          var notificationCount = 0;
+          notifier.addListener(() => notificationCount++);
+
+          notifier.upsertAll([
+            'updated1',
+            'updated2',
+          ], toKey: (final v) => v.replaceAll('updated', 'key'));
+
+          expect(notifier, hasLength(2));
+          expect(notifier['key1'], 'updated1');
+          expect(notifier['key2'], 'updated2');
+          expect(
+            notificationCount,
+            1,
+            reason: 'Should notify only once for batch operation',
+          );
+        });
+
+        test('adds items at beginning with putFirst and notifies once', () {
+          final notifier = env.makeOrderedMapNotifier<String, String>(
+            stringToKey,
+          );
+          notifier.upsert('value1', key: 'key1');
+          notifier.upsert('value2', key: 'key2');
+
+          var notificationCount = 0;
+          notifier.addListener(() => notificationCount++);
+
+          notifier.upsertAll(
+            ['value3', 'value4'],
+            putFirst: true,
+            toKey: (final v) => v.replaceAll('value', 'key'),
+          );
+
+          expect(notifier, hasLength(4));
+          expect(notifier.keys, ['key3', 'key4', 'key1', 'key2']);
+          expect(notifier.orderedValues, [
+            'value3',
+            'value4',
+            'value1',
+            'value2',
+          ]);
+          expect(
+            notificationCount,
+            1,
+            reason: 'Should notify only once for batch operation',
+          );
+        });
+
+        test('mixed new and existing keys notify once', () {
+          final notifier = env.makeOrderedMapNotifier<String, String>(
+            stringToKey,
+          );
+          notifier.upsert('value1', key: 'key1');
+          notifier.upsert('value2', key: 'key2');
+
+          var notificationCount = 0;
+          notifier.addListener(() => notificationCount++);
+
+          notifier.upsertAll(
+            ['updated2', 'value3'],
+            toKey: (final v) => switch (v) {
+              'updated2' => 'key2',
+              'value3' => 'key3',
+              _ => throw ArgumentError.value(v, 'v', 'Invalid value'),
+            },
+          );
+
+          expect(notifier, hasLength(3));
+          expect(notifier['key1'], 'value1'); // unchanged
+          expect(notifier['key2'], 'updated2'); // updated
+          expect(notifier['key3'], 'value3'); // new
+          expect(
+            notificationCount,
+            1,
+            reason: 'Should notify only once for batch operation',
+          );
+        });
+
+        test('does not notify when adding empty iterable', () {
+          final notifier = env.makeOrderedMapNotifier<String, String>(
+            stringToKey,
+          );
+          notifier.upsert('value1', key: 'key1');
+
+          var notificationCount = 0;
+          notifier.addListener(() => notificationCount++);
+
+          notifier.upsertAll([]);
+
+          expect(notifier, hasLength(1));
+          expect(notifier['key1'], 'value1');
+          expect(
+            notificationCount,
+            0,
+            reason: 'Should not notify when no changes occur',
+          );
+        });
+
+        test('uses keyOverride function when provided', () {
+          final notifier = env.makeOrderedMapNotifier<String, String>(
+            stringToKey,
+          );
+          notifier.upsert('value1', key: 'key1');
+
+          var notificationCount = 0;
+          notifier.addListener(() => notificationCount++);
+
+          notifier.upsertAll([
+            'value2',
+            'value3',
+          ], toKey: (final v) => 'custom_${v.replaceAll('value', 'key')}');
+
+          expect(notifier, hasLength(3));
+          expect(notifier['custom_key2'], 'value2');
+          expect(notifier['custom_key3'], 'value3');
+          expect(notifier.keys, ['key1', 'custom_key2', 'custom_key3']);
+          expect(
+            notificationCount,
+            1,
+            reason: 'Should notify only once for batch operation',
+          );
+        });
+
+        test('single notification for large batch', () {
+          final notifier = env.makeOrderedMapNotifier<String, String>(
+            stringToKey,
+          );
+          var notificationCount = 0;
+          const count = 100;
+
+          notifier.addListener(() => notificationCount++);
+
+          final values = List.generate(count, (final i) => 'value$i');
+          notifier.upsertAll(
+            values,
+            toKey: (final v) => v.replaceAll('value', 'key'),
+          );
+
+          expect(notifier, hasLength(count));
+          expect(notifier['key0'], 'value0');
+          expect(notifier['key99'], 'value99');
+          expect(
+            notificationCount,
+            1,
+            reason: 'Should notify only once for large batch operation',
+          );
+        });
+
+        test('notification includes all changes', () {
+          final notifier = env.makeOrderedMapNotifier<String, String>(
+            stringToKey,
+          );
+          notifier.upsert('value1', key: 'key1');
+          notifier.upsert('value2', key: 'key2');
+
+          final operations = <String>[];
+          notifier.addListener(() {
+            operations.add(
+              'length: ${notifier.length}, keys: ${notifier.keys.join(",")}',
+            );
+          });
+
+          notifier.upsertAll(
+            ['updated2', 'value3'],
+            toKey: (final v) => switch (v) {
+              'updated2' => 'key2',
+              'value3' => 'key3',
+              _ => throw ArgumentError.value(v, 'v', 'Invalid value'),
+            },
+          );
+
+          expect(operations, hasLength(1));
+          expect(operations.first, 'length: 3, keys: key1,key2,key3');
+        });
+
+        test('maintains order in notification payload', () {
+          final notifier = env.makeOrderedMapNotifier<String, String>(
+            stringToKey,
+          );
+          notifier.upsert('value1', key: 'key1');
+          notifier.upsert('value2', key: 'key2');
+
+          final operations = <String>[];
+          notifier.addListener(() {
+            operations.add('values: ${notifier.orderedValues.join(",")}');
+          });
+
+          notifier.upsertAll(
+            ['updated2', 'value3'],
+            toKey: (final v) => switch (v) {
+              'updated2' => 'key2',
+              'value3' => 'key3',
+              _ => throw ArgumentError.value(v, 'v', 'Invalid value'),
+            },
+          );
+
+          expect(operations, hasLength(1));
+          expect(operations.first, 'values: value1,updated2,value3');
+        });
+
+        test('compares performance with individual upsert calls', () {
+          final notifier1 = env.makeOrderedMapNotifier<String, String>(
+            stringToKey,
+          );
+          final notifier2 = env.makeOrderedMapNotifier<String, String>(
+            stringToKey,
+          );
+
+          var notificationCount1 = 0;
+          var notificationCount2 = 0;
+
+          notifier1.addListener(() => notificationCount1++);
+          notifier2.addListener(() => notificationCount2++);
+
+          // Batch operation
+          notifier1.upsertAll([
+            'value1',
+            'value2',
+            'value3',
+          ], toKey: (final v) => v.replaceAll('value', 'key'));
+
+          // Individual operations
+          notifier2.upsert('value1', key: 'key1');
+          notifier2.upsert('value2', key: 'key2');
+          notifier2.upsert('value3', key: 'key3');
+
+          expect(notifier1.keys, notifier2.keys);
+          expect(notifier1.orderedValues, notifier2.orderedValues);
+          expect(
+            notificationCount1,
+            1,
+            reason: 'Batch operation should notify once',
+          );
+          expect(
+            notificationCount2,
+            3,
+            reason: 'Individual operations should notify three times',
+          );
+        });
       });
     });
   });

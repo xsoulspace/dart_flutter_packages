@@ -130,7 +130,7 @@ class MutableOrderedMap<K, V> with Iterable<K> {
   ///
   /// This method efficiently processes multiple values in a single operation,
   /// performing a single cache invalidation at the end rather than after each item.
-  /// The [keyOverride] function can be used to provide custom key extraction
+  /// The [toKey] function can be used to provide custom key extraction
   /// for this operation, overriding the default [toKey] function.
   ///
   /// ```dart
@@ -150,14 +150,14 @@ class MutableOrderedMap<K, V> with Iterable<K> {
   /// ```
   ///
   /// @ai Use this method for efficient batch updates instead of multiple individual upsert() calls.
-  /// The [keyOverride] parameter is useful when you need different key extraction for specific operations.
+  /// The [toKey] parameter is useful when you need different key extraction for specific operations.
   /// {@endtemplate}
-  void upsertAll(
-    final Iterable<V> values, {
-    final K? Function(V)? keyOverride,
-  }) {
+  void upsertAll(final Iterable<V> values, {final K? Function(V)? toKey}) {
+    if (values.isEmpty) {
+      return;
+    }
     for (final value in values) {
-      final effectiveKey = keyOverride?.call(value) ?? toKey?.call(value);
+      final effectiveKey = toKey?.call(value) ?? this.toKey?.call(value);
       if (effectiveKey == null) {
         throw ArgumentError.value(value, 'key', 'Key not provided');
       }
@@ -473,7 +473,7 @@ class ImmutableOrderedMap<K, V> with Iterable<K> {
   /// This method efficiently processes multiple values in a single operation,
   /// creating new unmodifiable collections only once at the end. The [putFirst] parameter
   /// controls whether all new items are placed at the beginning or end of the insertion order.
-  /// The [keyOverride] function can be used to provide custom key extraction for this operation.
+  /// The [toKey] function can be used to provide custom key extraction for this operation.
   ///
   /// ```dart
   /// final map = ImmutableOrderedMap<String, User>(toKey: (user) => user.id);
@@ -502,25 +502,32 @@ class ImmutableOrderedMap<K, V> with Iterable<K> {
   void upsertAll(
     final Iterable<V> values, {
     final bool putFirst = false,
-    final K? Function(V)? keyOverride,
+    final K? Function(V)? toKey,
   }) {
+    if (values.isEmpty) {
+      return;
+    }
     final newItems = {..._items};
-    final newOrderedKeys = {..._orderedKeys};
+    final oldKeys = {..._orderedKeys};
     final keysToAdd = <K>[];
 
     for (final value in values) {
-      final effectiveKey = keyOverride?.call(value) ?? toKey?.call(value);
+      final effectiveKey = toKey?.call(value) ?? this.toKey?.call(value);
       if (effectiveKey == null) {
         throw ArgumentError.value(value, 'key', 'Key not provided');
       }
       newItems[effectiveKey] = value;
-      newOrderedKeys.remove(effectiveKey); // Remove if exists
-      keysToAdd.add(effectiveKey);
+      if (putFirst) {
+        oldKeys.remove(effectiveKey);
+      }
+      if (!oldKeys.contains(effectiveKey)) {
+        keysToAdd.add(effectiveKey);
+      }
     }
 
     final orderedKeys = {
       if (putFirst) ...keysToAdd,
-      ...newOrderedKeys,
+      ...oldKeys,
       if (!putFirst) ...keysToAdd,
     };
 
