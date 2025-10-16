@@ -91,6 +91,40 @@ class OrderedMapNotifier<K, V> extends ImmutableOrderedMap<K, V>
     notifyListeners();
   }
 
+  /// {@template ordered_map_notifier_upsert_all}
+  /// Inserts or updates multiple mappings from the provided [values] iterable and notifies listeners once.
+  ///
+  /// This method calls the superclass [upsertAll] method to perform the immutable batch update,
+  /// then automatically calls [notifyListeners()] once at the end to trigger UI updates.
+  /// This is more efficient than calling [upsert] multiple times as it only triggers
+  /// a single notification after all items are processed.
+  ///
+  /// ```dart
+  /// final notifier = OrderedMapNotifier<String, User>(toKey: (user) => user.id);
+  ///
+  /// // Efficient batch update with single notification
+  /// notifier.upsertAll([
+  ///   User(id: 'user1', name: 'Alice'),
+  ///   User(id: 'user2', name: 'Bob'),
+  ///   User(id: 'user3', name: 'Charlie'),
+  /// ]);
+  /// // Only one notifyListeners() call is made after all items are processed
+  /// ```
+  ///
+  /// @ai Use this method for efficient batch updates in reactive contexts.
+  /// The single notification at the end prevents excessive UI rebuilds during bulk operations.
+  /// {@endtemplate}
+  @override
+  @mustCallSuper
+  void upsertAll(
+    final Iterable<V> values, {
+    final bool putFirst = false,
+    final K? Function(V)? keyOverride,
+  }) {
+    super.upsertAll(values, putFirst: putFirst, keyOverride: keyOverride);
+    notifyListeners(); // Single notification at the end
+  }
+
   /// {@template ordered_map_notifier_remove}
   /// Removes the mapping for the specified [key] if it exists and notifies listeners.
   ///

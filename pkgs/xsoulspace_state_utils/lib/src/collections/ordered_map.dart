@@ -125,6 +125,48 @@ class MutableOrderedMap<K, V> with Iterable<K> {
     _valuesListCache = null;
   }
 
+  /// {@template mutable_ordered_map_upsert_all}
+  /// Inserts or updates multiple mappings from the provided [values] iterable.
+  ///
+  /// This method efficiently processes multiple values in a single operation,
+  /// performing a single cache invalidation at the end rather than after each item.
+  /// The [keyOverride] function can be used to provide custom key extraction
+  /// for this operation, overriding the default [toKey] function.
+  ///
+  /// ```dart
+  /// final map = MutableOrderedMap<String, User>(toKey: (user) => user.id);
+  ///
+  /// // Using default toKey function
+  /// map.upsertAll([
+  ///   User(id: 'user1', name: 'Alice'),
+  ///   User(id: 'user2', name: 'Bob'),
+  /// ]);
+  ///
+  /// // Using custom key extraction
+  /// map.upsertAll([
+  ///   User(id: 'user3', name: 'Charlie'),
+  ///   User(id: 'user4', name: 'David'),
+  /// ], keyOverride: (user) => 'custom_${user.id}');
+  /// ```
+  ///
+  /// @ai Use this method for efficient batch updates instead of multiple individual upsert() calls.
+  /// The [keyOverride] parameter is useful when you need different key extraction for specific operations.
+  /// {@endtemplate}
+  void upsertAll(
+    final Iterable<V> values, {
+    final K? Function(V)? keyOverride,
+  }) {
+    for (final value in values) {
+      final effectiveKey = keyOverride?.call(value) ?? toKey?.call(value);
+      if (effectiveKey == null) {
+        throw ArgumentError.value(value, 'key', 'Key not provided');
+      }
+      _items[effectiveKey] = value;
+      _orderedKeys.add(effectiveKey);
+    }
+    _valuesListCache = null; // Single cache invalidation
+  }
+
   /// {@template mutable_ordered_map_update}
   /// Updates the value associated with the specified [key] using the provided
   /// [update] function.
@@ -422,6 +464,67 @@ class ImmutableOrderedMap<K, V> with Iterable<K> {
       if (putLast) effectiveKey,
     }.unmodifiable;
     _setItems(items);
+    _setOrderedKeys(orderedKeys);
+  }
+
+  /// {@template immutable_ordered_map_upsert_all}
+  /// Inserts or updates multiple mappings from the provided [values] iterable.
+  ///
+  /// This method efficiently processes multiple values in a single operation,
+  /// creating new unmodifiable collections only once at the end. The [putFirst] parameter
+  /// controls whether all new items are placed at the beginning or end of the insertion order.
+  /// The [keyOverride] function can be used to provide custom key extraction for this operation.
+  ///
+  /// ```dart
+  /// final map = ImmutableOrderedMap<String, User>(toKey: (user) => user.id);
+  ///
+  /// // Adding items at the end (default)
+  /// map.upsertAll([
+  ///   User(id: 'user1', name: 'Alice'),
+  ///   User(id: 'user2', name: 'Bob'),
+  /// ]);
+  ///
+  /// // Adding items at the beginning
+  /// map.upsertAll([
+  ///   User(id: 'user3', name: 'Charlie'),
+  ///   User(id: 'user4', name: 'David'),
+  /// ], putFirst: true);
+  ///
+  /// // Using custom key extraction
+  /// map.upsertAll([
+  ///   User(id: 'user5', name: 'Eve'),
+  /// ], keyOverride: (user) => 'custom_${user.id}');
+  /// ```
+  ///
+  /// @ai Use this method for efficient batch updates instead of multiple individual upsert() calls.
+  /// When [putFirst] is true, all new items are placed at the front in the order they appear in the iterable.
+  /// {@endtemplate}
+  void upsertAll(
+    final Iterable<V> values, {
+    final bool putFirst = false,
+    final K? Function(V)? keyOverride,
+  }) {
+    final newItems = {..._items};
+    final newOrderedKeys = {..._orderedKeys};
+    final keysToAdd = <K>[];
+
+    for (final value in values) {
+      final effectiveKey = keyOverride?.call(value) ?? toKey?.call(value);
+      if (effectiveKey == null) {
+        throw ArgumentError.value(value, 'key', 'Key not provided');
+      }
+      newItems[effectiveKey] = value;
+      newOrderedKeys.remove(effectiveKey); // Remove if exists
+      keysToAdd.add(effectiveKey);
+    }
+
+    final orderedKeys = {
+      if (putFirst) ...keysToAdd,
+      ...newOrderedKeys,
+      if (!putFirst) ...keysToAdd,
+    };
+
+    _setItems(newItems);
     _setOrderedKeys(orderedKeys);
   }
 

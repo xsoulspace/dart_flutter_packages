@@ -58,9 +58,11 @@ Both extend Flutter's `ChangeNotifier` for automatic UI updates.
 
 - **`Chain<TStartWith, TThenResult>`** - Type-safe command pipeline pattern (may be removed)
 
-## AI Agent Usage Patterns:
+## Agentic Executable (AE) Usage Patterns:
 
-All patterns are in `lib_ai_use` folder.
+TODO: migrate to [Agentic Executable (AE)](https://github.com/fluent-meaning-symbiotic/agentic_executables).
+
+Rules are in `ai_use` folder.
 
 - `command_resource_pattern.mdc` - Command-Resource Pattern
 
