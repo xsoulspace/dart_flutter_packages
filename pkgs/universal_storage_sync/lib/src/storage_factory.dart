@@ -21,15 +21,14 @@ mixin StorageFactory {
   /// Creates a FileSystem storage service
   static Future<StorageService> createFileSystem(
     final FileSystemConfig config,
-  ) async => create(config);
+  ) => create(config);
 
   /// Creates a GitHub API storage service
-  static Future<StorageService> createGitHubApi(
-    final GitHubApiConfig config,
-  ) async => create(config);
+  static Future<StorageService> createGitHubApi(final GitHubApiConfig config) =>
+      create(config);
 
   /// Creates an Offline Git storage service
   static Future<StorageService> createOfflineGit(
     final OfflineGitConfig config,
-  ) async => create(config);
+  ) => create(config);
 }

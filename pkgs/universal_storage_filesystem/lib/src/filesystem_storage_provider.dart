@@ -170,5 +170,3 @@ class FileSystemStorageProvider extends StorageProvider {
     }
   }
 }
-
-

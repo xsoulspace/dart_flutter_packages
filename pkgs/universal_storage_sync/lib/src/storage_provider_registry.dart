@@ -17,6 +17,7 @@ import 'package:universal_storage_interface/universal_storage_interface.dart';
 /// provider using the registered factory.
 /// {@endtemplate}
 abstract final class StorageProviderRegistry {
+  StorageProviderRegistry._();
   static final Map<Type, StorageProvider Function()> _factories = {};
 
   /// Registers a provider factory for a `StorageConfig` subtype [T].
@@ -44,5 +45,3 @@ abstract final class StorageProviderRegistry {
     return factory();
   }
 }
-
-

@@ -58,9 +58,3 @@ await service.saveFile('file.txt', 'content');
 
 - Provider-specific unit tests live in provider packages.
 - Foundation tests validate `StorageFactory` wiring, `StorageService` behavior, and error contracts.
-
-### Migration Notes
-
-- Provider code extracted into dedicated packages.
-- Foundation no longer depends on provider packages directly.
-- Apps must register providers at startup via the registry.
