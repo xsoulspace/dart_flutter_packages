@@ -1,5 +1,9 @@
 /// {@template xsoulspace_foundation.stateless}
 /// Flags a class which should not contain any state.
+/// It can be applied to command, or simple class.
+///
+/// Best resource to study command pattern:
+/// https://gameprogrammingpatterns.com/command.html
 ///
 /// This class can be used to annotate functional classes that encapsulate
 /// business logic without exposing any internal state. It may contain minimal
@@ -25,9 +29,10 @@ final class Stateless {
   const Stateless();
 }
 
-/// {@template xsoulspace_foundation.state_distributor}
+/// {@template xsoulspace_foundation.resource}
 /// A marker class indicating that a class contains state but should not
 /// contain any business logic.
+///
 ///
 /// This class is used to annotate classes that manage state without
 /// implementing any business logic. It serves as a clear separation of
@@ -36,7 +41,7 @@ final class Stateless {
 /// @ai Use this annotation to ensure that the annotated class focuses solely
 /// on state management without mixing in business logic.
 /// {@endtemplate}
-const stateDistributor = StateDistributor();
+const resource = Resource();
 
 /// A marker class indicating that a class contains state but should not
 /// contain any business logic.
@@ -47,9 +52,9 @@ const stateDistributor = StateDistributor();
 ///
 /// @ai Use this annotation to ensure that the annotated class focuses solely
 /// on state management without mixing in business logic.
-final class StateDistributor {
-  /// {@macro xsoulspace_foundation.state_distributor}
-  const StateDistributor();
+final class Resource {
+  /// {@macro xsoulspace_foundation.resource}
+  const Resource();
 }
 
 /// {@template xsoulspace_foundation.heavy_computation}

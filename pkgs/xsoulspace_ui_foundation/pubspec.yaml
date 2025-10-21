@@ -1,6 +1,6 @@
 name: xsoulspace_ui_foundation
 description: Shared UI utils, extensions, and helpers.
-version: 0.2.3
+version: 0.3.0
 homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_ui_foundation
 repository: https://github.com/xsoulspace/dart_flutter_packages
 
@@ -14,7 +14,7 @@ dependencies:
   from_json_to_json: ^0.3.0
   infinite_scroll_pagination: ^5.1.1
   is_dart_empty_or_not: ^0.2.3
-  xsoulspace_foundation: ^0.2.2
+  xsoulspace_foundation: ^0.3.0
 
 dev_dependencies:
   flutter_test:

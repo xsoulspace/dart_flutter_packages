@@ -46,7 +46,7 @@ class SoftKeyboard {
   ///
   /// @ai Use this method when you need to hide the keyboard without a specific
   /// focus change.
-  static Future<void> close() async =>
+  static Future<void> close() =>
       SystemChannels.textInput.invokeMethod('TextInput.hide');
 
   /// Shows the soft keyboard.
@@ -62,6 +62,6 @@ class SoftKeyboard {
   /// @ai Use this method when you need to show the keyboard programmatically,
   /// but be aware that it may not always result in the keyboard being
   /// displayed.
-  static Future<void> open() async =>
+  static Future<void> open() =>
       SystemChannels.textInput.invokeMethod('TextInput.show');
 }

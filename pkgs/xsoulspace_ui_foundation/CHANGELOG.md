@@ -4,6 +4,14 @@ This project follows [Semantic Versioning](https://semver.org/) (semver).
 Breaking changes will increment the major version, new features the minor, and bugfixes the patch.  
 Always review the changelog before upgrading to a new version.
 
+## 0.3.0
+
+BREAKING:
+
+- removed interface `Loadable`
+- removed annotaions: stateless, Stateless, stateDistributor, StateDistributor, HeavyComputation
+- chore: xsoulspace_foundation 0.3.0
+
 ## 0.2.3
 
 - Fixed:

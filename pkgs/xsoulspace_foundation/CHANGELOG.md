@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0
+
+BREAKING:
+
+- renamed `StateDistributor` to `Resource`
+
 ## 0.2.2
 
 - fixed: flutter sdk added to dependencies
