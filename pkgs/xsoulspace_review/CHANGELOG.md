@@ -1,3 +1,8 @@
+## 0.4.0-beta.3
+
+- chore: xsoulspace_foundation 0.3.0
+- chore: xsoulspace_locale 0.3.3
+
 ## 0.4.0-beta.2
 
 ### Added

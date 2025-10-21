@@ -1,6 +1,6 @@
 name: xsoulspace_support
 description: A reusable Flutter package for email support functionality
-version: 0.2.0
+version: 0.2.1
 homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_support
 repository: https://github.com/xsoulspace/dart_flutter_packages
 
@@ -16,7 +16,7 @@ dependencies:
   is_dart_empty_or_not: ^0.2.3
   package_info_plus: ^8.0.2
   url_launcher: ^6.3.2
-  xsoulspace_locale: ^0.3.2
+  xsoulspace_locale: ^0.3.3
   xsoulspace_logger: ^0.1.0-beta.1
 
 dev_dependencies:

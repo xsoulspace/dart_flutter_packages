@@ -6,6 +6,10 @@ Always review the changelog before upgrading to a new version.
 
 # Changelog
 
+## 0.5.1
+
+- chore: xsoulspace_foundation 0.3.0
+
 ## 0.5.0
 
 - added: `upsertAll` method for `MutableOrderedMap` with optional `toKey` parameter for efficient batch operations.

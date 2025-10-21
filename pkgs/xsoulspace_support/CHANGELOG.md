@@ -6,6 +6,10 @@ Always review the changelog before upgrading to a new version.
 
 All notable changes to this project will be documented in this file.
 
+## 0.2.1
+
+- chore: xsoulspace_locale 0.3.3
+
 ## 0.2.0
 
 - added logging support via xsoulspace_logger 0.1.0-beta.1

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.3
+
+- chore: xsoulspace_foundation 0.3.0
+
 ## 0.3.2
 
 - chore: from_json_to_json 0.3.0
