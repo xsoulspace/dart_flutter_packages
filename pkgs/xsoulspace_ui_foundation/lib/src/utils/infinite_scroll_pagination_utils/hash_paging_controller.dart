@@ -223,8 +223,13 @@ class HashPagingController<TKey, TItem> extends PagingController<TKey, TItem> {
     return deletedItems;
   }
 
-  void removeElement({required final TItem element}) {
-    final int index = items?.indexWhere((final a) => a == element) ?? -1;
+  void removeElement({
+    required final TItem element,
+    final bool Function(TItem element)? test,
+  }) {
+    final testCallback = test ?? (final a) => a == element;
+    final int index = items?.indexWhere(testCallback) ?? -1;
+
     removeElementByIndex(index: index);
   }
 
@@ -250,6 +255,7 @@ class HashPagingController<TKey, TItem> extends PagingController<TKey, TItem> {
   void replaceElement({
     required final TItem element,
     final bool shouldAddOnNotFound = false,
+    final bool shouldMoveToFirst = false,
     final bool Function(TItem a, TItem b)? equals,
     final int? index,
   }) {
@@ -263,6 +269,9 @@ class HashPagingController<TKey, TItem> extends PagingController<TKey, TItem> {
       element: element,
       shouldAddOnNotFound: shouldAddOnNotFound,
     );
+    if (shouldMoveToFirst) {
+      moveElementByIndex(oldIndex: eIndex, element: element);
+    }
   }
 
   void _updateItemList(final List<TItem> newItems) {

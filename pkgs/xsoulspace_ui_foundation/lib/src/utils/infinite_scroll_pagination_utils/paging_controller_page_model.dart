@@ -47,3 +47,14 @@ Map<String, dynamic> _$PagingControllerPageModelToJson<E>(
   'pagesCount': instance.pagesCount,
   'currentPage': instance.currentPage,
 };
+
+class PagingControllerRequestModel<TData> {
+  PagingControllerRequestModel({this.page = 0, this.limit = 10, this.data});
+  Map<String, dynamic> toJson(
+    final Map<String, dynamic> Function(TData?) toJsonT,
+  ) => {'page': page, 'limit': limit, 'data': toJsonT(data)};
+
+  final int page;
+  final int limit;
+  final TData? data;
+}
