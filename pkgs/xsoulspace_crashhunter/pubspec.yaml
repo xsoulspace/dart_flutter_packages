@@ -1,0 +1,25 @@
+name: xsoulspace_crashhunter
+description: Crashhunter implementation for xsoulspace
+version: 0.1.0
+homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_crashhunter
+repository: https://github.com/xsoulspace/dart_flutter_packages
+issue_tracker: https://github.com/xsoulspace/xsoulspace_packages/issues
+
+environment:
+  sdk: ">=3.8.1 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # firebase_analytics: ^12.0.3
+  # firebase_analytics_web: ^0.6.0+3
+  # firebase_core: ^4.2.0
+  # firebase_core_web: ^3.2.0
+  # firebase_crashlytics: ^5.0.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  lints: ^6.0.0
+  xsoulspace_lints: ^0.1.2
