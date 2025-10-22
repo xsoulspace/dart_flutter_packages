@@ -4,6 +4,10 @@ This project follows [Semantic Versioning](https://semver.org/) (semver).
 Breaking changes will increment the major version, new features the minor, and bugfixes the patch.  
 Always review the changelog before upgrading to a new version.
 
+## 0.3.1
+
+- added: `PagingControllerRequestModel` for building request models for pagination
+
 ## 0.3.0
 
 BREAKING:
