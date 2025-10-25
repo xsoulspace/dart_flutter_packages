@@ -13,4 +13,13 @@ extension type const MacOSBookmark(String value) {
   /// Creates a [MacOSBookmark] from a [Directory] path.
   factory MacOSBookmark.fromDirectory(final Directory directory) =>
       MacOSBookmark(directory.path);
+
+  /// Whether the bookmark is empty.
+  bool get isEmpty => value.isEmpty;
+
+  /// Whether the bookmark is not empty.
+  bool get isNotEmpty => value.isNotEmpty;
+
+  /// An empty bookmark.
+  static const empty = MacOSBookmark('');
 }

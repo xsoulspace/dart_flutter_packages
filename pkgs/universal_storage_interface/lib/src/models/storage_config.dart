@@ -1,16 +1,40 @@
 import 'conflict_resolution_strategy.dart';
+import 'file_path_config.dart';
 import 'version_control_models.dart';
 
+/// {@template storage_config}
+/// Base class for all storage configurations.
+/// {@endtemplate}
 sealed class StorageConfig {
+  /// {@macro storage_config}
   const StorageConfig();
+
+  /// Converts the configuration to a JSON-serializable map.
   Map<String, dynamic> toMap();
 }
 
+/// {@template file_system_config}
+/// Configuration for the file system storage provider.
+/// {@endtemplate}
 class FileSystemConfig extends StorageConfig {
+  /// {@macro file_system_config}
   FileSystemConfig({required this.basePath, this.databaseName = ''}) {
     if (basePath.isEmpty) throw ArgumentError('Base path cannot be empty');
   }
+
+  /// Creates a [FileSystemConfig] from a [FilePathConfig].
+  factory FileSystemConfig.fromFilePathConfig(
+    final FilePathConfig filePathConfig, {
+    final String? databaseName,
+  }) => FileSystemConfig(
+    basePath: filePathConfig.path.path,
+    databaseName: databaseName ?? '',
+  );
+
+  /// The base path of the file system.
   final String basePath;
+
+  /// The name of the database.
   final String databaseName;
   @override
   Map<String, dynamic> toMap() => {

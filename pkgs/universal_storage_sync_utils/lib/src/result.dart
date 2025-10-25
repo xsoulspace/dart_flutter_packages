@@ -17,6 +17,12 @@ class PickSuccess extends PickResult {
 
   /// An optional security-scoped bookmark for macOS.
   final MacOSBookmark? macOSBookmark;
+
+  /// Creates a [FilePathConfig] from the pick result.
+  FilePathConfig get filePathConfig => FilePathConfig.create(
+    path: path,
+    macOSBookmarkData: macOSBookmark ?? MacOSBookmark.empty,
+  );
 }
 
 /// Represents a failed folder pick.

@@ -4,7 +4,14 @@ analyzer:
   exclude:
     - "**/*.g.dart"
     - "**/*.freezed.dart"
-    - "example/**"
+    - "example/basic_usage.dart"
+    - "example/github_api_usage.dart"
+    - "example/git_usage.dart"
+    - "example/provider_factory_usage.dart"
+    - "example/remote_sync_usage.dart"
+    # - "example/todo_file_app/**"
+    - "example/todo_git_app/**"
+
   language:
     strict-casts: true
     strict-inference: true

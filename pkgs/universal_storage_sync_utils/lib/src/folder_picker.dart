@@ -1,7 +1,6 @@
-import 'dart:io';
-
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/widgets.dart';
+import 'package:universal_io/io.dart';
 import 'package:universal_storage_sync/universal_storage_sync.dart';
 
 import 'macos_bookmark_manager.dart';

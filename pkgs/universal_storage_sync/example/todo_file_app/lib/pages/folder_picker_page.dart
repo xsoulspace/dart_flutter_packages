@@ -29,8 +29,8 @@ class _FolderPickerPageState extends State<FolderPickerPage> {
     if (!mounted) return;
 
     switch (result) {
-      case PickSuccess(:final path, :final macOSBookmark):
-        await appState.setWorkspacePath(path, macOSBookmark: macOSBookmark);
+      case PickSuccess value:
+        await appState.setWorkspacePath(value.filePathConfig);
 
         // Navigate to the main app screen after setting the path
         if (mounted) {
@@ -69,9 +69,7 @@ class _FolderPickerPageState extends State<FolderPickerPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Select Storage Folder'),
-      ),
+      appBar: AppBar(title: const Text('Select Storage Folder')),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

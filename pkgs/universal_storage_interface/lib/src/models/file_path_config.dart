@@ -1,6 +1,6 @@
 // ignore_for_file: avoid_annotating_with_dynamic
-
 import 'package:from_json_to_json/from_json_to_json.dart';
+import 'package:universal_io/io.dart';
 
 import 'macos_bookmark.dart';
 
@@ -60,6 +60,15 @@ extension type const FilePathConfig(Map<String, dynamic> value) {
 
   /// Converts the configuration to a JSON-serializable map.
   Map<String, dynamic> toJson() => value;
+
+  /// Whether the configuration is empty.
+  bool get isEmpty =>
+      value.isEmpty ||
+      path.path.isEmpty ||
+      (Platform.isMacOS && macOSBookmarkData.isEmpty);
+
+  /// Whether the configuration is not empty.
+  bool get isNotEmpty => !isEmpty;
 
   /// An empty configuration with no path or bookmark data.
   static const empty = FilePathConfig({});

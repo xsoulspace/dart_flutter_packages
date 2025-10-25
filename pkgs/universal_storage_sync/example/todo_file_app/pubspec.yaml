@@ -19,7 +19,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: ">=3.3.0 <4.0.0"
+  sdk: ">=3.9.0 <4.0.0"
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -39,23 +39,31 @@ dependencies:
   path: ^1.8.3
   provider: ^6.0.5
   shared_preferences: ^2.2.0
+  universal_storage_filesystem:
+    path: ../../../universal_storage_filesystem
+  universal_storage_interface:
+    path: ../../../universal_storage_interface
 
   # Universal Storage Sync - our main package
-  universal_storage_sync: ^0.1.0-dev.2
+  universal_storage_sync:
+    path: ../../
 
   # Additional dependencies
-  universal_storage_sync_utils: ^0.1.0-dev.1
+  universal_storage_sync_utils:
+    path: ../../../universal_storage_sync_utils
 
   # Utilities
   uuid: ^4.2.0
+  xsoulspace_foundation: ^0.3.0
   yaml: ^3.1.2
 
+dependency_overrides:
+  universal_storage_sync:
+    path: ../../
+  universal_storage_interface:
+    path: ../../../universal_storage_interface
+
 dev_dependencies:
-  # The "flutter_lints" package below contains a set of recommended lints to
-  # encourage good coding practices. The lint set provided by the package is
-  # activated in the `analysis_options.yaml` file located at the root of your
-  # package. See that file for information about deactivating specific lint
-  # rules and activating additional ones.
   flutter_lints: ^3.0.0
   flutter_test:
     sdk: flutter

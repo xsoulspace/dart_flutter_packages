@@ -1,11 +1,9 @@
 // ignore_for_file: avoid_print
 
-import 'dart:io';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:path/path.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:universal_storage_interface/universal_storage_interface.dart';
 import 'package:universal_storage_filesystem/universal_storage_filesystem.dart';
 import 'package:universal_storage_sync/universal_storage_sync.dart';
 import 'package:universal_storage_sync_utils/universal_storage_sync_utils.dart';
@@ -20,15 +18,10 @@ import '../models/todo.dart';
 /// {@endtemplate}
 class AppState extends ChangeNotifier {
   static const String _workspacePathKey = 'workspace_path';
-  static const String _macOSBookmarkKey = 'macos_bookmark';
   static const String _todosDirectoryName = 'todos';
   final Uuid _uuid = const Uuid();
 
-  /// Current workspace path
-  String? workspacePath;
-
-  /// Current macOS bookmark
-  MacOSBookmark? macOSBookmark;
+  FilePathConfig filePathConfig = FilePathConfig.empty;
 
   /// List of all todos
   List<Todo> todos = [];
@@ -44,11 +37,11 @@ class AppState extends ChangeNotifier {
 
   /// {@macro app_state}
   AppState() {
-    _loadStoredWorkspacePath();
+    _onLoad();
   }
 
   /// Whether a workspace is currently selected
-  bool get hasWorkspace => workspacePath != null;
+  bool get hasWorkspace => filePathConfig.isNotEmpty;
 
   /// Number of completed todos
   int get completedCount => todos.where((todo) => todo.isCompleted).length;
@@ -57,27 +50,15 @@ class AppState extends ChangeNotifier {
   int get pendingCount => todos.where((todo) => !todo.isCompleted).length;
 
   /// Sets the workspace path and initializes storage
-  Future<void> setWorkspacePath(String pathValue,
-      {MacOSBookmark? macOSBookmark}) async {
+  Future<void> setWorkspacePath(final FilePathConfig pathConfig) async {
     await _setBusy(true);
     try {
-      // Validate directory exists and is writable
-      final directory = Directory(pathValue);
-      if (!await directory.exists()) {
-        throw Exception('Directory does not exist: $pathValue');
+      final isWritable = PathValidator.isWritable(pathConfig.path.path);
+      if (!isWritable) {
+        throw Exception('Directory is not writable: ${pathConfig.path.path}');
       }
 
-      // Test write permissions by creating a temporary file
-      final testFile = File(path.join(pathValue, '.todo_app_test'));
-      try {
-        await testFile.writeAsString('test');
-        await testFile.delete();
-      } catch (e) {
-        throw Exception('Directory is not writable: $pathValue');
-      }
-
-      workspacePath = pathValue;
-      await _storeWorkspacePath(pathValue, macOSBookmark: macOSBookmark);
+      await _storeWorkspacePath(pathConfig);
       await _initializeStorage();
       await loadTodos();
       _clearError();
@@ -98,7 +79,8 @@ class AppState extends ChangeNotifier {
       final fileList = await _storageService!.listDirectory(todosPath);
 
       final loadedTodos = <Todo>[];
-      for (final fileName in fileList) {
+      for (final fileEntry in fileList) {
+        final fileName = fileEntry.name;
         if (fileName.endsWith('.yaml')) {
           final content = await _storageService!.readFile(fileName);
           if (content != null) {
@@ -139,8 +121,9 @@ class AppState extends ChangeNotifier {
       );
 
       // Update local list
-      final existingIndex =
-          todos.indexWhere((t) => t.id.value == todo.id.value);
+      final existingIndex = todos.indexWhere(
+        (t) => t.id.value == todo.id.value,
+      );
       if (existingIndex >= 0) {
         todos[existingIndex] = todo;
       } else {
@@ -162,10 +145,7 @@ class AppState extends ChangeNotifier {
     await _setBusy(true);
     try {
       final fileName = '$_todosDirectoryName/${id.value}.yaml';
-      await _storageService!.removeFile(
-        fileName,
-        message: 'Delete todo: $id',
-      );
+      await _storageService!.removeFile(fileName, message: 'Delete todo: $id');
 
       // Remove from local list
       todos.removeWhere((todo) => todo.id.value == id.value);
@@ -204,7 +184,7 @@ class AppState extends ChangeNotifier {
 
   /// Clears the current workspace
   void clearWorkspace() {
-    workspacePath = null;
+    filePathConfig = FilePathConfig.empty;
     todos = [];
     _storageService = null;
     _clearStoredWorkspacePath();
@@ -228,46 +208,30 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> _onLoad() async {
+    StorageProviderRegistry.register<FileSystemConfig>(
+      () => FileSystemStorageProvider(),
+    );
+    await _loadStoredWorkspacePath();
+  }
+
   Future<void> _loadStoredWorkspacePath() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final stored = prefs.getString(_workspacePathKey);
-      final macOSBookmarkString = prefs.getString(_macOSBookmarkKey);
+      final workspacePath = prefs.getString(_workspacePathKey);
+      filePathConfig = FilePathConfig.fromJson(workspacePath);
 
-      final directory = await resolvePlatformDirectory(
-        path: stored ?? '',
-        bookmark: macOSBookmarkString != null
-            ? MacOSBookmark.fromBase64(macOSBookmarkString)
-            : null,
-      );
-      if (directory != null && directory.existsSync()) {
-        workspacePath = stored;
-        if (macOSBookmarkString != null) {
-          macOSBookmark = MacOSBookmark.fromBase64(macOSBookmarkString);
-        } else {
-          macOSBookmark = null;
-        }
-        await _initializeStorage();
-        await loadTodos();
-      }
+      await _initializeStorage();
+      await loadTodos();
     } catch (e) {
       print('Failed to load stored workspace path: $e');
     }
   }
 
-  Future<void> _storeWorkspacePath(
-    String pathValue, {
-    MacOSBookmark? macOSBookmark,
-  }) async {
+  Future<void> _storeWorkspacePath(final FilePathConfig pathConfig) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_workspacePathKey, pathValue);
-      if (macOSBookmark != null) {
-        await prefs.setString(
-          _macOSBookmarkKey,
-          macOSBookmark.value,
-        );
-      }
+      await prefs.setString(_workspacePathKey, jsonEncode(pathConfig.toJson()));
     } catch (e) {
       print('Failed to store workspace path: $e');
     }
@@ -277,19 +241,18 @@ class AppState extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_workspacePathKey);
-      await prefs.remove(_macOSBookmarkKey);
     } catch (e) {
       print('Failed to clear stored workspace path: $e');
     }
   }
 
   Future<void> _initializeStorage() async {
-    if (workspacePath == null) return;
+    if (!hasWorkspace) return;
 
-    final config = FileSystemConfig(basePath: workspacePath!);
-
-    _storageService = StorageService(FileSystemStorageProvider());
-    await _storageService!.initializeWithConfig(config);
+    final fileSystemConfig = FileSystemConfig.fromFilePathConfig(
+      filePathConfig,
+    );
+    _storageService = await StorageFactory.create(fileSystemConfig);
   }
 
   String _todoToYaml(Todo todo) {
@@ -313,8 +276,9 @@ class AppState extends ChangeNotifier {
             buffer.writeln('  - ${_yamlEscape(item.toString())}');
           }
         } else {
-          buffer
-              .writeln('${entry.key}: ${_yamlEscape(entry.value.toString())}');
+          buffer.writeln(
+            '${entry.key}: ${_yamlEscape(entry.value.toString())}',
+          );
         }
       }
     }

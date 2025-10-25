@@ -1,6 +1,6 @@
 name: universal_storage_filesystem
 description: Filesystem storage provider for universal_storage_interface.
-version: 0.1.0-dev.6
+version: 0.1.0-dev.7
 homepage: https://github.com/xsoulspace/universal_storage_sync
 repository: https://github.com/xsoulspace/universal_storage_sync
 issue_tracker: https://github.com/xsoulspace/universal_storage_sync/issues
@@ -11,7 +11,7 @@ environment:
 
 dependencies:
   path: ^1.9.1
-  universal_storage_interface: ^0.1.0-dev.6
+  universal_storage_interface: ^0.1.0-dev.7
 
 dev_dependencies:
   lints: ^6.0.0
