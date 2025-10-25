@@ -14,7 +14,7 @@ environment:
 
 dependencies:
   from_json_to_json: ^0.3.0
-  universal_storage_interface: ^0.1.0-dev.7
+  universal_storage_interface: ^0.1.0-dev.8
 
 dev_dependencies:
   build_runner: ^2.5.2
