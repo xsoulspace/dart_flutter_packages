@@ -668,4 +668,10 @@ class OfflineGitStorageProvider extends StorageProvider
     // TODO(arenukvern): implement setRepository
     throw UnimplementedError();
   }
+
+  @override
+  Future<void> dispose() {
+    // TODO: implement dispose
+    throw UnimplementedError();
+  }
 }

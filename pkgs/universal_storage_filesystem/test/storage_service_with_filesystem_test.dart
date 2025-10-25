@@ -17,7 +17,12 @@ void main() {
       tempDir = tempDirectory.path;
 
       provider = FileSystemStorageProvider();
-      final config = FileSystemConfig(basePath: tempDir);
+      final config = FileSystemConfig(
+        filePathConfig: FilePathConfig.create(
+          path: tempDir,
+          macOSBookmarkData: MacOSBookmark.empty,
+        ),
+      );
       await provider.initWithConfig(config);
     });
 

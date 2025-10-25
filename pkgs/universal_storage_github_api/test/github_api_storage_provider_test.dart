@@ -15,7 +15,12 @@ void main() {
     });
 
     test('should throw ArgumentError when wrong config type is provided', () {
-      final config = FileSystemConfig(basePath: '/test');
+      final config = FileSystemConfig(
+        filePathConfig: FilePathConfig.create(
+          path: '/test',
+          macOSBookmarkData: MacOSBookmark.empty,
+        ),
+      );
       expect(
         () => provider.initWithConfig(config),
         throwsA(isA<ArgumentError>()),
@@ -86,5 +91,3 @@ void main() {
     });
   });
 }
-
-

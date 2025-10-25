@@ -116,6 +116,9 @@ class _FakeStorageProvider extends StorageProvider {
 
   @override
   bool get supportsSync => false;
+
+  @override
+  Future<void> dispose() async {}
 }
 
 void main() {
@@ -130,7 +133,12 @@ void main() {
       final tempDirectory = await Directory.systemTemp.createTemp(
         'storage_test_',
       );
-      final config = FileSystemConfig(basePath: tempDirectory.path);
+      final config = FileSystemConfig(
+        filePathConfig: FilePathConfig.create(
+          path: tempDirectory.path,
+          macOSBookmarkData: MacOSBookmark.empty,
+        ),
+      );
       await storageService.initializeWithConfig(config);
     });
 
@@ -216,7 +224,12 @@ void main() {
       final tempDirectory = await Directory.systemTemp.createTemp(
         'storage_test_',
       );
-      final config = FileSystemConfig(basePath: tempDirectory.path);
+      final config = FileSystemConfig(
+        filePathConfig: FilePathConfig.create(
+          path: tempDirectory.path,
+          macOSBookmarkData: MacOSBookmark.empty,
+        ),
+      );
       await storageService.initializeWithConfig(config);
 
       await storageService.syncRemote();
