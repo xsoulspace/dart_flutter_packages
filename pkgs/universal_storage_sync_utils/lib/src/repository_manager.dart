@@ -3,7 +3,7 @@
 import 'dart:developer';
 
 import 'package:collection/collection.dart';
-import 'package:universal_storage_sync/universal_storage_sync.dart';
+import 'package:universal_storage_interface/universal_storage_interface.dart';
 
 /// {@template repository_selection_result}
 /// Result of repository selection or creation operation.

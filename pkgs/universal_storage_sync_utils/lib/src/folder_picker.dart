@@ -1,11 +1,69 @@
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/widgets.dart';
+import 'package:path_provider/path_provider.dart' as p;
 import 'package:universal_io/io.dart';
-import 'package:universal_storage_sync/universal_storage_sync.dart';
+import 'package:universal_storage_interface/universal_storage_interface.dart';
 
 import 'macos_bookmark_manager.dart';
+import 'models/pick_result.dart';
 import 'path_validator.dart';
-import 'result.dart';
+
+/// Disposes a [FilePathConfig] by stopping access to the macOS bookmark.
+Future<void> disposePathOfFileConfig(final FilePathConfig config) async {
+  if (Platform.isMacOS) {
+    final bookmark = config.macOSBookmarkData;
+    if (bookmark.isNotEmpty) {
+      try {
+        await MacOSBookmarkManager().stopAccessing(Directory(bookmark.value));
+      } catch (e, st) {
+        debugPrint('Failed to dispose path of file config: $e $st');
+      }
+    }
+  }
+}
+
+/// Resolves the default path for the application.
+///
+/// This function will:
+/// 1. Get the application documents directory.
+/// 2. Create a security-scoped bookmark for persistent access on macOS.
+/// 3. Return a [FilePathConfig] with the path and bookmark.
+///
+/// It returns a [FilePathConfig] which can be used to initialize a
+/// [FileSystemConfig].
+Future<FilePathConfig> resolveDefaultPath() async {
+  final path = await p.getApplicationDocumentsDirectory();
+  MacOSBookmark? bookmark;
+  if (Platform.isMacOS) {
+    bookmark = await MacOSBookmarkManager().createBookmark(path.path);
+  }
+  return FilePathConfig.create(
+    path: path.path,
+    macOSBookmarkData: bookmark ?? MacOSBookmark.empty,
+  );
+}
+
+/// Resolves a [FilePathConfig] to a [Directory].
+///
+/// This function is used to resolve a [FilePathConfig] to a [Directory] on the
+/// current platform.
+///
+/// It's important to call [MacOSBookmarkManager.stopAccessing] when you're done
+/// accessing the entity.
+Future<Directory?> resolvePlatformDirectoryOfConfig(
+  final FilePathConfig config,
+) async {
+  final path = config.path.path;
+  if (path.isEmpty) return null;
+  final directory = await resolvePlatformDirectory(
+    path: path,
+    bookmark: config.macOSBookmarkData,
+  );
+  if (directory != null && directory.existsSync()) {
+    return directory;
+  }
+  return null;
+}
 
 /// Resolves a [MacOSBookmark] to a [FileSystemEntity].
 ///
@@ -18,6 +76,7 @@ Future<Directory?> resolvePlatformDirectory({
   required final String path,
   final MacOSBookmark? bookmark,
 }) async {
+  if (path.isEmpty) return null;
   if (Platform.isMacOS) {
     if (bookmark != null) {
       final resolved = await MacOSBookmarkManager().resolveBookmark(bookmark);
@@ -66,7 +125,7 @@ Future<PickResult> pickWritableDirectory({
   }
 
   // 4. Validate writability.
-  final isWritable = await PathValidator.isWritable(path);
+  final isWritable = PathValidator.isWritable(path);
   if (!isWritable) {
     return PickFailure(FailureReason.pathNotWritable);
   }
@@ -78,5 +137,10 @@ Future<PickResult> pickWritableDirectory({
     bookmark = await bookmarkManager.createBookmark(path);
   }
 
-  return PickSuccess(path, macOSBookmark: bookmark);
+  return PickSuccess(
+    FilePathConfig.create(
+      path: path,
+      macOSBookmarkData: bookmark ?? MacOSBookmark.empty,
+    ),
+  );
 }

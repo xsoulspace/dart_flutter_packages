@@ -31,7 +31,9 @@ abstract class StorageProvider {
   Future<void> restore(final String path, {final String? versionId});
 
   bool get supportsSync => false;
-
+  // TODO: refactor variables to be abstract
+  // sync ca be between two providers or remote and local data inside
+  // one provider therefore clarify what it does
   Future<void> sync({
     final String? pullMergeStrategy,
     final String? pushConflictStrategy,
@@ -40,4 +42,7 @@ abstract class StorageProvider {
       'This provider does not support sync.',
     );
   }
+
+  /// Disposes the storage provider.
+  Future<void> dispose();
 }

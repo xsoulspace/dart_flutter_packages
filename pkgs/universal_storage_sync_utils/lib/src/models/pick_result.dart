@@ -10,19 +10,10 @@ sealed class PickResult {}
 /// {@endtemplate}
 class PickSuccess extends PickResult {
   /// {@macro pick_success}
-  PickSuccess(this.path, {this.macOSBookmark});
+  PickSuccess(this.config);
 
   /// The path of the selected directory.
-  final String path;
-
-  /// An optional security-scoped bookmark for macOS.
-  final MacOSBookmark? macOSBookmark;
-
-  /// Creates a [FilePathConfig] from the pick result.
-  FilePathConfig get filePathConfig => FilePathConfig.create(
-    path: path,
-    macOSBookmarkData: macOSBookmark ?? MacOSBookmark.empty,
-  );
+  final FilePathConfig config;
 }
 
 /// Represents a failed folder pick.

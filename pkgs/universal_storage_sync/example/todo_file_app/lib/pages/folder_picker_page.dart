@@ -30,7 +30,7 @@ class _FolderPickerPageState extends State<FolderPickerPage> {
 
     switch (result) {
       case PickSuccess value:
-        await appState.setWorkspacePath(value.filePathConfig);
+        await appState.setWorkspacePath(value.config);
 
         // Navigate to the main app screen after setting the path
         if (mounted) {

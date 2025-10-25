@@ -1,7 +1,7 @@
-import 'dart:io';
-
 import 'package:path/path.dart' as path;
+import 'package:universal_io/io.dart';
 import 'package:universal_storage_interface/universal_storage_interface.dart';
+import 'package:universal_storage_sync_utils/universal_storage_sync_utils.dart';
 
 /// {@template filesystem_storage_provider}
 /// A storage provider that uses the local file system for storage operations.
@@ -12,7 +12,8 @@ import 'package:universal_storage_interface/universal_storage_interface.dart';
 class FileSystemStorageProvider extends StorageProvider {
   /// {@macro filesystem_storage_provider}
   FileSystemStorageProvider();
-  String? _basePath;
+  FileSystemConfig _config = FileSystemConfig.empty;
+  String get _basePath => _config.basePath;
   var _isInitialized = false;
 
   @override
@@ -23,10 +24,12 @@ class FileSystemStorageProvider extends StorageProvider {
       );
     }
 
-    _basePath = config.basePath;
+    _config = config;
 
     // Ensure the base directory exists
-    final directory = Directory(_basePath!);
+    final directory = await resolvePlatformDirectoryOfConfig(
+      config.filePathConfig,
+    );
     if (!directory.existsSync()) {
       await directory.create(recursive: true);
     }
@@ -35,7 +38,7 @@ class FileSystemStorageProvider extends StorageProvider {
   }
 
   @override
-  Future<bool> isAuthenticated() async => _isInitialized && _basePath != null;
+  Future<bool> isAuthenticated() async => _isInitialized;
 
   @override
   Future<FileOperationResult> createFile(
@@ -45,7 +48,7 @@ class FileSystemStorageProvider extends StorageProvider {
   }) async {
     _ensureInitialized();
 
-    final fullPath = path.join(_basePath!, filePath);
+    final fullPath = path.join(_basePath, filePath);
     final file = File(fullPath);
 
     // Check if file already exists
@@ -69,7 +72,7 @@ class FileSystemStorageProvider extends StorageProvider {
   Future<String?> getFile(final String filePath) async {
     _ensureInitialized();
 
-    final fullPath = path.join(_basePath!, filePath);
+    final fullPath = path.join(_basePath, filePath);
     final file = File(fullPath);
 
     if (!file.existsSync()) {
@@ -91,7 +94,7 @@ class FileSystemStorageProvider extends StorageProvider {
   }) async {
     _ensureInitialized();
 
-    final fullPath = path.join(_basePath!, filePath);
+    final fullPath = path.join(_basePath, filePath);
     final file = File(fullPath);
 
     if (!file.existsSync()) {
@@ -109,7 +112,7 @@ class FileSystemStorageProvider extends StorageProvider {
   }) async {
     _ensureInitialized();
 
-    final fullPath = path.join(_basePath!, filePath);
+    final fullPath = path.join(_basePath, filePath);
     final file = File(fullPath);
 
     if (!file.existsSync()) {
@@ -124,7 +127,7 @@ class FileSystemStorageProvider extends StorageProvider {
   Future<List<FileEntry>> listDirectory(final String directoryPath) async {
     _ensureInitialized();
 
-    final fullPath = path.join(_basePath!, directoryPath);
+    final fullPath = path.join(_basePath, directoryPath);
     final directory = Directory(fullPath);
 
     if (!directory.existsSync()) {
@@ -163,10 +166,16 @@ class FileSystemStorageProvider extends StorageProvider {
   bool get supportsSync => false;
 
   void _ensureInitialized() {
-    if (!_isInitialized || _basePath == null) {
+    if (!_isInitialized || _config.isEmpty) {
       throw const AuthenticationException(
         'Provider not initialized. Call init() first.',
       );
     }
+  }
+
+  Future<void> dispose() async {
+    _isInitialized = false;
+    await disposePathOfFileConfig(_config);
+    _config = FileSystemConfig.empty;
   }
 }

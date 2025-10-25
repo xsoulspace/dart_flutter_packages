@@ -1,9 +1,9 @@
 // ignore_for_file: avoid_catches_without_on_clauses
 
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/widgets.dart';
 import 'package:macos_secure_bookmarks/macos_secure_bookmarks.dart';
 import 'package:universal_io/io.dart';
-import 'package:universal_storage_sync/universal_storage_sync.dart';
+import 'package:universal_storage_interface/universal_storage_interface.dart';
 
 /// A utility class for managing security-scoped bookmarks on macOS.
 ///

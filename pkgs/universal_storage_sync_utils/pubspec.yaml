@@ -22,9 +22,11 @@ dependencies:
   github: ^9.24.0
   macos_secure_bookmarks: ^0.2.1
   path: ^1.8.0
+  path_provider: ^2.1.5
   permission_handler: ^11.0.0
   universal_io: ^2.2.2
-  universal_storage_sync: ^0.1.0-dev.7
+  universal_storage_interface: ^0.1.0-dev.8
+  universal_storage_sync: ^0.1.0-dev.8
 
 dev_dependencies:
   flutter_test:

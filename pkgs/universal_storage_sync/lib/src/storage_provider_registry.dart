@@ -30,8 +30,13 @@ abstract final class StorageProviderRegistry {
   /// Unregisters a factory for a `StorageConfig` subtype [T].
   static void unregister<T extends StorageConfig>() => _factories.remove(T);
 
-  /// Clears all registered factories.
-  static void clear() => _factories.clear();
+  /// Clears and disposes all registered factories.
+  static Future<void> dispose() async {
+    for (final provider in _factories.values) {
+      await provider().dispose();
+    }
+    _factories.clear();
+  }
 
   /// Resolves a provider instance for the given [config].
   /// Throws [ConfigurationException] if nothing is registered.

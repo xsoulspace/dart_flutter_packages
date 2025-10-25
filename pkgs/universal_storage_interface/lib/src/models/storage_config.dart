@@ -18,8 +18,10 @@ sealed class StorageConfig {
 /// {@endtemplate}
 class FileSystemConfig extends StorageConfig {
   /// {@macro file_system_config}
-  FileSystemConfig({required this.basePath, this.databaseName = ''}) {
-    if (basePath.isEmpty) throw ArgumentError('Base path cannot be empty');
+  FileSystemConfig({required this.filePathConfig, this.databaseName = ''}) {
+    if (filePathConfig.isEmpty) {
+      throw ArgumentError('filePathConfig cannot be empty');
+    }
   }
 
   /// Creates a [FileSystemConfig] from a [FilePathConfig].
@@ -27,20 +29,32 @@ class FileSystemConfig extends StorageConfig {
     final FilePathConfig filePathConfig, {
     final String? databaseName,
   }) => FileSystemConfig(
-    basePath: filePathConfig.path.path,
+    filePathConfig: filePathConfig,
     databaseName: databaseName ?? '',
   );
 
+  /// The file path configuration.
+  final FilePathConfig filePathConfig;
+
   /// The base path of the file system.
-  final String basePath;
+  String get basePath => filePathConfig.path.path;
 
   /// The name of the database.
   final String databaseName;
+
+  /// Whether the configuration is empty.
+  bool get isEmpty => filePathConfig.isEmpty || databaseName.isEmpty;
+
+  /// Whether the configuration is not empty.
+  bool get isNotEmpty => !isEmpty;
+
   @override
   Map<String, dynamic> toMap() => {
     'basePath': basePath,
     if (databaseName.isNotEmpty) 'databaseName': databaseName,
   };
+
+  static final empty = FileSystemConfig(filePathConfig: FilePathConfig.empty);
 }
 
 class OfflineGitConfig extends StorageConfig {

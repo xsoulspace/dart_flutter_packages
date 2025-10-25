@@ -249,6 +249,8 @@ class AppState extends ChangeNotifier {
   Future<void> _initializeStorage() async {
     if (!hasWorkspace) return;
 
+    resolvePlatformDirectoryOfConfig(filePathConfig);
+
     final fileSystemConfig = FileSystemConfig.fromFilePathConfig(
       filePathConfig,
     );
