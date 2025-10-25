@@ -30,7 +30,7 @@ class FileSystemStorageProvider extends StorageProvider {
     final directory = await resolvePlatformDirectoryOfConfig(
       config.filePathConfig,
     );
-    if (!directory.existsSync()) {
+    if (directory != null && !directory.existsSync()) {
       await directory.create(recursive: true);
     }
 
@@ -173,9 +173,10 @@ class FileSystemStorageProvider extends StorageProvider {
     }
   }
 
+  @override
   Future<void> dispose() async {
     _isInitialized = false;
-    await disposePathOfFileConfig(_config);
+    await disposePathOfFileConfig(_config.filePathConfig);
     _config = FileSystemConfig.empty;
   }
 }
