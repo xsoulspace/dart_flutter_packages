@@ -2,7 +2,7 @@ name: universal_storage_sync_utils
 description: |
   Utility functions for universal_storage_sync, including a
   cross-platform folder picker.
-version: 0.1.0-dev.6
+version: 0.1.0-dev.7
 homepage: https://github.com/xsoulspace/universal_storage_sync/tree/main/pkgs/universal_storage_sync_utils
 repository: https://github.com/xsoulspace/universal_storage_sync
 issue_tracker: https://github.com/xsoulspace/universal_storage_sync/issues
