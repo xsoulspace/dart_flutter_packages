@@ -1,0 +1,21 @@
+name: universal_storage_db
+description: DB for flutter apps which uses universal_storage_sync as underlying storage.
+version: 0.1.0-dev.1
+homepage: https://github.com/xsoulspace/universal_storage_db
+repository: https://github.com/xsoulspace/universal_storage_db
+issue_tracker: https://github.com/xsoulspace/universal_storage_db/issues
+documentation: https://github.com/xsoulspace/universal_storage_db/tree/main/pkgs/universal_storage_db
+
+environment:
+  sdk: ">=3.9.0 <4.0.0"
+
+dependencies:
+  from_json_to_json: ^0.3.0
+  universal_storage_sync: ^0.1.0-dev.8
+  xsoulspace_foundation: ^0.3.0
+
+dev_dependencies:
+  lints: ^6.0.0
+  mockito: ^5.4.6
+  test: ^1.26.2
+  xsoulspace_lints: ^0.1.2
