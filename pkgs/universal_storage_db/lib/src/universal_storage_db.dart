@@ -1,4 +1,3 @@
-import 'package:path/path.dart' as path;
 import 'package:universal_storage_sync/universal_storage_sync.dart';
 
 /// {@template storage_router_type}
@@ -56,7 +55,7 @@ const kDefaultMapFileName = 'xsun_m';
 /// {@template default_map_list_file_name}
 /// Default file name for map list values.
 /// {@endtemplate}
-const kDefaultMapListFileName = 'xsun_ml';
+const kDefaultMapListSubName = 'xsun_ml';
 
 /// {@template storage_router_file_builder}
 /// Function to generate file names for storage operations.
@@ -99,11 +98,11 @@ String defaultMapSingleFileNameBuilder(final String key) =>
 
 /// {@macro storage_router_file_builder}
 String defaultMapListSeparateFileNameBuilder(final String key) =>
-    '${kDefaultMapListFileName}_$key';
+    '$kDefaultMapListSubName/$key';
 
 /// {@macro storage_router_file_builder}
 String defaultMapListSingleFileNameBuilder(final String key) =>
-    '${kDefaultMapListFileName}_single';
+    '${kDefaultMapListSubName}_single';
 
 /// {@template universal_storage_db_config}
 /// Configuration for [LocalDbUniversalStorageImpl] storage operations.

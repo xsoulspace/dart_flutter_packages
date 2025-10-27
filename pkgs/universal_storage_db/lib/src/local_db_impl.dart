@@ -66,6 +66,7 @@ class LocalDbUniversalStorageImpl implements LocalDbI {
 
   /// {@macro universal_storage_db}
   final UniversalStorageDb db;
+
   StorageService get _storageService => db.storageService;
 
   /// {@macro universal_storage_db_config}
@@ -299,16 +300,21 @@ class LocalDbUniversalStorageImpl implements LocalDbI {
     required final String key,
     final List<Map<String, dynamic>> defaultValue = const [],
   }) async {
+    // TODO(arenukvern): add separate files builder method
+    // if (_routerTypes.placeMapListInSingleFile) {
     final opKey = _OperationKey(key);
     final cached = _singleFilesMapListsCache[opKey];
     if (cached != null) return cached;
-    final iterable = await _readContent(
+    final iterableStr = await _readContent(
       key: key,
       dataType: _StorageOperationDataType.oMapList,
     );
-    if (iterable.isEmpty) return defaultValue;
+    if (iterableStr.isEmpty) return defaultValue;
     return _singleFilesMapListsCache[opKey] ??=
-        jsonDecodeListAs<Map<String, dynamic>>(iterable);
+        jsonDecodeListAs<Map<String, dynamic>>(iterableStr);
+    // } else {
+
+    // }
   }
 
   @override
