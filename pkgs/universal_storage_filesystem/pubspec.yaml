@@ -1,19 +1,19 @@
 name: universal_storage_filesystem
 description: Filesystem storage provider for universal_storage_interface.
-version: 0.1.0-dev.8
+version: 0.1.0-dev.9
 homepage: https://github.com/xsoulspace/universal_storage_sync
 repository: https://github.com/xsoulspace/universal_storage_sync
 issue_tracker: https://github.com/xsoulspace/universal_storage_sync/issues
 documentation: https://github.com/xsoulspace/universal_storage_sync/tree/main/pkgs/universal_storage_filesystem
 
 environment:
-  sdk: ">=3.8.1 <4.0.0"
+  sdk: ^3.9.0
 
 dependencies:
   path: ^1.9.1
   universal_io: ^2.2.2
-  universal_storage_interface: ^0.1.0-dev.8
-  universal_storage_sync_utils: ^0.1.0-dev.8
+  universal_storage_interface: ^0.1.0-dev.9
+  universal_storage_sync_utils: ^0.1.0-dev.9
 
 dev_dependencies:
   lints: ^6.0.0

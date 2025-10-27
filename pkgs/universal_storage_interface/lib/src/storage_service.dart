@@ -1,6 +1,8 @@
 import 'dart:developer';
 
-import 'package:universal_storage_interface/universal_storage_interface.dart';
+import 'exceptions.dart';
+import 'models/models.dart';
+import 'storage_service_contracts.dart';
 
 /// {@template storage_service}
 /// A service class providing a unified API for file storage operations

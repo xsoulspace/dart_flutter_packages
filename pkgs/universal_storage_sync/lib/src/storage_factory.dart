@@ -1,7 +1,6 @@
 import 'package:universal_storage_interface/universal_storage_interface.dart';
 
 import 'storage_provider_registry.dart';
-import 'storage_service.dart';
 
 /// {@template storage_factory}
 /// Factory class for creating configured storage services.

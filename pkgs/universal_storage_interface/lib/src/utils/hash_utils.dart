@@ -1,7 +1,8 @@
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart' as crypto;
-import 'package:universal_storage_sync/universal_storage_sync.dart';
+
+import '../storage_service.dart';
 
 /// {@template hash_utils}
 /// Lightweight hashing helpers for sync workflows.
