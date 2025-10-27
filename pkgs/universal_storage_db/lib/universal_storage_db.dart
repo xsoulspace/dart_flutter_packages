@@ -10,13 +10,13 @@ class StorageRouterType {
     this.placeIntsToOneFile = true,
     this.placeStringsToOneFile = true,
     this.placeSingleMapToOneFile = true,
-    this.placeMapsInListAsSeparateFiles = true,
+    this.placeMapListInSingleFile = true,
   });
   final bool placeBoolsToOneFile;
   final bool placeIntsToOneFile;
   final bool placeStringsToOneFile;
   final bool placeSingleMapToOneFile;
-  final bool placeMapsInListAsSeparateFiles;
+  final bool placeMapListInSingleFile;
 }
 
 const kDefaultBoolFileName = 'xsun_b';
@@ -101,6 +101,7 @@ class UniversalStorageDb implements LocalDbI {
   final _singleFilesMapsCache = <_OperationKey, Map<String, dynamic>>{};
   final _singleFilesMapListsCache =
       <_OperationKey, List<Map<String, dynamic>>>{};
+  final _singleFilesStringsListsCache = <_OperationKey, List<String>>{};
 
   StorageRouterType get _routerTypes => config.storageRouterTypes;
 
@@ -132,7 +133,7 @@ class UniversalStorageDb implements LocalDbI {
           ? config.mapSingleFileNameBuilder(key)
           : config.mapSeparateFileNameBuilder(key),
     StorageOperationDataType.oMapList =>
-      _routerTypes.placeMapsInListAsSeparateFiles
+      _routerTypes.placeMapListInSingleFile
           ? config.mapListSingleFileNameBuilder(key)
           : config.mapListSeparateFileNameBuilder(key),
   };
@@ -286,9 +287,10 @@ class UniversalStorageDb implements LocalDbI {
     required final String key,
     required final T Function(Map<String, dynamic> p1) fromJson,
     final List<T> defaultValue = const [],
-  }) {
-    // TODO: implement getItemsIterable
-    throw UnimplementedError();
+  }) async {
+    final iterable = await getMapIterable(key: key, defaultValue: []);
+    if (iterable.isEmpty) return defaultValue;
+    return iterable.map(fromJson);
   }
 
   @override
@@ -296,10 +298,7 @@ class UniversalStorageDb implements LocalDbI {
     required final String key,
     required final List<T> value,
     required final Map<String, dynamic> Function(T p1) toJson,
-  }) {
-    // TODO: implement setItemsList
-    throw UnimplementedError();
-  }
+  }) => setMapList(key: key, value: value.map(toJson).toList());
 
   @override
   Future<Map<String, dynamic>> getMap(final String key) =>
@@ -323,18 +322,31 @@ class UniversalStorageDb implements LocalDbI {
   Future<Iterable<Map<String, dynamic>>> getMapIterable({
     required final String key,
     final List<Map<String, dynamic>> defaultValue = const [],
-  }) {
-    if (_routerTypes.placeMapsInListAsSeparateFiles) {
-    } else {}
+  }) async {
+    final opKey = _OperationKey(key);
+    final cached = _singleFilesMapListsCache[opKey];
+    if (cached != null) return cached;
+    final iterable = await _readContent(
+      key: key,
+      dataType: StorageOperationDataType.oMapList,
+    );
+    if (iterable.isEmpty) return defaultValue;
+    return _singleFilesMapListsCache[opKey] ??=
+        jsonDecodeListAs<Map<String, dynamic>>(iterable);
   }
 
   @override
   Future<void> setMapList({
     required final String key,
     required final List<Map<String, dynamic>> value,
-  }) {
-    // TODO: implement setMapList
-    throw UnimplementedError();
+  }) async {
+    _singleFilesMapListsCache[_OperationKey(key)] = value;
+    final json = jsonEncode(value);
+    await _writeContent(
+      key: key,
+      dataType: StorageOperationDataType.oMapList,
+      content: json,
+    );
   }
 
   @override
@@ -361,17 +373,31 @@ class UniversalStorageDb implements LocalDbI {
   Future<Iterable<String>> getStringsIterable({
     required final String key,
     final List<String> defaultValue = const [],
-  }) {
-    // TODO: implement getStringsIterable
-    throw UnimplementedError();
+  }) async {
+    final opKey = _OperationKey(key);
+    final cached = _singleFilesStringsListsCache[opKey];
+    if (cached != null) return cached;
+    final iterable = await _readContent(
+      key: key,
+      dataType: StorageOperationDataType.oMapList,
+    );
+    if (iterable.isEmpty) return defaultValue;
+    return _singleFilesStringsListsCache[opKey] ??= jsonDecodeListAs<String>(
+      iterable,
+    );
   }
 
   @override
   Future<void> setStringList({
     required final String key,
     required final List<String> value,
-  }) {
-    // TODO: implement setStringList
-    throw UnimplementedError();
+  }) async {
+    _singleFilesStringsListsCache[_OperationKey(key)] = value;
+    final json = jsonEncode(value);
+    await _writeContent(
+      key: key,
+      dataType: StorageOperationDataType.oMapList,
+      content: json,
+    );
   }
 }
