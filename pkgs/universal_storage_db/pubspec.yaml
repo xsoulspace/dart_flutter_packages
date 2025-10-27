@@ -8,7 +8,7 @@ documentation: https://github.com/xsoulspace/universal_storage_db/tree/main/pkgs
 
 environment:
   sdk: ">=3.9.0 <4.0.0"
-  flutter: ">=3.9.0 <4.0.0"
+  flutter: ">=3.32.0"
 
 dependencies:
   flutter:
