@@ -4,7 +4,7 @@ Note: this package is still in early development and the API is quite possible w
 
 # Why yet another database?
 
-[Short video demo][https://youtu.be/eykzsmgMBv8?si=qjoM7dbcj7FNSsYx]
+[Short video demo](https://youtu.be/eykzsmgMBv8?si=qjoM7dbcj7FNSsYx)
 
 The idea is simple - I want to make it easy to access & manage underlying storage system (file system, git, cloud) in a type-safe way with simplest API possible and take into account case if the this idea fails.
 
