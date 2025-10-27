@@ -26,7 +26,8 @@
     "Unstages",
     "visionos",
     "wheretype",
-    "writability"
+    "writability",
+    "xsun"
   ],
   "cSpell.language": "en,ru",
   "python.analysis.typeCheckingMode": "off",
