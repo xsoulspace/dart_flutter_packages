@@ -5,7 +5,7 @@ alwaysApply: false
 
 # Flutter widgets and concepts:
 
-- Dart 3.8 syntax for null safety, pattern matching, and more
+- Dart 3.9 syntax for null safety, pattern matching, and more
 - Appropriate use of StatelessWidget, or Stateful widgets (NO riverpod)
 - Custom reusable widgets (use ui_kit) instead of methods
 - Cupertino or Material Design as appropriate
