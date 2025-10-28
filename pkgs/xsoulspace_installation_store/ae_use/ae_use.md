@@ -13,7 +13,7 @@ This document provides a guide for an AI agent on how to use the features of the
 
 When working with `xsoulspace_installation_store`, follow this typical workflow:
 
-1. **Initialize**: Create an `InstallationStoreUtils` instance (can be reused, as it's stateless).
+1. **Initialize**: Create a singleton instance of `InstallationStoreUtils` (preferred) or use a dependency injection container.
 2. **Detect**: Call `getInstallationSource()` to get the current installation source.
 3. **Decide**: Use the source enum value or platform helpers to make decisions.
 4. **Cache**: Store the result if needed, as the source doesn't change during app runtime.
@@ -21,8 +21,39 @@ When working with `xsoulspace_installation_store`, follow this typical workflow:
 ## Core Components
 
 - `InstallationStoreSource`: Enum representing detected installation sources across all platforms (Android, Apple, Windows, Linux, Web).
-- `InstallationStoreUtils`: Utility class for detecting the installation source (automatically selects IO or Web implementation).
+- `InstallationStoreUtils`: Utility class for detecting the installation source (automatically selects IO or Web implementation). **Prefer singleton usage** - the class is stateless and can be safely shared.
 - `InstallationTargetStore`: Enum describing intended target distribution stores.
+
+## Singleton Pattern (Preferred)
+
+**Agent Action:** Always prefer using a singleton instance of `InstallationStoreUtils` rather than creating multiple instances.
+
+**Singleton Implementation:**
+
+```dart
+import 'package:xsoulspace_installation_store/xsoulspace_installation_store.dart';
+
+/// Global singleton instance of InstallationStoreUtils
+final installationStoreUtils = InstallationStoreUtils();
+
+// Usage
+final source = await installationStoreUtils.getInstallationSource();
+```
+
+**Alternative: Dependency Injection**
+
+If using a DI container (e.g., `get_it`, `provider`), register it as a singleton:
+
+```dart
+// With get_it
+GetIt.instance.registerSingleton<InstallationStoreUtils>(
+  InstallationStoreUtils(),
+);
+
+// Usage
+final utils = GetIt.instance<InstallationStoreUtils>();
+final source = await utils.getInstallationSource();
+```
 
 ## Common Tasks
 
@@ -32,7 +63,7 @@ The primary use case is to detect where the app was installed from.
 
 **Agent Action:**
 
-1. Create an instance of `InstallationStoreUtils`.
+1. Use the singleton instance of `InstallationStoreUtils` (or get it from DI container).
 2. Call `getInstallationSource()` asynchronously.
 3. Use the returned `InstallationStoreSource` enum value for conditional logic.
 
@@ -41,9 +72,11 @@ The primary use case is to detect where the app was installed from.
 ```dart
 import 'package:xsoulspace_installation_store/xsoulspace_installation_store.dart';
 
+// Singleton instance
+final installationStoreUtils = InstallationStoreUtils();
+
 Future<void> detectSource() async {
-  final utils = InstallationStoreUtils();
-  final source = await utils.getInstallationSource();
+  final source = await installationStoreUtils.getInstallationSource();
 
   // Use the source for feature gating, analytics, etc.
   if (source.isAndroid) {
@@ -69,9 +102,11 @@ Conditionally enable or disable features based on installation source.
 ```dart
 import 'package:xsoulspace_installation_store/xsoulspace_installation_store.dart';
 
+// Singleton instance
+final installationStoreUtils = InstallationStoreUtils();
+
 Future<bool> shouldEnableFeature() async {
-  final utils = InstallationStoreUtils();
-  final source = await utils.getInstallationSource();
+  final source = await installationStoreUtils.getInstallationSource();
 
   // Enable feature only for Google Play installations
   return source == InstallationStoreSource.androidGooglePlay;
@@ -79,8 +114,7 @@ Future<bool> shouldEnableFeature() async {
 
 // Or use platform helpers
 Future<void> configureApp() async {
-  final utils = InstallationStoreUtils();
-  final source = await utils.getInstallationSource();
+  final source = await installationStoreUtils.getInstallationSource();
 
   if (source.isAndroid) {
     // Android-specific configuration
@@ -107,9 +141,11 @@ Track installation source for analytics and user segmentation.
 ```dart
 import 'package:xsoulspace_installation_store/xsoulspace_installation_store.dart';
 
+// Singleton instance
+final installationStoreUtils = InstallationStoreUtils();
+
 Future<void> initializeAnalytics() async {
-  final utils = InstallationStoreUtils();
-  final source = await utils.getInstallationSource();
+  final source = await installationStoreUtils.getInstallationSource();
 
   // Set as user property
   analytics.setUserProperty('installation_source', source.name);
@@ -119,8 +155,8 @@ Future<void> initializeAnalytics() async {
   // Or log as event
   analytics.logEvent('app_installed', parameters: {
     'source': source.name,
-    'platform': source.isAndroid ? 'android' : 
-                 source.isApple ? 'apple' : 
+    'platform': source.isAndroid ? 'android' :
+                 source.isApple ? 'apple' :
                  source.isWeb ? 'web' : 'other',
   });
 }
@@ -142,13 +178,16 @@ Display different UI or behavior based on the specific store.
 import 'package:xsoulspace_installation_store/xsoulspace_installation_store.dart';
 import 'package:flutter/material.dart';
 
+// Singleton instance
+final installationStoreUtils = InstallationStoreUtils();
+
 class StoreSpecificWidget extends StatelessWidget {
   const StoreSpecificWidget({super.key});
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<InstallationStoreSource>(
-      future: InstallationStoreUtils().getInstallationSource(),
+      future: installationStoreUtils.getInstallationSource(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const CircularProgressIndicator();
@@ -220,31 +259,48 @@ void configureDistribution() {
 
 ## Best Practices
 
-### 1. Cache the Installation Source
+### 1. Use Singleton Pattern (Preferred)
 
-The installation source doesn't change during app runtime, so consider caching it:
+Always use a singleton instance of `InstallationStoreUtils` instead of creating multiple instances:
 
 ```dart
+// Global singleton
+final installationStoreUtils = InstallationStoreUtils();
+
+// Use throughout the app
+final source = await installationStoreUtils.getInstallationSource();
+```
+
+If using dependency injection, register it as a singleton in your DI container.
+
+### 2. Cache the Installation Source
+
+The installation source doesn't change during app runtime, so cache the result:
+
+```dart
+// Singleton instance
+final installationStoreUtils = InstallationStoreUtils();
+
 InstallationStoreSource? _cachedSource;
 
 Future<InstallationStoreSource> getInstallationSource() async {
-  _cachedSource ??= await InstallationStoreUtils().getInstallationSource();
+  _cachedSource ??= await installationStoreUtils.getInstallationSource();
   return _cachedSource!;
 }
 ```
 
-### 2. Handle Unknown Sources Gracefully
+### 3. Handle Unknown Sources Gracefully
 
 Always handle the `unknown` source case:
 
 ```dart
-final source = await utils.getInstallationSource();
+final source = await installationStoreUtils.getInstallationSource();
 if (source == InstallationStoreSource.unknown) {
   // Fallback to default behavior
 }
 ```
 
-### 3. Use Platform Helpers
+### 4. Use Platform Helpers
 
 Prefer using helper getters (`isAndroid`, `isApple`, `isWeb`, etc.) over string matching:
 
@@ -258,15 +314,42 @@ if (source.name.startsWith('android')) { /* ... */ }
 
 ## Anti-Patterns
 
-### 1. Don't Call `getInstallationSource()` Repeatedly
+### 1. Don't Create Multiple Instances
 
-The source doesn't change, so cache it instead of calling it multiple times.
+**Avoid creating new instances in every function or widget:**
 
-### 2. Don't Assume Specific Store Detection
+```dart
+// Bad - creating multiple instances
+Future<void> function1() async {
+  final utils = InstallationStoreUtils(); // ❌ New instance
+  await utils.getInstallationSource();
+}
+
+Future<void> function2() async {
+  final utils = InstallationStoreUtils(); // ❌ Another new instance
+  await utils.getInstallationSource();
+}
+
+// Good - use singleton
+final installationStoreUtils = InstallationStoreUtils(); // ✅ Single instance
+
+Future<void> function1() async {
+  await installationStoreUtils.getInstallationSource(); // ✅ Reuse
+}
+
+Future<void> function2() async {
+  await installationStoreUtils.getInstallationSource(); // ✅ Reuse
+}
+```
+
+### 2. Don't Call `getInstallationSource()` Repeatedly
+
+The source doesn't change, so cache it instead of calling it multiple times, even with a singleton.
+
+### 3. Don't Assume Specific Store Detection
 
 On IO platforms, the library may return platform defaults rather than specific stores (e.g., `androidApk` instead of `androidGooglePlay`). Don't assume perfect store detection.
 
-### 3. Don't Block UI on Source Detection
+### 4. Don't Block UI on Source Detection
 
 Use `FutureBuilder` or similar patterns to handle the async nature without blocking the UI thread.
-
