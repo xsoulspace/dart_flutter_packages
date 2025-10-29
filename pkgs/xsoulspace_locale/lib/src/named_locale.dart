@@ -106,7 +106,7 @@ class LocalizedMap {
   ///
   /// @ai Handles both direct maps and wrapped maps with 'value' key.
   factory LocalizedMap.fromJson(final dynamic json) {
-    final decodedJson = jsonDecodeMapAs<String, String>(json);
+    final decodedJson = jsonDecodeMapAs<String, dynamic>(json);
     final rawJson = switch (decodedJson) {
       {'value': final dynamic value} => value,
       _ => decodedJson,

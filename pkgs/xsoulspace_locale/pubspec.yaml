@@ -1,6 +1,6 @@
 name: xsoulspace_locale
 description: Unified locale wrapper to make localization easier.
-version: 0.3.5
+version: 0.3.6
 homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_locale
 repository: https://github.com/xsoulspace/dart_flutter_packages
 

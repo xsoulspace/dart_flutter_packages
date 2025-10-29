@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.6
+
+- fix: LocalizedMap.fromJson
+
 ## 0.3.5
 
 - LocalizedMap now is class instead of extension type.
