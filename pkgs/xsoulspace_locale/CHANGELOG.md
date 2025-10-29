@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.4
+
+- fix: LocalizedMap now Map<String, String> instead of Map<UiLanguage, String> - this improves JSON serialization and deserialization.
+
 ## 0.3.3
 
 - chore: xsoulspace_foundation 0.3.0
