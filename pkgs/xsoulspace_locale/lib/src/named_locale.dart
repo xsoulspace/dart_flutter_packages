@@ -98,21 +98,21 @@ Map<String, String> localeValueToMap(final Map<UiLanguage, String> locales) =>
 /// @ai Use for managing multi-language content. Provides fallback to default
 /// language when requested language is not available.
 /// {@endtemplate}
-extension type const LocalizedMap._(Map<String, String> value) {
+class LocalizedMap {
   /// {@macro localized_map}
-  factory LocalizedMap(final Map<UiLanguage, String> value) =>
-      LocalizedMap._(localeValueToMap(value));
+  const LocalizedMap(this.value);
 
   /// Creates from JSON with flexible input format.
   ///
   /// @ai Handles both direct maps and wrapped maps with 'value' key.
   factory LocalizedMap.fromJson(final dynamic json) {
-    final rawJson = switch (json) {
+    final decodedJson = jsonDecodeMapAs<String, String>(json);
+    final rawJson = switch (decodedJson) {
       {'value': final dynamic value} => value,
-      _ => json,
+      _ => decodedJson,
     };
-    final rawMap = jsonDecodeMapAs<String, String>(rawJson);
-    return LocalizedMap._(rawMap);
+    // This produces Map<String, String> from JSON
+    return localeValueFromMap(rawJson);
   }
 
   /// Creates empty map with all supported languages.
@@ -122,18 +122,22 @@ extension type const LocalizedMap._(Map<String, String> value) {
     for (final lang in LocalizationConfig.instance.supportedLanguages) lang: '',
   });
 
-  /// Converts to JSON with 'value' wrapper.
+  /// The underlying map storing localized values.
+  final Map<UiLanguage, String> value;
+
+  /// Converts to JSON with 'value' wrapper. (keys are language codes)
   ///
   /// @ai Use for consistent JSON serialization format.
   static Map<String, dynamic> toJsonValueMap(final LocalizedMap map) => {
-    'value': map.value,
+    'value': localeValueToMap(map.value),
   };
 
   /// Converts to JSON map without wrapper.
-  Map<String, dynamic> toJson() => value;
+  Map<String, dynamic> toJson() =>
+      value.map((final key, final value) => MapEntry(key.code, value));
 
   /// Empty localized map.
-  static const empty = LocalizedMap._({});
+  static const empty = LocalizedMap({});
 
   /// Gets localized value for Flutter locale.
   ///
@@ -146,8 +150,8 @@ extension type const LocalizedMap._(Map<String, String> value) {
   /// @ai Falls back to default language if requested language not found.
   String getValueByLanguage([final UiLanguage? language]) {
     final lang = language ?? getCurrentLanguage();
-    return value[lang.code] ??
-        value[LocalizationConfig.instance.fallbackLanguage.code] ??
+    return value[lang] ??
+        value[LocalizationConfig.instance.fallbackLanguage] ??
         '';
   }
 
@@ -164,4 +168,10 @@ extension type const LocalizedMap._(Map<String, String> value) {
   /// @ai Use for immutable updates to localized content.
   LocalizedMap copyWith({final Map<UiLanguage, String>? value}) =>
       value != null ? LocalizedMap(value) : this;
+
+  /// Creates copy with optional value replacement.
+  ///
+  /// @ai Use for immutable updates to localized content.
+  LocalizedMap copyRawWith({final Map<String, String>? value}) =>
+      value != null ? LocalizedMap.fromJson(value) : this;
 }

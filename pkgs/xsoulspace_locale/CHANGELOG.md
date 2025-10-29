@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.5
+
+- LocalizedMap now is class instead of extension type.
+- added: `copyRawWith` method to `LocalizedMap` for immutable updates to localized content.
+
 ## 0.3.4
 
 - fix: LocalizedMap now Map<String, String> instead of Map<UiLanguage, String> - this improves JSON serialization and deserialization.
