@@ -171,9 +171,11 @@ class MutableOrderedMap<K, V> with Iterable<K> {
   /// Updates the value associated with the specified [key] using the provided
   /// [update] function.
   ///
+  /// Returns the updated value.
+  ///
   /// @ai Use this method to update the value associated with a key in the map.
   /// {@endtemplate}
-  void update(
+  V update(
     final K key,
     final V Function(V) update, {
     final V Function()? ifAbsent,
@@ -191,6 +193,7 @@ class MutableOrderedMap<K, V> with Iterable<K> {
       throw ArgumentError.value(key, 'value', 'Value not provided');
     }
     _valuesListCache = null;
+    return updatedValue;
   }
 
   /// {@template mutable_ordered_map_getter}
@@ -543,9 +546,11 @@ class ImmutableOrderedMap<K, V> with Iterable<K> {
   /// a default value. If the [ifAbsent] function is not provided, an
   /// [ArgumentError] is thrown.
   ///
+  /// Returns the updated value.
+  ///
   /// @ai Use this method to update the value associated with a key in the map.
   /// {@endtemplate}
-  void update(
+  V update(
     final K key,
     final V Function(V) update, {
     final V Function()? ifAbsent,
@@ -563,6 +568,7 @@ class ImmutableOrderedMap<K, V> with Iterable<K> {
     } else {
       throw ArgumentError.value(key, 'value', 'Value not provided');
     }
+    return updatedValue;
   }
 
   /// {@template immutable_ordered_map_remove}
