@@ -39,6 +39,18 @@ class MutableOrderedSet<V> with Iterable<V> {
     ..clear()
     ..addAll(items);
 
+  /// {@template mutable_ordered_set_add_all}
+  /// Adds all items from the provided [items] to this ordered set.
+  ///
+  /// Duplicates are removed, and the items are appended to maintain insertion order.
+  /// Returns `true` if any items were added, `false` if all items already existed.
+  /// Subclasses can override this method to add validation logic.
+  ///
+  /// @ai Ensure proper validation is performed in subclasses before calling super.addAll().
+  /// {@endtemplate}
+  @mustCallSuper
+  void addAll(final Iterable<V> items) => _items.addAll(items);
+
   /// {@template mutable_ordered_set_add}
   /// Adds the specified [value] to this ordered set if it doesn't already exist.
   ///
