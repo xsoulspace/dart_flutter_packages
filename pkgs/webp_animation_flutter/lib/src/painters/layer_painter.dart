@@ -5,8 +5,31 @@ import 'package:flutter/material.dart';
 import '../core/sprite_sheet.dart';
 import '../models/webp_animation_item.dart';
 
+/// Internal data structure for rendering a single animation in a layer.
+class AnimationRenderData {
+  const AnimationRenderData({
+    required this.image,
+    required this.spriteSheet,
+    required this.item,
+    required this.frameIndex,
+  });
+
+  final ui.Image? image;
+  final SpriteSheet spriteSheet;
+  final WebpAnimationItem item;
+  final int frameIndex;
+
+  @override
+  String toString() =>
+      '_AnimationRenderData('
+      'image: ${image != null ? "loaded" : "null"}, '
+      'frameIndex: $frameIndex, '
+      'item: $item)';
+}
+
 /// {@template layer_painter}
-/// CustomPainter that efficiently renders multiple WebP animations in a single draw call.
+/// CustomPainter that efficiently renders multiple WebP animations
+/// in a single draw call.
 ///
 /// Batches all animations into one paint operation for optimal GPU performance,
 /// similar to sprite batching in game engines.
@@ -18,14 +41,15 @@ class LayerPainter extends CustomPainter {
     this.filterQuality = FilterQuality.medium,
   });
 
-  /// List of animation data containing images, sprite sheets, positions, and current frame indices.
-  final List<_AnimationRenderData> animationData;
+  /// List of animation data containing images, sprite sheets,
+  /// positions, and current frame indices.
+  final List<AnimationRenderData> animationData;
 
   /// The quality of filtering to apply when scaling animations.
   final FilterQuality filterQuality;
 
   @override
-  void paint(Canvas canvas, Size size) {
+  void paint(final Canvas canvas, final Size size) {
     if (animationData.isEmpty) return;
 
     final paint = Paint()
@@ -53,7 +77,12 @@ class LayerPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(LayerPainter oldDelegate) {
+  // Semantics change if the number of animations changes
+  bool shouldRebuildSemantics(final LayerPainter oldDelegate) =>
+      animationData.length != oldDelegate.animationData.length;
+
+  @override
+  bool shouldRepaint(final LayerPainter oldDelegate) {
     // Repaint if the animation data has changed
     if (animationData.length != oldDelegate.animationData.length) {
       return true;
@@ -61,7 +90,8 @@ class LayerPainter extends CustomPainter {
 
     // Check if any frame indices have changed
     for (int i = 0; i < animationData.length; i++) {
-      if (animationData[i].frameIndex != oldDelegate.animationData[i].frameIndex ||
+      if (animationData[i].frameIndex !=
+              oldDelegate.animationData[i].frameIndex ||
           animationData[i].image != oldDelegate.animationData[i].image ||
           animationData[i].item != oldDelegate.animationData[i].item) {
         return true;
@@ -72,36 +102,7 @@ class LayerPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRebuildSemantics(LayerPainter oldDelegate) {
-    // Semantics change if the number of animations changes
-    return animationData.length != oldDelegate.animationData.length;
-  }
-
-  @override
-  String toString() {
-    return 'LayerPainter(animationCount: ${animationData.length}, filterQuality: $filterQuality)';
-  }
-}
-
-/// Internal data structure for rendering a single animation in a layer.
-class _AnimationRenderData {
-  const _AnimationRenderData({
-    required this.image,
-    required this.spriteSheet,
-    required this.item,
-    required this.frameIndex,
-  });
-
-  final ui.Image? image;
-  final SpriteSheet spriteSheet;
-  final WebpAnimationItem item;
-  final int frameIndex;
-
-  @override
-  String toString() {
-    return '_AnimationRenderData('
-        'image: ${image != null ? "loaded" : "null"}, '
-        'frameIndex: $frameIndex, '
-        'item: $item)';
-  }
+  String toString() =>
+      'LayerPainter(animationCount: ${animationData.length}, '
+      'filterQuality: $filterQuality)';
 }

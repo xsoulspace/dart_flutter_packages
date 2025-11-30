@@ -1,4 +1,6 @@
-import 'dart:ui';
+import 'dart:typed_data';
+
+import 'package:flutter/material.dart';
 
 import 'animation_frame.dart';
 
@@ -8,6 +10,7 @@ import 'animation_frame.dart';
 /// Contains the raw pixel data, dimensions, and frame metadata for efficient
 /// animation playback. All frames are packed horizontally into a single texture.
 /// {@endtemplate}
+@immutable
 class SpriteSheet {
   /// {@macro sprite_sheet}
   const SpriteSheet({
@@ -21,7 +24,7 @@ class SpriteSheet {
   });
 
   /// Raw RGBA pixel data as Uint8List, ready for GPU upload.
-  final List<int> pixels;
+  final Uint8List pixels;
 
   /// Total width of the sprite sheet (frameWidth * frameCount).
   final int width;
@@ -84,10 +87,9 @@ class SpriteSheet {
   }
 
   @override
-  bool operator ==(final Object other) {
+  bool operator ==(covariant final SpriteSheet other) {
     if (identical(this, other)) return true;
-    return other is SpriteSheet &&
-        other.width == width &&
+    return other.width == width &&
         other.height == height &&
         other.frameWidth == frameWidth &&
         other.frameHeight == frameHeight &&

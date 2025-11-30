@@ -1,10 +1,20 @@
+import 'package:flutter/foundation.dart';
+
 /// {@template animation_frame}
 /// Represents a single frame in a WebP animation with timing information.
 ///
 /// Contains the frame index, delay from WebP metadata, and calculated timestamp
 /// for efficient animation playback.
 /// {@endtemplate}
+@immutable
 class AnimationFrame {
+  /// {@macro animation_frame}
+  const AnimationFrame({
+    required this.index,
+    required this.delay,
+    required this.timestamp,
+  });
+
   /// The zero-based frame index in the animation sequence.
   final int index;
 
@@ -15,18 +25,11 @@ class AnimationFrame {
   /// calculated as the sum of all previous frame delays.
   final double timestamp;
 
-  /// {@macro animation_frame}
-  const AnimationFrame({
-    required this.index,
-    required this.delay,
-    required this.timestamp,
-  });
-
   @override
   int get hashCode => Object.hash(index, delay, timestamp);
 
   @override
-  bool operator ==(covariant AnimationFrame other) {
+  bool operator ==(covariant final AnimationFrame other) {
     if (identical(this, other)) return true;
     return other.index == index &&
         other.delay == delay &&
@@ -34,13 +37,15 @@ class AnimationFrame {
   }
 
   /// Creates a copy of this frame with modified properties.
-  AnimationFrame copyWith({int? index, Duration? delay, double? timestamp}) {
-    return AnimationFrame(
-      index: index ?? this.index,
-      delay: delay ?? this.delay,
-      timestamp: timestamp ?? this.timestamp,
-    );
-  }
+  AnimationFrame copyWith({
+    final int? index,
+    final Duration? delay,
+    final double? timestamp,
+  }) => AnimationFrame(
+    index: index ?? this.index,
+    delay: delay ?? this.delay,
+    timestamp: timestamp ?? this.timestamp,
+  );
 
   @override
   String toString() =>

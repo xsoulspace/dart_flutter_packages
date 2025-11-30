@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -17,10 +18,10 @@ import 'webp_animation_controller.dart';
 class WebpAnimation extends StatefulWidget {
   /// {@macro webp_animation}
   const WebpAnimation({
-    super.key,
     required this.asset,
     required this.width,
     required this.height,
+    super.key,
     this.autoPlay = true,
     this.loop = true,
     this.speed = 1.0,
@@ -76,13 +77,19 @@ class WebpAnimation extends StatefulWidget {
   ///
   /// If provided, returns a widget instead of the default animation rendering.
   /// Useful for custom loading indicators or error handling.
-  final Widget Function(BuildContext context, SpriteSheet? spriteSheet, Object? error)? builder;
+  final Widget Function(
+    BuildContext context,
+    SpriteSheet? spriteSheet,
+    Object? error,
+  )?
+  builder;
 
   @override
   State<WebpAnimation> createState() => _WebpAnimationState();
 }
 
-class _WebpAnimationState extends State<WebpAnimation> with TickerProviderStateMixin {
+class _WebpAnimationState extends State<WebpAnimation>
+    with TickerProviderStateMixin {
   late Future<SpriteSheet> _spriteSheetFuture;
   SpriteSheet? _spriteSheet;
   ui.Image? _image;
@@ -91,19 +98,33 @@ class _WebpAnimationState extends State<WebpAnimation> with TickerProviderStateM
   late AnimationController _animationController;
   WebpAnimationController? _webpController;
 
+  /// Gets the WebpAnimationController for this animation.
+  ///
+  /// Only available when no custom controller is provided.
+  WebpAnimationController? get webpController => _webpController;
+
   @override
-  void initState() {
-    super.initState();
-    _loadAnimation();
+  Widget build(final BuildContext context) {
+    // Use custom builder if provided
+    if (widget.builder != null) {
+      return widget.builder!(context, _spriteSheet, _error);
+    }
+
+    // Default rendering
+    return SizedBox(
+      width: widget.width,
+      height: widget.height,
+      child: _buildAnimationWidget(),
+    );
   }
 
   @override
-  void didUpdateWidget(WebpAnimation oldWidget) {
+  void didUpdateWidget(final WebpAnimation oldWidget) {
     super.didUpdateWidget(oldWidget);
 
     // Reload if asset changed
     if (oldWidget.asset != widget.asset) {
-      _loadAnimation();
+      unawaited(_loadAnimation());
     }
 
     // Update controller if timing parameters changed
@@ -121,90 +142,10 @@ class _WebpAnimationState extends State<WebpAnimation> with TickerProviderStateM
     super.dispose();
   }
 
-  void _loadAnimation() {
-    _spriteSheetFuture = WebpDecoder.decodeFromAsset(widget.asset);
-
-    _spriteSheetFuture.then((spriteSheet) async {
-      if (!mounted) return;
-
-      setState(() {
-        _spriteSheet = spriteSheet;
-        _error = null;
-      });
-
-      // Create GPU image
-      try {
-        final image = await WebpDecoder.createImageFromSpriteSheet(spriteSheet);
-        if (!mounted) return;
-
-        setState(() {
-          _image = image;
-        });
-
-        // Initialize animation controller
-        _initializeAnimationController();
-
-        // Start playback if requested
-        if (widget.autoPlay) {
-          _animationController.repeat(reverse: false);
-        }
-      } catch (e) {
-        if (!mounted) return;
-        setState(() {
-          _error = e;
-        });
-      }
-    }).catchError((error) {
-      if (!mounted) return;
-      setState(() {
-        _error = error;
-      });
-    });
-  }
-
-  void _initializeAnimationController() {
-    if (_spriteSheet == null) return;
-
-    // Use provided controller or create our own
-    _animationController = widget.controller ?? AnimationController(vsync: this);
-
-    // Update duration based on timing mode
-    _updateAnimationController();
-
-    // Create WebpAnimationController wrapper if no custom controller provided
-    if (widget.controller == null) {
-      _webpController = WebpAnimationController(
-        controller: _animationController,
-        spriteSheet: _spriteSheet!,
-      );
-    }
-  }
-
-  void _updateAnimationController() {
-    if (_spriteSheet == null) return;
-
-    final duration = FrameTiming.getTotalDuration(
-      spriteSheet: _spriteSheet!,
-      respectFrameDelays: widget.respectFrameDelays,
-      fps: widget.fps,
-    );
-
-    _animationController.duration = duration * (1.0 / widget.speed);
-  }
-
   @override
-  Widget build(BuildContext context) {
-    // Use custom builder if provided
-    if (widget.builder != null) {
-      return widget.builder!(context, _spriteSheet, _error);
-    }
-
-    // Default rendering
-    return SizedBox(
-      width: widget.width,
-      height: widget.height,
-      child: _buildAnimationWidget(),
-    );
+  void initState() {
+    super.initState();
+    unawaited(_loadAnimation());
   }
 
   Widget _buildAnimationWidget() {
@@ -216,7 +157,7 @@ class _WebpAnimationState extends State<WebpAnimation> with TickerProviderStateM
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.error_outline, color: Colors.red, size: 48),
+              const Icon(Icons.error_outline, color: Colors.red, size: 48),
               const SizedBox(height: 8),
               Text(
                 'Failed to load animation',
@@ -232,16 +173,14 @@ class _WebpAnimationState extends State<WebpAnimation> with TickerProviderStateM
     if (_spriteSheet == null || _image == null) {
       return Container(
         color: Colors.grey[100],
-        child: const Center(
-          child: CircularProgressIndicator(),
-        ),
+        child: const Center(child: CircularProgressIndicator()),
       );
     }
 
     // Render animation
     return AnimatedBuilder(
       animation: _animationController,
-      builder: (context, child) {
+      builder: (final context, final child) {
         final frameIndex = FrameTiming.getFrameIndex(
           spriteSheet: _spriteSheet!,
           progress: _animationController.value,
@@ -263,8 +202,74 @@ class _WebpAnimationState extends State<WebpAnimation> with TickerProviderStateM
     );
   }
 
-  /// Gets the WebpAnimationController for this animation.
-  ///
-  /// Only available when no custom controller is provided.
-  WebpAnimationController? get webpController => _webpController;
+  void _initializeAnimationController() {
+    if (_spriteSheet == null) return;
+
+    // Use provided controller or create our own
+    _animationController =
+        widget.controller ?? AnimationController(vsync: this);
+
+    // Update duration based on timing mode
+    _updateAnimationController();
+
+    // Create WebpAnimationController wrapper if no custom controller provided
+    if (widget.controller == null) {
+      _webpController = WebpAnimationController(
+        controller: _animationController,
+        spriteSheet: _spriteSheet!,
+      );
+    }
+  }
+
+  Future<void> _loadAnimation() async {
+    _spriteSheetFuture = WebpDecoder.decodeFromAsset(widget.asset);
+    try {
+      final spriteSheet = await _spriteSheetFuture;
+      if (!mounted) return;
+
+      setState(() {
+        _spriteSheet = spriteSheet;
+        _error = null;
+      });
+
+      try {
+        final image = await WebpDecoder.createImageFromSpriteSheet(spriteSheet);
+        if (!mounted) return;
+
+        setState(() {
+          _image = image;
+        });
+
+        // Initialize animation controller
+        _initializeAnimationController();
+
+        // Start playback if requested
+        if (widget.autoPlay) {
+          unawaited(_animationController.repeat());
+        }
+      } catch (e) {
+        if (!mounted) return;
+        setState(() {
+          _error = e;
+        });
+      }
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = error;
+      });
+    }
+  }
+
+  void _updateAnimationController() {
+    if (_spriteSheet == null) return;
+
+    final duration = FrameTiming.getTotalDuration(
+      spriteSheet: _spriteSheet!,
+      respectFrameDelays: widget.respectFrameDelays,
+      fps: widget.fps,
+    );
+
+    _animationController.duration = duration * (1.0 / widget.speed);
+  }
 }

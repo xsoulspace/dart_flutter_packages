@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -41,7 +42,7 @@ class SpriteSheetPainter extends CustomPainter {
   final FilterQuality filterQuality;
 
   @override
-  void paint(Canvas canvas, Size size) {
+  void paint(final Canvas canvas, final Size size) {
     if (size.isEmpty) return;
 
     // Get the source rectangle for the current frame
@@ -59,22 +60,30 @@ class SpriteSheetPainter extends CustomPainter {
     canvas.drawImageRect(image, srcRect, dstRect, paint);
   }
 
-  /// Calculates the destination rectangle for rendering based on fit and alignment.
-  Rect _calculateDestinationRect(Size canvasSize, Size frameSize) {
-    final fittedSize = _applyBoxFit(frameSize, canvasSize);
+  // Semantics don't change for frame updates
+  @override
+  bool shouldRebuildSemantics(final SpriteSheetPainter oldDelegate) =>
+      oldDelegate.spriteSheet != spriteSheet;
 
-    final offset = alignment.alongSize(canvasSize - fittedSize);
+  // Only repaint if the frame actually changed or rendering properties changed
+  @override
+  bool shouldRepaint(final SpriteSheetPainter oldDelegate) =>
+      oldDelegate.frameIndex != frameIndex ||
+      oldDelegate.spriteSheet != spriteSheet ||
+      oldDelegate.fit != fit ||
+      oldDelegate.alignment != alignment ||
+      oldDelegate.filterQuality != filterQuality;
 
-    return Rect.fromLTWH(
-      offset.dx,
-      offset.dy,
-      fittedSize.width,
-      fittedSize.height,
-    );
-  }
+  @override
+  String toString() =>
+      'SpriteSheetPainter('
+      'frameIndex: $frameIndex, '
+      'spriteSheet: $spriteSheet, '
+      'fit: $fit, '
+      'alignment: $alignment)';
 
   /// Applies BoxFit logic to calculate fitted size.
-  Size _applyBoxFit(Size inputSize, Size outputSize) {
+  Size _applyBoxFit(final Size inputSize, final Size outputSize) {
     if (inputSize.isEmpty || outputSize.isEmpty) return Size.zero;
 
     switch (fit) {
@@ -82,11 +91,17 @@ class SpriteSheetPainter extends CustomPainter {
         return outputSize;
 
       case BoxFit.contain:
-        final scale = min(outputSize.width / inputSize.width, outputSize.height / inputSize.height);
+        final scale = math.min(
+          outputSize.width / inputSize.width,
+          outputSize.height / inputSize.height,
+        );
         return Size(inputSize.width * scale, inputSize.height * scale);
 
       case BoxFit.cover:
-        final scale = max(outputSize.width / inputSize.width, outputSize.height / inputSize.height);
+        final scale = math.max(
+          outputSize.width / inputSize.width,
+          outputSize.height / inputSize.height,
+        );
         return Size(inputSize.width * scale, inputSize.height * scale);
 
       case BoxFit.fitWidth:
@@ -101,33 +116,34 @@ class SpriteSheetPainter extends CustomPainter {
         return inputSize;
 
       case BoxFit.scaleDown:
-        final scale = min(1.0, min(outputSize.width / inputSize.width, outputSize.height / inputSize.height));
+        final scale = math.min(
+          1,
+          math.min(
+            outputSize.width / inputSize.width,
+            outputSize.height / inputSize.height,
+          ),
+        );
         return Size(inputSize.width * scale, inputSize.height * scale);
     }
   }
 
-  @override
-  bool shouldRepaint(SpriteSheetPainter oldDelegate) {
-    // Only repaint if the frame actually changed or rendering properties changed
-    return oldDelegate.frameIndex != frameIndex ||
-           oldDelegate.spriteSheet != spriteSheet ||
-           oldDelegate.fit != fit ||
-           oldDelegate.alignment != alignment ||
-           oldDelegate.filterQuality != filterQuality;
-  }
+  /// Calculates the destination rectangle for rendering based on
+  /// fit and alignment.
+  Rect _calculateDestinationRect(final Size canvasSize, final Size frameSize) {
+    final fittedSize = _applyBoxFit(frameSize, canvasSize);
 
-  @override
-  bool shouldRebuildSemantics(SpriteSheetPainter oldDelegate) {
-    // Semantics don't change for frame updates
-    return oldDelegate.spriteSheet != spriteSheet;
-  }
+    final offset = alignment.alongSize(
+      Size(
+        canvasSize.width - fittedSize.width,
+        canvasSize.height - fittedSize.height,
+      ),
+    );
 
-  @override
-  String toString() {
-    return 'SpriteSheetPainter('
-        'frameIndex: $frameIndex, '
-        'spriteSheet: $spriteSheet, '
-        'fit: $fit, '
-        'alignment: $alignment)';
+    return Rect.fromLTWH(
+      offset.dx,
+      offset.dy,
+      fittedSize.width,
+      fittedSize.height,
+    );
   }
 }

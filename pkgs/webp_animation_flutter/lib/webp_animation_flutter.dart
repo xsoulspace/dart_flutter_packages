@@ -36,6 +36,7 @@
 ///   ],
 /// )
 /// ```
+library;
 
 export 'src/core/webp_decoder.dart';
 export 'src/models/webp_animation_item.dart';
