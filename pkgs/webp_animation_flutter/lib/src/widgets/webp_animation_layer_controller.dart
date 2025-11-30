@@ -10,13 +10,12 @@ import '../core/game_loop_controller.dart';
 class WebpAnimationLayerController {
   /// {@macro webp_animation_layer_controller}
   WebpAnimationLayerController({
-    final GameLoopController? gameLoopController,
+    required this.gameLoopController,
     final List<AnimationState>? animationStates,
-  }) : _gameLoopController = gameLoopController,
-       _animationStates = animationStates ?? [];
+  }) : _animationStates = animationStates ?? [];
 
   /// The underlying GameLoopController.
-  final GameLoopController? _gameLoopController;
+  final GameLoopController gameLoopController;
 
   /// Animation states for all animations in the layer.
   final List<AnimationState> _animationStates;
@@ -30,7 +29,7 @@ class WebpAnimationLayerController {
 
   /// Disposes of the controller and cleans up resources.
   void dispose() {
-    _gameLoopController?.dispose();
+    gameLoopController.dispose();
   }
 
   /// Calculates and returns the current frame indices for all animations.
@@ -45,7 +44,7 @@ class WebpAnimationLayerController {
     for (final state in _animationStates) {
       state.pause();
     }
-    _gameLoopController?.stop();
+    gameLoopController.stop();
   }
 
   /// Starts playing all animations.
@@ -57,7 +56,7 @@ class WebpAnimationLayerController {
         ..reset()
         ..play();
     }
-    await _gameLoopController?.start();
+    await gameLoopController.start();
   }
 
   /// Resets all animations to their first frames and stops playback.
@@ -65,7 +64,7 @@ class WebpAnimationLayerController {
     for (final state in _animationStates) {
       state.reset();
     }
-    _gameLoopController?.stop();
+    gameLoopController.stop();
   }
 
   /// Seeks to a specific progress point (0.0 to 1.0).

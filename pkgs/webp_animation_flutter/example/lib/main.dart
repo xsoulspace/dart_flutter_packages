@@ -30,7 +30,7 @@ class WebpAnimationExampleApp extends StatelessWidget {
 
 class _HomePageState extends State<HomePage> {
   static const animationAsset = 'assets/animated-webp-supported.webp';
-  static const animationCount = 60;
+  static const animationCount = 120;
   static const singleAnimationSize = Size(200, 200);
   static const batchAnimationSize = Size(50, 50);
 
@@ -75,28 +75,33 @@ class _HomePageState extends State<HomePage> {
     ),
   );
 
-  Widget _buildBatchAnimationView() => Column(
+  Widget _buildBatchAnimationView() => Row(
     mainAxisAlignment: MainAxisAlignment.center,
     children: [
-      Text(
-        'Batch Animation Layer',
-        style: Theme.of(context).textTheme.headlineSmall,
-      ),
-      Text(
-        '$animationCount animations',
-        style: Theme.of(context).textTheme.titleMedium,
-      ),
-      const SizedBox(height: 20),
-      SizedBox(
-        width: _totalWidth,
-        height: _totalHeight,
-        child: WebpAnimationLayer(animations: _animationItems),
-      ),
-      const SizedBox(height: 20),
-      Text(
-        'Single WebpAnimationLayer widget\nOne draw call for all animations\nPerfect synchronization',
-        style: Theme.of(context).textTheme.bodyMedium,
-        textAlign: TextAlign.center,
+      Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            'Batch Animation Layer',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          Text(
+            '$animationCount animations',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: _totalWidth,
+            height: _totalHeight,
+            child: WebpAnimationLayer(animations: _animationItems),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Single WebpAnimationLayer widget\nOne draw call for all animations\nPerfect synchronization',
+            style: Theme.of(context).textTheme.bodyMedium,
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     ],
   );

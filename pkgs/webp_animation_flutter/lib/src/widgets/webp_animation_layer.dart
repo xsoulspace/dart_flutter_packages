@@ -28,7 +28,7 @@ class WebpAnimationLayer extends StatefulWidget {
     this.loop = true,
     this.speed = 1.0,
     this.respectFrameDelays = true,
-    this.fps = 24.0,
+    this.fps = 30.0,
     this.filterQuality = FilterQuality.medium,
     this.builder,
   }) : assert(animations.length > 0, 'animations list must be non-empty'),
@@ -79,7 +79,6 @@ class _WebpAnimationLayerState extends State<WebpAnimationLayer>
   late List<Object?> _errors;
   late List<AnimationState?> _animationStates;
 
-  GameLoopController? _gameLoopController;
   WebpAnimationLayerController? _layerController;
 
   bool _allLoaded = false;
@@ -116,7 +115,6 @@ class _WebpAnimationLayerState extends State<WebpAnimationLayer>
 
   @override
   void dispose() {
-    _gameLoopController?.dispose();
     _layerController?.dispose();
     super.dispose();
   }
@@ -174,6 +172,7 @@ class _WebpAnimationLayerState extends State<WebpAnimationLayer>
       painter: AnimationPainter(
         spriteSheets: _spriteSheets,
         images: _images,
+        repaint: _layerController?.gameLoopController,
         animationStates: _animationStates,
         animationItems: widget.animations,
         fit: BoxFit.fill, // Items define their own size
@@ -252,36 +251,26 @@ class _WebpAnimationLayerState extends State<WebpAnimationLayer>
     });
 
     // Initialize game loop controller
-    _gameLoopController = GameLoopController(vsync: this);
-    _gameLoopController!.onTick = _onGameLoopTick;
+    final gameLoopController = GameLoopController(vsync: this);
+    gameLoopController.onTick = _onGameLoopTick;
 
     // Create layer controller
     _layerController = WebpAnimationLayerController(
-      gameLoopController: _gameLoopController,
+      gameLoopController: gameLoopController,
       animationStates: _animationStates.whereType<AnimationState>().toList(),
     );
 
     // Start playback if requested
     if (widget.autoPlay && _allLoaded) {
-      for (final state in _animationStates) {
-        state?.play();
-      }
-      unawaited(_gameLoopController!.start());
+      unawaited(_layerController?.play());
     }
   }
 
   void _onGameLoopTick(final double deltaTime) {
-    bool needsRepaint = false;
     for (final state in _animationStates) {
       if (state != null) {
         state.update(deltaTime);
-        needsRepaint = true;
       }
-    }
-
-    // Trigger repaint if any animations updated
-    if (needsRepaint && mounted) {
-      setState(() {});
     }
   }
 

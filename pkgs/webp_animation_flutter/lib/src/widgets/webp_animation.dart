@@ -29,7 +29,7 @@ class WebpAnimation extends StatefulWidget {
     this.loop = true,
     this.speed = 1.0,
     this.respectFrameDelays = true,
-    this.fps = 24.0,
+    this.fps = 30.0,
     this.controller,
     this.fit = BoxFit.contain,
     this.alignment = Alignment.center,
@@ -98,7 +98,6 @@ class _WebpAnimationState extends State<WebpAnimation>
   ui.Image? _image;
   Object? _error;
 
-  GameLoopController? _gameLoopController;
   AnimationState? _animationState;
   WebpAnimationController? _webpController;
 
@@ -141,7 +140,6 @@ class _WebpAnimationState extends State<WebpAnimation>
 
   @override
   void dispose() {
-    _gameLoopController?.dispose();
     _webpController?.dispose();
     super.dispose();
   }
@@ -186,6 +184,7 @@ class _WebpAnimationState extends State<WebpAnimation>
       painter: AnimationPainter(
         spriteSheets: [_spriteSheet],
         images: [_image],
+        repaint: _webpController?.gameLoopController,
         animationStates: [_animationState],
         fit: widget.fit,
         alignment: widget.alignment,
@@ -208,11 +207,11 @@ class _WebpAnimationState extends State<WebpAnimation>
 
     // Use provided controller or create our own game loop
     if (widget.controller == null) {
-      _gameLoopController = GameLoopController(vsync: this);
-      _gameLoopController!.onTick = _onGameLoopTick;
+      final gameLoopController = GameLoopController(vsync: this);
+      gameLoopController.onTick = _onGameLoopTick;
 
       _webpController = WebpAnimationController(
-        gameLoopController: _gameLoopController,
+        gameLoopController: gameLoopController,
         animationState: _animationState,
       );
     }
@@ -241,8 +240,7 @@ class _WebpAnimationState extends State<WebpAnimation>
 
         // Start playback if requested
         if (widget.autoPlay && _animationState != null) {
-          _animationState!.play();
-          unawaited(_gameLoopController?.start());
+          unawaited(_webpController?.play());
         }
         // ignore: avoid_catches_without_on_clauses
       } catch (e) {
@@ -263,10 +261,6 @@ class _WebpAnimationState extends State<WebpAnimation>
   void _onGameLoopTick(final double deltaTime) {
     if (_animationState != null) {
       _animationState!.update(deltaTime);
-      // Trigger repaint
-      if (mounted) {
-        setState(() {});
-      }
     }
   }
 

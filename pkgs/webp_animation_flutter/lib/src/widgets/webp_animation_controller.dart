@@ -10,13 +10,12 @@ import '../core/game_loop_controller.dart';
 class WebpAnimationController {
   /// {@macro webp_animation_controller}
   WebpAnimationController({
-    final GameLoopController? gameLoopController,
+    this.gameLoopController,
     final AnimationState? animationState,
-  }) : _gameLoopController = gameLoopController,
-       _animationState = animationState;
+  }) : _animationState = animationState;
 
   /// The underlying GameLoopController that drives the animation.
-  final GameLoopController? _gameLoopController;
+  final GameLoopController? gameLoopController;
 
   /// The animation state containing timing and frame data.
   final AnimationState? _animationState;
@@ -41,7 +40,7 @@ class WebpAnimationController {
   /// @ai Always call this when the controller is no longer needed.
   /// Note: This does not dispose the GameLoopController as it's owned by the widget.
   void dispose() {
-    // GameLoopController is disposed by the widget that owns it
+    gameLoopController?.dispose();
   }
 
   /// Pauses the animation at the current frame.
@@ -49,7 +48,7 @@ class WebpAnimationController {
   /// @ai Call this to pause animation playback.
   void pause() {
     _animationState?.pause();
-    _gameLoopController?.stop();
+    gameLoopController?.stop();
   }
 
   /// Starts the animation from the beginning.
@@ -58,7 +57,7 @@ class WebpAnimationController {
   Future<void> play() async {
     _animationState?.reset();
     _animationState?.play();
-    await _gameLoopController?.start();
+    await gameLoopController?.start();
   }
 
   /// Resets the animation to the first frame and stops playback.
@@ -66,7 +65,7 @@ class WebpAnimationController {
   /// @ai Call this to return to the beginning of the animation.
   void reset() {
     _animationState?.reset();
-    _gameLoopController?.stop();
+    gameLoopController?.stop();
   }
 
   /// Seeks to a specific frame index.

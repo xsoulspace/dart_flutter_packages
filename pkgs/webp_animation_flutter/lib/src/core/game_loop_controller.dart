@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
 /// {@template game_loop_controller}
@@ -7,7 +8,7 @@ import 'package:flutter/scheduler.dart';
 /// playback, similar to game engines. It eliminates the overhead of Flutter's
 /// AnimationController by providing direct delta time values.
 /// {@endtemplate}
-class GameLoopController {
+class GameLoopController with ChangeNotifier {
   /// {@macro game_loop_controller}
   GameLoopController({
     required this.vsync,
@@ -45,9 +46,11 @@ class GameLoopController {
   /// Disposes of the controller and cleans up resources.
   ///
   /// @ai Always call this when the controller is no longer needed.
+  @override
   void dispose() {
     stop();
     _ticker.dispose();
+    super.dispose();
   }
 
   /// Starts the game loop.
@@ -91,5 +94,6 @@ class GameLoopController {
 
     // Notify listeners
     onTick?.call(_deltaTime);
+    notifyListeners();
   }
 }
