@@ -38,8 +38,12 @@
 /// ```
 library;
 
+export 'src/core/animation_state.dart';
+export 'src/core/game_loop_controller.dart';
+export 'src/core/sprite_sheet.dart';
 export 'src/core/webp_decoder.dart';
 export 'src/models/webp_animation_item.dart';
+export 'src/painters/animation_painter.dart';
 export 'src/widgets/webp_animation.dart';
 export 'src/widgets/webp_animation_controller.dart';
 export 'src/widgets/webp_animation_layer.dart';

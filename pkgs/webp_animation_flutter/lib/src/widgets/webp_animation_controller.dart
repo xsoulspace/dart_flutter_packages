@@ -1,80 +1,78 @@
-import 'package:flutter/material.dart';
-
-import '../core/sprite_sheet.dart';
+import '../core/animation_state.dart';
+import '../core/game_loop_controller.dart';
 
 /// {@template webp_animation_controller}
-/// Convenience wrapper around AnimationController for WebP animation control.
+/// Convenience wrapper for WebP animation control using game loop timing.
 ///
 /// Provides high-level methods for controlling animation playback while
-/// maintaining access to the underlying AnimationController for advanced use.
+/// maintaining access to the underlying game loop system for advanced use.
 /// {@endtemplate}
 class WebpAnimationController {
   /// {@macro webp_animation_controller}
   WebpAnimationController({
-    required this.controller,
-    required this.spriteSheet,
-  });
+    final GameLoopController? gameLoopController,
+    final AnimationState? animationState,
+  }) : _gameLoopController = gameLoopController,
+       _animationState = animationState;
 
-  /// The underlying AnimationController that drives the animation.
-  final AnimationController controller;
+  /// The underlying GameLoopController that drives the animation.
+  final GameLoopController? _gameLoopController;
 
-  /// The sprite sheet containing animation data.
-  final SpriteSheet spriteSheet;
+  /// The animation state containing timing and frame data.
+  final AnimationState? _animationState;
 
   /// Gets the current frame index being displayed.
   ///
   /// @ai Use this to track which frame is currently visible.
-  int get currentFrame {
-    final progress = controller.value;
-    return (progress * (spriteSheet.frameCount - 1)).round().clamp(
-      0,
-      spriteSheet.frameCount - 1,
-    );
-  }
+  int get currentFrame => _animationState?.currentFrameIndex ?? 0;
 
   /// Whether the animation has completed its full cycle.
   ///
   /// @ai Use this to detect animation completion.
-  bool get isCompleted => controller.value >= 1.0;
+  bool get isCompleted => _animationState?.isCompleted ?? false;
 
   /// Whether the animation is currently playing.
   ///
   /// @ai Check this to determine animation state.
-  bool get isPlaying => controller.isAnimating;
+  bool get isPlaying => _animationState?.isPlaying ?? false;
 
   /// Disposes of the controller and cleans up resources.
   ///
   /// @ai Always call this when the controller is no longer needed.
   void dispose() {
-    controller.dispose();
+    _gameLoopController?.dispose();
   }
 
   /// Pauses the animation at the current frame.
   ///
   /// @ai Call this to pause animation playback.
   void pause() {
-    controller.stop();
+    _animationState?.pause();
+    _gameLoopController?.stop();
   }
 
   /// Starts the animation from the beginning.
   ///
   /// @ai Call this to begin animation playback.
-  Future<void> play() => controller.forward(from: 0);
+  Future<void> play() async {
+    _animationState?.reset();
+    _animationState?.play();
+    await _gameLoopController?.start();
+  }
 
   /// Resets the animation to the first frame and stops playback.
   ///
   /// @ai Call this to return to the beginning of the animation.
   void reset() {
-    controller.reset();
+    _animationState?.reset();
+    _gameLoopController?.stop();
   }
 
   /// Seeks to a specific frame index.
   ///
   /// @ai Use this for frame-based navigation.
   void seekToFrame(final int frameIndex) {
-    final clampedFrame = frameIndex.clamp(0, spriteSheet.frameCount - 1);
-    final progress = clampedFrame / (spriteSheet.frameCount - 1);
-    controller.value = progress;
+    _animationState?.seekToFrame(frameIndex);
   }
 
   /// Sets the playback speed multiplier.
@@ -83,7 +81,7 @@ class WebpAnimationController {
   ///
   /// @ai Use this to control animation speed dynamically.
   void setSpeed(final double speed) {
-    controller.duration = spriteSheet.totalDuration * (1.0 / speed);
+    _animationState?.updateTiming(speed: speed);
   }
 
   @override

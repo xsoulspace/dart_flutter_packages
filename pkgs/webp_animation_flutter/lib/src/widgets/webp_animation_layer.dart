@@ -3,9 +3,12 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
+import '../core/animation_state.dart';
+import '../core/game_loop_controller.dart';
 import '../core/sprite_sheet.dart';
 import '../core/webp_decoder.dart';
 import '../models/webp_animation_item.dart';
+import '../painters/animation_painter.dart';
 import 'webp_animation_layer_controller.dart';
 
 /// {@template webp_animation_layer}
@@ -68,99 +71,15 @@ class WebpAnimationLayer extends StatefulWidget {
   State<WebpAnimationLayer> createState() => _WebpAnimationLayerState();
 }
 
-/// {@template efficient_layer_painter}
-/// Optimized CustomPainter that calculates frame indices internally
-/// without requiring AnimatedBuilder, eliminating expensive object creation
-/// on every frame.
-/// {@endtemplate}
-class _EfficientLayerPainter extends CustomPainter {
-  /// {@macro efficient_layer_painter}
-  _EfficientLayerPainter({
-    required this.spriteSheets,
-    required this.images,
-    required this.animations,
-    required this.layerController,
-    required this.filterQuality,
-  }) : super(repaint: layerController?.controller);
-
-  final List<SpriteSheet?> spriteSheets;
-  final List<ui.Image?> images;
-  final List<WebpAnimationItem> animations;
-  final WebpAnimationLayerController? layerController;
-  final FilterQuality filterQuality;
-
-  @override
-  void paint(final Canvas canvas, final Size size) {
-    if (animations.isEmpty) return;
-
-    final paint = Paint()
-      ..filterQuality = filterQuality
-      ..isAntiAlias = true;
-
-    // Get current frame indices for all animations
-    final frameIndices = layerController?.getCurrentFrameIndices() ?? [];
-
-    // Render all animations in a single batch
-    for (int i = 0; i < animations.length; i++) {
-      final spriteSheet = spriteSheets[i];
-      final image = images[i];
-      if (spriteSheet == null || image == null) continue;
-
-      final frameIndex = i < frameIndices.length ? frameIndices[i] : 0;
-
-      // Get source rectangle for current frame
-      final srcRect = spriteSheet.getFrameRect(frameIndex);
-
-      // Calculate destination rectangle based on item position and size
-      final dstRect = Rect.fromLTWH(
-        animations[i].position.dx,
-        animations[i].position.dy,
-        animations[i].size.width,
-        animations[i].size.height,
-      );
-
-      // Draw the frame slice at the specified position and size
-      canvas.drawImageRect(image, srcRect, dstRect, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(final _EfficientLayerPainter oldDelegate) {
-    // Check basic properties first
-    if (spriteSheets.length != oldDelegate.spriteSheets.length ||
-        images.length != oldDelegate.images.length ||
-        animations.length != oldDelegate.animations.length ||
-        filterQuality != oldDelegate.filterQuality) {
-      return true;
-    }
-
-    // Check if any sprite sheets changed
-    for (int i = 0; i < spriteSheets.length; i++) {
-      if (spriteSheets[i] != oldDelegate.spriteSheets[i]) return true;
-    }
-
-    // Check if any images changed
-    for (int i = 0; i < images.length; i++) {
-      if (images[i] != oldDelegate.images[i]) return true;
-    }
-
-    // Check if any animation items changed
-    for (int i = 0; i < animations.length; i++) {
-      if (animations[i] != oldDelegate.animations[i]) return true;
-    }
-
-    // Controller changes will trigger repaint via repaint parameter
-    return false;
-  }
-}
-
 class _WebpAnimationLayerState extends State<WebpAnimationLayer>
     with TickerProviderStateMixin {
   late List<Future<SpriteSheet>> _spriteSheetFutures;
   late List<SpriteSheet?> _spriteSheets;
   late List<ui.Image?> _images;
   late List<Object?> _errors;
+  late List<AnimationState?> _animationStates;
 
+  GameLoopController? _gameLoopController;
   WebpAnimationLayerController? _layerController;
 
   bool _allLoaded = false;
@@ -197,6 +116,7 @@ class _WebpAnimationLayerState extends State<WebpAnimationLayer>
 
   @override
   void dispose() {
+    _gameLoopController?.dispose();
     _layerController?.dispose();
     super.dispose();
   }
@@ -248,14 +168,16 @@ class _WebpAnimationLayerState extends State<WebpAnimationLayer>
       );
     }
 
-    // Render all animations in a single CustomPaint with direct repaint
+    // Render all animations in a single CustomPaint with game loop repaint
     return CustomPaint(
       isComplex: true,
-      painter: _EfficientLayerPainter(
+      painter: AnimationPainter(
         spriteSheets: _spriteSheets,
         images: _images,
-        animations: widget.animations,
-        layerController: _layerController,
+        animationStates: _animationStates,
+        animationItems: widget.animations,
+        fit: BoxFit.fill, // Items define their own size
+        alignment: Alignment.topLeft,
         filterQuality: widget.filterQuality,
       ),
     );
@@ -267,6 +189,7 @@ class _WebpAnimationLayerState extends State<WebpAnimationLayer>
     _spriteSheets = List.filled(count, null);
     _images = List.filled(count, null);
     _errors = List.filled(count, null);
+    _animationStates = List.filled(count, null);
 
     // Load all animations in parallel
     _spriteSheetFutures = widget.animations
@@ -300,6 +223,17 @@ class _WebpAnimationLayerState extends State<WebpAnimationLayer>
         setState(() {
           _images[index] = image;
         });
+
+        // Create animation state for this animation
+        if (_spriteSheets[index] != null) {
+          _animationStates[index] = AnimationState(
+            spriteSheet: _spriteSheets[index]!,
+            speed: widget.speed,
+            respectFrameDelays: widget.respectFrameDelays,
+            fps: widget.fps,
+            loop: widget.loop,
+          );
+        }
       } catch (error) {
         if (!mounted) return;
         setState(() {
@@ -317,24 +251,48 @@ class _WebpAnimationLayerState extends State<WebpAnimationLayer>
       _allLoaded = true;
     });
 
-    // Initialize layer controller with loaded sprite sheets
-    _layerController = WebpAnimationLayerController(vsync: this);
-    _updateLayerController();
+    // Initialize game loop controller
+    _gameLoopController = GameLoopController(vsync: this);
+    _gameLoopController!.onTick = _onGameLoopTick;
+
+    // Create layer controller
+    _layerController = WebpAnimationLayerController(
+      gameLoopController: _gameLoopController,
+      animationStates: _animationStates.whereType<AnimationState>().toList(),
+    );
 
     // Start playback if requested
     if (widget.autoPlay && _allLoaded) {
-      await _layerController!.play();
+      for (final state in _animationStates) {
+        state?.play();
+      }
+      unawaited(_gameLoopController!.start());
+    }
+  }
+
+  void _onGameLoopTick(final double deltaTime) {
+    bool needsRepaint = false;
+    for (final state in _animationStates) {
+      if (state != null) {
+        state.update(deltaTime);
+        needsRepaint = true;
+      }
+    }
+
+    // Trigger repaint if any animations updated
+    if (needsRepaint && mounted) {
+      setState(() {});
     }
   }
 
   void _updateLayerController() {
-    final controller = _layerController;
-    if (controller == null) return;
-    controller.initialize(
-      spriteSheets: _spriteSheets,
-      respectFrameDelays: widget.respectFrameDelays,
-      fps: widget.fps,
-      speed: widget.speed,
-    );
+    // Update all animation states with new timing parameters
+    for (final state in _animationStates) {
+      state?.updateTiming(
+        speed: widget.speed,
+        respectFrameDelays: widget.respectFrameDelays,
+        fps: widget.fps,
+      );
+    }
   }
 }

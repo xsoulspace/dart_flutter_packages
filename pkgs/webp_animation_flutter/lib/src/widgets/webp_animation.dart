@@ -3,10 +3,11 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
+import '../core/animation_state.dart';
+import '../core/game_loop_controller.dart';
 import '../core/sprite_sheet.dart';
 import '../core/webp_decoder.dart';
-import '../painters/sprite_sheet_painter.dart';
-import '../utils/frame_timing.dart';
+import '../painters/animation_painter.dart';
 import 'webp_animation_controller.dart';
 
 /// {@template webp_animation}
@@ -97,7 +98,8 @@ class _WebpAnimationState extends State<WebpAnimation>
   ui.Image? _image;
   Object? _error;
 
-  AnimationController? _animationController;
+  GameLoopController? _gameLoopController;
+  AnimationState? _animationState;
   WebpAnimationController? _webpController;
 
   /// Gets the WebpAnimationController for this animation.
@@ -139,7 +141,7 @@ class _WebpAnimationState extends State<WebpAnimation>
 
   @override
   void dispose() {
-    _animationController?.dispose();
+    _gameLoopController?.dispose();
     _webpController?.dispose();
     super.dispose();
   }
@@ -172,61 +174,46 @@ class _WebpAnimationState extends State<WebpAnimation>
     }
 
     // Show loading state
-    if (_spriteSheet == null || _image == null) {
+    if (_spriteSheet == null || _image == null || _animationState == null) {
       return Container(
         color: Colors.grey[100],
         child: const Center(child: CircularProgressIndicator()),
       );
     }
 
-    // Render animation
-    if (_animationController == null) {
-      // Controller not yet initialized, show loading
-      return Container(
-        color: Colors.grey[100],
-        child: const Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    return AnimatedBuilder(
-      animation: _animationController!,
-      builder: (final context, final child) {
-        final frameIndex = FrameTiming.getFrameIndex(
-          spriteSheet: _spriteSheet!,
-          progress: _animationController!.value,
-          respectFrameDelays: widget.respectFrameDelays,
-          fps: widget.fps,
-        );
-
-        return CustomPaint(
-          painter: SpriteSheetPainter(
-            image: _image!,
-            spriteSheet: _spriteSheet!,
-            frameIndex: frameIndex,
-            fit: widget.fit,
-            alignment: widget.alignment,
-            filterQuality: widget.filterQuality,
-          ),
-        );
-      },
+    // Render animation with game loop
+    return CustomPaint(
+      painter: AnimationPainter(
+        spriteSheets: [_spriteSheet],
+        images: [_image],
+        animationStates: [_animationState],
+        fit: widget.fit,
+        alignment: widget.alignment,
+        filterQuality: widget.filterQuality,
+      ),
     );
   }
 
   void _initializeAnimationController() {
     if (_spriteSheet == null) return;
 
-    // Use provided controller or create our own
-    _animationController =
-        widget.controller ?? AnimationController(vsync: this);
+    // Create animation state
+    _animationState = AnimationState(
+      spriteSheet: _spriteSheet!,
+      speed: widget.speed,
+      respectFrameDelays: widget.respectFrameDelays,
+      fps: widget.fps,
+      loop: widget.loop,
+    );
 
-    // Update duration based on timing mode
-    _updateAnimationController();
-
-    // Create WebpAnimationController wrapper if no custom controller provided
+    // Use provided controller or create our own game loop
     if (widget.controller == null) {
+      _gameLoopController = GameLoopController(vsync: this);
+      _gameLoopController!.onTick = _onGameLoopTick;
+
       _webpController = WebpAnimationController(
-        controller: _animationController!,
-        spriteSheet: _spriteSheet!,
+        gameLoopController: _gameLoopController,
+        animationState: _animationState,
       );
     }
   }
@@ -254,8 +241,9 @@ class _WebpAnimationState extends State<WebpAnimation>
         _initializeAnimationController();
 
         // Start playback if requested
-        if (widget.autoPlay) {
-          unawaited(_animationController!.repeat());
+        if (widget.autoPlay && _animationState != null) {
+          _animationState!.play();
+          unawaited(_gameLoopController?.start());
         }
       } catch (e) {
         if (!mounted) return;
@@ -271,15 +259,23 @@ class _WebpAnimationState extends State<WebpAnimation>
     }
   }
 
-  void _updateAnimationController() {
-    if (_spriteSheet == null) return;
+  void _onGameLoopTick(final double deltaTime) {
+    if (_animationState != null) {
+      _animationState!.update(deltaTime);
+      // Trigger repaint
+      if (mounted) {
+        setState(() {});
+      }
+    }
+  }
 
-    final duration = FrameTiming.getTotalDuration(
-      spriteSheet: _spriteSheet!,
+  void _updateAnimationController() {
+    if (_animationState == null) return;
+
+    _animationState!.updateTiming(
+      speed: widget.speed,
       respectFrameDelays: widget.respectFrameDelays,
       fps: widget.fps,
     );
-
-    _animationController!.duration = duration * (1.0 / widget.speed);
   }
 }
