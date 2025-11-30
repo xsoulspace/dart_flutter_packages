@@ -11,11 +11,13 @@ This example demonstrates the performance difference between single WebP animati
 ## Running the Example
 
 1. Navigate to the example directory:
+
    ```bash
    cd example
    ```
 
 2. Get dependencies:
+
    ```bash
    flutter pub get
    ```
@@ -28,12 +30,14 @@ This example demonstrates the performance difference between single WebP animati
 ## What You'll See
 
 ### Single Animation View
+
 - One large WebP animation (200x200) in the center
 - Uses individual `WebpAnimation` widget
 - Separate draw call per animation
 - Good for: Individual control, <10 animations
 
 ### Batch Animation View
+
 - 60+ small WebP animations (50x50) in a grid layout
 - Uses single `WebpAnimationLayer` widget
 - Single draw call for all animations

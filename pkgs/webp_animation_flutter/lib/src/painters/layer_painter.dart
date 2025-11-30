@@ -38,6 +38,7 @@ class LayerPainter extends CustomPainter {
   /// {@macro layer_painter}
   LayerPainter({
     required this.animationData,
+    super.repaint,
     this.filterQuality = FilterQuality.medium,
   });
 

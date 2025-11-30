@@ -189,8 +189,11 @@ class _WebpAnimationLayerState extends State<WebpAnimationLayer>
         }
 
         return CustomPaint(
+          isComplex: true,
+
           painter: LayerPainter(
             animationData: animationData,
+            repaint: _layerController?.controller,
             filterQuality: widget.filterQuality,
           ),
         );

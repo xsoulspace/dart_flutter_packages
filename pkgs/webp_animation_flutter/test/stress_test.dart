@@ -2,7 +2,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:webp_animation_flutter/webp_animation_flutter.dart';
 
 /// Stress tests for WebP animation widgets structure and instantiation.
@@ -11,57 +10,57 @@ import 'package:webp_animation_flutter/webp_animation_flutter.dart';
 /// and parameter handling with multiple animation instances.
 /// Asset loading is tested separately in integration tests.
 void main() {
-  const animationAsset = 'assets/animated-webp-supported.webp';
+  const animationAsset = 'example/assets/animated-webp-supported.webp';
   const animationCount = 10; // Small count for widget structure tests
   const animationSize = Size(50, 50);
 
   group('WebP Animation Stress Tests', () {
-    testWidgets('WebpAnimation instantiates multiple widgets correctly',
-        (tester) async {
+    testWidgets('WebpAnimation instantiates multiple widgets correctly', (
+      final tester,
+    ) async {
       // Arrange: Create multiple WebpAnimation widgets
       final animations = _createAnimationGrid(
         count: animationCount,
-        builder: (index) => WebpAnimation(
+        builder: (final index) => WebpAnimation(
           asset: animationAsset,
           width: animationSize.width,
           height: animationSize.height,
-          autoPlay: true,
-          loop: true,
-          respectFrameDelays: true,
-          fps: 24.0,
-          speed: 1.0,
         ),
       );
 
       // Act: Pump the widget tree
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: Column(
-              children: animations,
-            ),
-          ),
+          home: Scaffold(body: Column(children: animations)),
         ),
       );
 
       // Assert: All widgets should be instantiated correctly
-      expect(find.byType(WebpAnimation), findsNWidgets(animationCount),
-          reason: 'All $animationCount WebpAnimation widgets should be instantiated');
+      expect(
+        find.byType(WebpAnimation),
+        findsNWidgets(animationCount),
+        reason:
+            'All $animationCount WebpAnimation widgets should be instantiated',
+      );
 
       // Each WebpAnimation should have proper sizing
       for (final animation in animations) {
-        expect(find.byWidget(animation), findsOneWidget,
-            reason: 'Each animation widget should be present in tree');
+        expect(
+          find.byWidget(animation),
+          findsOneWidget,
+          reason: 'Each animation widget should be present in tree',
+        );
       }
     });
 
-    testWidgets('WebpAnimationLayer instantiates with multiple animations',
-        (tester) async {
+    testWidgets('WebpAnimationLayer instantiates with multiple animations', (
+      final tester,
+    ) async {
       // Arrange: Create layer with multiple animations
       final gridSize = math.sqrt(animationCount).ceil();
       final animationItems = List.generate(
         animationCount,
-        (index) => WebpAnimationItem(
+        (final index) => WebpAnimationItem(
           asset: animationAsset,
           position: Offset(
             (index % gridSize) * animationSize.width,
@@ -78,30 +77,30 @@ void main() {
             body: SizedBox(
               width: gridSize * animationSize.width,
               height: gridSize * animationSize.height,
-              child: WebpAnimationLayer(
-                animations: animationItems,
-                autoPlay: true,
-                loop: true,
-                respectFrameDelays: true,
-                fps: 24.0,
-                speed: 1.0,
-              ),
+              child: WebpAnimationLayer(animations: animationItems),
             ),
           ),
         ),
       );
 
       // Assert: Layer should be instantiated correctly
-      expect(find.byType(WebpAnimationLayer), findsOneWidget,
-          reason: 'WebpAnimationLayer widget should be instantiated');
+      expect(
+        find.byType(WebpAnimationLayer),
+        findsOneWidget,
+        reason: 'WebpAnimationLayer widget should be instantiated',
+      );
 
       // Should have proper number of animation items
-      expect(animationItems.length, animationCount,
-          reason: 'Should have $animationCount animation items');
+      expect(
+        animationItems.length,
+        animationCount,
+        reason: 'Should have $animationCount animation items',
+      );
     });
 
-    testWidgets('WebpAnimation parameters are validated correctly',
-        (tester) async {
+    testWidgets('WebpAnimation parameters are validated correctly', (
+      final tester,
+    ) async {
       // Test that invalid parameters throw assertions
       expect(
         () => WebpAnimation(
@@ -135,12 +134,13 @@ void main() {
       );
     });
 
-    testWidgets('WebpAnimationLayer validates animation list',
-        (tester) async {
+    testWidgets('WebpAnimationLayer validates animation list', (
+      final tester,
+    ) async {
       // Test that empty animation list throws assertion
       expect(
         () => WebpAnimationLayer(
-          animations: [], // Empty list
+          animations: const [], // Empty list
         ),
         throwsAssertionError,
         reason: 'Should throw assertion error for empty animation list',
@@ -149,7 +149,7 @@ void main() {
       // Test with valid animations
       final animationItems = List.generate(
         animationCount,
-        (index) => WebpAnimationItem(
+        (final index) => const WebpAnimationItem(
           asset: animationAsset,
           position: Offset.zero,
           size: animationSize,
@@ -157,9 +157,7 @@ void main() {
       );
 
       expect(
-        () => WebpAnimationLayer(
-          animations: animationItems,
-        ),
+        () => WebpAnimationLayer(animations: animationItems),
         isNotNull,
         reason: 'Should create layer with valid animation list',
       );
@@ -169,8 +167,6 @@ void main() {
 
 /// Creates a list of animation widgets for stress testing.
 List<Widget> _createAnimationGrid({
-  required int count,
-  required Widget Function(int index) builder,
-}) {
-  return List.generate(count, builder);
-}
+  required final int count,
+  required final Widget Function(int index) builder,
+}) => List.generate(count, builder);

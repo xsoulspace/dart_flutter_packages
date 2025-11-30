@@ -10,9 +10,11 @@ import '../utils/frame_timing.dart';
 import 'webp_animation_controller.dart';
 
 /// {@template webp_animation}
-/// A widget that displays a WebP animation with efficient sprite sheet rendering.
+/// A widget that displays a WebP animation
+/// with efficient sprite sheet rendering.
 ///
-/// Features isolate-based decoding, flexible timing control, and smooth performance.
+/// Features isolate-based decoding, flexible timing control,
+///  and smooth performance.
 /// Supports both automatic playback and custom AnimationController integration.
 /// {@endtemplate}
 class WebpAnimation extends StatefulWidget {
