@@ -21,6 +21,7 @@ class AnimationPainter extends CustomPainter {
     required this.animationStates,
     this.animationItems,
     this.fit = BoxFit.contain,
+    super.repaint,
     this.alignment = Alignment.center,
     this.filterQuality = FilterQuality.medium,
   }) : assert(
@@ -79,6 +80,7 @@ class AnimationPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant final AnimationPainter oldDelegate) {
+    return true;
     // Check basic properties
     if (spriteSheets.length != oldDelegate.spriteSheets.length ||
         images.length != oldDelegate.images.length ||

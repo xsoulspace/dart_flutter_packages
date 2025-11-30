@@ -69,11 +69,13 @@ class AnimationState {
   }
 
   /// Gets the total duration of the animation in seconds.
-  int get _totalDuration => FrameTiming.getTotalDuration(
-    spriteSheet: spriteSheet,
-    respectFrameDelays: respectFrameDelays,
-    fps: fps,
-  ).inSeconds;
+  double get _totalDuration =>
+      FrameTiming.getTotalDuration(
+        spriteSheet: spriteSheet,
+        respectFrameDelays: respectFrameDelays,
+        fps: fps,
+      ).inMilliseconds /
+      1000.0;
 
   /// Pauses animation playback.
   ///

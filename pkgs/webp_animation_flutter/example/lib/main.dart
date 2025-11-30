@@ -29,7 +29,7 @@ class WebpAnimationExampleApp extends StatelessWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  static const animationAsset = '../assets/animated-webp-supported.webp';
+  static const animationAsset = 'assets/animated-webp-supported.webp';
   static const animationCount = 60;
   static const singleAnimationSize = Size(200, 200);
   static const batchAnimationSize = Size(50, 50);

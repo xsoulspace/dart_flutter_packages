@@ -105,28 +105,36 @@ class SpriteSheet {
   }
 
   /// Finds the appropriate frame index for a given timestamp in the animation.
-  int getFrameIndexAt(final double timestamp) {
+  ///
+  /// @param timestamp Time in milliseconds from animation start.
+  int getFrameIndexAt(final double timestampMs) {
     if (frames.isEmpty) return 0;
 
     // Handle timestamps beyond the total duration
     final totalMs = totalDuration.inMilliseconds.toDouble();
-    if (timestamp >= totalMs && frames.isNotEmpty) {
+    if (timestampMs >= totalMs && frames.isNotEmpty) {
       return frames.length - 1;
     }
 
     // Binary search for the appropriate frame
+    // Convert frame timestamps from seconds to milliseconds for comparison
     int left = 0;
     int right = frames.length - 1;
 
     while (left <= right) {
       final mid = (left + right) ~/ 2;
       final frame = frames[mid];
+      final frameTimestampMs = frame.timestamp * 1000.0;
 
-      if (timestamp < frame.timestamp) {
+      if (timestampMs < frameTimestampMs) {
         right = mid - 1;
-      } else if (mid < frames.length - 1 &&
-          timestamp >= frames[mid + 1].timestamp) {
-        left = mid + 1;
+      } else if (mid < frames.length - 1) {
+        final nextFrameTimestampMs = frames[mid + 1].timestamp * 1000.0;
+        if (timestampMs >= nextFrameTimestampMs) {
+          left = mid + 1;
+        } else {
+          return frame.index;
+        }
       } else {
         return frame.index;
       }

@@ -233,9 +233,8 @@ class _WebpAnimationState extends State<WebpAnimation>
         final image = await WebpDecoder.createImageFromSpriteSheet(spriteSheet);
         if (!mounted) return;
 
-        setState(() {
-          _image = image;
-        });
+        setState(() {});
+        _image = image;
 
         // Initialize animation controller
         _initializeAnimationController();
@@ -245,12 +244,14 @@ class _WebpAnimationState extends State<WebpAnimation>
           _animationState!.play();
           unawaited(_gameLoopController?.start());
         }
+        // ignore: avoid_catches_without_on_clauses
       } catch (e) {
         if (!mounted) return;
         setState(() {
           _error = e;
         });
       }
+      // ignore: avoid_catches_without_on_clauses
     } catch (error) {
       if (!mounted) return;
       setState(() {
