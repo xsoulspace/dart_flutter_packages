@@ -1,17 +1,16 @@
 # webp_animation_flutter
 
-High-performance WebP animation library for Flutter using game dev principles. Features isolate-based decoding and efficient sprite sheet rendering for smooth animations even with complex WebP files.
+High-performance Flutter library for animated WebP, using a game loop architecture for perfect sync and ultra-efficient rendering.
 
-## Features
+---
 
-- **Isolate-based decoding**: WebP decoding happens in background isolates, keeping your UI thread smooth
-- **Sprite sheet rendering**: All animation frames are packed into a single GPU texture for efficient rendering
-- **Batch rendering**: Render multiple animations in a single draw call with `WebpAnimationLayer`
-- **Flexible timing**: Respect original WebP frame delays or use custom FPS for consistent playback
-- **Simple API**: Two main widgets with intuitive parameters
-- **Performance optimized**: Minimal widget tree overhead and efficient repaint cycles
+## FAQ
 
-## Getting Started
+### What is this library for?
+
+Animates multiple WebP files in Flutter with high performance: unified timing, isolate decoding, and batch GPU rendering—ideal for games and complex UI, but simple for one-off animations.
+
+### How do I add it to my project?
 
 Add to your `pubspec.yaml`:
 
@@ -20,64 +19,69 @@ dependencies:
   webp_animation_flutter: ^0.1.0-dev.1
 ```
 
-## Usage
+---
 
-### Single Animation
+## Usage Examples
+
+### Simple: Single Animation (auto-play)
 
 ```dart
 import 'package:webp_animation_flutter/webp_animation_flutter.dart';
 
-// Simple auto-playing animation
 WebpAnimation(
   asset: 'assets/animations/character.webp',
   width: 100,
   height: 100,
-  autoPlay: true,
-  loop: true,
 )
+```
 
-// Custom FPS animation
+### Simple: Custom FPS & Speed
+
+```dart
 WebpAnimation(
-  asset: 'assets/animations/effect.webp',
+  asset: 'assets/effects/explosion.webp',
   width: 200,
   height: 150,
-  respectFrameDelays: false, // Use custom FPS instead of WebP delays
-  fps: 24.0,
-  speed: 2.0, // 2x speed
+  respectFrameDelays: false, // Use custom FPS
+  fps: 30.0,
+  speed: 2.0,
 )
+```
 
-// With custom loading/error handling
+### Simple: Error & Loading States
+
+```dart
 WebpAnimation(
-  asset: 'assets/animations/loading.webp',
+  asset: 'assets/loading.webp',
   width: 50,
   height: 50,
-  builder: (context, spriteSheet, error) {
-    if (error != null) {
-      return Text('Failed to load animation: $error');
-    }
-    if (spriteSheet == null) {
-      return CircularProgressIndicator();
-    }
-    // Animation renders automatically
+  builder: (context, sheet, error) {
+    if (error != null) return Icon(Icons.error, color: Colors.red);
+    if (sheet == null) return CircularProgressIndicator();
     return SizedBox.shrink();
   },
 )
 ```
 
-### Multiple Animations (Batch Rendering)
+### Advanced: Batch Rendering (Perfect Sync)
 
 ```dart
 WebpAnimationLayer(
   animations: [
     WebpAnimationItem(
-      asset: 'assets/char1.webp',
+      asset: 'assets/char_idle.webp',
       position: Offset(10, 20),
       size: Size(100, 100),
     ),
     WebpAnimationItem(
-      asset: 'assets/char2.webp',
+      asset: 'assets/char_walk.webp',
       position: Offset(150, 50),
       size: Size(80, 80),
+    ),
+    WebpAnimationItem(
+      asset: 'assets/effects/particles.webp',
+      position: Offset(200, 100),
+      size: Size(60, 60),
     ),
   ],
   autoPlay: true,
@@ -86,71 +90,118 @@ WebpAnimationLayer(
 )
 ```
 
-## API Reference
+### Advanced: Unified Layer Controller (Play/Pause/Seek All)
 
-### WebpAnimation
+```dart
+class GameScreen extends StatefulWidget {
+  @override
+  State<GameScreen> createState() => _GameScreenState();
+}
 
-Widget for rendering a single WebP animation.
+class _GameScreenState extends State<GameScreen>
+    with TickerProviderStateMixin {
+  late final WebpAnimationLayerController _layerController;
 
-**Parameters:**
-- `asset`: Asset path to the WebP file (required)
-- `width`: Render width (required)
-- `height`: Render height (required)
-- `autoPlay`: Whether to start playing automatically (default: true)
-- `loop`: Whether to loop the animation (default: true)
-- `speed`: Playback speed multiplier (default: 1.0)
-- `respectFrameDelays`: Use WebP frame delays if true, custom FPS if false (default: true)
-- `fps`: Custom frames per second when `respectFrameDelays` is false (default: 24.0)
-- `controller`: Optional AnimationController for advanced control
-- `builder`: Optional builder for custom loading/error states
+  @override
+  void initState() {
+    super.initState();
+    _layerController = WebpAnimationLayerController(
+      vsync: this,
+      respectFrameDelays: false,
+      fps: 24.0,
+      speed: 1.0,
+    );
+  }
 
-### WebpAnimationLayer
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // Animated layer controls
+        Row(
+          children: [
+            ElevatedButton(
+              onPressed: _layerController.play,
+              child: Text('Play'),
+            ),
+            ElevatedButton(
+              onPressed: _layerController.pause,
+              child: Text('Pause'),
+            ),
+            ElevatedButton(
+              onPressed: _layerController.reset,
+              child: Text('Reset'),
+            ),
+            Slider(
+              value: _layerController.controller.value,
+              onChanged: (value) => _layerController.seek(value),
+            ),
+          ],
+        ),
+        // Layer with animations
+        WebpAnimationLayer(
+          animations: [
+            WebpAnimationItem(
+              asset: 'assets/game/character.webp',
+              position: Offset.zero,
+              size: Size(100, 100),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 
-Widget for rendering multiple WebP animations in a single draw call.
+  @override
+  void dispose() {
+    _layerController.dispose();
+    super.dispose();
+  }
+}
+```
 
-**Parameters:**
-- `animations`: List of `WebpAnimationItem` objects (required)
-- `autoPlay`: Whether to start all animations automatically (default: true)
-- `loop`: Whether to loop all animations (default: true)
-- `speed`: Playback speed multiplier for all animations (default: 1.0)
-- `respectFrameDelays`: Use WebP frame delays if true, custom FPS if false (default: true)
-- `fps`: Custom frames per second when `respectFrameDelays` is false (default: 24.0)
-- `builder`: Optional builder for custom loading/error states
+---
 
-### WebpAnimationItem
+## Common Questions
 
-Data class representing a single animation in a layer.
+**Can I control each animation individually in a batch?**  
+Use standalone `WebpAnimation` widgets with custom controllers for individual control.  
+Use `WebpAnimationLayer` for perfect sync and unified control.
 
-**Parameters:**
-- `asset`: Asset path to the WebP file (required)
-- `position`: Screen position as Offset (required)
-- `size`: Render size as Size (required)
+**Can I use my own AnimationController?**  
+Yes, pass it to a `WebpAnimation` for advanced timing.
 
-## Performance Notes
+**How do I migrate from older versions?**  
+Remove the `controllers:` parameter from `WebpAnimationLayer`—timing is now unified internally.
 
-This library uses game development principles for optimal performance:
+**What's performance like?**
 
-1. **Isolate Decoding**: WebP decoding happens in background isolates, preventing UI thread blocking
-2. **Sprite Sheet Rendering**: All frames are packed into a single GPU texture, uploaded once
-3. **Batch Rendering**: Multiple animations can be rendered in a single draw call
-4. **Efficient Repainting**: Widgets only repaint when the frame actually changes
-5. **Memory Efficient**: Raw pixel data is uploaded to GPU and can be garbage collected
+- WebP decoding in separate thread (isolate)
+- Batches all rendering into a single GPU call
+- Zero timing drift, minimal CPU use even with many animations
 
-## Architecture
+---
 
-The library follows a "deconstruct and ship" strategy:
+## API References (short)
 
-1. **Background Isolate**: Decodes WebP and creates sprite sheet pixel data
-2. **Main Isolate**: Uploads pixels to GPU as `ui.Image`, renders frame slices
-3. **Zero Runtime Decoding**: CPU work happens once during loading, not every frame
+- **WebpAnimation:** Single animation (see above)
+- **WebpAnimationLayer:** Multi-animation, synched and batch-rendered
+- **WebpAnimationLayerController:** Controls a layer (play/pause/seek/reset)
+- **WebpAnimationItem:** Position/size/configuration for each animation in a layer
 
-This approach eliminates the heat problems common with frame-by-frame decoding and provides consistent performance even with large animations.
+---
 
 ## Requirements
 
-- Flutter 3.3.0+
-- Dart 3.8.1+
+- Flutter >=3.3.0
+- Dart >=3.8.1
 
 ## License
 
-MIT License. See LICENSE file for details.
+MIT License. See LICENSE for details.
+
+---
+
+## Credits
+
+Animated WebP demo assets: [https://mathiasbynens.be/demo/animated-webp](https://mathiasbynens.be/demo/animated-webp)

@@ -57,7 +57,8 @@ class LayerPainter extends CustomPainter {
       ..isAntiAlias = true;
 
     // Render all animations in a single batch
-    for (final data in animationData) {
+    for (int i = 0; i < animationData.length; i++) {
+      final data = animationData[i];
       if (data.image == null) continue;
 
       // Get source rectangle for current frame

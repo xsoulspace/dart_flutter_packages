@@ -265,13 +265,13 @@ class _WebpAnimationLayerState extends State<WebpAnimationLayer>
   }
 
   void _updateLayerController() {
-    if (_layerController != null) {
-      _layerController!.initialize(
-        spriteSheets: _spriteSheets,
-        respectFrameDelays: widget.respectFrameDelays,
-        fps: widget.fps,
-        speed: widget.speed,
-      );
-    }
+    final controller = _layerController;
+    if (controller == null) return;
+    controller.initialize(
+      spriteSheets: _spriteSheets,
+      respectFrameDelays: widget.respectFrameDelays,
+      fps: widget.fps,
+      speed: widget.speed,
+    );
   }
 }
