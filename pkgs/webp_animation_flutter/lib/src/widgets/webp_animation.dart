@@ -95,7 +95,7 @@ class _WebpAnimationState extends State<WebpAnimation>
   ui.Image? _image;
   Object? _error;
 
-  late AnimationController _animationController;
+  AnimationController? _animationController;
   WebpAnimationController? _webpController;
 
   /// Gets the WebpAnimationController for this animation.
@@ -137,7 +137,7 @@ class _WebpAnimationState extends State<WebpAnimation>
 
   @override
   void dispose() {
-    _animationController.dispose();
+    _animationController?.dispose();
     _webpController?.dispose();
     super.dispose();
   }
@@ -178,12 +178,20 @@ class _WebpAnimationState extends State<WebpAnimation>
     }
 
     // Render animation
+    if (_animationController == null) {
+      // Controller not yet initialized, show loading
+      return Container(
+        color: Colors.grey[100],
+        child: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return AnimatedBuilder(
-      animation: _animationController,
+      animation: _animationController!,
       builder: (final context, final child) {
         final frameIndex = FrameTiming.getFrameIndex(
           spriteSheet: _spriteSheet!,
-          progress: _animationController.value,
+          progress: _animationController!.value,
           respectFrameDelays: widget.respectFrameDelays,
           fps: widget.fps,
         );
@@ -215,7 +223,7 @@ class _WebpAnimationState extends State<WebpAnimation>
     // Create WebpAnimationController wrapper if no custom controller provided
     if (widget.controller == null) {
       _webpController = WebpAnimationController(
-        controller: _animationController,
+        controller: _animationController!,
         spriteSheet: _spriteSheet!,
       );
     }
@@ -245,7 +253,7 @@ class _WebpAnimationState extends State<WebpAnimation>
 
         // Start playback if requested
         if (widget.autoPlay) {
-          unawaited(_animationController.repeat());
+          unawaited(_animationController!.repeat());
         }
       } catch (e) {
         if (!mounted) return;
@@ -270,6 +278,6 @@ class _WebpAnimationState extends State<WebpAnimation>
       fps: widget.fps,
     );
 
-    _animationController.duration = duration * (1.0 / widget.speed);
+    _animationController!.duration = duration * (1.0 / widget.speed);
   }
 }
