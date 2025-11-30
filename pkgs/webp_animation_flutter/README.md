@@ -115,7 +115,6 @@ Widget for rendering multiple WebP animations in a single draw call.
 - `speed`: Playback speed multiplier for all animations (default: 1.0)
 - `respectFrameDelays`: Use WebP frame delays if true, custom FPS if false (default: true)
 - `fps`: Custom frames per second when `respectFrameDelays` is false (default: 24.0)
-- `controllers`: Optional list of AnimationControllers (one per animation)
 - `builder`: Optional builder for custom loading/error states
 
 ### WebpAnimationItem

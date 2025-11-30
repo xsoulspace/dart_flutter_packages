@@ -7,14 +7,15 @@ import '../core/sprite_sheet.dart';
 import '../core/webp_decoder.dart';
 import '../models/webp_animation_item.dart';
 import '../painters/layer_painter.dart' show AnimationRenderData, LayerPainter;
-import '../utils/frame_timing.dart';
-import 'webp_animation_controller.dart';
+import 'webp_animation_layer_controller.dart';
 
 /// {@template webp_animation_layer}
-/// A widget that efficiently renders multiple WebP animations in a single draw call.
+/// A widget that efficiently renders multiple WebP animations
+/// in a single draw call.
 ///
 /// Batches all animations together for optimal GPU performance, similar to
-/// sprite batching in game engines. All animations share the same timing settings.
+/// sprite batching in game engines. All animations share
+/// the same timing settings.
 /// {@endtemplate}
 class WebpAnimationLayer extends StatefulWidget {
   /// {@macro webp_animation_layer}
@@ -26,16 +27,11 @@ class WebpAnimationLayer extends StatefulWidget {
     this.speed = 1.0,
     this.respectFrameDelays = true,
     this.fps = 24.0,
-    this.controllers,
     this.filterQuality = FilterQuality.medium,
     this.builder,
   }) : assert(animations.length > 0, 'animations list must be non-empty'),
        assert(speed > 0, 'speed must be positive'),
-       assert(fps > 0, 'fps must be positive'),
-       assert(
-         controllers == null || controllers.length == animations.length,
-         'controllers length must match animations length',
-       );
+       assert(fps > 0, 'fps must be positive');
 
   /// List of animation items to render.
   final List<WebpAnimationItem> animations;
@@ -54,12 +50,6 @@ class WebpAnimationLayer extends StatefulWidget {
 
   /// Frames per second when respectFrameDelays is false.
   final double fps;
-
-  /// Optional controllers for individual animation control.
-  ///
-  /// If provided, must have the same length as animations.
-  /// Each controller controls one animation independently.
-  final List<AnimationController>? controllers;
 
   /// Quality of filtering when scaling animations.
   final FilterQuality filterQuality;
@@ -86,15 +76,9 @@ class _WebpAnimationLayerState extends State<WebpAnimationLayer>
   late List<ui.Image?> _images;
   late List<Object?> _errors;
 
-  late List<AnimationController> _animationControllers;
-  late List<WebpAnimationController?> _webpControllers;
+  WebpAnimationLayerController? _layerController;
 
   bool _allLoaded = false;
-
-  /// Gets the WebpAnimationControllers for all animations.
-  ///
-  /// Only available when no custom controllers are provided.
-  List<WebpAnimationController?> get webpControllers => _webpControllers;
 
   @override
   Widget build(final BuildContext context) {
@@ -113,21 +97,22 @@ class _WebpAnimationLayerState extends State<WebpAnimationLayer>
 
     // Check if animations changed
     if (!_areAnimationsEqual(oldWidget.animations, widget.animations)) {
-      _disposeControllers();
+      _layerController?.dispose();
+      _layerController = null;
       _initializeState();
     } else {
       // Update timing parameters if they changed
       if (oldWidget.respectFrameDelays != widget.respectFrameDelays ||
           oldWidget.fps != widget.fps ||
           oldWidget.speed != widget.speed) {
-        _updateAnimationControllers();
+        _updateLayerController();
       }
     }
   }
 
   @override
   void dispose() {
-    _disposeControllers();
+    _layerController?.dispose();
     super.dispose();
   }
 
@@ -180,22 +165,18 @@ class _WebpAnimationLayerState extends State<WebpAnimationLayer>
 
     // Render all animations in a single CustomPaint
     return AnimatedBuilder(
-      animation: Listenable.merge(_animationControllers),
+      animation:
+          _layerController?.controller ?? const AlwaysStoppedAnimation(0),
       builder: (final context, final child) {
+        final frameIndices = _layerController?.getCurrentFrameIndices() ?? [];
         final animationData = <AnimationRenderData>[];
 
         for (int i = 0; i < widget.animations.length; i++) {
           final spriteSheet = _spriteSheets[i];
           final image = _images[i];
+          final frameIndex = i < frameIndices.length ? frameIndices[i] : 0;
 
           if (spriteSheet != null && image != null) {
-            final frameIndex = FrameTiming.getFrameIndex(
-              spriteSheet: spriteSheet,
-              progress: _animationControllers[i].value,
-              respectFrameDelays: widget.respectFrameDelays,
-              fps: widget.fps,
-            );
-
             animationData.add(
               AnimationRenderData(
                 image: image,
@@ -217,37 +198,6 @@ class _WebpAnimationLayerState extends State<WebpAnimationLayer>
     );
   }
 
-  void _disposeControllers() {
-    // Only dispose controllers we created
-    if (widget.controllers == null) {
-      for (final controller in _animationControllers) {
-        controller.dispose();
-      }
-    }
-
-    // Dispose WebpAnimationControllers we created
-    for (final controller in _webpControllers) {
-      controller?.dispose();
-    }
-  }
-
-  void _initializeControllers() {
-    final count = widget.animations.length;
-
-    if (widget.controllers != null) {
-      // Use provided controllers
-      _animationControllers = widget.controllers!;
-      _webpControllers = List.filled(count, null);
-    } else {
-      // Create our own controllers
-      _animationControllers = List.generate(
-        count,
-        (final index) => AnimationController(vsync: this),
-      );
-      _webpControllers = List.generate(count, (final index) => null);
-    }
-  }
-
   void _initializeState() {
     final count = widget.animations.length;
 
@@ -259,9 +209,6 @@ class _WebpAnimationLayerState extends State<WebpAnimationLayer>
     _spriteSheetFutures = widget.animations
         .map((final item) => WebpDecoder.decodeFromAsset(item.asset))
         .toList();
-
-    // Initialize controllers
-    _initializeControllers();
 
     // Load animations
     unawaited(_loadAnimations());
@@ -290,14 +237,6 @@ class _WebpAnimationLayerState extends State<WebpAnimationLayer>
         setState(() {
           _images[index] = image;
         });
-
-        // Create WebpAnimationController if we own the controller
-        if (widget.controllers == null) {
-          _webpControllers[index] = WebpAnimationController(
-            controller: _animationControllers[index],
-            spriteSheet: spriteSheet,
-          );
-        }
       } catch (error) {
         if (!mounted) return;
         setState(() {
@@ -315,29 +254,24 @@ class _WebpAnimationLayerState extends State<WebpAnimationLayer>
       _allLoaded = true;
     });
 
-    // Update controllers with proper durations
-    _updateAnimationControllers();
+    // Initialize layer controller with loaded sprite sheets
+    _layerController = WebpAnimationLayerController(vsync: this);
+    _updateLayerController();
 
     // Start playback if requested
     if (widget.autoPlay && _allLoaded) {
-      for (final controller in _animationControllers) {
-        await controller.repeat();
-      }
+      await _layerController!.play();
     }
   }
 
-  void _updateAnimationControllers() {
-    for (int i = 0; i < _animationControllers.length; i++) {
-      final spriteSheet = _spriteSheets[i];
-      if (spriteSheet != null) {
-        final duration = FrameTiming.getTotalDuration(
-          spriteSheet: spriteSheet,
-          respectFrameDelays: widget.respectFrameDelays,
-          fps: widget.fps,
-        );
-
-        _animationControllers[i].duration = duration * (1.0 / widget.speed);
-      }
+  void _updateLayerController() {
+    if (_layerController != null) {
+      _layerController!.initialize(
+        spriteSheets: _spriteSheets,
+        respectFrameDelays: widget.respectFrameDelays,
+        fps: widget.fps,
+        speed: widget.speed,
+      );
     }
   }
 }

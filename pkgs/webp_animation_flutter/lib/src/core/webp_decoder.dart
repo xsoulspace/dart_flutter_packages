@@ -1,7 +1,7 @@
 import 'dart:async';
-import 'dart:isolate';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
 
@@ -10,7 +10,8 @@ import 'sprite_sheet.dart';
 
 /// BACKGROUND ISOLATE FUNCTION
 /// This does the heavy CPU lifting: decoding WebP and creating sprite sheet.
-_DecodedSpriteSheetData _decodeAndCreateSpriteSheet(final Uint8List webpBytes) {
+
+DecodedSpriteSheetData _decodeAndCreateSpriteSheet(final Uint8List webpBytes) {
   // Decode the WebP animation using the image package
   final animation = img.decodeWebP(webpBytes);
 
@@ -61,7 +62,7 @@ _DecodedSpriteSheetData _decodeAndCreateSpriteSheet(final Uint8List webpBytes) {
   // Convert to RGBA bytes for Flutter's ui.decodeImageFromPixels
   final rgbaBytes = spriteSheet.getBytes(order: img.ChannelOrder.rgba);
 
-  return _DecodedSpriteSheetData(
+  return DecodedSpriteSheetData(
     pixels: rgbaBytes,
     width: totalWidth,
     height: totalHeight,
@@ -70,6 +71,27 @@ _DecodedSpriteSheetData _decodeAndCreateSpriteSheet(final Uint8List webpBytes) {
     frameCount: animation.numFrames,
     frames: frames,
   );
+}
+
+/// Internal data structure passed between isolates.
+@immutable
+class DecodedSpriteSheetData {
+  const DecodedSpriteSheetData({
+    required this.pixels,
+    required this.width,
+    required this.height,
+    required this.frameWidth,
+    required this.frameHeight,
+    required this.frameCount,
+    required this.frames,
+  });
+  final Uint8List pixels;
+  final int width;
+  final int height;
+  final int frameWidth;
+  final int frameHeight;
+  final int frameCount;
+  final List<AnimationFrame> frames;
 }
 
 /// {@template webp_decoder}
@@ -81,6 +103,8 @@ _DecodedSpriteSheetData _decodeAndCreateSpriteSheet(final Uint8List webpBytes) {
 /// - Zero runtime decoding overhead during playback
 /// {@endtemplate}
 class WebpDecoder {
+  WebpDecoder._();
+
   /// Cache for decoded sprite sheets by asset path to avoid re-decoding.
   static final Map<String, Future<SpriteSheet>> _cache = {};
 
@@ -129,9 +153,7 @@ class WebpDecoder {
     final buffer = byteData.buffer.asUint8List();
 
     // Decode in background isolate
-    final decodedData = await Isolate.run(
-      () => _decodeAndCreateSpriteSheet(buffer),
-    );
+    final decodedData = await compute(_decodeAndCreateSpriteSheet, buffer);
 
     // Convert to SpriteSheet model
     return SpriteSheet(
@@ -144,24 +166,4 @@ class WebpDecoder {
       frames: decodedData.frames,
     );
   }
-}
-
-/// Internal data structure passed between isolates.
-class _DecodedSpriteSheetData {
-  _DecodedSpriteSheetData({
-    required this.pixels,
-    required this.width,
-    required this.height,
-    required this.frameWidth,
-    required this.frameHeight,
-    required this.frameCount,
-    required this.frames,
-  });
-  final Uint8List pixels;
-  final int width;
-  final int height;
-  final int frameWidth;
-  final int frameHeight;
-  final int frameCount;
-  final List<AnimationFrame> frames;
 }

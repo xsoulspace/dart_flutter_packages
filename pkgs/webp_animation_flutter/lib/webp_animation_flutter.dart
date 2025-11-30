@@ -43,3 +43,4 @@ export 'src/models/webp_animation_item.dart';
 export 'src/widgets/webp_animation.dart';
 export 'src/widgets/webp_animation_controller.dart';
 export 'src/widgets/webp_animation_layer.dart';
+export 'src/widgets/webp_animation_layer_controller.dart';
