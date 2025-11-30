@@ -36,20 +36,28 @@ class _HomePageState extends State<HomePage> {
 
   int _currentIndex = 0;
 
+  // Cached grid calculations to avoid recalculation on every build
+  late final int _gridSize = math.sqrt(animationCount).ceil();
+  late final double _totalWidth = _gridSize * batchAnimationSize.width;
+  late final double _totalHeight = _gridSize * batchAnimationSize.height;
+  late final List<WebpAnimationItem> _animationItems = _createAnimationItems();
+
   @override
   Widget build(final BuildContext context) => Scaffold(
     appBar: AppBar(
       title: const Text('WebP Animation Example'),
       backgroundColor: Theme.of(context).colorScheme.inversePrimary,
     ),
-    body: IndexedStack(
-      index: _currentIndex,
-      children: [
-        // Single animation view
-        _buildSingleAnimationView(),
-        // Batch animation view
-        _buildBatchAnimationView(),
-      ],
+    body: SingleChildScrollView(
+      child: IndexedStack(
+        index: _currentIndex,
+        children: [
+          // Single animation view
+          _buildSingleAnimationView(),
+          // Batch animation view
+          _buildBatchAnimationView(),
+        ],
+      ),
     ),
     bottomNavigationBar: BottomNavigationBar(
       currentIndex: _currentIndex,
@@ -67,57 +75,31 @@ class _HomePageState extends State<HomePage> {
     ),
   );
 
-  Widget _buildBatchAnimationView() {
-    // Calculate grid dimensions for square-ish layout
-    final gridSize = math.sqrt(animationCount).ceil();
-    final totalWidth = gridSize * batchAnimationSize.width;
-    final totalHeight = gridSize * batchAnimationSize.height;
-
-    // Create animation items in grid layout
-    final animationItems = <WebpAnimationItem>[];
-    for (int i = 0; i < animationCount; i++) {
-      final row = i ~/ gridSize;
-      final col = i % gridSize;
-      animationItems.add(
-        WebpAnimationItem(
-          asset: animationAsset,
-          position: Offset(
-            col * batchAnimationSize.width,
-            row * batchAnimationSize.height,
-          ),
-          size: batchAnimationSize,
-        ),
-      );
-    }
-
-    return SingleChildScrollView(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            'Batch Animation Layer',
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-          Text(
-            '$animationCount animations',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 20),
-          SizedBox(
-            width: totalWidth,
-            height: totalHeight,
-            child: WebpAnimationLayer(animations: animationItems),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'Single WebpAnimationLayer widget\nOne draw call for all animations\nPerfect synchronization',
-            style: Theme.of(context).textTheme.bodyMedium,
-            textAlign: TextAlign.center,
-          ),
-        ],
+  Widget _buildBatchAnimationView() => Column(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      Text(
+        'Batch Animation Layer',
+        style: Theme.of(context).textTheme.headlineSmall,
       ),
-    );
-  }
+      Text(
+        '$animationCount animations',
+        style: Theme.of(context).textTheme.titleMedium,
+      ),
+      const SizedBox(height: 20),
+      SizedBox(
+        width: _totalWidth,
+        height: _totalHeight,
+        child: WebpAnimationLayer(animations: _animationItems),
+      ),
+      const SizedBox(height: 20),
+      Text(
+        'Single WebpAnimationLayer widget\nOne draw call for all animations\nPerfect synchronization',
+        style: Theme.of(context).textTheme.bodyMedium,
+        textAlign: TextAlign.center,
+      ),
+    ],
+  );
 
   Widget _buildSingleAnimationView() => Center(
     child: Column(
@@ -142,4 +124,23 @@ class _HomePageState extends State<HomePage> {
       ],
     ),
   );
+
+  List<WebpAnimationItem> _createAnimationItems() {
+    final animationItems = <WebpAnimationItem>[];
+    for (int i = 0; i < animationCount; i++) {
+      final row = i ~/ _gridSize;
+      final col = i % _gridSize;
+      animationItems.add(
+        WebpAnimationItem(
+          asset: animationAsset,
+          position: Offset(
+            col * batchAnimationSize.width,
+            row * batchAnimationSize.height,
+          ),
+          size: batchAnimationSize,
+        ),
+      );
+    }
+    return animationItems;
+  }
 }

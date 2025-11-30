@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import '../core/sprite_sheet.dart';
 import '../core/webp_decoder.dart';
 import '../models/webp_animation_item.dart';
-import '../painters/layer_painter.dart' show AnimationRenderData, LayerPainter;
 import 'webp_animation_layer_controller.dart';
 
 /// {@template webp_animation_layer}
@@ -67,6 +66,92 @@ class WebpAnimationLayer extends StatefulWidget {
 
   @override
   State<WebpAnimationLayer> createState() => _WebpAnimationLayerState();
+}
+
+/// {@template efficient_layer_painter}
+/// Optimized CustomPainter that calculates frame indices internally
+/// without requiring AnimatedBuilder, eliminating expensive object creation
+/// on every frame.
+/// {@endtemplate}
+class _EfficientLayerPainter extends CustomPainter {
+  /// {@macro efficient_layer_painter}
+  _EfficientLayerPainter({
+    required this.spriteSheets,
+    required this.images,
+    required this.animations,
+    required this.layerController,
+    required this.filterQuality,
+  }) : super(repaint: layerController?.controller);
+
+  final List<SpriteSheet?> spriteSheets;
+  final List<ui.Image?> images;
+  final List<WebpAnimationItem> animations;
+  final WebpAnimationLayerController? layerController;
+  final FilterQuality filterQuality;
+
+  @override
+  void paint(final Canvas canvas, final Size size) {
+    if (animations.isEmpty) return;
+
+    final paint = Paint()
+      ..filterQuality = filterQuality
+      ..isAntiAlias = true;
+
+    // Get current frame indices for all animations
+    final frameIndices = layerController?.getCurrentFrameIndices() ?? [];
+
+    // Render all animations in a single batch
+    for (int i = 0; i < animations.length; i++) {
+      final spriteSheet = spriteSheets[i];
+      final image = images[i];
+      if (spriteSheet == null || image == null) continue;
+
+      final frameIndex = i < frameIndices.length ? frameIndices[i] : 0;
+
+      // Get source rectangle for current frame
+      final srcRect = spriteSheet.getFrameRect(frameIndex);
+
+      // Calculate destination rectangle based on item position and size
+      final dstRect = Rect.fromLTWH(
+        animations[i].position.dx,
+        animations[i].position.dy,
+        animations[i].size.width,
+        animations[i].size.height,
+      );
+
+      // Draw the frame slice at the specified position and size
+      canvas.drawImageRect(image, srcRect, dstRect, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(final _EfficientLayerPainter oldDelegate) {
+    // Check basic properties first
+    if (spriteSheets.length != oldDelegate.spriteSheets.length ||
+        images.length != oldDelegate.images.length ||
+        animations.length != oldDelegate.animations.length ||
+        filterQuality != oldDelegate.filterQuality) {
+      return true;
+    }
+
+    // Check if any sprite sheets changed
+    for (int i = 0; i < spriteSheets.length; i++) {
+      if (spriteSheets[i] != oldDelegate.spriteSheets[i]) return true;
+    }
+
+    // Check if any images changed
+    for (int i = 0; i < images.length; i++) {
+      if (images[i] != oldDelegate.images[i]) return true;
+    }
+
+    // Check if any animation items changed
+    for (int i = 0; i < animations.length; i++) {
+      if (animations[i] != oldDelegate.animations[i]) return true;
+    }
+
+    // Controller changes will trigger repaint via repaint parameter
+    return false;
+  }
 }
 
 class _WebpAnimationLayerState extends State<WebpAnimationLayer>
@@ -163,41 +248,16 @@ class _WebpAnimationLayerState extends State<WebpAnimationLayer>
       );
     }
 
-    // Render all animations in a single CustomPaint
-    return AnimatedBuilder(
-      animation:
-          _layerController?.controller ?? const AlwaysStoppedAnimation(0),
-      builder: (final context, final child) {
-        final frameIndices = _layerController?.getCurrentFrameIndices() ?? [];
-        final animationData = <AnimationRenderData>[];
-
-        for (int i = 0; i < widget.animations.length; i++) {
-          final spriteSheet = _spriteSheets[i];
-          final image = _images[i];
-          final frameIndex = i < frameIndices.length ? frameIndices[i] : 0;
-
-          if (spriteSheet != null && image != null) {
-            animationData.add(
-              AnimationRenderData(
-                image: image,
-                spriteSheet: spriteSheet,
-                item: widget.animations[i],
-                frameIndex: frameIndex,
-              ),
-            );
-          }
-        }
-
-        return CustomPaint(
-          isComplex: true,
-
-          painter: LayerPainter(
-            animationData: animationData,
-            repaint: _layerController?.controller,
-            filterQuality: widget.filterQuality,
-          ),
-        );
-      },
+    // Render all animations in a single CustomPaint with direct repaint
+    return CustomPaint(
+      isComplex: true,
+      painter: _EfficientLayerPainter(
+        spriteSheets: _spriteSheets,
+        images: _images,
+        animations: widget.animations,
+        layerController: _layerController,
+        filterQuality: widget.filterQuality,
+      ),
     );
   }
 

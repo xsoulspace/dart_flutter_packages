@@ -7,27 +7,25 @@ void main() {
   runApp(const WebpAnimationExampleApp());
 }
 
-class WebpAnimationExampleApp extends StatelessWidget {
-  const WebpAnimationExampleApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'WebP Animation Example',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        useMaterial3: true,
-      ),
-      home: const HomePage(),
-    );
-  }
-}
-
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
+}
+
+class WebpAnimationExampleApp extends StatelessWidget {
+  const WebpAnimationExampleApp({super.key});
+
+  @override
+  Widget build(final BuildContext context) => MaterialApp(
+    title: 'WebP Animation Example',
+    theme: ThemeData(
+      colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+      useMaterial3: true,
+    ),
+    home: const HomePage(),
+  );
 }
 
 class _HomePageState extends State<HomePage> {
@@ -39,66 +37,35 @@ class _HomePageState extends State<HomePage> {
   int _currentIndex = 0;
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('WebP Animation Example'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-      ),
-      body: IndexedStack(
-        index: _currentIndex,
-        children: [
-          // Single animation view
-          _buildSingleAnimationView(),
-          // Batch animation view
-          _buildBatchAnimationView(),
-        ],
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.looks_one),
-            label: 'Single Animation',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.grid_view),
-            label: 'Batch ($animationCount Animations)',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSingleAnimationView() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            'Single Animation',
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-          const SizedBox(height: 20),
-          WebpAnimation(
-            asset: animationAsset,
-            width: singleAnimationSize.width,
-            height: singleAnimationSize.height,
-            autoPlay: true,
-            loop: true,
-            respectFrameDelays: true,
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'Individual WebpAnimation widget\nSeparate draw call per animation',
-            style: Theme.of(context).textTheme.bodyMedium,
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(final BuildContext context) => Scaffold(
+    appBar: AppBar(
+      title: const Text('WebP Animation Example'),
+      backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+    ),
+    body: IndexedStack(
+      index: _currentIndex,
+      children: [
+        // Single animation view
+        _buildSingleAnimationView(),
+        // Batch animation view
+        _buildBatchAnimationView(),
+      ],
+    ),
+    bottomNavigationBar: BottomNavigationBar(
+      currentIndex: _currentIndex,
+      onTap: (final index) => setState(() => _currentIndex = index),
+      items: const [
+        BottomNavigationBarItem(
+          icon: Icon(Icons.looks_one),
+          label: 'Single Animation',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.grid_view),
+          label: 'Batch ($animationCount Animations)',
+        ),
+      ],
+    ),
+  );
 
   Widget _buildBatchAnimationView() {
     // Calculate grid dimensions for square-ish layout
@@ -139,12 +106,7 @@ class _HomePageState extends State<HomePage> {
           SizedBox(
             width: totalWidth,
             height: totalHeight,
-            child: WebpAnimationLayer(
-              animations: animationItems,
-              autoPlay: true,
-              loop: true,
-              respectFrameDelays: true,
-            ),
+            child: WebpAnimationLayer(animations: animationItems),
           ),
           const SizedBox(height: 20),
           Text(
@@ -156,4 +118,28 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+
+  Widget _buildSingleAnimationView() => Center(
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          'Single Animation',
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
+        const SizedBox(height: 20),
+        WebpAnimation(
+          asset: animationAsset,
+          width: singleAnimationSize.width,
+          height: singleAnimationSize.height,
+        ),
+        const SizedBox(height: 20),
+        Text(
+          'Individual WebpAnimation widget\nSeparate draw call per animation',
+          style: Theme.of(context).textTheme.bodyMedium,
+          textAlign: TextAlign.center,
+        ),
+      ],
+    ),
+  );
 }
