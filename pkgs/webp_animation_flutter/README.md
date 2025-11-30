@@ -2,6 +2,8 @@
 
 High-performance Flutter library for animated WebP, using a game loop architecture for perfect sync and ultra-efficient rendering.
 
+Please notice: this package status is a `proof of concept`. Feel free to clone, contribute, and improve it if you will have use for it:)
+
 ---
 
 ## FAQ
