@@ -1,1 +1,1 @@
-please evaluate thoughtfully
+critically evaluate with extreme accuracy and thoroughness
