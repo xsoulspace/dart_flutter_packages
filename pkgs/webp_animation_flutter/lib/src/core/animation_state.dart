@@ -50,17 +50,7 @@ class AnimationState {
   double get currentTime => _currentTime;
 
   /// Whether the animation has completed (only meaningful for non-looping).
-  bool get isCompleted {
-    if (loop) return false;
-
-    final duration = FrameTiming.getTotalDuration(
-      spriteSheet: spriteSheet,
-      respectFrameDelays: respectFrameDelays,
-      fps: fps,
-    ).inSeconds;
-
-    return _currentTime >= duration;
-  }
+  bool get isCompleted => !loop && _currentTime >= _totalDuration;
 
   /// Whether the animation is currently playing.
   bool get isPlaying => _isPlaying;
@@ -69,19 +59,21 @@ class AnimationState {
   double get progress {
     if (spriteSheet.frameCount <= 1) return 0;
 
-    final duration = FrameTiming.getTotalDuration(
-      spriteSheet: spriteSheet,
-      respectFrameDelays: respectFrameDelays,
-      fps: fps,
-    ).inSeconds;
-
-    if (duration == 0) return 0;
+    final duration = _totalDuration;
+    if (duration == 0.0) return 0;
 
     final loopedTime = loop
         ? _currentTime % duration
         : _currentTime.clamp(0.0, duration);
     return loopedTime / duration;
   }
+
+  /// Gets the total duration of the animation in seconds.
+  int get _totalDuration => FrameTiming.getTotalDuration(
+    spriteSheet: spriteSheet,
+    respectFrameDelays: respectFrameDelays,
+    fps: fps,
+  ).inSeconds;
 
   /// Pauses animation playback.
   ///
@@ -186,11 +178,7 @@ class AnimationState {
       return;
     }
 
-    final duration = FrameTiming.getTotalDuration(
-      spriteSheet: spriteSheet,
-      respectFrameDelays: respectFrameDelays,
-      fps: fps,
-    ).inSeconds;
+    final duration = _totalDuration;
 
     final loopedTime = loop
         ? _currentTime % duration
