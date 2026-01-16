@@ -5,8 +5,8 @@ homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xso
 repository: https://github.com/xsoulspace/dart_flutter_packages
 
 environment:
-  sdk: ">=3.8.0 <4.0.0"
-  flutter: ">=3.32.0"
+  sdk: ">=3.10.0 <4.0.0"
+  flutter: ">=3.38.0"
 
 dependencies:
   device_info_plus: ^10.1.0

@@ -4,8 +4,8 @@ description: OAuth provider for Git platforms (GitHub, GitLab, etc.) with secure
 version: 0.1.0-dev.2
 
 environment:
-  sdk: ">=3.8.0 <4.0.0"
-  flutter: ">=3.32.0"
+  sdk: ">=3.10.0 <4.0.0"
+  flutter: ">=3.38.0"
 
 dependencies:
   flutter:
