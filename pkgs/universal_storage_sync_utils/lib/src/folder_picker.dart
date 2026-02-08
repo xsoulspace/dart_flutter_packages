@@ -1,5 +1,7 @@
+import 'dart:developer' as dev;
+
 import 'package:file_selector/file_selector.dart';
-import 'package:flutter/widgets.dart';
+// import 'package:flutter/widgets.dart';
 import 'package:path_provider/path_provider.dart' as p;
 import 'package:universal_io/io.dart';
 import 'package:universal_storage_interface/universal_storage_interface.dart';
@@ -15,8 +17,9 @@ Future<void> disposePathOfFileConfig(final FilePathConfig config) async {
     if (bookmark.isNotEmpty) {
       try {
         await MacOSBookmarkManager().stopAccessing(Directory(bookmark.value));
+        // ignore: avoid_catches_without_on_clauses
       } catch (e, st) {
-        debugPrint('Failed to dispose path of file config: $e $st');
+        dev.log('Failed to dispose path of file config: $e', stackTrace: st);
       }
     }
   }
@@ -105,7 +108,6 @@ Future<Directory?> resolvePlatformDirectory({
 /// It returns a [PickResult] which can be one of [PickSuccess],
 /// [PickFailure], or [PickCancelled].
 Future<PickResult> pickWritableDirectory({
-  final BuildContext? context,
   final String? initialDirectory,
 }) async {
   // 1. Request permissions if needed.

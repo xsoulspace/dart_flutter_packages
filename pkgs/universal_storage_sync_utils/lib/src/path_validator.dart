@@ -1,6 +1,7 @@
 // ignore_for_file: avoid_catches_without_on_clauses
 
-import 'package:flutter/widgets.dart';
+import 'dart:developer' as dev;
+
 import 'package:path/path.dart' as p;
 import 'package:universal_io/io.dart';
 
@@ -28,8 +29,7 @@ mixin PathValidator {
         ..deleteSync();
       return true;
     } catch (e, stackTrace) {
-      debugPrint('Failed to validate path: $e');
-      debugPrint('Stack trace: $stackTrace');
+      dev.log('Failed to validate path: $e', stackTrace: stackTrace);
       // Catches FileSystemException, etc.
       return false;
     }

@@ -1,6 +1,8 @@
 // ignore_for_file: avoid_catches_without_on_clauses
 
-import 'package:flutter/widgets.dart';
+// import 'package:flutter/widgets.dart';
+import 'dart:developer' as dev;
+
 import 'package:macos_secure_bookmarks/macos_secure_bookmarks.dart';
 import 'package:universal_io/io.dart';
 import 'package:universal_storage_interface/universal_storage_interface.dart';
@@ -32,8 +34,7 @@ class MacOSBookmarkManager {
       return MacOSBookmark.fromBase64(bookmarkData);
     } catch (e, stackTrace) {
       // Log the error or handle it as needed
-      debugPrint('Failed to create bookmark: $e');
-      debugPrint('Stack trace: $stackTrace');
+      dev.log('Failed to create bookmark: $e', stackTrace: stackTrace);
       return null;
     }
   }
@@ -63,8 +64,7 @@ class MacOSBookmarkManager {
       };
     } catch (e, stackTrace) {
       // Log the error or handle it as needed
-      debugPrint('Failed to resolve bookmark: $e');
-      debugPrint('Stack trace: $stackTrace');
+      dev.log('Failed to resolve bookmark: $e', stackTrace: stackTrace);
       return null;
     }
   }
@@ -79,8 +79,7 @@ class MacOSBookmarkManager {
       await _secureBookmarks.stopAccessingSecurityScopedResource(entity);
     } catch (e, stackTrace) {
       // Log the error or handle it as needed
-      debugPrint('Failed to stop accessing resource: $e');
-      debugPrint('Stack trace: $stackTrace');
+      dev.log('Failed to stop accessing resource: $e', stackTrace: stackTrace);
     }
   }
 }
