@@ -6,7 +6,7 @@ Offline Git provider for Universal Storage. Local Git repository with optional r
 
 ```yaml
 dependencies:
-  universal_storage_interface: ^0.1.0-dev.2
+  universal_storage_interface: ^0.1.0-dev.10 ^0.1.0-dev.2
   universal_storage_git_offline: ^0.1.0-dev.2
 ```
 

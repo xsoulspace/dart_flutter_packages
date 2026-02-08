@@ -35,6 +35,7 @@ grep -A 20 "^dependencies:" pkgs/<package>/pubspec.yaml
 Create a map of package relationships:
 
 **Local dependencies** (path-based):
+
 ```yaml
 dependencies:
   universal_storage_interface:
@@ -42,6 +43,7 @@ dependencies:
 ```
 
 **Published dependencies** (version-based):
+
 ```yaml
 dependencies:
   xsoulspace_foundation: ^0.3.0
@@ -52,6 +54,7 @@ dependencies:
 Common package families in this monorepo:
 
 **Universal Storage Family:**
+
 - `universal_storage_interface` (core)
 - `universal_storage_filesystem`
 - `universal_storage_db`
@@ -62,6 +65,7 @@ Common package families in this monorepo:
 - `universal_storage_sync_utils`
 
 **Monetization Family:**
+
 - `xsoulspace_monetization_interface` (core)
 - `xsoulspace_monetization_foundation`
 - `xsoulspace_monetization_google_apple`
@@ -69,6 +73,7 @@ Common package families in this monorepo:
 - `xsoulspace_monetization_rustore`
 
 **Review Family:**
+
 - `xsoulspace_review_interface` (core)
 - `xsoulspace_review`
 - `xsoulspace_review_google_apple`
@@ -78,11 +83,13 @@ Common package families in this monorepo:
 - `xsoulspace_review_web`
 
 **Ads Family:**
+
 - `xsoulspace_monetization_ads_interface` (core)
 - `xsoulspace_monetization_ads_foundation`
 - `xsoulspace_monetization_ads_yandex`
 
 **Foundation Packages:**
+
 - `xsoulspace_foundation` (used by many)
 - `xsoulspace_lints` (used by all)
 - `xsoulspace_logger`
@@ -185,7 +192,7 @@ graph TD
     B[universal_storage_filesystem]
     C[universal_storage_sync]
     D[xsoulspace_foundation]
-    
+
     B --> A
     C --> A
     C --> B
@@ -240,12 +247,14 @@ xsoulspace_foundation
 **Symptom**: Package A depends on B, B depends on A
 
 **Detection**:
+
 ```bash
 # Manually trace dependencies
 # If you return to starting package, circular dependency exists
 ```
 
 **Solution**:
+
 - Extract shared code to new package
 - Refactor to remove circular reference
 - Use dependency inversion
@@ -255,12 +264,14 @@ xsoulspace_foundation
 **Symptom**: Different packages require incompatible versions
 
 **Detection**:
+
 ```bash
 # Check if multiple versions are specified
 grep -r "package_name:" pkgs/*/pubspec.yaml
 ```
 
 **Solution**:
+
 - Align all packages to same version
 - Update constraints to be compatible
 - Use `dependency_overrides` temporarily
@@ -270,12 +281,14 @@ grep -r "package_name:" pkgs/*/pubspec.yaml
 **Symptom**: Package not used by any other package
 
 **Detection**:
+
 ```bash
 pkg_name="package_name"
 grep -r "$pkg_name" pkgs/*/pubspec.yaml | grep -v "^pkgs/$pkg_name"
 ```
 
 **Solution**:
+
 - Document as standalone package
 - Consider archiving if unused
 - Add to example apps
@@ -285,15 +298,18 @@ grep -r "$pkg_name" pkgs/*/pubspec.yaml | grep -v "^pkgs/$pkg_name"
 When updating a package, determine impact:
 
 ### Low Impact
+
 - Leaf packages (no dependents)
 - Example apps
 - Test-only packages
 
 ### Medium Impact
+
 - Mid-level packages (few dependents)
 - Platform-specific implementations
 
 ### High Impact
+
 - Core interfaces
 - Foundation packages (e.g., `xsoulspace_foundation`)
 - Widely-used utilities
@@ -308,6 +324,7 @@ For a given package update, determine order:
 4. **Remove duplicates**
 
 Example for `universal_storage_interface`:
+
 ```
 Update order:
 1. universal_storage_interface (core)

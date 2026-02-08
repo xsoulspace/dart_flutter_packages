@@ -6,7 +6,7 @@ GitHub API provider for Universal Storage using GitHub REST API (no local Git).
 
 ```yaml
 dependencies:
-  universal_storage_interface: ^0.1.0-dev.2
+  universal_storage_interface: ^0.1.0-dev.10 ^0.1.0-dev.2
   universal_storage_github_api: ^0.1.0-dev.2
 ```
 

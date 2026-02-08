@@ -8,10 +8,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.8.2] - 2026-02-08
 
 - chore: update is_dart_empty_or_not dependency to 0.4.0
-
-## [0.8.0]
-
-- chore: updated dependencies
-- chore: updated README
-- chore: updated CHANGELOG
-- chore: updated LICENSE
+- chore: update xsoulspace_monetization_interface dependency to 0.8.2

@@ -1,7 +1,7 @@
 name: xsoulspace_monetization_foundation
 description: A Flutter package for managing in-app purchases, subscriptions, and
   advertisements across multiple platforms.
-version: 0.8.1
+version: 0.8.2
 publish_to: "none"
 
 environment:
@@ -12,11 +12,11 @@ dependencies:
   collection: ^1.19.0
   flutter:
     sdk: flutter
-  is_dart_empty_or_not: ^0.2.3
+  is_dart_empty_or_not: ^0.4.0
   xsoulspace_foundation: ^0.3.0
   xsoulspace_monetization_ads_interface:
     path: ../xsoulspace_monetization_ads_interface
-  xsoulspace_monetization_interface: ^0.8.0
+  xsoulspace_monetization_interface: ^0.8.2
 
 dev_dependencies:
   flutter_test:
