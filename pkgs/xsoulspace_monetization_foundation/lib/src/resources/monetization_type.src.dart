@@ -4,7 +4,7 @@ import 'package:xsoulspace_foundation/xsoulspace_foundation.dart';
 import '../models/models.dart';
 
 /// Resource that manages the status  of the monetization system.
-@stateDistributor
+@resource
 class MonetizationTypeResource extends ChangeNotifier {
   MonetizationTypeResource(this._type);
   MonetizationType _type;

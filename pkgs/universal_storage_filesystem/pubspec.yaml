@@ -7,11 +7,11 @@ issue_tracker: https://github.com/xsoulspace/universal_storage_sync/issues
 documentation: https://github.com/xsoulspace/universal_storage_sync/tree/main/pkgs/universal_storage_filesystem
 
 environment:
-  sdk: ^3.9.0
+  sdk: ">=3.10.0 <4.0.0"
 
 dependencies:
   path: ^1.9.1
-  universal_io: ^2.2.2
+  universal_io: ^2.3.1
   universal_storage_interface: ^0.1.0-dev.9
   universal_storage_sync_utils: ^0.1.0-dev.10
 

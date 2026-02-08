@@ -73,7 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Dependencies
 
-- `from_json_to_json: ^0.3.0` - JSON serialization utilities
+- `from_json_to_json: ^0.4.0` - JSON serialization utilities
 - `meta: ^1.16.0` - Metadata annotations
 
 ### Development Dependencies

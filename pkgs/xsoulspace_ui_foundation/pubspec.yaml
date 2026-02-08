@@ -11,7 +11,7 @@ dependencies:
   collection: ^1.19.1
   flutter:
     sdk: flutter
-  from_json_to_json: ^0.3.0
+  from_json_to_json: ^0.4.0
   infinite_scroll_pagination: ^5.1.1
   is_dart_empty_or_not: ^0.2.3
   xsoulspace_foundation: ^0.3.0

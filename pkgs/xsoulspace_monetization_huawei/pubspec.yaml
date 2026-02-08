@@ -11,7 +11,7 @@ dependencies:
   collection: ^1.19.1
   flutter:
     sdk: flutter
-  from_json_to_json: ^0.3.0
+  from_json_to_json: ^0.4.0
   huawei_iap: ^6.13.0+302
   url_launcher: ^6.3.2
   xsoulspace_monetization_interface:
