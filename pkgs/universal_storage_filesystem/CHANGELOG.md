@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - sdk: ">=3.10.0 <4.0.0"
 - universal_io: ^2.3.1
 - universal_storage_interface: ^0.1.0-dev.10
-- universal_storage_sync_utils: ^0.1.0-dev.10
+- universal_storage_sync_utils: ^0.1.0-dev.11
 
 ## [0.1.0-dev.10] - 2025-10-27
 
