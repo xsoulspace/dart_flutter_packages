@@ -54,7 +54,7 @@ dependencies:
 
   # Utilities
   uuid: ^4.2.0
-  xsoulspace_foundation: ^0.3.0
+  xsoulspace_foundation: ^0.4.0
   yaml: ^3.1.2
 
 dependency_overrides:

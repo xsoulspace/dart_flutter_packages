@@ -46,7 +46,7 @@ dependencies:
 
 ```yaml
 dependencies:
-  xsoulspace_foundation: ^0.3.0
+  xsoulspace_foundation: ^0.4.0
 ```
 
 ### Step 3: Identify Package Families
