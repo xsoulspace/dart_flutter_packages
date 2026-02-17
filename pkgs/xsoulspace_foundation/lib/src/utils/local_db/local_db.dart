@@ -28,6 +28,24 @@ abstract interface class LocalDbI {
   /// to avoid any uninitialized access errors.
   Future<void> init();
 
+  /// Clears the local database.
+  ///
+  /// This method should be called to clear the local database when the user
+  /// logs out or the app is uninstalled.
+  ///
+  /// @ai Ensure this method is called when the user logs out or the app is
+  /// uninstalled to avoid any data leakage.
+  Future<void> clear();
+
+  /// Clears a specific key from the local database.
+  ///
+  /// This method should be called to clear a specific key from the local database.
+  ///
+  /// [key] The unique identifier for the key to be cleared.
+  ///
+  /// @ai Ensure this method is called to clear a specific key from the local database.
+  Future<void> clearKey({required final String key});
+
   /// Stores a map of key-value pairs in the database.
   ///
   /// This method serializes the provided map and stores it under the specified
@@ -51,9 +69,7 @@ abstract interface class LocalDbI {
   /// @returns A [Future] that completes with the retrieved map.
   ///
   /// @ai Implement this method to deserialize and return the stored map.
-  Future<Map<String, dynamic>> getMap(
-    final String key,
-  );
+  Future<Map<String, dynamic>> getMap(final String key);
 
   /// Stores a string value in the database.
   ///
@@ -94,10 +110,7 @@ abstract interface class LocalDbI {
   /// [value] The boolean to be stored.
   ///
   /// @ai Ensure that the boolean value is correctly stored and retrieved.
-  Future<void> setBool({
-    required final String key,
-    required final bool value,
-  });
+  Future<void> setBool({required final String key, required final bool value});
 
   /// Retrieves a boolean value from the database.
   ///
@@ -123,10 +136,7 @@ abstract interface class LocalDbI {
   /// [value] The integer to be stored.
   ///
   /// @ai Ensure that the integer value is correctly stored and retrieved.
-  Future<void> setInt({
-    required final String key,
-    final int value = 0,
-  });
+  Future<void> setInt({required final String key, final int value = 0});
 
   /// Retrieves an integer value from the database.
   ///
@@ -138,10 +148,7 @@ abstract interface class LocalDbI {
   ///
   /// @ai Ensure that the default value is returned correctly when the key is
   /// not found.
-  Future<int> getInt({
-    required final String key,
-    final int defaultValue = 0,
-  });
+  Future<int> getInt({required final String key, final int defaultValue = 0});
 
   /// Stores a generic item in the database.
   ///

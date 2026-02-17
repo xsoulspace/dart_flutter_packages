@@ -38,6 +38,16 @@ class PrefsDb implements LocalDbI {
   }
 
   @override
+  Future<void> clear() async {
+    await prefs.clear();
+  }
+
+  @override
+  Future<void> clearKey({required final String key}) async {
+    await prefs.remove(key);
+  }
+
+  @override
   Future<void> setMap({
     required final String key,
     required final Map<String, dynamic> value,

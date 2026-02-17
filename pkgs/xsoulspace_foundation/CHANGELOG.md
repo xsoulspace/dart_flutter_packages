@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.4.0
+
+- chore:
+  freezed_annotation: ^3.1.0
+  shared_preferences: ^2.5.4
+  uuid: ^4.5.2
+
+  build_runner: ^2.11.1
+  freezed: ^3.2.5
+  json_serializable: ^6.12.0
+  lints: ^6.1.0
+
+- updated readme.
+- added clearKey and clear methods to LocalDbI and PrefsDb.
+
 ## 0.3.0
 
 BREAKING:
