@@ -296,6 +296,26 @@ class LocalDbUniversalStorageImpl implements LocalDbI {
   );
 
   @override
+  Future<void> clear() async {
+    _singleFilesBoolsCache.clear();
+    _singleFilesIntsCache.clear();
+    _singleFilesStringsCache.clear();
+    _singleFilesMapsCache.clear();
+    _singleFilesMapListsCache.clear();
+    _singleFilesStringsListsCache.clear();
+  }
+
+  @override
+  Future<void> clearKey({required final String key}) async {
+    _singleFilesBoolsCache.remove(key);
+    _singleFilesIntsCache.remove(key);
+    _singleFilesStringsCache.remove(key);
+    _singleFilesMapsCache.remove(key);
+    _singleFilesMapListsCache.remove(key);
+    _singleFilesStringsListsCache.remove(key);
+  }
+
+  @override
   Future<Iterable<Map<String, dynamic>>> getMapIterable({
     required final String key,
     final List<Map<String, dynamic>> defaultValue = const [],
