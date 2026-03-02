@@ -16,7 +16,7 @@ import 'package:universal_storage_interface/universal_storage_interface.dart';
 /// This provider is offline-first and supports version control features.
 /// {@endtemplate}
 class OfflineGitStorageProvider extends StorageProvider
-    implements VersionControlService {
+    implements VersionControlService, LocalEngine {
   /// {@macro offline_git_storage_provider}
   OfflineGitStorageProvider();
 
@@ -39,6 +39,15 @@ class OfflineGitStorageProvider extends StorageProvider
       ConflictResolutionStrategy.clientAlwaysRight;
 
   var _isInitialized = false;
+
+  @override
+  VersionControlCapabilities get declaredVersionControlCapabilities =>
+      VersionControlCapabilities.none;
+
+  @override
+  Future<VersionControlCapabilities>
+  resolveVersionControlCapabilities() async =>
+      declaredVersionControlCapabilities;
 
   @override
   Future<void> initWithConfig(final StorageConfig config) async {
@@ -89,7 +98,15 @@ class OfflineGitStorageProvider extends StorageProvider
 
     final message = commitMessage ?? 'Create file: $filePath';
     final commitHash = await _commitChanges(message);
-    return FileOperationResult.created(path: fullPath, revisionId: commitHash);
+    return FileOperationResult.created(
+      path: fullPath,
+      revisionId: commitHash,
+      metadata: _durabilityMetadata(
+        filePath: filePath,
+        commitHash: commitHash,
+        operationType: 'create',
+      ),
+    );
   }
 
   @override
@@ -134,7 +151,15 @@ class OfflineGitStorageProvider extends StorageProvider
 
     final message = commitMessage ?? 'Update file: $filePath';
     final commitHash = await _commitChanges(message);
-    return FileOperationResult.updated(path: fullPath, revisionId: commitHash);
+    return FileOperationResult.updated(
+      path: fullPath,
+      revisionId: commitHash,
+      metadata: _durabilityMetadata(
+        filePath: filePath,
+        commitHash: commitHash,
+        operationType: 'update',
+      ),
+    );
   }
 
   @override
@@ -156,7 +181,15 @@ class OfflineGitStorageProvider extends StorageProvider
 
     final message = commitMessage ?? 'Delete file: $filePath';
     final commitHash = await _commitChanges(message);
-    return FileOperationResult.deleted(path: fullPath, revisionId: commitHash);
+    return FileOperationResult.deleted(
+      path: fullPath,
+      revisionId: commitHash,
+      metadata: _durabilityMetadata(
+        filePath: filePath,
+        commitHash: commitHash,
+        operationType: 'delete',
+      ),
+    );
   }
 
   @override
@@ -627,11 +660,38 @@ class OfflineGitStorageProvider extends StorageProvider
     await _gitDir!.runCommand(args);
   }
 
+  Map<String, dynamic> _durabilityMetadata({
+    required final String filePath,
+    required final String commitHash,
+    required final String operationType,
+  }) => <String, dynamic>{
+    'durability_protocol': 'git_commit_v1',
+    'durability_namespace': _namespaceForPath(filePath),
+    'durability_operation_type': operationType,
+    'durability_commit': commitHash,
+  };
+
+  String _namespaceForPath(final String filePath) {
+    final normalized = filePath
+        .trim()
+        .replaceAll(r'\', '/')
+        .replaceAll(RegExp('/+'), '/')
+        .replaceFirst(RegExp('^/'), '');
+    final separatorIndex = normalized.indexOf('/');
+    if (separatorIndex <= 0) {
+      return '_root';
+    }
+    return normalized.substring(0, separatorIndex);
+  }
+
   @override
   Future<void> cloneRepository(
     final VcRepository repository,
     final String localPath,
-  ) => throw UnsupportedError('Offline Git does not support cloning');
+  ) => throw const CapabilityMismatchException(
+    'OfflineGitStorageProvider manages an already-local repository and '
+    'does not support clone-to-local workflows.',
+  );
 
   @override
   Future<VcRepository> createRepository(
@@ -646,32 +706,315 @@ class OfflineGitStorageProvider extends StorageProvider
   }
 
   @override
-  Future<VcRepository> getRepositoryInfo() {
-    // TODO(arenukvern): implement getRepositoryInfo
-    throw UnimplementedError();
+  Future<VcRepository> getRepositoryInfo() async {
+    _ensureInitialized();
+
+    final absoluteLocalPath = path.normalize(path.absolute(_localPath));
+    final localRepositoryName = path.basename(absoluteLocalPath);
+    final remoteUrl = await _tryReadRemoteUrl();
+    final remoteIdentity = _parseRemoteIdentity(
+      remoteUrl,
+      fallbackRepositoryName: localRepositoryName,
+    );
+    final activeBranchName = await _tryGetCurrentBranchName();
+
+    return VcRepository(
+      id: absoluteLocalPath,
+      name: localRepositoryName,
+      description: 'Local git repository at $absoluteLocalPath',
+      cloneUrl: remoteUrl,
+      defaultBranch: activeBranchName ?? _branchName.value,
+      owner: remoteIdentity.owner,
+      fullName: remoteIdentity.fullName,
+      webUrl: remoteIdentity.webUrl,
+    );
   }
 
   @override
-  Future<List<VcBranch>> listBranches() {
-    // TODO(arenukvern): implement listBranches
-    throw UnimplementedError();
+  Future<List<VcBranch>> listBranches() async {
+    _ensureInitialized();
+
+    try {
+      final currentBranchName = await _tryGetCurrentBranchName();
+      final result = await _gitDir!.runCommand([
+        'branch',
+        '--format=%(refname:short)',
+      ]);
+      final branchNames = result.stdout
+          .toString()
+          .split('\n')
+          .map((final branch) => branch.trim())
+          .where((final branch) => branch.isNotEmpty)
+          .toList();
+
+      if (branchNames.isEmpty) {
+        if (currentBranchName != null && currentBranchName.isNotEmpty) {
+          branchNames.add(currentBranchName);
+        } else {
+          branchNames.add(_branchName.value);
+        }
+      }
+
+      final seenBranches = <String>{};
+      final branches = <VcBranch>[];
+      for (final branchName in branchNames) {
+        if (!seenBranches.add(branchName)) {
+          continue;
+        }
+        branches.add(
+          VcBranch(
+            name: VcBranchName(branchName),
+            isDefault: currentBranchName == null
+                ? branchName == _branchName.value
+                : branchName == currentBranchName,
+          ),
+        );
+      }
+
+      return branches;
+    } catch (e, stackTrace) {
+      log('Error: $e', stackTrace: stackTrace);
+      throw GitConflictException('Failed to list branches: $e');
+    }
   }
 
   @override
-  Future<List<VcRepository>> listRepositories() {
-    // TODO(arenukvern): implement listRepositories
-    throw UnimplementedError();
+  Future<List<VcRepository>> listRepositories() async {
+    _ensureInitialized();
+
+    final repositories = <VcRepository>[];
+    final absoluteLocalPath = path.normalize(path.absolute(_localPath));
+    final parentPath = path.dirname(absoluteLocalPath);
+    final parentDirectory = Directory(parentPath);
+
+    if (parentDirectory.existsSync()) {
+      final entities = await parentDirectory.list().toList();
+      for (final entity in entities) {
+        if (entity is! Directory) {
+          continue;
+        }
+        final gitDirectory = Directory(path.join(entity.path, '.git'));
+        if (!gitDirectory.existsSync()) {
+          continue;
+        }
+        final normalizedPath = path.normalize(path.absolute(entity.path));
+        final repositoryName = path.basename(normalizedPath);
+        repositories.add(
+          VcRepository(
+            id: normalizedPath,
+            name: repositoryName,
+            description: 'Local git repository at $normalizedPath',
+            fullName: repositoryName,
+          ),
+        );
+      }
+    }
+
+    final hasCurrentRepository = repositories.any(
+      (final repository) =>
+          path.normalize(path.absolute(repository.id)) == absoluteLocalPath,
+    );
+    if (!hasCurrentRepository) {
+      repositories.add(await getRepositoryInfo());
+    }
+
+    repositories.sort(
+      (final first, final second) => first.name.compareTo(second.name),
+    );
+    return repositories;
   }
 
   @override
-  Future<void> setRepository(final VcRepositoryName repositoryId) {
-    // TODO(arenukvern): implement setRepository
-    throw UnimplementedError();
+  Future<void> setRepository(final VcRepositoryName repositoryId) async {
+    _ensureInitialized();
+
+    if (repositoryId.isEmpty) {
+      throw ArgumentError('repositoryId cannot be empty');
+    }
+
+    final absoluteCurrentPath = path.normalize(path.absolute(_localPath));
+    final currentRepositoryName = path.basename(absoluteCurrentPath);
+    if (repositoryId.value == currentRepositoryName) {
+      return;
+    }
+
+    final parentPath = path.dirname(absoluteCurrentPath);
+    final nextRepositoryPath = path.join(parentPath, repositoryId.value);
+    final nextRepositoryDirectory = Directory(nextRepositoryPath);
+    if (!nextRepositoryDirectory.existsSync()) {
+      throw FileNotFoundException(
+        'Repository "${repositoryId.value}" was not found in $parentPath',
+      );
+    }
+
+    final nextGitDirectory = Directory(path.join(nextRepositoryPath, '.git'));
+    if (!nextGitDirectory.existsSync()) {
+      throw ConfigurationException(
+        'Directory "$nextRepositoryPath" is not a git repository.',
+      );
+    }
+
+    try {
+      _gitDir = await GitDir.fromExisting(nextRepositoryPath);
+
+      await _checkoutBranchIfExists(_branchName.value);
+      final activeBranchName = await _tryGetCurrentBranchName();
+      final remoteUrl = await _tryReadRemoteUrl();
+      final remoteIdentity = _parseRemoteIdentity(
+        remoteUrl,
+        fallbackRepositoryName: repositoryId.value,
+      );
+
+      _config = OfflineGitConfig(
+        localPath: path.normalize(path.absolute(nextRepositoryPath)),
+        branchName: VcBranchName(activeBranchName ?? _branchName.value),
+        authorName: _authorName,
+        authorEmail: _authorEmail,
+        remoteUrl: remoteUrl.isEmpty ? VcUrl.empty : VcUrl(remoteUrl),
+        remoteRepositoryName: remoteIdentity.repositoryName.isEmpty
+            ? VcRepositoryName.empty
+            : VcRepositoryName(remoteIdentity.repositoryName),
+        remoteRepositoryOwner: remoteIdentity.owner.isEmpty
+            ? VcRepositoryOwner.empty
+            : VcRepositoryOwner(remoteIdentity.owner),
+        remoteName: _remoteName,
+        remoteType: _config.remoteType,
+        remoteApiSettings: _config.remoteApiSettings,
+        defaultPullStrategy: _defaultPullStrategy,
+        defaultPushStrategy: _defaultPushStrategy,
+        conflictResolution: _config.conflictResolution,
+        sshKeyPath: _config.sshKeyPath,
+        httpsToken: _config.httpsToken,
+      );
+      _isInitialized = true;
+    } catch (e, stackTrace) {
+      log('Error: $e', stackTrace: stackTrace);
+      throw GitConflictException(
+        'Failed to switch repository to "${repositoryId.value}": $e',
+      );
+    }
+  }
+
+  Future<String?> _tryGetCurrentBranchName() async {
+    try {
+      final result = await _gitDir!.runCommand(['branch', '--show-current']);
+      final branchName = result.stdout.toString().trim();
+      if (branchName.isEmpty) {
+        return null;
+      }
+      return branchName;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _checkoutBranchIfExists(final String branchName) async {
+    final branchResult = await _gitDir!.runCommand([
+      'branch',
+      '--list',
+      branchName,
+    ]);
+    final hasBranch = branchResult.stdout.toString().trim().isNotEmpty;
+    if (!hasBranch) {
+      return;
+    }
+    await _gitDir!.runCommand(['checkout', branchName]);
+  }
+
+  Future<String> _tryReadRemoteUrl() async {
+    try {
+      final remoteResult = await _gitDir!.runCommand([
+        'remote',
+        'get-url',
+        _remoteName,
+      ]);
+      return remoteResult.stdout.toString().trim();
+    } catch (_) {
+      return '';
+    }
+  }
+
+  _RemoteRepositoryIdentity _parseRemoteIdentity(
+    final String remoteUrl, {
+    required final String fallbackRepositoryName,
+  }) {
+    if (remoteUrl.isEmpty) {
+      return _RemoteRepositoryIdentity(
+        repositoryName: fallbackRepositoryName,
+        fullName: fallbackRepositoryName,
+      );
+    }
+
+    String? host;
+    String? owner;
+    var repositoryName = fallbackRepositoryName;
+
+    final uri = Uri.tryParse(remoteUrl);
+    if (uri != null && uri.hasAuthority) {
+      host = uri.host;
+      final segments = uri.pathSegments.where((final s) => s.isNotEmpty);
+      final pathSegments = segments.toList();
+      if (pathSegments.length >= 2) {
+        owner = pathSegments[pathSegments.length - 2];
+        repositoryName = pathSegments.last;
+      } else if (pathSegments.isNotEmpty) {
+        repositoryName = pathSegments.last;
+      }
+    } else {
+      final sshPattern = RegExp(r'^[^@]+@([^:]+):(.+)$');
+      final match = sshPattern.firstMatch(remoteUrl);
+      if (match != null) {
+        host = match.group(1);
+        final pathPart = match.group(2) ?? '';
+        final pathSegments = pathPart
+            .split('/')
+            .where((final segment) => segment.isNotEmpty)
+            .toList();
+        if (pathSegments.length >= 2) {
+          owner = pathSegments[pathSegments.length - 2];
+          repositoryName = pathSegments.last;
+        } else if (pathSegments.isNotEmpty) {
+          repositoryName = pathSegments.last;
+        }
+      }
+    }
+
+    if (repositoryName.endsWith('.git')) {
+      repositoryName = repositoryName.substring(0, repositoryName.length - 4);
+    }
+    final fullName = owner == null || owner.isEmpty
+        ? repositoryName
+        : '$owner/$repositoryName';
+    final webUrl =
+        host == null || host.isEmpty || owner == null || owner.isEmpty
+        ? ''
+        : 'https://$host/$owner/$repositoryName';
+
+    return _RemoteRepositoryIdentity(
+      owner: owner ?? '',
+      repositoryName: repositoryName,
+      fullName: fullName,
+      webUrl: webUrl,
+    );
   }
 
   @override
-  Future<void> dispose() {
-    // TODO: implement dispose
-    throw UnimplementedError();
+  Future<void> dispose() async {
+    _isInitialized = false;
+    _gitDir = null;
   }
+}
+
+class _RemoteRepositoryIdentity {
+  const _RemoteRepositoryIdentity({
+    this.owner = '',
+    this.repositoryName = '',
+    this.fullName = '',
+    this.webUrl = '',
+  });
+
+  final String owner;
+  final String repositoryName;
+  final String fullName;
+  final String webUrl;
 }

@@ -49,7 +49,9 @@ void bootstrap() {
 
 ```dart
 final service = await StorageFactory.create(
-  FileSystemConfig(basePath: '/data'),
+  FileSystemConfig(
+    filePathConfig: FilePathConfig({'path': '/data'}),
+  ),
 );
 await service.saveFile('file.txt', 'content');
 ```
@@ -58,3 +60,12 @@ await service.saveFile('file.txt', 'content');
 
 - Provider-specific unit tests live in provider packages.
 - Foundation tests validate `StorageFactory` wiring, `StorageService` behavior, and error contracts.
+
+### Current Reality (2026-03-02)
+
+- Architecture direction is stable, but provider capabilities are not fully
+  complete yet (not all `VersionControlService` methods are implemented across
+  providers).
+- Use this document as a structural reference; use
+  `../universal_storage_docs/PRODUCTION_COMPLETENESS_PATH.md` for production
+  readiness status.

@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:path/path.dart' as path;
 import 'package:test/test.dart';
 import 'package:universal_storage_git_offline/universal_storage_git_offline.dart';
 import 'package:universal_storage_interface/universal_storage_interface.dart';
@@ -17,6 +18,20 @@ void main() {
       );
       tempDir = tempDirectory.path;
       provider = OfflineGitStorageProvider();
+    });
+
+    test('implements LocalEngine role for kernel profile routing', () {
+      expect(provider, isA<LocalEngine>());
+      expect(provider, isNot(isA<RemoteEngine>()));
+    });
+
+    test('declares clone-to-local capability as unsupported', () async {
+      expect(
+        provider.declaredVersionControlCapabilities.supportsCloneToLocal,
+        isFalse,
+      );
+      final resolved = await provider.resolveVersionControlCapabilities();
+      expect(resolved.supportsCloneToLocal, isFalse);
     });
 
     tearDown(() async {
@@ -65,7 +80,7 @@ void main() {
         expect(
           () => OfflineGitConfig(
             localPath: tempDir,
-            branchName: const VcBranchName(''),
+            branchName: VcBranchName.empty,
           ),
           throwsA(isA<ArgumentError>()),
         );
@@ -106,6 +121,10 @@ void main() {
 
         expect(result.revisionId, isNotEmpty);
         expect(result.revisionId.length, equals(40)); // Git SHA-1 hash length
+        expect(result.metadata['durability_protocol'], 'git_commit_v1');
+        expect(result.metadata['durability_operation_type'], 'create');
+        expect(result.metadata['durability_namespace'], '_root');
+        expect(result.metadata['durability_commit'], result.revisionId);
 
         // Verify file exists and has correct content
         final readContent = await provider.getFile(filePath);
@@ -128,6 +147,10 @@ void main() {
         );
 
         expect(result.revisionId, isNotEmpty);
+        expect(result.metadata['durability_protocol'], 'git_commit_v1');
+        expect(result.metadata['durability_operation_type'], 'update');
+        expect(result.metadata['durability_namespace'], '_root');
+        expect(result.metadata['durability_commit'], result.revisionId);
 
         // Verify updated content
         final readContent = await provider.getFile(filePath);
@@ -145,7 +168,14 @@ void main() {
         expect(await provider.getFile(filePath), equals(content));
 
         // Delete file
-        await provider.deleteFile(filePath, commitMessage: 'Delete test file');
+        final result = await provider.deleteFile(
+          filePath,
+          commitMessage: 'Delete test file',
+        );
+        expect(result.metadata['durability_protocol'], 'git_commit_v1');
+        expect(result.metadata['durability_operation_type'], 'delete');
+        expect(result.metadata['durability_namespace'], '_root');
+        expect(result.metadata['durability_commit'], result.revisionId);
 
         // Verify file is gone
         expect(await provider.getFile(filePath), isNull);
@@ -242,6 +272,16 @@ void main() {
         await provider.initWithConfig(config);
       });
 
+      test('cloneRepository should fail with capability mismatch', () async {
+        await expectLater(
+          () => provider.cloneRepository(
+            const VcRepository(id: '1', name: 'repo'),
+            path.join(tempDir, 'clone-target'),
+          ),
+          throwsA(isA<CapabilityMismatchException>()),
+        );
+      });
+
       test('should restore file to HEAD', () async {
         const filePath = 'versioned.txt';
         const originalContent = 'Original content';
@@ -285,6 +325,98 @@ void main() {
         // Verify restored version
         expect(await provider.getFile(filePath), equals(version1));
       });
+
+      test(
+        'should return repository info for current local repository',
+        () async {
+          final info = await provider.getRepositoryInfo();
+
+          expect(info.id, equals(path.normalize(path.absolute(tempDir))));
+          expect(info.name, equals(path.basename(path.normalize(tempDir))));
+          expect(info.defaultBranch, equals('main'));
+        },
+      );
+
+      test('should list branches for local repository', () async {
+        final branches = await provider.listBranches();
+
+        expect(branches, isNotEmpty);
+        final names = branches
+            .map((final branch) => branch.name.value)
+            .toList();
+        expect(names, contains('main'));
+        expect(branches.any((final branch) => branch.isDefault), isTrue);
+      });
+
+      test('should list sibling git repositories', () async {
+        final siblingRepoPath = path.join(
+          path.dirname(tempDir),
+          'git_storage_sibling_${DateTime.now().microsecondsSinceEpoch}',
+        );
+        final siblingDirectory = await Directory(siblingRepoPath).create();
+        addTearDown(() async {
+          if (siblingDirectory.existsSync()) {
+            await siblingDirectory.delete(recursive: true);
+          }
+        });
+
+        final siblingProvider = OfflineGitStorageProvider();
+        await siblingProvider.initWithConfig(
+          OfflineGitConfig(localPath: siblingDirectory.path),
+        );
+        await siblingProvider.dispose();
+
+        final repositories = await provider.listRepositories();
+        final repoNames = repositories
+            .map((final repository) => repository.name)
+            .toList();
+
+        expect(repoNames, contains(path.basename(tempDir)));
+        expect(repoNames, contains(path.basename(siblingDirectory.path)));
+      });
+
+      test(
+        'should switch repository context to a sibling repository',
+        () async {
+          final siblingRepoPath = path.join(
+            path.dirname(tempDir),
+            'git_storage_switch_${DateTime.now().microsecondsSinceEpoch}',
+          );
+          final siblingDirectory = await Directory(siblingRepoPath).create();
+          addTearDown(() async {
+            if (siblingDirectory.existsSync()) {
+              await siblingDirectory.delete(recursive: true);
+            }
+          });
+
+          final siblingProvider = OfflineGitStorageProvider();
+          await siblingProvider.initWithConfig(
+            OfflineGitConfig(
+              localPath: siblingDirectory.path,
+              authorName: 'Test User',
+              authorEmail: 'test@example.com',
+            ),
+          );
+          await siblingProvider.createFile('seed.txt', 'seed');
+          await siblingProvider.dispose();
+
+          await provider.setRepository(
+            VcRepositoryName(path.basename(siblingDirectory.path)),
+          );
+          final info = await provider.getRepositoryInfo();
+          expect(info.name, equals(path.basename(siblingDirectory.path)));
+
+          await provider.createFile('switched.txt', 'ok');
+          expect(
+            File(path.join(siblingDirectory.path, 'switched.txt')).existsSync(),
+            isTrue,
+          );
+          expect(
+            File(path.join(tempDir, 'switched.txt')).existsSync(),
+            isFalse,
+          );
+        },
+      );
     });
 
     group('Remote Sync Configuration', () {
@@ -318,5 +450,3 @@ void main() {
     });
   });
 }
-
-

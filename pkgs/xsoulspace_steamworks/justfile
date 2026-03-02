@@ -1,0 +1,19 @@
+default:
+    @just --list
+
+generate:
+    @echo "No code generation required for wrapper package"
+
+generate-check:
+    @echo "No generated wrapper files to check"
+
+analyze:
+    dart analyze
+
+test:
+    dart test
+
+verify:
+    just generate-check
+    just analyze
+    just test

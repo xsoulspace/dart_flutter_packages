@@ -1,7 +1,9 @@
 name: universal_storage_github_api
 description: GitHub API storage provider for universal_storage_interface.
 version: 0.1.0-dev.2
-publish_to: none
+homepage: https://github.com/xsoulspace/universal_storage_sync
+repository: https://github.com/xsoulspace/universal_storage_sync
+issue_tracker: https://github.com/xsoulspace/universal_storage_sync/issues
 
 environment:
   sdk: ">=3.10.0 <4.0.0"
@@ -9,8 +11,7 @@ environment:
 dependencies:
   github: ^9.25.0
   retry: ^3.1.2
-  universal_storage_interface:
-    path: ../universal_storage_interface
+  universal_storage_interface: ^0.1.0-dev.10
 
 dev_dependencies:
   lints: ^6.0.0

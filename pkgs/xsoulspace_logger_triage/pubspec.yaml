@@ -1,0 +1,20 @@
+name: xsoulspace_logger_triage
+description: Fingerprinting, grouping, deduplication, priority scoring, and escalation sink for xsoulspace_logger.
+version: 1.0.0-beta.0
+homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_logger_triage
+repository: https://github.com/xsoulspace/dart_flutter_packages
+issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
+documentation: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_logger_triage
+topics: [logging, observability, triage, monitoring, dart]
+
+environment:
+  sdk: ">=3.10.0 <4.0.0"
+
+dependencies:
+  crypto: ^3.0.6
+  xsoulspace_logger: ^1.0.0-beta.0
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.24.0
+  xsoulspace_lints: ^0.1.2

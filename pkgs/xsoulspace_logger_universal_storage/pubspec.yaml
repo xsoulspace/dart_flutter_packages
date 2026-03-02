@@ -1,0 +1,20 @@
+name: xsoulspace_logger_universal_storage
+description: universal_storage_interface sink adapter for xsoulspace_logger with append snapshots, compaction, and restore hooks.
+version: 1.0.0-beta.0
+homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_logger_universal_storage
+repository: https://github.com/xsoulspace/dart_flutter_packages
+issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
+documentation: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_logger_universal_storage
+topics: [logging, observability, storage, dart, sync]
+
+environment:
+  sdk: ">=3.10.0 <4.0.0"
+
+dependencies:
+  universal_storage_interface: ">=0.1.0-dev.10 <0.2.0"
+  xsoulspace_logger: ^1.0.0-beta.0
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.24.0
+  xsoulspace_lints: ^0.1.2

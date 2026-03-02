@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'exceptions.dart';
 import 'models/models.dart';
 import 'storage_service_contracts.dart';
@@ -75,19 +73,17 @@ class StorageService {
     final String? pullMergeStrategy,
     final String? pushConflictStrategy,
   }) async {
-    if (_provider.supportsSync) {
-      await _provider.sync(
-        pullMergeStrategy: pullMergeStrategy,
-        pushConflictStrategy: pushConflictStrategy,
+    if (!_provider.supportsSync) {
+      throw CapabilityMismatchException(
+        'The configured storage provider '
+        '(${_provider.runtimeType}) does not support remote synchronization.',
       );
-    } else {
-      // Log or handle providers not supporting sync
-      log(
-        'The configured storage provider does not support remote '
-        'synchronization.',
-      );
-      // Optionally throw UnsupportedOperationException
     }
+
+    await _provider.sync(
+      pullMergeStrategy: pullMergeStrategy,
+      pushConflictStrategy: pushConflictStrategy,
+    );
   }
 
   /// Gets the underlying storage provider for advanced operations

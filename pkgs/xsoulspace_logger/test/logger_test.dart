@@ -1,132 +1,196 @@
-/// Tests for xsoulspace_logger package
 library;
 
 import 'package:test/test.dart';
+import 'package:xsoulspace_logger/testing.dart';
 import 'package:xsoulspace_logger/xsoulspace_logger.dart';
 
 void main() {
-  group('LogLevel', () {
-    test('should have correct ordering', () {
-      expect(LogLevel.verbose.value, lessThan(LogLevel.debug.value));
-      expect(LogLevel.debug.value, lessThan(LogLevel.info.value));
-      expect(LogLevel.info.value, lessThan(LogLevel.warning.value));
-      expect(LogLevel.warning.value, lessThan(LogLevel.error.value));
-    });
-
-    test('isEnabled should work correctly', () {
-      expect(LogLevel.verbose.isEnabled(LogLevel.verbose), isTrue);
-      expect(LogLevel.debug.isEnabled(LogLevel.verbose), isTrue);
-      expect(LogLevel.verbose.isEnabled(LogLevel.debug), isFalse);
-      expect(LogLevel.error.isEnabled(LogLevel.info), isTrue);
-    });
-  });
-
-  group('LoggerConfig', () {
-    test('debug preset should have correct settings', () {
-      final config = LoggerConfig.debug();
-      expect(config.minLevel, LogLevel.verbose);
-      expect(config.enableConsole, isTrue);
-      expect(config.enableFile, isTrue);
-    });
-
-    test('production preset should have correct settings', () {
-      final config = LoggerConfig.production();
-      expect(config.minLevel, LogLevel.info);
-      expect(config.enableConsole, isFalse);
-      expect(config.enableFile, isTrue);
-    });
-
-    test('consoleOnly preset should have correct settings', () {
-      final config = LoggerConfig.consoleOnly();
-      expect(config.enableConsole, isTrue);
-      expect(config.enableFile, isFalse);
-    });
-  });
-
-  group('Logger', () {
-    setUp(() async {
-      // Reset logger before each test
-      await Logger.reset();
-    });
-
-    tearDown(() async {
-      // Clean up
-      await Logger.reset();
-    });
-
-    test('should initialize with console-only config', () {
-      final config = LoggerConfig.consoleOnly(level: LogLevel.info);
-      final logger = Logger(config);
-      expect(logger.config.enableConsole, isTrue);
-      expect(logger.config.enableFile, isFalse);
-    });
-
-    test('should respect minimum log level', () {
-      final config = LoggerConfig.consoleOnly(level: LogLevel.warning);
-      final logger = Logger(config);
-
-      // These should not throw
-      logger.verbose('TEST', 'Verbose message');
-      logger.debug('TEST', 'Debug message');
-      logger.info('TEST', 'Info message');
-      logger.warning('TEST', 'Warning message');
-      logger.error('TEST', 'Error message');
-    });
-
-    test('should log with data', () {
-      final config = LoggerConfig.consoleOnly();
-      final logger = Logger(config);
-
-      logger.info(
-        'TEST',
-        'Message with data',
-        data: {'key1': 'value1', 'key2': 42},
-      );
-    });
-
-    test('should log errors with stack trace', () {
-      final config = LoggerConfig.consoleOnly();
-      final logger = Logger(config);
-
-      try {
-        throw Exception('Test error');
-      } catch (e, stack) {
-        logger.error('TEST', 'Error occurred', error: e, stackTrace: stack);
-      }
-    });
-
-    test('should be singleton', () {
-      final config = LoggerConfig.consoleOnly();
-      final logger1 = Logger(config);
-      final logger2 = Logger();
-      expect(identical(logger1, logger2), isTrue);
-    });
-  });
-
-  group('FileWriter', () {
-    test('should create FileWriter with config', () {
-      const config = LoggerConfig(
-        minLevel: LogLevel.info,
-        enableConsole: false,
-        enableFile: true,
+  group('Logger core behavior', () {
+    test('filters disabled levels before lazy message work', () async {
+      final sink = InMemoryLogSink();
+      final logger = Logger(
+        const LoggerConfig(
+          minLevel: LogLevel.warning,
+          flushInterval: Duration(hours: 1),
+        ),
+        <LogSink>[sink],
       );
 
-      final writer = FileWriter(config);
-      expect(writer.config.enableFile, isTrue);
+      var built = false;
+      logger.debugLazy('lazy', () {
+        built = true;
+        return 'expensive';
+      });
+
+      await logger.flush();
+
+      expect(built, isFalse);
+      expect(sink.records, isEmpty);
+      await logger.dispose();
     });
 
-    test('should handle writes without errors', () {
-      const config = LoggerConfig(
-        minLevel: LogLevel.info,
-        enableConsole: false,
-        enableFile: true,
+    test(
+      'redacts sensitive fields and enforces depth and size guards',
+      () async {
+        final sink = InMemoryLogSink();
+        final logger = Logger(
+          const LoggerConfig(flushInterval: Duration(hours: 1)),
+          <LogSink>[sink],
+        );
+
+        logger.info(
+          'security',
+          'payload',
+          fields: <String, Object?>{
+            'password': 'secret',
+            'profile': <String, Object?>{
+              'email': 'user@example.com',
+              'token': 'abcdef',
+            },
+            'deep': <String, Object?>{
+              'a': <String, Object?>{
+                'b': <String, Object?>{
+                  'c': <String, Object?>{
+                    'd': <String, Object?>{
+                      'e': <String, Object?>{
+                        'f': <String, Object?>{'g': 'value'},
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            'blob': 'x' * 5000,
+          },
+        );
+
+        await logger.flush();
+
+        final record = sink.records.single;
+        expect(record.fields['password'], '[REDACTED]');
+
+        final profile = record.fields['profile']! as Map<String, Object?>;
+        expect(profile['email'], '[REDACTED]');
+        expect(profile['token'], '[REDACTED]');
+
+        final blob = record.fields['blob']! as String;
+        expect(blob, contains('[TRUNCATED]'));
+        expect(record.fields.toString(), contains('[MAX_DEPTH]'));
+
+        await logger.dispose();
+      },
+    );
+
+    test('drops low-priority records first under backpressure', () async {
+      final clock = FakeClock(DateTime.utc(2026, 1, 1));
+      final sink = InMemoryLogSink();
+      final logger = Logger(
+        LoggerConfig(
+          minLevel: LogLevel.trace,
+          flushInterval: const Duration(hours: 1),
+          flushBatchSize: 64,
+          queueCapacity: 2,
+          hardQueueCapacity: 4,
+          clock: clock,
+        ),
+        <LogSink>[sink],
       );
 
-      final writer = FileWriter(config);
-      // These should not throw
-      writer.write('Message 1');
-      writer.write('Message 2');
-      writer.write('Message 3');
+      logger.traceLog('flow', 'trace');
+      logger.debug('flow', 'debug');
+      logger.warning('flow', 'warning');
+      logger.error('flow', 'error');
+
+      await logger.flush();
+
+      expect(sink.records.any((final r) => r.level == LogLevel.trace), isFalse);
+      expect(sink.records.any((final r) => r.level == LogLevel.debug), isFalse);
+      expect(
+        sink.records.any((final r) => r.level == LogLevel.warning),
+        isTrue,
+      );
+      expect(sink.records.any((final r) => r.level == LogLevel.error), isTrue);
+      expect(
+        sink.records.any(
+          (final r) => r.category == LoggerCategories.backpressure,
+        ),
+        isTrue,
+      );
+
+      await logger.dispose();
     });
+
+    test('trace query returns ordered chain', () async {
+      final sink = InMemoryLogSink();
+      final logger = Logger(
+        const LoggerConfig(flushInterval: Duration(hours: 1)),
+        <LogSink>[sink],
+      );
+
+      final trace = TraceContext(traceId: 'trace-1', spanId: 'span-a');
+      final traced = logger.child(
+        trace: trace,
+        fields: <String, Object?>{'session': 'abc'},
+      );
+
+      traced.info('checkout', 'start');
+      traced.warning('checkout', 'retry');
+      traced.error('checkout', 'failed');
+
+      await logger.flush();
+
+      final chain = await logger.trace('trace-1');
+      expect(chain.length, 3);
+      expect(chain.every((final r) => r.trace?.traceId == 'trace-1'), isTrue);
+      expect(chain[0].sequence < chain[1].sequence, isTrue);
+      expect(chain[1].sequence < chain[2].sequence, isTrue);
+
+      await logger.dispose();
+    });
+
+    test('watch and query apply filters', () async {
+      final sink = InMemoryLogSink();
+      final logger = Logger(
+        const LoggerConfig(flushInterval: Duration(hours: 1)),
+        <LogSink>[sink],
+      );
+
+      final errorFuture = logger
+          .watch(const LogQuery(levels: <LogLevel>{LogLevel.error}))
+          .first;
+
+      logger.info('api', 'ok');
+      logger.error('api', 'boom', fields: <String, Object?>{'code': 500});
+
+      await logger.flush();
+
+      final watchedError = await errorFuture;
+      expect(watchedError.level, LogLevel.error);
+
+      final queried = await logger.query(const LogQuery(text: 'boom'));
+      expect(queried.length, 1);
+      expect(queried.single.category, 'api');
+
+      await logger.dispose();
+    });
+
+    test(
+      'regression: dispose flushes pending records before closing sinks',
+      () async {
+        final sink = InMemoryLogSink();
+        final logger = Logger(
+          const LoggerConfig(flushInterval: Duration(hours: 1)),
+          <LogSink>[sink],
+        );
+
+        logger.info('regression', 'must survive dispose');
+        await logger.dispose();
+
+        expect(sink.records.length, 1);
+        expect(sink.records.single.message, 'must survive dispose');
+        expect(sink.flushCount, greaterThanOrEqualTo(1));
+        expect(sink.disposed, isTrue);
+      },
+    );
   });
 }

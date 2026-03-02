@@ -62,6 +62,8 @@ dependency_overrides:
     path: ../../
   universal_storage_interface:
     path: ../../../universal_storage_interface
+  universal_storage_sync_utils:
+    path: ../../../universal_storage_sync_utils
 
 dev_dependencies:
   flutter_lints: ^3.0.0

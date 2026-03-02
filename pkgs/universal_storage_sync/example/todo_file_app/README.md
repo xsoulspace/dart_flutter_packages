@@ -1,11 +1,12 @@
 # Todo App - Universal Storage Sync Demo
 
-A Flutter macOS demo application showcasing the `universal_storage_sync` package's FileSystem provider. This app demonstrates how to build a file-based todo application where each todo is stored as a separate YAML file in a user-selected workspace folder.
+A Flutter macOS demo application showcasing the `universal_storage_sync` package's profile-based kernel with FileSystem provider compatibility. Each todo is stored as a separate YAML file in a user-selected workspace folder.
 
 ## Features
 
 - **VS Code-style folder picker** with persistent folder selection
 - **CRUD operations** on todos with YAML file storage
+- **Profile-based kernel routing** with `StorageServiceKernelAdapter` compatibility
 - **Provider/ChangeNotifier** state management
 - **Type-safe models** using Dart 3.3+ extension types
 - **Error handling** for read-only directories and permission issues
@@ -110,18 +111,10 @@ extension type const TodoId(String value)
 extension type const Todo(Map<String, dynamic> value)
 ```
 
-### FileSystem Integration
+### Profile + Kernel Integration
 
-Demonstrates the **FileSystemConfig.builder()** API from Stage 5:
-
-```dart
-final config = FileSystemConfig.builder()
-    .basePath(workspacePath!)
-    .build();
-
-_storageService = StorageService(FileSystemStorageProvider());
-await _storageService!.initialize(config.toMap());
-```
+The app uses `StorageProfileLoader` to build a `StorageKernel` and then
+adapts legacy service-style calls via `StorageServiceKernelAdapter`.
 
 ## Testing
 

@@ -41,6 +41,7 @@ class FileOperationResult {
     required this.path,
     this.revisionId = '',
     this.isNew = false,
+    this.metadata = const <String, dynamic>{},
   });
 
   factory FileOperationResult.fromJson(final Map<String, dynamic> json) =>
@@ -48,30 +49,51 @@ class FileOperationResult {
         path: jsonDecodeString(json['path']),
         revisionId: jsonDecodeString(json['revision_id']),
         isNew: jsonDecodeBool(json['is_new']),
+        metadata: json['metadata'] is Map
+            ? Map<String, dynamic>.from(json['metadata'] as Map)
+            : const <String, dynamic>{},
       );
 
   final String path;
   final String revisionId;
   final bool isNew;
+  final Map<String, dynamic> metadata;
 
   Map<String, dynamic> toJson() => {
     'path': path,
     'revision_id': revisionId,
     'is_new': isNew,
+    'metadata': metadata,
   };
 
   static FileOperationResult created({
     required final String path,
     final String revisionId = '',
-  }) => FileOperationResult(path: path, revisionId: revisionId, isNew: true);
+    final Map<String, dynamic> metadata = const <String, dynamic>{},
+  }) => FileOperationResult(
+    path: path,
+    revisionId: revisionId,
+    isNew: true,
+    metadata: metadata,
+  );
 
   static FileOperationResult updated({
     required final String path,
     final String revisionId = '',
-  }) => FileOperationResult(path: path, revisionId: revisionId);
+    final Map<String, dynamic> metadata = const <String, dynamic>{},
+  }) => FileOperationResult(
+    path: path,
+    revisionId: revisionId,
+    metadata: metadata,
+  );
 
   static FileOperationResult deleted({
     required final String path,
     final String revisionId = '',
-  }) => FileOperationResult(path: path, revisionId: revisionId);
+    final Map<String, dynamic> metadata = const <String, dynamic>{},
+  }) => FileOperationResult(
+    path: path,
+    revisionId: revisionId,
+    metadata: metadata,
+  );
 }

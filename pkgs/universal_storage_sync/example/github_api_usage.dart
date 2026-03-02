@@ -173,8 +173,8 @@ Future<void> storageServiceExample() async {
     final content = await service.readFile('service-example.txt');
     print('Content via StorageService: $content');
 
-    // Note: GitHub API provider doesn't support sync operations
-    // service.syncRemote() will print a message about not supporting sync
+    // Note: GitHub API provider doesn't support sync operations.
+    // service.syncRemote() throws CapabilityMismatchException.
   } catch (e) {
     print('Error: $e');
   }

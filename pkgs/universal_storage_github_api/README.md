@@ -1,38 +1,50 @@
 # universal_storage_github_api
 
-GitHub API provider for Universal Storage using GitHub REST API (no local Git).
+GitHub REST API provider for Universal Storage (no local Git required).
 
-## Install
+Status: alpha (`0.1.0-dev`). Provider contract methods are implemented.
+
+## Installation
 
 ```yaml
 dependencies:
-  universal_storage_interface: ^0.1.0-dev.10 ^0.1.0-dev.2
-  universal_storage_github_api: ^0.1.0-dev.2
+  universal_storage_github_api:
+    path: ../universal_storage_github_api
+  universal_storage_interface:
+    path: ../universal_storage_interface
 ```
 
 ## Usage
 
 ```dart
-import 'package:universal_storage_interface/universal_storage_interface.dart';
 import 'package:universal_storage_github_api/universal_storage_github_api.dart';
+import 'package:universal_storage_interface/universal_storage_interface.dart';
 
-final provider = GitHubApiStorageProvider();
-await provider.initWithConfig(GitHubApiConfig(
-  authToken: 'ghp_xxx',
-  repositoryOwner: const VcRepositoryOwner('owner'),
-  repositoryName: const VcRepositoryName('repo'),
-  branchName: VcBranchName.main,
-));
+Future<void> main() async {
+  final provider = GitHubApiStorageProvider();
+  await provider.initWithConfig(
+    GitHubApiConfig(
+      authToken: 'ghp_xxx',
+      repositoryOwner: const VcRepositoryOwner('owner'),
+      repositoryName: const VcRepositoryName('repo'),
+      branchName: VcBranchName.main,
+    ),
+  );
 
-final service = StorageService(provider);
-await service.saveFile('docs/readme.md', '# Docs', message: 'docs: add readme');
+  final service = StorageService(provider);
+  await service.saveFile('docs/readme.md', '# Docs', message: 'docs: add readme');
+}
 ```
+
+## Current Limitations (2026-03-02)
+
+- `cloneRepository` is intentionally unsupported in this API-only provider and
+  throws `UnsupportedOperationException`.
+- Use `OfflineGitStorageProvider` when you need local clone workflows.
 
 ## Notes
 
-- Works on web
-- Subject to GitHub API rate limits
-
-## License
-
-MIT
+- Works on web and non-web platforms.
+- Subject to GitHub API rate limits and token permissions.
+- Authentication flow is intentionally out of scope for this package; use
+  `universal_storage_oauth` or app-level token acquisition.

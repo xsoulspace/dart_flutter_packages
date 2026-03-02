@@ -33,7 +33,9 @@ class AppState extends ChangeNotifier {
   String? error;
 
   /// Storage service instance
-  StorageService? _storageService;
+  StorageService? _legacyStorageService;
+  StorageKernel? _kernel;
+  StorageServiceKernelAdapter? _storageAdapter;
 
   /// {@macro app_state}
   AppState() {
@@ -48,6 +50,9 @@ class AppState extends ChangeNotifier {
 
   /// Number of pending todos
   int get pendingCount => todos.where((todo) => !todo.isCompleted).length;
+
+  /// Whether app storage is currently routed through profile-based kernel.
+  bool get usesProfileKernel => _kernel != null;
 
   /// Sets the workspace path and initializes storage
   Future<void> setWorkspacePath(final FilePathConfig pathConfig) async {
@@ -76,13 +81,13 @@ class AppState extends ChangeNotifier {
     await _setBusy(true);
     try {
       const todosPath = _todosDirectoryName;
-      final fileList = await _storageService!.listDirectory(todosPath);
+      final fileList = await _listDirectory(todosPath);
 
       final loadedTodos = <Todo>[];
       for (final fileEntry in fileList) {
         final fileName = fileEntry.name;
         if (fileName.endsWith('.yaml')) {
-          final content = await _storageService!.readFile(fileName);
+          final content = await _readFile(fileName);
           if (content != null) {
             try {
               final yamlData = loadYaml(content) as Map;
@@ -114,7 +119,7 @@ class AppState extends ChangeNotifier {
       final fileName = '$_todosDirectoryName/${todo.id.value}.yaml';
       final yamlContent = _todoToYaml(todo);
 
-      await _storageService!.saveFile(
+      await _saveFile(
         fileName,
         yamlContent,
         message: 'Save todo: ${todo.title}',
@@ -145,7 +150,7 @@ class AppState extends ChangeNotifier {
     await _setBusy(true);
     try {
       final fileName = '$_todosDirectoryName/${id.value}.yaml';
-      await _storageService!.removeFile(fileName, message: 'Delete todo: $id');
+      await _removeFile(fileName, message: 'Delete todo: $id');
 
       // Remove from local list
       todos.removeWhere((todo) => todo.id.value == id.value);
@@ -186,7 +191,9 @@ class AppState extends ChangeNotifier {
   void clearWorkspace() {
     filePathConfig = FilePathConfig.empty;
     todos = [];
-    _storageService = null;
+    _storageAdapter = null;
+    _kernel = null;
+    _legacyStorageService = null;
     _clearStoredWorkspacePath();
     notifyListeners();
   }
@@ -254,7 +261,65 @@ class AppState extends ChangeNotifier {
     final fileSystemConfig = FileSystemConfig.fromFilePathConfig(
       filePathConfig,
     );
-    _storageService = await StorageFactory.create(fileSystemConfig);
+    _legacyStorageService = await StorageFactory.create(fileSystemConfig);
+
+    final profile = const StorageProfile(
+      name: 'todo_file_app_profile_v1',
+      namespaces: <StorageNamespaceProfile>[
+        StorageNamespaceProfile(
+          namespace: StorageNamespace.projects,
+          policy: StoragePolicy.localOnly,
+          localEngineId: 'filesystem',
+          defaultFileExtension: '.yaml',
+          syncInteractionLevel: SyncInteractionLevel.minimal,
+        ),
+      ],
+    );
+
+    final loadResult = await const StorageProfileLoader().load(
+      profile: profile,
+      serviceFactory: (final _) async => _legacyStorageService!,
+    );
+    _kernel = loadResult.kernel;
+    _storageAdapter = StorageServiceKernelAdapter(
+      kernel: _kernel!,
+      namespace: StorageNamespace.projects,
+    );
+  }
+
+  Future<List<FileEntry>> _listDirectory(final String path) async {
+    if (_storageAdapter != null) {
+      return _storageAdapter!.listDirectory(path);
+    }
+    return _legacyStorageService!.listDirectory(path);
+  }
+
+  Future<String?> _readFile(final String path) async {
+    if (_storageAdapter != null) {
+      return _storageAdapter!.readFile(path);
+    }
+    return _legacyStorageService!.readFile(path);
+  }
+
+  Future<FileOperationResult> _saveFile(
+    final String path,
+    final String content, {
+    final String? message,
+  }) async {
+    if (_storageAdapter != null) {
+      return _storageAdapter!.saveFile(path, content, message: message);
+    }
+    return _legacyStorageService!.saveFile(path, content, message: message);
+  }
+
+  Future<FileOperationResult> _removeFile(
+    final String path, {
+    final String? message,
+  }) async {
+    if (_storageAdapter != null) {
+      return _storageAdapter!.removeFile(path, message: message);
+    }
+    return _legacyStorageService!.removeFile(path, message: message);
   }
 
   String _todoToYaml(Todo todo) {

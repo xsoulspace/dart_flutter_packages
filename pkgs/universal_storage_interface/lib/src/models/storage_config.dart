@@ -18,11 +18,15 @@ sealed class StorageConfig {
 /// {@endtemplate}
 class FileSystemConfig extends StorageConfig {
   /// {@macro file_system_config}
-  FileSystemConfig({required this.filePathConfig, this.databaseName = ''}) {
-    if (filePathConfig.isEmpty) {
-      throw ArgumentError('filePathConfig cannot be empty');
-    }
+  FileSystemConfig({required this.filePathConfig, this.databaseName = ''})
+    : _allowEmpty = false {
+    _validate();
   }
+
+  FileSystemConfig._empty()
+    : filePathConfig = FilePathConfig.empty,
+      databaseName = '',
+      _allowEmpty = true;
 
   /// Creates a [FileSystemConfig] from a [FilePathConfig].
   factory FileSystemConfig.fromFilePathConfig(
@@ -42,8 +46,16 @@ class FileSystemConfig extends StorageConfig {
   /// The name of the database.
   final String databaseName;
 
+  final bool _allowEmpty;
+
+  void _validate() {
+    if (!_allowEmpty && filePathConfig.isEmpty) {
+      throw ArgumentError('filePathConfig cannot be empty');
+    }
+  }
+
   /// Whether the configuration is empty.
-  bool get isEmpty => filePathConfig.isEmpty || databaseName.isEmpty;
+  bool get isEmpty => filePathConfig.isEmpty;
 
   /// Whether the configuration is not empty.
   bool get isNotEmpty => !isEmpty;
@@ -54,7 +66,7 @@ class FileSystemConfig extends StorageConfig {
     if (databaseName.isNotEmpty) 'databaseName': databaseName,
   };
 
-  static final empty = FileSystemConfig(filePathConfig: FilePathConfig.empty);
+  static final empty = FileSystemConfig._empty();
 }
 
 class OfflineGitConfig extends StorageConfig {

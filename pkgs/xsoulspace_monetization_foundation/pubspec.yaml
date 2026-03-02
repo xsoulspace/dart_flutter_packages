@@ -2,7 +2,6 @@ name: xsoulspace_monetization_foundation
 description: A Flutter package for managing in-app purchases, subscriptions, and
   advertisements across multiple platforms.
 version: 0.8.2
-publish_to: "none"
 
 environment:
   sdk: ">=3.10.0 <4.0.0"

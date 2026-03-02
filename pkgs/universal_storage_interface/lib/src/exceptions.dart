@@ -121,3 +121,42 @@ class ConfigurationException extends StorageException {
   @override
   String toString() => 'ConfigurationException: $message';
 }
+
+/// Requested capability is not available for current backend/profile.
+class CapabilityMismatchException extends ConfigurationException {
+  const CapabilityMismatchException(super.message);
+  @override
+  String toString() => 'CapabilityMismatchException: $message';
+}
+
+/// Base migration exception.
+class MigrationException extends StorageException {
+  const MigrationException(super.message);
+  @override
+  String toString() => 'MigrationException: $message';
+}
+
+class MigrationPreparationException extends MigrationException {
+  const MigrationPreparationException(super.message);
+  @override
+  String toString() => 'MigrationPreparationException: $message';
+}
+
+class MigrationExecutionException extends MigrationException {
+  const MigrationExecutionException(super.message);
+  @override
+  String toString() => 'MigrationExecutionException: $message';
+}
+
+class MigrationRollbackException extends MigrationException {
+  const MigrationRollbackException(super.message);
+  @override
+  String toString() => 'MigrationRollbackException: $message';
+}
+
+/// Operation requires explicit user decision (complex mode flow).
+class DecisionRequiredException extends StorageException {
+  const DecisionRequiredException(super.message);
+  @override
+  String toString() => 'DecisionRequiredException: $message';
+}

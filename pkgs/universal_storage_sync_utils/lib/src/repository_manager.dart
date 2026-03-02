@@ -293,6 +293,45 @@ class RepositoryManager {
     }
   }
 
+  /// Clones [repository] into [localPath] with capability-first validation.
+  ///
+  /// The provider capability is resolved before clone is invoked. If clone is
+  /// unsupported, [CapabilityMismatchException] is thrown without attempting a
+  /// provider clone call.
+  Future<void> cloneRepositoryToLocal({
+    required final VcRepository repository,
+    required final String localPath,
+  }) async {
+    if (localPath.trim().isEmpty) {
+      throw const RepositorySelectionException('localPath cannot be empty');
+    }
+
+    await ui.showProgress('Cloning repository...');
+    try {
+      final capabilities = await service.resolveVersionControlCapabilities();
+      if (!capabilities.supportsCloneToLocal) {
+        throw const CapabilityMismatchException(
+          'Selected provider does not support clone-to-local workflows.',
+        );
+      }
+
+      await service.cloneRepository(repository, localPath);
+    } on CapabilityMismatchException catch (e, stackTrace) {
+      log('Error: $e', stackTrace: stackTrace);
+      await ui.showError('Clone Not Supported', e.message);
+      rethrow;
+    } catch (e, stackTrace) {
+      log('Error: $e', stackTrace: stackTrace);
+      await ui.showError(
+        'Repository Clone Failed',
+        'Failed to clone repository: $e',
+      );
+      throw RepositorySelectionException('Repository clone failed: $e');
+    } finally {
+      await ui.hideProgress();
+    }
+  }
+
   /// Helper to extract repository name in a provider-agnostic way.
   ///
   /// VcRepository extension type provides a name getter that can be used

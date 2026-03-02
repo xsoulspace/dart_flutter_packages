@@ -1,0 +1,3 @@
+dependency_overrides:
+  universal_storage_interface:
+    path: ../universal_storage_interface

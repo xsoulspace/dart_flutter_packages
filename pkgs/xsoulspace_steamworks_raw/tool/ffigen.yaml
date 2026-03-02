@@ -1,0 +1,29 @@
+name: SteamApiFlatBindings
+description: Generated Steamworks flat API bindings.
+output: "__OUTPUT_PATH__"
+headers:
+  entry-points:
+    - "__SHIM_HEADER_PATH__"
+compiler-opts:
+  - "-I__SDK_PUBLIC_PATH__"
+  - "-x"
+  - "c++"
+  - "-std=c++17"
+functions:
+  include:
+    - '^SteamAPI_.*'
+structs:
+  include:
+    - '.*'
+enums:
+  include:
+    - '.*'
+typedefs:
+  include:
+    - '.*'
+unions:
+  include:
+    - '.*'
+comments:
+  style: any
+sort: true

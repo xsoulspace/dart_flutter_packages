@@ -21,10 +21,7 @@ void main() {
     });
 
     testWidgets('shows correct title for editing todo', (tester) async {
-      final todo = Todo.create(
-        id: const TodoId('test-id'),
-        title: 'Test Todo',
-      );
+      final todo = Todo.create(id: const TodoId('test-id'), title: 'Test Todo');
 
       await tester.pumpWidget(
         createTestWidget(
@@ -47,9 +44,7 @@ void main() {
       );
 
       await tester.pumpWidget(
-        createTestWidget(
-          child: TodoEditorDialog(todo: todo),
-        ),
+        createTestWidget(child: TodoEditorDialog(todo: todo)),
       );
 
       await tester.pumpAndSettle();
@@ -61,9 +56,7 @@ void main() {
 
     testWidgets('validates required title field', (tester) async {
       await tester.pumpWidget(
-        createTestWidget(
-          child: const TodoEditorDialog(),
-        ),
+        createTestWidget(child: const TodoEditorDialog()),
       );
 
       await tester.pumpAndSettle();
@@ -77,9 +70,7 @@ void main() {
 
     testWidgets('allows submission with valid title', (tester) async {
       await tester.pumpWidget(
-        createTestWidget(
-          child: const TodoEditorDialog(),
-        ),
+        createTestWidget(child: const TodoEditorDialog()),
       );
 
       await tester.pumpAndSettle();
@@ -99,15 +90,10 @@ void main() {
     });
 
     testWidgets('shows Update button when editing', (tester) async {
-      final todo = Todo.create(
-        id: const TodoId('test-id'),
-        title: 'Test Todo',
-      );
+      final todo = Todo.create(id: const TodoId('test-id'), title: 'Test Todo');
 
       await tester.pumpWidget(
-        createTestWidget(
-          child: TodoEditorDialog(todo: todo),
-        ),
+        createTestWidget(child: TodoEditorDialog(todo: todo)),
       );
 
       await tester.pumpAndSettle();
@@ -118,9 +104,7 @@ void main() {
 
     testWidgets('shows Create button when creating new todo', (tester) async {
       await tester.pumpWidget(
-        createTestWidget(
-          child: const TodoEditorDialog(),
-        ),
+        createTestWidget(child: const TodoEditorDialog()),
       );
 
       await tester.pumpAndSettle();

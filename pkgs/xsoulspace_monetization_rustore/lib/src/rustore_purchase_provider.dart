@@ -5,8 +5,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:from_json_to_json/from_json_to_json.dart';
-// import 'package:flutter_rustore_billing/flutter_rustore_billing.dart';
-// import 'package:flutter_rustore_billing/pigeons/rustore.dart';
 import 'package:rustore_billing_api/rustore_billing_api.dart';
 import 'package:universal_io/io.dart';
 import 'package:url_launcher/url_launcher_string.dart';
@@ -14,9 +12,6 @@ import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interf
 
 typedef DurationFromProductId = Duration Function(PurchaseProductId);
 
-/// {@template rustore_purchase_provider}
-/// Implementation of [PurchaseProvider] using RuStore Billing.
-/// {@endtemplate}
 class RustorePurchaseProvider implements PurchaseProvider {
   RustorePurchaseProvider({
     required this.consoleApplicationId,
@@ -34,13 +29,15 @@ class RustorePurchaseProvider implements PurchaseProvider {
   final PurchaseProductType? Function(PurchaseProductId productId)?
   productTypeChecker;
 
-  final _purchaseStreamController =
+  final StreamController<List<PurchaseDetailsModel>> _purchaseStreamController =
       StreamController<List<PurchaseDetailsModel>>.broadcast();
   final RustoreBillingClient _client = RustoreBillingClient.instance;
 
   @override
   Future<MonetizationStoreStatus> init() async {
-    if (!Platform.isAndroid) return MonetizationStoreStatus.notAvailable;
+    if (!Platform.isAndroid) {
+      return MonetizationStoreStatus.notAvailable;
+    }
     try {
       await _client.initialize(
         RustoreBillingConfig(
@@ -50,19 +47,18 @@ class RustorePurchaseProvider implements PurchaseProvider {
           enableLogging: enableLogging,
         ),
       );
-      _client.updatesStream.listen((final e) async {
-        final purchase = e.paymentResult;
-        final error = e.error;
-        if (purchase != null) {
+      _client.updatesStream.listen((final event) async {
+        final purchaseResult = event.purchaseResult;
+        final error = event.error;
+        if (purchaseResult != null && purchaseResult.purchase != null) {
           final purchaseDetails = await getPurchaseDetails(
-            PurchaseId.fromJson(purchase.purchaseId),
+            PurchaseId.fromJson(purchaseResult.purchase!.purchaseId),
           );
           _purchaseStreamController.add([purchaseDetails]);
         } else if (error != null) {
-          debugPrint('RustorePurchaseProvider.init: $error');
+          debugPrint('RustorePurchaseProvider.init: ${error.message}');
         }
       });
-
       return MonetizationStoreStatus.loaded;
     } catch (e) {
       debugPrint('RustorePurchaseProvider.init: $e');
@@ -80,7 +76,7 @@ class RustorePurchaseProvider implements PurchaseProvider {
   @override
   Future<bool> isUserAuthorized() async {
     try {
-      return await _client.isRustoreUserAuthorized();
+      return await _client.getUserAuthorizationStatus();
     } catch (e, stackTrace) {
       debugPrint('RustorePurchaseProvider.isUserAuthorized: $e');
       debugPrint('RustorePurchaseProvider.isUserAuthorized: $stackTrace');
@@ -93,10 +89,18 @@ class RustorePurchaseProvider implements PurchaseProvider {
     final PurchaseVerificationDtoModel purchase,
   ) async {
     try {
-      if (purchase.productType != PurchaseProductType.consumable) {
+      final rustorePurchase = await _client.getPurchase(
+        purchase.purchaseId.value,
+      );
+      if (rustorePurchase == null) {
+        return CompletePurchaseResultModel.failure(
+          'Purchase ${purchase.purchaseId.value} was not found.',
+        );
+      }
+      if (rustorePurchase.purchaseType != RustorePurchaseType.twoStep) {
         return CompletePurchaseResultModel.success();
       }
-      await _client.confirmPurchase(purchase.purchaseId.value);
+      await _client.confirmTwoStepPurchase(purchase.purchaseId.value);
       return CompletePurchaseResultModel.success();
     } catch (e) {
       return CompletePurchaseResultModel.failure(e.toString());
@@ -128,36 +132,37 @@ class RustorePurchaseProvider implements PurchaseProvider {
     final PurchaseProductDetailsModel details,
   ) async {
     try {
-      final purchase = await _client.purchaseProduct(details.productId.value);
-      if (purchase.resultType != RustorePaymentResultType.success) {
+      final preferredType =
+          details.productType == PurchaseProductType.consumable
+          ? RustorePreferredPurchaseType.twoStep
+          : RustorePreferredPurchaseType.oneStep;
+      final result = await _client.purchase(
+        RustoreProductPurchaseParams(
+          productId: details.productId.value,
+          quantity: 1,
+        ),
+        preferredPurchaseType: preferredType,
+      );
+
+      if (result.purchase == null) {
         return PurchaseResultModel.failure(
-          'Purchase failed. ${purchase.errorMessage}',
+          result.error?.message ?? 'Purchase failed without purchase payload.',
         );
       }
 
-      final result = PurchaseResultModel.success(
-        PurchaseDetailsModel(
-          status: details.productType == PurchaseProductType.consumable
-              ? PurchaseStatus.pendingVerification
-              : PurchaseStatus.purchased,
-          purchaseId: PurchaseId.fromJson(purchase.purchaseId),
-          purchaseType: details.productType,
-          productId: details.productId,
-          priceId: details.priceId,
-          name: details.name,
-          formattedPrice: details.formattedPrice,
-          price: details.price,
-          currency: details.currency,
-          purchaseDate: DateTime.now(),
-          expiryDate: details.productType == PurchaseProductType.subscription
-              ? DateTime.now().add(details.duration)
-              : null,
-          duration: details.duration,
-          freeTrialDuration: details.freeTrialDuration.toDuration(),
-        ),
+      if (result.resultType != RustoreProductPurchaseResultType.success) {
+        return PurchaseResultModel.failure(
+          result.error?.message ?? 'Purchase failed.',
+        );
+      }
+
+      final mappedDetails = _mapRustorePurchaseToDetails(
+        purchase: result.purchase!,
+        fallbackProductDetails: details,
       );
-      _purchaseStreamController.add([result.details!]);
-      return result;
+      final purchaseResult = PurchaseResultModel.success(mappedDetails);
+      _purchaseStreamController.add([purchaseResult.details!]);
+      return purchaseResult;
     } catch (e) {
       return PurchaseResultModel.failure(e.toString());
     }
@@ -169,13 +174,14 @@ class RustorePurchaseProvider implements PurchaseProvider {
       final purchases = await _client.getPurchases();
       final restored = await Future.wait(
         purchases.map((final p) {
-          final purchaseId = PurchaseId.fromJson(p.purchaseId ?? '');
-          if (purchaseId.isEmpty) return null;
-          return getPurchaseDetails(PurchaseId.fromJson(p.purchaseId ?? ''));
+          final purchaseId = PurchaseId.fromJson(p.purchaseId);
+          if (purchaseId.isEmpty) {
+            return null;
+          }
+          return getPurchaseDetails(purchaseId);
         }).nonNulls,
       );
       _purchaseStreamController.add(restored);
-
       return RestoreResultModel.success(restored);
     } catch (e) {
       return RestoreResultModel.failure(e.toString());
@@ -186,25 +192,39 @@ class RustorePurchaseProvider implements PurchaseProvider {
     final RustoreProduct product,
   ) {
     final productId = PurchaseProductId.fromJson(product.productId);
-    final duration = _getDurationFromProductId(productId);
-    final freeTrialDuration = product.subscription?.freeTrialPeriod;
-    final productType = _productTypeFromRustoreJson(
-      product.productType,
-      productId,
-    );
+    final periods =
+        product.subscriptionInfo?.periods ??
+        const <RustoreProductSubscriptionPeriod>[];
+    RustoreProductSubscriptionPeriod? period;
+    for (final current in periods) {
+      if (current.type == RustoreSubscriptionPeriodType.main) {
+        period = current;
+        break;
+      }
+    }
+    period ??= periods.isNotEmpty ? periods.first : null;
+
+    RustoreProductSubscriptionPeriod? freeTrialPeriod;
+    for (final current in periods) {
+      if (current.type == RustoreSubscriptionPeriodType.trial) {
+        freeTrialPeriod = current;
+        break;
+      }
+    }
+    final duration = period != null
+        ? _durationFromIso8601Period(period.durationIso)
+        : _getDurationFromProductId(productId);
 
     return PurchaseProductDetailsModel(
       productId: productId,
-      productType: productType,
+      productType: _productTypeFromRustoreJson(product.productType),
       name: product.title ?? '',
       formattedPrice: product.priceLabel ?? '',
       price: (product.price ?? 0).toDouble(),
       currency: product.currency ?? '',
       duration: duration,
-      freeTrialDuration: PurchaseDurationModel(
-        years: freeTrialDuration?.years ?? 0,
-        months: freeTrialDuration?.months ?? 0,
-        days: freeTrialDuration?.days ?? 0,
+      freeTrialDuration: _durationModelFromIso8601(
+        freeTrialPeriod?.durationIso ?? 'P0D',
       ),
       description: product.description ?? '',
       priceId: PurchasePriceId.fromJson(product.productId),
@@ -212,13 +232,12 @@ class RustorePurchaseProvider implements PurchaseProvider {
   }
 
   PurchaseProductType _productTypeFromRustoreJson(
-    final RustoreProductType? json,
-    final PurchaseProductId productId,
+    final RustoreProductType json,
   ) => switch (json) {
     RustoreProductType.nonConsumable => PurchaseProductType.nonConsumable,
     RustoreProductType.consumable => PurchaseProductType.consumable,
     RustoreProductType.subscription => PurchaseProductType.subscription,
-    _ => throw Exception('Invalid purchase type: $json'),
+    RustoreProductType.unknown => PurchaseProductType.consumable,
   };
 
   static Duration getDurationFromProductId(final PurchaseProductId id) {
@@ -226,14 +245,14 @@ class RustorePurchaseProvider implements PurchaseProvider {
     final unitIndex = parts.indexWhere(
       (final part) => ['day', 'month', 'year'].contains(part),
     );
-
-    if (unitIndex == -1 || unitIndex + 1 >= parts.length) return Duration.zero;
-
+    if (unitIndex == -1 || unitIndex + 1 >= parts.length) {
+      return Duration.zero;
+    }
     final unit = parts[unitIndex];
     final count = jsonDecodeInt(parts[unitIndex + 1]);
-
-    if (count == 0) return Duration.zero;
-
+    if (count == 0) {
+      return Duration.zero;
+    }
     return switch (unit) {
       'day' => Duration(days: count),
       'month' => Duration(days: count * 30),
@@ -245,12 +264,20 @@ class RustorePurchaseProvider implements PurchaseProvider {
   @override
   Future<CancelResultModel> cancel(final String purchaseId) async {
     try {
-      await _client.deletePurchase(purchaseId);
+      final purchase = await _client.getPurchase(purchaseId);
+      if (purchase == null) {
+        return CancelResultModel.failure('Purchase $purchaseId was not found.');
+      }
+      if (purchase.purchaseType != RustorePurchaseType.twoStep) {
+        return CancelResultModel.failure(
+          'Cancel is supported only for two-step purchases.',
+        );
+      }
+      await _client.cancelTwoStepPurchase(purchaseId);
       return CancelResultModel.success();
     } catch (e, stackTrace) {
       debugPrint('RustorePurchaseProvider.cancel: $e');
       debugPrint('RustorePurchaseProvider.cancel: $stackTrace');
-
       return CancelResultModel.failure(e.toString());
     }
   }
@@ -259,22 +286,26 @@ class RustorePurchaseProvider implements PurchaseProvider {
   Future<List<PurchaseProductDetailsModel>> getConsumables(
     final List<PurchaseProductId> productIds,
   ) async {
-    // TODO(arenukvern): implement identification of consumables
     final products = await _client.getProducts(
       productIds.map((final p) => p.value).toList(),
     );
-    return products.map(_mapToPurchaseProductDetails).toList();
+    return products
+        .where((final p) => p.productType == RustoreProductType.consumable)
+        .map(_mapToPurchaseProductDetails)
+        .toList();
   }
 
   @override
   Future<List<PurchaseProductDetailsModel>> getNonConsumables(
     final List<PurchaseProductId> productIds,
   ) async {
-    // TODO(arenukvern): implement identification of non-consumables
     final products = await _client.getProducts(
       productIds.map((final p) => p.value).toList(),
     );
-    return products.map(_mapToPurchaseProductDetails).toList();
+    return products
+        .where((final p) => p.productType == RustoreProductType.nonConsumable)
+        .map(_mapToPurchaseProductDetails)
+        .toList();
   }
 
   @override
@@ -282,16 +313,18 @@ class RustorePurchaseProvider implements PurchaseProvider {
     final List<PurchaseProductId> productIds,
   ) async {
     try {
-      // TODO(arenukvern): implement identification of subscriptions
       final products = await _client.getProducts(
         productIds.map((final p) => p.value).toList(),
       );
-      return products.map(_mapToPurchaseProductDetails).toList();
+      return products
+          .where((final p) => p.productType == RustoreProductType.subscription)
+          .map(_mapToPurchaseProductDetails)
+          .toList();
     } on RustoreBillingException catch (e) {
       throw PlatformException(
-        code: 'RustoreBillingException',
+        code: e.code,
         message: e.message,
-        details: e,
+        details: e.details,
         stacktrace: e.stackTrace.toString(),
       );
     }
@@ -304,7 +337,6 @@ class RustorePurchaseProvider implements PurchaseProvider {
 
   @override
   Future<void> openSubscriptionManagement() async {
-    // https://www.rustore.ru/help/sdk/rustore-deeplinks
     await launchUrlString('rustore://profile/subscriptions');
   }
 
@@ -312,77 +344,111 @@ class RustorePurchaseProvider implements PurchaseProvider {
   Future<PurchaseDetailsModel> getPurchaseDetails(
     final PurchaseId purchaseId,
   ) async {
-    // TODO(arenukvern): implement getting of purchase details
-    final purchases = await _client.getPurchases();
-    final purchase = purchases.firstWhere(
-      (final p) => p.purchaseId == purchaseId.value,
-      orElse: RustorePurchase.new,
-    );
-    final purchaseDate =
-        dateTimeFromIso8601String(purchase.purchaseTime) ?? DateTime.now();
-    final duration = _getDurationFromProductId(
-      PurchaseProductId.fromJson(purchase.productId ?? ''),
-    );
-    final expiryDate = purchase.purchaseTime != null
-        ? dateTimeFromIso8601String(purchase.purchaseTime)?.add(duration)
-        : null;
-    final productDetails = await getProductDetails([
-      PurchaseProductId.fromJson(purchase.productId ?? ''),
-    ]);
+    final purchase = await _client.getPurchase(purchaseId.value);
+    if (purchase == null) {
+      return PurchaseDetailsModel.empty;
+    }
+    final productId = PurchaseProductId.fromJson(purchase.productId ?? '');
+    final productDetails = await getProductDetails([productId]);
     final productDetail = productDetails.firstWhere(
-      (final p) =>
-          p.productId == PurchaseProductId.fromJson(purchase.productId ?? ''),
+      (final p) => p.productId == productId,
       orElse: () => PurchaseProductDetailsModel.empty,
     );
-    return PurchaseDetailsModel(
-      purchaseId: purchaseId,
-      productId: PurchaseProductId.fromJson(purchase.productId ?? ''),
-      priceId: PurchasePriceId.fromJson(purchase.productId ?? ''),
-      status: _purchaseStatusFromRustoreState(purchase.purchaseState),
-      purchaseDate: purchaseDate,
-      name: purchase.amountLabel ?? '',
-      formattedPrice: purchase.amountLabel ?? '',
-      price: (purchase.amount ?? 0).toDouble(),
-      currency: purchase.currency ?? '',
-      duration: duration,
-      expiryDate: expiryDate,
-      purchaseType: _productTypeFromRustoreJson(
-        purchase.productType,
-        PurchaseProductId.fromJson(purchase.productId ?? ''),
-      ),
-      freeTrialDuration: productDetail.freeTrialDuration.toDuration(),
+    return _mapRustorePurchaseToDetails(
+      purchase: purchase,
+      fallbackProductDetails: productDetail,
     );
   }
 
   @override
   Future<bool> isStoreInstalled() async {
     try {
-      final availability = await _client.checkPurchasesAvailability();
-      return availability.resultType ==
-              RustorePurchaseAvailabilityType.available ||
-          availability.resultType == RustorePurchaseAvailabilityType.unknown;
+      final availability = await _client.getPurchaseAvailability();
+      return availability.status ==
+              RustorePurchaseAvailabilityStatus.available ||
+          availability.status == RustorePurchaseAvailabilityStatus.unknown;
     } catch (e, stackTrace) {
       debugPrint('RustorePurchaseProvider.isStoreInstalled: $e');
       debugPrint('RustorePurchaseProvider.isStoreInstalled: $stackTrace');
       return false;
     }
   }
+
+  PurchaseDetailsModel _mapRustorePurchaseToDetails({
+    required final RustorePurchase purchase,
+    required final PurchaseProductDetailsModel fallbackProductDetails,
+  }) {
+    final purchaseDate =
+        dateTimeFromIso8601String(purchase.purchaseTime) ?? DateTime.now();
+    final duration = fallbackProductDetails.duration;
+    final expiryDate = purchaseDate.add(duration);
+
+    return PurchaseDetailsModel(
+      purchaseId: PurchaseId.fromJson(purchase.purchaseId),
+      productId: PurchaseProductId.fromJson(purchase.productId ?? ''),
+      priceId: PurchasePriceId.fromJson(purchase.productId ?? ''),
+      status: _purchaseStatusFromRustoreState(purchase.purchaseStatus),
+      purchaseDate: purchaseDate,
+      name: fallbackProductDetails.name,
+      formattedPrice:
+          purchase.amountLabel ?? fallbackProductDetails.formattedPrice,
+      price: (purchase.amount ?? 0).toDouble(),
+      currency: purchase.currency ?? fallbackProductDetails.currency,
+      duration: duration,
+      expiryDate:
+          fallbackProductDetails.productType == PurchaseProductType.subscription
+          ? expiryDate
+          : null,
+      purchaseType: fallbackProductDetails.productType,
+      freeTrialDuration: fallbackProductDetails.freeTrialDuration.toDuration(),
+      purchaseToken: purchase.subscriptionToken ?? '',
+    );
+  }
 }
 
 PurchaseStatus _purchaseStatusFromRustoreState(
-  final RustorePurchaseState? state,
+  final RustorePurchaseStatus state,
 ) => switch (state) {
-  RustorePurchaseState.created ||
-  RustorePurchaseState.invoiceCreated ||
-  RustorePurchaseState.paused => PurchaseStatus.pendingVerification,
-  RustorePurchaseState.paid => PurchaseStatus.pendingVerification,
-  RustorePurchaseState.cancelled ||
-  RustorePurchaseState.closed ||
-  RustorePurchaseState.terminated => PurchaseStatus.canceled,
-  RustorePurchaseState.consumed ||
-  RustorePurchaseState.confirmed => PurchaseStatus.purchased,
-  null => PurchaseStatus.pendingVerification,
+  RustorePurchaseStatus.created ||
+  RustorePurchaseStatus.invoiceCreated ||
+  RustorePurchaseStatus.paid ||
+  RustorePurchaseStatus.active ||
+  RustorePurchaseStatus.paused => PurchaseStatus.pendingVerification,
+  RustorePurchaseStatus.confirmed ||
+  RustorePurchaseStatus.consumed => PurchaseStatus.purchased,
+  RustorePurchaseStatus.cancelled ||
+  RustorePurchaseStatus.closed ||
+  RustorePurchaseStatus.terminated ||
+  RustorePurchaseStatus.reversed => PurchaseStatus.canceled,
+  RustorePurchaseStatus.unknown => PurchaseStatus.error,
 };
+
+Duration _durationFromIso8601Period(final String period) {
+  final match = RegExp(
+    r'^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)D)?$',
+  ).firstMatch(period);
+  if (match == null) {
+    return Duration.zero;
+  }
+  final years = int.tryParse(match.group(1) ?? '0') ?? 0;
+  final months = int.tryParse(match.group(2) ?? '0') ?? 0;
+  final days = int.tryParse(match.group(3) ?? '0') ?? 0;
+  return Duration(days: years * 365 + months * 30 + days);
+}
+
+PurchaseDurationModel _durationModelFromIso8601(final String period) {
+  final match = RegExp(
+    r'^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)D)?$',
+  ).firstMatch(period);
+  if (match == null) {
+    return PurchaseDurationModel.zero;
+  }
+  return PurchaseDurationModel(
+    years: int.tryParse(match.group(1) ?? '0') ?? 0,
+    months: int.tryParse(match.group(2) ?? '0') ?? 0,
+    days: int.tryParse(match.group(3) ?? '0') ?? 0,
+  );
+}
 
 extension on PurchaseDurationModel {
   Duration toDuration() => Duration(days: years * 365 + months * 30 + days);

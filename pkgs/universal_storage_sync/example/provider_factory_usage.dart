@@ -10,7 +10,12 @@ void main() async {
     // Example 1: Auto-detect provider from config type
     print('1. Auto-detect Provider from Configuration:');
 
-    final fileConfig = FileSystemConfig(basePath: '/tmp/demo');
+    final fileConfig = FileSystemConfig.fromFilePathConfig(
+      FilePathConfig.create(
+        path: '/tmp/demo',
+        macOSBookmarkData: MacOSBookmark.empty,
+      ),
+    );
     await StorageFactory.create(fileConfig);
     print('   Created FileSystem service automatically');
 
@@ -26,7 +31,12 @@ void main() async {
     // Example 2: Specific factory methods
     print('2. Specific Factory Methods:');
 
-    final fsConfig = FileSystemConfig(basePath: '/path/to/data');
+    final fsConfig = FileSystemConfig.fromFilePathConfig(
+      FilePathConfig.create(
+        path: '/path/to/data',
+        macOSBookmarkData: MacOSBookmark.empty,
+      ),
+    );
     await StorageFactory.createFileSystem(fsConfig);
     print('   Created FileSystem service with specific method');
 
