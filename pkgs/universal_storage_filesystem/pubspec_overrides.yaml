@@ -3,5 +3,3 @@ dependency_overrides:
     path: ../universal_storage_interface
   universal_storage_sync:
     path: ../universal_storage_sync
-  universal_storage_sync_utils:
-    path: ../universal_storage_sync_utils

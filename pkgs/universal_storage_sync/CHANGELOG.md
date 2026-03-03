@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - feat: add `StorageFactory.createCloudKit(CloudKitConfig)`
 - feat: add `ProviderType.cloudkit` path normalization and validation support
 - test: add `StorageFactory` CloudKit and `PathNormalizer` CloudKit coverage
+- example: make `example/cloudkit_usage.dart` runnable in pure Dart by using
+  an in-memory bridge fallback for non-web startup.
 
 ## [0.1.0-dev.10] - 2026-02-08
 

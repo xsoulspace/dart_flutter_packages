@@ -59,6 +59,6 @@ Future<void> main() async {
 
 ## Production Path
 
-For full production-completeness requirements and sequencing:
+For current release blockers and sequencing:
 
-- `../universal_storage_docs/PRODUCTION_COMPLETENESS_PATH.md`
+- `../universal_storage_docs/BLOCKERS_NEXT.md`

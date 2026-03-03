@@ -4,7 +4,8 @@ import 'dart:convert';
 import 'package:path/path.dart' as path;
 import 'package:universal_io/io.dart';
 import 'package:universal_storage_interface/universal_storage_interface.dart';
-import 'package:universal_storage_sync_utils/universal_storage_sync_utils.dart';
+
+import 'filesystem_path_access.dart';
 
 /// {@template filesystem_storage_provider}
 /// A storage provider that uses the local file system for storage operations.
@@ -14,7 +15,10 @@ import 'package:universal_storage_sync_utils/universal_storage_sync_utils.dart';
 /// {@endtemplate}
 class FileSystemStorageProvider extends StorageProvider implements LocalEngine {
   /// {@macro filesystem_storage_provider}
-  FileSystemStorageProvider({this.maxReplayEntriesPerNamespace = 5000});
+  FileSystemStorageProvider({
+    this.maxReplayEntriesPerNamespace = 5000,
+    final FileSystemPathAccess? pathAccess,
+  }) : _pathAccess = pathAccess ?? const DefaultFileSystemPathAccess();
 
   static const _durabilitySchemaVersion = 1;
   static const _checkpointRetainedOperationIds = 2048;
@@ -22,6 +26,7 @@ class FileSystemStorageProvider extends StorageProvider implements LocalEngine {
 
   /// Bounded number of journal entries replayed during startup recovery.
   final int maxReplayEntriesPerNamespace;
+  final FileSystemPathAccess _pathAccess;
 
   FileSystemConfig _config = FileSystemConfig.empty;
   String get _basePath => _config.basePath;
@@ -54,9 +59,7 @@ class FileSystemStorageProvider extends StorageProvider implements LocalEngine {
 
     _config = config;
 
-    final directory = await resolvePlatformDirectoryOfConfig(
-      config.filePathConfig,
-    );
+    final directory = await _pathAccess.resolveDirectory(config.filePathConfig);
     if (directory != null && !directory.existsSync()) {
       await directory.create(recursive: true);
     }
@@ -211,7 +214,7 @@ class FileSystemStorageProvider extends StorageProvider implements LocalEngine {
   Future<void> dispose() async {
     await _mutationQueue;
     _isInitialized = false;
-    await disposePathOfFileConfig(_config.filePathConfig);
+    await _pathAccess.releaseDirectory(_config.filePathConfig);
     _checkpointCache.clear();
     _lastRecoveryReport = _emptyRecoveryReport();
     _config = FileSystemConfig.empty;

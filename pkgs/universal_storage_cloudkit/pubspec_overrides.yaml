@@ -1,6 +1,8 @@
 dependency_overrides:
   universal_storage_cloudkit_platform_interface:
     path: ../universal_storage_cloudkit_platform_interface
+  universal_storage_cloudkit_web:
+    path: ../universal_storage_cloudkit_web
   universal_storage_filesystem:
     path: ../universal_storage_filesystem
   universal_storage_interface:

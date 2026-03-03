@@ -78,5 +78,4 @@ await service.saveFile('file.txt', 'content');
   complete yet (not all `VersionControlService` methods are implemented across
   providers).
 - Use this document as a structural reference; use
-  `../universal_storage_docs/PRODUCTION_COMPLETENESS_PATH.md` for production
-  readiness status.
+  `../universal_storage_docs/BLOCKERS_NEXT.md` for current release blockers.

@@ -49,8 +49,8 @@ dependencies:
     path: ../../
 
   # Additional dependencies
-  universal_storage_sync_utils:
-    path: ../../../universal_storage_sync_utils
+  universal_storage_sync_utils_flutter:
+    path: ../../../universal_storage_sync_utils_flutter
 
   # Utilities
   uuid: ^4.2.0
@@ -64,6 +64,8 @@ dependency_overrides:
     path: ../../../universal_storage_interface
   universal_storage_sync_utils:
     path: ../../../universal_storage_sync_utils
+  universal_storage_sync_utils_flutter:
+    path: ../../../universal_storage_sync_utils_flutter
 
 dev_dependencies:
   flutter_lints: ^3.0.0

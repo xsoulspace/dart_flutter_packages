@@ -96,6 +96,6 @@ Future<StorageKernel> buildKernel() async {
 
 ## Production Path
 
-For the concrete production-completeness plan and exit criteria:
+For the current blockers and exit criteria:
 
-- `../universal_storage_docs/PRODUCTION_COMPLETENESS_PATH.md`
+- `../universal_storage_docs/BLOCKERS_NEXT.md`

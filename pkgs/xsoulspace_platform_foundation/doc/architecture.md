@@ -14,7 +14,8 @@
    - Steam
    - Yandex Games
    - CrazyGames
-   - VK Play skeleton
+   - VK Play
+   - Discord
 5. Optional feature plugins:
    - `xsoulspace_platform_yandex_games_purchases`
    - `xsoulspace_platform_crazygames_ads`
@@ -34,7 +35,7 @@
 
 ## Adapter Principle
 
-Adapters wrap existing source-of-truth packages (`xsoulspace_steamworks`, `xsoulspace_ysdk_games_js`, `xsoulspace_crazygames_js`) and do not replace their internals.
+Adapters wrap existing source-of-truth packages (`xsoulspace_steamworks`, `xsoulspace_ysdk_games_js`, `xsoulspace_crazygames_js`, `xsoulspace_vkplay_js`, `xsoulspace_discord_js`) and do not replace their internals.
 
 ## Dependency Modularity
 

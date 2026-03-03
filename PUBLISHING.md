@@ -17,6 +17,7 @@ From repo root:
 
 ```bash
 just docs-check
+just storage-release-g6
 ```
 
 This verifies every package has:
@@ -24,6 +25,9 @@ This verifies every package has:
 - `README.md`
 - `CHANGELOG.md`
 - `LICENSE`
+- Universal Storage target apps resolve local package paths only via
+  `pubspec_overrides.yaml` (no inline Universal Storage path overrides in
+  app `pubspec.yaml`)
 
 ## Run package dry-runs
 
@@ -38,6 +42,15 @@ All packages:
 ```bash
 just publish-dry-run-all
 ```
+
+Both `publish-dry-run` commands are gated by `storage-release-g6` and fail on
+blocking findings. Gate sequence:
+
+1. `storage-path-audit`
+2. `clone-guard-audit`
+3. analyzer (errors-only)
+4. tests
+5. `StorageReleaseGateEvaluator` artifact
 
 If a package contains `pubspec_overrides.yaml`, temporarily remove/rename it before running publish dry-run.
 

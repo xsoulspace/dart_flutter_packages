@@ -12,6 +12,13 @@ Implemented host-side operations:
 - zone change fetching with encoded server change token
 - Apple error mapping to bridge error codes
 
+## Testing
+
+```bash
+flutter test
+swift test
+```
+
 ## Regenerate Pigeon API
 
 ```bash

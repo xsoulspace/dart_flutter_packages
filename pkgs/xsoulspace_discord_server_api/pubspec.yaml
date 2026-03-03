@@ -1,0 +1,21 @@
+name: xsoulspace_discord_server_api
+description: Server-only Discord OAuth and REST toolkit with generated metadata coverage for v10.
+version: 0.1.0
+repository: https://github.com/xsoulspace/dart_flutter_packages
+homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_discord_server_api
+issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
+
+environment:
+  sdk: ">=3.10.0 <4.0.0"
+
+dependencies:
+  http: ^1.6.0
+  meta: ^1.16.0
+
+dev_dependencies:
+  lints: ^6.0.0
+  path: ^1.9.1
+  test: ^1.26.3
+  xsoulspace_js_interop_codegen:
+    path: ../xsoulspace_js_interop_codegen
+  xsoulspace_lints: ^0.1.2

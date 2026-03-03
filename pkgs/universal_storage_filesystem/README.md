@@ -8,7 +8,7 @@ Status: alpha (`0.1.0-dev`).
 
 ```yaml
 dependencies:
-  universal_storage_filesystem: ^0.1.0-dev.11
+  universal_storage_filesystem: ^0.1.0-dev.12
   universal_storage_interface: ^0.1.0-dev.10
 ```
 
@@ -37,3 +37,32 @@ Future<void> main() async {
 - Not supported on web.
 - Creates parent directories automatically.
 - Includes durability/recovery internals under `.us/` in the workspace root.
+
+## Optional Path Access Override
+
+You can inject custom platform path access logic.
+
+With your own implementation:
+
+```dart
+final provider = FileSystemStorageProvider(
+  pathAccess: CallbackFileSystemPathAccess(
+    resolveDirectory: (config) async => Directory(config.path.path),
+    releaseDirectory: (config) async {},
+  ),
+);
+```
+
+Or, if you depend on `universal_storage_sync_utils_flutter`, you can wire its Flutter
+helpers explicitly:
+
+```dart
+import 'package:universal_storage_sync_utils_flutter/universal_storage_sync_utils_flutter.dart';
+
+final provider = FileSystemStorageProvider(
+  pathAccess: CallbackFileSystemPathAccess(
+    resolveDirectory: resolvePlatformDirectoryOfConfig,
+    releaseDirectory: disposePathOfFileConfig,
+  ),
+);
+```

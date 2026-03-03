@@ -160,6 +160,64 @@ void main() {
     );
   });
 
+  group('FileSystemStorageProvider path access overrides', () {
+    late Directory tempDirectory;
+    late FilePathConfig filePathConfig;
+
+    setUp(() async {
+      tempDirectory = await Directory.systemTemp.createTemp(
+        'storage_path_access_test_',
+      );
+      filePathConfig = FilePathConfig.create(
+        path: tempDirectory.path,
+        macOSBookmarkData: MacOSBookmark.empty,
+      );
+    });
+
+    tearDown(() async {
+      if (tempDirectory.existsSync()) {
+        await tempDirectory.delete(recursive: true);
+      }
+    });
+
+    test('calls custom resolver and release hooks', () async {
+      final pathAccess = _RecordingPathAccess(tempDirectory);
+      final provider = FileSystemStorageProvider(pathAccess: pathAccess);
+
+      await provider.initWithConfig(
+        FileSystemConfig(filePathConfig: filePathConfig),
+      );
+
+      expect(pathAccess.resolveCalls, 1);
+      expect(pathAccess.lastResolvedPath, tempDirectory.path);
+
+      await provider.dispose();
+      expect(pathAccess.releaseCalls, 1);
+      expect(pathAccess.lastReleasedPath, tempDirectory.path);
+    });
+
+    test('supports callback-based path access override', () async {
+      var releaseCalls = 0;
+      final provider = FileSystemStorageProvider(
+        pathAccess: CallbackFileSystemPathAccess(
+          resolveDirectory: (final config) async => Directory(config.path.path),
+          releaseDirectory: (final config) async {
+            releaseCalls++;
+          },
+        ),
+      );
+
+      await provider.initWithConfig(
+        FileSystemConfig(filePathConfig: filePathConfig),
+      );
+      await provider.createFile('callback.txt', 'ok');
+      expect(await provider.getFile('callback.txt'), 'ok');
+
+      await provider.dispose();
+      expect(releaseCalls, 1);
+    });
+  });
+
   group('FileSystemStorageProvider durability recovery', () {
     late String tempDir;
     late FilePathConfig filePathConfig;
@@ -282,4 +340,27 @@ void main() {
       await provider2.dispose();
     });
   });
+}
+
+final class _RecordingPathAccess implements FileSystemPathAccess {
+  _RecordingPathAccess(this.directory);
+
+  final Directory directory;
+  int resolveCalls = 0;
+  int releaseCalls = 0;
+  String? lastResolvedPath;
+  String? lastReleasedPath;
+
+  @override
+  Future<Directory?> resolveDirectory(final FilePathConfig config) async {
+    resolveCalls++;
+    lastResolvedPath = config.path.path;
+    return directory;
+  }
+
+  @override
+  Future<void> releaseDirectory(final FilePathConfig config) async {
+    releaseCalls++;
+    lastReleasedPath = config.path.path;
+  }
 }

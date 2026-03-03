@@ -1,7 +1,9 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:from_json_to_json/from_json_to_json.dart';
+import 'package:is_dart_empty_or_not/is_dart_empty_or_not.dart';
 import 'package:test/test.dart';
 import 'package:universal_storage_sync/universal_storage_sync.dart';
 
@@ -230,6 +232,42 @@ Future<void> _writeManifest({
   );
 }
 
+Map<String, dynamic> _decodeJsonMap(final Object? value) =>
+    jsonDecodeMap(value).whenEmptyUse(const <String, dynamic>{});
+
+List<Map<String, dynamic>> _decodeJsonMapList(final Object? value) {
+  final decoded =
+      jsonDecodeListAs<Object?>(value)
+          .map((final Object? item) => _decodeJsonMap(item))
+          .where((final Map<String, dynamic> item) => item.isNotEmpty)
+          .toList(growable: false);
+  return decoded.whenEmptyUse(const <Map<String, dynamic>>[]);
+}
+
+List<String> _decodeJsonStringList(final Object? value) {
+  final decoded =
+      jsonDecodeListAs<Object?>(value)
+          .map((final Object? item) => jsonDecodeString(item))
+          .where((final String item) => item.isNotEmpty)
+          .toList(growable: false);
+  return decoded.whenEmptyUse(const <String>[]);
+}
+
+Map<String, dynamic> _decodeJsonMapField(
+  final Map<String, dynamic> source,
+  final String key,
+) => _decodeJsonMap(source[key]);
+
+List<Map<String, dynamic>> _decodeJsonMapListField(
+  final Map<String, dynamic> source,
+  final String key,
+) => _decodeJsonMapList(source[key]);
+
+String _decodeJsonStringField(
+  final Map<String, dynamic> source,
+  final String key,
+) => jsonDecodeString(source[key]);
+
 void main() {
   group('StorageProfileMigrationManager', () {
     test('copies files and records rollback path', () async {
@@ -389,20 +427,21 @@ void main() {
         expect(result.ok, isTrue);
         expect(result.status, MigrationStatus.completed);
 
-        final parity =
-            result.metadata['parity_summary'] as Map<String, dynamic>;
-        final countParity = parity['count_parity'] as Map<String, dynamic>;
-        final checksumParity =
-            parity['checksum_parity'] as Map<String, dynamic>;
+        final parity = _decodeJsonMap(result.metadata['parity_summary']);
+        final countParity = _decodeJsonMapField(parity, 'count_parity');
+        final checksumParity = _decodeJsonMapField(
+          parity,
+          'checksum_parity',
+        );
         expect(countParity['source_operations'], 1);
         expect(countParity['processed_operations'], 1);
         expect(checksumParity['matched'], 1);
 
-        final checkpoints =
-            (result.metadata['checkpoint_ledger'] as List<dynamic>)
-                .cast<Map<String, dynamic>>();
+        final checkpoints = _decodeJsonMapList(
+          result.metadata['checkpoint_ledger'],
+        );
         expect(checkpoints.length, 1);
-        expect(checkpoints.single['status'], 'applied');
+        expect(_decodeJsonStringField(checkpoints.single, 'status'), 'applied');
         expect(checkpoints.single['stable'], isTrue);
 
         final targetSettingsService = StorageService(targetSettings);
@@ -410,7 +449,7 @@ void main() {
           '.us/migrations/parity_checkpoint_plan.json',
         );
         expect(rawManifest, isNotNull);
-        final manifest = jsonDecode(rawManifest!) as Map<String, dynamic>;
+        final manifest = _decodeJsonMap(rawManifest);
         expect(manifest['checkpoints'], isA<List<dynamic>>());
         expect(manifest['parity_summary'], isA<Map<String, dynamic>>());
       },
@@ -494,18 +533,18 @@ void main() {
         path: 'documents/new-id.json',
       );
       expect(transformed, isNotNull);
-      final decoded = jsonDecode(transformed!) as Map<String, dynamic>;
-      expect(decoded['schema_version'], '2');
-      expect(decoded['id'], 'new-id');
-      expect(decoded['title'], 'Draft');
+      final decoded = _decodeJsonMap(transformed);
+      expect(_decodeJsonStringField(decoded, 'schema_version'), '2');
+      expect(_decodeJsonStringField(decoded, 'id'), 'new-id');
+      expect(_decodeJsonStringField(decoded, 'title'), 'Draft');
       expect(decoded.containsKey('discarded'), isFalse);
 
-      final checkpoints =
-          (result.metadata['checkpoint_ledger'] as List<dynamic>)
-              .cast<Map<String, dynamic>>();
+      final checkpoints = _decodeJsonMapList(
+        result.metadata['checkpoint_ledger'],
+      );
       expect(checkpoints.single['transform_steps'], isA<List<dynamic>>());
       expect(
-        (checkpoints.single['transform_steps'] as List<dynamic>).contains(
+        _decodeJsonStringList(checkpoints.single['transform_steps']).contains(
           'schema_transform',
         ),
         isTrue,
@@ -574,10 +613,10 @@ void main() {
 
       final executed = await endpoint.executeMigration(plan: executePlan);
       expect(executed.ok, isTrue);
-      final checkpoints =
-          (executed.metadata['checkpoint_ledger'] as List<dynamic>)
-              .cast<Map<String, dynamic>>();
-      final checkpointId = checkpoints.first['id'] as String;
+      final checkpoints = _decodeJsonMapList(
+        executed.metadata['checkpoint_ledger'],
+      );
+      final checkpointId = _decodeJsonStringField(checkpoints.first, 'id');
 
       final rollback = await endpoint.rollbackMigration(
         plan: MigrationPlan(
@@ -700,23 +739,25 @@ void main() {
         expect(result.ok, isTrue);
         expect(result.status, MigrationStatus.prepared);
         final metadata = result.metadata;
-        final preview = metadata['preflight_preview'] as List<dynamic>;
+        final preview = _decodeJsonMapListField(metadata, 'preflight_preview');
         expect(preview.length, 2);
 
         final byPath = <String, Map<String, dynamic>>{
-          for (final item in preview.cast<Map<String, dynamic>>())
-            item['source_path'] as String: item,
+          for (final item in preview) _decodeJsonStringField(item, 'source_path'): item,
         };
-        expect(byPath['notes/new.txt'], isNotNull);
-        expect(byPath['notes/old.txt'], isNotNull);
-        expect(byPath['notes/new.txt']?['status'], 'create');
-        expect(byPath['notes/old.txt']?['status'], 'conflict');
+        final newItem = byPath['notes/new.txt'];
+        final oldItem = byPath['notes/old.txt'];
+        expect(newItem, isNotNull);
+        expect(oldItem, isNotNull);
+        expect(_decodeJsonStringField(newItem!, 'status'), 'create');
+        expect(_decodeJsonStringField(oldItem!, 'status'), 'conflict');
         expect(
-          byPath['notes/old.txt']?['decision_state'],
+          _decodeJsonStringField(oldItem, 'decision_state'),
           DecisionState.needsUserDecision.name,
         );
+        final newItemMetadata = _decodeJsonMapField(newItem, 'metadata');
         expect(
-          byPath['notes/new.txt']?['metadata']?['diff_summary'],
+          _decodeJsonStringField(newItemMetadata, 'diff_summary'),
           'Target file missing.',
         );
       },
@@ -806,18 +847,22 @@ void main() {
         expect(result.status, MigrationStatus.prepared);
         final metadata = result.metadata;
         expect(metadata['pause_for_decisions'], isTrue);
-        final pending = metadata['pending_decisions'] as List<dynamic>;
+        final pending = _decodeJsonMapListField(metadata, 'pending_decisions');
         expect(pending.length, 1);
-        expect(pending.first['source_path'], 'notes/old.txt');
-        expect(pending.first['operation_id'], isNotEmpty);
-        final preview = metadata['preflight_preview'] as List<dynamic>;
+        expect(
+          _decodeJsonStringField(pending.first, 'source_path'),
+          'notes/old.txt',
+        );
+        expect(_decodeJsonStringField(pending.first, 'operation_id'), isNotEmpty);
+        final preview = _decodeJsonMapListField(metadata, 'preflight_preview');
         final previewItem = preview.singleWhere(
-          (final item) => item['source_path'] == 'notes/old.txt',
+          (final Map<String, dynamic> item) =>
+              _decodeJsonStringField(item, 'source_path') == 'notes/old.txt',
           orElse: () => fail('Expected preview item not found.'),
         );
-        expect(previewItem['status'], 'conflict');
+        expect(_decodeJsonStringField(previewItem, 'status'), 'conflict');
         expect(
-          previewItem['decision_state'],
+          _decodeJsonStringField(previewItem, 'decision_state'),
           DecisionState.needsUserDecision.name,
         );
       },
@@ -909,8 +954,13 @@ void main() {
         );
         expect(paused.ok, isFalse);
         expect(paused.status, MigrationStatus.prepared);
-        final pending = paused.metadata['pending_decisions'] as List<dynamic>;
-        final operationId = pending.single['operation_id'] as String;
+        final pending = _decodeJsonMapList(
+          paused.metadata['pending_decisions'],
+        );
+        final operationId = _decodeJsonStringField(
+          pending.single,
+          'operation_id',
+        );
 
         final resumed = await endpoint.executeMigrationWithOptions(
           plan: plan,
@@ -1021,10 +1071,16 @@ void main() {
         );
         expect(first.ok, isFalse);
         expect(first.status, MigrationStatus.prepared);
-        final pending = first.metadata['pending_decisions'] as List<dynamic>;
-        expect(pending.single['source_path'], 'notes/conflict.txt');
+        final pending = _decodeJsonMapList(first.metadata['pending_decisions']);
+        expect(
+          _decodeJsonStringField(pending.single, 'source_path'),
+          'notes/conflict.txt',
+        );
 
-        final operationId = pending.single['operation_id'] as String;
+        final operationId = _decodeJsonStringField(
+          pending.single,
+          'operation_id',
+        );
         final result = await endpoint.executeMigrationWithOptions(
           plan: plan,
           overwrite: false,
@@ -1137,25 +1193,26 @@ void main() {
         );
         expect(paused.ok, isFalse);
         expect(paused.status, MigrationStatus.prepared);
-        final pending = paused.metadata['pending_decisions'] as List<dynamic>;
+        final pending = _decodeJsonMapList(
+          paused.metadata['pending_decisions'],
+        );
         expect(pending.length, 2);
 
+        final overwriteEntry = pending.firstWhere(
+          (final Map<String, dynamic> item) =>
+              _decodeJsonStringField(item, 'source_path') ==
+              'notes/overwrite.txt',
+        );
         final overwriteDecision = <String, MigrationDecisionAction>{
-          pending
-                  .firstWhere(
-                    (final item) =>
-                        (item as Map)['source_path'] == 'notes/overwrite.txt',
-                  )['operation_id']
-                  .toString():
+          _decodeJsonStringField(overwriteEntry, 'operation_id'):
               MigrationDecisionAction.overwrite,
         };
+        final skipEntry = pending.firstWhere(
+          (final Map<String, dynamic> item) =>
+              _decodeJsonStringField(item, 'source_path') == 'notes/skip.txt',
+        );
         final skipDecision = <String, MigrationDecisionAction>{
-          pending
-                  .firstWhere(
-                    (final item) =>
-                        (item as Map)['source_path'] == 'notes/skip.txt',
-                  )['operation_id']
-                  .toString():
+          _decodeJsonStringField(skipEntry, 'operation_id'):
               MigrationDecisionAction.skip,
         };
         final decisions = <String, MigrationDecisionAction>{};
@@ -1271,8 +1328,11 @@ void main() {
       );
       expect(paused.ok, isFalse);
       expect(paused.status, MigrationStatus.prepared);
-      final pending = paused.metadata['pending_decisions'] as List<dynamic>;
-      final conflictOperationId = pending.single['operation_id'] as String;
+      final pending = _decodeJsonMapList(paused.metadata['pending_decisions']);
+      final conflictOperationId = _decodeJsonStringField(
+        pending.single,
+        'operation_id',
+      );
 
       final aborted = await endpoint.executeMigrationWithOptions(
         plan: plan,

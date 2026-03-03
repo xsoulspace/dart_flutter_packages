@@ -7,15 +7,15 @@ info:
 
 format:
     @echo "Running formatter..."
-    flutter format .
+    dart format .
 
 analyze:
     @echo "Running analyzer..."
-    flutter analyze
+    dart analyze
 
 test:
     @echo "Running tests..."
-    flutter test
+    dart test
 
 clean:
     @echo "Cleaning build/artifacts..."
@@ -23,8 +23,8 @@ clean:
 
 publish-dry:
     @echo "Dry-run publish (no changes will be made)"
-    flutter pub publish --dry-run
+    dart pub publish --dry-run
 
 publish:
     @echo "Publishing package to pub.dev"
-    flutter pub publish
+    dart pub publish

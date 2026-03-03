@@ -106,7 +106,9 @@ void main() {
       'sync performs pull-then-push and persists token state file',
       () async {
         await provider.createFile('notes/a.txt', 'local-content');
-        await File('${tempDir.path}/notes/a.txt').writeAsString('locally-edited');
+        await File(
+          '${tempDir.path}/notes/a.txt',
+        ).writeAsString('locally-edited');
 
         bridge.nextDelta = const CloudKitDelta(
           nextServerChangeToken: 'after-sync-token',
@@ -157,6 +159,106 @@ void main() {
         throwsA(isA<SyncConflictException>()),
       );
     });
+
+    test(
+      'clientAlwaysRight keeps local and overwrites remote update',
+      () async {
+        await provider.createFile('conflict_keep_local.txt', 'local-v1');
+
+        bridge.recordsByPath['conflict_keep_local.txt'] = _fakeRecord(
+          path: 'conflict_keep_local.txt',
+          content: 'remote-v2',
+        );
+        bridge.nextDelta = CloudKitDelta(
+          updatedRecords: <CloudKitRecord>[
+            bridge.recordsByPath['conflict_keep_local.txt']!,
+          ],
+        );
+
+        await provider.sync(
+          pullMergeStrategy: ConflictResolutionStrategy.clientAlwaysRight.name,
+          pushConflictStrategy:
+              ConflictResolutionStrategy.clientAlwaysRight.name,
+        );
+
+        expect(await provider.getFile('conflict_keep_local.txt'), 'local-v1');
+        expect(
+          bridge.recordsByPath['conflict_keep_local.txt']?.content,
+          'local-v1',
+        );
+      },
+    );
+
+    test(
+      'clientAlwaysRight keeps local file and recreates remote after deletion',
+      () async {
+        await provider.createFile('deleted_remote.txt', 'local-v1');
+
+        bridge.nextDelta = const CloudKitDelta(
+          deletedPaths: <String>['deleted_remote.txt'],
+        );
+        bridge.recordsByPath.remove('deleted_remote.txt');
+
+        await provider.sync(
+          pullMergeStrategy: ConflictResolutionStrategy.clientAlwaysRight.name,
+          pushConflictStrategy:
+              ConflictResolutionStrategy.clientAlwaysRight.name,
+        );
+
+        expect(await provider.getFile('deleted_remote.txt'), 'local-v1');
+        expect(bridge.recordsByPath['deleted_remote.txt']?.content, 'local-v1');
+      },
+    );
+
+    test('lastWriteWins keeps newer local content and pushes', () async {
+      await provider.createFile('lww.txt', 'local-newer');
+
+      bridge.recordsByPath['lww.txt'] = _fakeRecord(
+        path: 'lww.txt',
+        content: 'remote-older',
+        updatedAt: DateTime.utc(2000, 1, 1),
+      );
+      bridge.nextDelta = CloudKitDelta(
+        updatedRecords: <CloudKitRecord>[bridge.recordsByPath['lww.txt']!],
+      );
+
+      await provider.sync(
+        pullMergeStrategy: ConflictResolutionStrategy.lastWriteWins.name,
+        pushConflictStrategy: ConflictResolutionStrategy.lastWriteWins.name,
+      );
+
+      expect(await provider.getFile('lww.txt'), 'local-newer');
+      expect(bridge.recordsByPath['lww.txt']?.content, 'local-newer');
+    });
+
+    test(
+      'lastWriteWins applies newer remote content after push conflict',
+      () async {
+        await provider.createFile('lww_remote_newer.txt', 'local-initial');
+        await File(
+          '${tempDir.path}/lww_remote_newer.txt',
+        ).writeAsString('local-edited');
+
+        bridge.recordsByPath['lww_remote_newer.txt'] = _fakeRecord(
+          path: 'lww_remote_newer.txt',
+          content: 'remote-newer',
+          updatedAt: DateTime.now().toUtc(),
+          changeTag: 'remote-v2',
+        );
+        bridge.conflictOnNextSavePaths.add('lww_remote_newer.txt');
+
+        await provider.sync(
+          pullMergeStrategy: ConflictResolutionStrategy.lastWriteWins.name,
+          pushConflictStrategy: ConflictResolutionStrategy.lastWriteWins.name,
+        );
+
+        expect(await provider.getFile('lww_remote_newer.txt'), 'remote-newer');
+        expect(
+          bridge.recordsByPath['lww_remote_newer.txt']?.content,
+          'remote-newer',
+        );
+      },
+    );
   });
 
   group('CloudKitStorageProvider fallback', () {
@@ -235,6 +337,7 @@ void main() {
 class _FakeCloudKitBridge implements CloudKitBridge {
   final Map<String, CloudKitRecord> recordsByPath = <String, CloudKitRecord>{};
   final List<String> callLog = <String>[];
+  final Set<String> conflictOnNextSavePaths = <String>{};
 
   CloudKitDelta nextDelta = CloudKitDelta.empty();
   var fetchChangesCalls = 0;
@@ -260,6 +363,12 @@ class _FakeCloudKitBridge implements CloudKitBridge {
   @override
   Future<void> saveRecord(final CloudKitRecord record) async {
     callLog.add('saveRecord:${record.path}');
+    if (conflictOnNextSavePaths.remove(record.path)) {
+      throw const CloudKitBridgeException(
+        code: CloudKitBridgeErrorCode.conflict,
+        message: 'Simulated conflict',
+      );
+    }
     recordsByPath[record.path] = record;
   }
 
@@ -309,11 +418,14 @@ class _FakeCloudKitBridge implements CloudKitBridge {
 CloudKitRecord _fakeRecord({
   required final String path,
   required final String content,
+  final DateTime? updatedAt,
+  final String? changeTag,
 }) => CloudKitRecord(
   recordName: sha256Hex(path),
   path: path,
   content: content,
   checksum: normalizedSha256Hex(content),
   size: content.length,
-  updatedAt: DateTime.now().toUtc(),
+  updatedAt: updatedAt ?? DateTime.now().toUtc(),
+  changeTag: changeTag,
 );

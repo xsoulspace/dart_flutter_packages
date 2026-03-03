@@ -687,8 +687,15 @@ packages:
       relative: true
     source: path
     version: "0.1.0-dev.1"
-  universal_storage_filesystem:
+  universal_storage_cloudkit_web:
     dependency: "direct main"
+    description:
+      path: "../universal_storage_cloudkit_web"
+      relative: true
+    source: path
+    version: "0.1.0-dev.1"
+  universal_storage_filesystem:
+    dependency: "direct dev"
     description:
       path: "../universal_storage_filesystem"
       relative: true

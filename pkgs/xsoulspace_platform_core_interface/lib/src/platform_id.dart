@@ -1,2 +1,2 @@
 /// Known platform identifiers.
-enum PlatformId { steam, yandexGames, crazyGames, vkPlay, custom }
+enum PlatformId { steam, yandexGames, crazyGames, vkPlay, discord, custom }

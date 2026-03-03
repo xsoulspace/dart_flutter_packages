@@ -105,5 +105,5 @@ Future<void> main() async {
 
 - `StorageService.syncRemote()` throws `CapabilityMismatchException` when the
   provider reports `supportsSync == false`.
-- For production rollout status and completion plan, see:
-  - `../universal_storage_docs/PRODUCTION_COMPLETENESS_PATH.md`
+- For current release blockers and completion status, see:
+  - `../universal_storage_docs/BLOCKERS_NEXT.md`

@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:universal_storage_filesystem/universal_storage_filesystem.dart';
 import 'package:universal_storage_sync/universal_storage_sync.dart';
-import 'package:universal_storage_sync_utils/universal_storage_sync_utils.dart';
+import 'package:universal_storage_sync_utils_flutter/universal_storage_sync_utils_flutter.dart';
 import 'package:uuid/uuid.dart';
 import 'package:yaml/yaml.dart';
 
@@ -263,7 +263,7 @@ class AppState extends ChangeNotifier {
     );
     _legacyStorageService = await StorageFactory.create(fileSystemConfig);
 
-    final profile = const StorageProfile(
+    const profile = StorageProfile(
       name: 'todo_file_app_profile_v1',
       namespaces: <StorageNamespaceProfile>[
         StorageNamespaceProfile(

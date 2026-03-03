@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:universal_storage_sync_utils/universal_storage_sync_utils.dart';
+import 'package:universal_storage_sync_utils_flutter/universal_storage_sync_utils_flutter.dart';
 
 import '../state/app_state.dart';
 import 'todo_list_page.dart';
@@ -29,8 +29,11 @@ class _FolderPickerPageState extends State<FolderPickerPage> {
     if (!mounted) return;
 
     switch (result) {
-      case PickSuccess(:final path, :final macOSBookmark):
-        await appState.setWorkspacePath(path, macOSBookmark: macOSBookmark);
+      case PickSuccess(config: final config):
+        await appState.setWorkspacePath(
+          config.path.path,
+          macOSBookmark: config.macOSBookmarkData,
+        );
 
         // Navigate to the main app screen after setting the path
         if (mounted) {

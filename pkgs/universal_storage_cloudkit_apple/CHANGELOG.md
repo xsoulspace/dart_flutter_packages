@@ -12,3 +12,6 @@ All notable changes to this project will be documented in this file.
 - Added CKError to bridge-error code mapping for auth/network/conflict/not-found.
 - Added persistent recordName-to-path cache for deletion path reconstruction in
   zone deltas.
+- Refactored token codec + CKError mapping into shared Apple support utilities.
+- Added Swift unit tests (SwiftPM) for token codec validation and CKError
+  mapping behavior, including partial-failure nested error handling.

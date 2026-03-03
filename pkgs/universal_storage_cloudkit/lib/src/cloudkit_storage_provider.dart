@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:path/path.dart' as path;
 import 'package:universal_io/io.dart';
 import 'package:universal_storage_cloudkit_platform_interface/universal_storage_cloudkit_platform_interface.dart';
-import 'package:universal_storage_filesystem/universal_storage_filesystem.dart';
 import 'package:universal_storage_interface/universal_storage_interface.dart';
 import 'package:universal_storage_sync/universal_storage_sync.dart';
 
@@ -13,7 +12,7 @@ import 'cloudkit_payload_too_large_exception.dart';
 class CloudKitStorageProvider extends StorageProvider implements RemoteEngine {
   CloudKitStorageProvider({
     final CloudKitBridge? bridge,
-    final FileSystemStorageProvider Function()? localMirrorFactory,
+    final _LocalMirrorStore Function()? localMirrorFactory,
     final StorageProvider Function(StorageConfig config)? fallbackResolver,
   }) : _bridge = bridge ?? CloudKitBridgePlatform.instance,
        _localMirrorFactory = localMirrorFactory ?? _defaultLocalMirrorFactory,
@@ -23,11 +22,11 @@ class CloudKitStorageProvider extends StorageProvider implements RemoteEngine {
   static const _stateRelativePath = '.us/cloudkit/state_v1.json';
 
   final CloudKitBridge _bridge;
-  final FileSystemStorageProvider Function() _localMirrorFactory;
+  final _LocalMirrorStore Function() _localMirrorFactory;
   final StorageProvider Function(StorageConfig config)? _fallbackResolver;
 
   CloudKitConfig? _config;
-  FileSystemStorageProvider? _localMirror;
+  _LocalMirrorStore? _localMirror;
   StorageProvider? _fallback;
   _MirrorState _mirrorState = const _MirrorState();
   var _initialized = false;
@@ -295,7 +294,7 @@ class CloudKitStorageProvider extends StorageProvider implements RemoteEngine {
     }
 
     final localMirror = _localMirrorFactory();
-    await localMirror.initWithConfig(localConfig);
+    await localMirror.init(localConfig);
     _localMirror = localMirror;
     _mirrorState = await _loadMirrorState();
   }
@@ -383,7 +382,11 @@ class CloudKitStorageProvider extends StorageProvider implements RemoteEngine {
       throw FileNotFoundException('File not found at path: $normalizedPath');
     }
 
-    final record = _buildRecord(normalizedPath, content);
+    final record = _buildRecord(
+      normalizedPath,
+      content,
+      changeTag: existing.changeTag,
+    );
     await _saveRemoteRecord(record);
     return _resultFromRecord(record, created: false);
   }
@@ -546,8 +549,9 @@ class CloudKitStorageProvider extends StorageProvider implements RemoteEngine {
 
   CloudKitRecord _buildRecord(
     final String normalizedPath,
-    final String content,
-  ) {
+    final String content, {
+    final String? changeTag,
+  }) {
     final payloadBytes = utf8.encode(content).length;
     if (payloadBytes > _config!.maxInlineBytes) {
       final error = CloudKitPayloadTooLargeException(
@@ -566,6 +570,7 @@ class CloudKitStorageProvider extends StorageProvider implements RemoteEngine {
       checksum: normalizedSha256Hex(content),
       size: payloadBytes,
       updatedAt: updatedAt,
+      changeTag: changeTag,
     );
   }
 
@@ -604,11 +609,13 @@ class CloudKitStorageProvider extends StorageProvider implements RemoteEngine {
         );
         return null;
       case ConflictResolutionStrategy.clientAlwaysRight:
+        // Keep local source-of-truth and force push in _pushLocalDiff by
+        // storing remote checksum as last-known remote state.
         _mirrorState = _mirrorState.withManifestEntry(
           record.path,
           _ManifestEntry(
-            checksum: localChecksum,
-            updatedAt: DateTime.now().toUtc(),
+            checksum: record.checksum,
+            updatedAt: record.updatedAt,
           ),
         );
         return null;
@@ -628,11 +635,13 @@ class CloudKitStorageProvider extends StorageProvider implements RemoteEngine {
             ),
           );
         } else {
+          // Local is newer: keep local and force push by preserving remote
+          // checksum in manifest.
           _mirrorState = _mirrorState.withManifestEntry(
             record.path,
             _ManifestEntry(
-              checksum: localChecksum,
-              updatedAt: DateTime.now().toUtc(),
+              checksum: record.checksum,
+              updatedAt: record.updatedAt,
             ),
           );
         }
@@ -653,25 +662,28 @@ class CloudKitStorageProvider extends StorageProvider implements RemoteEngine {
     final localChecksum = normalizedSha256Hex(localContent);
     final manifestEntry = _mirrorState.manifest[remotePath];
     final localHasDrift =
-        manifestEntry != null && manifestEntry.checksum != localChecksum;
-
-    if (!localHasDrift ||
-        strategy == ConflictResolutionStrategy.serverAlwaysRight) {
-      await _localMirror!.deleteFile(remotePath);
-      _mirrorState = _mirrorState.withoutManifestEntry(remotePath);
-      return null;
-    }
+        manifestEntry == null || manifestEntry.checksum != localChecksum;
 
     switch (strategy) {
       case ConflictResolutionStrategy.clientAlwaysRight:
+        // Keep local source-of-truth and force recreation remotely on push.
+        _mirrorState = _mirrorState.withoutManifestEntry(remotePath);
         return null;
       case ConflictResolutionStrategy.serverAlwaysRight:
+        await _localMirror!.deleteFile(remotePath);
+        _mirrorState = _mirrorState.withoutManifestEntry(remotePath);
         return null;
       case ConflictResolutionStrategy.manualResolution:
-        return remotePath;
+        if (localHasDrift) {
+          return remotePath;
+        }
+        await _localMirror!.deleteFile(remotePath);
+        _mirrorState = _mirrorState.withoutManifestEntry(remotePath);
+        return null;
       case ConflictResolutionStrategy.lastWriteWins:
-        final localUpdatedAt = manifestEntry.updatedAt;
-        if (DateTime.now().toUtc().isAfter(localUpdatedAt)) {
+        if (localHasDrift) {
+          // Local content diverged from last known remote snapshot.
+          _mirrorState = _mirrorState.withoutManifestEntry(remotePath);
           return null;
         }
         await _localMirror!.deleteFile(remotePath);
@@ -697,8 +709,14 @@ class CloudKitStorageProvider extends StorageProvider implements RemoteEngine {
       if (previous != null && previous.checksum == localChecksum) {
         continue;
       }
+      final localUpdatedAt = previous?.updatedAt ?? DateTime.now().toUtc();
 
-      final record = _buildRecord(pathKey, entry.value);
+      final remoteExisting = await _fetchRemoteRecordByPath(pathKey);
+      final record = _buildRecord(
+        pathKey,
+        entry.value,
+        changeTag: remoteExisting?.changeTag,
+      );
       try {
         await _saveRemoteRecord(record);
       } on SyncConflictException {
@@ -714,7 +732,7 @@ class CloudKitStorageProvider extends StorageProvider implements RemoteEngine {
           }
         } else if (strategy == ConflictResolutionStrategy.lastWriteWins) {
           final remote = await _fetchRemoteRecordByPath(pathKey);
-          if (remote == null || record.updatedAt.isAfter(remote.updatedAt)) {
+          if (remote == null || localUpdatedAt.isAfter(remote.updatedAt)) {
             await _saveRemoteRecord(record);
           } else {
             await _applyRemoteUpdate(
@@ -723,7 +741,9 @@ class CloudKitStorageProvider extends StorageProvider implements RemoteEngine {
             );
           }
         } else {
-          await _saveRemoteRecord(record);
+          // Force overwrite for clientAlwaysRight.
+          final forced = _buildRecord(pathKey, entry.value);
+          await _saveRemoteRecord(forced);
         }
       }
     }
@@ -874,20 +894,29 @@ class CloudKitStorageProvider extends StorageProvider implements RemoteEngine {
     };
 
     await tmpFile.writeAsString(jsonEncode(payload), flush: true);
-
-    if (stateFile.existsSync()) {
-      await stateFile.delete();
+    try {
+      await tmpFile.rename(statePath);
+    } on FileSystemException {
+      // Windows/filesystem fallback when rename over existing file isn't
+      // supported; keeps previous state until new content is written.
+      await stateFile.writeAsString(await tmpFile.readAsString(), flush: true);
+      if (tmpFile.existsSync()) {
+        await tmpFile.delete();
+      }
     }
-    await tmpFile.rename(statePath);
   }
 
   Future<Map<String, _ManifestEntry>> _buildManifestFromLocalMirror() async {
     final localFiles = await _readLocalMirrorFiles();
     final manifest = <String, _ManifestEntry>{};
     for (final entry in localFiles.entries) {
+      final checksum = normalizedSha256Hex(entry.value);
+      final previous = _mirrorState.manifest[entry.key];
       manifest[entry.key] = _ManifestEntry(
-        checksum: normalizedSha256Hex(entry.value),
-        updatedAt: DateTime.now().toUtc(),
+        checksum: checksum,
+        updatedAt: previous != null && previous.checksum == checksum
+            ? previous.updatedAt
+            : DateTime.now().toUtc(),
       );
     }
     return manifest;
@@ -976,8 +1005,7 @@ class CloudKitStorageProvider extends StorageProvider implements RemoteEngine {
   }
 
   String _platformLabel() {
-    if (const bool.fromEnvironment('dart.library.js_interop') ||
-        const bool.fromEnvironment('dart.library.js')) {
+    if (identical(0, 0.0)) {
       return 'web';
     }
 
@@ -1000,8 +1028,148 @@ class CloudKitStorageProvider extends StorageProvider implements RemoteEngine {
     return 'unknown';
   }
 
-  static FileSystemStorageProvider _defaultLocalMirrorFactory() =>
-      FileSystemStorageProvider();
+  static _LocalMirrorStore _defaultLocalMirrorFactory() => _LocalMirrorStore();
+}
+
+class _LocalMirrorStore {
+  _LocalMirrorStore();
+
+  late FileSystemConfig _config;
+  var _initialized = false;
+
+  Future<void> init(final FileSystemConfig config) async {
+    _config = config;
+    final root = Directory(_config.basePath);
+    if (!root.existsSync()) {
+      await root.create(recursive: true);
+    }
+    _initialized = true;
+  }
+
+  Future<FileOperationResult> createFile(
+    final String filePath,
+    final String content, {
+    final String? commitMessage,
+  }) async {
+    _ensureInitialized();
+    final normalizedPath = _normalizePath(filePath);
+    final file = _resolveFile(normalizedPath);
+    if (file.existsSync()) {
+      throw FileAlreadyExistsException(
+        'File already exists at path: $filePath',
+      );
+    }
+    await file.parent.create(recursive: true);
+    await file.writeAsString(content, flush: true);
+
+    return FileOperationResult.created(path: normalizedPath);
+  }
+
+  Future<FileOperationResult> updateFile(
+    final String filePath,
+    final String content, {
+    final String? commitMessage,
+  }) async {
+    _ensureInitialized();
+    final normalizedPath = _normalizePath(filePath);
+    final file = _resolveFile(normalizedPath);
+    if (!file.existsSync()) {
+      throw FileNotFoundException('File not found at path: $filePath');
+    }
+    await file.writeAsString(content, flush: true);
+    return FileOperationResult.updated(path: normalizedPath);
+  }
+
+  Future<FileOperationResult> deleteFile(
+    final String filePath, {
+    final String? commitMessage,
+  }) async {
+    _ensureInitialized();
+    final normalizedPath = _normalizePath(filePath);
+    final file = _resolveFile(normalizedPath);
+    if (!file.existsSync()) {
+      throw FileNotFoundException('File not found at path: $filePath');
+    }
+    await file.delete();
+    return FileOperationResult.deleted(path: normalizedPath);
+  }
+
+  Future<String?> getFile(final String filePath) async {
+    _ensureInitialized();
+    final normalizedPath = _normalizePath(filePath);
+    final file = _resolveFile(normalizedPath);
+    if (!file.existsSync()) {
+      return null;
+    }
+    return file.readAsString();
+  }
+
+  Future<List<FileEntry>> listDirectory(final String directoryPath) async {
+    _ensureInitialized();
+    final normalizedPath = _normalizeDirectory(directoryPath);
+    final directory = normalizedPath.isEmpty
+        ? Directory(_config.basePath)
+        : Directory(path.join(_config.basePath, normalizedPath));
+    if (!directory.existsSync()) {
+      return const <FileEntry>[];
+    }
+
+    final entries = <FileEntry>[];
+    await for (final entity in directory.list(followLinks: false)) {
+      final stat = await entity.stat();
+      final name = path.basename(entity.path);
+      entries.add(
+        FileEntry(
+          name: name,
+          isDirectory: entity is Directory,
+          size: entity is File ? stat.size : 0,
+          modifiedAt: stat.modified.toUtc(),
+        ),
+      );
+    }
+    entries.sort((final a, final b) => a.name.compareTo(b.name));
+    return entries;
+  }
+
+  Future<void> dispose() async {
+    _initialized = false;
+  }
+
+  File _resolveFile(final String normalizedPath) =>
+      File(path.join(_config.basePath, normalizedPath));
+
+  void _ensureInitialized() {
+    if (!_initialized) {
+      throw const AuthenticationException(
+        'CloudKit local mirror store is not initialized.',
+      );
+    }
+  }
+
+  String _normalizePath(final String filePath) {
+    final normalized = filePath
+        .replaceAll('\\', '/')
+        .replaceAll(RegExp('/+'), '/')
+        .replaceAll(RegExp('^/+'), '')
+        .replaceAll(RegExp(r'/+$'), '')
+        .trim();
+    if (normalized.isEmpty || normalized == '.') {
+      throw ArgumentError('filePath cannot be empty');
+    }
+    return normalized;
+  }
+
+  String _normalizeDirectory(final String directoryPath) {
+    final trimmed = directoryPath.trim();
+    if (trimmed.isEmpty || trimmed == '.') {
+      return '';
+    }
+    return trimmed
+        .replaceAll('\\', '/')
+        .replaceAll(RegExp('/+'), '/')
+        .replaceAll(RegExp('^/+'), '')
+        .replaceAll(RegExp(r'/+$'), '');
+  }
 }
 
 class _MirrorState {

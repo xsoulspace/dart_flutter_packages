@@ -5,6 +5,29 @@
 default:
     just pub-get
 
+generate-all:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    failed=0
+    generators="$(rg --files pkgs | rg '/tool/generate\.dart$' | sort || true)"
+    if [ -z "$generators" ]; then
+      echo "No tool/generate.dart scripts found."
+      exit 0
+    fi
+    while IFS= read -r gen; do
+      [ -n "$gen" ] || continue
+      pkg_dir="$(dirname "$(dirname "$gen")")"
+      echo "=== $pkg_dir ==="
+      if [ "$pkg_dir" = "pkgs/xsoulspace_steamworks_raw" ] && [ -z "${STEAMWORKS_SDK_PATH:-}" ]; then
+        echo "Skipping $pkg_dir (set STEAMWORKS_SDK_PATH to enable generation)."
+        continue
+      fi
+      if ! (cd "$pkg_dir" && dart run tool/generate.dart); then
+        failed=1
+      fi
+    done <<< "$generators"
+    exit "$failed"
+
 pub-get:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -32,9 +55,25 @@ docs-check:
     fi
     echo "All packages contain README.md, CHANGELOG.md, and LICENSE."
 
+storage-path-audit:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    bash tool/universal_storage_path_audit.sh
+
+clone-guard-audit:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    bash tool/universal_storage_clone_guard_audit.sh
+
+storage-release-g6:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    bash tool/universal_storage_release_gate_g6.sh
+
 publish-dry-run pkg:
     #!/usr/bin/env bash
     set -euo pipefail
+    just storage-release-g6
     if [ -z "{{pkg}}" ]; then
       echo "Usage: just publish-dry-run <package_name>"
       exit 2
@@ -53,6 +92,7 @@ publish-dry-run pkg:
 publish-dry-run-all:
     #!/usr/bin/env bash
     set -euo pipefail
+    just storage-release-g6
     failed=0
     for d in pkgs/*/; do
       [ -f "$d/pubspec.yaml" ] || continue

@@ -22,3 +22,7 @@ void bootstrap() {
   registerUniversalStorageCloudKit();
 }
 ```
+
+`registerUniversalStorageCloudKit()` now auto-registers the web bridge on web
+targets when no explicit bridge was provided. For Apple targets, register the
+Apple bridge package during app startup.

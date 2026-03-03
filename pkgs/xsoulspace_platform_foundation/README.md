@@ -18,22 +18,22 @@ Runtime orchestration layer for unified platform adapters.
 
 ## Capability Matrix (Phase 1)
 
-| Capability | Steam | Yandex Games | CrazyGames | VK Play |
-| --- | --- | --- | --- | --- |
-| Identity | yes | yes | yes | yes |
-| Friends | yes | no | yes | yes |
-| Invite | no | no | no | optional |
-| Feed Share | no | no | no | optional |
-| Achievement Read | yes | no | no | no |
-| Achievement Write | yes | no | no | no |
-| Stats Read | yes | yes | no | no |
-| Stats Write | yes | yes | no | no |
-| Stats Sync | yes | no | no | no |
-| Leaderboard Read | no | yes | no | no |
-| Leaderboard Write | no | yes | yes | no |
-| Multiplayer Session | no | yes | no | no |
-| Purchases (optional plugin) | no | plugin | no | no |
-| Ads (optional plugin) | no | no | plugin | no |
+| Capability | Steam | Yandex Games | CrazyGames | VK Play | Discord |
+| --- | --- | --- | --- | --- | --- |
+| Identity | yes | yes | yes | yes | yes |
+| Friends | yes | no | yes | yes | yes |
+| Invite | no | no | no | optional | optional |
+| Feed Share | no | no | no | optional | optional |
+| Achievement Read | yes | no | no | no | no |
+| Achievement Write | yes | no | no | no | no |
+| Stats Read | yes | yes | no | no | no |
+| Stats Write | yes | yes | no | no | no |
+| Stats Sync | yes | no | no | no | no |
+| Leaderboard Read | no | yes | no | no | no |
+| Leaderboard Write | no | yes | yes | no | no |
+| Multiplayer Session | no | yes | no | no | no |
+| Purchases (optional plugin) | no | plugin | no | no | no |
+| Ads (optional plugin) | no | no | plugin | no | no |
 
 ## Migration Guide
 

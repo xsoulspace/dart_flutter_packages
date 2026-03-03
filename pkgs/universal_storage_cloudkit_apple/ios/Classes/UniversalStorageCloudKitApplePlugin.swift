@@ -739,34 +739,11 @@ public final class UniversalStorageCloudKitApplePlugin: NSObject, FlutterPlugin,
   }
 
   private func encodeToken(_ token: CKServerChangeToken?) throws -> String? {
-    guard let token else {
-      return nil
-    }
-
-    let data = try NSKeyedArchiver.archivedData(
-      withRootObject: token,
-      requiringSecureCoding: true
-    )
-    return data.base64EncodedString()
+    try CloudKitAppleTokenCodec.encode(token)
   }
 
   private func decodeToken(_ encodedToken: String?) throws -> CKServerChangeToken? {
-    guard let encodedToken, !encodedToken.isEmpty else {
-      return nil
-    }
-
-    guard let data = Data(base64Encoded: encodedToken) else {
-      throw PigeonError(
-        code: "unknown",
-        message: "Invalid CloudKit server change token encoding.",
-        details: nil
-      )
-    }
-
-    return try NSKeyedUnarchiver.unarchivedObject(
-      ofClass: CKServerChangeToken.self,
-      from: data
-    )
+    try CloudKitAppleTokenCodec.decode(encodedToken)
   }
 
   private func mapError(_ error: Error) -> Error {
@@ -774,45 +751,17 @@ public final class UniversalStorageCloudKitApplePlugin: NSObject, FlutterPlugin,
       return error
     }
 
-    guard let ckError = error as? CKError else {
-      return PigeonError(
-        code: "unknown",
-        message: error.localizedDescription,
-        details: nil
-      )
-    }
-
-    if ckError.code == .partialFailure,
-      let nestedErrors = ckError.partialErrorsByItemID,
-      let firstNested = nestedErrors.values.first
-    {
-      return mapError(firstNested)
-    }
-
-    let code: String
-    switch ckError.code {
-    case .notAuthenticated:
-      code = "auth"
-    case .networkUnavailable, .networkFailure:
-      code = "network"
-    case .serviceUnavailable, .requestRateLimited, .zoneBusy:
-      code = "transient"
-    case .serverRecordChanged:
-      code = "conflict"
-    case .unknownItem, .zoneNotFound:
-      code = "notFound"
-    case .assetFileTooLarge, .limitExceeded, .quotaExceeded:
-      code = "payloadTooLarge"
-    case .missingEntitlement, .badContainer:
-      code = "unsupported"
-    default:
-      code = "unknown"
+    let supportError: CloudKitAppleSupportError
+    if let mapped = error as? CloudKitAppleSupportError {
+      supportError = mapped
+    } else {
+      supportError = CloudKitAppleErrorMapper.map(error)
     }
 
     return PigeonError(
-      code: code,
-      message: ckError.localizedDescription,
-      details: ["ckCode": "\(ckError.code.rawValue)"]
+      code: supportError.code,
+      message: supportError.message,
+      details: supportError.details
     )
   }
 }

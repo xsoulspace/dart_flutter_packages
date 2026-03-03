@@ -2,15 +2,14 @@
 
 Current documentation set for Universal Storage implementation and rollout.
 
-## Canonical Docs
+## Canonical Doc
 
-- Production path and exit criteria:
-  - `./PRODUCTION_COMPLETENESS_PATH.md`
+- Next blockers and release unblocking criteria:
+  - `./BLOCKERS_NEXT.md`
 
 ## Status Note
 
-As of `2026-03-03`, the old phase roadmap has been fully superseded.
+As of `2026-03-03`, all old roadmap/plan docs were removed from Universal
+Storage docs scope.
 
-- The only authoritative roadmap is `PRODUCTION_COMPLETENESS_PATH.md`.
-- `PRODUCTION_COMPLETENESS_PATH.md` tracks only remaining active work.
-- Old `phased_plan/*` roadmap files were hard-deleted.
+- The only authoritative next-steps file is `BLOCKERS_NEXT.md`.
