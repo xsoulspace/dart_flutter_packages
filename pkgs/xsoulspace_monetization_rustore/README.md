@@ -2,9 +2,21 @@
 
 RuStore monetization provider implementation for the `xsoulspace_monetization_interface` contracts.
 
-## Status
+## Production readiness
 
-Early-stage package. Validate behavior in your app and store configuration before production rollout.
+- Supported platforms: Android devices with RuStore billing services.
+- Known limitations:
+  - Non-Android environments return `MonetizationStoreStatus.notAvailable`.
+  - Cancel flow is available only for two-step purchases per RuStore API constraints.
+  - Subscription management is delegated to the RuStore app deep link.
+- Required configuration:
+  - Set `consoleApplicationId` and `deeplinkScheme` from your RuStore console project.
+  - Ensure `rustore_billing_api` integration and Android manifest setup are present in the host app.
+  - Map product IDs and durations consistently with your backend verification logic.
+- Rollback guidance:
+  - Pin the previous stable package version in `pubspec.yaml` and redeploy.
+  - Disable purchase initiation UI until rollback validation is complete.
+  - Re-run purchase, restore, and cancel smoke tests after rollback.
 
 ## Installation
 

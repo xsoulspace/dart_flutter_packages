@@ -42,6 +42,7 @@ final class PlatformRuntime {
     }
 
     final attemptedPlatforms = <PlatformId>[];
+    final startupDiagnostics = <Map<String, Object?>>[];
     final orderedFactories = List<PlatformAdapterFactory>.of(_factories)
       ..sort((final a, final b) => a.priority.compareTo(b.priority));
 
@@ -52,11 +53,46 @@ final class PlatformRuntime {
 
       final supported = await factory.isSupportedEnvironment();
       if (!supported) {
+        final diagnostic = <String, Object?>{
+          'platformId': factory.platformId.name,
+          'priority': factory.priority,
+          'result': 'unsupportedEnvironment',
+        };
+        startupDiagnostics.add(diagnostic);
+        _emitStartupDiagnostic(diagnostic);
         continue;
       }
 
-      final client = await factory.createClient();
-      final initResult = await client.init(initOptions);
+      final PlatformClient client;
+      try {
+        client = await factory.createClient();
+      } on Object catch (error) {
+        final diagnostic = <String, Object?>{
+          'platformId': factory.platformId.name,
+          'priority': factory.priority,
+          'result': 'createClientFailure',
+          'error': error.toString(),
+        };
+        startupDiagnostics.add(diagnostic);
+        _emitStartupDiagnostic(diagnostic);
+        continue;
+      }
+
+      PlatformInitResult initResult;
+      try {
+        initResult = await client.init(initOptions);
+      } on Object catch (error) {
+        await client.dispose();
+        final diagnostic = <String, Object?>{
+          'platformId': factory.platformId.name,
+          'priority': factory.priority,
+          'result': 'initException',
+          'error': error.toString(),
+        };
+        startupDiagnostics.add(diagnostic);
+        _emitStartupDiagnostic(diagnostic);
+        continue;
+      }
       if (initResult.isSuccess) {
         _activeClient = client;
         activeInitResult = initResult;
@@ -64,22 +100,43 @@ final class PlatformRuntime {
       }
 
       await client.dispose();
-      if (initResult.isFailure &&
-          initOptions.missingCapabilityBehavior ==
-              MissingCapabilityBehavior.strict) {
-        throw PlatformException(
-          code: PlatformExceptionCode.initFailed,
-          message:
-              initResult.message ??
-              'Failed to initialize platform ${factory.platformId.name}.',
-          platformId: factory.platformId,
-          cause: initResult.error,
-        );
-      }
+
+      final diagnostic = <String, Object?>{
+        'platformId': factory.platformId.name,
+        'priority': factory.priority,
+        'result': initResult.status.name,
+        if (initResult.message != null) 'message': initResult.message,
+        if (initResult.error != null) 'error': initResult.error.toString(),
+      };
+      startupDiagnostics.add(diagnostic);
+      _emitStartupDiagnostic(diagnostic);
     }
 
     var usedFallbackClient = false;
     if (_activeClient == null) {
+      if (initOptions.missingCapabilityBehavior ==
+          MissingCapabilityBehavior.strict) {
+        _eventsController.add(
+          PlatformEvent.now(
+            name: 'runtime.startup.failed',
+            payload: <String, Object?>{
+              'message':
+                  'No platform adapter initialized successfully in strict mode.',
+              'attemptedPlatforms': attemptedPlatforms
+                  .map((final id) => id.name)
+                  .toList(growable: false),
+              'startupDiagnostics': startupDiagnostics,
+            },
+          ),
+        );
+        throw PlatformException(
+          code: PlatformExceptionCode.initFailed,
+          message:
+              'No platform adapter initialized successfully in strict mode.',
+          cause: startupDiagnostics,
+        );
+      }
+
       usedFallbackClient = true;
       final fallback =
           _fallbackClient ??
@@ -233,6 +290,15 @@ final class PlatformRuntime {
           'missing': missing.map((final e) => e.toString()).toList(),
           'usedFallbackClient': usedFallbackClient,
         },
+      ),
+    );
+  }
+
+  void _emitStartupDiagnostic(final Map<String, Object?> payload) {
+    _eventsController.add(
+      PlatformEvent.now(
+        name: 'runtime.startup.adapterAttempt',
+        payload: payload,
       ),
     );
   }

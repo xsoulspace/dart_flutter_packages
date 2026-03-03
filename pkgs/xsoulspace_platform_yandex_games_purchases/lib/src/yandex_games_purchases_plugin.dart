@@ -36,29 +36,56 @@ final class YandexGamesPurchasesPlatformFactory
   @override
   final int priority;
 
-  final bool Function()? environmentProbe;
-  final Future<YsdkClient> Function({bool signed})? initClient;
+  final bool Function(String expectedGlobal)? environmentProbe;
+  final YandexGamesClientInitializer? initClient;
 
   @override
   PlatformId get platformId => PlatformId.yandexGames;
 
   @override
   Future<bool> isSupportedEnvironment() async {
-    return environmentProbe?.call() ?? true;
+    final signed = pluginConfig.signed;
+    final effectiveConfig =
+        baseConfig ?? YandexGamesPlatformConfig(signed: signed);
+
+    final probe = environmentProbe;
+    if (probe != null) {
+      return probe(effectiveConfig.expectedSdkGlobal);
+    }
+
+    final injected = effectiveConfig.sdkInjected;
+    if (injected != null) {
+      return injected;
+    }
+
+    if (effectiveConfig.autoLoadSdk &&
+        effectiveConfig.sdkScriptLoader != null &&
+        effectiveConfig.sdkUrl != null) {
+      return true;
+    }
+
+    return YandexGames.isAvailable(
+      expectedGlobal: effectiveConfig.expectedSdkGlobal,
+    );
   }
 
   @override
   Future<PlatformClient> createClient() async {
     final init = initClient ?? YandexGames.init;
     final signed = pluginConfig.signed;
+    final effectiveBaseConfig =
+        baseConfig ?? YandexGamesPlatformConfig(signed: signed);
 
     final base = YandexGamesPlatformClient(
-      config: baseConfig ?? YandexGamesPlatformConfig(signed: signed),
+      config: effectiveBaseConfig,
       initClient: init,
     );
 
-    final defaultFactory = () =>
-        YandexGamesPurchaseProvider(signed: signed, initClient: init);
+    final defaultFactory = () => YandexGamesPurchaseProvider(
+      signed: signed,
+      expectedGlobal: effectiveBaseConfig.expectedSdkGlobal,
+      initClient: init,
+    );
 
     return YandexGamesPurchasesPlatformClient(
       baseClient: base,
@@ -81,6 +108,7 @@ final class YandexGamesPurchasesPlatformClient implements PlatformClient {
 
   PurchaseProvider? _purchaseProvider;
   PurchasesCapability? _purchasesCapability;
+  var _disposed = false;
 
   @override
   PlatformId get platformId => _baseClient.platformId;
@@ -126,6 +154,10 @@ final class YandexGamesPurchasesPlatformClient implements PlatformClient {
 
   @override
   Future<void> dispose() async {
+    if (_disposed) {
+      return;
+    }
+    _disposed = true;
     final provider = _purchaseProvider;
     _purchaseProvider = null;
     _purchasesCapability = null;

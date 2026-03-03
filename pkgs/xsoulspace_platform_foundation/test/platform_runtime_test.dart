@@ -37,6 +37,146 @@ void main() {
     expect(runtime.activePlatform, PlatformId.yandexGames);
   });
 
+  test('strict mode tries next adapter after failure and starts', () async {
+    final failingFactory = _FakeFactory(
+      platformId: PlatformId.steam,
+      priority: 0,
+      supported: true,
+      client: _FakeClient(
+        platformId: PlatformId.steam,
+        initResult: PlatformInitResult.failure(message: 'steam init failed'),
+      ),
+    );
+
+    final workingFactory = _FakeFactory(
+      platformId: PlatformId.discord,
+      priority: 1,
+      supported: true,
+      client: _FakeClient(
+        platformId: PlatformId.discord,
+        initResult: PlatformInitResult.success(),
+      ),
+    );
+
+    final runtime = PlatformRuntime(
+      factories: <PlatformAdapterFactory>[workingFactory, failingFactory],
+      initOptions: const PlatformInitOptions(
+        missingCapabilityBehavior: MissingCapabilityBehavior.strict,
+      ),
+    );
+
+    final start = await runtime.start();
+    expect(start.activePlatform, PlatformId.discord);
+    expect(start.attemptedPlatforms, <PlatformId>[
+      PlatformId.steam,
+      PlatformId.discord,
+    ]);
+  });
+
+  test('strict mode throws when all adapters fail to initialize', () async {
+    final runtime = PlatformRuntime(
+      factories: <PlatformAdapterFactory>[
+        _FakeFactory(
+          platformId: PlatformId.steam,
+          priority: 0,
+          supported: true,
+          client: _FakeClient(
+            platformId: PlatformId.steam,
+            initResult: PlatformInitResult.notAvailable(message: 'no steam'),
+          ),
+        ),
+        _FakeFactory(
+          platformId: PlatformId.vkPlay,
+          priority: 1,
+          supported: false,
+          client: _FakeClient(
+            platformId: PlatformId.vkPlay,
+            initResult: PlatformInitResult.success(),
+          ),
+        ),
+      ],
+      initOptions: const PlatformInitOptions(
+        missingCapabilityBehavior: MissingCapabilityBehavior.strict,
+      ),
+    );
+
+    expect(
+      runtime.start(),
+      throwsA(
+        isA<PlatformException>().having(
+          (final e) => e.code,
+          'code',
+          PlatformExceptionCode.initFailed,
+        ),
+      ),
+    );
+  });
+
+  test('permissive mode activates fallback when all adapters fail', () async {
+    final runtime = PlatformRuntime(
+      factories: <PlatformAdapterFactory>[
+        _FakeFactory(
+          platformId: PlatformId.steam,
+          priority: 0,
+          supported: true,
+          client: _FakeClient(
+            platformId: PlatformId.steam,
+            initResult: PlatformInitResult.failure(message: 'steam failed'),
+          ),
+        ),
+      ],
+      initOptions: const PlatformInitOptions(
+        missingCapabilityBehavior: MissingCapabilityBehavior.permissive,
+      ),
+    );
+
+    final start = await runtime.start();
+    expect(start.usedFallbackClient, isTrue);
+    expect(start.activePlatform, PlatformId.custom);
+  });
+
+  test('emits startup diagnostics payloads for failed attempts', () async {
+    final events = <PlatformEvent>[];
+    final runtime = PlatformRuntime(
+      factories: <PlatformAdapterFactory>[
+        _FakeFactory(
+          platformId: PlatformId.vkPlay,
+          priority: 0,
+          supported: false,
+          client: _FakeClient(
+            platformId: PlatformId.vkPlay,
+            initResult: PlatformInitResult.success(),
+          ),
+        ),
+        _FakeFactory(
+          platformId: PlatformId.steam,
+          priority: 1,
+          supported: true,
+          client: _FakeClient(
+            platformId: PlatformId.steam,
+            initResult: PlatformInitResult.notAvailable(message: 'no steam'),
+          ),
+        ),
+      ],
+      initOptions: const PlatformInitOptions(
+        missingCapabilityBehavior: MissingCapabilityBehavior.permissive,
+      ),
+    );
+
+    final sub = runtime.events.listen(events.add);
+    await runtime.start();
+    await sub.cancel();
+
+    final diagnostics = events
+        .where((final e) => e.name == 'runtime.startup.adapterAttempt')
+        .toList(growable: false);
+    expect(diagnostics, hasLength(2));
+    expect(diagnostics.first.payload['platformId'], 'vkPlay');
+    expect(diagnostics.first.payload['result'], 'unsupportedEnvironment');
+    expect(diagnostics.last.payload['platformId'], 'steam');
+    expect(diagnostics.last.payload['result'], 'notAvailable');
+  });
+
   test('strict mode fails startup when required capability missing', () async {
     final runtime = PlatformRuntime(
       factories: <PlatformAdapterFactory>[

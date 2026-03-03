@@ -1,7 +1,6 @@
 name: xsoulspace_platform_crazygames_ads
 description: Optional CrazyGames ads plugin for xsoulspace platform runtime.
-version: 0.1.0
-publish_to: none
+version: 0.1.0-beta.1
 homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_platform_crazygames_ads
 repository: https://github.com/xsoulspace/dart_flutter_packages
 issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
@@ -13,18 +12,12 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  xsoulspace_crazygames_js:
-    path: ../xsoulspace_crazygames_js
-  xsoulspace_monetization_ads_crazygames:
-    path: ../xsoulspace_monetization_ads_crazygames
-  xsoulspace_monetization_ads_interface:
-    path: ../xsoulspace_monetization_ads_interface
-  xsoulspace_platform_core_interface:
-    path: ../xsoulspace_platform_core_interface
-  xsoulspace_platform_crazygames:
-    path: ../xsoulspace_platform_crazygames
-  xsoulspace_platform_ads_bridge:
-    path: ../xsoulspace_platform_ads_bridge
+  xsoulspace_crazygames_js: ^0.1.0-beta.1
+  xsoulspace_monetization_ads_crazygames: ^0.1.0-beta.1
+  xsoulspace_monetization_ads_interface: ^0.0.1
+  xsoulspace_platform_core_interface: ^0.1.0-beta.1
+  xsoulspace_platform_crazygames: ^0.1.0-beta.1
+  xsoulspace_platform_ads_bridge: ^0.1.0-beta.1
 
 dev_dependencies:
   flutter_test:

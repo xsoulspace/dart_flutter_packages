@@ -121,3 +121,49 @@ ci-cloudkit:
       echo "=== $d ==="
       (cd "$d" && flutter pub get && flutter analyze --no-fatal-infos --no-fatal-warnings && flutter test)
     done
+
+platform-sdk-verify:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    bash tool/platform_sdk_verify.sh
+
+xsoulspace-readiness scope="all" artifact="tool/artifacts/xsoulspace_production_readiness.json":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    dart tool/xsoulspace_production_readiness.dart --scope "{{scope}}" --output "{{artifact}}"
+
+xsoulspace-public-gate artifact="tool/artifacts/xsoulspace_production_readiness.json":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    dart tool/xsoulspace_production_readiness.dart --scope public --output "{{artifact}}" --fail-on-blocked
+
+xsoulspace-internal-gate artifact="tool/artifacts/xsoulspace_production_readiness.json":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    dart tool/xsoulspace_production_readiness.dart --scope internal --output "{{artifact}}" --fail-on-blocked
+
+xsoulspace-gates artifact="tool/artifacts/xsoulspace_production_readiness.json":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    dart tool/xsoulspace_production_readiness.dart --scope all --output "{{artifact}}" --fail-on-blocked
+
+xsoulspace-logger-chain-dry-run:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    packages=(
+      "xsoulspace_logger"
+      "xsoulspace_logger_triage"
+      "xsoulspace_logger_io"
+      "xsoulspace_logger_universal_storage"
+      "xsoulspace_logger_flutter"
+    )
+    for pkg in "${packages[@]}"; do
+      pkg_dir="pkgs/$pkg"
+      [ -f "$pkg_dir/pubspec.yaml" ] || { echo "Missing package: $pkg"; exit 2; }
+      echo "=== logger chain dry-run: $pkg ==="
+      if rg -q "sdk:\\s*flutter" "$pkg_dir/pubspec.yaml"; then
+        (cd "$pkg_dir" && flutter pub get && flutter pub publish --dry-run)
+      else
+        (cd "$pkg_dir" && dart pub get && dart pub publish --dry-run)
+      fi
+    done

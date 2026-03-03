@@ -12,7 +12,12 @@ Never _unsupported() {
 
 /// Non-web fallback for CrazyGames wrapper.
 abstract final class CrazyGames {
-  static Future<CrazyGamesClient> init() async => _unsupported();
+  static Future<CrazyGamesClient> init({
+    final String expectedGlobal = 'CrazyGames',
+  }) async => _unsupported();
+
+  static bool isAvailable({final String expectedGlobal = 'CrazyGames'}) =>
+      false;
 }
 
 class CrazyGamesClient {

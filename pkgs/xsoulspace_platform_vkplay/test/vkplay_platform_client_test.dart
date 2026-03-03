@@ -54,6 +54,30 @@ void main() {
     expect(rawResult, equals(10));
   });
 
+  test(
+    'friends pagination applies offset only once after merge/dedupe',
+    () async {
+      final sdk = _FakeVkPlayClient();
+      final client = VkPlayPlatformClient(
+        config: const VkPlayPlatformConfig(sdkInjected: true),
+        initClient:
+            ({
+              final String? appId,
+              final String expectedGlobal = 'iframeApi',
+            }) async => sdk,
+      );
+
+      await client.init(const PlatformInitOptions());
+
+      final friends = await client.require<FriendsCapability>().listFriends(
+        limit: 1,
+        offset: 1,
+      );
+      expect(friends, hasLength(1));
+      expect(friends.first.id, 'f-2');
+    },
+  );
+
   test('invite/share capabilities delegate to backend gateway', () async {
     final gateway = _FakeGateway();
     final client = VkPlayPlatformClient(
@@ -97,6 +121,21 @@ void main() {
     expect(client.maybe<InviteCapability>(), isNull);
     expect(client.maybe<FeedShareCapability>(), isNull);
   });
+
+  test('dispose is idempotent', () async {
+    final client = VkPlayPlatformClient(
+      config: const VkPlayPlatformConfig(sdkInjected: true),
+      initClient:
+          ({
+            final String? appId,
+            final String expectedGlobal = 'iframeApi',
+          }) async => _FakeVkPlayClient(),
+    );
+    await client.init(const PlatformInitOptions());
+
+    await client.dispose();
+    await client.dispose();
+  });
 }
 
 final class _FakeVkPlayClient extends VkPlayClient {
@@ -133,10 +172,11 @@ final class _FakeVkPlayClient extends VkPlayClient {
     final int? limit,
     final int? offset,
   }) async {
-    return const <VkPlayFriend>[
+    final friends = const <VkPlayFriend>[
       VkPlayFriend(id: 'f-1', displayName: 'Friend 1'),
       VkPlayFriend(id: 'f-2', displayName: 'Friend 2'),
     ];
+    return _sliceFriends(friends, limit: limit, offset: offset);
   }
 
   @override
@@ -144,10 +184,11 @@ final class _FakeVkPlayClient extends VkPlayClient {
     final int? limit,
     final int? offset,
   }) async {
-    return const <VkPlayFriend>[
+    final friends = const <VkPlayFriend>[
       VkPlayFriend(id: 'f-2', displayName: 'Friend 2 social', isSocial: true),
       VkPlayFriend(id: 'f-3', displayName: 'Friend 3 social', isSocial: true),
     ];
+    return _sliceFriends(friends, limit: limit, offset: offset);
   }
 
   @override
@@ -159,6 +200,19 @@ final class _FakeVkPlayClient extends VkPlayClient {
       return ((params?['value'] as int?) ?? 0) + 1;
     }
     return null;
+  }
+
+  List<VkPlayFriend> _sliceFriends(
+    final List<VkPlayFriend> source, {
+    final int? limit,
+    final int? offset,
+  }) {
+    final safeOffset = (offset ?? 0).clamp(0, source.length);
+    final start = source.skip(safeOffset);
+    if (limit == null) {
+      return start.toList(growable: false);
+    }
+    return start.take(limit.clamp(0, source.length)).toList(growable: false);
   }
 }
 

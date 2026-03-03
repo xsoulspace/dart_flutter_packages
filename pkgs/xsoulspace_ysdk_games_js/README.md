@@ -36,6 +36,10 @@ Load Yandex Games SDK script before using this package.
 import 'package:xsoulspace_ysdk_games_js/xsoulspace_ysdk_games_js.dart';
 
 Future<void> bootstrapGame() async {
+  if (!YandexGames.isAvailable()) {
+    return;
+  }
+
   final ysdk = await YandexGames.init();
 
   final player = await ysdk.getPlayerUnsigned();
@@ -47,6 +51,9 @@ Future<void> bootstrapGame() async {
   print('difficulty=${flags['difficulty']}');
 }
 ```
+
+`YandexGames.init` and `YandexGames.isAvailable` both support
+`expectedGlobal` for custom global names.
 
 ## Signed and unsigned APIs
 

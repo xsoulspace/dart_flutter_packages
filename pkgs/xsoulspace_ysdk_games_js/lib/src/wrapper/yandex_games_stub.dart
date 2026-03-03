@@ -10,8 +10,12 @@ Never _unsupported() {
 
 /// Non-web fallback for Yandex Games wrapper.
 abstract final class YandexGames {
-  static Future<YsdkClient> init({final bool signed = false}) async =>
-      _unsupported();
+  static Future<YsdkClient> init({
+    final bool signed = false,
+    final String expectedGlobal = 'YaGames',
+  }) async => _unsupported();
+
+  static bool isAvailable({final String expectedGlobal = 'YaGames'}) => false;
 }
 
 class YsdkClient {

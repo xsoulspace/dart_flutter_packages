@@ -12,11 +12,12 @@ Runtime orchestration layer for unified platform adapters.
 ## Runtime behavior
 
 - Activates one platform client by `priority` (`firstAvailable` strategy).
-- Supports strict/permissive missing-capability behavior.
-- Includes no-op fallback client.
+- Supports strict/permissive startup and missing-capability behavior.
+- `strict`: tries all adapters by priority and throws if none initialize.
+- `permissive`: activates no-op fallback client when no adapter initializes.
 - No-op feature capabilities are provided by optional plugin packages.
 
-## Capability Matrix (Phase 1)
+## Capability Matrix
 
 | Capability | Steam | Yandex Games | CrazyGames | VK Play | Discord |
 | --- | --- | --- | --- | --- | --- |
@@ -47,3 +48,5 @@ Runtime orchestration layer for unified platform adapters.
 
 See [Architecture](doc/architecture.md). Integration runtime example is in
 `pkgs/xsoulspace_platform_yandex_games/example/runtime_integration_example.dart`.
+Production setup details are in
+[`doc/unified_platform_sdk_production_guide.md`](doc/unified_platform_sdk_production_guide.md).

@@ -16,6 +16,14 @@ void main() {
 
   setUp(() => _stub.reset());
 
+  test('availability probe', () {
+    expect(CrazyGames.isAvailable(), isTrue);
+    expect(
+      CrazyGames.isAvailable(expectedGlobal: 'MissingCrazyGamesGlobal'),
+      isFalse,
+    );
+  });
+
   test('init + environment', () async {
     final cg = await CrazyGames.init();
     expect(_stub.initCalls, 1);

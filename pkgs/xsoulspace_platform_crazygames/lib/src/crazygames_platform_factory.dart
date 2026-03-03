@@ -16,8 +16,8 @@ final class CrazyGamesPlatformFactory implements PlatformAdapterFactory {
   final CrazyGamesPlatformConfig config;
   @override
   final int priority;
-  final bool Function()? environmentProbe;
-  final Future<CrazyGamesClient> Function()? initClient;
+  final bool Function(String expectedGlobal)? environmentProbe;
+  final CrazyGamesClientInitializer? initClient;
 
   @override
   PlatformId get platformId => PlatformId.crazyGames;
@@ -25,7 +25,22 @@ final class CrazyGamesPlatformFactory implements PlatformAdapterFactory {
   @override
   Future<bool> isSupportedEnvironment() async {
     final probe = environmentProbe;
-    return probe?.call() ?? true;
+    if (probe != null) {
+      return probe(config.expectedSdkGlobal);
+    }
+
+    final injected = config.sdkInjected;
+    if (injected != null) {
+      return injected;
+    }
+
+    if (config.autoLoadSdk &&
+        config.sdkScriptLoader != null &&
+        config.sdkUrl != null) {
+      return true;
+    }
+
+    return CrazyGames.isAvailable(expectedGlobal: config.expectedSdkGlobal);
   }
 
   @override

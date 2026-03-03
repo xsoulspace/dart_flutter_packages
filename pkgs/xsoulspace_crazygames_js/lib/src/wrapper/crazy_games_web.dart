@@ -8,8 +8,37 @@ export 'enums.dart';
 
 /// Wrapper entrypoint for CrazyGames HTML5 SDK.
 abstract final class CrazyGames {
-  static Future<CrazyGamesClient> init() async {
-    await jsCallPromise(raw.crazyGamesSdk, 'init');
-    return CrazyGamesClient(raw.crazyGamesSdk);
+  static Future<CrazyGamesClient> init({
+    final String expectedGlobal = 'CrazyGames',
+  }) async {
+    final sdk = _resolveSdk(expectedGlobal: expectedGlobal);
+    if (sdk == null) {
+      throw StateError(
+        'CrazyGames SDK global `$expectedGlobal` was not detected.',
+      );
+    }
+    await jsCallPromise(sdk, 'init');
+    return CrazyGamesClient(sdk);
+  }
+
+  static bool isAvailable({final String expectedGlobal = 'CrazyGames'}) {
+    return _resolveSdk(expectedGlobal: expectedGlobal) != null;
+  }
+
+  static Object? _resolveSdk({required final String expectedGlobal}) {
+    if (expectedGlobal == 'CrazyGames') {
+      final known = raw.crazyGamesSdk;
+      if (known != null) {
+        return known;
+      }
+    }
+
+    final customGlobal = globalProperty(expectedGlobal);
+    if (customGlobal == null) {
+      return null;
+    }
+
+    final customSdk = prop(customGlobal, 'SDK');
+    return customSdk ?? customGlobal;
   }
 }

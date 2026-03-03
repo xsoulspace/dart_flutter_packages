@@ -22,6 +22,7 @@ final class SteamPlatformClient implements PlatformClient {
       StreamController<PlatformEvent>.broadcast();
 
   StreamSubscription<SteamEvent>? _steamEventsSubscription;
+  var _disposed = false;
 
   @override
   PlatformId get platformId => PlatformId.steam;
@@ -52,7 +53,7 @@ final class SteamPlatformClient implements PlatformClient {
       }
 
       _registerCapabilities();
-      _eventsController.add(
+      _emit(
         PlatformEvent.now(
           name: 'steam.initialized',
           payload: <String, Object?>{'appId': effectiveConfig.appId},
@@ -71,9 +72,14 @@ final class SteamPlatformClient implements PlatformClient {
 
   @override
   Future<void> dispose() async {
+    if (_disposed) {
+      return;
+    }
+    _disposed = true;
     await _steamEventsSubscription?.cancel();
     _steamEventsSubscription = null;
     await _steamClient.shutdown();
+    await _eventsController.close();
   }
 
   @override
@@ -136,16 +142,20 @@ final class SteamPlatformClient implements PlatformClient {
   }
 
   void _onSteamEvent(final SteamEvent event) {
+    if (_disposed || _eventsController.isClosed) {
+      return;
+    }
+
     switch (event) {
       case final SteamLifecycleEvent lifecycle:
-        _eventsController.add(
+        _emit(
           PlatformEvent(
             name: 'steam.lifecycle.${lifecycle.state.name}',
             timestamp: lifecycle.timestamp,
           ),
         );
       case final SteamCallbackEvent callback:
-        _eventsController.add(
+        _emit(
           PlatformEvent(
             name: 'steam.callback',
             timestamp: callback.timestamp,
@@ -156,7 +166,7 @@ final class SteamPlatformClient implements PlatformClient {
           ),
         );
       case final SteamAsyncCallResolvedEvent resolved:
-        _eventsController.add(
+        _emit(
           PlatformEvent(
             name: 'steam.async.resolved',
             timestamp: resolved.timestamp,
@@ -168,7 +178,7 @@ final class SteamPlatformClient implements PlatformClient {
           ),
         );
       case final SteamAsyncCallTimeoutEvent timeout:
-        _eventsController.add(
+        _emit(
           PlatformEvent(
             name: 'steam.async.timeout',
             timestamp: timeout.timestamp,
@@ -180,7 +190,7 @@ final class SteamPlatformClient implements PlatformClient {
           ),
         );
       case final SteamErrorEvent error:
-        _eventsController.add(
+        _emit(
           PlatformEvent(
             name: 'steam.error',
             timestamp: error.timestamp,
@@ -188,6 +198,13 @@ final class SteamPlatformClient implements PlatformClient {
           ),
         );
     }
+  }
+
+  void _emit(final PlatformEvent event) {
+    if (_disposed || _eventsController.isClosed) {
+      return;
+    }
+    _eventsController.add(event);
   }
 }
 

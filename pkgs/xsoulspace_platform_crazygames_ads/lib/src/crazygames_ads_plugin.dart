@@ -33,27 +33,51 @@ final class CrazyGamesAdsPlatformFactory implements PlatformAdapterFactory {
   @override
   final int priority;
 
-  final bool Function()? environmentProbe;
-  final Future<CrazyGamesClient> Function()? initClient;
+  final bool Function(String expectedGlobal)? environmentProbe;
+  final CrazyGamesClientInitializer? initClient;
 
   @override
   PlatformId get platformId => PlatformId.crazyGames;
 
   @override
   Future<bool> isSupportedEnvironment() async {
-    return environmentProbe?.call() ?? true;
+    final effectiveConfig = baseConfig ?? const CrazyGamesPlatformConfig();
+
+    final probe = environmentProbe;
+    if (probe != null) {
+      return probe(effectiveConfig.expectedSdkGlobal);
+    }
+
+    final injected = effectiveConfig.sdkInjected;
+    if (injected != null) {
+      return injected;
+    }
+
+    if (effectiveConfig.autoLoadSdk &&
+        effectiveConfig.sdkScriptLoader != null &&
+        effectiveConfig.sdkUrl != null) {
+      return true;
+    }
+
+    return CrazyGames.isAvailable(
+      expectedGlobal: effectiveConfig.expectedSdkGlobal,
+    );
   }
 
   @override
   Future<PlatformClient> createClient() async {
     final init = initClient ?? CrazyGames.init;
+    final effectiveBaseConfig = baseConfig ?? const CrazyGamesPlatformConfig();
 
     final base = CrazyGamesPlatformClient(
-      config: baseConfig ?? const CrazyGamesPlatformConfig(),
+      config: effectiveBaseConfig,
       initClient: init,
     );
 
-    final defaultFactory = () => CrazyGamesAdProvider(initClient: init);
+    final defaultFactory = () => CrazyGamesAdProvider(
+      expectedGlobal: effectiveBaseConfig.expectedSdkGlobal,
+      initClient: init,
+    );
 
     return CrazyGamesAdsPlatformClient(
       baseClient: base,
@@ -75,6 +99,7 @@ final class CrazyGamesAdsPlatformClient implements PlatformClient {
   final AdProvider Function() defaultProviderFactory;
 
   AdsCapability? _adsCapability;
+  var _disposed = false;
 
   @override
   PlatformId get platformId => _baseClient.platformId;
@@ -106,6 +131,10 @@ final class CrazyGamesAdsPlatformClient implements PlatformClient {
 
   @override
   Future<void> dispose() async {
+    if (_disposed) {
+      return;
+    }
+    _disposed = true;
     _adsCapability = null;
     await _baseClient.dispose();
   }

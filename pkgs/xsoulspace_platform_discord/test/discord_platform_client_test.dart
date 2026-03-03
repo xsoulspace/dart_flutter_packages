@@ -159,6 +159,22 @@ void main() {
         .currentPlayer();
     expect(identity?.id, 'u-1');
   });
+
+  test('dispose is idempotent', () async {
+    final client = DiscordPlatformClient(
+      config: const DiscordPlatformConfig(clientId: 'app-1', sdkInjected: true),
+      initClient:
+          ({required final clientId, required final expectedGlobal}) async {
+            return _FakeDiscordClient();
+          },
+    );
+
+    final init = await client.init(const PlatformInitOptions());
+    expect(init.isSuccess, isTrue);
+
+    await client.dispose();
+    await client.dispose();
+  });
 }
 
 final class _FakeOAuthGateway implements DiscordOAuthGateway {

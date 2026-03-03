@@ -14,15 +14,19 @@ final class CrazyGamesBannerSize {
 
 /// Ad provider backed by CrazyGames HTML5 SDK.
 class CrazyGamesAdProvider implements AdProvider {
-  CrazyGamesAdProvider({final Future<CrazyGamesClient> Function()? initClient})
-    : _initClient = initClient ?? CrazyGames.init;
+  CrazyGamesAdProvider({
+    final Future<CrazyGamesClient> Function({String expectedGlobal})?
+    initClient,
+    this.expectedGlobal = 'CrazyGames',
+  }) : _initClient = initClient ?? CrazyGames.init;
 
-  final Future<CrazyGamesClient> Function() _initClient;
+  final Future<CrazyGamesClient> Function({String expectedGlobal}) _initClient;
+  final String expectedGlobal;
   CrazyGamesClient? _client;
 
   @override
   Future<void> init() async {
-    _client = await _initClient();
+    _client = await _initClient(expectedGlobal: expectedGlobal);
   }
 
   @override

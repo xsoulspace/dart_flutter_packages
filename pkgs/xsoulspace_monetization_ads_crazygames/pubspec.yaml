@@ -1,7 +1,6 @@
 name: xsoulspace_monetization_ads_crazygames
 description: CrazyGames ads provider for xsoulspace monetization contracts.
-version: 0.1.0
-publish_to: none
+version: 0.1.0-beta.1
 homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_monetization_ads_crazygames
 repository: https://github.com/xsoulspace/dart_flutter_packages
 issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
@@ -13,10 +12,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  xsoulspace_crazygames_js:
-    path: ../xsoulspace_crazygames_js
-  xsoulspace_monetization_ads_interface:
-    path: ../xsoulspace_monetization_ads_interface
+  xsoulspace_crazygames_js: ^0.1.0-beta.1
+  xsoulspace_monetization_ads_interface: ^0.0.1
 
 dev_dependencies:
   flutter_test:

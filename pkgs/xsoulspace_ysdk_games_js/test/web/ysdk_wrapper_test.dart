@@ -15,6 +15,14 @@ void main() {
 
   setUp(() => _sdkStub.reset());
 
+  test('availability probe', () {
+    expect(YandexGames.isAvailable(), isTrue);
+    expect(
+      YandexGames.isAvailable(expectedGlobal: 'MissingYsdkGlobal'),
+      isFalse,
+    );
+  });
+
   test('core entrypoint and common APIs', () async {
     final ysdk = await YandexGames.init();
 

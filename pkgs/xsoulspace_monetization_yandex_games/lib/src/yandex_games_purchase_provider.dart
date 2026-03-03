@@ -6,12 +6,16 @@ import 'package:xsoulspace_ysdk_games_js/xsoulspace_ysdk_games_js.dart';
 /// Purchase provider backed by Yandex Games web payments API.
 class YandexGamesPurchaseProvider implements PurchaseProvider {
   YandexGamesPurchaseProvider({
-    final Future<YsdkClient> Function({bool signed})? initClient,
+    final Future<YsdkClient> Function({bool signed, String expectedGlobal})?
+    initClient,
     this.signed = false,
+    this.expectedGlobal = 'YaGames',
   }) : _initClient = initClient ?? YandexGames.init;
 
-  final Future<YsdkClient> Function({bool signed}) _initClient;
+  final Future<YsdkClient> Function({bool signed, String expectedGlobal})
+  _initClient;
   final bool signed;
+  final String expectedGlobal;
 
   final StreamController<List<PurchaseDetailsModel>> _purchaseController =
       StreamController<List<PurchaseDetailsModel>>.broadcast();
@@ -26,7 +30,10 @@ class YandexGamesPurchaseProvider implements PurchaseProvider {
   @override
   Future<MonetizationStoreStatus> init() async {
     try {
-      _client = await _initClient(signed: signed);
+      _client = await _initClient(
+        signed: signed,
+        expectedGlobal: expectedGlobal,
+      );
       _payments = _client!.payments;
       return MonetizationStoreStatus.loaded;
     } on Object {

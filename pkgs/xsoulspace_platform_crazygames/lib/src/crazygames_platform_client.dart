@@ -8,11 +8,14 @@ import 'package:xsoulspace_platform_social_interface/xsoulspace_platform_social_
 
 import 'crazygames_platform_config.dart';
 
+typedef CrazyGamesClientInitializer =
+    Future<CrazyGamesClient> Function({String expectedGlobal});
+
 final class CrazyGamesPlatformClient implements PlatformClient {
   CrazyGamesPlatformClient({required this.config, required this.initClient});
 
   final CrazyGamesPlatformConfig config;
-  final Future<CrazyGamesClient> Function() initClient;
+  final CrazyGamesClientInitializer initClient;
 
   final CapabilityRegistry _capabilities = CapabilityRegistry();
   final StreamController<PlatformEvent> _eventsController =
@@ -20,16 +23,33 @@ final class CrazyGamesPlatformClient implements PlatformClient {
 
   CrazyGamesClient? _client;
   _CrazyIdentityCapability? _identityCapability;
+  var _disposed = false;
 
   @override
   PlatformId get platformId => PlatformId.crazyGames;
 
   @override
   Future<PlatformInitResult> init(final PlatformInitOptions options) async {
+    final bool sdkReady;
     try {
-      _client = await initClient();
+      sdkReady = await _ensureSdkReady();
+    } on Object catch (error) {
+      return PlatformInitResult.failure(
+        message: 'CrazyGames SDK loader failed.',
+        error: error,
+      );
+    }
+
+    if (!sdkReady) {
+      return PlatformInitResult.notAvailable(message: _notAvailableMessage());
+    }
+
+    try {
+      _client = await initClient(expectedGlobal: config.expectedSdkGlobal);
     } on UnsupportedError catch (error) {
       return PlatformInitResult.notAvailable(message: error.toString());
+    } on StateError {
+      return PlatformInitResult.notAvailable(message: _notAvailableMessage());
     } on Object catch (error) {
       return PlatformInitResult.failure(
         message: 'CrazyGames init failed.',
@@ -55,14 +75,20 @@ final class CrazyGamesPlatformClient implements PlatformClient {
       leaderboardWrite,
     );
 
-    _eventsController.add(PlatformEvent.now(name: 'crazygames.initialized'));
+    _emit(PlatformEvent.now(name: 'crazygames.initialized'));
     return PlatformInitResult.success(message: 'CrazyGames initialized.');
   }
 
   @override
   Future<void> dispose() async {
+    if (_disposed) {
+      return;
+    }
+    _disposed = true;
     await _identityCapability?.dispose();
     _identityCapability = null;
+    _client = null;
+    await _eventsController.close();
   }
 
   @override
@@ -90,6 +116,44 @@ final class CrazyGamesPlatformClient implements PlatformClient {
 
   @override
   Stream<PlatformEvent> get events => _eventsController.stream;
+
+  void _emit(final PlatformEvent event) {
+    if (_disposed || _eventsController.isClosed) {
+      return;
+    }
+    _eventsController.add(event);
+  }
+
+  Future<bool> _ensureSdkReady() async {
+    final injectedOverride = config.sdkInjected;
+    if (injectedOverride != null) {
+      return injectedOverride;
+    }
+
+    final available = CrazyGames.isAvailable(
+      expectedGlobal: config.expectedSdkGlobal,
+    );
+    if (available) {
+      return true;
+    }
+
+    if (!config.autoLoadSdk) {
+      return false;
+    }
+
+    final loader = config.sdkScriptLoader;
+    final sdkUrl = config.sdkUrl;
+    if (loader == null || sdkUrl == null) {
+      return false;
+    }
+
+    await loader(sdkUrl);
+    return CrazyGames.isAvailable(expectedGlobal: config.expectedSdkGlobal);
+  }
+
+  String _notAvailableMessage() {
+    return 'CrazyGames SDK global `${config.expectedSdkGlobal}` was not detected.';
+  }
 }
 
 final class _CrazyIdentityCapability implements IdentityCapability {
@@ -102,6 +166,7 @@ final class _CrazyIdentityCapability implements IdentityCapability {
 
   Object? _authListener;
   var _listenerAttached = false;
+  var _disposed = false;
 
   @override
   String get capabilityName => 'identity';
@@ -122,6 +187,10 @@ final class _CrazyIdentityCapability implements IdentityCapability {
   }
 
   Future<void> dispose() async {
+    if (_disposed) {
+      return;
+    }
+    _disposed = true;
     if (_listenerAttached && _authListener != null) {
       _client.user.removeAuthListener(_authListener!);
     }

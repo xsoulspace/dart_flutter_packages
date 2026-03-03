@@ -66,6 +66,12 @@ Object? prop(final Object? target, final String name) {
   return js_util.getProperty<Object?>(target, name);
 }
 
+bool hasGlobalProperty(final String name) =>
+    js_util.hasProperty(js_util.globalThis, name);
+
+Object? globalProperty(final String name) =>
+    js_util.getProperty<Object?>(js_util.globalThis, name);
+
 Object? jsCall(
   final Object? target,
   final String methodName,

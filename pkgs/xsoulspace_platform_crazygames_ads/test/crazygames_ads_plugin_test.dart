@@ -19,6 +19,8 @@ void main() {
     expect(init.isSuccess, isTrue);
     expect(client.supports<AdsCapability>(), isTrue);
     expect(client.maybe<AdsCapability>(), isNotNull);
+    expect(client.capabilityTypes, contains(AdsCapability));
+    expect(client.capabilityTypes.length, greaterThanOrEqualTo(2));
   });
 
   test('keeps base client active when ads init fails and optional', () async {

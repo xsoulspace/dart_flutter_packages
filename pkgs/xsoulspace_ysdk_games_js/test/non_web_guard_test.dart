@@ -7,6 +7,10 @@ void main() {
     expect(() => YandexGames.init(), throwsA(isA<UnsupportedError>()));
   });
 
+  test('availability probe is false on non-web', () {
+    expect(YandexGames.isAvailable(), isFalse);
+  });
+
   test('raw entrypoint is guarded on non-web', () {
     expect(() => raw.yaGames, throwsA(isA<UnsupportedError>()));
   });

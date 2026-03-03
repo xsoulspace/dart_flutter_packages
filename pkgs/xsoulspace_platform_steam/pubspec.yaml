@@ -1,7 +1,6 @@
 name: xsoulspace_platform_steam
 description: Steam platform adapter for xsoulspace unified platform runtime.
-version: 0.1.0
-publish_to: none
+version: 0.1.0-beta.1
 homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_platform_steam
 repository: https://github.com/xsoulspace/dart_flutter_packages
 issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
@@ -11,22 +10,13 @@ environment:
 
 dependencies:
   meta: ^1.16.0
-  xsoulspace_platform_core_interface:
-    path: ../xsoulspace_platform_core_interface
-  xsoulspace_platform_foundation:
-    path: ../xsoulspace_platform_foundation
-  xsoulspace_platform_gamification_interface:
-    path: ../xsoulspace_platform_gamification_interface
-  xsoulspace_platform_social_interface:
-    path: ../xsoulspace_platform_social_interface
-  xsoulspace_steamworks:
-    path: ../xsoulspace_steamworks
+  xsoulspace_platform_core_interface: ^0.1.0-beta.1
+  xsoulspace_platform_foundation: ^0.2.0-beta.1
+  xsoulspace_platform_gamification_interface: ^0.1.0-beta.1
+  xsoulspace_platform_social_interface: ^0.2.0-beta.1
+  xsoulspace_steamworks: ^0.1.0
 
 dev_dependencies:
   lints: ^6.0.0
   test: ^1.26.3
   xsoulspace_lints: ^0.1.2
-
-dependency_overrides:
-  xsoulspace_steamworks_raw:
-    path: ../xsoulspace_steamworks_raw

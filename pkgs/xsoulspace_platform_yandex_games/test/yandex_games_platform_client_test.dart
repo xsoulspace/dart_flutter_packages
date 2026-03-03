@@ -19,11 +19,44 @@ void main() {
     expect(result.isNotAvailable, isTrue);
   });
 
+  test(
+    'returns deterministic notAvailable when SDK global is missing',
+    () async {
+      var initCalled = false;
+      final client = YandexGamesPlatformClient(
+        config: const YandexGamesPlatformConfig(
+          expectedSdkGlobal: 'MissingYsdkGlobal',
+          sdkInjected: false,
+        ),
+        initClient:
+            ({
+              final bool signed = false,
+              final String expectedGlobal = 'YaGames',
+            }) async {
+              initCalled = true;
+              throw StateError('should not be called');
+            },
+      );
+
+      final result = await client.init(const PlatformInitOptions());
+      expect(result.isNotAvailable, isTrue);
+      expect(
+        result.message,
+        'Yandex Games SDK global `MissingYsdkGlobal` was not detected.',
+      );
+      expect(initCalled, isFalse);
+    },
+  );
+
   test('identity, leaderboard, stats and multiplayer mappings', () async {
     final fakeSdk = _FakeYsdkClient();
     final client = YandexGamesPlatformClient(
       config: const YandexGamesPlatformConfig(),
-      initClient: ({final bool signed = false}) async => fakeSdk,
+      initClient:
+          ({
+            final bool signed = false,
+            final String expectedGlobal = 'YaGames',
+          }) async => fakeSdk,
     );
 
     final init = await client.init(const PlatformInitOptions());
@@ -80,6 +113,23 @@ void main() {
       const MultiplayerMeta(meta1: 1, meta2: 2, meta3: 3),
     );
     expect(pushResult.status, 'ok');
+  });
+
+  test('dispose is idempotent', () async {
+    final client = YandexGamesPlatformClient(
+      config: const YandexGamesPlatformConfig(),
+      initClient:
+          ({
+            final bool signed = false,
+            final String expectedGlobal = 'YaGames',
+          }) async => _FakeYsdkClient(),
+    );
+
+    final init = await client.init(const PlatformInitOptions());
+    expect(init.isSuccess, isTrue);
+
+    await client.dispose();
+    await client.dispose();
   });
 }
 

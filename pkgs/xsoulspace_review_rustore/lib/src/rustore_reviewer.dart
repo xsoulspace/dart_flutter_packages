@@ -11,15 +11,24 @@ import 'package:xsoulspace_review_interface/xsoulspace_review_interface.dart';
 /// {@endtemplate}
 final class RuStoreReviewer extends StoreReviewer {
   /// {@macro rustore_reviewer}
-  const RuStoreReviewer({
+  RuStoreReviewer({
     required this.consentBuilder,
     super.defaultLocale,
     super.packageName,
-  });
-  
+    final Future<void> Function()? requestReviewFlow,
+    final Future<void> Function()? launchNativeReviewFlow,
+    final Future<void> Function(String scheme)? launchSchemeAction,
+  }) : _requestReviewFlow = requestReviewFlow ?? RustoreReviewClient.request,
+       _launchNativeReviewFlow =
+           launchNativeReviewFlow ?? RustoreReviewClient.review,
+       _launchSchemeAction = launchSchemeAction;
+
   /// A builder for the consent screen when review limit is reached
   final ReviewerFallbackConsentBuilder consentBuilder;
-  
+  final Future<void> Function() _requestReviewFlow;
+  final Future<void> Function() _launchNativeReviewFlow;
+  final Future<void> Function(String scheme)? _launchSchemeAction;
+
   @override
   Future<bool> onLoad() async {
     await RustoreReviewClient.initialize();
@@ -33,8 +42,8 @@ final class RuStoreReviewer extends StoreReviewer {
     final bool force = false,
   }) async {
     try {
-      await RustoreReviewClient.request();
-      await RustoreReviewClient.review();
+      await _requestReviewFlow();
+      await _launchNativeReviewFlow();
     } on PlatformException catch (e) {
       switch (e.message) {
         case 'RuStoreRequestLimitReached':
@@ -44,9 +53,13 @@ final class RuStoreReviewer extends StoreReviewer {
               locale ?? defaultLocale,
             );
             if (!isConsent) return;
-            await launchScheme(
-              'https://www.rustore.ru/catalog/app/$packageName',
-            );
+            final scheme = 'https://www.rustore.ru/catalog/app/$packageName';
+            final launchSchemeAction = _launchSchemeAction;
+            if (launchSchemeAction != null) {
+              await launchSchemeAction(scheme);
+            } else {
+              await launchScheme(scheme);
+            }
           }
           return;
         case 'RuStoreReviewExists':
@@ -57,4 +70,3 @@ final class RuStoreReviewer extends StoreReviewer {
     }
   }
 }
-

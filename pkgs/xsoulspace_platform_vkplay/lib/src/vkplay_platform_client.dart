@@ -23,6 +23,7 @@ final class VkPlayPlatformClient implements PlatformClient {
       StreamController<PlatformEvent>.broadcast();
 
   VkPlayClient? _sdkClient;
+  var _disposed = false;
 
   @override
   PlatformId get platformId => PlatformId.vkPlay;
@@ -89,7 +90,7 @@ final class VkPlayPlatformClient implements PlatformClient {
       _capabilities.registerDynamic(raw.runtimeType, raw);
     }
 
-    _eventsController.add(
+    _emit(
       PlatformEvent.now(
         name: 'vkplay.initialized',
         payload: <String, Object?>{
@@ -106,6 +107,11 @@ final class VkPlayPlatformClient implements PlatformClient {
 
   @override
   Future<void> dispose() async {
+    if (_disposed) {
+      return;
+    }
+    _disposed = true;
+    _sdkClient = null;
     await _eventsController.close();
   }
 
@@ -231,30 +237,32 @@ final class _VkPlayFriendsCapability implements FriendsCapability {
     final int? offset,
   }) async {
     final merged = <String, PlayerFriend>{};
+    final requestedOffset = offset ?? 0;
+    final requestedLimit = limit;
+    final upstreamLimit = requestedLimit == null
+        ? null
+        : (requestedOffset + requestedLimit).clamp(0, 1000000);
 
-    final primary = await _client.userFriends(limit: limit, offset: offset);
+    final primary = await _client.userFriends(limit: upstreamLimit);
     for (final friend in primary) {
       merged[friend.id] = _mapFriend(friend);
     }
 
-    final social = await _client.userSocialFriends(
-      limit: limit,
-      offset: offset,
-    );
+    final social = await _client.userSocialFriends(limit: upstreamLimit);
     for (final friend in social) {
       merged.putIfAbsent(friend.id, () => _mapFriend(friend));
     }
 
     final allFriends = merged.values.toList(growable: false);
-    final safeOffset = (offset ?? 0).clamp(0, allFriends.length);
+    final safeOffset = requestedOffset.clamp(0, allFriends.length);
     final sliced = allFriends.skip(safeOffset);
 
-    if (limit == null) {
+    if (requestedLimit == null) {
       return sliced.toList(growable: false);
     }
 
     return sliced
-        .take(limit.clamp(0, allFriends.length))
+        .take(requestedLimit.clamp(0, allFriends.length))
         .toList(growable: false);
   }
 
@@ -264,6 +272,15 @@ final class _VkPlayFriendsCapability implements FriendsCapability {
       displayName: friend.displayName,
       avatarUrl: friend.avatarUrl,
     );
+  }
+}
+
+extension on VkPlayPlatformClient {
+  void _emit(final PlatformEvent event) {
+    if (_disposed || _eventsController.isClosed) {
+      return;
+    }
+    _eventsController.add(event);
   }
 }
 

@@ -24,9 +24,10 @@
 
 1. Runtime sorts factories by `priority`.
 2. Runtime probes each factory via `isSupportedEnvironment()`.
-3. Runtime initializes first successful client.
-4. If none initialize successfully, runtime activates no-op fallback client.
-5. Required capabilities are enforced according to strict/permissive mode.
+3. Runtime attempts adapter initialization in order and records startup diagnostics for failures.
+4. `strict`: if none initialize successfully, runtime throws startup exception.
+5. `permissive`: if none initialize successfully, runtime activates no-op fallback client.
+6. Required capabilities are enforced according to strict/permissive mode.
 
 ## Missing Capability Policy
 

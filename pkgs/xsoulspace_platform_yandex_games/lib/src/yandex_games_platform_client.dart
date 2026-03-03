@@ -9,27 +9,50 @@ import 'package:xsoulspace_ysdk_games_js/xsoulspace_ysdk_games_js.dart';
 
 import 'yandex_games_platform_config.dart';
 
+typedef YandexGamesClientInitializer =
+    Future<YsdkClient> Function({bool signed, String expectedGlobal});
+
 final class YandexGamesPlatformClient implements PlatformClient {
   YandexGamesPlatformClient({required this.config, required this.initClient});
 
   final YandexGamesPlatformConfig config;
-  final Future<YsdkClient> Function({bool signed}) initClient;
+  final YandexGamesClientInitializer initClient;
 
   final CapabilityRegistry _capabilities = CapabilityRegistry();
   final StreamController<PlatformEvent> _eventsController =
       StreamController<PlatformEvent>.broadcast();
 
   YsdkClient? _sdkClient;
+  var _disposed = false;
 
   @override
   PlatformId get platformId => PlatformId.yandexGames;
 
   @override
   Future<PlatformInitResult> init(final PlatformInitOptions options) async {
+    final bool sdkReady;
     try {
-      _sdkClient = await initClient(signed: config.signed);
+      sdkReady = await _ensureSdkReady();
+    } on Object catch (error) {
+      return PlatformInitResult.failure(
+        message: 'Yandex Games SDK loader failed.',
+        error: error,
+      );
+    }
+
+    if (!sdkReady) {
+      return PlatformInitResult.notAvailable(message: _notAvailableMessage());
+    }
+
+    try {
+      _sdkClient = await initClient(
+        signed: config.signed,
+        expectedGlobal: config.expectedSdkGlobal,
+      );
     } on UnsupportedError catch (error) {
       return PlatformInitResult.notAvailable(message: error.toString());
+    } on StateError {
+      return PlatformInitResult.notAvailable(message: _notAvailableMessage());
     } on Object catch (error) {
       return PlatformInitResult.failure(
         message: 'Yandex Games init failed.',
@@ -66,12 +89,19 @@ final class YandexGamesPlatformClient implements PlatformClient {
     _capabilities.register<MultiplayerSessionCapability>(multiplayer);
     _capabilities.registerDynamic(multiplayer.runtimeType, multiplayer);
 
-    _eventsController.add(PlatformEvent.now(name: 'yandex.initialized'));
+    _emit(PlatformEvent.now(name: 'yandex.initialized'));
     return PlatformInitResult.success(message: 'Yandex Games initialized.');
   }
 
   @override
-  Future<void> dispose() async {}
+  Future<void> dispose() async {
+    if (_disposed) {
+      return;
+    }
+    _disposed = true;
+    _sdkClient = null;
+    await _eventsController.close();
+  }
 
   @override
   bool supports<T extends PlatformCapability>() => _capabilities.supports<T>();
@@ -98,6 +128,44 @@ final class YandexGamesPlatformClient implements PlatformClient {
 
   @override
   Stream<PlatformEvent> get events => _eventsController.stream;
+
+  void _emit(final PlatformEvent event) {
+    if (_disposed || _eventsController.isClosed) {
+      return;
+    }
+    _eventsController.add(event);
+  }
+
+  Future<bool> _ensureSdkReady() async {
+    final injectedOverride = config.sdkInjected;
+    if (injectedOverride != null) {
+      return injectedOverride;
+    }
+
+    final available = YandexGames.isAvailable(
+      expectedGlobal: config.expectedSdkGlobal,
+    );
+    if (available) {
+      return true;
+    }
+
+    if (!config.autoLoadSdk) {
+      return false;
+    }
+
+    final loader = config.sdkScriptLoader;
+    final sdkUrl = config.sdkUrl;
+    if (loader == null || sdkUrl == null) {
+      return false;
+    }
+
+    await loader(sdkUrl);
+    return YandexGames.isAvailable(expectedGlobal: config.expectedSdkGlobal);
+  }
+
+  String _notAvailableMessage() {
+    return 'Yandex Games SDK global `${config.expectedSdkGlobal}` was not detected.';
+  }
 }
 
 final class _YandexIdentityCapability implements IdentityCapability {

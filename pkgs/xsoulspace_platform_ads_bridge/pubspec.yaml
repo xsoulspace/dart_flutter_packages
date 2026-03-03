@@ -1,7 +1,6 @@
 name: xsoulspace_platform_ads_bridge
 description: Ads capability bridge for xsoulspace unified platform runtime.
-version: 0.1.0
-publish_to: none
+version: 0.1.0-beta.1
 homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_platform_ads_bridge
 repository: https://github.com/xsoulspace/dart_flutter_packages
 issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
@@ -13,10 +12,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  xsoulspace_monetization_ads_interface:
-    path: ../xsoulspace_monetization_ads_interface
-  xsoulspace_platform_core_interface:
-    path: ../xsoulspace_platform_core_interface
+  xsoulspace_monetization_ads_interface: ^0.0.1
+  xsoulspace_platform_core_interface: ^0.1.0-beta.1
 
 dev_dependencies:
   flutter_test:

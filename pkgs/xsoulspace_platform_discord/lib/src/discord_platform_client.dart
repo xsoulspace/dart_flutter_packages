@@ -30,6 +30,7 @@ final class DiscordPlatformClient implements PlatformClient {
 
   DiscordClient? _sdkClient;
   PlayerIdentity? _currentIdentity;
+  var _disposed = false;
 
   DiscordEventSubscription? _currentUserSubscription;
   DiscordEventSubscription? _relationshipSubscription;
@@ -86,7 +87,7 @@ final class DiscordPlatformClient implements PlatformClient {
     try {
       await _runOAuthHandshakeIfNeeded(sdk);
     } on Object catch (error) {
-      _eventsController.add(
+      _emit(
         PlatformEvent.now(
           name: 'discord.error',
           payload: <String, Object?>{
@@ -129,7 +130,7 @@ final class DiscordPlatformClient implements PlatformClient {
 
     await _bindSdkEvents(sdk);
 
-    _eventsController.add(
+    _emit(
       PlatformEvent.now(
         name: 'discord.initialized',
         payload: <String, Object?>{
@@ -146,6 +147,10 @@ final class DiscordPlatformClient implements PlatformClient {
 
   @override
   Future<void> dispose() async {
+    if (_disposed) {
+      return;
+    }
+    _disposed = true;
     await _currentUserSubscription?.cancel();
     await _relationshipSubscription?.cancel();
     _currentUserSubscription = null;
@@ -257,9 +262,9 @@ final class DiscordPlatformClient implements PlatformClient {
       accessToken: exchange.accessToken,
     );
     _currentIdentity = _toIdentity(authResult.user);
-    _authController.add(_currentIdentity);
+    _emitAuth(_currentIdentity);
 
-    _eventsController.add(
+    _emit(
       PlatformEvent.now(
         name: 'discord.auth.updated',
         payload: <String, Object?>{
@@ -275,8 +280,8 @@ final class DiscordPlatformClient implements PlatformClient {
   Future<void> _bindSdkEvents(final DiscordClient sdk) async {
     _currentUserSubscription = await sdk.onCurrentUserUpdate((final user) {
       _currentIdentity = user == null ? null : _toIdentity(user);
-      _authController.add(_currentIdentity);
-      _eventsController.add(
+      _emitAuth(_currentIdentity);
+      _emit(
         PlatformEvent.now(
           name: 'discord.auth.updated',
           payload: <String, Object?>{
@@ -288,7 +293,7 @@ final class DiscordPlatformClient implements PlatformClient {
     });
 
     _relationshipSubscription = await sdk.onRelationshipUpdate((final value) {
-      _eventsController.add(
+      _emit(
         PlatformEvent.now(
           name: 'discord.relationship.updated',
           payload: <String, Object?>{
@@ -308,6 +313,20 @@ final class DiscordPlatformClient implements PlatformClient {
       isAnonymous: false,
       metadata: user.metadata,
     );
+  }
+
+  void _emit(final PlatformEvent event) {
+    if (_disposed || _eventsController.isClosed) {
+      return;
+    }
+    _eventsController.add(event);
+  }
+
+  void _emitAuth(final PlayerIdentity? identity) {
+    if (_disposed || _authController.isClosed) {
+      return;
+    }
+    _authController.add(identity);
   }
 }
 

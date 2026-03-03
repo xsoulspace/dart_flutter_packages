@@ -89,7 +89,6 @@ class StoreReviewRequester extends ChangeNotifier {
     logger.logReviewDebug('Initializing review requester');
 
     if (storeReviewer != null) _storeReviewer = storeReviewer;
-    await _storeReviewer.onLoad();
     isAvailable = await _storeReviewer.onLoad();
 
     if (!isAvailable) {

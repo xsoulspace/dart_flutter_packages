@@ -16,6 +16,7 @@ Use this guide to publish them to pub.dev with minimal friction.
 From repo root:
 
 ```bash
+just platform-sdk-verify
 just docs-check
 just storage-release-g6
 ```
@@ -28,6 +29,8 @@ This verifies every package has:
 - Universal Storage target apps resolve local package paths only via
   `pubspec_overrides.yaml` (no inline Universal Storage path overrides in
   app `pubspec.yaml`)
+- Platform SDK beta release-set packages have no local path dependencies in
+  `pubspec.yaml`
 
 ## Run package dry-runs
 
@@ -54,24 +57,43 @@ blocking findings. Gate sequence:
 
 If a package contains `pubspec_overrides.yaml`, temporarily remove/rename it before running publish dry-run.
 
-## Recommended publish order (monetization chain)
+## Recommended publish order (Unified Platform SDK beta wave)
 
-These packages depend on each other and must be published in order:
+All changed release-set packages use `-beta.1` prerelease versions and should be published in topological order:
 
-1. `xsoulspace_monetization_interface`
-2. `xsoulspace_monetization_ads_interface`
-3. `rustore_billing_api`
-4. `xsoulspace_monetization_ads_foundation`
-5. `xsoulspace_monetization_google_apple`
-6. `xsoulspace_monetization_huawei`
-7. `xsoulspace_monetization_rustore`
-8. `xsoulspace_monetization_ads_yandex`
-9. `xsoulspace_monetization_foundation`
+1. Wrappers and low-level deps:
+   - `xsoulspace_vkplay_js`
+   - `xsoulspace_ysdk_games_js`
+   - `xsoulspace_crazygames_js`
+   - `xsoulspace_discord_js`
+2. Interfaces and runtime/bridges:
+   - `xsoulspace_platform_core_interface`
+   - `xsoulspace_platform_social_interface`
+   - `xsoulspace_platform_gamification_interface`
+   - `xsoulspace_platform_multiplayer_interface`
+   - `xsoulspace_platform_foundation`
+   - `xsoulspace_platform_purchases_bridge`
+   - `xsoulspace_platform_ads_bridge`
+   - `xsoulspace_platform_monetization_bridge`
+3. Base adapters:
+   - `xsoulspace_platform_steam`
+   - `xsoulspace_platform_vkplay`
+   - `xsoulspace_platform_yandex_games`
+   - `xsoulspace_platform_crazygames`
+   - `xsoulspace_platform_discord`
+4. Plugin adapters:
+   - `xsoulspace_monetization_yandex_games`
+   - `xsoulspace_monetization_ads_crazygames`
+   - `xsoulspace_platform_yandex_games_purchases`
+   - `xsoulspace_platform_crazygames_ads`
+5. Optional server APIs (same beta wave when docs rely on them):
+   - `xsoulspace_vkplay_server_api`
+   - `xsoulspace_discord_server_api`
 
 Notes:
 
-- `xsoulspace_monetization_*` implementation packages can fail `--dry-run` until the required interface versions are published.
-- Publish core interfaces first, then rerun dry-run for dependent packages.
+- Publish foundational dependencies first, then rerun dry-runs for dependents.
+- Keep local development path wiring in `pubspec_overrides.yaml` only.
 
 ## Publish command
 

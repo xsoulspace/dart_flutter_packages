@@ -16,11 +16,36 @@ void main() {
     expect(result.isNotAvailable, isTrue);
   });
 
+  test(
+    'returns deterministic notAvailable when SDK global is missing',
+    () async {
+      var initCalled = false;
+      final client = CrazyGamesPlatformClient(
+        config: const CrazyGamesPlatformConfig(
+          expectedSdkGlobal: 'MissingCrazyGamesGlobal',
+          sdkInjected: false,
+        ),
+        initClient: ({final String expectedGlobal = 'CrazyGames'}) async {
+          initCalled = true;
+          throw StateError('should not be called');
+        },
+      );
+
+      final result = await client.init(const PlatformInitOptions());
+      expect(result.isNotAvailable, isTrue);
+      expect(
+        result.message,
+        'CrazyGames SDK global `MissingCrazyGamesGlobal` was not detected.',
+      );
+      expect(initCalled, isFalse);
+    },
+  );
+
   test('user absent/present mapping and auth listener flow', () async {
     final fake = _FakeCrazyGamesClient();
     final client = CrazyGamesPlatformClient(
       config: const CrazyGamesPlatformConfig(),
-      initClient: () async => fake,
+      initClient: ({final String expectedGlobal = 'CrazyGames'}) async => fake,
     );
 
     final init = await client.init(const PlatformInitOptions());
@@ -63,7 +88,7 @@ void main() {
     final fake = _FakeCrazyGamesClient();
     final client = CrazyGamesPlatformClient(
       config: const CrazyGamesPlatformConfig(),
-      initClient: () async => fake,
+      initClient: ({final String expectedGlobal = 'CrazyGames'}) async => fake,
     );
 
     await client.init(const PlatformInitOptions());
@@ -80,7 +105,7 @@ void main() {
     final fake = _FakeCrazyGamesClient();
     final client = CrazyGamesPlatformClient(
       config: const CrazyGamesPlatformConfig(),
-      initClient: () async => fake,
+      initClient: ({final String expectedGlobal = 'CrazyGames'}) async => fake,
     );
 
     await client.init(const PlatformInitOptions());
@@ -91,6 +116,20 @@ void main() {
     expect(friends, hasLength(2));
     expect(friends[0].id, 'f-2');
     expect(friends[1].id, 'f-3');
+  });
+
+  test('dispose is idempotent', () async {
+    final client = CrazyGamesPlatformClient(
+      config: const CrazyGamesPlatformConfig(),
+      initClient: ({final String expectedGlobal = 'CrazyGames'}) async =>
+          _FakeCrazyGamesClient(),
+    );
+
+    final init = await client.init(const PlatformInitOptions());
+    expect(init.isSuccess, isTrue);
+
+    await client.dispose();
+    await client.dispose();
   });
 }
 

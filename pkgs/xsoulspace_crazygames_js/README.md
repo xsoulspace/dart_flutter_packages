@@ -24,6 +24,10 @@ Load the CrazyGames SDK script in your web host page according to the official C
 import 'package:xsoulspace_crazygames_js/xsoulspace_crazygames_js.dart';
 
 Future<void> bootstrapGame() async {
+  if (!CrazyGames.isAvailable()) {
+    return;
+  }
+
   final sdk = await CrazyGames.init();
 
   sdk.game.loadingStart();
@@ -41,6 +45,9 @@ Future<void> bootstrapGame() async {
   }
 }
 ```
+
+`CrazyGames.init` and `CrazyGames.isAvailable` both support
+`expectedGlobal` for custom SDK global names.
 
 ## Raw interop
 

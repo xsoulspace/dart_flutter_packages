@@ -7,6 +7,10 @@ void main() {
     expect(() => CrazyGames.init(), throwsA(isA<UnsupportedError>()));
   });
 
+  test('availability probe is false on non-web', () {
+    expect(CrazyGames.isAvailable(), isFalse);
+  });
+
   test('raw entrypoint is guarded on non-web', () {
     expect(() => raw.crazyGames, throwsA(isA<UnsupportedError>()));
     expect(() => raw.crazyGamesSdk, throwsA(isA<UnsupportedError>()));

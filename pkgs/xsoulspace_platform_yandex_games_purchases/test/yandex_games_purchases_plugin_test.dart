@@ -20,6 +20,8 @@ void main() {
     expect(init.isSuccess, isTrue);
     expect(client.supports<PurchasesCapability>(), isTrue);
     expect(client.maybe<PurchasesCapability>(), isNotNull);
+    expect(client.capabilityTypes, contains(PurchasesCapability));
+    expect(client.capabilityTypes.length, greaterThanOrEqualTo(2));
   });
 
   test(
