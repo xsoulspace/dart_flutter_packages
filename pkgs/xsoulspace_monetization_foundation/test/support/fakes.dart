@@ -8,6 +8,11 @@ class FakeLocalDb implements LocalDbI {
   @override
   Future<void> init() async {}
   @override
+  Future<void> clear() async => _store.clear();
+  @override
+  Future<void> clearKey({required final String key}) async =>
+      _store.remove(key);
+  @override
   Future<void> setMap({
     required final String key,
     required final Map<String, dynamic> value,
@@ -120,6 +125,7 @@ class FakeProvider implements PurchaseProvider {
     this.completeResult,
     this.cancelResult,
     this.subscriptions = const [],
+    this.purchaseDetails,
   });
 
   final MonetizationStoreStatus initStatus;
@@ -130,6 +136,7 @@ class FakeProvider implements PurchaseProvider {
   final CompletePurchaseResultModel? completeResult;
   final CancelResultModel? cancelResult;
   final List<PurchaseProductDetailsModel> subscriptions;
+  final PurchaseDetailsModel? purchaseDetails;
 
   final _ctrl = StreamController<List<PurchaseDetailsModel>>.broadcast();
   int completeCalls = 0;
@@ -163,7 +170,7 @@ class FakeProvider implements PurchaseProvider {
   @override
   Future<PurchaseDetailsModel> getPurchaseDetails(
     final PurchaseId productId,
-  ) async => PurchaseDetailsModel(purchaseDate: DateTime.now());
+  ) async => purchaseDetails ?? purchase(active: true);
   @override
   Future<PurchaseResultModel> purchaseNonConsumable(
     final PurchaseProductDetailsModel productDetails,
@@ -214,6 +221,9 @@ PurchaseDetailsModel purchase({
     purchaseDate: DateTime.now(),
     status: status,
     purchaseType: type,
+    duration: type == PurchaseProductType.subscription
+        ? const Duration(days: 30)
+        : Duration.zero,
     expiryDate: active ? DateTime.now().add(const Duration(days: 30)) : null,
   );
 }

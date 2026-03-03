@@ -31,6 +31,7 @@ import 'package:universal_storage_sync/universal_storage_sync.dart';
 import 'package:universal_storage_filesystem/universal_storage_filesystem.dart';
 import 'package:universal_storage_github_api/universal_storage_github_api.dart';
 import 'package:universal_storage_git_offline/universal_storage_git_offline.dart';
+import 'package:universal_storage_cloudkit/universal_storage_cloudkit.dart';
 
 void bootstrap() {
   StorageProviderRegistry.register<FileSystemConfig>(
@@ -42,8 +43,18 @@ void bootstrap() {
   StorageProviderRegistry.register<OfflineGitConfig>(
     () => OfflineGitStorageProvider(),
   );
+  registerUniversalStorageCloudKit();
 }
 ```
+
+### Provider Capability Matrix (Clone Semantics Included)
+
+| Provider | `supportsSync` | `supportsCloneToLocal` | Clone semantics impact |
+| --- | --- | --- | --- |
+| `FileSystemStorageProvider` | no | n/a | Local-only provider; clone flow not applicable. |
+| `GitHubApiStorageProvider` | no | no | API provider blocks clone-to-local; orchestration must guard via capabilities. |
+| `OfflineGitStorageProvider` | conditional (remote configured) | no | Local git persistence without clone-to-local workflow contract. |
+| `CloudKitStorageProvider` | yes | n/a | Cloud database provider; clone-to-local is not a version-control feature. |
 
 ### Usage (Factory + Service)
 

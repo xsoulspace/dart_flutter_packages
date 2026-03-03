@@ -1,0 +1,26 @@
+name: xsoulspace_platform_monetization_bridge
+description: Compatibility export layer for purchases and ads bridge packages.
+version: 0.1.0
+publish_to: none
+homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_platform_monetization_bridge
+repository: https://github.com/xsoulspace/dart_flutter_packages
+issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
+
+environment:
+  sdk: ">=3.10.0 <4.0.0"
+  flutter: ">=3.38.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  xsoulspace_platform_ads_bridge:
+    path: ../xsoulspace_platform_ads_bridge
+  xsoulspace_platform_purchases_bridge:
+    path: ../xsoulspace_platform_purchases_bridge
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  test: ^1.26.3
+  lints: ^6.0.0
+  xsoulspace_lints: ^0.1.2

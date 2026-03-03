@@ -23,19 +23,14 @@ void main() {
       expect(env.provider.subscribeCalls, 0);
     });
 
-    test('sets pending then confirms on provider success', () async {
+    test('sets pending status on provider success', () async {
       env.givenSubscribeSuccess();
       final cmd = env.makeSubscribeCommand();
 
       await cmd.execute(aProduct(freeTrial: PurchaseDurationModel.zero));
 
-      expect(
-        env.subscriptionStatus.isPendingConfirmation,
-        isFalse,
-        reason: 'should confirm and set subscribed',
-      );
-      expect(env.subscriptionStatus, isSubscribed());
-      expect(env.provider.completeCalls, 1);
+      expect(env.subscriptionStatus, isPendingConfirmationStatus());
+      expect(env.provider.completeCalls, 0);
       expect(env.provider.subscribeCalls, 1);
     });
 
@@ -50,18 +45,14 @@ void main() {
       expect(env.provider.subscribeCalls, 1);
     });
 
-    test(
-      'failure without details leaves purchasing; resolved asynchronously',
-      () async {
-        env.givenSubscribeFailure();
-        final cmd = env.makeSubscribeCommand();
+    test('failure restores previous status and sets error', () async {
+      env.givenSubscribeFailure();
+      final cmd = env.makeSubscribeCommand();
 
-        await cmd.execute(aProduct(freeTrial: PurchaseDurationModel.zero));
-        await Future<void>.delayed(Duration.zero);
-        expect(env.subscriptionStatus, isPurchasingStatus());
-        expect(env.purchasePaywallError, hasNoError());
-        expect(env.provider.cancelCalls, 0);
-      },
-    );
+      await cmd.execute(aProduct(freeTrial: PurchaseDurationModel.zero));
+
+      expect(env.subscriptionStatus, isFreeStatus());
+      expect(env.purchasePaywallError, hasError());
+    });
   });
 }

@@ -1,0 +1,38 @@
+name: xsoulspace_platform_yandex_games
+description: Yandex Games platform adapter for xsoulspace unified platform runtime.
+version: 0.1.0
+publish_to: none
+homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_platform_yandex_games
+repository: https://github.com/xsoulspace/dart_flutter_packages
+issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
+
+environment:
+  sdk: ">=3.10.0 <4.0.0"
+
+dependencies:
+  meta: ^1.16.0
+  xsoulspace_platform_core_interface:
+    path: ../xsoulspace_platform_core_interface
+  xsoulspace_platform_foundation:
+    path: ../xsoulspace_platform_foundation
+  xsoulspace_platform_gamification_interface:
+    path: ../xsoulspace_platform_gamification_interface
+  xsoulspace_platform_multiplayer_interface:
+    path: ../xsoulspace_platform_multiplayer_interface
+  xsoulspace_platform_social_interface:
+    path: ../xsoulspace_platform_social_interface
+  xsoulspace_ysdk_games_js:
+    path: ../xsoulspace_ysdk_games_js
+
+dev_dependencies:
+  lints: ^6.0.0
+  xsoulspace_platform_crazygames:
+    path: ../xsoulspace_platform_crazygames
+  xsoulspace_platform_steam:
+    path: ../xsoulspace_platform_steam
+  test: ^1.26.3
+  xsoulspace_lints: ^0.1.2
+
+dependency_overrides:
+  xsoulspace_steamworks_raw:
+    path: ../xsoulspace_steamworks_raw

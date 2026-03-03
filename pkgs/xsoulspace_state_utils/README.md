@@ -1,83 +1,46 @@
 # xsoulspace_state_utils
 
-A Dart package providing ordered collections and reactive state management utilities for Flutter applications.
+Ordered collection data structures and reactive notifiers for Flutter state management.
 
-## What it does
+## Features
 
-Solves two key problems:
-
-- **Ordered collections**: Maps and Lists that maintain insertion order with key-based access
-- **Reactive state management**: Notifiers for ordered collections that automatically notify listeners of changes
+- Ordered map/list/set collections with predictable iteration order
+- Mutable and immutable collection variants
+- `ChangeNotifier` wrappers for reactive UI updates
+- Efficient batch operations (`upsertAll`, `assignAllOrdered`)
 
 ## Installation
 
 ```yaml
 dependencies:
-  xsoulspace_state_utils: ^0.1.0
+  xsoulspace_state_utils: ^0.6.0
 ```
 
-## Quick Start
+## Quick start
 
 ```dart
 import 'package:xsoulspace_state_utils/xsoulspace_state_utils.dart';
 
-// Ordered map that maintains insertion order
-final orderedMap = MutableOrderedMap<String, User>();
-orderedMap.upsert('alice', User(name: 'Alice'));
-orderedMap.upsert('bob', User(name: 'Bob'));
+final users = OrderedMapNotifier<String, User>(toKey: (u) => u.id);
+users.addListener(() {
+  // Trigger UI update or side effects.
+});
 
-// Access by key or iterate in order
-print(orderedMap['alice']); // User(name: 'Alice')
-print(orderedMap.orderedValues); // [User(Alice), User(Bob)]
+users.upsertAll([
+  User(id: 'u1', name: 'Alice'),
+  User(id: 'u2', name: 'Bob'),
+]);
 
-// Efficient batch operations
-final users = [
-  User(id: 'user1', name: 'Alice'),
-  User(id: 'user2', name: 'Bob'),
-  User(id: 'user3', name: 'Charlie'),
-];
-
-// Batch insert multiple users efficiently (single cache invalidation)
-orderedMap.upsertAll(users);
-
-// Reactive notifier for state management with efficient batch updates
-final userNotifier = OrderedMapNotifier<String, User>();
-userNotifier.addListener(() => print('Users changed'));
-
-// Batch update with single notification (prevents excessive UI rebuilds)
-userNotifier.upsertAll(users);
+final ordered = users.orderedValues;
 ```
 
-## Core Components
+## Main APIs
 
-### Ordered Collections
-
-- **`MutableOrderedMap<K, V>`** - Ordered map with mutable operations
-- **`ImmutableOrderedMap<K, V>`** - Immutable ordered map
-- **`MutableOrderedList<V>`** - Ordered list with mutable operations
-- **`ImmutableOrderedList<V>`** - Immutable ordered list
-- **`MutableOrderedSet<V>`** - Ordered set with mutable operations
-- **`ImmutableOrderedSet<V>`** - Immutable ordered set
-
-### State Notifiers
-
-- **`OrderedMapNotifier<K, V>`** - Reactive ordered map notifier
-- **`OrderedListNotifier<V>`** - Reactive ordered list notifier
-
-Both extend Flutter's `ChangeNotifier` for automatic UI updates.
-
-### Experimental
-
-- **`Chain<TStartWith, TThenResult>`** - Type-safe command pipeline pattern (may be removed)
-
-## Agentic Executable (AE) Usage Patterns:
-
-TODO: migrate to [Agentic Executable (AE)](https://github.com/fluent-meaning-symbiotic/agentic_executables).
-
-Rules are in `ai_use` folder.
-
-- `command_resource_pattern.mdc` - Command-Resource Pattern
+- `MutableOrderedMap<K, V>` / `ImmutableOrderedMap<K, V>`
+- `MutableOrderedList<V>` / `ImmutableOrderedList<V>`
+- `MutableOrderedSet<V>` / `ImmutableOrderedSet<V>`
+- `OrderedMapNotifier<K, V>` and `OrderedListNotifier<V>`
 
 ## License
 
-MIT License. See [LICENSE](LICENSE) for details.
+MIT (see [LICENSE](LICENSE)).

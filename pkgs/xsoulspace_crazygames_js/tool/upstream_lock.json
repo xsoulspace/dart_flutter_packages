@@ -1,0 +1,17 @@
+{
+  "sdkUrl": "https://sdk.crazygames.com/crazygames-sdk-v3.js",
+  "sdkSha512": "b8fc5f7dd26628d8ec8ce7762545ca39df8aef01ccf7c49479dcaadf24a96ede7c8969a69892163fdd205b6a14264cd0a584d11d04df905607e46037d75e0a2e",
+  "sdkVersion": "3.6.0",
+  "docsUrls": [
+    "https://docs.crazygames.com/sdk/intro/",
+    "https://docs.crazygames.com/sdk/video-ads/",
+    "https://docs.crazygames.com/sdk/banners/",
+    "https://docs.crazygames.com/sdk/game/",
+    "https://docs.crazygames.com/sdk/user/",
+    "https://docs.crazygames.com/sdk/data/",
+    "https://docs.crazygames.com/sdk/in-game-purchases/"
+  ],
+  "docsHash": "7ab858e22f2c1bd8cee602289c11fa82e73fa239593d0cd706b4d322fd44a31d",
+  "declarationHash": "db17d7a897e77d6e4eb99b430c9e133a3fe46ff5391b27644345e80039ca4252",
+  "officialDtsUrl": null
+}

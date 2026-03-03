@@ -1,0 +1,30 @@
+name: xsoulspace_vkplay_js
+description: Generated dart:js_interop bindings and Dart wrappers for VK Play iframe API.
+version: 0.1.0
+repository: https://github.com/xsoulspace/dart_flutter_packages
+homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_vkplay_js
+issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
+
+topics:
+  - vkplay
+  - games
+  - js-interop
+  - web
+  - xsoulspace
+
+platforms:
+  web:
+
+environment:
+  sdk: ">=3.10.0 <4.0.0"
+
+dependencies:
+  meta: ^1.16.0
+
+dev_dependencies:
+  lints: ^6.0.0
+  path: ^1.9.1
+  test: ^1.26.3
+  xsoulspace_js_interop_codegen:
+    path: ../xsoulspace_js_interop_codegen
+  xsoulspace_lints: ^0.1.2

@@ -1,0 +1,4 @@
+.dart_tool/
+.packages
+build/
+tool/ts_parser/node_modules/

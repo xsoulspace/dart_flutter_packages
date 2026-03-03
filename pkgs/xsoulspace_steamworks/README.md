@@ -1,48 +1,123 @@
 # xsoulspace_steamworks
 
-Manual-safe Steamworks wrapper for Dart/Flutter desktop.
+High-level Steamworks wrapper for Dart/Flutter desktop, built on `xsoulspace_steamworks_raw`.
+
+## Legal and Distribution Notice
+
+- This package does **not** redistribute Steamworks SDK headers or Valve binaries.
+- You must provide Steam runtime binaries locally in your app environment.
+- Mobile/web are out of scope and throw `UnsupportedError`.
 
 ## v1 Scope
 
-- Lifecycle: initialize/shutdown/restart check.
-- Callback pumping: auto (default) and manual.
-- Services: `User`, `Friends`, `Stats`, `Achievements`.
-- Event stream for lifecycle and callback runtime events.
+- lifecycle: init/shutdown/restart checks
+- callback pumping: auto (`16ms`) and manual (`runCallbacksOnce`)
+- services: `User`, `Friends`, `Stats`, `Achievements`
+- event stream for lifecycle/callback/async runtime events
 
-## SDK Setup Prerequisites
+## Install
 
-1. Add `xsoulspace_steamworks_raw` + `xsoulspace_steamworks` to your project.
-2. Install Steamworks SDK locally.
-3. Configure generation in `xsoulspace_steamworks_raw` with `STEAMWORKS_SDK_PATH`.
-4. Provide Steam runtime library files locally (do not bundle Valve SDK artifacts inside published package archives).
+```yaml
+dependencies:
+  xsoulspace_steamworks: ^0.1.0
+```
 
-## Platform Binary Placement
+`xsoulspace_steamworks_raw` is a transitive dependency and pinned by this wrapper.
 
-Runtime `steam_api` library must be discoverable.
+## Quick Start
+
+```dart
+import 'package:xsoulspace_steamworks/xsoulspace_steamworks.dart';
+
+final client = SteamClient();
+
+final init = await client.initialize(
+  const SteamInitConfig(
+    appId: 480,
+    autoPumpCallbacks: true,
+    callbackInterval: Duration(milliseconds: 16),
+  ),
+);
+
+if (!init.success) {
+  throw Exception('Steam init failed: ${init.errorCode} ${init.message}');
+}
+
+final loggedOn = client.user.isLoggedOn;
+final steamId = client.user.steamId;
+final persona = client.friends.personaName;
+
+await client.stats.requestCurrentStats();
+client.achievements.setAchievement('ACH_WIN_ONE_GAME');
+await client.stats.storeStats();
+
+await client.shutdown();
+```
+
+## Initialization Options
+
+`SteamInitConfig` fields:
+
+- `appId` (required)
+- `autoPumpCallbacks` (default `true`)
+- `callbackInterval` (default `16ms`, max `100ms`)
+- `librarySearchPaths` (optional)
+- `enableVerboseLogs` (default `false`)
+
+## Runtime Binary Placement
+
+Runtime must be able to load:
 
 - Windows: `steam_api64.dll` / `steam_api.dll`
 - macOS: `libsteam_api.dylib`
 - Linux: `libsteam_api.so`
 
-Use `SteamInitConfig.librarySearchPaths` when binaries are outside default locations.
+Use `librarySearchPaths` when binaries are outside default executable/current dirs.
 
-## Local Dev With `steam_appid.txt`
+## Local Dev (`steam_appid.txt`)
 
-Place `steam_appid.txt` near your executable for desktop local runs.
-Use Valve test app ids for smoke validation.
+When launching a local debug build outside Steam, create `steam_appid.txt` next to
+the executable and put your AppID inside (for example `480` for local smoke
+workflows).
 
-## Example
+Without this file, Steam API initialization may fail even when Steam is running.
 
-See `example/lib/main.dart` for init, callback pumping, stats, and achievements flow.
+## Event Model
 
-## Known Failure Modes And Diagnostics
+`SteamClient.events` emits:
 
-- `SteamInitErrorCode.noSteamClient`: Steam is not running or client is unavailable.
-- `SteamInitErrorCode.versionMismatch`: Steam runtime and SDK lock are incompatible.
-- `SteamInitErrorCode.restartRequired`: process must be launched via Steam.
-- `SteamRawErrorCode.libraryNotFound`: runtime `steam_api` library not found.
+- `SteamLifecycleEvent`
+- `SteamCallbackEvent`
+- `SteamAsyncCallResolvedEvent`
+- `SteamAsyncCallTimeoutEvent`
+- `SteamErrorEvent`
 
-## Important Boundary
+## Example App
 
-This wrapper intentionally keeps callback routing, async completion mapping, and pointer safety in manual runtime code.
-Raw symbol coverage is generator-first, but runtime safety remains hand-maintained.
+See `example/lib/main.dart`.
+
+Run example integration test (fake native backend):
+
+```bash
+cd example
+flutter test integration_test -d macos
+```
+
+Change device for your platform (`-d windows` or `-d linux`).
+
+## Failure Diagnostics
+
+Common init failures:
+
+- `SteamInitErrorCode.noSteamClient`
+- `SteamInitErrorCode.versionMismatch`
+- `SteamInitErrorCode.restartRequired`
+- `SteamInitErrorCode.libraryLoadFailed`
+
+## Manual Boundary (Intentional)
+
+The wrapper keeps callback routing, `SteamAPICall_t` completion matching, and pointer/buffer safety in explicit manual runtime code. Raw symbol generation remains generator-first in the raw package.
+
+## Publishing
+
+See [PUBLISHING.md](./PUBLISHING.md).

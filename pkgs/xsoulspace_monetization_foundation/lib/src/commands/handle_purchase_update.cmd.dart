@@ -75,18 +75,19 @@ class HandlePurchaseUpdateCommand {
   Future<void> execute(final PurchaseDetailsModel details) async {
     final dto = details.toVerificationDto();
     switch (dto.status) {
-      case PurchaseStatus.error:
+      case PurchaseStatus.pendingVerification:
+        subscriptionStatusResource.set(
+          SubscriptionStatus.pendingPaymentConfirmation,
+        );
+      case PurchaseStatus.purchased:
+        await confirmPurchaseCommand.execute(dto);
+      case PurchaseStatus.error || PurchaseStatus.canceled:
         // TODO(arenukvern): add error notification
         await cancelSubscriptionCommand.execute(
           productId: dto.productId,
           purchaseId: dto.purchaseId,
           openSubscriptionManagement: false,
         );
-      case PurchaseStatus.canceled:
-        // noop
-        break;
-      case PurchaseStatus.pendingVerification || PurchaseStatus.purchased:
-        await confirmPurchaseCommand.execute(dto);
     }
   }
 }

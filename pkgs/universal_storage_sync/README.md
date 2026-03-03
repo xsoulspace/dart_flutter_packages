@@ -18,6 +18,7 @@ Provider implementations live in dedicated packages:
 - `universal_storage_filesystem`
 - `universal_storage_github_api`
 - `universal_storage_git_offline`
+- `universal_storage_cloudkit`
 
 ## Installation
 
@@ -88,6 +89,8 @@ Future<StorageKernel> buildKernel() async {
 
 - Clone-to-local workflows are capability-gated (`supportsCloneToLocal`) and
   are unavailable on API-only providers such as `GitHubApiStorageProvider`.
+- CloudKit provider currently targets private database scope only
+  (`CloudKitDatabaseScope.privateDb`).
 - App integrations are partial; several apps initialize kernel but still keep
   legacy data paths as primary storage.
 

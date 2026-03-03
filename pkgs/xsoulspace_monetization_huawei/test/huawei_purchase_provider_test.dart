@@ -1,293 +1,528 @@
-// ignore_for_file: avoid_catches_without_on_clauses
+import 'dart:convert';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:xsoulspace_monetization_huawei/xsoulspace_monetization_huawei.dart';
+import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interface.dart';
 
 void main() {
-  group('HuaweiPurchaseProvider - Subscription Tests', () {
-    late HuaweiPurchaseProvider provider;
+  TestWidgetsFlutterBinding.ensureInitialized();
 
-    setUp(() {
-      provider = HuaweiPurchaseProvider(isSandbox: true);
+  const iapChannel = MethodChannel('IapClient');
+
+  late Future<dynamic> Function(MethodCall call) iapHandler;
+  late List<MethodCall> iapCalls;
+
+  setUp(() {
+    iapCalls = <MethodCall>[];
+    iapHandler = (_) async => throw PlatformException(code: 'unimplemented');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(iapChannel, (final call) async {
+          iapCalls.add(call);
+          return iapHandler(call);
+        });
+  });
+
+  tearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(iapChannel, null);
+  });
+
+  group('init', () {
+    test('enables logger and loads when initialization succeeds', () async {
+      iapHandler = (final call) async {
+        expect(call.method, 'enableLogger');
+        return null;
+      };
+      final provider = HuaweiPurchaseProvider(enableLogger: true);
+      addTearDown(provider.dispose);
+
+      final result = await provider.init();
+
+      expect(result, MonetizationStoreStatus.loaded);
+      expect(iapCalls.map((final call) => call.method), <String>[
+        'enableLogger',
+      ]);
     });
 
-    tearDown(() async {
-      await provider.dispose();
-    });
+    test(
+      'returns notAvailable when sandbox is required but not active',
+      () async {
+        iapHandler = (final call) async {
+          expect(call.method, 'isSandboxActivated');
+          return _sandboxActivatedResponse(isSandboxApk: false);
+        };
+        final provider = HuaweiPurchaseProvider(isSandbox: true);
+        addTearDown(provider.dispose);
 
-    group('Subscription Product Details Mapping', () {
-      test('should correctly map subscription product with expiry date', () {
-        // This is a conceptual test - in real implementation,
-        // you would need to mock IapClient responses
+        final result = await provider.init();
 
-        // Expected behavior:
-        // 1. Subscription products should have duration extracted from subPeriod
-        // 2. Free trial duration should be extracted if available
-        // 3. Product type should be correctly identified as subscription
+        expect(result, MonetizationStoreStatus.notAvailable);
+      },
+    );
 
-        expect(provider, isNotNull);
-      });
+    test('returns loaded when sandbox is required and active', () async {
+      iapHandler = (final call) async {
+        expect(call.method, 'isSandboxActivated');
+        return _sandboxActivatedResponse(isSandboxApk: true);
+      };
+      final provider = HuaweiPurchaseProvider(isSandbox: true);
+      addTearDown(provider.dispose);
 
-      test('should extract free trial duration from ProductInfo', () {
-        // Test that free trial period is correctly parsed
-        // from ISO 8601 format (P1W, P1M, P1Y, etc.)
+      final result = await provider.init();
 
-        // Mock ProductInfo with subFreeTrialPeriod
-        // Verify PurchaseDurationModel is correctly populated
-
-        expect(provider, isNotNull);
-      });
-
-      test('should handle missing free trial duration gracefully', () {
-        // When ProductInfo doesn't have free trial period,
-        // freeTrialDuration should be zero
-
-        expect(provider, isNotNull);
-      });
-    });
-
-    group('Subscription Expiry Date Calculation', () {
-      test('should calculate expiry date for subscriptions', () {
-        // For subscription purchases:
-        // expiryDate = purchaseDate + duration
-        // Or from InAppPurchaseData.expirationDate if available
-
-        expect(provider, isNotNull);
-      });
-
-      test('should not set expiry date for non-consumables', () {
-        // Non-consumable products should have null expiryDate
-
-        expect(provider, isNotNull);
-      });
-
-      test('should not set expiry date for consumables', () {
-        // Consumable products should have null expiryDate
-
-        expect(provider, isNotNull);
-      });
-
-      test('should use Huawei expirationDate when available', () {
-        // If InAppPurchaseData provides expirationDate,
-        // prefer that over calculated value
-
-        expect(provider, isNotNull);
-      });
-    });
-
-    group('Query All Product Types', () {
-      test('restorePurchases should query all price types', () async {
-        // Should query priceType 0, 1, and 2
-        // Should merge results from all three queries
-
-        // Mock IapClient.obtainOwnedPurchases for each type
-        // Verify all types are queried
-
-        expect(provider, isNotNull);
-      });
-
-      test('getPurchaseDetails should search all price types', () async {
-        // Should query priceType 0, 1, and 2
-        // Should return purchase from any type
-
-        expect(provider, isNotNull);
-      });
-
-      test('should handle errors gracefully when querying types', () async {
-        // If one query fails, should continue with others
-
-        expect(provider, isNotNull);
-      });
-    });
-
-    group('Subscription Status Mapping', () {
-      test('should map purchase state -1 to pendingVerification', () {
-        // Huawei state -1 is initial/pending
-
-        expect(provider, isNotNull);
-      });
-
-      test('should map purchase state 0 to purchased', () {
-        // Huawei state 0 is successfully purchased
-
-        expect(provider, isNotNull);
-      });
-
-      test('should map purchase state 1 to canceled', () {
-        // Huawei state 1 is user cancelled
-
-        expect(provider, isNotNull);
-      });
-
-      test('should map purchase state 2 to pendingVerification', () {
-        // Huawei state 2 is refunded, needs verification
-
-        expect(provider, isNotNull);
-      });
-
-      test('should map unknown states to error', () {
-        // Any other state should be treated as error
-
-        expect(provider, isNotNull);
-      });
-    });
-
-    group('Subscription Management', () {
-      test('openSubscriptionManagement should call IapClient', () async {
-        // Should call IapClient.startIapActivity with TYPE_SUBSCRIBE_MANAGER_ACTIVITY
-
-        // Note: This will fail in test environment without mocking
-        // In real tests, you would mock IapClient
-
-        expect(provider, isNotNull);
-      });
-
-      test('cancel should redirect to subscription management', () async {
-        // cancel() should call openSubscriptionManagement()
-        // since Huawei doesn't provide direct cancellation API
-
-        expect(provider, isNotNull);
-      });
-    });
-
-    group('Store Availability', () {
-      test('isStoreInstalled should check HMS environment', () async {
-        // Should use IapClient.isEnvReady()
-        // Should return true if statusCode is 0
-
-        // Note: In test environment, this may not work without proper mocking
-
-        expect(provider, isNotNull);
-      });
-
-      test('isUserAuthorized should check environment ready', () async {
-        // Should use IapClient.isEnvReady()
-        // Should return true if statusCode is 0
-
-        expect(provider, isNotNull);
-      });
-    });
-
-    group('Duration Parsing', () {
-      test('should parse ISO 8601 duration formats', () {
-        // P1D -> 1 day
-        // P1W -> 7 days
-        // P1M -> 30 days
-        // P1Y -> 365 days
-
-        expect(provider, isNotNull);
-      });
-
-      test('should handle invalid duration formats gracefully', () {
-        // Empty or invalid strings should return default duration
-
-        expect(provider, isNotNull);
-      });
-    });
-
-    group('Product Type Identification', () {
-      test('should identify consumables (priceType 0)', () {
-        // getConsumables should query with priceType 0
-
-        expect(provider, isNotNull);
-      });
-
-      test('should identify non-consumables (priceType 1)', () {
-        // getNonConsumables should query with priceType 1
-
-        expect(provider, isNotNull);
-      });
-
-      test('should identify subscriptions (priceType 2)', () {
-        // getSubscriptions should query with priceType 2
-
-        expect(provider, isNotNull);
-      });
-    });
-
-    group('Complete Purchase', () {
-      test('should consume consumable purchases', () async {
-        // For consumables, should call IapClient.consumeOwnedPurchase
-
-        expect(provider, isNotNull);
-      });
-
-      test('should not consume non-consumable purchases', () async {
-        // For non-consumables, should return success immediately
-
-        expect(provider, isNotNull);
-      });
-
-      test('should not consume subscription purchases', () async {
-        // For subscriptions, should return success immediately
-
-        expect(provider, isNotNull);
-      });
+      expect(result, MonetizationStoreStatus.loaded);
     });
   });
 
-  group('HuaweiPurchaseProvider - Integration Tests', () {
-    late HuaweiPurchaseProvider provider;
+  group('store availability', () {
+    test(
+      'isUserAuthorized returns true when environment status is 0',
+      () async {
+        iapHandler = (_) async => _isEnvReadyResponse(statusCode: 0);
+        final provider = HuaweiPurchaseProvider();
+        addTearDown(provider.dispose);
 
-    setUp(() {
-      provider = HuaweiPurchaseProvider(isSandbox: true, enableLogger: true);
-    });
+        final result = await provider.isUserAuthorized();
 
-    tearDown(() async {
-      await provider.dispose();
-    });
+        expect(result, isTrue);
+      },
+    );
 
-    test('should initialize successfully', () async {
-      // init() should return loaded status when successful
-      // Note: May return notAvailable in test environment
+    test('isStoreInstalled returns false when platform call throws', () async {
+      iapHandler = (_) async => throw PlatformException(code: 'platform_error');
+      final provider = HuaweiPurchaseProvider();
+      addTearDown(provider.dispose);
 
-      expect(provider, isNotNull);
-    });
+      final result = await provider.isStoreInstalled();
 
-    test('should handle purchase stream', () async {
-      // Purchase stream should be broadcast and emit updates
-
-      expect(provider.purchaseStream, isNotNull);
-    });
-
-    test('should handle subscription purchase flow', () async {
-      // 1. Get subscription products
-      // 2. Subscribe to product
-      // 3. Listen to purchase stream
-      // 4. Complete purchase
-
-      expect(provider, isNotNull);
+      expect(result, isFalse);
     });
   });
 
-  group('HuaweiPurchaseProvider - Edge Cases', () {
-    test('should handle null or empty product data', () {
-      // When Huawei returns null or empty data,
-      // should return empty lists, not crash
+  group('product queries', () {
+    test('getSubscriptions maps Huawei product fields', () async {
+      const productId = 'sub.premium.monthly';
+      iapHandler = (final call) async {
+        if (call.method != 'obtainProductInfo') {
+          throw PlatformException(
+            code: 'unexpected_method',
+            message: call.method,
+          );
+        }
+        return _productInfoResponse(
+          statusCode: 0,
+          products: <Map<String, dynamic>>[
+            <String, dynamic>{
+              'productId': productId,
+              'priceType': 2,
+              'price': r'$4.99',
+              'microsPrice': 4990000,
+              'currency': 'USD',
+              'productName': 'Premium Monthly',
+              'productDesc': 'Monthly premium subscription',
+              'subPeriod': 'P30D',
+              'subFreeTrialPeriod': 'P7D',
+            },
+          ],
+        );
+      };
+      final provider = HuaweiPurchaseProvider();
+      addTearDown(provider.dispose);
 
-      expect(true, isTrue);
+      final result = await provider.getSubscriptions(<PurchaseProductId>[
+        PurchaseProductId.fromJson(productId),
+      ]);
+
+      expect(result, hasLength(1));
+      final product = result.first;
+      expect(product.productId.value, productId);
+      expect(product.priceId.value, productId);
+      expect(product.productType, PurchaseProductType.subscription);
+      expect(product.name, 'Premium Monthly');
+      expect(product.description, 'Monthly premium subscription');
+      expect(product.formattedPrice, r'$4.99');
+      expect(product.price, 4990000 / 1000000);
+      expect(product.currency, 'USD');
+      expect(product.duration, const Duration(days: 30));
+      expect(product.freeTrialDuration.days, 7);
+
+      final call = iapCalls.singleWhere(
+        (final methodCall) => methodCall.method == 'obtainProductInfo',
+      );
+      final args = call.arguments as Map<dynamic, dynamic>;
+      expect(args['priceType'], 2);
+      expect(args['skuIds'], <String>[productId]);
     });
 
-    test('should handle null purchase dates', () {
-      // When purchaseTime is null, should handle gracefully
+    test('getProductDetails throws when Huawei status is non-zero', () async {
+      iapHandler = (_) async => _productInfoResponse(
+        statusCode: 500,
+        products: const <Map<String, dynamic>>[],
+      );
+      final provider = HuaweiPurchaseProvider();
+      addTearDown(provider.dispose);
 
-      expect(true, isTrue);
+      expect(
+        () => provider.getProductDetails(<PurchaseProductId>[
+          PurchaseProductId.fromJson('broken.sku'),
+        ]),
+        throwsA(isA<Exception>()),
+      );
+    });
+  });
+
+  group('purchase flow', () {
+    test('purchaseNonConsumable emits purchase details to stream', () async {
+      const purchaseTimeMs = 1735689600000;
+      final product = PurchaseProductDetailsModel(
+        freeTrialDuration: PurchaseDurationModel(days: 7),
+        productId: PurchaseProductId.fromJson('sub.premium.monthly'),
+        priceId: PurchasePriceId.fromJson('sub.premium.monthly'),
+        productType: PurchaseProductType.subscription,
+        name: 'Premium Monthly',
+        formattedPrice: r'$4.99',
+        price: 4.99,
+        currency: 'USD',
+        duration: const Duration(days: 30),
+      );
+
+      iapHandler = (final call) async {
+        if (call.method != 'createPurchaseIntent') {
+          throw PlatformException(
+            code: 'unexpected_method',
+            message: call.method,
+          );
+        }
+        return _purchaseIntentResponse(
+          purchaseData: _purchaseData(
+            orderId: 'order-1',
+            productId: 'sub.premium.monthly',
+            purchaseToken: 'token-1',
+            purchaseTimeMs: purchaseTimeMs,
+            purchaseState: 0,
+            kind: 2,
+          ),
+        );
+      };
+      final provider = HuaweiPurchaseProvider();
+      addTearDown(provider.dispose);
+
+      final streamEvent = provider.purchaseStream.first;
+      final result = await provider.purchaseNonConsumable(product);
+      final streamBatch = await streamEvent;
+
+      expect(result.isSuccess, isTrue);
+      final details = result.details!;
+      expect(details.purchaseId.value, 'order-1');
+      expect(details.productId.value, 'sub.premium.monthly');
+      expect(details.status, PurchaseStatus.purchased);
+      expect(details.purchaseType, PurchaseProductType.subscription);
+      expect(
+        details.expiryDate,
+        DateTime.fromMillisecondsSinceEpoch(
+          purchaseTimeMs,
+        ).add(const Duration(days: 30)),
+      );
+
+      expect(streamBatch, hasLength(1));
+      expect(streamBatch.single.purchaseId.value, 'order-1');
+
+      final call = iapCalls.singleWhere(
+        (final methodCall) => methodCall.method == 'createPurchaseIntent',
+      );
+      final args = call.arguments as Map<dynamic, dynamic>;
+      expect(args['priceType'], 2);
+      expect(args['productId'], 'sub.premium.monthly');
     });
 
-    test('should handle concurrent purchase queries', () async {
-      // Multiple simultaneous queries should not interfere
+    test(
+      'restorePurchases queries all Huawei product types and merges data',
+      () async {
+        iapHandler = (final call) async {
+          if (call.method != 'obtainOwnedPurchases') {
+            throw PlatformException(
+              code: 'unexpected_method',
+              message: call.method,
+            );
+          }
 
-      expect(true, isTrue);
+          final args = call.arguments as Map<dynamic, dynamic>;
+          final priceType = args['priceType'] as int;
+
+          return switch (priceType) {
+            0 => _ownedPurchasesResponse(
+              purchases: <Map<String, dynamic>>[
+                _purchaseData(
+                  orderId: 'consumable-order',
+                  productId: 'coins.100',
+                  purchaseToken: 'token-c',
+                  purchaseTimeMs: 1735689600000,
+                  purchaseState: 0,
+                  kind: 0,
+                ),
+              ],
+            ),
+            1 => _ownedPurchasesResponse(
+              returnCode: '1001',
+              purchases: const <Map<String, dynamic>>[],
+            ),
+            2 => _ownedPurchasesResponse(
+              purchases: <Map<String, dynamic>>[
+                _purchaseData(
+                  orderId: 'subscription-order',
+                  productId: 'sub.monthly',
+                  purchaseToken: 'token-s',
+                  purchaseTimeMs: 1735776000000,
+                  purchaseState: 0,
+                  kind: 2,
+                  expirationDateMs: 1738368000000,
+                ),
+              ],
+            ),
+            _ => throw PlatformException(code: 'bad_price_type'),
+          };
+        };
+        final provider = HuaweiPurchaseProvider();
+        addTearDown(provider.dispose);
+
+        final streamEvent = provider.purchaseStream.first;
+        final result = await provider.restorePurchases();
+        final streamBatch = await streamEvent;
+
+        expect(result.isSuccess, isTrue);
+        expect(result.restoredPurchases, hasLength(2));
+        expect(
+          result.restoredPurchases.map((final item) => item.purchaseId.value),
+          containsAll(<String>['consumable-order', 'subscription-order']),
+        );
+        expect(streamBatch, hasLength(2));
+
+        final calledPriceTypes = iapCalls
+            .where((final call) => call.method == 'obtainOwnedPurchases')
+            .map((final call) {
+              final args = call.arguments as Map<dynamic, dynamic>;
+              return args['priceType'];
+            })
+            .toList();
+        expect(calledPriceTypes, <int>[0, 1, 2]);
+      },
+    );
+
+    test(
+      'getPurchaseDetails finds purchase across all Huawei price types',
+      () async {
+        iapHandler = (final call) async {
+          if (call.method != 'obtainOwnedPurchases') {
+            throw PlatformException(
+              code: 'unexpected_method',
+              message: call.method,
+            );
+          }
+          final args = call.arguments as Map<dynamic, dynamic>;
+          final priceType = args['priceType'] as int;
+
+          if (priceType == 2) {
+            return _ownedPurchasesResponse(
+              purchases: <Map<String, dynamic>>[
+                _purchaseData(
+                  orderId: 'target-order',
+                  productId: 'sub.monthly',
+                  purchaseToken: 'token-target',
+                  purchaseTimeMs: 1735776000000,
+                  purchaseState: 0,
+                  kind: 2,
+                  expirationDateMs: 1738368000000,
+                ),
+              ],
+            );
+          }
+          return _ownedPurchasesResponse(
+            purchases: const <Map<String, dynamic>>[],
+          );
+        };
+        final provider = HuaweiPurchaseProvider();
+        addTearDown(provider.dispose);
+
+        final details = await provider.getPurchaseDetails(
+          PurchaseId.fromJson('target-order'),
+        );
+
+        expect(details.purchaseId.value, 'target-order');
+        expect(details.productId.value, 'sub.monthly');
+        expect(details.purchaseType, PurchaseProductType.subscription);
+        expect(
+          details.expiryDate,
+          DateTime.fromMillisecondsSinceEpoch(1738368000000),
+        );
+
+        final calledPriceTypes = iapCalls
+            .where((final call) => call.method == 'obtainOwnedPurchases')
+            .map((final call) {
+              final args = call.arguments as Map<dynamic, dynamic>;
+              return args['priceType'];
+            })
+            .toList();
+        expect(calledPriceTypes, <int>[0, 1, 2]);
+      },
+    );
+  });
+
+  group('complete purchase', () {
+    test('consumes consumables using Huawei consumeOwnedPurchase', () async {
+      iapHandler = (final call) async {
+        expect(call.method, 'consumeOwnedPurchase');
+        return _consumeOwnedPurchaseResponse(returnCode: '0');
+      };
+      final provider = HuaweiPurchaseProvider();
+      addTearDown(provider.dispose);
+
+      final result = await provider.completePurchase(
+        PurchaseVerificationDtoModel(
+          transactionDate: DateTime.utc(2026, 1, 1),
+          productType: PurchaseProductType.consumable,
+          purchaseToken: 'token-consumable',
+        ),
+      );
+
+      expect(result.isSuccess, isTrue);
+      final call = iapCalls.singleWhere(
+        (final methodCall) => methodCall.method == 'consumeOwnedPurchase',
+      );
+      final args = call.arguments as Map<dynamic, dynamic>;
+      expect(args['purchaseToken'], 'token-consumable');
     });
 
-    test('should handle sandbox mode correctly', () {
-      final sandboxProvider = HuaweiPurchaseProvider(isSandbox: true);
-      expect(sandboxProvider.isSandbox, isTrue);
-    });
+    test('does not consume non-consumable purchases', () async {
+      iapHandler = (_) async =>
+          throw PlatformException(code: 'should_not_call');
+      final provider = HuaweiPurchaseProvider();
+      addTearDown(provider.dispose);
 
-    test('should handle production mode correctly', () {
-      final prodProvider = HuaweiPurchaseProvider();
-      expect(prodProvider.isSandbox, isFalse);
+      final result = await provider.completePurchase(
+        PurchaseVerificationDtoModel(
+          transactionDate: DateTime.utc(2026, 1, 1),
+          productType: PurchaseProductType.nonConsumable,
+        ),
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(
+        iapCalls.where((final call) => call.method == 'consumeOwnedPurchase'),
+        isEmpty,
+      );
     });
+  });
+
+  group('subscription management', () {
+    test(
+      'openSubscriptionManagement starts Huawei subscription manager activity',
+      () async {
+        iapHandler = (final call) async {
+          expect(call.method, 'startIapActivity');
+          return null;
+        };
+        final provider = HuaweiPurchaseProvider();
+        addTearDown(provider.dispose);
+
+        await provider.openSubscriptionManagement();
+
+        final call = iapCalls.singleWhere(
+          (final methodCall) => methodCall.method == 'startIapActivity',
+        );
+        final args = call.arguments as Map<dynamic, dynamic>;
+        expect(args['type'], 2);
+      },
+    );
+
+    test(
+      'cancel delegates to subscription management and returns success',
+      () async {
+        iapHandler = (final call) async {
+          expect(call.method, 'startIapActivity');
+          return null;
+        };
+        final provider = HuaweiPurchaseProvider();
+        addTearDown(provider.dispose);
+
+        final result = await provider.cancel('ignored-by-huawei');
+
+        expect(result.isSuccess, isTrue);
+        expect(
+          iapCalls.where((final call) => call.method == 'startIapActivity'),
+          hasLength(1),
+        );
+      },
+    );
   });
 }
+
+String _isEnvReadyResponse({required final int statusCode}) =>
+    jsonEncode(<String, dynamic>{
+      'returnCode': statusCode == 0 ? '0' : '1',
+      'status': <String, dynamic>{
+        'statusCode': statusCode,
+        'statusMessage': statusCode == 0 ? 'OK' : 'ERROR',
+      },
+    });
+
+String _sandboxActivatedResponse({required final bool isSandboxApk}) =>
+    jsonEncode(<String, dynamic>{
+      'returnCode': '0',
+      'isSandboxApk': isSandboxApk,
+      'isSandboxUser': true,
+      'status': <String, dynamic>{'statusCode': 0, 'statusMessage': 'OK'},
+    });
+
+String _productInfoResponse({
+  required final int statusCode,
+  required final List<Map<String, dynamic>> products,
+}) => jsonEncode(<String, dynamic>{
+  'returnCode': statusCode == 0 ? '0' : '1',
+  'status': <String, dynamic>{
+    'statusCode': statusCode,
+    'statusMessage': statusCode == 0 ? 'OK' : 'ERROR',
+  },
+  'productInfoList': products,
+});
+
+String _purchaseIntentResponse({
+  required final Map<String, dynamic> purchaseData,
+}) => jsonEncode(<String, dynamic>{
+  'returnCode': '0',
+  'inAppPurchaseData': jsonEncode(purchaseData),
+});
+
+String _ownedPurchasesResponse({
+  final String returnCode = '0',
+  required final List<Map<String, dynamic>> purchases,
+}) => jsonEncode(<String, dynamic>{
+  'returnCode': returnCode,
+  'inAppPurchaseDataList': purchases.map(jsonEncode).toList(),
+  'itemList': purchases
+      .map((final purchase) => purchase['productId'])
+      .whereType<String>()
+      .toList(),
+});
+
+String _consumeOwnedPurchaseResponse({required final String returnCode}) =>
+    jsonEncode(<String, dynamic>{'returnCode': returnCode});
+
+Map<String, dynamic> _purchaseData({
+  required final String orderId,
+  required final String productId,
+  required final String purchaseToken,
+  required final int purchaseTimeMs,
+  required final int purchaseState,
+  required final int kind,
+  final int? expirationDateMs,
+}) => <String, dynamic>{
+  'orderId': orderId,
+  'productId': productId,
+  'purchaseToken': purchaseToken,
+  'purchaseTime': purchaseTimeMs,
+  'purchaseState': purchaseState,
+  'kind': kind,
+  'currency': 'USD',
+  if (expirationDateMs != null) 'expirationDate': expirationDateMs,
+};

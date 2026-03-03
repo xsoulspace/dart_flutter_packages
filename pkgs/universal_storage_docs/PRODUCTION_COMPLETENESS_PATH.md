@@ -25,80 +25,124 @@ true:
 4. Quality completeness:
    - Package-level tests exist for all core packages (including
      `universal_storage_interface` and `universal_storage_db`).
-   - CI gating includes tests + analyze for packages and integrated apps.
+   - Automated release checks include tests + analyze for packages and
+     integrated apps.
 5. Operational completeness:
    - Migration/sync observability is wired and documented.
    - Release gate checklist is automated and enforced before release tags.
 
 ## 2) Verified Gap Snapshot (2026-03-03)
 
-1. Contract design gap (still open):
-   - `VersionControlService.cloneRepository` is mandatory, but current providers
-     still expose runtime-only unsupported paths.
-   - `GitHubApiStorageProvider.cloneRepository` throws
-     `UnsupportedOperationException`.
-   - `OfflineGitStorageProvider.cloneRepository` throws
-     `UnsupportedOperationException`.
-2. API hygiene gap (still open):
-   - `universal_storage_sync_utils` imports internal API from
-     `package:universal_storage_sync/src/storage_profile_loader.dart`
-     (`YamlStorageProfileLoader`).
-3. CI/integration verification gap (still open):
-   - No package workspace CI matrix currently enforces Universal Storage
-     analyze/test checks.
-   - App workflows are missing or release-only and do not enforce storage smoke
-     checks.
-4. Dependency-source drift gap (still open):
+1. Contract design gate (closed for provider onboarding):
+   - `VersionControlService` now exposes explicit
+     `VersionControlCapabilities` with `supportsCloneToLocal` and runtime
+     resolution APIs.
+   - `RepositoryManager.cloneRepositoryToLocal(...)` now blocks unsupported
+     clone calls through capability-first checks.
+   - Provider capability matrix is now documented (including clone semantics
+     impact and CloudKit provider behavior).
+   - Remaining: migrate any app-level direct clone call sites to the guarded
+     flow.
+2. API hygiene gap (closed):
+   - `universal_storage_sync_utils` no longer imports
+     `universal_storage_sync/src/*` internals for YAML profile loading.
+3. Dependency-source drift gap (still open):
    - `daily_budget_planner/packages/mobile_app` already uses
      `pubspec_overrides.yaml`.
    - Other target apps still rely on inline `dependency_overrides` in
      `pubspec.yaml` for Universal Storage paths.
-5. Data-path migration gap (still open):
-   - Kernel bootstrap is present in all target apps, but primary domain data
-     still persists through legacy local data sources.
-6. Coverage and reliability gaps (still open):
+4. Data-path migration gap (partially closed):
+   - `prompt_character` workspace/prompt runtime writes now persist in kernel
+     `workspace`/`prompts` namespaces, and workspace/prompt reads are now
+     kernel-first with compatibility fallback to legacy workspace files and
+     migration test coverage.
+   - `drip` sync queue now persists in kernel `queue` namespace with
+     compatibility fallback to legacy `LocalDbI` keys, and remote data setting
+     now persists in kernel `settings` namespace with legacy fallback and
+     migration test coverage.
+   - `word_by_word_game` game saves now persist in kernel `saves` namespace
+     with compatibility fallback to legacy `LocalDbI` key `game_save`, and app
+     settings now persist in kernel `settings` namespace with legacy fallback
+     and migration test coverage.
+   - `daily_budget_planner` monthly/weekly budgets now persist in kernel
+     `budget` namespace, and user/settings now persist in kernel `user` /
+     `settings` namespaces, all with compatibility fallback to legacy
+     `LocalDbI` keys and migration test coverage.
+   - `last_answer/packages/core` projects now persist in kernel `projects`
+     namespace, and tags now persist in kernel `tags` namespace, both with
+     compatibility fallback to legacy Isar/local/SharedPreferences data
+     sources and migration test coverage.
+   - Remaining: remove compatibility bridges after bake-in windows.
+5. Coverage and reliability gaps (still open):
    - `universal_storage_interface` has no dedicated `test/` suite.
    - `universal_storage_db` has no dedicated `test/` suite.
    - Failure-mode suites are incomplete for crash/replay/rollback under stress.
-7. Release gate integration gap (still open):
+6. Release gate integration gap (still open):
    - `StorageReleaseGateEvaluator` (Gate G6) exists with tests in
-     `universal_storage_sync`, but is not wired as a hard CI gate.
+     `universal_storage_sync`, but is not wired as a hard automated release
+     gate.
 
 ## 3) Current Integration Coverage (As-Is)
 
 ### 3.1 Target App Coverage Matrix
 
-| Target app | Kernel bootstrap | App-level storage smoke test | CI enforcement |
-| --- | --- | --- | --- |
-| `prompt_character` | yes (`PromptCharacterStorageKernelBootstrap`) | no dedicated bootstrap smoke test | none |
-| `drip` | yes (`DripStorageKernelBootstrap`) | yes (`test/storage_kernel_bootstrap_test.dart`) | not enforced |
-| `word_by_word_game` | yes (`WordByWordStorageKernelBootstrap`) | yes (`test/game/storage/storage_kernel_bootstrap_test.dart`) | not enforced |
-| `daily_budget_planner/packages/mobile_app` | yes (`DailyBudgetStorageKernelBootstrap`) | no dedicated bootstrap smoke test | not enforced |
-| `last_answer/packages/core` | yes (`LastAnswerStorageKernelBootstrap`) | yes (`test/state_di/storage_kernel_bootstrap_test.dart`) | not enforced |
+| Target app | Kernel bootstrap | App-level storage smoke test |
+| --- | --- | --- |
+| `prompt_character` | yes (`PromptCharacterStorageKernelBootstrap`) | yes (`test/storage_kernel_bootstrap_test.dart`) |
+| `drip` | yes (`DripStorageKernelBootstrap`) | yes (`test/storage_kernel_bootstrap_test.dart`) |
+| `word_by_word_game` | yes (`WordByWordStorageKernelBootstrap`) | yes (`test/game/storage/storage_kernel_bootstrap_test.dart`) |
+| `daily_budget_planner/packages/mobile_app` | yes (`DailyBudgetStorageKernelBootstrap`) | yes (`test/storage_kernel_bootstrap_test.dart`) |
+| `last_answer/packages/core` | yes (`LastAnswerStorageKernelBootstrap`) | yes (`test/state_di/storage_kernel_bootstrap_test.dart`) |
 
 ### 3.2 Primary Legacy Data Sources By App
 
 1. `prompt_character`
-   - Workspace and prompt flows are still direct file-service based
-     (`workspace.yaml`, prompt files), not kernel-first for production reads.
+   - Workspace/prompt write + read migration slices are landed:
+     - kernel-backed writes in `workspace` and `prompts` namespaces,
+     - kernel-first reads for `workspace.yaml` and prompt content,
+     - kernel prompt-path listing to include kernel-only prompts in indexing,
+     - compatibility mirror to legacy workspace filesystem paths,
+     - migration + rollback recipe and verification tests.
+   - Remaining: remove compatibility mirror/fallback bridge after bake-in.
 2. `drip`
-   - Sync queue is stored in legacy `LocalDbI` key-value entries in
-     `lib/services/sync_service.dart`.
+   - Sync queue + remote-data-settings migration slices are landed:
+     - kernel-backed queue state in `queue` namespace,
+     - kernel-backed remote data toggle in `settings` namespace,
+     - compatibility fallback to legacy `LocalDbI` keys,
+     - migration + rollback recipe and verification tests.
+   - Remaining: remove fallback bridges after bake-in window.
 3. `word_by_word_game`
-   - Game/app settings repositories are `LocalDbI`/`PrefsDb` based
-     (`packages/wbw_core`), while kernel namespaces are bootstrap-only.
+   - Game saves + app settings migration slices are landed:
+     - kernel-backed save state in `saves` namespace,
+     - kernel-backed app settings state in `settings` namespace,
+     - compatibility fallback to legacy `LocalDbI` key `game_save`,
+     - migration + rollback recipe and verification tests.
+   - Remaining: remove fallback bridges after bake-in window.
 4. `daily_budget_planner/packages/mobile_app`
-   - `BudgetLocalApi`, `UserLocalApi`, and `AppSettingsLocalApi` persist via
-     legacy `LocalDbI`.
+   - Budget + user/settings migration slices are landed:
+     - kernel-backed monthly/weekly budget state in `budget` namespace,
+     - kernel-backed user state in `user` namespace,
+     - kernel-backed app settings state in `settings` namespace,
+     - compatibility fallback to legacy `LocalDbI` keys (`monthly_budget` /
+       `weekly_budget` / `user` / `settings`),
+     - migration + rollback recipe and verification tests.
+   - Remaining: remove fallback bridges after bake-in window.
 5. `last_answer/packages/core`
-   - Projects/tags use existing Isar/local DB data sources
-     (`ProjectsLocalDataSourceIsarImpl` and local storage paths).
+   - Projects + tags migration slices are landed:
+     - kernel-backed project state in `projects` namespace,
+     - kernel-backed tags state in `tags` namespace,
+     - compatibility fallback to legacy Isar/local DB / SharedPreferences
+       data sources,
+     - migration + rollback recipe and verification tests.
+   - Remaining: remove fallback bridges after bake-in window.
 
 ## 4) Active Execution Plan (Remaining Work Only)
 
 ## R1. Finalize Capability Contracts
 
 Goal: remove runtime-only VC capability ambiguity.
+
+Status (2026-03-03): provider gate complete for new-provider onboarding.
 
 Required work:
 
@@ -118,67 +162,49 @@ Exit criteria:
 - No production path reaches unsupported clone by surprise.
 - VC capability matrix is explicit in docs and asserted in tests.
 
-## R2. Enforce Integration In CI
+## R2. Normalize Dependency Source Resolution
 
-Goal: make integration regressions continuously fail-fast.
+Goal: remove cross-workspace dependency drift for Universal Storage packages.
 
 Required work:
 
-- Add mandatory storage CI jobs for target apps:
-  - `prompt_character`
-  - `drip`
-  - `word_by_word_game`
-  - `daily_budget_planner/packages/mobile_app`
-  - `last_answer/packages/core`
-- Minimum per-app checks:
-  - `flutter pub get`
-  - targeted `flutter analyze` for bootstrap/DI/storage modules
-  - app-level storage smoke test execution
-- Add missing bootstrap smoke tests before enforcing matrix:
-  - `prompt_character`
-  - `daily_budget_planner/packages/mobile_app`
 - Standardize Universal Storage path sourcing via `pubspec_overrides.yaml`
-  across all target apps (remove drift between inline `dependency_overrides`
-  and generated override files).
+  across all target apps.
+- Remove remaining inline `dependency_overrides` for Universal Storage paths
+  from target app `pubspec.yaml` files.
+- Add a lightweight workspace audit command/report that flags path-source drift
+  before release tagging.
 
 Exit criteria:
 
-- CI fails on storage integration regressions across app matrix.
-- Dependency source resolution is consistent across local/CI runs.
+- Dependency source resolution is consistent across target apps.
+- Release checklist fails when path-source drift is reintroduced.
 
-## R3. Migrate Real Data Paths (M3)
+## R3. Bake-In And Bridge Removal (M3)
 
-Goal: move from bootstrap markers to production data usage.
+Goal: retire temporary compatibility bridges after safe bake-in windows.
 
 Required work:
 
-1. `prompt_character`
-   - First migration slice: route prompt/workspace runtime writes through
-     kernel namespaces (`workspace`, `prompts`) instead of direct ad-hoc paths.
-2. `drip`
-   - First migration slice: move sync queue persistence from `LocalDbI` keys to
-     kernel `queue` namespace.
-3. `word_by_word_game`
-   - First migration slice: migrate game save persistence to kernel `saves`
-     namespace (then settings).
-4. `daily_budget_planner/packages/mobile_app`
-   - First migration slice: migrate monthly/weekly budget persistence from
-     `BudgetLocalApi` local DB keys to kernel `budget` namespace.
-5. `last_answer/packages/core`
-   - First migration slice: migrate project read/write path from Isar-first to
-     kernel `projects` namespace (with compatibility bridge).
-
-For each migration slice above, add:
-
-- one migration recipe (source -> target)
-- one rollback recipe
-- one migration verification test
+1. Define bake-in windows and rollback thresholds for each migrated app slice:
+   - `prompt_character`: workspace + prompts;
+   - `drip`: queue + remote-data settings;
+   - `word_by_word_game`: saves + app settings;
+   - `daily_budget_planner`: budget + user/settings;
+   - `last_answer`: projects + tags.
+2. Add fallback-path usage observability per migrated domain (read fallback,
+   write fallback, legacy mirror writes).
+3. Remove compatibility bridges and legacy mirror writes where fallback usage
+   remains zero for a full bake-in window.
+4. Remove obsolete legacy-key cleanup and migration backfill branches once
+   bridge removal is complete.
+5. Keep migration docs updated with final cutover date and rollback owner.
 
 Exit criteria:
 
-- Each target app has one documented migrated production domain plus rollback
-  test coverage.
-- Migrated domain no longer has dual source-of-truth ambiguity.
+- No primary read/write path depends on legacy stores.
+- Compatibility bridge code is removed for all migrated domains.
+- Rollback playbook is explicit and time-bounded per domain.
 
 ## R4. Hardening, Coverage, And Release Gate (M4)
 
@@ -194,8 +220,8 @@ Required work:
   - replay/idempotency recovery
   - conflict decision workflows
   - migration rollback under stress
-- Wire Gate G6 (`StorageReleaseGateEvaluator`) into CI as blocking stage with
-  explicit artifacts (JSON report + failing conditions).
+- Wire Gate G6 (`StorageReleaseGateEvaluator`) into release workflow as
+  blocking stage with explicit artifacts (JSON report + failing conditions).
 - Define and enforce baseline SLO budgets in gate input payloads:
   - startup recovery p95 bound
   - sync queue throughput floor
@@ -208,27 +234,30 @@ Exit criteria:
 
 ## 5) Immediate Next Order (Execution Queue)
 
-1. R2: add missing smoke tests (`prompt_character`, `daily_budget mobile_app`)
-   and wire app CI matrix.
-2. R1: capability-first clone contract and provider guarding.
-3. R3: first production-domain migration in each target app.
-4. R4: interface/db tests and blocking Gate G6 integration.
+1. R1: capability-first clone contract and provider guarding.
+2. R2: normalize `pubspec_overrides.yaml` adoption across all target apps.
+3. R3: define bake-in windows and remove compatibility bridges per app.
+4. R4: interface/db tests and blocking Gate G6 release integration.
 
 ## 6) Working Session Checklist (Next 2 Iterations)
 
-1. Iteration A (CI baseline)
-   - Add missing smoke tests for `prompt_character` and daily budget mobile app.
-   - Create/extend app workflows to run analyze + storage smoke tests.
+1. Iteration A (dependency + bake-in baseline)
    - Normalize `pubspec_overrides.yaml` usage in all target apps.
+   - Define bake-in windows and fallback-usage thresholds for each migrated
+     domain.
+   - Capture baseline fallback-path metrics for all app slices.
 2. Iteration B (contract + migration kickoff)
    - Land VC capability contract update and provider test coverage.
-   - Ship first migrated domain for `drip` (queue) and
-     `word_by_word_game` (saves).
-   - Start Gate G6 CI wiring with placeholder evidence artifact generation.
+   - Plan compatibility bridge removals after completed second slices in
+     `prompt_character`, `drip`, `word_by_word_game`,
+     `daily_budget_planner`, and `last_answer`.
+   - Start Gate G6 release-workflow wiring with placeholder evidence artifact
+     generation.
 
 ## 7) Governance Rules Until Production
 
-1. No new provider is added until R1 capability-contract work is complete.
+1. New providers require a green R1 capability-contract gate (now satisfied;
+   keep enforced for subsequent providers).
 2. No app is marked migrated while primary flow still uses old storage path as
    source-of-truth.
 3. Every storage/sync/migration behavior change must ship with:

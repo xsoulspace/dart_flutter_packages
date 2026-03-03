@@ -25,8 +25,8 @@ void main() {
         expect(env.subscriptionStatus, isSubscribed());
         expect(
           env.activeSubscription.isActive,
-          isFalse,
-          reason: 'active details set via getPurchaseDetails minimal stub',
+          isTrue,
+          reason: 'active details should be saved for active subscriptions',
         );
       },
     );

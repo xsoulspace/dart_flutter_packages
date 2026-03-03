@@ -1,6 +1,9 @@
 name: xsoulspace_monetization_ads_interface
-description: A new Flutter package.
+description: Core interfaces for xsoulspace ads monetization providers.
 version: 0.0.1
+homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_monetization_ads_interface
+repository: https://github.com/xsoulspace/dart_flutter_packages
+issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
 
 environment:
   sdk: ">=3.10.0 <4.0.0"

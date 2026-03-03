@@ -1,43 +1,91 @@
 # xsoulspace_steamworks_raw
 
-Raw Steamworks FFI package for Dart/Flutter desktop.
+Raw Steamworks FFI bindings and runtime loading for Dart/Flutter desktop.
 
-## What This Package Contains
+## Legal and Distribution Notice
 
-- Dynamic library resolution and loading (`SteamRawLibraryLoader`).
-- Runtime-safe symbol lookup layer (`SteamRawBindings`).
-- Generated low-level binding surface from `steam_api_flat.h`.
-- Generator tooling with lock/snapshot/diff/check workflow.
+- This package **does not** ship Valve proprietary Steamworks SDK headers or binaries.
+- Consumers must provide SDK files locally for generation and runtime binaries for execution.
+- Keep Steamworks SDK licensing obligations in your own project and release process.
 
-## SDK Setup Prerequisites
+## Package Scope
 
-1. Install Steamworks SDK locally from Valve.
-2. Set `STEAMWORKS_SDK_PATH` to your SDK root path.
-3. Set `STEAMWORKS_SDK_VERSION` (or create `<sdk>/steamworks_sdk_version.txt`) to match `tool/upstream_lock.json`.
-4. Run `just generate`.
+`xsoulspace_steamworks_raw` provides:
 
-Important: this package does **not** redistribute Steamworks headers or binaries.
+- `SteamRawLibraryLoader`
+- `SteamRawBindings`
+- `SteamRawException`
+- Generated symbols from `steam_api_flat.h` (functions/types/structs/enums)
 
-## Platform Binary Placement
+It does **not** provide high-level callback routing, async completion registry, or lifecycle guardrails.
+Those are intentionally manual and live in `xsoulspace_steamworks`.
 
-Provide Steam runtime libraries in your app/runtime location or via explicit `librarySearchPaths` in wrapper config.
+## Platform Support
+
+Desktop only:
+
+- Windows
+- macOS
+- Linux
+
+## Install
+
+```yaml
+dependencies:
+  xsoulspace_steamworks_raw: ^0.1.0
+```
+
+## Runtime Binary Placement
+
+Provide the Steam runtime library where the app can load it:
 
 - Windows: `steam_api64.dll` (or `steam_api.dll`)
 - macOS: `libsteam_api.dylib`
 - Linux: `libsteam_api.so`
 
-## Local Dev With `steam_appid.txt`
+## Local SDK Setup for Generation
 
-For local desktop runs, place `steam_appid.txt` near your executable and set your test app id there.
+1. Install Steamworks SDK locally.
+2. Export `STEAMWORKS_SDK_PATH` to the SDK root.
+3. Ensure SDK version matches `tool/upstream_lock.json` (`sdkVersion` + header hash).
+4. Run generation.
 
-## Generator Commands
+```bash
+just generate
+```
 
-- `just generate`: regenerate bindings/snapshot/diff.
-- `just generate-check`: fail if committed generated files are stale.
-- `just verify`: run generate-check + analyze + tests.
+## Generator Pipeline
 
-## Known Failure Modes And Diagnostics
+The raw generator (`tool/generate.dart`) performs:
 
-- SDK lock mismatch: update `STEAMWORKS_SDK_VERSION`/SDK path or explicitly bump lock.
-- Missing library: check search paths and binary names for your platform.
-- Missing symbol: Steam client/runtime version may not match the locked SDK.
+1. shim header generation (`tool/steam_api_flat_shim.h`)
+2. `ffigen` generation via `tool/ffigen.yaml`
+3. deterministic post-processing
+4. API snapshot emission (`tool/api_snapshot.json`)
+5. API diff emission (`tool/api_diff.json`)
+6. stale-file verification in `--check` mode
+
+Commands:
+
+- `just generate`
+- `just generate-check`
+- `just analyze`
+- `just test`
+- `just verify`
+
+Useful env vars:
+
+- `STEAMWORKS_SDK_PATH`
+- `STEAMWORKS_SDK_VERSION`
+- `STEAMWORKS_MOCK_FFIGEN_OUTPUT` (tests/CI fixture mode)
+- `STEAMWORKS_FFIGEN_EXEC` (custom ffigen executable)
+
+## Known Failure Modes
+
+- Lock mismatch: SDK version/hash differs from `tool/upstream_lock.json`
+- Missing runtime library: `SteamRawErrorCode.libraryNotFound`
+- Missing symbol: `SteamRawErrorCode.symbolNotFound`
+
+## Publishing
+
+See [PUBLISHING.md](./PUBLISHING.md) for the release checklist.

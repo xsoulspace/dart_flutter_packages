@@ -13,6 +13,9 @@ analyze:
 test:
     dart test
 
+test-example device='macos':
+    (cd example && flutter test integration_test -d {{device}})
+
 verify:
     just generate-check
     just analyze

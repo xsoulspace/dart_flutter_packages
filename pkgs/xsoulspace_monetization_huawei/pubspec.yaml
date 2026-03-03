@@ -1,6 +1,9 @@
 name: xsoulspace_monetization_huawei
-description: A new Flutter package.
+description: Huawei AppGallery monetization provider for xsoulspace apps.
 version: 0.0.1
+homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_monetization_huawei
+repository: https://github.com/xsoulspace/dart_flutter_packages
+issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
 
 environment:
   sdk: ">=3.10.0 <4.0.0"
@@ -11,10 +14,9 @@ dependencies:
   flutter:
     sdk: flutter
   from_json_to_json: ^0.4.0
-  huawei_iap: ^6.13.0+302
+  huawei_iap: ^6.13.0+305
   url_launcher: ^6.3.2
-  xsoulspace_monetization_interface:
-    path: ../xsoulspace_monetization_interface
+  xsoulspace_monetization_interface: ^0.8.2
 
 dev_dependencies:
   flutter_test:

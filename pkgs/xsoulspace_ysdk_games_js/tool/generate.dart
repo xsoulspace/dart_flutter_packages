@@ -1,56 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
-import 'package:archive/archive.dart';
-import 'package:crypto/crypto.dart';
-import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
-
-final class LockConfig {
-  const LockConfig({
-    required this.packageName,
-    required this.version,
-    required this.integrity,
-  });
-
-  final String packageName;
-  final String version;
-  final String integrity;
-
-  Map<String, Object?> toJson() => <String, Object?>{
-    'package': packageName,
-    'version': version,
-    'integrity': integrity,
-  };
-
-  static LockConfig fromJson(final Map<String, Object?> json) => LockConfig(
-    packageName: json['package']! as String,
-    version: json['version']! as String,
-    integrity: json['integrity']! as String,
-  );
-}
-
-final class RegistryVersionInfo {
-  const RegistryVersionInfo({
-    required this.version,
-    required this.tarball,
-    required this.integrity,
-  });
-
-  final String version;
-  final String tarball;
-  final String integrity;
-
-  static RegistryVersionInfo fromRegistryJson(final Map<String, Object?> json) {
-    final dist = json['dist']! as Map<String, Object?>;
-    return RegistryVersionInfo(
-      version: json['version']! as String,
-      tarball: dist['tarball']! as String,
-      integrity: dist['integrity']! as String,
-    );
-  }
-}
+import 'package:xsoulspace_js_interop_codegen/xsoulspace_js_interop_codegen.dart';
 
 Future<void> main(final List<String> args) async {
   final packageRoot = Directory.current.path;
@@ -91,14 +43,14 @@ Future<void> main(final List<String> args) async {
     return;
   }
 
-  var lockConfig = LockConfig.fromJson(
+  var lockConfig = NpmLockConfig.fromJson(
     jsonDecode(lockFile.readAsStringSync()) as Map<String, Object?>,
   );
 
   final packageEncoded = Uri.encodeComponent(lockConfig.packageName);
   if (bumpVersion != null) {
     final info = await fetchRegistryVersionInfo(packageEncoded, bumpVersion);
-    lockConfig = LockConfig(
+    lockConfig = NpmLockConfig(
       packageName: lockConfig.packageName,
       version: info.version,
       integrity: info.integrity,
@@ -126,32 +78,39 @@ Future<void> main(final List<String> args) async {
   final tarballBytes = await downloadTarball(versionInfo.tarball);
   verifyIntegrity(versionInfo.integrity, tarballBytes);
 
+  final parser = TypeScriptIrParser.fromSharedCore(
+    currentPackageRoot: packageRoot,
+  );
+
   final tempDir = await Directory.systemTemp.createTemp('ysdk_codegen_');
   try {
-    final dtsPath = await extractIndexDts(tempDir.path, tarballBytes);
-    await ensureParserDeps(packageRoot);
-    final ir = await parseTypeScriptToIr(packageRoot, dtsPath);
+    final dtsPath = await extractTarGzFile(
+      tempDir: tempDir.path,
+      tarballBytes: tarballBytes,
+      selector: (final path) => path.endsWith('/index.d.ts'),
+      outputName: 'index.d.ts',
+      missingError: 'index.d.ts not found inside npm tarball',
+    );
+    await parser.ensureDependencies();
+    final ir = await parser.parseFileToIr(dtsPath);
 
     final rawCode = emitRawCode(ir, lockConfig);
     final enumsCode = emitWrapperEnums(ir, lockConfig);
 
-    final touchedFiles = <String>[];
-    final mismatches = <String>[];
+    final edits = GenerationEdits();
 
-    checkOrWrite(
+    checkOrWriteGeneratedFile(
       path: rawOutputPath,
       content: rawCode,
       checkOnly: isCheck,
-      touchedFiles: touchedFiles,
-      mismatches: mismatches,
+      edits: edits,
     );
 
-    checkOrWrite(
+    checkOrWriteGeneratedFile(
       path: wrapperEnumsPath,
       content: enumsCode,
       checkOnly: isCheck,
-      touchedFiles: touchedFiles,
-      mismatches: mismatches,
+      edits: edits,
     );
 
     final newSnapshot = <String, Object?>{
@@ -172,38 +131,35 @@ Future<void> main(final List<String> args) async {
         .cast<String>()
         .toSet();
 
-    final added = (newSymbols.difference(oldSymbols).toList()..sort());
-    final removed = (oldSymbols.difference(newSymbols).toList()..sort());
-
     final diff = <String, Object?>{
       'package': lockConfig.packageName,
-      'fromVersion': oldSnapshot['version'],
-      'toVersion': lockConfig.version,
-      'addedSymbols': added,
-      'removedSymbols': removed,
+      ...buildApiDiff(
+        fromVersion: oldSnapshot['version'],
+        toVersion: lockConfig.version,
+        oldSymbols: oldSymbols,
+        newSymbols: newSymbols,
+      ),
     };
 
-    checkOrWrite(
+    checkOrWriteGeneratedFile(
       path: snapshotPath,
       content: '${const JsonEncoder.withIndent('  ').convert(newSnapshot)}\n',
       checkOnly: isCheck,
-      touchedFiles: touchedFiles,
-      mismatches: mismatches,
+      edits: edits,
     );
 
     if (!isCheck || bumpVersion != null) {
-      checkOrWrite(
+      checkOrWriteGeneratedFile(
         path: diffPath,
         content: '${const JsonEncoder.withIndent('  ').convert(diff)}\n',
         checkOnly: false,
-        touchedFiles: touchedFiles,
-        mismatches: mismatches,
+        edits: edits,
       );
     }
 
-    if (mismatches.isNotEmpty) {
+    if (edits.hasMismatches) {
       stderr.writeln('Generated files are out of date:');
-      for (final mismatch in mismatches) {
+      for (final mismatch in edits.mismatches) {
         stderr.writeln(' - $mismatch');
       }
       stderr.writeln('Run: dart run tool/generate.dart');
@@ -213,7 +169,7 @@ Future<void> main(final List<String> args) async {
 
     if (!isCheck) {
       stdout.writeln('Generated files:');
-      for (final path in touchedFiles) {
+      for (final path in edits.touchedFiles) {
         stdout.writeln(' - ${p.relative(path, from: packageRoot)}');
       }
     }
@@ -222,134 +178,7 @@ Future<void> main(final List<String> args) async {
   }
 }
 
-Future<RegistryVersionInfo> fetchRegistryVersionInfo(
-  final String packageEncoded,
-  final String version,
-) async {
-  final uri = Uri.parse('https://registry.npmjs.org/$packageEncoded/$version');
-  final response = await http.get(uri);
-  if (response.statusCode != 200) {
-    throw StateError(
-      'Failed to fetch npm metadata ($version): ${response.statusCode}',
-    );
-  }
-  final decoded = jsonDecode(response.body) as Map<String, Object?>;
-  return RegistryVersionInfo.fromRegistryJson(decoded);
-}
-
-Future<Uint8List> downloadTarball(final String tarballUrl) async {
-  final response = await http.get(Uri.parse(tarballUrl));
-  if (response.statusCode != 200) {
-    throw StateError('Failed to download tarball: ${response.statusCode}');
-  }
-  return response.bodyBytes;
-}
-
-void verifyIntegrity(final String integrity, final Uint8List tarballBytes) {
-  final parts = integrity.split('-');
-  if (parts.length != 2 || parts.first != 'sha512') {
-    throw StateError('Unsupported integrity format: $integrity');
-  }
-
-  final digest = sha512.convert(tarballBytes).bytes;
-  final actual = base64Encode(digest);
-  if (actual != parts[1]) {
-    throw StateError('Tarball integrity verification failed.');
-  }
-}
-
-Future<String> extractIndexDts(
-  final String tempDir,
-  final Uint8List tarballBytes,
-) async {
-  final decodedTar = GZipDecoder().decodeBytes(tarballBytes);
-  final archive = TarDecoder().decodeBytes(decodedTar);
-
-  ArchiveFile? dtsEntry;
-  for (final file in archive) {
-    if (file.isFile && file.name.endsWith('/index.d.ts')) {
-      dtsEntry = file;
-      break;
-    }
-  }
-
-  if (dtsEntry == null) {
-    throw StateError('index.d.ts not found inside npm tarball');
-  }
-
-  final outPath = p.join(tempDir, 'index.d.ts');
-  final outFile = File(outPath);
-  final content = dtsEntry.content as List<int>;
-  await outFile.writeAsBytes(content, flush: true);
-  return outPath;
-}
-
-Future<void> ensureParserDeps(final String packageRoot) async {
-  final parserDir = p.join(packageRoot, 'tool', 'ts_parser');
-  final typescriptPackage = File(
-    p.join(parserDir, 'node_modules', 'typescript', 'package.json'),
-  );
-  if (typescriptPackage.existsSync()) {
-    return;
-  }
-
-  final result = await Process.run('npm', <String>[
-    'install',
-    '--no-audit',
-    '--no-fund',
-  ], workingDirectory: parserDir);
-  if (result.exitCode != 0) {
-    stderr.writeln(result.stdout);
-    stderr.writeln(result.stderr);
-    throw StateError('Failed to install TypeScript parser dependencies');
-  }
-}
-
-Future<Map<String, Object?>> parseTypeScriptToIr(
-  final String packageRoot,
-  final String dtsPath,
-) async {
-  final parserScript = p.join(
-    packageRoot,
-    'tool',
-    'ts_parser',
-    'parse_ysdk.mjs',
-  );
-  final result = await Process.run('node', <String>[
-    parserScript,
-    dtsPath,
-  ], workingDirectory: p.join(packageRoot, 'tool', 'ts_parser'));
-  if (result.exitCode != 0) {
-    stderr.writeln(result.stdout);
-    stderr.writeln(result.stderr);
-    throw StateError('TypeScript parser failed');
-  }
-  return jsonDecode(result.stdout as String) as Map<String, Object?>;
-}
-
-void checkOrWrite({
-  required final String path,
-  required final String content,
-  required final bool checkOnly,
-  required final List<String> touchedFiles,
-  required final List<String> mismatches,
-}) {
-  final file = File(path);
-  if (checkOnly) {
-    if (!file.existsSync() || file.readAsStringSync() != content) {
-      mismatches.add(path);
-    }
-    return;
-  }
-
-  if (!file.existsSync() || file.readAsStringSync() != content) {
-    file.parent.createSync(recursive: true);
-    file.writeAsStringSync(content);
-    touchedFiles.add(path);
-  }
-}
-
-String emitRawCode(final Map<String, Object?> ir, final LockConfig lock) {
+String emitRawCode(final Map<String, Object?> ir, final NpmLockConfig lock) {
   final declarations = (ir['declarations'] as List<dynamic>)
       .cast<Map<String, Object?>>();
   final globalDeclarations = (ir['globalDeclarations'] as List<dynamic>)
@@ -665,7 +494,10 @@ void emitEnum(final StringBuffer b, final Map<String, Object?> declaration) {
     ..writeln();
 }
 
-String emitWrapperEnums(final Map<String, Object?> ir, final LockConfig lock) {
+String emitWrapperEnums(
+  final Map<String, Object?> ir,
+  final NpmLockConfig lock,
+) {
   final declarations = (ir['declarations'] as List<dynamic>)
       .cast<Map<String, Object?>>();
   final literalUnions = (ir['literalUnions'] as List<dynamic>)

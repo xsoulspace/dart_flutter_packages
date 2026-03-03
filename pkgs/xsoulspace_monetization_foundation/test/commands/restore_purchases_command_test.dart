@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:xsoulspace_monetization_foundation/xsoulspace_monetization_foundation.dart';
 
 import '../support/builders.dart';
 import '../support/harness.dart';
@@ -14,6 +15,7 @@ void main() {
     test('does not downgrade when already subscribed locally', () async {
       final active = aPurchase(active: true);
       await env.purchasesLocalApi.saveActiveSubscription(active);
+      env.subscriptionStatus.set(SubscriptionStatus.subscribed);
 
       env.givenRestoreFailure('net');
       final cmd = env.makeRestorePurchasesCommand();

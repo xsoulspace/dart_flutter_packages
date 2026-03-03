@@ -206,9 +206,10 @@ Future<void> main(final List<String> args) async {
       ffigenConfigPath: tempConfigPath,
       outputPath: tempOutputPath,
       mockOutputPath: options.mockFfigenOutput == null
-          ? null
+          ? Platform.environment['STEAMWORKS_MOCK_FFIGEN_OUTPUT']
           : _resolvePath(packageRoot, options.mockFfigenOutput!),
-      ffigenExec: options.ffigenExec,
+      ffigenExec:
+          options.ffigenExec ?? Platform.environment['STEAMWORKS_FFIGEN_EXEC'],
     );
 
     final generatedOutput = File(tempOutputPath).readAsStringSync();

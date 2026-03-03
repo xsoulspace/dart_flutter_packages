@@ -165,3 +165,94 @@ class GitHubApiConfig extends StorageConfig {
     'branchName': branchName,
   };
 }
+
+/// CloudKit runtime environment.
+enum CloudKitEnvironment { development, production }
+
+/// CloudKit database scope for v1 provider surface.
+enum CloudKitDatabaseScope { privateDb }
+
+/// CloudKit data mode for universal storage behavior.
+enum CloudKitDataMode { remoteOnly, localMirror }
+
+/// Configuration for the CloudKit storage provider.
+class CloudKitConfig extends StorageConfig {
+  CloudKitConfig({
+    required this.containerId,
+    this.environment = CloudKitEnvironment.development,
+    this.databaseScope = CloudKitDatabaseScope.privateDb,
+    this.dataMode = CloudKitDataMode.remoteOnly,
+    this.zoneName = 'UniversalStorageZone',
+    this.recordType = 'USFile',
+    this.maxInlineBytes = 262144,
+    this.webApiToken,
+    this.localMirrorConfig,
+    this.fallbackConfig,
+  }) {
+    _validate();
+  }
+
+  final String containerId;
+  final CloudKitEnvironment environment;
+  final CloudKitDatabaseScope databaseScope;
+  final CloudKitDataMode dataMode;
+  final String zoneName;
+  final String recordType;
+  final int maxInlineBytes;
+  final String? webApiToken;
+  final FileSystemConfig? localMirrorConfig;
+  final StorageConfig? fallbackConfig;
+
+  static bool get _isWeb =>
+      const bool.fromEnvironment('dart.library.js_interop') ||
+      const bool.fromEnvironment('dart.library.js');
+
+  void _validate() {
+    if (containerId.trim().isEmpty) {
+      throw ArgumentError('containerId cannot be empty');
+    }
+    if (zoneName.trim().isEmpty) {
+      throw ArgumentError('zoneName cannot be empty');
+    }
+    if (recordType.trim().isEmpty) {
+      throw ArgumentError('recordType cannot be empty');
+    }
+    if (maxInlineBytes <= 0) {
+      throw ArgumentError('maxInlineBytes must be greater than 0');
+    }
+    if (databaseScope != CloudKitDatabaseScope.privateDb) {
+      throw ArgumentError(
+        'CloudKit v1 supports only CloudKitDatabaseScope.privateDb',
+      );
+    }
+    if (dataMode == CloudKitDataMode.localMirror &&
+        (localMirrorConfig == null || localMirrorConfig!.isEmpty)) {
+      throw ArgumentError(
+        'localMirrorConfig is required when dataMode is localMirror',
+      );
+    }
+    if (_isWeb && (webApiToken == null || webApiToken!.trim().isEmpty)) {
+      throw ArgumentError('webApiToken is required on web platforms');
+    }
+    if (fallbackConfig is CloudKitConfig) {
+      throw ArgumentError(
+        'fallbackConfig cannot be CloudKitConfig to avoid recursion',
+      );
+    }
+  }
+
+  @override
+  Map<String, dynamic> toMap() => {
+    'containerId': containerId,
+    'environment': environment.name,
+    'databaseScope': databaseScope.name,
+    'dataMode': dataMode.name,
+    'zoneName': zoneName,
+    'recordType': recordType,
+    'maxInlineBytes': maxInlineBytes,
+    if (webApiToken != null) 'webApiToken': webApiToken,
+    if (localMirrorConfig != null)
+      'localMirrorConfig': localMirrorConfig!.toMap(),
+    if (fallbackConfig != null) 'fallbackConfig': fallbackConfig!.toMap(),
+  };
+}

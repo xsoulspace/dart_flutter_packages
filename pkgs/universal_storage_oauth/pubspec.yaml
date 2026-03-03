@@ -2,6 +2,9 @@ name: universal_storage_oauth
 description: OAuth provider for Git platforms (GitHub, GitLab, etc.) with secure
   credential management
 version: 0.1.0-dev.2
+homepage: https://github.com/xsoulspace/universal_storage_sync
+repository: https://github.com/xsoulspace/universal_storage_sync
+issue_tracker: https://github.com/xsoulspace/universal_storage_sync/issues
 
 environment:
   sdk: ">=3.10.0 <4.0.0"

@@ -1,0 +1,31 @@
+name: xsoulspace_platform_yandex_games_purchases
+description: Optional Yandex Games purchases plugin for xsoulspace platform runtime.
+version: 0.1.0
+publish_to: none
+homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_platform_yandex_games_purchases
+repository: https://github.com/xsoulspace/dart_flutter_packages
+issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
+
+environment:
+  sdk: ">=3.10.0 <4.0.0"
+
+dependencies:
+  xsoulspace_monetization_interface:
+    path: ../xsoulspace_monetization_interface
+  xsoulspace_monetization_yandex_games:
+    path: ../xsoulspace_monetization_yandex_games
+  xsoulspace_platform_core_interface:
+    path: ../xsoulspace_platform_core_interface
+  xsoulspace_platform_foundation:
+    path: ../xsoulspace_platform_foundation
+  xsoulspace_platform_purchases_bridge:
+    path: ../xsoulspace_platform_purchases_bridge
+  xsoulspace_platform_yandex_games:
+    path: ../xsoulspace_platform_yandex_games
+  xsoulspace_ysdk_games_js:
+    path: ../xsoulspace_ysdk_games_js
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.26.3
+  xsoulspace_lints: ^0.1.2

@@ -11,20 +11,24 @@ environment:
   flutter: ">=3.38.0"
 
 dependencies:
-  app_settings: ^6.1.1
+  app_settings: ^7.0.0
   collection: ^1.19.1
   flutter:
     sdk: flutter
   from_json_to_json: ^0.4.0
   in_app_purchase: ^3.2.3
-  in_app_purchase_storekit: ^0.4.4
-  xsoulspace_monetization_interface: ^0.8.0
+  in_app_purchase_storekit: ^0.4.8
+  xsoulspace_monetization_interface: ^0.8.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  lints: ^6.0.0
+  lints: ^6.1.0
   xsoulspace_lints: ^0.1.2
+
+dependency_overrides:
+  xsoulspace_monetization_interface:
+    path: ../xsoulspace_monetization_interface
 
 flutter:
   plugin:
