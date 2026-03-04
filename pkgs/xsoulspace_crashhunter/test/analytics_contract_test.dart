@@ -10,31 +10,31 @@ void main() {
         StackTrace.empty,
         reason: 'during test',
         fatal: true,
-        information: const <DiagnosticsNode>[
-          StringProperty('context', 'unit-test'),
-        ],
+        information: <DiagnosticsNode>[StringProperty('context', 'unit-test')],
       );
 
       expect(details, contains('FATAL'));
       expect(details, contains('during test'));
       expect(details, contains('Bad state: boom'));
-      expect(details, contains('context: unit-test'));
+      expect(details, contains('context: "unit-test"'));
     });
   });
 
   group('AnalyticsServiceImpl', () {
-    test('forwards analytic events and intended exceptions to plugins',
-        () async {
-      final plugin = _FakeAnalyticsPlugin();
-      final service = AnalyticsServiceImpl();
-      service.upsertPlugin<_FakeAnalyticsPlugin>(plugin);
+    test(
+      'forwards analytic events and intended exceptions to plugins',
+      () async {
+        final plugin = _FakeAnalyticsPlugin();
+        final service = AnalyticsServiceImpl();
+        service.upsertPlugin<_FakeAnalyticsPlugin>(plugin);
 
-      await service.logAnalyticEvent(AnalyticEvents.usedInWeb);
-      service.reportIntededException('known issue');
+        await service.logAnalyticEvent(AnalyticEvents.usedInWeb);
+        service.reportIntededException('known issue');
 
-      expect(plugin.loggedEvents, <AnalyticEvents>[AnalyticEvents.usedInWeb]);
-      expect(plugin.intendedExceptions, <Object?>['known issue']);
-    });
+        expect(plugin.loggedEvents, <AnalyticEvents>[AnalyticEvents.usedInWeb]);
+        expect(plugin.intendedExceptions, <Object?>['known issue']);
+      },
+    );
   });
 }
 

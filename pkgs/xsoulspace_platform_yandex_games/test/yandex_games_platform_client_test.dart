@@ -51,7 +51,7 @@ void main() {
   test('identity, leaderboard, stats and multiplayer mappings', () async {
     final fakeSdk = _FakeYsdkClient();
     final client = YandexGamesPlatformClient(
-      config: const YandexGamesPlatformConfig(),
+      config: const YandexGamesPlatformConfig(sdkInjected: true),
       initClient:
           ({
             final bool signed = false,
@@ -117,7 +117,7 @@ void main() {
 
   test('dispose is idempotent', () async {
     final client = YandexGamesPlatformClient(
-      config: const YandexGamesPlatformConfig(),
+      config: const YandexGamesPlatformConfig(sdkInjected: true),
       initClient:
           ({
             final bool signed = false,

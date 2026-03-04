@@ -105,6 +105,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "7.0.1"
+  from_json_to_json:
+    dependency: transitive
+    description:
+      name: from_json_to_json
+      sha256: "31c0323d7d3ad03d40fbf2d81d1b7cbd87a6235c0d32d1a59a20f3862245fdca"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.4.0"
   frontend_server_client:
     dependency: transitive
     description:
@@ -153,6 +161,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.5"
+  is_dart_empty_or_not:
+    dependency: transitive
+    description:
+      name: is_dart_empty_or_not
+      sha256: "1b3294a11fcf6987484a9d1928a47b858a459213eae2f779be092cfa362d5592"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.3.0"
   lints:
     dependency: "direct dev"
     description:
@@ -409,6 +425,20 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.2.1"
+  xsoulspace_crazygames_js:
+    dependency: "direct overridden"
+    description:
+      path: "../xsoulspace_crazygames_js"
+      relative: true
+    source: path
+    version: "0.1.0-beta.1"
+  xsoulspace_discord_server_api:
+    dependency: "direct overridden"
+    description:
+      path: "../xsoulspace_discord_server_api"
+      relative: true
+    source: path
+    version: "0.1.0-beta.1"
   xsoulspace_js_interop_codegen:
     dependency: "direct dev"
     description:
@@ -424,6 +454,139 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.1.2"
+  xsoulspace_monetization_interface:
+    dependency: "direct overridden"
+    description:
+      path: "../xsoulspace_monetization_interface"
+      relative: true
+    source: path
+    version: "0.8.2"
+  xsoulspace_monetization_yandex_games:
+    dependency: "direct overridden"
+    description:
+      path: "../xsoulspace_monetization_yandex_games"
+      relative: true
+    source: path
+    version: "0.1.0-beta.1"
+  xsoulspace_platform_core_interface:
+    dependency: "direct overridden"
+    description:
+      path: "../xsoulspace_platform_core_interface"
+      relative: true
+    source: path
+    version: "0.1.0-beta.1"
+  xsoulspace_platform_crazygames:
+    dependency: "direct overridden"
+    description:
+      path: "../xsoulspace_platform_crazygames"
+      relative: true
+    source: path
+    version: "0.1.0-beta.1"
+  xsoulspace_platform_discord:
+    dependency: "direct overridden"
+    description:
+      path: "../xsoulspace_platform_discord"
+      relative: true
+    source: path
+    version: "0.1.0-beta.1"
+  xsoulspace_platform_foundation:
+    dependency: "direct overridden"
+    description:
+      path: "../xsoulspace_platform_foundation"
+      relative: true
+    source: path
+    version: "0.2.0-beta.1"
+  xsoulspace_platform_gamification_interface:
+    dependency: "direct overridden"
+    description:
+      path: "../xsoulspace_platform_gamification_interface"
+      relative: true
+    source: path
+    version: "0.1.0-beta.1"
+  xsoulspace_platform_multiplayer_interface:
+    dependency: "direct overridden"
+    description:
+      path: "../xsoulspace_platform_multiplayer_interface"
+      relative: true
+    source: path
+    version: "0.1.0-beta.1"
+  xsoulspace_platform_purchases_bridge:
+    dependency: "direct overridden"
+    description:
+      path: "../xsoulspace_platform_purchases_bridge"
+      relative: true
+    source: path
+    version: "0.1.0-beta.1"
+  xsoulspace_platform_social_interface:
+    dependency: "direct overridden"
+    description:
+      path: "../xsoulspace_platform_social_interface"
+      relative: true
+    source: path
+    version: "0.2.0-beta.1"
+  xsoulspace_platform_steam:
+    dependency: "direct overridden"
+    description:
+      path: "../xsoulspace_platform_steam"
+      relative: true
+    source: path
+    version: "0.1.0-beta.1"
+  xsoulspace_platform_vkplay:
+    dependency: "direct overridden"
+    description:
+      path: "../xsoulspace_platform_vkplay"
+      relative: true
+    source: path
+    version: "0.2.0-beta.1"
+  xsoulspace_platform_yandex_games:
+    dependency: "direct overridden"
+    description:
+      path: "../xsoulspace_platform_yandex_games"
+      relative: true
+    source: path
+    version: "0.1.0-beta.1"
+  xsoulspace_platform_yandex_games_purchases:
+    dependency: "direct overridden"
+    description:
+      path: "../xsoulspace_platform_yandex_games_purchases"
+      relative: true
+    source: path
+    version: "0.1.0-beta.1"
+  xsoulspace_steamworks:
+    dependency: "direct overridden"
+    description:
+      path: "../xsoulspace_steamworks"
+      relative: true
+    source: path
+    version: "0.1.0"
+  xsoulspace_steamworks_raw:
+    dependency: "direct overridden"
+    description:
+      path: "../xsoulspace_steamworks_raw"
+      relative: true
+    source: path
+    version: "0.1.0"
+  xsoulspace_vkplay_js:
+    dependency: "direct overridden"
+    description:
+      path: "../xsoulspace_vkplay_js"
+      relative: true
+    source: path
+    version: "0.1.0-beta.1"
+  xsoulspace_vkplay_server_api:
+    dependency: "direct overridden"
+    description:
+      path: "../xsoulspace_vkplay_server_api"
+      relative: true
+    source: path
+    version: "0.1.0-beta.1"
+  xsoulspace_ysdk_games_js:
+    dependency: "direct overridden"
+    description:
+      path: "../xsoulspace_ysdk_games_js"
+      relative: true
+    source: path
+    version: "0.1.0-beta.1"
   yaml:
     dependency: transitive
     description:

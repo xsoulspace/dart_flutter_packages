@@ -9,6 +9,7 @@ environment:
   sdk: ">=3.10.0 <4.0.0"
 
 dependencies:
+  meta: ^1.17.0
   xsoulspace_monetization_interface: ^0.8.2
   xsoulspace_monetization_yandex_games: ^0.1.0-beta.1
   xsoulspace_platform_core_interface: ^0.1.0-beta.1

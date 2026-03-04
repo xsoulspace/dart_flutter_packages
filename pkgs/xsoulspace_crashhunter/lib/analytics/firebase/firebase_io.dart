@@ -99,7 +99,7 @@ class FirebaseCrashlyticsPlugin extends AnalyticsServicePlugin {
   Future<void> onLoad() async {
     // Force enable crashlytics collection enabled if we're testing it.
     // Else only enable it in non-debug builds.
-    isEnabled = kTestingCrashlytics || PlatformInfo.isNativeMobile;
+    isEnabled = kTestingCrashlytics || Platform.isAndroid || Platform.isIOS;
 
     if (isEnabled) {
       // You could additionally extend this to allow users to opt-in.

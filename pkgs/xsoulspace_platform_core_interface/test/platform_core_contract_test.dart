@@ -5,10 +5,7 @@ void main() {
   group('PlatformInitOptions', () {
     test('reads typed context values safely', () {
       final options = PlatformInitOptions(
-        context: const <String, Object?>{
-          'retries': 3,
-          'title': 'runtime',
-        },
+        context: const <String, Object?>{'retries': 3, 'title': 'runtime'},
       );
 
       expect(options.read<int>('retries'), 3);

@@ -25,9 +25,3 @@ dev_dependencies:
     sdk: flutter
   lints: ^6.0.0
   xsoulspace_lints: ^0.1.2
-
-dependency_overrides:
-  rustore_billing_api:
-    path: ../rustore_billing_api
-  xsoulspace_monetization_interface:
-    path: ../xsoulspace_monetization_interface

@@ -8,11 +8,9 @@ class VkPlayClient {
   final Object _api;
 
   Future<void> init({final String? appId}) async {
-    final args = appId == null
-        ? const <Object?>[]
-        : <Object?>[
-            jsify(<String, Object?>{'app_id': appId}),
-          ];
+    final args = <Object?>[
+      if (appId == null) null else jsify(<String, Object?>{'app_id': appId}),
+    ];
 
     if (!_hasMethod('init')) {
       return;

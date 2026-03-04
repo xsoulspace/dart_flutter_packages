@@ -32,10 +32,7 @@ void main() {
     test('Randomizer.nextInt validates bounds and stays in range', () {
       final randomizer = Randomizer();
 
-      expect(
-        () => randomizer.nextInt(min: 5, max: 5),
-        throwsArgumentError,
-      );
+      expect(() => randomizer.nextInt(min: 5, max: 5), throwsArgumentError);
 
       final value = randomizer.nextInt(min: 1, max: 3);
       expect(value, inInclusiveRange(1, 2));

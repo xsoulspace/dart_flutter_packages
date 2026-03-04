@@ -3,8 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:xsoulspace_monetization_ads_interface/xsoulspace_monetization_ads_interface.dart';
 
 void main() {
-  test('AdProvider implementations can provide lifecycle operations',
-      () async {
+  test('AdProvider implementations can provide lifecycle operations', () async {
     final provider = _TestAdProvider();
 
     await provider.init();

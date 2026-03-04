@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:xsoulspace_logger/xsoulspace_logger.dart';
 import 'package:xsoulspace_logger_flutter/xsoulspace_logger_flutter.dart';
@@ -36,8 +38,8 @@ class _LoggerInspectorDemoState extends State<LoggerInspectorDemo> {
     _logger = Logger(const LoggerConfig(), <LogSink>[_triage]);
     _controller = LoggerInspectorController(logger: _logger, triage: _triage);
 
-    _controller.init();
-    _seedData();
+    unawaited(_controller.init());
+    unawaited(_seedData());
   }
 
   Future<void> _seedData() async {
@@ -56,7 +58,7 @@ class _LoggerInspectorDemoState extends State<LoggerInspectorDemo> {
   @override
   void dispose() {
     _controller.dispose();
-    _logger.dispose();
+    unawaited(_logger.dispose());
     super.dispose();
   }
 

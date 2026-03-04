@@ -5,7 +5,7 @@
   "packages": [
     {
       "name": "xsoulspace_monetization_yandex_games",
-      "version": "0.1.0",
+      "version": "0.1.0-beta.1",
       "dependencies": [
         "xsoulspace_monetization_interface",
         "xsoulspace_ysdk_games_js"
@@ -17,15 +17,31 @@
       ]
     },
     {
-      "name": "xsoulspace_lints",
-      "version": "0.1.2",
-      "dependencies": []
-    },
-    {
-      "name": "xsoulspace_ysdk_games_js",
+      "name": "xsoulspace_js_interop_codegen",
       "version": "0.1.0",
       "dependencies": [
-        "meta"
+        "archive",
+        "crypto",
+        "http",
+        "path"
+      ]
+    },
+    {
+      "name": "xsoulspace_steamworks_raw",
+      "version": "0.1.0",
+      "dependencies": [
+        "ffi",
+        "meta",
+        "path"
+      ]
+    },
+    {
+      "name": "xsoulspace_steamworks",
+      "version": "0.1.0",
+      "dependencies": [
+        "ffi",
+        "meta",
+        "xsoulspace_steamworks_raw"
       ]
     },
     {
@@ -37,31 +53,173 @@
       ]
     },
     {
-      "name": "is_dart_empty_or_not",
-      "version": "0.3.0",
-      "dependencies": []
-    },
-    {
-      "name": "from_json_to_json",
-      "version": "0.4.0",
+      "name": "xsoulspace_discord_server_api",
+      "version": "0.1.0-beta.1",
       "dependencies": [
-        "collection",
-        "is_dart_empty_or_not"
+        "http",
+        "meta"
       ]
     },
     {
-      "name": "collection",
-      "version": "1.19.1",
-      "dependencies": []
+      "name": "xsoulspace_vkplay_server_api",
+      "version": "0.1.0-beta.1",
+      "dependencies": [
+        "crypto",
+        "http",
+        "meta"
+      ]
     },
     {
-      "name": "lints",
-      "version": "6.1.0",
-      "dependencies": []
+      "name": "xsoulspace_platform_yandex_games_purchases",
+      "version": "0.1.0-beta.1",
+      "dependencies": [
+        "meta",
+        "xsoulspace_monetization_interface",
+        "xsoulspace_monetization_yandex_games",
+        "xsoulspace_platform_core_interface",
+        "xsoulspace_platform_foundation",
+        "xsoulspace_platform_purchases_bridge",
+        "xsoulspace_platform_yandex_games",
+        "xsoulspace_ysdk_games_js"
+      ]
     },
     {
-      "name": "meta",
-      "version": "1.18.1",
+      "name": "xsoulspace_platform_discord",
+      "version": "0.1.0-beta.1",
+      "dependencies": [
+        "meta",
+        "xsoulspace_discord_js",
+        "xsoulspace_platform_core_interface",
+        "xsoulspace_platform_foundation",
+        "xsoulspace_platform_social_interface"
+      ]
+    },
+    {
+      "name": "xsoulspace_platform_crazygames",
+      "version": "0.1.0-beta.1",
+      "dependencies": [
+        "meta",
+        "xsoulspace_crazygames_js",
+        "xsoulspace_platform_core_interface",
+        "xsoulspace_platform_foundation",
+        "xsoulspace_platform_gamification_interface",
+        "xsoulspace_platform_social_interface"
+      ]
+    },
+    {
+      "name": "xsoulspace_platform_yandex_games",
+      "version": "0.1.0-beta.1",
+      "dependencies": [
+        "meta",
+        "xsoulspace_platform_core_interface",
+        "xsoulspace_platform_foundation",
+        "xsoulspace_platform_gamification_interface",
+        "xsoulspace_platform_multiplayer_interface",
+        "xsoulspace_platform_social_interface",
+        "xsoulspace_ysdk_games_js"
+      ]
+    },
+    {
+      "name": "xsoulspace_platform_vkplay",
+      "version": "0.2.0-beta.1",
+      "dependencies": [
+        "meta",
+        "xsoulspace_platform_core_interface",
+        "xsoulspace_platform_foundation",
+        "xsoulspace_platform_social_interface",
+        "xsoulspace_vkplay_js"
+      ]
+    },
+    {
+      "name": "xsoulspace_platform_steam",
+      "version": "0.1.0-beta.1",
+      "dependencies": [
+        "meta",
+        "xsoulspace_platform_core_interface",
+        "xsoulspace_platform_foundation",
+        "xsoulspace_platform_gamification_interface",
+        "xsoulspace_platform_social_interface",
+        "xsoulspace_steamworks"
+      ]
+    },
+    {
+      "name": "xsoulspace_discord_js",
+      "version": "0.1.0-beta.1",
+      "dependencies": [
+        "meta"
+      ]
+    },
+    {
+      "name": "xsoulspace_crazygames_js",
+      "version": "0.1.0-beta.1",
+      "dependencies": [
+        "meta"
+      ]
+    },
+    {
+      "name": "xsoulspace_ysdk_games_js",
+      "version": "0.1.0-beta.1",
+      "dependencies": [
+        "meta"
+      ]
+    },
+    {
+      "name": "xsoulspace_vkplay_js",
+      "version": "0.1.0-beta.1",
+      "dependencies": [
+        "meta"
+      ]
+    },
+    {
+      "name": "xsoulspace_platform_purchases_bridge",
+      "version": "0.1.0-beta.1",
+      "dependencies": [
+        "xsoulspace_monetization_interface",
+        "xsoulspace_platform_core_interface"
+      ]
+    },
+    {
+      "name": "xsoulspace_platform_foundation",
+      "version": "0.2.0-beta.1",
+      "dependencies": [
+        "meta",
+        "xsoulspace_platform_core_interface"
+      ]
+    },
+    {
+      "name": "xsoulspace_platform_multiplayer_interface",
+      "version": "0.1.0-beta.1",
+      "dependencies": [
+        "meta",
+        "xsoulspace_platform_core_interface"
+      ]
+    },
+    {
+      "name": "xsoulspace_platform_gamification_interface",
+      "version": "0.1.0-beta.1",
+      "dependencies": [
+        "meta",
+        "xsoulspace_platform_core_interface"
+      ]
+    },
+    {
+      "name": "xsoulspace_platform_social_interface",
+      "version": "0.2.0-beta.1",
+      "dependencies": [
+        "meta",
+        "xsoulspace_platform_core_interface"
+      ]
+    },
+    {
+      "name": "xsoulspace_platform_core_interface",
+      "version": "0.1.0-beta.1",
+      "dependencies": [
+        "meta"
+      ]
+    },
+    {
+      "name": "xsoulspace_lints",
+      "version": "0.1.2",
       "dependencies": []
     },
     {
@@ -93,6 +251,98 @@
         "web_socket_channel",
         "webkit_inspection_protocol",
         "yaml"
+      ]
+    },
+    {
+      "name": "lints",
+      "version": "6.1.0",
+      "dependencies": []
+    },
+    {
+      "name": "path",
+      "version": "1.9.1",
+      "dependencies": []
+    },
+    {
+      "name": "http",
+      "version": "1.6.0",
+      "dependencies": [
+        "async",
+        "http_parser",
+        "meta",
+        "web"
+      ]
+    },
+    {
+      "name": "crypto",
+      "version": "3.0.7",
+      "dependencies": [
+        "typed_data"
+      ]
+    },
+    {
+      "name": "archive",
+      "version": "4.0.9",
+      "dependencies": [
+        "path",
+        "posix"
+      ]
+    },
+    {
+      "name": "meta",
+      "version": "1.18.1",
+      "dependencies": []
+    },
+    {
+      "name": "ffi",
+      "version": "2.2.0",
+      "dependencies": []
+    },
+    {
+      "name": "is_dart_empty_or_not",
+      "version": "0.3.0",
+      "dependencies": []
+    },
+    {
+      "name": "from_json_to_json",
+      "version": "0.4.0",
+      "dependencies": [
+        "collection",
+        "is_dart_empty_or_not"
+      ]
+    },
+    {
+      "name": "yaml",
+      "version": "3.1.3",
+      "dependencies": [
+        "collection",
+        "source_span",
+        "string_scanner"
+      ]
+    },
+    {
+      "name": "webkit_inspection_protocol",
+      "version": "1.2.1",
+      "dependencies": [
+        "logging"
+      ]
+    },
+    {
+      "name": "web_socket_channel",
+      "version": "3.0.3",
+      "dependencies": [
+        "async",
+        "crypto",
+        "stream_channel",
+        "web",
+        "web_socket"
+      ]
+    },
+    {
+      "name": "typed_data",
+      "version": "1.4.0",
+      "dependencies": [
+        "collection"
       ]
     },
     {
@@ -138,6 +388,117 @@
       ]
     },
     {
+      "name": "stream_channel",
+      "version": "2.1.4",
+      "dependencies": [
+        "async"
+      ]
+    },
+    {
+      "name": "stack_trace",
+      "version": "1.12.1",
+      "dependencies": [
+        "path"
+      ]
+    },
+    {
+      "name": "source_span",
+      "version": "1.10.2",
+      "dependencies": [
+        "collection",
+        "path",
+        "term_glyph"
+      ]
+    },
+    {
+      "name": "shelf_web_socket",
+      "version": "3.0.0",
+      "dependencies": [
+        "shelf",
+        "stream_channel",
+        "web_socket_channel"
+      ]
+    },
+    {
+      "name": "shelf_static",
+      "version": "1.1.3",
+      "dependencies": [
+        "convert",
+        "http_parser",
+        "mime",
+        "path",
+        "shelf"
+      ]
+    },
+    {
+      "name": "shelf_packages_handler",
+      "version": "3.0.2",
+      "dependencies": [
+        "path",
+        "shelf",
+        "shelf_static"
+      ]
+    },
+    {
+      "name": "shelf",
+      "version": "1.4.2",
+      "dependencies": [
+        "async",
+        "collection",
+        "http_parser",
+        "path",
+        "stack_trace",
+        "stream_channel"
+      ]
+    },
+    {
+      "name": "pool",
+      "version": "1.5.2",
+      "dependencies": [
+        "async",
+        "stack_trace"
+      ]
+    },
+    {
+      "name": "package_config",
+      "version": "2.2.0",
+      "dependencies": [
+        "path"
+      ]
+    },
+    {
+      "name": "node_preamble",
+      "version": "2.0.2",
+      "dependencies": []
+    },
+    {
+      "name": "matcher",
+      "version": "0.12.19",
+      "dependencies": [
+        "async",
+        "meta",
+        "stack_trace",
+        "term_glyph",
+        "test_api"
+      ]
+    },
+    {
+      "name": "io",
+      "version": "1.0.5",
+      "dependencies": [
+        "meta",
+        "path",
+        "string_scanner"
+      ]
+    },
+    {
+      "name": "http_multi_server",
+      "version": "3.2.2",
+      "dependencies": [
+        "async"
+      ]
+    },
+    {
       "name": "coverage",
       "version": "1.15.0",
       "dependencies": [
@@ -155,20 +516,106 @@
       ]
     },
     {
-      "name": "yaml",
-      "version": "3.1.3",
+      "name": "collection",
+      "version": "1.19.1",
+      "dependencies": []
+    },
+    {
+      "name": "boolean_selector",
+      "version": "2.1.2",
       "dependencies": [
-        "collection",
         "source_span",
         "string_scanner"
       ]
     },
     {
-      "name": "cli_config",
-      "version": "0.2.0",
+      "name": "async",
+      "version": "2.13.0",
       "dependencies": [
-        "args",
+        "collection",
+        "meta"
+      ]
+    },
+    {
+      "name": "analyzer",
+      "version": "10.2.0",
+      "dependencies": [
+        "_fe_analyzer_shared",
+        "collection",
+        "convert",
+        "crypto",
+        "glob",
+        "meta",
+        "package_config",
+        "path",
+        "pub_semver",
+        "source_span",
+        "watcher",
         "yaml"
+      ]
+    },
+    {
+      "name": "web",
+      "version": "1.1.1",
+      "dependencies": []
+    },
+    {
+      "name": "http_parser",
+      "version": "4.1.2",
+      "dependencies": [
+        "collection",
+        "source_span",
+        "string_scanner",
+        "typed_data"
+      ]
+    },
+    {
+      "name": "posix",
+      "version": "6.5.0",
+      "dependencies": [
+        "ffi",
+        "meta",
+        "path"
+      ]
+    },
+    {
+      "name": "string_scanner",
+      "version": "1.4.1",
+      "dependencies": [
+        "source_span"
+      ]
+    },
+    {
+      "name": "logging",
+      "version": "1.3.0",
+      "dependencies": []
+    },
+    {
+      "name": "web_socket",
+      "version": "1.0.1",
+      "dependencies": [
+        "web"
+      ]
+    },
+    {
+      "name": "vm_service",
+      "version": "15.0.2",
+      "dependencies": []
+    },
+    {
+      "name": "source_maps",
+      "version": "0.10.13",
+      "dependencies": [
+        "source_span"
+      ]
+    },
+    {
+      "name": "source_map_stack_trace",
+      "version": "2.1.2",
+      "dependencies": [
+        "path",
+        "source_maps",
+        "stack_trace"
       ]
     },
     {
@@ -191,43 +638,9 @@
       ]
     },
     {
-      "name": "shelf_packages_handler",
-      "version": "3.0.2",
-      "dependencies": [
-        "path",
-        "shelf",
-        "shelf_static"
-      ]
-    },
-    {
-      "name": "pool",
-      "version": "1.5.2",
-      "dependencies": [
-        "async",
-        "stack_trace"
-      ]
-    },
-    {
-      "name": "node_preamble",
-      "version": "2.0.2",
+      "name": "args",
+      "version": "2.7.0",
       "dependencies": []
-    },
-    {
-      "name": "boolean_selector",
-      "version": "2.1.2",
-      "dependencies": [
-        "source_span",
-        "string_scanner"
-      ]
-    },
-    {
-      "name": "source_map_stack_trace",
-      "version": "2.1.2",
-      "dependencies": [
-        "path",
-        "source_maps",
-        "stack_trace"
-      ]
     },
     {
       "name": "term_glyph",
@@ -235,127 +648,9 @@
       "dependencies": []
     },
     {
-      "name": "typed_data",
-      "version": "1.4.0",
-      "dependencies": [
-        "collection"
-      ]
-    },
-    {
-      "name": "source_maps",
-      "version": "0.10.13",
-      "dependencies": [
-        "source_span"
-      ]
-    },
-    {
-      "name": "string_scanner",
-      "version": "1.4.1",
-      "dependencies": [
-        "source_span"
-      ]
-    },
-    {
-      "name": "file",
-      "version": "7.0.1",
-      "dependencies": [
-        "meta",
-        "path"
-      ]
-    },
-    {
-      "name": "path",
-      "version": "1.9.1",
+      "name": "mime",
+      "version": "2.0.0",
       "dependencies": []
-    },
-    {
-      "name": "webkit_inspection_protocol",
-      "version": "1.2.1",
-      "dependencies": [
-        "logging"
-      ]
-    },
-    {
-      "name": "stream_channel",
-      "version": "2.1.4",
-      "dependencies": [
-        "async"
-      ]
-    },
-    {
-      "name": "stack_trace",
-      "version": "1.12.1",
-      "dependencies": [
-        "path"
-      ]
-    },
-    {
-      "name": "shelf_static",
-      "version": "1.1.3",
-      "dependencies": [
-        "convert",
-        "http_parser",
-        "mime",
-        "path",
-        "shelf"
-      ]
-    },
-    {
-      "name": "package_config",
-      "version": "2.2.0",
-      "dependencies": [
-        "path"
-      ]
-    },
-    {
-      "name": "matcher",
-      "version": "0.12.19",
-      "dependencies": [
-        "async",
-        "meta",
-        "stack_trace",
-        "term_glyph",
-        "test_api"
-      ]
-    },
-    {
-      "name": "async",
-      "version": "2.13.0",
-      "dependencies": [
-        "collection",
-        "meta"
-      ]
-    },
-    {
-      "name": "io",
-      "version": "1.0.5",
-      "dependencies": [
-        "meta",
-        "path",
-        "string_scanner"
-      ]
-    },
-    {
-      "name": "http_multi_server",
-      "version": "3.2.2",
-      "dependencies": [
-        "async"
-      ]
-    },
-    {
-      "name": "args",
-      "version": "2.7.0",
-      "dependencies": []
-    },
-    {
-      "name": "http_parser",
-      "version": "4.1.2",
-      "dependencies": [
-        "collection",
-        "source_span",
-        "string_scanner",
-        "typed_data"
-      ]
     },
     {
       "name": "convert",
@@ -365,106 +660,11 @@
       ]
     },
     {
-      "name": "logging",
-      "version": "1.3.0",
-      "dependencies": []
-    },
-    {
-      "name": "source_span",
-      "version": "1.10.2",
+      "name": "cli_config",
+      "version": "0.2.0",
       "dependencies": [
-        "collection",
-        "path",
-        "term_glyph"
-      ]
-    },
-    {
-      "name": "shelf_web_socket",
-      "version": "3.0.0",
-      "dependencies": [
-        "shelf",
-        "stream_channel",
-        "web_socket_channel"
-      ]
-    },
-    {
-      "name": "mime",
-      "version": "2.0.0",
-      "dependencies": []
-    },
-    {
-      "name": "shelf",
-      "version": "1.4.2",
-      "dependencies": [
-        "async",
-        "collection",
-        "http_parser",
-        "path",
-        "stack_trace",
-        "stream_channel"
-      ]
-    },
-    {
-      "name": "web_socket_channel",
-      "version": "3.0.3",
-      "dependencies": [
-        "async",
-        "crypto",
-        "stream_channel",
-        "web",
-        "web_socket"
-      ]
-    },
-    {
-      "name": "web_socket",
-      "version": "1.0.1",
-      "dependencies": [
-        "web"
-      ]
-    },
-    {
-      "name": "web",
-      "version": "1.1.1",
-      "dependencies": []
-    },
-    {
-      "name": "crypto",
-      "version": "3.0.7",
-      "dependencies": [
-        "typed_data"
-      ]
-    },
-    {
-      "name": "analyzer",
-      "version": "10.2.0",
-      "dependencies": [
-        "_fe_analyzer_shared",
-        "collection",
-        "convert",
-        "crypto",
-        "glob",
-        "meta",
-        "package_config",
-        "path",
-        "pub_semver",
-        "source_span",
-        "watcher",
+        "args",
         "yaml"
-      ]
-    },
-    {
-      "name": "_fe_analyzer_shared",
-      "version": "96.0.0",
-      "dependencies": [
-        "meta",
-        "source_span"
-      ]
-    },
-    {
-      "name": "pub_semver",
-      "version": "2.2.0",
-      "dependencies": [
-        "collection"
       ]
     },
     {
@@ -476,9 +676,27 @@
       ]
     },
     {
-      "name": "vm_service",
-      "version": "15.0.2",
-      "dependencies": []
+      "name": "pub_semver",
+      "version": "2.2.0",
+      "dependencies": [
+        "collection"
+      ]
+    },
+    {
+      "name": "_fe_analyzer_shared",
+      "version": "96.0.0",
+      "dependencies": [
+        "meta",
+        "source_span"
+      ]
+    },
+    {
+      "name": "file",
+      "version": "7.0.1",
+      "dependencies": [
+        "meta",
+        "path"
+      ]
     }
   ],
   "configVersion": 1

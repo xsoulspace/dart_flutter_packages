@@ -48,7 +48,10 @@ void main() {
       );
 
       await requester.onLoad();
-      await requester.requestReview(context: context, locale: const Locale('en'));
+      await requester.requestReview(
+        context: context,
+        locale: const Locale('en'),
+      );
 
       expect(reviewer.requestCalls, 1);
       expect(await localDb.getInt(key: 'review_count'), 1);
@@ -86,10 +89,8 @@ final class _MemoryLocalDb implements LocalDbI {
   @override
   Future<void> init() async {}
 
-  @override
   Future<void> clear() async => _store.clear();
 
-  @override
   Future<void> clearKey({required final String key}) async {
     _store.remove(key);
   }
@@ -187,7 +188,7 @@ final class _MemoryLocalDb implements LocalDbI {
   Future<Iterable<T>> getItemsIterable<T>({
     required final String key,
     required final T Function(Map<String, dynamic>) fromJson,
-    final List<T> defaultValue = const <T>[],
+    final List<T> defaultValue = const [],
   }) async {
     final raw = _store[key];
     if (raw is List) {
@@ -207,7 +208,8 @@ final class _MemoryLocalDb implements LocalDbI {
   @override
   Future<Iterable<Map<String, dynamic>>> getMapIterable({
     required final String key,
-    final List<Map<String, dynamic>> defaultValue = const <Map<String, dynamic>>[],
+    final List<Map<String, dynamic>> defaultValue =
+        const <Map<String, dynamic>>[],
   }) async {
     final raw = _store[key];
     if (raw is List) {

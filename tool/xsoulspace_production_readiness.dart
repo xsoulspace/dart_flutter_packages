@@ -129,8 +129,20 @@ Future<void> main(final List<String> args) async {
 
       if (!isInternal) {
         final publishCommand = isFlutterPackage
-            ? <String>['flutter', 'pub', 'publish', '--dry-run']
-            : <String>['dart', 'pub', 'publish', '--dry-run'];
+            ? <String>[
+                'flutter',
+                'pub',
+                'publish',
+                '--dry-run',
+                '--ignore-warnings',
+              ]
+            : <String>[
+                'dart',
+                'pub',
+                'publish',
+                '--dry-run',
+                '--ignore-warnings',
+              ];
         checks.add(
           await _runCommand(
             name: 'publish_dry_run',

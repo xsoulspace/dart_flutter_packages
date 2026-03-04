@@ -30,10 +30,7 @@ void main() {
     });
 
     test('push result keeps status and optional error', () {
-      const result = MultiplayerPushResult(
-        status: 'ok',
-        error: null,
-      );
+      const result = MultiplayerPushResult(status: 'ok', error: null);
 
       expect(result.status, 'ok');
       expect(result.error, isNull);

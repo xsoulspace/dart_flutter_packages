@@ -8,10 +8,6 @@ final class VkPlayLoginStatus {
     this.metadata = const <String, Object?>{},
   });
 
-  final bool authorized;
-  final String? userId;
-  final Map<String, Object?> metadata;
-
   factory VkPlayLoginStatus.fromMap(final Map<String, Object?> map) {
     final authorized =
         map['authorized'] == true ||
@@ -25,6 +21,10 @@ final class VkPlayLoginStatus {
       metadata: Map<String, Object?>.unmodifiable(map),
     );
   }
+
+  final bool authorized;
+  final String? userId;
+  final Map<String, Object?> metadata;
 }
 
 @immutable
@@ -35,11 +35,6 @@ final class VkPlayUserInfo {
     this.avatarUrl,
     this.metadata = const <String, Object?>{},
   });
-
-  final String id;
-  final String displayName;
-  final String? avatarUrl;
-  final Map<String, Object?> metadata;
 
   factory VkPlayUserInfo.fromMap(final Map<String, Object?> map) {
     final id =
@@ -57,6 +52,11 @@ final class VkPlayUserInfo {
       metadata: Map<String, Object?>.unmodifiable(map),
     );
   }
+
+  final String id;
+  final String displayName;
+  final String? avatarUrl;
+  final Map<String, Object?> metadata;
 }
 
 @immutable
@@ -67,11 +67,6 @@ final class VkPlayUserProfile {
     this.avatarUrl,
     this.metadata = const <String, Object?>{},
   });
-
-  final String id;
-  final String displayName;
-  final String? avatarUrl;
-  final Map<String, Object?> metadata;
 
   factory VkPlayUserProfile.fromMap(final Map<String, Object?> map) {
     final id =
@@ -89,6 +84,11 @@ final class VkPlayUserProfile {
       metadata: Map<String, Object?>.unmodifiable(map),
     );
   }
+
+  final String id;
+  final String displayName;
+  final String? avatarUrl;
+  final Map<String, Object?> metadata;
 }
 
 @immutable
@@ -100,12 +100,6 @@ final class VkPlayFriend {
     this.isSocial = false,
     this.metadata = const <String, Object?>{},
   });
-
-  final String id;
-  final String displayName;
-  final String? avatarUrl;
-  final bool isSocial;
-  final Map<String, Object?> metadata;
 
   factory VkPlayFriend.fromMap(
     final Map<String, Object?> map, {
@@ -126,6 +120,12 @@ final class VkPlayFriend {
       metadata: Map<String, Object?>.unmodifiable(map),
     );
   }
+
+  final String id;
+  final String displayName;
+  final String? avatarUrl;
+  final bool isSocial;
+  final Map<String, Object?> metadata;
 }
 
 @immutable

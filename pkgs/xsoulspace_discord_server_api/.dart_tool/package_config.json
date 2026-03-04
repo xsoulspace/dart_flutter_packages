@@ -80,6 +80,12 @@
       "languageVersion": "3.0"
     },
     {
+      "name": "from_json_to_json",
+      "rootUri": "file:///Users/antonio/.pub-cache/hosted/pub.dev/from_json_to_json-0.4.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
       "name": "frontend_server_client",
       "rootUri": "file:///Users/antonio/.pub-cache/hosted/pub.dev/frontend_server_client-4.0.0",
       "packageUri": "lib/",
@@ -114,6 +120,12 @@
       "rootUri": "file:///Users/antonio/.pub-cache/hosted/pub.dev/io-1.0.5",
       "packageUri": "lib/",
       "languageVersion": "3.4"
+    },
+    {
+      "name": "is_dart_empty_or_not",
+      "rootUri": "file:///Users/antonio/.pub-cache/hosted/pub.dev/is_dart_empty_or_not-0.3.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
     },
     {
       "name": "lints",
@@ -308,6 +320,18 @@
       "languageVersion": "3.0"
     },
     {
+      "name": "xsoulspace_crazygames_js",
+      "rootUri": "../../xsoulspace_crazygames_js",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
+      "name": "xsoulspace_discord_js",
+      "rootUri": "../../xsoulspace_discord_js",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
       "name": "xsoulspace_js_interop_codegen",
       "rootUri": "../../xsoulspace_js_interop_codegen",
       "packageUri": "lib/",
@@ -318,6 +342,120 @@
       "rootUri": "file:///Users/antonio/.pub-cache/hosted/pub.dev/xsoulspace_lints-0.1.2",
       "packageUri": "lib/",
       "languageVersion": "3.8"
+    },
+    {
+      "name": "xsoulspace_monetization_interface",
+      "rootUri": "../../xsoulspace_monetization_interface",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
+      "name": "xsoulspace_monetization_yandex_games",
+      "rootUri": "../../xsoulspace_monetization_yandex_games",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
+      "name": "xsoulspace_platform_core_interface",
+      "rootUri": "../../xsoulspace_platform_core_interface",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
+      "name": "xsoulspace_platform_crazygames",
+      "rootUri": "../../xsoulspace_platform_crazygames",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
+      "name": "xsoulspace_platform_discord",
+      "rootUri": "../../xsoulspace_platform_discord",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
+      "name": "xsoulspace_platform_foundation",
+      "rootUri": "../../xsoulspace_platform_foundation",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
+      "name": "xsoulspace_platform_gamification_interface",
+      "rootUri": "../../xsoulspace_platform_gamification_interface",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
+      "name": "xsoulspace_platform_multiplayer_interface",
+      "rootUri": "../../xsoulspace_platform_multiplayer_interface",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
+      "name": "xsoulspace_platform_purchases_bridge",
+      "rootUri": "../../xsoulspace_platform_purchases_bridge",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
+      "name": "xsoulspace_platform_social_interface",
+      "rootUri": "../../xsoulspace_platform_social_interface",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
+      "name": "xsoulspace_platform_steam",
+      "rootUri": "../../xsoulspace_platform_steam",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
+      "name": "xsoulspace_platform_vkplay",
+      "rootUri": "../../xsoulspace_platform_vkplay",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
+      "name": "xsoulspace_platform_yandex_games",
+      "rootUri": "../../xsoulspace_platform_yandex_games",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
+      "name": "xsoulspace_platform_yandex_games_purchases",
+      "rootUri": "../../xsoulspace_platform_yandex_games_purchases",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
+      "name": "xsoulspace_steamworks",
+      "rootUri": "../../xsoulspace_steamworks",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
+      "name": "xsoulspace_steamworks_raw",
+      "rootUri": "../../xsoulspace_steamworks_raw",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
+      "name": "xsoulspace_vkplay_js",
+      "rootUri": "../../xsoulspace_vkplay_js",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
+      "name": "xsoulspace_vkplay_server_api",
+      "rootUri": "../../xsoulspace_vkplay_server_api",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
+      "name": "xsoulspace_ysdk_games_js",
+      "rootUri": "../../xsoulspace_ysdk_games_js",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
     },
     {
       "name": "yaml",
@@ -334,7 +472,5 @@
   ],
   "generator": "pub",
   "generatorVersion": "3.11.0",
-  "flutterRoot": "file:///Users/antonio/fvm/versions/3.41.1",
-  "flutterVersion": "3.41.1",
   "pubCache": "file:///Users/antonio/.pub-cache"
 }

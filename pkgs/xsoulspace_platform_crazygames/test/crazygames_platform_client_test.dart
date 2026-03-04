@@ -44,7 +44,7 @@ void main() {
   test('user absent/present mapping and auth listener flow', () async {
     final fake = _FakeCrazyGamesClient();
     final client = CrazyGamesPlatformClient(
-      config: const CrazyGamesPlatformConfig(),
+      config: const CrazyGamesPlatformConfig(sdkInjected: true),
       initClient: ({final String expectedGlobal = 'CrazyGames'}) async => fake,
     );
 
@@ -87,7 +87,7 @@ void main() {
   test('score submit mapping', () async {
     final fake = _FakeCrazyGamesClient();
     final client = CrazyGamesPlatformClient(
-      config: const CrazyGamesPlatformConfig(),
+      config: const CrazyGamesPlatformConfig(sdkInjected: true),
       initClient: ({final String expectedGlobal = 'CrazyGames'}) async => fake,
     );
 
@@ -104,7 +104,7 @@ void main() {
   test('friends pagination mapping', () async {
     final fake = _FakeCrazyGamesClient();
     final client = CrazyGamesPlatformClient(
-      config: const CrazyGamesPlatformConfig(),
+      config: const CrazyGamesPlatformConfig(sdkInjected: true),
       initClient: ({final String expectedGlobal = 'CrazyGames'}) async => fake,
     );
 
@@ -120,7 +120,7 @@ void main() {
 
   test('dispose is idempotent', () async {
     final client = CrazyGamesPlatformClient(
-      config: const CrazyGamesPlatformConfig(),
+      config: const CrazyGamesPlatformConfig(sdkInjected: true),
       initClient: ({final String expectedGlobal = 'CrazyGames'}) async =>
           _FakeCrazyGamesClient(),
     );

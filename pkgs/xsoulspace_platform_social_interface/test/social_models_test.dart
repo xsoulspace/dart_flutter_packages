@@ -24,10 +24,7 @@ void main() {
         message: 'hello',
         linkUrl: 'https://example.com',
       );
-      const result = FeedShareResult(
-        shared: true,
-        postId: 'post-1',
-      );
+      const result = FeedShareResult(shared: true, postId: 'post-1');
 
       expect(identity.id, 'user-1');
       expect(identity.metadata['tier'], 'gold');

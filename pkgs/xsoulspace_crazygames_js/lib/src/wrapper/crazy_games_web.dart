@@ -26,11 +26,12 @@ abstract final class CrazyGames {
   }
 
   static Object? _resolveSdk({required final String expectedGlobal}) {
+    if (!hasGlobalProperty(expectedGlobal)) {
+      return null;
+    }
+
     if (expectedGlobal == 'CrazyGames') {
-      final known = raw.crazyGamesSdk;
-      if (known != null) {
-        return known;
-      }
+      return raw.crazyGamesSdk;
     }
 
     final customGlobal = globalProperty(expectedGlobal);

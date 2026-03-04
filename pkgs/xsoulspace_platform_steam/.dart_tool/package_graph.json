@@ -5,7 +5,7 @@
   "packages": [
     {
       "name": "xsoulspace_platform_steam",
-      "version": "0.1.0",
+      "version": "0.1.0-beta.1",
       "dependencies": [
         "meta",
         "xsoulspace_platform_core_interface",
@@ -21,12 +21,200 @@
       ]
     },
     {
+      "name": "xsoulspace_js_interop_codegen",
+      "version": "0.1.0",
+      "dependencies": [
+        "archive",
+        "crypto",
+        "http",
+        "path"
+      ]
+    },
+    {
       "name": "xsoulspace_steamworks_raw",
       "version": "0.1.0",
       "dependencies": [
         "ffi",
         "meta",
         "path"
+      ]
+    },
+    {
+      "name": "xsoulspace_steamworks",
+      "version": "0.1.0",
+      "dependencies": [
+        "ffi",
+        "meta",
+        "xsoulspace_steamworks_raw"
+      ]
+    },
+    {
+      "name": "xsoulspace_monetization_interface",
+      "version": "0.8.2",
+      "dependencies": [
+        "from_json_to_json",
+        "is_dart_empty_or_not"
+      ]
+    },
+    {
+      "name": "xsoulspace_discord_server_api",
+      "version": "0.1.0-beta.1",
+      "dependencies": [
+        "http",
+        "meta"
+      ]
+    },
+    {
+      "name": "xsoulspace_vkplay_server_api",
+      "version": "0.1.0-beta.1",
+      "dependencies": [
+        "crypto",
+        "http",
+        "meta"
+      ]
+    },
+    {
+      "name": "xsoulspace_platform_yandex_games_purchases",
+      "version": "0.1.0-beta.1",
+      "dependencies": [
+        "meta",
+        "xsoulspace_monetization_interface",
+        "xsoulspace_monetization_yandex_games",
+        "xsoulspace_platform_core_interface",
+        "xsoulspace_platform_foundation",
+        "xsoulspace_platform_purchases_bridge",
+        "xsoulspace_platform_yandex_games",
+        "xsoulspace_ysdk_games_js"
+      ]
+    },
+    {
+      "name": "xsoulspace_monetization_yandex_games",
+      "version": "0.1.0-beta.1",
+      "dependencies": [
+        "xsoulspace_monetization_interface",
+        "xsoulspace_ysdk_games_js"
+      ]
+    },
+    {
+      "name": "xsoulspace_platform_discord",
+      "version": "0.1.0-beta.1",
+      "dependencies": [
+        "meta",
+        "xsoulspace_discord_js",
+        "xsoulspace_platform_core_interface",
+        "xsoulspace_platform_foundation",
+        "xsoulspace_platform_social_interface"
+      ]
+    },
+    {
+      "name": "xsoulspace_platform_crazygames",
+      "version": "0.1.0-beta.1",
+      "dependencies": [
+        "meta",
+        "xsoulspace_crazygames_js",
+        "xsoulspace_platform_core_interface",
+        "xsoulspace_platform_foundation",
+        "xsoulspace_platform_gamification_interface",
+        "xsoulspace_platform_social_interface"
+      ]
+    },
+    {
+      "name": "xsoulspace_platform_yandex_games",
+      "version": "0.1.0-beta.1",
+      "dependencies": [
+        "meta",
+        "xsoulspace_platform_core_interface",
+        "xsoulspace_platform_foundation",
+        "xsoulspace_platform_gamification_interface",
+        "xsoulspace_platform_multiplayer_interface",
+        "xsoulspace_platform_social_interface",
+        "xsoulspace_ysdk_games_js"
+      ]
+    },
+    {
+      "name": "xsoulspace_platform_vkplay",
+      "version": "0.2.0-beta.1",
+      "dependencies": [
+        "meta",
+        "xsoulspace_platform_core_interface",
+        "xsoulspace_platform_foundation",
+        "xsoulspace_platform_social_interface",
+        "xsoulspace_vkplay_js"
+      ]
+    },
+    {
+      "name": "xsoulspace_discord_js",
+      "version": "0.1.0-beta.1",
+      "dependencies": [
+        "meta"
+      ]
+    },
+    {
+      "name": "xsoulspace_crazygames_js",
+      "version": "0.1.0-beta.1",
+      "dependencies": [
+        "meta"
+      ]
+    },
+    {
+      "name": "xsoulspace_ysdk_games_js",
+      "version": "0.1.0-beta.1",
+      "dependencies": [
+        "meta"
+      ]
+    },
+    {
+      "name": "xsoulspace_vkplay_js",
+      "version": "0.1.0-beta.1",
+      "dependencies": [
+        "meta"
+      ]
+    },
+    {
+      "name": "xsoulspace_platform_purchases_bridge",
+      "version": "0.1.0-beta.1",
+      "dependencies": [
+        "xsoulspace_monetization_interface",
+        "xsoulspace_platform_core_interface"
+      ]
+    },
+    {
+      "name": "xsoulspace_platform_foundation",
+      "version": "0.2.0-beta.1",
+      "dependencies": [
+        "meta",
+        "xsoulspace_platform_core_interface"
+      ]
+    },
+    {
+      "name": "xsoulspace_platform_multiplayer_interface",
+      "version": "0.1.0-beta.1",
+      "dependencies": [
+        "meta",
+        "xsoulspace_platform_core_interface"
+      ]
+    },
+    {
+      "name": "xsoulspace_platform_gamification_interface",
+      "version": "0.1.0-beta.1",
+      "dependencies": [
+        "meta",
+        "xsoulspace_platform_core_interface"
+      ]
+    },
+    {
+      "name": "xsoulspace_platform_social_interface",
+      "version": "0.2.0-beta.1",
+      "dependencies": [
+        "meta",
+        "xsoulspace_platform_core_interface"
+      ]
+    },
+    {
+      "name": "xsoulspace_platform_core_interface",
+      "version": "0.1.0-beta.1",
+      "dependencies": [
+        "meta"
       ]
     },
     {
@@ -71,46 +259,6 @@
       "dependencies": []
     },
     {
-      "name": "xsoulspace_steamworks",
-      "version": "0.1.0",
-      "dependencies": [
-        "ffi",
-        "meta",
-        "xsoulspace_steamworks_raw"
-      ]
-    },
-    {
-      "name": "xsoulspace_platform_social_interface",
-      "version": "0.2.0",
-      "dependencies": [
-        "meta",
-        "xsoulspace_platform_core_interface"
-      ]
-    },
-    {
-      "name": "xsoulspace_platform_gamification_interface",
-      "version": "0.1.0",
-      "dependencies": [
-        "meta",
-        "xsoulspace_platform_core_interface"
-      ]
-    },
-    {
-      "name": "xsoulspace_platform_foundation",
-      "version": "0.2.0",
-      "dependencies": [
-        "meta",
-        "xsoulspace_platform_core_interface"
-      ]
-    },
-    {
-      "name": "xsoulspace_platform_core_interface",
-      "version": "0.1.0",
-      "dependencies": [
-        "meta"
-      ]
-    },
-    {
       "name": "meta",
       "version": "1.18.1",
       "dependencies": []
@@ -121,9 +269,47 @@
       "dependencies": []
     },
     {
+      "name": "http",
+      "version": "1.6.0",
+      "dependencies": [
+        "async",
+        "http_parser",
+        "meta",
+        "web"
+      ]
+    },
+    {
+      "name": "crypto",
+      "version": "3.0.7",
+      "dependencies": [
+        "typed_data"
+      ]
+    },
+    {
+      "name": "archive",
+      "version": "4.0.9",
+      "dependencies": [
+        "path",
+        "posix"
+      ]
+    },
+    {
       "name": "ffi",
       "version": "2.2.0",
       "dependencies": []
+    },
+    {
+      "name": "is_dart_empty_or_not",
+      "version": "0.3.0",
+      "dependencies": []
+    },
+    {
+      "name": "from_json_to_json",
+      "version": "0.4.0",
+      "dependencies": [
+        "collection",
+        "is_dart_empty_or_not"
+      ]
     },
     {
       "name": "yaml",
@@ -369,6 +555,30 @@
       ]
     },
     {
+      "name": "web",
+      "version": "1.1.1",
+      "dependencies": []
+    },
+    {
+      "name": "http_parser",
+      "version": "4.1.2",
+      "dependencies": [
+        "collection",
+        "source_span",
+        "string_scanner",
+        "typed_data"
+      ]
+    },
+    {
+      "name": "posix",
+      "version": "6.5.0",
+      "dependencies": [
+        "ffi",
+        "meta",
+        "path"
+      ]
+    },
+    {
       "name": "string_scanner",
       "version": "1.4.1",
       "dependencies": [
@@ -385,18 +595,6 @@
       "version": "1.0.1",
       "dependencies": [
         "web"
-      ]
-    },
-    {
-      "name": "web",
-      "version": "1.1.1",
-      "dependencies": []
-    },
-    {
-      "name": "crypto",
-      "version": "3.0.7",
-      "dependencies": [
-        "typed_data"
       ]
     },
     {
@@ -453,16 +651,6 @@
       "name": "mime",
       "version": "2.0.0",
       "dependencies": []
-    },
-    {
-      "name": "http_parser",
-      "version": "4.1.2",
-      "dependencies": [
-        "collection",
-        "source_span",
-        "string_scanner",
-        "typed_data"
-      ]
     },
     {
       "name": "convert",

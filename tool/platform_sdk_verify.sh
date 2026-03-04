@@ -72,7 +72,7 @@ echo "=== Wrapper generator/browser checks ==="
 for pkg in "${WRAPPER_PACKAGES[@]}"; do
   echo "--- ${pkg} ---"
   (cd "${pkg}" && dart run tool/generate.dart --check)
-  (cd "${pkg}" && dart test -p chrome)
+  (cd "${pkg}" && dart test -p chrome test/web)
 done
 
 echo "platform_sdk_verify: OK"

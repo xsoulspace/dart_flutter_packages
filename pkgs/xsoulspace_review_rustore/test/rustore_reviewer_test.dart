@@ -4,7 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:xsoulspace_review_rustore/xsoulspace_review_rustore.dart';
 
 void main() {
-  testWidgets('handles request limit without forcing fallback', (final tester) async {
+  testWidgets('handles request limit without forcing fallback', (
+    final tester,
+  ) async {
     var consentCalls = 0;
     var launchCalls = 0;
 
@@ -15,7 +17,10 @@ void main() {
         return true;
       },
       requestReviewFlow: () async {
-        throw const PlatformException(message: 'RuStoreRequestLimitReached');
+        throw PlatformException(
+          code: 'request_limit_reached',
+          message: 'RuStoreRequestLimitReached',
+        );
       },
       launchNativeReviewFlow: () async {},
       launchSchemeAction: (final scheme) async {
@@ -51,7 +56,10 @@ void main() {
       packageName: 'dev.xsoulspace.app',
       consentBuilder: (final context, final locale) async => true,
       requestReviewFlow: () async {
-        throw const PlatformException(message: 'RuStoreRequestLimitReached');
+        throw PlatformException(
+          code: 'request_limit_reached',
+          message: 'RuStoreRequestLimitReached',
+        );
       },
       launchNativeReviewFlow: () async {},
       launchSchemeAction: (final scheme) async {
@@ -74,6 +82,9 @@ void main() {
 
     await reviewer.requestReview(context!, force: true);
 
-    expect(launchScheme, 'https://www.rustore.ru/catalog/app/dev.xsoulspace.app');
+    expect(
+      launchScheme,
+      'https://www.rustore.ru/catalog/app/dev.xsoulspace.app',
+    );
   });
 }

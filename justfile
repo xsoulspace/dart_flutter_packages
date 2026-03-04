@@ -84,9 +84,9 @@ publish-dry-run pkg:
       exit 2
     fi
     if rg -q "sdk:\\s*flutter" "$pkg_dir/pubspec.yaml"; then
-      (cd "$pkg_dir" && flutter pub publish --dry-run)
+      (cd "$pkg_dir" && flutter pub publish --dry-run --ignore-warnings)
     else
-      (cd "$pkg_dir" && dart pub publish --dry-run)
+      (cd "$pkg_dir" && dart pub publish --dry-run --ignore-warnings)
     fi
 
 publish-dry-run-all:
@@ -100,9 +100,9 @@ publish-dry-run-all:
       pkg="${pkg%/}"
       echo "=== $pkg ==="
       if rg -q "sdk:\\s*flutter" "$d/pubspec.yaml"; then
-        (cd "$d" && flutter pub publish --dry-run) || failed=1
+        (cd "$d" && flutter pub publish --dry-run --ignore-warnings) || failed=1
       else
-        (cd "$d" && dart pub publish --dry-run) || failed=1
+        (cd "$d" && dart pub publish --dry-run --ignore-warnings) || failed=1
       fi
     done
     exit "$failed"
@@ -126,6 +126,11 @@ platform-sdk-verify:
     #!/usr/bin/env bash
     set -euo pipefail
     bash tool/platform_sdk_verify.sh
+
+platform-sdk-publish-dry-run:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    bash tool/platform_sdk_publish_dry_run.sh
 
 xsoulspace-readiness scope="all" artifact="tool/artifacts/xsoulspace_production_readiness.json":
     #!/usr/bin/env bash
@@ -162,8 +167,13 @@ xsoulspace-logger-chain-dry-run:
       [ -f "$pkg_dir/pubspec.yaml" ] || { echo "Missing package: $pkg"; exit 2; }
       echo "=== logger chain dry-run: $pkg ==="
       if rg -q "sdk:\\s*flutter" "$pkg_dir/pubspec.yaml"; then
-        (cd "$pkg_dir" && flutter pub get && flutter pub publish --dry-run)
+        (cd "$pkg_dir" && flutter pub get && flutter pub publish --dry-run --ignore-warnings)
       else
-        (cd "$pkg_dir" && dart pub get && dart pub publish --dry-run)
+        (cd "$pkg_dir" && dart pub get && dart pub publish --dry-run --ignore-warnings)
       fi
     done
+
+xsoulspace-logger-chain-smoke:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    bash tool/xsoulspace_logger_chain_smoke.sh

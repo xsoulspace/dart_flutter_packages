@@ -19,7 +19,7 @@ void main() {
         priceId: PurchasePriceId.fromJson('premium_month_price'),
         productType: PurchaseProductType.subscription,
         name: 'Premium Monthly',
-        formattedPrice: '49.99',
+        formattedPrice: '\$49.99',
         price: 49.99,
         currency: 'USD',
         description: 'Monthly subscription',
@@ -47,19 +47,22 @@ void main() {
       expect(restoreFailure.error, 'network_error');
     });
 
-    test('status decode falls back to pending verification on unknown value', () {
-      final details = PurchaseDetailsModel.fromJson(<String, dynamic>{
-        'purchaseId': 'id',
-        'productId': 'product',
-        'priceId': 'price',
-        'status': 'unknown_status',
-        'purchaseType': 'subscription',
-        'purchaseDate': DateTime.utc(2026, 1, 1).toIso8601String(),
-        'duration': 0,
-        'freeTrialDuration': 0,
-      });
+    test(
+      'status decode falls back to pending verification on unknown value',
+      () {
+        final details = PurchaseDetailsModel.fromJson(<String, dynamic>{
+          'purchaseId': 'id',
+          'productId': 'product',
+          'priceId': 'price',
+          'status': 'unknown_status',
+          'purchaseType': 'subscription',
+          'purchaseDate': DateTime.utc(2026, 1, 1).toIso8601String(),
+          'duration': 0,
+          'freeTrialDuration': 0,
+        });
 
-      expect(details.status, PurchaseStatus.pendingVerification);
-    });
+        expect(details.status, PurchaseStatus.pendingVerification);
+      },
+    );
   });
 }

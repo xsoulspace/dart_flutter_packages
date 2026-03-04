@@ -57,6 +57,21 @@ blocking findings. Gate sequence:
 
 If a package contains `pubspec_overrides.yaml`, temporarily remove/rename it before running publish dry-run.
 
+Unified Platform SDK beta release-set dry-run:
+
+```bash
+just platform-sdk-publish-dry-run
+```
+
+By default this command uses `--ignore-warnings` so local
+`pubspec_overrides.yaml` monorepo path wiring does not block dry-run.
+Set `IGNORE_WARNINGS=0` to enforce warning-free dry-runs in a clean release
+workspace:
+
+```bash
+IGNORE_WARNINGS=0 bash tool/platform_sdk_publish_dry_run.sh
+```
+
 ## Recommended publish order (Unified Platform SDK beta wave)
 
 All changed release-set packages use `-beta.1` prerelease versions and should be published in topological order:

@@ -3,7 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:xsoulspace_review_snapstore/xsoulspace_review_snapstore.dart';
 
 void main() {
-  testWidgets('does not launch store when consent is denied', (final tester) async {
+  testWidgets('does not launch store when consent is denied', (
+    final tester,
+  ) async {
     var launchCalls = 0;
     final reviewer = SnapStoreReviewer(
       packageName: 'xs-app',

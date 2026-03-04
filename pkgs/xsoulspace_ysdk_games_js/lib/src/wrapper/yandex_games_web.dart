@@ -32,15 +32,12 @@ abstract final class YandexGames {
   }
 
   static Object? _resolveGlobal({required final String expectedGlobal}) {
-    if (expectedGlobal == 'YaGames') {
-      final known = raw.yaGames;
-      if (known != null) {
-        return known;
-      }
-    }
-
     if (!hasGlobalProperty(expectedGlobal)) {
       return null;
+    }
+
+    if (expectedGlobal == 'YaGames') {
+      return raw.yaGames;
     }
     return globalProperty(expectedGlobal);
   }

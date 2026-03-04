@@ -11,7 +11,9 @@ void main() {
         pagesCount: 4,
       );
 
-      final json = original.toJson((final value) => <String, dynamic>{'v': value});
+      final json = original.toJson(
+        (final value) => <String, dynamic>{'v': value},
+      );
       final decoded = PagingControllerPageModel<int>.fromJson(
         json,
         (final raw) => (raw as Map<String, dynamic>)['v'] as int,

@@ -6,6 +6,15 @@ void main() {
   const english = UiLanguage('en', 'English');
   const russian = UiLanguage('ru', 'Russian');
 
+  setUp(() {
+    LocalizationConfig.initialize(
+      LocalizationConfig(
+        supportedLanguages: const <UiLanguage>[english, russian],
+        fallbackLanguage: english,
+      ),
+    );
+  });
+
   group('SupportRequest model', () {
     test('serializes and deserializes core fields', () {
       final request = SupportRequest(
@@ -40,9 +49,7 @@ void main() {
         supportEmail: 'help@xsoulspace.dev',
         appName: 'XS App',
         localization: <String, LocalizedMap>{
-          'greeting': const LocalizedMap(<UiLanguage, String>{
-            english: 'Hello',
-          }),
+          'greeting': LocalizedMap(<UiLanguage, String>{english: 'Hello'}),
         },
       );
 

@@ -6,7 +6,11 @@ void main() {
   group('YandexGamesPurchaseProvider', () {
     test('maps init failures to notAvailable status', () async {
       final provider = YandexGamesPurchaseProvider(
-        initClient: ({final bool signed = false}) async {
+        initClient:
+            ({
+              final bool signed = false,
+              final String expectedGlobal = 'YaGames',
+            }) async {
           throw StateError('sdk unavailable');
         },
       );
@@ -17,7 +21,11 @@ void main() {
 
     test('returns explicit failure for unsupported cancel flow', () async {
       final provider = YandexGamesPurchaseProvider(
-        initClient: ({final bool signed = false}) async {
+        initClient:
+            ({
+              final bool signed = false,
+              final String expectedGlobal = 'YaGames',
+            }) async {
           throw StateError('sdk unavailable');
         },
       );
