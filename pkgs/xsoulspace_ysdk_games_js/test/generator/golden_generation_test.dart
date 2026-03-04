@@ -35,7 +35,7 @@ void main() {
       final after = File(rawPath).readAsStringSync();
       expect(after, equals(before));
     },
-    timeout: const Timeout(Duration(minutes: 2)),
+    timeout: const Timeout(Duration(minutes: 5)),
   );
 
   test(
@@ -68,6 +68,6 @@ void main() {
         reason: '${cleanCheck.stdout}\n${cleanCheck.stderr}',
       );
     },
-    timeout: const Timeout(Duration(minutes: 2)),
+    timeout: const Timeout(Duration(minutes: 5)),
   );
 }

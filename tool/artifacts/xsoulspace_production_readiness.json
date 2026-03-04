@@ -1,5 +1,5 @@
 {
-  "evaluated_at_utc": "2026-03-04T01:06:08.454386Z",
+  "evaluated_at_utc": "2026-03-04T02:10:11.330191Z",
   "scope": "all",
   "excluded_packages": [
     "xsoulspace_steamworks",
@@ -7,8 +7,8 @@
     "xsoulspace_platform_steam"
   ],
   "summary": {
-    "ready_public": 42,
-    "ready_internal": 9,
+    "ready_public": 51,
+    "ready_internal": 0,
     "blocked": 0,
     "total": 51
   },
@@ -485,8 +485,8 @@
     },
     {
       "package": "xsoulspace_logger_flutter",
-      "status": "ready_internal",
-      "is_internal": true,
+      "status": "ready_public",
+      "is_internal": false,
       "checks": [
         {
           "name": "docs_files",
@@ -495,6 +495,11 @@
         },
         {
           "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
           "passed": true,
           "skipped": false
         },
@@ -515,14 +520,20 @@
           "passed": true,
           "skipped": false,
           "command": "flutter test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub publish --dry-run --ignore-warnings"
         }
       ],
       "failing_checks": []
     },
     {
       "package": "xsoulspace_logger_io",
-      "status": "ready_internal",
-      "is_internal": true,
+      "status": "ready_public",
+      "is_internal": false,
       "checks": [
         {
           "name": "docs_files",
@@ -531,6 +542,11 @@
         },
         {
           "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
           "passed": true,
           "skipped": false
         },
@@ -551,14 +567,20 @@
           "passed": true,
           "skipped": false,
           "command": "dart test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub publish --dry-run --ignore-warnings"
         }
       ],
       "failing_checks": []
     },
     {
       "package": "xsoulspace_logger_triage",
-      "status": "ready_internal",
-      "is_internal": true,
+      "status": "ready_public",
+      "is_internal": false,
       "checks": [
         {
           "name": "docs_files",
@@ -567,6 +589,11 @@
         },
         {
           "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
           "passed": true,
           "skipped": false
         },
@@ -587,14 +614,20 @@
           "passed": true,
           "skipped": false,
           "command": "dart test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub publish --dry-run --ignore-warnings"
         }
       ],
       "failing_checks": []
     },
     {
       "package": "xsoulspace_logger_universal_storage",
-      "status": "ready_internal",
-      "is_internal": true,
+      "status": "ready_public",
+      "is_internal": false,
       "checks": [
         {
           "name": "docs_files",
@@ -603,6 +636,11 @@
         },
         {
           "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
           "passed": true,
           "skipped": false
         },
@@ -623,6 +661,12 @@
           "passed": true,
           "skipped": false,
           "command": "dart test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub publish --dry-run --ignore-warnings"
         }
       ],
       "failing_checks": []
@@ -676,8 +720,8 @@
     },
     {
       "package": "xsoulspace_monetization_ads_foundation",
-      "status": "ready_internal",
-      "is_internal": true,
+      "status": "ready_public",
+      "is_internal": false,
       "checks": [
         {
           "name": "docs_files",
@@ -686,6 +730,11 @@
         },
         {
           "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
           "passed": true,
           "skipped": false
         },
@@ -706,6 +755,12 @@
           "passed": true,
           "skipped": false,
           "command": "flutter test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub publish --dry-run --ignore-warnings"
         }
       ],
       "failing_checks": []
@@ -759,8 +814,8 @@
     },
     {
       "package": "xsoulspace_monetization_ads_yandex",
-      "status": "ready_internal",
-      "is_internal": true,
+      "status": "ready_public",
+      "is_internal": false,
       "checks": [
         {
           "name": "docs_files",
@@ -769,6 +824,11 @@
         },
         {
           "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
           "passed": true,
           "skipped": false
         },
@@ -789,14 +849,20 @@
           "passed": true,
           "skipped": false,
           "command": "flutter test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub publish --dry-run --ignore-warnings"
         }
       ],
       "failing_checks": []
     },
     {
       "package": "xsoulspace_monetization_foundation",
-      "status": "ready_internal",
-      "is_internal": true,
+      "status": "ready_public",
+      "is_internal": false,
       "checks": [
         {
           "name": "docs_files",
@@ -805,6 +871,11 @@
         },
         {
           "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
           "passed": true,
           "skipped": false
         },
@@ -825,14 +896,20 @@
           "passed": true,
           "skipped": false,
           "command": "flutter test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub publish --dry-run --ignore-warnings"
         }
       ],
       "failing_checks": []
     },
     {
       "package": "xsoulspace_monetization_google_apple",
-      "status": "ready_internal",
-      "is_internal": true,
+      "status": "ready_public",
+      "is_internal": false,
       "checks": [
         {
           "name": "docs_files",
@@ -841,6 +918,11 @@
         },
         {
           "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
           "passed": true,
           "skipped": false
         },
@@ -861,6 +943,12 @@
           "passed": true,
           "skipped": false,
           "command": "flutter test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub publish --dry-run --ignore-warnings"
         }
       ],
       "failing_checks": []
@@ -961,8 +1049,8 @@
     },
     {
       "package": "xsoulspace_monetization_rustore",
-      "status": "ready_internal",
-      "is_internal": true,
+      "status": "ready_public",
+      "is_internal": false,
       "checks": [
         {
           "name": "docs_files",
@@ -971,6 +1059,11 @@
         },
         {
           "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
           "passed": true,
           "skipped": false
         },
@@ -991,6 +1084,12 @@
           "passed": true,
           "skipped": false,
           "command": "flutter test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub publish --dry-run --ignore-warnings"
         }
       ],
       "failing_checks": []

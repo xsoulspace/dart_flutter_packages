@@ -32,6 +32,18 @@ This verifies every package has:
 - Platform SDK beta release-set packages have no local path dependencies in
   `pubspec.yaml`
 
+On macOS, web-wrapper browser tests can fail if Chrome tries to access a real
+keychain profile. `tool/platform_sdk_verify.sh` now defaults
+`CHROME_EXECUTABLE` to `tool/chrome_with_mock_keychain.sh`, which launches
+Chrome with `--use-mock-keychain`. No keychain reset is required.
+You can override if needed:
+
+```bash
+CHROME_EXECUTABLE=/custom/chrome just platform-sdk-verify
+# or keep launcher and point to another Chrome binary
+CHROME_BIN=/custom/chrome-binary just platform-sdk-verify
+```
+
 ## Run package dry-runs
 
 Single package:

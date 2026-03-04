@@ -15,7 +15,9 @@
         "flutter_test",
         "lints",
         "test",
-        "xsoulspace_lints"
+        "xsoulspace_lints",
+        "xsoulspace_monetization_ads_interface",
+        "xsoulspace_monetization_interface"
       ]
     },
     {

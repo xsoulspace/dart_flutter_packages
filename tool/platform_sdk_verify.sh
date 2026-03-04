@@ -4,6 +4,12 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
 
+DEFAULT_CHROME_LAUNCHER="${ROOT_DIR}/tool/chrome_with_mock_keychain.sh"
+if [[ -z "${CHROME_EXECUTABLE:-}" && -x "${DEFAULT_CHROME_LAUNCHER}" ]]; then
+  export CHROME_EXECUTABLE="${DEFAULT_CHROME_LAUNCHER}"
+  echo "Using CHROME_EXECUTABLE=${CHROME_EXECUTABLE}"
+fi
+
 PACKAGES=(
   "pkgs/xsoulspace_platform_core_interface"
   "pkgs/xsoulspace_platform_social_interface"

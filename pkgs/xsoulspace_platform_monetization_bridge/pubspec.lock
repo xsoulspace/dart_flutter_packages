@@ -548,14 +548,14 @@ packages:
     source: path
     version: "0.1.0-beta.1"
   xsoulspace_monetization_ads_interface:
-    dependency: "direct overridden"
+    dependency: "direct dev"
     description:
       path: "../xsoulspace_monetization_ads_interface"
       relative: true
     source: path
     version: "0.0.1"
   xsoulspace_monetization_interface:
-    dependency: "direct overridden"
+    dependency: "direct dev"
     description:
       path: "../xsoulspace_monetization_interface"
       relative: true
