@@ -12,8 +12,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  xsoulspace_monetization_ads_interface: ^0.0.1
-
+  xsoulspace_monetization_ads_interface:
+    hosted:
+      name: xsoulspace_monetization_ads_interface
+      url: https://pub.xsoulspace.dev
+    version: ^0.0.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

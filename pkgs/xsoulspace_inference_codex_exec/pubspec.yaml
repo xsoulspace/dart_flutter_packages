@@ -10,7 +10,6 @@ dependencies:
   path: ^1.9.1
   xsoulspace_inference_core:
     path: ../xsoulspace_inference_core
-
 dev_dependencies:
   lints: ^6.0.0
   test: ^1.25.8

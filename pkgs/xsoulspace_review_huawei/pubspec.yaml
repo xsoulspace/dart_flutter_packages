@@ -11,10 +11,17 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  xsoulspace_review_interface: ^0.4.0-beta.2
-
+  xsoulspace_review_interface:
+    hosted:
+      name: xsoulspace_review_interface
+      url: https://pub.xsoulspace.dev
+    version: ^0.4.0-beta.2
 dev_dependencies:
   flutter_test:
     sdk: flutter
   lints: ^6.0.0
-  xsoulspace_lints: ^0.1.2
+  xsoulspace_lints:
+    hosted:
+      name: xsoulspace_lints
+      url: https://pub.xsoulspace.dev
+    version: ^0.1.2

@@ -11,11 +11,19 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  xsoulspace_monetization_ads_interface: ^0.0.1
+  xsoulspace_monetization_ads_interface:
+    hosted:
+      name: xsoulspace_monetization_ads_interface
+      url: https://pub.xsoulspace.dev
+    version: ^0.0.1
   yandex_mobileads: ^7.13.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   lints: ^6.0.0
-  xsoulspace_lints: ^0.1.2
+  xsoulspace_lints:
+    hosted:
+      name: xsoulspace_lints
+      url: https://pub.xsoulspace.dev
+    version: ^0.1.2

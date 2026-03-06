@@ -177,3 +177,56 @@ xsoulspace-logger-chain-smoke:
     #!/usr/bin/env bash
     set -euo pipefail
     bash tool/xsoulspace_logger_chain_smoke.sh
+
+registry-rewrite-hosted registry_url="https://pub.xsoulspace.dev":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    dart pub get >/dev/null
+    dart registry/tools/rewrite_internal_hosted_deps.dart --repo-root . --hosted-url "{{registry_url}}"
+
+registry-build-index output="build/registry" registry_url="https://pub.xsoulspace.dev" github_repo="xsoulspace/dart_flutter_packages" existing_index="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    dart pub get >/dev/null
+    args=(
+      registry/tools/build_registry_index.dart
+      --repo-root .
+      --output-dir "{{output}}"
+      --registry-base-url "{{registry_url}}"
+      --github-repo "{{github_repo}}"
+    )
+    if [ -n "{{existing_index}}" ]; then
+      args+=(--existing-index-dir "{{existing_index}}")
+    fi
+    dart "${args[@]}"
+
+registry-validate output="build/registry" registry_url="https://pub.xsoulspace.dev" github_repo="xsoulspace/dart_flutter_packages" existing_index="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    dart pub get >/dev/null
+    args=(
+      registry/tools/build_registry_index.dart
+      --repo-root .
+      --output-dir "{{output}}"
+      --registry-base-url "{{registry_url}}"
+      --github-repo "{{github_repo}}"
+    )
+    if [ -n "{{existing_index}}" ]; then
+      args+=(--existing-index-dir "{{existing_index}}")
+    fi
+    dart "${args[@]}"
+    dart registry/tools/validate_registry.dart --repo-root . --output-dir "{{output}}" --registry-base-url "{{registry_url}}" --hosted-url "{{registry_url}}"
+
+registry-test:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    dart pub get >/dev/null
+    dart analyze registry/tools test
+    dart test test/registry_tools_test.dart
+    PYTHONWARNINGS=ignore::ResourceWarning \
+      python3 -m unittest discover -s registry/gateway/tests -p '*_test.py'
+
+registry-smoke output="build/registry" selection="stable":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    python3 registry/gateway/smoke_test.py --registry-dir "{{output}}" --select "{{selection}}"

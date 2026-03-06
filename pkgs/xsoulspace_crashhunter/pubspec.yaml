@@ -18,10 +18,17 @@ dependencies:
   firebase_crashlytics: ^5.0.3
   logger: ^2.6.2
   universal_io: ^2.3.1
-  xsoulspace_foundation: ^0.4.0
-
+  xsoulspace_foundation:
+    hosted:
+      name: xsoulspace_foundation
+      url: https://pub.xsoulspace.dev
+    version: ^0.4.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
   lints: ^6.0.0
-  xsoulspace_lints: ^0.1.2
+  xsoulspace_lints:
+    hosted:
+      name: xsoulspace_lints
+      url: https://pub.xsoulspace.dev
+    version: ^0.1.2

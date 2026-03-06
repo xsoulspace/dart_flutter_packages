@@ -1,137 +1,123 @@
 # Publishing Guide
 
-This repository contains multiple packages with cross-package dependencies.
-Use this guide to publish them to pub.dev with minimal friction.
+This repository now publishes internal packages through a GitHub-backed hosted
+registry flow instead of a runtime `dart pub publish` endpoint.
 
-## Prerequisites
+## Registry v1 layout
 
-- Flutter SDK installed (`flutter --version`)
-- Dart SDK installed (`dart --version`)
-- Authenticated to pub.dev (`dart pub token add https://pub.dev`)
-- Clean git state for the package you are publishing (recommended)
-- No active `dependency_overrides` in `pubspec_overrides.yaml` for the package being published
+- Package metadata lives on the `registry-index` branch under `api/`.
+- Package archives are built from tracked package files and uploaded to GitHub
+  Releases as `<package>-<version>.tar.gz`.
+- The Docker gateway in `registry/gateway/` serves hosted-pub-compatible
+  read endpoints and redirects archive downloads to the release assets.
 
-## Validate documentation and metadata
-
-From repo root:
+Default registry URL:
 
 ```bash
-just platform-sdk-verify
+https://pub.xsoulspace.dev
+```
+
+## Local authoring flow
+
+Before opening a release PR:
+
+```bash
 just docs-check
 just storage-release-g6
+just platform-sdk-verify
+just registry-test
+just registry-rewrite-hosted
+just registry-validate
 ```
 
-This verifies every package has:
+What these commands do:
 
-- `README.md`
-- `CHANGELOG.md`
-- `LICENSE`
-- Universal Storage target apps resolve local package paths only via
-  `pubspec_overrides.yaml` (no inline Universal Storage path overrides in
-  app `pubspec.yaml`)
-- Platform SDK beta release-set packages have no local path dependencies in
-  `pubspec.yaml`
+1. Validate package docs and existing release gates.
+2. Rewrite internal package dependencies in `pkgs/*/pubspec.yaml` to explicit
+   hosted dependencies that point at the internal registry.
+3. Build `build/registry/` with publishable packages only (`publish_to: none`
+   packages are excluded) and produce:
+   - `api/packages/<package>.json`
+   - `api/package-names.json`
+   - `archives/<package>-<version>.tar.gz`
+   - `release-manifest.json`
+4. Validate hosted dependency rewrites, metadata payloads, and archive SHA256
+   values, and fail on stale extra artifacts.
 
-On macOS, web-wrapper browser tests can fail if Chrome tries to access a real
-keychain profile. `tool/platform_sdk_verify.sh` now defaults
-`CHROME_EXECUTABLE` to `tool/chrome_with_mock_keychain.sh`, which launches
-Chrome with `--use-mock-keychain`. No keychain reset is required.
-You can override if needed:
+Path-based internal dependencies are rewritten to the current target package
+version because there is no version constraint to preserve.
+
+## CI publish flow
+
+`.github/workflows/registry_publish.yml` handles publication.
+
+On `main`/`master` pushes or manual dispatch it:
+
+1. Detects packages whose `version:` changed.
+2. Runs the existing repo gates (`docs-check`, `storage-release-g6`,
+   `platform-sdk-verify`).
+3. Runs registry tooling tests, deterministic rebuild verification, and gateway
+   smoke tests.
+4. Builds package archives and regenerates hosted metadata.
+5. Uploads changed package archives to GitHub Releases using the tag format
+   `<package>-v<version>`.
+6. Verifies each uploaded release asset matches the local archive SHA256.
+7. Pushes generated metadata to the `registry-index` branch.
+
+The workflow does not expose a hosted publish API. GitHub Actions is the write
+path in v1.
+
+## Consumer dependency format
+
+Direct internal dependencies should use explicit hosted syntax:
+
+```yaml
+dependencies:
+  xsoulspace_foundation:
+    hosted:
+      name: xsoulspace_foundation
+      url: https://pub.xsoulspace.dev
+    version: ^0.4.0
+```
+
+External dependencies continue to resolve from `pub.dev`.
+
+## Gateway deployment
+
+Build and run the gateway from `registry/gateway/`:
 
 ```bash
-CHROME_EXECUTABLE=/custom/chrome just platform-sdk-verify
-# or keep launcher and point to another Chrome binary
-CHROME_BIN=/custom/chrome-binary just platform-sdk-verify
+docker build -t xs-registry-gateway registry/gateway
+
+docker run --rm -p 8080:8080 \
+  --env REGISTRY_INDEX_BASE_URL=https://raw.githubusercontent.com/xsoulspace/dart_flutter_packages/registry-index \
+  --env GITHUB_REPOSITORY=xsoulspace/dart_flutter_packages \
+  xs-registry-gateway
 ```
 
-## Run package dry-runs
+The gateway provides:
 
-Single package:
+- `GET /api/packages/<package>`
+- `GET /api/packages/<package>/versions/<version>`
+- `GET /api/package-names`
+- `GET /packages/<package>/versions/<version>.tar.gz`
+- `GET /healthz`
+- `GET /readyz`
 
-```bash
-just publish-dry-run <package_name>
-```
+## Fallback
 
-All packages:
+If the registry is unavailable, direct internal dependencies can be pinned to
+Git refs temporarily while the metadata branch or gateway is restored.
 
-```bash
-just publish-dry-run-all
-```
+## Rollback
 
-Both `publish-dry-run` commands are gated by `storage-release-g6` and fail on
-blocking findings. Gate sequence:
+If a publish must be reverted:
 
-1. `storage-path-audit`
-2. `clone-guard-audit`
-3. analyzer (errors-only)
-4. tests
-5. `StorageReleaseGateEvaluator` artifact
+1. Remove the affected release asset/tag when archive bytes should no longer be served.
+2. Reset the `registry-index` branch to the previous known-good commit.
+3. Redeploy the previous gateway container image if the runtime itself changed.
 
-If a package contains `pubspec_overrides.yaml`, temporarily remove/rename it before running publish dry-run.
+## Production Targets
 
-Unified Platform SDK beta release-set dry-run:
-
-```bash
-just platform-sdk-publish-dry-run
-```
-
-By default this command uses `--ignore-warnings` so local
-`pubspec_overrides.yaml` monorepo path wiring does not block dry-run.
-Set `IGNORE_WARNINGS=0` to enforce warning-free dry-runs in a clean release
-workspace:
-
-```bash
-IGNORE_WARNINGS=0 bash tool/platform_sdk_publish_dry_run.sh
-```
-
-## Recommended publish order (Unified Platform SDK beta wave)
-
-All changed release-set packages use `-beta.1` prerelease versions and should be published in topological order:
-
-1. Wrappers and low-level deps:
-   - `xsoulspace_vkplay_js`
-   - `xsoulspace_ysdk_games_js`
-   - `xsoulspace_crazygames_js`
-   - `xsoulspace_discord_js`
-2. Interfaces and runtime/bridges:
-   - `xsoulspace_platform_core_interface`
-   - `xsoulspace_platform_social_interface`
-   - `xsoulspace_platform_gamification_interface`
-   - `xsoulspace_platform_multiplayer_interface`
-   - `xsoulspace_platform_foundation`
-   - `xsoulspace_platform_purchases_bridge`
-   - `xsoulspace_platform_ads_bridge`
-   - `xsoulspace_platform_monetization_bridge`
-3. Base adapters:
-   - `xsoulspace_platform_steam`
-   - `xsoulspace_platform_vkplay`
-   - `xsoulspace_platform_yandex_games`
-   - `xsoulspace_platform_crazygames`
-   - `xsoulspace_platform_discord`
-4. Plugin adapters:
-   - `xsoulspace_monetization_yandex_games`
-   - `xsoulspace_monetization_ads_crazygames`
-   - `xsoulspace_platform_yandex_games_purchases`
-   - `xsoulspace_platform_crazygames_ads`
-5. Optional server APIs (same beta wave when docs rely on them):
-   - `xsoulspace_vkplay_server_api`
-   - `xsoulspace_discord_server_api`
-
-Notes:
-
-- Publish foundational dependencies first, then rerun dry-runs for dependents.
-- Keep local development path wiring in `pubspec_overrides.yaml` only.
-
-## Publish command
-
-Run from each package directory:
-
-```bash
-flutter pub publish
-```
-
-or for pure Dart packages:
-
-```bash
-dart pub publish
-```
+- Availability target: 99.9% monthly for read endpoints.
+- Metadata freshness target: within 15 minutes of a successful publish run.

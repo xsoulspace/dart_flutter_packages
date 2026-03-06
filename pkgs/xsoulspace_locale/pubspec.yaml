@@ -16,11 +16,18 @@ dependencies:
     sdk: flutter
   from_json_to_json: ^0.4.0
   intl: ^0.20.2
-  xsoulspace_foundation: ^0.4.0
-
+  xsoulspace_foundation:
+    hosted:
+      name: xsoulspace_foundation
+      url: https://pub.xsoulspace.dev
+    version: ^0.4.0
 dev_dependencies:
   build_runner: ^2.4.15
   flutter_test:
     sdk: flutter
   lints: ^6.0.0
-  xsoulspace_lints: ^0.1.2
+  xsoulspace_lints:
+    hosted:
+      name: xsoulspace_lints
+      url: https://pub.xsoulspace.dev
+    version: ^0.1.2
