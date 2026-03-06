@@ -3,6 +3,8 @@
 This repository now publishes internal packages through a GitHub-backed hosted
 registry flow instead of a runtime `dart pub publish` endpoint.
 
+Deployment runbook: `deploy/README.md`.
+
 ## Registry v1 layout
 
 - Package metadata lives on the `registry-index` branch under `api/`.

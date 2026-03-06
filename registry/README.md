@@ -2,6 +2,8 @@
 
 Unified home for the internal hosted-pub registry implementation.
 
+Deployment runbook: `deploy/README.md`.
+
 ## Pillars
 
 1. Single source of truth
