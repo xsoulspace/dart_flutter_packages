@@ -1,0 +1,23 @@
+name: xsoulspace_inference_apple_foundation
+description: Apple Foundation Models (SystemLanguageModel) implementation of xsoulspace_inference_core for macOS.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ">=3.10.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  xsoulspace_inference_core:
+    path: ../xsoulspace_inference_core
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.25.8
+
+flutter:
+  plugin:
+    platforms:
+      macos:
+        pluginClass: XsoulspaceInferenceAppleFoundationPlugin
