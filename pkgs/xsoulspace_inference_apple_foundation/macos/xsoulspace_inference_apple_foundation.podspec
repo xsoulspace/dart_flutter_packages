@@ -15,4 +15,5 @@ Pod::Spec.new do |s|
   s.frameworks            = 'Foundation'
   # FoundationModels is a system framework on macOS 26+; optional at link time.
   s.weak_frameworks       = 'FoundationModels'
+  s.dependency 'FlutterMacOS'
 end

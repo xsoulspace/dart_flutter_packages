@@ -52,7 +52,7 @@ enum FoundationModelsBridge {
         let session = LanguageModelSession(model: model)
         let response = try await session.respond(to: prompt)
         DispatchQueue.main.async {
-          completion(response, nil, nil)
+          completion(response.content, nil, nil)
         }
       } catch {
         DispatchQueue.main.async {

@@ -2,26 +2,26 @@
 
 Unified home for the internal hosted-pub registry implementation.
 
-Deployment runbook: `deploy/README.md`.
+Deployment runbook: `DEPLOY.md`.
 
 ## Pillars
 
 1. Single source of truth
-All registry tooling and runtime gateway code live under `registry/`.
+   All registry tooling and runtime gateway code live under `registry/`.
 
 2. Deterministic metadata and archives
-`registry/tools` generates reproducible package metadata and release archives
-from tracked package content, while excluding packages marked
-`publish_to: none`.
+   `registry/tools` generates reproducible package metadata and release archives
+   from tracked package content, while excluding packages marked
+   `publish_to: none`.
 
 3. Stable command surface
-Repository-facing recipe names stay stable (`registry-rewrite-hosted`,
-`registry-build-index`, `registry-validate`) while script paths are standardized
-to `dart registry/tools/<script>.dart`.
+   Repository-facing recipe names stay stable (`registry-rewrite-hosted`,
+   `registry-build-index`, `registry-validate`) while script paths are standardized
+   to `dart registry/tools/<script>.dart`.
 
 4. Read-only gateway runtime
-`registry/gateway` serves hosted-pub-compatible read APIs and redirects archive
-downloads to release assets; CI remains the write path.
+   `registry/gateway` serves hosted-pub-compatible read APIs and redirects archive
+   downloads to release assets; CI remains the write path.
 
 ## Layout
 

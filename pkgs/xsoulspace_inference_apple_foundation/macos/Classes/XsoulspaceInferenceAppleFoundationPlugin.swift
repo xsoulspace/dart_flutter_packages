@@ -1,4 +1,8 @@
+#if os(macOS)
+import FlutterMacOS
+#else
 import Flutter
+#endif
 import Foundation
 
 /// macOS plugin: method channel for Apple Foundation Models availability and generation.

@@ -15,5 +15,7 @@ dependencies:
     path: ../xsoulspace_inference_core
 
 dev_dependencies:
+  flutter_test:
+    sdk: flutter
   lints: ^6.0.0
   test: ^1.25.8
