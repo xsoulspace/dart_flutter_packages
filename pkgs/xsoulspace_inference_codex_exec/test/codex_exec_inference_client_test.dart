@@ -10,6 +10,28 @@ void main() {
       : null;
 
   group('CodexExecInferenceClient', () {
+    test('supports only structuredText tasks', () {
+      final client = CodexExecInferenceClient(binaryName: '/tmp/codex');
+      expect(client.supportedTasks, const <InferenceTask>{
+        InferenceTask.structuredText,
+      });
+    });
+
+    test('infer returns task_unsupported for STT requests', () async {
+      final client = CodexExecInferenceClient(binaryName: '/tmp/codex');
+      final result = await client.infer(
+        InferenceRequest.speechToText(
+          audioInput: const InferenceAudioInput.filePath(
+            filePath: '/tmp/audio.wav',
+            mimeType: 'audio/wav',
+          ),
+        ),
+      );
+
+      expect(result.success, isFalse);
+      expect(result.error?.code, errorCodeTaskUnsupported);
+    });
+
     test(
       'infer parses structured output from codex output file',
       () async {

@@ -55,6 +55,12 @@ Future<void> runInference() async {
 }
 ```
 
+## Task support
+
+- Supported: `InferenceTask.structuredText`
+- Unsupported: `InferenceTask.speechToText`, `InferenceTask.textToSpeech`
+  return `task_unsupported`.
+
 ## Production reliability behavior
 
 - Request prevalidation before executing Codex (`prompt`, `schema`, `workingDirectory`).

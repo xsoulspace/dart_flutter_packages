@@ -6,5 +6,7 @@ abstract interface class InferenceClient {
 
   bool get isAvailable;
 
+  Set<InferenceTask> get supportedTasks;
+
   Future<InferenceResult<InferenceResponse>> infer(InferenceRequest request);
 }

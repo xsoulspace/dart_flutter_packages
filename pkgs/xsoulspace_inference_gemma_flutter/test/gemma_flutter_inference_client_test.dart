@@ -7,7 +7,9 @@ void main() {
     prompt: 'Say hello',
     outputSchema: <String, dynamic>{
       'type': 'object',
-      'properties': <String, dynamic>{'answer': <String, dynamic>{'type': 'string'}},
+      'properties': <String, dynamic>{
+        'answer': <String, dynamic>{'type': 'string'},
+      },
     },
     workingDirectory: '/tmp',
   );
@@ -15,6 +17,28 @@ void main() {
   group('GemmaFlutterInferenceClient', () {
     test('id is gemma_flutter', () {
       expect(GemmaFlutterInferenceClient().id, 'gemma_flutter');
+    });
+
+    test('supports only structuredText tasks', () {
+      expect(
+        GemmaFlutterInferenceClient().supportedTasks,
+        const <InferenceTask>{InferenceTask.structuredText},
+      );
+    });
+
+    test('returns task_unsupported for non-text tasks', () async {
+      final client = GemmaFlutterInferenceClient();
+      final result = await client.infer(
+        InferenceRequest.speechToText(
+          audioInput: const InferenceAudioInput.filePath(
+            filePath: '/tmp/audio.wav',
+            mimeType: 'audio/wav',
+          ),
+        ),
+      );
+
+      expect(result.success, isFalse);
+      expect(result.error?.code, errorCodeTaskUnsupported);
     });
 
     group('availability and cache', () {
@@ -25,7 +49,8 @@ void main() {
 
       test('refreshAvailability runs and isAvailable matches result', () async {
         GemmaFlutterInferenceClient.resetAvailabilityCache();
-        final available = await GemmaFlutterInferenceClient.refreshAvailability();
+        final available =
+            await GemmaFlutterInferenceClient.refreshAvailability();
         expect(GemmaFlutterInferenceClient().isAvailable, available);
       });
     });
@@ -34,56 +59,73 @@ void main() {
       test('fails with request_prompt_empty when prompt is empty', () async {
         GemmaFlutterInferenceClient.resetAvailabilityCache();
         final client = GemmaFlutterInferenceClient();
-        final result = await client.infer(const InferenceRequest(
-          prompt: '   ',
-          outputSchema: <String, dynamic>{'type': 'object'},
-          workingDirectory: '/tmp',
-        ));
+        final result = await client.infer(
+          const InferenceRequest(
+            prompt: '   ',
+            outputSchema: <String, dynamic>{'type': 'object'},
+            workingDirectory: '/tmp',
+          ),
+        );
         expect(result.success, isFalse);
         expect(result.error?.code, 'request_prompt_empty');
       });
 
-      test('fails with request_working_directory_empty when workingDirectory is empty', () async {
-        GemmaFlutterInferenceClient.resetAvailabilityCache();
-        final client = GemmaFlutterInferenceClient();
-        final result = await client.infer(const InferenceRequest(
-          prompt: 'Hi',
-          outputSchema: <String, dynamic>{'type': 'object'},
-          workingDirectory: '   ',
-        ));
-        expect(result.success, isFalse);
-        expect(result.error?.code, 'request_working_directory_empty');
-      });
+      test(
+        'fails with request_working_directory_empty when workingDirectory is empty',
+        () async {
+          GemmaFlutterInferenceClient.resetAvailabilityCache();
+          final client = GemmaFlutterInferenceClient();
+          final result = await client.infer(
+            const InferenceRequest(
+              prompt: 'Hi',
+              outputSchema: <String, dynamic>{'type': 'object'},
+              workingDirectory: '   ',
+            ),
+          );
+          expect(result.success, isFalse);
+          expect(result.error?.code, 'request_working_directory_empty');
+        },
+      );
 
-      test('fails with request_schema_empty when outputSchema is empty', () async {
-        final client = GemmaFlutterInferenceClient();
-        final result = await client.infer(const InferenceRequest(
-          prompt: 'Hi',
-          outputSchema: <String, dynamic>{},
-          workingDirectory: '/tmp',
-        ));
-        expect(result.success, isFalse);
-        expect(result.error?.code, 'request_schema_empty');
-      });
+      test(
+        'fails with request_schema_empty when outputSchema is empty',
+        () async {
+          final client = GemmaFlutterInferenceClient();
+          final result = await client.infer(
+            const InferenceRequest(
+              prompt: 'Hi',
+              outputSchema: <String, dynamic>{},
+              workingDirectory: '/tmp',
+            ),
+          );
+          expect(result.success, isFalse);
+          expect(result.error?.code, 'request_schema_empty');
+        },
+      );
     });
 
     group('infer when unavailable', () {
-      test('returns engine_unavailable when no model (or valid result when model present)', () async {
-        GemmaFlutterInferenceClient.resetAvailabilityCache();
-        await GemmaFlutterInferenceClient.refreshAvailability();
-        final client = GemmaFlutterInferenceClient();
-        final result = await client.infer(validRequest);
-        expect(result.success || result.error != null, isTrue);
-        if (!result.success) {
-          expect(result.error!.code, isNotEmpty);
-          expect(
-            ['engine_unavailable', 'codex_output_empty', 'json_parse_failed', 'schema_validation_failed'],
-            contains(result.error!.code),
-          );
-        } else {
-          expect(result.data?.output, isA<Map<String, dynamic>>());
-        }
-      });
+      test(
+        'returns engine_unavailable when no model (or valid result when model present)',
+        () async {
+          GemmaFlutterInferenceClient.resetAvailabilityCache();
+          await GemmaFlutterInferenceClient.refreshAvailability();
+          final client = GemmaFlutterInferenceClient();
+          final result = await client.infer(validRequest);
+          expect(result.success || result.error != null, isTrue);
+          if (!result.success) {
+            expect(result.error!.code, isNotEmpty);
+            expect([
+              'engine_unavailable',
+              'codex_output_empty',
+              'json_parse_failed',
+              'schema_validation_failed',
+            ], contains(result.error!.code));
+          } else {
+            expect(result.data?.output, isA<Map<String, dynamic>>());
+          }
+        },
+      );
     });
   });
 }

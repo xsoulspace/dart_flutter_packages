@@ -3,6 +3,12 @@ import 'dart:convert';
 import 'inference_models.dart';
 import 'inference_result.dart';
 
+const String errorCodeTaskUnsupported = 'task_unsupported';
+const String errorCodeAudioInputMissing = 'audio_input_missing';
+const String errorCodeAudioInputInvalid = 'audio_input_invalid';
+const String errorCodeTtsTextEmpty = 'tts_text_empty';
+const String errorCodeAudioOutputUnavailable = 'audio_output_unavailable';
+
 InferenceResult<Map<String, dynamic>> parseStrictJsonObject(final String raw) {
   final trimmed = raw.trim();
   if (trimmed.isEmpty) {
@@ -55,13 +61,6 @@ InferenceResult<void> validateRequiredKeys({
 }
 
 InferenceResult<void> validateInferenceRequest(final InferenceRequest request) {
-  if (request.prompt.trim().isEmpty) {
-    return InferenceResult<void>.fail(
-      code: 'request_prompt_empty',
-      message: 'Inference prompt must not be empty',
-    );
-  }
-
   if (request.workingDirectory.trim().isEmpty) {
     return InferenceResult<void>.fail(
       code: 'request_working_directory_empty',
@@ -69,14 +68,100 @@ InferenceResult<void> validateInferenceRequest(final InferenceRequest request) {
     );
   }
 
-  if (request.outputSchema.isEmpty) {
+  switch (request.task) {
+    case InferenceTask.structuredText:
+      if (request.prompt.trim().isEmpty) {
+        return InferenceResult<void>.fail(
+          code: 'request_prompt_empty',
+          message: 'Inference prompt must not be empty',
+        );
+      }
+
+      if (request.outputSchema.isEmpty) {
+        return InferenceResult<void>.fail(
+          code: 'request_schema_empty',
+          message: 'Inference outputSchema must not be empty',
+        );
+      }
+
+      return validateSchemaDefinition(request.outputSchema);
+    case InferenceTask.speechToText:
+      final audioInput = request.audioInput;
+      if (audioInput == null) {
+        return InferenceResult<void>.fail(
+          code: errorCodeAudioInputMissing,
+          message: 'Speech-to-text request requires audioInput',
+        );
+      }
+      return validateInferenceAudioInput(audioInput);
+    case InferenceTask.textToSpeech:
+      if (request.prompt.trim().isEmpty) {
+        return InferenceResult<void>.fail(
+          code: errorCodeTtsTextEmpty,
+          message: 'Text-to-speech request text must not be empty',
+        );
+      }
+      return InferenceResult<void>.ok(null);
+  }
+}
+
+InferenceResult<void> validateInferenceAudioInput(
+  final InferenceAudioInput audioInput,
+) {
+  final hasFilePath = (audioInput.filePath ?? '').trim().isNotEmpty;
+  final hasBytes = (audioInput.bytes ?? const <int>[]).isNotEmpty;
+
+  if (!hasFilePath && !hasBytes) {
     return InferenceResult<void>.fail(
-      code: 'request_schema_empty',
-      message: 'Inference outputSchema must not be empty',
+      code: errorCodeAudioInputInvalid,
+      message: 'Audio input must provide filePath or bytes',
+      details: const <String, dynamic>{'reason': 'source_missing'},
     );
   }
 
-  return validateSchemaDefinition(request.outputSchema);
+  if (hasFilePath && hasBytes) {
+    return InferenceResult<void>.fail(
+      code: errorCodeAudioInputInvalid,
+      message: 'Audio input must not provide both filePath and bytes',
+      details: const <String, dynamic>{'reason': 'ambiguous_source'},
+    );
+  }
+
+  if (audioInput.mimeType.trim().isEmpty) {
+    return InferenceResult<void>.fail(
+      code: errorCodeAudioInputInvalid,
+      message: 'Audio input mimeType must not be empty',
+      details: const <String, dynamic>{'reason': 'mime_type_empty'},
+    );
+  }
+
+  final sampleRateHz = audioInput.sampleRateHz;
+  if (sampleRateHz != null && sampleRateHz <= 0) {
+    return InferenceResult<void>.fail(
+      code: errorCodeAudioInputInvalid,
+      message: 'Audio input sampleRateHz must be > 0 when provided',
+      details: const <String, dynamic>{'reason': 'sample_rate_invalid'},
+    );
+  }
+
+  final channelCount = audioInput.channelCount;
+  if (channelCount != null && channelCount <= 0) {
+    return InferenceResult<void>.fail(
+      code: errorCodeAudioInputInvalid,
+      message: 'Audio input channelCount must be > 0 when provided',
+      details: const <String, dynamic>{'reason': 'channel_count_invalid'},
+    );
+  }
+
+  return InferenceResult<void>.ok(null);
+}
+
+String normalizeTranscript(final String transcript) {
+  final punctuationStripped = transcript.replaceAll(
+    RegExp(r'[^\p{L}\p{N}\s]+', unicode: true),
+    ' ',
+  );
+  return punctuationStripped.replaceAll(RegExp(r'\s+'), ' ').trim();
 }
 
 InferenceResult<void> validateSchemaDefinition(

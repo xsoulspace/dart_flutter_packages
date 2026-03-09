@@ -31,6 +31,12 @@ if (client.isAvailable) {
 }
 ```
 
+## Task support
+
+- Supported: `InferenceTask.structuredText`
+- Unsupported: `InferenceTask.speechToText`, `InferenceTask.textToSpeech`
+  return `task_unsupported`.
+
 ## Smoke verification
 
 - **Unit tests** (no native engine, runs on any platform):
