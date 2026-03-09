@@ -18,10 +18,42 @@ void main() {
 
     expect(decoded.task, InferenceTask.speechToText);
     expect(decoded.audioInput, isNotNull);
+    expect(decoded.audioInput!.source, InferenceAudioSource.bytes);
     expect(decoded.audioInput!.bytes, <int>[1, 2, 3, 4]);
     expect(decoded.audioInput!.mimeType, 'audio/wav');
     expect(decoded.metadata['source'], 'unit_test');
   });
+
+  test('InferenceAudioInput microphone serialization round-trips', () {
+    const input = InferenceAudioInput.microphone(
+      mimeType: 'audio/webm',
+      sampleRateHz: 48000,
+      channelCount: 1,
+    );
+
+    final decoded = InferenceAudioInput.fromJson(input.toJson());
+
+    expect(decoded.source, InferenceAudioSource.microphone);
+    expect(decoded.filePath, isNull);
+    expect(decoded.bytes, isNull);
+    expect(decoded.mimeType, 'audio/webm');
+    expect(decoded.sampleRateHz, 48000);
+    expect(decoded.channelCount, 1);
+  });
+
+  test(
+    'InferenceAudioInput infers source when source discriminant is absent',
+    () {
+      final decoded = InferenceAudioInput.fromJson(const <String, dynamic>{
+        'file_path': 'https://example.com/audio.wav',
+        'mime_type': 'audio/wav',
+      });
+
+      expect(decoded.source, isNull);
+      expect(decoded.resolvedSource, InferenceAudioSource.filePath);
+      expect(decoded.filePath, 'https://example.com/audio.wav');
+    },
+  );
 
   test('InferenceRequest TTS serialization round-trips', () {
     final request = InferenceRequest.textToSpeech(

@@ -110,16 +110,41 @@ InferenceResult<void> validateInferenceAudioInput(
 ) {
   final hasFilePath = (audioInput.filePath ?? '').trim().isNotEmpty;
   final hasBytes = (audioInput.bytes ?? const <int>[]).isNotEmpty;
+  final source = audioInput.resolvedSource;
 
-  if (!hasFilePath && !hasBytes) {
+  if (source == InferenceAudioSource.microphone && (hasFilePath || hasBytes)) {
     return InferenceResult<void>.fail(
       code: errorCodeAudioInputInvalid,
-      message: 'Audio input must provide filePath or bytes',
+      message: 'Microphone audio input must not provide filePath or bytes',
+      details: const <String, dynamic>{'reason': 'microphone_source_ambiguous'},
+    );
+  }
+
+  if (source == InferenceAudioSource.filePath && !hasFilePath) {
+    return InferenceResult<void>.fail(
+      code: errorCodeAudioInputInvalid,
+      message: 'Audio input source=file_path requires filePath',
+      details: const <String, dynamic>{'reason': 'source_mismatch'},
+    );
+  }
+
+  if (source == InferenceAudioSource.bytes && !hasBytes) {
+    return InferenceResult<void>.fail(
+      code: errorCodeAudioInputInvalid,
+      message: 'Audio input source=bytes requires bytes',
+      details: const <String, dynamic>{'reason': 'source_mismatch'},
+    );
+  }
+
+  if (source != InferenceAudioSource.microphone && !hasFilePath && !hasBytes) {
+    return InferenceResult<void>.fail(
+      code: errorCodeAudioInputInvalid,
+      message: 'Audio input must provide filePath, bytes, or microphone source',
       details: const <String, dynamic>{'reason': 'source_missing'},
     );
   }
 
-  if (hasFilePath && hasBytes) {
+  if (source != InferenceAudioSource.microphone && hasFilePath && hasBytes) {
     return InferenceResult<void>.fail(
       code: errorCodeAudioInputInvalid,
       message: 'Audio input must not provide both filePath and bytes',

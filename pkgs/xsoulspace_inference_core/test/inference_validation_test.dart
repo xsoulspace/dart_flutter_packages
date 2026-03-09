@@ -153,6 +153,35 @@ void main() {
     expect(result.success, isTrue);
   });
 
+  test('validateInferenceRequest accepts STT microphone request', () {
+    final result = validateInferenceRequest(
+      InferenceRequest.speechToText(
+        audioInput: const InferenceAudioInput.microphone(
+          mimeType: 'audio/webm',
+        ),
+        workingDirectory: '/tmp',
+      ),
+    );
+
+    expect(result.success, isTrue);
+  });
+
+  test('validateInferenceRequest rejects ambiguous microphone payload', () {
+    final result = validateInferenceRequest(
+      InferenceRequest.speechToText(
+        audioInput: const InferenceAudioInput(
+          source: InferenceAudioSource.microphone,
+          filePath: '/tmp/audio.wav',
+          mimeType: 'audio/wav',
+        ),
+        workingDirectory: '/tmp',
+      ),
+    );
+
+    expect(result.success, isFalse);
+    expect(result.error?.code, errorCodeAudioInputInvalid);
+  });
+
   test('normalizeTranscript strips punctuation and collapses whitespace', () {
     final normalized = normalizeTranscript(
       'Hi,   world!!!  this... is\tan\nexample.',

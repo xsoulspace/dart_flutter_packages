@@ -16,8 +16,31 @@ InferenceTask inferenceTaskFromJsonValue(final Object? value) {
   return InferenceTask.structuredText;
 }
 
+enum InferenceAudioSource { filePath, bytes, microphone }
+
+String inferenceAudioSourceToJsonValue(final InferenceAudioSource source) =>
+    switch (source) {
+      InferenceAudioSource.filePath => 'file_path',
+      InferenceAudioSource.bytes => 'bytes',
+      InferenceAudioSource.microphone => 'microphone',
+    };
+
+InferenceAudioSource? inferenceAudioSourceFromJsonValue(final Object? value) {
+  if (value is! String) {
+    return null;
+  }
+
+  return switch (value) {
+    'file_path' || 'filePath' => InferenceAudioSource.filePath,
+    'bytes' => InferenceAudioSource.bytes,
+    'microphone' => InferenceAudioSource.microphone,
+    _ => null,
+  };
+}
+
 class InferenceAudioInput {
   const InferenceAudioInput({
+    this.source,
     this.filePath,
     this.bytes,
     required this.mimeType,
@@ -30,22 +53,52 @@ class InferenceAudioInput {
     required this.mimeType,
     this.sampleRateHz,
     this.channelCount,
-  }) : bytes = null;
+  }) : source = InferenceAudioSource.filePath,
+       bytes = null;
 
   const InferenceAudioInput.bytes({
     required this.bytes,
     required this.mimeType,
     this.sampleRateHz,
     this.channelCount,
-  }) : filePath = null;
+  }) : source = InferenceAudioSource.bytes,
+       filePath = null;
 
+  const InferenceAudioInput.microphone({
+    this.mimeType = 'audio/webm',
+    this.sampleRateHz,
+    this.channelCount,
+  }) : source = InferenceAudioSource.microphone,
+       filePath = null,
+       bytes = null;
+
+  final InferenceAudioSource? source;
   final String? filePath;
   final List<int>? bytes;
   final String mimeType;
   final int? sampleRateHz;
   final int? channelCount;
 
+  InferenceAudioSource? get resolvedSource {
+    if (source != null) {
+      return source;
+    }
+
+    final hasFilePath = (filePath ?? '').trim().isNotEmpty;
+    final hasBytes = (bytes ?? const <int>[]).isNotEmpty;
+
+    if (hasFilePath == hasBytes) {
+      return null;
+    }
+
+    return hasFilePath
+        ? InferenceAudioSource.filePath
+        : InferenceAudioSource.bytes;
+  }
+
   Map<String, dynamic> toJson() => {
+    if (resolvedSource != null)
+      'source': inferenceAudioSourceToJsonValue(resolvedSource!),
     if (filePath != null) 'file_path': filePath,
     if (bytes != null) 'bytes_base64': base64Encode(bytes!),
     'mime_type': mimeType,
@@ -55,6 +108,7 @@ class InferenceAudioInput {
 
   factory InferenceAudioInput.fromJson(final Map<String, dynamic> json) =>
       InferenceAudioInput(
+        source: inferenceAudioSourceFromJsonValue(json['source']),
         filePath: json['file_path'] as String?,
         bytes: switch (json['bytes_base64']) {
           final String value => base64Decode(value),
