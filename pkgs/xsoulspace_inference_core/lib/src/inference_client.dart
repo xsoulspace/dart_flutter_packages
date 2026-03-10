@@ -6,5 +6,13 @@ abstract interface class InferenceClient {
 
   bool get isAvailable;
 
+  Set<InferenceTask> get supportedTasks;
+
+  /// Refreshes provider availability state and returns latest value.
+  Future<bool> refreshAvailability();
+
+  /// Clears provider availability caches (if any).
+  void resetAvailabilityCache();
+
   Future<InferenceResult<InferenceResponse>> infer(InferenceRequest request);
 }

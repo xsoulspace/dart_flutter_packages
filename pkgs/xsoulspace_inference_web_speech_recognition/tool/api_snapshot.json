@@ -1,0 +1,21 @@
+{
+  "source": "tool/generated/web_speech_recognition.generated.d.ts",
+  "sourceHash": "86efa776aa6a32c43f6d8ad5fc05a9e8906128d2e96f514c22e08ba34a52ea79",
+  "generated": "lib/src/raw/web_speech_recognition_raw.g.dart",
+  "symbolCount": 9,
+  "symbols": [
+    "MediaStreamTrack",
+    "SpeechRecognition",
+    "SpeechRecognitionAlternative",
+    "SpeechRecognitionConstructor",
+    "SpeechRecognitionErrorCode",
+    "SpeechRecognitionErrorEvent",
+    "SpeechRecognitionEvent",
+    "SpeechRecognitionResult",
+    "SpeechRecognitionResultList"
+  ],
+  "globalSymbols": [
+    "SpeechRecognition",
+    "webkitSpeechRecognition"
+  ]
+}

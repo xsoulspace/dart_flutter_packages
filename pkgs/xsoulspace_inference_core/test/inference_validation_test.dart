@@ -115,4 +115,78 @@ void main() {
     final details = result.error?.details as Map<String, dynamic>?;
     expect(details?['path'], r'$.items[0].id');
   });
+
+  test('validateInferenceRequest rejects STT request without audio input', () {
+    final result = validateInferenceRequest(
+      const InferenceRequest(
+        prompt: '',
+        outputSchema: <String, dynamic>{},
+        workingDirectory: '/tmp',
+        task: InferenceTask.speechToText,
+      ),
+    );
+
+    expect(result.success, isFalse);
+    expect(result.error?.code, errorCodeAudioInputMissing);
+  });
+
+  test('validateInferenceRequest rejects empty TTS text', () {
+    final result = validateInferenceRequest(
+      InferenceRequest.textToSpeech(text: '   ', workingDirectory: '/tmp'),
+    );
+
+    expect(result.success, isFalse);
+    expect(result.error?.code, errorCodeTtsTextEmpty);
+  });
+
+  test('validateInferenceRequest accepts STT file-path request', () {
+    final result = validateInferenceRequest(
+      InferenceRequest.speechToText(
+        audioInput: const InferenceAudioInput.filePath(
+          filePath: '/tmp/audio.wav',
+          mimeType: 'audio/wav',
+        ),
+        workingDirectory: '/tmp',
+      ),
+    );
+
+    expect(result.success, isTrue);
+  });
+
+  test('validateInferenceRequest accepts STT microphone request', () {
+    final result = validateInferenceRequest(
+      InferenceRequest.speechToText(
+        audioInput: const InferenceAudioInput.microphone(
+          mimeType: 'audio/webm',
+        ),
+        workingDirectory: '/tmp',
+      ),
+    );
+
+    expect(result.success, isTrue);
+  });
+
+  test('validateInferenceRequest rejects ambiguous microphone payload', () {
+    final result = validateInferenceRequest(
+      InferenceRequest.speechToText(
+        audioInput: const InferenceAudioInput(
+          source: InferenceAudioSource.microphone,
+          filePath: '/tmp/audio.wav',
+          mimeType: 'audio/wav',
+        ),
+        workingDirectory: '/tmp',
+      ),
+    );
+
+    expect(result.success, isFalse);
+    expect(result.error?.code, errorCodeAudioInputInvalid);
+  });
+
+  test('normalizeTranscript strips punctuation and collapses whitespace', () {
+    final normalized = normalizeTranscript(
+      'Hi,   world!!!  this... is\tan\nexample.',
+    );
+
+    expect(normalized, 'Hi world this is an example');
+  });
 }

@@ -53,12 +53,12 @@ class GemmaModelStatus {
   final String? message;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'ready': ready,
-        if (modelId != null) 'model_id': modelId,
-        if (installSource != null) 'install_source': installSource,
-        if (errorCode != null) 'error_code': errorCode,
-        if (message != null) 'message': message,
-      };
+    'ready': ready,
+    if (modelId != null) 'model_id': modelId,
+    if (installSource != null) 'install_source': installSource,
+    if (errorCode != null) 'error_code': errorCode,
+    if (message != null) 'message': message,
+  };
 }
 
 /// Model setup APIs: URL download, local file, status.
@@ -79,11 +79,10 @@ class GemmaModelSetup {
   }) async {
     try {
       final id = profileId ?? defaultProfileId;
-      await FlutterGemma.installModel(modelType: ModelType.functionGemma)
-          .fromNetwork(url.trim())
-          .withProgress(onProgress ?? (_) {})
-          .install();
-      final ready = await FlutterGemma.hasActiveModel();
+      await FlutterGemma.installModel(
+        modelType: ModelType.functionGemma,
+      ).fromNetwork(url.trim()).withProgress(onProgress ?? (_) {}).install();
+      final ready = FlutterGemma.hasActiveModel();
       return GemmaModelInstallResult(
         success: ready,
         modelId: ready ? id : null,
@@ -106,10 +105,10 @@ class GemmaModelSetup {
   }) async {
     try {
       final id = profileId ?? defaultProfileId;
-      await FlutterGemma.installModel(modelType: ModelType.functionGemma)
-          .fromFile(path.trim())
-          .install();
-      final ready = await FlutterGemma.hasActiveModel();
+      await FlutterGemma.installModel(
+        modelType: ModelType.functionGemma,
+      ).fromFile(path.trim()).install();
+      final ready = FlutterGemma.hasActiveModel();
       return GemmaModelInstallResult(
         success: ready,
         modelId: ready ? id : null,
@@ -128,7 +127,7 @@ class GemmaModelSetup {
   /// Report whether a model is ready and optional status details.
   Future<GemmaModelStatus> getStatus() async {
     try {
-      final hasModel = await FlutterGemma.hasActiveModel();
+      final hasModel = FlutterGemma.hasActiveModel();
       if (!hasModel) {
         return const GemmaModelStatus(
           ready: false,

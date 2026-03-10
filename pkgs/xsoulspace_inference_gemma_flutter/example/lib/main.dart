@@ -11,7 +11,9 @@ class GemmaExampleApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Gemma Example',
-      theme: ThemeData.from(colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal)),
+      theme: ThemeData.from(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
+      ),
       home: const _ExamplePage(),
     );
   }
@@ -30,16 +32,20 @@ class _ExamplePageState extends State<_ExamplePage> {
 
   static const _schema = <String, dynamic>{
     'type': 'object',
-    'properties': <String, dynamic>{'answer': <String, dynamic>{'type': 'string'}},
+    'properties': <String, dynamic>{
+      'answer': <String, dynamic>{'type': 'string'},
+    },
   };
 
   Future<void> _checkAvailability() async {
     setState(() => _status = 'Checking...');
-    GemmaFlutterInferenceClient.resetAvailabilityCache();
-    final available = await GemmaFlutterInferenceClient.refreshAvailability();
+    GemmaFlutterInferenceClient().resetAvailabilityCache();
+    final available = await GemmaFlutterInferenceClient().refreshAvailability();
     setState(() {
       _available = available;
-      _status = available ? 'Available' : 'Unavailable (install model via Install model)';
+      _status = available
+          ? 'Available'
+          : 'Unavailable (install model via Install model)';
     });
   }
 
@@ -60,11 +66,13 @@ class _ExamplePageState extends State<_ExamplePage> {
   Future<void> _runInference() async {
     setState(() => _status = 'Running inference...');
     final client = GemmaFlutterInferenceClient();
-    final result = await client.infer(const InferenceRequest(
-      prompt: 'Reply with one short word: hello.',
-      outputSchema: _schema,
-      workingDirectory: '/tmp',
-    ));
+    final result = await client.infer(
+      const InferenceRequest(
+        prompt: 'Reply with one short word: hello.',
+        outputSchema: _schema,
+        workingDirectory: '/tmp',
+      ),
+    );
     setState(() {
       if (result.success && result.data != null) {
         _status = 'OK: ${result.data!.output}';

@@ -44,9 +44,35 @@ class CodexExecInferenceClient implements InferenceClient {
   bool get isAvailable => _resolveBinaryPath() != null;
 
   @override
+  Set<InferenceTask> get supportedTasks => const <InferenceTask>{
+    InferenceTask.structuredText,
+  };
+
+  @override
+  Future<bool> refreshAvailability() async => isAvailable;
+
+  @override
+  void resetAvailabilityCache() {
+    // No availability cache for codex binary resolution.
+  }
+
+  @override
   Future<InferenceResult<InferenceResponse>> infer(
     final InferenceRequest request,
   ) async {
+    if (!supportedTasks.contains(request.task)) {
+      return InferenceResult<InferenceResponse>.fail(
+        code: errorCodeTaskUnsupported,
+        message: 'Task ${request.task.name} is not supported by $id',
+        details: <String, dynamic>{
+          'supported_tasks': supportedTasks
+              .map((final task) => task.name)
+              .toList(),
+          'requested_task': request.task.name,
+        },
+      );
+    }
+
     final requestValidation = validateInferenceRequest(request);
     if (!requestValidation.success) {
       return InferenceResult<InferenceResponse>.fail(

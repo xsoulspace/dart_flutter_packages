@@ -11,12 +11,11 @@ import 'gemma_model_setup.dart';
 class GemmaFlutterInferenceClient implements InferenceClient {
   GemmaFlutterInferenceClient({
     this.maxTokens = 1024,
-    this.modelSetup,
-  }) : _modelSetup = modelSetup ?? GemmaModelSetup();
+    GemmaModelSetup? modelSetup,
+  }) : modelSetup = modelSetup ?? GemmaModelSetup();
 
   final int maxTokens;
-  final GemmaModelSetup? modelSetup;
-  final GemmaModelSetup _modelSetup;
+  final GemmaModelSetup modelSetup;
 
   @override
   String get id => 'gemma_flutter';
@@ -24,13 +23,18 @@ class GemmaFlutterInferenceClient implements InferenceClient {
   @override
   bool get isAvailable => _cachedAvailable;
 
+  @override
+  Set<InferenceTask> get supportedTasks => const <InferenceTask>{
+    InferenceTask.structuredText,
+  };
+
   static bool _cachedAvailable = false;
   static bool _availabilityChecked = false;
 
-  /// Refreshes the availability cache (e.g. after model install). Idempotent.
-  static Future<bool> refreshAvailability() async {
+  @override
+  Future<bool> refreshAvailability() async {
     try {
-      _cachedAvailable = await FlutterGemma.hasActiveModel();
+      _cachedAvailable = FlutterGemma.hasActiveModel();
       _availabilityChecked = true;
     } catch (_) {
       _cachedAvailable = false;
@@ -39,7 +43,7 @@ class GemmaFlutterInferenceClient implements InferenceClient {
     return _cachedAvailable;
   }
 
-  static Future<bool> _checkAvailability() async {
+  Future<bool> _checkAvailability() async {
     if (!_availabilityChecked) {
       await refreshAvailability();
     }
@@ -47,9 +51,28 @@ class GemmaFlutterInferenceClient implements InferenceClient {
   }
 
   @override
+  void resetAvailabilityCache() {
+    _availabilityChecked = false;
+    _cachedAvailable = false;
+  }
+
+  @override
   Future<InferenceResult<InferenceResponse>> infer(
     final InferenceRequest request,
   ) async {
+    if (!supportedTasks.contains(request.task)) {
+      return InferenceResult<InferenceResponse>.fail(
+        code: errorCodeTaskUnsupported,
+        message: 'Task ${request.task.name} is not supported by $id',
+        details: <String, dynamic>{
+          'supported_tasks': supportedTasks
+              .map((final task) => task.name)
+              .toList(),
+          'requested_task': request.task.name,
+        },
+      );
+    }
+
     final requestValidation = validateInferenceRequest(request);
     if (!requestValidation.success) {
       return InferenceResult<InferenceResponse>.fail(
@@ -131,20 +154,14 @@ class GemmaFlutterInferenceClient implements InferenceClient {
   }
 
   String _buildPromptWithSchema(InferenceRequest request) {
-    final schemaJson = const JsonEncoder.withIndent('  ').convert(
-      request.outputSchema,
-    );
+    final schemaJson = const JsonEncoder.withIndent(
+      '  ',
+    ).convert(request.outputSchema);
     return '${request.prompt}\n\nRespond with a single JSON object that conforms to this schema (no other text):\n$schemaJson';
   }
 
   String _truncate(String value, {int max = 2000}) {
     if (value.length <= max) return value;
     return '${value.substring(0, max)}...[truncated ${value.length - max} chars]';
-  }
-
-  /// Refresh availability cache (e.g. after model install).
-  static void resetAvailabilityCache() {
-    _availabilityChecked = false;
-    _cachedAvailable = false;
   }
 }

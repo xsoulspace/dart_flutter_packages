@@ -4,6 +4,8 @@ All notable changes to this package will be documented in this file.
 
 ## Unreleased
 
+- Extended `InferenceClient` with lifecycle methods:
+  `refreshAvailability()` and `resetAvailabilityCache()`.
 - Added request preflight validation via `validateInferenceRequest`.
 - Added recursive schema definition validation via `validateSchemaDefinition`.
 - Added recursive output schema conformance checks via `validateJsonAgainstSchema`.

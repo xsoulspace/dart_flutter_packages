@@ -3,8 +3,9 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
-const MethodChannel _channel =
-    MethodChannel('xsoulspace_inference_apple_foundation');
+const MethodChannel _channel = MethodChannel(
+  'xsoulspace_inference_apple_foundation',
+);
 
 /// Apple Foundation Models (SystemLanguageModel) implementation of [InferenceClient].
 /// macOS only; returns standardized [InferenceResult] with codes
@@ -18,11 +19,17 @@ class AppleFoundationInferenceClient implements InferenceClient {
   @override
   bool get isAvailable => _cachedAvailable;
 
+  @override
+  Set<InferenceTask> get supportedTasks => const <InferenceTask>{
+    InferenceTask.structuredText,
+  };
+
   static bool _cachedAvailable = false;
   static bool _availabilityChecked = false;
 
   /// Refreshes the availability cache. Idempotent.
-  static Future<bool> refreshAvailability() async {
+  @override
+  Future<bool> refreshAvailability() async {
     try {
       final result = await _channel.invokeMethod<bool>('isAvailable');
       _cachedAvailable = result == true;
@@ -37,7 +44,7 @@ class AppleFoundationInferenceClient implements InferenceClient {
     return _cachedAvailable;
   }
 
-  static Future<bool> _checkAvailability() async {
+  Future<bool> _checkAvailability() async {
     if (!_availabilityChecked) {
       await refreshAvailability();
     }
@@ -45,9 +52,28 @@ class AppleFoundationInferenceClient implements InferenceClient {
   }
 
   @override
+  void resetAvailabilityCache() {
+    _availabilityChecked = false;
+    _cachedAvailable = false;
+  }
+
+  @override
   Future<InferenceResult<InferenceResponse>> infer(
     final InferenceRequest request,
   ) async {
+    if (!supportedTasks.contains(request.task)) {
+      return InferenceResult<InferenceResponse>.fail(
+        code: errorCodeTaskUnsupported,
+        message: 'Task ${request.task.name} is not supported by $id',
+        details: <String, dynamic>{
+          'supported_tasks': supportedTasks
+              .map((final task) => task.name)
+              .toList(),
+          'requested_task': request.task.name,
+        },
+      );
+    }
+
     final requestValidation = validateInferenceRequest(request);
     if (!requestValidation.success) {
       return InferenceResult<InferenceResponse>.fail(
@@ -138,9 +164,9 @@ class AppleFoundationInferenceClient implements InferenceClient {
   }
 
   String _buildPromptWithSchema(InferenceRequest request) {
-    final schemaJson = const JsonEncoder.withIndent('  ').convert(
-      request.outputSchema,
-    );
+    final schemaJson = const JsonEncoder.withIndent(
+      '  ',
+    ).convert(request.outputSchema);
     return '${request.prompt}\n\nRespond with a single JSON object that conforms to this schema (no other text):\n$schemaJson';
   }
 

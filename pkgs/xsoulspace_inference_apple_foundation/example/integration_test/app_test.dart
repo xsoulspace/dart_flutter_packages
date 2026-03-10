@@ -7,7 +7,7 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('plugin availability and optional infer', (tester) async {
-    await AppleFoundationInferenceClient.refreshAvailability();
+    await AppleFoundationInferenceClient().refreshAvailability();
     final available = AppleFoundationInferenceClient().isAvailable;
 
     if (!available) {
@@ -17,13 +17,17 @@ void main() {
     final client = AppleFoundationInferenceClient();
     const schema = <String, dynamic>{
       'type': 'object',
-      'properties': <String, dynamic>{'answer': <String, dynamic>{'type': 'string'}},
+      'properties': <String, dynamic>{
+        'answer': <String, dynamic>{'type': 'string'},
+      },
     };
-    final result = await client.infer(const InferenceRequest(
-      prompt: 'Reply with one word: ok.',
-      outputSchema: schema,
-      workingDirectory: '/tmp',
-    ));
+    final result = await client.infer(
+      const InferenceRequest(
+        prompt: 'Reply with one word: ok.',
+        outputSchema: schema,
+        workingDirectory: '/tmp',
+      ),
+    );
 
     expect(result.success || result.error != null, isTrue);
     if (result.success) {

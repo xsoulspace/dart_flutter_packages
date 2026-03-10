@@ -37,6 +37,7 @@ Version is in `pubspec.yaml`; there is no `--version` CLI (library only).
   - `codex_output_empty` — model produced no output.
   - `json_parse_failed` — output was not valid JSON.
   - `schema_validation_failed` — output did not match the requested schema.
+  - `task_unsupported` — STT/TTS requests are not supported by this text-only wrapper.
 
 ## Example app and e2e
 
