@@ -261,17 +261,22 @@ class CodexExecInferenceClient implements InferenceClient {
     required final String outputPath,
     required final List<String> autoArgs,
   }) async {
+    final skipGitRepoCheck = !Directory(
+      p.join(request.workingDirectory, '.git'),
+    ).existsSync();
     final args = <String>[
       'exec',
       '--sandbox',
       sandbox,
       ...autoArgs,
+      '--ephemeral',
+      if (skipGitRepoCheck) '--skip-git-repo-check',
       '--output-schema',
       schemaPath,
       '--output-last-message',
       outputPath,
       ...extraExecArgs,
-      request.prompt,
+      '-',
     ];
 
     final startedAt = DateTime.now();
@@ -283,6 +288,22 @@ class CodexExecInferenceClient implements InferenceClient {
       includeParentEnvironment: true,
       runInShell: false,
     );
+
+    unawaited(() async {
+      try {
+        process.stdin.write(request.prompt);
+        await process.stdin.flush();
+      } on SocketException {
+        // The child process can exit before consuming stdin; let the
+        // normal exit-code path report the failure instead of crashing.
+      } finally {
+        try {
+          await process.stdin.close();
+        } on SocketException {
+          // best-effort close
+        }
+      }
+    }());
 
     final stdoutFuture = process.stdout.transform(utf8.decoder).join();
     final stderrFuture = process.stderr.transform(utf8.decoder).join();
@@ -451,7 +472,11 @@ class CodexExecInferenceClient implements InferenceClient {
     if (value.length <= max) {
       return value;
     }
-    return '${value.substring(0, max)}...[truncated ${value.length - max} chars]';
+    final headLength = max ~/ 2;
+    final tailLength = max - headLength;
+    final head = value.substring(0, headLength);
+    final tail = value.substring(value.length - tailLength);
+    return '$head...[truncated ${value.length - max} chars]...$tail';
   }
 
   String? _resolveBinaryPath() {
