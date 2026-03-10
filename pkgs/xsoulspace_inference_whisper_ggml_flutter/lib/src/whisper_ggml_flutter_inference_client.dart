@@ -53,6 +53,14 @@ class WhisperGgmlFlutterInferenceClient implements InferenceClient {
     InferenceTask.speechToText,
   };
 
+  @override
+  Future<bool> refreshAvailability() async => isAvailable;
+
+  @override
+  void resetAvailabilityCache() {
+    // No availability cache; platform checks are dynamic.
+  }
+
   WhisperModel get selectedModel => _selectedModel;
 
   Future<void> selectModel(final WhisperModel model) async {

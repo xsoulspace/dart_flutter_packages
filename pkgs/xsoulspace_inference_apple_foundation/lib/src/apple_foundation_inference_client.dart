@@ -28,7 +28,8 @@ class AppleFoundationInferenceClient implements InferenceClient {
   static bool _availabilityChecked = false;
 
   /// Refreshes the availability cache. Idempotent.
-  static Future<bool> refreshAvailability() async {
+  @override
+  Future<bool> refreshAvailability() async {
     try {
       final result = await _channel.invokeMethod<bool>('isAvailable');
       _cachedAvailable = result == true;
@@ -43,11 +44,17 @@ class AppleFoundationInferenceClient implements InferenceClient {
     return _cachedAvailable;
   }
 
-  static Future<bool> _checkAvailability() async {
+  Future<bool> _checkAvailability() async {
     if (!_availabilityChecked) {
       await refreshAvailability();
     }
     return _cachedAvailable;
+  }
+
+  @override
+  void resetAvailabilityCache() {
+    _availabilityChecked = false;
+    _cachedAvailable = false;
   }
 
   @override

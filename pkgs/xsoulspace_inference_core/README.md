@@ -14,6 +14,8 @@ and TTS task flows.
 - `InferenceVoiceOptions`
 - `InferenceClient`
 - `InferenceClient.supportedTasks`
+- `InferenceClient.refreshAvailability`
+- `InferenceClient.resetAvailabilityCache`
 - `InferenceResult<T>`
 - `InferenceError`
 - `parseStrictJsonObject`

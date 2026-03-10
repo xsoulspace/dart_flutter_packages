@@ -43,21 +43,21 @@ void main() {
 
     group('availability and cache', () {
       test('resetAvailabilityCache sets isAvailable to false', () async {
-        GemmaFlutterInferenceClient.resetAvailabilityCache();
+        GemmaFlutterInferenceClient().resetAvailabilityCache();
         expect(GemmaFlutterInferenceClient().isAvailable, isFalse);
       });
 
       test('refreshAvailability runs and isAvailable matches result', () async {
-        GemmaFlutterInferenceClient.resetAvailabilityCache();
-        final available =
-            await GemmaFlutterInferenceClient.refreshAvailability();
+        GemmaFlutterInferenceClient().resetAvailabilityCache();
+        final available = await GemmaFlutterInferenceClient()
+            .refreshAvailability();
         expect(GemmaFlutterInferenceClient().isAvailable, available);
       });
     });
 
     group('infer validation', () {
       test('fails with request_prompt_empty when prompt is empty', () async {
-        GemmaFlutterInferenceClient.resetAvailabilityCache();
+        GemmaFlutterInferenceClient().resetAvailabilityCache();
         final client = GemmaFlutterInferenceClient();
         final result = await client.infer(
           const InferenceRequest(
@@ -73,7 +73,7 @@ void main() {
       test(
         'fails with request_working_directory_empty when workingDirectory is empty',
         () async {
-          GemmaFlutterInferenceClient.resetAvailabilityCache();
+          GemmaFlutterInferenceClient().resetAvailabilityCache();
           final client = GemmaFlutterInferenceClient();
           final result = await client.infer(
             const InferenceRequest(
@@ -108,8 +108,8 @@ void main() {
       test(
         'returns engine_unavailable when no model (or valid result when model present)',
         () async {
-          GemmaFlutterInferenceClient.resetAvailabilityCache();
-          await GemmaFlutterInferenceClient.refreshAvailability();
+          GemmaFlutterInferenceClient().resetAvailabilityCache();
+          await GemmaFlutterInferenceClient().refreshAvailability();
           final client = GemmaFlutterInferenceClient();
           final result = await client.infer(validRequest);
           expect(result.success || result.error != null, isTrue);

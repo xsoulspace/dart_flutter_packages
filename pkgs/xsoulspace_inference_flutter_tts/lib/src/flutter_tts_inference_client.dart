@@ -75,6 +75,14 @@ class FlutterTtsInferenceClient implements InferenceClient {
   };
 
   @override
+  Future<bool> refreshAvailability() async => isAvailable;
+
+  @override
+  void resetAvailabilityCache() {
+    // No availability cache; platform support is evaluated dynamically.
+  }
+
+  @override
   Future<InferenceResult<InferenceResponse>> infer(
     final InferenceRequest request,
   ) async {

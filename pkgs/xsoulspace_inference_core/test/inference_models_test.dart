@@ -98,4 +98,52 @@ void main() {
     expect(decoded.segments.length, 2);
     expect(decoded.segments.first.startMs, 0);
   });
+
+  test('InferenceClient lifecycle methods are callable', () async {
+    final client = _FakeInferenceClient();
+    expect(client.isAvailable, isFalse);
+
+    final refreshed = await client.refreshAvailability();
+    expect(refreshed, isTrue);
+    expect(client.isAvailable, isTrue);
+
+    client.resetAvailabilityCache();
+    expect(client.isAvailable, isFalse);
+  });
+}
+
+final class _FakeInferenceClient implements InferenceClient {
+  bool _available = false;
+
+  @override
+  String get id => 'fake';
+
+  @override
+  bool get isAvailable => _available;
+
+  @override
+  Set<InferenceTask> get supportedTasks => const <InferenceTask>{
+    InferenceTask.structuredText,
+  };
+
+  @override
+  Future<bool> refreshAvailability() async {
+    _available = true;
+    return _available;
+  }
+
+  @override
+  void resetAvailabilityCache() {
+    _available = false;
+  }
+
+  @override
+  Future<InferenceResult<InferenceResponse>> infer(
+    final InferenceRequest request,
+  ) async {
+    return InferenceResult<InferenceResponse>.fail(
+      code: 'unsupported',
+      message: 'Not implemented in fake',
+    );
+  }
 }

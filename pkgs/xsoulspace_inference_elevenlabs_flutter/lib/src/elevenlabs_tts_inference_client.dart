@@ -37,6 +37,14 @@ class ElevenLabsTtsInferenceClient implements InferenceClient {
     InferenceTask.textToSpeech,
   };
 
+  @override
+  Future<bool> refreshAvailability() async => isAvailable;
+
+  @override
+  void resetAvailabilityCache() {
+    // No availability cache; API key checks happen during infer.
+  }
+
   Future<void> dispose() async {
     if (_ownsHttpClient) {
       _httpClient.close();

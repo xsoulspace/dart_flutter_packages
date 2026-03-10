@@ -9,12 +9,13 @@ import 'gemma_model_setup.dart';
 /// Uses active inference model from FlutterGemma; returns standardized
 /// [InferenceResult] with codes like [engine_unavailable], [schema_validation_failed].
 class GemmaFlutterInferenceClient implements InferenceClient {
-  GemmaFlutterInferenceClient({this.maxTokens = 1024, this.modelSetup})
-    : _modelSetup = modelSetup ?? GemmaModelSetup();
+  GemmaFlutterInferenceClient({
+    this.maxTokens = 1024,
+    GemmaModelSetup? modelSetup,
+  }) : modelSetup = modelSetup ?? GemmaModelSetup();
 
   final int maxTokens;
-  final GemmaModelSetup? modelSetup;
-  final GemmaModelSetup _modelSetup;
+  final GemmaModelSetup modelSetup;
 
   @override
   String get id => 'gemma_flutter';
@@ -30,10 +31,10 @@ class GemmaFlutterInferenceClient implements InferenceClient {
   static bool _cachedAvailable = false;
   static bool _availabilityChecked = false;
 
-  /// Refreshes the availability cache (e.g. after model install). Idempotent.
-  static Future<bool> refreshAvailability() async {
+  @override
+  Future<bool> refreshAvailability() async {
     try {
-      _cachedAvailable = await FlutterGemma.hasActiveModel();
+      _cachedAvailable = FlutterGemma.hasActiveModel();
       _availabilityChecked = true;
     } catch (_) {
       _cachedAvailable = false;
@@ -42,11 +43,17 @@ class GemmaFlutterInferenceClient implements InferenceClient {
     return _cachedAvailable;
   }
 
-  static Future<bool> _checkAvailability() async {
+  Future<bool> _checkAvailability() async {
     if (!_availabilityChecked) {
       await refreshAvailability();
     }
     return _cachedAvailable;
+  }
+
+  @override
+  void resetAvailabilityCache() {
+    _availabilityChecked = false;
+    _cachedAvailable = false;
   }
 
   @override
@@ -156,11 +163,5 @@ class GemmaFlutterInferenceClient implements InferenceClient {
   String _truncate(String value, {int max = 2000}) {
     if (value.length <= max) return value;
     return '${value.substring(0, max)}...[truncated ${value.length - max} chars]';
-  }
-
-  /// Refresh availability cache (e.g. after model install).
-  static void resetAvailabilityCache() {
-    _availabilityChecked = false;
-    _cachedAvailable = false;
   }
 }

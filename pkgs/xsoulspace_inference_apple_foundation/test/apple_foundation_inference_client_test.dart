@@ -46,7 +46,7 @@ void main() {
                 call.method == 'isAvailable' ? true : null,
           );
           expect(
-            await AppleFoundationInferenceClient.refreshAvailability(),
+            await AppleFoundationInferenceClient().refreshAvailability(),
             isTrue,
           );
           expect(AppleFoundationInferenceClient().isAvailable, isTrue);
@@ -62,7 +62,7 @@ void main() {
                 call.method == 'isAvailable' ? false : null,
           );
           expect(
-            await AppleFoundationInferenceClient.refreshAvailability(),
+            await AppleFoundationInferenceClient().refreshAvailability(),
             isFalse,
           );
           expect(AppleFoundationInferenceClient().isAvailable, isFalse);
@@ -79,7 +79,7 @@ void main() {
           return null;
         });
         expect(
-          await AppleFoundationInferenceClient.refreshAvailability(),
+          await AppleFoundationInferenceClient().refreshAvailability(),
           isFalse,
         );
         expect(AppleFoundationInferenceClient().isAvailable, isFalse);
@@ -103,7 +103,7 @@ void main() {
           _channel,
           (MethodCall call) async => call.method == 'isAvailable' ? true : null,
         );
-        await AppleFoundationInferenceClient.refreshAvailability();
+        await AppleFoundationInferenceClient().refreshAvailability();
         final client = AppleFoundationInferenceClient();
         final result = await client.infer(
           const InferenceRequest(
@@ -119,7 +119,7 @@ void main() {
       test(
         'fails with request_working_directory_empty when workingDirectory is empty',
         () async {
-          await AppleFoundationInferenceClient.refreshAvailability();
+          await AppleFoundationInferenceClient().refreshAvailability();
           final client = AppleFoundationInferenceClient();
           final result = await client.infer(
             const InferenceRequest(
@@ -155,7 +155,7 @@ void main() {
           (MethodCall call) async =>
               call.method == 'isAvailable' ? false : null,
         );
-        await AppleFoundationInferenceClient.refreshAvailability();
+        await AppleFoundationInferenceClient().refreshAvailability();
         final client = AppleFoundationInferenceClient();
         final result = await client.infer(validRequest);
         expect(result.success, isFalse);
@@ -170,7 +170,7 @@ void main() {
           if (call.method == 'generate') return '{"answer": "hello"}';
           return null;
         });
-        await AppleFoundationInferenceClient.refreshAvailability();
+        await AppleFoundationInferenceClient().refreshAvailability();
         final client = AppleFoundationInferenceClient();
         final result = await client.infer(validRequest);
         expect(result.success, isTrue);
@@ -188,7 +188,7 @@ void main() {
             if (call.method == 'generate') return '';
             return null;
           });
-          await AppleFoundationInferenceClient.refreshAvailability();
+          await AppleFoundationInferenceClient().refreshAvailability();
           final client = AppleFoundationInferenceClient();
           final result = await client.infer(validRequest);
           expect(result.success, isFalse);
@@ -204,7 +204,7 @@ void main() {
           if (call.method == 'generate') return null;
           return null;
         });
-        await AppleFoundationInferenceClient.refreshAvailability();
+        await AppleFoundationInferenceClient().refreshAvailability();
         final client = AppleFoundationInferenceClient();
         final result = await client.infer(validRequest);
         expect(result.success, isFalse);
@@ -221,7 +221,7 @@ void main() {
             if (call.method == 'generate') return 'not json';
             return null;
           });
-          await AppleFoundationInferenceClient.refreshAvailability();
+          await AppleFoundationInferenceClient().refreshAvailability();
           final client = AppleFoundationInferenceClient();
           final result = await client.infer(validRequest);
           expect(result.success, isFalse);
@@ -239,7 +239,7 @@ void main() {
             if (call.method == 'generate') return '{"wrong": 123}';
             return null;
           });
-          await AppleFoundationInferenceClient.refreshAvailability();
+          await AppleFoundationInferenceClient().refreshAvailability();
           final client = AppleFoundationInferenceClient();
           final schema = <String, dynamic>{
             'type': 'object',
@@ -276,7 +276,7 @@ void main() {
           }
           return null;
         });
-        await AppleFoundationInferenceClient.refreshAvailability();
+        await AppleFoundationInferenceClient().refreshAvailability();
         final client = AppleFoundationInferenceClient();
         final result = await client.infer(validRequest);
         expect(result.success, isFalse);
@@ -296,7 +296,7 @@ void main() {
             }
             return null;
           });
-          await AppleFoundationInferenceClient.refreshAvailability();
+          await AppleFoundationInferenceClient().refreshAvailability();
           final client = AppleFoundationInferenceClient();
           final result = await client.infer(validRequest);
           expect(result.success, isFalse);
