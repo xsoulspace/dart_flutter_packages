@@ -59,18 +59,27 @@ void main() {
       final aProvider = LocalDbStorageProvider(localDb: localDb);
       final bProvider = LocalDbStorageProvider(localDb: localDb);
 
-      await aProvider.initWithConfig(
-        _configForPrefix('app_a'),
-      );
-      await bProvider.initWithConfig(
-        _configForPrefix('app_b'),
-      );
+      await aProvider.initWithConfig(const LocalDbStorageConfig(keyspacePrefix: 'app_a'));
+      await bProvider.initWithConfig(const LocalDbStorageConfig(keyspacePrefix: 'app_b'));
 
       await aProvider.createFile('profile.json', '{"scope":"a"}');
       await bProvider.createFile('profile.json', '{"scope":"b"}');
 
       expect(await aProvider.getFile('profile.json'), '{"scope":"a"}');
       expect(await bProvider.getFile('profile.json'), '{"scope":"b"}');
+    });
+
+    test('accepts LocalDbStorageConfig without filesystem path hacks', () async {
+      await provider.initWithConfig(
+        const LocalDbStorageConfig(keyspacePrefix: 'arena_voice_settings'),
+      );
+
+      await provider.createFile('voice/settings.json', '{"language":"en"}');
+
+      expect(
+        await provider.getFile('voice/settings.json'),
+        '{"language":"en"}',
+      );
     });
 
     test('throws expected errors for invalid mutations', () async {

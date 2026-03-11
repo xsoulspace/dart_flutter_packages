@@ -13,24 +13,23 @@ class LocalDbStorageProvider extends StorageProvider implements LocalEngine {
   /// Backing key-value storage.
   final LocalDbI localDb;
 
-  FileSystemConfig _config = FileSystemConfig.empty;
+  StorageConfig? _config;
   var _initialized = false;
   Future<void> _mutationQueue = Future<void>.value();
 
   String get _bucketStorageKey {
-    final normalizedPath = _normalizeConfigPath(_config.basePath);
-    final databaseName = _config.databaseName.trim();
-    final prefix = databaseName
-        .whenEmptyUse(normalizedPath)
-        .whenEmptyUse('universal_storage');
+    final prefix = _resolveKeyspacePrefix(_config).whenEmptyUse(
+      'universal_storage',
+    );
     return 'us_local_db/$prefix/files';
   }
 
   @override
   Future<void> initWithConfig(final StorageConfig config) async {
-    if (config is! FileSystemConfig) {
+    if (config is! FileSystemConfig && config is! LocalDbStorageConfig) {
       throw ArgumentError(
-        'Expected FileSystemConfig, got ${config.runtimeType}',
+        'Expected FileSystemConfig or LocalDbStorageConfig, got '
+        '${config.runtimeType}',
       );
     }
 
@@ -217,6 +216,19 @@ class LocalDbStorageProvider extends StorageProvider implements LocalEngine {
         'Provider not initialized. Call initWithConfig() first.',
       );
     }
+  }
+
+  String _resolveKeyspacePrefix(final StorageConfig? config) {
+    if (config is LocalDbStorageConfig) {
+      final normalizedPrefix = _normalizeConfigPath(config.keyspacePrefix);
+      return normalizedPrefix.whenEmptyUse('universal_storage');
+    }
+    if (config is FileSystemConfig) {
+      final normalizedPath = _normalizeConfigPath(config.basePath);
+      final databaseName = config.databaseName.trim();
+      return databaseName.whenEmptyUse(normalizedPath);
+    }
+    return 'universal_storage';
   }
 
   Map<String, dynamic> _recordFromContent(final String content) =>

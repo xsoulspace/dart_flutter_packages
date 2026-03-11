@@ -69,6 +69,23 @@ class FileSystemConfig extends StorageConfig {
   static final empty = FileSystemConfig._empty();
 }
 
+/// {@template local_db_storage_config}
+/// Configuration for the local database storage provider.
+/// {@endtemplate}
+class LocalDbStorageConfig extends StorageConfig {
+  /// {@macro local_db_storage_config}
+  const LocalDbStorageConfig({
+    required this.keyspacePrefix,
+  });
+
+  final String keyspacePrefix;
+
+  @override
+  Map<String, dynamic> toMap() => <String, dynamic>{
+    'keyspacePrefix': keyspacePrefix,
+  };
+}
+
 class OfflineGitConfig extends StorageConfig {
   OfflineGitConfig({
     this.localPath = './',
