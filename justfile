@@ -230,3 +230,40 @@ registry-smoke output="build/registry" selection="stable":
     #!/usr/bin/env bash
     set -euo pipefail
     python3 registry/gateway/smoke_test.py --registry-dir "{{output}}" --select "{{selection}}"
+
+registry-release-preflight output="build/registry" registry_url="https://pub.xsoulspace.dev" github_repo="xsoulspace/dart_flutter_packages":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    just docs-check
+    just storage-release-g6
+    just platform-sdk-verify
+    just registry-test
+    just registry-rewrite-hosted registry_url="{{registry_url}}"
+    just registry-build-index output="{{output}}" registry_url="{{registry_url}}" github_repo="{{github_repo}}"
+    just registry-validate output="{{output}}" registry_url="{{registry_url}}" github_repo="{{github_repo}}"
+    dart registry/tools/registry_preview_publish.dart --output-dir "{{output}}"
+
+registry-preview output="build/registry":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    dart registry/tools/registry_preview_publish.dart --output-dir "{{output}}"
+
+registry-bump package version registry_url="https://pub.xsoulspace.dev":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    dart registry/tools/registry_bump.dart "{{package}}" "{{version}}"
+    just registry-rewrite-hosted registry_url="{{registry_url}}"
+
+registry-list output="build/registry" versions="false" gateway_url="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    args=()
+    if [ -n "{{gateway_url}}" ]; then args+=(--gateway-url "{{gateway_url}}"); else args+=(--output-dir "{{output}}"); fi
+    if [ "{{versions}}" = "true" ]; then args+=(--versions); fi
+    dart registry/tools/registry_list.dart "${args[@]}"
+
+registry-add target_package dependency_package version="^0.0.0" registry_url="https://pub.xsoulspace.dev":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    dart registry/tools/registry_add.dart --repo-root . --hosted-url "{{registry_url}}" "{{target_package}}" "{{dependency_package}}" "{{version}}"
+    just registry-rewrite-hosted registry_url="{{registry_url}}"

@@ -244,6 +244,7 @@ class RegistryGateway(BaseHTTPRequestHandler):
                 payload,
                 head_only=head_only,
                 extra_headers={"X-Registry-Cache": cache_status},
+                add_etag=True,
             )
             return HTTPStatus.OK, cache_status
 
@@ -265,6 +266,7 @@ class RegistryGateway(BaseHTTPRequestHandler):
                     content_type="application/vnd.pub.v2+json",
                     head_only=head_only,
                     extra_headers={"X-Registry-Cache": cache_status},
+                    add_etag=True,
                 )
                 return HTTPStatus.OK, cache_status
 
@@ -281,6 +283,7 @@ class RegistryGateway(BaseHTTPRequestHandler):
                     content_type="application/vnd.pub.v2+json",
                     head_only=head_only,
                     extra_headers={"X-Registry-Cache": cache_status},
+                    add_etag=True,
                 )
                 return HTTPStatus.OK, cache_status
 
@@ -419,6 +422,19 @@ class RegistryGateway(BaseHTTPRequestHandler):
         version = segments[3].removesuffix(".tar.gz")
         return package_name, version
 
+    def _etag_from_body(self, body: bytes) -> str:
+        return 'W/"' + hashlib.sha256(body).hexdigest() + '"'
+
+    def _etag_matches(self, etag: str, if_none_match: Optional[str]) -> bool:
+        if not if_none_match:
+            return False
+        raw = etag.strip().removeprefix('W/').strip('"')
+        for candidate in if_none_match.split(","):
+            c = candidate.strip().removeprefix('W/').strip('"')
+            if c == raw:
+                return True
+        return False
+
     def _write_json(
         self,
         status: HTTPStatus,
@@ -427,12 +443,24 @@ class RegistryGateway(BaseHTTPRequestHandler):
         content_type: str = "application/json",
         head_only: bool,
         extra_headers: Optional[dict] = None,
+        add_etag: bool = False,
     ) -> None:
         body = json.dumps(payload, indent=2).encode("utf-8")
+        if add_etag:
+            etag = self._etag_from_body(body)
+            if_none_match = self.headers.get("If-None-Match")
+            if self._etag_matches(etag, if_none_match):
+                self.send_response(HTTPStatus.NOT_MODIFIED)
+                self.send_header("ETag", etag)
+                self.send_header("Cache-Control", "public, max-age=60")
+                self.end_headers()
+                return
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "public, max-age=60")
+        if add_etag:
+            self.send_header("ETag", self._etag_from_body(body))
         if extra_headers:
             for key, value in extra_headers.items():
                 self.send_header(key, str(value))
