@@ -2,7 +2,12 @@ import 'web_speech_recognition_adapter.dart';
 import 'web_speech_recognition_adapter_web.dart';
 import 'web_speech_recognition_inference_client_base.dart';
 
-export 'web_speech_recognition_adapter.dart';
+export 'web_speech_recognition_adapter.dart'
+    show
+        WebSpeechLiveRecognitionSession,
+        WebSpeechRecognitionAdapter,
+        WebSpeechRecognitionAdapterException,
+        WebSpeechRecognitionFailureKind;
 export 'web_speech_recognition_adapter_web.dart'
     show
         BrowserWebSpeechRecognitionAdapter,

@@ -10,10 +10,10 @@ class InferenceError {
   final Object? details;
 
   Map<String, dynamic> toJson() => {
-        'code': code,
-        'message': message,
-        if (details != null) 'details': details,
-      };
+    'code': code,
+    'message': message,
+    if (details != null) 'details': details,
+  };
 }
 
 class InferenceResult<T> {
@@ -29,13 +29,12 @@ class InferenceResult<T> {
     final T data, {
     final List<String> warnings = const <String>[],
     final Map<String, dynamic> meta = const <String, dynamic>{},
-  }) =>
-      InferenceResult<T>(
-        success: true,
-        data: data,
-        warnings: warnings,
-        meta: meta,
-      );
+  }) => InferenceResult<T>(
+    success: true,
+    data: data,
+    warnings: warnings,
+    meta: meta,
+  );
 
   factory InferenceResult.fail({
     required final String code,
@@ -43,13 +42,12 @@ class InferenceResult<T> {
     final Object? details,
     final List<String> warnings = const <String>[],
     final Map<String, dynamic> meta = const <String, dynamic>{},
-  }) =>
-      InferenceResult<T>(
-        success: false,
-        error: InferenceError(code: code, message: message, details: details),
-        warnings: warnings,
-        meta: meta,
-      );
+  }) => InferenceResult<T>(
+    success: false,
+    error: InferenceError(code: code, message: message, details: details),
+    warnings: warnings,
+    meta: meta,
+  );
 
   final bool success;
   final T? data;

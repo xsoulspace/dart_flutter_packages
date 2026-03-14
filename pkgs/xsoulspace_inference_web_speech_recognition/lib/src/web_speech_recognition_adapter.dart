@@ -31,6 +31,12 @@ class WebSpeechRecognitionAdapterException implements Exception {
       'message: $message, details: $details)';
 }
 
+/// Session for live (streaming) recognition. Call [stop] when done.
+abstract interface class WebSpeechLiveRecognitionSession {
+  Stream<String> get transcriptStream;
+  void stop();
+}
+
 abstract interface class WebSpeechRecognitionAdapter {
   bool get hasSpeechRecognitionApi;
 
@@ -40,4 +46,7 @@ abstract interface class WebSpeechRecognitionAdapter {
     required InferenceAudioInput audioInput,
     String? language,
   });
+
+  /// Starts live recognition (microphone, continuous + interim). Returns null if unsupported.
+  WebSpeechLiveRecognitionSession? startLiveRecognition({String? language});
 }

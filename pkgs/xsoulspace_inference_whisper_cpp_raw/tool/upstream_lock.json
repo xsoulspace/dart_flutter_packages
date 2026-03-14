@@ -1,0 +1,6 @@
+{
+  "project": "whisper.cpp",
+  "header": "include/whisper.h",
+  "source": "https://github.com/ggml-org/whisper.cpp",
+  "version": "master"
+}

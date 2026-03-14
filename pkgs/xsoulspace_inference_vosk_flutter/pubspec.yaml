@@ -1,0 +1,21 @@
+name: xsoulspace_inference_vosk_flutter
+description: Vosk small-model streaming and batch speech-to-text wrapper for xsoulspace_inference_core.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ">=3.10.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  xsoulspace_inference_core:
+    path: ../xsoulspace_inference_core
+  xsoulspace_inference_vosk_raw:
+    path: ../xsoulspace_inference_vosk_raw
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  lints: ^6.0.0
+  test: ^1.25.8

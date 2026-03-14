@@ -16,8 +16,13 @@ and TTS task flows.
 - `InferenceClient.supportedTasks`
 - `InferenceClient.refreshAvailability`
 - `InferenceClient.resetAvailabilityCache`
+- `InferenceReadinessProbe`
+- `InferenceReadinessSnapshot`
+- `InferenceReadinessIssue`
 - `InferenceResult<T>`
 - `InferenceError`
+- `InferenceRealtimeAudioSink`
+- `InferenceTranscriptController`
 - `parseStrictJsonObject`
 - `validateRequiredKeys`
 - `validateInferenceRequest`
@@ -127,6 +132,10 @@ Future<void> runVoicePipeline({
 - Type mismatches include structured path metadata (for example `$.items[0].id`).
 - Transcript normalization strips punctuation and collapses whitespace while
   preserving word order.
+- Readiness probes stay provider-agnostic and report standardized blocking and
+  non-blocking issues.
+- Realtime controllers can consume any injected
+  `InferenceRealtimeSession<InferenceTranscriptEvent>`.
 
 ## Tests
 

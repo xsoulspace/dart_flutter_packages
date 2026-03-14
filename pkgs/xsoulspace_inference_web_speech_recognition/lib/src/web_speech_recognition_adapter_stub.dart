@@ -22,4 +22,8 @@ class NonWebSpeechRecognitionAdapter implements WebSpeechRecognitionAdapter {
       message: 'SpeechRecognition is available only on web runtimes.',
     );
   }
+
+  @override
+  WebSpeechLiveRecognitionSession? startLiveRecognition({String? language}) =>
+      null;
 }

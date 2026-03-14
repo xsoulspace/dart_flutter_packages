@@ -119,6 +119,10 @@ class WebSpeechRecognitionInferenceClientBase implements InferenceClient {
     }
   }
 
+  /// Starts live (streaming) recognition on microphone. Returns null if unavailable.
+  WebSpeechLiveRecognitionSession? startLiveRecognition({String? language}) =>
+      _adapter.startLiveRecognition(language: language);
+
   String? _resolveLanguage(final InferenceRequest request) {
     final rawLanguage = request.metadata['language'];
     if (rawLanguage is! String) {

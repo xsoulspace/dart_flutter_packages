@@ -5,7 +5,8 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
-class CodexExecInferenceClient implements InferenceClient {
+class CodexExecInferenceClient
+    implements InferenceClient, StructuredTextStreamingInferenceClient {
   CodexExecInferenceClient({
     this.binaryName = 'codex',
     this.environment,
@@ -13,6 +14,8 @@ class CodexExecInferenceClient implements InferenceClient {
     this.primaryAutoArgs = const <String>['--full-auto'],
     this.fallbackAutoArgs = const <String>['-a', 'on-failure'],
     this.extraExecArgs = const <String>[],
+    this.defaultModel,
+    this.defaultReasoningEffort,
     this.executionTimeout = const Duration(minutes: 2),
     this.maxOutputBytes = 1024 * 1024,
     this.maxAttempts = 4,
@@ -30,6 +33,8 @@ class CodexExecInferenceClient implements InferenceClient {
   final List<String> primaryAutoArgs;
   final List<String> fallbackAutoArgs;
   final List<String> extraExecArgs;
+  final String? defaultModel;
+  final String? defaultReasoningEffort;
   final Duration executionTimeout;
   final int maxOutputBytes;
   final int maxAttempts;
@@ -59,7 +64,330 @@ class CodexExecInferenceClient implements InferenceClient {
   @override
   Future<InferenceResult<InferenceResponse>> infer(
     final InferenceRequest request,
+  ) => _runInference(request);
+
+  @override
+  Future<InferenceStructuredTextStreamSession> streamStructuredText(
+    final InferenceRequest request,
   ) async {
+    final session = _CodexStructuredTextStreamSession();
+    session.start(
+      () => _runInference(
+        request,
+        onEvent: session.emit,
+        executionControl: session.executionControl,
+      ),
+    );
+    return session;
+  }
+
+  Future<InferenceResult<InferenceResponse>> _runInference(
+    final InferenceRequest request, {
+    final void Function(InferenceStructuredTextStreamEvent event)? onEvent,
+    final _ExecutionControl? executionControl,
+  }) async {
+    final preflightFailure = _validateRequest(request);
+    if (preflightFailure != null) {
+      _emitFailure(
+        onEvent,
+        preflightFailure,
+        attempt: 1,
+        lifecycleState: InferenceStructuredTextLifecycleState.failed,
+      );
+      return preflightFailure;
+    }
+
+    final binaryPath = _resolveBinaryPath()!;
+    _emitLifecycle(
+      onEvent,
+      InferenceStructuredTextLifecycleState.started,
+      message: 'Starting codex exec stream.',
+      attempt: 1,
+      metadata: <String, dynamic>{'binary_path': binaryPath},
+    );
+
+    Directory? tempDir;
+    try {
+      tempDir = await Directory.systemTemp.createTemp(
+        'xsoulspace_codex_schema_',
+      );
+      final schemaPath = p.join(tempDir.path, 'schema.json');
+      final outputPath = p.join(tempDir.path, 'last_message.json');
+      final warnings = <String>[];
+      final attempts = <_ExecRunResult>[];
+      var autoArgs = primaryAutoArgs;
+      var fallbackUsed = false;
+      var timeoutRetriesLeft = maxTimeoutRetries;
+      var transientRetriesLeft = maxTransientRetries;
+
+      await File(schemaPath).writeAsString(jsonEncode(request.outputSchema));
+
+      while (attempts.length < maxAttempts) {
+        final attempt = attempts.length + 1;
+        if (executionControl?.canceled == true) {
+          final canceledResult = InferenceResult<InferenceResponse>.fail(
+            code: 'codex_exec_cancelled',
+            message: 'codex exec stream was cancelled',
+            meta: <String, dynamic>{'attempt_count': attempts.length},
+          );
+          _emitFailure(
+            onEvent,
+            canceledResult,
+            attempt: attempt,
+            lifecycleState: InferenceStructuredTextLifecycleState.failed,
+          );
+          return canceledResult;
+        }
+
+        _emitLifecycle(
+          onEvent,
+          InferenceStructuredTextLifecycleState.running,
+          message: 'Running codex exec.',
+          attempt: attempt,
+          metadata: <String, dynamic>{'auto_args': autoArgs},
+        );
+        final result = await _runExec(
+          binaryPath: binaryPath,
+          request: request,
+          schemaPath: schemaPath,
+          outputPath: outputPath,
+          autoArgs: autoArgs,
+          attempt: attempt,
+          onEvent: onEvent,
+          executionControl: executionControl,
+        );
+        attempts.add(result);
+
+        if (result.exitCode == 0 && !result.timedOut) {
+          break;
+        }
+
+        if (!fallbackUsed &&
+            fallbackAutoArgs.isNotEmpty &&
+            _shouldRetryLegacy(result.stderr)) {
+          fallbackUsed = true;
+          autoArgs = fallbackAutoArgs;
+          const warning = 'Fallback auto-args used for legacy codex CLI flags.';
+          warnings.add(warning);
+          _emitWarning(onEvent, warning, attempt: attempt);
+          _emitLifecycle(
+            onEvent,
+            InferenceStructuredTextLifecycleState.retrying,
+            message: 'Retrying codex exec with fallback CLI flags.',
+            attempt: attempt + 1,
+          );
+          continue;
+        }
+
+        if (result.timedOut && timeoutRetriesLeft > 0) {
+          timeoutRetriesLeft--;
+          const warning = 'Retrying codex exec after timeout.';
+          warnings.add(warning);
+          _emitWarning(onEvent, warning, attempt: attempt, isTransient: true);
+          _emitLifecycle(
+            onEvent,
+            InferenceStructuredTextLifecycleState.retrying,
+            message: 'Retrying codex exec after timeout.',
+            attempt: attempt + 1,
+          );
+          continue;
+        }
+
+        if (_isTransientFailure(result) && transientRetriesLeft > 0) {
+          transientRetriesLeft--;
+          const warning =
+              'Retrying codex exec after transient process failure.';
+          warnings.add(warning);
+          _emitWarning(onEvent, warning, attempt: attempt, isTransient: true);
+          _emitLifecycle(
+            onEvent,
+            InferenceStructuredTextLifecycleState.retrying,
+            message: 'Retrying codex exec after transient failure.',
+            attempt: attempt + 1,
+          );
+          continue;
+        }
+
+        break;
+      }
+
+      if (attempts.isEmpty) {
+        final result = InferenceResult<InferenceResponse>.fail(
+          code: 'codex_exec_failed',
+          message: 'codex exec was not attempted',
+        );
+        _emitFailure(
+          onEvent,
+          result,
+          attempt: 1,
+          lifecycleState: InferenceStructuredTextLifecycleState.failed,
+        );
+        return result;
+      }
+
+      final runResult = attempts.last;
+      if (runResult.exitCode != 0) {
+        final result = _buildExecFailureResult(
+          result: runResult,
+          attempts: attempts,
+          warnings: warnings,
+        );
+        _emitFailure(
+          onEvent,
+          result,
+          attempt: attempts.length,
+          lifecycleState: runResult.timedOut
+              ? InferenceStructuredTextLifecycleState.timedOut
+              : InferenceStructuredTextLifecycleState.failed,
+        );
+        return result;
+      }
+
+      final rawOutputResult = await _readRawOutput(
+        outputPath: outputPath,
+        stdoutFallback: runResult.stdout,
+      );
+      if (!rawOutputResult.success || rawOutputResult.data == null) {
+        final result = InferenceResult<InferenceResponse>.fail(
+          code: rawOutputResult.error?.code ?? 'codex_output_unavailable',
+          message:
+              rawOutputResult.error?.message ?? 'Failed to read codex output',
+          details: rawOutputResult.error?.details,
+          warnings: warnings,
+          meta: <String, dynamic>{'attempt_count': attempts.length},
+        );
+        _emitFailure(
+          onEvent,
+          result,
+          attempt: attempts.length,
+          lifecycleState: InferenceStructuredTextLifecycleState.failed,
+        );
+        return result;
+      }
+
+      final rawOutput = rawOutputResult.data!.raw;
+      final parsed = parseStrictJsonObject(rawOutput);
+      if (!parsed.success || parsed.data == null) {
+        final result = InferenceResult<InferenceResponse>.fail(
+          code: parsed.error?.code ?? 'codex_parse_failed',
+          message:
+              parsed.error?.message ??
+              'Failed to parse structured output from codex',
+          details: parsed.error?.details ?? _truncate(rawOutput),
+          warnings: warnings,
+          meta: <String, dynamic>{'attempt_count': attempts.length},
+        );
+        _emitFailure(
+          onEvent,
+          result,
+          attempt: attempts.length,
+          lifecycleState: InferenceStructuredTextLifecycleState.failed,
+        );
+        return result;
+      }
+
+      final schemaValidation = validateJsonAgainstSchema(
+        value: parsed.data!,
+        schema: request.outputSchema,
+      );
+      if (!schemaValidation.success) {
+        final result = InferenceResult<InferenceResponse>.fail(
+          code: schemaValidation.error?.code ?? 'schema_validation_failed',
+          message:
+              schemaValidation.error?.message ??
+              'Inference output does not match schema',
+          details: schemaValidation.error?.details,
+          warnings: warnings,
+          meta: <String, dynamic>{'attempt_count': attempts.length},
+        );
+        _emitFailure(
+          onEvent,
+          result,
+          attempt: attempts.length,
+          lifecycleState: InferenceStructuredTextLifecycleState.failed,
+        );
+        return result;
+      }
+
+      final meta = <String, dynamic>{
+        'provider': id,
+        'binary_path': binaryPath,
+        'attempt_count': attempts.length,
+        'fallback_used': fallbackUsed,
+        'execution_timeout_ms': executionTimeout.inMilliseconds,
+        'output_source': rawOutputResult.data!.source,
+        'output_bytes': rawOutputResult.data!.byteLength,
+        'attempts': attempts.map((final run) => run.toSummary()).toList(),
+        if (_resolveModel(request) != null) 'model': _resolveModel(request),
+        if (_resolveReasoningEffort(request) != null)
+          'reasoning_effort': _resolveReasoningEffort(request),
+      };
+      if (request.metadata.isNotEmpty) {
+        meta['request_metadata'] = request.metadata;
+      }
+
+      final result = InferenceResult<InferenceResponse>.ok(
+        InferenceResponse(
+          output: parsed.data!,
+          rawOutput: rawOutput,
+          warnings: warnings,
+          meta: meta,
+        ),
+        warnings: warnings,
+        meta: meta,
+      );
+      _emitLifecycle(
+        onEvent,
+        InferenceStructuredTextLifecycleState.completed,
+        message: 'codex exec completed successfully.',
+        attempt: attempts.length,
+        metadata: <String, dynamic>{
+          'output_source': rawOutputResult.data!.source,
+          'output_bytes': rawOutputResult.data!.byteLength,
+        },
+      );
+      _emitCompletion(onEvent, result, attempt: attempts.length);
+      return result;
+    } on FileSystemException catch (error) {
+      final result = InferenceResult<InferenceResponse>.fail(
+        code: 'codex_io_failed',
+        message: 'Failed to write schema/output files for codex exec',
+        details: error.toString(),
+      );
+      _emitFailure(
+        onEvent,
+        result,
+        attempt: 1,
+        lifecycleState: InferenceStructuredTextLifecycleState.failed,
+      );
+      return result;
+    } catch (error) {
+      final result = InferenceResult<InferenceResponse>.fail(
+        code: 'codex_exec_failed',
+        message: 'Failed to execute codex',
+        details: error.toString(),
+      );
+      _emitFailure(
+        onEvent,
+        result,
+        attempt: 1,
+        lifecycleState: InferenceStructuredTextLifecycleState.failed,
+      );
+      return result;
+    } finally {
+      if (tempDir != null) {
+        try {
+          await tempDir.delete(recursive: true);
+        } catch (_) {
+          // best-effort cleanup
+        }
+      }
+    }
+  }
+
+  InferenceResult<InferenceResponse>? _validateRequest(
+    final InferenceRequest request,
+  ) {
     if (!supportedTasks.contains(request.task)) {
       return InferenceResult<InferenceResponse>.fail(
         code: errorCodeTaskUnsupported,
@@ -93,191 +421,42 @@ class CodexExecInferenceClient implements InferenceClient {
       );
     }
 
-    final binaryPath = _resolveBinaryPath();
-    if (binaryPath == null) {
+    if (_resolveBinaryPath() == null) {
       return InferenceResult<InferenceResponse>.fail(
         code: 'engine_unavailable',
         message: 'codex binary not found in PATH',
       );
     }
+    return null;
+  }
 
-    Directory? tempDir;
-    try {
-      tempDir = await Directory.systemTemp.createTemp(
-        'xsoulspace_codex_schema_',
-      );
-      final schemaPath = p.join(tempDir.path, 'schema.json');
-      final outputPath = p.join(tempDir.path, 'last_message.json');
-      final warnings = <String>[];
-      var autoArgs = primaryAutoArgs;
-      var fallbackUsed = false;
-      var timeoutRetriesLeft = maxTimeoutRetries;
-      var transientRetriesLeft = maxTransientRetries;
-      final attempts = <_ExecRunResult>[];
-
-      await File(schemaPath).writeAsString(jsonEncode(request.outputSchema));
-
-      while (attempts.length < maxAttempts) {
-        final result = await _runExec(
-          binaryPath: binaryPath,
-          request: request,
-          schemaPath: schemaPath,
-          outputPath: outputPath,
-          autoArgs: autoArgs,
-        );
-        attempts.add(result);
-
-        if (result.exitCode == 0 && !result.timedOut) {
-          break;
-        }
-
-        if (!fallbackUsed &&
-            fallbackAutoArgs.isNotEmpty &&
-            _shouldRetryLegacy(result.stderr)) {
-          fallbackUsed = true;
-          autoArgs = fallbackAutoArgs;
-          warnings.add('Fallback auto-args used for legacy codex CLI flags.');
-          continue;
-        }
-
-        if (result.timedOut && timeoutRetriesLeft > 0) {
-          timeoutRetriesLeft--;
-          warnings.add('Retrying codex exec after timeout.');
-          continue;
-        }
-
-        if (_isTransientFailure(result) && transientRetriesLeft > 0) {
-          transientRetriesLeft--;
-          warnings.add('Retrying codex exec after transient process failure.');
-          continue;
-        }
-
-        break;
-      }
-
-      if (attempts.isEmpty) {
-        return InferenceResult<InferenceResponse>.fail(
-          code: 'codex_exec_failed',
-          message: 'codex exec was not attempted',
-        );
-      }
-
-      final result = attempts.last;
-      if (result.exitCode != 0) {
-        final authFailure = _isAuthFailure(result);
-        final code = result.timedOut
-            ? 'codex_exec_timeout'
-            : authFailure
-            ? 'codex_auth_failed'
-            : 'codex_exec_failed';
-        final message = result.timedOut
-            ? 'codex exec timed out after ${executionTimeout.inMilliseconds}ms'
-            : authFailure
-            ? 'codex exec authentication failed; use CODEX_API_KEY or codex login --with-api-key'
-            : 'codex exec failed with exit code ${result.exitCode}';
-        return InferenceResult<InferenceResponse>.fail(
-          code: code,
-          message: message,
-          details: _buildFailureDetails(
-            result: result,
-            attempts: attempts,
-            authFailure: authFailure,
-          ),
-          warnings: warnings,
-          meta: <String, dynamic>{'attempt_count': attempts.length},
-        );
-      }
-
-      final rawOutputResult = await _readRawOutput(
-        outputPath: outputPath,
-        stdoutFallback: result.stdout,
-      );
-      if (!rawOutputResult.success || rawOutputResult.data == null) {
-        return InferenceResult<InferenceResponse>.fail(
-          code: rawOutputResult.error?.code ?? 'codex_output_unavailable',
-          message:
-              rawOutputResult.error?.message ?? 'Failed to read codex output',
-          details: rawOutputResult.error?.details,
-          warnings: warnings,
-          meta: <String, dynamic>{'attempt_count': attempts.length},
-        );
-      }
-      final rawOutput = rawOutputResult.data!.raw;
-
-      final parsed = parseStrictJsonObject(rawOutput);
-      if (!parsed.success || parsed.data == null) {
-        return InferenceResult<InferenceResponse>.fail(
-          code: parsed.error?.code ?? 'codex_parse_failed',
-          message:
-              parsed.error?.message ??
-              'Failed to parse structured output from codex',
-          details: parsed.error?.details ?? _truncate(rawOutput),
-          warnings: warnings,
-          meta: <String, dynamic>{'attempt_count': attempts.length},
-        );
-      }
-
-      final schemaValidation = validateJsonAgainstSchema(
-        value: parsed.data!,
-        schema: request.outputSchema,
-      );
-      if (!schemaValidation.success) {
-        return InferenceResult<InferenceResponse>.fail(
-          code: schemaValidation.error?.code ?? 'schema_validation_failed',
-          message:
-              schemaValidation.error?.message ??
-              'Inference output does not match schema',
-          details: schemaValidation.error?.details,
-          warnings: warnings,
-          meta: <String, dynamic>{'attempt_count': attempts.length},
-        );
-      }
-
-      final meta = <String, dynamic>{
-        'provider': id,
-        'binary_path': binaryPath,
-        'attempt_count': attempts.length,
-        'fallback_used': fallbackUsed,
-        'execution_timeout_ms': executionTimeout.inMilliseconds,
-        'output_source': rawOutputResult.data!.source,
-        'output_bytes': rawOutputResult.data!.byteLength,
-        'attempts': attempts.map((final run) => run.toSummary()).toList(),
-      };
-      if (request.metadata.isNotEmpty) {
-        meta['request_metadata'] = request.metadata;
-      }
-
-      return InferenceResult<InferenceResponse>.ok(
-        InferenceResponse(
-          output: parsed.data!,
-          rawOutput: rawOutput,
-          warnings: warnings,
-          meta: meta,
-        ),
-        warnings: warnings,
-        meta: meta,
-      );
-    } on FileSystemException catch (error) {
-      return InferenceResult<InferenceResponse>.fail(
-        code: 'codex_io_failed',
-        message: 'Failed to write schema/output files for codex exec',
-        details: error.toString(),
-      );
-    } catch (error) {
-      return InferenceResult<InferenceResponse>.fail(
-        code: 'codex_exec_failed',
-        message: 'Failed to execute codex',
-        details: error.toString(),
-      );
-    } finally {
-      if (tempDir != null) {
-        try {
-          await tempDir.delete(recursive: true);
-        } catch (_) {
-          // best-effort cleanup
-        }
-      }
-    }
+  InferenceResult<InferenceResponse> _buildExecFailureResult({
+    required final _ExecRunResult result,
+    required final List<_ExecRunResult> attempts,
+    required final List<String> warnings,
+  }) {
+    final authFailure = _isAuthFailure(result);
+    final code = result.timedOut
+        ? 'codex_exec_timeout'
+        : authFailure
+        ? 'codex_auth_failed'
+        : 'codex_exec_failed';
+    final message = result.timedOut
+        ? 'codex exec timed out after ${executionTimeout.inMilliseconds}ms'
+        : authFailure
+        ? 'codex exec authentication failed; use CODEX_API_KEY or codex login --with-api-key'
+        : 'codex exec failed with exit code ${result.exitCode}';
+    return InferenceResult<InferenceResponse>.fail(
+      code: code,
+      message: message,
+      details: _buildFailureDetails(
+        result: result,
+        attempts: attempts,
+        authFailure: authFailure,
+      ),
+      warnings: warnings,
+      meta: <String, dynamic>{'attempt_count': attempts.length},
+    );
   }
 
   Future<_ExecRunResult> _runExec({
@@ -286,15 +465,25 @@ class CodexExecInferenceClient implements InferenceClient {
     required final String schemaPath,
     required final String outputPath,
     required final List<String> autoArgs,
+    required final int attempt,
+    final void Function(InferenceStructuredTextStreamEvent event)? onEvent,
+    final _ExecutionControl? executionControl,
   }) async {
     final skipGitRepoCheck = !Directory(
       p.join(request.workingDirectory, '.git'),
     ).existsSync();
+    final model = _resolveModel(request);
+    final reasoningEffort = _resolveReasoningEffort(request);
     final args = <String>[
       'exec',
       '--sandbox',
       sandbox,
       ...autoArgs,
+      if (_hasText(model)) ...<String>['--model', model!],
+      if (_hasText(reasoningEffort)) ...<String>[
+        '-c',
+        'reasoning.effort="$reasoningEffort"',
+      ],
       '--ephemeral',
       if (skipGitRepoCheck) '--skip-git-repo-check',
       '--output-schema',
@@ -314,6 +503,7 @@ class CodexExecInferenceClient implements InferenceClient {
       includeParentEnvironment: true,
       runInShell: false,
     );
+    executionControl?.attach(process);
 
     unawaited(() async {
       try {
@@ -331,50 +521,157 @@ class CodexExecInferenceClient implements InferenceClient {
       }
     }());
 
-    final stdoutFuture = process.stdout.transform(utf8.decoder).join();
-    final stderrFuture = process.stderr.transform(utf8.decoder).join();
+    final stdoutBuffer = StringBuffer();
+    final stderrBuffer = StringBuffer();
+    final stdoutDone = Completer<void>();
+    final stderrDone = Completer<void>();
+    late final StreamSubscription<String> stdoutSub;
+    late final StreamSubscription<String> stderrSub;
+
+    void handleChunk(
+      final InferenceStructuredTextRawChannel channel,
+      final String chunk,
+    ) {
+      if (chunk.isEmpty) {
+        return;
+      }
+      if (channel == InferenceStructuredTextRawChannel.stdout) {
+        stdoutBuffer.write(chunk);
+      } else {
+        stderrBuffer.write(chunk);
+      }
+      _emitRaw(
+        onEvent,
+        channel,
+        chunk,
+        attempt: attempt,
+        metadata: <String, dynamic>{'auto_args': autoArgs},
+      );
+      final trimmed = chunk.trim();
+      if (trimmed.isNotEmpty) {
+        if (channel == InferenceStructuredTextRawChannel.stdout) {
+          _emitPartialOutput(onEvent, trimmed, attempt: attempt);
+        } else {
+          _emitProgress(
+            onEvent,
+            trimmed,
+            attempt: attempt,
+            metadata: const <String, dynamic>{'source': 'stderr'},
+          );
+        }
+      }
+    }
+
+    stdoutSub = process.stdout
+        .transform(utf8.decoder)
+        .listen(
+          (final chunk) =>
+              handleChunk(InferenceStructuredTextRawChannel.stdout, chunk),
+          onDone: () => stdoutDone.complete(),
+          onError: (final Object error, final StackTrace stackTrace) {
+            stdoutBuffer.write('$error');
+            if (!stdoutDone.isCompleted) {
+              stdoutDone.complete();
+            }
+          },
+          cancelOnError: false,
+        );
+    stderrSub = process.stderr
+        .transform(utf8.decoder)
+        .listen(
+          (final chunk) =>
+              handleChunk(InferenceStructuredTextRawChannel.stderr, chunk),
+          onDone: () => stderrDone.complete(),
+          onError: (final Object error, final StackTrace stackTrace) {
+            stderrBuffer.write('$error');
+            if (!stderrDone.isCompleted) {
+              stderrDone.complete();
+            }
+          },
+          cancelOnError: false,
+        );
 
     try {
       final exitCode = await process.exitCode.timeout(executionTimeout);
-      final stdout = await stdoutFuture;
-      final stderr = await stderrFuture;
+      await Future.wait(<Future<void>>[stdoutDone.future, stderrDone.future]);
+      await stdoutSub.cancel();
+      await stderrSub.cancel();
       return _ExecRunResult(
         exitCode: exitCode,
-        stdout: stdout,
-        stderr: stderr,
+        stdout: stdoutBuffer.toString(),
+        stderr: stderrBuffer.toString(),
         autoArgs: autoArgs,
         duration: DateTime.now().difference(startedAt),
       );
     } on TimeoutException {
-      process.kill();
-      await Future<void>.delayed(killGracePeriod);
-      try {
-        process.kill(ProcessSignal.sigkill);
-      } catch (_) {
-        // best-effort forced termination
-      }
-
+      _emitLifecycle(
+        onEvent,
+        InferenceStructuredTextLifecycleState.timedOut,
+        message: 'codex exec timed out.',
+        attempt: attempt,
+      );
+      await executionControl?.cancel();
       final exitCode = await process.exitCode.timeout(
         const Duration(seconds: 1),
         onTimeout: () => -1,
       );
-      final stdout = await stdoutFuture.timeout(
-        const Duration(seconds: 1),
-        onTimeout: () => '',
-      );
-      final stderr = await stderrFuture.timeout(
-        const Duration(seconds: 1),
-        onTimeout: () => '',
-      );
+      await Future.wait(<Future<void>>[
+        stdoutDone.future.timeout(const Duration(seconds: 1), onTimeout: () {}),
+        stderrDone.future.timeout(const Duration(seconds: 1), onTimeout: () {}),
+      ]);
+      await stdoutSub.cancel();
+      await stderrSub.cancel();
       return _ExecRunResult(
         exitCode: exitCode == 0 ? -1 : exitCode,
-        stdout: stdout,
-        stderr: stderr,
+        stdout: stdoutBuffer.toString(),
+        stderr: stderrBuffer.toString(),
         autoArgs: autoArgs,
         timedOut: true,
         duration: DateTime.now().difference(startedAt),
       );
+    } finally {
+      executionControl?.detach(process);
     }
+  }
+
+  String? _resolveModel(final InferenceRequest request) {
+    final metadataValue =
+        request.metadata['inferenceModel'] ??
+        request.metadata['codexExecModel'];
+    final normalized = _normalizeConfigValue(
+      metadataValue == null ? null : '$metadataValue',
+    );
+    return normalized ?? _normalizeConfigValue(defaultModel);
+  }
+
+  String? _resolveReasoningEffort(final InferenceRequest request) {
+    final metadataValue =
+        request.metadata['inferenceReasoningEffort'] ??
+        request.metadata['codexExecReasoningEffort'];
+    final normalized = _normalizeReasoningEffort(
+      metadataValue == null ? null : '$metadataValue',
+    );
+    return normalized ?? _normalizeReasoningEffort(defaultReasoningEffort);
+  }
+
+  bool _hasText(final String? value) =>
+      value != null && value.trim().isNotEmpty;
+
+  String? _normalizeConfigValue(final String? value) {
+    final trimmed = value?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      return null;
+    }
+    return trimmed;
+  }
+
+  String? _normalizeReasoningEffort(final String? value) {
+    final trimmed = _normalizeConfigValue(value)?.toLowerCase();
+    return switch (trimmed) {
+      null => null,
+      'middle' => 'medium',
+      _ => trimmed,
+    };
   }
 
   Future<InferenceResult<_RawOutput>> _readRawOutput({
@@ -401,7 +698,7 @@ class CodexExecInferenceClient implements InferenceClient {
         return InferenceResult<_RawOutput>.fail(
           code: 'codex_output_empty',
           message: 'codex output file is empty',
-          details: <String, dynamic>{'source': 'file'},
+          details: const <String, dynamic>{'source': 'file'},
         );
       }
 
@@ -427,7 +724,7 @@ class CodexExecInferenceClient implements InferenceClient {
       return InferenceResult<_RawOutput>.fail(
         code: 'codex_output_empty',
         message: 'codex produced no output',
-        details: <String, dynamic>{'source': 'stdout'},
+        details: const <String, dynamic>{'source': 'stdout'},
       );
     }
 
@@ -438,6 +735,142 @@ class CodexExecInferenceClient implements InferenceClient {
         byteLength: stdoutBytes,
       ),
     );
+  }
+
+  void _emitLifecycle(
+    final void Function(InferenceStructuredTextStreamEvent event)? onEvent,
+    final InferenceStructuredTextLifecycleState state, {
+    required final String message,
+    required final int attempt,
+    final Map<String, dynamic> metadata = const <String, dynamic>{},
+  }) => _emitEvent(
+    onEvent,
+    InferenceStructuredTextStreamEvent(
+      type: InferenceStructuredTextStreamEventType.lifecycle,
+      timestamp: DateTime.now().toUtc(),
+      lifecycleState: state,
+      message: message,
+      attempt: attempt,
+      metadata: metadata,
+    ),
+  );
+
+  void _emitProgress(
+    final void Function(InferenceStructuredTextStreamEvent event)? onEvent,
+    final String message, {
+    required final int attempt,
+    final Map<String, dynamic> metadata = const <String, dynamic>{},
+  }) => _emitEvent(
+    onEvent,
+    InferenceStructuredTextStreamEvent(
+      type: InferenceStructuredTextStreamEventType.progress,
+      timestamp: DateTime.now().toUtc(),
+      message: message,
+      attempt: attempt,
+      metadata: metadata,
+    ),
+  );
+
+  void _emitPartialOutput(
+    final void Function(InferenceStructuredTextStreamEvent event)? onEvent,
+    final String textDelta, {
+    required final int attempt,
+  }) => _emitEvent(
+    onEvent,
+    InferenceStructuredTextStreamEvent(
+      type: InferenceStructuredTextStreamEventType.partialOutput,
+      timestamp: DateTime.now().toUtc(),
+      textDelta: textDelta,
+      attempt: attempt,
+    ),
+  );
+
+  void _emitRaw(
+    final void Function(InferenceStructuredTextStreamEvent event)? onEvent,
+    final InferenceStructuredTextRawChannel channel,
+    final String rawText, {
+    required final int attempt,
+    final Map<String, dynamic> metadata = const <String, dynamic>{},
+  }) => _emitEvent(
+    onEvent,
+    InferenceStructuredTextStreamEvent(
+      type: InferenceStructuredTextStreamEventType.raw,
+      timestamp: DateTime.now().toUtc(),
+      rawChannel: channel,
+      rawText: rawText,
+      attempt: attempt,
+      metadata: metadata,
+    ),
+  );
+
+  void _emitWarning(
+    final void Function(InferenceStructuredTextStreamEvent event)? onEvent,
+    final String message, {
+    required final int attempt,
+    final bool isTransient = false,
+  }) => _emitEvent(
+    onEvent,
+    InferenceStructuredTextStreamEvent(
+      type: InferenceStructuredTextStreamEventType.warning,
+      timestamp: DateTime.now().toUtc(),
+      message: message,
+      attempt: attempt,
+      isTransient: isTransient,
+    ),
+  );
+
+  void _emitFailure(
+    final void Function(InferenceStructuredTextStreamEvent event)? onEvent,
+    final InferenceResult<InferenceResponse> result, {
+    required final int attempt,
+    required final InferenceStructuredTextLifecycleState lifecycleState,
+  }) {
+    _emitLifecycle(
+      onEvent,
+      lifecycleState,
+      message: result.error?.message ?? 'codex exec failed.',
+      attempt: attempt,
+    );
+    _emitEvent(
+      onEvent,
+      InferenceStructuredTextStreamEvent(
+        type: InferenceStructuredTextStreamEventType.error,
+        timestamp: DateTime.now().toUtc(),
+        message: result.error?.message,
+        attempt: attempt,
+        error: result.error,
+        metadata: result.meta,
+      ),
+    );
+    _emitCompletion(onEvent, result, attempt: attempt);
+  }
+
+  void _emitCompletion(
+    final void Function(InferenceStructuredTextStreamEvent event)? onEvent,
+    final InferenceResult<InferenceResponse> result, {
+    required final int attempt,
+  }) => _emitEvent(
+    onEvent,
+    InferenceStructuredTextStreamEvent(
+      type: InferenceStructuredTextStreamEventType.completion,
+      timestamp: DateTime.now().toUtc(),
+      attempt: attempt,
+      completion: InferenceStructuredTextCompletion(
+        result: result,
+        attemptCount: (result.meta['attempt_count'] as num?)?.toInt(),
+      ),
+      metadata: result.meta,
+    ),
+  );
+
+  void _emitEvent(
+    final void Function(InferenceStructuredTextStreamEvent event)? onEvent,
+    final InferenceStructuredTextStreamEvent event,
+  ) {
+    if (onEvent == null) {
+      return;
+    }
+    onEvent(event);
   }
 
   bool _shouldRetryLegacy(final String stderr) {
@@ -537,6 +970,113 @@ class CodexExecInferenceClient implements InferenceClient {
     }
 
     return null;
+  }
+}
+
+final class _ExecutionControl {
+  Process? _process;
+  bool _canceled = false;
+
+  bool get canceled => _canceled;
+
+  void attach(final Process process) {
+    _process = process;
+    if (_canceled) {
+      _kill(process);
+    }
+  }
+
+  void detach(final Process process) {
+    if (identical(_process, process)) {
+      _process = null;
+    }
+  }
+
+  Future<void> cancel() async {
+    _canceled = true;
+    final process = _process;
+    if (process == null) {
+      return;
+    }
+    _kill(process);
+  }
+
+  void _kill(final Process process) {
+    process.kill();
+    try {
+      process.kill(ProcessSignal.sigkill);
+    } catch (_) {
+      // best-effort forced termination
+    }
+  }
+}
+
+final class _CodexStructuredTextStreamSession
+    implements InferenceStructuredTextStreamSession {
+  final StreamController<InferenceStructuredTextStreamEvent> _controller =
+      StreamController<InferenceStructuredTextStreamEvent>.broadcast(
+        sync: true,
+      );
+  final Completer<InferenceResult<InferenceResponse>> _resultCompleter =
+      Completer<InferenceResult<InferenceResponse>>();
+  final _ExecutionControl executionControl = _ExecutionControl();
+  bool _disposed = false;
+
+  @override
+  Stream<InferenceStructuredTextStreamEvent> get events => _controller.stream;
+
+  @override
+  Future<InferenceResult<InferenceResponse>> get result =>
+      _resultCompleter.future;
+
+  void emit(final InferenceStructuredTextStreamEvent event) {
+    if (_disposed || _controller.isClosed) {
+      return;
+    }
+    _controller.add(event);
+  }
+
+  void start(final Future<InferenceResult<InferenceResponse>> Function() run) {
+    unawaited(() async {
+      try {
+        final resolved = await run();
+        if (!_resultCompleter.isCompleted) {
+          _resultCompleter.complete(resolved);
+        }
+      } catch (error) {
+        if (!_resultCompleter.isCompleted) {
+          _resultCompleter.complete(
+            InferenceResult<InferenceResponse>.fail(
+              code: 'codex_exec_failed',
+              message: 'Failed to execute codex',
+              details: '$error',
+            ),
+          );
+        }
+      } finally {
+        await dispose();
+      }
+    }());
+  }
+
+  @override
+  Future<void> cancel() => executionControl.cancel();
+
+  @override
+  Future<void> dispose() async {
+    if (_disposed) {
+      return;
+    }
+    _disposed = true;
+    if (!_resultCompleter.isCompleted) {
+      _resultCompleter.complete(
+        InferenceResult<InferenceResponse>.fail(
+          code: 'codex_exec_cancelled',
+          message: 'codex exec stream was cancelled',
+        ),
+      );
+    }
+    await _controller.close();
   }
 }
 

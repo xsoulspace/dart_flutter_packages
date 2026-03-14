@@ -9,6 +9,102 @@ import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'raw/web_speech_recognition_raw.g.dart' as raw;
 import 'web_speech_recognition_adapter.dart';
 
+/// Live recognition session using microphone; continuous + interim results.
+class BrowserWebSpeechLiveRecognitionSession
+    implements WebSpeechLiveRecognitionSession {
+  BrowserWebSpeechLiveRecognitionSession._({
+    required raw.SpeechRecognitionRaw recognition,
+    required StreamController<String> controller,
+  })  : _recognition = recognition,
+       _controller = controller;
+
+  final raw.SpeechRecognitionRaw _recognition;
+  final StreamController<String> _controller;
+  bool _stopped = false;
+
+  @override
+  Stream<String> get transcriptStream => _controller.stream;
+
+  @override
+  void stop() {
+    if (_stopped) return;
+    _stopped = true;
+    try {
+      _recognition.stop();
+    } catch (_) {}
+    if (!_controller.isClosed) {
+      _controller.close();
+    }
+  }
+
+  void _onResult(final JSAny? event) {
+    if (_controller.isClosed) return;
+    final transcript = _extractTranscriptFromEvent(event);
+    if (transcript != null && transcript.isNotEmpty) {
+      _controller.add(transcript);
+    }
+  }
+
+  void _onEnd(final JSAny? _) {
+    if (!_controller.isClosed) {
+      _controller.close();
+    }
+  }
+
+  void _onError(final JSAny? _) {
+    if (!_controller.isClosed) {
+      _controller.close();
+    }
+  }
+
+  static String? _extractTranscriptFromEvent(final JSAny? event) {
+    final eventObject = _asJsObject(event);
+    final resultsObject = _asJsObject(eventObject?['results']);
+    final resultCount = _asInt(resultsObject?['length']) ?? 0;
+    final buffer = StringBuffer();
+    for (var index = 0; index < resultCount; index++) {
+      final resultObject = _asJsObject(resultsObject?['$index']);
+      if (resultObject == null) continue;
+      final alternative = _asJsObject(resultObject['0']);
+      final transcript = _asTrimmedString(alternative?['transcript']);
+      if (transcript != null && transcript.isNotEmpty) {
+        if (buffer.isNotEmpty) buffer.write(' ');
+        buffer.write(transcript);
+      }
+    }
+    final s = buffer.toString().trim();
+    return s.isEmpty ? null : s;
+  }
+
+  static JSObject? _asJsObject(final JSAny? value) {
+    // ignore: invalid_runtime_check_with_js_interop_types
+    return value is JSObject ? value : null;
+  }
+
+  static int? _asInt(final JSAny? value) {
+    final normalized = _dartify(value);
+    if (normalized is int) return normalized;
+    if (normalized is num) return (normalized as num).round();
+    return null;
+  }
+
+  static String? _asTrimmedString(final JSAny? value) {
+    final normalized = _dartify(value);
+    if (normalized is! String) return null;
+    final text = normalized.trim();
+    return text.isEmpty ? null : text;
+  }
+
+  static Object? _dartify(final JSAny? value) {
+    if (value == null) return null;
+    try {
+      return value.dartify();
+    } catch (_) {
+      return null;
+    }
+  }
+}
+
 abstract interface class WebSpeechRecognitionTrackProvider {
   Future<WebSpeechRecognitionAudioTrackHandle> fromFileUrl({
     required String fileUrl,
@@ -267,6 +363,39 @@ class BrowserWebSpeechRecognitionAdapter
       if (trackHandle != null) {
         await trackHandle.dispose();
       }
+    }
+  }
+
+  @override
+  WebSpeechLiveRecognitionSession? startLiveRecognition({
+    final String? language,
+  }) {
+    if (!hasSpeechRecognitionApi) return null;
+    try {
+      final recognition = _createRecognition();
+      recognition.continuous = true.toJS;
+      recognition.interimResults = true.toJS;
+      recognition.maxAlternatives = 1.toJS;
+      if (language != null && language.trim().isNotEmpty) {
+        recognition.lang = language.trim().toJS;
+      }
+      final controller = StreamController<String>.broadcast();
+      final session = BrowserWebSpeechLiveRecognitionSession._(
+        recognition: recognition,
+        controller: controller,
+      );
+      recognition.onresult = ((final JSAny? event) => session._onResult(event)).toJS;
+      recognition.onend = ((final JSAny? e) => session._onEnd(e)).toJS;
+      recognition.onerror = ((final JSAny? e) => session._onError(e)).toJS;
+      try {
+        recognition.start();
+      } catch (_) {
+        session.stop();
+        return null;
+      }
+      return session;
+    } catch (_) {
+      return null;
     }
   }
 

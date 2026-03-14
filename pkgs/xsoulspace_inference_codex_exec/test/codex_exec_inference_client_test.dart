@@ -64,6 +64,290 @@ void main() {
     );
 
     test(
+      'infer passes model and reasoning config from codexExec metadata',
+      () async {
+        final temp = await Directory.systemTemp.createTemp(
+          'xsoulspace_codex_test_',
+        );
+        addTearDown(() => temp.delete(recursive: true));
+
+        final argsPath = '${temp.path}/args.txt';
+        final script = await _createExecutableScript(
+          temp,
+          _argumentCaptureScript(argsPath),
+        );
+        final client = CodexExecInferenceClient(
+          binaryName: script.path,
+          defaultModel: 'gpt-5.3-codex',
+          defaultReasoningEffort: 'low',
+        );
+
+        final result = await client.infer(
+          _request(
+            temp.path,
+            outputSchema: const <String, dynamic>{
+              'type': 'object',
+              'required': <String>['ok'],
+              'properties': <String, dynamic>{
+                'ok': <String, dynamic>{'type': 'boolean'},
+              },
+            },
+          ).copyWith(
+            metadata: const <String, dynamic>{
+              'codexExecModel': 'gpt-5.4',
+              'codexExecReasoningEffort': 'middle',
+            },
+          ),
+        );
+
+        expect(result.success, isTrue);
+        final args = File(argsPath).readAsLinesSync();
+        expect(
+          args,
+          containsAllInOrder(<String>[
+            '--model',
+            'gpt-5.4',
+            '-c',
+            'reasoning.effort="medium"',
+          ]),
+        );
+      },
+      skip: shellSkipReason,
+    );
+
+    test(
+      'infer uses inferenceModel and inferenceReasoningEffort when set',
+      () async {
+        final temp = await Directory.systemTemp.createTemp(
+          'xsoulspace_codex_test_',
+        );
+        addTearDown(() => temp.delete(recursive: true));
+
+        final argsPath = '${temp.path}/args.txt';
+        final script = await _createExecutableScript(
+          temp,
+          _argumentCaptureScript(argsPath),
+        );
+        final client = CodexExecInferenceClient(binaryName: script.path);
+
+        final result = await client.infer(
+          _request(
+            temp.path,
+            outputSchema: const <String, dynamic>{
+              'type': 'object',
+              'required': <String>['ok'],
+              'properties': <String, dynamic>{
+                'ok': <String, dynamic>{'type': 'boolean'},
+              },
+            },
+          ).copyWith(
+            metadata: const <String, dynamic>{
+              'inferenceModel': 'gpt-5.4',
+              'inferenceReasoningEffort': 'high',
+            },
+          ),
+        );
+
+        expect(result.success, isTrue);
+        final args = File(argsPath).readAsLinesSync();
+        expect(
+          args,
+          containsAllInOrder(<String>[
+            '--model',
+            'gpt-5.4',
+            '-c',
+            'reasoning.effort="high"',
+          ]),
+        );
+      },
+      skip: shellSkipReason,
+    );
+
+    test(
+      'infer prefers inferenceModel over codexExecModel when both set',
+      () async {
+        final temp = await Directory.systemTemp.createTemp(
+          'xsoulspace_codex_test_',
+        );
+        addTearDown(() => temp.delete(recursive: true));
+
+        final argsPath = '${temp.path}/args.txt';
+        final script = await _createExecutableScript(
+          temp,
+          _argumentCaptureScript(argsPath),
+        );
+        final client = CodexExecInferenceClient(binaryName: script.path);
+
+        final result = await client.infer(
+          _request(
+            temp.path,
+            outputSchema: const <String, dynamic>{
+              'type': 'object',
+              'required': <String>['ok'],
+              'properties': <String, dynamic>{
+                'ok': <String, dynamic>{'type': 'boolean'},
+              },
+            },
+          ).copyWith(
+            metadata: const <String, dynamic>{
+              'inferenceModel': 'preferred-model',
+              'codexExecModel': 'legacy-model',
+              'inferenceReasoningEffort': 'medium',
+              'codexExecReasoningEffort': 'low',
+            },
+          ),
+        );
+
+        expect(result.success, isTrue);
+        final args = File(argsPath).readAsLinesSync();
+        expect(
+          args,
+          containsAllInOrder(<String>[
+            '--model',
+            'preferred-model',
+            '-c',
+            'reasoning.effort="medium"',
+          ]),
+        );
+      },
+      skip: shellSkipReason,
+    );
+
+    test('infer omits model and reasoning flags when unset', () async {
+      final temp = await Directory.systemTemp.createTemp(
+        'xsoulspace_codex_test_',
+      );
+      addTearDown(() => temp.delete(recursive: true));
+
+      final argsPath = '${temp.path}/args.txt';
+      final script = await _createExecutableScript(
+        temp,
+        _argumentCaptureScript(argsPath),
+      );
+      final client = CodexExecInferenceClient(binaryName: script.path);
+
+      final result = await client.infer(
+        _request(
+          temp.path,
+          outputSchema: const <String, dynamic>{
+            'type': 'object',
+            'required': <String>['ok'],
+            'properties': <String, dynamic>{
+              'ok': <String, dynamic>{'type': 'boolean'},
+            },
+          },
+        ),
+      );
+
+      expect(result.success, isTrue);
+      final args = File(argsPath).readAsLinesSync();
+      expect(args.contains('--model'), isFalse);
+      expect(args.contains('-c'), isFalse);
+    }, skip: shellSkipReason);
+
+    test(
+      'streamStructuredText emits raw chunks and completion',
+      () async {
+        final temp = await Directory.systemTemp.createTemp(
+          'xsoulspace_codex_test_',
+        );
+        addTearDown(() => temp.delete(recursive: true));
+
+        final script = await _createExecutableScript(temp, _streamingScript());
+        final client = CodexExecInferenceClient(binaryName: script.path);
+        final session = await client.streamStructuredText(
+          _request(
+            temp.path,
+            outputSchema: const <String, dynamic>{
+              'type': 'object',
+              'required': <String>['status'],
+              'properties': <String, dynamic>{
+                'status': <String, dynamic>{'type': 'string'},
+              },
+            },
+          ),
+        );
+        addTearDown(session.dispose);
+
+        final eventsFuture = session.events.toList();
+        final result = await session.result;
+        final events = await eventsFuture;
+
+        expect(result.success, isTrue);
+        expect(
+          events.any(
+            (final event) =>
+                event.type == InferenceStructuredTextStreamEventType.raw &&
+                event.rawChannel == InferenceStructuredTextRawChannel.stdout,
+          ),
+          isTrue,
+        );
+        expect(
+          events.any(
+            (final event) =>
+                event.type == InferenceStructuredTextStreamEventType.raw &&
+                event.rawChannel == InferenceStructuredTextRawChannel.stderr,
+          ),
+          isTrue,
+        );
+        expect(
+          events.any(
+            (final event) =>
+                event.type ==
+                    InferenceStructuredTextStreamEventType.partialOutput &&
+                (event.textDelta ?? '').contains('streaming stdout chunk'),
+          ),
+          isTrue,
+        );
+        expect(
+          events.last.type,
+          InferenceStructuredTextStreamEventType.completion,
+        );
+        expect(events.last.completion?.result.success, isTrue);
+      },
+      skip: shellSkipReason,
+    );
+
+    test('streamStructuredText surfaces timeout completion', () async {
+      final temp = await Directory.systemTemp.createTemp(
+        'xsoulspace_codex_test_',
+      );
+      addTearDown(() => temp.delete(recursive: true));
+
+      final script = await _createExecutableScript(temp, _timeoutScript());
+      final client = CodexExecInferenceClient(
+        binaryName: script.path,
+        executionTimeout: const Duration(milliseconds: 150),
+        maxTimeoutRetries: 0,
+        maxAttempts: 1,
+      );
+      final session = await client.streamStructuredText(
+        _request(
+          temp.path,
+          outputSchema: const <String, dynamic>{'type': 'object'},
+        ),
+      );
+      addTearDown(session.dispose);
+
+      final eventsFuture = session.events.toList();
+      final result = await session.result;
+      final events = await eventsFuture;
+
+      expect(result.success, isFalse);
+      expect(result.error?.code, 'codex_exec_timeout');
+      expect(
+        events.any(
+          (final event) =>
+              event.type == InferenceStructuredTextStreamEventType.lifecycle &&
+              event.lifecycleState ==
+                  InferenceStructuredTextLifecycleState.timedOut,
+        ),
+        isTrue,
+      );
+      expect(events.last.completion?.result.error?.code, 'codex_exec_timeout');
+    }, skip: shellSkipReason);
+
+    test(
       'infer retries with fallback args for legacy codex flags',
       () async {
         final temp = await Directory.systemTemp.createTemp(
@@ -363,6 +647,20 @@ InferenceRequest _request(
   workingDirectory: workingDirectory,
 );
 
+extension on InferenceRequest {
+  InferenceRequest copyWith({
+    final String? prompt,
+    final Map<String, dynamic>? outputSchema,
+    final String? workingDirectory,
+    final Map<String, dynamic>? metadata,
+  }) => InferenceRequest(
+    prompt: prompt ?? this.prompt,
+    outputSchema: outputSchema ?? this.outputSchema,
+    workingDirectory: workingDirectory ?? this.workingDirectory,
+    metadata: metadata ?? this.metadata,
+  );
+}
+
 Future<File> _createExecutableScript(
   final Directory directory,
   final String content,
@@ -392,6 +690,40 @@ JSON
   exit 0
 fi
 exit 1
+''';
+
+String _streamingScript() => r'''#!/usr/bin/env bash
+output=""
+while [ "$#" -gt 0 ]; do
+  if [ "$1" = "--output-last-message" ]; then
+    shift
+    output="$1"
+  fi
+  shift
+done
+echo "streaming stdout chunk"
+echo "streaming stderr chunk" >&2
+cat > "$output" <<'JSON'
+{"status":"ok"}
+JSON
+exit 0
+''';
+
+String _argumentCaptureScript(final String argsPath) =>
+    '''#!/usr/bin/env bash
+printf '%s\n' "\$@" > "$argsPath"
+output=""
+while [ "\$#" -gt 0 ]; do
+  if [ "\$1" = "--output-last-message" ]; then
+    shift
+    output="\$1"
+  fi
+  shift
+done
+cat > "\$output" <<'JSON'
+{"ok":true}
+JSON
+exit 0
 ''';
 
 String _legacyScript() => r'''#!/usr/bin/env bash
