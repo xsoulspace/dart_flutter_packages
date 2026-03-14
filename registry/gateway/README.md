@@ -16,9 +16,11 @@ Minimal hosted-pub-compatible read gateway for the internal Dart registry.
 - `GET /readyz`
 
 `/api/*` responses are fetched from the generated metadata branch/repo and cached
-on disk. Archive requests validate the package/version against metadata and then
-return a `302` redirect to the configured archive source. On transient upstream
-failures the gateway serves stale cached metadata when available.
+on disk. Metadata responses include `ETag` and `Cache-Control: public, max-age=60`;
+clients may send `If-None-Match` to receive `304 Not Modified` when unchanged.
+Archive requests validate the package/version against metadata and then return a
+`302` redirect to the configured archive source. On transient upstream failures
+the gateway serves stale cached metadata when available.
 
 ## Environment
 

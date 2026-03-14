@@ -3,7 +3,7 @@
 This repository now publishes internal packages through a GitHub-backed hosted
 registry flow instead of a runtime `dart pub publish` endpoint.
 
-Deployment runbook: `deploy/README.md`.
+Deployment runbook: [registry/DEPLOY.md](registry/DEPLOY.md).
 
 ## Registry v1 layout
 
@@ -19,9 +19,26 @@ Default registry URL:
 https://pub.xsoulspace.dev
 ```
 
+## Quick start
+
+**Consumers:** To depend on an internal package, add a hosted entry (see [Consumer dependency format](#consumer-dependency-format)) or run `just registry-add <target_package> <internal_package> [version]`. List available packages with `just registry-list` (optionally `versions=true` or `gateway_url="https://pub.xsoulspace.dev"`).
+
+**Authors:** Before opening a release PR, run `just registry-release-preflight` once. Then push; CI publishes. To bump a package version: `just registry-bump <package> <version>`.
+
 ## Local authoring flow
 
-Before opening a release PR:
+Before opening a release PR, run the full preflight (recommended):
+
+```bash
+just registry-release-preflight
+```
+
+This runs in order: `docs-check`, `storage-release-g6`, `platform-sdk-verify`,
+`registry-test`, `registry-rewrite-hosted`, `registry-build-index`,
+`registry-validate`, then prints a "Would publish" summary. If any step fails,
+stop and fix before pushing.
+
+Alternatively, run the same steps manually:
 
 ```bash
 just docs-check
