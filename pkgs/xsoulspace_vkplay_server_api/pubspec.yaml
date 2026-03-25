@@ -16,8 +16,4 @@ dependencies:
 dev_dependencies:
   lints: ^6.0.0
   test: ^1.26.3
-  xsoulspace_lints:
-    hosted:
-      name: xsoulspace_lints
-      url: https://pub.xsoulspace.dev
-    version: ^0.1.2
+  xsoulspace_lints: ^0.1.2

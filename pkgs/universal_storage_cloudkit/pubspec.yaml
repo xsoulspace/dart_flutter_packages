@@ -39,8 +39,4 @@ dev_dependencies:
       name: universal_storage_filesystem
       url: https://pub.xsoulspace.dev
     version: ^0.1.0-dev.11
-  xsoulspace_lints:
-    hosted:
-      name: xsoulspace_lints
-      url: https://pub.xsoulspace.dev
-    version: ^0.1.2
+  xsoulspace_lints: ^0.1.2

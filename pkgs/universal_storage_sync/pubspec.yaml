@@ -13,8 +13,8 @@ environment:
   sdk: ">=3.10.0 <4.0.0"
 
 dependencies:
-  from_json_to_json: ">=0.2.0 <0.5.0"
-  is_dart_empty_or_not: ">=0.2.0 <0.5.0"
+  from_json_to_json: ^0.4.0
+  is_dart_empty_or_not: ^0.5.0
   meta: ^1.17.0
   universal_storage_interface:
     hosted:
@@ -32,8 +32,4 @@ dev_dependencies:
       name: universal_storage_cloudkit
       url: https://pub.xsoulspace.dev
     version: ^0.1.0-dev.1
-  xsoulspace_lints:
-    hosted:
-      name: xsoulspace_lints
-      url: https://pub.xsoulspace.dev
-    version: ^0.1.2
+  xsoulspace_lints: ^0.1.2

@@ -23,8 +23,4 @@ dev_dependencies:
       name: xsoulspace_js_interop_codegen
       url: https://pub.xsoulspace.dev
     version: 0.1.0
-  xsoulspace_lints:
-    hosted:
-      name: xsoulspace_lints
-      url: https://pub.xsoulspace.dev
-    version: ^0.1.2
+  xsoulspace_lints: ^0.1.2

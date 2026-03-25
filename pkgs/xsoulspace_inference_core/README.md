@@ -1,5 +1,7 @@
 # xsoulspace_inference_core
 
+Please notice: this package is under development and not ready for production use.
+
 Provider-agnostic inference contracts and validation utilities for text, STT,
 and TTS task flows.
 
