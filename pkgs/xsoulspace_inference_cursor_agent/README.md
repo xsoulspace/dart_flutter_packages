@@ -1,5 +1,7 @@
 # xsoulspace_inference_cursor_agent
 
+Please notice: this package is under development and not ready for production use.
+
 Cursor Agent CLI backed implementation of
 `xsoulspace_inference_core` (`InferenceClient`).
 

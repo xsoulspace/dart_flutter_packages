@@ -4,6 +4,10 @@ All notable changes to this package will be documented in this file.
 
 ## Unreleased
 
+## 0.1.0-beta.1
+
+- Initial release with Codex CLI-backed inference client.
+
 - Added production hardening for `CodexExecInferenceClient`:
   - request prevalidation and working-directory checks;
   - timeout handling with process termination;
@@ -21,7 +25,3 @@ All notable changes to this package will be documented in this file.
   - sequential and parallel stability checks.
 - Added optional real-binary integration tests gated by
   `CODEX_INFERENCE_INTEGRATION=1` and `CODEX_API_KEY`.
-
-## 0.1.0
-
-- Initial release with Codex CLI-backed inference client.

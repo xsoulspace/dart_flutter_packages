@@ -1,5 +1,7 @@
 # xsoulspace_inference_codex_exec
 
+Please notice: this package is under development and not ready for production use.
+
 Codex CLI backed implementation of
 `xsoulspace_inference_core` (`InferenceClient`).
 

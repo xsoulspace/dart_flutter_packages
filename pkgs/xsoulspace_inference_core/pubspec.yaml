@@ -1,7 +1,6 @@
 name: xsoulspace_inference_core
 description: Provider-agnostic inference interfaces and validation helpers.
-version: 0.1.0
-publish_to: none
+version: 0.1.0-beta.1
 
 environment:
   sdk: ">=3.11.0 <4.0.0"

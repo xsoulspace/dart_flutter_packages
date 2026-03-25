@@ -11,7 +11,7 @@ All notable changes to this package will be documented in this file.
 - Added recursive output schema conformance checks via `validateJsonAgainstSchema`.
 - Added tests for nested schema validation and path-aware mismatch reporting.
 
-## 0.1.0
+## 0.1.0-beta.1
 
 - Initial release with provider-agnostic inference contracts.
 - Added base JSON parsing and required-key validation helpers.

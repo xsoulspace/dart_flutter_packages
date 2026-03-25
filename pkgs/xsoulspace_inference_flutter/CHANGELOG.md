@@ -1,3 +1,3 @@
-## 0.1.0
+## 0.1.0-beta.1
 
 - Initial provider-agnostic Flutter helpers package.

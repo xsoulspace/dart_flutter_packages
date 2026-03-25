@@ -1,15 +1,14 @@
 name: xsoulspace_inference_codex_exec
 description: Codex exec-backed implementation of xsoulspace_inference_core.
-version: 0.1.0
-publish_to: none
+version: 0.1.0-beta.1
 
 environment:
-  sdk: ">=3.10.0 <4.0.0"
+  sdk: ">=3.11.0 <4.0.0"
 
 dependencies:
   path: ^1.9.1
-  xsoulspace_inference_core:
-    path: ../xsoulspace_inference_core
+  xsoulspace_inference_core: ^0.1.0-beta.1
+  
 dev_dependencies:
-  lints: ^6.0.0
-  test: ^1.25.8
+  lints: ^6.1.0
+  test: ^1.31.0
