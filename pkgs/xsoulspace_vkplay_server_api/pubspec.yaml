@@ -1,0 +1,19 @@
+name: xsoulspace_vkplay_server_api
+description: Server-only VK Play API signer and REST clients for signed endpoints.
+version: 0.1.0-beta.1
+repository: https://github.com/xsoulspace/dart_flutter_packages
+homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_vkplay_server_api
+issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
+
+environment:
+  sdk: ">=3.10.0 <4.0.0"
+
+dependencies:
+  crypto: ^3.0.7
+  http: ^1.6.0
+  meta: ^1.16.0
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.26.3
+  xsoulspace_lints: ^0.1.2

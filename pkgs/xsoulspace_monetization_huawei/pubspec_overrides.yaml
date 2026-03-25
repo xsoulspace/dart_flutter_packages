@@ -1,0 +1,3 @@
+dependency_overrides:
+  xsoulspace_monetization_interface:
+    path: ../xsoulspace_monetization_interface

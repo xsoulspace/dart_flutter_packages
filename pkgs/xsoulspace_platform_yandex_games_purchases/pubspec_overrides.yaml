@@ -1,0 +1,45 @@
+dependency_overrides:
+  xsoulspace_platform_core_interface:
+    path: ../xsoulspace_platform_core_interface
+  xsoulspace_platform_social_interface:
+    path: ../xsoulspace_platform_social_interface
+  xsoulspace_platform_gamification_interface:
+    path: ../xsoulspace_platform_gamification_interface
+  xsoulspace_platform_multiplayer_interface:
+    path: ../xsoulspace_platform_multiplayer_interface
+  xsoulspace_platform_foundation:
+    path: ../xsoulspace_platform_foundation
+  xsoulspace_platform_purchases_bridge:
+    path: ../xsoulspace_platform_purchases_bridge
+  xsoulspace_vkplay_js:
+    path: ../xsoulspace_vkplay_js
+  xsoulspace_ysdk_games_js:
+    path: ../xsoulspace_ysdk_games_js
+  xsoulspace_crazygames_js:
+    path: ../xsoulspace_crazygames_js
+  xsoulspace_discord_js:
+    path: ../xsoulspace_discord_js
+  xsoulspace_platform_steam:
+    path: ../xsoulspace_platform_steam
+  xsoulspace_platform_vkplay:
+    path: ../xsoulspace_platform_vkplay
+  xsoulspace_platform_yandex_games:
+    path: ../xsoulspace_platform_yandex_games
+  xsoulspace_platform_crazygames:
+    path: ../xsoulspace_platform_crazygames
+  xsoulspace_platform_discord:
+    path: ../xsoulspace_platform_discord
+  xsoulspace_monetization_yandex_games:
+    path: ../xsoulspace_monetization_yandex_games
+  xsoulspace_vkplay_server_api:
+    path: ../xsoulspace_vkplay_server_api
+  xsoulspace_discord_server_api:
+    path: ../xsoulspace_discord_server_api
+  xsoulspace_monetization_interface:
+    path: ../xsoulspace_monetization_interface
+  xsoulspace_steamworks:
+    path: ../xsoulspace_steamworks
+  xsoulspace_steamworks_raw:
+    path: ../xsoulspace_steamworks_raw
+  xsoulspace_js_interop_codegen:
+    path: ../xsoulspace_js_interop_codegen

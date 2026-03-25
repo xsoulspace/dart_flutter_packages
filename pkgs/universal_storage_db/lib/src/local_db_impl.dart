@@ -28,11 +28,6 @@ enum _StorageOperationDataType {
   oMapList,
 }
 
-/// {@template operation_key}
-/// Represents the key for an operation.
-/// {@endtemplate}
-extension type const _OperationKey(String value) implements String {}
-
 /// {@template local_db_universal_storage_impl}
 /// Local DB Universal Storage implementation.
 ///
@@ -71,13 +66,12 @@ class LocalDbUniversalStorageImpl implements LocalDbI {
 
   /// {@macro universal_storage_db_config}
   UniversalStorageDbConfig get _config => db.config;
-  final _singleFilesStringsCache = <_OperationKey, String>{};
-  final _singleFilesIntsCache = <_OperationKey, int>{};
-  final _singleFilesBoolsCache = <_OperationKey, bool>{};
-  final _singleFilesMapsCache = <_OperationKey, Map<String, dynamic>>{};
-  final _singleFilesMapListsCache =
-      <_OperationKey, List<Map<String, dynamic>>>{};
-  final _singleFilesStringsListsCache = <_OperationKey, List<String>>{};
+  final _singleFilesStringsCache = <String, String>{};
+  final _singleFilesIntsCache = <String, int>{};
+  final _singleFilesBoolsCache = <String, bool>{};
+  final _singleFilesMapsCache = <String, Map<String, dynamic>>{};
+  final _singleFilesMapListsCache = <String, List<Map<String, dynamic>>>{};
+  final _singleFilesStringsListsCache = <String, List<String>>{};
 
   StorageRouterType get _routerTypes => _config.storageRouterTypes;
 
@@ -160,17 +154,15 @@ class LocalDbUniversalStorageImpl implements LocalDbI {
 
   void _setSingleFileCacheMap<T extends Object>({
     required final _StorageOperationDataType dataType,
-    required final String key,
     required final Map<String, T> map,
   }) {
-    final opKey = _OperationKey(key);
-    final _ = switch (dataType) {
-      _StorageOperationDataType.oBool => _singleFilesBoolsCache,
-      _StorageOperationDataType.oInt => _singleFilesIntsCache,
-      _StorageOperationDataType.oString => _singleFilesStringsCache,
-      _StorageOperationDataType.oMap => _singleFilesMapsCache,
-      _StorageOperationDataType.oMapList => _singleFilesMapListsCache,
-    }..[opKey] = map;
+    final cacheMap = _getSingleFileCacheMap<T>(dataType: dataType);
+    if (cacheMap == null) return;
+    if (identical(cacheMap, map)) return;
+    final snapshot = Map<String, T>.from(map);
+    cacheMap
+      ..clear()
+      ..addAll(snapshot);
   }
 
   Future<T> _readKeyValueFromSingleFile<T extends Object>({
@@ -199,7 +191,7 @@ class LocalDbUniversalStorageImpl implements LocalDbI {
     final cacheMap = _getSingleFileCacheMap<T>(dataType: dataType);
     final map = cacheMap ?? await getContent();
     map[key] = value;
-    _setSingleFileCacheMap(dataType: dataType, key: key, map: map);
+    _setSingleFileCacheMap(dataType: dataType, map: map);
     await _writeContent(key: key, dataType: dataType, content: jsonEncode(map));
   }
 
@@ -296,21 +288,40 @@ class LocalDbUniversalStorageImpl implements LocalDbI {
   );
 
   @override
+  Future<void> clear() async {
+    _singleFilesBoolsCache.clear();
+    _singleFilesIntsCache.clear();
+    _singleFilesStringsCache.clear();
+    _singleFilesMapsCache.clear();
+    _singleFilesMapListsCache.clear();
+    _singleFilesStringsListsCache.clear();
+  }
+
+  @override
+  Future<void> clearKey({required final String key}) async {
+    _singleFilesBoolsCache.remove(key);
+    _singleFilesIntsCache.remove(key);
+    _singleFilesStringsCache.remove(key);
+    _singleFilesMapsCache.remove(key);
+    _singleFilesMapListsCache.remove(key);
+    _singleFilesStringsListsCache.remove(key);
+  }
+
+  @override
   Future<Iterable<Map<String, dynamic>>> getMapIterable({
     required final String key,
     final List<Map<String, dynamic>> defaultValue = const [],
   }) async {
     // TODO(arenukvern): add separate files builder method
     // if (_routerTypes.placeMapListInSingleFile) {
-    final opKey = _OperationKey(key);
-    final cached = _singleFilesMapListsCache[opKey];
+    final cached = _singleFilesMapListsCache[key];
     if (cached != null) return cached;
     final iterableStr = await _readContent(
       key: key,
       dataType: _StorageOperationDataType.oMapList,
     );
     if (iterableStr.isEmpty) return defaultValue;
-    return _singleFilesMapListsCache[opKey] ??=
+    return _singleFilesMapListsCache[key] ??=
         jsonDecodeListAs<Map<String, dynamic>>(iterableStr);
     // } else {
 
@@ -322,7 +333,7 @@ class LocalDbUniversalStorageImpl implements LocalDbI {
     required final String key,
     required final List<Map<String, dynamic>> value,
   }) async {
-    _singleFilesMapListsCache[_OperationKey(key)] = value;
+    _singleFilesMapListsCache[key] = value;
     final json = jsonEncode(value);
     await _writeContent(
       key: key,
@@ -356,15 +367,14 @@ class LocalDbUniversalStorageImpl implements LocalDbI {
     required final String key,
     final List<String> defaultValue = const [],
   }) async {
-    final opKey = _OperationKey(key);
-    final cached = _singleFilesStringsListsCache[opKey];
+    final cached = _singleFilesStringsListsCache[key];
     if (cached != null) return cached;
     final iterable = await _readContent(
       key: key,
       dataType: _StorageOperationDataType.oMapList,
     );
     if (iterable.isEmpty) return defaultValue;
-    return _singleFilesStringsListsCache[opKey] ??= jsonDecodeListAs<String>(
+    return _singleFilesStringsListsCache[key] ??= jsonDecodeListAs<String>(
       iterable,
     );
   }
@@ -374,7 +384,7 @@ class LocalDbUniversalStorageImpl implements LocalDbI {
     required final String key,
     required final List<String> value,
   }) async {
-    _singleFilesStringsListsCache[_OperationKey(key)] = value;
+    _singleFilesStringsListsCache[key] = value;
     final json = jsonEncode(value);
     await _writeContent(
       key: key,

@@ -1,0 +1,2414 @@
+{
+  "evaluated_at_utc": "2026-03-04T02:10:11.330191Z",
+  "scope": "all",
+  "excluded_packages": [
+    "xsoulspace_steamworks",
+    "xsoulspace_steamworks_raw",
+    "xsoulspace_platform_steam"
+  ],
+  "summary": {
+    "ready_public": 51,
+    "ready_internal": 0,
+    "blocked": 0,
+    "total": 51
+  },
+  "packages": [
+    {
+      "package": "xsoulspace_crashhunter",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter analyze --no-fatal-infos --no-fatal-warnings"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_crazygames_js",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "dart analyze"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "dart test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_discord_js",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "dart analyze"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "dart test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_discord_server_api",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "dart analyze"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "dart test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_foundation",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter analyze --no-fatal-infos --no-fatal-warnings"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_installation_store",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "dart analyze"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "dart test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_js_interop_codegen",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "dart analyze"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "dart test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_lints",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "dart analyze"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "dart test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_locale",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter analyze --no-fatal-infos --no-fatal-warnings"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_logger",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "dart analyze"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "dart test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_logger_flutter",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter analyze --no-fatal-infos --no-fatal-warnings"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_logger_io",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "dart analyze"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "dart test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_logger_triage",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "dart analyze"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "dart test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_logger_universal_storage",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "dart analyze"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "dart test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_monetization_ads_crazygames",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter analyze --no-fatal-infos --no-fatal-warnings"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_monetization_ads_foundation",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter analyze --no-fatal-infos --no-fatal-warnings"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_monetization_ads_interface",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter analyze --no-fatal-infos --no-fatal-warnings"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_monetization_ads_yandex",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter analyze --no-fatal-infos --no-fatal-warnings"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_monetization_foundation",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter analyze --no-fatal-infos --no-fatal-warnings"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_monetization_google_apple",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter analyze --no-fatal-infos --no-fatal-warnings"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_monetization_huawei",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter analyze --no-fatal-infos --no-fatal-warnings"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_monetization_interface",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "dart analyze"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "dart test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_monetization_rustore",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter analyze --no-fatal-infos --no-fatal-warnings"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_monetization_yandex_games",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "dart analyze"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "dart test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_platform_ads_bridge",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter analyze --no-fatal-infos --no-fatal-warnings"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_platform_core_interface",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "dart analyze"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "dart test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_platform_crazygames",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "dart analyze"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "dart test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_platform_crazygames_ads",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter analyze --no-fatal-infos --no-fatal-warnings"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_platform_discord",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "dart analyze"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "dart test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_platform_foundation",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "dart analyze"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "dart test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_platform_gamification_interface",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "dart analyze"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "dart test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_platform_monetization_bridge",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter analyze --no-fatal-infos --no-fatal-warnings"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_platform_multiplayer_interface",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "dart analyze"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "dart test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_platform_purchases_bridge",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "dart analyze"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "dart test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_platform_social_interface",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "dart analyze"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "dart test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_platform_vkplay",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "dart analyze"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "dart test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_platform_yandex_games",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "dart analyze"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "dart test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_platform_yandex_games_purchases",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "dart analyze"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "dart test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_review",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter analyze --no-fatal-infos --no-fatal-warnings"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_review_google_apple",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter analyze --no-fatal-infos --no-fatal-warnings"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_review_huawei",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter analyze --no-fatal-infos --no-fatal-warnings"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_review_interface",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter analyze --no-fatal-infos --no-fatal-warnings"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_review_rustore",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter analyze --no-fatal-infos --no-fatal-warnings"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_review_snapstore",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter analyze --no-fatal-infos --no-fatal-warnings"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_review_web",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter analyze --no-fatal-infos --no-fatal-warnings"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_state_utils",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter analyze --no-fatal-infos --no-fatal-warnings"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_support",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter analyze --no-fatal-infos --no-fatal-warnings"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_ui_foundation",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter analyze --no-fatal-infos --no-fatal-warnings"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "flutter pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_vkplay_js",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "dart analyze"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "dart test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_vkplay_server_api",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "dart analyze"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "dart test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    },
+    {
+      "package": "xsoulspace_ysdk_games_js",
+      "status": "ready_public",
+      "is_internal": false,
+      "checks": [
+        {
+          "name": "docs_files",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "readme_status",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "no_local_path_overrides",
+          "passed": true,
+          "skipped": false
+        },
+        {
+          "name": "pub_get",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub get"
+        },
+        {
+          "name": "analyze",
+          "passed": true,
+          "skipped": false,
+          "command": "dart analyze"
+        },
+        {
+          "name": "test",
+          "passed": true,
+          "skipped": false,
+          "command": "dart test"
+        },
+        {
+          "name": "publish_dry_run",
+          "passed": true,
+          "skipped": false,
+          "command": "dart pub publish --dry-run --ignore-warnings"
+        }
+      ],
+      "failing_checks": []
+    }
+  ]
+}

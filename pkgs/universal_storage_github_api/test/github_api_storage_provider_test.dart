@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:test/test.dart';
 import 'package:universal_storage_github_api/universal_storage_github_api.dart';
 import 'package:universal_storage_interface/universal_storage_interface.dart';
@@ -14,17 +16,38 @@ void main() {
       expect(provider, isA<GitHubApiStorageProvider>());
     });
 
+    test('implements RemoteEngine role with declared capabilities', () {
+      expect(provider, isA<RemoteEngine>());
+      expect(provider.declaredCapabilities.supportsRevisionMetadata, isTrue);
+      expect(provider.declaredCapabilities.supportsDiff, isFalse);
+    });
+
+    test('declares clone-to-local capability as unsupported', () async {
+      expect(
+        provider.declaredVersionControlCapabilities.supportsCloneToLocal,
+        isFalse,
+      );
+      final resolved = await provider.resolveVersionControlCapabilities();
+      expect(resolved.supportsCloneToLocal, isFalse);
+    });
+
     test('should throw ArgumentError when wrong config type is provided', () {
+      final tempDirectory = Directory.systemTemp.createTempSync(
+        'github_api_wrong_config_test_',
+      );
       final config = FileSystemConfig(
         filePathConfig: FilePathConfig.create(
-          path: '/test',
-          macOSBookmarkData: MacOSBookmark.empty,
+          path: tempDirectory.path,
+          macOSBookmarkData: MacOSBookmark.fromDirectory(tempDirectory),
         ),
       );
       expect(
         () => provider.initWithConfig(config),
         throwsA(isA<ArgumentError>()),
       );
+      if (tempDirectory.existsSync()) {
+        tempDirectory.deleteSync(recursive: true);
+      }
     });
 
     test('should throw ArgumentError when '
@@ -47,7 +70,7 @@ void main() {
         () => GitHubApiConfig(
           authToken: 'test-token',
           repositoryName: const VcRepositoryName('test-repo'),
-          repositoryOwner: const VcRepositoryOwner(''),
+          repositoryOwner: VcRepositoryOwner.empty,
         ),
         throwsA(isA<ArgumentError>()),
       );
@@ -60,7 +83,7 @@ void main() {
         () => GitHubApiConfig(
           authToken: 'test-token',
           repositoryOwner: const VcRepositoryOwner('test'),
-          repositoryName: const VcRepositoryName(''),
+          repositoryName: VcRepositoryName.empty,
         ),
         throwsA(isA<ArgumentError>()),
       );
@@ -88,6 +111,30 @@ void main() {
       expect(config.authToken, equals('test-token'));
       expect(config.repositoryOwner.value, equals('test-owner'));
       expect(config.repositoryName.value, equals('test-repo'));
+    });
+
+    test('cloneRepository should require initialized provider '
+        'and not throw UnimplementedError', () {
+      expect(
+        () => provider.cloneRepository(
+          const VcRepository(id: '1', name: 'repo'),
+          '/tmp/repo',
+        ),
+        throwsA(isA<ConfigurationException>()),
+      );
+    });
+
+    test('setRepository should require initialized provider '
+        'and not throw UnimplementedError', () {
+      expect(
+        () => provider.setRepository(const VcRepositoryName('another-repo')),
+        throwsA(isA<ConfigurationException>()),
+      );
+    });
+
+    test('dispose should complete without throwing', () async {
+      await provider.dispose();
+      expect(await provider.isAuthenticated(), isFalse);
     });
   });
 }

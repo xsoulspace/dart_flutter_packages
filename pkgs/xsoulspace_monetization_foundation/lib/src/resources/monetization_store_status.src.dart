@@ -29,7 +29,7 @@ import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interf
 /// statusResource.setStatus(MonetizationStatus.loaded);
 /// ```
 /// {@endtemplate}
-@stateDistributor
+@resource
 class MonetizationStoreStatusResource extends ChangeNotifier {
   /// {@macro monetization_store_status_resource}
   MonetizationStoreStatusResource();

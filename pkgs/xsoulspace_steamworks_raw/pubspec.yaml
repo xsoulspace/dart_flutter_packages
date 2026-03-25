@@ -1,0 +1,33 @@
+name: xsoulspace_steamworks_raw
+description: Raw Steamworks FFI bindings and dynamic library loader for Dart and Flutter desktop.
+version: 0.1.0
+repository: https://github.com/xsoulspace/dart_flutter_packages
+homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_steamworks_raw
+issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
+
+topics:
+  - steam
+  - steamworks
+  - ffi
+  - desktop
+  - xsoulspace
+
+platforms:
+  windows:
+  macos:
+  linux:
+
+environment:
+  sdk: ">=3.10.0 <4.0.0"
+
+dependencies:
+  ffi: ^2.1.4
+  meta: ^1.16.0
+  path: ^1.9.1
+
+dev_dependencies:
+  crypto: ^3.0.6
+  ffigen: ^19.1.0
+  lints: ^6.0.0
+  test: ^1.26.3
+  xsoulspace_lints: ^0.1.2

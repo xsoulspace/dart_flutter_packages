@@ -1,13 +1,14 @@
 name: xsoulspace_logger
-description: Generic configurable logger with console and file output support. Pure Dart package for reusable logging across projects.
-version: 0.2.0-beta.1
-issue_tracker: https://github.com/xsoulspace/xsoulspace_packages/issues
-documentation: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_logger
+description: Pure Dart observability logger core with deterministic pipelines, redaction, trace context, and query APIs.
+version: 1.0.0-beta.0
 homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_logger
-topics: [logging, dart, xsoulspace]
+repository: https://github.com/xsoulspace/dart_flutter_packages
+issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
+documentation: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_logger
+topics: [logging, observability, monitoring, tracing, dart]
 
 environment:
-  sdk: ">=3.8.0 <4.0.0"
+  sdk: ">=3.10.0 <4.0.0"
 
 dev_dependencies:
   lints: ^6.0.0

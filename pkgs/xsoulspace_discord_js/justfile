@@ -1,0 +1,26 @@
+default:
+    @just --list
+
+generate:
+    dart run tool/generate.dart
+
+generate-check:
+    dart run tool/generate.dart --check
+
+generate-bump:
+    dart run tool/generate.dart --bump
+
+analyze:
+    dart analyze
+
+test:
+    dart test
+
+test-web:
+    dart test -p chrome test/web
+
+verify:
+    just generate-check
+    just analyze
+    just test
+    just test-web

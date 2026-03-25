@@ -11,14 +11,14 @@ abstract class AdProvider {
   Future<void> init();
 
   /// Shows a rewarded ad.
-  Future<void> showRewardedAd({required String adUnitId});
+  Future<void> showRewardedAd({required final String adUnitId});
 
   /// Shows an interstitial ad.
-  Future<void> showInterstitialAd({required String adUnitId});
+  Future<void> showInterstitialAd({required final String adUnitId});
 
   /// Builds a banner ad widget.
   Widget buildBannerAd({
-    required String adUnitId,
-    required covariant Object adSize,
+    required final String adUnitId,
+    required covariant final Object adSize,
   });
 }

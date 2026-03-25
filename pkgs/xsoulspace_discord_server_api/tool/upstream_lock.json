@@ -1,0 +1,8 @@
+{
+  "package": "discord-api-types",
+  "version": "0.38.40",
+  "integrity": "sha512-P/His8cotqZgQqrt+hzrocp9L8RhQQz1GkrCnC9TMJ8Uw2q0tg8YyqJyGULxhXn/8kxHETN4IppmOv+P2m82lQ==",
+  "tarballSha512": "3ff1e2b3c728b6a66042aaedfa1ceba1ca7d2fc461410cf51a4ac29c2f53309f14c36ab4b60f18caa2721942f18579fff24c47113378229a663aff8fda6f3695",
+  "routesHash": "cfdf8fea03bd51548041252080d29b7d0c676a8845e3aea56a93a79d9ca62631",
+  "typesHash": "3a5bd11c728c4f91d2cf664ec2579175eeeb74f1a150c2dfe0235530828cffa6"
+}

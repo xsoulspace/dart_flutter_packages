@@ -11,6 +11,12 @@ import 'package:universal_storage_interface/universal_storage_interface.dart';
 /// * [VcBranch] – branch information
 /// * [VcCreateRepositoryRequest] – repository creation parameters
 abstract interface class VersionControlService {
+  /// Declared provider capabilities for VC-specific features.
+  VersionControlCapabilities get declaredVersionControlCapabilities;
+
+  /// Resolves runtime VC capabilities.
+  Future<VersionControlCapabilities> resolveVersionControlCapabilities();
+
   /// List repositories available to the current authenticated user.
   Future<List<VcRepository>> listRepositories();
 

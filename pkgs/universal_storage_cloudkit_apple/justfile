@@ -1,0 +1,16 @@
+gen:
+    dart run pigeon --input pigeons/cloudkit_apple_api.dart
+
+analyze:
+    flutter analyze --no-fatal-infos --no-fatal-warnings
+
+test:
+    flutter test
+
+swift-test:
+    swift test
+
+verify:
+    just analyze
+    just test
+    just swift-test

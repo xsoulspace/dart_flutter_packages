@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-dev.13] - 2026-03-03
+
+- split Flutter-specific folder picker/bookmark APIs into
+  `universal_storage_sync_utils_flutter`
+- package is now pure Dart only
+- removed Flutter/plugin dependencies from this package
+
+## [0.1.0-dev.12] - 2026-02-08
+
+- chore: flutter removed
+
+## [0.1.0-dev.11] - 2026-02-08
+
+- chore:
+  from_json_to_json: ^0.4.0
+  universal_storage_interface: ^0.1.0-dev.10
+
 ## [0.1.0-dev.10] - 2025-10-27
 
 - chore: update permission_handler dependency to 12.0.1

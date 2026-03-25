@@ -74,15 +74,13 @@ android {
 
 dependencies {
     val kotlinVersion = "2.1.10"
-    
+
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion")
     implementation("androidx.annotation:annotation:1.9.1")
-//    implementation(platform("ru.rustore.sdk:bom:2025.02.01"))
-//    implementation("ru.rustore.sdk:billingclient")
 
-    // RuStore SDK
-    implementation("ru.rustore.sdk:billingclient:9.1.0")
-    
+    // RuStore Billing SDK 10.1.0 API surface (Pay documentation line).
+    implementation("ru.rustore.sdk:billingclient:10.1.0")
+
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
-} 
+}

@@ -10,6 +10,9 @@ enum ProviderType {
 
   /// Offline Git provider
   git,
+
+  /// CloudKit provider
+  cloudkit,
 }
 
 /// {@template path_normalizer}
@@ -28,6 +31,8 @@ mixin PathNormalizer {
         return _normalizeGitHubPath(path);
       case ProviderType.git:
         return _normalizeGitPath(path);
+      case ProviderType.cloudkit:
+        return _normalizeCloudKitPath(path);
     }
   }
 
@@ -51,6 +56,13 @@ mixin PathNormalizer {
   /// Normalizes paths for Git operations
   // Git uses forward slashes regardless of platform
   static String _normalizeGitPath(final String path) => path
+      .replaceAll(RegExp(r'\\+'), '/') // Convert backslashes to forward slashes
+      .replaceAll(RegExp('/+'), '/') // Remove duplicate slashes
+      .replaceAll(RegExp('^/+'), '') // Remove leading slashes
+      .replaceAll(RegExp(r'/+$'), ''); // Remove trailing slashes
+
+  /// Normalizes paths for CloudKit operations
+  static String _normalizeCloudKitPath(final String path) => path
       .replaceAll(RegExp(r'\\+'), '/') // Convert backslashes to forward slashes
       .replaceAll(RegExp('/+'), '/') // Remove duplicate slashes
       .replaceAll(RegExp('^/+'), '') // Remove leading slashes
@@ -86,6 +98,8 @@ mixin PathNormalizer {
         return _isValidFilesystemPath(path);
       case ProviderType.git:
         return _isValidGitPath(path);
+      case ProviderType.cloudkit:
+        return _isValidCloudKitPath(path);
     }
   }
 
@@ -112,6 +126,12 @@ mixin PathNormalizer {
           ) && // No control characters
           !path.contains(' ') || // Prefer no spaces or properly escaped
       path.contains(RegExp(r'^[a-zA-Z0-9._/-]+$')); // Only safe characters
+
+  /// Validates CloudKit key path requirements.
+  static bool _isValidCloudKitPath(final String path) =>
+      path.length <= 1024 && // Keep key size bounded for record-name hashing
+      !path.startsWith('.') &&
+      !path.contains(RegExp(r'[\x00-\x1f]'));
 
   /// Joins path segments with the appropriate separator for the provider
   static String join(

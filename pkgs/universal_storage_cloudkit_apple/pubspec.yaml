@@ -1,0 +1,32 @@
+name: universal_storage_cloudkit_apple
+description: iOS/macOS CloudKit native bridge for universal_storage_cloudkit.
+version: 0.1.0-dev.1
+homepage: https://github.com/xsoulspace/universal_storage_sync
+repository: https://github.com/xsoulspace/universal_storage_sync
+issue_tracker: https://github.com/xsoulspace/universal_storage_sync/issues
+
+environment:
+  sdk: ">=3.10.0 <4.0.0"
+  flutter: ">=3.38.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  universal_storage_cloudkit_platform_interface:
+    hosted:
+      name: universal_storage_cloudkit_platform_interface
+      url: https://pub.xsoulspace.dev
+    version: ^0.1.0-dev.1
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  lints: ^6.0.0
+  pigeon: ^26.0.0
+  xsoulspace_lints: ^0.1.2
+flutter:
+  plugin:
+    platforms:
+      ios:
+        pluginClass: UniversalStorageCloudKitApplePlugin
+      macos:
+        pluginClass: UniversalStorageCloudKitApplePlugin

@@ -34,7 +34,16 @@ class RestoreLocalPurchasesCommand {
   Future<void> execute() async {
     final activeSubscription = await purchasesLocalApi.getActiveSubscription();
     final status = activeSubscription?.status;
-    if (activeSubscription == null || status == null) {
+    final isPlaceholderPurchase =
+        activeSubscription != null &&
+        activeSubscription.purchaseId.isEmpty &&
+        activeSubscription.productId.isEmpty &&
+        activeSubscription.status == PurchaseStatus.pendingVerification &&
+        activeSubscription.purchaseType == PurchaseProductType.consumable &&
+        activeSubscription.duration == Duration.zero &&
+        activeSubscription.freeTrialDuration == Duration.zero &&
+        activeSubscription.expiryDate == null;
+    if (activeSubscription == null || status == null || isPlaceholderPurchase) {
       subscriptionStatusResource.set(SubscriptionStatus.free);
     } else {
       subscriptionStatusResource.set(switch (status) {

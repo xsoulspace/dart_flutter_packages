@@ -1,0 +1,296 @@
+name: registry_publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      registry_base_url:
+        description: Hosted registry base URL used in generated archive_url values.
+        required: false
+        default: https://pub.xsoulspace.dev
+      index_branch:
+        description: Branch that stores generated registry metadata.
+        required: false
+        default: registry-index
+  push:
+    branches:
+      - main
+      - master
+
+permissions:
+  contents: write
+
+env:
+  DEFAULT_REGISTRY_BASE_URL: https://pub.xsoulspace.dev
+  DEFAULT_INDEX_BRANCH: registry-index
+  REGISTRY_OUTPUT_DIR: ${{ runner.temp }}/registry-build-primary
+  REGISTRY_VERIFY_OUTPUT_DIR: ${{ runner.temp }}/registry-build-secondary
+
+jobs:
+  registry_publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@v1
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install registry tooling dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          dart pub get
+
+      - name: Resolve settings
+        id: settings
+        shell: bash
+        run: |
+          set -euo pipefail
+          registry_base_url="${{ github.event.inputs.registry_base_url }}"
+          index_branch="${{ github.event.inputs.index_branch }}"
+
+          if [ -z "$registry_base_url" ]; then
+            registry_base_url="$DEFAULT_REGISTRY_BASE_URL"
+          fi
+          if [ -z "$index_branch" ]; then
+            index_branch="$DEFAULT_INDEX_BRANCH"
+          fi
+
+          echo "registry_base_url=$registry_base_url" >> "$GITHUB_OUTPUT"
+          echo "index_branch=$index_branch" >> "$GITHUB_OUTPUT"
+
+      - name: Detect changed package versions
+        id: changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          before="${{ github.event.before }}"
+          after="${{ github.sha }}"
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ -z "$before" ] || [ "$before" = "0000000000000000000000000000000000000000" ]; then
+            mapfile -t candidates < <(find pkgs -mindepth 2 -maxdepth 2 -name pubspec.yaml | sort)
+          else
+            mapfile -t candidates < <(git diff --name-only "$before" "$after" -- 'pkgs/*/pubspec.yaml' | sort -u)
+          fi
+
+          changed_packages=()
+          for pubspec in "${candidates[@]}"; do
+            [ -f "$pubspec" ] || continue
+            package_name="$(basename "$(dirname "$pubspec")")"
+            current_version="$(awk -F': ' '/^version:/{print $2; exit}' "$pubspec" | tr -d '\"')"
+            previous_version=""
+
+            if [ "${{ github.event_name }}" != "workflow_dispatch" ] && [ -n "$before" ] && [ "$before" != "0000000000000000000000000000000000000000" ]; then
+              previous_content="$(git show "$before:$pubspec" 2>/dev/null || true)"
+              if [ -n "$previous_content" ]; then
+                previous_version="$(printf '%s\n' "$previous_content" | awk -F': ' '/^version:/{print $2; exit}' | tr -d '\"')"
+              fi
+            fi
+
+            if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "$current_version" != "$previous_version" ]; then
+              changed_packages+=("$package_name")
+            fi
+          done
+
+          if [ "${#changed_packages[@]}" -eq 0 ]; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          printf '%s\n' "${changed_packages[@]}" | sort -u > changed_packages.txt
+          echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          echo "packages=$(paste -sd, changed_packages.txt)" >> "$GITHUB_OUTPUT"
+
+      - name: Stop when nothing changed
+        if: steps.changed.outputs.has_changes != 'true'
+        run: echo "No package version changes detected."
+
+      - name: Validate existing gates
+        if: steps.changed.outputs.has_changes == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          just docs-check
+          just storage-release-g6
+          just platform-sdk-verify
+
+      - name: Run registry tests
+        if: steps.changed.outputs.has_changes == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          just registry-test
+
+      - name: Prepare registry index checkout
+        if: steps.changed.outputs.has_changes == 'true'
+        id: index
+        shell: bash
+        run: |
+          set -euo pipefail
+          index_dir="$RUNNER_TEMP/registry-index"
+          rm -rf "$index_dir"
+
+          if git clone \
+            --depth 1 \
+            --branch "${{ steps.settings.outputs.index_branch }}" \
+            "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" \
+            "$index_dir"; then
+            :
+          else
+            rm -rf "$index_dir"
+            mkdir -p "$index_dir"
+            git -C "$index_dir" init
+            git -C "$index_dir" checkout -b "${{ steps.settings.outputs.index_branch }}"
+          fi
+
+          git -C "$index_dir" config user.name "github-actions[bot]"
+          git -C "$index_dir" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          echo "path=$index_dir" >> "$GITHUB_OUTPUT"
+
+      - name: Build registry index
+        if: steps.changed.outputs.has_changes == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          dart registry/tools/build_registry_index.dart \
+            --repo-root . \
+            --output-dir "$REGISTRY_OUTPUT_DIR" \
+            --registry-base-url "${{ steps.settings.outputs.registry_base_url }}" \
+            --existing-index-dir "${{ steps.index.outputs.path }}" \
+            --github-repo "${{ github.repository }}"
+
+      - name: Validate registry output
+        if: steps.changed.outputs.has_changes == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          dart registry/tools/validate_registry.dart \
+            --repo-root . \
+            --output-dir "$REGISTRY_OUTPUT_DIR" \
+            --registry-base-url "${{ steps.settings.outputs.registry_base_url }}" \
+            --hosted-url "${{ steps.settings.outputs.registry_base_url }}"
+
+      - name: Verify deterministic rebuild
+        if: steps.changed.outputs.has_changes == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          dart registry/tools/build_registry_index.dart \
+            --repo-root . \
+            --output-dir "$REGISTRY_VERIFY_OUTPUT_DIR" \
+            --registry-base-url "${{ steps.settings.outputs.registry_base_url }}" \
+            --existing-index-dir "${{ steps.index.outputs.path }}" \
+            --github-repo "${{ github.repository }}"
+
+          diff -rq "$REGISTRY_OUTPUT_DIR/api" "$REGISTRY_VERIFY_OUTPUT_DIR/api"
+
+          python3 - <<'PY'
+          import hashlib
+          import os
+          import pathlib
+
+          left = pathlib.Path(os.environ["REGISTRY_OUTPUT_DIR"]) / "archives"
+          right = pathlib.Path(os.environ["REGISTRY_VERIFY_OUTPUT_DIR"]) / "archives"
+
+          left_files = sorted(path.name for path in left.glob("*.tar.gz"))
+          right_files = sorted(path.name for path in right.glob("*.tar.gz"))
+          if left_files != right_files:
+              raise SystemExit("Archive file lists differ between deterministic rebuilds.")
+
+          for name in left_files:
+              left_hash = hashlib.sha256((left / name).read_bytes()).hexdigest()
+              right_hash = hashlib.sha256((right / name).read_bytes()).hexdigest()
+              if left_hash != right_hash:
+                  raise SystemExit(f"Archive hash mismatch for {name}: {left_hash} != {right_hash}")
+          PY
+
+      - name: Gateway smoke tests
+        if: steps.changed.outputs.has_changes == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          just registry-smoke "$REGISTRY_OUTPUT_DIR" stable
+          just registry-smoke "$REGISTRY_OUTPUT_DIR" prerelease
+
+      - name: Upload release archives
+        if: steps.changed.outputs.has_changes == 'true'
+        env:
+          CHANGED_PACKAGES: ${{ steps.changed.outputs.packages }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' > release_manifest.tsv
+          import json
+          import os
+
+          changed = set(filter(None, os.environ["CHANGED_PACKAGES"].split(",")))
+          manifest = json.load(open(os.path.join(os.environ["REGISTRY_OUTPUT_DIR"], "release-manifest.json")))
+
+          for package in manifest["packages"]:
+            if package["name"] not in changed:
+              continue
+            print(
+              "\t".join(
+                [
+                  package["name"],
+                  package["version"],
+                  package["release_tag"],
+                  package["asset_name"],
+                  package["archive_path"],
+                ]
+              )
+            )
+          PY
+
+          while IFS=$'\t' read -r package_name version release_tag asset_name archive_path; do
+            [ -n "$package_name" ] || continue
+            if ! gh release view "$release_tag" >/dev/null 2>&1; then
+              gh release create "$release_tag" \
+                --title "$release_tag" \
+                --notes "Registry archive for $package_name $version"
+            fi
+            gh release upload "$release_tag" "$archive_path#$asset_name" --clobber
+
+            download_dir="$RUNNER_TEMP/release-verify/$package_name"
+            rm -rf "$download_dir"
+            mkdir -p "$download_dir"
+            gh release download "$release_tag" --pattern "$asset_name" --dir "$download_dir" --clobber
+
+            local_sha="$(sha256sum "$archive_path" | cut -d' ' -f1)"
+            remote_sha="$(sha256sum "$download_dir/$asset_name" | cut -d' ' -f1)"
+            if [ "$local_sha" != "$remote_sha" ]; then
+              echo "Release asset hash mismatch for $asset_name: $local_sha != $remote_sha"
+              exit 1
+            fi
+          done < release_manifest.tsv
+
+      - name: Publish metadata branch
+        if: steps.changed.outputs.has_changes == 'true'
+        env:
+          INDEX_BRANCH: ${{ steps.settings.outputs.index_branch }}
+          INDEX_DIR: ${{ steps.index.outputs.path }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          find "$INDEX_DIR" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -R "$REGISTRY_OUTPUT_DIR/api" "$INDEX_DIR/api"
+
+          git -C "$INDEX_DIR" remote remove origin >/dev/null 2>&1 || true
+          git -C "$INDEX_DIR" remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+          git -C "$INDEX_DIR" add api
+
+          if git -C "$INDEX_DIR" diff --cached --quiet; then
+            echo "No metadata changes to publish."
+            exit 0
+          fi
+
+          git -C "$INDEX_DIR" commit -m "Update registry metadata for ${{ github.sha }}"
+          git -C "$INDEX_DIR" push origin HEAD:"$INDEX_BRANCH"

@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-dev.11] - 2026-03-03
+
+- feat: add `StorageFactory.createCloudKit(CloudKitConfig)`
+- feat: add `ProviderType.cloudkit` path normalization and validation support
+- test: add `StorageFactory` CloudKit and `PathNormalizer` CloudKit coverage
+- example: make `example/cloudkit_usage.dart` runnable in pure Dart by using
+  an in-memory bridge fallback for non-web startup.
+
+## [0.1.0-dev.10] - 2026-02-08
+
+- sdk: ">=3.10.0 <4.0.0"
+- from_json_to_json: ^0.4.0
+- universal_storage_interface: ^0.1.0-dev.10
+
 ## [0.1.0-dev.9] - 2025-10-27
 
 - refactor: StorageService from `universal_storage_sync` package to `universal_storage_interface` package

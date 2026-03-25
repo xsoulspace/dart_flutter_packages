@@ -1,0 +1,21 @@
+PODS:
+  - FlutterMacOS (1.0.0)
+  - xsoulspace_inference_apple_foundation (0.1.0)
+
+DEPENDENCIES:
+  - FlutterMacOS (from `Flutter/ephemeral`)
+  - xsoulspace_inference_apple_foundation (from `Flutter/ephemeral/.symlinks/plugins/xsoulspace_inference_apple_foundation/macos`)
+
+EXTERNAL SOURCES:
+  FlutterMacOS:
+    :path: Flutter/ephemeral
+  xsoulspace_inference_apple_foundation:
+    :path: Flutter/ephemeral/.symlinks/plugins/xsoulspace_inference_apple_foundation/macos
+
+SPEC CHECKSUMS:
+  FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
+  xsoulspace_inference_apple_foundation: add265d6ef89861bb875c303e2a6c72b6aa27c01
+
+PODFILE CHECKSUM: 54d867c82ac51cbd61b565781b9fada492027009
+
+COCOAPODS: 1.16.2

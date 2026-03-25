@@ -8,14 +8,16 @@ import 'package:xsoulspace_review_interface/xsoulspace_review_interface.dart';
 /// {@endtemplate}
 final class SnapStoreReviewer extends StoreReviewer {
   /// {@macro snapstore_reviewer}
-  const SnapStoreReviewer({
+  SnapStoreReviewer({
     required super.packageName,
     required this.consentBuilder,
     super.defaultLocale,
-  });
+    final Future<void> Function(String scheme)? launchSchemeAction,
+  }) : _launchSchemeAction = launchSchemeAction;
 
   /// A builder for the consent screen before opening Snap Store
   final ReviewerFallbackConsentBuilder consentBuilder;
+  final Future<void> Function(String scheme)? _launchSchemeAction;
 
   @override
   Future<bool> onLoad() async => true;
@@ -29,6 +31,12 @@ final class SnapStoreReviewer extends StoreReviewer {
     final isConsent = await consentBuilder(context, locale ?? defaultLocale);
     if (!isConsent) return;
 
-    await launchScheme('snap://review/$packageName');
+    final scheme = 'snap://review/$packageName';
+    final launchSchemeAction = _launchSchemeAction;
+    if (launchSchemeAction != null) {
+      await launchSchemeAction(scheme);
+      return;
+    }
+    await launchScheme(scheme);
   }
 }

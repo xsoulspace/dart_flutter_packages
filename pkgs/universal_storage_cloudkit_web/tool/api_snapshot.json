@@ -1,0 +1,32 @@
+{
+  "source": "tool/generated/cloudkit.generated.d.ts",
+  "sourceHash": "affe421649712e7a9b780a21d8ba5ae8a5def1a8929fb0ed217cbc7adb9a714c",
+  "generated": "lib/src/raw/cloudkit_raw.g.dart",
+  "symbolCount": 21,
+  "symbols": [
+    "CloudKitApiTokenAuth",
+    "CloudKitAuthResult",
+    "CloudKitChangesResponse",
+    "CloudKitConfigureOptions",
+    "CloudKitContainer",
+    "CloudKitContainerConfig",
+    "CloudKitDatabase",
+    "CloudKitDatabaseScope",
+    "CloudKitDeleteRecordsRequest",
+    "CloudKitEnvironment",
+    "CloudKitFetchChangedRecordsRequest",
+    "CloudKitFieldValue",
+    "CloudKitGlobal",
+    "CloudKitPerformQueryRequest",
+    "CloudKitQuery",
+    "CloudKitQueryFilter",
+    "CloudKitQueryResponse",
+    "CloudKitRecord",
+    "CloudKitRecordID",
+    "CloudKitSaveRecordsRequest",
+    "CloudKitZoneID"
+  ],
+  "globalSymbols": [
+    "CloudKit"
+  ]
+}

@@ -6,6 +6,10 @@ Always review the changelog before upgrading to a new version.
 
 # Changelog
 
+## 0.6.0
+
+- chore: xsoulspace_foundation 0.4.0, lints: ^6.1.0
+
 ## 0.5.2
 
 - added: `update` method for `MutableOrderedMap` and `ImmutableOrderedMap` now returns the updated value.

@@ -1,16 +1,17 @@
 name: xsoulspace_monetization_interface
 description: Common interfaces for xsoulspace_monetization_foundation.
-version: 0.8.0
+version: 0.8.2
 homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_monetization_interface
 repository: https://github.com/xsoulspace/dart_flutter_packages
 
 environment:
-  sdk: ">=3.8.0 <4.0.0"
+  sdk: ">=3.10.0 <4.0.0"
 
 dependencies:
-  from_json_to_json: ^0.3.0
-  is_dart_empty_or_not: ^0.2.3
+  from_json_to_json: ^0.4.0
+  is_dart_empty_or_not: ^0.3.0
 
 dev_dependencies:
   lints: ^6.0.0
+  test: ^1.26.3
   xsoulspace_lints: ^0.1.2

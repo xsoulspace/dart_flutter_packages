@@ -16,6 +16,9 @@ PurchaseDetailsModel aPurchase({
     purchaseDate: DateTime.now(),
     status: status,
     purchaseType: type,
+    duration: type == PurchaseProductType.subscription
+        ? const Duration(days: 30)
+        : Duration.zero,
     expiryDate: active ? DateTime.now().add(const Duration(days: 30)) : null,
   );
 }

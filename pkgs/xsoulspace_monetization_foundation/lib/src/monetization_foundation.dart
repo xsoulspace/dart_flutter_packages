@@ -105,7 +105,10 @@ class MonetizationFoundation {
       return;
     }
 
-    // Ensure local init is finished before proceeding
+    // Ensure local init is started and finished before proceeding.
+    if (!_initLocalCompleter.isCompleted) {
+      unawaited(initLocal());
+    }
     await _initLocalCompleter.future;
     _assignProductIds(productIds);
     srcs.status.setStatus(MonetizationStoreStatus.loading);

@@ -185,7 +185,7 @@ class HuaweiPurchaseProvider implements PurchaseProvider {
       productType: _mapHuaweiToProductType(product.priceType),
       name: product.productName ?? '',
       formattedPrice: product.price ?? '',
-      price: jsonDecodeDouble(product.microsPrice?.toString() ?? '0'),
+      price: jsonDecodeDouble(product.microsPrice?.toString() ?? '0') / 1000000,
       currency: product.currency ?? '',
       description: product.productDesc ?? '',
       duration: duration,

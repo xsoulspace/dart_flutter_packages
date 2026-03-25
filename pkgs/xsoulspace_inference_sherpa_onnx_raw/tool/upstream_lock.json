@@ -1,0 +1,6 @@
+{
+  "project": "sherpa-onnx",
+  "header": "sherpa-onnx/c-api/c-api.h",
+  "source": "https://github.com/k2-fsa/sherpa-onnx",
+  "version": "master"
+}

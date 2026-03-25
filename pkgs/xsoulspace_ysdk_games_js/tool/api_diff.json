@@ -1,0 +1,7 @@
+{
+  "package": "@types/ysdk",
+  "fromVersion": "1.2.0",
+  "toVersion": "1.2.0",
+  "addedSymbols": [],
+  "removedSymbols": []
+}

@@ -1,0 +1,28 @@
+include: package:xsoulspace_lints/library.yaml
+
+analyzer:
+  exclude:
+    - lib/src/gen/**
+
+linter:
+  rules:
+    avoid_annotating_with_dynamic: false
+    avoid_catching_errors: false
+    avoid_js_rounded_ints: false
+    avoid_print: false
+    avoid_redundant_argument_values: false
+    avoid_types_on_closure_parameters: false
+    cascade_invocations: false
+    depend_on_referenced_packages: false
+    flutter_style_todos: false
+    lines_longer_than_80_chars: false
+    prefer_conditional_assignment: false
+    prefer_expression_function_bodies: false
+    prefer_final_locals: false
+    prefer_final_parameters: false
+    prefer_foreach: false
+    prefer_function_declarations_over_variables: false
+    sort_pub_dependencies: false
+    unnecessary_async: false
+    unnecessary_lambdas: false
+    use_late_for_private_fields_and_variables: false

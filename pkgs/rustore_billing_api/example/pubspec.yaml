@@ -6,7 +6,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: ">=3.8.0 <4.0.0"
+  sdk: ">=3.10.0 <4.0.0"
 
 dependencies:
   flutter:
@@ -14,7 +14,7 @@ dependencies:
   rustore_billing_api:
     path: ../
   cupertino_icons: ^1.0.2
-  from_json_to_json: ^0.3.0
+  from_json_to_json: ^0.4.0
 
 dev_dependencies:
   flutter_test:

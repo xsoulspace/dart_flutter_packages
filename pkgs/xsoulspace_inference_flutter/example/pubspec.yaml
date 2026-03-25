@@ -1,0 +1,19 @@
+name: xsoulspace_inference_flutter_example
+publish_to: none
+
+environment:
+  sdk: ">=3.11.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  xsoulspace_inference_core: ^0.1.0-beta.1
+  xsoulspace_inference_flutter:
+    path: ..
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true

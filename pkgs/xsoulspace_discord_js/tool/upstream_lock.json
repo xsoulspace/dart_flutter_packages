@@ -1,0 +1,7 @@
+{
+  "package": "@discord/embedded-app-sdk",
+  "version": "2.4.0",
+  "integrity": "sha512-kIIS79tuVKvu9YC6GIuvBSfUqNa6511UqafD4i3qGjWSRqVulioYuRzZ+M9D9/KZ2wuu0nQ5IWIYlnh1bsy2tg==",
+  "tarballSha512": "908212efdb6e54abeef580ba188baf0527d4a8d6bae75d54a9a7c3e22dea1a359246a56e962a18b91cd9f8cf43f7f299db0baed274392162189678756eccb6b6",
+  "declarationHash": "77d9d510a4b3dc7c814af91928f6cc81de0009de510128d4a307b9e85e418464"
+}

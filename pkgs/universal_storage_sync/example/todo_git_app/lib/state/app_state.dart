@@ -8,7 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:universal_storage_interface/universal_storage_interface.dart';
 import 'package:universal_storage_filesystem/universal_storage_filesystem.dart';
 import 'package:universal_storage_sync/universal_storage_sync.dart';
-import 'package:universal_storage_sync_utils/universal_storage_sync_utils.dart';
+import 'package:universal_storage_sync_utils_flutter/universal_storage_sync_utils_flutter.dart';
 import 'package:uuid/uuid.dart';
 import 'package:yaml/yaml.dart';
 
@@ -57,8 +57,10 @@ class AppState extends ChangeNotifier {
   int get pendingCount => todos.where((todo) => !todo.isCompleted).length;
 
   /// Sets the workspace path and initializes storage
-  Future<void> setWorkspacePath(String pathValue,
-      {MacOSBookmark? macOSBookmark}) async {
+  Future<void> setWorkspacePath(
+    String pathValue, {
+    MacOSBookmark? macOSBookmark,
+  }) async {
     await _setBusy(true);
     try {
       // Validate directory exists and is writable
@@ -98,7 +100,8 @@ class AppState extends ChangeNotifier {
       final fileList = await _storageService!.listDirectory(todosPath);
 
       final loadedTodos = <Todo>[];
-      for (final fileName in fileList) {
+      for (final fileEntry in fileList) {
+        final fileName = fileEntry.name;
         if (fileName.endsWith('.yaml')) {
           final content = await _storageService!.readFile(fileName);
           if (content != null) {
@@ -139,8 +142,9 @@ class AppState extends ChangeNotifier {
       );
 
       // Update local list
-      final existingIndex =
-          todos.indexWhere((t) => t.id.value == todo.id.value);
+      final existingIndex = todos.indexWhere(
+        (t) => t.id.value == todo.id.value,
+      );
       if (existingIndex >= 0) {
         todos[existingIndex] = todo;
       } else {
@@ -162,10 +166,7 @@ class AppState extends ChangeNotifier {
     await _setBusy(true);
     try {
       final fileName = '$_todosDirectoryName/${id.value}.yaml';
-      await _storageService!.removeFile(
-        fileName,
-        message: 'Delete todo: $id',
-      );
+      await _storageService!.removeFile(fileName, message: 'Delete todo: $id');
 
       // Remove from local list
       todos.removeWhere((todo) => todo.id.value == id.value);
@@ -263,10 +264,7 @@ class AppState extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_workspacePathKey, pathValue);
       if (macOSBookmark != null) {
-        await prefs.setString(
-          _macOSBookmarkKey,
-          macOSBookmark.value,
-        );
+        await prefs.setString(_macOSBookmarkKey, macOSBookmark.value);
       }
     } catch (e) {
       print('Failed to store workspace path: $e');
@@ -286,7 +284,12 @@ class AppState extends ChangeNotifier {
   Future<void> _initializeStorage() async {
     if (workspacePath == null) return;
 
-    final config = FileSystemConfig(basePath: workspacePath!);
+    final config = FileSystemConfig.fromFilePathConfig(
+      FilePathConfig.create(
+        path: workspacePath!,
+        macOSBookmarkData: macOSBookmark ?? MacOSBookmark.empty,
+      ),
+    );
 
     _storageService = StorageService(FileSystemStorageProvider());
     await _storageService!.initializeWithConfig(config);
@@ -313,8 +316,9 @@ class AppState extends ChangeNotifier {
             buffer.writeln('  - ${_yamlEscape(item.toString())}');
           }
         } else {
-          buffer
-              .writeln('${entry.key}: ${_yamlEscape(entry.value.toString())}');
+          buffer.writeln(
+            '${entry.key}: ${_yamlEscape(entry.value.toString())}',
+          );
         }
       }
     }

@@ -8,247 +8,255 @@ import 'package:pigeon/pigeon.dart';
     kotlinOptions: KotlinOptions(package: 'dev.xsoulspace.rustore_billing_api'),
   ),
 )
-// Data Models
 @HostApi()
 abstract class RustoreBillingApi {
-  /// Initialize the RuStore billing client
   @async
   void initialize(final RustoreBillingConfig config);
 
-  /// Handle deep link intent (for payment flows)
-  void onNewIntent(final String? intentData);
-
-  /// Check if purchases are available on this device
   @async
-  RustorePurchaseAvailabilityResult checkPurchasesAvailability();
+  RustorePurchaseAvailabilityResult getPurchaseAvailability();
 
-  /// Check if RuStore is installed on the device
   @async
-  bool isRustoreUserAuthorized();
+  bool getUserAuthorizationStatus();
 
-  /// Get available products by IDs
   @async
   List<RustoreProduct> getProducts(final List<String> productIds);
 
-  /// Get existing purchases
   @async
-  List<RustorePurchase> getPurchases();
+  List<RustorePurchase> getPurchases(final RustorePurchaseFilter? filter);
 
-  /// Start purchase flow for a product
   @async
-  RustorePaymentResult purchaseProduct(
-    final String productId,
+  RustorePurchase? getPurchase(final String purchaseId);
+
+  @async
+  RustoreProductPurchaseResult purchase(
+    final RustoreProductPurchaseParams params,
+    final RustorePreferredPurchaseType preferredPurchaseType,
+    final RustoreBillingTheme sdkTheme,
+  );
+
+  @async
+  RustoreProductPurchaseResult purchaseTwoStep(
+    final RustoreProductPurchaseParams params,
+    final RustoreBillingTheme sdkTheme,
+  );
+
+  @async
+  void confirmTwoStepPurchase(
+    final String purchaseId,
     final String? developerPayload,
   );
 
-  /// Confirm a successful purchase
   @async
-  void confirmPurchase(final String purchaseId, final String? developerPayload);
-
-  /// Delete a purchase
-  @async
-  void deletePurchase(final String purchaseId);
-
-  /// Set the billing client theme
-  @async
-  void setTheme(final RustoreBillingTheme theme);
+  void cancelTwoStepPurchase(final String purchaseId);
 }
 
 @FlutterApi()
 abstract class RustoreBillingCallbackApi {
-  /// Called when purchase state changes
-  void onPurchaseResult(final RustorePaymentResult result);
+  void onPurchaseResult(final RustoreProductPurchaseResult result);
 
-  /// Called when an error occurs
-  void onError(final RustoreError error);
+  void onPurchaseError(final RustorePurchaseError error);
 }
 
-// Configuration
 class RustoreBillingConfig {
   const RustoreBillingConfig({
     required this.consoleApplicationId,
     required this.deeplinkScheme,
     this.debugLogs = false,
-    this.theme = RustoreBillingTheme.light,
+    this.defaultTheme = RustoreBillingTheme.system,
     this.enableLogging = false,
   });
 
   final String consoleApplicationId;
   final String deeplinkScheme;
   final bool debugLogs;
-  final RustoreBillingTheme theme;
+  final RustoreBillingTheme defaultTheme;
   final bool enableLogging;
 }
 
-// Billing theme enum
-enum RustoreBillingTheme { light, dark }
+enum RustoreBillingTheme { light, dark, system, unknown }
 
-// Purchase availability result
 class RustorePurchaseAvailabilityResult {
   const RustorePurchaseAvailabilityResult({
-    required this.resultType,
+    required this.status,
     this.cause,
   });
 
-  final RustorePurchaseAvailabilityType resultType;
+  final RustorePurchaseAvailabilityStatus status;
   final RustoreException? cause;
 }
 
-enum RustorePurchaseAvailabilityType { available, unavailable, unknown }
+enum RustorePurchaseAvailabilityStatus { available, unavailable, unknown }
 
-// Product model
 class RustoreProduct {
   const RustoreProduct({
     required this.productId,
     required this.productType,
+    required this.productStatus,
     this.title,
     this.description,
     this.price,
     this.priceLabel,
     this.currency,
     this.language,
-    this.subscription,
+    this.subscriptionInfo,
   });
 
   final String productId;
   final RustoreProductType productType;
+  final RustoreProductStatus productStatus;
   final String? title;
   final String? description;
   final int? price;
   final String? priceLabel;
   final String? currency;
   final String? language;
-  final RustoreProductSubscription? subscription;
+  final RustoreProductSubscriptionInfo? subscriptionInfo;
 }
 
-enum RustoreProductType { nonConsumable, consumable, subscription }
+enum RustoreProductStatus { active, inactive, unknown }
 
-// Subscription period model
-class RustoreSubscriptionPeriod {
-  const RustoreSubscriptionPeriod({
-    required this.years,
-    required this.months,
-    required this.days,
+enum RustoreProductType { consumable, nonConsumable, subscription, unknown }
+
+class RustoreProductSubscriptionInfo {
+  const RustoreProductSubscriptionInfo({required this.periods});
+
+  final List<RustoreProductSubscriptionPeriod> periods;
+}
+
+class RustoreProductSubscriptionPeriod {
+  const RustoreProductSubscriptionPeriod({
+    required this.type,
+    required this.durationIso,
+    this.price,
+    this.priceLabel,
+    this.currency,
   });
 
-  final int years;
-  final int months;
-  final int days;
+  final RustoreSubscriptionPeriodType type;
+  final String durationIso;
+  final int? price;
+  final String? priceLabel;
+  final String? currency;
 }
 
-// Product subscription model
-class RustoreProductSubscription {
-  const RustoreProductSubscription({
-    this.subscriptionPeriod,
-    this.freeTrialPeriod,
-    this.gracePeriod,
-    this.introductoryPrice,
-    this.introductoryPriceAmount,
-    this.introductoryPricePeriod,
-  });
+enum RustoreSubscriptionPeriodType { trial, intro, main, grace, hold, unknown }
 
-  final RustoreSubscriptionPeriod? subscriptionPeriod;
-  final RustoreSubscriptionPeriod? freeTrialPeriod;
-  final RustoreSubscriptionPeriod? gracePeriod;
-  final String? introductoryPrice;
-  final String? introductoryPriceAmount;
-  final RustoreSubscriptionPeriod? introductoryPricePeriod;
-}
-
-// Purchase model
 class RustorePurchase {
   const RustorePurchase({
-    this.purchaseId,
+    required this.purchaseId,
+    required this.purchaseType,
+    required this.productType,
+    required this.purchaseStatus,
     this.productId,
-    this.productType,
     this.invoiceId,
-    this.description,
-    this.language,
-    this.purchaseTime,
     this.orderId,
     this.amountLabel,
     this.amount,
     this.currency,
     this.quantity,
-    this.purchaseState,
+    this.purchaseTime,
     this.developerPayload,
+    this.subscriptionToken,
+    this.sandbox,
   });
 
-  final String? purchaseId;
+  final String purchaseId;
+  final RustorePurchaseType purchaseType;
+  final RustoreProductType productType;
+  final RustorePurchaseStatus purchaseStatus;
   final String? productId;
-  final RustoreProductType? productType;
   final String? invoiceId;
-  final String? description;
-  final String? language;
-  final String? purchaseTime;
   final String? orderId;
   final String? amountLabel;
   final int? amount;
   final String? currency;
   final int? quantity;
-  final RustorePurchaseState? purchaseState;
+  final String? purchaseTime;
   final String? developerPayload;
+  final String? subscriptionToken;
+  final bool? sandbox;
 }
 
-// Purchase state enum
-enum RustorePurchaseState {
+enum RustorePurchaseType { oneStep, twoStep, undefined, unknown }
+
+enum RustorePurchaseStatus {
   created,
   invoiceCreated,
-  confirmed,
   paid,
+  confirmed,
   cancelled,
+  reversed,
   consumed,
   closed,
+  active,
   paused,
   terminated,
+  unknown,
 }
 
-// Payment result
-class RustorePaymentResult {
-  const RustorePaymentResult({
-    required this.resultType,
-    this.productId = '',
-    this.invoiceId = '',
-    this.orderId = '',
-    this.subscriptionToken = '',
-    this.purchaseId = '',
-    this.errorCode = '',
-    this.errorMessage = '',
-    this.sandbox = false,
+class RustorePurchaseFilter {
+  const RustorePurchaseFilter({
+    this.productId,
+    this.productType,
+    this.purchaseStatus,
+    this.purchaseType,
   });
 
-  final RustorePaymentResultType resultType;
+  final String? productId;
+  final RustoreProductType? productType;
+  final RustorePurchaseStatus? purchaseStatus;
+  final RustorePurchaseType? purchaseType;
+}
+
+enum RustorePreferredPurchaseType { oneStep, twoStep, unknown }
+
+class RustoreProductPurchaseParams {
+  const RustoreProductPurchaseParams({
+    required this.productId,
+    this.quantity,
+    this.orderId,
+    this.developerPayload,
+    this.appUserId,
+    this.appUserEmail,
+  });
+
   final String productId;
-  final String orderId;
-  final String subscriptionToken;
-  final String invoiceId;
-  final bool sandbox;
-  final String purchaseId;
-  final String errorCode;
-  final String errorMessage;
+  final int? quantity;
+  final String? orderId;
+  final String? developerPayload;
+  final String? appUserId;
+  final String? appUserEmail;
 }
 
-enum RustorePaymentResultType {
-  success,
-  cancelled,
-  failure,
-  invalidPaymentState,
+class RustoreProductPurchaseResult {
+  const RustoreProductPurchaseResult({
+    required this.resultType,
+    this.purchase,
+    this.error,
+  });
+
+  final RustoreProductPurchaseResultType resultType;
+  final RustorePurchase? purchase;
+  final RustorePurchaseError? error;
 }
 
-// Error model
-class RustoreError {
-  const RustoreError({
+enum RustoreProductPurchaseResultType { success, cancelled, failure, unknown }
+
+class RustorePurchaseError {
+  const RustorePurchaseError({
     required this.code,
     required this.message,
     this.description,
+    this.purchase,
   });
 
   final String code;
   final String message;
   final String? description;
+  final RustorePurchase? purchase;
 }
 
-// RuStore exception types
 class RustoreException {
   const RustoreException({
     required this.type,
@@ -265,8 +273,6 @@ enum RustoreExceptionType {
   notInstalled,
   outdated,
   userUnauthorized,
-  requestLimitReached,
-  reviewExists,
-  invalidReviewInfo,
   general,
+  unknown,
 }

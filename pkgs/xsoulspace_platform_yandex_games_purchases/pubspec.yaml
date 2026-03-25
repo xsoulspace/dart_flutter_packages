@@ -1,0 +1,51 @@
+name: xsoulspace_platform_yandex_games_purchases
+description: Optional Yandex Games purchases plugin for xsoulspace platform runtime.
+version: 0.1.0-beta.1
+homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_platform_yandex_games_purchases
+repository: https://github.com/xsoulspace/dart_flutter_packages
+issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
+
+environment:
+  sdk: ">=3.10.0 <4.0.0"
+
+dependencies:
+  meta: ^1.17.0
+  xsoulspace_monetization_interface:
+    hosted:
+      name: xsoulspace_monetization_interface
+      url: https://pub.xsoulspace.dev
+    version: ^0.8.2
+  xsoulspace_monetization_yandex_games:
+    hosted:
+      name: xsoulspace_monetization_yandex_games
+      url: https://pub.xsoulspace.dev
+    version: ^0.1.0-beta.1
+  xsoulspace_platform_core_interface:
+    hosted:
+      name: xsoulspace_platform_core_interface
+      url: https://pub.xsoulspace.dev
+    version: ^0.1.0-beta.1
+  xsoulspace_platform_foundation:
+    hosted:
+      name: xsoulspace_platform_foundation
+      url: https://pub.xsoulspace.dev
+    version: ^0.2.0-beta.1
+  xsoulspace_platform_purchases_bridge:
+    hosted:
+      name: xsoulspace_platform_purchases_bridge
+      url: https://pub.xsoulspace.dev
+    version: ^0.1.0-beta.1
+  xsoulspace_platform_yandex_games:
+    hosted:
+      name: xsoulspace_platform_yandex_games
+      url: https://pub.xsoulspace.dev
+    version: ^0.1.0-beta.1
+  xsoulspace_ysdk_games_js:
+    hosted:
+      name: xsoulspace_ysdk_games_js
+      url: https://pub.xsoulspace.dev
+    version: ^0.1.0-beta.1
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.26.3
+  xsoulspace_lints: ^0.1.2

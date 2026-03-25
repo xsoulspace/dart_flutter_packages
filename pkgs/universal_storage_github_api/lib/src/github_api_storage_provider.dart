@@ -22,7 +22,7 @@ import 'package:universal_storage_interface/universal_storage_interface.dart';
 /// - Exposes low-level repository management primitives
 /// {@endtemplate}
 class GitHubApiStorageProvider extends StorageProvider
-    implements VersionControlService {
+    implements VersionControlService, RemoteEngine {
   /// {@macro github_api_storage_provider}
   GitHubApiStorageProvider();
   late GitHubApiConfig _config;
@@ -34,6 +34,23 @@ class GitHubApiStorageProvider extends StorageProvider
       RepositorySlug(_repositoryOwner.value, _repositoryName.value);
   VcBranchName get _branchName => _config.branchName;
   var _isInitialized = false;
+
+  @override
+  StorageCapabilities get declaredCapabilities =>
+      const StorageCapabilities(supportsRevisionMetadata: true);
+
+  @override
+  VersionControlCapabilities get declaredVersionControlCapabilities =>
+      VersionControlCapabilities.none;
+
+  @override
+  Future<StorageCapabilities> resolveCapabilities() async =>
+      declaredCapabilities;
+
+  @override
+  Future<VersionControlCapabilities>
+  resolveVersionControlCapabilities() async =>
+      declaredVersionControlCapabilities;
 
   @override
   Future<void> initWithConfig(final StorageConfig config) async {
@@ -356,7 +373,8 @@ class GitHubApiStorageProvider extends StorageProvider
         retryIf: _isRetryableError,
         maxAttempts: 3,
       );
-      // GitHub delete API doesn't return a commit SHA directly; follow-up could fetch latest
+      // GitHub delete API doesn't return a commit SHA directly.
+      // Follow-up logic can fetch the latest commit when needed.
       return FileOperationResult.deleted(path: filePath);
     } catch (e) {
       throw _handleGitHubError(e, 'Failed to delete file: $filePath');
@@ -511,19 +529,106 @@ class GitHubApiStorageProvider extends StorageProvider
     final VcRepository repository,
     final String localPath,
   ) {
-    // TODO(arenukvern): implement cloneRepository
-    throw UnimplementedError();
+    _ensureInitialized();
+
+    final resolvedOwner = repository.owner.isNotEmpty
+        ? repository.owner
+        : _repositoryOwner.value;
+    final resolvedName = repository.name.isNotEmpty
+        ? repository.name
+        : _repositoryName.value;
+
+    if (resolvedOwner.isEmpty || resolvedName.isEmpty) {
+      throw const ConfigurationException(
+        'Repository owner and name are required for clone operations.',
+      );
+    }
+    if (localPath.trim().isEmpty) {
+      throw ArgumentError('localPath cannot be empty');
+    }
+
+    throw const CapabilityMismatchException(
+      'GitHubApiStorageProvider does not support clone-to-local workflows. '
+      'Use a provider with supportsCloneToLocal=true.',
+    );
   }
 
   @override
-  Future<void> setRepository(final VcRepositoryName repositoryId) {
-    // TODO(arenukvern): implement setRepository
-    throw UnimplementedError();
+  Future<void> setRepository(final VcRepositoryName repositoryId) async {
+    _ensureInitialized();
+
+    if (repositoryId.isEmpty) {
+      throw ArgumentError('repositoryId cannot be empty');
+    }
+
+    final reference = _parseRepositoryReference(repositoryId.value);
+    final nextSlug = RepositorySlug(reference.owner, reference.name);
+
+    try {
+      final repository = await retry(
+        () => _github!.repositories.getRepository(nextSlug),
+        retryIf: _isRetryableError,
+        maxAttempts: 3,
+      );
+
+      final nextOwner = repository.owner?.login ?? reference.owner;
+      final nextName = repository.name.isNotEmpty
+          ? repository.name
+          : reference.name;
+
+      _config = GitHubApiConfig(
+        authToken: _config.authToken,
+        repositoryOwner: VcRepositoryOwner(nextOwner),
+        repositoryName: VcRepositoryName(nextName),
+        branchName: _branchName,
+      );
+    } catch (e) {
+      throw _handleGitHubError(
+        e,
+        'Failed to set repository to ${reference.owner}/${reference.name}',
+      );
+    }
   }
 
   @override
-  Future<void> dispose() {
-    // TODO: implement dispose
-    throw UnimplementedError();
+  Future<void> dispose() async {
+    _github?.dispose();
+    _github = null;
+    _isInitialized = false;
   }
+
+  _RepositoryReference _parseRepositoryReference(
+    final String repositoryReference,
+  ) {
+    final normalized = repositoryReference.trim();
+    if (normalized.isEmpty) {
+      throw ArgumentError('repositoryId cannot be empty');
+    }
+
+    final parts = normalized
+        .split('/')
+        .map((final segment) => segment.trim())
+        .where((final segment) => segment.isNotEmpty)
+        .toList();
+
+    if (parts.length == 1) {
+      return _RepositoryReference(
+        owner: _repositoryOwner.value,
+        name: parts[0],
+      );
+    }
+    if (parts.length == 2) {
+      return _RepositoryReference(owner: parts[0], name: parts[1]);
+    }
+    throw ArgumentError(
+      'repositoryId must be either "<repository>" or "<owner>/<repository>"',
+    );
+  }
+}
+
+class _RepositoryReference {
+  const _RepositoryReference({required this.owner, required this.name});
+
+  final String owner;
+  final String name;
 }

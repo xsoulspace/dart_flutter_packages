@@ -61,10 +61,7 @@ void main() {
     });
 
     test('Todo.create factory creates todo with defaults', () {
-      final todo = Todo.create(
-        id: const TodoId('new-id'),
-        title: 'New Todo',
-      );
+      final todo = Todo.create(id: const TodoId('new-id'), title: 'New Todo');
 
       expect(todo.id.value, equals('new-id'));
       expect(todo.title, equals('New Todo'));

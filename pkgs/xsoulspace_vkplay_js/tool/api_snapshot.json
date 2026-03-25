@@ -1,0 +1,11 @@
+{
+  "sdkVersion": "0.1.0",
+  "symbols": [
+    "VkPlayApi",
+    "VkPlayFriend",
+    "VkPlayLoginStatus",
+    "VkPlayUserInfo",
+    "VkPlayUserProfile",
+    "iframeApi"
+  ]
+}

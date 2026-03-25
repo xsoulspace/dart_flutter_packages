@@ -1,0 +1,10 @@
+{
+  "sdkUrl": "https://example.com/mailru.core.js",
+  "sdkSha512": "e85d69f579f3f27173f2a38249f31af02c7de454764705cb189362697d8cd99ef447e89ef4b6e84df75903a86c58db50cb86b2865e190454fd0a14327bb74d12",
+  "sdkVersion": "0.1.0",
+  "docsUrls": [
+    "https://vkplay.ru/docs/f2pb_js_vkp"
+  ],
+  "docsHash": "83ce8aa7a22a569f242acd05ec988150a198ceb8dd9b77c4f3771d0bcb3d7131",
+  "declarationHash": "dff2b1b5b43e41a550a00f749565a086dcb3efd4246b957f55af0b675d08d66f"
+}

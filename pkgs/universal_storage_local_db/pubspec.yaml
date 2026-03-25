@@ -1,0 +1,28 @@
+name: universal_storage_local_db
+description: LocalDbI-backed local engine provider for universal storage.
+version: 0.1.0-dev.1
+homepage: https://github.com/xsoulspace/universal_storage_sync
+repository: https://github.com/xsoulspace/universal_storage_sync
+issue_tracker: https://github.com/xsoulspace/universal_storage_sync/issues
+documentation: https://github.com/xsoulspace/universal_storage_sync/tree/main/pkgs/universal_storage_local_db
+
+environment:
+  sdk: ">=3.10.0 <4.0.0"
+
+dependencies:
+  from_json_to_json: ^0.4.0
+  is_dart_empty_or_not: ^0.5.0
+  universal_storage_interface:
+    hosted:
+      name: universal_storage_interface
+      url: https://pub.xsoulspace.dev
+    version: ^0.1.0-dev.10
+  xsoulspace_foundation:
+    hosted:
+      name: xsoulspace_foundation
+      url: https://pub.xsoulspace.dev
+    version: ">=0.0.3 <0.5.0"
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.26.2
+  xsoulspace_lints: ^0.1.2

@@ -1,0 +1,10 @@
+# Local build and tool artifacts.
+.dart_tool/
+build/
+
+# Monorepo-only dependency wiring.
+pubspec_overrides.yaml
+pubspec.lock
+
+# Node tool artifacts.
+tool/ts_parser/node_modules/

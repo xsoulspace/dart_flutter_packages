@@ -1,0 +1,6 @@
+{
+  "project": "vosk-api",
+  "header": "src/vosk_api.h",
+  "source": "https://github.com/alphacep/vosk-api",
+  "version": "master"
+}

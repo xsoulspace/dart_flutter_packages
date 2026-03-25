@@ -108,10 +108,13 @@ Future<void> demonstrateRemoteSync(final String localPath) async {
   final storageService = StorageService(provider);
   await storageService.initializeWithConfig(config);
 
-  // StorageService handles non-sync providers gracefully
-  await storageService.syncRemote();
-  print('✓ StorageService.syncRemote() completed gracefully');
-  print("  (No operation performed since provider doesn't support sync)");
+  // StorageService now throws for non-sync providers.
+  try {
+    await storageService.syncRemote();
+    print('✓ StorageService.syncRemote() completed successfully');
+  } on CapabilityMismatchException catch (e) {
+    print('ℹ StorageService sync blocked as expected: ${e.message}');
+  }
 
   print('\n7. Demonstrating conflict resolution configuration...');
 
@@ -157,7 +160,7 @@ Future<void> demonstrateRemoteSync(final String localPath) async {
   print(
     '• Sync support is automatically detected based on remote URL configuration',
   );
-  print('• StorageService gracefully handles providers without sync support');
+  print('• StorageService throws when provider lacks sync capability');
   print('• Multiple conflict resolution strategies are available');
   print('• Authentication supports both SSH keys and HTTPS tokens');
   print('• "Client is always right" philosophy with configurable strategies');

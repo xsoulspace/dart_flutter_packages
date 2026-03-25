@@ -2,9 +2,18 @@
 
 Web review implementation for xsoulspace_review.
 
-## Status
+## Production readiness
 
-⚠️ **Work in Progress**: This package currently contains a placeholder implementation pending web review functionality design.
+- Supported platforms: Web as a safe no-op reviewer fallback.
+- Known limitations:
+  - The current reviewer intentionally does not open external rating services.
+  - Applications should provide their own web feedback or rating surface when needed.
+- Required configuration:
+  - Register `WebStoreReviewer` in your review provider composition for web targets.
+  - Route users to your preferred feedback destination from app UI if review capture is required.
+- Rollback guidance:
+  - Replace `WebStoreReviewer` with your previous web reviewer binding.
+  - Validate review flow wiring in `ReviewFoundation` after the swap.
 
 ## Usage
 
@@ -26,7 +35,7 @@ await foundation.init();
 
 ## Platform Support
 
-- 🚧 Web - Implementation pending
+- ✅ Web - no-op fallback implementation
 
 ## Future Plans
 

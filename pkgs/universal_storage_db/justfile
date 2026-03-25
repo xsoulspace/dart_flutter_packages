@@ -1,0 +1,33 @@
+# dart vs flutter from pubspec
+_cmd := `grep -q 'sdk: flutter' pubspec.yaml 2>/dev/null && echo flutter || echo dart`
+
+help:
+    @echo "Available: help info format analyze test clean publish-dry publish"
+
+info:
+    @echo "Package: {{ `sed -n 's/^name: //p' pubspec.yaml | head -n1` }}"
+    @echo "Version: {{ `sed -n 's/^version: //p' pubspec.yaml | head -n1` }}"
+
+format:
+    @echo "Running formatter..."
+    {{ _cmd }} format .
+
+analyze:
+    @echo "Running analyzer..."
+    {{ _cmd }} analyze
+
+test:
+    @echo "Running tests..."
+    {{ _cmd }} test
+
+clean:
+    @echo "Cleaning build/artifacts..."
+    rm -rf .dart_tool .packages build
+
+publish-dry:
+    @echo "Dry-run publish (no changes will be made)"
+    {{ _cmd }} pub publish --dry-run
+
+publish:
+    @echo "Publishing package to pub.dev"
+    {{ _cmd }} pub publish

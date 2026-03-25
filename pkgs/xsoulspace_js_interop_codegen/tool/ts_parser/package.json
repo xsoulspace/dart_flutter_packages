@@ -1,0 +1,8 @@
+{
+  "name": "xsoulspace-js-interop-codegen-ts-parser",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "typescript": "^5.9.2"
+  }
+}

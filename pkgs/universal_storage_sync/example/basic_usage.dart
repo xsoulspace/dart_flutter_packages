@@ -29,7 +29,12 @@ Future<void> fileSystemExample() async {
     final storageService = StorageService(provider);
 
     // Initialize with configuration
-    final config = FileSystemConfig(basePath: tempDir.path);
+    final config = FileSystemConfig.fromFilePathConfig(
+      FilePathConfig.create(
+        path: tempDir.path,
+        macOSBookmarkData: MacOSBookmark.empty,
+      ),
+    );
     await storageService.initializeWithConfig(config);
 
     // Create and save a file
@@ -87,7 +92,12 @@ Future<void> fileSystemTypedConfigExample() async {
 
   try {
     // Initialize using typed configuration
-    final config = FileSystemConfig(basePath: tempDir.path);
+    final config = FileSystemConfig.fromFilePathConfig(
+      FilePathConfig.create(
+        path: tempDir.path,
+        macOSBookmarkData: MacOSBookmark.empty,
+      ),
+    );
     final provider = FileSystemStorageProvider();
     final storageService = StorageService(provider);
 
@@ -127,7 +137,12 @@ Future<void> errorHandlingExample() async {
     final provider = FileSystemStorageProvider();
     final storageService = StorageService(provider);
 
-    final config = FileSystemConfig(basePath: tempDir.path);
+    final config = FileSystemConfig.fromFilePathConfig(
+      FilePathConfig.create(
+        path: tempDir.path,
+        macOSBookmarkData: MacOSBookmark.empty,
+      ),
+    );
     await storageService.initializeWithConfig(config);
 
     // Try to read a non-existent file

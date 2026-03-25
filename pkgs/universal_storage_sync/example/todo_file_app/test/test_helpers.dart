@@ -3,17 +3,10 @@ import 'package:provider/provider.dart';
 import 'package:todo_app/state/app_state.dart';
 
 /// Creates a test widget with necessary providers and material app wrapper
-Widget createTestWidget({
-  required Widget child,
-  AppState? appState,
-}) {
+Widget createTestWidget({required Widget child, AppState? appState}) {
   return ChangeNotifierProvider(
     create: (_) => appState ?? AppState(),
-    child: MaterialApp(
-      home: Scaffold(
-        body: child,
-      ),
-    ),
+    child: MaterialApp(home: Scaffold(body: child)),
   );
 }
 

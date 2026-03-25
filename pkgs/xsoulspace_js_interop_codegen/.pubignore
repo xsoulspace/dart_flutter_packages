@@ -1,0 +1,4 @@
+.dart_tool/
+pubspec.lock
+tool/ts_parser/node_modules/
+tool/ts_parser/package-lock.json

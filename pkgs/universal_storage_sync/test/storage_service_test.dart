@@ -136,7 +136,7 @@ void main() {
       final config = FileSystemConfig(
         filePathConfig: FilePathConfig.create(
           path: tempDirectory.path,
-          macOSBookmarkData: MacOSBookmark.empty,
+          macOSBookmarkData: MacOSBookmark.fromDirectory(tempDirectory),
         ),
       );
       await storageService.initializeWithConfig(config);
@@ -217,7 +217,7 @@ void main() {
   });
 
   group('StorageService sync operations', () {
-    test('should handle sync gracefully for non-sync providers', () async {
+    test('should fail sync for non-sync providers', () async {
       final provider = _FakeStorageProvider();
       final storageService = StorageService(provider);
 
@@ -227,12 +227,15 @@ void main() {
       final config = FileSystemConfig(
         filePathConfig: FilePathConfig.create(
           path: tempDirectory.path,
-          macOSBookmarkData: MacOSBookmark.empty,
+          macOSBookmarkData: MacOSBookmark.fromDirectory(tempDirectory),
         ),
       );
       await storageService.initializeWithConfig(config);
 
-      await storageService.syncRemote();
+      await expectLater(
+        () => storageService.syncRemote(),
+        throwsA(isA<CapabilityMismatchException>()),
+      );
 
       await tempDirectory.delete(recursive: true);
     });

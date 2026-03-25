@@ -30,4 +30,8 @@ mixin StorageFactory {
   static Future<StorageService> createOfflineGit(
     final OfflineGitConfig config,
   ) => create(config);
+
+  /// Creates a CloudKit storage service
+  static Future<StorageService> createCloudKit(final CloudKitConfig config) =>
+      create(config);
 }

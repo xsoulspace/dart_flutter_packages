@@ -2,16 +2,19 @@ name: universal_storage_oauth
 description: OAuth provider for Git platforms (GitHub, GitLab, etc.) with secure
   credential management
 version: 0.1.0-dev.2
+homepage: https://github.com/xsoulspace/universal_storage_sync
+repository: https://github.com/xsoulspace/universal_storage_sync
+issue_tracker: https://github.com/xsoulspace/universal_storage_sync/issues
 
 environment:
-  sdk: ">=3.8.0 <4.0.0"
-  flutter: ">=3.32.0"
+  sdk: ">=3.10.0 <4.0.0"
+  flutter: ">=3.38.0"
 
 dependencies:
   flutter:
     sdk: flutter
   flutter_secure_storage: ^10.0.0-beta.4
-  from_json_to_json: ^0.3.0
+  from_json_to_json: ^0.4.0
   github: ^9.25.0
   http: ^1.4.0
   oauth2: ^2.0.3

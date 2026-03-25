@@ -1,17 +1,22 @@
 name: xsoulspace_monetization_ads_yandex
-description: A new Flutter package.
+description: Yandex Mobile Ads implementation for xsoulspace monetization ads.
 version: 0.0.1
-publish_to: "none"
+homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_monetization_ads_yandex
+repository: https://github.com/xsoulspace/dart_flutter_packages
+issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
 
 environment:
-  sdk: ">=3.8.0 <4.0.0"
+  sdk: ">=3.10.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
-  yandex_mobileads: ^7.13.0
   xsoulspace_monetization_ads_interface:
-    path: ../xsoulspace_monetization_ads_interface
+    hosted:
+      name: xsoulspace_monetization_ads_interface
+      url: https://pub.xsoulspace.dev
+    version: ^0.0.1
+  yandex_mobileads: ^7.13.0
 
 dev_dependencies:
   flutter_test:

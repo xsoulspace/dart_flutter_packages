@@ -1,0 +1,56 @@
+name: xsoulspace_platform_yandex_games
+description: Yandex Games platform adapter for xsoulspace unified platform runtime.
+version: 0.1.0-beta.1
+homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_platform_yandex_games
+repository: https://github.com/xsoulspace/dart_flutter_packages
+issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
+
+environment:
+  sdk: ">=3.10.0 <4.0.0"
+
+dependencies:
+  meta: ^1.16.0
+  xsoulspace_platform_core_interface:
+    hosted:
+      name: xsoulspace_platform_core_interface
+      url: https://pub.xsoulspace.dev
+    version: ^0.1.0-beta.1
+  xsoulspace_platform_foundation:
+    hosted:
+      name: xsoulspace_platform_foundation
+      url: https://pub.xsoulspace.dev
+    version: ^0.2.0-beta.1
+  xsoulspace_platform_gamification_interface:
+    hosted:
+      name: xsoulspace_platform_gamification_interface
+      url: https://pub.xsoulspace.dev
+    version: ^0.1.0-beta.1
+  xsoulspace_platform_multiplayer_interface:
+    hosted:
+      name: xsoulspace_platform_multiplayer_interface
+      url: https://pub.xsoulspace.dev
+    version: ^0.1.0-beta.1
+  xsoulspace_platform_social_interface:
+    hosted:
+      name: xsoulspace_platform_social_interface
+      url: https://pub.xsoulspace.dev
+    version: ^0.2.0-beta.1
+  xsoulspace_ysdk_games_js:
+    hosted:
+      name: xsoulspace_ysdk_games_js
+      url: https://pub.xsoulspace.dev
+    version: ^0.1.0-beta.1
+dev_dependencies:
+  lints: ^6.0.0
+  xsoulspace_platform_crazygames:
+    hosted:
+      name: xsoulspace_platform_crazygames
+      url: https://pub.xsoulspace.dev
+    version: ^0.1.0-beta.1
+  xsoulspace_platform_steam:
+    hosted:
+      name: xsoulspace_platform_steam
+      url: https://pub.xsoulspace.dev
+    version: ^0.1.0-beta.1
+  test: ^1.26.3
+  xsoulspace_lints: ^0.1.2

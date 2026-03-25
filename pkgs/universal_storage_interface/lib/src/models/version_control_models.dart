@@ -1,6 +1,29 @@
 /// Version control models shared across providers.
 library;
 
+import 'package:meta/meta.dart';
+
+/// Capability set for provider-specific version control features.
+@immutable
+final class VersionControlCapabilities {
+  const VersionControlCapabilities({this.supportsCloneToLocal = false});
+
+  factory VersionControlCapabilities.fromJson(
+    final Map<String, dynamic> json,
+  ) => VersionControlCapabilities(
+    supportsCloneToLocal: json['supports_clone_to_local'] == true,
+  );
+
+  static const none = VersionControlCapabilities();
+
+  /// Whether this provider can clone repository content to local filesystem.
+  final bool supportsCloneToLocal;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'supports_clone_to_local': supportsCloneToLocal,
+  };
+}
+
 class VcRepository {
   const VcRepository({
     required this.id,
