@@ -17,3 +17,9 @@ verify:
     just generate-check
     just analyze
     just test
+
+publish-dry:
+    flutter pub publish --dry-run
+
+publish:
+    flutter pub publish

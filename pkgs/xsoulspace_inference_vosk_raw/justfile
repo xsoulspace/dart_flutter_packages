@@ -1,19 +1,17 @@
-default:
-    @just --list
-
-generate:
-    dart run tool/generate.dart
-
-generate-check:
-    dart run tool/generate.dart --check
-
-analyze:
-    dart analyze
+get:
+    flutter pub get
 
 test:
-    dart test
+    flutter test
 
-verify:
-    just generate-check
-    just analyze
-    just test
+analyze:
+    flutter analyze
+
+format:
+    dart format .
+
+publish-dry:
+    flutter pub publish --dry-run
+
+publish:
+    flutter pub publish

@@ -1,5 +1,0 @@
-dependency_overrides:
-  universal_storage_cloudkit_platform_interface:
-    path: ../universal_storage_cloudkit_platform_interface
-  universal_storage_interface:
-    path: ../universal_storage_interface

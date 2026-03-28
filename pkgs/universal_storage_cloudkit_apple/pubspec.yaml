@@ -12,11 +12,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  universal_storage_cloudkit_platform_interface:
-    hosted:
-      name: universal_storage_cloudkit_platform_interface
-      url: https://pub.xsoulspace.dev
-    version: ^0.1.0-dev.1
+  universal_storage_cloudkit_platform_interface: 
 dev_dependencies:
   flutter_test:
     sdk: flutter
