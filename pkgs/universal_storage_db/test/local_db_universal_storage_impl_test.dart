@@ -37,10 +37,10 @@ void main() {
       expect(await localDb.getBool(key: 'feature_enabled'), isTrue);
       expect(await localDb.getInt(key: 'launch_count'), 7);
       expect(await localDb.getString(key: 'username'), 'antonio');
-      expect(
-        await localDb.getMap('profile'),
-        <String, dynamic>{'name': 'Antonio', 'age': 30},
-      );
+      expect(await localDb.getMap('profile'), <String, dynamic>{
+        'name': 'Antonio',
+        'age': 30,
+      });
     });
 
     test('stores and reads map-list values', () async {
@@ -112,7 +112,10 @@ void main() {
 
       await localDb.setString(key: 'locale', value: 'en');
 
-      expect(harness.provider.files.containsKey('prefs/xsun_s_single.json'), isTrue);
+      expect(
+        harness.provider.files.containsKey('prefs/xsun_s_single.json'),
+        isTrue,
+      );
       expect(await localDb.getString(key: 'locale'), 'en');
     });
   });

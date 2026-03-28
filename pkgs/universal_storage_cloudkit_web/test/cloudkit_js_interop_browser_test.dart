@@ -228,7 +228,9 @@ void _installNativeCloudKitStub(final _NativeCloudKitStub stub) {
 
   final container = JSObject();
   container['privateCloudDatabase'] = database;
-  container['setUpAuth'] = (() => <String, Object?>{'isAuthenticated': true}.jsify()).toJS;
+  container['setUpAuth'] = (() => <String, Object?>{
+    'isAuthenticated': true,
+  }.jsify()).toJS;
 
   final cloudKit = JSObject();
   cloudKit['configure'] = ((final JSAny? payloadRaw) {

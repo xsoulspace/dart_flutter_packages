@@ -74,9 +74,7 @@ class FileSystemConfig extends StorageConfig {
 /// {@endtemplate}
 class LocalDbStorageConfig extends StorageConfig {
   /// {@macro local_db_storage_config}
-  const LocalDbStorageConfig({
-    required this.keyspacePrefix,
-  });
+  const LocalDbStorageConfig({required this.keyspacePrefix});
 
   final String keyspacePrefix;
 

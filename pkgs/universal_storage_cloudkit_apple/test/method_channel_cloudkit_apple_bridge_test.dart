@@ -61,7 +61,9 @@ class _FakeAppleApiClient implements CloudKitAppleApiClient {
 
   @override
   Future<void> deleteRecord(final String recordName) async {
-    recordsByPath.removeWhere((final _, final record) => record.recordName == recordName);
+    recordsByPath.removeWhere(
+      (final _, final record) => record.recordName == recordName,
+    );
   }
 
   @override

@@ -77,10 +77,7 @@ class RustoreBillingConfig {
 enum RustoreBillingTheme { light, dark, system, unknown }
 
 class RustorePurchaseAvailabilityResult {
-  const RustorePurchaseAvailabilityResult({
-    required this.status,
-    this.cause,
-  });
+  const RustorePurchaseAvailabilityResult({required this.status, this.cause});
 
   final RustorePurchaseAvailabilityStatus status;
   final RustoreException? cause;

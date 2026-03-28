@@ -59,8 +59,12 @@ void main() {
       final aProvider = LocalDbStorageProvider(localDb: localDb);
       final bProvider = LocalDbStorageProvider(localDb: localDb);
 
-      await aProvider.initWithConfig(const LocalDbStorageConfig(keyspacePrefix: 'app_a'));
-      await bProvider.initWithConfig(const LocalDbStorageConfig(keyspacePrefix: 'app_b'));
+      await aProvider.initWithConfig(
+        const LocalDbStorageConfig(keyspacePrefix: 'app_a'),
+      );
+      await bProvider.initWithConfig(
+        const LocalDbStorageConfig(keyspacePrefix: 'app_b'),
+      );
 
       await aProvider.createFile('profile.json', '{"scope":"a"}');
       await bProvider.createFile('profile.json', '{"scope":"b"}');
@@ -69,18 +73,21 @@ void main() {
       expect(await bProvider.getFile('profile.json'), '{"scope":"b"}');
     });
 
-    test('accepts LocalDbStorageConfig without filesystem path hacks', () async {
-      await provider.initWithConfig(
-        const LocalDbStorageConfig(keyspacePrefix: 'arena_voice_settings'),
-      );
+    test(
+      'accepts LocalDbStorageConfig without filesystem path hacks',
+      () async {
+        await provider.initWithConfig(
+          const LocalDbStorageConfig(keyspacePrefix: 'arena_voice_settings'),
+        );
 
-      await provider.createFile('voice/settings.json', '{"language":"en"}');
+        await provider.createFile('voice/settings.json', '{"language":"en"}');
 
-      expect(
-        await provider.getFile('voice/settings.json'),
-        '{"language":"en"}',
-      );
-    });
+        expect(
+          await provider.getFile('voice/settings.json'),
+          '{"language":"en"}',
+        );
+      },
+    );
 
     test('throws expected errors for invalid mutations', () async {
       await provider.initWithConfig(_configForPrefix('default'));
@@ -115,7 +122,8 @@ final class _InMemoryLocalDb implements LocalDbI {
   final Map<String, bool> _bools = <String, bool>{};
   final Map<String, int> _ints = <String, int>{};
   final Map<String, String> _strings = <String, String>{};
-  final Map<String, Map<String, dynamic>> _maps = <String, Map<String, dynamic>>{};
+  final Map<String, Map<String, dynamic>> _maps =
+      <String, Map<String, dynamic>>{};
   final Map<String, List<String>> _stringLists = <String, List<String>>{};
 
   @override
@@ -181,8 +189,7 @@ final class _InMemoryLocalDb implements LocalDbI {
   Future<Iterable<String>> getStringsIterable({
     required final String key,
     final List<String> defaultValue = const [],
-  }) async =>
-      List<String>.from(_stringLists[key] ?? defaultValue);
+  }) async => List<String>.from(_stringLists[key] ?? defaultValue);
 
   @override
   Future<T> getItem<T>({
@@ -205,7 +212,10 @@ final class _InMemoryLocalDb implements LocalDbI {
   }
 
   @override
-  Future<void> setBool({required final String key, required final bool value}) async {
+  Future<void> setBool({
+    required final String key,
+    required final bool value,
+  }) async {
     _bools[key] = value;
   }
 

@@ -18,9 +18,9 @@ class LocalDbStorageProvider extends StorageProvider implements LocalEngine {
   Future<void> _mutationQueue = Future<void>.value();
 
   String get _bucketStorageKey {
-    final prefix = _resolveKeyspacePrefix(_config).whenEmptyUse(
-      'universal_storage',
-    );
+    final prefix = _resolveKeyspacePrefix(
+      _config,
+    ).whenEmptyUse('universal_storage');
     return 'us_local_db/$prefix/files';
   }
 
@@ -199,9 +199,9 @@ class LocalDbStorageProvider extends StorageProvider implements LocalEngine {
 
   Future<Map<String, dynamic>> _readBucket() async {
     final rawBucket = await localDb.getMap(_bucketStorageKey);
-    final bucket = jsonDecodeMap(rawBucket).whenEmptyUse(
-      const <String, dynamic>{},
-    );
+    final bucket = jsonDecodeMap(
+      rawBucket,
+    ).whenEmptyUse(const <String, dynamic>{});
     return Map<String, dynamic>.from(bucket);
   }
 

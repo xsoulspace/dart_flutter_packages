@@ -12,7 +12,5 @@ void registerUniversalStorageCloudKit({final CloudKitBridge? bridge}) {
     registerDefaultCloudKitPlatformBridgeIfAvailable();
   }
 
-  StorageProviderRegistry.register<CloudKitConfig>(
-    CloudKitStorageProvider.new,
-  );
+  StorageProviderRegistry.register<CloudKitConfig>(CloudKitStorageProvider.new);
 }

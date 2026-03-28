@@ -348,9 +348,7 @@ void emitMembers(
         if (dartName != name) {
           b.writeln("$indent@JS('${escapeSingleQuotes(name)}')");
         }
-        b.writeln(
-          '$indent external $returnType $dartName$paramsBuffer;',
-        );
+        b.writeln('$indent external $returnType $dartName$paramsBuffer;');
 
       case 'index':
         final returnTypeIr = member['returnType'] as Map<String, Object?>?;
@@ -443,9 +441,7 @@ void emitEnum(final StringBuffer b, final Map<String, Object?> declaration) {
   for (final member in members) {
     final memberName = member['name']! as String;
     final value = member['value'];
-    final fieldName = safeIdentifier(
-      toLowerCamel(memberName),
-    );
+    final fieldName = safeIdentifier(toLowerCamel(memberName));
     final stringValue = value is String ? value : '$value';
     b.writeln(
       "  static JSString get $fieldName => '${escapeSingleQuotes(stringValue)}'.toJS;",

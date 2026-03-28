@@ -161,20 +161,20 @@ class CloudKitJsInteropClient implements CloudKitWebClient {
     }
 
     if (_hasDatabaseMethod('fetchChangedRecords')) {
-      final response =
-          await _invokeNativeDatabase('fetchChangedRecords', <String, Object?>{
-            'zoneID': _zoneIdPayload(),
-            'syncToken': ?serverChangeToken,
-          });
+      final response = await _invokeNativeDatabase(
+        'fetchChangedRecords',
+        <String, Object?>{
+          'zoneID': _zoneIdPayload(),
+          'syncToken': ?serverChangeToken,
+        },
+      );
       return _toCloudKitDelta(response, fallbackToken: serverChangeToken);
     }
 
     if (_hasDatabaseMethod('fetchChanges')) {
       final response = await _invokeNativeDatabase(
         'fetchChanges',
-        <String, Object?>{
-          'serverChangeToken': ?serverChangeToken,
-        },
+        <String, Object?>{'serverChangeToken': ?serverChangeToken},
       );
       return _toCloudKitDelta(response, fallbackToken: serverChangeToken);
     }
