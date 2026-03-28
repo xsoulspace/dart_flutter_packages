@@ -9,18 +9,10 @@ environment:
   sdk: ">=3.10.0 <4.0.0"
 
 dependencies:
-  universal_storage_cloudkit_platform_interface:
-    hosted:
-      name: universal_storage_cloudkit_platform_interface
-      url: https://pub.xsoulspace.dev
-    version: ^0.1.0-dev.1
+  universal_storage_cloudkit_platform_interface: ^0.1.0-dev.1
 dev_dependencies:
   lints: ^6.0.0
   path: ^1.9.1
   test: ^1.26.2
-  xsoulspace_js_interop_codegen:
-    hosted:
-      name: xsoulspace_js_interop_codegen
-      url: https://pub.xsoulspace.dev
-    version: 0.1.0
+  xsoulspace_js_interop_codegen: ^0.1.0-dev.1
   xsoulspace_lints: ^0.1.2
