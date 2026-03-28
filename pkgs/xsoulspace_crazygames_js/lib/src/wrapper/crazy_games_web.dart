@@ -21,7 +21,8 @@ abstract final class CrazyGames {
     return CrazyGamesClient(sdk);
   }
 
-  static bool isAvailable({final String expectedGlobal = 'CrazyGames'}) => _resolveSdk(expectedGlobal: expectedGlobal) != null;
+  static bool isAvailable({final String expectedGlobal = 'CrazyGames'}) =>
+      _resolveSdk(expectedGlobal: expectedGlobal) != null;
 
   static Object? _resolveSdk({required final String expectedGlobal}) {
     if (!hasGlobalProperty(expectedGlobal)) {

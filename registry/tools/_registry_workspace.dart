@@ -117,9 +117,7 @@ Object? _normalizeYamlValue(final Object? value) {
   }
 
   if (value is YamlList) {
-    return value
-        .map(_normalizeYamlValue)
-        .toList(growable: false);
+    return value.map(_normalizeYamlValue).toList(growable: false);
   }
 
   if (value is num || value is String || value is bool || value == null) {
@@ -261,9 +259,7 @@ Future<File> createPackageArchive({
     archiveFile.deleteSync();
   }
 
-  final tempDir = await Directory.systemTemp.createTemp(
-    'xs-registry-archive-',
-  );
+  final tempDir = await Directory.systemTemp.createTemp('xs-registry-archive-');
   final manifestFile = File('${tempDir.path}/files.json');
   await manifestFile.writeAsString(jsonEncode(files));
 

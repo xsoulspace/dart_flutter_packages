@@ -8,5 +8,6 @@ class PricingScreen extends StatelessWidget {
     // TODO: implement build
     throw UnimplementedError();
   }
+
   // Implement the app-agnostic design screen for the pricing structure
 }

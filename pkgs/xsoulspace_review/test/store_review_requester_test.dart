@@ -104,7 +104,8 @@ final class _MemoryLocalDb implements LocalDbI {
   }
 
   @override
-  Future<Map<String, dynamic>> getMap(final String key) async => (_store[key] as Map<String, dynamic>?) ?? <String, dynamic>{};
+  Future<Map<String, dynamic>> getMap(final String key) async =>
+      (_store[key] as Map<String, dynamic>?) ?? <String, dynamic>{};
 
   @override
   Future<void> setString({

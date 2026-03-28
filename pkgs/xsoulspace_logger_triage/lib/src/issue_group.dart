@@ -1,4 +1,3 @@
-
 import 'package:xsoulspace_logger/xsoulspace_logger.dart';
 
 import 'issue_status.dart';

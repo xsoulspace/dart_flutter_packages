@@ -14,7 +14,8 @@ Future<void> main(final List<String> args) async {
     exit(1);
   }
 
-  final payload = jsonDecode(await manifestFile.readAsString()) as Map<String, Object?>;
+  final payload =
+      jsonDecode(await manifestFile.readAsString()) as Map<String, Object?>;
   final rawPackages = payload['packages'];
   if (rawPackages is! List) {
     stderr.writeln('release-manifest.json has no "packages" list.');

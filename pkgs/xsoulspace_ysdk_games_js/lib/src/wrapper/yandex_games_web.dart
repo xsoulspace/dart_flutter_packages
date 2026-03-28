@@ -27,7 +27,8 @@ abstract final class YandexGames {
     return YsdkClient.fromSdk(sdk, signed: signed);
   }
 
-  static bool isAvailable({final String expectedGlobal = 'YaGames'}) => _resolveGlobal(expectedGlobal: expectedGlobal) != null;
+  static bool isAvailable({final String expectedGlobal = 'YaGames'}) =>
+      _resolveGlobal(expectedGlobal: expectedGlobal) != null;
 
   static Object? _resolveGlobal({required final String expectedGlobal}) {
     if (!hasGlobalProperty(expectedGlobal)) {

@@ -1,4 +1,3 @@
-
 /// Distributed tracing context attached to a log record.
 final class TraceContext {
   const TraceContext({

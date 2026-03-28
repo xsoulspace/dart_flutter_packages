@@ -1,4 +1,3 @@
-
 /// Runtime settings for [UniversalStorageSink].
 final class UniversalStorageSinkConfig {
   const UniversalStorageSinkConfig({

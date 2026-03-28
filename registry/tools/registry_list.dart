@@ -12,10 +12,13 @@ Future<void> main(final List<String> args) async {
     final dir = options.outputDirectory!;
     final namesFile = File('$dir/api/package-names.json');
     if (!namesFile.existsSync()) {
-      stderr.writeln('Not found: ${namesFile.path}. Run registry-build-index first.');
+      stderr.writeln(
+        'Not found: ${namesFile.path}. Run registry-build-index first.',
+      );
       exit(1);
     }
-    final payload = jsonDecode(await namesFile.readAsString()) as Map<String, Object?>;
+    final payload =
+        jsonDecode(await namesFile.readAsString()) as Map<String, Object?>;
     final raw = payload['packages'];
     if (raw is! List) {
       stderr.writeln('package-names.json has no "packages" list.');
@@ -28,7 +31,8 @@ Future<void> main(final List<String> args) async {
       for (final name in names) {
         final pkgFile = File('$dir/api/packages/$name.json');
         if (pkgFile.existsSync()) {
-          final pkg = jsonDecode(await pkgFile.readAsString()) as Map<String, Object?>;
+          final pkg =
+              jsonDecode(await pkgFile.readAsString()) as Map<String, Object?>;
           final latest = pkg['latest'];
           if (latest is Map && latest['version'] is String) {
             latestVersions[name] = latest['version'] as String;

@@ -493,7 +493,8 @@ String _purchaseIntentResponse({
 });
 
 String _ownedPurchasesResponse({
-  required final List<Map<String, dynamic>> purchases, final String returnCode = '0',
+  required final List<Map<String, dynamic>> purchases,
+  final String returnCode = '0',
 }) => jsonEncode(<String, dynamic>{
   'returnCode': returnCode,
   'inAppPurchaseDataList': purchases.map(jsonEncode).toList(),

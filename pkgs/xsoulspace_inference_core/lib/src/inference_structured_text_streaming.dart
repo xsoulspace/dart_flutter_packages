@@ -23,9 +23,8 @@ enum InferenceStructuredTextLifecycleState {
 
 enum InferenceStructuredTextRawChannel { stdout, stderr }
 
-InferenceStructuredTextStreamEventType inferenceStructuredTextStreamEventTypeFromJsonValue(
-  final Object? value,
-) {
+InferenceStructuredTextStreamEventType
+inferenceStructuredTextStreamEventTypeFromJsonValue(final Object? value) {
   if (value is! String) {
     return InferenceStructuredTextStreamEventType.progress;
   }
@@ -35,9 +34,8 @@ InferenceStructuredTextStreamEventType inferenceStructuredTextStreamEventTypeFro
   );
 }
 
-InferenceStructuredTextLifecycleState? inferenceStructuredTextLifecycleStateFromJsonValue(
-  final Object? value,
-) {
+InferenceStructuredTextLifecycleState?
+inferenceStructuredTextLifecycleStateFromJsonValue(final Object? value) {
   if (value is! String) {
     return null;
   }
@@ -49,9 +47,8 @@ InferenceStructuredTextLifecycleState? inferenceStructuredTextLifecycleStateFrom
   return null;
 }
 
-InferenceStructuredTextRawChannel? inferenceStructuredTextRawChannelFromJsonValue(
-  final Object? value,
-) {
+InferenceStructuredTextRawChannel?
+inferenceStructuredTextRawChannelFromJsonValue(final Object? value) {
   if (value is! String) {
     return null;
   }
@@ -80,14 +77,16 @@ class InferenceStructuredTextCompletion {
   factory InferenceStructuredTextCompletion.fromJson(
     final Map<String, dynamic> json,
   ) {
-    final resultJson = (json['result'] as Map?)?.cast<String, dynamic>() ??
+    final resultJson =
+        (json['result'] as Map?)?.cast<String, dynamic>() ??
         const <String, dynamic>{};
     final success = resultJson['success'] == true;
     final dataJson = (resultJson['data'] as Map?)?.cast<String, dynamic>();
     final errorJson = (resultJson['error'] as Map?)?.cast<String, dynamic>();
     final warnings =
         (resultJson['warnings'] as List?)?.cast<String>() ?? const <String>[];
-    final meta = (resultJson['meta'] as Map?)?.cast<String, dynamic>() ??
+    final meta =
+        (resultJson['meta'] as Map?)?.cast<String, dynamic>() ??
         const <String, dynamic>{};
     final result = success
         ? InferenceResult<InferenceResponse>.ok(
@@ -165,15 +164,15 @@ class InferenceStructuredTextStreamEvent {
     timestamp:
         DateTime.tryParse('${json['timestamp'] ?? ''}') ??
         DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
-    lifecycleState:
-        inferenceStructuredTextLifecycleStateFromJsonValue(
-          json['lifecycle_state'],
-        ),
+    lifecycleState: inferenceStructuredTextLifecycleStateFromJsonValue(
+      json['lifecycle_state'],
+    ),
     message: json['message'] as String?,
     textDelta: json['text_delta'] as String?,
     rawText: json['raw_text'] as String?,
-    rawChannel:
-        inferenceStructuredTextRawChannelFromJsonValue(json['raw_channel']),
+    rawChannel: inferenceStructuredTextRawChannelFromJsonValue(
+      json['raw_channel'],
+    ),
     attempt: switch (json['attempt']) {
       final int value => value,
       final num value => value.toInt(),
@@ -183,8 +182,7 @@ class InferenceStructuredTextStreamEvent {
     error: switch (json['error']) {
       final Map value => InferenceError(
         code: '${value['code'] ?? 'stream_error'}',
-        message:
-            '${value['message'] ?? 'Structured text streaming error'}',
+        message: '${value['message'] ?? 'Structured text streaming error'}',
         details: value['details'],
       ),
       _ => null,

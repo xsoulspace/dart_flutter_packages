@@ -168,10 +168,7 @@ void main() {
 
     final decoded = InferenceStructuredTextStreamEvent.fromJson(event.toJson());
 
-    expect(
-      decoded.type,
-      InferenceStructuredTextStreamEventType.completion,
-    );
+    expect(decoded.type, InferenceStructuredTextStreamEventType.completion);
     expect(
       decoded.lifecycleState,
       InferenceStructuredTextLifecycleState.completed,

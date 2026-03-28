@@ -20,15 +20,18 @@ void main() {
     expect(probeCalled, isTrue);
   });
 
-  test('autoload-ready config reports supported without probing globals', () async {
-    final factory = YandexGamesPlatformFactory(
-      config: YandexGamesPlatformConfig(
-        autoLoadSdk: true,
-        sdkUrl: Uri.parse('https://example.com/ysdk.js'),
-        sdkScriptLoader: (final _) async {},
-      ),
-    );
+  test(
+    'autoload-ready config reports supported without probing globals',
+    () async {
+      final factory = YandexGamesPlatformFactory(
+        config: YandexGamesPlatformConfig(
+          autoLoadSdk: true,
+          sdkUrl: Uri.parse('https://example.com/ysdk.js'),
+          sdkScriptLoader: (final _) async {},
+        ),
+      );
 
-    expect(await factory.isSupportedEnvironment(), isTrue);
-  });
+      expect(await factory.isSupportedEnvironment(), isTrue);
+    },
+  );
 }

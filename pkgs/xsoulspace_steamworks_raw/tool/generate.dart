@@ -20,11 +20,11 @@ final class UpstreamLock {
     final String? flatHeaderRelativePath,
     final String? headerSha256,
   }) => UpstreamLock(
-      sdkVersion: sdkVersion ?? this.sdkVersion,
-      flatHeaderRelativePath:
-          flatHeaderRelativePath ?? this.flatHeaderRelativePath,
-      headerSha256: headerSha256 ?? this.headerSha256,
-    );
+    sdkVersion: sdkVersion ?? this.sdkVersion,
+    flatHeaderRelativePath:
+        flatHeaderRelativePath ?? this.flatHeaderRelativePath,
+    headerSha256: headerSha256 ?? this.headerSha256,
+  );
 
   Map<String, Object?> toJson() => <String, Object?>{
     'sdkVersion': sdkVersion,
@@ -33,10 +33,10 @@ final class UpstreamLock {
   };
 
   static UpstreamLock fromJson(final Map<String, Object?> json) => UpstreamLock(
-      sdkVersion: json['sdkVersion']! as String,
-      flatHeaderRelativePath: json['flatHeaderRelativePath']! as String,
-      headerSha256: json['headerSha256']! as String,
-    );
+    sdkVersion: json['sdkVersion']! as String,
+    flatHeaderRelativePath: json['flatHeaderRelativePath']! as String,
+    headerSha256: json['headerSha256']! as String,
+  );
 }
 
 final class GenerateOptions {
@@ -410,9 +410,9 @@ String _buildFfigenConfig({
   required final String shimPath,
   required final String sdkPublicPath,
 }) => template
-      .replaceAll('__OUTPUT_PATH__', _yamlPath(outputPath))
-      .replaceAll('__SHIM_HEADER_PATH__', _yamlPath(shimPath))
-      .replaceAll('__SDK_PUBLIC_PATH__', _yamlPath(sdkPublicPath));
+    .replaceAll('__OUTPUT_PATH__', _yamlPath(outputPath))
+    .replaceAll('__SHIM_HEADER_PATH__', _yamlPath(shimPath))
+    .replaceAll('__SDK_PUBLIC_PATH__', _yamlPath(sdkPublicPath));
 
 String _yamlPath(final String value) => value.replaceAll(r'\', '/');
 

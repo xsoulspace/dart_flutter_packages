@@ -80,12 +80,12 @@ final class SteamInitResult {
     final int? nativeInitCode,
     final bool restartRequired = false,
   }) => SteamInitResult._(
-      success: false,
-      errorCode: errorCode,
-      message: message,
-      nativeInitCode: nativeInitCode,
-      restartRequired: restartRequired,
-    );
+    success: false,
+    errorCode: errorCode,
+    message: message,
+    nativeInitCode: nativeInitCode,
+    restartRequired: restartRequired,
+  );
 
   final bool success;
   final SteamInitErrorCode? errorCode;

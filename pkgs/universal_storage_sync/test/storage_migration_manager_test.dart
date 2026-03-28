@@ -233,20 +233,18 @@ Map<String, dynamic> _decodeJsonMap(final Object? value) =>
     jsonDecodeMap(value).whenEmptyUse(const <String, dynamic>{});
 
 List<Map<String, dynamic>> _decodeJsonMapList(final Object? value) {
-  final decoded =
-      jsonDecodeListAs<Object?>(value)
-          .map(_decodeJsonMap)
-          .where((final item) => item.isNotEmpty)
-          .toList(growable: false);
+  final decoded = jsonDecodeListAs<Object?>(value)
+      .map(_decodeJsonMap)
+      .where((final item) => item.isNotEmpty)
+      .toList(growable: false);
   return decoded.whenEmptyUse(const <Map<String, dynamic>>[]);
 }
 
 List<String> _decodeJsonStringList(final Object? value) {
-  final decoded =
-      jsonDecodeListAs<Object?>(value)
-          .map(jsonDecodeString)
-          .where((final item) => item.isNotEmpty)
-          .toList(growable: false);
+  final decoded = jsonDecodeListAs<Object?>(value)
+      .map(jsonDecodeString)
+      .where((final item) => item.isNotEmpty)
+      .toList(growable: false);
   return decoded.whenEmptyUse(const <String>[]);
 }
 
@@ -426,10 +424,7 @@ void main() {
 
         final parity = _decodeJsonMap(result.metadata['parity_summary']);
         final countParity = _decodeJsonMapField(parity, 'count_parity');
-        final checksumParity = _decodeJsonMapField(
-          parity,
-          'checksum_parity',
-        );
+        final checksumParity = _decodeJsonMapField(parity, 'checksum_parity');
         expect(countParity['source_operations'], 1);
         expect(countParity['processed_operations'], 1);
         expect(checksumParity['matched'], 1);
@@ -541,9 +536,9 @@ void main() {
       );
       expect(checkpoints.single['transform_steps'], isA<List<dynamic>>());
       expect(
-        _decodeJsonStringList(checkpoints.single['transform_steps']).contains(
-          'schema_transform',
-        ),
+        _decodeJsonStringList(
+          checkpoints.single['transform_steps'],
+        ).contains('schema_transform'),
         isTrue,
       );
     });
@@ -740,7 +735,8 @@ void main() {
         expect(preview.length, 2);
 
         final byPath = <String, Map<String, dynamic>>{
-          for (final item in preview) _decodeJsonStringField(item, 'source_path'): item,
+          for (final item in preview)
+            _decodeJsonStringField(item, 'source_path'): item,
         };
         final newItem = byPath['notes/new.txt'];
         final oldItem = byPath['notes/old.txt'];
@@ -849,7 +845,10 @@ void main() {
           _decodeJsonStringField(pending.first, 'source_path'),
           'notes/old.txt',
         );
-        expect(_decodeJsonStringField(pending.first, 'operation_id'), isNotEmpty);
+        expect(
+          _decodeJsonStringField(pending.first, 'operation_id'),
+          isNotEmpty,
+        );
         final preview = _decodeJsonMapListField(metadata, 'preflight_preview');
         final previewItem = preview.singleWhere(
           (final item) =>

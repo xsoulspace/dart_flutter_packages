@@ -2,7 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:apple_foundation_example/main.dart';
 
 void main() {
-  testWidgets('Example app shows availability and inference actions', (tester) async {
+  testWidgets('Example app shows availability and inference actions', (
+    tester,
+  ) async {
     await tester.pumpWidget(const AppleFoundationExampleApp());
     await tester.pumpAndSettle();
     expect(find.text('Check availability'), findsOneWidget);

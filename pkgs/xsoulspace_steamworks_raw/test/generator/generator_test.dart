@@ -154,9 +154,7 @@ Future<void> _copyDirectory(
 ) async {
   destination.createSync(recursive: true);
 
-  await for (final entity in source.list(
-    followLinks: false,
-  )) {
+  await for (final entity in source.list(followLinks: false)) {
     final basename = p.basename(entity.path);
     if (basename == '.dart_tool' || basename == 'build') {
       continue;

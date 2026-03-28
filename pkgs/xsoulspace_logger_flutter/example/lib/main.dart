@@ -13,7 +13,8 @@ class LoggerExampleApp extends StatelessWidget {
   const LoggerExampleApp({super.key});
 
   @override
-  Widget build(final BuildContext context) => const MaterialApp(home: LoggerInspectorDemo());
+  Widget build(final BuildContext context) =>
+      const MaterialApp(home: LoggerInspectorDemo());
 }
 
 class LoggerInspectorDemo extends StatefulWidget {
@@ -62,7 +63,7 @@ class _LoggerInspectorDemoState extends State<LoggerInspectorDemo> {
 
   @override
   Widget build(final BuildContext context) => Scaffold(
-      appBar: AppBar(title: const Text('Logger Inspector')),
-      body: LoggerInspectorView(controller: _controller),
-    );
+    appBar: AppBar(title: const Text('Logger Inspector')),
+    body: LoggerInspectorView(controller: _controller),
+  );
 }

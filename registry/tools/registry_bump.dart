@@ -3,22 +3,31 @@ import 'dart:io';
 /// Updates `version:` in `pkgs/<package>/pubspec.yaml` to the given version.
 Future<void> main(final List<String> args) async {
   final options = _BumpOptions.parse(args);
-  final pubspecPath = '${options.repoRoot}/pkgs/${options.packageName}/pubspec.yaml';
+  final pubspecPath =
+      '${options.repoRoot}/pkgs/${options.packageName}/pubspec.yaml';
   final file = File(pubspecPath);
   if (!file.existsSync()) {
-    stderr.writeln('No such package: ${options.packageName} (missing $pubspecPath)');
+    stderr.writeln(
+      'No such package: ${options.packageName} (missing $pubspecPath)',
+    );
     exit(1);
   }
 
   final content = await file.readAsString();
-  final versionRe = RegExp(r'^(version:\s*)(["\x27]?[\w.+-]+["\x27]?)', multiLine: true);
+  final versionRe = RegExp(
+    r'^(version:\s*)(["\x27]?[\w.+-]+["\x27]?)',
+    multiLine: true,
+  );
   if (!versionRe.hasMatch(content)) {
     stderr.writeln('No version: line found in $pubspecPath');
     exit(1);
   }
 
   final prefix = versionRe.firstMatch(content)!.group(1)!;
-  final newContent = content.replaceFirst(versionRe, '$prefix${options.version}');
+  final newContent = content.replaceFirst(
+    versionRe,
+    '$prefix${options.version}',
+  );
   if (newContent == content) {
     stderr.writeln('Version unchanged.');
     exit(0);
@@ -54,7 +63,11 @@ class _BumpOptions {
     final packageName = args[args.length - 2];
     final version = args[args.length - 1];
     if (packageName.isEmpty || version.isEmpty) _printUsageAndExit();
-    return _BumpOptions(repoRoot: repoRoot, packageName: packageName, version: version);
+    return _BumpOptions(
+      repoRoot: repoRoot,
+      packageName: packageName,
+      version: version,
+    );
   }
 }
 

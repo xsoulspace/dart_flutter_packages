@@ -1,4 +1,3 @@
-
 export 'src/file_generation.dart';
 export 'src/hashes.dart';
 export 'src/npm_registry.dart';

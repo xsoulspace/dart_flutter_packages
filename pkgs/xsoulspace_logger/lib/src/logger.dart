@@ -1,4 +1,3 @@
-
 import 'dart:async';
 import 'dart:collection';
 
@@ -354,9 +353,7 @@ final class _LoggerState {
   }
 
   Future<List<LogRecord>> query(final LogQuery query) async {
-    final matches = _history
-        .where(query.matches)
-        .toList(growable: false);
+    final matches = _history.where(query.matches).toList(growable: false);
 
     final limit = query.limit;
     if (limit == null || matches.length <= limit) {

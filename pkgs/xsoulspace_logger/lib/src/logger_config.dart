@@ -1,4 +1,3 @@
-
 import 'clock.dart';
 import 'log_level.dart';
 import 'redaction_policy.dart';

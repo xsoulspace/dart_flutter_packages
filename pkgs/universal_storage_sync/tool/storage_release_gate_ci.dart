@@ -26,8 +26,10 @@ Future<void> main(final List<String> args) async {
         scenario = args[index];
       default:
         stderr.writeln('Unknown argument: $arg');
-        stderr.writeln('Usage: dart run tool/storage_release_gate_ci.dart '
-            '--output <path> [--scenario pass|fail]');
+        stderr.writeln(
+          'Usage: dart run tool/storage_release_gate_ci.dart '
+          '--output <path> [--scenario pass|fail]',
+        );
         exit(2);
     }
   }
@@ -70,7 +72,9 @@ Future<void> main(final List<String> args) async {
     exit(1);
   }
 
-  stdout.writeln('Storage release gate G6 passed. Artifact: ${outputFile.path}');
+  stdout.writeln(
+    'Storage release gate G6 passed. Artifact: ${outputFile.path}',
+  );
 }
 
 StorageReleaseGateInput _buildInput({required final bool failingEvidence}) {

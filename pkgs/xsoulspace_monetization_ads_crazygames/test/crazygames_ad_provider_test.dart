@@ -7,9 +7,8 @@ void main() {
   group('CrazyGamesAdProvider', () {
     test('returns a banner widget for unknown adSize values', () {
       final provider = CrazyGamesAdProvider(
-        initClient:
-            ({final String expectedGlobal = 'CrazyGames'}) async =>
-                CrazyGamesClient(),
+        initClient: ({final String expectedGlobal = 'CrazyGames'}) async =>
+            CrazyGamesClient(),
       );
 
       final banner = provider.buildBannerAd(
@@ -22,9 +21,8 @@ void main() {
 
     test('surfaces unsupported SDK calls on non-web', () async {
       final provider = CrazyGamesAdProvider(
-        initClient:
-            ({final String expectedGlobal = 'CrazyGames'}) async =>
-                CrazyGamesClient(),
+        initClient: ({final String expectedGlobal = 'CrazyGames'}) async =>
+            CrazyGamesClient(),
       );
 
       await expectLater(

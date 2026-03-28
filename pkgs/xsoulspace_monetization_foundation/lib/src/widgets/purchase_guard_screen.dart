@@ -40,33 +40,33 @@ class _PurchaseGuardScreenState extends State<PurchaseGuardScreen> {
 
   @override
   Widget build(final BuildContext context) => FutureBuilder<bool>(
-        future: _accessFuture,
-        builder: (final context, final snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const CircularProgressIndicator();
-          }
+    future: _accessFuture,
+    builder: (final context, final snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return const CircularProgressIndicator();
+      }
 
-          if (snapshot.hasError) {
-            return Text('Error: ${snapshot.error}');
-          }
+      if (snapshot.hasError) {
+        return Text('Error: ${snapshot.error}');
+      }
 
-          final hasAccess = snapshot.data ?? false;
+      final hasAccess = snapshot.data ?? false;
 
-          if (hasAccess) {
-            return widget.child;
-          }
+      if (hasAccess) {
+        return widget.child;
+      }
 
-          return Center(
-            child: ElevatedButton(
-              onPressed: () async {
-                await widget.onPurchase();
-                setState(() {
-                  _accessFuture = _checkAccess();
-                });
-              },
-              child: const Text('Purchase to Access'),
-            ),
-          );
-        },
+      return Center(
+        child: ElevatedButton(
+          onPressed: () async {
+            await widget.onPurchase();
+            setState(() {
+              _accessFuture = _checkAccess();
+            });
+          },
+          child: const Text('Purchase to Access'),
+        ),
       );
+    },
+  );
 }

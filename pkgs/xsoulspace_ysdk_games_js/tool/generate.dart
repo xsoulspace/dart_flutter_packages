@@ -183,7 +183,9 @@ String emitRawCode(final Map<String, Object?> ir, final NpmLockConfig lock) {
       .cast<Map<String, Object?>>();
   final globalDeclarations = (ir['globalDeclarations']! as List<dynamic>)
       .cast<Map<String, Object?>>();
-  final knownTypes = declarations.map((final d) => d['name']! as String).toSet();
+  final knownTypes = declarations
+      .map((final d) => d['name']! as String)
+      .toSet();
 
   final b = StringBuffer()
     ..writeln('// GENERATED CODE - DO NOT MODIFY BY HAND.')
@@ -390,9 +392,7 @@ void emitMembers(
         if (dartName != name) {
           b.writeln("$indent@JS('${escapeSingleQuotes(name)}')");
         }
-        b.writeln(
-          '$indent external $returnType $dartName$paramsBuffer;',
-        );
+        b.writeln('$indent external $returnType $dartName$paramsBuffer;');
 
       case 'index':
         final returnTypeIr = member['returnType'] as Map<String, Object?>?;
@@ -479,9 +479,7 @@ void emitEnum(final StringBuffer b, final Map<String, Object?> declaration) {
   for (final member in members) {
     final memberName = member['name']! as String;
     final value = member['value'];
-    final fieldName = safeIdentifier(
-      toLowerCamel(memberName),
-    );
+    final fieldName = safeIdentifier(toLowerCamel(memberName));
     final stringValue = value is String ? value : '$value';
     b.writeln(
       "  static JSString get $fieldName => '${escapeSingleQuotes(stringValue)}'.toJS;",
@@ -501,7 +499,9 @@ String emitWrapperEnums(
       .cast<Map<String, Object?>>();
   final literalUnions = (ir['literalUnions']! as List<dynamic>)
       .cast<Map<String, Object?>>();
-  final enumDecls = declarations.where((final d) => d['kind'] == 'enum').toList();
+  final enumDecls = declarations
+      .where((final d) => d['kind'] == 'enum')
+      .toList();
 
   final b = StringBuffer()
     ..writeln('// GENERATED CODE - DO NOT MODIFY BY HAND.')
@@ -830,7 +830,9 @@ String toLowerCamel(final String value) {
   final first = parts.first.toLowerCase();
   final rest = parts
       .skip(1)
-      .map((final part) => part[0].toUpperCase() + part.substring(1).toLowerCase())
+      .map(
+        (final part) => part[0].toUpperCase() + part.substring(1).toLowerCase(),
+      )
       .join();
   return '$first$rest';
 }

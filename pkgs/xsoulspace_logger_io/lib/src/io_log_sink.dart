@@ -1,4 +1,3 @@
-
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
@@ -243,10 +242,7 @@ final class IoLogSink implements LogSink {
     }
 
     if (truncateOffset < bytes.length) {
-      await file.writeAsBytes(
-        bytes.sublist(0, truncateOffset),
-        flush: true,
-      );
+      await file.writeAsBytes(bytes.sublist(0, truncateOffset), flush: true);
     }
 
     return maxSequence;

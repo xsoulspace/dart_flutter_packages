@@ -8,5 +8,6 @@ class AdFreeScreen extends StatelessWidget {
     // TODO: implement build
     throw UnimplementedError();
   }
+
   // Implement the app-agnostic design screen for the option to remove ads permanently
 }

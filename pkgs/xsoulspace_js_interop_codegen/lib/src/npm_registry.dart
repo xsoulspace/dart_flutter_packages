@@ -25,11 +25,12 @@ final class NpmLockConfig {
     'integrity': integrity,
   };
 
-  static NpmLockConfig fromJson(final Map<String, Object?> json) => NpmLockConfig(
-      packageName: json['package']! as String,
-      version: json['version']! as String,
-      integrity: json['integrity']! as String,
-    );
+  static NpmLockConfig fromJson(final Map<String, Object?> json) =>
+      NpmLockConfig(
+        packageName: json['package']! as String,
+        version: json['version']! as String,
+        integrity: json['integrity']! as String,
+      );
 }
 
 final class RegistryVersionInfo {

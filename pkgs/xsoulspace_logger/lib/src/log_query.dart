@@ -1,4 +1,3 @@
-
 import 'log_level.dart';
 import 'log_record.dart';
 

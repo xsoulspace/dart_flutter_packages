@@ -33,16 +33,16 @@ final class UpstreamLock {
     final String? officialDtsUrl,
     final bool clearOfficialDtsUrl = false,
   }) => UpstreamLock(
-      sdkUrl: sdkUrl ?? this.sdkUrl,
-      sdkSha512: sdkSha512 ?? this.sdkSha512,
-      sdkVersion: sdkVersion ?? this.sdkVersion,
-      docsUrls: docsUrls ?? this.docsUrls,
-      docsHash: docsHash ?? this.docsHash,
-      declarationHash: declarationHash ?? this.declarationHash,
-      officialDtsUrl: clearOfficialDtsUrl
-          ? null
-          : (officialDtsUrl ?? this.officialDtsUrl),
-    );
+    sdkUrl: sdkUrl ?? this.sdkUrl,
+    sdkSha512: sdkSha512 ?? this.sdkSha512,
+    sdkVersion: sdkVersion ?? this.sdkVersion,
+    docsUrls: docsUrls ?? this.docsUrls,
+    docsHash: docsHash ?? this.docsHash,
+    declarationHash: declarationHash ?? this.declarationHash,
+    officialDtsUrl: clearOfficialDtsUrl
+        ? null
+        : (officialDtsUrl ?? this.officialDtsUrl),
+  );
 
   Map<String, Object?> toJson() => <String, Object?>{
     'sdkUrl': sdkUrl,
@@ -55,14 +55,14 @@ final class UpstreamLock {
   };
 
   static UpstreamLock fromJson(final Map<String, Object?> json) => UpstreamLock(
-      sdkUrl: json['sdkUrl']! as String,
-      sdkSha512: json['sdkSha512']! as String,
-      sdkVersion: json['sdkVersion']! as String,
-      docsUrls: (json['docsUrls']! as List<dynamic>).cast<String>(),
-      docsHash: json['docsHash']! as String,
-      declarationHash: json['declarationHash']! as String,
-      officialDtsUrl: json['officialDtsUrl'] as String?,
-    );
+    sdkUrl: json['sdkUrl']! as String,
+    sdkSha512: json['sdkSha512']! as String,
+    sdkVersion: json['sdkVersion']! as String,
+    docsUrls: (json['docsUrls']! as List<dynamic>).cast<String>(),
+    docsHash: json['docsHash']! as String,
+    declarationHash: json['declarationHash']! as String,
+    officialDtsUrl: json['officialDtsUrl'] as String?,
+  );
 }
 
 final class GenerateOptions {
@@ -1168,12 +1168,12 @@ List<String> _extractCodeBlocks(final String html) {
 }
 
 String _decodeHtmlEntities(final String input) => input
-      .replaceAll('&lt;', '<')
-      .replaceAll('&gt;', '>')
-      .replaceAll('&amp;', '&')
-      .replaceAll('&quot;', '"')
-      .replaceAll('&#39;', "'")
-      .replaceAll('&nbsp;', ' ');
+    .replaceAll('&lt;', '<')
+    .replaceAll('&gt;', '>')
+    .replaceAll('&amp;', '&')
+    .replaceAll('&quot;', '"')
+    .replaceAll('&#39;', "'")
+    .replaceAll('&nbsp;', ' ');
 
 String _normalizeFileContent(final String content) {
   var normalized = content.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
@@ -1407,9 +1407,7 @@ void emitMembers(
         if (dartName != name) {
           b.writeln("$indent@JS('${escapeSingleQuotes(name)}')");
         }
-        b.writeln(
-          '$indent external $returnType $dartName$paramsBuffer;',
-        );
+        b.writeln('$indent external $returnType $dartName$paramsBuffer;');
 
       case 'index':
         final returnTypeIr = member['returnType'] as Map<String, Object?>?;
@@ -1496,9 +1494,7 @@ void emitEnum(final StringBuffer b, final Map<String, Object?> declaration) {
   for (final member in members) {
     final memberName = member['name']! as String;
     final value = member['value'];
-    final fieldName = safeIdentifier(
-      toLowerCamel(memberName),
-    );
+    final fieldName = safeIdentifier(toLowerCamel(memberName));
     final stringValue = value is String ? value : '$value';
     b.writeln(
       "  static JSString get $fieldName => '${escapeSingleQuotes(stringValue)}'.toJS;",

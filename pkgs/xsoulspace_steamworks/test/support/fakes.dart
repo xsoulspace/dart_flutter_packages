@@ -43,7 +43,8 @@ final class FakeSteamNativeApi implements SteamNativeApi {
   bool restartAppIfNecessary(final int appId) => restartRequired;
 
   @override
-  SteamNativeInitResult initialize() => SteamNativeInitResult(initCode: initCode, errorMessage: initMessage);
+  SteamNativeInitResult initialize() =>
+      SteamNativeInitResult(initCode: initCode, errorMessage: initMessage);
 
   @override
   void shutdown() {

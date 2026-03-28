@@ -6,9 +6,7 @@ void main() {
   testWidgets('base StoreReviewer provides no-op defaults', (
     final tester,
   ) async {
-    const reviewer = StoreReviewer(
-      packageName: 'dev.xsoulspace.app',
-    );
+    const reviewer = StoreReviewer(packageName: 'dev.xsoulspace.app');
 
     BuildContext? context;
     await tester.pumpWidget(

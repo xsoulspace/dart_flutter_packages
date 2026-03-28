@@ -28,9 +28,9 @@ Future<void> main(final List<String> args) async {
   );
 
   final packageNames =
-      (packageNamesPayload?['packages'] as List?)
-          ?.whereType<String>()
-          .toList(growable: false) ??
+      (packageNamesPayload?['packages'] as List?)?.whereType<String>().toList(
+        growable: false,
+      ) ??
       <String>[];
   final sortedPackageNames = packageNames.toList(growable: false)..sort();
   final uniquePackageNames = sortedPackageNames.toSet();
@@ -40,16 +40,22 @@ Future<void> main(final List<String> args) async {
     issues.add('api/package-names.json contains duplicate package names.');
   }
   if (packageNames.join('\n') != sortedPackageNames.join('\n')) {
-    issues.add('api/package-names.json must contain package names in sorted order.');
+    issues.add(
+      'api/package-names.json must contain package names in sorted order.',
+    );
   }
   for (final packageName in expectedCurrentNames) {
     if (!uniquePackageNames.contains(packageName)) {
-      issues.add('api/package-names.json is missing current package $packageName.');
+      issues.add(
+        'api/package-names.json is missing current package $packageName.',
+      );
     }
   }
   for (final packageName in privatePackageNames) {
     if (uniquePackageNames.contains(packageName)) {
-      issues.add('api/package-names.json includes excluded private package $packageName.');
+      issues.add(
+        'api/package-names.json includes excluded private package $packageName.',
+      );
     }
   }
 
@@ -66,10 +72,11 @@ Future<void> main(final List<String> args) async {
           return files;
         })()
       : <String>[];
-  final expectedMetadataFiles = packageNames
-      .map((final packageName) => '$packageName.json')
-      .toList(growable: false)
-    ..sort();
+  final expectedMetadataFiles =
+      packageNames
+          .map((final packageName) => '$packageName.json')
+          .toList(growable: false)
+        ..sort();
   if (actualMetadataFiles.join('\n') != expectedMetadataFiles.join('\n')) {
     issues.add(
       'api/packages contents do not exactly match api/package-names.json.',
@@ -111,11 +118,12 @@ Future<void> main(final List<String> args) async {
           )
           .toList(growable: false) ??
       <Map<String, Object?>>[];
-  final manifestNames = manifestEntries
-      .map((final entry) => entry['name'])
-      .whereType<String>()
-      .toList(growable: false)
-    ..sort();
+  final manifestNames =
+      manifestEntries
+          .map((final entry) => entry['name'])
+          .whereType<String>()
+          .toList(growable: false)
+        ..sort();
   if (manifestNames.join('\n') != expectedCurrentNames.join('\n')) {
     issues.add(
       'release-manifest.json does not match current publishable package names.',
@@ -126,8 +134,9 @@ Future<void> main(final List<String> args) async {
           ?.whereType<String>()
           .toList(growable: false) ??
       <String>[];
-  final sortedExcludedManifestNames =
-      excludedManifestNames.toList(growable: false)..sort();
+  final sortedExcludedManifestNames = excludedManifestNames.toList(
+    growable: false,
+  )..sort();
   final expectedExcludedNames = privatePackageNames.toList(growable: false)
     ..sort();
   if (sortedExcludedManifestNames.join('\n') !=
@@ -160,7 +169,8 @@ Future<void> main(final List<String> args) async {
     final payload = await _readJsonObject(
       file: packageFile,
       issues: issues,
-      missingMessage: 'Missing metadata for ${package.name}: ${packageFile.path}',
+      missingMessage:
+          'Missing metadata for ${package.name}: ${packageFile.path}',
     );
     if (payload == null) {
       continue;
@@ -259,7 +269,9 @@ Future<void> main(final List<String> args) async {
       '${options.outputDirectory}/api/packages/$privatePackageName.json',
     );
     if (privateMetadataFile.existsSync()) {
-      issues.add('Excluded private package is present: ${privateMetadataFile.path}');
+      issues.add(
+        'Excluded private package is present: ${privateMetadataFile.path}',
+      );
     }
   }
 
@@ -308,7 +320,8 @@ List<Map<String, Object?>> _readVersions(
   final versions = rawVersions
       .whereType<Map>()
       .map(
-        (final entry) => Map<String, Object?>.from(entry.cast<String, Object?>()),
+        (final entry) =>
+            Map<String, Object?>.from(entry.cast<String, Object?>()),
       )
       .toList(growable: false);
   if (versions.isEmpty) {

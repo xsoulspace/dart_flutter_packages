@@ -15,7 +15,7 @@ class BrowserWebSpeechLiveRecognitionSession
   BrowserWebSpeechLiveRecognitionSession._({
     required raw.SpeechRecognitionRaw recognition,
     required StreamController<String> controller,
-  })  : _recognition = recognition,
+  }) : _recognition = recognition,
        _controller = controller;
 
   final raw.SpeechRecognitionRaw _recognition;
@@ -384,7 +384,9 @@ class BrowserWebSpeechRecognitionAdapter
         recognition: recognition,
         controller: controller,
       );
-      recognition.onresult = ((final JSAny? event) => session._onResult(event)).toJS;
+      recognition.onresult = ((final JSAny? event) => session._onResult(
+        event,
+      )).toJS;
       recognition.onend = ((final JSAny? e) => session._onEnd(e)).toJS;
       recognition.onerror = ((final JSAny? e) => session._onError(e)).toJS;
       try {

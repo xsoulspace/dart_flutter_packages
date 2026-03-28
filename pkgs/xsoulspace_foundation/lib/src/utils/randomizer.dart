@@ -53,10 +53,7 @@ class Randomizer {
   /// ```
   ///
   /// @ai Ensure that [max] is greater than [min] when using this method.
-  int nextInt({
-    final int min = 0,
-    final int max = 0,
-  }) {
+  int nextInt({final int min = 0, final int max = 0}) {
     if (max <= min) {
       throw ArgumentError('max must be greater than min');
     }

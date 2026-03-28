@@ -99,7 +99,8 @@ final class SteamRawNativeApi implements SteamNativeApi {
   }
 
   @override
-  bool restartAppIfNecessary(final int appId) => _bindings.restartAppIfNecessary(appId);
+  bool restartAppIfNecessary(final int appId) =>
+      _bindings.restartAppIfNecessary(appId);
 
   @override
   SteamNativeInitResult initialize() {
@@ -252,26 +253,25 @@ final class SteamRawNativeApi implements SteamNativeApi {
 
   @override
   String personaName() => _bindings.readNullableUtf8(
-      _bindings.friendsGetPersonaName(_requireSteamFriends()),
-    );
+    _bindings.friendsGetPersonaName(_requireSteamFriends()),
+  );
 
   @override
-  int friendCount(final int flags) => _bindings.friendsGetFriendCount(_requireSteamFriends(), flags);
+  int friendCount(final int flags) =>
+      _bindings.friendsGetFriendCount(_requireSteamFriends(), flags);
 
   @override
-  int friendByIndex(final int index, final int flags) => _bindings.friendsGetFriendByIndex(
-      _requireSteamFriends(),
-      index,
-      flags,
-    );
+  int friendByIndex(final int index, final int flags) =>
+      _bindings.friendsGetFriendByIndex(_requireSteamFriends(), index, flags);
 
   @override
   String friendPersonaName(final int steamId) => _bindings.readNullableUtf8(
-      _bindings.friendsGetFriendPersonaName(_requireSteamFriends(), steamId),
-    );
+    _bindings.friendsGetFriendPersonaName(_requireSteamFriends(), steamId),
+  );
 
   @override
-  bool requestCurrentStats() => _bindings.userStatsRequestCurrentStats(_requireSteamUserStats());
+  bool requestCurrentStats() =>
+      _bindings.userStatsRequestCurrentStats(_requireSteamUserStats());
 
   @override
   int? getStatInt32(final String name) {

@@ -5,10 +5,13 @@ import '_registry_workspace.dart';
 /// Adds (or updates) a hosted internal dependency to a package's pubspec.yaml.
 Future<void> main(final List<String> args) async {
   final options = _AddOptions.parse(args);
-  final pubspecPath = '${options.repoRoot}/pkgs/${options.targetPackage}/pubspec.yaml';
+  final pubspecPath =
+      '${options.repoRoot}/pkgs/${options.targetPackage}/pubspec.yaml';
   final file = File(pubspecPath);
   if (!file.existsSync()) {
-    stderr.writeln('No such package: ${options.targetPackage} (missing $pubspecPath)');
+    stderr.writeln(
+      'No such package: ${options.targetPackage} (missing $pubspecPath)',
+    );
     exit(1);
   }
 
@@ -45,7 +48,9 @@ Future<void> main(final List<String> args) async {
   }
 
   if (result == content) {
-    stdout.writeln('${options.dependencyPackage} already present with requested version.');
+    stdout.writeln(
+      '${options.dependencyPackage} already present with requested version.',
+    );
     return;
   }
 
@@ -90,7 +95,9 @@ String? _insertOrUpdateHostedDependency({
       sectionStart = i;
       continue;
     }
-    if (sectionStart >= 0 && _indentOf(lines[i]) == 0 && trimmed.endsWith(':')) {
+    if (sectionStart >= 0 &&
+        _indentOf(lines[i]) == 0 &&
+        trimmed.endsWith(':')) {
       sectionEnd = i;
       break;
     }
@@ -100,7 +107,8 @@ String? _insertOrUpdateHostedDependency({
         trimmed.startsWith('$packageName:')) {
       existingStart = i;
       var j = i + 1;
-      while (j < lines.length && (_indentOf(lines[j]) > 2 || lines[j].trim().isEmpty)) {
+      while (j < lines.length &&
+          (_indentOf(lines[j]) > 2 || lines[j].trim().isEmpty)) {
         j++;
       }
       existingEnd = j;
@@ -110,7 +118,10 @@ String? _insertOrUpdateHostedDependency({
 
   if (sectionStart < 0) return null;
 
-  final blockLines = block.split('\n').where((final l) => l.isNotEmpty).toList(growable: false);
+  final blockLines = block
+      .split('\n')
+      .where((final l) => l.isNotEmpty)
+      .toList(growable: false);
 
   if (existingStart >= 0) {
     final before = lines.sublist(0, existingStart);

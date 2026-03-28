@@ -1,4 +1,3 @@
-
 import 'dart:async';
 
 import 'package:test/test.dart';
@@ -52,9 +51,7 @@ void main() {
     test(
       'deduplicates by fingerprint and transitions resolved to regressing',
       () async {
-        final sink = IssueTriageSink(
-          
-        );
+        final sink = IssueTriageSink();
         await sink.init();
 
         final base = DateTime.utc(2026, 1, 1, 10);
@@ -177,7 +174,8 @@ LogRecord _record({
   required final int sequence,
   required final DateTime at,
   required final LogLevel level,
-  required final String message, final String category = 'db',
+  required final String message,
+  final String category = 'db',
 }) => LogRecord(
   sequence: sequence,
   timestampUtc: at.toUtc(),

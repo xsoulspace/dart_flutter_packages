@@ -8,5 +8,6 @@ class FamilyPlanScreen extends StatelessWidget {
     // TODO: implement build
     throw UnimplementedError();
   }
+
   // Implement the app-agnostic design screen for the family plan or team plan options
 }

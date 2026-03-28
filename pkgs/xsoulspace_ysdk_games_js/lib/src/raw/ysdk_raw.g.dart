@@ -11,67 +11,71 @@ import 'dart:js_interop';
 external YaGamesGlobalRaw get yaGames;
 
 extension type YaGamesGlobalRaw(JSObject _) implements JSObject {
-   external JSPromise<SDKRaw> init([JSAny? opts]);
+  external JSPromise<SDKRaw> init([JSAny? opts]);
 }
 
 extension type SDKRaw(JSObject _) implements JSObject {
-   external JSAny? get EVENTS;
-   external JSAny? get adv;
-   external JSAny? get auth;
-   external JSAny? get clipboard;
-   external DeviceInfoRaw get deviceInfo;
-   external EnvironmentRaw get environment;
-   external JSAny? get features;
-   external JSAny? get feedback;
-   external YLeaderboardsRaw get leaderboards;
-   external MultiplayerRaw get multiplayer;
-   external PaymentsRaw get payments;
-   external JSAny? get screen;
-   external JSAny? get shortcut;
-   external JSPromise<JSAny?> dispatchEvent(SdkEventNameRaw eventName, [JSAny? detail]);
-   external JSPromise<JSObject> getFlags([GetFlagsParamsRaw? params]);
-   external JSPromise<LeaderboardsRaw> getLeaderboards();
-   external JSPromise<PaymentsRaw> getPayments([JSAny? opts]);
-   external JSPromise<JSAny?> getPlayer([JSAny? opts]);
-   external JSPromise<SafeStorageRaw> getStorage();
-   external JSPromise<JSBoolean> isAvailableMethod(JSString methodName);
-   external void off(JSString event, JSAny? observer);
+  external JSAny? get EVENTS;
+  external JSAny? get adv;
+  external JSAny? get auth;
+  external JSAny? get clipboard;
+  external DeviceInfoRaw get deviceInfo;
+  external EnvironmentRaw get environment;
+  external JSAny? get features;
+  external JSAny? get feedback;
+  external YLeaderboardsRaw get leaderboards;
+  external MultiplayerRaw get multiplayer;
+  external PaymentsRaw get payments;
+  external JSAny? get screen;
+  external JSAny? get shortcut;
+  external JSPromise<JSAny?> dispatchEvent(
+    SdkEventNameRaw eventName, [
+    JSAny? detail,
+  ]);
+  external JSPromise<JSObject> getFlags([GetFlagsParamsRaw? params]);
+  external JSPromise<LeaderboardsRaw> getLeaderboards();
+  external JSPromise<PaymentsRaw> getPayments([JSAny? opts]);
+  external JSPromise<JSAny?> getPlayer([JSAny? opts]);
+  external JSPromise<SafeStorageRaw> getStorage();
+  external JSPromise<JSBoolean> isAvailableMethod(JSString methodName);
+  external void off(JSString event, JSAny? observer);
   @JS('on')
-   external JSAny? onValue(JSString event, JSAny? observer);
-   external JSAny? onEvent(SdkEventNameRaw eventName, JSAny? listener);
-   external JSNumber serverTime();
+  external JSAny? onValue(JSString event, JSAny? observer);
+  external JSAny? onEvent(SdkEventNameRaw eventName, JSAny? listener);
+  external JSNumber serverTime();
 }
 
 extension type ClientFeatureRaw(JSObject _) implements JSObject {
-   external JSString get name;
-   external JSString get value;
+  external JSString get name;
+  external JSString get value;
 }
 
 extension type GetFlagsParamsRaw(JSObject _) implements JSObject {
-   external JSArray<ClientFeatureRaw>? get clientFeatures;
-   external JSObject? get defaultFlags;
+  external JSArray<ClientFeatureRaw>? get clientFeatures;
+  external JSObject? get defaultFlags;
 }
 
 extension type GameRaw(JSObject _) implements JSObject {
-   external JSString get appID;
-   external JSString get coverURL;
-   external JSString get iconURL;
-   external JSString get title;
-   external JSString get url;
+  external JSString get appID;
+  external JSString get coverURL;
+  external JSString get iconURL;
+  external JSString get title;
+  external JSString get url;
 }
 
 extension type SignatureRaw(JSObject _) implements JSObject {
-   external JSString get signature;
+  external JSString get signature;
 }
 
 extension type EnvironmentRaw(JSObject _) implements JSObject {
-   external JSAny? get app;
-   external JSAny? get browser;
-   external JSAny? get i18n;
-   external JSAny? get payload;
+  external JSAny? get app;
+  external JSAny? get browser;
+  external JSAny? get i18n;
+  external JSAny? get payload;
 }
 
 typedef DeviceTypeRaw = JSString;
+
 abstract final class DeviceTypeRawValues {
   static JSString get desktop => 'desktop'.toJS;
   static JSString get mobile => 'mobile'.toJS;
@@ -80,103 +84,126 @@ abstract final class DeviceTypeRawValues {
 }
 
 extension type DeviceInfoRaw(JSObject _) implements JSObject {
-   external JSBoolean isDesktop();
-   external JSBoolean isMobile();
-   external JSBoolean isTV();
-   external JSBoolean isTablet();
-   external DeviceTypeRaw get type;
+  external JSBoolean isDesktop();
+  external JSBoolean isMobile();
+  external JSBoolean isTV();
+  external JSBoolean isTablet();
+  external DeviceTypeRaw get type;
 }
 
 typedef SafeStorageRaw = JSObject;
 extension type PlayerRaw(JSObject _) implements JSObject {
-   external JSPromise<JSAny?> getData([JSAny? keys]);
-   external JSPromise<JSArray<JSAny?>> getIDsPerGame();
-   external JSString getMode();
-   external JSString getName();
-   external JSString getPayingStatus();
-   external JSString getPhoto(JSString size);
-   external JSPromise<JSAny?> getStats([JSAny? keys]);
-   external JSString getUniqueID();
-   external JSPromise<IncrementedStatsRaw> incrementStats(JSAny? stats);
-   external JSBoolean isAuthorized();
-   external JSPromise<JSAny?> setData(JSAny? data, [JSBoolean? flush]);
-   external JSPromise<JSAny?> setStats(JSObject stats);
+  external JSPromise<JSAny?> getData([JSAny? keys]);
+  external JSPromise<JSArray<JSAny?>> getIDsPerGame();
+  external JSString getMode();
+  external JSString getName();
+  external JSString getPayingStatus();
+  external JSString getPhoto(JSString size);
+  external JSPromise<JSAny?> getStats([JSAny? keys]);
+  external JSString getUniqueID();
+  external JSPromise<IncrementedStatsRaw> incrementStats(JSAny? stats);
+  external JSBoolean isAuthorized();
+  external JSPromise<JSAny?> setData(JSAny? data, [JSBoolean? flush]);
+  external JSPromise<JSAny?> setStats(JSObject stats);
 }
 
 extension type IncrementedStatsRaw(JSObject _) implements JSObject {
-   external JSArray<JSString> get newKeys;
-   external JSAny? get stats;
+  external JSArray<JSString> get newKeys;
+  external JSAny? get stats;
 }
 
 extension type PurchaseRaw(JSObject _) implements JSObject {
-   external JSString? get developerPayload;
-   external JSString get productID;
-   external JSString get purchaseToken;
+  external JSString? get developerPayload;
+  external JSString get productID;
+  external JSString get purchaseToken;
 }
 
 extension type ProductRaw(JSObject _) implements JSObject {
-   external JSString get description;
-   external JSString get id;
-   external JSString get imageURI;
-   external JSString get price;
-   external JSString get priceCurrencyCode;
-   external JSString get priceValue;
-   external JSString get title;
-   external JSString getPriceCurrencyImage(JSString size);
+  external JSString get description;
+  external JSString get id;
+  external JSString get imageURI;
+  external JSString get price;
+  external JSString get priceCurrencyCode;
+  external JSString get priceValue;
+  external JSString get title;
+  external JSString getPriceCurrencyImage(JSString size);
 }
 
 extension type PaymentsRaw(JSObject _) implements JSObject {
-   external JSPromise<JSAny?> consumePurchase(JSString token);
-   external JSPromise<JSArray<ProductRaw>> getCatalog();
-   external JSPromise<JSAny?> getPurchases();
-   external JSPromise<JSAny?> purchase([JSAny? opts]);
+  external JSPromise<JSAny?> consumePurchase(JSString token);
+  external JSPromise<JSArray<ProductRaw>> getCatalog();
+  external JSPromise<JSAny?> getPurchases();
+  external JSPromise<JSAny?> purchase([JSAny? opts]);
 }
 
 extension type GetLeaderboardEntriesOptsRaw(JSObject _) implements JSObject {
-   external JSBoolean? get includeUser;
-   external JSNumber? get quantityAround;
-   external JSNumber? get quantityTop;
+  external JSBoolean? get includeUser;
+  external JSNumber? get quantityAround;
+  external JSNumber? get quantityTop;
 }
 
 extension type LeaderboardsRaw(JSObject _) implements JSObject {
-   external JSPromise<LeaderboardDescriptionRaw> getLeaderboardDescription(JSString leaderboardName);
-   external JSPromise<LeaderboardEntriesDataRaw> getLeaderboardEntries(JSString leaderboardName, [GetLeaderboardEntriesOptsRaw? opts]);
-   external JSPromise<LeaderboardEntryRaw> getLeaderboardPlayerEntry(JSString leaderboardName);
-   external JSPromise<JSAny?> setLeaderboardScore(JSString leaderboardName, JSNumber score, [JSString? extraData]);
+  external JSPromise<LeaderboardDescriptionRaw> getLeaderboardDescription(
+    JSString leaderboardName,
+  );
+  external JSPromise<LeaderboardEntriesDataRaw> getLeaderboardEntries(
+    JSString leaderboardName, [
+    GetLeaderboardEntriesOptsRaw? opts,
+  ]);
+  external JSPromise<LeaderboardEntryRaw> getLeaderboardPlayerEntry(
+    JSString leaderboardName,
+  );
+  external JSPromise<JSAny?> setLeaderboardScore(
+    JSString leaderboardName,
+    JSNumber score, [
+    JSString? extraData,
+  ]);
 }
 
 extension type YLeaderboardsRaw(JSObject _) implements JSObject {
-   external JSPromise<LeaderboardDescriptionRaw> getDescription(JSString leaderboardName);
-   external JSPromise<LeaderboardEntriesDataRaw> getEntries(JSString leaderboardName, [GetLeaderboardEntriesOptsRaw? opts]);
-   external JSPromise<LeaderboardEntryRaw> getPlayerEntry(JSString leaderboardName);
-   external JSPromise<JSAny?> setScore(JSString leaderboardName, JSNumber score, [JSString? extraData]);
+  external JSPromise<LeaderboardDescriptionRaw> getDescription(
+    JSString leaderboardName,
+  );
+  external JSPromise<LeaderboardEntriesDataRaw> getEntries(
+    JSString leaderboardName, [
+    GetLeaderboardEntriesOptsRaw? opts,
+  ]);
+  external JSPromise<LeaderboardEntryRaw> getPlayerEntry(
+    JSString leaderboardName,
+  );
+  external JSPromise<JSAny?> setScore(
+    JSString leaderboardName,
+    JSNumber score, [
+    JSString? extraData,
+  ]);
 }
 
 extension type LeaderboardEntriesDataRaw(JSObject _) implements JSObject {
-   external JSArray<LeaderboardEntryRaw> get entries;
-   external LeaderboardDescriptionRaw get leaderboard;
-   external JSArray<JSAny?> get ranges;
-   external JSNumber get userRank;
+  external JSArray<LeaderboardEntryRaw> get entries;
+  external LeaderboardDescriptionRaw get leaderboard;
+  external JSArray<JSAny?> get ranges;
+  external JSNumber get userRank;
 }
 
 extension type LeaderboardEntryRaw(JSObject _) implements JSObject {
-   external JSString? get extraData;
-   external JSString get formattedScore;
-   external JSAny? get player;
-   external JSNumber get rank;
-   external JSNumber get score;
+  external JSString? get extraData;
+  external JSString get formattedScore;
+  external JSAny? get player;
+  external JSNumber get rank;
+  external JSNumber get score;
 }
 
 extension type LeaderboardDescriptionRaw(JSObject _) implements JSObject {
-   external JSString get appID;
+  external JSString get appID;
   @JS('default')
-   external JSBoolean get defaultValue;
-   external JSAny? get description;
-   external JSString get name;
-   external JSObject get title;
+  external JSBoolean get defaultValue;
+  external JSAny? get description;
+  external JSString get name;
+  external JSObject get title;
 }
 
 typedef FeedbackErrorRaw = JSString;
+
 abstract final class FeedbackErrorRawValues {
   static JSString get gameRated => 'GAME_RATED'.toJS;
   static JSString get noAuth => 'NO_AUTH'.toJS;
@@ -185,18 +212,21 @@ abstract final class FeedbackErrorRawValues {
 }
 
 typedef StickyAdvErrorRaw = JSString;
+
 abstract final class StickyAdvErrorRawValues {
   static JSString get advIsNotConnected => 'ADV_IS_NOT_CONNECTED'.toJS;
   static JSString get unknown => 'UNKNOWN'.toJS;
 }
 
 typedef SdkEventNameRaw = JSString;
+
 abstract final class SdkEventNameRawValues {
   static JSString get exit => 'EXIT'.toJS;
   static JSString get historyBack => 'HISTORY_BACK'.toJS;
 }
 
 typedef ISO_639_1Raw = JSString;
+
 abstract final class ISO_639_1RawValues {
   static JSString get af => 'af'.toJS;
   static JSString get am => 'am'.toJS;
@@ -271,6 +301,7 @@ abstract final class ISO_639_1RawValues {
 }
 
 typedef TopLevelDomainRaw = JSString;
+
 abstract final class TopLevelDomainRawValues {
   static JSString get az => 'az'.toJS;
   static JSString get by => 'by'.toJS;
@@ -295,48 +326,54 @@ abstract final class TopLevelDomainRawValues {
 
 typedef SerializableRaw = JSAny?;
 extension type MultiplayerRaw(JSObject _) implements JSObject {
-   external MultiplayerSessionsRaw get sessions;
+  external MultiplayerSessionsRaw get sessions;
 }
 
 extension type MultiplayerSessionsRaw(JSObject _) implements JSObject {
-   external void commit(MultiplayerSessionsCommitPayloadRaw payload);
-   external JSPromise<JSArray<MultiplayerSessionsOpponentRaw>> init([MultiplayerSessionsInitOptionsRaw? options]);
-   external JSPromise<CallbackBaseMessageDataRaw> push(MultiplayerSessionsMetaRaw meta);
+  external void commit(MultiplayerSessionsCommitPayloadRaw payload);
+  external JSPromise<JSArray<MultiplayerSessionsOpponentRaw>> init([
+    MultiplayerSessionsInitOptionsRaw? options,
+  ]);
+  external JSPromise<CallbackBaseMessageDataRaw> push(
+    MultiplayerSessionsMetaRaw meta,
+  );
 }
 
 extension type CallbackBaseMessageDataRaw(JSObject _) implements JSObject {
-   external JSAny? get data;
-   external JSAny? get error;
-   external JSString get status;
+  external JSAny? get data;
+  external JSAny? get error;
+  external JSString get status;
 }
 
-extension type MultiplayerSessionsCommitPayloadRaw(JSObject _) implements JSObject {
-   external JSObject get data;
-   external JSNumber get time;
+extension type MultiplayerSessionsCommitPayloadRaw(JSObject _)
+    implements JSObject {
+  external JSObject get data;
+  external JSNumber get time;
 }
 
-extension type MultiplayerSessionsInitOptionsRaw(JSObject _) implements JSObject {
-   external JSNumber? get count;
-   external JSBoolean? get isEventBased;
-   external JSNumber? get maxOpponentTurnTime;
-   external MultiplayerSessionsMetaRangesRaw? get meta;
+extension type MultiplayerSessionsInitOptionsRaw(JSObject _)
+    implements JSObject {
+  external JSNumber? get count;
+  external JSBoolean? get isEventBased;
+  external JSNumber? get maxOpponentTurnTime;
+  external MultiplayerSessionsMetaRangesRaw? get meta;
 }
 
 extension type MultiplayerSessionsMetaRaw(JSObject _) implements JSObject {
-   external JSNumber get meta1;
-   external JSNumber get meta2;
-   external JSNumber get meta3;
+  external JSNumber get meta1;
+  external JSNumber get meta2;
+  external JSNumber get meta3;
 }
 
-extension type MultiplayerSessionsMetaRangesRaw(JSObject _) implements JSObject {
-   external JSAny? get meta1;
-   external JSAny? get meta2;
-   external JSAny? get meta3;
+extension type MultiplayerSessionsMetaRangesRaw(JSObject _)
+    implements JSObject {
+  external JSAny? get meta1;
+  external JSAny? get meta2;
+  external JSAny? get meta3;
 }
 
 extension type MultiplayerSessionsOpponentRaw(JSObject _) implements JSObject {
-   external JSString get id;
-   external MultiplayerSessionsMetaRaw get meta;
-   external JSArray<MultiplayerSessionsCommitPayloadRaw> get transactions;
+  external JSString get id;
+  external MultiplayerSessionsMetaRaw get meta;
+  external JSArray<MultiplayerSessionsCommitPayloadRaw> get transactions;
 }
-

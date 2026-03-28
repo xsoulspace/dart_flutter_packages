@@ -12,7 +12,8 @@ part of 'foundation.dart';
 T _$identity<T>(T value) => value;
 
 final _privateConstructorUsedError = UnsupportedError(
-    'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models');
+  'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models',
+);
 
 /// @nodoc
 mixin _$LoadableContainer<T> {
@@ -28,16 +29,20 @@ mixin _$LoadableContainer<T> {
 
 /// @nodoc
 abstract class $LoadableContainerCopyWith<T, $Res> {
-  factory $LoadableContainerCopyWith(LoadableContainer<T> value,
-          $Res Function(LoadableContainer<T>) then) =
-      _$LoadableContainerCopyWithImpl<T, $Res, LoadableContainer<T>>;
+  factory $LoadableContainerCopyWith(
+    LoadableContainer<T> value,
+    $Res Function(LoadableContainer<T>) then,
+  ) = _$LoadableContainerCopyWithImpl<T, $Res, LoadableContainer<T>>;
   @useResult
   $Res call({T value, bool isLoaded});
 }
 
 /// @nodoc
-class _$LoadableContainerCopyWithImpl<T, $Res,
-        $Val extends LoadableContainer<T>>
+class _$LoadableContainerCopyWithImpl<
+  T,
+  $Res,
+  $Val extends LoadableContainer<T>
+>
     implements $LoadableContainerCopyWith<T, $Res> {
   _$LoadableContainerCopyWithImpl(this._value, this._then);
 
@@ -50,29 +55,30 @@ class _$LoadableContainerCopyWithImpl<T, $Res,
   /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
-  $Res call({
-    Object? value = freezed,
-    Object? isLoaded = null,
-  }) {
-    return _then(_value.copyWith(
-      value: freezed == value
-          ? _value.value
-          : value // ignore: cast_nullable_to_non_nullable
-              as T,
-      isLoaded: null == isLoaded
-          ? _value.isLoaded
-          : isLoaded // ignore: cast_nullable_to_non_nullable
-              as bool,
-    ) as $Val);
+  $Res call({Object? value = freezed, Object? isLoaded = null}) {
+    return _then(
+      _value.copyWith(
+            value: freezed == value
+                ? _value.value
+                : value // ignore: cast_nullable_to_non_nullable
+                      as T,
+            isLoaded: null == isLoaded
+                ? _value.isLoaded
+                : isLoaded // ignore: cast_nullable_to_non_nullable
+                      as bool,
+          )
+          as $Val,
+    );
   }
 }
 
 /// @nodoc
 abstract class _$$LoadableContainerImplCopyWith<T, $Res>
     implements $LoadableContainerCopyWith<T, $Res> {
-  factory _$$LoadableContainerImplCopyWith(_$LoadableContainerImpl<T> value,
-          $Res Function(_$LoadableContainerImpl<T>) then) =
-      __$$LoadableContainerImplCopyWithImpl<T, $Res>;
+  factory _$$LoadableContainerImplCopyWith(
+    _$LoadableContainerImpl<T> value,
+    $Res Function(_$LoadableContainerImpl<T>) then,
+  ) = __$$LoadableContainerImplCopyWithImpl<T, $Res>;
   @override
   @useResult
   $Res call({T value, bool isLoaded});
@@ -82,28 +88,28 @@ abstract class _$$LoadableContainerImplCopyWith<T, $Res>
 class __$$LoadableContainerImplCopyWithImpl<T, $Res>
     extends _$LoadableContainerCopyWithImpl<T, $Res, _$LoadableContainerImpl<T>>
     implements _$$LoadableContainerImplCopyWith<T, $Res> {
-  __$$LoadableContainerImplCopyWithImpl(_$LoadableContainerImpl<T> _value,
-      $Res Function(_$LoadableContainerImpl<T>) _then)
-      : super(_value, _then);
+  __$$LoadableContainerImplCopyWithImpl(
+    _$LoadableContainerImpl<T> _value,
+    $Res Function(_$LoadableContainerImpl<T>) _then,
+  ) : super(_value, _then);
 
   /// Create a copy of LoadableContainer
   /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
-  $Res call({
-    Object? value = freezed,
-    Object? isLoaded = null,
-  }) {
-    return _then(_$LoadableContainerImpl<T>(
-      value: freezed == value
-          ? _value.value
-          : value // ignore: cast_nullable_to_non_nullable
-              as T,
-      isLoaded: null == isLoaded
-          ? _value.isLoaded
-          : isLoaded // ignore: cast_nullable_to_non_nullable
-              as bool,
-    ));
+  $Res call({Object? value = freezed, Object? isLoaded = null}) {
+    return _then(
+      _$LoadableContainerImpl<T>(
+        value: freezed == value
+            ? _value.value
+            : value // ignore: cast_nullable_to_non_nullable
+                  as T,
+        isLoaded: null == isLoaded
+            ? _value.isLoaded
+            : isLoaded // ignore: cast_nullable_to_non_nullable
+                  as bool,
+      ),
+    );
   }
 }
 
@@ -111,7 +117,7 @@ class __$$LoadableContainerImplCopyWithImpl<T, $Res>
 
 class _$LoadableContainerImpl<T> extends _LoadableContainer<T> {
   const _$LoadableContainerImpl({required this.value, this.isLoaded = false})
-      : super._();
+    : super._();
 
   @override
   final T value;
@@ -136,7 +142,10 @@ class _$LoadableContainerImpl<T> extends _LoadableContainer<T> {
 
   @override
   int get hashCode => Object.hash(
-      runtimeType, const DeepCollectionEquality().hash(value), isLoaded);
+    runtimeType,
+    const DeepCollectionEquality().hash(value),
+    isLoaded,
+  );
 
   /// Create a copy of LoadableContainer
   /// with the given fields replaced by the non-null parameter values.
@@ -144,15 +153,18 @@ class _$LoadableContainerImpl<T> extends _LoadableContainer<T> {
   @override
   @pragma('vm:prefer-inline')
   _$$LoadableContainerImplCopyWith<T, _$LoadableContainerImpl<T>>
-      get copyWith =>
-          __$$LoadableContainerImplCopyWithImpl<T, _$LoadableContainerImpl<T>>(
-              this, _$identity);
+  get copyWith =>
+      __$$LoadableContainerImplCopyWithImpl<T, _$LoadableContainerImpl<T>>(
+        this,
+        _$identity,
+      );
 }
 
 abstract class _LoadableContainer<T> extends LoadableContainer<T> {
-  const factory _LoadableContainer(
-      {required final T value,
-      final bool isLoaded}) = _$LoadableContainerImpl<T>;
+  const factory _LoadableContainer({
+    required final T value,
+    final bool isLoaded,
+  }) = _$LoadableContainerImpl<T>;
   const _LoadableContainer._() : super._();
 
   @override
@@ -165,7 +177,7 @@ abstract class _LoadableContainer<T> extends LoadableContainer<T> {
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   _$$LoadableContainerImplCopyWith<T, _$LoadableContainerImpl<T>>
-      get copyWith => throw _privateConstructorUsedError;
+  get copyWith => throw _privateConstructorUsedError;
 }
 
 /// @nodoc
@@ -184,8 +196,9 @@ mixin _$FieldContainer<T> {
 /// @nodoc
 abstract class $FieldContainerCopyWith<T, $Res> {
   factory $FieldContainerCopyWith(
-          FieldContainer<T> value, $Res Function(FieldContainer<T>) then) =
-      _$FieldContainerCopyWithImpl<T, $Res, FieldContainer<T>>;
+    FieldContainer<T> value,
+    $Res Function(FieldContainer<T>) then,
+  ) = _$FieldContainerCopyWithImpl<T, $Res, FieldContainer<T>>;
   @useResult
   $Res call({T value, String errorText, bool isLoading});
 }
@@ -209,29 +222,33 @@ class _$FieldContainerCopyWithImpl<T, $Res, $Val extends FieldContainer<T>>
     Object? errorText = null,
     Object? isLoading = null,
   }) {
-    return _then(_value.copyWith(
-      value: freezed == value
-          ? _value.value
-          : value // ignore: cast_nullable_to_non_nullable
-              as T,
-      errorText: null == errorText
-          ? _value.errorText
-          : errorText // ignore: cast_nullable_to_non_nullable
-              as String,
-      isLoading: null == isLoading
-          ? _value.isLoading
-          : isLoading // ignore: cast_nullable_to_non_nullable
-              as bool,
-    ) as $Val);
+    return _then(
+      _value.copyWith(
+            value: freezed == value
+                ? _value.value
+                : value // ignore: cast_nullable_to_non_nullable
+                      as T,
+            errorText: null == errorText
+                ? _value.errorText
+                : errorText // ignore: cast_nullable_to_non_nullable
+                      as String,
+            isLoading: null == isLoading
+                ? _value.isLoading
+                : isLoading // ignore: cast_nullable_to_non_nullable
+                      as bool,
+          )
+          as $Val,
+    );
   }
 }
 
 /// @nodoc
 abstract class _$$FieldContainerImplCopyWith<T, $Res>
     implements $FieldContainerCopyWith<T, $Res> {
-  factory _$$FieldContainerImplCopyWith(_$FieldContainerImpl<T> value,
-          $Res Function(_$FieldContainerImpl<T>) then) =
-      __$$FieldContainerImplCopyWithImpl<T, $Res>;
+  factory _$$FieldContainerImplCopyWith(
+    _$FieldContainerImpl<T> value,
+    $Res Function(_$FieldContainerImpl<T>) then,
+  ) = __$$FieldContainerImplCopyWithImpl<T, $Res>;
   @override
   @useResult
   $Res call({T value, String errorText, bool isLoading});
@@ -241,9 +258,10 @@ abstract class _$$FieldContainerImplCopyWith<T, $Res>
 class __$$FieldContainerImplCopyWithImpl<T, $Res>
     extends _$FieldContainerCopyWithImpl<T, $Res, _$FieldContainerImpl<T>>
     implements _$$FieldContainerImplCopyWith<T, $Res> {
-  __$$FieldContainerImplCopyWithImpl(_$FieldContainerImpl<T> _value,
-      $Res Function(_$FieldContainerImpl<T>) _then)
-      : super(_value, _then);
+  __$$FieldContainerImplCopyWithImpl(
+    _$FieldContainerImpl<T> _value,
+    $Res Function(_$FieldContainerImpl<T>) _then,
+  ) : super(_value, _then);
 
   /// Create a copy of FieldContainer
   /// with the given fields replaced by the non-null parameter values.
@@ -254,28 +272,33 @@ class __$$FieldContainerImplCopyWithImpl<T, $Res>
     Object? errorText = null,
     Object? isLoading = null,
   }) {
-    return _then(_$FieldContainerImpl<T>(
-      value: freezed == value
-          ? _value.value
-          : value // ignore: cast_nullable_to_non_nullable
-              as T,
-      errorText: null == errorText
-          ? _value.errorText
-          : errorText // ignore: cast_nullable_to_non_nullable
-              as String,
-      isLoading: null == isLoading
-          ? _value.isLoading
-          : isLoading // ignore: cast_nullable_to_non_nullable
-              as bool,
-    ));
+    return _then(
+      _$FieldContainerImpl<T>(
+        value: freezed == value
+            ? _value.value
+            : value // ignore: cast_nullable_to_non_nullable
+                  as T,
+        errorText: null == errorText
+            ? _value.errorText
+            : errorText // ignore: cast_nullable_to_non_nullable
+                  as String,
+        isLoading: null == isLoading
+            ? _value.isLoading
+            : isLoading // ignore: cast_nullable_to_non_nullable
+                  as bool,
+      ),
+    );
   }
 }
 
 /// @nodoc
 
 class _$FieldContainerImpl<T> implements _FieldContainer<T> {
-  const _$FieldContainerImpl(
-      {required this.value, this.errorText = '', this.isLoading = false});
+  const _$FieldContainerImpl({
+    required this.value,
+    this.errorText = '',
+    this.isLoading = false,
+  });
 
   @override
   final T value;
@@ -304,8 +327,12 @@ class _$FieldContainerImpl<T> implements _FieldContainer<T> {
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType,
-      const DeepCollectionEquality().hash(value), errorText, isLoading);
+  int get hashCode => Object.hash(
+    runtimeType,
+    const DeepCollectionEquality().hash(value),
+    errorText,
+    isLoading,
+  );
 
   /// Create a copy of FieldContainer
   /// with the given fields replaced by the non-null parameter values.
@@ -314,14 +341,17 @@ class _$FieldContainerImpl<T> implements _FieldContainer<T> {
   @pragma('vm:prefer-inline')
   _$$FieldContainerImplCopyWith<T, _$FieldContainerImpl<T>> get copyWith =>
       __$$FieldContainerImplCopyWithImpl<T, _$FieldContainerImpl<T>>(
-          this, _$identity);
+        this,
+        _$identity,
+      );
 }
 
 abstract class _FieldContainer<T> implements FieldContainer<T> {
-  const factory _FieldContainer(
-      {required final T value,
-      final String errorText,
-      final bool isLoading}) = _$FieldContainerImpl<T>;
+  const factory _FieldContainer({
+    required final T value,
+    final String errorText,
+    final bool isLoading,
+  }) = _$FieldContainerImpl<T>;
 
   @override
   T get value;

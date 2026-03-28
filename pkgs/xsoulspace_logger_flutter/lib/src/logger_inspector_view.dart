@@ -1,4 +1,3 @@
-
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -67,30 +66,30 @@ final class _LoggerInspectorViewState extends State<LoggerInspectorView> {
 
   @override
   Widget build(final BuildContext context) => DefaultTabController(
-      length: 3,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          _buildSearchAndFilters(context),
-          const TabBar(
-            tabs: <Tab>[
-              Tab(text: 'Logs'),
-              Tab(text: 'Traces'),
-              Tab(text: 'Issues'),
+    length: 3,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        _buildSearchAndFilters(context),
+        const TabBar(
+          tabs: <Tab>[
+            Tab(text: 'Logs'),
+            Tab(text: 'Traces'),
+            Tab(text: 'Issues'),
+          ],
+        ),
+        Expanded(
+          child: TabBarView(
+            children: <Widget>[
+              _buildLogsTab(context),
+              _buildTracesTab(context),
+              _buildIssuesTab(context),
             ],
           ),
-          Expanded(
-            child: TabBarView(
-              children: <Widget>[
-                _buildLogsTab(context),
-                _buildTracesTab(context),
-                _buildIssuesTab(context),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+        ),
+      ],
+    ),
+  );
 
   Widget _buildSearchAndFilters(final BuildContext context) {
     final categories =
@@ -145,9 +144,7 @@ final class _LoggerInspectorViewState extends State<LoggerInspectorView> {
             value: _selectedCategory,
             hint: const Text('All categories'),
             items: <DropdownMenuItem<String?>>[
-              const DropdownMenuItem<String?>(
-                child: Text('All categories'),
-              ),
+              const DropdownMenuItem<String?>(child: Text('All categories')),
               ...categories.map(
                 (final category) => DropdownMenuItem<String?>(
                   value: category,
@@ -303,36 +300,35 @@ final class _LoggerInspectorViewState extends State<LoggerInspectorView> {
   }
 
   List<LogRecord> _filteredLogs() => widget.controller.logs
-        .where((final record) {
-          if (!_selectedLevels.contains(record.level)) {
-            return false;
-          }
-          if (_selectedCategory != null &&
-              record.category != _selectedCategory) {
-            return false;
-          }
-          if (_searchText.isEmpty) {
-            return true;
-          }
+      .where((final record) {
+        if (!_selectedLevels.contains(record.level)) {
+          return false;
+        }
+        if (_selectedCategory != null && record.category != _selectedCategory) {
+          return false;
+        }
+        if (_searchText.isEmpty) {
+          return true;
+        }
 
-          final haystack = StringBuffer()
-            ..write(record.message)
+        final haystack = StringBuffer()
+          ..write(record.message)
+          ..write(' ')
+          ..write(record.category)
+          ..write(' ')
+          ..write(record.error?.toString() ?? '');
+
+        record.fields.forEach((final key, final value) {
+          haystack
             ..write(' ')
-            ..write(record.category)
-            ..write(' ')
-            ..write(record.error?.toString() ?? '');
+            ..write(key)
+            ..write('=')
+            ..write(value);
+        });
 
-          record.fields.forEach((final key, final value) {
-            haystack
-              ..write(' ')
-              ..write(key)
-              ..write('=')
-              ..write(value);
-          });
-
-          return haystack.toString().toLowerCase().contains(_searchText);
-        })
-        .toList(growable: false);
+        return haystack.toString().toLowerCase().contains(_searchText);
+      })
+      .toList(growable: false);
 
   Color _levelColor(final LogLevel level) => switch (level) {
     LogLevel.trace => Colors.blueGrey,

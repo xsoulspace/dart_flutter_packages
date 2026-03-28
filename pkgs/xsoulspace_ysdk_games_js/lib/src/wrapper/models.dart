@@ -225,7 +225,11 @@ class LeaderboardPlayerModel {
 @immutable
 class LeaderboardEntryModel {
   const LeaderboardEntryModel({
-    required this.formattedScore, required this.player, required this.rank, required this.score, this.extraData,
+    required this.formattedScore,
+    required this.player,
+    required this.rank,
+    required this.score,
+    this.extraData,
   });
 
   final String? extraData;

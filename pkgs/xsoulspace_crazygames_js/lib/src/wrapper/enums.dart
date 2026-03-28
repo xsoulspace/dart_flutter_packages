@@ -1,4 +1,3 @@
-
 enum Environment {
   crazygames('crazygames'),
   local('local'),

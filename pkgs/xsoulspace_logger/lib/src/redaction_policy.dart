@@ -1,4 +1,3 @@
-
 import 'dart:convert';
 
 /// Callback that marks whether [key] should be redacted for [path].

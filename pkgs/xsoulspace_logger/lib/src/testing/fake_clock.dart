@@ -1,4 +1,3 @@
-
 import '../clock.dart';
 
 /// Mutable deterministic clock for tests.

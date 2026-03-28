@@ -215,7 +215,8 @@ final class SteamClient {
     _callbackEngine?.pumpOnce();
   }
 
-  bool _isDesktopPlatform() => Platform.isWindows || Platform.isMacOS || Platform.isLinux;
+  bool _isDesktopPlatform() =>
+      Platform.isWindows || Platform.isMacOS || Platform.isLinux;
 
   SteamInitErrorCode? _mapNativeInitCode(final int code) {
     switch (code) {

@@ -1,4 +1,3 @@
-
 import 'package:xsoulspace_logger/xsoulspace_logger.dart';
 
 /// Runtime behavior for issue triage.

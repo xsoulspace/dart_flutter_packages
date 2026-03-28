@@ -1,6 +1,5 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND.
 
-
 import 'dart:ffi';
 
 base class CallbackMsg_t extends Struct {

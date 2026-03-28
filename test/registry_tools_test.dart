@@ -8,26 +8,33 @@ import '../registry/tools/_registry_workspace.dart';
 
 void main() {
   group('package discovery', () {
-    test('excludes publish_to none packages from publishable discovery', () async {
-      final repoRoot = await _createRepoFixture();
+    test(
+      'excludes publish_to none packages from publishable discovery',
+      () async {
+        final repoRoot = await _createRepoFixture();
 
-      final publishable = await discoverPackages(
-        repoRoot: repoRoot.path,
-        includePrivate: false,
-      );
-      final allPackages = await discoverAllPackages(repoRoot: repoRoot.path);
+        final publishable = await discoverPackages(
+          repoRoot: repoRoot.path,
+          includePrivate: false,
+        );
+        final allPackages = await discoverAllPackages(repoRoot: repoRoot.path);
 
-      expect(publishable.map((final package) => package.name), ['public_pkg']);
-      expect(
-        allPackages.map((final package) => package.name),
-        ['private_pkg', 'public_pkg'],
-      );
-      expect(allPackages.first.isPrivate, isTrue);
-    });
+        expect(publishable.map((final package) => package.name), [
+          'public_pkg',
+        ]);
+        expect(allPackages.map((final package) => package.name), [
+          'private_pkg',
+          'public_pkg',
+        ]);
+        expect(allPackages.first.isPrivate, isTrue);
+      },
+    );
 
-    test('parses inline lists and nested pubspec structures with yaml package', () async {
-      final repoRoot = await _createRepoFixture(
-        publicPubspec: '''
+    test(
+      'parses inline lists and nested pubspec structures with yaml package',
+      () async {
+        final repoRoot = await _createRepoFixture(
+          publicPubspec: '''
 name: public_pkg
 description: Public package
 version: 1.2.3
@@ -37,19 +44,19 @@ environment:
 dependencies:
   args: ^2.7.0
 ''',
-      );
+        );
 
-      final packages = await discoverPackages(
-        repoRoot: repoRoot.path,
-        includePrivate: false,
-      );
+        final packages = await discoverPackages(
+          repoRoot: repoRoot.path,
+          includePrivate: false,
+        );
 
-      expect(packages.single.pubspecJson['topics'], ['logging', 'registry']);
-      expect(
-        packages.single.pubspecJson['environment'],
-        {'sdk': '>=3.11.0 <4.0.0'},
-      );
-    });
+        expect(packages.single.pubspecJson['topics'], ['logging', 'registry']);
+        expect(packages.single.pubspecJson['environment'], {
+          'sdk': '>=3.11.0 <4.0.0',
+        });
+      },
+    );
   });
 
   group('archives', () {
@@ -71,12 +78,12 @@ environment:
   sdk: ">=3.11.0 <4.0.0"
 ''');
       await Directory('${packageDir.path}/lib').create(recursive: true);
-      await File('${packageDir.path}/lib/archive_pkg.dart').writeAsString(
-        'library archive_pkg;\n',
-      );
-      await File('${packageDir.path}/pubspec_overrides.yaml').writeAsString(
-        'dependency_overrides: {}\n',
-      );
+      await File(
+        '${packageDir.path}/lib/archive_pkg.dart',
+      ).writeAsString('library archive_pkg;\n');
+      await File(
+        '${packageDir.path}/pubspec_overrides.yaml',
+      ).writeAsString('dependency_overrides: {}\n');
 
       final outputDir = await Directory.systemTemp.createTemp(
         'xs-registry-archive-output-',
@@ -94,7 +101,9 @@ environment:
         relativeDirectory: 'pkgs/archive_pkg',
         relativePubspecPath: 'pkgs/archive_pkg/pubspec.yaml',
         pubspecPath: '${packageDir.path}/pubspec.yaml',
-        pubspecContent: await File('${packageDir.path}/pubspec.yaml').readAsString(),
+        pubspecContent: await File(
+          '${packageDir.path}/pubspec.yaml',
+        ).readAsString(),
         pubspecJson: <String, Object?>{
           'name': 'archive_pkg',
           'description': 'Archive package',
@@ -122,16 +131,18 @@ environment:
 
       expect(secondBytes, firstBytes);
       expect(secondSha, firstSha);
-      expect(
-        await listTrackedPackageFiles(package: package),
-        ['lib/archive_pkg.dart', 'pubspec.yaml'],
-      );
+      expect(await listTrackedPackageFiles(package: package), [
+        'lib/archive_pkg.dart',
+        'pubspec.yaml',
+      ]);
     });
   });
 
   group('rewrites', () {
-    test('rewriteHostedDependencies rewrites only publishable internal packages', () {
-      const content = '''
+    test(
+      'rewriteHostedDependencies rewrites only publishable internal packages',
+      () {
+        const content = '''
 dependencies:
   public_pkg:
     path: ../public_pkg
@@ -139,18 +150,22 @@ dependencies:
     path: ../private_pkg
 ''';
 
-      final result = rewriteHostedDependencies(
-        content: content,
-        internalPackageNames: {'public_pkg'},
-        internalPackageVersions: {'public_pkg': '1.2.3'},
-        hostedUrl: 'https://pub.xsoulspace.dev',
-      );
+        final result = rewriteHostedDependencies(
+          content: content,
+          internalPackageNames: {'public_pkg'},
+          internalPackageVersions: {'public_pkg': '1.2.3'},
+          hostedUrl: 'https://pub.xsoulspace.dev',
+        );
 
-      expect(result.changed, isTrue);
-      expect(result.content, contains('name: public_pkg'));
-      expect(result.content, contains('version: 1.2.3'));
-      expect(result.content, contains('private_pkg:\n    path: ../private_pkg'));
-    });
+        expect(result.changed, isTrue);
+        expect(result.content, contains('name: public_pkg'));
+        expect(result.content, contains('version: 1.2.3'));
+        expect(
+          result.content,
+          contains('private_pkg:\n    path: ../private_pkg'),
+        );
+      },
+    );
   });
 
   group('validation script', () {
@@ -168,20 +183,23 @@ dependencies:
         }
       });
 
-      final buildResult = await Process.run(Platform.resolvedExecutable, <String>[
-        'registry/tools/build_registry_index.dart',
-        '--repo-root',
-        repoRoot.path,
-        '--output-dir',
-        outputDir.path,
-        '--registry-base-url',
-        'https://pub.xsoulspace.dev',
-        '--github-repo',
-        'xsoulspace/dart_flutter_packages',
-      ], workingDirectory: _repoRootPath);
+      final buildResult =
+          await Process.run(Platform.resolvedExecutable, <String>[
+            'registry/tools/build_registry_index.dart',
+            '--repo-root',
+            repoRoot.path,
+            '--output-dir',
+            outputDir.path,
+            '--registry-base-url',
+            'https://pub.xsoulspace.dev',
+            '--github-repo',
+            'xsoulspace/dart_flutter_packages',
+          ], workingDirectory: _repoRootPath);
       expect(buildResult.exitCode, 0, reason: buildResult.stderr.toString());
 
-      await File('${outputDir.path}/api/packages/zombie_pkg.json').writeAsString(
+      await File(
+        '${outputDir.path}/api/packages/zombie_pkg.json',
+      ).writeAsString(
         jsonEncode(<String, Object?>{
           'name': 'zombie_pkg',
           'latest': {'version': '9.9.9'},
@@ -190,24 +208,22 @@ dependencies:
           ],
         }),
       );
-      await File('${outputDir.path}/archives/zombie_pkg-9.9.9.tar.gz')
-          .writeAsBytes(const <int>[1, 2, 3]);
+      await File(
+        '${outputDir.path}/archives/zombie_pkg-9.9.9.tar.gz',
+      ).writeAsBytes(const <int>[1, 2, 3]);
 
-      final validateResult = await Process.run(
-        Platform.resolvedExecutable,
-        <String>[
-          'registry/tools/validate_registry.dart',
-          '--repo-root',
-          repoRoot.path,
-          '--output-dir',
-          outputDir.path,
-          '--registry-base-url',
-          'https://pub.xsoulspace.dev',
-          '--hosted-url',
-          'https://pub.xsoulspace.dev',
-        ],
-        workingDirectory: _repoRootPath,
-      );
+      final validateResult =
+          await Process.run(Platform.resolvedExecutable, <String>[
+            'registry/tools/validate_registry.dart',
+            '--repo-root',
+            repoRoot.path,
+            '--output-dir',
+            outputDir.path,
+            '--registry-base-url',
+            'https://pub.xsoulspace.dev',
+            '--hosted-url',
+            'https://pub.xsoulspace.dev',
+          ], workingDirectory: _repoRootPath);
 
       expect(validateResult.exitCode, isNonZero);
       expect(
@@ -230,19 +246,19 @@ dependencies:
         SemanticVersion.parse('1.0.0+5'),
       ]..sort();
 
-      expect(
-        versions.map((final version) => version.toString()).toList(),
-        ['1.0.0-beta.1', '1.0.0-beta.2', '1.0.0', '1.0.0+5'],
-      );
+      expect(versions.map((final version) => version.toString()).toList(), [
+        '1.0.0-beta.1',
+        '1.0.0-beta.2',
+        '1.0.0',
+        '1.0.0+5',
+      ]);
     });
   });
 }
 
 String get _repoRootPath => Directory.current.path;
 
-Future<Directory> _createRepoFixture({
-  final String? publicPubspec,
-}) async {
+Future<Directory> _createRepoFixture({final String? publicPubspec}) async {
   final repoRoot = await Directory.systemTemp.createTemp('xs-registry-repo-');
   final pkgsDir = Directory('${repoRoot.path}/pkgs');
   await pkgsDir.create(recursive: true);
@@ -262,7 +278,8 @@ environment:
   await _writePackage(
     pkgsDir.path,
     name: 'public_pkg',
-    pubspec: publicPubspec ??
+    pubspec:
+        publicPubspec ??
         '''
 name: public_pkg
 description: Public package
@@ -286,7 +303,7 @@ Future<void> _writePackage(
   await packageDir.create(recursive: true);
   await File('${packageDir.path}/pubspec.yaml').writeAsString(pubspec);
   await Directory('${packageDir.path}/lib').create(recursive: true);
-  await File('${packageDir.path}/lib/$name.dart').writeAsString(
-    'library $name;\n',
-  );
+  await File(
+    '${packageDir.path}/lib/$name.dart',
+  ).writeAsString('library $name;\n');
 }

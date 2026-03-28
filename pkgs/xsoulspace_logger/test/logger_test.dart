@@ -1,4 +1,3 @@
-
 import 'package:test/test.dart';
 import 'package:xsoulspace_logger/testing.dart';
 import 'package:xsoulspace_logger/xsoulspace_logger.dart';

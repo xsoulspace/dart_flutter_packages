@@ -43,7 +43,8 @@ final class DynamicLibrarySteamRawSymbolResolver
   final DynamicLibrary library;
 
   @override
-  Pointer<T> lookup<T extends NativeType>(final String symbolName) => library.lookup<T>(symbolName);
+  Pointer<T> lookup<T extends NativeType>(final String symbolName) =>
+      library.lookup<T>(symbolName);
 }
 
 /// Bound Steamworks flat API symbols used by the v1 wrapper runtime.
@@ -154,8 +155,9 @@ final class SteamRawBindings {
 
     final init = _lookupRequiredFunction<_InitDart>(
       'SteamAPI_Init',
-      (final pointer) =>
-          pointer.cast<NativeFunction<Uint8 Function()>>().asFunction<_InitDart>(),
+      (final pointer) => pointer
+          .cast<NativeFunction<Uint8 Function()>>()
+          .asFunction<_InitDart>(),
     );
     return _asBool(init()) ? 0 : 1;
   }
@@ -200,13 +202,14 @@ final class SteamRawBindings {
     return fn();
   }
 
-  bool hasManualDispatch() => _lookupOptionalFunction<_ManualDispatchInitDart>(
-          'SteamAPI_ManualDispatch_Init',
-          (final pointer) => pointer
-              .cast<NativeFunction<_ManualDispatchInitNative>>()
-              .asFunction<_ManualDispatchInitDart>(),
-        ) !=
-        null;
+  bool hasManualDispatch() =>
+      _lookupOptionalFunction<_ManualDispatchInitDart>(
+        'SteamAPI_ManualDispatch_Init',
+        (final pointer) => pointer
+            .cast<NativeFunction<_ManualDispatchInitNative>>()
+            .asFunction<_ManualDispatchInitDart>(),
+      ) !=
+      null;
 
   void manualDispatchInit() {
     final fn = _lookupRequiredFunction<_ManualDispatchInitDart>(
@@ -235,7 +238,11 @@ final class SteamRawBindings {
     final fn = _lookupRequiredFunction<_ManualDispatchGetNextCallbackDart>(
       'SteamAPI_ManualDispatch_GetNextCallback',
       (final pointer) => pointer
-          .cast<NativeFunction<Uint8 Function(Int32, Pointer<SteamCallbackMessageNative>)>>()
+          .cast<
+            NativeFunction<
+              Uint8 Function(Int32, Pointer<SteamCallbackMessageNative>)
+            >
+          >()
           .asFunction<_ManualDispatchGetNextCallbackDart>(),
     );
     return _asBool(fn(hSteamPipe, callbackMsg));
@@ -262,7 +269,18 @@ final class SteamRawBindings {
     final fn = _lookupRequiredFunction<_ManualDispatchGetApiCallResultDart>(
       'SteamAPI_ManualDispatch_GetAPICallResult',
       (final pointer) => pointer
-          .cast<NativeFunction<Uint8 Function(Int32, Uint64, Pointer<Void>, Int32, Int32, Pointer<Uint8>)>>()
+          .cast<
+            NativeFunction<
+              Uint8 Function(
+                Int32,
+                Uint64,
+                Pointer<Void>,
+                Int32,
+                Int32,
+                Pointer<Uint8>,
+              )
+            >
+          >()
           .asFunction<_ManualDispatchGetApiCallResultDart>(),
     );
 
@@ -279,22 +297,22 @@ final class SteamRawBindings {
   }
 
   Pointer<Void> steamUser() => _lookupVersionedInterface(const <String>[
-      'SteamAPI_SteamUser_v023',
-      'SteamAPI_SteamUser_v022',
-      'SteamAPI_SteamUser_v021',
-    ]);
+    'SteamAPI_SteamUser_v023',
+    'SteamAPI_SteamUser_v022',
+    'SteamAPI_SteamUser_v021',
+  ]);
 
   Pointer<Void> steamFriends() => _lookupVersionedInterface(const <String>[
-      'SteamAPI_SteamFriends_v018',
-      'SteamAPI_SteamFriends_v017',
-      'SteamAPI_SteamFriends_v016',
-    ]);
+    'SteamAPI_SteamFriends_v018',
+    'SteamAPI_SteamFriends_v017',
+    'SteamAPI_SteamFriends_v016',
+  ]);
 
   Pointer<Void> steamUserStats() => _lookupVersionedInterface(const <String>[
-      'SteamAPI_SteamUserStats_v013',
-      'SteamAPI_SteamUserStats_v012',
-      'SteamAPI_SteamUserStats_v011',
-    ]);
+    'SteamAPI_SteamUserStats_v013',
+    'SteamAPI_SteamUserStats_v012',
+    'SteamAPI_SteamUserStats_v011',
+  ]);
 
   bool userIsLoggedOn(final Pointer<Void> steamUser) {
     final fn = _lookupRequiredFunction<_UserLoggedOnDart>(
@@ -381,7 +399,11 @@ final class SteamRawBindings {
     final fn = _lookupRequiredFunction<_UserStatsGetStatInt32Dart>(
       'SteamAPI_ISteamUserStats_GetStatInt32',
       (final pointer) => pointer
-          .cast<NativeFunction<Uint8 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int32>)>>()
+          .cast<
+            NativeFunction<
+              Uint8 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int32>)
+            >
+          >()
           .asFunction<_UserStatsGetStatInt32Dart>(),
     );
     return _asBool(fn(steamUserStats, name, outValue));
@@ -395,7 +417,11 @@ final class SteamRawBindings {
     final fn = _lookupRequiredFunction<_UserStatsGetStatFloatDart>(
       'SteamAPI_ISteamUserStats_GetStatFloat',
       (final pointer) => pointer
-          .cast<NativeFunction<Uint8 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Float>)>>()
+          .cast<
+            NativeFunction<
+              Uint8 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Float>)
+            >
+          >()
           .asFunction<_UserStatsGetStatFloatDart>(),
     );
     return _asBool(fn(steamUserStats, name, outValue));
@@ -409,7 +435,9 @@ final class SteamRawBindings {
     final fn = _lookupRequiredFunction<_UserStatsSetStatInt32Dart>(
       'SteamAPI_ISteamUserStats_SetStatInt32',
       (final pointer) => pointer
-          .cast<NativeFunction<Uint8 Function(Pointer<Void>, Pointer<Utf8>, Int32)>>()
+          .cast<
+            NativeFunction<Uint8 Function(Pointer<Void>, Pointer<Utf8>, Int32)>
+          >()
           .asFunction<_UserStatsSetStatInt32Dart>(),
     );
     return _asBool(fn(steamUserStats, name, value));
@@ -423,7 +451,9 @@ final class SteamRawBindings {
     final fn = _lookupRequiredFunction<_UserStatsSetStatFloatDart>(
       'SteamAPI_ISteamUserStats_SetStatFloat',
       (final pointer) => pointer
-          .cast<NativeFunction<Uint8 Function(Pointer<Void>, Pointer<Utf8>, Float)>>()
+          .cast<
+            NativeFunction<Uint8 Function(Pointer<Void>, Pointer<Utf8>, Float)>
+          >()
           .asFunction<_UserStatsSetStatFloatDart>(),
     );
     return _asBool(fn(steamUserStats, name, value));
@@ -447,7 +477,11 @@ final class SteamRawBindings {
     final fn = _lookupRequiredFunction<_UserStatsGetAchievementDart>(
       'SteamAPI_ISteamUserStats_GetAchievement',
       (final pointer) => pointer
-          .cast<NativeFunction<Uint8 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Uint8>)>>()
+          .cast<
+            NativeFunction<
+              Uint8 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Uint8>)
+            >
+          >()
           .asFunction<_UserStatsGetAchievementDart>(),
     );
     return _asBool(fn(steamUserStats, name, outAchieved));

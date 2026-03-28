@@ -441,10 +441,7 @@ class YsdkPaymentsClient {
     final String? developerPayload,
   }) async {
     final result = await jsCallPromise(_module, 'purchase', <Object?>[
-      jsify(<String, Object?>{
-        'id': id,
-        'developerPayload': ?developerPayload,
-      }),
+      jsify(<String, Object?>{'id': id, 'developerPayload': ?developerPayload}),
     ]);
     return PurchaseModel.fromMap(asMap(result));
   }
@@ -454,10 +451,7 @@ class YsdkPaymentsClient {
     final String? developerPayload,
   }) async {
     final result = await jsCallPromise(_module, 'purchase', <Object?>[
-      jsify(<String, Object?>{
-        'id': id,
-        'developerPayload': ?developerPayload,
-      }),
+      jsify(<String, Object?>{'id': id, 'developerPayload': ?developerPayload}),
     ]);
     return SignatureModel.fromMap(asMap(result));
   }

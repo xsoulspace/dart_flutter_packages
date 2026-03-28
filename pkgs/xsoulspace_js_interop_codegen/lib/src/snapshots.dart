@@ -6,8 +6,8 @@ Map<String, Object?> buildApiDiff({
   final String fromVersionField = 'fromVersion',
   final String toVersionField = 'toVersion',
 }) => <String, Object?>{
-    fromVersionField: fromVersion,
-    toVersionField: toVersion,
-    'addedSymbols': (newSymbols.difference(oldSymbols).toList()..sort()),
-    'removedSymbols': (oldSymbols.difference(newSymbols).toList()..sort()),
-  };
+  fromVersionField: fromVersion,
+  toVersionField: toVersion,
+  'addedSymbols': (newSymbols.difference(oldSymbols).toList()..sort()),
+  'removedSymbols': (oldSymbols.difference(newSymbols).toList()..sort()),
+};

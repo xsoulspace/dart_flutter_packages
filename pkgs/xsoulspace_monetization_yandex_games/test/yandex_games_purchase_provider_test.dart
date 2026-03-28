@@ -11,8 +11,8 @@ void main() {
               final bool signed = false,
               final String expectedGlobal = 'YaGames',
             }) async {
-          throw StateError('sdk unavailable');
-        },
+              throw StateError('sdk unavailable');
+            },
       );
 
       final status = await provider.init();
@@ -26,8 +26,8 @@ void main() {
               final bool signed = false,
               final String expectedGlobal = 'YaGames',
             }) async {
-          throw StateError('sdk unavailable');
-        },
+              throw StateError('sdk unavailable');
+            },
       );
 
       final result = await provider.cancel('purchase-id');

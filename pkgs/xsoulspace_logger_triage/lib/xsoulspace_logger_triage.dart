@@ -1,4 +1,3 @@
-
 export 'src/fingerprint_generator.dart';
 export 'src/issue_group.dart';
 export 'src/issue_status.dart';

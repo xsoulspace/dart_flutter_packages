@@ -23,8 +23,9 @@ extension XSIterableX<E> on Iterable<E> {
   ///
   /// @ai Use this method to create indexed maps for easier lookups.
   Map<TId, int> toIndexedMap<TId>(final TId Function(E e) toId) {
-    final iterableEntries =
-        mapIndexed((final index, final e) => MapEntry(toId(e), index));
+    final iterableEntries = mapIndexed(
+      (final index, final e) => MapEntry(toId(e), index),
+    );
 
     return Map.fromEntries(iterableEntries);
   }

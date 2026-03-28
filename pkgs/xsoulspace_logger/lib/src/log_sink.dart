@@ -1,4 +1,3 @@
-
 import 'log_record.dart';
 
 /// Output target for log records.
