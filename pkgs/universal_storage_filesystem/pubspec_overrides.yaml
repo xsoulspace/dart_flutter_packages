@@ -1,5 +1,0 @@
-dependency_overrides:
-  universal_storage_interface:
-    path: ../universal_storage_interface
-  universal_storage_sync:
-    path: ../universal_storage_sync
