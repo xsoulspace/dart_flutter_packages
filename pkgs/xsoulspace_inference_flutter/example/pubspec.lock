@@ -187,17 +187,18 @@ packages:
   xsoulspace_inference_core:
     dependency: "direct main"
     description:
-      path: "../../xsoulspace_inference_core"
-      relative: true
-    source: path
-    version: "0.1.0"
+      name: xsoulspace_inference_core
+      sha256: "3507a8ed478716a74ab871a8640448c1f40f2bdbe331537110c97ae51e15a97f"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.0-beta.1"
   xsoulspace_inference_flutter:
     dependency: "direct main"
     description:
       path: ".."
       relative: true
     source: path
-    version: "0.1.0"
+    version: "0.1.0-beta.1"
 sdks:
-  dart: ">=3.10.0 <4.0.0"
+  dart: ">=3.11.0 <4.0.0"
   flutter: ">=3.18.0-18.0.pre.54"

@@ -10,7 +10,7 @@ environment:
   sdk: ">=3.10.0 <4.0.0"
 
 dependencies:
-  from_json_to_json: ^0.4.0
+  from_json_to_json: ^0.5.0
   is_dart_empty_or_not: ^0.5.0
   universal_storage_interface:
     hosted:
