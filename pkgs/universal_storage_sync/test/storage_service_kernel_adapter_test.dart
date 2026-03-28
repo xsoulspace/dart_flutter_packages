@@ -8,7 +8,7 @@ class _AdapterFakeStorageProvider extends StorageProvider {
 
   final bool syncEnabled;
   final Map<String, String> files = <String, String>{};
-  var syncCalls = 0;
+  int syncCalls = 0;
   var _initialized = false;
 
   @override

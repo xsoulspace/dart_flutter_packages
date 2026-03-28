@@ -37,7 +37,7 @@ void main() {
     );
 
     expect(
-      () => loader.load(),
+      loader.load,
       throwsA(
         isA<SteamRawException>().having(
           (final e) => e.code,

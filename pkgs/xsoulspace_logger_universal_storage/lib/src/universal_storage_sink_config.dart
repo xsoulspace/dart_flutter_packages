@@ -1,4 +1,3 @@
-library;
 
 /// Runtime settings for [UniversalStorageSink].
 final class UniversalStorageSinkConfig {

@@ -32,10 +32,10 @@ declare global {
 ''');
 
       final ir = await parser.parseFileToIr(dtsFile.path);
-      final symbols = (ir['symbols'] as List<dynamic>).cast<String>();
+      final symbols = (ir['symbols']! as List<dynamic>).cast<String>();
       expect(symbols, contains('SampleApi'));
 
-      final globals = (ir['globalDeclarations'] as List<dynamic>)
+      final globals = (ir['globalDeclarations']! as List<dynamic>)
           .cast<Map<String, Object?>>();
       expect(globals.any((final g) => g['name'] == 'CrazyGames'), isTrue);
     },

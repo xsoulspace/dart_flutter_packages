@@ -233,7 +233,7 @@ void main() {
       await storageService.initializeWithConfig(config);
 
       await expectLater(
-        () => storageService.syncRemote(),
+        storageService.syncRemote,
         throwsA(isA<CapabilityMismatchException>()),
       );
 

@@ -83,8 +83,8 @@ final class StorageKernel implements StorageKernelContract {
         : '.$rawExt';
 
     final base = '$prefix/${objectId.value}$ext'
-        .replaceAll(RegExp(r'/+'), '/')
-        .replaceFirst(RegExp(r'^/'), '');
+        .replaceAll(RegExp('/+'), '/')
+        .replaceFirst(RegExp('^/'), '');
     return base;
   }
 
@@ -518,7 +518,7 @@ final class StorageKernel implements StorageKernelContract {
     required final MigrationPlan plan,
   }) async {
     if (_migrationEndpoint == null) {
-      final executionResult = MigrationExecutionResult(
+      const executionResult = MigrationExecutionResult(
         ok: false,
         status: MigrationStatus.failed,
         message:
@@ -693,9 +693,9 @@ final class StorageKernel implements StorageKernelContract {
     final queuePolicy = namespaceProfile.queuePolicy;
 
     var outbox = <SyncOutboxEntry>[];
-    var deadLetter = List<SyncOutboxEntry>.from(queueState.deadLetter);
+    final deadLetter = List<SyncOutboxEntry>.from(queueState.deadLetter);
     var conflicts = List<SyncConflictEntry>.from(queueState.conflicts);
-    var appliedEntryIds = _uniqueStrings(queueState.appliedEntryIds);
+    final appliedEntryIds = _uniqueStrings(queueState.appliedEntryIds);
 
     var deadLetteredEntries = 0;
     for (final entry in queueState.outbox) {
@@ -921,8 +921,8 @@ final class StorageKernel implements StorageKernelContract {
     );
 
     var conflicts = List<SyncConflictEntry>.from(currentState.conflicts);
-    var outbox = List<SyncOutboxEntry>.from(currentState.outbox);
-    var deadLetter = List<SyncOutboxEntry>.from(currentState.deadLetter);
+    final outbox = List<SyncOutboxEntry>.from(currentState.outbox);
+    final deadLetter = List<SyncOutboxEntry>.from(currentState.deadLetter);
 
     if (conflictEntryId != null && conflictEntryId.isNotEmpty) {
       conflicts = conflicts

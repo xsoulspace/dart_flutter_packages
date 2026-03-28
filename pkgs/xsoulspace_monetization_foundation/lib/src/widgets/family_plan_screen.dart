@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 class FamilyPlanScreen extends StatelessWidget {
+  const FamilyPlanScreen({super.key});
+
   @override
   Widget build(final BuildContext context) {
     // TODO: implement build

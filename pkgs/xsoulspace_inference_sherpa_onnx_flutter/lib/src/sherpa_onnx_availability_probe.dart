@@ -86,7 +86,7 @@ class SherpaOnnxAvailabilityProbe implements InferenceReadinessProbe {
       metadata: <String, dynamic>{
         'provider': 'sherpa_onnx',
         'runtime_configured': isConfigured(runtimeConfig),
-        if (modelRoot != null) 'model_root': modelRoot,
+        'model_root': ?modelRoot,
       },
     );
   }

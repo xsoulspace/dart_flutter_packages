@@ -212,7 +212,7 @@ class _RustoreBillingExampleState extends State<RustoreBillingExample> {
               Expanded(
                 child: ListView.builder(
                   itemCount: _products.length,
-                  itemBuilder: (final BuildContext context, final int index) {
+                  itemBuilder: (final context, final index) {
                     final RustoreProduct product = _products[index];
                     return Card(
                       child: ListTile(

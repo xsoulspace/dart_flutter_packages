@@ -19,7 +19,7 @@ void main() {
         priceId: PurchasePriceId.fromJson('premium_month_price'),
         productType: PurchaseProductType.subscription,
         name: 'Premium Monthly',
-        formattedPrice: '\$49.99',
+        formattedPrice: r'$49.99',
         price: 49.99,
         currency: 'USD',
         description: 'Monthly subscription',
@@ -56,7 +56,7 @@ void main() {
           'priceId': 'price',
           'status': 'unknown_status',
           'purchaseType': 'subscription',
-          'purchaseDate': DateTime.utc(2026, 1, 1).toIso8601String(),
+          'purchaseDate': DateTime.utc(2026).toIso8601String(),
           'duration': 0,
           'freeTrialDuration': 0,
         });

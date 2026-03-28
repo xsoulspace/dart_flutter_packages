@@ -142,7 +142,7 @@ namespaces:
       });
       expect(valid.isValid, isTrue);
       final namespace =
-          (valid.normalizedMap?['namespaces'] as List).single as Map;
+          (valid.normalizedMap['namespaces'] as List).single as Map;
       final queuePolicy = namespace['queue_policy'] as Map;
       expect(queuePolicy['max_retries'], 4);
     });

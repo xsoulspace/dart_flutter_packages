@@ -1,4 +1,3 @@
-library;
 
 import 'dart:convert';
 import 'dart:io';
@@ -16,7 +15,7 @@ void main() {
       final file = File('${temp.path}/segment_00000000000000000001.ndjson');
       final seededRecord = <String, Object?>{
         'sequence': 41,
-        'timestampUtc': DateTime.utc(2026, 1, 1).toIso8601String(),
+        'timestampUtc': DateTime.utc(2026).toIso8601String(),
         'level': 'info',
         'category': 'boot',
         'message': 'ok',
@@ -93,7 +92,7 @@ void main() {
         expect(records.length, 200);
 
         final sequences = records
-            .map((final row) => (row['sequence'] as num).toInt())
+            .map((final row) => (row['sequence']! as num).toInt())
             .toList(growable: false);
         final unique = sequences.toSet();
         expect(unique.length, sequences.length);
@@ -103,7 +102,7 @@ void main() {
         }
 
         final coreSequences = records
-            .map((final row) => (row['coreSequence'] as num).toInt())
+            .map((final row) => (row['coreSequence']! as num).toInt())
             .toList(growable: false);
         expect(coreSequences.first, 1);
         expect(coreSequences.last, 200);
@@ -118,7 +117,7 @@ void main() {
       final newFile = File('${temp.path}/segment_00000000000000000099.ndjson');
       final oldRecord = <String, Object?>{
         'sequence': 1,
-        'timestampUtc': DateTime.utc(2026, 1, 1).toIso8601String(),
+        'timestampUtc': DateTime.utc(2026).toIso8601String(),
         'level': 'info',
         'category': 'old',
         'message': 'old',
@@ -144,7 +143,6 @@ void main() {
       final sink = IoLogSink(
         IoLogSinkConfig(
           directoryPath: temp.path,
-          retentionMaxAge: const Duration(days: 7),
           retentionMaxBytes: 10 * 1024 * 1024,
         ),
       );

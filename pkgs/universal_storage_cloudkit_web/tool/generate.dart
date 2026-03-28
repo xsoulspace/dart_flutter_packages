@@ -153,7 +153,7 @@ String emitRawCode(final Map<String, Object?> ir) {
           .cast<Map<String, Object?>>();
 
   final knownTypes = declarations
-      .map((final declaration) => declaration['name'] as String)
+      .map((final declaration) => declaration['name']! as String)
       .toSet();
 
   final b = StringBuffer()
@@ -218,12 +218,12 @@ void emitInterface(
   final Map<String, Object?> declaration,
   final Set<String> knownTypes,
 ) {
-  final name = declaration['name'] as String;
+  final name = declaration['name']! as String;
   final members = (declaration['members'] as List<dynamic>? ?? <dynamic>[])
       .cast<Map<String, Object?>>();
   final rawName = '${name}Raw';
 
-  b..writeln('extension type $rawName(JSObject _) implements JSObject {');
+  b.writeln('extension type $rawName(JSObject _) implements JSObject {');
 
   emitMembers(b, knownTypes: knownTypes, members: members, indent: '  ');
 
@@ -349,7 +349,7 @@ void emitMembers(
           b.writeln("$indent@JS('${escapeSingleQuotes(name)}')");
         }
         b.writeln(
-          '$indent external $returnType $dartName${paramsBuffer.toString()};',
+          '$indent external $returnType $dartName$paramsBuffer;',
         );
 
       case 'index':
@@ -378,7 +378,7 @@ void emitTypeAlias(
   final Map<String, Object?> declaration,
   final Set<String> knownTypes,
 ) {
-  final name = declaration['name'] as String;
+  final name = declaration['name']! as String;
   final rawName = '${name}Raw';
   final typeParams =
       (declaration['typeParams'] as List<dynamic>? ?? <dynamic>[])
@@ -409,12 +409,12 @@ void emitTypeAlias(
   }
 
   final valuesClass = '${rawName}Values';
-  b..writeln('abstract final class $valuesClass {');
+  b.writeln('abstract final class $valuesClass {');
 
   final usedNames = <String>{};
   for (final value in literalUnion) {
     final rawValue = value as String;
-    var fieldName = safeIdentifier(toLowerCamel(rawValue), fallback: 'value');
+    var fieldName = safeIdentifier(toLowerCamel(rawValue));
     if (!usedNames.add(fieldName)) {
       fieldName = '${fieldName}_${usedNames.length}';
       usedNames.add(fieldName);
@@ -431,7 +431,7 @@ void emitTypeAlias(
 }
 
 void emitEnum(final StringBuffer b, final Map<String, Object?> declaration) {
-  final name = declaration['name'] as String;
+  final name = declaration['name']! as String;
   final rawName = '${name}Raw';
   final valuesClass = '${rawName}Values';
 
@@ -441,11 +441,10 @@ void emitEnum(final StringBuffer b, final Map<String, Object?> declaration) {
   final members = (declaration['members'] as List<dynamic>? ?? <dynamic>[])
       .cast<Map<String, Object?>>();
   for (final member in members) {
-    final memberName = member['name'] as String;
+    final memberName = member['name']! as String;
     final value = member['value'];
     final fieldName = safeIdentifier(
       toLowerCamel(memberName),
-      fallback: 'value',
     );
     final stringValue = value is String ? value : '$value';
     b.writeln(

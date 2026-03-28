@@ -37,7 +37,7 @@ Future<void> main(final List<String> args) async {
     exit(2);
   }
 
-  final evaluator = const StorageReleaseGateEvaluator();
+  const evaluator = StorageReleaseGateEvaluator();
   final report = evaluator.evaluate(
     input: _buildInput(failingEvidence: scenario == 'fail'),
   );
@@ -193,7 +193,7 @@ StorageReleaseGateInput _buildInput({required final bool failingEvidence}) {
         status: StorageSecurityControlStatus.passed,
       ),
     ],
-    observabilityEvidence: StorageObservabilityEvidence(
+    observabilityEvidence: const StorageObservabilityEvidence(
       hasStructuredLogs: true,
       hasCorrelationIds: true,
       hasDebugExportBundle: true,
@@ -215,14 +215,14 @@ StorageReleaseGateInput _buildInput({required final bool failingEvidence}) {
         description: 'Release checklist complete.',
         owner: 'release-manager',
         done: true,
-        completedAtUtc: DateTime.utc(2026, 3, 1),
+        completedAtUtc: DateTime.utc(2026, 3),
       ),
       StorageReleaseChecklistItem(
         id: 'rollback_playbook',
         description: 'Rollback playbook rehearsal complete.',
         owner: 'release-manager',
         done: true,
-        completedAtUtc: DateTime.utc(2026, 3, 1),
+        completedAtUtc: DateTime.utc(2026, 3),
       ),
     ],
     rollbackDrills: <StorageRollbackDrillRecord>[
@@ -237,7 +237,7 @@ StorageReleaseGateInput _buildInput({required final bool failingEvidence}) {
         id: 'legacy_storage_service_facade',
         description: 'Deprecate legacy facade path in favor of kernel.',
         owner: 'storage-team',
-        targetDateUtc: DateTime.utc(2026, 6, 1),
+        targetDateUtc: DateTime.utc(2026, 6),
         stage: StorageDeprecationStage.announced,
       ),
     ],

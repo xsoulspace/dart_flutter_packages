@@ -1,4 +1,3 @@
-library;
 
 import 'dart:convert';
 import 'dart:io';
@@ -246,7 +245,6 @@ final class IoLogSink implements LogSink {
     if (truncateOffset < bytes.length) {
       await file.writeAsBytes(
         bytes.sublist(0, truncateOffset),
-        mode: FileMode.write,
         flush: true,
       );
     }

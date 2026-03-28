@@ -32,8 +32,7 @@ final class UpstreamLock {
     final String? declarationHash,
     final String? officialDtsUrl,
     final bool clearOfficialDtsUrl = false,
-  }) {
-    return UpstreamLock(
+  }) => UpstreamLock(
       sdkUrl: sdkUrl ?? this.sdkUrl,
       sdkSha512: sdkSha512 ?? this.sdkSha512,
       sdkVersion: sdkVersion ?? this.sdkVersion,
@@ -44,7 +43,6 @@ final class UpstreamLock {
           ? null
           : (officialDtsUrl ?? this.officialDtsUrl),
     );
-  }
 
   Map<String, Object?> toJson() => <String, Object?>{
     'sdkUrl': sdkUrl,
@@ -56,17 +54,15 @@ final class UpstreamLock {
     'officialDtsUrl': officialDtsUrl,
   };
 
-  static UpstreamLock fromJson(final Map<String, Object?> json) {
-    return UpstreamLock(
+  static UpstreamLock fromJson(final Map<String, Object?> json) => UpstreamLock(
       sdkUrl: json['sdkUrl']! as String,
       sdkSha512: json['sdkSha512']! as String,
       sdkVersion: json['sdkVersion']! as String,
-      docsUrls: (json['docsUrls'] as List<dynamic>).cast<String>(),
+      docsUrls: (json['docsUrls']! as List<dynamic>).cast<String>(),
       docsHash: json['docsHash']! as String,
       declarationHash: json['declarationHash']! as String,
       officialDtsUrl: json['officialDtsUrl'] as String?,
     );
-  }
 }
 
 final class GenerateOptions {
@@ -222,7 +218,7 @@ Future<void> main(final List<String> args) async {
       edits: edits,
     );
 
-    final symbols = ((ir['symbols'] as List<dynamic>).cast<String>()..sort());
+    final symbols = ((ir['symbols']! as List<dynamic>).cast<String>()..sort());
     final newSnapshot = <String, Object?>{
       'sdkVersion': lock.sdkVersion,
       'symbols': symbols,
@@ -243,8 +239,6 @@ Future<void> main(final List<String> args) async {
       toVersion: lock.sdkVersion,
       oldSymbols: oldSymbols,
       newSymbols: newSymbols,
-      fromVersionField: 'fromVersion',
-      toVersionField: 'toVersion',
     );
 
     checkOrWriteGeneratedFile(
@@ -385,7 +379,7 @@ Future<DocsExtraction> _fetchDocs(final List<String> urls) async {
   final concatenated = StringBuffer();
   for (final uri
       in normalizedForHash.keys.toList()
-        ..sort((a, b) => a.toString().compareTo(b.toString()))) {
+        ..sort((final a, final b) => a.toString().compareTo(b.toString()))) {
     concatenated
       ..writeln(uri)
       ..writeln(normalizedForHash[uri]);
@@ -410,7 +404,7 @@ Future<RuntimeSurface> _fetchRuntime(final String sdkUrl) async {
   final bytes = utf8.encode(source);
   final sha512 = sha512Hex(bytes);
 
-  final versionMatch = RegExp(r'version:"([^"]+)"').firstMatch(source);
+  final versionMatch = RegExp('version:"([^"]+)"').firstMatch(source);
   final version = versionMatch?.group(1) ?? 'unknown';
 
   final moduleMembers = <String, List<RuntimeMember>>{};
@@ -1054,10 +1048,10 @@ List<RuntimeMember> _parseTopLevelMembers(final String objectLiteral) {
     final rawKey = chunk.substring(0, colonIndex).trim();
     final value = chunk.substring(colonIndex + 1).trim();
     final key = rawKey
-        .replaceAll(RegExp(r'''^['"]'''), '')
+        .replaceAll(RegExp('''^['"]'''), '')
         .replaceAll(RegExp(r'''['"]$'''), '')
         .trim();
-    final normalizedKey = key.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '').trim();
+    final normalizedKey = key.replaceAll(RegExp('[^A-Za-z0-9_-]'), '').trim();
     if (normalizedKey.isEmpty || !seen.add(normalizedKey)) {
       continue;
     }
@@ -1164,7 +1158,7 @@ List<String> _extractCodeBlocks(final String html) {
     }
     final text = _decodeHtmlEntities(
       content,
-    ).replaceAll(RegExp(r'<[^>]+>'), '').replaceAll('\r', '').trim();
+    ).replaceAll(RegExp('<[^>]+>'), '').replaceAll('\r', '').trim();
     if (text.isNotEmpty) {
       blocks.add(text);
     }
@@ -1173,15 +1167,13 @@ List<String> _extractCodeBlocks(final String html) {
   return blocks;
 }
 
-String _decodeHtmlEntities(final String input) {
-  return input
+String _decodeHtmlEntities(final String input) => input
       .replaceAll('&lt;', '<')
       .replaceAll('&gt;', '>')
       .replaceAll('&amp;', '&')
       .replaceAll('&quot;', '"')
       .replaceAll('&#39;', "'")
       .replaceAll('&nbsp;', ' ');
-}
 
 String _normalizeFileContent(final String content) {
   var normalized = content.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
@@ -1221,9 +1213,9 @@ Future<_HttpTextResponse> _httpGet(
 }
 
 String emitRawCode(final Map<String, Object?> ir, final UpstreamLock lock) {
-  final declarations = (ir['declarations'] as List<dynamic>)
+  final declarations = (ir['declarations']! as List<dynamic>)
       .cast<Map<String, Object?>>();
-  final globalDeclarations = (ir['globalDeclarations'] as List<dynamic>)
+  final globalDeclarations = (ir['globalDeclarations']! as List<dynamic>)
       .cast<Map<String, Object?>>();
   final knownTypes = declarations
       .map((final d) => d['name']! as String)
@@ -1266,7 +1258,7 @@ String emitRawCode(final Map<String, Object?> ir, final UpstreamLock lock) {
   }
 
   for (final declaration in declarations) {
-    final kind = declaration['kind'] as String;
+    final kind = declaration['kind']! as String;
 
     switch (kind) {
       case 'interface':
@@ -1289,11 +1281,11 @@ void emitInterface(
   final Set<String> knownTypes,
 ) {
   final name = declaration['name']! as String;
-  final members = (declaration['members'] as List<dynamic>)
+  final members = (declaration['members']! as List<dynamic>)
       .cast<Map<String, Object?>>();
   final rawName = '${name}Raw';
 
-  b..writeln('extension type $rawName(JSObject _) implements JSObject {');
+  b.writeln('extension type $rawName(JSObject _) implements JSObject {');
 
   emitMembers(b, knownTypes: knownTypes, members: members, indent: '  ');
 
@@ -1416,7 +1408,7 @@ void emitMembers(
           b.writeln("$indent@JS('${escapeSingleQuotes(name)}')");
         }
         b.writeln(
-          '$indent external $returnType $dartName${paramsBuffer.toString()};',
+          '$indent external $returnType $dartName$paramsBuffer;',
         );
 
       case 'index':
@@ -1471,12 +1463,12 @@ void emitTypeAlias(
           .cast<dynamic>();
   if (literalUnion.isNotEmpty) {
     final valuesClass = '${rawName}Values';
-    b..writeln('abstract final class $valuesClass {');
+    b.writeln('abstract final class $valuesClass {');
 
     final usedNames = <String>{};
     for (final value in literalUnion) {
       final rawValue = value as String;
-      var fieldName = safeIdentifier(toLowerCamel(rawValue), fallback: 'value');
+      var fieldName = safeIdentifier(toLowerCamel(rawValue));
       if (!usedNames.add(fieldName)) {
         fieldName = '${fieldName}_${usedNames.length}';
         usedNames.add(fieldName);
@@ -1499,14 +1491,13 @@ void emitEnum(final StringBuffer b, final Map<String, Object?> declaration) {
   b.writeln('typedef $rawName = JSString;');
   b.writeln('abstract final class $valuesClass {');
 
-  final members = (declaration['members'] as List<dynamic>)
+  final members = (declaration['members']! as List<dynamic>)
       .cast<Map<String, Object?>>();
   for (final member in members) {
     final memberName = member['name']! as String;
     final value = member['value'];
     final fieldName = safeIdentifier(
       toLowerCamel(memberName),
-      fallback: 'value',
     );
     final stringValue = value is String ? value : '$value';
     b.writeln(

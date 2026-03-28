@@ -1,4 +1,3 @@
-library;
 
 /// Log severity from least to most severe.
 enum LogLevel {

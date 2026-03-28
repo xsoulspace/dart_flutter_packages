@@ -1,4 +1,3 @@
-library;
 
 /// Shared category names for logger internals and conventions.
 abstract final class LoggerCategories {

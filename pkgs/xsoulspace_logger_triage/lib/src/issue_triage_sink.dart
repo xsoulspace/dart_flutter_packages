@@ -1,4 +1,3 @@
-library;
 
 import 'dart:async';
 import 'dart:collection';
@@ -15,7 +14,7 @@ import 'triage_config.dart';
 final class IssueTriageSink implements LogSink {
   IssueTriageSink({
     this.config = const TriageConfig(),
-    FingerprintGenerator? fingerprintGenerator,
+    final FingerprintGenerator? fingerprintGenerator,
   }) : _fingerprintGenerator =
            fingerprintGenerator ?? const FingerprintGenerator();
 

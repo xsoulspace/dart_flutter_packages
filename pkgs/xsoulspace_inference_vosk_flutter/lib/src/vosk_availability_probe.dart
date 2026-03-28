@@ -86,7 +86,7 @@ class VoskAvailabilityProbe implements InferenceReadinessProbe {
       metadata: <String, dynamic>{
         'provider': 'vosk',
         'runtime_configured': isConfigured(runtimeConfig),
-        if (modelPath != null) 'model_path': modelPath,
+        'model_path': ?modelPath,
       },
     );
   }

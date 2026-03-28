@@ -1,8 +1,8 @@
-export 'enums.dart';
-export 'models.dart';
-
 import 'enums.dart';
 import 'models.dart';
+
+export 'enums.dart';
+export 'models.dart';
 
 Never _unsupported() {
   throw UnsupportedError(

@@ -1,4 +1,3 @@
-library;
 
 import 'dart:convert';
 
@@ -225,7 +224,7 @@ final class UniversalStorageSink implements LogSink {
 
     return raw
         .whereType<Map<dynamic, dynamic>>()
-        .map((final row) => Map<String, Object?>.from(row))
+        .map(Map<String, Object?>.from)
         .toList(growable: false);
   }
 

@@ -551,7 +551,7 @@ class FileSystemStorageProvider extends StorageProvider implements LocalEngine {
 
     if (prepared.tempRelativePath != null &&
         prepared.tempRelativePath!.isNotEmpty) {
-      final tempFile = File(path.join(_basePath, prepared.tempRelativePath!));
+      final tempFile = File(path.join(_basePath, prepared.tempRelativePath));
       if (tempFile.existsSync()) {
         if (targetFile.existsSync()) {
           await targetFile.delete();
@@ -683,9 +683,9 @@ class FileSystemStorageProvider extends StorageProvider implements LocalEngine {
   String _normalizeRelativePath(final String rawPath) {
     final normalized = rawPath
         .trim()
-        .replaceAll('\\', '/')
-        .replaceAll(RegExp(r'/+'), '/')
-        .replaceFirst(RegExp(r'^/'), '')
+        .replaceAll(r'\', '/')
+        .replaceAll(RegExp('/+'), '/')
+        .replaceFirst(RegExp('^/'), '')
         .replaceFirst(RegExp(r'^\./'), '');
     if (normalized.isEmpty || normalized == '.') {
       throw ArgumentError.value(rawPath, 'filePath', 'Path must be non-empty.');
@@ -694,8 +694,8 @@ class FileSystemStorageProvider extends StorageProvider implements LocalEngine {
   }
 
   String _sanitizeSegment(final String value) => value
-      .replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_')
-      .replaceAll(RegExp(r'_+'), '_');
+      .replaceAll(RegExp('[^A-Za-z0-9._-]'), '_')
+      .replaceAll(RegExp('_+'), '_');
 
   String _journalPath(final String namespace) =>
       path.join(_journalRootPath, '${_sanitizeSegment(namespace)}.log');
@@ -859,8 +859,8 @@ final class _DurabilityReplayOperation {
 
   final String operationId;
   _DurabilityJournalEntry? preparedEntry;
-  var committed = false;
-  var sequence = 0;
+  bool committed = false;
+  int sequence = 0;
 
   void track(final _DurabilityJournalEntry entry) {
     if (entry.sequence > sequence) {

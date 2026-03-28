@@ -178,7 +178,7 @@ Future<void> main(final List<String> args) async {
       edits: edits,
     );
 
-    final parserSymbols = ((ir['symbols'] as List<dynamic>).cast<String>());
+    final parserSymbols = (ir['symbols']! as List<dynamic>).cast<String>();
     final symbols = _extractSymbols(
       dtsContent: dtsContent,
       parserSymbols: parserSymbols,
@@ -338,7 +338,8 @@ List<String> _extractSymbols({
   return sorted;
 }
 
-const String _dtsTemplate = '''interface VkPlayLoginStatus {
+const String _dtsTemplate = '''
+interface VkPlayLoginStatus {
   authorized: boolean;
   userId?: string;
 }

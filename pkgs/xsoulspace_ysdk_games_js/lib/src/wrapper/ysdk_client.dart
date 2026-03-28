@@ -355,7 +355,7 @@ class YsdkLeaderboardsClient {
     await jsCallPromise(_module, 'setScore', <Object?>[
       leaderboardName,
       score,
-      if (extraData != null) extraData,
+      ?extraData,
     ]);
   }
 }
@@ -406,7 +406,7 @@ class YsdkLegacyLeaderboardsClient {
     await jsCallPromise(_module, 'setLeaderboardScore', <Object?>[
       leaderboardName,
       score,
-      if (extraData != null) extraData,
+      ?extraData,
     ]);
   }
 }
@@ -443,7 +443,7 @@ class YsdkPaymentsClient {
     final result = await jsCallPromise(_module, 'purchase', <Object?>[
       jsify(<String, Object?>{
         'id': id,
-        if (developerPayload != null) 'developerPayload': developerPayload,
+        'developerPayload': ?developerPayload,
       }),
     ]);
     return PurchaseModel.fromMap(asMap(result));
@@ -456,7 +456,7 @@ class YsdkPaymentsClient {
     final result = await jsCallPromise(_module, 'purchase', <Object?>[
       jsify(<String, Object?>{
         'id': id,
-        if (developerPayload != null) 'developerPayload': developerPayload,
+        'developerPayload': ?developerPayload,
       }),
     ]);
     return SignatureModel.fromMap(asMap(result));

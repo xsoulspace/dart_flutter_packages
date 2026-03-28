@@ -4,7 +4,7 @@ import 'package:universal_storage_sync/universal_storage_sync.dart';
 void main() {
   group('StorageReleaseGateEvaluator', () {
     test('fails gate when write latency p95 exceeds budget', () {
-      final evaluator = const StorageReleaseGateEvaluator();
+      const evaluator = StorageReleaseGateEvaluator();
       final report = evaluator.evaluate(
         input: _baseInput(
           performanceEvidence: const StoragePerformanceEvidence(
@@ -49,7 +49,7 @@ void main() {
     });
 
     test('passes gate when all G6 criteria are satisfied', () {
-      final evaluator = const StorageReleaseGateEvaluator();
+      const evaluator = StorageReleaseGateEvaluator();
       final report = evaluator.evaluate(input: _baseInput());
 
       expect(report.passed, isTrue);
@@ -60,7 +60,7 @@ void main() {
     });
 
     test('fails gate when deprecation item is overdue and unfinished', () {
-      final evaluator = const StorageReleaseGateEvaluator();
+      const evaluator = StorageReleaseGateEvaluator();
       final report = evaluator.evaluate(
         input: _baseInput(
           deprecationSchedule: <StorageDeprecationItem>[
@@ -167,7 +167,7 @@ StorageReleaseGateInput _baseInput({
       status: StorageSecurityControlStatus.passed,
     ),
   ],
-  observabilityEvidence: StorageObservabilityEvidence(
+  observabilityEvidence: const StorageObservabilityEvidence(
     hasStructuredLogs: true,
     hasCorrelationIds: true,
     hasDebugExportBundle: true,
@@ -189,14 +189,14 @@ StorageReleaseGateInput _baseInput({
       description: 'Release checklist complete.',
       owner: 'release-manager',
       done: true,
-      completedAtUtc: DateTime.utc(2026, 3, 1),
+      completedAtUtc: DateTime.utc(2026, 3),
     ),
     StorageReleaseChecklistItem(
       id: 'rollback_playbook',
       description: 'Rollback playbook rehearsal complete.',
       owner: 'release-manager',
       done: true,
-      completedAtUtc: DateTime.utc(2026, 3, 1),
+      completedAtUtc: DateTime.utc(2026, 3),
     ),
   ],
   rollbackDrills: <StorageRollbackDrillRecord>[
@@ -213,7 +213,7 @@ StorageReleaseGateInput _baseInput({
           id: 'legacy_storage_service_facade',
           description: 'Deprecate legacy facade path in favor of kernel.',
           owner: 'storage-team',
-          targetDateUtc: DateTime.utc(2026, 6, 1),
+          targetDateUtc: DateTime.utc(2026, 6),
           stage: StorageDeprecationStage.announced,
         ),
       ],

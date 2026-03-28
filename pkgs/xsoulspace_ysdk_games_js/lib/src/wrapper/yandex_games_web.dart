@@ -1,10 +1,10 @@
-import 'ysdk_client.dart';
-import 'converters.dart';
 import '../raw/ysdk_raw.g.dart' as raw;
+import 'converters.dart';
+import 'ysdk_client.dart';
 
-export 'ysdk_client.dart';
-export 'models.dart';
 export 'enums.dart';
+export 'models.dart';
+export 'ysdk_client.dart';
 
 /// Wrapper entrypoint for Yandex Games SDK.
 abstract final class YandexGames {
@@ -27,9 +27,7 @@ abstract final class YandexGames {
     return YsdkClient.fromSdk(sdk, signed: signed);
   }
 
-  static bool isAvailable({final String expectedGlobal = 'YaGames'}) {
-    return _resolveGlobal(expectedGlobal: expectedGlobal) != null;
-  }
+  static bool isAvailable({final String expectedGlobal = 'YaGames'}) => _resolveGlobal(expectedGlobal: expectedGlobal) != null;
 
   static Object? _resolveGlobal({required final String expectedGlobal}) {
     if (!hasGlobalProperty(expectedGlobal)) {

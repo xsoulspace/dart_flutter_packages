@@ -1,4 +1,3 @@
-library;
 
 /// Runtime configuration for [IoLogSink].
 final class IoLogSinkConfig {

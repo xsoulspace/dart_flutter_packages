@@ -1,4 +1,3 @@
-library;
 
 import 'package:test/test.dart';
 import 'package:xsoulspace_logger/testing.dart';
@@ -82,7 +81,7 @@ void main() {
     );
 
     test('drops low-priority records first under backpressure', () async {
-      final clock = FakeClock(DateTime.utc(2026, 1, 1));
+      final clock = FakeClock(DateTime.utc(2026));
       final sink = InMemoryLogSink();
       final logger = Logger(
         LoggerConfig(
@@ -127,7 +126,7 @@ void main() {
         <LogSink>[sink],
       );
 
-      final trace = TraceContext(traceId: 'trace-1', spanId: 'span-a');
+      const trace = TraceContext(traceId: 'trace-1', spanId: 'span-a');
       final traced = logger.child(
         trace: trace,
         fields: <String, Object?>{'session': 'abc'},

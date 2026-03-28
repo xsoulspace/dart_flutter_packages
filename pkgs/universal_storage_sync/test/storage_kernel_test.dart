@@ -15,7 +15,7 @@ class _KernelFakeStorageProvider extends StorageProvider {
   final bool syncEnabled;
   final List<Object> _syncErrors;
   final Map<String, String> files = <String, String>{};
-  var syncCalls = 0;
+  int syncCalls = 0;
   String? lastPullMergeStrategy;
   String? lastPushConflictStrategy;
   var _initialized = false;
@@ -223,9 +223,9 @@ void main() {
       await settingsService.initializeWithConfig(await _createConfig());
       await projectsService.initializeWithConfig(await _createConfig());
 
-      final profile = StorageProfile(
+      const profile = StorageProfile(
         name: 'test_profile',
-        namespaces: const <StorageNamespaceProfile>[
+        namespaces: <StorageNamespaceProfile>[
           StorageNamespaceProfile(
             namespace: StorageNamespace.settings,
             policy: StoragePolicy.localOnly,
@@ -268,9 +268,9 @@ void main() {
         final service = StorageService(provider);
         await service.initializeWithConfig(await _createConfig());
 
-        final profile = StorageProfile(
+        const profile = StorageProfile(
           name: 'complex_profile',
-          namespaces: const <StorageNamespaceProfile>[
+          namespaces: <StorageNamespaceProfile>[
             StorageNamespaceProfile(
               namespace: StorageNamespace.projects,
               policy: StoragePolicy.optimisticSync,
@@ -315,9 +315,9 @@ void main() {
         await settingsService.initializeWithConfig(await _createConfig());
         await projectsService.initializeWithConfig(await _createConfig());
 
-        final profile = StorageProfile(
+        const profile = StorageProfile(
           name: 'sync_profile',
-          namespaces: const <StorageNamespaceProfile>[
+          namespaces: <StorageNamespaceProfile>[
             StorageNamespaceProfile(
               namespace: StorageNamespace.settings,
               policy: StoragePolicy.localOnly,
@@ -346,7 +346,7 @@ void main() {
 
     test('sync marks remote-required namespace as failed when provider '
         'does not support sync', () async {
-      final provider = _KernelFakeStorageProvider(syncEnabled: false);
+      final provider = _KernelFakeStorageProvider();
       final service = StorageService(provider);
       await service.initializeWithConfig(await _createConfig());
 
@@ -399,9 +399,9 @@ void main() {
       final service = StorageService(provider);
       await service.initializeWithConfig(await _createConfig());
 
-      final profile = StorageProfile(
+      const profile = StorageProfile(
         name: 'observe_profile',
-        namespaces: const <StorageNamespaceProfile>[
+        namespaces: <StorageNamespaceProfile>[
           StorageNamespaceProfile(
             namespace: StorageNamespace.settings,
             policy: StoragePolicy.localOnly,
@@ -445,9 +445,9 @@ void main() {
       final service = StorageService(provider);
       await service.initializeWithConfig(await _createConfig());
 
-      final profile = StorageProfile(
+      const profile = StorageProfile(
         name: 'observe_durability_profile',
-        namespaces: const <StorageNamespaceProfile>[
+        namespaces: <StorageNamespaceProfile>[
           StorageNamespaceProfile(
             namespace: StorageNamespace.settings,
             policy: StoragePolicy.localOnly,
@@ -481,9 +481,9 @@ void main() {
       final service = StorageService(provider);
       await service.initializeWithConfig(await _createConfig());
 
-      final profile = StorageProfile(
+      const profile = StorageProfile(
         name: 'observe_correlation_profile',
-        namespaces: const <StorageNamespaceProfile>[
+        namespaces: <StorageNamespaceProfile>[
           StorageNamespaceProfile(
             namespace: StorageNamespace.settings,
             policy: StoragePolicy.localOnly,
@@ -522,9 +522,9 @@ void main() {
       await settingsService.initializeWithConfig(await _createConfig());
       await projectsService.initializeWithConfig(await _createConfig());
 
-      final profile = StorageProfile(
+      const profile = StorageProfile(
         name: 'observe_sync_profile',
-        namespaces: const <StorageNamespaceProfile>[
+        namespaces: <StorageNamespaceProfile>[
           StorageNamespaceProfile(
             namespace: StorageNamespace.settings,
             policy: StoragePolicy.localOnly,
@@ -692,7 +692,6 @@ void main() {
             policy: StoragePolicy.optimisticSync,
             remoteEngineId: 'github',
             queuePolicy: SyncQueuePolicy(
-              maxRetries: 3,
               initialBackoffMs: 1,
               maxBackoffMs: 2,
               maxEntryAgeMs: 60000,
@@ -798,7 +797,6 @@ void main() {
             policy: StoragePolicy.optimisticSync,
             remoteEngineId: 'github',
             queuePolicy: SyncQueuePolicy(
-              maxRetries: 3,
               initialBackoffMs: 1,
               maxBackoffMs: 1,
               maxEntryAgeMs: 60000,
@@ -869,9 +867,9 @@ void main() {
         final service = StorageService(provider);
         await service.initializeWithConfig(await _createConfig());
 
-        final profile = StorageProfile(
+        const profile = StorageProfile(
           name: 'metadata_profile',
-          namespaces: const <StorageNamespaceProfile>[
+          namespaces: <StorageNamespaceProfile>[
             StorageNamespaceProfile(
               namespace: StorageNamespace.projects,
               policy: StoragePolicy.optimisticSync,

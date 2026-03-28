@@ -9,7 +9,7 @@ void main() {
       content: 'hello',
       checksum: 'sum',
       size: 5,
-      updatedAt: DateTime.utc(2026, 3, 3, 10, 0, 0),
+      updatedAt: DateTime.utc(2026, 3, 3, 10),
       changeTag: 'ctag',
     );
 

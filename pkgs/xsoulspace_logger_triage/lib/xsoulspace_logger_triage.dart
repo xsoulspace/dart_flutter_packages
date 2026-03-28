@@ -1,4 +1,3 @@
-library;
 
 export 'src/fingerprint_generator.dart';
 export 'src/issue_group.dart';

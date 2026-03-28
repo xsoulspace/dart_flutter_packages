@@ -95,7 +95,6 @@ void main() {
           namespace: StorageNamespace.settings,
           path: 'settings.json',
           timestamp: DateTime.utc(2026, 3, 2),
-          metadata: const <String, dynamic>{},
         ),
       );
 

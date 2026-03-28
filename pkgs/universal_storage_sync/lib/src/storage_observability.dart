@@ -308,7 +308,7 @@ final class StorageDebugBundleCollector {
   Map<String, dynamic> _sanitizeMap(final Map<String, dynamic> source) {
     final sanitized = <String, dynamic>{};
     source.forEach((final rawKey, final rawValue) {
-      final key = rawKey.toString();
+      final key = rawKey;
       sanitized[key] = _sanitizeValue(key: key, value: rawValue);
     });
     return sanitized;

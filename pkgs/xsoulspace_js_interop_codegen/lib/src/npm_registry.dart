@@ -25,13 +25,11 @@ final class NpmLockConfig {
     'integrity': integrity,
   };
 
-  static NpmLockConfig fromJson(final Map<String, Object?> json) {
-    return NpmLockConfig(
+  static NpmLockConfig fromJson(final Map<String, Object?> json) => NpmLockConfig(
       packageName: json['package']! as String,
       version: json['version']! as String,
       integrity: json['integrity']! as String,
     );
-  }
 }
 
 final class RegistryVersionInfo {
@@ -97,7 +95,7 @@ Future<String> extractTarGzFile({
   required final String outputName,
   required final String missingError,
 }) async {
-  final decodedTar = GZipDecoder().decodeBytes(tarballBytes);
+  final decodedTar = const GZipDecoder().decodeBytes(tarballBytes);
   final archive = TarDecoder().decodeBytes(decodedTar);
 
   ArchiveFile? entry;

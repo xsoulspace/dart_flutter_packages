@@ -7,7 +7,6 @@ void main() {
     final tester,
   ) async {
     const reviewer = StoreReviewer(
-      defaultLocale: Locale('en'),
       packageName: 'dev.xsoulspace.app',
     );
 

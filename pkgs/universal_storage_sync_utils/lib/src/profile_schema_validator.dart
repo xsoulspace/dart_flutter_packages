@@ -453,7 +453,7 @@ final class StorageProfileSchemaValidator {
         );
       } else if (queuePolicyRaw is Map) {
         final queuePolicy = Map<String, dynamic>.from(
-          queuePolicyRaw as Map<dynamic, dynamic>,
+          queuePolicyRaw,
         );
         _validatePositiveInt(
           queuePolicy,

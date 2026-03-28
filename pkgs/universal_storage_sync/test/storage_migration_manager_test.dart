@@ -11,10 +11,7 @@ class _MigrationFakeStorageProvider extends StorageProvider {
   _MigrationFakeStorageProvider({
     this.delay = Duration.zero,
     this.beforeCreate,
-    this.beforeRead,
     this.beforeUpdate,
-    this.beforeDelete,
-    this.beforeList,
   });
 
   bool _initialized = false;
@@ -238,8 +235,8 @@ Map<String, dynamic> _decodeJsonMap(final Object? value) =>
 List<Map<String, dynamic>> _decodeJsonMapList(final Object? value) {
   final decoded =
       jsonDecodeListAs<Object?>(value)
-          .map((final Object? item) => _decodeJsonMap(item))
-          .where((final Map<String, dynamic> item) => item.isNotEmpty)
+          .map(_decodeJsonMap)
+          .where((final item) => item.isNotEmpty)
           .toList(growable: false);
   return decoded.whenEmptyUse(const <Map<String, dynamic>>[]);
 }
@@ -247,8 +244,8 @@ List<Map<String, dynamic>> _decodeJsonMapList(final Object? value) {
 List<String> _decodeJsonStringList(final Object? value) {
   final decoded =
       jsonDecodeListAs<Object?>(value)
-          .map((final Object? item) => jsonDecodeString(item))
-          .where((final String item) => item.isNotEmpty)
+          .map(jsonDecodeString)
+          .where((final item) => item.isNotEmpty)
           .toList(growable: false);
   return decoded.whenEmptyUse(const <String>[]);
 }
@@ -277,9 +274,9 @@ void main() {
       final targetProjects = _MigrationFakeStorageProvider();
 
       final sourceKernel = _buildKernel(
-        profile: StorageProfile(
+        profile: const StorageProfile(
           name: 'source',
-          namespaces: const <StorageNamespaceProfile>[
+          namespaces: <StorageNamespaceProfile>[
             StorageNamespaceProfile(
               namespace: StorageNamespace.settings,
               policy: StoragePolicy.localOnly,
@@ -294,9 +291,9 @@ void main() {
         projectsProvider: sourceProjects,
       );
       final targetKernel = _buildKernel(
-        profile: StorageProfile(
+        profile: const StorageProfile(
           name: 'target',
-          namespaces: const <StorageNamespaceProfile>[
+          namespaces: <StorageNamespaceProfile>[
             StorageNamespaceProfile(
               namespace: StorageNamespace.settings,
               policy: StoragePolicy.localOnly,
@@ -375,9 +372,9 @@ void main() {
         final targetProjects = _MigrationFakeStorageProvider();
 
         final sourceKernel = _buildKernel(
-          profile: StorageProfile(
+          profile: const StorageProfile(
             name: 'source',
-            namespaces: const <StorageNamespaceProfile>[
+            namespaces: <StorageNamespaceProfile>[
               StorageNamespaceProfile(
                 namespace: StorageNamespace.settings,
                 policy: StoragePolicy.localOnly,
@@ -388,9 +385,9 @@ void main() {
           projectsProvider: sourceProjects,
         );
         final targetKernel = _buildKernel(
-          profile: StorageProfile(
+          profile: const StorageProfile(
             name: 'target',
-            namespaces: const <StorageNamespaceProfile>[
+            namespaces: <StorageNamespaceProfile>[
               StorageNamespaceProfile(
                 namespace: StorageNamespace.settings,
                 policy: StoragePolicy.localOnly,
@@ -462,9 +459,9 @@ void main() {
       final targetProjects = _MigrationFakeStorageProvider();
 
       final sourceKernel = _buildKernel(
-        profile: StorageProfile(
+        profile: const StorageProfile(
           name: 'source',
-          namespaces: const <StorageNamespaceProfile>[
+          namespaces: <StorageNamespaceProfile>[
             StorageNamespaceProfile(
               namespace: StorageNamespace.projects,
               policy: StoragePolicy.localOnly,
@@ -475,9 +472,9 @@ void main() {
         projectsProvider: sourceProjects,
       );
       final targetKernel = _buildKernel(
-        profile: StorageProfile(
+        profile: const StorageProfile(
           name: 'target',
-          namespaces: const <StorageNamespaceProfile>[
+          namespaces: <StorageNamespaceProfile>[
             StorageNamespaceProfile(
               namespace: StorageNamespace.projects,
               policy: StoragePolicy.localOnly,
@@ -509,7 +506,7 @@ void main() {
         sourceProfileHash: 'source_hash',
         targetProfileHash: 'target_hash',
         createdAt: DateTime.now(),
-        metadata: <String, dynamic>{
+        metadata: const <String, dynamic>{
           'path_remap': <String, String>{'legacy': 'documents'},
           'id_remap_table': <String, String>{
             'old-id': 'new-id',
@@ -558,9 +555,9 @@ void main() {
       final targetProjects = _MigrationFakeStorageProvider();
 
       final sourceKernel = _buildKernel(
-        profile: StorageProfile(
+        profile: const StorageProfile(
           name: 'source',
-          namespaces: const <StorageNamespaceProfile>[
+          namespaces: <StorageNamespaceProfile>[
             StorageNamespaceProfile(
               namespace: StorageNamespace.settings,
               policy: StoragePolicy.localOnly,
@@ -571,9 +568,9 @@ void main() {
         projectsProvider: sourceProjects,
       );
       final targetKernel = _buildKernel(
-        profile: StorageProfile(
+        profile: const StorageProfile(
           name: 'target',
-          namespaces: const <StorageNamespaceProfile>[
+          namespaces: <StorageNamespaceProfile>[
             StorageNamespaceProfile(
               namespace: StorageNamespace.settings,
               policy: StoragePolicy.localOnly,
@@ -656,9 +653,9 @@ void main() {
         final targetProjects = _MigrationFakeStorageProvider();
 
         final sourceKernel = _buildKernel(
-          profile: StorageProfile(
+          profile: const StorageProfile(
             name: 'source',
-            namespaces: const <StorageNamespaceProfile>[
+            namespaces: <StorageNamespaceProfile>[
               StorageNamespaceProfile(
                 namespace: StorageNamespace.projects,
                 policy: StoragePolicy.localOnly,
@@ -669,9 +666,9 @@ void main() {
           projectsProvider: sourceProjects,
         );
         final targetKernel = _buildKernel(
-          profile: StorageProfile(
+          profile: const StorageProfile(
             name: 'target',
-            namespaces: const <StorageNamespaceProfile>[
+            namespaces: <StorageNamespaceProfile>[
               StorageNamespaceProfile(
                 namespace: StorageNamespace.projects,
                 policy: StoragePolicy.localOnly,
@@ -772,9 +769,9 @@ void main() {
         final targetProjects = _MigrationFakeStorageProvider();
 
         final sourceKernel = _buildKernel(
-          profile: StorageProfile(
+          profile: const StorageProfile(
             name: 'source',
-            namespaces: const <StorageNamespaceProfile>[
+            namespaces: <StorageNamespaceProfile>[
               StorageNamespaceProfile(
                 namespace: StorageNamespace.projects,
                 policy: StoragePolicy.localOnly,
@@ -785,9 +782,9 @@ void main() {
           projectsProvider: sourceProjects,
         );
         final targetKernel = _buildKernel(
-          profile: StorageProfile(
+          profile: const StorageProfile(
             name: 'target',
-            namespaces: const <StorageNamespaceProfile>[
+            namespaces: <StorageNamespaceProfile>[
               StorageNamespaceProfile(
                 namespace: StorageNamespace.projects,
                 policy: StoragePolicy.localOnly,
@@ -838,7 +835,6 @@ void main() {
         final result = await endpoint.executeMigrationWithOptions(
           plan: plan,
           overwrite: false,
-          dryRun: false,
           collectDiffs: true,
           pauseForDecisions: true,
         );
@@ -856,7 +852,7 @@ void main() {
         expect(_decodeJsonStringField(pending.first, 'operation_id'), isNotEmpty);
         final preview = _decodeJsonMapListField(metadata, 'preflight_preview');
         final previewItem = preview.singleWhere(
-          (final Map<String, dynamic> item) =>
+          (final item) =>
               _decodeJsonStringField(item, 'source_path') == 'notes/old.txt',
           orElse: () => fail('Expected preview item not found.'),
         );
@@ -877,9 +873,9 @@ void main() {
         final targetProjects = _MigrationFakeStorageProvider();
 
         final sourceKernel = _buildKernel(
-          profile: StorageProfile(
+          profile: const StorageProfile(
             name: 'source',
-            namespaces: const <StorageNamespaceProfile>[
+            namespaces: <StorageNamespaceProfile>[
               StorageNamespaceProfile(
                 namespace: StorageNamespace.projects,
                 policy: StoragePolicy.localOnly,
@@ -890,9 +886,9 @@ void main() {
           projectsProvider: sourceProjects,
         );
         final targetKernel = _buildKernel(
-          profile: StorageProfile(
+          profile: const StorageProfile(
             name: 'target',
-            namespaces: const <StorageNamespaceProfile>[
+            namespaces: <StorageNamespaceProfile>[
               StorageNamespaceProfile(
                 namespace: StorageNamespace.projects,
                 policy: StoragePolicy.localOnly,
@@ -948,7 +944,6 @@ void main() {
         final paused = await endpoint.executeMigrationWithOptions(
           plan: plan,
           overwrite: false,
-          dryRun: false,
           collectDiffs: true,
           pauseForDecisions: true,
         );
@@ -965,7 +960,6 @@ void main() {
         final resumed = await endpoint.executeMigrationWithOptions(
           plan: plan,
           overwrite: false,
-          dryRun: false,
           collectDiffs: true,
           pauseForDecisions: true,
           decisionStates: <String, DecisionState>{
@@ -1000,9 +994,9 @@ void main() {
         final targetProjects = _MigrationFakeStorageProvider();
 
         final sourceKernel = _buildKernel(
-          profile: StorageProfile(
+          profile: const StorageProfile(
             name: 'source',
-            namespaces: const <StorageNamespaceProfile>[
+            namespaces: <StorageNamespaceProfile>[
               StorageNamespaceProfile(
                 namespace: StorageNamespace.projects,
                 policy: StoragePolicy.localOnly,
@@ -1013,9 +1007,9 @@ void main() {
           projectsProvider: sourceProjects,
         );
         final targetKernel = _buildKernel(
-          profile: StorageProfile(
+          profile: const StorageProfile(
             name: 'target',
-            namespaces: const <StorageNamespaceProfile>[
+            namespaces: <StorageNamespaceProfile>[
               StorageNamespaceProfile(
                 namespace: StorageNamespace.projects,
                 policy: StoragePolicy.localOnly,
@@ -1112,9 +1106,9 @@ void main() {
         final targetProjects = _MigrationFakeStorageProvider();
 
         final sourceKernel = _buildKernel(
-          profile: StorageProfile(
+          profile: const StorageProfile(
             name: 'source',
-            namespaces: const <StorageNamespaceProfile>[
+            namespaces: <StorageNamespaceProfile>[
               StorageNamespaceProfile(
                 namespace: StorageNamespace.projects,
                 policy: StoragePolicy.localOnly,
@@ -1125,9 +1119,9 @@ void main() {
           projectsProvider: sourceProjects,
         );
         final targetKernel = _buildKernel(
-          profile: StorageProfile(
+          profile: const StorageProfile(
             name: 'target',
-            namespaces: const <StorageNamespaceProfile>[
+            namespaces: <StorageNamespaceProfile>[
               StorageNamespaceProfile(
                 namespace: StorageNamespace.projects,
                 policy: StoragePolicy.localOnly,
@@ -1199,7 +1193,7 @@ void main() {
         expect(pending.length, 2);
 
         final overwriteEntry = pending.firstWhere(
-          (final Map<String, dynamic> item) =>
+          (final item) =>
               _decodeJsonStringField(item, 'source_path') ==
               'notes/overwrite.txt',
         );
@@ -1208,7 +1202,7 @@ void main() {
               MigrationDecisionAction.overwrite,
         };
         final skipEntry = pending.firstWhere(
-          (final Map<String, dynamic> item) =>
+          (final item) =>
               _decodeJsonStringField(item, 'source_path') == 'notes/skip.txt',
         );
         final skipDecision = <String, MigrationDecisionAction>{
@@ -1252,9 +1246,9 @@ void main() {
       final targetProjects = _MigrationFakeStorageProvider();
 
       final sourceKernel = _buildKernel(
-        profile: StorageProfile(
+        profile: const StorageProfile(
           name: 'source',
-          namespaces: const <StorageNamespaceProfile>[
+          namespaces: <StorageNamespaceProfile>[
             StorageNamespaceProfile(
               namespace: StorageNamespace.projects,
               policy: StoragePolicy.localOnly,
@@ -1265,9 +1259,9 @@ void main() {
         projectsProvider: sourceProjects,
       );
       final targetKernel = _buildKernel(
-        profile: StorageProfile(
+        profile: const StorageProfile(
           name: 'target',
-          namespaces: const <StorageNamespaceProfile>[
+          namespaces: <StorageNamespaceProfile>[
             StorageNamespaceProfile(
               namespace: StorageNamespace.projects,
               policy: StoragePolicy.localOnly,
@@ -1396,9 +1390,9 @@ void main() {
       );
 
       final sourceKernel = _buildKernel(
-        profile: StorageProfile(
+        profile: const StorageProfile(
           name: 'source',
-          namespaces: const <StorageNamespaceProfile>[
+          namespaces: <StorageNamespaceProfile>[
             StorageNamespaceProfile(
               namespace: StorageNamespace.settings,
               policy: StoragePolicy.localOnly,
@@ -1413,9 +1407,9 @@ void main() {
         projectsProvider: sourceProjects,
       );
       final targetKernel = _buildKernel(
-        profile: StorageProfile(
+        profile: const StorageProfile(
           name: 'target',
-          namespaces: const <StorageNamespaceProfile>[
+          namespaces: <StorageNamespaceProfile>[
             StorageNamespaceProfile(
               namespace: StorageNamespace.settings,
               policy: StoragePolicy.localOnly,
@@ -1487,9 +1481,9 @@ void main() {
       final targetProjects = _MigrationFakeStorageProvider();
 
       final sourceKernel = _buildKernel(
-        profile: StorageProfile(
+        profile: const StorageProfile(
           name: 'source',
-          namespaces: const <StorageNamespaceProfile>[
+          namespaces: <StorageNamespaceProfile>[
             StorageNamespaceProfile(
               namespace: StorageNamespace.settings,
               policy: StoragePolicy.localOnly,
@@ -1500,9 +1494,9 @@ void main() {
         projectsProvider: sourceProjects,
       );
       final targetKernel = _buildKernel(
-        profile: StorageProfile(
+        profile: const StorageProfile(
           name: 'target',
-          namespaces: const <StorageNamespaceProfile>[
+          namespaces: <StorageNamespaceProfile>[
             StorageNamespaceProfile(
               namespace: StorageNamespace.settings,
               policy: StoragePolicy.localOnly,
@@ -1554,9 +1548,9 @@ void main() {
       final targetProjects = _MigrationFakeStorageProvider();
 
       final sourceKernel = _buildKernel(
-        profile: StorageProfile(
+        profile: const StorageProfile(
           name: 'source',
-          namespaces: const <StorageNamespaceProfile>[
+          namespaces: <StorageNamespaceProfile>[
             StorageNamespaceProfile(
               namespace: StorageNamespace.settings,
               policy: StoragePolicy.localOnly,
@@ -1567,9 +1561,9 @@ void main() {
         projectsProvider: sourceProjects,
       );
       final targetKernel = _buildKernel(
-        profile: StorageProfile(
+        profile: const StorageProfile(
           name: 'target',
-          namespaces: const <StorageNamespaceProfile>[
+          namespaces: <StorageNamespaceProfile>[
             StorageNamespaceProfile(
               namespace: StorageNamespace.settings,
               policy: StoragePolicy.localOnly,
@@ -1624,9 +1618,9 @@ void main() {
         final targetProjects = _MigrationFakeStorageProvider();
 
         final sourceKernel = _buildKernel(
-          profile: StorageProfile(
+          profile: const StorageProfile(
             name: 'source',
-            namespaces: const <StorageNamespaceProfile>[
+            namespaces: <StorageNamespaceProfile>[
               StorageNamespaceProfile(
                 namespace: StorageNamespace.settings,
                 policy: StoragePolicy.localOnly,
@@ -1637,9 +1631,9 @@ void main() {
           projectsProvider: sourceProjects,
         );
         final targetKernel = _buildKernel(
-          profile: StorageProfile(
+          profile: const StorageProfile(
             name: 'target',
-            namespaces: const <StorageNamespaceProfile>[
+            namespaces: <StorageNamespaceProfile>[
               StorageNamespaceProfile(
                 namespace: StorageNamespace.settings,
                 policy: StoragePolicy.localOnly,
@@ -1692,9 +1686,9 @@ void main() {
         final targetProjects = _MigrationFakeStorageProvider();
 
         final sourceKernel = _buildKernel(
-          profile: StorageProfile(
+          profile: const StorageProfile(
             name: 'source',
-            namespaces: const <StorageNamespaceProfile>[
+            namespaces: <StorageNamespaceProfile>[
               StorageNamespaceProfile(
                 namespace: StorageNamespace.settings,
                 policy: StoragePolicy.localOnly,
@@ -1705,9 +1699,9 @@ void main() {
           projectsProvider: sourceProjects,
         );
         final targetKernel = _buildKernel(
-          profile: StorageProfile(
+          profile: const StorageProfile(
             name: 'target',
-            namespaces: const <StorageNamespaceProfile>[
+            namespaces: <StorageNamespaceProfile>[
               StorageNamespaceProfile(
                 namespace: StorageNamespace.settings,
                 policy: StoragePolicy.localOnly,
@@ -1753,9 +1747,9 @@ void main() {
 
   test('storage kernel rollback without endpoint fails clearly', () async {
     final settingsProvider = _MigrationFakeStorageProvider();
-    final profile = StorageProfile(
+    const profile = StorageProfile(
       name: 'no-endpoint',
-      namespaces: const <StorageNamespaceProfile>[
+      namespaces: <StorageNamespaceProfile>[
         StorageNamespaceProfile(
           namespace: StorageNamespace.settings,
           policy: StoragePolicy.localOnly,
@@ -1787,9 +1781,9 @@ void main() {
     'storage kernel execute migration without endpoint fails clearly',
     () async {
       final settingsProvider = _MigrationFakeStorageProvider();
-      final profile = StorageProfile(
+      const profile = StorageProfile(
         name: 'no-endpoint-exec',
-        namespaces: const <StorageNamespaceProfile>[
+        namespaces: <StorageNamespaceProfile>[
           StorageNamespaceProfile(
             namespace: StorageNamespace.settings,
             policy: StoragePolicy.localOnly,

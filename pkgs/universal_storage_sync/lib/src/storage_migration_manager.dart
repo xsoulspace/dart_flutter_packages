@@ -236,7 +236,7 @@ final class StorageProfileMigrationManager implements MigrationEndpoint {
         ok: false,
         status: MigrationStatus.failed,
         message: 'Migration ${plan.id} is already in progress.',
-        metadata: <String, dynamic>{
+        metadata: const <String, dynamic>{
           'issues': <String>['Migration lock is held by another execution.'],
         },
       );
@@ -952,7 +952,7 @@ final class StorageProfileMigrationManager implements MigrationEndpoint {
         ok: false,
         status: MigrationStatus.failed,
         message: 'Migration $planId is already in progress.',
-        metadata: <String, dynamic>{
+        metadata: const <String, dynamic>{
           'issues': <String>['Migration lock is held by another execution.'],
         },
       );
@@ -994,7 +994,7 @@ final class StorageProfileMigrationManager implements MigrationEndpoint {
           status: MigrationStatus.failed,
           message:
               'Checkpoint $rollbackToCheckpointId is not available for migration $planId.',
-          metadata: <String, dynamic>{
+          metadata: const <String, dynamic>{
             'issues': <String>['rollback_checkpoint_not_found'],
           },
         );
@@ -1593,9 +1593,9 @@ final class StorageProfileMigrationManager implements MigrationEndpoint {
   }
 
   String _normalizePath(final String path) => path
-      .replaceAll('\\', '/')
-      .replaceAll(RegExp(r'/+'), '/')
-      .replaceAll(RegExp(r'^/+'), '')
+      .replaceAll(r'\', '/')
+      .replaceAll(RegExp('/+'), '/')
+      .replaceAll(RegExp('^/+'), '')
       .replaceAll(RegExp(r'/+$'), '');
 
   String _joinPath(final String base, final String segment) {
@@ -1608,7 +1608,7 @@ final class StorageProfileMigrationManager implements MigrationEndpoint {
 
   String _sanitizeManifestFileName(final String value) => value
       .replaceAll(RegExp(r'[/\\]'), '_')
-      .replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
+      .replaceAll(RegExp('[^A-Za-z0-9._-]'), '_');
 
   String _migrationOperationId({
     required final StorageNamespace sourceNamespace,
@@ -2255,7 +2255,7 @@ Set<String> _stringSetFromValue(final Object? value) {
 }
 
 String _normalizePathValue(final String path) => path
-    .replaceAll('\\', '/')
-    .replaceAll(RegExp(r'/+'), '/')
-    .replaceAll(RegExp(r'^/+'), '')
+    .replaceAll(r'\', '/')
+    .replaceAll(RegExp('/+'), '/')
+    .replaceAll(RegExp('^/+'), '')
     .replaceAll(RegExp(r'/+$'), '');

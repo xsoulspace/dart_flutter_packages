@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:test/test.dart';
-import 'package:xsoulspace_steamworks/xsoulspace_steamworks.dart';
 import 'package:xsoulspace_steamworks/src/native/steam_native_api.dart';
+import 'package:xsoulspace_steamworks/xsoulspace_steamworks.dart';
 
 import '../support/fakes.dart';
 
@@ -16,7 +16,6 @@ void main() {
     final result = await client.initialize(
       const SteamInitConfig(
         appId: 480,
-        autoPumpCallbacks: true,
         callbackInterval: Duration(milliseconds: 10),
       ),
     );

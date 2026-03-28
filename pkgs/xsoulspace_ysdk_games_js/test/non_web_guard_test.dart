@@ -4,7 +4,7 @@ import 'package:xsoulspace_ysdk_games_js/xsoulspace_ysdk_games_js.dart';
 
 void main() {
   test('wrapper throws UnsupportedError on non-web', () async {
-    expect(() => YandexGames.init(), throwsA(isA<UnsupportedError>()));
+    expect(YandexGames.init, throwsA(isA<UnsupportedError>()));
   });
 
   test('availability probe is false on non-web', () {

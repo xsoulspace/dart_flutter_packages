@@ -379,8 +379,7 @@ void main() {
 
       final result = await provider.completePurchase(
         PurchaseVerificationDtoModel(
-          transactionDate: DateTime.utc(2026, 1, 1),
-          productType: PurchaseProductType.consumable,
+          transactionDate: DateTime.utc(2026),
           purchaseToken: 'token-consumable',
         ),
       );
@@ -401,7 +400,7 @@ void main() {
 
       final result = await provider.completePurchase(
         PurchaseVerificationDtoModel(
-          transactionDate: DateTime.utc(2026, 1, 1),
+          transactionDate: DateTime.utc(2026),
           productType: PurchaseProductType.nonConsumable,
         ),
       );
@@ -494,8 +493,7 @@ String _purchaseIntentResponse({
 });
 
 String _ownedPurchasesResponse({
-  final String returnCode = '0',
-  required final List<Map<String, dynamic>> purchases,
+  required final List<Map<String, dynamic>> purchases, final String returnCode = '0',
 }) => jsonEncode(<String, dynamic>{
   'returnCode': returnCode,
   'inAppPurchaseDataList': purchases.map(jsonEncode).toList(),

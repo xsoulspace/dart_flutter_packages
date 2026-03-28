@@ -217,7 +217,7 @@ void main() {
   });
 
   test('payments wrappers for unsigned and signed flows', () async {
-    final unsignedClient = await YandexGames.init(signed: false);
+    final unsignedClient = await YandexGames.init();
 
     expect(_sdkStub.initCalls, 1);
     expect(_sdkStub.lastInitSigned, isFalse);
@@ -226,7 +226,7 @@ void main() {
     final catalog = await unsignedClient.payments.getCatalog();
     expect(catalog, hasLength(1));
     expect(catalog.first.id, 'prod-1');
-    expect(catalog.first.price, '\$41');
+    expect(catalog.first.price, r'$41');
 
     final purchasesUnsigned = await unsignedClient.payments
         .getPurchasesUnsigned();
@@ -460,7 +460,7 @@ class _SdkStubState {
             'description': 'desc',
             'id': 'prod-1',
             'imageURI': 'image',
-            'price': '\$41',
+            'price': r'$41',
             'priceCurrencyCode': 'USD',
             'priceValue': '41',
             'title': 'Product 1',
@@ -532,7 +532,7 @@ class _SdkStubState {
         lastSetScore = <String, Object?>{
           'name': name,
           'score': score,
-          if (extraData != null) 'extraData': extraData,
+          'extraData': ?extraData,
         };
         return jsPromise(null);
       }),
@@ -560,7 +560,7 @@ class _SdkStubState {
         lastLegacySetScore = <String, Object?>{
           'name': name,
           'score': score,
-          if (extraData != null) 'extraData': extraData,
+          'extraData': ?extraData,
         };
         return jsPromise(null);
       }),

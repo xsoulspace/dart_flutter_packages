@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:path/path.dart' as path;
 import 'package:universal_io/io.dart';
 import 'package:universal_storage_cloudkit_platform_interface/universal_storage_cloudkit_platform_interface.dart';
-import 'package:universal_storage_interface/universal_storage_interface.dart';
 import 'package:universal_storage_sync/universal_storage_sync.dart';
 
 import 'cloudkit_payload_too_large_exception.dart';
@@ -940,7 +939,7 @@ class CloudKitStorageProvider extends StorageProvider implements RemoteEngine {
       }
       final relativePath = path
           .relative(entity.path, from: config.basePath)
-          .replaceAll('\\', '/');
+          .replaceAll(r'\', '/');
       if (relativePath.startsWith('.us/')) {
         continue;
       }
@@ -970,7 +969,7 @@ class CloudKitStorageProvider extends StorageProvider implements RemoteEngine {
 
   String _normalizePath(final String filePath) {
     final normalized = filePath
-        .replaceAll('\\', '/')
+        .replaceAll(r'\', '/')
         .replaceAll(RegExp('/+'), '/')
         .replaceAll(RegExp('^/+'), '')
         .replaceAll(RegExp(r'/+$'), '')
@@ -987,7 +986,7 @@ class CloudKitStorageProvider extends StorageProvider implements RemoteEngine {
       return '';
     }
     return trimmed
-        .replaceAll('\\', '/')
+        .replaceAll(r'\', '/')
         .replaceAll(RegExp('/+'), '/')
         .replaceAll(RegExp('^/+'), '')
         .replaceAll(RegExp(r'/+$'), '');
@@ -1148,7 +1147,7 @@ class _LocalMirrorStore {
 
   String _normalizePath(final String filePath) {
     final normalized = filePath
-        .replaceAll('\\', '/')
+        .replaceAll(r'\', '/')
         .replaceAll(RegExp('/+'), '/')
         .replaceAll(RegExp('^/+'), '')
         .replaceAll(RegExp(r'/+$'), '')
@@ -1165,7 +1164,7 @@ class _LocalMirrorStore {
       return '';
     }
     return trimmed
-        .replaceAll('\\', '/')
+        .replaceAll(r'\', '/')
         .replaceAll(RegExp('/+'), '/')
         .replaceAll(RegExp('^/+'), '')
         .replaceAll(RegExp(r'/+$'), '');

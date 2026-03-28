@@ -4,7 +4,6 @@ library;
 import 'dart:js_util' as js_util;
 
 import 'package:test/test.dart';
-import 'package:xsoulspace_vkplay_js/src/wrapper/models.dart';
 import 'package:xsoulspace_vkplay_js/src/wrapper/vkplay_web.dart';
 
 late final _VkPlaySdkStub _stub;
@@ -131,7 +130,7 @@ final class _VkPlaySdkStub {
         final params = Map<String, Object?>.from(
           js_util.dartify(payload)! as Map,
         );
-        return (params['value'] as int) + 1;
+        return (params['value']! as int) + 1;
       }),
     });
 

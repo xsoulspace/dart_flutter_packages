@@ -1,4 +1,3 @@
-library;
 
 import 'package:xsoulspace_logger/xsoulspace_logger.dart';
 

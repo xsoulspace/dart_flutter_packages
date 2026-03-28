@@ -1,16 +1,16 @@
 abstract interface class NpmDtsSourceAdapter {
   Future<DtsSourceResult> resolve({
-    required String packageName,
-    required String version,
+    required final String packageName,
+    required final String version,
   });
 }
 
 abstract interface class DocsExtractorSourceAdapter {
-  Future<DocsSourceResult> resolve({required List<Uri> pageUrls});
+  Future<DocsSourceResult> resolve({required final List<Uri> pageUrls});
 }
 
 abstract interface class RuntimeSurfaceSourceAdapter {
-  Future<RuntimeSurfaceResult> resolve({required Uri scriptUrl});
+  Future<RuntimeSurfaceResult> resolve({required final Uri scriptUrl});
 }
 
 final class DtsSourceResult {

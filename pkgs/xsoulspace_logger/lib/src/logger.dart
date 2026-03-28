@@ -1,4 +1,3 @@
-library;
 
 import 'dart:async';
 import 'dart:collection';
@@ -113,7 +112,6 @@ final class Logger {
       error: error,
       stackTrace: config.redaction.sanitizeStackTrace(stackTrace),
       trace: trace ?? _defaultTrace,
-      fingerprint: null,
     );
 
     _state.enqueue(record);
@@ -357,7 +355,7 @@ final class _LoggerState {
 
   Future<List<LogRecord>> query(final LogQuery query) async {
     final matches = _history
-        .where((final record) => query.matches(record))
+        .where(query.matches)
         .toList(growable: false);
 
     final limit = query.limit;

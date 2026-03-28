@@ -1,5 +1,4 @@
 import 'package:universal_storage_cloudkit_platform_interface/universal_storage_cloudkit_platform_interface.dart';
-import 'package:universal_storage_interface/universal_storage_interface.dart';
 import 'package:universal_storage_sync/universal_storage_sync.dart';
 
 import 'cloudkit_storage_provider.dart';
@@ -14,6 +13,6 @@ void registerUniversalStorageCloudKit({final CloudKitBridge? bridge}) {
   }
 
   StorageProviderRegistry.register<CloudKitConfig>(
-    () => CloudKitStorageProvider(),
+    CloudKitStorageProvider.new,
   );
 }

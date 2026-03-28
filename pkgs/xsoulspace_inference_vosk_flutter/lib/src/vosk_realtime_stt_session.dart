@@ -116,6 +116,7 @@ class VoskRealtimeSttSession
     }
   }
 
+  @override
   Future<InferenceResult<void>> sendAudioChunk(
     final List<int> audioBytes,
   ) async {
@@ -145,6 +146,7 @@ class VoskRealtimeSttSession
     }
   }
 
+  @override
   Future<InferenceResult<void>> commit() async {
     if (!_isConnected) {
       return InferenceResult<void>.fail(

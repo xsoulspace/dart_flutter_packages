@@ -1,4 +1,3 @@
-library;
 
 import 'dart:convert';
 
@@ -91,7 +90,7 @@ void main() {
 
         final seedOne = LogRecord(
           sequence: 1,
-          timestampUtc: DateTime.utc(2026, 1, 1),
+          timestampUtc: DateTime.utc(2026),
           level: LogLevel.info,
           category: 'seed',
           message: 'one',

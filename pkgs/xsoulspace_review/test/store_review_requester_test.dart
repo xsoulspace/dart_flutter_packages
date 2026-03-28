@@ -104,9 +104,7 @@ final class _MemoryLocalDb implements LocalDbI {
   }
 
   @override
-  Future<Map<String, dynamic>> getMap(final String key) async {
-    return (_store[key] as Map<String, dynamic>?) ?? <String, dynamic>{};
-  }
+  Future<Map<String, dynamic>> getMap(final String key) async => (_store[key] as Map<String, dynamic>?) ?? <String, dynamic>{};
 
   @override
   Future<void> setString({
@@ -120,9 +118,7 @@ final class _MemoryLocalDb implements LocalDbI {
   Future<String> getString({
     required final String key,
     final String defaultValue = '',
-  }) async {
-    return (_store[key] as String?) ?? defaultValue;
-  }
+  }) async => (_store[key] as String?) ?? defaultValue;
 
   @override
   Future<void> setBool({
@@ -136,9 +132,7 @@ final class _MemoryLocalDb implements LocalDbI {
   Future<bool> getBool({
     required final String key,
     final bool defaultValue = false,
-  }) async {
-    return (_store[key] as bool?) ?? defaultValue;
-  }
+  }) async => (_store[key] as bool?) ?? defaultValue;
 
   @override
   Future<void> setInt({required final String key, final int value = 0}) async {
@@ -149,9 +143,7 @@ final class _MemoryLocalDb implements LocalDbI {
   Future<int> getInt({
     required final String key,
     final int defaultValue = 0,
-  }) async {
-    return (_store[key] as int?) ?? defaultValue;
-  }
+  }) async => (_store[key] as int?) ?? defaultValue;
 
   @override
   Future<void> setItem<T>({

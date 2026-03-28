@@ -149,7 +149,7 @@ class CloudKitJsInteropClient implements CloudKitWebClient {
     _ensureInitialized();
     if (_mode == _CloudKitClientMode.adapter) {
       final response = await _invokeAdapter('fetchChanges', <String, Object?>{
-        if (serverChangeToken != null) 'serverChangeToken': serverChangeToken,
+        'serverChangeToken': ?serverChangeToken,
       });
       if (response is! Map) {
         return CloudKitDelta(nextServerChangeToken: serverChangeToken);
@@ -164,7 +164,7 @@ class CloudKitJsInteropClient implements CloudKitWebClient {
       final response =
           await _invokeNativeDatabase('fetchChangedRecords', <String, Object?>{
             'zoneID': _zoneIdPayload(),
-            if (serverChangeToken != null) 'syncToken': serverChangeToken,
+            'syncToken': ?serverChangeToken,
           });
       return _toCloudKitDelta(response, fallbackToken: serverChangeToken);
     }
@@ -173,7 +173,7 @@ class CloudKitJsInteropClient implements CloudKitWebClient {
       final response = await _invokeNativeDatabase(
         'fetchChanges',
         <String, Object?>{
-          if (serverChangeToken != null) 'serverChangeToken': serverChangeToken,
+          'serverChangeToken': ?serverChangeToken,
         },
       );
       return _toCloudKitDelta(response, fallbackToken: serverChangeToken);
@@ -210,10 +210,10 @@ class CloudKitJsInteropClient implements CloudKitWebClient {
     }
 
     if (!_hasMethod(cloudKit, 'configure')) {
-      throw CloudKitBridgeException(
+      throw const CloudKitBridgeException(
         code: CloudKitBridgeErrorCode.unsupported,
         message: 'CloudKit.configure(...) is unavailable on window.CloudKit.',
-        details: const <String, Object?>{'action': 'load_full_cloudkit_js_sdk'},
+        details: <String, Object?>{'action': 'load_full_cloudkit_js_sdk'},
       );
     }
 
@@ -244,11 +244,11 @@ class CloudKitJsInteropClient implements CloudKitWebClient {
     }
 
     if (container == null) {
-      throw CloudKitBridgeException(
+      throw const CloudKitBridgeException(
         code: CloudKitBridgeErrorCode.unsupported,
         message:
             'CloudKit container APIs are unavailable (expected getDefaultContainer/getContainer).',
-        details: const <String, Object?>{'action': 'load_full_cloudkit_js_sdk'},
+        details: <String, Object?>{'action': 'load_full_cloudkit_js_sdk'},
       );
     }
 
@@ -275,10 +275,10 @@ class CloudKitJsInteropClient implements CloudKitWebClient {
     }
 
     if (database == null) {
-      throw CloudKitBridgeException(
+      throw const CloudKitBridgeException(
         code: CloudKitBridgeErrorCode.unsupported,
         message: 'CloudKit privateCloudDatabase is unavailable.',
-        details: const <String, Object?>{
+        details: <String, Object?>{
           'action': 'verify_cloudkit_container_capabilities',
         },
       );
@@ -312,7 +312,7 @@ class CloudKitJsInteropClient implements CloudKitWebClient {
             'recordType': _config!.recordType,
             'filterBy': filterBy,
           },
-          if (limit != null) 'resultsLimit': limit,
+          'resultsLimit': ?limit,
         };
         final response = await _invokeNativeDatabase('performQuery', payload);
         return _extractRecordMaps(response);
@@ -340,7 +340,7 @@ class CloudKitJsInteropClient implements CloudKitWebClient {
     if (response is List) {
       return response
           .whereType<Map>()
-          .map((final item) => Map<String, Object?>.from(item))
+          .map(Map<String, Object?>.from)
           .toList(growable: false);
     }
     if (response is Map) {
@@ -350,7 +350,7 @@ class CloudKitJsInteropClient implements CloudKitWebClient {
       if (recordsValue is List) {
         return recordsValue
             .whereType<Map>()
-            .map((final item) => Map<String, Object?>.from(item))
+            .map(Map<String, Object?>.from)
             .toList(growable: false);
       }
     }
@@ -555,10 +555,10 @@ class CloudKitJsInteropClient implements CloudKitWebClient {
 
   JSObject _resolveCloudKitGlobal() {
     if (!hasCloudKitGlobal) {
-      throw CloudKitBridgeException(
+      throw const CloudKitBridgeException(
         code: CloudKitBridgeErrorCode.unsupported,
         message: 'CloudKit JS global is missing. Load CloudKit JS before init.',
-        details: const <String, Object?>{'action': 'load_cloudkit_js'},
+        details: <String, Object?>{'action': 'load_cloudkit_js'},
       );
     }
     final global = globalContext['CloudKit'];
@@ -607,7 +607,7 @@ class CloudKitJsInteropClient implements CloudKitWebClient {
         },
       );
     }
-    return _invokeTarget(database, method, args: args, dartifyResult: true);
+    return _invokeTarget(database, method, args: args);
   }
 
   Future<Object?> _invokeTarget(
@@ -630,7 +630,7 @@ class CloudKitJsInteropClient implements CloudKitWebClient {
     final result = _callJsMethod(target, method, args);
     if (_isThenable(result)) {
       try {
-        final value = await (result as JSPromise<JSAny?>).toDart;
+        final value = await (result! as JSPromise<JSAny?>).toDart;
         return dartifyResult ? _normalizeResult(value) : value;
       } catch (error) {
         throw _mapWebError(method: method, error: error);

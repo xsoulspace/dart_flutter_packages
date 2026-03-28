@@ -123,7 +123,7 @@ class RustorePurchaseProvider implements PurchaseProvider {
   ) async {
     final result = await _processPurchase(productDetails);
     if (result.isSuccess && result.details != null) {
-      _purchaseStreamController.add([result.details!]);
+      _purchaseStreamController.add([result.details]);
     }
     return result;
   }
@@ -157,11 +157,11 @@ class RustorePurchaseProvider implements PurchaseProvider {
       }
 
       final mappedDetails = _mapRustorePurchaseToDetails(
-        purchase: result.purchase!,
+        purchase: result.purchase,
         fallbackProductDetails: details,
       );
       final purchaseResult = PurchaseResultModel.success(mappedDetails);
-      _purchaseStreamController.add([purchaseResult.details!]);
+      _purchaseStreamController.add([purchaseResult.details]);
       return purchaseResult;
     } catch (e) {
       return PurchaseResultModel.failure(e.toString());

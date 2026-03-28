@@ -20,7 +20,7 @@ String resolvePackageRootFromPackageConfig({
   }
 
   final decoded = jsonDecode(file.readAsStringSync()) as Map<String, Object?>;
-  final packages = (decoded['packages'] as List<dynamic>)
+  final packages = (decoded['packages']! as List<dynamic>)
       .cast<Map<String, Object?>>();
   final target = packages
       .where((final pkg) => pkg['name'] == packageName)

@@ -11,7 +11,7 @@ String mapTypeToDart(
 
   switch (kind) {
     case 'keyword':
-      final name = typeIr['name'] as String;
+      final name = typeIr['name']! as String;
       return switch (name) {
         'string' => 'JSString',
         'number' => 'JSNumber',
@@ -21,7 +21,7 @@ String mapTypeToDart(
       };
 
     case 'reference':
-      final name = typeIr['name'] as String;
+      final name = typeIr['name']! as String;
       final typeArgs = (typeIr['typeArgs'] as List<dynamic>? ?? <dynamic>[])
           .cast<Map<String, Object?>>();
       if (name == 'Promise') {
@@ -64,7 +64,7 @@ String mapTypeToDart(
       return 'JSArray<$elementType>';
 
     case 'union':
-      final types = (typeIr['types'] as List<dynamic>)
+      final types = (typeIr['types']! as List<dynamic>)
           .cast<Map<String, Object?>>();
       if (types.isEmpty) {
         return 'JSAny?';
@@ -142,14 +142,14 @@ String safeIdentifier(final String raw, {final String fallback = 'value'}) {
   }
 
   final cleaned = trimmed
-      .replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_')
-      .replaceAll(RegExp(r'_+'), '_');
+      .replaceAll(RegExp('[^a-zA-Z0-9_]'), '_')
+      .replaceAll(RegExp('_+'), '_');
 
   var candidate = cleaned;
   if (candidate.isEmpty) {
     candidate = fallback;
   }
-  if (RegExp(r'^[0-9]').hasMatch(candidate)) {
+  if (RegExp('^[0-9]').hasMatch(candidate)) {
     candidate = '_$candidate';
   }
 
@@ -232,8 +232,8 @@ String safeEnumCaseName(final String rawValue) {
   if (rawValue.isEmpty) {
     return 'empty';
   }
-  final lowered = rawValue.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_');
-  return safeIdentifier(lowered, fallback: 'value');
+  final lowered = rawValue.toLowerCase().replaceAll(RegExp('[^a-z0-9]+'), '_');
+  return safeIdentifier(lowered);
 }
 
 String toLowerCamel(final String value) {
@@ -242,7 +242,7 @@ String toLowerCamel(final String value) {
   }
 
   final parts = value
-      .split(RegExp(r'[^a-zA-Z0-9]+'))
+      .split(RegExp('[^a-zA-Z0-9]+'))
       .where((final part) => part.isNotEmpty)
       .toList();
   if (parts.isEmpty) {

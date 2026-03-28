@@ -43,9 +43,7 @@ final class FakeSteamNativeApi implements SteamNativeApi {
   bool restartAppIfNecessary(final int appId) => restartRequired;
 
   @override
-  SteamNativeInitResult initialize() {
-    return SteamNativeInitResult(initCode: initCode, errorMessage: initMessage);
-  }
+  SteamNativeInitResult initialize() => SteamNativeInitResult(initCode: initCode, errorMessage: initMessage);
 
   @override
   void shutdown() {
@@ -82,9 +80,7 @@ final class FakeSteamNativeApi implements SteamNativeApi {
     required final int apiCallHandle,
     required final int expectedCallbackId,
     required final int callbackBufferSize,
-  }) {
-    return apiCallResults[apiCallHandle];
-  }
+  }) => apiCallResults[apiCallHandle];
 
   @override
   bool userLoggedOn() => loggedOn;

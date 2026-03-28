@@ -5,15 +5,15 @@ import 'package:ffi/ffi.dart';
 
 /// Allocator abstraction used for pointer lifecycle tests and runtime safety.
 abstract interface class SteamMemoryAllocator {
-  Pointer<Uint8> allocateUint8(int elementCount);
+  Pointer<Uint8> allocateUint8(final int elementCount);
 
-  Pointer<Int8> allocateInt8(int elementCount);
+  Pointer<Int8> allocateInt8(final int elementCount);
 
-  Pointer<Int32> allocateInt32(int elementCount);
+  Pointer<Int32> allocateInt32(final int elementCount);
 
-  Pointer<Float> allocateFloat(int elementCount);
+  Pointer<Float> allocateFloat(final int elementCount);
 
-  void free(Pointer<NativeType> pointer);
+  void free(final Pointer<NativeType> pointer);
 }
 
 /// Production allocator backed by `calloc`.

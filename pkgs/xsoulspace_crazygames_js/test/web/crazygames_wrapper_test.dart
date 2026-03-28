@@ -5,7 +5,6 @@ import 'dart:js_util' as js_util;
 
 import 'package:test/test.dart';
 import 'package:xsoulspace_crazygames_js/src/wrapper/crazy_games_web.dart';
-import 'package:xsoulspace_crazygames_js/src/wrapper/models.dart';
 
 late final _SdkStubState _stub;
 
@@ -163,7 +162,7 @@ void main() {
     final user = await cg.user.getUser();
     expect(user?.username, 'PlayerOne.123');
 
-    final friends = await cg.user.listFriends(page: 1, size: 10);
+    final friends = await cg.user.listFriends();
     expect(friends.friends, hasLength(1));
     expect(friends.friends.first.id, 'friend-1');
 
@@ -251,9 +250,7 @@ class _SdkStubState {
 
   void install() {
     final ad = js_util.jsify(<String, Object?>{
-      'prefetchAd': js_util.allowInterop((final String adType) {
-        prefetchedAdTypes.add(adType);
-      }),
+      'prefetchAd': js_util.allowInterop(prefetchedAdTypes.add),
       'requestAd': js_util.allowInterop((
         final String adType,
         final Object? callbacks,
@@ -290,7 +287,7 @@ class _SdkStubState {
 
     final banner = js_util.jsify(<String, Object?>{
       'prefetchBanner': js_util.allowInterop((final Object? request) {
-        final map = js_util.dartify(request) as Map<Object?, Object?>;
+        final map = js_util.dartify(request)! as Map<Object?, Object?>;
         lastPrefetchedBannerRequest = map.map(
           (final key, final value) => MapEntry(key.toString(), value),
         );
@@ -301,14 +298,14 @@ class _SdkStubState {
         });
       }),
       'requestBanner': js_util.allowInterop((final Object? request) {
-        final map = js_util.dartify(request) as Map<Object?, Object?>;
+        final map = js_util.dartify(request)! as Map<Object?, Object?>;
         lastBannerRequest = map.map(
           (final key, final value) => MapEntry(key.toString(), value),
         );
         return null;
       }),
       'prefetchResponsiveBanner': js_util.allowInterop((final Object? request) {
-        final map = js_util.dartify(request) as Map<Object?, Object?>;
+        final map = js_util.dartify(request)! as Map<Object?, Object?>;
         lastPrefetchedResponsiveRequest = map.map(
           (final key, final value) => MapEntry(key.toString(), value),
         );
@@ -325,15 +322,13 @@ class _SdkStubState {
         return null;
       }),
       'renderPrefetchedBanner': js_util.allowInterop((final Object? request) {
-        final map = js_util.dartify(request) as Map<Object?, Object?>;
+        final map = js_util.dartify(request)! as Map<Object?, Object?>;
         lastRenderedPrefetchedBanner = map.map(
           (final key, final value) => MapEntry(key.toString(), value),
         );
         return null;
       }),
-      'clearBanner': js_util.allowInterop((final String id) {
-        clearedBannerIds.add(id);
-      }),
+      'clearBanner': js_util.allowInterop(clearedBannerIds.add),
       'clearAllBanners': js_util.allowInterop(() {
         clearAllBannersCalls++;
       }),
@@ -341,10 +336,10 @@ class _SdkStubState {
         final Object? banners,
         final Object? callback,
       ) {
-        final list = js_util.dartify(banners) as List<Object?>;
+        final list = js_util.dartify(banners)! as List<Object?>;
         lastOverlayRequest = list
             .map(
-              (final item) => (item as Map<Object?, Object?>).map(
+              (final item) => (item! as Map<Object?, Object?>).map(
                 (final key, final value) => MapEntry(key.toString(), value),
               ),
             )
@@ -389,11 +384,11 @@ class _SdkStubState {
         happytimeCalls++;
       }),
       'inviteLink': js_util.allowInterop((final Object? params) {
-        final map = js_util.dartify(params) as Map<Object?, Object?>;
+        final map = js_util.dartify(params)! as Map<Object?, Object?>;
         return 'https://example.com/invite?roomId=${map['roomId']}';
       }),
       'showInviteButton': js_util.allowInterop((final Object? params) {
-        final map = js_util.dartify(params) as Map<Object?, Object?>;
+        final map = js_util.dartify(params)! as Map<Object?, Object?>;
         return 'https://example.com/button?roomId=${map['roomId']}';
       }),
       'hideInviteButton': js_util.allowInterop(() {
@@ -450,7 +445,7 @@ class _SdkStubState {
         }),
       ),
       'listFriends': js_util.allowInterop((final Object? options) {
-        final map = js_util.dartify(options) as Map<Object?, Object?>;
+        final map = js_util.dartify(options)! as Map<Object?, Object?>;
         return js_util.jsify(<String, Object?>{
           'friends': <Object?>[
             js_util.jsify(<String, Object?>{
@@ -495,7 +490,7 @@ class _SdkStubState {
         lastEncryptedScore = encryptedScore;
       }),
       'submitScore': js_util.allowInterop((final Object? payload) {
-        final map = js_util.dartify(payload) as Map<Object?, Object?>;
+        final map = js_util.dartify(payload)! as Map<Object?, Object?>;
         lastSubmitScorePayload = map.map(
           (final key, final value) => MapEntry(key.toString(), value),
         );
@@ -503,14 +498,12 @@ class _SdkStubState {
     });
 
     final data = js_util.jsify(<String, Object?>{
-      'clear': js_util.allowInterop(() => _data.clear()),
+      'clear': js_util.allowInterop(_data.clear),
       'getItem': js_util.allowInterop((final String key) {
         final value = _data[key];
         return value == null ? null : '$value';
       }),
-      'removeItem': js_util.allowInterop((final String key) {
-        _data.remove(key);
-      }),
+      'removeItem': js_util.allowInterop(_data.remove),
       'setItem': js_util.allowInterop((final String key, final Object? value) {
         _data[key] = value;
       }),
@@ -525,7 +518,7 @@ class _SdkStubState {
         final Object? order,
       ) {
         lastTrackOrderProvider = provider;
-        final map = js_util.dartify(order) as Map<Object?, Object?>;
+        final map = js_util.dartify(order)! as Map<Object?, Object?>;
         lastTrackOrderPayload = map.map(
           (final key, final value) => MapEntry(key.toString(), value),
         );

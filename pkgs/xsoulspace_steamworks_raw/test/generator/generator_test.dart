@@ -155,7 +155,6 @@ Future<void> _copyDirectory(
   destination.createSync(recursive: true);
 
   await for (final entity in source.list(
-    recursive: false,
     followLinks: false,
   )) {
     final basename = p.basename(entity.path);

@@ -1,8 +1,8 @@
 import 'dart:convert';
 
+import 'http_transport.dart';
 import 'models.dart';
 import 'signer.dart';
-import 'http_transport.dart';
 
 final class VkPlayServerApiClient {
   VkPlayServerApiClient({
@@ -50,7 +50,7 @@ final class VkPlayServerApiClient {
       params: <String, Object?>{
         'user_id': userId,
         'message': message,
-        if (payload != null) 'payload': payload,
+        'payload': ?payload,
         ...extra,
       },
     );
@@ -68,8 +68,8 @@ final class VkPlayServerApiClient {
       params: <String, Object?>{
         'user_id': userId,
         'message': message,
-        if (linkUrl != null) 'link_url': linkUrl,
-        if (imageUrl != null) 'image_url': imageUrl,
+        'link_url': ?linkUrl,
+        'image_url': ?imageUrl,
         ...extra,
       },
     );
@@ -92,7 +92,7 @@ final class VkPlayServerApiClient {
     final params = _baseParams(<String, Object?>{
       'user_id': userId,
       'item_id': itemId,
-      if (orderId != null) 'order_id': orderId,
+      'order_id': ?orderId,
       ...extra,
     });
     final signature = signer.sign(params: params, secret: secret);

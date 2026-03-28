@@ -2,9 +2,7 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 import 'package:universal_storage_cloudkit/universal_storage_cloudkit.dart';
-import 'package:universal_storage_cloudkit_platform_interface/universal_storage_cloudkit_platform_interface.dart';
 import 'package:universal_storage_filesystem/universal_storage_filesystem.dart';
-import 'package:universal_storage_interface/universal_storage_interface.dart';
 import 'package:universal_storage_sync/universal_storage_sync.dart';
 
 void main() {
@@ -216,7 +214,7 @@ void main() {
       bridge.recordsByPath['lww.txt'] = _fakeRecord(
         path: 'lww.txt',
         content: 'remote-older',
-        updatedAt: DateTime.utc(2000, 1, 1),
+        updatedAt: DateTime.utc(2000),
       );
       bridge.nextDelta = CloudKitDelta(
         updatedRecords: <CloudKitRecord>[bridge.recordsByPath['lww.txt']!],
@@ -340,8 +338,8 @@ class _FakeCloudKitBridge implements CloudKitBridge {
   final Set<String> conflictOnNextSavePaths = <String>{};
 
   CloudKitDelta nextDelta = CloudKitDelta.empty();
-  var fetchChangesCalls = 0;
-  var throwOnInitialize = false;
+  int fetchChangesCalls = 0;
+  bool throwOnInitialize = false;
 
   @override
   Future<void> initialize(final CloudKitBridgeConfig config) async {

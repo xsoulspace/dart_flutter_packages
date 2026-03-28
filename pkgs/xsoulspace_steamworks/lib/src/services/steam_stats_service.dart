@@ -6,27 +6,15 @@ final class SteamStatsService {
 
   final SteamNativeApi _nativeApi;
 
-  Future<bool> requestCurrentStats() async {
-    return _nativeApi.requestCurrentStats();
-  }
+  Future<bool> requestCurrentStats() async => _nativeApi.requestCurrentStats();
 
-  int? getIntStat(final String name) {
-    return _nativeApi.getStatInt32(name);
-  }
+  int? getIntStat(final String name) => _nativeApi.getStatInt32(name);
 
-  double? getFloatStat(final String name) {
-    return _nativeApi.getStatFloat(name);
-  }
+  double? getFloatStat(final String name) => _nativeApi.getStatFloat(name);
 
-  bool setIntStat(final String name, final int value) {
-    return _nativeApi.setStatInt32(name, value);
-  }
+  bool setIntStat(final String name, final int value) => _nativeApi.setStatInt32(name, value);
 
-  bool setFloatStat(final String name, final double value) {
-    return _nativeApi.setStatFloat(name, value);
-  }
+  bool setFloatStat(final String name, final double value) => _nativeApi.setStatFloat(name, value);
 
-  Future<bool> storeStats() async {
-    return _nativeApi.storeStats();
-  }
+  Future<bool> storeStats() async => _nativeApi.storeStats();
 }

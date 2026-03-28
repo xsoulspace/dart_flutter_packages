@@ -1,4 +1,3 @@
-library;
 
 import 'dart:async';
 
@@ -67,8 +66,7 @@ final class _LoggerInspectorViewState extends State<LoggerInspectorView> {
   }
 
   @override
-  Widget build(final BuildContext context) {
-    return DefaultTabController(
+  Widget build(final BuildContext context) => DefaultTabController(
       length: 3,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -93,7 +91,6 @@ final class _LoggerInspectorViewState extends State<LoggerInspectorView> {
         ],
       ),
     );
-  }
 
   Widget _buildSearchAndFilters(final BuildContext context) {
     final categories =
@@ -149,7 +146,6 @@ final class _LoggerInspectorViewState extends State<LoggerInspectorView> {
             hint: const Text('All categories'),
             items: <DropdownMenuItem<String?>>[
               const DropdownMenuItem<String?>(
-                value: null,
                 child: Text('All categories'),
               ),
               ...categories.map(
@@ -306,8 +302,7 @@ final class _LoggerInspectorViewState extends State<LoggerInspectorView> {
     );
   }
 
-  List<LogRecord> _filteredLogs() {
-    return widget.controller.logs
+  List<LogRecord> _filteredLogs() => widget.controller.logs
         .where((final record) {
           if (!_selectedLevels.contains(record.level)) {
             return false;
@@ -338,7 +333,6 @@ final class _LoggerInspectorViewState extends State<LoggerInspectorView> {
           return haystack.toString().toLowerCase().contains(_searchText);
         })
         .toList(growable: false);
-  }
 
   Color _levelColor(final LogLevel level) => switch (level) {
     LogLevel.trace => Colors.blueGrey,

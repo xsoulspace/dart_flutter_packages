@@ -65,7 +65,6 @@ void main() {
             namespace: StorageNamespace.settings,
             policy: StoragePolicy.localOnly,
             localEngineId: 'files',
-            syncInteractionLevel: SyncInteractionLevel.minimal,
           ),
         ],
       );
@@ -77,7 +76,6 @@ void main() {
             namespace: StorageNamespace.settings,
             policy: StoragePolicy.localOnly,
             localEngineId: 'files',
-            syncInteractionLevel: SyncInteractionLevel.minimal,
           ),
         ],
       );
@@ -104,7 +102,6 @@ void main() {
             namespace: StorageNamespace.projects,
             policy: StoragePolicy.localOnly,
             localEngineId: 'files',
-            syncInteractionLevel: SyncInteractionLevel.minimal,
           ),
         ],
       );
@@ -173,7 +170,6 @@ void main() {
               policy: StoragePolicy.optimisticSync,
               localEngineId: 'files',
               remoteEngineId: 'serverpod',
-              syncInteractionLevel: SyncInteractionLevel.minimal,
             ),
           ],
         );
@@ -379,13 +375,11 @@ void main() {
               policy: StoragePolicy.optimisticSync,
               localEngineId: 'files',
               remoteEngineId: 'serverpod',
-              syncInteractionLevel: SyncInteractionLevel.minimal,
             ),
             StorageNamespaceProfile(
               namespace: StorageNamespace.settings,
               policy: StoragePolicy.localOnly,
               localEngineId: 'files',
-              syncInteractionLevel: SyncInteractionLevel.minimal,
             ),
           ],
         );

@@ -116,7 +116,7 @@ Future<void> main(final List<String> args) async {
     final newSnapshot = <String, Object?>{
       'package': lockConfig.packageName,
       'version': lockConfig.version,
-      'symbols': ((ir['symbols'] as List<dynamic>).cast<String>()..sort()),
+      'symbols': ((ir['symbols']! as List<dynamic>).cast<String>()..sort()),
     };
 
     final snapshotFile = File(snapshotPath);
@@ -127,7 +127,7 @@ Future<void> main(final List<String> args) async {
     final oldSymbols = (oldSnapshot['symbols'] as List<dynamic>? ?? <dynamic>[])
         .cast<String>()
         .toSet();
-    final newSymbols = (newSnapshot['symbols'] as List<dynamic>)
+    final newSymbols = (newSnapshot['symbols']! as List<dynamic>)
         .cast<String>()
         .toSet();
 
@@ -179,11 +179,11 @@ Future<void> main(final List<String> args) async {
 }
 
 String emitRawCode(final Map<String, Object?> ir, final NpmLockConfig lock) {
-  final declarations = (ir['declarations'] as List<dynamic>)
+  final declarations = (ir['declarations']! as List<dynamic>)
       .cast<Map<String, Object?>>();
-  final globalDeclarations = (ir['globalDeclarations'] as List<dynamic>)
+  final globalDeclarations = (ir['globalDeclarations']! as List<dynamic>)
       .cast<Map<String, Object?>>();
-  final knownTypes = declarations.map((d) => d['name']! as String).toSet();
+  final knownTypes = declarations.map((final d) => d['name']! as String).toSet();
 
   final b = StringBuffer()
     ..writeln('// GENERATED CODE - DO NOT MODIFY BY HAND.')
@@ -192,7 +192,7 @@ String emitRawCode(final Map<String, Object?> ir, final NpmLockConfig lock) {
       '// ignore_for_file: avoid_types_as_parameter_names, camel_case_types, non_constant_identifier_names, unused_element',
     )
     ..writeln()
-    ..writeln("@JS()")
+    ..writeln('@JS()')
     ..writeln('library;')
     ..writeln()
     ..writeln("import 'dart:js_interop';")
@@ -234,7 +234,7 @@ String emitRawCode(final Map<String, Object?> ir, final NpmLockConfig lock) {
   }
 
   for (final declaration in declarations) {
-    final kind = declaration['kind'] as String;
+    final kind = declaration['kind']! as String;
 
     switch (kind) {
       case 'interface':
@@ -257,11 +257,11 @@ void emitInterface(
   final Set<String> knownTypes,
 ) {
   final name = declaration['name']! as String;
-  final members = (declaration['members'] as List<dynamic>)
+  final members = (declaration['members']! as List<dynamic>)
       .cast<Map<String, Object?>>();
   final rawName = '${name}Raw';
 
-  b..writeln('extension type $rawName(JSObject _) implements JSObject {');
+  b.writeln('extension type $rawName(JSObject _) implements JSObject {');
 
   emitMembers(
     b,
@@ -391,7 +391,7 @@ void emitMembers(
           b.writeln("$indent@JS('${escapeSingleQuotes(name)}')");
         }
         b.writeln(
-          '$indent external $returnType $dartName${paramsBuffer.toString()};',
+          '$indent external $returnType $dartName$paramsBuffer;',
         );
 
       case 'index':
@@ -446,12 +446,12 @@ void emitTypeAlias(
           .cast<dynamic>();
   if (literalUnion.isNotEmpty) {
     final valuesClass = '${rawName}Values';
-    b..writeln('abstract final class $valuesClass {');
+    b.writeln('abstract final class $valuesClass {');
 
     final usedNames = <String>{};
     for (final value in literalUnion) {
       final rawValue = value as String;
-      var fieldName = safeIdentifier(toLowerCamel(rawValue), fallback: 'value');
+      var fieldName = safeIdentifier(toLowerCamel(rawValue));
       if (!usedNames.add(fieldName)) {
         fieldName = '${fieldName}_${usedNames.length}';
         usedNames.add(fieldName);
@@ -474,14 +474,13 @@ void emitEnum(final StringBuffer b, final Map<String, Object?> declaration) {
   b.writeln('typedef $rawName = JSString;');
   b.writeln('abstract final class $valuesClass {');
 
-  final members = (declaration['members'] as List<dynamic>)
+  final members = (declaration['members']! as List<dynamic>)
       .cast<Map<String, Object?>>();
   for (final member in members) {
     final memberName = member['name']! as String;
     final value = member['value'];
     final fieldName = safeIdentifier(
       toLowerCamel(memberName),
-      fallback: 'value',
     );
     final stringValue = value is String ? value : '$value';
     b.writeln(
@@ -498,11 +497,11 @@ String emitWrapperEnums(
   final Map<String, Object?> ir,
   final NpmLockConfig lock,
 ) {
-  final declarations = (ir['declarations'] as List<dynamic>)
+  final declarations = (ir['declarations']! as List<dynamic>)
       .cast<Map<String, Object?>>();
-  final literalUnions = (ir['literalUnions'] as List<dynamic>)
+  final literalUnions = (ir['literalUnions']! as List<dynamic>)
       .cast<Map<String, Object?>>();
-  final enumDecls = declarations.where((d) => d['kind'] == 'enum').toList();
+  final enumDecls = declarations.where((final d) => d['kind'] == 'enum').toList();
 
   final b = StringBuffer()
     ..writeln('// GENERATED CODE - DO NOT MODIFY BY HAND.')
@@ -513,16 +512,16 @@ String emitWrapperEnums(
 
   for (final union in literalUnions) {
     final enumName = union['name']! as String;
-    final values = (union['values'] as List<dynamic>).cast<String>();
+    final values = (union['values']! as List<dynamic>).cast<String>();
     emitDartEnum(b, enumName, values);
   }
 
   for (final enumDecl in enumDecls) {
     final enumName = enumDecl['name']! as String;
-    final members = (enumDecl['members'] as List<dynamic>)
+    final members = (enumDecl['members']! as List<dynamic>)
         .cast<Map<String, Object?>>();
     final values = members
-        .map((m) => m['value'])
+        .map((final m) => m['value'])
         .whereType<String>()
         .toList(growable: false);
     emitDartEnum(b, enumName, values);
@@ -590,7 +589,7 @@ String mapTypeToDart(
 
   switch (kind) {
     case 'keyword':
-      final name = typeIr['name'] as String;
+      final name = typeIr['name']! as String;
       return switch (name) {
         'string' => 'JSString',
         'number' => 'JSNumber',
@@ -600,7 +599,7 @@ String mapTypeToDart(
       };
 
     case 'reference':
-      final name = typeIr['name'] as String;
+      final name = typeIr['name']! as String;
       final typeArgs = (typeIr['typeArgs'] as List<dynamic>? ?? <dynamic>[])
           .cast<Map<String, Object?>>();
       if (name == 'Promise') {
@@ -643,7 +642,7 @@ String mapTypeToDart(
       return 'JSArray<$elementType>';
 
     case 'union':
-      final types = (typeIr['types'] as List<dynamic>)
+      final types = (typeIr['types']! as List<dynamic>)
           .cast<Map<String, Object?>>();
       if (types.isEmpty) {
         return 'JSAny?';
@@ -672,7 +671,7 @@ String mapTypeToDart(
       final allStringLiteral =
           nonNullable.isNotEmpty &&
           nonNullable.every(
-            (t) => t['kind'] == 'literal' && t['valueType'] == 'string',
+            (final t) => t['kind'] == 'literal' && t['valueType'] == 'string',
           );
       if (allStringLiteral) {
         return hasNullable ? 'JSString?' : 'JSString';
@@ -721,14 +720,14 @@ String safeIdentifier(final String raw, {final String fallback = 'value'}) {
   }
 
   final cleaned = trimmed
-      .replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_')
-      .replaceAll(RegExp(r'_+'), '_');
+      .replaceAll(RegExp('[^a-zA-Z0-9_]'), '_')
+      .replaceAll(RegExp('_+'), '_');
 
   var candidate = cleaned;
   if (candidate.isEmpty) {
     candidate = fallback;
   }
-  if (RegExp(r'^[0-9]').hasMatch(candidate)) {
+  if (RegExp('^[0-9]').hasMatch(candidate)) {
     candidate = '_$candidate';
   }
 
@@ -811,8 +810,8 @@ String safeEnumCaseName(final String rawValue) {
   if (rawValue.isEmpty) {
     return 'empty';
   }
-  final lowered = rawValue.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_');
-  return safeIdentifier(lowered, fallback: 'value');
+  final lowered = rawValue.toLowerCase().replaceAll(RegExp('[^a-z0-9]+'), '_');
+  return safeIdentifier(lowered);
 }
 
 String toLowerCamel(final String value) {
@@ -821,8 +820,8 @@ String toLowerCamel(final String value) {
   }
 
   final parts = value
-      .split(RegExp(r'[^a-zA-Z0-9]+'))
-      .where((part) => part.isNotEmpty)
+      .split(RegExp('[^a-zA-Z0-9]+'))
+      .where((final part) => part.isNotEmpty)
       .toList();
   if (parts.isEmpty) {
     return value;
@@ -831,7 +830,7 @@ String toLowerCamel(final String value) {
   final first = parts.first.toLowerCase();
   final rest = parts
       .skip(1)
-      .map((part) => part[0].toUpperCase() + part.substring(1).toLowerCase())
+      .map((final part) => part[0].toUpperCase() + part.substring(1).toLowerCase())
       .join();
   return '$first$rest';
 }

@@ -269,7 +269,7 @@ final class _InMemoryLocalDb implements LocalDbI {
   }) async {
     await setMapList(
       key: key,
-      value: value.map((final item) => toJson(item)).toList(growable: false),
+      value: value.map(toJson).toList(growable: false),
     );
   }
 }

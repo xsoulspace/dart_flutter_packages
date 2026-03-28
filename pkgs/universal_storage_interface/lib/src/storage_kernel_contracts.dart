@@ -16,19 +16,19 @@ abstract interface class RemoteEngine implements StorageProvider {
 /// Optional sync orchestrator that can be plugged into kernel.
 abstract interface class SyncEngine {
   Future<StorageOperationResult> syncNamespace({
-    required StorageNamespaceProfile namespaceProfile,
-    required StorageService service,
+    required final StorageNamespaceProfile namespaceProfile,
+    required final StorageService service,
   });
 }
 
 /// Optional migration endpoint capability for providers/bridges.
 abstract interface class MigrationEndpoint {
   Future<MigrationPreparationResult> prepareMigration({
-    required MigrationPlan plan,
+    required final MigrationPlan plan,
   });
 
   Future<MigrationExecutionResult> executeMigration({
-    required MigrationPlan plan,
+    required final MigrationPlan plan,
   });
 
   /// Executes migration with explicit options when supported by the endpoint.
@@ -36,7 +36,7 @@ abstract interface class MigrationEndpoint {
   /// This default implementation delegates to [executeMigration] so existing
   /// implementations remain compatible.
   Future<MigrationExecutionResult> executeMigrationWithOptions({
-    required MigrationPlan plan,
+    required final MigrationPlan plan,
     final bool overwrite = true,
     final bool dryRun = false,
     final bool collectDiffs = false,
@@ -48,57 +48,57 @@ abstract interface class MigrationEndpoint {
   }) => executeMigration(plan: plan);
 
   Future<MigrationExecutionResult> rollbackMigration({
-    required MigrationPlan plan,
+    required final MigrationPlan plan,
   });
 }
 
 /// Profile-aware kernel contract.
 abstract interface class StorageKernelContract {
   Future<String?> read({
-    required StorageNamespace namespace,
-    required String path,
+    required final StorageNamespace namespace,
+    required final String path,
   });
 
   Future<FileOperationResult> write({
-    required StorageNamespace namespace,
-    required String path,
-    required String content,
-    String? message,
+    required final StorageNamespace namespace,
+    required final String path,
+    required final String content,
+    final String? message,
   });
 
   Future<FileOperationResult> delete({
-    required StorageNamespace namespace,
-    required String path,
-    String? message,
+    required final StorageNamespace namespace,
+    required final String path,
+    final String? message,
   });
 
   Future<List<FileEntry>> list({
-    required StorageNamespace namespace,
-    String directoryPath = '.',
+    required final StorageNamespace namespace,
+    final String directoryPath = '.',
   });
 
   Stream<StorageObservationEvent> observe({
-    StorageNamespace? namespace,
-    String? pathPrefix,
+    final StorageNamespace? namespace,
+    final String? pathPrefix,
   });
 
-  Future<void> sync({StorageNamespace? namespace});
+  Future<void> sync({final StorageNamespace? namespace});
 
   Future<MigrationPreparationResult> prepareMigration({
-    required MigrationPlan plan,
+    required final MigrationPlan plan,
   });
 
   Future<MigrationExecutionResult> executeMigration({
-    required MigrationPlan plan,
+    required final MigrationPlan plan,
   });
 
   Future<MigrationExecutionResult> rollbackMigration({
-    required MigrationPlan plan,
+    required final MigrationPlan plan,
   });
 
   Future<StorageOperationResult> resolveDecision({
-    required StorageDecision decision,
-    required DecisionState targetState,
-    String note = '',
+    required final StorageDecision decision,
+    required final DecisionState targetState,
+    final String note = '',
   });
 }

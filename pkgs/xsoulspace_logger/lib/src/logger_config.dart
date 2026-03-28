@@ -1,4 +1,3 @@
-library;
 
 import 'clock.dart';
 import 'log_level.dart';

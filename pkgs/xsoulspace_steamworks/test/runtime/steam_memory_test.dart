@@ -40,8 +40,8 @@ void main() {
 }
 
 final class _CountingAllocator implements SteamMemoryAllocator {
-  var allocations = 0;
-  var frees = 0;
+  int allocations = 0;
+  int frees = 0;
 
   @override
   Pointer<Uint8> allocateUint8(final int elementCount) {

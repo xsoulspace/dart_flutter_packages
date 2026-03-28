@@ -19,14 +19,12 @@ final class UpstreamLock {
     final String? sdkVersion,
     final String? flatHeaderRelativePath,
     final String? headerSha256,
-  }) {
-    return UpstreamLock(
+  }) => UpstreamLock(
       sdkVersion: sdkVersion ?? this.sdkVersion,
       flatHeaderRelativePath:
           flatHeaderRelativePath ?? this.flatHeaderRelativePath,
       headerSha256: headerSha256 ?? this.headerSha256,
     );
-  }
 
   Map<String, Object?> toJson() => <String, Object?>{
     'sdkVersion': sdkVersion,
@@ -34,13 +32,11 @@ final class UpstreamLock {
     'headerSha256': headerSha256,
   };
 
-  static UpstreamLock fromJson(final Map<String, Object?> json) {
-    return UpstreamLock(
+  static UpstreamLock fromJson(final Map<String, Object?> json) => UpstreamLock(
       sdkVersion: json['sdkVersion']! as String,
       flatHeaderRelativePath: json['flatHeaderRelativePath']! as String,
       headerSha256: json['headerSha256']! as String,
     );
-  }
 }
 
 final class GenerateOptions {
@@ -396,8 +392,8 @@ String _resolvePath(final String base, final String value) {
   return p.join(base, value);
 }
 
-String _buildShimHeader() {
-  return '''// GENERATED FILE - DO NOT EDIT.
+String _buildShimHeader() => '''
+// GENERATED FILE - DO NOT EDIT.
 // Shim header used as ffigen entry-point.
 
 #ifndef XSOULSPACE_STEAM_API_FLAT_SHIM_H
@@ -407,23 +403,18 @@ String _buildShimHeader() {
 
 #endif // XSOULSPACE_STEAM_API_FLAT_SHIM_H
 ''';
-}
 
 String _buildFfigenConfig({
   required final String template,
   required final String outputPath,
   required final String shimPath,
   required final String sdkPublicPath,
-}) {
-  return template
+}) => template
       .replaceAll('__OUTPUT_PATH__', _yamlPath(outputPath))
       .replaceAll('__SHIM_HEADER_PATH__', _yamlPath(shimPath))
       .replaceAll('__SDK_PUBLIC_PATH__', _yamlPath(sdkPublicPath));
-}
 
-String _yamlPath(final String value) {
-  return value.replaceAll('\\', '/');
-}
+String _yamlPath(final String value) => value.replaceAll(r'\', '/');
 
 Future<void> _runFfigen({
   required final String packageRoot,
@@ -476,7 +467,7 @@ String _postProcessGeneratedOutput(
 }) {
   var content = source.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
   content = content.replaceAll(
-    sdkPath.replaceAll('\\', '/'),
+    sdkPath.replaceAll(r'\', '/'),
     r'$STEAMWORKS_SDK_PATH',
   );
   content = content

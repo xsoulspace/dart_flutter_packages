@@ -1,4 +1,3 @@
-library;
 
 export 'src/file_generation.dart';
 export 'src/hashes.dart';

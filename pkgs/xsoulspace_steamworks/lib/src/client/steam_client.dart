@@ -126,7 +126,6 @@ final class SteamClient {
       }
 
       _asyncRegistry = SteamAsyncCallRegistry(
-        defaultTimeout: const Duration(seconds: 10),
         onTimeout:
             (final apiCallHandle, final expectedCallbackId, final timeout) {
               _emit(
@@ -216,9 +215,7 @@ final class SteamClient {
     _callbackEngine?.pumpOnce();
   }
 
-  bool _isDesktopPlatform() {
-    return Platform.isWindows || Platform.isMacOS || Platform.isLinux;
-  }
+  bool _isDesktopPlatform() => Platform.isWindows || Platform.isMacOS || Platform.isLinux;
 
   SteamInitErrorCode? _mapNativeInitCode(final int code) {
     switch (code) {

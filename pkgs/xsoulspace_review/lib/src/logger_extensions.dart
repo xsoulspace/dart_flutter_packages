@@ -19,7 +19,7 @@ extension ReviewLoggerExtensions on Logger? {
   ///
   /// Logs to 'REVIEW' category with full error details including
   /// stack trace. Safe to call on null logger.
-  void logReviewError(String message, Object error, [StackTrace? stackTrace]) {
+  void logReviewError(final String message, final Object error, [final StackTrace? stackTrace]) {
     this?.error(
       'REVIEW',
       message,
@@ -35,7 +35,7 @@ extension ReviewLoggerExtensions on Logger? {
   ///
   /// - [message] - Description of feedback event
   /// - [data] - Optional structured data
-  void logFeedback(String message, {Map<String, dynamic>? data}) {
+  void logFeedback(final String message, {final Map<String, dynamic>? data}) {
     this?.info('FEEDBACK', message, data: data);
   }
 
@@ -46,7 +46,7 @@ extension ReviewLoggerExtensions on Logger? {
   ///
   /// - [message] - Description of consent event
   /// - [data] - Optional structured data (e.g., consent state)
-  void logConsent(String message, {Map<String, dynamic>? data}) {
+  void logConsent(final String message, {final Map<String, dynamic>? data}) {
     this?.info('CONSENT', message, data: data);
   }
 
@@ -57,7 +57,7 @@ extension ReviewLoggerExtensions on Logger? {
   ///
   /// - [message] - Debug message
   /// - [data] - Optional structured data
-  void logReviewDebug(String message, {Map<String, dynamic>? data}) {
+  void logReviewDebug(final String message, {final Map<String, dynamic>? data}) {
     this?.debug('REVIEW', message, data: data);
   }
 
@@ -68,7 +68,7 @@ extension ReviewLoggerExtensions on Logger? {
   ///
   /// - [message] - Warning message
   /// - [data] - Optional structured data
-  void logReviewWarning(String message, {Map<String, dynamic>? data}) {
+  void logReviewWarning(final String message, {final Map<String, dynamic>? data}) {
     this?.warning('REVIEW', message, data: data);
   }
 }

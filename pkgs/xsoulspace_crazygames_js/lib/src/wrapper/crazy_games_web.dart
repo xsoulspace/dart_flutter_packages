@@ -1,10 +1,10 @@
-import 'crazygames_client.dart';
-import 'converters.dart';
 import '../raw/crazygames_raw.g.dart' as raw;
+import 'converters.dart';
+import 'crazygames_client.dart';
 
 export 'crazygames_client.dart';
-export 'models.dart';
 export 'enums.dart';
+export 'models.dart';
 
 /// Wrapper entrypoint for CrazyGames HTML5 SDK.
 abstract final class CrazyGames {
@@ -21,9 +21,7 @@ abstract final class CrazyGames {
     return CrazyGamesClient(sdk);
   }
 
-  static bool isAvailable({final String expectedGlobal = 'CrazyGames'}) {
-    return _resolveSdk(expectedGlobal: expectedGlobal) != null;
-  }
+  static bool isAvailable({final String expectedGlobal = 'CrazyGames'}) => _resolveSdk(expectedGlobal: expectedGlobal) != null;
 
   static Object? _resolveSdk({required final String expectedGlobal}) {
     if (!hasGlobalProperty(expectedGlobal)) {

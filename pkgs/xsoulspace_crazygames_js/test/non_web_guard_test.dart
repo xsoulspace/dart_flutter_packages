@@ -4,7 +4,7 @@ import 'package:xsoulspace_crazygames_js/xsoulspace_crazygames_js.dart';
 
 void main() {
   test('wrapper throws UnsupportedError on non-web', () async {
-    expect(() => CrazyGames.init(), throwsA(isA<UnsupportedError>()));
+    expect(CrazyGames.init, throwsA(isA<UnsupportedError>()));
   });
 
   test('availability probe is false on non-web', () {

@@ -1,4 +1,3 @@
-library;
 
 import 'dart:convert';
 
@@ -11,9 +10,9 @@ final class FingerprintGenerator {
 
   static final RegExp _uuidPattern = RegExp(
     r'\b[0-9a-fA-F]{8}-'
-    r'[0-9a-fA-F]{4}-'
-    r'[0-9a-fA-F]{4}-'
-    r'[0-9a-fA-F]{4}-'
+    '[0-9a-fA-F]{4}-'
+    '[0-9a-fA-F]{4}-'
+    '[0-9a-fA-F]{4}-'
     r'[0-9a-fA-F]{12}\b',
   );
   static final RegExp _hexPattern = RegExp(r'\b(?:0x)?[0-9a-fA-F]{8,}\b');

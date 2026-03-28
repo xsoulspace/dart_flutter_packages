@@ -84,7 +84,7 @@ class BrowserWebSpeechLiveRecognitionSession
   static int? _asInt(final JSAny? value) {
     final normalized = _dartify(value);
     if (normalized is int) return normalized;
-    if (normalized is num) return (normalized as num).round();
+    if (normalized is num) return (normalized).round();
     return null;
   }
 

@@ -6,13 +6,13 @@ import 'package:universal_storage_interface/universal_storage_interface.dart';
 abstract interface class DecisionStore {
   /// Saves decision state by unique [decisionId].
   Future<void> saveState({
-    required String decisionId,
-    required DecisionState state,
-    String note = '',
+    required final String decisionId,
+    required final DecisionState state,
+    final String note = '',
   });
 
   /// Loads state for a single decision.
-  Future<DecisionState?> loadState(String decisionId);
+  Future<DecisionState?> loadState(final String decisionId);
 
   /// Loads all known decision states.
   Future<Map<String, DecisionState>> loadAllStates();

@@ -246,14 +246,14 @@ final class SyncQueueState {
 /// Durable persistence API for namespace sync queues.
 abstract interface class SyncQueueStore {
   Future<SyncQueueState> loadState({
-    required StorageNamespace namespace,
-    required StorageService service,
+    required final StorageNamespace namespace,
+    required final StorageService service,
   });
 
   Future<void> saveState({
-    required StorageNamespace namespace,
-    required StorageService service,
-    required SyncQueueState state,
+    required final StorageNamespace namespace,
+    required final StorageService service,
+    required final SyncQueueState state,
   });
 }
 

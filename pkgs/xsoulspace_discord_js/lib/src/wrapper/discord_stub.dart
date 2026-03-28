@@ -1,6 +1,6 @@
-export 'models.dart';
-
 import 'models.dart';
+
+export 'models.dart';
 
 Never _unsupported() {
   throw UnsupportedError(

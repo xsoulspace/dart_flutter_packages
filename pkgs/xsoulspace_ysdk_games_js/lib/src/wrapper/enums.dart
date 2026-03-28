@@ -1,7 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND.
 // Source: @types/ysdk@1.2.0
 
-library;
 
 enum FeedbackError {
   game_rated('GAME_RATED'),

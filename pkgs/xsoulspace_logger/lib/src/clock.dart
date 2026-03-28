@@ -1,4 +1,3 @@
-library;
 
 /// Abstraction for deterministic time in tests.
 abstract interface class Clock {

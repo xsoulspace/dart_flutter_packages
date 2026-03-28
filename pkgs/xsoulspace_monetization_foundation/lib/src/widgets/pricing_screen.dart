@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 class PricingScreen extends StatelessWidget {
+  const PricingScreen({super.key});
+
   @override
   Widget build(final BuildContext context) {
     // TODO: implement build

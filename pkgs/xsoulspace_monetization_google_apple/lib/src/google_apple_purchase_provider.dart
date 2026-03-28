@@ -372,7 +372,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
       productIds.map((final id) => id.value).toSet(),
     );
     if (response.error != null) {
-      _catchNoResponse(response.error!);
+      _catchNoResponse(response.error);
       throw Exception(response.error!.message);
     }
     return response.productDetails.map(_mapToProductDetails).toList();
@@ -397,7 +397,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
       productIds.map((final id) => id.value).toSet(),
     );
     if (response.error != null) {
-      _catchNoResponse(response.error!);
+      _catchNoResponse(response.error);
       throw Exception(response.error!.message);
     }
     return response.productDetails.map(_mapToProductDetails).toList();
@@ -421,7 +421,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
       productIds.map((final id) => id.value).toSet(),
     );
     if (response.error != null) {
-      _catchNoResponse(response.error!);
+      _catchNoResponse(response.error);
       throw Exception(response.error!.message);
     }
     return response.productDetails.map(_mapToProductDetails).toList();

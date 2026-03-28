@@ -160,10 +160,10 @@ Future<void> main(final List<String> args) async {
       );
     }
 
-    final routeSymbols = (routeIndex['routes'] as List<dynamic>)
+    final routeSymbols = (routeIndex['routes']! as List<dynamic>)
         .cast<String>()
         .map((final value) => 'route:$value');
-    final typeSymbols = (typeIndex['exportedSymbols'] as List<dynamic>)
+    final typeSymbols = (typeIndex['exportedSymbols']! as List<dynamic>)
         .cast<String>()
         .map((final value) => 'type:$value');
 

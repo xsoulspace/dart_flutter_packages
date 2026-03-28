@@ -1,4 +1,3 @@
-library;
 
 import 'dart:async';
 
@@ -9,7 +8,7 @@ import 'package:xsoulspace_logger_triage/xsoulspace_logger_triage.dart';
 void main() {
   group('FingerprintGenerator', () {
     test('normalizes volatile tokens and frame line numbers', () {
-      final generator = FingerprintGenerator();
+      const generator = FingerprintGenerator();
       final baseTime = DateTime.utc(2026, 1, 1, 12);
 
       final recordA = LogRecord(
@@ -54,7 +53,7 @@ void main() {
       'deduplicates by fingerprint and transitions resolved to regressing',
       () async {
         final sink = IssueTriageSink(
-          config: const TriageConfig(dedupWindow: Duration(minutes: 10)),
+          
         );
         await sink.init();
 
@@ -178,8 +177,7 @@ LogRecord _record({
   required final int sequence,
   required final DateTime at,
   required final LogLevel level,
-  final String category = 'db',
-  required final String message,
+  required final String message, final String category = 'db',
 }) => LogRecord(
   sequence: sequence,
   timestampUtc: at.toUtc(),

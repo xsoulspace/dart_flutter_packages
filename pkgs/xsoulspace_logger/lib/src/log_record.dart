@@ -1,4 +1,3 @@
-library;
 
 import 'log_level.dart';
 import 'trace_context.dart';

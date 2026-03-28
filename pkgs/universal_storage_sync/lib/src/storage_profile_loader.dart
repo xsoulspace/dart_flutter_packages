@@ -3,9 +3,9 @@ import 'dart:convert';
 import 'package:meta/meta.dart';
 import 'package:universal_storage_interface/universal_storage_interface.dart';
 
+import 'decision_store.dart';
 import 'storage_kernel.dart';
 import 'storage_profile_resolver.dart';
-import 'decision_store.dart';
 
 /// Factory function that builds a storage service for one namespace profile.
 typedef NamespaceServiceFactory =

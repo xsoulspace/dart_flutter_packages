@@ -1,4 +1,3 @@
-library;
 
 import '../log_record.dart';
 import '../log_sink.dart';

@@ -149,7 +149,7 @@ class FriendsPage {
         .cast<Object?>()
         .map(
           (final item) => Friend.fromMap(
-            (item as Map<Object?, Object?>).map(
+            (item! as Map<Object?, Object?>).map(
               (final key, final value) => MapEntry(key.toString(), value),
             ),
           ),

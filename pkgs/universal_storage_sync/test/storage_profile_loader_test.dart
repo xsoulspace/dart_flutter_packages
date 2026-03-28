@@ -162,7 +162,6 @@ void main() {
         () => loader.load(
           profile: profile,
           serviceFactory: (final _) async => service,
-          strict: true,
         ),
         throwsA(isA<ConfigurationException>()),
       );

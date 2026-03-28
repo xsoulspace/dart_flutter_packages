@@ -11,7 +11,7 @@ void main() {
 
   test('generated raw contains key symbols', () {
     final content = File(rawPath).readAsStringSync();
-    expect(content, contains("external JSAny? get DiscordSDK;"));
+    expect(content, contains('external JSAny? get DiscordSDK;'));
     expect(content, contains('extension type DiscordSdkRaw'));
     expect(content, contains('subscribe'));
     expect(content, contains('unsubscribe'));

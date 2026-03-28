@@ -65,7 +65,7 @@ void main() {
       ),
     );
 
-    final signer = const VkPlaySigner();
+    const signer = VkPlaySigner();
     final payload = <String, Object?>{'user_id': 'u1', 'event': 'billing'};
     final sig = signer.sign(params: payload, secret: 'secret');
 

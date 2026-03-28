@@ -629,23 +629,19 @@ final class StorageMigrationRecipe {
         policy: StoragePolicy.localOnly,
         localEngineId: gitEnabled ? 'offline_git' : 'files',
         pathPrefix: 'projects',
-        defaultFileExtension: '.json',
         syncInteractionLevel: interactionLevel,
       ),
-      StorageNamespaceProfile(
+      const StorageNamespaceProfile(
         namespace: StorageNamespace.settings,
         policy: StoragePolicy.localOnly,
         localEngineId: 'files',
         pathPrefix: 'settings',
-        defaultFileExtension: '.json',
-        syncInteractionLevel: SyncInteractionLevel.minimal,
       ),
       StorageNamespaceProfile(
         namespace: const StorageNamespace('tags'),
         policy: StoragePolicy.localOnly,
         localEngineId: 'files',
         pathPrefix: 'tags',
-        defaultFileExtension: '.json',
         syncInteractionLevel: interactionLevel,
       ),
       StorageNamespaceProfile(
@@ -653,16 +649,13 @@ final class StorageMigrationRecipe {
         policy: StoragePolicy.localOnly,
         localEngineId: 'files',
         pathPrefix: 'drafts',
-        defaultFileExtension: '.json',
         syncInteractionLevel: interactionLevel,
       ),
-      StorageNamespaceProfile(
+      const StorageNamespaceProfile(
         namespace: StorageNamespace.cache,
         policy: StoragePolicy.localOnly,
         localEngineId: 'files',
         pathPrefix: 'cache',
-        defaultFileExtension: '.json',
-        syncInteractionLevel: SyncInteractionLevel.minimal,
       ),
     ],
   );

@@ -174,7 +174,7 @@ Future<void> main(final List<String> args) async {
       edits: edits,
     );
 
-    final parserSymbols = ((ir['symbols'] as List<dynamic>).cast<String>());
+    final parserSymbols = (ir['symbols']! as List<dynamic>).cast<String>();
     final symbols = _extractSymbols(
       dtsContent: flattenedDts,
       parserSymbols: parserSymbols,

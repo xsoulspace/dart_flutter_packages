@@ -106,10 +106,12 @@ class OfflineGitConfig extends StorageConfig {
   }) {
     if (localPath.isEmpty) throw ArgumentError('Local path cannot be empty');
     if (branchName.isEmpty) throw ArgumentError('Branch name cannot be empty');
-    if (defaultPullStrategy.isEmpty)
+    if (defaultPullStrategy.isEmpty) {
       throw ArgumentError('Pull strategy cannot be empty');
-    if (defaultPushStrategy.isEmpty)
+    }
+    if (defaultPushStrategy.isEmpty) {
       throw ArgumentError('Push strategy cannot be empty');
+    }
   }
   final String localPath;
   final VcBranchName branchName;
@@ -163,10 +165,12 @@ class GitHubApiConfig extends StorageConfig {
     this.branchName = VcBranchName.main,
   }) {
     if (authToken.isEmpty) throw ArgumentError('Auth token cannot be empty');
-    if (repositoryOwner.isEmpty)
+    if (repositoryOwner.isEmpty) {
       throw ArgumentError('Repository owner cannot be empty');
-    if (repositoryName.isEmpty)
+    }
+    if (repositoryName.isEmpty) {
       throw ArgumentError('Repository name cannot be empty');
+    }
     if (branchName.isEmpty) throw ArgumentError('Branch name cannot be empty');
   }
   final String authToken;

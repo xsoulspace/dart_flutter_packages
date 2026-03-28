@@ -86,7 +86,7 @@ class WhisperCppAvailabilityProbe implements InferenceReadinessProbe {
       metadata: <String, dynamic>{
         'provider': 'whisper_cpp',
         'runtime_configured': isConfigured(runtimeConfig),
-        if (modelPath != null) 'model_path': modelPath,
+        'model_path': ?modelPath,
       },
     );
   }

@@ -99,9 +99,7 @@ final class SteamRawNativeApi implements SteamNativeApi {
   }
 
   @override
-  bool restartAppIfNecessary(final int appId) {
-    return _bindings.restartAppIfNecessary(appId);
-  }
+  bool restartAppIfNecessary(final int appId) => _bindings.restartAppIfNecessary(appId);
 
   @override
   SteamNativeInitResult initialize() {
@@ -247,47 +245,33 @@ final class SteamRawNativeApi implements SteamNativeApi {
   }
 
   @override
-  bool userLoggedOn() {
-    return _bindings.userIsLoggedOn(_requireSteamUser());
-  }
+  bool userLoggedOn() => _bindings.userIsLoggedOn(_requireSteamUser());
 
   @override
-  int userSteamId() {
-    return _bindings.userSteamId(_requireSteamUser());
-  }
+  int userSteamId() => _bindings.userSteamId(_requireSteamUser());
 
   @override
-  String personaName() {
-    return _bindings.readNullableUtf8(
+  String personaName() => _bindings.readNullableUtf8(
       _bindings.friendsGetPersonaName(_requireSteamFriends()),
     );
-  }
 
   @override
-  int friendCount(final int flags) {
-    return _bindings.friendsGetFriendCount(_requireSteamFriends(), flags);
-  }
+  int friendCount(final int flags) => _bindings.friendsGetFriendCount(_requireSteamFriends(), flags);
 
   @override
-  int friendByIndex(final int index, final int flags) {
-    return _bindings.friendsGetFriendByIndex(
+  int friendByIndex(final int index, final int flags) => _bindings.friendsGetFriendByIndex(
       _requireSteamFriends(),
       index,
       flags,
     );
-  }
 
   @override
-  String friendPersonaName(final int steamId) {
-    return _bindings.readNullableUtf8(
+  String friendPersonaName(final int steamId) => _bindings.readNullableUtf8(
       _bindings.friendsGetFriendPersonaName(_requireSteamFriends(), steamId),
     );
-  }
 
   @override
-  bool requestCurrentStats() {
-    return _bindings.userStatsRequestCurrentStats(_requireSteamUserStats());
-  }
+  bool requestCurrentStats() => _bindings.userStatsRequestCurrentStats(_requireSteamUserStats());
 
   @override
   int? getStatInt32(final String name) {
@@ -354,9 +338,7 @@ final class SteamRawNativeApi implements SteamNativeApi {
   }
 
   @override
-  bool storeStats() {
-    return _bindings.userStatsStoreStats(_requireSteamUserStats());
-  }
+  bool storeStats() => _bindings.userStatsStoreStats(_requireSteamUserStats());
 
   @override
   bool? getAchievement(final String name) {

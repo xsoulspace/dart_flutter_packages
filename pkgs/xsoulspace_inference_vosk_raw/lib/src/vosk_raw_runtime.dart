@@ -452,7 +452,7 @@ VoskRawRecognitionResult parseVoskRawRecognitionResult(
 
   final transcript = ((decoded['text'] ?? decoded['partial']) as String? ?? '')
       .trim();
-  final alternatives = <String>[
+  final alternatives = <String>{
     ...switch (decoded['alternatives']) {
       final List values =>
         values
@@ -461,7 +461,7 @@ VoskRawRecognitionResult parseVoskRawRecognitionResult(
             .where((final value) => value.isNotEmpty),
       _ => const Iterable<String>.empty(),
     },
-  ].toSet().toList(growable: false);
+  }.toList(growable: false);
 
   final rawWords = switch (decoded['result'] ?? decoded['partial_result']) {
     final List values => values.whereType<Map>(),

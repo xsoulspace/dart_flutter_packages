@@ -262,7 +262,7 @@ void main() {
       const content = '{"recovered":true}';
       const operationId = 'settings_op_1';
       const relativePath = 'settings/recovered.json';
-      final tempRelativePath = '.us/tmp/settings/$operationId.tmp';
+      const tempRelativePath = '.us/tmp/settings/$operationId.tmp';
       final tempFile = File('$tempDir/$tempRelativePath');
       await tempFile.parent.create(recursive: true);
       await tempFile.writeAsString(content, flush: true);
@@ -308,7 +308,7 @@ void main() {
       const content = '{"idempotent":true}';
       const operationId = 'settings_op_2';
       const relativePath = 'settings/idempotent.json';
-      final tempRelativePath = '.us/tmp/settings/$operationId.tmp';
+      const tempRelativePath = '.us/tmp/settings/$operationId.tmp';
       final tempFile = File('$tempDir/$tempRelativePath');
       await tempFile.parent.create(recursive: true);
       await tempFile.writeAsString(content, flush: true);

@@ -153,7 +153,6 @@ class LocalDbStorageProvider extends StorageProvider implements LocalEngine {
         () => FileEntry(
           name: directoryName,
           isDirectory: true,
-          size: 0,
           modifiedAt: DateTime.now().toUtc(),
         ),
       );
@@ -249,7 +248,7 @@ class LocalDbStorageProvider extends StorageProvider implements LocalEngine {
   String _normalizePath(final String path) {
     final normalized = path
         .trim()
-        .replaceAll('\\', '/')
+        .replaceAll(r'\', '/')
         .replaceAll(RegExp('/+'), '/')
         .replaceFirst(RegExp('^/'), '')
         .replaceFirst(RegExp(r'/$'), '');
@@ -269,7 +268,7 @@ class LocalDbStorageProvider extends StorageProvider implements LocalEngine {
 
   String _normalizeConfigPath(final String path) => path
       .trim()
-      .replaceAll('\\', '/')
+      .replaceAll(r'\', '/')
       .replaceAll(RegExp('/+'), '/')
       .replaceFirst(RegExp('^/'), '')
       .replaceFirst(RegExp(r'/$'), '');

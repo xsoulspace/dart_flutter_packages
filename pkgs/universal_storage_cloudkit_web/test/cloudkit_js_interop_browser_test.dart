@@ -127,7 +127,7 @@ class _NativeCloudKitStub {
 
 void _installNativeCloudKitStub(final _NativeCloudKitStub stub) {
   final database = JSObject();
-  database['performQuery'] = ((JSAny? requestRaw) {
+  database['performQuery'] = ((final JSAny? requestRaw) {
     final request = _asMap(requestRaw);
     final query = _asMap(request['query']);
     final filters = query['filterBy'];
@@ -156,7 +156,7 @@ void _installNativeCloudKitStub(final _NativeCloudKitStub stub) {
     return <String, Object?>{'records': records}.jsify();
   }).toJS;
 
-  database['saveRecords'] = ((JSAny? requestRaw) {
+  database['saveRecords'] = ((final JSAny? requestRaw) {
     final request = _asMap(requestRaw);
     final records = request['records'];
     if (records is List) {
@@ -187,7 +187,7 @@ void _installNativeCloudKitStub(final _NativeCloudKitStub stub) {
     }.jsify();
   }).toJS;
 
-  database['deleteRecords'] = ((JSAny? requestRaw) {
+  database['deleteRecords'] = ((final JSAny? requestRaw) {
     final request = _asMap(requestRaw);
     final names = <String>[];
     final rawNames = request['recordNames'];
@@ -213,7 +213,7 @@ void _installNativeCloudKitStub(final _NativeCloudKitStub stub) {
     return null;
   }).toJS;
 
-  database['fetchChangedRecords'] = ((JSAny? requestRaw) {
+  database['fetchChangedRecords'] = ((final JSAny? requestRaw) {
     final request = _asMap(requestRaw);
     stub.lastSyncToken = request['syncToken']?.toString();
     final changed = stub.changedRecords.isEmpty
@@ -228,12 +228,10 @@ void _installNativeCloudKitStub(final _NativeCloudKitStub stub) {
 
   final container = JSObject();
   container['privateCloudDatabase'] = database;
-  container['setUpAuth'] = (() {
-    return <String, Object?>{'isAuthenticated': true}.jsify();
-  }).toJS;
+  container['setUpAuth'] = (() => <String, Object?>{'isAuthenticated': true}.jsify()).toJS;
 
   final cloudKit = JSObject();
-  cloudKit['configure'] = ((JSAny? payloadRaw) {
+  cloudKit['configure'] = ((final JSAny? payloadRaw) {
     stub.lastConfigurePayload = _asMap(payloadRaw);
     return null;
   }).toJS;
@@ -285,7 +283,7 @@ Map<String, Object?> _nativeRecord({
   final String? changeTag,
 }) => <String, Object?>{
   'recordName': recordName,
-  if (changeTag != null) 'recordChangeTag': changeTag,
+  'recordChangeTag': ?changeTag,
   'fields': <String, Object?>{
     'path': <String, Object?>{'value': path},
     'content': <String, Object?>{'value': content},

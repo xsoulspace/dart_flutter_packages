@@ -13,7 +13,7 @@ void registerCloudKitAppleBridge() {
 
 /// Pigeon-backed CloudKit bridge for iOS/macOS.
 class MethodChannelCloudKitAppleBridge implements CloudKitBridge {
-  MethodChannelCloudKitAppleBridge({CloudKitAppleApiClient? apiClient})
+  MethodChannelCloudKitAppleBridge({final CloudKitAppleApiClient? apiClient})
     : _apiClient = apiClient ?? PigeonCloudKitAppleApiClient();
 
   final CloudKitAppleApiClient _apiClient;
@@ -91,7 +91,7 @@ class MethodChannelCloudKitAppleBridge implements CloudKitBridge {
 
   @override
   Future<void> dispose() async {
-    await _invoke<void>(() => _apiClient.dispose());
+    await _invoke<void>(_apiClient.dispose);
   }
 
   Future<T> _invoke<T>(final Future<T> Function() callback) async {
