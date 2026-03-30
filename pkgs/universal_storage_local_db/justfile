@@ -26,8 +26,8 @@ clean:
 
 publish-dry:
     @echo "Dry-run publish (no changes will be made)"
-    {{ _cmd }} pub publish --dry-run
+    {{ _cmd }} flutter pub publish --dry-run
 
 publish:
     @echo "Publishing package to pub.dev"
-    {{ _cmd }} pub publish
+    {{ _cmd }} flutter pub publish
