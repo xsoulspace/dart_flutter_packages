@@ -37,6 +37,12 @@ class _FakeAdapter implements WebSpeechRecognitionAdapter {
 
     return transcript;
   }
+
+  @override
+  WebSpeechLiveRecognitionSession? startLiveRecognition({String? language}) {
+    // TODO: implement startLiveRecognition
+    throw UnimplementedError();
+  }
 }
 
 void main() {
