@@ -1,4 +1,4 @@
-## 0.1.0
+## 0.1.0-beta.1
 
 - Initial STT wrapper for `whisper_ggml` integrated with `InferenceClient`.
 - Added model lifecycle helpers (`getInstalledModels`, `downloadModel`, `selectModel`, `deleteModel`).

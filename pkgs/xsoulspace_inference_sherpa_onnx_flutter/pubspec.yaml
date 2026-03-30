@@ -1,18 +1,16 @@
 name: xsoulspace_inference_sherpa_onnx_flutter
 description: Sherpa-ONNX streaming and batch speech-to-text wrapper for xsoulspace_inference_core.
-version: 0.1.0
+version: 0.1.0-beta.1
 publish_to: none
 
 environment:
-  sdk: ">=3.10.0 <4.0.0"
+  sdk: ">=3.11.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
-  xsoulspace_inference_core:
-    path: ../xsoulspace_inference_core
-  xsoulspace_inference_sherpa_onnx_raw:
-    path: ../xsoulspace_inference_sherpa_onnx_raw
+  xsoulspace_inference_core: ^0.1.0-beta.1
+  xsoulspace_inference_sherpa_onnx_raw: ^0.1.0-beta.1
 
 dev_dependencies:
   flutter_test:

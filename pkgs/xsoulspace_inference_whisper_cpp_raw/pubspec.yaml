@@ -1,10 +1,10 @@
 name: xsoulspace_inference_whisper_cpp_raw
 description: Raw whisper.cpp FFI bindings, runtime loading, and recognition helpers.
-version: 0.1.0
+version: 0.1.0-beta.1
 publish_to: none
 
 environment:
-  sdk: ">=3.10.0 <4.0.0"
+  sdk: ">=3.11.0 <4.0.0"
 
 dependencies:
   ffi: ^2.1.4

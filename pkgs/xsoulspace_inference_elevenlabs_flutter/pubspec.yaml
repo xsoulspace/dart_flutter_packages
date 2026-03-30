@@ -1,6 +1,6 @@
 name: xsoulspace_inference_elevenlabs_flutter
 description: ElevenLabs API-backed TTS and STT inference clients for xsoulspace_inference_core.
-version: 0.1.0
+version: 0.1.0-beta.1
 publish_to: none
 
 environment:
@@ -9,15 +9,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  elevenlabs_agents:
-    git:
-      url: https://github.com/elevenlabs/elevenlabs-flutter.git
-      ref: 099acb38e30713e65790328516e211e71c9cc2c4
+  elevenlabs_agents: ^0.4.0
   http: ^1.5.0
   path: ^1.9.1
   web_socket_channel: ^3.0.3
-  xsoulspace_inference_core:
-    path: ../xsoulspace_inference_core
+  xsoulspace_inference_core: ^0.1.0-beta.1
 
 dev_dependencies:
   flutter_test:

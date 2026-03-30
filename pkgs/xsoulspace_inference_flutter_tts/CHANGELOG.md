@@ -1,4 +1,4 @@
-## 0.1.0
+## 0.1.0-beta.1
 
 - Initial `flutter_tts` wrapper implementing `InferenceTask.textToSpeech`.
 - Added artifact synthesis response mapping via `InferenceResponse.audioArtifact`.

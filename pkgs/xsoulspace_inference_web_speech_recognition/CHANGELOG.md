@@ -1,4 +1,4 @@
-## 0.1.0
+## 0.1.0-beta.1
 
 - Initial Chromium-only Web Speech API STT wrapper for `xsoulspace_inference_core`.
 - Added microphone, URL, and bytes speech recognition flows via `infer(...)`.

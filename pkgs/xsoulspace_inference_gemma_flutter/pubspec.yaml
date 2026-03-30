@@ -1,18 +1,17 @@
 name: xsoulspace_inference_gemma_flutter
 description: Flutter Gemma-backed implementation of xsoulspace_inference_core for desktop/mobile.
-version: 0.1.0
+version: 0.1.0-beta.1
 publish_to: none
 
 environment:
-  sdk: ">=3.10.0 <4.0.0"
+  sdk: ">=3.11.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
   flutter_gemma: ^0.12.0
   path: ^1.9.1
-  xsoulspace_inference_core:
-    path: ../xsoulspace_inference_core
+  xsoulspace_inference_core: ^0.1.0-beta.1
 
 dev_dependencies:
   flutter_test:
