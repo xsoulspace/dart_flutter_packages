@@ -31,14 +31,3 @@ publish-dry:
 publish:
     @echo "Publishing package to pub.dev"
     {{ _cmd }} pub publish
-
-gen:
-    dart run pigeon --input pigeons/cloudkit_apple_api.dart
-
-swift-test:
-    swift test
-
-verify:
-    just analyze
-    just test
-    just swift-test
