@@ -12,6 +12,12 @@ class _MigrationFakeStorageProvider extends StorageProvider {
     this.delay = Duration.zero,
     this.beforeCreate,
     this.beforeUpdate,
+    // ignore: unused_element_parameter
+    this.beforeRead,
+    // ignore: unused_element_parameter
+    this.beforeDelete,
+    // ignore: unused_element_parameter
+    this.beforeList,
   });
 
   bool _initialized = false;
