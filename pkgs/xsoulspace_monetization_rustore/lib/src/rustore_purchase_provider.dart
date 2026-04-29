@@ -338,7 +338,13 @@ class RustorePurchaseProvider implements PurchaseProvider {
       purchaseId: purchaseId,
       productId: PurchaseProductId.fromJson(purchase.productId ?? ''),
       priceId: PurchasePriceId.fromJson(purchase.productId ?? ''),
-      status: _purchaseStatusFromRustoreState(purchase.purchaseState),
+      status: purchaseStatusFromRustoreState(
+        purchase.purchaseState,
+        productType: _productTypeFromRustoreJson(
+          purchase.productType,
+          PurchaseProductId.fromJson(purchase.productId ?? ''),
+        ),
+      ),
       purchaseDate: purchaseDate,
       name: purchase.amountLabel ?? '',
       formattedPrice: purchase.amountLabel ?? '',
@@ -369,18 +375,36 @@ class RustorePurchaseProvider implements PurchaseProvider {
   }
 }
 
-PurchaseStatus _purchaseStatusFromRustoreState(
-  final RustorePurchaseState? state,
-) => switch (state) {
+/// Maps a RuStore purchase lifecycle state to the foundation [PurchaseStatus].
+///
+/// For non-consumable products (subscriptions, non-consumables) RuStore treats
+/// `paid` as the terminal success state — there is no client-side
+/// `confirmPurchase` step. Bucketing `paid` as `pendingVerification` here
+/// caused the foundation's `confirmPurchaseCommand` to bail on the
+/// `isPurchased` check (subscription `pendingVerification` does not satisfy
+/// `isPurchased`), leaving users stuck on the paywall after a successful
+/// subscription purchase.
+///
+/// For consumable products, `paid` still requires `_client.confirmPurchase`,
+/// so it is mapped to `pendingVerification` to drive the foundation's
+/// confirm flow.
+@visibleForTesting
+PurchaseStatus purchaseStatusFromRustoreState(
+  final RustorePurchaseState? state, {
+  required final PurchaseProductType productType,
+}) => switch (state) {
   RustorePurchaseState.created ||
-  RustorePurchaseState.invoiceCreated ||
-  RustorePurchaseState.paused => PurchaseStatus.pendingVerification,
-  RustorePurchaseState.paid => PurchaseStatus.pendingVerification,
+  RustorePurchaseState.invoiceCreated => PurchaseStatus.pendingVerification,
+  RustorePurchaseState.paid =>
+    productType == PurchaseProductType.consumable
+        ? PurchaseStatus.pendingVerification
+        : PurchaseStatus.purchased,
+  RustorePurchaseState.paused ||
+  RustorePurchaseState.consumed ||
+  RustorePurchaseState.confirmed => PurchaseStatus.purchased,
   RustorePurchaseState.cancelled ||
   RustorePurchaseState.closed ||
   RustorePurchaseState.terminated => PurchaseStatus.canceled,
-  RustorePurchaseState.consumed ||
-  RustorePurchaseState.confirmed => PurchaseStatus.purchased,
   null => PurchaseStatus.pendingVerification,
 };
 
