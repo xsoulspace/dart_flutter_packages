@@ -1,6 +1,6 @@
 name: xsoulspace_monetization_rustore
 description: Unofficial Flutter plugin for integrating RuStore monetization features.
-version: 1.0.1
+version: 1.0.1-dev.1
 homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_monetization_rustore
 repository: https://github.com/xsoulspace/dart_flutter_packages
 issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
@@ -12,25 +12,13 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  from_json_to_json: ^0.5.0
+  from_json_to_json: ">=0.4.0 <0.6.0"
   # flutter_rustore_billing: ^9.1.0
-  rustore_billing_api:
-    hosted:
-      name: rustore_billing_api
-      url: https://pub.xsoulspace.dev
-    version: ^1.0.0
+  rustore_billing_api: ^1.0.0
   universal_io: ^2.3.1
   url_launcher: ^6.3.2
-  xsoulspace_foundation:
-    hosted:
-      name: xsoulspace_foundation
-      url: https://pub.xsoulspace.dev
-    version: ^0.4.0
-  xsoulspace_monetization_interface:
-    hosted:
-      name: xsoulspace_monetization_interface
-      url: https://pub.xsoulspace.dev
-    version: ^0.8.2
+  xsoulspace_foundation: ^0.4.0
+  xsoulspace_monetization_interface: ^0.8.2
 dev_dependencies:
   flutter_test:
     sdk: flutter

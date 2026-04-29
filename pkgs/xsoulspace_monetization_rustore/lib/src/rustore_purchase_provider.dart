@@ -122,8 +122,9 @@ class RustorePurchaseProvider implements PurchaseProvider {
     final PurchaseProductDetailsModel productDetails,
   ) async {
     final result = await _processPurchase(productDetails);
-    if (result.isSuccess && result.details != null) {
-      _purchaseStreamController.add([result.details]);
+    final details = result.details;
+    if (result.isSuccess && details != null) {
+      _purchaseStreamController.add([details]);
     }
     return result;
   }
@@ -144,7 +145,8 @@ class RustorePurchaseProvider implements PurchaseProvider {
         preferredPurchaseType: preferredType,
       );
 
-      if (result.purchase == null) {
+      final purchase = result.purchase;
+      if (purchase == null) {
         return PurchaseResultModel.failure(
           result.error?.message ?? 'Purchase failed without purchase payload.',
         );
@@ -157,11 +159,11 @@ class RustorePurchaseProvider implements PurchaseProvider {
       }
 
       final mappedDetails = _mapRustorePurchaseToDetails(
-        purchase: result.purchase,
+        purchase: purchase,
         fallbackProductDetails: details,
       );
       final purchaseResult = PurchaseResultModel.success(mappedDetails);
-      _purchaseStreamController.add([purchaseResult.details]);
+      _purchaseStreamController.add([mappedDetails]);
       return purchaseResult;
     } catch (e) {
       return PurchaseResultModel.failure(e.toString());
