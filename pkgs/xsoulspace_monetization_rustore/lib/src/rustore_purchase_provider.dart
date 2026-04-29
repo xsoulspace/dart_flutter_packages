@@ -387,7 +387,10 @@ class RustorePurchaseProvider implements PurchaseProvider {
       purchaseId: PurchaseId.fromJson(purchase.purchaseId),
       productId: PurchaseProductId.fromJson(purchase.productId ?? ''),
       priceId: PurchasePriceId.fromJson(purchase.productId ?? ''),
-      status: _purchaseStatusFromRustoreState(purchase.purchaseStatus),
+      status: purchaseStatusFromRustoreState(
+        purchase.purchaseStatus,
+        purchaseType: purchase.purchaseType,
+      ),
       purchaseDate: purchaseDate,
       name: fallbackProductDetails.name,
       formattedPrice:
@@ -406,14 +409,35 @@ class RustorePurchaseProvider implements PurchaseProvider {
   }
 }
 
-PurchaseStatus _purchaseStatusFromRustoreState(
-  final RustorePurchaseStatus state,
-) => switch (state) {
+/// Maps a RuStore purchase lifecycle state to the foundation [PurchaseStatus].
+///
+/// RuStore's lifecycle differs by purchase type:
+/// - **One-step** (subscriptions, non-consumables): the SDK reports `paid`
+///   as the terminal success state. There is no client-side `confirm` step,
+///   and the purchase will *not* automatically transition to `confirmed`. If
+///   `paid` is bucketed as "needs verification", the foundation never calls
+///   `confirmPurchaseCommand` and the user is stuck on the paywall despite
+///   having paid.
+/// - **Two-step** (consumables): the SDK reports `paid` after charging the
+///   user, and the app must explicitly call `confirmTwoStepPurchase` to
+///   finalize. Only after that does it transition to `confirmed`/`consumed`.
+///
+/// `active` and `paused` are RuStore subscription lifecycle states reported
+/// when restoring purchases — both indicate the user currently has access,
+/// so they map to `purchased`.
+@visibleForTesting
+PurchaseStatus purchaseStatusFromRustoreState(
+  final RustorePurchaseStatus state, {
+  required final RustorePurchaseType purchaseType,
+}) => switch (state) {
   RustorePurchaseStatus.created ||
-  RustorePurchaseStatus.invoiceCreated ||
-  RustorePurchaseStatus.paid ||
+  RustorePurchaseStatus.invoiceCreated => PurchaseStatus.pendingVerification,
+  RustorePurchaseStatus.paid =>
+    purchaseType == RustorePurchaseType.twoStep
+        ? PurchaseStatus.pendingVerification
+        : PurchaseStatus.purchased,
   RustorePurchaseStatus.active ||
-  RustorePurchaseStatus.paused => PurchaseStatus.pendingVerification,
+  RustorePurchaseStatus.paused ||
   RustorePurchaseStatus.confirmed ||
   RustorePurchaseStatus.consumed => PurchaseStatus.purchased,
   RustorePurchaseStatus.cancelled ||
