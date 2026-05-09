@@ -1,24 +1,24 @@
 name: rustore_billing_api
 description: Unofficial plugin for RuStore Pay/Billing integration
-version: 1.0.0
+version: 1.1.0
 homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/rustore_billing_api
 repository: https://github.com/xsoulspace/dart_flutter_packages
 
 environment:
-  sdk: ">=3.10.0 <4.0.0"
+  sdk: ">=3.11.0 <4.0.0"
   flutter: ">=3.38.0"
 
 dependencies:
   flutter:
     sdk: flutter
-  from_json_to_json: ^0.4.0
+  from_json_to_json: ^0.5.0
   plugin_platform_interface: ^2.1.8
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  lints: ^6.0.0
-  pigeon: ^26.0.0
+  lints: ^6.1.0
+  pigeon: ^26.3.4
   xsoulspace_lints: ^0.1.2
 flutter:
   plugin:
