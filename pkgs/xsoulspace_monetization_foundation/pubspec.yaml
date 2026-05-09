@@ -7,31 +7,19 @@ repository: https://github.com/xsoulspace/dart_flutter_packages
 issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
 
 environment:
-  sdk: ">=3.10.0 <4.0.0"
+  sdk: ">=3.11.0 <4.0.0"
   flutter: ">=3.38.0"
 
 dependencies:
   collection: ^1.19.0
   flutter:
     sdk: flutter
-  is_dart_empty_or_not: ^0.3.0
-  xsoulspace_foundation:
-    hosted:
-      name: xsoulspace_foundation
-      url: https://pub.xsoulspace.dev
-    version: ^0.4.0
-  xsoulspace_monetization_ads_interface:
-    hosted:
-      name: xsoulspace_monetization_ads_interface
-      url: https://pub.xsoulspace.dev
-    version: ^0.0.1
-  xsoulspace_monetization_interface:
-    hosted:
-      name: xsoulspace_monetization_interface
-      url: https://pub.xsoulspace.dev
-    version: ^0.8.2
+  is_dart_empty_or_not: ^0.4.0
+  xsoulspace_foundation: ^0.4.0
+  xsoulspace_monetization_ads_interface: ^0.0.1
+  xsoulspace_monetization_interface: ^0.9.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  lints: ^6.0.0
+  lints: ^6.1.0
   xsoulspace_lints: ^0.1.2
