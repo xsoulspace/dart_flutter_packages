@@ -10,7 +10,7 @@ All notable changes to this project will be documented in this file.
 
 BREAKING:
 
-- chore: xsoulspace_locale 0.3.6
+- chore: xsoulspace_locale 0.4.0
 - chore: xsoulspace_logger 1.0.0-beta.0
 - chore: xsoulspace_lints 0.1.2
 - chore: device_info_plus 13.1.0
