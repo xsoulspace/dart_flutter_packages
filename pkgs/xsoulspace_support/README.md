@@ -1,6 +1,6 @@
 # xsoulspace_support
 
-A reusable Flutter package for email support functionality with automatic context collection and localization support.
+A reusable Flutter package for different support functionality with automatic context collection and localization support.
 
 ## Features
 
