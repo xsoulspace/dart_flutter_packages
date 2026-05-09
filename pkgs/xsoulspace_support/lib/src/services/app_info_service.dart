@@ -35,13 +35,14 @@ class AppInfoService {
       _logger?.info(
         'APP_INFO_SERVICE',
         'App info collected successfully',
-        data: {
+        fields: {
           'version': appInfo.version,
           'buildNumber': appInfo.buildNumber,
           'packageName': appInfo.packageName,
         },
       );
       return appInfo;
+      // ignore: avoid_catches_without_on_clauses
     } catch (e, stackTrace) {
       _logger?.error(
         'APP_INFO_SERVICE',

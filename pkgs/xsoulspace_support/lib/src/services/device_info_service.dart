@@ -43,7 +43,7 @@ class DeviceInfoService {
       _logger?.info(
         'DEVICE_INFO_SERVICE',
         'Device info collected successfully',
-        data: {
+        fields: {
           'platform': deviceInfo.platform,
           'model': deviceInfo.model,
           'osVersion': deviceInfo.osVersion,
@@ -51,6 +51,7 @@ class DeviceInfoService {
       );
 
       return deviceInfo;
+      // ignore: avoid_catches_without_on_clauses
     } catch (e, stackTrace) {
       _logger?.error(
         'DEVICE_INFO_SERVICE',

@@ -57,7 +57,7 @@ class SupportManager {
     logger?.info(
       'SUPPORT_MANAGER',
       'Sending support email',
-      data: {
+      fields: {
         'subject': subject,
         'hasUserEmail': userEmail != null,
         'hasUserName': userName != null,
@@ -194,7 +194,7 @@ class SupportManager {
     logger?.debug(
       'SUPPORT_MANAGER',
       'Support request data collected',
-      data: {
+      fields: {
         'hasAppInfo': appInfo != null,
         'hasDeviceInfo': deviceInfo != null,
         'additionalContextCount': mergedContext.length,
@@ -219,10 +219,10 @@ class SupportManager {
     final UiLanguage? language,
   ) {
     final logger = config.logger;
-    logger?.verbose(
+    logger?.debug(
       'SUPPORT_MANAGER',
       'Composing email body',
-      data: {'hasCustomTemplate': config.emailTemplate.isNotEmpty},
+      fields: {'hasCustomTemplate': config.emailTemplate.isNotEmpty},
     );
 
     if (config.emailTemplate.isNotEmpty) {

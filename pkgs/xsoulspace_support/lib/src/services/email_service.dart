@@ -67,7 +67,7 @@ class EmailService {
     _logger?.debug(
       'EMAIL_SERVICE',
       'Composing email',
-      data: {
+      fields: {
         'to': to,
         'hasSubject': subject != null,
         'hasBody': body != null,
@@ -105,6 +105,7 @@ class EmailService {
         );
         return false;
       }
+      // ignore: avoid_catches_without_on_clauses
     } catch (e, stackTrace) {
       _logger?.error(
         'EMAIL_SERVICE',

@@ -6,7 +6,7 @@ Always review the changelog before upgrading to a new version.
 
 All notable changes to this project will be documented in this file.
 
-## 0.3.0
+## 0.3.0-beta.0
 
 BREAKING:
 
