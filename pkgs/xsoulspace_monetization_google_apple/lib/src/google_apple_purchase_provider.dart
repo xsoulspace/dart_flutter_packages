@@ -371,9 +371,10 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
     final response = await _inAppPurchaseClient.queryProductDetails(
       productIds.map((final id) => id.value).toSet(),
     );
-    if (response.error != null) {
-      _catchNoResponse(response.error);
-      throw Exception(response.error!.message);
+    final error = response.error;
+    if (error != null) {
+      _catchNoResponse(error);
+      throw Exception(error.message);
     }
     return response.productDetails.map(_mapToProductDetails).toList();
   }
@@ -396,9 +397,10 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
     final response = await _inAppPurchaseClient.queryProductDetails(
       productIds.map((final id) => id.value).toSet(),
     );
-    if (response.error != null) {
-      _catchNoResponse(response.error);
-      throw Exception(response.error!.message);
+    final error = response.error;
+    if (error != null) {
+      _catchNoResponse(error);
+      throw Exception(error.message);
     }
     return response.productDetails.map(_mapToProductDetails).toList();
   }
@@ -420,9 +422,10 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
     final response = await _inAppPurchaseClient.queryProductDetails(
       productIds.map((final id) => id.value).toSet(),
     );
-    if (response.error != null) {
-      _catchNoResponse(response.error);
-      throw Exception(response.error!.message);
+    final error = response.error;
+    if (error != null) {
+      _catchNoResponse(error);
+      throw Exception(error.message);
     }
     return response.productDetails.map(_mapToProductDetails).toList();
   }
