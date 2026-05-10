@@ -11,7 +11,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  meta: ^1.17.01.17.2
+  meta: ^1.17.0
   url_launcher: ^6.3.2
   wiredash: ^2.6.0
   xsoulspace_foundation: ^0.4.0
