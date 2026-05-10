@@ -39,8 +39,11 @@ extension ReviewLoggerExtensions on Logger? {
   ///
   /// - [message] - Description of feedback event
   /// - [data] - Optional structured data
-  void logFeedback(final String message, {final Map<String, dynamic>? data}) {
-    this?.info('FEEDBACK', message, data: data);
+  void logFeedback(
+    final String message, {
+    final Map<String, Object?> data = const {},
+  }) {
+    this?.info('FEEDBACK', message, fields: data);
   }
 
   /// Log consent decision
@@ -50,8 +53,11 @@ extension ReviewLoggerExtensions on Logger? {
   ///
   /// - [message] - Description of consent event
   /// - [data] - Optional structured data (e.g., consent state)
-  void logConsent(final String message, {final Map<String, dynamic>? data}) {
-    this?.info('CONSENT', message, data: data);
+  void logConsent(
+    final String message, {
+    final Map<String, Object?> data = const {},
+  }) {
+    this?.info('CONSENT', message, fields: data);
   }
 
   /// Log debug information for review operations
@@ -63,9 +69,9 @@ extension ReviewLoggerExtensions on Logger? {
   /// - [data] - Optional structured data
   void logReviewDebug(
     final String message, {
-    final Map<String, dynamic>? data,
+    final Map<String, Object?> data = const {},
   }) {
-    this?.debug('REVIEW', message, data: data);
+    this?.debug('REVIEW', message, fields: data);
   }
 
   /// Log review-related warning
@@ -77,8 +83,8 @@ extension ReviewLoggerExtensions on Logger? {
   /// - [data] - Optional structured data
   void logReviewWarning(
     final String message, {
-    final Map<String, dynamic>? data,
+    final Map<String, Object?> data = const {},
   }) {
-    this?.warning('REVIEW', message, data: data);
+    this?.warning('REVIEW', message, fields: data);
   }
 }
