@@ -1,7 +1,11 @@
 ## 0.4.0-beta.3
 
-- chore: xsoulspace_foundation 0.3.0
-- chore: xsoulspace_locale 0.3.3
+- chore: xsoulspace_foundation 0.4.0
+- chore: xsoulspace_locale 0.4.0
+- chore: xsoulspace_logger 1.0.0-beta.0
+- chore: xsoulspace_lints 0.1.2
+- chore: meta 1.18.2
+- chore: wiredash 2.6.0
 
 ## 0.4.0-beta.2
 
