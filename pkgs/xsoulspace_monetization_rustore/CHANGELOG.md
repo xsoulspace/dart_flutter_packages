@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.0.1-dev.2
+
+BREAKING:
+
+- chore: sdk: ">=3.11.0 <4.0.0"
+- chore: from_json_to_json: ^0.5.0
+- chore: rustore_billing_api: ^1.1.0
+- chore: xsoulspace_monetization_interface: ^0.9.0
+
 ## [1.0.1-dev.1] - 2026-04-29
 
 - fix: one-step subscription / non-consumable purchases reported as
