@@ -41,6 +41,19 @@ BREAKING:
 ## [0.8.2] - 2026-02-08
 
 - chore: update xsoulspace_monetization_interface dependency to 0.8.2
+## [0.8.1-dev.1] - 2026-04-29
+
+- fix: subscription / non-consumable purchases reported by RuStore as
+  `RustorePurchaseState.paid` are now mapped to `PurchaseStatus.purchased`
+  instead of `pendingVerification`. Previously, a successful subscription
+  purchase left users stuck on the paywall: the foundation's
+  `confirmPurchaseCommand` ran, but its `isPurchased` check failed because
+  RuStore's `paid` was treated as unverified, so subscription state never
+  transitioned to `subscribed`. `paid` for consumable purchases is unchanged
+  (still mapped to `pendingVerification` so the foundation drives the
+  `confirmPurchase` call).
+- changed: `purchaseStatusFromRustoreState` now takes a required `productType`
+  argument and is exported with `@visibleForTesting`.
 
 ## 0.8.0
 
