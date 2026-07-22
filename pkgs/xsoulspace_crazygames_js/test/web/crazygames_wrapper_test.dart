@@ -1,9 +1,13 @@
 @TestOn('browser')
 library;
 
-import 'dart:js_util' as js_util;
+import 'dart:js_interop' as js;
+import 'dart:js_interop_unsafe' as js_unsafe;
 
 import 'package:test/test.dart';
+import 'package:web/web.dart' as web;
+import 'package:web/web.dart' as web;
+import 'package:xsoulspace_crazygames_js/src/wrapper/converters.dart';
 import 'package:xsoulspace_crazygames_js/src/wrapper/crazy_games_web.dart';
 
 late final _SdkStubState _stub;

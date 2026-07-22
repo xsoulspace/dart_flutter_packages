@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:js_interop';
-import 'dart:js_util' as js_util;
+import 'dart:js_interop_unsafe' as js_util_unsafe;
+
+import 'package:web/web.dart' as web;
 
 import '../raw/discord_raw_shared.dart';
 

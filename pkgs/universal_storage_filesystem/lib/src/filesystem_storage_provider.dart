@@ -177,7 +177,7 @@ class FileSystemStorageProvider extends StorageProvider implements LocalEngine {
     final entities = await directory.list().toList();
     final items = <FileEntry>[];
     for (final entity in entities) {
-      final stat = await entity.stat();
+      final stat = entity.statSync();
       final name = path.relative(entity.path, from: _basePath);
       items.add(
         FileEntry(
@@ -410,8 +410,8 @@ class FileSystemStorageProvider extends StorageProvider implements LocalEngine {
 
     for (final namespace in namespaces) {
       final rawEntries =
-          namespaceEntries[namespace] ?? <_DurabilityJournalEntry>[];
-      rawEntries.sort((final a, final b) => a.sequence.compareTo(b.sequence));
+          namespaceEntries[namespace] ?? <_DurabilityJournalEntry>[]
+            ..sort((final a, final b) => a.sequence.compareTo(b.sequence));
 
       var truncatedEntries = 0;
       final entries = rawEntries.length > maxReplayEntriesPerNamespace
@@ -426,11 +426,10 @@ class FileSystemStorageProvider extends StorageProvider implements LocalEngine {
       final checkpoint = await _loadCheckpoint(namespace);
       final replayByOperationId = <String, _DurabilityReplayOperation>{};
       for (final entry in entries) {
-        final replay = replayByOperationId.putIfAbsent(
+        final _ = replayByOperationId.putIfAbsent(
           entry.operationId,
           () => _DurabilityReplayOperation(operationId: entry.operationId),
-        );
-        replay.track(entry);
+        )..track(entry);
       }
 
       final ordered = replayByOperationId.values.toList()
@@ -659,6 +658,7 @@ class FileSystemStorageProvider extends StorageProvider implements LocalEngine {
     required final _DurabilityOperationType operationType,
   }) {
     final nowMicros = DateTime.now().toUtc().microsecondsSinceEpoch;
+    // ignore: lines_longer_than_80_chars
     return '${_sanitizeSegment(namespace)}:${operationType.name}:$sequence:$nowMicros';
   }
 

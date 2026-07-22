@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:todo_app/main.dart' as app;
+import 'package:todo_file_app/main.dart' as app;
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -18,13 +18,13 @@ void main() {
 
     tearDownAll(() async {
       // Clean up
-      if (await tempDir.exists()) {
+      if (tempDir.existsSync()) {
         await tempDir.delete(recursive: true);
       }
     });
 
     testWidgets('app starts with folder picker when no workspace selected', (
-      tester,
+      final tester,
     ) async {
       app.main();
       await tester.pumpAndSettle();
@@ -35,7 +35,7 @@ void main() {
       expect(find.byIcon(Icons.folder_open), findsWidgets);
     });
 
-    testWidgets('shows folder picker tips and help text', (tester) async {
+    testWidgets('shows folder picker tips and help text', (final tester) async {
       app.main();
       await tester.pumpAndSettle();
 
@@ -51,7 +51,7 @@ void main() {
     });
 
     testWidgets('folder picker shows error for invalid actions', (
-      tester,
+      final tester,
     ) async {
       app.main();
       await tester.pumpAndSettle();

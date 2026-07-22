@@ -212,7 +212,7 @@ class OfflineGitStorageProvider extends StorageProvider
       if (rel.startsWith('.git') || path.basename(rel).startsWith('.')) {
         continue;
       }
-      final stat = await entity.stat();
+      final stat = entity.statSync();
       items.add(
         FileEntry(
           name: rel,

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:todo_app/models/todo.dart';
+import 'package:todo_file_app/models/todo.dart';
 
 void main() {
   group('TodoId', () {
@@ -72,7 +72,7 @@ void main() {
     });
 
     test('Todo.create factory respects provided values', () {
-      final createdAt = DateTime(2023, 1, 1);
+      final createdAt = DateTime(2023);
       final completedAt = DateTime(2023, 1, 2);
       final todo = Todo.create(
         id: const TodoId('custom-id'),

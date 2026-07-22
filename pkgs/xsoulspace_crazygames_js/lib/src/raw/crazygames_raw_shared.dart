@@ -2,20 +2,19 @@
 library;
 
 import 'dart:js_interop';
-import 'dart:js_util' as js_util;
 
 import 'package:meta/meta.dart';
 
 @internal
 Future<T> promiseToFuture<T extends JSAny?>(final JSPromise<T> promise) =>
-    js_util.promiseToFuture<T>(promise as Object);
+    promise.toDart;
 
 @internal
-Object? dartify(final Object? value) {
+Object? dartify(final JSObject? value) {
   if (value == null) {
     return null;
   }
-  return js_util.dartify(value);
+  return value.dartify();
 }
 
 @internal
@@ -24,7 +23,7 @@ JSAny? jsifyAny(final Object? value) {
     return null;
   }
   if (value is Map || value is List) {
-    return js_util.jsify(value) as JSAny;
+    return value.jsify();
   }
   return value as JSAny;
 }

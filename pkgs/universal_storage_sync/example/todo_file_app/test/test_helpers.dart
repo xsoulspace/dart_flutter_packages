@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:todo_app/state/app_state.dart';
+import 'package:todo_file_app/state/app_state.dart';
 
 /// Creates a test widget with necessary providers and material app wrapper
-Widget createTestWidget({required Widget child, AppState? appState}) {
-  return ChangeNotifierProvider(
-    create: (_) => appState ?? AppState(),
-    child: MaterialApp(home: Scaffold(body: child)),
-  );
-}
+Widget createTestWidget({
+  required final Widget child,
+  final AppState? appState,
+}) => ChangeNotifierProvider(
+  create: (_) => appState ?? AppState(),
+  child: MaterialApp(home: Scaffold(body: child)),
+);
 
 /// Creates a mock AppState for testing
 class MockAppState extends AppState {

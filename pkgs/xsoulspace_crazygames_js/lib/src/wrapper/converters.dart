@@ -1,6 +1,8 @@
 import 'dart:async';
-import 'dart:js_interop';
-import 'dart:js_util' as js_util;
+import 'dart:js_interop' as js;
+import 'dart:js_interop_unsafe' as js_unsafe;
+
+import 'package:web/web.dart' as web;
 
 import '../raw/crazygames_raw_shared.dart';
 
@@ -63,14 +65,14 @@ Object? prop(final Object? target, final String name) {
   if (target == null) {
     return null;
   }
-  return js_util.getProperty<Object?>(target, name);
+  return js_unsafe.getProperty<Object?>(target, name);
 }
 
 bool hasGlobalProperty(final String name) =>
-    js_util.hasProperty(js_util.globalThis, name);
+    web.hasProperty(web.globalThis, name);
 
 Object? globalProperty(final String name) =>
-    js_util.getProperty<Object?>(js_util.globalThis, name);
+    web.getProperty<Object?>(web.globalThis, name);
 
 Object? jsCall(
   final Object? target,
@@ -80,7 +82,7 @@ Object? jsCall(
   if (target == null) {
     throw StateError('Cannot call `$methodName` on null JS target.');
   }
-  return js_util.callMethod<Object?>(target, methodName, args);
+  return web.callMethod<Object?>(target, methodName, args);
 }
 
 Future<Object?> jsCallPromise(
@@ -95,15 +97,15 @@ Future<Object?> jsCallPromise(
   if (result is bool || result is num || result is String) {
     return result;
   }
-  if (js_util.hasProperty(result, 'then')) {
-    return js_util.promiseToFuture<Object?>(result);
+  if (web.hasProperty(result, 'then')) {
+    return web.promiseToFuture<Object?>(result);
   }
   return result;
 }
 
-JSAny? jsify(final Object? value) => jsifyAny(value);
+js.JSAny? jsify(final Object? value) => jsifyAny(value);
 
-Object allowInterop(final Function fn) => js_util.allowInterop(fn);
+Object allowInterop(final Function fn) => fn;
 
 void runGuarded(final void Function() callback) {
   try {

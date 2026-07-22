@@ -1,10 +1,11 @@
+// ignore_for_file: lines_longer_than_80_chars
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
-import '../models/todo.dart';
-import '../state/app_state.dart';
-import '../widgets/status_bar.dart';
-import '../widgets/todo_editor_dialog.dart';
+import 'package:todo_file_app/models/todo.dart';
+import 'package:todo_file_app/state/app_state.dart';
+import 'package:todo_file_app/widgets/status_bar.dart';
+import 'package:todo_file_app/widgets/todo_editor_dialog.dart';
 
 /// {@template todo_list_page}
 /// Main page displaying the list of todos with CRUD operations.
@@ -14,14 +15,14 @@ class TodoListPage extends StatelessWidget {
   const TodoListPage({super.key});
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(final BuildContext context) => Scaffold(
     appBar: AppBar(
       title: const Text('Todo App'),
       actions: [
         // Refresh button
         Consumer<AppState>(
-          builder: (context, appState, child) => IconButton(
-            onPressed: appState.busy ? null : () => appState.loadTodos(),
+          builder: (final context, final appState, final child) => IconButton(
+            onPressed: appState.busy ? null : appState.loadTodos,
             icon: const Icon(Icons.refresh),
             tooltip: 'Refresh todos',
           ),
@@ -29,12 +30,12 @@ class TodoListPage extends StatelessWidget {
 
         // Settings/workspace button
         PopupMenuButton<String>(
-          onSelected: (value) {
+          onSelected: (final value) {
             if (value == 'change_workspace') {
               _showChangeWorkspaceDialog(context);
             }
           },
-          itemBuilder: (context) => [
+          itemBuilder: (final context) => [
             const PopupMenuItem(
               value: 'change_workspace',
               child: Row(
@@ -54,10 +55,11 @@ class TodoListPage extends StatelessWidget {
         // Status bar
         const StatusBar(),
 
+        // ignore: flutter_style_todos
         // Todo list
         Expanded(
           child: Consumer<AppState>(
-            builder: (context, appState, child) {
+            builder: (final context, final appState, final child) {
               if (appState.busy) {
                 return const Center(
                   child: Column(
@@ -85,7 +87,7 @@ class TodoListPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton(
-                        onPressed: () => appState.loadTodos(),
+                        onPressed: appState.loadTodos,
                         child: const Text('Retry'),
                       ),
                     ],
@@ -118,7 +120,7 @@ class TodoListPage extends StatelessWidget {
               return ListView.builder(
                 padding: const EdgeInsets.all(16),
                 itemCount: appState.todos.length,
-                itemBuilder: (context, index) {
+                itemBuilder: (final context, final index) {
                   final todo = appState.todos[index];
                   return _TodoListItem(todo: todo);
                 },
@@ -129,45 +131,44 @@ class TodoListPage extends StatelessWidget {
       ],
     ),
     floatingActionButton: Consumer<AppState>(
-      builder: (context, appState, child) => FloatingActionButton(
-        onPressed: appState.busy ? null : () => _showAddTodoDialog(context),
-        child: const Icon(Icons.add),
-      ),
+      builder: (final context, final appState, final child) =>
+          FloatingActionButton(
+            onPressed: appState.busy ? null : () => _showAddTodoDialog(context),
+            child: const Icon(Icons.add),
+          ),
     ),
   );
 
-  void _showAddTodoDialog(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (context) => const TodoEditorDialog(),
-    );
-  }
+  void _showAddTodoDialog(final BuildContext context) => showDialog<void>(
+    context: context,
+    builder: (final context) => const TodoEditorDialog(),
+  );
 
-  void _showChangeWorkspaceDialog(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Change Workspace'),
-        content: const Text(
-          'Are you sure you want to change the workspace folder? '
-          'This will close the current workspace and you\'ll need to select a new folder.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              context.read<AppState>().clearWorkspace();
-            },
-            child: const Text('Change'),
-          ),
-        ],
+  void _showChangeWorkspaceDialog(
+    final BuildContext context,
+  ) => showDialog<void>(
+    context: context,
+    builder: (final context) => AlertDialog(
+      title: const Text('Change Workspace'),
+      content: const Text(
+        'Are you sure you want to change the workspace folder? '
+        "This will close the current workspace and you'll need to select a new folder.",
       ),
-    );
-  }
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+            context.read<AppState>().clearWorkspace();
+          },
+          child: const Text('Change'),
+        ),
+      ],
+    ),
+  );
 }
 
 /// Individual todo item widget
@@ -177,14 +178,13 @@ class _TodoListItem extends StatelessWidget {
   final Todo todo;
 
   @override
-  Widget build(BuildContext context) => Card(
+  Widget build(final BuildContext context) => Card(
     margin: const EdgeInsets.only(bottom: 8),
     child: ListTile(
       leading: Checkbox(
         value: todo.isCompleted,
-        onChanged: (value) {
-          context.read<AppState>().toggleTodoCompletion(todo.id);
-        },
+        onChanged: (final value) =>
+            context.read<AppState>().toggleTodoCompletion(todo.id),
       ),
       title: Text(
         todo.title,
@@ -206,17 +206,15 @@ class _TodoListItem extends StatelessWidget {
             )
           : null,
       trailing: PopupMenuButton<String>(
-        onSelected: (value) {
+        onSelected: (final value) {
           switch (value) {
             case 'edit':
               _showEditDialog(context);
-              break;
             case 'delete':
               _showDeleteDialog(context);
-              break;
           }
         },
-        itemBuilder: (context) => [
+        itemBuilder: (final context) => [
           const PopupMenuItem(
             value: 'edit',
             child: Row(
@@ -238,34 +236,30 @@ class _TodoListItem extends StatelessWidget {
     ),
   );
 
-  void _showEditDialog(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (context) => TodoEditorDialog(todo: todo),
-    );
-  }
+  void _showEditDialog(final BuildContext context) => showDialog<void>(
+    context: context,
+    builder: (final context) => TodoEditorDialog(todo: todo),
+  );
 
-  void _showDeleteDialog(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Todo'),
-        content: Text('Are you sure you want to delete "${todo.title}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              context.read<AppState>().deleteTodo(todo.id);
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-  }
+  void _showDeleteDialog(final BuildContext context) => showDialog<void>(
+    context: context,
+    builder: (final context) => AlertDialog(
+      title: const Text('Delete Todo'),
+      content: Text('Are you sure you want to delete "${todo.title}"?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () async {
+            Navigator.of(context).pop();
+            await context.read<AppState>().deleteTodo(todo.id);
+          },
+          style: TextButton.styleFrom(foregroundColor: Colors.red),
+          child: const Text('Delete'),
+        ),
+      ],
+    ),
+  );
 }

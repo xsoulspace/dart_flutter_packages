@@ -1,4 +1,4 @@
-name: todo_app
+name: todo_file_app
 description: Flutter Todo App demonstrating universal_storage_sync FileSystem provider
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -21,6 +21,8 @@ version: 1.0.0+1
 environment:
   sdk: ^3.12.0
 
+resolution: workspace
+
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
 # consider running `flutter pub upgrade --major-versions`. Alternatively,
@@ -40,9 +42,7 @@ dependencies:
   provider: ^6.0.5
   shared_preferences: ^2.2.0
   universal_storage_filesystem:
-    path: ../../../universal_storage_filesystem
   universal_storage_interface:
-    path: ../../../universal_storage_interface
 
   # Universal Storage Sync - our main package
   universal_storage_sync:
@@ -50,27 +50,17 @@ dependencies:
 
   # Additional dependencies
   universal_storage_sync_utils_flutter:
-    path: ../../../universal_storage_sync_utils_flutter
 
   # Utilities
   uuid: ^4.2.0
   xsoulspace_foundation: ^0.4.0
   yaml: ^3.1.2
 
-dependency_overrides:
-  universal_storage_sync:
-    path: ../../
-  universal_storage_interface:
-    path: ../../../universal_storage_interface
-  universal_storage_sync_utils:
-    path: ../../../universal_storage_sync_utils
-  universal_storage_sync_utils_flutter:
-    path: ../../../universal_storage_sync_utils_flutter
-
 dev_dependencies:
-  flutter_lints: ^3.0.0
+  lints: ^6.1.0
   flutter_test:
     sdk: flutter
+  xsoulspace_lints: ^0.1.2
   integration_test:
     sdk: flutter
   mocktail: ^1.0.0

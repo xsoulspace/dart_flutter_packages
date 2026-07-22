@@ -1,4 +1,4 @@
-name: todo_app
+name: todo_git_app
 description: Flutter Todo App demonstrating universal_storage_sync FileSystem provider
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -19,7 +19,9 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: ">=3.3.0 <4.0.0"
+  sdk: ^3.12.0
+
+resolution: workspace
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -32,12 +34,10 @@ dependencies:
     sdk: flutter
 
   # Universal Storage Sync - our main package
-  universal_storage_sync: ^0.1.0-dev.3
+  universal_storage_sync:
+    path: ../../
   universal_storage_filesystem:
-    path: ../../../universal_storage_filesystem
   universal_storage_interface:
-    path: ../../../universal_storage_interface
-
   # Core dependencies
   from_json_to_json: ^0.5.0
   file_selector: ^1.0.3
@@ -52,33 +52,17 @@ dependencies:
 
   # Additional dependencies
   universal_storage_sync_utils_flutter:
-    path: ../../../universal_storage_sync_utils_flutter
 
   cupertino_icons: ^1.0.2
 
-dependency_overrides:
-  universal_storage_interface:
-    path: ../../../universal_storage_interface
-  universal_storage_filesystem:
-    path: ../../../universal_storage_filesystem
-  universal_storage_sync_utils:
-    path: ../../../universal_storage_sync_utils
-  universal_storage_sync_utils_flutter:
-    path: ../../../universal_storage_sync_utils_flutter
-
 dev_dependencies:
+  lints: ^6.1.0
   flutter_test:
     sdk: flutter
+  xsoulspace_lints: ^0.1.2
   integration_test:
     sdk: flutter
   mocktail: ^1.0.0
-  # The "flutter_lints" package below contains a set of recommended lints to
-  # encourage good coding practices. The lint set provided by the package is
-  # activated in the `analysis_options.yaml` file located at the root of your
-  # package. See that file for information about deactivating specific lint
-  # rules and activating additional ones.
-  flutter_lints: ^3.0.0
-
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 

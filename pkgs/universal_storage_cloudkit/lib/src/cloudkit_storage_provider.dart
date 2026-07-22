@@ -12,10 +12,9 @@ class CloudKitStorageProvider extends StorageProvider implements RemoteEngine {
   CloudKitStorageProvider({
     final CloudKitBridge? bridge,
     final _LocalMirrorStore Function()? localMirrorFactory,
-    final StorageProvider Function(StorageConfig config)? fallbackResolver,
+    this._fallbackResolver,
   }) : _bridge = bridge ?? CloudKitBridgePlatform.instance,
-       _localMirrorFactory = localMirrorFactory ?? _defaultLocalMirrorFactory,
-       _fallbackResolver = fallbackResolver;
+       _localMirrorFactory = localMirrorFactory ?? _defaultLocalMirrorFactory;
 
   static const _stateSchemaVersion = 1;
   static const _stateRelativePath = '.us/cloudkit/state_v1.json';
@@ -94,7 +93,7 @@ class CloudKitStorageProvider extends StorageProvider implements RemoteEngine {
     final String filePath,
     final String content, {
     final String? commitMessage,
-  }) async {
+  }) {
     if (_delegatingToFallback) {
       return _fallback!.createFile(
         filePath,
@@ -132,7 +131,7 @@ class CloudKitStorageProvider extends StorageProvider implements RemoteEngine {
     final String filePath,
     final String content, {
     final String? commitMessage,
-  }) async {
+  }) {
     if (_delegatingToFallback) {
       return _fallback!.updateFile(
         filePath,
@@ -153,7 +152,7 @@ class CloudKitStorageProvider extends StorageProvider implements RemoteEngine {
   Future<FileOperationResult> deleteFile(
     final String filePath, {
     final String? commitMessage,
-  }) async {
+  }) {
     if (_delegatingToFallback) {
       return _fallback!.deleteFile(filePath, commitMessage: commitMessage);
     }
@@ -1115,7 +1114,7 @@ class _LocalMirrorStore {
 
     final entries = <FileEntry>[];
     await for (final entity in directory.list(followLinks: false)) {
-      final stat = await entity.stat();
+      final stat = entity.statSync();
       final name = path.basename(entity.path);
       entries.add(
         FileEntry(

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:todo_app/models/todo.dart';
-import 'package:todo_app/widgets/todo_editor_dialog.dart';
+import 'package:todo_file_app/models/todo.dart';
+import 'package:todo_file_app/widgets/todo_editor_dialog.dart';
 
 import '../test_helpers.dart';
 
 void main() {
   group('TodoEditorDialog', () {
-    testWidgets('shows correct title for new todo', (tester) async {
+    testWidgets('shows correct title for new todo', (final tester) async {
       await tester.pumpWidget(
         createTestWidget(child: const TodoEditorDialog()),
       );
@@ -15,7 +15,7 @@ void main() {
       expect(find.text('New Todo'), findsOneWidget);
     });
 
-    testWidgets('shows correct title for editing todo', (tester) async {
+    testWidgets('shows correct title for editing todo', (final tester) async {
       final todo = Todo.create(id: const TodoId('test-id'), title: 'Test Todo');
 
       await tester.pumpWidget(
@@ -25,7 +25,9 @@ void main() {
       expect(find.text('Edit Todo'), findsOneWidget);
     });
 
-    testWidgets('populates fields when editing existing todo', (tester) async {
+    testWidgets('populates fields when editing existing todo', (
+      final tester,
+    ) async {
       final todo = Todo.create(
         id: const TodoId('test-id'),
         title: 'Test Todo',
@@ -44,7 +46,7 @@ void main() {
       expect(find.text('tag1, tag2'), findsOneWidget);
     });
 
-    testWidgets('validates required title field', (tester) async {
+    testWidgets('validates required title field', (final tester) async {
       await tester.pumpWidget(
         createTestWidget(child: const TodoEditorDialog()),
       );
@@ -58,7 +60,7 @@ void main() {
       expect(find.text('Title is required'), findsOneWidget);
     });
 
-    testWidgets('allows submission with valid title', (tester) async {
+    testWidgets('allows submission with valid title', (final tester) async {
       await tester.pumpWidget(
         createTestWidget(child: const TodoEditorDialog()),
       );
@@ -79,7 +81,7 @@ void main() {
       expect(find.text('Title is required'), findsNothing);
     });
 
-    testWidgets('shows Update button when editing', (tester) async {
+    testWidgets('shows Update button when editing', (final tester) async {
       final todo = Todo.create(id: const TodoId('test-id'), title: 'Test Todo');
 
       await tester.pumpWidget(
@@ -92,7 +94,9 @@ void main() {
       expect(find.text('Create'), findsNothing);
     });
 
-    testWidgets('shows Create button when creating new todo', (tester) async {
+    testWidgets('shows Create button when creating new todo', (
+      final tester,
+    ) async {
       await tester.pumpWidget(
         createTestWidget(child: const TodoEditorDialog()),
       );

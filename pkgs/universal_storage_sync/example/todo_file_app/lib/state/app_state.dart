@@ -1,22 +1,26 @@
-// ignore_for_file: avoid_print
+// ignore_for_file: avoid_catches_without_on_clauses, avoid_print
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:todo_file_app/models/todo.dart';
 import 'package:universal_storage_filesystem/universal_storage_filesystem.dart';
 import 'package:universal_storage_sync/universal_storage_sync.dart';
 import 'package:universal_storage_sync_utils_flutter/universal_storage_sync_utils_flutter.dart';
 import 'package:uuid/uuid.dart';
 import 'package:yaml/yaml.dart';
 
-import '../models/todo.dart';
-
 /// {@template app_state}
 /// Main application state managing workspace, todos, and storage operations.
 /// Uses ChangeNotifier for reactive UI updates.
 /// {@endtemplate}
 class AppState extends ChangeNotifier {
+  /// {@macro app_state}
+  AppState() {
+    unawaited(_onLoad());
+  }
   static const String _workspacePathKey = 'workspace_path';
   static const String _todosDirectoryName = 'todos';
   final Uuid _uuid = const Uuid();
@@ -37,19 +41,15 @@ class AppState extends ChangeNotifier {
   StorageKernel? _kernel;
   StorageServiceKernelAdapter? _storageAdapter;
 
-  /// {@macro app_state}
-  AppState() {
-    _onLoad();
-  }
-
   /// Whether a workspace is currently selected
   bool get hasWorkspace => filePathConfig.isNotEmpty;
 
   /// Number of completed todos
-  int get completedCount => todos.where((todo) => todo.isCompleted).length;
+  int get completedCount =>
+      todos.where((final todo) => todo.isCompleted).length;
 
   /// Number of pending todos
-  int get pendingCount => todos.where((todo) => !todo.isCompleted).length;
+  int get pendingCount => todos.where((final todo) => !todo.isCompleted).length;
 
   /// Whether app storage is currently routed through profile-based kernel.
   bool get usesProfileKernel => _kernel != null;
@@ -111,7 +111,7 @@ class AppState extends ChangeNotifier {
   }
 
   /// Creates or updates a todo
-  Future<void> saveTodo(Todo todo) async {
+  Future<void> saveTodo(final Todo todo) async {
     if (!hasWorkspace) return;
 
     await _setBusy(true);
@@ -127,7 +127,7 @@ class AppState extends ChangeNotifier {
 
       // Update local list
       final existingIndex = todos.indexWhere(
-        (t) => t.id.value == todo.id.value,
+        (final t) => t.id.value == todo.id.value,
       );
       if (existingIndex >= 0) {
         todos[existingIndex] = todo;
@@ -144,7 +144,7 @@ class AppState extends ChangeNotifier {
   }
 
   /// Deletes a todo
-  Future<void> deleteTodo(TodoId id) async {
+  Future<void> deleteTodo(final TodoId id) async {
     if (!hasWorkspace) return;
 
     await _setBusy(true);
@@ -153,7 +153,7 @@ class AppState extends ChangeNotifier {
       await _removeFile(fileName, message: 'Delete todo: $id');
 
       // Remove from local list
-      todos.removeWhere((todo) => todo.id.value == id.value);
+      todos.removeWhere((final todo) => todo.id.value == id.value);
       _clearError();
     } catch (e) {
       _setError('Failed to delete todo: $e');
@@ -164,9 +164,9 @@ class AppState extends ChangeNotifier {
 
   /// Creates a new todo with generated ID
   Future<void> createTodo({
-    required String title,
-    String description = '',
-    List<String> tags = const [],
+    required final String title,
+    final String description = '',
+    final List<String> tags = const [],
   }) async {
     final todo = Todo.create(
       id: TodoId(_uuid.v4()),
@@ -178,8 +178,8 @@ class AppState extends ChangeNotifier {
   }
 
   /// Toggles completion status of a todo
-  Future<void> toggleTodoCompletion(TodoId id) async {
-    final todo = todos.firstWhere((t) => t.id.value == id.value);
+  Future<void> toggleTodoCompletion(final TodoId id) async {
+    final todo = todos.firstWhere((final t) => t.id.value == id.value);
     final updatedTodo = todo.copyWith(
       isCompleted: !todo.isCompleted,
       completedAt: !todo.isCompleted ? DateTime.now() : null,
@@ -194,18 +194,18 @@ class AppState extends ChangeNotifier {
     _storageAdapter = null;
     _kernel = null;
     _legacyStorageService = null;
-    _clearStoredWorkspacePath();
+    unawaited(_clearStoredWorkspacePath());
     notifyListeners();
   }
 
   // Private methods
 
-  Future<void> _setBusy(bool value) async {
+  Future<void> _setBusy(final bool value) async {
     busy = value;
     notifyListeners();
   }
 
-  void _setError(String message) {
+  void _setError(final String message) {
     error = message;
     notifyListeners();
   }
@@ -217,7 +217,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> _onLoad() async {
     StorageProviderRegistry.register<FileSystemConfig>(
-      () => FileSystemStorageProvider(),
+      FileSystemStorageProvider.new,
     );
     await _loadStoredWorkspacePath();
   }
@@ -256,7 +256,7 @@ class AppState extends ChangeNotifier {
   Future<void> _initializeStorage() async {
     if (!hasWorkspace) return;
 
-    resolvePlatformDirectoryOfConfig(filePathConfig);
+    await resolvePlatformDirectoryOfConfig(filePathConfig);
 
     final fileSystemConfig = FileSystemConfig.fromFilePathConfig(
       filePathConfig,
@@ -271,7 +271,6 @@ class AppState extends ChangeNotifier {
           policy: StoragePolicy.localOnly,
           localEngineId: 'filesystem',
           defaultFileExtension: '.yaml',
-          syncInteractionLevel: SyncInteractionLevel.minimal,
         ),
       ],
     );
@@ -287,14 +286,14 @@ class AppState extends ChangeNotifier {
     );
   }
 
-  Future<List<FileEntry>> _listDirectory(final String path) async {
+  Future<List<FileEntry>> _listDirectory(final String path) {
     if (_storageAdapter != null) {
       return _storageAdapter!.listDirectory(path);
     }
     return _legacyStorageService!.listDirectory(path);
   }
 
-  Future<String?> _readFile(final String path) async {
+  Future<String?> _readFile(final String path) {
     if (_storageAdapter != null) {
       return _storageAdapter!.readFile(path);
     }
@@ -305,7 +304,7 @@ class AppState extends ChangeNotifier {
     final String path,
     final String content, {
     final String? message,
-  }) async {
+  }) {
     if (_storageAdapter != null) {
       return _storageAdapter!.saveFile(path, content, message: message);
     }
@@ -315,14 +314,14 @@ class AppState extends ChangeNotifier {
   Future<FileOperationResult> _removeFile(
     final String path, {
     final String? message,
-  }) async {
+  }) {
     if (_storageAdapter != null) {
       return _storageAdapter!.removeFile(path, message: message);
     }
     return _legacyStorageService!.removeFile(path, message: message);
   }
 
-  String _todoToYaml(Todo todo) {
+  String _todoToYaml(final Todo todo) {
     final data = {
       'id': todo.id.value,
       'title': todo.title,
@@ -339,7 +338,7 @@ class AppState extends ChangeNotifier {
       if (entry.value != null) {
         if (entry.value is List) {
           buffer.writeln('${entry.key}:');
-          for (final item in entry.value as List) {
+          for (final item in entry.value! as List) {
             buffer.writeln('  - ${_yamlEscape(item.toString())}');
           }
         } else {
@@ -352,10 +351,10 @@ class AppState extends ChangeNotifier {
     return buffer.toString();
   }
 
-  String _yamlEscape(String value) {
+  String _yamlEscape(final String value) {
     // Simple YAML escaping - wrap in quotes if contains special characters
     if (value.contains(':') || value.contains('#') || value.contains('\n')) {
-      return '"${value.replaceAll('"', '\\"')}"';
+      return '"${value.replaceAll('"', r'\"')}"';
     }
     return value;
   }
