@@ -8,7 +8,7 @@ documentation: https://github.com/xsoulspace/universal_storage_sync/tree/main/pk
 
 environment:
   sdk: ^3.12.0
-  flutter: ">=3.38.0"
+  flutter: ">=3.44.0"
 
 resolution: workspace
 
