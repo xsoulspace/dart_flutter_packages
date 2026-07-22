@@ -10,8 +10,8 @@ environment:
 resolution: workspace
 
 dev_dependencies:
-  lints: ^6.0.0
-  test: ^1.26.3
+  lints: ^6.1.0
+  test: ^1.25.8
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 

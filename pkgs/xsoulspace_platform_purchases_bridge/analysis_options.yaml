@@ -19,7 +19,7 @@ linter:
     prefer_conditional_assignment: false
     prefer_expression_function_bodies: false
     prefer_final_locals: false
-    prefer_final_parameters: false
+
     prefer_foreach: false
     prefer_function_declarations_over_variables: false
     sort_pub_dependencies: false

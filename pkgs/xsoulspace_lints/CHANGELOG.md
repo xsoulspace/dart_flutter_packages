@@ -1,3 +1,7 @@
+## 0.2.0
+
+- chore: dart:3.12, lints: 6.1
+
 ## 0.1.2
 
 - fix: public_member_api_docs now false for app.yaml and library.yaml

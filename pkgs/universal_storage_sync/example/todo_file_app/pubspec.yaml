@@ -57,12 +57,12 @@ dependencies:
   yaml: ^3.1.2
 
 dev_dependencies:
-  lints: ^6.1.0
   flutter_test:
     sdk: flutter
-  xsoulspace_lints: ^0.1.2
+  lints: ^6.1.0
   integration_test:
     sdk: flutter
+  xsoulspace_lints: ^0.1.2
   mocktail: ^1.0.0
 
 # For information on the generic Dart part of this file, see the
