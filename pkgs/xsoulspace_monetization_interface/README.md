@@ -12,7 +12,7 @@ Common contracts and models for monetization providers used by xsoulspace packag
 
 ```yaml
 dependencies:
-  xsoulspace_monetization_interface: ^0.8.2
+  xsoulspace_monetization_interface: ^0.9.0
 ```
 
 ## Usage

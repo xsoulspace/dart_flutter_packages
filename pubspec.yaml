@@ -4,3 +4,8 @@ environment:
   sdk: ^3.12.0
 workspace:
   - pkgs/*
+  - pkgs/xsoulspace_steamworks/example/
+  - pkgs/xsoulspace_inference_gemma_flutter/example/
+
+dependency_overrides:
+  device_info_plus: 13.1.0

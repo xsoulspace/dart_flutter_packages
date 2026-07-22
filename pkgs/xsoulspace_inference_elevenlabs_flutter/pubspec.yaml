@@ -11,7 +11,7 @@ environment:
 resolution: workspace
 
 dependencies:
-  elevenlabs_agents: ^0.4.0
+  elevenlabs_agents: ^0.6.1
   flutter:
     sdk: flutter
   http: ^1.5.0

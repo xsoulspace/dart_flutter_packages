@@ -15,7 +15,7 @@ BREAKING:
 
 ## 0.8.1
 
-- chore: publish readiness updates and dependency alignment to `xsoulspace_monetization_interface: ^0.8.2`.
+- chore: publish readiness updates and dependency alignment to `xsoulspace_monetization_interface: ^0.9.0`.
 
 ## 0.8.0
 
