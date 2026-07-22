@@ -5,7 +5,9 @@ homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xso
 repository: https://github.com/xsoulspace/dart_flutter_packages
 
 environment:
-  sdk: ">=3.11.0 <4.0.0"
+  sdk: ^3.12.0
+
+resolution: workspace
 
 dependencies:
   collection: ^1.19.1

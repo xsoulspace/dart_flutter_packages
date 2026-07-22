@@ -7,8 +7,10 @@ homepage: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xso
 issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
 
 environment:
-  sdk: ">=3.11.0 <4.0.0"
+  sdk: ^3.12.0
   flutter: ">=3.38.0"
+
+resolution: workspace
 
 dependencies:
   app_settings: ^7.0.0

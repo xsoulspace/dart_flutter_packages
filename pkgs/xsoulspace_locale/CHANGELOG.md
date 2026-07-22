@@ -4,7 +4,7 @@
 
 BREAKING:
 
-- chore: sdk: ">=3.11.0 <4.0.0"
+- chore: sdk: ^3.12.0
 - chore: equatable: ^2.0.8
 - chore: build_runner: ^2.15.0
 - chore: lints: ^6.1.0

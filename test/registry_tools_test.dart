@@ -40,7 +40,7 @@ description: Public package
 version: 1.2.3
 topics: [logging, registry]
 environment:
-  sdk: ">=3.11.0 <4.0.0"
+  sdk: ^3.12.0
 dependencies:
   args: ^2.7.0
 ''',
@@ -75,7 +75,7 @@ name: archive_pkg
 description: Archive package
 version: 1.0.0
 environment:
-  sdk: ">=3.11.0 <4.0.0"
+  sdk: ^3.12.0
 ''');
       await Directory('${packageDir.path}/lib').create(recursive: true);
       await File(
@@ -272,7 +272,7 @@ description: Private package
 version: 0.1.0
 publish_to: none
 environment:
-  sdk: ">=3.11.0 <4.0.0"
+  sdk: ^3.12.0
 ''',
   );
   await _writePackage(
@@ -285,7 +285,7 @@ name: public_pkg
 description: Public package
 version: 1.2.3
 environment:
-  sdk: ">=3.11.0 <4.0.0"
+  sdk: ^3.12.0
 dependencies:
   args: ^2.7.0
 ''',

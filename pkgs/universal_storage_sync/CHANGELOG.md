@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.0-dev.10] - 2026-02-08
 
-- sdk: ">=3.10.0 <4.0.0"
+- sdk: ^3.12.0
 - from_json_to_json: ^0.4.0
 - universal_storage_interface: ^0.1.0-dev.10
 

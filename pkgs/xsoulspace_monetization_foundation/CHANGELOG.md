@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 BREAKING:
 
-- chore: sdk: ">=3.11.0 <4.0.0"
+- chore: sdk: ^3.12.0
 - chore: is_dart_empty_or_not: ^0.4.0
 - chore: xsoulspace_monetization_interface: ^0.9.0
 

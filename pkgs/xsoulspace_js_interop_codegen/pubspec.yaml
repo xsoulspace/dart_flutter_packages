@@ -6,7 +6,9 @@ homepage: https://github.com/xsoulspace/xsoulspace_packages/tree/main/pkgs/xsoul
 issue_tracker: https://github.com/xsoulspace/xsoulspace_packages/issues
 
 environment:
-  sdk: ">=3.10.0 <4.0.0"
+  sdk: ^3.12.0
+
+resolution: workspace
 
 dependencies:
   archive: ^4.0.2

@@ -7,8 +7,10 @@ issue_tracker: https://github.com/xsoulspace/universal_storage_db/issues
 documentation: https://github.com/xsoulspace/universal_storage_db/tree/main/pkgs/universal_storage_db
 
 environment:
-  sdk: ">=3.10.0 <4.0.0"
+  sdk: ^3.12.0
   flutter: ">=3.38.0"
+
+resolution: workspace
 
 dependencies:
   flutter:

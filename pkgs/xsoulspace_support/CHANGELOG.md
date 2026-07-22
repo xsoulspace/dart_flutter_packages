@@ -17,7 +17,7 @@ BREAKING:
 - chore: package_info_plus 10.1.0
 - chore: from_json_to_json 0.5.0
 - chore: is_dart_empty_or_not 0.4.0
-- chore: sdk: ">=3.11.0 <4.0.0"
+- chore: sdk: ^3.12.0
 
 ## 0.2.1
 

@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 BREAKING:
 
-- chore: sdk: ">=3.11.0 <4.0.0"
+- chore: sdk: ^3.12.0
 - chore: from_json_to_json: ^0.5.0
 - chore: rustore_billing_api: ^1.1.0
 - chore: xsoulspace_monetization_interface: ^0.9.0

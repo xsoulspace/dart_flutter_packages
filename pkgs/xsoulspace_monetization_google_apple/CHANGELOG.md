@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 BREAKING:
 
-- chore: sdk: ">=3.11.0 <4.0.0"
+- chore: sdk: ^3.12.0
 - chore: in_app_purchase_storekit: ^0.4.8+1
 - chore: xsoulspace_monetization_interface: ^0.9.0
 
