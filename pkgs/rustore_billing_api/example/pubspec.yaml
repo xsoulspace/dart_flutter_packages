@@ -13,13 +13,13 @@ dependencies:
     sdk: flutter
   rustore_billing_api:
     path: ../
-  cupertino_icons: ^1.0.2
+  cupertino_icons: ^1.0.9
   from_json_to_json: ^0.5.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  lints: ^6.0.0
+  lints: ^6.1.0
   xsoulspace_lints: ^0.1.2
 
 flutter:

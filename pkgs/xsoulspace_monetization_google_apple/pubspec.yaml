@@ -13,13 +13,13 @@ environment:
 resolution: workspace
 
 dependencies:
-  app_settings: ^7.0.0
+  app_settings: ^8.0.3
   collection: ^1.19.1
   flutter:
     sdk: flutter
   from_json_to_json: ^0.5.0
-  in_app_purchase: ^3.2.3
-  in_app_purchase_storekit: ^0.4.8+1
+  in_app_purchase: ^3.3.0
+  in_app_purchase_storekit: ^0.4.10+1
   xsoulspace_monetization_interface: ^0.9.0
 dev_dependencies:
   flutter_test:

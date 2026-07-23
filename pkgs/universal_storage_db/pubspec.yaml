@@ -21,6 +21,6 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  lints: ^6.0.0
-  mockito: ^5.4.6
+  lints: ^6.1.0
+  mockito: ^5.7.0
   xsoulspace_lints: ^0.1.2

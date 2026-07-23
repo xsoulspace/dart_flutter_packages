@@ -83,8 +83,6 @@ class HashPagingController<TKey, TItem> extends PagingController<TKey, TItem> {
         newItems = fetchResult;
       }
 
-      state = value;
-
       // Apply deduplication before adding to state
       final existingItems =
           state.pages?.expand((final page) => page).toList() ?? [];
@@ -275,7 +273,12 @@ class HashPagingController<TKey, TItem> extends PagingController<TKey, TItem> {
   }
 
   void _updateItemList(final List<TItem> newItems) {
-    value = value.copyWith(pages: [newItems]);
+    final resettedState = value.reset();
+    final key = value.keys?.firstOrNull;
+    value = resettedState.copyWith(
+      pages: [newItems],
+      keys: key == null ? null : [key],
+    );
   }
 
   bool _mounted = true;

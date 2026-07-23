@@ -11,10 +11,10 @@ environment:
 resolution: workspace
 
 dependencies:
-  github: ^9.25.0
+  github: ^9.25.1
   retry: ^3.1.2
-  universal_storage_interface: ^0.1.0-dev.10
+  universal_storage_interface: ^0.1.0-dev.12
 dev_dependencies:
-  lints: ^6.0.0
-  test: ^1.26.2
+  lints: ^6.1.0
+  test: ^1.31.2
   xsoulspace_lints: ^0.1.2

@@ -30,17 +30,17 @@ resolution: workspace
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
-  cupertino_icons: ^1.0.2
-  file_selector: ^1.0.3
+  cupertino_icons: ^1.0.9
+  file_selector: ^1.1.0
   flutter:
     sdk: flutter
-  flutter_animate: ^4.3.0
+  flutter_animate: ^4.5.2
 
   # Core dependencies
   from_json_to_json: ^0.5.0
-  path: ^1.8.3
-  provider: ^6.0.5
-  shared_preferences: ^2.2.0
+  path: ^1.9.1
+  provider: ^6.1.5+1
+  shared_preferences: ^2.5.5
   universal_storage_filesystem:
   universal_storage_interface:
 
@@ -52,9 +52,9 @@ dependencies:
   universal_storage_sync_utils_flutter:
 
   # Utilities
-  uuid: ^4.2.0
+  uuid: ^4.6.0
   xsoulspace_foundation: ^0.4.0
-  yaml: ^3.1.2
+  yaml: ^3.1.3
 
 dev_dependencies:
   flutter_test:
@@ -63,7 +63,7 @@ dev_dependencies:
   integration_test:
     sdk: flutter
   xsoulspace_lints: ^0.1.2
-  mocktail: ^1.0.0
+  mocktail: ^1.0.5
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

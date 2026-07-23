@@ -30,7 +30,7 @@ resolution: workspace
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
-  cupertino_icons: ^1.0.8
+  cupertino_icons: ^1.0.9
   flutter:
     sdk: flutter
   xsoulspace_inference_gemma_flutter:

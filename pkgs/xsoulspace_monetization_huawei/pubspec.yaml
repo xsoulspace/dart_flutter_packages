@@ -16,11 +16,11 @@ dependencies:
   flutter:
     sdk: flutter
   from_json_to_json: ^0.5.0
-  huawei_iap: ^6.13.0+305
+  huawei_iap: ^6.14.0+300
   url_launcher: ^6.3.2
   xsoulspace_monetization_interface: ^0.9.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  lints: ^6.0.0
+  lints: ^6.1.0
   xsoulspace_lints: ^0.1.2
