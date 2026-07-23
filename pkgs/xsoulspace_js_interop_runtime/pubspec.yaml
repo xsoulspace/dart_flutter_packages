@@ -1,0 +1,24 @@
+name: xsoulspace_js_interop_runtime
+description: Shared dynamic dart:js_interop helpers for XSoulSpace JS SDK wrapper packages.
+version: 0.1.0-dev.1
+repository: https://github.com/xsoulspace/xsoulspace_packages
+homepage: https://github.com/xsoulspace/xsoulspace_packages/tree/main/pkgs/xsoulspace_js_interop_runtime
+issue_tracker: https://github.com/xsoulspace/xsoulspace_packages/issues
+
+topics:
+  - js-interop
+  - web
+  - xsoulspace
+
+platforms:
+  web:
+
+environment:
+  sdk: ^3.12.0
+
+resolution: workspace
+
+dev_dependencies:
+  lints: ^6.1.0
+  test: ^1.31.2
+  xsoulspace_lints: ^0.1.2

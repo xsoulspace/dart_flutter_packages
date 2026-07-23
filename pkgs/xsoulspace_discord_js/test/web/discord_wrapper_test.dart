@@ -1,9 +1,8 @@
 @TestOn('browser')
 library;
 
-import 'dart:js_util' as js_util;
-
 import 'package:test/test.dart';
+import 'package:xsoulspace_discord_js/src/wrapper/converters.dart';
 import 'package:xsoulspace_discord_js/src/wrapper/discord_web.dart';
 
 late final _DiscordSdkStub _stub;
@@ -118,15 +117,15 @@ final class _DiscordSdkStub {
   final Map<String, List<Object>> _listeners = <String, List<Object>>{};
 
   void install() {
-    final commands = js_util.jsify(<String, Object?>{
-      'authorize': js_util.allowInterop((final Object? payload) {
-        return js_util.jsify(<String, Object?>{'code': 'oauth-code-1'});
+    final commands = jsify(<String, Object?>{
+      'authorize': allowInterop((final Object? payload) {
+        return jsify(<String, Object?>{'code': 'oauth-code-1'});
       }),
-      'authenticate': js_util.allowInterop((final Object? payload) {
+      'authenticate': allowInterop((final Object? payload) {
         final data = payload == null
             ? <String, Object?>{}
-            : Map<String, Object?>.from(js_util.dartify(payload)! as Map);
-        return js_util.jsify(<String, Object?>{
+            : Map<String, Object?>.from(dartify(payload)! as Map);
+        return jsify(<String, Object?>{
           'access_token': data['access_token'] ?? 'token-default',
           'user': <String, Object?>{
             'id': 'u-1',
@@ -137,19 +136,19 @@ final class _DiscordSdkStub {
           'application': <String, Object?>{'id': 'app-42'},
         });
       }),
-      'getUser': js_util.allowInterop((final Object? payload) {
+      'getUser': allowInterop((final Object? payload) {
         final data = Map<String, Object?>.from(
-          js_util.dartify(payload)! as Map,
+          dartify(payload)! as Map,
         );
         final id = data['id']?.toString() ?? 'unknown';
-        return js_util.jsify(<String, Object?>{
+        return jsify(<String, Object?>{
           'id': id,
           'username': 'User $id',
           'global_name': 'User $id',
         });
       }),
-      'getRelationships': js_util.allowInterop(([final Object? payload]) {
-        return js_util.jsify(<String, Object?>{
+      'getRelationships': allowInterop(([final Object? payload]) {
+        return jsify(<String, Object?>{
           'relationships': <Map<String, Object?>>[
             <String, Object?>{
               'type': 1,
@@ -162,30 +161,30 @@ final class _DiscordSdkStub {
           ],
         });
       }),
-      'openInviteDialog': js_util.allowInterop(([final Object? payload]) {
-        return js_util.jsify(<String, Object?>{'opened': true});
+      'openInviteDialog': allowInterop(([final Object? payload]) {
+        return jsify(<String, Object?>{'opened': true});
       }),
-      'inviteUserEmbedded': js_util.allowInterop((final Object? payload) {
-        return js_util.jsify(<String, Object?>{'sent': true});
+      'inviteUserEmbedded': allowInterop((final Object? payload) {
+        return jsify(<String, Object?>{'sent': true});
       }),
-      'shareLink': js_util.allowInterop((final Object? payload) {
-        return js_util.jsify(<String, Object?>{
+      'shareLink': allowInterop((final Object? payload) {
+        return jsify(<String, Object?>{
           'success': true,
           'didCopyLink': true,
           'didSendMessage': true,
         });
       }),
-      'openShareMomentDialog': js_util.allowInterop((final Object? payload) {
-        return js_util.jsify(<String, Object?>{'opened': true});
+      'openShareMomentDialog': allowInterop((final Object? payload) {
+        return jsify(<String, Object?>{'opened': true});
       }),
     });
 
-    final sdk = js_util.jsify(<String, Object?>{
-      'ready': js_util.allowInterop(() {
+    final sdk = jsify(<String, Object?>{
+      'ready': allowInterop(() {
         readyCalls += 1;
       }),
       'commands': commands,
-      'subscribe': js_util.allowInterop((
+      'subscribe': allowInterop((
         final Object? event,
         final Object listener, [
         final Object? subscribeArgs,
@@ -194,7 +193,7 @@ final class _DiscordSdkStub {
         final key = event?.toString() ?? '';
         _listeners.putIfAbsent(key, () => <Object>[]).add(listener);
       }),
-      'unsubscribe': js_util.allowInterop((
+      'unsubscribe': allowInterop((
         final Object? event,
         final Object listener, [
         final Object? unsubscribeArgs,
@@ -205,7 +204,7 @@ final class _DiscordSdkStub {
       }),
     });
 
-    js_util.setProperty(js_util.globalThis, 'DiscordSDK', sdk);
+    setGlobalProperty('DiscordSDK', sdk);
   }
 
   void emit(final String event, final Map<String, Object?> payload) {
@@ -214,9 +213,9 @@ final class _DiscordSdkStub {
       return;
     }
 
-    final jsPayload = js_util.jsify(payload);
+    final jsPayload = jsify(payload);
     for (final listener in listeners) {
-      js_util.callMethod<Object?>(listener, 'call', <Object?>[null, jsPayload]);
+      jsCall(listener, 'call', <Object?>[null, jsPayload]);
     }
   }
 

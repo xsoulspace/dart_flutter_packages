@@ -20,7 +20,7 @@ environment:
 
 dependencies:
   meta: ^1.19.0
-  web: ^1.1.1
+  xsoulspace_js_interop_runtime: ^0.1.0-dev.1
 
 resolution: workspace
 

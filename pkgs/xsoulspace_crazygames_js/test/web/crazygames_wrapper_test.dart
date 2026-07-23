@@ -1,12 +1,7 @@
 @TestOn('browser')
 library;
 
-import 'dart:js_interop' as js;
-import 'dart:js_interop_unsafe' as js_unsafe;
-
 import 'package:test/test.dart';
-import 'package:web/web.dart' as web;
-import 'package:web/web.dart' as web;
 import 'package:xsoulspace_crazygames_js/src/wrapper/converters.dart';
 import 'package:xsoulspace_crazygames_js/src/wrapper/crazy_games_web.dart';
 
@@ -253,33 +248,33 @@ class _SdkStubState {
   Object? _authListener;
 
   void install() {
-    final ad = js_util.jsify(<String, Object?>{
-      'prefetchAd': js_util.allowInterop(prefetchedAdTypes.add),
-      'requestAd': js_util.allowInterop((
+    final ad = jsify(<String, Object?>{
+      'prefetchAd': allowInterop(prefetchedAdTypes.add),
+      'requestAd': allowInterop((
         final String adType,
         final Object? callbacks,
       ) {
         lastAdType = adType;
         if (callbacks != null) {
-          final started = js_util.getProperty<Object?>(callbacks, 'adStarted');
-          final finished = js_util.getProperty<Object?>(
+          final started = prop(callbacks, 'adStarted');
+          final finished = prop(
             callbacks,
             'adFinished',
           );
           if (started != null) {
-            js_util.callMethod<Object?>(started, 'call', const <Object?>[]);
+            jsCall(started, 'call', const <Object?>[]);
           }
           if (finished != null) {
-            js_util.callMethod<Object?>(finished, 'call', const <Object?>[]);
+            jsCall(finished, 'call', const <Object?>[]);
           }
         }
         return null;
       }),
-      'hasAdblock': js_util.allowInterop(() => true),
-      'addAdblockPopupListener': js_util.allowInterop((final Object listener) {
+      'hasAdblock': allowInterop(() => true),
+      'addAdblockPopupListener': allowInterop((final Object listener) {
         _adblockPopupListener = listener;
       }),
-      'removeAdblockPopupListener': js_util.allowInterop((
+      'removeAdblockPopupListener': allowInterop((
         final Object listener,
       ) {
         if (identical(_adblockPopupListener, listener)) {
@@ -289,58 +284,58 @@ class _SdkStubState {
       'isAdPlaying': false,
     });
 
-    final banner = js_util.jsify(<String, Object?>{
-      'prefetchBanner': js_util.allowInterop((final Object? request) {
-        final map = js_util.dartify(request)! as Map<Object?, Object?>;
+    final banner = jsify(<String, Object?>{
+      'prefetchBanner': allowInterop((final Object? request) {
+        final map = dartify(request)! as Map<Object?, Object?>;
         lastPrefetchedBannerRequest = map.map(
           (final key, final value) => MapEntry(key.toString(), value),
         );
-        return js_util.jsify(<String, Object?>{
+        return jsify(<String, Object?>{
           'id': map['id'],
           'banner': request,
-          'renderOptions': js_util.jsify(<String, Object?>{'renderer': 'stub'}),
+          'renderOptions': jsify(<String, Object?>{'renderer': 'stub'}),
         });
       }),
-      'requestBanner': js_util.allowInterop((final Object? request) {
-        final map = js_util.dartify(request)! as Map<Object?, Object?>;
+      'requestBanner': allowInterop((final Object? request) {
+        final map = dartify(request)! as Map<Object?, Object?>;
         lastBannerRequest = map.map(
           (final key, final value) => MapEntry(key.toString(), value),
         );
         return null;
       }),
-      'prefetchResponsiveBanner': js_util.allowInterop((final Object? request) {
-        final map = js_util.dartify(request)! as Map<Object?, Object?>;
+      'prefetchResponsiveBanner': allowInterop((final Object? request) {
+        final map = dartify(request)! as Map<Object?, Object?>;
         lastPrefetchedResponsiveRequest = map.map(
           (final key, final value) => MapEntry(key.toString(), value),
         );
-        return js_util.jsify(<String, Object?>{
+        return jsify(<String, Object?>{
           'id': map['id'],
           'banner': request,
-          'renderOptions': js_util.jsify(<String, Object?>{
+          'renderOptions': jsify(<String, Object?>{
             'renderer': 'responsive',
           }),
         });
       }),
-      'requestResponsiveBanner': js_util.allowInterop((final String id) {
+      'requestResponsiveBanner': allowInterop((final String id) {
         lastResponsiveBannerId = id;
         return null;
       }),
-      'renderPrefetchedBanner': js_util.allowInterop((final Object? request) {
-        final map = js_util.dartify(request)! as Map<Object?, Object?>;
+      'renderPrefetchedBanner': allowInterop((final Object? request) {
+        final map = dartify(request)! as Map<Object?, Object?>;
         lastRenderedPrefetchedBanner = map.map(
           (final key, final value) => MapEntry(key.toString(), value),
         );
         return null;
       }),
-      'clearBanner': js_util.allowInterop(clearedBannerIds.add),
-      'clearAllBanners': js_util.allowInterop(() {
+      'clearBanner': allowInterop(clearedBannerIds.add),
+      'clearAllBanners': allowInterop(() {
         clearAllBannersCalls++;
       }),
-      'requestOverlayBanners': js_util.allowInterop((
+      'requestOverlayBanners': allowInterop((
         final Object? banners,
         final Object? callback,
       ) {
-        final list = js_util.dartify(banners)! as List<Object?>;
+        final list = dartify(banners)! as List<Object?>;
         lastOverlayRequest = list
             .map(
               (final item) => (item! as Map<Object?, Object?>).map(
@@ -351,7 +346,7 @@ class _SdkStubState {
 
         if (callback != null && lastOverlayRequest!.isNotEmpty) {
           final firstId = lastOverlayRequest!.first['id'] as String? ?? '';
-          js_util.callMethod<Object?>(callback, 'call', <Object?>[
+          jsCall(callback, 'call', <Object?>[
             null,
             firstId,
             'shown',
@@ -362,97 +357,97 @@ class _SdkStubState {
       'activeBannersCount': 1,
     });
 
-    final game = js_util.jsify(<String, Object?>{
+    final game = jsify(<String, Object?>{
       'link': 'https://www.crazygames.com/game/test-game',
       'id': 'test-game',
-      'settings': js_util.jsify(<String, Object?>{
+      'settings': jsify(<String, Object?>{
         'disableChat': false,
         'muteAudio': false,
       }),
       'isInstantJoin': false,
       'isInstantMultiplayer': true,
-      'inviteParams': js_util.jsify(<String, String>{'roomId': 'r-1'}),
-      'gameplayStart': js_util.allowInterop(() {
+      'inviteParams': jsify(<String, String>{'roomId': 'r-1'}),
+      'gameplayStart': allowInterop(() {
         gameplayStartCalls++;
       }),
-      'gameplayStop': js_util.allowInterop(() {
+      'gameplayStop': allowInterop(() {
         gameplayStopCalls++;
       }),
-      'loadingStart': js_util.allowInterop(() {
+      'loadingStart': allowInterop(() {
         loadingStartCalls++;
       }),
-      'loadingStop': js_util.allowInterop(() {
+      'loadingStop': allowInterop(() {
         loadingStopCalls++;
       }),
-      'happytime': js_util.allowInterop(() {
+      'happytime': allowInterop(() {
         happytimeCalls++;
       }),
-      'inviteLink': js_util.allowInterop((final Object? params) {
-        final map = js_util.dartify(params)! as Map<Object?, Object?>;
+      'inviteLink': allowInterop((final Object? params) {
+        final map = dartify(params)! as Map<Object?, Object?>;
         return 'https://example.com/invite?roomId=${map['roomId']}';
       }),
-      'showInviteButton': js_util.allowInterop((final Object? params) {
-        final map = js_util.dartify(params)! as Map<Object?, Object?>;
+      'showInviteButton': allowInterop((final Object? params) {
+        final map = dartify(params)! as Map<Object?, Object?>;
         return 'https://example.com/button?roomId=${map['roomId']}';
       }),
-      'hideInviteButton': js_util.allowInterop(() {
+      'hideInviteButton': allowInterop(() {
         hideInviteButtonCalls++;
       }),
-      'getInviteParam': js_util.allowInterop((final String key) {
+      'getInviteParam': allowInterop((final String key) {
         if (key == 'roomId') {
           return 'r-1';
         }
         return null;
       }),
-      'addSettingsChangeListener': js_util.allowInterop((
+      'addSettingsChangeListener': allowInterop((
         final Object listener,
       ) {
         _settingsListener = listener;
       }),
-      'removeSettingsChangeListener': js_util.allowInterop((
+      'removeSettingsChangeListener': allowInterop((
         final Object listener,
       ) {
         if (identical(_settingsListener, listener)) {
           _settingsListener = null;
         }
       }),
-      'addJoinRoomListener': js_util.allowInterop((final Object listener) {
+      'addJoinRoomListener': allowInterop((final Object listener) {
         _joinRoomListener = listener;
       }),
-      'removeJoinRoomListener': js_util.allowInterop((final Object listener) {
+      'removeJoinRoomListener': allowInterop((final Object listener) {
         if (identical(_joinRoomListener, listener)) {
           _joinRoomListener = null;
         }
       }),
     });
 
-    final user = js_util.jsify(<String, Object?>{
+    final user = jsify(<String, Object?>{
       'isUserAccountAvailable': true,
-      'systemInfo': js_util.jsify(<String, Object?>{
+      'systemInfo': jsify(<String, Object?>{
         'countryCode': 'US',
         'locale': 'en-US',
-        'device': js_util.jsify(<String, String>{'type': 'desktop'}),
-        'os': js_util.jsify(<String, String>{
+        'device': jsify(<String, String>{'type': 'desktop'}),
+        'os': jsify(<String, String>{
           'name': 'Windows',
           'version': '11',
         }),
-        'browser': js_util.jsify(<String, String>{
+        'browser': jsify(<String, String>{
           'name': 'Chrome',
           'version': '132.0.0.0',
         }),
         'applicationType': 'web',
       }),
-      'getUser': js_util.allowInterop(
-        () => js_util.jsify(<String, Object?>{
+      'getUser': allowInterop(
+        () => jsify(<String, Object?>{
           'username': 'PlayerOne.123',
           'profilePictureUrl': 'https://example.com/avatar.png',
         }),
       ),
-      'listFriends': js_util.allowInterop((final Object? options) {
-        final map = js_util.dartify(options)! as Map<Object?, Object?>;
-        return js_util.jsify(<String, Object?>{
+      'listFriends': allowInterop((final Object? options) {
+        final map = dartify(options)! as Map<Object?, Object?>;
+        return jsify(<String, Object?>{
           'friends': <Object?>[
-            js_util.jsify(<String, Object?>{
+            jsify(<String, Object?>{
               'id': 'friend-1',
               'username': 'Friend.1',
               'profilePictureUrl': 'https://example.com/avatar-friend.png',
@@ -464,73 +459,73 @@ class _SdkStubState {
           'total': 1,
         });
       }),
-      'getUserToken': js_util.allowInterop(() => 'user-token'),
-      'getXsollaUserToken': js_util.allowInterop(() => 'xsolla-token'),
-      'showAuthPrompt': js_util.allowInterop(
-        () => js_util.jsify(<String, Object?>{
+      'getUserToken': allowInterop(() => 'user-token'),
+      'getXsollaUserToken': allowInterop(() => 'xsolla-token'),
+      'showAuthPrompt': allowInterop(
+        () => jsify(<String, Object?>{
           'username': 'PromptedUser.55',
           'profilePictureUrl': 'https://example.com/avatar-prompted.png',
         }),
       ),
-      'showAccountLinkPrompt': js_util.allowInterop(
-        () => js_util.jsify(<String, String>{'response': 'yes'}),
+      'showAccountLinkPrompt': allowInterop(
+        () => jsify(<String, String>{'response': 'yes'}),
       ),
-      'addAuthListener': js_util.allowInterop((final Object listener) {
+      'addAuthListener': allowInterop((final Object listener) {
         _authListener = listener;
       }),
-      'removeAuthListener': js_util.allowInterop((final Object listener) {
+      'removeAuthListener': allowInterop((final Object listener) {
         if (identical(_authListener, listener)) {
           _authListener = null;
         }
       }),
-      'addScore': js_util.allowInterop((final int score) {
+      'addScore': allowInterop((final int score) {
         lastScore = score;
       }),
-      'addScoreEncrypted': js_util.allowInterop((
+      'addScoreEncrypted': allowInterop((
         final int score,
         final String encryptedScore,
       ) {
         lastScore = score;
         lastEncryptedScore = encryptedScore;
       }),
-      'submitScore': js_util.allowInterop((final Object? payload) {
-        final map = js_util.dartify(payload)! as Map<Object?, Object?>;
+      'submitScore': allowInterop((final Object? payload) {
+        final map = dartify(payload)! as Map<Object?, Object?>;
         lastSubmitScorePayload = map.map(
           (final key, final value) => MapEntry(key.toString(), value),
         );
       }),
     });
 
-    final data = js_util.jsify(<String, Object?>{
-      'clear': js_util.allowInterop(_data.clear),
-      'getItem': js_util.allowInterop((final String key) {
+    final data = jsify(<String, Object?>{
+      'clear': allowInterop(_data.clear),
+      'getItem': allowInterop((final String key) {
         final value = _data[key];
         return value == null ? null : '$value';
       }),
-      'removeItem': js_util.allowInterop(_data.remove),
-      'setItem': js_util.allowInterop((final String key, final Object? value) {
+      'removeItem': allowInterop(_data.remove),
+      'setItem': allowInterop((final String key, final Object? value) {
         _data[key] = value;
       }),
-      'syncUnityGameData': js_util.allowInterop(() {
+      'syncUnityGameData': allowInterop(() {
         syncUnityGameDataCalls++;
       }),
     });
 
-    final analytics = js_util.jsify(<String, Object?>{
-      'trackOrder': js_util.allowInterop((
+    final analytics = jsify(<String, Object?>{
+      'trackOrder': allowInterop((
         final String provider,
         final Object? order,
       ) {
         lastTrackOrderProvider = provider;
-        final map = js_util.dartify(order)! as Map<Object?, Object?>;
+        final map = dartify(order)! as Map<Object?, Object?>;
         lastTrackOrderPayload = map.map(
           (final key, final value) => MapEntry(key.toString(), value),
         );
       }),
     });
 
-    final sdk = js_util.jsify(<String, Object?>{
-      'init': js_util.allowInterop(() {
+    final sdk = jsify(<String, Object?>{
+      'init': allowInterop(() {
         initCalls++;
         return null;
       }),
@@ -544,8 +539,8 @@ class _SdkStubState {
       'analytics': analytics,
     });
 
-    final crazyGames = js_util.jsify(<String, Object?>{'SDK': sdk});
-    js_util.setProperty(js_util.globalThis, 'CrazyGames', crazyGames);
+    final crazyGames = jsify(<String, Object?>{'SDK': sdk});
+    setGlobalProperty('CrazyGames', crazyGames);
   }
 
   void reset() {
@@ -584,9 +579,9 @@ class _SdkStubState {
     if (_settingsListener == null) {
       return;
     }
-    js_util.callMethod<Object?>(_settingsListener!, 'call', <Object?>[
+    jsCall(_settingsListener!, 'call', <Object?>[
       null,
-      js_util.jsify(settings),
+      jsify(settings),
     ]);
   }
 
@@ -594,9 +589,9 @@ class _SdkStubState {
     if (_joinRoomListener == null) {
       return;
     }
-    js_util.callMethod<Object?>(_joinRoomListener!, 'call', <Object?>[
+    jsCall(_joinRoomListener!, 'call', <Object?>[
       null,
-      js_util.jsify(inviteParams),
+      jsify(inviteParams),
     ]);
   }
 
@@ -604,9 +599,9 @@ class _SdkStubState {
     if (_authListener == null) {
       return;
     }
-    js_util.callMethod<Object?>(_authListener!, 'call', <Object?>[
+    jsCall(_authListener!, 'call', <Object?>[
       null,
-      js_util.jsify(user),
+      jsify(user),
     ]);
   }
 
@@ -614,7 +609,7 @@ class _SdkStubState {
     if (_adblockPopupListener == null) {
       return;
     }
-    js_util.callMethod<Object?>(_adblockPopupListener!, 'call', <Object?>[
+    jsCall(_adblockPopupListener!, 'call', <Object?>[
       null,
       state,
     ]);

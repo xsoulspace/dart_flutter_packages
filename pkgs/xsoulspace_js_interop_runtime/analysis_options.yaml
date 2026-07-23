@@ -1,0 +1,7 @@
+include: package:xsoulspace_lints/public_library.yaml
+
+analyzer:
+
+linter:
+  rules:
+    avoid_annotating_with_dynamic: false
