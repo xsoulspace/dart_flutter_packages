@@ -1,13 +1,6 @@
 import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
-/// Default model profile: FunctionGemma 270M .litertlm (desktop).
-const String kDefaultGemmaModelProfileId = 'function_gemma_270m_litertlm';
-
-/// Default download URL for FunctionGemma 270M .litertlm.
-const String kDefaultGemmaModelUrl =
-    'https://huggingface.co/sasha-denisov/function-gemma-270M-it/resolve/main/functiongemma-270M-it.litertlm';
-
 /// Result of a model install (URL or file).
 class GemmaModelInstallResult {
   const GemmaModelInstallResult({
@@ -63,22 +56,18 @@ class GemmaModelStatus {
 
 /// Model setup APIs: URL download, local file, status.
 class GemmaModelSetup {
-  GemmaModelSetup({
-    this.defaultModelUrl = kDefaultGemmaModelUrl,
-    this.defaultProfileId = kDefaultGemmaModelProfileId,
-  });
-
-  final String defaultModelUrl;
-  final String defaultProfileId;
+  const GemmaModelSetup();
 
   /// Install model from [url]. Returns install result with modelId on success.
+  ///
+  /// Prefer to use [Model]
   Future<GemmaModelInstallResult> installFromUrl({
     required String url,
     void Function(int percent)? onProgress,
     String? profileId,
   }) async {
     try {
-      final id = profileId ?? defaultProfileId;
+      final id = profileId;
       await FlutterGemma.installModel(
         modelType: ModelType.functionGemma,
       ).fromNetwork(url.trim()).withProgress(onProgress ?? (_) {}).install();
@@ -104,7 +93,7 @@ class GemmaModelSetup {
     String? profileId,
   }) async {
     try {
-      final id = profileId ?? defaultProfileId;
+      final id = profileId;
       await FlutterGemma.installModel(
         modelType: ModelType.functionGemma,
       ).fromFile(path.trim()).install();
@@ -136,7 +125,7 @@ class GemmaModelSetup {
         );
       }
       final list = await FlutterGemma.listInstalledModels();
-      final modelId = list.isNotEmpty ? list.first : defaultProfileId;
+      final modelId = list.isNotEmpty ? list.first : null;
       return GemmaModelStatus(
         ready: true,
         modelId: modelId,

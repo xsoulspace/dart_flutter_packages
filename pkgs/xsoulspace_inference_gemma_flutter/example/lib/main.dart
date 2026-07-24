@@ -49,7 +49,7 @@ class _ExamplePageState extends State<_ExamplePage> {
 
   Future<void> _installModel() async {
     setState(() => _status = 'Installing model...');
-    final setup = GemmaModelSetup();
+    const setup = GemmaModelSetup();
     final result = await setup.installFromUrl(url: setup.defaultModelUrl);
     setState(() {
       if (result.success) {

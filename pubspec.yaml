@@ -6,6 +6,7 @@ workspace:
   - pkgs/*
   - pkgs/xsoulspace_steamworks/example/
   - pkgs/xsoulspace_inference_gemma_flutter/example/
+  - pkgs/xsoulspace_inference_core/example/
   - pkgs/universal_storage_sync/example/todo_file_app/
   - pkgs/universal_storage_sync/example/todo_git_app/
 

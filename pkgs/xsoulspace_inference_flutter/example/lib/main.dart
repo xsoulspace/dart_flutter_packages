@@ -23,8 +23,11 @@ class _ExampleAppState extends State<_ExampleApp> {
   void initState() {
     super.initState();
     _session = _ExampleSession();
-    _notifier = InferenceTranscriptNotifier(session: _session);
-    unawaited(_session.emitDemo());
+    _notifier = InferenceTranscriptNotifier();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _notifier.attach(_session);
+      unawaited(_session.emitDemo());
+    });
   }
 
   @override

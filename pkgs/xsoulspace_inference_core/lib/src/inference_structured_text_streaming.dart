@@ -9,7 +9,17 @@ enum InferenceStructuredTextStreamEventType {
   raw,
   warning,
   error,
-  completion,
+  completion;
+
+  factory InferenceStructuredTextStreamEventType.fromJson(final Object? value) {
+    if (value is! String) {
+      return InferenceStructuredTextStreamEventType.progress;
+    }
+    return InferenceStructuredTextStreamEventType.values.firstWhere(
+      (final candidate) => candidate.name == value,
+      orElse: () => InferenceStructuredTextStreamEventType.progress,
+    );
+  }
 }
 
 enum InferenceStructuredTextLifecycleState {
@@ -18,46 +28,36 @@ enum InferenceStructuredTextLifecycleState {
   running,
   timedOut,
   completed,
-  failed,
-}
+  failed;
 
-enum InferenceStructuredTextRawChannel { stdout, stderr }
-
-InferenceStructuredTextStreamEventType
-inferenceStructuredTextStreamEventTypeFromJsonValue(final Object? value) {
-  if (value is! String) {
-    return InferenceStructuredTextStreamEventType.progress;
-  }
-  return InferenceStructuredTextStreamEventType.values.firstWhere(
-    (final candidate) => candidate.name == value,
-    orElse: () => InferenceStructuredTextStreamEventType.progress,
-  );
-}
-
-InferenceStructuredTextLifecycleState?
-inferenceStructuredTextLifecycleStateFromJsonValue(final Object? value) {
-  if (value is! String) {
+  static InferenceStructuredTextLifecycleState? fromJson(final Object? value) {
+    if (value is! String) {
+      return null;
+    }
+    for (final candidate in InferenceStructuredTextLifecycleState.values) {
+      if (candidate.name == value) {
+        return candidate;
+      }
+    }
     return null;
   }
-  for (final candidate in InferenceStructuredTextLifecycleState.values) {
-    if (candidate.name == value) {
-      return candidate;
-    }
-  }
-  return null;
 }
 
-InferenceStructuredTextRawChannel?
-inferenceStructuredTextRawChannelFromJsonValue(final Object? value) {
-  if (value is! String) {
+enum InferenceStructuredTextRawChannel {
+  stdout,
+  stderr;
+
+  static InferenceStructuredTextRawChannel? fromJson(final Object? value) {
+    if (value is! String) {
+      return null;
+    }
+    for (final candidate in InferenceStructuredTextRawChannel.values) {
+      if (candidate.name == value) {
+        return candidate;
+      }
+    }
     return null;
   }
-  for (final candidate in InferenceStructuredTextRawChannel.values) {
-    if (candidate.name == value) {
-      return candidate;
-    }
-  }
-  return null;
 }
 
 class InferenceStructuredTextCompletion {
@@ -132,19 +132,17 @@ class InferenceStructuredTextStreamEvent {
   factory InferenceStructuredTextStreamEvent.fromJson(
     final Map<String, dynamic> json,
   ) => InferenceStructuredTextStreamEvent(
-    type: inferenceStructuredTextStreamEventTypeFromJsonValue(json['type']),
+    type: InferenceStructuredTextStreamEventType.fromJson(json['type']),
     timestamp:
         DateTime.tryParse('${json['timestamp'] ?? ''}') ??
         DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
-    lifecycleState: inferenceStructuredTextLifecycleStateFromJsonValue(
+    lifecycleState: InferenceStructuredTextLifecycleState.fromJson(
       json['lifecycle_state'],
     ),
     message: json['message'] as String?,
     textDelta: json['text_delta'] as String?,
     rawText: json['raw_text'] as String?,
-    rawChannel: inferenceStructuredTextRawChannelFromJsonValue(
-      json['raw_channel'],
-    ),
+    rawChannel: InferenceStructuredTextRawChannel.fromJson(json['raw_channel']),
     attempt: switch (json['attempt']) {
       final int value => value,
       final num value => value.toInt(),

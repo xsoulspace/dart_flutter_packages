@@ -30,7 +30,7 @@ class _FakeSession
   Future<void> close() async {}
 
   @override
-  Future<void> dispose() async => controller.close();
+  Future<void> dispose() => controller.close();
 
   @override
   Future<InferenceResult<void>> sendAudioChunk(
@@ -42,7 +42,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('InferencePreflightPanel renders readiness summary', (
-    final WidgetTester tester,
+    final tester,
   ) async {
     await tester.pumpWidget(
       const MaterialApp(
@@ -61,10 +61,11 @@ void main() {
   });
 
   testWidgets('InferenceTranscriptNotifier updates transcript widgets', (
-    final WidgetTester tester,
+    final tester,
   ) async {
     final session = _FakeSession();
-    final notifier = InferenceTranscriptNotifier(session: session);
+    final notifier = InferenceTranscriptNotifier();
+    await notifier.attach(session);
     addTearDown(notifier.dispose);
     addTearDown(session.dispose);
 
@@ -81,9 +82,8 @@ void main() {
         home: Scaffold(
           body: AnimatedBuilder(
             animation: notifier,
-            builder: (final context, final _) {
-              return InferenceTranscriptPanel(snapshot: notifier.snapshot);
-            },
+            builder: (final context, final _) =>
+                InferenceTranscriptPanel(snapshot: notifier.snapshot),
           ),
         ),
       ),
