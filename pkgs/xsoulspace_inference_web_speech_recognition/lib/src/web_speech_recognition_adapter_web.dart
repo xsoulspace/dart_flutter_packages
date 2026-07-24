@@ -13,10 +13,9 @@ import 'web_speech_recognition_adapter.dart';
 class BrowserWebSpeechLiveRecognitionSession
     implements WebSpeechLiveRecognitionSession {
   BrowserWebSpeechLiveRecognitionSession._({
-    required raw.SpeechRecognitionRaw recognition,
-    required StreamController<String> controller,
-  }) : _recognition = recognition,
-       _controller = controller;
+    required this._recognition,
+    required this._controller,
+  });
 
   final raw.SpeechRecognitionRaw _recognition;
   final StreamController<String> _controller;
@@ -120,8 +119,8 @@ abstract interface class WebSpeechRecognitionTrackProvider {
 final class WebSpeechRecognitionAudioTrackHandle {
   WebSpeechRecognitionAudioTrackHandle({
     required this.audioTrack,
-    required Future<void> Function() dispose,
-  }) : _dispose = dispose;
+    required this._dispose,
+  });
 
   final JSAny audioTrack;
   final Future<void> Function() _dispose;

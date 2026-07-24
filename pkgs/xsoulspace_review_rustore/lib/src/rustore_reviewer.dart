@@ -17,11 +17,10 @@ final class RuStoreReviewer extends StoreReviewer {
     super.packageName,
     final Future<void> Function()? requestReviewFlow,
     final Future<void> Function()? launchNativeReviewFlow,
-    final Future<void> Function(String scheme)? launchSchemeAction,
+    this._launchSchemeAction,
   }) : _requestReviewFlow = requestReviewFlow ?? RustoreReviewClient.request,
        _launchNativeReviewFlow =
-           launchNativeReviewFlow ?? RustoreReviewClient.review,
-       _launchSchemeAction = launchSchemeAction;
+           launchNativeReviewFlow ?? RustoreReviewClient.review;
 
   /// A builder for the consent screen when review limit is reached
   final ReviewerFallbackConsentBuilder consentBuilder;

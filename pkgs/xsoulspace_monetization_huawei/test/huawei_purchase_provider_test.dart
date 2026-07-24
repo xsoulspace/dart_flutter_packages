@@ -523,5 +523,5 @@ Map<String, dynamic> _purchaseData({
   'purchaseState': purchaseState,
   'kind': kind,
   'currency': 'USD',
-  if (expirationDateMs != null) 'expirationDate': expirationDateMs,
+  'expirationDate': ?expirationDateMs,
 };

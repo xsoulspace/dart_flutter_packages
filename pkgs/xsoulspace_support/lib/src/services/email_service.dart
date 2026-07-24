@@ -9,7 +9,7 @@ import 'package:xsoulspace_logger/xsoulspace_logger.dart';
 /// {@endtemplate}
 class EmailService {
   /// {@macro email_service}
-  const EmailService({final Logger? logger}) : _logger = logger;
+  const EmailService({this._logger});
 
   final Logger? _logger;
 

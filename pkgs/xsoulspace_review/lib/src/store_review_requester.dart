@@ -39,13 +39,13 @@ class StoreReviewRequester extends ChangeNotifier {
   /// {@macro store_review_requester}
   StoreReviewRequester({
     required this.localDb,
-    final StoreReviewer storeReviewer = const StoreReviewer(),
+    this._storeReviewer = const StoreReviewer(),
     this.firstReviewPeriod = const Duration(days: 1),
     this.reviewPeriod = const Duration(days: 15),
     this.maxReviewCount = 3,
     this.getLocale,
     this.logger,
-  }) : _storeReviewer = storeReviewer;
+  });
 
   /// Callback to get current locale
   final ValueGetter<Locale>? getLocale;

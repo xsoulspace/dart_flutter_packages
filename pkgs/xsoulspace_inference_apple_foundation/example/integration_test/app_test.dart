@@ -6,7 +6,7 @@ import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('plugin availability and optional infer', (tester) async {
+  testWidgets('plugin availability and optional infer', (final tester) async {
     await AppleFoundationInferenceClient().refreshAvailability();
     final available = AppleFoundationInferenceClient().isAvailable;
 

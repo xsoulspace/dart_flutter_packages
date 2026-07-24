@@ -79,12 +79,10 @@ class FakeWebSocketChannel
 
 class _FakeWebSocketSink implements WebSocketSink {
   _FakeWebSocketSink({
-    required final StreamSink<dynamic> outgoingSink,
-    required final Future<void> Function(int?, String?) closeImpl,
-    required final Future<void> done,
-  }) : _outgoingSink = outgoingSink,
-       _closeImpl = closeImpl,
-       _done = done;
+    required this._outgoingSink,
+    required this._closeImpl,
+    required this._done,
+  });
 
   final StreamSink<dynamic> _outgoingSink;
   final Future<void> Function(int?, String?) _closeImpl;

@@ -45,8 +45,8 @@ final class SteamCallocAllocator implements SteamMemoryAllocator {
 /// Arena that tracks all native allocations and frees them in one call.
 final class SteamPointerArena {
   SteamPointerArena({
-    final SteamMemoryAllocator allocator = const SteamCallocAllocator(),
-  }) : _allocator = allocator;
+    this._allocator = const SteamCallocAllocator(),
+  });
 
   final SteamMemoryAllocator _allocator;
   final List<Pointer<NativeType>> _allocations = <Pointer<NativeType>>[];

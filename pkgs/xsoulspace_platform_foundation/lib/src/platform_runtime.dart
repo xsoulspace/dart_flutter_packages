@@ -14,9 +14,8 @@ final class PlatformRuntime {
     this.initOptions = const PlatformInitOptions(),
     final Iterable<PlatformCapability> permissiveFallbackCapabilities =
         const <PlatformCapability>[],
-    final PlatformClient? fallbackClient,
-  }) : _factories = List<PlatformAdapterFactory>.unmodifiable(factories),
-       _fallbackClient = fallbackClient {
+    this._fallbackClient,
+  }) : _factories = List<PlatformAdapterFactory>.unmodifiable(factories) {
     for (final capability in permissiveFallbackCapabilities) {
       _fallbackRegistry.registerDynamic(capability.runtimeType, capability);
     }

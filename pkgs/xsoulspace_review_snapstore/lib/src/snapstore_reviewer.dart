@@ -12,8 +12,8 @@ final class SnapStoreReviewer extends StoreReviewer {
     required super.packageName,
     required this.consentBuilder,
     super.defaultLocale,
-    final Future<void> Function(String scheme)? launchSchemeAction,
-  }) : _launchSchemeAction = launchSchemeAction;
+    this._launchSchemeAction,
+  });
 
   /// A builder for the consent screen before opening Snap Store
   final ReviewerFallbackConsentBuilder consentBuilder;

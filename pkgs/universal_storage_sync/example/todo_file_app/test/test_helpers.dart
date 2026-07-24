@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:todo_file_app/state/app_state.dart';
+import 'package:universal_storage_interface/universal_storage_interface.dart';
 
 /// Creates a test widget with necessary providers and material app wrapper
 Widget createTestWidget({
@@ -15,9 +16,11 @@ Widget createTestWidget({
 class MockAppState extends AppState {
   @override
   bool get hasWorkspace => true;
-
   @override
-  String? get workspacePath => '/test/workspace';
+  FilePathConfig get filePathConfig => FilePathConfig.create(
+    macOSBookmarkData: const MacOSBookmark(''),
+    path: '/test/workspace',
+  );
 
   @override
   bool get busy => false;

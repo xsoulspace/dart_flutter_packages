@@ -19,7 +19,7 @@ class WhisperCppInferenceClient implements InferenceClient {
     this.modelConfig = const WhisperCppModelConfig(),
     this.runtimeConfig = const WhisperCppRuntimeConfig(),
     WhisperCppAvailabilityProbe? availabilityProbe,
-    WhisperCppTranscribeFn? transcribe,
+    this._transcribe,
   }) : _availabilityProbe =
            availabilityProbe ??
            WhisperCppAvailabilityProbe(
@@ -29,7 +29,6 @@ class WhisperCppInferenceClient implements InferenceClient {
                return direct.isEmpty ? null : direct;
              },
            ),
-       _transcribe = transcribe,
        _nativeBackend = NativeWhisperCppBatchBackend(
          runtimeConfig: runtimeConfig,
          modelConfig: modelConfig,

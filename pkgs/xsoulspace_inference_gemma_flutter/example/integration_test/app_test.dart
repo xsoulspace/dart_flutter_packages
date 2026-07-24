@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:xsoulspace_inference_gemma_flutter/xsoulspace_inference_gemma_flutter.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
+import 'package:xsoulspace_inference_gemma_flutter/xsoulspace_inference_gemma_flutter.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();

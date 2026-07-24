@@ -42,7 +42,7 @@ class _LoggerInspectorDemoState extends State<LoggerInspectorDemo> {
   }
 
   Future<void> _seedData() async {
-    final trace = const TraceContext(traceId: 'trace-demo', spanId: 'root');
+    const trace = TraceContext(traceId: 'trace-demo', spanId: 'root');
     _logger.info('demo', 'Inspector demo started', trace: trace);
     _logger.warning('demo', 'Slow request detected', trace: trace);
     _logger.error(

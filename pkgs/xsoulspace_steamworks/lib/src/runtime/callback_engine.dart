@@ -5,12 +5,10 @@ import 'async_call_registry.dart';
 /// Callback pump/dispatch engine with async call completion bridge.
 final class SteamCallbackEngine {
   SteamCallbackEngine({
-    required final SteamNativeApi nativeApi,
-    required final SteamAsyncCallRegistry asyncRegistry,
-    required final void Function(SteamEvent event) emit,
-  }) : _nativeApi = nativeApi,
-       _asyncRegistry = asyncRegistry,
-       _emit = emit;
+    required this._nativeApi,
+    required this._asyncRegistry,
+    required this._emit,
+  });
 
   final SteamNativeApi _nativeApi;
   final SteamAsyncCallRegistry _asyncRegistry;

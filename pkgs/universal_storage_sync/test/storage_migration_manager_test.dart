@@ -230,7 +230,7 @@ Future<void> _writeManifest({
       'written': <String>[],
       'operations_total': 0,
       'written_count': 0,
-      if (lockData != null) 'migration_lock': lockData,
+      'migration_lock': ?lockData,
     }),
   );
 }

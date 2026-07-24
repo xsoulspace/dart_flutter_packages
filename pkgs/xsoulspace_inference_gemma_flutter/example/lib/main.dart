@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:xsoulspace_inference_gemma_flutter/xsoulspace_inference_gemma_flutter.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
+import 'package:xsoulspace_inference_gemma_flutter/xsoulspace_inference_gemma_flutter.dart';
 
 void main() => runApp(const GemmaExampleApp());
 
@@ -8,15 +8,13 @@ class GemmaExampleApp extends StatelessWidget {
   const GemmaExampleApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Gemma Example',
-      theme: ThemeData.from(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
-      ),
-      home: const _ExamplePage(),
-    );
-  }
+  Widget build(BuildContext context) => MaterialApp(
+    title: 'Gemma Example',
+    theme: ThemeData.from(
+      colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
+    ),
+    home: const _ExamplePage(),
+  );
 }
 
 class _ExamplePage extends StatefulWidget {
@@ -83,39 +81,37 @@ class _ExamplePageState extends State<_ExamplePage> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Gemma Example')),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (_available != null)
-              Text(
-                'Engine: ${_available! ? "Available" : "Unavailable"}',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _checkAvailability,
-              child: const Text('Check availability'),
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Gemma Example')),
+    body: Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (_available != null)
+            Text(
+              'Engine: ${_available! ? "Available" : "Unavailable"}',
+              style: Theme.of(context).textTheme.titleMedium,
             ),
-            const SizedBox(height: 8),
-            ElevatedButton(
-              onPressed: _installModel,
-              child: const Text('Install model'),
-            ),
-            const SizedBox(height: 8),
-            ElevatedButton(
-              onPressed: _available == true ? _runInference : null,
-              child: const Text('Run inference'),
-            ),
-            const SizedBox(height: 24),
-            Text(_status, style: Theme.of(context).textTheme.bodyLarge),
-          ],
-        ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: _checkAvailability,
+            child: const Text('Check availability'),
+          ),
+          const SizedBox(height: 8),
+          ElevatedButton(
+            onPressed: _installModel,
+            child: const Text('Install model'),
+          ),
+          const SizedBox(height: 8),
+          ElevatedButton(
+            onPressed: _available == true ? _runInference : null,
+            child: const Text('Run inference'),
+          ),
+          const SizedBox(height: 24),
+          Text(_status, style: Theme.of(context).textTheme.bodyLarge),
+        ],
       ),
-    );
-  }
+    ),
+  );
 }

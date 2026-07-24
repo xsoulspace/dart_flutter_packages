@@ -20,14 +20,13 @@ class SherpaOnnxInferenceClient implements InferenceClient {
         const SherpaOnnxModelConfig.streamingZipformerEn20230626(),
     this.runtimeConfig = const SherpaOnnxRuntimeConfig(),
     SherpaOnnxAvailabilityProbe? availabilityProbe,
-    SherpaOnnxTranscribeFn? transcribe,
+    this._transcribe,
   }) : _availabilityProbe =
            availabilityProbe ??
            SherpaOnnxAvailabilityProbe(
              runtimeConfig: runtimeConfig,
              modelPathResolver: () => runtimeConfig.modelsDirectory,
            ),
-       _transcribe = transcribe,
        _nativeBackend = NativeSherpaOnnxBatchBackend(
          runtimeConfig: runtimeConfig,
          modelConfig: modelConfig,

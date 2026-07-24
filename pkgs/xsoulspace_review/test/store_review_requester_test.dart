@@ -89,8 +89,10 @@ final class _MemoryLocalDb implements LocalDbI {
   @override
   Future<void> init() async {}
 
+  @override
   Future<void> clear() async => _store.clear();
 
+  @override
   Future<void> clearKey({required final String key}) async {
     _store.remove(key);
   }

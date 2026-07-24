@@ -4,8 +4,8 @@ import 'web_speech_recognition_adapter.dart';
 
 class WebSpeechRecognitionInferenceClientBase implements InferenceClient {
   WebSpeechRecognitionInferenceClientBase({
-    required final WebSpeechRecognitionAdapter adapter,
-  }) : _adapter = adapter;
+    required this._adapter,
+  });
 
   final WebSpeechRecognitionAdapter _adapter;
 

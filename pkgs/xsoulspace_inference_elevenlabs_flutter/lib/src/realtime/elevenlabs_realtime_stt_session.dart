@@ -24,11 +24,10 @@ class ElevenLabsRealtimeSttEvent {
 
 class ElevenLabsRealtimeSttSession {
   ElevenLabsRealtimeSttSession({
-    required final ElevenLabsAuthConfig authConfig,
+    required this._authConfig,
     final ElevenLabsEndpointConfig? endpointConfig,
     final ElevenLabsWebSocketConnector? webSocketConnector,
-  }) : _authConfig = authConfig,
-       _endpointConfig = endpointConfig ?? ElevenLabsEndpointConfig(),
+  }) : _endpointConfig = endpointConfig ?? ElevenLabsEndpointConfig(),
        _webSocketConnector =
            webSocketConnector ?? defaultElevenLabsWebSocketConnector;
 

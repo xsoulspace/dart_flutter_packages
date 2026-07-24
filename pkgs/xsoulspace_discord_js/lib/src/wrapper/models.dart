@@ -191,8 +191,7 @@ final class DiscordEventData {
 }
 
 final class DiscordEventSubscription {
-  DiscordEventSubscription({required final Future<void> Function() onCancel})
-    : _onCancel = onCancel;
+  DiscordEventSubscription({required this._onCancel});
 
   final Future<void> Function() _onCancel;
 

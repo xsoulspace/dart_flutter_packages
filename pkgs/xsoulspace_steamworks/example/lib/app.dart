@@ -46,7 +46,7 @@ class SteamworksExampleApp extends StatelessWidget {
 }
 
 class SteamworksHomePage extends StatefulWidget {
-  const SteamworksHomePage({super.key, required this.client});
+  const SteamworksHomePage({required this.client, super.key});
 
   final SteamClient client;
 
@@ -85,8 +85,6 @@ class _SteamworksHomePageState extends State<SteamworksHomePage> {
     final result = await _client.initialize(
       const SteamInitConfig(
         appId: 480,
-        autoPumpCallbacks: true,
-        callbackInterval: Duration(milliseconds: 16),
       ),
     );
 
@@ -134,8 +132,7 @@ class _SteamworksHomePageState extends State<SteamworksHomePage> {
   }
 
   @override
-  Widget build(final BuildContext context) {
-    return Scaffold(
+  Widget build(final BuildContext context) => Scaffold(
       appBar: AppBar(title: const Text('Steamworks Desktop Example')),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -189,5 +186,4 @@ class _SteamworksHomePageState extends State<SteamworksHomePage> {
         ),
       ),
     );
-  }
 }

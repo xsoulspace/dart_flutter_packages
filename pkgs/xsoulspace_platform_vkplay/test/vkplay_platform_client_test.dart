@@ -172,7 +172,7 @@ final class _FakeVkPlayClient extends VkPlayClient {
     final int? limit,
     final int? offset,
   }) async {
-    final friends = const <VkPlayFriend>[
+    const friends = <VkPlayFriend>[
       VkPlayFriend(id: 'f-1', displayName: 'Friend 1'),
       VkPlayFriend(id: 'f-2', displayName: 'Friend 2'),
     ];
@@ -184,7 +184,7 @@ final class _FakeVkPlayClient extends VkPlayClient {
     final int? limit,
     final int? offset,
   }) async {
-    final friends = const <VkPlayFriend>[
+    const friends = <VkPlayFriend>[
       VkPlayFriend(id: 'f-2', displayName: 'Friend 2 social', isSocial: true),
       VkPlayFriend(id: 'f-3', displayName: 'Friend 3 social', isSocial: true),
     ];

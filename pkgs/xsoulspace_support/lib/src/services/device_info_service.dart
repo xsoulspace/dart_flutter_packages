@@ -14,7 +14,7 @@ import '../models/models.dart';
 /// {@endtemplate}
 class DeviceInfoService {
   /// {@macro device_info_service}
-  const DeviceInfoService({final Logger? logger}) : _logger = logger;
+  const DeviceInfoService({this._logger});
 
   final Logger? _logger;
 

@@ -89,10 +89,10 @@ final class CrazyGamesAdsPlatformFactory implements PlatformAdapterFactory {
 
 final class CrazyGamesAdsPlatformClient implements PlatformClient {
   CrazyGamesAdsPlatformClient({
-    required final PlatformClient baseClient,
+    required this._baseClient,
     required this.pluginConfig,
     required this.defaultProviderFactory,
-  }) : _baseClient = baseClient;
+  });
 
   final PlatformClient _baseClient;
   final CrazyGamesAdsPluginConfig pluginConfig;

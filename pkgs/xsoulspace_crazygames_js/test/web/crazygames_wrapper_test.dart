@@ -579,7 +579,7 @@ class _SdkStubState {
     if (_settingsListener == null) {
       return;
     }
-    jsCall(_settingsListener!, 'call', <Object?>[
+    jsCall(_settingsListener, 'call', <Object?>[
       null,
       jsify(settings),
     ]);
@@ -589,7 +589,7 @@ class _SdkStubState {
     if (_joinRoomListener == null) {
       return;
     }
-    jsCall(_joinRoomListener!, 'call', <Object?>[
+    jsCall(_joinRoomListener, 'call', <Object?>[
       null,
       jsify(inviteParams),
     ]);
@@ -599,7 +599,7 @@ class _SdkStubState {
     if (_authListener == null) {
       return;
     }
-    jsCall(_authListener!, 'call', <Object?>[
+    jsCall(_authListener, 'call', <Object?>[
       null,
       jsify(user),
     ]);
@@ -609,7 +609,7 @@ class _SdkStubState {
     if (_adblockPopupListener == null) {
       return;
     }
-    jsCall(_adblockPopupListener!, 'call', <Object?>[
+    jsCall(_adblockPopupListener, 'call', <Object?>[
       null,
       state,
     ]);

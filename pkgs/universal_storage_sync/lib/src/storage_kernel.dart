@@ -15,18 +15,14 @@ typedef ConflictDecisionHook =
 final class StorageKernel implements StorageKernelContract {
   StorageKernel({
     required this.profile,
-    required final StorageProfileResolver resolver,
-    final SyncEngine? syncEngine,
-    final MigrationEndpoint? migrationEndpoint,
+    required this._resolver,
+    this._syncEngine,
+    this._migrationEndpoint,
     final DecisionStore? decisionStore,
     final SyncQueueStore? queueStore,
-    final ConflictDecisionHook? conflictDecisionHook,
-  }) : _resolver = resolver,
-       _syncEngine = syncEngine,
-       _migrationEndpoint = migrationEndpoint,
-       _decisionStore = decisionStore ?? InMemoryDecisionStore(),
-       _queueStore = queueStore ?? StorageServiceSyncQueueStore(),
-       _conflictDecisionHook = conflictDecisionHook;
+    this._conflictDecisionHook,
+  }) : _decisionStore = decisionStore ?? InMemoryDecisionStore(),
+       _queueStore = queueStore ?? StorageServiceSyncQueueStore();
 
   final StorageProfile profile;
   final StorageProfileResolver _resolver;
@@ -143,7 +139,7 @@ final class StorageKernel implements StorageKernelContract {
     final operationMetadata = <String, dynamic>{
       if (result.revisionId.isNotEmpty) 'revision_id': result.revisionId,
       if (result.metadata.isNotEmpty) ...result.metadata,
-      if (queueEntryId != null) 'outbox_entry_id': queueEntryId,
+      'outbox_entry_id': ?queueEntryId,
     };
     _emitObservation(
       type: result.isNew
@@ -182,7 +178,7 @@ final class StorageKernel implements StorageKernelContract {
     final operationMetadata = <String, dynamic>{
       if (result.revisionId.isNotEmpty) 'revision_id': result.revisionId,
       if (result.metadata.isNotEmpty) ...result.metadata,
-      if (queueEntryId != null) 'outbox_entry_id': queueEntryId,
+      'outbox_entry_id': ?queueEntryId,
     };
     _emitObservation(
       type: StorageObservationType.deleted,

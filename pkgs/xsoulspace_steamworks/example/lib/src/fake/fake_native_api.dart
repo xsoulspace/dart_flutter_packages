@@ -18,9 +18,7 @@ final class _FakeSteamNativeApi implements SteamNativeApi {
       const <SteamManualCallback>[];
 
   @override
-  int friendByIndex(final int index, final int flags) {
-    return const <int>[1001, 1002, 1003][index];
-  }
+  int friendByIndex(final int index, final int flags) => const <int>[1001, 1002, 1003][index];
 
   @override
   int friendCount(final int flags) => 3;
@@ -50,9 +48,7 @@ final class _FakeSteamNativeApi implements SteamNativeApi {
     required final int apiCallHandle,
     required final int expectedCallbackId,
     required final int callbackBufferSize,
-  }) {
-    return null;
-  }
+  }) => null;
 
   @override
   bool? getAchievement(final String name) => _achievements[name];
@@ -70,9 +66,7 @@ final class _FakeSteamNativeApi implements SteamNativeApi {
   void initManualDispatch() {}
 
   @override
-  SteamNativeInitResult initialize() {
-    return const SteamNativeInitResult(initCode: 0, errorMessage: '');
-  }
+  SteamNativeInitResult initialize() => const SteamNativeInitResult(initCode: 0, errorMessage: '');
 
   @override
   String personaName() => 'FakeUser';

@@ -22,12 +22,10 @@ final class Logger {
 
   Logger._child(
     this._state, {
-    required final String? defaultCategory,
+    required this._defaultCategory,
     required final Map<String, Object?> defaultFields,
-    required final TraceContext? defaultTrace,
-  }) : _defaultCategory = defaultCategory,
-       _defaultFields = Map<String, Object?>.unmodifiable(defaultFields),
-       _defaultTrace = defaultTrace;
+    required this._defaultTrace,
+  }) : _defaultFields = Map<String, Object?>.unmodifiable(defaultFields);
 
   final _LoggerState _state;
   final String? _defaultCategory;
@@ -279,8 +277,7 @@ final class Logger {
 }
 
 final class _LoggerState {
-  _LoggerState({required this.config, required final List<LogSink> sinks})
-    : _sinks = sinks {
+  _LoggerState({required this.config, required this._sinks}) {
     _flushTimer = Timer.periodic(config.flushInterval, (_) {
       unawaited(flush());
     });

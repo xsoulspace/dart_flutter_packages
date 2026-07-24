@@ -97,10 +97,10 @@ final class YandexGamesPurchasesPlatformFactory
 
 final class YandexGamesPurchasesPlatformClient implements PlatformClient {
   YandexGamesPurchasesPlatformClient({
-    required final PlatformClient baseClient,
+    required this._baseClient,
     required this.pluginConfig,
     required this.defaultProviderFactory,
-  }) : _baseClient = baseClient;
+  });
 
   final PlatformClient _baseClient;
   final YandexGamesPurchasesPluginConfig pluginConfig;

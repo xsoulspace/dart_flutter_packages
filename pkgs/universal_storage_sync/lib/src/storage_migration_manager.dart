@@ -1,3 +1,5 @@
+// ignore_for_file: lines_longer_than_80_chars
+
 import 'dart:convert';
 
 import 'package:meta/meta.dart';
@@ -68,15 +70,15 @@ final class StorageProfileMigrationEndpoint implements MigrationEndpoint {
 /// Runtime that migrates data from one profile/kernel to another with checkpoints
 /// and optional rollback.
 final class StorageProfileMigrationManager implements MigrationEndpoint {
+  /// Runtime that migrates data from one profile/kernel to another with checkpoints
+  /// and optional rollback.
   StorageProfileMigrationManager({
-    required final StorageKernel sourceKernel,
-    required final StorageKernel targetKernel,
+    required this._sourceKernel,
+    required this._targetKernel,
     this.manifestDirectory = '.us/migrations',
     this.manifestNamespace,
     this.sourcePathExcludePrefixes = const <String>{'.us/migrations'},
-  }) : _sourceKernel = sourceKernel,
-       _targetKernel = targetKernel,
-       _managerInstanceId =
+  }) : _managerInstanceId =
            'migration_manager_${DateTime.now().toUtc().microsecondsSinceEpoch}_${++_instanceCounter}';
 
   static const int _manifestSchemaVersion = 2;
@@ -1075,8 +1077,7 @@ final class StorageProfileMigrationManager implements MigrationEndpoint {
         metadata: <String, dynamic>{
           'removed': removed,
           'issues': issues,
-          if (rollbackToCheckpointId != null)
-            'rollback_to_checkpoint_id': rollbackToCheckpointId,
+          'rollback_to_checkpoint_id': ?rollbackToCheckpointId,
         },
       );
     } finally {
@@ -1553,9 +1554,9 @@ final class StorageProfileMigrationManager implements MigrationEndpoint {
         'checkpoints': <Map<String, dynamic>>[
           for (final checkpoint in checkpoints) checkpoint.toJson(),
         ],
-      if (paritySummary != null) 'parity_summary': paritySummary,
-      if (transformConfig != null) 'transform_config': transformConfig,
-      if (issueDetails != null) 'issues': issueDetails,
+      'parity_summary': ?paritySummary,
+      'transform_config': ?transformConfig,
+      'issues': ?issueDetails,
       if (decisionActions != null)
         'decision_actions': <String, String>{
           for (final item in decisionActions.entries) item.key: item.value.name,

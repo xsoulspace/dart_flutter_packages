@@ -13,23 +13,26 @@ class YandexAdProvider implements AdProvider {
 
   @override
   Future<void> init() async {
-    await MobileAds.initialize();
+    await YandexAds.initialize();
     if (debug) {
-      await MobileAds.setLogging(true);
-      await MobileAds.showDebugPanel();
+      await YandexAds.setLogging(true);
+      await YandexAds.showDebugPanel();
     }
-    await MobileAds.setAgeRestrictedUser(true);
+    await YandexAds.setAgeRestricted(true);
   }
 
   @override
   Future<void> showRewardedAd({required final String adUnitId}) async {
     final completer = Completer<RewardedAd>();
-    final adLoader = await RewardedAdLoader.create(
-      onAdFailedToLoad: completer.completeError,
-      onAdLoaded: completer.complete,
-    );
-    await adLoader.loadAd(
-      adRequestConfiguration: AdRequestConfiguration(adUnitId: adUnitId),
+    final loader = RewardedAdLoader();
+    //TODO(arenukvern): fix implementation
+    // final adLoader = await RewardedAdLoader.create(
+    //   onAdFailedToLoad: completer.completeError,
+    //   onAdLoaded: completer.complete,
+    // );
+    await loader.loadAd(
+      adRequest: AdRequest(adUnitId: adUnitId),
+      // adRequestConfiguration: AdRequestConfiguration(adUnitId: adUnitId),
     );
     final ad = await completer.future;
     await ad.setAdEventListener(
@@ -48,12 +51,15 @@ class YandexAdProvider implements AdProvider {
   @override
   Future<void> showInterstitialAd({required final String adUnitId}) async {
     final completer = Completer<InterstitialAd>();
-    final adLoader = await InterstitialAdLoader.create(
-      onAdLoaded: completer.complete,
-      onAdFailedToLoad: completer.completeError,
-    );
-    await adLoader.loadAd(
-      adRequestConfiguration: AdRequestConfiguration(adUnitId: adUnitId),
+    final loader = InterstitialAdLoader();
+    //TODO(arenukvern): fix implementation
+    // final adLoader = await InterstitialAdLoader.create(
+    //   onAdLoaded: completer.complete,
+    //   onAdFailedToLoad: completer.completeError,
+    // );
+    await loader.loadAd(
+      adRequest: AdRequest(adUnitId: adUnitId),
+      // adRequestConfiguration: AdRequestConfiguration(adUnitId: adUnitId),
     );
     final ad = await completer.future;
     await ad.setAdEventListener(

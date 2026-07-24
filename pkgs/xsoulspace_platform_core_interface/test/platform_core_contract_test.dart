@@ -4,8 +4,8 @@ import 'package:xsoulspace_platform_core_interface/xsoulspace_platform_core_inte
 void main() {
   group('PlatformInitOptions', () {
     test('reads typed context values safely', () {
-      final options = PlatformInitOptions(
-        context: const <String, Object?>{'retries': 3, 'title': 'runtime'},
+      const options = PlatformInitOptions(
+        context: <String, Object?>{'retries': 3, 'title': 'runtime'},
       );
 
       expect(options.read<int>('retries'), 3);

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'pages/folder_picker_page.dart';
-import 'pages/todo_list_page.dart';
-import 'state/app_state.dart';
+import 'package:todo_file_app/pages/folder_picker_page.dart';
+import 'package:todo_file_app/pages/todo_list_page.dart';
+import 'package:todo_file_app/state/app_state.dart';
 
 void main() {
   runApp(const TodoApp());

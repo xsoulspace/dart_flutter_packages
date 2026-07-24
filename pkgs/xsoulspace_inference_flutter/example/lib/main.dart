@@ -30,7 +30,7 @@ class _ExampleAppState extends State<_ExampleApp> {
   @override
   void dispose() {
     _notifier.dispose();
-    _session.dispose();
+    unawaited(_session.dispose());
     super.dispose();
   }
 
@@ -47,12 +47,10 @@ class _ExampleAppState extends State<_ExampleApp> {
           padding: const EdgeInsets.all(16),
           child: AnimatedBuilder(
             animation: _notifier,
-            builder: (final context, final _) {
-              return InferenceDiagnosticsPresenter(
-                readiness: readiness,
-                transcript: _notifier.snapshot,
-              );
-            },
+            builder: (final context, final _) => InferenceDiagnosticsPresenter(
+              readiness: readiness,
+              transcript: _notifier.snapshot,
+            ),
           ),
         ),
       ),
@@ -90,5 +88,5 @@ class _ExampleSession
   Future<void> close() async {}
 
   @override
-  Future<void> dispose() async => _controller.close();
+  Future<void> dispose() => _controller.close();
 }

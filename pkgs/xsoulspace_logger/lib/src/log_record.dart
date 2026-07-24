@@ -69,7 +69,7 @@ final class LogRecord {
       'message': message,
       'fields': fields,
       if (error != null) 'error': error.toString(),
-      if (stackForStorage != null) 'stackTrace': stackForStorage,
+      'stackTrace': ?stackForStorage,
       if (trace != null) 'trace': trace!.toJson(),
       if (fingerprint != null) 'fingerprint': fingerprint,
     };

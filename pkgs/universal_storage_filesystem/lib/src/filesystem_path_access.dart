@@ -40,10 +40,9 @@ typedef ReleaseDirectoryForConfig =
 /// Callback-based [FileSystemPathAccess] helper for local overrides.
 final class CallbackFileSystemPathAccess implements FileSystemPathAccess {
   CallbackFileSystemPathAccess({
-    required final ResolveDirectoryForConfig resolveDirectory,
+    required this._resolveDirectory,
     final ReleaseDirectoryForConfig? releaseDirectory,
-  }) : _resolveDirectory = resolveDirectory,
-       _releaseDirectory = releaseDirectory ?? _noopReleaseDirectory;
+  }) : _releaseDirectory = releaseDirectory ?? _noopReleaseDirectory;
 
   final ResolveDirectoryForConfig _resolveDirectory;
   final ReleaseDirectoryForConfig _releaseDirectory;

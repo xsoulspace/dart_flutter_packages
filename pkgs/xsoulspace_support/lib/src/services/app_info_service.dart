@@ -12,7 +12,7 @@ import '../models/models.dart';
 /// {@endtemplate}
 class AppInfoService {
   /// {@macro app_info_service}
-  const AppInfoService({final Logger? logger}) : _logger = logger;
+  const AppInfoService({this._logger});
 
   final Logger? _logger;
 

@@ -19,7 +19,7 @@ class VoskInferenceClient implements InferenceClient {
     this.modelConfig = const VoskModelConfig(),
     this.runtimeConfig = const VoskRuntimeConfig(),
     VoskAvailabilityProbe? availabilityProbe,
-    VoskTranscribeFn? transcribe,
+    this._transcribe,
   }) : _availabilityProbe =
            availabilityProbe ??
            VoskAvailabilityProbe(
@@ -29,7 +29,6 @@ class VoskInferenceClient implements InferenceClient {
                return direct.isEmpty ? null : direct;
              },
            ),
-       _transcribe = transcribe,
        _nativeBackend = NativeVoskBatchBackend(
          runtimeConfig: runtimeConfig,
          modelConfig: modelConfig,

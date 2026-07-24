@@ -35,9 +35,8 @@ abstract base class BasePagingController<TItem> implements Disposable {
   BasePagingController({
     this.addEmptyFirstItem = false,
     this.emptyItemBuilder,
-    final int firstPageKey = 1,
-  }) : _firstPageKey = firstPageKey,
-       assert(
+    this._firstPageKey = 1,
+  }) : assert(
          // ignore: avoid_bool_literals_in_conditional_expressions
          addEmptyFirstItem ? emptyItemBuilder != null : true,
          'emptyItemBuilder must not be null',

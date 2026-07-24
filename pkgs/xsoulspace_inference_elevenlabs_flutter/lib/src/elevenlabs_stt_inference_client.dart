@@ -11,11 +11,10 @@ import 'elevenlabs_config.dart';
 
 class ElevenLabsSttInferenceClient implements InferenceClient {
   ElevenLabsSttInferenceClient({
-    required final ElevenLabsAuthConfig authConfig,
+    required this._authConfig,
     final ElevenLabsEndpointConfig? endpointConfig,
     final http.Client? httpClient,
-  }) : _authConfig = authConfig,
-       _endpointConfig = endpointConfig ?? ElevenLabsEndpointConfig(),
+  }) : _endpointConfig = endpointConfig ?? ElevenLabsEndpointConfig(),
        _httpClient = httpClient ?? http.Client(),
        _ownsHttpClient = httpClient == null;
 

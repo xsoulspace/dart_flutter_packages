@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../models/todo.dart';
-import '../state/app_state.dart';
+import 'package:todo_file_app/models/todo.dart';
+import 'package:todo_file_app/state/app_state.dart';
 
 /// {@template todo_editor_dialog}
 /// Dialog for creating and editing todos.

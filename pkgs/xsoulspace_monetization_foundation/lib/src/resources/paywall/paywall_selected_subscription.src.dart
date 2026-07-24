@@ -9,10 +9,9 @@ import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interf
 class PaywallSelectedSubscriptionResource extends ChangeNotifier {
   /// {@macro subscription_plans_resource}
   PaywallSelectedSubscriptionResource({
-    final PurchaseProductId selectedProductId = PurchaseProductId.empty,
-    final PurchaseProductDetailsModel? selectedProductDetails,
-  }) : _selectedProductId = selectedProductId,
-       _selectedProductDetails = selectedProductDetails;
+    this._selectedProductId = PurchaseProductId.empty,
+    this._selectedProductDetails,
+  });
 
   PurchaseProductId _selectedProductId;
   PurchaseProductDetailsModel? _selectedProductDetails;

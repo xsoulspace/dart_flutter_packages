@@ -5,7 +5,7 @@ import 'package:from_json_to_json/from_json_to_json.dart';
 /// {@endtemplate}
 extension type const TodoId(String value) {
   /// {@macro todo_id}
-  factory TodoId.fromJson(final dynamic json) => TodoId(jsonDecodeString(json));
+  factory TodoId.fromJson(final json) => TodoId(jsonDecodeString(json));
 
   /// Converts to JSON representation
   String toJson() => value;
@@ -23,7 +23,7 @@ extension type const TodoId(String value) {
 /// {@endtemplate}
 extension type const Todo(Map<String, dynamic> value) {
   /// {@macro todo}
-  factory Todo.fromJson(final dynamic json) => Todo(jsonDecodeMap(json));
+  factory Todo.fromJson(final json) => Todo(jsonDecodeMap(json));
 
   /// Creates a new Todo with the given properties
   factory Todo.create({

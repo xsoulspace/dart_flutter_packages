@@ -7,9 +7,9 @@ import 'capability_registry.dart';
 /// Always-available fallback client with no-op capabilities.
 final class NoopPlatformClient implements PlatformClient {
   NoopPlatformClient({
-    final PlatformId platformId = PlatformId.custom,
+    this._platformId = PlatformId.custom,
     final Iterable<PlatformCapability>? capabilities,
-  }) : _platformId = platformId {
+  }) {
     for (final capability in capabilities ?? const <PlatformCapability>[]) {
       _registerCapability(capability);
     }

@@ -30,10 +30,9 @@ final class SteamRawNativeApiFactory implements SteamNativeApiFactory {
 /// Production adapter that performs pointer marshalling and native calls.
 final class SteamRawNativeApi implements SteamNativeApi {
   SteamRawNativeApi({
-    required final SteamRawBindings bindings,
-    required final bool enableVerboseLogs,
-  }) : _bindings = bindings,
-       _enableVerboseLogs = enableVerboseLogs;
+    required this._bindings,
+    required this._enableVerboseLogs,
+  });
 
   final SteamRawBindings _bindings;
   final bool _enableVerboseLogs;
