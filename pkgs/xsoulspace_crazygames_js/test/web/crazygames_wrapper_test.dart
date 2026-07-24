@@ -250,17 +250,11 @@ class _SdkStubState {
   void install() {
     final ad = jsify(<String, Object?>{
       'prefetchAd': allowInterop(prefetchedAdTypes.add),
-      'requestAd': allowInterop((
-        final String adType,
-        final Object? callbacks,
-      ) {
+      'requestAd': allowInterop((final String adType, final Object? callbacks) {
         lastAdType = adType;
         if (callbacks != null) {
           final started = prop(callbacks, 'adStarted');
-          final finished = prop(
-            callbacks,
-            'adFinished',
-          );
+          final finished = prop(callbacks, 'adFinished');
           if (started != null) {
             jsCall(started, 'call', const <Object?>[]);
           }
@@ -274,9 +268,7 @@ class _SdkStubState {
       'addAdblockPopupListener': allowInterop((final Object listener) {
         _adblockPopupListener = listener;
       }),
-      'removeAdblockPopupListener': allowInterop((
-        final Object listener,
-      ) {
+      'removeAdblockPopupListener': allowInterop((final Object listener) {
         if (identical(_adblockPopupListener, listener)) {
           _adblockPopupListener = null;
         }
@@ -311,9 +303,7 @@ class _SdkStubState {
         return jsify(<String, Object?>{
           'id': map['id'],
           'banner': request,
-          'renderOptions': jsify(<String, Object?>{
-            'renderer': 'responsive',
-          }),
+          'renderOptions': jsify(<String, Object?>{'renderer': 'responsive'}),
         });
       }),
       'requestResponsiveBanner': allowInterop((final String id) {
@@ -346,12 +336,7 @@ class _SdkStubState {
 
         if (callback != null && lastOverlayRequest!.isNotEmpty) {
           final firstId = lastOverlayRequest!.first['id'] as String? ?? '';
-          jsCall(callback, 'call', <Object?>[
-            null,
-            firstId,
-            'shown',
-            'ok',
-          ]);
+          jsCall(callback, 'call', <Object?>[null, firstId, 'shown', 'ok']);
         }
       }),
       'activeBannersCount': 1,
@@ -399,14 +384,10 @@ class _SdkStubState {
         }
         return null;
       }),
-      'addSettingsChangeListener': allowInterop((
-        final Object listener,
-      ) {
+      'addSettingsChangeListener': allowInterop((final Object listener) {
         _settingsListener = listener;
       }),
-      'removeSettingsChangeListener': allowInterop((
-        final Object listener,
-      ) {
+      'removeSettingsChangeListener': allowInterop((final Object listener) {
         if (identical(_settingsListener, listener)) {
           _settingsListener = null;
         }
@@ -427,10 +408,7 @@ class _SdkStubState {
         'countryCode': 'US',
         'locale': 'en-US',
         'device': jsify(<String, String>{'type': 'desktop'}),
-        'os': jsify(<String, String>{
-          'name': 'Windows',
-          'version': '11',
-        }),
+        'os': jsify(<String, String>{'name': 'Windows', 'version': '11'}),
         'browser': jsify(<String, String>{
           'name': 'Chrome',
           'version': '132.0.0.0',
@@ -512,10 +490,7 @@ class _SdkStubState {
     });
 
     final analytics = jsify(<String, Object?>{
-      'trackOrder': allowInterop((
-        final String provider,
-        final Object? order,
-      ) {
+      'trackOrder': allowInterop((final String provider, final Object? order) {
         lastTrackOrderProvider = provider;
         final map = dartify(order)! as Map<Object?, Object?>;
         lastTrackOrderPayload = map.map(
@@ -579,39 +554,27 @@ class _SdkStubState {
     if (_settingsListener == null) {
       return;
     }
-    jsCall(_settingsListener, 'call', <Object?>[
-      null,
-      jsify(settings),
-    ]);
+    jsCall(_settingsListener, 'call', <Object?>[null, jsify(settings)]);
   }
 
   void emitJoinRoom(final Map<String, String> inviteParams) {
     if (_joinRoomListener == null) {
       return;
     }
-    jsCall(_joinRoomListener, 'call', <Object?>[
-      null,
-      jsify(inviteParams),
-    ]);
+    jsCall(_joinRoomListener, 'call', <Object?>[null, jsify(inviteParams)]);
   }
 
   void emitAuthChanged(final Map<String, Object?> user) {
     if (_authListener == null) {
       return;
     }
-    jsCall(_authListener, 'call', <Object?>[
-      null,
-      jsify(user),
-    ]);
+    jsCall(_authListener, 'call', <Object?>[null, jsify(user)]);
   }
 
   void emitAdblockPopup(final String state) {
     if (_adblockPopupListener == null) {
       return;
     }
-    jsCall(_adblockPopupListener, 'call', <Object?>[
-      null,
-      state,
-    ]);
+    jsCall(_adblockPopupListener, 'call', <Object?>[null, state]);
   }
 }

@@ -3,9 +3,7 @@ import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'web_speech_recognition_adapter.dart';
 
 class WebSpeechRecognitionInferenceClientBase implements InferenceClient {
-  WebSpeechRecognitionInferenceClientBase({
-    required this._adapter,
-  });
+  WebSpeechRecognitionInferenceClientBase({required this._adapter});
 
   final WebSpeechRecognitionAdapter _adapter;
 

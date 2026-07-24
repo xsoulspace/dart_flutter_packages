@@ -72,16 +72,11 @@ final class _VkPlaySdkStub {
       'init': allowInterop((final Object? payload) {
         initCalls += 1;
         if (payload != null) {
-          lastInitPayload = Map<String, Object?>.from(
-            dartify(payload)! as Map,
-          );
+          lastInitPayload = Map<String, Object?>.from(dartify(payload)! as Map);
         }
       }),
       'getLoginStatus': allowInterop(() {
-        return jsify(<String, Object?>{
-          'authorized': true,
-          'userId': 'u-1',
-        });
+        return jsify(<String, Object?>{'authorized': true, 'userId': 'u-1'});
       }),
       'userInfo': allowInterop(() {
         return jsify(<String, Object?>{
@@ -126,9 +121,7 @@ final class _VkPlaySdkStub {
         return jsify(<String, Object?>{'shared': true});
       }),
       'customMethod': allowInterop((final Object? payload) {
-        final params = Map<String, Object?>.from(
-          dartify(payload)! as Map,
-        );
+        final params = Map<String, Object?>.from(dartify(payload)! as Map);
         return (params['value']! as int) + 1;
       }),
     });

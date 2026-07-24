@@ -18,8 +18,7 @@ class RustorePurchaseProvider implements PurchaseProvider {
     required this.deeplinkScheme,
     this.enableLogging = false,
     this.productTypeChecker,
-    this._getDurationFromProductId =
-        getDurationFromProductId,
+    this._getDurationFromProductId = getDurationFromProductId,
   });
 
   final String consoleApplicationId;

@@ -137,9 +137,7 @@ final class _DiscordSdkStub {
         });
       }),
       'getUser': allowInterop((final Object? payload) {
-        final data = Map<String, Object?>.from(
-          dartify(payload)! as Map,
-        );
+        final data = Map<String, Object?>.from(dartify(payload)! as Map);
         final id = data['id']?.toString() ?? 'unknown';
         return jsify(<String, Object?>{
           'id': id,

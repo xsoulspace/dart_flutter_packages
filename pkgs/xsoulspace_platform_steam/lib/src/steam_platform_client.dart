@@ -9,10 +9,7 @@ import 'package:xsoulspace_steamworks/xsoulspace_steamworks.dart';
 import 'steam_platform_config.dart';
 
 final class SteamPlatformClient implements PlatformClient {
-  SteamPlatformClient({
-    required this.config,
-    required this._steamClient,
-  });
+  SteamPlatformClient({required this.config, required this._steamClient});
 
   final SteamPlatformConfig config;
   final SteamClient _steamClient;

@@ -5,6 +5,9 @@
 default:
     just pub-get
 
+fix-lints:
+    dart fix . --apply && dart format .
+
 generate-all:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -74,13 +77,13 @@ publish-dry-run pkg:
     #!/usr/bin/env bash
     set -euo pipefail
     just storage-release-g6
-    if [ -z "{{pkg}}" ]; then
+    if [ -z "{{ pkg }}" ]; then
       echo "Usage: just publish-dry-run <package_name>"
       exit 2
     fi
-    pkg_dir="pkgs/{{pkg}}"
+    pkg_dir="pkgs/{{ pkg }}"
     if [ ! -f "$pkg_dir/pubspec.yaml" ]; then
-      echo "Package not found: {{pkg}}"
+      echo "Package not found: {{ pkg }}"
       exit 2
     fi
     if rg -q "sdk:\\s*flutter" "$pkg_dir/pubspec.yaml"; then
@@ -135,22 +138,22 @@ platform-sdk-publish-dry-run:
 xsoulspace-readiness scope="all" artifact="tool/artifacts/xsoulspace_production_readiness.json":
     #!/usr/bin/env bash
     set -euo pipefail
-    dart tool/xsoulspace_production_readiness.dart --scope "{{scope}}" --output "{{artifact}}"
+    dart tool/xsoulspace_production_readiness.dart --scope "{{ scope }}" --output "{{ artifact }}"
 
 xsoulspace-public-gate artifact="tool/artifacts/xsoulspace_production_readiness.json":
     #!/usr/bin/env bash
     set -euo pipefail
-    dart tool/xsoulspace_production_readiness.dart --scope public --output "{{artifact}}" --fail-on-blocked
+    dart tool/xsoulspace_production_readiness.dart --scope public --output "{{ artifact }}" --fail-on-blocked
 
 xsoulspace-internal-gate artifact="tool/artifacts/xsoulspace_production_readiness.json":
     #!/usr/bin/env bash
     set -euo pipefail
-    dart tool/xsoulspace_production_readiness.dart --scope internal --output "{{artifact}}" --fail-on-blocked
+    dart tool/xsoulspace_production_readiness.dart --scope internal --output "{{ artifact }}" --fail-on-blocked
 
 xsoulspace-gates artifact="tool/artifacts/xsoulspace_production_readiness.json":
     #!/usr/bin/env bash
     set -euo pipefail
-    dart tool/xsoulspace_production_readiness.dart --scope all --output "{{artifact}}" --fail-on-blocked
+    dart tool/xsoulspace_production_readiness.dart --scope all --output "{{ artifact }}" --fail-on-blocked
 
 xsoulspace-logger-chain-dry-run:
     #!/usr/bin/env bash
@@ -182,7 +185,7 @@ registry-rewrite-hosted registry_url="https://pub.xsoulspace.dev":
     #!/usr/bin/env bash
     set -euo pipefail
     dart pub get >/dev/null
-    dart registry/tools/rewrite_internal_hosted_deps.dart --repo-root . --hosted-url "{{registry_url}}"
+    dart registry/tools/rewrite_internal_hosted_deps.dart --repo-root . --hosted-url "{{ registry_url }}"
 
 registry-build-index output="build/registry" registry_url="https://pub.xsoulspace.dev" github_repo="xsoulspace/dart_flutter_packages" existing_index="":
     #!/usr/bin/env bash
@@ -191,12 +194,12 @@ registry-build-index output="build/registry" registry_url="https://pub.xsoulspac
     args=(
       registry/tools/build_registry_index.dart
       --repo-root .
-      --output-dir "{{output}}"
-      --registry-base-url "{{registry_url}}"
-      --github-repo "{{github_repo}}"
+      --output-dir "{{ output }}"
+      --registry-base-url "{{ registry_url }}"
+      --github-repo "{{ github_repo }}"
     )
-    if [ -n "{{existing_index}}" ]; then
-      args+=(--existing-index-dir "{{existing_index}}")
+    if [ -n "{{ existing_index }}" ]; then
+      args+=(--existing-index-dir "{{ existing_index }}")
     fi
     dart "${args[@]}"
 
@@ -207,15 +210,15 @@ registry-validate output="build/registry" registry_url="https://pub.xsoulspace.d
     args=(
       registry/tools/build_registry_index.dart
       --repo-root .
-      --output-dir "{{output}}"
-      --registry-base-url "{{registry_url}}"
-      --github-repo "{{github_repo}}"
+      --output-dir "{{ output }}"
+      --registry-base-url "{{ registry_url }}"
+      --github-repo "{{ github_repo }}"
     )
-    if [ -n "{{existing_index}}" ]; then
-      args+=(--existing-index-dir "{{existing_index}}")
+    if [ -n "{{ existing_index }}" ]; then
+      args+=(--existing-index-dir "{{ existing_index }}")
     fi
     dart "${args[@]}"
-    dart registry/tools/validate_registry.dart --repo-root . --output-dir "{{output}}" --registry-base-url "{{registry_url}}" --hosted-url "{{registry_url}}"
+    dart registry/tools/validate_registry.dart --repo-root . --output-dir "{{ output }}" --registry-base-url "{{ registry_url }}" --hosted-url "{{ registry_url }}"
 
 registry-test:
     #!/usr/bin/env bash
@@ -229,7 +232,7 @@ registry-test:
 registry-smoke output="build/registry" selection="stable":
     #!/usr/bin/env bash
     set -euo pipefail
-    python3 registry/gateway/smoke_test.py --registry-dir "{{output}}" --select "{{selection}}"
+    python3 registry/gateway/smoke_test.py --registry-dir "{{ output }}" --select "{{ selection }}"
 
 registry-release-preflight output="build/registry" registry_url="https://pub.xsoulspace.dev" github_repo="xsoulspace/dart_flutter_packages":
     #!/usr/bin/env bash
@@ -238,32 +241,32 @@ registry-release-preflight output="build/registry" registry_url="https://pub.xso
     just storage-release-g6
     just platform-sdk-verify
     just registry-test
-    just registry-rewrite-hosted registry_url="{{registry_url}}"
-    just registry-build-index output="{{output}}" registry_url="{{registry_url}}" github_repo="{{github_repo}}"
-    just registry-validate output="{{output}}" registry_url="{{registry_url}}" github_repo="{{github_repo}}"
-    dart registry/tools/registry_preview_publish.dart --output-dir "{{output}}"
+    just registry-rewrite-hosted registry_url="{{ registry_url }}"
+    just registry-build-index output="{{ output }}" registry_url="{{ registry_url }}" github_repo="{{ github_repo }}"
+    just registry-validate output="{{ output }}" registry_url="{{ registry_url }}" github_repo="{{ github_repo }}"
+    dart registry/tools/registry_preview_publish.dart --output-dir "{{ output }}"
 
 registry-preview output="build/registry":
     #!/usr/bin/env bash
     set -euo pipefail
-    dart registry/tools/registry_preview_publish.dart --output-dir "{{output}}"
+    dart registry/tools/registry_preview_publish.dart --output-dir "{{ output }}"
 
 registry-bump package version registry_url="https://pub.xsoulspace.dev":
     #!/usr/bin/env bash
     set -euo pipefail
-    dart registry/tools/registry_bump.dart "{{package}}" "{{version}}"
-    just registry-rewrite-hosted registry_url="{{registry_url}}"
+    dart registry/tools/registry_bump.dart "{{ package }}" "{{ version }}"
+    just registry-rewrite-hosted registry_url="{{ registry_url }}"
 
 registry-list output="build/registry" versions="false" gateway_url="":
     #!/usr/bin/env bash
     set -euo pipefail
     args=()
-    if [ -n "{{gateway_url}}" ]; then args+=(--gateway-url "{{gateway_url}}"); else args+=(--output-dir "{{output}}"); fi
-    if [ "{{versions}}" = "true" ]; then args+=(--versions); fi
+    if [ -n "{{ gateway_url }}" ]; then args+=(--gateway-url "{{ gateway_url }}"); else args+=(--output-dir "{{ output }}"); fi
+    if [ "{{ versions }}" = "true" ]; then args+=(--versions); fi
     dart registry/tools/registry_list.dart "${args[@]}"
 
 registry-add target_package dependency_package version="^0.0.0" registry_url="https://pub.xsoulspace.dev":
     #!/usr/bin/env bash
     set -euo pipefail
-    dart registry/tools/registry_add.dart --repo-root . --hosted-url "{{registry_url}}" "{{target_package}}" "{{dependency_package}}" "{{version}}"
-    just registry-rewrite-hosted registry_url="{{registry_url}}"
+    dart registry/tools/registry_add.dart --repo-root . --hosted-url "{{ registry_url }}" "{{ target_package }}" "{{ dependency_package }}" "{{ version }}"
+    just registry-rewrite-hosted registry_url="{{ registry_url }}"

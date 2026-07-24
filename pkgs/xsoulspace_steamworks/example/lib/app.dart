@@ -82,11 +82,7 @@ class _SteamworksHomePageState extends State<SteamworksHomePage> {
   Future<void> _initialize() async {
     setState(() => _status = 'Initializing...');
 
-    final result = await _client.initialize(
-      const SteamInitConfig(
-        appId: 480,
-      ),
-    );
+    final result = await _client.initialize(const SteamInitConfig(appId: 480));
 
     setState(() {
       if (result.success) {
@@ -133,57 +129,57 @@ class _SteamworksHomePageState extends State<SteamworksHomePage> {
 
   @override
   Widget build(final BuildContext context) => Scaffold(
-      appBar: AppBar(title: const Text('Steamworks Desktop Example')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text('Status: $_status', key: SteamExampleKeys.statusText),
-            const SizedBox(height: 8),
-            Text('Last event: $_lastEvent', key: SteamExampleKeys.eventText),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: <Widget>[
-                ElevatedButton(
-                  key: SteamExampleKeys.initializeButton,
-                  onPressed: _initialize,
-                  child: const Text('Initialize'),
-                ),
-                ElevatedButton(
-                  key: SteamExampleKeys.pumpButton,
-                  onPressed: _client.runCallbacksOnce,
-                  child: const Text('Pump once'),
-                ),
-                ElevatedButton(
-                  key: SteamExampleKeys.requestStatsButton,
-                  onPressed: _requestStats,
-                  child: const Text('Request stats'),
-                ),
-                ElevatedButton(
-                  key: SteamExampleKeys.setAchievementButton,
-                  onPressed: _setAchievement,
-                  child: const Text('Set achievement'),
-                ),
-                ElevatedButton(
-                  key: SteamExampleKeys.clearAchievementButton,
-                  onPressed: _clearAchievement,
-                  child: const Text('Clear achievement'),
-                ),
-                ElevatedButton(
-                  key: SteamExampleKeys.shutdownButton,
-                  onPressed: () async {
-                    await _client.shutdown();
-                    setState(() => _status = 'Shutdown complete');
-                  },
-                  child: const Text('Shutdown'),
-                ),
-              ],
-            ),
-          ],
-        ),
+    appBar: AppBar(title: const Text('Steamworks Desktop Example')),
+    body: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text('Status: $_status', key: SteamExampleKeys.statusText),
+          const SizedBox(height: 8),
+          Text('Last event: $_lastEvent', key: SteamExampleKeys.eventText),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              ElevatedButton(
+                key: SteamExampleKeys.initializeButton,
+                onPressed: _initialize,
+                child: const Text('Initialize'),
+              ),
+              ElevatedButton(
+                key: SteamExampleKeys.pumpButton,
+                onPressed: _client.runCallbacksOnce,
+                child: const Text('Pump once'),
+              ),
+              ElevatedButton(
+                key: SteamExampleKeys.requestStatsButton,
+                onPressed: _requestStats,
+                child: const Text('Request stats'),
+              ),
+              ElevatedButton(
+                key: SteamExampleKeys.setAchievementButton,
+                onPressed: _setAchievement,
+                child: const Text('Set achievement'),
+              ),
+              ElevatedButton(
+                key: SteamExampleKeys.clearAchievementButton,
+                onPressed: _clearAchievement,
+                child: const Text('Clear achievement'),
+              ),
+              ElevatedButton(
+                key: SteamExampleKeys.shutdownButton,
+                onPressed: () async {
+                  await _client.shutdown();
+                  setState(() => _status = 'Shutdown complete');
+                },
+                child: const Text('Shutdown'),
+              ),
+            ],
+          ),
+        ],
       ),
-    );
+    ),
+  );
 }
