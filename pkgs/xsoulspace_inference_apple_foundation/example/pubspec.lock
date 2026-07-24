@@ -72,6 +72,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  from_json_to_json:
+    dependency: transitive
+    description:
+      name: from_json_to_json
+      sha256: a29219df65cd20b1b17be8141ee51b3103d1cd95b192b7512139f3ae44775f49
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.5.0"
   fuchsia_remote_debug_protocol:
     dependency: transitive
     description: flutter
@@ -82,6 +90,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  is_dart_empty_or_not:
+    dependency: transitive
+    description:
+      name: is_dart_empty_or_not
+      sha256: "1454632c2b961175d4c2807310713cbcbd054a51e63c545dc86c3eb9b2b061b0"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.4.0"
   leak_tracker:
     dependency: transitive
     description:
@@ -162,6 +178,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "5.0.5"
+  recase:
+    dependency: transitive
+    description:
+      name: recase
+      sha256: e4eb4ec2dcdee52dcf99cb4ceabaffc631d7424ee55e56f280bc039737f89213
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.1.0"
   sky_engine:
     dependency: transitive
     description: flutter

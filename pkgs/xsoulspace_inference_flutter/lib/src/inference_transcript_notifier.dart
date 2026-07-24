@@ -6,7 +6,7 @@ import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 final class InferenceTranscriptNotifier extends ChangeNotifier {
   InferenceTranscriptNotifier({
     final InferenceRealtimeSession<InferenceTranscriptEvent>? session,
-  }) : _controller = InferenceTranscriptController(session: session) {
+  }) : _controller = InferenceTranscriptController() {
     _subscription = _controller.snapshots.listen(
       (final _) => notifyListeners(),
     );

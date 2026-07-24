@@ -106,7 +106,7 @@ class AppleFoundationInferenceClient implements InferenceClient {
 
       if (rawOutput == null || rawOutput.trim().isEmpty) {
         return InferenceResult<InferenceResponse>.fail(
-          code: 'codex_output_empty',
+          code: 'output_empty',
           message: 'Apple Foundation Model produced no output',
           meta: <String, dynamic>{'provider': id},
         );

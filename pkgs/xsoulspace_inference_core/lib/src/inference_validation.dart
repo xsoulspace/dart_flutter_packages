@@ -1,7 +1,7 @@
 import 'dart:convert';
 
-import 'inference_models.dart';
 import 'inference_result.dart';
+import 'models/inference_models.dart';
 
 const String errorCodeTaskUnsupported = 'task_unsupported';
 const String errorCodeAudioInputMissing = 'audio_input_missing';
@@ -10,7 +10,11 @@ const String errorCodeTtsTextEmpty = 'tts_text_empty';
 const String errorCodeAudioOutputUnavailable = 'audio_output_unavailable';
 
 InferenceResult<Map<String, dynamic>> parseStrictJsonObject(final String raw) {
-  final trimmed = raw.trim();
+  var trimmed = raw.trim();
+  if (trimmed.startsWith('```')) {
+    trimmed = trimmed.replaceAll('```json', '').replaceAll('```', '');
+  }
+
   if (trimmed.isEmpty) {
     return InferenceResult<Map<String, dynamic>>.fail(
       code: 'json_empty',

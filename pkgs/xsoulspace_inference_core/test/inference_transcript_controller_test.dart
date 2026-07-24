@@ -32,7 +32,8 @@ void main() {
     'InferenceTranscriptController tracks partial and final transcript',
     () async {
       final session = _FakeSession();
-      final controller = InferenceTranscriptController(session: session);
+      final controller = InferenceTranscriptController();
+      await controller.attach(session);
       addTearDown(controller.dispose);
       addTearDown(session.dispose);
 

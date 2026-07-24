@@ -89,8 +89,7 @@ class WebSpeechRecognitionInferenceClientBase implements InferenceClient {
       final meta = <String, dynamic>{
         'provider': id,
         'language': language ?? 'browser_default',
-        if (source != null)
-          'audio_source': inferenceAudioSourceToJsonValue(source),
+        if (source != null) 'audio_source': InferenceAudioSource.toJson(source),
       };
 
       return InferenceResult<InferenceResponse>.ok(

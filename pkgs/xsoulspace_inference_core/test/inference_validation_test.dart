@@ -156,9 +156,7 @@ void main() {
   test('validateInferenceRequest accepts STT microphone request', () {
     final result = validateInferenceRequest(
       InferenceRequest.speechToText(
-        audioInput: const InferenceAudioInput.microphone(
-          mimeType: 'audio/webm',
-        ),
+        audioInput: const InferenceAudioInput.microphone(),
         workingDirectory: '/tmp',
       ),
     );

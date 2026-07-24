@@ -1,52 +1,70 @@
 import 'dart:convert';
 
-enum InferenceTask { structuredText, speechToText, textToSpeech }
+import 'package:recase/recase.dart';
 
-InferenceTask inferenceTaskFromJsonValue(final Object? value) {
-  if (value is! String) {
+enum InferenceTask {
+  structuredText,
+  speechToText,
+  textToSpeech;
+
+  factory InferenceTask.fromJson(final Object? value) {
+    if (value is! String) {
+      return InferenceTask.structuredText;
+    }
+
+    try {
+      return InferenceTask.values.byName(value);
+      // ignore: avoid_catches_without_on_clauses, empty_catches
+    } catch (e) {}
+
     return InferenceTask.structuredText;
   }
-
-  for (final task in InferenceTask.values) {
-    if (task.name == value) {
-      return task;
-    }
-  }
-
-  return InferenceTask.structuredText;
 }
 
-enum InferenceAudioSource { filePath, bytes, microphone }
+enum InferenceAudioSource {
+  filePath,
+  bytes,
+  microphone;
 
-String inferenceAudioSourceToJsonValue(final InferenceAudioSource source) =>
-    switch (source) {
-      InferenceAudioSource.filePath => 'file_path',
-      InferenceAudioSource.bytes => 'bytes',
-      InferenceAudioSource.microphone => 'microphone',
+  static String toJson(final InferenceAudioSource source) =>
+      source.name.snakeCase;
+
+  static InferenceAudioSource? fromJson(final Object? value) {
+    if (value is! String) {
+      return null;
+    }
+
+    return switch (value) {
+      'file_path' || 'filePath' => InferenceAudioSource.filePath,
+      'bytes' => InferenceAudioSource.bytes,
+      'microphone' => InferenceAudioSource.microphone,
+      _ => null,
     };
-
-InferenceAudioSource? inferenceAudioSourceFromJsonValue(final Object? value) {
-  if (value is! String) {
-    return null;
   }
-
-  return switch (value) {
-    'file_path' || 'filePath' => InferenceAudioSource.filePath,
-    'bytes' => InferenceAudioSource.bytes,
-    'microphone' => InferenceAudioSource.microphone,
-    _ => null,
-  };
 }
 
 class InferenceAudioInput {
   const InferenceAudioInput({
+    required this.mimeType,
     this.source,
     this.filePath,
     this.bytes,
-    required this.mimeType,
     this.sampleRateHz,
     this.channelCount,
   });
+
+  factory InferenceAudioInput.fromJson(final Map<String, dynamic> json) =>
+      InferenceAudioInput(
+        source: InferenceAudioSource.fromJson(json['source']),
+        filePath: json['file_path'] as String?,
+        bytes: switch (json['bytes_base64']) {
+          final String value => base64Decode(value),
+          _ => null,
+        },
+        mimeType: (json['mime_type'] as String?) ?? '',
+        sampleRateHz: json['sample_rate_hz'] as int?,
+        channelCount: json['channel_count'] as int?,
+      );
 
   const InferenceAudioInput.filePath({
     required this.filePath,
@@ -98,26 +116,13 @@ class InferenceAudioInput {
 
   Map<String, dynamic> toJson() => {
     if (resolvedSource != null)
-      'source': inferenceAudioSourceToJsonValue(resolvedSource!),
+      'source': InferenceAudioSource.toJson(resolvedSource!),
     if (filePath != null) 'file_path': filePath,
     if (bytes != null) 'bytes_base64': base64Encode(bytes!),
     'mime_type': mimeType,
     if (sampleRateHz != null) 'sample_rate_hz': sampleRateHz,
     if (channelCount != null) 'channel_count': channelCount,
   };
-
-  factory InferenceAudioInput.fromJson(final Map<String, dynamic> json) =>
-      InferenceAudioInput(
-        source: inferenceAudioSourceFromJsonValue(json['source']),
-        filePath: json['file_path'] as String?,
-        bytes: switch (json['bytes_base64']) {
-          final String value => base64Decode(value),
-          _ => null,
-        },
-        mimeType: (json['mime_type'] as String?) ?? '',
-        sampleRateHz: json['sample_rate_hz'] as int?,
-        channelCount: json['channel_count'] as int?,
-      );
 }
 
 class InferenceAudioArtifact {
@@ -126,6 +131,13 @@ class InferenceAudioArtifact {
     required this.mimeType,
     this.durationMs,
   });
+
+  factory InferenceAudioArtifact.fromJson(final Map<String, dynamic> json) =>
+      InferenceAudioArtifact(
+        filePath: (json['file_path'] as String?) ?? '',
+        mimeType: (json['mime_type'] as String?) ?? '',
+        durationMs: json['duration_ms'] as int?,
+      );
 
   final String filePath;
   final String mimeType;
@@ -136,13 +148,6 @@ class InferenceAudioArtifact {
     'mime_type': mimeType,
     if (durationMs != null) 'duration_ms': durationMs,
   };
-
-  factory InferenceAudioArtifact.fromJson(final Map<String, dynamic> json) =>
-      InferenceAudioArtifact(
-        filePath: (json['file_path'] as String?) ?? '',
-        mimeType: (json['mime_type'] as String?) ?? '',
-        durationMs: json['duration_ms'] as int?,
-      );
 }
 
 class InferenceSpeechSegment {
@@ -151,6 +156,13 @@ class InferenceSpeechSegment {
     required this.startMs,
     required this.endMs,
   });
+
+  factory InferenceSpeechSegment.fromJson(final Map<String, dynamic> json) =>
+      InferenceSpeechSegment(
+        text: (json['text'] as String?) ?? '',
+        startMs: (json['start_ms'] as num?)?.round() ?? 0,
+        endMs: (json['end_ms'] as num?)?.round() ?? 0,
+      );
 
   final String text;
   final int startMs;
@@ -161,13 +173,6 @@ class InferenceSpeechSegment {
     'start_ms': startMs,
     'end_ms': endMs,
   };
-
-  factory InferenceSpeechSegment.fromJson(final Map<String, dynamic> json) =>
-      InferenceSpeechSegment(
-        text: (json['text'] as String?) ?? '',
-        startMs: (json['start_ms'] as num?)?.round() ?? 0,
-        endMs: (json['end_ms'] as num?)?.round() ?? 0,
-      );
 }
 
 class InferenceVoiceOptions {
@@ -178,6 +183,17 @@ class InferenceVoiceOptions {
     this.pitch,
     this.providerExtras = const <String, dynamic>{},
   });
+
+  factory InferenceVoiceOptions.fromJson(final Map<String, dynamic> json) =>
+      InferenceVoiceOptions(
+        voiceId: json['voice_id'] as String?,
+        locale: json['locale'] as String?,
+        speechRate: (json['speech_rate'] as num?)?.toDouble(),
+        pitch: (json['pitch'] as num?)?.toDouble(),
+        providerExtras:
+            (json['provider_extras'] as Map?)?.cast<String, dynamic>() ??
+            const <String, dynamic>{},
+      );
 
   final String? voiceId;
   final String? locale;
@@ -192,17 +208,6 @@ class InferenceVoiceOptions {
     if (pitch != null) 'pitch': pitch,
     'provider_extras': providerExtras,
   };
-
-  factory InferenceVoiceOptions.fromJson(final Map<String, dynamic> json) =>
-      InferenceVoiceOptions(
-        voiceId: json['voice_id'] as String?,
-        locale: json['locale'] as String?,
-        speechRate: (json['speech_rate'] as num?)?.toDouble(),
-        pitch: (json['pitch'] as num?)?.toDouble(),
-        providerExtras:
-            (json['provider_extras'] as Map?)?.cast<String, dynamic>() ??
-            const <String, dynamic>{},
-      );
 }
 
 class InferenceRequest {
@@ -215,6 +220,31 @@ class InferenceRequest {
     this.audioInput,
     this.voiceOptions,
   });
+
+  factory InferenceRequest.fromJson(final Map<String, dynamic> json) =>
+      InferenceRequest(
+        prompt: (json['prompt'] as String?) ?? '',
+        outputSchema:
+            (json['output_schema'] as Map?)?.cast<String, dynamic>() ??
+            const <String, dynamic>{},
+        workingDirectory: (json['working_directory'] as String?) ?? '',
+        metadata:
+            (json['metadata'] as Map?)?.cast<String, dynamic>() ??
+            const <String, dynamic>{},
+        task: InferenceTask.fromJson(json['task']),
+        audioInput: switch (json['audio_input']) {
+          final Map value => InferenceAudioInput.fromJson(
+            value.cast<String, dynamic>(),
+          ),
+          _ => null,
+        },
+        voiceOptions: switch (json['voice_options']) {
+          final Map value => InferenceVoiceOptions.fromJson(
+            value.cast<String, dynamic>(),
+          ),
+          _ => null,
+        },
+      );
 
   factory InferenceRequest.speechToText({
     required final InferenceAudioInput audioInput,
@@ -260,31 +290,6 @@ class InferenceRequest {
     if (audioInput != null) 'audio_input': audioInput!.toJson(),
     if (voiceOptions != null) 'voice_options': voiceOptions!.toJson(),
   };
-
-  factory InferenceRequest.fromJson(final Map<String, dynamic> json) =>
-      InferenceRequest(
-        prompt: (json['prompt'] as String?) ?? '',
-        outputSchema:
-            (json['output_schema'] as Map?)?.cast<String, dynamic>() ??
-            const <String, dynamic>{},
-        workingDirectory: (json['working_directory'] as String?) ?? '',
-        metadata:
-            (json['metadata'] as Map?)?.cast<String, dynamic>() ??
-            const <String, dynamic>{},
-        task: inferenceTaskFromJsonValue(json['task']),
-        audioInput: switch (json['audio_input']) {
-          final Map value => InferenceAudioInput.fromJson(
-            value.cast<String, dynamic>(),
-          ),
-          _ => null,
-        },
-        voiceOptions: switch (json['voice_options']) {
-          final Map value => InferenceVoiceOptions.fromJson(
-            value.cast<String, dynamic>(),
-          ),
-          _ => null,
-        },
-      );
 }
 
 class InferenceResponse {
@@ -299,6 +304,37 @@ class InferenceResponse {
     this.segments = const <InferenceSpeechSegment>[],
     this.audioArtifact,
   });
+
+  factory InferenceResponse.fromJson(final Map<String, dynamic> json) =>
+      InferenceResponse(
+        output:
+            (json['output'] as Map?)?.cast<String, dynamic>() ??
+            const <String, dynamic>{},
+        rawOutput: json['raw_output'] as String?,
+        warnings:
+            (json['warnings'] as List?)?.cast<String>() ?? const <String>[],
+        meta:
+            (json['meta'] as Map?)?.cast<String, dynamic>() ??
+            const <String, dynamic>{},
+        task: InferenceTask.fromJson(json['task']),
+        transcript: json['transcript'] as String?,
+        normalizedTranscript: json['normalized_transcript'] as String?,
+        segments:
+            (json['segments'] as List?)
+                ?.map(
+                  (final segment) => InferenceSpeechSegment.fromJson(
+                    (segment as Map).cast<String, dynamic>(),
+                  ),
+                )
+                .toList(growable: false) ??
+            const <InferenceSpeechSegment>[],
+        audioArtifact: switch (json['audio_artifact']) {
+          final Map value => InferenceAudioArtifact.fromJson(
+            value.cast<String, dynamic>(),
+          ),
+          _ => null,
+        },
+      );
 
   final Map<String, dynamic> output;
   final String? rawOutput;
@@ -323,35 +359,4 @@ class InferenceResponse {
     'warnings': warnings,
     'meta': meta,
   };
-
-  factory InferenceResponse.fromJson(final Map<String, dynamic> json) =>
-      InferenceResponse(
-        output:
-            (json['output'] as Map?)?.cast<String, dynamic>() ??
-            const <String, dynamic>{},
-        rawOutput: json['raw_output'] as String?,
-        warnings:
-            (json['warnings'] as List?)?.cast<String>() ?? const <String>[],
-        meta:
-            (json['meta'] as Map?)?.cast<String, dynamic>() ??
-            const <String, dynamic>{},
-        task: inferenceTaskFromJsonValue(json['task']),
-        transcript: json['transcript'] as String?,
-        normalizedTranscript: json['normalized_transcript'] as String?,
-        segments:
-            (json['segments'] as List?)
-                ?.map(
-                  (final segment) => InferenceSpeechSegment.fromJson(
-                    (segment as Map).cast<String, dynamic>(),
-                  ),
-                )
-                .toList(growable: false) ??
-            const <InferenceSpeechSegment>[],
-        audioArtifact: switch (json['audio_artifact']) {
-          final Map value => InferenceAudioArtifact.fromJson(
-            value.cast<String, dynamic>(),
-          ),
-          _ => null,
-        },
-      );
 }

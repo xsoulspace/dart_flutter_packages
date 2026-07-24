@@ -26,7 +26,6 @@ void main() {
 
   test('InferenceAudioInput microphone serialization round-trips', () {
     const input = InferenceAudioInput.microphone(
-      mimeType: 'audio/webm',
       sampleRateHz: 48000,
       channelCount: 1,
     );
@@ -78,16 +77,16 @@ void main() {
   });
 
   test('InferenceResponse speech payload serialization round-trips', () {
-    final response = InferenceResponse(
+    const response = InferenceResponse(
       task: InferenceTask.speechToText,
-      output: const <String, dynamic>{},
+      output: <String, dynamic>{},
       transcript: 'Hello, world.',
       normalizedTranscript: 'Hello world',
-      segments: const <InferenceSpeechSegment>[
+      segments: <InferenceSpeechSegment>[
         InferenceSpeechSegment(text: 'Hello', startMs: 0, endMs: 300),
         InferenceSpeechSegment(text: 'world', startMs: 300, endMs: 700),
       ],
-      meta: const <String, dynamic>{'provider': 'whisper'},
+      meta: <String, dynamic>{'provider': 'whisper'},
     );
 
     final decoded = InferenceResponse.fromJson(response.toJson());
@@ -226,12 +225,10 @@ final class _FakeInferenceClient implements InferenceClient {
   @override
   Future<InferenceResult<InferenceResponse>> infer(
     final InferenceRequest request,
-  ) async {
-    return InferenceResult<InferenceResponse>.fail(
-      code: 'unsupported',
-      message: 'Not implemented in fake',
-    );
-  }
+  ) async => InferenceResult<InferenceResponse>.fail(
+    code: 'unsupported',
+    message: 'Not implemented in fake',
+  );
 }
 
 final class _FakeRealtimeSession

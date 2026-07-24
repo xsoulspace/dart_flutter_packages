@@ -29,26 +29,6 @@ class InferenceTranscriptEvent {
     this.error,
   });
 
-  final InferenceTranscriptEventType type;
-  final DateTime timestamp;
-  final String? transcript;
-  final bool isFinal;
-  final InferenceRealtimeSessionState? sessionState;
-  final Map<String, num> metrics;
-  final Map<String, dynamic> metadata;
-  final InferenceError? error;
-
-  Map<String, dynamic> toJson() => <String, dynamic>{
-    'type': type.name,
-    'timestamp': timestamp.toIso8601String(),
-    if (transcript != null) 'transcript': transcript,
-    'is_final': isFinal,
-    if (sessionState != null) 'session_state': sessionState!.name,
-    'metrics': metrics,
-    'metadata': metadata,
-    if (error != null) 'error': error!.toJson(),
-  };
-
   factory InferenceTranscriptEvent.fromJson(final Map<String, dynamic> json) {
     final typeName = json['type'] as String?;
     final stateName = json['session_state'] as String?;
@@ -90,6 +70,26 @@ class InferenceTranscriptEvent {
       },
     );
   }
+
+  final InferenceTranscriptEventType type;
+  final DateTime timestamp;
+  final String? transcript;
+  final bool isFinal;
+  final InferenceRealtimeSessionState? sessionState;
+  final Map<String, num> metrics;
+  final Map<String, dynamic> metadata;
+  final InferenceError? error;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'type': type.name,
+    'timestamp': timestamp.toIso8601String(),
+    if (transcript != null) 'transcript': transcript,
+    'is_final': isFinal,
+    if (sessionState != null) 'session_state': sessionState!.name,
+    'metrics': metrics,
+    'metadata': metadata,
+    if (error != null) 'error': error!.toJson(),
+  };
 }
 
 abstract interface class InferenceRealtimeSession<TEvent> {

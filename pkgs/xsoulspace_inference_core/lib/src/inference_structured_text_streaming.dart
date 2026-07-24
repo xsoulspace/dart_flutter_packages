@@ -1,6 +1,6 @@
 import 'inference_client.dart';
-import 'inference_models.dart';
 import 'inference_result.dart';
+import 'models/inference_models.dart';
 
 enum InferenceStructuredTextStreamEventType {
   lifecycle,
@@ -66,14 +66,6 @@ class InferenceStructuredTextCompletion {
     this.attemptCount,
   });
 
-  final InferenceResult<InferenceResponse> result;
-  final int? attemptCount;
-
-  Map<String, dynamic> toJson() => <String, dynamic>{
-    'result': result.toJson((final value) => value.toJson()),
-    if (attemptCount != null) 'attempt_count': attemptCount,
-  };
-
   factory InferenceStructuredTextCompletion.fromJson(
     final Map<String, dynamic> json,
   ) {
@@ -111,6 +103,14 @@ class InferenceStructuredTextCompletion {
       },
     );
   }
+
+  final InferenceResult<InferenceResponse> result;
+  final int? attemptCount;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'result': result.toJson((final value) => value.toJson()),
+    if (attemptCount != null) 'attempt_count': attemptCount,
+  };
 }
 
 class InferenceStructuredTextStreamEvent {
@@ -128,34 +128,6 @@ class InferenceStructuredTextStreamEvent {
     this.completion,
     this.metadata = const <String, dynamic>{},
   });
-
-  final InferenceStructuredTextStreamEventType type;
-  final DateTime timestamp;
-  final InferenceStructuredTextLifecycleState? lifecycleState;
-  final String? message;
-  final String? textDelta;
-  final String? rawText;
-  final InferenceStructuredTextRawChannel? rawChannel;
-  final int? attempt;
-  final bool isTransient;
-  final InferenceError? error;
-  final InferenceStructuredTextCompletion? completion;
-  final Map<String, dynamic> metadata;
-
-  Map<String, dynamic> toJson() => <String, dynamic>{
-    'type': type.name,
-    'timestamp': timestamp.toIso8601String(),
-    if (lifecycleState != null) 'lifecycle_state': lifecycleState!.name,
-    if (message != null) 'message': message,
-    if (textDelta != null) 'text_delta': textDelta,
-    if (rawText != null) 'raw_text': rawText,
-    if (rawChannel != null) 'raw_channel': rawChannel!.name,
-    if (attempt != null) 'attempt': attempt,
-    'is_transient': isTransient,
-    if (error != null) 'error': error!.toJson(),
-    if (completion != null) 'completion': completion!.toJson(),
-    'metadata': metadata,
-  };
 
   factory InferenceStructuredTextStreamEvent.fromJson(
     final Map<String, dynamic> json,
@@ -197,6 +169,34 @@ class InferenceStructuredTextStreamEvent {
         (json['metadata'] as Map?)?.cast<String, dynamic>() ??
         const <String, dynamic>{},
   );
+
+  final InferenceStructuredTextStreamEventType type;
+  final DateTime timestamp;
+  final InferenceStructuredTextLifecycleState? lifecycleState;
+  final String? message;
+  final String? textDelta;
+  final String? rawText;
+  final InferenceStructuredTextRawChannel? rawChannel;
+  final int? attempt;
+  final bool isTransient;
+  final InferenceError? error;
+  final InferenceStructuredTextCompletion? completion;
+  final Map<String, dynamic> metadata;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'type': type.name,
+    'timestamp': timestamp.toIso8601String(),
+    if (lifecycleState != null) 'lifecycle_state': lifecycleState!.name,
+    if (message != null) 'message': message,
+    if (textDelta != null) 'text_delta': textDelta,
+    'raw_text': ?rawText,
+    'raw_channel': ?rawChannel?.name,
+    if (attempt != null) 'attempt': attempt,
+    'is_transient': isTransient,
+    if (error != null) 'error': error!.toJson(),
+    if (completion != null) 'completion': completion!.toJson(),
+    'metadata': metadata,
+  };
 }
 
 abstract interface class InferenceStructuredTextStreamSession {

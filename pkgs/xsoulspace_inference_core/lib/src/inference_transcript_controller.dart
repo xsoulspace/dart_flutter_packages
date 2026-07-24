@@ -38,30 +38,20 @@ final class InferenceTranscriptSnapshot {
     final Map<String, dynamic>? metadata,
     final bool clearPartialTranscript = false,
     final bool clearError = false,
-  }) {
-    return InferenceTranscriptSnapshot(
-      lastTranscript: lastTranscript ?? this.lastTranscript,
-      partialTranscript: clearPartialTranscript
-          ? null
-          : partialTranscript ?? this.partialTranscript,
-      finalTranscript: finalTranscript ?? this.finalTranscript,
-      lastEvent: lastEvent ?? this.lastEvent,
-      error: clearError ? null : error ?? this.error,
-      sessionState: sessionState ?? this.sessionState,
-      metadata: metadata ?? this.metadata,
-    );
-  }
+  }) => InferenceTranscriptSnapshot(
+    lastTranscript: lastTranscript ?? this.lastTranscript,
+    partialTranscript: clearPartialTranscript
+        ? null
+        : partialTranscript ?? this.partialTranscript,
+    finalTranscript: finalTranscript ?? this.finalTranscript,
+    lastEvent: lastEvent ?? this.lastEvent,
+    error: clearError ? null : error ?? this.error,
+    sessionState: sessionState ?? this.sessionState,
+    metadata: metadata ?? this.metadata,
+  );
 }
 
 final class InferenceTranscriptController {
-  InferenceTranscriptController({
-    final InferenceRealtimeSession<InferenceTranscriptEvent>? session,
-  }) {
-    if (session != null) {
-      attach(session);
-    }
-  }
-
   final StreamController<InferenceTranscriptSnapshot> _snapshotsController =
       StreamController<InferenceTranscriptSnapshot>.broadcast();
 
@@ -73,10 +63,10 @@ final class InferenceTranscriptController {
   Stream<InferenceTranscriptSnapshot> get snapshots =>
       _snapshotsController.stream;
 
-  void attach(
+  Future<void> attach(
     final InferenceRealtimeSession<InferenceTranscriptEvent> session,
-  ) {
-    _subscription?.cancel();
+  ) async {
+    await _subscription?.cancel();
     _subscription = session.events.listen(_consumeEvent);
   }
 
@@ -105,7 +95,6 @@ final class InferenceTranscriptController {
       case InferenceTranscriptEventType.finalTranscript:
         _snapshot = _snapshot.copyWith(
           lastTranscript: event.transcript,
-          partialTranscript: null,
           finalTranscript: event.transcript,
           lastEvent: event,
           sessionState: nextState,

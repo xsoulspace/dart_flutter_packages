@@ -13,6 +13,15 @@ final class InferenceReadinessIssue {
     this.remediation,
   });
 
+  factory InferenceReadinessIssue.fromJson(final Map<String, dynamic> json) =>
+      InferenceReadinessIssue(
+        code: (json['code'] as String?) ?? 'readiness_issue',
+        message: (json['message'] as String?) ?? 'Readiness issue',
+        isBlocking: json['is_blocking'] as bool? ?? true,
+        details: json['details'],
+        remediation: json['remediation'] as String?,
+      );
+
   final String code;
   final String message;
   final bool isBlocking;
@@ -26,15 +35,6 @@ final class InferenceReadinessIssue {
     if (details != null) 'details': details,
     if (remediation != null) 'remediation': remediation,
   };
-
-  factory InferenceReadinessIssue.fromJson(final Map<String, dynamic> json) =>
-      InferenceReadinessIssue(
-        code: (json['code'] as String?) ?? 'readiness_issue',
-        message: (json['message'] as String?) ?? 'Readiness issue',
-        isBlocking: json['is_blocking'] as bool? ?? true,
-        details: json['details'],
-        remediation: json['remediation'] as String?,
-      );
 }
 
 final class InferenceReadinessSnapshot {
@@ -44,20 +44,6 @@ final class InferenceReadinessSnapshot {
     this.issues = const <InferenceReadinessIssue>[],
     this.metadata = const <String, dynamic>{},
   });
-
-  final InferenceReadinessState state;
-  final String summary;
-  final List<InferenceReadinessIssue> issues;
-  final Map<String, dynamic> metadata;
-
-  bool get isReady => state == InferenceReadinessState.ready;
-
-  Map<String, dynamic> toJson() => <String, dynamic>{
-    'state': state.name,
-    'summary': summary,
-    'issues': issues.map((final issue) => issue.toJson()).toList(),
-    'metadata': metadata,
-  };
 
   factory InferenceReadinessSnapshot.fromJson(final Map<String, dynamic> json) {
     final stateName = json['state'] as String?;
@@ -81,6 +67,20 @@ final class InferenceReadinessSnapshot {
           const <String, dynamic>{},
     );
   }
+
+  final InferenceReadinessState state;
+  final String summary;
+  final List<InferenceReadinessIssue> issues;
+  final Map<String, dynamic> metadata;
+
+  bool get isReady => state == InferenceReadinessState.ready;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'state': state.name,
+    'summary': summary,
+    'issues': issues.map((final issue) => issue.toJson()).toList(),
+    'metadata': metadata,
+  };
 }
 
 abstract interface class InferenceReadinessProbe {
@@ -105,16 +105,14 @@ String formatInferenceReadinessSummary(
 
 List<String> formatInferenceReadinessIssues(
   final InferenceReadinessSnapshot snapshot,
-) {
-  return snapshot.issues
-      .map((final issue) {
-        final remediation = issue.remediation?.trim();
-        return remediation == null || remediation.isEmpty
-            ? issue.message
-            : '${issue.message} ${remediation.trim()}';
-      })
-      .toList(growable: false);
-}
+) => snapshot.issues
+    .map((final issue) {
+      final remediation = issue.remediation?.trim();
+      return remediation == null || remediation.isEmpty
+          ? issue.message
+          : '${issue.message} ${remediation.trim()}';
+    })
+    .toList(growable: false);
 
 InferenceResult<void> toInferenceReadinessResult(
   final InferenceReadinessSnapshot snapshot,

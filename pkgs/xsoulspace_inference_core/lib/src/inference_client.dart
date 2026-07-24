@@ -1,5 +1,5 @@
-import 'inference_models.dart';
 import 'inference_result.dart';
+import 'models/inference_models.dart';
 
 abstract interface class InferenceClient {
   String get id;
