@@ -1,9 +1,19 @@
+import 'package:ecsly/ecsly.dart';
 import 'package:equatable/equatable.dart';
 
 /// Any ML model
-class Model {}
+class Model {
+  const Model();
+  static const empty = Model();
+}
 
-/// orginized and contiuos information
+extension type const ModelId(String value) {
+  //TODO(arenukvern): add uuid
+  factory ModelId.create() => ModelId('${DateTime.now()}');
+  static const empty = ModelId('');
+}
+
+/// organized and contiuos information
 /// about agent goals, plans, history etc..
 class ModelContextWindow {
   const ModelContextWindow();
@@ -12,8 +22,12 @@ class ModelContextWindow {
 
 /// the chooser of models
 class ModelRouter {
-  ModelRouter({required this.model});
-  Model model;
+  ModelRouter({this.models = const {}});
+  Map<ModelId, Model> models;
+
+  final ModelId _cursor = ModelId.empty;
+
+  Model get activeModel => models[_cursor] ?? Model.empty;
 }
 
 /// 1 intance [ModelRuntime] holds:
@@ -46,19 +60,19 @@ class VoidAgentMemoryStorage implements AgentMemoryStorage {
   const VoidAgentMemoryStorage();
 }
 
-abstract class AgentMemory {
-  const AgentMemory({this.storage = const VoidAgentMemoryStorage()});
+abstract class AgentMemories {
+  const AgentMemories({this.storage = const VoidAgentMemoryStorage()});
   final AgentMemoryStorage storage;
 }
 
 /// persits only per runtime agent (not shared between)
-class AgentRuntimeMemory extends AgentMemory {
-  const AgentRuntimeMemory({super.storage});
+class AgentRuntimeMemories extends AgentMemories {
+  const AgentRuntimeMemories({super.storage});
 }
 
 /// persists across multiple runtimes
-class SharedMemory extends AgentMemory {
-  const SharedMemory({super.storage});
+class AgentSharedMemories extends AgentMemories {
+  const AgentSharedMemories({super.storage});
 }
 
 extension type const AgentId(String value) {
@@ -67,15 +81,24 @@ extension type const AgentId(String value) {
   static const empty = AgentId('');
 }
 
+class AgentConfig {
+  const AgentConfig({this.model = Model.empty});
+  final Model model;
+}
+
 /// aka thread aka lead aka main aka orchestrator
 ///
 /// controls [ModelLoop]s and through that - [ModelRuntime]
 class Agent with Equatable {
   const Agent({
-    this.runtimeMemory = const AgentRuntimeMemory(),
+    this.runtimeMemories = const AgentRuntimeMemories(),
+    this.sharedMemories = const AgentSharedMemories(),
+    this.config = const AgentConfig(),
     this.id = AgentId.empty,
   });
-  final AgentRuntimeMemory runtimeMemory;
+  final AgentRuntimeMemories runtimeMemories;
+  final AgentSharedMemories sharedMemories;
+  final AgentConfig config;
   final AgentId id;
 
   @override
@@ -103,4 +126,10 @@ class AIRuntime {
     context.agentsPool.add(agent);
     return agent;
   }
+}
+
+class AIWorld {
+  final world = World();
+
+  void run() {}
 }

@@ -16,3 +16,7 @@ dependency_overrides:
   test_api: 0.7.13
   analyzer: 14.1.0
   intl: 0.20.3
+  ecsly_codegen:
+    path: ../../ecsly/core_packages/ecsly_codegen
+  ecsly_app:
+    path: ../../ecsly/core_packages/ecsly_app
