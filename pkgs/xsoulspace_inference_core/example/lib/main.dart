@@ -72,22 +72,46 @@ class _MyHomePageState extends State<MyHomePage> {
       body: Center(
         child: Column(
           mainAxisAlignment: .center,
+          crossAxisAlignment: .center,
+          spacing: 24,
           children: [
-            TextFormField(
-              initialValue: _txt,
-              onChanged: (v) => setState(() => _txt = v),
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: 600),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      initialValue: _txt,
+                      onChanged: (v) => setState(() => _txt = v),
+                    ),
+                  ),
+                  TextButton.icon(
+                    icon: Icon(Icons.send),
+                    onPressed: _run,
+                    label: Text('v1: generate one message'),
+                  ),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: 24,
+                      maxWidth: 24,
+                      minHeight: 24,
+                      minWidth: 24,
+                    ),
+                    child: Center(
+                      child: AnimatedSwitcher(
+                        duration: .new(milliseconds: 250),
+
+                        child: _isRunning
+                            ? CircularProgressIndicator.adaptive()
+                            : SizedBox(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
 
-            Text(
-              "response: $_response",
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            Row(
-              children: [
-                if (_isRunning) CircularProgressIndicator.adaptive(),
-                TextButton(onPressed: _run, child: Text('run')),
-              ],
-            ),
+            Text("response: $_response", textAlign: .center),
           ],
         ),
       ),
