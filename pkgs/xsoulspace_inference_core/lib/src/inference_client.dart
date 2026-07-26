@@ -11,6 +11,9 @@ abstract interface class InferenceClient {
   /// Refreshes provider availability state and returns latest value.
   Future<bool> refreshAvailability();
 
+  /// Loads model into CPU / GPU if possible.
+  Future<void> load();
+
   /// Clears provider availability caches (if any).
   void resetAvailabilityCache();
 

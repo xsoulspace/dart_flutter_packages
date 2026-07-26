@@ -40,6 +40,10 @@ class VoskInferenceClient implements InferenceClient {
   final VoskTranscribeFn? _transcribe;
   final NativeVoskBatchBackend _nativeBackend;
 
+  @override
+  Future<void> load() async {
+    // TODO: implement load
+  }
   String? resolveRuntimeLibraryPath() {
     return VoskRawLibraryLoader(
       runtimeConfig: VoskRawRuntimeConfig(

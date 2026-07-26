@@ -40,6 +40,10 @@ class WhisperCppInferenceClient implements InferenceClient {
   final WhisperCppTranscribeFn? _transcribe;
   final NativeWhisperCppBatchBackend _nativeBackend;
 
+  @override
+  Future<void> load() async {
+    // TODO: implement load
+  }
   String? resolveRuntimeLibraryPath() {
     return WhisperCppRawLibraryLoader(
       runtimeConfig: WhisperCppRawRuntimeConfig(

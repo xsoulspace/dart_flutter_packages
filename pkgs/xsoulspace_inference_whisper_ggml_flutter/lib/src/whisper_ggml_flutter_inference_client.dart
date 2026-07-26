@@ -42,6 +42,10 @@ class WhisperGgmlFlutterInferenceClient implements InferenceClient {
   WhisperModel _selectedModel;
 
   @override
+  Future<void> load() async {
+    // TODO: implement load
+  }
+  @override
   String get id => 'whisper_ggml_flutter';
 
   @override

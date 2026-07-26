@@ -26,6 +26,11 @@ class ElevenLabsTtsInferenceClient implements InferenceClient {
   final DateTime Function() _now;
 
   @override
+  Future<void> load() async {
+    // TODO: implement load
+  }
+
+  @override
   String get id => 'elevenlabs_tts';
 
   @override

@@ -38,6 +38,10 @@ class SherpaOnnxInferenceClient implements InferenceClient {
   final SherpaOnnxTranscribeFn? _transcribe;
   final NativeSherpaOnnxBatchBackend _nativeBackend;
 
+  @override
+  Future<void> load() async {
+    // TODO: implement load
+  }
   String? resolveRuntimeLibraryPath() {
     return SherpaOnnxRawLibraryLoader(
       runtimeConfig: SherpaOnnxRawRuntimeConfig(

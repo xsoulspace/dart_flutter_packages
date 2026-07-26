@@ -11,7 +11,7 @@ const MethodChannel _channel = MethodChannel(
 /// macOS only; returns standardized [InferenceResult] with codes
 /// [engine_unavailable], [schema_validation_failed], etc.
 class AppleFoundationInferenceClient implements InferenceClient {
-  AppleFoundationInferenceClient();
+  const AppleFoundationInferenceClient();
 
   @override
   String get id => 'apple_foundation';
@@ -173,5 +173,10 @@ class AppleFoundationInferenceClient implements InferenceClient {
   String _truncate(String value, {int max = 2000}) {
     if (value.length <= max) return value;
     return '${value.substring(0, max)}...[truncated ${value.length - max} chars]';
+  }
+
+  @override
+  Future<void> load() async {
+    // TODO: implement load
   }
 }

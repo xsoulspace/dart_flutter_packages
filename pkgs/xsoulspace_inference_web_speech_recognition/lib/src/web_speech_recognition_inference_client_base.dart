@@ -8,6 +8,10 @@ class WebSpeechRecognitionInferenceClientBase implements InferenceClient {
   final WebSpeechRecognitionAdapter _adapter;
 
   @override
+  Future<void> load() async {
+    // TODO: implement load
+  }
+  @override
   String get id => 'web_speech_recognition';
 
   @override

@@ -18,6 +18,10 @@ class GemmaFlutterInferenceClient implements InferenceClient {
   final GemmaModelSetup modelSetup;
 
   @override
+  Future<void> load() async {
+    // TODO: implement load
+  }
+  @override
   String get id => 'gemma_flutter';
 
   @override

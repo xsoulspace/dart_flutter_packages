@@ -201,6 +201,10 @@ final class _FakeInferenceClient implements InferenceClient {
   bool _available = false;
 
   @override
+  Future<void> load() async {
+    // TODO: implement load
+  }
+  @override
   String get id => 'fake';
 
   @override
@@ -259,6 +263,10 @@ final class _FakeRealtimeSession
 
 final class _FakeStructuredTextStreamingClient
     implements StructuredTextStreamingInferenceClient {
+  @override
+  Future<void> load() async {
+    // TODO: implement load
+  }
   @override
   String get id => 'fake_stream';
 

@@ -43,6 +43,10 @@ class CodexExecInferenceClient
   final Duration killGracePeriod;
 
   @override
+  Future<void> load() async {
+    // TODO: implement load
+  }
+  @override
   String get id => 'codex_exec';
 
   @override

@@ -1,4 +1,8 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
+import 'package:xsoulspace_inference_apple_foundation/xsoulspace_inference_apple_foundation.dart';
+import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 void main() {
   runApp(const MyApp());
@@ -26,12 +30,39 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+abstract class Scenario {
+  final ai = AIWorld.fromConfigs(
+    runtimeConfig: AIRuntimeConfig(
+      inferenceClientBuilders: {
+        DefaultModelNames.appleFoundation: () =>
+            const AppleFoundationInferenceClient(),
+      },
+    ),
+  );
+}
 
-  void _incrementCounter() {
+class ScenarioV1SendMessageGetAnswer extends Scenario {
+  Future<String> run(String text) async {
+    final response = await ai.sendTextMessage(text);
+    log(response);
+    return response;
+  }
+}
+
+class ScenarioV2SendMessageGetAnswerLoop extends Scenario {}
+
+class _MyHomePageState extends State<MyHomePage> {
+  final scenario = ScenarioV1SendMessageGetAnswer();
+  String _response = '';
+  String _txt = '';
+  bool _isRunning = false;
+
+  Future<void> _run() async {
+    setState(() => _isRunning = true);
+    final r = await scenario.run(_txt);
     setState(() {
-      _counter++;
+      _response = r;
+      _isRunning = false;
     });
   }
 
@@ -42,18 +73,23 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           mainAxisAlignment: .center,
           children: [
-            const Text('You have pushed the button this many times:'),
+            TextFormField(
+              initialValue: _txt,
+              onChanged: (v) => setState(() => _txt = v),
+            ),
+
             Text(
-              '$_counter',
+              "response: $_response",
               style: Theme.of(context).textTheme.headlineMedium,
+            ),
+            Row(
+              children: [
+                if (_isRunning) CircularProgressIndicator.adaptive(),
+                TextButton(onPressed: _run, child: Text('run')),
+              ],
             ),
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
       ),
     );
   }

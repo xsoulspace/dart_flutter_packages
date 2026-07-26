@@ -24,6 +24,10 @@ class ElevenLabsSttInferenceClient implements InferenceClient {
   final bool _ownsHttpClient;
 
   @override
+  Future<void> load() async {
+    // TODO: implement load
+  }
+  @override
   String get id => 'elevenlabs_stt';
 
   @override

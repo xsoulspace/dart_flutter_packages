@@ -36,6 +36,10 @@ class CursorAgentInferenceClient implements InferenceClient {
   final Duration killGracePeriod;
 
   @override
+  Future<void> load() async {
+    // TODO: implement load
+  }
+  @override
   String get id => 'cursor_agent';
 
   @override

@@ -64,6 +64,10 @@ class FlutterTtsInferenceClient implements InferenceClient {
   final DateTime Function() _now;
 
   @override
+  Future<void> load() async {
+    // TODO: implement load
+  }
+  @override
   String get id => 'flutter_tts';
 
   @override

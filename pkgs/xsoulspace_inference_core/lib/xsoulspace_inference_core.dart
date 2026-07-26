@@ -1,5 +1,4 @@
-library;
-
+export 'src/agent/agent.dart';
 export 'src/inference_client.dart';
 export 'src/inference_readiness.dart';
 export 'src/inference_realtime.dart';
