@@ -42,9 +42,17 @@ sealed class Scenario {
     ),
   );
 
-  Future<String> init({required String text, required AgentConfig config});
+  @mustCallSuper
+  Future<String> init({
+    required String text,
+    required AgentConfig config,
+  }) async {
+    isInitialized = true;
+    return '';
+  }
 
   void dispose() {
+    isInitialized = false;
     ai.dispose();
   }
 }
@@ -55,6 +63,7 @@ class ScenarioV1SendMessageGetAnswer extends Scenario {
     required String text,
     required AgentConfig config,
   }) async {
+    super.init(text: text, config: config);
     final response = await ai.sendTextMessage(
       message: text,
       config: config,
@@ -74,6 +83,7 @@ class ScenarioV2KeepPrimitiveMemory extends Scenario {
     required String text,
     required AgentConfig config,
   }) async {
+    super.init(text: text, config: config);
     final response = await ai.sendTextMessage(message: text, config: config);
     log(response.text);
     agent = response.agent;
@@ -118,16 +128,16 @@ class _MyHomePageState extends State<MyHomePage> {
     _isRunning = true;
   });
 
-  Future<void> _initScenario() async {
+  Future<void> _initScenario({bool cleanup = false}) async {
+    if (cleanup) _cleanup();
     final scenario = _getScenarioByIndex();
-    _cleanup();
     _setLoading();
     final r = await scenario.init(text: _txt, config: _agentConfig);
     setState(() {
-      _controller.clear();
       _messages
         ..add(_txt)
         ..add(r);
+      _controller.clear();
       _isRunning = false;
     });
   }
@@ -137,10 +147,10 @@ class _MyHomePageState extends State<MyHomePage> {
 
     final r = await scenarioV2.reply(_txt);
     setState(() {
-      _controller.clear();
       _messages
         ..add(_txt)
         ..add(r);
+      _controller.clear();
       _isRunning = false;
     });
   }
@@ -149,12 +159,17 @@ class _MyHomePageState extends State<MyHomePage> {
     final scenario = _getScenarioByIndex();
     switch (scenario) {
       case final ScenarioV1SendMessageGetAnswer _:
-        _initScenario();
+        _initScenario(cleanup: true);
 
       case final ScenarioV2KeepPrimitiveMemory i:
         if (i.isInitialized) {
           _scenario2Reply();
         } else {
+          _cleanup();
+          _agentConfig = AgentConfig(
+            systemPrompt:
+                'You are weather predictor and helps to make coversation.',
+          );
           _initScenario();
         }
     }
@@ -176,6 +191,18 @@ class _MyHomePageState extends State<MyHomePage> {
           crossAxisAlignment: .center,
           spacing: 24,
           children: [
+            Flexible(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: 450),
+                child: ListView.builder(
+                  reverse: true,
+                  itemBuilder: (context, index) {
+                    return Text(_messages[index]);
+                  },
+                  itemCount: _messages.length,
+                ),
+              ),
+            ),
             ConstrainedBox(
               constraints: BoxConstraints(maxWidth: 600),
               child: Row(
@@ -209,7 +236,14 @@ class _MyHomePageState extends State<MyHomePage> {
               constraints: BoxConstraints(maxWidth: 600),
               child: Row(
                 children: [
-                  Expanded(child: TextFormField(controller: _controller)),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _controller,
+                      onFieldSubmitted: (value) {
+                        _onReply();
+                      },
+                    ),
+                  ),
                   TextButton.icon(
                     icon: Icon(Icons.send),
                     onPressed: _onReply,
@@ -235,16 +269,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 ],
               ),
             ),
-
-            Flexible(
-              child: ListView.builder(
-                reverse: true,
-                itemBuilder: (context, index) {
-                  return Text(_messages[index]);
-                },
-                itemCount: _messages.length,
-              ),
-            ),
+            SizedBox(height: 24),
           ],
         ),
       ),

@@ -96,18 +96,22 @@ class AppleFoundationInferenceClient implements InferenceClient {
       var systemPrompt = request.systemPrompt;
       if (request.task == InferenceTask.implicitlyStructuredText) {
         final promptBuilder = PromptBuilder(systemPrompt);
-        if (systemPrompt.isEmpty) {
-          promptBuilder.writeStructuredOutputPrompt(request.outputSchema);
-        }
+        promptBuilder.writeStructuredOutputPrompt(request.outputSchema);
         systemPrompt = promptBuilder.toString();
       }
-      final rawOutput = await _channel
-          .invokeMethod<String>('generate', <String, dynamic>{
-            'prompt': request.prompt,
-            'instructions': systemPrompt,
-            'workingDirectory': request.workingDirectory,
-            'transcript': request.contextFragmentsJson,
-          });
+      final rawOutput = await _channel.invokeMethod<String>('generate', <
+        String,
+        dynamic
+      >{
+        'prompt': "${request.prompt}/nCONTEXT: ${request.contextFragmentsJson}",
+        'instructions': systemPrompt.isEmpty ? null : systemPrompt,
+        'workingDirectory': request.workingDirectory,
+
+        /// TODO(arenukvern): temporary disabled, because it doesnt work - need a proper fix
+        // 'transcript': request.contextFragmentsJson.isEmpty
+        //     ? null
+        //     : request.contextFragmentsJson,
+      });
 
       if (rawOutput == null || rawOutput.trim().isEmpty) {
         return InferenceResult<InferenceResponse>.fail(

@@ -79,30 +79,29 @@ enum AppleFoundationBridge {
                 do {
                     // 1. Directly assign the constant using an if-else expression
                     let session =
-                    if let transcript = transcript, !transcript.isEmpty {
-                        LanguageModelSession(model: model, transcript: transcript)
-                    } else {
-                        LanguageModelSession(model: model, instructions: instructions)
-                    }
+                        if let transcript = transcript, !transcript.isEmpty {
+                            LanguageModelSession(
+                                model: model,
+                                transcript: transcript
+                            )
+                        } else {
+                            LanguageModelSession(
+                                model: model,
+                                instructions: instructions
+                            )
+                        }
                     let response = try await session.respond(to: prompt)
-                    //        DispatchQueue.main.async {
-                    //          completion(response.content, nil, nil)
-                    //        }
-
-                    // 2. Safe main-thread UI updates using modern Swift concurrency
+                    let content = response.content
                     await MainActor.run {
-                        completion(response.content, nil, nil)
+                        completion(content, nil, nil)
                     }
                 } catch {
-                    //        DispatchQueue.main.async {
-                    //          completion(nil, "engine_unavailable", error.localizedDescription)
-                    //        }
-                    // 3. Always handle errors in a do-catch block
+                    let message = error.localizedDescription
                     await MainActor.run {
                         completion(
                             nil,
                             "engine_unavailable",
-                            error.localizedDescription
+                            message
                         )
                     }
                 }
@@ -110,3 +109,4 @@ enum AppleFoundationBridge {
         }
     }
 #endif
+

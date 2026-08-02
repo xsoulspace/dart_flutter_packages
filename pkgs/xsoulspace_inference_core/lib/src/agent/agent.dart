@@ -155,13 +155,19 @@ class ModelRuntime {
       log('Output is null');
       return rawOutput ?? '';
     }
-
-    final answer = output['answer'];
-    if (answer == null) {
-      log('Answer is null');
+    try {
+      final answer =
+          output['answer'] ?? (output['properties'] as Map)['answer'];
+      if (answer == null) {
+        log('Answer is null');
+        return rawOutput ?? '';
+      }
+      return answer;
+      // ignore: avoid_catches_without_on_clauses
+    } catch (e, st) {
+      log('wrong structure $e', stackTrace: st);
       return rawOutput ?? '';
     }
-    return answer;
   }
 }
 
@@ -287,7 +293,7 @@ class Agent with Equatable {
     );
     runtimeMemories
       ..addUserInput(str)
-      ..addModelResponse(str);
+      ..addModelResponse(json);
     final response = responseFromJson(json);
     return response;
   }
@@ -413,7 +419,7 @@ class AIWorld {
     AgentConfig config = AgentConfig.empty,
     bool disposeAfterCompletion = false,
   }) async {
-    final agent = runtime.createAgent();
+    final agent = runtime.createAgent(config: config);
     final response = await runtime.generateContent(
       agent,
       message,
