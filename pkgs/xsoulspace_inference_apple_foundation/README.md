@@ -1,6 +1,6 @@
 # xsoulspace_inference_apple_foundation
 
-Apple Foundation Models (SystemLanguageModel) implementation of [xsoulspace_inference_core](https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_inference_core) for macOS. Requires macOS 26+ and Apple Intelligence for real inference.
+Apple Foundation Models (SystemLanguageModel) implementation of [xsoulspace_inference_core](https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_inference_core) for macOS 26+. Uses Swift Package Manager exclusively and requires Apple Intelligence for real inference.
 
 ## Installation
 
@@ -47,12 +47,12 @@ if (client.isAvailable) {
   ```bash
   cd example && flutter test integration_test -d macos
   ```
-  Full e2e requires macOS 26+ with Apple Intelligence; on older macOS or without Apple Intelligence the test still passes (availability check only).
+  Full e2e requires macOS 26+ with Apple Intelligence.
 
 One-command smoke from package root:
 
 ```bash
-make test
+just test
 ```
 
 ## Example app

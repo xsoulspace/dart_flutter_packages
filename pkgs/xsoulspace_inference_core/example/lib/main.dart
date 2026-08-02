@@ -187,7 +187,7 @@ class _MyHomePageState extends State<MyHomePage> {
     return Scaffold(
       body: Center(
         child: Column(
-          mainAxisAlignment: .center,
+          mainAxisAlignment: .end,
           crossAxisAlignment: .center,
           spacing: 24,
           children: [
@@ -195,7 +195,7 @@ class _MyHomePageState extends State<MyHomePage> {
               child: ConstrainedBox(
                 constraints: BoxConstraints(maxWidth: 450),
                 child: ListView.builder(
-                  reverse: true,
+                  shrinkWrap: true,
                   itemBuilder: (context, index) {
                     return Text(_messages[index]);
                   },
@@ -221,7 +221,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                 constraints: BoxConstraints(maxWidth: 100),
                                 child: RadioListTile<int>.adaptive(
                                   value: i.$1,
-                                  title: Text('${i.$1}'),
+                                  title: Text('${i.$1 + 1}'),
                                 ),
                               ),
                             )

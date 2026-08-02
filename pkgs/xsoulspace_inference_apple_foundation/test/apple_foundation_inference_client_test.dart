@@ -19,7 +19,7 @@ void main() {
       expect(AppleFoundationInferenceClient().id, 'apple_foundation');
     });
 
-    test('supports only structuredText tasks', () {
+    test('supports only implicitlyStructuredText tasks', () {
       expect(
         AppleFoundationInferenceClient().supportedTasks,
         const <InferenceTask>{InferenceTask.implicitlyStructuredText},
@@ -88,6 +88,7 @@ void main() {
 
     group('infer', () {
       const validRequest = InferenceRequest(
+        task: InferenceTask.implicitlyStructuredText,
         prompt: 'Say hello',
         outputSchema: <String, dynamic>{
           'type': 'object',
@@ -107,6 +108,7 @@ void main() {
         final client = AppleFoundationInferenceClient();
         final result = await client.infer(
           const InferenceRequest(
+            task: InferenceTask.implicitlyStructuredText,
             prompt: '   ',
             outputSchema: <String, dynamic>{'type': 'object'},
             workingDirectory: '/tmp',
@@ -123,6 +125,7 @@ void main() {
           final client = AppleFoundationInferenceClient();
           final result = await client.infer(
             const InferenceRequest(
+              task: InferenceTask.implicitlyStructuredText,
               prompt: 'Hi',
               outputSchema: <String, dynamic>{'type': 'object'},
               workingDirectory: '   ',
@@ -139,6 +142,7 @@ void main() {
           final client = AppleFoundationInferenceClient();
           final result = await client.infer(
             const InferenceRequest(
+              task: InferenceTask.implicitlyStructuredText,
               prompt: 'Hi',
               outputSchema: <String, dynamic>{},
               workingDirectory: '/tmp',
@@ -179,7 +183,7 @@ void main() {
       });
 
       test(
-        'fails with codex_output_empty when channel returns empty string',
+        'fails with output_empty when channel returns empty string',
         () async {
           binaryMessenger.setMockMethodCallHandler(_channel, (
             MethodCall call,
@@ -192,11 +196,11 @@ void main() {
           final client = AppleFoundationInferenceClient();
           final result = await client.infer(validRequest);
           expect(result.success, isFalse);
-          expect(result.error?.code, 'codex_output_empty');
+          expect(result.error?.code, 'output_empty');
         },
       );
 
-      test('fails with codex_output_empty when channel returns null', () async {
+      test('fails with output_empty when channel returns null', () async {
         binaryMessenger.setMockMethodCallHandler(_channel, (
           MethodCall call,
         ) async {
@@ -208,7 +212,7 @@ void main() {
         final client = AppleFoundationInferenceClient();
         final result = await client.infer(validRequest);
         expect(result.success, isFalse);
-        expect(result.error?.code, 'codex_output_empty');
+        expect(result.error?.code, 'output_empty');
       });
 
       test(
@@ -250,6 +254,7 @@ void main() {
           };
           final result = await client.infer(
             InferenceRequest(
+              task: InferenceTask.implicitlyStructuredText,
               prompt: 'Hi',
               outputSchema: schema,
               workingDirectory: '/tmp',
