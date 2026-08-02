@@ -54,7 +54,7 @@ class CodexExecInferenceClient
 
   @override
   Set<InferenceTask> get supportedTasks => const <InferenceTask>{
-    InferenceTask.structuredText,
+    InferenceTask.implicitlyStructuredText,
   };
 
   @override

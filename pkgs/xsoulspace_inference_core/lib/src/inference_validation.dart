@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:from_json_to_json/from_json_to_json.dart';
+
 import 'inference_result.dart';
 import 'models/inference_models.dart';
 
@@ -10,6 +12,8 @@ const String errorCodeTtsTextEmpty = 'tts_text_empty';
 const String errorCodeAudioOutputUnavailable = 'audio_output_unavailable';
 
 InferenceResult<Map<String, dynamic>> parseStrictJsonObject(final String raw) {
+  //TODO(arenukvern): move to safeguard -
+  // sometimes LLM tend to wrap output in ```json``` tags
   var trimmed = raw.trim();
   if (trimmed.startsWith('```')) {
     trimmed = trimmed.replaceAll('```json', '').replaceAll('```', '');
@@ -32,6 +36,7 @@ InferenceResult<Map<String, dynamic>> parseStrictJsonObject(final String raw) {
       );
     }
     return InferenceResult<Map<String, dynamic>>.ok(decoded);
+    // ignore: avoid_catches_without_on_clauses
   } catch (error) {
     return InferenceResult<Map<String, dynamic>>.fail(
       code: 'json_parse_failed',
@@ -73,7 +78,7 @@ InferenceResult<void> validateInferenceRequest(final InferenceRequest request) {
   }
 
   switch (request.task) {
-    case InferenceTask.structuredText:
+    case InferenceTask.text || InferenceTask.implicitlyStructuredText:
       if (request.prompt.trim().isEmpty) {
         return InferenceResult<void>.fail(
           code: 'request_prompt_empty',
@@ -329,23 +334,21 @@ InferenceResult<void> _validateJsonNode({
       );
     }
 
-    final properties =
-        (schema['properties'] as Map?)?.cast<String, dynamic>() ??
-        const <String, dynamic>{};
-    for (final entry in properties.entries) {
-      if (!objectValue.containsKey(entry.key)) {
+    final properties = jsonDecodeMap(schema['properties']);
+    for (final MapEntry<String, dynamic>(key: propertyKey, value: propertyValue)
+        in properties.entries) {
+      if (!objectValue.containsKey(propertyKey)) {
         continue;
       }
-      if (entry.value is! Map<String, dynamic>) {
-        continue;
-      }
-      final nested = _validateJsonNode(
-        value: objectValue[entry.key],
-        schema: entry.value as Map<String, dynamic>,
-        path: '$path.${entry.key}',
-      );
-      if (!nested.success) {
-        return nested;
+      if (propertyValue case final Map<String, dynamic> propertySchema) {
+        final nested = _validateJsonNode(
+          value: objectValue[propertyKey],
+          schema: propertySchema,
+          path: '$path.$propertyKey',
+        );
+        if (!nested.success) {
+          return nested;
+        }
       }
     }
   }

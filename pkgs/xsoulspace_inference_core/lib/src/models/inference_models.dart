@@ -1,15 +1,27 @@
 import 'dart:convert';
 
+import 'package:from_json_to_json/from_json_to_json.dart';
 import 'package:recase/recase.dart';
 
+import 'prompt_builder.dart';
+
+/// The idea is that inference task should be as atomic as possible
+/// so if structural output is needed it should be pointed as such
+/// or relevant config for API passed.
 enum InferenceTask {
-  structuredText,
+  text,
+
+  /// text will depend from [PromptBuilder.structuredOutputSystemPrompt],
+  /// even if parameters doesnt set to return structured output.
+  ///
+  // TODO(arenukvern): rework as fallback strategy
+  implicitlyStructuredText,
   speechToText,
   textToSpeech;
 
   factory InferenceTask.fromJson(final Object? value) {
     if (value is! String) {
-      return InferenceTask.structuredText;
+      return InferenceTask.implicitlyStructuredText;
     }
 
     try {
@@ -17,7 +29,7 @@ enum InferenceTask {
       // ignore: avoid_catches_without_on_clauses, empty_catches
     } catch (e) {}
 
-    return InferenceTask.structuredText;
+    return InferenceTask.implicitlyStructuredText;
   }
 }
 
@@ -43,6 +55,163 @@ enum InferenceAudioSource {
   }
 }
 
+/// in apple, [contextFragments] will become Transcript.prompt
+/// TODO: make it more native for convertion fragments -> transcript
+class InferenceRequest {
+  const InferenceRequest({
+    required this.prompt,
+    required this.outputSchema,
+    required this.workingDirectory,
+    this.systemPrompt = '',
+    this.contextFragments = const [],
+    this.metadata = const <String, dynamic>{},
+    this.task = InferenceTask.text,
+    this.audioInput,
+    this.voiceOptions,
+  });
+
+  factory InferenceRequest.fromJson(final Map<String, dynamic> json) =>
+      InferenceRequest(
+        prompt: jsonEncodeString(json['prompt']) ?? '',
+        outputSchema: jsonDecodeMap(json['output_schema']),
+        contextFragments: jsonDecodeListAs<Object>(json['context_fragments']),
+        workingDirectory: jsonEncodeString(json['working_directory']),
+        metadata: jsonDecodeMap(json['metadata']),
+        systemPrompt: jsonEncodeString(json['system_prompt']),
+        task: InferenceTask.fromJson(json['task']),
+        audioInput: switch (json['audio_input']) {
+          final Map value => InferenceAudioInput.fromJson(
+            value.cast<String, dynamic>(),
+          ),
+          _ => null,
+        },
+        voiceOptions: switch (json['voice_options']) {
+          final Map value => InferenceVoiceOptions.fromJson(
+            value.cast<String, dynamic>(),
+          ),
+          _ => null,
+        },
+      );
+
+  factory InferenceRequest.speechToText({
+    required final InferenceAudioInput audioInput,
+    final List<Object> contextFragments = const [],
+    final String systemPrompt = '',
+    final String workingDirectory = '.',
+    final Map<String, dynamic> metadata = const <String, dynamic>{},
+  }) => InferenceRequest(
+    prompt: '',
+    contextFragments: contextFragments,
+    systemPrompt: systemPrompt,
+    outputSchema: const <String, dynamic>{},
+    workingDirectory: workingDirectory,
+    metadata: metadata,
+    task: InferenceTask.speechToText,
+    audioInput: audioInput,
+  );
+
+  factory InferenceRequest.textToSpeech({
+    required final String text,
+    final String workingDirectory = '.',
+    final String systemPrompt = '',
+    final InferenceVoiceOptions? voiceOptions,
+    final Map<String, dynamic> metadata = const <String, dynamic>{},
+    final List<Object> contextFragments = const [],
+  }) => InferenceRequest(
+    prompt: text,
+    contextFragments: contextFragments,
+    systemPrompt: systemPrompt,
+    outputSchema: const <String, dynamic>{},
+    workingDirectory: workingDirectory,
+    metadata: metadata,
+    task: InferenceTask.textToSpeech,
+    voiceOptions: voiceOptions,
+  );
+
+  final String prompt;
+  final Map<String, dynamic> outputSchema;
+  final String workingDirectory;
+  final Map<String, dynamic> metadata;
+  final InferenceTask task;
+  final InferenceAudioInput? audioInput;
+  final InferenceVoiceOptions? voiceOptions;
+  final List<Object> contextFragments;
+  final String systemPrompt;
+  String get contextFragmentsJson =>
+      contextFragments.isNotEmpty ? jsonEncode(contextFragments) : '';
+
+  Map<String, dynamic> toJson() => {
+    'task': task.name,
+    'prompt': prompt,
+    'output_schema': outputSchema,
+    'working_directory': workingDirectory,
+    'system_prompt': systemPrompt,
+    'context_fragments': jsonEncode(contextFragments),
+    'metadata': metadata,
+    'audio_input': ?audioInput?.toJson(),
+    'voice_options': ?voiceOptions?.toJson(),
+  };
+}
+
+class InferenceResponse {
+  const InferenceResponse({
+    required this.output,
+    this.rawOutput,
+    this.warnings = const <String>[],
+    this.meta = const <String, dynamic>{},
+    this.task = InferenceTask.implicitlyStructuredText,
+    this.transcript,
+    this.normalizedTranscript,
+    this.segments = const <InferenceSpeechSegment>[],
+    this.audioArtifact,
+  });
+
+  factory InferenceResponse.fromJson(final Map<String, dynamic> json) =>
+      InferenceResponse(
+        output: jsonDecodeMap(json['output']),
+        rawOutput: jsonDecodeString(json['raw_output']),
+        warnings: jsonDecodeListAs(json['warnings']),
+        meta: jsonDecodeMap(json['meta']),
+        task: InferenceTask.fromJson(json['task']),
+
+        transcript: jsonDecodeString(json['transcript']),
+        normalizedTranscript: jsonDecodeString(json['normalized_transcript']),
+        segments: jsonDecodeListAs<Map<String, dynamic>>(
+          json['segments'],
+        ).map(InferenceSpeechSegment.fromJson).toList(),
+        audioArtifact: switch (json['audio_artifact']) {
+          final Map value => InferenceAudioArtifact.fromJson(
+            value.cast<String, dynamic>(),
+          ),
+          _ => null,
+        },
+      );
+
+  final Map<String, dynamic> output;
+  final String? rawOutput;
+  final List<String> warnings;
+  final Map<String, dynamic> meta;
+  final InferenceTask task;
+  final String? transcript;
+  final String? normalizedTranscript;
+  final List<InferenceSpeechSegment> segments;
+  final InferenceAudioArtifact? audioArtifact;
+
+  Map<String, dynamic> toJson() => {
+    'task': task.name,
+    'output': output,
+    if (rawOutput != null) 'raw_output': rawOutput,
+    if (transcript != null) 'transcript': transcript,
+    if (normalizedTranscript != null)
+      'normalized_transcript': normalizedTranscript,
+    if (segments.isNotEmpty)
+      'segments': segments.map((final segment) => segment.toJson()).toList(),
+    if (audioArtifact != null) 'audio_artifact': audioArtifact!.toJson(),
+    'warnings': warnings,
+    'meta': meta,
+  };
+}
+
 class InferenceAudioInput {
   const InferenceAudioInput({
     required this.mimeType,
@@ -56,14 +225,14 @@ class InferenceAudioInput {
   factory InferenceAudioInput.fromJson(final Map<String, dynamic> json) =>
       InferenceAudioInput(
         source: InferenceAudioSource.fromJson(json['source']),
-        filePath: json['file_path'] as String?,
+        filePath: jsonEncodeString(json['file_path']),
         bytes: switch (json['bytes_base64']) {
           final String value => base64Decode(value),
           _ => null,
         },
-        mimeType: (json['mime_type'] as String?) ?? '',
-        sampleRateHz: json['sample_rate_hz'] as int?,
-        channelCount: json['channel_count'] as int?,
+        mimeType: jsonEncodeString(json['mime_type']),
+        sampleRateHz: jsonEncodeInt(json['sample_rate_hz']),
+        channelCount: jsonEncodeInt(json['channel_count']),
       );
 
   const InferenceAudioInput.filePath({
@@ -134,9 +303,9 @@ class InferenceAudioArtifact {
 
   factory InferenceAudioArtifact.fromJson(final Map<String, dynamic> json) =>
       InferenceAudioArtifact(
-        filePath: (json['file_path'] as String?) ?? '',
-        mimeType: (json['mime_type'] as String?) ?? '',
-        durationMs: json['duration_ms'] as int?,
+        filePath: jsonEncodeString(json['file_path']),
+        mimeType: jsonEncodeString(json['mime_type']),
+        durationMs: jsonEncodeInt(json['duration_ms']),
       );
 
   final String filePath;
@@ -159,9 +328,9 @@ class InferenceSpeechSegment {
 
   factory InferenceSpeechSegment.fromJson(final Map<String, dynamic> json) =>
       InferenceSpeechSegment(
-        text: (json['text'] as String?) ?? '',
-        startMs: (json['start_ms'] as num?)?.round() ?? 0,
-        endMs: (json['end_ms'] as num?)?.round() ?? 0,
+        text: jsonEncodeString(json['text']),
+        startMs: jsonEncodeInt(json['start_ms']),
+        endMs: jsonEncodeInt(json['end_ms']),
       );
 
   final String text;
@@ -186,13 +355,11 @@ class InferenceVoiceOptions {
 
   factory InferenceVoiceOptions.fromJson(final Map<String, dynamic> json) =>
       InferenceVoiceOptions(
-        voiceId: json['voice_id'] as String?,
-        locale: json['locale'] as String?,
-        speechRate: (json['speech_rate'] as num?)?.toDouble(),
-        pitch: (json['pitch'] as num?)?.toDouble(),
-        providerExtras:
-            (json['provider_extras'] as Map?)?.cast<String, dynamic>() ??
-            const <String, dynamic>{},
+        voiceId: jsonEncodeString(json['voice_id']),
+        locale: jsonEncodeString(json['locale']),
+        speechRate: jsonEncodeDouble(json['speech_rate']),
+        pitch: jsonEncodeDouble(json['pitch']),
+        providerExtras: jsonDecodeMap(json['provider_extras']),
       );
 
   final String? voiceId;
@@ -207,156 +374,5 @@ class InferenceVoiceOptions {
     if (speechRate != null) 'speech_rate': speechRate,
     if (pitch != null) 'pitch': pitch,
     'provider_extras': providerExtras,
-  };
-}
-
-class InferenceRequest {
-  const InferenceRequest({
-    required this.prompt,
-    required this.outputSchema,
-    required this.workingDirectory,
-    this.metadata = const <String, dynamic>{},
-    this.task = InferenceTask.structuredText,
-    this.audioInput,
-    this.voiceOptions,
-  });
-
-  factory InferenceRequest.fromJson(final Map<String, dynamic> json) =>
-      InferenceRequest(
-        prompt: (json['prompt'] as String?) ?? '',
-        outputSchema:
-            (json['output_schema'] as Map?)?.cast<String, dynamic>() ??
-            const <String, dynamic>{},
-        workingDirectory: (json['working_directory'] as String?) ?? '',
-        metadata:
-            (json['metadata'] as Map?)?.cast<String, dynamic>() ??
-            const <String, dynamic>{},
-        task: InferenceTask.fromJson(json['task']),
-        audioInput: switch (json['audio_input']) {
-          final Map value => InferenceAudioInput.fromJson(
-            value.cast<String, dynamic>(),
-          ),
-          _ => null,
-        },
-        voiceOptions: switch (json['voice_options']) {
-          final Map value => InferenceVoiceOptions.fromJson(
-            value.cast<String, dynamic>(),
-          ),
-          _ => null,
-        },
-      );
-
-  factory InferenceRequest.speechToText({
-    required final InferenceAudioInput audioInput,
-    final String workingDirectory = '.',
-    final Map<String, dynamic> metadata = const <String, dynamic>{},
-  }) => InferenceRequest(
-    prompt: '',
-    outputSchema: const <String, dynamic>{},
-    workingDirectory: workingDirectory,
-    metadata: metadata,
-    task: InferenceTask.speechToText,
-    audioInput: audioInput,
-  );
-
-  factory InferenceRequest.textToSpeech({
-    required final String text,
-    final String workingDirectory = '.',
-    final InferenceVoiceOptions? voiceOptions,
-    final Map<String, dynamic> metadata = const <String, dynamic>{},
-  }) => InferenceRequest(
-    prompt: text,
-    outputSchema: const <String, dynamic>{},
-    workingDirectory: workingDirectory,
-    metadata: metadata,
-    task: InferenceTask.textToSpeech,
-    voiceOptions: voiceOptions,
-  );
-
-  final String prompt;
-  final Map<String, dynamic> outputSchema;
-  final String workingDirectory;
-  final Map<String, dynamic> metadata;
-  final InferenceTask task;
-  final InferenceAudioInput? audioInput;
-  final InferenceVoiceOptions? voiceOptions;
-
-  Map<String, dynamic> toJson() => {
-    'task': task.name,
-    'prompt': prompt,
-    'output_schema': outputSchema,
-    'working_directory': workingDirectory,
-    'metadata': metadata,
-    if (audioInput != null) 'audio_input': audioInput!.toJson(),
-    if (voiceOptions != null) 'voice_options': voiceOptions!.toJson(),
-  };
-}
-
-class InferenceResponse {
-  const InferenceResponse({
-    required this.output,
-    this.rawOutput,
-    this.warnings = const <String>[],
-    this.meta = const <String, dynamic>{},
-    this.task = InferenceTask.structuredText,
-    this.transcript,
-    this.normalizedTranscript,
-    this.segments = const <InferenceSpeechSegment>[],
-    this.audioArtifact,
-  });
-
-  factory InferenceResponse.fromJson(final Map<String, dynamic> json) =>
-      InferenceResponse(
-        output:
-            (json['output'] as Map?)?.cast<String, dynamic>() ??
-            const <String, dynamic>{},
-        rawOutput: json['raw_output'] as String?,
-        warnings:
-            (json['warnings'] as List?)?.cast<String>() ?? const <String>[],
-        meta:
-            (json['meta'] as Map?)?.cast<String, dynamic>() ??
-            const <String, dynamic>{},
-        task: InferenceTask.fromJson(json['task']),
-        transcript: json['transcript'] as String?,
-        normalizedTranscript: json['normalized_transcript'] as String?,
-        segments:
-            (json['segments'] as List?)
-                ?.map(
-                  (final segment) => InferenceSpeechSegment.fromJson(
-                    (segment as Map).cast<String, dynamic>(),
-                  ),
-                )
-                .toList(growable: false) ??
-            const <InferenceSpeechSegment>[],
-        audioArtifact: switch (json['audio_artifact']) {
-          final Map value => InferenceAudioArtifact.fromJson(
-            value.cast<String, dynamic>(),
-          ),
-          _ => null,
-        },
-      );
-
-  final Map<String, dynamic> output;
-  final String? rawOutput;
-  final List<String> warnings;
-  final Map<String, dynamic> meta;
-  final InferenceTask task;
-  final String? transcript;
-  final String? normalizedTranscript;
-  final List<InferenceSpeechSegment> segments;
-  final InferenceAudioArtifact? audioArtifact;
-
-  Map<String, dynamic> toJson() => {
-    'task': task.name,
-    'output': output,
-    if (rawOutput != null) 'raw_output': rawOutput,
-    if (transcript != null) 'transcript': transcript,
-    if (normalizedTranscript != null)
-      'normalized_transcript': normalizedTranscript,
-    if (segments.isNotEmpty)
-      'segments': segments.map((final segment) => segment.toJson()).toList(),
-    if (audioArtifact != null) 'audio_artifact': audioArtifact!.toJson(),
-    'warnings': warnings,
-    'meta': meta,
   };
 }

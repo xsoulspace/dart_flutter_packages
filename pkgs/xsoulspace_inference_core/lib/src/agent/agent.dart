@@ -1,7 +1,8 @@
-import 'dart:convert';
+import 'dart:developer';
 
 import 'package:ecsly/ecsly.dart';
 import 'package:equatable/equatable.dart';
+import 'package:xsoulspace_state_utils/xsoulspace_state_utils.dart';
 
 import '../inference_client.dart';
 import '../models/inference_models.dart';
@@ -48,11 +49,16 @@ typedef InferenceClientBuilder = InferenceClient Function();
 
 /// the chooser of models
 class ModelRouter {
+  /// it is important to pass not const empty maps,
+  /// because directly mutable
   ModelRouter({
-    required this.inferenceClientsBuilders,
-    this.models = const {},
-    this.runtimes = const {},
-  });
+    InferenceClientsBuilders? inferenceClientsBuilders,
+    Map<ModelId, Model>? models,
+    Map<ModelId, ModelRuntime>? runtimes,
+  }) : inferenceClientsBuilders = inferenceClientsBuilders ?? {},
+       models = models ?? {},
+       runtimes = runtimes ?? {};
+
   final InferenceClientsBuilders inferenceClientsBuilders;
   Map<ModelId, Model> models;
   Map<ModelId, ModelRuntime> runtimes;
@@ -120,7 +126,11 @@ class ModelRuntime {
     await client.refreshAvailability();
   }
 
-  Future<String> generateText(String content) async {
+  Future<String> generateText({
+    required String content,
+    required List<Object> contextFragments,
+    required String systemPrompt,
+  }) async {
     final response = await client.infer(
       InferenceRequest(
         outputSchema: {
@@ -131,11 +141,27 @@ class ModelRuntime {
         },
         workingDirectory: '/tmp',
         prompt: content,
+        systemPrompt: systemPrompt,
+        task: InferenceTask.implicitlyStructuredText,
+        contextFragments: contextFragments,
         metadata: {},
       ),
     );
+    final data = response.data;
+    final output = data?.output;
+    final rawOutput = data?.rawOutput;
 
-    return jsonEncode(response.data?.output);
+    if (output == null) {
+      log('Output is null');
+      return rawOutput ?? '';
+    }
+
+    final answer = output['answer'];
+    if (answer == null) {
+      log('Answer is null');
+      return rawOutput ?? '';
+    }
+    return answer;
   }
 }
 
@@ -145,22 +171,63 @@ class ModelRuntime {
 abstract class ModelLoop {}
 
 /// user / tool result -> increase context window -> response -> etc..
-class ModelMessageLoop implements ModelLoop {}
+class ModelMessageLoop implements ModelLoop {
+  ModelMessageLoop({required this.runtime});
+  final ModelRuntime runtime;
+  void flush() {}
+}
 
 /// manages ability to keep runtime agent, while
 /// controlling its context, context compression, agent restarts and
 /// knowledge passings..
-class ModelRuntimeLoop implements ModelLoop {}
+class ModelRuntimeLoop implements ModelLoop {
+  ModelRuntimeLoop({required this.runtime});
+  final ModelRuntime runtime;
 
-abstract class AgentMemoryStorage {}
+  void flush() {}
+}
 
-class VoidAgentMemoryStorage implements AgentMemoryStorage {
+/// migrate to ecsly column storage
+abstract class AgentMemoryStorage {
+  const AgentMemoryStorage();
+  void addEntry(ContextFragmentType type, Object value) {
+    throw UnimplementedError();
+  }
+
+  List<Object> getAllOrdered() {
+    throw UnimplementedError();
+  }
+}
+
+class VoidAgentMemoryStorage extends AgentMemoryStorage {
   const VoidAgentMemoryStorage();
+}
+
+enum ContextFragmentType { systemPrompt, userMessage, modelResponse }
+
+class InMemoryAgentMemoryStorage
+    extends MutableOrderedMap<ContextFragmentType, Object>
+    implements AgentMemoryStorage {
+  @override
+  void addEntry(ContextFragmentType type, Object value) =>
+      upsert(value, key: type);
+
+  @override
+  List<Object> getAllOrdered() => orderedValues;
 }
 
 abstract class AgentMemories {
   const AgentMemories({this.storage = const VoidAgentMemoryStorage()});
   final AgentMemoryStorage storage;
+
+  void addSystemPrompt(Object value) =>
+      storage.addEntry(ContextFragmentType.systemPrompt, value);
+  void addUserInput(Object value) =>
+      storage.addEntry(ContextFragmentType.userMessage, value);
+  void addModelResponse(Object value) =>
+      storage.addEntry(ContextFragmentType.modelResponse, value);
+
+  List<Object> getAll() => storage.getAllOrdered();
 }
 
 /// persits only per runtime agent (not shared between)
@@ -180,8 +247,10 @@ extension type const AgentId(String value) {
 }
 
 class AgentConfig {
-  const AgentConfig({this.model = Model.empty});
+  const AgentConfig({this.model = Model.empty, this.systemPrompt = ''});
+  static const empty = AgentConfig();
   final Model model;
+  final String systemPrompt;
 }
 
 /// aka thread aka lead aka main aka orchestrator
@@ -192,7 +261,7 @@ class Agent with Equatable {
     required this.context,
     this.runtimeMemories = const AgentRuntimeMemories(),
     this.sharedMemories = const AgentSharedMemories(),
-    this.config = const AgentConfig(),
+    this.config = AgentConfig.empty,
     this.id = AgentId.empty,
   });
   final AgentRuntimeMemories runtimeMemories;
@@ -201,7 +270,7 @@ class Agent with Equatable {
   final AgentId id;
   final AIRuntimeContext context;
 
-  Future<TResponse> generate<TContent, TResponse>(
+  Future<TResponse> generate<TContent extends Object, TResponse extends Object>(
     TContent content, {
     required String Function(TContent content) contentToJson,
     required TResponse Function(String json) responseFromJson,
@@ -210,8 +279,28 @@ class Agent with Equatable {
     final modelRuntime = await context.modelRouter.waitAndGetRuntimeModel(
       config.model,
     );
-    final json = await modelRuntime.generateText(str);
+    final allContextFragments = runtimeMemories.getAll();
+    final json = await modelRuntime.generateText(
+      content: str,
+      systemPrompt: config.systemPrompt,
+      contextFragments: allContextFragments,
+    );
+    runtimeMemories
+      ..addUserInput(str)
+      ..addModelResponse(str);
     final response = responseFromJson(json);
+    return response;
+  }
+
+  Future<String> sendTextMessage(
+    final String message, {
+    bool accumulate = false,
+  }) async {
+    final response = await generate(
+      message,
+      contentToJson: (m) => m,
+      responseFromJson: (json) => json,
+    );
     return response;
   }
 
@@ -220,21 +309,36 @@ class Agent with Equatable {
   static void disposeStatic(Agent agent) {}
 }
 
+class AgentWorlds {
+  /// profile later, maybe replace with sparse set of worlds
+  final agentWorlds = <AgentId, World>{};
+
+  World getWorld(AgentId agentId) => agentWorlds[agentId] ??= World();
+  void removeWorld(AgentId agentId) => agentWorlds.remove(agentId);
+
+  void dispose() {
+    for (final world in agentWorlds.values) {
+      world.clear();
+    }
+    agentWorlds.clear();
+  }
+}
+
 /// context (di) for [AIRuntime]
 class AIRuntimeContext {
-  AIRuntimeContext({ModelRouter? modelRouter})
-    : modelRouter = modelRouter ?? ModelRouter(inferenceClientsBuilders: {});
-  factory AIRuntimeContext.fromConfigs({
+  AIRuntimeContext({
+    ModelRouter? modelRouter,
+    AgentWorlds? agentWorlds,
     InferenceClientsBuilders? inferenceClientsBuilders,
-  }) => AIRuntimeContext(
-    modelRouter: ModelRouter(
-      inferenceClientsBuilders: inferenceClientsBuilders ?? {},
-      models: {},
-      runtimes: {},
-    ),
-  );
+  }) : modelRouter =
+           modelRouter ??
+           ModelRouter(
+             inferenceClientsBuilders: inferenceClientsBuilders ?? {},
+           ),
+       agentWorlds = agentWorlds ?? AgentWorlds();
 
   final agentsPool = <Agent>{};
+  final AgentWorlds agentWorlds;
   final ModelRouter modelRouter;
 
   void dispose() {
@@ -254,19 +358,30 @@ class AIRuntime {
   AIRuntime({this.config = const AIRuntimeConfig(), AIRuntimeContext? context})
     : context =
           context ??
-          AIRuntimeContext.fromConfigs(
+          AIRuntimeContext(
             inferenceClientsBuilders: config.inferenceClientBuilders,
           );
   final AIRuntimeConfig config;
   AIRuntimeContext context;
 
-  Agent createAgent() {
-    final agent = Agent(context: context);
+  Agent createAgent({AgentConfig config = AgentConfig.empty}) {
+    final agent = Agent(
+      context: context,
+      config: config,
+      runtimeMemories: AgentRuntimeMemories(
+        storage: InMemoryAgentMemoryStorage(),
+      ),
+    );
     context.agentsPool.add(agent);
     return agent;
   }
 
-  Future<TResponse> generateContent<TContent, TResponse>(
+  void disposeAgent(Agent agent) {
+    context.agentsPool.remove(agent);
+  }
+
+  Future<TResponse>
+  generateContent<TContent extends Object, TResponse extends Object>(
     Agent agent,
     TContent content, {
     required String Function(TContent content) contentToJson,
@@ -290,15 +405,34 @@ class AIWorld {
   factory AIWorld.fromConfigs({AIRuntimeConfig? runtimeConfig}) => AIWorld(
     runtime: AIRuntime(config: runtimeConfig ?? const AIRuntimeConfig()),
   );
-  final world = World();
   final AIRuntime runtime;
 
-  Future<String> sendTextMessage(final String message) async {
+  /// message -> response
+  Future<({String text, Agent agent})> sendTextMessage({
+    required final String message,
+    AgentConfig config = AgentConfig.empty,
+    bool disposeAfterCompletion = false,
+  }) async {
     final agent = runtime.createAgent();
     final response = await runtime.generateContent(
       agent,
       message,
-      contentToJson: (content) => content,
+      contentToJson: (m) => m,
+      responseFromJson: (json) => json,
+    );
+    if (disposeAfterCompletion) runtime.disposeAgent(agent);
+    return (text: response, agent: agent);
+  }
+
+  /// message -> response
+  Future<String> proceedTextForAgent({
+    required final String message,
+    required Agent agent,
+  }) async {
+    final response = await runtime.generateContent(
+      agent,
+      message,
+      contentToJson: (m) => m,
       responseFromJson: (json) => json,
     );
     return response;

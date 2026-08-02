@@ -22,7 +22,7 @@ void main() {
     test('supports only structuredText tasks', () {
       expect(
         AppleFoundationInferenceClient().supportedTasks,
-        const <InferenceTask>{InferenceTask.structuredText},
+        const <InferenceTask>{InferenceTask.implicitlyStructuredText},
       );
     });
 

@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter/services.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
@@ -21,7 +19,7 @@ class AppleFoundationInferenceClient implements InferenceClient {
 
   @override
   Set<InferenceTask> get supportedTasks => const <InferenceTask>{
-    InferenceTask.structuredText,
+    InferenceTask.implicitlyStructuredText,
   };
 
   static bool _cachedAvailable = false;
@@ -95,14 +93,21 @@ class AppleFoundationInferenceClient implements InferenceClient {
     }
 
     try {
-      final prompt = _buildPromptWithSchema(request);
-      final rawOutput = await _channel.invokeMethod<String>(
-        'generate',
-        <String, dynamic>{
-          'prompt': prompt,
-          'workingDirectory': request.workingDirectory,
-        },
-      );
+      var systemPrompt = request.systemPrompt;
+      if (request.task == InferenceTask.implicitlyStructuredText) {
+        final promptBuilder = PromptBuilder(systemPrompt);
+        if (systemPrompt.isEmpty) {
+          promptBuilder.writeStructuredOutputPrompt(request.outputSchema);
+        }
+        systemPrompt = promptBuilder.toString();
+      }
+      final rawOutput = await _channel
+          .invokeMethod<String>('generate', <String, dynamic>{
+            'prompt': request.prompt,
+            'instructions': systemPrompt,
+            'workingDirectory': request.workingDirectory,
+            'transcript': request.contextFragmentsJson,
+          });
 
       if (rawOutput == null || rawOutput.trim().isEmpty) {
         return InferenceResult<InferenceResponse>.fail(
@@ -161,13 +166,6 @@ class AppleFoundationInferenceClient implements InferenceClient {
         meta: <String, dynamic>{'provider': id},
       );
     }
-  }
-
-  String _buildPromptWithSchema(InferenceRequest request) {
-    final schemaJson = const JsonEncoder.withIndent(
-      '  ',
-    ).convert(request.outputSchema);
-    return '${request.prompt}\n\nRespond with a single JSON object that conforms to this schema (no other text):\n$schemaJson';
   }
 
   String _truncate(String value, {int max = 2000}) {

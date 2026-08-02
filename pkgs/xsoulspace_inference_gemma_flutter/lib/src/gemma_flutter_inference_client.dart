@@ -29,7 +29,7 @@ class GemmaFlutterInferenceClient implements InferenceClient {
 
   @override
   Set<InferenceTask> get supportedTasks => const <InferenceTask>{
-    InferenceTask.structuredText,
+    InferenceTask.implicitlyStructuredText,
   };
 
   static bool _cachedAvailable = false;

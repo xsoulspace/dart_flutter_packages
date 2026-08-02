@@ -13,7 +13,7 @@ void main() {
     test('supports only structuredText tasks', () {
       final client = CodexExecInferenceClient(binaryName: '/tmp/codex');
       expect(client.supportedTasks, const <InferenceTask>{
-        InferenceTask.structuredText,
+        InferenceTask.implicitlyStructuredText,
       });
     });
 

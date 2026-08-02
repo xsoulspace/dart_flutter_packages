@@ -212,7 +212,7 @@ final class _FakeInferenceClient implements InferenceClient {
 
   @override
   Set<InferenceTask> get supportedTasks => const <InferenceTask>{
-    InferenceTask.structuredText,
+    InferenceTask.implicitlyStructuredText,
   };
 
   @override
@@ -275,7 +275,7 @@ final class _FakeStructuredTextStreamingClient
 
   @override
   Set<InferenceTask> get supportedTasks => const <InferenceTask>{
-    InferenceTask.structuredText,
+    InferenceTask.implicitlyStructuredText,
   };
 
   @override

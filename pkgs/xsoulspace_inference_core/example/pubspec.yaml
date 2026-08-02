@@ -40,6 +40,7 @@ dependencies:
     path: ../
   xsoulspace_inference_apple_foundation:
     path: ../../xsoulspace_inference_apple_foundation
+  xsoulspace_state_utils: ^0.6.0
 
 dev_dependencies:
   flutter_test:

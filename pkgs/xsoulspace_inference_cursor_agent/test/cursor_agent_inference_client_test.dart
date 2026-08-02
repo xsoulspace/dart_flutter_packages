@@ -15,7 +15,7 @@ void main() {
         binaryName: '/tmp/cursor-agent',
       );
       expect(client.supportedTasks, const <InferenceTask>{
-        InferenceTask.structuredText,
+        InferenceTask.implicitlyStructuredText,
       });
     });
 
