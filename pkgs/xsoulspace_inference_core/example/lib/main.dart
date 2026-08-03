@@ -16,7 +16,12 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Flutter Demo',
-      theme: ThemeData(colorScheme: .fromSeed(seedColor: Colors.deepPurple)),
+      theme: ThemeData(
+        colorScheme: .fromSeed(
+          seedColor: Colors.indigo,
+          brightness: Brightness.dark,
+        ),
+      ),
       home: const MyHomePage(title: 'Flutter Demo Home Page'),
     );
   }
@@ -101,12 +106,17 @@ class _MyHomePageState extends State<MyHomePage> {
   final scenarioV1 = ScenarioV1SendMessageGetAnswer();
   final scenarioV2 = ScenarioV2KeepPrimitiveMemory();
   final _messages = ImmutableOrderedList<String>();
+
   AgentConfig _agentConfig = AgentConfig.empty;
   final TextEditingController _controller = TextEditingController();
+
   String get _txt => _controller.text;
+
   bool _isRunning = false;
   int _scenarioIndex = 0;
+
   List<Scenario> get _scenarios => [scenarioV1, scenarioV2];
+
   T _getScenarioByIndex<T extends Scenario>() =>
       _scenarios[_scenarioIndex] as T;
   void _switchToScenario(int? index) {
@@ -189,7 +199,7 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           mainAxisAlignment: .end,
           crossAxisAlignment: .center,
-          spacing: 24,
+          spacing: 4,
           children: [
             Flexible(
               child: ConstrainedBox(
@@ -233,22 +243,58 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ),
             ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: 600),
+              constraints: BoxConstraints(maxWidth: 450, maxHeight: 150),
               child: Row(
                 children: [
                   Expanded(
-                    child: TextFormField(
-                      controller: _controller,
-                      onFieldSubmitted: (value) {
-                        _onReply();
-                      },
+                    child: Stack(
+                      children: [
+                        TextFormField(
+                          controller: _controller,
+                          maxLines: null,
+                          textAlignVertical: TextAlignVertical.top,
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: ColorScheme.of(context).onSecondary,
+                              ),
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: ColorScheme.of(context).onSecondary,
+                              ),
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            hintText: 'Ask',
+                            suffix: SizedBox(width: 24),
+                          ),
+                          onFieldSubmitted: (value) {
+                            _onReply();
+                          },
+                        ),
+                        Positioned(
+                          right: 6,
+                          bottom: 4,
+                          child: ValueListenableBuilder(
+                            valueListenable: _controller,
+                            builder: (context, value, child) {
+                              return IconButton.outlined(
+                                icon: Icon(Icons.arrow_upward_rounded),
+                                onPressed: _controller.text.isEmpty
+                                    ? null
+                                    : _onReply,
+                              );
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  TextButton.icon(
-                    icon: Icon(Icons.send),
-                    onPressed: _onReply,
-                    label: Text('reply'),
-                  ),
+
                   ConstrainedBox(
                     constraints: BoxConstraints(
                       maxHeight: 24,
