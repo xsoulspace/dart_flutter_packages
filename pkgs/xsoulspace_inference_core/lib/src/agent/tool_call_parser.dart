@@ -1,5 +1,9 @@
 import 'dart:convert';
 
+// ─────────────────────────────────────────────
+// 1. Tag model + parser
+// ─────────────────────────────────────────────
+
 enum ToolTagType { getDefinition, call, result }
 
 class ToolTag {
@@ -12,40 +16,31 @@ class ToolTag {
   });
   final ToolTagType type;
   final String toolName;
-  final Map<String, dynamic>? payload; // null for getDefinition
+  final Map<String, dynamic>? payload;
   final int start;
   final int end;
-
-  @override
-  String toString() =>
-      'ToolTag($type | $toolName | ${payload != null ? jsonEncode(payload) : null})';
 }
 
-// ignore: avoid_classes_with_only_static_members
 class ToolTagParser {
-  // Matches: <getDefinition|name>  or  <call|name|{...}>  or  <result|name|{...}>
-  static final _tagRegex = RegExp(
+  static final _regex = RegExp(
     r'<(getDefinition|call|result)\|([a-zA-Z0-9_]+)(?:\|(\{.*?\}))?>',
     multiLine: true,
     dotAll: true,
   );
 
-  /// Finds every tool tag in the given text.
   static List<ToolTag> parse(String text) {
     final tags = <ToolTag>[];
-
-    for (final match in _tagRegex.allMatches(text)) {
-      final typeStr = match.group(1)!;
-      final name = match.group(2)!;
-      final rawPayload = match.group(3);
+    for (final m in _regex.allMatches(text)) {
+      final typeStr = m.group(1)!;
+      final name = m.group(2)!;
+      final raw = m.group(3);
 
       Map<String, dynamic>? payload;
-      if (rawPayload != null) {
+      if (raw != null) {
         try {
-          payload = jsonDecode(rawPayload) as Map<String, dynamic>;
+          payload = jsonDecode(raw) as Map<String, dynamic>;
         } catch (_) {
-          // Malformed JSON – you can decide to skip or surface an error
-          continue;
+          continue; // skip malformed
         }
       }
 
@@ -55,7 +50,6 @@ class ToolTagParser {
         'result' => ToolTagType.result,
         _ => null,
       };
-
       if (type == null) continue;
 
       tags.add(
@@ -63,34 +57,73 @@ class ToolTagParser {
           type: type,
           toolName: name,
           payload: payload,
-          start: match.start,
-          end: match.end,
+          start: m.start,
+          end: m.end,
         ),
       );
     }
-
     return tags;
   }
+}
 
-  /// Convenience: returns the first actionable tag (getDefinition or call).
-  /// Useful when the model is only allowed to emit one tag per turn.
-  static ToolTag? lastActionable(String text) {
-    final tags = parse(text);
-    return tags.cast<ToolTag?>().lastWhere(
-      (t) => t!.type == ToolTagType.getDefinition || t.type == ToolTagType.call,
-      orElse: () => null,
-    );
+// ─────────────────────────────────────────────
+// 2. Tool definition + registry
+// ─────────────────────────────────────────────
+
+class ToolDef {
+  const ToolDef({
+    required this.name,
+    required this.description,
+    required this.schema,
+    required this.execute,
+  });
+  final String name;
+  final String description;
+  final Map<String, dynamic> schema; // keep it simple JSON-schema-like
+  final Future<Map<String, dynamic>> Function(Map<String, dynamic> args)
+  execute;
+}
+
+class ToolRegistry {
+  final Map<String, ToolDef> _tools = {};
+
+  void register(ToolDef tool) => _tools[tool.name] = tool;
+
+  ToolDef? get(String name) => _tools[name];
+
+  Map<String, dynamic>? getSchema(String name) => _tools[name]?.schema;
+
+  Future<Map<String, dynamic>> execute(String name, Map<String, dynamic> args) {
+    final tool = _tools[name];
+    if (tool == null) {
+      return Future.value({'error': 'Unknown tool: $name'});
+    }
+    return tool.execute(args);
   }
 
-  /// Replaces a specific tag range with a new <result|...> string.
-  /// Useful when you want to keep the rest of the model’s text intact.
-  static String injectResult({
-    required String original,
-    required ToolTag originalTag,
-    required String toolName,
-    required Object? resultPayload,
-  }) {
-    final resultTag = '<result|$toolName|${jsonEncode(resultPayload)}>';
-    return original.replaceRange(originalTag.start, originalTag.end, resultTag);
+  /// Compact list for the system prompt (progressive disclosure)
+  String compactToolList() {
+    if (_tools.isEmpty) return 'No tools available.';
+    return _tools.values.map((t) => '- ${t.name}: ${t.description}').join('\n');
   }
+}
+
+// ─────────────────────────────────────────────
+// 3. Runtime state (prevents endless loops)
+// ─────────────────────────────────────────────
+
+class CallRecord {
+  CallRecord(this.signature, this.result);
+  final String signature; // toolName + json(args)
+  final Map<String, dynamic> result;
+}
+
+class ToolRuntimeState {
+  final Set<String> knownSchemas = {};
+  final List<CallRecord> history = [];
+  int step = 0;
+
+  static const int maxSteps = 5; // hard ceiling for on-device
+
+  bool get reachedLimit => step >= maxSteps;
 }

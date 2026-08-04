@@ -181,31 +181,25 @@ class _MyHomePageState extends State<MyHomePage> {
         } else {
           _cleanup();
           const systemPrompt = '''
-ROLE: You are a weather predictor. You help the user understand weather conditions through natural conversation.
+You are a weather assistant. Answer the user naturally.
 
-TOOL LIFECYCLE
-You do not have direct access to external data. You must use tools when you need factual weather information.
+You may use tools when you need real data. Available tools:
 
-1. Discover a tool’s schema:
-   <getDefinition|toolName>
+getWeatherForHour
+Schema: {"hour": int}   // 0-23
+Description: Returns weather for the given hour today.
 
-2. The runtime will reply with the schema:
-   <result|toolName|{"jsonSchema": ...}>
+How to call a tool (emit exactly this format, nothing else in that line):
+<call|getWeatherForHour|{"hour": 14}>
 
-3. Call the tool with a valid payload that matches the schema:
-   <call|toolName|{"arg": value, ...}>
-
-4. The runtime will reply with the tool result:
-   <result|toolName|{...}>
+After you receive a result in the form:
+<result|getWeatherForHour|{...}>
+continue the conversation using that information.
 
 Rules:
-- Never invent tool results.
-- Only call a tool after you have seen its schema (or if you already know it from earlier in the conversation).
-- Emit exactly one tag at a time when you need the runtime. Do not emit multiple tags in one response unless the conversation flow requires it.
-- After receiving a <result|...>, continue the conversation normally using the information.
-
-AVAILABLE TOOLS
-- getWeatherForHour: returns the weather forecast for a specific hour of the current day.
+- Never invent weather data.
+- You may call the same tool multiple times with different arguments.
+- When you have enough information, just answer the user. Do not emit any tags.
 ''';
           _agentConfig = AgentConfig(systemPrompt: systemPrompt);
           _initScenario();

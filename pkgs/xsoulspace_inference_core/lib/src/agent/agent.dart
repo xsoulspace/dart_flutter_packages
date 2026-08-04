@@ -284,6 +284,27 @@ class AgentConfig {
   final String systemPrompt;
 }
 
+class ToolDef {
+  ToolDef({
+    required this.name,
+    required this.description,
+    required this.schema,
+    required this.execute,
+  });
+  final String name;
+  final String description;
+  final Map<String, dynamic> schema; // JSON Schema or your simpler form
+  final Future<Map<String, dynamic>> Function(Map<String, dynamic> args)
+  execute;
+}
+
+class ToolRuntimeState {
+  final Set<String> knownSchemas = {}; // schemas already shown this session
+  final List<CallRecord> history = []; // for loop detection + reuse
+  int step = 0;
+  static const maxSteps = 5; // hard ceiling for on-device
+}
+
 /// aka thread aka lead aka main aka orchestrator
 ///
 /// controls [ModelLoop]s and through that - [ModelRuntime]
@@ -310,10 +331,17 @@ class Agent with Equatable {
     final modelRuntime = await context.modelRouter.waitAndGetRuntimeModel(
       config.model,
     );
-    bool hasNextAction = false;
     final resultedJson = StringBuffer();
     runtimeMemories.addUserInput(str);
-    do {
+    final state = ToolRuntimeState();
+
+    while (true) {
+      if (state.step >= ToolRuntimeState.maxSteps) {
+        // force termination
+        runtimeMemories.addModelResponse(
+          'You have reached the step limit. Answer the user now using only the information you already have. Do not emit any more tool tags.',
+        );
+      }
       final allContextFragments = runtimeMemories.getAll();
       final json = await modelRuntime.generateText(
         content: str,
@@ -358,7 +386,8 @@ class Agent with Equatable {
           // should not appear as an actionable tag from the model
         }
       }
-    } while (hasNextAction);
+    }
+    while (hasNextAction) {}
 
     final response = responseFromJson(resultedJson.toString());
     return response;
