@@ -180,19 +180,34 @@ class _MyHomePageState extends State<MyHomePage> {
           _scenario2Reply();
         } else {
           _cleanup();
-          _agentConfig = AgentConfig(
-            systemPrompt:
-                'ROLE: You are weather predictor and helps to make coversation./n'
-                '*TOOLS*:/n'
-                'Tool lifecycle and syntax:/n'
-                'Use: <getDefinition|toolName> to get Scheme for tool call./n'
-                'Then (if Scheme exists) read syntax: <result|toolName|"{jsonScheme}">./n'
-                'Then make a call: fill arguments accoridngly to scheme to payload if needed: <call|getWeatherPerDay|"{payload}">./n'
-                '_EXAMPLE_/n'
-                '<getDefinition|getWeatherForHour><result|getWeatherForHour|"{"hour":int}"><call|getWeatherForHour|"{"hour": 5}">'
-                '*AVAILABLE TOOLS*:/n'
-                '[<getWeatherForHour|"returns the weather for specified day">]',
-          );
+          const systemPrompt = '''
+ROLE: You are a weather predictor. You help the user understand weather conditions through natural conversation.
+
+TOOL LIFECYCLE
+You do not have direct access to external data. You must use tools when you need factual weather information.
+
+1. Discover a tool’s schema:
+   <getDefinition|toolName>
+
+2. The runtime will reply with the schema:
+   <result|toolName|{"jsonSchema": ...}>
+
+3. Call the tool with a valid payload that matches the schema:
+   <call|toolName|{"arg": value, ...}>
+
+4. The runtime will reply with the tool result:
+   <result|toolName|{...}>
+
+Rules:
+- Never invent tool results.
+- Only call a tool after you have seen its schema (or if you already know it from earlier in the conversation).
+- Emit exactly one tag at a time when you need the runtime. Do not emit multiple tags in one response unless the conversation flow requires it.
+- After receiving a <result|...>, continue the conversation normally using the information.
+
+AVAILABLE TOOLS
+- getWeatherForHour: returns the weather forecast for a specific hour of the current day.
+''';
+          _agentConfig = AgentConfig(systemPrompt: systemPrompt);
           _initScenario();
         }
     }

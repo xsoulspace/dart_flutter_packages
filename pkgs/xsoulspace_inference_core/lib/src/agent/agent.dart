@@ -6,6 +6,7 @@ import 'package:xsoulspace_state_utils/xsoulspace_state_utils.dart';
 
 import '../inference_client.dart';
 import '../models/inference_models.dart';
+import 'tool_call_parser.dart';
 
 /// Any ML model
 class Model {
@@ -226,7 +227,12 @@ class VoidAgentMemoryStorage extends AgentMemoryStorage {
   const VoidAgentMemoryStorage();
 }
 
-enum ContextFragmentType { systemPrompt, userMessage, modelResponse }
+enum ContextFragmentType {
+  systemPrompt,
+  userMessage,
+  modelResponse,
+  toolMessage,
+}
 
 class InMemoryAgentMemoryStorage
     extends MutableOrderedMap<ContextFragmentType, Object>
@@ -249,6 +255,8 @@ abstract class AgentMemories {
       storage.addEntry(ContextFragmentType.userMessage, value);
   void addModelResponse(Object value) =>
       storage.addEntry(ContextFragmentType.modelResponse, value);
+  void addToolMessage(Object value) =>
+      storage.addEntry(ContextFragmentType.toolMessage, value);
 
   List<Object> getAll() => storage.getAllOrdered();
 }
@@ -302,17 +310,72 @@ class Agent with Equatable {
     final modelRuntime = await context.modelRouter.waitAndGetRuntimeModel(
       config.model,
     );
-    final allContextFragments = runtimeMemories.getAll();
-    final json = await modelRuntime.generateText(
-      content: str,
-      systemPrompt: config.systemPrompt,
-      contextFragments: allContextFragments,
-    );
-    runtimeMemories
-      ..addUserInput(str)
-      ..addModelResponse(json);
-    final response = responseFromJson(json);
+    bool hasNextAction = false;
+    final resultedJson = StringBuffer();
+    runtimeMemories.addUserInput(str);
+    do {
+      final allContextFragments = runtimeMemories.getAll();
+      final json = await modelRuntime.generateText(
+        content: str,
+        systemPrompt: config.systemPrompt,
+        contextFragments: allContextFragments,
+      );
+      resultedJson.write(json);
+      runtimeMemories.addModelResponse(json);
+      final actionable = ToolTagParser.lastActionable(json);
+
+      if (actionable != null) {
+        hasNextAction = true;
+        switch (actionable.type) {
+          case ToolTagType.getDefinition:
+            final schema = getSchemaFor(actionable);
+            final resultText = ToolTagParser.injectResult(
+              original: json,
+              originalTag: actionable,
+              toolName: actionable.toolName,
+              resultPayload: schema,
+            );
+            log(resultText);
+            resultedJson.write(resultText);
+            runtimeMemories.addToolMessage(resultText);
+          // feed resultText back into the next turn
+
+          case ToolTagType.call:
+            final result = executeTool(actionable);
+            final resultText = ToolTagParser.injectResult(
+              original: json,
+              originalTag: actionable,
+              toolName: actionable.toolName,
+              resultPayload: result,
+            );
+            log(resultText);
+            resultedJson.write(resultText);
+            runtimeMemories.addToolMessage(resultText);
+          // continue conversation with resultText
+
+          case ToolTagType.result:
+            hasNextAction = false;
+          // should not appear as an actionable tag from the model
+        }
+      }
+    } while (hasNextAction);
+
+    final response = responseFromJson(resultedJson.toString());
     return response;
+  }
+
+  Map<String, dynamic> getSchemaFor(ToolTag tool) {
+    log('getSchemaFor: ${tool.toolName}');
+    return {};
+  }
+
+  Object? executeTool(ToolTag tool) {
+    log('executeTool: ${tool.toolName}');
+
+    return '84°F°C '
+        'Precipitation: 0% '
+        'Humidity: 69% '
+        'Wind: 8 mph';
   }
 
   Future<String> sendTextMessage(
