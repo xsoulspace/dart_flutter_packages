@@ -100,7 +100,24 @@ class ModelRouter {
 /// - 1 only ML/LM [Model] and its [ModelContextWindow]
 /// - orginized and contiuos information
 /// about model goals, plans, history etc..
-/// - AgentTools - intents / intentcalls?
+/// - AgentRegistry - intents / intentcalls?
+///
+/// ```markdown
+/// Tool Registry (code, projections (MCP, CLI, intents))
+///         ↓
+/// Schema Normalizer (for Non-Native, OpenAI / Hermes / Gemma / LiteRT / …)
+///         ↓
+/// Prompt / Request Builder (adapts to model family + constraints)
+///         ↓
+/// Model Backend (Ollama, llama.cpp, LiteRT-LM, MLX, …)
+///         ↓
+/// Robust Parser + Recovery + Arguments coercing
+/// (paired with Schema Normalizer)
+///         ↓
+/// Executor (sandbox, permissions, observability)
+///         ↓
+/// Observation → back into conversation state
+/// ```
 class ModelRuntime {
   ModelRuntime({
     required this.model,

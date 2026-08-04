@@ -14,12 +14,16 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hour = DateTime.now().hour;
+    final brightness = hour < 12 || hour > 18
+        ? Brightness.dark
+        : Brightness.light;
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Agent Demo',
       theme: ThemeData(
         colorScheme: .fromSeed(
           seedColor: Colors.indigo,
-          brightness: Brightness.dark,
+          brightness: brightness,
         ),
       ),
       home: const MyHomePage(title: 'Flutter Demo Home Page'),
@@ -178,7 +182,16 @@ class _MyHomePageState extends State<MyHomePage> {
           _cleanup();
           _agentConfig = AgentConfig(
             systemPrompt:
-                'You are weather predictor and helps to make coversation.',
+                'ROLE: You are weather predictor and helps to make coversation./n'
+                '*TOOLS*:/n'
+                'Tool lifecycle and syntax:/n'
+                'Use: <getDefinition|toolName> to get Scheme for tool call./n'
+                'Then (if Scheme exists) read syntax: <result|toolName|"{jsonScheme}">./n'
+                'Then make a call: fill arguments accoridngly to scheme to payload if needed: <call|getWeatherPerDay|"{payload}">./n'
+                '_EXAMPLE_/n'
+                '<getDefinition|getWeatherForHour><result|getWeatherForHour|"{"hour":int}"><call|getWeatherForHour|"{"hour": 5}">'
+                '*AVAILABLE TOOLS*:/n'
+                '[<getWeatherForHour|"returns the weather for specified day">]',
           );
           _initScenario();
         }
