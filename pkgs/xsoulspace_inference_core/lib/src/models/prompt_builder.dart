@@ -14,8 +14,12 @@ class PromptBuilder extends StringBuffer {
   PromptBuilder(
     String super.content, {
     this.structuredOutputSystemPrompt =
-        'Respond with a single JSON object that conforms to this schema '
-        '(no other text):',
+        'FINAL RESPONSE FORMAT'
+        'When you have all the information you need (or when no tool is required),'
+        'your entire reply must be a single valid JSON object that matches this schema.'
+        'No markdown, no explanation, no text before or after the JSON.'
+        ''
+        'Schema:',
   });
   final String structuredOutputSystemPrompt;
 
@@ -37,6 +41,9 @@ class PromptBuilder extends StringBuffer {
 
     skipLines();
     write(structuredOutputSystemPrompt);
+    // 'Example of a correct final response:'
+    // '{"answer": "It will be cloudy at 5pm with a temperature of 18°C"}'
+
     writeln();
     write(schemaJson);
   }

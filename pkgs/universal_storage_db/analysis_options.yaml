@@ -11,6 +11,13 @@ analyzer:
     - "example/remote_sync_usage.dart"
     # - "example/todo_file_app/**"
     - "example/todo_git_app/**"
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**
 
   language:
     strict-casts: true

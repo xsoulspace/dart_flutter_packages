@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:developer';
 
 import 'package:ecsly/ecsly.dart';
@@ -7,6 +8,8 @@ import 'package:xsoulspace_state_utils/xsoulspace_state_utils.dart';
 import '../inference_client.dart';
 import '../models/inference_models.dart';
 import 'tool_call_parser.dart';
+
+export 'tool_call_parser.dart';
 
 /// Any ML model
 class Model {
@@ -168,6 +171,7 @@ class ModelRuntime {
     final data = response.data;
     final output = data?.output;
     final rawOutput = data?.rawOutput;
+    log('Output is $rawOutput');
 
     if (output == null) {
       log('Output is null');
@@ -235,14 +239,22 @@ enum ContextFragmentType {
 }
 
 class InMemoryAgentMemoryStorage
-    extends MutableOrderedMap<ContextFragmentType, Object>
+    extends MutableOrderedList<(ContextFragmentType, Object)>
     implements AgentMemoryStorage {
   @override
-  void addEntry(ContextFragmentType type, Object value) =>
-      upsert(value, key: type);
+  void addEntry(ContextFragmentType type, Object value) => add((type, value));
 
   @override
-  List<Object> getAllOrdered() => orderedValues;
+  List<Object> getAllOrdered() => map(
+    (e) =>
+        'role:${switch (e.$1) {
+          .systemPrompt => 'system',
+          .userMessage => 'user',
+          .modelResponse => 'model',
+          .toolMessage => 'tool',
+        }}'
+        '|content:${e.$2}',
+  ).toList();
 }
 
 abstract class AgentMemories {
@@ -284,33 +296,13 @@ class AgentConfig {
   final String systemPrompt;
 }
 
-class ToolDef {
-  ToolDef({
-    required this.name,
-    required this.description,
-    required this.schema,
-    required this.execute,
-  });
-  final String name;
-  final String description;
-  final Map<String, dynamic> schema; // JSON Schema or your simpler form
-  final Future<Map<String, dynamic>> Function(Map<String, dynamic> args)
-  execute;
-}
-
-class ToolRuntimeState {
-  final Set<String> knownSchemas = {}; // schemas already shown this session
-  final List<CallRecord> history = []; // for loop detection + reuse
-  int step = 0;
-  static const maxSteps = 5; // hard ceiling for on-device
-}
-
 /// aka thread aka lead aka main aka orchestrator
 ///
 /// controls [ModelLoop]s and through that - [ModelRuntime]
 class Agent with Equatable {
   const Agent({
     required this.context,
+    required this.toolRegistry,
     this.runtimeMemories = const AgentRuntimeMemories(),
     this.sharedMemories = const AgentSharedMemories(),
     this.config = AgentConfig.empty,
@@ -321,76 +313,102 @@ class Agent with Equatable {
   final AgentConfig config;
   final AgentId id;
   final AIRuntimeContext context;
+  final ToolRegistry toolRegistry;
 
   Future<TResponse> generate<TContent extends Object, TResponse extends Object>(
     TContent content, {
     required String Function(TContent content) contentToJson,
     required TResponse Function(String json) responseFromJson,
   }) async {
-    final str = contentToJson(content);
     final modelRuntime = await context.modelRouter.waitAndGetRuntimeModel(
       config.model,
     );
-    final resultedJson = StringBuffer();
-    runtimeMemories.addUserInput(str);
+    final userStr = contentToJson(content);
+    runtimeMemories.addUserInput(userStr);
+
     final state = ToolRuntimeState();
+    final systemPrompt = buildSystemPrompt(toolRegistry, config.systemPrompt);
 
     while (true) {
-      if (state.step >= ToolRuntimeState.maxSteps) {
-        // force termination
+      // Force termination path
+      if (state.reachedLimit) {
         runtimeMemories.addModelResponse(
-          'You have reached the step limit. Answer the user now using only the information you already have. Do not emit any more tool tags.',
+          'You have reached the maximum number of tool steps. '
+          'Answer the user now using only the information you already have. '
+          'Do not emit any more tool tags.',
         );
       }
-      final allContextFragments = runtimeMemories.getAll();
+      final memories = runtimeMemories.getAll();
+      log(jsonEncode(memories));
+
       final json = await modelRuntime.generateText(
-        content: str,
-        systemPrompt: config.systemPrompt,
-        contextFragments: allContextFragments,
+        content: userStr, // or whatever your API expects
+        systemPrompt: systemPrompt,
+        contextFragments: memories,
       );
-      resultedJson.write(json);
+
       runtimeMemories.addModelResponse(json);
-      final actionable = ToolTagParser.lastActionable(json);
+      state.step++;
 
-      if (actionable != null) {
-        hasNextAction = true;
-        switch (actionable.type) {
-          case ToolTagType.getDefinition:
-            final schema = getSchemaFor(actionable);
-            final resultText = ToolTagParser.injectResult(
-              original: json,
-              originalTag: actionable,
-              toolName: actionable.toolName,
-              resultPayload: schema,
-            );
-            log(resultText);
-            resultedJson.write(resultText);
-            runtimeMemories.addToolMessage(resultText);
-          // feed resultText back into the next turn
+      final tags = ToolTagParser.parse(json);
+      final definitions = tags
+          .where((t) => t.type == ToolTagType.getDefinition)
+          .toList();
+      final calls = tags.where((t) => t.type == ToolTagType.call).toList();
 
-          case ToolTagType.call:
-            final result = executeTool(actionable);
-            final resultText = ToolTagParser.injectResult(
-              original: json,
-              originalTag: actionable,
-              toolName: actionable.toolName,
-              resultPayload: result,
-            );
-            log(resultText);
-            resultedJson.write(resultText);
-            runtimeMemories.addToolMessage(resultText);
-          // continue conversation with resultText
+      // Clean final answer
+      if (definitions.isEmpty && calls.isEmpty) {
+        return responseFromJson(json);
+      }
 
-          case ToolTagType.result:
-            hasNextAction = false;
-          // should not appear as an actionable tag from the model
+      // 1. Progressive schema disclosure
+      for (final def in definitions) {
+        if (state.knownSchemas.contains(def.toolName)) continue;
+
+        final schema = toolRegistry.getSchema(def.toolName);
+        if (schema == null) {
+          runtimeMemories.addToolMessage(
+            '<result|${def.toolName}|{"error":"Unknown tool"}>',
+          );
+          continue;
         }
+
+        final resultTag = '<result|${def.toolName}|${jsonEncode(schema)}>';
+        runtimeMemories.addToolMessage(resultTag);
+        state.knownSchemas.add(def.toolName);
+      }
+
+      // 2. Execute calls (supports multiple + same tool with different args)
+      for (final call in calls) {
+        final args = call.payload ?? <String, dynamic>{};
+        final signature = '${call.toolName}:${jsonEncode(args)}';
+
+        // Allow legitimate re-use, but stop pure spinning
+        final previous = state.history
+            .where((h) => h.signature == signature)
+            .length;
+        if (previous >= 2) {
+          runtimeMemories.addModelResponse(
+            'You already called ${call.toolName} with these exact arguments twice. '
+            'Use the previous result or answer the user.',
+          );
+          continue;
+        }
+
+        final result = await toolRegistry.execute(call.toolName, args);
+        final resultTag = '<result|${call.toolName}|${jsonEncode(result)}>';
+        runtimeMemories.addToolMessage(resultTag);
+        state.history.add(CallRecord(signature, result));
+      }
+
+      // Gentle nudge after tools
+      if (calls.isNotEmpty && !state.reachedLimit) {
+        runtimeMemories.addModelResponse(
+          'Tool results are available. Continue the conversation or give the final answer. '
+          'Only call tools again if you still lack necessary information.',
+        );
       }
     }
-    while (hasNextAction) {}
-
-    final response = responseFromJson(resultedJson.toString());
-    return response;
   }
 
   Map<String, dynamic> getSchemaFor(ToolTag tool) {
@@ -479,10 +497,14 @@ class AIRuntime {
   final AIRuntimeConfig config;
   AIRuntimeContext context;
 
-  Agent createAgent({AgentConfig config = AgentConfig.empty}) {
+  Agent createAgent({
+    required ToolRegistry toolRegistry,
+    AgentConfig config = AgentConfig.empty,
+  }) {
     final agent = Agent(
       context: context,
       config: config,
+      toolRegistry: toolRegistry,
       runtimeMemories: AgentRuntimeMemories(
         storage: InMemoryAgentMemoryStorage(),
       ),
@@ -527,8 +549,12 @@ class AIWorld {
     required final String message,
     AgentConfig config = AgentConfig.empty,
     bool disposeAfterCompletion = false,
+    ToolRegistry? toolRegsitry,
   }) async {
-    final agent = runtime.createAgent(config: config);
+    final agent = runtime.createAgent(
+      config: config,
+      toolRegistry: toolRegsitry ?? ToolRegistry(),
+    );
     final response = await runtime.generateContent(
       agent,
       message,

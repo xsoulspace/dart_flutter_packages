@@ -93,7 +93,35 @@ class ScenarioV2KeepPrimitiveMemory extends Scenario {
     required AgentConfig config,
   }) async {
     super.init(text: text, config: config);
-    final response = await ai.sendTextMessage(message: text, config: config);
+    final response = await ai.sendTextMessage(
+      message: text,
+      config: config,
+      toolRegsitry: ToolRegistry()
+        ..register(
+          ToolDef(
+            name: 'getWeatherForHour',
+            description: 'Returns weather for a specific hour of today',
+            schema: {
+              'type': 'object',
+              'properties': {
+                'hour': {'type': 'integer', 'minimum': 0, 'maximum': 23},
+              },
+              'required': ['hour'],
+            },
+            execute: (args) async {
+              final hour = args['hour'] as int;
+              final temp = switch (hour) {
+                < 4 => 16,
+                >= 4 && < 12 => 20,
+                >= 12 && < 21 => 20,
+                _ => 16,
+              };
+              // your real implementation
+              return {'hour': hour, 'temp': temp, 'condition': 'cloudy'};
+            },
+          ),
+        ),
+    );
     log(response.text);
     agent = response.agent;
     return response.text;
@@ -180,27 +208,7 @@ class _MyHomePageState extends State<MyHomePage> {
           _scenario2Reply();
         } else {
           _cleanup();
-          const systemPrompt = '''
-You are a weather assistant. Answer the user naturally.
-
-You may use tools when you need real data. Available tools:
-
-getWeatherForHour
-Schema: {"hour": int}   // 0-23
-Description: Returns weather for the given hour today.
-
-How to call a tool (emit exactly this format, nothing else in that line):
-<call|getWeatherForHour|{"hour": 14}>
-
-After you receive a result in the form:
-<result|getWeatherForHour|{...}>
-continue the conversation using that information.
-
-Rules:
-- Never invent weather data.
-- You may call the same tool multiple times with different arguments.
-- When you have enough information, just answer the user. Do not emit any tags.
-''';
+          const systemPrompt = 'trustworthy agent';
           _agentConfig = AgentConfig(systemPrompt: systemPrompt);
           _initScenario();
         }

@@ -1,3 +1,4 @@
+// tool_agent.dart
 import 'dart:convert';
 
 // ─────────────────────────────────────────────
@@ -127,3 +128,33 @@ class ToolRuntimeState {
 
   bool get reachedLimit => step >= maxSteps;
 }
+
+// ─────────────────────────────────────────────
+// 4. System prompt (short, on-device friendly)
+// ─────────────────────────────────────────────
+
+String buildSystemPrompt(ToolRegistry registry, String role) =>
+    '''
+You are an $role. Use AVAILABLE TOOLS below accoridngly to TOOL PROTOCOL when to get, modify, provide real information.
+
+TOOL PROTOCOL (strict print to execute)
+1. Get a tool's schema:
+   <getDefinition|toolName>
+
+2. Call a tool accoringly to scheme:
+   <call|toolName|{"arg": value}>
+
+3. The runtime will reply with:
+   <result|toolName|{...}>
+
+CRITICAL RULES
+- You have no private knowledge of the real world.
+- If a question can be answered by one of the available tools, you MUST call the tool.
+- Never invent data that a tool can provide.
+- You may call the same tool multiple times with different arguments.
+- After you receive tool results, produce the final JSON answer.
+- Do not keep calling tools once you have enough information.
+
+AVAILABLE TOOLS
+${registry.compactToolList()}
+''';

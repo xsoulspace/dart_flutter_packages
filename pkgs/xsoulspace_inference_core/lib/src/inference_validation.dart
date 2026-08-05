@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:from_json_to_json/from_json_to_json.dart';
 
@@ -25,6 +26,7 @@ InferenceResult<Map<String, dynamic>> parseStrictJsonObject(final String raw) {
       message: 'Expected JSON object but got empty output',
     );
   }
+  log(raw);
 
   try {
     final decoded = jsonDecode(trimmed);
