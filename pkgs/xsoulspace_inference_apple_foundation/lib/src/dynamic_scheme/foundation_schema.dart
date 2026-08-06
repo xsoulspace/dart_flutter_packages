@@ -1,3 +1,14 @@
+import 'package:xsoulspace_inference_apple_foundation/src/dynamic_scheme/schema_bundle.dart';
+
+///```dart
+/// final schemaTree = SchemaBundle(
+///   root: npcSchema,
+///   dependencies: [attributeSchema, encounterSchema],
+/// );
+///
+/// // Send to Swift (FFI, method channel, or isolate bridge)
+/// await FoundationSchema.materialize(schemaTree);
+///```
 /// Root of every schema definition.
 sealed class Schema {
   const Schema();
@@ -111,7 +122,33 @@ final class PatternGuide extends Guide {
   final String pattern;
 }
 
+class FoundationSchema {
+  /// Serializes the bundle and asks the native side to materialize
+  /// a real GenerationSchema.
+  ///
+  /// Returns an opaque handle / id that can later be used with the
+  /// LanguageModelSession on the Swift side, or throws on failure.
+  static Future<GenerationSchemaHandle> materialize(SchemaBundle bundle) async {
+    final json = bundle.toJson();
 
-// Simple JSON-serializable form
-Map<String, dynamic> schemaToJson(Schema s);
-Schema schemaFromJson(Map<String, dynamic> json);
+    // Transport – replace with your real bridge (FFI, method channel, etc.)
+    final result = await _nativeMaterialize(json);
+
+    return GenerationSchemaHandle(result['id'] as String);
+  }
+
+  // Placeholder for the actual platform channel / FFI call
+  static Future<Map<String, dynamic>> _nativeMaterialize(
+    Map<String, dynamic> json,
+  ) {
+    // Example with method channel:
+    // return _channel.invokeMapMethod('materializeSchema', json);
+    throw UnimplementedError('Wire this to your Swift bridge');
+  }
+}
+
+/// Opaque handle returned to Dart after successful materialization.
+class GenerationSchemaHandle {
+  const GenerationSchemaHandle(this.id);
+  final String id;
+}
