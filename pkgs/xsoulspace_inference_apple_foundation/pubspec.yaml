@@ -13,12 +13,16 @@ dependencies:
     sdk: flutter
   xsoulspace_inference_core:
     path: ../xsoulspace_inference_core
+  analyzer: ^14.1.0
+  build: ^4.0.10
+  source_gen: ^4.2.4
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   lints: ^6.1.0
   test: ^1.31.2
+  xsoulspace_lints: ^0.1.2
 
 flutter:
   plugin:

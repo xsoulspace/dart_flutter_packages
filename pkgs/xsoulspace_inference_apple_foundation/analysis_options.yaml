@@ -1,3 +1,4 @@
+include: package:xsoulspace_lints/library.dart
 analyzer:
   exclude:
     - build/**
@@ -7,4 +8,3 @@ analyzer:
     - windows/**
     - macos/**
     - linux/**
-include: package:lints/recommended.yaml
