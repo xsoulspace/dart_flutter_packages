@@ -31,7 +31,7 @@ void main() {
 
   test('validateInferenceRequest rejects empty prompt', () {
     final result = validateInferenceRequest(
-      const InferenceRequest(
+      InferenceRequest(
         prompt: '   ',
         outputSchema: <String, dynamic>{'type': 'object'},
         workingDirectory: '/tmp',
@@ -118,9 +118,8 @@ void main() {
 
   test('validateInferenceRequest rejects STT request without audio input', () {
     final result = validateInferenceRequest(
-      const InferenceRequest(
+      InferenceRequest(
         prompt: '',
-        outputSchema: <String, dynamic>{},
         workingDirectory: '/tmp',
         task: InferenceTask.speechToText,
       ),

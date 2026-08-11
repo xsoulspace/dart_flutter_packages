@@ -2,9 +2,6 @@ import 'package:flutter/services.dart';
 import 'package:xsoulspace_inference_apple_foundation/src/dynamic_scheme/foundation_api.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
-import 'dynamic_scheme/foundation_schema.dart';
-import 'dynamic_scheme/foundation_schema_shortcuts.dart';
-
 const MethodChannel _channel = MethodChannel(
   'xsoulspace_inference_apple_foundation',
 );
@@ -25,6 +22,7 @@ class AppleFoundationInferenceClient implements InferenceClient {
   @override
   Set<InferenceTask> get supportedTasks => const <InferenceTask>{
     InferenceTask.implicitlyStructuredText,
+    InferenceTask.nativelyStructuredText,
   };
 
   static bool _cachedAvailable = false;
@@ -99,53 +97,21 @@ class AppleFoundationInferenceClient implements InferenceClient {
 
     try {
       var systemPrompt = request.systemPrompt;
-      if (request.task == InferenceTask.implicitlyStructuredText) {
+      if (request.task case .implicitlyStructuredText) {
         final promptBuilder = PromptBuilder(systemPrompt);
         promptBuilder.writeStructuredOutputPrompt(request.outputSchema);
         systemPrompt = promptBuilder.toString();
+      } else if (request.task case .nativelyStructuredText) {
+        // noop
       }
 
-      final npcSchema = FM.object(
-        'Npc',
-        description: 'A character that can order coffee',
-        properties: () => [
-          FM.prop('name', description: 'First name, Second Name', FM.string()),
-          FM.prop('level', FM.double(guides: [RangeGuide(1, 10)])),
-          FM.prop('attributes', FM.array(FM.ref('Attribute'), min: 1, max: 2)),
-          FM.prop('encounter', FM.ref('Encounter')),
-        ],
-      );
-
-      final attributeSchema = FM.enum_('Attribute', [
-        'sassy',
-        'tired',
-        'hungry',
-      ]);
-
-      final encounterSchema = FM.anyOf('Encounter', [
-        FM.object(
-          'OrderCoffee',
-          properties: () => [FM.prop('drink', FM.string())],
-        ),
-        FM.object(
-          'WantToTalkToManager',
-          properties: () => [FM.prop('complaint', FM.string())],
-        ),
-      ]);
-
-      // Root + dependencies
-      final schema = SchemaBundle(
-        root: npcSchema,
-        dependencies: [attributeSchema, encounterSchema],
-      );
-      final schemaJson = schema.toJson();
       final rawOutput = await _api.generate(
         json: {
           'prompt':
               "${request.prompt}/nCONTEXT: ${request.contextFragmentsJson}",
           'instructions': systemPrompt.isEmpty ? null : systemPrompt,
           // 'workingDirectory': request.workingDirectory,
-          'schema': schemaJson,
+          'schema': request.outputSchema,
 
           /// TODO(arenukvern): temporary disabled, because it doesnt work - need a proper fix
           // 'transcript': request.contextFragmentsJson.isEmpty

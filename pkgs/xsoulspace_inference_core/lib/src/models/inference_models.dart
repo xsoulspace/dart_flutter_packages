@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:from_json_to_json/from_json_to_json.dart';
 import 'package:recase/recase.dart';
 
+import '../agent/structured_output/structured_output.dart';
 import 'prompt_builder.dart';
 
 /// The idea is that inference task should be as atomic as possible
@@ -16,6 +17,7 @@ enum InferenceTask {
   ///
   // TODO(arenukvern): rework as fallback strategy
   implicitlyStructuredText,
+  nativelyStructuredText,
   speechToText,
   textToSpeech;
 
@@ -57,41 +59,51 @@ enum InferenceAudioSource {
 
 /// in apple, [contextFragments] will become Transcript.prompt
 /// TODO: make it more native for convertion fragments -> transcript
-class InferenceRequest {
-  const InferenceRequest({
-    required this.prompt,
-    required this.outputSchema,
-    required this.workingDirectory,
-    this.systemPrompt = '',
-    this.contextFragments = const [],
-    this.metadata = const <String, dynamic>{},
-    this.task = InferenceTask.text,
-    this.audioInput,
-    this.voiceOptions,
+extension type const InferenceRequest._(Map<String, dynamic> value) {
+  factory InferenceRequest({
+    required String prompt,
+    Map<String, dynamic> outputSchema = const {},
+    String workingDirectory = '',
+    String systemPrompt = '',
+    List<Object> contextFragments = const [],
+    Map<String, dynamic> metadata = const <String, dynamic>{},
+    InferenceTask task = InferenceTask.text,
+    InferenceAudioInput? audioInput,
+    InferenceVoiceOptions? voiceOptions,
+  }) => InferenceRequest._({
+    'task': task.name,
+    'prompt': prompt,
+    'output_schema': outputSchema,
+    'working_directory': workingDirectory,
+    'system_prompt': systemPrompt,
+    'context_fragments': contextFragments,
+    'metadata': metadata,
+    'audio_input': ?audioInput?.toJson(),
+    'voice_options': ?voiceOptions?.toJson(),
   });
-
+  factory InferenceRequest.structured({
+    required String prompt,
+    SchemaBundle outputSchema = SchemaBundle.empty,
+    String workingDirectory = '',
+    String systemPrompt = '',
+    List<Object> contextFragments = const [],
+    Map<String, dynamic> metadata = const <String, dynamic>{},
+    InferenceTask task = InferenceTask.text,
+    InferenceAudioInput? audioInput,
+    InferenceVoiceOptions? voiceOptions,
+  }) => InferenceRequest._({
+    'task': task.name,
+    'prompt': prompt,
+    'output_schema': outputSchema.toJson(),
+    'working_directory': workingDirectory,
+    'system_prompt': systemPrompt,
+    'context_fragments': contextFragments,
+    'metadata': metadata,
+    'audio_input': ?audioInput?.toJson(),
+    'voice_options': ?voiceOptions?.toJson(),
+  });
   factory InferenceRequest.fromJson(final Map<String, dynamic> json) =>
-      InferenceRequest(
-        prompt: jsonEncodeString(json['prompt']) ?? '',
-        outputSchema: jsonDecodeMap(json['output_schema']),
-        contextFragments: jsonDecodeListAs<Object>(json['context_fragments']),
-        workingDirectory: jsonEncodeString(json['working_directory']),
-        metadata: jsonDecodeMap(json['metadata']),
-        systemPrompt: jsonEncodeString(json['system_prompt']),
-        task: InferenceTask.fromJson(json['task']),
-        audioInput: switch (json['audio_input']) {
-          final Map value => InferenceAudioInput.fromJson(
-            value.cast<String, dynamic>(),
-          ),
-          _ => null,
-        },
-        voiceOptions: switch (json['voice_options']) {
-          final Map value => InferenceVoiceOptions.fromJson(
-            value.cast<String, dynamic>(),
-          ),
-          _ => null,
-        },
-      );
+      InferenceRequest._(json);
 
   factory InferenceRequest.speechToText({
     required final InferenceAudioInput audioInput,
@@ -103,7 +115,6 @@ class InferenceRequest {
     prompt: '',
     contextFragments: contextFragments,
     systemPrompt: systemPrompt,
-    outputSchema: const <String, dynamic>{},
     workingDirectory: workingDirectory,
     metadata: metadata,
     task: InferenceTask.speechToText,
@@ -121,36 +132,36 @@ class InferenceRequest {
     prompt: text,
     contextFragments: contextFragments,
     systemPrompt: systemPrompt,
-    outputSchema: const <String, dynamic>{},
     workingDirectory: workingDirectory,
     metadata: metadata,
     task: InferenceTask.textToSpeech,
     voiceOptions: voiceOptions,
   );
 
-  final String prompt;
-  final Map<String, dynamic> outputSchema;
-  final String workingDirectory;
-  final Map<String, dynamic> metadata;
-  final InferenceTask task;
-  final InferenceAudioInput? audioInput;
-  final InferenceVoiceOptions? voiceOptions;
-  final List<Object> contextFragments;
-  final String systemPrompt;
+  String get prompt => jsonDecodeString(value['prompt']);
+  Map<String, dynamic> get outputSchema =>
+      jsonDecodeMapAs(value['output_schema']);
+  SchemaBundle get outputSchemaBundle => SchemaBundle.fromJson(outputSchema);
+  String get workingDirectory => jsonDecodeString(value['working_directory']);
+  Map<String, dynamic> get metadata => jsonDecodeMapAs(value['metadata']);
+  InferenceTask get task => InferenceTask.fromJson(value['task']);
+  InferenceAudioInput? get audioInput => switch (value['audio_input']) {
+    final Map value => InferenceAudioInput.fromJson(
+      value.cast<String, dynamic>(),
+    ),
+    _ => null,
+  };
+  InferenceVoiceOptions? get voiceOptions => switch (value['voice_options']) {
+    final Map value => InferenceVoiceOptions.fromJson(
+      value.cast<String, dynamic>(),
+    ),
+    _ => null,
+  };
+  List<Object> get contextFragments =>
+      jsonDecodeListAs<Object>(value['context_fragments']);
   String get contextFragmentsJson =>
       contextFragments.isNotEmpty ? jsonEncode(contextFragments) : '';
-
-  Map<String, dynamic> toJson() => {
-    'task': task.name,
-    'prompt': prompt,
-    'output_schema': outputSchema,
-    'working_directory': workingDirectory,
-    'system_prompt': systemPrompt,
-    'context_fragments': jsonEncode(contextFragments),
-    'metadata': metadata,
-    'audio_input': ?audioInput?.toJson(),
-    'voice_options': ?voiceOptions?.toJson(),
-  };
+  String get systemPrompt => jsonDecodeString(value['system_prompt']);
 }
 
 class InferenceResponse {

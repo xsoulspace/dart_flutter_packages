@@ -1,6 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:from_json_to_json/from_json_to_json.dart';
-import 'package:xsoulspace_inference_apple_foundation/src/dynamic_scheme/foundation_schema.dart';
+import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 /// Opaque handle returned to Dart after successful materialization.
 extension type const GenerationSchemaHandle(String value) {}

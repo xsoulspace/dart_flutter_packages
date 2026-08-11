@@ -117,7 +117,7 @@ void main() {
     });
 
     group('infer', () {
-      const validRequest = InferenceRequest(
+      final validRequest = InferenceRequest(
         task: InferenceTask.implicitlyStructuredText,
         prompt: 'Say hello',
         outputSchema: <String, dynamic>{
@@ -141,7 +141,7 @@ void main() {
           api: AppleFoundationInferenceClient.initApi(),
         );
         final result = await client.infer(
-          const InferenceRequest(
+          InferenceRequest(
             task: InferenceTask.implicitlyStructuredText,
             prompt: '   ',
             outputSchema: <String, dynamic>{'type': 'object'},
@@ -162,7 +162,7 @@ void main() {
             api: AppleFoundationInferenceClient.initApi(),
           );
           final result = await client.infer(
-            const InferenceRequest(
+            InferenceRequest(
               task: InferenceTask.implicitlyStructuredText,
               prompt: 'Hi',
               outputSchema: <String, dynamic>{'type': 'object'},
@@ -181,7 +181,7 @@ void main() {
             api: AppleFoundationInferenceClient.initApi(),
           );
           final result = await client.infer(
-            const InferenceRequest(
+            InferenceRequest(
               task: InferenceTask.implicitlyStructuredText,
               prompt: 'Hi',
               outputSchema: <String, dynamic>{},

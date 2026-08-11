@@ -14,7 +14,7 @@ void main() {
       metadata: const <String, dynamic>{'source': 'unit_test'},
     );
 
-    final decoded = InferenceRequest.fromJson(request.toJson());
+    final decoded = InferenceRequest.fromJson(request.value);
 
     expect(decoded.task, InferenceTask.speechToText);
     expect(decoded.audioInput, isNotNull);
@@ -67,7 +67,7 @@ void main() {
       ),
     );
 
-    final decoded = InferenceRequest.fromJson(request.toJson());
+    final decoded = InferenceRequest.fromJson(request.value);
 
     expect(decoded.task, InferenceTask.textToSpeech);
     expect(decoded.prompt, 'Hello there');
@@ -184,7 +184,7 @@ void main() {
     expect(client.supportsStructuredTextStreaming, isTrue);
 
     final session = await client.streamStructuredText(
-      const InferenceRequest(
+      InferenceRequest(
         prompt: 'return json',
         outputSchema: <String, dynamic>{'type': 'object'},
         workingDirectory: '/tmp',

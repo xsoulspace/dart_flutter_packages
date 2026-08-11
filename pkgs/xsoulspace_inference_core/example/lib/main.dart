@@ -78,6 +78,7 @@ class ScenarioV1SendMessageGetAnswer extends Scenario {
       message: text,
       config: config,
       disposeAfterCompletion: true,
+      outputSchema: SchemaBundle.string,
     );
     log(response.text);
     return response.text;
@@ -135,9 +136,49 @@ class ScenarioV2KeepPrimitiveMemory extends Scenario {
   }
 }
 
+class ScenarioV3FunctionCallAndSchema extends Scenario {
+  SchemaBundle get _schema {
+    final npcSchema = FM.object(
+      'Npc',
+      description: 'A character that can order coffee',
+      properties: () => [
+        FM.prop('name', description: 'First name, Second Name', FM.string()),
+        FM.prop('level', FM.double(guides: [RangeGuide(1, 10)])),
+        FM.prop('attributes', FM.array(FM.ref('Attribute'), min: 1, max: 2)),
+        FM.prop('encounter', FM.ref('Encounter')),
+      ],
+    );
+
+    final attributeSchema = FM.enum_('Attribute', ['sassy', 'tired', 'hungry']);
+
+    final encounterSchema = FM.anyOf('Encounter', [
+      FM.object(
+        'OrderCoffee',
+        properties: () => [FM.prop('drink', FM.string())],
+      ),
+      FM.object(
+        'WantToTalkToManager',
+        properties: () => [FM.prop('complaint', FM.string())],
+      ),
+    ]);
+
+    // Root + dependencies
+    final schema = SchemaBundle(
+      root: npcSchema,
+      dependencies: [attributeSchema, encounterSchema],
+    );
+    return schema;
+  }
+
+  Future<String> reply(String txt) async {
+    throw UnimplementedError();
+  }
+}
+
 class _MyHomePageState extends State<MyHomePage> {
   final scenarioV1 = ScenarioV1SendMessageGetAnswer();
   final scenarioV2 = ScenarioV2KeepPrimitiveMemory();
+  final scenarioV3 = ScenarioV3FunctionCallAndSchema();
   final _messages = ImmutableOrderedList<String>();
 
   AgentConfig _agentConfig = AgentConfig.empty;
@@ -148,7 +189,7 @@ class _MyHomePageState extends State<MyHomePage> {
   bool _isRunning = false;
   int _scenarioIndex = 0;
 
-  List<Scenario> get _scenarios => [scenarioV1, scenarioV2];
+  List<Scenario> get _scenarios => [scenarioV1, scenarioV2, scenarioV3];
 
   T _getScenarioByIndex<T extends Scenario>() =>
       _scenarios[_scenarioIndex] as T;
@@ -185,6 +226,19 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
+  Future<void> _scenario3Reply() async {
+    _setLoading();
+
+    final r = await scenarioV3.reply(_txt);
+    setState(() {
+      _messages
+        ..add(_txt)
+        ..add(r);
+      _controller.clear();
+      _isRunning = false;
+    });
+  }
+
   Future<void> _scenario2Reply() async {
     _setLoading();
 
@@ -207,6 +261,15 @@ class _MyHomePageState extends State<MyHomePage> {
       case final ScenarioV2KeepPrimitiveMemory i:
         if (i.isInitialized) {
           _scenario2Reply();
+        } else {
+          _cleanup();
+          const systemPrompt = 'trustworthy agent';
+          _agentConfig = AgentConfig(systemPrompt: systemPrompt);
+          _initScenario();
+        }
+      case final ScenarioV3FunctionCallAndSchema i:
+        if (i.isInitialized) {
+          _scenario3Reply();
         } else {
           _cleanup();
           const systemPrompt = 'trustworthy agent';

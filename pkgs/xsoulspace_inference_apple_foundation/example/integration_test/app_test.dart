@@ -28,7 +28,7 @@ void main() {
       },
     };
     final result = await client.infer(
-      const InferenceRequest(
+      InferenceRequest(
         prompt: 'Reply with one word: ok.',
         outputSchema: schema,
         workingDirectory: '/tmp',

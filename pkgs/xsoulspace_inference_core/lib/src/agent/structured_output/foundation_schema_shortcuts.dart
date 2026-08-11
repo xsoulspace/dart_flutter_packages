@@ -3,6 +3,7 @@ import 'foundation_schema.dart';
 /// short from Foundation Models
 ///
 /// ```dart
+// ignore: lines_longer_than_80_chars
 /// final npcSchema = FM.object('Npc', description: 'A character that can order coffee', properties: () => [
 ///   FM.prop('name', FM.string(guides: [DescriptionGuide('A full name')])),
 ///   FM.prop('level', FM.integer(guides: [RangeGuide(1, 10)])),
@@ -25,12 +26,13 @@ import 'foundation_schema.dart';
 /// final root = npcSchema;
 /// final dependencies = [attributeSchema, encounterSchema];
 /// ````
+// ignore: avoid_classes_with_only_static_members
 class FM {
   static Schema object(
     String name, {
+    required List<SchemaProperty> Function() properties,
     String? description,
     bool representNilExplicitly = false,
-    required List<SchemaProperty> Function() properties,
   }) => ObjectSchema(
     name: name,
     description: description,
@@ -75,5 +77,5 @@ class FM {
 
   static Schema ref(String name) => ReferenceSchema(name);
 
-  static Schema get nullSchema => const NullSchema();
+  static Schema get nullSchema => NullSchema.empty;
 }

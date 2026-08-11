@@ -72,15 +72,8 @@ InferenceResult<void> validateRequiredKeys({
 }
 
 InferenceResult<void> validateInferenceRequest(final InferenceRequest request) {
-  if (request.workingDirectory.trim().isEmpty) {
-    return InferenceResult<void>.fail(
-      code: 'request_working_directory_empty',
-      message: 'Inference workingDirectory must not be empty',
-    );
-  }
-
   switch (request.task) {
-    case InferenceTask.text || InferenceTask.implicitlyStructuredText:
+    case .text || .implicitlyStructuredText || .nativelyStructuredText:
       if (request.prompt.trim().isEmpty) {
         return InferenceResult<void>.fail(
           code: 'request_prompt_empty',
@@ -96,7 +89,7 @@ InferenceResult<void> validateInferenceRequest(final InferenceRequest request) {
       }
 
       return validateSchemaDefinition(request.outputSchema);
-    case InferenceTask.speechToText:
+    case .speechToText:
       final audioInput = request.audioInput;
       if (audioInput == null) {
         return InferenceResult<void>.fail(
@@ -105,7 +98,7 @@ InferenceResult<void> validateInferenceRequest(final InferenceRequest request) {
         );
       }
       return validateInferenceAudioInput(audioInput);
-    case InferenceTask.textToSpeech:
+    case .textToSpeech:
       if (request.prompt.trim().isEmpty) {
         return InferenceResult<void>.fail(
           code: errorCodeTtsTextEmpty,
@@ -123,7 +116,7 @@ InferenceResult<void> validateInferenceAudioInput(
   final hasBytes = (audioInput.bytes ?? const <int>[]).isNotEmpty;
   final source = audioInput.resolvedSource;
 
-  if (source == InferenceAudioSource.microphone && (hasFilePath || hasBytes)) {
+  if (source == .microphone && (hasFilePath || hasBytes)) {
     return InferenceResult<void>.fail(
       code: errorCodeAudioInputInvalid,
       message: 'Microphone audio input must not provide filePath or bytes',
@@ -131,7 +124,7 @@ InferenceResult<void> validateInferenceAudioInput(
     );
   }
 
-  if (source == InferenceAudioSource.filePath && !hasFilePath) {
+  if (source == .filePath && !hasFilePath) {
     return InferenceResult<void>.fail(
       code: errorCodeAudioInputInvalid,
       message: 'Audio input source=file_path requires filePath',
@@ -139,7 +132,7 @@ InferenceResult<void> validateInferenceAudioInput(
     );
   }
 
-  if (source == InferenceAudioSource.bytes && !hasBytes) {
+  if (source == .bytes && !hasBytes) {
     return InferenceResult<void>.fail(
       code: errorCodeAudioInputInvalid,
       message: 'Audio input source=bytes requires bytes',
@@ -147,7 +140,7 @@ InferenceResult<void> validateInferenceAudioInput(
     );
   }
 
-  if (source != InferenceAudioSource.microphone && !hasFilePath && !hasBytes) {
+  if (source != .microphone && !hasFilePath && !hasBytes) {
     return InferenceResult<void>.fail(
       code: errorCodeAudioInputInvalid,
       message: 'Audio input must provide filePath, bytes, or microphone source',
@@ -155,7 +148,7 @@ InferenceResult<void> validateInferenceAudioInput(
     );
   }
 
-  if (source != InferenceAudioSource.microphone && hasFilePath && hasBytes) {
+  if (source != .microphone && hasFilePath && hasBytes) {
     return InferenceResult<void>.fail(
       code: errorCodeAudioInputInvalid,
       message: 'Audio input must not provide both filePath and bytes',

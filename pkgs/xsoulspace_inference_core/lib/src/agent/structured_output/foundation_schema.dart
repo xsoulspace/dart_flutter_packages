@@ -6,7 +6,21 @@ part 'foundation_schema_json.dart';
 extension type const GenerationSchemaHandle(String value) {}
 
 class SchemaBundle {
-  const SchemaBundle({required this.root, this.dependencies = const []});
+  const SchemaBundle({
+    this.root = NullSchema.empty,
+    this.dependencies = const [],
+  });
+
+  factory SchemaBundle.fromJson(Map<String, dynamic> json) => SchemaBundle(
+    root: schemaFromJson(jsonDecodeMapAs(json['root'])),
+    dependencies: jsonDecodeListAs<Map<String, dynamic>>(
+      json['dependencies'],
+    ).map(schemaFromJson).toList(),
+  );
+  static const empty = SchemaBundle();
+  static const string = SchemaBundle(
+    root: PrimitiveSchema(type: PrimitiveType.string),
+  );
 
   final Schema root;
   final List<Schema> dependencies;
@@ -16,14 +30,7 @@ class SchemaBundle {
     'dependencies': dependencies.map(schemaToJson).toList(),
   };
 
-  factory SchemaBundle.fromJson(Map<String, dynamic> json) {
-    return SchemaBundle(
-      root: schemaFromJson(jsonDecodeMapAs(json['root'])),
-      dependencies: (jsonDecodeListAs<Map<String, dynamic>>(
-        json['dependencies'],
-      )).map((e) => schemaFromJson(e)).toList(),
-    );
-  }
+  bool get isEmpty => root == NullSchema.empty && dependencies.isEmpty;
 }
 
 /// Root of every schema definition.
@@ -50,8 +57,8 @@ final class ObjectSchema extends Schema {
 final class AnyOfSchema extends Schema {
   const AnyOfSchema({
     required this.name,
-    this.description,
     required this.choices,
+    this.description,
   });
 
   final String name;
@@ -61,7 +68,7 @@ final class AnyOfSchema extends Schema {
 
 /// Enum of string literals
 final class EnumSchema extends Schema {
-  const EnumSchema({required this.name, this.description, required this.cases});
+  const EnumSchema({required this.name, required this.cases, this.description});
 
   final String name;
   final String? description;
@@ -86,6 +93,7 @@ final class ReferenceSchema extends Schema {
 /// Null
 final class NullSchema extends Schema {
   const NullSchema();
+  static const empty = NullSchema();
 }
 
 /// Primitive (backed by Swift `DynamicGenerationSchema(type:guides:)`)
@@ -102,8 +110,8 @@ enum PrimitiveType { string, int, double, bool }
 final class SchemaProperty {
   const SchemaProperty({
     required this.name,
-    this.description,
     required this.schema,
+    this.description,
     this.isOptional = false,
   });
 

@@ -7,8 +7,10 @@ import 'package:xsoulspace_state_utils/xsoulspace_state_utils.dart';
 
 import '../inference_client.dart';
 import '../models/inference_models.dart';
+import 'structured_output/structured_output.dart';
 import 'tool_call_parser.dart';
 
+export 'structured_output/structured_output.dart';
 export 'tool_call_parser.dart';
 
 /// Any ML model
@@ -147,49 +149,26 @@ class ModelRuntime {
     await client.refreshAvailability();
   }
 
-  Future<String> generateText({
-    required String content,
+  Future<InferenceResponse?> generateStructuredText({
+    required String prompt,
     required List<Object> contextFragments,
     required String systemPrompt,
+    required SchemaBundle outputSchema,
   }) async {
     final response = await client.infer(
-      InferenceRequest(
-        outputSchema: {
-          'type': 'object',
-          'properties': {
-            'answer': {'type': 'string'},
-          },
-        },
+      InferenceRequest.structured(
+        outputSchema: outputSchema,
         workingDirectory: '/tmp',
-        prompt: content,
+        prompt: prompt,
         systemPrompt: systemPrompt,
-        task: InferenceTask.implicitlyStructuredText,
+        task: InferenceTask.nativelyStructuredText,
         contextFragments: contextFragments,
         metadata: {},
       ),
     );
     final data = response.data;
-    final output = data?.output;
-    final rawOutput = data?.rawOutput;
-    log('Output is $rawOutput');
-
-    if (output == null) {
-      log('Output is null');
-      return rawOutput ?? '';
-    }
-    try {
-      final answer =
-          output['answer'] ?? (output['properties'] as Map)['answer'];
-      if (answer == null) {
-        log('Answer is null');
-        return rawOutput ?? '';
-      }
-      return answer;
-      // ignore: avoid_catches_without_on_clauses
-    } catch (e, st) {
-      log('wrong structure $e', stackTrace: st);
-      return rawOutput ?? '';
-    }
+    log('Output is ${data?.output}');
+    return data;
   }
 }
 
@@ -317,6 +296,7 @@ class Agent with Equatable {
 
   Future<TResponse> generate<TContent extends Object, TResponse extends Object>(
     TContent content, {
+    required SchemaBundle outputSchema,
     required String Function(TContent content) contentToJson,
     required TResponse Function(String json) responseFromJson,
   }) async {
@@ -341,16 +321,23 @@ class Agent with Equatable {
       final memories = runtimeMemories.getAll();
       log(jsonEncode(memories));
 
-      final json = await modelRuntime.generateText(
-        content: userStr, // or whatever your API expects
+      final json = await modelRuntime.generateStructuredText(
+        prompt: userStr, // or whatever your API expects
         systemPrompt: systemPrompt,
         contextFragments: memories,
+        outputSchema: outputSchema,
       );
+      final output = json?.output;
+      final rawOutput = json?.rawOutput;
+      if (json == null || output == null || rawOutput == null) {
+        log('response is empty');
+        throw StateError('response is empty');
+      }
 
-      runtimeMemories.addModelResponse(json);
+      runtimeMemories.addModelResponse(output);
       state.step++;
 
-      final tags = ToolTagParser.parse(json);
+      final tags = ToolTagParser.parse(rawOutput);
       final definitions = tags
           .where((t) => t.type == ToolTagType.getDefinition)
           .toList();
@@ -358,7 +345,7 @@ class Agent with Equatable {
 
       // Clean final answer
       if (definitions.isEmpty && calls.isEmpty) {
-        return responseFromJson(json);
+        return responseFromJson(rawOutput);
       }
 
       // 1. Progressive schema disclosure
@@ -423,18 +410,6 @@ class Agent with Equatable {
         'Precipitation: 0% '
         'Humidity: 69% '
         'Wind: 8 mph';
-  }
-
-  Future<String> sendTextMessage(
-    final String message, {
-    bool accumulate = false,
-  }) async {
-    final response = await generate(
-      message,
-      contentToJson: (m) => m,
-      responseFromJson: (json) => json,
-    );
-    return response;
   }
 
   @override
@@ -523,11 +498,13 @@ class AIRuntime {
     TContent content, {
     required String Function(TContent content) contentToJson,
     required TResponse Function(String json) responseFromJson,
+    required SchemaBundle outputSchema,
   }) async {
     final response = await agent.generate(
       content,
       contentToJson: contentToJson,
       responseFromJson: responseFromJson,
+      outputSchema: outputSchema,
     );
     return response;
   }
@@ -547,6 +524,7 @@ class AIWorld {
   /// message -> response
   Future<({String text, Agent agent})> sendTextMessage({
     required final String message,
+    SchemaBundle outputSchema = SchemaBundle.string,
     AgentConfig config = AgentConfig.empty,
     bool disposeAfterCompletion = false,
     ToolRegistry? toolRegsitry,
@@ -560,6 +538,7 @@ class AIWorld {
       message,
       contentToJson: (m) => m,
       responseFromJson: (json) => json,
+      outputSchema: outputSchema,
     );
     if (disposeAfterCompletion) runtime.disposeAgent(agent);
     return (text: response, agent: agent);
@@ -569,12 +548,14 @@ class AIWorld {
   Future<String> proceedTextForAgent({
     required final String message,
     required Agent agent,
+    SchemaBundle outputSchema = SchemaBundle.string,
   }) async {
     final response = await runtime.generateContent(
       agent,
       message,
       contentToJson: (m) => m,
       responseFromJson: (json) => json,
+      outputSchema: outputSchema,
     );
     return response;
   }
