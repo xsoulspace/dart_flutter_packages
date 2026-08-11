@@ -396,15 +396,14 @@ enum SchemaMaterializer {
         -> GenerationGuide<Value>
     {
         switch desc.kind {
-        case "description":
+        case "constant":
             guard let text = desc.text else {
                 throw SchemaMaterializerError.invalidGuidePayload(
                     "description requires text"
                 )
             }
-            // GenerationGuide.description is available via the macro surface;
-            // the runtime equivalent is usually expressed as a constrained guide.
-            // If the exact static member differs in the final SDK, adjust here.
+            // since Guide.description only available via the macro surface,
+            // we should prefer only DynamicGenerationSchema.Property
             return GenerationGuide.constant(text) as! GenerationGuide<Value>
 
         case "range":

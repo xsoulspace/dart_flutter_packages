@@ -121,7 +121,7 @@ PrimitiveType _primitiveTypeFromString(String s) => switch (s) {
 };
 
 Map<String, dynamic> _guideToJson(Guide g) => switch (g) {
-  DescriptionGuide(:final text) => {'kind': 'description', 'text': text},
+  ConstantTextGuide(:final text) => {'kind': 'description', 'text': text},
   RangeGuide(:final min, :final max) => {
     'kind': 'range',
     'min': min,
@@ -134,7 +134,7 @@ Map<String, dynamic> _guideToJson(Guide g) => switch (g) {
 Guide _guideFromJson(Map<String, dynamic> json) {
   final kind = json['kind'] as String;
   return switch (kind) {
-    'description' => DescriptionGuide(json['text'] as String),
+    'description' => ConstantTextGuide(json['text'] as String),
     'range' => RangeGuide((json['min'] as num), (json['max'] as num)),
     'count' => CountGuide(json['count'] as int),
     'pattern' => PatternGuide(json['pattern'] as String),

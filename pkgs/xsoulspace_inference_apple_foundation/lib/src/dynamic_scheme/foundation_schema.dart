@@ -26,15 +26,6 @@ class SchemaBundle {
   }
 }
 
-///```dart
-/// final schemaTree = SchemaBundle(
-///   root: npcSchema,
-///   dependencies: [attributeSchema, encounterSchema],
-/// );
-///
-/// // Send to Swift (FFI, method channel, or isolate bridge)
-/// await FoundationSchema.materialize(schemaTree);
-///```
 /// Root of every schema definition.
 sealed class Schema {
   const Schema();
@@ -127,15 +118,15 @@ sealed class Guide {
   const Guide();
 }
 
-final class DescriptionGuide extends Guide {
-  const DescriptionGuide(this.text);
+final class ConstantTextGuide extends Guide {
+  const ConstantTextGuide(this.text);
   final String text;
 }
 
-final class RangeGuide extends Guide {
+final class RangeGuide<T extends num> extends Guide {
   const RangeGuide(this.min, this.max);
-  final num min;
-  final num max;
+  final T min;
+  final T max;
 }
 
 final class CountGuide extends Guide {

@@ -109,7 +109,7 @@ class AppleFoundationInferenceClient implements InferenceClient {
         'Npc',
         description: 'A character that can order coffee',
         properties: () => [
-          FM.prop('name', FM.string(guides: [DescriptionGuide('A full name')])),
+          FM.prop('name', description: 'First name, Second Name', FM.string()),
           FM.prop('level', FM.double(guides: [RangeGuide(1, 10)])),
           FM.prop('attributes', FM.array(FM.ref('Attribute'), min: 1, max: 2)),
           FM.prop('encounter', FM.ref('Encounter')),
