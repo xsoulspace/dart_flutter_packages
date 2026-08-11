@@ -14,8 +14,8 @@ enum AppleFoundationBridge {
         prompt: String,
         transcript: String?,
         instructions: String?,
-        completion: @escaping (String?, String?, String?) -> Void,
-        generationSchema: GenerationSchema?
+        generationSchema: GenerationSchema?,
+        completion: @escaping (String?, String?, String?) -> Void
     ) {
         #if canImport(FoundationModels)
             FoundationModelsBridge.generate(
@@ -117,6 +117,3 @@ enum AppleFoundationBridge {
         }
     }
 #endif
-
-
-

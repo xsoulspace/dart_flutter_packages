@@ -5,7 +5,7 @@ import PackageDescription
 let package = Package(
     name: "xsoulspace_inference_apple_foundation",
     platforms: [
-        .macOS("26.0")
+        .macOS("26.4")
     ],
     products: [
         .library(

@@ -33,34 +33,41 @@ public class XsoulspaceInferenceAppleFoundationPlugin: NSObject, FlutterPlugin {
                 return
             }
 
-            let schemaJson = args["schema"] as? [String: Any]
-            let dartRoot = schemaJson?["dartRoot"] as? String
-            let dartDependencies = schemaJson?["dartDependencies"] as? String
-
-            let generationSchema = try SchemaMaterializer.materialize(
-                root: dartRoot,
-                dependencies: dartDependencies
-            )
-
-            AppleFoundationBridge.generate(
-                prompt: prompt,
-                transcript: args["transcript"] as? String,
-                instructions: args["instructions"] as? String,
-                generationSchema: generationSchema,
-                s
-            ) { output, errorCode, message in
-                if let errorCode {
-                    result(
-                        FlutterError(
-                            code: errorCode,
-                            message: message ?? "Inference failed",
-                            details: nil
+            let schemaJson = args["schema"] as? [String: Any] ?? [:]
+            let dartRoot = schemaJson["dartRoot"] as? String
+            let dartDependencies = schemaJson["dartDependencies"] as? String
+            do {
+                let generationSchema = try materializeFromDartJSON(
+                    schemaJson
+                )
+                AppleFoundationBridge.generate(
+                    prompt: prompt,
+                    transcript: args["transcript"] as? String,
+                    instructions: args["instructions"] as? String,
+                    generationSchema: generationSchema,
+                ) { output, errorCode, message in
+                    if let errorCode {
+                        result(
+                            FlutterError(
+                                code: errorCode,
+                                message: message ?? "Inference failed",
+                                details: nil
+                            )
                         )
-                    )
-                } else {
-                    result(output ?? "")
+                    } else {
+                        result(output ?? "")
+                    }
                 }
+            } catch {
+                result(
+                    FlutterError(
+                        code: error.localizedDescription,
+                        message: "Inference failed",
+                        details: error
+                    )
+                )
             }
+
         default:
             result(FlutterMethodNotImplemented)
         }

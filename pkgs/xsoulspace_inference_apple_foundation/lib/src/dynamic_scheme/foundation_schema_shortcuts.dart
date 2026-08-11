@@ -53,6 +53,9 @@ class FM {
   static Schema string({List<Guide> guides = const []}) =>
       PrimitiveSchema(type: PrimitiveType.string, guides: guides);
 
+  static Schema double({List<Guide> guides = const []}) =>
+      PrimitiveSchema(type: PrimitiveType.double, guides: guides);
+
   static Schema integer({List<Guide> guides = const []}) =>
       PrimitiveSchema(type: PrimitiveType.int, guides: guides);
 

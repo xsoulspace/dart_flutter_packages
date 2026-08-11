@@ -22,7 +22,7 @@ Map<String, dynamic> schemaToJson(Schema s) {
       'choices': choices.map(schemaToJson).toList(),
     },
     EnumSchema(:final name, :final description, :final cases) => {
-      'kind': 'enum',
+      'kind': 'enum_',
       'name': name,
       if (description != null) 'description': description,
       'cases': cases,
@@ -65,7 +65,7 @@ Schema schemaFromJson(Map<String, dynamic> json) {
           .map((e) => schemaFromJson(e as Map<String, dynamic>))
           .toList(),
     ),
-    'enum' => EnumSchema(
+    'enum_' => EnumSchema(
       name: json['name'] as String,
       description: json['description'] as String?,
       cases: (json['cases'] as List<dynamic>).cast<String>(),

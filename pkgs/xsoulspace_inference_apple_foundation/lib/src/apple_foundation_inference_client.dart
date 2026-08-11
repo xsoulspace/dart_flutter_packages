@@ -110,8 +110,8 @@ class AppleFoundationInferenceClient implements InferenceClient {
         description: 'A character that can order coffee',
         properties: () => [
           FM.prop('name', FM.string(guides: [DescriptionGuide('A full name')])),
-          FM.prop('level', FM.integer(guides: [RangeGuide(1, 10)])),
-          FM.prop('attributes', FM.array(FM.ref('Attribute'), min: 3, max: 3)),
+          FM.prop('level', FM.double(guides: [RangeGuide(1, 10)])),
+          FM.prop('attributes', FM.array(FM.ref('Attribute'), min: 1, max: 2)),
           FM.prop('encounter', FM.ref('Encounter')),
         ],
       );
@@ -134,19 +134,18 @@ class AppleFoundationInferenceClient implements InferenceClient {
       ]);
 
       // Root + dependencies
-      final root = npcSchema;
-      final dependencies = [attributeSchema, encounterSchema];
-
+      final schema = SchemaBundle(
+        root: npcSchema,
+        dependencies: [attributeSchema, encounterSchema],
+      );
+      final schemaJson = schema.toJson();
       final rawOutput = await _api.generate(
         json: {
           'prompt':
               "${request.prompt}/nCONTEXT: ${request.contextFragmentsJson}",
           'instructions': systemPrompt.isEmpty ? null : systemPrompt,
           // 'workingDirectory': request.workingDirectory,
-          'schema': SchemaBundle(
-            root: root,
-            dependencies: dependencies,
-          ).toJson(),
+          'schema': schemaJson,
 
           /// TODO(arenukvern): temporary disabled, because it doesnt work - need a proper fix
           // 'transcript': request.contextFragmentsJson.isEmpty
