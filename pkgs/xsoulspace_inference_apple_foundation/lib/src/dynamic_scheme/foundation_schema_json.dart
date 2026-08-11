@@ -1,6 +1,4 @@
-// lib/src/schema_json.dart
-
-import 'foundation_schema.dart';
+part of 'foundation_schema.dart';
 
 Map<String, dynamic> schemaToJson(Schema s) {
   return switch (s) {

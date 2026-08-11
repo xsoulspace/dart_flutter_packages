@@ -13,9 +13,7 @@ dependencies:
     sdk: flutter
   xsoulspace_inference_core:
     path: ../xsoulspace_inference_core
-  analyzer: ^14.1.0
-  build: ^4.0.10
-  source_gen: ^4.2.4
+  from_json_to_json: ^0.5.0
 
 dev_dependencies:
   flutter_test:

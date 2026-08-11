@@ -4,6 +4,9 @@ get:
 test:
     flutter test
 
+gen:
+    dart run pigeon --input path/to/input.dart
+
 analyze:
     flutter analyze
 

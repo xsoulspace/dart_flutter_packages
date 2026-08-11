@@ -1,5 +1,5 @@
-import Foundation
 import FlutterMacOS
+import Foundation
 
 /// macOS plugin for Apple Foundation Models.
 public class XsoulspaceInferenceAppleFoundationPlugin: NSObject, FlutterPlugin {
@@ -23,17 +23,40 @@ public class XsoulspaceInferenceAppleFoundationPlugin: NSObject, FlutterPlugin {
             guard let args = call.arguments as? [String: Any],
                 let prompt = args["prompt"] as? String
             else {
-                result(FlutterError(code: "invalid_args", message: "prompt required", details: nil))
+                result(
+                    FlutterError(
+                        code: "invalid_args",
+                        message: "prompt required",
+                        details: nil
+                    )
+                )
                 return
             }
+
+            let schemaJson = args["schema"] as? [String: Any]
+            let dartRoot = schemaJson?["dartRoot"] as? String
+            let dartDependencies = schemaJson?["dartDependencies"] as? String
+
+            let generationSchema = try SchemaMaterializer.materialize(
+                root: dartRoot,
+                dependencies: dartDependencies
+            )
 
             AppleFoundationBridge.generate(
                 prompt: prompt,
                 transcript: args["transcript"] as? String,
-                instructions: args["instructions"] as? String
+                instructions: args["instructions"] as? String,
+                generationSchema: generationSchema,
+                s
             ) { output, errorCode, message in
                 if let errorCode {
-                    result(FlutterError(code: errorCode, message: message ?? "Inference failed", details: nil))
+                    result(
+                        FlutterError(
+                            code: errorCode,
+                            message: message ?? "Inference failed",
+                            details: nil
+                        )
+                    )
                 } else {
                     result(output ?? "")
                 }

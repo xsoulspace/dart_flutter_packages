@@ -1,33 +1,16 @@
 import FoundationModels
 
-///```swift
-/// let generationSchema = try SchemaMaterializer.makeGenerationSchema(
-///   root: dartRoot,
-///   dependencies: dartDependencies
-/// )
-///
-/// let session = LanguageModelSession(...)
-/// let response = try await session.respond(generating: generationSchema) {
-///   "Generate a character that orders a coffee."
-/// }
-///```
-public enum SchemaMaterializer {
-
-  /// Turns the Dart-serialized tree into real DynamicGenerationSchema values.
-  public static func materialize(
-    root: SchemaDescription,
-    dependencies: [SchemaDescription]
-  ) throws -> (root: DynamicGenerationSchema, dependencies: [DynamicGenerationSchema])
-
-  /// Convenience: directly produce a GenerationSchema ready for the model.
-  public static func makeGenerationSchema(
-    root: SchemaDescription,
-    dependencies: [SchemaDescription] = []
-  ) throws -> GenerationSchema
+public struct GuideDescription: Codable, Sendable {
+  public let kind: String
+  public let text: String?  // for "description"
+  public let min: Double?  // for "range"
+  public let max: Double?  // for "range"
+  public let count: Int?  // for "count"
+  public let pattern: String?  // for "pattern"
 }
 
 // Internal representation that matches the Dart JSON shape
-public struct SchemaDescription: Codable, Sendable {
+public final class SchemaDescription: Codable, Sendable {
   public enum Kind: String, Codable {
     case object, anyOf, enum_, array, reference, null, primitive
   }
@@ -47,21 +30,42 @@ public struct SchemaDescription: Codable, Sendable {
   public let representNilExplicitly: Bool?
 }
 
-public struct PropertyDescription: Codable, Sendable {
+public final class PropertyDescription: Codable, Sendable {
   public let name: String
   public let description: String?
   public let schema: SchemaDescription
   public let isOptional: Bool
 }
 
+///```swift
+/// let generationSchema = try SchemaMaterializer.makeGenerationSchema(
+///   root: dartRoot,
+///   dependencies: dartDependencies
+/// )
+///
+/// let session = LanguageModelSession(...)
+/// let response = try await session.respond(generating: generationSchema) {
+///   "Generate a character that orders a coffee."
+/// }
+///```
 extension SchemaMaterializer {
-  static func build(_ desc: SchemaDescription) throws -> DynamicGenerationSchema {
+  /// Turns the Dart-serialized tree into real DynamicGenerationSchema values.
+  public static func materialize(
+    root: String,
+    dependencies: [String]
+  ) throws -> (
+    root: SchemaMaterializer.build(root), dependencies: dependencies.lazy.map(SchemaMaterializer.build)
+  )
+  static func build(_ desc: SchemaDescription) throws
+    -> DynamicGenerationSchema
+  {
     switch desc.kind {
     case .object:
       return DynamicGenerationSchema(
         name: desc.name!,
         description: desc.description,
-        representNilExplicitlyInGeneratedContent: desc.representNilExplicitly ?? false,
+        representNilExplicitlyInGeneratedContent: desc
+          .representNilExplicitly ?? false,
         properties: try desc.properties!.map { prop in
           DynamicGenerationSchema.Property(
             name: prop.name,
@@ -79,7 +83,7 @@ extension SchemaMaterializer {
         anyOf: try desc.choices!.map(build)
       )
 
-    case .enum:
+    case .enum_:
       return DynamicGenerationSchema(
         name: desc.name!,
         description: desc.description,
@@ -103,7 +107,7 @@ extension SchemaMaterializer {
     // + apply guides
     case .primitive:
       guard let typeName = desc.primitiveType else {
-        throw SchemaError.missingField("primitiveType")
+        throw SchemaError("primitiveType")
       }
 
       let guides = try (desc.guides ?? []).map(Self.buildGuide)
@@ -130,14 +134,14 @@ extension SchemaMaterializer {
           guides: guides as! [GenerationGuide<Bool>]
         )
       default:
-        throw SchemaError.unsupportedPrimitive(typeName)
+        throw SchemaError(typeName)
       }
     }
   }
   private static func buildGuide(_ desc: GuideDescription) throws -> Any {
     switch desc.kind {
     case "description":
-      return GenerationGuide.description(desc.text!)
+      return GenerationGuide(desc.text!)
     case "range":
       // GenerationGuide.range is generic; the cast happens at the call site
       return GenerationGuide.range(desc.min!...desc.max!)
@@ -146,38 +150,7 @@ extension SchemaMaterializer {
     case "pattern":
       return GenerationGuide.pattern(desc.pattern!)
     default:
-      throw SchemaError.unknownGuide(desc.kind)
+      throw SchemaError(desc.kind)
     }
-  }
-
-  ///```swift
-  ///    // 1. Decode from the JSON that arrived from Dart
-  /// let guideDescs = try JSONDecoder().decode([GuideDescription].self, from: data)
-  ///
-  /// // 2. Convert each one into a real GenerationGuide
-  /// let guides = try guideDescs.map { desc in
-  ///   switch desc.kind {
-  ///   case "description":
-  ///     return GenerationGuide.description(desc.text!)
-  ///   case "range":
-  ///     return GenerationGuide.range(desc.min!...desc.max!)
-  ///   case "count":
-  ///     return GenerationGuide.count(desc.count!)
-  ///   case "pattern":
-  ///     return GenerationGuide.pattern(desc.pattern!)
-  ///   default:
-  ///     throw SchemaError.unknownGuide(desc.kind)
-  ///   }
-  /// }
-  /// ```
-  struct GuideDescription: Codable, Sendable {
-    let kind: String
-
-    // Only some of these will be present, depending on `kind`
-    let text: String?  // for "description"
-    let min: Double?  // for "range"
-    let max: Double?  // for "range"
-    let count: Int?  // for "count"
-    let pattern: String?  // for "pattern"
   }
 }

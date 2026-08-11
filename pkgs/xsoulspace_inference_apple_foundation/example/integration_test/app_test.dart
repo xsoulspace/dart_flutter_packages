@@ -7,14 +7,20 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('plugin availability and optional infer', (final tester) async {
-    await AppleFoundationInferenceClient().refreshAvailability();
-    final available = AppleFoundationInferenceClient().isAvailable;
+    await AppleFoundationInferenceClient(
+      api: AppleFoundationInferenceClient.initApi(),
+    ).refreshAvailability();
+    final available = AppleFoundationInferenceClient(
+      api: AppleFoundationInferenceClient.initApi(),
+    ).isAvailable;
 
     if (!available) {
       return;
     }
 
-    final client = AppleFoundationInferenceClient();
+    final client = AppleFoundationInferenceClient(
+      api: AppleFoundationInferenceClient.initApi(),
+    );
     const schema = <String, dynamic>{
       'type': 'object',
       'properties': <String, dynamic>{

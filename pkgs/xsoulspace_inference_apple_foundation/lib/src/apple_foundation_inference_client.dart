@@ -1,5 +1,9 @@
 import 'package:flutter/services.dart';
+import 'package:xsoulspace_inference_apple_foundation/src/dynamic_scheme/foundation_api.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
+
+import 'dynamic_scheme/foundation_schema.dart';
+import 'dynamic_scheme/foundation_schema_shortcuts.dart';
 
 const MethodChannel _channel = MethodChannel(
   'xsoulspace_inference_apple_foundation',
@@ -9,8 +13,9 @@ const MethodChannel _channel = MethodChannel(
 /// macOS only; returns standardized [InferenceResult] with codes
 /// [engine_unavailable], [schema_validation_failed], etc.
 class AppleFoundationInferenceClient implements InferenceClient {
-  const AppleFoundationInferenceClient();
-
+  const AppleFoundationInferenceClient({required this._api});
+  final FoundationApi _api;
+  static FoundationApi initApi() => FoundationApi(channel: _channel);
   @override
   String get id => 'apple_foundation';
 
@@ -29,7 +34,7 @@ class AppleFoundationInferenceClient implements InferenceClient {
   @override
   Future<bool> refreshAvailability() async {
     try {
-      final result = await _channel.invokeMethod<bool>('isAvailable');
+      final result = await _api.isAvailable();
       _cachedAvailable = result == true;
       _availabilityChecked = true;
     } on PlatformException catch (_) {
@@ -99,21 +104,58 @@ class AppleFoundationInferenceClient implements InferenceClient {
         promptBuilder.writeStructuredOutputPrompt(request.outputSchema);
         systemPrompt = promptBuilder.toString();
       }
-      final rawOutput = await _channel.invokeMethod<String>('generate', <
-        String,
-        dynamic
-      >{
-        'prompt': "${request.prompt}/nCONTEXT: ${request.contextFragmentsJson}",
-        'instructions': systemPrompt.isEmpty ? null : systemPrompt,
-        'workingDirectory': request.workingDirectory,
 
-        /// TODO(arenukvern): temporary disabled, because it doesnt work - need a proper fix
-        // 'transcript': request.contextFragmentsJson.isEmpty
-        //     ? null
-        //     : request.contextFragmentsJson,
-      });
+      final npcSchema = FM.object(
+        'Npc',
+        description: 'A character that can order coffee',
+        properties: () => [
+          FM.prop('name', FM.string(guides: [DescriptionGuide('A full name')])),
+          FM.prop('level', FM.integer(guides: [RangeGuide(1, 10)])),
+          FM.prop('attributes', FM.array(FM.ref('Attribute'), min: 3, max: 3)),
+          FM.prop('encounter', FM.ref('Encounter')),
+        ],
+      );
 
-      if (rawOutput == null || rawOutput.trim().isEmpty) {
+      final attributeSchema = FM.enum_('Attribute', [
+        'sassy',
+        'tired',
+        'hungry',
+      ]);
+
+      final encounterSchema = FM.anyOf('Encounter', [
+        FM.object(
+          'OrderCoffee',
+          properties: () => [FM.prop('drink', FM.string())],
+        ),
+        FM.object(
+          'WantToTalkToManager',
+          properties: () => [FM.prop('complaint', FM.string())],
+        ),
+      ]);
+
+      // Root + dependencies
+      final root = npcSchema;
+      final dependencies = [attributeSchema, encounterSchema];
+
+      final rawOutput = await _api.generate(
+        json: {
+          'prompt':
+              "${request.prompt}/nCONTEXT: ${request.contextFragmentsJson}",
+          'instructions': systemPrompt.isEmpty ? null : systemPrompt,
+          // 'workingDirectory': request.workingDirectory,
+          'schema': SchemaBundle(
+            root: root,
+            dependencies: dependencies,
+          ).toJson(),
+
+          /// TODO(arenukvern): temporary disabled, because it doesnt work - need a proper fix
+          // 'transcript': request.contextFragmentsJson.isEmpty
+          //     ? null
+          //     : request.contextFragmentsJson,
+        },
+      );
+
+      if (rawOutput.trim().isEmpty) {
         return InferenceResult<InferenceResponse>.fail(
           code: 'output_empty',
           message: 'Apple Foundation Model produced no output',

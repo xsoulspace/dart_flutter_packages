@@ -1,4 +1,30 @@
-import 'package:xsoulspace_inference_apple_foundation/src/dynamic_scheme/schema_bundle.dart';
+import 'package:from_json_to_json/from_json_to_json.dart';
+
+part 'foundation_schema_json.dart';
+
+/// Opaque handle returned to Dart after successful materialization.
+extension type const GenerationSchemaHandle(String value) {}
+
+class SchemaBundle {
+  const SchemaBundle({required this.root, this.dependencies = const []});
+
+  final Schema root;
+  final List<Schema> dependencies;
+
+  Map<String, dynamic> toJson() => {
+    'root': schemaToJson(root),
+    'dependencies': dependencies.map(schemaToJson).toList(),
+  };
+
+  factory SchemaBundle.fromJson(Map<String, dynamic> json) {
+    return SchemaBundle(
+      root: schemaFromJson(jsonDecodeMapAs(json['root'])),
+      dependencies: (jsonDecodeListAs<Map<String, dynamic>>(
+        json['dependencies'],
+      )).map((e) => schemaFromJson(e)).toList(),
+    );
+  }
+}
 
 ///```dart
 /// final schemaTree = SchemaBundle(
@@ -120,35 +146,4 @@ final class CountGuide extends Guide {
 final class PatternGuide extends Guide {
   const PatternGuide(this.pattern);
   final String pattern;
-}
-
-class FoundationSchema {
-  /// Serializes the bundle and asks the native side to materialize
-  /// a real GenerationSchema.
-  ///
-  /// Returns an opaque handle / id that can later be used with the
-  /// LanguageModelSession on the Swift side, or throws on failure.
-  static Future<GenerationSchemaHandle> materialize(SchemaBundle bundle) async {
-    final json = bundle.toJson();
-
-    // Transport – replace with your real bridge (FFI, method channel, etc.)
-    final result = await _nativeMaterialize(json);
-
-    return GenerationSchemaHandle(result['id'] as String);
-  }
-
-  // Placeholder for the actual platform channel / FFI call
-  static Future<Map<String, dynamic>> _nativeMaterialize(
-    Map<String, dynamic> json,
-  ) {
-    // Example with method channel:
-    // return _channel.invokeMapMethod('materializeSchema', json);
-    throw UnimplementedError('Wire this to your Swift bridge');
-  }
-}
-
-/// Opaque handle returned to Dart after successful materialization.
-class GenerationSchemaHandle {
-  const GenerationSchemaHandle(this.id);
-  final String id;
 }

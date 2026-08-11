@@ -37,8 +37,9 @@ class _ExamplePageState extends State<_ExamplePage> {
 
   Future<void> _checkAvailability() async {
     setState(() => _status = 'Checking...');
-    final available = await AppleFoundationInferenceClient()
-        .refreshAvailability();
+    final available = await AppleFoundationInferenceClient(
+      api: AppleFoundationInferenceClient.initApi(),
+    ).refreshAvailability();
     setState(() {
       _available = available;
       _status = available
@@ -49,7 +50,9 @@ class _ExamplePageState extends State<_ExamplePage> {
 
   Future<void> _runInference() async {
     setState(() => _status = 'Running inference...');
-    final client = AppleFoundationInferenceClient();
+    final client = AppleFoundationInferenceClient(
+      api: AppleFoundationInferenceClient.initApi(),
+    );
     final result = await client.infer(
       const InferenceRequest(
         prompt: 'Reply with one short word: hello.',

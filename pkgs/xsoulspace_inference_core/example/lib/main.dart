@@ -45,8 +45,9 @@ sealed class Scenario {
   final ai = AIWorld.fromConfigs(
     runtimeConfig: AIRuntimeConfig(
       inferenceClientBuilders: {
-        DefaultModelNames.appleFoundation: () =>
-            const AppleFoundationInferenceClient(),
+        DefaultModelNames.appleFoundation: () => AppleFoundationInferenceClient(
+          api: AppleFoundationInferenceClient.initApi(),
+        ),
       },
     ),
   );

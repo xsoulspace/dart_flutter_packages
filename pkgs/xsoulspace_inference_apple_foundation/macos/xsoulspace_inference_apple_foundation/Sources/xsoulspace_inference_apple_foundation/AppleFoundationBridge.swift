@@ -14,7 +14,8 @@ enum AppleFoundationBridge {
         prompt: String,
         transcript: String?,
         instructions: String?,
-        completion: @escaping (String?, String?, String?) -> Void
+        completion: @escaping (String?, String?, String?) -> Void,
+        generationSchema: GenerationSchema?
     ) {
         #if canImport(FoundationModels)
             FoundationModelsBridge.generate(
@@ -25,14 +26,17 @@ enum AppleFoundationBridge {
                             Transcript.Prompt(
                                 segments: [
                                     Transcript.Segment.text(
-                                        Transcript.TextSegment(content: transcript!)
+                                        Transcript.TextSegment(
+                                            content: transcript!
+                                        )
                                     )
                                 ]
                             )
                         )
                     ]) : nil,
                 instructions: instructions,
-                completion: completion
+                completion: completion,
+                generationSchema: generationSchema
             )
         #else
             completion(
@@ -56,11 +60,16 @@ enum AppleFoundationBridge {
             prompt: String,
             transcript: Transcript?,
             instructions: String?,
-            completion: @escaping (String?, String?, String?) -> Void
+            completion: @escaping (String?, String?, String?) -> Void,
+            generationSchema: GenerationSchema?
         ) {
             let model = SystemLanguageModel.default
             guard model.isAvailable else {
-                completion(nil, "engine_unavailable", "Apple Intelligence not available")
+                completion(
+                    nil,
+                    "engine_unavailable",
+                    "Apple Intelligence not available"
+                )
                 return
             }
 
@@ -68,21 +77,46 @@ enum AppleFoundationBridge {
                 do {
                     let session: LanguageModelSession
                     if let transcript, !transcript.isEmpty {
-                        session = LanguageModelSession(model: model, transcript: transcript)
+                        session = LanguageModelSession(
+                            model: model,
+                            transcript: transcript
+                        )
                     } else {
-                        session = LanguageModelSession(model: model, instructions: instructions)
+                        session = LanguageModelSession(
+                            model: model,
+                            instructions: instructions
+                        )
                     }
-                    let response = try await session.respond(to: prompt)
+                    let response = try await {
+                        if let schema = generationSchema {
+                            return try await session.respond(
+                                to: prompt,
+                                schema: schema
+                            )
+                        } else {
+                            return try await session.respond(
+                                to: prompt
+                            )
+                        }
+                    }()
                     let content = response.content
+                    let contentString = String(describing: content)
                     await MainActor.run {
-                        completion(content, nil, nil)
+                        completion(contentString, nil, nil)
                     }
                 } catch {
                     await MainActor.run {
-                        completion(nil, "engine_unavailable", error.localizedDescription)
+                        completion(
+                            nil,
+                            "engine_unavailable",
+                            error.localizedDescription
+                        )
                     }
                 }
             }
         }
     }
 #endif
+
+
+
