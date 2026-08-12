@@ -154,6 +154,7 @@ class ModelRuntime {
     required List<Object> contextFragments,
     required String systemPrompt,
     required SchemaBundle outputSchema,
+    required ToolRegistry toolRegistry,
   }) async {
     final response = await client.infer(
       InferenceRequest.structured(
@@ -165,6 +166,8 @@ class ModelRuntime {
         contextFragments: contextFragments,
         metadata: {},
       ),
+      // inline tools should be included to systemprompt or similar
+      toolRegistry: toolRegistry,
     );
     final data = response.data;
     log('Output is ${data?.output}');
@@ -307,7 +310,7 @@ class Agent with Equatable {
     runtimeMemories.addUserInput(userStr);
 
     final state = ToolRuntimeState();
-    final systemPrompt = buildSystemPrompt(toolRegistry, config.systemPrompt);
+    // final systemPrompt = buildSystemPrompt(config.systemPrompt);
 
     while (true) {
       // Force termination path
@@ -323,9 +326,10 @@ class Agent with Equatable {
 
       final json = await modelRuntime.generateStructuredText(
         prompt: userStr, // or whatever your API expects
-        systemPrompt: systemPrompt,
+        systemPrompt: config.systemPrompt,
         contextFragments: memories,
         outputSchema: outputSchema,
+        toolRegistry: toolRegistry,
       );
       final output = json?.output;
       final rawOutput = json?.rawOutput;

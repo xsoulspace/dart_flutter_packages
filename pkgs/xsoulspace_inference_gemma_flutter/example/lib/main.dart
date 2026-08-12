@@ -65,7 +65,7 @@ class _ExamplePageState extends State<_ExamplePage> {
     setState(() => _status = 'Running inference...');
     final client = GemmaFlutterInferenceClient();
     final result = await client.infer(
-      const InferenceRequest(
+      InferenceRequest(
         prompt: 'Reply with one short word: hello.',
         outputSchema: _schema,
         workingDirectory: '/tmp',

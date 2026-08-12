@@ -67,8 +67,9 @@ class CodexExecInferenceClient
 
   @override
   Future<InferenceResult<InferenceResponse>> infer(
-    final InferenceRequest request,
-  ) => _runInference(request);
+    final InferenceRequest request, {
+    ToolRegistry? toolRegistry,
+  }) => _runInference(request);
 
   @override
   Future<InferenceStructuredTextStreamSession> streamStructuredText(

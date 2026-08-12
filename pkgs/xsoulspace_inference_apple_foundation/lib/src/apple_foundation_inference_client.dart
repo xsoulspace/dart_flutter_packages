@@ -12,7 +12,7 @@ const MethodChannel _channel = MethodChannel(
 class AppleFoundationInferenceClient implements InferenceClient {
   const AppleFoundationInferenceClient({required this._api});
   final FoundationApi _api;
-  static FoundationApi initApi() => FoundationApi(channel: _channel);
+  static FoundationApi initApi() => FoundationApi(channel: _channel)..init();
   @override
   String get id => 'apple_foundation';
 
@@ -60,8 +60,9 @@ class AppleFoundationInferenceClient implements InferenceClient {
 
   @override
   Future<InferenceResult<InferenceResponse>> infer(
-    final InferenceRequest request,
-  ) async {
+    final InferenceRequest request, {
+    ToolRegistry? toolRegistry,
+  }) async {
     if (!supportedTasks.contains(request.task)) {
       return InferenceResult<InferenceResponse>.fail(
         code: errorCodeTaskUnsupported,
@@ -105,6 +106,8 @@ class AppleFoundationInferenceClient implements InferenceClient {
         // noop
       }
 
+      if (toolRegistry != null) _api.addTools(toolRegistry);
+
       final rawOutput = await _api.generate(
         json: {
           'prompt':
@@ -112,6 +115,7 @@ class AppleFoundationInferenceClient implements InferenceClient {
           'instructions': systemPrompt.isEmpty ? null : systemPrompt,
           // 'workingDirectory': request.workingDirectory,
           'schema': request.outputSchema,
+          "tools": toolRegistry?.getToolsJsons(),
 
           /// TODO(arenukvern): temporary disabled, because it doesnt work - need a proper fix
           // 'transcript': request.contextFragmentsJson.isEmpty
@@ -120,6 +124,7 @@ class AppleFoundationInferenceClient implements InferenceClient {
         },
       );
 
+      if (toolRegistry != null) _api.removeTools(toolRegistry);
       if (rawOutput.trim().isEmpty) {
         return InferenceResult<InferenceResponse>.fail(
           code: 'output_empty',

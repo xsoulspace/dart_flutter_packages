@@ -62,8 +62,9 @@ class GemmaFlutterInferenceClient implements InferenceClient {
 
   @override
   Future<InferenceResult<InferenceResponse>> infer(
-    final InferenceRequest request,
-  ) async {
+    final InferenceRequest request, {
+    ToolRegistry? toolRegistry,
+  }) async {
     if (!supportedTasks.contains(request.task)) {
       return InferenceResult<InferenceResponse>.fail(
         code: errorCodeTaskUnsupported,

@@ -26,6 +26,56 @@ class FoundationApi {
     return GenerationSchemaHandle(jsonDecodeString(result?['id']));
   }
 
+  void init() {
+    _addToolCallHanlders();
+  }
+
+  void _addToolCallHanlders() {
+    _channel.setMethodCallHandler((call) async {
+      if (call.method == 'onToolCall') {
+        final name = call.arguments['name'] as String;
+        final arguments = call.arguments['arguments'];
+
+        final handler = _toolHandlers[name];
+        if (handler == null) {
+          throw PlatformException(
+            code: 'unknown_tool',
+            message: 'No handler registered for $name',
+          );
+        }
+
+        // Execute the real Dart logic and return the result
+        final result = await handler(arguments);
+        return result; // this value goes back to Swift ToolInvoker
+      }
+      throw PlatformException(code: 'not_implemented');
+    });
+  }
+
+  // Registry of Dart tool implementations
+  static final Map<String, ToolCallCallback> _toolHandlers = {};
+  void addToolCall(String toolCallName, ToolCallCallback function) {
+    _toolHandlers[toolCallName] = function;
+  }
+
+  void removeToolCall(String toolCallName) {
+    _toolHandlers.remove(toolCallName);
+  }
+
+  void addTools(ToolRegistry toolRegistry) {
+    for (var MapEntry(:key, value: callback) in toolRegistry.tools.entries) {
+      addToolCall(key, callback.execute);
+    }
+  }
+
+  void removeTools(ToolRegistry toolRegistry) {
+    toolRegistry.tools.keys.map(removeToolCall);
+  }
+
+  void dispose() {
+    _toolHandlers.clear();
+  }
+
   Future<bool> isAvailable() async {
     final result = await _channel.invokeMethod<bool>('isAvailable');
     return jsonDecodeBool(result);

@@ -228,8 +228,9 @@ final class _FakeInferenceClient implements InferenceClient {
 
   @override
   Future<InferenceResult<InferenceResponse>> infer(
-    final InferenceRequest request,
-  ) async => InferenceResult<InferenceResponse>.fail(
+    final InferenceRequest request, {
+    ToolRegistry? toolRegistry,
+  }) async => InferenceResult<InferenceResponse>.fail(
     code: 'unsupported',
     message: 'Not implemented in fake',
   );
@@ -280,8 +281,9 @@ final class _FakeStructuredTextStreamingClient
 
   @override
   Future<InferenceResult<InferenceResponse>> infer(
-    final InferenceRequest request,
-  ) async => InferenceResult<InferenceResponse>.ok(
+    final InferenceRequest request, {
+    ToolRegistry? toolRegistry,
+  }) async => InferenceResult<InferenceResponse>.ok(
     const InferenceResponse(output: <String, dynamic>{'ok': true}),
   );
 

@@ -1,3 +1,4 @@
+import 'agent/tool_call_parser.dart';
 import 'inference_result.dart';
 import 'models/inference_models.dart';
 
@@ -17,5 +18,8 @@ abstract interface class InferenceClient {
   /// Clears provider availability caches (if any).
   void resetAvailabilityCache();
 
-  Future<InferenceResult<InferenceResponse>> infer(InferenceRequest request);
+  Future<InferenceResult<InferenceResponse>> infer(
+    InferenceRequest request, {
+    ToolRegistry? toolRegistry,
+  });
 }

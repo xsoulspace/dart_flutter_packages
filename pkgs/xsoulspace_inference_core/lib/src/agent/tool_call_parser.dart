@@ -1,6 +1,8 @@
 // tool_agent.dart
 import 'dart:convert';
 
+import 'structured_output/foundation_schema.dart';
+
 // ─────────────────────────────────────────────
 // 1. Tag model + parser
 // ─────────────────────────────────────────────
@@ -70,19 +72,37 @@ class ToolTagParser {
 // ─────────────────────────────────────────────
 // 2. Tool definition + registry
 // ─────────────────────────────────────────────
+// ignore: avoid_annotating_with_dynamic
+typedef ToolCallCallback = Future<dynamic> Function(dynamic args);
 
 class ToolDef {
   const ToolDef({
     required this.name,
     required this.description,
-    required this.schema,
+    required this.parameters,
     required this.execute,
   });
+  factory ToolDef.structured({
+    required String name,
+    required String description,
+    required SchemaBundle parameters,
+    required ToolCallCallback execute,
+  }) => ToolDef(
+    description: description,
+    execute: execute,
+    name: name,
+    parameters: parameters.toJson(),
+  );
   final String name;
   final String description;
-  final Map<String, dynamic> schema; // keep it simple JSON-schema-like
-  final Future<Map<String, dynamic>> Function(Map<String, dynamic> args)
-  execute;
+  final Map<String, dynamic> parameters; // keep it simple JSON-schema-like
+  final ToolCallCallback execute;
+
+  Map<String, dynamic> toJson() => {
+    'name': name,
+    'description': description,
+    'parameters': parameters,
+  };
 }
 
 class ToolRegistry {
@@ -92,9 +112,9 @@ class ToolRegistry {
 
   ToolDef? get(String name) => _tools[name];
 
-  Map<String, dynamic>? getSchema(String name) => _tools[name]?.schema;
+  Map<String, dynamic>? getSchema(String name) => _tools[name]?.parameters;
 
-  Future<Map<String, dynamic>> execute(String name, Map<String, dynamic> args) {
+  Future<dynamic> execute(String name, Map<String, dynamic> args) {
     final tool = _tools[name];
     if (tool == null) {
       return Future.value({'error': 'Unknown tool: $name'});
@@ -102,8 +122,13 @@ class ToolRegistry {
     return tool.execute(args);
   }
 
+  Map<String, ToolDef> get tools => _tools;
+
+  List<Map<String, dynamic>> getToolsJsons() =>
+      _tools.values.map((e) => e.toJson()).toList();
+
   /// Compact list for the system prompt (progressive disclosure)
-  String compactToolList() {
+  String getToolsAsString() {
     if (_tools.isEmpty) return 'No tools available.';
     return _tools.values.map((t) => '- ${t.name}: ${t.description}').join('\n');
   }
@@ -156,5 +181,5 @@ CRITICAL RULES
 - Do not keep calling tools once you have enough information.
 
 AVAILABLE TOOLS
-${registry.compactToolList()}
+${registry.getToolsAsString()}
 ''';

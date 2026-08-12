@@ -3,12 +3,16 @@ import Foundation
 
 /// macOS plugin for Apple Foundation Models.
 public class XsoulspaceInferenceAppleFoundationPlugin: NSObject, FlutterPlugin {
+    private var channel: FlutterMethodChannel!
+    private var toolInvoker: FlutterToolInvoker!
     public static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(
             name: "xsoulspace_inference_apple_foundation",
             binaryMessenger: registrar.messenger
         )
         let instance = XsoulspaceInferenceAppleFoundationPlugin()
+        instance.channel = channel
+        instance.toolInvoker = FlutterToolInvoker(channel: channel)
         registrar.addMethodCallDelegate(instance, channel: channel)
     }
 
@@ -16,6 +20,7 @@ public class XsoulspaceInferenceAppleFoundationPlugin: NSObject, FlutterPlugin {
         _ call: FlutterMethodCall,
         result: @escaping FlutterResult
     ) {
+
         switch call.method {
         case "isAvailable":
             result(AppleFoundationBridge.isAvailable())
@@ -36,6 +41,8 @@ public class XsoulspaceInferenceAppleFoundationPlugin: NSObject, FlutterPlugin {
             let schemaJson = args["schema"] as? [String: Any] ?? [:]
             let dartRoot = schemaJson["dartRoot"] as? String
             let dartDependencies = schemaJson["dartDependencies"] as? String
+            let toolsJSON = args["tools"] as? [[String: Any]] ?? []
+
             do {
                 let generationSchema = try materializeFromDartJSON(
                     schemaJson
@@ -45,6 +52,8 @@ public class XsoulspaceInferenceAppleFoundationPlugin: NSObject, FlutterPlugin {
                     transcript: args["transcript"] as? String,
                     instructions: args["instructions"] as? String,
                     generationSchema: generationSchema,
+                    toolsJSON: toolsJSON,
+                    toolInvoker: toolInvoker,
                 ) { output, errorCode, message in
                     if let errorCode {
                         result(
@@ -72,4 +81,5 @@ public class XsoulspaceInferenceAppleFoundationPlugin: NSObject, FlutterPlugin {
             result(FlutterMethodNotImplemented)
         }
     }
+
 }

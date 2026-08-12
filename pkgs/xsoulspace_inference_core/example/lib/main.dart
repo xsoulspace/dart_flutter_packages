@@ -95,21 +95,56 @@ class ScenarioV2KeepPrimitiveMemory extends Scenario {
     required AgentConfig config,
   }) async {
     super.init(text: text, config: config);
+    final response = await ai.sendTextMessage(message: text, config: config);
+    log(response.text);
+    agent = response.agent;
+    return response.text;
+  }
+
+  Future<String> reply(String text) async {
+    final response = await ai.proceedTextForAgent(message: text, agent: agent);
+    log(response);
+    return response;
+  }
+}
+
+class ScenarioV3FunctionCallAndSchema extends Scenario {
+  late Agent agent;
+  @override
+  Future<String> init({
+    required String text,
+    required AgentConfig config,
+  }) async {
+    super.init(text: text, config: config);
     final response = await ai.sendTextMessage(
       message: text,
       config: config,
+      outputSchema: SchemaBundle(
+        root: FM.object(
+          'weather',
+          properties: () => [FM.prop('condition', FM.string())],
+        ),
+      ),
       toolRegsitry: ToolRegistry()
         ..register(
-          ToolDef(
+          ToolDef.structured(
             name: 'getWeatherForHour',
             description: 'Returns weather for a specific hour of today',
-            schema: {
-              'type': 'object',
-              'properties': {
-                'hour': {'type': 'integer', 'minimum': 0, 'maximum': 23},
-              },
-              'required': ['hour'],
-            },
+            parameters: SchemaBundle(
+              root: FM.object(
+                'time',
+                properties: () => [
+                  FM.prop('hour', FM.double(guides: [RangeGuide(0, 23)])),
+                ],
+              ),
+            ),
+            // {
+            //   'type': 'object',
+            //   'properties': {
+            //     'hour': {'type': 'integer', 'minimum': 0, 'maximum': 23},
+            //   },
+            //   'required': ['hour'],
+            // },
             execute: (args) async {
               final hour = args['hour'] as int;
               final temp = switch (hour) {
@@ -129,14 +164,6 @@ class ScenarioV2KeepPrimitiveMemory extends Scenario {
     return response.text;
   }
 
-  Future<String> reply(String text) async {
-    final response = await ai.proceedTextForAgent(message: text, agent: agent);
-    log(response);
-    return response;
-  }
-}
-
-class ScenarioV3FunctionCallAndSchema extends Scenario {
   SchemaBundle get _schema {
     final npcSchema = FM.object(
       'Npc',
