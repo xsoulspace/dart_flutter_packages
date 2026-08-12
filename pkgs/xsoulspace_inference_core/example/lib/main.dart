@@ -128,6 +128,7 @@ class ScenarioV2KeepPrimitiveMemory extends Scenario {
   }
 }
 
+/// Schema and function call for weather
 class ScenarioV3FunctionCallAndSchema extends Scenario {
   late Agent agent;
   @override
@@ -235,105 +236,112 @@ class ScenarioV3FunctionCallAndSchema extends Scenario {
   }
 }
 
+typedef ScenarioRecord = ({String title, Scenario scenario});
+
 class _MyHomePageState extends State<MyHomePage> {
-  final scenarioV1 = ScenarioV1SendMessageGetAnswer();
-  final scenarioV2 = ScenarioV2KeepPrimitiveMemory();
-  final scenarioV3 = ScenarioV3FunctionCallAndSchema();
-  final messages = ImmutableOrderedList<String>();
+  final _scenarioV1 = ScenarioV1SendMessageGetAnswer();
+  final _scenarioV2 = ScenarioV2KeepPrimitiveMemory();
+  final _scenarioV3 = ScenarioV3FunctionCallAndSchema();
+  final _messages = ImmutableOrderedList<String>();
 
-  AgentConfig agentConfig = AgentConfig.empty;
-  final TextEditingController controller = TextEditingController();
+  AgentConfig _agentConfig = AgentConfig.empty;
+  final TextEditingController _controller = TextEditingController();
 
-  String get txt => controller.text;
+  String get _txt => _controller.text;
 
-  bool isRunning = false;
-  int scenarioIndex = 0;
+  bool _isRunning = false;
+  int _scenarioIndex = 0;
 
-  List<Scenario> get scenarios => [scenarioV1, scenarioV2, scenarioV3];
+  List<ScenarioRecord> get _scenarios => [
+    (scenario: _scenarioV1, title: 'one-text'),
+    (scenario: _scenarioV2, title: 'h -> llm -> h -> llm'),
+    (scenario: _scenarioV3, title: 'scheme + tool call'),
+  ];
 
-  T getScenarioByIndex<T extends Scenario>() => scenarios[scenarioIndex] as T;
-  void switchToScenario(int? index) {
+  T _getScenarioByIndex<T extends Scenario>() =>
+      _scenarios[_scenarioIndex].scenario as T;
+  void _switchToScenario(int? index) {
     final i = index;
-    if (i == null || scenarioIndex == i) return;
+    if (i == null || _scenarioIndex == i) return;
     _cleanup();
-    setState(() => scenarioIndex = i);
+    setState(() => _scenarioIndex = i);
   }
 
   void _cleanup() {
-    messages.clear();
-    agentConfig = AgentConfig.empty;
-    for (var scenario in scenarios) {
-      scenario.dispose();
+    _messages.clear();
+    _agentConfig = AgentConfig.empty;
+    for (var scenario in _scenarios) {
+      scenario.scenario.dispose();
     }
   }
 
-  void setLoading() => setState(() {
-    isRunning = true;
+  void _setLoading() => setState(() {
+    _isRunning = true;
   });
 
-  Future<void> initScenario({bool cleanup = false}) async {
+  Future<void> _initScenario({bool cleanup = false}) async {
     if (cleanup) _cleanup();
-    final scenario = getScenarioByIndex();
-    setLoading();
-    final r = await scenario.init(text: txt, config: agentConfig);
+    final scenario = _getScenarioByIndex();
+    _setLoading();
+    final r = await scenario.init(text: _txt, config: _agentConfig);
     setState(() {
-      messages
-        ..add(txt)
+      _messages
+        ..add(_txt)
         ..add(r);
-      controller.clear();
-      isRunning = false;
+      _controller.clear();
+      _isRunning = false;
     });
   }
 
-  Future<void> scenario3Reply() async {
-    setLoading();
+  Future<void> _scenario3Reply() async {
+    _setLoading();
 
-    final r = await scenarioV3.reply(txt);
+    final r = await _scenarioV3.reply(_txt);
     setState(() {
-      messages
-        ..add(txt)
+      _messages
+        ..add(_txt)
         ..add(r);
-      controller.clear();
-      isRunning = false;
+      _controller.clear();
+      _isRunning = false;
     });
   }
 
-  Future<void> scenario2Reply() async {
-    setLoading();
+  Future<void> _scenario2Reply() async {
+    _setLoading();
 
-    final r = await scenarioV2.reply(txt);
+    final r = await _scenarioV2.reply(_txt);
     setState(() {
-      messages
-        ..add(txt)
+      _messages
+        ..add(_txt)
         ..add(r);
-      controller.clear();
-      isRunning = false;
+      _controller.clear();
+      _isRunning = false;
     });
   }
 
-  void onReply() {
-    final scenario = getScenarioByIndex();
+  void _onReply() {
+    final scenario = _getScenarioByIndex();
     switch (scenario) {
       case final ScenarioV1SendMessageGetAnswer _:
-        initScenario(cleanup: true);
+        _initScenario(cleanup: true);
 
       case final ScenarioV2KeepPrimitiveMemory i:
         if (i.isInitialized) {
-          scenario2Reply();
+          _scenario2Reply();
         } else {
           _cleanup();
           const systemPrompt = 'trustworthy agent';
-          agentConfig = AgentConfig(systemPrompt: systemPrompt);
-          initScenario();
+          _agentConfig = AgentConfig(systemPrompt: systemPrompt);
+          _initScenario();
         }
       case final ScenarioV3FunctionCallAndSchema i:
         if (i.isInitialized) {
-          scenario3Reply();
+          _scenario3Reply();
         } else {
           _cleanup();
           const systemPrompt = 'trustworthy agent';
-          agentConfig = AgentConfig(systemPrompt: systemPrompt);
-          initScenario();
+          _agentConfig = AgentConfig(systemPrompt: systemPrompt);
+          _initScenario();
         }
     }
   }
@@ -341,7 +349,7 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void dispose() {
     _cleanup();
-    controller.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
@@ -360,40 +368,50 @@ class _MyHomePageState extends State<MyHomePage> {
                 child: ListView.builder(
                   shrinkWrap: true,
                   itemBuilder: (context, index) {
-                    return Text(messages[index]);
+                    return Text(_messages[index]);
                   },
-                  itemCount: messages.length,
+                  itemCount: _messages.length,
                 ),
               ),
             ),
-            ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: 600),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('Scenario: '),
-                  Flexible(
-                    child: RadioGroup<int>(
-                      onChanged: switchToScenario,
-                      groupValue: scenarioIndex,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: scenarios.indexed
-                            .map(
-                              (i) => ConstrainedBox(
-                                constraints: BoxConstraints(maxWidth: 100),
-                                child: RadioListTile<int>.adaptive(
-                                  value: i.$1,
-                                  title: Text('${i.$1 + 1}'),
-                                ),
-                              ),
-                            )
-                            .toList(),
-                      ),
+            Column(
+              crossAxisAlignment: .start,
+              mainAxisSize: .min,
+              children: [
+                Text('scenarios'),
+                Container(
+                  constraints: BoxConstraints(maxWidth: 600, maxHeight: 300),
+                  child: GridView.builder(
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 5,
+                      childAspectRatio: 300 / 180,
                     ),
+                    shrinkWrap: true,
+                    itemCount: _scenarios.length,
+                    itemBuilder: (context, index) {
+                      final scenario = _scenarios[index];
+                      final filled = _scenarioIndex == index;
+                      Widget child = Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Row(
+                          crossAxisAlignment: .start,
+                          mainAxisSize: .min,
+                          children: [Flexible(child: Text(scenario.title))],
+                        ),
+                      );
+                      if (filled) {
+                        child = Card.filled(child: child);
+                      } else {
+                        child = Card.outlined(child: child);
+                      }
+                      return GestureDetector(
+                        onTap: () => _switchToScenario(index),
+                        child: child,
+                      );
+                    },
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
             ConstrainedBox(
               constraints: BoxConstraints(maxWidth: 450, maxHeight: 150),
@@ -403,7 +421,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     child: Stack(
                       children: [
                         TextFormField(
-                          controller: controller,
+                          controller: _controller,
                           maxLines: null,
                           textAlignVertical: TextAlignVertical.top,
                           decoration: InputDecoration(
@@ -426,20 +444,20 @@ class _MyHomePageState extends State<MyHomePage> {
                             suffix: SizedBox(width: 24),
                           ),
                           onFieldSubmitted: (value) {
-                            onReply();
+                            _onReply();
                           },
                         ),
                         Positioned(
                           right: 6,
                           bottom: 4,
                           child: ValueListenableBuilder(
-                            valueListenable: controller,
+                            valueListenable: _controller,
                             builder: (context, value, child) {
                               return IconButton.outlined(
                                 icon: Icon(Icons.arrow_upward_rounded),
-                                onPressed: controller.text.isEmpty
+                                onPressed: _controller.text.isEmpty
                                     ? null
-                                    : onReply,
+                                    : _onReply,
                               );
                             },
                           ),
@@ -459,7 +477,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       child: AnimatedSwitcher(
                         duration: .new(milliseconds: 250),
 
-                        child: isRunning
+                        child: _isRunning
                             ? CircularProgressIndicator.adaptive()
                             : SizedBox(),
                       ),
