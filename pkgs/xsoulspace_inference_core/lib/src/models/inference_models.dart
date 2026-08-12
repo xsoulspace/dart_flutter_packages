@@ -4,7 +4,6 @@ import 'package:from_json_to_json/from_json_to_json.dart';
 import 'package:recase/recase.dart';
 
 import '../agent/structured_output/structured_output.dart';
-import 'prompt_builder.dart';
 
 /// The idea is that inference task should be as atomic as possible
 /// so if structural output is needed it should be pointed as such
@@ -12,11 +11,10 @@ import 'prompt_builder.dart';
 enum InferenceTask {
   text,
 
-  /// text will depend from [PromptBuilder.structuredOutputSystemPrompt],
-  /// even if parameters doesnt set to return structured output.
-  ///
-  // TODO(arenukvern): rework as fallback strategy
+  /// fallback for [nativelyStructuredText]
   implicitlyStructuredText,
+
+  /// should be primary target for all platforms
   nativelyStructuredText,
   speechToText,
   textToSpeech;

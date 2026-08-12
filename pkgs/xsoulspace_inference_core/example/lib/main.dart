@@ -1,6 +1,9 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
+import 'package:from_json_to_json/from_json_to_json.dart';
 import 'package:xsoulspace_inference_apple_foundation/xsoulspace_inference_apple_foundation.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'package:xsoulspace_state_utils/xsoulspace_state_utils.dart';
@@ -52,6 +55,15 @@ sealed class Scenario {
     ),
   );
 
+  Future<T> doTry<T>(Future<T> Function() callback, T fallback) async {
+    try {
+      return await callback();
+    } catch (e, st) {
+      log('e', error: e, stackTrace: st);
+      return fallback;
+    }
+  }
+
   @mustCallSuper
   Future<String> init({
     required String text,
@@ -74,14 +86,15 @@ class ScenarioV1SendMessageGetAnswer extends Scenario {
     required AgentConfig config,
   }) async {
     super.init(text: text, config: config);
-    final response = await ai.sendTextMessage(
-      message: text,
-      config: config,
-      disposeAfterCompletion: true,
-      outputSchema: SchemaBundle.string,
-    );
-    log(response.text);
-    return response.text;
+    return doTry(() async {
+      final response = await ai.sendTextMessage(
+        message: text,
+        config: config,
+        disposeAfterCompletion: true,
+      );
+      log(response.text);
+      return response.text;
+    }, '');
   }
 }
 
@@ -95,16 +108,23 @@ class ScenarioV2KeepPrimitiveMemory extends Scenario {
     required AgentConfig config,
   }) async {
     super.init(text: text, config: config);
-    final response = await ai.sendTextMessage(message: text, config: config);
-    log(response.text);
-    agent = response.agent;
-    return response.text;
+    return doTry(() async {
+      final response = await ai.sendTextMessage(message: text, config: config);
+      log(response.text);
+      agent = response.agent;
+      return response.text;
+    }, "");
   }
 
   Future<String> reply(String text) async {
-    final response = await ai.proceedTextForAgent(message: text, agent: agent);
-    log(response);
-    return response;
+    return doTry(() async {
+      final response = await ai.proceedTextForAgent(
+        message: text,
+        agent: agent,
+      );
+      log(response);
+      return response;
+    }, '');
   }
 }
 
@@ -146,15 +166,20 @@ class ScenarioV3FunctionCallAndSchema extends Scenario {
             //   'required': ['hour'],
             // },
             execute: (args) async {
-              final hour = args['hour'] as int;
+              final params = jsonDecodeMapAs(args);
+              final hour = jsonDecodeInt(params['hour']);
               final temp = switch (hour) {
                 < 4 => 16,
                 >= 4 && < 12 => 20,
                 >= 12 && < 21 => 20,
                 _ => 16,
               };
-              // your real implementation
-              return {'hour': hour, 'temp': temp, 'condition': 'cloudy'};
+              // add real implementation
+              return jsonEncode({
+                'hour': hour,
+                'temp': temp,
+                'condition': 'cloudy',
+              });
             },
           ),
         ),
@@ -198,7 +223,15 @@ class ScenarioV3FunctionCallAndSchema extends Scenario {
   }
 
   Future<String> reply(String txt) async {
-    throw UnimplementedError();
+    return doTry(() async {
+      final response = await ai.proceedTextForAgent(
+        message: txt,
+        agent: agent,
+        outputSchema: _schema,
+      );
+      log(response);
+      return response;
+    }, "");
   }
 }
 
@@ -206,102 +239,101 @@ class _MyHomePageState extends State<MyHomePage> {
   final scenarioV1 = ScenarioV1SendMessageGetAnswer();
   final scenarioV2 = ScenarioV2KeepPrimitiveMemory();
   final scenarioV3 = ScenarioV3FunctionCallAndSchema();
-  final _messages = ImmutableOrderedList<String>();
+  final messages = ImmutableOrderedList<String>();
 
-  AgentConfig _agentConfig = AgentConfig.empty;
-  final TextEditingController _controller = TextEditingController();
+  AgentConfig agentConfig = AgentConfig.empty;
+  final TextEditingController controller = TextEditingController();
 
-  String get _txt => _controller.text;
+  String get txt => controller.text;
 
-  bool _isRunning = false;
-  int _scenarioIndex = 0;
+  bool isRunning = false;
+  int scenarioIndex = 0;
 
-  List<Scenario> get _scenarios => [scenarioV1, scenarioV2, scenarioV3];
+  List<Scenario> get scenarios => [scenarioV1, scenarioV2, scenarioV3];
 
-  T _getScenarioByIndex<T extends Scenario>() =>
-      _scenarios[_scenarioIndex] as T;
-  void _switchToScenario(int? index) {
+  T getScenarioByIndex<T extends Scenario>() => scenarios[scenarioIndex] as T;
+  void switchToScenario(int? index) {
     final i = index;
-    if (i == null || _scenarioIndex == i) return;
+    if (i == null || scenarioIndex == i) return;
     _cleanup();
-    setState(() => _scenarioIndex = i);
+    setState(() => scenarioIndex = i);
   }
 
   void _cleanup() {
-    _messages.clear();
-    _agentConfig = AgentConfig.empty;
-    for (var scenario in _scenarios) {
+    messages.clear();
+    agentConfig = AgentConfig.empty;
+    for (var scenario in scenarios) {
       scenario.dispose();
     }
   }
 
-  void _setLoading() => setState(() {
-    _isRunning = true;
+  void setLoading() => setState(() {
+    isRunning = true;
   });
 
-  Future<void> _initScenario({bool cleanup = false}) async {
+  Future<void> initScenario({bool cleanup = false}) async {
     if (cleanup) _cleanup();
-    final scenario = _getScenarioByIndex();
-    _setLoading();
-    final r = await scenario.init(text: _txt, config: _agentConfig);
+    final scenario = getScenarioByIndex();
+    setLoading();
+    final r = await scenario.init(text: txt, config: agentConfig);
     setState(() {
-      _messages
-        ..add(_txt)
+      messages
+        ..add(txt)
         ..add(r);
-      _controller.clear();
-      _isRunning = false;
+      controller.clear();
+      isRunning = false;
     });
   }
 
-  Future<void> _scenario3Reply() async {
-    _setLoading();
+  Future<void> scenario3Reply() async {
+    setLoading();
 
-    final r = await scenarioV3.reply(_txt);
+    final r = await scenarioV3.reply(txt);
     setState(() {
-      _messages
-        ..add(_txt)
+      messages
+        ..add(txt)
         ..add(r);
-      _controller.clear();
-      _isRunning = false;
+      controller.clear();
+      isRunning = false;
     });
   }
 
-  Future<void> _scenario2Reply() async {
-    _setLoading();
+  Future<void> scenario2Reply() async {
+    setLoading();
 
-    final r = await scenarioV2.reply(_txt);
+    final r = await scenarioV2.reply(txt);
     setState(() {
-      _messages
-        ..add(_txt)
+      messages
+        ..add(txt)
         ..add(r);
-      _controller.clear();
-      _isRunning = false;
+      controller.clear();
+      isRunning = false;
     });
   }
 
-  void _onReply() {
-    final scenario = _getScenarioByIndex();
+  void onReply() {
+    final scenario = getScenarioByIndex();
     switch (scenario) {
       case final ScenarioV1SendMessageGetAnswer _:
-        _initScenario(cleanup: true);
+        initScenario(cleanup: true);
 
       case final ScenarioV2KeepPrimitiveMemory i:
         if (i.isInitialized) {
-          _scenario2Reply();
+          scenario2Reply();
         } else {
           _cleanup();
           const systemPrompt = 'trustworthy agent';
-          _agentConfig = AgentConfig(systemPrompt: systemPrompt);
-          _initScenario();
+          agentConfig = AgentConfig(systemPrompt: systemPrompt);
+          initScenario();
         }
       case final ScenarioV3FunctionCallAndSchema i:
         if (i.isInitialized) {
-          _scenario3Reply();
+          scenario3Reply();
         } else {
           _cleanup();
           const systemPrompt = 'trustworthy agent';
-          _agentConfig = AgentConfig(systemPrompt: systemPrompt);
-          _initScenario();
+          agentConfig = AgentConfig(systemPrompt: systemPrompt);
+          initScenario();
         }
     }
   }
@@ -309,7 +341,7 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void dispose() {
     _cleanup();
-    _controller.dispose();
+    controller.dispose();
     super.dispose();
   }
 
@@ -328,9 +360,9 @@ class _MyHomePageState extends State<MyHomePage> {
                 child: ListView.builder(
                   shrinkWrap: true,
                   itemBuilder: (context, index) {
-                    return Text(_messages[index]);
+                    return Text(messages[index]);
                   },
-                  itemCount: _messages.length,
+                  itemCount: messages.length,
                 ),
               ),
             ),
@@ -342,11 +374,11 @@ class _MyHomePageState extends State<MyHomePage> {
                   Text('Scenario: '),
                   Flexible(
                     child: RadioGroup<int>(
-                      onChanged: _switchToScenario,
-                      groupValue: _scenarioIndex,
+                      onChanged: switchToScenario,
+                      groupValue: scenarioIndex,
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
-                        children: _scenarios.indexed
+                        children: scenarios.indexed
                             .map(
                               (i) => ConstrainedBox(
                                 constraints: BoxConstraints(maxWidth: 100),
@@ -371,7 +403,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     child: Stack(
                       children: [
                         TextFormField(
-                          controller: _controller,
+                          controller: controller,
                           maxLines: null,
                           textAlignVertical: TextAlignVertical.top,
                           decoration: InputDecoration(
@@ -394,20 +426,20 @@ class _MyHomePageState extends State<MyHomePage> {
                             suffix: SizedBox(width: 24),
                           ),
                           onFieldSubmitted: (value) {
-                            _onReply();
+                            onReply();
                           },
                         ),
                         Positioned(
                           right: 6,
                           bottom: 4,
                           child: ValueListenableBuilder(
-                            valueListenable: _controller,
+                            valueListenable: controller,
                             builder: (context, value, child) {
                               return IconButton.outlined(
                                 icon: Icon(Icons.arrow_upward_rounded),
-                                onPressed: _controller.text.isEmpty
+                                onPressed: controller.text.isEmpty
                                     ? null
-                                    : _onReply,
+                                    : onReply,
                               );
                             },
                           ),
@@ -427,7 +459,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       child: AnimatedSwitcher(
                         duration: .new(milliseconds: 250),
 
-                        child: _isRunning
+                        child: isRunning
                             ? CircularProgressIndicator.adaptive()
                             : SizedBox(),
                       ),

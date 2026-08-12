@@ -39,8 +39,8 @@ public class XsoulspaceInferenceAppleFoundationPlugin: NSObject, FlutterPlugin {
             }
 
             let schemaJson = args["schema"] as? [String: Any] ?? [:]
-            let dartRoot = schemaJson["dartRoot"] as? String
-            let dartDependencies = schemaJson["dartDependencies"] as? String
+            let dartRoot = schemaJson["root"] as? String
+            let dartDependencies = schemaJson["dependencies"] as? String
             let toolsJSON = args["tools"] as? [[String: Any]] ?? []
 
             do {

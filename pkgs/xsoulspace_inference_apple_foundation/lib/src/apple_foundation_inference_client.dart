@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:developer';
+
 import 'package:flutter/services.dart';
 import 'package:xsoulspace_inference_apple_foundation/src/dynamic_scheme/foundation_api.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
@@ -21,6 +24,7 @@ class AppleFoundationInferenceClient implements InferenceClient {
 
   @override
   Set<InferenceTask> get supportedTasks => const <InferenceTask>{
+    InferenceTask.text,
     InferenceTask.implicitlyStructuredText,
     InferenceTask.nativelyStructuredText,
   };
@@ -107,14 +111,15 @@ class AppleFoundationInferenceClient implements InferenceClient {
       }
 
       if (toolRegistry != null) _api.addTools(toolRegistry);
-
+      final schema = request.outputSchema;
+      log(jsonEncode(schema));
       final rawOutput = await _api.generate(
         json: {
           'prompt':
               "${request.prompt}/nCONTEXT: ${request.contextFragmentsJson}",
           'instructions': systemPrompt.isEmpty ? null : systemPrompt,
           // 'workingDirectory': request.workingDirectory,
-          'schema': request.outputSchema,
+          if (schema.isNotEmpty) 'schema': schema,
           "tools": toolRegistry?.getToolsJsons(),
 
           /// TODO(arenukvern): temporary disabled, because it doesnt work - need a proper fix

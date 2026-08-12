@@ -73,7 +73,12 @@ InferenceResult<void> validateRequiredKeys({
 
 InferenceResult<void> validateInferenceRequest(final InferenceRequest request) {
   switch (request.task) {
-    case .text || .implicitlyStructuredText || .nativelyStructuredText:
+    case .text:
+
+      /// structural integrity is needed only if scheme exists
+      return InferenceResult<void>.ok(null);
+
+    case .implicitlyStructuredText || .nativelyStructuredText:
       if (request.prompt.trim().isEmpty) {
         return InferenceResult<void>.fail(
           code: 'request_prompt_empty',

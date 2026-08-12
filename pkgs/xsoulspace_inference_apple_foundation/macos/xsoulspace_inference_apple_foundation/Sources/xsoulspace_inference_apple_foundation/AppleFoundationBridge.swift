@@ -112,6 +112,7 @@ enum AppleFoundationBridge {
                             )
                         }
                     }()
+                    print(response.content.jsonString)
                     let content = response.content
                     let contentString = String(describing: content)
                     await MainActor.run {
@@ -164,7 +165,10 @@ enum AppleFoundationBridge {
             let description = json["description"] as! String
             let schemaJSON = json["parameters"] as! [String: Any]
 
-            let schema = try materializeFromDartJSON(schemaJSON)  // your existing helper
+            let schema = try materializeFromDartJSON(schemaJSON)
+            guard let schema = schema else {
+                throw FlutterToolError(code: "no scheme found for tool \(name)")
+            }
 
             return DartTool(
                 name: name,
@@ -255,8 +259,8 @@ final class FlutterToolInvoker: ToolInvoker {
         }
     }
 
-    struct FlutterToolError: Error {
-        public let code: String?
-    }
+}
 
+struct FlutterToolError: Error {
+    public let code: String?
 }

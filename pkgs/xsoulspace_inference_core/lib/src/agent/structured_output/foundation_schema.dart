@@ -18,19 +18,25 @@ class SchemaBundle {
     ).map(schemaFromJson).toList(),
   );
   static const empty = SchemaBundle();
-  static const string = SchemaBundle(
-    root: PrimitiveSchema(type: PrimitiveType.string),
-  );
+  static const string = empty;
 
   final Schema root;
   final List<Schema> dependencies;
 
-  Map<String, dynamic> toJson() => {
-    'root': schemaToJson(root),
-    'dependencies': dependencies.map(schemaToJson).toList(),
-  };
+  Map<String, dynamic> toJson() {
+    if (isEmpty) return {};
+    return {
+      'root': schemaToJson(root),
+      'dependencies': dependencies.map(schemaToJson).toList(),
+    };
+  }
 
-  bool get isEmpty => root == NullSchema.empty && dependencies.isEmpty;
+  bool get isEmpty {
+    if (root case NullSchema _ || PrimitiveSchema _ when dependencies.isEmpty) {
+      return true;
+    }
+    return false;
+  }
 }
 
 /// Root of every schema definition.

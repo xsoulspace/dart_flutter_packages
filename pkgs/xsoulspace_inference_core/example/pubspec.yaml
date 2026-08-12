@@ -42,6 +42,7 @@ dependencies:
     path: ../../xsoulspace_inference_apple_foundation
   xsoulspace_state_utils: ^0.6.0
   ecsly: ^0.0.1-dev.13
+  from_json_to_json: ^0.5.0
 
 dev_dependencies:
   flutter_test:

@@ -38,7 +38,11 @@ public final class PropertyDescription: Codable, Sendable {
     public let isOptional: Bool
 }
 
-func materializeFromDartJSON(_ json: [String: Any]) throws -> GenerationSchema {
+func materializeFromDartJSON(_ json: [String: Any]) throws -> GenerationSchema? {
+    if json.isEmpty {
+        return nil
+    }
+
     // 1. Convert the Dictionary into Data so Codable can work
     let data = try JSONSerialization.data(withJSONObject: json)
 

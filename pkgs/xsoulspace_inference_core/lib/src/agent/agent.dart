@@ -149,12 +149,13 @@ class ModelRuntime {
     await client.refreshAvailability();
   }
 
-  Future<InferenceResponse?> generateStructuredText({
+  Future<InferenceResponse?> generate({
     required String prompt,
     required List<Object> contextFragments,
     required String systemPrompt,
     required SchemaBundle outputSchema,
-    required ToolRegistry toolRegistry,
+    required ToolRegistry? toolRegistry,
+    required InferenceTask task,
   }) async {
     final response = await client.infer(
       InferenceRequest.structured(
@@ -162,7 +163,7 @@ class ModelRuntime {
         workingDirectory: '/tmp',
         prompt: prompt,
         systemPrompt: systemPrompt,
-        task: InferenceTask.nativelyStructuredText,
+        task: task,
         contextFragments: contextFragments,
         metadata: {},
       ),
@@ -170,8 +171,30 @@ class ModelRuntime {
       toolRegistry: toolRegistry,
     );
     final data = response.data;
-    log('Output is ${data?.output}');
+    log('rawOutput is ${data?.rawOutput}');
     return data;
+  }
+
+  Future<Map<String, dynamic>> generateStructuredText({
+    required String prompt,
+    required List<Object> contextFragments,
+    required String systemPrompt,
+    required SchemaBundle outputSchema,
+    required ToolRegistry toolRegistry,
+  }) async {
+    final data = await generate(
+      outputSchema: outputSchema,
+      toolRegistry: toolRegistry,
+      prompt: prompt,
+      systemPrompt: systemPrompt,
+      task: InferenceTask.nativelyStructuredText,
+      contextFragments: contextFragments,
+    );
+    final output = data?.output;
+    if (output == null || output.isEmpty) {
+      log('output is empty: $output');
+    }
+    return output ?? {};
   }
 }
 
@@ -324,81 +347,85 @@ class Agent with Equatable {
       final memories = runtimeMemories.getAll();
       log(jsonEncode(memories));
 
-      final json = await modelRuntime.generateStructuredText(
-        prompt: userStr, // or whatever your API expects
+      final response = await modelRuntime.generate(
+        prompt: userStr,
         systemPrompt: config.systemPrompt,
         contextFragments: memories,
         outputSchema: outputSchema,
         toolRegistry: toolRegistry,
+        task: outputSchema.isEmpty
+            ? InferenceTask.text
+            : InferenceTask.nativelyStructuredText,
       );
-      final output = json?.output;
-      final rawOutput = json?.rawOutput;
-      if (json == null || output == null || rawOutput == null) {
-        log('response is empty');
+
+      final json = response?.output ?? {};
+      if (json.isEmpty) {
         throw StateError('response is empty');
       }
 
-      runtimeMemories.addModelResponse(output);
+      runtimeMemories.addModelResponse(json);
       state.step++;
+      return responseFromJson(response?.rawOutput ?? '');
 
-      final tags = ToolTagParser.parse(rawOutput);
-      final definitions = tags
-          .where((t) => t.type == ToolTagType.getDefinition)
-          .toList();
-      final calls = tags.where((t) => t.type == ToolTagType.call).toList();
+      // *non native tool call section
+      // final tags = ToolTagParser.parse(rawOutput);
+      // final definitions = tags
+      //     .where((t) => t.type == ToolTagType.getDefinition)
+      //     .toList();
+      // final calls = tags.where((t) => t.type == ToolTagType.call).toList();
 
       // Clean final answer
-      if (definitions.isEmpty && calls.isEmpty) {
-        return responseFromJson(rawOutput);
-      }
+      // if (definitions.isEmpty && calls.isEmpty) {
+      //   return responseFromJson(rawOutput);
+      // }
 
       // 1. Progressive schema disclosure
-      for (final def in definitions) {
-        if (state.knownSchemas.contains(def.toolName)) continue;
+      // for (final def in definitions) {
+      //   if (state.knownSchemas.contains(def.toolName)) continue;
 
-        final schema = toolRegistry.getSchema(def.toolName);
-        if (schema == null) {
-          runtimeMemories.addToolMessage(
-            '<result|${def.toolName}|{"error":"Unknown tool"}>',
-          );
-          continue;
-        }
+      //   final schema = toolRegistry.getSchema(def.toolName);
+      //   if (schema == null) {
+      //     runtimeMemories.addToolMessage(
+      //       '<result|${def.toolName}|{"error":"Unknown tool"}>',
+      //     );
+      //     continue;
+      //   }
 
-        final resultTag = '<result|${def.toolName}|${jsonEncode(schema)}>';
-        runtimeMemories.addToolMessage(resultTag);
-        state.knownSchemas.add(def.toolName);
-      }
+      //   final resultTag = '<result|${def.toolName}|${jsonEncode(schema)}>';
+      //   runtimeMemories.addToolMessage(resultTag);
+      //   state.knownSchemas.add(def.toolName);
+      // }
 
       // 2. Execute calls (supports multiple + same tool with different args)
-      for (final call in calls) {
-        final args = call.payload ?? <String, dynamic>{};
-        final signature = '${call.toolName}:${jsonEncode(args)}';
+      // for (final call in calls) {
+      //   final args = call.payload ?? <String, dynamic>{};
+      //   final signature = '${call.toolName}:${jsonEncode(args)}';
 
-        // Allow legitimate re-use, but stop pure spinning
-        final previous = state.history
-            .where((h) => h.signature == signature)
-            .length;
-        if (previous >= 2) {
-          runtimeMemories.addModelResponse(
-            'You already called ${call.toolName} with these exact arguments twice. '
-            'Use the previous result or answer the user.',
-          );
-          continue;
-        }
+      //   // Allow legitimate re-use, but stop pure spinning
+      //   final previous = state.history
+      //       .where((h) => h.signature == signature)
+      //       .length;
+      //   if (previous >= 2) {
+      //     runtimeMemories.addModelResponse(
+      //       'You already called ${call.toolName} with these exact arguments twice. '
+      //       'Use the previous result or answer the user.',
+      //     );
+      //     continue;
+      //   }
 
-        final result = await toolRegistry.execute(call.toolName, args);
-        final resultTag = '<result|${call.toolName}|${jsonEncode(result)}>';
-        runtimeMemories.addToolMessage(resultTag);
-        state.history.add(CallRecord(signature, result));
-      }
+      //   final result = await toolRegistry.execute(call.toolName, args);
+      //   final resultTag = '<result|${call.toolName}|${jsonEncode(result)}>';
+      //   runtimeMemories.addToolMessage(resultTag);
+      //   state.history.add(CallRecord(signature, result));
+      // }
 
       // Gentle nudge after tools
-      if (calls.isNotEmpty && !state.reachedLimit) {
-        runtimeMemories.addModelResponse(
-          'Tool results are available. Continue the conversation or give the final answer. '
-          'Only call tools again if you still lack necessary information.',
-        );
-      }
+      // if (calls.isNotEmpty && !state.reachedLimit) {
+      //   runtimeMemories.addModelResponse(
+      //     'Tool results are available. Continue the conversation or give the final answer. '
+      //     'Only call tools again if you still lack necessary information.',
+      //   );
+      // }
     }
   }
 
