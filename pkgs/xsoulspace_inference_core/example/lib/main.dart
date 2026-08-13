@@ -323,14 +323,18 @@ class _MyHomePageState extends State<MyHomePage> {
     final scenario = _getScenarioByIndex();
     switch (scenario) {
       case final ScenarioV1SendMessageGetAnswer _:
-        _initScenario(cleanup: true);
+        _cleanup();
+        const systemPrompt =
+            'You are an ASCII art generator for video game tiles. Output: tile with size 5 width by 5 height characters using only standard ASCII text. Wrap the final output in a single markdown code block. Do not include any intro, outro, explanations, or conversational filler. Draw the requested object by user.';
+        _agentConfig = AgentConfig(systemPrompt: systemPrompt);
+        _initScenario();
 
       case final ScenarioV2KeepPrimitiveMemory i:
         if (i.isInitialized) {
           _scenario2Reply();
         } else {
           _cleanup();
-          const systemPrompt = 'trustworthy agent';
+          const systemPrompt = '';
           _agentConfig = AgentConfig(systemPrompt: systemPrompt);
           _initScenario();
         }
@@ -339,7 +343,7 @@ class _MyHomePageState extends State<MyHomePage> {
           _scenario3Reply();
         } else {
           _cleanup();
-          const systemPrompt = 'trustworthy agent';
+          const systemPrompt = '';
           _agentConfig = AgentConfig(systemPrompt: systemPrompt);
           _initScenario();
         }

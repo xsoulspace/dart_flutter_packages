@@ -330,11 +330,10 @@ class Agent with Equatable {
       config.model,
     );
     final userStr = contentToJson(content);
-    runtimeMemories.addUserInput(userStr);
 
     final state = ToolRuntimeState();
     // final systemPrompt = buildSystemPrompt(config.systemPrompt);
-
+    bool isUserMessageAdded = false;
     while (true) {
       // Force termination path
       if (state.reachedLimit) {
@@ -362,7 +361,11 @@ class Agent with Equatable {
       if (json.isEmpty) {
         throw StateError('response is empty');
       }
-
+      if (!isUserMessageAdded) {
+        isUserMessageAdded = true;
+        runtimeMemories.addUserInput(userStr);
+        log('user message added');
+      }
       runtimeMemories.addModelResponse(json);
       state.step++;
       return responseFromJson(response?.rawOutput ?? '');
