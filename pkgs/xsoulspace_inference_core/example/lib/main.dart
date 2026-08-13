@@ -59,7 +59,7 @@ sealed class Scenario {
     try {
       return await callback();
     } catch (e, st) {
-      log('scenary | doTry', error: e, stackTrace: st);
+      log('scenario | try failure', error: e, stackTrace: st);
       return fallback;
     }
   }
@@ -255,7 +255,7 @@ class _MyHomePageState extends State<MyHomePage> {
   List<ScenarioRecord> get _scenarios => [
     (scenario: _scenarioV1, title: 'one-text'),
     (scenario: _scenarioV2, title: 'h -> llm -> h -> llm'),
-    (scenario: _scenarioV3, title: 'scheme + tool call'),
+    (scenario: _scenarioV3, title: 'scheme + tool call: Weather / Character'),
   ];
 
   T _getScenarioByIndex<T extends Scenario>() =>
