@@ -159,27 +159,20 @@ class ScenarioV3FunctionCallAndSchema extends Scenario {
                 ],
               ),
             ),
-            // {
-            //   'type': 'object',
-            //   'properties': {
-            //     'hour': {'type': 'integer', 'minimum': 0, 'maximum': 23},
-            //   },
-            //   'required': ['hour'],
-            // },
             execute: (args) async {
               final params = jsonDecodeMapAs(args);
               final hour = jsonDecodeInt(params['hour']);
-              final temp = switch (hour) {
-                < 4 => 16,
-                >= 4 && < 12 => 20,
-                >= 12 && < 21 => 20,
-                _ => 16,
+              final (temp, condition) = switch (hour) {
+                < 4 => (16, 'rain'),
+                >= 4 && < 12 => (20, 'sunny'),
+                >= 12 && < 21 => (20, 'cloudy'),
+                _ => (16, "sunny"),
               };
               // add real implementation
               return jsonEncode({
                 'hour': hour,
                 'temp': temp,
-                'condition': 'cloudy',
+                'condition': condition,
               });
             },
           ),
@@ -202,7 +195,7 @@ class ScenarioV3FunctionCallAndSchema extends Scenario {
       ],
     );
 
-    final attributeSchema = FM.enum_('Attribute', ['sassy', 'tired', 'hungry']);
+    final attributeSchema = FM.enum_('Attribute', ['bold', 'tired', 'hungry']);
 
     final encounterSchema = FM.anyOf('Encounter', [
       FM.object(
@@ -324,8 +317,8 @@ class _MyHomePageState extends State<MyHomePage> {
     switch (scenario) {
       case final ScenarioV1SendMessageGetAnswer _:
         _cleanup();
-        const systemPrompt =
-            'You are an ASCII art generator for video game tiles. Output: tile with size 5 width by 5 height characters using only standard ASCII text. Wrap the final output in a single markdown code block. Do not include any intro, outro, explanations, or conversational filler. Draw the requested object by user.';
+        const systemPrompt = '';
+        // 'You are an ASCII art generator for video game tiles. Output: tile with size 5 width by 5 height characters using only standard ASCII text. Wrap the final output in a single markdown code block. Do not include any intro, outro, explanations, or conversational filler. Draw the requested object by user.';
         _agentConfig = AgentConfig(systemPrompt: systemPrompt);
         _initScenario();
 
@@ -384,11 +377,11 @@ class _MyHomePageState extends State<MyHomePage> {
               children: [
                 Text('scenarios'),
                 Container(
-                  constraints: BoxConstraints(maxWidth: 600, maxHeight: 300),
+                  constraints: BoxConstraints(maxWidth: 800, maxHeight: 300),
                   child: GridView.builder(
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 5,
-                      childAspectRatio: 300 / 180,
+                      crossAxisCount: 4,
+                      childAspectRatio: 300 / 200,
                     ),
                     shrinkWrap: true,
                     itemCount: _scenarios.length,
