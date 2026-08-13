@@ -100,23 +100,26 @@ enum AppleFoundationBridge {
                             instructions: instructions,
                         )
                     }
-                    let response = try await {
+                    let str = try await {
                         if let schema = generationSchema {
-                            return try await session.respond(
+                            let response = try await session.respond(
                                 to: prompt,
                                 schema: schema
                             )
+                            let content = response.content.jsonString
+                            return String(describing: content)
+
                         } else {
-                            return try await session.respond(
+                            let response = try await session.respond(
                                 to: prompt
                             )
+                            return response.content
                         }
                     }()
-                    print(response.content.jsonString)
-                    let content = response.content
-                    let contentString = String(describing: content)
+
+                    print(str)
                     await MainActor.run {
-                        completion(contentString, nil, nil)
+                        completion(str, nil, nil)
                     }
                 } catch {
                     print("Other generation error: \(error)")

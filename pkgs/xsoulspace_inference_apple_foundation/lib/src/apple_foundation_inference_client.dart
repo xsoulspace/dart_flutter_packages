@@ -116,7 +116,7 @@ class AppleFoundationInferenceClient implements InferenceClient {
       final rawOutput = await _api.generate(
         json: {
           'prompt':
-              "${request.prompt}/nCONTEXT: ${request.contextFragmentsJson}",
+              "${request.prompt}${request.contextFragmentsJson.isEmpty ? "" : '/nCONTEXT: ${request.contextFragmentsJson}'}",
           'instructions': systemPrompt.isEmpty ? null : systemPrompt,
           // 'workingDirectory': request.workingDirectory,
           if (schema.isNotEmpty) 'schema': schema,
