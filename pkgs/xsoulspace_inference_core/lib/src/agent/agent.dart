@@ -13,6 +13,43 @@ import 'tool_call_parser.dart';
 export 'structured_output/structured_output.dart';
 export 'tool_call_parser.dart';
 
+// experiements
+//
+// AI = F(S)
+// void run() {
+//   Flow(
+//     directives: [
+//       Directive(
+//         type: .sequencial,
+//         actions: [
+//           Action(
+//             type: .tool,
+//             definition: const ToolDef(),
+//             onInvoke: (data) {
+//               // some transformation
+//               return data;
+//             },
+//           ),
+//         ],
+//       ),
+//       Directive(type: .freewill, actions: [
+//         ]
+//       ),
+//     ],
+//   );
+//   AI(
+//     tools: [],
+//     memory: M(),
+//     storage: S(),
+//     agents: [
+//       Agent(systemPrompt: '', llms: [LLM(), LLM()]),
+//       const Agent(),
+//     ],
+//     flows: [
+//     ]
+//   );
+// }
+
 /// Any ML model
 class Model {
   const Model({
@@ -331,105 +368,105 @@ class Agent with Equatable {
     );
     final userStr = contentToJson(content);
 
-    final state = ToolRuntimeState();
+    // final state = ToolRuntimeState();
     // final systemPrompt = buildSystemPrompt(config.systemPrompt);
     bool isUserMessageAdded = false;
-    while (true) {
-      // Force termination path
-      if (state.reachedLimit) {
-        runtimeMemories.addModelResponse(
-          'You have reached the maximum number of tool steps. '
-          'Answer the user now using only the information you already have. '
-          'Do not emit any more tool tags.',
-        );
-      }
-      final memories = runtimeMemories.getAll();
-      log(jsonEncode(memories));
+    // while (true) {
+    // Force termination path
+    // if (state.reachedLimit) {
+    runtimeMemories.addModelResponse(
+      'You have reached the maximum number of tool steps. '
+      'Answer the user now using only the information you already have. '
+      'Do not emit any more tool tags.',
+    );
+    // }
+    final memories = runtimeMemories.getAll();
+    log(jsonEncode(memories));
 
-      final response = await modelRuntime.generate(
-        prompt: userStr,
-        systemPrompt: config.systemPrompt,
-        contextFragments: memories,
-        outputSchema: outputSchema,
-        toolRegistry: toolRegistry,
-        task: outputSchema.isEmpty
-            ? InferenceTask.text
-            : InferenceTask.nativelyStructuredText,
-      );
+    final response = await modelRuntime.generate(
+      prompt: userStr,
+      systemPrompt: config.systemPrompt,
+      contextFragments: memories,
+      outputSchema: outputSchema,
+      toolRegistry: toolRegistry,
+      task: outputSchema.isEmpty
+          ? InferenceTask.text
+          : InferenceTask.nativelyStructuredText,
+    );
 
-      final json = response?.output ?? {};
-      if (json.isEmpty) {
-        throw StateError('response is empty');
-      }
-      if (!isUserMessageAdded) {
-        isUserMessageAdded = true;
-        runtimeMemories.addUserInput(userStr);
-        log('user message added');
-      }
-      runtimeMemories.addModelResponse(json);
-      state.step++;
-      return responseFromJson(response?.rawOutput ?? '');
-
-      // *non native tool call section
-      // final tags = ToolTagParser.parse(rawOutput);
-      // final definitions = tags
-      //     .where((t) => t.type == ToolTagType.getDefinition)
-      //     .toList();
-      // final calls = tags.where((t) => t.type == ToolTagType.call).toList();
-
-      // Clean final answer
-      // if (definitions.isEmpty && calls.isEmpty) {
-      //   return responseFromJson(rawOutput);
-      // }
-
-      // 1. Progressive schema disclosure
-      // for (final def in definitions) {
-      //   if (state.knownSchemas.contains(def.toolName)) continue;
-
-      //   final schema = toolRegistry.getSchema(def.toolName);
-      //   if (schema == null) {
-      //     runtimeMemories.addToolMessage(
-      //       '<result|${def.toolName}|{"error":"Unknown tool"}>',
-      //     );
-      //     continue;
-      //   }
-
-      //   final resultTag = '<result|${def.toolName}|${jsonEncode(schema)}>';
-      //   runtimeMemories.addToolMessage(resultTag);
-      //   state.knownSchemas.add(def.toolName);
-      // }
-
-      // 2. Execute calls (supports multiple + same tool with different args)
-      // for (final call in calls) {
-      //   final args = call.payload ?? <String, dynamic>{};
-      //   final signature = '${call.toolName}:${jsonEncode(args)}';
-
-      //   // Allow legitimate re-use, but stop pure spinning
-      //   final previous = state.history
-      //       .where((h) => h.signature == signature)
-      //       .length;
-      //   if (previous >= 2) {
-      //     runtimeMemories.addModelResponse(
-      //       'You already called ${call.toolName} with these exact arguments twice. '
-      //       'Use the previous result or answer the user.',
-      //     );
-      //     continue;
-      //   }
-
-      //   final result = await toolRegistry.execute(call.toolName, args);
-      //   final resultTag = '<result|${call.toolName}|${jsonEncode(result)}>';
-      //   runtimeMemories.addToolMessage(resultTag);
-      //   state.history.add(CallRecord(signature, result));
-      // }
-
-      // Gentle nudge after tools
-      // if (calls.isNotEmpty && !state.reachedLimit) {
-      //   runtimeMemories.addModelResponse(
-      //     'Tool results are available. Continue the conversation or give the final answer. '
-      //     'Only call tools again if you still lack necessary information.',
-      //   );
-      // }
+    final json = response?.output ?? {};
+    if (json.isEmpty) {
+      throw StateError('response is empty');
     }
+    if (!isUserMessageAdded) {
+      isUserMessageAdded = true;
+      runtimeMemories.addUserInput(userStr);
+      log('user message added');
+    }
+    runtimeMemories.addModelResponse(json);
+    // state.step++;
+    return responseFromJson(response?.rawOutput ?? '');
+
+    // *non native tool call section
+    // final tags = ToolTagParser.parse(rawOutput);
+    // final definitions = tags
+    //     .where((t) => t.type == ToolTagType.getDefinition)
+    //     .toList();
+    // final calls = tags.where((t) => t.type == ToolTagType.call).toList();
+
+    // Clean final answer
+    // if (definitions.isEmpty && calls.isEmpty) {
+    //   return responseFromJson(rawOutput);
+    // }
+
+    // 1. Progressive schema disclosure
+    // for (final def in definitions) {
+    //   if (state.knownSchemas.contains(def.toolName)) continue;
+
+    //   final schema = toolRegistry.getSchema(def.toolName);
+    //   if (schema == null) {
+    //     runtimeMemories.addToolMessage(
+    //       '<result|${def.toolName}|{"error":"Unknown tool"}>',
+    //     );
+    //     continue;
+    //   }
+
+    //   final resultTag = '<result|${def.toolName}|${jsonEncode(schema)}>';
+    //   runtimeMemories.addToolMessage(resultTag);
+    //   state.knownSchemas.add(def.toolName);
+    // }
+
+    // 2. Execute calls (supports multiple + same tool with different args)
+    // for (final call in calls) {
+    //   final args = call.payload ?? <String, dynamic>{};
+    //   final signature = '${call.toolName}:${jsonEncode(args)}';
+
+    //   // Allow legitimate re-use, but stop pure spinning
+    //   final previous = state.history
+    //       .where((h) => h.signature == signature)
+    //       .length;
+    //   if (previous >= 2) {
+    //     runtimeMemories.addModelResponse(
+    //       'You already called ${call.toolName} with these exact arguments twice. '
+    //       'Use the previous result or answer the user.',
+    //     );
+    //     continue;
+    //   }
+
+    //   final result = await toolRegistry.execute(call.toolName, args);
+    //   final resultTag = '<result|${call.toolName}|${jsonEncode(result)}>';
+    //   runtimeMemories.addToolMessage(resultTag);
+    //   state.history.add(CallRecord(signature, result));
+    // }
+
+    // Gentle nudge after tools
+    // if (calls.isNotEmpty && !state.reachedLimit) {
+    //   runtimeMemories.addModelResponse(
+    //     'Tool results are available. Continue the conversation or give the final answer. '
+    //     'Only call tools again if you still lack necessary information.',
+    //   );
+    // }
+    // }
   }
 
   Map<String, dynamic> getSchemaFor(ToolTag tool) {

@@ -75,6 +75,29 @@ class ToolTagParser {
 // ignore: avoid_annotating_with_dynamic
 typedef ToolCallCallback = Future<dynamic> Function(dynamic args);
 
+class ToolDefinition {
+  ToolDefinition({
+    this.description = '',
+    this.schemaBundle = SchemaBundle.empty,
+  });
+  final String description;
+  final SchemaBundle schemaBundle;
+
+  ToolDef toDef({required ToolName name, required ToolCallCallback execute}) =>
+      ToolDef.structured(
+        name: name,
+        description: description,
+        parameters: schemaBundle,
+        execute: execute,
+      );
+}
+
+/// part of [ToolDefinition]
+class ToolName {
+  ToolName(this.value);
+  final String value;
+}
+
 class ToolDef {
   const ToolDef({
     required this.name,
@@ -83,7 +106,7 @@ class ToolDef {
     required this.execute,
   });
   factory ToolDef.structured({
-    required String name,
+    required ToolName name,
     required String description,
     required SchemaBundle parameters,
     required ToolCallCallback execute,
@@ -93,7 +116,8 @@ class ToolDef {
     name: name,
     parameters: parameters.toJson(),
   );
-  final String name;
+
+  final ToolName name;
   final String description;
   final Map<String, dynamic> parameters; // keep it simple JSON-schema-like
   final ToolCallCallback execute;
@@ -106,15 +130,16 @@ class ToolDef {
 }
 
 class ToolRegistry {
-  final Map<String, ToolDef> _tools = {};
+  final Map<ToolName, ToolDef> _tools = {};
 
   void register(ToolDef tool) => _tools[tool.name] = tool;
 
-  ToolDef? get(String name) => _tools[name];
+  ToolDef? get(ToolName name) => _tools[name];
 
-  Map<String, dynamic>? getSchema(String name) => _tools[name]?.parameters;
+  Map<String, dynamic>? getSchema(ToolName name) => _tools[name]?.parameters;
 
-  Future<dynamic> execute(String name, Map<String, dynamic> args) {
+  // ignore: avoid_annotating_with_dynamic
+  Future<dynamic> execute(ToolName name, dynamic args) {
     final tool = _tools[name];
     if (tool == null) {
       return Future.value({'error': 'Unknown tool: $name'});
@@ -122,7 +147,7 @@ class ToolRegistry {
     return tool.execute(args);
   }
 
-  Map<String, ToolDef> get tools => _tools;
+  Map<ToolName, ToolDef> get tools => _tools;
 
   List<Map<String, dynamic>> getToolsJsons() =>
       _tools.values.map((e) => e.toJson()).toList();

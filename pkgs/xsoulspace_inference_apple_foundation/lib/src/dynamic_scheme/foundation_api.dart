@@ -26,7 +26,7 @@ class FoundationApi {
     return GenerationSchemaHandle(jsonDecodeString(result?['id']));
   }
 
-  void init() {
+  void init({ToolCallCallback? toolCallback}) {
     _addToolCallHanlders();
   }
 
@@ -53,12 +53,12 @@ class FoundationApi {
   }
 
   // Registry of Dart tool implementations
-  static final Map<String, ToolCallCallback> _toolHandlers = {};
-  void addToolCall(String toolCallName, ToolCallCallback function) {
+  static final Map<ToolName, ToolCallCallback> _toolHandlers = {};
+  void addToolCall(ToolName toolCallName, ToolCallCallback function) {
     _toolHandlers[toolCallName] = function;
   }
 
-  void removeToolCall(String toolCallName) {
+  void removeToolCall(ToolName toolCallName) {
     _toolHandlers.remove(toolCallName);
   }
 

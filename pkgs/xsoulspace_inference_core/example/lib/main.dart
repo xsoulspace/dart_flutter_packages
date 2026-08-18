@@ -149,7 +149,7 @@ class ScenarioV3FunctionCallAndSchema extends Scenario {
       toolRegsitry: ToolRegistry()
         ..register(
           ToolDef.structured(
-            name: 'getWeatherForHour',
+            name: ToolName('getWeatherForHour'),
             description: 'Returns weather for a specific hour of today',
             parameters: SchemaBundle(
               root: FM.object(
