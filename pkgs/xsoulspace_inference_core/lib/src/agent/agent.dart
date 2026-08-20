@@ -170,6 +170,7 @@ enum ContextFragmentType {
   userMessage,
   modelResponse,
   toolMessage,
+  memorySummary,
 }
 
 extension type const AgentId(String value) {

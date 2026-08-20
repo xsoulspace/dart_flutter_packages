@@ -11,40 +11,13 @@ Inference backends are unreliable by nature (timeouts, malformed JSON, partial
 responses). This package centralizes task contracts, validation, and failure
 shapes so all providers expose consistent behavior.
 
-## Included API
-
-- `InferenceTask`, `InferenceRequest`, `InferenceResponse`
-- `InferenceAudioInput`, `InferenceAudioArtifact`, `InferenceSpeechSegment`
-- `InferenceVoiceOptions`, `InferenceClient`
-- `InferenceReadinessProbe`, `InferenceReadinessSnapshot`, `InferenceReadinessIssue`
-- `InferenceResult<T>`, `InferenceError`
-- `InferenceRealtimeAudioSink`, `InferenceTranscriptController`
-- `parseStrictJsonObject`, `validateRequiredKeys`, `validateInferenceRequest`
-- `validateInferenceAudioInput`, `validateSchemaDefinition`, `validateJsonAgainstSchema`
-- `normalizeTranscript`
-
-## Reliability Contract
-
-- Structured text validation preserves current prompt/schema checks.
-- STT validation enforces audio input presence and valid source form.
-- TTS validation enforces non-empty text.
-- Schema definitions are validated before output validation starts.
-- JSON-schema validation is applied only for `InferenceTask.structuredText`.
-- Type mismatches include structured path metadata (for example `$.items[0].id`).
-- Transcript normalization strips punctuation and collapses whitespace while
-  preserving word order.
-- Readiness probes stay provider-agnostic and report standardized blocking and
-  non-blocking issues.
-- Realtime controllers can consume any injected
-  `InferenceRealtimeSession<InferenceTranscriptEvent>`.
-
 ## Agentic Harness
 
 This package also hosts a **UI-agnostic, cinematic multi-actor agent harness**
 built on ecsly. The harness is the intelligence amplifier; the model is a
 replaceable reasoning primitive. It is a living, multi-linear, game-like world
 where actors (LLM, human, or other) act, think, plan, research, use tools, and
-make decisions.
+make decisions. Everything is an entity. The graph is formed by typed reference components. Stories interlink. The LLM is reduced to exactly one role: *produce the next beat*. **Every part of the engine except "write a beat" is deterministic graph logic**.
 
 ### Core thesis
 
@@ -73,7 +46,7 @@ never blocks on a single LLM call. Idle/sleep only when no work remains.
 
 ### Where it lives
 
-- `lib/src/agent/agent.dart` — `Model`, `ModelRouter`, `ModelRuntime`, `AgentId`
+- `lib/src/agent` folder. — `Model`, `ModelRouter`, `ModelRuntime`, `AgentId`
 - `lib/src/agent/agent_plugin.dart` — `AgentPlugin` (components, resources,
   event channels, schedules), agency/projection/act/response/tool systems
 - `lib/src/agent/agency_lifecycle.dart` — `AgencyLifecycle` (grant/consume/retry rules)

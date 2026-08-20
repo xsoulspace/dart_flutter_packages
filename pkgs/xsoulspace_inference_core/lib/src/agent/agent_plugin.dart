@@ -101,10 +101,39 @@ class AwaitingResponse implements Component {
 /// An entity with both [Actor] and [OpenDecision] (and no [Agency] yet)
 /// triggers the agency-granting system. The [schema] describes the
 /// expected structured output; empty schema means free text.
+///
+/// [priority] ranks competing decisions (higher = more urgent). [escalate]
+/// requests a stronger model for this decision (Phase 3).
 class OpenDecision implements Component {
-  const OpenDecision({this.schema = SchemaBundle.empty, this.prompt = ''});
+  const OpenDecision({
+    this.schema = SchemaBundle.empty,
+    this.prompt = '',
+    this.priority = 0,
+    this.escalate = false,
+  });
   final SchemaBundle schema;
   final String prompt;
+  final int priority;
+  final bool escalate;
+}
+
+/// Tag component: this actor has requested escalation to a stronger model.
+///
+/// Written by a mechanical system when an [OpenDecision] has
+/// [OpenDecision.escalate] set (or the local model signals low confidence).
+/// The agency system routes this actor's next generation to a different
+/// (larger) model, then folds the result back into the narrative state.
+class EscalationRequest implements Component {
+  const EscalationRequest({this.reason = ''});
+  final String reason;
+}
+
+/// Agency policy: how to prioritize competing agency grants.
+class AgencyPolicy extends Resource {
+  AgencyPolicy({this.maxConcurrent = 8});
+
+  /// Maximum number of actors that may hold [Agency] in a single tick.
+  int maxConcurrent;
 }
 
 /// Tag component: this entity is a Scene (the current stage).
@@ -222,6 +251,50 @@ class ToolRegistryResource extends Resource {
   void register(String name, ToolRegistry registry) {
     registries[name] = registry;
   }
+}
+
+// ─────────────────────────────────────────────
+// Bounded memory (Phase 2)
+// ─────────────────────────────────────────────
+
+/// A memory summary: a compact, queryable record of an actor's past work.
+///
+/// Mechanical systems write these from raw beats so the actor's projected
+/// context never has to carry full history. The summary is a Prop — it can
+/// be observed, shared, and referenced by other actors.
+class MemorySummary implements Component {
+  MemorySummary(this.text);
+  String text;
+}
+
+/// The actor this memory summary belongs to.
+class SummaryOwner implements Component {
+  const SummaryOwner(this.actor);
+  final Entity actor;
+}
+
+/// The thread this summary was derived from (if any).
+class SummaryThread implements Component {
+  const SummaryThread(this.thread);
+  final Entity? thread;
+}
+
+/// A memory compaction policy: when to compact and how much to keep.
+class MemoryCompactionPolicy extends Resource {
+  MemoryCompactionPolicy({
+    this.maxRawFragments = 12,
+    this.summaryEvery = 8,
+    this.summaryLength = 200,
+  });
+
+  /// Above this many raw fragments, compaction starts.
+  int maxRawFragments;
+
+  /// Compact the oldest N raw fragments into one summary every N beats.
+  int summaryEvery;
+
+  /// Max chars for a generated summary.
+  int summaryLength;
 }
 
 /// Token estimator for projection budgeting.
@@ -551,6 +624,7 @@ class AgentPlugin extends Plugin {
       ..registerObjectComponent<Agency>()
       ..registerObjectComponent<AwaitingResponse>()
       ..registerObjectComponent<OpenDecision>()
+      ..registerObjectComponent<EscalationRequest>()
       ..registerObjectComponent<Scene>()
       ..registerObjectComponent<SceneFrame>()
       ..registerObjectComponent<PresentInScene>()
@@ -586,14 +660,20 @@ class AgentPlugin extends Plugin {
       ..registerObjectComponent<BeatToolCall>()
       ..registerObjectComponent<ToolResult>()
       ..registerObjectComponent<ThoughtContent>()
-      ..registerObjectComponent<ObservationData>();
+      ..registerObjectComponent<ObservationData>()
+      // Bounded memory (Phase 2)
+      ..registerObjectComponent<MemorySummary>()
+      ..registerObjectComponent<SummaryOwner>()
+      ..registerObjectComponent<SummaryThread>();
 
     // Resources
     world
       ..upsertResource(TaskRegistryResource())
       ..upsertResource(GenerationHandlerResource())
       ..upsertResource(ProjectionBudget())
-      ..upsertResource(ProjectionPolicy());
+      ..upsertResource(ProjectionPolicy())
+      ..upsertResource(MemoryCompactionPolicy())
+      ..upsertResource(AgencyPolicy());
 
     // Event channels for async LLM I/O
     world.events.register<ActorGenerateRequest>();
@@ -637,6 +717,7 @@ class AgentPlugin extends Plugin {
 
     world.createSchedule('Narrative')
       ..add(finalizePartialsSystem, name: 'finalizePartials')
+      ..then(compactMemorySystem, name: 'compactMemory')
       ..then(flushAllSystem, name: 'flushAfterNarrative');
   }
 
@@ -654,13 +735,38 @@ class AgentPlugin extends Plugin {
 /// and without [AwaitingResponse], add the [Agency] tag.
 /// This is the explicit agency-granting step — actors never assume
 /// agency; systems grant it.
+///
+/// Prioritization: decisions with higher [OpenDecision.priority] or an
+/// [EscalationRequest] are granted first. The number of concurrent grants
+/// is capped by [AgencyPolicy.maxConcurrent] so a crowd of actors doesn't
+/// flood the model pool.
 void grantAgencySystem(World world) {
+  final policy = world.getResource<AgencyPolicy>();
   final actorsWithDecisions = world.query2<Actor, OpenDecision>();
 
-  for (final (entity, _, _) in actorsWithDecisions) {
+  // Collect eligible actors (have a decision, no agency, no pending response).
+  final eligible = <(WorldEntity, OpenDecision)>[];
+  for (final (entity, _, decision) in actorsWithDecisions) {
     if (entity.has<Agency>()) continue;
     if (entity.has<AwaitingResponse>()) continue;
+    eligible.add((entity, decision));
+  }
+
+  // Sort by priority (desc), then escalation (escalated first).
+  eligible.sort((a, b) {
+    final byPriority = b.$2.priority.compareTo(a.$2.priority);
+    if (byPriority != 0) return byPriority;
+    final aEsc = a.$1.has<EscalationRequest>() || a.$2.escalate;
+    final bEsc = b.$1.has<EscalationRequest>() || b.$2.escalate;
+    return (bEsc ? 1 : 0).compareTo(aEsc ? 1 : 0);
+  });
+
+  // Grant up to the concurrency cap.
+  var granted = 0;
+  for (final (entity, _) in eligible) {
+    if (granted >= policy.maxConcurrent) break;
     entity.insert(const Agency());
+    granted++;
   }
 }
 
@@ -882,6 +988,14 @@ Future<void> actorActSystem(World world) async {
   for (final (entity, actor, _, model, situation) in actorsWithAgency) {
     final systemPrompt = entity.get<ActorSystemPrompt>();
 
+    // Escalation: if this actor requested a stronger model, swap the model
+    // binding for this request. The result folds back into the narrative
+    // state via the normal response path.
+    final escalate = entity.has<EscalationRequest>();
+    final effectiveModel = escalate
+        ? _resolveEscalatedModel(world, model)
+        : model;
+
     final toolRegistry = situation.toolRegistryName != null
         ? world.getResource<ToolRegistryResource>().get(
             situation.toolRegistryName!,
@@ -913,7 +1027,7 @@ Future<void> actorActSystem(World world) async {
     final request = ActorGenerateRequest(
       actorEntity: entity.entity,
       agentId: actor.agentId,
-      modelId: model.modelId,
+      modelId: effectiveModel.modelId,
       prompt: situation.prompt,
       systemPrompt: systemPrompt?.text ?? '',
       contextFragments: contextFragments,
@@ -938,6 +1052,20 @@ Future<void> actorActSystem(World world) async {
       unawaited(handler.generate(world, request));
     }
   }
+}
+
+/// Resolve the escalated model for an actor.
+///
+/// Uses the [ModelRouterResource] to find a stronger model than the actor's
+/// current binding. If none is configured, falls back to the actor's own
+/// model (escalation is best-effort).
+ActorModel _resolveEscalatedModel(World world, ActorModel current) {
+  final router = world.getResource<ModelRouterResource>().router;
+  // Prefer a model whose id is not the current one (a "bigger" binding).
+  for (final m in router.models.values) {
+    if (m.id != current.modelId) return ActorModel(modelId: m.id);
+  }
+  return current;
 }
 
 /// System 4a: Append streaming chunks to actors' [StreamingBeat]s.
@@ -1053,6 +1181,7 @@ void processResponsesSystem(World world) {
     }
     we.remove<Agency>();
     we.remove<AwaitingResponse>();
+    we.remove<EscalationRequest>();
   }
 }
 
@@ -1171,6 +1300,96 @@ void processToolResultsSystem(World world) {
       ContextFragment(type: ContextFragmentType.toolMessage, beat: toolBeat),
     );
   }
+}
+
+// ─────────────────────────────────────────────
+// Bounded memory via mechanical delegation (Phase 2)
+// ─────────────────────────────────────────────
+
+/// Mechanical system: compacts old raw memory fragments into summaries.
+///
+/// The harness, not the model, owns history. When an actor's raw fragment
+/// count exceeds [MemoryCompactionPolicy.maxRawFragments], the oldest
+/// [MemoryCompactionPolicy.summaryEvery] fragments are collapsed into a
+/// single [MemorySummary] Prop and replaced in the actor's memory by one
+/// [ContextFragment] of type [ContextFragmentType.memorySummary].
+///
+/// This keeps the projected context bounded: the model sees summaries of
+/// the past, not the raw past itself.
+void compactMemorySystem(World world) {
+  final policy = world.getResource<MemoryCompactionPolicy>();
+
+  final actors = world.query2<Actor, ActorRuntimeMemories>();
+  for (final (entity, _, memories) in actors.toList()) {
+    final fragments = memories.fragments;
+    if (fragments.length <= policy.maxRawFragments) continue;
+
+    // Take the oldest summaryEvery fragments (excluding existing summaries).
+    final raw = fragments
+        .where((f) => f.type != ContextFragmentType.memorySummary)
+        .toList();
+    if (raw.length < policy.summaryEvery) continue;
+
+    final toCompact = raw.take(policy.summaryEvery).toList();
+    final summaryText = _summarizeFragments(
+      world,
+      toCompact,
+      policy.summaryLength,
+    );
+
+    // Create a summary beat.
+    final summaryBeat = world.reserveEmptyEntity().entity;
+    final summaryEntity = world.getEntity(summaryBeat).$1;
+    summaryEntity.insert(TextContent(summaryText));
+    summaryEntity.insert(BeatStatus(BeatStatusEnum.complete));
+    summaryEntity.insert(BeatModality(BeatModalityEnum.observation));
+    summaryEntity.insert(MemorySummary(summaryText));
+    summaryEntity.insert(SummaryOwner(entity.entity));
+
+    // Replace the compacted raw fragments with a single summary fragment.
+    final compactedIds = toCompact.map((f) => f.beat).toSet();
+    memories.fragments = fragments
+        .where((f) => !compactedIds.contains(f.beat))
+        .toList();
+    memories.fragments.insert(
+      0,
+      ContextFragment(
+        type: ContextFragmentType.memorySummary,
+        beat: summaryBeat,
+      ),
+    );
+  }
+}
+
+/// Deterministic, mechanical summarization: keep the head and tail of the
+/// compacted fragments, joined with a separator. This is a lossy but bounded
+/// compression — the full beats remain queryable in the world for later
+/// reconstruction (the projection just no longer shows them raw).
+String _summarizeFragments(
+  World world,
+  List<ContextFragment> fragments,
+  int maxLength,
+) {
+  final parts = <String>[];
+  for (final f in fragments) {
+    final (entity, valid) = world.getEntity(f.beat);
+    if (!valid) continue;
+    final text = entity.get<TextContent>();
+    if (text != null && text.text.isNotEmpty) {
+      parts.add(text.text);
+    }
+  }
+  if (parts.isEmpty) return '';
+
+  final joined = parts.join(' | ');
+  if (joined.length <= maxLength) return joined;
+
+  // Keep the head and tail, drop the middle.
+  final headLen = maxLength * 2 ~/ 3;
+  final tailLen = maxLength ~/ 3;
+  final head = joined.substring(0, headLen);
+  final tail = joined.substring(joined.length - tailLen);
+  return '$head … $tail';
 }
 
 // ─────────────────────────────────────────────
