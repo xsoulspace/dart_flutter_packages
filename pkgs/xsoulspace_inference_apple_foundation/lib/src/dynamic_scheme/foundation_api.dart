@@ -5,6 +5,12 @@ import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 /// Opaque handle returned to Dart after successful materialization.
 extension type const GenerationSchemaHandle(String value) {}
 
+/// A per-request, isolated tool-handler registry.
+///
+/// Each `generate` call owns its own handlers keyed by a `requestId`. Swift
+/// threads the `requestId` back on every `onToolCall`, so concurrent requests
+/// can use the same tool name with different handlers without colliding —
+/// true per-request isolation, no ref-counting needed.
 class FoundationApi {
   FoundationApi({required this._channel});
 
@@ -33,67 +39,50 @@ class FoundationApi {
   void _addToolCallHanlders() {
     _channel.setMethodCallHandler((call) async {
       if (call.method == 'onToolCall') {
+        final requestId = call.arguments['requestId'] as String? ?? '';
         final name = call.arguments['name'] as String;
         final arguments = call.arguments['arguments'];
 
-        final entry = _toolHandlers[name];
-        if (entry == null) {
+        final handler = _resolveHandler(requestId, name);
+        if (handler == null) {
           throw PlatformException(
             code: 'unknown_tool',
-            message: 'No handler registered for $name',
+            message: 'No handler registered for $name (request $requestId)',
           );
         }
 
         // Execute the real Dart logic and return the result
-        final result = await entry.callback(arguments);
+        final result = await handler(arguments);
         return result; // this value goes back to Swift ToolInvoker
       }
       throw PlatformException(code: 'not_implemented');
     });
   }
 
-  // Registry of Dart tool implementations, reference-counted per tool name.
-  //
-  // Swift's `onToolCall` invokes Dart by tool name only. Multiple concurrent
-  // `generate` calls may add/remove the same tool; a plain map would let one
-  // request's `removeTools` wipe a handler another in-flight request still
-  // needs (a cross-request race). Ref-counting each tool name so a handler is
-  // only removed when the last owner releases it keeps the registry correct
-  // without changing the Swift protocol.
-  static final Map<ToolName, _ToolHandlerEntry> _toolHandlers = {};
+  // Request-scoped tool handlers: requestId → (tool name → callback).
+  final Map<String, Map<String, ToolCallCallback>> _requestHandlers = {};
 
-  void addToolCall(ToolName toolCallName, ToolCallCallback function) {
-    final existing = _toolHandlers[toolCallName];
-    if (existing != null) {
-      existing.refCount++;
-    } else {
-      _toolHandlers[toolCallName] = _ToolHandlerEntry(function);
+  /// Install [registry]'s handlers for [requestId]. Call before `generate`.
+  void beginRequest(String requestId, ToolRegistry registry) {
+    final scoped = _requestHandlers.putIfAbsent(requestId, () => {});
+    for (final entry in registry.tools.entries) {
+      scoped[entry.key.value] = entry.value.execute;
     }
   }
 
-  void removeToolCall(ToolName toolCallName) {
-    final entry = _toolHandlers[toolCallName];
-    if (entry == null) return;
-    entry.refCount--;
-    if (entry.refCount <= 0) {
-      _toolHandlers.remove(toolCallName);
-    }
+  /// Remove [requestId]'s handlers. Call in `finally` after `generate`.
+  void endRequest(String requestId) {
+    _requestHandlers.remove(requestId);
   }
 
-  void addTools(ToolRegistry toolRegistry) {
-    for (var MapEntry(:key, value: callback) in toolRegistry.tools.entries) {
-      addToolCall(key, callback.execute);
-    }
-  }
-
-  void removeTools(ToolRegistry toolRegistry) {
-    for (final key in toolRegistry.tools.keys) {
-      removeToolCall(key);
-    }
+  ToolCallCallback? _resolveHandler(String requestId, String name) {
+    final scoped = _requestHandlers[requestId];
+    if (scoped == null) return null;
+    return scoped[name];
   }
 
   void dispose() {
-    _toolHandlers.clear();
+    _requestHandlers.clear();
   }
 
   Future<bool> isAvailable() async {
@@ -105,14 +94,4 @@ class FoundationApi {
     final response = await _channel.invokeMethod<String>('generate', json);
     return jsonDecodeString(response);
   }
-}
-
-/// A registered tool handler plus its live ownership count.
-///
-/// Ref-counting lets overlapping `generate` calls share a tool handler safely;
-/// the handler is removed only when the last owner calls [FoundationApi.removeToolCall].
-class _ToolHandlerEntry {
-  _ToolHandlerEntry(this.callback);
-  final ToolCallCallback callback;
-  int refCount = 1;
 }

@@ -31,6 +31,7 @@ class AppleFoundationInferenceClient implements InferenceClient {
 
   static bool _cachedAvailable = false;
   static bool _availabilityChecked = false;
+  static int _seq = 0;
 
   /// Refreshes the availability cache. Idempotent.
   @override
@@ -110,12 +111,15 @@ class AppleFoundationInferenceClient implements InferenceClient {
         // noop
       }
 
-      if (toolRegistry != null) _api.addTools(toolRegistry);
+      // True per-request tool isolation: own handlers for this request only.
+      final requestId = '${DateTime.now().microsecondsSinceEpoch}-${_seq++}';
+      if (toolRegistry != null) _api.beginRequest(requestId, toolRegistry);
       try {
         final schema = request.outputSchema;
         log(jsonEncode(schema));
         final rawOutput = await _api.generate(
           json: {
+            'requestId': requestId,
             'prompt':
                 "${request.prompt}${request.contextFragmentsJson.isEmpty ? "" : '/nCONTEXT: ${request.contextFragmentsJson}'}",
             'instructions': systemPrompt.isEmpty ? null : systemPrompt,
@@ -172,9 +176,8 @@ class AppleFoundationInferenceClient implements InferenceClient {
           meta: <String, dynamic>{'provider': id},
         );
       } finally {
-        // Always release the handlers this request registered, even on error, so
-        // the per-tool ref-count stays balanced across overlapping calls.
-        if (toolRegistry != null) _api.removeTools(toolRegistry);
+        // Release this request's handlers (isolated per request).
+        if (toolRegistry != null) _api.endRequest(requestId);
       }
     } on PlatformException catch (e) {
       final code = e.code.isEmpty ? 'engine_unavailable' : e.code;

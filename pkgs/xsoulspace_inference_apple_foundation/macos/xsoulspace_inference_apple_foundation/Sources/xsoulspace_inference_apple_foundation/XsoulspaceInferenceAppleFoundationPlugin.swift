@@ -42,6 +42,7 @@ public class XsoulspaceInferenceAppleFoundationPlugin: NSObject, FlutterPlugin {
             let dartRoot = schemaJson["root"] as? String
             let dartDependencies = schemaJson["dependencies"] as? String
             let toolsJSON = args["tools"] as? [[String: Any]] ?? []
+            let requestId = args["requestId"] as? String ?? ""
 
             do {
                 let generationSchema = try materializeFromDartJSON(
@@ -53,6 +54,7 @@ public class XsoulspaceInferenceAppleFoundationPlugin: NSObject, FlutterPlugin {
                     instructions: args["instructions"] as? String,
                     generationSchema: generationSchema,
                     toolsJSON: toolsJSON,
+                    requestId: requestId,
                     toolInvoker: toolInvoker,
                 ) { output, errorCode, message in
                     if let errorCode {

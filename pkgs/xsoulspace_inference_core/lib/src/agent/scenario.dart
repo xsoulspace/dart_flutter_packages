@@ -19,6 +19,7 @@ import 'agent.dart';
 import 'components.dart';
 import 'events.dart';
 import 'harness_loop.dart';
+import 'metrics.dart';
 import 'narrative.dart';
 import 'resources.dart';
 
@@ -99,13 +100,17 @@ class ScenarioMetrics {
     required this.totalTokens,
     required this.prunedThreads,
     required this.mergedThreads,
-  });
+    MetricsReport? telemetry,
+  }) : telemetry = telemetry ?? MetricsReport(decisions: const []);
   final String name;
   final List<DecisionMetrics> decisions;
   final int totalLlmCalls;
   final int totalTokens;
   final int prunedThreads;
   final int mergedThreads;
+
+  /// Richer telemetry (tool calls/results, trends) from [MetricsCollector].
+  final MetricsReport telemetry;
 
   double get avgTokensPerDecision =>
       decisions.isEmpty ? 0 : totalTokens / decisions.length;
@@ -177,6 +182,7 @@ class ScenarioRunner {
     final decisions = <DecisionMetrics>[];
     var totalLlmCalls = 0;
     var totalTokens = 0;
+    final collector = MetricsCollector(world: world);
 
     // Drive each actor's decisions in turn (deterministic, one at a time so
     // the metrics are attributable to a single actor/decision).
@@ -186,6 +192,11 @@ class ScenarioRunner {
       for (final prompt in actor.decisions) {
         world.upsertComponent(entity, OpenDecision(prompt: prompt));
         world.flush();
+        collector.beginDecision(
+          actor: entity,
+          actorName: actor.name,
+          prompt: prompt,
+        );
 
         // One full cinematic cycle.
         world.runSchedule('AgencyGrant');
@@ -200,6 +211,7 @@ class ScenarioRunner {
         world.flush();
 
         final situation = world.getEntity(entity).$1.get<Situation>();
+        collector.endDecision(actor: entity, situation: situation);
         final metrics = DecisionMetrics(
           actor: actor.name,
           prompt: prompt,
@@ -231,6 +243,7 @@ class ScenarioRunner {
       totalTokens: totalTokens,
       prunedThreads: pruned,
       mergedThreads: merged,
+      telemetry: collector.report(),
     );
   }
 }

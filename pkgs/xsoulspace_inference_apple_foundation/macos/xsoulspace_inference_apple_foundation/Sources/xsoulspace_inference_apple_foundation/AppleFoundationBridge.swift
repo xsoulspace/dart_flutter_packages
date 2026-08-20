@@ -17,6 +17,7 @@ enum AppleFoundationBridge {
         instructions: String?,
         generationSchema: GenerationSchema?,
         toolsJSON: [[String: Any]],
+        requestId: String,
         toolInvoker: FlutterToolInvoker,
         completion: @escaping (String?, String?, String?) -> Void
     ) {
@@ -25,6 +26,7 @@ enum AppleFoundationBridge {
         let tools =
             (try? FoundationModelsBridge.prepareTools(
                 from: toolsJSON,
+                requestId: requestId,
                 toolInvoker: toolInvoker
             )) ?? []
         FoundationModelsBridge.generate(
@@ -137,6 +139,7 @@ enum AppleFoundationBridge {
 
         static func prepareTools(
             from toolsJSON: [[String: Any]],
+            requestId: String,
             toolInvoker: FlutterToolInvoker
         )
             throws
@@ -144,7 +147,11 @@ enum AppleFoundationBridge {
         {
             do {
                 return try toolsJSON.map {
-                    try self.makeDartTool(from: $0, toolInvoker: toolInvoker)
+                    try self.makeDartTool(
+                        from: $0,
+                        requestId: requestId,
+                        toolInvoker: toolInvoker
+                    )
                 }
             } catch {
                 print(
@@ -160,6 +167,7 @@ enum AppleFoundationBridge {
         }
         static func makeDartTool(
             from json: [String: Any],
+            requestId: String,
             toolInvoker: FlutterToolInvoker
         ) throws
             -> DartTool
@@ -177,6 +185,7 @@ enum AppleFoundationBridge {
                 name: name,
                 description: description,
                 parameters: schema,
+                requestId: requestId,
                 invoker: toolInvoker
             )
         }
@@ -188,6 +197,7 @@ struct DartTool: Tool {
     let name: String
     let description: String
     let parameters: GenerationSchema
+    let requestId: String
 
     // Channel / callback that talks to Dart
     private let invoker: ToolInvoker
@@ -196,11 +206,13 @@ struct DartTool: Tool {
         name: String,
         description: String,
         parameters: GenerationSchema,
+        requestId: String,
         invoker: ToolInvoker
     ) {
         self.name = name
         self.description = description
         self.parameters = parameters
+        self.requestId = requestId
         self.invoker = invoker
     }
 
@@ -211,6 +223,7 @@ struct DartTool: Tool {
         // 2. Call Dart and wait for the result
         let result = try await invoker.invoke(
             toolName: name,
+            requestId: requestId,
             arguments: argsJSON
         )
 
@@ -219,7 +232,7 @@ struct DartTool: Tool {
 }
 
 protocol ToolInvoker: Sendable {
-    func invoke(toolName: String, arguments: Any) async throws -> String
+    func invoke(toolName: String, requestId: String, arguments: Any) async throws -> String
 }
 /// Concrete implementation using Flutter MethodChannel / FFI / etc.
 final class FlutterToolInvoker: ToolInvoker {
@@ -229,7 +242,7 @@ final class FlutterToolInvoker: ToolInvoker {
         self.channel = channel
     }
 
-    func invoke(toolName: String, arguments: Any) async throws -> String {
+    func invoke(toolName: String, requestId: String, arguments: Any) async throws -> String {
         try await withCheckedThrowingContinuation { continuation in
             // This calls INTO Dart
             DispatchQueue.main.async {
@@ -237,6 +250,7 @@ final class FlutterToolInvoker: ToolInvoker {
                     "onToolCall",  // ← method name Dart will listen to
                     arguments: [
                         "name": toolName,
+                        "requestId": requestId,
                         "arguments": arguments,
                     ]
                 ) { result in
