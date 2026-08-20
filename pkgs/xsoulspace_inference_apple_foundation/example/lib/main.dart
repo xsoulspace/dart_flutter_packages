@@ -62,8 +62,10 @@ class _ExamplePageState extends State<_ExamplePage> {
       ..upsertResource(ToolRegistryResource())
       ..flush();
 
-    // Register the default handler
-    final handler = DefaultActorGenerateHandler()..router = router;
+    // Register the default generation handler
+    final handler = DefaultGenerationHandler()..router = router;
+    world.getResource<GenerationHandlerResource>().registerDefault(handler);
+    world.flush();
 
     // Spawn a scene
     final sceneEntity = world.spawnComponents([const Scene(), SceneFrame()]);
@@ -88,7 +90,7 @@ class _ExamplePageState extends State<_ExamplePage> {
 
     // Run the harness loop — it handles agency grant, projection,
     // actor act, response processing, and idle/sleep automatically.
-    final loop = HarnessLoop(world: world, handler: handler);
+    final loop = HarnessLoop(world: world);
     loop.start(until: Future.delayed(const Duration(seconds: 10)));
 
     // Wait for the loop to process the decision and sleep

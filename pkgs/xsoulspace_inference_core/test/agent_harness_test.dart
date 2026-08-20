@@ -8,10 +8,10 @@ import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 /// A mock handler that simulates an LLM without requiring Apple Foundation Models.
 ///
 /// Returns a configurable [responseText] and optionally [toolCalls].
-/// The handler processes requests synchronously when [processPending] is called,
+/// The handler sends responses back to the world's event channel,
 /// mirroring how a real isolate handler would consume the event channel.
-class MockActorGenerateHandler extends ActorGenerateHandler {
-  MockActorGenerateHandler({
+class MockGenerationHandler implements GenerationHandler {
+  MockGenerationHandler({
     required this.responseText,
     this.toolCalls = const [],
     this.responseOutput,
@@ -23,36 +23,26 @@ class MockActorGenerateHandler extends ActorGenerateHandler {
   final Map<String, dynamic>? responseOutput;
   final Duration delay;
 
-  /// Process all pending requests in the world's event channel.
-  ///
-  /// This simulates what an external handler (Flutter isolate, CLI, etc.)
-  /// would do: drain the request channel, call [handle] for each, and
-  /// send responses back.
-  Future<void> processPending(World world) async {
-    final reader = world.events.reader<ActorGenerateRequest>();
-    final writer = world.events.writer<ActorGenerateResponse>();
-
-    final requests = reader.drain();
-    for (final request in requests) {
-      final response = await handle(request);
-      writer.send(response);
-    }
-  }
-
   @override
-  Future<ActorGenerateResponse> handle(ActorGenerateRequest request) async {
+  Future<ActorGenerateResponse> generate(
+    World world,
+    ActorGenerateRequest request,
+  ) async {
     if (delay > Duration.zero) {
       await Future.delayed(delay);
     }
 
     final output = responseOutput ?? {'text': responseText};
-
-    return ActorGenerateResponse(
+    final response = ActorGenerateResponse(
       actorEntity: request.actorEntity,
       structuralOutput: output,
       rawOutput: responseText,
       toolCalls: toolCalls,
+      taskId: request.taskId,
     );
+
+    world.events.writer<ActorGenerateResponse>().send(response);
+    return response;
   }
 }
 
@@ -60,13 +50,18 @@ class MockActorGenerateHandler extends ActorGenerateHandler {
 Future<World> buildTestWorld({
   ModelRouter? router,
   ToolRegistryResource? toolRegistryResource,
+  GenerationHandler? handler,
 }) async {
   final world = World()..addPlugin(AgentPlugin());
 
   world
     ..upsertResource(ModelRouterResource(router ?? ModelRouter()))
-    ..upsertResource(toolRegistryResource ?? ToolRegistryResource())
-    ..flush();
+    ..upsertResource(toolRegistryResource ?? ToolRegistryResource());
+
+  if (handler != null) {
+    world.getResource<GenerationHandlerResource>().registerDefault(handler);
+  }
+  world.flush();
 
   return world;
 }
@@ -179,8 +174,8 @@ void main() {
 
   group('AwaitingResponse lifecycle', () {
     test('AwaitingResponse is added when actor acts', () async {
-      final world = await buildTestWorld();
-      final handler = MockActorGenerateHandler(responseText: 'hello');
+      final handler = MockGenerationHandler(responseText: 'hello');
+      final world = await buildTestWorld(handler: handler);
 
       final scene = spawnScene(world);
       final actor = spawnActor(world, scene, openDecisionPrompt: 'Say hello.');
@@ -202,8 +197,8 @@ void main() {
     });
 
     test('AwaitingResponse is consumed after response is processed', () async {
-      final world = await buildTestWorld();
-      final handler = MockActorGenerateHandler(responseText: 'hello');
+      final handler = MockGenerationHandler(responseText: 'hello');
+      final world = await buildTestWorld(handler: handler);
 
       final scene = spawnScene(world);
       final actor = spawnActor(world, scene, openDecisionPrompt: 'Say hello.');
@@ -218,8 +213,6 @@ void main() {
 
       expect(world.getEntity(actor).$1.has<AwaitingResponse>(), isTrue);
 
-      await handler.processPending(world);
-      world.flush();
       world.runSchedule('ProcessResponses');
       world.flush();
 
@@ -228,8 +221,8 @@ void main() {
     });
 
     test('AwaitingResponse prevents re-granting Agency', () async {
-      final world = await buildTestWorld();
-      final handler = MockActorGenerateHandler(responseText: 'hello');
+      final handler = MockGenerationHandler(responseText: 'hello');
+      final world = await buildTestWorld(handler: handler);
 
       final scene = spawnScene(world);
       final actor = spawnActor(world, scene, openDecisionPrompt: 'Say hello.');
@@ -330,8 +323,8 @@ void main() {
 
   group('actorActSystem', () {
     test('sends ActorGenerateRequest for actors with Agency', () async {
-      final world = await buildTestWorld();
-      final handler = MockActorGenerateHandler(responseText: 'hello');
+      final handler = MockGenerationHandler(responseText: 'hello');
+      final world = await buildTestWorld(handler: handler);
 
       final scene = spawnScene(world);
       final actor = spawnActor(
@@ -368,8 +361,8 @@ void main() {
     });
 
     test('does not send requests for actors without Agency', () async {
-      final world = await buildTestWorld();
-      final handler = MockActorGenerateHandler(responseText: 'hello');
+      final handler = MockGenerationHandler(responseText: 'hello');
+      final world = await buildTestWorld(handler: handler);
 
       final scene = spawnScene(world);
       final actor = spawnActor(world, scene, openDecisionPrompt: 'Q');
@@ -389,8 +382,8 @@ void main() {
 
   group('processResponsesSystem', () {
     test('stores model response as context fragment', () async {
-      final world = await buildTestWorld();
-      final handler = MockActorGenerateHandler(responseText: 'hello world');
+      final handler = MockGenerationHandler(responseText: 'hello world');
+      final world = await buildTestWorld(handler: handler);
 
       final scene = spawnScene(world);
       final actor = spawnActor(world, scene, openDecisionPrompt: 'Say hello');
@@ -402,10 +395,6 @@ void main() {
       world.runSchedule('Project');
       world.flush();
       await world.runScheduleAsync('ActorAct');
-      world.flush();
-
-      // Process the request through the mock handler
-      await handler.processPending(world);
       world.flush();
 
       // Process responses
@@ -442,12 +431,14 @@ void main() {
       final toolResource = ToolRegistryResource();
       toolResource.register('default', toolRegistry);
 
-      final world = await buildTestWorld(toolRegistryResource: toolResource);
-      final handler = MockActorGenerateHandler(
-        responseText: 'Let me check that.',
-        toolCalls: [
-          ToolCall(name: ToolName('echo'), arguments: {'message': 'hello'}),
-        ],
+      final world = await buildTestWorld(
+        toolRegistryResource: toolResource,
+        handler: MockGenerationHandler(
+          responseText: 'Let me check that.',
+          toolCalls: [
+            ToolCall(name: ToolName('echo'), arguments: {'message': 'hello'}),
+          ],
+        ),
       );
 
       final scene = spawnScene(world);
@@ -460,9 +451,6 @@ void main() {
       world.runSchedule('Project');
       world.flush();
       await world.runScheduleAsync('ActorAct');
-      world.flush();
-
-      await handler.processPending(world);
       world.flush();
 
       world.runSchedule('ProcessResponses');
@@ -497,11 +485,11 @@ void main() {
 
   group('full cinematic loop (e2e)', () {
     test('single actor end-to-end with mock LLM', () async {
-      final world = await buildTestWorld();
-      final handler = MockActorGenerateHandler(
+      final handler = MockGenerationHandler(
         responseText: 'hello',
         responseOutput: {'text': 'hello'},
       );
+      final world = await buildTestWorld(handler: handler);
 
       final scene = spawnScene(world);
       final actor = spawnActor(
@@ -527,11 +515,7 @@ void main() {
       expect(world.getEntity(actor).$1.has<Agency>(), isTrue);
       expect(world.getEntity(actor).$1.has<AwaitingResponse>(), isTrue);
 
-      // 4. External handler processes requests
-      await handler.processPending(world);
-      world.flush();
-
-      // 5. Process responses — consumes Agency + AwaitingResponse
+      // 4. Process responses — consumes Agency + AwaitingResponse
       world.runSchedule('ProcessResponses');
       world.flush();
 
@@ -553,11 +537,11 @@ void main() {
     });
 
     test('multi-actor parallel end-to-end', () async {
-      final world = await buildTestWorld();
-      final handler = MockActorGenerateHandler(
+      final handler = MockGenerationHandler(
         responseText: 'response',
         responseOutput: {'text': 'response'},
       );
+      final world = await buildTestWorld(handler: handler);
 
       final scene = spawnScene(world);
 
@@ -595,11 +579,7 @@ void main() {
         expect(world.getEntity(actor).$1.has<AwaitingResponse>(), isTrue);
       }
 
-      // 4. Handler processes all requests
-      await handler.processPending(world);
-      world.flush();
-
-      // 5. Process all responses
+      // 4. Process all responses
       world.runSchedule('ProcessResponses');
       world.flush();
 
@@ -618,8 +598,8 @@ void main() {
     test(
       'agency is re-granted after acting when new OpenDecision exists',
       () async {
-        final world = await buildTestWorld();
-        final handler = MockActorGenerateHandler(responseText: 'done');
+        final handler = MockGenerationHandler(responseText: 'done');
+        final world = await buildTestWorld(handler: handler);
 
         final scene = spawnScene(world);
         final actor = spawnActor(
@@ -635,8 +615,6 @@ void main() {
         world.runSchedule('Project');
         world.flush();
         await world.runScheduleAsync('ActorAct');
-        world.flush();
-        await handler.processPending(world);
         world.flush();
         world.runSchedule('ProcessResponses');
         world.flush();
@@ -660,8 +638,6 @@ void main() {
         world.runSchedule('Project');
         world.flush();
         await world.runScheduleAsync('ActorAct');
-        world.flush();
-        await handler.processPending(world);
         world.flush();
         world.runSchedule('ProcessResponses');
         world.flush();
@@ -858,8 +834,7 @@ void main() {
   group('HarnessLoop idle/sleep', () {
     test('canSleep returns true when no work remains', () async {
       final world = await buildTestWorld();
-      final handler = MockActorGenerateHandler(responseText: 'hello');
-      final loop = HarnessLoop(world: world, handler: handler);
+      final loop = HarnessLoop(world: world);
 
       // No actors, no decisions, no agency — should be able to sleep
       expect(loop.canSleep(), isTrue);
@@ -867,8 +842,7 @@ void main() {
 
     test('canSleep returns false when OpenDecision exists', () async {
       final world = await buildTestWorld();
-      final handler = MockActorGenerateHandler(responseText: 'hello');
-      final loop = HarnessLoop(world: world, handler: handler);
+      final loop = HarnessLoop(world: world);
 
       final scene = spawnScene(world);
       spawnActor(world, scene, openDecisionPrompt: 'Decide something.');
@@ -879,8 +853,7 @@ void main() {
 
     test('canSleep returns false when Agency exists', () async {
       final world = await buildTestWorld();
-      final handler = MockActorGenerateHandler(responseText: 'hello');
-      final loop = HarnessLoop(world: world, handler: handler);
+      final loop = HarnessLoop(world: world);
 
       final scene = spawnScene(world);
       final actor = spawnActor(world, scene, openDecisionPrompt: 'Q');
@@ -894,8 +867,7 @@ void main() {
 
     test('canSleep returns false when AwaitingResponse exists', () async {
       final world = await buildTestWorld();
-      final handler = MockActorGenerateHandler(responseText: 'hello');
-      final loop = HarnessLoop(world: world, handler: handler);
+      final loop = HarnessLoop(world: world);
 
       final scene = spawnScene(world);
       final actor = spawnActor(world, scene, openDecisionPrompt: 'Q');
@@ -912,9 +884,9 @@ void main() {
     });
 
     test('canSleep returns true after response is processed', () async {
-      final world = await buildTestWorld();
-      final handler = MockActorGenerateHandler(responseText: 'hello');
-      final loop = HarnessLoop(world: world, handler: handler);
+      final handler = MockGenerationHandler(responseText: 'hello');
+      final world = await buildTestWorld(handler: handler);
+      final loop = HarnessLoop(world: world);
 
       final scene = spawnScene(world);
       final actor = spawnActor(world, scene, openDecisionPrompt: 'Q');
@@ -929,8 +901,6 @@ void main() {
 
       expect(loop.canSleep(), isFalse);
 
-      await handler.processPending(world);
-      world.flush();
       world.runSchedule('ProcessResponses');
       world.flush();
 
@@ -986,6 +956,7 @@ void main() {
         schema: SchemaBundle.empty,
         toolRegistry: null,
         task: InferenceTask.text,
+        taskId: const TaskId('task-1'),
       );
 
       expect(request.actorEntity, entity);
@@ -1030,5 +1001,65 @@ void main() {
       expect(call.name.value, 'search');
       expect(call.arguments, {'query': 'weather'});
     });
+  });
+
+  group('WorldToolBridge (native tool routing)', () {
+    test(
+      'routes a native tool call through the world and resolves the task',
+      () async {
+        // Set up a tool registry with a mock tool
+        final toolRegistry = ToolRegistry();
+        final toolDef = ToolDef(
+          name: ToolName('echo'),
+          description: 'Echoes the input',
+          parameters: const {},
+          execute: (args) async => {'echoed': args},
+        );
+        toolRegistry.register(toolDef);
+
+        final toolResource = ToolRegistryResource();
+        toolResource.register('default', toolRegistry);
+
+        final world = await buildTestWorld(toolRegistryResource: toolResource);
+        final scene = spawnScene(world);
+        final actor = spawnActor(world, scene);
+        world.upsertComponent(actor, const ActorTools(registryName: 'default'));
+        world.flush();
+
+        // Build a bridged registry — simulates the backend executing a native
+        // tool call through the world (Apple Foundation native path).
+        final bridge = WorldToolBridge(
+          world: world,
+          actorEntity: actor,
+          source: toolRegistry,
+        );
+        final bridged = bridge.buildRegistry();
+
+        // Invoke the tool — this suspends until the world resolves the task.
+        final future = bridged.execute(ToolName('echo'), {'message': 'hi'});
+
+        // The tool call event was sent to the world.
+        final reader = world.events.reader<ToolCallEvent>();
+        expect(reader.isNotEmpty, isTrue);
+        expect(reader.length, 1);
+        expect(reader.readAt(0).call.name.value, 'echo');
+        expect(reader.readAt(0).taskId, isNotNull);
+
+        // Run the Mechanical schedule to execute the tool and resolve the task.
+        world.runSchedule('Mechanical');
+        world.flush();
+        await Future.delayed(const Duration(milliseconds: 50));
+
+        final result = await future;
+        expect(result, isNotNull);
+        expect((result as ToolExecutionResult).name, 'echo');
+        expect((result).output, {
+          'echoed': {'message': 'hi'},
+        });
+
+        // The task was resolved and removed from the registry.
+        expect(world.getResource<TaskRegistryResource>().isEmpty, isTrue);
+      },
+    );
   });
 }
