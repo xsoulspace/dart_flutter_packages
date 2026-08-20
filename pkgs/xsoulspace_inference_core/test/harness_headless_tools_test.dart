@@ -143,7 +143,6 @@ Entity _spawnActor(World world, String decision) {
   final actor = world.spawnComponents([
     Actor(agentId: AgentId.create()),
     ActorModel(modelId: ModelId.create()),
-    ActorRuntimeMemories(),
     PresentInScene(sceneEntity: scene),
     OpenDecision(prompt: decision),
     const ActorTools(registryName: 'default'),
@@ -202,23 +201,27 @@ void main() {
       world.getResource<GenerationHandlerResource>().registerDefault(
         _ToolEmittingHandler(toolName: 'read', arguments: {'path': filePath}),
       );
-      final actor = _spawnActor(
-        world,
-        'Read the file and report its contents.',
-      );
+      _spawnActor(world, 'Read the file and report its contents.');
 
       await _runCycle(world);
 
-      final memories = world.maybeGetComponent<ActorRuntimeMemories>(actor);
-      expect(memories, isNotNull);
-
-      // The tool result must be stored as a toolMessage fragment.
-      final toolFragments = memories!.fragments
-          .where((f) => f.type == ContextFragmentType.toolMessage)
+      // The tool result was stored as an indexed beat in the world.
+      final index = world.getResource<FacetIndex>();
+      final toolBeats = index
+          .beatsFor(const ['result'])
+          .where(
+            (b) =>
+                world
+                    .getEntity(b)
+                    .$1
+                    .get<TextContent>()
+                    ?.text
+                    .contains('hello world') ??
+                false,
+          )
           .toList();
-      expect(toolFragments, isNotEmpty);
-      final toolBeat = world.getEntity(toolFragments.first.beat).$1;
-      final text = toolBeat.get<TextContent>();
+      expect(toolBeats, isNotEmpty);
+      final text = world.getEntity(toolBeats.first).$1.get<TextContent>();
       expect(text, isNotNull);
       expect(text!.text, contains('hello world'));
     });
@@ -259,7 +262,7 @@ void main() {
           arguments: {'path': filePath, 'content': 'agent wrote this'},
         ),
       );
-      final actor = _spawnActor(world, 'Write a file.');
+      _spawnActor(world, 'Write a file.');
 
       await _runCycle(world);
 
@@ -267,13 +270,22 @@ void main() {
       expect(File(filePath).existsSync(), isTrue);
       expect(File(filePath).readAsStringSync(), 'agent wrote this');
 
-      // And the tool result must be in actor memory.
-      final memories = world.getEntity(actor).$1.get<ActorRuntimeMemories>();
-      expect(memories, isNotNull);
-      final toolFragments = memories!.fragments
-          .where((f) => f.type == ContextFragmentType.toolMessage)
+      // And the tool result must be stored as an indexed beat.
+      final index = world.getResource<FacetIndex>();
+      final toolBeats = index
+          .beatsFor(const ['result'])
+          .where(
+            (b) =>
+                world
+                    .getEntity(b)
+                    .$1
+                    .get<TextContent>()
+                    ?.text
+                    .contains('wrote') ??
+                false,
+          )
           .toList();
-      expect(toolFragments, isNotEmpty);
+      expect(toolBeats, isNotEmpty);
     });
 
     test('list_dir tool lists a directory through the world', () async {
@@ -312,22 +324,29 @@ void main() {
           arguments: {'path': temp.path},
         ),
       );
-      final actor = _spawnActor(world, 'List the directory.');
+      _spawnActor(world, 'List the directory.');
 
       await _runCycle(world);
 
-      // The tool result must be in actor memory and contain both files.
-      final memories = world.getEntity(actor).$1.get<ActorRuntimeMemories>();
-      expect(memories, isNotNull);
-      final toolFragments = memories!.fragments
-          .where((f) => f.type == ContextFragmentType.toolMessage)
+      // The tool result must be stored as an indexed beat and contain both files.
+      final index = world.getResource<FacetIndex>();
+      final toolBeats = index
+          .beatsFor(const ['result'])
+          .where(
+            (b) =>
+                world
+                    .getEntity(b)
+                    .$1
+                    .get<TextContent>()
+                    ?.text
+                    .contains('a.txt') ??
+                false,
+          )
           .toList();
-      expect(toolFragments, isNotEmpty);
-      final toolBeat = world.getEntity(toolFragments.first.beat).$1;
-      final text = toolBeat.get<TextContent>();
-      expect(text, isNotNull);
-      expect(text!.text, contains('a.txt'));
-      expect(text!.text, contains('b.txt'));
+      expect(toolBeats, isNotEmpty);
+      final text = world.getEntity(toolBeats.first).$1.get<TextContent>()!;
+      expect(text.text, contains('a.txt'));
+      expect(text.text, contains('b.txt'));
     });
 
     test('routes each agent to its own GenerationHandler', () async {
@@ -340,17 +359,15 @@ void main() {
       final handlerResource = world.getResource<GenerationHandlerResource>();
 
       final scene = world.spawnComponents([const Scene(), SceneFrame()]);
-      final actorA = world.spawnComponents([
+      world.spawnComponents([
         Actor(agentId: const AgentId('agent-apple')),
         ActorModel(modelId: ModelId.create()),
-        ActorRuntimeMemories(),
         PresentInScene(sceneEntity: scene),
         OpenDecision(prompt: 'Apple decision'),
       ]);
-      final actorB = world.spawnComponents([
+      world.spawnComponents([
         Actor(agentId: const AgentId('agent-openrouter')),
         ActorModel(modelId: ModelId.create()),
-        ActorRuntimeMemories(),
         PresentInScene(sceneEntity: scene),
         OpenDecision(prompt: 'OpenRouter decision'),
       ]);
@@ -380,17 +397,36 @@ void main() {
       expect(appleHandler.handled, [const AgentId('agent-apple')]);
       expect(openRouterHandler.handled, [const AgentId('agent-openrouter')]);
 
-      // Each actor's memory holds the response from its own handler.
-      final memoriesA = world.getEntity(actorA).$1.get<ActorRuntimeMemories>();
-      final memoriesB = world.getEntity(actorB).$1.get<ActorRuntimeMemories>();
-      expect(memoriesA, isNotNull);
-      expect(memoriesB, isNotNull);
-      final lastA = memoriesA!.fragments.last;
-      final lastB = memoriesB!.fragments.last;
-      final textA = world.getEntity(lastA.beat).$1.get<TextContent>();
-      final textB = world.getEntity(lastB.beat).$1.get<TextContent>();
-      expect(textA!.text, contains('apple'));
-      expect(textB!.text, contains('openrouter'));
+      // Each actor's response was stored as an indexed beat from its own handler.
+      final index = world.getResource<FacetIndex>();
+      final beatsApple = index
+          .beatsFor(const ['apple'])
+          .where(
+            (b) =>
+                world
+                    .getEntity(b)
+                    .$1
+                    .get<TextContent>()
+                    ?.text
+                    .contains('apple') ??
+                false,
+          )
+          .toList();
+      final beatsOpenRouter = index
+          .beatsFor(const ['openrouter'])
+          .where(
+            (b) =>
+                world
+                    .getEntity(b)
+                    .$1
+                    .get<TextContent>()
+                    ?.text
+                    .contains('openrouter') ??
+                false,
+          )
+          .toList();
+      expect(beatsApple, isNotEmpty);
+      expect(beatsOpenRouter, isNotEmpty);
     });
 
     test(
@@ -436,7 +472,7 @@ void main() {
             arguments: {'path': filePath, 'content': 'structured call'},
           ),
         );
-        final actor = _spawnActor(world, 'Write via structured tool call.');
+        _spawnActor(world, 'Write via structured tool call.');
 
         await _runCycle(world);
 
@@ -444,13 +480,22 @@ void main() {
         expect(File(filePath).existsSync(), isTrue);
         expect(File(filePath).readAsStringSync(), 'structured call');
 
-        // And the tool result landed in actor memory.
-        final memories = world.getEntity(actor).$1.get<ActorRuntimeMemories>();
-        expect(memories, isNotNull);
-        final toolFragments = memories!.fragments
-            .where((f) => f.type == ContextFragmentType.toolMessage)
+        // And the tool result was stored as an indexed beat.
+        final index = world.getResource<FacetIndex>();
+        final toolBeats = index
+            .beatsFor(const ['result'])
+            .where(
+              (b) =>
+                  world
+                      .getEntity(b)
+                      .$1
+                      .get<TextContent>()
+                      ?.text
+                      .contains('wrote') ??
+                  false,
+            )
             .toList();
-        expect(toolFragments, isNotEmpty);
+        expect(toolBeats, isNotEmpty);
       },
     );
 
@@ -471,7 +516,6 @@ void main() {
       final actor = world.spawnComponents([
         Actor(agentId: AgentId.create()),
         ActorModel(modelId: appleModelId),
-        ActorRuntimeMemories(),
         PresentInScene(sceneEntity: scene),
         OpenDecision(prompt: 'First decision'),
       ]);

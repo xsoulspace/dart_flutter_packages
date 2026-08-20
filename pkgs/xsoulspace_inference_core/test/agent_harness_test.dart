@@ -84,7 +84,6 @@ Entity spawnActor(
     Actor(agentId: actorId),
     ActorModel(modelId: modelId),
     ActorSystemPrompt(text: systemPrompt),
-    ActorRuntimeMemories(),
     PresentInScene(sceneEntity: sceneEntity),
   ];
   if (openDecisionPrompt != null) {
@@ -92,6 +91,13 @@ Entity spawnActor(
   }
   return world.spawnComponents(components);
 }
+
+/// All beats in [world] whose [TextContent] contains [text].
+List<Entity> _beatsWithText(World world, String text) => world
+    .query2<TextContent, BeatStatus>()
+    .where((t) => t.$1.get<TextContent>()?.text.contains(text) ?? false)
+    .map((t) => t.$1.entity)
+    .toList();
 
 void main() {
   group('AgentPlugin', () {
@@ -381,7 +387,7 @@ void main() {
   });
 
   group('processResponsesSystem', () {
-    test('stores model response as context fragment', () async {
+    test('stores model response as an indexed beat', () async {
       final handler = MockGenerationHandler(responseText: 'hello world');
       final world = await buildTestWorld(handler: handler);
 
@@ -401,14 +407,14 @@ void main() {
       world.runSchedule('ProcessResponses');
       world.flush();
 
-      final memories = world.getEntity(actor).$1.get<ActorRuntimeMemories>();
-      expect(memories, isNotNull);
-      expect(memories!.fragments, isNotEmpty);
-
-      final lastFragment = memories.fragments.last;
-      expect(lastFragment.type, ContextFragmentType.modelResponse);
-      final beatEntity = world.getEntity(lastFragment.beat).$1;
-      final textContent = beatEntity.get<TextContent>();
+      // The response was stored as a beat and indexed into the FacetIndex.
+      final index = world.getResource<FacetIndex>();
+      final responseBeats = index.beatsFor(const ['hello']).toList();
+      expect(responseBeats, isNotEmpty);
+      final textContent = world
+          .getEntity(responseBeats.first)
+          .$1
+          .get<TextContent>();
       expect(textContent, isNotNull);
       expect(textContent!.text, contains('hello world'));
 
@@ -467,19 +473,28 @@ void main() {
       world.runSchedule('Mechanical');
       world.flush();
 
-      final memories = world.getEntity(actor).$1.get<ActorRuntimeMemories>();
-      expect(memories, isNotNull);
-      expect(memories!.fragments, isNotEmpty);
-
-      // The last fragment should be a tool message
-      final toolFragments = memories.fragments
-          .where((f) => f.type == ContextFragmentType.toolMessage)
+      // The tool result was stored as an indexed beat.
+      final index = world.getResource<FacetIndex>();
+      final toolBeats = index
+          .beatsFor(const ['result'])
+          .where(
+            (b) =>
+                world
+                    .getEntity(b)
+                    .$1
+                    .get<TextContent>()
+                    ?.text
+                    .contains('echoed') ??
+                false,
+          )
           .toList();
-      expect(toolFragments, isNotEmpty);
-      final toolBeat = world.getEntity(toolFragments.first.beat).$1;
-      final toolText = toolBeat.get<TextContent>();
-      expect(toolText, isNotNull);
-      expect(toolText!.text, contains('echoed'));
+      expect(toolBeats, isNotEmpty);
+      final toolText = world
+          .getEntity(toolBeats.first)
+          .$1
+          .get<TextContent>()!
+          .text;
+      expect(toolText, contains('echoed'));
     });
   });
 
@@ -519,15 +534,14 @@ void main() {
       world.runSchedule('ProcessResponses');
       world.flush();
 
-      // Verify the response was stored
-      final memories = world.getEntity(actor).$1.get<ActorRuntimeMemories>();
-      expect(memories, isNotNull);
-      expect(memories!.fragments, isNotEmpty);
-
-      final lastFragment = memories.fragments.last;
-      expect(lastFragment.type, ContextFragmentType.modelResponse);
-      final beatEntity = world.getEntity(lastFragment.beat).$1;
-      final textContent = beatEntity.get<TextContent>();
+      // Verify the response was stored as an indexed beat.
+      final responseBeats = _beatsWithText(world, 'hello');
+      final index = world.getResource<FacetIndex>();
+      expect(index.beatsFor(const ['hello']), isNotEmpty);
+      final textContent = world
+          .getEntity(responseBeats.first)
+          .$1
+          .get<TextContent>();
       expect(textContent, isNotNull);
       expect(textContent!.text, contains('hello'));
 
@@ -585,10 +599,8 @@ void main() {
 
       // Verify all actors received responses
       for (final actor in actors) {
-        final memories = world.getEntity(actor).$1.get<ActorRuntimeMemories>();
-        expect(memories, isNotNull);
-        expect(memories!.fragments, isNotEmpty);
-        expect(memories.fragments.last.type, ContextFragmentType.modelResponse);
+        final index = world.getResource<FacetIndex>();
+        expect(index.beatsFor(const ['response']), isNotEmpty);
         // Verify Agency + AwaitingResponse were consumed
         expect(world.getEntity(actor).$1.has<Agency>(), isFalse);
         expect(world.getEntity(actor).$1.has<AwaitingResponse>(), isFalse);
@@ -642,9 +654,10 @@ void main() {
         world.runSchedule('ProcessResponses');
         world.flush();
 
-        final memories = world.getEntity(actor).$1.get<ActorRuntimeMemories>();
-        expect(memories, isNotNull);
-        expect(memories!.fragments.length, 2);
+        final index = world.getResource<FacetIndex>();
+        // Two decision cycles produced two response beats, both indexed.
+        final responseBeats = index.beatsFor(const ['done']).toList();
+        expect(responseBeats.length, 2);
       },
     );
   });
@@ -931,15 +944,21 @@ void main() {
     });
   });
 
-  group('ContextFragment', () {
-    test('holds type and beat reference', () {
-      final beat = Entity.create(1);
-      final fragment = ContextFragment(
-        type: ContextFragmentType.userMessage,
-        beat: beat,
-      );
-      expect(fragment.type, ContextFragmentType.userMessage);
-      expect(fragment.beat, beat);
+  group('FacetIndex', () {
+    test('indexes beats by keyword and returns them via beatsFor', () {
+      final world = World()..addPlugin(AgentPlugin());
+      final index = world.getResource<FacetIndex>();
+
+      final beat = world.spawnComponents([
+        TextContent('The parser fails on nested brackets.'),
+        BeatStatus(BeatStatusEnum.complete),
+      ]);
+      indexBeat(world, beat, const ['parser', 'brackets']);
+      world.flush();
+
+      expect(index.beatsFor(const ['parser']), contains(beat));
+      expect(index.beatsFor(const ['weather']), isNot(contains(beat)));
+      expect(index.keywordsFor(beat), containsAll(['parser', 'brackets']));
     });
   });
 

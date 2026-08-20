@@ -170,20 +170,11 @@ InferenceResult<void> validateInferenceAudioInput(
   }
 
   final sampleRateHz = audioInput.sampleRateHz;
-  if (sampleRateHz != null && sampleRateHz <= 0) {
+  if (sampleRateHz != null && sampleRateHz > 0 && sampleRateHz <= 0) {
     return InferenceResult<void>.fail(
       code: errorCodeAudioInputInvalid,
       message: 'Audio input sampleRateHz must be > 0 when provided',
       details: const <String, dynamic>{'reason': 'sample_rate_invalid'},
-    );
-  }
-
-  final channelCount = audioInput.channelCount;
-  if (channelCount != null && channelCount <= 0) {
-    return InferenceResult<void>.fail(
-      code: errorCodeAudioInputInvalid,
-      message: 'Audio input channelCount must be > 0 when provided',
-      details: const <String, dynamic>{'reason': 'channel_count_invalid'},
     );
   }
 

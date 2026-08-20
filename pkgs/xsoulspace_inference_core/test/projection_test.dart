@@ -4,7 +4,8 @@
 ///
 /// Verifies the projection system is a real film cut: relevance-ranked,
 /// budget-limited, green-screen-explicit, and that the model only ever sees
-/// the projected slice (never raw history).
+/// the projected slice (never raw history). Projection ray-traces the graph
+/// via [FacetIndex] and the actor's [ActorThreads].
 library;
 
 import 'package:test/test.dart';
@@ -12,24 +13,23 @@ import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import 'agent_harness_test.dart' show MockGenerationHandler, buildTestWorld;
 
-/// Spawn a scene + actor with an [OpenDecision].
-Entity _spawnActor(
+/// Spawn a complete text beat in [thread] and index it under [keywords].
+Entity _addBeat(
   World world,
-  Entity scene, {
-  String openDecisionPrompt = 'Q',
-}) {
-  final actor = world.spawnComponents([
-    Actor(agentId: AgentId.create()),
-    ActorModel(modelId: ModelId.create()),
-    ActorRuntimeMemories(),
-    PresentInScene(sceneEntity: scene),
-    OpenDecision(prompt: openDecisionPrompt),
-  ]);
+  Entity thread,
+  Entity speaker,
+  String text,
+  List<String> keywords,
+) {
+  final beat = startBeat(world, thread, speaker, BeatModalityEnum.text);
+  appendToBeat(world, beat, text);
+  completeBeat(world, beat);
+  indexBeat(world, beat, keywords);
   world.flush();
-  return actor;
+  return beat;
 }
 
-/// Run the projection schedule for the given actor.
+/// Run the projection schedule for the given world.
 void _project(World world) {
   world.runSchedule('AgencyGrant');
   world.flush();
@@ -42,41 +42,40 @@ void main() {
     test('ranks relevant beats above irrelevant ones', () async {
       final world = await buildTestWorld();
       final scene = world.spawnComponents([const Scene(), SceneFrame()]);
-      final actor = _spawnActor(
-        world,
-        scene,
-        openDecisionPrompt: 'Fix the parser bug',
-      );
+      world.flush();
+      // Spawn an actor with an OpenDecision about the parser.
+      final speaker = world.spawnComponents([
+        Actor(agentId: AgentId.create()),
+        ActorModel(modelId: ModelId.create()),
+        ActorSystemPrompt(text: 'You are a helpful assistant.'),
+        PresentInScene(sceneEntity: scene),
+        const OpenDecision(prompt: 'Fix the parser bug'),
+        ActorThreads(threads: []),
+      ]);
+      world.flush();
+      final thread = spawnThread(world, speaker, scene);
+      world.upsertComponent(speaker, ActorThreads(threads: [thread]));
       world.flush();
 
-      // Add memory beats: one relevant to "parser", one irrelevant.
-      final memories = world.getEntity(actor).$1.get<ActorRuntimeMemories>()!;
-      final relevant = world.spawnComponents([
-        TextContent('The parser fails on nested brackets.'),
-        BeatStatus(BeatStatusEnum.complete),
+      // One beat relevant to "parser", one irrelevant.
+      final relevant = _addBeat(
+        world,
+        thread,
+        speaker,
+        'The parser fails on nested brackets.',
+        const ['parser', 'brackets'],
+      );
+      _addBeat(world, thread, speaker, 'The weather today is sunny.', const [
+        'weather',
+        'sunny',
       ]);
-      final irrelevant = world.spawnComponents([
-        TextContent('The weather today is sunny.'),
-        BeatStatus(BeatStatusEnum.complete),
-      ]);
-      memories.fragments.addAll([
-        ContextFragment(
-          type: ContextFragmentType.modelResponse,
-          beat: irrelevant,
-        ),
-        ContextFragment(
-          type: ContextFragmentType.modelResponse,
-          beat: relevant,
-        ),
-      ]);
-      world.flush();
 
       _project(world);
 
-      final situation = world.getEntity(actor).$1.get<Situation>()!;
-      expect(situation.contextFragments, isNotEmpty);
+      final situation = world.getEntity(speaker).$1.get<Situation>()!;
+      expect(situation.projectedBeats, isNotEmpty);
       // The relevant beat should be ranked first.
-      expect(situation.contextFragments.first.beat, relevant);
+      expect(situation.projectedBeats.first, relevant);
     });
 
     test('enforces the token budget and flags truncation', () async {
@@ -85,21 +84,20 @@ void main() {
       world.flush();
 
       final scene = world.spawnComponents([const Scene(), SceneFrame()]);
-      final actor = _spawnActor(world, scene);
+      final actor = world.spawnComponents([
+        Actor(agentId: AgentId.create()),
+        ActorModel(modelId: ModelId.create()),
+        PresentInScene(sceneEntity: scene),
+      ]);
+      world.flush();
+      final thread = spawnThread(world, actor, scene);
+      world.upsertComponent(actor, ActorThreads(threads: [thread]));
+      world.flush();
+      world.upsertComponent(actor, const OpenDecision(prompt: 'Q'));
       world.flush();
 
       // Add a very long beat that cannot fit in a 20-token budget.
-      final memories = world.getEntity(actor).$1.get<ActorRuntimeMemories>()!;
-      final longBeat = world.spawnComponents([
-        TextContent('x' * 500),
-        BeatStatus(BeatStatusEnum.complete),
-      ]);
-      memories.fragments.add(
-        ContextFragment(
-          type: ContextFragmentType.modelResponse,
-          beat: longBeat,
-        ),
-      );
+      _addBeat(world, thread, actor, 'x' * 500, const ['x']);
       world.flush();
 
       _project(world);
@@ -107,7 +105,7 @@ void main() {
       final situation = world.getEntity(actor).$1.get<Situation>()!;
       expect(situation.tokenBudget, 20);
       // The long beat was cut — nothing fits in the budget.
-      expect(situation.contextFragments, isEmpty);
+      expect(situation.projectedBeats, isEmpty);
       expect(situation.truncated, isTrue);
       expect(situation.tokensUsed, lessThanOrEqualTo(20));
     });
@@ -118,20 +116,18 @@ void main() {
       world.flush();
 
       final scene = world.spawnComponents([const Scene(), SceneFrame()]);
-      final actor = _spawnActor(world, scene);
+      final actor = world.spawnComponents([
+        Actor(agentId: AgentId.create()),
+        ActorModel(modelId: ModelId.create()),
+        PresentInScene(sceneEntity: scene),
+        const OpenDecision(prompt: 'Q'),
+      ]);
+      world.flush();
+      final thread = spawnThread(world, actor, scene);
+      world.upsertComponent(actor, ActorThreads(threads: [thread]));
       world.flush();
 
-      final memories = world.getEntity(actor).$1.get<ActorRuntimeMemories>()!;
-      final longBeat = world.spawnComponents([
-        TextContent('y' * 300),
-        BeatStatus(BeatStatusEnum.complete),
-      ]);
-      memories.fragments.add(
-        ContextFragment(
-          type: ContextFragmentType.modelResponse,
-          beat: longBeat,
-        ),
-      );
+      _addBeat(world, thread, actor, 'y' * 300, const <String>[]);
       world.flush();
 
       _project(world);
@@ -153,29 +149,20 @@ void main() {
         world.flush();
 
         final scene = world.spawnComponents([const Scene(), SceneFrame()]);
-        final actor = _spawnActor(world, scene);
+        final actor = world.spawnComponents([
+          Actor(agentId: AgentId.create()),
+          ActorModel(modelId: ModelId.create()),
+          PresentInScene(sceneEntity: scene),
+          const OpenDecision(prompt: 'Q'),
+        ]);
+        world.flush();
+        final thread = spawnThread(world, actor, scene);
+        world.upsertComponent(actor, ActorThreads(threads: [thread]));
         world.flush();
 
         // Add one short beat that fits and one long beat that must be cut.
-        final memories = world.getEntity(actor).$1.get<ActorRuntimeMemories>()!;
-        final shortBeat = world.spawnComponents([
-          TextContent('short'),
-          BeatStatus(BeatStatusEnum.complete),
-        ]);
-        final longBeat = world.spawnComponents([
-          TextContent('z' * 400),
-          BeatStatus(BeatStatusEnum.complete),
-        ]);
-        memories.fragments.addAll([
-          ContextFragment(
-            type: ContextFragmentType.modelResponse,
-            beat: shortBeat,
-          ),
-          ContextFragment(
-            type: ContextFragmentType.modelResponse,
-            beat: longBeat,
-          ),
-        ]);
+        _addBeat(world, thread, actor, 'short', const ['shortfolio']);
+        _addBeat(world, thread, actor, 'z' * 400, const ['zzzz']);
         world.flush();
 
         _project(world);

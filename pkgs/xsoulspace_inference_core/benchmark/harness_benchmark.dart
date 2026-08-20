@@ -180,12 +180,17 @@ Future<BenchmarkRun> runBenchmark(ScriptedTask task) async {
   world.flush();
 
   final scene = world.spawnComponents([const Scene(), SceneFrame()]);
+  // Graph-native memory: the actor participates in a thread, so its response
+  // beats attach to the thread and accumulate into projection.
   final actor = world.spawnComponents([
     Actor(agentId: AgentId.create()),
     ActorModel(modelId: ModelId.create()),
-    ActorRuntimeMemories(),
     PresentInScene(sceneEntity: scene),
+    ActorThreads(threads: []),
   ]);
+  world.flush();
+  final thread = spawnThread(world, actor, scene);
+  world.upsertComponent(actor, ActorThreads(threads: [thread]));
   world.flush();
 
   final tokensPerDecision = <int>[];
@@ -216,12 +221,13 @@ Future<BenchmarkRun> runBenchmark(ScriptedTask task) async {
     }
 
     // Measure the PROJECTED context (what the model actually sees), not raw
-    // memory. This is the real tiny-context signal.
+    // memory. This is the real tiny-context signal: count the projected beat
+    // texts after the cinematic cut.
     final situation = world.getEntity(actor).$1.get<Situation>();
     final projectedChars =
-        situation?.contextFragments.fold<int>(
+        situation?.projectedBeats.fold<int>(
           0,
-          (a, f) => a + _fragmentChars(world, f),
+          (a, b) => a + _beatChars(world, b),
         ) ??
         0;
     contextGrowth.add(_estimateTokens(projectedChars));
@@ -249,8 +255,8 @@ Future<BenchmarkRun> runBenchmark(ScriptedTask task) async {
   );
 }
 
-int _fragmentChars(World world, ContextFragment f) {
-  final (entity, valid) = world.getEntity(f.beat);
+int _beatChars(World world, Entity beat) {
+  final (entity, valid) = world.getEntity(beat);
   if (!valid) return 0;
   final text = entity.get<TextContent>();
   return text?.text.length ?? 0;

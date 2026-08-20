@@ -23,7 +23,6 @@ Entity _spawnActor(
   final actor = world.spawnComponents([
     Actor(agentId: AgentId.create()),
     ActorModel(modelId: ModelId.create()),
-    ActorRuntimeMemories(),
     PresentInScene(sceneEntity: scene),
     OpenDecision(
       prompt: openDecisionPrompt,
@@ -113,7 +112,6 @@ void main() {
       world.spawnComponents([
         Actor(agentId: AgentId.create()),
         const ActorModel(modelId: ModelId('model-1')),
-        ActorRuntimeMemories(),
         PresentInScene(sceneEntity: scene),
         const OpenDecision(prompt: 'Q', escalate: true),
         const EscalationRequest(reason: 'low confidence'),
@@ -142,7 +140,6 @@ void main() {
       final actor = world.spawnComponents([
         Actor(agentId: AgentId.create()),
         ActorModel(modelId: ModelId.create()),
-        ActorRuntimeMemories(),
         PresentInScene(sceneEntity: scene),
         const OpenDecision(prompt: 'Q', escalate: true),
         const EscalationRequest(reason: 'low confidence'),

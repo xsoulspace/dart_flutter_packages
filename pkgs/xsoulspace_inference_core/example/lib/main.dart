@@ -52,12 +52,12 @@ enum ScenarioBackend {
   openRouter,
 }
 
-/// A scenario drives a fresh ecsly [World] through the agent schedules.
+/// A scenario drives a fresh ecsly [World] through the actor schedules.
 ///
 /// Each scenario builds its own world (so switching scenarios is isolated),
 /// registers the Apple Foundation model + tools, spawns a scene + actor with
-/// an [OpenDecision], and runs the [HarnessLoop] until the response lands in
-/// the actor's [ActorRuntimeMemories].
+/// an [OpenDecision], and runs the [HarnessLoop] until the response lands as
+/// an indexed beat in the narrative graph.
 sealed class Scenario {
   bool isInitialized = false;
   World? world;
@@ -148,16 +148,17 @@ sealed class Scenario {
     final actor = world.spawnComponents([
       Actor(agentId: actorId),
       ActorModel(modelId: modelId),
-      ActorRuntimeMemories(),
       PresentInScene(sceneEntity: scene),
       OpenDecision(prompt: text),
     ]);
     return actor;
   }
 
-  /// Run the schedules until the actor's memory holds a model response.
+  /// Run the schedules until the actor's decision is consumed, then return
+  /// the latest model-response [TextContent] (or '' if none arrived).
   ///
-  /// Returns the last model-response fragment text, or '' if none arrived.
+  /// Response beats are indexed into the [FacetIndex]; we scan the world's
+  /// complete text beats for the most recent one.
   Future<String> run() async {
     final world = this.world;
     final actor = this.actor;
@@ -167,14 +168,12 @@ sealed class Scenario {
     final loop = HarnessLoop(world: world);
     await loop.start(until: _waitForResponse(world, actor));
 
-    final memories = world.maybeGetComponent<ActorRuntimeMemories>(actor);
-    final lastModel = memories?.fragments
-        .where((f) => f.type == ContextFragmentType.modelResponse)
-        .lastOrNull;
-    if (lastModel == null) return '';
-
-    final beat = world.getEntity(lastModel.beat);
-    return beat.$1.get<TextContent>()?.text ?? '';
+    // Latest complete text beat = the model's most recent response.
+    String? last;
+    for (final (_, _, content) in world.query2<BeatModality, TextContent>()) {
+      if (content.text.isNotEmpty) last = content.text;
+    }
+    return last ?? '';
   }
 
   Future<void> _waitForResponse(World world, Entity actor) async {
@@ -214,7 +213,7 @@ class ScenarioV1SendMessageGetAnswer extends Scenario {
 /// Human -> Agent -> Human -> Agent -> Human
 ///
 /// Keeps the same world/actor across turns by re-inserting an [OpenDecision]
-/// on each reply, so the actor's [ActorRuntimeMemories] accumulate.
+/// on each reply, so beats accumulate in the narrative graph.
 class ScenarioV2KeepPrimitiveMemory extends Scenario {
   @override
   Future<String> init({
