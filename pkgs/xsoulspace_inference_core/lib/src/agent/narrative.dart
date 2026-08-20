@@ -144,6 +144,18 @@ class BelongsToThread extends Component {
   final Entity thread;
 }
 
+/// Links a [MemorySummary] beat to the source beats it was derived from.
+///
+/// Written by the deliberate [summarizeThread] graph transform so a summary
+/// stays traceable to its raw beats. The summary remains queryable in the
+/// graph; this component records provenance, not a cache.
+class SummarizesBeats extends Component {
+  SummarizesBeats({List<Entity>? sources}) : sources = sources ?? <Entity>[];
+
+  /// The source beats this summary was built from.
+  List<Entity> sources;
+}
+
 /// Sequence number for ordering Beats within a Thread.
 class BeatSequence extends Component {
   BeatSequence(this.value);
@@ -420,4 +432,47 @@ void finalizePartialsSystem(World w) {
       status.value = BeatStatusEnum.complete;
     }
   }
+}
+
+/// Facet index over the narrative graph.
+///
+/// A keyword → beats index that makes projection a ray-tracing query: given
+/// a prompt, we look up the beats whose keywords match instead of scanning a
+/// per-actor memory list. This is a derived index — beats are indexed when
+/// they are written, and projection reads it functionally.
+class FacetIndex extends Resource {
+  final Map<String, Set<Entity>> byKeyword = {};
+  final Map<Entity, Set<String>> keywordsOf = {};
+
+  /// Index [beat] under [keywords]. Idempotent — re-indexing a beat with the
+  /// same keywords is a no-op; new keywords are unioned in.
+  void indexBeat(Entity beat, Iterable<String> keywords) {
+    final owned = keywordsOf.putIfAbsent(beat, () => <String>{});
+    for (final keyword in keywords) {
+      if (keyword.isEmpty) continue;
+      byKeyword.putIfAbsent(keyword, () => <Entity>{}).add(beat);
+      owned.add(keyword);
+    }
+  }
+
+  /// Union of all beats indexed under any of [keywords].
+  Iterable<Entity> beatsFor(Iterable<String> keywords) {
+    final out = <Entity>{};
+    for (final keyword in keywords) {
+      final hits = byKeyword[keyword];
+      if (hits != null) out.addAll(hits);
+    }
+    return out;
+  }
+
+  /// The keywords currently indexed for [beat].
+  Set<String> keywordsFor(Entity beat) => keywordsOf[beat] ?? <String>{};
+}
+
+/// Index a beat into the world's [FacetIndex] under the given keywords.
+///
+/// Mechanical helper — callers derive keywords from the beat's content and
+/// write them here so projection can ray-trace to the beat later.
+void indexBeat(World w, Entity beat, Iterable<String> keywords) {
+  w.getResource<FacetIndex>().indexBeat(beat, keywords);
 }

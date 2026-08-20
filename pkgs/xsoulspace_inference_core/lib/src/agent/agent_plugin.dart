@@ -48,89 +48,20 @@ class ActorTools implements Component {
   final String registryName;
 }
 
-/// Per-actor runtime conversation memory.
+/// Marks which threads an actor participates in.
 ///
-/// Stored as a list of context fragments (system, user, model, tool).
-/// This is cold-path data — not in the hot loop.
-///
-/// Each fragment references a [Beat] entity in the narrative graph,
-/// enabling typed access to content via the Beat's modality components.
-class ActorRuntimeMemories implements Component {
-  ActorRuntimeMemories({List<ContextFragment>? fragments})
-    : fragments = fragments ?? <ContextFragment>[];
+/// This replaces the old memory-cache reference. It is NOT a memory cache —
+/// it only records which threads the actor is "in". Projection reads the
+/// thread graph + facet index functionally; this component just marks
+/// membership so the ray-trace can include the actor's own threads.
+class ActorThreads implements Component {
+  ActorThreads({List<Entity>? threads}) : threads = threads ?? <Entity>[];
 
-  List<ContextFragment> fragments;
-}
-
-/// A single context fragment in an actor's memory.
-///
-/// References a [Beat] entity in the narrative graph. The Beat's
-/// modality-specific components (TextContent, BeatToolCall, etc.)
-/// provide the actual content.
-class ContextFragment {
-  const ContextFragment({required this.type, required this.beat});
-  final ContextFragmentType type;
-  final Entity beat;
-}
-
-/// Links an actor to the thread(s) that constitute its memory.
-///
-/// Memory is a result of the storyline, not the other way around. This
-/// component points the actor at the thread(s) whose beats make up its
-/// observable history. [ActorRuntimeMemories.fragments] is a *derived
-/// cache* over these threads — rebuilt by the compaction/rebuild system,
-/// never an independent source of truth.
-class ActorMemoryRef implements Component {
-  ActorMemoryRef({List<Entity>? threads}) : threads = threads ?? <Entity>[];
-
-  /// The threads this actor's memory is derived from.
+  /// The threads this actor participates in.
   List<Entity> threads;
 }
 
-/// Persist the actor's current memory path so it survives a rebuild in a
-/// subsequent tick or schedule run.
-///
-/// Mechanical. Walks each thread's beats and rewrites
-/// [ActorRuntimeMemories.fragments] to match the thread graph. This is the
-/// single place memory is re-derived from the storyline.
-Entity persistMemory(World world, Entity actorEntity) {
-  final we = world.getEntity(actorEntity).$1;
-  we.insert(ActorRuntimeMemories(fragments: _threadFragments(world, we)));
-  return actorEntity;
-}
-
-/// Link [actorEntity] memory to the given [thread]s.
-void linkActorToThreads(World world, Entity actorEntity, List<Entity> threads) {
-  final we = world.getEntity(actorEntity).$1;
-  we.insert(ActorMemoryRef(threads: threads));
-}
-
-/// Derives the actor's memory fragments from its linked threads.
-List<ContextFragment> _threadFragments(World world, WorldEntity actorEntity) {
-  final ref = actorEntity.get<ActorMemoryRef>();
-  if (ref == null) return const [];
-
-  final out = <ContextFragment>[];
-  for (final thread in ref.threads) {
-    final (t, valid) = world.getEntity(thread);
-    if (!valid) continue;
-    for (final (beat, belongs, _)
-        in world.query2<BelongsToThread, BeatStatus>()) {
-      if (belongs.thread == thread) {
-        out.add(ContextFragment(type: _tagFor(beat), beat: beat.entity));
-      }
-    }
-  }
-  return out;
-}
-
-ContextFragmentType _tagFor(WorldEntity beat) {
-  if (beat.has<MemorySummary>()) return ContextFragmentType.memorySummary;
-  if (beat.has<BeatToolCall>()) return ContextFragmentType.toolMessage;
-  return ContextFragmentType.modelResponse;
-}
-
-/// Tag component: this actor currently has agency and must act.
+/// Tag component: this actor currently has autonomy and must act.
 ///
 /// Granted by [grantAgencySystem] when an [OpenDecision] exists.
 /// Consumed by [processResponsesSystem] after the actor responds.
@@ -236,7 +167,7 @@ class Situation implements Component {
     this.schema = SchemaBundle.empty,
     this.inFramePropIds = const [],
     this.coPresentActorIds = const [],
-    this.contextFragments = const [],
+    this.projectedBeats = const [],
     this.explicitAbsences = const [],
     this.toolRegistryName,
     this.tokensUsed = 0,
@@ -248,9 +179,10 @@ class Situation implements Component {
   List<String> inFramePropIds;
   List<AgentId> coPresentActorIds;
 
-  /// The projected, relevance-ranked, budget-limited context beats the model
-  /// will actually see. This is the cinematic cut.
-  List<ContextFragment> contextFragments;
+  /// The projected, relevance-ranked, budget-limited beat entities the model
+  /// will actually see. This is the cinematic cut — plain beat handles, not
+  /// a stored per-actor fragment list.
+  List<Entity> projectedBeats;
 
   /// Green-screen: explicit statements of what the model does NOT see.
   List<String> explicitAbsences;
@@ -314,11 +246,13 @@ class ToolRegistryResource extends Resource {
 // Bounded memory (Phase 2)
 // ─────────────────────────────────────────────
 
-/// A memory summary: a compact, queryable record of an actor's past work.
+/// A memory summary: a first-class beat kind, like text/thought/toolCall.
 ///
-/// Mechanical systems write these from raw beats so the actor's projected
-/// context never has to carry full history. The summary is a Prop — it can
-/// be observed, shared, and referenced by other actors.
+/// A summary is only ever produced by a deliberate, requested graph transform
+/// ([summarizeThread]) — never by automatic compaction. It stays in its
+/// thread (via [BelongsToThread]) and links back to its source beats (via
+/// [SummarizesBeats]). The summary is a Prop — it can be observed, shared,
+/// and referenced by other actors.
 class MemorySummary implements Component {
   MemorySummary(this.text);
   String text;
@@ -334,24 +268,6 @@ class SummaryOwner implements Component {
 class SummaryThread implements Component {
   const SummaryThread(this.thread);
   final Entity? thread;
-}
-
-/// A memory compaction policy: when to compact and how much to keep.
-class MemoryCompactionPolicy extends Resource {
-  MemoryCompactionPolicy({
-    this.maxRawFragments = 12,
-    this.summaryEvery = 8,
-    this.summaryLength = 200,
-  });
-
-  /// Above this many raw fragments, compaction starts.
-  int maxRawFragments;
-
-  /// Compact the oldest N raw fragments into one summary every N beats.
-  int summaryEvery;
-
-  /// Max chars for a generated summary.
-  int summaryLength;
 }
 
 /// Token estimator for projection budgeting.
@@ -677,8 +593,7 @@ class AgentPlugin extends Plugin {
       ..registerObjectComponent<ActorModel>()
       ..registerObjectComponent<ActorSystemPrompt>()
       ..registerObjectComponent<ActorTools>()
-      ..registerObjectComponent<ActorRuntimeMemories>()
-      ..registerObjectComponent<ActorMemoryRef>()
+      ..registerObjectComponent<ActorThreads>()
       ..registerObjectComponent<Agency>()
       ..registerObjectComponent<AwaitingResponse>()
       ..registerObjectComponent<OpenDecision>()
@@ -719,10 +634,11 @@ class AgentPlugin extends Plugin {
       ..registerObjectComponent<ToolResult>()
       ..registerObjectComponent<ThoughtContent>()
       ..registerObjectComponent<ObservationData>()
-      // Bounded memory (Phase 2)
+      // Memory summary provenance (deliberate graph transforms only)
       ..registerObjectComponent<MemorySummary>()
       ..registerObjectComponent<SummaryOwner>()
-      ..registerObjectComponent<SummaryThread>();
+      ..registerObjectComponent<SummaryThread>()
+      ..registerObjectComponent<SummarizesBeats>();
 
     // Resources
     world
@@ -730,7 +646,7 @@ class AgentPlugin extends Plugin {
       ..upsertResource(GenerationHandlerResource())
       ..upsertResource(ProjectionBudget())
       ..upsertResource(ProjectionPolicy())
-      ..upsertResource(MemoryCompactionPolicy())
+      ..upsertResource(FacetIndex())
       ..upsertResource(AgencyPolicy());
 
     // Event channels for async LLM I/O
@@ -775,7 +691,6 @@ class AgentPlugin extends Plugin {
 
     world.createSchedule('Narrative')
       ..add(finalizePartialsSystem, name: 'finalizePartials')
-      ..then(compactMemorySystem, name: 'compactMemory')
       ..then(flushAllSystem, name: 'flushAfterNarrative');
   }
 
@@ -843,11 +758,11 @@ void projectSituationSystem(World world) {
   final policy = world.getResource<ProjectionPolicy>();
   final estimator = budget.estimator ?? defaultTokenEstimator;
 
-  final actorsWithAgency = world.query3<Actor, Agency, ActorRuntimeMemories>();
+  final actorsWithAgency = world.query2<Actor, Agency>();
 
   // Materialize the query results before mutating, since entity.insert()
   // changes archetypes and can invalidate lazy iterators.
-  for (final (entity, actor, _, _) in actorsWithAgency.toList()) {
+  for (final (entity, actor, _) in actorsWithAgency.toList()) {
     final situation = _buildSituation(
       world: world,
       entity: entity,
@@ -900,12 +815,12 @@ Situation _buildSituation({
   final decision = entity.get<OpenDecision>();
   final prompt = decision?.prompt ?? '';
 
-  // Cinematic cut: relevance-rank the actor's memory beats, then fit them
-  // into the token budget. This is the intelligence amplifier — the model
-  // only ever sees the slice the current decision actually needs.
-  final memories = entity.get<ActorRuntimeMemories>();
-  final fragments = memories?.fragments ?? const <ContextFragment>[];
-  final ranked = _rankFragments(world, fragments, prompt);
+  // Cinematic cut: ray-trace the graph for beats relevant to this decision.
+  // This is functional/derived — it reads the facet index + thread graph,
+  // never a stored per-actor list. The model only ever sees the slice the
+  // current decision actually needs.
+  final beats = _raycastBeats(world, entity, prompt);
+  final ranked = _rankFragments(world, beats, prompt);
   final fit = _fitToBudget(
     world: world,
     fragments: ranked,
@@ -921,9 +836,9 @@ Situation _buildSituation({
   // Green-screen: explicit absences so the model knows what it does NOT see.
   final absences = <String>[];
   if (policy.greenScreen) {
-    if (fragments.length > selected.length) {
+    if (beats.length > selected.length) {
       absences.add(
-        '${fragments.length - selected.length} earlier beat(s) are off-screen.',
+        '${beats.length - selected.length} earlier beat(s) are off-screen.',
       );
     }
     if (truncated) {
@@ -941,7 +856,7 @@ Situation _buildSituation({
     schema: decision?.schema ?? SchemaBundle.empty,
     inFramePropIds: inFrameProps,
     coPresentActorIds: coPresent,
-    contextFragments: selected,
+    projectedBeats: selected,
     explicitAbsences: absences,
     toolRegistryName: tools?.registryName,
     tokensUsed: tokensUsed,
@@ -950,76 +865,106 @@ Situation _buildSituation({
   );
 }
 
-/// Rank context fragments by relevance to the current [prompt].
+/// Ray-trace the graph for beats relevant to [prompt].
 ///
-/// A lightweight, deterministic heuristic: fragments whose text shares terms
+/// Derives keywords from the prompt, queries the [FacetIndex] for matching
+/// beats, and unions in the beats reachable from the actor's thread links
+/// ([ActorThreads]). This is the functional projection — it reads the index
+/// and the graph, never a stored per-actor list.
+List<Entity> _raycastBeats(World world, WorldEntity entity, String prompt) {
+  final index = world.getResource<FacetIndex>();
+  final out = <Entity>{};
+
+  // Keyword hits from the facet index (the ray-trace).
+  final promptTerms = _keywordsOf(prompt);
+  if (promptTerms.isNotEmpty) {
+    out.addAll(index.beatsFor(promptTerms));
+  }
+
+  // Beats reachable from the actor's thread links — the actor's own story.
+  final threads = entity.get<ActorThreads>();
+  if (threads != null) {
+    for (final thread in threads.threads) {
+      final (_, valid) = world.getEntity(thread);
+      if (!valid) continue;
+      for (final (beat, belongs, _)
+          in world.query2<BelongsToThread, BeatStatus>()) {
+        if (belongs.thread == thread) out.add(beat.entity);
+      }
+    }
+  }
+
+  return out.toList();
+}
+
+/// Split [text] into lowercase keywords, dropping terms of length <= 2.
+List<String> _keywordsOf(String text) => text
+    .toLowerCase()
+    .split(RegExp(r'\W+'))
+    .where((t) => t.length > 2)
+    .toList();
+
+/// Rank beat entities by relevance to the current [prompt].
+///
+/// A lightweight, deterministic heuristic: beats whose text shares terms
 /// with the prompt rank higher; recency breaks ties. This is the projection
 /// system's job — the model never sees raw history, only the ranked cut.
-List<ContextFragment> _rankFragments(
-  World world,
-  List<ContextFragment> fragments,
-  String prompt,
-) {
-  final promptTerms = prompt
-      .toLowerCase()
-      .split(RegExp(r'\W+'))
-      .where((t) => t.length > 2)
-      .toSet();
-  if (promptTerms.isEmpty) return fragments.reversed.toList();
+List<Entity> _rankFragments(World world, List<Entity> beats, String prompt) {
+  final promptTerms = _keywordsOf(prompt).toSet();
+  if (promptTerms.isEmpty) return beats.reversed.toList();
 
-  final scored = <(ContextFragment, int)>[];
-  for (var i = 0; i < fragments.length; i++) {
-    final f = fragments[i];
-    final text = _fragmentText(world, f).toLowerCase();
+  final scored = <(Entity, int)>[];
+  for (var i = 0; i < beats.length; i++) {
+    final beat = beats[i];
+    final text = _fragmentText(world, beat).toLowerCase();
     var score = 0;
     for (final term in promptTerms) {
       if (text.contains(term)) score++;
     }
-    // Recency tie-break: later fragments win.
-    scored.add((f, score * 1000 + i));
+    // Recency tie-break: later beats win.
+    scored.add((beat, score * 1000 + i));
   }
   scored.sort((a, b) => b.$2.compareTo(a.$2));
   return scored.map((s) => s.$1).toList();
 }
 
-/// Fit ranked fragments into the token budget, newest-relevant first.
+/// Fit ranked beat entities into the token budget, newest-relevant first.
 ///
-/// Returns the selected fragments, tokens used, and whether anything was cut.
-/// The prompt + system prompt are always included; beats are added until the
-/// budget is exhausted.
-({List<ContextFragment> selected, int tokensUsed, bool truncated})
-_fitToBudget({
+/// Returns the projected beats, the used tokens, and whether anything was
+/// cut. The prompt + system prompt are always included; beats are added
+/// until the budget is exhausted.
+({List<Entity> selected, int tokensUsed, bool truncated}) _fitToBudget({
   required World world,
-  required List<ContextFragment> fragments,
+  required List<Entity> fragments,
   required int budget,
   required String prompt,
   required TokenEstimator estimator,
   required int maxBeats,
 }) {
-  final selected = <ContextFragment>[];
+  final selected = <Entity>[];
   var used = estimator(prompt);
   var truncated = false;
 
-  for (final f in fragments) {
+  for (final beat in fragments) {
     if (selected.length >= maxBeats) {
       truncated = true;
       break;
     }
-    final text = _fragmentText(world, f);
+    final text = _fragmentText(world, beat);
     final cost = estimator(text);
     if (used + cost > budget) {
       truncated = true;
       continue;
     }
-    selected.add(f);
+    selected.add(beat);
     used += cost;
   }
 
   return (selected: selected, tokensUsed: used, truncated: truncated);
 }
 
-String _fragmentText(World world, ContextFragment f) {
-  final (entity, valid) = world.getEntity(f.beat);
+String _fragmentText(World world, Entity beat) {
+  final (entity, valid) = world.getEntity(beat);
   if (!valid) return '';
   final text = entity.get<TextContent>();
   return text?.text ?? '';
@@ -1062,16 +1007,14 @@ Future<void> actorActSystem(World world) async {
 
     // The projected, budget-limited context beats — the cinematic cut.
     // The model sees ONLY what projection selected, never raw history.
+    // Each projected beat is resolved to its TextContent for the wire format.
     final contextFragments = <Object>[];
-    for (final fragment in situation.contextFragments) {
-      final beatEntity = world.getEntity(fragment.beat);
+    for (final beat in situation.projectedBeats) {
+      final beatEntity = world.getEntity(beat);
       if (!beatEntity.$2) continue;
-      final beat = beatEntity.$1;
-      final textContent = beat.get<TextContent>();
+      final textContent = beatEntity.$1.get<TextContent>();
       if (textContent != null) {
-        contextFragments.add('${fragment.type.name}:${textContent.text}');
-      } else {
-        contextFragments.add(fragment.type.name);
+        contextFragments.add(textContent.text);
       }
     }
     // Green-screen absences are part of the cut.
@@ -1182,23 +1125,18 @@ void processResponsesSystem(World world) {
     if (!entity.$2) continue;
 
     final (we, _) = entity;
-    final memories = we.get<ActorRuntimeMemories>();
-    if (memories == null) continue;
 
-    // Store the model response as a Beat entity
+    // Store the model response as a Beat entity, then index it into the
+    // facet index so projection can ray-trace to it later. If the actor is
+    // in a thread, the beat lives in the graph via BelongsToThread.
     final responseBeat = world.reserveEmptyEntity().entity;
     final responseBeatEntity = world.getEntity(responseBeat).$1;
-    responseBeatEntity.insert(
-      TextContent(jsonEncode(response.structuralOutput)),
-    );
+    final responseText = jsonEncode(response.structuralOutput);
+    responseBeatEntity.insert(TextContent(responseText));
     responseBeatEntity.insert(BeatStatus(BeatStatusEnum.complete));
     responseBeatEntity.insert(BeatModality(BeatModalityEnum.text));
-    memories.fragments.add(
-      ContextFragment(
-        type: ContextFragmentType.modelResponse,
-        beat: responseBeat,
-      ),
-    );
+    _attachBeatToActorThread(world, we, responseBeat);
+    indexBeat(world, responseBeat, _keywordsOf(responseText));
 
     // Dispatch parsed tool calls as ToolCallEvents for the
     // ToolExecutionSystem to process. This is the ECS way —
@@ -1214,14 +1152,12 @@ void processResponsesSystem(World world) {
     for (final result in response.toolResults) {
       final toolBeat = world.reserveEmptyEntity().entity;
       final toolBeatEntity = world.getEntity(toolBeat).$1;
-      toolBeatEntity.insert(
-        TextContent('<result|${result.name}|${jsonEncode(result.output)}>'),
-      );
+      final toolText = '<result|${result.name}|${jsonEncode(result.output)}>';
+      toolBeatEntity.insert(TextContent(toolText));
       toolBeatEntity.insert(BeatStatus(BeatStatusEnum.complete));
       toolBeatEntity.insert(BeatModality(BeatModalityEnum.toolCall));
-      memories.fragments.add(
-        ContextFragment(type: ContextFragmentType.toolMessage, beat: toolBeat),
-      );
+      _attachBeatToActorThread(world, we, toolBeat);
+      indexBeat(world, toolBeat, _keywordsOf(toolText));
     }
 
     // Consume Agency + AwaitingResponse + OpenDecision — actor responded.
@@ -1342,200 +1278,69 @@ void processToolResultsSystem(World world) {
     if (!entity.$2) continue;
 
     final (we, _) = entity;
-    final memories = we.get<ActorRuntimeMemories>();
-    if (memories == null) continue;
 
     final toolBeat = world.reserveEmptyEntity().entity;
     final toolBeatEntity = world.getEntity(toolBeat).$1;
-    toolBeatEntity.insert(
-      TextContent(
-        '<result|${event.result.name}|${jsonEncode(event.result.output)}>',
-      ),
-    );
+    final toolText =
+        '<result|${event.result.name}|${jsonEncode(event.result.output)}>';
+    toolBeatEntity.insert(TextContent(toolText));
     toolBeatEntity.insert(BeatStatus(BeatStatusEnum.complete));
     toolBeatEntity.insert(BeatModality(BeatModalityEnum.toolCall));
-    memories.fragments.add(
-      ContextFragment(type: ContextFragmentType.toolMessage, beat: toolBeat),
-    );
+    _attachBeatToActorThread(world, we, toolBeat);
+    indexBeat(world, toolBeat, _keywordsOf(toolText));
   }
 }
 
-// ─────────────────────────────────────────────
-// Bounded memory via mechanical delegation (Phase 2)
-// ─────────────────────────────────────────────
-
-/// Mechanical system: compacts old raw memory into summaries — a graph
-/// transformation over the actor's threads, with a cache fallback.
-///
-/// The harness, not the model, owns history, and memory lives *in* the
-/// storyline (threads of beats), not in a parallel log. When a thread of the
-/// actor has too many raw beats, the oldest
-/// [MemoryCompactionPolicy.summaryEvery] beats are merged into a single
-/// [MemorySummary] *node that stays in that thread* (via [BelongsToThread]);
-/// the compacted beats are marked `archived` (off the projection path) but
-/// remain queryable for history. The actor's [ActorRuntimeMemories.fragments]
-/// cache is then re-derived from the thread graph.
-///
-/// When the actor has no thread links yet (legacy/cache-only usage), it falls
-/// back to a fragment-list compaction so bounded context still holds.
-void compactMemorySystem(World world) {
-  final policy = world.getResource<MemoryCompactionPolicy>();
-
-  final actors = world.query2<Actor, ActorRuntimeMemories>();
-  for (final (entity, _, memories) in actors.toList()) {
-    final ref = entity.get<ActorMemoryRef>();
-    final hasThreads = ref != null && ref.threads.isNotEmpty;
-
-    if (hasThreads) {
-      _compactThreadMemory(world, entity, ref, memories, policy);
-      // Source of truth is the graph — rebuild the cache from it.
-      entity.insert(
-        ActorRuntimeMemories(fragments: _threadFragments(world, entity)),
-      );
-    } else {
-      _compactCacheMemory(world, entity, memories, policy);
-    }
-  }
+/// If the actor is in a thread ([ActorThreads]), attach [beat] to that
+/// thread so it lives in the graph. Mechanical — never a memory cache.
+void _attachBeatToActorThread(World world, WorldEntity actor, Entity beat) {
+  final threads = actor.get<ActorThreads>();
+  if (threads == null || threads.threads.isEmpty) return;
+  final beatEntity = world.getEntity(beat);
+  if (!beatEntity.$2) return;
+  beatEntity.$1.insert(BelongsToThread(threads.threads.first));
 }
 
-/// Graph-native compaction: merge a thread's oldest raw beats into a single
-/// in-thread summary node, mark the compacted beats archived.
-void _compactThreadMemory(
-  World world,
-  WorldEntity entity,
-  ActorMemoryRef ref,
-  ActorRuntimeMemories memories,
-  MemoryCompactionPolicy policy,
-) {
-  for (final thread in ref.threads) {
-    final (t, valid) = world.getEntity(thread);
+// ─────────────────────────────────────────────
+// Deliberate graph transforms (requested, never automatic)
+// ─────────────────────────────────────────────
+
+/// Deliberate graph transform: summarize a set of beats into a [MemorySummary]
+/// beat that stays in [thread].
+///
+/// This is OPTIONAL/requested — it is NOT run automatically in any schedule.
+/// The summary beat:
+/// - stays in the thread via [BelongsToThread],
+/// - links back to its source beats via [SummarizesBeats],
+/// - is indexed with the union of its sources' keywords so projection can
+///   ray-trace to it.
+///
+/// Returns the new summary beat entity.
+Entity summarizeThread(World world, Entity thread, List<Entity> sources) {
+  final parts = <String>[];
+  final keywords = <String>{};
+  for (final source in sources) {
+    final (entity, valid) = world.getEntity(source);
     if (!valid) continue;
-
-    final beats =
-        world
-            .query2<BelongsToThread, BeatStatus>()
-            .where((r) => r.$2.thread == thread)
-            .map(
-              (r) => (
-                beat: r.$1.entity,
-                seq: r.$1.get<BeatSequence>()?.value ?? 0,
-                raw:
-                    !r.$1.has<MemorySummary>() &&
-                    r.$3.value != BeatStatusEnum.archived,
-              ),
-            )
-            .toList()
-          ..sort((a, b) => a.seq.compareTo(b.seq));
-
-    final activeRaw = beats.where((b) => b.raw).toList();
-    if (activeRaw.length <= policy.maxRawFragments) continue;
-
-    final toCompact = activeRaw.take(policy.summaryEvery).toList();
-    if (toCompact.isEmpty) continue;
-
-    final summaryText = _summarizeFragments(
-      world,
-      toCompact.map((b) => b.beat).toList(),
-      policy.summaryLength,
-    );
-
-    final summaryBeat = world.reserveEmptyEntity().entity;
-    final se = world.getEntity(summaryBeat).$1;
-    se.insert(TextContent(summaryText));
-    se.insert(BeatStatus(BeatStatusEnum.complete));
-    se.insert(BeatModality(BeatModalityEnum.observation));
-    se.insert(MemorySummary(summaryText));
-    se.insert(SummaryOwner(entity.entity));
-    se.insert(BelongsToThread(thread));
-    se.insert(BeatSequence(_nextThreadBeatSeq(world, thread)));
-
-    // Archive the compacted beats (off the projection path, kept for history).
-    for (final b in toCompact) {
-      final (we, ok) = world.getEntity(b.beat);
-      if (!ok) continue;
-      final st = we.get<BeatStatus>();
-      if (st != null) {
-        st.value = BeatStatusEnum.archived;
-      }
+    final text = entity.get<TextContent>();
+    if (text != null && text.text.isNotEmpty) {
+      parts.add(text.text);
     }
+    keywords.addAll(_keywordsOf(entity.get<TextContent>()?.text ?? ''));
   }
-}
 
-int _nextThreadBeatSeq(World world, Entity thread) {
-  var max = 0;
-  for (final (_, belongs, seq)
-      in world.query2<BelongsToThread, BeatSequence>()) {
-    if (belongs.thread != thread) continue;
-    if (seq.value > max) max = seq.value;
-  }
-  return max + 1;
-}
-
-/// Cache-only fallback: compact a plain fragment list (no thread links yet).
-void _compactCacheMemory(
-  World world,
-  WorldEntity entity,
-  ActorRuntimeMemories memories,
-  MemoryCompactionPolicy policy,
-) {
-  final fragments = memories.fragments;
-  if (fragments.length <= policy.maxRawFragments) return;
-
-  final raw = fragments
-      .where((f) => f.type != ContextFragmentType.memorySummary)
-      .toList();
-  if (raw.length < policy.summaryEvery) return;
-
-  final toCompact = raw.take(policy.summaryEvery).toList();
-  final summaryText = _summarizeFragments(
-    world,
-    toCompact.map((f) => f.beat).toList(),
-    policy.summaryLength,
-  );
-
+  final summaryText = parts.join(' | ');
   final summaryBeat = world.reserveEmptyEntity().entity;
   final se = world.getEntity(summaryBeat).$1;
   se.insert(TextContent(summaryText));
   se.insert(BeatStatus(BeatStatusEnum.complete));
   se.insert(BeatModality(BeatModalityEnum.observation));
   se.insert(MemorySummary(summaryText));
-  se.insert(SummaryOwner(entity.entity));
+  se.insert(BelongsToThread(thread));
+  se.insert(SummarizesBeats(sources: sources));
 
-  final compactedIds = toCompact.map((f) => f.beat).toSet();
-  memories.fragments = fragments
-      .where((f) => !compactedIds.contains(f.beat))
-      .toList();
-  memories.fragments.insert(
-    0,
-    ContextFragment(type: ContextFragmentType.memorySummary, beat: summaryBeat),
-  );
-}
-
-/// Deterministic, mechanical summarization: keep the head and tail of the
-/// compacted fragments, joined with a separator. This is a lossy but bounded
-/// compression — the full beats remain queryable in the world for later
-/// reconstruction (the projection just no longer shows them raw).
-String _summarizeFragments(World world, List<Entity> beats, int maxLength) {
-  final parts = <String>[];
-  for (final beat in beats) {
-    final (entity, valid) = world.getEntity(beat);
-    if (!valid) continue;
-    final text = entity.get<TextContent>();
-    if (text != null && text.text.isNotEmpty) {
-      parts.add(text.text);
-    }
-  }
-  if (parts.isEmpty) return '';
-
-  final joined = parts.join(' | ');
-  if (joined.length <= maxLength) return joined;
-
-  // Keep the head and tail, drop the middle.
-  final headLen = maxLength * 2 ~/ 3;
-  final tailLen = maxLength ~/ 3;
-  final head = joined.substring(0, headLen);
-  final tail = joined.substring(joined.length - tailLen);
-  return '$head … $tail';
+  indexBeat(world, summaryBeat, keywords);
+  return summaryBeat;
 }
 
 // ─────────────────────────────────────────────

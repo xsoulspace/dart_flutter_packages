@@ -165,14 +165,6 @@ class ModelRuntime {
   }
 }
 
-enum ContextFragmentType {
-  systemPrompt,
-  userMessage,
-  modelResponse,
-  toolMessage,
-  memorySummary,
-}
-
 extension type const AgentId(String value) {
   //TODO(arenukvern): add uuid
   factory AgentId.create() => AgentId('${DateTime.now()}');
