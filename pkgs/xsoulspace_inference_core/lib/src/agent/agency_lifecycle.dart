@@ -22,6 +22,7 @@ import 'agent_plugin.dart';
 /// This class encapsulates the policy for when to grant, consume, and
 /// retry agency. It's a stateless utility — all state lives in the
 /// ECS world as components.
+// ignore: avoid_classes_with_only_static_members
 class AgencyLifecycle {
   /// Maximum retry attempts for a failed LLM call.
   static const int maxRetries = 3;
@@ -30,21 +31,19 @@ class AgencyLifecycle {
   ///
   /// Returns true when the actor has an [OpenDecision] but no [Agency]
   /// and no [AwaitingResponse].
-  static bool canGrantAgency(WorldEntity entity) {
-    return entity.has<Actor>() &&
-        entity.has<OpenDecision>() &&
-        !entity.has<Agency>() &&
-        !entity.has<AwaitingResponse>();
-  }
+  static bool canGrantAgency(WorldEntity entity) =>
+      entity.has<Actor>() &&
+      entity.has<OpenDecision>() &&
+      !entity.has<Agency>() &&
+      !entity.has<AwaitingResponse>();
 
   /// Check if an actor is awaiting a response.
   ///
   /// Returns true when the actor has [AwaitingResponse] but no [Agency].
-  static bool isAwaitingResponse(WorldEntity entity) {
-    return entity.has<Actor>() &&
-        entity.has<AwaitingResponse>() &&
-        !entity.has<Agency>();
-  }
+  static bool isAwaitingResponse(WorldEntity entity) =>
+      entity.has<Actor>() &&
+      entity.has<AwaitingResponse>() &&
+      !entity.has<Agency>();
 
   /// Create a retry decision for a failed LLM call.
   ///

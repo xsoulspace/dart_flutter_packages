@@ -4,6 +4,12 @@
 /// [ActorGenerateHandler] for LLM responses, and enters event-driven
 /// sleep when no work remains.
 ///
+/// ## Flutter integration
+///
+/// For Flutter apps, prefer [EcsFixedStepLoop] from `ecsly_flutter` which
+/// drives schedules on the Flutter frame ticker. This [HarnessLoop] is
+/// for headless/CLI use or when you need full control over the loop.
+///
 /// ## Concurrency model
 ///
 /// `ActorAct` dispatches all LLM calls concurrently (fire-and-forget via

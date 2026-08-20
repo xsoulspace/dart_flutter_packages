@@ -51,6 +51,9 @@ class ActorTools implements Component {
 ///
 /// Stored as a list of context fragments (system, user, model, tool).
 /// This is cold-path data — not in the hot loop.
+///
+/// Each fragment references a [Beat] entity in the narrative graph,
+/// enabling typed access to content via the Beat's modality components.
 class ActorRuntimeMemories implements Component {
   ActorRuntimeMemories({List<ContextFragment>? fragments})
     : fragments = fragments ?? <ContextFragment>[];
@@ -59,10 +62,14 @@ class ActorRuntimeMemories implements Component {
 }
 
 /// A single context fragment in an actor's memory.
+///
+/// References a [Beat] entity in the narrative graph. The Beat's
+/// modality-specific components (TextContent, BeatToolCall, etc.)
+/// provide the actual content.
 class ContextFragment {
-  const ContextFragment({required this.type, required this.value});
+  const ContextFragment({required this.type, required this.beat});
   final ContextFragmentType type;
-  final String value;
+  final Entity beat;
 }
 
 /// Tag component: this actor currently has agency and must act.
@@ -209,7 +216,22 @@ class ActorGenerateRequest implements EcsEvent {
 /// Response from the LLM handler back to the ECS world.
 ///
 /// The external handler sends this after completing the generation.
-/// [toolCalls] contains parsed tool call tags if the model emitted any.
+/// [toolCalls] contains parsed tool calls if the model emitted any.
+/// [toolResults] contains results of tool calls that were already
+/// executed by the handler (e.g., Apple Foundation native tool calls).
+///
+/// ## Backend-specific tool handling
+///
+/// - **Apple Foundation (native)**: Tools are called during generation
+///   by the ModelRuntime. The handler receives the final result with
+///   tool results already resolved in [toolResults].
+/// - **OpenAI/OpenRouter/DeepSeek**: The handler parses tool calls from
+///   the response into [toolCalls]. These are sent as `ToolCallEvent`s
+///   for the ECS `ToolExecutionSystem` to process.
+/// - **Raw LLM**: Same as above — parse from text into [toolCalls].
+///
+/// The ECS layer processes [toolCalls] via `ToolExecutionSystem` and
+/// stores [toolResults] as Beats.
 ///
 /// [rawOutput] - shows output as it is come from llm
 class ActorGenerateResponse implements EcsEvent {
@@ -218,19 +240,55 @@ class ActorGenerateResponse implements EcsEvent {
     required this.structuralOutput,
     required this.rawOutput,
     this.toolCalls = const [],
+    this.toolResults = const [],
   });
 
   final Entity actorEntity;
   final Map<String, dynamic> structuralOutput;
   final String rawOutput;
   final List<ToolCall> toolCalls;
+  final List<ToolExecutionResult> toolResults;
 }
 
 /// A parsed tool call from an LLM response.
+///
+/// Sent by the handler as a `ToolCallEvent` for the ECS
+/// `ToolExecutionSystem` to process.
 class ToolCall {
   const ToolCall({required this.name, required this.arguments});
   final ToolName name;
   final Map<String, dynamic> arguments;
+}
+
+/// Result of a tool call execution.
+///
+/// Sent by the `ToolExecutionSystem` as a `ToolResultEvent`
+/// for `processToolResultsSystem` to store as a Beat.
+class ToolExecutionResult {
+  const ToolExecutionResult({required this.name, required this.output});
+  final String name;
+  final dynamic output;
+}
+
+/// Event: a tool call that needs to be executed by the ECS world.
+///
+/// Sent by the handler (for parsed tool calls) or by
+/// `processResponsesSystem` (for tool calls that need execution).
+/// Processed by `ToolExecutionSystem` in the Mechanical schedule.
+class ToolCallEvent implements EcsEvent {
+  const ToolCallEvent({required this.actorEntity, required this.call});
+  final Entity actorEntity;
+  final ToolCall call;
+}
+
+/// Event: a tool call result that has been executed.
+///
+/// Sent by `ToolExecutionSystem` after executing a `ToolCallEvent`.
+/// Consumed by `processToolResultsSystem` to store as a Beat.
+class ToolResultEvent implements EcsEvent {
+  const ToolResultEvent({required this.actorEntity, required this.result});
+  final Entity actorEntity;
+  final ToolExecutionResult result;
 }
 
 // ─────────────────────────────────────────────
@@ -295,14 +353,16 @@ class AgentPlugin extends Plugin {
     // Event channels for async LLM I/O
     world.events.register<ActorGenerateRequest>();
     world.events.register<ActorGenerateResponse>();
+    world.events.register<ToolCallEvent>();
+    world.events.register<ToolResultEvent>();
 
     // Schedules — the cinematic multi-actor loop
     //
     // 1. AgencyGrant: grant Agency to actors with OpenDecision
     // 2. Project: build minimal Situations for actors with Agency
     // 3. ActorAct: async — send LLM requests, external handler responds
-    // 4. ProcessResponses: handle LLM responses, queue tool calls
-    // 5. Mechanical: score/prune threads, execute tools
+    // 4. ProcessResponses: handle LLM responses, dispatch tool calls
+    // 5. Mechanical: execute tools, score/prune threads
     // 6. Narrative: advance Thread/Beat playheads, finalize partials
     world.createSchedule('AgencyGrant')
       ..add(grantAgencySystem, name: 'grantAgency')
@@ -321,7 +381,9 @@ class AgentPlugin extends Plugin {
       ..then(flushAllSystem, name: 'flushAfterResponses');
 
     world.createSchedule('Mechanical')
-      ..add(scoreThreadsSystem, name: 'scoreThreads')
+      ..add(toolExecutionSystem, name: 'toolExecution')
+      ..then(processToolResultsSystem, name: 'processToolResults')
+      ..then(scoreThreadsSystem, name: 'scoreThreads')
       ..then(pruneThreadsSystem, name: 'pruneThreads')
       ..then(mergeThreadsSystem, name: 'mergeThreads')
       ..then(flushAllSystem, name: 'flushAfterMechanical');
@@ -449,9 +511,22 @@ Future<void> actorActSystem(World world) async {
         ? world.getResource<ToolRegistryResource>().get(tools.registryName)
         : null;
 
-    final contextFragments =
-        memories?.fragments.map((f) => '${f.type.name}:${f.value}').toList() ??
-        [];
+    // Build context fragments from Beat entities referenced by ContextFragment.
+    // Each Beat's content is read from its modality-specific components.
+    final contextFragments = <Object>[];
+    if (memories != null) {
+      for (final fragment in memories.fragments) {
+        final beatEntity = world.getEntity(fragment.beat);
+        if (!beatEntity.$2) continue;
+        final beat = beatEntity.$1;
+        final textContent = beat.get<TextContent>();
+        if (textContent != null) {
+          contextFragments.add('${fragment.type.name}:${textContent.text}');
+        } else {
+          contextFragments.add(fragment.type.name);
+        }
+      }
+    }
 
     final request = ActorGenerateRequest(
       actorEntity: entity.entity,
@@ -482,15 +557,20 @@ Future<void> actorActSystem(World world) async {
 
 /// System 4: Process LLM responses from the external handler.
 ///
-/// Mechanical — no LLM calls. Reads [ActorGenerateResponse] events,
-/// stores the output as a context fragment, and executes tool calls
-/// synchronously (tools are typically fast; only LLM calls are truly async).
+/// Mechanical — no LLM calls, no tool execution. Reads
+/// [ActorGenerateResponse] events and stores them as Beat entities.
 ///
-/// Consumes [Agency] + [AwaitingResponse] after storing the response.
-/// On failure (null response): creates a new [OpenDecision] with an error note.
+/// For tool calls that were parsed by the handler (non-native backends),
+/// sends [ToolCallEvent]s for the [toolExecutionSystem] to process.
+/// For tool results that were already executed by the handler (Apple
+/// Foundation native), stores them directly as Beats.
+///
+/// Consumes [Agency] + [AwaitingResponse] + [OpenDecision] after storing
+/// the response. On failure (null response): creates a new [OpenDecision]
+/// with an error note for retry.
 void processResponsesSystem(World world) {
   final responseReader = world.events.reader<ActorGenerateResponse>();
-  final toolRegistryResource = world.getResource<ToolRegistryResource>();
+  final toolCallWriter = world.events.writer<ToolCallEvent>();
 
   // Drain and clear the response channel so events don't persist across frames.
   final responses = responseReader.drain();
@@ -519,62 +599,46 @@ void processResponsesSystem(World world) {
     final memories = we.get<ActorRuntimeMemories>();
     if (memories == null) continue;
 
-    // Store the model response
+    // Store the model response as a Beat entity
+    final responseBeat = world.reserveEmptyEntity().entity;
+    final responseBeatEntity = world.getEntity(responseBeat).$1;
+    responseBeatEntity.insert(
+      TextContent(jsonEncode(response.structuralOutput)),
+    );
+    responseBeatEntity.insert(BeatStatus(BeatStatusEnum.complete));
+    responseBeatEntity.insert(BeatModality(BeatModalityEnum.text));
     memories.fragments.add(
       ContextFragment(
         type: ContextFragmentType.modelResponse,
-        value: jsonEncode(response.structuralOutput),
+        beat: responseBeat,
       ),
     );
 
-    // Resolve the actor's tool registry by name (not by tool name)
-    final tools = we.get<ActorTools>();
-    final toolRegistry = tools != null
-        ? toolRegistryResource.get(tools.registryName)
-        : null;
-
-    // Execute tool calls synchronously (MVP decision — tools are fast).
-    // Slow async tool calls would be deferred to the result queue.
+    // Dispatch parsed tool calls as ToolCallEvents for the
+    // ToolExecutionSystem to process. This is the ECS way —
+    // tools are executed by a system, not by the handler.
     for (final call in response.toolCalls) {
-      if (toolRegistry == null) {
-        memories.fragments.add(
-          ContextFragment(
-            type: ContextFragmentType.toolMessage,
-            value: '<result|${call.name.value}|{"error":"No tool registry"}>',
-          ),
-        );
-        continue;
-      }
-
-      final toolDef = toolRegistry.get(call.name);
-      if (toolDef == null) {
-        memories.fragments.add(
-          ContextFragment(
-            type: ContextFragmentType.toolMessage,
-            value: '<result|${call.name.value}|{"error":"Unknown tool"}>',
-          ),
-        );
-        continue;
-      }
-
-      // Synchronous execution — await the Future directly.
-      // ToolDef.execute returns Future<dynamic>, but most tools complete
-      // synchronously. For truly async tools, the result is processed
-      // via .then() with unawaited to avoid blocking the ECS loop.
-      // Slow async tool calls would be deferred to the result queue.
-      unawaited(
-        toolDef.execute(call.arguments).then((value) {
-          memories.fragments.add(
-            ContextFragment(
-              type: ContextFragmentType.toolMessage,
-              value: '<result|${call.name.value}|${jsonEncode(value)}>',
-            ),
-          );
-        }),
+      toolCallWriter.send(
+        ToolCallEvent(actorEntity: response.actorEntity, call: call),
       );
     }
 
-    // Consume Agency + AwaitingResponse + OpenDecision — the actor has responded.
+    // Store tool results that were already executed by the handler
+    // (e.g., Apple Foundation native tool calls).
+    for (final result in response.toolResults) {
+      final toolBeat = world.reserveEmptyEntity().entity;
+      final toolBeatEntity = world.getEntity(toolBeat).$1;
+      toolBeatEntity.insert(
+        TextContent('<result|${result.name}|${jsonEncode(result.output)}>'),
+      );
+      toolBeatEntity.insert(BeatStatus(BeatStatusEnum.complete));
+      toolBeatEntity.insert(BeatModality(BeatModalityEnum.toolCall));
+      memories.fragments.add(
+        ContextFragment(type: ContextFragmentType.toolMessage, beat: toolBeat),
+      );
+    }
+
+    // Consume Agency + AwaitingResponse + OpenDecision — actor responded.
     // If the response was null/empty, create a new OpenDecision for retry.
     if (response.structuralOutput.isEmpty && response.rawOutput.isEmpty) {
       we.insert(
@@ -589,6 +653,112 @@ void processResponsesSystem(World world) {
     }
     we.remove<Agency>();
     we.remove<AwaitingResponse>();
+  }
+}
+
+/// System 5: Execute tool calls dispatched as [ToolCallEvent]s.
+///
+/// Reads [ToolCallEvent]s from the event channel, executes the tools
+/// via the [ToolRegistryResource], and sends [ToolResultEvent]s back.
+///
+/// This is the ECS-native way to handle tool execution — tools are
+/// executed by a system, not by the handler. The handler only parses
+/// tool calls from LLM output; execution happens here.
+void toolExecutionSystem(World world) {
+  final toolCallReader = world.events.reader<ToolCallEvent>();
+  final toolResultWriter = world.events.writer<ToolResultEvent>();
+  final toolRegistryResource = world.getResource<ToolRegistryResource>();
+
+  final toolCalls = toolCallReader.drain();
+  world.events.channel<ToolCallEvent>().clear();
+
+  for (final event in toolCalls) {
+    final entity = world.getEntity(event.actorEntity);
+    if (!entity.$2) continue;
+
+    final (we, _) = entity;
+    final tools = we.get<ActorTools>();
+    final toolRegistry = tools != null
+        ? toolRegistryResource.get(tools.registryName)
+        : null;
+
+    if (toolRegistry == null) {
+      toolResultWriter.send(
+        ToolResultEvent(
+          actorEntity: event.actorEntity,
+          result: ToolExecutionResult(
+            name: event.call.name.value,
+            output: {'error': 'No tool registry'},
+          ),
+        ),
+      );
+      continue;
+    }
+
+    final toolDef = toolRegistry.get(event.call.name);
+    if (toolDef == null) {
+      toolResultWriter.send(
+        ToolResultEvent(
+          actorEntity: event.actorEntity,
+          result: ToolExecutionResult(
+            name: event.call.name.value,
+            output: {'error': 'Unknown tool'},
+          ),
+        ),
+      );
+      continue;
+    }
+
+    // Execute the tool. Most tools complete synchronously, but
+    // async tools are handled via .then() — the result is sent
+    // as a ToolResultEvent when it arrives.
+    unawaited(
+      toolDef.execute(event.call.arguments).then((value) {
+        toolResultWriter.send(
+          ToolResultEvent(
+            actorEntity: event.actorEntity,
+            result: ToolExecutionResult(
+              name: event.call.name.value,
+              output: value,
+            ),
+          ),
+        );
+      }),
+    );
+  }
+}
+
+/// System 6: Process tool results from [ToolResultEvent]s.
+///
+/// Reads [ToolResultEvent]s and stores them as Beat entities in the
+/// actor's memory. This runs after [toolExecutionSystem] in the same
+/// Mechanical schedule tick.
+void processToolResultsSystem(World world) {
+  final resultReader = world.events.reader<ToolResultEvent>();
+
+  final results = resultReader.drain();
+  world.events.channel<ToolResultEvent>().clear();
+
+  for (final event in results) {
+    final entity = world.getEntity(event.actorEntity);
+    if (!entity.$2) continue;
+
+    final (we, _) = entity;
+    final memories = we.get<ActorRuntimeMemories>();
+    if (memories == null) continue;
+
+    final toolBeat = world.reserveEmptyEntity().entity;
+    final toolBeatEntity = world.getEntity(toolBeat).$1;
+    toolBeatEntity.insert(
+      TextContent(
+        '<result|${event.result.name}|${jsonEncode(event.result.output)}>',
+      ),
+    );
+    toolBeatEntity.insert(BeatStatus(BeatStatusEnum.complete));
+    toolBeatEntity.insert(BeatModality(BeatModalityEnum.toolCall));
+    memories.fragments.add(
+      ContextFragment(type: ContextFragmentType.toolMessage, beat: toolBeat),
+    );
   }
 }
 
@@ -648,6 +818,19 @@ abstract class ActorGenerateHandler {
 
 /// Default handler that uses [ModelRouterResource] to resolve models
 /// and call the inference client directly.
+///
+/// ## Backend-specific tool handling
+///
+/// - **Apple Foundation (native)**: The `ModelRuntime.generate()` handles
+///   tool calls during generation. Tools are passed via `toolRegistry`
+///   and executed natively. The handler receives the final result with
+///   tool results already resolved in `response.toolResults`.
+/// - **Raw LLM backends**: The handler parses tool calls from `rawOutput`
+///   using `parseToolCalls()` and returns them in `toolCalls`. The ECS
+///   `toolExecutionSystem` then executes them.
+///
+/// The handler NEVER executes tools itself — that's the ECS layer's job.
+/// The handler only parses tool calls from LLM output (for non-native backends).
 class DefaultActorGenerateHandler extends ActorGenerateHandler {
   /// The world must have [ModelRouterResource] registered.
   @override
@@ -684,15 +867,25 @@ class DefaultActorGenerateHandler extends ActorGenerateHandler {
     }
 
     // Parse tool calls from raw output using the tag-based parser.
-    // For Apple Foundation (native), the ModelRuntime returns already-parsed
-    // ToolCall objects, so this parsing is backend-specific.
+    // For Apple Foundation (native), the ModelRuntime handles tools
+    // during generation — rawOutput won't contain tool tags, so
+    // toolCalls will be empty and toolResults will contain the results.
+    // For raw LLM backends, parse tool calls for the ECS
+    // ToolExecutionSystem to execute.
     final toolCalls = parseToolCalls(response.rawOutput ?? '');
+
+    // Convert InferenceResponse.toolResults to ToolExecutionResult objects.
+    // For Apple Foundation (native), these are already executed results.
+    final toolResults = response.toolResults
+        .map((r) => ToolExecutionResult(name: r.name, output: r.output))
+        .toList();
 
     return ActorGenerateResponse(
       actorEntity: request.actorEntity,
       structuralOutput: response.output,
       rawOutput: response.rawOutput ?? '',
       toolCalls: toolCalls,
+      toolResults: toolResults,
     );
   }
 

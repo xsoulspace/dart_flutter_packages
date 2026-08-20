@@ -70,7 +70,9 @@ class EcsScenario {
     if (memories == null || memories.fragments.isEmpty) return null;
     final last = memories.fragments.last;
     if (last.type == ContextFragmentType.modelResponse) {
-      return last.value;
+      final beatEntity = world.getEntity(last.beat).$1;
+      final textContent = beatEntity.get<TextContent>();
+      return textContent?.text;
     }
     return null;
   }

@@ -99,7 +99,7 @@ class _ExamplePageState extends State<_ExamplePage> {
     final lastFragment = memories?.fragments.last;
     setState(() {
       if (lastFragment != null) {
-        _status = 'OK: ${lastFragment.value}';
+        _status = 'OK: $lastFragment';
       } else {
         _status = 'No response received';
       }

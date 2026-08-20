@@ -53,6 +53,7 @@ Key: `ActorAct` dispatches LLM calls concurrently and returns immediately. `Proc
 | `processResponsesSystem` | `agent_plugin.dart` | Tested |
 | `scoreThreadsSystem`, `pruneThreadsSystem`, `mergeThreadsSystem` | `narrative.dart` (NEW) | Real scoring/pruning (replaces placeholders) |
 | `finalizePartialsSystem` | `narrative.dart` (NEW) | Narrative schedule system |
+| `toolExecutionSystem`, `processToolResultsSystem` | `agent_plugin.dart` (NEW) | ECS-driven tool execution via events |
 | `spawnThread`, `startBeat`, `appendToBeat`, `completeBeat` | `narrative.dart` (NEW) | Graph-forming systems |
 | `parseToolCalls` | `agent_plugin.dart` | Public function (renamed from `_parseToolCalls`) |
 | `ActorGenerateHandler.processPending` | `agent_plugin.dart` (NEW) | Polling-based handler (replaces broken `forEach`) |
@@ -80,7 +81,7 @@ Key: `ActorAct` dispatches LLM calls concurrently and returns immediately. `Proc
 | 10 | `agent.dart` duplicates ECS concepts (`Agent`, `AgentId`, `ModelRouter`) | P2 | `agent.dart` | **FIXED** — deprecated `Agent`, `AIRuntime`, `AIWorld` |
 | 11 | `ToolCall` name collision — event payload vs. component | P2 | `agent_plugin.dart` L232 vs. discussion.md L802 | **FIXED** — Beat component renamed to `BeatToolCall` |
 | 12 | No multi-actor coordination (`AddressedTo`, `PrivateToActor`, `DerivedFrom`) | P2 | Missing | **FIXED** — components in `narrative.dart` |
-| 13 | Tool call parsing is hardcoded to tag-based parsing — should be backend-specific | P0 | `agent_plugin.dart` L621-631, `tool_call_parser.dart` | **FIXED** — `parseToolCalls` is public, handler-layer responsibility |
+| 13 | Tool call parsing is hardcoded to tag-based parsing — should be backend-specific | P0 | `agent_plugin.dart` L621-631, `tool_call_parser.dart` | **FIXED** — `parseToolCalls` is public, handler-layer responsibility, ECS-driven execution via `ToolCallEvent`/`ToolResultEvent` |
 | 14 | `ContextFragment` value is a raw string — loses structure | P1 | `agent_plugin.dart` L60-64 | Open — Phase 1 (ContextFragment → typed Beats) |
 | 15 | `EventChannel` has no subscription mechanism — `forEach` is snapshot-only | P0 | ecsly `event_channel.dart` | **FIXED** — polling pattern via `processPending` |
 | 16 | `actorActSystem` uses `asyncParallel` mode but `EcsFixedLoop` calls `runScheduleAsync` which awaits — defeats fire-and-forget | P0 | `ecs_loop.dart` + `agent_plugin.dart` | **FIXED** — `EcsFixedLoop` uses `runSchedule` (sync path) |
@@ -144,18 +145,24 @@ Or: use a polling pattern where the host application calls `handler.processPendi
 
 | Backend | Tool calls | Structured output |
 |---|---|---|
-| Apple Foundation (native) | Native bridge — no parsing needed | Native JSON schema |
-| OpenAI / OpenRouter / DeepSeek | Native tool call API | Native JSON schema |
-| Raw LLM (no tool API) | Parse from text (tag-based or XML) | Parse from text |
+| Apple Foundation (native) | Tools called during generation by ModelRuntime — results returned in `toolResults` | Native JSON schema |
+| OpenAI / OpenRouter / DeepSeek | Native tool call API — handler parses, ECS executes | Native JSON schema |
+| Raw LLM (no tool API) | Parse from text (tag-based or XML) — handler parses, ECS executes | Parse from text |
 | Laguna / custom | Custom format | Custom format |
 
 **Implementation**:
 - `ActorGenerateRequest` carries the `ToolRegistry` and `SchemaBundle` as-is.
 - `ActorGenerateResponse` carries `structuralOutput` (parsed `Map<String, dynamic>`) and `rawOutput` (raw string).
 - **Tool call parsing is the handler's responsibility**, not the ECS system's.
-- The `processResponsesSystem` receives already-parsed `ToolCall` objects in `ActorGenerateResponse.toolCalls`.
+- For Apple Foundation: the handler returns `toolResults` (already executed by the runtime).
+- For other backends: the handler parses tool calls into `toolCalls`, which are sent as `ToolCallEvent`s for the ECS `ToolExecutionSystem` to execute.
+- The ECS `processResponsesSystem` receives already-parsed `ToolCall` objects and dispatches them as `ToolCallEvent`s.
+- The ECS `toolExecutionSystem` executes tools and sends `ToolResultEvent`s.
+- The ECS `processToolResultsSystem` stores results as Beats.
 
-**Action**: Move `_parseToolCalls` from `agent_plugin.dart` into the handler/runtime layer. The ECS system just consumes `response.toolCalls`.
+**Action**: `parseToolCalls` is a public function in `agent_plugin.dart`. The handler uses it for non-native backends. The ECS layer never executes tools directly — it uses the event-driven `ToolCallEvent` → `ToolExecutionSystem` → `ToolResultEvent` → `processToolResultsSystem` pipeline.
+
+**Key insight**: This makes the ECS world the backbone — all tool calls are tracked as ECS entities/events, enabling multiplayer and deterministic replay.
 
 ### 2.4 Prefer native ecsly API
 

@@ -221,8 +221,8 @@ class ActionPayload extends Component {
 
 /// A tool call within a Beat.
 ///
-/// Renamed from `ToolCall` to avoid collision with the event payload class
-/// of the same name in [agent_plugin.dart].
+/// Used as both a Beat component (for stored tool calls) and as part of
+/// the [ToolCallEvent] for ECS-driven tool execution.
 class BeatToolCall extends Component {
   BeatToolCall(this.name, this.args);
   final String name;
@@ -230,6 +230,9 @@ class BeatToolCall extends Component {
 }
 
 /// Result of a tool call within a Beat.
+///
+/// Used as both a Beat component (for stored tool results) and as part of
+/// the [ToolResultEvent] for ECS-driven tool execution.
 class ToolResult extends Component {
   ToolResult(this.result);
   dynamic result;

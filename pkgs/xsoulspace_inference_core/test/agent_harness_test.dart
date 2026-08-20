@@ -418,7 +418,10 @@ void main() {
 
       final lastFragment = memories.fragments.last;
       expect(lastFragment.type, ContextFragmentType.modelResponse);
-      expect(lastFragment.value, contains('hello world'));
+      final beatEntity = world.getEntity(lastFragment.beat).$1;
+      final textContent = beatEntity.get<TextContent>();
+      expect(textContent, isNotNull);
+      expect(textContent!.text, contains('hello world'));
 
       // Verify Agency + AwaitingResponse were consumed
       expect(world.getEntity(actor).$1.has<Agency>(), isFalse);
@@ -465,8 +468,16 @@ void main() {
       world.runSchedule('ProcessResponses');
       world.flush();
 
-      // Give tool execution time to complete
+      // Run Mechanical schedule to execute tool calls
+      world.runSchedule('Mechanical');
+      world.flush();
+
+      // Give tool execution time to complete (async)
       await Future.delayed(const Duration(milliseconds: 100));
+
+      // Run Mechanical again to process tool results
+      world.runSchedule('Mechanical');
+      world.flush();
 
       final memories = world.getEntity(actor).$1.get<ActorRuntimeMemories>();
       expect(memories, isNotNull);
@@ -477,7 +488,10 @@ void main() {
           .where((f) => f.type == ContextFragmentType.toolMessage)
           .toList();
       expect(toolFragments, isNotEmpty);
-      expect(toolFragments.first.value, contains('echoed'));
+      final toolBeat = world.getEntity(toolFragments.first.beat).$1;
+      final toolText = toolBeat.get<TextContent>();
+      expect(toolText, isNotNull);
+      expect(toolText!.text, contains('echoed'));
     });
   });
 
@@ -528,7 +542,10 @@ void main() {
 
       final lastFragment = memories.fragments.last;
       expect(lastFragment.type, ContextFragmentType.modelResponse);
-      expect(lastFragment.value, contains('hello'));
+      final beatEntity = world.getEntity(lastFragment.beat).$1;
+      final textContent = beatEntity.get<TextContent>();
+      expect(textContent, isNotNull);
+      expect(textContent!.text, contains('hello'));
 
       // Verify Agency + AwaitingResponse were consumed
       expect(world.getEntity(actor).$1.has<Agency>(), isFalse);
@@ -945,13 +962,14 @@ void main() {
   });
 
   group('ContextFragment', () {
-    test('holds type and value', () {
-      const fragment = ContextFragment(
+    test('holds type and beat reference', () {
+      final beat = Entity.create(1);
+      final fragment = ContextFragment(
         type: ContextFragmentType.userMessage,
-        value: 'hello',
+        beat: beat,
       );
       expect(fragment.type, ContextFragmentType.userMessage);
-      expect(fragment.value, 'hello');
+      expect(fragment.beat, beat);
     });
   });
 

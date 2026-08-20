@@ -26,6 +26,7 @@ class ToolTag {
   final int end;
 }
 
+// ignore: avoid_classes_with_only_static_members
 class ToolTagParser {
   static final _regex = RegExp(
     r'<(getDefinition|call|result)\|([a-zA-Z0-9_]+)(?:\|(\{.*?\}))?>',

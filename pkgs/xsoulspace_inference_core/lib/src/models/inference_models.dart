@@ -173,6 +173,7 @@ class InferenceResponse {
     this.normalizedTranscript,
     this.segments = const <InferenceSpeechSegment>[],
     this.audioArtifact,
+    this.toolResults = const [],
   });
 
   factory InferenceResponse.fromJson(final Map<String, dynamic> json) =>
@@ -182,7 +183,6 @@ class InferenceResponse {
         warnings: jsonDecodeListAs(json['warnings']),
         meta: jsonDecodeMap(json['meta']),
         task: InferenceTask.fromJson(json['task']),
-
         transcript: jsonDecodeString(json['transcript']),
         normalizedTranscript: jsonDecodeString(json['normalized_transcript']),
         segments: jsonDecodeListAs<Map<String, dynamic>>(
@@ -205,6 +205,7 @@ class InferenceResponse {
   final String? normalizedTranscript;
   final List<InferenceSpeechSegment> segments;
   final InferenceAudioArtifact? audioArtifact;
+  final List<({String name, dynamic output})> toolResults;
 
   Map<String, dynamic> toJson() => {
     'task': task.name,
