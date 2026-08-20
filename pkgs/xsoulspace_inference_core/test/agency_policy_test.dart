@@ -1,6 +1,6 @@
 // ignore_for_file: lines_longer_than_80_chars
 
-/// Phase 3 — tests for agency policy + escalation.
+/// Phase 3 — agency policy + escalation.
 ///
 /// Verifies that agency is granted by priority (not just "any decision"),
 /// that concurrency is capped, and that escalation routes a decision to a
@@ -10,9 +10,9 @@ library;
 import 'package:test/test.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
-import 'agent_harness_test.dart' show MockGenerationHandler, buildTestWorld;
+import 'support/agent_harness_support.dart';
 
-/// Spawn an actor in a scene with an [OpenDecision].
+/// Spawn an actor in a scene with an [OpenDecision] carrying priority/escalation.
 Entity _spawnActor(
   World world,
   Entity scene, {

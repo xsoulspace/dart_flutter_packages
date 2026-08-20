@@ -77,7 +77,7 @@ class _ExamplePageState extends State<_ExamplePage> {
       Actor(agentId: actorId),
       ActorModel(modelId: modelId),
       const ActorSystemPrompt(text: 'You are a helpful assistant.'),
-      ActorRuntimeMemories(),
+      ActorThreads(threads: []),
       PresentInScene(sceneEntity: sceneEntity),
     ]);
 
@@ -96,12 +96,18 @@ class _ExamplePageState extends State<_ExamplePage> {
     // Wait for the loop to process the decision and sleep
     await Future.delayed(const Duration(seconds: 5));
 
-    // Read the result
-    final memories = world.maybeGetComponent<ActorRuntimeMemories>(actorEntity);
-    final lastFragment = memories?.fragments.last;
+    // Read the projected cut: the indexed beats the actor handled. The cut is a
+    // derived view (Situation) rebuilt each decision, so read the facet index.
+    final index = world.getResource<FacetIndex>();
+    final responseBeats = index.beatsFor(const ['hello']).toList();
     setState(() {
-      if (lastFragment != null) {
-        _status = 'OK: $lastFragment';
+      if (responseBeats.isNotEmpty) {
+        final text = world
+            .getEntity(responseBeats.first)
+            .$1
+            .get<TextContent>()
+            ?.text;
+        _status = text == null ? 'No response received' : 'OK: $text';
       } else {
         _status = 'No response received';
       }

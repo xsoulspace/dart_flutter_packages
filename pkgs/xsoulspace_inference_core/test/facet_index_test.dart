@@ -11,23 +11,7 @@ library;
 import 'package:test/test.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
-import 'agent_harness_test.dart' show buildTestWorld;
-
-/// Spawn a complete text beat in [thread] and index it under [keywords].
-Entity _addBeat(
-  World world,
-  Entity thread,
-  Entity speaker,
-  String text,
-  List<String> keywords,
-) {
-  final beat = startBeat(world, thread, speaker, BeatModalityEnum.text);
-  appendToBeat(world, beat, text);
-  completeBeat(world, beat);
-  indexBeat(world, beat, keywords);
-  world.flush();
-  return beat;
-}
+import 'support/agent_harness_support.dart';
 
 void main() {
   group('FacetIndex', () {
@@ -43,7 +27,7 @@ void main() {
       final thread = spawnThread(world, speaker, scene);
       world.flush();
 
-      final beat = _addBeat(
+      final beat = addIndexedBeat(
         world,
         thread,
         speaker,
@@ -72,14 +56,14 @@ void main() {
       final thread = spawnThread(world, speaker, scene);
       world.flush();
 
-      final beatA = _addBeat(
+      final beatA = addIndexedBeat(
         world,
         thread,
         speaker,
         'The lexer produces tokens.',
         const ['lexer', 'tokens'],
       );
-      final beatB = _addBeat(
+      final beatB = addIndexedBeat(
         world,
         thread,
         speaker,
@@ -114,14 +98,14 @@ void main() {
         // The relevant beat lives in the actor's thread and matches the prompt
         // keyword. The irrelevant beat lives in an UNLINKED thread, so it is
         // neither keyword-relevant nor thread-reachable.
-        final relevant = _addBeat(
+        final relevant = addIndexedBeat(
           world,
           thread,
           actor,
           'The parser is fixed now.',
           const ['parser'],
         );
-        final irrelevant = _addBeat(
+        final irrelevant = addIndexedBeat(
           world,
           otherThread,
           actor,
@@ -161,7 +145,7 @@ void main() {
       world.flush();
 
       // A beat with no shared prompt keyword, but reachable from the thread.
-      final reachable = _addBeat(
+      final reachable = addIndexedBeat(
         world,
         thread,
         actor,
@@ -197,14 +181,14 @@ void main() {
         final thread = spawnThread(world, speaker, scene);
         world.flush();
 
-        final source1 = _addBeat(
+        final source1 = addIndexedBeat(
           world,
           thread,
           speaker,
           'The lexer produces tokens.',
           const ['lexer', 'tokens'],
         );
-        final source2 = _addBeat(
+        final source2 = addIndexedBeat(
           world,
           thread,
           speaker,

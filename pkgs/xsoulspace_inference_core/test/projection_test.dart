@@ -1,41 +1,17 @@
 // ignore_for_file: lines_longer_than_80_chars
 
-/// Phase 1 — tests for cinematic projection.
+/// Cinematic projection tests — the projection system is a film cut.
 ///
-/// Verifies the projection system is a real film cut: relevance-ranked,
-/// budget-limited, green-screen-explicit, and that the model only ever sees
-/// the projected slice (never raw history). Projection ray-traces the graph
-/// via [FacetIndex] and the actor's [ActorThreads].
+/// Verifies projection is relevance-ranked, budget-limited, green-screen-
+/// explicit, and that the model only ever sees the projected slice (never
+/// raw history). Projection ray-traces the graph via [FacetIndex] and the
+/// actor's [ActorThreads].
 library;
 
 import 'package:test/test.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
-import 'agent_harness_test.dart' show MockGenerationHandler, buildTestWorld;
-
-/// Spawn a complete text beat in [thread] and index it under [keywords].
-Entity _addBeat(
-  World world,
-  Entity thread,
-  Entity speaker,
-  String text,
-  List<String> keywords,
-) {
-  final beat = startBeat(world, thread, speaker, BeatModalityEnum.text);
-  appendToBeat(world, beat, text);
-  completeBeat(world, beat);
-  indexBeat(world, beat, keywords);
-  world.flush();
-  return beat;
-}
-
-/// Run the projection schedule for the given world.
-void _project(World world) {
-  world.runSchedule('AgencyGrant');
-  world.flush();
-  world.runSchedule('Project');
-  world.flush();
-}
+import 'support/agent_harness_support.dart';
 
 void main() {
   group('cinematic projection', () {
@@ -43,7 +19,6 @@ void main() {
       final world = await buildTestWorld();
       final scene = world.spawnComponents([const Scene(), SceneFrame()]);
       world.flush();
-      // Spawn an actor with an OpenDecision about the parser.
       final speaker = world.spawnComponents([
         Actor(agentId: AgentId.create()),
         ActorModel(modelId: ModelId.create()),
@@ -57,20 +32,22 @@ void main() {
       world.upsertComponent(speaker, ActorThreads(threads: [thread]));
       world.flush();
 
-      // One beat relevant to "parser", one irrelevant.
-      final relevant = _addBeat(
+      final relevant = addIndexedBeat(
         world,
         thread,
         speaker,
         'The parser fails on nested brackets.',
         const ['parser', 'brackets'],
       );
-      _addBeat(world, thread, speaker, 'The weather today is sunny.', const [
-        'weather',
-        'sunny',
-      ]);
+      addIndexedBeat(
+        world,
+        thread,
+        speaker,
+        'The weather today is sunny.',
+        const ['weather', 'sunny'],
+      );
 
-      _project(world);
+      projectFor(world);
 
       final situation = world.getEntity(speaker).$1.get<Situation>()!;
       expect(situation.projectedBeats, isNotEmpty);
@@ -83,7 +60,7 @@ void main() {
       world.upsertResource(ProjectionBudget(tokens: 20));
       world.flush();
 
-      final scene = world.spawnComponents([const Scene(), SceneFrame()]);
+      final scene = world.spawnComponents([Scene(), SceneFrame()]);
       final actor = world.spawnComponents([
         Actor(agentId: AgentId.create()),
         ActorModel(modelId: ModelId.create()),
@@ -97,10 +74,10 @@ void main() {
       world.flush();
 
       // Add a very long beat that cannot fit in a 20-token budget.
-      _addBeat(world, thread, actor, 'x' * 500, const ['x']);
+      addIndexedBeat(world, thread, actor, 'x' * 500, const ['x']);
       world.flush();
 
-      _project(world);
+      projectFor(world);
 
       final situation = world.getEntity(actor).$1.get<Situation>()!;
       expect(situation.tokenBudget, 20);
@@ -115,7 +92,7 @@ void main() {
       world.upsertResource(ProjectionBudget(tokens: 10));
       world.flush();
 
-      final scene = world.spawnComponents([const Scene(), SceneFrame()]);
+      final scene = world.spawnComponents([Scene(), SceneFrame()]);
       final actor = world.spawnComponents([
         Actor(agentId: AgentId.create()),
         ActorModel(modelId: ModelId.create()),
@@ -127,10 +104,10 @@ void main() {
       world.upsertComponent(actor, ActorThreads(threads: [thread]));
       world.flush();
 
-      _addBeat(world, thread, actor, 'y' * 300, const <String>[]);
+      addIndexedBeat(world, thread, actor, 'y' * 300, const <String>[]);
       world.flush();
 
-      _project(world);
+      projectFor(world);
 
       final situation = world.getEntity(actor).$1.get<Situation>()!;
       expect(situation.explicitAbsences, isNotEmpty);
@@ -148,7 +125,7 @@ void main() {
         world.upsertResource(ProjectionBudget(tokens: 30));
         world.flush();
 
-        final scene = world.spawnComponents([const Scene(), SceneFrame()]);
+        final scene = world.spawnComponents([Scene(), SceneFrame()]);
         final actor = world.spawnComponents([
           Actor(agentId: AgentId.create()),
           ActorModel(modelId: ModelId.create()),
@@ -160,12 +137,12 @@ void main() {
         world.upsertComponent(actor, ActorThreads(threads: [thread]));
         world.flush();
 
-        // Add one short beat that fits and one long beat that must be cut.
-        _addBeat(world, thread, actor, 'short', const ['shortfolio']);
-        _addBeat(world, thread, actor, 'z' * 400, const ['zzzz']);
+        // One short beat that fits and one long beat that must be cut.
+        addIndexedBeat(world, thread, actor, 'short', const ['shortfolio']);
+        addIndexedBeat(world, thread, actor, 'z' * 400, const ['zzzz']);
         world.flush();
 
-        _project(world);
+        projectFor(world);
         await world.runScheduleAsync('ActorAct');
         world.flush();
 
