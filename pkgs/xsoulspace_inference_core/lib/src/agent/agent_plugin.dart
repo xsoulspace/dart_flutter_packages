@@ -140,19 +140,46 @@ class Prop implements Component {
 
 /// Transient minimal projection prepared for one actor.
 ///
-/// Contains only the props in frame, co-present actors, and the local question.
-/// Built by [projectSituationSystem] and consumed by [actorActSystem].
+/// A cinematic cut, not a summary: only the props in frame, co-present
+/// actors, the local question, the projected (budget-limited) context beats,
+/// and explicit absences. Built by [projectSituationSystem] and consumed by
+/// [actorActSystem].
 class Situation implements Component {
   Situation({
     this.prompt = '',
     this.schema = SchemaBundle.empty,
     this.inFramePropIds = const [],
     this.coPresentActorIds = const [],
+    this.contextFragments = const [],
+    this.explicitAbsences = const [],
+    this.toolRegistryName,
+    this.tokensUsed = 0,
+    this.tokenBudget = 4000,
+    this.truncated = false,
   });
   String prompt;
   SchemaBundle schema;
   List<String> inFramePropIds;
   List<AgentId> coPresentActorIds;
+
+  /// The projected, relevance-ranked, budget-limited context beats the model
+  /// will actually see. This is the cinematic cut.
+  List<ContextFragment> contextFragments;
+
+  /// Green-screen: explicit statements of what the model does NOT see.
+  List<String> explicitAbsences;
+
+  /// The tool registry in frame for this actor (if any).
+  String? toolRegistryName;
+
+  /// Tokens consumed by this projection (for measurement / budget audit).
+  int tokensUsed;
+
+  /// The token budget this projection was built against.
+  int tokenBudget;
+
+  /// True when relevant context was omitted to fit the budget.
+  bool truncated;
 }
 
 /// A goal assigned to an actor.
@@ -195,6 +222,38 @@ class ToolRegistryResource extends Resource {
   void register(String name, ToolRegistry registry) {
     registries[name] = registry;
   }
+}
+
+/// Token estimator for projection budgeting.
+typedef TokenEstimator = int Function(String text);
+
+/// Default estimator: ~4 chars per token.
+int defaultTokenEstimator(String text) => (text.length / 4).ceil();
+
+/// World resource holding the projection token budget.
+///
+/// Projection systems use this to keep the model's view within the tiny
+/// context window. Content that does not fit is dropped (green screen).
+class ProjectionBudget extends Resource {
+  ProjectionBudget({this.tokens = 4000, this.estimator});
+  int tokens;
+  final TokenEstimator? estimator;
+}
+
+/// World resource holding projection policy (relevance / cut rules).
+class ProjectionPolicy extends Resource {
+  ProjectionPolicy({
+    this.maxBeats = 8,
+    this.includePartials = true,
+    this.greenScreen = true,
+    this.maxProps = 8,
+    this.maxCoPresent = 4,
+  });
+  int maxBeats;
+  bool includePartials;
+  bool greenScreen;
+  int maxProps;
+  int maxCoPresent;
 }
 
 /// Identity for an in-flight async task (LLM generation, tool call, human
@@ -532,7 +591,9 @@ class AgentPlugin extends Plugin {
     // Resources
     world
       ..upsertResource(TaskRegistryResource())
-      ..upsertResource(GenerationHandlerResource());
+      ..upsertResource(GenerationHandlerResource())
+      ..upsertResource(ProjectionBudget())
+      ..upsertResource(ProjectionPolicy());
 
     // Event channels for async LLM I/O
     world.events.register<ActorGenerateRequest>();
@@ -607,7 +668,17 @@ void grantAgencySystem(World world) {
 ///
 /// Projection is ruthlessly minimal and cinematic — only props in frame,
 /// co-present actors, and the local question. Context windows stay tiny.
+/// System 2: Build a minimal [Situation] for each actor with [Agency].
+///
+/// Projection is ruthlessly minimal and cinematic — only props in frame,
+/// co-present actors, the local question, and a relevance-ranked, budget-
+/// limited slice of the actor's memory. Everything else stays off-screen
+/// (green screen). Context windows stay tiny by design.
 void projectSituationSystem(World world) {
+  final budget = world.getResource<ProjectionBudget>();
+  final policy = world.getResource<ProjectionPolicy>();
+  final estimator = budget.estimator ?? defaultTokenEstimator;
+
   final actorsWithAgency = world.query3<Actor, Agency, ActorRuntimeMemories>();
 
   // Materialize the query results before mutating, since entity.insert()
@@ -617,6 +688,9 @@ void projectSituationSystem(World world) {
       world: world,
       entity: entity,
       actor: actor,
+      budget: budget.tokens,
+      policy: policy,
+      estimator: estimator,
     );
     entity.insert(situation);
   }
@@ -626,6 +700,9 @@ Situation _buildSituation({
   required World world,
   required WorldEntity entity,
   required Actor actor,
+  required int budget,
+  required ProjectionPolicy policy,
+  required TokenEstimator estimator,
 }) {
   // Find the current scene
   WorldEntity? sceneEntity;
@@ -633,36 +710,155 @@ Situation _buildSituation({
     sceneEntity = sceneEnt;
     break;
   }
-  if (sceneEntity == null) return Situation();
+  if (sceneEntity == null) return Situation(tokenBudget: budget);
 
-  // Find co-present actors (same scene, excluding self)
+  // Find co-present actors (same scene, excluding self), capped.
   final coPresent = <AgentId>[];
   for (final (_, present, otherActor)
       in world.query2<PresentInScene, Actor>()) {
     if (present.sceneEntity == sceneEntity.entity &&
         otherActor.agentId != actor.agentId) {
       coPresent.add(otherActor.agentId);
+      if (coPresent.length >= policy.maxCoPresent) break;
     }
   }
 
-  // Find props in frame
+  // Find props in frame, capped.
   final inFrameProps = <String>[];
   for (final (_, present, prop) in world.query2<PresentProp, Prop>()) {
     if (present.sceneEntity == sceneEntity.entity) {
       inFrameProps.add(prop.name);
+      if (inFrameProps.length >= policy.maxProps) break;
     }
   }
 
-  // Build the prompt from the open decision
+  // The local question.
   final decision = entity.get<OpenDecision>();
   final prompt = decision?.prompt ?? '';
+
+  // Cinematic cut: relevance-rank the actor's memory beats, then fit them
+  // into the token budget. This is the intelligence amplifier — the model
+  // only ever sees the slice the current decision actually needs.
+  final memories = entity.get<ActorRuntimeMemories>();
+  final fragments = memories?.fragments ?? const <ContextFragment>[];
+  final ranked = _rankFragments(world, fragments, prompt);
+  final fit = _fitToBudget(
+    world: world,
+    fragments: ranked,
+    budget: budget,
+    prompt: prompt,
+    estimator: estimator,
+    maxBeats: policy.maxBeats,
+  );
+  final selected = fit.selected;
+  final tokensUsed = fit.tokensUsed;
+  final truncated = fit.truncated;
+
+  // Green-screen: explicit absences so the model knows what it does NOT see.
+  final absences = <String>[];
+  if (policy.greenScreen) {
+    if (fragments.length > selected.length) {
+      absences.add(
+        '${fragments.length - selected.length} earlier beat(s) are off-screen.',
+      );
+    }
+    if (truncated) {
+      absences.add('Some context was cut to fit the token budget.');
+    }
+    if (coPresent.isEmpty) {
+      absences.add('No other actors are in frame.');
+    }
+  }
+
+  final tools = entity.get<ActorTools>();
 
   return Situation(
     prompt: prompt,
     schema: decision?.schema ?? SchemaBundle.empty,
     inFramePropIds: inFrameProps,
     coPresentActorIds: coPresent,
+    contextFragments: selected,
+    explicitAbsences: absences,
+    toolRegistryName: tools?.registryName,
+    tokensUsed: tokensUsed,
+    tokenBudget: budget,
+    truncated: truncated,
   );
+}
+
+/// Rank context fragments by relevance to the current [prompt].
+///
+/// A lightweight, deterministic heuristic: fragments whose text shares terms
+/// with the prompt rank higher; recency breaks ties. This is the projection
+/// system's job — the model never sees raw history, only the ranked cut.
+List<ContextFragment> _rankFragments(
+  World world,
+  List<ContextFragment> fragments,
+  String prompt,
+) {
+  final promptTerms = prompt
+      .toLowerCase()
+      .split(RegExp(r'\W+'))
+      .where((t) => t.length > 2)
+      .toSet();
+  if (promptTerms.isEmpty) return fragments.reversed.toList();
+
+  final scored = <(ContextFragment, int)>[];
+  for (var i = 0; i < fragments.length; i++) {
+    final f = fragments[i];
+    final text = _fragmentText(world, f).toLowerCase();
+    var score = 0;
+    for (final term in promptTerms) {
+      if (text.contains(term)) score++;
+    }
+    // Recency tie-break: later fragments win.
+    scored.add((f, score * 1000 + i));
+  }
+  scored.sort((a, b) => b.$2.compareTo(a.$2));
+  return scored.map((s) => s.$1).toList();
+}
+
+/// Fit ranked fragments into the token budget, newest-relevant first.
+///
+/// Returns the selected fragments, tokens used, and whether anything was cut.
+/// The prompt + system prompt are always included; beats are added until the
+/// budget is exhausted.
+({List<ContextFragment> selected, int tokensUsed, bool truncated})
+_fitToBudget({
+  required World world,
+  required List<ContextFragment> fragments,
+  required int budget,
+  required String prompt,
+  required TokenEstimator estimator,
+  required int maxBeats,
+}) {
+  final selected = <ContextFragment>[];
+  var used = estimator(prompt);
+  var truncated = false;
+
+  for (final f in fragments) {
+    if (selected.length >= maxBeats) {
+      truncated = true;
+      break;
+    }
+    final text = _fragmentText(world, f);
+    final cost = estimator(text);
+    if (used + cost > budget) {
+      truncated = true;
+      continue;
+    }
+    selected.add(f);
+    used += cost;
+  }
+
+  return (selected: selected, tokensUsed: used, truncated: truncated);
+}
+
+String _fragmentText(World world, ContextFragment f) {
+  final (entity, valid) = world.getEntity(f.beat);
+  if (!valid) return '';
+  final text = entity.get<TextContent>();
+  return text?.text ?? '';
 }
 
 /// System 3: Actors that hold [Agency] act.
@@ -684,28 +880,31 @@ Future<void> actorActSystem(World world) async {
   final taskRegistry = world.getResource<TaskRegistryResource>();
 
   for (final (entity, actor, _, model, situation) in actorsWithAgency) {
-    final memories = entity.get<ActorRuntimeMemories>();
     final systemPrompt = entity.get<ActorSystemPrompt>();
-    final tools = entity.get<ActorTools>();
 
-    final toolRegistry = tools != null
-        ? world.getResource<ToolRegistryResource>().get(tools.registryName)
+    final toolRegistry = situation.toolRegistryName != null
+        ? world.getResource<ToolRegistryResource>().get(
+            situation.toolRegistryName!,
+          )
         : null;
 
-    // Build context fragments from Beat entities referenced by ContextFragment.
+    // The projected, budget-limited context beats — the cinematic cut.
+    // The model sees ONLY what projection selected, never raw history.
     final contextFragments = <Object>[];
-    if (memories != null) {
-      for (final fragment in memories.fragments) {
-        final beatEntity = world.getEntity(fragment.beat);
-        if (!beatEntity.$2) continue;
-        final beat = beatEntity.$1;
-        final textContent = beat.get<TextContent>();
-        if (textContent != null) {
-          contextFragments.add('${fragment.type.name}:${textContent.text}');
-        } else {
-          contextFragments.add(fragment.type.name);
-        }
+    for (final fragment in situation.contextFragments) {
+      final beatEntity = world.getEntity(fragment.beat);
+      if (!beatEntity.$2) continue;
+      final beat = beatEntity.$1;
+      final textContent = beat.get<TextContent>();
+      if (textContent != null) {
+        contextFragments.add('${fragment.type.name}:${textContent.text}');
+      } else {
+        contextFragments.add(fragment.type.name);
       }
+    }
+    // Green-screen absences are part of the cut.
+    for (final absence in situation.explicitAbsences) {
+      contextFragments.add('absence:$absence');
     }
 
     final taskId = TaskId.create();

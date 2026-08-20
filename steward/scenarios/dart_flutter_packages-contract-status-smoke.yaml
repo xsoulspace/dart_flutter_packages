@@ -1,0 +1,18 @@
+schema: steward/scenario-manifest/v1
+repo: dart_flutter_packages
+scenario: dart_flutter_packages.contract-status-smoke
+status: runnable
+source:
+  git: 'git@github.com:xsoulspace/dart_flutter_packages.git'
+  commit: 7abc210227b35e228a8aef7bb5151c77c379557b
+  steward_contract: steward.yaml
+safe_first_probe: doctor.local
+required_actions:
+  - doctor.local
+artifacts:
+  - id: steward_contract
+    kind: yaml
+    path: steward.yaml
+    required: true
+    durability: input
+owner: dart_flutter_packages

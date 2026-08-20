@@ -8,3 +8,4 @@ pubspec.lock
 **/**/pubspec.lock
 **/**/build
 **/**/.dart_tool/
+/.steward/

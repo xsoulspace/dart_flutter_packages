@@ -1,0 +1,183 @@
+schema: steward/v1
+repo:
+  id: dart_flutter_packages
+  archetype: library
+  archetype_detection:
+    confidence: 1.0
+    signals:
+      - 'explicit --archetype'
+
+harness:
+  name: steward
+  mode: cli
+  entrypoints:
+    cli: steward
+
+adoption:
+  status: adopting
+  owner: dart_flutter_packages
+  gate:
+    pillar: quality
+
+stewardship:
+  governance:
+    charter: AGENTS.md
+    adr_dir: docs/decisions
+  knowledge:
+    docs_map: AGENTS.md
+    source_policy: required_for_external_claims
+  repo_quality:
+    contract_spec: steward.yaml
+    maturity_model: general_stewardship
+  skill_lifecycle:
+    installable_skills: false
+    registry: skills.json
+  quality:
+    validate: 'dart test'
+    evidence: .steward/evidence
+  harness:
+    enabled: true
+    action_contract: actions
+  release:
+    changelog: CHANGELOG.md
+    artifact_provenance: required
+  review_handoff:
+    moe_required_for_architecture: true
+  strategic_alignment:
+    vision_source: AGENTS.md
+    success_evidence: required
+  security:
+    action_effects: required
+    redaction: steward/redaction/v1
+  org:
+    owners: AGENTS.md
+
+docs:
+  "Working agreement": AGENTS.md
+  "Local command hub": justfile
+  "Package working agreement": pkgs/xsoulspace_inference_core/AGENTS.md
+
+actions:
+  doctor.local:
+    kind: command
+    desc: Inspect Steward adoption state without running repository actions.
+    command:
+      argv: [steward, doctor, --json]
+      shell: false
+    cwd: .
+    effects:
+      fs_read:
+        - steward.yaml
+        - skills.json
+        - AGENTS.md
+      fs_write: []
+      git: false
+      network: false
+      secrets: false
+      destructive: false
+    safety:
+      class: observe
+      default_policy: auto
+      requires_confirmation: false
+    limits:
+      timeout_ms: 10000
+      max_output_bytes: 200000
+    outputs:
+      - id: stdout
+        kind: stream
+        required: true
+        retention: summary
+        format: json
+    evidence:
+      redact: []
+
+  xsoulspace_inference_core.analyze:
+    kind: command
+    desc: Analyze the xsoulspace_inference_core package.
+    command:
+      argv: [flutter, analyze]
+      shell: false
+    cwd: pkgs/xsoulspace_inference_core
+    effects:
+      fs_read:
+        - pkgs/xsoulspace_inference_core/lib/**
+        - pkgs/xsoulspace_inference_core/test/**
+        - pkgs/xsoulspace_inference_core/pubspec.yaml
+      fs_write: []
+      git: false
+      network: false
+      secrets: false
+      destructive: false
+    safety:
+      class: bounded_local
+      default_policy: auto
+      requires_confirmation: false
+    limits:
+      timeout_ms: 120000
+      max_output_bytes: 400000
+    outputs:
+      - id: stdout
+        kind: stream
+        required: true
+        retention: summary
+        format: text
+    evidence:
+      redact: []
+
+  xsoulspace_inference_core.test:
+    kind: command
+    desc: Run the xsoulspace_inference_core package tests.
+    command:
+      argv: [flutter, test]
+      shell: false
+    cwd: pkgs/xsoulspace_inference_core
+    effects:
+      fs_read:
+        - pkgs/xsoulspace_inference_core/lib/**
+        - pkgs/xsoulspace_inference_core/test/**
+        - pkgs/xsoulspace_inference_core/pubspec.yaml
+      fs_write: []
+      git: false
+      network: false
+      secrets: false
+      destructive: false
+    safety:
+      class: bounded_local
+      default_policy: auto
+      requires_confirmation: false
+    limits:
+      timeout_ms: 300000
+      max_output_bytes: 600000
+    outputs:
+      - id: stdout
+        kind: stream
+        required: true
+        retention: summary
+        format: text
+    evidence:
+      redact: []
+
+probes:
+  quick:
+    profile: quick
+    actions: [doctor.local]
+  xsoulspace_inference_core:
+    profile: package
+    actions:
+      - doctor.local
+      - xsoulspace_inference_core.analyze
+      - xsoulspace_inference_core.test
+
+diagnostics:
+  cases: {}
+
+unknown_cases:
+  path: .steward/unknown-cases/
+  retention: local
+
+provenance:
+  dependencies: []
+  artifacts: []
+  benchmarks:
+    - id: dart_flutter_packages.contract-status-smoke
+      manifest: steward/scenarios/dart_flutter_packages-contract-status-smoke.yaml

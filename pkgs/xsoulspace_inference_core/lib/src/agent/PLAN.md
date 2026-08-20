@@ -1,27 +1,33 @@
-# Agent Harness Implementation Plan
+# Agent Harness — Improvement Plan
 
-> **Goal**: Build a general-purpose, UI-agnostic, cinematic (as abstration principle) multi-actor agent harness on ecsly.
-> **Core thesis**: The harness is the intelligence amplifier. The model is a replaceable reasoning primitive.
+> Goal: prove + harden the tiny-context (2–4k) cinematic multi-actor harness.
+> Thesis: harness = intelligence amplifier; model = replaceable reasoning primitive.
 
----
+## Phase 0 — Benchmark harness (measure first)
+- Scripted tasks vs `MockGenerationHandler`.
+- Record: tokens/decision, LLM calls/task, context growth, task success, thread prune/merge.
+- Context-budget assertion: projection over budget fails the benchmark.
 
-## 0. Vision Summary
+## Phase 1 — Cinematic projection (the intelligence) ✅
+- `ProjectionSystem` takes a token budget → relevance-ranked, thread/beat-aware,
+  green-screen-explicit, tool-format-aware `Situation`.
+- Enforce budget at projection time.
+- `Situation` now carries the projected `contextFragments`, `explicitAbsences`,
+  `toolRegistryName`, `tokensUsed`, `tokenBudget`, `truncated`.
+- Resources: `ProjectionBudget`, `ProjectionPolicy`.
+- `actorActSystem` sends ONLY the projected cut to the model (never raw memory).
 
-A living, multi-linear, game-like world where:
+## Phase 2 — Bounded memory via mechanical delegation
+- Harness owns history. Mechanical systems compact/summarize/prune into Props.
+- `ActorRuntimeMemories` becomes a projected view, not an append-only log.
 
-- **Actors** (LLM, human, or other) act, think, plan, research, use tools, and make decisions.
-- **Projection** produces an extremely limited *Situation* (a "film cut") for each actor — only props in frame, only co-present actors, only the local question, explicit absences.
-- **Agency** is granted only when a genuine `OpenDecision` exists. Everything else is mechanical (no LLM calls).
-- **Threads** are first-class exploration branches. **Beats** are modality-agnostic content units (text, voice, tool calls, thoughts, observations).
-- **Everything is an entity.** The graph is formed by typed reference components. Stories interlink. Multiplayer is natural.
-- **The loop is continuous and idle-aware.** It sleeps when there is no work.
+## Phase 3 — Agency policy + escalation
+- Prioritize which actor/decision gets agency (urgency, cost, dependency).
+- `EscalationRequest`: low-confidence local model hands a beat to a bigger
+  remote model, folds result back.
 
-### The Loop (Concurrent, Non-Blocking)
+## Phase 4 — Wire threads/multiplayer into projection
+- Projection follows the graph: shared/private/derived threads. a2a / a2h / a2h2a.
 
-```
-Tick N:   Ingest -> Narrative -> AgencyGrant -> Project -> ActorAct (dispatch LLM calls, fire-and-forget) -> flush
-Tick N+1: Ingest -> Narrative -> AgencyGrant -> Project -> ActorAct (dispatch new calls) -> ProcessResponses (process whatever arrived) -> Mechanical -> flush
-Tick N+2: ... (same pattern, responses from Tick N may arrive here)
-```
-
-Key: `ActorAct` dispatches LLM calls concurrently and returns immediately. `ProcessResponses` processes whatever responses have arrived on this tick. The loop never blocks on a single LLM call. Multiple actors' LLM calls run concurrently. Idle/sleep only when no work remains.
+## Phase 5 — AST as a tool seam (later)
+- Add as a capability/tool behind `ToolRegistry`, not a core change.
