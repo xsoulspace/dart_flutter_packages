@@ -42,7 +42,7 @@ class VoskInferenceClient implements InferenceClient {
 
   @override
   Future<void> load() async {
-    // TODO: implement load
+    // TODO(arenukvern): implement load
   }
   String? resolveRuntimeLibraryPath() {
     return VoskRawLibraryLoader(

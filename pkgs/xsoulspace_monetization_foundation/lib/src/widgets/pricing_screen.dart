@@ -5,7 +5,7 @@ class PricingScreen extends StatelessWidget {
 
   @override
   Widget build(final BuildContext context) {
-    // TODO: implement build
+    // TODO(arenukvern): implement build
     throw UnimplementedError();
   }
 

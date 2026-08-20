@@ -28,7 +28,7 @@ void main() {
     final details = result.error?.details as Map<String, dynamic>?;
     expect(details?['missing_keys'], contains('b'));
   });
-  // TODO: fixme
+  // TODO(arenukvern): fixme
   // test('validateInferenceRequest rejects empty prompt', () {
   //   final result = validateInferenceRequest(
   //     InferenceRequest(

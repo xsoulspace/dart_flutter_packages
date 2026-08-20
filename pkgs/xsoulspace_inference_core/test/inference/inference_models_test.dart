@@ -202,7 +202,7 @@ final class _FakeInferenceClient implements InferenceClient {
 
   @override
   Future<void> load() async {
-    // TODO: implement load
+    // TODO(arenukvern): implement load
   }
   @override
   String get id => 'fake';
@@ -266,7 +266,7 @@ final class _FakeStructuredTextStreamingClient
     implements StructuredTextStreamingInferenceClient {
   @override
   Future<void> load() async {
-    // TODO: implement load
+    // TODO(arenukvern): implement load
   }
   @override
   String get id => 'fake_stream';

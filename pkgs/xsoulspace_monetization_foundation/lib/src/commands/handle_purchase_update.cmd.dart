@@ -37,7 +37,7 @@ import 'confirm_purchase.cmd.dart';
 /// | Status | Action |
 /// |--------|--------|
 /// | purchased/restored | Confirm purchase |
-/// | error | Handle error (TODO: add notification) |
+/// | error | Handle error (TODO(arenukvern): add notification) |
 /// | pending | Set pending status |
 /// | canceled | Clear subscription |
 /// {@endtemplate}
@@ -64,7 +64,7 @@ class HandlePurchaseUpdateCommand {
   ///
   /// **Status-Specific Actions:**
   /// - **purchased/restored**: Confirm purchase through `ConfirmPurchaseCommand`
-  /// - **error**: Currently delegates to confirm (TODO: add error notification)
+  /// - **error**: Currently delegates to confirm (TODO(arenukvern): add error notification)
   /// - **pending**: Sets subscription status to pending
   /// - **canceled**: Clears active subscription and sets status to free
   ///

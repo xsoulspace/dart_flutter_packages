@@ -62,7 +62,7 @@ class AppleNativePurchaseProvider {
     );
     final duration = jsonDecodeDurationFromISO8601(recurringPeriod);
 
-    // TODO: Extract free trial information when available in the API response
+    // TODO(arenukvern): Extract free trial information when available in the API response
     final freeTrialDuration = PurchaseDurationModel.zero;
 
     return PurchaseProductDetailsModel(

@@ -217,7 +217,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
     description: product.description,
     // This duration logic is also an assumption and needs to be solid.
     duration: _extractDurationFromProductId(product.id).duration,
-    // TODO: Implement free trial duration
+    // TODO(arenukvern): Implement free trial duration
     freeTrialDuration: PurchaseDurationModel.zero,
   );
 
