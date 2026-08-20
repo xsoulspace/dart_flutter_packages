@@ -33,7 +33,7 @@ void main() {
     final decoded = InferenceAudioInput.fromJson(input.toJson());
 
     expect(decoded.source, InferenceAudioSource.microphone);
-    expect(decoded.filePath, isNull);
+    expect(decoded.filePath, isEmpty);
     expect(decoded.bytes, isNull);
     expect(decoded.mimeType, 'audio/webm');
     expect(decoded.sampleRateHz, 48000);

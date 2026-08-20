@@ -244,14 +244,14 @@ class InferenceAudioInput {
   factory InferenceAudioInput.fromJson(final Map<String, dynamic> json) =>
       InferenceAudioInput(
         source: InferenceAudioSource.fromJson(json['source']),
-        filePath: jsonEncodeString(json['file_path']),
+        filePath: jsonDecodeString(json['file_path']),
         bytes: switch (json['bytes_base64']) {
           final String value => base64Decode(value),
           _ => null,
         },
-        mimeType: jsonEncodeString(json['mime_type']),
-        sampleRateHz: jsonEncodeInt(json['sample_rate_hz']),
-        channelCount: jsonEncodeInt(json['channel_count']),
+        mimeType: jsonDecodeString(json['mime_type']),
+        sampleRateHz: jsonDecodeInt(json['sample_rate_hz']),
+        channelCount: jsonDecodeInt(json['channel_count']),
       );
 
   const InferenceAudioInput.filePath({
@@ -322,9 +322,9 @@ class InferenceAudioArtifact {
 
   factory InferenceAudioArtifact.fromJson(final Map<String, dynamic> json) =>
       InferenceAudioArtifact(
-        filePath: jsonEncodeString(json['file_path']),
-        mimeType: jsonEncodeString(json['mime_type']),
-        durationMs: jsonEncodeInt(json['duration_ms']),
+        filePath: jsonDecodeString(json['file_path']),
+        mimeType: jsonDecodeString(json['mime_type']),
+        durationMs: jsonDecodeInt(json['duration_ms']),
       );
 
   final String filePath;
@@ -347,9 +347,9 @@ class InferenceSpeechSegment {
 
   factory InferenceSpeechSegment.fromJson(final Map<String, dynamic> json) =>
       InferenceSpeechSegment(
-        text: jsonEncodeString(json['text']),
-        startMs: jsonEncodeInt(json['start_ms']),
-        endMs: jsonEncodeInt(json['end_ms']),
+        text: jsonDecodeString(json['text']),
+        startMs: jsonDecodeInt(json['start_ms']),
+        endMs: jsonDecodeInt(json['end_ms']),
       );
 
   final String text;
@@ -374,10 +374,10 @@ class InferenceVoiceOptions {
 
   factory InferenceVoiceOptions.fromJson(final Map<String, dynamic> json) =>
       InferenceVoiceOptions(
-        voiceId: jsonEncodeString(json['voice_id']),
-        locale: jsonEncodeString(json['locale']),
-        speechRate: jsonEncodeDouble(json['speech_rate']),
-        pitch: jsonEncodeDouble(json['pitch']),
+        voiceId: jsonDecodeString(json['voice_id']),
+        locale: jsonDecodeString(json['locale']),
+        speechRate: jsonDecodeDouble(json['speech_rate']),
+        pitch: jsonDecodeDouble(json['pitch']),
         providerExtras: jsonDecodeMap(json['provider_extras']),
       );
 
