@@ -30,9 +30,16 @@ memory is just one flavor of projection.
    model (Apple Foundation) over multi-actor, multi-topic, tool-using
    scenarios. Entrypoint: `apple_foundation/example/lib/stress_cli.dart`.
    See `docs/scenario_stress_testing.mdx`.
-2. **Wire threads/multiplayer into projection** — shared/private/derived threads,
+2. **Metrics machine (done).** `MetricsCollector` + `MetricsReport` fold
+   per-decision tool results and projections into trends (tokens/beats/tools),
+   with dangling-tool detection. Wired into `ScenarioRunner`.
+3. **Per-request tool isolation (done).** Each Apple Foundation `generate` owns
+   its handlers under a `requestId`; Swift echoes it on `onToolCall`.
+4. **Run the real hardware e2e** — execute `stress_cli.dart` on a macOS 26+
+   Apple Intelligence host and iterate on the weak spots it surfaces.
+5. **Wire threads/multiplayer into projection** — shared/private/derived threads,
    a2a / a2h / a2h2a. Projection follows the graph.
-3. **Angle-of-view / scale tiers** — a projection should be queryable at a scale
+6. **Angle-of-view / scale tiers** — a projection should be queryable at a scale
    (`beat`, `thread`, beat subset) so a ray can coarsen, not just narrow.
-4. **AST as a tool seam (later)** — add as a capability/tool behind
+7. **AST as a tool seam (later)** — add as a capability/tool behind
    `ToolRegistry`, not a core change.

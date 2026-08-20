@@ -60,18 +60,54 @@ Aggregate:
 - **totalLlmCalls / avg per decision** — efficiency of intelligence; agency should be sparse.
 - **prunedThreads / mergedThreads** — how the mechanical graph systems behave.
 
+## The metrics machine
+
+The `MetricsCollector` is a passive recorder tapped into a `World`. For each
+actor decision it snapshots the cinematic cut (`Situation`) and the tool-result
+beats written that window (`ToolResultContent`), then folds them into a
+[`MetricsReport`](../src/agent/metrics.dart) with:
+
+- **pending/dangling tools** — tools dispatched but never returned (a strong
+  weak-spot signal).
+- **tool frequency** — which tools the harness actually uses.
+- **trends** — token / beat / tool series over decisions, with a rising/falling
+  direction so budget drift is visible.
+
+`ScenarioRunner` wires a collector on each run, so `ScenarioMetrics.telemetry`
+carries the richer report while the scenario-level `decisions` list stays
+backward compatible.
+
+## Per-request tool isolation
+
+Apple Foundation tools are isolated **per request**. Each `generate` gets a
+unique `requestId`; Dart installs that request's handlers under it, and Swift
+threads the `requestId` back on every `onToolCall`. Concurrent requests using
+the same tool name with different handlers never collide — no global
+registry, no ref-counting.
+
 ## How to run it
 
 The CLI entrypoint is a headless Flutter macOS app (the Apple Foundation client
-is a platform plugin, so it needs a Flutter host, not `dart run`).
+is a platform plugin, so it needs a Flutter host, not `dart run`). Build verifies
+the whole stack compiles:
 
 ```bash
 cd pkgs/xsoulspace_inference_apple_foundation/example
+flutter build macos --debug
+```
+
+To run the stress scenario against a real Apple Intelligence model (macOS 26+):
+
+```bash
 flutter run -t lib/stress_cli.dart --release --dart-define=SCENARIO=multi_actor
 ```
 
 The app prints a `ScenarioMetrics` report to stdout and exits 0 on success, 1
 if the engine is unavailable or any projection was truncated.
+
+The same stack is covered in CI without a model via
+`test/e2e_scenario_test.dart`, which drives the real runner + tools + metrics
+against a mock handler.
 
 ## The first scenario
 
