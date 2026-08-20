@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:from_json_to_json/from_json_to_json.dart';
@@ -43,189 +42,194 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
+/// A scenario drives a fresh ecsly [World] through the agent schedules.
+///
+/// Each scenario builds its own world (so switching scenarios is isolated),
+/// registers the Apple Foundation model + tools, spawns a scene + actor with
+/// an [OpenDecision], and runs the [HarnessLoop] until the response lands in
+/// the actor's [ActorRuntimeMemories].
 sealed class Scenario {
   bool isInitialized = false;
-  final ai = AIWorld.fromConfigs(
-    runtimeConfig: AIRuntimeConfig(
-      inferenceClientBuilders: {
+  World? world;
+  Entity? actor;
+
+  /// Build the world, register resources/handlers, and spawn the actor.
+  ///
+  /// Subclasses override [setupWorld] to add model bindings and tools, and
+  /// [spawnActor] to configure the actor's system prompt / decision.
+  Future<String> init({required String text}) async {
+    isInitialized = true;
+    final world = World()..addPlugin(AgentPlugin());
+
+    final router = ModelRouter(
+      inferenceClientsBuilders: {
         DefaultModelNames.appleFoundation: () => AppleFoundationInferenceClient(
           api: AppleFoundationInferenceClient.initApi(),
         ),
       },
-    ),
-  );
+    );
+    world
+      ..upsertResource(ModelRouterResource(router))
+      ..upsertResource(ToolRegistryResource())
+      ..flush();
 
-  Future<T> doTry<T>(Future<T> Function() callback, T fallback) async {
-    try {
-      return await callback();
-    } catch (e, st) {
-      log('scenario | try failure', error: e, stackTrace: st);
-      return fallback;
-    }
+    // Route generation through the default handler (Apple Foundation).
+    final handler = DefaultGenerationHandler()..router = router;
+    world.getResource<GenerationHandlerResource>().registerDefault(handler);
+
+    setupWorld(world);
+
+    final scene = world.spawnComponents([const Scene(), SceneFrame()]);
+    actor = spawnActor(world, scene, text);
+
+    world.flush();
+    this.world = world;
+    return '';
   }
 
-  @mustCallSuper
-  Future<String> init({
-    required String text,
-    required AgentConfig config,
-  }) async {
-    isInitialized = true;
-    return '';
+  /// Hook for subclasses to register tools / extra resources.
+  void setupWorld(World world) {}
+
+  /// Spawn the actor with an [OpenDecision] derived from [text].
+  Entity spawnActor(World world, Entity scene, String text) {
+    final actorId = AgentId.create();
+    final modelId = ModelId.create();
+    final actor = world.spawnComponents([
+      Actor(agentId: actorId),
+      ActorModel(modelId: modelId),
+      ActorRuntimeMemories(),
+      PresentInScene(sceneEntity: scene),
+      OpenDecision(prompt: text),
+    ]);
+    return actor;
+  }
+
+  /// Run the schedules until the actor's memory holds a model response.
+  ///
+  /// Returns the last model-response fragment text, or '' if none arrived.
+  Future<String> run() async {
+    final world = this.world;
+    final actor = this.actor;
+    if (world == null || actor == null) return '';
+
+    // Drive the loop until the actor's OpenDecision is consumed.
+    final loop = HarnessLoop(world: world);
+    await loop.start(until: _waitForResponse(world, actor));
+
+    final memories = world.maybeGetComponent<ActorRuntimeMemories>(actor);
+    final lastModel = memories?.fragments
+        .where((f) => f.type == ContextFragmentType.modelResponse)
+        .lastOrNull;
+    if (lastModel == null) return '';
+
+    final beat = world.getEntity(lastModel.beat);
+    return beat.$1.get<TextContent>()?.text ?? '';
+  }
+
+  Future<void> _waitForResponse(World world, Entity actor) async {
+    while (true) {
+      final entity = world.getEntity(actor);
+      if (!entity.$2) return;
+      if (!entity.$1.has<OpenDecision>()) return;
+      await Future.delayed(const Duration(milliseconds: 50));
+    }
   }
 
   void dispose() {
     isInitialized = false;
-    ai.dispose();
+    world?.clear();
+    world = null;
+    actor = null;
   }
 }
 
+/// Human -> Agent (one-shot)
 class ScenarioV1SendMessageGetAnswer extends Scenario {
   @override
-  Future<String> init({
-    required String text,
-    required AgentConfig config,
-  }) async {
-    super.init(text: text, config: config);
-    return doTry(() async {
-      final response = await ai.sendTextMessage(
-        message: text,
-        config: config,
-        disposeAfterCompletion: true,
-      );
-      log(response.text);
-      return response.text;
-    }, '');
+  Future<String> init({required String text}) async {
+    await super.init(text: text);
+    return run();
   }
 }
 
 /// Human -> Agent -> Human -> Agent -> Human
+///
+/// Keeps the same world/actor across turns by re-inserting an [OpenDecision]
+/// on each reply, so the actor's [ActorRuntimeMemories] accumulate.
 class ScenarioV2KeepPrimitiveMemory extends Scenario {
-  late Agent agent;
-
   @override
-  Future<String> init({
-    required String text,
-    required AgentConfig config,
-  }) async {
-    super.init(text: text, config: config);
-    return doTry(() async {
-      final response = await ai.sendTextMessage(message: text, config: config);
-      log(response.text);
-      agent = response.agent;
-      return response.text;
-    }, "");
+  Future<String> init({required String text}) async {
+    await super.init(text: text);
+    return run();
   }
 
   Future<String> reply(String text) async {
-    return doTry(() async {
-      final response = await ai.proceedTextForAgent(
-        message: text,
-        agent: agent,
-      );
-      log(response);
-      return response;
-    }, '');
+    final world = this.world;
+    final actor = this.actor;
+    if (world == null || actor == null) return '';
+    world.upsertComponent(actor, OpenDecision(prompt: text));
+    world.flush();
+    return run();
   }
 }
 
-/// Schema and function call for weather
+/// Schema + function call for weather
 class ScenarioV3FunctionCallAndSchema extends Scenario {
-  late Agent agent;
   @override
-  Future<String> init({
-    required String text,
-    required AgentConfig config,
-  }) async {
-    super.init(text: text, config: config);
-    final response = await ai.sendTextMessage(
-      message: text,
-      config: config,
-      outputSchema: SchemaBundle(
-        root: FM.object(
-          'weather',
-          properties: () => [FM.prop('condition', FM.string())],
-        ),
-      ),
-      toolRegsitry: ToolRegistry()
-        ..register(
-          ToolDef.structured(
-            name: ToolName('getWeatherForHour'),
-            description: 'Returns weather for a specific hour of today',
-            parameters: SchemaBundle(
-              root: FM.object(
-                'time',
-                properties: () => [
-                  FM.prop('hour', FM.double(guides: [RangeGuide(0, 23)])),
-                ],
-              ),
-            ),
-            execute: (args) async {
-              final params = jsonDecodeMapAs(args);
-              final hour = jsonDecodeInt(params['hour']);
-              final (temp, condition) = switch (hour) {
-                < 4 => (16, 'rain'),
-                >= 4 && < 12 => (20, 'sunny'),
-                >= 12 && < 21 => (20, 'cloudy'),
-                _ => (16, "sunny"),
-              };
-              // add real implementation
-              return jsonEncode({
-                'hour': hour,
-                'temp': temp,
-                'condition': condition,
-              });
-            },
+  void setupWorld(World world) {
+    final registry = ToolRegistry();
+    registry.register(
+      ToolDef.structured(
+        name: ToolName('getWeatherForHour'),
+        description: 'Returns weather for a specific hour of today',
+        parameters: SchemaBundle(
+          root: FM.object(
+            'time',
+            properties: () => [
+              FM.prop('hour', FM.double(guides: [RangeGuide(0, 23)])),
+            ],
           ),
         ),
+        execute: (args) async {
+          final params = jsonDecodeMapAs(args);
+          final hour = jsonDecodeInt(params['hour']);
+          final (temp, condition) = switch (hour) {
+            < 4 => (16, 'rain'),
+            >= 4 && < 12 => (20, 'sunny'),
+            >= 12 && < 21 => (20, 'cloudy'),
+            _ => (16, "sunny"),
+          };
+          return jsonEncode({
+            'hour': hour,
+            'temp': temp,
+            'condition': condition,
+          });
+        },
+      ),
     );
-    log(response.text);
-    agent = response.agent;
-    return response.text;
+    world.getResource<ToolRegistryResource>().register('default', registry);
   }
 
-  SchemaBundle get _schema {
-    final npcSchema = FM.object(
-      'Npc',
-      description: 'A character that can order coffee',
-      properties: () => [
-        FM.prop('name', description: 'First name, Second Name', FM.string()),
-        FM.prop('level', FM.double(guides: [RangeGuide(1, 10)])),
-        FM.prop('attributes', FM.array(FM.ref('Attribute'), min: 1, max: 2)),
-        FM.prop('encounter', FM.ref('Encounter')),
-      ],
-    );
-
-    final attributeSchema = FM.enum_('Attribute', ['bold', 'tired', 'hungry']);
-
-    final encounterSchema = FM.anyOf('Encounter', [
-      FM.object(
-        'OrderCoffee',
-        properties: () => [FM.prop('drink', FM.string())],
-      ),
-      FM.object(
-        'WantToTalkToManager',
-        properties: () => [FM.prop('complaint', FM.string())],
-      ),
-    ]);
-
-    // Root + dependencies
-    final schema = SchemaBundle(
-      root: npcSchema,
-      dependencies: [attributeSchema, encounterSchema],
-    );
-    return schema;
+  @override
+  Entity spawnActor(World world, Entity scene, String text) {
+    final actor = super.spawnActor(world, scene, text);
+    world.upsertComponent(actor, const ActorTools(registryName: 'default'));
+    return actor;
   }
 
-  Future<String> reply(String txt) async {
-    return doTry(() async {
-      final response = await ai.proceedTextForAgent(
-        message: txt,
-        agent: agent,
-        outputSchema: _schema,
-      );
-      log(response);
-      return response;
-    }, "");
+  @override
+  Future<String> init({required String text}) async {
+    await super.init(text: text);
+    return run();
+  }
+
+  Future<String> reply(String text) async {
+    final world = this.world;
+    final actor = this.actor;
+    if (world == null || actor == null) return '';
+    world.upsertComponent(actor, OpenDecision(prompt: text));
+    world.flush();
+    return run();
   }
 }
 
@@ -237,7 +241,6 @@ class _MyHomePageState extends State<MyHomePage> {
   final _scenarioV3 = ScenarioV3FunctionCallAndSchema();
   final _messages = ImmutableOrderedList<String>();
 
-  AgentConfig _agentConfig = AgentConfig.empty;
   final TextEditingController _controller = TextEditingController();
 
   String get _txt => _controller.text;
@@ -262,7 +265,6 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void _cleanup() {
     _messages.clear();
-    _agentConfig = AgentConfig.empty;
     for (var scenario in _scenarios) {
       scenario.scenario.dispose();
     }
@@ -272,11 +274,10 @@ class _MyHomePageState extends State<MyHomePage> {
     _isRunning = true;
   });
 
-  Future<void> _initScenario({bool cleanup = false}) async {
-    if (cleanup) _cleanup();
+  Future<void> _initScenario() async {
     final scenario = _getScenarioByIndex();
     _setLoading();
-    final r = await scenario.init(text: _txt, config: _agentConfig);
+    final r = await scenario.init(text: _txt);
     setState(() {
       _messages
         ..add(_txt)
@@ -286,23 +287,15 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
-  Future<void> _scenario3Reply() async {
+  Future<void> _scenarioReply() async {
     _setLoading();
 
-    final r = await _scenarioV3.reply(_txt);
-    setState(() {
-      _messages
-        ..add(_txt)
-        ..add(r);
-      _controller.clear();
-      _isRunning = false;
-    });
-  }
-
-  Future<void> _scenario2Reply() async {
-    _setLoading();
-
-    final r = await _scenarioV2.reply(_txt);
+    final scenario = _getScenarioByIndex();
+    final r = switch (scenario) {
+      ScenarioV2KeepPrimitiveMemory() => await scenario.reply(_txt),
+      ScenarioV3FunctionCallAndSchema() => await scenario.reply(_txt),
+      _ => '',
+    };
     setState(() {
       _messages
         ..add(_txt)
@@ -317,27 +310,20 @@ class _MyHomePageState extends State<MyHomePage> {
     switch (scenario) {
       case final ScenarioV1SendMessageGetAnswer _:
         _cleanup();
-        const systemPrompt = '';
-        // 'You are an ASCII art generator for video game tiles. Output: tile with size 5 width by 5 height characters using only standard ASCII text. Wrap the final output in a single markdown code block. Do not include any intro, outro, explanations, or conversational filler. Draw the requested object by user.';
-        _agentConfig = AgentConfig(systemPrompt: systemPrompt);
         _initScenario();
 
       case final ScenarioV2KeepPrimitiveMemory i:
         if (i.isInitialized) {
-          _scenario2Reply();
+          _scenarioReply();
         } else {
           _cleanup();
-          const systemPrompt = '';
-          _agentConfig = AgentConfig(systemPrompt: systemPrompt);
           _initScenario();
         }
       case final ScenarioV3FunctionCallAndSchema i:
         if (i.isInitialized) {
-          _scenario3Reply();
+          _scenarioReply();
         } else {
           _cleanup();
-          const systemPrompt = '';
-          _agentConfig = AgentConfig(systemPrompt: systemPrompt);
           _initScenario();
         }
     }
