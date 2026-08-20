@@ -61,6 +61,9 @@ enum BeatStatusEnum {
 
   /// Beat was aborted (error, cancelled).
   aborted,
+
+  /// Beat was superseded by a summary node; kept for history.
+  archived,
 }
 
 // ─────────────────────────────────────────────

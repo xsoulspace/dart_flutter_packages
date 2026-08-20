@@ -73,6 +73,63 @@ class ContextFragment {
   final Entity beat;
 }
 
+/// Links an actor to the thread(s) that constitute its memory.
+///
+/// Memory is a result of the storyline, not the other way around. This
+/// component points the actor at the thread(s) whose beats make up its
+/// observable history. [ActorRuntimeMemories.fragments] is a *derived
+/// cache* over these threads — rebuilt by the compaction/rebuild system,
+/// never an independent source of truth.
+class ActorMemoryRef implements Component {
+  ActorMemoryRef({List<Entity>? threads}) : threads = threads ?? <Entity>[];
+
+  /// The threads this actor's memory is derived from.
+  List<Entity> threads;
+}
+
+/// Persist the actor's current memory path so it survives a rebuild in a
+/// subsequent tick or schedule run.
+///
+/// Mechanical. Walks each thread's beats and rewrites
+/// [ActorRuntimeMemories.fragments] to match the thread graph. This is the
+/// single place memory is re-derived from the storyline.
+Entity persistMemory(World world, Entity actorEntity) {
+  final we = world.getEntity(actorEntity).$1;
+  we.insert(ActorRuntimeMemories(fragments: _threadFragments(world, we)));
+  return actorEntity;
+}
+
+/// Link [actorEntity] memory to the given [thread]s.
+void linkActorToThreads(World world, Entity actorEntity, List<Entity> threads) {
+  final we = world.getEntity(actorEntity).$1;
+  we.insert(ActorMemoryRef(threads: threads));
+}
+
+/// Derives the actor's memory fragments from its linked threads.
+List<ContextFragment> _threadFragments(World world, WorldEntity actorEntity) {
+  final ref = actorEntity.get<ActorMemoryRef>();
+  if (ref == null) return const [];
+
+  final out = <ContextFragment>[];
+  for (final thread in ref.threads) {
+    final (t, valid) = world.getEntity(thread);
+    if (!valid) continue;
+    for (final (beat, belongs, _)
+        in world.query2<BelongsToThread, BeatStatus>()) {
+      if (belongs.thread == thread) {
+        out.add(ContextFragment(type: _tagFor(beat), beat: beat.entity));
+      }
+    }
+  }
+  return out;
+}
+
+ContextFragmentType _tagFor(WorldEntity beat) {
+  if (beat.has<MemorySummary>()) return ContextFragmentType.memorySummary;
+  if (beat.has<BeatToolCall>()) return ContextFragmentType.toolMessage;
+  return ContextFragmentType.modelResponse;
+}
+
 /// Tag component: this actor currently has agency and must act.
 ///
 /// Granted by [grantAgencySystem] when an [OpenDecision] exists.
@@ -621,6 +678,7 @@ class AgentPlugin extends Plugin {
       ..registerObjectComponent<ActorSystemPrompt>()
       ..registerObjectComponent<ActorTools>()
       ..registerObjectComponent<ActorRuntimeMemories>()
+      ..registerObjectComponent<ActorMemoryRef>()
       ..registerObjectComponent<Agency>()
       ..registerObjectComponent<AwaitingResponse>()
       ..registerObjectComponent<OpenDecision>()
@@ -1306,73 +1364,161 @@ void processToolResultsSystem(World world) {
 // Bounded memory via mechanical delegation (Phase 2)
 // ─────────────────────────────────────────────
 
-/// Mechanical system: compacts old raw memory fragments into summaries.
+/// Mechanical system: compacts old raw memory into summaries — a graph
+/// transformation over the actor's threads, with a cache fallback.
 ///
-/// The harness, not the model, owns history. When an actor's raw fragment
-/// count exceeds [MemoryCompactionPolicy.maxRawFragments], the oldest
-/// [MemoryCompactionPolicy.summaryEvery] fragments are collapsed into a
-/// single [MemorySummary] Prop and replaced in the actor's memory by one
-/// [ContextFragment] of type [ContextFragmentType.memorySummary].
+/// The harness, not the model, owns history, and memory lives *in* the
+/// storyline (threads of beats), not in a parallel log. When a thread of the
+/// actor has too many raw beats, the oldest
+/// [MemoryCompactionPolicy.summaryEvery] beats are merged into a single
+/// [MemorySummary] *node that stays in that thread* (via [BelongsToThread]);
+/// the compacted beats are marked `archived` (off the projection path) but
+/// remain queryable for history. The actor's [ActorRuntimeMemories.fragments]
+/// cache is then re-derived from the thread graph.
 ///
-/// This keeps the projected context bounded: the model sees summaries of
-/// the past, not the raw past itself.
+/// When the actor has no thread links yet (legacy/cache-only usage), it falls
+/// back to a fragment-list compaction so bounded context still holds.
 void compactMemorySystem(World world) {
   final policy = world.getResource<MemoryCompactionPolicy>();
 
   final actors = world.query2<Actor, ActorRuntimeMemories>();
   for (final (entity, _, memories) in actors.toList()) {
-    final fragments = memories.fragments;
-    if (fragments.length <= policy.maxRawFragments) continue;
+    final ref = entity.get<ActorMemoryRef>();
+    final hasThreads = ref != null && ref.threads.isNotEmpty;
 
-    // Take the oldest summaryEvery fragments (excluding existing summaries).
-    final raw = fragments
-        .where((f) => f.type != ContextFragmentType.memorySummary)
-        .toList();
-    if (raw.length < policy.summaryEvery) continue;
+    if (hasThreads) {
+      _compactThreadMemory(world, entity, ref, memories, policy);
+      // Source of truth is the graph — rebuild the cache from it.
+      entity.insert(
+        ActorRuntimeMemories(fragments: _threadFragments(world, entity)),
+      );
+    } else {
+      _compactCacheMemory(world, entity, memories, policy);
+    }
+  }
+}
 
-    final toCompact = raw.take(policy.summaryEvery).toList();
+/// Graph-native compaction: merge a thread's oldest raw beats into a single
+/// in-thread summary node, mark the compacted beats archived.
+void _compactThreadMemory(
+  World world,
+  WorldEntity entity,
+  ActorMemoryRef ref,
+  ActorRuntimeMemories memories,
+  MemoryCompactionPolicy policy,
+) {
+  for (final thread in ref.threads) {
+    final (t, valid) = world.getEntity(thread);
+    if (!valid) continue;
+
+    final beats =
+        world
+            .query2<BelongsToThread, BeatStatus>()
+            .where((r) => r.$2.thread == thread)
+            .map(
+              (r) => (
+                beat: r.$1.entity,
+                seq: r.$1.get<BeatSequence>()?.value ?? 0,
+                raw:
+                    !r.$1.has<MemorySummary>() &&
+                    r.$3.value != BeatStatusEnum.archived,
+              ),
+            )
+            .toList()
+          ..sort((a, b) => a.seq.compareTo(b.seq));
+
+    final activeRaw = beats.where((b) => b.raw).toList();
+    if (activeRaw.length <= policy.maxRawFragments) continue;
+
+    final toCompact = activeRaw.take(policy.summaryEvery).toList();
+    if (toCompact.isEmpty) continue;
+
     final summaryText = _summarizeFragments(
       world,
-      toCompact,
+      toCompact.map((b) => b.beat).toList(),
       policy.summaryLength,
     );
 
-    // Create a summary beat.
     final summaryBeat = world.reserveEmptyEntity().entity;
-    final summaryEntity = world.getEntity(summaryBeat).$1;
-    summaryEntity.insert(TextContent(summaryText));
-    summaryEntity.insert(BeatStatus(BeatStatusEnum.complete));
-    summaryEntity.insert(BeatModality(BeatModalityEnum.observation));
-    summaryEntity.insert(MemorySummary(summaryText));
-    summaryEntity.insert(SummaryOwner(entity.entity));
+    final se = world.getEntity(summaryBeat).$1;
+    se.insert(TextContent(summaryText));
+    se.insert(BeatStatus(BeatStatusEnum.complete));
+    se.insert(BeatModality(BeatModalityEnum.observation));
+    se.insert(MemorySummary(summaryText));
+    se.insert(SummaryOwner(entity.entity));
+    se.insert(BelongsToThread(thread));
+    se.insert(BeatSequence(_nextThreadBeatSeq(world, thread)));
 
-    // Replace the compacted raw fragments with a single summary fragment.
-    final compactedIds = toCompact.map((f) => f.beat).toSet();
-    memories.fragments = fragments
-        .where((f) => !compactedIds.contains(f.beat))
-        .toList();
-    memories.fragments.insert(
-      0,
-      ContextFragment(
-        type: ContextFragmentType.memorySummary,
-        beat: summaryBeat,
-      ),
-    );
+    // Archive the compacted beats (off the projection path, kept for history).
+    for (final b in toCompact) {
+      final (we, ok) = world.getEntity(b.beat);
+      if (!ok) continue;
+      final st = we.get<BeatStatus>();
+      if (st != null) {
+        st.value = BeatStatusEnum.archived;
+      }
+    }
   }
+}
+
+int _nextThreadBeatSeq(World world, Entity thread) {
+  var max = 0;
+  for (final (_, belongs, seq)
+      in world.query2<BelongsToThread, BeatSequence>()) {
+    if (belongs.thread != thread) continue;
+    if (seq.value > max) max = seq.value;
+  }
+  return max + 1;
+}
+
+/// Cache-only fallback: compact a plain fragment list (no thread links yet).
+void _compactCacheMemory(
+  World world,
+  WorldEntity entity,
+  ActorRuntimeMemories memories,
+  MemoryCompactionPolicy policy,
+) {
+  final fragments = memories.fragments;
+  if (fragments.length <= policy.maxRawFragments) return;
+
+  final raw = fragments
+      .where((f) => f.type != ContextFragmentType.memorySummary)
+      .toList();
+  if (raw.length < policy.summaryEvery) return;
+
+  final toCompact = raw.take(policy.summaryEvery).toList();
+  final summaryText = _summarizeFragments(
+    world,
+    toCompact.map((f) => f.beat).toList(),
+    policy.summaryLength,
+  );
+
+  final summaryBeat = world.reserveEmptyEntity().entity;
+  final se = world.getEntity(summaryBeat).$1;
+  se.insert(TextContent(summaryText));
+  se.insert(BeatStatus(BeatStatusEnum.complete));
+  se.insert(BeatModality(BeatModalityEnum.observation));
+  se.insert(MemorySummary(summaryText));
+  se.insert(SummaryOwner(entity.entity));
+
+  final compactedIds = toCompact.map((f) => f.beat).toSet();
+  memories.fragments = fragments
+      .where((f) => !compactedIds.contains(f.beat))
+      .toList();
+  memories.fragments.insert(
+    0,
+    ContextFragment(type: ContextFragmentType.memorySummary, beat: summaryBeat),
+  );
 }
 
 /// Deterministic, mechanical summarization: keep the head and tail of the
 /// compacted fragments, joined with a separator. This is a lossy but bounded
 /// compression — the full beats remain queryable in the world for later
 /// reconstruction (the projection just no longer shows them raw).
-String _summarizeFragments(
-  World world,
-  List<ContextFragment> fragments,
-  int maxLength,
-) {
+String _summarizeFragments(World world, List<Entity> beats, int maxLength) {
   final parts = <String>[];
-  for (final f in fragments) {
-    final (entity, valid) = world.getEntity(f.beat);
+  for (final beat in beats) {
+    final (entity, valid) = world.getEntity(beat);
     if (!valid) continue;
     final text = entity.get<TextContent>();
     if (text != null && text.text.isNotEmpty) {

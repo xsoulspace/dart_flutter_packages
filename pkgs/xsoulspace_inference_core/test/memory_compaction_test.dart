@@ -129,5 +129,50 @@ void main() {
         isNotEmpty,
       );
     });
+
+    test('derives memory cache from the thread graph (graph-native)', () async {
+      final world = await buildTestWorld();
+      world.upsertResource(
+        MemoryCompactionPolicy(maxRawFragments: 6, summaryEvery: 4),
+      );
+      world.flush();
+
+      final scene = world.spawnComponents([const Scene(), SceneFrame()]);
+      final actor = world.spawnComponents([
+        Actor(agentId: AgentId.create()),
+        ActorModel(modelId: ModelId.create()),
+        ActorRuntimeMemories(),
+        PresentInScene(sceneEntity: scene),
+      ]);
+      world.flush();
+
+      // Link the actor to a thread, then add beats INTO the thread.
+      final thread = spawnThread(world, actor, scene);
+      linkActorToThreads(world, actor, [thread]);
+      world.flush();
+
+      for (var i = 0; i < 10; i++) {
+        final beat = startBeat(world, thread, actor, BeatModalityEnum.text);
+        appendToBeat(world, beat, 'fragment $i content');
+        completeBeat(world, beat);
+      }
+      world.flush();
+
+      // Compact — graph transformation over the thread.
+      world.runSchedule('Narrative');
+      world.flush();
+
+      final memories = world.getEntity(actor).$1.get<ActorRuntimeMemories>()!;
+      // The cache now reflects the thread graph (beats + summary), not raw
+      // fragment appends. Archived beats dropped from projection view.
+      final summaries = memories.fragments
+          .where((f) => f.type == ContextFragmentType.memorySummary)
+          .toList();
+      expect(summaries, isNotEmpty);
+      // The summary node stays in the thread.
+      final summaryBeat = world.getEntity(summaries.first.beat).$1;
+      expect(summaryBeat.get<BelongsToThread>()?.thread, thread);
+      expect(summaryBeat.has<MemorySummary>(), isTrue);
+    });
   });
 }

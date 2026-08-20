@@ -32,12 +32,13 @@
 - `grantAgencySystem` sorts by priority then escalation, caps concurrency.
 - `actorActSystem` routes escalated requests to a different model.
 
-## Phase 3.5 — Memory is derived from the storyline (refactor Phase 2)
+## Phase 3.5 — Memory is derived from the storyline ✅
 - Memory = the thread/beat graph, NOT a parallel fragment log.
-- `ActorRuntimeMemories` becomes a derived query/cache over the graph.
-- Compaction = graph transformation (merge old beats into a summary node
-  that stays linked in the thread), preserving provenance + reconstructibility.
-- Projection walks the graph (actor → thread links → beats + summaries).
+- `ActorMemoryRef` links an actor to its memory threads; fragment cache is
+  re-derived from the graph (`_threadFragments`).
+- Compaction = graph transformation: merge a thread's oldest raw beats into
+  an in-thread `MemorySummary` node, mark the old beats archived.
+- Cache-fallback kept for legacy/no-thread usage; bounded context holds.
 - Enables testing the whole engine without an LLM: scripted graph mutations
   drive compaction/projection/agency/escalation deterministically.
 

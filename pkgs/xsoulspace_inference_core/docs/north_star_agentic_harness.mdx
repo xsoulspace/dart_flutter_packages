@@ -1,0 +1,57 @@
+# Agentic Harness — North Star
+
+**Owner:** `xsoulspace_inference_core`
+**Status:** guiding — this is the durable center for the agent harness work.
+
+## The objective
+
+A **small local model (2–4k context window) becomes genuinely useful** for
+acting, writing, coding, and reasoning — not because the model is big, but
+because the **harness does the heavy lifting**. The model is a replaceable,
+sparingly-called reasoning primitive; the harness is the intelligence
+amplifier.
+
+Concretely: the same outcome should be reachable with a tiny on-device model as
+with a much larger remote one, because the hard parts (memory, projection,
+tool orchestration, multi-actor coordination, verification) are handled by the
+deterministic, graph-native seams around the model — not by the model's context
+window.
+
+## What this subsection owns
+
+- **Projection** — a cinematic *cut* per actor: only what the current decision
+  needs, plus explicit green-screen absences. Enforced token budget.
+- **Agency discipline** — the model is called only when a real decision is
+  open; all other work is mechanical and never touches an LLM.
+- **Graph-native memory** — threads of beats (text, thought, tool calls,
+  observations) are the source of truth. An actor's memory is a re-derivable
+  view over those threads, compacted into in-thread summaries. Memory is a
+  result of the storyline, never an independent parallel log.
+- **Multi-actor + escapable** — many actors share one deterministic world;
+  a2a, a2h, a2h2a; runtime-swappable model backends.
+- **Testable without an LLM** — every part except *write a beat* is
+  deterministic graph logic, exercisable with a mock generator.
+
+## The minimal viable standard
+
+- Projection stays within a declared token budget, enforced, measured, failing
+  the benchmark if exceeded.
+- Compaction/projection/agency/escalation can be driven end-to-end by scripted
+  mutations with no real model.
+- The loop is continuous, concurrent, and sleeps when idle.
+
+## Non-goals
+
+- Not a phone-a-friend wrapper: escalation to a bigger model is a fallback, not
+  the default path. Constant escalation defeats the objective.
+- Not conversation-centric — dialogue is one allowed action (thinking, planning,
+  tool use, research, self-reflection) rather than the core mode.
+- Not a monolith: this stays a focused, ui-agnostic core; UI/CLI/TUI/Flutter are
+  thin hosts over the same world.
+
+## Gravity
+
+Before a structural change, ask whether it (a) keeps a tiny model useful,
+(b) reduces LLM calls for the same result, (c) keeps context bounded and
+derived, and (d) stays LLM-free testable. If a mechanism is becoming the mission
+instead of serving those, that is drift.
