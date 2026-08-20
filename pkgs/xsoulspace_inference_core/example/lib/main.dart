@@ -24,12 +24,12 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Agent Demo',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
+        colorScheme: .fromSeed(
           seedColor: Colors.indigo,
           brightness: brightness,
         ),
       ),
-      home: const MyHomePage(title: 'Agent Demo'),
+      home: const MyHomePage(title: 'Flutter Demo Home Page'),
     );
   }
 }
@@ -43,263 +43,303 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-/// ECS-based scenario that runs the agent harness loop.
-class EcsScenario {
-  final World world;
-  final DefaultActorGenerateHandler handler;
-  final HarnessLoop loop;
-  final Entity actorEntity;
-  final ToolRegistry toolRegistry;
+sealed class Scenario {
+  bool isInitialized = false;
+  final ai = AIWorld.fromConfigs(
+    runtimeConfig: AIRuntimeConfig(
+      inferenceClientBuilders: {
+        DefaultModelNames.appleFoundation: () => AppleFoundationInferenceClient(
+          api: AppleFoundationInferenceClient.initApi(),
+        ),
+      },
+    ),
+  );
 
-  EcsScenario({
-    required this.world,
-    required this.handler,
-    required this.loop,
-    required this.actorEntity,
-    required this.toolRegistry,
-  });
+  Future<T> doTry<T>(Future<T> Function() callback, T fallback) async {
+    try {
+      return await callback();
+    } catch (e, st) {
+      log('scenario | try failure', error: e, stackTrace: st);
+      return fallback;
+    }
+  }
+
+  @mustCallSuper
+  Future<String> init({
+    required String text,
+    required AgentConfig config,
+  }) async {
+    isInitialized = true;
+    return '';
+  }
 
   void dispose() {
-    loop.stop();
-    world.clear();
-  }
-
-  /// Get the last model response from the actor's memories.
-  String? get lastResponse {
-    final memories = world.maybeGetComponent<ActorRuntimeMemories>(actorEntity);
-    if (memories == null || memories.fragments.isEmpty) return null;
-    final last = memories.fragments.last;
-    if (last.type == ContextFragmentType.modelResponse) {
-      final beatEntity = world.getEntity(last.beat).$1;
-      final textContent = beatEntity.get<TextContent>();
-      return textContent?.text;
-    }
-    return null;
+    isInitialized = false;
+    ai.dispose();
   }
 }
 
-/// Build an ECS world with the agent plugin and a scene + actor.
-Future<EcsScenario> buildEcsScenario({
-  required ToolRegistry toolRegistry,
-  required String systemPrompt,
-  required String openDecisionPrompt,
-}) async {
-  final world = World()..addPlugin(AgentPlugin());
+class ScenarioV1SendMessageGetAnswer extends Scenario {
+  @override
+  Future<String> init({
+    required String text,
+    required AgentConfig config,
+  }) async {
+    super.init(text: text, config: config);
+    return doTry(() async {
+      final response = await ai.sendTextMessage(
+        message: text,
+        config: config,
+        disposeAfterCompletion: true,
+      );
+      log(response.text);
+      return response.text;
+    }, '');
+  }
+}
 
-  final router = ModelRouter(
-    inferenceClientsBuilders: {
-      DefaultModelNames.appleFoundation: () => AppleFoundationInferenceClient(
-        api: AppleFoundationInferenceClient.initApi(),
+/// Human -> Agent -> Human -> Agent -> Human
+class ScenarioV2KeepPrimitiveMemory extends Scenario {
+  late Agent agent;
+
+  @override
+  Future<String> init({
+    required String text,
+    required AgentConfig config,
+  }) async {
+    super.init(text: text, config: config);
+    return doTry(() async {
+      final response = await ai.sendTextMessage(message: text, config: config);
+      log(response.text);
+      agent = response.agent;
+      return response.text;
+    }, "");
+  }
+
+  Future<String> reply(String text) async {
+    return doTry(() async {
+      final response = await ai.proceedTextForAgent(
+        message: text,
+        agent: agent,
+      );
+      log(response);
+      return response;
+    }, '');
+  }
+}
+
+/// Schema and function call for weather
+class ScenarioV3FunctionCallAndSchema extends Scenario {
+  late Agent agent;
+  @override
+  Future<String> init({
+    required String text,
+    required AgentConfig config,
+  }) async {
+    super.init(text: text, config: config);
+    final response = await ai.sendTextMessage(
+      message: text,
+      config: config,
+      outputSchema: SchemaBundle(
+        root: FM.object(
+          'weather',
+          properties: () => [FM.prop('condition', FM.string())],
+        ),
       ),
-    },
-  );
-  world
-    ..upsertResource(ModelRouterResource(router))
-    ..upsertResource(ToolRegistryResource())
-    ..flush();
+      toolRegsitry: ToolRegistry()
+        ..register(
+          ToolDef.structured(
+            name: ToolName('getWeatherForHour'),
+            description: 'Returns weather for a specific hour of today',
+            parameters: SchemaBundle(
+              root: FM.object(
+                'time',
+                properties: () => [
+                  FM.prop('hour', FM.double(guides: [RangeGuide(0, 23)])),
+                ],
+              ),
+            ),
+            execute: (args) async {
+              final params = jsonDecodeMapAs(args);
+              final hour = jsonDecodeInt(params['hour']);
+              final (temp, condition) = switch (hour) {
+                < 4 => (16, 'rain'),
+                >= 4 && < 12 => (20, 'sunny'),
+                >= 12 && < 21 => (20, 'cloudy'),
+                _ => (16, "sunny"),
+              };
+              // add real implementation
+              return jsonEncode({
+                'hour': hour,
+                'temp': temp,
+                'condition': condition,
+              });
+            },
+          ),
+        ),
+    );
+    log(response.text);
+    agent = response.agent;
+    return response.text;
+  }
 
-  // Register the tool registry
-  final toolResource = world.getResource<ToolRegistryResource>();
-  toolResource.register('default', toolRegistry);
+  SchemaBundle get _schema {
+    final npcSchema = FM.object(
+      'Npc',
+      description: 'A character that can order coffee',
+      properties: () => [
+        FM.prop('name', description: 'First name, Second Name', FM.string()),
+        FM.prop('level', FM.double(guides: [RangeGuide(1, 10)])),
+        FM.prop('attributes', FM.array(FM.ref('Attribute'), min: 1, max: 2)),
+        FM.prop('encounter', FM.ref('Encounter')),
+      ],
+    );
 
-  // Register the default handler
-  final handler = DefaultActorGenerateHandler()..router = router;
+    final attributeSchema = FM.enum_('Attribute', ['bold', 'tired', 'hungry']);
 
-  // Spawn a scene
-  final sceneEntity = world.spawnComponents([const Scene(), SceneFrame()]);
+    final encounterSchema = FM.anyOf('Encounter', [
+      FM.object(
+        'OrderCoffee',
+        properties: () => [FM.prop('drink', FM.string())],
+      ),
+      FM.object(
+        'WantToTalkToManager',
+        properties: () => [FM.prop('complaint', FM.string())],
+      ),
+    ]);
 
-  // Spawn an actor with a goal
-  final actorId = AgentId.create();
-  final modelId = ModelId.create();
-  final actorEntity = world.spawnComponents([
-    Actor(agentId: actorId),
-    ActorModel(modelId: modelId),
-    ActorSystemPrompt(text: systemPrompt),
-    ActorRuntimeMemories(),
-    PresentInScene(sceneEntity: sceneEntity),
-    const ActorTools(registryName: 'default'),
-  ]);
+    // Root + dependencies
+    final schema = SchemaBundle(
+      root: npcSchema,
+      dependencies: [attributeSchema, encounterSchema],
+    );
+    return schema;
+  }
 
-  // Create an open decision — this triggers the agency loop
-  world.upsertComponent(actorEntity, OpenDecision(prompt: openDecisionPrompt));
-  world.flush();
-
-  // Create the harness loop
-  final loop = HarnessLoop(world: world, handler: handler);
-
-  return EcsScenario(
-    world: world,
-    handler: handler,
-    loop: loop,
-    actorEntity: actorEntity,
-    toolRegistry: toolRegistry,
-  );
+  Future<String> reply(String txt) async {
+    return doTry(() async {
+      final response = await ai.proceedTextForAgent(
+        message: txt,
+        agent: agent,
+        outputSchema: _schema,
+      );
+      log(response);
+      return response;
+    }, "");
+  }
 }
+
+typedef ScenarioRecord = ({String title, Scenario scenario});
 
 class _MyHomePageState extends State<MyHomePage> {
+  final _scenarioV1 = ScenarioV1SendMessageGetAnswer();
+  final _scenarioV2 = ScenarioV2KeepPrimitiveMemory();
+  final _scenarioV3 = ScenarioV3FunctionCallAndSchema();
   final _messages = ImmutableOrderedList<String>();
+
+  AgentConfig _agentConfig = AgentConfig.empty;
   final TextEditingController _controller = TextEditingController();
 
   String get _txt => _controller.text;
 
   bool _isRunning = false;
   int _scenarioIndex = 0;
-  EcsScenario? _currentScenario;
 
-  // Tool registry for scenario 3 (weather tool)
-  final _toolRegistry = ToolRegistry()
-    ..register(
-      ToolDef.structured(
-        name: ToolName('getWeatherForHour'),
-        description: 'Returns weather for a specific hour of today',
-        parameters: SchemaBundle(
-          root: FM.object(
-            'time',
-            properties: () => [
-              FM.prop('hour', FM.double(guides: [RangeGuide(0, 23)])),
-            ],
-          ),
-        ),
-        execute: (args) async {
-          final params = jsonDecodeMapAs(args);
-          final hour = jsonDecodeInt(params['hour']);
-          final (temp, condition) = switch (hour) {
-            < 4 => (16, 'rain'),
-            >= 4 && < 12 => (20, 'sunny'),
-            >= 12 && < 21 => (20, 'cloudy'),
-            _ => (16, 'sunny'),
-          };
-          return jsonEncode({
-            'hour': hour,
-            'temp': temp,
-            'condition': condition,
-          });
-        },
-      ),
-    );
-
-  List<(String, int)> get _scenarios => [
-    ('one-text', 0),
-    ('h -> llm -> h -> llm', 1),
-    ('scheme + tool call: Weather', 2),
+  List<ScenarioRecord> get _scenarios => [
+    (scenario: _scenarioV1, title: 'one-text'),
+    (scenario: _scenarioV2, title: 'h -> llm -> h -> llm'),
+    (scenario: _scenarioV3, title: 'scheme + tool call: Weather / Character'),
   ];
 
+  T _getScenarioByIndex<T extends Scenario>() =>
+      _scenarios[_scenarioIndex].scenario as T;
   void _switchToScenario(int? index) {
-    if (index == null || _scenarioIndex == index) return;
+    final i = index;
+    if (i == null || _scenarioIndex == i) return;
     _cleanup();
-    setState(() => _scenarioIndex = index);
+    setState(() => _scenarioIndex = i);
   }
 
   void _cleanup() {
     _messages.clear();
-    _currentScenario?.dispose();
-    _currentScenario = null;
+    _agentConfig = AgentConfig.empty;
+    for (var scenario in _scenarios) {
+      scenario.scenario.dispose();
+    }
   }
 
   void _setLoading() => setState(() {
     _isRunning = true;
   });
 
-  Future<void> _runScenario() async {
+  Future<void> _initScenario({bool cleanup = false}) async {
+    if (cleanup) _cleanup();
+    final scenario = _getScenarioByIndex();
     _setLoading();
-    _cleanup();
-
-    final scenario = _scenarios[_scenarioIndex].$2;
-    final systemPrompt = '';
-    final openDecision = switch (scenario) {
-      0 => 'Reply with one short word: hello.',
-      1 => 'Continue the conversation with: "Tell me about yourself.".',
-      2 => 'What is the weather at hour 14?',
-      _ => 'Reply with one short word: hello.',
-    };
-
-    try {
-      final ecsScenario = await buildEcsScenario(
-        toolRegistry: scenario == 2 ? _toolRegistry : ToolRegistry(),
-        systemPrompt: systemPrompt,
-        openDecisionPrompt: openDecision,
-      );
-
-      _currentScenario = ecsScenario;
-
-      // Start the harness loop — runs for 10 seconds
-      ecsScenario.loop.start(
-        until: Future.delayed(const Duration(seconds: 10)),
-      );
-
-      // Wait for the loop to process
-      await Future.delayed(const Duration(seconds: 5));
-
-      final response = ecsScenario.lastResponse;
-      setState(() {
-        _messages
-          ..add(_txt)
-          ..add(response ?? 'No response received');
-        _controller.clear();
-        _isRunning = false;
-      });
-    } catch (e, st) {
-      log('scenario | try failure', error: e, stackTrace: st);
-      setState(() {
-        _messages
-          ..add(_txt)
-          ..add('Error: $e');
-        _controller.clear();
-        _isRunning = false;
-      });
-    }
+    final r = await scenario.init(text: _txt, config: _agentConfig);
+    setState(() {
+      _messages
+        ..add(_txt)
+        ..add(r);
+      _controller.clear();
+      _isRunning = false;
+    });
   }
 
-  Future<void> _reply() async {
-    if (_currentScenario == null) return;
+  Future<void> _scenario3Reply() async {
     _setLoading();
 
-    final scenario = _scenarios[_scenarioIndex].$2;
+    final r = await _scenarioV3.reply(_txt);
+    setState(() {
+      _messages
+        ..add(_txt)
+        ..add(r);
+      _controller.clear();
+      _isRunning = false;
+    });
+  }
 
-    try {
-      // Add a new OpenDecision to the existing actor
-      final actor = _currentScenario!.actorEntity;
-      final prompt = switch (scenario) {
-        1 => 'Continue: $_txt',
-        2 => 'Weather at hour 8?',
-        _ => _txt,
-      };
+  Future<void> _scenario2Reply() async {
+    _setLoading();
 
-      _currentScenario!.world.upsertComponent(
-        actor,
-        OpenDecision(prompt: prompt),
-      );
-      _currentScenario!.world.flush();
-
-      // Wait for the loop to process
-      await Future.delayed(const Duration(seconds: 5));
-
-      final response = _currentScenario!.lastResponse;
-      setState(() {
-        _messages
-          ..add(_txt)
-          ..add(response ?? 'No response received');
-        _controller.clear();
-        _isRunning = false;
-      });
-    } catch (e, st) {
-      log('reply | try failure', error: e, stackTrace: st);
-      setState(() {
-        _messages
-          ..add(_txt)
-          ..add('Error: $e');
-        _controller.clear();
-        _isRunning = false;
-      });
-    }
+    final r = await _scenarioV2.reply(_txt);
+    setState(() {
+      _messages
+        ..add(_txt)
+        ..add(r);
+      _controller.clear();
+      _isRunning = false;
+    });
   }
 
   void _onReply() {
-    if (_currentScenario != null &&
-        _currentScenario!.world.getEntity(_currentScenario!.actorEntity).$2) {
-      _reply();
-    } else {
-      _runScenario();
+    final scenario = _getScenarioByIndex();
+    switch (scenario) {
+      case final ScenarioV1SendMessageGetAnswer _:
+        _cleanup();
+        const systemPrompt = '';
+        // 'You are an ASCII art generator for video game tiles. Output: tile with size 5 width by 5 height characters using only standard ASCII text. Wrap the final output in a single markdown code block. Do not include any intro, outro, explanations, or conversational filler. Draw the requested object by user.';
+        _agentConfig = AgentConfig(systemPrompt: systemPrompt);
+        _initScenario();
+
+      case final ScenarioV2KeepPrimitiveMemory i:
+        if (i.isInitialized) {
+          _scenario2Reply();
+        } else {
+          _cleanup();
+          const systemPrompt = '';
+          _agentConfig = AgentConfig(systemPrompt: systemPrompt);
+          _initScenario();
+        }
+      case final ScenarioV3FunctionCallAndSchema i:
+        if (i.isInitialized) {
+          _scenario3Reply();
+        } else {
+          _cleanup();
+          const systemPrompt = '';
+          _agentConfig = AgentConfig(systemPrompt: systemPrompt);
+          _initScenario();
+        }
     }
   }
 
@@ -313,16 +353,15 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
       body: Center(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.end,
-          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisAlignment: .end,
+          crossAxisAlignment: .center,
           spacing: 4,
           children: [
             Flexible(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 450),
+                constraints: BoxConstraints(maxWidth: 450),
                 child: ListView.builder(
                   shrinkWrap: true,
                   itemBuilder: (context, index) {
@@ -333,21 +372,17 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ),
             Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: .start,
+              mainAxisSize: .min,
               children: [
-                const Text('scenarios'),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    maxWidth: 800,
-                    maxHeight: 300,
-                  ),
+                Text('scenarios'),
+                Container(
+                  constraints: BoxConstraints(maxWidth: 800, maxHeight: 300),
                   child: GridView.builder(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 4,
-                          childAspectRatio: 300 / 200,
-                        ),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 4,
+                      childAspectRatio: 300 / 200,
+                    ),
                     shrinkWrap: true,
                     itemCount: _scenarios.length,
                     itemBuilder: (context, index) {
@@ -356,9 +391,9 @@ class _MyHomePageState extends State<MyHomePage> {
                       Widget child = Padding(
                         padding: const EdgeInsets.all(8.0),
                         child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [Flexible(child: Text(scenario.$1))],
+                          crossAxisAlignment: .start,
+                          mainAxisSize: .min,
+                          children: [Flexible(child: Text(scenario.title))],
                         ),
                       );
                       if (filled) {
@@ -376,7 +411,7 @@ class _MyHomePageState extends State<MyHomePage> {
               ],
             ),
             ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 150, maxWidth: 450),
+              constraints: BoxConstraints(maxWidth: 450, maxHeight: 150),
               child: Row(
                 children: [
                   Expanded(
@@ -403,7 +438,7 @@ class _MyHomePageState extends State<MyHomePage> {
                               borderRadius: BorderRadius.circular(24),
                             ),
                             hintText: 'Ask',
-                            suffix: const SizedBox(width: 24),
+                            suffix: SizedBox(width: 24),
                           ),
                           onFieldSubmitted: (value) {
                             _onReply();
@@ -416,7 +451,7 @@ class _MyHomePageState extends State<MyHomePage> {
                             valueListenable: _controller,
                             builder: (context, value, child) {
                               return IconButton.outlined(
-                                icon: const Icon(Icons.arrow_upward_rounded),
+                                icon: Icon(Icons.arrow_upward_rounded),
                                 onPressed: _controller.text.isEmpty
                                     ? null
                                     : _onReply,
@@ -427,8 +462,9 @@ class _MyHomePageState extends State<MyHomePage> {
                       ],
                     ),
                   ),
+
                   ConstrainedBox(
-                    constraints: const BoxConstraints(
+                    constraints: BoxConstraints(
                       maxHeight: 24,
                       maxWidth: 24,
                       minHeight: 24,
@@ -436,17 +472,18 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                     child: Center(
                       child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 250),
+                        duration: .new(milliseconds: 250),
+
                         child: _isRunning
-                            ? const CircularProgressIndicator.adaptive()
-                            : const SizedBox(),
+                            ? CircularProgressIndicator.adaptive()
+                            : SizedBox(),
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
           ],
         ),
       ),
