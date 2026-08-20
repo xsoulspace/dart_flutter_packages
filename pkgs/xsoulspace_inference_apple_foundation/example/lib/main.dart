@@ -64,7 +64,6 @@ class _ExamplePageState extends State<_ExamplePage> {
 
     // Register the default handler
     final handler = DefaultActorGenerateHandler()..router = router;
-    handler.register(world);
 
     // Spawn a scene
     final sceneEntity = world.spawnComponents([const Scene(), SceneFrame()]);
@@ -87,24 +86,13 @@ class _ExamplePageState extends State<_ExamplePage> {
     );
     world.flush();
 
-    // Run the cinematic loop:
-    // 1. Grant agency
-    world.runSchedule('AgencyGrant');
-    world.flush();
+    // Run the harness loop — it handles agency grant, projection,
+    // actor act, response processing, and idle/sleep automatically.
+    final loop = HarnessLoop(world: world, handler: handler);
+    loop.start(until: Future.delayed(const Duration(seconds: 10)));
 
-    // 2. Project situation
-    world.runSchedule('Project');
-    world.flush();
-
-    // 3. Actor acts (async — sends LLM request)
-    await world.runScheduleAsync('ActorAct');
-    world.flush();
-
-    // 4. Process responses (external handler sends back response)
-    //    Give the handler time to complete
-    await Future.delayed(const Duration(seconds: 2));
-    world.runSchedule('ProcessResponses');
-    world.flush();
+    // Wait for the loop to process the decision and sleep
+    await Future.delayed(const Duration(seconds: 5));
 
     // Read the result
     final memories = world.maybeGetComponent<ActorRuntimeMemories>(actorEntity);

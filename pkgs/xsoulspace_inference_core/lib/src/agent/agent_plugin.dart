@@ -3,9 +3,11 @@ import 'dart:convert';
 
 import 'package:ecsly/ecsly.dart';
 import 'package:ecsly_app/ecsly_app.dart';
+import 'package:ecsly_async_parallel/ecsly_async_parallel.dart';
 
 import '../models/inference_models.dart';
 import 'agent.dart';
+import 'narrative.dart';
 
 // ─────────────────────────────────────────────
 // Components
@@ -71,6 +73,16 @@ class Agency implements Component {
   const Agency();
 }
 
+/// Tag component: this actor has dispatched an LLM request and is waiting
+/// for a response.
+///
+/// Added by [actorActSystem] when the request is sent. Consumed by
+/// [processResponsesSystem] after the response is processed.
+/// Prevents re-granting Agency until the response arrives.
+class AwaitingResponse implements Component {
+  const AwaitingResponse();
+}
+
 /// Explicit signal that agency is required.
 ///
 /// An entity with both [Actor] and [OpenDecision] (and no [Agency] yet)
@@ -128,20 +140,6 @@ class Situation implements Component {
   SchemaBundle schema;
   List<String> inFramePropIds;
   List<AgentId> coPresentActorIds;
-}
-
-/// A thread is an alternative / exploration path.
-///
-/// Threads are scoreable, prunable, and mergeable.
-class Thread implements Component {
-  const Thread({this.parentThreadId});
-  final Entity? parentThreadId;
-}
-
-/// Score for a [Thread]. Higher is better.
-class ThreadScore implements Component {
-  ThreadScore({this.value = 0.0});
-  double value;
 }
 
 /// A goal assigned to an actor.
@@ -246,6 +244,9 @@ class ToolCall {
 class AgentPlugin extends Plugin {
   @override
   void install(World world) {
+    // Install async parallel plugin for ScheduleJobResultQueueResource
+    world.addPlugin(const AsyncParallelPlugin());
+
     world.components
       ..registerObjectComponent<Actor>()
       ..registerObjectComponent<ActorModel>()
@@ -253,6 +254,7 @@ class AgentPlugin extends Plugin {
       ..registerObjectComponent<ActorTools>()
       ..registerObjectComponent<ActorRuntimeMemories>()
       ..registerObjectComponent<Agency>()
+      ..registerObjectComponent<AwaitingResponse>()
       ..registerObjectComponent<OpenDecision>()
       ..registerObjectComponent<Scene>()
       ..registerObjectComponent<SceneFrame>()
@@ -260,9 +262,35 @@ class AgentPlugin extends Plugin {
       ..registerObjectComponent<PresentProp>()
       ..registerObjectComponent<Prop>()
       ..registerObjectComponent<Situation>()
+      ..registerObjectComponent<Goal>()
+      // Thread & Beat ontology (from narrative.dart)
       ..registerObjectComponent<Thread>()
       ..registerObjectComponent<ThreadScore>()
-      ..registerObjectComponent<Goal>();
+      ..registerObjectComponent<ThreadId>()
+      ..registerObjectComponent<ThreadStatus>()
+      ..registerObjectComponent<ParentScene>()
+      ..registerObjectComponent<OriginActor>()
+      ..registerObjectComponent<GoalLink>()
+      ..registerObjectComponent<DerivedFromThread>()
+      ..registerObjectComponent<ThreadVisibility>()
+      ..registerObjectComponent<BeatId>()
+      ..registerObjectComponent<BelongsToThread>()
+      ..registerObjectComponent<BeatSequence>()
+      ..registerObjectComponent<Speaker>()
+      ..registerObjectComponent<AddressedTo>()
+      ..registerObjectComponent<BeatModality>()
+      ..registerObjectComponent<BeatStatus>()
+      ..registerObjectComponent<ReplyToBeat>()
+      ..registerObjectComponent<ObservesProp>()
+      ..registerObjectComponent<PrivateToActor>()
+      ..registerObjectComponent<TextContent>()
+      ..registerObjectComponent<TextStream>()
+      ..registerObjectComponent<AudioStream>()
+      ..registerObjectComponent<ActionPayload>()
+      ..registerObjectComponent<BeatToolCall>()
+      ..registerObjectComponent<ToolResult>()
+      ..registerObjectComponent<ThoughtContent>()
+      ..registerObjectComponent<ObservationData>();
 
     // Event channels for async LLM I/O
     world.events.register<ActorGenerateRequest>();
@@ -275,6 +303,7 @@ class AgentPlugin extends Plugin {
     // 3. ActorAct: async — send LLM requests, external handler responds
     // 4. ProcessResponses: handle LLM responses, queue tool calls
     // 5. Mechanical: score/prune threads, execute tools
+    // 6. Narrative: advance Thread/Beat playheads, finalize partials
     world.createSchedule('AgencyGrant')
       ..add(grantAgencySystem, name: 'grantAgency')
       ..then(flushAllSystem, name: 'flushAfterGrant');
@@ -294,7 +323,12 @@ class AgentPlugin extends Plugin {
     world.createSchedule('Mechanical')
       ..add(scoreThreadsSystem, name: 'scoreThreads')
       ..then(pruneThreadsSystem, name: 'pruneThreads')
+      ..then(mergeThreadsSystem, name: 'mergeThreads')
       ..then(flushAllSystem, name: 'flushAfterMechanical');
+
+    world.createSchedule('Narrative')
+      ..add(finalizePartialsSystem, name: 'finalizePartials')
+      ..then(flushAllSystem, name: 'flushAfterNarrative');
   }
 
   @override
@@ -307,16 +341,18 @@ class AgentPlugin extends Plugin {
 
 /// System 1: Grant agency to actors that have an [OpenDecision].
 ///
-/// For each Actor entity with [OpenDecision] but without [Agency],
-/// add the [Agency] tag. This is the explicit agency-granting step —
-/// actors never assume agency; systems grant it.
+/// For each Actor entity with [OpenDecision] but without [Agency]
+/// and without [AwaitingResponse], add the [Agency] tag.
+/// This is the explicit agency-granting step — actors never assume
+/// agency; systems grant it.
 void grantAgencySystem(World world) {
-  // Query: Actor + OpenDecision, then check for Agency manually
-  // (ecsly's query2 requires both components; we filter Agency via has<T>)
+  // Query: Actor + OpenDecision, then check for Agency/AwaitingResponse manually
+  // (ecsly's query2 requires both components; we filter via has<T>)
   final actorsWithDecisions = world.query2<Actor, OpenDecision>();
 
   for (final (entity, _, _) in actorsWithDecisions) {
     if (entity.has<Agency>()) continue;
+    if (entity.has<AwaitingResponse>()) continue;
     entity.insert(const Agency());
   }
 }
@@ -391,9 +427,18 @@ Situation _buildSituation({
 ///
 /// This system is async-parallel: many actors can act concurrently.
 /// Responses are processed by [processResponsesSystem] on a later tick.
+///
+/// Instead of removing [Agency] immediately, adds [AwaitingResponse] so
+/// that the actor's state is preserved for retry on failure.
 Future<void> actorActSystem(World world) async {
   final requestWriter = world.events.writer<ActorGenerateRequest>();
   final actorsWithAgency = world.query4<Actor, Agency, ActorModel, Situation>();
+
+  // Mark the actorAct job as in-flight so HarnessLoop.canSleep() knows
+  // there is pending async work (LLM calls dispatched to the handler).
+  final policy = world.getResource<ScheduleExecutionPolicyResource>();
+  final queue = world.getResource<ScheduleJobResultQueueResource>();
+  queue.beginInFlight(jobKey: 'actorAct', frameId: policy.frameId);
 
   for (final (entity, actor, _, model, situation) in actorsWithAgency) {
     final memories = entity.get<ActorRuntimeMemories>();
@@ -424,8 +469,9 @@ Future<void> actorActSystem(World world) async {
 
     requestWriter.send(request);
 
-    // Remove Agency — the actor has acted; it will be re-granted if needed
-    entity.remove<Agency>();
+    // Add AwaitingResponse — preserves actor state for retry on failure.
+    // Agency is consumed by processResponsesSystem after the response arrives.
+    entity.insert(const AwaitingResponse());
   }
 
   // Yield to let the event loop process requests sent to the channel.
@@ -437,8 +483,11 @@ Future<void> actorActSystem(World world) async {
 /// System 4: Process LLM responses from the external handler.
 ///
 /// Mechanical — no LLM calls. Reads [ActorGenerateResponse] events,
-/// stores the output as a context fragment, and queues tool calls
-/// for execution.
+/// stores the output as a context fragment, and executes tool calls
+/// synchronously (tools are typically fast; only LLM calls are truly async).
+///
+/// Consumes [Agency] + [AwaitingResponse] after storing the response.
+/// On failure (null response): creates a new [OpenDecision] with an error note.
 void processResponsesSystem(World world) {
   final responseReader = world.events.reader<ActorGenerateResponse>();
   final toolRegistryResource = world.getResource<ToolRegistryResource>();
@@ -446,6 +495,21 @@ void processResponsesSystem(World world) {
   // Drain and clear the response channel so events don't persist across frames.
   final responses = responseReader.drain();
   world.events.channel<ActorGenerateResponse>().clear();
+
+  // Complete the in-flight marker for this frame — LLM responses have arrived
+  // and are being processed. Also clean up stale markers from previous frames.
+  if (world.resources.has<ScheduleJobResultQueueResource>()) {
+    final policy = world.getResource<ScheduleExecutionPolicyResource>();
+    final queue = world.getResource<ScheduleJobResultQueueResource>();
+    queue.completeInFlight(
+      ScheduleJobResultEnvelope<Object>(
+        jobKey: 'actorAct',
+        frameId: policy.frameId,
+        results: [],
+      ),
+    );
+    queue.dropStaleResults(minFrameId: policy.frameId);
+  }
 
   for (final response in responses) {
     final entity = world.getEntity(response.actorEntity);
@@ -469,7 +533,8 @@ void processResponsesSystem(World world) {
         ? toolRegistryResource.get(tools.registryName)
         : null;
 
-    // Execute tool calls (ToolDef.execute always returns Future<dynamic>)
+    // Execute tool calls synchronously (MVP decision — tools are fast).
+    // Slow async tool calls would be deferred to the result queue.
     for (final call in response.toolCalls) {
       if (toolRegistry == null) {
         memories.fragments.add(
@@ -492,6 +557,11 @@ void processResponsesSystem(World world) {
         continue;
       }
 
+      // Synchronous execution — await the Future directly.
+      // ToolDef.execute returns Future<dynamic>, but most tools complete
+      // synchronously. For truly async tools, the result is processed
+      // via .then() with unawaited to avoid blocking the ECS loop.
+      // Slow async tool calls would be deferred to the result queue.
       unawaited(
         toolDef.execute(call.arguments).then((value) {
           memories.fragments.add(
@@ -503,30 +573,22 @@ void processResponsesSystem(World world) {
         }),
       );
     }
-  }
-}
 
-/// System 5: Score threads for pruning.
-///
-/// Mechanical — no LLM calls. Scores are based on heuristics.
-void scoreThreadsSystem(World world) {
-  final threads = world.query2<Thread, ThreadScore>();
-  for (final (_, _, score) in threads) {
-    // Placeholder: score based on fragment count
-    score.value = 0.5;
-  }
-}
-
-/// System 6: Prune low-scoring threads.
-///
-/// Mechanical — no LLM calls.
-void pruneThreadsSystem(World world) {
-  final threads = world.query2<Thread, ThreadScore>();
-  // Materialize before despawning to avoid iterator invalidation.
-  for (final (entity, _, score) in threads.toList()) {
-    if (score.value < 0.1) {
-      entity.despawn();
+    // Consume Agency + AwaitingResponse + OpenDecision — the actor has responded.
+    // If the response was null/empty, create a new OpenDecision for retry.
+    if (response.structuralOutput.isEmpty && response.rawOutput.isEmpty) {
+      we.insert(
+        const OpenDecision(
+          prompt:
+              'Error: LLM returned empty response. Retry with tighter context.',
+        ),
+      );
+    } else {
+      // Remove the OpenDecision — it has been resolved
+      we.remove<OpenDecision>();
     }
+    we.remove<Agency>();
+    we.remove<AwaitingResponse>();
   }
 }
 
@@ -539,25 +601,48 @@ void pruneThreadsSystem(World world) {
 ///
 /// This is the bridge between the ECS world and the actual LLM runtime.
 /// Implementations live outside the core (e.g., in a Flutter isolate or CLI).
+///
+/// ## Polling pattern (not subscription)
+///
+/// The `EventChannel` uses ring-buffer snapshot semantics — `forEach`
+/// creates a snapshot at call time and cannot see events sent later.
+/// Therefore, the handler must be polled via [processPending] on each tick
+/// of the [HarnessLoop], which drains the request channel and sends
+/// responses. This avoids modifying ecsly's `EventChannel` and keeps the
+/// handler lifecycle simple: the host application calls
+/// `handler.processPending(world)` on each loop tick.
 abstract class ActorGenerateHandler {
   /// Process a single generation request and return the response.
   Future<ActorGenerateResponse> handle(ActorGenerateRequest request);
 
-  /// Register this handler with the world's event channels.
+  /// Process all pending requests in the world's event channel.
   ///
-  /// Call this once after the plugin is installed. The handler will
-  /// listen for [ActorGenerateRequest] events and send responses.
+  /// This is the polling entry point — called by [HarnessLoop] on each tick.
+  /// It drains the request channel, calls [handle] for each request, and
+  /// sends responses back via the response channel.
+  ///
+  /// Implementations may override this for custom batching or concurrency,
+  /// but the default implementation processes requests sequentially.
+  Future<void> processPending(World world) async {
+    final reader = world.events.reader<ActorGenerateRequest>();
+    final writer = world.events.writer<ActorGenerateResponse>();
+
+    final requests = reader.drain();
+    for (final request in requests) {
+      final response = await handle(request);
+      writer.send(response);
+    }
+  }
+
+  /// Register this handler with the world.
+  ///
+  /// Deprecated: Use [processPending] on each tick instead.
+  /// The old `forEach` subscription pattern is broken because
+  /// `EventChannel.forEach` creates a snapshot at call time and cannot
+  /// see events sent after registration.
+  @Deprecated('Use processPending(world) on each tick instead.')
   void register(World world) {
-    // Listen for requests and process them
-    // TODO: add listen method for EventChannel or onchange or stream kind
-    // so we could subscribe to changes
-    world.events.reader<ActorGenerateRequest>().forEach((request) {
-      unawaited(
-        handle(request).then((response) {
-          world.events.writer<ActorGenerateResponse>().send(response);
-        }),
-      );
-    });
+    // No-op — the handler is polled via processPending instead.
   }
 }
 
@@ -598,8 +683,10 @@ class DefaultActorGenerateHandler extends ActorGenerateHandler {
       );
     }
 
-    // Parse tool calls from raw output
-    final toolCalls = _parseToolCalls(response.rawOutput ?? '');
+    // Parse tool calls from raw output using the tag-based parser.
+    // For Apple Foundation (native), the ModelRuntime returns already-parsed
+    // ToolCall objects, so this parsing is backend-specific.
+    final toolCalls = parseToolCalls(response.rawOutput ?? '');
 
     return ActorGenerateResponse(
       actorEntity: request.actorEntity,
@@ -618,7 +705,13 @@ class DefaultActorGenerateHandler extends ActorGenerateHandler {
   }
 }
 
-List<ToolCall> _parseToolCalls(String rawOutput) {
+/// Parse tool calls from raw LLM output using tag-based parsing.
+///
+/// This is the default parser for raw LLM backends that don't have
+/// native tool call APIs. For backends with native tool call support
+/// (Apple Foundation, OpenAI, etc.), the [ModelRuntime] should return
+/// already-parsed [ToolCall] objects and this function is not used.
+List<ToolCall> parseToolCalls(String rawOutput) {
   final tags = ToolTagParser.parse(rawOutput);
   final calls = tags.where((t) => t.type == ToolTagType.call).toList();
   return calls

@@ -341,6 +341,9 @@ class AgentConfig {
 /// aka thread aka lead aka main aka orchestrator
 ///
 /// controls [ModelLoop]s and through that - [ModelRuntime]
+///
+/// @Deprecated Use the ECS-based [AgentPlugin] and [HarnessLoop] instead.
+@Deprecated('Use the ECS-based AgentPlugin and HarnessLoop instead.')
 class Agent with Equatable {
   const Agent({
     required this.context,
@@ -368,18 +371,11 @@ class Agent with Equatable {
     );
     final userStr = contentToJson(content);
 
-    // final state = ToolRuntimeState();
-    // final systemPrompt = buildSystemPrompt(config.systemPrompt);
-    bool isUserMessageAdded = false;
-    // while (true) {
-    // Force termination path
-    // if (state.reachedLimit) {
     runtimeMemories.addModelResponse(
       'You have reached the maximum number of tool steps. '
       'Answer the user now using only the information you already have. '
       'Do not emit any more tool tags.',
     );
-    // }
     final memories = runtimeMemories.getAll();
     log(jsonEncode(memories));
 
@@ -398,75 +394,9 @@ class Agent with Equatable {
     if (json.isEmpty) {
       throw StateError('response is empty');
     }
-    if (!isUserMessageAdded) {
-      isUserMessageAdded = true;
-      runtimeMemories.addUserInput(userStr);
-      log('user message added');
-    }
+    runtimeMemories.addUserInput(userStr);
     runtimeMemories.addModelResponse(json);
-    // state.step++;
     return responseFromJson(response?.rawOutput ?? '');
-
-    // *non native tool call section
-    // final tags = ToolTagParser.parse(rawOutput);
-    // final definitions = tags
-    //     .where((t) => t.type == ToolTagType.getDefinition)
-    //     .toList();
-    // final calls = tags.where((t) => t.type == ToolTagType.call).toList();
-
-    // Clean final answer
-    // if (definitions.isEmpty && calls.isEmpty) {
-    //   return responseFromJson(rawOutput);
-    // }
-
-    // 1. Progressive schema disclosure
-    // for (final def in definitions) {
-    //   if (state.knownSchemas.contains(def.toolName)) continue;
-
-    //   final schema = toolRegistry.getSchema(def.toolName);
-    //   if (schema == null) {
-    //     runtimeMemories.addToolMessage(
-    //       '<result|${def.toolName}|{"error":"Unknown tool"}>',
-    //     );
-    //     continue;
-    //   }
-
-    //   final resultTag = '<result|${def.toolName}|${jsonEncode(schema)}>';
-    //   runtimeMemories.addToolMessage(resultTag);
-    //   state.knownSchemas.add(def.toolName);
-    // }
-
-    // 2. Execute calls (supports multiple + same tool with different args)
-    // for (final call in calls) {
-    //   final args = call.payload ?? <String, dynamic>{};
-    //   final signature = '${call.toolName}:${jsonEncode(args)}';
-
-    //   // Allow legitimate re-use, but stop pure spinning
-    //   final previous = state.history
-    //       .where((h) => h.signature == signature)
-    //       .length;
-    //   if (previous >= 2) {
-    //     runtimeMemories.addModelResponse(
-    //       'You already called ${call.toolName} with these exact arguments twice. '
-    //       'Use the previous result or answer the user.',
-    //     );
-    //     continue;
-    //   }
-
-    //   final result = await toolRegistry.execute(call.toolName, args);
-    //   final resultTag = '<result|${call.toolName}|${jsonEncode(result)}>';
-    //   runtimeMemories.addToolMessage(resultTag);
-    //   state.history.add(CallRecord(signature, result));
-    // }
-
-    // Gentle nudge after tools
-    // if (calls.isNotEmpty && !state.reachedLimit) {
-    //   runtimeMemories.addModelResponse(
-    //     'Tool results are available. Continue the conversation or give the final answer. '
-    //     'Only call tools again if you still lack necessary information.',
-    //   );
-    // }
-    // }
   }
 
   Map<String, dynamic> getSchemaFor(ToolTag tool) {
@@ -533,6 +463,9 @@ class AIRuntimeConfig {
 }
 
 /// starting point of managing agents runtimes
+///
+/// @Deprecated Use the ECS-based [AgentPlugin] and [HarnessLoop] instead.
+@Deprecated('Use the ECS-based AgentPlugin and HarnessLoop instead.')
 class AIRuntime {
   AIRuntime({this.config = const AIRuntimeConfig(), AIRuntimeContext? context})
     : context =
@@ -585,6 +518,8 @@ class AIRuntime {
   }
 }
 
+/// @Deprecated Use the ECS-based [AgentPlugin] and [HarnessLoop] instead.
+@Deprecated('Use the ECS-based AgentPlugin and HarnessLoop instead.')
 class AIWorld {
   AIWorld({AIRuntime? runtime}) : runtime = runtime ?? AIRuntime();
   factory AIWorld.fromConfigs({AIRuntimeConfig? runtimeConfig}) => AIWorld(

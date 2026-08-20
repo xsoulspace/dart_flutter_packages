@@ -7,6 +7,7 @@ workspace:
   - pkgs/xsoulspace_steamworks/example/
   - pkgs/xsoulspace_inference_gemma_flutter/example/
   - pkgs/xsoulspace_inference_core/example/
+  - pkgs/xsoulspace_inference_apple_foundation/example/
   - pkgs/universal_storage_sync/example/todo_file_app/
   - pkgs/universal_storage_sync/example/todo_git_app/
 
@@ -24,3 +25,7 @@ dependency_overrides:
     path: ../../ecsly/core_packages/ecsly_codegen
   ecsly_app:
     path: ../../ecsly/core_packages/ecsly_app
+  ecsly_async_parallel:
+    path: ../../ecsly/plugins/ecsly_async_parallel
+  async_parallel:
+    path: ../../ecsly/plugins/async_parallel

@@ -1,6 +1,8 @@
 // tool_agent.dart
 import 'dart:convert';
 
+import 'package:meta/meta.dart';
+
 import 'structured_output/foundation_schema.dart';
 
 // ─────────────────────────────────────────────
@@ -93,9 +95,17 @@ class ToolDefinition {
 }
 
 /// part of [ToolDefinition]
+@immutable
 class ToolName {
-  ToolName(this.value);
+  const ToolName(this.value);
   final String value;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || other is ToolName && value == other.value;
+
+  @override
+  int get hashCode => value.hashCode;
 }
 
 class ToolDef {

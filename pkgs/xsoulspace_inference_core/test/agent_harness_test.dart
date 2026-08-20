@@ -109,6 +109,7 @@ void main() {
       expect(world.hasSchedule('ActorAct'), isTrue);
       expect(world.hasSchedule('ProcessResponses'), isTrue);
       expect(world.hasSchedule('Mechanical'), isTrue);
+      expect(world.hasSchedule('Narrative'), isTrue);
     });
 
     test(
@@ -173,6 +174,85 @@ void main() {
       world.flush();
 
       expect(world.getEntity(actor).$1.has<Agency>(), isFalse);
+    });
+  });
+
+  group('AwaitingResponse lifecycle', () {
+    test('AwaitingResponse is added when actor acts', () async {
+      final world = await buildTestWorld();
+      final handler = MockActorGenerateHandler(responseText: 'hello');
+
+      final scene = spawnScene(world);
+      final actor = spawnActor(world, scene, openDecisionPrompt: 'Say hello.');
+      world.flush();
+
+      world.runSchedule('AgencyGrant');
+      world.flush();
+      world.runSchedule('Project');
+      world.flush();
+
+      // Before acting: no AwaitingResponse
+      expect(world.getEntity(actor).$1.has<AwaitingResponse>(), isFalse);
+
+      await world.runScheduleAsync('ActorAct');
+      world.flush();
+
+      // After acting: AwaitingResponse is present
+      expect(world.getEntity(actor).$1.has<AwaitingResponse>(), isTrue);
+    });
+
+    test('AwaitingResponse is consumed after response is processed', () async {
+      final world = await buildTestWorld();
+      final handler = MockActorGenerateHandler(responseText: 'hello');
+
+      final scene = spawnScene(world);
+      final actor = spawnActor(world, scene, openDecisionPrompt: 'Say hello.');
+      world.flush();
+
+      world.runSchedule('AgencyGrant');
+      world.flush();
+      world.runSchedule('Project');
+      world.flush();
+      await world.runScheduleAsync('ActorAct');
+      world.flush();
+
+      expect(world.getEntity(actor).$1.has<AwaitingResponse>(), isTrue);
+
+      await handler.processPending(world);
+      world.flush();
+      world.runSchedule('ProcessResponses');
+      world.flush();
+
+      // After processing: AwaitingResponse is consumed
+      expect(world.getEntity(actor).$1.has<AwaitingResponse>(), isFalse);
+    });
+
+    test('AwaitingResponse prevents re-granting Agency', () async {
+      final world = await buildTestWorld();
+      final handler = MockActorGenerateHandler(responseText: 'hello');
+
+      final scene = spawnScene(world);
+      final actor = spawnActor(world, scene, openDecisionPrompt: 'Say hello.');
+      world.flush();
+
+      world.runSchedule('AgencyGrant');
+      world.flush();
+      world.runSchedule('Project');
+      world.flush();
+      await world.runScheduleAsync('ActorAct');
+      world.flush();
+
+      // Actor has Agency + AwaitingResponse
+      expect(world.getEntity(actor).$1.has<Agency>(), isTrue);
+      expect(world.getEntity(actor).$1.has<AwaitingResponse>(), isTrue);
+
+      // grantAgencySystem should NOT grant a second Agency
+      // (it checks has<Agency>() and skips)
+      world.runSchedule('AgencyGrant');
+      world.flush();
+
+      // Still has Agency (not duplicated)
+      expect(world.getEntity(actor).$1.has<Agency>(), isTrue);
     });
   });
 
@@ -252,7 +332,6 @@ void main() {
     test('sends ActorGenerateRequest for actors with Agency', () async {
       final world = await buildTestWorld();
       final handler = MockActorGenerateHandler(responseText: 'hello');
-      handler.register(world);
 
       final scene = spawnScene(world);
       final actor = spawnActor(
@@ -282,14 +361,15 @@ void main() {
       expect(request.prompt, 'Reply with one word: hello.');
       expect(request.systemPrompt, 'You are a test assistant.');
 
-      // Verify Agency was removed after acting
-      expect(world.getEntity(actor).$1.has<Agency>(), isFalse);
+      // Verify Agency is still present (consumed by processResponsesSystem)
+      expect(world.getEntity(actor).$1.has<Agency>(), isTrue);
+      // Verify AwaitingResponse was added
+      expect(world.getEntity(actor).$1.has<AwaitingResponse>(), isTrue);
     });
 
     test('does not send requests for actors without Agency', () async {
       final world = await buildTestWorld();
       final handler = MockActorGenerateHandler(responseText: 'hello');
-      handler.register(world);
 
       final scene = spawnScene(world);
       final actor = spawnActor(world, scene, openDecisionPrompt: 'Q');
@@ -311,7 +391,6 @@ void main() {
     test('stores model response as context fragment', () async {
       final world = await buildTestWorld();
       final handler = MockActorGenerateHandler(responseText: 'hello world');
-      handler.register(world);
 
       final scene = spawnScene(world);
       final actor = spawnActor(world, scene, openDecisionPrompt: 'Say hello');
@@ -340,11 +419,13 @@ void main() {
       final lastFragment = memories.fragments.last;
       expect(lastFragment.type, ContextFragmentType.modelResponse);
       expect(lastFragment.value, contains('hello world'));
+
+      // Verify Agency + AwaitingResponse were consumed
+      expect(world.getEntity(actor).$1.has<Agency>(), isFalse);
+      expect(world.getEntity(actor).$1.has<AwaitingResponse>(), isFalse);
     });
 
     test('executes tool calls from response', () async {
-      final world = await buildTestWorld();
-
       // Set up a tool registry with a mock tool
       final toolRegistry = ToolRegistry();
       final toolDef = ToolDef(
@@ -358,13 +439,13 @@ void main() {
       final toolResource = ToolRegistryResource();
       toolResource.register('default', toolRegistry);
 
+      final world = await buildTestWorld(toolRegistryResource: toolResource);
       final handler = MockActorGenerateHandler(
         responseText: 'Let me check that.',
         toolCalls: [
           ToolCall(name: ToolName('echo'), arguments: {'message': 'hello'}),
         ],
       );
-      handler.register(world);
 
       final scene = spawnScene(world);
       final actor = spawnActor(world, scene, openDecisionPrompt: 'Echo hello');
@@ -407,7 +488,6 @@ void main() {
         responseText: 'hello',
         responseOutput: {'text': 'hello'},
       );
-      handler.register(world);
 
       final scene = spawnScene(world);
       final actor = spawnActor(
@@ -427,16 +507,17 @@ void main() {
       world.flush();
       expect(world.getEntity(actor).$1.has<Situation>(), isTrue);
 
-      // 3. Actor acts (async)
+      // 3. Actor acts (async) — adds AwaitingResponse, keeps Agency
       await world.runScheduleAsync('ActorAct');
       world.flush();
-      expect(world.getEntity(actor).$1.has<Agency>(), isFalse);
+      expect(world.getEntity(actor).$1.has<Agency>(), isTrue);
+      expect(world.getEntity(actor).$1.has<AwaitingResponse>(), isTrue);
 
       // 4. External handler processes requests
       await handler.processPending(world);
       world.flush();
 
-      // 5. Process responses
+      // 5. Process responses — consumes Agency + AwaitingResponse
       world.runSchedule('ProcessResponses');
       world.flush();
 
@@ -448,6 +529,10 @@ void main() {
       final lastFragment = memories.fragments.last;
       expect(lastFragment.type, ContextFragmentType.modelResponse);
       expect(lastFragment.value, contains('hello'));
+
+      // Verify Agency + AwaitingResponse were consumed
+      expect(world.getEntity(actor).$1.has<Agency>(), isFalse);
+      expect(world.getEntity(actor).$1.has<AwaitingResponse>(), isFalse);
     });
 
     test('multi-actor parallel end-to-end', () async {
@@ -456,7 +541,6 @@ void main() {
         responseText: 'response',
         responseOutput: {'text': 'response'},
       );
-      handler.register(world);
 
       final scene = spawnScene(world);
 
@@ -486,11 +570,12 @@ void main() {
         expect(world.getEntity(actor).$1.has<Situation>(), isTrue);
       }
 
-      // 3. All actors act concurrently
+      // 3. All actors act concurrently — adds AwaitingResponse
       await world.runScheduleAsync('ActorAct');
       world.flush();
       for (final actor in actors) {
-        expect(world.getEntity(actor).$1.has<Agency>(), isFalse);
+        expect(world.getEntity(actor).$1.has<Agency>(), isTrue);
+        expect(world.getEntity(actor).$1.has<AwaitingResponse>(), isTrue);
       }
 
       // 4. Handler processes all requests
@@ -507,6 +592,9 @@ void main() {
         expect(memories, isNotNull);
         expect(memories!.fragments, isNotEmpty);
         expect(memories.fragments.last.type, ContextFragmentType.modelResponse);
+        // Verify Agency + AwaitingResponse were consumed
+        expect(world.getEntity(actor).$1.has<Agency>(), isFalse);
+        expect(world.getEntity(actor).$1.has<AwaitingResponse>(), isFalse);
       }
     });
 
@@ -515,7 +603,6 @@ void main() {
       () async {
         final world = await buildTestWorld();
         final handler = MockActorGenerateHandler(responseText: 'done');
-        handler.register(world);
 
         final scene = spawnScene(world);
         final actor = spawnActor(
@@ -537,8 +624,9 @@ void main() {
         world.runSchedule('ProcessResponses');
         world.flush();
 
-        // Actor acted, Agency removed
+        // Actor acted, Agency + AwaitingResponse consumed
         expect(world.getEntity(actor).$1.has<Agency>(), isFalse);
+        expect(world.getEntity(actor).$1.has<AwaitingResponse>(), isFalse);
 
         // Add a new OpenDecision
         world.upsertComponent(
@@ -572,39 +660,264 @@ void main() {
     test('scoreThreadsSystem assigns scores to threads', () async {
       final world = await buildTestWorld();
 
-      final thread1 = world.spawnComponents([const Thread(), ThreadScore()]);
-      final thread2 = world.spawnComponents([const Thread(), ThreadScore()]);
+      final thread1 = world.spawnComponents([const Thread(), ThreadScore(0.0)]);
+      final thread2 = world.spawnComponents([const Thread(), ThreadScore(0.0)]);
       world.flush();
 
       world.runSchedule('Mechanical');
       world.flush();
 
-      expect(world.getEntity(thread1).$1.get<ThreadScore>()?.value, 0.5);
-      expect(world.getEntity(thread2).$1.get<ThreadScore>()?.value, 0.5);
+      // With no beats, score should be 0.0
+      expect(world.getEntity(thread1).$1.get<ThreadScore>()?.value, 0.0);
+      expect(world.getEntity(thread2).$1.get<ThreadScore>()?.value, 0.0);
     });
 
-    test('pruneThreadsSystem removes low-scoring threads', () async {
+    test('pruneThreadsSystem marks low-scoring threads as pruned', () async {
       final world = await buildTestWorld();
 
       final highScoreThread = world.spawnComponents([
         const Thread(),
-        ThreadScore(value: 0.5),
+        ThreadScore(0.5),
+        ThreadStatus(ThreadStatusEnum.active),
       ]);
       final lowScoreThread = world.spawnComponents([
         const Thread(),
-        ThreadScore(value: 0.05),
+        ThreadScore(0.05),
+        ThreadStatus(ThreadStatusEnum.active),
       ]);
       world.flush();
 
       // Run pruneThreadsSystem directly (not the full Mechanical schedule,
-      // since scoreThreadsSystem would overwrite scores to 0.5)
+      // since scoreThreadsSystem would overwrite scores)
       pruneThreadsSystem(world);
       world.flush();
 
-      // High-score thread survives
+      // High-score thread survives (still active)
       expect(world.getEntity(highScoreThread).$2, isTrue);
-      // Low-score thread is despawned
-      expect(world.getEntity(lowScoreThread).$2, isFalse);
+      expect(
+        world.getEntity(highScoreThread).$1.get<ThreadStatus>()?.value,
+        ThreadStatusEnum.active,
+      );
+      // Low-score thread is marked as pruned (not despawned)
+      expect(world.getEntity(lowScoreThread).$2, isTrue);
+      expect(
+        world.getEntity(lowScoreThread).$1.get<ThreadStatus>()?.value,
+        ThreadStatusEnum.pruned,
+      );
+    });
+  });
+
+  group('Narrative systems', () {
+    test('spawnThread creates a Thread with status and score', () async {
+      final world = await buildTestWorld();
+      final scene = spawnScene(world);
+      final actor = spawnActor(world, scene);
+      world.flush();
+
+      final thread = spawnThread(world, actor, scene);
+      world.flush();
+
+      expect(world.getEntity(thread).$2, isTrue);
+      expect(
+        world.getEntity(thread).$1.get<ThreadStatus>()?.value,
+        ThreadStatusEnum.active,
+      );
+      expect(world.getEntity(thread).$1.get<ThreadScore>()?.value, 0.0);
+      expect(world.getEntity(thread).$1.get<OriginActor>()?.actor, actor);
+      expect(world.getEntity(thread).$1.get<ParentScene>()?.scene, scene);
+    });
+
+    test('startBeat creates a Beat in partial status', () async {
+      final world = await buildTestWorld();
+      final scene = spawnScene(world);
+      final actor = spawnActor(world, scene);
+      final thread = spawnThread(world, actor, scene);
+      world.flush();
+
+      final beat = startBeat(world, thread, actor, BeatModalityEnum.text);
+      world.flush();
+
+      expect(world.getEntity(beat).$2, isTrue);
+      expect(
+        world.getEntity(beat).$1.get<BeatStatus>()?.value,
+        BeatStatusEnum.partial,
+      );
+      expect(
+        world.getEntity(beat).$1.get<BeatModality>()?.value,
+        BeatModalityEnum.text,
+      );
+      expect(world.getEntity(beat).$1.get<BelongsToThread>()?.thread, thread);
+      expect(world.getEntity(beat).$1.get<Speaker>()?.actor, actor);
+    });
+
+    test('appendToBeat adds chunks to TextStream', () async {
+      final world = await buildTestWorld();
+      final scene = spawnScene(world);
+      final actor = spawnActor(world, scene);
+      final thread = spawnThread(world, actor, scene);
+      world.flush();
+
+      final beat = startBeat(
+        world,
+        thread,
+        actor,
+        BeatModalityEnum.streamingText,
+      );
+      world.flush();
+
+      appendToBeat(world, beat, 'Hello');
+      appendToBeat(world, beat, ' world');
+      world.flush();
+
+      final stream = world.getEntity(beat).$1.get<TextStream>();
+      expect(stream, isNotNull);
+      expect(stream!.chunks, ['Hello', ' world']);
+    });
+
+    test('completeBeat finalizes a partial Beat', () async {
+      final world = await buildTestWorld();
+      final scene = spawnScene(world);
+      final actor = spawnActor(world, scene);
+      final thread = spawnThread(world, actor, scene);
+      world.flush();
+
+      final beat = startBeat(
+        world,
+        thread,
+        actor,
+        BeatModalityEnum.streamingText,
+      );
+      world.flush();
+
+      appendToBeat(world, beat, 'Hello');
+      appendToBeat(world, beat, ' world');
+      world.flush();
+
+      completeBeat(world, beat);
+      world.flush();
+
+      expect(
+        world.getEntity(beat).$1.get<BeatStatus>()?.value,
+        BeatStatusEnum.complete,
+      );
+      expect(world.getEntity(beat).$1.get<TextContent>()?.text, 'Hello world');
+      expect(world.getEntity(beat).$1.get<TextStream>(), isNull);
+    });
+
+    test('finalizePartialsSystem completes Beats with full cursor', () async {
+      final world = await buildTestWorld();
+      final scene = spawnScene(world);
+      final actor = spawnActor(world, scene);
+      final thread = spawnThread(world, actor, scene);
+      world.flush();
+
+      final beat = startBeat(
+        world,
+        thread,
+        actor,
+        BeatModalityEnum.streamingText,
+      );
+      world.flush();
+
+      appendToBeat(world, beat, 'Hello');
+      world.flush();
+
+      // Move cursor to end
+      final stream = world.getEntity(beat).$1.get<TextStream>();
+      stream!.cursor = stream.chunks.length;
+      world.flush();
+
+      world.runSchedule('Narrative');
+      world.flush();
+
+      expect(
+        world.getEntity(beat).$1.get<BeatStatus>()?.value,
+        BeatStatusEnum.complete,
+      );
+      expect(world.getEntity(beat).$1.get<TextContent>()?.text, 'Hello');
+    });
+  });
+
+  group('HarnessLoop idle/sleep', () {
+    test('canSleep returns true when no work remains', () async {
+      final world = await buildTestWorld();
+      final handler = MockActorGenerateHandler(responseText: 'hello');
+      final loop = HarnessLoop(world: world, handler: handler);
+
+      // No actors, no decisions, no agency — should be able to sleep
+      expect(loop.canSleep(), isTrue);
+    });
+
+    test('canSleep returns false when OpenDecision exists', () async {
+      final world = await buildTestWorld();
+      final handler = MockActorGenerateHandler(responseText: 'hello');
+      final loop = HarnessLoop(world: world, handler: handler);
+
+      final scene = spawnScene(world);
+      spawnActor(world, scene, openDecisionPrompt: 'Decide something.');
+      world.flush();
+
+      expect(loop.canSleep(), isFalse);
+    });
+
+    test('canSleep returns false when Agency exists', () async {
+      final world = await buildTestWorld();
+      final handler = MockActorGenerateHandler(responseText: 'hello');
+      final loop = HarnessLoop(world: world, handler: handler);
+
+      final scene = spawnScene(world);
+      final actor = spawnActor(world, scene, openDecisionPrompt: 'Q');
+      world.flush();
+
+      world.runSchedule('AgencyGrant');
+      world.flush();
+
+      expect(loop.canSleep(), isFalse);
+    });
+
+    test('canSleep returns false when AwaitingResponse exists', () async {
+      final world = await buildTestWorld();
+      final handler = MockActorGenerateHandler(responseText: 'hello');
+      final loop = HarnessLoop(world: world, handler: handler);
+
+      final scene = spawnScene(world);
+      final actor = spawnActor(world, scene, openDecisionPrompt: 'Q');
+      world.flush();
+
+      world.runSchedule('AgencyGrant');
+      world.flush();
+      world.runSchedule('Project');
+      world.flush();
+      await world.runScheduleAsync('ActorAct');
+      world.flush();
+
+      expect(loop.canSleep(), isFalse);
+    });
+
+    test('canSleep returns true after response is processed', () async {
+      final world = await buildTestWorld();
+      final handler = MockActorGenerateHandler(responseText: 'hello');
+      final loop = HarnessLoop(world: world, handler: handler);
+
+      final scene = spawnScene(world);
+      final actor = spawnActor(world, scene, openDecisionPrompt: 'Q');
+      world.flush();
+
+      world.runSchedule('AgencyGrant');
+      world.flush();
+      world.runSchedule('Project');
+      world.flush();
+      await world.runScheduleAsync('ActorAct');
+      world.flush();
+
+      expect(loop.canSleep(), isFalse);
+
+      await handler.processPending(world);
+      world.flush();
+      world.runSchedule('ProcessResponses');
+      world.flush();
+
+      expect(loop.canSleep(), isTrue);
     });
   });
 
