@@ -36,8 +36,8 @@ class FoundationApi {
         final name = call.arguments['name'] as String;
         final arguments = call.arguments['arguments'];
 
-        final handler = _toolHandlers[name];
-        if (handler == null) {
+        final entry = _toolHandlers[name];
+        if (entry == null) {
           throw PlatformException(
             code: 'unknown_tool',
             message: 'No handler registered for $name',
@@ -45,21 +45,39 @@ class FoundationApi {
         }
 
         // Execute the real Dart logic and return the result
-        final result = await handler(arguments);
+        final result = await entry.callback(arguments);
         return result; // this value goes back to Swift ToolInvoker
       }
       throw PlatformException(code: 'not_implemented');
     });
   }
 
-  // Registry of Dart tool implementations
-  static final Map<ToolName, ToolCallCallback> _toolHandlers = {};
+  // Registry of Dart tool implementations, reference-counted per tool name.
+  //
+  // Swift's `onToolCall` invokes Dart by tool name only. Multiple concurrent
+  // `generate` calls may add/remove the same tool; a plain map would let one
+  // request's `removeTools` wipe a handler another in-flight request still
+  // needs (a cross-request race). Ref-counting each tool name so a handler is
+  // only removed when the last owner releases it keeps the registry correct
+  // without changing the Swift protocol.
+  static final Map<ToolName, _ToolHandlerEntry> _toolHandlers = {};
+
   void addToolCall(ToolName toolCallName, ToolCallCallback function) {
-    _toolHandlers[toolCallName] = function;
+    final existing = _toolHandlers[toolCallName];
+    if (existing != null) {
+      existing.refCount++;
+    } else {
+      _toolHandlers[toolCallName] = _ToolHandlerEntry(function);
+    }
   }
 
   void removeToolCall(ToolName toolCallName) {
-    _toolHandlers.remove(toolCallName);
+    final entry = _toolHandlers[toolCallName];
+    if (entry == null) return;
+    entry.refCount--;
+    if (entry.refCount <= 0) {
+      _toolHandlers.remove(toolCallName);
+    }
   }
 
   void addTools(ToolRegistry toolRegistry) {
@@ -69,7 +87,9 @@ class FoundationApi {
   }
 
   void removeTools(ToolRegistry toolRegistry) {
-    toolRegistry.tools.keys.map(removeToolCall);
+    for (final key in toolRegistry.tools.keys) {
+      removeToolCall(key);
+    }
   }
 
   void dispose() {
@@ -85,4 +105,14 @@ class FoundationApi {
     final response = await _channel.invokeMethod<String>('generate', json);
     return jsonDecodeString(response);
   }
+}
+
+/// A registered tool handler plus its live ownership count.
+///
+/// Ref-counting lets overlapping `generate` calls share a tool handler safely;
+/// the handler is removed only when the last owner calls [FoundationApi.removeToolCall].
+class _ToolHandlerEntry {
+  _ToolHandlerEntry(this.callback);
+  final ToolCallCallback callback;
+  int refCount = 1;
 }

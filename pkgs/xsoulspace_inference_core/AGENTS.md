@@ -19,12 +19,13 @@ The working model is a living, multi-linear game world, not a conversation log:
 
 - **Projection** gives each actor a tiny, cinematic *cut* of the world — only what the current decision needs, with explicit green-screen absences. The model never sees full history.
 - **Agency** is granted only when a real decision is open; everything else is mechanical. The model is called sparingly.
-- **Memory is derived from the storyline.** Threads of beats (text, thought, tool calls, observations) are the source of truth; an actor's memory is a re-derivable view over those threads, compacted into in-thread summaries over time.
+- **Memory is projection, not a log.** Threads of beats (text, thought, tool calls, observations) are the source of truth; an actor's memory is a re-derivable projection over those threads, ray-traced via the facet index. Summaries are first-class beats produced only by deliberate transforms — never automatic compaction.
 - **The loop is continuous and sleeps when idle.** The same world runs headless, in a CLI, or in Flutter.
+- **Scenario stress-testing.** `ScenarioRunner` drives the real loop over multi-actor, multi-topic, tool-using scenarios against a real model, so we find and fix weak spots. See [Scenario stress-testing](docs/scenario_stress_testing.mdx).
 
 ### Purpose & guardrails
 
-- **Testable without an LLM.** Every part except *write a beat* is deterministic graph logic — scripted mutations should exercise compaction, projection, agency, and escalation with a mock generator.
+- **Testable without an LLM.** Every part except *write a beat* is deterministic graph logic — scripted mutations should exercise projection, agency, and escalation with a mock generator.
 - **Tiny-context discipline is enforced, not aspirational.** Projection budgets tokens and fails the benchmark if it exceeds them.
 - **Parallelism is bounded and safe.** Many actors act concurrently; a single flush remains the coherence point.
 

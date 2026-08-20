@@ -68,7 +68,8 @@ class AgentPlugin extends Plugin {
       ..registerObjectComponent<MemorySummary>()
       ..registerObjectComponent<SummaryOwner>()
       ..registerObjectComponent<SummaryThread>()
-      ..registerObjectComponent<SummarizesBeats>();
+      ..registerObjectComponent<SummarizesBeats>()
+      ..registerObjectComponent<ToolResultContent>();
 
     // Resources
     world

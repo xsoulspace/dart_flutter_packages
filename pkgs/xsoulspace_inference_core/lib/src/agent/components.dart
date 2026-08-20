@@ -228,6 +228,18 @@ class SummaryThread implements Component {
   final Entity? thread;
 }
 
+/// Structured result of a tool call, stored on the tool-result beat.
+///
+/// Unlike a stringified `<result|...>` blob, this keeps the tool name and its
+/// typed output so projection and metrics can read the structure instead of
+/// re-parsing text. The beat also carries a short [TextContent] for keyword
+/// indexing / projection; [ToolResultContent] is the source of truth.
+class ToolResultContent implements Component {
+  ToolResultContent({required this.name, required this.output});
+  final String name;
+  final dynamic output;
+}
+
 // ─────────────────────────────────────────────
 // Task surface
 // ─────────────────────────────────────────────

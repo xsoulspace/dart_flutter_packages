@@ -25,9 +25,14 @@ memory is just one flavor of projection.
 
 ## Next
 
-1. **Wire threads/multiplayer into projection** — shared/private/derived threads,
+1. **Scenario stress-testing (active).** `ScenarioRunner` + `ScenarioMetrics`
+   + `ScenarioMetricsReporter` drive the real `HarnessLoop` against a real
+   model (Apple Foundation) over multi-actor, multi-topic, tool-using
+   scenarios. Entrypoint: `apple_foundation/example/lib/stress_cli.dart`.
+   See `docs/scenario_stress_testing.mdx`.
+2. **Wire threads/multiplayer into projection** — shared/private/derived threads,
    a2a / a2h / a2h2a. Projection follows the graph.
-2. **Angle-of-view / scale tiers** — a projection should be queryable at a scale
+3. **Angle-of-view / scale tiers** — a projection should be queryable at a scale
    (`beat`, `thread`, beat subset) so a ray can coarsen, not just narrow.
-3. **AST as a tool seam (later)** — add as a capability/tool behind
+4. **AST as a tool seam (later)** — add as a capability/tool behind
    `ToolRegistry`, not a core change.

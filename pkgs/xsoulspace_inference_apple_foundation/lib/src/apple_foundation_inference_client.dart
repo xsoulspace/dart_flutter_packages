@@ -111,66 +111,71 @@ class AppleFoundationInferenceClient implements InferenceClient {
       }
 
       if (toolRegistry != null) _api.addTools(toolRegistry);
-      final schema = request.outputSchema;
-      log(jsonEncode(schema));
-      final rawOutput = await _api.generate(
-        json: {
-          'prompt':
-              "${request.prompt}${request.contextFragmentsJson.isEmpty ? "" : '/nCONTEXT: ${request.contextFragmentsJson}'}",
-          'instructions': systemPrompt.isEmpty ? null : systemPrompt,
-          // 'workingDirectory': request.workingDirectory,
-          if (schema.isNotEmpty) 'schema': schema,
-          "tools": toolRegistry?.getToolsJsons(),
+      try {
+        final schema = request.outputSchema;
+        log(jsonEncode(schema));
+        final rawOutput = await _api.generate(
+          json: {
+            'prompt':
+                "${request.prompt}${request.contextFragmentsJson.isEmpty ? "" : '/nCONTEXT: ${request.contextFragmentsJson}'}",
+            'instructions': systemPrompt.isEmpty ? null : systemPrompt,
+            // 'workingDirectory': request.workingDirectory,
+            if (schema.isNotEmpty) 'schema': schema,
+            "tools": toolRegistry?.getToolsJsons(),
 
-          /// TODO(arenukvern): temporary disabled, because it doesnt work - need a proper fix
-          // 'transcript': request.contextFragmentsJson.isEmpty
-          //     ? null
-          //     : request.contextFragmentsJson,
-        },
-      );
+            /// TODO(arenukvern): temporary disabled, because it doesnt work - need a proper fix
+            // 'transcript': request.contextFragmentsJson.isEmpty
+            //     ? null
+            //     : request.contextFragmentsJson,
+          },
+        );
 
-      if (toolRegistry != null) _api.removeTools(toolRegistry);
-      if (rawOutput.trim().isEmpty) {
-        return InferenceResult<InferenceResponse>.fail(
-          code: 'output_empty',
-          message: 'Apple Foundation Model produced no output',
+        if (rawOutput.trim().isEmpty) {
+          return InferenceResult<InferenceResponse>.fail(
+            code: 'output_empty',
+            message: 'Apple Foundation Model produced no output',
+            meta: <String, dynamic>{'provider': id},
+          );
+        }
+
+        final parsed = parseStrictJsonObject(rawOutput);
+        if (!parsed.success || parsed.data == null) {
+          return InferenceResult<InferenceResponse>.fail(
+            code: parsed.error?.code ?? 'json_parse_failed',
+            message: parsed.error?.message ?? 'Failed to parse Apple FM JSON',
+            details: parsed.error?.details ?? _truncate(rawOutput),
+            meta: <String, dynamic>{'provider': id},
+          );
+        }
+
+        final schemaValidation = validateJsonAgainstSchema(
+          value: parsed.data!,
+          schema: request.outputSchema,
+        );
+        if (!schemaValidation.success) {
+          return InferenceResult<InferenceResponse>.fail(
+            code: schemaValidation.error?.code ?? 'schema_validation_failed',
+            message:
+                schemaValidation.error?.message ??
+                'Apple FM output does not match schema',
+            details: schemaValidation.error?.details,
+            meta: <String, dynamic>{'provider': id},
+          );
+        }
+
+        return InferenceResult<InferenceResponse>.ok(
+          InferenceResponse(
+            output: parsed.data!,
+            rawOutput: rawOutput,
+            meta: <String, dynamic>{'provider': id},
+          ),
           meta: <String, dynamic>{'provider': id},
         );
+      } finally {
+        // Always release the handlers this request registered, even on error, so
+        // the per-tool ref-count stays balanced across overlapping calls.
+        if (toolRegistry != null) _api.removeTools(toolRegistry);
       }
-
-      final parsed = parseStrictJsonObject(rawOutput);
-      if (!parsed.success || parsed.data == null) {
-        return InferenceResult<InferenceResponse>.fail(
-          code: parsed.error?.code ?? 'json_parse_failed',
-          message: parsed.error?.message ?? 'Failed to parse Apple FM JSON',
-          details: parsed.error?.details ?? _truncate(rawOutput),
-          meta: <String, dynamic>{'provider': id},
-        );
-      }
-
-      final schemaValidation = validateJsonAgainstSchema(
-        value: parsed.data!,
-        schema: request.outputSchema,
-      );
-      if (!schemaValidation.success) {
-        return InferenceResult<InferenceResponse>.fail(
-          code: schemaValidation.error?.code ?? 'schema_validation_failed',
-          message:
-              schemaValidation.error?.message ??
-              'Apple FM output does not match schema',
-          details: schemaValidation.error?.details,
-          meta: <String, dynamic>{'provider': id},
-        );
-      }
-
-      return InferenceResult<InferenceResponse>.ok(
-        InferenceResponse(
-          output: parsed.data!,
-          rawOutput: rawOutput,
-          meta: <String, dynamic>{'provider': id},
-        ),
-        meta: <String, dynamic>{'provider': id},
-      );
     } on PlatformException catch (e) {
       final code = e.code.isEmpty ? 'engine_unavailable' : e.code;
       return InferenceResult<InferenceResponse>.fail(

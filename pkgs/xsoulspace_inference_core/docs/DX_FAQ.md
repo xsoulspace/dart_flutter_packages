@@ -13,7 +13,34 @@ We deliberately named two things differently to stop confusing them:
   handed to a model. In code this is the `Situation`.
 
 So: you *project* for an actor, and the actor receives a *cut*. "Memory" is never
-a thing you maintain — it is just *"project a past I'm entitled to"*.
+an independent store you maintain — it is just *"project a past I'm entitled to"*.
+
+## Tools: define once with structured schema, reuse everywhere
+
+A tool is a `ToolDef`. Build it with a structured `SchemaBundle` (`FM.object` /
+`FM.prop`), never a random JSON map:
+
+```dart
+final readTool = ToolDef.structured(
+  name: const ToolName('read'),
+  description: 'Read a file',
+  parameters: SchemaBundle(
+    root: FM.object('read', properties: () => [FM.prop('path', FM.string())]),
+  ),
+  execute: (args) async {
+    final params = jsonDecodeMapAs(args);
+    return File(jsonDecodeString(params['path'])).readAsString();
+  },
+);
+```
+
+Shared real tools live in `lib/src/agent/tools.dart` (`fsTools()` — `read`,
+`write`, `list_dir`). Reuse them instead of redefining. A tool result is stored
+**structurally** on its beat as `ToolResultContent` (name + typed output); the
+short `TextContent` on the same beat is only for projection/indexing, never the
+source of truth.
+
+There is **no `ScenarioTool`** — `Scenario.tools` is a `List<ToolDef>`.
 
 ## The two things you reach for
 

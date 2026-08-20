@@ -12,10 +12,8 @@
 library;
 
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
-import 'package:from_json_to_json/from_json_to_json.dart';
 import 'package:test/test.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
@@ -177,25 +175,8 @@ void main() {
       final filePath = '${temp.path}/notes.txt';
       File(filePath).writeAsStringSync('hello world');
 
-      // A read tool that reads a file from disk.
-      final registry = ToolRegistry();
-      registry.register(
-        ToolDef.structured(
-          name: ToolName('read'),
-          description: 'Read a file',
-          parameters: SchemaBundle(
-            root: FM.object(
-              'read',
-              properties: () => [FM.prop('path', FM.string())],
-            ),
-          ),
-          execute: (args) async {
-            final params = jsonDecodeMapAs(args);
-            final path = jsonDecodeString(params['path']);
-            return await File(path).readAsString();
-          },
-        ),
-      );
+      // Reused shared real tool from lib/src/agent/tools.dart.
+      final registry = ToolRegistry()..register(readTool());
 
       final world = await _buildWorld(registry);
       world.getResource<GenerationHandlerResource>().registerDefault(
@@ -224,6 +205,16 @@ void main() {
       final text = world.getEntity(toolBeats.first).$1.get<TextContent>();
       expect(text, isNotNull);
       expect(text!.text, contains('hello world'));
+
+      // The tool result is stored STRUCTURALLY too — tool name + typed output
+      // — not only as a stringified blob. This is the seam this rework fixes.
+      final structured = world
+          .getEntity(toolBeats.first)
+          .$1
+          .get<ToolResultContent>();
+      expect(structured, isNotNull);
+      expect(structured!.name, 'read');
+      expect(structured.output, 'hello world');
     });
 
     test('write tool creates a file through the world', () async {
@@ -231,29 +222,7 @@ void main() {
       addTearDown(() => temp.delete(recursive: true));
       final filePath = '${temp.path}/output.txt';
 
-      final registry = ToolRegistry();
-      registry.register(
-        ToolDef.structured(
-          name: ToolName('write'),
-          description: 'Write a file',
-          parameters: SchemaBundle(
-            root: FM.object(
-              'write',
-              properties: () => [
-                FM.prop('path', FM.string()),
-                FM.prop('content', FM.string()),
-              ],
-            ),
-          ),
-          execute: (args) async {
-            final params = jsonDecodeMapAs(args);
-            final path = jsonDecodeString(params['path']);
-            final content = jsonDecodeString(params['content']);
-            await File(path).writeAsString(content);
-            return 'wrote $path';
-          },
-        ),
-      );
+      final registry = ToolRegistry()..register(writeTool());
 
       final world = await _buildWorld(registry);
       world.getResource<GenerationHandlerResource>().registerDefault(
@@ -295,27 +264,7 @@ void main() {
       File('${temp.path}/a.txt').writeAsStringSync('a');
       File('${temp.path}/b.txt').writeAsStringSync('b');
 
-      final registry = ToolRegistry();
-      registry.register(
-        ToolDef.structured(
-          name: ToolName('list_dir'),
-          description: 'List a directory',
-          parameters: SchemaBundle(
-            root: FM.object(
-              'list_dir',
-              properties: () => [FM.prop('path', FM.string())],
-            ),
-          ),
-          execute: (args) async {
-            final params = jsonDecodeMapAs(args);
-            final path = jsonDecodeString(params['path']);
-            final entries = Directory(
-              path,
-            ).listSync().map((e) => e.path).toList();
-            return jsonEncode(entries);
-          },
-        ),
-      );
+      final registry = ToolRegistry()..register(listDirTool());
 
       final world = await _buildWorld(registry);
       world.getResource<GenerationHandlerResource>().registerDefault(
@@ -438,29 +387,7 @@ void main() {
         addTearDown(() => temp.delete(recursive: true));
         final filePath = '${temp.path}/structured.txt';
 
-        final registry = ToolRegistry();
-        registry.register(
-          ToolDef.structured(
-            name: ToolName('write'),
-            description: 'Write a file',
-            parameters: SchemaBundle(
-              root: FM.object(
-                'write',
-                properties: () => [
-                  FM.prop('path', FM.string()),
-                  FM.prop('content', FM.string()),
-                ],
-              ),
-            ),
-            execute: (args) async {
-              final params = jsonDecodeMapAs(args);
-              await File(
-                jsonDecodeString(params['path']),
-              ).writeAsString(jsonDecodeString(params['content']));
-              return 'wrote';
-            },
-          ),
-        );
+        final registry = ToolRegistry()..register(writeTool());
 
         final world = await _buildWorld(registry);
 

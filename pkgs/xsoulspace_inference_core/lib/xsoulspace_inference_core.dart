@@ -7,6 +7,7 @@ export 'src/agent/agent_plugin.dart';
 export 'src/agent/agency_lifecycle.dart';
 export 'src/agent/harness_loop.dart';
 export 'src/agent/narrative.dart';
+export 'src/agent/scenario.dart';
 export 'src/inference_client.dart';
 export 'src/inference_readiness.dart';
 export 'src/inference_realtime.dart';

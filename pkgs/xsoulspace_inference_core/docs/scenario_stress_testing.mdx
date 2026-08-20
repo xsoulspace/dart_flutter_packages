@@ -1,0 +1,99 @@
+# Scenario Stress-Testing the Agent Harness
+
+> North Star impact: **applies**. This is the tool that proves the harness's central
+> thesis on a real model — that a small local model is genuinely useful *because*
+> the deterministic seams (projection, agency, tools, coordination) do the heavy
+> lifting. Until we drive it with a real model under load, "tiny-context harness"
+> is a claim; the stress rig is how we get evidence.
+
+## What this is
+
+A **scenario** is a declarative description of a multi-actor, multi-topic,
+tool-using run against a **real** `GenerationHandler` (Apple Foundation). A
+**scenario runner** drives the real `HarnessLoop` and records per-decision
+metrics. A **metrics reporter** turns the run into a human-readable report we
+use to find weak spots.
+
+This is deliberately **LLM-agnostic**: the runner only needs a
+`GenerationHandler`. The Apple Foundation wiring lives in the host app; the
+scenario runner and reporter are plain core code, unit-testable without a model.
+
+## The stress surface
+
+A useful stress test is not a happy-path single agent. It must load the axis the
+harness thesis depends on:
+
+- **Multi-topic** — several `OpenDecision`s across different subjects, so
+  projection has to ray-trace different facet clusters and the model must switch
+  context without losing the thread.
+- **Multi-actor** — several actors in one scene, each with its own thread and
+  goal, so agency prioritization and co-present projection actually bite.
+- **Tools, and dynamic tools** — a registry, plus the ability to register a new
+  tool mid-run (`toolHook`) when a decision needs it.
+
+## Tools are structured and reusable
+
+Tools are real `ToolDef`s built with **structured schemas** (`ToolDef.structured`
++ `SchemaBundle` + `FM`) — never loose string/random-map definitions. `Scenario`
+takes `ToolDef` directly (there is no separate `ScenarioTool`).
+
+Tool results are stored **structurally on the beat** as `ToolResultContent`
+(tool name + typed output), not stringified. A short `TextContent` is kept only
+for keyword indexing and projection; `ToolResultContent` is the source of truth.
+
+Shared tools live in `lib/src/agent/tools.dart` (`fsTools()` — `read`/`write`/
+`list_dir`) and are reused by the stress scenario, the example, and tests. If
+you need a tool in more than one place, define it there and reuse it.
+
+## The metrics we watch
+
+Per decision (each agency moment):
+
+- **tokensUsed** — the projected `Situation` token cost (the real cost of a call).
+- **projectedBeats** — how many beats survived the cinematic cut.
+- **explicitAbsences** — green-screen statements; many means we are cutting a lot.
+- **truncated** — true when the budget was hit and context was dropped. This is
+  a stress signal: the tiny-context guarantee is failing if it fires often.
+
+Aggregate:
+
+- **totalLlmCalls / avg per decision** — efficiency of intelligence; agency should be sparse.
+- **prunedThreads / mergedThreads** — how the mechanical graph systems behave.
+
+## How to run it
+
+The CLI entrypoint is a headless Flutter macOS app (the Apple Foundation client
+is a platform plugin, so it needs a Flutter host, not `dart run`).
+
+```bash
+cd pkgs/xsoulspace_inference_apple_foundation/example
+flutter run -t lib/stress_cli.dart --release --dart-define=SCENARIO=multi_actor
+```
+
+The app prints a `ScenarioMetrics` report to stdout and exits 0 on success, 1
+if the engine is unavailable or any projection was truncated.
+
+## The first scenario
+
+`scenario_definitions.dart` ships `multi_actor_multi_topic`:
+
+- **coder** actor — terse coding agent; writes code, uses the clock tool, then
+  summarizes.
+- **researcher** actor — uses `web_search` (registered dynamically via
+  `toolHook`) for an unfamiliar topic.
+
+It is deliberately small. We grow it from here as we find weak spots.
+
+## Iterating on weak spots
+
+The point is to make it fail. When a report shows truncation, many absences, or
+a tool path that doesn't fire, that is evidence of a harness gap. Fix the
+mechanism (projection budget, tool wiring, agency), not the scenario — unless
+the scenario itself is unrealistic.
+
+## North-star guardrails
+
+- Small model stays useful: the projected cut is the only context the model sees.
+- Testable without an LLM: the runner works with a `MockGenerationHandler` too.
+- Bounded and measured: the budget is enforced and the report makes it visible.
+- Not a monolith: the runner is core; the host wires the provider.

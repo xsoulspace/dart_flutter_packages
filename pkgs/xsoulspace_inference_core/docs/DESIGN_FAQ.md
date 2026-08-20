@@ -89,6 +89,10 @@ machinery everywhere.
 - Agency is granted only when a real decision is open; everything else is
   mechanical and never touches an LLM.
 - The loop is continuous, concurrent, and sleeps when idle.
+- **Tools are structured and first-class.** A tool is a `ToolDef` with a
+  `SchemaBundle` schema; a tool result is stored on its beat as
+  `ToolResultContent` (name + typed output), not a stringified blob. Shared real
+  tools live in `lib/src/agent/tools.dart`.
 
 ## 7. Non-goals
 

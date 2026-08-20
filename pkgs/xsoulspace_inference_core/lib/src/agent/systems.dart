@@ -264,6 +264,17 @@ String _fragmentText(World world, Entity beat) {
   return text?.text ?? '';
 }
 
+/// Short, projection-friendly text for a tool result beat.
+///
+/// The structured output lives in [ToolResultContent]; this is only a compact
+/// string so the beat is keyword-indexable and projectable. It is never the
+/// source of truth.
+String _toolResultText(ToolExecutionResult result) {
+  final output = result.output;
+  if (output is String) return '<result|${result.name}|$output>';
+  return '<result|${result.name}|${jsonEncode(output)}>';
+}
+
 /// Resolve the escalated model for an actor.
 ///
 /// Uses [ModelRouterResource] to find a stronger model than the actor's
@@ -540,8 +551,13 @@ void processToolResultsSystem(World world) {
 
     final toolBeat = world.reserveEmptyEntity().entity;
     final toolBeatEntity = world.getEntity(toolBeat).$1;
-    final toolText =
-        '<result|${event.result.name}|${jsonEncode(event.result.output)}>';
+    // Structured source of truth: tool name + typed output.
+    toolBeatEntity.insert(
+      ToolResultContent(name: event.result.name, output: event.result.output),
+    );
+    // Short text for projection / keyword indexing only — not the source of
+    // truth. The structured output lives in [ToolResultContent].
+    final toolText = _toolResultText(event.result);
     toolBeatEntity.insert(TextContent(toolText));
     toolBeatEntity.insert(BeatStatus(BeatStatusEnum.complete));
     toolBeatEntity.insert(BeatModality(BeatModalityEnum.toolCall));
