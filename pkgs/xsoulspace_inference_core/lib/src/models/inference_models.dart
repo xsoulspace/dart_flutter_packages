@@ -174,6 +174,7 @@ class InferenceResponse {
     this.segments = const <InferenceSpeechSegment>[],
     this.audioArtifact,
     this.toolResults = const [],
+    this.toolCalls = const [],
   });
 
   factory InferenceResponse.fromJson(final Map<String, dynamic> json) =>
@@ -206,6 +207,14 @@ class InferenceResponse {
   final List<InferenceSpeechSegment> segments;
   final InferenceAudioArtifact? audioArtifact;
   final List<({String name, dynamic output})> toolResults;
+
+  /// Structured tool calls parsed by the inference client.
+  ///
+  /// Backends with native tool calling (OpenRouter, OpenAI, Apple Foundation)
+  /// return parsed calls here directly — no tag round-trip. Raw/legacy backends
+  /// that emit `<call|...>` tags in [rawOutput] leave this empty; the harness
+  /// falls back to tag parsing for those.
+  final List<({String name, Map<String, dynamic> arguments})> toolCalls;
 
   Map<String, dynamic> toJson() => {
     'task': task.name,

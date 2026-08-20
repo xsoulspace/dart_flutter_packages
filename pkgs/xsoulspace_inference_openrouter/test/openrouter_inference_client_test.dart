@@ -63,7 +63,7 @@ void main() {
       expect(result.data!.rawOutput, 'Hello from OpenRouter');
     });
 
-    test('parses native tool calls into rawOutput tags', () async {
+    test('parses native tool calls into structured toolCalls', () async {
       final client = _clientWithMock(
         _respondWith('''
           {
@@ -98,9 +98,12 @@ void main() {
 
       expect(result.success, isTrue);
       expect(result.data, isNotNull);
-      // The tool call must be re-emitted as a tag for the harness to parse.
-      expect(result.data!.rawOutput, contains('<call|get_weather|'));
-      expect(result.data!.rawOutput, contains('Paris'));
+      // The tool call must be structured — no tag round-trip.
+      expect(result.data!.toolCalls, isNotEmpty);
+      expect(result.data!.toolCalls.first.name, 'get_weather');
+      expect(result.data!.toolCalls.first.arguments, {'city': 'Paris'});
+      // rawOutput stays the raw content (no tags).
+      expect(result.data!.rawOutput, isNot(contains('<call|')));
     });
 
     test('sends tools in the request body', () async {

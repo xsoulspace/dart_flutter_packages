@@ -40,6 +40,8 @@ dependencies:
     path: ../
   xsoulspace_inference_apple_foundation:
     path: ../../xsoulspace_inference_apple_foundation
+  xsoulspace_inference_openrouter:
+    path: ../../xsoulspace_inference_openrouter
   xsoulspace_state_utils: ^0.6.0
   ecsly: ^0.0.1-dev.13
   ecsly_app: ^0.1.0-dev.2

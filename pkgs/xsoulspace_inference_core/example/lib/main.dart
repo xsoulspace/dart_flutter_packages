@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:from_json_to_json/from_json_to_json.dart';
 import 'package:xsoulspace_inference_apple_foundation/xsoulspace_inference_apple_foundation.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
+import 'package:xsoulspace_inference_openrouter/xsoulspace_inference_openrouter.dart';
 import 'package:xsoulspace_state_utils/xsoulspace_state_utils.dart';
 
 void main() {
@@ -42,6 +43,15 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
+/// Which inference backend a scenario uses.
+enum ScenarioBackend {
+  /// On-device Apple Foundation Models (macOS 26+).
+  apple,
+
+  /// Hosted OpenRouter API (requires an API key).
+  openRouter,
+}
+
 /// A scenario drives a fresh ecsly [World] through the agent schedules.
 ///
 /// Each scenario builds its own world (so switching scenarios is isolated),
@@ -57,30 +67,64 @@ sealed class Scenario {
   ///
   /// Subclasses override [setupWorld] to add model bindings and tools, and
   /// [spawnActor] to configure the actor's system prompt / decision.
-  Future<String> init({required String text}) async {
+  ///
+  /// [backend] selects which inference backend routes the actor's generation:
+  /// [ScenarioBackend.apple] (on-device Apple Foundation) or
+  /// [ScenarioBackend.openRouter] (hosted OpenRouter API).
+  Future<String> init({
+    required String text,
+    ScenarioBackend backend = ScenarioBackend.apple,
+    String openRouterApiKey = '',
+  }) async {
     isInitialized = true;
     final world = World()..addPlugin(AgentPlugin());
 
+    // Register both backends as first-class models in the router, so an actor
+    // can swap inference at runtime by changing its [ActorModel]. Apple
+    // Foundation is on-device; OpenRouter is a hosted API (requires a key).
     final router = ModelRouter(
       inferenceClientsBuilders: {
         DefaultModelNames.appleFoundation: () => AppleFoundationInferenceClient(
           api: AppleFoundationInferenceClient.initApi(),
         ),
+        OpenRouterModelNames.openRouter: () =>
+            OpenRouterInferenceClient(apiKey: openRouterApiKey),
       },
     );
+
+    // Bind stable model ids so the actor can reference them via [ActorModel].
+    final appleModelId = ModelId('model-apple');
+    final openRouterModelId = ModelId('model-openrouter');
+    router.models[appleModelId] = Model(
+      id: appleModelId,
+      name: DefaultModelNames.appleFoundation,
+    );
+    router.models[openRouterModelId] = Model(
+      id: openRouterModelId,
+      name: OpenRouterModelNames.openRouter,
+    );
+
     world
       ..upsertResource(ModelRouterResource(router))
       ..upsertResource(ToolRegistryResource())
       ..flush();
 
-    // Route generation through the default handler (Apple Foundation).
+    // Route generation through the default handler, which resolves the model
+    // from the router by the actor's [ActorModel.modelId].
     final handler = DefaultGenerationHandler()..router = router;
     world.getResource<GenerationHandlerResource>().registerDefault(handler);
 
     setupWorld(world);
 
     final scene = world.spawnComponents([const Scene(), SceneFrame()]);
-    actor = spawnActor(world, scene, text);
+    actor = spawnActor(
+      world,
+      scene,
+      text,
+      modelId: backend == ScenarioBackend.openRouter
+          ? openRouterModelId
+          : appleModelId,
+    );
 
     world.flush();
     this.world = world;
@@ -91,9 +135,16 @@ sealed class Scenario {
   void setupWorld(World world) {}
 
   /// Spawn the actor with an [OpenDecision] derived from [text].
-  Entity spawnActor(World world, Entity scene, String text) {
+  ///
+  /// [modelId] selects which registered model the actor uses — swapping this
+  /// component at runtime swaps the inference backend.
+  Entity spawnActor(
+    World world,
+    Entity scene,
+    String text, {
+    ModelId modelId = ModelId.empty,
+  }) {
     final actorId = AgentId.create();
-    final modelId = ModelId.create();
     final actor = world.spawnComponents([
       Actor(agentId: actorId),
       ActorModel(modelId: modelId),
@@ -146,8 +197,16 @@ sealed class Scenario {
 /// Human -> Agent (one-shot)
 class ScenarioV1SendMessageGetAnswer extends Scenario {
   @override
-  Future<String> init({required String text}) async {
-    await super.init(text: text);
+  Future<String> init({
+    required String text,
+    ScenarioBackend backend = ScenarioBackend.apple,
+    String openRouterApiKey = '',
+  }) async {
+    await super.init(
+      text: text,
+      backend: backend,
+      openRouterApiKey: openRouterApiKey,
+    );
     return run();
   }
 }
@@ -158,8 +217,16 @@ class ScenarioV1SendMessageGetAnswer extends Scenario {
 /// on each reply, so the actor's [ActorRuntimeMemories] accumulate.
 class ScenarioV2KeepPrimitiveMemory extends Scenario {
   @override
-  Future<String> init({required String text}) async {
-    await super.init(text: text);
+  Future<String> init({
+    required String text,
+    ScenarioBackend backend = ScenarioBackend.apple,
+    String openRouterApiKey = '',
+  }) async {
+    await super.init(
+      text: text,
+      backend: backend,
+      openRouterApiKey: openRouterApiKey,
+    );
     return run();
   }
 
@@ -211,15 +278,28 @@ class ScenarioV3FunctionCallAndSchema extends Scenario {
   }
 
   @override
-  Entity spawnActor(World world, Entity scene, String text) {
-    final actor = super.spawnActor(world, scene, text);
+  Entity spawnActor(
+    World world,
+    Entity scene,
+    String text, {
+    ModelId modelId = ModelId.empty,
+  }) {
+    final actor = super.spawnActor(world, scene, text, modelId: modelId);
     world.upsertComponent(actor, const ActorTools(registryName: 'default'));
     return actor;
   }
 
   @override
-  Future<String> init({required String text}) async {
-    await super.init(text: text);
+  Future<String> init({
+    required String text,
+    ScenarioBackend backend = ScenarioBackend.apple,
+    String openRouterApiKey = '',
+  }) async {
+    await super.init(
+      text: text,
+      backend: backend,
+      openRouterApiKey: openRouterApiKey,
+    );
     return run();
   }
 
@@ -247,6 +327,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   bool _isRunning = false;
   int _scenarioIndex = 0;
+  ScenarioBackend _backend = ScenarioBackend.apple;
+  final TextEditingController _apiKeyController = TextEditingController();
 
   List<ScenarioRecord> get _scenarios => [
     (scenario: _scenarioV1, title: 'one-text'),
@@ -277,7 +359,11 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<void> _initScenario() async {
     final scenario = _getScenarioByIndex();
     _setLoading();
-    final r = await scenario.init(text: _txt);
+    final r = await scenario.init(
+      text: _txt,
+      backend: _backend,
+      openRouterApiKey: _apiKeyController.text.trim(),
+    );
     setState(() {
       _messages
         ..add(_txt)
@@ -333,6 +419,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void dispose() {
     _cleanup();
     _controller.dispose();
+    _apiKeyController.dispose();
     super.dispose();
   }
 
@@ -395,6 +482,42 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
                 ),
               ],
+            ),
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: 450),
+              child: Column(
+                crossAxisAlignment: .start,
+                mainAxisSize: .min,
+                children: [
+                  Text('backend'),
+                  SegmentedButton<ScenarioBackend>(
+                    segments: const [
+                      ButtonSegment(
+                        value: ScenarioBackend.apple,
+                        label: Text('Apple Foundation'),
+                      ),
+                      ButtonSegment(
+                        value: ScenarioBackend.openRouter,
+                        label: Text('OpenRouter'),
+                      ),
+                    ],
+                    selected: {_backend},
+                    onSelectionChanged: (selection) {
+                      setState(() => _backend = selection.first);
+                    },
+                  ),
+                  if (_backend == ScenarioBackend.openRouter)
+                    TextFormField(
+                      controller: _apiKeyController,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        labelText: 'OpenRouter API key',
+                        hintText: 'sk-or-...',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                ],
+              ),
             ),
             ConstrainedBox(
               constraints: BoxConstraints(maxWidth: 450, maxHeight: 150),

@@ -5,6 +5,12 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
+/// Model names for OpenRouter-backed models.
+///
+/// Register these in a [ModelRouter] alongside [DefaultModelNames] so an actor
+/// can swap inference backends at runtime by changing its [ActorModel].
+enum OpenRouterModelNames implements ModelName { openRouter }
+
 /// OpenRouter API-backed [InferenceClient].
 ///
 /// Calls the OpenRouter `/chat/completions` endpoint. Supports free text and
@@ -225,8 +231,9 @@ class OpenRouterInferenceClient implements InferenceClient {
   /// Parse the OpenRouter chat completion response into an [InferenceResponse].
   ///
   /// Extracts the assistant message content and any native `tool_calls`.
-  /// Tool calls are re-emitted as `<call|name|{json}>` tags in `rawOutput`
-  /// so the harness's `parseToolCalls` can route them to the world.
+  /// Tool calls are returned as structured records on
+  /// [InferenceResponse.toolCalls] — no tag round-trip. The harness routes
+  /// them to the world's tool execution system directly.
   InferenceResponse? _parseChatCompletion(final Map<String, dynamic> decoded) {
     final choices = decoded['choices'];
     if (choices is! List) return null;
@@ -239,9 +246,9 @@ class OpenRouterInferenceClient implements InferenceClient {
     final content = messageMap['content'];
     final contentStr = content is String ? content as String : '';
 
-    // Extract native tool_calls and re-emit as tags.
+    // Extract native tool_calls as structured records.
     final toolCalls = messageMap['tool_calls'];
-    final toolTags = <String>[];
+    final parsedCalls = <({String name, Map<String, dynamic> arguments})>[];
     if (toolCalls is List) {
       for (final call in toolCalls as List) {
         if (call is! Map<String, dynamic>) continue;
@@ -250,15 +257,12 @@ class OpenRouterInferenceClient implements InferenceClient {
         final name = fnMap['name'];
         final arguments = fnMap['arguments'];
         if (name is! String) continue;
-        toolTags.add(
-          '<call|${name as String}|${arguments is String ? arguments as String : '{}'}>',
-        );
+        parsedCalls.add((
+          name: name as String,
+          arguments: _parseArguments(arguments),
+        ));
       }
     }
-
-    final rawOutput = contentStr.isEmpty && toolTags.isNotEmpty
-        ? toolTags.join()
-        : contentStr;
 
     final output = <String, dynamic>{};
     if (contentStr.isNotEmpty) {
@@ -273,10 +277,33 @@ class OpenRouterInferenceClient implements InferenceClient {
 
     return InferenceResponse(
       output: output,
-      rawOutput: rawOutput,
+      rawOutput: contentStr,
       task: InferenceTask.text,
+      toolCalls: parsedCalls,
       meta: <String, dynamic>{'provider': id},
     );
+  }
+
+  /// Parse a tool call's `arguments` (a JSON string from OpenRouter) into a map.
+  Map<String, dynamic> _parseArguments(final Object? arguments) {
+    if (arguments is Map<String, dynamic>) return arguments;
+    if (arguments is Map) {
+      return arguments.map((k, v) => MapEntry('$k', v));
+    }
+    if (arguments is String) {
+      final trimmed = (arguments as String).trim();
+      if (trimmed.isEmpty) return <String, dynamic>{};
+      try {
+        final decoded = jsonDecode(trimmed);
+        if (decoded is Map<String, dynamic>) return decoded;
+        if (decoded is Map) {
+          return decoded.map((k, v) => MapEntry('$k', v));
+        }
+      } catch (_) {
+        // Fall through to empty.
+      }
+    }
+    return <String, dynamic>{};
   }
 
   String _mapHttpStatus(final int statusCode) => switch (statusCode) {

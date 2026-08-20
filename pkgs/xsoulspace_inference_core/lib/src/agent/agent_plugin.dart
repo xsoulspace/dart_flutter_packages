@@ -1051,13 +1051,18 @@ class DefaultGenerationHandler implements GenerationHandler {
       );
     }
 
-    // Parse tool calls from raw output using the tag-based parser.
-    // For Apple Foundation (native), the ModelRuntime handles tools
-    // during generation — rawOutput won't contain tool tags, so
-    // toolCalls will be empty and toolResults will contain the results.
-    // For raw LLM backends, parse tool calls for the ECS
-    // ToolExecutionSystem to execute.
-    final toolCalls = parseToolCalls(response.rawOutput ?? '');
+    // Tool calls. Prefer the structured calls parsed by the inference client
+    // (native tool calling — OpenRouter, OpenAI, Apple Foundation). For raw/
+    // legacy backends that emit `<call|...>` tags in rawOutput, fall back to
+    // the tag parser. The client owns wire-format parsing; ecsly stays
+    // structured + raw output.
+    final toolCalls = response.toolCalls.isNotEmpty
+        ? response.toolCalls
+              .map(
+                (c) => ToolCall(name: ToolName(c.name), arguments: c.arguments),
+              )
+              .toList()
+        : parseToolCalls(response.rawOutput ?? '');
 
     // Convert InferenceResponse.toolResults to ToolExecutionResult objects.
     // For Apple Foundation (native), these are already executed results.

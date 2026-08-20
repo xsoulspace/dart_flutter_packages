@@ -48,6 +48,83 @@ class _ToolEmittingHandler implements GenerationHandler {
   }
 }
 
+/// A [GenerationHandler] that records which handler it is and returns a plain
+/// text response. Used to prove per-agent handler routing.
+class _TaggedHandler implements GenerationHandler {
+  _TaggedHandler(this.tag);
+
+  final String tag;
+  final List<AgentId> handled = [];
+
+  @override
+  Future<ActorGenerateResponse> generate(
+    World world,
+    ActorGenerateRequest request,
+  ) async {
+    handled.add(request.agentId);
+    final response = ActorGenerateResponse(
+      actorEntity: request.actorEntity,
+      structuralOutput: {'text': 'from $tag'},
+      rawOutput: 'from $tag',
+      taskId: request.taskId,
+    );
+    world.events.writer<ActorGenerateResponse>().send(response);
+    return response;
+  }
+}
+
+/// A [GenerationHandler] that returns a STRUCTURED tool call on the response
+/// (no tag round-trip) — mirroring what OpenRouter's native tool calling now
+/// produces via [InferenceResponse.toolCalls].
+class _StructuredToolHandler implements GenerationHandler {
+  _StructuredToolHandler({required this.name, required this.arguments});
+
+  final String name;
+  final Map<String, dynamic> arguments;
+
+  @override
+  Future<ActorGenerateResponse> generate(
+    World world,
+    ActorGenerateRequest request,
+  ) async {
+    final response = ActorGenerateResponse(
+      actorEntity: request.actorEntity,
+      structuralOutput: {'text': 'structured tool dispatched'},
+      rawOutput: 'structured tool dispatched',
+      toolCalls: [ToolCall(name: ToolName(name), arguments: arguments)],
+      taskId: request.taskId,
+    );
+    world.events.writer<ActorGenerateResponse>().send(response);
+    return response;
+  }
+}
+
+/// A [GenerationHandler] that records which model it served. Used to prove
+/// that swapping an actor's [ActorModel] at runtime routes to a different
+/// backend (Apple Foundation vs OpenRouter) via the [ModelRouter].
+class _ModelTaggedHandler implements GenerationHandler {
+  _ModelTaggedHandler(this.tag);
+
+  final String tag;
+  final List<ModelId> served = [];
+
+  @override
+  Future<ActorGenerateResponse> generate(
+    World world,
+    ActorGenerateRequest request,
+  ) async {
+    served.add(request.modelId);
+    final response = ActorGenerateResponse(
+      actorEntity: request.actorEntity,
+      structuralOutput: {'text': 'from $tag'},
+      rawOutput: 'from $tag',
+      taskId: request.taskId,
+    );
+    world.events.writer<ActorGenerateResponse>().send(response);
+    return response;
+  }
+}
+
 /// Build a world with the agent plugin and a coding-agent tool registry.
 Future<World> _buildWorld(ToolRegistry registry) async {
   final world = World()..addPlugin(AgentPlugin());
@@ -251,6 +328,184 @@ void main() {
       expect(text, isNotNull);
       expect(text!.text, contains('a.txt'));
       expect(text!.text, contains('b.txt'));
+    });
+
+    test('routes each agent to its own GenerationHandler', () async {
+      final world = await _buildWorld(ToolRegistry());
+
+      // Two handlers — simulates Apple Foundation + OpenRouter (or any two
+      // backends). Each is registered per-agent.
+      final appleHandler = _TaggedHandler('apple');
+      final openRouterHandler = _TaggedHandler('openrouter');
+      final handlerResource = world.getResource<GenerationHandlerResource>();
+
+      final scene = world.spawnComponents([const Scene(), SceneFrame()]);
+      final actorA = world.spawnComponents([
+        Actor(agentId: const AgentId('agent-apple')),
+        ActorModel(modelId: ModelId.create()),
+        ActorRuntimeMemories(),
+        PresentInScene(sceneEntity: scene),
+        OpenDecision(prompt: 'Apple decision'),
+      ]);
+      final actorB = world.spawnComponents([
+        Actor(agentId: const AgentId('agent-openrouter')),
+        ActorModel(modelId: ModelId.create()),
+        ActorRuntimeMemories(),
+        PresentInScene(sceneEntity: scene),
+        OpenDecision(prompt: 'OpenRouter decision'),
+      ]);
+      world.flush();
+
+      // Route by agent id — this is the multi-handler proof.
+      handlerResource.registerForAgent(
+        const AgentId('agent-apple'),
+        appleHandler,
+      );
+      handlerResource.registerForAgent(
+        const AgentId('agent-openrouter'),
+        openRouterHandler,
+      );
+
+      // Run one full cycle — both actors act concurrently.
+      world.runSchedule('AgencyGrant');
+      world.flush();
+      world.runSchedule('Project');
+      world.flush();
+      await world.runScheduleAsync('ActorAct');
+      world.flush();
+      world.runSchedule('ProcessResponses');
+      world.flush();
+
+      // Each handler handled exactly its own agent.
+      expect(appleHandler.handled, [const AgentId('agent-apple')]);
+      expect(openRouterHandler.handled, [const AgentId('agent-openrouter')]);
+
+      // Each actor's memory holds the response from its own handler.
+      final memoriesA = world.getEntity(actorA).$1.get<ActorRuntimeMemories>();
+      final memoriesB = world.getEntity(actorB).$1.get<ActorRuntimeMemories>();
+      expect(memoriesA, isNotNull);
+      expect(memoriesB, isNotNull);
+      final lastA = memoriesA!.fragments.last;
+      final lastB = memoriesB!.fragments.last;
+      final textA = world.getEntity(lastA.beat).$1.get<TextContent>();
+      final textB = world.getEntity(lastB.beat).$1.get<TextContent>();
+      expect(textA!.text, contains('apple'));
+      expect(textB!.text, contains('openrouter'));
+    });
+
+    test(
+      'structured tool calls route through the world toolExecutionSystem',
+      () async {
+        final temp = await Directory.systemTemp.createTemp(
+          'xsoulspace_harness_',
+        );
+        addTearDown(() => temp.delete(recursive: true));
+        final filePath = '${temp.path}/structured.txt';
+
+        final registry = ToolRegistry();
+        registry.register(
+          ToolDef.structured(
+            name: ToolName('write'),
+            description: 'Write a file',
+            parameters: SchemaBundle(
+              root: FM.object(
+                'write',
+                properties: () => [
+                  FM.prop('path', FM.string()),
+                  FM.prop('content', FM.string()),
+                ],
+              ),
+            ),
+            execute: (args) async {
+              final params = jsonDecodeMapAs(args);
+              await File(
+                jsonDecodeString(params['path']),
+              ).writeAsString(jsonDecodeString(params['content']));
+              return 'wrote';
+            },
+          ),
+        );
+
+        final world = await _buildWorld(registry);
+
+        // A handler that returns a STRUCTURED tool call on the response —
+        // exactly what OpenRouter now does (no tag round-trip).
+        world.getResource<GenerationHandlerResource>().registerDefault(
+          _StructuredToolHandler(
+            name: 'write',
+            arguments: {'path': filePath, 'content': 'structured call'},
+          ),
+        );
+        final actor = _spawnActor(world, 'Write via structured tool call.');
+
+        await _runCycle(world);
+
+        // The world executed the structured tool call and wrote the file.
+        expect(File(filePath).existsSync(), isTrue);
+        expect(File(filePath).readAsStringSync(), 'structured call');
+
+        // And the tool result landed in actor memory.
+        final memories = world.getEntity(actor).$1.get<ActorRuntimeMemories>();
+        expect(memories, isNotNull);
+        final toolFragments = memories!.fragments
+            .where((f) => f.type == ContextFragmentType.toolMessage)
+            .toList();
+        expect(toolFragments, isNotEmpty);
+      },
+    );
+
+    test('swaps inference backend at runtime by changing ActorModel', () async {
+      final world = await _buildWorld(ToolRegistry());
+
+      // Two handlers registered by model id — simulates Apple Foundation and
+      // OpenRouter both being first-class models in the router.
+      final appleModelId = const ModelId('model-apple');
+      final openRouterModelId = const ModelId('model-openrouter');
+      final appleHandler = _ModelTaggedHandler('apple');
+      final openRouterHandler = _ModelTaggedHandler('openrouter');
+      final handlerResource = world.getResource<GenerationHandlerResource>();
+      handlerResource.registerForModel(appleModelId, appleHandler);
+      handlerResource.registerForModel(openRouterModelId, openRouterHandler);
+
+      final scene = world.spawnComponents([const Scene(), SceneFrame()]);
+      final actor = world.spawnComponents([
+        Actor(agentId: AgentId.create()),
+        ActorModel(modelId: appleModelId),
+        ActorRuntimeMemories(),
+        PresentInScene(sceneEntity: scene),
+        OpenDecision(prompt: 'First decision'),
+      ]);
+      world.flush();
+
+      // First cycle — routes to Apple (model-apple).
+      world.runSchedule('AgencyGrant');
+      world.flush();
+      world.runSchedule('Project');
+      world.flush();
+      await world.runScheduleAsync('ActorAct');
+      world.flush();
+      world.runSchedule('ProcessResponses');
+      world.flush();
+      expect(appleHandler.served, [appleModelId]);
+      expect(openRouterHandler.served, isEmpty);
+
+      // Swap the actor's model to OpenRouter at runtime.
+      world.upsertComponent(actor, ActorModel(modelId: openRouterModelId));
+      world.upsertComponent(actor, OpenDecision(prompt: 'Second decision'));
+      world.flush();
+
+      // Second cycle — routes to OpenRouter (model-openrouter).
+      world.runSchedule('AgencyGrant');
+      world.flush();
+      world.runSchedule('Project');
+      world.flush();
+      await world.runScheduleAsync('ActorAct');
+      world.flush();
+      world.runSchedule('ProcessResponses');
+      world.flush();
+
+      expect(appleHandler.served, [appleModelId]);
+      expect(openRouterHandler.served, [openRouterModelId]);
     });
   });
 }
