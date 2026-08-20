@@ -1,4 +1,6 @@
 analyzer:
+  errors:
+    cascade_invocations: ignore
   exclude:
     - build/**
     - android/**

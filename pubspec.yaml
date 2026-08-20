@@ -16,6 +16,10 @@ dependency_overrides:
   test_api: 0.7.13
   analyzer: 14.1.0
   intl: 0.20.3
+  ecsly:
+    path: ../../ecsly/core_packages/ecsly
+  ecsly_flutter:
+    path: ../../ecsly/core_packages/ecsly_flutter
   ecsly_codegen:
     path: ../../ecsly/core_packages/ecsly_codegen
   ecsly_app:

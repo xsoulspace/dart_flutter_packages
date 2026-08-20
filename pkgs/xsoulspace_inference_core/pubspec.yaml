@@ -11,7 +11,6 @@ dependencies:
   ecsly: ^0.0.1-dev.13
   ecsly_app: ^0.1.0-dev.2
   ecsly_codegen: ^0.1.0-dev.2
-  ecsly_flutter: ^0.1.0-dev.4
   equatable: ^2.1.0
   from_json_to_json: ^0.5.0
   is_dart_empty_or_not: ^0.4.0

@@ -1,4 +1,4 @@
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 import 'package:xsoulspace_foundation/xsoulspace_foundation.dart';
 
 void main() {

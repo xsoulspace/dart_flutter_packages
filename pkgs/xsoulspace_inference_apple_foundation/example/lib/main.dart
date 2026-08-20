@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:xsoulspace_inference_apple_foundation/xsoulspace_inference_apple_foundation.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
+// ecsly types are re-exported via xsoulspace_inference_core
+
 void main() => runApp(const AppleFoundationExampleApp());
 
 class AppleFoundationExampleApp extends StatelessWidget {
@@ -28,13 +30,6 @@ class _ExamplePageState extends State<_ExamplePage> {
   String _status = 'Idle';
   bool? _available;
 
-  static const _schema = <String, dynamic>{
-    'type': 'object',
-    'properties': <String, dynamic>{
-      'answer': <String, dynamic>{'type': 'string'},
-    },
-  };
-
   Future<void> _checkAvailability() async {
     setState(() => _status = 'Checking...');
     final available = await AppleFoundationInferenceClient(
@@ -48,23 +43,77 @@ class _ExamplePageState extends State<_ExamplePage> {
     });
   }
 
-  Future<void> _runInference() async {
-    setState(() => _status = 'Running inference...');
-    final client = AppleFoundationInferenceClient(
-      api: AppleFoundationInferenceClient.initApi(),
+  Future<void> _runEcsHarness() async {
+    setState(() => _status = 'Running ECS harness...');
+
+    // Build the world with the agent plugin
+    final world = World()..addPlugin(AgentPlugin());
+
+    // Register the model router resource
+    final router = ModelRouter(
+      inferenceClientsBuilders: {
+        DefaultModelNames.appleFoundation: () => AppleFoundationInferenceClient(
+          api: AppleFoundationInferenceClient.initApi(),
+        ),
+      },
     );
-    final result = await client.infer(
-      InferenceRequest(
-        prompt: 'Reply with one short word: hello.',
-        outputSchema: _schema,
-        workingDirectory: '/tmp',
-      ),
+    world
+      ..upsertResource(ModelRouterResource(router))
+      ..upsertResource(ToolRegistryResource())
+      ..flush();
+
+    // Register the default handler
+    final handler = DefaultActorGenerateHandler()..router = router;
+    handler.register(world);
+
+    // Spawn a scene
+    final sceneEntity = world.spawnComponents([const Scene(), SceneFrame()]);
+
+    // Spawn an actor with a goal
+    final actorId = AgentId.create();
+    final modelId = ModelId.create();
+    final actorEntity = world.spawnComponents([
+      Actor(agentId: actorId),
+      ActorModel(modelId: modelId),
+      const ActorSystemPrompt(text: 'You are a helpful assistant.'),
+      ActorRuntimeMemories(),
+      PresentInScene(sceneEntity: sceneEntity),
+    ]);
+
+    // Create an open decision — this triggers the agency loop
+    world.upsertComponent(
+      actorEntity,
+      const OpenDecision(prompt: 'Reply with one short word: hello.'),
     );
+    world.flush();
+
+    // Run the cinematic loop:
+    // 1. Grant agency
+    world.runSchedule('AgencyGrant');
+    world.flush();
+
+    // 2. Project situation
+    world.runSchedule('Project');
+    world.flush();
+
+    // 3. Actor acts (async — sends LLM request)
+    await world.runScheduleAsync('ActorAct');
+    world.flush();
+
+    // 4. Process responses (external handler sends back response)
+    //    Give the handler time to complete
+    await Future.delayed(const Duration(seconds: 2));
+    world.runSchedule('ProcessResponses');
+    world.flush();
+
+    // Read the result
+    final memories = world.maybeGetComponent<ActorRuntimeMemories>(actorEntity);
+    final lastFragment = memories?.fragments.last;
     setState(() {
-      if (result.success && result.data != null) {
-        _status = 'OK: ${result.data!.output}';
+      if (lastFragment != null) {
+        _status = 'OK: ${lastFragment.value}';
       } else {
-        _status = 'Error: ${result.error?.code} — ${result.error?.message}';
+        _status = 'No response received';
       }
     });
   }
@@ -89,8 +138,8 @@ class _ExamplePageState extends State<_ExamplePage> {
           ),
           const SizedBox(height: 8),
           ElevatedButton(
-            onPressed: _available == true ? _runInference : null,
-            child: const Text('Run inference'),
+            onPressed: _available == true ? _runEcsHarness : null,
+            child: const Text('Run ECS harness'),
           ),
           const SizedBox(height: 24),
           Text(_status, style: Theme.of(context).textTheme.bodyLarge),

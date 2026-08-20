@@ -1,4 +1,8 @@
+export 'package:ecsly/ecsly.dart';
+export 'package:ecsly_app/ecsly_app.dart';
+
 export 'src/agent/agent.dart';
+export 'src/agent/agent_plugin.dart';
 export 'src/inference_client.dart';
 export 'src/inference_readiness.dart';
 export 'src/inference_realtime.dart';
