@@ -14,6 +14,67 @@ import 'resources.dart';
 // Systems
 // ─────────────────────────────────────────────
 
+/// System 0: Seed an actor's identity into the graph as beats.
+///
+/// An actor's [ActorSystemPrompt] and [Goal] are its identity — "who am I / what
+/// am I doing". Writing them as indexable beats in the actor's thread means
+/// projection can ray-trace them on the FIRST decision, before any real beats
+/// exist. This fixes the cold-start gap where projection returned nothing.
+///
+/// Idempotent: an actor gets identity beats exactly once (guarded by
+/// [IdentityBeat]). Mechanical — never touches an LLM.
+void seedIdentitySystem(World world) {
+  final actors = world.query2<Actor, ActorThreads>();
+  for (final (entity, _, threads) in actors.toList()) {
+    // Skip actors that already have identity beats.
+    if (_hasIdentityBeats(world, entity.entity)) continue;
+    if (threads.threads.isEmpty) continue;
+
+    final thread = threads.threads.first;
+    final (_, valid) = world.getEntity(thread);
+    if (!valid) continue;
+
+    final systemPrompt = entity.get<ActorSystemPrompt>();
+    final goal = entity.get<Goal>();
+    final parts = <String>[];
+    if (systemPrompt != null && systemPrompt.text.isNotEmpty) {
+      parts.add(systemPrompt.text);
+    }
+    if (goal != null && goal.text.isNotEmpty) {
+      parts.add('Goal: ${goal.text}');
+    }
+    if (parts.isEmpty) continue;
+
+    final identityBeat = world.reserveEmptyEntity().entity;
+    final be = world.getEntity(identityBeat).$1;
+    be.insert(TextContent(parts.join('\n')));
+    be.insert(BeatStatus(BeatStatusEnum.complete));
+    be.insert(BeatModality(BeatModalityEnum.observation));
+    be.insert(IdentityBeat());
+    be.insert(BelongsToThread(thread));
+    indexBeat(world, identityBeat, _keywordsOf(parts.join(' ')));
+  }
+}
+
+bool _hasIdentityBeats(World world, Entity actor) {
+  // An actor has identity beats if any beat in its threads carries IdentityBeat.
+  // We approximate by checking the world for IdentityBeat beats whose thread
+  // matches the actor's thread. Simpler: check the actor's thread for any
+  // IdentityBeat beat.
+  for (final (_, _, belongs, _)
+      in world.query3<IdentityBeat, BelongsToThread, TextContent>()) {
+    if (belongs.thread == _actorThread(world, actor)) return true;
+  }
+  return false;
+}
+
+Entity? _actorThread(World world, Entity actor) {
+  final (e, valid) = world.getEntity(actor);
+  if (!valid) return null;
+  final threads = e.get<ActorThreads>();
+  return threads?.threads.isEmpty ?? true ? null : threads!.threads.first;
+}
+
 /// System 1: Grant agency to actors that have an [OpenDecision].
 ///
 /// For each Actor entity with [OpenDecision] but without [Agency]
@@ -136,6 +197,16 @@ Situation _buildSituation({
   final tokensUsed = fit.tokensUsed;
   final truncated = fit.truncated;
 
+  // The real context the model sees includes the system prompt and tool
+  // schemas, not just the prompt + projected beats. Count them so the budget
+  // metric reflects actual model input (fixes under-reporting).
+  final systemPrompt = entity.get<ActorSystemPrompt>();
+  final tools = entity.get<ActorTools>();
+  final toolSchemaCost = tools != null ? _toolSchemaTokens(world, tools) : 0;
+  final systemCost = systemPrompt != null ? estimator(systemPrompt.text) : 0;
+  final realTokensUsed = tokensUsed + systemCost + toolSchemaCost;
+  final realTruncated = truncated || realTokensUsed > budget;
+
   // Green-screen: explicit absences so the model knows what it does NOT see.
   final absences = <String>[];
   if (policy.greenScreen) {
@@ -152,8 +223,6 @@ Situation _buildSituation({
     }
   }
 
-  final tools = entity.get<ActorTools>();
-
   return Situation(
     prompt: prompt,
     schema: decision?.schema ?? SchemaBundle.empty,
@@ -162,9 +231,9 @@ Situation _buildSituation({
     projectedBeats: selected,
     explicitAbsences: absences,
     toolRegistryName: tools?.registryName,
-    tokensUsed: tokensUsed,
+    tokensUsed: realTokensUsed,
     tokenBudget: budget,
-    truncated: truncated,
+    truncated: realTruncated,
   );
 }
 
@@ -262,6 +331,29 @@ String _fragmentText(World world, Entity beat) {
   if (!valid) return '';
   final text = entity.get<TextContent>();
   return text?.text ?? '';
+}
+
+/// Estimate the token cost of the tool schemas an actor is bound to.
+///
+/// The model sees these schemas in its context, so they count toward the
+/// real budget. Uses the default estimator (chars/4).
+int _toolSchemaTokens(World world, ActorTools tools) {
+  final registry = world.getResource<ToolRegistryResource>().get(
+    tools.registryName,
+  );
+  if (registry == null) return 0;
+  // Sum the JSON-serializable schema payloads (parameters + description).
+  // Avoid jsonEncode on the whole ToolDef (ToolName isn't encodable).
+  var chars = 0;
+  for (final tool in registry.tools.values) {
+    chars += tool.description.length;
+    try {
+      chars += jsonEncode(tool.parameters).length;
+    } catch (_) {
+      chars += tool.parameters.length;
+    }
+  }
+  return (chars / 4).ceil();
 }
 
 /// Short, projection-friendly text for a tool result beat.

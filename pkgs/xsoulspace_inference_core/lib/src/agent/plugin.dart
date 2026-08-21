@@ -69,7 +69,8 @@ class AgentPlugin extends Plugin {
       ..registerObjectComponent<SummaryOwner>()
       ..registerObjectComponent<SummaryThread>()
       ..registerObjectComponent<SummarizesBeats>()
-      ..registerObjectComponent<ToolResultContent>();
+      ..registerObjectComponent<ToolResultContent>()
+      ..registerObjectComponent<IdentityBeat>();
 
     // Resources
     world
@@ -100,7 +101,8 @@ class AgentPlugin extends Plugin {
       ..then(flushAllSystem, name: 'flushAfterGrant');
 
     world.createSchedule('Project')
-      ..add(projectSituationSystem, name: 'projectSituation')
+      ..add(seedIdentitySystem, name: 'seedIdentity')
+      ..then(projectSituationSystem, name: 'projectSituation')
       ..then(flushAllSystem, name: 'flushAfterProject');
 
     world.createSchedule('ActorAct')

@@ -228,6 +228,15 @@ class SummaryThread implements Component {
   final Entity? thread;
 }
 
+/// Marker: this beat is an actor's seeded identity (system prompt / goal).
+///
+/// Written by [seedIdentitySystem] so an actor's "who am I / what am I doing"
+/// is graph content that projection can ray-trace on the first decision —
+/// before any real beats exist. Idempotent: an actor gets identity beats once.
+class IdentityBeat implements Component {
+  const IdentityBeat();
+}
+
 /// Structured result of a tool call, stored on the tool-result beat.
 ///
 /// Unlike a stringified `<result|...>` blob, this keeps the tool name and its

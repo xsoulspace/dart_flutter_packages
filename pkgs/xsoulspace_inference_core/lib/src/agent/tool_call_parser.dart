@@ -134,7 +134,7 @@ class ToolDef {
   final ToolCallCallback execute;
 
   Map<String, dynamic> toJson() => {
-    'name': name,
+    'name': name.value,
     'description': description,
     'parameters': parameters,
   };
