@@ -4,7 +4,7 @@
 ///
 /// Start simple, escalate: single topic, then multi-topic, then multi-actor +
 /// tools + dynamic tool registration. Each scenario is a [Scenario] consumed
-/// by `ScenarioRunner` (see `stress_cli.dart`).
+/// by `ScenarioRunner` via the CLI (`main_stress_cli.dart`).
 ///
 /// Tools are the *real* shared definitions from core (`fsTools()`) plus
 /// example-specific clock/search tools, all built with structured schemas.

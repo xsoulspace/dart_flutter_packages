@@ -30,6 +30,7 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  args: ^2.5.0
   ecsly: ^0.0.1-dev.13
   ecsly_app: ^0.1.0-dev.2
   ecsly_codegen: ^0.1.0-dev.2

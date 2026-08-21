@@ -37,7 +37,8 @@ class BenchmarkRun {
     required this.prunedThreads,
     required this.mergedThreads,
     required this.tokenBudget,
-  });
+    MetricsReport? telemetry,
+  }) : telemetry = telemetry ?? MetricsReport(decisions: const []);
 
   final String name;
   final int llmCalls;
@@ -47,6 +48,9 @@ class BenchmarkRun {
   final int prunedThreads;
   final int mergedThreads;
   final int tokenBudget;
+
+  /// Metrics-machine telemetry (tool calls/results, trends).
+  final MetricsReport telemetry;
 
   /// Total tokens consumed by all decisions in this run.
   int get totalTokens => tokensPerDecision.fold(0, (a, b) => a + b);
@@ -96,6 +100,13 @@ class BenchmarkReport {
         '(calls=${r.llmCalls}, tokens/dec=${r.avgTokensPerDecision.toStringAsFixed(1)}, '
         'growth=${r.contextGrowth}, budget=${r.tokenBudget})',
       );
+      if (r.telemetry.totalToolCalls > 0) {
+        sb.writeln(
+          '      tools: ${r.telemetry.totalToolCalls} dispatched, '
+          '${r.telemetry.totalToolResults} returned, '
+          'dangling=${r.telemetry.pendingTools.join(',')}',
+        );
+      }
     }
     return sb.toString();
   }
@@ -196,10 +207,16 @@ Future<BenchmarkRun> runBenchmark(ScriptedTask task) async {
   final tokensPerDecision = <int>[];
   final contextGrowth = <int>[];
   var llmCalls = 0;
+  final collector = MetricsCollector(world: world);
 
   for (final decision in task.decisions) {
     world.upsertComponent(actor, OpenDecision(prompt: decision));
     world.flush();
+    collector.beginDecision(
+      actor: actor,
+      actorName: task.name,
+      prompt: decision,
+    );
 
     // Full cinematic cycle for this decision.
     world.runSchedule('AgencyGrant');
@@ -213,6 +230,9 @@ Future<BenchmarkRun> runBenchmark(ScriptedTask task) async {
     world.runSchedule('Mechanical');
     world.flush();
 
+    final situation = world.getEntity(actor).$1.get<Situation>();
+    collector.endDecision(actor: actor, situation: situation);
+
     // Record metrics after the decision is resolved.
     final served = mockHandler.tokensServed;
     if (served.isNotEmpty) {
@@ -223,7 +243,6 @@ Future<BenchmarkRun> runBenchmark(ScriptedTask task) async {
     // Measure the PROJECTED context (what the model actually sees), not raw
     // memory. This is the real tiny-context signal: count the projected beat
     // texts after the cinematic cut.
-    final situation = world.getEntity(actor).$1.get<Situation>();
     final projectedChars =
         situation?.projectedBeats.fold<int>(
           0,
@@ -252,6 +271,7 @@ Future<BenchmarkRun> runBenchmark(ScriptedTask task) async {
     prunedThreads: pruned,
     mergedThreads: merged,
     tokenBudget: task.tokenBudget,
+    telemetry: collector.report(),
   );
 }
 

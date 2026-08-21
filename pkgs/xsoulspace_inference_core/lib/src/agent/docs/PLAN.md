@@ -28,15 +28,19 @@ memory is just one flavor of projection.
 1. **Scenario stress-testing (active).** `ScenarioRunner` + `ScenarioMetrics`
    + `ScenarioMetricsReporter` drive the real `HarnessLoop` against a real
    model (Apple Foundation) over multi-actor, multi-topic, tool-using
-   scenarios. Entrypoint: `apple_foundation/example/lib/stress_cli.dart`.
+   scenarios. Production CLI: `apple_foundation/example/lib/main_stress_cli.dart`
+   (subcommands `list`/`run`, `--json`, stable exit codes).
    See `docs/scenario_stress_testing.mdx`.
 2. **Metrics machine (done).** `MetricsCollector` + `MetricsReport` fold
    per-decision tool results and projections into trends (tokens/beats/tools),
-   with dangling-tool detection. Wired into `ScenarioRunner`.
+   with dangling-tool detection. Wired into `ScenarioRunner` and the benchmark
+   harness (`harness_benchmark.dart`).
 3. **Per-request tool isolation (done).** Each Apple Foundation `generate` owns
    its handlers under a `requestId`; Swift echoes it on `onToolCall`.
-4. **Run the real hardware e2e** — execute `stress_cli.dart` on a macOS 26+
-   Apple Intelligence host and iterate on the weak spots it surfaces.
+4. **Run the real hardware e2e (done).** Executed `main_stress_cli.dart run` on
+   this macOS 26 Apple Intelligence host; iterating on surfaced weak spots (e.g.
+   cold-start projections show `beats=0`; `tokensUsed` under-reports without
+   context; tools are advertised but not yet invoked by the model in the trace).
 5. **Wire threads/multiplayer into projection** — shared/private/derived threads,
    a2a / a2h / a2h2a. Projection follows the graph.
 6. **Angle-of-view / scale tiers** — a projection should be queryable at a scale

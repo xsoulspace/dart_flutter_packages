@@ -87,27 +87,37 @@ registry, no ref-counting.
 
 ## How to run it
 
-The CLI entrypoint is a headless Flutter macOS app (the Apple Foundation client
-is a platform plugin, so it needs a Flutter host, not `dart run`). Build verifies
-the whole stack compiles:
+The production CLI is `lib/main_stress_cli.dart` (Flutter macOS host — Apple
+Foundation is a platform plugin, so the CLI runs inside the Flutter engine).
+Build a real binary:
 
 ```bash
 cd pkgs/xsoulspace_inference_apple_foundation/example
-flutter build macos --debug
+flutter build macos -t lib/main_stress_cli.dart --release
 ```
 
-To run the stress scenario against a real Apple Intelligence model (macOS 26+):
+Run against a real Apple Intelligence model (macOS 26+) — pass entrypoint args:
 
 ```bash
-flutter run -t lib/stress_cli.dart --release --dart-define=SCENARIO=multi_actor
+flutter run -t lib/main_stress_cli.dart --debug \
+  --dart-entrypoint-args=run \
+  --dart-entrypoint-args=--scenario \
+  --dart-entrypoint-args=multi_actor
 ```
 
-The app prints a `ScenarioMetrics` report to stdout and exits 0 on success, 1
-if the engine is unavailable or any projection was truncated.
+Subcommands + flags:
 
-The same stack is covered in CI without a model via
-`test/e2e_scenario_test.dart`, which drives the real runner + tools + metrics
-against a mock handler.
+- `list` — enumerate scenarios (`--json` for machine output).
+- `run --scenario=<name> [--json] [--budget=N]` — run a scenario and print a
+  `ScenarioMetrics` report (human or JSON).
+
+Exit codes (stable contract for scripts/CI): 0 ok, 1 engine unavailable,
+2 bad args, 3 a projection exceeded the budget.
+
+The parsing/output logic in `lib/cli/stress_cli_app.dart` is engine-free and
+tested in `test/stress_cli_app_test.dart`. The full stack is covered without a
+model via `test/e2e_scenario_test.dart` (real runner + tools + metrics against
+a mock handler).
 
 ## The first scenario
 
