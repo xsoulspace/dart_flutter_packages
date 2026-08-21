@@ -1,8 +1,9 @@
 import 'package:ecsly/ecsly.dart';
 
-import 'agent.dart';
+import '../../xsoulspace_inference_core.dart';
+import 'agent_low_api.dart';
 import 'events.dart';
-import 'resources.dart';
+import 'resources/resources.dart';
 
 // ─────────────────────────────────────────────
 // Default generation handler
@@ -88,10 +89,6 @@ class DefaultGenerationHandler implements GenerationHandler {
     // structured + raw output.
     final toolCalls = response.toolCalls.isNotEmpty
         ? response.toolCalls
-              .map(
-                (c) => ToolCall(name: ToolName(c.name), arguments: c.arguments),
-              )
-              .toList()
         : parseToolCalls(response.rawOutput ?? '');
 
     final toolResults = response.toolResults;
@@ -105,23 +102,4 @@ class DefaultGenerationHandler implements GenerationHandler {
       taskId: request.taskId,
     );
   }
-}
-
-/// Parse tool calls from raw LLM output using tag-based parsing.
-///
-/// This is the default parser for raw LLM backends that don't have
-/// native tool call APIs. For backends with native tool call support
-/// (Apple Foundation, OpenAI, etc.), the [ModelRuntime] should return
-/// already-parsed [ToolCall] objects and this function is not used.
-List<ToolCall> parseToolCalls(String rawOutput) {
-  final tags = ToolTagParser.parse(rawOutput);
-  final calls = tags.where((t) => t.type == ToolTagType.call).toList();
-  return calls
-      .map(
-        (tag) => ToolCall(
-          name: ToolName(tag.toolName),
-          arguments: tag.payload ?? {},
-        ),
-      )
-      .toList();
 }

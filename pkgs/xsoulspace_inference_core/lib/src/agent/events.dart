@@ -6,7 +6,8 @@ import 'package:from_json_to_json/from_json_to_json.dart';
 
 import '../models/inference_models.dart';
 import 'agent.dart';
-import 'components.dart';
+import 'agent_low_api.dart';
+import 'data_models/data_models.dart';
 
 // ─────────────────────────────────────────────
 // Events
@@ -21,6 +22,7 @@ import 'components.dart';
 ///
 /// This replaces the old polled [ActorGenerateHandler]. Handlers are now
 /// resources the world *uses*, not objects the world is polled by.
+// ignore: one_member_abstracts
 abstract class GenerationHandler {
   /// Perform the generation and send an [ActorGenerateResponse] back to
   /// [world]'s event channel. May send [ActorGenerateStreamEvent]s first.
@@ -126,9 +128,7 @@ class ToolExecutionResult {
   final String name;
   final String? output;
 
-  Map<String, dynamic> toJson() {
-    return {"name": name, "output": output};
-  }
+  Map<String, dynamic> toJson() => {'name': name, 'output': output};
 }
 
 /// Event: a tool call that needs to be executed by the ECS world.

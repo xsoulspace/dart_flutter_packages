@@ -218,7 +218,7 @@ class InferenceResponse {
   /// return parsed calls here directly — no tag round-trip. Raw/legacy backends
   /// that emit `<call|...>` tags in [rawOutput] leave this empty; the harness
   /// falls back to tag parsing for those.
-  final List<({String name, Map<String, dynamic> arguments})> toolCalls;
+  final List<ToolCall> toolCalls;
 
   Map<String, dynamic> toJson() => {
     'task': task.name,

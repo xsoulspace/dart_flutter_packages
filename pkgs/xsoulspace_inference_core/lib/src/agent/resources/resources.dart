@@ -1,7 +1,10 @@
 import 'package:ecsly/ecsly.dart';
 
-import 'agent.dart';
-import 'events.dart';
+import '../agent_low_api.dart';
+import '../events.dart';
+import '../tools/tools.dart';
+
+export 'task_registry.dart';
 
 // ─────────────────────────────────────────────
 // Resources

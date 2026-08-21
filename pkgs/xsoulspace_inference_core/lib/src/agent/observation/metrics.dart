@@ -13,9 +13,9 @@ library;
 
 import 'package:ecsly/ecsly.dart';
 
-import 'components.dart';
-import 'narrative.dart';
-import 'resources.dart';
+import '../data_models/data_models.dart';
+import '../narrative.dart';
+import '../resources/resources.dart';
 
 // ─────────────────────────────────────────────
 // Per-decision telemetry

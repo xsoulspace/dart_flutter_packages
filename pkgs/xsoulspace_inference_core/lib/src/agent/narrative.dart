@@ -12,7 +12,7 @@ import 'dart:typed_data';
 
 import 'package:ecsly/ecsly.dart';
 
-import 'agent.dart';
+import 'agent_low_api.dart';
 
 // ─────────────────────────────────────────────
 // Enums

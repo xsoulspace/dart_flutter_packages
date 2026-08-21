@@ -1,4 +1,5 @@
-import 'agent/tool_call_parser.dart';
+import '../xsoulspace_inference_core.dart';
+import 'agent/agent.dart';
 import 'inference_result.dart';
 import 'models/inference_models.dart';
 

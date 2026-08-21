@@ -35,7 +35,8 @@ import 'dart:async';
 
 import 'package:ecsly/ecsly.dart';
 
-import 'agent_plugin.dart';
+import 'data_models/data_models.dart';
+import 'resources/resources.dart';
 
 /// Non-blocking, concurrent agent harness loop.
 ///

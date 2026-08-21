@@ -1,10 +1,8 @@
-import 'dart:async';
-
 import 'package:ecsly/ecsly.dart';
-import 'package:meta/meta.dart';
 
-import 'agent.dart';
-import 'narrative.dart';
+import '../agent_low_api.dart';
+import '../narrative.dart';
+import 'data_models.dart';
 
 // ─────────────────────────────────────────────
 // Components
@@ -257,62 +255,4 @@ class ToolResultContent implements Component {
   ToolResultContent({required this.name, required this.output});
   final String name;
   final dynamic output;
-}
-
-// ─────────────────────────────────────────────
-// Task surface
-// ─────────────────────────────────────────────
-//
-// Co-located here because [TaskId] / [TaskHandle] / [TaskRegistryResource]
-// are referenced from components, events, and resources alike; keeping them
-// together makes the import graph acyclic (components is a leaf above
-// agent.dart).
-
-/// Identity for an in-flight async task (generation, tool call, human
-/// input). Tasks are correlated across the world via [TaskRegistryResource].
-@immutable
-class TaskId {
-  const TaskId(this.value);
-  factory TaskId.create() => TaskId('${DateTime.now().microsecondsSinceEpoch}');
-  final String value;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) || (other is TaskId && value == other.value);
-
-  @override
-  int get hashCode => value.hashCode;
-}
-
-/// Cold handle to an in-flight task.
-///
-/// Holds the [Completer] that resumes the awaiting caller (e.g. a native
-/// tool bridge or a host awaiting an actor response). Completers live here —
-/// in a cold resource — never in a component, keeping the ECS hot path
-/// future-free.
-class TaskHandle {
-  TaskHandle({Completer<dynamic>? completer})
-    : completer = completer ?? Completer<dynamic>();
-  final Completer<dynamic> completer;
-}
-
-/// World resource tracking in-flight async tasks.
-///
-/// This is the single source of truth for "is there pending async work".
-/// [HarnessLoop.canSleep] checks it; systems resolve tasks by completing
-/// the associated [TaskHandle.completer].
-class TaskRegistryResource extends Resource {
-  final Map<TaskId, TaskHandle> tasks = {};
-
-  void register(TaskId id, TaskHandle handle) => tasks[id] = handle;
-
-  TaskHandle? take(TaskId id) => tasks.remove(id);
-
-  TaskHandle? peek(TaskId id) => tasks[id];
-
-  bool has(TaskId id) => tasks.containsKey(id);
-
-  int get length => tasks.length;
-
-  bool get isEmpty => tasks.isEmpty;
 }

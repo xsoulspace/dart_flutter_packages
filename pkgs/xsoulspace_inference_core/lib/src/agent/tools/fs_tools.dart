@@ -13,8 +13,8 @@ import 'dart:io';
 
 import 'package:from_json_to_json/from_json_to_json.dart';
 
-import 'structured_output/structured_output.dart';
-import 'tool_call_parser.dart';
+import '../structured_output/structured_output.dart';
+import 'tool_registry.dart';
 
 /// A file-system tool suite: `read`, `write`, `list_dir`.
 ///
@@ -29,10 +29,10 @@ ToolDef readTool() => ToolDef(
   argsSchema: SchemaBundle(
     root: FM.object('read', properties: () => [FM.prop('path', FM.string())]),
   ),
-  execute: (args) async {
+  execute: (args) {
     final params = jsonDecodeMapAs(args);
     final path = jsonDecodeString(params['path']);
-    return await File(path).readAsString();
+    return File(path).readAsString();
   },
 );
 

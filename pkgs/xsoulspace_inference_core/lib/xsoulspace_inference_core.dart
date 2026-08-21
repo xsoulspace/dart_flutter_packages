@@ -3,12 +3,6 @@ export 'package:ecsly_app/ecsly_app.dart';
 export 'package:ecsly_async_parallel/ecsly_async_parallel.dart';
 
 export 'src/agent/agent.dart';
-export 'src/agent/agent_plugin.dart';
-export 'src/agent/agency_lifecycle.dart';
-export 'src/agent/harness_loop.dart';
-export 'src/agent/metrics.dart';
-export 'src/agent/narrative.dart';
-export 'src/agent/scenario.dart';
 export 'src/inference_client.dart';
 export 'src/inference_readiness.dart';
 export 'src/inference_realtime.dart';

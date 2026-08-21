@@ -2,11 +2,11 @@ import 'package:ecsly/ecsly.dart';
 import 'package:ecsly_app/ecsly_app.dart';
 import 'package:ecsly_async_parallel/ecsly_async_parallel.dart';
 
-import 'components.dart';
 import 'events.dart';
+import 'data_models/data_models.dart';
 import 'narrative.dart';
-import 'resources.dart';
-import 'systems.dart';
+import 'resources/resources.dart';
+import 'systems/systems.dart';
 
 /// Plugin that installs the agent harness into an ecsly [World].
 ///

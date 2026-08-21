@@ -15,13 +15,14 @@ import 'dart:async';
 
 import 'package:ecsly/ecsly.dart';
 
-import 'agent.dart';
-import 'components.dart';
-import 'events.dart';
-import 'harness_loop.dart';
-import 'metrics.dart';
-import 'narrative.dart';
-import 'resources.dart';
+import '../agent_low_api.dart';
+import '../data_models/data_models.dart';
+import '../events.dart';
+import '../harness_loop.dart';
+import '../narrative.dart';
+import '../observation/observation.dart';
+import '../resources/resources.dart';
+import '../tools/tool_registry.dart';
 
 // ─────────────────────────────────────────────
 // Scenario model
@@ -71,53 +72,6 @@ class Scenario {
 // Metrics
 // ─────────────────────────────────────────────
 
-/// Metrics for one decision (one agency moment).
-class DecisionMetrics {
-  DecisionMetrics({
-    required this.actor,
-    required this.prompt,
-    required this.tokensUsed,
-    required this.projectedBeats,
-    required this.explicitAbsences,
-    required this.llmCalls,
-    required this.truncated,
-  });
-  final String actor;
-  final String prompt;
-  final int tokensUsed;
-  final int projectedBeats;
-  final List<String> explicitAbsences;
-  final int llmCalls;
-  final bool truncated;
-}
-
-/// Aggregate metrics for a whole [Scenario] run.
-class ScenarioMetrics {
-  ScenarioMetrics({
-    required this.name,
-    required this.decisions,
-    required this.totalLlmCalls,
-    required this.totalTokens,
-    required this.prunedThreads,
-    required this.mergedThreads,
-    MetricsReport? telemetry,
-  }) : telemetry = telemetry ?? MetricsReport(decisions: const []);
-  final String name;
-  final List<DecisionMetrics> decisions;
-  final int totalLlmCalls;
-  final int totalTokens;
-  final int prunedThreads;
-  final int mergedThreads;
-
-  /// Richer telemetry (tool calls/results, trends) from [MetricsCollector].
-  final MetricsReport telemetry;
-
-  double get avgTokensPerDecision =>
-      decisions.isEmpty ? 0 : totalTokens / decisions.length;
-  double get avgLlmCallsPerDecision =>
-      decisions.isEmpty ? 0 : totalLlmCalls / decisions.length;
-}
-
 // ─────────────────────────────────────────────
 // Runner
 // ─────────────────────────────────────────────
@@ -148,9 +102,8 @@ class ScenarioRunner {
     final toolRegistry = ToolRegistry();
     scenario.tools.forEach(toolRegistry.register);
     if (scenario.toolHook != null) {
-      for (final tool in await scenario.toolHook!()) {
-        toolRegistry.register(tool);
-      }
+      final tools = await scenario.toolHook!();
+      tools.forEach(toolRegistry.register);
     }
     registry.register('default', toolRegistry);
     world.flush();

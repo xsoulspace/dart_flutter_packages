@@ -3,12 +3,12 @@ import 'dart:convert';
 
 import 'package:ecsly/ecsly.dart';
 
-import '../models/inference_models.dart';
-import 'agent.dart';
-import 'components.dart';
-import 'events.dart';
-import 'narrative.dart';
-import 'resources.dart';
+import '../../models/inference_models.dart';
+import '../agent_low_api.dart';
+import '../data_models/data_models.dart';
+import '../events.dart';
+import '../narrative.dart';
+import '../resources/resources.dart';
 
 // ─────────────────────────────────────────────
 // Systems
