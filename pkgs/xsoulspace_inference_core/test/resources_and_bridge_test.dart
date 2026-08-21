@@ -120,7 +120,7 @@ void main() {
         final toolDef = ToolDef(
           name: const ToolName('echo'),
           description: 'Echoes the input',
-          parameters: const {},
+          argsSchema: const {},
           execute: (args) async => {'echoed': args},
         );
         toolRegistry.register(toolDef);
@@ -160,7 +160,7 @@ void main() {
 
         final result = await future;
         expect(result, isNotNull);
-        expect((result as ToolExecutionResult).name, 'echo');
+        expect(result.name, 'echo');
         expect(result.output, {
           'echoed': {'message': 'hi'},
         });

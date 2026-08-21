@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:from_json_to_json/from_json_to_json.dart';
 import 'package:recase/recase.dart';
 
+import '../agent/events.dart';
 import '../agent/structured_output/structured_output.dart';
 
 /// The idea is that inference task should be as atomic as possible
@@ -209,7 +210,7 @@ class InferenceResponse {
   final String? normalizedTranscript;
   final List<InferenceSpeechSegment> segments;
   final InferenceAudioArtifact? audioArtifact;
-  final List<({String name, dynamic output})> toolResults;
+  final List<ToolExecutionResult> toolResults;
 
   /// Structured tool calls parsed by the inference client.
   ///
@@ -229,6 +230,7 @@ class InferenceResponse {
     if (segments.isNotEmpty)
       'segments': segments.map((final segment) => segment.toJson()).toList(),
     if (audioArtifact != null) 'audio_artifact': audioArtifact!.toJson(),
+    'tool_results': toolResults.map((e) => e.toJson()).toList(),
     'warnings': warnings,
     'meta': meta,
   };

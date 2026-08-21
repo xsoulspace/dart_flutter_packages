@@ -1,8 +1,10 @@
 // tool_agent.dart
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:meta/meta.dart';
 
+import 'events.dart';
 import 'structured_output/foundation_schema.dart';
 
 // ─────────────────────────────────────────────
@@ -75,22 +77,23 @@ class ToolTagParser {
 // ─────────────────────────────────────────────
 // 2. Tool definition + registry
 // ─────────────────────────────────────────────
-// ignore: avoid_annotating_with_dynamic
-typedef ToolCallCallback = Future<dynamic> Function(dynamic args);
+/// [args] can be String or Map
+/// returns serialized (encoded) answer
+typedef ToolCallCallback = Future<String?> Function(Object? args);
 
 class ToolDefinition {
-  ToolDefinition({
+  const ToolDefinition({
     this.description = '',
-    this.schemaBundle = SchemaBundle.empty,
+    this.argsSchema = SchemaBundle.empty,
   });
   final String description;
-  final SchemaBundle schemaBundle;
+  final SchemaBundle argsSchema;
 
   ToolDef toDef({required ToolName name, required ToolCallCallback execute}) =>
-      ToolDef.structured(
+      ToolDef(
         name: name,
         description: description,
-        parameters: schemaBundle,
+        argsSchema: argsSchema,
         execute: execute,
       );
 }
@@ -109,34 +112,36 @@ class ToolName {
   int get hashCode => value.hashCode;
 }
 
-class ToolDef {
+class ToolDef extends ToolDefinition {
   const ToolDef({
+    required super.description,
     required this.name,
-    required this.description,
-    required this.parameters,
     required this.execute,
+    super.argsSchema = SchemaBundle.empty,
   });
-  factory ToolDef.structured({
+
+  factory ToolDef.encode({
     required ToolName name,
     required String description,
-    required SchemaBundle parameters,
-    required ToolCallCallback execute,
+    required Future<Map<String, dynamic>?> Function(Object? args) execute,
+    SchemaBundle argsSchema = SchemaBundle.empty,
   }) => ToolDef(
-    description: description,
-    execute: execute,
     name: name,
-    parameters: parameters.toJson(),
+    argsSchema: argsSchema,
+    description: description,
+    execute: (e) async {
+      final result = await execute(e);
+      return result == null ? null : jsonEncode(result);
+    },
   );
 
   final ToolName name;
-  final String description;
-  final Map<String, dynamic> parameters; // keep it simple JSON-schema-like
   final ToolCallCallback execute;
 
   Map<String, dynamic> toJson() => {
     'name': name.value,
     'description': description,
-    'parameters': parameters,
+    'parameters': argsSchema.toJson(),
   };
 }
 
@@ -147,13 +152,14 @@ class ToolRegistry {
 
   ToolDef? get(ToolName name) => _tools[name];
 
-  Map<String, dynamic>? getSchema(ToolName name) => _tools[name]?.parameters;
+  Map<String, dynamic>? getSchema(ToolName name) =>
+      _tools[name]?.argsSchema.toJson();
 
   // ignore: avoid_annotating_with_dynamic
-  Future<dynamic> execute(ToolName name, dynamic args) {
+  Future<String?> execute(ToolName name, dynamic args) {
     final tool = _tools[name];
     if (tool == null) {
-      return Future.value({'error': 'Unknown tool: $name'});
+      return Future.value(jsonEncode({'error': 'Unknown tool: $name'}));
     }
     return tool.execute(args);
   }
@@ -193,7 +199,7 @@ class ToolRuntimeState {
 // ─────────────────────────────────────────────
 // 4. System prompt (short, on-device friendly)
 // ─────────────────────────────────────────────
-
+// TODO(arenukvern): change tool protocol to make it aligned ith openai
 String buildSystemPrompt(ToolRegistry registry, String role) =>
     '''
 You are an $role. Use AVAILABLE TOOLS below accoridngly to TOOL PROTOCOL when to get, modify, provide real information.

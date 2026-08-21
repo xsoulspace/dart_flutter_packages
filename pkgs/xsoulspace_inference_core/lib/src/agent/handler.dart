@@ -94,11 +94,7 @@ class DefaultGenerationHandler implements GenerationHandler {
               .toList()
         : parseToolCalls(response.rawOutput ?? '');
 
-    // Convert InferenceResponse.toolResults to ToolExecutionResult objects.
-    // For Apple Foundation (native), these are already executed results.
-    final toolResults = response.toolResults
-        .map((r) => ToolExecutionResult(name: r.name, output: r.output))
-        .toList();
+    final toolResults = response.toolResults;
 
     return ActorGenerateResponse(
       actorEntity: request.actorEntity,

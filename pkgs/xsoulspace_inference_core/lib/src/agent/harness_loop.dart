@@ -106,7 +106,14 @@ class HarnessLoop {
     //    ScheduleJobResultQueueResource can pipeline across frames.
     syncScheduleExecutionFrame(world);
 
-    // 2. Run all schedules in deterministic order
+    // 2. Run all schedules in deterministic order. If the world was cleared
+    //    (e.g. a host switched scenarios and called world.clear()), the
+    //    schedules are gone — stop the loop instead of crashing on a missing
+    //    schedule.
+    if (!world.hasSchedule('AgencyGrant')) {
+      _running = false;
+      return;
+    }
     world.runSchedule('AgencyGrant');
     world.runSchedule('Project');
     world.runSchedule('ActorAct'); // asyncParallel — fire-and-forget

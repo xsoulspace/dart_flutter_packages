@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:ecsly/ecsly.dart';
+import 'package:from_json_to_json/from_json_to_json.dart';
 
 import '../models/inference_models.dart';
 import 'agent.dart';
@@ -108,8 +110,25 @@ class ToolCall {
 /// Result of a tool call execution.
 class ToolExecutionResult {
   const ToolExecutionResult({required this.name, required this.output});
+  factory ToolExecutionResult.encode({
+    required String name,
+    required Map<String, dynamic>? output,
+  }) => ToolExecutionResult(
+    name: name,
+    output: output == null ? null : jsonEncode(output),
+  );
+
+  factory ToolExecutionResult.fromJson(Map<String, dynamic> json) =>
+      ToolExecutionResult(
+        name: jsonDecodeString(json['name']),
+        output: jsonDecodeString(json['output']),
+      );
   final String name;
-  final dynamic output;
+  final String? output;
+
+  Map<String, dynamic> toJson() {
+    return {"name": name, "output": output};
+  }
 }
 
 /// Event: a tool call that needs to be executed by the ECS world.
@@ -172,7 +191,7 @@ class WorldToolBridge {
         ToolDef(
           name: tool.name,
           description: tool.description,
-          parameters: tool.parameters,
+          argsSchema: tool.argsSchema,
           execute: (args) => _routeToolCall(tool, args),
         ),
       );
@@ -180,12 +199,14 @@ class WorldToolBridge {
     return bridged;
   }
 
-  Future<Object?> _routeToolCall(ToolDef tool, Object? args) {
+  Future<String> _routeToolCall(ToolDef tool, Object? args) {
     final taskId = TaskId.create();
-    final completer = Completer<dynamic>();
+    final innerCompleter = Completer<ToolExecutionResult>();
+    final outsideCompleter = Completer<String>();
+
     world.getResource<TaskRegistryResource>().register(
       taskId,
-      TaskHandle(completer: completer),
+      TaskHandle(completer: innerCompleter),
     );
 
     world.events.writer<ToolCallEvent>().send(
@@ -196,7 +217,13 @@ class WorldToolBridge {
       ),
     );
 
-    return completer.future;
+    unawaited(
+      innerCompleter.future.then((result) {
+        outsideCompleter.complete(result.output);
+      }),
+    );
+
+    return outsideCompleter.future;
   }
 
   static Map<String, dynamic> _asMap(Object? args) {

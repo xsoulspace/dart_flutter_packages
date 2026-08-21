@@ -146,9 +146,7 @@ class ScenarioRunner {
     // actor to it, so the model can actually call them. This is the actor→tool
     // binding that makes the first run meaningful.
     final toolRegistry = ToolRegistry();
-    for (final tool in scenario.tools) {
-      toolRegistry.register(tool);
-    }
+    scenario.tools.forEach(toolRegistry.register);
     if (scenario.toolHook != null) {
       for (final tool in await scenario.toolHook!()) {
         toolRegistry.register(tool);

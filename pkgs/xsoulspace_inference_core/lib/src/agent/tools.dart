@@ -23,10 +23,10 @@ import 'tool_call_parser.dart';
 List<ToolDef> fsTools() => [readTool(), writeTool(), listDirTool()];
 
 /// Read a file's contents.
-ToolDef readTool() => ToolDef.structured(
+ToolDef readTool() => ToolDef(
   name: const ToolName('read'),
   description: 'Read a file',
-  parameters: SchemaBundle(
+  argsSchema: SchemaBundle(
     root: FM.object('read', properties: () => [FM.prop('path', FM.string())]),
   ),
   execute: (args) async {
@@ -37,10 +37,10 @@ ToolDef readTool() => ToolDef.structured(
 );
 
 /// Write content to a file.
-ToolDef writeTool() => ToolDef.structured(
+ToolDef writeTool() => ToolDef(
   name: const ToolName('write'),
   description: 'Write a file',
-  parameters: SchemaBundle(
+  argsSchema: SchemaBundle(
     root: FM.object(
       'write',
       properties: () => [
@@ -59,10 +59,10 @@ ToolDef writeTool() => ToolDef.structured(
 );
 
 /// List the entries of a directory.
-ToolDef listDirTool() => ToolDef.structured(
+ToolDef listDirTool() => ToolDef(
   name: const ToolName('list_dir'),
   description: 'List a directory',
-  parameters: SchemaBundle(
+  argsSchema: SchemaBundle(
     root: FM.object(
       'list_dir',
       properties: () => [FM.prop('path', FM.string())],

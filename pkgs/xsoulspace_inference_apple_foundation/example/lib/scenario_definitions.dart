@@ -14,10 +14,10 @@ import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 /// A small "current time" tool the actors can use when a decision mentions
 /// date/time. Registered statically (part of [Scenario].tools).
-ToolDef clockTool() => ToolDef.structured(
+ToolDef clockTool() => ToolDef.encode(
   name: const ToolName('clock'),
   description: 'Returns the current date and time.',
-  parameters: SchemaBundle(
+  argsSchema: SchemaBundle(
     root: FM.object(
       'ClockResult',
       properties: () => [FM.prop('iso', FM.string())],
@@ -31,10 +31,10 @@ ToolDef clockTool() => ToolDef.structured(
 /// A "web search" tool added lazily by [Scenario.toolHook] — exercises the
 /// dynamic tool-registration path (register a new tool when a decision needs
 /// it).
-ToolDef searchTool() => ToolDef.structured(
+ToolDef searchTool() => ToolDef.encode(
   name: const ToolName('web_search'),
   description: 'Searches the web (simulated) and returns a short summary.',
-  parameters: SchemaBundle(
+  argsSchema: SchemaBundle(
     root: FM.object(
       'SearchResult',
       properties: () => [

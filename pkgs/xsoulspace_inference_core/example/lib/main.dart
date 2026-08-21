@@ -8,6 +8,9 @@ import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'package:xsoulspace_inference_openrouter/xsoulspace_inference_openrouter.dart';
 import 'package:xsoulspace_state_utils/xsoulspace_state_utils.dart';
 
+/// A selectable scenario in the example UI: the scenario plus its label.
+typedef ScenarioRecord = ({Scenario scenario, String title});
+
 void main() {
   // debugProfilePlatformChannels = true;
   runApp(const MyApp());
@@ -63,6 +66,7 @@ sealed class Scenario {
   bool isInitialized = false;
   World? world;
   Entity? actor;
+  HarnessLoop? _loop;
 
   /// Build the world, register resources/handlers, and spawn the actor.
   ///
@@ -167,7 +171,9 @@ sealed class Scenario {
 
     // Drive the loop until the actor's OpenDecision is consumed.
     final loop = HarnessLoop(world: world);
+    _loop = loop;
     await loop.start(until: _waitForResponse(world, actor));
+    _loop = null;
 
     // Latest complete text beat = the model's most recent response.
     String? last;
@@ -188,6 +194,10 @@ sealed class Scenario {
 
   void dispose() {
     isInitialized = false;
+    // Stop any running loop before clearing the world, so it doesn't tick a
+    // cleared world (which would crash on a missing schedule).
+    _loop?.stop();
+    _loop = null;
     world?.clear();
     world = null;
     actor = null;
@@ -242,14 +252,23 @@ class ScenarioV2KeepPrimitiveMemory extends Scenario {
 
 /// Schema + function call for weather
 class ScenarioV3FunctionCallAndSchema extends Scenario {
+  /// Output schema for the model's final weather answer.
+  static final _outputSchema = SchemaBundle(
+    root: FM.object(
+      'answer',
+      properties: () => [FM.prop('explanation', FM.double())],
+    ),
+  );
+
   @override
   void setupWorld(World world) {
+    // TODO(arenukvern): restore character generation
     final registry = ToolRegistry();
     registry.register(
-      ToolDef.structured(
+      ToolDef.encode(
         name: ToolName('getWeatherForHour'),
         description: 'Returns weather for a specific hour of today',
-        parameters: SchemaBundle(
+        argsSchema: SchemaBundle(
           root: FM.object(
             'time',
             properties: () => [
@@ -266,11 +285,7 @@ class ScenarioV3FunctionCallAndSchema extends Scenario {
             >= 12 && < 21 => (20, 'cloudy'),
             _ => (16, "sunny"),
           };
-          return jsonEncode({
-            'hour': hour,
-            'temp': temp,
-            'condition': condition,
-          });
+          return {'hour': hour, 'temp': temp, 'condition': condition};
         },
       ),
     );
@@ -286,6 +301,11 @@ class ScenarioV3FunctionCallAndSchema extends Scenario {
   }) {
     final actor = super.spawnActor(world, scene, text, modelId: modelId);
     world.upsertComponent(actor, const ActorTools(registryName: 'default'));
+    // Give the decision a structured output schema.
+    world.upsertComponent(
+      actor,
+      OpenDecision(prompt: text, schema: _outputSchema),
+    );
     return actor;
   }
 
@@ -307,13 +327,14 @@ class ScenarioV3FunctionCallAndSchema extends Scenario {
     final world = this.world;
     final actor = this.actor;
     if (world == null || actor == null) return '';
-    world.upsertComponent(actor, OpenDecision(prompt: text));
+    world.upsertComponent(
+      actor,
+      OpenDecision(prompt: text, schema: _outputSchema),
+    );
     world.flush();
     return run();
   }
 }
-
-typedef ScenarioRecord = ({String title, Scenario scenario});
 
 class _MyHomePageState extends State<MyHomePage> {
   final _scenarioV1 = ScenarioV1SendMessageGetAnswer();

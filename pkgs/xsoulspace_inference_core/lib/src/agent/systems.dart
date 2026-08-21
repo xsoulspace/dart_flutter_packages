@@ -347,11 +347,8 @@ int _toolSchemaTokens(World world, ActorTools tools) {
   var chars = 0;
   for (final tool in registry.tools.values) {
     chars += tool.description.length;
-    try {
-      chars += jsonEncode(tool.parameters).length;
-    } catch (_) {
-      chars += tool.parameters.length;
-    }
+    final json = tool.argsSchema.toJson();
+    chars += jsonEncode(json).length;
   }
   return (chars / 4).ceil();
 }
@@ -362,6 +359,7 @@ int _toolSchemaTokens(World world, ActorTools tools) {
 /// string so the beat is keyword-indexable and projectable. It is never the
 /// source of truth.
 String _toolResultText(ToolExecutionResult result) {
+  // TODO(arenukvern): feels redundant since we storing everything structurally as it is
   final output = result.output;
   if (output is String) return '<result|${result.name}|$output>';
   return '<result|${result.name}|${jsonEncode(output)}>';
@@ -508,6 +506,7 @@ void processResponsesSystem(World world) {
     // facet index so projection can ray-trace to it later.
     final responseBeat = world.reserveEmptyEntity().entity;
     final responseBeatEntity = world.getEntity(responseBeat).$1;
+    // TODO(arenukvern): feels redundant since we storing everything structurally as it is - JsonTextContent or StructuralTextContent
     final responseText = jsonEncode(response.structuralOutput);
     responseBeatEntity.insert(TextContent(responseText));
     responseBeatEntity.insert(BeatStatus(BeatStatusEnum.complete));
@@ -527,7 +526,9 @@ void processResponsesSystem(World world) {
     for (final result in response.toolResults) {
       final toolBeat = world.reserveEmptyEntity().entity;
       final toolBeatEntity = world.getEntity(toolBeat).$1;
-      final toolText = '<result|${result.name}|${jsonEncode(result.output)}>';
+      // TODO(arenukvern): feels wrong since we already have the
+      // same logic in [processToolResultsSystem]
+      final toolText = _toolResultText(result);
       toolBeatEntity.insert(TextContent(toolText));
       toolBeatEntity.insert(BeatStatus(BeatStatusEnum.complete));
       toolBeatEntity.insert(BeatModality(BeatModalityEnum.toolCall));
@@ -587,7 +588,7 @@ void toolExecutionSystem(World world) {
         : null;
 
     if (toolRegistry == null) {
-      final result = ToolExecutionResult(
+      final result = ToolExecutionResult.encode(
         name: event.call.name.value,
         output: {'error': 'No tool registry'},
       );
@@ -600,7 +601,7 @@ void toolExecutionSystem(World world) {
 
     final toolDef = toolRegistry.get(event.call.name);
     if (toolDef == null) {
-      final result = ToolExecutionResult(
+      final result = ToolExecutionResult.encode(
         name: event.call.name.value,
         output: {'error': 'Unknown tool'},
       );
@@ -637,7 +638,7 @@ void _resolveToolTask(
   if (taskId == null) return;
   final handle = taskRegistry.take(taskId);
   if (handle != null && !handle.completer.isCompleted) {
-    handle.completer.complete(result.output);
+    handle.completer.complete(result);
   }
 }
 
