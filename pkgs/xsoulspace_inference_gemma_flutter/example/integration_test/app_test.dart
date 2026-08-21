@@ -33,7 +33,7 @@ void main() {
     expect(result.success || result.error != null, isTrue);
     if (result.success) {
       expect(result.data, isNotNull);
-      expect(result.data!.output, isA<Map<String, dynamic>>());
+      expect(result.data!.structuredOutput, isA<Map<String, dynamic>>());
     } else {
       expect(result.error!.code, isNotEmpty);
     }

@@ -73,7 +73,7 @@ class _ExamplePageState extends State<_ExamplePage> {
     );
     setState(() {
       if (result.success && result.data != null) {
-        _status = 'OK: ${result.data!.output}';
+        _status = 'OK: ${result.data!.structuredOutput}';
       } else {
         _status = 'Error: ${result.error?.code} — ${result.error?.message}';
       }

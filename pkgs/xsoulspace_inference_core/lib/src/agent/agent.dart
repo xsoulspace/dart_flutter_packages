@@ -157,7 +157,7 @@ class ModelRuntime {
       task: InferenceTask.nativelyStructuredText,
       contextFragments: contextFragments,
     );
-    final output = data?.output;
+    final output = data?.structuredOutput;
     if (output == null || output.isEmpty) {
       log('output is empty: $output');
     }

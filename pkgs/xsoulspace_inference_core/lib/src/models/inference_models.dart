@@ -168,7 +168,7 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
 
 class InferenceResponse {
   const InferenceResponse({
-    required this.output,
+    this.structuredOutput = const {},
     this.rawOutput,
     this.warnings = const <String>[],
     this.meta = const <String, dynamic>{},
@@ -183,7 +183,7 @@ class InferenceResponse {
 
   factory InferenceResponse.fromJson(final Map<String, dynamic> json) =>
       InferenceResponse(
-        output: jsonDecodeMap(json['output']),
+        structuredOutput: jsonDecodeMap(json['output']),
         rawOutput: jsonDecodeString(json['raw_output']),
         warnings: jsonDecodeListAs(json['warnings']),
         meta: jsonDecodeMap(json['meta']),
@@ -201,7 +201,7 @@ class InferenceResponse {
         },
       );
 
-  final Map<String, dynamic> output;
+  final Map<String, dynamic> structuredOutput;
   final String? rawOutput;
   final List<String> warnings;
   final Map<String, dynamic> meta;
@@ -222,7 +222,7 @@ class InferenceResponse {
 
   Map<String, dynamic> toJson() => {
     'task': task.name,
-    'output': output,
+    'output': structuredOutput,
     if (rawOutput != null) 'raw_output': rawOutput,
     if (transcript != null) 'transcript': transcript,
     if (normalizedTranscript != null)

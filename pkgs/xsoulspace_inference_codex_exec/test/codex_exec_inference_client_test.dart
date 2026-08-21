@@ -32,36 +32,33 @@ void main() {
       expect(result.error?.code, errorCodeTaskUnsupported);
     });
 
-    test(
-      'infer parses structured output from codex output file',
-      () async {
-        final temp = await Directory.systemTemp.createTemp(
-          'xsoulspace_codex_test_',
-        );
-        addTearDown(() => temp.delete(recursive: true));
+    test('infer parses structured output from codex output file', () async {
+      final temp = await Directory.systemTemp.createTemp(
+        'xsoulspace_codex_test_',
+      );
+      addTearDown(() => temp.delete(recursive: true));
 
-        final script = await _createExecutableScript(temp, _successScript());
-        final client = CodexExecInferenceClient(binaryName: script.path);
+      final script = await _createExecutableScript(temp, _successScript());
+      final client = CodexExecInferenceClient(binaryName: script.path);
 
-        final result = await client.infer(
-          _request(
-            temp.path,
-            outputSchema: const <String, dynamic>{
-              'type': 'object',
-              'required': <String>['suggestions'],
-              'properties': <String, dynamic>{
-                'suggestions': <String, dynamic>{'type': 'array'},
-              },
+      final result = await client.infer(
+        _request(
+          temp.path,
+          outputSchema: const <String, dynamic>{
+            'type': 'object',
+            'required': <String>['suggestions'],
+            'properties': <String, dynamic>{
+              'suggestions': <String, dynamic>{'type': 'array'},
             },
-          ),
-        );
+          },
+        ),
+      );
 
-        expect(result.success, isTrue);
-        final suggestions = result.data!.output['suggestions'] as List<dynamic>;
-        expect(suggestions, isNotEmpty);
-      },
-      skip: shellSkipReason,
-    );
+      expect(result.success, isTrue);
+      final suggestions =
+          result.data!.structuredOutput['suggestions'] as List<dynamic>;
+      expect(suggestions, isNotEmpty);
+    }, skip: shellSkipReason);
 
     test(
       'infer passes model and reasoning config from codexExec metadata',
@@ -245,68 +242,64 @@ void main() {
       expect(args.contains('-c'), isFalse);
     }, skip: shellSkipReason);
 
-    test(
-      'streamStructuredText emits raw chunks and completion',
-      () async {
-        final temp = await Directory.systemTemp.createTemp(
-          'xsoulspace_codex_test_',
-        );
-        addTearDown(() => temp.delete(recursive: true));
+    test('streamStructuredText emits raw chunks and completion', () async {
+      final temp = await Directory.systemTemp.createTemp(
+        'xsoulspace_codex_test_',
+      );
+      addTearDown(() => temp.delete(recursive: true));
 
-        final script = await _createExecutableScript(temp, _streamingScript());
-        final client = CodexExecInferenceClient(binaryName: script.path);
-        final session = await client.streamStructuredText(
-          _request(
-            temp.path,
-            outputSchema: const <String, dynamic>{
-              'type': 'object',
-              'required': <String>['status'],
-              'properties': <String, dynamic>{
-                'status': <String, dynamic>{'type': 'string'},
-              },
+      final script = await _createExecutableScript(temp, _streamingScript());
+      final client = CodexExecInferenceClient(binaryName: script.path);
+      final session = await client.streamStructuredText(
+        _request(
+          temp.path,
+          outputSchema: const <String, dynamic>{
+            'type': 'object',
+            'required': <String>['status'],
+            'properties': <String, dynamic>{
+              'status': <String, dynamic>{'type': 'string'},
             },
-          ),
-        );
-        addTearDown(session.dispose);
+          },
+        ),
+      );
+      addTearDown(session.dispose);
 
-        final eventsFuture = session.events.toList();
-        final result = await session.result;
-        final events = await eventsFuture;
+      final eventsFuture = session.events.toList();
+      final result = await session.result;
+      final events = await eventsFuture;
 
-        expect(result.success, isTrue);
-        expect(
-          events.any(
-            (final event) =>
-                event.type == InferenceStructuredTextStreamEventType.raw &&
-                event.rawChannel == InferenceStructuredTextRawChannel.stdout,
-          ),
-          isTrue,
-        );
-        expect(
-          events.any(
-            (final event) =>
-                event.type == InferenceStructuredTextStreamEventType.raw &&
-                event.rawChannel == InferenceStructuredTextRawChannel.stderr,
-          ),
-          isTrue,
-        );
-        expect(
-          events.any(
-            (final event) =>
-                event.type ==
-                    InferenceStructuredTextStreamEventType.partialOutput &&
-                (event.textDelta ?? '').contains('streaming stdout chunk'),
-          ),
-          isTrue,
-        );
-        expect(
-          events.last.type,
-          InferenceStructuredTextStreamEventType.completion,
-        );
-        expect(events.last.completion?.result.success, isTrue);
-      },
-      skip: shellSkipReason,
-    );
+      expect(result.success, isTrue);
+      expect(
+        events.any(
+          (final event) =>
+              event.type == InferenceStructuredTextStreamEventType.raw &&
+              event.rawChannel == InferenceStructuredTextRawChannel.stdout,
+        ),
+        isTrue,
+      );
+      expect(
+        events.any(
+          (final event) =>
+              event.type == InferenceStructuredTextStreamEventType.raw &&
+              event.rawChannel == InferenceStructuredTextRawChannel.stderr,
+        ),
+        isTrue,
+      );
+      expect(
+        events.any(
+          (final event) =>
+              event.type ==
+                  InferenceStructuredTextStreamEventType.partialOutput &&
+              (event.textDelta ?? '').contains('streaming stdout chunk'),
+        ),
+        isTrue,
+      );
+      expect(
+        events.last.type,
+        InferenceStructuredTextStreamEventType.completion,
+      );
+      expect(events.last.completion?.result.success, isTrue);
+    }, skip: shellSkipReason);
 
     test('streamStructuredText surfaces timeout completion', () async {
       final temp = await Directory.systemTemp.createTemp(
@@ -347,37 +340,33 @@ void main() {
       expect(events.last.completion?.result.error?.code, 'codex_exec_timeout');
     }, skip: shellSkipReason);
 
-    test(
-      'infer retries with fallback args for legacy codex flags',
-      () async {
-        final temp = await Directory.systemTemp.createTemp(
-          'xsoulspace_codex_test_',
-        );
-        addTearDown(() => temp.delete(recursive: true));
+    test('infer retries with fallback args for legacy codex flags', () async {
+      final temp = await Directory.systemTemp.createTemp(
+        'xsoulspace_codex_test_',
+      );
+      addTearDown(() => temp.delete(recursive: true));
 
-        final script = await _createExecutableScript(temp, _legacyScript());
-        final client = CodexExecInferenceClient(binaryName: script.path);
-        final result = await client.infer(
-          _request(
-            temp.path,
-            outputSchema: const <String, dynamic>{
-              'type': 'object',
-              'required': <String>['ok'],
-              'properties': <String, dynamic>{
-                'ok': <String, dynamic>{'type': 'boolean'},
-              },
+      final script = await _createExecutableScript(temp, _legacyScript());
+      final client = CodexExecInferenceClient(binaryName: script.path);
+      final result = await client.infer(
+        _request(
+          temp.path,
+          outputSchema: const <String, dynamic>{
+            'type': 'object',
+            'required': <String>['ok'],
+            'properties': <String, dynamic>{
+              'ok': <String, dynamic>{'type': 'boolean'},
             },
-          ),
-        );
+          },
+        ),
+      );
 
-        expect(result.success, isTrue);
-        expect(result.data!.output['ok'], isTrue);
-        expect(result.data!.warnings, isNotEmpty);
-        expect(result.data!.meta['fallback_used'], isTrue);
-        expect(result.data!.meta['attempt_count'], 2);
-      },
-      skip: shellSkipReason,
-    );
+      expect(result.success, isTrue);
+      expect(result.data!.structuredOutput['ok'], isTrue);
+      expect(result.data!.warnings, isNotEmpty);
+      expect(result.data!.meta['fallback_used'], isTrue);
+      expect(result.data!.meta['attempt_count'], 2);
+    }, skip: shellSkipReason);
 
     test('infer retries transient process errors', () async {
       final temp = await Directory.systemTemp.createTemp(
@@ -404,7 +393,7 @@ void main() {
       );
 
       expect(result.success, isTrue);
-      expect(result.data!.output['ok'], isTrue);
+      expect(result.data!.structuredOutput['ok'], isTrue);
       expect(result.data!.meta['attempt_count'], 2);
     }, skip: shellSkipReason);
 
@@ -454,38 +443,31 @@ void main() {
       expect(result.error?.code, 'engine_unavailable');
     }, skip: shellSkipReason);
 
-    test(
-      'infer maps authentication failures to codex_auth_failed',
-      () async {
-        final temp = await Directory.systemTemp.createTemp(
-          'xsoulspace_codex_test_',
-        );
-        addTearDown(() => temp.delete(recursive: true));
+    test('infer maps authentication failures to codex_auth_failed', () async {
+      final temp = await Directory.systemTemp.createTemp(
+        'xsoulspace_codex_test_',
+      );
+      addTearDown(() => temp.delete(recursive: true));
 
-        final script = await _createExecutableScript(
-          temp,
-          _authFailureScript(),
-        );
-        final client = CodexExecInferenceClient(
-          binaryName: script.path,
-          maxAttempts: 1,
-        );
-        final result = await client.infer(
-          _request(
-            temp.path,
-            outputSchema: const <String, dynamic>{'type': 'object'},
-          ),
-        );
+      final script = await _createExecutableScript(temp, _authFailureScript());
+      final client = CodexExecInferenceClient(
+        binaryName: script.path,
+        maxAttempts: 1,
+      );
+      final result = await client.infer(
+        _request(
+          temp.path,
+          outputSchema: const <String, dynamic>{'type': 'object'},
+        ),
+      );
 
-        expect(result.success, isFalse);
-        expect(result.error?.code, 'codex_auth_failed');
-        final details = result.error?.details as Map<String, dynamic>?;
-        expect(details?['auth_failure'], isTrue);
-        final remediation = details?['remediation'] as List<dynamic>?;
-        expect(remediation?.join(' '), contains('CODEX_API_KEY'));
-      },
-      skip: shellSkipReason,
-    );
+      expect(result.success, isFalse);
+      expect(result.error?.code, 'codex_auth_failed');
+      final details = result.error?.details as Map<String, dynamic>?;
+      expect(details?['auth_failure'], isTrue);
+      final remediation = details?['remediation'] as List<dynamic>?;
+      expect(remediation?.join(' '), contains('CODEX_API_KEY'));
+    }, skip: shellSkipReason);
 
     test('infer fails when working directory is missing', () async {
       final client = CodexExecInferenceClient(binaryName: '/bin/sh');
@@ -500,37 +482,30 @@ void main() {
       expect(result.error?.code, 'working_directory_not_found');
     });
 
-    test(
-      'infer fails when codex output exceeds maxOutputBytes',
-      () async {
-        final temp = await Directory.systemTemp.createTemp(
-          'xsoulspace_codex_test_',
-        );
-        addTearDown(() => temp.delete(recursive: true));
+    test('infer fails when codex output exceeds maxOutputBytes', () async {
+      final temp = await Directory.systemTemp.createTemp(
+        'xsoulspace_codex_test_',
+      );
+      addTearDown(() => temp.delete(recursive: true));
 
-        final script = await _createExecutableScript(
-          temp,
-          _largeOutputScript(),
-        );
-        final client = CodexExecInferenceClient(
-          binaryName: script.path,
-          maxOutputBytes: 120,
-        );
-        final result = await client.infer(
-          _request(
-            temp.path,
-            outputSchema: const <String, dynamic>{
-              'type': 'object',
-              'required': <String>['payload'],
-            },
-          ),
-        );
+      final script = await _createExecutableScript(temp, _largeOutputScript());
+      final client = CodexExecInferenceClient(
+        binaryName: script.path,
+        maxOutputBytes: 120,
+      );
+      final result = await client.infer(
+        _request(
+          temp.path,
+          outputSchema: const <String, dynamic>{
+            'type': 'object',
+            'required': <String>['payload'],
+          },
+        ),
+      );
 
-        expect(result.success, isFalse);
-        expect(result.error?.code, 'codex_output_too_large');
-      },
-      skip: shellSkipReason,
-    );
+      expect(result.success, isFalse);
+      expect(result.error?.code, 'codex_output_too_large');
+    }, skip: shellSkipReason);
 
     test('infer validates nested schema and reports mismatch', () async {
       final temp = await Directory.systemTemp.createTemp(
@@ -569,37 +544,33 @@ void main() {
       expect(result.error?.code, 'schema_type_mismatch');
     }, skip: shellSkipReason);
 
-    test(
-      'infer remains stable across repeated sequential requests',
-      () async {
-        final temp = await Directory.systemTemp.createTemp(
-          'xsoulspace_codex_test_',
-        );
-        addTearDown(() => temp.delete(recursive: true));
+    test('infer remains stable across repeated sequential requests', () async {
+      final temp = await Directory.systemTemp.createTemp(
+        'xsoulspace_codex_test_',
+      );
+      addTearDown(() => temp.delete(recursive: true));
 
-        final script = await _createExecutableScript(temp, _stableScript());
-        final client = CodexExecInferenceClient(binaryName: script.path);
+      final script = await _createExecutableScript(temp, _stableScript());
+      final client = CodexExecInferenceClient(binaryName: script.path);
 
-        for (var index = 0; index < 20; index++) {
-          final result = await client.infer(
-            _request(
-              temp.path,
-              prompt: 'request $index',
-              outputSchema: const <String, dynamic>{
-                'type': 'object',
-                'required': <String>['status'],
-                'properties': <String, dynamic>{
-                  'status': <String, dynamic>{'type': 'string'},
-                },
+      for (var index = 0; index < 20; index++) {
+        final result = await client.infer(
+          _request(
+            temp.path,
+            prompt: 'request $index',
+            outputSchema: const <String, dynamic>{
+              'type': 'object',
+              'required': <String>['status'],
+              'properties': <String, dynamic>{
+                'status': <String, dynamic>{'type': 'string'},
               },
-            ),
-          );
-          expect(result.success, isTrue, reason: 'failed at iteration=$index');
-          expect(result.data!.output['status'], 'ok');
-        }
-      },
-      skip: shellSkipReason,
-    );
+            },
+          ),
+        );
+        expect(result.success, isTrue, reason: 'failed at iteration=$index');
+        expect(result.data!.structuredOutput['status'], 'ok');
+      }
+    }, skip: shellSkipReason);
 
     test('infer remains stable across parallel requests', () async {
       final temp = await Directory.systemTemp.createTemp(
@@ -631,7 +602,7 @@ void main() {
 
       for (final result in results) {
         expect(result.success, isTrue);
-        expect(result.data!.output['status'], 'ok');
+        expect(result.data!.structuredOutput['status'], 'ok');
       }
     }, skip: shellSkipReason);
   });

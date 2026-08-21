@@ -199,7 +199,7 @@ class ElevenLabsTtsInferenceClient implements InferenceClient {
       return InferenceResult<InferenceResponse>.ok(
         InferenceResponse(
           task: InferenceTask.textToSpeech,
-          output: const <String, dynamic>{},
+          structuredOutput: const <String, dynamic>{},
           audioArtifact: InferenceAudioArtifact(
             filePath: outputPath,
             mimeType: mimeType,

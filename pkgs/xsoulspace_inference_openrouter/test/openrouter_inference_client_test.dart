@@ -59,7 +59,7 @@ void main() {
 
       expect(result.success, isTrue);
       expect(result.data, isNotNull);
-      expect(result.data!.output['text'], 'Hello from OpenRouter');
+      expect(result.data!.structuredOutput['text'], 'Hello from OpenRouter');
       expect(result.data!.rawOutput, 'Hello from OpenRouter');
     });
 

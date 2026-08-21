@@ -122,7 +122,7 @@ void main() {
               'schema_validation_failed',
             ], contains(result.error!.code));
           } else {
-            expect(result.data?.output, isA<Map<String, dynamic>>());
+            expect(result.data?.structuredOutput, isA<Map<String, dynamic>>());
           }
         },
       );

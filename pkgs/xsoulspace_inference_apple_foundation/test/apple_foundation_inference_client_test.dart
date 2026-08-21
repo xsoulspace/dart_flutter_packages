@@ -226,7 +226,9 @@ void main() {
         );
         final result = await client.infer(validRequest);
         expect(result.success, isTrue);
-        expect(result.data?.output, <String, dynamic>{'answer': 'hello'});
+        expect(result.data?.structuredOutput, <String, dynamic>{
+          'answer': 'hello',
+        });
         expect(result.data?.meta['provider'], 'apple_foundation');
       });
 

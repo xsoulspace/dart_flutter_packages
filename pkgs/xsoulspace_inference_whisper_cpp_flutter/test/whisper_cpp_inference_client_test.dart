@@ -57,7 +57,7 @@ void main() {
             return InferenceResult<InferenceResponse>.ok(
               InferenceResponse(
                 task: InferenceTask.speechToText,
-                output: const <String, dynamic>{},
+                structuredOutput: const <String, dynamic>{},
                 transcript: 'low latency incremental',
                 normalizedTranscript: 'low latency incremental',
               ),

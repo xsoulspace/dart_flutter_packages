@@ -236,7 +236,7 @@ class CursorAgentInferenceClient implements InferenceClient {
 
       return InferenceResult<InferenceResponse>.ok(
         InferenceResponse(
-          output: normalizedOutput is Map<String, dynamic>
+          structuredOutput: normalizedOutput is Map<String, dynamic>
               ? normalizedOutput
               : parsed.data!,
           rawOutput: normalizedAssistantText,

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:from_json_to_json/from_json_to_json.dart';
@@ -98,7 +97,7 @@ sealed class Scenario {
     );
 
     // Bind stable model ids so the actor can reference them via [ActorModel].
-    final appleModelId = ModelId('model-apple');
+    final appleModelId = ModelId('apple-foundation');
     final openRouterModelId = ModelId('model-openrouter');
     router.models[appleModelId] = Model(
       id: appleModelId,
@@ -252,13 +251,38 @@ class ScenarioV2KeepPrimitiveMemory extends Scenario {
 
 /// Schema + function call for weather
 class ScenarioV3FunctionCallAndSchema extends Scenario {
-  /// Output schema for the model's final weather answer.
-  static final _outputSchema = SchemaBundle(
-    root: FM.object(
-      'answer',
-      properties: () => [FM.prop('explanation', FM.double())],
-    ),
-  );
+  SchemaBundle get _characterGenOutputSchema {
+    final npcSchema = FM.object(
+      'Npc',
+      description: 'A character that can order coffee',
+      properties: () => [
+        FM.prop('name', description: 'First name, Second Name', FM.string()),
+        FM.prop('level', FM.double(guides: [RangeGuide(1, 10)])),
+        FM.prop('attributes', FM.array(FM.ref('Attribute'), min: 1, max: 2)),
+        FM.prop('encounter', FM.ref('Encounter')),
+      ],
+    );
+
+    final attributeSchema = FM.enum_('Attribute', ['bold', 'tired', 'hungry']);
+
+    final encounterSchema = FM.anyOf('Encounter', [
+      FM.object(
+        'OrderCoffee',
+        properties: () => [FM.prop('drink', FM.string())],
+      ),
+      FM.object(
+        'WantToTalkToManager',
+        properties: () => [FM.prop('complaint', FM.string())],
+      ),
+    ]);
+
+    // Root + dependencies
+    final schema = SchemaBundle(
+      root: npcSchema,
+      dependencies: [attributeSchema, encounterSchema],
+    );
+    return schema;
+  }
 
   @override
   void setupWorld(World world) {
@@ -304,7 +328,15 @@ class ScenarioV3FunctionCallAndSchema extends Scenario {
     // Give the decision a structured output schema.
     world.upsertComponent(
       actor,
-      OpenDecision(prompt: text, schema: _outputSchema),
+      OpenDecision(
+        prompt: text,
+        schema: SchemaBundle(
+          root: FM.object(
+            'weather',
+            properties: () => [FM.prop('condition', FM.double())],
+          ),
+        ),
+      ),
     );
     return actor;
   }
@@ -329,7 +361,7 @@ class ScenarioV3FunctionCallAndSchema extends Scenario {
     if (world == null || actor == null) return '';
     world.upsertComponent(
       actor,
-      OpenDecision(prompt: text, schema: _outputSchema),
+      OpenDecision(prompt: text, schema: _characterGenOutputSchema),
     );
     world.flush();
     return run();

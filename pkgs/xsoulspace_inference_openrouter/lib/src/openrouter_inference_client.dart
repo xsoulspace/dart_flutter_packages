@@ -20,9 +20,9 @@ enum OpenRouterModelNames implements ModelName { openRouter }
 /// ## Tool calls
 ///
 /// OpenRouter returns native `tool_calls` in the response JSON. This client
-/// parses them and re-emits them in the tag format (`<call|name|{json}>`) in
-/// [InferenceResponse.rawOutput], so the harness's
-/// [DefaultGenerationHandler] picks them up via `parseToolCalls` and routes
+/// parses them and re-emits them as
+/// [InferenceResponse.toolCalls], so the harness's
+/// [DefaultGenerationHandler] could route
 /// them to the world's `toolExecutionSystem` — the same path as raw LLM
 /// backends. The client never executes tools itself.
 class OpenRouterInferenceClient implements InferenceClient {
@@ -216,18 +216,19 @@ class OpenRouterInferenceClient implements InferenceClient {
   }
 
   List<Map<String, dynamic>> _buildTools(final ToolRegistry registry) {
-    return registry.getToolsJsons().map((tool) {
-      final name = tool['name'];
-      final nameStr = name is ToolName ? (name).value : '$name';
-      return <String, dynamic>{
+    final functions = <Map<String, dynamic>>[];
+    for (var MapEntry(key: name, value: tool) in registry.tools.entries) {
+      functions.add(<String, dynamic>{
         'type': 'function',
         'function': {
-          'name': nameStr,
-          'description': tool['description'],
-          'parameters': tool['parameters'],
+          'name': name.value,
+          'description': tool.description,
+          'parameters': tool.argsSchema.toJson(),
         },
-      };
-    }).toList();
+      });
+    }
+
+    return functions;
   }
 
   /// Parse the OpenRouter chat completion response into an [InferenceResponse].
@@ -275,7 +276,7 @@ class OpenRouterInferenceClient implements InferenceClient {
     }
 
     return InferenceResponse(
-      output: output,
+      structuredOutput: output,
       rawOutput: contentStr,
       task: InferenceTask.text,
       toolCalls: parsedCalls,

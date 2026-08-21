@@ -62,7 +62,7 @@ final class NativeSherpaOnnxBatchBackend {
       return InferenceResult<InferenceResponse>.ok(
         InferenceResponse(
           task: InferenceTask.speechToText,
-          output: const <String, dynamic>{},
+          structuredOutput: const <String, dynamic>{},
           transcript: result.transcript,
           normalizedTranscript: normalizeTranscript(result.transcript),
           segments: result.segments

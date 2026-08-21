@@ -69,7 +69,7 @@ void main() {
             return InferenceResult<InferenceResponse>.ok(
               InferenceResponse(
                 task: InferenceTask.speechToText,
-                output: const <String, dynamic>{},
+                structuredOutput: const <String, dynamic>{},
                 transcript: 'arena voice',
                 normalizedTranscript: 'arena voice',
                 meta: const <String, dynamic>{'provider': 'sherpa_onnx'},

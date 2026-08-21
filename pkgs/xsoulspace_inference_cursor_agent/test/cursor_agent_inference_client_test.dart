@@ -61,7 +61,8 @@ void main() {
         );
 
         expect(result.success, isTrue);
-        final suggestions = result.data!.output['suggestions'] as List<dynamic>;
+        final suggestions =
+            result.data!.structuredOutput['suggestions'] as List<dynamic>;
         expect(suggestions, isNotEmpty);
         expect(result.data!.meta['cursor_session_id'], 'session-ok');
         expect(
@@ -97,7 +98,7 @@ void main() {
       );
 
       expect(result.success, isTrue);
-      expect(result.data!.output['ok'], isTrue);
+      expect(result.data!.structuredOutput['ok'], isTrue);
       expect(result.data!.meta['attempt_count'], 2);
     }, skip: shellSkipReason);
 
@@ -147,38 +148,31 @@ void main() {
       expect(result.error?.code, 'engine_unavailable');
     }, skip: shellSkipReason);
 
-    test(
-      'infer maps authentication failures to cursor_auth_failed',
-      () async {
-        final temp = await Directory.systemTemp.createTemp(
-          'xsoulspace_cursor_test_',
-        );
-        addTearDown(() => temp.delete(recursive: true));
+    test('infer maps authentication failures to cursor_auth_failed', () async {
+      final temp = await Directory.systemTemp.createTemp(
+        'xsoulspace_cursor_test_',
+      );
+      addTearDown(() => temp.delete(recursive: true));
 
-        final script = await _createExecutableScript(
-          temp,
-          _authFailureScript(),
-        );
-        final client = CursorAgentInferenceClient(
-          binaryName: script.path,
-          maxAttempts: 1,
-        );
-        final result = await client.infer(
-          _request(
-            temp.path,
-            outputSchema: const <String, dynamic>{'type': 'object'},
-          ),
-        );
+      final script = await _createExecutableScript(temp, _authFailureScript());
+      final client = CursorAgentInferenceClient(
+        binaryName: script.path,
+        maxAttempts: 1,
+      );
+      final result = await client.infer(
+        _request(
+          temp.path,
+          outputSchema: const <String, dynamic>{'type': 'object'},
+        ),
+      );
 
-        expect(result.success, isFalse);
-        expect(result.error?.code, 'cursor_auth_failed');
-        final details = result.error?.details as Map<String, dynamic>?;
-        expect(details?['auth_failure'], isTrue);
-        final remediation = details?['remediation'] as List<dynamic>?;
-        expect(remediation?.join(' '), contains('CURSOR_API_KEY'));
-      },
-      skip: shellSkipReason,
-    );
+      expect(result.success, isFalse);
+      expect(result.error?.code, 'cursor_auth_failed');
+      final details = result.error?.details as Map<String, dynamic>?;
+      expect(details?['auth_failure'], isTrue);
+      final remediation = details?['remediation'] as List<dynamic>?;
+      expect(remediation?.join(' '), contains('CURSOR_API_KEY'));
+    }, skip: shellSkipReason);
 
     test('infer fails when working directory is missing', () async {
       final client = CursorAgentInferenceClient(binaryName: '/bin/sh');
@@ -325,7 +319,7 @@ void main() {
       );
 
       expect(result.success, isTrue);
-      expect(result.data!.output['status'], 'ok');
+      expect(result.data!.structuredOutput['status'], 'ok');
       expect(result.data!.rawOutput, '{"status":"ok"}');
     }, skip: shellSkipReason);
 
@@ -355,7 +349,10 @@ void main() {
       );
 
       expect(result.success, isTrue, reason: '${result.error?.toJson()}');
-      expect(result.data!.output['summary'], 'Applied the requested edit.');
+      expect(
+        result.data!.structuredOutput['summary'],
+        'Applied the requested edit.',
+      );
       expect(result.data!.rawOutput, contains('changedFiles'));
     }, skip: shellSkipReason);
 
@@ -401,124 +398,117 @@ void main() {
       );
 
       expect(result.success, isTrue, reason: '${result.error?.toJson()}');
-      expect(result.data!.output['summary'], 'Prompt-only update applied.');
-      expect(result.data!.output['changedFiles'], <String>['lib/main.dart']);
-      expect(result.data!.output['warnings'], <String>[
+      expect(
+        result.data!.structuredOutput['summary'],
+        'Prompt-only update applied.',
+      );
+      expect(result.data!.structuredOutput['changedFiles'], <String>[
+        'lib/main.dart',
+      ]);
+      expect(result.data!.structuredOutput['warnings'], <String>[
         'Double-check spacing.',
       ]);
-      expect(result.data!.output['validationSteps'], <String>[
+      expect(result.data!.structuredOutput['validationSteps'], <String>[
         'Hot reload and verify',
       ]);
     }, skip: shellSkipReason);
 
-    test(
-      'infer remains stable across repeated sequential requests',
-      () async {
-        final temp = await Directory.systemTemp.createTemp(
-          'xsoulspace_cursor_test_',
-        );
-        addTearDown(() => temp.delete(recursive: true));
+    test('infer remains stable across repeated sequential requests', () async {
+      final temp = await Directory.systemTemp.createTemp(
+        'xsoulspace_cursor_test_',
+      );
+      addTearDown(() => temp.delete(recursive: true));
 
-        final script = await _createExecutableScript(temp, _stableScript());
-        final client = CursorAgentInferenceClient(binaryName: script.path);
+      final script = await _createExecutableScript(temp, _stableScript());
+      final client = CursorAgentInferenceClient(binaryName: script.path);
 
-        for (var index = 0; index < 20; index++) {
-          final result = await client.infer(
-            _request(
-              temp.path,
-              prompt: 'request $index',
-              outputSchema: const <String, dynamic>{
-                'type': 'object',
-                'required': <String>['status'],
-                'properties': <String, dynamic>{
-                  'status': <String, dynamic>{'type': 'string'},
-                },
-              },
-            ),
-          );
-          expect(result.success, isTrue, reason: 'failed at iteration=$index');
-          expect(result.data!.output['status'], 'ok');
-        }
-      },
-      skip: shellSkipReason,
-    );
-
-    test(
-      'infer passes model from metadata inferenceModel to CLI',
-      () async {
-        final temp = await Directory.systemTemp.createTemp(
-          'xsoulspace_cursor_test_',
-        );
-        addTearDown(() => temp.delete(recursive: true));
-
-        final argsPath = '${temp.path}/args.txt';
-        final script = await _createExecutableScript(
-          temp,
-          _argumentCaptureScript(argsPath),
-        );
-        final client = CursorAgentInferenceClient(binaryName: script.path);
-
+      for (var index = 0; index < 20; index++) {
         final result = await client.infer(
           _request(
             temp.path,
+            prompt: 'request $index',
             outputSchema: const <String, dynamic>{
               'type': 'object',
-              'required': <String>['ok'],
+              'required': <String>['status'],
               'properties': <String, dynamic>{
-                'ok': <String, dynamic>{'type': 'boolean'},
+                'status': <String, dynamic>{'type': 'string'},
               },
-            },
-            metadata: const <String, dynamic>{
-              'inferenceModel': 'claude-3-5-sonnet',
             },
           ),
         );
+        expect(result.success, isTrue, reason: 'failed at iteration=$index');
+        expect(result.data!.structuredOutput['status'], 'ok');
+      }
+    }, skip: shellSkipReason);
 
-        expect(result.success, isTrue);
-        final args = File(argsPath).readAsLinesSync();
-        expect(
-          args,
-          containsAllInOrder(<String>['--model', 'claude-3-5-sonnet']),
-        );
-      },
-      skip: shellSkipReason,
-    );
+    test('infer passes model from metadata inferenceModel to CLI', () async {
+      final temp = await Directory.systemTemp.createTemp(
+        'xsoulspace_cursor_test_',
+      );
+      addTearDown(() => temp.delete(recursive: true));
 
-    test(
-      'infer passes model from metadata cursorAgentModel to CLI',
-      () async {
-        final temp = await Directory.systemTemp.createTemp(
-          'xsoulspace_cursor_test_',
-        );
-        addTearDown(() => temp.delete(recursive: true));
+      final argsPath = '${temp.path}/args.txt';
+      final script = await _createExecutableScript(
+        temp,
+        _argumentCaptureScript(argsPath),
+      );
+      final client = CursorAgentInferenceClient(binaryName: script.path);
 
-        final argsPath = '${temp.path}/args.txt';
-        final script = await _createExecutableScript(
-          temp,
-          _argumentCaptureScript(argsPath),
-        );
-        final client = CursorAgentInferenceClient(binaryName: script.path);
-
-        final result = await client.infer(
-          _request(
-            temp.path,
-            outputSchema: const <String, dynamic>{
-              'type': 'object',
-              'required': <String>['ok'],
-              'properties': <String, dynamic>{
-                'ok': <String, dynamic>{'type': 'boolean'},
-              },
+      final result = await client.infer(
+        _request(
+          temp.path,
+          outputSchema: const <String, dynamic>{
+            'type': 'object',
+            'required': <String>['ok'],
+            'properties': <String, dynamic>{
+              'ok': <String, dynamic>{'type': 'boolean'},
             },
-            metadata: const <String, dynamic>{'cursorAgentModel': 'gpt-4o'},
-          ),
-        );
+          },
+          metadata: const <String, dynamic>{
+            'inferenceModel': 'claude-3-5-sonnet',
+          },
+        ),
+      );
 
-        expect(result.success, isTrue);
-        final args = File(argsPath).readAsLinesSync();
-        expect(args, containsAllInOrder(<String>['--model', 'gpt-4o']));
-      },
-      skip: shellSkipReason,
-    );
+      expect(result.success, isTrue);
+      final args = File(argsPath).readAsLinesSync();
+      expect(
+        args,
+        containsAllInOrder(<String>['--model', 'claude-3-5-sonnet']),
+      );
+    }, skip: shellSkipReason);
+
+    test('infer passes model from metadata cursorAgentModel to CLI', () async {
+      final temp = await Directory.systemTemp.createTemp(
+        'xsoulspace_cursor_test_',
+      );
+      addTearDown(() => temp.delete(recursive: true));
+
+      final argsPath = '${temp.path}/args.txt';
+      final script = await _createExecutableScript(
+        temp,
+        _argumentCaptureScript(argsPath),
+      );
+      final client = CursorAgentInferenceClient(binaryName: script.path);
+
+      final result = await client.infer(
+        _request(
+          temp.path,
+          outputSchema: const <String, dynamic>{
+            'type': 'object',
+            'required': <String>['ok'],
+            'properties': <String, dynamic>{
+              'ok': <String, dynamic>{'type': 'boolean'},
+            },
+          },
+          metadata: const <String, dynamic>{'cursorAgentModel': 'gpt-4o'},
+        ),
+      );
+
+      expect(result.success, isTrue);
+      final args = File(argsPath).readAsLinesSync();
+      expect(args, containsAllInOrder(<String>['--model', 'gpt-4o']));
+    }, skip: shellSkipReason);
 
     test('infer uses defaultModel when metadata has no model', () async {
       final temp = await Directory.systemTemp.createTemp(
@@ -584,7 +574,7 @@ void main() {
 
       for (final result in results) {
         expect(result.success, isTrue);
-        expect(result.data!.output['status'], 'ok');
+        expect(result.data!.structuredOutput['status'], 'ok');
       }
     }, skip: shellSkipReason);
   });

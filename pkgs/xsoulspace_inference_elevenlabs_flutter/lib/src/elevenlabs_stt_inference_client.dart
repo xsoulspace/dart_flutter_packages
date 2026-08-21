@@ -215,7 +215,7 @@ class ElevenLabsSttInferenceClient implements InferenceClient {
       return InferenceResult<InferenceResponse>.ok(
         InferenceResponse(
           task: InferenceTask.speechToText,
-          output: const <String, dynamic>{},
+          structuredOutput: const <String, dynamic>{},
           transcript: transcript,
           normalizedTranscript: normalizedTranscript,
           segments: segments,

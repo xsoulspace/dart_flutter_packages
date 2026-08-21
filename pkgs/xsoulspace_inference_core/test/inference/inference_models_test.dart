@@ -79,7 +79,7 @@ void main() {
   test('InferenceResponse speech payload serialization round-trips', () {
     const response = InferenceResponse(
       task: InferenceTask.speechToText,
-      output: <String, dynamic>{},
+      structuredOutput: <String, dynamic>{},
       transcript: 'Hello, world.',
       normalizedTranscript: 'Hello world',
       segments: <InferenceSpeechSegment>[
@@ -155,7 +155,7 @@ void main() {
       completion: InferenceStructuredTextCompletion(
         result: InferenceResult<InferenceResponse>.ok(
           const InferenceResponse(
-            output: <String, dynamic>{'ok': true},
+            structuredOutput: <String, dynamic>{'ok': true},
             rawOutput: '{"ok":true}',
           ),
           meta: const <String, dynamic>{'attempt_count': 2},
@@ -284,7 +284,7 @@ final class _FakeStructuredTextStreamingClient
     final InferenceRequest request, {
     ToolRegistry? toolRegistry,
   }) async => InferenceResult<InferenceResponse>.ok(
-    const InferenceResponse(output: <String, dynamic>{'ok': true}),
+    const InferenceResponse(structuredOutput: <String, dynamic>{'ok': true}),
   );
 
   @override
@@ -318,7 +318,9 @@ final class _FakeStructuredTextStreamSession
   @override
   Future<InferenceResult<InferenceResponse>> get result async =>
       InferenceResult<InferenceResponse>.ok(
-        const InferenceResponse(output: <String, dynamic>{'ok': true}),
+        const InferenceResponse(
+          structuredOutput: <String, dynamic>{'ok': true},
+        ),
       );
 
   @override

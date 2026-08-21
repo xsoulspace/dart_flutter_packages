@@ -58,7 +58,7 @@ void main() {
           isTrue,
           reason: result.error?.toJson().toString(),
         );
-        expect(result.data?.output['status'], 'ok');
+        expect(result.data?.structuredOutput['status'], 'ok');
       },
       skip: skipReason,
       timeout: const Timeout(Duration(minutes: 2)),
@@ -95,7 +95,7 @@ void main() {
             isTrue,
             reason: 'run=$index error=${result.error?.toJson()}',
           );
-          expect(result.data?.output['status'], 'ok');
+          expect(result.data?.structuredOutput['status'], 'ok');
         }
       },
       skip: skipReason,

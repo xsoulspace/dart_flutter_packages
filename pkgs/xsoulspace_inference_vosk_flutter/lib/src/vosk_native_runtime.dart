@@ -53,7 +53,7 @@ final class NativeVoskBatchBackend {
       return InferenceResult<InferenceResponse>.ok(
         InferenceResponse(
           task: InferenceTask.speechToText,
-          output: <String, dynamic>{
+          structuredOutput: <String, dynamic>{
             if (result.alternatives.isNotEmpty)
               'alternatives': result.alternatives,
           },

@@ -141,40 +141,45 @@ class AppleFoundationInferenceClient implements InferenceClient {
             meta: <String, dynamic>{'provider': id},
           );
         }
+        InferenceResponse response;
+        final meta = <String, dynamic>{'provider': id};
+        final isStructuredOutput = schema.isNotEmpty;
+        if (isStructuredOutput) {
+          final parsed = parseStrictJsonObject(rawOutput);
+          final data = parsed.data;
+          if (!parsed.success || data == null) {
+            return InferenceResult<InferenceResponse>.fail(
+              code: parsed.error?.code ?? 'json_parse_failed',
+              message: parsed.error?.message ?? 'Failed to parse Apple FM JSON',
+              details: parsed.error?.details ?? _truncate(rawOutput),
+              meta: <String, dynamic>{'provider': id},
+            );
+          }
 
-        final parsed = parseStrictJsonObject(rawOutput);
-        if (!parsed.success || parsed.data == null) {
-          return InferenceResult<InferenceResponse>.fail(
-            code: parsed.error?.code ?? 'json_parse_failed',
-            message: parsed.error?.message ?? 'Failed to parse Apple FM JSON',
-            details: parsed.error?.details ?? _truncate(rawOutput),
-            meta: <String, dynamic>{'provider': id},
+          final schemaValidation = validateJsonAgainstSchema(
+            value: data,
+            schema: request.outputSchema,
           );
-        }
-
-        final schemaValidation = validateJsonAgainstSchema(
-          value: parsed.data!,
-          schema: request.outputSchema,
-        );
-        if (!schemaValidation.success) {
-          return InferenceResult<InferenceResponse>.fail(
-            code: schemaValidation.error?.code ?? 'schema_validation_failed',
-            message:
-                schemaValidation.error?.message ??
-                'Apple FM output does not match schema',
-            details: schemaValidation.error?.details,
-            meta: <String, dynamic>{'provider': id},
-          );
-        }
-
-        return InferenceResult<InferenceResponse>.ok(
-          InferenceResponse(
-            output: parsed.data!,
+          if (!schemaValidation.success) {
+            return InferenceResult<InferenceResponse>.fail(
+              code: schemaValidation.error?.code ?? 'schema_validation_failed',
+              message:
+                  schemaValidation.error?.message ??
+                  'Apple FM output does not match schema',
+              details: schemaValidation.error?.details,
+              meta: <String, dynamic>{'provider': id},
+            );
+          }
+          response = InferenceResponse(
+            structuredOutput: data,
             rawOutput: rawOutput,
-            meta: <String, dynamic>{'provider': id},
-          ),
-          meta: <String, dynamic>{'provider': id},
-        );
+            meta: meta,
+          );
+        } else {
+          response = InferenceResponse(rawOutput: rawOutput, meta: meta);
+        }
+
+        return InferenceResult<InferenceResponse>.ok(response, meta: meta);
       } finally {
         // Release this request's handlers (isolated per request).
         if (toolRegistry != null) _api.endRequest(requestId);

@@ -98,7 +98,7 @@ class DefaultGenerationHandler implements GenerationHandler {
 
     return ActorGenerateResponse(
       actorEntity: request.actorEntity,
-      structuralOutput: response.output,
+      structuralOutput: response.structuredOutput,
       rawOutput: response.rawOutput ?? '',
       toolCalls: toolCalls,
       toolResults: toolResults,

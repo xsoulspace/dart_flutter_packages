@@ -333,7 +333,7 @@ class CodexExecInferenceClient
 
       final result = InferenceResult<InferenceResponse>.ok(
         InferenceResponse(
-          output: parsed.data!,
+          structuredOutput: parsed.data!,
           rawOutput: rawOutput,
           warnings: warnings,
           meta: meta,

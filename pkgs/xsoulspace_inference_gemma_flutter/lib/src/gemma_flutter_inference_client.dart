@@ -139,7 +139,7 @@ class GemmaFlutterInferenceClient implements InferenceClient {
 
         return InferenceResult<InferenceResponse>.ok(
           InferenceResponse(
-            output: parsed.data!,
+            structuredOutput: parsed.data!,
             rawOutput: rawOutput,
             meta: <String, dynamic>{'provider': id},
           ),
