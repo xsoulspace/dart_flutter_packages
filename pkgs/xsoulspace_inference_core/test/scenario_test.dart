@@ -56,18 +56,16 @@ void main() {
     final scenario = Scenario(
       name: 'tools',
       tools: [
-        ToolDef.structured(
+        ToolDef(
           name: const ToolName('static_tool'),
           description: 'd',
-          parameters: SchemaBundle.empty,
           execute: (args) async => 'static',
         ),
       ],
       toolHook: () async => [
-        ToolDef.structured(
+        ToolDef(
           name: const ToolName('dynamic_tool'),
           description: 'd',
-          parameters: SchemaBundle.empty,
           execute: (args) async => 'dynamic',
         ),
       ],

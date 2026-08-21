@@ -117,10 +117,9 @@ void main() {
       'routes a native tool call through the world and resolves the task',
       () async {
         final toolRegistry = ToolRegistry();
-        final toolDef = ToolDef(
+        final toolDef = ToolDef.encode(
           name: const ToolName('echo'),
           description: 'Echoes the input',
-          argsSchema: const {},
           execute: (args) async => {'echoed': args},
         );
         toolRegistry.register(toolDef);
@@ -160,8 +159,7 @@ void main() {
 
         final result = await future;
         expect(result, isNotNull);
-        expect(result.name, 'echo');
-        expect(result.output, {
+        expect(result, {
           'echoed': {'message': 'hi'},
         });
 

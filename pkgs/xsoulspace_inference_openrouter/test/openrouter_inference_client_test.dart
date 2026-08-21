@@ -121,10 +121,9 @@ void main() {
 
       final registry = ToolRegistry();
       registry.register(
-        ToolDef.structured(
+        ToolDef(
           name: ToolName('get_weather'),
           description: 'Get weather',
-          parameters: SchemaBundle.empty,
           execute: (args) async => 'sunny',
         ),
       );
