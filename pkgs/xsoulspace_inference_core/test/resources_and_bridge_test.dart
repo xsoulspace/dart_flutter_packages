@@ -7,6 +7,8 @@
 /// the [WorldToolBridge] native-routing path.
 library;
 
+import 'dart:convert';
+
 import 'package:test/test.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
@@ -33,6 +35,20 @@ void main() {
 
       expect(resource.get('default'), same(registry));
       expect(resource.get('nonexistent'), isNull);
+    });
+  });
+
+  group('ToolDef serialization (Apple native tool path)', () {
+    test('getToolsJsons emits string names and JSON-serializable payloads', () {
+      final registry = ToolRegistry()..register(readTool());
+      final jsons = registry.getToolsJsons();
+      expect(jsons, hasLength(1));
+      final tool = jsons.first;
+      // The name must be a plain String (Swift does `json["name"] as! String`).
+      expect(tool['name'], isA<String>());
+      expect(tool['name'], 'read');
+      // The whole payload must be JSON-encodable (no ToolName objects).
+      expect(() => jsonEncode(jsons), returnsNormally);
     });
   });
 

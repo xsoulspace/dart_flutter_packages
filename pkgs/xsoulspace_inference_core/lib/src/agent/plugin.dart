@@ -70,7 +70,8 @@ class AgentPlugin extends Plugin {
       ..registerObjectComponent<SummaryThread>()
       ..registerObjectComponent<SummarizesBeats>()
       ..registerObjectComponent<ToolResultContent>()
-      ..registerObjectComponent<IdentityBeat>();
+      ..registerObjectComponent<IdentityBeat>()
+      ..registerObjectComponent<RetryCount>();
 
     // Resources
     world

@@ -237,6 +237,16 @@ class IdentityBeat implements Component {
   const IdentityBeat();
 }
 
+/// Tracks how many times an actor's empty-response retry has fired.
+///
+/// Guards [processResponsesSystem]'s retry-on-empty path so a persistently
+/// empty model response cannot loop forever. Once [maxRetries] is reached the
+/// actor stops retrying and the decision is dropped.
+class RetryCount implements Component {
+  RetryCount(this.value);
+  int value;
+}
+
 /// Structured result of a tool call, stored on the tool-result beat.
 ///
 /// Unlike a stringified `<result|...>` blob, this keeps the tool name and its

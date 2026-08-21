@@ -392,6 +392,11 @@ Future<void> actorActSystem(World world) async {
   final taskRegistry = world.getResource<TaskRegistryResource>();
 
   for (final (entity, actor, _, model, situation) in actorsWithAgency) {
+    // Never re-dispatch an actor that already has an in-flight request —
+    // otherwise the schedule re-fires the same actor endlessly, flooding the
+    // handler while runtime.generate is still awaiting a response.
+    if (entity.has<AwaitingResponse>()) continue;
+
     final systemPrompt = entity.get<ActorSystemPrompt>();
 
     final escalate = entity.has<EscalationRequest>();
@@ -532,15 +537,25 @@ void processResponsesSystem(World world) {
 
     // Consume Agency + AwaitingResponse + OpenDecision — actor responded.
     if (response.structuralOutput.isEmpty && response.rawOutput.isEmpty) {
-      we.insert(
-        const OpenDecision(
-          prompt:
-              'Error: LLM returned empty response. Retry with tighter context.',
-        ),
-      );
+      // Retry on empty, but cap it so a persistently empty model cannot loop
+      // forever. After [maxRetries] the decision is dropped.
+      const maxRetries = 3;
+      final retries = we.get<RetryCount>()?.value ?? 0;
+      if (retries < maxRetries) {
+        we.insert(RetryCount(retries + 1));
+        we.insert(
+          const OpenDecision(
+            prompt:
+                'Error: LLM returned empty response. Retry with tighter context.',
+          ),
+        );
+      } else {
+        we.remove<OpenDecision>();
+      }
     } else {
       // Remove the OpenDecision — it has been resolved
       we.remove<OpenDecision>();
+      we.remove<RetryCount>();
     }
     we.remove<Agency>();
     we.remove<AwaitingResponse>();
