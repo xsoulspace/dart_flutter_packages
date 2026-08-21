@@ -56,7 +56,10 @@ enum InferenceAudioSource {
 }
 
 /// in apple, [contextFragments] will become Transcript.prompt
-/// TODO(arenukvern): make it more native for convertion fragments -> transcript
+// TODO(arenukvern): make it more native i.e. apple -> transcript
+/// i.e. embrace different views - completion api for openai, apple transcript
+/// etc...
+/// or just text
 extension type const InferenceRequest._(Map<String, dynamic> value) {
   factory InferenceRequest({
     required String prompt,

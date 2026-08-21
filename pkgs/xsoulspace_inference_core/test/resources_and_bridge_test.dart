@@ -88,7 +88,7 @@ void main() {
         structuralOutput: {'text': '4'},
         rawOutput: '4',
         toolCalls: [
-          ToolCall(name: ToolName('calc'), arguments: {'expr': '2+2'}),
+          const ToolCall(name: ToolName('calc'), arguments: {'expr': '2+2'}),
         ],
       );
 
@@ -103,7 +103,7 @@ void main() {
 
   group('ToolCall', () {
     test('holds name and arguments', () {
-      final call = ToolCall(
+      const call = ToolCall(
         name: ToolName('search'),
         arguments: {'query': 'weather'},
       );
@@ -118,7 +118,7 @@ void main() {
       () async {
         final toolRegistry = ToolRegistry();
         final toolDef = ToolDef(
-          name: ToolName('echo'),
+          name: const ToolName('echo'),
           description: 'Echoes the input',
           parameters: const {},
           execute: (args) async => {'echoed': args},
@@ -144,7 +144,9 @@ void main() {
         final bridged = bridge.buildRegistry();
 
         // Invoke — suspends until the world resolves the task.
-        final future = bridged.execute(ToolName('echo'), {'message': 'hi'});
+        final future = bridged.execute(const ToolName('echo'), {
+          'message': 'hi',
+        });
 
         final reader = world.events.reader<ToolCallEvent>();
         expect(reader.isNotEmpty, isTrue);

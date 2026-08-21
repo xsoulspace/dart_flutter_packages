@@ -50,7 +50,7 @@ void seedIdentitySystem(World world) {
     be.insert(TextContent(parts.join('\n')));
     be.insert(BeatStatus(BeatStatusEnum.complete));
     be.insert(BeatModality(BeatModalityEnum.observation));
-    be.insert(IdentityBeat());
+    be.insert(const IdentityBeat());
     be.insert(BelongsToThread(thread));
     indexBeat(world, identityBeat, _keywordsOf(parts.join(' ')));
   }
@@ -219,7 +219,7 @@ Situation _buildSituation({
       absences.add('Some context was cut to fit the token budget.');
     }
     if (coPresent.isEmpty) {
-      absences.add('No other actors are in view.');
+      //noop - we dont need to if nothing is present
     }
   }
 
@@ -637,7 +637,7 @@ void _resolveToolTask(
   if (taskId == null) return;
   final handle = taskRegistry.take(taskId);
   if (handle != null && !handle.completer.isCompleted) {
-    handle.completer.complete(result);
+    handle.completer.complete(result.output);
   }
 }
 

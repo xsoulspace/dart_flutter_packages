@@ -91,7 +91,7 @@ class FoundationApi {
   }
 
   Future<String> generate({required Map<String, dynamic> json}) async {
-    final response = await _channel.invokeMethod<String>('generate', json);
+    final response = await _channel.invokeMethod('generate', json);
     return jsonDecodeString(response);
   }
 }

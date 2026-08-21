@@ -201,8 +201,8 @@ class OpenRouterInferenceClient implements InferenceClient {
 
   String _resolveModel(final InferenceRequest request) {
     final metadataModel = request.metadata['model'];
-    if (metadataModel is String && (metadataModel as String).isNotEmpty) {
-      return metadataModel as String;
+    if (metadataModel is String && (metadataModel).isNotEmpty) {
+      return metadataModel;
     }
     return defaultModel;
   }
@@ -210,13 +210,15 @@ class OpenRouterInferenceClient implements InferenceClient {
   String _buildUserContent(final InferenceRequest request) {
     final context = request.contextFragmentsJson;
     if (context.isEmpty) return request.prompt;
+    // TODO(arenukvern): this is wrong - and should be rewritten to messages
+    // (completion api)
     return '${request.prompt}\n\nCONTEXT:\n$context';
   }
 
   List<Map<String, dynamic>> _buildTools(final ToolRegistry registry) {
     return registry.getToolsJsons().map((tool) {
       final name = tool['name'];
-      final nameStr = name is ToolName ? (name as ToolName).value : '$name';
+      final nameStr = name is ToolName ? (name).value : '$name';
       return <String, dynamic>{
         'type': 'function',
         'function': {
@@ -237,30 +239,27 @@ class OpenRouterInferenceClient implements InferenceClient {
   InferenceResponse? _parseChatCompletion(final Map<String, dynamic> decoded) {
     final choices = decoded['choices'];
     if (choices is! List) return null;
-    final first = (choices as List).firstOrNull;
+    final first = (choices).firstOrNull;
     if (first is! Map<String, dynamic>) return null;
 
-    final messageMap = (first as Map<String, dynamic>)['message'];
+    final messageMap = (first)['message'];
     if (messageMap is! Map<String, dynamic>) return null;
 
     final content = messageMap['content'];
-    final contentStr = content is String ? content as String : '';
+    final contentStr = content is String ? content : '';
 
     // Extract native tool_calls as structured records.
     final toolCalls = messageMap['tool_calls'];
     final parsedCalls = <({String name, Map<String, dynamic> arguments})>[];
     if (toolCalls is List) {
-      for (final call in toolCalls as List) {
+      for (final call in toolCalls) {
         if (call is! Map<String, dynamic>) continue;
-        final fnMap = (call as Map<String, dynamic>)['function'];
+        final fnMap = (call)['function'];
         if (fnMap is! Map<String, dynamic>) continue;
         final name = fnMap['name'];
         final arguments = fnMap['arguments'];
         if (name is! String) continue;
-        parsedCalls.add((
-          name: name as String,
-          arguments: _parseArguments(arguments),
-        ));
+        parsedCalls.add((name: name, arguments: _parseArguments(arguments)));
       }
     }
 
@@ -291,7 +290,7 @@ class OpenRouterInferenceClient implements InferenceClient {
       return arguments.map((k, v) => MapEntry('$k', v));
     }
     if (arguments is String) {
-      final trimmed = (arguments as String).trim();
+      final trimmed = (arguments).trim();
       if (trimmed.isEmpty) return <String, dynamic>{};
       try {
         final decoded = jsonDecode(trimmed);
@@ -317,15 +316,15 @@ class OpenRouterInferenceClient implements InferenceClient {
     try {
       final decoded = jsonDecode(body);
       if (decoded is Map<String, dynamic>) {
-        final error = (decoded as Map<String, dynamic>)['error'];
+        final error = (decoded)['error'];
         if (error is Map<String, dynamic>) {
-          final message = (error as Map<String, dynamic>)['message'];
-          if (message is String) return message as String;
+          final message = (error)['message'];
+          if (message is String) return message;
         }
       }
     } catch (_) {
       // Fall through to raw body.
     }
-    return 'OpenRouter request failed with status ${body}';
+    return 'OpenRouter request failed with status $body';
   }
 }

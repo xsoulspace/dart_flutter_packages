@@ -102,6 +102,7 @@ enum AppleFoundationBridge {
                             instructions: instructions,
                         )
                     }
+                    print(prompt)
                     let str = try await {
                         if let schema = generationSchema {
                             let response = try await session.respond(

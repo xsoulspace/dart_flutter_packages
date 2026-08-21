@@ -9,6 +9,7 @@ import 'package:xsoulspace_inference_openrouter/xsoulspace_inference_openrouter.
 import 'package:xsoulspace_state_utils/xsoulspace_state_utils.dart';
 
 void main() {
+  // debugProfilePlatformChannels = true;
   runApp(const MyApp());
 }
 

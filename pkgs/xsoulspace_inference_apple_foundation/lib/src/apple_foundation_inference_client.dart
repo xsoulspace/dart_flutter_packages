@@ -116,12 +116,12 @@ class AppleFoundationInferenceClient implements InferenceClient {
       if (toolRegistry != null) _api.beginRequest(requestId, toolRegistry);
       try {
         final schema = request.outputSchema;
-        log(jsonEncode(schema));
+        log(jsonEncode(schema), name: 'pregeneration');
         final rawOutput = await _api.generate(
           json: {
             'requestId': requestId,
             'prompt':
-                "${request.prompt}${request.contextFragmentsJson.isEmpty ? "" : '/nCONTEXT: ${request.contextFragmentsJson}'}",
+                "${request.contextFragmentsJson.isEmpty ? "" : '/nCONTEXT: ${request.contextFragmentsJson}\nPROMPT:\n'}${request.prompt}",
             'instructions': systemPrompt.isEmpty ? null : systemPrompt,
             // 'workingDirectory': request.workingDirectory,
             if (schema.isNotEmpty) 'schema': schema,
@@ -179,15 +179,17 @@ class AppleFoundationInferenceClient implements InferenceClient {
         // Release this request's handlers (isolated per request).
         if (toolRegistry != null) _api.endRequest(requestId);
       }
-    } on PlatformException catch (e) {
+    } on PlatformException catch (e, st) {
       final code = e.code.isEmpty ? 'engine_unavailable' : e.code;
+      log('Apple Foundation Model invocation failed', error: e, stackTrace: st);
       return InferenceResult<InferenceResponse>.fail(
         code: code,
         message: e.message ?? 'Apple Foundation Model invocation failed',
         details: e.details,
         meta: <String, dynamic>{'provider': id},
       );
-    } catch (e) {
+    } catch (e, st) {
+      log('Apple Foundation Model failed', error: e, stackTrace: st);
       return InferenceResult<InferenceResponse>.fail(
         code: 'engine_unavailable',
         message: 'Apple Foundation Model failed',
