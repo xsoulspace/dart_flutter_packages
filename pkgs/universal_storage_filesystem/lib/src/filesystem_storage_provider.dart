@@ -686,6 +686,7 @@ class FileSystemStorageProvider extends StorageProvider implements LocalEngine {
         .replaceAll(r'\', '/')
         .replaceAll(RegExp('/+'), '/')
         .replaceFirst(RegExp('^/'), '')
+        .replaceFirst(RegExp(r'/+$'), '')
         .replaceFirst(RegExp(r'^\./'), '');
     if (normalized.isEmpty || normalized == '.') {
       throw ArgumentError.value(rawPath, 'filePath', 'Path must be non-empty.');

@@ -1,0 +1,20 @@
+name: universal_storage_conformance
+description: >-
+  Shared behavioral conformance suite for Universal Storage backends.
+  Every StorageProvider implementation must pass this suite to guarantee
+  swappability under the StorageKernelContract.
+version: 0.1.0-dev.1
+
+environment:
+  sdk: ^3.12.0
+
+resolution: workspace
+
+dependencies:
+  meta: ^1.19.0
+  universal_storage_interface: ^0.1.0-dev.12
+
+dev_dependencies:
+  lints: ^6.1.0
+  test: ^1.31.2
+  xsoulspace_lints: ^0.1.2

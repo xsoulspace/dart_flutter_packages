@@ -36,10 +36,6 @@ final class StorageKernel implements StorageKernelContract {
       queueStore: _queueStore,
       observations: _observations,
     );
-    _outbox = OutboxManager(
-      queueStore: _queueStore,
-      observations: _observations,
-    );
     _replayer = OutboxReplayer(
       decisionStore: _decisionStore,
       observations: _observations,

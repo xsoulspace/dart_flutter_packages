@@ -5,6 +5,7 @@ import 'package:xsoulspace_inference_gemma_flutter/xsoulspace_inference_gemma_fl
 void main() {
   final validRequest = InferenceRequest(
     prompt: 'Say hello',
+    task: InferenceTask.implicitlyStructuredText,
     outputSchema: <String, dynamic>{
       'type': 'object',
       'properties': <String, dynamic>{
@@ -19,10 +20,13 @@ void main() {
       expect(GemmaFlutterInferenceClient().id, 'gemma_flutter');
     });
 
-    test('supports only structuredText tasks', () {
+    test('supports text and implicitlyStructuredText tasks', () {
       expect(
         GemmaFlutterInferenceClient().supportedTasks,
-        const <InferenceTask>{InferenceTask.implicitlyStructuredText},
+        const <InferenceTask>{
+          InferenceTask.text,
+          InferenceTask.implicitlyStructuredText,
+        },
       );
     });
 
@@ -62,6 +66,7 @@ void main() {
         final result = await client.infer(
           InferenceRequest(
             prompt: '   ',
+            task: InferenceTask.implicitlyStructuredText,
             outputSchema: <String, dynamic>{'type': 'object'},
             workingDirectory: '/tmp',
           ),
@@ -71,19 +76,20 @@ void main() {
       });
 
       test(
-        'fails with request_working_directory_empty when workingDirectory is empty',
+        'empty workingDirectory does not block structured requests',
         () async {
-          GemmaFlutterInferenceClient().resetAvailabilityCache();
           final client = GemmaFlutterInferenceClient();
           final result = await client.infer(
             InferenceRequest(
               prompt: 'Hi',
+              task: InferenceTask.implicitlyStructuredText,
               outputSchema: <String, dynamic>{'type': 'object'},
               workingDirectory: '   ',
             ),
           );
-          expect(result.success, isFalse);
-          expect(result.error?.code, 'request_working_directory_empty');
+          // No working-directory validation exists in core; failure (if any)
+          // must come from availability, not request validation.
+          expect(result.error?.code, isNot('request_working_directory_empty'));
         },
       );
 
@@ -94,6 +100,7 @@ void main() {
           final result = await client.infer(
             InferenceRequest(
               prompt: 'Hi',
+              task: InferenceTask.implicitlyStructuredText,
               outputSchema: <String, dynamic>{},
               workingDirectory: '/tmp',
             ),

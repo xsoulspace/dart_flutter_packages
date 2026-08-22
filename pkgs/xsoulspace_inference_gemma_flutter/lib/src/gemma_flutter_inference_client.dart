@@ -42,6 +42,9 @@ class GemmaFlutterInferenceClient
 
   @override
   Set<InferenceTask> get supportedTasks => const <InferenceTask>{
+    InferenceTask.text,
+    // JSON via prompt engineering; Gemma has no native constrained decoding,
+    // so nativelyStructuredText is intentionally unsupported.
     InferenceTask.implicitlyStructuredText,
   };
 
@@ -147,6 +150,8 @@ class GemmaFlutterInferenceClient
         preferredBackend: preferredBackend,
       );
       var prompt = _buildPrompt(request);
+      final wantsStructured =
+          request.task == InferenceTask.implicitlyStructuredText;
 
       var attempt = 0;
       while (true) {
@@ -158,6 +163,17 @@ class GemmaFlutterInferenceClient
             return InferenceResult<InferenceResponse>.fail(
               code: 'output_empty',
               message: 'Gemma produced no output',
+              meta: <String, dynamic>{'provider': id},
+            );
+          }
+
+          // Plain text task: no schema, no JSON parsing.
+          if (!wantsStructured) {
+            return InferenceResult<InferenceResponse>.ok(
+              InferenceResponse(
+                rawOutput: rawOutput,
+                meta: <String, dynamic>{'provider': id},
+              ),
               meta: <String, dynamic>{'provider': id},
             );
           }
@@ -241,16 +257,18 @@ class GemmaFlutterInferenceClient
         ..writeln();
     }
     buffer.write(request.prompt);
-    buffer.writeln();
-    buffer
-      ..writeln()
-      ..writeln(
-        'Respond with a single JSON object that conforms to this '
-        'schema (no other text):',
+    if (request.task == InferenceTask.implicitlyStructuredText) {
+      buffer
+        ..writeln()
+        ..writeln()
+        ..writeln(
+          'Respond with a single JSON object that conforms to this '
+          'schema (no other text):',
+        );
+      buffer.writeln(
+        const JsonEncoder.withIndent('  ').convert(request.outputSchema),
       );
-    buffer.writeln(
-      const JsonEncoder.withIndent('  ').convert(request.outputSchema),
-    );
+    }
     return buffer.toString();
   }
 
