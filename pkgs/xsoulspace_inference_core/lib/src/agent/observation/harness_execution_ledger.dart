@@ -67,8 +67,14 @@ class HarnessExecutionLedger extends EcsExecutionObserverBase {
     'ToolResultEvent': _len<ToolResultEvent>,
   };
 
-  static int _len<T extends EcsEvent>(World w) =>
-      w.events.hasRegistered<T>() ? w.events.stats<T>().sent : -1;
+  /// Watermark snapshot for [T] — `sent - consumed` is the number of events
+  /// dispatched but not yet drained, which catches fire-and-forget sends
+  /// (e.g. async tool execution) that buffered-length snapshots miss.
+  static int _len<T extends EcsEvent>(World w) {
+    if (!w.events.hasRegistered<T>()) return -1;
+    final s = w.events.stats<T>();
+    return s.sent - s.consumed;
+  }
 
   Map<String, int> _snapshot() => {
     for (final name in _trackedChannels.keys) name: _lenFor(name),
