@@ -14,6 +14,7 @@ import Foundation
 
 typealias XsFmToolCallback = @convention(c) (UnsafePointer<CChar>?) -> Void
 typealias XsFmDoneCallback = @convention(c) (UnsafePointer<CChar>?) -> Void
+typealias XsFmStreamCallback = @convention(c) (UnsafePointer<CChar>?) -> Void
 
 // MARK: - Debug tracing
 
@@ -207,6 +208,142 @@ public func xs_fm_tool_respond(
   let toolId = String(cString: idC)
   let result = String(cString: resultC)
   return PendingToolRegistry.shared.fulfill(id: toolId, result: result) ? 0 : 1
+}
+
+// MARK: - Streaming generation
+
+@_cdecl("xs_fm_generate_stream_async")
+public func xs_fm_generate_stream_async(
+  _ request_json: UnsafePointer<CChar>?,
+  _ tool_cb: UnsafeRawPointer?,
+  _ stream_cb: UnsafeRawPointer?,
+  _ done_cb: UnsafeRawPointer?
+) -> Int32 {
+  let toolCallback: XsFmToolCallback? =
+    tool_cb.map { unsafeBitCast($0, to: XsFmToolCallback.self) }
+  guard let doneRaw = done_cb else {
+    return 1
+  }
+  let doneCallback = unsafeBitCast(doneRaw, to: XsFmDoneCallback.self)
+  guard let streamRaw = stream_cb else {
+    return 1
+  }
+  let streamCallback = unsafeBitCast(streamRaw, to: XsFmStreamCallback.self)
+
+  func finish(_ responseJson: String) {
+    responseJson.withCString { cString in
+      doneCallback(strdup(cString))
+    }
+  }
+
+  func emitDelta(_ delta: String) {
+    // Each snapshot is heap-allocated; Dart frees via xs_fm_free_string.
+    let payload = "{\"delta\":\(jsonEscaped(delta))}"
+    payload.withCString { cString in
+      streamCallback(strdup(cString))
+    }
+  }
+
+  func failNow(code: String, message: String) -> Int32 {
+    finish(jsonEscapedError(code: code, message: message))
+    return 1
+  }
+
+  guard let requestJson = request_json.map({ String(cString: $0) }) else {
+    return failNow(code: "invalid_args", message: "request_json required")
+  }
+  guard let data = requestJson.data(using: .utf8),
+    let request = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+  else {
+    return failNow(code: "invalid_args", message: "request_json is not valid JSON")
+  }
+  guard let prompt = request["prompt"] as? String else {
+    return failNow(code: "invalid_args", message: "prompt required")
+  }
+
+  let instructions = request["instructions"] as? String
+  let schemaJson = request["schema"] as? [String: Any]
+  let toolsJson = request["tools"] as? [[String: Any]] ?? []
+
+  let schemaDesc = schemaJson != nil ? "present" : "absent"
+  let toolNames = toolsJson.map { $0["name"] as? String ?? "?" }.joined(separator: ", ")
+  XsFmDebug.log(
+    "generate-stream: prompt=\(prompt.prefix(80)) schema=\(schemaDesc) tools=[\(toolNames)]"
+  )
+
+  #if canImport(FoundationModels)
+    do {
+      let generationSchema = try materializeFromDartJSON(schemaJson ?? [:])
+      let tools = try prepareNativeTools(from: toolsJson, callback: toolCallback)
+
+      Task.detached {
+        do {
+          let model = SystemLanguageModel.default
+          guard model.isAvailable else {
+            finish(
+              jsonEscapedError(
+                code: "engine_unavailable",
+                message: "Apple Intelligence not available"
+              )
+            )
+            return
+          }
+
+          let session = LanguageModelSession(
+            model: model,
+            tools: tools,
+            instructions: instructions
+          )
+
+          // Streaming requires no generation schema (structured output is
+          // delivered atomically by the framework). Fall back to the
+          // non-streaming path when a schema is present.
+          if generationSchema != nil {
+            XsFmDebug.log("generate-stream: schema present — falling back to blocking respond")
+            let response = try await session.respond(to: prompt, schema: generationSchema!)
+            let content = response.content.jsonString
+            finish("{\"ok\":true,\"output\":\(jsonEscaped(content))}")
+            return
+          }
+
+          var lastEmittedLength = 0
+          let stream = session.streamResponse(to: prompt)
+          for try await snapshot in stream {
+            // Snapshot.content is the full text so far; emit only the new
+            // suffix as a delta so Dart can append incrementally.
+            let full = snapshot.content
+            if full.count > lastEmittedLength {
+              let delta = String(full.suffix(full.count - lastEmittedLength))
+              lastEmittedLength = full.count
+              emitDelta(delta)
+            }
+          }
+
+          // The final content comes through done_cb via collect(); re-use the
+          // accumulated stream to avoid a second model call.
+          let finalText = try await stream.collect().content
+          XsFmDebug.log("generate-stream: ok, output=\(finalText.prefix(120))")
+          finish("{\"ok\":true,\"output\":\(jsonEscaped(finalText))}")
+        } catch {
+          XsFmDebug.log("generate-stream: error — \(error)")
+          finish(
+            jsonEscapedError(
+              code: "generation_error",
+              message: error.localizedDescription
+            )
+          )
+        }
+      }
+      return 0
+    } catch {
+      return failNow(code: "schema_error", message: error.localizedDescription)
+    }
+  #else
+    return failNow(
+      code: "engine_unavailable",
+      message: "FoundationModels unavailable"
+    )
+  #endif
 }
 
 // MARK: - Native tool adapter

@@ -18,7 +18,8 @@ import 'library_loader.dart';
 /// Symbol resolution prefers the code asset registered by `hook/build.dart`
 /// (via the `@Native` bindings in `native_bindings.dart`); when code assets
 /// are unavailable it falls back to [XsFmLibraryLoader] path resolution.
-class AppleFoundationNativeClient implements InferenceClient {
+class AppleFoundationNativeClient
+    implements InferenceClient, StructuredTextStreamingInferenceClient {
   AppleFoundationNativeClient({XsFmLibraryLoader? loader})
     : _loader = loader ?? XsFmLibraryLoader() {
     _instance = this;
@@ -39,6 +40,7 @@ class AppleFoundationNativeClient implements InferenceClient {
   XsFmBindings? _bindings;
   NativeCallable<ToolCbNative>? _toolCallable;
   NativeCallable<DoneCbNative>? _doneCallable;
+  NativeCallable<StreamCbNative>? _streamCallable;
 
   /// Whether the last load used the code-asset path (vs the fallback loader).
   static bool usedCodeAsset = false;
@@ -317,6 +319,8 @@ class AppleFoundationNativeClient implements InferenceClient {
     _toolCallable = null;
     _doneCallable?.close();
     _doneCallable = null;
+    _streamCallable?.close();
+    _streamCallable = null;
   }
 
   /// Runs [body] with [value] encoded as a NUL-terminated UTF-8 C string.
@@ -328,4 +332,178 @@ class AppleFoundationNativeClient implements InferenceClient {
       malloc.free(cString);
     }
   }
+
+  /// Streaming generation: returns a session whose [events] stream delivers
+  /// text deltas as they arrive, and whose [result] completes when the turn
+  /// finishes. Tool calls are resumed inline exactly like [infer].
+  ///
+  /// Structured-output requests fall back to the blocking path on the Swift
+  /// side (the framework delivers structured content atomically).
+  @override
+  Future<InferenceStructuredTextStreamSession> streamStructuredText(
+    InferenceRequest request,
+  ) async {
+    if (!supportedTasks.contains(request.task)) {
+      throw UnsupportedError(
+        'Task ${request.task.name} is not supported by $id',
+      );
+    }
+
+    if (!_availabilityChecked) await refreshAvailability();
+    if (!_cachedAvailable) {
+      throw StateError(
+        'Apple Foundation Model unavailable (Apple Intelligence or device)',
+      );
+    }
+
+    var systemPrompt = request.systemPrompt;
+    if (request.task case .implicitlyStructuredText) {
+      final promptBuilder = PromptBuilder(systemPrompt);
+      promptBuilder.writeStructuredOutputPrompt(request.outputSchema);
+      systemPrompt = promptBuilder.toString();
+    }
+
+    final requestJson = jsonEncode(<String, dynamic>{
+      'prompt': request.prompt,
+      'instructions': systemPrompt.isEmpty ? null : systemPrompt,
+      // No schema: streaming is text-only; structured output uses infer().
+      'tools': null,
+    });
+
+    final controller = StreamController<InferenceStructuredTextStreamEvent>();
+    final done = Completer<Map<String, dynamic>>();
+
+    void handleStreamPayload(Pointer<Char> payloadC) {
+      try {
+        final payload =
+            jsonDecode(payloadC.cast<Utf8>().toDartString())
+                as Map<String, dynamic>;
+        final delta = payload['delta'] as String? ?? '';
+        if (delta.isNotEmpty) {
+          controller.add(
+            InferenceStructuredTextStreamEvent(
+              type: .partialOutput,
+              timestamp: DateTime.now(),
+              textDelta: delta,
+            ),
+          );
+        }
+      } on Object catch (e) {
+        stderr.writeln('xs_fm stream payload error: $e');
+      } finally {
+        _b.freeString(payloadC);
+      }
+    }
+
+    void handleToolPayload(Pointer<Char> payloadC) {
+      // Streaming sessions carry no tool registry — nothing to resume.
+      try {
+        final payload =
+            jsonDecode(payloadC.cast<Utf8>().toDartString())
+                as Map<String, dynamic>;
+        _respondTool(payload['id'] as String, '{"error":"no tools in stream"}');
+      } on Object {
+        // ignore
+      } finally {
+        _b.freeString(payloadC);
+      }
+    }
+
+    void handleDone(Pointer<Char> responseC) {
+      try {
+        final response =
+            jsonDecode(responseC.cast<Utf8>().toDartString())
+                as Map<String, dynamic>;
+        done.complete(response);
+      } on Object catch (e, st) {
+        done.completeError(e, st);
+      } finally {
+        _b.freeString(responseC);
+      }
+    }
+
+    _closeCallables();
+    _toolCallable = NativeCallable<ToolCbNative>.listener(handleToolPayload)
+      ..keepIsolateAlive = false;
+    _streamCallable = NativeCallable<StreamCbNative>.listener(
+      handleStreamPayload,
+    )..keepIsolateAlive = false;
+    _doneCallable = NativeCallable<DoneCbNative>.listener(handleDone)
+      ..keepIsolateAlive = false;
+
+    final accepted = _withCString(requestJson, (requestC) {
+      return _b.generateStreamAsync(
+        requestC,
+        _toolCallable!.nativeFunction,
+        _streamCallable!.nativeFunction,
+        _doneCallable!.nativeFunction,
+      );
+    });
+
+    if (accepted != 0) {
+      _closeCallables();
+      throw StateError('Bridge rejected the streaming request ($accepted)');
+    }
+
+    return _NativeStreamSession(
+      events: controller.stream,
+      resultFuture: () async {
+        try {
+          final response = await done.future.timeout(
+            const Duration(minutes: 5),
+          );
+          return _toResult(response);
+        } on TimeoutException {
+          return InferenceResult<InferenceResponse>.fail(
+            code: 'generation_timeout',
+            message: 'Streaming generation exceeded 5 minutes',
+            meta: <String, dynamic>{'provider': id},
+          );
+        } finally {
+          await controller.close();
+          _closeCallables();
+        }
+      }(),
+      onCancel: () async {
+        // The bridge has no cancel entrypoint yet; closing the callables
+        // detaches Dart from the turn. The native task runs to completion and
+        // its done callback lands on a closed callable (no-op).
+        _closeCallables();
+        await controller.close();
+      },
+    );
+  }
+}
+
+/// [InferenceStructuredTextStreamSession] over the FFI bridge callbacks.
+final class _NativeStreamSession
+    implements InferenceStructuredTextStreamSession {
+  _NativeStreamSession({
+    required Stream<InferenceStructuredTextStreamEvent> events,
+    required Future<InferenceResult<InferenceResponse>> resultFuture,
+    required Future<void> Function() onCancel,
+  }) : _events = events,
+       _resultFuture = resultFuture,
+       _onCancel = onCancel;
+
+  final Stream<InferenceStructuredTextStreamEvent> _events;
+  final Future<InferenceResult<InferenceResponse>> _resultFuture;
+  final Future<void> Function() _onCancel;
+  var _disposed = false;
+
+  @override
+  Stream<InferenceStructuredTextStreamEvent> get events => _events;
+
+  @override
+  Future<InferenceResult<InferenceResponse>> get result => _resultFuture;
+
+  @override
+  Future<void> cancel() async {
+    if (_disposed) return;
+    _disposed = true;
+    await _onCancel();
+  }
+
+  @override
+  Future<void> dispose() => cancel();
 }

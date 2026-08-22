@@ -21,6 +21,10 @@ typedef ToolCbDart = void Function(Pointer<Char>);
 typedef DoneCbNative = Void Function(Pointer<Char>);
 typedef DoneCbDart = void Function(Pointer<Char>);
 
+/// void xs_fm_stream_cb(const char* snapshot_json)
+typedef StreamCbNative = Void Function(Pointer<Char>);
+typedef StreamCbDart = void Function(Pointer<Char>);
+
 /// int32_t xs_fm_is_available(void)
 typedef IsAvailableNative = Int32 Function();
 typedef IsAvailableDart = int Function();
@@ -36,6 +40,22 @@ typedef GenerateAsyncDart =
     int Function(
       Pointer<Char>,
       Pointer<NativeFunction<ToolCbNative>>,
+      Pointer<NativeFunction<DoneCbNative>>,
+    );
+
+/// int32_t xs_fm_generate_stream_async(const char*, void*, void*, void*)
+typedef GenerateStreamAsyncNative =
+    Int32 Function(
+      Pointer<Char>,
+      Pointer<NativeFunction<ToolCbNative>>,
+      Pointer<NativeFunction<StreamCbNative>>,
+      Pointer<NativeFunction<DoneCbNative>>,
+    );
+typedef GenerateStreamAsyncDart =
+    int Function(
+      Pointer<Char>,
+      Pointer<NativeFunction<ToolCbNative>>,
+      Pointer<NativeFunction<StreamCbNative>>,
       Pointer<NativeFunction<DoneCbNative>>,
     );
 
@@ -61,6 +81,12 @@ abstract interface class XsFmBindings {
     Pointer<NativeFunction<ToolCbNative>> toolCb,
     Pointer<NativeFunction<DoneCbNative>> doneCb,
   );
+  int generateStreamAsync(
+    Pointer<Char> requestJson,
+    Pointer<NativeFunction<ToolCbNative>> toolCb,
+    Pointer<NativeFunction<StreamCbNative>> streamCb,
+    Pointer<NativeFunction<DoneCbNative>> doneCb,
+  );
   int toolRespond(Pointer<Char> id, Pointer<Char> resultJson);
   void freeString(Pointer<Char> s);
   void setDebug(int enabled);
@@ -75,6 +101,11 @@ final class LibraryXsFmBindings implements XsFmBindings {
       generateAsyncFn = library
           .lookup<NativeFunction<GenerateAsyncNative>>('xs_fm_generate_async')
           .asFunction(),
+      generateStreamAsyncFn = library
+          .lookup<NativeFunction<GenerateStreamAsyncNative>>(
+            'xs_fm_generate_stream_async',
+          )
+          .asFunction(),
       toolRespondFn = library
           .lookup<NativeFunction<ToolRespondNative>>('xs_fm_tool_respond')
           .asFunction(),
@@ -87,6 +118,7 @@ final class LibraryXsFmBindings implements XsFmBindings {
 
   final IsAvailableDart isAvailableFn;
   final GenerateAsyncDart generateAsyncFn;
+  final GenerateStreamAsyncDart generateStreamAsyncFn;
   final ToolRespondDart toolRespondFn;
   final FreeStringDart freeStringFn;
   final SetDebugDart setDebugFn;
@@ -100,6 +132,14 @@ final class LibraryXsFmBindings implements XsFmBindings {
     Pointer<NativeFunction<ToolCbNative>> toolCb,
     Pointer<NativeFunction<DoneCbNative>> doneCb,
   ) => generateAsyncFn(requestJson, toolCb, doneCb);
+
+  @override
+  int generateStreamAsync(
+    Pointer<Char> requestJson,
+    Pointer<NativeFunction<ToolCbNative>> toolCb,
+    Pointer<NativeFunction<StreamCbNative>> streamCb,
+    Pointer<NativeFunction<DoneCbNative>> doneCb,
+  ) => generateStreamAsyncFn(requestJson, toolCb, streamCb, doneCb);
 
   @override
   int toolRespond(Pointer<Char> id, Pointer<Char> resultJson) =>

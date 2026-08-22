@@ -17,20 +17,39 @@ tool orchestration, multi-actor coordination, verification) are handled by the
 deterministic, graph-native seams around the model — not by the model's context
 window.
 
+## The competitive claim (what we intend to prove)
+
+Conversation-log agents (pi, codex-cli, LangChain ReAct loops) ship their full
+history to the model on every call: token cost grows **linearly** with session
+length. This harness projects only what the current decision needs: token cost
+per call stays **flat forever**, regardless of how many beats the graph holds.
+
+That is the efficiency claim, and it must be measured, not asserted:
+
+1. **Long-horizon scaling** — scripted 1,000+ decision runs show flat
+   tokens/decision and sublinear projection latency as beats grow 100×.
+   (Phase 2)
+2. **Tokens-per-task dominance** — on a fixed coding-task suite, total tokens
+   per completed task beat conversation-log agents running comparable models.
+   (Phase 4/6)
+3. **Local-first usability** — Apple Foundation Models alone can complete real
+   coding tasks; hosted models are an optional escalation, never a dependency.
+   (Phases 3–5)
+
 ## What this subsection owns
 
-- **Projection** — a cinematic *cut* per actor: only what the current decision
+- **Projection** — a cinematic _cut_ per actor: only what the current decision
   needs, plus explicit green-screen absences. Enforced token budget.
 - **Agency discipline** — the model is called only when a real decision is
   open; all other work is mechanical and never touches an LLM.
 - **Graph-native memory** — threads of beats (text, thought, tool calls,
-  observations) are the source of truth for the storyline. Memory is a *re-
-  derivable projection* (project a past I'm entitled to), never an independent
+  observations) are the source of truth for the storyline. Memory is a _re-
+  derivable projection_ (project a past I'm entitled to), never an independent
   parallel log and never a stored per-actor list. Summaries are first-class
   beats produced only by deliberate transforms.
 - **Multi-actor + escapable** — many actors share one deterministic world;
   a2a, a2h, a2h2a; runtime-swappable model backends.
-- **Testable without an LLM** — every part except *write a beat* is
+- **Testable without an LLM** — every part except _write a beat_ is
   deterministic graph logic, exercisable with a mock generator.
 
 ## The minimal viable standard
@@ -49,6 +68,9 @@ window.
   tool use, research, self-reflection) rather than the core mode.
 - Not a monolith: this stays a focused, ui-agnostic core; UI/CLI/TUI/Flutter are
   thin hosts over the same world.
+- Not LangChain parity: we do not chase framework-API breadth or provider
+  plugin counts. Every feature is judged by one question — _does it shrink
+  tokens-per-task or keep context bounded?_ Anything else is scope creep.
 
 ## Gravity
 
@@ -57,9 +79,23 @@ Before a structural change, ask whether it (a) keeps a tiny model useful,
 derived, and (d) stays LLM-free testable. If a mechanism is becoming the mission
 instead of serving those, that is drift.
 
+## Production-readiness phases
+
+Ordered path from current state to "defensible production agent." Each phase
+ends with a measurable artifact — no phase is done on vibes.
+
+| #   | Phase                                  | Deliverable                                                                                                                                                                                     | Proves                                  |
+| --- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| 1   | **Docs & North Star**                  | This file + `docs/agent/PLAN.md` rewritten; claims separated from proofs.                                                                                                                       | Alignment                               |
+| 2   | **Long-horizon scaling benchmark** ✅  | Scripted 1,000-decision run (mock handler): flatness **1.07x**, latency growth **1.92x** over a 1000-beat graph, budget never exceeded. CI-gated.                                               | Context-boundedness at scale — proven   |
+| 3   | **Streaming through FFI bridge**       | AFM streaming wired through the native bridge → `ActorGenerateStreamEvent`. Time-to-first-token measured.                                                                                       | Local-model UX viability                |
+| 4   | **20-task coding suite vs pi**         | Fixed task set (edit/refactor/search/tool-chain) with pass/fail checks, run against real AFM; same tasks through pi with a comparable model. Table: pass rate, tokens/task, wall-clock, $/task. | Task completion + tokens-per-task claim |
+| 5   | **Concurrency gating in AgencyPolicy** | Backend-declared max in-flight requests gates agency grants; no silent queueing on serial backends (AFM). Timeout sweeper stops firing false positives.                                         | Correct multi-actor behavior on-device  |
+| 6   | **Snapshot/restore + baseline table**  | World snapshot/restore (threads, beats, facet index rebuild) → CLI restart survival. Final comparison table published.                                                                          | CLI parity + the winning numbers        |
+
 ## Extra notes
 
 1. **Beats grow like a book.** They don't "need compaction" in the general sense. Compaction made sense only because we framed memory as a per-actor list that must shrink.
-2. **The projection (situation) is what the actor sees, not "memory."** The actor's entire reality *is* the situation you hand it. "Memory" is just one flavor of projection — "project a past I'm entitled to."
-3. **Projection is ray-tracing, not summarization.** You cast a ray from (actor + scene + props + co-actors + question + keywords) and collect only the beats that ray hits. Everything else is literally dark. You never "decide what to keep in memory" — you decide what to *render*.
+2. **The projection (situation) is what the actor sees, not "memory."** The actor's entire reality _is_ the situation you hand it. "Memory" is just one flavor of projection — "project a past I'm entitled to."
+3. **Projection is ray-tracing, not summarization.** You cast a ray from (actor + scene + props + co-actors + question + keywords) and collect only the beats that ray hits. Everything else is literally dark. You never "decide what to keep in memory" — you decide what to _render_.
 4. **Situation can be projected for anything** — an actor, a prop, a scene, a beat, a thread, or a subset. The projection machinery is one generic thing, parameterized by subject + viewpoint.

@@ -1,33 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
-/// Result of a model install (URL or file).
-class GemmaModelInstallResult {
-  const GemmaModelInstallResult({
-    required this.success,
-    this.modelId,
-    this.errorCode,
-    this.message,
-    this.details,
-  });
-
-  final bool success;
-  final String? modelId;
-  final String? errorCode;
-  final String? message;
-  final Object? details;
-
-  InferenceResult<String> toInferenceResult() {
-    if (success && modelId != null) {
-      return InferenceResult<String>.ok(modelId!);
-    }
-    return InferenceResult<String>.fail(
-      code: errorCode ?? 'model_install_failed',
-      message: message ?? 'Model installation failed',
-      details: details,
-    );
-  }
-}
+import 'gemma_model_catalog.dart';
 
 /// Status of the Gemma model (readiness, install source).
 class GemmaModelStatus {
@@ -54,59 +30,232 @@ class GemmaModelStatus {
   };
 }
 
-/// Model setup APIs: URL download, local file, status.
+/// Model setup: purpose-driven provisioning with constraint checks, plus
+/// explicit URL/file installs for advanced use.
 class GemmaModelSetup {
-  const GemmaModelSetup();
+  GemmaModelSetup({this.catalog = defaultCatalog});
 
-  /// Install model from [url]. Returns install result with modelId on success.
-  ///
-  /// Prefer to use [Model]
-  Future<GemmaModelInstallResult> installFromUrl({
-    required String url,
-    void Function(int percent)? onProgress,
-    String? profileId,
+  final List<GemmaModelEntry> catalog;
+
+  CancelToken? _activeCancelToken;
+  final _progressController = StreamController<ProvisionProgress>.broadcast();
+  ProvisionProgress _lastProgress = const ProvisionProgress(
+    phase: ProvisionPhase.idle,
+  );
+
+  /// Progress stream for UI. Broadcast — late listeners get nothing; use
+  /// [lastProgress] for current state.
+  Stream<ProvisionProgress> get provisionProgress => _progressController.stream;
+
+  /// Latest known progress snapshot.
+  ProvisionProgress get lastProgress => _lastProgress;
+
+  void _emit(final ProvisionProgress progress) {
+    _lastProgress = progress;
+    if (!_progressController.isClosed) {
+      _progressController.add(progress);
+    }
+  }
+
+  /// Ensures a model serving [purpose] is installed and active, honoring
+  /// [constraints]. Idempotent: returns immediately when a suitable model is
+  /// already active.
+  Future<InferenceResult<ModelHandle>> ensureReady(
+    final GemmaPurpose purpose, {
+    final ProvisionConstraints constraints = const ProvisionConstraints(),
+  }) async {
+    final entry = GemmaModelEntry.bestFor(purpose, catalog: catalog);
+    if (entry == null) {
+      return InferenceResult<ModelHandle>.fail(
+        code: 'model_not_found',
+        message: 'No catalog entry serves purpose "${purpose.name}"',
+        details: <String, dynamic>{
+          'purposes': catalog
+              .expand((final e) => e.purposes)
+              .map((final p) => p.name)
+              .toSet()
+              .toList(),
+        },
+      );
+    }
+
+    try {
+      final status = await getStatus();
+      if (status.ready && status.modelId == entry.id) {
+        _emit(ProvisionProgress(phase: ProvisionPhase.ready));
+        return InferenceResult<ModelHandle>.ok(ModelHandle(entry.id));
+      }
+      // A different model is active — replace only when it doesn't serve the
+      // requested purpose. Same-model re-activation is a no-op above.
+      if (constraints.requireUserConsent && !constraints.userConsentGranted) {
+        return InferenceResult<ModelHandle>.fail(
+          code: 'user_consent_required',
+          message:
+              'Downloading ${entry.id} (~${entry.sizeBytes ~/ 1000000} MB) '
+              'requires user consent',
+          details: <String, dynamic>{
+            'model_id': entry.id,
+            'size_bytes': entry.sizeBytes,
+          },
+        );
+      }
+
+      final networkAllowed = constraints.isNetworkAllowed?.call() ?? true;
+      if (!networkAllowed) {
+        return InferenceResult<ModelHandle>.fail(
+          code: 'network_not_allowed',
+          message: 'Network policy blocks downloading ${entry.id}',
+        );
+      }
+
+      final maxBytes = constraints.maxDownloadBytes;
+      if (maxBytes != null && entry.sizeBytes > maxBytes) {
+        return InferenceResult<ModelHandle>.fail(
+          code: 'model_too_large',
+          message:
+              '${entry.id} (${entry.sizeBytes} bytes) exceeds '
+              'maxDownloadBytes ($maxBytes)',
+        );
+      }
+
+      _emit(
+        ProvisionProgress(
+          phase: ProvisionPhase.checking,
+          totalBytes: entry.sizeBytes,
+          message: 'Checking ${entry.id}',
+        ),
+      );
+
+      final installResult = await _installEntry(entry);
+      return installResult;
+    } on Exception catch (e) {
+      _emit(
+        ProvisionProgress(phase: ProvisionPhase.failed, message: e.toString()),
+      );
+      return InferenceResult<ModelHandle>.fail(
+        code: 'provision_failed',
+        message: 'Gemma provisioning failed',
+        details: e.toString(),
+      );
+    }
+  }
+
+  /// Installs and activates [entry] with progress + cancellation support.
+  Future<InferenceResult<ModelHandle>> _installEntry(
+    final GemmaModelEntry entry,
+  ) async {
+    final cancelToken = CancelToken();
+    _activeCancelToken = cancelToken;
+    _emit(
+      ProvisionProgress(
+        phase: ProvisionPhase.downloading,
+        percent: 0,
+        downloadedBytes: 0,
+        totalBytes: entry.sizeBytes,
+        message: 'Downloading ${entry.id}',
+      ),
+    );
+    try {
+      await FlutterGemma.installModel(modelType: entry.modelType)
+          .fromNetwork(entry.url)
+          .withProgress(
+            (final percent) => _emit(
+              ProvisionProgress(
+                phase: ProvisionPhase.downloading,
+                percent: percent,
+                downloadedBytes: entry.sizeBytes * percent ~/ 100,
+                totalBytes: entry.sizeBytes,
+              ),
+            ),
+          )
+          .withCancelToken(cancelToken)
+          .install();
+
+      _emit(
+        ProvisionProgress(
+          phase: ProvisionPhase.loading,
+          percent: 100,
+          totalBytes: entry.sizeBytes,
+          message: 'Activating ${entry.id}',
+        ),
+      );
+
+      final ready = FlutterGemma.hasActiveModel();
+      if (!ready) {
+        return InferenceResult<ModelHandle>.fail(
+          code: 'model_install_failed',
+          message: 'Installed but not active: ${entry.id}',
+        );
+      }
+      _emit(ProvisionProgress(phase: ProvisionPhase.ready, percent: 100));
+      return InferenceResult<ModelHandle>.ok(ModelHandle(entry.id));
+    } on Exception catch (e) {
+      _emit(
+        ProvisionProgress(phase: ProvisionPhase.failed, message: e.toString()),
+      );
+      return InferenceResult<ModelHandle>.fail(
+        code: 'model_install_failed',
+        message: 'Failed to install ${entry.id}',
+        details: e.toString(),
+      );
+    } finally {
+      _activeCancelToken = null;
+    }
+  }
+
+  /// Cancels an in-flight download. No-op when idle.
+  void cancel() {
+    _activeCancelToken?.cancel('Cancelled by caller');
+  }
+
+  /// Install model from an arbitrary URL (advanced use — prefer
+  /// [ensureReady] for production).
+  Future<InferenceResult<ModelHandle>> installFromUrl({
+    required final String url,
+    required final ModelType modelType,
+    final void Function(int percent)? onProgress,
   }) async {
     try {
-      final id = profileId;
       await FlutterGemma.installModel(
-        modelType: ModelType.functionGemma,
+        modelType: modelType,
       ).fromNetwork(url.trim()).withProgress(onProgress ?? (_) {}).install();
       final ready = FlutterGemma.hasActiveModel();
-      return GemmaModelInstallResult(
-        success: ready,
-        modelId: ready ? id : null,
-        message: ready ? null : 'Model installed but not active',
-      );
+      if (!ready) {
+        return InferenceResult<ModelHandle>.fail(
+          code: 'model_install_failed',
+          message: 'Model installed but not active',
+        );
+      }
+      return InferenceResult<ModelHandle>.ok(ModelHandle(url));
     } on Exception catch (e) {
-      return GemmaModelInstallResult(
-        success: false,
-        errorCode: 'engine_unavailable',
+      return InferenceResult<ModelHandle>.fail(
+        code: 'model_install_failed',
         message: e.toString(),
         details: e.toString(),
       );
     }
   }
 
-  /// Install model from local file at [path].
-  Future<GemmaModelInstallResult> installFromFile({
-    required String path,
-    String? profileId,
+  /// Install model from local file at [path] (advanced use).
+  Future<InferenceResult<ModelHandle>> installFromFile({
+    required final String path,
+    required final ModelType modelType,
   }) async {
     try {
-      final id = profileId;
       await FlutterGemma.installModel(
-        modelType: ModelType.functionGemma,
+        modelType: modelType,
       ).fromFile(path.trim()).install();
       final ready = FlutterGemma.hasActiveModel();
-      return GemmaModelInstallResult(
-        success: ready,
-        modelId: ready ? id : null,
-        message: ready ? null : 'Model installed but not active',
-      );
+      if (!ready) {
+        return InferenceResult<ModelHandle>.fail(
+          code: 'model_install_failed',
+          message: 'Model installed but not active',
+        );
+      }
+      return InferenceResult<ModelHandle>.ok(ModelHandle(path));
     } on Exception catch (e) {
-      return GemmaModelInstallResult(
-        success: false,
-        errorCode: 'engine_unavailable',
+      return InferenceResult<ModelHandle>.fail(
+        code: 'model_install_failed',
         message: e.toString(),
         details: e.toString(),
       );
@@ -114,6 +263,9 @@ class GemmaModelSetup {
   }
 
   /// Report whether a model is ready and optional status details.
+  ///
+  /// Note: flutter_gemma persists only the active spec's name, so we match
+  /// against catalog ids derived from the URL filename.
   Future<GemmaModelStatus> getStatus() async {
     try {
       final hasModel = FlutterGemma.hasActiveModel();
@@ -125,10 +277,10 @@ class GemmaModelSetup {
         );
       }
       final list = await FlutterGemma.listInstalledModels();
-      final modelId = list.isNotEmpty ? list.first : null;
+      final activeId = list.isNotEmpty ? list.first : null;
       return GemmaModelStatus(
         ready: true,
-        modelId: modelId,
+        modelId: activeId,
         installSource: 'flutter_gemma',
       );
     } on Exception catch (e) {
@@ -139,4 +291,6 @@ class GemmaModelSetup {
       );
     }
   }
+
+  Future<void> dispose() => _progressController.close();
 }

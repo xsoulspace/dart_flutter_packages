@@ -3,7 +3,7 @@ import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'package:xsoulspace_inference_gemma_flutter/xsoulspace_inference_gemma_flutter.dart';
 
 void main() {
-  const validRequest = InferenceRequest(
+  final validRequest = InferenceRequest(
     prompt: 'Say hello',
     outputSchema: <String, dynamic>{
       'type': 'object',
@@ -60,7 +60,7 @@ void main() {
         GemmaFlutterInferenceClient().resetAvailabilityCache();
         final client = GemmaFlutterInferenceClient();
         final result = await client.infer(
-          const InferenceRequest(
+          InferenceRequest(
             prompt: '   ',
             outputSchema: <String, dynamic>{'type': 'object'},
             workingDirectory: '/tmp',
@@ -76,7 +76,7 @@ void main() {
           GemmaFlutterInferenceClient().resetAvailabilityCache();
           final client = GemmaFlutterInferenceClient();
           final result = await client.infer(
-            const InferenceRequest(
+            InferenceRequest(
               prompt: 'Hi',
               outputSchema: <String, dynamic>{'type': 'object'},
               workingDirectory: '   ',
@@ -92,7 +92,7 @@ void main() {
         () async {
           final client = GemmaFlutterInferenceClient();
           final result = await client.infer(
-            const InferenceRequest(
+            InferenceRequest(
               prompt: 'Hi',
               outputSchema: <String, dynamic>{},
               workingDirectory: '/tmp',
@@ -117,7 +117,7 @@ void main() {
             expect(result.error!.code, isNotEmpty);
             expect([
               'engine_unavailable',
-              'codex_output_empty',
+              'output_empty',
               'json_parse_failed',
               'schema_validation_failed',
             ], contains(result.error!.code));

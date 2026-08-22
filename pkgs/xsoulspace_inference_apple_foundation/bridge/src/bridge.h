@@ -15,6 +15,10 @@
 //      and calls xs_fm_tool_respond(id, result_json).
 //   3. Bridge invokes done_cb once with {"ok":true,"output":"..."} or
 //      {"ok":false,"error":{"code","message"}}.
+//
+// Streaming flow (xs_fm_generate_stream_async):
+//   Same as above, plus stream_cb invoked zero or more times with
+//   {"delta":"..."} JSON as partial text arrives, before done_cb.
 #ifndef XS_FM_BRIDGE_H
 #define XS_FM_BRIDGE_H
 
@@ -39,9 +43,16 @@ int32_t xs_fm_is_available(void);
 /// }
 typedef void (*xs_fm_tool_cb)(const char *payload_json);
 typedef void (*xs_fm_done_cb)(const char *response_json);
+typedef void (*xs_fm_stream_cb)(const char *snapshot_json);
 
 int32_t xs_fm_generate_async(const char *request_json, void *tool_cb,
                              void *done_cb);
+
+/// Like xs_fm_generate_async but also streams partial output. stream_cb is
+/// invoked with {"delta":"..."} JSON chunks as they arrive; done_cb still
+/// fires exactly once at the end. Returns 0 on accept, 1 on immediate failure.
+int32_t xs_fm_generate_stream_async(const char *request_json, void *tool_cb,
+                                    void *stream_cb, void *done_cb);
 
 /// Delivers a tool result for a pending tool_cb payload id.
 /// Returns 0 if the id was pending, 1 otherwise.

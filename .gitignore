@@ -9,3 +9,4 @@ pubspec.lock
 **/**/build
 **/**/.dart_tool/
 /.steward/
+.gitnexus

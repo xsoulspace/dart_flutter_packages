@@ -49,14 +49,17 @@ class _ExamplePageState extends State<_ExamplePage> {
 
   Future<void> _installModel() async {
     setState(() => _status = 'Installing model...');
-    const setup = GemmaModelSetup();
-    final result = await setup.installFromUrl(url: setup.defaultModelUrl);
+    final setup = GemmaModelSetup();
+    final result = await setup.ensureReady(
+      GemmaPurpose.structuredToolUse,
+      constraints: const ProvisionConstraints(userConsentGranted: true),
+    );
     setState(() {
       if (result.success) {
-        _status = 'Installed: ${result.modelId}';
+        _status = 'Installed: ${result.data!.value}';
         _available = true;
       } else {
-        _status = 'Install failed: ${result.message}';
+        _status = 'Install failed: ${result.error?.message}';
       }
     });
   }
