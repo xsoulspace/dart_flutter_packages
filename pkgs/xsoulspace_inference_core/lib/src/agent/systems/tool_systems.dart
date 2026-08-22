@@ -7,8 +7,7 @@ import '../data_models/data_models.dart';
 import '../events.dart';
 import '../narrative/narrative.dart';
 import '../resources/resources.dart';
-import '../tools/tool_registry.dart';
-import 'projection/projection_systems.dart';
+import 'projection/projection_systems.dart' show toolResultText;
 import 'projection/relevance.dart' show keywordsOf;
 
 /// System 5: Execute tool calls dispatched as [ToolCallEvent]s.

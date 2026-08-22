@@ -1,3 +1,10 @@
+/// Facade for wiring an agent world: spawn the scene, actors, and threads.
+///
+/// Extracted from [ScenarioRunner]'s setup ritual so hosts (CLI, Flutter,
+/// tests) get the same one-call bootstrap instead of duplicating the
+/// Scene → actors → threads → flush choreography.
+library;
+
 import 'package:ecsly/ecsly.dart';
 
 import 'data_models/data_models.dart';

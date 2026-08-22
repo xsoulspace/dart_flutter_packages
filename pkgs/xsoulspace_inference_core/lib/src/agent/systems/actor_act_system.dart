@@ -8,7 +8,6 @@ import '../events.dart';
 import '../model_router.dart';
 import '../narrative/narrative.dart';
 import '../resources/resources.dart';
-import 'projection/projection_systems.dart';
 
 /// Resolve the escalated model for an actor.
 ///

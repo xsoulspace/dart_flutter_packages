@@ -1,6 +1,7 @@
 import 'exceptions.dart';
 import 'models/file_models.dart';
 import 'models/storage_config.dart';
+import 'models/storage_profile.dart';
 
 /// Provider-agnostic contract for storage operations.
 abstract class StorageProvider {
@@ -29,6 +30,11 @@ abstract class StorageProvider {
   Future<List<FileEntry>> listDirectory(final String directoryPath);
 
   Future<void> restore(final String path, {final String? versionId});
+
+  /// Declared static capabilities. Providers should override to expose
+  /// feature availability (sync mode, revision metadata, etc.) so the
+  /// kernel and profile loader can negotiate without instantiating sync.
+  StorageCapabilities get declaredCapabilities => StorageCapabilities.none;
 
   bool get supportsSync => false;
   // TODO(arenukvern): refactor variables to be abstract

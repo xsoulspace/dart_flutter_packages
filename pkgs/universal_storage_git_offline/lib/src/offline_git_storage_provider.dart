@@ -101,7 +101,10 @@ class OfflineGitStorageProvider extends StorageProvider
   }) async {
     final batching = commitBatching;
     if (batching == null) {
-      // Legacy behavior: commit synchronously.
+      // Legacy behavior: stage and commit synchronously.
+      if (!deleted) {
+        await _gitDir!.runCommand(['add', filePath]);
+      }
       return _commitChanges(
         deleted ? 'Delete file: $filePath' : 'Update file: $filePath',
       );

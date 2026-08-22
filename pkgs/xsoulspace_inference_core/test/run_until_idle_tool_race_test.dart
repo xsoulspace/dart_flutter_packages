@@ -25,6 +25,8 @@ import 'package:test/test.dart';
 import 'package:xsoulspace_inference_core/src/agent/tools/fs_tools.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
+import 'support/agent_harness_support.dart';
+
 class _ToolEmittingHandler implements GenerationHandler {
   @override
   Future<ActorGenerateResponse> generate(
@@ -108,6 +110,34 @@ void main() {
           .toList();
       expect(toolBeats, isNotEmpty);
       expect(toolBeats.first.$2.name, 'write');
+
+      // Nothing stranded anywhere — the canonical end-of-test assertion.
+      expectIdle(world);
+    },
+    timeout: const Timeout(Duration(seconds: 30)),
+  );
+
+  test(
+    'ledger shows channel flow across schedules',
+    () async {
+      final jail = await Directory.systemTemp.createTemp('ledger_');
+      addTearDown(() => jail.delete(recursive: true));
+
+      final world = _buildWorld(jail.path);
+      final ledger = HarnessExecutionLedger(world);
+      world.executionObserver = ledger;
+
+      await HarnessLoop(world: world).runUntilIdle();
+
+      // The ledger must show the full event journey:
+      // response arrives → tool call dispatched → tool result → beat.
+      final dump = ledger.dump();
+      expect(dump, contains('ActorGenerateResponse 0→1'));
+      expect(dump, contains('ToolCallEvent 0→1'));
+      expect(dump, contains('ToolResultEvent 0→1'));
+      expect(dump, contains('ToolResultEvent 1→0'));
+
+      expectIdle(world);
     },
     timeout: const Timeout(Duration(seconds: 30)),
   );

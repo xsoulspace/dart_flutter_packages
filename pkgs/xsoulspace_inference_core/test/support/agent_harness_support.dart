@@ -11,7 +11,6 @@ library;
 import 'dart:async';
 
 import 'package:test/test.dart';
-import 'package:xsoulspace_inference_core/src/agent/schedules.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 /// A mock handler that simulates an LLM without requiring a real backend.
@@ -111,7 +110,9 @@ void expectIdle(World world) {
     if (n > 0) problems.add('$n stranded $name event(s)');
   }
 
-  checkChannel<ActorGenerateRequest>('ActorGenerateRequest');
+  // Note: ActorGenerateRequest is intentionally NOT checked — actorActSystem
+  // publishes it as fire-and-forget dispatch; handlers consume the request
+  // via the GenerationHandlerResource call, not by draining the channel.
   checkChannel<ActorGenerateResponse>('ActorGenerateResponse');
   checkChannel<ActorGenerateStreamEvent>('ActorGenerateStreamEvent');
   checkChannel<ToolCallEvent>('ToolCallEvent');
@@ -153,7 +154,7 @@ Entity addIndexedBeat(
   final beat = startBeat(world, thread, speaker, BeatModalityEnum.text);
   appendToBeat(world, beat, text);
   completeBeat(world, beat);
-  indexBeat(world, beat, keywords);
+  indexBeat(world, beat, keywords, thread: thread);
   world.flush();
   return beat;
 }
