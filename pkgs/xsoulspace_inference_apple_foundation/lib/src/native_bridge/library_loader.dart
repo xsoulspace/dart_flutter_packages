@@ -1,5 +1,6 @@
 // Deliberately uses DynamicLibrary.codeAsset (SDK 3.14+) behind a runtime
 // guard while the workspace SDK constraint is ^3.12.0.
+// ignore_for_file: sdk_version_since
 import 'dart:ffi';
 import 'dart:io';
 
@@ -41,10 +42,9 @@ final class XsFmLibraryLoader {
   /// Opens the bridge library via the code asset, falling back to path
   /// resolution when [DynamicLibrary.codeAsset] is unavailable or fails.
   DynamicLibrary load() {
+    // SDK 3.14+ API; guarded by try/catch for older SDKs where the
+    // code-asset factory is absent or the asset is not registered.
     try {
-      // SDK 3.14+ API; guarded by try/catch for older SDKs where the
-      // code-asset factory is absent or the asset is not registered.
-      // ignore: sdk_version_since
       return DynamicLibrary.codeAsset(assetId);
     } on Object {
       // Fall through to path-based loading.
