@@ -176,7 +176,7 @@ void main() {
       File(filePath).writeAsStringSync('hello world');
 
       // Reused shared real tool from lib/src/agent/tools.dart.
-      final registry = ToolRegistry()..register(readTool());
+      final registry = ToolRegistry()..register(readTool(FsToolsRoot(temp.path)));
 
       final world = await _buildWorld(registry);
       world.getResource<GenerationHandlerResource>().registerDefault(
@@ -222,7 +222,7 @@ void main() {
       addTearDown(() => temp.delete(recursive: true));
       final filePath = '${temp.path}/output.txt';
 
-      final registry = ToolRegistry()..register(writeTool());
+      final registry = ToolRegistry()..register(writeTool(FsToolsRoot(temp.path)));
 
       final world = await _buildWorld(registry);
       world.getResource<GenerationHandlerResource>().registerDefault(
@@ -264,7 +264,7 @@ void main() {
       File('${temp.path}/a.txt').writeAsStringSync('a');
       File('${temp.path}/b.txt').writeAsStringSync('b');
 
-      final registry = ToolRegistry()..register(listDirTool());
+      final registry = ToolRegistry()..register(listDirTool(FsToolsRoot(temp.path)));
 
       final world = await _buildWorld(registry);
       world.getResource<GenerationHandlerResource>().registerDefault(
@@ -387,7 +387,7 @@ void main() {
         addTearDown(() => temp.delete(recursive: true));
         final filePath = '${temp.path}/structured.txt';
 
-        final registry = ToolRegistry()..register(writeTool());
+        final registry = ToolRegistry()..register(writeTool(FsToolsRoot(temp.path)));
 
         final world = await _buildWorld(registry);
 

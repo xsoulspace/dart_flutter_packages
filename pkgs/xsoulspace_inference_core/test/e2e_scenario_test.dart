@@ -22,7 +22,7 @@ void main() {
     // A multi-actor scenario using the real shared FS tools.
     final scenario = Scenario(
       name: 'e2e',
-      tools: [...fsTools()],
+      tools: [...fsTools(FsToolsRoot('/tmp/ecsly_e2e_test'))],
       actors: [
         ScenarioActor(
           name: 'coder',
@@ -63,12 +63,15 @@ void main() {
     // produce tools with structured schemas and the runner must accept them.
     final scenario = Scenario(
       name: 'tools-ok',
-      tools: [...fsTools()],
+      tools: [...fsTools(FsToolsRoot('/tmp/ecsly_e2e_test'))],
       actors: [
         ScenarioActor(name: 'a', systemPrompt: 'p', decisions: ['go']),
       ],
     );
-    expect(scenario.tools, hasLength(fsTools().length));
+    expect(
+      scenario.tools,
+      hasLength(fsTools(FsToolsRoot('/tmp/ecsly_e2e_test')).length),
+    );
     for (final tool in scenario.tools) {
       expect(tool.argsSchema.isEmpty, isFalse);
     }

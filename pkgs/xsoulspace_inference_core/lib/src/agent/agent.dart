@@ -6,7 +6,7 @@
 /// 'src/agent/agent_plugin.dart';` in the package root works unchanged.
 library;
 
-export 'agent_low_api.dart';
+export 'model_router.dart';
 export 'data_models/data_models.dart';
 export 'events.dart';
 export 'handler.dart';

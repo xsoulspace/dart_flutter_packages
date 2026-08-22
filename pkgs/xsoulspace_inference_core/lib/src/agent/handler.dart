@@ -1,7 +1,7 @@
 import 'package:ecsly/ecsly.dart';
 
 import '../../xsoulspace_inference_core.dart';
-import 'agent_low_api.dart';
+import 'model_router.dart';
 import 'events.dart';
 import 'resources/resources.dart';
 

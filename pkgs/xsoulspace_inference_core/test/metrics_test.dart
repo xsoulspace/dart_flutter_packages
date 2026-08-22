@@ -43,7 +43,7 @@ void main() {
         final filePath = '${temp.path}/notes.txt';
         await File(filePath).writeAsString('hello');
 
-        final registry = ToolRegistry()..register(readTool());
+        final registry = ToolRegistry()..register(readTool(FsToolsRoot(Directory.systemTemp.createTempSync('ecsly_t').path)));
         final toolResource = ToolRegistryResource();
         toolResource.register('default', registry);
         final world = await buildTestWorld(toolRegistryResource: toolResource);

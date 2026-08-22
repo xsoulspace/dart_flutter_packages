@@ -8,6 +8,7 @@
 library;
 
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:test/test.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
@@ -40,7 +41,7 @@ void main() {
 
   group('ToolDef serialization (Apple native tool path)', () {
     test('getToolsJsons emits string names and JSON-serializable payloads', () {
-      final registry = ToolRegistry()..register(readTool());
+      final registry = ToolRegistry()..register(readTool(FsToolsRoot(Directory.systemTemp.createTempSync('ecsly_t').path)));
       final jsons = registry.getToolsJsons();
       expect(jsons, hasLength(1));
       final tool = jsons.first;

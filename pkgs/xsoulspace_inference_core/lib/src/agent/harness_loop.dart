@@ -97,6 +97,31 @@ class HarnessLoop {
     _wakeupCompleter = null;
   }
 
+  /// Drive schedules until the world is idle (no open decisions, no agency,
+  /// no awaiting responses, no in-flight tasks), then return.
+  ///
+  /// This is the CLI/server entry point: spawn actors with [OpenDecision]s,
+  /// call this, and read the resulting beats when it completes. A safety cap
+  /// ([maxTicks]) guards against a world that keeps producing work forever —
+  /// pass `null` for unbounded runs you control via [stop].
+  Future<void> runUntilIdle({int? maxTicks = 10000}) async {
+    var ticks = 0;
+    while (!canSleep()) {
+      if (maxTicks != null && ticks >= maxTicks) {
+        throw StateError(
+          'HarnessLoop.runUntilIdle exceeded $maxTicks ticks without going '
+          'idle. The world keeps producing work — check for retry loops or '
+          'self-spawning decisions.',
+        );
+      }
+      ticks++;
+      _tick();
+      // Yield so fire-and-forget handler futures / tool completions can land.
+      await Future<void>.delayed(Duration.zero);
+    }
+    world.flush();
+  }
+
   /// Run one tick of the agent loop.
   ///
   /// Executes all schedules in order. Handlers receive requests through the

@@ -55,13 +55,6 @@ extension type const ModelId(String value) {
   static const empty = ModelId('');
 }
 
-/// organized and contiuos information
-/// about agent goals, plans, history etc..
-class ModelContextWindow {
-  const ModelContextWindow();
-  static const empty = ModelContextWindow();
-}
-
 typedef InferenceClientsBuilders = Map<ModelName, InferenceClientBuilder>;
 typedef InferenceClientBuilder = InferenceClient Function();
 
@@ -104,18 +97,10 @@ class ModelRouter {
   }
 }
 
-/// 1 instance [ModelRuntime] holds:
-/// - 1 only ML/LM [Model] and its [ModelContextWindow]
-/// - organized and continuous information
-/// about model goals, plans, history etc..
+/// A loaded, callable model bound to its inference client.
 class ModelRuntime {
-  ModelRuntime({
-    required this.model,
-    required this.client,
-    this.context = ModelContextWindow.empty,
-  });
+  ModelRuntime({required this.model, required this.client});
   final Model model;
-  final ModelContextWindow context;
   final InferenceClient client;
   bool get isRunning => client.isAvailable;
 
