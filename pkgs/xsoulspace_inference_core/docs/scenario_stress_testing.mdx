@@ -1,7 +1,7 @@
 # Scenario Stress-Testing the Agent Harness
 
 > North Star impact: **applies**. This is the tool that proves the harness's central
-> thesis on a real model — that a small local model is genuinely useful *because*
+> thesis on a real model — that a small local model is genuinely useful _because_
 > the deterministic seams (projection, agency, tools, coordination) do the heavy
 > lifting. Until we drive it with a real model under load, "tiny-context harness"
 > is a claim; the stress rig is how we get evidence.
@@ -34,16 +34,19 @@ harness thesis depends on:
 ## Tools are structured and reusable
 
 Tools are real `ToolDef`s built with **structured schemas** (`ToolDef.structured`
-+ `SchemaBundle` + `FM`) — never loose string/random-map definitions. `Scenario`
-takes `ToolDef` directly (there is no separate `ScenarioTool`).
+
+- `SchemaBundle` + `FM`) — never loose string/random-map definitions. `Scenario`
+  takes `ToolDef` directly (there is no separate `ScenarioTool`).
 
 Tool results are stored **structurally on the beat** as `ToolResultContent`
 (tool name + typed output), not stringified. A short `TextContent` is kept only
 for keyword indexing and projection; `ToolResultContent` is the source of truth.
 
-Shared tools live in `lib/src/agent/tools.dart` (`fsTools()` — `read`/`write`/
-`list_dir`) and are reused by the stress scenario, the example, and tests. If
-you need a tool in more than one place, define it there and reuse it.
+Shared tools live in `lib/src/agent/tools/fs_tools.dart` —
+`fsTools(FsToolsRoot('/path/to/jail'))` (`read`/`write`/`list_dir`) — and are
+reused by the stress scenario, the example, and tests. The suite is jailed:
+paths escaping the root are rejected. If you need a tool in more than one
+place, define it there and reuse it.
 
 ## The metrics we watch
 

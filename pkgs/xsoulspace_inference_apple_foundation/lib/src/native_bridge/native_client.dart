@@ -8,12 +8,17 @@ import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import 'bindings.dart';
 import 'library_loader.dart';
+import 'native_bindings.dart' as native;
 
 /// FFI transport for Apple Foundation Models.
 ///
 /// Implements [InferenceClient] without a Flutter engine. Tool calls flow
 /// Swift → Dart through a `NativeCallable.listener` callback; Dart resumes
 /// each pending call via `xs_fm_tool_respond`.
+///
+/// Symbol resolution prefers the code asset registered by `hook/build.dart`
+/// (via the `@Native` bindings in `native_bindings.dart`); when code assets
+/// are unavailable it falls back to [XsFmLibraryLoader] path resolution.
 class AppleFoundationNativeClient implements InferenceClient {
   AppleFoundationNativeClient({XsFmLibraryLoader? loader})
     : _loader = loader ?? XsFmLibraryLoader();
@@ -23,6 +28,9 @@ class AppleFoundationNativeClient implements InferenceClient {
   XsFmBindings? _bindings;
   NativeCallable<ToolCbNative>? _toolCallable;
   NativeCallable<DoneCbNative>? _doneCallable;
+
+  /// Whether the last load used the code-asset path (vs the fallback loader).
+  static bool usedCodeAsset = false;
 
   @override
   String get id => 'apple_foundation_native';
@@ -40,7 +48,20 @@ class AppleFoundationNativeClient implements InferenceClient {
   static bool _cachedAvailable = false;
   static bool _availabilityChecked = false;
 
-  XsFmBindings get _b => _bindings ??= XsFmBindings.fromLibrary(_loader.load());
+  XsFmBindings get _b {
+    if (_bindings != null) return _bindings!;
+    try {
+      // Probe the code-asset path: calling an @Native symbol resolves it
+      // through the asset registered by the build hook.
+      native.xs_fm_is_available();
+      usedCodeAsset = true;
+      _bindings = NativeXsFmBindings();
+    } on Object {
+      usedCodeAsset = false;
+      _bindings = LibraryXsFmBindings.fromLibrary(_loader.load());
+    }
+    return _bindings!;
+  }
 
   @override
   Future<bool> refreshAvailability() async {
@@ -246,4 +267,27 @@ class AppleFoundationNativeClient implements InferenceClient {
       malloc.free(cString);
     }
   }
+}
+
+/// [XsFmBindings] view that routes through the `@Native` declarations in
+/// `native_bindings.dart`, resolved via the build-hook code asset.
+final class NativeXsFmBindings implements XsFmBindings {
+  const NativeXsFmBindings();
+
+  @override
+  int isAvailable() => native.xs_fm_is_available();
+
+  @override
+  int generateAsync(
+    Pointer<Char> requestJson,
+    Pointer<NativeFunction<ToolCbNative>> toolCb,
+    Pointer<NativeFunction<DoneCbNative>> doneCb,
+  ) => native.xs_fm_generate_async(requestJson, toolCb, doneCb);
+
+  @override
+  int toolRespond(Pointer<Char> id, Pointer<Char> resultJson) =>
+      native.xs_fm_tool_respond(id, resultJson);
+
+  @override
+  void freeString(Pointer<Char> s) => native.xs_fm_free_string(s);
 }

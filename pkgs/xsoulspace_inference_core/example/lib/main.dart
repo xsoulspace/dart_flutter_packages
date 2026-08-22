@@ -65,6 +65,8 @@ sealed class Scenario {
   bool isInitialized = false;
   World? world;
   Entity? actor;
+
+  /// Loop for the current run — kept so [dispose] can stop a run in flight.
   HarnessLoop? _loop;
 
   /// Build the world, register resources/handlers, and spawn the actor.
@@ -97,15 +99,18 @@ sealed class Scenario {
     );
 
     // Bind stable model ids so the actor can reference them via [ActorModel].
+    // Tier 1 = stronger (OpenRouter) — escalation moves up tiers.
     final appleModelId = ModelId('apple-foundation');
     final openRouterModelId = ModelId('model-openrouter');
-    router.models[appleModelId] = Model(
-      id: appleModelId,
+    router.models[appleModelId] = const Model(
+      id: ModelId('apple-foundation'),
       name: DefaultModelNames.appleFoundation,
+      tier: 0,
     );
-    router.models[openRouterModelId] = Model(
-      id: openRouterModelId,
+    router.models[openRouterModelId] = const Model(
+      id: ModelId('model-openrouter'),
       name: OpenRouterModelNames.openRouter,
+      tier: 1,
     );
 
     world
@@ -158,20 +163,19 @@ sealed class Scenario {
     return actor;
   }
 
-  /// Run the schedules until the actor's decision is consumed, then return
-  /// the latest model-response [TextContent] (or '' if none arrived).
+  /// Run the schedules until the world goes idle, then return the latest
+  /// model-response [TextContent] (or '' if none arrived).
   ///
   /// Response beats are indexed into the [FacetIndex]; we scan the world's
   /// complete text beats for the most recent one.
   Future<String> run() async {
     final world = this.world;
-    final actor = this.actor;
-    if (world == null || actor == null) return '';
+    if (world == null) return '';
 
-    // Drive the loop until the actor's OpenDecision is consumed.
+    // Drive all schedules until no decisions / responses / tasks remain.
     final loop = HarnessLoop(world: world);
     _loop = loop;
-    await loop.start(until: _waitForResponse(world, actor));
+    await loop.runUntilIdle();
     _loop = null;
 
     // Latest complete text beat = the model's most recent response.
@@ -180,15 +184,6 @@ sealed class Scenario {
       if (content.text.isNotEmpty) last = content.text;
     }
     return last ?? '';
-  }
-
-  Future<void> _waitForResponse(World world, Entity actor) async {
-    while (true) {
-      final entity = world.getEntity(actor);
-      if (!entity.$2) return;
-      if (!entity.$1.has<OpenDecision>()) return;
-      await Future.delayed(const Duration(milliseconds: 50));
-    }
   }
 
   void dispose() {

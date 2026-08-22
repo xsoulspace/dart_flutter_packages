@@ -9,9 +9,11 @@ environment:
 resolution: workspace
 
 dependencies:
+  code_assets: any
   ffi: ^2.2.0
   flutter:
     sdk: flutter
+  hooks: any
   path: ^1.9.1
   xsoulspace_inference_core:
     path: ../xsoulspace_inference_core
