@@ -6,7 +6,7 @@
 /// tools + dynamic tool registration. Each scenario is a [Scenario] consumed
 /// by `ScenarioRunner` via the CLI (`main_stress_cli.dart`).
 ///
-/// Tools are the *real* shared definitions from core (`fsTools()`) plus
+/// Tools are the *real* shared definitions from core (`fsTools(root)`) plus
 /// example-specific clock/search tools, all built with structured schemas.
 library;
 
@@ -56,8 +56,9 @@ ToolDef searchTool() => ToolDef.encode(
 /// tools (from core), plus clock + a dynamically-added search tool.
 Scenario multiActorTopicScenario() => Scenario(
   name: 'multi_actor_multi_topic',
-  // Real shared file-system tools for the coding agent.
-  tools: [...fsTools(), clockTool()],
+  // Real shared file-system tools for the coding agent, jailed to a
+  // scratch directory so the model cannot touch anything outside it.
+  tools: [...fsTools(FsToolsRoot('/tmp/ecsly_stress_workspace')), clockTool()],
   // Dynamically add the search tool before the run.
   toolHook: () async => [searchTool()],
   maxConcurrent: 2,

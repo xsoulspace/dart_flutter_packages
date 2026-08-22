@@ -1,6 +1,7 @@
-// Deliberately uses DynamicLibrary.codeAsset (SDK 3.14+) behind a runtime
-// guard while the workspace SDK constraint is ^3.12.0.
-// ignore_for_file: sdk_version_since
+// Path-based loader for the bridge dylib. The code-asset path
+// (`DynamicLibrary.codeAsset`, SDK 3.14+) is not yet available on the
+// workspace SDK (3.12); when the SDK is bumped, prefer code assets and keep
+// this as fallback.
 import 'dart:ffi';
 import 'dart:io';
 
@@ -39,18 +40,13 @@ final class XsFmLibraryLoader {
     return candidates.toSet().toList(growable: false);
   }
 
-  /// Opens the bridge library via the code asset, falling back to path
-  /// resolution when [DynamicLibrary.codeAsset] is unavailable or fails.
-  DynamicLibrary load() {
-    // SDK 3.14+ API; guarded by try/catch for older SDKs where the
-    // code-asset factory is absent or the asset is not registered.
-    try {
-      return DynamicLibrary.codeAsset(assetId);
-    } on Object {
-      // Fall through to path-based loading.
-    }
-    return loadFromPath();
-  }
+  /// Opens the bridge library.
+  ///
+  /// Path-based loading first (works on all supported SDKs). When the
+  /// workspace SDK reaches 3.14+ and `DynamicLibrary.codeAsset` exists, the
+  /// code-asset path in `native_bindings.dart` takes precedence instead —
+  /// see `AppleFoundationNativeClient._b` for the resolution order.
+  DynamicLibrary load() => loadFromPath();
 
   /// Path-based loading only (no code-asset attempt).
   DynamicLibrary loadFromPath() {

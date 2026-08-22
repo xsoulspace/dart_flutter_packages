@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:xsoulspace_inference_apple_foundation/xsoulspace_inference_apple_foundation.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
@@ -91,10 +93,7 @@ class _ExamplePageState extends State<_ExamplePage> {
     // Run the harness loop — it handles agency grant, projection,
     // actor act, response processing, and idle/sleep automatically.
     final loop = HarnessLoop(world: world);
-    loop.start(until: Future.delayed(const Duration(seconds: 10)));
-
-    // Wait for the loop to process the decision and sleep
-    await Future.delayed(const Duration(seconds: 5));
+    await loop.runUntilIdle();
 
     // Read the projected cut: the indexed beats the actor handled. The cut is a
     // derived view (Situation) rebuilt each decision, so read the facet index.

@@ -46,7 +46,7 @@ Future<void> main(List<String> args) async {
       // Tool round-trip: model must call the clock tool to answer.
       final registry = ToolRegistry()
         ..register(
-          ToolDef(
+          ToolDef.encode(
             name: const ToolName('clock'),
             description: 'Returns the current time in ISO-8601.',
             argsSchema: SchemaBundle(
@@ -55,16 +55,16 @@ Future<void> main(List<String> args) async {
                 properties: () => [FM.prop('iso', FM.string())],
               ),
             ),
-            execute: (args) async => jsonEncode(<String, dynamic>{
+            execute: (args) async => <String, dynamic>{
               'iso': DateTime.now().toIso8601String(),
-            }),
+            },
           ),
         );
       final toolResult = await client.infer(
         InferenceRequest(
           prompt:
-              'What time is it? Use the clock tool, then answer with '
-              'just the hour number.',
+              'Use the clock tool, then answer with just the hour number. What time is it? '
+              '',
           task: InferenceTask.text,
         ),
         toolRegistry: registry,

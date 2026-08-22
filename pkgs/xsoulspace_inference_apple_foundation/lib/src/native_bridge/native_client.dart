@@ -8,7 +8,6 @@ import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import 'bindings.dart';
 import 'library_loader.dart';
-import 'native_bindings.dart' as native;
 
 /// FFI transport for Apple Foundation Models.
 ///
@@ -50,16 +49,13 @@ class AppleFoundationNativeClient implements InferenceClient {
 
   XsFmBindings get _b {
     if (_bindings != null) return _bindings!;
-    try {
-      // Probe the code-asset path: calling an @Native symbol resolves it
-      // through the asset registered by the build hook.
-      native.xs_fm_is_available();
-      usedCodeAsset = true;
-      _bindings = NativeXsFmBindings();
-    } on Object {
-      usedCodeAsset = false;
-      _bindings = LibraryXsFmBindings.fromLibrary(_loader.load());
-    }
+    // Resolution order:
+    // 1. Loader path (works today, all supported SDKs).
+    // 2. Code-asset path (`@Native` bindings) once the workspace SDK is
+    //    3.14+ and `DynamicLibrary.codeAsset` ships — see
+    //    `native_bindings.dart`, kept ready for that migration.
+    usedCodeAsset = false;
+    _bindings = LibraryXsFmBindings.fromLibrary(_loader.load());
     return _bindings!;
   }
 
@@ -267,27 +263,4 @@ class AppleFoundationNativeClient implements InferenceClient {
       malloc.free(cString);
     }
   }
-}
-
-/// [XsFmBindings] view that routes through the `@Native` declarations in
-/// `native_bindings.dart`, resolved via the build-hook code asset.
-final class NativeXsFmBindings implements XsFmBindings {
-  const NativeXsFmBindings();
-
-  @override
-  int isAvailable() => native.xs_fm_is_available();
-
-  @override
-  int generateAsync(
-    Pointer<Char> requestJson,
-    Pointer<NativeFunction<ToolCbNative>> toolCb,
-    Pointer<NativeFunction<DoneCbNative>> doneCb,
-  ) => native.xs_fm_generate_async(requestJson, toolCb, doneCb);
-
-  @override
-  int toolRespond(Pointer<Char> id, Pointer<Char> resultJson) =>
-      native.xs_fm_tool_respond(id, resultJson);
-
-  @override
-  void freeString(Pointer<Char> s) => native.xs_fm_free_string(s);
 }

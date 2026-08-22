@@ -48,6 +48,7 @@ dev_dependencies:
   integration_test:
     sdk: flutter
   lints: ^6.1.0
+  test: any
   xsoulspace_lints: ^0.1.2
 
 # For information on the generic Dart part of this file, see the
