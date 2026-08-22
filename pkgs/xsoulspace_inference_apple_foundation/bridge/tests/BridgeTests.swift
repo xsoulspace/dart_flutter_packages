@@ -119,16 +119,26 @@ func testSchemaMaterialization() {
 
   @available(macOS 26.0, *)
   func makeClockTool(parameters: GenerationSchema?) -> NativeDartTool {
+    // The callback receives {id, name, arguments} and must resolve the
+    // pending continuation via PendingToolRegistry — same contract as the
+    // Dart side's xs_fm_tool_respond. Returning a string from the closure
+    // alone would leave the continuation hanging forever.
     NativeDartTool(
       name: "clock",
       description: "Returns the current time in ISO-8601.",
       parameters: parameters,
-      callback: { _ in
-        // The C callback would normally suspend until Dart responds. For the
-        // live test we can't drive Dart — but the framework calls this only
-        // if it decides to invoke the tool; a synchronous return keeps the
-        // test self-contained.
-        "2026-01-01T00:00:00Z"
+      callback: { payload in
+        guard let payload = payload else { return }
+        let payloadStr = String(cString: payload)
+        guard let data = payloadStr.data(using: .utf8),
+          let obj = try? JSONSerialization.jsonObject(with: data)
+            as? [String: Any],
+          let id = obj["id"] as? String
+        else { return }
+        PendingToolRegistry.shared.fulfill(
+          id: id,
+          result: "2026-01-01T00:00:00Z"
+        )
       }
     )
   }
@@ -136,7 +146,8 @@ func testSchemaMaterialization() {
   func liveSessionTest(
     _ name: String,
     tools: [NativeDartTool],
-    prompt: String
+    prompt: String,
+    timeoutSeconds: UInt64 = 90
   ) async -> Bool {
     do {
       let model = SystemLanguageModel.default
@@ -144,13 +155,35 @@ func testSchemaMaterialization() {
         print("SKIP \(name) — Apple Intelligence unavailable")
         return true
       }
-      let session = LanguageModelSession(model: model, tools: tools)
-      let response = try await session.respond(to: prompt)
-      return !response.content.isEmpty
+      // Race the session against a timeout so a hung tool round-trip fails
+      // loudly instead of blocking the suite forever.
+      return try await withThrowingTaskGroup(of: Bool.self) { group in
+        group.addTask {
+          let session = LanguageModelSession(model: model, tools: tools)
+          let response = try await session.respond(to: prompt)
+          return !response.content.isEmpty
+        }
+        group.addTask {
+          try await Task.sleep(nanoseconds: timeoutSeconds * 1_000_000_000)
+          throw TimeoutError(name: name, seconds: timeoutSeconds)
+        }
+        let first = try await group.next()!
+        group.cancelAll()
+        return first
+      }
+    } catch let err as TimeoutError {
+      print("     TIMEOUT: \(err)")
+      return false
     } catch {
       print("     error: \(error)")
       return false
     }
+  }
+
+  struct TimeoutError: Error, CustomStringConvertible {
+    let name: String
+    let seconds: UInt64
+    var description: String { "\(name) exceeded \(seconds)s" }
   }
 
   func runLiveTests() async {
@@ -207,14 +240,27 @@ func testSchemaMaterialization() {
       check("live C: schema'd tool session", c)
     }
 
-    // D: multiple tools — matches production shape (read/write/list_dir).
-    let multiTools = [
-      makeClockTool(parameters: nil),
-      makeClockTool(parameters: nil),
-    ]
+    // D: multiple DISTINCT tools — matches production shape
+    // (read/write/list_dir). Duplicate names would be an invalid session.
+    let timeTool = makeClockTool(parameters: nil)
+    let echoTool = NativeDartTool(
+      name: "echo",
+      description: "Echoes back the given text.",
+      parameters: nil,
+      callback: { payload in
+        guard let payload = payload else { return }
+        let payloadStr = String(cString: payload)
+        guard let data = payloadStr.data(using: .utf8),
+          let obj = try? JSONSerialization.jsonObject(with: data)
+            as? [String: Any],
+          let id = obj["id"] as? String
+        else { return }
+        PendingToolRegistry.shared.fulfill(id: id, result: "echo-ok")
+      }
+    )
     let d = await liveSessionTest(
       "live D: multi-tool session",
-      tools: multiTools,
+      tools: [timeTool, echoTool],
       prompt: "Say ok."
     )
     check("live D: multi-tool session", d)
