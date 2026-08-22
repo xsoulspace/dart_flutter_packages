@@ -78,6 +78,47 @@ Future<World> buildTestWorld({
 Entity spawnScene(World world) =>
     world.spawnComponents([const Scene(), SceneFrame()]);
 
+/// Asserts the harness is fully idle: no pending decisions, agency,
+/// responses, in-flight tasks, or stranded events.
+///
+/// End every harness test with this. It turns "loop exited early and
+/// stranded work" into a named failure at the exact channel, instead of a
+/// downstream assertion failure (or worse, silence).
+///
+/// See docs/agent/PLAN.md → "Detecting idle-race bugs".
+void expectIdle(World world) {
+  final problems = <String>[];
+
+  if (world.query2<Actor, OpenDecision>().toList().isNotEmpty) {
+    problems.add('OpenDecision still pending');
+  }
+  if (world.query2<Actor, Agency>().toList().isNotEmpty) {
+    problems.add('Agency still granted');
+  }
+  if (world.query2<Actor, AwaitingResponse>().toList().isNotEmpty) {
+    problems.add('AwaitingResponse still set');
+  }
+  if (!world.getResource<TaskRegistryResource>().isEmpty) {
+    problems.add(
+      '${world.getResource<TaskRegistryResource>().length} task(s) in flight',
+    );
+  }
+
+  void checkChannel<T extends EcsEvent>(String name) {
+    if (!world.events.hasRegistered<T>()) return;
+    final n = world.events.reader<T>().length;
+    if (n > 0) problems.add('$n stranded $name event(s)');
+  }
+
+  checkChannel<ActorGenerateRequest>('ActorGenerateRequest');
+  checkChannel<ActorGenerateResponse>('ActorGenerateResponse');
+  checkChannel<ActorGenerateStreamEvent>('ActorGenerateStreamEvent');
+  checkChannel<ToolCallEvent>('ToolCallEvent');
+  checkChannel<ToolResultEvent>('ToolResultEvent');
+
+  expect(problems, isEmpty, reason: 'harness not idle: ${problems.join('; ')}');
+}
+
 /// Helper to spawn an actor entity in a scene.
 Entity spawnActor(
   World world,

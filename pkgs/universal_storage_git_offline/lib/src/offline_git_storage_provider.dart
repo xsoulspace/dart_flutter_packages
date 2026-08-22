@@ -9,6 +9,8 @@ import 'package:path/path.dart' as path;
 import 'package:retry/retry.dart';
 import 'package:universal_storage_interface/universal_storage_interface.dart';
 
+import 'git_commit_batching.dart';
+
 /// {@template offline_git_storage_provider}
 /// A storage provider that uses a local Git repository for storage operations
 /// with optional remote synchronization capabilities.
@@ -306,6 +308,9 @@ class OfflineGitStorageProvider extends StorageProvider
     _ensureInitialized();
 
     try {
+      // Pending mutations must be committed before checkout so they are
+      // not clobbered by the restore.
+      await flushPendingCommits();
       if (versionId != null) {
         // Restore to specific commit
         await _gitDir!.runCommand(['checkout', versionId, '--', filePath]);
@@ -338,10 +343,14 @@ class OfflineGitStorageProvider extends StorageProvider
 
     if (_remoteUrl.isEmpty) {
       // Offline-first: no remote configured means nothing to replicate.
+      await flushPendingCommits();
       return;
     }
 
     try {
+      // 0. Commit pending mutations so they are included in the push.
+      await flushPendingCommits();
+
       // 1. Setup remote if not exists
       await _ensureRemoteSetup();
 
@@ -1082,6 +1091,15 @@ class OfflineGitStorageProvider extends StorageProvider
 
   @override
   Future<void> dispose() async {
+    // Commit any pending batched mutations before tearing down.
+    try {
+      await flushPendingCommits();
+    } on Object {
+      // Best-effort: dispose must not throw over an unflushed batch.
+    }
+    _batchTimer?.cancel();
+    _batchTimer = null;
+    _pendingCommit = null;
     _isInitialized = false;
     _gitDir = null;
   }
