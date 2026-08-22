@@ -36,6 +36,7 @@ import 'dart:async';
 import 'package:ecsly/ecsly.dart';
 
 import 'data_models/data_models.dart';
+import 'events.dart';
 import 'resources/resources.dart';
 import 'schedules.dart';
 
@@ -174,6 +175,21 @@ class HarnessLoop {
   /// - No actors with `Agency`
   /// - No actors with `AwaitingResponse`
   /// - No in-flight tasks in [TaskRegistryResource]
+  /// Check if the loop can sleep (no work remaining).
+  ///
+  /// Returns true when:
+  /// - No actors with `OpenDecision`
+  /// - No actors with `Agency`
+  /// - No actors with `AwaitingResponse`
+  /// - No in-flight tasks in [TaskRegistryResource]
+  /// - No unconsumed events on harness channels
+  ///
+  /// The channel check closes a race: an async tool completes, sends its
+  /// [ToolResultEvent], and resolves its task in the same microtask. Between
+  /// that moment and the next `Mechanical` pass (which turns the event into
+  /// a beat), the task registry is empty — but the result still needs one
+  /// more tick to be processed. Without this check, runUntilIdle exited and
+  /// stranded tool results in the channel.
   bool canSleep() {
     final hasOpenDecisions = world
         .query2<Actor, OpenDecision>()
@@ -187,6 +203,13 @@ class HarnessLoop {
 
     final hasInFlightTasks = !world.getResource<TaskRegistryResource>().isEmpty;
 
-    return !hasOpenDecisions && !hasAgency && !hasAwaiting && !hasInFlightTasks;
+    // Unconsumed harness events are pending work by definition.
+    final hasPendingEvents = world.events.reader<ToolResultEvent>().isNotEmpty;
+
+    return !hasOpenDecisions &&
+        !hasAgency &&
+        !hasAwaiting &&
+        !hasInFlightTasks &&
+        !hasPendingEvents;
   }
 }

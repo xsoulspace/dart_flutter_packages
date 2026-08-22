@@ -102,6 +102,7 @@ void main() {
 
   Future<(StorageKernel, Directory)> buildGitOfflineKernel({
     required String? name,
+    final String? remoteUrl,
   }) async {
     final directory = await Directory.systemTemp.createTemp(
       'bench_git_${name ?? 'x'}_',
@@ -119,6 +120,7 @@ void main() {
           localPath: namespaceDir.path,
           authorName: 'Benchmark',
           authorEmail: 'benchmark@test.local',
+          remoteUrl: remoteUrl == null ? VcUrl.empty : VcUrl(remoteUrl),
         ),
       );
       namespaceServices[namespace] = StorageService(provider);
@@ -332,7 +334,33 @@ void main() {
 
   group('outbox replay benchmark', () {
     test('enqueue + replay 100 entries against offline-git', () async {
-      final (kernel, directory) = await buildGitOfflineKernel(name: 'outbox');
+      // Create a local bare repo to act as the sync remote. It needs at
+      // least one commit on 'main' so pull/fetch has a ref to track.
+      final remoteDir = await Directory.systemTemp.createTemp('bench_remote_');
+      await Process.run('git', ['init', '--bare', remoteDir.path]);
+      final seedDir = await Directory.systemTemp.createTemp('bench_seed_');
+      await Process.run('git', ['init', seedDir.path]);
+      await Process.run('git', [
+        '-C',
+        seedDir.path,
+        'commit',
+        '--allow-empty',
+        '-m',
+        'seed',
+      ]);
+      await Process.run('git', ['-C', seedDir.path, 'branch', '-M', 'main']);
+      await Process.run('git', [
+        '-C',
+        seedDir.path,
+        'push',
+        remoteDir.path,
+        'main',
+      ]);
+      await seedDir.delete(recursive: true);
+      final (kernel, directory) = await buildGitOfflineKernel(
+        name: 'outbox',
+        remoteUrl: remoteDir.path,
+      );
       try {
         final enqueueStart = Stopwatch()..start();
         for (var i = 0; i < 100; i++) {

@@ -109,9 +109,15 @@ void grantAgencySystem(World world) {
 
   // Grant up to the concurrency cap.
   var granted = 0;
-  for (final (entity, _) in eligible) {
+  for (final (entity, decision) in eligible) {
     if (granted >= policy.maxConcurrent) break;
     entity.insert(const Agency());
+    // Materialize the decision-level escalation flag as a tag so downstream
+    // systems (actorAct model resolution) see it without re-reading the
+    // decision — OpenDecision may be consumed before dispatch.
+    if (decision.escalate && !entity.has<EscalationRequest>()) {
+      entity.insert(const EscalationRequest(reason: 'decision.escalate'));
+    }
     granted++;
   }
 }

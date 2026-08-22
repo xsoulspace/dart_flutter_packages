@@ -249,7 +249,8 @@ final class OutboxReplayer {
       syncResult = providerSyncResult;
       metadata = providerSyncResult.metadata;
 
-      if (dueEntries.isNotEmpty) {
+      final syncWasSkipped = metadata['sync_skipped'] != null;
+      if (dueEntries.isNotEmpty && !syncWasSkipped) {
         final replayedIds = dueEntries.map((final item) => item.id).toSet();
         outbox = outbox
             .where((final entry) => !replayedIds.contains(entry.id))
@@ -271,6 +272,12 @@ final class OutboxReplayer {
             },
           );
         }
+      } else if (dueEntries.isNotEmpty && syncWasSkipped) {
+        // Sync was skipped (e.g. no remote configured): keep entries queued.
+        metadata = <String, dynamic>{
+          ...metadata,
+          'outbox_retained': dueEntries.length,
+        };
       }
     } on Object catch (error) {
       final message = errorMessage(error);

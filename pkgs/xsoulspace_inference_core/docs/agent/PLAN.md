@@ -47,6 +47,24 @@ Phases below mirror the North Star table. Status: `done` / `active` / `next`.
   real model over multi-actor, tool-using scenarios.
   CLI: `apple_foundation/example/lib/main_stress_cli.dart`.
   See `docs/scenario_stress_testing.mdx`.
+- **Idle-detection correctness (runUntilIdle race, fixed 2026-08).** Two
+  related bugs made `HarnessLoop.runUntilIdle` exit while async tool work was
+  still in flight, stranding results in event channels:
+
+  1. Response-carried `ToolCallEvent`s had no `taskId`, so the in-flight tool
+     was invisible to `canSleep()` (which checks `TaskRegistryResource`).
+     Fix: `processResponsesSystem` registers a `TaskHandle` per dispatched
+     call; `toolExecutionSystem` resolves it on completion.
+  2. A completed tool sends its `ToolResultEvent` and resolves its task in
+     the same microtask — leaving a window where the registry is empty but
+     the result still needs one more `Mechanical` pass to become a beat.
+     Fix: `canSleep()` also treats unconsumed `ToolResultEvent`s as pending
+     work.
+
+  Regression: `test/run_until_idle_tool_race_test.dart`. The manual-schedule
+  tests never caught this because they hardcode a sleep + second Mechanical
+  pass; only the production `runUntilIdle` path exposed it. See "Detecting
+  idle-race bugs" below.
 
 ## Phase 1 — Docs & North Star (done)
 
@@ -115,3 +133,27 @@ final comparison table from Phase 4 as the headline artifact.
   thread, subset) so a ray can coarsen, not just narrow.
 - **AST as a tool seam** — add as a capability/tool behind `ToolRegistry`, not
   a core change.
+
+## Detecting idle-race bugs (postmortem → practice)
+
+The runUntilIdle race (see Done) took days because three layers each looked
+innocent in isolation: the event channel passed its own tests, the systems
+passed manual-schedule tests, and the loop's `canSleep()` was _almost_ right.
+Practices adopted so the next one surfaces in minutes:
+
+1. **Invariant: "idle ⇒ nothing stranded."** `canSleep()` must be provable
+   from world state alone. Any new async path that sends an event or spawns
+   work MUST either register a task or be covered by the channel check.
+   Review checklist item for every new event-producing system.
+2. **Production-path tests only.** Manual schedule-stepping tests
+   (`runSchedule` + sleeps) mask timing races. New harness behavior tests
+   must go through `HarnessLoop.runUntilIdle` / `tickForDebug`. The sleep+
+   second-pass crutch in older tests is legacy — don't copy it.
+3. **Stranded-event assertion.** After `runUntilIdle`, all harness channels
+   (`ActorGenerateRequest/Response`, `ToolCallEvent`, `ToolResultEvent`,
+   stream events) must be empty. Cheap to assert; catches any future
+   "loop exited early" bug at the exact failing tick. Candidate for a shared
+   `expectIdle(world)` test helper if it recurs.
+4. **Bisection probes over code reading.** When data is lost between producer
+   and consumer, instrument the boundary first (drain counts per stage),
+   read code only after the loss point is localized to one hop.
