@@ -366,8 +366,18 @@ void pruneThreadsSystem(World w) {
       final status = entity.get<ThreadStatus>();
       if (status != null && status.value != ThreadStatusEnum.pruned) {
         status.value = ThreadStatusEnum.pruned;
+        // Deindex the thread's beats so projection cannot ray-trace into
+        // pruned history via stale keyword hits.
+        _deindexThreadBeats(w, entity.entity);
       }
     }
+  }
+}
+
+void _deindexThreadBeats(World w, Entity thread) {
+  for (final (beat, belongs, _)
+      in w.query2<BelongsToThread, BeatStatus>().toList()) {
+    if (belongs.thread == thread) deindexBeat(w, beat.entity);
   }
 }
 
@@ -397,7 +407,9 @@ void mergeThreadsSystem(World w) {
         )
         .$1;
 
-    // Re-parent all Beats
+    // Re-parent all Beats (the target keeps its index entries; the source's
+    // beats were already deindexed when it was pruned — re-index them under
+    // the merged thread is a no-op for the index, only ownership changes).
     final beats = w.query2<BelongsToThread, BeatStatus>();
     for (final (beat, belongs, _) in beats.toList()) {
       if (belongs.thread == entity.entity) {
@@ -467,6 +479,21 @@ class FacetIndex extends Resource {
 
   /// The keywords currently indexed for [beat].
   Set<String> keywordsFor(Entity beat) => keywordsOf[beat] ?? <String>{};
+
+  /// Remove [beat] from the index entirely.
+  ///
+  /// Called when a beat's thread is pruned or merged away so stale keyword
+  /// hits cannot resurface pruned content in projections.
+  void deindexBeat(Entity beat) {
+    final owned = keywordsOf.remove(beat);
+    if (owned == null) return;
+    for (final keyword in owned) {
+      final hits = byKeyword[keyword];
+      if (hits == null) continue;
+      hits.remove(beat);
+      if (hits.isEmpty) byKeyword.remove(keyword);
+    }
+  }
 }
 
 /// Index a beat into the world's [FacetIndex] under the given keywords.
@@ -475,4 +502,12 @@ class FacetIndex extends Resource {
 /// write them here so projection can ray-trace to the beat later.
 void indexBeat(World w, Entity beat, Iterable<String> keywords) {
   w.getResource<FacetIndex>().indexBeat(beat, keywords);
+}
+
+/// Remove [beat] from the world's [FacetIndex].
+///
+/// Call when a beat's thread is pruned/merged so stale keyword hits cannot
+/// resurface pruned content in projections.
+void deindexBeat(World w, Entity beat) {
+  w.getResource<FacetIndex>().deindexBeat(beat);
 }

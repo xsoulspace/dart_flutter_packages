@@ -64,12 +64,28 @@ class ProjectionPolicy extends Resource {
   int maxCoPresent;
 }
 
-/// Agency policy: how to prioritize competing agency grants.
+/// Agency policy: how to prioritize competing agency grants and how to
+/// bound in-flight work.
 class AgencyPolicy extends Resource {
-  AgencyPolicy({this.maxConcurrent = 8});
+  AgencyPolicy({
+    this.maxConcurrent = 8,
+    this.maxRetries = 3,
+    this.taskTimeout = const Duration(minutes: 5),
+  });
 
   /// Maximum number of actors that may hold [Agency] in a single tick.
   int maxConcurrent;
+
+  /// Maximum retry attempts for an empty/failed LLM response before the
+  /// decision is dropped.
+  int maxRetries;
+
+  /// How long a generation or tool task may stay in flight before the
+  /// harness fails it and frees the actor.
+  ///
+  /// [Duration.zero] disables the timeout (not recommended — a crashed
+  /// backend would hang the actor and the loop forever).
+  Duration taskTimeout;
 }
 
 /// World resource routing generation requests to handlers.

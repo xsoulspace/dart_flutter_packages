@@ -2,6 +2,17 @@
 
 Apple Foundation Models (SystemLanguageModel) implementation of [xsoulspace_inference_core](https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_inference_core) for macOS 26+. Uses Swift Package Manager exclusively and requires Apple Intelligence for real inference.
 
+## Runtime surfaces
+
+| Surface                 | Transport                         | Host                                 |
+| ----------------------- | --------------------------------- | ------------------------------------ |
+| Flutter app             | `MethodChannel` (platform plugin) | Flutter engine, macOS 26+            |
+| Native CLI / ACP server | `dart:ffi` C-ABI bridge           | Pure Dart process, no Flutter engine |
+
+Both surfaces share the same Swift core (`FoundationModelsBridge`,
+`DartSchemaMaterializer`). The FFI surface is in progress; see
+[AGENTS.md](AGENTS.md) for status and guardrails.
+
 ## Installation
 
 In your Flutter app:
@@ -9,7 +20,7 @@ In your Flutter app:
 ```yaml
 dependencies:
   xsoulspace_inference_apple_foundation:
-    path: ../path/to/xsoulspace_inference_apple_foundation  # or published version
+    path: ../path/to/xsoulspace_inference_apple_foundation # or published version
 ```
 
 Then `flutter pub get`.

@@ -1,0 +1,257 @@
+import Foundation
+
+#if canImport(FoundationModels)
+  import FoundationModels
+#endif
+
+/// C-ABI entrypoints. See bridge.h for the async contract.
+///
+/// Tool callbacks and the done callback are `NativeCallable.listener` native
+/// function pointers from Dart. They are invoked on arbitrary threads; the
+/// Dart VM posts them back to the owning isolate. Generation runs on a Swift
+/// Task so the calling thread is never blocked — this is what lets Dart-side
+/// tool handlers execute while a turn is in flight.
+
+typealias XsFmToolCallback = @convention(c) (UnsafePointer<CChar>?) -> Void
+typealias XsFmDoneCallback = @convention(c) (UnsafePointer<CChar>?) -> Void
+
+// MARK: - Pending tool registry
+
+/// Tracks in-flight tool calls so `xs_fm_tool_respond` can resume the right
+/// continuation. Access is serialized on a private queue.
+final class PendingToolRegistry: @unchecked Sendable {
+  static let shared = PendingToolRegistry()
+  private let queue = DispatchQueue(label: "xs.fm.pendingTools")
+  private var pending: [String: CheckedContinuation<String, Error>] = [:]
+  private var counter = 0
+
+  func register(_ continuation: CheckedContinuation<String, Error>) -> String {
+    let id = "tool_\(UUID().uuidString)"
+    queue.sync {
+      counter += 1
+      pending[id] = continuation
+    }
+    return id
+  }
+
+  func fulfill(id: String, result: String) -> Bool {
+    var resumed = false
+    queue.sync {
+      if let continuation = pending.removeValue(forKey: id) {
+        continuation.resume(returning: result)
+        resumed = true
+      }
+    }
+    return resumed
+  }
+}
+
+@_cdecl("xs_fm_is_available")
+public func xs_fm_is_available() -> Int32 {
+  #if canImport(FoundationModels)
+    return SystemLanguageModel.default.isAvailable ? 1 : 0
+  #else
+    return 0
+  #endif
+}
+
+@_cdecl("xs_fm_free_string")
+public func xs_fm_free_string(_ s: UnsafeMutablePointer<CChar>?) {
+  free(s)
+}
+
+@_cdecl("xs_fm_generate_async")
+public func xs_fm_generate_async(
+  _ request_json: UnsafePointer<CChar>?,
+  _ tool_cb: UnsafeRawPointer?,
+  _ done_cb: UnsafeRawPointer?
+) -> Int32 {
+  let toolCallback: XsFmToolCallback? =
+    tool_cb.map { unsafeBitCast($0, to: XsFmToolCallback.self) }
+  guard let doneRaw = done_cb else {
+    return 1
+  }
+  let doneCallback = unsafeBitCast(doneRaw, to: XsFmDoneCallback.self)
+
+  func finish(_ responseJson: String) {
+    // NativeCallable.listener delivers asynchronously on the Dart isolate,
+    // so the buffer must outlive this call: heap-allocate and let Dart
+    // free it via xs_fm_free_string.
+    responseJson.withCString { cString in
+      doneCallback(strdup(cString))
+    }
+  }
+
+  func failNow(code: String, message: String) -> Int32 {
+    finish(jsonEscapedError(code: code, message: message))
+    return 1
+  }
+
+  guard let requestJson = request_json.map({ String(cString: $0) }) else {
+    return failNow(code: "invalid_args", message: "request_json required")
+  }
+  guard let data = requestJson.data(using: .utf8),
+    let request = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+  else {
+    return failNow(code: "invalid_args", message: "request_json is not valid JSON")
+  }
+  guard let prompt = request["prompt"] as? String else {
+    return failNow(code: "invalid_args", message: "prompt required")
+  }
+
+  let instructions = request["instructions"] as? String
+  let schemaJson = request["schema"] as? [String: Any]
+  let toolsJson = request["tools"] as? [[String: Any]] ?? []
+
+  #if canImport(FoundationModels)
+    do {
+      let generationSchema = try materializeFromDartJSON(schemaJson ?? [:])
+      let tools = try prepareNativeTools(from: toolsJson, callback: toolCallback)
+
+      Task.detached {
+        do {
+          let model = SystemLanguageModel.default
+          guard model.isAvailable else {
+            finish(
+              jsonEscapedError(
+                code: "engine_unavailable",
+                message: "Apple Intelligence not available"
+              )
+            )
+            return
+          }
+
+          let session = LanguageModelSession(
+            model: model,
+            tools: tools,
+            instructions: instructions
+          )
+
+          let content: String
+          if let schema = generationSchema {
+            let response = try await session.respond(to: prompt, schema: schema)
+            content = response.content.jsonString
+          } else {
+            let response = try await session.respond(to: prompt)
+            content = response.content
+          }
+
+          finish("{\"ok\":true,\"output\":\(jsonEscaped(content))}")
+        } catch {
+          finish(
+            jsonEscapedError(
+              code: "generation_error",
+              message: error.localizedDescription
+            )
+          )
+        }
+      }
+      return 0
+    } catch {
+      return failNow(code: "schema_error", message: error.localizedDescription)
+    }
+  #else
+    return failNow(
+      code: "engine_unavailable",
+      message: "FoundationModels unavailable"
+    )
+  #endif
+}
+
+@_cdecl("xs_fm_tool_respond")
+public func xs_fm_tool_respond(
+  _ id: UnsafePointer<CChar>?,
+  _ result_json: UnsafePointer<CChar>?
+) -> Int32 {
+  guard let idC = id, let resultC = result_json else { return 1 }
+  let toolId = String(cString: idC)
+  let result = String(cString: resultC)
+  return PendingToolRegistry.shared.fulfill(id: toolId, result: result) ? 0 : 1
+}
+
+// MARK: - Native tool adapter
+
+#if canImport(FoundationModels)
+  /// A tool whose implementation lives on the Dart side, invoked through the
+  /// C callback pointer. Mirrors `DartTool` from the Flutter plugin.
+  struct NativeDartTool: Tool {
+    let name: String
+    let description: String
+    let parameters: GenerationSchema
+    let callback: XsFmToolCallback
+
+    func call(arguments: GeneratedContent) async throws -> String {
+      let argsJSON = try arguments.jsonString
+
+      // Suspend until Dart calls xs_fm_tool_respond for our id.
+      return try await withCheckedThrowingContinuation {
+        (continuation: CheckedContinuation<String, Error>) in
+        let id = PendingToolRegistry.shared.register(continuation)
+        let payload: [String: Any] = [
+          "id": id,
+          "name": name,
+          "arguments": argsJSON,
+        ]
+        let data = (try? JSONSerialization.data(withJSONObject: payload)) ?? Data()
+        let payloadString = String(data: data, encoding: .utf8) ?? "{}"
+        payloadString.withCString { cString in
+          callback(strdup(cString))
+        }
+      }
+    }
+  }
+
+  struct NativeToolError: Error, LocalizedError {
+    let code: String
+    var errorDescription: String? { code }
+  }
+
+  func prepareNativeTools(
+    from toolsJSON: [[String: Any]],
+    callback: XsFmToolCallback?
+  ) throws -> [any Tool] {
+    guard let callback = callback else { return [] }
+    return try toolsJSON.map { json in
+      guard let name = json["name"] as? String,
+        let description = json["description"] as? String,
+        let schemaJSON = json["parameters"] as? [String: Any]
+      else {
+        throw NativeToolError(code: "invalid_tool_json")
+      }
+      guard let schema = try materializeFromDartJSON(schemaJSON) else {
+        throw NativeToolError(code: "no_schema_for_tool_\(name)")
+      }
+      return NativeDartTool(
+        name: name,
+        description: description,
+        parameters: schema,
+        callback: callback
+      )
+    }
+  }
+#endif
+
+// MARK: - JSON helpers
+
+func jsonEscaped(_ s: String) -> String {
+  guard let data = try? JSONSerialization.data(withJSONObject: ["text": s]),
+    let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+    let escaped = obj["text"] as? String
+  else {
+    return "\"\""
+  }
+  return "\"\(escaped)\""
+}
+
+func jsonEscapedError(code: String, message: String) -> String {
+  let payload: [String: Any] = [
+    "ok": false,
+    "error": ["code": code, "message": message],
+  ]
+  guard let data = try? JSONSerialization.data(withJSONObject: payload),
+    let s = String(data: data, encoding: .utf8)
+  else {
+    return "{\"ok\":false,\"error\":{\"code\":\"\(code)\",\"message\":\"\"}}"
+  }
+  return s
+}

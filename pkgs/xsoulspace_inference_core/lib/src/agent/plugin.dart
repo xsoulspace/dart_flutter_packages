@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:ecsly/ecsly.dart';
 import 'package:ecsly_app/ecsly_app.dart';
 import 'package:ecsly_async_parallel/ecsly_async_parallel.dart';
@@ -82,12 +84,29 @@ class AgentPlugin extends Plugin {
       ..upsertResource(FacetIndex())
       ..upsertResource(AgencyPolicy());
 
-    // Event channels for async LLM I/O
-    world.events.register<ActorGenerateRequest>();
-    world.events.register<ActorGenerateResponse>();
-    world.events.register<ActorGenerateStreamEvent>();
-    world.events.register<ToolCallEvent>();
-    world.events.register<ToolResultEvent>();
+    // Event channels for async LLM I/O.
+    //
+    // Capacity is sized above the default because a single tick can produce
+    // many events (N actors × tool calls). The default policy `dropNew` would
+    // silently drop overflow events — which dangles tasks and hangs actors —
+    // so these channels use `dropOld` plus an overflow metrics hook.
+    void registerChannel<T extends EcsEvent>() => world.events.register<T>(
+      capacity: 256,
+      capacityPolicy: EventCapacityPolicy.dropOld,
+      metricsHook: (overflow) {
+        // Surfaced via dart:developer log; ScenarioRunner/MetricsCollector
+        // can also detect dangling tools downstream.
+        log(
+          'EventChannel<${T}> overflow: dropped '
+          '${overflow.dropped ? "new" : "old"} event',
+        );
+      },
+    );
+    registerChannel<ActorGenerateRequest>();
+    registerChannel<ActorGenerateResponse>();
+    registerChannel<ActorGenerateStreamEvent>();
+    registerChannel<ToolCallEvent>();
+    registerChannel<ToolResultEvent>();
 
     // Schedules — the cinematic multi-actor loop
     //
@@ -112,6 +131,7 @@ class AgentPlugin extends Plugin {
 
     world.createSchedule('ProcessResponses')
       ..add(processStreamEventsSystem, name: 'processStreamEvents')
+      ..then(taskTimeoutSweeperSystem, name: 'taskTimeoutSweeper')
       ..then(processResponsesSystem, name: 'processResponses')
       ..then(flushAllSystem, name: 'flushAfterResponses');
 

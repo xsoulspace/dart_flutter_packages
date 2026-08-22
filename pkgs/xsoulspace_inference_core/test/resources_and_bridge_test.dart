@@ -159,9 +159,13 @@ void main() {
 
         final result = await future;
         expect(result, isNotNull);
-        expect(result, {
-          'echoed': {'message': 'hi'},
-        });
+        // Tool output is serialized to a JSON string by ToolDef.encode.
+        expect(
+          result,
+          jsonEncode({
+            'echoed': {'message': 'hi'},
+          }),
+        );
 
         // The task was resolved and removed from the registry.
         expect(world.getResource<TaskRegistryResource>().isEmpty, isTrue);

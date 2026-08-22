@@ -86,19 +86,17 @@ class DefaultGenerationHandler implements GenerationHandler {
     // (native tool calling — OpenRouter, OpenAI, Apple Foundation). For raw/
     // legacy backends that emit `<call|...>` tags in rawOutput, fall back to
     // the tag parser. The client owns wire-format parsing; ecsly stays
-    // structured + raw output.
+    // structured + raw output. Tool execution always happens in the world
+    // (toolExecutionSystem) — the handler never executes tools itself.
     final toolCalls = response.toolCalls.isNotEmpty
         ? response.toolCalls
         : parseToolCalls(response.rawOutput ?? '');
-
-    final toolResults = response.toolResults;
 
     return ActorGenerateResponse(
       actorEntity: request.actorEntity,
       structuralOutput: response.structuredOutput,
       rawOutput: response.rawOutput ?? '',
       toolCalls: toolCalls,
-      toolResults: toolResults,
       taskId: request.taskId,
     );
   }

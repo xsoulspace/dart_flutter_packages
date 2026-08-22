@@ -65,17 +65,21 @@ class ActorGenerateRequest implements EcsEvent {
 
 /// Response from a [GenerationHandler] back to the ECS world.
 ///
-/// [toolCalls] contains parsed tool calls if the model emitted any.
-/// [toolResults] contains results of tool calls that were already executed
-/// natively (e.g. Apple Foundation). [taskId] matches the originating
+/// [toolCalls] contains parsed tool calls if the model emitted any; they are
+/// dispatched as [ToolCallEvent]s and executed by the world's
+/// [toolExecutionSystem]. [taskId] matches the originating
 /// [ActorGenerateRequest].
+///
+/// [error] is non-empty when the generation failed (handler crash, missing
+/// backend, timeout). An errored response is treated like an empty response:
+/// the actor retries up to [AgencyPolicy.maxRetries], then drops the decision.
 class ActorGenerateResponse implements EcsEvent {
   const ActorGenerateResponse({
     required this.actorEntity,
     required this.structuralOutput,
     required this.rawOutput,
     this.toolCalls = const [],
-    this.toolResults = const [],
+    this.error = '',
     this.taskId,
   });
 
@@ -83,7 +87,9 @@ class ActorGenerateResponse implements EcsEvent {
   final Map<String, dynamic> structuralOutput;
   final String rawOutput;
   final List<ToolCall> toolCalls;
-  final List<ToolExecutionResult> toolResults;
+
+  /// Non-empty when generation failed.
+  final String error;
   final TaskId? taskId;
 }
 

@@ -70,7 +70,7 @@ void main() {
     );
     expect(scenario.tools, hasLength(fsTools().length));
     for (final tool in scenario.tools) {
-      expect(tool.argsSchema, isNotEmpty);
+      expect(tool.argsSchema.isEmpty, isFalse);
     }
   });
 }

@@ -58,9 +58,6 @@ void seedIdentitySystem(World world) {
 
 bool _hasIdentityBeats(World world, Entity actor) {
   // An actor has identity beats if any beat in its threads carries IdentityBeat.
-  // We approximate by checking the world for IdentityBeat beats whose thread
-  // matches the actor's thread. Simpler: check the actor's thread for any
-  // IdentityBeat beat.
   for (final (_, _, belongs, _)
       in world.query3<IdentityBeat, BelongsToThread, TextContent>()) {
     if (belongs.thread == _actorThread(world, actor)) return true;
@@ -71,6 +68,9 @@ bool _hasIdentityBeats(World world, Entity actor) {
 Entity? _actorThread(World world, Entity actor) {
   final (e, valid) = world.getEntity(actor);
   if (!valid) return null;
+  // A targeted decision routes identity to its thread.
+  final targeted = e.get<OpenDecision>()?.threadId;
+  if (targeted != null) return targeted;
   final threads = e.get<ActorThreads>();
   return threads?.threads.isEmpty ?? true ? null : threads!.threads.first;
 }
@@ -150,13 +150,18 @@ Situation _buildSituation({
   required ProjectionPolicy policy,
   required TokenEstimator estimator,
 }) {
-  // Find the current scene
+  // Find the current scene. Multi-scene is not yet supported — fail loudly
+  // instead of silently projecting against an arbitrary scene.
   WorldEntity? sceneEntity;
   for (final (sceneEnt, _, _) in world.query2<Scene, SceneFrame>()) {
     sceneEntity = sceneEnt;
     break;
   }
   if (sceneEntity == null) return Situation(tokenBudget: budget);
+  assert(
+    world.query2<Scene, SceneFrame>().length <= 1,
+    'Multiple scenes found; multi-scene projection is not yet supported.',
+  );
 
   // Find co-present actors (same scene, excluding self), capped.
   final coPresent = <AgentId>[];
@@ -238,24 +243,39 @@ Situation _buildSituation({
 }
 
 /// Ray-trace the graph for beats relevant to [prompt].
+///
+/// Multi-thread aware: iterates ALL of the actor's threads, skipping threads
+/// that are pruned/merged/archived and threads this actor is not allowed to
+/// see ([ThreadVisibility]). Private beats of other actors are excluded.
 List<Entity> _raycastBeats(World world, WorldEntity entity, String prompt) {
   final index = world.getResource<FacetIndex>();
   final out = <Entity>{};
 
   final promptTerms = _keywordsOf(prompt);
   if (promptTerms.isNotEmpty) {
-    out.addAll(index.beatsFor(promptTerms));
+    // Privacy applies to keyword hits too — an indexed private beat must
+    // never enter another actor's cut just because its keywords matched.
+    for (final hit in index.beatsFor(promptTerms)) {
+      final privacy = world.getEntity(hit).$1.get<PrivateToActor>();
+      if (privacy != null && privacy.actor != entity.entity) continue;
+      out.add(hit);
+    }
   }
 
-  // Beats reachable from the actor's thread links.
+  // Beats reachable from the actor's thread links — every thread, not just
+  // the first. Visibility and status filter what the ray may enter.
+  final actorEntity = entity.entity;
   final threads = entity.get<ActorThreads>();
   if (threads != null) {
     for (final thread in threads.threads) {
-      final (_, valid) = world.getEntity(thread);
-      if (!valid) continue;
+      if (!_threadVisibleToWorld(world, thread, actorEntity)) continue;
       for (final (beat, belongs, _)
           in world.query2<BelongsToThread, BeatStatus>()) {
-        if (belongs.thread == thread) out.add(beat.entity);
+        if (belongs.thread != thread) continue;
+        // Private beats of other actors never enter another actor's cut.
+        final privacy = world.getEntity(beat.entity).$1.get<PrivateToActor>();
+        if (privacy != null && privacy.actor != actorEntity) continue;
+        out.add(beat.entity);
       }
     }
   }
@@ -263,17 +283,115 @@ List<Entity> _raycastBeats(World world, WorldEntity entity, String prompt) {
   return out.toList();
 }
 
-/// Split [text] into lowercase keywords, dropping terms of length <= 2.
+/// Whether [thread] is projectable: active/suspended/scoring only, and — when
+/// a [ThreadVisibility] restricts it — only for listed agents.
+bool _threadVisibleToWorld(World world, Entity thread, Entity actor) {
+  final (t, valid) = world.getEntity(thread);
+  if (!valid) return false;
+  final status = t.get<ThreadStatus>();
+  if (status != null) {
+    switch (status.value) {
+      case ThreadStatusEnum.pruned:
+      case ThreadStatusEnum.merged:
+      case ThreadStatusEnum.archived:
+        return false;
+      case ThreadStatusEnum.active:
+      case ThreadStatusEnum.suspended:
+      case ThreadStatusEnum.scoring:
+        break;
+    }
+  }
+  final visibility = t.get<ThreadVisibility>();
+  if (visibility == null || visibility.visibleTo.isEmpty) return true;
+  final agentId = world.getEntity(actor).$1.get<Actor>()?.agentId;
+  if (agentId == null) return false;
+  return visibility.visibleTo.contains(agentId);
+}
+
+/// Common English stopwords excluded from keyword indexing/ranking — without
+/// this, terms like "the" match every beat and one accidental hit beats
+/// genuine relevance in the score.
+const _stopwords = {
+  'the',
+  'and',
+  'for',
+  'are',
+  'but',
+  'not',
+  'you',
+  'all',
+  'can',
+  'her',
+  'was',
+  'one',
+  'our',
+  'out',
+  'day',
+  'get',
+  'has',
+  'him',
+  'his',
+  'how',
+  'man',
+  'new',
+  'now',
+  'old',
+  'see',
+  'two',
+  'way',
+  'who',
+  'its',
+  'did',
+  'that',
+  'this',
+  'with',
+  'have',
+  'from',
+  'they',
+  'will',
+  'would',
+  'there',
+  'their',
+  'what',
+  'about',
+  'which',
+  'when',
+  'make',
+  'like',
+  'time',
+  'just',
+  'know',
+  'take',
+  'into',
+  'your',
+  'than',
+  'then',
+  'them',
+  'these',
+  'some',
+  'could',
+  'other',
+  'been',
+  'more',
+  'also',
+  'may',
+  'should',
+  'does',
+};
+
+/// Split [text] into lowercase keywords, dropping stopwords and short terms.
 List<String> _keywordsOf(String text) => text
     .toLowerCase()
     .split(RegExp(r'\W+'))
-    .where((t) => t.length > 2)
+    .where((t) => t.length > 2 && !_stopwords.contains(t))
     .toList();
 
 /// Rank beat entities by relevance to the current [prompt].
 ///
-/// A lightweight, deterministic heuristic: beats whose text shares terms
-/// with the prompt rank higher; recency breaks ties.
+/// A lightweight, deterministic heuristic: beats sharing MORE distinct terms
+/// with the prompt rank higher; recency breaks ties. A single accidental term
+/// match no longer outranks recency because the score is the count of matched
+/// terms (not weighted 1000x over position).
 List<Entity> _rankFragments(World world, List<Entity> beats, String prompt) {
   final promptTerms = _keywordsOf(prompt).toSet();
   if (promptTerms.isEmpty) return beats.reversed.toList();
@@ -286,8 +404,8 @@ List<Entity> _rankFragments(World world, List<Entity> beats, String prompt) {
     for (final term in promptTerms) {
       if (text.contains(term)) score++;
     }
-    // Recency tie-break: later beats win.
-    scored.add((beat, score * 1000 + i));
+    // Relevance first (matched-term count), recency as tie-break.
+    scored.add((beat, score * 100000 + i));
   }
   scored.sort((a, b) => b.$2.compareTo(a.$2));
   return scored.map((s) => s.$1).toList();
@@ -356,27 +474,38 @@ int _toolSchemaTokens(World world, ActorTools tools) {
 /// Short, projection-friendly text for a tool result beat.
 ///
 /// The structured output lives in [ToolResultContent]; this is only a compact
-/// string so the beat is keyword-indexable and projectable. It is never the
-/// source of truth.
+/// human-readable line so the beat is keyword-indexable and projectable. It
+/// is never the source of truth.
 String _toolResultText(ToolExecutionResult result) {
-  // TODO(arenukvern): feels redundant since we storing everything structurally as it is
   final output = result.output;
   if (output is String) return '<result|${result.name}|$output>';
   return '<result|${result.name}|${jsonEncode(output)}>';
 }
 
+/// Human-readable projection text for a structured model output.
+///
+/// JSON syntax tokens (braces, quotes, key names) would flood the keyword
+/// index and pollute ranking; this renders `key: value` pairs instead.
+String _structuralOutputText(Map<String, dynamic> output) =>
+    output.entries.map((e) => '${e.key}: ${e.value}').join('; ');
+
 /// Resolve the escalated model for an actor.
 ///
-/// Uses [ModelRouterResource] to find a stronger model than the actor's
-/// current binding. If none is configured, falls back to the actor's own
-/// model (escalation is best-effort).
+/// Uses [ModelRouterResource] to find the lowest-tier model strictly above
+/// the actor's current binding. If none is configured, falls back to the
+/// actor's own model (escalation is best-effort).
 ActorModel _resolveEscalatedModel(World world, ActorModel current) {
   final router = world.getResource<ModelRouterResource>().router;
-  // Prefer a model whose id is not the current one (a "bigger" binding).
+  final currentModel = router.models[current.modelId];
+  final currentTier = currentModel?.tier ?? 0;
+
+  Model? best;
   for (final m in router.models.values) {
-    if (m.id != current.modelId) return ActorModel(modelId: m.id);
+    if (m.id == current.modelId) continue;
+    if (m.tier <= currentTier) continue;
+    if (best == null || m.tier < best.tier) best = m;
   }
-  return current;
+  return best == null ? current : ActorModel(modelId: best.id);
 }
 
 /// Actors that hold [Agency] act.
@@ -445,12 +574,59 @@ Future<void> actorActSystem(World world) async {
     entity.insert(AwaitingResponse(taskId: taskId));
 
     // Publish the request to the event channel, then fire-and-forget the
-    // handler.
+    // handler. A missing handler must fail the task immediately — otherwise
+    // the actor stays in AwaitingResponse forever and the loop never sleeps.
     world.events.writer<ActorGenerateRequest>().send(request);
     final handler = handlerResource.resolve(request);
-    if (handler != null) {
-      unawaited(handler.generate(world, request));
+    if (handler == null) {
+      taskRegistry
+          .take(taskId)
+          ?.completer
+          .complete(
+            ToolExecutionResult(
+              name: 'generate',
+              output: 'No generation handler',
+            ),
+          );
+      world.events.writer<ActorGenerateResponse>().send(
+        ActorGenerateResponse(
+          actorEntity: entity.entity,
+          structuralOutput: const {},
+          rawOutput: '',
+          error: 'No generation handler registered',
+          taskId: taskId,
+        ),
+      );
+      continue;
     }
+    unawaited(
+      handler.generate(world, request).catchError((Object e) {
+        // A throwing handler must still resolve the task and free the
+        // actor, or the harness hangs.
+        final handle = taskRegistry.take(taskId);
+        if (handle != null && !handle.completer.isCompleted) {
+          handle.completer.complete(
+            ToolExecutionResult(name: 'generate', output: '$e'),
+          );
+        }
+        world.events.writer<ActorGenerateResponse>().send(
+          ActorGenerateResponse(
+            actorEntity: entity.entity,
+            structuralOutput: const {},
+            rawOutput: '',
+            error: '$e',
+            taskId: taskId,
+          ),
+        );
+        return ActorGenerateResponse(
+          actorEntity: entity.entity,
+          structuralOutput: const {},
+          rawOutput: '',
+          error: '$e',
+          taskId: taskId,
+        );
+      }),
+    );
   }
 }
 
@@ -503,11 +679,13 @@ void processResponsesSystem(World world) {
     final (we, _) = entity;
 
     // Store the model response as a Beat entity, then index it into the
-    // facet index so projection can ray-trace to it later.
+    // facet index so projection can ray-trace to it later. Structured output
+    // is rendered as readable text — JSON syntax would pollute the index.
     final responseBeat = world.reserveEmptyEntity().entity;
     final responseBeatEntity = world.getEntity(responseBeat).$1;
-    // TODO(arenukvern): feels redundant since we storing everything structurally as it is - JsonTextContent or StructuralTextContent
-    final responseText = jsonEncode(response.structuralOutput);
+    final responseText = response.structuralOutput.isEmpty
+        ? response.rawOutput
+        : _structuralOutputText(response.structuralOutput);
     responseBeatEntity.insert(TextContent(responseText));
     responseBeatEntity.insert(BeatStatus(BeatStatusEnum.complete));
     responseBeatEntity.insert(BeatModality(BeatModalityEnum.text));
@@ -515,39 +693,31 @@ void processResponsesSystem(World world) {
     indexBeat(world, responseBeat, _keywordsOf(responseText));
 
     // Dispatch parsed tool calls as ToolCallEvents for the
-    // ToolExecutionSystem to process.
+    // toolExecutionSystem to process. All tool results — native or parsed —
+    // flow through the world's single canonical path:
+    // ToolCallEvent → toolExecutionSystem → ToolResultEvent → beats.
     for (final call in response.toolCalls) {
       toolCallWriter.send(
         ToolCallEvent(actorEntity: response.actorEntity, call: call),
       );
     }
 
-    // Store tool results already executed by the handler.
-    for (final result in response.toolResults) {
-      final toolBeat = world.reserveEmptyEntity().entity;
-      final toolBeatEntity = world.getEntity(toolBeat).$1;
-      // TODO(arenukvern): feels wrong since we already have the
-      // same logic in [processToolResultsSystem]
-      final toolText = _toolResultText(result);
-      toolBeatEntity.insert(TextContent(toolText));
-      toolBeatEntity.insert(BeatStatus(BeatStatusEnum.complete));
-      toolBeatEntity.insert(BeatModality(BeatModalityEnum.toolCall));
-      _attachBeatToActorThread(world, we, toolBeat);
-      indexBeat(world, toolBeat, _keywordsOf(toolText));
-    }
-
     // Consume Agency + AwaitingResponse + OpenDecision — actor responded.
-    if (response.structuralOutput.isEmpty && response.rawOutput.isEmpty) {
-      // Retry on empty, but cap it so a persistently empty model cannot loop
-      // forever. After [maxRetries] the decision is dropped.
-      const maxRetries = 3;
+    final failed = response.error.isNotEmpty;
+    if (failed ||
+        (response.structuralOutput.isEmpty && response.rawOutput.isEmpty)) {
+      // Retry on failure/empty, but cap it so a persistently failing model
+      // cannot loop forever. After [AgencyPolicy.maxRetries] the decision is
+      // dropped.
+      final policy = world.getResource<AgencyPolicy>();
       final retries = we.get<RetryCount>()?.value ?? 0;
-      if (retries < maxRetries) {
+      if (retries < policy.maxRetries) {
         we.insert(RetryCount(retries + 1));
         we.insert(
-          const OpenDecision(
-            prompt:
-                'Error: LLM returned empty response. Retry with tighter context.',
+          OpenDecision(
+            prompt: failed
+                ? 'Error: ${response.error}. Retry with tighter context.'
+                : 'Error: LLM returned empty response. Retry with tighter context.',
           ),
         );
       } else {
@@ -613,19 +783,33 @@ void toolExecutionSystem(World world) {
     }
 
     // Execute the tool. Most tools complete synchronously, but
-    // async tools are handled via .then().
-    unawaited(
-      toolDef.execute(event.call.arguments).then((value) {
-        final result = ToolExecutionResult(
+    // async tools are handled via .then(). Errors and timeouts are converted
+    // into error results so a failing tool can never dangle the actor or
+    // hang the loop.
+    final policy = world.getResource<AgencyPolicy>();
+    unawaited(() async {
+      ToolExecutionResult result;
+      try {
+        final value = policy.taskTimeout > Duration.zero
+            ? await toolDef
+                  .execute(event.call.arguments)
+                  .timeout(policy.taskTimeout)
+            : await toolDef.execute(event.call.arguments);
+        result = ToolExecutionResult(
           name: event.call.name.value,
-          output: value,
+          output: value is String ? value : jsonEncode(value),
         );
-        toolResultWriter.send(
-          ToolResultEvent(actorEntity: event.actorEntity, result: result),
+      } on Object catch (e) {
+        result = ToolExecutionResult(
+          name: event.call.name.value,
+          output: jsonEncode({'error': '$e'}),
         );
-        _resolveToolTask(world, taskRegistry, event.taskId, result);
-      }),
-    );
+      }
+      toolResultWriter.send(
+        ToolResultEvent(actorEntity: event.actorEntity, result: result),
+      );
+      _resolveToolTask(world, taskRegistry, event.taskId, result);
+    }());
   }
 }
 
@@ -639,6 +823,52 @@ void _resolveToolTask(
   final handle = taskRegistry.take(taskId);
   if (handle != null && !handle.completer.isCompleted) {
     handle.completer.complete(result);
+  }
+}
+
+/// System 5b: Fail in-flight generation tasks that exceeded
+/// [AgencyPolicy.taskTimeout].
+///
+/// Mechanical — no LLM calls. A hung backend must not dangle an actor in
+/// [AwaitingResponse] forever: `canSleep()` would never be true and the loop
+/// would hang. Timed-out actors get a retry decision like any other failure.
+void taskTimeoutSweeperSystem(World world) {
+  final policy = world.getResource<AgencyPolicy>();
+  final timeout = policy.taskTimeout;
+  if (timeout <= Duration.zero) return; // disabled
+
+  final now = DateTime.now();
+  final responseWriter = world.events.writer<ActorGenerateResponse>();
+  final taskRegistry = world.getResource<TaskRegistryResource>();
+
+  for (final (entity, _, awaiting)
+      in world.query2<Actor, AwaitingResponse>().toList()) {
+    final taskId = awaiting.taskId;
+    if (taskId == null) continue;
+    final handle = taskRegistry.peek(taskId);
+    if (handle == null) continue; // already resolved, response pending
+    if (now.difference(handle.createdAt) < timeout) continue;
+
+    // Fail the task and emit an error response so processResponsesSystem
+    // applies the normal retry path. completeError is unawaited-safe: nobody
+    // may be awaiting the completer (the backend hung), so mark it handled
+    // first to avoid an unhandled async error crashing the zone.
+    taskRegistry.take(taskId);
+    handle.completer.future.ignore();
+    if (!handle.completer.isCompleted) {
+      handle.completer.completeError(
+        TimeoutException('generation timed out', timeout),
+      );
+    }
+    responseWriter.send(
+      ActorGenerateResponse(
+        actorEntity: entity.entity,
+        structuralOutput: const {},
+        rawOutput: '',
+        error: 'Generation timed out after ${timeout.inMilliseconds}ms',
+        taskId: taskId,
+      ),
+    );
   }
 }
 
@@ -675,13 +905,22 @@ void processToolResultsSystem(World world) {
 }
 
 /// If the actor is in a thread ([ActorThreads]), attach [beat] to that
-/// thread so it lives in the graph. Mechanical — never a memory cache.
+/// thread so it lives in the graph. The current decision's [OpenDecision.threadId]
+/// takes precedence (targeted thread), otherwise the actor's first thread.
+/// Mechanical — never a memory cache.
 void _attachBeatToActorThread(World world, WorldEntity actor, Entity beat) {
+  final targeted = actor.get<OpenDecision>()?.threadId;
+  if (targeted != null) {
+    final (t, valid) = world.getEntity(targeted);
+    // spawnThread stamps ThreadStatus; that's the thread-entity marker.
+    if (valid && t.has<ThreadStatus>()) {
+      world.getEntity(beat).$1.insert(BelongsToThread(targeted));
+      return;
+    }
+  }
   final threads = actor.get<ActorThreads>();
   if (threads == null || threads.threads.isEmpty) return;
-  final beatEntity = world.getEntity(beat);
-  if (!beatEntity.$2) return;
-  beatEntity.$1.insert(BelongsToThread(threads.threads.first));
+  world.getEntity(beat).$1.insert(BelongsToThread(threads.threads.first));
 }
 
 /// Deliberate graph transform: summarize a set of beats into a

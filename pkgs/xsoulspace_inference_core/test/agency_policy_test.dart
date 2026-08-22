@@ -95,14 +95,16 @@ void main() {
   });
 
   group('escalation routing', () {
-    test('routes an escalated request to a different model', () async {
-      // Two models in the router; the actor binds to model-1.
+    test('routes an escalated request to a higher-tier model', () async {
+      // Two models in the router; the actor binds to model-1 (tier 0).
+      // model-2 is tier 1 — escalation must pick it, not an arbitrary model.
       final router = ModelRouter();
       router.models[const ModelId('model-1')] = const Model(
         id: ModelId('model-1'),
       );
       router.models[const ModelId('model-2')] = const Model(
         id: ModelId('model-2'),
+        tier: 1,
       );
 
       final world = await buildTestWorld(router: router);
@@ -127,9 +129,48 @@ void main() {
 
       final reader = world.events.reader<ActorGenerateRequest>();
       expect(reader.isNotEmpty, isTrue);
-      // The request was routed to the escalated (different) model.
+      // The request was routed to the escalated (higher-tier) model.
       expect(reader.readAt(0).modelId, const ModelId('model-2'));
     });
+
+    test(
+      'escalation falls back to the current model when no higher tier exists',
+      () async {
+        // Both models are tier 0 — no strictly higher tier exists, so the
+        // actor keeps its own model instead of jumping arbitrarily.
+        final router = ModelRouter();
+        router.models[const ModelId('model-1')] = const Model(
+          id: ModelId('model-1'),
+        );
+        router.models[const ModelId('model-2')] = const Model(
+          id: ModelId('model-2'),
+        );
+
+        final world = await buildTestWorld(router: router);
+        world.flush();
+
+        final scene = world.spawnComponents([const Scene(), SceneFrame()]);
+        world.spawnComponents([
+          Actor(agentId: AgentId.create()),
+          const ActorModel(modelId: ModelId('model-1')),
+          PresentInScene(sceneEntity: scene),
+          const OpenDecision(prompt: 'Q', escalate: true),
+          const EscalationRequest(reason: 'low confidence'),
+        ]);
+        world.flush();
+
+        world.runSchedule('AgencyGrant');
+        world.flush();
+        world.runSchedule('Project');
+        world.flush();
+        await world.runScheduleAsync('ActorAct');
+        world.flush();
+
+        final reader = world.events.reader<ActorGenerateRequest>();
+        expect(reader.isNotEmpty, isTrue);
+        expect(reader.readAt(0).modelId, const ModelId('model-1'));
+      },
+    );
 
     test('clears EscalationRequest after the response is processed', () async {
       final handler = MockGenerationHandler(responseText: 'ok');

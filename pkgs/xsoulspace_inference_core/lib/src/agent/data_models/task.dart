@@ -2,12 +2,14 @@ import 'dart:async';
 
 import 'package:meta/meta.dart';
 
+import '../utils/id_counter.dart';
+
 /// Identity for an in-flight async task (generation, tool call, human
 /// input). Tasks are correlated across the world via [TaskRegistryResource].
 @immutable
 class TaskId {
   const TaskId(this.value);
-  factory TaskId.create() => TaskId('${DateTime.now().microsecondsSinceEpoch}');
+  factory TaskId.create() => TaskId(nextId('task'));
   final String value;
 
   @override
@@ -26,6 +28,10 @@ class TaskId {
 /// future-free.
 class TaskHandle {
   TaskHandle({Completer<dynamic>? completer})
-    : completer = completer ?? Completer<dynamic>();
+    : completer = completer ?? Completer<dynamic>(),
+      createdAt = DateTime.now();
   final Completer<dynamic> completer;
+
+  /// When this task was registered — used by the timeout sweeper.
+  final DateTime createdAt;
 }

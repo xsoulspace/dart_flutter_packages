@@ -45,12 +45,15 @@ Use `steward.yaml` and harness proof only when typed actions, probes, or benchma
 ## Package Working Agreements
 
 - `pkgs/xsoulspace_inference_core`: [AGENTS.md](pkgs/xsoulspace_inference_core/AGENTS.md)
+- `pkgs/xsoulspace_inference_apple_foundation`: [AGENTS.md](pkgs/xsoulspace_inference_apple_foundation/AGENTS.md)
 
 ## Active Skills
 
 Skills are installed locally under `.agents/skills/`. You can view them using:
+
 - `steward list`
 
 For more information on the project charter and decisions:
+
 - Read [NORTH_STAR.mdx](docs/NORTH_STAR.mdx) (if present)
 - Read [ADR Index](docs/decisions/README) (if present)

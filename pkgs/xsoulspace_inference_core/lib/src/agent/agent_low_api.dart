@@ -8,14 +8,33 @@ import 'tools/tools.dart';
 export 'structured_output/structured_output.dart';
 
 /// Any ML model
+///
+/// [tier] ranks models for escalation: higher tier = stronger model.
+/// Escalation always moves to a strictly higher tier; models of equal or
+/// unknown tier are never chosen.
 class Model {
   const Model({
     this.id = ModelId.empty,
     this.name = DefaultModelNames.appleFoundation,
+    this.tier = 0,
   });
   static const empty = Model();
   final ModelId id;
   final ModelName name;
+
+  /// Escalation rank. 0 = default/local, higher = stronger.
+  final int tier;
+}
+
+/// Collision-free unique id generation.
+///
+/// Timestamp alone collides when ids are created within the same microsecond
+/// (e.g. spawning N actors in a loop), so a process-wide monotonic counter is
+/// mixed in. Deterministic — no external dependency, works on all platforms.
+int _idCounter = 0;
+String nextUniqueId(String prefix) {
+  final count = _idCounter++;
+  return '$prefix-${DateTime.now().microsecondsSinceEpoch}-$count';
 }
 
 /// name of model
@@ -30,10 +49,9 @@ abstract class ModelName implements Enum {}
 
 enum DefaultModelNames implements ModelName { appleFoundation }
 
-/// generated uuid
+/// generated unique id
 extension type const ModelId(String value) {
-  //TODO(arenukvern): add uuid
-  factory ModelId.create() => ModelId('${DateTime.now()}');
+  factory ModelId.create() => ModelId(nextUniqueId('model'));
   static const empty = ModelId('');
 }
 
@@ -126,12 +144,11 @@ class ModelRuntime {
     final response = await client.infer(
       InferenceRequest.structured(
         outputSchema: outputSchema,
-        workingDirectory: '/tmp',
         prompt: prompt,
         systemPrompt: systemPrompt,
         task: task,
         contextFragments: contextFragments,
-        metadata: {},
+        metadata: const {},
       ),
       // inline tools should be included to systemprompt or similar
       toolRegistry: toolRegistry,
@@ -165,7 +182,6 @@ class ModelRuntime {
 }
 
 extension type const AgentId(String value) {
-  //TODO(arenukvern): add uuid
-  factory AgentId.create() => AgentId('${DateTime.now()}');
+  factory AgentId.create() => AgentId(nextUniqueId('agent'));
   static const empty = AgentId('');
 }

@@ -85,18 +85,25 @@ class AwaitingResponse implements Component {
 /// expected structured output; empty schema means free text.
 ///
 /// [priority] ranks competing decisions (higher = more urgent). [escalate]
-/// requests a stronger model for this decision (Phase 3).
+/// requests a stronger model for this decision.
+///
+/// [threadId] optionally targets a specific thread: beats produced while
+/// resolving this decision attach to that thread, and projection ray-traces
+/// it first. When null, the actor's first thread is used (single-thread
+/// actors are unaffected).
 class OpenDecision implements Component {
   const OpenDecision({
     this.schema = SchemaBundle.empty,
     this.prompt = '',
     this.priority = 0,
     this.escalate = false,
+    this.threadId,
   });
   final SchemaBundle schema;
   final String prompt;
   final int priority;
   final bool escalate;
+  final Entity? threadId;
 }
 
 /// Tag component: this actor has requested escalation to a stronger model.

@@ -6,7 +6,6 @@
 /// 'src/agent/agent_plugin.dart';` in the package root works unchanged.
 library;
 
-export 'agency_lifecycle.dart';
 export 'agent_low_api.dart';
 export 'data_models/data_models.dart';
 export 'events.dart';
