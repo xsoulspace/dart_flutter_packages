@@ -4,14 +4,10 @@ import 'dart:io';
 
 import 'package:github/github.dart';
 import 'package:universal_storage_github_api/universal_storage_github_api.dart';
-import 'package:universal_storage_interface/universal_storage_interface.dart';
 
 /// Minimal in-process fake of the GitHub Contents API sufficient for the
 /// conformance suite: repo metadata, get contents, create/update/delete file.
 class FakeGitHubApi {
-  final Completer<void> _ready = Completer<void>();
-  HttpServer? _boundServer;
-  String _endpoint = '';
 
   FakeGitHubApi() {
     unawaited(
@@ -34,6 +30,9 @@ class FakeGitHubApi {
       }),
     );
   }
+  final Completer<void> _ready = Completer<void>();
+  HttpServer? _boundServer;
+  String _endpoint = '';
 
   /// Base URL of the fake API once bound; empty until ready.
   String get endpoint => _endpoint;
@@ -43,7 +42,7 @@ class FakeGitHubApi {
   GitHubApiStorageProvider createProvider() {
     final provider = GitHubApiStorageProvider(
       githubClient: GitHub(
-        auth: Authentication.withToken('fake-token'),
+        auth: const Authentication.withToken('fake-token'),
         endpoint: _endpoint,
       ),
     );

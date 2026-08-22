@@ -24,5 +24,9 @@ dev_dependencies:
   lints: ^6.1.0
   mockito: ^5.7.0
   test: ^1.31.2
+  universal_storage_filesystem: ^0.1.0-dev.12
+  universal_storage_git_offline: ^0.1.0-dev.3
+  universal_storage_local_db: ^0.1.0-dev.1
   universal_io: ^2.3.1
   xsoulspace_lints: ^0.1.2
+  xsoulspace_foundation: ^0.4.0

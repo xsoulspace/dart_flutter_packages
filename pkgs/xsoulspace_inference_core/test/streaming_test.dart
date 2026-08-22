@@ -12,10 +12,9 @@ import 'support/agent_harness_support.dart';
 
 /// A handler that emits deltas before the final response.
 class _StreamingMockHandler implements GenerationHandler {
-  _StreamingMockHandler({required this.deltas, this.delayMs = 1});
+  _StreamingMockHandler({required this.deltas});
 
   final List<String> deltas;
-  final int delayMs;
 
   @override
   Future<ActorGenerateResponse> generate(
@@ -24,7 +23,7 @@ class _StreamingMockHandler implements GenerationHandler {
   ) async {
     final tap = world.getResource<StreamingTapResource>();
     for (final delta in deltas) {
-      await Future<void>.delayed(Duration(milliseconds: delayMs));
+      await Future<void>.delayed(const Duration(milliseconds: 1));
       world.events.writer<ActorGenerateStreamEvent>().send(
         ActorGenerateStreamEvent(
           actorEntity: request.actorEntity,
@@ -70,6 +69,8 @@ void main() {
       world.runSchedule('Project');
       world.flush();
       await world.runScheduleAsync('ActorAct');
+      // Let the async handler finish emitting deltas + response.
+      await Future<void>.delayed(const Duration(milliseconds: 50));
       world.flush();
       world.runSchedule('ProcessResponses');
       world.flush();
@@ -101,6 +102,7 @@ void main() {
     world.runSchedule('Project');
     world.flush();
     await world.runScheduleAsync('ActorAct');
+    await Future<void>.delayed(const Duration(milliseconds: 50));
     world.flush();
     world.runSchedule('ProcessResponses');
     world.flush();

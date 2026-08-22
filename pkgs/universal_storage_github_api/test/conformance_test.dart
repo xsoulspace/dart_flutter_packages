@@ -1,6 +1,5 @@
 import 'package:test/test.dart';
 import 'package:universal_storage_conformance/universal_storage_conformance.dart';
-import 'package:universal_storage_github_api/universal_storage_github_api.dart';
 import 'package:universal_storage_interface/universal_storage_interface.dart';
 
 import 'fake_github_api.dart';
