@@ -9,6 +9,7 @@
 library;
 
 import 'package:test/test.dart';
+import 'package:xsoulspace_inference_core/src/agent/schedules.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import 'support/agent_harness_support.dart';
@@ -119,9 +120,9 @@ void main() {
           const OpenDecision(prompt: 'fix the parser'),
         );
         world.flush();
-        world.runSchedule('AgencyGrant');
+        world.runSchedule(Schedules.agencyGrant);
         world.flush();
-        world.runSchedule('Project');
+        world.runSchedule(Schedules.project);
         world.flush();
 
         final situation = world.getEntity(actor).$1.get<Situation>()!;
@@ -156,9 +157,9 @@ void main() {
 
       world.upsertComponent(actor, const OpenDecision(prompt: 'say anything'));
       world.flush();
-      world.runSchedule('AgencyGrant');
+      world.runSchedule(Schedules.agencyGrant);
       world.flush();
-      world.runSchedule('Project');
+      world.runSchedule(Schedules.project);
       world.flush();
 
       final situation = world.getEntity(actor).$1.get<Situation>()!;

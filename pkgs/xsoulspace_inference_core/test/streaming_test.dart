@@ -6,6 +6,7 @@
 import 'dart:async';
 
 import 'package:test/test.dart';
+import 'package:xsoulspace_inference_core/src/agent/schedules.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import 'support/agent_harness_support.dart';
@@ -64,15 +65,15 @@ void main() {
           .listen(received.add, onDone: () => tapClosed = true);
 
       // Full cinematic cycle so agency is granted and projection runs.
-      world.runSchedule('AgencyGrant');
+      world.runSchedule(Schedules.agencyGrant);
       world.flush();
-      world.runSchedule('Project');
+      world.runSchedule(Schedules.project);
       world.flush();
-      await world.runScheduleAsync('ActorAct');
+      await world.runScheduleAsync(Schedules.actorAct);
       // Let the async handler finish emitting deltas + response.
       await Future<void>.delayed(const Duration(milliseconds: 50));
       world.flush();
-      world.runSchedule('ProcessResponses');
+      world.runSchedule(Schedules.processResponses);
       world.flush();
 
       // Deltas accumulated into the actor's StreamingBeat.
@@ -97,14 +98,14 @@ void main() {
     world.flush();
 
     // No subscribe() — publishing must not throw.
-    world.runSchedule('AgencyGrant');
+    world.runSchedule(Schedules.agencyGrant);
     world.flush();
-    world.runSchedule('Project');
+    world.runSchedule(Schedules.project);
     world.flush();
-    await world.runScheduleAsync('ActorAct');
+    await world.runScheduleAsync(Schedules.actorAct);
     await Future<void>.delayed(const Duration(milliseconds: 50));
     world.flush();
-    world.runSchedule('ProcessResponses');
+    world.runSchedule(Schedules.processResponses);
     world.flush();
 
     expect(world.getEntity(actor).$1.has<OpenDecision>(), isFalse);

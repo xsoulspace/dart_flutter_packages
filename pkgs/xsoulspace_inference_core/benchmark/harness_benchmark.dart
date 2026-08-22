@@ -24,7 +24,9 @@ library;
 
 import 'dart:async';
 
+import 'package:xsoulspace_inference_core/src/agent/schedules.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
+import 'package:ecsly/ecsly.dart';
 
 /// A single measured run of a scripted task.
 class BenchmarkRun {
@@ -219,15 +221,15 @@ Future<BenchmarkRun> runBenchmark(ScriptedTask task) async {
     );
 
     // Full cinematic cycle for this decision.
-    world.runSchedule('AgencyGrant');
+    world.runSchedule(Schedules.agencyGrant);
     world.flush();
-    world.runSchedule('Project');
+    world.runSchedule(Schedules.project);
     world.flush();
-    await world.runScheduleAsync('ActorAct');
+    await world.runScheduleAsync(Schedules.actorAct);
     world.flush();
-    world.runSchedule('ProcessResponses');
+    world.runSchedule(Schedules.processResponses);
     world.flush();
-    world.runSchedule('Mechanical');
+    world.runSchedule(Schedules.mechanical);
     world.flush();
 
     final situation = world.getEntity(actor).$1.get<Situation>();

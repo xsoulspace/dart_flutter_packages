@@ -9,6 +9,7 @@
 library;
 
 import 'package:test/test.dart';
+import 'package:xsoulspace_inference_core/src/agent/schedules.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import 'support/agent_harness_support.dart';
@@ -22,7 +23,7 @@ void main() {
       world.spawnComponents([const Thread(), ThreadScore(0.0)]);
       world.flush();
 
-      world.runSchedule('Mechanical');
+      world.runSchedule(Schedules.mechanical);
       world.flush();
 
       final threads = world.query2<Thread, ThreadScore>().toList();

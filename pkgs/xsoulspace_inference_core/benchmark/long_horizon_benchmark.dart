@@ -28,6 +28,7 @@
 
 import 'dart:io';
 
+import 'package:xsoulspace_inference_core/src/agent/schedules.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 /// Result of one long-horizon run.
@@ -159,15 +160,15 @@ Future<LongHorizonResult> runLongHorizonBenchmark({
     world.flush();
 
     final sw = Stopwatch()..start();
-    world.runSchedule('AgencyGrant');
+    world.runSchedule(Schedules.agencyGrant);
     world.flush();
-    world.runSchedule('Project');
+    world.runSchedule(Schedules.project);
     world.flush();
-    await world.runScheduleAsync('ActorAct');
+    await world.runScheduleAsync(Schedules.actorAct);
     world.flush();
-    world.runSchedule('ProcessResponses');
+    world.runSchedule(Schedules.processResponses);
     world.flush();
-    world.runSchedule('Mechanical');
+    world.runSchedule(Schedules.mechanical);
     world.flush();
     sw.stop();
     latencies.add(sw.elapsedMicroseconds);

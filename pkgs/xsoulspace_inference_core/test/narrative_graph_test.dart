@@ -4,6 +4,7 @@
 library;
 
 import 'package:test/test.dart';
+import 'package:xsoulspace_inference_core/src/agent/schedules.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import 'support/agent_harness_support.dart';
@@ -131,7 +132,7 @@ void main() {
       stream.cursor = stream.chunks.length;
       world.flush();
 
-      world.runSchedule('Narrative');
+      world.runSchedule(Schedules.narrative);
       world.flush();
 
       expect(

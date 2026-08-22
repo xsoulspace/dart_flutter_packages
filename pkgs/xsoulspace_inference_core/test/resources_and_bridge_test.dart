@@ -11,6 +11,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:test/test.dart';
+import 'package:xsoulspace_inference_core/src/agent/schedules.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import 'support/agent_harness_support.dart';
@@ -41,7 +42,12 @@ void main() {
 
   group('ToolDef serialization (Apple native tool path)', () {
     test('getToolsJsons emits string names and JSON-serializable payloads', () {
-      final registry = ToolRegistry()..register(readTool(FsToolsRoot(Directory.systemTemp.createTempSync('ecsly_t').path)));
+      final registry = ToolRegistry()
+        ..register(
+          readTool(
+            FsToolsRoot(Directory.systemTemp.createTempSync('ecsly_t').path),
+          ),
+        );
       final jsons = registry.getToolsJsons();
       expect(jsons, hasLength(1));
       final tool = jsons.first;
@@ -154,7 +160,7 @@ void main() {
         expect(reader.readAt(0).call.name.value, 'echo');
         expect(reader.readAt(0).taskId, isNotNull);
 
-        world.runSchedule('Mechanical');
+        world.runSchedule(Schedules.mechanical);
         world.flush();
         await Future.delayed(const Duration(milliseconds: 50));
 

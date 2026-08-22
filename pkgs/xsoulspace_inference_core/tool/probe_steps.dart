@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:ecsly/ecsly.dart';
+import 'package:xsoulspace_inference_core/src/agent/schedules.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 class _H implements GenerationHandler {
@@ -64,34 +65,34 @@ Future<void> main() async {
   // Manual schedule stepping with visibility.
   for (var step = 0; step < 8; step++) {
     print('--- manual step $step ---');
-    if (world.hasSchedule('AgencyGrant')) {
-      world.runSchedule('AgencyGrant');
+    if (world.hasSchedule(Schedules.agencyGrant)) {
+      world.runSchedule(Schedules.agencyGrant);
       world.flush();
     }
     final hasAgency = world.query2<Actor, Agency>().toList().isNotEmpty;
     print('  after AgencyGrant: agency=$hasAgency');
 
-    if (world.hasSchedule('Project')) {
-      world.runSchedule('Project');
+    if (world.hasSchedule(Schedules.project)) {
+      world.runSchedule(Schedules.project);
       world.flush();
     }
 
-    if (world.hasSchedule('ActorAct')) {
-      await world.runScheduleAsync('ActorAct');
+    if (world.hasSchedule(Schedules.actorAct)) {
+      await world.runScheduleAsync(Schedules.actorAct);
       world.flush();
     }
     final respCount = world.events.reader<ActorGenerateResponse>().length;
     print('  after ActorAct: responses=$respCount');
 
-    if (world.hasSchedule('ProcessResponses')) {
-      world.runSchedule('ProcessResponses');
+    if (world.hasSchedule(Schedules.processResponses)) {
+      world.runSchedule(Schedules.processResponses);
       world.flush();
     }
     final callCount = world.events.reader<ToolCallEvent>().length;
     print('  after ProcessResponses: toolCalls=$callCount');
 
-    if (world.hasSchedule('Mechanical')) {
-      world.runSchedule('Mechanical');
+    if (world.hasSchedule(Schedules.mechanical)) {
+      world.runSchedule(Schedules.mechanical);
       world.flush();
     }
     final resultCount = world.events.reader<ToolResultEvent>().length;

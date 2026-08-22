@@ -37,6 +37,7 @@ import 'package:ecsly/ecsly.dart';
 
 import 'data_models/data_models.dart';
 import 'resources/resources.dart';
+import 'schedules.dart';
 
 /// Non-blocking, concurrent agent harness loop.
 ///
@@ -139,16 +140,16 @@ class HarnessLoop {
     //    (e.g. a host switched scenarios and called world.clear()), the
     //    schedules are gone — stop the loop instead of crashing on a missing
     //    schedule.
-    if (!world.hasSchedule('AgencyGrant')) {
+    if (!world.hasSchedule(Schedules.agencyGrant)) {
       _running = false;
       return;
     }
-    world.runSchedule('AgencyGrant');
-    world.runSchedule('Project');
-    world.runSchedule('ActorAct'); // asyncParallel — fire-and-forget
-    world.runSchedule('ProcessResponses');
-    world.runSchedule('Mechanical');
-    world.runSchedule('Narrative');
+    world.runSchedule(Schedules.agencyGrant);
+    world.runSchedule(Schedules.project);
+    world.runSchedule(Schedules.actorAct); // asyncParallel — fire-and-forget
+    world.runSchedule(Schedules.processResponses);
+    world.runSchedule(Schedules.mechanical);
+    world.runSchedule(Schedules.narrative);
 
     // 3. Flush all pending entity/component changes
     world.flush();

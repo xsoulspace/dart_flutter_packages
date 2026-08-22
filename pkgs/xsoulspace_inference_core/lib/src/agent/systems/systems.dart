@@ -696,9 +696,20 @@ void processResponsesSystem(World world) {
     // toolExecutionSystem to process. All tool results — native or parsed —
     // flow through the world's single canonical path:
     // ToolCallEvent → toolExecutionSystem → ToolResultEvent → beats.
+    //
+    // Each response-carried call registers a task in [TaskRegistryResource]
+    // so [HarnessLoop.canSleep] stays false until the (async) execution
+    // completes. Without this, runUntilIdle can exit between dispatch and
+    // completion — the tool result then lands in a dead loop and is lost.
     for (final call in response.toolCalls) {
+      final toolTaskId = TaskId.create();
+      taskRegistry.register(toolTaskId, TaskHandle());
       toolCallWriter.send(
-        ToolCallEvent(actorEntity: response.actorEntity, call: call),
+        ToolCallEvent(
+          actorEntity: response.actorEntity,
+          call: call,
+          taskId: toolTaskId,
+        ),
       );
     }
 
@@ -814,6 +825,10 @@ void toolExecutionSystem(World world) {
       toolResultWriter.send(
         ToolResultEvent(actorEntity: event.actorEntity, result: result),
       );
+      // Resolve the task AFTER the result event is in the channel. The
+      // registry entry is what keeps [HarnessLoop.canSleep] false; resolving
+      // first would let the loop exit before a final Mechanical pass turns
+      // the ToolResultEvent into a beat.
       _resolveToolTask(world, taskRegistry, event.taskId, result);
     }());
   }

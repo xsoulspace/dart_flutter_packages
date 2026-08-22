@@ -8,6 +8,7 @@ import 'events.dart';
 import 'data_models/data_models.dart';
 import 'narrative.dart';
 import 'resources/resources.dart';
+import 'schedules.dart';
 import 'systems/systems.dart';
 
 /// Plugin that installs the agent harness into an ecsly [World].
@@ -117,26 +118,26 @@ class AgentPlugin extends Plugin {
     // 4. ProcessResponses: handle LLM responses, dispatch tool calls
     // 5. Mechanical: execute tools, score/prune threads
     // 6. Narrative: advance Thread/Beat playheads, finalize partials
-    world.createSchedule('AgencyGrant')
+    world.createSchedule(Schedules.agencyGrant)
       ..add(grantAgencySystem, name: 'grantAgency')
       ..then(flushAllSystem, name: 'flushAfterGrant');
 
-    world.createSchedule('Project')
+    world.createSchedule(Schedules.project)
       ..add(seedIdentitySystem, name: 'seedIdentity')
       ..then(projectSituationSystem, name: 'projectSituation')
       ..then(flushAllSystem, name: 'flushAfterProject');
 
-    world.createSchedule('ActorAct')
+    world.createSchedule(Schedules.actorAct)
       ..add(actorActSystem, name: 'actorAct', mode: ExecutionMode.asyncParallel)
       ..then(flushAllSystem, name: 'flushAfterAct');
 
-    world.createSchedule('ProcessResponses')
+    world.createSchedule(Schedules.processResponses)
       ..add(processStreamEventsSystem, name: 'processStreamEvents')
       ..then(taskTimeoutSweeperSystem, name: 'taskTimeoutSweeper')
       ..then(processResponsesSystem, name: 'processResponses')
       ..then(flushAllSystem, name: 'flushAfterResponses');
 
-    world.createSchedule('Mechanical')
+    world.createSchedule(Schedules.mechanical)
       ..add(toolExecutionSystem, name: 'toolExecution')
       ..then(processToolResultsSystem, name: 'processToolResults')
       ..then(scoreThreadsSystem, name: 'scoreThreads')
@@ -144,7 +145,7 @@ class AgentPlugin extends Plugin {
       ..then(mergeThreadsSystem, name: 'mergeThreads')
       ..then(flushAllSystem, name: 'flushAfterMechanical');
 
-    world.createSchedule('Narrative')
+    world.createSchedule(Schedules.narrative)
       ..add(finalizePartialsSystem, name: 'finalizePartials')
       ..then(flushAllSystem, name: 'flushAfterNarrative');
   }

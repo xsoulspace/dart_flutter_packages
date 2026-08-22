@@ -15,6 +15,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:test/test.dart';
+import 'package:xsoulspace_inference_core/src/agent/schedules.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 /// A [GenerationHandler] that simulates an LLM emitting a tool call.
@@ -151,19 +152,19 @@ Entity _spawnActor(World world, String decision) {
 
 /// Run the full schedule cycle once and drain responses.
 Future<void> _runCycle(World world) async {
-  world.runSchedule('AgencyGrant');
+  world.runSchedule(Schedules.agencyGrant);
   world.flush();
-  world.runSchedule('Project');
+  world.runSchedule(Schedules.project);
   world.flush();
-  await world.runScheduleAsync('ActorAct');
+  await world.runScheduleAsync(Schedules.actorAct);
   world.flush();
-  world.runSchedule('ProcessResponses');
+  world.runSchedule(Schedules.processResponses);
   world.flush();
-  world.runSchedule('Mechanical');
+  world.runSchedule(Schedules.mechanical);
   world.flush();
   // Let async tool execution complete.
   await Future.delayed(const Duration(milliseconds: 50));
-  world.runSchedule('Mechanical');
+  world.runSchedule(Schedules.mechanical);
   world.flush();
 }
 
@@ -176,7 +177,8 @@ void main() {
       File(filePath).writeAsStringSync('hello world');
 
       // Reused shared real tool from lib/src/agent/tools.dart.
-      final registry = ToolRegistry()..register(readTool(FsToolsRoot(temp.path)));
+      final registry = ToolRegistry()
+        ..register(readTool(FsToolsRoot(temp.path)));
 
       final world = await _buildWorld(registry);
       world.getResource<GenerationHandlerResource>().registerDefault(
@@ -222,7 +224,8 @@ void main() {
       addTearDown(() => temp.delete(recursive: true));
       final filePath = '${temp.path}/output.txt';
 
-      final registry = ToolRegistry()..register(writeTool(FsToolsRoot(temp.path)));
+      final registry = ToolRegistry()
+        ..register(writeTool(FsToolsRoot(temp.path)));
 
       final world = await _buildWorld(registry);
       world.getResource<GenerationHandlerResource>().registerDefault(
@@ -264,7 +267,8 @@ void main() {
       File('${temp.path}/a.txt').writeAsStringSync('a');
       File('${temp.path}/b.txt').writeAsStringSync('b');
 
-      final registry = ToolRegistry()..register(listDirTool(FsToolsRoot(temp.path)));
+      final registry = ToolRegistry()
+        ..register(listDirTool(FsToolsRoot(temp.path)));
 
       final world = await _buildWorld(registry);
       world.getResource<GenerationHandlerResource>().registerDefault(
@@ -333,13 +337,13 @@ void main() {
       );
 
       // Run one full cycle — both actors act concurrently.
-      world.runSchedule('AgencyGrant');
+      world.runSchedule(Schedules.agencyGrant);
       world.flush();
-      world.runSchedule('Project');
+      world.runSchedule(Schedules.project);
       world.flush();
-      await world.runScheduleAsync('ActorAct');
+      await world.runScheduleAsync(Schedules.actorAct);
       world.flush();
-      world.runSchedule('ProcessResponses');
+      world.runSchedule(Schedules.processResponses);
       world.flush();
 
       // Each handler handled exactly its own agent.
@@ -387,7 +391,8 @@ void main() {
         addTearDown(() => temp.delete(recursive: true));
         final filePath = '${temp.path}/structured.txt';
 
-        final registry = ToolRegistry()..register(writeTool(FsToolsRoot(temp.path)));
+        final registry = ToolRegistry()
+          ..register(writeTool(FsToolsRoot(temp.path)));
 
         final world = await _buildWorld(registry);
 
@@ -449,13 +454,13 @@ void main() {
       world.flush();
 
       // First cycle — routes to Apple (model-apple).
-      world.runSchedule('AgencyGrant');
+      world.runSchedule(Schedules.agencyGrant);
       world.flush();
-      world.runSchedule('Project');
+      world.runSchedule(Schedules.project);
       world.flush();
-      await world.runScheduleAsync('ActorAct');
+      await world.runScheduleAsync(Schedules.actorAct);
       world.flush();
-      world.runSchedule('ProcessResponses');
+      world.runSchedule(Schedules.processResponses);
       world.flush();
       expect(appleHandler.served, [appleModelId]);
       expect(openRouterHandler.served, isEmpty);
@@ -466,13 +471,13 @@ void main() {
       world.flush();
 
       // Second cycle — routes to OpenRouter (model-openrouter).
-      world.runSchedule('AgencyGrant');
+      world.runSchedule(Schedules.agencyGrant);
       world.flush();
-      world.runSchedule('Project');
+      world.runSchedule(Schedules.project);
       world.flush();
-      await world.runScheduleAsync('ActorAct');
+      await world.runScheduleAsync(Schedules.actorAct);
       world.flush();
-      world.runSchedule('ProcessResponses');
+      world.runSchedule(Schedules.processResponses);
       world.flush();
 
       expect(appleHandler.served, [appleModelId]);

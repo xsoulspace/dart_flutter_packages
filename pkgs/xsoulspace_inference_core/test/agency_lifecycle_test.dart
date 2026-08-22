@@ -9,6 +9,7 @@
 library;
 
 import 'package:test/test.dart';
+import 'package:xsoulspace_inference_core/src/agent/schedules.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import 'support/agent_harness_support.dart';
@@ -26,7 +27,7 @@ void main() {
       world.flush();
 
       expect(world.getEntity(actor).$1.has<Agency>(), isFalse);
-      world.runSchedule('AgencyGrant');
+      world.runSchedule(Schedules.agencyGrant);
       world.flush();
       expect(world.getEntity(actor).$1.has<Agency>(), isTrue);
     });
@@ -37,9 +38,9 @@ void main() {
       final actor = spawnActor(world, scene, openDecisionPrompt: 'Decide.');
       world.flush();
 
-      world.runSchedule('AgencyGrant');
+      world.runSchedule(Schedules.agencyGrant);
       world.flush();
-      world.runSchedule('AgencyGrant');
+      world.runSchedule(Schedules.agencyGrant);
       world.flush();
       expect(world.getEntity(actor).$1.has<Agency>(), isTrue);
     });
@@ -50,7 +51,7 @@ void main() {
       final actor = spawnActor(world, scene);
       world.flush();
 
-      world.runSchedule('AgencyGrant');
+      world.runSchedule(Schedules.agencyGrant);
       world.flush();
       expect(world.getEntity(actor).$1.has<Agency>(), isFalse);
     });
@@ -64,17 +65,17 @@ void main() {
       final actor = spawnActor(world, scene, openDecisionPrompt: 'Say hello.');
       world.flush();
 
-      world.runSchedule('AgencyGrant');
+      world.runSchedule(Schedules.agencyGrant);
       world.flush();
-      world.runSchedule('Project');
+      world.runSchedule(Schedules.project);
       world.flush();
       expect(world.getEntity(actor).$1.has<AwaitingResponse>(), isFalse);
 
-      await world.runScheduleAsync('ActorAct');
+      await world.runScheduleAsync(Schedules.actorAct);
       world.flush();
       expect(world.getEntity(actor).$1.has<AwaitingResponse>(), isTrue);
 
-      world.runSchedule('ProcessResponses');
+      world.runSchedule(Schedules.processResponses);
       world.flush();
       expect(world.getEntity(actor).$1.has<AwaitingResponse>(), isFalse);
     });
@@ -86,16 +87,16 @@ void main() {
       final actor = spawnActor(world, scene, openDecisionPrompt: 'Say hello.');
       world.flush();
 
-      world.runSchedule('AgencyGrant');
+      world.runSchedule(Schedules.agencyGrant);
       world.flush();
-      world.runSchedule('Project');
+      world.runSchedule(Schedules.project);
       world.flush();
-      await world.runScheduleAsync('ActorAct');
+      await world.runScheduleAsync(Schedules.actorAct);
       world.flush();
       expect(world.getEntity(actor).$1.has<AwaitingResponse>(), isTrue);
 
       // A second grant pass must not re-grant (still has Agency + awaiting).
-      world.runSchedule('AgencyGrant');
+      world.runSchedule(Schedules.agencyGrant);
       world.flush();
       expect(world.getEntity(actor).$1.has<Agency>(), isTrue);
       expect(world.getEntity(actor).$1.has<AwaitingResponse>(), isTrue);

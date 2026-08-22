@@ -150,15 +150,15 @@ class ScenarioRunner {
         );
 
         // One full cinematic cycle.
-        world.runSchedule('AgencyGrant');
+        world.runSchedule(ScheduleId('AgencyGrant'));
         world.flush();
-        world.runSchedule('Project');
+        world.runSchedule(ScheduleId('Project'));
         world.flush();
-        await world.runScheduleAsync('ActorAct');
+        await world.runScheduleAsync(ScheduleId('ActorAct'));
         world.flush();
-        world.runSchedule('ProcessResponses');
+        world.runSchedule(ScheduleId('ProcessResponses'));
         world.flush();
-        world.runSchedule('Mechanical');
+        world.runSchedule(ScheduleId('Mechanical'));
         world.flush();
 
         final situation = world.getEntity(entity).$1.get<Situation>();

@@ -344,55 +344,58 @@ void main() {
       },
     );
 
-    test('sync marks remote-required namespace as failed when provider '
-        'does not support sync', () async {
-      final provider = _KernelFakeStorageProvider();
-      final service = StorageService(provider);
-      await service.initializeWithConfig(await _createConfig());
+    test(
+      'sync treats remote-unconfigured provider as graceful no-op',
+      () async {
+        // Providers with SyncAvailability.withRemoteConfig (e.g. offline-git
+        // without a remote URL) must not fail the sync loop — there is simply
+        // nothing to replicate yet. Outbox entries stay queued for later.
+        final provider = _KernelFakeStorageProvider();
+        final service = StorageService(provider);
+        await service.initializeWithConfig(await _createConfig());
 
-      const profile = StorageProfile(
-        name: 'sync_unsupported_profile',
-        namespaces: <StorageNamespaceProfile>[
-          StorageNamespaceProfile(
-            namespace: StorageNamespace.projects,
-            policy: StoragePolicy.optimisticSync,
-            remoteEngineId: 'github',
-          ),
-        ],
-      );
-      final resolver = InMemoryStorageProfileResolver(
-        namespaceServices: <StorageNamespace, StorageService>{
-          StorageNamespace.projects: service,
-        },
-      );
+        const profile = StorageProfile(
+          name: 'sync_unsupported_profile',
+          namespaces: <StorageNamespaceProfile>[
+            StorageNamespaceProfile(
+              namespace: StorageNamespace.projects,
+              policy: StoragePolicy.optimisticSync,
+              remoteEngineId: 'github',
+            ),
+          ],
+        );
+        final resolver = InMemoryStorageProfileResolver(
+          namespaceServices: <StorageNamespace, StorageService>{
+            StorageNamespace.projects: service,
+          },
+        );
 
-      final kernel = StorageKernel(profile: profile, resolver: resolver);
-      final syncEventFuture = kernel
-          .observe(namespace: StorageNamespace.projects)
-          .where((final event) => event.type == StorageObservationType.synced)
-          .first;
+        final kernel = StorageKernel(profile: profile, resolver: resolver);
+        final syncEventFuture = kernel
+            .observe(namespace: StorageNamespace.projects)
+            .where((final event) => event.type == StorageObservationType.synced)
+            .first;
 
-      await kernel.write(
-        namespace: StorageNamespace.projects,
-        path: 'tasks/unsupported.json',
-        content: '{"id":"unsupported"}',
-      );
-      await kernel.sync(namespace: StorageNamespace.projects);
+        await kernel.write(
+          namespace: StorageNamespace.projects,
+          path: 'tasks/unsupported.json',
+          content: '{"id":"unsupported"}',
+        );
+        await kernel.sync(namespace: StorageNamespace.projects);
 
-      final syncEvent = await syncEventFuture;
-      expect(provider.syncCalls, 0);
-      expect(syncEvent.result, isNotNull);
-      expect(syncEvent.result!.success, isFalse);
-      expect(syncEvent.result!.decisionState, DecisionState.blocked);
-      expect(
-        syncEvent.result!.message,
-        contains('does not support remote synchronization'),
-      );
-      expect(
-        syncEvent.result!.metadata['error_type'],
-        'CapabilityMismatchException',
-      );
-    });
+        final syncEvent = await syncEventFuture;
+        expect(provider.syncCalls, 0);
+        expect(syncEvent.result, isNotNull);
+        expect(syncEvent.result!.success, isTrue);
+        expect(
+          syncEvent.result!.metadata['sync_skipped'],
+          'no_remote_configured',
+        );
+        // Data is preserved in the outbox for when a remote gets configured.
+        final outbox = await kernel.outboxSnapshot(StorageNamespace.projects);
+        expect(outbox, hasLength(1));
+      },
+    );
 
     test('observe emits created and updated events for namespace', () async {
       final provider = _KernelFakeStorageProvider();

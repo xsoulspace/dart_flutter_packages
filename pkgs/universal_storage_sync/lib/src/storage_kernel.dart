@@ -401,14 +401,24 @@ final class StorageKernel implements StorageKernelContract {
       );
     }
 
-    await service.syncRemote(
-      pullMergeStrategy: pullMergeStrategyFor(
-        namespaceProfile.conflictResolution,
-      ),
-      pushConflictStrategy: pushConflictStrategyFor(
-        namespaceProfile.conflictResolution,
-      ),
-    );
+    try {
+      await service.syncRemote(
+        pullMergeStrategy: pullMergeStrategyFor(
+          namespaceProfile.conflictResolution,
+        ),
+        pushConflictStrategy: pushConflictStrategyFor(
+          namespaceProfile.conflictResolution,
+        ),
+      );
+    } on CapabilityMismatchException {
+      // Providers with SyncAvailability.withRemoteConfig (e.g. offline-git
+      // without a remote URL) have nothing to replicate yet — treat as a
+      // successful no-op rather than a sync failure.
+      return StorageOperationResult.success(
+        message: 'Sync skipped: provider has no remote configured.',
+        metadata: <String, dynamic>{'sync_skipped': 'no_remote_configured'},
+      );
+    }
 
     return StorageOperationResult.success(
       message: 'Sync completed using provider syncRemote.',

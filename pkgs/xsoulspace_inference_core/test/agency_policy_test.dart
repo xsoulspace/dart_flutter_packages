@@ -8,6 +8,7 @@
 library;
 
 import 'package:test/test.dart';
+import 'package:xsoulspace_inference_core/src/agent/schedules.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import 'support/agent_harness_support.dart';
@@ -46,7 +47,7 @@ void main() {
       final high = _spawnActor(world, scene, priority: 10);
       world.flush();
 
-      world.runSchedule('AgencyGrant');
+      world.runSchedule(Schedules.agencyGrant);
       world.flush();
 
       // Only the high-priority actor gets agency (cap = 1).
@@ -65,7 +66,7 @@ void main() {
       final c = _spawnActor(world, scene, priority: 1);
       world.flush();
 
-      world.runSchedule('AgencyGrant');
+      world.runSchedule(Schedules.agencyGrant);
       world.flush();
 
       var granted = 0;
@@ -85,7 +86,7 @@ void main() {
       final escalated = _spawnActor(world, scene, priority: 5, escalate: true);
       world.flush();
 
-      world.runSchedule('AgencyGrant');
+      world.runSchedule(Schedules.agencyGrant);
       world.flush();
 
       // Same priority, but escalated wins the tie.
@@ -120,11 +121,11 @@ void main() {
       ]);
       world.flush();
 
-      world.runSchedule('AgencyGrant');
+      world.runSchedule(Schedules.agencyGrant);
       world.flush();
-      world.runSchedule('Project');
+      world.runSchedule(Schedules.project);
       world.flush();
-      await world.runScheduleAsync('ActorAct');
+      await world.runScheduleAsync(Schedules.actorAct);
       world.flush();
 
       final reader = world.events.reader<ActorGenerateRequest>();
@@ -159,11 +160,11 @@ void main() {
         ]);
         world.flush();
 
-        world.runSchedule('AgencyGrant');
+        world.runSchedule(Schedules.agencyGrant);
         world.flush();
-        world.runSchedule('Project');
+        world.runSchedule(Schedules.project);
         world.flush();
-        await world.runScheduleAsync('ActorAct');
+        await world.runScheduleAsync(Schedules.actorAct);
         world.flush();
 
         final reader = world.events.reader<ActorGenerateRequest>();
@@ -187,13 +188,13 @@ void main() {
       ]);
       world.flush();
 
-      world.runSchedule('AgencyGrant');
+      world.runSchedule(Schedules.agencyGrant);
       world.flush();
-      world.runSchedule('Project');
+      world.runSchedule(Schedules.project);
       world.flush();
-      await world.runScheduleAsync('ActorAct');
+      await world.runScheduleAsync(Schedules.actorAct);
       world.flush();
-      world.runSchedule('ProcessResponses');
+      world.runSchedule(Schedules.processResponses);
       world.flush();
 
       expect(world.getEntity(actor).$1.has<EscalationRequest>(), isFalse);

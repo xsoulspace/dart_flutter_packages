@@ -8,6 +8,7 @@
 library;
 
 import 'package:test/test.dart';
+import 'package:xsoulspace_inference_core/src/agent/schedules.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import 'support/agent_harness_support.dart';
@@ -24,9 +25,9 @@ void main() {
       );
       world.flush();
 
-      world.runSchedule('AgencyGrant');
+      world.runSchedule(Schedules.agencyGrant);
       world.flush();
-      world.runSchedule('Project');
+      world.runSchedule(Schedules.project);
       world.flush();
 
       final (entity, valid) = world.getEntity(actor);
@@ -45,9 +46,9 @@ void main() {
       spawnActor(world, scene, openDecisionPrompt: 'Q2');
       world.flush();
 
-      world.runSchedule('AgencyGrant');
+      world.runSchedule(Schedules.agencyGrant);
       world.flush();
-      world.runSchedule('Project');
+      world.runSchedule(Schedules.project);
       world.flush();
 
       // At least one actor sees the other as co-present.
@@ -70,9 +71,9 @@ void main() {
       ]);
       world.flush();
 
-      world.runSchedule('AgencyGrant');
+      world.runSchedule(Schedules.agencyGrant);
       world.flush();
-      world.runSchedule('Project');
+      world.runSchedule(Schedules.project);
       world.flush();
 
       final situation = world.getEntity(actor).$1.get<Situation>();

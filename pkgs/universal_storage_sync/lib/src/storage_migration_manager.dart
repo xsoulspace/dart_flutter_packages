@@ -606,6 +606,16 @@ final class StorageProfileMigrationManager implements MigrationEndpoint {
                     : 'conflict',
               _ => status,
             };
+            if (checkpointStatus == 'conflict') {
+              // An unresolved conflict must block completion: silently
+              // reporting success here would hide potential data loss.
+              issues.add(
+                'Unresolved conflict for '
+                '${operation.targetNamespace.value}:${operation.targetPath}. '
+                'Target exists with different content and overwrite is '
+                'disabled.',
+              );
+            }
             checkpointsByOperationId[operation.id] = _MigrationCheckpoint(
               id: operation.id,
               operationId: operation.id,

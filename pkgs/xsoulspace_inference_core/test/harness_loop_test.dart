@@ -9,6 +9,7 @@
 library;
 
 import 'package:test/test.dart';
+import 'package:xsoulspace_inference_core/src/agent/schedules.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import 'support/agent_harness_support.dart';
@@ -36,7 +37,7 @@ void main() {
       final scene = spawnScene(world);
       spawnActor(world, scene, openDecisionPrompt: 'Q');
       world.flush();
-      world.runSchedule('AgencyGrant');
+      world.runSchedule(Schedules.agencyGrant);
       world.flush();
       expect(loop.canSleep(), isFalse);
     });
@@ -49,15 +50,15 @@ void main() {
       spawnActor(world, scene, openDecisionPrompt: 'Q');
       world.flush();
 
-      world.runSchedule('AgencyGrant');
+      world.runSchedule(Schedules.agencyGrant);
       world.flush();
-      world.runSchedule('Project');
+      world.runSchedule(Schedules.project);
       world.flush();
-      await world.runScheduleAsync('ActorAct');
+      await world.runScheduleAsync(Schedules.actorAct);
       world.flush();
       expect(loop.canSleep(), isFalse);
 
-      world.runSchedule('ProcessResponses');
+      world.runSchedule(Schedules.processResponses);
       world.flush();
       expect(loop.canSleep(), isTrue);
     });
@@ -83,21 +84,21 @@ void main() {
         world.flush();
 
         // Grant + project all.
-        world.runSchedule('AgencyGrant');
+        world.runSchedule(Schedules.agencyGrant);
         world.flush();
-        world.runSchedule('Project');
+        world.runSchedule(Schedules.project);
         world.flush();
         for (final actor in actors) {
           expect(world.getEntity(actor).$1.has<Situation>(), isTrue);
         }
 
         // All act concurrently, then all responses processed.
-        await world.runScheduleAsync('ActorAct');
+        await world.runScheduleAsync(Schedules.actorAct);
         world.flush();
         for (final actor in actors) {
           expect(world.getEntity(actor).$1.has<AwaitingResponse>(), isTrue);
         }
-        world.runSchedule('ProcessResponses');
+        world.runSchedule(Schedules.processResponses);
         world.flush();
 
         final index = world.getResource<FacetIndex>();
@@ -117,27 +118,27 @@ void main() {
       world.flush();
 
       // First cycle.
-      world.runSchedule('AgencyGrant');
+      world.runSchedule(Schedules.agencyGrant);
       world.flush();
-      world.runSchedule('Project');
+      world.runSchedule(Schedules.project);
       world.flush();
-      await world.runScheduleAsync('ActorAct');
+      await world.runScheduleAsync(Schedules.actorAct);
       world.flush();
-      world.runSchedule('ProcessResponses');
+      world.runSchedule(Schedules.processResponses);
       world.flush();
       expect(world.getEntity(actor).$1.has<Agency>(), isFalse);
 
       // Second cycle.
       world.upsertComponent(actor, const OpenDecision(prompt: 'Second.'));
       world.flush();
-      world.runSchedule('AgencyGrant');
+      world.runSchedule(Schedules.agencyGrant);
       world.flush();
       expect(world.getEntity(actor).$1.has<Agency>(), isTrue);
-      world.runSchedule('Project');
+      world.runSchedule(Schedules.project);
       world.flush();
-      await world.runScheduleAsync('ActorAct');
+      await world.runScheduleAsync(Schedules.actorAct);
       world.flush();
-      world.runSchedule('ProcessResponses');
+      world.runSchedule(Schedules.processResponses);
       world.flush();
 
       final index = world.getResource<FacetIndex>();

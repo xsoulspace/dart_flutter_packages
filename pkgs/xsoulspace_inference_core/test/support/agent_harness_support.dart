@@ -10,6 +10,7 @@ library;
 
 import 'dart:async';
 
+import 'package:xsoulspace_inference_core/src/agent/schedules.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 /// A mock handler that simulates an LLM without requiring a real backend.
@@ -117,9 +118,9 @@ Entity addIndexedBeat(
 
 /// Drive agency grant + projection for the given world.
 void projectFor(World world) {
-  world.runSchedule('AgencyGrant');
+  world.runSchedule(Schedules.agencyGrant);
   world.flush();
-  world.runSchedule('Project');
+  world.runSchedule(Schedules.project);
   world.flush();
 }
 

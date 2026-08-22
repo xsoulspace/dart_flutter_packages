@@ -6,6 +6,7 @@ library;
 import 'dart:io';
 
 import 'package:test/test.dart';
+import 'package:xsoulspace_inference_core/src/agent/schedules.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import 'support/agent_harness_support.dart';
@@ -43,7 +44,12 @@ void main() {
         final filePath = '${temp.path}/notes.txt';
         await File(filePath).writeAsString('hello');
 
-        final registry = ToolRegistry()..register(readTool(FsToolsRoot(Directory.systemTemp.createTempSync('ecsly_t').path)));
+        final registry = ToolRegistry()
+          ..register(
+            readTool(
+              FsToolsRoot(Directory.systemTemp.createTempSync('ecsly_t').path),
+            ),
+          );
         final toolResource = ToolRegistryResource();
         toolResource.register('default', registry);
         final world = await buildTestWorld(toolRegistryResource: toolResource);
@@ -68,18 +74,18 @@ void main() {
           prompt: 'Read',
         );
 
-        world.runSchedule('AgencyGrant');
+        world.runSchedule(Schedules.agencyGrant);
         world.flush();
-        world.runSchedule('Project');
+        world.runSchedule(Schedules.project);
         world.flush();
-        await world.runScheduleAsync('ActorAct');
+        await world.runScheduleAsync(Schedules.actorAct);
         world.flush();
-        world.runSchedule('ProcessResponses');
+        world.runSchedule(Schedules.processResponses);
         world.flush();
-        world.runSchedule('Mechanical');
+        world.runSchedule(Schedules.mechanical);
         world.flush();
         await Future.delayed(const Duration(milliseconds: 50));
-        world.runSchedule('Mechanical');
+        world.runSchedule(Schedules.mechanical);
         world.flush();
 
         collector.endDecision(

@@ -3,6 +3,7 @@
 /// AgentPlugin registration — what the plugin installs into a [World].
 library;
 
+import 'package:ecsly/ecsly.dart';
 import 'package:test/test.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
@@ -18,7 +19,11 @@ void main() {
         'Mechanical',
         'Narrative',
       ]) {
-        expect(world.hasSchedule(name), isTrue, reason: 'missing $name');
+        expect(
+          world.hasSchedule(ScheduleId(name)),
+          isTrue,
+          reason: 'missing $name',
+        );
       }
     });
 

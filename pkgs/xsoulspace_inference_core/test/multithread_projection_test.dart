@@ -4,6 +4,7 @@
 /// and targeted decisions ([OpenDecision.threadId]).
 
 import 'package:test/test.dart';
+import 'package:xsoulspace_inference_core/src/agent/schedules.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import 'support/agent_harness_support.dart';
@@ -130,13 +131,13 @@ void main() {
     world.flush();
 
     // Full cinematic cycle so agency is granted and projection runs.
-    world.runSchedule('AgencyGrant');
+    world.runSchedule(Schedules.agencyGrant);
     world.flush();
-    world.runSchedule('Project');
+    world.runSchedule(Schedules.project);
     world.flush();
-    await world.runScheduleAsync('ActorAct');
+    await world.runScheduleAsync(Schedules.actorAct);
     world.flush();
-    world.runSchedule('ProcessResponses');
+    world.runSchedule(Schedules.processResponses);
     world.flush();
 
     // The response beat landed in the targeted thread, not the default one.

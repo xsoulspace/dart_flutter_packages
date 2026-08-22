@@ -9,6 +9,7 @@
 import 'dart:async';
 
 import 'package:test/test.dart';
+import 'package:xsoulspace_inference_core/src/agent/schedules.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import 'support/agent_harness_support.dart';
@@ -46,17 +47,17 @@ Future<(World, Entity)> _worldWithDecision({GenerationHandler? handler}) async {
 
 /// Drive one full cinematic cycle.
 Future<void> _cycle(World world) async {
-  world.runSchedule('AgencyGrant');
+  world.runSchedule(Schedules.agencyGrant);
   world.flush();
-  world.runSchedule('Project');
+  world.runSchedule(Schedules.project);
   world.flush();
-  await world.runScheduleAsync('ActorAct');
+  await world.runScheduleAsync(Schedules.actorAct);
   world.flush();
   // Let async tool completions / handler futures land.
   await Future<void>.delayed(const Duration(milliseconds: 200));
-  world.runSchedule('ProcessResponses');
+  world.runSchedule(Schedules.processResponses);
   world.flush();
-  world.runSchedule('Mechanical');
+  world.runSchedule(Schedules.mechanical);
   world.flush();
 }
 
@@ -147,11 +148,11 @@ void main() {
       );
 
       // First dispatch; the handler hangs.
-      world.runSchedule('AgencyGrant');
+      world.runSchedule(Schedules.agencyGrant);
       world.flush();
-      world.runSchedule('Project');
+      world.runSchedule(Schedules.project);
       world.flush();
-      await world.runScheduleAsync('ActorAct');
+      await world.runScheduleAsync(Schedules.actorAct);
       world.flush();
 
       // The actor is awaiting with a registered task.
@@ -161,7 +162,7 @@ void main() {
       // After the timeout elapses, the sweeper fails the task and the retry
       // path frees the actor.
       await Future<void>.delayed(const Duration(milliseconds: 150));
-      world.runSchedule('ProcessResponses');
+      world.runSchedule(Schedules.processResponses);
       world.flush();
 
       expect(world.getEntity(actor).$1.has<AwaitingResponse>(), isFalse);
