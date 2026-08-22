@@ -41,6 +41,9 @@ Evaluate the **harness itself** with zero LLM calls, deterministically:
   is in the loop.
 - Token counts remain estimator-based (chars/4); thresholds inherit that
   approximation until a real tokenizer lands.
+- Oracle scoring here is residue-based and keyword-shaped — adequate for
+  discipline claims, not intelligence claims. [ADR 0004](0004_intelligence_grade_harness_evaluation.md)
+  supersedes it for retrieval-quality measurement.
 - intentcall-style registry projection and an ACP session facade remain future
   work; they are DX improvements, not prerequisites for measurement.
 
