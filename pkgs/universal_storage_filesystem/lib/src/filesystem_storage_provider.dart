@@ -176,9 +176,13 @@ class FileSystemStorageProvider extends StorageProvider implements LocalEngine {
 
     final entities = await directory.list().toList();
     final items = <FileEntry>[];
+    final queryRoot = normalizedPath == '.' ? '' : normalizedPath;
     for (final entity in entities) {
       final stat = entity.statSync();
-      final name = path.relative(entity.path, from: _basePath);
+      // Contract: FileEntry.name is relative to the queried directory.
+      final name = queryRoot.isEmpty
+          ? path.relative(entity.path, from: _basePath)
+          : path.relative(entity.path, from: path.join(_basePath, queryRoot));
       items.add(
         FileEntry(
           name: name,

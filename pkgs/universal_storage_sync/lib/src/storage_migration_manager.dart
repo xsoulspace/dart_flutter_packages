@@ -207,18 +207,36 @@ final class StorageProfileMigrationManager implements MigrationEndpoint {
   }) async => executeMigrationWithOptions(plan: plan);
 
   /// Executes migration with optional overwrite and dry-run strategy.
+  ///
+  /// Explicit parameters win; when not provided, falls back to the
+  /// corresponding `plan.metadata` keys (`overwrite`, `dry_run`,
+  /// `collect_diffs`, `pause_for_decisions`) so plan-level configuration
+  /// is honored regardless of entry point.
   @override
   Future<MigrationExecutionResult> executeMigrationWithOptions({
     required final MigrationPlan plan,
-    final bool overwrite = true,
-    final bool dryRun = false,
-    final bool collectDiffs = false,
-    final bool pauseForDecisions = false,
+    final bool? overwrite,
+    final bool? dryRun,
+    final bool? collectDiffs,
+    final bool? pauseForDecisions,
     final Map<String, MigrationDecisionAction> decisionActions =
         const <String, MigrationDecisionAction>{},
     final Map<String, DecisionState> decisionStates =
         const <String, DecisionState>{},
   }) async {
+    final resolvedOverwrite =
+        overwrite ?? _planBool(plan.metadata, 'overwrite') ?? true;
+    final resolvedDryRun =
+        dryRun ?? _planBool(plan.metadata, 'dry_run') ?? false;
+    final resolvedPauseForDecisions =
+        pauseForDecisions ??
+        _planBool(plan.metadata, 'pause_for_decisions') ??
+        _planInteractionLevel(plan.metadata) ??
+        false;
+    final resolvedCollectDiffs =
+        collectDiffs ??
+        _planBool(plan.metadata, 'collect_diffs') ??
+        resolvedPauseForDecisions;
     final preparation = await prepareMigration(plan: plan);
     if (!preparation.ok) {
       return MigrationExecutionResult(
@@ -303,7 +321,9 @@ final class StorageProfileMigrationManager implements MigrationEndpoint {
       final completed = <String>{
         for (final operation in completedOperations) operation.key,
       };
-      final preflight = collectDiffs ? <_MigrationOperationPreview>[] : null;
+      final preflight = resolvedCollectDiffs
+          ? <_MigrationOperationPreview>[]
+          : null;
       final writtenRecords = List<_MigrationRecord>.from(completedOperations);
       final checkpointsByOperationId = <String, _MigrationCheckpoint>{
         for (final checkpoint in _manifestCheckpoints(manifest))
@@ -317,7 +337,7 @@ final class StorageProfileMigrationManager implements MigrationEndpoint {
       var abortOperationId = '';
 
       final alreadyCompleted = completed.length;
-      if (!dryRun) {
+      if (!resolvedDryRun) {
         await _persistManifest(
           planId: plan.id,
           sourceProfileHash: plan.sourceProfileHash,
@@ -387,7 +407,7 @@ final class StorageProfileMigrationManager implements MigrationEndpoint {
               'Source file not found: ${operation.sourcePath} in '
               '${operation.sourceNamespace.value}.',
             );
-            if (!dryRun) {
+            if (!resolvedDryRun) {
               await _persistManifest(
                 planId: plan.id,
                 sourceProfileHash: plan.sourceProfileHash,
@@ -446,7 +466,7 @@ final class StorageProfileMigrationManager implements MigrationEndpoint {
           var status = 'create';
           var willApply = true;
           var decisionState = DecisionState.autoResolved;
-          var resolvedAction = pauseForDecisions
+          var resolvedAction = resolvedPauseForDecisions
               ? activeDecisionActions[operation.id]
               : null;
           var willAbort = false;
@@ -454,16 +474,16 @@ final class StorageProfileMigrationManager implements MigrationEndpoint {
           if (targetExists && targetContent == transformedContent) {
             status = 'no_change';
             willApply = false;
-          } else if (targetExists && overwrite) {
+          } else if (targetExists && resolvedOverwrite) {
             status = 'overwrite';
-          } else if (targetExists && !overwrite) {
+          } else if (targetExists && !resolvedOverwrite) {
             status = 'conflict';
             willApply = false;
-            resolvedAction = pauseForDecisions ? resolvedAction : null;
+            resolvedAction = resolvedPauseForDecisions ? resolvedAction : null;
             decisionState = resolvedAction == null
                 ? DecisionState.needsUserDecision
                 : _migrationDecisionStateFromAction(resolvedAction);
-            if (pauseForDecisions && resolvedAction == null) {
+            if (resolvedPauseForDecisions && resolvedAction == null) {
               pendingDecisionActions.add(operation.id);
             }
             if (resolvedAction == MigrationDecisionAction.overwrite) {
@@ -477,7 +497,7 @@ final class StorageProfileMigrationManager implements MigrationEndpoint {
             }
           }
 
-          if (dryRun) {
+          if (resolvedDryRun) {
             final metadata = <String, dynamic>{
               'source_length': sourceContent.length,
               'transformed_length': transformedContent.length,
@@ -581,7 +601,7 @@ final class StorageProfileMigrationManager implements MigrationEndpoint {
               'skip' => 'skipped',
               'abort' => 'aborted',
               'conflict' =>
-                pauseForDecisions && resolvedAction == null
+                resolvedPauseForDecisions && resolvedAction == null
                     ? 'awaiting_decision'
                     : 'conflict',
               _ => status,
@@ -611,7 +631,7 @@ final class StorageProfileMigrationManager implements MigrationEndpoint {
                   : null,
             );
             completed.add(operation.key);
-            if (!dryRun) {
+            if (!resolvedDryRun) {
               await _persistManifest(
                 planId: plan.id,
                 sourceProfileHash: plan.sourceProfileHash,
@@ -672,7 +692,7 @@ final class StorageProfileMigrationManager implements MigrationEndpoint {
             operationId: operation.id,
           );
           writtenRecords.add(newRecord);
-          if (pauseForDecisions) {
+          if (resolvedPauseForDecisions) {
             activeDecisionActions[operation.id] =
                 MigrationDecisionAction.overwrite;
           }
@@ -732,7 +752,7 @@ final class StorageProfileMigrationManager implements MigrationEndpoint {
             completedAt: DateTime.now().toUtc(),
             errorMessage: error.toString(),
           );
-          if (!dryRun) {
+          if (!resolvedDryRun) {
             await _persistManifest(
               planId: plan.id,
               sourceProfileHash: plan.sourceProfileHash,
@@ -763,7 +783,9 @@ final class StorageProfileMigrationManager implements MigrationEndpoint {
         issues: issues,
       );
 
-      if (!dryRun && pauseForDecisions && pendingDecisionActions.isNotEmpty) {
+      if (!resolvedDryRun &&
+          resolvedPauseForDecisions &&
+          pendingDecisionActions.isNotEmpty) {
         await _persistManifest(
           planId: plan.id,
           sourceProfileHash: plan.sourceProfileHash,
@@ -863,7 +885,7 @@ final class StorageProfileMigrationManager implements MigrationEndpoint {
         );
       }
 
-      if (dryRun) {
+      if (resolvedDryRun) {
         return MigrationExecutionResult(
           ok: issues.isEmpty,
           status: MigrationStatus.prepared,
@@ -2260,3 +2282,50 @@ String _normalizePathValue(final String path) => path
     .replaceAll(RegExp('/+'), '/')
     .replaceAll(RegExp('^/+'), '')
     .replaceAll(RegExp(r'/+$'), '');
+
+/// Parses a plan metadata value as a tri-state bool.
+bool? _planBool(final Map<String, dynamic> metadata, final String key) {
+  final raw = metadata[key];
+  if (raw == null) {
+    return null;
+  }
+  if (raw is bool) {
+    return raw;
+  }
+  if (raw is String) {
+    final normalized = raw.trim().toLowerCase();
+    if (normalized == '1' ||
+        normalized == 'true' ||
+        normalized == 'yes' ||
+        normalized == 'y') {
+      return true;
+    }
+    if (normalized == '0' ||
+        normalized == 'false' ||
+        normalized == 'no' ||
+        normalized == 'n') {
+      return false;
+    }
+    return null;
+  }
+  if (raw is num) {
+    return raw > 0;
+  }
+  return null;
+}
+
+/// Resolves `migration_interaction_level: complex` as pause-for-decisions.
+bool? _planInteractionLevel(final Map<String, dynamic> metadata) {
+  final rawLevel = metadata['migration_interaction_level'];
+  if (rawLevel is! String) {
+    return null;
+  }
+  final normalized = rawLevel.trim().toLowerCase();
+  if (normalized == SyncInteractionLevel.complex.name) {
+    return true;
+  }
+  if (normalized == SyncInteractionLevel.minimal.name) {
+    return false;
+  }
+  return null;
+}

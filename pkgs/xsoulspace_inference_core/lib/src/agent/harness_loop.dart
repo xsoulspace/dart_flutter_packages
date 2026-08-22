@@ -127,6 +127,9 @@ class HarnessLoop {
   /// Executes all schedules in order. Handlers receive requests through the
   /// world's event channels and send responses back; the loop does not poll
   /// them directly.
+  /// One schedule pass, exposed for host-driven tracing/debug loops.
+  void tickForDebug() => _tick();
+
   void _tick() {
     // 1. Advance the schedule execution frame so that
     //    ScheduleJobResultQueueResource can pipeline across frames.

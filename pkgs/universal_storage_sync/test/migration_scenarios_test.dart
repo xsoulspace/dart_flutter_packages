@@ -20,14 +20,24 @@ import 'package:xsoulspace_foundation/xsoulspace_foundation.dart';
 void main() {
   Future<StorageKernel> buildLocalDbKernel({
     required final String keyspacePrefix,
-    _SharedInMemoryLocalDb? shared,
   }) async {
-    final provider = LocalDbStorageProvider(
-      localDb: shared ?? _SharedInMemoryLocalDb(),
-    );
-    await provider.initWithConfig(
-      LocalDbStorageConfig(keyspacePrefix: keyspacePrefix),
-    );
+    // One provider per namespace: LocalDbStorageProvider isolates by keyspace
+    // prefix, so sharing one instance across namespaces would leak entries.
+    final namespaceServices = <StorageNamespace, StorageService>{};
+    for (final namespace in [
+      StorageNamespace.settings,
+      StorageNamespace.projects,
+    ]) {
+      final provider = LocalDbStorageProvider(
+        localDb: _SharedInMemoryLocalDb(),
+      );
+      await provider.initWithConfig(
+        LocalDbStorageConfig(
+          keyspacePrefix: '${keyspacePrefix}_${namespace.value}',
+        ),
+      );
+      namespaceServices[namespace] = StorageService(provider);
+    }
     return StorageKernel(
       profile: StorageProfile(
         name: 'localdb_$keyspacePrefix',
@@ -43,10 +53,7 @@ void main() {
         ],
       ),
       resolver: InMemoryStorageProfileResolver(
-        namespaceServices: {
-          StorageNamespace.settings: StorageService(provider),
-          StorageNamespace.projects: StorageService(provider),
-        },
+        namespaceServices: namespaceServices,
       ),
     );
   }
@@ -57,15 +64,25 @@ void main() {
     final directory = await Directory.systemTemp.createTemp(
       'mig_fs_${name ?? 'x'}_',
     );
-    final provider = FileSystemStorageProvider();
-    await provider.initWithConfig(
-      FileSystemConfig(
-        filePathConfig: FilePathConfig.create(
-          path: directory.path,
-          macOSBookmarkData: MacOSBookmark.fromDirectory(directory),
+    // One provider per namespace with isolated subdirectories.
+    final namespaceServices = <StorageNamespace, StorageService>{};
+    for (final namespace in [
+      StorageNamespace.settings,
+      StorageNamespace.projects,
+    ]) {
+      final namespaceDir = Directory('${directory.path}/${namespace.value}')
+        ..createSync(recursive: true);
+      final provider = FileSystemStorageProvider();
+      await provider.initWithConfig(
+        FileSystemConfig(
+          filePathConfig: FilePathConfig.create(
+            path: namespaceDir.path,
+            macOSBookmarkData: MacOSBookmark.fromDirectory(namespaceDir),
+          ),
         ),
-      ),
-    );
+      );
+      namespaceServices[namespace] = StorageService(provider);
+    }
     return (
       StorageKernel(
         profile: StorageProfile(
@@ -82,10 +99,7 @@ void main() {
           ],
         ),
         resolver: InMemoryStorageProfileResolver(
-          namespaceServices: {
-            StorageNamespace.settings: StorageService(provider),
-            StorageNamespace.projects: StorageService(provider),
-          },
+          namespaceServices: namespaceServices,
         ),
       ),
       directory,
@@ -98,14 +112,24 @@ void main() {
     final directory = await Directory.systemTemp.createTemp(
       'mig_git_${name ?? 'x'}_',
     );
-    final provider = OfflineGitStorageProvider();
-    await provider.initWithConfig(
-      OfflineGitConfig(
-        localPath: directory.path,
-        authorName: 'Migration Test',
-        authorEmail: 'migration@test.local',
-      ),
-    );
+    // One git repo per namespace with isolated subdirectories.
+    final namespaceServices = <StorageNamespace, StorageService>{};
+    for (final namespace in [
+      StorageNamespace.settings,
+      StorageNamespace.projects,
+    ]) {
+      final namespaceDir = Directory('${directory.path}/${namespace.value}')
+        ..createSync(recursive: true);
+      final provider = OfflineGitStorageProvider();
+      await provider.initWithConfig(
+        OfflineGitConfig(
+          localPath: namespaceDir.path,
+          authorName: 'Migration Test',
+          authorEmail: 'migration@test.local',
+        ),
+      );
+      namespaceServices[namespace] = StorageService(provider);
+    }
     return (
       StorageKernel(
         profile: StorageProfile(
@@ -124,10 +148,7 @@ void main() {
           ],
         ),
         resolver: InMemoryStorageProfileResolver(
-          namespaceServices: {
-            StorageNamespace.settings: StorageService(provider),
-            StorageNamespace.projects: StorageService(provider),
-          },
+          namespaceServices: namespaceServices,
         ),
       ),
       directory,

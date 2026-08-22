@@ -219,15 +219,20 @@ class OfflineGitStorageProvider extends StorageProvider
 
     final entities = await directory.list().toList();
     final items = <FileEntry>[];
+    final queryRoot = _normalizeRelativePath(directoryPath);
     for (final entity in entities) {
       final rel = path.relative(entity.path, from: _localPath);
       if (rel.startsWith('.git') || path.basename(rel).startsWith('.')) {
         continue;
       }
       final stat = entity.statSync();
+      // Contract: FileEntry.name is relative to the queried directory.
+      final name = queryRoot.isEmpty
+          ? rel
+          : path.relative(entity.path, from: path.join(_localPath, queryRoot));
       items.add(
         FileEntry(
-          name: rel,
+          name: name,
           isDirectory: stat.type == FileSystemEntityType.directory,
           size: stat.size,
           modifiedAt: stat.modified,

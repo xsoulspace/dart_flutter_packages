@@ -116,6 +116,9 @@ ToolDef writeTool(FsToolsRoot root) => ToolDef(
     final params = jsonDecodeMapAs(args);
     final path = root.resolve(jsonDecodeString(params['path']));
     final content = jsonDecodeString(params['content']);
+    // Create parent directories so nested paths (src/lib.dart) work in a
+    // fresh workspace — the common case for a coding agent.
+    await File(path).parent.create(recursive: true);
     await File(path).writeAsString(content);
     return 'wrote $path';
   },
