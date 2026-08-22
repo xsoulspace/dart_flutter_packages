@@ -2,6 +2,7 @@ import 'package:ecsly/ecsly.dart';
 
 import '../data_models/data_models.dart';
 import '../narrative/narrative.dart';
+import 'projection/relevance.dart' show keywordsOf;
 
 /// Deliberate graph transform: summarize a set of beats into a
 /// [MemorySummary] beat that stays in [thread].

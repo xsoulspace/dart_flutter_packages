@@ -11,7 +11,7 @@ export 'data_models/data_models.dart';
 export 'events.dart';
 export 'handler.dart';
 export 'harness_loop.dart';
-export 'narrative.dart';
+export 'narrative/narrative.dart';
 export 'observation/observation.dart';
 export 'plugin.dart';
 export 'resources/resources.dart';

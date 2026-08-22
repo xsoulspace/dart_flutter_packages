@@ -1,16 +1,10 @@
 import 'package:ecsly/ecsly.dart';
 
-import '../data_models/data_models.dart';
-import '../model_router.dart';
-import '../narrative/narrative.dart';
-import '../resources/resources.dart';
-
-/// Facade for wiring an agent world: spawn the scene, actors, and threads.
-///
-/// Extracted from [ScenarioRunner]'s setup ritual so hosts (CLI, Flutter,
-/// tests) get the same one-call bootstrap instead of duplicating the
-/// Scene → actors → threads → flush choreography.
-library;
+import 'data_models/data_models.dart';
+import 'model_router.dart';
+import 'narrative/narrative.dart';
+import 'resources/resources.dart';
+import 'tools/tool_registry.dart';
 
 /// A declarative actor description for [AgentWorldSetup.spawnActors].
 class ActorSpec {
@@ -25,11 +19,13 @@ class ActorSpec {
 
 /// One spawned actor: entity handle plus its thread and display name.
 class SpawnedActor {
-  SpawnedActor({required this.entity, required this.thread, required this.name});
+  SpawnedActor({required this.entity, required this.name, Entity? thread})
+    : thread = thread ?? Entity.create(0);
   final Entity entity;
 
-  /// The actor's first thread (projection ray-traces it).
-  final Entity thread;
+  /// The actor's first thread (projection ray-traces it). Assigned during
+  /// [AgentWorldSetup.spawnActors].
+  Entity thread;
   final String name;
 }
 
@@ -63,7 +59,7 @@ class AgentWorldSetup {
         ActorTools(registryName: registryName),
         PresentInScene(sceneEntity: scene),
       ]);
-      spawned.add(SpawnedActor(entity: e, thread: Entity.empty, name: spec.name));
+      spawned.add(SpawnedActor(entity: e, name: spec.name));
     }
     world.flush();
 
@@ -78,7 +74,10 @@ class AgentWorldSetup {
   }
 
   /// Register [tools] under [registryName] (creating the registry if needed).
-  void registerTools(Iterable<ToolDef> tools, {String registryName = 'default'}) {
+  void registerTools(
+    Iterable<ToolDef> tools, {
+    String registryName = 'default',
+  }) {
     final resource = world.getResource<ToolRegistryResource>();
     final registry = resource.get(registryName) ?? ToolRegistry();
     tools.forEach(registry.register);

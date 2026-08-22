@@ -14,7 +14,7 @@ library;
 import 'package:ecsly/ecsly.dart';
 
 import '../data_models/data_models.dart';
-import '../narrative.dart';
+import '../narrative/narrative.dart';
 import '../resources/resources.dart';
 
 // ─────────────────────────────────────────────

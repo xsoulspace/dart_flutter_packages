@@ -1,7 +1,7 @@
 import 'package:ecsly/ecsly.dart';
 
 import '../model_router.dart';
-import '../narrative.dart';
+import '../narrative/narrative.dart';
 import 'data_models.dart';
 
 // ─────────────────────────────────────────────

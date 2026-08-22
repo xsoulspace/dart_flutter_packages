@@ -4,7 +4,12 @@ import 'package:ecsly/ecsly.dart';
 
 import '../data_models/data_models.dart';
 import '../events.dart';
+import '../narrative/narrative.dart';
 import '../resources/resources.dart';
+import '../structured_output/structured_output.dart';
+import 'projection/projection_systems.dart';
+import 'projection/relevance.dart' show keywordsOf;
+import 'tool_systems.dart';
 
 /// System 4a: Append streaming chunks to actors' [StreamingBeat]s.
 ///

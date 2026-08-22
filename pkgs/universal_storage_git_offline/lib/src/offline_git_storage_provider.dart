@@ -1118,3 +1118,9 @@ class _RemoteRepositoryIdentity {
   final String fullName;
   final String webUrl;
 }
+
+/// Accumulates staged paths for one batched commit.
+final class _PendingCommit {
+  final Set<String> paths = <String>{};
+  String commitHash = '';
+}

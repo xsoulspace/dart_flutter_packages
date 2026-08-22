@@ -6,7 +6,7 @@ import 'package:ecsly_async_parallel/ecsly_async_parallel.dart';
 
 import 'events.dart';
 import 'data_models/data_models.dart';
-import 'narrative.dart';
+import 'narrative/narrative.dart';
 import 'resources/resources.dart';
 import 'schedules.dart';
 import 'systems/systems.dart';

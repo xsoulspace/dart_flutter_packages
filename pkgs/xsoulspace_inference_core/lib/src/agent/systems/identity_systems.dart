@@ -2,6 +2,7 @@ import 'package:ecsly/ecsly.dart';
 
 import '../data_models/data_models.dart';
 import '../narrative/narrative.dart';
+import 'projection/relevance.dart' show keywordsOf;
 
 /// System 0: Seed an actor's identity into the graph as beats.
 ///

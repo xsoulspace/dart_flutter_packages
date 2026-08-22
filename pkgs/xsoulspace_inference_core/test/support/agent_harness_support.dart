@@ -10,6 +10,7 @@ library;
 
 import 'dart:async';
 
+import 'package:test/test.dart';
 import 'package:xsoulspace_inference_core/src/agent/schedules.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:ecsly/ecsly.dart';
@@ -7,6 +8,8 @@ import '../events.dart';
 import '../narrative/narrative.dart';
 import '../resources/resources.dart';
 import '../tools/tool_registry.dart';
+import 'projection/projection_systems.dart';
+import 'projection/relevance.dart' show keywordsOf;
 
 /// System 5: Execute tool calls dispatched as [ToolCallEvent]s.
 ///
