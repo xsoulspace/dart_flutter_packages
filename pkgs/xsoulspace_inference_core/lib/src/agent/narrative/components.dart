@@ -1,9 +1,3 @@
-import 'dart:typed_data';
-
-import 'package:ecsly/ecsly.dart';
-
-import '../model_router.dart';
-
 /// Thread & Beat ontology components.
 ///
 /// A Thread is a first-class exploration branch — a container that holds
@@ -12,6 +6,12 @@ import '../model_router.dart';
 ///
 /// Everything is an entity. The graph is formed by typed reference components.
 library;
+
+import 'dart:typed_data';
+
+import 'package:ecsly/ecsly.dart';
+
+import '../model_router.dart';
 
 // ─────────────────────────────────────────────
 // Enums

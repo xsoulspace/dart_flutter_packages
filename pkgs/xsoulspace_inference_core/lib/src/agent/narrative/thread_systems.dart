@@ -1,9 +1,10 @@
+/// Thread scoring, pruning, and merging systems.
+library;
+
 import 'package:ecsly/ecsly.dart';
 
 import 'components.dart';
-
-/// Thread scoring, pruning, and merging systems.
-library;
+import 'facet_index.dart';
 
 /// Real scoring system — scores Threads based on heuristics.
 ///
@@ -43,7 +44,8 @@ void pruneThreadsSystem(World w) {
 }
 
 void deindexThreadBeats(World w, Entity thread) {
-  for (final beat in w.getResource<FacetIndex>().beatsOfThread(thread).toList()) {
+  for (final beat
+      in w.getResource<FacetIndex>().beatsOfThread(thread).toList()) {
     deindexBeat(w, beat);
   }
 }

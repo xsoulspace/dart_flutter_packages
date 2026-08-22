@@ -170,11 +170,7 @@ class OfflineGitStorageProvider extends StorageProvider
     // Write file content
     await file.writeAsString(content);
 
-    // Git add and commit
-    await _gitDir!.runCommand(['add', filePath]);
-
-    final message = commitMessage ?? 'Create file: $filePath';
-    final commitHash = await _commitChanges(message);
+    final commitHash = await _stageAndScheduleCommit(filePath);
     return FileOperationResult.created(
       path: fullPath,
       revisionId: commitHash,
@@ -223,11 +219,7 @@ class OfflineGitStorageProvider extends StorageProvider
     // Write updated content
     await file.writeAsString(content);
 
-    // Git add and commit
-    await _gitDir!.runCommand(['add', filePath]);
-
-    final message = commitMessage ?? 'Update file: $filePath';
-    final commitHash = await _commitChanges(message);
+    final commitHash = await _stageAndScheduleCommit(filePath);
     return FileOperationResult.updated(
       path: fullPath,
       revisionId: commitHash,
@@ -253,11 +245,10 @@ class OfflineGitStorageProvider extends StorageProvider
       throw FileNotFoundException('File not found at path: $filePath');
     }
 
-    // Git remove and commit
+    // Git remove, commit deferred like other mutations.
     await _gitDir!.runCommand(['rm', filePath]);
 
-    final message = commitMessage ?? 'Delete file: $filePath';
-    final commitHash = await _commitChanges(message);
+    final commitHash = await _stageAndScheduleCommit(filePath, deleted: true);
     return FileOperationResult.deleted(
       path: fullPath,
       revisionId: commitHash,

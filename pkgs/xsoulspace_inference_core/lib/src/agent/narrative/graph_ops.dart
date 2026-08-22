@@ -1,12 +1,12 @@
-import 'package:ecsly/ecsly.dart';
-
-import 'components.dart';
-import 'facet_index.dart';
-
 /// Graph transforms over the Thread/Beat ontology — spawn, append, complete.
 ///
 /// Pure mechanical helpers; no LLM calls, no schedules.
 library;
+
+import 'package:ecsly/ecsly.dart';
+
+import 'components.dart';
+import 'facet_index.dart';
 
 /// Spawn a new Thread entity under [originActor] and [parentScene].
 ///

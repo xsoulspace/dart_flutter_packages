@@ -1,7 +1,3 @@
-import 'package:ecsly/ecsly.dart';
-
-import 'components.dart';
-
 /// Facet index over the narrative graph.
 ///
 /// A keyword → beats index that makes projection a ray-tracing query: given
@@ -13,6 +9,10 @@ import 'components.dart';
 /// counters so projection/scoring are O(beats-in-thread), not full-world
 /// scans.
 library;
+
+import 'package:ecsly/ecsly.dart';
+
+import 'components.dart';
 
 class FacetIndex extends Resource {
   final Map<String, Set<Entity>> byKeyword = {};
@@ -105,8 +105,12 @@ class FacetIndex extends Resource {
 ///
 /// Mechanical helper — callers derive keywords from the beat's content and
 /// write them here so projection can ray-trace to the beat later.
-void indexBeat(World w, Entity beat, Iterable<String> keywords,
-    {Entity? thread}) {
+void indexBeat(
+  World w,
+  Entity beat,
+  Iterable<String> keywords, {
+  Entity? thread,
+}) {
   w.getResource<FacetIndex>().indexBeat(beat, keywords, thread: thread);
 }
 
