@@ -35,7 +35,9 @@ class OfflineGitStorageProvider extends StorageProvider
 
   _PendingCommit? _pendingCommit;
   Timer? _batchTimer;
-  final Lock _gitOperationLock = Lock();
+  // Reentrant: flushPendingCommits holds this lock while _commitChanges
+  // re-enters via _runGitCommandSafely.
+  final Lock _gitOperationLock = Lock(reentrant: true);
 
   var _config = OfflineGitConfig();
   GitDir? _gitDir;

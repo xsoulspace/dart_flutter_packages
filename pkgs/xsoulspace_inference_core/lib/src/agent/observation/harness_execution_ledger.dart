@@ -56,9 +56,7 @@ class HarnessExecutionLedger extends EcsExecutionObserverBase {
   final List<LedgerEntry> entries = [];
 
   int _tick = 0;
-  String? _currentSchedule;
   Map<String, int>? _scheduleStartCounts;
-  int? _systemStartUs;
 
   /// Channels tracked by the ledger, in drain order.
   static const _trackedChannels = <String, void Function(World)>{
@@ -96,7 +94,6 @@ class HarnessExecutionLedger extends EcsExecutionObserverBase {
     final String scheduleName, {
     required final int systemCount,
   }) {
-    _currentSchedule = scheduleName;
     _scheduleStartCounts = _snapshot();
   }
 
@@ -105,9 +102,7 @@ class HarnessExecutionLedger extends EcsExecutionObserverBase {
     final World world,
     final String scheduleName,
     final SystemDescriptor system,
-  ) {
-    _systemStartUs = DateTime.now().microsecondsSinceEpoch;
-  }
+  ) {}
 
   @override
   void onSystemEnd(

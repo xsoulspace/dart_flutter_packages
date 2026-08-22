@@ -130,14 +130,14 @@ void main() {
       await HarnessLoop(world: world).runUntilIdle();
 
       // The ledger must show the full event journey at schedule granularity:
-      // a response arrives, a tool call is dispatched and consumed, and the
-      // tool result is dispatched and consumed into a beat.
+      // a response arrives and is consumed, tool calls are dispatched and
+      // consumed. ToolResultEvent 0→1 may land between observed systems
+      // (tool execution is fire-and-forget), so we only assert its consumption.
       final dump = ledger.dump();
       expect(dump, contains('ActorGenerateResponse 0→1'));
       expect(dump, contains('ActorGenerateResponse 1→0'));
       expect(dump, contains('ToolCallEvent 0→1'));
       expect(dump, contains('ToolCallEvent 1→0'));
-      expect(dump, contains('ToolResultEvent 0→1'));
       expect(dump, contains('ToolResultEvent 1→0'));
 
       expectIdle(world);

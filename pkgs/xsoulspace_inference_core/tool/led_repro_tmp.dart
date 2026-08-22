@@ -52,19 +52,15 @@ void main() async {
   ]);
   world.flush();
 
-  final loop = HarnessLoop(world: world);
-  for (var i = 0; i < 12; i++) {
-    loop.tickForDebug();
-    await Future<void>.delayed(Duration.zero);
-    final decision = world.query2<Actor, OpenDecision>().length;
-    final agency = world.query2<Actor, Agency>().length;
-    final awaiting = world.query2<Actor, AwaitingResponse>().length;
-    final tasks = world.getResource<TaskRegistryResource>().length;
+  final ledger = HarnessExecutionLedger(world);
+  world.executionObserver = ledger;
+  try {
+    await HarnessLoop(world: world).runUntilIdle();
+  } on Object catch (e) {
     // ignore: avoid_print
-    print('tick $i: decision=$decision agency=$agency awaiting=$awaiting tasks=$tasks '
-        'resp=${world.events.reader<ActorGenerateResponse>().length} '
-        'call=${world.events.reader<ToolCallEvent>().length} '
-        'result=${world.events.reader<ToolResultEvent>().length}');
+    print('CAUGHT: $e');
   }
+  // ignore: avoid_print
+  print(ledger.dump().split('\n').where((l) => l.contains('→')).join('\n'));
   await jail.delete(recursive: true);
 }
