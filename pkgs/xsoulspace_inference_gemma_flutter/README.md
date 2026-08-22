@@ -53,14 +53,30 @@ if (!ready.success) {
 
 ## Purposes and catalog
 
-`GemmaPurpose` maps intents to curated catalog entries; `bestFor` picks the
-smallest entry serving the purpose:
+`GemmaPurpose` maps intents to curated catalog entries; `bestFor(purpose,
+platform:)` picks the smallest entry serving the purpose **on the target
+platform** — a purpose may need different artifacts per platform (`.task` on
+Android/iOS, `.litertlm` on macOS).
 
-| Purpose             | Default entry                        | Size        | Min RAM |
-| ------------------- | ------------------------------------ | ----------- | ------- |
-| `structuredToolUse` | Gemma 3n E2B-it (int4 .task)         | ~2.3 GB     | 4 GB    |
-| `chatNarrative`     | E2B (falls through to E4B if capped) | ~2.3 GB     | 4 GB    |
-| `summarization`     | E2B / E4B                            | ~2.3–4.4 GB | 4–6 GB  |
+| Purpose             | Android / iOS                       | macOS                    |
+| ------------------- | ----------------------------------- | ------------------------ |
+| `structuredToolUse` | Gemma 4 E2B-it (.litertlm, ~2.6 GB) | Gemma 4 E2B-it (~2.6 GB) |
+| `chatNarrative`     | E2B (E4B ~3.7 GB optional)          | E2B / E4B / 12B          |
+| `summarization`     | E2B / E4B                           | E2B / E4B / 12B          |
+| `coding`            | — (falls back to structuredToolUse) | Gemma 4 12B (~6.5 GB)    |
+
+**Validated targets today: Android and macOS.** iOS entries exist but are not
+device-validated; Windows/Linux/Web return `model_not_found` until their
+artifacts are added and tested.
+
+Platform is auto-detected; override explicitly when needed:
+
+```dart
+await client.ensureReady(
+  const ModelPurpose('structured_tool_use'),
+  platform: GemmaPlatform.macos,
+);
+```
 
 Apps can ship their own catalog: `GemmaModelSetup(catalog: myEntries)`.
 

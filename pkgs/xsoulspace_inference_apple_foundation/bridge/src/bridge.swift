@@ -238,6 +238,8 @@ public func xs_fm_generate_stream_async(
 
   func emitDelta(_ delta: String) {
     // Each snapshot is heap-allocated; Dart frees via xs_fm_free_string.
+    // jsonEscaped produces a properly escaped JSON string literal (newlines
+    // and quotes included) — never interpolate raw text into JSON.
     let payload = "{\"delta\":\(jsonEscaped(delta))}"
     payload.withCString { cString in
       streamCallback(strdup(cString))

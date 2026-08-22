@@ -78,6 +78,7 @@ class GemmaFlutterInferenceClient
   Future<InferenceResult<ModelHandle>> ensureReady(
     final ModelPurpose purpose, {
     final ProvisionConstraints constraints = const ProvisionConstraints(),
+    final GemmaPlatform? platform,
   }) async {
     final gemmaPurpose = switch (purpose.value) {
       'structured_tool_use' => GemmaPurpose.structuredToolUse,
@@ -94,6 +95,7 @@ class GemmaFlutterInferenceClient
     final result = await modelSetup.ensureReady(
       gemmaPurpose,
       constraints: constraints,
+      platform: platform,
     );
     if (!result.success) {
       return InferenceResult<ModelHandle>.fail(

@@ -1,9 +1,24 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import 'gemma_model_catalog.dart';
+
+/// Host platform detection for catalog selection.
+GemmaPlatform _currentPlatform() {
+  if (kIsWeb) return GemmaPlatform.web;
+  return switch (Platform.operatingSystem) {
+    'android' => GemmaPlatform.android,
+    'ios' => GemmaPlatform.ios,
+    'macos' => GemmaPlatform.macos,
+    'windows' => GemmaPlatform.windows,
+    'linux' => GemmaPlatform.linux,
+    _ => GemmaPlatform.android,
+  };
+}
 
 /// Status of the Gemma model (readiness, install source).
 class GemmaModelStatus {
@@ -60,18 +75,31 @@ class GemmaModelSetup {
   /// Ensures a model serving [purpose] is installed and active, honoring
   /// [constraints]. Idempotent: returns immediately when a suitable model is
   /// already active.
+  ///
+  /// [platform] selects the artifact variant; defaults to the current host
+  /// platform. Only Android and macOS are validated targets today.
   Future<InferenceResult<ModelHandle>> ensureReady(
     final GemmaPurpose purpose, {
     final ProvisionConstraints constraints = const ProvisionConstraints(),
+    final GemmaPlatform? platform,
   }) async {
-    final entry = GemmaModelEntry.bestFor(purpose, catalog: catalog);
+    final target = platform ?? _currentPlatform();
+    final entry = GemmaModelEntry.bestFor(
+      purpose,
+      platform: target,
+      catalog: catalog,
+    );
     if (entry == null) {
       return InferenceResult<ModelHandle>.fail(
         code: 'model_not_found',
-        message: 'No catalog entry serves purpose "${purpose.name}"',
+        message:
+            'No catalog entry serves purpose "${purpose.name}" on '
+            '${target.name}',
         details: <String, dynamic>{
-          'purposes': catalog
-              .expand((final e) => e.purposes)
+          'purpose': purpose.value,
+          'platform': target.name,
+          'covered_platforms': catalog
+              .expand((final e) => e.platforms)
               .map((final p) => p.name)
               .toSet()
               .toList(),

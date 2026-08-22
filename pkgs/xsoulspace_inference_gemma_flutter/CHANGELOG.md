@@ -9,10 +9,15 @@ All notable changes to this package will be documented in this file.
 - Supported tasks: `InferenceTask.text` (raw completion) and
   `InferenceTask.implicitlyStructuredText` (prompt-engineered JSON with schema
   validation and one automatic repair attempt on validation failure).
-- `GemmaModelSetup.ensureReady(purpose, constraints)` — purpose-driven
-  provisioning from a curated catalog (`GemmaModelCatalog`): consent,
-  network-policy, and size-cap checks, broadcast progress stream, cancel
-  token, idempotent re-entry.
+- `GemmaModelSetup.ensureReady(purpose, constraints, platform)` — purpose-
+  driven provisioning from a curated platform-aware catalog
+  (`GemmaModelCatalog`): consent, network-policy, and size-cap checks,
+  broadcast progress stream, cancel token, idempotent re-entry. Validated
+  targets: Android and macOS.
+- Catalog: Gemma 4 E2B/E4B (Android/iOS/macOS) and Gemma 4 12B (macOS coding
+  tier). All URLs verified against the HuggingFace API; CodeGemma 7B was
+  evaluated and rejected (512-token KV cache is below the harness projection
+  budget).
 - `GemmaFlutterInferenceClient.ensureReady` — same contract, plus model load
   into the engine on success.
 - Explicit installs remain available: `installFromUrl`, `installFromFile`,

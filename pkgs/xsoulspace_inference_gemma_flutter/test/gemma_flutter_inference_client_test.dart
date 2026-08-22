@@ -1,8 +1,81 @@
+import 'package:flutter_gemma/flutter_gemma.dart' show ModelFileType, ModelType;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'package:xsoulspace_inference_gemma_flutter/xsoulspace_inference_gemma_flutter.dart';
 
 void main() {
+  group('GemmaModelEntry.bestFor', () {
+    final catalog = <GemmaModelEntry>[
+      GemmaModelEntry(
+        id: 'mobile-only',
+        purposes: {GemmaPurpose.structuredToolUse},
+        platforms: {GemmaPlatform.android, GemmaPlatform.ios},
+        url: 'https://example.com/mobile.task',
+        sizeBytes: 1000,
+        modelType: ModelType.gemmaIt,
+      ),
+      GemmaModelEntry(
+        id: 'desktop-only',
+        purposes: {GemmaPurpose.structuredToolUse},
+        platforms: {GemmaPlatform.macos},
+        url: 'https://example.com/desktop.litertlm',
+        sizeBytes: 2000,
+        modelType: ModelType.gemmaIt,
+        fileType: ModelFileType.litertlm,
+      ),
+    ];
+
+    test('picks the mobile artifact on android', () {
+      expect(
+        GemmaModelEntry.bestFor(
+          GemmaPurpose.structuredToolUse,
+          platform: GemmaPlatform.android,
+          catalog: catalog,
+        )?.id,
+        'mobile-only',
+      );
+    });
+
+    test('picks the desktop artifact on macos', () {
+      expect(
+        GemmaModelEntry.bestFor(
+          GemmaPurpose.structuredToolUse,
+          platform: GemmaPlatform.macos,
+          catalog: catalog,
+        )?.id,
+        'desktop-only',
+      );
+    });
+
+    test('returns null when no entry covers the platform', () {
+      expect(
+        GemmaModelEntry.bestFor(
+          GemmaPurpose.structuredToolUse,
+          platform: GemmaPlatform.web,
+          catalog: catalog,
+        ),
+        isNull,
+      );
+    });
+
+    test('default catalog covers android and macos for structuredToolUse', () {
+      expect(
+        GemmaModelEntry.bestFor(
+          GemmaPurpose.structuredToolUse,
+          platform: GemmaPlatform.android,
+        ),
+        isNotNull,
+      );
+      expect(
+        GemmaModelEntry.bestFor(
+          GemmaPurpose.structuredToolUse,
+          platform: GemmaPlatform.macos,
+        ),
+        isNotNull,
+      );
+    });
+  });
+
   final validRequest = InferenceRequest(
     prompt: 'Say hello',
     task: InferenceTask.implicitlyStructuredText,
