@@ -13,11 +13,6 @@ class FakeGitHubApi {
   HttpServer? _boundServer;
   String _endpoint = '';
 
-  /// Base URL of the fake API once bound; empty until ready.
-  String get endpoint => _endpoint;
-
-  Future<void> get ready => _ready.future;
-
   FakeGitHubApi() {
     unawaited(
       HttpServer.bind(InternetAddress.loopbackIPv4, 0).then((server) {
@@ -39,6 +34,11 @@ class FakeGitHubApi {
       }),
     );
   }
+
+  /// Base URL of the fake API once bound; empty until ready.
+  String get endpoint => _endpoint;
+
+  Future<void> get ready => _ready.future;
 
   GitHubApiStorageProvider createProvider() {
     final provider = GitHubApiStorageProvider(

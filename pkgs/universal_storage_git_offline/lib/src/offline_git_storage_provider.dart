@@ -205,7 +205,10 @@ class OfflineGitStorageProvider extends StorageProvider
   Future<List<FileEntry>> listDirectory(final String directoryPath) async {
     _ensureInitialized();
 
-    final fullPath = path.join(_localPath, _normalizeRelativePath(directoryPath));
+    final fullPath = path.join(
+      _localPath,
+      _normalizeRelativePath(directoryPath),
+    );
     final directory = Directory(fullPath);
 
     if (!directory.existsSync()) {
@@ -254,6 +257,13 @@ class OfflineGitStorageProvider extends StorageProvider
 
   @override
   bool get supportsSync => _remoteUrl.isNotEmpty;
+
+  @override
+  StorageCapabilities get declaredCapabilities => StorageCapabilities(
+    supportsRevisionMetadata: true,
+    // Sync works, but only when a remote URL is configured.
+    syncAvailability: SyncAvailability.withRemoteConfig,
+  );
 
   @override
   Future<void> sync({

@@ -471,7 +471,6 @@ class ScenarioV4MultiActorScene extends Scenario {
 /// MCP toolkit surfaces: read scenario state and drive scenarios from an
 /// agent without touching the UI. Registered once at bootstrap.
 Set<AgentCallEntry> _registerScenarioSurfaces() {
-  final state = _ScenarioSurfacesState();
   return {
     AgentCallEntry.resource(
       namespace: 'scenario',
@@ -482,7 +481,7 @@ Set<AgentCallEntry> _registerScenarioSurfaces() {
       mimeType: 'application/json',
       handler: (args) async => AgentResult.success(
         message: 'Scenario state',
-        data: state.snapshot(),
+        data: ScenarioBridge.snapshot(),
       ),
     ),
     AgentCallEntry.tool(
@@ -507,28 +506,31 @@ Set<AgentCallEntry> _registerScenarioSurfaces() {
             message: 'prompt must not be empty',
           );
         }
-        final reply = await state.send(prompt);
+        final reply = await ScenarioBridge.send(prompt);
         return AgentResult.success(message: 'Reply', data: {'reply': reply});
       },
     ),
   };
 }
 
-/// Mutable bridge between MCP handlers and the UI-owned scenario state.
-/// The home state registers itself here on init so handlers stay thin.
-class _ScenarioSurfacesState {
-  int scenarioIndex = 0;
-  String backend = 'apple';
-  Future<String> Function(String prompt)? onSend;
-  Map<String, String> lastBeatByActor = const {};
+/// Bridge between MCP handlers and the UI-owned scenario state.
+///
+/// Statics are read at call time, so handlers never hold a stale copy of
+/// this object across hot reload / hot restart.
+class ScenarioBridge {
+  static int scenarioIndex = 0;
+  static String backend = 'apple';
+  static Future<String> Function(String prompt)? onSend;
+  static Map<String, String> lastBeatByActor = const {};
+  static String? pendingPrompt;
 
-  Map<String, Object?> snapshot() => {
+  static Map<String, Object?> snapshot() => {
     'scenario_index': scenarioIndex,
     'backend': backend,
     'last_beat_by_actor': lastBeatByActor,
   };
 
-  Future<String> send(final String prompt) async {
+  static Future<String> send(final String prompt) async {
     final send = onSend;
     if (send == null) {
       // UI not mounted yet — queue the prompt; initState drains it.
@@ -537,13 +539,7 @@ class _ScenarioSurfacesState {
     }
     return send(prompt);
   }
-
-  String? pendingPrompt;
 }
-
-/// Shared surface-state singleton so both main() registration and the home
-/// state can reach the same bridge.
-final _scenarioSurfaces = _ScenarioSurfacesState();
 
 class _MyHomePageState extends State<MyHomePage> {
   final _scenarioV1 = ScenarioV1SendMessageGetAnswer();
@@ -574,7 +570,10 @@ class _MyHomePageState extends State<MyHomePage> {
     final i = index;
     if (i == null || _scenarioIndex == i) return;
     _cleanup();
-    setState(() => _scenarioIndex = i);
+    setState(() {
+      _scenarioIndex = i;
+      _syncSurfaceState();
+    });
   }
 
   void _cleanup() {
@@ -593,7 +592,7 @@ class _MyHomePageState extends State<MyHomePage> {
     super.initState();
     // Bridge MCP surfaces to UI state. Handlers stay thin; the home state
     // owns scenario execution.
-    _scenarioSurfaces.onSend = (prompt) async {
+    ScenarioBridge.onSend = (prompt) async {
       final scenario = _getScenarioByIndex();
       if (!scenario.isInitialized) {
         await _initScenarioWith(prompt);
@@ -603,9 +602,9 @@ class _MyHomePageState extends State<MyHomePage> {
       return _messages.isEmpty ? '' : _messages.last;
     };
     // Drain a prompt that arrived via MCP before the UI mounted.
-    final pending = _scenarioSurfaces.pendingPrompt;
+    final pending = ScenarioBridge.pendingPrompt;
     if (pending != null) {
-      _scenarioSurfaces.pendingPrompt = null;
+      ScenarioBridge.pendingPrompt = null;
       scheduleMicrotask(() => _initScenarioWith(pending));
     }
   }
@@ -647,13 +646,12 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _syncSurfaceState() {
-    _scenarioSurfaces
-      ..scenarioIndex = _scenarioIndex
-      ..backend = _backend.name
-      ..lastBeatByActor = switch (_getScenarioByIndex()) {
-        final ScenarioV4MultiActorScene v4 => Map.of(v4.lastBeatByActor),
-        _ => const {},
-      };
+    ScenarioBridge.scenarioIndex = _scenarioIndex;
+    ScenarioBridge.backend = _backend.name;
+    ScenarioBridge.lastBeatByActor = switch (_getScenarioByIndex()) {
+      final ScenarioV4MultiActorScene v4 => Map.of(v4.lastBeatByActor),
+      _ => const {},
+    };
   }
 
   Future<void> _initScenario() async {

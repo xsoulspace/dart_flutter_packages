@@ -35,6 +35,7 @@ class CloudKitStorageProvider extends StorageProvider implements RemoteEngine {
     supportsRevisionMetadata: true,
     supportsManualConflictResolution: true,
     supportsBackgroundSync: true,
+    syncAvailability: SyncAvailability.always,
   );
 
   @override

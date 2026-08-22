@@ -155,6 +155,7 @@ final class StorageCapabilities {
     this.supportsManualConflictResolution = false,
     this.supportsBackgroundSync = false,
     this.supportsMigrationEndpoint = false,
+    this.syncAvailability = SyncAvailability.none,
   });
 
   factory StorageCapabilities.fromJson(final Map<String, dynamic> json) =>
@@ -166,6 +167,10 @@ final class StorageCapabilities {
             json['supports_manual_conflict_resolution'] == true,
         supportsBackgroundSync: json['supports_background_sync'] == true,
         supportsMigrationEndpoint: json['supports_migration_endpoint'] == true,
+        syncAvailability: SyncAvailability.values.firstWhere(
+          (final value) => value.name == json['sync_availability'],
+          orElse: () => SyncAvailability.none,
+        ),
       );
 
   static const none = StorageCapabilities();
@@ -177,11 +182,20 @@ final class StorageCapabilities {
   final bool supportsBackgroundSync;
   final bool supportsMigrationEndpoint;
 
+  /// Distinguishes providers that can never sync from those that sync when
+  /// configured with a remote (e.g. OfflineGitStorageProvider without a URL).
+  final SyncAvailability syncAvailability;
+
   bool get supportsComplexInteraction =>
       supportsDiff &&
       supportsHistory &&
       supportsRevisionMetadata &&
       supportsManualConflictResolution;
+
+  /// True when the provider implements [StorageProvider.sync] meaningfully.
+  bool get canSync =>
+      syncAvailability == SyncAvailability.always ||
+      syncAvailability == SyncAvailability.withRemoteConfig;
 
   bool satisfies(final StorageCapabilities required) =>
       (!required.supportsDiff || supportsDiff) &&
@@ -190,7 +204,18 @@ final class StorageCapabilities {
       (!required.supportsManualConflictResolution ||
           supportsManualConflictResolution) &&
       (!required.supportsBackgroundSync || supportsBackgroundSync) &&
-      (!required.supportsMigrationEndpoint || supportsMigrationEndpoint);
+      (!required.supportsMigrationEndpoint || supportsMigrationEndpoint) &&
+      (required.syncAvailability == SyncAvailability.none ||
+          _satisfiesSyncAvailability(required.syncAvailability));
+
+  bool _satisfiesSyncAvailability(final SyncAvailability required) =>
+      switch (required) {
+        SyncAvailability.none => true,
+        // 'always' requirement is satisfied only by 'always'.
+        SyncAvailability.always => syncAvailability == SyncAvailability.always,
+        // 'withRemoteConfig' requirement accepts either non-none mode.
+        SyncAvailability.withRemoteConfig => canSync,
+      };
 
   Map<String, dynamic> toJson() => {
     'supports_diff': supportsDiff,
@@ -199,7 +224,22 @@ final class StorageCapabilities {
     'supports_manual_conflict_resolution': supportsManualConflictResolution,
     'supports_background_sync': supportsBackgroundSync,
     'supports_migration_endpoint': supportsMigrationEndpoint,
+    'sync_availability': syncAvailability.name,
   };
+}
+
+/// How a provider relates to remote synchronization.
+enum SyncAvailability {
+  /// Provider has no sync implementation at all (local-only backends).
+  none,
+
+  /// Sync always works; provider manages its own remote connectivity.
+  always,
+
+  /// Sync works only when the provider is configured with a remote
+  /// (e.g. offline-git with a remote URL). Callers should check runtime
+  /// state before relying on sync succeeding.
+  withRemoteConfig,
 }
 
 /// Per-namespace profile binding for local/remote engines and policies.

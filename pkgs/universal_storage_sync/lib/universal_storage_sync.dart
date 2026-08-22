@@ -4,7 +4,6 @@ library;
 
 export 'package:universal_storage_interface/universal_storage_interface.dart';
 
-export 'src/capabilities/authentication_capable.dart';
 export 'src/capabilities/capabilities.dart';
 export 'src/decision_store.dart';
 export 'src/storage_factory.dart';

@@ -42,8 +42,10 @@ class GitHubApiStorageProvider extends StorageProvider
   var _isInitialized = false;
 
   @override
-  StorageCapabilities get declaredCapabilities =>
-      const StorageCapabilities(supportsRevisionMetadata: true);
+  StorageCapabilities get declaredCapabilities => const StorageCapabilities(
+    supportsRevisionMetadata: true,
+    syncAvailability: SyncAvailability.always,
+  );
 
   @override
   VersionControlCapabilities get declaredVersionControlCapabilities =>

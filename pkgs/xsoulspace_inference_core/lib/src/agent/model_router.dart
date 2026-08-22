@@ -145,16 +145,18 @@ class ModelRuntime {
         ),
       );
       final buffer = StringBuffer();
-      unawaited(
-        session.events.forEach((event) {
-          final delta = event.textDelta;
-          if (delta != null && delta.isNotEmpty) {
-            buffer.write(delta);
-            onDelta(delta);
-          }
-        }),
-      );
-      final result = await session.result;
+      // Drain events and result concurrently; await BOTH so the buffer is
+      // complete before we return (result can complete before the last
+      // delta event is delivered).
+      final draining = session.events.forEach((event) {
+        final delta = event.textDelta;
+        if (delta != null && delta.isNotEmpty) {
+          buffer.write(delta);
+          onDelta(delta);
+        }
+      });
+      final results = await (session.result, draining).wait;
+      final result = results.$1;
       if (!result.success || result.data == null) {
         log('stream failed: ${result.error?.code}');
         return null;

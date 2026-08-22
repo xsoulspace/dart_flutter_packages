@@ -64,6 +64,11 @@ void main() {
           .subscribe(actor)
           .listen(received.add, onDone: () => tapClosed = true);
 
+      // Full cinematic cycle so agency is granted and projection runs.
+      world.runSchedule('AgencyGrant');
+      world.flush();
+      world.runSchedule('Project');
+      world.flush();
       await world.runScheduleAsync('ActorAct');
       world.flush();
       world.runSchedule('ProcessResponses');
@@ -91,6 +96,10 @@ void main() {
     world.flush();
 
     // No subscribe() — publishing must not throw.
+    world.runSchedule('AgencyGrant');
+    world.flush();
+    world.runSchedule('Project');
+    world.flush();
     await world.runScheduleAsync('ActorAct');
     world.flush();
     world.runSchedule('ProcessResponses');
