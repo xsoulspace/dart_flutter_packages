@@ -19,7 +19,6 @@
 /// ```
 library;
 
-import 'package:ecsly/ecsly.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 /// One observed system execution within a schedule.
@@ -162,6 +161,29 @@ class HarnessExecutionLedger extends EcsExecutionObserverBase {
       if (changes.isNotEmpty) {
         b.writeln('  ${changes.join(', ')}');
       }
+    }
+    return b.toString();
+  }
+
+  /// Deterministic, timing-free trace for golden-file diffing (ADR 0003).
+  ///
+  /// Identical runs must produce byte-identical output; any behavioral drift
+  /// in schedules/systems shows up as a diff. Timing is excluded by design.
+  String dumpGolden() {
+    final b = StringBuffer();
+    for (final e in entries) {
+      b.write('tick ${e.tick} | ${e.schedule}.${e.system}');
+      if (e.error != null) b.write(' | ERROR: ${e.error}');
+      b.writeln();
+      final changes = <String>[];
+      for (final name in _trackedChannels.keys) {
+        final before = e.channelCountsBefore[name];
+        final after = e.channelCountsAfter[name];
+        if (before != null && after != null && before != after) {
+          changes.add('$name $before→$after');
+        }
+      }
+      if (changes.isNotEmpty) b.writeln('  ${changes.join(', ')}');
     }
     return b.toString();
   }

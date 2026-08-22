@@ -181,7 +181,8 @@ class AppleFoundationNativeClient
         final name = payload['name'] as String;
         final argumentsJson = payload['arguments'] as String? ?? '{}';
 
-        final handler = toolRegistry?.tools[name]?.execute;
+        // Payload name is a raw String; the registry is keyed by ToolName.
+        final handler = toolRegistry?.tools[ToolName(name)]?.execute;
         if (handler == null) {
           if (_debugEnabled) {
             stderr.writeln(
