@@ -1,0 +1,15 @@
+id: chain_01_read_compute_write
+category: tool_chain
+prompt: |
+  Read numbers.txt (one integer per line), compute their sum, and write the
+  sum as a plain number to sum.txt.
+fixtures:
+  - path: numbers.txt
+    content: |
+      10
+      20
+      12
+checkers:
+  - type: equals
+    path: sum.txt
+    value: "42"

@@ -1,0 +1,29 @@
+id: refactor_04_consistent_api
+category: multi_file_refactor
+prompt: |
+  In calc.dart the function add is defined; in client_a.dart and client_b.dart
+  it is called. Change the signature of add to accept named parameter
+  `{required int b}` in addition to positional `int a`, i.e.
+  `int add(int a, {required int b})`, and update every call site accordingly.
+fixtures:
+  - path: calc.dart
+    content: |
+      int add(int a, int b) => a + b;
+  - path: client_a.dart
+    content: |
+      import 'calc.dart';
+      final x = add(1, 2);
+  - path: client_b.dart
+    content: |
+      import 'calc.dart';
+      final y = add(3, 4);
+checkers:
+  - type: contains
+    path: calc.dart
+    value: "{required int b}"
+  - type: contains
+    path: client_a.dart
+    value: "b: 2"
+  - type: contains
+    path: client_b.dart
+    value: "b: 4"

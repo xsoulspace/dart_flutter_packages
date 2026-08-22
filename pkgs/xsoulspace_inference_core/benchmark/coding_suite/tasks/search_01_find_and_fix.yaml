@@ -1,0 +1,22 @@
+id: search_01_find_and_fix
+category: search_then_edit
+prompt: |
+  Somewhere in this directory there is a file containing the string
+  "TODO-broken". Find it and replace the string with "TODO-fixed".
+fixtures:
+  - path: src/alpha.dart
+    content: |
+      // nothing here
+  - path: src/nested/beta.dart
+    content: |
+      // TODO-broken: revisit
+  - path: src/gamma.dart
+    content: |
+      final ok = true;
+checkers:
+  - type: contains
+    path: src/nested/beta.dart
+    value: TODO-fixed
+  - type: not_contains
+    path: src/nested/beta.dart
+    value: TODO-broken

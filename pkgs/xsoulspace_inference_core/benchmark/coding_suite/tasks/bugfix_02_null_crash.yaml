@@ -1,0 +1,17 @@
+id: bugfix_02_null_crash
+category: bug_fix_with_test
+prompt: |
+  greet.dart has a null-safety bug: `String greet(String? name) => 'Hi,
+  ${name.length}';` will crash when name is null. Fix it so that a null name
+  produces 'Hi, guest' and a non-null name produces 'Hi, <name>'.
+fixtures:
+  - path: greet.dart
+    content: |
+      String greet(String? name) => 'Hi, ${name!.length}';
+checkers:
+  - type: not_contains
+    path: greet.dart
+    value: "${name!.length}"
+  - type: contains
+    path: greet.dart
+    value: guest

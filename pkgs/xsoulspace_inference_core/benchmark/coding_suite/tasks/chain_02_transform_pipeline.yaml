@@ -1,0 +1,22 @@
+id: chain_02_transform_pipeline
+category: tool_chain
+prompt: |
+  Read names.csv (comma-separated values, one header line "name"). Write a
+  file names.json containing a JSON array of the names in file order,
+  e.g. ["alice","bob"].
+fixtures:
+  - path: names.csv
+    content: |
+      name
+      alice
+      bob
+      carol
+checkers:
+  - type: json_valid
+    path: names.json
+  - type: contains
+    path: names.json
+    values:
+      - alice
+      - bob
+      - carol

@@ -1,0 +1,18 @@
+id: edit_04_delete_function
+category: file_edit
+prompt: |
+  In helpers.dart, remove the entire function `String unused()` (all its
+  lines). Keep everything else unchanged.
+fixtures:
+  - path: helpers.dart
+    content: |
+      String used() => 'keep me';
+
+      String unused() => 'delete me';
+checkers:
+  - type: not_contains
+    path: helpers.dart
+    value: "String unused()"
+  - type: contains
+    path: helpers.dart
+    value: "String used()"

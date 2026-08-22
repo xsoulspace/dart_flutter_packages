@@ -1,0 +1,22 @@
+id: search_04_dead_code
+category: search_then_edit
+prompt: |
+  The file main.dart imports util.dart but only uses one of its two exported
+  functions. Determine which functions in util.dart are unused by main.dart
+  and delete the unused ones from util.dart, keeping the used one intact.
+fixtures:
+  - path: main.dart
+    content: |
+      import 'util.dart';
+      void main() => print(helpful());
+  - path: util.dart
+    content: |
+      String helpful() => 'used';
+      String staleHelper() => 'unused';
+checkers:
+  - type: contains
+    path: util.dart
+    value: helpful
+  - type: not_contains
+    path: util.dart
+    value: staleHelper

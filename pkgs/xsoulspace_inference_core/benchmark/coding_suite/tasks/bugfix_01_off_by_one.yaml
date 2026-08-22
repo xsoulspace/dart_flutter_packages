@@ -1,0 +1,23 @@
+id: bugfix_01_off_by_one
+category: bug_fix_with_test
+prompt: |
+  loop.dart contains a function `int sumTo(int n)` that should return
+  1+2+...+n but has an off-by-one bug (it returns the wrong result for n=3).
+  Fix the function so sumTo(3) == 6. Do not change its signature.
+fixtures:
+  - path: loop.dart
+    content: |
+      int sumTo(int n) {
+        var total = 0;
+        for (var i = 1; i < n; i++) {
+          total += i;
+        }
+        return total;
+      }
+checkers:
+  - type: contains
+    path: loop.dart
+    value: "<= n"
+  - type: not_contains
+    path: loop.dart
+    value: "< n"

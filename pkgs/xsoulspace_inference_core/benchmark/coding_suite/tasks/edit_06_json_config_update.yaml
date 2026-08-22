@@ -1,0 +1,26 @@
+id: edit_06_json_config_update
+category: file_edit
+prompt: |
+  The file settings.json holds app settings. Change the value of "retries" to
+  5 and leave everything else untouched. Keep valid JSON.
+fixtures:
+  - path: settings.json
+    content: |
+      {
+        "host": "localhost",
+        "port": 8080,
+        "retries": 3,
+        "verbose": false
+      }
+checkers:
+  - type: json_valid
+    path: settings.json
+  - type: contains
+    path: settings.json
+    value: '"retries": 5'
+  - type: contains
+    path: settings.json
+    values:
+      - '"host": "localhost"'
+      - '"port": 8080'
+      - '"verbose": false'

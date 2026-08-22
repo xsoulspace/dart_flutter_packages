@@ -1,0 +1,35 @@
+id: refactor_02_rename_across_files
+category: multi_file_refactor
+prompt: |
+  The class name DataStore is used in store.dart (definition), app.dart, and
+  tests.dart. Rename it to KeyValueStore everywhere across all three files.
+fixtures:
+  - path: store.dart
+    content: |
+      class DataStore {
+        Map<String, String> map = {};
+      }
+  - path: app.dart
+    content: |
+      import 'store.dart';
+      final store = DataStore();
+  - path: tests.dart
+    content: |
+      import 'store.dart';
+      void check() {
+        final s = DataStore();
+        print(s);
+      }
+checkers:
+  - type: not_contains
+    path: store.dart
+    value: DataStore
+  - type: not_contains
+    path: app.dart
+    value: DataStore
+  - type: not_contains
+    path: tests.dart
+    value: DataStore
+  - type: contains
+    path: store.dart
+    value: "class KeyValueStore"

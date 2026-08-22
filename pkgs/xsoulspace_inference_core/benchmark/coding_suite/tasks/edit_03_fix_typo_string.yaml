@@ -1,0 +1,20 @@
+id: edit_03_fix_typo_string
+category: file_edit
+prompt: |
+  In messages.dart every occurrence of the misspelled word "recieve" must be
+  corrected to "receive". Fix all of them.
+fixtures:
+  - path: messages.dart
+    content: |
+      String welcome() => 'You will recieve a confirmation.';
+      String goodbye() => 'You will recieve nothing further.';
+      String hint() => 'Recieve it soon.';
+checkers:
+  - type: not_contains
+    path: messages.dart
+    value: ecieve
+  - type: contains
+    path: messages.dart
+    values:
+      - receive
+      - Receive

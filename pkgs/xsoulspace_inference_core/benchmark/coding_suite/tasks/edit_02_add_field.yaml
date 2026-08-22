@@ -1,0 +1,18 @@
+id: edit_02_add_field
+category: file_edit
+prompt: |
+  In user.dart, add a field `final String email;` to the User class and add it
+  as a named parameter with a required keyword in the constructor.
+fixtures:
+  - path: user.dart
+    content: |
+      class User {
+        User({required this.name});
+        final String name;
+      }
+checkers:
+  - type: contains
+    path: user.dart
+    values:
+      - "final String email;"
+      - required this.email

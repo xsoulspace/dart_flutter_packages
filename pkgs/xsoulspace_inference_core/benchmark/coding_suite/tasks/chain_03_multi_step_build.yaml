@@ -1,0 +1,13 @@
+id: chain_03_multi_step_build
+category: tool_chain
+prompt: |
+  Build a tiny project: create src/lib.dart exporting `int triple(int x) =>
+  x * 3;`, then create a README.md whose first line is exactly
+  "triple(2) = 6" (the correct evaluation of triple(2)).
+checkers:
+  - type: contains
+    path: src/lib.dart
+    value: "x * 3"
+  - type: regex
+    path: README.md
+    pattern: "^triple\\(2\\) = 6"

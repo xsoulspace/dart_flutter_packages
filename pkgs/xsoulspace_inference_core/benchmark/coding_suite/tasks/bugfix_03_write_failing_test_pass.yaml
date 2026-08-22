@@ -1,0 +1,22 @@
+id: bugfix_03_write_failing_test_pass
+category: bug_fix_with_test
+prompt: |
+  math_utils.dart has function `bool isEven(int x) => x % 2 == 1;` which is
+  wrong. Fix isEven so it correctly detects even numbers, then create a file
+  test_is_even.dart containing at least three assertions that call isEven and
+  would pass with your fix (e.g. isEven(2) is true, isEven(3) is false,
+  isEven(0) is true).
+fixtures:
+  - path: math_utils.dart
+    content: |
+      bool isEven(int x) => x % 2 == 1;
+checkers:
+  - type: contains
+    path: math_utils.dart
+    value: "% 2 == 0"
+  - type: contains
+    path: test_is_even.dart
+    value: isEven(2)
+  - type: regex
+    path: test_is_even.dart
+    pattern: "isEven\\(\\d+\\)"

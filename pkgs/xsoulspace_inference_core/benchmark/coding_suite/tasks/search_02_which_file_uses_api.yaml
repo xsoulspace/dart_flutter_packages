@@ -1,0 +1,29 @@
+id: search_02_which_file_uses_api
+category: search_then_edit
+prompt: |
+  Find which file calls the function `legacyFetch()` (it is defined in
+  api.dart but called from exactly one other file). In that calling file,
+  rename the call to `modernFetch()`. Do not modify api.dart.
+fixtures:
+  - path: api.dart
+    content: |
+      String legacyFetch() => 'old';
+      String modernFetch() => 'new';
+  - path: worker.dart
+    content: |
+      import 'api.dart';
+      final data = legacyFetch();
+  - path: unrelated.dart
+    content: |
+      import 'api.dart';
+      final modern = modernFetch();
+checkers:
+  - type: contains
+    path: worker.dart
+    value: modernFetch()
+  - type: not_contains
+    path: worker.dart
+    value: legacyFetch()
+  - type: contains
+    path: api.dart
+    value: legacyFetch

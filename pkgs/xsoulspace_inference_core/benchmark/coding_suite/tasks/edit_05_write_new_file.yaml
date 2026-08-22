@@ -1,0 +1,10 @@
+id: edit_05_write_new_file
+category: file_edit
+prompt: |
+  Create a new file called version.txt containing exactly the text 1.2.3 (no
+  trailing whitespace beyond a single optional newline).
+fixtures: []
+checkers:
+  - type: equals
+    path: version.txt
+    value: "1.2.3"

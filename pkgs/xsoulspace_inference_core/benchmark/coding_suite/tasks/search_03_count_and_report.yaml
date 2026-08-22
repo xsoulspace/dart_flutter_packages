@@ -1,0 +1,21 @@
+id: search_03_count_and_report
+category: search_then_edit
+prompt: |
+  Count how many files in this directory (recursively) contain the word
+  "marker". Write the count as a plain number to a new file count.txt.
+  There are exactly some files with it and some without; count only files
+  containing "marker".
+fixtures:
+  - path: docs/a.txt
+    content: |
+      has marker here
+  - path: docs/b.txt
+    content: |
+      no signal
+  - path: code/c.txt
+    content: |
+      another MARKER lowercased? no, exact case matters: marker
+checkers:
+  - type: equals
+    path: count.txt
+    value: "2"

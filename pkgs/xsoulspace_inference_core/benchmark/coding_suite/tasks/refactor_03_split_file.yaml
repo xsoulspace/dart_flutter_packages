@@ -1,0 +1,33 @@
+id: refactor_03_split_file
+category: multi_file_refactor
+prompt: |
+  models.dart defines three classes: User, Order, Product. Split them into
+  user.dart, order.dart, and product.dart respectively — each new file keeps
+  its class unchanged, and models.dart should be deleted.
+fixtures:
+  - path: models.dart
+    content: |
+      class User {
+        String name = '';
+      }
+
+      class Order {
+        int id = 0;
+      }
+
+      class Product {
+        String sku = '';
+      }
+checkers:
+  - type: contains
+    path: user.dart
+    value: "class User"
+  - type: contains
+    path: order.dart
+    value: "class Order"
+  - type: contains
+    path: product.dart
+    value: "class Product"
+  - type: not_contains
+    path: models.dart
+    value: "class User"

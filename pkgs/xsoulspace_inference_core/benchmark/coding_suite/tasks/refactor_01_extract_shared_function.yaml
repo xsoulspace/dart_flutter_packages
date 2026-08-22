@@ -1,0 +1,33 @@
+id: refactor_01_extract_shared_function
+category: multi_file_refactor
+prompt: |
+  a.dart and b.dart both contain an identical duplicated function
+  `String greet(String name) => 'Hello, $name!';`. Extract it into a new file
+  shared.dart and make both a.dart and b.dart contain only the original file's
+  other content plus a re-export or import-free copy is NOT allowed — instead,
+  each of a.dart and b.dart must define `export 'shared.dart' show greet;`
+fixtures:
+  - path: a.dart
+    content: |
+      String greet(String name) => 'Hello, $name!';
+      String onlyInA() => 'a';
+  - path: b.dart
+    content: |
+      String greet(String name) => 'Hello, $name!';
+      String onlyInB() => 'b';
+checkers:
+  - type: contains
+    path: shared.dart
+    value: "greet(String name)"
+  - type: contains
+    path: a.dart
+    value: "export 'shared.dart'"
+  - type: contains
+    path: b.dart
+    value: "export 'shared.dart'"
+  - type: not_contains
+    path: a.dart
+    value: "=> 'Hello, $name!'"
+  - type: not_contains
+    path: b.dart
+    value: "=> 'Hello, $name!'"
