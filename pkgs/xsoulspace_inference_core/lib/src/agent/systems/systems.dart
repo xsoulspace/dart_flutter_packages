@@ -725,16 +725,24 @@ void processResponsesSystem(World world) {
         (response.structuralOutput.isEmpty && response.rawOutput.isEmpty)) {
       // Retry on failure/empty, but cap it so a persistently failing model
       // cannot loop forever. After [AgencyPolicy.maxRetries] the decision is
-      // dropped.
+      // dropped. The original decision's schema/priority/thread targeting are
+      // preserved — a structured decision must not silently degrade to free
+      // text on retry.
       final policy = world.getResource<AgencyPolicy>();
       final retries = we.get<RetryCount>()?.value ?? 0;
       if (retries < policy.maxRetries) {
+        final prior = we.get<OpenDecision>();
         we.insert(RetryCount(retries + 1));
         we.insert(
           OpenDecision(
             prompt: failed
                 ? 'Error: ${response.error}. Retry with tighter context.'
-                : 'Error: LLM returned empty response. Retry with tighter context.',
+                : 'Error: LLM returned empty response. '
+                      'Retry with tighter context.',
+            schema: prior?.schema ?? SchemaBundle.empty,
+            priority: prior?.priority ?? 0,
+            escalate: prior?.escalate ?? false,
+            threadId: prior?.threadId,
           ),
         );
       } else {
