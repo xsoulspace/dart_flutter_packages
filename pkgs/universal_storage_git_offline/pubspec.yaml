@@ -15,6 +15,7 @@ dependencies:
   meta: ^1.19.0
   path: ^1.9.1
   retry: ^3.1.2
+  synchronized: ^3.4.1+2
   universal_storage_interface: ^0.1.0-dev.12
 dev_dependencies:
   lints: ^6.1.0

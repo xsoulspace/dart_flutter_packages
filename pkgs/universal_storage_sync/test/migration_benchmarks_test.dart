@@ -103,6 +103,7 @@ void main() {
   Future<(StorageKernel, Directory)> buildGitOfflineKernel({
     required String? name,
     final String? remoteUrl,
+    final GitCommitBatching? commitBatching,
   }) async {
     final directory = await Directory.systemTemp.createTemp(
       'bench_git_${name ?? 'x'}_',
@@ -114,7 +115,9 @@ void main() {
     ]) {
       final namespaceDir = Directory('${directory.path}/${namespace.value}')
         ..createSync(recursive: true);
-      final provider = OfflineGitStorageProvider();
+      final provider = OfflineGitStorageProvider(
+        commitBatching: commitBatching,
+      );
       await provider.initWithConfig(
         OfflineGitConfig(
           localPath: namespaceDir.path,
@@ -213,6 +216,7 @@ void main() {
         );
         final (target, directory) = await buildGitOfflineKernel(
           name: 'bench$count',
+          commitBatching: const GitCommitBatching(),
         );
         try {
           for (var i = 0; i < count; i++) {
@@ -325,6 +329,37 @@ void main() {
           '[bench] git_offline write p50=${percentile(latencies, 0.5).inMilliseconds}ms '
           'p95=${percentile(latencies, 0.95).inMilliseconds}ms '
           '(n=100, includes git commit per write)',
+        );
+      } finally {
+        await directory.delete(recursive: true);
+      }
+    });
+
+    test('git_offline batched: 100 writes p50/p95', () async {
+      final (kernel, directory) = await buildGitOfflineKernel(
+        name: 'lat_batched',
+        commitBatching: const GitCommitBatching(),
+      );
+      try {
+        final latencies = <Duration>[];
+        for (var i = 0; i < 100; i++) {
+          final stopwatch = Stopwatch()..start();
+          await kernel.write(
+            namespace: StorageNamespace.settings,
+            path: 'lat/file-$i.json',
+            content: payloadFor(i),
+          );
+          stopwatch.stop();
+          latencies.add(stopwatch.elapsed);
+        }
+        final flushStopwatch = Stopwatch()..start();
+        await kernel.sync(namespace: StorageNamespace.settings);
+        flushStopwatch.stop();
+        // ignore: avoid_print
+        print(
+          '[bench] git_offline batched write p50=${percentile(latencies, 0.5).inMicroseconds}µs '
+          'p95=${percentile(latencies, 0.95).inMicroseconds}µs '
+          '(n=100; sync+flush ${flushStopwatch.elapsedMilliseconds}ms)',
         );
       } finally {
         await directory.delete(recursive: true);

@@ -7,6 +7,7 @@ import 'dart:io';
 import 'package:git/git.dart';
 import 'package:path/path.dart' as path;
 import 'package:retry/retry.dart';
+import 'package:synchronized/synchronized.dart';
 import 'package:universal_storage_interface/universal_storage_interface.dart';
 
 import 'git_commit_batching.dart';
@@ -34,7 +35,7 @@ class OfflineGitStorageProvider extends StorageProvider
 
   _PendingCommit? _pendingCommit;
   Timer? _batchTimer;
-  Future<void> _commitChain = Future<void>.value();
+  final Lock _gitOperationLock = Lock();
 
   var _config = OfflineGitConfig();
   GitDir? _gitDir;
@@ -121,11 +122,7 @@ class OfflineGitStorageProvider extends StorageProvider
     }
 
     _batchTimer ??= Timer(batching.maxDelay, () {
-      unawaited(
-        _commitChain = _commitChain
-            .then((_) => flushPendingCommits())
-            .catchError((final Object _) {}),
-      );
+      unawaited(flushPendingCommits().catchError((final Object _) {}));
     });
 
     return 'pending:${pending.paths.length}';
@@ -133,7 +130,13 @@ class OfflineGitStorageProvider extends StorageProvider
 
   /// Commits all staged mutations in one batched commit. No-op when
   /// nothing is pending. Called automatically before sync/restore/dispose.
-  Future<void> flushPendingCommits() async {
+  ///
+  /// All git write operations are serialized through a lock so git's
+  /// index lock is never contended.
+  Future<void> flushPendingCommits() =>
+      _gitOperationLock.synchronized(_flushNow);
+
+  Future<void> _flushNow() async {
     _batchTimer?.cancel();
     _batchTimer = null;
 
@@ -464,7 +467,15 @@ class OfflineGitStorageProvider extends StorageProvider
     try {
       switch (strategy) {
         case 'merge':
-          await _gitDir!.runCommand(['pull', _remoteName, _branchName.value]);
+          // Allow unrelated histories: a freshly-initialized local repo has
+          // no common ancestor with the remote seed commit.
+          await _gitDir!.runCommand([
+            'pull',
+            '--allow-unrelated-histories',
+            '--no-rebase',
+            _remoteName,
+            _branchName.value,
+          ]);
         case 'rebase':
           await _gitDir!.runCommand([
             'pull',

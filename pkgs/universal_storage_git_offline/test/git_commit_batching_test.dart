@@ -176,7 +176,7 @@ void main() {
       await provider.dispose();
 
       // Reopen and verify all files committed.
-      final reopened = providerFor(dir);
+      final reopened = await providerFor(dir);
       try {
         expect(await reopened.getFile('d/file-1.txt'), 'd1');
         final log = await gitLog(dir);
