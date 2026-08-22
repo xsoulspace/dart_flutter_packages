@@ -31,6 +31,7 @@ class SchemaBundle {
     };
   }
 
+  bool get isNotEmpty => !isEmpty;
   bool get isEmpty {
     if (root case NullSchema _ || PrimitiveSchema _ when dependencies.isEmpty) {
       return true;

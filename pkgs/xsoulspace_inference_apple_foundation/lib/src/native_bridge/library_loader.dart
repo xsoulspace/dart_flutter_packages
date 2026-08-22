@@ -33,6 +33,8 @@ final class XsFmLibraryLoader {
       if (overridePath != null) overridePath!,
       if (Platform.environment['XS_FM_BRIDGE_PATH'] case final envPath?)
         envPath,
+      // Build-hook output (preferred — always fresh).
+      p.join(Directory.current.path, '.dart_tool', 'lib', dylibName),
       p.join(p.dirname(Platform.resolvedExecutable), dylibName),
       p.join(Directory.current.path, 'build', dylibName),
       p.join(Directory.current.path, dylibName),

@@ -47,6 +47,10 @@ typedef ToolRespondDart = int Function(Pointer<Char>, Pointer<Char>);
 typedef FreeStringNative = Void Function(Pointer<Char>);
 typedef FreeStringDart = void Function(Pointer<Char>);
 
+/// void xs_fm_set_debug(int32_t)
+typedef SetDebugNative = Void Function(Int32);
+typedef SetDebugDart = void Function(int);
+
 /// Interface over the bridge symbols, shared by both resolution paths:
 /// the code-asset path (`@Native` in `native_bindings.dart`) and the
 /// fallback loader path ([XsFmBindings.fromLibrary]).
@@ -59,6 +63,7 @@ abstract interface class XsFmBindings {
   );
   int toolRespond(Pointer<Char> id, Pointer<Char> resultJson);
   void freeString(Pointer<Char> s);
+  void setDebug(int enabled);
 }
 
 /// Typed view over the bridge symbols resolved from a loaded library.
@@ -75,12 +80,16 @@ final class LibraryXsFmBindings implements XsFmBindings {
           .asFunction(),
       freeStringFn = library
           .lookup<NativeFunction<FreeStringNative>>('xs_fm_free_string')
+          .asFunction(),
+      setDebugFn = library
+          .lookup<NativeFunction<SetDebugNative>>('xs_fm_set_debug')
           .asFunction();
 
   final IsAvailableDart isAvailableFn;
   final GenerateAsyncDart generateAsyncFn;
   final ToolRespondDart toolRespondFn;
   final FreeStringDart freeStringFn;
+  final SetDebugDart setDebugFn;
 
   @override
   int isAvailable() => isAvailableFn();
@@ -98,4 +107,7 @@ final class LibraryXsFmBindings implements XsFmBindings {
 
   @override
   void freeString(Pointer<Char> s) => freeStringFn(s);
+
+  @override
+  void setDebug(int enabled) => setDebugFn(enabled);
 }

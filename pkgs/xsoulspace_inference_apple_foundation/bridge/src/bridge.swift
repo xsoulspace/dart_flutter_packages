@@ -15,6 +15,31 @@ import Foundation
 typealias XsFmToolCallback = @convention(c) (UnsafePointer<CChar>?) -> Void
 typealias XsFmDoneCallback = @convention(c) (UnsafePointer<CChar>?) -> Void
 
+// MARK: - Debug tracing
+
+/// Debug tracing, controlled at runtime from Dart via `xs_fm_set_debug`.
+/// Traces go to stderr (never stdout — stdout is the ACP/CLI protocol
+/// channel). Enabled by default; disable for production runs.
+enum XsFmDebug {
+  static let queue = DispatchQueue(label: "xs.fm.debug")
+  nonisolated(unsafe) static var enabled = true
+
+  static func log(_ message: String) {
+    guard enabled else { return }
+    queue.sync {
+      FileHandle.standardError.write(
+        Data("[xs_fm] \(message)\n".utf8)
+      )
+    }
+  }
+}
+
+@_cdecl("xs_fm_set_debug")
+public func xs_fm_set_debug(_ enabled: Int32) {
+  XsFmDebug.enabled = enabled != 0
+  XsFmDebug.log("debug tracing \(enabled != 0 ? "enabled" : "disabled")")
+}
+
 // MARK: - Pending tool registry
 
 /// Tracks in-flight tool calls so `xs_fm_tool_respond` can resume the right
@@ -42,6 +67,9 @@ final class PendingToolRegistry: @unchecked Sendable {
         resumed = true
       }
     }
+    XsFmDebug.log(
+      "tool respond: id=\(id) resumed=\(resumed) result=\(result.prefix(120))"
+    )
     return resumed
   }
 }
@@ -103,10 +131,20 @@ public func xs_fm_generate_async(
   let schemaJson = request["schema"] as? [String: Any]
   let toolsJson = request["tools"] as? [[String: Any]] ?? []
 
+  XsFmDebug.log(
+    "generate: prompt=\(prompt.prefix(80)) schema=\(schemaJson != nil ? "present" : "absent") tools=[\(toolsJson.map { $0["name"] as? String ?? "?" }.joined(separator: ", "))] callback=\(toolCallback != nil ? "set" : "NULL")"
+  )
+
   #if canImport(FoundationModels)
     do {
       let generationSchema = try materializeFromDartJSON(schemaJson ?? [:])
+      XsFmDebug.log(
+        "generate: schema materialized=\(generationSchema != nil ? "yes" : "no (nil)")"
+      )
       let tools = try prepareNativeTools(from: toolsJson, callback: toolCallback)
+      XsFmDebug.log(
+        "generate: tools prepared=\(tools.count)/\(toolsJson.count) requested"
+      )
 
       Task.detached {
         do {
@@ -136,8 +174,10 @@ public func xs_fm_generate_async(
             content = response.content
           }
 
+          XsFmDebug.log("generate: ok, output=\(content.prefix(120))")
           finish("{\"ok\":true,\"output\":\(jsonEscaped(content))}")
         } catch {
+          XsFmDebug.log("generate: error — \(error)")
           finish(
             jsonEscapedError(
               code: "generation_error",
@@ -174,14 +214,19 @@ public func xs_fm_tool_respond(
 #if canImport(FoundationModels)
   /// A tool whose implementation lives on the Dart side, invoked through the
   /// C callback pointer. Mirrors `DartTool` from the Flutter plugin.
+  ///
+  /// `parameters` is optional: tools without an args schema are registered
+  /// with no `parameters` property, so the model can call them with any or
+  /// no arguments instead of the bridge rejecting the tool entirely.
   struct NativeDartTool: Tool {
     let name: String
     let description: String
-    let parameters: GenerationSchema
+    let parameters: GenerationSchema?
     let callback: XsFmToolCallback
 
     func call(arguments: GeneratedContent) async throws -> String {
       let argsJSON = try arguments.jsonString
+      XsFmDebug.log("tool call: name=\(name) args=\(argsJSON.prefix(120))")
 
       // Suspend until Dart calls xs_fm_tool_respond for our id.
       return try await withCheckedThrowingContinuation {
@@ -210,16 +255,25 @@ public func xs_fm_tool_respond(
     from toolsJSON: [[String: Any]],
     callback: XsFmToolCallback?
   ) throws -> [any Tool] {
-    guard let callback = callback else { return [] }
+    guard let callback = callback else {
+      XsFmDebug.log(
+        "prepareTools: \(toolsJSON.count) tool(s) requested but callback is NULL — registering none"
+      )
+      return []
+    }
     return try toolsJSON.map { json in
       guard let name = json["name"] as? String,
-        let description = json["description"] as? String,
-        let schemaJSON = json["parameters"] as? [String: Any]
+        let description = json["description"] as? String
       else {
         throw NativeToolError(code: "invalid_tool_json")
       }
-      guard let schema = try materializeFromDartJSON(schemaJSON) else {
-        throw NativeToolError(code: "no_schema_for_tool_\(name)")
+      // Args schema is optional: an empty parameters object means the tool
+      // takes no structured arguments. Registering without `parameters` is
+      // valid; rejecting the tool here was the bridge-breaking bug.
+      let schemaJSON = json["parameters"] as? [String: Any] ?? [:]
+      let schema = try materializeFromDartJSON(schemaJSON)
+      if schema == nil {
+        XsFmDebug.log("prepareTools: \(name) has no args schema (optional args)")
       }
       return NativeDartTool(
         name: name,

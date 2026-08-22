@@ -71,7 +71,7 @@ class ToolDef extends ToolDefinition {
   Map<String, dynamic> toJson() => {
     'name': name.value,
     'description': description,
-    'parameters': argsSchema.toJson(),
+    if (argsSchema.isNotEmpty) 'parameters': argsSchema.toJson(),
   };
 }
 

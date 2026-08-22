@@ -37,3 +37,8 @@ external int xs_fm_tool_respond(Pointer<Char> id, Pointer<Char> resultJson);
   assetId: 'package:xsoulspace_inference_apple_foundation/swift_bridge',
 )
 external void xs_fm_free_string(Pointer<Char> s);
+
+@Native<Void Function(Int32)>(
+  assetId: 'package:xsoulspace_inference_apple_foundation/swift_bridge',
+)
+external void xs_fm_set_debug(int enabled);

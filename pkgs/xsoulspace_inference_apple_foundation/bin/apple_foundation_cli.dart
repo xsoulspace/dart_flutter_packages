@@ -7,12 +7,18 @@ import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 /// Native CLI smoke test — no Flutter engine required.
 ///
 /// ```sh
-/// sh tool/build_bridge.sh
 /// dart run bin/apple_foundation_cli.dart probe
 /// dart run bin/apple_foundation_cli.dart ask "Say hello in one word"
+/// dart run bin/apple_foundation_cli.dart --no-debug tool
 /// ```
+///
+/// Debug traces (native + Dart, stderr) are on by default; pass
+/// `--no-debug` to silence them.
 Future<void> main(List<String> args) async {
-  final command = args.isEmpty ? 'probe' : args.first;
+  final debug = !args.contains('--no-debug');
+  final positional = args.where((a) => !a.startsWith('--')).toList();
+  final command = positional.isEmpty ? 'probe' : positional.first;
+  AppleFoundationNativeClient.setDebug(enabled: debug);
   final client = AppleFoundationNativeClient();
 
   switch (command) {
@@ -24,12 +30,12 @@ Future<void> main(List<String> args) async {
       );
       exit(available ? 0 : 1);
     case 'ask':
-      if (args.length < 2) {
+      if (positional.length < 2) {
         stderr.writeln('Usage: ask <prompt>');
         exit(2);
       }
       final result = await client.infer(
-        InferenceRequest(prompt: args.sublist(1).join(' ')),
+        InferenceRequest(prompt: positional.sublist(1).join(' ')),
       );
       if (result.success) {
         stdout.writeln(result.data!.rawOutput);

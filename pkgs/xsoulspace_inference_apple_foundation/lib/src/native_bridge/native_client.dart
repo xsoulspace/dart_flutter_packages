@@ -20,7 +20,19 @@ import 'library_loader.dart';
 /// are unavailable it falls back to [XsFmLibraryLoader] path resolution.
 class AppleFoundationNativeClient implements InferenceClient {
   AppleFoundationNativeClient({XsFmLibraryLoader? loader})
-    : _loader = loader ?? XsFmLibraryLoader();
+    : _loader = loader ?? XsFmLibraryLoader() {
+    _instance = this;
+    if (_debugEnabled) {
+      // Apply after first load; safe to call repeatedly.
+      Future<void>.microtask(() {
+        try {
+          _b.setDebug(1);
+        } on Object {
+          // Load failure surfaces on first use instead.
+        }
+      });
+    }
+  }
 
   final XsFmLibraryLoader _loader;
 
@@ -46,6 +58,21 @@ class AppleFoundationNativeClient implements InferenceClient {
 
   static bool _cachedAvailable = false;
   static bool _availabilityChecked = false;
+
+  /// Enables/disables native + Dart debug traces (stderr). On by default.
+  /// Traces cover: request receipt, schema materialization, tool
+  /// preparation, tool call payloads, tool responses, and completion.
+  static void setDebug({bool enabled = true}) {
+    _debugEnabled = enabled;
+    try {
+      _instance?._b.setDebug(enabled ? 1 : 0);
+    } on Object {
+      // Bridge not loaded yet; flag applies when it loads.
+    }
+  }
+
+  static bool _debugEnabled = true;
+  static AppleFoundationNativeClient? _instance;
 
   XsFmBindings get _b {
     if (_bindings != null) return _bindings!;
@@ -121,6 +148,24 @@ class AppleFoundationNativeClient implements InferenceClient {
       'tools': toolRegistry?.getToolsJsons(),
     });
 
+    if (_debugEnabled) {
+      final toolNames = toolRegistry?.tools.keys.map((t) => t.value).join(', ');
+      stderr.writeln(
+        '[xs_fm/dart] infer: prompt=${request.prompt.length}ch '
+        'schema=${request.outputSchema.isEmpty ? "absent" : "present"} '
+        'tools=[${toolNames ?? "none"}]',
+      );
+      for (final entry
+          in toolRegistry?.tools.entries ??
+              const <MapEntry<ToolName, ToolDef>>[]) {
+        final schema = entry.value.argsSchema.toJson();
+        stderr.writeln(
+          '[xs_fm/dart] tool ${entry.key.value}: '
+          'argsSchema=${schema.isEmpty ? "EMPTY (optional args)" : "present"}',
+        );
+      }
+    }
+
     // The completion of the whole generation turn. Tool calls are resumed
     // inline: the Swift side suspends its tool continuation until Dart calls
     // xs_fm_tool_respond, so no queue is needed here.
@@ -136,6 +181,12 @@ class AppleFoundationNativeClient implements InferenceClient {
 
         final handler = toolRegistry?.tools[name]?.execute;
         if (handler == null) {
+          if (_debugEnabled) {
+            stderr.writeln(
+              '[xs_fm/dart] tool call "$name": NO HANDLER registered '
+              '(known: ${toolRegistry?.tools.keys.map((t) => t.value).join(", ") ?? "none"})',
+            );
+          }
           _respondTool(id, '{"error":"no handler for $name"}');
           return;
         }
@@ -144,9 +195,17 @@ class AppleFoundationNativeClient implements InferenceClient {
 
         handler(arguments)
             .then((result) {
+              if (_debugEnabled) {
+                stderr.writeln(
+                  '[xs_fm/dart] tool "$name" handler ok → responding',
+                );
+              }
               _respondTool(id, jsonEncode(result));
             })
             .catchError((Object e) {
+              if (_debugEnabled) {
+                stderr.writeln('[xs_fm/dart] tool "$name" handler error: $e');
+              }
               _respondTool(id, '{"error":${jsonEncode(e.toString())}}');
             });
       } on Object catch (e) {
@@ -158,10 +217,16 @@ class AppleFoundationNativeClient implements InferenceClient {
 
     void handleDone(Pointer<Char> responseC) {
       try {
-        done.complete(
-          jsonDecode(responseC.cast<Utf8>().toDartString())
-              as Map<String, dynamic>,
-        );
+        final response =
+            jsonDecode(responseC.cast<Utf8>().toDartString())
+                as Map<String, dynamic>;
+        if (_debugEnabled) {
+          stderr.writeln(
+            '[xs_fm/dart] done: ok=${response["ok"]} '
+            'error=${response["error"] ?? "none"}',
+          );
+        }
+        done.complete(response);
       } on Object catch (e, st) {
         done.completeError(e, st);
       } finally {
