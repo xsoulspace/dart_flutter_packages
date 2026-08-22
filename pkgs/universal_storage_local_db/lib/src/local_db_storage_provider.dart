@@ -177,7 +177,11 @@ class LocalDbStorageProvider extends StorageProvider implements LocalEngine {
   Future<void> sync({
     final String? pullMergeStrategy,
     final String? pushConflictStrategy,
-  }) async {}
+  }) {
+    throw const UnsupportedOperationException(
+      'This provider does not support sync.',
+    );
+  }
 
   @override
   Future<void> dispose() async {

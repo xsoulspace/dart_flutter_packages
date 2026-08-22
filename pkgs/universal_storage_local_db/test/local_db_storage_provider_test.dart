@@ -5,11 +5,11 @@ import 'package:xsoulspace_foundation/xsoulspace_foundation.dart';
 
 void main() {
   group('LocalDbStorageProvider', () {
-    late _InMemoryLocalDb localDb;
+    late InMemoryLocalDb localDb;
     late LocalDbStorageProvider provider;
 
     setUp(() {
-      localDb = _InMemoryLocalDb();
+      localDb = InMemoryLocalDb();
       provider = LocalDbStorageProvider(localDb: localDb);
     });
 
@@ -118,7 +118,7 @@ FileSystemConfig _configForPrefix(final String prefix) => FileSystemConfig(
   databaseName: prefix,
 );
 
-final class _InMemoryLocalDb implements LocalDbI {
+final class InMemoryLocalDb implements LocalDbI {
   final Map<String, bool> _bools = <String, bool>{};
   final Map<String, int> _ints = <String, int>{};
   final Map<String, String> _strings = <String, String>{};

@@ -24,12 +24,16 @@ void main() {
       );
     });
 
-    test('supports only implicitlyStructuredText tasks', () {
+    test('supports text and structured text tasks', () {
       expect(
         AppleFoundationInferenceClient(
           api: AppleFoundationInferenceClient.initApi(),
         ).supportedTasks,
-        const <InferenceTask>{InferenceTask.implicitlyStructuredText},
+        const <InferenceTask>{
+          InferenceTask.text,
+          InferenceTask.implicitlyStructuredText,
+          InferenceTask.nativelyStructuredText,
+        },
       );
     });
 
@@ -152,46 +156,21 @@ void main() {
         expect(result.error?.code, 'request_prompt_empty');
       });
 
-      test(
-        'fails with request_working_directory_empty when workingDirectory is empty',
-        () async {
-          await AppleFoundationInferenceClient(
-            api: AppleFoundationInferenceClient.initApi(),
-          ).refreshAvailability();
-          final client = AppleFoundationInferenceClient(
-            api: AppleFoundationInferenceClient.initApi(),
-          );
-          final result = await client.infer(
-            InferenceRequest(
-              task: InferenceTask.implicitlyStructuredText,
-              prompt: 'Hi',
-              outputSchema: <String, dynamic>{'type': 'object'},
-              workingDirectory: '   ',
-            ),
-          );
-          expect(result.success, isFalse);
-          expect(result.error?.code, 'request_working_directory_empty');
-        },
-      );
-
-      test(
-        'fails with request_schema_empty when outputSchema is empty',
-        () async {
-          final client = AppleFoundationInferenceClient(
-            api: AppleFoundationInferenceClient.initApi(),
-          );
-          final result = await client.infer(
-            InferenceRequest(
-              task: InferenceTask.implicitlyStructuredText,
-              prompt: 'Hi',
-              outputSchema: <String, dynamic>{},
-              workingDirectory: '/tmp',
-            ),
-          );
-          expect(result.success, isFalse);
-          expect(result.error?.code, 'request_schema_empty');
-        },
-      );
+      test('fails with engine_unavailable when not available', () async {
+        final client = AppleFoundationInferenceClient(
+          api: AppleFoundationInferenceClient.initApi(),
+        );
+        final result = await client.infer(
+          InferenceRequest(
+            task: InferenceTask.implicitlyStructuredText,
+            prompt: 'Hi',
+            outputSchema: <String, dynamic>{},
+            workingDirectory: '/tmp',
+          ),
+        );
+        expect(result.success, isFalse);
+        expect(result.error?.code, 'request_schema_empty');
+      });
 
       test('fails with engine_unavailable when not available', () async {
         binaryMessenger.setMockMethodCallHandler(

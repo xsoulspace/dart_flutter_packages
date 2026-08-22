@@ -12,5 +12,4 @@ export 'src/inference_structured_text_streaming.dart';
 export 'src/inference_transcript_controller.dart';
 export 'src/inference_validation.dart';
 export 'src/models/inference_models.dart';
-export 'src/inference_provisioning.dart';
 export 'src/models/prompt_builder.dart';
