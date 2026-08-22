@@ -37,6 +37,10 @@ class StorageService {
       }
     } on FileNotFoundException {
       return _provider.createFile(path, content, commitMessage: message);
+    } on FileAlreadyExistsException {
+      // Raced with a concurrent saveFile that created the file between our
+      // existence check and create call — fall through to update.
+      return _provider.updateFile(path, content, commitMessage: message);
     }
   }
 

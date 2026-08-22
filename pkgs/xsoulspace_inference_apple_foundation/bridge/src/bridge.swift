@@ -354,14 +354,38 @@ public func xs_fm_generate_stream_async(
   /// A tool whose implementation lives on the Dart side, invoked through the
   /// C callback pointer. Mirrors `DartTool` from the Flutter plugin.
   ///
-  /// `parameters` is optional: tools without an args schema are registered
-  /// with no `parameters` property, so the model can call them with any or
-  /// no arguments instead of the bridge rejecting the tool entirely.
+  /// `parameters` is NON-optional per the Tool protocol
+  /// (`var parameters: GenerationSchema { get }`). Tools without an args
+  /// schema get an explicit empty-object schema — a nil/optional here made
+  /// LanguageModelSession fail with GenerationError -1/1020000.
   struct NativeDartTool: Tool {
+    typealias Arguments = GeneratedContent
+    typealias Output = String
+
     let name: String
     let description: String
-    let parameters: GenerationSchema?
+    let parameters: GenerationSchema
     let callback: XsFmToolCallback
+
+    init(
+      name: String,
+      description: String,
+      parameters: GenerationSchema?,
+      callback: XsFmToolCallback
+    ) {
+      self.name = name
+      self.description = description
+      self.parameters =
+        (try? GenerationSchema(
+          root: DynamicGenerationSchema(name: name, properties: []),
+          dependencies: []
+        ))
+        ?? (try! GenerationSchema(
+          root: DynamicGenerationSchema(name: "empty", properties: []),
+          dependencies: []
+        ))
+      self.callback = callback
+    }
 
     func call(arguments: GeneratedContent) async throws -> String {
       let argsJSON = try arguments.jsonString

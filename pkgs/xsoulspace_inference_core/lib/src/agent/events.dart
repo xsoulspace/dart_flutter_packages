@@ -20,6 +20,15 @@ import 'data_models/data_models.dart';
 /// [GenerationHandlerResource]; they send results back as
 /// [ActorGenerateResponse] events.
 ///
+/// ## Response delivery contract (ADR 0002)
+///
+/// The returned future is authoritative: [actorActSystem] guarantees the
+/// response reaches the world channel, publishing it if the handler did not.
+/// Handlers may send to the channel themselves (legacy built-ins do), but
+/// must send the SAME response they return — an explicit channel send takes
+/// precedence over the return value. A handler that neither sends nor throws
+/// cannot deadlock the actor.
+///
 /// This replaces the old polled [ActorGenerateHandler]. Handlers are now
 /// resources the world *uses*, not objects the world is polled by.
 // ignore: one_member_abstracts

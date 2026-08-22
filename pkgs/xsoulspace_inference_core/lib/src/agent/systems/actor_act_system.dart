@@ -97,6 +97,12 @@ Future<void> actorActSystem(World world) async {
     // handler. A missing handler must fail the task immediately — otherwise
     // the actor stays in AwaitingResponse forever and the loop never sleeps.
     world.events.writer<ActorGenerateRequest>().send(request);
+    // Watermark before dispatch — used by the ADR 0002 fallback below to
+    // detect whether the handler published its own response.
+    final responsesSentAtDispatch =
+        world.events.hasRegistered<ActorGenerateResponse>()
+        ? world.events.stats<ActorGenerateResponse>().sent
+        : 0;
     final handler = handlerResource.resolve(request);
     if (handler == null) {
       taskRegistry
@@ -120,32 +126,52 @@ Future<void> actorActSystem(World world) async {
       continue;
     }
     unawaited(
-      handler.generate(world, request).catchError((Object e) {
-        // A throwing handler must still resolve the task and free the
-        // actor, or the harness hangs.
-        final handle = taskRegistry.take(taskId);
-        if (handle != null && !handle.completer.isCompleted) {
-          handle.completer.complete(
-            ToolExecutionResult(name: 'generate', output: '$e'),
-          );
-        }
-        world.events.writer<ActorGenerateResponse>().send(
-          ActorGenerateResponse(
-            actorEntity: entity.entity,
-            structuredOutput: const {},
-            rawOutput: '',
-            error: '$e',
-            taskId: taskId,
-          ),
-        );
-        return ActorGenerateResponse(
-          actorEntity: entity.entity,
-          structuredOutput: const {},
-          rawOutput: '',
-          error: '$e',
-          taskId: taskId,
-        );
-      }),
+      handler
+          .generate(world, request)
+          .then((response) {
+            // Protocol guarantee (ADR 0002): the response MUST reach the
+            // event channel — processResponsesSystem only consumes channel
+            // events, never return values. A handler that only returns would
+            // otherwise deadlock the actor in AwaitingResponse forever.
+            //
+            // Detection uses the channel watermark, not channel contents:
+            // a compliant handler's send may already have been drained by
+            // processResponsesSystem before this callback runs, and drain()
+            // empties the buffer. The watermark is monotonic, so "sent count
+            // unchanged since dispatch" reliably means THIS handler never
+            // sent anything.
+            final sent = world.events.stats<ActorGenerateResponse>().sent;
+            if (sent <= responsesSentAtDispatch) {
+              world.events.writer<ActorGenerateResponse>().send(response);
+            }
+            return response;
+          })
+          .catchError((Object e) {
+            // A throwing handler must still resolve the task and free the
+            // actor, or the harness hangs.
+            final handle = taskRegistry.take(taskId);
+            if (handle != null && !handle.completer.isCompleted) {
+              handle.completer.complete(
+                ToolExecutionResult(name: 'generate', output: '$e'),
+              );
+            }
+            world.events.writer<ActorGenerateResponse>().send(
+              ActorGenerateResponse(
+                actorEntity: entity.entity,
+                structuredOutput: const {},
+                rawOutput: '',
+                error: '$e',
+                taskId: taskId,
+              ),
+            );
+            return ActorGenerateResponse(
+              actorEntity: entity.entity,
+              structuredOutput: const {},
+              rawOutput: '',
+              error: '$e',
+              taskId: taskId,
+            );
+          }),
     );
   }
 }

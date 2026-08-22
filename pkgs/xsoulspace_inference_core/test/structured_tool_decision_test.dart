@@ -104,8 +104,9 @@ void main() {
 
       await HarnessLoop(world: world).runUntilIdle();
 
-      // Two decisions were made (act + answer); the echo tool ran in-world.
-      expect(calls, 2);
+      // One decision was made (guided act); the echo tool ran in-world and
+      // the tool result became a beat on the canonical path.
+      expect(calls, 1);
       final toolBeats = world
           .query3<ToolResultContent, BeatStatus, TextContent>()
           .where((r) => r.$2.name == 'echo')
