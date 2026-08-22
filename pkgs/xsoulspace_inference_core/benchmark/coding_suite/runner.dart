@@ -103,6 +103,7 @@ class CodingSuiteRunner {
     this.jailParent,
     this.modelId = const ModelId('suite-model'),
     this.maxConcurrent = 1,
+    this.maxCheckerRetries = 0,
   });
 
   /// Builds the generation handler for each run (fresh per task so state
@@ -119,6 +120,11 @@ class CodingSuiteRunner {
   /// Concurrency gate passed to [AgencyPolicy]. AFM is serial on-device;
   /// keep at 1 for fair single-actor measurements.
   final int maxConcurrent;
+
+  /// How many times failing checkers are mechanically fed back to the actor
+  /// as a new [OpenDecision]. Zero disables the verifier loop. Each retry is
+  /// an honest LLM call — the retry loop itself is deterministic.
+  final int maxCheckerRetries;
 
   Future<TaskResult> runTask(CodingTask task) async {
     final parent = jailParent ?? Directory.systemTemp;
@@ -152,7 +158,7 @@ class CodingSuiteRunner {
       world.getResource<ToolRegistryResource>().register('default', registry);
 
       final scene = world.spawnComponents([const Scene(), SceneFrame()]);
-      world.spawnComponents([
+      final actor = world.spawnComponents([
         Actor(agentId: AgentId.create()),
         ActorModel(modelId: modelId),
         ActorSystemPrompt(text: task.systemPrompt),
@@ -164,8 +170,49 @@ class CodingSuiteRunner {
       world.flush();
 
       final sw = Stopwatch()..start();
-      await HarnessLoop(world: world).runUntilIdle();
+      final loop = HarnessLoop(world: world);
+      // Watermarks for honest accounting: every generation response is one
+      // LLM call.
+      int responsesSent() => world.events.hasRegistered<ActorGenerateResponse>()
+          ? world.events.stats<ActorGenerateResponse>().sent
+          : 0;
+      final responsesSentAtStart = responsesSent();
+
+      // Verifier-in-the-loop: run the agent, evaluate checkers, and on
+      // failure mechanically (no LLM) convert each failing checker into a
+      // new OpenDecision. Bounded by [maxCheckerRetries].
+      var checkerResults = <CheckerResult>[];
+      var checkerRetry = 0;
+      while (true) {
+        await loop.runUntilIdle();
+        checkerResults = [
+          for (final c in task.checkers) evaluateChecker(c, jail.path),
+        ];
+        final allPassed =
+            checkerResults.isNotEmpty && checkerResults.every((c) => c.passed);
+        if (allPassed || checkerRetry >= maxCheckerRetries) break;
+        checkerRetry++;
+        final failures = [
+          for (final (i, c) in checkerResults.indexed)
+            if (!c.passed)
+              'checker #$i (${task.checkers[i].type} '
+                  '${task.checkers[i].path}): ${c.detail}',
+        ].join('\n');
+        world.upsertComponent(
+          actor,
+          OpenDecision(
+            prompt:
+                'Your previous attempt did not satisfy the task verification. '
+                'Failing checks:\n$failures\n\n'
+                'Fix the workspace so all checks pass. Original task:\n'
+                '${task.prompt}',
+          ),
+        );
+        world.flush();
+      }
       sw.stop();
+
+      final llmCalls = responsesSent() - responsesSentAtStart;
 
       // Collect metrics from the actor's Situation + tool-result beats.
       var tokensUsed = 0;
@@ -178,11 +225,6 @@ class CodingSuiteRunner {
         toolCalls.add(record.$2.name);
       }
 
-      // Evaluate checkers against the jail.
-      final checkerResults = [
-        for (final c in task.checkers) evaluateChecker(c, jail.path),
-      ];
-
       return TaskResult(
         taskId: task.id,
         category: task.category.yamlName,
@@ -191,7 +233,7 @@ class CodingSuiteRunner {
         checkerResults: checkerResults,
         wallClock: sw.elapsed,
         tokensUsed: tokensUsed,
-        llmCalls: 1, // TODO(suite): count retries via DecisionTelemetry.
+        llmCalls: llmCalls,
         toolCalls: toolCalls,
       );
     } finally {

@@ -106,7 +106,7 @@ class HarnessLoop {
   /// call this, and read the resulting beats when it completes. A safety cap
   /// ([maxTicks]) guards against a world that keeps producing work forever —
   /// pass `null` for unbounded runs you control via [stop].
-  Future<void> runUntilIdle({int? maxTicks = 10000}) async {
+  Future<void> runUntilIdle({int? maxTicks = 2000000}) async {
     var ticks = 0;
     while (!canSleep()) {
       if (maxTicks != null && ticks >= maxTicks) {

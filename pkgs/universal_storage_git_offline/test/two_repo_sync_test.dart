@@ -22,6 +22,7 @@ void main() {
 
       // Seed remote with an initial commit on main so both clones can ff.
       final seedDir = await Directory.systemTemp.createTemp('sync2_seed_');
+      await Process.run('git', ['init', '--bare', remoteDir.path]);
       await Process.run('git', ['init', seedDir.path]);
       await Process.run('git', [
         '-C',
@@ -171,6 +172,7 @@ void main() {
       final dirA = await Directory.systemTemp.createTemp('sync3_a_');
 
       final seedDir = await Directory.systemTemp.createTemp('sync3_seed_');
+      await Process.run('git', ['init', '--bare', remoteDir.path]);
       await Process.run('git', ['init', seedDir.path]);
       await Process.run('git', [
         '-C',

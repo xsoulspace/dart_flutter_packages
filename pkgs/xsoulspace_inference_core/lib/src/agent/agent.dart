@@ -10,6 +10,7 @@ export 'model_router.dart';
 export 'data_models/data_models.dart';
 export 'events.dart';
 export 'handler.dart';
+export 'handler_structured_tools.dart';
 export 'harness_loop.dart';
 export 'narrative/narrative.dart';
 export 'observation/observation.dart';

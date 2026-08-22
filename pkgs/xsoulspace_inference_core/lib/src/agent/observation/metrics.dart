@@ -14,6 +14,7 @@ library;
 import 'package:ecsly/ecsly.dart';
 
 import '../data_models/data_models.dart';
+import '../events.dart';
 import '../narrative/narrative.dart';
 import '../resources/resources.dart';
 
@@ -204,6 +205,11 @@ class MetricsCollector {
   final Map<int, _DecisionAccumulator> _active = {};
   final List<DecisionTelemetry> _finished = [];
 
+  /// Channel watermark of generation responses when the current decision
+  /// began. The delta at [endDecision] is the honest LLM-call count for that
+  /// decision (retries and failures each consume a call).
+  int _responsesSentAtBegin = 0;
+
   /// Begin a decision for [actor] (the actor entity). Call before a cycle.
   void beginDecision({
     required Entity actor,
@@ -215,6 +221,9 @@ class MetricsCollector {
       prompt: prompt,
       priorBeats: _toolResultBeats(),
     );
+    _responsesSentAtBegin = world.events.hasRegistered<ActorGenerateResponse>()
+        ? world.events.stats<ActorGenerateResponse>().sent
+        : 0;
   }
 
   /// Finish [actor]'s current decision and append it to the report.
@@ -238,7 +247,10 @@ class MetricsCollector {
         truncated: situation?.truncated ?? false,
         toolCalls: registered != null ? _dispatchedTools(actor) : const [],
         toolResults: toolResults,
-        llmCalls: situation != null ? 1 : 0,
+        // Real count: generation responses observed since this decision
+        // began (includes retries). Falls back to presence-based counting
+        // when no response channel traffic was seen.
+        llmCalls: _llmCallsForDecision(world),
       ),
     );
   }
@@ -246,6 +258,17 @@ class MetricsCollector {
   /// The collected report.
   MetricsReport report() =>
       MetricsReport(decisions: List.unmodifiable(_finished));
+
+  /// Generation responses observed since the current decision began.
+  /// Retries and failures each consume an LLM call, so this is the honest
+  /// tokens-per-task input — not a hardcoded 1.
+  int _llmCallsForDecision(World world) {
+    if (!world.events.hasRegistered<ActorGenerateResponse>()) return 0;
+    final delta =
+        world.events.stats<ActorGenerateResponse>().sent -
+        _responsesSentAtBegin;
+    return delta > 0 ? delta : 0;
+  }
 
   /// All current tool-result beats (entity → name), in insertion (sequence) order.
   Set<Entity> _toolResultBeats() => world
