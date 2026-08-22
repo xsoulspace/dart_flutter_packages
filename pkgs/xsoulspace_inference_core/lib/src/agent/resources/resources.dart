@@ -34,6 +34,30 @@ class ToolRegistryResource extends Resource {
   }
 }
 
+/// Executor for a tool, resolved by name.
+///
+/// Keeps tool execution out of the graph: [ToolDefinition]s (pure data) can
+/// live as beats/props and be snapshot/restored, while closures stay in this
+/// resource. When no executor is registered for a name,
+/// [toolExecutionSystem] falls back to the registry's inline closure.
+typedef ToolExecutor = Future<Object?> Function(Object? args);
+
+/// World resource mapping tool names to executors.
+class ToolExecutorResource extends Resource {
+  final Map<ToolName, ToolExecutor> _executors = {};
+
+  void register(ToolName name, ToolExecutor executor) =>
+      _executors[name] = executor;
+
+  void registerAll(Iterable<ToolDef> tools) {
+    for (final tool in tools) {
+      _executors[tool.name] = (args) async => tool.execute(args);
+    }
+  }
+
+  ToolExecutor? get(ToolName name) => _executors[name];
+}
+
 /// Token estimator for projection budgeting.
 typedef TokenEstimator = int Function(String text);
 

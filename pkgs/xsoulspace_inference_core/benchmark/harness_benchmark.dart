@@ -165,7 +165,7 @@ class MockGenerationHandler implements GenerationHandler {
 
     final response = ActorGenerateResponse(
       actorEntity: request.actorEntity,
-      structuralOutput: {'text': responseText},
+      structuredOutput: {'text': responseText},
       rawOutput: responseText,
       toolCalls: toolCalls,
       taskId: request.taskId,

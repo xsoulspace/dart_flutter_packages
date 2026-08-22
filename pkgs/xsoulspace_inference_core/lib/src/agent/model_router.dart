@@ -74,12 +74,27 @@ class ModelRouter {
 
   final InferenceClientsBuilders inferenceClientsBuilders;
   Map<ModelId, Model> models;
-  Map<ModelId, ModelRuntime> runtimes;
 
-  Future<ModelRuntime> waitAndGetRuntimeModel(Model model) async {
-    final runtime = runtimes[model.id] ??= await initRuntime(model);
+  /// Loaded runtimes, keyed by model id.
+  final Map<ModelId, ModelRuntime> runtimes;
 
-    return runtime;
+  /// In-flight runtime initializations — concurrent requests for the same
+  /// unloaded model share one [initRuntime] call instead of double-loading
+  /// the client.
+  final Map<ModelId, Future<ModelRuntime>> _pendingRuntimes = {};
+
+  Future<ModelRuntime> waitAndGetRuntimeModel(Model model) {
+    final existing = runtimes[model.id];
+    if (existing != null) return Future.value(existing);
+    return _pendingRuntimes.putIfAbsent(model.id, () async {
+      try {
+        final runtime = await initRuntime(model);
+        runtimes[model.id] = runtime;
+        return runtime;
+      } finally {
+        _pendingRuntimes.remove(model.id);
+      }
+    });
   }
 
   Future<ModelRuntime> initRuntime(Model model) async {

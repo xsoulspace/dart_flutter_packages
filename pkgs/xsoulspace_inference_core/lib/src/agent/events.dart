@@ -76,7 +76,7 @@ class ActorGenerateRequest implements EcsEvent {
 class ActorGenerateResponse implements EcsEvent {
   const ActorGenerateResponse({
     required this.actorEntity,
-    required this.structuralOutput,
+    required this.structuredOutput,
     required this.rawOutput,
     this.toolCalls = const [],
     this.error = '',
@@ -84,7 +84,7 @@ class ActorGenerateResponse implements EcsEvent {
   });
 
   final Entity actorEntity;
-  final Map<String, dynamic> structuralOutput;
+  final Map<String, dynamic> structuredOutput;
   final String rawOutput;
   final List<ToolCall> toolCalls;
 
@@ -161,10 +161,19 @@ class ToolCallEvent implements EcsEvent {
 ///
 /// Sent by [toolExecutionSystem] after executing a [ToolCallEvent].
 /// Consumed by [processToolResultsSystem] to store as a Beat.
+/// [callArgs] carries the originating call's arguments so the stored beat
+/// keeps full call provenance (graph-native memory), not just the result.
 class ToolResultEvent implements EcsEvent {
-  const ToolResultEvent({required this.actorEntity, required this.result});
+  const ToolResultEvent({
+    required this.actorEntity,
+    required this.result,
+    this.callArgs = const {},
+  });
   final Entity actorEntity;
   final ToolExecutionResult result;
+
+  /// Arguments of the originating [ToolCallEvent], for beat provenance.
+  final Map<String, dynamic> callArgs;
 }
 
 // ─────────────────────────────────────────────
@@ -207,12 +216,11 @@ class WorldToolBridge {
 
   Future<String> _routeToolCall(ToolDef tool, Object? args) {
     final taskId = TaskId.create();
-    final innerCompleter = Completer<ToolExecutionResult>();
-    final outsideCompleter = Completer<String>();
+    final completer = Completer<ToolExecutionResult>();
 
     world.getResource<TaskRegistryResource>().register(
       taskId,
-      TaskHandle(completer: innerCompleter),
+      TaskHandle(completer: completer),
     );
 
     world.events.writer<ToolCallEvent>().send(
@@ -223,13 +231,7 @@ class WorldToolBridge {
       ),
     );
 
-    unawaited(
-      innerCompleter.future.then((result) {
-        outsideCompleter.complete(result.output);
-      }),
-    );
-
-    return outsideCompleter.future;
+    return completer.future.then((result) => result.output ?? '');
   }
 
   static Map<String, dynamic> _asMap(Object? args) {

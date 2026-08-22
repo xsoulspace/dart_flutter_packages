@@ -44,7 +44,7 @@ class DefaultGenerationHandler implements GenerationHandler {
     if (router == null) {
       return ActorGenerateResponse(
         actorEntity: request.actorEntity,
-        structuralOutput: {},
+        structuredOutput: {},
         rawOutput: '',
         taskId: request.taskId,
       );
@@ -96,7 +96,7 @@ class DefaultGenerationHandler implements GenerationHandler {
     if (response == null) {
       return ActorGenerateResponse(
         actorEntity: request.actorEntity,
-        structuralOutput: {},
+        structuredOutput: {},
         rawOutput: '',
         taskId: request.taskId,
       );
@@ -114,7 +114,7 @@ class DefaultGenerationHandler implements GenerationHandler {
 
     return ActorGenerateResponse(
       actorEntity: request.actorEntity,
-      structuralOutput: response.structuredOutput,
+      structuredOutput: response.structuredOutput,
       rawOutput: response.rawOutput ?? '',
       toolCalls: toolCalls,
       taskId: request.taskId,

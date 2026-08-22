@@ -24,7 +24,7 @@ class _ToolCallHandler implements GenerationHandler {
   ) async {
     final response = ActorGenerateResponse(
       actorEntity: request.actorEntity,
-      structuralOutput: {'text': 'ok'},
+      structuredOutput: {'text': 'ok'},
       rawOutput: 'ok',
       toolCalls: [ToolCall(name: ToolName(toolName), arguments: arguments)],
       taskId: request.taskId,

@@ -37,7 +37,7 @@ class _StreamingMockHandler implements GenerationHandler {
     final text = deltas.join();
     final response = ActorGenerateResponse(
       actorEntity: request.actorEntity,
-      structuralOutput: {'text': text},
+      structuredOutput: {'text': text},
       rawOutput: text,
       taskId: request.taskId,
     );

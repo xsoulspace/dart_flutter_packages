@@ -15,6 +15,13 @@ export 'narrative.dart';
 export 'observation/observation.dart';
 export 'plugin.dart';
 export 'resources/resources.dart';
+export 'schedules.dart';
 export 'systems/systems.dart';
 export 'testing/testing.dart';
-export 'tools/tools.dart';
+export 'world_setup.dart';
+// NOTE: tools/fs_tools.dart is intentionally NOT exported here — it uses
+// dart:io and would break web compilation of the core barrel. Import it
+// directly on VM-only targets:
+//   import 'package:xsoulspace_inference_core/src/agent/tools/fs_tools.dart';
+export 'tools/tool_call_parser.dart';
+export 'tools/tool_registry.dart';

@@ -11,7 +11,7 @@ class _H implements GenerationHandler {
   ) async {
     final response = ActorGenerateResponse(
       actorEntity: request.actorEntity,
-      structuralOutput: {'text': 'step'},
+      structuredOutput: {'text': 'step'},
       rawOutput: 'step',
       toolCalls: [
         ToolCall(

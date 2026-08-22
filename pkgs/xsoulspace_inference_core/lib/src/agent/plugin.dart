@@ -74,7 +74,8 @@ class AgentPlugin extends Plugin {
       ..registerObjectComponent<SummarizesBeats>()
       ..registerObjectComponent<ToolResultContent>()
       ..registerObjectComponent<IdentityBeat>()
-      ..registerObjectComponent<RetryCount>();
+      ..registerObjectComponent<RetryCount>()
+      ..registerObjectComponent<IdentitySeeded>();
 
     // Resources
     world
@@ -84,7 +85,8 @@ class AgentPlugin extends Plugin {
       ..upsertResource(ProjectionBudget())
       ..upsertResource(ProjectionPolicy())
       ..upsertResource(FacetIndex())
-      ..upsertResource(AgencyPolicy());
+      ..upsertResource(AgencyPolicy())
+      ..upsertResource(ToolExecutorResource());
 
     // Event channels for async LLM I/O.
     //

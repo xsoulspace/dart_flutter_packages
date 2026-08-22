@@ -19,10 +19,12 @@ import '../model_router.dart';
 import '../data_models/data_models.dart';
 import '../events.dart';
 import '../harness_loop.dart';
-import '../narrative.dart';
+import '../narrative/narrative.dart';
 import '../observation/observation.dart';
 import '../resources/resources.dart';
+import '../schedules.dart';
 import '../tools/tool_registry.dart';
+import '../world_setup.dart';
 
 // ─────────────────────────────────────────────
 // Scenario model
@@ -96,9 +98,10 @@ class ScenarioRunner {
       ..upsertResource(ProjectionBudget(tokens: scenario.tokenBudget))
       ..upsertResource(AgencyPolicy(maxConcurrent: scenario.maxConcurrent));
     world.getResource<GenerationHandlerResource>().registerDefault(handler);
-    // Register all scenario tools under a single named registry and bind every
-    // actor to it, so the model can actually call them. This is the actor→tool
-    // binding that makes the first run meaningful.
+
+    // Register all scenario tools under a single named registry (plus the
+    // executor resource so execution works without inline closures), then
+    // spawn scene/actors/threads through the shared facade.
     final toolRegistry = ToolRegistry();
     scenario.tools.forEach(toolRegistry.register);
     if (scenario.toolHook != null) {
@@ -106,29 +109,19 @@ class ScenarioRunner {
       tools.forEach(toolRegistry.register);
     }
     registry.register('default', toolRegistry);
+    world.getResource<ToolExecutorResource>().registerAll(
+      toolRegistry.tools.values,
+    );
     world.flush();
 
-    final scene = world.spawnComponents([const Scene(), SceneFrame()]);
-    final actorEntities = <Entity>[];
-    for (final actor in scenario.actors) {
-      final e = world.spawnComponents([
-        Actor(agentId: AgentId.create()),
-        ActorModel(modelId: ModelId.create()),
-        ActorSystemPrompt(text: actor.systemPrompt),
-        ActorThreads(threads: []),
-        const ActorTools(registryName: 'default'),
-        PresentInScene(sceneEntity: scene),
-      ]);
-      actorEntities.add(e);
-    }
-    world.flush();
-
-    // Give each actor a thread so projection can ray-trace its own beats.
-    for (final e in actorEntities) {
-      final thread = spawnThread(world, e, scene);
-      world.upsertComponent(e, ActorThreads(threads: [thread]));
-    }
-    world.flush();
+    final setup = AgentWorldSetup(world: world);
+    final scene = setup.spawnScene();
+    final actors = setup.spawnActors(
+      scenario.actors
+          .map((a) => ActorSpec(name: a.name, systemPrompt: a.systemPrompt))
+          .toList(),
+      scene,
+    );
 
     final decisions = <DecisionMetrics>[];
     var totalLlmCalls = 0;
@@ -136,10 +129,13 @@ class ScenarioRunner {
     final collector = MetricsCollector(world: world);
 
     // Drive each actor's decisions in turn (deterministic, one at a time so
-    // the metrics are attributable to a single actor/decision).
+    // the metrics are attributable to a single actor/decision). Uses the
+    // Schedules constants — never hardcoded ScheduleId strings — so the
+    // runner cannot drift from HarnessLoop's tick order.
     for (var i = 0; i < scenario.actors.length; i++) {
       final actor = scenario.actors[i];
-      final entity = actorEntities[i];
+      final spawned = actors[i];
+      final entity = spawned.entity;
       for (final prompt in actor.decisions) {
         world.upsertComponent(entity, OpenDecision(prompt: prompt));
         world.flush();
@@ -150,15 +146,15 @@ class ScenarioRunner {
         );
 
         // One full cinematic cycle.
-        world.runSchedule(ScheduleId('AgencyGrant'));
+        world.runSchedule(Schedules.agencyGrant);
         world.flush();
-        world.runSchedule(ScheduleId('Project'));
+        world.runSchedule(Schedules.project);
         world.flush();
-        await world.runScheduleAsync(ScheduleId('ActorAct'));
+        await world.runScheduleAsync(Schedules.actorAct);
         world.flush();
-        world.runSchedule(ScheduleId('ProcessResponses'));
+        world.runSchedule(Schedules.processResponses);
         world.flush();
-        world.runSchedule(ScheduleId('Mechanical'));
+        world.runSchedule(Schedules.mechanical);
         world.flush();
 
         final situation = world.getEntity(entity).$1.get<Situation>();

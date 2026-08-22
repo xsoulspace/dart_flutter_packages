@@ -18,7 +18,21 @@ import 'package:universal_storage_interface/universal_storage_interface.dart';
 class OfflineGitStorageProvider extends StorageProvider
     implements VersionControlService, LocalEngine {
   /// {@macro offline_git_storage_provider}
-  OfflineGitStorageProvider();
+  ///
+  /// [commitBatching] controls deferred git commits. When enabled (default),
+  /// file mutations are written to disk immediately (reads are always
+  /// consistent) but the git commit is deferred and coalesced: consecutive
+  /// mutations within [commitBatching.maxDelay] or exceeding
+  /// [commitBatching.maxPendingOperations] produce a single batched commit.
+  /// Commits flush automatically before [sync], [restore], and [dispose].
+  OfflineGitStorageProvider({this.commitBatching});
+
+  /// Batched-commit policy; `null` disables batching (commit per write).
+  final GitCommitBatching? commitBatching;
+
+  _PendingCommit? _pendingCommit;
+  Timer? _batchTimer;
+  Future<void> _commitChain = Future<void>.value();
 
   var _config = OfflineGitConfig();
   GitDir? _gitDir;
@@ -74,6 +88,60 @@ class OfflineGitStorageProvider extends StorageProvider
       .replaceAll(RegExp('/+'), '/')
       .replaceFirst(RegExp('^/'), '')
       .replaceFirst(RegExp(r'/+$'), '');
+
+  /// Stages [filePath] and defers/coalesces the git commit per
+  /// [commitBatching] policy. Returns a placeholder revision id when
+  /// batching is active; callers should treat it as "pending" until
+  /// [flushPendingCommits] completes.
+  Future<String> _stageAndScheduleCommit(
+    final String filePath, {
+    final bool deleted = false,
+  }) async {
+    final batching = commitBatching;
+    if (batching == null) {
+      // Legacy behavior: commit synchronously.
+      return _commitChanges(
+        deleted ? 'Delete file: $filePath' : 'Update file: $filePath',
+      );
+    }
+
+    await _gitDir!.runCommand(['add', filePath]);
+
+    final pending = _pendingCommit ??= _PendingCommit();
+    pending.paths.add(filePath);
+
+    if (pending.paths.length >= batching.maxPendingOperations) {
+      await flushPendingCommits();
+      return 'batched:${pending.commitHash}';
+    }
+
+    _batchTimer ??= Timer(batching.maxDelay, () {
+      unawaited(
+        _commitChain = _commitChain
+            .then((_) => flushPendingCommits())
+            .catchError((final Object _) {}),
+      );
+    });
+
+    return 'pending:${pending.paths.length}';
+  }
+
+  /// Commits all staged mutations in one batched commit. No-op when
+  /// nothing is pending. Called automatically before sync/restore/dispose.
+  Future<void> flushPendingCommits() async {
+    _batchTimer?.cancel();
+    _batchTimer = null;
+
+    final pending = _pendingCommit;
+    if (pending == null || pending.paths.isEmpty) {
+      return;
+    }
+    _pendingCommit = null;
+
+    pending.commitHash = await _commitChanges(
+      'Batch update: ${pending.paths.length} file(s)',
+    );
+  }
 
   @override
   Future<FileOperationResult> createFile(

@@ -37,7 +37,7 @@ class _ToolEmittingHandler implements GenerationHandler {
   ) async {
     final response = ActorGenerateResponse(
       actorEntity: request.actorEntity,
-      structuralOutput: {'text': 'tool dispatched'},
+      structuredOutput: {'text': 'tool dispatched'},
       rawOutput: 'tool dispatched',
       toolCalls: [ToolCall(name: ToolName(toolName), arguments: arguments)],
       taskId: request.taskId,
@@ -63,7 +63,7 @@ class _TaggedHandler implements GenerationHandler {
     handled.add(request.agentId);
     final response = ActorGenerateResponse(
       actorEntity: request.actorEntity,
-      structuralOutput: {'text': 'from $tag'},
+      structuredOutput: {'text': 'from $tag'},
       rawOutput: 'from $tag',
       taskId: request.taskId,
     );
@@ -88,7 +88,7 @@ class _StructuredToolHandler implements GenerationHandler {
   ) async {
     final response = ActorGenerateResponse(
       actorEntity: request.actorEntity,
-      structuralOutput: {'text': 'structured tool dispatched'},
+      structuredOutput: {'text': 'structured tool dispatched'},
       rawOutput: 'structured tool dispatched',
       toolCalls: [ToolCall(name: ToolName(name), arguments: arguments)],
       taskId: request.taskId,
@@ -115,7 +115,7 @@ class _ModelTaggedHandler implements GenerationHandler {
     served.add(request.modelId);
     final response = ActorGenerateResponse(
       actorEntity: request.actorEntity,
-      structuralOutput: {'text': 'from $tag'},
+      structuredOutput: {'text': 'from $tag'},
       rawOutput: 'from $tag',
       taskId: request.taskId,
     );

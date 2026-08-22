@@ -32,7 +32,7 @@ class _ToolEmittingHandler implements GenerationHandler {
   ) async {
     final response = ActorGenerateResponse(
       actorEntity: request.actorEntity,
-      structuralOutput: {'text': 'writing'},
+      structuredOutput: {'text': 'writing'},
       rawOutput: 'writing',
       toolCalls: [
         ToolCall(

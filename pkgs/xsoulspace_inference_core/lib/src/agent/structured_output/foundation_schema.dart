@@ -18,7 +18,6 @@ class SchemaBundle {
     ).map(schemaFromJson).toList(),
   );
   static const empty = SchemaBundle();
-  static const string = empty;
 
   final Schema root;
   final List<Schema> dependencies;

@@ -23,7 +23,7 @@ class _SelfPerpetuatingHandler implements GenerationHandler {
   ) async {
     final response = ActorGenerateResponse(
       actorEntity: request.actorEntity,
-      structuralOutput: {'text': 'still working'},
+      structuredOutput: {'text': 'still working'},
       rawOutput: 'still working',
       taskId: request.taskId,
     );

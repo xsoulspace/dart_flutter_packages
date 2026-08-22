@@ -92,7 +92,7 @@ void main() {
       final entity = Entity.create(1);
       final response = ActorGenerateResponse(
         actorEntity: entity,
-        structuralOutput: {'text': '4'},
+        structuredOutput: {'text': '4'},
         rawOutput: '4',
         toolCalls: [
           const ToolCall(name: ToolName('calc'), arguments: {'expr': '2+2'}),
@@ -100,7 +100,7 @@ void main() {
       );
 
       expect(response.actorEntity, entity);
-      expect(response.structuralOutput, {'text': '4'});
+      expect(response.structuredOutput, {'text': '4'});
       expect(response.rawOutput, '4');
       expect(response.toolCalls.length, 1);
       expect(response.toolCalls.first.name.value, 'calc');

@@ -206,7 +206,7 @@ class ScriptedSuiteHandler implements GenerationHandler {
       onStep?.call(taskId, i);
       final response = ActorGenerateResponse(
         actorEntity: request.actorEntity,
-        structuralOutput: {'text': 'step $i'},
+        structuredOutput: {'text': 'step $i'},
         rawOutput: 'step $i',
         toolCalls: [
           ToolCall(name: ToolName(step.toolName), arguments: step.arguments),
@@ -217,7 +217,7 @@ class ScriptedSuiteHandler implements GenerationHandler {
     }
     return ActorGenerateResponse(
       actorEntity: request.actorEntity,
-      structuralOutput: {'text': 'done'},
+      structuredOutput: {'text': 'done'},
       rawOutput: 'done',
       taskId: request.taskId,
     );
