@@ -10,6 +10,7 @@ class DecisionMetrics {
     required this.explicitAbsences,
     required this.llmCalls,
     required this.truncated,
+    this.projectedTexts = const [],
   });
   final String actor;
   final String prompt;
@@ -18,6 +19,10 @@ class DecisionMetrics {
   final List<String> explicitAbsences;
   final int llmCalls;
   final bool truncated;
+
+  /// Exact texts of the beats in this decision's cut, captured at projection
+  /// time (ADR 0004). Empty for metrics produced by older runners.
+  final List<String> projectedTexts;
 }
 
 /// Aggregate metrics for a whole [Scenario] run.

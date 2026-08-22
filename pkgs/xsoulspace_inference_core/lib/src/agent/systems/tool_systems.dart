@@ -156,6 +156,24 @@ void processToolResultsSystem(World world) {
       keywordsOf(toolText),
       thread: toolBeatEntity.get<BelongsToThread>()?.thread,
     );
+
+    // ReAct continuation (ADR 0004): when a tool result lands and the actor
+    // has no open decision, re-open one so the next projection ray-traces
+    // this tool-result beat into context. Without this, the decision was
+    // consumed at response time and the actor never sees its own tool
+    // output — the loop dies with work left undone.
+    //
+    // Bounded by [AgencyPolicy.maxToolRounds] via [ToolRoundCount]: a model
+    // that never stops calling tools must not loop forever. The count is
+    // reset when a decision completes WITHOUT tool calls (final answer).
+    final policy = world.getResource<AgencyPolicy>();
+    final rounds = we.get<ToolRoundCount>()?.value ?? 0;
+    if (!we.has<OpenDecision>() && rounds < policy.maxToolRounds) {
+      we.insert(ToolRoundCount(rounds + 1));
+      we.insert(
+        const OpenDecision(prompt: 'Tool result received. Continue the task.'),
+      );
+    }
   }
 }
 

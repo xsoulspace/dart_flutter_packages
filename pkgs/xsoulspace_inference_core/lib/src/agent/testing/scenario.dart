@@ -22,6 +22,7 @@ import '../narrative/narrative.dart';
 import '../observation/observation.dart';
 import '../resources/resources.dart';
 import '../schedules.dart';
+import '../systems/projection/projection_systems.dart' show fragmentText;
 import '../tools/tool_registry.dart';
 import '../world_setup.dart';
 
@@ -158,6 +159,12 @@ class ScenarioRunner {
 
         final situation = world.getEntity(entity).$1.get<Situation>();
         collector.endDecision(actor: entity, situation: situation);
+        // Exact per-decision cut capture (ADR 0004): the projected beat texts
+        // as they existed at projection time — not post-run residue.
+        final projectedTexts = <String>[
+          for (final beat in situation?.projectedBeats ?? const <Entity>[])
+            fragmentText(world, beat),
+        ];
         final metrics = DecisionMetrics(
           actor: actor.name,
           prompt: prompt,
@@ -166,6 +173,7 @@ class ScenarioRunner {
           explicitAbsences: situation?.explicitAbsences ?? const [],
           llmCalls: 1,
           truncated: situation?.truncated ?? false,
+          projectedTexts: projectedTexts,
         );
         decisions.add(metrics);
         totalLlmCalls += metrics.llmCalls;

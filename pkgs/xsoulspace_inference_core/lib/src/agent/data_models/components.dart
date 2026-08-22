@@ -252,6 +252,18 @@ class RetryCount implements Component {
   int value;
 }
 
+/// Tracks how many tool→continuation rounds this actor's current decision
+/// chain has consumed.
+///
+/// Guards [processToolResultsSystem]'s ReAct continuation (ADR 0004) so a
+/// model that never stops calling tools cannot loop forever. Reset when a
+/// decision completes without tool calls (final answer) — a new task starts
+/// with a fresh budget.
+class ToolRoundCount implements Component {
+  ToolRoundCount(this.value);
+  int value;
+}
+
 /// Structured result of a tool call, stored on the tool-result beat.
 ///
 /// Unlike a stringified `<result|...>` blob, this keeps the tool name and its

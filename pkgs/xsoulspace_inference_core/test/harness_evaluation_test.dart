@@ -8,6 +8,8 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 import 'package:xsoulspace_inference_core/src/agent/schedules.dart';
+import 'package:xsoulspace_inference_core/src/agent/systems/projection/projection_systems.dart'
+    show fragmentText;
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import 'support/agent_harness_support.dart';
@@ -41,6 +43,55 @@ Future<void> _cycle(World world) async {
 }
 
 void main() {
+  /// Drive one decision through the canonical cycle with exact cut capture.
+  Future<ScenarioMetrics> _driveOneDecisionForOracle(
+    World world,
+    Entity actorEntity,
+    String prompt,
+  ) async {
+    world.upsertComponent(actorEntity, OpenDecision(prompt: prompt));
+    world.flush();
+    final collector = MetricsCollector(world: world);
+    collector.beginDecision(actor: actorEntity, actorName: 'a', prompt: prompt);
+
+    world.runSchedule(Schedules.agencyGrant);
+    world.flush();
+    world.runSchedule(Schedules.project);
+    world.flush();
+    await world.runScheduleAsync(Schedules.actorAct);
+    world.flush();
+    world.runSchedule(Schedules.processResponses);
+    world.flush();
+    world.runSchedule(Schedules.mechanical);
+    world.flush();
+
+    final situation = world.getEntity(actorEntity).$1.get<Situation>();
+    collector.endDecision(actor: actorEntity, situation: situation);
+    final telemetry = collector.report().decisions.first;
+    return ScenarioMetrics(
+      name: 'driven',
+      decisions: [
+        DecisionMetrics(
+          actor: 'a',
+          prompt: prompt,
+          tokensUsed: situation?.tokensUsed ?? 0,
+          projectedBeats: situation?.projectedBeats.length ?? 0,
+          explicitAbsences: situation?.explicitAbsences ?? const [],
+          llmCalls: telemetry.llmCalls,
+          truncated: situation?.truncated ?? false,
+          projectedTexts: [
+            for (final beat in situation?.projectedBeats ?? const <Entity>[])
+              fragmentText(world, beat),
+          ],
+        ),
+      ],
+      totalLlmCalls: telemetry.llmCalls,
+      totalTokens: situation?.tokensUsed ?? 0,
+      prunedThreads: 0,
+      mergedThreads: 0,
+    );
+  }
+
   group('ScriptedGenerationHandler', () {
     test('serves turns in order and records requests', () async {
       final handler = ScriptedGenerationHandler([
@@ -267,20 +318,29 @@ void main() {
     test('scores projection recall and missing tool calls', () async {
       final world = await buildTestWorld();
       final handler = MockGenerationHandler(responseText: 'parser fixed');
-      final runner = ScenarioRunner(world: world, handler: handler);
-      final scenario = Scenario(
-        name: 'oracle',
-        actors: [
-          ScenarioActor(
-            name: 'a',
-            systemPrompt: 'p',
-            decisions: ['fix parser'],
-          ),
-        ],
-      );
-      final metrics = await runner.run(scenario);
 
-      // Post-run residue: the response beat mentions "parser".
+      // Spawn manually and seed a relevant beat so the exact cut is
+      // non-empty (ADR 0004: scoring uses the true cut when captured).
+      final setup = AgentWorldSetup(world: world);
+      final scene = setup.spawnScene();
+      final spawned = setup.spawnActors([
+        ActorSpec(name: 'a', systemPrompt: 'p'),
+      ], scene);
+      world.getResource<GenerationHandlerResource>().registerDefault(handler);
+      addIndexedBeat(
+        world,
+        spawned.first.thread,
+        spawned.first.entity,
+        'the parser fails on brackets',
+        ['parser'],
+      );
+
+      final metrics = await _driveOneDecisionForOracle(
+        world,
+        spawned.first.entity,
+        'fix parser',
+      );
+
       final results = scoreOracles(world, metrics, [
         const DecisionOracle(
           mustProject: ['parser'],
@@ -297,14 +357,26 @@ void main() {
     test('detects leaked keywords', () async {
       final world = await buildTestWorld();
       final handler = MockGenerationHandler(responseText: 'weather sunny');
-      final runner = ScenarioRunner(world: world, handler: handler);
-      final scenario = Scenario(
-        name: 'leak',
-        actors: [
-          ScenarioActor(name: 'a', systemPrompt: 'p', decisions: ['weather?']),
-        ],
+
+      final setup = AgentWorldSetup(world: world);
+      final scene = setup.spawnScene();
+      final spawned = setup.spawnActors([
+        ActorSpec(name: 'a', systemPrompt: 'p'),
+      ], scene);
+      world.getResource<GenerationHandlerResource>().registerDefault(handler);
+      addIndexedBeat(
+        world,
+        spawned.first.thread,
+        spawned.first.entity,
+        'the weather is sunny today',
+        ['weather'],
       );
-      final metrics = await runner.run(scenario);
+
+      final metrics = await _driveOneDecisionForOracle(
+        world,
+        spawned.first.entity,
+        'weather?',
+      );
 
       final results = scoreOracles(world, metrics, [
         const DecisionOracle(mustNotProject: ['weather']),

@@ -25,6 +25,7 @@ class DecisionOracle {
     this.expectedToolCalls = const [],
     this.mustProject = const [],
     this.mustNotProject = const [],
+    this.decoyTerms = const [],
   });
 
   /// Tool names that must have been dispatched this decision (subset match).
@@ -35,6 +36,11 @@ class DecisionOracle {
 
   /// Keywords whose beats must NOT appear in the projection.
   final List<String> mustNotProject;
+
+  /// Adversarial terms (ADR 0004): prompt words that also appear in decoy
+  /// beats. Beats matching ONLY decoys count against precision — this makes
+  /// precision measure discrimination, not keyword self-agreement.
+  final List<String> decoyTerms;
 }
 
 /// Oracle result for one decision.
@@ -78,8 +84,9 @@ class OracleResult {
 
 /// Score [metrics] decisions against [oracles] (parallel lists).
 ///
-/// Uses the world to read projected beat texts recorded in each decision's
-/// telemetry window — callers pass the world after the run completes.
+/// When a decision carries exact [DecisionMetrics.projectedTexts] (captured
+/// at projection time, ADR 0004), scoring uses the true cut. Otherwise it
+/// falls back to post-run world residue — coarser but still useful.
 List<OracleResult> scoreOracles(
   World world,
   ScenarioMetrics metrics,
@@ -95,14 +102,21 @@ List<OracleResult> scoreOracles(
         ? const <String>[]
         : telemetry.decisions[i].toolResults;
 
-    // Projected-beat texts are not retained post-run; score against the
-    // world's current beat graph filtered by the decision's actor thread.
-    final texts = _beatTextsForActor(world, metrics.decisions[i].actor);
+    // Exact cut when available; residue fallback otherwise.
+    final texts = d.projectedTexts.isNotEmpty
+        ? d.projectedTexts
+        : _beatTextsForActor(world, metrics.decisions[i].actor);
     final promptTerms = _keywords(d.prompt);
 
+    // Precision: fraction of projected beats sharing a NON-DECOY prompt
+    // term. Decoy terms are excluded from relevance so adversarial beats
+    // that match only decoys count as noise, not signal.
     var relevant = 0;
     for (final text in texts) {
-      if (promptTerms.any(text.contains)) relevant++;
+      final nonDecoyHits = promptTerms
+          .where((t) => !oracle.decoyTerms.contains(t))
+          .where(text.contains);
+      if (nonDecoyHits.isNotEmpty) relevant++;
     }
     final precision = texts.isEmpty ? 1.0 : relevant / texts.length;
 

@@ -69,7 +69,10 @@ World _buildWorld(String jailPath, GenerationHandler handler) {
   world.getResource<ToolRegistryResource>().register('default', registry);
 
   final scene = spawnScene(world);
-  spawnActor(world, scene, openDecisionPrompt: 'write out.txt');
+  final actor = spawnActor(world, scene, openDecisionPrompt: 'write out.txt');
+  world.upsertComponent(actor, const ActorTools(registryName: 'default'));
+  final thread = spawnThread(world, actor, scene);
+  world.upsertComponent(actor, ActorThreads(threads: [thread]));
   world.flush();
   return world;
 }

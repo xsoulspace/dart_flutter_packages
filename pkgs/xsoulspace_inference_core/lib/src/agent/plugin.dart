@@ -75,6 +75,7 @@ class AgentPlugin extends Plugin {
       ..registerObjectComponent<ToolResultContent>()
       ..registerObjectComponent<IdentityBeat>()
       ..registerObjectComponent<RetryCount>()
+      ..registerObjectComponent<ToolRoundCount>()
       ..registerObjectComponent<IdentitySeeded>();
 
     // Resources

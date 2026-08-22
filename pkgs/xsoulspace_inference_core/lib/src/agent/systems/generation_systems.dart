@@ -132,6 +132,11 @@ void processResponsesSystem(World world) {
       // Remove the OpenDecision — it has been resolved
       we.remove<OpenDecision>();
       we.remove<RetryCount>();
+      // A final answer (no tool calls) ends the tool-round chain — reset the
+      // budget so the actor's NEXT task starts fresh (ADR 0004).
+      if (response.toolCalls.isEmpty) {
+        we.remove<ToolRoundCount>();
+      }
     }
     we.remove<Agency>();
     we.remove<AwaitingResponse>();

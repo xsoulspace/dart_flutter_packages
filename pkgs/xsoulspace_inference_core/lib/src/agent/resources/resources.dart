@@ -97,6 +97,7 @@ class AgencyPolicy extends Resource {
     this.maxConcurrent = 8,
     this.maxRetries = 3,
     this.taskTimeout = const Duration(minutes: 5),
+    this.maxToolRounds = 16,
   });
 
   /// Maximum number of actors that may hold [Agency] in a single tick.
@@ -112,6 +113,12 @@ class AgencyPolicy extends Resource {
   /// [Duration.zero] disables the timeout (not recommended — a crashed
   /// backend would hang the actor and the loop forever).
   Duration taskTimeout;
+
+  /// Maximum tool→continuation rounds per decision chain. Bounds the ReAct
+  /// loop (ADR 0004): after this many continuation decisions spawned by tool
+  /// results, the chain is dropped instead of continued. Prevents a model
+  /// that never stops calling tools from looping forever.
+  int maxToolRounds;
 }
 
 /// World resource routing generation requests to handlers.

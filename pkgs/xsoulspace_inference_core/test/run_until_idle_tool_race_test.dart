@@ -168,6 +168,28 @@ void main() {
       isTrue,
       reason: 'tool execution should be visible as an in-flight task',
     );
-    expect(loop.canSleep(), isTrue, reason: 'loop should settle idle');
+
+    // ADR 0004: this handler ALWAYS emits a tool call, so the ReAct
+    // continuation keeps re-opening decisions until maxToolRounds. The
+    // world legitimately does NOT settle idle here anymore — instead assert
+    // the bounded-loop invariant: after enough ticks the chain exhausts its
+    // round budget and the actor stops.
+    for (var i = 0; i < 500 && !loop.canSleep(); i++) {
+      loop.tickForDebug();
+      await Future<void>.delayed(Duration.zero);
+    }
+    expect(
+      loop.canSleep(),
+      isTrue,
+      reason: 'loop must settle once maxToolRounds is exhausted',
+    );
+    final actorRounds = world.query2<Actor, ToolRoundCount>().toList();
+    if (actorRounds.isNotEmpty) {
+      expect(
+        actorRounds.first.$2.value,
+        lessThanOrEqualTo(16),
+        reason: 'ToolRoundCount must never exceed AgencyPolicy.maxToolRounds',
+      );
+    }
   });
 }
