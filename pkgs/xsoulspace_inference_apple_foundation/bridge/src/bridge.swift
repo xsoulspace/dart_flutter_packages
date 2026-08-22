@@ -427,13 +427,26 @@ public func xs_fm_generate_stream_async(
 // MARK: - JSON helpers
 
 func jsonEscaped(_ s: String) -> String {
-  guard let data = try? JSONSerialization.data(withJSONObject: ["text": s]),
-    let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-    let escaped = obj["text"] as? String
-  else {
-    return "\"\""
+  // JSONEncoder escapes ALL control characters (newlines, quotes, backslashes)
+  // correctly. JSONSerialization round-trips unescape them, so a naive
+  // serialize→deserialize→interpolate helper emits raw newlines into the JSON
+  // — which Dart's jsonDecode then rejects.
+  guard #available(macOS 10.15, *) else { return "\"\"" }
+  let data: Data
+  if #available(macOS 13.0, *) {
+    var encoder = JSONEncoder()
+    encoder.outputFormatting = [.withoutEscapingSlashes]
+    guard let d = try? encoder.encode([s]) else { return "\"\"" }
+    data = d
+  } else {
+    guard let d = try? JSONEncoder().encode([s]) else { return "\"\"" }
+    data = d
   }
-  return "\"\(escaped)\""
+  // data is a JSON array like ["line1\nline2"] — strip the brackets.
+  guard let str = String(data: data, encoding: .utf8),
+    str.hasPrefix("["), str.hasSuffix("]"), str.count >= 2
+  else { return "\"\"" }
+  return String(str.dropFirst().dropLast())
 }
 
 func jsonEscapedError(code: String, message: String) -> String {

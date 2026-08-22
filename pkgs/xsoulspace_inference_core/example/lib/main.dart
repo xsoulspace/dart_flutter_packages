@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:from_json_to_json/from_json_to_json.dart';
-import 'package:xsoulspace_inference_apple_foundation/xsoulspace_inference_apple_foundation.dart';
+import 'package:mcp_toolkit/mcp_toolkit.dart' hide TextContent;
+
+import 'package:xsoulspace_inference_apple_foundation/xsoulspace_inference_apple_foundation_flutter.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'package:xsoulspace_inference_openrouter/xsoulspace_inference_openrouter.dart';
 import 'package:xsoulspace_state_utils/xsoulspace_state_utils.dart';
@@ -12,7 +14,10 @@ typedef ScenarioRecord = ({Scenario scenario, String title});
 
 void main() {
   // debugProfilePlatformChannels = true;
-  runApp(const MyApp());
+  MCPToolkitBinding.instance.bootstrapFlutter(
+    runApp: () => runApp(const MyApp()),
+    additionalEntries: _registerScenarioSurfaces(),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -363,10 +368,184 @@ class ScenarioV3FunctionCallAndSchema extends Scenario {
   }
 }
 
+/// Multi-actor scene: two actors share one world and observe each other.
+///
+/// Actor A (the planner) decides what to do; Actor B (the critic) reacts to
+/// A's beat. Demonstrates the harness's core claim — projection gives each
+/// actor only the cut it needs, and beats written by one actor are visible to
+/// the other through the graph, not a shared chat log.
+class ScenarioV4MultiActorScene extends Scenario {
+  Entity? _critic;
+
+  /// Latest beat text per actor id, exposed to the MCP surfaces.
+  final Map<String, String> lastBeatByActor = {};
+
+  @override
+  Future<String> init({
+    required String text,
+    ScenarioBackend backend = ScenarioBackend.apple,
+    String openRouterApiKey = '',
+  }) async {
+    await super.init(
+      text: text,
+      backend: backend,
+      openRouterApiKey: openRouterApiKey,
+    );
+    return run();
+  }
+
+  @override
+  Entity spawnActor(
+    final World world,
+    final Entity scene,
+    final String text, {
+    final ModelId modelId = ModelId.empty,
+  }) {
+    // Planner: decides the next move.
+    final planner = super.spawnActor(world, scene, text, modelId: modelId);
+    // Critic: reacts to whatever the planner produced.
+    final criticId = AgentId.create();
+    _critic = world.spawnComponents([
+      Actor(agentId: criticId),
+      ActorModel(modelId: modelId),
+      PresentInScene(sceneEntity: scene),
+      OpenDecision(
+        prompt:
+            'You are the critic. Wait for the planner to act, then give a '
+            'one-sentence reaction to their choice.',
+      ),
+    ]);
+    return planner;
+  }
+
+  @override
+  Future<String> run() async {
+    final world = this.world;
+    if (world == null) return '';
+
+    final loop = HarnessLoop(world: world);
+    _loop = loop;
+    await loop.runUntilIdle();
+    _loop = null;
+
+    // Collect the latest text beat per actor for the MCP snapshot surface.
+    String? plannerLast;
+    String? criticLast;
+    final critic = _critic;
+    for (final (worldEntity, _, _, content)
+        in world.query3<Actor, BeatModality, TextContent>()) {
+      if (content.text.isEmpty) continue;
+      if (critic != null && worldEntity.entity == critic) {
+        criticLast = content.text;
+      } else {
+        plannerLast = content.text;
+      }
+    }
+    if (plannerLast != null) {
+      lastBeatByActor['planner'] = plannerLast;
+    }
+    if (criticLast != null) {
+      lastBeatByActor['critic'] = criticLast;
+    }
+    return criticLast ?? plannerLast ?? '';
+  }
+
+  /// Round two: the critic gets the floor, reacting to the planner's beat.
+  Future<String> reply(String text) async {
+    final world = this.world;
+    final critic = _critic;
+    if (world == null || critic == null) return '';
+    world.upsertComponent(critic, OpenDecision(prompt: text));
+    world.flush();
+    return run();
+  }
+
+  @override
+  void dispose() {
+    _critic = null;
+    lastBeatByActor.clear();
+    super.dispose();
+  }
+}
+
+/// MCP toolkit surfaces: read scenario state and drive scenarios from an
+/// agent without touching the UI. Registered once at bootstrap.
+Set<AgentCallEntry> _registerScenarioSurfaces() {
+  final state = _ScenarioSurfacesState();
+  return {
+    AgentCallEntry.resource(
+      namespace: 'scenario',
+      name: 'scenario_state',
+      description:
+          'Read-only snapshot of the example scenario app: active scenario '
+          'index, backend, and per-actor latest beats (V4).',
+      mimeType: 'application/json',
+      handler: (args) async => AgentResult.success(
+        message: 'Scenario state',
+        data: state.snapshot(),
+      ),
+    ),
+    AgentCallEntry.tool(
+      namespace: 'scenario',
+      name: 'scenario_send',
+      description:
+          'Send a prompt to the currently selected scenario (same as typing '
+          'in the app and pressing send).',
+      inputSchema: {
+        'type': 'object',
+        'additionalProperties': false,
+        'properties': {
+          'prompt': {'type': 'string'},
+        },
+        'required': ['prompt'],
+      },
+      handler: (args) async {
+        final prompt = args['prompt'] as String? ?? '';
+        if (prompt.trim().isEmpty) {
+          return AgentResult.failure(
+            code: 'prompt_empty',
+            message: 'prompt must not be empty',
+          );
+        }
+        final reply = await state.send(prompt);
+        return AgentResult.success(message: 'Reply', data: {'reply': reply});
+      },
+    ),
+  };
+}
+
+/// Mutable bridge between MCP handlers and the UI-owned scenario state.
+/// The home state registers itself here on init so handlers stay thin.
+class _ScenarioSurfacesState {
+  int scenarioIndex = 0;
+  String backend = 'apple';
+  Future<String> Function(String prompt)? onSend;
+  Map<String, String> lastBeatByActor = const {};
+
+  Map<String, Object?> snapshot() => {
+    'scenario_index': scenarioIndex,
+    'backend': backend,
+    'last_beat_by_actor': lastBeatByActor,
+  };
+
+  Future<String> send(final String prompt) async {
+    final send = onSend;
+    if (send == null) {
+      throw StateError('Scenario app is not ready yet');
+    }
+    return send(prompt);
+  }
+}
+
+/// Shared surface-state singleton so both main() registration and the home
+/// state can reach the same bridge.
+final _scenarioSurfaces = _ScenarioSurfacesState();
+
 class _MyHomePageState extends State<MyHomePage> {
   final _scenarioV1 = ScenarioV1SendMessageGetAnswer();
   final _scenarioV2 = ScenarioV2KeepPrimitiveMemory();
   final _scenarioV3 = ScenarioV3FunctionCallAndSchema();
+  final _scenarioV4 = ScenarioV4MultiActorScene();
   final _messages = ImmutableOrderedList<String>();
 
   final TextEditingController _controller = TextEditingController();
@@ -382,6 +561,7 @@ class _MyHomePageState extends State<MyHomePage> {
     (scenario: _scenarioV1, title: 'one-text'),
     (scenario: _scenarioV2, title: 'h -> llm -> h -> llm'),
     (scenario: _scenarioV3, title: 'scheme + tool call: Weather / Character'),
+    (scenario: _scenarioV4, title: 'multi-actor scene (planner + critic)'),
   ];
 
   T _getScenarioByIndex<T extends Scenario>() =>
@@ -404,39 +584,74 @@ class _MyHomePageState extends State<MyHomePage> {
     _isRunning = true;
   });
 
-  Future<void> _initScenario() async {
+  @override
+  void initState() {
+    super.initState();
+    // Bridge MCP surfaces to UI state. Handlers stay thin; the home state
+    // owns scenario execution.
+    _scenarioSurfaces.onSend = (prompt) async {
+      final scenario = _getScenarioByIndex();
+      if (!scenario.isInitialized) {
+        await _initScenarioWith(prompt);
+      } else {
+        await _replyTo(scenario, prompt);
+      }
+      return _messages.isEmpty ? '' : _messages.last;
+    };
+  }
+
+  Future<void> _initScenarioWith(String text) async {
     final scenario = _getScenarioByIndex();
     _setLoading();
     final r = await scenario.init(
-      text: _txt,
+      text: text,
       backend: _backend,
       openRouterApiKey: _apiKeyController.text.trim(),
     );
     setState(() {
       _messages
-        ..add(_txt)
+        ..add(text)
         ..add(r);
       _controller.clear();
       _isRunning = false;
+      _syncSurfaceState();
     });
   }
 
-  Future<void> _scenarioReply() async {
+  Future<void> _replyTo(Scenario scenario, String text) async {
     _setLoading();
-
-    final scenario = _getScenarioByIndex();
     final r = switch (scenario) {
-      ScenarioV2KeepPrimitiveMemory() => await scenario.reply(_txt),
-      ScenarioV3FunctionCallAndSchema() => await scenario.reply(_txt),
+      ScenarioV2KeepPrimitiveMemory() => await scenario.reply(text),
+      ScenarioV3FunctionCallAndSchema() => await scenario.reply(text),
+      ScenarioV4MultiActorScene() => await scenario.reply(text),
       _ => '',
     };
     setState(() {
       _messages
-        ..add(_txt)
+        ..add(text)
         ..add(r);
       _controller.clear();
       _isRunning = false;
+      _syncSurfaceState();
     });
+  }
+
+  void _syncSurfaceState() {
+    _scenarioSurfaces
+      ..scenarioIndex = _scenarioIndex
+      ..backend = _backend.name
+      ..lastBeatByActor = switch (_getScenarioByIndex()) {
+        final ScenarioV4MultiActorScene v4 => Map.of(v4.lastBeatByActor),
+        _ => const {},
+      };
+  }
+
+  Future<void> _initScenario() async {
+    await _initScenarioWith(_txt);
+  }
+
+  Future<void> _scenarioReply() async {
+    await _replyTo(_getScenarioByIndex(), _txt);
   }
 
   void _onReply() {
@@ -454,6 +669,13 @@ class _MyHomePageState extends State<MyHomePage> {
           _initScenario();
         }
       case final ScenarioV3FunctionCallAndSchema i:
+        if (i.isInitialized) {
+          _scenarioReply();
+        } else {
+          _cleanup();
+          _initScenario();
+        }
+      case final ScenarioV4MultiActorScene i:
         if (i.isInitialized) {
           _scenarioReply();
         } else {

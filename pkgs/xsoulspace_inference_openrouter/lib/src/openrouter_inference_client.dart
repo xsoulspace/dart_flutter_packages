@@ -251,7 +251,7 @@ class OpenRouterInferenceClient implements InferenceClient {
 
     // Extract native tool_calls as structured records.
     final toolCalls = messageMap['tool_calls'];
-    final parsedCalls = <({String name, Map<String, dynamic> arguments})>[];
+    final parsedCalls = <ToolCall>[];
     if (toolCalls is List) {
       for (final call in toolCalls) {
         if (call is! Map<String, dynamic>) continue;
@@ -260,7 +260,9 @@ class OpenRouterInferenceClient implements InferenceClient {
         final name = fnMap['name'];
         final arguments = fnMap['arguments'];
         if (name is! String) continue;
-        parsedCalls.add((name: name, arguments: _parseArguments(arguments)));
+        parsedCalls.add(
+          ToolCall(name: ToolName(name), arguments: _parseArguments(arguments)),
+        );
       }
     }
 

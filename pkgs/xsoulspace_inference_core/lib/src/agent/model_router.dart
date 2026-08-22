@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer';
 
 import '../inference_client.dart';
@@ -125,7 +126,48 @@ class ModelRuntime {
     required SchemaBundle outputSchema,
     required ToolRegistry? toolRegistry,
     required InferenceTask task,
+    void Function(String delta)? onDelta,
   }) async {
+    // Streaming path: only for plain-text tasks where the client supports it.
+    if (onDelta != null &&
+        outputSchema.isEmpty &&
+        toolRegistry == null &&
+        client.supportsStructuredTextStreaming) {
+      final session = await client.streamStructuredText(
+        InferenceRequest.structured(
+          outputSchema: SchemaBundle.empty,
+          prompt: prompt,
+          systemPrompt: systemPrompt,
+          task: task,
+          contextFragments: contextFragments,
+          metadata: const {},
+        ),
+      );
+      final buffer = StringBuffer();
+      unawaited(
+        session.events.forEach((event) {
+          final delta = event.textDelta;
+          if (delta != null && delta.isNotEmpty) {
+            buffer.write(delta);
+            onDelta(delta);
+          }
+        }),
+      );
+      final result = await session.result;
+      if (!result.success || result.data == null) {
+        log('stream failed: ${result.error?.code}');
+        return null;
+      }
+      // Prefer the accumulated buffer (complete text); fall back to rawOutput.
+      final data = result.data!;
+      final streamed = buffer.toString();
+      return InferenceResponse(
+        structuredOutput: data.structuredOutput,
+        rawOutput: streamed.isNotEmpty ? streamed : data.rawOutput,
+        meta: data.meta,
+      );
+    }
+
     final response = await client.infer(
       InferenceRequest.structured(
         outputSchema: outputSchema,

@@ -68,12 +68,27 @@ Gated in CI by `test/long_horizon_test.dart` (300 decisions, same assertions).
 CLI: `dart run benchmark/long_horizon_benchmark.dart [decisions]` — non-zero
 exit on failure.
 
-## Phase 3 — Streaming through FFI bridge
+## Phase 3 — Streaming through FFI bridge (done)
 
-Apple Foundation streaming wired through the native bridge into
-`ActorGenerateStreamEvent` (the harness plumbing already exists). Measure
-time-to-first-token on-device. Unblocks coding-agent UX: no more silent 30s
-waits on file writes.
+`xs_fm_generate_stream_async` added to the Swift bridge: AFM
+`streamResponse` snapshots are emitted as `\"delta\"` chunks through a new
+stream callback; `done_cb` still fires once with the final text. Structured
+output requests fall back to blocking respond (framework delivers structured
+content atomically).
+
+Dart side: new `StreamCbNative` binding, `AppleFoundationNativeClient` now
+implements `StructuredTextStreamingInferenceClient` (`streamStructuredText`),
+deltas flow as `InferenceStructuredTextStreamEvent.partialOutput`. The harness
+plumbing downstream (`ActorGenerateStreamEvent` → `StreamingBeat`) already
+existed.
+
+**Measured on hardware**: TTFT ~8.3s for a cold first call (model warm-up
+dominates), deltas stream correctly with multi-line output, final result
+matches streamed text. Smoke: `dart run bin/stream_smoke.dart`.
+
+Also fixed: `jsonEscaped` helper emitted raw control characters into JSON
+(newlines broke Dart's decoder) — replaced with a JSONEncoder-based escaping
+that round-trips correctly.
 
 ## Phase 4 — 20-task coding suite vs pi
 

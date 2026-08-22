@@ -22,7 +22,7 @@ class FakeGitHubApi {
     unawaited(
       HttpServer.bind(InternetAddress.loopbackIPv4, 0).then((server) {
         _boundServer = server;
-        _endpoint = 'http://127.0.0.1:${server.port}/';
+        _endpoint = 'http://127.0.0.1:${server.port}';
         server.listen(
           (final request) {
             unawaited(_handle(request));
@@ -76,7 +76,7 @@ class FakeGitHubApi {
     }
 
     // GET/PUT/DELETE /repos/{owner}/{name}/contents/{path...}
-    if (segments.length > 4 &&
+    if (segments.length > 3 &&
         segments[0] == 'repos' &&
         segments[3] == 'contents') {
       final filePath = segments.sublist(4).join('/');
@@ -103,8 +103,51 @@ class FakeGitHubApi {
     final HttpRequest request,
     final String filePath,
   ) async {
-    final file = _files[filePath];
     final response = request.response;
+
+    // Directory listing: any GET whose path matches a directory prefix of
+    // stored files (i.e. no file stored exactly at this path).
+    final isDirectoryRequest = !_files.containsKey(filePath);
+    if (isDirectoryRequest) {
+      final prefix = filePath.endsWith('/')
+          ? filePath.substring(0, filePath.length - 1)
+          : filePath;
+      final entries = <Map<String, dynamic>>[];
+      final seenDirectories = <String>{};
+      for (final key in _files.keys) {
+        if (!key.startsWith(prefix.isEmpty ? '' : '$prefix/')) {
+          continue;
+        }
+        final remainder = key.substring(prefix.isEmpty ? 0 : prefix.length + 1);
+        final slashIndex = remainder.indexOf('/');
+        if (slashIndex >= 0) {
+          final directoryName = remainder.substring(0, slashIndex);
+          if (seenDirectories.add(directoryName)) {
+            entries.add(<String, dynamic>{
+              'name': directoryName,
+              'path': '$prefix/$directoryName',
+              'type': 'dir',
+              'sha': 'dir_$directoryName',
+            });
+          }
+        } else {
+          final file = _files[key]!;
+          entries.add(<String, dynamic>{
+            'name': remainder,
+            'path': key,
+            'type': 'file',
+            'size': file.content.length,
+            'sha': file.sha,
+          });
+        }
+      }
+      response.statusCode = 200;
+      response.write(jsonEncode(entries));
+      await response.close();
+      return;
+    }
+
+    final file = _files[filePath];
     if (file == null) {
       response.statusCode = 404;
       response.write(jsonEncode(<String, dynamic>{'message': 'Not Found'}));
@@ -170,6 +213,12 @@ class FakeGitHubApi {
     }
     _files.remove(filePath);
     request.response.statusCode = 200;
+    request.response.write(
+      jsonEncode(<String, dynamic>{
+        'content': <String, dynamic>{'path': filePath},
+        'commit': <String, dynamic>{'sha': 'delete_${body['sha']}'},
+      }),
+    );
     await request.response.close();
   }
 }

@@ -1,6 +1,8 @@
+import 'dart:async';
+
 import 'package:ecsly/ecsly.dart';
 
-import '../model_router.dart';
+import '../agent_low_api.dart' show AgentId, ModelId;
 import '../events.dart';
 import '../tools/tools.dart';
 
@@ -107,4 +109,47 @@ class GenerationHandlerResource extends Resource {
       byAgent[agentId] = handler;
   void registerForModel(ModelId modelId, GenerationHandler handler) =>
       byModel[modelId] = handler;
+}
+
+/// Push channel for streaming deltas — the host-facing side of streaming.
+///
+/// Handlers publish deltas here as they arrive (same tick); hosts subscribe
+/// per actor and render incrementally:
+///
+/// - **Flutter**: wrap in a `StreamBuilder` on `subscribe(actorEntity)`.
+/// - **TUI/CLI**: subscribe and print to stdout.
+/// - The world-side [StreamingBeat] component remains the authoritative
+///   accumulated buffer; this resource is a live push tap, not storage.
+class StreamingTapResource extends Resource {
+  final Map<Entity, StreamController<String>> _controllers = {};
+
+  /// Subscribe to streamed text for [actor]. Multiple subscribers are
+  /// supported (broadcast). The stream closes when the actor's turn completes
+  /// or the actor despawns.
+  Stream<String> subscribe(Entity actor) => _controllerFor(actor).stream;
+
+  /// Publish a delta for [actor]. Called by handlers; no-op if nobody is
+  /// listening (streaming still accumulates into [StreamingBeat]).
+  void publish(Entity actor, String delta) {
+    final controller = _controllers[actor];
+    if (controller != null && !controller.isClosed) {
+      controller.add(delta);
+    }
+  }
+
+  /// Close the tap for [actor] — called when its response lands.
+  void close(Entity actor) {
+    _controllers.remove(actor)?.close();
+  }
+
+  /// Close all taps (world teardown / scenario switch).
+  void closeAll() {
+    for (final controller in _controllers.values) {
+      unawaited(controller.close());
+    }
+    _controllers.clear();
+  }
+
+  StreamController<String> _controllerFor(Entity actor) => _controllers
+      .putIfAbsent(actor, () => StreamController<String>.broadcast());
 }
