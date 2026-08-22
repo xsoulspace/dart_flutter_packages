@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:developer';
 
 import '../inference_client.dart';
+import '../inference_structured_text_streaming.dart';
 import '../models/inference_models.dart';
 import 'structured_output/structured_output.dart';
 import 'tools/tools.dart';

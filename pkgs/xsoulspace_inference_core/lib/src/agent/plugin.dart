@@ -79,6 +79,7 @@ class AgentPlugin extends Plugin {
     world
       ..upsertResource(TaskRegistryResource())
       ..upsertResource(GenerationHandlerResource())
+      ..upsertResource(StreamingTapResource())
       ..upsertResource(ProjectionBudget())
       ..upsertResource(ProjectionPolicy())
       ..upsertResource(FacetIndex())

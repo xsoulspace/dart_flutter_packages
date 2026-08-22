@@ -731,6 +731,12 @@ void processResponsesSystem(World world) {
     we.remove<Agency>();
     we.remove<AwaitingResponse>();
     we.remove<EscalationRequest>();
+
+    // The turn is complete — close the streaming tap so host subscribers
+    // (Flutter StreamBuilder / TUI) see an end-of-stream signal.
+    unawaited(
+      world.getResource<StreamingTapResource>().close(response.actorEntity),
+    );
   }
 }
 

@@ -64,6 +64,14 @@ class DefaultGenerationHandler implements GenerationHandler {
           ).buildRegistry()
         : null;
 
+    // Stream deltas into the world when the backend supports it: each chunk
+    // lands as an ActorGenerateStreamEvent (accumulated into StreamingBeat by
+    // processStreamEventsSystem) and is pushed to host subscribers via
+    // StreamingTapResource. Structured-output and tool-calling requests stay
+    // on the blocking path — streaming is text-only.
+    final canStream = request.schema.isEmpty && request.toolRegistry == null;
+    final tap = world.getResource<StreamingTapResource>();
+
     final response = await runtime.generate(
       prompt: request.prompt,
       systemPrompt: request.systemPrompt,
@@ -71,6 +79,18 @@ class DefaultGenerationHandler implements GenerationHandler {
       outputSchema: request.schema,
       toolRegistry: bridgedRegistry,
       task: request.task,
+      onDelta: canStream
+          ? (delta) {
+              world.events.writer<ActorGenerateStreamEvent>().send(
+                ActorGenerateStreamEvent(
+                  actorEntity: request.actorEntity,
+                  taskId: request.taskId,
+                  chunk: delta,
+                ),
+              );
+              tap.publish(request.actorEntity, delta);
+            }
+          : null,
     );
 
     if (response == null) {

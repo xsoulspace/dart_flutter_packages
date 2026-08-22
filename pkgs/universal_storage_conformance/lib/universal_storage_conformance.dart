@@ -37,6 +37,7 @@ void storageProviderConformanceTests(
   final String backendName, {
   required final ProviderFactory create,
   final bool supportsSync = false,
+  final bool supportsRestore = true,
 }) {
   group('$backendName conformance', () {
     late StorageProvider provider;
@@ -125,10 +126,12 @@ void storageProviderConformanceTests(
           await expectLater(provider.sync(), completes);
         });
 
-        test('restore without version restores latest', () async {
-          await provider.createFile('conf/restore.json', 'r1');
-          await expectLater(provider.restore('conf/restore.json'), completes);
-        });
+        if (supportsRestore) {
+          test('restore without version restores latest', () async {
+            await provider.createFile('conf/restore.json', 'r1');
+            await expectLater(provider.restore('conf/restore.json'), completes);
+          });
+        }
       });
     } else {
       test('sync throws UnsupportedOperationException when unsupported', () {

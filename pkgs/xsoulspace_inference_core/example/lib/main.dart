@@ -531,10 +531,14 @@ class _ScenarioSurfacesState {
   Future<String> send(final String prompt) async {
     final send = onSend;
     if (send == null) {
-      throw StateError('Scenario app is not ready yet');
+      // UI not mounted yet — queue the prompt; initState drains it.
+      pendingPrompt = prompt;
+      return '(queued — scenario UI not ready yet)';
     }
     return send(prompt);
   }
+
+  String? pendingPrompt;
 }
 
 /// Shared surface-state singleton so both main() registration and the home
@@ -598,6 +602,12 @@ class _MyHomePageState extends State<MyHomePage> {
       }
       return _messages.isEmpty ? '' : _messages.last;
     };
+    // Drain a prompt that arrived via MCP before the UI mounted.
+    final pending = _scenarioSurfaces.pendingPrompt;
+    if (pending != null) {
+      _scenarioSurfaces.pendingPrompt = null;
+      scheduleMicrotask(() => _initScenarioWith(pending));
+    }
   }
 
   Future<void> _initScenarioWith(String text) async {

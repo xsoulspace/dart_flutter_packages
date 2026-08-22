@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:ecsly/ecsly.dart';
 
-import '../agent_low_api.dart' show AgentId, ModelId;
 import '../events.dart';
+import '../model_router.dart';
 import '../tools/tools.dart';
 
 export 'task_registry.dart';
@@ -138,14 +138,14 @@ class StreamingTapResource extends Resource {
   }
 
   /// Close the tap for [actor] — called when its response lands.
-  void close(Entity actor) {
-    _controllers.remove(actor)?.close();
+  Future<void> close(Entity actor) async {
+    await _controllers.remove(actor)?.close();
   }
 
   /// Close all taps (world teardown / scenario switch).
-  void closeAll() {
+  Future<void> closeAll() async {
     for (final controller in _controllers.values) {
-      unawaited(controller.close());
+      await controller.close();
     }
     _controllers.clear();
   }

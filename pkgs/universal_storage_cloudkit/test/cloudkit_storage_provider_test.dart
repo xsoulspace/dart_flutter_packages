@@ -7,11 +7,11 @@ import 'package:universal_storage_sync/universal_storage_sync.dart';
 
 void main() {
   group('CloudKitStorageProvider remoteOnly', () {
-    late _FakeCloudKitBridge bridge;
+    late FakeCloudKitBridge bridge;
     late CloudKitStorageProvider provider;
 
     setUp(() {
-      bridge = _FakeCloudKitBridge();
+      bridge = FakeCloudKitBridge();
       provider = CloudKitStorageProvider(bridge: bridge);
     });
 
@@ -70,12 +70,12 @@ void main() {
   });
 
   group('CloudKitStorageProvider localMirror', () {
-    late _FakeCloudKitBridge bridge;
+    late FakeCloudKitBridge bridge;
     late Directory tempDir;
     late CloudKitStorageProvider provider;
 
     setUp(() async {
-      bridge = _FakeCloudKitBridge();
+      bridge = FakeCloudKitBridge();
       tempDir = await Directory.systemTemp.createTemp('cloudkit_local_mirror_');
 
       provider = CloudKitStorageProvider(bridge: bridge);
@@ -263,7 +263,7 @@ void main() {
     test(
       'uses fallback provider when bridge init fails and fallback configured',
       () async {
-        final bridge = _FakeCloudKitBridge()..throwOnInitialize = true;
+        final bridge = FakeCloudKitBridge()..throwOnInitialize = true;
         final fallbackDir = await Directory.systemTemp.createTemp(
           'cloudkit_fallback_',
         );
@@ -301,7 +301,7 @@ void main() {
     );
 
     test('throws unsupported error when no fallback configured', () async {
-      final bridge = _FakeCloudKitBridge()..throwOnInitialize = true;
+      final bridge = FakeCloudKitBridge()..throwOnInitialize = true;
       final provider = CloudKitStorageProvider(bridge: bridge);
 
       await expectLater(
@@ -317,7 +317,7 @@ void main() {
     test(
       'registers CloudKitConfig factory in StorageProviderRegistry',
       () async {
-        final bridge = _FakeCloudKitBridge();
+        final bridge = FakeCloudKitBridge();
         registerUniversalStorageCloudKit(bridge: bridge);
 
         final service = await StorageFactory.createCloudKit(
@@ -332,7 +332,7 @@ void main() {
   });
 }
 
-class _FakeCloudKitBridge implements CloudKitBridge {
+class FakeCloudKitBridge implements CloudKitBridge {
   final Map<String, CloudKitRecord> recordsByPath = <String, CloudKitRecord>{};
   final List<String> callLog = <String>[];
   final Set<String> conflictOnNextSavePaths = <String>{};
