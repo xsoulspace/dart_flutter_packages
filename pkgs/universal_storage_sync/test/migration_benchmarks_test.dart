@@ -395,6 +395,7 @@ void main() {
       final (kernel, directory) = await buildGitOfflineKernel(
         name: 'outbox',
         remoteUrl: remoteDir.path,
+        commitBatching: const GitCommitBatching(),
       );
       try {
         final enqueueStart = Stopwatch()..start();

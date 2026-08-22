@@ -68,7 +68,7 @@ class HarnessExecutionLedger extends EcsExecutionObserverBase {
   };
 
   static int _len<T extends EcsEvent>(World w) =>
-      w.events.hasRegistered<T>() ? w.events.reader<T>().length : -1;
+      w.events.hasRegistered<T>() ? w.events.stats<T>().sent : -1;
 
   Map<String, int> _snapshot() => {
     for (final name in _trackedChannels.keys) name: _lenFor(name),

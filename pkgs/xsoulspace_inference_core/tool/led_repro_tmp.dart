@@ -52,6 +52,13 @@ void main() async {
   ]);
   world.flush();
 
+  // Reset watermark counters so the ledger deltas are per-run.
+  world.events.channel<ActorGenerateRequest>().resetStats();
+  world.events.channel<ActorGenerateResponse>().resetStats();
+  world.events.channel<ActorGenerateStreamEvent>().resetStats();
+  world.events.channel<ToolCallEvent>().resetStats();
+  world.events.channel<ToolResultEvent>().resetStats();
+
   final ledger = HarnessExecutionLedger(world);
   world.executionObserver = ledger;
   try {
@@ -60,7 +67,14 @@ void main() async {
     // ignore: avoid_print
     print('CAUGHT: $e');
   }
-  // ignore: avoid_print
-  print(ledger.dump().split('\n').where((l) => l.contains('→')).join('\n'));
+  // Show ToolResultEvent watermark at each entry.
+  for (final e in ledger.entries) {
+    final b = e.channelCountsBefore['ToolResultEvent'];
+    final a = e.channelCountsAfter['ToolResultEvent'];
+    if (b != a) {
+      // ignore: avoid_print
+      print('${e.schedule}.${e.system}: $b→$a');
+    }
+  }
   await jail.delete(recursive: true);
 }

@@ -10,6 +10,8 @@ resolution: workspace
 
 dependencies:
   code_assets: any
+  ecsly_serialization:
+    path: /Users/antonio/xs/ecsly/plugins/ecsly_serialization
   ffi: ^2.2.0
   flutter:
     sdk: flutter
