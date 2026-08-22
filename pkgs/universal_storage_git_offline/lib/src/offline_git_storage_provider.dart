@@ -104,14 +104,14 @@ class OfflineGitStorageProvider extends StorageProvider
     if (batching == null) {
       // Legacy behavior: stage and commit synchronously.
       if (!deleted) {
-        await _gitDir!.runCommand(['add', filePath]);
+        await _runGitCommandSafely(['add', filePath]);
       }
       return _commitChanges(
         deleted ? 'Delete file: $filePath' : 'Update file: $filePath',
       );
     }
 
-    await _gitDir!.runCommand(['add', filePath]);
+    await _runGitCommandSafely(['add', filePath]);
 
     final pending = _pendingCommit ??= _PendingCommit();
     pending.paths.add(filePath);
@@ -254,7 +254,7 @@ class OfflineGitStorageProvider extends StorageProvider
     }
 
     // Git remove, commit deferred like other mutations.
-    await _gitDir!.runCommand(['rm', filePath]);
+    await _runGitCommandSafely(['rm', filePath]);
 
     final commitHash = await _stageAndScheduleCommit(filePath, deleted: true);
     return FileOperationResult.deleted(
@@ -319,10 +319,10 @@ class OfflineGitStorageProvider extends StorageProvider
       await flushPendingCommits();
       if (versionId != null) {
         // Restore to specific commit
-        await _gitDir!.runCommand(['checkout', versionId, '--', filePath]);
+        await _runGitCommandSafely(['checkout', versionId, '--', filePath]);
       } else {
         // Restore to HEAD (latest commit)
-        await _gitDir!.runCommand(['checkout', 'HEAD', '--', filePath]);
+        await _runGitCommandSafely(['checkout', 'HEAD', '--', filePath]);
       }
     } catch (e, stackTrace) {
       log('Error: $e', stackTrace: stackTrace);
@@ -380,7 +380,7 @@ class OfflineGitStorageProvider extends StorageProvider
   Future<void> _ensureRemoteSetup() async {
     try {
       // Check if remote already exists
-      final result = await _gitDir!.runCommand([
+      final result = await _runGitCommandSafely([
         'remote',
         'get-url',
         _remoteName,
@@ -389,7 +389,7 @@ class OfflineGitStorageProvider extends StorageProvider
 
       if (existingUrl != _remoteUrl.value) {
         // Update remote URL if different
-        await _gitDir!.runCommand([
+        await _runGitCommandSafely([
           'remote',
           'set-url',
           _remoteName,
@@ -400,7 +400,7 @@ class OfflineGitStorageProvider extends StorageProvider
       log('Error: $e', stackTrace: stackTrace);
       // Remote doesn't exist, add it
       try {
-        await _gitDir!.runCommand([
+        await _runGitCommandSafely([
           'remote',
           'add',
           _remoteName,
@@ -469,7 +469,7 @@ class OfflineGitStorageProvider extends StorageProvider
         case 'merge':
           // Allow unrelated histories: a freshly-initialized local repo has
           // no common ancestor with the remote seed commit.
-          await _gitDir!.runCommand([
+          await _runGitCommandSafely([
             'pull',
             '--allow-unrelated-histories',
             '--no-rebase',
@@ -477,21 +477,21 @@ class OfflineGitStorageProvider extends StorageProvider
             _branchName.value,
           ]);
         case 'rebase':
-          await _gitDir!.runCommand([
+          await _runGitCommandSafely([
             'pull',
             '--rebase',
             _remoteName,
             _branchName.value,
           ]);
         case 'ff-only':
-          await _gitDir!.runCommand([
+          await _runGitCommandSafely([
             'pull',
             '--ff-only',
             _remoteName,
             _branchName.value,
           ]);
         default:
-          await _gitDir!.runCommand(['pull', _remoteName, _branchName.value]);
+          await _runGitCommandSafely(['pull', _remoteName, _branchName.value]);
       }
     } catch (e, stackTrace) {
       log('Error: $e', stackTrace: stackTrace);
@@ -530,7 +530,7 @@ class OfflineGitStorageProvider extends StorageProvider
   Future<void> _resolveConflictsClientWins() async {
     try {
       // Get list of conflicted files
-      final result = await _gitDir!.runCommand([
+      final result = await _runGitCommandSafely([
         'diff',
         '--name-only',
         '--diff-filter=U',
@@ -544,12 +544,12 @@ class OfflineGitStorageProvider extends StorageProvider
 
       for (final file in conflictedFiles) {
         // Use local version (ours)
-        await _gitDir!.runCommand(['checkout', '--ours', file]);
-        await _gitDir!.runCommand(['add', file]);
+        await _runGitCommandSafely(['checkout', '--ours', file]);
+        await _runGitCommandSafely(['add', file]);
       }
 
       // Complete the merge
-      await _gitDir!.runCommand(['commit', '--no-edit']);
+      await _runGitCommandSafely(['commit', '--no-edit']);
     } catch (e) {
       throw MergeConflictException(
         'Failed to resolve conflicts with client-wins strategy: $e',
@@ -561,7 +561,7 @@ class OfflineGitStorageProvider extends StorageProvider
   Future<void> _resolveConflictsServerWins() async {
     try {
       // Get list of conflicted files
-      final result = await _gitDir!.runCommand([
+      final result = await _runGitCommandSafely([
         'diff',
         '--name-only',
         '--diff-filter=U',
@@ -575,12 +575,12 @@ class OfflineGitStorageProvider extends StorageProvider
 
       for (final file in conflictedFiles) {
         // Use remote version (theirs)
-        await _gitDir!.runCommand(['checkout', '--theirs', file]);
-        await _gitDir!.runCommand(['add', file]);
+        await _runGitCommandSafely(['checkout', '--theirs', file]);
+        await _runGitCommandSafely(['add', file]);
       }
 
       // Complete the merge
-      await _gitDir!.runCommand(['commit', '--no-edit']);
+      await _runGitCommandSafely(['commit', '--no-edit']);
     } catch (e, stackTrace) {
       log('Error: $e', stackTrace: stackTrace);
       throw MergeConflictException(
@@ -610,14 +610,14 @@ class OfflineGitStorageProvider extends StorageProvider
         case 'rebase-local':
           await _pushWithRebaseLocal();
         case 'force-with-lease':
-          await _gitDir!.runCommand([
+          await _runGitCommandSafely([
             'push',
             '--force-with-lease',
             _remoteName,
             _branchName.value,
           ]);
         case 'fail-on-conflict':
-          await _gitDir!.runCommand(['push', _remoteName, _branchName.value]);
+          await _runGitCommandSafely(['push', _remoteName, _branchName.value]);
         default:
           await _pushWithRebaseLocal();
       }
@@ -645,27 +645,31 @@ class OfflineGitStorageProvider extends StorageProvider
   Future<void> _pushWithRebaseLocal() async {
     try {
       // Try normal push first
-      await _gitDir!.runCommand(['push', _remoteName, _branchName.value]);
+      await _runGitCommandSafely(['push', _remoteName, _branchName.value]);
     } catch (e, stackTrace) {
       log('Error: $e', stackTrace: stackTrace);
       if (e.toString().contains('non-fast-forward') ||
           e.toString().contains('rejected')) {
         // Rebase local commits on top of remote
         try {
-          await _gitDir!.runCommand([
+          await _runGitCommandSafely([
             'pull',
             '--rebase',
             _remoteName,
             _branchName.value,
           ]);
-          await _gitDir!.runCommand(['push', _remoteName, _branchName.value]);
+          await _runGitCommandSafely(['push', _remoteName, _branchName.value]);
         } catch (rebaseError, stackTrace) {
           log('Rebase error: $rebaseError', stackTrace: stackTrace);
           if (rebaseError.toString().contains('CONFLICT')) {
             // Handle rebase conflicts with client-wins strategy
             await _handlePullConflicts();
-            await _gitDir!.runCommand(['rebase', '--continue']);
-            await _gitDir!.runCommand(['push', _remoteName, _branchName.value]);
+            await _runGitCommandSafely(['rebase', '--continue']);
+            await _runGitCommandSafely([
+              'push',
+              _remoteName,
+              _branchName.value,
+            ]);
           } else {
             throw GitConflictException('Rebase operation failed: $rebaseError');
           }
@@ -697,10 +701,10 @@ class OfflineGitStorageProvider extends StorageProvider
 
     // Configure Git user if provided
     if (_authorName != null) {
-      await _gitDir!.runCommand(['config', 'user.name', _authorName!]);
+      await _runGitCommandSafely(['config', 'user.name', _authorName!]);
     }
     if (_authorEmail != null) {
-      await _gitDir!.runCommand(['config', 'user.email', _authorEmail!]);
+      await _runGitCommandSafely(['config', 'user.email', _authorEmail!]);
     }
 
     // Ensure we're on the correct branch
@@ -711,16 +715,16 @@ class OfflineGitStorageProvider extends StorageProvider
   Future<void> _ensureBranch() async {
     try {
       // Try to checkout the branch
-      await _gitDir!.runCommand(['checkout', _branchName.value]);
+      await _runGitCommandSafely(['checkout', _branchName.value]);
     } catch (e) {
       // Branch doesn't exist, create it
       try {
-        await _gitDir!.runCommand(['checkout', '-b', _branchName.value]);
+        await _runGitCommandSafely(['checkout', '-b', _branchName.value]);
       } catch (e) {
         // If we can't create the branch, we might be in an empty repo
         // Create an initial commit first
         await _createInitialCommit();
-        await _gitDir!.runCommand(['checkout', '-b', _branchName.value]);
+        await _runGitCommandSafely(['checkout', '-b', _branchName.value]);
       }
     }
   }
@@ -732,7 +736,7 @@ class OfflineGitStorageProvider extends StorageProvider
       final gitkeepFile = File(path.join(_localPath, '.gitkeep'));
       await gitkeepFile.writeAsString('');
 
-      await _gitDir!.runCommand(['add', '.gitkeep']);
+      await _runGitCommandSafely(['add', '.gitkeep']);
       await _commitChanges('Initial commit');
     } catch (e) {
       // Ignore errors - this is just to bootstrap the repository
@@ -742,10 +746,10 @@ class OfflineGitStorageProvider extends StorageProvider
   /// Commits changes with the given message.
   Future<String> _commitChanges(final String message) async {
     try {
-      await _gitDir!.runCommand(['commit', '-m', message]);
+      await _runGitCommandSafely(['commit', '-m', message]);
 
       // Get the commit hash
-      final hashResult = await _gitDir!.runCommand(['rev-parse', 'HEAD']);
+      final hashResult = await _runGitCommandSafely(['rev-parse', 'HEAD']);
       return hashResult.stdout.toString().trim();
     } catch (e, stackTrace) {
       log('Error: $e', stackTrace: stackTrace);
@@ -762,8 +766,14 @@ class OfflineGitStorageProvider extends StorageProvider
   }
 
   Future<void> _runGitCommand(final List<String> args) async {
-    await _gitDir!.runCommand(args);
+    await _runGitCommandSafely(args);
   }
+
+  /// Serializes all git write operations through one lock so git's
+  /// index.lock is never contended between batched commits, outbox queue
+  /// persistence, and sync pull/push.
+  Future<ProcessResult> _runGitCommandSafely(final List<String> args) =>
+      _gitOperationLock.synchronized(() => _gitDir!.runCommand(args));
 
   Map<String, dynamic> _durabilityMetadata({
     required final String filePath,
@@ -841,7 +851,7 @@ class OfflineGitStorageProvider extends StorageProvider
 
     try {
       final currentBranchName = await _tryGetCurrentBranchName();
-      final result = await _gitDir!.runCommand([
+      final result = await _runGitCommandSafely([
         'branch',
         '--format=%(refname:short)',
       ]);
@@ -1002,7 +1012,7 @@ class OfflineGitStorageProvider extends StorageProvider
 
   Future<String?> _tryGetCurrentBranchName() async {
     try {
-      final result = await _gitDir!.runCommand(['branch', '--show-current']);
+      final result = await _runGitCommandSafely(['branch', '--show-current']);
       final branchName = result.stdout.toString().trim();
       if (branchName.isEmpty) {
         return null;
@@ -1014,7 +1024,7 @@ class OfflineGitStorageProvider extends StorageProvider
   }
 
   Future<void> _checkoutBranchIfExists(final String branchName) async {
-    final branchResult = await _gitDir!.runCommand([
+    final branchResult = await _runGitCommandSafely([
       'branch',
       '--list',
       branchName,
@@ -1023,12 +1033,12 @@ class OfflineGitStorageProvider extends StorageProvider
     if (!hasBranch) {
       return;
     }
-    await _gitDir!.runCommand(['checkout', branchName]);
+    await _runGitCommandSafely(['checkout', branchName]);
   }
 
   Future<String> _tryReadRemoteUrl() async {
     try {
-      final remoteResult = await _gitDir!.runCommand([
+      final remoteResult = await _runGitCommandSafely([
         'remote',
         'get-url',
         _remoteName,
