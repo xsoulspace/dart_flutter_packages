@@ -4,6 +4,10 @@ All notable changes to this package will be documented in this file.
 
 ## Unreleased
 
+- Added provisioning contract: `ProvisionableInferenceClient`,
+  `ProvisionConstraints`, `ProvisionProgress`, `ProvisionPhase`,
+  `ModelPurpose`, `ModelHandle` (`src/inference_provisioning.dart`).
+  Local providers adopt it optionally; cloud providers are unaffected.
 - Extended `InferenceClient` with lifecycle methods:
   `refreshAvailability()` and `resetAvailabilityCache()`.
 - Added request preflight validation via `validateInferenceRequest`.

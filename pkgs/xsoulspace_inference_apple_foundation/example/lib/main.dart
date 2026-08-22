@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:xsoulspace_inference_apple_foundation/xsoulspace_inference_apple_foundation.dart';
+import 'package:xsoulspace_inference_apple_foundation/xsoulspace_inference_apple_foundation_flutter.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 // ecsly types are re-exported via xsoulspace_inference_core

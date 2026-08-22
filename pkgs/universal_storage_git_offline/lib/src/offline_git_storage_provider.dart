@@ -66,6 +66,15 @@ class OfflineGitStorageProvider extends StorageProvider
   @override
   Future<bool> isAuthenticated() async => _isInitialized && _gitDir != null;
 
+  /// Normalizes user-supplied paths so leading/trailing separators and
+  /// duplicate slashes resolve to the same repository object.
+  String _normalizeRelativePath(final String rawPath) => rawPath
+      .trim()
+      .replaceAll(r'\', '/')
+      .replaceAll(RegExp('/+'), '/')
+      .replaceFirst(RegExp('^/'), '')
+      .replaceFirst(RegExp(r'/+$'), '');
+
   @override
   Future<FileOperationResult> createFile(
     final String filePath,
@@ -74,7 +83,7 @@ class OfflineGitStorageProvider extends StorageProvider
   }) async {
     _ensureInitialized();
 
-    final fullPath = path.join(_localPath, filePath);
+    final fullPath = path.join(_localPath, _normalizeRelativePath(filePath));
     final file = File(fullPath);
 
     // Check if file already exists
@@ -113,7 +122,7 @@ class OfflineGitStorageProvider extends StorageProvider
   Future<String?> getFile(final String filePath) async {
     _ensureInitialized();
 
-    final fullPath = path.join(_localPath, filePath);
+    final fullPath = path.join(_localPath, _normalizeRelativePath(filePath));
     final file = File(fullPath);
 
     if (!file.existsSync()) {
@@ -136,7 +145,7 @@ class OfflineGitStorageProvider extends StorageProvider
   }) async {
     _ensureInitialized();
 
-    final fullPath = path.join(_localPath, filePath);
+    final fullPath = path.join(_localPath, _normalizeRelativePath(filePath));
     final file = File(fullPath);
 
     if (!file.existsSync()) {
@@ -169,7 +178,7 @@ class OfflineGitStorageProvider extends StorageProvider
   }) async {
     _ensureInitialized();
 
-    final fullPath = path.join(_localPath, filePath);
+    final fullPath = path.join(_localPath, _normalizeRelativePath(filePath));
     final file = File(fullPath);
 
     if (!file.existsSync()) {
@@ -196,7 +205,7 @@ class OfflineGitStorageProvider extends StorageProvider
   Future<List<FileEntry>> listDirectory(final String directoryPath) async {
     _ensureInitialized();
 
-    final fullPath = path.join(_localPath, directoryPath);
+    final fullPath = path.join(_localPath, _normalizeRelativePath(directoryPath));
     final directory = Directory(fullPath);
 
     if (!directory.existsSync()) {
@@ -254,9 +263,8 @@ class OfflineGitStorageProvider extends StorageProvider
     _ensureInitialized();
 
     if (_remoteUrl.isEmpty) {
-      throw const AuthenticationException(
-        'Remote URL not configured. Cannot sync without remote repository.',
-      );
+      // Offline-first: no remote configured means nothing to replicate.
+      return;
     }
 
     try {

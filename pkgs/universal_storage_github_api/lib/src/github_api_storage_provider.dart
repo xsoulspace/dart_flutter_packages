@@ -24,7 +24,13 @@ import 'package:universal_storage_interface/universal_storage_interface.dart';
 class GitHubApiStorageProvider extends StorageProvider
     implements VersionControlService, RemoteEngine {
   /// {@macro github_api_storage_provider}
-  GitHubApiStorageProvider();
+  ///
+  /// [githubClient] is optional and intended for testing: inject a client
+  /// pointed at a fake/local endpoint to run the conformance suite without
+  /// network access or real credentials.
+  GitHubApiStorageProvider({final GitHub? githubClient})
+    : _injectedGithub = githubClient;
+  final GitHub? _injectedGithub;
   late GitHubApiConfig _config;
   GitHub? _github;
   String? get _authToken => _config.authToken;
@@ -62,7 +68,8 @@ class GitHubApiStorageProvider extends StorageProvider
     _config = config;
 
     // Initialize GitHub client with the provided token
-    _github = GitHub(auth: Authentication.withToken(_authToken));
+    _github =
+        _injectedGithub ?? GitHub(auth: Authentication.withToken(_authToken));
 
     // Verify repository access
     await _initializeRepository();

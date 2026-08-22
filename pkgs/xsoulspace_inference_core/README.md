@@ -53,6 +53,11 @@ await HarnessLoop(world: world).runUntilIdle();
 - `InferenceClient.supportedTasks`
 - `InferenceClient.refreshAvailability`
 - `InferenceClient.resetAvailabilityCache`
+- `ProvisionableInferenceClient` — optional capability for local providers:
+  purpose-driven `ensureReady` with `ProvisionConstraints` (consent, network
+  policy, size caps) and a `ProvisionProgress` stream for UI
+- `ModelPurpose`, `ModelHandle`, `ProvisionConstraints`, `ProvisionProgress`,
+  `ProvisionPhase`
 - `InferenceReadinessProbe`
 - `InferenceReadinessSnapshot`
 - `InferenceReadinessIssue`
@@ -67,6 +72,28 @@ await HarnessLoop(world: world).runUntilIdle();
 - `validateSchemaDefinition`
 - `validateJsonAgainstSchema`
 - `normalizeTranscript`
+
+## Local model provisioning
+
+Providers whose models must be downloaded (Gemma, Whisper, Sherpa) implement
+`ProvisionableInferenceClient`. Core stays provider-agnostic: it defines only
+the purpose key, the constraint shape, and the progress contract.
+
+```dart
+final client = someLocalClient; // implements InferenceClient + ProvisionableInferenceClient
+final ready = await client.ensureReady(
+  const ModelPurpose('structured_tool_use'),
+  constraints: const ProvisionConstraints(
+    maxDownloadBytes: 3 << 30,
+    requireUserConsent: true,
+    userConsentGranted: true,
+  ),
+);
+```
+
+Defaults are conservative: consent is required and no download starts without
+it. Cloud providers never implement this interface — provisioning is a local-
+provider concern, not part of `InferenceClient`.
 
 ## Why this package exists
 

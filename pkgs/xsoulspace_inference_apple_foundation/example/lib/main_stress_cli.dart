@@ -23,7 +23,8 @@ library;
 import 'dart:io';
 
 import 'package:flutter/widgets.dart';
-import 'package:xsoulspace_inference_apple_foundation/xsoulspace_inference_apple_foundation.dart';
+
+import 'package:xsoulspace_inference_apple_foundation/xsoulspace_inference_apple_foundation_flutter.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import 'cli/stress_cli_app.dart';

@@ -142,6 +142,38 @@ The harness never hangs on a failing backend:
 - In-flight generation tasks are failed by a timeout sweeper after
   `AgencyPolicy.taskTimeout` (default 5 min; `Duration.zero` disables).
 
+## Local model provisioning (Gemma and other on-device providers)
+
+Local providers implement the optional `ProvisionableInferenceClient` on top
+of `InferenceClient`. Apps touch one call:
+
+```dart
+final client = GemmaFlutterInferenceClient();
+client.provisionProgress.listen((p) => updateUi(p.phase, p.percent));
+
+final ready = await client.ensureReady(
+  const ModelPurpose('structured_tool_use'),
+  constraints: ProvisionConstraints(
+    maxDownloadBytes: 3 << 30,
+    requireUserConsent: true,
+    userConsentGranted: userAccepted,
+    isNetworkAllowed: isWifiOnly,
+  ),
+);
+```
+
+Rules:
+
+- **Downloads are explicit.** Never trigger provisioning from inside a
+  schedule or system. The host app decides when a multi-GB download starts.
+- **Defaults block.** `requireUserConsent` defaults to true; without consent
+  you get `user_consent_required`, not a silent download.
+- **`ensureReady` is idempotent.** A ready model returns immediately; call it
+  at startup or before spawning actors.
+- **Purposes are stable strings** (`structured_tool_use`, `chat_narrative`,
+  `summarization`). Providers map purposes to concrete artifacts in their own
+  catalogs; core never knows model filenames.
+
 ## Escalation tiers
 
 Models carry an escalation rank: `Model(tier: n)` — higher tier = stronger.

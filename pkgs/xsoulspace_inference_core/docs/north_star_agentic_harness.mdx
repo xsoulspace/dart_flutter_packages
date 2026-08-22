@@ -34,7 +34,8 @@ That is the efficiency claim, and it must be measured, not asserted:
    (Phase 4/6)
 3. **Local-first usability** — Apple Foundation Models alone can complete real
    coding tasks; hosted models are an optional escalation, never a dependency.
-   (Phases 3–5)
+   On Android/desktop, Gemma via `xsoulspace_inference_gemma_flutter` serves
+   the same claim through purpose-driven provisioning. (Phases 3–5)
 
 ## What this subsection owns
 
@@ -51,6 +52,11 @@ That is the efficiency claim, and it must be measured, not asserted:
   a2a, a2h, a2h2a; runtime-swappable model backends.
 - **Testable without an LLM** — every part except _write a beat_ is
   deterministic graph logic, exercisable with a mock generator.
+- **Purpose-driven model provisioning** — local providers (Gemma, Whisper,
+  Sherpa) adopt the optional `ProvisionableInferenceClient` contract:
+  `ensureReady(ModelPurpose, constraints)` with consent, network-policy, and
+  size-cap checks plus a progress stream. Downloads are explicit, observable,
+  and app-controlled — never an implicit side effect of an agent decision.
 
 ## The minimal viable standard
 
