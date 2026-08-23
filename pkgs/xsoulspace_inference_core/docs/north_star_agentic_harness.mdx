@@ -50,6 +50,10 @@ That is the efficiency claim, and it must be measured, not asserted:
   beats produced only by deliberate transforms.
 - **Multi-actor + escapable** — many actors share one deterministic world;
   a2a, a2h, a2h2a; runtime-swappable model backends.
+- **Extensibility without core change** — tools, decision policies, skills,
+  MCP servers, workflows enter through exactly five seams (decide / act /
+  touch world / see / persist), each individually conformance-tested and
+  reusable — the modding model. See [ADR 0007](../../../docs/decisions/0007_extensibility_seams_and_conformance.md).
 - **Testable without an LLM** — every part except _write a beat_ is
   deterministic graph logic, exercisable with a mock generator.
 - **Purpose-driven model provisioning** — local providers (Gemma, Whisper,
@@ -95,13 +99,17 @@ ends with a measurable artifact — no phase is done on vibes.
 | 1   | **Docs & North Star**                  | This file + `docs/agent/PLAN.md` rewritten; claims separated from proofs.                                                                                                                       | Alignment                               |
 | 2   | **Long-horizon scaling benchmark** ✅  | Scripted 1,000-decision run (mock handler): flatness **1.07x**, latency growth **1.92x** over a 1000-beat graph, budget never exceeded. CI-gated.                                               | Context-boundedness at scale — proven   |
 | 3   | **Streaming through FFI bridge** ✅    | `xs_fm_generate_stream_async` in Swift + `streamStructuredText` on the native client. TTFT measured on hardware; multi-line deltas verified. Smoke: `dart run bin/stream_smoke.dart`.           | Local-model UX viability — proven       |
-| 4   | **20-task coding suite vs pi**         | Fixed task set (edit/refactor/search/tool-chain) with pass/fail checks, run against real AFM; same tasks through pi with a comparable model. Table: pass rate, tokens/task, wall-clock, $/task. | Task completion + tokens-per-task claim |
-| 5   | **Concurrency gating in AgencyPolicy** | Backend-declared max in-flight requests gates agency grants; no silent queueing on serial backends (AFM). Timeout sweeper stops firing false positives.                                         | Correct multi-actor behavior on-device  |
-| 6   | **Snapshot/restore + baseline table**  | World snapshot/restore (threads, beats, facet index rebuild) → CLI restart survival. Final comparison table published.                                                                          | CLI parity + the winning numbers        |
+| 4   | **20-task coding suite vs pi**         | Fixed task set (edit/refactor/search/tool-chain) with pass/fail checks, run against real AFM; same tasks through pi driving the harness as an MCP/ACP server. Table: pass rate, tokens/task, wall-clock, $/task, escalation rate. | Task completion + tokens-per-task claim |
+| 5   | **Concurrency gating in AgencyPolicy** ✅ | `Model.maxInFlight` gates agency grants per resolved model (`grantAgencySystem`); `_spawn` CLI command battle-tests multi-actor under serial AFM. Timeout-sweeper false positives bounded by per-model budget. | Correct multi-actor behavior on-device  |
+| 6   | **Snapshot/restore + baseline table**  | World snapshot/restore via `ecsly_serializable` + `universal_storage` (ADR 0007 §5); facet index rebuilt from restored beats; CLI restart survival. Final comparison table published.          | CLI parity + the winning numbers        |
 
 ## Extra notes
 
 1. **Beats grow like a book.** They don't "need compaction" in the general sense. Compaction made sense only because we framed memory as a per-actor list that must shrink.
+1b. **Summarization is not a harness feature.** Projection over beat threads is
+   the memory mechanism. Text summarization may exist only as a *reduction
+   transform* — classify/structurize long text into beats with facets. It
+   feeds the graph; it never replaces it (ADR 0007 §Context).
 2. **The projection (situation) is what the actor sees, not "memory."** The actor's entire reality _is_ the situation you hand it. "Memory" is just one flavor of projection — "project a past I'm entitled to."
 3. **Projection is ray-tracing, not summarization.** You cast a ray from (actor + scene + props + co-actors + question + keywords) and collect only the beats that ray hits. Everything else is literally dark. You never "decide what to keep in memory" — you decide what to _render_.
 4. **Situation can be projected for anything** — an actor, a prop, a scene, a beat, a thread, or a subset. The projection machinery is one generic thing, parameterized by subject + viewpoint.

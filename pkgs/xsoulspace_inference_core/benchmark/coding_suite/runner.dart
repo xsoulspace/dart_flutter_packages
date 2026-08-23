@@ -114,6 +114,8 @@ class CodingSuiteRunner {
     required this.buildHandler,
     this.jailParent,
     this.modelId = const ModelId('suite-model'),
+    this.modelName = DefaultModelNames.appleFoundation,
+    this.router,
     this.maxConcurrent = 1,
     this.maxCheckerRetries = 0,
     this.maxToolRounds = 16,
@@ -133,6 +135,16 @@ class CodingSuiteRunner {
 
   /// Model id registered in the router for the run's single model.
   final ModelId modelId;
+
+  /// Registered [Model.name] — must match a key in the handler's router
+  /// `inferenceClientsBuilders` (e.g. [DefaultModelNames.appleFoundation] for
+  /// the AFM bin, [OpenRouterModelNames.openRouter] for OpenRouter).
+  final ModelName modelName;
+
+  /// Shared router: registered as [ModelRouterResource] AND used by the
+  /// host-built handler, so model resolution cannot desynchronize. When null
+  /// a fresh empty router is created (scripted runs without real backends).
+  final ModelRouter? router;
 
   /// Concurrency gate passed to [AgencyPolicy]. AFM is serial on-device;
   /// keep at 1 for fair single-actor measurements.
@@ -175,10 +187,14 @@ class CodingSuiteRunner {
 
       // Build the world exactly like the production example path.
       final world = World()..addPlugin(AgentPlugin());
-      final router = ModelRouter(inferenceClientsBuilders: {});
+      // Use the host-provided router when given so the handler and the
+      // resource registry see the SAME builders + model registry. Two
+      // routers would desynchronize: the handler's fallback Model defaults
+      // to appleFoundation and silently misses backend-specific clients.
+      final router = this.router ?? ModelRouter(inferenceClientsBuilders: {});
       router.models[modelId] = Model(
         id: modelId,
-        name: DefaultModelNames.appleFoundation,
+        name: modelName,
       );
       world
         ..upsertResource(ModelRouterResource(router))

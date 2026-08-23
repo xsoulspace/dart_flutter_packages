@@ -114,7 +114,8 @@ Fixed task set (file edit, multi-file refactor, search-then-edit, tool chains)
 with deterministic pass/fail checks. Run against real AFM; run the same tasks
 through pi driving the harness as an MCP/ACP server (ADR 0007 §3) with a
 comparable hosted model. Output: pass rate, tokens/task, wall-clock, $/task.
-This is where the efficiency claim gets its numbers.
+This is where the efficiency claim gets its numbers. pi-extension reuse is
+decided: no (ADR 0007 §3) — the interop surface is MCP servers.
 
 Additions binding via ADR 0007:
 
@@ -139,12 +140,18 @@ longer match future rays become invisible; measure ray recall under vocabulary
 drift. This is the known failure mode of keyword-facet retrieval; it must be
 measured, not assumed away.
 
-## Phase 5 — Concurrency gating in AgencyPolicy
+## Phase 5 — Concurrency gating in AgencyPolicy (done)
 
-AFM serializes requests on-device. Add backend-declared max-in-flight to
-`AgencyPolicy`; agency grants gate on it, and `taskTimeout` scales with queue
-depth so the timeout sweeper stops firing false positives on serial backends.
-Prevents invisible queueing when many actors act concurrently.
+AFM serializes requests on-device. Landed:
+
+- `Model.maxInFlight` (default 1) — backend-declared per-model concurrency.
+- `grantAgencySystem` gates per resolved model: in-flight counts come from
+  awaiting actors' bound models; grants respect escalation-aware resolution;
+  the global `AgencyPolicy.maxConcurrent` cap still applies (CLI: 4).
+- CLI `_spawn <prompt>` command spawns additional actors for multi-actor
+  battle-testing; verified two actors serialize correctly under AFM's 1.
+- Follow-up (small): scale `taskTimeout` with queue depth so the timeout
+  sweeper never fires false positives on serial backends.
 
 ## Phase 5b — Seam conformance suites
 

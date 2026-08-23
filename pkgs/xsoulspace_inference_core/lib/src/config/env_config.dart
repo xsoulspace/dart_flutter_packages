@@ -67,6 +67,21 @@ class EnvConfig {
   static String defaultLocalPath() =>
       '${Directory.current.path}/.xsoulspace/config.json';
 
+  /// Discover the nearest `.xsoulspace/config.json` by walking up from
+  /// [start] (default: current directory) — the same convention as git's
+  /// repo-root search, so tools work from any subdirectory of a project.
+  /// Returns null when no ancestor owns a config.
+  static String? discoverLocalPath({String? start}) {
+    var dir = Directory(start ?? Directory.current.path).absolute.path;
+    while (true) {
+      final candidate = '$dir/.xsoulspace/config.json';
+      if (File(candidate).existsSync()) return candidate;
+      final parent = File(dir).parent.path;
+      if (parent == dir) return null;
+      dir = parent;
+    }
+  }
+
   static String _home() {
     final home =
         Platform.environment['HOME'] ??
@@ -86,7 +101,8 @@ class EnvConfig {
     void Function(String path, Object error)? onCorrupt,
   }) async {
     final gp = globalPath ?? defaultGlobalPath();
-    final lp = localPath ?? defaultLocalPath();
+    final lp =
+        localPath ?? discoverLocalPath() ?? defaultLocalPath();
     final handler = onCorrupt ??
         (path, error) => stderr.writeln(
               'warning: skipping malformed config $path ($error)',

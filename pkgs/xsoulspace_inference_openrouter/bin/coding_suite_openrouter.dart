@@ -36,7 +36,7 @@ Future<void> main(List<String> args) async {
   var resume = false;
   // Small, cheap, tool-capable default — the suite measures *agentic* quality,
   // not frontier-model ceiling. Override with --model for anything else.
-  var model = 'z-ai/glm-4.5-air:free';
+  var model = '';
   var apiKey = Platform.environment['OPENROUTER_API_KEY'] ?? '';
   for (var i = 0; i < args.length; i++) {
     switch (args[i]) {
@@ -63,6 +63,12 @@ Future<void> main(List<String> args) async {
     }
   }
 
+  if (model.isEmpty) {
+    // --model flag wins; otherwise the saved local/global config.
+    final config = await EnvConfig.load();
+    model = config.get('openrouter.model') ?? 'z-ai/glm-4.5-air:free';
+  }
+
   if (apiKey.isEmpty) {
     // Fall through to saved config (local project scope, then global).
     final config = await EnvConfig.load();
@@ -84,20 +90,20 @@ Future<void> main(List<String> args) async {
   print('Loaded ${tasks.length} tasks from $tasksDir');
   print('Backend: openrouter — model: $model');
 
+  // ONE router shared by handler and runner — model resolution cannot
+  // desynchronize (see CodingSuiteRunner.router doc).
+  final sharedRouter = ModelRouter(
+    inferenceClientsBuilders: {
+      OpenRouterModelNames.openRouter: () => OpenRouterInferenceClient(
+            apiKey: apiKey,
+            defaultModel: model,
+          ),
+    },
+  );
+
   GenerationHandler buildHandler(CodingTask task) {
-    // Fresh client per task keeps HTTP state isolated between runs.
-    final taskClient = OpenRouterInferenceClient(
-      apiKey: apiKey,
-      defaultModel: model,
-    );
     return StructuredToolDecisionHandler(
-      inner: DefaultGenerationHandler(
-        router: ModelRouter(
-          inferenceClientsBuilders: {
-            OpenRouterModelNames.openRouter: () => taskClient,
-          },
-        ),
-      ),
+      inner: DefaultGenerationHandler(router: sharedRouter),
     );
   }
 
@@ -111,7 +117,9 @@ Future<void> main(List<String> args) async {
     maxCheckerRetries: retries,
     maxToolRounds: maxToolRounds,
     resumeFromTrace: resume ? tracePath : null,
+    router: sharedRouter,
     backendLabel: 'openrouter',
+    modelName: OpenRouterModelNames.openRouter,
     modelLabel: model,
   ).runAll(tasks, tracePath: tracePath, filter: filter);
 
@@ -131,9 +139,14 @@ class _LoggingHandler implements GenerationHandler {
     World world,
     ActorGenerateRequest request,
   ) async {
-    final response = await inner.generate(world, request);
-    final names = response.toolCalls.map((t) => t.name.value).toList();
-    print('[decision] structured=${response.structuredOutput} $names');
-    return response;
+    try {
+      final response = await inner.generate(world, request);
+      final names = response.toolCalls.map((t) => t.name.value).toList();
+      print('[decision] structured=${response.structuredOutput} $names');
+      return response;
+    } on Object catch (e) {
+      print('[decision] THREW: $e');
+      rethrow;
+    }
   }
 }
