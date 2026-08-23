@@ -7,7 +7,7 @@ import 'package:github/github.dart' as gh;
 import '../exceptions/oauth_exceptions.dart';
 import '../models/models.dart';
 import '../services/repository_service.dart';
-import 'github_oauth_provider.dart';
+import 'github_device_flow_auth_provider.dart';
 
 /// {@template github_repository_service}
 /// GitHub repository management service
@@ -17,7 +17,7 @@ class GitHubRepositoryService implements RepositoryService {
   GitHubRepositoryService(this._oauthProvider);
 
   /// The OAuth provider.
-  final GitHubOAuthProvider _oauthProvider;
+  final GithubDeviceFlowAuthProvider _oauthProvider;
 
   /// The GitHub client.
   gh.GitHub? _github;
@@ -211,15 +211,15 @@ class GitHubRepositoryService implements RepositoryService {
       throw const AuthenticationException('No GitHub credentials found');
     }
 
-    // Use the HTTP client from the OAuth provider
-    final httpClient = await _oauthProvider.getHttpClient();
-    if (httpClient == null) {
-      throw const AuthenticationException(
-        'Failed to get authenticated HTTP client',
-      );
+    // Authenticate the GitHub client directly with the stored token.
+    final credentials = await _oauthProvider.getStoredCredentials();
+    if (credentials == null || credentials.accessToken.isEmpty) {
+      throw const AuthenticationException('No GitHub credentials found');
     }
 
-    _github = gh.GitHub(client: httpClient);
+    _github = gh.GitHub(
+      auth: gh.Authentication.withToken(credentials.accessToken.value),
+    );
     return _github!;
   }
 
