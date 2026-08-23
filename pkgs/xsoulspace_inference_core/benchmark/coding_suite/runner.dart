@@ -220,6 +220,13 @@ class CodingSuiteRunner {
         tokensUsed += situation.tokensUsed;
       }
       final toolCalls = <String>[];
+      stdout.writeln(
+        '  [debug] trc=${world.query<ToolResultContent>().length} '
+        'bs=${world.query<BeatStatus>().length} '
+        'tc=${world.query<TextContent>().length} '
+        'toolCallEvtSent=${world.events.hasRegistered<ToolCallEvent>() ? world.events.stats<ToolCallEvent>().sent : 'n/a'} '
+        'respSent=$responsesSent()',
+      );
       for (final record
           in world.query3<ToolResultContent, BeatStatus, TextContent>()) {
         toolCalls.add(record.$2.name);

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:meta/meta.dart';
+import 'package:synchronized/synchronized.dart';
 import 'package:universal_storage_interface/universal_storage_interface.dart';
 
 /// Local operation type staged in namespace outbox.
@@ -255,12 +256,22 @@ abstract interface class SyncQueueStore {
     required final StorageService service,
     required final SyncQueueState state,
   });
+
+  /// Atomically reads, transforms, and persists the queue state for
+  /// [namespace]. Concurrent callers are serialized so no update is lost
+  /// (check-then-act between [loadState] and [saveState] is unsafe).
+  Future<SyncQueueState> mutateState({
+    required final StorageNamespace namespace,
+    required final StorageService service,
+    required final Future<SyncQueueState> Function(SyncQueueState state) update,
+  });
 }
 
 /// In-memory queue persistence.
 final class InMemorySyncQueueStore implements SyncQueueStore {
   final Map<StorageNamespace, SyncQueueState> _states =
       <StorageNamespace, SyncQueueState>{};
+  final Lock _lock = Lock();
 
   @override
   Future<SyncQueueState> loadState({
@@ -289,6 +300,24 @@ final class InMemorySyncQueueStore implements SyncQueueStore {
       appliedEntryIds: List<String>.unmodifiable(state.appliedEntryIds),
     );
   }
+
+  @override
+  Future<SyncQueueState> mutateState({
+    required final StorageNamespace namespace,
+    required final StorageService service,
+    required final Future<SyncQueueState> Function(SyncQueueState state) update,
+  }) async {
+    await _lock.synchronized(() async {
+      final next = await update(_states[namespace] ?? const SyncQueueState());
+      _states[namespace] = SyncQueueState(
+        outbox: List<SyncOutboxEntry>.unmodifiable(next.outbox),
+        deadLetter: List<SyncOutboxEntry>.unmodifiable(next.deadLetter),
+        conflicts: List<SyncConflictEntry>.unmodifiable(next.conflicts),
+        appliedEntryIds: List<String>.unmodifiable(next.appliedEntryIds),
+      );
+    });
+    return _states[namespace]!;
+  }
 }
 
 /// Storage-backed queue store that survives process restarts.
@@ -300,6 +329,10 @@ final class StorageServiceSyncQueueStore implements SyncQueueStore {
 
   final String path;
   final int maxAppliedEntryIds;
+
+  /// Serializes read-modify-write cycles on the queue file so concurrent
+  /// enqueues never lose entries and never race `createFile`.
+  final Lock _mutationLock = Lock();
 
   @override
   Future<SyncQueueState> loadState({
@@ -394,6 +427,18 @@ final class StorageServiceSyncQueueStore implements SyncQueueStore {
       message: 'Persist sync queue state for ${namespace.value}',
     );
   }
+
+  @override
+  Future<SyncQueueState> mutateState({
+    required final StorageNamespace namespace,
+    required final StorageService service,
+    required final Future<SyncQueueState> Function(SyncQueueState state) update,
+  }) => _mutationLock.synchronized(() async {
+    final current = await loadState(namespace: namespace, service: service);
+    final next = await update(current);
+    await saveState(namespace: namespace, service: service, state: next);
+    return next;
+  });
 
   List<String> _boundedAppliedIds(final List<String> ids) {
     final unique = <String>[];

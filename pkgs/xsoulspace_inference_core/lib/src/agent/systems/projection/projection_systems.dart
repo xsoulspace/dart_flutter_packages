@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:ecsly/ecsly.dart';
 
 import '../../data_models/data_models.dart';
+import '../../decisions/decision_flow.dart' show DeferredThinking;
 import '../../events.dart';
 import '../../model_router.dart';
 import '../../narrative/narrative.dart';
@@ -23,12 +24,27 @@ void projectSituationSystem(World world) {
   // Materialize the query results before mutating, since entity.insert()
   // changes archetypes and can invalidate lazy iterators.
   for (final (entity, actor, _) in actorsWithAgency.toList()) {
+    // Deferred thinking (ADR 0005 §5): a "dream" turn gets an expanded cut —
+    // doubled beat cap and budget — so the model can actually reflect over
+    // more history. Still bounded; still measured like any other spend.
+    var effectivePolicy = policy;
+    if (entity.has<DeferredThinking>()) {
+      effectivePolicy = ProjectionPolicy(
+        maxBeats: policy.maxBeats * 2,
+        includePartials: policy.includePartials,
+        greenScreen: policy.greenScreen,
+        maxProps: policy.maxProps,
+        maxCoPresent: policy.maxCoPresent,
+      );
+    }
     final situation = buildSituation(
       world: world,
       entity: entity,
       actor: actor,
-      budget: budget.tokens,
-      policy: policy,
+      budget: entity.has<DeferredThinking>()
+          ? budget.tokens * 2
+          : budget.tokens,
+      policy: effectivePolicy,
       estimator: estimator,
     );
     entity.insert(situation);

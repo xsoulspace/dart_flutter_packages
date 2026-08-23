@@ -41,7 +41,8 @@ class _BuilderPolicy implements DecisionPolicy {
   bool _fires(DecisionContext ctx) => switch (trigger) {
     _TriggerKind.toolResult => ctx.has<ToolResultPendingMarker>(),
     _TriggerKind.error => ctx.has<RetryCount>(),
-    _TriggerKind.tickInterval => interval > 0 && ctx.tick % interval == 0,
+    _TriggerKind.tickInterval =>
+        interval > 0 && ctx.tick > 0 && ctx.tick % interval == 0,
     _TriggerKind.predicate => predicate?.call(ctx) ?? false,
   };
 }

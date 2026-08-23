@@ -267,6 +267,61 @@ func testSchemaMaterialization() {
   }
 #endif
 
+// MARK: - Unit: tool argument extraction
+
+func testExtractArgsJSON() {
+  #if canImport(FoundationModels)
+    if #available(macOS 26.0, *) {
+      // Structure with scalar leaves — the shape that jsonString loses.
+      let content = GeneratedContent(
+        kind: .structure(
+          properties: [
+            "path": GeneratedContent(kind: .string("x.txt")),
+            "content": GeneratedContent(kind: .string("hi")),
+          ],
+          orderedKeys: ["path", "content"]
+        ))
+      do {
+        let json = try extractArgsJSON(from: content)
+        guard let data = json.data(using: .utf8),
+          let obj = try? JSONSerialization.jsonObject(with: data) as? [String: String]
+        else {
+          check("extractArgsJSON structure", false, "unparseable: \(json)")
+          return
+        }
+        check(
+          "extractArgsJSON structure",
+          obj["path"] == "x.txt" && obj["content"] == "hi",
+          "got: \(json)")
+      } catch {
+        check("extractArgsJSON structure", false, "threw: \(error)")
+      }
+
+      // Nested structure must round-trip too (recursion path).
+      let nested = GeneratedContent(
+        kind: .structure(
+          properties: [
+            "inner": GeneratedContent(kind: .structure(
+              properties: ["v": GeneratedContent(kind: .number(3.0))],
+              orderedKeys: ["v"])),
+            "flag": GeneratedContent(kind: .bool(true)),
+          ],
+          orderedKeys: ["inner", "flag"]))
+      do {
+        let json = try extractArgsJSON(from: nested)
+        let obj = try JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any]
+        let inner = obj?["inner"] as? [String: Any]
+        check(
+          "extractArgsJSON nested",
+          (inner?["v"] as? Double) == 3.0 && (obj?["flag"] as? Bool) == true,
+          "got: \(json)")
+      } catch {
+        check("extractArgsJSON nested", false, "threw: \(error)")
+      }
+    }
+  #endif
+}
+
 // MARK: - Entry
 
 @main
@@ -276,6 +331,7 @@ struct TestMain {
 
     testJsonEscaped()
     testSchemaMaterialization()
+    testExtractArgsJSON()
 
     #if canImport(FoundationModels)
       let live = ProcessInfo.processInfo.environment["LIVE"] ?? "1"

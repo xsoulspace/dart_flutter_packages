@@ -66,8 +66,13 @@ Future<void> main(List<String> args) async {
     );
   }
 
+  GenerationHandler debugHandler(CodingTask task) {
+    final innerHandler = buildHandler(task);
+    return _LoggingHandler(innerHandler);
+  }
+
   final result = await CodingSuiteRunner(
-    buildHandler: buildHandler,
+    buildHandler: debugHandler,
     maxCheckerRetries: retries,
   ).runAll(tasks, tracePath: tracePath);
 
@@ -76,4 +81,27 @@ Future<void> main(List<String> args) async {
     File(markdownPath).writeAsStringSync(result.toMarkdown());
   }
   exit(result.passRate == 1 ? 0 : 1);
+}
+
+class _LoggingHandler implements GenerationHandler {
+  _LoggingHandler(this.inner);
+  final GenerationHandler inner;
+
+  @override
+  Future<ActorGenerateResponse> generate(
+    World world,
+    ActorGenerateRequest request,
+  ) async {
+    final response = await inner.generate(world, request);
+    final names = response.toolCalls.map((t) => t.name.value).toList();
+    // ignore: avoid_print
+    stdout.writeln(
+      '[decision] structured=${response.structuredOutput} toolCalls=$names error=${response.error}',
+    );
+    return response;
+  }
+}
+
+extension on String {
+  int clampLength(int lo, int hi) => length > hi ? hi : length < lo ? lo : length;
 }

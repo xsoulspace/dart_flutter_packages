@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Fixed
+
+- fix: `listDirectory` returns names relative to the queried directory.
+- fix: trailing-slash / leading-slash paths are normalized to the same
+  object as their canonical form.
+
 ## [0.1.0-dev.12] - 2026-03-03
 
 - decouple from `universal_storage_sync_utils` to remove Flutter-transitive deps

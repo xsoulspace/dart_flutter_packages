@@ -31,16 +31,18 @@ class StorageService {
     try {
       final existingContent = await _provider.getFile(path);
       if (existingContent != null) {
-        return _provider.updateFile(path, content, commitMessage: message);
+        // Await before returning: a bare `return future` inside `try`
+        // bypasses the catch clauses below in async functions.
+        return await _provider.updateFile(path, content, commitMessage: message);
       } else {
-        return _provider.createFile(path, content, commitMessage: message);
+        return await _provider.createFile(path, content, commitMessage: message);
       }
     } on FileNotFoundException {
-      return _provider.createFile(path, content, commitMessage: message);
+      return await _provider.createFile(path, content, commitMessage: message);
     } on FileAlreadyExistsException {
       // Raced with a concurrent saveFile that created the file between our
       // existence check and create call — fall through to update.
-      return _provider.updateFile(path, content, commitMessage: message);
+      return await _provider.updateFile(path, content, commitMessage: message);
     }
   }
 

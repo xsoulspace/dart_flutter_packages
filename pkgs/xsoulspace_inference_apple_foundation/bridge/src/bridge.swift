@@ -388,7 +388,7 @@ public func xs_fm_generate_stream_async(
     }
 
     func call(arguments: GeneratedContent) async throws -> String {
-      let argsJSON = try arguments.jsonString
+      let argsJSON = try extractArgsJSON(from: arguments)
       XsFmDebug.log("tool call: name=\(name) args=\(argsJSON.prefix(120))")
 
       // Suspend until Dart calls xs_fm_tool_respond for our id.
@@ -447,6 +447,29 @@ public func xs_fm_generate_stream_async(
     }
   }
 #endif
+
+// MARK: - Tool argument extraction
+
+/// `GeneratedContent.jsonString` loses properties for tools whose schema was
+/// built from `DynamicGenerationSchema` (materialized from Dart JSON): it
+/// returns "{}" even when the model supplied arguments. Extract explicitly
+/// from the `.structure` kind instead.
+func extractArgsJSON(from content: GeneratedContent) throws -> String {
+  #if canImport(FoundationModels)
+    if case .structure(let props, _) = content.kind {
+      let dict = try props.mapValues { value -> Any in
+        // Each property value is itself GeneratedContent; decode its
+        // fragment JSON (scalars encode as bare literals).
+        let s = try extractArgsJSON(from: value)
+        return try JSONSerialization.jsonObject(
+          with: Data(s.utf8), options: [.fragmentsAllowed])
+      }
+      let data = try JSONSerialization.data(withJSONObject: dict)
+      return String(data: data, encoding: .utf8) ?? "{}"
+    }
+  #endif
+  return try content.jsonString
+}
 
 // MARK: - JSON helpers
 

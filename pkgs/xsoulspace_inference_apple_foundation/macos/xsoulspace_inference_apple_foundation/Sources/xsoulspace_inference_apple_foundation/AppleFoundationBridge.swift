@@ -218,8 +218,9 @@ struct DartTool: Tool {
     }
 
     func call(arguments: GeneratedContent) async throws -> String {
-        // 1. Turn GeneratedContent into something JSON-serializable
-        let argsJSON = try arguments.jsonString  // or your own encoder
+        // jsonString loses properties for dynamic-schema tools; extract
+        // explicitly from the structure kind instead.
+        let argsJSON = try extractArgsJSON(from: arguments)
 
         // 2. Call Dart and wait for the result
         let result = try await invoker.invoke(

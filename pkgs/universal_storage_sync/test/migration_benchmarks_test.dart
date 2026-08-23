@@ -205,6 +205,15 @@ void main() {
             '${stopwatch.elapsedMilliseconds}ms '
             '(${(count / (stopwatch.elapsedMilliseconds / 1000)).toStringAsFixed(1)} files/sec)',
           );
+          // Soft regression gate: generous threshold to catch catastrophic
+          // slowdowns without CI flakiness.
+          if (count >= 100) {
+            expect(
+              stopwatch.elapsed,
+              lessThan(const Duration(seconds: 2)),
+              reason: 'filesystem migration throughput dropped below 50 files/sec',
+            );
+          }
         } finally {
           await directory.delete(recursive: true);
         }
@@ -355,11 +364,19 @@ void main() {
         final flushStopwatch = Stopwatch()..start();
         await kernel.sync(namespace: StorageNamespace.settings);
         flushStopwatch.stop();
+        final writeP50 = percentile(latencies, 0.5);
         // ignore: avoid_print
         print(
-          '[bench] git_offline batched write p50=${percentile(latencies, 0.5).inMicroseconds}µs '
+          '[bench] git_offline batched write p50=${writeP50.inMicroseconds}µs '
           'p95=${percentile(latencies, 0.95).inMicroseconds}µs '
           '(n=100; sync+flush ${flushStopwatch.elapsedMilliseconds}ms)',
+        );
+        // Soft regression gate: batching must keep write p50 well under
+        // the ~150ms unbatched per-commit cost.
+        expect(
+          writeP50,
+          lessThan(const Duration(milliseconds: 100)),
+          reason: 'batched git write p50 regressed above 100ms',
         );
       } finally {
         await directory.delete(recursive: true);

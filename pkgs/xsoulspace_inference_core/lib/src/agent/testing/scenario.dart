@@ -22,6 +22,7 @@ import '../narrative/narrative.dart';
 import '../observation/observation.dart';
 import '../resources/resources.dart';
 import '../schedules.dart';
+import '../systems/decision_flow_system.dart' show decisionPrecisionByPolicy;
 import '../systems/projection/projection_systems.dart' show fragmentText;
 import '../tools/tool_registry.dart';
 import '../world_setup.dart';
@@ -198,6 +199,7 @@ class ScenarioRunner {
       prunedThreads: pruned,
       mergedThreads: merged,
       telemetry: collector.report(),
+      policyPrecision: decisionPrecisionByPolicy(world),
     );
   }
 }

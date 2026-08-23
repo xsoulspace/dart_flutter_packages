@@ -39,6 +39,7 @@ import 'data_models/data_models.dart';
 import 'events.dart';
 import 'resources/resources.dart';
 import 'schedules.dart';
+import 'systems/decision_flow_system.dart' show ToolResultPendingMarker;
 
 /// Non-blocking, concurrent agent harness loop.
 ///
@@ -206,10 +207,19 @@ class HarnessLoop {
     // Unconsumed harness events are pending work by definition.
     final hasPendingEvents = world.events.reader<ToolResultEvent>().isNotEmpty;
 
+    // A pending decision-flow trigger is work: the next AgencyGrant pass
+    // must run to evaluate it (ADR 0005), otherwise runUntilIdle exits with
+    // a continuation decision never opened.
+    final hasPendingFlowTriggers = world
+        .query2<Actor, ToolResultPendingMarker>()
+        .toList()
+        .isNotEmpty;
+
     return !hasOpenDecisions &&
         !hasAgency &&
         !hasAwaiting &&
         !hasInFlightTasks &&
-        !hasPendingEvents;
+        !hasPendingEvents &&
+        !hasPendingFlowTriggers;
   }
 }

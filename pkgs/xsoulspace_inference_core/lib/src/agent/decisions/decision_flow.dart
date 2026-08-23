@@ -7,6 +7,36 @@
 /// `decisionFlowSystem` collects drafts and applies them. This makes policy
 /// evaluation a plain function call — fixture state in, draft out — and
 /// agency precision attributable per policy via [DecisionOrigin].
+///
+/// ## Where each piece is used
+///
+/// - **Host app / CLI** (`main`): build a [DecisionFlow], wrap it in
+///   [DecisionFlowResource], `world.upsertResource(...)` — done. The harness
+///   then routes decisions automatically every tick.
+/// - **Tests**: evaluate policies directly against a fixture world (pure,
+///   no schedules needed) or run full scenarios with a custom flow.
+/// - **Metrics**: after a run, call `decisionPrecisionByPolicy(world)` to get
+///   per-policy agency precision.
+///
+/// ## Minimal end-to-end example (host)
+///
+/// ```dart
+/// final world = World()..addPlugin(AgentPlugin());
+/// world.upsertResource(
+///   DecisionFlowResource(
+///     DecisionFlow([
+///       // 1. ReAct: after a tool result, continue the task.
+///       onToolResult().thenOpen(prompt: 'Tool result received. Continue.'),
+///       // 2. Proactive: idle actor with a goal gets nudged.
+///       when((c) => c.has<Goal>())
+///           .thenOpen(prompt: 'Pursue your goal.'),
+///       // 3. Periodic reflection ("dreaming") — costs real tokens.
+///       everyNTicks(600).thenDream('Review progress; consider delegating'),
+///     ]),
+///   ),
+/// );
+/// // ... spawn scene/actors as usual; HarnessLoop routes decisions.
+/// ```
 library;
 
 import 'package:ecsly/ecsly.dart';
@@ -21,6 +51,14 @@ part 'builders.dart';
 ///
 /// Deliberately narrow: no mutation, no clocks, no I/O. Determinism is by
 /// construction — the same world state yields the same evaluation.
+///
+/// ```dart
+/// // Inside a policy's evaluate():
+/// if (ctx.has<Goal>() && ctx.get<Goal>()!.text.contains('urgent')) {
+///   return DecisionDraft(prompt: 'Handle the urgent goal now.', priority: 10);
+/// }
+/// final peers = ctx.coPresentActors(); // share decisions with these
+/// ```
 class DecisionContext {
   DecisionContext({
     required this.actor,
@@ -74,6 +112,16 @@ class DecisionDraft {
   final List<AgentId> shareWith;
 }
 
+/// ```dart
+/// // Escalate a stuck task to a stronger model and loop in a teammate:
+/// DecisionDraft(
+///   prompt: 'Task failed twice; re-plan from scratch.',
+///   priority: 10,          // wins agency contention this tick
+///   escalate: true,        // routed to a higher model tier
+///   shareWith: [teammateId], // teammate sees this decision's context
+/// )
+/// ```
+
 /// Marker: which policy created this actor's current decision. Written by
 /// the applying system; read by metrics for per-policy agency precision.
 class DecisionOrigin implements Component {
@@ -88,6 +136,26 @@ class DeferredThinking implements Component {
 }
 
 /// A named, deterministic decision-creation rule.
+///
+/// Implement this for logic the builders can't express; prefer builders for
+/// common cases.
+///
+/// ```dart
+/// class StuckTaskPolicy implements DecisionPolicy {
+///   @override
+///   String get name => 'stuck_task';
+///
+///   @override
+///   DecisionDraft? evaluate(DecisionContext ctx) {
+///     final retries = ctx.get<RetryCount>()?.value ?? 0;
+///     if (retries < 2) return null; // not stuck yet
+///     return DecisionDraft(
+///       prompt: 'Multiple failures — re-plan from scratch.',
+///       escalate: true,
+///     );
+///   }
+/// }
+/// ```
 abstract class DecisionPolicy {
   String get name;
 
@@ -118,8 +186,18 @@ class DecisionFlow {
   }
 }
 
-/// Resource holding the active flow. Hosts replace it to re-route decisions;
-/// tests swap it per scenario.
+/// Resource holding the active flow. Installed by [AgentPlugin] with
+/// [DecisionFlow.defaultReAct]; hosts replace it to re-route decisions.
+///
+/// ```dart
+/// // Swap routing at runtime (e.g. user toggles "proactive mode"):
+/// world.upsertResource(
+///   DecisionFlowResource(DecisionFlow([
+///     ReActContinuationPolicy(),
+///     everyNTicks(300).thenDream('Self-review'),
+///   ])),
+/// );
+/// ```
 class DecisionFlowResource extends Resource {
   DecisionFlowResource(this.flow);
   DecisionFlow flow;

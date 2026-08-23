@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+
+- feat: `SyncAvailability` tri-state (`none` / `always` / `withRemoteConfig`)
+  added to `StorageCapabilities` and profile negotiation.
+- feat: default `declaredCapabilities` (`StorageCapabilities.none`) on
+  `StorageProvider` so providers only override what they support.
+
+### Fixed
+
+- fix: **saveFile race guard** — inside async functions a bare
+  `return future` bypasses surrounding `try/on` handlers; provider results
+  are now awaited before returning so the
+  `on FileAlreadyExistsException → updateFile` fallback actually engages
+  when concurrent savers race between existence check and create.
+
+### Breaking changes
+
+- Removed dead mixins `RemoteSyncCapable`, `VersionControlCapable`,
+  and `AuthenticatedProvider`; capability declaration now flows exclusively
+  through `StorageCapabilities` / `declaredCapabilities`.
+
 ## [0.1.0-dev.12] - 2026-03-28
 
 - chore: update dependencies

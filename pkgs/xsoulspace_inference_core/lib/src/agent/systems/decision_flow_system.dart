@@ -11,6 +11,9 @@ import 'package:ecsly/ecsly.dart';
 
 import '../data_models/data_models.dart';
 import '../decisions/decision_flow.dart';
+import '../model_router.dart' show AgentId;
+import '../narrative/narrative.dart';
+import 'projection/relevance.dart' show keywordsOf;
 
 /// Marker written by processToolResultsSystem when a fresh tool result landed
 /// and continuation budget remains; consumed (cleared) here each tick.
@@ -21,11 +24,9 @@ class ToolResultPendingMarker implements Component {
 /// Evaluate the active [DecisionFlow] for every actor and apply drafts.
 void decisionFlowSystem(World world) {
   final resource = world.getResource<DecisionFlowResource>();
-  var tick = 0;
-  for (final (_, _, scene) in world.query2<Scene, SceneFrame>()) {
-    tick = scene.frame;
-    break;
-  }
+  // Injected time: HarnessLoop advances this every tick via
+  // syncScheduleExecutionFrame — deterministic, no wall clock.
+  final tick = world.getResource<ScheduleExecutionPolicyResource>().frameId;
 
   for (final (entity, _, _) in world.query2<Actor, ActorModel>().toList()) {
     // Never stack a mechanical decision on top of an existing one.
@@ -46,6 +47,14 @@ void decisionFlowSystem(World world) {
     );
     entity.insert(DecisionOrigin(result.policyName));
     if (draft.deferredThinking) entity.insert(const DeferredThinking());
+
+    // Sharing (ADR 0005 §6): write an addressed notification beat into each
+    // target actor's thread so their next projection ray-traces it. The
+    // beat is graph content under existing visibility rules — no special
+    // channel, nothing new to invariant-check.
+    for (final targetId in draft.shareWith) {
+      _shareDecisionBeat(world, entity.entity, draft.prompt, targetId);
+    }
   }
 
   // Clear one-shot trigger markers after evaluation.
@@ -53,6 +62,44 @@ void decisionFlowSystem(World world) {
       in world.query2<Actor, ToolResultPendingMarker>().toList()) {
     entity.remove<ToolResultPendingMarker>();
   }
+}
+
+/// Write a shared decision beat into [targetId]'s first thread.
+void _shareDecisionBeat(
+  World world,
+  Entity originActor,
+  String prompt,
+  AgentId targetId,
+) {
+  // Resolve the target actor entity by agent id.
+  Entity? target;
+  for (final (entity, _, actor) in world.query2<PresentInScene, Actor>()) {
+    if (actor.agentId == targetId) {
+      target = entity.entity;
+      break;
+    }
+  }
+  if (target == null) return;
+
+  final targetEntity = world.getEntity(target).$1;
+  final threads = targetEntity.get<ActorThreads>();
+  if (threads == null || threads.threads.isEmpty) return;
+  final thread = threads.threads.first;
+
+  final beat = world.reserveEmptyEntity().entity;
+  final be = world.getEntity(beat).$1;
+  be.insert(TextContent('Shared decision from a peer: $prompt'));
+  be.insert(BeatStatus(BeatStatusEnum.complete));
+  be.insert(BeatModality(BeatModalityEnum.observation));
+  be.insert(Speaker(originActor));
+  be.insert(BelongsToThread(thread));
+  be.insert(AddressedTo(target));
+  indexBeat(
+    world,
+    beat,
+    keywordsOf('Shared decision from a peer: $prompt'),
+    thread: thread,
+  );
 }
 
 /// Per-policy agency precision from a finished run's world state.
@@ -64,8 +111,9 @@ Map<String, ({int created, int answered})> decisionPrecisionByPolicy(
   World world,
 ) {
   final stats = <String, ({int created, int answered})>{};
-  for (final (entity, _, origin, _)
-      in world.query3<Actor, DecisionOrigin, Actor>().toList()) {
+  for (final record in world.query2<Actor, DecisionOrigin>().toList()) {
+    final entity = record.$1;
+    final origin = record.$3;
     void bump(String name, {required bool answered}) {
       final cur = stats[name] ?? (created: 0, answered: 0);
       stats[name] = (

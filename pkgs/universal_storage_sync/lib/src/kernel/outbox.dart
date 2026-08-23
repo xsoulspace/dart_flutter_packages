@@ -33,18 +33,12 @@ final class OutboxManager {
     required final FileOperationResult result,
   }) async {
     final now = DateTime.now().toUtc();
-    final queueState = await _queueStore.loadState(
-      namespace: namespaceProfile.namespace,
-      service: service,
-    );
-
     final contentDigest = operation == SyncQueueOperationType.write
         ? hashString(content)
         : '';
     final operationSeed = operation == SyncQueueOperationType.write
         ? (result.revisionId.isNotEmpty ? result.revisionId : contentDigest)
         : path;
-
     final entryId = deterministicEntryId(
       namespace: namespaceProfile.namespace,
       operation: operation,
@@ -70,18 +64,22 @@ final class OutboxManager {
       metadata: metadata,
     );
 
-    final nextOutbox = <SyncOutboxEntry>[
-      for (final entry in queueState.outbox)
-        if (entry.id != newEntry.id &&
-            !(entry.path == newEntry.path && entry.operation == operation))
-          entry,
-      newEntry,
-    ]..sort((final a, final b) => a.createdAtUtc.compareTo(b.createdAtUtc));
-
-    await _queueStore.saveState(
+    var nextOutboxLength = 0;
+    // Serialize load-modify-save so concurrent enqueues never lose entries.
+    await _queueStore.mutateState(
       namespace: namespaceProfile.namespace,
       service: service,
-      state: queueState.copyWith(outbox: nextOutbox),
+      update: (final queueState) async {
+        final nextOutbox = <SyncOutboxEntry>[
+          for (final entry in queueState.outbox)
+            if (entry.id != newEntry.id &&
+                !(entry.path == newEntry.path && entry.operation == operation))
+              entry,
+          newEntry,
+        ]..sort((final a, final b) => a.createdAtUtc.compareTo(b.createdAtUtc));
+        nextOutboxLength = nextOutbox.length;
+        return queueState.copyWith(outbox: nextOutbox);
+      },
     );
 
     _observations.emit(
@@ -92,7 +90,7 @@ final class OutboxManager {
       metadata: <String, dynamic>{
         'outbox_entry_id': entryId,
         'operation': operation.name,
-        'outbox_pending': nextOutbox.length,
+        'outbox_pending': nextOutboxLength,
       },
     );
 
@@ -490,79 +488,78 @@ Future<void> applyDecisionToQueues({
   }
 
   final service = await resolver.resolveService(decision.namespace);
-  final currentState = await queueStore.loadState(
+
+  // Serialize load-modify-save so concurrent queue writers never lose updates.
+  await queueStore.mutateState(
     namespace: decision.namespace,
     service: service,
-  );
+    update: (final currentState) async {
+      var conflicts = List<SyncConflictEntry>.from(currentState.conflicts);
+      final outbox = List<SyncOutboxEntry>.from(currentState.outbox);
+      final deadLetter = List<SyncOutboxEntry>.from(currentState.deadLetter);
 
-  var conflicts = List<SyncConflictEntry>.from(currentState.conflicts);
-  final outbox = List<SyncOutboxEntry>.from(currentState.outbox);
-  final deadLetter = List<SyncOutboxEntry>.from(currentState.deadLetter);
+      if (conflictEntryId != null && conflictEntryId.isNotEmpty) {
+        conflicts = conflicts
+            .map(
+              (final entry) => entry.id == conflictEntryId
+                  ? entry.copyWith(
+                      decisionState: targetState,
+                      updatedAtUtc: DateTime.now().toUtc(),
+                      metadata: <String, dynamic>{
+                        ...entry.metadata,
+                        if (note.isNotEmpty) 'decision_note': note,
+                      },
+                    )
+                  : entry,
+            )
+            .toList(growable: false);
 
-  if (conflictEntryId != null && conflictEntryId.isNotEmpty) {
-    conflicts = conflicts
-        .map(
-          (final entry) => entry.id == conflictEntryId
-              ? entry.copyWith(
-                  decisionState: targetState,
-                  updatedAtUtc: DateTime.now().toUtc(),
-                  metadata: <String, dynamic>{
-                    ...entry.metadata,
-                    if (note.isNotEmpty) 'decision_note': note,
-                  },
-                )
-              : entry,
-        )
-        .toList(growable: false);
-
-    if (targetState != DecisionState.needsUserDecision) {
-      conflicts = conflicts
-          .where((final entry) => entry.id != conflictEntryId)
-          .toList(growable: false);
-    }
-  }
-
-  if (outboxEntryId != null && outboxEntryId.isNotEmpty) {
-    final entryIndex = outbox.indexWhere(
-      (final entry) => entry.id == outboxEntryId,
-    );
-    if (entryIndex >= 0) {
-      final entry = outbox[entryIndex];
-      if (targetState == DecisionState.blocked) {
-        outbox.removeAt(entryIndex);
-        deadLetter.add(
-          entry.copyWith(
-            updatedAtUtc: DateTime.now().toUtc(),
-            lastError: note.isEmpty ? 'Blocked by user decision.' : note,
-          ),
-        );
-        observations.emit(
-          type: StorageObservationType.outboxDeadLettered,
-          namespace: decision.namespace,
-          path: entry.path,
-          metadata: <String, dynamic>{
-            'outbox_entry_id': entry.id,
-            'reason': 'decision_blocked',
-          },
-        );
-      } else if (targetState == DecisionState.autoResolved) {
-        outbox[entryIndex] = entry.copyWith(
-          updatedAtUtc: DateTime.now().toUtc(),
-          nextAttemptAtUtc: DateTime.now().toUtc(),
-          lastError: '',
-        );
+        if (targetState != DecisionState.needsUserDecision) {
+          conflicts = conflicts
+              .where((final entry) => entry.id != conflictEntryId)
+              .toList(growable: false);
+        }
       }
-    }
-  }
 
-  await queueStore.saveState(
-    namespace: decision.namespace,
-    service: service,
-    state: currentState.copyWith(
-      outbox: outbox,
-      deadLetter: deadLetter,
-      conflicts: conflicts,
-    ),
+      if (outboxEntryId != null && outboxEntryId.isNotEmpty) {
+        final entryIndex = outbox.indexWhere(
+          (final entry) => entry.id == outboxEntryId,
+        );
+        if (entryIndex >= 0) {
+          final entry = outbox[entryIndex];
+          if (targetState == DecisionState.blocked) {
+            outbox.removeAt(entryIndex);
+            deadLetter.add(
+              entry.copyWith(
+                updatedAtUtc: DateTime.now().toUtc(),
+                lastError: note.isEmpty ? 'Blocked by user decision.' : note,
+              ),
+            );
+            observations.emit(
+              type: StorageObservationType.outboxDeadLettered,
+              namespace: decision.namespace,
+              path: entry.path,
+              metadata: <String, dynamic>{
+                'outbox_entry_id': entry.id,
+                'reason': 'decision_blocked',
+              },
+            );
+          } else if (targetState == DecisionState.autoResolved) {
+            outbox[entryIndex] = entry.copyWith(
+              updatedAtUtc: DateTime.now().toUtc(),
+              nextAttemptAtUtc: DateTime.now().toUtc(),
+              lastError: '',
+            );
+          }
+        }
+      }
+
+      return currentState.copyWith(
+        outbox: outbox,
+        deadLetter: deadLetter,
+        conflicts: conflicts,
+      );
+    },
   );
 }
 
