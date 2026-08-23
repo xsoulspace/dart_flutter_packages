@@ -4,7 +4,9 @@ import 'package:ecsly/ecsly.dart';
 
 import '../data_models/data_models.dart';
 import '../events.dart';
+import '../model_router.dart' show ModelId;
 import '../resources/resources.dart';
+import 'actor_act_system.dart' show resolveEscalatedModel;
 
 /// System 1: Grant agency to actors that have an [OpenDecision].
 ///
@@ -14,12 +16,25 @@ import '../resources/resources.dart';
 /// agency; systems grant it.
 ///
 /// Prioritization: decisions with higher [OpenDecision.priority] or an
-/// [EscalationRequest] are granted first. The number of concurrent grants
-/// is capped by [AgencyPolicy.maxConcurrent] so a crowd of actors doesn't
-/// flood the model pool.
+/// [EscalationRequest] are granted first. Concurrency is gated per model:
+/// each actor's resolved model declares [Model.maxInFlight], and an actor
+/// is granted only while its model has spare in-flight capacity (counted
+/// from awaiting actors). The total is still capped by
+/// [AgencyPolicy.maxConcurrent]. This lets a serial backend (AFM, 1) sit
+/// behind a generous policy while hosted models parallelize.
 void grantAgencySystem(World world) {
   final policy = world.getResource<AgencyPolicy>();
   final actorsWithDecisions = world.query2<Actor, OpenDecision>();
+
+  // In-flight generation count per model id: awaiting actors' bound models.
+  final inflight = <ModelId, int>{};
+  for (final (entity, _, _) in world
+      .query2<Actor, AwaitingResponse>()
+      .toList()) {
+    final model = entity.get<ActorModel>();
+    if (model == null) continue;
+    inflight[model.modelId] = (inflight[model.modelId] ?? 0) + 1;
+  }
 
   // Collect eligible actors (have a decision, no agency, no pending response).
   final eligible = <(WorldEntity, OpenDecision)>[];
@@ -38,10 +53,26 @@ void grantAgencySystem(World world) {
     return (bEsc ? 1 : 0).compareTo(aEsc ? 1 : 0);
   });
 
-  // Grant up to the concurrency cap.
+  // Grant up to the per-model concurrency budget and the global cap.
   var granted = 0;
   for (final (entity, decision) in eligible) {
     if (granted >= policy.maxConcurrent) break;
+
+    final boundModel = entity.get<ActorModel>();
+    if (boundModel == null) continue;
+    final escalate = entity.has<EscalationRequest>() || decision.escalate;
+    final effectiveModel = escalate
+        ? resolveEscalatedModel(world, boundModel)
+        : boundModel;
+    final capacity = world
+        .getResource<ModelRouterResource>()
+        .router
+        .models[effectiveModel.modelId]
+        ?.maxInFlight;
+    final used = inflight[effectiveModel.modelId] ?? 0;
+    if (used >= (capacity ?? 1)) continue; // this backend is saturated
+    inflight[effectiveModel.modelId] = used + 1;
+
     entity.insert(const Agency());
     // Materialize the decision-level escalation flag as a tag so downstream
     // systems (actorAct model resolution) see it without re-reading the

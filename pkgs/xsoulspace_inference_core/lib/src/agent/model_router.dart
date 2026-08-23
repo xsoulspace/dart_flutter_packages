@@ -19,6 +19,7 @@ class Model {
     this.id = ModelId.empty,
     this.name = DefaultModelNames.appleFoundation,
     this.tier = 0,
+    this.maxInFlight = 1,
   });
   static const empty = Model();
   final ModelId id;
@@ -26,6 +27,13 @@ class Model {
 
   /// Escalation rank. 0 = default/local, higher = stronger.
   final int tier;
+
+  /// How many generation requests the backend can run concurrently for
+  /// this model. Declared by the backend's client (e.g. Apple Foundation
+  /// Models serializes requests on-device → 1; hosted APIs typically ≥ 8).
+  /// The agency-grant system sums this across resolved models to derive
+  /// the real concurrency budget instead of a flat count.
+  final int maxInFlight;
 }
 
 /// Collision-free unique id generation.

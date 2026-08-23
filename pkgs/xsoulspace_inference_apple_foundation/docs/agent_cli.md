@@ -36,21 +36,32 @@ dart run bin/agent.dart --no-debug                  # silence native traces
   `StreamingTapResource` / FFI bridge issues.
 - **Tool reliability** — failed writes/reads appear as error results; check
   jail permissions first, then `toolExecutionSystem` timeouts.
+- **Empty tool arguments** — FIXED (was: every native tool call arrived with
+  `arguments = {}`). Two-layer defense: (1) `NativeDartTool` now plumbs the
+  materialized schema instead of always advertising an empty one, and args
+  are extracted explicitly from the `.structure` kind (`extractArgsJSON`) —
+  `GeneratedContent.jsonString` loses properties for dynamic schemas;
+  (2) harness-side guard in `toolExecutionSystem` bounces required-arg-less
+  calls back to the model with a self-healing error. Regressions: live
+  tests E–H in `bridge/tests/BridgeTests.swift`.
 
 ## Ladder to production (Phases 5–6)
 
-### Phase 5 — concurrency gating
+### Phase 5 — concurrency gating (LANDED)
 
-AFM serializes requests on-device (~8s TTFT cold). Today
-`AgencyPolicy.maxConcurrent: 1` in the CLI papers over it. To go multi-actor:
+AFM serializes requests on-device (~8s TTFT cold). Implemented:
 
-1. Add backend-declared max-in-flight to `Model` (e.g. `maxInFlight`), plumbed
-   from the client (`AppleFoundationNativeClient` → 1).
-2. `grantAgencySystem`: grant up to Σ(maxInFlight of resolved models), not a
-   flat count. Queue the rest — they keep their `OpenDecision`.
-3. Battle-test via CLI: spawn a second actor (`_spawn <prompt>` command — add
-   when landing this phase) and watch `_stats` for queue depth and
-   `dropped > 0`.
+1. ✅ `Model.maxInFlight` (default 1) — backend-declared per-model
+   concurrency, set by the CLI (`AppleFoundationNativeClient` → 1).
+2. ✅ `grantAgencySystem` gates per model: in-flight counts come from
+   awaiting actors' bound models; an actor is granted only while its
+   resolved (escalation-aware) model has spare capacity. The global cap is
+   still `AgencyPolicy.maxConcurrent` (CLI: 4) — a serial backend sits
+   behind it while hosted models could parallelize.
+3. ✅ `_spawn <prompt>` REPL command spawns an additional actor (own agent,
+   same jail/tools); its stream is prefixed `[a0]`, `[a1]`, … Watch `_stats`
+   for queue depth and `dropped > 0`. Verified: two actors' writes serialize
+   correctly under `maxInFlight: 1`.
 
 Storage note: no serialization work needed here.
 

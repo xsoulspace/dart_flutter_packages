@@ -56,6 +56,10 @@ Future<void> main(List<String> args) async {
     id: modelId,
     name: DefaultModelNames.appleFoundation,
     tier: 0,
+    // AFM serializes generation requests on-device (~8s TTFT cold).
+    // grantAgencySystem reads this to gate per-model concurrency; the
+    // global policy stays generous so hosted models could parallelize.
+    maxInFlight: 1,
   );
 
   final world = World()
@@ -64,7 +68,7 @@ Future<void> main(List<String> args) async {
   world
     ..upsertResource(ModelRouterResource(router))
     ..upsertResource(ToolRegistryResource())
-    ..upsertResource(AgencyPolicy(maxConcurrent: 1)) // AFM is serial on-device
+    ..upsertResource(AgencyPolicy(maxConcurrent: 4)) // real cap = Σ maxInFlight
     ..flush();
 
   final handler = DefaultGenerationHandler()..router = router;
@@ -89,6 +93,33 @@ Future<void> main(List<String> args) async {
     PresentInScene(sceneEntity: scene),
   ]);
   world.flush();
+
+  var nextActorOrdinal = 0;
+  // Spawns an additional actor (Phase 5 battle-testing): same jail, own
+  // thread of work, streaming output prefixed with its label.
+  Entity spawnActor(final String prompt) {
+    final ordinal = nextActorOrdinal++;
+    final spawned = world.spawnComponents([
+      Actor(agentId: AgentId.create()),
+      ActorModel(modelId: modelId),
+      ActorSystemPrompt(
+        text:
+            'You are a coding agent working inside a sandboxed directory. '
+            'Use the provided tools to read, write, list, and search files. '
+            'Complete tasks fully; be concise.',
+      ),
+      ActorThreads(threads: []),
+      const ActorTools(registryName: 'default'),
+      PresentInScene(sceneEntity: scene),
+    ]);
+    world.getResource<StreamingTapResource>().subscribe(spawned).listen((delta) {
+      stdout.write('\x1b[2m[a$ordinal]\x1b[0m $delta');
+    });
+    world.upsertComponent(spawned, OpenDecision(prompt: prompt));
+    world.flush();
+    print('spawned a$ordinal');
+    return spawned;
+  }
 
   // ── Loop + observability ─────────────────────────────────────────────────
   final loop = HarnessLoop(world: world);
@@ -144,7 +175,7 @@ Future<void> main(List<String> args) async {
   // ── REPL ─────────────────────────────────────────────────────────────────
   stdout.writeln(
     'xs_agent ready. jail=$root\n'
-    'type a task, or _stats | _trace | _save <p> | _load <p> | _exit',
+    'type a task, or _stats | _trace | _spawn <p> | _save <p> | _load <p> | _exit',
   );
   await for (final line
       in stdin.transform(utf8.decoder).transform(const LineSplitter())) {
@@ -170,6 +201,20 @@ Future<void> main(List<String> args) async {
       continue;
     }
 
+    if (input.startsWith('_spawn ')) {
+      spawnActor(input.substring('_spawn '.length).trim());
+      loop.wakeup();
+      stdout.write('> ');
+      continue;
+    }
+
+    if (input.startsWith('_spawn ')) {
+      spawnActor(input.substring('_spawn '.length).trim());
+      loop.wakeup();
+      stdout.write('> ');
+      continue;
+    }
+
     ledger.reset();
     world.upsertComponent(actor, OpenDecision(prompt: input));
     world.flush();
@@ -179,6 +224,11 @@ Future<void> main(List<String> args) async {
     while (!loop.canSleep()) {
       await Future<void>.delayed(const Duration(milliseconds: 50));
     }
+    // ActorGenerateRequest is fire-and-forget (the handler is invoked
+    // inline, the event exists only as a watermark marker) — drain it so
+    // its buffered count doesn't grow unbounded and pollute _stats.
+    world.events.reader<ActorGenerateRequest>().drain();
+    world.events.channel<ActorGenerateRequest>().clear();
     final reply = latestResponse();
     if (!streaming && reply.isNotEmpty) print(reply);
     if (traceEveryTurn) print(ledger.dump());
