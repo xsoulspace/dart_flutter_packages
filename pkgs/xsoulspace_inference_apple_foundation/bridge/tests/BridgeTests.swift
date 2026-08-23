@@ -240,6 +240,98 @@ func testSchemaMaterialization() {
       check("live C: schema'd tool session", c)
     }
 
+    // E: THE empty-args regression — a schema'd tool must receive the
+    // model's arguments (path/content), not an empty structure.
+    let writeSchemaJSON: [String: Any] =
+      [
+        "root": [
+          "kind": "object",
+          "name": "write_args",
+          "representNilExplicitly": false,
+          "properties": [
+            [
+              "name": "path",
+              "schema": ["kind": "primitive", "primitiveType": "String"],
+              "isOptional": false,
+            ],
+            [
+              "name": "content",
+              "schema": ["kind": "primitive", "primitiveType": "String"],
+              "isOptional": false,
+            ],
+          ],
+        ],
+        "dependencies": [],
+      ] as [String: Any]
+    if let writeParams = try? materializeFromDartJSON(writeSchemaJSON) {
+      final class ArgsCapture: @unchecked Sendable {
+        static let shared = ArgsCapture()
+        var lastArgsJSON = "{}"
+      }
+      let writeTool = NativeDartTool(
+        name: "write",
+        description: "Writes text content to a file at the given path.",
+        parameters: writeParams,
+        callback: { payload in
+          guard let payload = payload else { return }
+          let payloadStr = String(cString: payload)
+          if let data = payloadStr.data(using: .utf8),
+            let obj = try? JSONSerialization.jsonObject(with: data)
+              as? [String: Any],
+            let id = obj["id"] as? String
+          {
+            ArgsCapture.shared.lastArgsJSON =
+              (obj["arguments"] as? String) ?? "(missing)"
+            PendingToolRegistry.shared.fulfill(id: id, result: "ok")
+          }
+        })
+      let e = await liveSessionTest(
+        "live E: schema'd tool receives args",
+        tools: [writeTool],
+        prompt:
+          "Use the write tool to create a file named notes.txt containing the text hello world."
+      )
+      let captured = ArgsCapture.shared.lastArgsJSON
+      let argsPopulated =
+        captured.contains("notes.txt") || captured.contains("hello")
+      check(
+        "live E: schema'd tool receives args",
+        e && argsPopulated,
+        "captured args=\(captured.prefix(200))")
+    } else {
+      check("live E: schema'd tool receives args", false, "schema materialize failed")
+    }
+
+    // F: CONTROL — native @Generable macro args type. If this receives
+    // populated args while E fails, the dynamic-schema decode path is the
+    // culprit; if F also fails, the framework/tool protocol is.
+    if #available(macOS 26.0, *) {
+      final class MacroCapture: @unchecked Sendable {
+        static let shared = MacroCapture()
+        var lastArgs: WriteArgs?
+      }
+      struct MacroWriteTool: Tool {
+        typealias Output = String
+        var name = "write"
+        var description = "Writes text content to a file at the given path."
+        func call(arguments: WriteArgs) async throws -> String {
+          MacroCapture.shared.lastArgs = arguments
+          return "ok"
+        }
+      }
+      let f = await liveSessionTest(
+        "live F: macro tool receives args",
+        tools: [MacroWriteTool()],
+        prompt:
+          "Use the write tool to create a file named notes.txt containing the text hello world."
+      )
+      let a = MacroCapture.shared.lastArgs
+      check(
+        "live F: macro tool receives args",
+        f && a != nil && !a!.path.isEmpty,
+        "got: \(a.map(\\.path) ?? "nil")")
+    }
+
     // D: multiple DISTINCT tools — matches production shape
     // (read/write/list_dir). Duplicate names would be an invalid session.
     let timeTool = makeClockTool(parameters: nil)
@@ -321,6 +413,18 @@ func testExtractArgsJSON() {
     }
   #endif
 }
+
+// MARK: - Live test support types
+
+#if canImport(FoundationModels)
+  @available(macOS 26.0, *)
+  struct WriteArgs: Generable {
+    @Guide(description: "Relative file path")
+    var path: String
+    @Guide(description: "Text content to write")
+    var content: String
+  }
+#endif
 
 // MARK: - Entry
 

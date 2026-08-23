@@ -45,7 +45,12 @@ void main() {
         );
         final scene = spawnScene(world);
         final leader = spawnActor(world, scene);
-        final helper = spawnActor(world, scene);
+        // The target must carry the exact AgentId the policy shares with.
+        final helper = world.spawnComponents([
+          Actor(agentId: teammate),
+          ActorModel(modelId: ModelId.create()),
+          PresentInScene(sceneEntity: scene),
+        ]);
         // Give the target a thread so the shared beat has somewhere to land.
         final helperThread = spawnThread(world, helper, scene);
         world.upsertComponent(helper, ActorThreads(threads: [helperThread]));
@@ -135,7 +140,7 @@ void main() {
         ..upsertResource(ToolRegistryResource())
         ..upsertResource(
           DecisionFlowResource(
-            DecisionFlow([everyNTicks(2).thenOpen(prompt: 'tick decision')]),
+            DecisionFlow([everyNTicks(1).thenOpen(prompt: 'tick decision')]),
           ),
         )
         ..flush();
@@ -156,10 +161,10 @@ void main() {
       // the rate must be computable.
       expect(metrics.policyPrecision, isNotEmpty);
       expect(
-        metrics.policyPrecision['everyNTicks(2)']?.created,
+        metrics.policyPrecision['everyNTicks(1)']?.created,
         greaterThanOrEqualTo(1),
       );
-      expect(metrics.policyPrecisionRate['everyNTicks(2)'], isA<double>());
+      expect(metrics.policyPrecisionRate['everyNTicks(1)'], isA<double>());
     });
 
     test(

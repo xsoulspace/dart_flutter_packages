@@ -389,7 +389,9 @@ public func xs_fm_generate_stream_async(
 
     func call(arguments: GeneratedContent) async throws -> String {
       let argsJSON = try extractArgsJSON(from: arguments)
-      XsFmDebug.log("tool call: name=\(name) args=\(argsJSON.prefix(120))")
+      XsFmDebug.log(
+        "tool call: name=\(name) kind=\(arguments.kind) args=\(argsJSON.prefix(120))"
+      )
 
       // Suspend until Dart calls xs_fm_tool_respond for our id.
       return try await withCheckedThrowingContinuation {

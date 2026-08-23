@@ -87,9 +87,38 @@ SchemaBundle decisionSchema(ToolRegistry registry) {
       return (call: ToolCall(name: tool.name, arguments: args), answer: null);
     }
   }
-  final answer = output['Answer'];
-  if (answer is Map<String, dynamic>) {
-    return (call: null, answer: '${answer['text'] ?? ''}');
+  final answerChoice = output['Answer'];
+  if (answerChoice is Map<String, dynamic>) {
+    return (call: null, answer: '${answerChoice['text'] ?? ''}');
+  }
+  // Backends without true structured decoding may deliver the whole decision
+  // as a JSON-encoded STRING under 'text' (e.g. AFM native bridge returns
+  // {"text": "<raw>"}). Unwrap one level of stringified JSON before giving
+  // up and treating everything as a final answer.
+  final answerRaw = output['text'];
+  if (answerRaw is String) {
+    try {
+      final decodedInner = jsonDecode(answerRaw);
+      if (decodedInner is Map<String, dynamic>) {
+        if (decodedInner['tool'] is String) {
+          final toolName = decodedInner['tool'] as String;
+          final tool = registry.tools[ToolName(toolName)];
+          if (tool != null) {
+            final args = <String, dynamic>{}
+              ..addAll(decodedInner)
+              ..remove('tool');
+            return (call: ToolCall(name: tool.name, arguments: args), answer: null);
+          }
+        }
+        return (
+          call: null,
+          answer: '${decodedInner['text'] ?? jsonEncode(decodedInner)}',
+        );
+      }
+    } on FormatException {
+      // Not JSON — plain text answer below.
+    }
+    return (call: null, answer: answerRaw);
   }
   // Fallback: treat the whole output as an answer.
   return (call: null, answer: jsonEncode(output));

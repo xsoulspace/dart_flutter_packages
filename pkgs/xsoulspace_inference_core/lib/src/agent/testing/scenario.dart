@@ -146,7 +146,10 @@ class ScenarioRunner {
           prompt: prompt,
         );
 
-        // One full cinematic cycle.
+        // One full cinematic cycle. The frame advances per cycle (mirrors
+        // HarnessLoop._tick) so tick-based DecisionFlow policies fire
+        // deterministically under the runner too.
+        syncScheduleExecutionFrame(world);
         world.runSchedule(Schedules.agencyGrant);
         world.flush();
         world.runSchedule(Schedules.project);

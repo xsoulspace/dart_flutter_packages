@@ -282,6 +282,18 @@ class AppleFoundationNativeClient
     }
   }
 
+  /// Best-effort decode of a JSON object payload. Returns null when the
+  /// output is not a JSON object (plain text answers stay wrapped as text).
+  static Map<String, dynamic>? _tryDecodeStructured(String raw) {
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map<String, dynamic>) return decoded;
+    } on FormatException {
+      // Plain text — caller falls back to {'text': raw}.
+    }
+    return null;
+  }
+
   InferenceResult<InferenceResponse> _toResult(Map<String, dynamic> response) {
     if (response['ok'] == true) {
       final rawOutput = response['output'] as String? ?? '';
@@ -292,9 +304,13 @@ class AppleFoundationNativeClient
           meta: <String, dynamic>{'provider': id},
         );
       }
+      // Guided generation returns the constrained JSON as raw text; decode
+      // it so structuredOutput honors the requested schema instead of the
+      // lossy {'text': raw} wrapper.
+      final structured = _tryDecodeStructured(rawOutput);
       return InferenceResult<InferenceResponse>.ok(
         InferenceResponse(
-          structuredOutput: {'text': rawOutput},
+          structuredOutput: structured ?? {'text': rawOutput},
           rawOutput: rawOutput,
           meta: <String, dynamic>{'provider': id},
         ),
