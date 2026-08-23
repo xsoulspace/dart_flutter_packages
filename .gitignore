@@ -3,6 +3,7 @@
 /.cache/
 /build/
 .DS_Store
+.xsoulspace
 **/.DS_Store
 pubspec.lock
 **/**/pubspec.lock
