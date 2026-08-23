@@ -5,6 +5,8 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
+import 'openrouter_schema.dart';
+
 /// Model names for OpenRouter-backed models.
 ///
 /// Register these in a [ModelRouter] alongside [DefaultModelNames] so an actor
@@ -113,18 +115,42 @@ class OpenRouterInferenceClient implements InferenceClient {
 
     // Build the messages array. The actor's context fragments are appended as
     // a trailing user message so the model sees the projected context.
+    // Structured tasks: many OpenRouter models silently ignore
+    // response_format=json_object — and the API itself requires the prompt to
+    // mention "json" — so the schema is also spelled out in the system
+    // message (same contract as PromptBuilder.writeStructuredOutputPrompt).
+    final structured =
+        request.task == InferenceTask.nativelyStructuredText &&
+        request.outputSchema.isNotEmpty;
+    var systemPrompt = request.systemPrompt;
+    Map<String, dynamic>? jsonSchemaFormat;
+    if (structured) {
+      // Strict json_schema beats json_object: the API enforces the grammar
+      // server-side instead of hoping the model cooperates.
+      final schema = bundleToJsonSchema(request.outputSchema);
+      jsonSchemaFormat = {
+        'type': 'json_schema',
+        'json_schema': {
+          'name': 'response',
+          'strict': true,
+          'schema': schema,
+        },
+      };
+      final schemaJson = const JsonEncoder.withIndent('  ').convert(schema);
+      systemPrompt =
+          '$systemPrompt\n\n'
+          'You must respond with ONLY a valid JSON object (no markdown, no '
+          'prose, no code fences) matching this JSON schema:\n$schemaJson';
+    }
     final messages = <Map<String, dynamic>>[
-      if (request.systemPrompt.isNotEmpty)
-        {'role': 'system', 'content': request.systemPrompt},
+      if (systemPrompt.isNotEmpty) {'role': 'system', 'content': systemPrompt},
       {'role': 'user', 'content': _buildUserContent(request)},
     ];
 
     final body = <String, dynamic>{
       'model': model,
       'messages': messages,
-      if (request.task == InferenceTask.nativelyStructuredText &&
-          request.outputSchema.isNotEmpty)
-        'response_format': {'type': 'json_object'},
+      if (jsonSchemaFormat != null) 'response_format': jsonSchemaFormat,
       if (toolRegistry != null && toolRegistry.tools.isNotEmpty)
         'tools': _buildTools(toolRegistry),
     };
