@@ -119,8 +119,12 @@ class HarnessLoop {
       }
       ticks++;
       _tick();
-      // Yield so fire-and-forget handler futures / tool completions can land.
-      await Future<void>.delayed(Duration.zero);
+      // Yield AND pace: Duration.zero alone busy-spins millions of iterations
+      // while an async generation/tool task is in flight (on-device models
+      // take seconds), tripping the maxTicks safety cap during perfectly
+      // healthy waits. 1ms keeps wake-up latency negligible for microtask
+      // worlds while bounding tick burnout to ~1000/s.
+      await Future<void>.delayed(const Duration(milliseconds: 1));
     }
     world.flush();
   }

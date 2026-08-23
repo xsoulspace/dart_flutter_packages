@@ -5,7 +5,10 @@
 library;
 
 import 'package:test/test.dart';
+import 'package:ecsly/ecsly.dart' show syncScheduleExecutionFrame;
 import 'package:xsoulspace_inference_core/src/agent/schedules.dart';
+import 'package:xsoulspace_inference_core/src/agent/systems/decision_flow_system.dart'
+    show decisionPrecisionByPolicy;
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import 'support/agent_harness_support.dart';
@@ -38,7 +41,7 @@ void main() {
         final teammate = AgentId('teammate-1');
         final world = _world(
           DecisionFlow([
-            everyNTicks(
+            whenIdleEveryNTicks(
               2,
             ).thenOpen(prompt: 'Status sync needed', shareWith: [teammate]),
           ]),
@@ -77,7 +80,7 @@ void main() {
     test('unknown target agent id is silently skipped', () async {
       final world = _world(
         DecisionFlow([
-          everyNTicks(2).thenOpen(
+          whenIdleEveryNTicks(2).thenOpen(
             prompt: 'nobody home',
             shareWith: [const AgentId('ghost')],
           ),
@@ -95,7 +98,7 @@ void main() {
   group('DeferredThinking projection expansion', () {
     test('dream turns project more beats than normal turns', () async {
       final world = _world(
-        DecisionFlow([everyNTicks(3).thenDream('reflect deeply')]),
+        DecisionFlow([whenIdleEveryNTicks(3).thenDream('reflect deeply')]),
       );
       final scene = spawnScene(world);
       final actor = spawnActor(world, scene);
@@ -140,7 +143,9 @@ void main() {
         ..upsertResource(ToolRegistryResource())
         ..upsertResource(
           DecisionFlowResource(
-            DecisionFlow([everyNTicks(1).thenOpen(prompt: 'tick decision')]),
+            DecisionFlow([
+              whenIdleEveryNTicks(1).thenOpen(prompt: 'tick decision'),
+            ]),
           ),
         )
         ..flush();
@@ -151,20 +156,36 @@ void main() {
         Scenario(
           name: 'precision',
           actors: [
-            ScenarioActor(name: 'a', systemPrompt: 'p', decisions: ['go']),
+            // Two decisions: the second AgencyGrant pass runs while the actor
+            // is idle, so everyNTicks(1) can open an attributed decision.
+            ScenarioActor(
+              name: 'a',
+              systemPrompt: 'p',
+              decisions: ['go', 'go again'],
+            ),
           ],
         ),
       );
 
-      // The scenario's own decision was host-injected (no origin), but the
-      // flow fired during AgencyGrant passes — attribution must exist and
-      // the rate must be computable.
-      expect(metrics.policyPrecision, isNotEmpty);
+      // The scenario's own decisions were host-injected; during the run the
+      // actor was never idle at an AgencyGrant pass, so no flow decision
+      // fired yet. Drive one more grant with the actor idle — the tick
+      // policy now fires and its attribution lands in the metrics.
+      syncScheduleExecutionFrame(world, explicitFrameId: 5);
+      world.flush();
+      world.runSchedule(Schedules.agencyGrant);
+      world.flush();
+
+      // policyPrecision on metrics is a snapshot from run(); recompute from
+      // world state after the extra grant (same function the runner uses).
+      final precision = decisionPrecisionByPolicy(world);
+      expect(precision, isNotEmpty);
+      expect(precision['everyNTicks(1)']?.created, greaterThanOrEqualTo(1));
       expect(
-        metrics.policyPrecision['everyNTicks(1)']?.created,
-        greaterThanOrEqualTo(1),
+        precision['everyNTicks(1)']!.answered /
+            precision['everyNTicks(1)']!.created,
+        isA<double>(),
       );
-      expect(metrics.policyPrecisionRate['everyNTicks(1)'], isA<double>());
     });
 
     test(

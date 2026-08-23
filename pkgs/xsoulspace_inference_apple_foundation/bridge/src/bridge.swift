@@ -358,8 +358,20 @@ public func xs_fm_generate_stream_async(
   /// (`var parameters: GenerationSchema { get }`). Tools without an args
   /// schema get an explicit empty-object schema — a nil/optional here made
   /// LanguageModelSession fail with GenerationError -1/1020000.
+  /// Wrapper so the framework hands us the RAW GeneratedContent.
+  /// Using `GeneratedContent` directly as `Arguments` loses properties
+  /// (decodes to an empty structure) for dynamically materialized schemas;
+  /// a custom ConvertibleFromGeneratedContent receives them intact
+  /// (regression: live E fails, live H passes).
+  struct BridgeToolArguments: ConvertibleFromGeneratedContent {
+    let content: GeneratedContent
+    init(_ content: GeneratedContent) throws {
+      self.content = content
+    }
+  }
+
   struct NativeDartTool: Tool {
-    typealias Arguments = GeneratedContent
+    typealias Arguments = BridgeToolArguments
     typealias Output = String
 
     let name: String
@@ -375,23 +387,30 @@ public func xs_fm_generate_stream_async(
     ) {
       self.name = name
       self.description = description
-      self.parameters =
-        (try? GenerationSchema(
-          root: DynamicGenerationSchema(name: name, properties: []),
-          dependencies: []
-        ))
-        ?? (try! GenerationSchema(
-          root: DynamicGenerationSchema(name: "empty", properties: []),
-          dependencies: []
-        ))
+      // Use the caller's schema when provided; only fall back to an
+      // explicit empty-object schema for tools without arguments.
+      // (This init previously DISCARDED `parameters` and always built an
+      // empty schema — tools advertised no properties, so every tool call
+      // arrived with empty arguments.)
+      if let p = parameters {
+        self.parameters = p
+      } else {
+        self.parameters =
+          (try? GenerationSchema(
+            root: DynamicGenerationSchema(name: name, properties: []),
+            dependencies: []
+          ))
+          ?? (try! GenerationSchema(
+            root: DynamicGenerationSchema(name: "empty", properties: []),
+            dependencies: []
+          ))
+      }
       self.callback = callback
     }
 
-    func call(arguments: GeneratedContent) async throws -> String {
-      let argsJSON = try extractArgsJSON(from: arguments)
-      XsFmDebug.log(
-        "tool call: name=\(name) kind=\(arguments.kind) args=\(argsJSON.prefix(120))"
-      )
+    func call(arguments: BridgeToolArguments) async throws -> String {
+      let argsJSON = try extractArgsJSON(from: arguments.content)
+      XsFmDebug.log("tool call: name=\(name) args=\(argsJSON.prefix(120))")
 
       // Suspend until Dart calls xs_fm_tool_respond for our id.
       return try await withCheckedThrowingContinuation {

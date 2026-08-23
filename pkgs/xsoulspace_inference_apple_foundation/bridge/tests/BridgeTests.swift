@@ -145,7 +145,7 @@ func testSchemaMaterialization() {
 
   func liveSessionTest(
     _ name: String,
-    tools: [NativeDartTool],
+    tools: [any Tool],
     prompt: String,
     timeoutSeconds: UInt64 = 90
   ) async -> Bool {
@@ -329,7 +329,87 @@ func testSchemaMaterialization() {
       check(
         "live F: macro tool receives args",
         f && a != nil && !a!.path.isEmpty,
-        "got: \(a.map(\\.path) ?? "nil")")
+        "got: \(a.map(\.path) ?? "nil")")
+    }
+
+    // G: NativeDartTool (GeneratedContent args) but schema from
+    // WriteArgs.generationSchema. Isolates whether the
+    // GeneratedContent tool surface decodes when the schema is macro-derived.
+    if #available(macOS 26.0, *) {
+      final class GCapture: @unchecked Sendable {
+        static let shared = GCapture()
+        var lastArgsJSON = "{}"
+      }
+      let reflectedParams = try? WriteArgs.generationSchema
+      if let rp = reflectedParams {
+        let gTool = NativeDartTool(
+          name: "write",
+          description: "Writes text content to a file at the given path.",
+          parameters: rp,
+          callback: { payload in
+            guard let payload = payload else { return }
+            let payloadStr = String(cString: payload)
+            if let data = payloadStr.data(using: .utf8),
+              let obj = try? JSONSerialization.jsonObject(with: data)
+                as? [String: Any],
+              let id = obj["id"] as? String
+            {
+              GCapture.shared.lastArgsJSON =
+                (obj["arguments"] as? String) ?? "(missing)"
+              PendingToolRegistry.shared.fulfill(id: id, result: "ok")
+            }
+          })
+        let g = await liveSessionTest(
+          "live G: reflected-schema tool receives args",
+          tools: [gTool],
+          prompt:
+            "Use the write tool to create a file named notes.txt containing the text hello world."
+        )
+        let capturedG = GCapture.shared.lastArgsJSON
+        check(
+          "live G: reflected-schema tool receives args",
+          g && capturedG.contains("notes.txt"),
+          "captured args=\(capturedG.prefix(200))")
+      } else {
+        check("live G: reflected-schema tool receives args", false, "reflect failed")
+      }
+    }
+
+    // H: custom ConvertibleFromGeneratedContent wrapper capturing raw
+    // content, with the dynamic (Dart-materialized) schema.
+    final class RawCapture: @unchecked Sendable {
+      static let shared = RawCapture()
+      var lastDebug = "none"
+    }
+    struct RawArgs: ConvertibleFromGeneratedContent {
+      let content: GeneratedContent
+      init(_ content: GeneratedContent) throws {
+        self.content = content
+        RawCapture.shared.lastDebug = String(describing: content)
+      }
+    }
+    struct RawTool: Tool {
+      typealias Output = String
+      typealias Arguments = RawArgs
+      var name = "write"
+      var description = "Writes text content to a file at the given path."
+      var parameters: GenerationSchema
+      func call(arguments: RawArgs) async throws -> String { "ok" }
+    }
+    if #available(macOS 26.0, *), let wp = try? materializeFromDartJSON(writeSchemaJSON) {
+      let h = await liveSessionTest(
+        "live H: raw-capture tool receives args",
+        tools: [RawTool(parameters: wp)],
+        prompt:
+          "Use the write tool to create a file named notes.txt containing the text hello world."
+      )
+      let dbg = RawCapture.shared.lastDebug
+      check(
+        "live H: raw-capture tool receives args",
+        h && dbg.contains("notes.txt"),
+        "captured: \(dbg.prefix(200))")
+    } else {
+      check("live H: raw-capture tool receives args", false, "materialize failed")
     }
 
     // D: multiple DISTINCT tools — matches production shape
@@ -418,7 +498,7 @@ func testExtractArgsJSON() {
 
 #if canImport(FoundationModels)
   @available(macOS 26.0, *)
-  struct WriteArgs: Generable {
+  @Generable struct WriteArgs {
     @Guide(description: "Relative file path")
     var path: String
     @Guide(description: "Text content to write")

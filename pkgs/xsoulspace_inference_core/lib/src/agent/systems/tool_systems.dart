@@ -7,9 +7,10 @@ import '../data_models/data_models.dart';
 import '../events.dart';
 import '../narrative/narrative.dart';
 import '../resources/resources.dart';
+import '../structured_output/structured_output.dart' show ObjectSchema;
+import 'decision_flow_system.dart' show ToolResultPendingMarker;
 import 'projection/projection_systems.dart' show toolResultText;
 import 'projection/relevance.dart' show keywordsOf;
-import 'decision_flow_system.dart' show ToolResultPendingMarker;
 
 /// System 5: Execute tool calls dispatched as [ToolCallEvent]s.
 ///
@@ -56,6 +57,34 @@ void toolExecutionSystem(World world) {
       final result = ToolExecutionResult.encode(
         name: event.call.name.value,
         output: {'error': 'Unknown tool'},
+      );
+      toolResultWriter.send(
+        ToolResultEvent(actorEntity: event.actorEntity, result: result),
+      );
+      resolveToolTask(world, taskRegistry, event.taskId, result);
+      continue;
+    }
+
+    // Empty-args guard: if the call carries no arguments but the tool's
+    // schema declares required properties, bounce it back to the model
+    // with a self-healing error naming the missing arguments instead of
+    // executing blindly (e.g. writing to the jail root because "path" was
+    // dropped by an upstream decode bug).
+    final requiredArgs = <String>[
+      if (toolDef?.argsSchema.root case final ObjectSchema root)
+        for (final prop in root.properties)
+          if (!prop.isOptional) prop.name,
+    ];
+    if (requiredArgs.isNotEmpty && event.call.arguments.isEmpty) {
+      final result = ToolExecutionResult.encode(
+        name: event.call.name.value,
+        output: {
+          'error':
+              'Tool ${event.call.name.value} called with no arguments. '
+              'Required arguments: '
+              '${requiredArgs.join(", ")}. '
+              'Retry the call providing all required arguments.',
+        },
       );
       toolResultWriter.send(
         ToolResultEvent(actorEntity: event.actorEntity, result: result),

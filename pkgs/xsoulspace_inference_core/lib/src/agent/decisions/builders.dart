@@ -42,12 +42,22 @@ class _BuilderPolicy implements DecisionPolicy {
     _TriggerKind.toolResult => ctx.has<ToolResultPendingMarker>(),
     _TriggerKind.error => ctx.has<RetryCount>(),
     _TriggerKind.tickInterval =>
-        interval > 0 && ctx.tick > 0 && ctx.tick % interval == 0,
+      interval > 0 && ctx.tick > 0 && ctx.tick % interval == 0,
     _TriggerKind.predicate => predicate?.call(ctx) ?? false,
   };
 }
 
 // ── Triggers ─────────────────────────────────────────────────────────────
+//
+// All triggers are evaluated ONLY for idle actors at an AgencyGrant pass.
+// A host-injected OpenDecision always wins: mechanical policies never
+// preempt host intent. Concretely:
+//
+// - `onToolResult` / `onError` fire on the next grant pass after the
+//   trigger marker appears — effectively immediate.
+// - `whenIdleEveryNTicks` (and any predicate policy) fires only when the
+//   actor is idle when its turn comes. A continuously busy actor starves
+//   them by design: think "idle-time proactivity", not guaranteed cron.
 
 /// Fire when a fresh tool result is pending continuation.
 _BuilderPolicy onToolResult() =>
@@ -57,7 +67,8 @@ _BuilderPolicy onToolResult() =>
 _BuilderPolicy onError() =>
     _BuilderPolicy(name: 'onError', trigger: _TriggerKind.error);
 
-/// Fire on an arbitrary deterministic predicate.
+/// Fire on an arbitrary deterministic predicate. Evaluated only for idle
+/// actors at an AgencyGrant pass (see the trigger rules above).
 _BuilderPolicy when(bool Function(DecisionContext ctx) predicate) =>
     _BuilderPolicy(
       name: 'when',
@@ -65,9 +76,18 @@ _BuilderPolicy when(bool Function(DecisionContext ctx) predicate) =>
       predicate: predicate,
     );
 
-/// Fire every [n] scene ticks (injected time; tick 0 does not fire).
-_BuilderPolicy everyNTicks(int n) => _BuilderPolicy(
-  name: 'everyNTicks($n)',
+/// Fire when the actor is IDLE and the harness tick is a positive multiple
+/// of [n]. This is idle-time proactivity, NOT a guaranteed scheduler: a
+/// busy actor skips firings entirely (they do not queue up), because a
+/// host-injected decision always outranks a mechanical one.
+///
+/// ```dart
+/// // Nudge an idle actor to reflect roughly every 600 ticks — but only
+/// // when it has nothing better to do:
+/// whenIdleEveryNTicks(600).thenDream('Review progress')
+/// ```
+_BuilderPolicy whenIdleEveryNTicks(int n) => _BuilderPolicy(
+  name: 'whenIdleEveryNTicks($n)',
   trigger: _TriggerKind.tickInterval,
   interval: n,
 );

@@ -68,6 +68,17 @@ SchemaBundle decisionSchema(ToolRegistry registry) {
   Map<String, dynamic> output,
   ToolRegistry registry,
 ) {
+  // Flat decision: some backends (e.g. AFM guided generation decoded by the
+  // native bridge) deliver {tool, ...args} directly at the top level.
+  if (output['tool'] is String) {
+    final tool = registry.tools[ToolName(output['tool'] as String)];
+    if (tool != null) {
+      final args = <String, dynamic>{}
+        ..addAll(output)
+        ..remove('tool');
+      return (call: ToolCall(name: tool.name, arguments: args), answer: null);
+    }
+  }
   for (final tool in registry.tools.values) {
     // Guided output may nest args under the AnyOf choice name
     // ('Act_<tool>') or flat under the tool name.
@@ -91,35 +102,37 @@ SchemaBundle decisionSchema(ToolRegistry registry) {
   if (answerChoice is Map<String, dynamic>) {
     return (call: null, answer: '${answerChoice['text'] ?? ''}');
   }
-  // Backends without true structured decoding may deliver the whole decision
-  // as a JSON-encoded STRING under 'text' (e.g. AFM native bridge returns
-  // {"text": "<raw>"}). Unwrap one level of stringified JSON before giving
-  // up and treating everything as a final answer.
-  final answerRaw = output['text'];
-  if (answerRaw is String) {
+  // Decoded backends may nest the whole decision under 'text' — either as a
+  // JSON-encoded string or as an already-decoded map.
+  final nested = output['text'];
+  Object? decodedNested;
+  if (nested is String) {
     try {
-      final decodedInner = jsonDecode(answerRaw);
-      if (decodedInner is Map<String, dynamic>) {
-        if (decodedInner['tool'] is String) {
-          final toolName = decodedInner['tool'] as String;
-          final tool = registry.tools[ToolName(toolName)];
-          if (tool != null) {
-            final args = <String, dynamic>{}
-              ..addAll(decodedInner)
-              ..remove('tool');
-            return (call: ToolCall(name: tool.name, arguments: args), answer: null);
-          }
-        }
-        return (
-          call: null,
-          answer: '${decodedInner['text'] ?? jsonEncode(decodedInner)}',
-        );
-      }
+      decodedNested = jsonDecode(nested);
     } on FormatException {
       // Not JSON — plain text answer below.
     }
-    return (call: null, answer: answerRaw);
   }
+  final innerCandidates = [
+    if (nested is Map<String, dynamic>) nested,
+    if (decodedNested is Map<String, dynamic>) decodedNested,
+  ];
+  for (final candidate in innerCandidates) {
+    final toolKey = candidate['tool'];
+    if (toolKey is String) {
+      final tool = registry.tools[ToolName(toolKey)];
+      if (tool != null) {
+        final args = <String, dynamic>{}
+          ..addAll(candidate)
+          ..remove('tool');
+        return (call: ToolCall(name: tool.name, arguments: args), answer: null);
+      }
+    }
+    if (candidate['text'] != null) {
+      return (call: null, answer: '${candidate['text']}');
+    }
+  }
+  if (nested is String) return (call: null, answer: nested);
   // Fallback: treat the whole output as an answer.
   return (call: null, answer: jsonEncode(output));
 }

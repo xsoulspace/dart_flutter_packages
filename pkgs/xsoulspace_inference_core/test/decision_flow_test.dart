@@ -51,7 +51,7 @@ void main() {
       final actor = spawnActor(world, scene);
       world.flush();
 
-      final policy = everyNTicks(10).thenDream('review');
+      final policy = whenIdleEveryNTicks(10).thenDream('review');
       bool eval(int tick) =>
           policy.evaluate(
             DecisionContext(actor: actor, world: world, tick: tick),
@@ -118,16 +118,16 @@ void main() {
       'decisionFlowSystem opens attributed decisions and clears markers',
       () async {
         final world = _world(
-          DecisionFlow([everyNTicks(2).thenOpen(prompt: 'tick decision')]),
+          DecisionFlow([
+            whenIdleEveryNTicks(2).thenOpen(prompt: 'tick decision'),
+          ]),
         );
         final scene = spawnScene(world);
         final actor = spawnActor(world, scene);
         world.flush();
 
         // Advance the frame to tick 4 and run AgencyGrant.
-        for (final record in world.query2<Scene, SceneFrame>().toList()) {
-          record.$3.frame = 4;
-        }
+        syncScheduleExecutionFrame(world, explicitFrameId: 4);
         world.flush();
         world.runSchedule(Schedules.agencyGrant);
         world.flush();
@@ -196,15 +196,13 @@ void main() {
 
     test('per-policy precision attribution', () async {
       final world = _world(
-        DecisionFlow([everyNTicks(2).thenOpen(prompt: 'attributed')]),
+        DecisionFlow([whenIdleEveryNTicks(2).thenOpen(prompt: 'attributed')]),
       );
       final scene = spawnScene(world);
       final actor = spawnActor(world, scene);
       world.flush();
 
-      for (final record in world.query2<Scene, SceneFrame>().toList()) {
-        record.$3.frame = 6;
-      }
+      syncScheduleExecutionFrame(world, explicitFrameId: 6);
       world.flush();
       world.runSchedule(Schedules.agencyGrant);
       world.flush();
@@ -218,14 +216,14 @@ void main() {
 
   group('deferred thinking', () {
     test('thenDream stamps DeferredThinking on the decision', () async {
-      final world = _world(DecisionFlow([everyNTicks(3).thenDream('dream')]));
+      final world = _world(
+        DecisionFlow([whenIdleEveryNTicks(3).thenDream('dream')]),
+      );
       final scene = spawnScene(world);
       final actor = spawnActor(world, scene);
       world.flush();
 
-      for (final record in world.query2<Scene, SceneFrame>().toList()) {
-        record.$3.frame = 3;
-      }
+      syncScheduleExecutionFrame(world, explicitFrameId: 3);
       world.flush();
       world.runSchedule(Schedules.agencyGrant);
       world.flush();
