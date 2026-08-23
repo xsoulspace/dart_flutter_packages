@@ -51,7 +51,7 @@ final class GithubDeviceFlowConfig {
 class GithubDeviceFlowAuthProvider implements OAuthProvider {
   /// {@macro github_device_flow_auth_provider}
   GithubDeviceFlowAuthProvider({
-    required this.config,
+    required this.flowConfig,
     required OAuthFlowDelegate delegate,
     CredentialStorage? storage,
     http.Client? httpClient,
@@ -221,6 +221,12 @@ class GithubDeviceFlowAuthProvider implements OAuthProvider {
 
     throw const AuthenticationException('Device authorization timed out');
   }
+
+  @override
+  Future<OAuthResult> refreshToken(final String refreshToken) =>
+      throw const AuthenticationException(
+        'GitHub tokens do not support refresh by default',
+      );
 
   @override
   Future<bool> isAuthenticated() async {

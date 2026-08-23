@@ -10,7 +10,7 @@ import 'package:universal_storage_oauth/universal_storage_oauth.dart';
 /// after authorizing. The provider's polling continues in the background —
 /// dismissing the dialog early is harmless; cancelling aborts the flow.
 /// {@endtemplate}
-class DefaultDeviceFlowDelegate extends OAuthFlowDelegate {
+class DefaultDeviceFlowDelegate implements OAuthFlowDelegate {
   /// {@macro default_device_flow_delegate}
   const DefaultDeviceFlowDelegate({required this.context});
 
@@ -55,7 +55,7 @@ class DefaultDeviceFlowDelegate extends OAuthFlowDelegate {
               Center(
                 child: SelectableText(
                   userCode,
-                  style: dialogContext.textTheme.headlineMedium?.copyWith(
+                  style: Theme.of(dialogContext).textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     letterSpacing: 2,
                   ),
@@ -64,7 +64,7 @@ class DefaultDeviceFlowDelegate extends OAuthFlowDelegate {
               const SizedBox(height: 12),
               Text(
                 'Expires in ${(expiresIn / 60).ceil()} minutes.',
-                style: dialogContext.textTheme.bodySmall,
+                style: Theme.of(dialogContext).textTheme.bodySmall,
               ),
             ],
           ),

@@ -1,5 +1,4 @@
 import 'package:from_json_to_json/from_json_to_json.dart';
-import 'package:oauth2/oauth2.dart' as oauth2;
 
 import '../models/git_platform.dart';
 
@@ -126,18 +125,6 @@ extension type const StoredCredentials(Map<String, dynamic> value) {
     'expires_at': expiresAt?.toIso8601String(),
     'scopes': scopes,
   });
-
-  /// Create stored credentials from oauth2 library credentials
-  factory StoredCredentials.fromOauth2Credentials(
-    final oauth2.Credentials credentials,
-  ) => StoredCredentials.create(
-    accessToken: OAuthAccessToken(credentials.accessToken),
-    refreshToken: credentials.refreshToken != null
-        ? OAuthRefreshToken(credentials.refreshToken!)
-        : null,
-    expiresAt: credentials.expiration,
-    scopes: credentials.scopes,
-  );
 
   /// OAuth access token
   OAuthAccessToken get accessToken =>

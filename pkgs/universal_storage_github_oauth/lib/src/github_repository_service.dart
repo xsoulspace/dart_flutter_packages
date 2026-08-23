@@ -4,9 +4,7 @@ import 'dart:developer';
 
 import 'package:github/github.dart' as gh;
 
-import '../exceptions/oauth_exceptions.dart';
-import '../models/models.dart';
-import '../services/repository_service.dart';
+import 'package:universal_storage_oauth/universal_storage_oauth.dart';
 import 'github_device_flow_auth_provider.dart';
 
 /// {@template github_repository_service}
