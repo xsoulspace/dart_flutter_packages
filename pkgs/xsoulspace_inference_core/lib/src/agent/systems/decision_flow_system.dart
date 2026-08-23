@@ -11,8 +11,6 @@ import 'package:ecsly/ecsly.dart';
 
 import '../data_models/data_models.dart';
 import '../decisions/decision_flow.dart';
-import '../narrative/narrative.dart';
-import '../resources/resources.dart';
 
 /// Marker written by processToolResultsSystem when a fresh tool result landed
 /// and continuation budget remains; consumed (cleared) here each tick.

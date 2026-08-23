@@ -77,6 +77,7 @@ class AgentPlugin extends Plugin {
       ..registerObjectComponent<IdentityBeat>()
       ..registerObjectComponent<RetryCount>()
       ..registerObjectComponent<RetryCount>()
+      ..registerObjectComponent<ToolRoundCount>()
       ..registerObjectComponent<IdentitySeeded>()
       ..registerObjectComponent<DecisionOrigin>()
       ..registerObjectComponent<DeferredThinking>()

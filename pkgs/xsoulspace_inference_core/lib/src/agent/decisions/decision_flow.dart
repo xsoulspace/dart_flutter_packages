@@ -13,7 +13,6 @@ import 'package:ecsly/ecsly.dart';
 
 import '../data_models/data_models.dart';
 import '../model_router.dart' show AgentId;
-import '../narrative/narrative.dart';
 import '../systems/decision_flow_system.dart' show ToolResultPendingMarker;
 
 part 'builders.dart';
