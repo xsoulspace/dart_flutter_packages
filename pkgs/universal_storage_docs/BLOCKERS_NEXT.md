@@ -1,6 +1,6 @@
 # Universal Storage: Next Blockers
 
-Last updated: `2026-08-22`
+Last updated: `2026-08-23`
 
 This is the only canonical next-steps document for Universal Storage.
 
@@ -33,25 +33,32 @@ This is the only canonical next-steps document for Universal Storage.
 7. **Chaos tests added** (`outbox_chaos_test.dart`) — corrupted queue
    file, deleted queue file, duplicate delivery: all pass. User data
    survives every scenario.
+8. **Concurrent `saveFile` race on queue file FIXED** — root cause was
+   twofold: (a) in async Dart, a bare `return future` inside `try`
+   bypasses the surrounding catch clauses, so the
+   `on FileAlreadyExistsException → updateFile` guard in
+   `StorageService.saveFile` never engaged (fix: `return await`,
+   interface package); (b) even with the guard,
+   `OutboxManager.enqueue`'s load→save cycle lost entries under
+   concurrency — fixed by a serialized `SyncQueueStore.mutateState`
+   read-modify-write primitive (`package:synchronized`).
+   Evidence: chaos suite 4/4 green; full sync suite (75 tests incl.
+   scenarios + benchmarks + chaos) green; race repro tests deleted.
+9. **Step-4 release items** — CHANGELOGs for all universal_storage
+   packages (breaking mixin removals and sync-semantics changes flagged);
+   conformance README (adoption guide + capability model table:
+   backend × SyncAvailability × restore); git_offline README section on
+   `GitCommitBatching` usage and tradeoffs; migration/write benchmarks
+   wired as soft CI gates (filesystem migration ≥50 files/sec, batched
+   git write p50 <100ms).
 
 ## Blocking Items
 
-1. **Concurrent `saveFile` race on queue file** — two concurrent kernel
-   writes racing on `.us/sync_queue_v1.json`: second call throws
-   `FileAlreadyExistsException` despite the catch guard in
-   `StorageService.saveFile` (interface, line 40). Isolated repro shows the
-   guard works; the chaos test still escapes it. Suspect stale build
-   artifact or a second save path. Repro: `race2_test.dart`
-   (universal_storage_sync/test). Exit condition: chaos test
-   "interleaved writes never lose an entry" passes.
+None.
 
 ## Non-blocking (step 4 of production plan)
 
-- CHANGELOG entries for interface (SyncAvailability, saveFile race guard),
-  sync (kernel split, migration fixes), git_offline (batching), conformance
-  (new package).
-- Docs: conformance suite usage, capability model, batching policy.
-- CI: wire migration benchmarks as regression gates (currently print-only).
+None remaining from this cycle.
 
 ## Green Criteria
 
