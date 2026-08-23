@@ -104,6 +104,7 @@ class CodingSuiteRunner {
     this.modelId = const ModelId('suite-model'),
     this.maxConcurrent = 1,
     this.maxCheckerRetries = 0,
+    this.maxToolRounds = 16,
   });
 
   /// Builds the generation handler for each run (fresh per task so state
@@ -126,6 +127,10 @@ class CodingSuiteRunner {
   /// an honest LLM call — the retry loop itself is deterministic.
   final int maxCheckerRetries;
 
+  /// ReAct tool rounds allowed per decision chain (AgencyPolicy bound).
+  /// Small local models benefit from headroom; hosted models rarely need it.
+  final int maxToolRounds;
+
   Future<TaskResult> runTask(CodingTask task) async {
     final parent = jailParent ?? Directory.systemTemp;
     final jail = await parent.createTemp('coding_suite_${task.id}_');
@@ -147,7 +152,7 @@ class CodingSuiteRunner {
       world
         ..upsertResource(ModelRouterResource(router))
         ..upsertResource(ToolRegistryResource())
-        ..upsertResource(AgencyPolicy(maxConcurrent: maxConcurrent))
+        ..upsertResource(AgencyPolicy(maxConcurrent: maxConcurrent, maxToolRounds: maxToolRounds))
         ..flush();
 
       final handler = buildHandler(task);
@@ -158,6 +163,10 @@ class CodingSuiteRunner {
       world.getResource<ToolRegistryResource>().register('default', registry);
 
       final scene = world.spawnComponents([const Scene(), SceneFrame()]);
+      // Give the actor a thread BEFORE spawning so tool/assistant beats
+      // attach to it (attachBeatToActorThread) and projection can ray-trace
+      // the conversation into continuation decisions. Without this the model
+      // continues blind after each tool result (mirrors world_setup.spawnActors).
       final actor = world.spawnComponents([
         Actor(agentId: AgentId.create()),
         ActorModel(modelId: modelId),
@@ -167,6 +176,8 @@ class CodingSuiteRunner {
         PresentInScene(sceneEntity: scene),
         OpenDecision(prompt: task.prompt),
       ]);
+      final thread = spawnThread(world, actor, scene);
+      world.upsertComponent(actor, ActorThreads(threads: [thread]));
       world.flush();
 
       final sw = Stopwatch()..start();
@@ -249,12 +260,19 @@ class CodingSuiteRunner {
   }
 
   /// Run all tasks; append one JSON line per task to [tracePath] if given.
+  /// [filter] keeps only tasks whose id contains it (case-insensitive).
   Future<SuiteResult> runAll(
     List<CodingTask> tasks, {
     String? tracePath,
+    String? filter,
   }) async {
+    final selected = filter == null || filter.isEmpty
+        ? tasks
+        : tasks
+              .where((t) => t.id.toLowerCase().contains(filter.toLowerCase()))
+              .toList();
     final results = <TaskResult>[];
-    for (final task in tasks) {
+    for (final task in selected) {
       stdout.writeln('▶ ${task.id} (${task.category.yamlName})');
       final r = await runTask(task);
       results.add(r);

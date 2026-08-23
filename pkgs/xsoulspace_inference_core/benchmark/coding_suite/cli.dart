@@ -28,6 +28,9 @@ Future<void> main(List<String> args) async {
   String? tracePath;
   String? markdownPath;
   var backend = 'scripted';
+  var retries = 0;
+  var maxToolRounds = 16;
+  String? filter;
   for (var i = 0; i < args.length; i++) {
     switch (args[i]) {
       case '--tasks':
@@ -38,6 +41,12 @@ Future<void> main(List<String> args) async {
         markdownPath = args[++i];
       case '--backend':
         backend = args[++i];
+      case '--retries':
+        retries = int.parse(args[++i]);
+      case '--max-tool-rounds':
+        maxToolRounds = int.parse(args[++i]);
+      case '--filter':
+        filter = args[++i];
     }
   }
 
@@ -59,7 +68,9 @@ Future<void> main(List<String> args) async {
 
   final result = await CodingSuiteRunner(
     buildHandler: buildHandler,
-  ).runAll(tasks, tracePath: tracePath);
+    maxCheckerRetries: retries,
+    maxToolRounds: maxToolRounds,
+  ).runAll(tasks, tracePath: tracePath, filter: filter);
 
   stdout.writeln(result.toMarkdown(label: 'suite($backend)'));
   if (markdownPath != null) {

@@ -111,6 +111,36 @@ void main() {
       );
       expect(result?.policyName, 'react_continuation');
     });
+
+    test('react_continuation prompt carries latest tool result', () {
+      final world = _world(DecisionFlow.defaultReAct());
+      final scene = spawnScene(world);
+      final actor = spawnActor(world, scene);
+      world.getEntity(actor).$1.insert(const ToolResultPendingMarker());
+      // A completed tool-result beat spoken by this actor.
+      final beat = world.spawnComponents([
+        TextContent('wrote 3 files to src/'),
+        BeatStatus(BeatStatusEnum.complete),
+        ToolResultContent(name: 'write', output: 'ok'),
+        Speaker(actor),
+      ]);
+      // Another actor's tool beat must NOT leak into the prompt.
+      final other = spawnActor(world, scene);
+      world.spawnComponents([
+        TextContent('secret from other actor'),
+        BeatStatus(BeatStatusEnum.complete),
+        ToolResultContent(name: 'read', output: 'x'),
+        Speaker(other),
+      ]);
+      world.flush();
+
+      final result = DecisionFlow.defaultReAct().evaluate(
+        DecisionContext(actor: actor, world: world, tick: 0),
+      );
+      expect(result?.draft.prompt, contains('`write`'));
+      expect(result?.draft.prompt, contains('wrote 3 files to src/'));
+      expect(result?.draft.prompt, isNot(contains('secret')));
+    });
   });
 
   group('end-to-end application', () {

@@ -29,6 +29,9 @@ Future<void> main(List<String> args) async {
   String? tracePath;
   String? markdownPath;
   var retries = 2;
+  var maxToolRounds = 16;
+  String? filter;
+  var verbose = false;
   for (var i = 0; i < args.length; i++) {
     switch (args[i]) {
       case '--tasks':
@@ -39,6 +42,12 @@ Future<void> main(List<String> args) async {
         markdownPath = args[++i];
       case '--retries':
         retries = int.parse(args[++i]);
+      case '--max-tool-rounds':
+        maxToolRounds = int.parse(args[++i]);
+      case '--filter':
+        filter = args[++i];
+      case '--verbose':
+        verbose = true;
     }
   }
 
@@ -68,13 +77,14 @@ Future<void> main(List<String> args) async {
 
   GenerationHandler debugHandler(CodingTask task) {
     final innerHandler = buildHandler(task);
-    return _LoggingHandler(innerHandler);
+    return verbose ? _LoggingHandler(innerHandler, true) : innerHandler;
   }
 
   final result = await CodingSuiteRunner(
     buildHandler: debugHandler,
     maxCheckerRetries: retries,
-  ).runAll(tasks, tracePath: tracePath);
+    maxToolRounds: maxToolRounds,
+  ).runAll(tasks, tracePath: tracePath, filter: filter);
 
   stdout.writeln(result.toMarkdown(label: 'suite(afm)'));
   if (markdownPath != null) {
@@ -84,8 +94,9 @@ Future<void> main(List<String> args) async {
 }
 
 class _LoggingHandler implements GenerationHandler {
-  _LoggingHandler(this.inner);
+  _LoggingHandler(this.inner, this.enabled);
   final GenerationHandler inner;
+  final bool enabled;
 
   @override
   Future<ActorGenerateResponse> generate(
@@ -93,6 +104,7 @@ class _LoggingHandler implements GenerationHandler {
     ActorGenerateRequest request,
   ) async {
     final response = await inner.generate(world, request);
+    if (!enabled) return response;
     final names = response.toolCalls.map((t) => t.name.value).toList();
     // ignore: avoid_print
     stdout.writeln(
@@ -102,6 +114,3 @@ class _LoggingHandler implements GenerationHandler {
   }
 }
 
-extension on String {
-  int clampLength(int lo, int hi) => length > hi ? hi : length < lo ? lo : length;
-}

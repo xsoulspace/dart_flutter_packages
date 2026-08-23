@@ -43,6 +43,7 @@ import 'package:ecsly/ecsly.dart';
 
 import '../data_models/data_models.dart';
 import '../model_router.dart' show AgentId;
+import '../narrative/components.dart';
 import '../systems/decision_flow_system.dart' show ToolResultPendingMarker;
 
 part 'builders.dart';
@@ -205,13 +206,43 @@ class DecisionFlowResource extends Resource {
 
 /// The built-in ReAct continuation: fire when the applying system has marked
 /// that a fresh tool result landed and continuation budget remains.
+///
+/// The continuation prompt is composed from world state (latest tool result
+/// for this actor) — small on-device models cannot be trusted to re-derive
+/// context from projected beats alone, and a blind "continue" prompt makes
+/// them loop trivial actions until the round budget burns out.
 class ReActContinuationPolicy implements DecisionPolicy {
   @override
   String get name => 'react_continuation';
 
   @override
-  DecisionDraft? evaluate(DecisionContext ctx) =>
-      ctx.has<ToolResultPendingMarker>()
-      ? const DecisionDraft(prompt: 'Tool result received. Continue the task.')
-      : null;
+  DecisionDraft? evaluate(DecisionContext ctx) {
+    if (!ctx.has<ToolResultPendingMarker>()) return null;
+    return DecisionDraft(prompt: _continuationPrompt(ctx));
+  }
+
+  /// Latest tool-result text spoken by this actor, truncated to keep the
+  /// decision prompt bounded (full output stays in the thread projection).
+  static String _continuationPrompt(DecisionContext ctx) {
+    final actorEntity = ctx.actorEntity.entity;
+    String? lastToolText;
+    String? lastToolName;
+    for (final (beat, content, _, text)
+        in ctx.world.query3<ToolResultContent, BeatStatus, TextContent>()) {
+      final sp = beat.get<Speaker>();
+      if (sp == null || sp.actor != actorEntity) continue;
+      lastToolName = content.name;
+      lastToolText = text.text.length > 400
+          ? '${text.text.substring(0, 400)}…'
+          : text.text;
+    }
+    final resultLine = lastToolName == null
+        ? 'A tool result just arrived.'
+        : 'Your `$lastToolName` tool call returned: $lastToolText';
+    return '$resultLine\n\n'
+        'Decide the next single step toward completing the original task: '
+        'either call one more tool with concrete arguments, or — if the task '
+        'is fully satisfied by the current workspace state — give the final '
+        'answer. Do not repeat a tool call that already succeeded.';
+  }
 }
