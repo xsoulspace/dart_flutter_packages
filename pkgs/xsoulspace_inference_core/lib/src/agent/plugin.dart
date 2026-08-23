@@ -6,6 +6,7 @@ import 'package:ecsly_async_parallel/ecsly_async_parallel.dart';
 
 import 'events.dart';
 import 'data_models/data_models.dart';
+import 'decisions/decision_flow.dart';
 import 'narrative/narrative.dart';
 import 'resources/resources.dart';
 import 'schedules.dart';
@@ -75,8 +76,11 @@ class AgentPlugin extends Plugin {
       ..registerObjectComponent<ToolResultContent>()
       ..registerObjectComponent<IdentityBeat>()
       ..registerObjectComponent<RetryCount>()
-      ..registerObjectComponent<ToolRoundCount>()
-      ..registerObjectComponent<IdentitySeeded>();
+      ..registerObjectComponent<RetryCount>()
+      ..registerObjectComponent<IdentitySeeded>()
+      ..registerObjectComponent<DecisionOrigin>()
+      ..registerObjectComponent<DeferredThinking>()
+      ..registerObjectComponent<ToolResultPendingMarker>();
 
     // Resources
     world
@@ -87,7 +91,8 @@ class AgentPlugin extends Plugin {
       ..upsertResource(ProjectionPolicy())
       ..upsertResource(FacetIndex())
       ..upsertResource(AgencyPolicy())
-      ..upsertResource(ToolExecutorResource());
+      ..upsertResource(ToolExecutorResource())
+      ..upsertResource(DecisionFlowResource(DecisionFlow.defaultReAct()));
 
     // Event channels for async LLM I/O.
     //
@@ -122,7 +127,8 @@ class AgentPlugin extends Plugin {
     // 5. Mechanical: execute tools, score/prune threads
     // 6. Narrative: advance Thread/Beat playheads, finalize partials
     world.createSchedule(Schedules.agencyGrant)
-      ..add(grantAgencySystem, name: 'grantAgency')
+      ..add(decisionFlowSystem, name: 'decisionFlow')
+      ..then(grantAgencySystem, name: 'grantAgency')
       ..then(flushAllSystem, name: 'flushAfterGrant');
 
     world.createSchedule(Schedules.project)

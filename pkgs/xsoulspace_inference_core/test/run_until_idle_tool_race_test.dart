@@ -186,7 +186,7 @@ void main() {
     final actorRounds = world.query2<Actor, ToolRoundCount>().toList();
     if (actorRounds.isNotEmpty) {
       expect(
-        actorRounds.first.$2.value,
+        actorRounds.first.$3.value,
         lessThanOrEqualTo(16),
         reason: 'ToolRoundCount must never exceed AgencyPolicy.maxToolRounds',
       );

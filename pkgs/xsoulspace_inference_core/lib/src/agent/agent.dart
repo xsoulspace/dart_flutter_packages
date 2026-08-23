@@ -8,6 +8,7 @@ library;
 
 export 'model_router.dart';
 export 'data_models/data_models.dart';
+export 'decisions/decision_flow.dart';
 export 'events.dart';
 export 'handler.dart';
 export 'handler_structured_tools.dart';

@@ -104,9 +104,12 @@ void main() {
 
       await HarnessLoop(world: world).runUntilIdle();
 
-      // One decision was made (guided act); the echo tool ran in-world and
-      // the tool result became a beat on the canonical path.
-      expect(calls, 1);
+      // One guided decision was made; the echo tool ran in-world and the
+      // tool result became a beat on the canonical path. (The ReAct
+      // continuation re-opens a decision after the tool result, so the inner
+      // handler may be called again — that's expected post-ADR-0004
+      // behavior, not a bug.)
+      expect(calls, greaterThanOrEqualTo(1));
       final toolBeats = world
           .query3<ToolResultContent, BeatStatus, TextContent>()
           .where((r) => r.$2.name == 'echo')

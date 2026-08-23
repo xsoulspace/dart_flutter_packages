@@ -11,6 +11,7 @@ library;
 
 export 'actor_act_system.dart';
 export 'agency_systems.dart';
+export 'decision_flow_system.dart';
 export 'generation_systems.dart';
 export 'identity_systems.dart';
 export 'projection/projection_systems.dart';

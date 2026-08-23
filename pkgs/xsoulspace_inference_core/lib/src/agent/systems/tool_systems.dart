@@ -9,6 +9,7 @@ import '../narrative/narrative.dart';
 import '../resources/resources.dart';
 import 'projection/projection_systems.dart' show toolResultText;
 import 'projection/relevance.dart' show keywordsOf;
+import 'decision_flow_system.dart' show ToolResultPendingMarker;
 
 /// System 5: Execute tool calls dispatched as [ToolCallEvent]s.
 ///
@@ -157,22 +158,16 @@ void processToolResultsSystem(World world) {
       thread: toolBeatEntity.get<BelongsToThread>()?.thread,
     );
 
-    // ReAct continuation (ADR 0004): when a tool result lands and the actor
-    // has no open decision, re-open one so the next projection ray-traces
-    // this tool-result beat into context. Without this, the decision was
-    // consumed at response time and the actor never sees its own tool
-    // output — the loop dies with work left undone.
-    //
-    // Bounded by [AgencyPolicy.maxToolRounds] via [ToolRoundCount]: a model
-    // that never stops calling tools must not loop forever. The count is
-    // reset when a decision completes WITHOUT tool calls (final answer).
+    // ReAct continuation (ADR 0005): mark that a fresh tool result landed.
+    // The DecisionFlow (default: ReActContinuationPolicy) evaluates the
+    // marker in the next AgencyGrant pass and opens the continuation
+    // decision — routing is data now, not buried control flow. Bounded by
+    // [AgencyPolicy.maxToolRounds] via [ToolRoundCount].
     final policy = world.getResource<AgencyPolicy>();
     final rounds = we.get<ToolRoundCount>()?.value ?? 0;
     if (!we.has<OpenDecision>() && rounds < policy.maxToolRounds) {
       we.insert(ToolRoundCount(rounds + 1));
-      we.insert(
-        const OpenDecision(prompt: 'Tool result received. Continue the task.'),
-      );
+      we.insert(const ToolResultPendingMarker());
     }
   }
 }
