@@ -32,6 +32,7 @@ Future<void> main(List<String> args) async {
   var maxToolRounds = 16;
   String? filter;
   var verbose = false;
+  var resume = false;
   for (var i = 0; i < args.length; i++) {
     switch (args[i]) {
       case '--tasks':
@@ -46,6 +47,8 @@ Future<void> main(List<String> args) async {
         maxToolRounds = int.parse(args[++i]);
       case '--filter':
         filter = args[++i];
+      case '--resume':
+        resume = true;
       case '--verbose':
         verbose = true;
     }
@@ -84,6 +87,7 @@ Future<void> main(List<String> args) async {
     buildHandler: debugHandler,
     maxCheckerRetries: retries,
     maxToolRounds: maxToolRounds,
+    resumeFromTrace: resume ? tracePath : null,
   ).runAll(tasks, tracePath: tracePath, filter: filter);
 
   stdout.writeln(result.toMarkdown(label: 'suite(afm)'));

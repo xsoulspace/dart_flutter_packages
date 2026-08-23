@@ -16,6 +16,7 @@
 /// (via a local OpenAI-compatible shim) for apples-to-apples comparison.
 library;
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -105,6 +106,8 @@ class CodingSuiteRunner {
     this.maxConcurrent = 1,
     this.maxCheckerRetries = 0,
     this.maxToolRounds = 16,
+    this.taskTimeoutMinutes = 8,
+    this.resumeFromTrace,
   });
 
   /// Builds the generation handler for each run (fresh per task so state
@@ -130,6 +133,15 @@ class CodingSuiteRunner {
   /// ReAct tool rounds allowed per decision chain (AgencyPolicy bound).
   /// Small local models benefit from headroom; hosted models rarely need it.
   final int maxToolRounds;
+
+  /// Hard wall-clock budget per task (all checker retries included). A model
+  /// looping tool calls must not eat the suite; on timeout the workspace is
+  /// still evaluated — partial progress often satisfies checkers.
+  final int taskTimeoutMinutes;
+
+  /// Path to a previous JSONL trace. Tasks already present there are skipped
+  /// so an interrupted run resumes instead of paying ~45min again.
+  final String? resumeFromTrace;
 
   Future<TaskResult> runTask(CodingTask task) async {
     final parent = jailParent ?? Directory.systemTemp;
@@ -182,6 +194,10 @@ class CodingSuiteRunner {
 
       final sw = Stopwatch()..start();
       final loop = HarnessLoop(world: world);
+      // Hard per-task bound: a model that loops tool calls must not eat the
+      // whole suite wall clock. On timeout the workspace is still checked —
+      // partial progress often satisfies checkers.
+      final taskBudget = Duration(minutes: taskTimeoutMinutes);
       // Watermarks for honest accounting: every generation response is one
       // LLM call.
       int responsesSent() => world.events.hasRegistered<ActorGenerateResponse>()
@@ -231,13 +247,6 @@ class CodingSuiteRunner {
         tokensUsed += situation.tokensUsed;
       }
       final toolCalls = <String>[];
-      stdout.writeln(
-        '  [debug] trc=${world.query<ToolResultContent>().length} '
-        'bs=${world.query<BeatStatus>().length} '
-        'tc=${world.query<TextContent>().length} '
-        'toolCallEvtSent=${world.events.hasRegistered<ToolCallEvent>() ? world.events.stats<ToolCallEvent>().sent : 'n/a'} '
-        'respSent=$responsesSent()',
-      );
       for (final record
           in world.query3<ToolResultContent, BeatStatus, TextContent>()) {
         toolCalls.add(record.$2.name);
@@ -271,8 +280,26 @@ class CodingSuiteRunner {
         : tasks
               .where((t) => t.id.toLowerCase().contains(filter.toLowerCase()))
               .toList();
+    final done = <String>{};
+    final resumePath = resumeFromTrace;
+    if (resumePath != null && File(resumePath).existsSync()) {
+      for (final line in File(resumePath).readAsLinesSync()) {
+        if (line.trim().isEmpty) continue;
+        try {
+          done.add((jsonDecode(line) as Map<String, dynamic>)['task_id'] as String);
+        } on FormatException {
+          // Torn last line from a killed run — ignore.
+        }
+      }
+    }
     final results = <TaskResult>[];
+    var skipped = 0;
     for (final task in selected) {
+      if (done.contains(task.id)) {
+        skipped++;
+        stdout.writeln('▶ ${task.id} — already in trace, skipping');
+        continue;
+      }
       stdout.writeln('▶ ${task.id} (${task.category.yamlName})');
       final r = await runTask(task);
       results.add(r);
@@ -286,6 +313,9 @@ class CodingSuiteRunner {
           mode: FileMode.append,
         );
       }
+    }
+    if (skipped > 0) {
+      stdout.writeln('  ($skipped task(s) resumed from existing trace)');
     }
     return SuiteResult(results: results);
   }

@@ -112,20 +112,84 @@ that round-trips correctly.
 
 Fixed task set (file edit, multi-file refactor, search-then-edit, tool chains)
 with deterministic pass/fail checks. Run against real AFM; run the same tasks
-through pi with a comparable hosted model. Output: pass rate, tokens/task,
-wall-clock, $/task. This is where the efficiency claim gets its numbers.
+through pi driving the harness as an MCP/ACP server (ADR 0007 §3) with a
+comparable hosted model. Output: pass rate, tokens/task, wall-clock, $/task.
+This is where the efficiency claim gets its numbers.
+
+Additions binding via ADR 0007:
+
+- **Escalation-rate metric** per task class — if AFM escalates often, the
+tiny-model claim is failing quietly; publish it next to pass rates.
+- **Extensibility ledger** — the host CLI logs every core change it needs;
+three entries against the same seam trigger a design conversation (ADR 0007 §4).
+- **Tool-surface gap closure** for coding tasks: search/grep, jailed shell,
+edit-with-diff-verification, per-tool human-confirmation gates. Each enters
+via seam 3 (`ToolDef`); none change core.
+
+## Phase 4b — Reduction-fidelity evaluation (structurification)
+
+Summarization exists only as a *reduction transform*: long text → classify →
+beats with facets. Its quality is measured deterministically with ADR 0004's
+machinery, no embedding judge:
+
+- **Reduction fidelity** = the reduced beat still triggers the correct ray and
+causally gates scripted success (`ContextCoupledHandler`).
+- **Keyword-drift benchmark** — paraphrased/reduced beats whose keywords no
+longer match future rays become invisible; measure ray recall under vocabulary
+drift. This is the known failure mode of keyword-facet retrieval; it must be
+measured, not assumed away.
 
 ## Phase 5 — Concurrency gating in AgencyPolicy
 
 AFM serializes requests on-device. Add backend-declared max-in-flight to
-`AgencyPolicy`; agency grants gate on it. Prevents invisible queueing and
-timeout-sweeper false positives when many actors act concurrently.
+`AgencyPolicy`; agency grants gate on it, and `taskTimeout` scales with queue
+depth so the timeout sweeper stops firing false positives on serial backends.
+Prevents invisible queueing when many actors act concurrently.
+
+## Phase 5b — Seam conformance suites
+
+Per ADR 0007 §2: policy conformance (determinism, purity canary), tool
+conformance (timeout/error-shape/serialization round-trip), handler
+conformance (ScriptedTurn fault matrix), projection conformance (budget
+assertion at runtime in debug mode). Precedent: `universal_storage_conformance`.
+Mods that break determinism fail at development time, not inside evaluations.
 
 ## Phase 6 — Snapshot/restore + baseline table
 
-World snapshot/restore (threads, beats, facet-index rebuild) so the CLI
-survives restarts — required for daily-driver parity with pi. Then publish the
-final comparison table from Phase 4 as the headline artifact.
+World snapshot/restore so the CLI survives restarts — required for daily-
+driver parity with pi. Binding requirements in ADR 0007 §5:
+
+- Persist beats/threads/components via `ecsly_serializable`, stored through
+`universal_storage`; **rebuild** the facet index from restored beats (derived
+state is never source-of-truth).
+- Crash mid-decision restores to a re-opened decision, never stuck
+`AwaitingResponse`.
+- Golden oracle: post-restore projections byte-match pre-snapshot projections.
+
+Then publish the final comparison table from Phase 4 as the headline artifact.
+
+## Everyday CLI host (thin, per North Star non-goals)
+
+REPL on `HarnessLoop.start()` + `wakeup()`: streaming deltas to the TTY (FFI
+streaming exists), user input as new decisions while idle, cancel-in-flight
+mapped to task cancellation + agency release (not process kill), `/situation`
+inspector showing an actor's current cut, snapshot autosave, confirmation-
+gated tools. The CLI stays embarrassingly thin: any need beyond snapshot +
+streaming + confirmation gates is an extensibility-ledger entry, not a core
+change.
+
+## Cleanup
+
+- Fix the 8 known-failing core tests (`fs tools path jail`, headless tool
+routing, decision flow) — Phase 4 blockers; honest benchmarking needs green
+baselines.
+- Migrate or delete legacy manual-schedule tests (the sleep + second-pass
+crutch that masked the idle-race bug; see postmortem above).
+- Delete bisection probes (`tool/probe_*.dart`, `benchmark/debug_*.dart`)
+after extracting durable lessons into checks/tests.
+- Fold `docs/agent/discussion.md` into ADRs; keep PLAN as the only living plan.
+- Make the web-vs-VM split (`fs_tools.dart`) enforceable by lint/separate
+barrel instead of a comment.
 
 ## Later / parked
 

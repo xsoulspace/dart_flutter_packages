@@ -31,6 +31,7 @@ Future<void> main(List<String> args) async {
   var retries = 0;
   var maxToolRounds = 16;
   String? filter;
+  var resume = false;
   for (var i = 0; i < args.length; i++) {
     switch (args[i]) {
       case '--tasks':
@@ -47,6 +48,8 @@ Future<void> main(List<String> args) async {
         maxToolRounds = int.parse(args[++i]);
       case '--filter':
         filter = args[++i];
+      case '--resume':
+        resume = true;
     }
   }
 
@@ -70,6 +73,7 @@ Future<void> main(List<String> args) async {
     buildHandler: buildHandler,
     maxCheckerRetries: retries,
     maxToolRounds: maxToolRounds,
+    resumeFromTrace: (resume && tracePath != null) ? tracePath : null,
   ).runAll(tasks, tracePath: tracePath, filter: filter);
 
   stdout.writeln(result.toMarkdown(label: 'suite($backend)'));
