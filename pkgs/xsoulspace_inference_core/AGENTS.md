@@ -31,6 +31,14 @@ The working model is a living, multi-linear game world, not a conversation log:
 
 See [Agent harness North Star](docs/north_star_agentic_harness.mdx) for the full objective and non-goals.
 
+### Onboarding fast path
+
+- **Architecture map** (one diagram + invariants): [docs/agent/architecture.mdx](docs/agent/architecture.mdx)
+- **Runnable golden examples** (pure Dart, no device): `example/lib/headless/` —
+  run all with `just demo` (package justfile) or `just demo xsoulspace_inference_core`
+  (repo root). Recipes are also embedded as dartdoc on `HarnessLoop`,
+  `AgentWorldSetup`, and `ScriptedGenerationHandler`.
+
 ## Where Things Live
 
 - Public API: `lib/xsoulspace_inference_core.dart`

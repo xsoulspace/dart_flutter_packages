@@ -5,6 +5,34 @@
 /// nothing about LLM handlers, tools, or I/O. All async work is owned by
 /// the world via [TaskRegistryResource] and the agent schedules.
 ///
+/// ## Minimal bootstrap (runnable)
+///
+/// The smallest complete harness — world, handler, one actor, one decision:
+///
+/// ```dart
+/// final world = World()..addPlugin(AgentPlugin());
+/// world
+///   ..upsertResource(ModelRouterResource(ModelRouter()))
+///   ..upsertResource(ToolRegistryResource());
+/// world.getResource<GenerationHandlerResource>().registerDefault(handler);
+/// world.flush();
+///
+/// final setup = AgentWorldSetup(world: world);
+/// final scene = setup.spawnScene();
+/// final actors = setup.spawnActors([ActorSpec(name: 'a', systemPrompt: '…')], scene);
+/// world.upsertComponent(actors.single.entity, OpenDecision(prompt: 'Decide.'));
+/// world.flush();
+///
+/// await HarnessLoop(world: world).runUntilIdle();
+/// ```
+///
+/// Runnable versions live in `example/lib/headless/`:
+///
+/// - `01_minimal_loop.dart` — this bootstrap, end to end.
+/// - `02_tool_routing.dart` — registering tools and routing tool calls.
+/// - `03_scripted_faults.dart` — deterministic testing with scripted turns.
+/// - `04_real_model_openrouter.dart` — swapping in a real provider.
+///
 /// ## Flutter integration
 ///
 /// For Flutter apps, prefer [EcsFixedStepLoop] from `ecsly_flutter` which

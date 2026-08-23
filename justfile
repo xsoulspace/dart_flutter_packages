@@ -5,6 +5,31 @@
 default:
     just pub-get
 
+# Fast scoped gate for one package (default: xsoulspace_inference_core).
+# Usage: just check [package]  — pub get is reused from workspace resolution.
+check package="xsoulspace_inference_core":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    d="pkgs/{{ package }}"
+    [ -d "$d" ] || { echo "unknown package {{ package }}"; exit 1; }
+    (cd "$d" && flutter analyze && flutter test)
+
+analyze-one package="xsoulspace_inference_core":
+    cd "pkgs/{{ package }}" && flutter analyze
+
+test-one package="xsoulspace_inference_core":
+    cd "pkgs/{{ package }}" && flutter test
+
+# Run the headless golden examples of the agent harness (no device needed).
+demo package="xsoulspace_inference_core":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd "pkgs/{{ package }}/example"
+    for f in lib/headless/0*.dart; do
+      echo "=== $f ==="
+      dart run "$f"
+    done
+
 fix-lints:
     dart fix . --apply && dart format .
 

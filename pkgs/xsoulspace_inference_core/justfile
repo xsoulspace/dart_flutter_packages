@@ -4,6 +4,15 @@ get:
 test:
     flutter test
 
+demo:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd example
+    for f in lib/headless/0*.dart; do
+      echo "=== $f ==="
+      dart run "$f"
+    done
+
 analyze:
     flutter analyze
 

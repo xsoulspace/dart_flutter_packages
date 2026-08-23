@@ -1,0 +1,68 @@
+# Agent Harness Architecture Map
+
+One page, one diagram, so agents and humans stop re-deriving this from ~30
+source files. Full objective and non-goals:
+[North Star](../north_star_agentic_harness.mdx).
+
+## The loop in one sentence
+
+The world is an ECS graph of beats; a decision opens, agency grants the actor
+a model call, the projection system ray-traces a tiny cut of the graph as the
+prompt, the handler calls a swappable model, responses come back through
+events, tools execute inside the world, and the result is written back as
+beats — then the loop sleeps until new work arrives.
+
+## Schedules → systems → events → resources
+
+```mermaid
+flowchart LR
+  subgraph Resources["Resources (state)"]
+    MRR[ModelRouterResource]
+    GHR[GenerationHandlerResource]
+    TRR[ToolRegistryResource / ToolExecutorResource]
+    FI[FacetIndex]
+    TaskR[TaskRegistryResource]
+  end
+
+  subgraph Schedules["Schedules (in tick order)"]
+    AG[AgencyGrant] --> PRJ[Project] --> AA[ActorAct] --> PRES[ProcessResponses]
+    MECH[Mechanical] --> NAR[Narrative]
+  end
+
+  OD[OpenDecision component<br/>on Actor] -- gate --> AG
+  AG -- Agency component --> PRJ
+  PRJ -- "ray-trace cut (token budget)" --> AA
+  AA -- ActorGenerateRequest event --> GHR
+  GHR -- handler.generate() --> Model[(Swappable model:<br/>Gemma / Apple FM / OpenRouter)]
+  Model -- response + toolCalls --> PRES
+  PRES -- ToolCallEvent --> TRR
+  TRR -- ToolResultEvent --> MECH
+  MECH -- beats --> FI
+  NAR -- beats/threads --> FI
+  FI -. projection reads .-> PRJ
+
+  HL[HarnessLoop] -- drives --> Schedules
+  HL -- sleeps when canSleep() --> IDLE[[event-driven sleep,<br/>wakeup() on new work]]
+```
+
+## Invariants worth defending
+
+- The handler **never executes tools**; `toolExecutionSystem` does, so native
+  (Apple FM) and tag-parsed tool calls share one path.
+- Memory is **projection over beat-threads**, never a log; summaries are
+  deliberate transforms that stay traceable.
+- Projection is **token-budgeted** and fails benchmarks when exceeded.
+- One **flush** is the coherence point per phase; `runUntilIdle` must end with
+  no pending decisions, agency, awaits, tasks, or stranded events
+  (`expectIdle` in test support).
+- Adding a provider = register an `InferenceClient` builder in
+  [ModelRouter]; nothing else changes.
+
+## Runnable entry points
+
+| File | Shows |
+| --- | --- |
+| `example/lib/headless/01_minimal_loop.dart` | Bootstrap + run-until-idle |
+| `example/lib/headless/02_tool_routing.dart` | Tool registration & world-routed execution |
+| `example/lib/headless/03_scripted_faults.dart` | Deterministic fault injection |
+| `example/lib/headless/04_real_model_openrouter.dart` | Real provider via ModelRouter |

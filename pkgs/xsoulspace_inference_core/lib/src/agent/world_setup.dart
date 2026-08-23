@@ -3,6 +3,24 @@
 /// Extracted from [ScenarioRunner]'s setup ritual so hosts (CLI, Flutter,
 /// tests) get the same one-call bootstrap instead of duplicating the
 /// Scene → actors → threads → flush choreography.
+///
+/// ## Recipes
+///
+/// **Open a decision for an actor** (the only way a model is invoked —
+/// agency is granted only when real work exists):
+///
+/// ```dart
+/// final actor = setup.spawnActors([ActorSpec(name: 'a', systemPrompt: '…')], scene).single;
+/// world.upsertComponent(actor.entity, OpenDecision(prompt: '…'));
+/// world.flush();
+/// ```
+///
+/// **Register tools** on the registry actors are bound to (see
+/// `example/lib/headless/02_tool_routing.dart`):
+///
+/// ```dart
+/// setup.registerTools([ToolDef.encode(name: ToolName('echo'), ...)]);
+/// ```
 library;
 
 import 'package:ecsly/ecsly.dart';

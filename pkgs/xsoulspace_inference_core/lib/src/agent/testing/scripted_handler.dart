@@ -61,6 +61,9 @@ enum ScriptedTurnMode {
 
 /// A deterministic [GenerationHandler]: consumes [turns] in order and loops
 /// on the last turn when exhausted (so retry paths replay the same behavior).
+///
+/// See `example/lib/headless/03_scripted_faults.dart` for a runnable
+/// empty-response → retry demonstration with oracle assertions.
 class ScriptedGenerationHandler implements GenerationHandler {
   ScriptedGenerationHandler(List<ScriptedTurn> turns)
     : turns = List.unmodifiable(turns);
