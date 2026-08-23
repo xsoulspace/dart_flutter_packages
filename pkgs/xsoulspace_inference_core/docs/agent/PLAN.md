@@ -29,26 +29,32 @@ pi SDK driver → run matrix (`harness+AFM` / `harness+OR` / `pi+OR`, same model
 → publish `results_comparison.md`.
 **No core changes.** Estimated ~2 days total.
 
-### A2. Goals as vectors, plans as projections (ADR 0009) — *the structural move*
+### A2. Goals as vectors, plans as projections (ADR 0009) — *falsification passed; productionize*
 
-Slot after 4b machinery exists; shares its evaluation apparatus.
+**Status update (2026-08):** the falsifying experiment ran across all 20
+suite tasks — **−39% LLM calls, −24% tokens/task, equal 20/20 pass rate**
+([results](results_plan_falsification.md)). Not noise. Remaining work to
+production shape, in order:
 
-1. `Goal` entity: direction + tool-callable success criteria + lifecycle;
+1. **Purity**: move the frontier policy off direct fs reads — predicates run
+   as verifier tools behind seam 3, results become beats, policy stays pure
+   (conformance suite in A4 applies).
+2. `Goal` entity: direction + tool-callable success criteria + lifecycle;
    predicate tools enter via seam 3 (`run_tests`, `diff_check`, `ast_check`).
-2. Step entities on a verifiability spectrum (`mechanical | observable |
+3. Step entities on a verifiability spectrum (`mechanical | observable |
    open`) with status machine and evidence-beat links; superseded steps stay
    queryable.
-3. `OpenDecision.stepId` backlink → agency grants carry acceptance criteria
+4. `OpenDecision.stepId` backlink → agency grants carry acceptance criteria
    in-frame.
-4. Plan-frontier projection: explicit `goalLink`/`dependsOn` traversal,
-   token-budgeted, green-screen elsewhere. Mechanical steps never touch an LLM.
-5. Decomposition as one agentic act per goal (amortized; escalation tier OK).
+5. Plan-frontier projection: explicit `goalLink`/`dependsOn` traversal,
+   token-budgeted, green-screen elsewhere.
+6. Real-model probe: same A/B against AFM on the 6 edit tasks — does the
+   saved close-out call survive a real model, or does it reappear elsewhere?
+7. Decomposition as one agentic act per goal (amortized; escalation tier OK),
+   fidelity measured via ADR 0004 causal coupling.
 
-**Falsifying experiment first:** one coding-suite task expressed as steps with
-checker criteria; mechanical steps skip the LLM; measure tokens/task delta.
-If the delta is noise, stop here.
-
-New metrics: mechanical-step share (work completed without any LLM call),
+New metrics: mechanical-step share (work completed without any LLM call —
+already measured at 100% for verification in the falsification run),
 escalation rate per task class, decomposition fidelity via ADR 0004 causal
 coupling.
 

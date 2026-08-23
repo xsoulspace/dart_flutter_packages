@@ -119,6 +119,12 @@ generators per ADR 0003.
 - Smallest falsifying experiment: take one coding-suite task, express its
   steps as goal-linked entities with checker-based criteria, run the loop with
   mechanical steps skipping the LLM, measure the tokens/task delta.
+  **Executed 2026-08 across all 20 suite tasks: −39% LLM calls, −24%
+  tokens/task, equal pass rate. Not noise — the mechanism survives.**
+  See [results](../../xsoulspace_inference_core/docs/agent/results_plan_falsification.md).
+  Known gap before production shape: the experiment's frontier policy reads
+  the workspace fs directly; predicates must become verifier-tool beats to
+  keep policies pure.
 
 ## References
 

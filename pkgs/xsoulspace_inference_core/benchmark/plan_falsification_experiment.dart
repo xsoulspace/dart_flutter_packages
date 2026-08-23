@@ -35,7 +35,6 @@ import 'package:xsoulspace_inference_core/src/agent/tools/fs_tools.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import 'coding_suite/checkers.dart';
-import 'coding_suite/runner.dart';
 import 'coding_suite/scripted_handler.dart';
 import 'coding_suite/task_spec.dart';
 
@@ -146,7 +145,12 @@ class OneActionPerCallHandler implements GenerationHandler {
 
 /// Plan-driven arm: mirrors CodingSuiteRunner.runTask's production world
 /// construction, swaps the decision flow, adds Goal+step entities.
-Future<_Row> _runPlanDriven(CodingTask task) async {
+/// [planFrontier] selects the arm:
+/// - false → default ReAct flow (baseline: continuation after every tool
+///   result; the model must spend one final call to say "done").
+/// - true  → [PlanFrontierPolicy] (goal criteria verified mechanically;
+///   loop terminates with zero close-out calls).
+Future<_Row> _runArm(CodingTask task, {required bool planFrontier}) async {
   final jail = await Directory.systemTemp.createTemp('plan_exp_${task.id}_');
   try {
     for (final f in task.fixtures) {
@@ -156,6 +160,10 @@ Future<_Row> _runPlanDriven(CodingTask task) async {
     }
 
     final world = World()..addPlugin(AgentPlugin());
+    // Experiment-local components (ADR 0009 §2 shape preview).
+    world.components
+      ..registerObjectComponent<StepGoalLink>()
+      ..registerObjectComponent<StepStatus>();
     final router = ModelRouter(inferenceClientsBuilders: {});
     final modelId = ModelId('suite-model');
     router.models[modelId] = Model(id: modelId, name: DefaultModelNames.appleFoundation);
@@ -168,19 +176,20 @@ Future<_Row> _runPlanDriven(CodingTask task) async {
     world.getResource<GenerationHandlerResource>().registerDefault(
           OneActionPerCallHandler(taskId: task.id),
         );
-
     final registry = ToolRegistry();
     fsTools(FsToolsRoot(jail.path)).forEach(registry.register);
     world.getResource<ToolRegistryResource>().register('default', registry);
 
-    // Replace the default ReAct flow with the plan frontier (ADR 0009 §3).
-    world.upsertResource(
-      DecisionFlowResource(
-        DecisionFlow([
-          PlanFrontierPolicy(jailPath: jail.path, checkers: task.checkers),
-        ]),
-      ),
-    );
+    if (planFrontier) {
+      // Replace the default ReAct flow with the plan frontier (ADR 0009 §3).
+      world.upsertResource(
+        DecisionFlowResource(
+          DecisionFlow([
+            PlanFrontierPolicy(jailPath: jail.path, checkers: task.checkers),
+          ]),
+        ),
+      );
+    }
 
     final scene = world.spawnComponents([const Scene(), SceneFrame()]);
     final actor = world.spawnComponents([
@@ -196,6 +205,8 @@ Future<_Row> _runPlanDriven(CodingTask task) async {
     world.upsertComponent(actor, ActorThreads(threads: [thread]));
 
     // Goal vector + step entity — durable facts in the graph (ADR 0009 §1–2).
+    // Present in BOTH arms so entity bookkeeping never confounds the delta;
+    // only the decision flow differs.
     final goal = world.spawnComponents([
       Goal(text: task.prompt),
     ]);
@@ -277,18 +288,18 @@ Future<void> main(List<String> args) async {
       .toList();
   stdout.writeln('ADR 0009 falsifying experiment — ${tasks.length} tasks\n');
 
-  // Arm A: baseline through the untouched production runner.
-  final baseline = await CodingSuiteRunner(
-    buildHandler: (task) => ScriptedSuiteHandler(taskId: task.id),
-    maxCheckerRetries: 0,
-    backendLabel: 'exp-baseline',
-    modelLabel: 'scripted',
-  ).runAll(tasks);
-
-  // Arm B: plan-driven.
+  // Both arms: same stateful handler (one action per call), same fixtures,
+  // same checkers, Goal+step entities present in both. The ONLY variable is
+  // the decision flow — continuation-after-every-result vs mechanical
+  // frontier verification. (An earlier draft used the stateless
+  // ScriptedSuiteHandler for the baseline; it re-emits all steps on every
+  // continuation round until maxToolRounds exhausts — 17 "calls" for a
+  // one-write task — which measures the handler, not the harness.)
+  final baseline = <_Row>[];
   final planRows = <_Row>[];
   for (final task in tasks) {
-    planRows.add(await _runPlanDriven(task));
+    baseline.add(await _runArm(task, planFrontier: false));
+    planRows.add(await _runArm(task, planFrontier: true));
   }
 
   // Comparison table.
@@ -299,7 +310,7 @@ Future<void> main(List<String> args) async {
   var baseTok = 0, planTok = 0, baseCalls = 0, planCalls = 0;
   var allPass = true;
   for (var i = 0; i < tasks.length; i++) {
-    final br = baseline.results[i];
+    final br = baseline[i];
     final pr = planRows[i];
     allPass &= pr.passed && br.passed;
     baseTok += br.tokensUsed;

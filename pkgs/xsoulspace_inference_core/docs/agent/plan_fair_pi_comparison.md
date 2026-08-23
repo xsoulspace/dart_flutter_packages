@@ -1,7 +1,18 @@
 # Plan — Fair pi vs harness comparison (Phase 4 follow-up)
 
 Status: proposed. Binding context: ADR 0007 §3–4,
-[results_phase4.md](results_phase4.md).
+[results_phase4.md](results_phase4.md). This is item **A1** in the living
+[PLAN](PLAN.md) — it blocks every measured claim downstream, including A2's
+tokens/task deltas (ADR 0009), because hosted columns cannot account tokens
+honestly until C1 is fixed.
+
+Cross-reference: ADR 0009's falsifying experiment already showed the
+plan-frontier mechanism removes the ReAct close-out call (−39% calls, −24%
+tokens/task on scripted runs,
+[results](results_plan_falsification.md)). Once this plan's matrix runs, add a
+**mechanical-step share** column (work completed with zero LLM calls) to every
+published table — it operationalizes the agency-discipline claim next to pass
+rates.
 
 ## Investigation: why the current columns are not comparable
 
@@ -133,11 +144,11 @@ write, list/search) is the requirement, not byte-identical schemas.
 
 ### Step 5 — Run matrix + publish
 
-| Column | Backend | Decision path | Tokens source |
-| --- | --- | --- | --- |
-| harness+AFM | apple-foundation | unified (Step 2) | projection (only option) |
-| harness+OR | dots-3-note-preview:free (or paid tier twin) | unified (Step 2) | real usage post-C1 |
-| pi+OR | same model id | pi native | real usage |
+| Column | Backend | Decision path | Tokens source | Mech-share |
+| --- | --- | --- | --- | --- |
+| harness+AFM | apple-foundation | unified (Step 2) | projection (only option) | yes |
+| harness+OR | dots-3-note-preview:free (or paid tier twin) | unified (Step 2) | real usage post-C1 | yes |
+| pi+OR | same model id | pi native | real usage | n/a (report pi tool-call count instead) |
 
 Publish an updated `results_phase4.md` (or `results_comparison.md`) with all
 axes, the C1 A/B delta, and explicit labels. Free-tier model ids can silently
@@ -153,6 +164,9 @@ equivalent if free-tier instability corrupts the comparison.
   Step 2 is benchmark-code only.
 - Failures remain data: pi's failures get the same failure-mode treatment,
   not a gentler narrative.
+- If A2 (goals/plans, ADR 0009) lands before the matrix run, stamp each row
+  with `plan_frontier: on/off` — otherwise the −24% tokens/task from close-out
+  elimination would silently confound the harness-vs-pi comparison.
 
 ## Sequencing
 
