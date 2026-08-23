@@ -43,6 +43,11 @@ That is the efficiency claim, and it must be measured, not asserted:
   needs, plus explicit green-screen absences. Enforced token budget.
 - **Agency discipline** — the model is called only when a real decision is
   open; all other work is mechanical and never touches an LLM.
+- **Plans as derived projections** (ADR 0009) — goals are vectors carrying
+  tool-callable verification criteria; plan steps are entities on a
+  verifiability spectrum; the plan itself is never stored, only re-cut as a
+  budgeted frontier projection. The same agency/mechanical split applies to
+  the future tense: mechanical steps execute and verify without an LLM.
 - **Graph-native memory** — threads of beats (text, thought, tool calls,
   observations) are the source of truth for the storyline. Memory is a _re-
   derivable projection_ (project a past I'm entitled to), never an independent
@@ -56,6 +61,7 @@ That is the efficiency claim, and it must be measured, not asserted:
   reusable — the modding model. See [ADR 0007](../../../docs/decisions/0007_extensibility_seams_and_conformance.md).
 - **Testable without an LLM** — every part except _write a beat_ is
   deterministic graph logic, exercisable with a mock generator.
+- **Plans as derived projections** (ADR 0009) — see above.
 - **Purpose-driven model provisioning** — local providers (Gemma, Whisper,
   Sherpa) adopt the optional `ProvisionableInferenceClient` contract:
   `ensureReady(ModelPurpose, constraints)` with consent, network-policy, and
@@ -99,7 +105,8 @@ ends with a measurable artifact — no phase is done on vibes.
 | 1   | **Docs & North Star**                  | This file + `docs/agent/PLAN.md` rewritten; claims separated from proofs.                                                                                                                       | Alignment                               |
 | 2   | **Long-horizon scaling benchmark** ✅  | Scripted 1,000-decision run (mock handler): flatness **1.07x**, latency growth **1.92x** over a 1000-beat graph, budget never exceeded. CI-gated.                                               | Context-boundedness at scale — proven   |
 | 3   | **Streaming through FFI bridge** ✅    | `xs_fm_generate_stream_async` in Swift + `streamStructuredText` on the native client. TTFT measured on hardware; multi-line deltas verified. Smoke: `dart run bin/stream_smoke.dart`.           | Local-model UX viability — proven       |
-| 4   | **20-task coding suite vs pi**         | Fixed task set (edit/refactor/search/tool-chain) with pass/fail checks, run against real AFM; same tasks through pi driving the harness as an MCP/ACP server. Table: pass rate, tokens/task, wall-clock, $/task, escalation rate. | Task completion + tokens-per-task claim |
+| 4   | **20-task coding suite vs pi**         | Ran 2026-08 (`results_phase4.md`): AFM 5/20, OR 4/20 — columns **not comparable** (C1 client shape, C2 decision-path split, C3 no pi column). Redo via pi SDK driver per `docs/agent/plan_fair_pi_comparison.md`: same model, two harnesses. Pass rate + tokens/task + wall-clock + escalation rate + mechanical-step share (ADR 0009). | Task completion + tokens-per-task claim |
+| 4b  | **Reduction fidelity**                 | Structurization measured by causal coupling + keyword-drift recall over execution contexts (plan discovery is link-based, drift-free by construction — ADR 0009). | Retrieval honesty under vocabulary drift |
 | 5   | **Concurrency gating in AgencyPolicy** ✅ | `Model.maxInFlight` gates agency grants per resolved model (`grantAgencySystem`); `_spawn` CLI command battle-tests multi-actor under serial AFM. Timeout-sweeper false positives bounded by per-model budget. | Correct multi-actor behavior on-device  |
 | 6   | **Snapshot/restore + baseline table**  | World snapshot/restore via `ecsly_serializable` + `universal_storage` (ADR 0007 §5); facet index rebuilt from restored beats; CLI restart survival. Final comparison table published.          | CLI parity + the winning numbers        |
 

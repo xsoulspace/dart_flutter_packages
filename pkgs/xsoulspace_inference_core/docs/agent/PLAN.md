@@ -1,241 +1,98 @@
-# Agent Harness — Improvement Plan
+# Agent Harness — Plan
 
 > Goal: prove + harden the tiny-context (2–4k) cinematic multi-actor harness.
-> Thesis: harness = intelligence amplifier; model = replaceable reasoning primitive.
+> Thesis: harness = intelligence amplifier; model = replaceable reasoning
+> primitive. History and landed work: [history.md](history.md). Durable
+> decisions: [ADR Index](../../../../docs/decisions/README.md).
 
-The working model is a **living, multi-linear game world**, not a conversation
-log. Memory was removed as a primitive: there is no per-actor fragment list and
-no compaction policy. An actor's reality _is_ the cut (`Situation`) you hand it;
-memory is just one flavor of projection.
+The working model is a living, multi-linear game world. Memory was removed as
+a primitive; now planning is too (ADR 0009). What remains ahead, in order:
 
-Phases below mirror the North Star table. Status: `done` / `active` / `next`.
+---
 
-## Done
+## Ahead — ordered
 
-- **Cinematic projection (the intelligence).** `projectSituationSystem` takes a
-  token budget → relevance-ranked, thread-aware, green-screen-explicit
-  `Situation`. Budget enforced at projection time; system prompt + tool schemas
-  counted against the real budget.
-- **Graph-native, memory removed.** Beats are indexed into a `FacetIndex`
-  (keyword → beats). Projection is a ray (keyword hits ∪ actor's `ActorThreads`),
-  not a scan of a per-actor memory list. Summary is a first-class beat kind
-  (`MemorySummary`), produced only by the deliberate `summarizeThread` transform.
-- **Multi-thread projection.** Rays traverse _all_ of an actor's threads;
-  `ThreadStatus` (pruned/merged/archived) filters entry; `ThreadVisibility`
-  restricts who may see what; `PrivateToActor` beats never enter another
-  actor's cut — including via keyword hits. Pruned threads deindex their beats.
-- **Targeted decisions.** `OpenDecision.threadId` routes beat attachment and
-  identity seeding to a specific thread.
-- **Failure guarantees.** Throwing/hanging tools produce error results after
-  `AgencyPolicy.taskTimeout`; missing/crashed handlers fail fast; failed
-  responses retry up to `AgencyPolicy.maxRetries`; a timeout sweeper frees
-  actors stuck in `AwaitingResponse`. The loop can never hang on a bad backend.
-- **Real escalation tiers.** `Model.tier` ranks models; escalation picks the
-  lowest strictly-higher tier, never an arbitrary map order.
-- **Collision-free IDs.** `TaskId`/`AgentId`/`ModelId` use timestamp +
-  monotonic counter.
-- **Single tool-result path.** All tool results flow
-  `ToolCallEvent → toolExecutionSystem → ToolResultEvent → beats`. No duplicate
-  recording from handler responses.
-- **CLI/server ergonomics.** `HarnessLoop.runUntilIdle({maxTicks})` drives all
-  schedules until idle — the headless entry point. Jailed fs tools
-  (`fsTools(FsToolsRoot(...))`) for VM hosts.
-- **Metrics machine.** `MetricsCollector` + `MetricsReport`: tokens/beats/tools
-  trends, dangling-tool detection. Wired into `ScenarioRunner` and
-  `harness_benchmark.dart`.
-- **Scenario stress-testing.** `ScenarioRunner` drives the real loop against a
-  real model over multi-actor, tool-using scenarios.
-  CLI: `apple_foundation/example/lib/main_stress_cli.dart`.
-  See `docs/scenario_stress_testing.mdx`.
-- **Idle-detection correctness (runUntilIdle race, fixed 2026-08).** Two
-  related bugs made `HarnessLoop.runUntilIdle` exit while async tool work was
-  still in flight, stranding results in event channels:
+### A1. Fair comparison baseline (Phase 4 follow-up) — *blocking everything measured*
 
-  1. Response-carried `ToolCallEvent`s had no `taskId`, so the in-flight tool
-     was invisible to `canSleep()` (which checks `TaskRegistryResource`).
-     Fix: `processResponsesSystem` registers a `TaskHandle` per dispatched
-     call; `toolExecutionSystem` resolves it on completion.
-  2. A completed tool sends its `ToolResultEvent` and resolves its task in
-     the same microtask — leaving a window where the registry is empty but
-     the result still needs one more `Mechanical` pass to become a beat.
-     Fix: `canSleep()` also treats unconsumed `ToolResultEvent`s as pending
-     work.
+The Phase 4 columns were not comparable (three verified confounds — see
+[plan_fair_pi_comparison.md](plan_fair_pi_comparison.md)):
 
-  Regression: `test/run_until_idle_tool_race_test.dart`. The manual-schedule
-  tests never caught this because they hardcode a sleep + second Mechanical
-  pass; only the production `runUntilIdle` path exposed it. See "Detecting
-  idle-race bugs" below.
+- **C1**: OpenRouter client flattens context into one user message (no real
+  chat-completions shape, no real usage accounting).
+- **C2**: AFM and OR ran different decision machinery (guided schema vs native
+  tools).
+- **C3**: No pi column — resolved by driving pi via its **SDK**
+  (`createAgentSession()`), not an ACP server we never built.
 
-## Phase 1 — Docs & North Star (done)
+Steps: C1 fix + A/B → decision-path unification pilot → tool-parity decision →
+pi SDK driver → run matrix (`harness+AFM` / `harness+OR` / `pi+OR`, same model)
+→ publish `results_comparison.md`.
+**No core changes.** Estimated ~2 days total.
 
-Claims separated from proofs in `docs/north_star_agentic_harness.mdx`;
-competitive claim made explicit and falsifiable; this plan restructured into
-measurable phases.
+### A2. Goals as vectors, plans as projections (ADR 0009) — *the structural move*
 
-## Phase 2 — Long-horizon scaling benchmark (done)
+Slot after 4b machinery exists; shares its evaluation apparatus.
 
-Scripted 1,000-decision run with mock handlers (`benchmark/long_horizon_benchmark.dart`):
+1. `Goal` entity: direction + tool-callable success criteria + lifecycle;
+   predicate tools enter via seam 3 (`run_tests`, `diff_check`, `ast_check`).
+2. Step entities on a verifiability spectrum (`mechanical | observable |
+   open`) with status machine and evidence-beat links; superseded steps stay
+   queryable.
+3. `OpenDecision.stepId` backlink → agency grants carry acceptance criteria
+   in-frame.
+4. Plan-frontier projection: explicit `goalLink`/`dependsOn` traversal,
+   token-budgeted, green-screen elsewhere. Mechanical steps never touch an LLM.
+5. Decomposition as one agentic act per goal (amortized; escalation tier OK).
 
-- **tokens/decision flat**: early=241, late=258 → **flatness 1.07x** while the
-  beat graph grew to 1,000 beats and the facet index to ~926 keywords.
-- **latency sublinear**: 0.81ms → 1.55ms per decision (**1.92x**) while beats
-  grew 1000x.
-- **budget never exceeded.**
+**Falsifying experiment first:** one coding-suite task expressed as steps with
+checker criteria; mechanical steps skip the LLM; measure tokens/task delta.
+If the delta is noise, stop here.
 
-Gated in CI by `test/long_horizon_test.dart` (300 decisions, same assertions).
-CLI: `dart run benchmark/long_horizon_benchmark.dart [decisions]` — non-zero
-exit on failure.
+New metrics: mechanical-step share (work completed without any LLM call),
+escalation rate per task class, decomposition fidelity via ADR 0004 causal
+coupling.
 
-## Phase 3 — Streaming through FFI bridge (done)
+### A3. Reduction fidelity / structurification (Phase 4b)
 
-`xs_fm_generate_stream_async` added to the Swift bridge: AFM
-`streamResponse` snapshots are emitted as `\"delta\"` chunks through a new
-stream callback; `done_cb` still fires once with the final text. Structured
-output requests fall back to blocking respond (framework delivers structured
-content atomically).
+Unchanged in substance, scope narrowed: keyword-drift recall now measures
+*execution-context* quality for steps (plan discovery uses explicit links and
+is drift-free by construction). Reduced beats must still trigger correct rays
+and causally gate scripted success.
 
-Dart side: new `StreamCbNative` binding, `AppleFoundationNativeClient` now
-implements `StructuredTextStreamingInferenceClient` (`streamStructuredText`),
-deltas flow as `InferenceStructuredTextStreamEvent.partialOutput`. The harness
-plumbing downstream (`ActorGenerateStreamEvent` → `StreamingBeat`) already
-existed.
+### A4. Seam conformance suites (Phase 5b)
 
-**Measured on hardware**: TTFT ~8.3s for a cold first call (model warm-up
-dominates), deltas stream correctly with multi-line output, final result
-matches streamed text. Smoke: `dart run bin/stream_smoke.dart`.
+Per ADR 0007 §2: policy determinism + purity canary; tool timeout/error-shape/
+serialization round-trip; handler fault matrix; projection budget assertion in
+debug mode. Verifier-tool conformance joins this list when A2 lands.
 
-Also fixed: `jsonEscaped` helper emitted raw control characters into JSON
-(newlines broke Dart's decoder) — replaced with a JSONEncoder-based escaping
-that round-trips correctly.
+### A5. Snapshot/restore + baseline table (Phase 6)
 
-## Phase 4 — 20-task coding suite vs pi (done — see [results_phase4.md](results_phase4.md))
+Real deliverable, not the REPL prototype: persist beats/threads/**goals/
+steps** via `ecsly_serializable` + `universal_storage`; rebuild facet index
+from restored beats (derived state never source-of-truth); crash mid-decision
+restores to a re-opened decision; golden oracle — post-restore projections
+byte-match pre-snapshot cuts. Then publish the final comparison table from A1
+as the headline artifact.
 
-**Status (2026-08-25):** executed. AFM pass rate **5/20 (25%)**; interim
-harness+hosted column (OpenRouter, `dots-3-note-preview:free`) **4/20 (20%)**.
-The pi-vs-harness column is blocked: no ACP/MCP server implementation exists
-(gap logged in `docs/decisions/extensibility_ledger.md` per ADR 0007 §4).
-Full numbers, caveats (harness-side projected token accounting, failure-mode
-classifier coarseness), and raw traces in
-`benchmark/coding_suite/runs/`: see [results_phase4.md](results_phase4.md).
-The three binding Phase 4 metrics (failureMode / escalations /
-transientErrors) land in every JSONL trace row.
+### A6. Everyday CLI host (thin)
 
-Original scope: fixed task set (file edit, multi-file refactor,
-search-then-edit, tool chains) with deterministic pass/fail checks; run
-against real AFM; run the same tasks
-through pi driving the harness as an MCP/ACP server (ADR 0007 §3) with a
-comparable hosted model. Output: pass rate, tokens/task, wall-clock, $/task.
-This is where the efficiency claim gets its numbers. pi-extension reuse is
-decided: no (ADR 0007 §3) — the interop surface is MCP servers.
+REPL on `HarnessLoop.start()`: streaming deltas, input-as-decisions while
+idle, cancel-in-flight = task cancellation + agency release, `/situation`
+inspector, snapshot autosave, confirmation-gated tools. Anything beyond that
+is an extensibility-ledger entry, not core.
 
-Additions binding via ADR 0007:
+---
 
-- **Escalation-rate metric** per task class — if AFM escalates often, the
-tiny-model claim is failing quietly; publish it next to pass rates.
-- **Extensibility ledger** — the host CLI logs every core change it needs;
-three entries against the same seam trigger a design conversation (ADR 0007 §4).
-- **Tool-surface gap closure** for coding tasks: search/grep, jailed shell,
-edit-with-diff-verification, per-tool human-confirmation gates. Each enters
-via seam 3 (`ToolDef`); none change core.
+## Standing rules
 
-## Phase 4b — Reduction-fidelity evaluation (structurification)
-
-Summarization exists only as a *reduction transform*: long text → classify →
-beats with facets. Its quality is measured deterministically with ADR 0004's
-machinery, no embedding judge:
-
-- **Reduction fidelity** = the reduced beat still triggers the correct ray and
-causally gates scripted success (`ContextCoupledHandler`).
-- **Keyword-drift benchmark** — paraphrased/reduced beats whose keywords no
-longer match future rays become invisible; measure ray recall under vocabulary
-drift. This is the known failure mode of keyword-facet retrieval; it must be
-measured, not assumed away.
-
-## Phase 5 — Concurrency gating in AgencyPolicy (done)
-
-AFM serializes requests on-device. Landed:
-
-- `Model.maxInFlight` (default 1) — backend-declared per-model concurrency.
-- `grantAgencySystem` gates per resolved model: in-flight counts come from
-  awaiting actors' bound models; grants respect escalation-aware resolution;
-  the global `AgencyPolicy.maxConcurrent` cap still applies (CLI: 4).
-- CLI `_spawn <prompt>` command spawns additional actors for multi-actor
-  battle-testing; verified two actors serialize correctly under AFM's 1.
-- Follow-up (small): scale `taskTimeout` with queue depth so the timeout
-  sweeper never fires false positives on serial backends.
-
-## Phase 5b — Seam conformance suites
-
-Per ADR 0007 §2: policy conformance (determinism, purity canary), tool
-conformance (timeout/error-shape/serialization round-trip), handler
-conformance (ScriptedTurn fault matrix), projection conformance (budget
-assertion at runtime in debug mode). Precedent: `universal_storage_conformance`.
-Mods that break determinism fail at development time, not inside evaluations.
-
-## Phase 6 — Snapshot/restore + baseline table
-
-World snapshot/restore so the CLI survives restarts — required for daily-
-driver parity with pi. Binding requirements in ADR 0007 §5:
-
-- Persist beats/threads/components via `ecsly_serializable`, stored through
-`universal_storage`; **rebuild** the facet index from restored beats (derived
-state is never source-of-truth).
-- Crash mid-decision restores to a re-opened decision, never stuck
-`AwaitingResponse`.
-- Golden oracle: post-restore projections byte-match pre-snapshot projections.
-
-Then publish the final comparison table from Phase 4 as the headline artifact.
-
-## Everyday CLI host (thin, per North Star non-goals)
-
-REPL on `HarnessLoop.start()` + `wakeup()`: streaming deltas to the TTY (FFI
-streaming exists), user input as new decisions while idle, cancel-in-flight
-mapped to task cancellation + agency release (not process kill), `/situation`
-inspector showing an actor's current cut, snapshot autosave, confirmation-
-gated tools. The CLI stays embarrassingly thin: any need beyond snapshot +
-streaming + confirmation gates is an extensibility-ledger entry, not a core
-change.
-
-## Cleanup
-
-- Fix the 8 known-failing core tests (`fs tools path jail`, headless tool
-routing, decision flow) — Phase 4 blockers; honest benchmarking needs green
-baselines.
-- Migrate or delete legacy manual-schedule tests (the sleep + second-pass
-crutch that masked the idle-race bug; see postmortem above).
-- Delete bisection probes (`tool/probe_*.dart`, `benchmark/debug_*.dart`)
-after extracting durable lessons into checks/tests.
-- Fold `docs/agent/discussion.md` into ADRs; keep PLAN as the only living plan.
-- Make the web-vs-VM split (`fs_tools.dart`) enforceable by lint/separate
-barrel instead of a comment.
-
-## Later / parked
-
-- **Angle-of-view / scale tiers** — projections queryable at a scale (beat,
-  thread, subset) so a ray can coarsen, not just narrow.
-- **AST as a tool seam** — add as a capability/tool behind `ToolRegistry`, not
-  a core change.
-
-## Detecting idle-race bugs (postmortem → practice)
-
-The runUntilIdle race (see Done) took days because three layers each looked
-innocent in isolation: the event channel passed its own tests, the systems
-passed manual-schedule tests, and the loop's `canSleep()` was _almost_ right.
-Practices adopted so the next one surfaces in minutes:
-
-1. **Invariant: "idle ⇒ nothing stranded."** `canSleep()` must be provable
-   from world state alone. Any new async path that sends an event or spawns
-   work MUST either register a task or be covered by the channel check.
-   Review checklist item for every new event-producing system.
-2. **Production-path tests only.** Manual schedule-stepping tests
-   (`runSchedule` + sleeps) mask timing races. New harness behavior tests
-   must go through `HarnessLoop.runUntilIdle` / `tickForDebug`. The sleep+
-   second-pass crutch in older tests is legacy — don't copy it.
-3. **Stranded-event assertion.** After `runUntilIdle`, all harness channels
-   (`ActorGenerateRequest/Response`, `ToolCallEvent`, `ToolResultEvent`,
-   stream events) must be empty. Cheap to assert; catches any future
-   "loop exited early" bug at the exact failing tick. Candidate for a shared
-   `expectIdle(world)` test helper if it recurs.
-4. **Bisection probes over code reading.** When data is lost between producer
-   and consumer, instrument the boundary first (drain counts per stage),
-   read code only after the loss point is localized to one hop.
+- Every published benchmark column states backend, decision path, tokens
+  source, and tool surface. Failures remain data.
+- Escalation-rate metric ships next to every pass-rate table — quiet
+  escalation means the tiny-model claim is failing silently.
+- Extensibility ledger: three host entries against the same seam trigger a
+  design conversation.
+- Gravity check before structural work: (a) tiny model stays useful,
+  (b) fewer LLM calls, (c) context bounded + derived, (d) LLM-free testable.
+- Scope tripwires for A2 specifically: no replanning policy engine, no plan
+  schema versioning, no planner agent. Steps in, projection out, checks fail
+  loudly.

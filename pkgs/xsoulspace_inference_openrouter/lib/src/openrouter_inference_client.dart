@@ -251,7 +251,10 @@ class OpenRouterInferenceClient implements InferenceClient {
         'function': {
           'name': name.value,
           'description': tool.description,
-          'parameters': tool.argsSchema.toJson(),
+          // Providers require standard JSON Schema here — the internal
+          // kind-tagged format is meaningless to them and silently breaks
+          // argument generation.
+          'parameters': bundleToJsonSchema(tool.argsSchema),
         },
       });
     }
