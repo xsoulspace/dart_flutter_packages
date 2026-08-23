@@ -104,11 +104,13 @@ SchemaBundle decisionSchema(ToolRegistry registry) {
   }
   // Decoded backends may nest the whole decision under 'text' — either as a
   // JSON-encoded string or as an already-decoded map.
+  // Decoded backends may nest the whole decision under 'text' — either as a
+  // JSON-encoded string or as an already-decoded map.
   final nested = output['text'];
   Object? decodedNested;
   if (nested is String) {
     try {
-      decodedNested = jsonDecode(nested);
+      decodedNested = jsonDecode(_stripCodeFence(nested));
     } on FormatException {
       // Not JSON — plain text answer below.
     }
@@ -127,12 +129,28 @@ SchemaBundle decisionSchema(ToolRegistry registry) {
           ..remove('tool');
         return (call: ToolCall(name: tool.name, arguments: args), answer: null);
       }
+      // Alternative shape some models emit: {"name": "write",
+      // "arguments": {...}} — same call, different envelope.
+      final nameKey = candidate['name'];
+      if (nameKey is String) {
+        final tool = registry.tools[ToolName(nameKey)];
+        final argsValue = candidate['arguments'];
+        if (tool != null && argsValue is Map<String, dynamic>) {
+          return (
+            call: ToolCall(name: tool.name, arguments: argsValue),
+            answer: null,
+          );
+        }
+      }
     }
     if (candidate['text'] != null) {
       return (call: null, answer: '${candidate['text']}');
     }
   }
-  if (nested is String) return (call: null, answer: nested);
+  if (nested is String) {
+    final stripped = _stripCodeFence(nested);
+    return (call: null, answer: stripped.isEmpty ? nested : stripped);
+  }
   // Fallback: treat the whole output as an answer.
   return (call: null, answer: jsonEncode(output));
 }
@@ -213,4 +231,13 @@ class StructuredToolDecisionHandler implements GenerationHandler {
       'Respond by choosing ONE option from the provided structure: '
       'either perform one tool action with its arguments, or give the '
       'final answer as text.';
+}
+
+/// Strip one markdown code fence (```json … ```) that weak models wrap around
+/// otherwise-valid JSON despite instructions not to.
+String _stripCodeFence(String s) {
+  final trimmed = s.trim();
+  final fence = RegExp(r'^```[a-zA-Z]*\s*\n(.*)\n```\s*$', dotAll: true);
+  final match = fence.firstMatch(trimmed);
+  return match != null ? match.group(1)!.trim() : trimmed;
 }

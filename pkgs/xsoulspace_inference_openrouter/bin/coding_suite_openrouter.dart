@@ -92,6 +92,12 @@ Future<void> main(List<String> args) async {
 
   // ONE router shared by handler and runner — model resolution cannot
   // desynchronize (see CodingSuiteRunner.router doc).
+  //
+  // Native tool calling, NOT the guided-decision wrapper: OpenRouter models
+  // are trained on the provider's `tools` wire format, and free-tier models
+  // silently drop response_format=json_schema. The client sends the registry
+  // as native tools and parses structured tool_calls off the response; both
+  // paths converge on the same world pipeline downstream.
   final sharedRouter = ModelRouter(
     inferenceClientsBuilders: {
       OpenRouterModelNames.openRouter: () => OpenRouterInferenceClient(
@@ -102,9 +108,7 @@ Future<void> main(List<String> args) async {
   );
 
   GenerationHandler buildHandler(CodingTask task) {
-    return StructuredToolDecisionHandler(
-      inner: DefaultGenerationHandler(router: sharedRouter),
-    );
+    return DefaultGenerationHandler(router: sharedRouter);
   }
 
   GenerationHandler debugHandler(CodingTask task) {

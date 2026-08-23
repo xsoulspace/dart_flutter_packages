@@ -127,7 +127,9 @@ class OpenRouterInferenceClient implements InferenceClient {
     if (structured) {
       // Strict json_schema beats json_object: the API enforces the grammar
       // server-side instead of hoping the model cooperates.
-      final schema = bundleToJsonSchema(request.outputSchema);
+      final schema = bundleToJsonSchema(
+        SchemaBundle.fromJson(request.outputSchema),
+      );
       jsonSchemaFormat = {
         'type': 'json_schema',
         'json_schema': {

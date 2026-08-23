@@ -39,6 +39,9 @@ class TaskResult {
     required this.toolCalls,
     this.backend = 'harness',
     this.model = 'unknown',
+    this.failureMode = '',
+    this.escalations = 0,
+    this.transientErrors = 0,
   });
 
   final String taskId;
@@ -57,6 +60,21 @@ class TaskResult {
   /// Concrete model identifier as reported by the backend (wire model id).
   final String model;
 
+  /// Phase 4 honesty metric: why the task failed, classified
+  /// deterministically. Empty on pass.
+  /// One of: timeout, tool-error, transient-errors, wrong-edit, no-llm.
+  final String failureMode;
+
+  /// Number of escalation requests observed for this task's actor.
+  /// Structurally 0 for single-tier backends (AFM alone) — recorded so the
+  /// escalation-rate column is honest rather than absent (PLAN Phase 4).
+  final int escalations;
+
+  /// Generation responses that arrived with a non-empty [error] — e.g. AFM
+  /// GenerationError -1 framework flakiness. NOT silently retried away:
+  /// this count feeds the recovery benchmark follow-up.
+  final int transientErrors;
+
   Map<String, Object?> toJson() => {
     'task_id': taskId,
     'category': category,
@@ -67,6 +85,9 @@ class TaskResult {
     'tokens_used': tokensUsed,
     'llm_calls': llmCalls,
     'tool_calls': toolCalls,
+    if (failureMode.isNotEmpty) 'failure_mode': failureMode,
+    'escalations': escalations,
+    'transient_errors': transientErrors,
     'checkers': [
       for (final c in checkerResults) {'passed': c.passed, 'detail': c.detail},
     ],
@@ -203,7 +224,12 @@ class CodingSuiteRunner {
         ..flush();
 
       final handler = buildHandler(task);
-      world.getResource<GenerationHandlerResource>().registerDefault(handler);
+      // Count errored generations (framework flakiness, backend failures)
+      // WITHOUT masking them: the retry policy is unchanged; we only observe.
+      var transientErrors = 0;
+      world.getResource<GenerationHandlerResource>().registerDefault(
+            _ErrorCountingHandler(handler, () => transientErrors++),
+          );
 
       final registry = ToolRegistry();
       fsTools(FsToolsRoot(jail.path)).forEach(registry.register);
@@ -287,6 +313,32 @@ class CodingSuiteRunner {
         toolCalls.add(record.$2.name);
       }
 
+      // Escalation accounting (Phase 4 binding metric). Single-tier
+      // backends structurally produce 0 — recorded explicitly.
+      final escalations = world.query2<Actor, EscalationRequest>().length;
+
+      // Deterministic failure-mode classification. Failures are data.
+      final passed =
+          checkerResults.isNotEmpty && checkerResults.every((c) => c.passed);
+      String failureMode = '';
+      if (!passed) {
+        final anyToolError = world
+            .query<ToolResultContent>()
+            .any((r) => r.$2.output.toString().contains('"error"'));
+        if (sw.elapsed >= taskBudget) {
+          failureMode = 'timeout';
+        } else if (llmCalls == 0) {
+          failureMode = 'no-llm';
+        } else if (transientErrors > 0 && checkerRetry == maxCheckerRetries) {
+          failureMode = 'transient-errors';
+        } else if (anyToolError) {
+          failureMode = 'tool-error';
+        } else {
+          // Checkers ran and genuinely disagreed with the workspace state.
+          failureMode = 'wrong-edit';
+        }
+      }
+
       return TaskResult(
         taskId: task.id,
         category: task.category.yamlName,
@@ -298,6 +350,9 @@ class CodingSuiteRunner {
         llmCalls: llmCalls,
         toolCalls: toolCalls,
         backend: backendLabel,
+        failureMode: failureMode,
+        escalations: escalations,
+        transientErrors: transientErrors,
         model: modelLabel,
       );
     } finally {
@@ -355,5 +410,24 @@ class CodingSuiteRunner {
       stdout.writeln('  ($skipped task(s) resumed from existing trace)');
     }
     return SuiteResult(results: results);
+  }
+}
+
+/// Observability decorator: counts generations that came back with an error
+/// so failure-mode classification can distinguish backend flakiness from
+/// model-quality failures. Retry policy is untouched.
+class _ErrorCountingHandler implements GenerationHandler {
+  _ErrorCountingHandler(this.inner, this.onError);
+  final GenerationHandler inner;
+  final void Function() onError;
+
+  @override
+  Future<ActorGenerateResponse> generate(
+    World world,
+    ActorGenerateRequest request,
+  ) async {
+    final response = await inner.generate(world, request);
+    if (response.error.isNotEmpty) onError();
+    return response;
   }
 }

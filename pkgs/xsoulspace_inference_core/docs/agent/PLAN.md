@@ -108,10 +108,21 @@ Also fixed: `jsonEscaped` helper emitted raw control characters into JSON
 (newlines broke Dart's decoder) — replaced with a JSONEncoder-based escaping
 that round-trips correctly.
 
-## Phase 4 — 20-task coding suite vs pi
+## Phase 4 — 20-task coding suite vs pi (done — see [results_phase4.md](results_phase4.md))
 
-Fixed task set (file edit, multi-file refactor, search-then-edit, tool chains)
-with deterministic pass/fail checks. Run against real AFM; run the same tasks
+**Status (2026-08-25):** executed. AFM pass rate **5/20 (25%)**; interim
+harness+hosted column (OpenRouter, `dots-3-note-preview:free`) **4/20 (20%)**.
+The pi-vs-harness column is blocked: no ACP/MCP server implementation exists
+(gap logged in `docs/decisions/extensibility_ledger.md` per ADR 0007 §4).
+Full numbers, caveats (harness-side projected token accounting, failure-mode
+classifier coarseness), and raw traces in
+`benchmark/coding_suite/runs/`: see [results_phase4.md](results_phase4.md).
+The three binding Phase 4 metrics (failureMode / escalations /
+transientErrors) land in every JSONL trace row.
+
+Original scope: fixed task set (file edit, multi-file refactor,
+search-then-edit, tool chains) with deterministic pass/fail checks; run
+against real AFM; run the same tasks
 through pi driving the harness as an MCP/ACP server (ADR 0007 §3) with a
 comparable hosted model. Output: pass rate, tokens/task, wall-clock, $/task.
 This is where the efficiency claim gets its numbers. pi-extension reuse is
