@@ -1,25 +1,26 @@
-// ignore_for_file: lines_longer_than_80_chars
+// ignore_for_file: avoid_print
 
-/// 20-task coding suite against real Apple Foundation Models (macOS only).
+/// 20-task coding suite against OpenRouter-hosted models.
 ///
 /// ```sh
-/// dart run bin/coding_suite_afm.dart [--tasks <dir>] [--trace out.jsonl]
-///     [--markdown report.md] [--retries 2]
+/// OPENROUTER_API_KEY=sk-... \
+/// dart run bin/coding_suite_openrouter.dart [--model z-ai/glm-4.5-air]
+///     [--tasks <dir>] [--trace out.jsonl] [--markdown report.md]
+///     [--retries 2] [--max-tool-rounds 16] [--filter <substring>]
+///     [--resume] [--verbose]
 /// ```
 ///
-/// Uses [StructuredToolDecisionHandler] over the AFM backend: every decision
-/// is forced through a guided-generation schema (act vs answer), so tool
-/// syntax errors are impossible by construction. Failing checkers are fed
-/// back mechanically as new decisions, bounded by `--retries`.
-///
-/// Artifacts match the scripted/pi runs (JSONL trace + markdown table) so
-/// results stay apples-to-apples.
+/// Uses [StructuredToolDecisionHandler] over the OpenRouter backend: every
+/// decision is forced through a guided-generation schema (act vs answer), so
+/// tool syntax errors are impossible by construction. The backend/model pair
+/// is stamped into every trace row so `report.dart` can aggregate runs into a
+/// per-category comparison matrix across backends.
 library;
 
 import 'dart:io';
 
-import 'package:xsoulspace_inference_apple_foundation/src/native_bridge/native_client.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
+import 'package:xsoulspace_inference_openrouter/xsoulspace_inference_openrouter.dart';
 
 import '../../xsoulspace_inference_core/benchmark/coding_suite/runner.dart';
 import '../../xsoulspace_inference_core/benchmark/coding_suite/task_spec.dart';
@@ -33,6 +34,11 @@ Future<void> main(List<String> args) async {
   String? filter;
   var verbose = false;
   var resume = false;
+  // Small, cheap, tool-capable default — the suite measures *agentic* quality,
+  // not frontier-model ceiling. Override with --model for anything else.
+  var model = 'z-ai/glm-4.5-air:free';
+  var apiKey = Platform.environment['OPENROUTER_API_KEY'] ?? '';
+
   for (var i = 0; i < args.length; i++) {
     switch (args[i]) {
       case '--tasks':
@@ -47,6 +53,10 @@ Future<void> main(List<String> args) async {
         maxToolRounds = int.parse(args[++i]);
       case '--filter':
         filter = args[++i];
+      case '--model':
+        model = args[++i];
+      case '--api-key':
+        apiKey = args[++i];
       case '--resume':
         resume = true;
       case '--verbose':
@@ -54,24 +64,28 @@ Future<void> main(List<String> args) async {
     }
   }
 
-  final client = AppleFoundationNativeClient();
-  await client.load();
-  if (!await client.refreshAvailability()) {
-    stderr.writeln('Apple Foundation Model unavailable on this device.');
+  if (apiKey.isEmpty) {
+    stderr.writeln(
+      'OPENROUTER_API_KEY env var (or --api-key) is required.',
+    );
     exit(2);
   }
 
   final tasks = loadTasks(tasksDir);
-  stdout.writeln('Loaded ${tasks.length} tasks from $tasksDir');
+  print('Loaded ${tasks.length} tasks from $tasksDir');
+  print('Backend: openrouter — model: $model');
 
   GenerationHandler buildHandler(CodingTask task) {
-    // Fresh native client per task keeps state isolated between runs.
-    final taskClient = AppleFoundationNativeClient();
+    // Fresh client per task keeps HTTP state isolated between runs.
+    final taskClient = OpenRouterInferenceClient(
+      apiKey: apiKey,
+      defaultModel: model,
+    );
     return StructuredToolDecisionHandler(
       inner: DefaultGenerationHandler(
         router: ModelRouter(
           inferenceClientsBuilders: {
-            DefaultModelNames.appleFoundation: () => taskClient,
+            OpenRouterModelNames.openRouter: () => taskClient,
           },
         ),
       ),
@@ -80,7 +94,7 @@ Future<void> main(List<String> args) async {
 
   GenerationHandler debugHandler(CodingTask task) {
     final innerHandler = buildHandler(task);
-    return verbose ? _LoggingHandler(innerHandler, true) : innerHandler;
+    return verbose ? _LoggingHandler(innerHandler) : innerHandler;
   }
 
   final result = await CodingSuiteRunner(
@@ -88,11 +102,11 @@ Future<void> main(List<String> args) async {
     maxCheckerRetries: retries,
     maxToolRounds: maxToolRounds,
     resumeFromTrace: resume ? tracePath : null,
-    backendLabel: 'afm',
-    modelLabel: 'apple-foundation',
+    backendLabel: 'openrouter',
+    modelLabel: model,
   ).runAll(tasks, tracePath: tracePath, filter: filter);
 
-  stdout.writeln(result.toMarkdown(label: 'suite(afm)'));
+  print(result.toMarkdown(label: 'suite(openrouter:$model)'));
   if (markdownPath != null) {
     File(markdownPath).writeAsStringSync(result.toMarkdown());
   }
@@ -100,9 +114,8 @@ Future<void> main(List<String> args) async {
 }
 
 class _LoggingHandler implements GenerationHandler {
-  _LoggingHandler(this.inner, this.enabled);
+  _LoggingHandler(this.inner);
   final GenerationHandler inner;
-  final bool enabled;
 
   @override
   Future<ActorGenerateResponse> generate(
@@ -110,13 +123,8 @@ class _LoggingHandler implements GenerationHandler {
     ActorGenerateRequest request,
   ) async {
     final response = await inner.generate(world, request);
-    if (!enabled) return response;
     final names = response.toolCalls.map((t) => t.name.value).toList();
-    // ignore: avoid_print
-    stdout.writeln(
-      '[decision] structured=${response.structuredOutput} toolCalls=$names error=${response.error}',
-    );
+    print('[decision] structured=${response.structuredOutput} $names');
     return response;
   }
 }
-

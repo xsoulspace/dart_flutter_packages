@@ -37,6 +37,8 @@ class TaskResult {
     required this.tokensUsed,
     required this.llmCalls,
     required this.toolCalls,
+    this.backend = 'harness',
+    this.model = 'unknown',
   });
 
   final String taskId;
@@ -48,9 +50,18 @@ class TaskResult {
   final int llmCalls;
   final List<String> toolCalls;
 
+  /// Which backend produced this result (e.g. 'afm', 'openrouter',
+  /// 'scripted') — trace rows from different runners must stay comparable.
+  final String backend;
+
+  /// Concrete model identifier as reported by the backend (wire model id).
+  final String model;
+
   Map<String, Object?> toJson() => {
     'task_id': taskId,
     'category': category,
+    'backend': backend,
+    'model': model,
     'passed': passed,
     'wall_clock_ms': wallClock.inMilliseconds,
     'tokens_used': tokensUsed,
@@ -108,6 +119,8 @@ class CodingSuiteRunner {
     this.maxToolRounds = 16,
     this.taskTimeoutMinutes = 8,
     this.resumeFromTrace,
+    this.backendLabel = 'harness',
+    this.modelLabel = 'unknown',
   });
 
   /// Builds the generation handler for each run (fresh per task so state
@@ -142,6 +155,12 @@ class CodingSuiteRunner {
   /// Path to a previous JSONL trace. Tasks already present there are skipped
   /// so an interrupted run resumes instead of paying ~45min again.
   final String? resumeFromTrace;
+
+  /// Stamp written into every trace row (see [TaskResult.backend]).
+  final String backendLabel;
+
+  /// Stamp written into every trace row (see [TaskResult.model]).
+  final String modelLabel;
 
   Future<TaskResult> runTask(CodingTask task) async {
     final parent = jailParent ?? Directory.systemTemp;
@@ -262,6 +281,8 @@ class CodingSuiteRunner {
         tokensUsed: tokensUsed,
         llmCalls: llmCalls,
         toolCalls: toolCalls,
+        backend: backendLabel,
+        model: modelLabel,
       );
     } finally {
       jail.delete(recursive: true);

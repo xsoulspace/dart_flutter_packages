@@ -74,6 +74,8 @@ Future<void> main(List<String> args) async {
     maxCheckerRetries: retries,
     maxToolRounds: maxToolRounds,
     resumeFromTrace: (resume && tracePath != null) ? tracePath : null,
+    backendLabel: 'scripted',
+    modelLabel: 'scripted',
   ).runAll(tasks, tracePath: tracePath, filter: filter);
 
   stdout.writeln(result.toMarkdown(label: 'suite($backend)'));
