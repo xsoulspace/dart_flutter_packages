@@ -1,0 +1,29 @@
+{
+  "recordedAt": "2026-08-23T16:48:31.113Z",
+  "failures": [
+    {
+      "name": "end-to-end application decisionFlowSystem opens attributed decisions and clears markers"
+    },
+    {
+      "name": "end-to-end application per-policy precision attribution"
+    },
+    {
+      "name": "fs tools path jail absolute paths inside the root are allowed"
+    },
+    {
+      "name": "headless coding-agent harness (no LLM) read tool executes and result lands in actor memory"
+    },
+    {
+      "name": "headless coding-agent harness (no LLM) write tool creates a file through the world"
+    },
+    {
+      "name": "headless coding-agent harness (no LLM) list_dir tool lists a directory through the world"
+    },
+    {
+      "name": "headless coding-agent harness (no LLM) structured tool calls route through the world toolExecutionSystem"
+    },
+    {
+      "name": "policy precision in ScenarioMetrics ScenarioRunner reports per-policy precision"
+    }
+  ]
+}
