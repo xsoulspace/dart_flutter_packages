@@ -9,3 +9,4 @@
 | [0005](0005_decision_flow_api.md)                      | Accepted | DecisionFlow — public composable decision-creation API                                           |
 | [0006](0006_universal_storage_production_hardening.md) | Accepted | Universal Storage hardening — kernel split, conformance suite, capability model, batched commits |
 | [0007](0007_extensibility_seams_and_conformance.md)    | Accepted | Extensibility seams, conformance suites, and adapter policy (MCP yes, pi-extension reuse no)     |
+| [0008](0008_env_config_store.md)                       | Accepted | EnvConfig — global/local environment configuration store                                         |

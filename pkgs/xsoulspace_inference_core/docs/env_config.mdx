@@ -1,0 +1,70 @@
+# EnvConfig — saving and loading settings
+
+`EnvConfig` (in `xsoulspace_inference_core`) stores API keys and settings the
+way CLI coding agents do: two JSON files plus your process environment.
+
+## Where values live
+
+| Scope | Path | Typical use |
+|---|---|---|
+| Process env | — | one-off overrides, CI |
+| Local | `./.xsoulspace/config.json` | per-project keys/settings (gitignore it if secret) |
+| Global | `~/.config/xsoulspace/inference/config.json`¹ | machine-wide defaults |
+
+Lookup order when reading a key: **process env → local → global**.
+¹ honors `$XDG_CONFIG_HOME`.
+
+File format is a flat JSON object of strings:
+
+```json
+{
+  "OPENROUTER_API_KEY": "sk-or-...",
+  "openrouter.model": "z-ai/glm-4.5-air:free"
+}
+```
+
+## Setting values
+
+### From Dart
+
+```dart
+final config = await EnvConfig.load();
+
+// Persist (creates directories; overwrites corrupt files).
+await config.set('OPENROUTER_API_KEY', 'sk-or-...', scope: ConfigScope.local);
+await config.set('openrouter.model', 'z-ai/glm-4.5-air:free',
+    scope: ConfigScope.global);
+
+// Read (merged across scopes).
+config.get('OPENROUTER_API_KEY');   // String? — null if nowhere
+config.require('MY_KEY');           // throws with a fix-it hint
+config.keys();                      // {key: ConfigScope} ownership map
+config.delete('KEY', scope: ConfigScope.local);
+```
+
+### From the shell (no code)
+
+Edit either file directly — same effect:
+
+```sh
+mkdir -p .xsoulspace
+echo '{"OPENROUTER_API_KEY": "sk-or-..."}' > .xsoulspace/config.json
+```
+
+Or per-invocation, which always wins over saved files:
+
+```sh
+OPENROUTER_API_KEY=sk-or-... dart run bin/coding_suite_openrouter.dart
+```
+
+The suite bins already use this: `coding_suite_openrouter.dart` resolves its
+key as `--api-key` flag → `$OPENROUTER_API_KEY` → saved local config → saved
+global config, and prints the exact paths to edit when none is found.
+
+## Rules of thumb
+
+- **Secrets**: local scope + add `.xsoulspace/` to `.gitignore`, or global
+  scope for machine-wide keys.
+- **Project defaults**: local scope, safe to commit.
+- **Never encode structure**: keys are flat strings (`backend.setting`);
+  nested documents belong in tool-specific files.
