@@ -38,7 +38,6 @@ Future<void> main(List<String> args) async {
   // not frontier-model ceiling. Override with --model for anything else.
   var model = 'z-ai/glm-4.5-air:free';
   var apiKey = Platform.environment['OPENROUTER_API_KEY'] ?? '';
-
   for (var i = 0; i < args.length; i++) {
     switch (args[i]) {
       case '--tasks':
@@ -65,8 +64,18 @@ Future<void> main(List<String> args) async {
   }
 
   if (apiKey.isEmpty) {
+    // Fall through to saved config (local project scope, then global).
+    final config = await EnvConfig.load();
+    apiKey = config.get('OPENROUTER_API_KEY') ?? '';
+  }
+
+  if (apiKey.isEmpty) {
     stderr.writeln(
-      'OPENROUTER_API_KEY env var (or --api-key) is required.',
+      'No OpenRouter API key found. Provide one via --api-key or the '
+      'OPENROUTER_API_KEY environment variable, or persist it in '
+      '${EnvConfig.defaultLocalPath()} (project) / '
+      '${EnvConfig.defaultGlobalPath()} (machine) as '
+      '{"OPENROUTER_API_KEY": "sk-..."}.',
     );
     exit(2);
   }

@@ -3,6 +3,7 @@ export 'package:ecsly_app/ecsly_app.dart';
 export 'package:ecsly_async_parallel/ecsly_async_parallel.dart';
 
 export 'src/agent/agent.dart';
+export 'src/config/env_config.dart';
 export 'src/inference_client.dart';
 export 'src/inference_readiness.dart';
 export 'src/inference_provisioning.dart';
