@@ -1,5 +1,12 @@
 # universal_storage_convergence — Working Agreement
 
+## North Star
+
+Read [docs/north_star.mdx](docs/north_star.mdx) before durable structural
+changes. This package is a sub-star (ADR 0011): it has its own center serving
+two parents — mesh sync and ecsly world sync. Neither parent may override
+kernel semantics.
+
 ## Scope (sub-star boundary, ADR 0011)
 
 - This package is the convergence kernel serving two parents: Universal
@@ -21,4 +28,6 @@
 
 ```bash
 just check universal_storage_convergence
+# or, headless:
+cd pkgs/universal_storage_convergence && dart test
 ```

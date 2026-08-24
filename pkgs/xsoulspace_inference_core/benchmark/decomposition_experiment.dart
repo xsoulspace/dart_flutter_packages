@@ -20,10 +20,11 @@
 library;
 
 import 'dart:io';
+import 'dart:convert';
 
-import 'package:xsoulspace_inference_core/src/agent/tools/fs_tools.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'package:xsoulspace_inference_core/src/agent/systems/decision_flow_system.dart';
+import 'package:xsoulspace_inference_core/src/agent/tools/fs_tools.dart';
 
 import 'coding_suite/checkers.dart';
 import 'coding_suite/scripted_handler.dart';
@@ -116,22 +117,26 @@ Future<void> stepFrontierSystem(World world) async {
       final claim = stepEntity.get<StepClaim>()!;
       final action = stepEntity.get<StepAction>()!;
       final index = stepEntity.get<StepIndex>()!.value;
-      final root = world.getResource<FsToolsRootResource>().root;
 
+      // Per-step criteria run as seam-3 verifier tools; the frontier policy
+      // consumes only their result. It never reads the filesystem directly.
+      final verify = world
+          .getResource<ToolExecutorResource>()
+          .get(const ToolName('verify_step'));
       var passed = false;
       var detail = '';
-      try {
-        if (action.toolName == 'write') {
-          final target = root.resolve(action.arguments['path'] as String);
-          passed =
-              File(target).existsSync() && File(target).readAsStringSync() ==
-                  action.arguments['content'] as String;
-          detail = passed ? '' : 'file ${action.arguments['path']} content mismatch';
-        } else {
-          passed = true; // non-write steps trusted in v1
-        }
-      } catch (e) {
-        detail = e.toString();
+      final output = await verify?.call(action.arguments);
+      Object? decoded = output;
+      if (decoded is String) {
+        try {
+          decoded = jsonDecode(decoded);
+        } catch (_) {}
+      }
+      if (decoded is Map) {
+        passed = decoded['passed'] == true;
+        detail = '${decoded['failures'] ?? ''}';
+      } else {
+        detail = 'verify_step unavailable';
       }
 
       stepEntity.insert(DStepStatus(passed ? 'verified' : 'open'));
@@ -189,6 +194,35 @@ Future<void> stepFrontierSystem(World world) async {
 class FsToolsRootResource extends Resource {
   FsToolsRootResource(this.root);
   final FsToolsRoot root;
+}
+
+/// Registers per-step acceptance predicates as a seam-3 verifier tool.
+void registerStepVerifier(
+  ToolRegistry registry,
+  ToolExecutorResource executors,
+  FsToolsRoot root,
+) {
+  final def = ToolDef.encode(
+    name: const ToolName('verify_step'),
+    description: 'Verify one planned file-write step against the workspace.',
+    execute: (args) async {
+      final argMap = args is Map ? args : const {};
+      final path = argMap['path'] as String?;
+      final content = argMap['content'] as String?;
+      if (path == null || content == null) {
+        return {'passed': false, 'failures': 'path and content are required'};
+      }
+      final target = root.resolve(path);
+      final passed = File(target).existsSync() &&
+          File(target).readAsStringSync() == content;
+      return {
+        'passed': passed,
+        'failures': passed ? '' : 'file $path content mismatch',
+      };
+    },
+  );
+  registry.register(def);
+  executors.register(def.name, (args) => def.execute(args));
 }
 
 // ---- Experiment ------------------------------------------------------------
@@ -307,6 +341,11 @@ Future<(World, List<int>, Directory)> _buildWorld(
   world.upsertResource(FsToolsRootResource(root));
   final registry = ToolRegistry();
   fsTools(root).forEach(registry.register);
+  registerStepVerifier(
+    registry,
+    world.getResource<ToolExecutorResource>(),
+    root,
+  );
 
   if (monolithic) {
     // Decompose-once MOCKED note applies to both arms equally: the baseline
@@ -553,6 +592,11 @@ Future<DecompRunResult> runDecomposedArmReal(
     world.upsertResource(FsToolsRootResource(root));
     final registry = ToolRegistry();
     fsTools(root).forEach(registry.register);
+    registerStepVerifier(
+      registry,
+      world.getResource<ToolExecutorResource>(),
+      root,
+    );
     world.getResource<ToolRegistryResource>().register('default', registry);
 
     // Mechanical pipeline on Narrative: transform → execute → verify/advance.

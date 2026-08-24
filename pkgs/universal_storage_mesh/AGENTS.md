@@ -1,5 +1,11 @@
 # universal_storage_mesh — Working Agreement
 
+## North Star
+
+Read [docs/north_star.mdx](docs/north_star.mdx) before durable structural
+changes. Classify `north_star_impact` per repo AGENTS.md; `amends`/`conflicts`
+need an ADR first.
+
 ## Scope (ADR 0010)
 
 - Serverless P2P replica provider. Every device has equal standing; relay or
@@ -10,16 +16,24 @@
   and skips unreachable peers silently (`MeshConnectionException`).
 - Each file is one LWW doc (`content` register) via the kernel. Opaque
   binary merging beyond object-level LWW is out of scope (ADR 0010 §5).
-- Session encryption/key material arrives with real transports; the QR
-  pairing registry stores peer identity records only for now.
+- A replica may hold multiple transports simultaneously (`attachTransport`
+  is additive); sync tries each transport per peer.
+- Compaction is app-driven via `compactAll()`; lagging peers catch up via
+  snapshots afterwards.
 
 ## Known gaps (v1)
 
 - Pairing records are unencrypted JSON; no Ed25519/X25519 handshake yet.
+  The QR pairing layer is the next milestone.
 - LAN transport package not started; only `FakeMeshTransport` exists.
 
 ## Validation
 
 ```bash
 just check universal_storage_mesh
+# or, headless:
+cd pkgs/universal_storage_mesh && dart test
 ```
+
+Conformance suite (`universal_storage_conformance`) + two-replica scenarios +
+integration suite (multi-hop, snapshot adoption) must all stay green.

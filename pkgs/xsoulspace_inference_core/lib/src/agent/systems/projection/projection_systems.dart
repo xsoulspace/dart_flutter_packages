@@ -141,6 +141,84 @@ Situation buildSituation({
   );
 }
 
+/// Derived plan frontier for the actor's current decision.
+///
+/// Traverses explicit goal/dependency links — never keyword search — and
+/// emits only unblocked steps that fit [budget]. Superseded/blocked context
+/// is reported as a green-screen absence, not narrative history.
+PlanProjection projectPlanFrontier(
+  World world,
+  Entity? stepId, {
+  required int budget,
+  required TokenEstimator estimator,
+}) {
+  final selected = <Entity>[];
+  var tokensUsed = 0;
+  var omitted = 0;
+  final visited = <Entity>{};
+
+  void visit(Entity entity) {
+    if (!visited.add(entity)) return;
+    final (facade, valid) = world.getEntity(entity);
+    if (!valid) return;
+    final step = facade.get<Step>();
+    if (step == null || step.status != StepLifecycle.open) return;
+
+    final dependencies =
+        facade.get<DependsOnStep>()?.dependencies ?? const <Entity>[];
+    for (final dependency in dependencies) {
+      final (depFacade, depValid) = world.getEntity(dependency);
+      if (!depValid || !visited.add(dependency)) continue;
+      final depStep = depFacade.get<Step>();
+      if (depStep == null || depStep.status != StepLifecycle.verified) {
+        omitted++;
+        return;
+      }
+    }
+
+    final cost = estimator(step.claim);
+    if (tokensUsed + cost > budget) {
+      omitted++;
+      return;
+    }
+    tokensUsed += cost;
+    selected.add(entity);
+  }
+
+  if (stepId != null) {
+    visit(stepId);
+  } else {
+    for (final (entity, _, _) in world.query2<GoalLink, Step>().toList()) {
+      visit(entity.entity);
+    }
+  }
+  return PlanProjection(
+    steps: selected,
+    tokensUsed: tokensUsed,
+    tokenBudget: budget,
+    truncated: omitted > 0,
+    explicitAbsences: [
+      if (omitted > 0) '$omitted plan step(s) are off-screen.',
+    ],
+  );
+}
+
+/// Budgeted result of explicit-link plan traversal.
+class PlanProjection {
+  const PlanProjection({
+    required this.steps,
+    required this.tokensUsed,
+    required this.tokenBudget,
+    this.truncated = false,
+    this.explicitAbsences = const [],
+  });
+  final List<Entity> steps;
+  final int tokensUsed;
+  final int tokenBudget;
+  final bool truncated;
+  final List<String> explicitAbsences;
+}
+
 /// Ray-trace the graph for beats relevant to [prompt].
 ///
 /// Multi-thread aware: iterates ALL of the actor's threads, skipping threads

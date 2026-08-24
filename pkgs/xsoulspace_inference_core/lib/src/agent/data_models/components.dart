@@ -98,12 +98,16 @@ class OpenDecision implements Component {
     this.priority = 0,
     this.escalate = false,
     this.threadId,
+    this.stepId,
   });
   final SchemaBundle schema;
   final String prompt;
   final int priority;
   final bool escalate;
   final Entity? threadId;
+
+  /// Optional plan-step backlink carrying acceptance criteria in-frame.
+  final Entity? stepId;
 }
 
 /// Tag component: this actor has requested escalation to a stronger model.
@@ -195,8 +199,15 @@ class Situation implements Component {
 
 /// A goal assigned to an actor.
 class Goal implements Component {
-  Goal({this.text = ''});
+  Goal({this.text = '', List<String>? successCriteria, this.status = 'active'})
+    : successCriteria = successCriteria ?? <String>[];
   String text;
+
+  /// Tool-callable predicate names resolved through seam 3.
+  List<String> successCriteria;
+
+  /// `active | achieved | abandoned`.
+  String status;
 }
 
 /// Partial streaming buffer for an actor's in-progress generation.

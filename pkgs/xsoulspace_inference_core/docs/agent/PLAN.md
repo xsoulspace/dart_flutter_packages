@@ -36,7 +36,7 @@ suite tasks — **−39% LLM calls, −24% tokens/task, equal 20/20 pass rate**
 ([results](results_plan_falsification.md)). Not noise. Remaining work to
 production shape, in order:
 
-1. **Purity**: move the frontier policy off direct fs reads — predicates run
+1. **Purity** — **landed 2026-08**: move the frontier policy off direct fs reads — predicates run
    as verifier tools behind seam 3, results become beats, policy stays pure
    (conformance suite in A4 applies).
 2. `Goal` entity: direction + tool-callable success criteria + lifecycle;

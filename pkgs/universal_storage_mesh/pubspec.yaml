@@ -14,6 +14,7 @@ environment:
 resolution: workspace
 
 dependencies:
+  cryptography: ^2.7.0
   meta: ^1.19.0
   universal_storage_convergence: ^0.1.0-dev.1
   universal_storage_interface: ^0.1.0-dev.12

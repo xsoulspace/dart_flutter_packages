@@ -48,6 +48,8 @@ class AgentPlugin extends Plugin {
       ..registerObjectComponent<ParentScene>()
       ..registerObjectComponent<OriginActor>()
       ..registerObjectComponent<GoalLink>()
+      ..registerObjectComponent<DependsOnStep>()
+      ..registerObjectComponent<Step>()
       ..registerObjectComponent<DerivedFromThread>()
       ..registerObjectComponent<ThreadVisibility>()
       ..registerObjectComponent<BeatId>()

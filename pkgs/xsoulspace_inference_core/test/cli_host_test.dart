@@ -1,0 +1,191 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:test/test.dart';
+import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
+
+import 'support/agent_harness_support.dart';
+
+class _DelayedHandler implements GenerationHandler {
+  final Completer<ActorGenerateRequest> started = Completer();
+
+  @override
+  Future<ActorGenerateResponse> generate(
+    World world,
+    ActorGenerateRequest request,
+  ) async {
+    if (!started.isCompleted) started.complete(request);
+    await Completer<void>().future;
+    throw StateError('handler was cancelled before completing');
+  }
+}
+
+class _StreamingHandler implements GenerationHandler {
+  @override
+  Future<ActorGenerateResponse> generate(
+    World world,
+    ActorGenerateRequest request,
+  ) async {
+    const text = 'Hello world';
+    for (final chunk in ['Hello', ' ', 'world']) {
+      world.events.writer<ActorGenerateStreamEvent>().send(
+        ActorGenerateStreamEvent(
+          actorEntity: request.actorEntity,
+          taskId: request.taskId,
+          chunk: chunk,
+        ),
+      );
+      world.getResource<StreamingTapResource>().publish(
+        request.actorEntity,
+        chunk,
+      );
+      world.flush();
+      await Future<void>.delayed(const Duration(milliseconds: 1));
+    }
+    final response = ActorGenerateResponse(
+      actorEntity: request.actorEntity,
+      structuredOutput: {'text': text},
+      rawOutput: text,
+      taskId: request.taskId,
+    );
+    world.events.writer<ActorGenerateResponse>().send(response);
+    return response;
+  }
+}
+
+CliHost buildCliTestHost(
+  World world, {
+  required ToolConfirmationCallback confirmation,
+  CliHostConfig config = const CliHostConfig(),
+}) => CliHost(
+  world: world,
+  config: config,
+  requestToolConfirmation: confirmation,
+);
+
+void main() {
+  test('feed opens a decision while idle and produces output', () async {
+    final world = await buildTestWorld(handler: _StreamingHandler());
+    spawnScene(world);
+    final host = buildCliTestHost(world, confirmation: (_, _) async => true);
+    unawaited(host.start());
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+
+    expect(host.feed('Say hello'), isTrue);
+    final chunks = await host.output.take(3).toList();
+    expect(chunks.join(), 'Hello world');
+
+    await host.stop();
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+  });
+
+  test('cancel releases agency and clears tasks', () async {
+    final handler = _DelayedHandler();
+    final world = await buildTestWorld(handler: handler);
+    final scene = spawnScene(world);
+    final actor = spawnActor(world, scene);
+    world.flush();
+    final host = buildCliTestHost(
+      world,
+      confirmation: (_, _) async => true,
+    );
+    unawaited(host.start());
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    await host.start();
+    expect(host.feed('long task'), isTrue);
+
+    await handler.started.future;
+    final idle = host.waitForIdle();
+    host.cancel();
+    await idle.timeout(const Duration(seconds: 1));
+
+    final entity = world.getEntity(actor).$1;
+    expect(entity.has<Agency>(), isFalse);
+    expect(entity.has<AwaitingResponse>(), isFalse);
+    expect(world.getResource<TaskRegistryResource>().isEmpty, isTrue);
+
+    await host.stop();
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+  });
+
+  test('inspectSituation returns projected situations', () async {
+    final world = await buildTestWorld(handler: _DelayedHandler());
+    final scene = spawnScene(world);
+    final actor = spawnActor(world, scene);
+    world.flush();
+    final host = buildCliTestHost(
+      world,
+      confirmation: (_, _) async => true,
+    );
+    unawaited(host.start());
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    await host.start();
+    host.feed('inspect me');
+
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    final situations = host.inspectSituation();
+    expect(situations, containsPair(actor, isA<Situation>()));
+
+    host.cancel();
+    await host.stop();
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+  });
+
+  test('confirmation gate blocks and rejects protected tools', () async {
+    final requests = <String>[];
+    final approvals = StreamController<bool>();
+    var executed = false;
+    final registry = ToolRegistry()
+      ..register(
+        ToolDef.encode(
+          name: const ToolName('dangerous'),
+          description: 'dangerous',
+          execute: (_) async {
+            executed = true;
+            return {'ok': true};
+          },
+        ),
+      );
+    final tools = ToolRegistryResource()..register('default', registry);
+    final world = World()..addPlugin(AgentPlugin());
+    world
+      ..upsertResource(ModelRouterResource(ModelRouter()))
+      ..upsertResource(tools)
+      ..flush();
+
+    final gatedHost = CliHost(
+      world: world,
+      config: const CliHostConfig(confirmationRequiredTools: {'dangerous'}),
+      requestToolConfirmation: (name, arguments) {
+        requests.add('${name.value}:${jsonEncode(arguments)}');
+        final future = approvals.stream.first;
+        return future;
+      },
+    );
+
+    final guardedRegistry = world.getResource<ToolRegistryResource>()
+        .get('default')!;
+    final execution = guardedRegistry.execute(const ToolName('dangerous'), {
+      'value': 'ok',
+    });
+    await Future<void>.delayed(Duration.zero);
+    expect(executed, isFalse);
+    expect(requests, ['dangerous:{"value":"ok"}']);
+
+    approvals.add(false);
+    expect(await execution, contains('rejected'));
+    expect(executed, isFalse);
+
+    final secondExecution = guardedRegistry.execute(
+      const ToolName('dangerous'),
+      {
+        'value': 'again',
+      },
+    );
+    approvals.add(true);
+    await secondExecution;
+    expect(executed, isTrue);
+
+    await approvals.close();
+  });
+}

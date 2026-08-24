@@ -157,4 +157,73 @@ void main() {
       },
     );
   });
+
+  group('plan frontier projection', () {
+    test('traverses explicit dependencies and omits off-screen steps', () {
+      final world = buildMinimalWorld();
+      final goal = world.spawnComponents([Goal(text: 'ship')]);
+      final first = world.spawnComponents([
+        GoalLink(goal),
+        Step(claim: 'first'),
+      ]);
+      final second = world.spawnComponents([
+        GoalLink(goal),
+        DependsOnStep([first]),
+        Step(claim: 'second'),
+      ]);
+      final third = world.spawnComponents([
+        GoalLink(goal),
+        DependsOnStep([second]),
+        Step(claim: 'third'),
+      ]);
+      final blocked = world.spawnComponents([
+        GoalLink(goal),
+        Step(claim: 'blocked', status: StepLifecycle.blocked),
+      ]);
+      world.flush();
+
+      final projection = projectPlanFrontier(
+        world,
+        null,
+        budget: 100,
+        estimator: defaultTokenEstimator,
+      );
+
+      expect(projection.steps, [first, second, third]);
+      expect(projection.tokensUsed, greaterThan(0));
+      expect(projection.truncated, isFalse);
+      expect(blocked, isNot(inProjection(projection)));
+    });
+
+    test('does not select a step before its dependency is verified', () {
+      final world = buildMinimalWorld();
+      final first = world.spawnComponents([
+        const GoalLink(null),
+        Step(claim: 'first', status: StepLifecycle.verified),
+      ]);
+      final second = world.spawnComponents([
+        DependsOnStep([first]),
+        Step(claim: 'second'),
+      ]);
+      world.flush();
+
+      final projection = projectPlanFrontier(
+        world,
+        second,
+        budget: 10,
+        estimator: defaultTokenEstimator,
+      );
+
+      expect(projection.steps, [second]);
+    });
+  });
+}
+
+Matcher inProjection(PlanProjection projection) =>
+    predicate<Entity>((e) => projection.steps.contains(e), 'in projection');
+
+World buildMinimalWorld() {
+  final world = World()..addPlugin(AgentPlugin());
+  world.flush();
+  return world;
 }

@@ -37,7 +37,7 @@ Consequences for hosted models:
   much context text this flattening wastes.
 
 So yes — part of the hosted column's low pass rate (4/20) is likely the
-*harness→backend input shape*, not model capability. Logged in
+_harness→backend input shape_, not model capability. Logged in
 [`extensibility_ledger.md`](../../../../docs/decisions/extensibility_ledger.md).
 
 ### C2. The two harness columns don't even share a decision path
@@ -48,7 +48,7 @@ So yes — part of the hosted column's low pass rate (4/20) is likely the
 - OpenRouter ran through `DefaultGenerationHandler` with **native tool
   calling**.
 
-Two variables changed at once (model *and* decision machinery). Neither
+Two variables changed at once (model _and_ decision machinery). Neither
 column isolates what we claim to measure.
 
 ### C3. There is no pi column — but it doesn't need ACP
@@ -71,11 +71,11 @@ over the same tasks/workspaces/checkers. Comparing "harness+AFM" against
 "pi+hosted" was never meaningful anyway (different models AND different
 harnesses); the interesting axes are:
 
-| Axis | Question answered |
-| --- | --- |
-| harness(AFM) vs harness(OR:same-model) | model swap under our harness |
-| harness(OR:m) vs pi(OR:m) | harness swap under same model ← headline |
-| harness(OR:m) pre/post C1 fix | how much the flat prompt shape costs |
+| Axis                                   | Question answered                        |
+| -------------------------------------- | ---------------------------------------- |
+| harness(AFM) vs harness(OR:same-model) | model swap under our harness             |
+| harness(OR:m) vs pi(OR:m)              | harness swap under same model ← headline |
+| harness(OR:m) pre/post C1 fix          | how much the flat prompt shape costs     |
 
 ## Plan
 
@@ -88,12 +88,12 @@ projection"): the `messages` array is a **codec, not state**. It is computed
 fresh per call by rendering the budgeted `Situation` — never stored, never
 appended to. Conversation-log agents accumulate messages; we serialize beats:
 
-| Role | Rendered from |
-| --- | --- |
-| `system` | `ActorSystemPrompt` + goal vector + plan frontier (ADR 0009) |
-| `user` | user-input beats addressed to the actor |
-| `assistant` / `tool_calls` | actor's text/thought beats, tool-call beats |
-| `tool` | tool-result beats, kept atomically paired to their calls |
+| Role                       | Rendered from                                                |
+| -------------------------- | ------------------------------------------------------------ |
+| `system`                   | `ActorSystemPrompt` + goal vector + plan frontier (ADR 0009) |
+| `user`                     | user-input beats addressed to the actor                      |
+| `assistant` / `tool_calls` | actor's text/thought beats, tool-call beats                  |
+| `tool`                     | tool-result beats, kept atomically paired to their calls     |
 
 Constraints the renderer must respect (recorded so nobody simplifies them
 into silent truncation):
@@ -159,7 +159,10 @@ changes):
   invokes it.
 - Emit the same JSONL row schema (`task_id`, `passed`, `wall_clock_ms`,
   `tool_calls`, `failure_mode`, …) with `backend: "pi"`. pi reports real
-  token usage per request — capture it from the SDK events.
+  token usage per request — capture it from the SDK events. **Assert usage is
+  non-null in the driver and fail loudly if absent** — a silent fallback to
+  projection-based accounting would reintroduce the exact confound this plan
+  fixes (C1).
 - Retry policy parity: our suite feeds failed checkers back up to
   `--retries 2`. Give pi the equivalent budget: on checker failure, send one
   follow-up prompt with the checker detail, max 2 feedback rounds. Same
@@ -178,16 +181,16 @@ Our jailed fs tools (`read`/`write`/`list_dir`) vs pi's stock tools
   tool axis must be stated next to the number.
 
 Do NOT port our tools into pi or vice versa — the tools are part of each
-harness's normal operating condition; parity of *capability class* (read,
+harness's normal operating condition; parity of _capability class_ (read,
 write, list/search) is the requirement, not byte-identical schemas.
 
 ### Step 5 — Run matrix + publish
 
-| Column | Backend | Decision path | Tokens source | Mech-share |
-| --- | --- | --- | --- | --- |
-| harness+AFM | apple-foundation | unified (Step 2) | projection (only option) | yes |
-| harness+OR | dots-3-note-preview:free (or paid tier twin) | unified (Step 2) | real usage post-C1 | yes |
-| pi+OR | same model id | pi native | real usage | n/a (report pi tool-call count instead) |
+| Column      | Backend                                      | Decision path    | Tokens source            | Mech-share                              |
+| ----------- | -------------------------------------------- | ---------------- | ------------------------ | --------------------------------------- |
+| harness+AFM | apple-foundation                             | unified (Step 2) | projection (only option) | yes                                     |
+| harness+OR  | dots-3-note-preview:free (or paid tier twin) | unified (Step 2) | real usage post-C1       | yes                                     |
+| pi+OR       | same model id                                | pi native        | real usage               | n/a (report pi tool-call count instead) |
 
 Publish an updated `results_phase4.md` (or `results_comparison.md`) with all
 axes, the C1 A/B delta, and explicit labels. Free-tier model ids can silently
@@ -199,6 +202,17 @@ equivalent if free-tier instability corrupts the comparison.
 - No MCP/ACP server in this plan — the SDK route removes the blocker; the
   ledger gap entry stays until/unless a server is genuinely needed for
   another purpose.
+- **No MCP anywhere** — `dart_mcp` would only matter for exposing tools over
+  a protocol; Step 3 bypasses protocols entirely (`createAgentSession()`
+  direct, checkers invoked outside the agent).
+- **No mcp_flutter** — it inspects running Flutter apps; unrelated to
+  headless agent-loop benchmarking.
+- **`xsoulspace_inference_acp` excluded from this matrix** — driving pi as an
+  ACP backend would measure "our harness + pi-as-model", not pi's native loop
+  (reintroduces the C2/C3 confound). It also can't report token usage or
+  tool-call counts today (meta carries only `sessionId`/`stopReason`).
+  Recorded as a _future_ candidate for a clearly-labeled
+  "hosted-agent-as-backend" exploratory column once it surfaces usage.
 - No core changes: Steps 1, 3, 4 live entirely in provider/driver packages;
   Step 2 is benchmark-code only.
 - Failures remain data: pi's failures get the same failure-mode treatment,

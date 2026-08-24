@@ -1,0 +1,49 @@
+# Convergence Kernel — North Star
+
+**Owner:** `universal_storage_convergence`
+**Status:** guiding — durable center for the convergence sub-star (ADR 0011).
+
+## The objective
+
+Any two replicas of the same state — a note app on two phones, an ecsly world
+on phone and web — **converge deterministically without a server and without
+either side hand-rolling merge logic**. The kernel is that "without
+hand-rolling": one small, pure-Dart contract for ordering (HLC), dedupe
+(version vectors), folding (merge strategies), and compaction (op log →
+snapshot), shared by every consumer.
+
+The competitive claim: consumers get battle-tested convergence by choosing a
+strategy, not by writing CRDT code. The known-hard parts — clock regression,
+idempotence, arbitrary-order delivery, conservative GC — are solved once,
+here, under property tests.
+
+## What this subsection owns
+
+- HLC total order `(wall, counter, actorId)`; monotonicity across restarts.
+- Version vectors as anti-entropy headers and dedupe watermarks.
+- The `MergeStrategy` seam: v1 ships LWW map/register; sequence CRDTs arrive
+  later behind the same seam without changing anything above it.
+- Dual-mode storage: folded state + pending op log; compaction is a
+  deliberate transform, never implicit.
+
+## What it never owns
+
+- Storage namespaces, files, worlds, actors, transports, or networking.
+- Conflict *policy* above LWW semantics (that belongs to providers).
+- Binary payloads (object-level LWW at the provider layer, ADR 0010 §5).
+
+## Non-negotiable invariants
+
+1. Any replica order of the same op set yields identical state
+   (property-tested).
+2. Re-applying ops changes nothing (idempotence).
+3. HLC monotonicity survives process restarts (`hlcRestoreMonotonic`).
+4. Kernel changes require conformance evidence from all consuming parents.
+
+## Proof of alignment
+
+- Kernel property suite green (`convergence_property_test.dart`).
+- Mesh provider passes headless conformance against a scripted fake transport
+  (ADR 0010 milestone) — done.
+- ecsly world sync consumes the kernel without importing storage packages —
+  future parent evidence.

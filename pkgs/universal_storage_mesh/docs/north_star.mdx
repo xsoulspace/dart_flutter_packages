@@ -1,0 +1,52 @@
+# Mesh Sync — North Star
+
+**Owner:** `universal_storage_mesh` (+ `universal_storage_mesh_transport`)
+**Status:** guiding — durable center for serverless sync (ADR 0010).
+
+## The objective
+
+Two devices, one user, **no account and no server**: local reads/writes are
+instant and always work; replicas converge whenever a link exists — LAN,
+Bluetooth, or a manual "sync now" tap. Sync is opportunistic by definition:
+never a liveness guarantee, never a blocker.
+
+The competitive claim against cloud-arbitrated sync: availability does not
+depend on any service. The mesh is a provider family inside Universal
+Storage's existing seam (`StorageProviderRegistry`), so an app adopts it by
+registering a provider — not by integrating a new sync stack.
+
+## What this subsection owns
+
+- `MeshStorageProvider`: each file is one kernel LWW doc; local-first CRUD;
+  symmetric anti-entropy sessions over any transport.
+- The `MeshTransport` seam (in the transport package): radios know nothing
+  about documents; documents know nothing about radios.
+- Pairing records (peer identity + endpoint hints) as the durable outcome of
+  QR scanning.
+- Uniform node model: every participant is a full replica. Relays/bridges,
+  if ever built, are nodes with a role — never origins with conflict
+  authority.
+
+## What it never owns
+
+- Merge semantics (kernel's job, ADR 0011).
+- Radio implementation (separate packages: LAN first, BLE-class later).
+- Cloud arbitration; a bridge node composes cloud providers but never
+  resolves conflicts.
+
+## Non-negotiable invariants
+
+1. Local operations never touch the network and never block on connectivity.
+2. Unreachable peers are skipped silently (`MeshConnectionException` =
+   "try later", not an error).
+3. Convergence is decided identically at every replica by the kernel.
+4. Provider semantics proven headless against the fake transport before any
+   radio code exists.
+
+## Proof of alignment
+
+- Conformance suite + two-replica scenarios green (sync, tombstones,
+  conflicts, persistence).
+- Integration suite green: two-hop propagation, responder-side convergence,
+  snapshot adoption after compaction, solo-provider mode.
+- Next proof: QR pairing layer + smallest real app example (see plan).

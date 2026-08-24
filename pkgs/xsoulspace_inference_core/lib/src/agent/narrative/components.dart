@@ -113,6 +113,38 @@ class GoalLink extends Component {
   final Entity? goal;
 }
 
+/// Explicit ordering dependency between plan steps.
+class DependsOnStep extends Component {
+  const DependsOnStep([this.dependencies = const <Entity>[]]);
+  final List<Entity> dependencies;
+}
+
+/// How a step's acceptance criterion is established.
+enum StepVerificationKind { mechanical, observable, open }
+
+/// Lifecycle state for a first-class plan step.
+enum StepLifecycle { open, blocked, verified, failed, superseded }
+
+/// A first-class intended outcome linked to a goal (ADR 0009).
+///
+/// Steps are durable graph facts; verification beats are evidence.
+class Step extends Component {
+  Step({
+    required this.claim,
+    this.verificationKind = StepVerificationKind.open,
+    StepLifecycle status = StepLifecycle.open,
+    this.confidence = 0,
+  }) : status = valueOf(status);
+  final String claim;
+  final StepVerificationKind verificationKind;
+
+  /// Mutable lifecycle residue updated by mechanical systems.
+  StepLifecycle status;
+  double confidence;
+
+  static StepLifecycle valueOf(StepLifecycle value) => value;
+}
+
 /// Reference to a parent Thread this Thread was derived from.
 /// Used for branching, forking, and isolation.
 class DerivedFromThread extends Component {

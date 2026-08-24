@@ -1,0 +1,8 @@
+{
+  "name": "pi-benchmark-driver",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "^0.84.2"
+  }
+}
