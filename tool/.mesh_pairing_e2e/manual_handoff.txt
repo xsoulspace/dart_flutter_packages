@@ -1,0 +1,5 @@
+FMTK automation reached both apps successfully.
+Use the Copy pairing code button in the web window, then click:
+- macOS: Accept peer QR, paste, Pair
+- Web: Files
+Then run this script again with MESH_PAIRING_DONE=1 to validate sync.

@@ -5,6 +5,7 @@
 /// ```sh
 /// OPENROUTER_API_KEY=sk-... \
 /// dart run bin/coding_suite_openrouter.dart [--model z-ai/glm-4.5-air]
+///     [--decision guided|native]
 ///     [--tasks <dir>] [--trace out.jsonl] [--markdown report.md]
 ///     [--retries 2] [--max-tool-rounds 16] [--filter <substring>]
 ///     [--resume] [--verbose]
@@ -16,6 +17,8 @@
 /// is stamped into every trace row so `report.dart` can aggregate runs into a
 /// per-category comparison matrix across backends.
 library;
+
+import 'dart:async';
 
 import 'dart:io';
 
@@ -34,6 +37,7 @@ Future<void> main(List<String> args) async {
   String? filter;
   var verbose = false;
   var resume = false;
+  var decision = 'guided';
   // Small, cheap, tool-capable default — the suite measures *agentic* quality,
   // not frontier-model ceiling. Override with --model for anything else.
   var model = '';
@@ -54,6 +58,8 @@ Future<void> main(List<String> args) async {
         filter = args[++i];
       case '--model':
         model = args[++i];
+      case '--decision':
+        decision = args[++i];
       case '--api-key':
         apiKey = args[++i];
       case '--resume':
@@ -86,9 +92,14 @@ Future<void> main(List<String> args) async {
     exit(2);
   }
 
+  if (decision != 'guided' && decision != 'native') {
+    stderr.writeln('--decision must be "guided" or "native"');
+    exit(2);
+  }
+
   final tasks = loadTasks(tasksDir);
   print('Loaded ${tasks.length} tasks from $tasksDir');
-  print('Backend: openrouter — model: $model');
+  print('Backend: openrouter — model: $model — decision: $decision');
 
   // ONE router shared by handler and runner — model resolution cannot
   // desynchronize (see CodingSuiteRunner.router doc).
@@ -108,9 +119,10 @@ Future<void> main(List<String> args) async {
   );
 
   GenerationHandler buildHandler(CodingTask task) {
-    return StructuredToolDecisionHandler(
-      inner: DefaultGenerationHandler(router: sharedRouter),
-    );
+    final inner = DefaultGenerationHandler(router: sharedRouter);
+    return decision == 'guided'
+        ? StructuredToolDecisionHandler(inner: inner, registryName: 'default')
+        : inner;
   }
 
   GenerationHandler debugHandler(CodingTask task) {
@@ -124,7 +136,7 @@ Future<void> main(List<String> args) async {
     maxToolRounds: maxToolRounds,
     resumeFromTrace: resume ? tracePath : null,
     router: sharedRouter,
-    backendLabel: 'openrouter',
+    backendLabel: 'openrouter-$decision',
     modelName: OpenRouterModelNames.openRouter,
     modelLabel: model,
   ).runAll(tasks, tracePath: tracePath, filter: filter);

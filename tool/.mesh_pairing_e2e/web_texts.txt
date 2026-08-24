@@ -1,0 +1,5 @@
+ready — show or paste a pairing code
+Copy pairing code
+Accept peer QR
+Files
+alice pairing

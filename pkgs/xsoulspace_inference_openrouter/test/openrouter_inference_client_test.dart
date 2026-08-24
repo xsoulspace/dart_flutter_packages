@@ -100,7 +100,7 @@ void main() {
       expect(result.data, isNotNull);
       // The tool call must be structured — no tag round-trip.
       expect(result.data!.toolCalls, isNotEmpty);
-      expect(result.data!.toolCalls.first.name, 'get_weather');
+      expect(result.data!.toolCalls.first.name.value, 'get_weather');
       expect(result.data!.toolCalls.first.arguments, {'city': 'Paris'});
       // rawOutput stays the raw content (no tags).
       expect(result.data!.rawOutput, isNot(contains('<call|')));

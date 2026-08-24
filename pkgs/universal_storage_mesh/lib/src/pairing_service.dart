@@ -62,11 +62,13 @@ final class PairingService {
     final String? transportHint,
   }) async {
     final ephPub = await ephemeralKeyPair.extractPublicKey();
+    final identityPub = await identityKeyPair.extractPublicKey();
     final body = utf8.encode(
       jsonEncode({
         'v': 1,
         'peer_id': peerId,
         'eph': base64Encode(ephPub.bytes),
+        'idk': base64Encode(identityPub.bytes),
       }),
     );
     final signature = await _ed25519.sign(body, keyPair: identityKeyPair);

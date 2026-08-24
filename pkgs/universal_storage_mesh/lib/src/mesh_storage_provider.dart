@@ -25,8 +25,8 @@ final class MeshStorageProvider implements StorageProvider {
   static const _contentKey = 'content';
 
   MeshStorageConfig? _config;
-  Directory? _docsDir;
   MeshPeerRegistry? _registry;
+  var _inMemory = false;
   final List<MeshTransport> _transports = [];
   final List<StreamSubscription<MeshSession>> _incomingSubscriptions = [];
   final Map<String, ConvergenceDoc> _docs = {};
@@ -77,10 +77,16 @@ final class MeshStorageProvider implements StorageProvider {
         'got ${config.runtimeType}.',
       );
     }
+    _inMemory = config.storePath == ':memory:';
+    if (_inMemory) {
+      _config = config;
+      _registry = MeshPeerRegistry.inMemory();
+      _initialized = true;
+      return;
+    }
     final docsDir = Directory('${config.storePath}/docs');
     await docsDir.create(recursive: true);
     _config = config;
-    _docsDir = docsDir;
     _registry = await MeshPeerRegistry.load('${config.storePath}/peers.json');
     await _loadDocs();
     _initialized = true;
@@ -328,7 +334,9 @@ final class MeshStorageProvider implements StorageProvider {
   }
 
   Future<void> _loadDocs() async {
-    await for (final entity in _docsDir!.list()) {
+    if (_inMemory) return;
+    final docsDir = Directory('${_config!.storePath}/docs');
+    await for (final entity in docsDir.list()) {
       if (entity is! File || !entity.path.endsWith('.json')) continue;
       try {
         final raw =
@@ -344,8 +352,9 @@ final class MeshStorageProvider implements StorageProvider {
   }
 
   Future<void> _persist(final ConvergenceDoc doc) async {
+    if (_inMemory) return;
     final fileName = encodeDocFileName(doc.docId);
-    final file = File('${_docsDir!.path}/$fileName.json');
+    final file = File('${_config!.storePath}/docs/$fileName.json');
     await file.writeAsString(
       jsonEncode({'path': doc.docId, 'doc': doc.toJson()}),
     );

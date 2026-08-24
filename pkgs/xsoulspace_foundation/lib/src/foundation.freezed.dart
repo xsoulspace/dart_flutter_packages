@@ -1,6 +1,6 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
 // coverage:ignore-file
-// ignore_for_file: type=lint, type=warning, deprecated_member_use, deprecated_member_use_from_same_package
+// GENERATED CODE - DO NOT MODIFY BY HAND
+// ignore_for_file: type=lint
 // ignore_for_file: unused_element, deprecated_member_use, deprecated_member_use_from_same_package, use_function_type_syntax_for_parameters, unnecessary_const, avoid_init_to_null, invalid_override_different_default_values_named, prefer_expression_function_bodies, annotate_overrides, invalid_annotation_target, unnecessary_question_mark
 
 part of 'foundation.dart';
@@ -9,530 +9,361 @@ part of 'foundation.dart';
 // FreezedGenerator
 // **************************************************************************
 
-// GENERATED CODE - DO NOT MODIFY BY HAND
-// dart format off
 T _$identity<T>(T value) => value;
+
+final _privateConstructorUsedError = UnsupportedError(
+  'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models',
+);
+
 /// @nodoc
 mixin _$LoadableContainer<T> {
+  T get value => throw _privateConstructorUsedError;
+  bool get isLoaded => throw _privateConstructorUsedError;
 
- T get value; bool get isLoaded;
-/// Create a copy of LoadableContainer
-/// with the given fields replaced by the non-null parameter values.
-@JsonKey(includeFromJson: false, includeToJson: false)
-@pragma('vm:prefer-inline')
-$LoadableContainerCopyWith<T, LoadableContainer<T>> get copyWith => _$LoadableContainerCopyWithImpl<T, LoadableContainer<T>>(this as LoadableContainer<T>, _$identity);
-
-
-
-@override
-bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is LoadableContainer<T>&&const DeepCollectionEquality().equals(other.value, value)&&(identical(other.isLoaded, isLoaded) || other.isLoaded == isLoaded));
-}
-
-
-@override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(value),isLoaded);
-
-@override
-String toString() {
-  return 'LoadableContainer<$T>(value: $value, isLoaded: $isLoaded)';
-}
-
-
+  /// Create a copy of LoadableContainer
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  $LoadableContainerCopyWith<T, LoadableContainer<T>> get copyWith =>
+      throw _privateConstructorUsedError;
 }
 
 /// @nodoc
-abstract mixin class $LoadableContainerCopyWith<T,$Res>  {
-  factory $LoadableContainerCopyWith(LoadableContainer<T> value, $Res Function(LoadableContainer<T>) _then) = _$LoadableContainerCopyWithImpl;
-@useResult
-$Res call({
- T value, bool isLoaded
-});
-
-
-
-
+abstract class $LoadableContainerCopyWith<T, $Res> {
+  factory $LoadableContainerCopyWith(
+    LoadableContainer<T> value,
+    $Res Function(LoadableContainer<T>) then,
+  ) = _$LoadableContainerCopyWithImpl<T, $Res, LoadableContainer<T>>;
+  @useResult
+  $Res call({T value, bool isLoaded});
 }
+
 /// @nodoc
-class _$LoadableContainerCopyWithImpl<T,$Res>
+class _$LoadableContainerCopyWithImpl<
+  T,
+  $Res,
+  $Val extends LoadableContainer<T>
+>
     implements $LoadableContainerCopyWith<T, $Res> {
-  _$LoadableContainerCopyWithImpl(this._self, this._then);
+  _$LoadableContainerCopyWithImpl(this._value, this._then);
 
-  final LoadableContainer<T> _self;
-  final $Res Function(LoadableContainer<T>) _then;
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
 
-/// Create a copy of LoadableContainer
-/// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? value = freezed,Object? isLoaded = null,}) {
-  return _then(LoadableContainer(
-value: freezed == value ? _self.value : value // ignore: cast_nullable_to_non_nullable
-as T,isLoaded: null == isLoaded ? _self.isLoaded : isLoaded // ignore: cast_nullable_to_non_nullable
-as bool,
-  ));
+  /// Create a copy of LoadableContainer
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({Object? value = freezed, Object? isLoaded = null}) {
+    return _then(
+      _value.copyWith(
+            value: freezed == value
+                ? _value.value
+                : value // ignore: cast_nullable_to_non_nullable
+                      as T,
+            isLoaded: null == isLoaded
+                ? _value.isLoaded
+                : isLoaded // ignore: cast_nullable_to_non_nullable
+                      as bool,
+          )
+          as $Val,
+    );
+  }
 }
 
+/// @nodoc
+abstract class _$$LoadableContainerImplCopyWith<T, $Res>
+    implements $LoadableContainerCopyWith<T, $Res> {
+  factory _$$LoadableContainerImplCopyWith(
+    _$LoadableContainerImpl<T> value,
+    $Res Function(_$LoadableContainerImpl<T>) then,
+  ) = __$$LoadableContainerImplCopyWithImpl<T, $Res>;
+  @override
+  @useResult
+  $Res call({T value, bool isLoaded});
 }
 
+/// @nodoc
+class __$$LoadableContainerImplCopyWithImpl<T, $Res>
+    extends _$LoadableContainerCopyWithImpl<T, $Res, _$LoadableContainerImpl<T>>
+    implements _$$LoadableContainerImplCopyWith<T, $Res> {
+  __$$LoadableContainerImplCopyWithImpl(
+    _$LoadableContainerImpl<T> _value,
+    $Res Function(_$LoadableContainerImpl<T>) _then,
+  ) : super(_value, _then);
 
-/// Adds pattern-matching-related methods to [LoadableContainer].
-extension LoadableContainerPatterns<T> on LoadableContainer<T> {
-/// A variant of `map` that fallback to returning `orElse`.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case _:
-///     return orElse();
-/// }
-/// ```
-
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _LoadableContainer<T> value)?  $default,{required TResult orElse(),}){
-final _that = this;
-switch (_that) {
-case _LoadableContainer() when $default != null:
-return $default(_that);case _:
-  return orElse();
-
-}
-}
-/// A `switch`-like method, using callbacks.
-///
-/// Callbacks receives the raw object, upcasted.
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case final Subclass2 value:
-///     return ...;
-/// }
-/// ```
-
-@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _LoadableContainer<T> value)  $default,){
-final _that = this;
-switch (_that) {
-case _LoadableContainer():
-return $default(_that);case _:
-  throw StateError('Unexpected subclass');
-
-}
-}
-/// A variant of `map` that fallback to returning `null`.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case _:
-///     return null;
-/// }
-/// ```
-
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _LoadableContainer<T> value)?  $default,){
-final _that = this;
-switch (_that) {
-case _LoadableContainer() when $default != null:
-return $default(_that);case _:
-  return null;
-
-}
-}
-/// A variant of `when` that fallback to an `orElse` callback.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case _:
-///     return orElse();
-/// }
-/// ```
-
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( T value,  bool isLoaded)?  $default,{required TResult orElse(),}) {final _that = this;
-switch (_that) {
-case _LoadableContainer() when $default != null:
-return $default(_that.value,_that.isLoaded);case _:
-  return orElse();
-
-}
-}
-/// A `switch`-like method, using callbacks.
-///
-/// As opposed to `map`, this offers destructuring.
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case Subclass2(:final field2):
-///     return ...;
-/// }
-/// ```
-
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( T value,  bool isLoaded)  $default,) {final _that = this;
-switch (_that) {
-case _LoadableContainer():
-return $default(_that.value,_that.isLoaded);case _:
-  throw StateError('Unexpected subclass');
-
-}
-}
-/// A variant of `when` that fallback to returning `null`
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case _:
-///     return null;
-/// }
-/// ```
-
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( T value,  bool isLoaded)?  $default,) {final _that = this;
-switch (_that) {
-case _LoadableContainer() when $default != null:
-return $default(_that.value,_that.isLoaded);case _:
-  return null;
-
-}
-}
-
+  /// Create a copy of LoadableContainer
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({Object? value = freezed, Object? isLoaded = null}) {
+    return _then(
+      _$LoadableContainerImpl<T>(
+        value: freezed == value
+            ? _value.value
+            : value // ignore: cast_nullable_to_non_nullable
+                  as T,
+        isLoaded: null == isLoaded
+            ? _value.isLoaded
+            : isLoaded // ignore: cast_nullable_to_non_nullable
+                  as bool,
+      ),
+    );
+  }
 }
 
 /// @nodoc
 
+class _$LoadableContainerImpl<T> extends _LoadableContainer<T> {
+  const _$LoadableContainerImpl({required this.value, this.isLoaded = false})
+    : super._();
 
-class _LoadableContainer<T> extends LoadableContainer<T> {
-  const _LoadableContainer({required this.value, this.isLoaded = false}): super._();
-  
+  @override
+  final T value;
+  @override
+  @JsonKey()
+  final bool isLoaded;
 
-@override final  T value;
-@override@JsonKey() final  bool isLoaded;
+  @override
+  String toString() {
+    return 'LoadableContainer<$T>(value: $value, isLoaded: $isLoaded)';
+  }
 
-/// Create a copy of LoadableContainer
-/// with the given fields replaced by the non-null parameter values.
-@override @JsonKey(includeFromJson: false, includeToJson: false)
-@pragma('vm:prefer-inline')
-_$LoadableContainerCopyWith<T, _LoadableContainer<T>> get copyWith => __$LoadableContainerCopyWithImpl<T, _LoadableContainer<T>>(this, _$identity);
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$LoadableContainerImpl<T> &&
+            const DeepCollectionEquality().equals(other.value, value) &&
+            (identical(other.isLoaded, isLoaded) ||
+                other.isLoaded == isLoaded));
+  }
 
+  @override
+  int get hashCode => Object.hash(
+    runtimeType,
+    const DeepCollectionEquality().hash(value),
+    isLoaded,
+  );
 
-
-@override
-bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _LoadableContainer<T>&&const DeepCollectionEquality().equals(other.value, value)&&(identical(other.isLoaded, isLoaded) || other.isLoaded == isLoaded));
+  /// Create a copy of LoadableContainer
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$LoadableContainerImplCopyWith<T, _$LoadableContainerImpl<T>>
+  get copyWith =>
+      __$$LoadableContainerImplCopyWithImpl<T, _$LoadableContainerImpl<T>>(
+        this,
+        _$identity,
+      );
 }
 
+abstract class _LoadableContainer<T> extends LoadableContainer<T> {
+  const factory _LoadableContainer({
+    required final T value,
+    final bool isLoaded,
+  }) = _$LoadableContainerImpl<T>;
+  const _LoadableContainer._() : super._();
 
-@override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(value),isLoaded);
+  @override
+  T get value;
+  @override
+  bool get isLoaded;
 
-@override
-String toString() {
-  return 'LoadableContainer<$T>(value: $value, isLoaded: $isLoaded)';
-}
-
-
-}
-
-/// @nodoc
-abstract mixin class _$LoadableContainerCopyWith<T,$Res> implements $LoadableContainerCopyWith<T, $Res> {
-  factory _$LoadableContainerCopyWith(_LoadableContainer<T> value, $Res Function(_LoadableContainer<T>) _then) = __$LoadableContainerCopyWithImpl;
-@override @useResult
-$Res call({
- T value, bool isLoaded
-});
-
-
-
-
-}
-/// @nodoc
-class __$LoadableContainerCopyWithImpl<T,$Res>
-    implements _$LoadableContainerCopyWith<T, $Res> {
-  __$LoadableContainerCopyWithImpl(this._self, this._then);
-
-  final _LoadableContainer<T> _self;
-  final $Res Function(_LoadableContainer<T>) _then;
-
-/// Create a copy of LoadableContainer
-/// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? value = freezed,Object? isLoaded = null,}) {
-  return _then(_LoadableContainer<T>(
-value: freezed == value ? _self.value : value // ignore: cast_nullable_to_non_nullable
-as T,isLoaded: null == isLoaded ? _self.isLoaded : isLoaded // ignore: cast_nullable_to_non_nullable
-as bool,
-  ));
-}
-
-
+  /// Create a copy of LoadableContainer
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$LoadableContainerImplCopyWith<T, _$LoadableContainerImpl<T>>
+  get copyWith => throw _privateConstructorUsedError;
 }
 
 /// @nodoc
 mixin _$FieldContainer<T> {
+  T get value => throw _privateConstructorUsedError;
+  String get errorText => throw _privateConstructorUsedError;
+  bool get isLoading => throw _privateConstructorUsedError;
 
- T get value; String get errorText; bool get isLoading;
-/// Create a copy of FieldContainer
-/// with the given fields replaced by the non-null parameter values.
-@JsonKey(includeFromJson: false, includeToJson: false)
-@pragma('vm:prefer-inline')
-$FieldContainerCopyWith<T, FieldContainer<T>> get copyWith => _$FieldContainerCopyWithImpl<T, FieldContainer<T>>(this as FieldContainer<T>, _$identity);
-
-
-
-@override
-bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is FieldContainer<T>&&const DeepCollectionEquality().equals(other.value, value)&&(identical(other.errorText, errorText) || other.errorText == errorText)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading));
-}
-
-
-@override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(value),errorText,isLoading);
-
-@override
-String toString() {
-  return 'FieldContainer<$T>(value: $value, errorText: $errorText, isLoading: $isLoading)';
-}
-
-
+  /// Create a copy of FieldContainer
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  $FieldContainerCopyWith<T, FieldContainer<T>> get copyWith =>
+      throw _privateConstructorUsedError;
 }
 
 /// @nodoc
-abstract mixin class $FieldContainerCopyWith<T,$Res>  {
-  factory $FieldContainerCopyWith(FieldContainer<T> value, $Res Function(FieldContainer<T>) _then) = _$FieldContainerCopyWithImpl;
-@useResult
-$Res call({
- T value, String errorText, bool isLoading
-});
-
-
-
-
+abstract class $FieldContainerCopyWith<T, $Res> {
+  factory $FieldContainerCopyWith(
+    FieldContainer<T> value,
+    $Res Function(FieldContainer<T>) then,
+  ) = _$FieldContainerCopyWithImpl<T, $Res, FieldContainer<T>>;
+  @useResult
+  $Res call({T value, String errorText, bool isLoading});
 }
+
 /// @nodoc
-class _$FieldContainerCopyWithImpl<T,$Res>
+class _$FieldContainerCopyWithImpl<T, $Res, $Val extends FieldContainer<T>>
     implements $FieldContainerCopyWith<T, $Res> {
-  _$FieldContainerCopyWithImpl(this._self, this._then);
+  _$FieldContainerCopyWithImpl(this._value, this._then);
 
-  final FieldContainer<T> _self;
-  final $Res Function(FieldContainer<T>) _then;
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
 
-/// Create a copy of FieldContainer
-/// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? value = freezed,Object? errorText = null,Object? isLoading = null,}) {
-  return _then(FieldContainer(
-value: freezed == value ? _self.value : value // ignore: cast_nullable_to_non_nullable
-as T,errorText: null == errorText ? _self.errorText : errorText // ignore: cast_nullable_to_non_nullable
-as String,isLoading: null == isLoading ? _self.isLoading : isLoading // ignore: cast_nullable_to_non_nullable
-as bool,
-  ));
+  /// Create a copy of FieldContainer
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? value = freezed,
+    Object? errorText = null,
+    Object? isLoading = null,
+  }) {
+    return _then(
+      _value.copyWith(
+            value: freezed == value
+                ? _value.value
+                : value // ignore: cast_nullable_to_non_nullable
+                      as T,
+            errorText: null == errorText
+                ? _value.errorText
+                : errorText // ignore: cast_nullable_to_non_nullable
+                      as String,
+            isLoading: null == isLoading
+                ? _value.isLoading
+                : isLoading // ignore: cast_nullable_to_non_nullable
+                      as bool,
+          )
+          as $Val,
+    );
+  }
 }
 
+/// @nodoc
+abstract class _$$FieldContainerImplCopyWith<T, $Res>
+    implements $FieldContainerCopyWith<T, $Res> {
+  factory _$$FieldContainerImplCopyWith(
+    _$FieldContainerImpl<T> value,
+    $Res Function(_$FieldContainerImpl<T>) then,
+  ) = __$$FieldContainerImplCopyWithImpl<T, $Res>;
+  @override
+  @useResult
+  $Res call({T value, String errorText, bool isLoading});
 }
 
+/// @nodoc
+class __$$FieldContainerImplCopyWithImpl<T, $Res>
+    extends _$FieldContainerCopyWithImpl<T, $Res, _$FieldContainerImpl<T>>
+    implements _$$FieldContainerImplCopyWith<T, $Res> {
+  __$$FieldContainerImplCopyWithImpl(
+    _$FieldContainerImpl<T> _value,
+    $Res Function(_$FieldContainerImpl<T>) _then,
+  ) : super(_value, _then);
 
-/// Adds pattern-matching-related methods to [FieldContainer].
-extension FieldContainerPatterns<T> on FieldContainer<T> {
-/// A variant of `map` that fallback to returning `orElse`.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case _:
-///     return orElse();
-/// }
-/// ```
-
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _FieldContainer<T> value)?  $default,{required TResult orElse(),}){
-final _that = this;
-switch (_that) {
-case _FieldContainer() when $default != null:
-return $default(_that);case _:
-  return orElse();
-
-}
-}
-/// A `switch`-like method, using callbacks.
-///
-/// Callbacks receives the raw object, upcasted.
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case final Subclass2 value:
-///     return ...;
-/// }
-/// ```
-
-@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _FieldContainer<T> value)  $default,){
-final _that = this;
-switch (_that) {
-case _FieldContainer():
-return $default(_that);case _:
-  throw StateError('Unexpected subclass');
-
-}
-}
-/// A variant of `map` that fallback to returning `null`.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case _:
-///     return null;
-/// }
-/// ```
-
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _FieldContainer<T> value)?  $default,){
-final _that = this;
-switch (_that) {
-case _FieldContainer() when $default != null:
-return $default(_that);case _:
-  return null;
-
-}
-}
-/// A variant of `when` that fallback to an `orElse` callback.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case _:
-///     return orElse();
-/// }
-/// ```
-
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( T value,  String errorText,  bool isLoading)?  $default,{required TResult orElse(),}) {final _that = this;
-switch (_that) {
-case _FieldContainer() when $default != null:
-return $default(_that.value,_that.errorText,_that.isLoading);case _:
-  return orElse();
-
-}
-}
-/// A `switch`-like method, using callbacks.
-///
-/// As opposed to `map`, this offers destructuring.
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case Subclass2(:final field2):
-///     return ...;
-/// }
-/// ```
-
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( T value,  String errorText,  bool isLoading)  $default,) {final _that = this;
-switch (_that) {
-case _FieldContainer():
-return $default(_that.value,_that.errorText,_that.isLoading);case _:
-  throw StateError('Unexpected subclass');
-
-}
-}
-/// A variant of `when` that fallback to returning `null`
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case _:
-///     return null;
-/// }
-/// ```
-
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( T value,  String errorText,  bool isLoading)?  $default,) {final _that = this;
-switch (_that) {
-case _FieldContainer() when $default != null:
-return $default(_that.value,_that.errorText,_that.isLoading);case _:
-  return null;
-
-}
-}
-
+  /// Create a copy of FieldContainer
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? value = freezed,
+    Object? errorText = null,
+    Object? isLoading = null,
+  }) {
+    return _then(
+      _$FieldContainerImpl<T>(
+        value: freezed == value
+            ? _value.value
+            : value // ignore: cast_nullable_to_non_nullable
+                  as T,
+        errorText: null == errorText
+            ? _value.errorText
+            : errorText // ignore: cast_nullable_to_non_nullable
+                  as String,
+        isLoading: null == isLoading
+            ? _value.isLoading
+            : isLoading // ignore: cast_nullable_to_non_nullable
+                  as bool,
+      ),
+    );
+  }
 }
 
 /// @nodoc
 
+class _$FieldContainerImpl<T> implements _FieldContainer<T> {
+  const _$FieldContainerImpl({
+    required this.value,
+    this.errorText = '',
+    this.isLoading = false,
+  });
 
-class _FieldContainer<T> implements FieldContainer<T> {
-  const _FieldContainer({required this.value, this.errorText = '', this.isLoading = false});
-  
+  @override
+  final T value;
+  @override
+  @JsonKey()
+  final String errorText;
+  @override
+  @JsonKey()
+  final bool isLoading;
 
-@override final  T value;
-@override@JsonKey() final  String errorText;
-@override@JsonKey() final  bool isLoading;
+  @override
+  String toString() {
+    return 'FieldContainer<$T>(value: $value, errorText: $errorText, isLoading: $isLoading)';
+  }
 
-/// Create a copy of FieldContainer
-/// with the given fields replaced by the non-null parameter values.
-@override @JsonKey(includeFromJson: false, includeToJson: false)
-@pragma('vm:prefer-inline')
-_$FieldContainerCopyWith<T, _FieldContainer<T>> get copyWith => __$FieldContainerCopyWithImpl<T, _FieldContainer<T>>(this, _$identity);
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$FieldContainerImpl<T> &&
+            const DeepCollectionEquality().equals(other.value, value) &&
+            (identical(other.errorText, errorText) ||
+                other.errorText == errorText) &&
+            (identical(other.isLoading, isLoading) ||
+                other.isLoading == isLoading));
+  }
 
+  @override
+  int get hashCode => Object.hash(
+    runtimeType,
+    const DeepCollectionEquality().hash(value),
+    errorText,
+    isLoading,
+  );
 
-
-@override
-bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _FieldContainer<T>&&const DeepCollectionEquality().equals(other.value, value)&&(identical(other.errorText, errorText) || other.errorText == errorText)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading));
+  /// Create a copy of FieldContainer
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$FieldContainerImplCopyWith<T, _$FieldContainerImpl<T>> get copyWith =>
+      __$$FieldContainerImplCopyWithImpl<T, _$FieldContainerImpl<T>>(
+        this,
+        _$identity,
+      );
 }
 
+abstract class _FieldContainer<T> implements FieldContainer<T> {
+  const factory _FieldContainer({
+    required final T value,
+    final String errorText,
+    final bool isLoading,
+  }) = _$FieldContainerImpl<T>;
 
-@override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(value),errorText,isLoading);
+  @override
+  T get value;
+  @override
+  String get errorText;
+  @override
+  bool get isLoading;
 
-@override
-String toString() {
-  return 'FieldContainer<$T>(value: $value, errorText: $errorText, isLoading: $isLoading)';
+  /// Create a copy of FieldContainer
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$FieldContainerImplCopyWith<T, _$FieldContainerImpl<T>> get copyWith =>
+      throw _privateConstructorUsedError;
 }
-
-
-}
-
-/// @nodoc
-abstract mixin class _$FieldContainerCopyWith<T,$Res> implements $FieldContainerCopyWith<T, $Res> {
-  factory _$FieldContainerCopyWith(_FieldContainer<T> value, $Res Function(_FieldContainer<T>) _then) = __$FieldContainerCopyWithImpl;
-@override @useResult
-$Res call({
- T value, String errorText, bool isLoading
-});
-
-
-
-
-}
-/// @nodoc
-class __$FieldContainerCopyWithImpl<T,$Res>
-    implements _$FieldContainerCopyWith<T, $Res> {
-  __$FieldContainerCopyWithImpl(this._self, this._then);
-
-  final _FieldContainer<T> _self;
-  final $Res Function(_FieldContainer<T>) _then;
-
-/// Create a copy of FieldContainer
-/// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? value = freezed,Object? errorText = null,Object? isLoading = null,}) {
-  return _then(_FieldContainer<T>(
-value: freezed == value ? _self.value : value // ignore: cast_nullable_to_non_nullable
-as T,errorText: null == errorText ? _self.errorText : errorText // ignore: cast_nullable_to_non_nullable
-as String,isLoading: null == isLoading ? _self.isLoading : isLoading // ignore: cast_nullable_to_non_nullable
-as bool,
-  ));
-}
-
-
-}
-
-// dart format on

@@ -1,0 +1,57 @@
+Resolving dependencies...
+Downloading packages...
+! analyzer 14.1.0 (overridden)
+  app_links 6.4.1 (7.2.1 available)
+  app_settings 8.0.3 (9.0.0 available)
+  archive 4.0.9 (4.2.0 available)
+! async_parallel 0.1.0 from path ../../ecsly/plugins/async_parallel (overridden)
+  background_downloader 9.5.7 (9.5.8 available)
+  cli_util 0.4.2 (0.6.0 available)
+  code_assets 1.2.1 (2.0.0 available)
+! dart_acp_toolkit 0.1.0-dev.1 from path ../../../mcp/cline/intentcall/packages/acp_toolkit (overridden)
+  dbus 0.7.14 (0.7.15 available)
+! device_info_plus 13.1.0 (overridden) (13.2.0 available)
+! ecsly 0.0.1-dev.13 from path ../../ecsly/core_packages/ecsly (overridden)
+! ecsly_app 0.1.0-dev.4 from path ../../ecsly/core_packages/ecsly_app (overridden)
+! ecsly_async_parallel 0.1.0 from path ../../ecsly/plugins/ecsly_async_parallel (overridden)
+! ecsly_codegen 0.1.0-dev.4 from path ../../ecsly/core_packages/ecsly_codegen (overridden)
+! ecsly_flutter 0.1.0-dev.4 from path ../../ecsly/core_packages/ecsly_flutter (overridden)
+  ffigen 20.1.1 (21.0.0 available)
+  ffmpeg_kit_flutter_new_min 2.1.0 (3.6.2 available)
+  flutter_gemma 1.5.2 (1.6.5 available)
+  flutter_rustore_review 10.5.0 (10.5.1 available)
+  flutter_secure_storage 10.3.1 (11.0.0 available)
+  flutter_secure_storage_darwin 0.3.2 (0.4.0 available)
+  freezed 4.0.0-dev.3 (4.0.0 available)
+  hooks 2.1.0 (2.2.0 available)
+  in_app_purchase_storekit 0.4.11 (0.4.11+1 available)
+! intl 0.20.3 (overridden)
+  livekit_client 2.10.0 (2.11.0 available)
+  logging_appenders 1.4.0+1 (2.0.0+1 available)
+  material_color_utilities 0.13.0 (0.13.1 available)
+! mcp_toolkit 5.0.4 (overridden) (5.1.0 available)
+! meta 1.19.0 (overridden)
+  objective_c 9.5.0 (9.6.0 available)
+  package_config 2.2.0 (3.0.0 available)
+  pigeon 27.3.0 (28.0.0 available)
+  record_use 1.0.0 (1.1.1 available)
+  source_gen 4.2.4 (4.3.0 available)
+  source_maps 0.10.13 (0.10.14 available)
+! test_api 0.7.13 (overridden)
+  vm_service 15.2.0 (15.3.0 available)
+  xml 6.6.1 (7.0.1 available)
+Got dependencies!
+29 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+Resolving dependencies in `./pkgs/rustore_billing_api/example`...
+Downloading packages...
+Got dependencies in `./pkgs/rustore_billing_api/example`.
+Resolving dependencies in `./pkgs/xsoulspace_inference_flutter/example`...
+Downloading packages...
+Got dependencies in `./pkgs/xsoulspace_inference_flutter/example`.
+Analyzing mesh_pairing_app...                                   
+
+   info • Don't use 'BuildContext's across async gaps. Try rewriting the code to not use the 'BuildContext', or guard the use with a 'mounted' check • pkgs/universal_storage_mesh/example/mesh_pairing_app/lib/pages/files_page.dart:92:29 • use_build_context_synchronously
+   info • The import of 'dart:typed_data' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/foundation.dart'. Try removing the import directive • pkgs/universal_storage_mesh/example/mesh_pairing_app/lib/state/mesh_app_state.dart:3:8 • unnecessary_import
+   info • Use an initializing formal to assign a parameter to a field. Try using an initialing formal ('this._channel') to initialize the field • pkgs/universal_storage_mesh/example/mesh_pairing_app/lib/transport/websocket_mesh_transport.dart:10:7 • prefer_initializing_formals
+

@@ -118,9 +118,12 @@ SchemaBundle decisionSchema(ToolRegistry registry) {
   final innerCandidates = [
     if (nested is Map<String, dynamic>) nested,
     if (decodedNested is Map<String, dynamic>) decodedNested,
+    if (output.isNotEmpty && !output.containsKey('text')) output,
   ];
   for (final candidate in innerCandidates) {
     final toolKey = candidate['tool'];
+    final actionKey = candidate['action'];
+    final effectiveKey = (toolKey ?? actionKey) as String?;
     if (toolKey is String) {
       final tool = registry.tools[ToolName(toolKey)];
       if (tool != null) {
@@ -143,8 +146,48 @@ SchemaBundle decisionSchema(ToolRegistry registry) {
         }
       }
     }
+    if (effectiveKey is String && effectiveKey != 'text') {
+      var tool = registry.tools[ToolName(effectiveKey)];
+      if (tool == null) {
+        final fuzzy = registry.tools.keys.where(
+          (name) =>
+              name.value.contains(effectiveKey) ||
+              effectiveKey.contains(name.value),
+        );
+        if (fuzzy.isNotEmpty) {
+          tool = registry.tools[fuzzy.first];
+        }
+      }
+      if (tool != null) {
+        final argsValue = candidate['arguments'] ?? <String, dynamic>{};
+        if (argsValue is Map<String, dynamic>) {
+          return (
+            call: ToolCall(name: tool.name, arguments: argsValue),
+            answer: null,
+          );
+        }
+        // Flat shape: {"action":"write","path":...,"content":...}
+        final flatArgs = <String, dynamic>{}
+          ..addAll(candidate)
+          ..remove('action')
+          ..remove('tool');
+        return (call: ToolCall(name: tool.name, arguments: flatArgs), answer: null);
+      }
+    }
     if (candidate['text'] != null) {
       return (call: null, answer: '${candidate['text']}');
+    }
+    // Some models emit {"tool": "...", "arguments": {...}} at the top level
+    // after the client's JSON parse — handle the arguments envelope too.
+    if (toolKey is String) {
+      final argsValue = candidate['arguments'];
+      final topTool = registry.tools[ToolName(toolKey)];
+      if (topTool != null && argsValue is Map<String, dynamic>) {
+        return (
+          call: ToolCall(name: topTool.name, arguments: argsValue),
+          answer: null,
+        );
+      }
     }
   }
   if (nested is String) {

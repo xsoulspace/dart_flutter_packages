@@ -9,26 +9,27 @@ workspace:
   - pkgs/xsoulspace_inference_core/example/
   - pkgs/xsoulspace_inference_apple_foundation/example/
   - pkgs/universal_storage_sync/example/todo_file_app/
+  - pkgs/universal_storage_mesh/example/mesh_pairing_app/
   - pkgs/universal_storage_sync/example/todo_git_app/
 
 dependency_overrides:
+  mcp_toolkit: 5.0.4
   device_info_plus: 13.1.0
   meta: 1.19.0
   test_api: 0.7.13
   analyzer: 14.1.0
   intl: 0.20.3
   dart_acp_toolkit:
-    path: ../../../mcp/cline/intentcall/packages/acp_toolkit
+    path: /Users/antonio/mcp/cline/intentcall/packages/acp_toolkit
   ecsly:
     path: ../../ecsly/core_packages/ecsly
   ecsly_flutter:
     path: ../../ecsly/core_packages/ecsly_flutter
   ecsly_codegen:
-    path: ../../ecsly/core_packages/ecsly_codegen
+    path: /Users/antonio/xs/ecsly/core_packages/ecsly_codegen
   ecsly_app:
     path: ../../ecsly/core_packages/ecsly_app
   ecsly_async_parallel:
-    path: ../../ecsly/plugins/ecsly_async_parallel
+    path: /Users/antonio/xs/ecsly/plugins/ecsly_async_parallel
   async_parallel:
     path: ../../ecsly/plugins/async_parallel
-

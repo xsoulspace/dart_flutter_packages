@@ -1,0 +1,32 @@
+name: mesh_pairing_app
+description: Minimal Flutter example for mesh QR pairing and local-first sync.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.12.0
+
+resolution: workspace
+
+dependencies:
+  cryptography: ^2.7.0
+  flutter:
+    sdk: flutter
+  provider: ^6.1.5+1
+  qr: ^4.0.0
+  shelf: ^1.4.2
+  shelf_web_socket: ^3.0.0
+  universal_storage_interface:
+  mcp_toolkit: ^5.0.4
+  universal_storage_mesh:
+    path: ../../
+  universal_storage_mesh_transport:
+  web_socket_channel: ^3.0.3
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true

@@ -30,13 +30,14 @@ enum OpenRouterModelNames implements ModelName { openRouter }
 /// backends. The client never executes tools itself.
 class OpenRouterInferenceClient implements InferenceClient {
   OpenRouterInferenceClient({
-    required this._apiKey,
+    String apiKey = '',
     this.defaultModel = 'openai/gpt-4o-mini',
     this.baseUrl = 'https://openrouter.ai/api/v1',
     final http.Client? httpClient,
     this.timeout = const Duration(seconds: 60),
     this.useMessagesCodec = false,
   }) : _httpClient = httpClient ?? http.Client(),
+       _apiKey = apiKey,
        _ownsHttpClient = httpClient == null;
 
   final String _apiKey;

@@ -10,6 +10,9 @@ import 'package:universal_storage_mesh_transport/universal_storage_mesh_transpor
 final class MeshPeerRegistry {
   MeshPeerRegistry({required this.filePath});
 
+  /// In-memory registry for browser-only examples and tests.
+  MeshPeerRegistry.inMemory() : filePath = '';
+
   final String filePath;
   final Map<String, MeshPeerRecord> _peers = {};
 
@@ -45,6 +48,7 @@ final class MeshPeerRegistry {
 
   @visibleForTesting
   Future<void> persist() async {
+    if (filePath.isEmpty) return;
     final file = File(filePath);
     await file.parent.create(recursive: true);
     await file.writeAsString(

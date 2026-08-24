@@ -12,7 +12,7 @@ a primitive; now planning is too (ADR 0009). What remains ahead, in order:
 
 ## Ahead — ordered
 
-### A1. Fair comparison baseline (Phase 4 follow-up) — *blocking everything measured*
+### A1. Fair comparison baseline — **landed 2026-08**
 
 The Phase 4 columns were not comparable (three verified confounds — see
 [plan_fair_pi_comparison.md](plan_fair_pi_comparison.md)):
@@ -27,7 +27,20 @@ The Phase 4 columns were not comparable (three verified confounds — see
 Steps: C1 fix + A/B → decision-path unification pilot → tool-parity decision →
 pi SDK driver → run matrix (`harness+AFM` / `harness+OR` / `pi+OR`, same model)
 → publish `results_comparison.md`.
-**No core changes.** Estimated ~2 days total.
+
+**Result:** C2 confirmed as the dominant confound. Guided-schema arm scored
+0/20 (2 tool calls total); native-tool-calling arm scored 6/20 (262 tool
+calls). Same model. pi scored 19/20 on the native loop. The remaining
+harness-vs-pi gap is edit quality, not decision machinery — the model can
+act but writes wrong content. See
+[results_comparison.md](../../benchmark/docs/agent/results_comparison.md).
+
+**Implication for tiny models:** guided schema is a bottleneck, not an
+amplifier, at this scale. Native tool calling should be the default decision
+path; guided schema remains available via `--decision guided` for targeted
+A/B. The harness thesis ("harness = intelligence amplifier") now has a clean
+mechanism to test: A2 plan-frontier + decomposition should close the edit-
+quality gap without changing the model.
 
 ### A2. Goals as vectors, plans as projections (ADR 0009) — *falsification passed; productionize*
 

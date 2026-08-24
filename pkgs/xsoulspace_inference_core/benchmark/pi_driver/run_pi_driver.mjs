@@ -96,6 +96,11 @@ function addUsage(totals, usage) {
   totals.cost += Number(usage.cost?.total ?? 0);
 }
 
+function countToolCalls(totals, event) {
+  if (event?.type !== "tool_execution_end") return;
+  totals.toolCalls += 1;
+}
+
 async function runPiTurn(session, prompt) {
   const turnUsage = {
     input: 0,
@@ -104,25 +109,35 @@ async function runPiTurn(session, prompt) {
     cacheWrite: 0,
     cost: 0,
   };
+  const counters = { toolCalls: 0 };
   const listener = (event) => {
-    if (event.type !== "message_end") return;
-    if (event.message.role === "assistant") {
-      addUsage(turnUsage, event.message.usage);
-    } else if (event.message.role === "toolResult" && event.message.usage) {
-      addUsage(turnUsage, event.message.usage);
+    if (event.type === "message_update") {
+      const usage = event.usage ?? event.assistantMessageEvent?.usage;
+      if (usage) addUsage(turnUsage, usage);
+      return;
     }
+    if (event.type === "message_end") {
+      if (event.message.role === "assistant") {
+        addUsage(turnUsage, event.message.usage);
+      } else if (event.message.role === "toolResult" && event.message.usage) {
+        addUsage(turnUsage, event.message.usage);
+      }
+      countToolCalls(counters, event);
+      return;
+    }
+    countToolCalls(counters, event);
   };
 
-  session.on("event", listener);
+  const unsubscribe = session.subscribe(listener);
   try {
     await session.prompt(prompt);
   } finally {
-    session.off("event", listener);
+    unsubscribe?.();
   }
   if (turnUsage.input + turnUsage.output + turnUsage.cacheRead + turnUsage.cacheWrite === 0) {
     throw new Error("pi completed without real token usage");
   }
-  return turnUsage;
+  return { ...turnUsage, toolCalls: counters.toolCalls };
 }
 
 function runChecker(taskPath, workspace) {
@@ -189,7 +204,7 @@ async function main() {
         tools: ["read", "write", "edit", "bash", "ls"],
       });
       session = created.session;
-      let usage = await runPiTurn(session, task.prompt);
+      usage = await runPiTurn(session, task.prompt);
       checker = runChecker(taskPath, workspace);
       for (let round = 0; round < RETRY_BUDGET && checker.exitCode === 1; round++) {
         const details = checker.results
@@ -208,14 +223,18 @@ async function main() {
         task_id: task.id,
         passed: error === undefined && checker?.passed === true,
         wall_clock_ms: wallClockMs,
-        tool_calls: usage ? (session?.getSessionStats().toolCalls ?? 0) : 0,
-        token_usage: error === undefined
+        tool_calls: usage?.toolCalls ?? 0,
+        token_usage: error === undefined && usage !== undefined
           ? {
               input: usage.input,
               output: usage.output,
               cache_read: usage.cacheRead,
               cache_write: usage.cacheWrite,
-              total: usage.input + usage.output + usage.cacheRead + usage.cacheWrite,
+              total:
+                usage.input +
+                usage.output +
+                usage.cacheRead +
+                usage.cacheWrite,
               cost: usage.cost,
             }
           : null,
