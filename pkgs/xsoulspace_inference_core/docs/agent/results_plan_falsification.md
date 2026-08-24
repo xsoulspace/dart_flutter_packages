@@ -116,3 +116,49 @@ tokens/task: **the binding constraint on-device is decision convergence**,
 which is exactly what the full ADR 0009 design (declared acceptance criteria
 in-frame every call + tight mechanical failure feedback + decomposition)
 targets. Next: cumulative token accounting, prefix A/B, then re-probe.
+
+---
+
+## Follow-up round — cumulative accounting + prefix A/B (2026-08)
+
+### 1. Cumulative token accounting landed
+
+`Situation.tokensUsed` is per-decision; summing final situations measured
+"last cut size", not spend (the §accounting caveat above — now fixed).
+`CumulativeTokenMeter` observes each decision's projection at handler entry:
+
+- `TaskResult.cumulative_tokens` added to the production suite runner
+  (`benchmark/coding_suite/runner.dart`) and JSONL traces.
+- `PlanRow.cumulativeTokens` in `plan_frontier_arms.dart`.
+
+Impact: real per-task spend on AFM is **~8.6–11k tokens** where the old field
+reported ~500 — a 20× gap. All published tokens/task numbers before this fix
+are undercounts and must be re-derived from re-runs.
+
+### 2. Role-prefix A/B: prefixes exonerated
+
+Re-ran baseline arm on all 6 edit tasks with role tags OFF (exact Phase-4
+wire format, `--no-role-tags`). Result identical: 6× FAIL, 17 calls each,
+same thrash pattern. Trace:
+`runs/plan_probe_afm_notags.jsonl`.
+
+### 3. Real culprit found (pre-existing, not ours)
+
+Probe logs show nearly every `write`/`read`/`list_dir` call failing with
+`Invalid argument(s): Path …` (fs-jail rejection). Cross-checked against the
+**Phase 4** `afm_run.log`: the same error appears **156 times** there. So the
+all-fail baseline regression is not the messages codec, not the role
+prefixes, and not the arm machinery — it is a pre-existing model/harness
+interaction: AFM emits paths that the jail rejects (likely absolute or
+root-escaping paths), then thrashes. Phase 4's 4/6 edit passes were rescued
+by the checker-retry loop this probe intentionally omits.
+
+### Next (in order)
+
+1. Capture the full untruncated path-rejection message (xs_fm logger
+   truncates); classify escapes-vs-malformed from real traces.
+2. Harness-side mitigation candidates (seam 3 only): have `list_dir` return
+   jail-relative paths; normalize absolute-inside-root paths in `resolve`;
+   bounce-with-explanation errors naming the expected relative form.
+3. Re-probe plan arm with the verifier feedback loop active — tight mechanical
+   failure feedback is precisely what should stop the thrash early.

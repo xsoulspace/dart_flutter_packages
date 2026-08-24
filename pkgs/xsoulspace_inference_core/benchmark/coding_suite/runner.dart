@@ -35,6 +35,7 @@ class TaskResult {
     required this.checkerResults,
     required this.wallClock,
     required this.tokensUsed,
+    required this.cumulativeTokens,
     required this.llmCalls,
     required this.toolCalls,
     this.backend = 'harness',
@@ -49,7 +50,14 @@ class TaskResult {
   final bool passed;
   final List<CheckerResult> checkerResults;
   final Duration wallClock;
+  /// Last-decision projection size (legacy field, kept for comparability
+  /// with earlier traces).
   final int tokensUsed;
+
+  /// Honest spend: sum of every decision's projection size. [tokensUsed]
+  /// alone measures the LAST cut, not task spend — see
+  /// docs/agent/results_plan_falsification.md §accounting caveat.
+  final int cumulativeTokens;
   final int llmCalls;
   final List<String> toolCalls;
 
@@ -83,6 +91,7 @@ class TaskResult {
     'passed': passed,
     'wall_clock_ms': wallClock.inMilliseconds,
     'tokens_used': tokensUsed,
+    'cumulative_tokens': cumulativeTokens,
     'llm_calls': llmCalls,
     'tool_calls': toolCalls,
     if (failureMode.isNotEmpty) 'failure_mode': failureMode,
@@ -227,8 +236,12 @@ class CodingSuiteRunner {
       // Count errored generations (framework flakiness, backend failures)
       // WITHOUT masking them: the retry policy is unchanged; we only observe.
       var transientErrors = 0;
+      // Honest cumulative token accounting (see TaskResult.cumulativeTokens).
+      final tokenTotal = <int>[0];
+      GenerationHandler metered =
+          _CumulativeTokenMeter(handler, tokenTotal);
       world.getResource<GenerationHandlerResource>().registerDefault(
-            _ErrorCountingHandler(handler, () => transientErrors++),
+            _ErrorCountingHandler(metered, () => transientErrors++),
           );
 
       final registry = ToolRegistry();
@@ -347,6 +360,7 @@ class CodingSuiteRunner {
         checkerResults: checkerResults,
         wallClock: sw.elapsed,
         tokensUsed: tokensUsed,
+        cumulativeTokens: tokenTotal[0],
         llmCalls: llmCalls,
         toolCalls: toolCalls,
         backend: backendLabel,
@@ -416,6 +430,24 @@ class CodingSuiteRunner {
 /// Observability decorator: counts generations that came back with an error
 /// so failure-mode classification can distinguish backend flakiness from
 /// model-quality failures. Retry policy is untouched.
+/// Sums every decision's projection size at handler entry (post-projection).
+/// See [TaskResult.cumulativeTokens].
+class _CumulativeTokenMeter implements GenerationHandler {
+  _CumulativeTokenMeter(this.inner, this.total);
+  final GenerationHandler inner;
+  final List<int> total;
+
+  @override
+  Future<ActorGenerateResponse> generate(
+    World world,
+    ActorGenerateRequest request,
+  ) {
+    final situation = world.getEntity(request.actorEntity).$1.get<Situation>();
+    if (situation != null) total[0] += situation.tokensUsed;
+    return inner.generate(world, request);
+  }
+}
+
 class _ErrorCountingHandler implements GenerationHandler {
   _ErrorCountingHandler(this.inner, this.onError);
   final GenerationHandler inner;

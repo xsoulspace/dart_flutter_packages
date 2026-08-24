@@ -48,12 +48,15 @@ production shape, in order:
    in-frame.
 5. Plan-frontier projection: explicit `goalLink`/`dependsOn` traversal,
    token-budgeted, green-screen elsewhere.
-6. Real-model probe: **ran** — see
-   [results_plan_falsification.md](results_plan_falsification.md) §real-model.
-   Mechanism confirmed (17→1 call on a task the baseline failed), but
-   convergence dominates on-device. Follow-ups before re-probe: cumulative
-   token accounting in the runner; `asst:`/`tool:` fragment-prefix A/B
-   against the Phase 4 baseline.
+6. Real-model probe: **ran twice** — see
+   [results_plan_falsification.md](results_plan_falsification.md)
+   (§real-model, §follow-up). Cumulative token accounting landed (real spend
+   ~20× the old metric — prior published numbers are undercounts). Role
+   prefixes exonerated by A/B. Root cause of baseline thrash identified:
+   pre-existing fs-jail path rejections (present 156× in the Phase 4 log),
+   masked then by the checker-retry loop. Next: capture full rejection
+   message, jail-relative path normalization/mitigation behind seam 3, then
+   re-probe plan arm with verifier feedback active.
 7. Decomposition as one agentic act per goal (amortized; escalation tier OK),
    fidelity measured via ADR 0004 causal coupling.
 

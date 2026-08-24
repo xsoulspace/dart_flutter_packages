@@ -155,6 +155,32 @@ Future<void> goalVerificationSystem(World world) async {
 }
 
 
+/// Cumulative token accounting: [Situation.tokensUsed] is per-decision
+/// (overwritten by every projection), so summing actors' final situations —
+/// as the Phase 4 runner did — measures "last cut size", not spend. This
+/// meter observes the situation exactly once per decision (at handler entry,
+/// i.e. post-projection, pre-dispatch) and accumulates honestly.
+///
+/// No core change: projection semantics untouched; benchmark-side
+/// bookkeeping only.
+class CumulativeTokenMeter implements GenerationHandler {
+  CumulativeTokenMeter(this.inner, this.total);
+  final GenerationHandler inner;
+
+  /// Single-element box mutated by [generate].
+  final List<int> total;
+
+  @override
+  Future<ActorGenerateResponse> generate(
+    World world,
+    ActorGenerateRequest request,
+  ) {
+    final situation = world.getEntity(request.actorEntity).$1.get<Situation>();
+    if (situation != null) total[0] += situation.tokensUsed;
+    return inner.generate(world, request);
+  }
+}
+
 class PlanRow {
   PlanRow({
     required this.taskId,
@@ -164,11 +190,18 @@ class PlanRow {
     required this.wallMs,
     required this.mechanicalVerifications,
     required this.stepStatuses,
+    this.cumulativeTokens = 0,
   });
   final String taskId;
   final bool passed;
   final int llmCalls;
+
+  /// Last-decision projection size (legacy field, kept for comparability).
   final int tokensUsed;
+
+  /// Honest spend: sum of every decision's projection size (see
+  /// [CumulativeTokenMeter]).
+  final int cumulativeTokens;
   final int wallMs;
   final int mechanicalVerifications;
   final List<String> stepStatuses;
@@ -207,8 +240,9 @@ Future<PlanRow> runPlanArm(
       ..upsertResource(AgencyPolicy(maxConcurrent: 1))
       ..flush();
 
+    final tokenTotal = <int>[0];
     world.getResource<GenerationHandlerResource>().registerDefault(
-          buildHandler(task),
+          CumulativeTokenMeter(buildHandler(task), tokenTotal),
         );
     final registry = ToolRegistry();
     fsTools(FsToolsRoot(jail.path)).forEach(registry.register);
@@ -308,6 +342,7 @@ Future<PlanRow> runPlanArm(
       tokensUsed: tokensUsed,
       wallMs: sw.elapsedMilliseconds,
       mechanicalVerifications: planFrontier ? verifications : 0,
+      cumulativeTokens: tokenTotal[0],
       stepStatuses: [
         for (final (_, _, s) in world.query2<StepGoalLink, StepStatus>())
           s.value,

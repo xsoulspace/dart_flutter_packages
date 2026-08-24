@@ -1,0 +1,6 @@
+{"task_id":"edit_01_rename_constant","arm":"baseline","role_tags":false,"passed":false,"llm_calls":17,"tokens_used_last_cut":526,"cumulative_tokens":10904,"wall_ms":217689}
+{"task_id":"edit_02_add_field","arm":"baseline","role_tags":false,"passed":false,"llm_calls":17,"tokens_used_last_cut":599,"cumulative_tokens":9724,"wall_ms":156970}
+{"task_id":"edit_03_fix_typo_string","arm":"baseline","role_tags":false,"passed":false,"llm_calls":17,"tokens_used_last_cut":838,"cumulative_tokens":10955,"wall_ms":149377}
+{"task_id":"edit_04_delete_function","arm":"baseline","role_tags":false,"passed":false,"llm_calls":17,"tokens_used_last_cut":545,"cumulative_tokens":8799,"wall_ms":158615}
+{"task_id":"edit_05_write_new_file","arm":"baseline","role_tags":false,"passed":false,"llm_calls":17,"tokens_used_last_cut":536,"cumulative_tokens":8743,"wall_ms":144928}
+{"task_id":"edit_06_json_config_update","arm":"baseline","role_tags":false,"passed":false,"llm_calls":17,"tokens_used_last_cut":515,"cumulative_tokens":8597,"wall_ms":152765}

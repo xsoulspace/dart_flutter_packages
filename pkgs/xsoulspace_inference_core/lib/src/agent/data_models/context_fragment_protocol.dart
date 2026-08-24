@@ -28,6 +28,11 @@ library;
 
 /// Prefixes and helpers for role-tagged context fragments.
 abstract final class ContextFragmentProtocol {
+  /// Benchmark scaffolding for prompt-format A/B (results_plan_falsification
+  /// §real-model): when false, producers emit plain untagged text — the exact
+  /// wire format the Phase 4 suite ran with. Settle the A/B, then remove.
+  static bool roleTagsEnabled = true;
+
   /// The actor's own prior output (rendered as an assistant message).
   static const String assistantPrefix = 'asst:';
 

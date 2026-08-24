@@ -67,6 +67,11 @@ Future<void> actorActSystem(World world) async {
       if (!beatEntity.$2) continue;
       final textContent = beatEntity.$1.get<TextContent>();
       if (textContent == null) continue;
+      if (!ContextFragmentProtocol.roleTagsEnabled) {
+        // Phase-4 wire format (prompt-format A/B scaffold).
+        contextFragments.add(textContent.text);
+        continue;
+      }
       final toolResult = beatEntity.$1.get<ToolResultContent>();
       if (toolResult != null) {
         contextFragments.add(
