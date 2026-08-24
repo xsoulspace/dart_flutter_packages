@@ -81,8 +81,10 @@ final class _SocketMeshSession implements MeshSession {
 
   @override
   Future<void> close() async {
-    await _socket.flush();
-    _socket.destroy();
+    // Close the frame stream first so any pending inbound iterator wakes;
+    // destroy the socket without awaiting flush — flush can hang after a
+    // peer disconnects, and there is nothing more to deliver.
     await _frames.close();
+    _socket.destroy();
   }
 }

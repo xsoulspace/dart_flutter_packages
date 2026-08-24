@@ -31,5 +31,4 @@ dependency_overrides:
     path: ../../ecsly/plugins/ecsly_async_parallel
   async_parallel:
     path: ../../ecsly/plugins/async_parallel
-  freezed: ^4.0.0-dev.3
-  json_serializable: ^6.14.1
+

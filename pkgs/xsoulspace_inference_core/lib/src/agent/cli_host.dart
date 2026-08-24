@@ -10,7 +10,6 @@ import 'dart:async';
 import 'package:ecsly/ecsly.dart';
 
 import 'data_models/data_models.dart';
-import 'events.dart';
 import 'harness_loop.dart';
 import 'resources/resources.dart';
 import 'tools/tool_registry.dart';
@@ -54,6 +53,8 @@ class CliHost {
   /// Intended for embedding applications and integration tests that own the
   /// process lifecycle; user cancellation remains [cancel].
   Future<void> stop() async {
+    _idleTimer?.cancel();
+    _idleTimer = null;
     _loop.stop();
     _loop.wakeup();
     while (isRunning) {
@@ -109,6 +110,8 @@ class CliHost {
   /// Pending tasks are completed with a cancellation error, then removed.
   /// The next harness tick sees no agency and no awaiting response.
   void cancel() {
+    _idleTimer?.cancel();
+    _idleTimer = null;
     final taskRegistry = world.getResource<TaskRegistryResource>();
     for (final taskId in taskRegistry.tasks.keys.toList()) {
       final handle = taskRegistry.take(taskId);
@@ -126,9 +129,12 @@ class CliHost {
         in world.query2<Actor, AwaitingResponse>().toList()) {
       entity.remove<AwaitingResponse>();
     }
+    for (final (entity, _, _) in world.query2<Actor, OpenDecision>().toList()) {
+      entity.remove<OpenDecision>();
+    }
     world.flush();
     _loop.wakeup();
-    _completeIdleTurn();
+    scheduleMicrotask(_completeIdleTurn);
   }
 
   Map<Entity, Situation> inspectSituation() {
@@ -147,7 +153,16 @@ class CliHost {
           .subscribe(entity.entity)
           .listen(_output.add, onError: _output.addError);
     }
+    _idleTimer = Timer.periodic(const Duration(milliseconds: 10), (timer) {
+      if (_loop.canSleep()) {
+        timer.cancel();
+        _idleTimer = null;
+        _completeIdleTurn();
+      }
+    });
   }
+
+  Timer? _idleTimer;
 
   Future<void> waitForIdle() {
     if (_loop.canSleep()) return Future.value();

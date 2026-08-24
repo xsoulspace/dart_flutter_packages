@@ -126,7 +126,7 @@ void main() {
 
   test('confirmation gate blocks and rejects protected tools', () async {
     final requests = <String>[];
-    final approvals = <bool>[false, true];
+    final confirmations = <Completer<bool>>[];
     var executed = false;
     final registry = ToolRegistry()
       ..register(
@@ -149,10 +149,11 @@ void main() {
     final cliHost = CliHost(
       world: world,
       config: const CliHostConfig(confirmationRequiredTools: {'dangerous'}),
-      requestToolConfirmation: (name, arguments) async {
+      requestToolConfirmation: (name, arguments) {
         requests.add('${name.value}:${jsonEncode(arguments)}');
-        await Future<void>.delayed(const Duration(milliseconds: 1));
-        return approvals.removeAt(0);
+        final completer = Completer<bool>();
+        confirmations.add(completer);
+        return completer.future;
       },
     );
 
@@ -166,6 +167,7 @@ void main() {
     expect(executed, isFalse);
     expect(requests, ['dangerous:{"value":"ok"}']);
 
+    confirmations[0].complete(false);
     expect(await execution, contains('rejected'));
     expect(executed, isFalse);
 
@@ -176,7 +178,8 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 2));
     expect(executed, isFalse);
     expect(requests.length, 2);
-    scheduleMicrotask(() => approvals.add(true));
+
+    confirmations[1].complete(true);
     await secondExecution;
     expect(executed, isTrue);
   });

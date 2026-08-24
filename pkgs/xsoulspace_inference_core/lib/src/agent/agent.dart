@@ -17,6 +17,7 @@ export 'harness_loop.dart';
 export 'narrative/narrative.dart';
 export 'observation/observation.dart';
 export 'plugin.dart';
+export 'snapshot.dart';
 export 'resources/resources.dart';
 export 'schedules.dart';
 export 'systems/systems.dart';

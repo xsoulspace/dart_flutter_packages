@@ -27,26 +27,29 @@ void main() {
   });
 
   tearDown(() async {
-    if (await jail.exists()) await jail.delete(recursive: true);
+    if (jail.existsSync()) await jail.delete(recursive: true);
   });
 
   group('list_dir', () {
     test('returns jail-relative entries, directories marked with /', () async {
       Directory('${jail.path}/sub').createSync();
-      final out =
-          await registry.get(const ToolName('list_dir'))!.execute({'path': '.'});
+      final out = await registry.get(const ToolName('list_dir'))!.execute({
+        'path': '.',
+      });
       expect(out, contains('config.dart'));
       expect(out, contains('sub/'));
       expect(out.toString(), isNot(contains(jail.path)));
     });
 
-    test('listing a file path (trailing slash habit) lists its parent',
-        () async {
-      final out = await registry
-          .get(const ToolName('list_dir'))!
-          .execute({'path': 'config.dart/'});
-      expect(out, contains('config.dart'));
-    });
+    test(
+      'listing a file path (trailing slash habit) lists its parent',
+      () async {
+        final out = await registry.get(const ToolName('list_dir'))!.execute({
+          'path': 'config.dart/',
+        });
+        expect(out, contains('config.dart'));
+      },
+    );
   });
 
   group('resolve / escapes', () {
@@ -82,7 +85,10 @@ void main() {
       // macOS: /var ↔ /private/var are the same directory lexically apart.
       final varSpelling = jail.path.replaceFirst('/private/var/', '/var/');
       if (!varSpelling.startsWith('/var/')) return; // not a macOS layout
-      expect(root.resolve('$varSpelling/config.dart'), startsWith(root.rootPath));
+      expect(
+        root.resolve('$varSpelling/config.dart'),
+        startsWith(root.rootPath),
+      );
     });
 
     test('wrapping quotes around the path are stripped', () async {
