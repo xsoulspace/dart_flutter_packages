@@ -83,9 +83,43 @@ harnesses); the interesting axes are:
 
 Scope: `xsoulspace_inference_openrouter` only; no core change.
 
-- Map `systemPrompt → system` message; build a proper multi-turn `messages`
-  array when the request carries structured context (tool results /
-  prior turns), instead of concatenating into one user string.
+Design ruling (per ADR 0007 seams + North Star "memory is a re-derivable
+projection"): the `messages` array is a **codec, not state**. It is computed
+fresh per call by rendering the budgeted `Situation` — never stored, never
+appended to. Conversation-log agents accumulate messages; we serialize beats:
+
+| Role | Rendered from |
+| --- | --- |
+| `system` | `ActorSystemPrompt` + goal vector + plan frontier (ADR 0009) |
+| `user` | user-input beats addressed to the actor |
+| `assistant` / `tool_calls` | actor's text/thought beats, tool-call beats |
+| `tool` | tool-result beats, kept atomically paired to their calls |
+
+Constraints the renderer must respect (recorded so nobody simplifies them
+into silent truncation):
+
+- **Pairing atomicity** — chat APIs validate `tool_calls` ↔ `tool` result
+  pairs; a pair is never split across the budget boundary. Recent turns render
+  verbatim; older material collapses into a leading synthesized context block
+  (keyword-ray hits + reduction beats).
+- **Budget inheritance** — rendered message tokens count against the same
+  enforced budget as today's `CONTEXT:` text; the long-horizon flatness gate
+  asserts on rendered output, so linear replay cannot sneak back in.
+- **One projection, many codecs** — AFM guided-schema and OpenRouter native
+  tools become two renderers over the identical `Situation`. This is also the
+  principled resolution of C2: cross-backend comparisons share the cut and
+  differ only in encoding.
+- **No cached transcripts** — if prompt-prefix caching is exploited later,
+  the cache is derived-and-rebuildable (facet-index discipline, Phase 6).
+  Projection is already deterministic (injected tick), so prefix stability is
+  reachable WITHOUT distorting the cut. Do not reorder or duplicate content
+  for cache hits before the fair baseline exists — record `cache_hit_rate`
+  as a future metric column instead.
+
+Practical scope:
+
+- Build the `messages` array from projected beats instead of concatenating a
+  trailing `CONTEXT:` block.
 - Keep the current single-shot path behind a flag initially so we can run the
   A/B (axis 3 above) without losing the baseline.
 - Record real usage from `decoded['usage']` into response meta; surface it in
@@ -94,6 +128,11 @@ Scope: `xsoulspace_inference_openrouter` only; no core change.
   `runs/openrouter_run.jsonl`. This delta is itself a publishable finding.
 
 ### Step 2 — Unify the harness decision path across backends (C2)
+
+With the Step 1 codec design, backends share one `Situation` and differ only
+in the renderer — so "decision path" reduces to a per-backend renderer choice
+plus its output grammar (guided schema vs native tool calls), both driven by
+the same cut. What remains to pin empirically:
 
 - Run each backend through **both** wrappers once (guided-decision AND native
   tools), or pick one per a small pilot (3 tasks × 2 wrappers × 2 backends)
