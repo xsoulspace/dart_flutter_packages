@@ -82,12 +82,12 @@ class FsToolsRoot {
   /// resolved), with the non-existent remainder rejoined lexically. Null
   /// when nothing up to the filesystem root exists (never in practice).
   static String? _existingRealPath(String path) {
-    final parts =
-        path.split('/').where((part) => part.isNotEmpty).toList();
+    final parts = path.split('/').where((part) => part.isNotEmpty).toList();
     for (var take = parts.length; take >= 1; take--) {
       try {
-        final realAncestor =
-            Directory('/${parts.take(take).join('/')}').resolveSymbolicLinksSync();
+        final realAncestor = Directory(
+          '/${parts.take(take).join('/')}',
+        ).resolveSymbolicLinksSync();
         final rest = parts.skip(take).toList();
         return _canonicalize(
           rest.isEmpty ? realAncestor : '$realAncestor/${rest.join('/')}',
@@ -190,8 +190,8 @@ ToolDef listDirTool(FsToolsRoot root) => ToolDef(
     if (!Directory(target).existsSync() && File(target).existsSync()) {
       target = File(target).parent.path;
     }
-    final prefix = root.rootPath.endsWith('/') 
-        ? root.rootPath 
+    final prefix = root.rootPath.endsWith('/')
+        ? root.rootPath
         : '${root.rootPath}/';
     final entries = Directory(target).listSync().map((e) {
       // Jail-RELATIVE names: feeding absolute paths back into read/write is
@@ -200,8 +200,7 @@ ToolDef listDirTool(FsToolsRoot root) => ToolDef(
           ? e.path.substring(prefix.length)
           : e.path;
       return e is Directory ? '$rel/' : rel;
-    }).toList()
-      ..sort();
+    }).toList()..sort();
     return jsonEncode(entries);
   },
 );

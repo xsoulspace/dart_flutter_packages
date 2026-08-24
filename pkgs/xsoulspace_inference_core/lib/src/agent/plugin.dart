@@ -2,7 +2,8 @@ import 'dart:developer';
 
 import 'package:ecsly/ecsly.dart';
 import 'package:ecsly_app/ecsly_app.dart';
-import 'package:ecsly_async_parallel/ecsly_async_parallel.dart';
+import '../inference_parallel_io.dart'
+    if (dart.library.js_interop) '../inference_parallel_stub.dart';
 
 import 'events.dart';
 import 'data_models/data_models.dart';

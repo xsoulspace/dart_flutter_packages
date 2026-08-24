@@ -170,11 +170,12 @@ class OpenRouterInferenceClient implements InferenceClient {
     final body = <String, dynamic>{
       'model': model,
       'messages': messages,
-      if (toolRegistry != null && toolRegistry.tools.isNotEmpty)
-        'tool_choice': 'auto',
-      if (jsonSchemaFormat != null) 'response_format': jsonSchemaFormat,
-      if (toolRegistry != null && toolRegistry.tools.isNotEmpty)
+      if (toolRegistry != null &&
+          toolRegistry.tools.isNotEmpty) ...<String, dynamic>{
         'tools': _buildTools(toolRegistry),
+        'tool_choice': 'auto',
+      },
+      if (jsonSchemaFormat != null) 'response_format': jsonSchemaFormat,
     };
 
     try {
@@ -203,6 +204,8 @@ class OpenRouterInferenceClient implements InferenceClient {
       }
 
       final decoded = jsonDecode(response.body);
+      stderr.writeln('[openrouter] status=${response.statusCode} '
+          'model=$model body=${response.body.length > 500 ? '${response.body.substring(0, 500)}…' : response.body}');
       if (decoded is! Map<String, dynamic>) {
         return InferenceResult<InferenceResponse>.fail(
           code: 'json_parse_failed',

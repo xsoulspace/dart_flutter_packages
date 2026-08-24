@@ -171,7 +171,10 @@ SchemaBundle decisionSchema(ToolRegistry registry) {
           ..addAll(candidate)
           ..remove('action')
           ..remove('tool');
-        return (call: ToolCall(name: tool.name, arguments: flatArgs), answer: null);
+        return (
+          call: ToolCall(name: tool.name, arguments: flatArgs),
+          answer: null,
+        );
       }
     }
     if (candidate['text'] != null) {

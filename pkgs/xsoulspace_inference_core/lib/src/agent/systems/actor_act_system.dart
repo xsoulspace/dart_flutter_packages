@@ -82,7 +82,9 @@ Future<void> actorActSystem(World world) async {
         // Text-modality beats in the actor's ray are overwhelmingly its own
         // prior narration (single-actor v1 heuristic; refine with Speaker
         // attribution when multi-actor codec conformance lands).
-        contextFragments.add(ContextFragmentProtocol.assistant(textContent.text));
+        contextFragments.add(
+          ContextFragmentProtocol.assistant(textContent.text),
+        );
       } else {
         contextFragments.add(textContent.text);
       }

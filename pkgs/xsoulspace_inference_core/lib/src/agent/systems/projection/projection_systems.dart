@@ -236,8 +236,8 @@ PlanProjection projectPlanFrontier(
 /// returns `{passed: bool, failures?: String}`. When no executor exists the
 /// step is left open — absence of proof is not failure.
 Future<void> verifyStepSystem(World world) async {
-  for (final (actor, _, _) in world.query2<Actor, ToolResultPendingMarker>()
-      .toList()) {
+  for (final (actor, _, _)
+      in world.query2<Actor, ToolResultPendingMarker>().toList()) {
     final decision = actor.get<OpenDecision>();
     final stepId = decision?.stepId;
     if (stepId == null) continue;
@@ -246,9 +246,9 @@ Future<void> verifyStepSystem(World world) async {
     final step = stepEntity.get<Step>();
     if (step == null || step.status != StepLifecycle.open) continue;
 
-    final executor = world
-        .getResource<ToolExecutorResource>()
-        .get(const ToolName('verify_step'));
+    final executor = world.getResource<ToolExecutorResource>().get(
+      const ToolName('verify_step'),
+    );
     if (executor == null) continue;
     Object? output;
     try {

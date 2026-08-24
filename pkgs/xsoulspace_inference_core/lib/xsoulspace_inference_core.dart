@@ -1,6 +1,7 @@
 export 'package:ecsly/ecsly.dart';
 export 'package:ecsly_app/ecsly_app.dart';
-export 'package:ecsly_async_parallel/ecsly_async_parallel.dart';
+export 'src/inference_parallel_io.dart'
+    if (dart.library.js_interop) 'src/inference_parallel_stub.dart';
 
 export 'src/agent/agent.dart';
 export 'src/config/env_config.dart';

@@ -41,12 +41,7 @@ enum ConfigScope {
 
 /// Read/write access to the merged environment configuration.
 class EnvConfig {
-  EnvConfig._(
-    this._global,
-    this._local,
-    this._globalPath,
-    this._localPath,
-  );
+  EnvConfig._(this._global, this._local, this._globalPath, this._localPath);
 
   final Map<String, String> _global;
   final Map<String, String> _local;
@@ -57,9 +52,7 @@ class EnvConfig {
   /// falling back to `~/.config/...`.
   static String defaultGlobalPath() {
     final xdg = Platform.environment['XDG_CONFIG_HOME'];
-    final base = xdg != null && xdg.isNotEmpty
-        ? xdg
-        : '${_home()}/.config';
+    final base = xdg != null && xdg.isNotEmpty ? xdg : '${_home()}/.config';
     return '$base/xsoulspace/inference/config.json';
   }
 
@@ -84,8 +77,7 @@ class EnvConfig {
 
   static String _home() {
     final home =
-        Platform.environment['HOME'] ??
-        Platform.environment['USERPROFILE'];
+        Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'];
     if (home == null || home.isEmpty) {
       throw StateError('Cannot resolve home directory (HOME is unset).');
     }
@@ -101,12 +93,11 @@ class EnvConfig {
     void Function(String path, Object error)? onCorrupt,
   }) async {
     final gp = globalPath ?? defaultGlobalPath();
-    final lp =
-        localPath ?? discoverLocalPath() ?? defaultLocalPath();
-    final handler = onCorrupt ??
-        (path, error) => stderr.writeln(
-              'warning: skipping malformed config $path ($error)',
-            );
+    final lp = localPath ?? discoverLocalPath() ?? defaultLocalPath();
+    final handler =
+        onCorrupt ??
+        (path, error) =>
+            stderr.writeln('warning: skipping malformed config $path ($error)');
     return EnvConfig._(
       await _readMap(gp, handler),
       await _readMap(lp, handler),
@@ -166,7 +157,11 @@ class EnvConfig {
   /// Persist [key] = [value] in [scope]. Creates parent directories.
   /// Values are masked as `<redacted>` if they look like secrets when listed
   /// elsewhere; storage is always plaintext (same tradeoff as dotenv files).
-  Future<void> set(String key, String value, {ConfigScope scope = .local}) async {
+  Future<void> set(
+    String key,
+    String value, {
+    ConfigScope scope = .local,
+  }) async {
     final path = scope == .local ? _localPath : _globalPath;
     final map = scope == .local ? _local : _global;
     map[key] = value;

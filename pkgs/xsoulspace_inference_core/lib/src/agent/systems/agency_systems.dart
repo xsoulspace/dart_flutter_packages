@@ -28,9 +28,8 @@ void grantAgencySystem(World world) {
 
   // In-flight generation count per model id: awaiting actors' bound models.
   final inflight = <ModelId, int>{};
-  for (final (entity, _, _) in world
-      .query2<Actor, AwaitingResponse>()
-      .toList()) {
+  for (final (entity, _, _)
+      in world.query2<Actor, AwaitingResponse>().toList()) {
     final model = entity.get<ActorModel>();
     if (model == null) continue;
     inflight[model.modelId] = (inflight[model.modelId] ?? 0) + 1;

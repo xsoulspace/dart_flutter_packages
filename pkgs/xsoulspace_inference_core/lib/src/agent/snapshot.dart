@@ -405,8 +405,8 @@ final Map<String, _Decode> _decoders = {
     ),
     status: StepLifecycle.values.byName(json['status'] as String? ?? 'open'),
     confidence: (json['confidence'] as num?)?.toDouble() ?? 0,
-    criterionArgs:
-        (json['criterionArgs'] as Map? ?? {}).cast<String, dynamic>(),
+    criterionArgs: (json['criterionArgs'] as Map? ?? {})
+        .cast<String, dynamic>(),
   ),
   'DerivedFromThread': (json, r) =>
       DerivedFromThread(r(json['thread'] as String)),
