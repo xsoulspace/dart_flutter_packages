@@ -93,22 +93,24 @@ Future<void> main(List<String> args) async {
   // ONE router shared by handler and runner — model resolution cannot
   // desynchronize (see CodingSuiteRunner.router doc).
   //
-  // Native tool calling, NOT the guided-decision wrapper: OpenRouter models
-  // are trained on the provider's `tools` wire format, and free-tier models
-  // silently drop response_format=json_schema. The client sends the registry
-  // as native tools and parses structured tool_calls off the response; both
-  // paths converge on the same world pipeline downstream.
+  // Fair-comparison: use StructuredToolDecisionHandler (guided schema) like
+  // AFM so decision machinery is identical across backends. OpenRouter client
+  // uses useMessagesCodec=true for proper chat-completions messages array
+  // (C1 fix).
   final sharedRouter = ModelRouter(
     inferenceClientsBuilders: {
       OpenRouterModelNames.openRouter: () => OpenRouterInferenceClient(
             apiKey: apiKey,
             defaultModel: model,
+            useMessagesCodec: true,
           ),
     },
   );
 
   GenerationHandler buildHandler(CodingTask task) {
-    return DefaultGenerationHandler(router: sharedRouter);
+    return StructuredToolDecisionHandler(
+      inner: DefaultGenerationHandler(router: sharedRouter),
+    );
   }
 
   GenerationHandler debugHandler(CodingTask task) {

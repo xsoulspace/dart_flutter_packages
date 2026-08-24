@@ -27,25 +27,26 @@ final class MeshStorageProvider implements StorageProvider {
   MeshStorageConfig? _config;
   Directory? _docsDir;
   MeshPeerRegistry? _registry;
-  MeshTransport? _transport;
+  final List<MeshTransport> _transports = [];
+  final List<StreamSubscription<MeshSession>> _incomingSubscriptions = [];
   final Map<String, ConvergenceDoc> _docs = {};
   var _initialized = false;
 
   /// Registers a transport for this replica and wires inbound sessions.
-  /// Call once after [initWithConfig].
+  /// Call once per transport after [initWithConfig]; a replica may hold
+  /// several transports simultaneously (e.g. LAN + BLE).
   void attachTransport(final MeshTransport transport) {
-    _transport = transport;
-    unawaited(_incomingSubscription?.cancel());
-    _incomingSubscription = transport.incoming.listen((final session) async {
-      try {
-        await _runExchange(session);
-      } finally {
-        await session.close();
-      }
-    });
+    _transports.add(transport);
+    _incomingSubscriptions.add(
+      transport.incoming.listen((final session) async {
+        try {
+          await _runExchange(session);
+        } finally {
+          await session.close();
+        }
+      }),
+    );
   }
-
-  StreamSubscription<MeshSession>? _incomingSubscription;
 
   /// Outcome of QR scanning: adds a paired peer to the durable registry.
   Future<void> registerPeer(final MeshPeerRecord peer) async {
@@ -159,13 +160,18 @@ final class MeshStorageProvider implements StorageProvider {
     final String? pushConflictStrategy,
   }) async {
     _ensureInitialized();
-    final transport = _transport;
-    if (transport == null) return; // No peers configured: nothing to do.
+    if (_transports.isEmpty) return; // No transports: nothing to do.
     for (final peer in _registry!.peers.toList()) {
-      final MeshSession session;
-      try {
-        session = await transport.connect(peer);
-      } on MeshConnectionException {
+      MeshSession? session;
+      for (final transport in _transports) {
+        try {
+          session = await transport.connect(peer);
+          break;
+        } on MeshConnectionException {
+          continue; // Try the next transport for this peer.
+        }
+      }
+      if (session == null) {
         continue; // Opportunistic: unreachable peer, try next time.
       }
       try {
@@ -178,11 +184,25 @@ final class MeshStorageProvider implements StorageProvider {
 
   @override
   Future<void> dispose() async {
-    await _incomingSubscription?.cancel();
-    _incomingSubscription = null;
-    _transport = null;
+    for (final sub in _incomingSubscriptions) {
+      await sub.cancel();
+    }
+    _incomingSubscriptions.clear();
+    _transports.clear();
     _docs.clear();
     _initialized = false;
+  }
+
+  /// Compacts every local document (retires pending op logs, keeping the
+  /// folded state as the snapshot). Policy-driven at the app layer per
+  /// ADR 0011 §1; lagging peers catch up via snapshots afterwards.
+  Future<void> compactAll() async {
+    _ensureInitialized();
+    for (final doc in _docs.values) {
+      if (doc.compact() > 0) {
+        await _persist(doc);
+      }
+    }
   }
 
   // -- Internals -----------------------------------------------------------

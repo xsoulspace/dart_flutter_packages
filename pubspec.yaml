@@ -17,6 +17,8 @@ dependency_overrides:
   test_api: 0.7.13
   analyzer: 14.1.0
   intl: 0.20.3
+  dart_acp_toolkit:
+    path: ../../../mcp/cline/intentcall/packages/acp_toolkit
   ecsly:
     path: ../../ecsly/core_packages/ecsly
   ecsly_flutter:

@@ -16,6 +16,7 @@ dependencies:
   is_dart_empty_or_not: ^0.4.0
   meta: ^1.19.0
   recase: ^4.1.0
+  dart_mcp: ^0.5.1
 
 dev_dependencies:
   yaml: ^3.1.3

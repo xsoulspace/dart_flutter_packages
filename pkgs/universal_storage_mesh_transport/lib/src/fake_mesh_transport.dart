@@ -55,7 +55,9 @@ final class FakeMeshTransport implements MeshTransport {
       throw MeshConnectionException(peer.peerId, 'simulated partition');
     }
     final remote = _remote;
-    if (remote == null) {
+    if (remote == null || remote.selfId != peer.peerId) {
+      // This transport cannot reach the requested peer; the provider
+      // tries its other transports (a device may hold several links).
       throw MeshConnectionException(peer.peerId, 'not linked');
     }
     return _openSessionPair(remote);
