@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@earendil-works/pi-coding-agent": "^0.84.2"
+    "@earendil-works/pi-coding-agent": "^0.84.2",
+    "yaml": "^2.9.0"
   }
 }

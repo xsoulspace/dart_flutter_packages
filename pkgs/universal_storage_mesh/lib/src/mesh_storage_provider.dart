@@ -306,6 +306,8 @@ final class MeshStorageProvider implements StorageProvider {
     for (final doc in touched) {
       await _persist(doc);
     }
+
+    await inbound.cancel();
   }
 
   Future<Map<String, Object?>> _recvOfType(

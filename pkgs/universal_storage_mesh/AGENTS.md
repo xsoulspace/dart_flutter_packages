@@ -6,6 +6,14 @@ Read [docs/north_star.mdx](docs/north_star.mdx) before durable structural
 changes. Classify `north_star_impact` per repo AGENTS.md; `amends`/`conflicts`
 need an ADR first.
 
+## Debugging logs
+
+- [docs/debug_tcp_hang.md](docs/debug_tcp_hang.md) — **open**: two-node TCP
+  example hangs at sync() despite exchanges completing. Evidence, tried
+  fixes, and next steps recorded.
+- [docs/debug_pairing_keys.md](docs/debug_pairing_keys.md) — resolved: HKDF
+  info-string canonicalization bug in PairingService.
+
 ## Scope (ADR 0010)
 
 - Serverless P2P replica provider. Every device has equal standing; relay or

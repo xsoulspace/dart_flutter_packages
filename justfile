@@ -150,6 +150,54 @@ ci-cloudkit:
       (cd "$d" && flutter pub get && flutter analyze --no-fatal-infos --no-fatal-warnings && flutter test)
     done
 
+# --- A1 fair comparison (harness+OR vs pi+OR) ------------------------------
+
+PI_DRIVER_DIR := "pkgs/xsoulspace_inference_core/benchmark/pi_driver"
+BENCH_DIR := "pkgs/xsoulspace_inference_core/benchmark"
+
+# Install pi-driver Node dependencies once per machine.
+pi-install:
+    cd {{ PI_DRIVER_DIR }} && npm install --no-fund --no-audit
+
+# Smoke: run pi against the first suite task and emit one JSONL row.
+pi-smoke model="z-ai/glm-4.5-air:free":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    : "${OPENROUTER_API_KEY:?OPENROUTER_API_KEY must be set}"
+    task="$(find pkgs/xsoulspace_inference_core/benchmark/coding_suite/tasks -maxdepth 1 -name '*.yaml' | sort | head -n 1)"
+    tmp="$(mktemp -d)"
+    cp "$task" "$tmp/"
+    cd {{ PI_DRIVER_DIR }}
+    OPENROUTER_MODEL="{{ model }}" node run_pi_driver.mjs \
+      --tasks "$tmp" --out "$tmp/pi_smoke.jsonl"
+    cat "$tmp/pi_smoke.jsonl"
+
+# Full 20-task pi column. Writes JSONL + a compact summary.
+pi-bench model="z-ai/glm-4.5-air:free" out="runs/pi_openrouter.jsonl":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    : "${OPENROUTER_API_KEY:?OPENROUTER_API_KEY must be set}"
+    mkdir -p {{ BENCH_DIR }}/runs
+    cd {{ PI_DRIVER_DIR }}
+    OPENROUTER_MODEL="{{ model }}" node run_pi_driver.mjs \
+      --tasks ../coding_suite/tasks --out "../runs/{{ out }}"
+    echo "pi column written to {{ out }}"
+
+# Harness+OpenRouter column using the unified guided-schema decision path.
+harness-or-bench model="z-ai/glm-4.5-air:free" trace="runs/harness_or.jsonl" markdown="runs/harness_or.md" filter="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    : "${OPENROUTER_API_KEY:?OPENROUTER_API_KEY must be set}"
+    mkdir -p "{{ BENCH_DIR }}/runs"
+    args=(--trace "{{ trace }}" --markdown "{{ markdown }}" --retries 2)
+    [ -n "{{ filter }}" ] && args+=(--filter "{{ filter }}")
+    cd pkgs/xsoulspace_inference_openrouter
+    dart run bin/coding_suite_openrouter.dart "${args[@]}" --model "{{ model }}"
+    echo "harness+OR written to {{ trace }} / {{ markdown }}"
+
+# Build the A1 comparison artifact from both JSONL columns.
+a1-compare harness="{{ BENCH_DIR }}/runs/harness_or.jsonl" pi="{{ BENCH_DIR }}/runs/pi_openrouter.jsonl" model="z-ai/glm-4.5-air:free":
+    dart run {{ BENCH_DIR }}/a1_compare.dart --harness "{{ harness }}" --pi "{{ pi }}" --model "{{ model }}" --out {{ BENCH_DIR }}/docs/agent/results_comparison.md
 platform-sdk-verify:
     #!/usr/bin/env bash
     set -euo pipefail

@@ -69,6 +69,7 @@ final class _SocketMeshSession implements MeshSession {
   final String remotePeerId;
   final Socket _socket;
   final _frames = StreamController<Uint8List>();
+  var _closed = false;
 
   @override
   Stream<Uint8List> get inbound => _frames.stream;
@@ -81,10 +82,12 @@ final class _SocketMeshSession implements MeshSession {
 
   @override
   Future<void> close() async {
-    // Close the frame stream first so any pending inbound iterator wakes;
-    // destroy the socket without awaiting flush — flush can hang after a
-    // peer disconnects, and there is nothing more to deliver.
-    await _frames.close();
+    if (_closed) return;
+    _closed = true;
+    // Destroy the transport first, then wake pending inbound iterators.
+    // Awaiting controller close before disconnect can stall while a peer's
+    // exchange still owns a StreamIterator subscription.
     _socket.destroy();
+    await _frames.close();
   }
 }
