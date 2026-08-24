@@ -55,7 +55,7 @@ final class AddressedRelayClient implements MeshTransport {
         if (envelope.kind == AddressedRelayProtocol.registerKind) return;
         if (envelope.kind == AddressedRelayProtocol.openKind) {
           _sessions.putIfAbsent(envelope.fromPeerId, () {
-            final created = _AddressedSession(selfId, envelope.fromPeerId);
+            final created = _AddressedSession(envelope.fromPeerId);
             created.client = this;
             scheduleMicrotask(() => _incoming.add(created));
             return created;
@@ -63,7 +63,7 @@ final class AddressedRelayClient implements MeshTransport {
           return;
         }
         final session = _sessions.putIfAbsent(envelope.fromPeerId, () {
-          final created = _AddressedSession(selfId, envelope.fromPeerId);
+          final created = _AddressedSession(envelope.fromPeerId);
           created.client = this;
           scheduleMicrotask(() => _incoming.add(created));
           return created;
@@ -82,8 +82,8 @@ final class AddressedRelayClient implements MeshTransport {
 
   @override
   Future<MeshSession> connect(final MeshPeerRecord peer) async {
-    final channel = await _requireChannel();
-    final session = _AddressedSession(selfId, peer.peerId);
+    await _requireChannel();
+    final session = _AddressedSession(peer.peerId);
     session.client = this;
     _sessions[peer.peerId] = session;
     _sendEnvelope(
@@ -97,6 +97,18 @@ final class AddressedRelayClient implements MeshTransport {
   Future<WebSocketChannel> _requireChannel() async {
     if (_channel == null) await openRelay();
     return _channel!;
+  }
+
+  /// Closes the relay socket and all logical sessions.
+  Future<void> close() async {
+    for (final session in _sessions.values) {
+      session.closeRemote();
+    }
+    _sessions.clear();
+    _incoming.close();
+    final channel = _channel;
+    _channel = null;
+    await channel?.sink.close();
   }
 
   void _sendEnvelope({
@@ -119,9 +131,7 @@ final class AddressedRelayClient implements MeshTransport {
 }
 
 final class _AddressedSession implements MeshSession {
-  _AddressedSession(this._selfId, this.remotePeerId);
-
-  final String _selfId;
+  _AddressedSession(this.remotePeerId);
   @override
   final String remotePeerId;
   final _inbound = StreamController<Uint8List>();
@@ -141,13 +151,12 @@ final class _AddressedSession implements MeshSession {
 
   void closeRemote() {
     if (_closed) return;
-    _inbound.close();
+    unawaited(_inbound.close());
   }
 
   @override
-  Future<void> send(final Uint8List payload) async {
-    _client?._route(remotePeerId, payload);
-  }
+  Future<void> send(final Uint8List payload) =>
+      _client?._route(remotePeerId, payload) ?? Future<void>.value();
 
   @override
   Future<void> close() async {

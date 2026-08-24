@@ -14,7 +14,9 @@ Future<void> main() async {
       received.add(String.fromCharCodes(bytes));
     });
   });
-  final s = await pair.a.connect(const MeshPeerRecord(peerId: 'device-b', displayName: 'B'));
+  final s = await pair.a.connect(
+    const MeshPeerRecord(peerId: 'device-b', displayName: 'B'),
+  );
   // ignore: avoid_print
   print('connected, sending');
   await s.send(Uint8List.fromList('ping'.codeUnits));
