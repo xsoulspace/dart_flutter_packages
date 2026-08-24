@@ -93,7 +93,9 @@ Future<void> main() async {
 
   stdout.writeln('syncing…');
   await alice.sync();
+  stdout.writeln('alice.sync done');
   await bob.sync();
+  stdout.writeln('bob.sync done');
 
   stdout.writeln(
     'alice sees bob\'s file: ${await alice.getFile('notes/other.json')}',

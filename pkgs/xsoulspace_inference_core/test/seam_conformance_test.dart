@@ -87,6 +87,7 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 40));
       await _cycle(hang.$1);
       await _cycle(hang.$1);
+      await _cycle(hang.$1);
       expect(
         beatsWithText(hang.$1, 'timeout recovered'),
         isNotEmpty,
@@ -125,6 +126,9 @@ void main() {
         );
       world.getResource<ToolRegistryResource>().register('default', registry);
       final actor = spawnActor(world, spawnScene(world));
+      world.upsertComponent(actor, const ActorTools(registryName: 'default'));
+      final thread = spawnThread(world, actor, spawnScene(world));
+      world.upsertComponent(actor, ActorThreads(threads: [thread]));
       world.flush();
 
       Future<ToolExecutionResult> call(
@@ -146,35 +150,58 @@ void main() {
         world.runSchedule(Schedules.mechanical);
         world.flush();
         await Future<void>.delayed(const Duration(milliseconds: 60));
-        final reader = world.events.reader<ToolResultEvent>();
-        expect(reader.length, 1, reason: 'tool $name produced a result');
-        final result = reader.readAt(reader.length - 1).result;
-        world.events.channel<ToolResultEvent>().clear();
-        world.getResource<TaskRegistryResource>().take(taskId);
-        world.runSchedule(Schedules.processResponses);
+        await Future<void>.delayed(const Duration(milliseconds: 40));
+        world.runSchedule(Schedules.mechanical);
         world.flush();
-        return result;
+        final evidence = [
+          for (final (entity, result, _, _)
+              in world.query3<ToolResultContent, BeatStatus, TextContent>()
+                  .toList())
+            if (result.name == name) entity,
+        ];
+        expect(evidence, hasLength(1), reason: 'tool $name produced evidence');
+        return ToolExecutionResult(
+          name: name,
+          output: evidence.single.get<ToolResultContent>()!.output?.toString(),
+        );
       }
 
       final hung = await call('missing_tool', {});
-      expect(jsonDecode(hung.output!)['error'], contains('Unknown tool'));
+      expect(
+        hung.output,
+        contains('Unknown tool'),
+      );
 
       final thrown = await call('thrower', {});
-      expect(jsonDecode(thrown.output!)['error'], contains('tool exploded'));
+      expect(thrown.output, contains('tool exploded'));
 
       final payload = {'id': 'abc', 'values': [1, 2.5, true]};
-      final roundTrip = ToolExecutionResult.fromJson(
-        jsonDecode(await ToolRegistry().execute(
-              const ToolName('x'),
-              payload,
-            ) ??
-            '{}') as Map<String, dynamic>,
+      final unknownRegistryResult = await ToolRegistry().execute(
+        const ToolName('missing'),
+        payload,
       );
-      expect(roundTrip.name, isNotEmpty);
+      expect(unknownRegistryResult, isNotNull);
+      expect(
+        jsonDecode(unknownRegistryResult!)['error'],
+        contains('Unknown tool'),
+      );
 
       final structured = await call('structured', payload);
-      final decoded = jsonDecode(structured.output!) as Map<String, dynamic>;
-      expect(decoded, {'received': payload, 'ok': true});
+      final structuredEvidence = [
+        for (final (entity, result, _, _)
+            in world.query3<ToolResultContent, BeatStatus, TextContent>()
+                .toList())
+          if (result.name == 'structured') entity,
+      ];
+      expect(structuredEvidence, hasLength(1));
+      final structuredOutput =
+          structuredEvidence.single.get<ToolResultContent>()!.output;
+      final decodedStructured =
+          jsonDecode(structuredOutput.toString()) as Map<String, dynamic>;
+      expect(
+        decodedStructured,
+        {'received': payload, 'ok': true},
+      );
       expect(
         ToolExecutionResult.fromJson(structured.toJson()).output,
         structured.output,
@@ -200,6 +227,9 @@ void main() {
         );
       world.getResource<ToolRegistryResource>().register('default', registry);
       final actor = spawnActor(world, spawnScene(world));
+      world.upsertComponent(actor, const ActorTools(registryName: 'default'));
+      final thread = spawnThread(world, actor, spawnScene(world));
+      world.upsertComponent(actor, ActorThreads(threads: [thread]));
       world.flush();
 
       final taskId = TaskId.create();
@@ -216,14 +246,23 @@ void main() {
       );
       world.runSchedule(Schedules.mechanical);
       world.flush();
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await Future<void>.delayed(const Duration(milliseconds: 60));
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+      world.runSchedule(Schedules.mechanical);
+      world.flush();
 
-      final result = world.events.reader<ToolResultEvent>();
-      expect(result.length, 1);
-      expect(jsonDecode(result.readAt(0).result.output!), {
-        'error': contains('TimeoutException'),
-      });
-      world.events.channel<ToolResultEvent>().clear();
+      final evidence = [
+        for (final (entity, result, _)
+            in world.query2<ToolResultContent, BeatStatus>().toList())
+          if (result.name == 'hang') entity,
+      ];
+      expect(evidence, hasLength(1), reason: 'timeout becomes durable result');
+      final timeoutOutput =
+          evidence.single.get<ToolResultContent>()!.output.toString();
+      expect(
+        timeoutOutput,
+        contains('TimeoutException'),
+      );
       world.getResource<TaskRegistryResource>().take(taskId);
     });
   });
@@ -331,24 +370,31 @@ void main() {
       world.upsertComponent(actor, ActorTools(registryName: 'default'));
       world.flush();
 
+      final taskId = TaskId.create();
+      world.getResource<TaskRegistryResource>().register(
+        taskId,
+        TaskHandle(),
+      );
       world.events.writer<ToolCallEvent>().send(
         ToolCallEvent(
           actorEntity: actor,
           call: const ToolCall(name: ToolName('run_tests'), arguments: {}),
+          taskId: taskId,
         ),
       );
-      world.flush();
       world.runSchedule(Schedules.mechanical);
       world.flush();
       await Future<void>.delayed(const Duration(milliseconds: 30));
-      world.runSchedule(Schedules.processResponses);
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+      world.runSchedule(Schedules.mechanical);
       world.flush();
 
       expect(calls, 1);
       final evidence = [
-        for (final (entity, _, modality)
-            in world.query2<TextContent, BeatModality>().toList())
-          if (modality.value == BeatModalityEnum.toolCall) entity,
+        for (final (entity, result, _, _)
+            in world.query3<ToolResultContent, BeatStatus, TextContent>()
+                .toList())
+          if (result.name == 'run_tests') entity,
       ];
       expect(
         evidence,

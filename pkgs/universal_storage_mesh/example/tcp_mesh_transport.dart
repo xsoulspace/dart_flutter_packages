@@ -23,9 +23,7 @@ final class TcpMeshTransport implements MeshTransport {
   /// Starts listening so the peer can connect to us.
   Future<void> start() async {
     _server = await ServerSocket.bind(InternetAddress.anyIPv4, bindPort);
-    stdout.writeln('listening on :$bindPort');
     _server!.listen((socket) {
-      stdout.writeln('inbound connection from ${socket.remoteAddress}');
       _incoming.add(_SocketMeshSession(selfId, socket));
     });
   }

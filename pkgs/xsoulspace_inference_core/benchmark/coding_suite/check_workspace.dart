@@ -3,13 +3,13 @@
 /// CLI bridge used by external benchmark drivers to evaluate task checkers.
 library;
 
-import 'dart:io';
 import 'dart:convert';
+import 'dart:io';
 
 import 'checkers.dart';
 import 'task_spec.dart';
 
-Future<void> main(List<String> args) async {
+void main(List<String> args) {
   String? taskPath;
   String? workspacePath;
   for (var index = 0; index < args.length; index += 2) {
@@ -29,17 +29,19 @@ Future<void> main(List<String> args) async {
     _fail('usage: dart run benchmark/coding_suite/check_workspace.dart '
         '--task <yaml-path> --workspace <dir>');
   }
+  final taskFile = taskPath;
+  final workspaceDir = workspacePath;
 
   final CodingTask task;
   try {
-    task = CodingTask.fromYaml(File(taskPath).readAsStringSync());
+    task = CodingTask.fromYaml(File(taskFile).readAsStringSync());
   } catch (error) {
     _fail('invalid task $taskPath: $error');
   }
 
-  final results = [
-    for (final checker in task.checkers) evaluateChecker(checker, workspacePath),
-  ];
+  final results = task.checkers
+      .map((checker) => evaluateChecker(checker, workspaceDir))
+      .toList();
   final passed = results.every((result) => result.passed);
   print(
     const JsonEncoder.withIndent('  ').convert({

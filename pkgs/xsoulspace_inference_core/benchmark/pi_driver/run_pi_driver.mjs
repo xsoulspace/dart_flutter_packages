@@ -1,12 +1,24 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { basename, dirname, join, resolve } from "node:path";
+import {
+  appendFile,
+  mkdtemp,
+  mkdir,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
+import { dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
+import { parse as parseYaml } from "yaml";
 import process from "node:process";
-import YAML from "yaml";
-import { createAgentSession } from "@earendil-works/pi-coding-agent";
+import {
+  createAgentSession,
+  ModelRuntime,
+  SessionManager,
+} from "@earendil-works/pi-coding-agent";
+import { performance } from "node:perf_hooks";
 
 const PACKAGE_ROOT = new URL(".", import.meta.url).pathname;
 const CHECKER_CLI = resolve(
@@ -15,7 +27,6 @@ const CHECKER_CLI = resolve(
 );
 
 const RETRY_BUDGET = 2;
-const currentUsage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0 };
 
 function usage(message) {
   console.error(`run_pi_driver: ${message}`);
@@ -47,7 +58,7 @@ async function loadTasks(directory) {
     names.map(async (name) => {
       const path = join(directory, name);
       const source = await readFile(path, "utf8");
-      return { path, task: YAML.parse(source) };
+      return { path, task: parseYaml(source) };
     }),
   );
 }
@@ -116,7 +127,7 @@ async function runPiTurn(session, prompt) {
 
 function runChecker(taskPath, workspace) {
   const result = spawnSync(
-    process.execPath.includes("dart") ? process.execPath : "dart",
+    process.execPath.endsWith("/dart") ? process.execPath : "dart",
     ["run", CHECKER_CLI, "--task", taskPath, "--workspace", workspace],
     { encoding: "utf8", timeout: 30_000 },
   );
@@ -130,8 +141,9 @@ function runChecker(taskPath, workspace) {
   return { ...parsed, exitCode: result.status };
 }
 
-function failureMode(checker, error) {
+function failureMode(checker, usage, error) {
   if (error) return "driver_error";
+  if (!usage) return "missing_token_usage";
   if (checker.exitCode === 64) return "checker_error";
   return "checker_failed";
 }
@@ -165,15 +177,18 @@ async function main() {
     const started = performance.now();
     let checker;
     let error;
+    let session;
+    let usage;
     try {
       await seedWorkspace(workspace, task);
-      const { session } = await createAgentSession({
+      const created = await createAgentSession({
         cwd: workspace,
         model: modelObject,
         modelRuntime: runtime,
         sessionManager: SessionManager.inMemory(workspace),
         tools: ["read", "write", "edit", "bash", "ls"],
       });
+      session = created.session;
       let usage = await runPiTurn(session, task.prompt);
       checker = runChecker(taskPath, workspace);
       for (let round = 0; round < RETRY_BUDGET && checker.exitCode === 1; round++) {
@@ -193,7 +208,7 @@ async function main() {
         task_id: task.id,
         passed: error === undefined && checker?.passed === true,
         wall_clock_ms: wallClockMs,
-        tool_calls: session?.getSessionStats().toolCalls ?? 0,
+        tool_calls: usage ? (session?.getSessionStats().toolCalls ?? 0) : 0,
         token_usage: error === undefined
           ? {
               input: usage.input,
@@ -205,7 +220,7 @@ async function main() {
             }
           : null,
         backend: "pi",
-        failure_mode: error ? "driver_error" : checker?.passed ? null : "checker_failed",
+        failure_mode: failureMode(checker, usage, error),
         error: error?.message,
       };
       await appendRow(output, row);
@@ -234,69 +249,3 @@ main().catch((error) => {
   console.error(error?.stack ?? error);
   process.exit(1);
 });
-    .filter((name) => name.endsWith(".yaml"))
-    .sort()
-    .map(async (name) => {
-      const path = join(directory, name);
-      const source = await readFile(path, "utf8");
-      return YAML.parse(source);
-    })
-    .map((promise) => promise.then((task) => ({ path, task })));
-}
-
-function assertTaskShape(task, path) {
-  for (const field of ["id", "category", "prompt"]) {
-    if (typeof task?.[field] !== "string") {
-      throw new Error(`invalid task ${path}: missing string field ${field}`);
-    }
-  }
-  if (!Array.isArray(task.fixtures)) task.fixtures = [];
-  if (!Array.isArray(task.checkers)) task.checkers = [];
-}
-
-async function seedWorkspace(root, task) {
-  await mkdir(root, { recursive: true });
-  for (const fixture of task.fixtures ?? []) {
-    if (!fixture.path || typeof fixture.content !== "string") {
-      throw new Error(`invalid fixture in task ${task.id}`);
-    }
-    const destination = join(root, fixture.path);
-    await mkdir(dirname(destination), { recursive: true });
-    await writeFile(destination, fixture.content);
-  }
-}
-
-function addUsage(totals, usage) {
-  if (!usage || typeof usage !== "object") {
-    throw new Error(`pi did not report real token usage`);
-  }
-  totals.input += Number(usage.input ?? 0);
-  totals.output += Number(usage.output ?? 0);
-  totals.cacheRead += Number(usage.cacheRead ?? 0);
-  totals.cacheWrite += Number(usage.cacheWrite ?? 0);
-  totals.cost += Number(usage.cost?.total ?? 0);
-}
-
-async function runPiTurn(session, prompt) {
-  let settled;
-  const listener = (event) => {
-    if (event.type === "message_end" && event.message.role === "assistant") {
-      addUsage(currentUsage, event.message.usage);
-    } else if (
-      event.type === "message_end" &&
-      event.message.role === "toolResult" &&
-      event.message.usage
-    ) {
-      addUsage(currentUsage, event.message.usage);
-    } else if (event.type === "agent_end") {
-      settled = true;
-    }
-  };
-
-  session.on("event", listener);
-  try {
-    await session.prompt(prompt);
-  } finally {
-    session.off("event", listener);
-  }
-}

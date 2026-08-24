@@ -66,7 +66,8 @@ CliHost buildCliTestHost(
 void main() {
   test('feed opens a decision while idle and produces output', () async {
     final world = await buildTestWorld(handler: _StreamingHandler());
-    spawnScene(world);
+    final scene = spawnScene(world);
+    spawnActor(world, scene);
     final host = buildCliTestHost(world, confirmation: (_, _) async => true);
     unawaited(host.start());
     await Future<void>.delayed(const Duration(milliseconds: 10));
@@ -85,13 +86,9 @@ void main() {
     final scene = spawnScene(world);
     final actor = spawnActor(world, scene);
     world.flush();
-    final host = buildCliTestHost(
-      world,
-      confirmation: (_, _) async => true,
-    );
+    final host = buildCliTestHost(world, confirmation: (_, _) async => true);
     unawaited(host.start());
     await Future<void>.delayed(const Duration(milliseconds: 10));
-    await host.start();
     expect(host.feed('long task'), isTrue);
 
     await handler.started.future;
@@ -113,13 +110,9 @@ void main() {
     final scene = spawnScene(world);
     final actor = spawnActor(world, scene);
     world.flush();
-    final host = buildCliTestHost(
-      world,
-      confirmation: (_, _) async => true,
-    );
+    final host = buildCliTestHost(world, confirmation: (_, _) async => true);
     unawaited(host.start());
     await Future<void>.delayed(const Duration(milliseconds: 10));
-    await host.start();
     host.feed('inspect me');
 
     await Future<void>.delayed(const Duration(milliseconds: 50));
@@ -133,7 +126,7 @@ void main() {
 
   test('confirmation gate blocks and rejects protected tools', () async {
     final requests = <String>[];
-    final approvals = StreamController<bool>();
+    final approvals = <bool>[false, true];
     var executed = false;
     final registry = ToolRegistry()
       ..register(
@@ -153,39 +146,38 @@ void main() {
       ..upsertResource(tools)
       ..flush();
 
-    final gatedHost = CliHost(
+    final cliHost = CliHost(
       world: world,
       config: const CliHostConfig(confirmationRequiredTools: {'dangerous'}),
-      requestToolConfirmation: (name, arguments) {
+      requestToolConfirmation: (name, arguments) async {
         requests.add('${name.value}:${jsonEncode(arguments)}');
-        final future = approvals.stream.first;
-        return future;
+        await Future<void>.delayed(const Duration(milliseconds: 1));
+        return approvals.removeAt(0);
       },
     );
 
-    final guardedRegistry = world.getResource<ToolRegistryResource>()
+    final guardedRegistry = cliHost.world
+        .getResource<ToolRegistryResource>()
         .get('default')!;
     final execution = guardedRegistry.execute(const ToolName('dangerous'), {
       'value': 'ok',
     });
-    await Future<void>.delayed(Duration.zero);
+    await Future<void>.delayed(const Duration(milliseconds: 2));
     expect(executed, isFalse);
     expect(requests, ['dangerous:{"value":"ok"}']);
 
-    approvals.add(false);
     expect(await execution, contains('rejected'));
     expect(executed, isFalse);
 
     final secondExecution = guardedRegistry.execute(
       const ToolName('dangerous'),
-      {
-        'value': 'again',
-      },
+      {'value': 'again'},
     );
-    approvals.add(true);
+    await Future<void>.delayed(const Duration(milliseconds: 2));
+    expect(executed, isFalse);
+    expect(requests.length, 2);
+    scheduleMicrotask(() => approvals.add(true));
     await secondExecution;
     expect(executed, isTrue);
-
-    await approvals.close();
   });
 }

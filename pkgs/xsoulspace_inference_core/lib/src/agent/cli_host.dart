@@ -141,19 +141,12 @@ class CliHost {
   }
 
   void _subscribeToStreamEvents() {
-    // The ECS event channel is frame-scoped rather than a push stream. The
-    // loop drains it on ProcessResponses, so poll only while active turns are
-    // possible; sleeping hosts do not need to burn cycles.
-    final timer = Timer.periodic(const Duration(milliseconds: 10), (_) {
-      final reader = world.events.reader<ActorGenerateStreamEvent>();
-      for (final event in reader.drain()) {
-        _output.add(event.chunk);
-      }
-      world.events.channel<ActorGenerateStreamEvent>().clear();
-      if (_loop.canSleep()) _completeIdleTurn();
-      if (!isRunning) _loop.stop();
-    });
-    _eventTimer = timer;
+    for (final (entity, _, _) in world.query2<Actor, ActorModel>().toList()) {
+      world
+          .getResource<StreamingTapResource>()
+          .subscribe(entity.entity)
+          .listen(_output.add, onError: _output.addError);
+    }
   }
 
   Future<void> waitForIdle() {
