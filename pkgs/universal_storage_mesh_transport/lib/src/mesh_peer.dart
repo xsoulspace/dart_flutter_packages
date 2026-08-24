@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:meta/meta.dart';
 
 /// Stable identity of a paired mesh peer (ADR 0010 §3).
@@ -7,6 +9,7 @@ final class MeshPeerRecord {
     required this.peerId,
     required this.displayName,
     this.endpointHints = const <String, String>{},
+    this.identityKey = const <int>[],
   }) : assert(peerId != ''),
        assert(displayName != '');
 
@@ -19,6 +22,7 @@ final class MeshPeerRecord {
               (final k, final v) => MapEntry(k as String, v as String),
             ) ??
             const {},
+        identityKey: base64Decode(json['identity_key'] as String? ?? ''),
       );
 
   /// Stable random identity issued at first pairing.
@@ -29,10 +33,14 @@ final class MeshPeerRecord {
   /// Transport-specific reconnection hints (e.g. mDNS service name).
   final Map<String, String> endpointHints;
 
+  /// Ed25519 public identity key used to verify signed pairing payloads.
+  final List<int> identityKey;
+
   Map<String, dynamic> toJson() => {
     'peer_id': peerId,
     'display_name': displayName,
     'endpoint_hints': endpointHints,
+    if (identityKey.isNotEmpty) 'identity_key': base64Encode(identityKey),
   };
 
   @override

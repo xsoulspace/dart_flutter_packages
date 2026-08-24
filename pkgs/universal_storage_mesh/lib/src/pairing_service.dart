@@ -227,6 +227,26 @@ final class PairingService {
       return false;
     }
   }
+
+  /// Extracts the advertised Ed25519 public key from the signed envelope.
+  ///
+  /// The signature is verified against this key before any pairing result
+  /// is returned. Hosts should additionally compare it with identity data
+  /// shown in the human-readable QR confirmation when available.
+  static Uint8List extractIdentityKey(final Uint8List raw) {
+    final parsed = _parsePayload(raw);
+    try {
+      final envelope =
+          jsonDecode(utf8.decode(parsed.body)) as Map<dynamic, dynamic>;
+      final value = envelope['idk'];
+      if (value is! String || value.isEmpty) {
+        throw const PairingException('Missing identity key');
+      }
+      return Uint8List.fromList(base64Decode(value));
+    } on FormatException {
+      throw const PairingException('Malformed pairing envelope');
+    }
+  }
 }
 
 /// Raised when pairing fails structurally or cryptographically.

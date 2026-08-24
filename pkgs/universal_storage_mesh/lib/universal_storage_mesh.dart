@@ -9,5 +9,6 @@ library;
 
 export 'src/mesh_path_utils.dart';
 export 'src/pairing_service.dart';
+export 'src/mesh_pairing_session.dart';
 export 'src/mesh_peer_registry.dart';
 export 'src/mesh_storage_provider.dart';

@@ -17,10 +17,7 @@ void main() {
     'MESH_PORT',
     defaultValue: selfId == 'alice' ? 45910 : 45911,
   );
-  const relayPort = int.fromEnvironment(
-    'MESH_RELAY_PORT',
-    defaultValue: 45910,
-  );
+  const relayPort = int.fromEnvironment('MESH_RELAY_PORT', defaultValue: 45910);
   const isHost = bool.fromEnvironment(
     'MESH_HOST',
     defaultValue: selfId == 'alice',
@@ -51,8 +48,10 @@ class MeshPairingApp extends StatelessWidget {
       handler: (args) async {
         final base64 = state.pairingCodeBase64();
         return AgentResult.success(
-        message: 'pairing code',
-        data: {'parameters': {'base64': base64}},
+          message: 'pairing code',
+          data: {
+            'parameters': {'base64': base64},
+          },
         );
       },
     ),
@@ -85,7 +84,10 @@ class MeshPairingApp extends StatelessWidget {
         },
       },
       handler: (args) async {
-        await state.createFile(args['path'] as String, args['content'] as String);
+        await state.createFile(
+          args['path'] as String,
+          args['content'] as String,
+        );
         return AgentResult.success(message: state.status);
       },
     ),
@@ -109,7 +111,9 @@ class MeshPairingApp extends StatelessWidget {
     unawaited(state.initialize());
     return MaterialApp(
       title: 'Mesh Pairing Example',
-      theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo)),
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
+      ),
       home: PairingPage(state: state),
       routes: {'/files': (context) => FilesPage(state: state)},
     );

@@ -1,6 +1,6 @@
 # A1 Fair Comparison — harness vs pi (same model via OpenRouter)
 
-- Model: `nvidia/nemotron-3-nano-30b-a3b:free`
+- Model: `poolside/laguna-xs-2.1:free`
 - Harness decision path: guided schema (`StructuredToolDecisionHandler`)
 - pi decision path: native loop (`createAgentSession()`)
 - Harness tokens: cumulative projection size per decision.

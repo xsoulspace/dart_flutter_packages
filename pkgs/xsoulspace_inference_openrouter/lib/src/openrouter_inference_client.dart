@@ -204,8 +204,6 @@ class OpenRouterInferenceClient implements InferenceClient {
       }
 
       final decoded = jsonDecode(response.body);
-      stderr.writeln('[openrouter] status=${response.statusCode} '
-          'model=$model body=${response.body.length > 500 ? '${response.body.substring(0, 500)}…' : response.body}');
       if (decoded is! Map<String, dynamic>) {
         return InferenceResult<InferenceResponse>.fail(
           code: 'json_parse_failed',

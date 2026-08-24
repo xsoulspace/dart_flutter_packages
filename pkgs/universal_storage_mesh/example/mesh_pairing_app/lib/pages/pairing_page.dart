@@ -132,7 +132,7 @@ class _TerminalQrPainter extends CustomPainter {
   @override
   bool shouldRepaint(final _TerminalQrPainter oldDelegate) =>
       payload.length != oldDelegate.payload.length ||
-      payload
-          .indexed
-          .any((record) => record.$2 != oldDelegate.payload[record.$1]);
+      payload.indexed.any(
+        (record) => record.$2 != oldDelegate.payload[record.$1],
+      );
 }

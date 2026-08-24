@@ -8,10 +8,12 @@ Future<void> main() async {
   server.listen((s) {
     print('server: connection');
     s.add([1, 2, 3]);
-    s.flush().then((_) {
-      print('server: flushed, destroying');
-      s.destroy();
-    });
+    unawaited(
+      s.flush().then((_) {
+        print('server: flushed, destroying');
+        s.destroy();
+      }),
+    );
   });
 
   print('B: connecting');

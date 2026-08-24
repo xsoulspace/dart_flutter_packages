@@ -6,8 +6,10 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 /// WebSocket client session for the example relay.
 final class WebSocketMeshSession implements MeshSession {
-  WebSocketMeshSession({required this.remotePeerId, required WebSocketChannel channel})
-    : _channel = channel;
+  WebSocketMeshSession({
+    required this.remotePeerId,
+    required WebSocketChannel channel,
+  }) : _channel = channel;
 
   @override
   final String remotePeerId;
@@ -29,10 +31,7 @@ final class WebSocketMeshSession implements MeshSession {
 
 /// WebSocket [MeshTransport] for a shared example relay.
 final class WebSocketMeshTransport implements MeshTransport {
-  WebSocketMeshTransport({
-    required this.selfId,
-    required this.endpoint,
-  });
+  WebSocketMeshTransport({required this.selfId, required this.endpoint});
 
   final String selfId;
   final Uri endpoint;
@@ -45,7 +44,9 @@ final class WebSocketMeshTransport implements MeshTransport {
   Future<void> start() async {}
 
   void attachClient(final WebSocketChannel channel) {
-    _incoming.add(WebSocketMeshSession(remotePeerId: 'relay', channel: channel));
+    _incoming.add(
+      WebSocketMeshSession(remotePeerId: 'relay', channel: channel),
+    );
   }
 
   @override
@@ -57,10 +58,7 @@ final class WebSocketMeshTransport implements MeshTransport {
     try {
       final channel = WebSocketChannel.connect(Uri.parse(endpoint));
       await channel.ready;
-      return WebSocketMeshSession(
-        remotePeerId: peer.peerId,
-        channel: channel,
-      );
+      return WebSocketMeshSession(remotePeerId: peer.peerId, channel: channel);
     } catch (error) {
       throw MeshConnectionException(peer.peerId, '$error');
     }

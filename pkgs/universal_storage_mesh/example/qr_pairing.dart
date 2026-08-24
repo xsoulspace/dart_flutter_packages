@@ -60,8 +60,7 @@ String _terminalQr(final Uint8List payload) {
   final modules = image.moduleCount;
   final buffer = StringBuffer();
 
-  String half(final bool top, final bool bottom) =>
-      !top && !bottom
+  String half(final bool top, final bool bottom) => !top && !bottom
       ? '██'
       : top && !bottom
       ? '▀▀'

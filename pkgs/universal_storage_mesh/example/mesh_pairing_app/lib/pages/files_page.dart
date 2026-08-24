@@ -23,7 +23,7 @@ class FilesPage extends StatelessWidget {
       ],
     ),
     floatingActionButton: FloatingActionButton.extended(
-          onPressed: state.syncing ? null : state.sync,
+      onPressed: state.syncing ? null : state.sync,
       icon: state.syncing
           ? const SizedBox.square(
               dimension: 18,
@@ -75,7 +75,10 @@ class FilesPage extends StatelessWidget {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: pathController, decoration: const InputDecoration(labelText: 'Path')),
+            TextField(
+              controller: pathController,
+              decoration: const InputDecoration(labelText: 'Path'),
+            ),
             const SizedBox(height: 12),
             TextField(
               controller: contentController,
@@ -85,10 +88,16 @@ class FilesPage extends StatelessWidget {
           ],
         ),
         actions: [
-          TextButton(onPressed: Navigator.of(context).pop, child: const Text('Cancel')),
+          TextButton(
+            onPressed: Navigator.of(context).pop,
+            child: const Text('Cancel'),
+          ),
           FilledButton(
             onPressed: () async {
-              await state.createFile(pathController.text, contentController.text);
+              await state.createFile(
+                pathController.text,
+                contentController.text,
+              );
               Navigator.pop(context);
             },
             child: const Text('Create'),
@@ -98,7 +107,10 @@ class FilesPage extends StatelessWidget {
     );
   }
 
-  Future<void> _showFile(final BuildContext context, final FileEntry file) async {
+  Future<void> _showFile(
+    final BuildContext context,
+    final FileEntry file,
+  ) async {
     final content = await state.readFile(file);
     if (!context.mounted) return;
     await showDialog<void>(
@@ -106,7 +118,12 @@ class FilesPage extends StatelessWidget {
       builder: (context) => AlertDialog(
         title: Text(file.name),
         content: SelectableText(content ?? '(missing)'),
-        actions: [FilledButton(onPressed: Navigator.of(context).pop, child: const Text('Close'))],
+        actions: [
+          FilledButton(
+            onPressed: Navigator.of(context).pop,
+            child: const Text('Close'),
+          ),
+        ],
       ),
     );
   }

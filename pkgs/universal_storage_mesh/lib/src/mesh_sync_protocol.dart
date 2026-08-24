@@ -38,13 +38,13 @@ final class MeshSyncProtocol {
   ) => {
     'type': vvType,
     'docs': {
-      for (final entry in docVectors.entries)
-        entry.key: entry.value.toJson(),
+      for (final entry in docVectors.entries) entry.key: entry.value.toJson(),
     },
   };
 
   static Map<String, VersionVector> parseVv(final Object? raw) {
-    final docs = (raw as Map<dynamic, dynamic>)['docs'] as Map<dynamic, dynamic>;
+    final docs =
+        (raw as Map<dynamic, dynamic>)['docs'] as Map<dynamic, dynamic>;
     return docs.map(
       (final docId, final value) => MapEntry(
         docId as String,
