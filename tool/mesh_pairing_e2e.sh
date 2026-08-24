@@ -8,6 +8,7 @@ RELAY_PORT="${MESH_RELAY_PORT:-45910}"
 if [[ -z "${WEB_PORT:-}" ]]; then
   WEB_PORT=$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1]); s.close()')
 fi
+DDS_PORT=$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1]); s.close()')
 mkdir -p "$ARTIFACTS"
 
 log() { printf '\n==> %s\n' "$*"; }
@@ -56,9 +57,14 @@ WEB_PID=$!
 
 get_vm_uri() {
   local file=$1
-  for _ in $(seq 1 180); do
+  for _ in $(seq 1 300); do
     uri=$(rg -o 'A Dart VM Service on [^ ]+ is available at: (http://[^ ]+)' -r '$1' \
       "$file" 2>/dev/null | tail -1 || true)
+    if [[ -z "$uri" ]]; then
+      uri=$(rg -o '(ws://127\.0\.0\.1:[0-9]+/[A-Za-z0-9_=-]+/ws)' "$file" 2>/dev/null |
+        tail -1 || true)
+      [[ -n "$uri" ]] && { printf '%s' "$uri"; return 0; }
+    fi
     [[ -n "$uri" ]] && { printf '%s' "$uri"; return 0; }
     sleep 1
   done
@@ -69,7 +75,7 @@ MAC_HTTP=$(get_vm_uri "$ARTIFACTS/macos.log") || { tail -100 "$ARTIFACTS/macos.l
 WEB_HTTP=$(get_vm_uri "$ARTIFACTS/web.log") || { tail -100 "$ARTIFACTS/web.log"; fail 'web VM URI missing'; }
 printf 'MAC_HTTP=%s\nWEB_HTTP=%s\n' "$MAC_HTTP" "$WEB_HTTP" >"$ARTIFACTS/uris.txt"
 normalize_ws() {
-  local uri=$1
+  local uri=${1:-}
   uri="${uri%/}"
   [[ "$uri" == */ws ]] || uri="$uri/ws"
   printf '%s' "${uri/http:/ws:}"
@@ -79,9 +85,11 @@ WEB_WS=$(normalize_ws "$WEB_HTTP")
 
 fmtk_exec() {
   local target=$1 name=$2 args=${3:-{}}
-  fmtk exec --name "$name" --args "$(python3 -c \
-    'import json,sys; d=json.loads(sys.argv[2]); d.setdefault("connection",{})["uri"]=sys.argv[1]; print(json.dumps(d))' \
-    "$target" "$args")"
+  local json
+  printf 'FMTK_TOOL_ARGS=[%s]\n' "$args" >&2 || true
+  json=$(FMTK_TARGET_URI="$target" FMTK_TOOL_ARGS="$args" python3 -c \
+    'import json,os; d=json.loads(os.environ["FMTK_TOOL_ARGS"]); d.setdefault("connection",{})["uri"]=os.environ["FMTK_TARGET_URI"]; print(json.dumps(d))')
+  /tmp/fmtk-fixed exec --name "$name" --args "$json"
 }
 
 assert_ok() {
@@ -96,8 +104,9 @@ wait_ready() {
     # Re-resolve web targets because the debug service URI can rotate while
     # Chrome is starting.
     if [[ "$label" == web ]]; then
-      target=$(rg -o 'A Dart VM Service on [^ ]+ is available at: (http://[^ ]+)' -r '$1' \
-        "$ARTIFACTS/web.log" 2>/dev/null | tail -1 | normalize_ws || true)
+      web_http=$(rg -o 'A Dart VM Service on [^ ]+ is available at: (http://[^ ]+)' -r '$1' \
+        "$ARTIFACTS/web.log" 2>/dev/null | tail -1)
+      target=$(normalize_ws "$web_http")
     fi
     [[ -n "$target" ]] || { sleep 1; continue; }
     output=$(fmtk_exec "$target" get_extension_rpcs || true)
@@ -135,9 +144,10 @@ grep -q 'bob pairing\|ready — show or paste a pairing code' <<<"$WEB_TEXTS" ||
 grep -q 'startup failed' <<<"$WEB_TEXTS" && fail 'web startup failed'
 
 log 'Automating pairing through app tools'
-WEB_HTTP=$(rg -o '(http://127\.0\.0\.1:[0-9]+/[A-Za-z0-9_=-]+/)' "$ARTIFACTS/web.log" | tail -1)
+WEB_HTTP=$(rg -o 'A Dart VM Service on [^ ]+ is available at: (http://[^ ]+)' -r '$1' \
+  "$ARTIFACTS/web.log" 2>/dev/null | tail -1)
 [[ -n "$WEB_HTTP" ]] || fail 'web VM URI missing before pairing'
-WEB_WS=$(normalize_ws "${WEB_HTTP%/}")
+WEB_WS=$(normalize_ws "$WEB_HTTP")
 WEB_CODE_RAW=$(fmtk_exec "$WEB_WS" fmt_client_tool \
   '{"toolName":"pairing_code","arguments":{}}') || fail 'web pairing_code invocation failed'
 assert_ok "$WEB_CODE_RAW" 'web pairing_code'

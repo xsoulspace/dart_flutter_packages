@@ -59,9 +59,15 @@ production shape, in order:
    queryable.
 4. `OpenDecision.stepId` backlink → agency grants carry acceptance criteria
    in-frame.
-5. Plan-frontier projection: explicit `goalLink`/`dependsOn` traversal,
-   token-budgeted, green-screen elsewhere.
-6. Real-model probe: **ran twice** — see
+5. Plan-frontier projection — **landed 2026-08**: `projectPlanFrontier()` now
+   runs inside `buildSituation()` every decision. Open steps linked to goals
+   via explicit `goalLink`/`dependsOn` traversal are rendered as a
+   token-budgeted "PLAN FRONTIER" fragment; `OpenDecision.stepId` narrows
+   to that step alone.
+6. Mechanical step verification — **landed 2026-08**: `verifyStepSystem`
+   runs on the mechanical schedule; executes the step's acceptance
+   predicate as a seam-3 `verify_step` tool and flips `Step.status`.
+7. Real-model probe: **ran twice** — see
    [results_plan_falsification.md](results_plan_falsification.md)
    (§real-model, §follow-up). Cumulative token accounting landed (real spend
    ~20× the old metric — prior published numbers are undercounts). Role
@@ -76,7 +82,7 @@ production shape, in order:
    pass rate — `benchmark/decomposition_experiment.dart`). Next lever:
    real-model decomposition probe (decompose call via guided schema), then
    the Phase 4 matrix re-run under cumulative token accounting.
-7. Decomposition as one agentic act per goal (amortized; escalation tier OK),
+8. Decomposition as one agentic act per goal (amortized; escalation tier OK),
    fidelity measured via ADR 0004 causal coupling.
 
 New metrics: mechanical-step share (work completed without any LLM call —

@@ -180,10 +180,13 @@ void main() {
       // world state after the extra grant (same function the runner uses).
       final precision = decisionPrecisionByPolicy(world);
       expect(precision, isNotEmpty);
-      expect(precision['everyNTicks(1)']?.created, greaterThanOrEqualTo(1));
       expect(
-        precision['everyNTicks(1)']!.answered /
-            precision['everyNTicks(1)']!.created,
+        precision['whenIdleEveryNTicks(1)']?.created,
+        greaterThanOrEqualTo(1),
+      );
+      expect(
+        precision['whenIdleEveryNTicks(1)']!.answered /
+            precision['whenIdleEveryNTicks(1)']!.created,
         isA<double>(),
       );
     });

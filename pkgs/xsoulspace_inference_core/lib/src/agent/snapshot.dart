@@ -283,6 +283,7 @@ Map<String, dynamic> _encode(Component raw) {
         'verificationKind': raw.verificationKind.name,
         'status': raw.status.name,
         'confidence': raw.confidence,
+        'criterionArgs': raw.criterionArgs,
       };
     case DerivedFromThread():
       return {tag: 'DerivedFromThread', 'thread': raw.thread.toJson()};
@@ -404,6 +405,8 @@ final Map<String, _Decode> _decoders = {
     ),
     status: StepLifecycle.values.byName(json['status'] as String? ?? 'open'),
     confidence: (json['confidence'] as num?)?.toDouble() ?? 0,
+    criterionArgs:
+        (json['criterionArgs'] as Map? ?? {}).cast<String, dynamic>(),
   ),
   'DerivedFromThread': (json, r) =>
       DerivedFromThread(r(json['thread'] as String)),

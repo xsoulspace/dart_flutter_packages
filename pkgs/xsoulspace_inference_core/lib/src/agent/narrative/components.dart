@@ -134,6 +134,7 @@ class Step extends Component {
     this.verificationKind = StepVerificationKind.open,
     StepLifecycle status = StepLifecycle.open,
     this.confidence = 0,
+    this.criterionArgs = const {},
   }) : status = valueOf(status);
   final String claim;
   final StepVerificationKind verificationKind;
@@ -141,6 +142,11 @@ class Step extends Component {
   /// Mutable lifecycle residue updated by mechanical systems.
   StepLifecycle status;
   double confidence;
+
+  /// Arguments forwarded to the seam-3 `verify_step` executor when this
+  /// step's acceptance predicate runs mechanically. Empty for open-ended
+  /// steps verified by observation instead of a tool.
+  final Map<String, dynamic> criterionArgs;
 
   static StepLifecycle valueOf(StepLifecycle value) => value;
 }

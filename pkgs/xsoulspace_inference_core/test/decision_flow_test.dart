@@ -164,7 +164,7 @@ void main() {
 
         final e = world.getEntity(actor).$1;
         expect(e.has<OpenDecision>(), isTrue);
-        expect(e.get<DecisionOrigin>()?.policyName, 'everyNTicks(2)');
+        expect(e.get<DecisionOrigin>()?.policyName, 'whenIdleEveryNTicks(2)');
         expect(beatsWithText(world, 'tick decision'), hasLength(0));
 
         // Marker cleared after evaluation (none was set here, but the sweep
@@ -239,8 +239,8 @@ void main() {
 
       // Decision created but not yet answered → answered=0.
       final stats = decisionPrecisionByPolicy(world);
-      expect(stats['everyNTicks(2)']?.created, 1);
-      expect(stats['everyNTicks(2)']?.answered, 0);
+      expect(stats['whenIdleEveryNTicks(2)']?.created, 1);
+      expect(stats['whenIdleEveryNTicks(2)']?.answered, 0);
     });
   });
 

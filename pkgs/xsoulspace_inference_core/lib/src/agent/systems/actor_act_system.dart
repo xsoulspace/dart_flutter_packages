@@ -91,6 +91,13 @@ Future<void> actorActSystem(World world) async {
     for (final absence in situation.explicitAbsences) {
       contextFragments.add('absence:$absence');
     }
+    // Plan-frontier steps (ADR 0009): acceptance criteria in-frame.
+    if (situation.planSteps.isNotEmpty) {
+      contextFragments.add(
+        'PLAN FRONTIER (open steps, do not skip verification):\n'
+        '${situation.planSteps.map((s) => '- $s').join('\n')}',
+      );
+    }
 
     final taskId = TaskId.create();
     taskRegistry.register(taskId, TaskHandle());

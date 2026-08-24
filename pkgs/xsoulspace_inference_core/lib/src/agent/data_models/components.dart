@@ -170,6 +170,7 @@ class Situation implements Component {
     this.tokensUsed = 0,
     this.tokenBudget = 4000,
     this.truncated = false,
+    this.planSteps = const [],
   });
   String prompt;
   SchemaBundle schema;
@@ -183,6 +184,11 @@ class Situation implements Component {
 
   /// Green-screen: explicit statements of what the model does NOT see.
   List<String> explicitAbsences;
+
+  /// Plan-frontier steps currently in-frame (ADR 0009): unblocked open-step
+  /// claims selected by [projectPlanFrontier]. Rendered as context fragments
+  /// so acceptance criteria travel with every decision.
+  List<String> planSteps = const [];
 
   /// The tool registry in frame for this actor (if any).
   String? toolRegistryName;

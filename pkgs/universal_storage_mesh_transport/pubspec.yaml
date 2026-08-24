@@ -15,6 +15,7 @@ resolution: workspace
 
 dependencies:
   meta: ^1.19.0
+  web_socket_channel: ^3.0.3
 
 dev_dependencies:
   lints: ^6.1.0

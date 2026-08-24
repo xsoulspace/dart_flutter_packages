@@ -3,12 +3,15 @@ import 'dart:convert';
 import 'package:ecsly/ecsly.dart';
 
 import '../../data_models/data_models.dart';
+import '../../tools/tool_registry.dart' show ToolName;
 import '../../decisions/decision_flow.dart' show DeferredThinking;
 import '../../events.dart';
+import '../../data_models/data_models.dart';
 import '../../model_router.dart';
 import '../../narrative/narrative.dart';
 import '../../resources/resources.dart';
 import 'relevance.dart' show keywordsOf;
+import '../decision_flow_system.dart' show ToolResultPendingMarker;
 
 /// System 2: Build a minimal [Situation] for each actor with [Agency].
 ///
@@ -96,6 +99,22 @@ Situation buildSituation({
   final decision = entity.get<OpenDecision>();
   final prompt = decision?.prompt ?? '';
 
+  // Plan frontier (ADR 0009): unblocked open steps for the actor's goal,
+  // traversed via explicit GoalLink/DependsOnStep links. When the decision
+  // carries a stepId backlink only that step (plus its verified deps) is
+  // projected; otherwise all open steps linked to any goal in-frame fit.
+  final planProjection = projectPlanFrontier(
+    world,
+    decision?.stepId,
+    budget: budget,
+    estimator: estimator,
+  );
+  final planSteps = [
+    for (final stepEntity in planProjection.steps)
+      if (world.getEntity(stepEntity).$1.get<Step>() case final step?)
+        step.claim,
+  ];
+
   // Cinematic cut: ray-trace the graph for beats relevant to this decision.
   final beats = raycastBeats(world, entity, prompt);
   final ranked = rankFragments(world, beats, prompt);
@@ -118,7 +137,11 @@ Situation buildSituation({
   final tools = entity.get<ActorTools>();
   final toolSchemaCost = tools != null ? toolSchemaTokens(world, tools) : 0;
   final systemCost = systemPrompt != null ? estimator(systemPrompt.text) : 0;
-  final realTokensUsed = tokensUsed + systemCost + toolSchemaCost;
+  final planCost = planSteps.fold<int>(
+    0,
+    (sum, claim) => sum + estimator(claim),
+  );
+  final realTokensUsed = tokensUsed + systemCost + toolSchemaCost + planCost;
   final realTruncated = truncated || realTokensUsed > budget;
 
   // Green-screen: explicit absences so the model knows what it does NOT see.
@@ -134,6 +157,7 @@ Situation buildSituation({
     coPresentActorIds: coPresent,
     projectedBeats: selected,
     explicitAbsences: absences,
+    planSteps: planSteps,
     toolRegistryName: tools?.registryName,
     tokensUsed: realTokensUsed,
     tokenBudget: budget,
@@ -201,6 +225,54 @@ PlanProjection projectPlanFrontier(
       if (omitted > 0) '$omitted plan step(s) are off-screen.',
     ],
   );
+}
+
+/// Mechanical step verification (ADR 0009 §2): when an actor's decision
+/// carried a [OpenDecision.stepId] backlink and its tool result landed,
+/// run the step's acceptance predicate as a seam-3 tool (`verify_step`)
+/// and flip the [Step.lifecycle]. Pure graph logic — never calls a model.
+///
+/// The `verify_step` executor receives the originating call arguments and
+/// returns `{passed: bool, failures?: String}`. When no executor exists the
+/// step is left open — absence of proof is not failure.
+Future<void> verifyStepSystem(World world) async {
+  for (final (actor, _, _) in world.query2<Actor, ToolResultPendingMarker>()
+      .toList()) {
+    final decision = actor.get<OpenDecision>();
+    final stepId = decision?.stepId;
+    if (stepId == null) continue;
+    final (stepEntity, valid) = world.getEntity(stepId);
+    if (!valid) continue;
+    final step = stepEntity.get<Step>();
+    if (step == null || step.status != StepLifecycle.open) continue;
+
+    final executor = world
+        .getResource<ToolExecutorResource>()
+        .get(const ToolName('verify_step'));
+    if (executor == null) continue;
+    Object? output;
+    try {
+      output = await executor(step.criterionArgs);
+    } on Object {
+      continue; // verifier failure is data for the next tick, not fatal
+    }
+    if (output is String) {
+      try {
+        output = jsonDecode(output);
+      } catch (_) {}
+    }
+    if (output is! Map) continue;
+    final passed = output['passed'] == true;
+    stepEntity.insert(
+      Step(
+        claim: step.claim,
+        verificationKind: step.verificationKind,
+        status: passed ? StepLifecycle.verified : StepLifecycle.failed,
+        confidence: step.confidence,
+      ),
+    );
+  }
+  world.flush();
 }
 
 /// Budgeted result of explicit-link plan traversal.
