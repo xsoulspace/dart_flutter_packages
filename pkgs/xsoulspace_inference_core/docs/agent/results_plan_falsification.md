@@ -162,3 +162,55 @@ by the checker-retry loop this probe intentionally omits.
    bounce-with-explanation errors naming the expected relative form.
 3. Re-probe plan arm with the verifier feedback loop active — tight mechanical
    failure feedback is precisely what should stop the thrash early.
+
+---
+
+## Round 3 — mitigations + verifier-feedback re-probe (2026-08)
+
+### Landed
+
+1. **Full tool-error capture**: `PlanRow.toolErrors` / probe JSONL
+   `tool_errors` — the native logger truncates at ~20 chars; traces now carry
+   complete outputs. Classification from real traces:
+   - hallucinated absolute paths (`/tmp/user_data.json`,
+     `/tmp/sample_directory/...`) — model inventing workspace locations;
+   - `config.dart/` trailing-slash → `list_dir` "Not a directory".
+2. **fs-jail mitigations (seam 3, `fs_tools.dart`, regression-tested in
+   `test/fs_tools_test.dart`)**:
+   - escape errors now **teach the fix** ("Use paths RELATIVE to the
+     workspace root… Call list_dir with path '.'");
+   - symlink-tolerant containment (`/var` ↔ `/private/var` accepted);
+   - wrapping quotes stripped;
+   - `list_dir` returns **jail-relative entries** with `dir/` markers;
+   - `list_dir` on a file path lists its parent (trailing-slash habit).
+3. **Re-probe: plan arm vs baseline** (6 edit tasks, cumulative tokens):
+
+| task | b_calls | p_calls | b_cum | p_cum | cum Δ |
+| --- | --- | --- | --- | --- | --- |
+| edit_01_rename_constant | 17 | 17 | 10904 | 9593 | −12% |
+| edit_02_add_field | 17 | 1 | 9724 | 329 | −97% |
+| edit_03_fix_typo_string | 17 | 12 | 10955 | 5019 | −54% |
+| edit_04_delete_function | 17 | 17 | 8799 | 6612 | −25% |
+| edit_05_write_new_file | 17 | 1 | 8743 | 326 | −96% ✅PASS |
+| edit_06_json_config_update | 17 | 17 | 8597 | 7055 | −18% |
+| **TOTAL** | **102** | **65** | **57722** | **28934** | **−50%** |
+
+### Findings
+
+- **−36% calls, −50% cumulative tokens** on a real local model where every
+  baseline run thrashed to its round budget.
+- edit_05 PASSED with 1 call / 326 tokens (baseline: 17 calls / 8743, fail).
+- edit_02 exposes a **coverage gap**: the model answered without acting; no
+  tool result ⇒ no verification ⇒ episode ends on an unverified goal. The
+  frontier currently gates only after tool activity. Candidate rule: "actor
+  idle + open goal ⇒ verify before sleep" (mechanical, no LLM).
+- Remaining thrash (edit_01/04/06) is model-side path hallucination surviving
+  even with teaching errors — the next lever is decomposition with per-step
+  criteria (the full ADR 0009 design), not more jail tuning.
+
+### Verdict
+
+The plan-frontier mechanism delivers its scripted promise on-device where
+verification can pass, and halves spend overall. The binding constraint has
+moved decisively from harness mechanics to model decision quality — exactly
+where ADR 0009's decomposition and acceptance-criteria-in-frame are aimed.

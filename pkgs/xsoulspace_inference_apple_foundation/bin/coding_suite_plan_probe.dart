@@ -153,6 +153,7 @@ Future<void> main(List<String> args) async {
           'tokens_used_last_cut': r.tokensUsed,
           'cumulative_tokens': r.cumulativeTokens,
           'wall_ms': r.wallMs,
+          if (r.toolErrors.isNotEmpty) 'tool_errors': r.toolErrors,
         }) + '\n',
         mode: FileMode.append,
       );

@@ -43,15 +43,60 @@ class FsToolsRoot {
 
   /// Resolve [path] (absolute or relative) inside the jail.
   ///
-  /// Throws [ArgumentError] when the resolved path escapes the root.
+  /// Throws [ArgumentError] when the resolved path escapes the root. The
+  /// error teaches the expected form: small models frequently hallucinate
+  /// absolute workspace locations (`/tmp/config.dart`) — the rejection must
+  /// say what to do instead, not just that it failed.
   String resolve(String path) {
-    final p = File(path.startsWith('/') ? path : '$rootPath/$path');
-    // Canonicalize the parent chain without requiring the target to exist.
-    final resolved = _canonicalize(p.path);
-    if (!resolved.startsWith(rootPath)) {
-      throw ArgumentError('Path escapes the allowed root: $path');
+    var raw = path.trim();
+    // Strip one level of wrapping quotes some models add around arguments.
+    if (raw.length >= 2 &&
+        ((raw.startsWith('"') && raw.endsWith('"')) ||
+            (raw.startsWith("'") && raw.endsWith("'")))) {
+      raw = raw.substring(1, raw.length - 1);
+      raw = raw.trim();
     }
-    return resolved;
+    final candidate = _canonicalize(
+      raw.startsWith('/') ? raw : '$rootPath/$raw',
+    );
+    if (candidate.startsWith(rootPath)) {
+      return candidate;
+    }
+    // Symlink-tolerant containment: on macOS, /var ↔ /private/var differ
+    // lexically but are the same directory. Accept an absolute path whose
+    // REAL location is inside the root; reject everything else with a
+    // bounce-explanation error naming the expected relative form.
+    final real = _existingRealPath(candidate);
+    if (real != null && real.startsWith(rootPath)) {
+      return real;
+    }
+    throw ArgumentError(
+      'Path escapes the allowed root: "$path". '
+      'Use paths RELATIVE to the workspace root — for example "config.dart" '
+      'or "src/lib.dart" — never absolute filesystem paths like "/tmp/..." or '
+      '"/Users/...". Call list_dir with path "." to see the workspace.',
+    );
+  }
+
+  /// Real path of the nearest existing ancestor of [path] (symlinks
+  /// resolved), with the non-existent remainder rejoined lexically. Null
+  /// when nothing up to the filesystem root exists (never in practice).
+  static String? _existingRealPath(String path) {
+    final parts =
+        path.split('/').where((part) => part.isNotEmpty).toList();
+    for (var take = parts.length; take >= 1; take--) {
+      try {
+        final realAncestor =
+            Directory('/${parts.take(take).join('/')}').resolveSymbolicLinksSync();
+        final rest = parts.skip(take).toList();
+        return _canonicalize(
+          rest.isEmpty ? realAncestor : '$realAncestor/${rest.join('/')}',
+        );
+      } on FileSystemException {
+        continue;
+      }
+    }
+    return null;
   }
 
   /// Lexical canonicalization (resolves `.`/`..`) without touching disk.
@@ -136,8 +181,27 @@ ToolDef listDirTool(FsToolsRoot root) => ToolDef(
   ),
   execute: (args) async {
     final params = jsonDecodeMapAs(args);
-    final path = root.resolve(jsonDecodeString(params['path']));
-    final entries = Directory(path).listSync().map((e) => e.path).toList();
+    var raw = jsonDecodeString(params['path']).trim();
+    if (raw.isEmpty) raw = '.';
+    // Small models habitually append '/' to file paths ("config.dart/") and
+    // get a confusing 'Not a directory' failure. Point at a file → list its
+    // parent instead, so the model can recover without burning a round.
+    var target = root.resolve(raw);
+    if (!Directory(target).existsSync() && File(target).existsSync()) {
+      target = File(target).parent.path;
+    }
+    final prefix = root.rootPath.endsWith('/') 
+        ? root.rootPath 
+        : '${root.rootPath}/';
+    final entries = Directory(target).listSync().map((e) {
+      // Jail-RELATIVE names: feeding absolute paths back into read/write is
+      // how models end up constructing /tmp/... locations from priors.
+      final rel = e.path.startsWith(prefix)
+          ? e.path.substring(prefix.length)
+          : e.path;
+      return e is Directory ? '$rel/' : rel;
+    }).toList()
+      ..sort();
     return jsonEncode(entries);
   },
 );

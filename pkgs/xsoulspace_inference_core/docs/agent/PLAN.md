@@ -54,9 +54,11 @@ production shape, in order:
    ~20× the old metric — prior published numbers are undercounts). Role
    prefixes exonerated by A/B. Root cause of baseline thrash identified:
    pre-existing fs-jail path rejections (present 156× in the Phase 4 log),
-   masked then by the checker-retry loop. Next: capture full rejection
-   message, jail-relative path normalization/mitigation behind seam 3, then
-   re-probe plan arm with verifier feedback active.
+   masked then by the checker-retry loop. **Mitigations landed + re-probed:
+   −36% calls, −50% cumulative tokens on real AFM; edit_05 passes with 1 call
+   (baseline: 17, fail).** Known gap: answer-without-acting episodes end
+   unverified — candidate mechanical rule "idle + open goal ⇒ verify".
+   Next lever: decomposition with per-step criteria.
 7. Decomposition as one agentic act per goal (amortized; escalation tier OK),
    fidelity measured via ADR 0004 causal coupling.
 

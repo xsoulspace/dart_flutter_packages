@@ -191,6 +191,7 @@ class PlanRow {
     required this.mechanicalVerifications,
     required this.stepStatuses,
     this.cumulativeTokens = 0,
+    this.toolErrors = const [],
   });
   final String taskId;
   final bool passed;
@@ -202,6 +203,10 @@ class PlanRow {
   /// Honest spend: sum of every decision's projection size (see
   /// [CumulativeTokenMeter]).
   final int cumulativeTokens;
+
+  /// Distinct FULL tool-error outputs observed during the run (the native
+  /// logger truncates at ~20 chars — useless for classification). Deduped.
+  final List<String> toolErrors;
   final int wallMs;
   final int mechanicalVerifications;
   final List<String> stepStatuses;
@@ -329,6 +334,14 @@ Future<PlanRow> runPlanArm(
       tokensUsed += situation.tokensUsed;
     }
 
+    // Capture FULL tool-error outputs for diagnosis (logger truncates).
+    final toolErrors = <String>{};
+    for (final (_, content, _) in world.query2<ToolResultContent, BeatStatus>()
+        .toList()) {
+      final out = content.output.toString();
+      if (out.contains('"error"')) toolErrors.add(out);
+    }
+
     final checkerResults = [
       for (final c in task.checkers) evaluateChecker(c, jail.path),
     ];
@@ -343,6 +356,7 @@ Future<PlanRow> runPlanArm(
       wallMs: sw.elapsedMilliseconds,
       mechanicalVerifications: planFrontier ? verifications : 0,
       cumulativeTokens: tokenTotal[0],
+      toolErrors: toolErrors.toList(),
       stepStatuses: [
         for (final (_, _, s) in world.query2<StepGoalLink, StepStatus>())
           s.value,
