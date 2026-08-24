@@ -275,3 +275,32 @@ class CloudKitConfig extends StorageConfig {
     if (fallbackConfig != null) 'fallbackConfig': fallbackConfig!.toMap(),
   };
 }
+
+/// Configuration for the mesh (serverless P2P) storage provider.
+/// See docs/decisions/0010_mesh_sync_architecture.md.
+class MeshStorageConfig extends StorageConfig {
+  MeshStorageConfig({
+    required this.storePath,
+    required this.peerId,
+    this.displayName = 'device',
+  }) {
+    if (storePath.isEmpty) throw ArgumentError('storePath cannot be empty');
+    if (peerId.isEmpty) throw ArgumentError('peerId cannot be empty');
+  }
+
+  /// Directory holding the local replica store and pairing records.
+  /// Created on init.
+  final String storePath;
+
+  /// This device's stable peer id (issued at first pairing).
+  final String peerId;
+
+  final String displayName;
+
+  @override
+  Map<String, dynamic> toMap() => {
+    'store_path': storePath,
+    'peer_id': peerId,
+    'display_name': displayName,
+  };
+}

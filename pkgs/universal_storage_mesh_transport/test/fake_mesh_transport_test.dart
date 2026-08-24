@@ -9,12 +9,13 @@ void main() {
     final pair = FakeMeshPair.paired();
     final bReceived = <String>[];
 
-    // B is the responder: it handles incoming sessions.
-    pair.b.onIncomingSession = (final session) async {
+    // B is the responder: it listens for incoming sessions.
+    final subscription = pair.b.incoming.listen((final session) {
       session.inbound.listen(
         (final bytes) => bReceived.add(String.fromCharCodes(bytes)),
       );
-    };
+    });
+    addTearDown(subscription.cancel);
 
     // A initiates toward B.
     final session = await pair.a.connect(
@@ -34,7 +35,9 @@ void main() {
     pair.b.failNextConnect = true;
 
     await expectLater(
-      pair.b.connect(const MeshPeerRecord(peerId: 'device-a', displayName: 'A')),
+      pair.b.connect(
+        const MeshPeerRecord(peerId: 'device-a', displayName: 'A'),
+      ),
       throwsA(isA<MeshConnectionException>()),
     );
     // Reset happened: next attempt proceeds.
@@ -46,7 +49,9 @@ void main() {
 
   test('frame codec round-trips split and concatenated writes', () {
     final decoder = FrameDecoder();
-    final message = Uint8List.fromList(List.generate(1000, (final i) => i % 256));
+    final message = Uint8List.fromList(
+      List.generate(1000, (final i) => i % 256),
+    );
     final framed = frameMessage(message);
 
     // Split the frame into awkward chunks.

@@ -28,6 +28,10 @@ abstract interface class MeshSession {
 /// separate packages (LAN first; BLE-class later as platform-channel
 /// plugins).
 abstract interface class MeshTransport {
+  /// Sessions initiated by remote peers. Implementations must deliver every
+  /// inbound session here exactly once.
+  Stream<MeshSession> get incoming;
+
   /// Opens a session to a previously paired [peer].
   ///
   /// Throws [MeshConnectionException] when the peer is unreachable.

@@ -75,6 +75,13 @@ final class ConvergenceDoc {
   VersionVector _vv = VersionVector.zero;
   List<OpRecord> _log = [];
 
+  /// Exact dedupe set. Version-vector checks assume per-actor ordering,
+  /// which delivery does NOT guarantee — arbitrary-order arrival is part of
+  /// the kernel contract (see `test/convergence_property_test.dart`).
+  /// Re-folding an already-folded op is harmless under LWW, so this set
+  /// exists to keep logs and counters honest, not for safety.
+  final Set<String> _seenOpIds = {};
+
   /// Read-only view of the current folded state.
   Map<String, Object?> get state => Map.unmodifiable(_state);
 
@@ -97,6 +104,7 @@ final class ConvergenceDoc {
     strategy.fold(_state, op);
     _vv = _vv.observed(hlc);
     _log = [..._log, op];
+    _seenOpIds.add(op.opId);
     return op;
   }
 
@@ -104,7 +112,7 @@ final class ConvergenceDoc {
   /// folds in ascending HLC order. Returns how many ops were new.
   int applyRemote(final Iterable<OpRecord> ops) {
     final fresh =
-        ops.where((final op) => op.docId == docId && !_vv.contains(op.hlc))
+        ops.where((final op) => op.docId == docId && _seenOpIds.add(op.opId))
             .toList()
           ..sort((final a, final b) => a.hlc.compareTo(b.hlc));
     for (final op in fresh) {
@@ -185,6 +193,9 @@ final class ConvergenceDoc {
   int compact() {
     final retired = _log.length;
     _log = [];
+    // Post-compaction, lagging peers are served snapshots; stale dedupe
+    // entries only bound memory — re-folding a duplicate is safe.
+    _seenOpIds.clear();
     return retired;
   }
 
@@ -196,6 +207,7 @@ final class ConvergenceDoc {
     'state': _state,
     'vv': _vv.toJson(),
     'log': _log.map((final op) => op.toJson()).toList(),
+    'seen_op_ids': _seenOpIds.toList(),
   };
 
   factory ConvergenceDoc.fromJson(final Map<String, dynamic> json) {
@@ -211,11 +223,18 @@ final class ConvergenceDoc {
       VersionVector.fromJson(
         Map<String, dynamic>.from(json['vv'] as Map<dynamic, dynamic>),
       ),
-      (json['log'] as List<dynamic>? ?? const [])
+      (json['log'] as List<dynamic>? ?? const <dynamic>[])
           .whereType<Map<dynamic, dynamic>>()
-          .map(OpRecord.fromJson)
+          .map((final e) => OpRecord.fromJson(Map<String, dynamic>.from(e)))
           .toList(),
     );
+    doc._seenOpIds.addAll(
+      (json['seen_op_ids'] as List<dynamic>? ?? const <dynamic>[])
+          .whereType<String>(),
+    );
+    for (final op in doc._log) {
+      doc._seenOpIds.add(op.opId);
+    }
     return doc;
   }
 }

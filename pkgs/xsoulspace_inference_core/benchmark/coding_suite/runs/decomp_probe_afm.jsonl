@@ -1,0 +1,8 @@
+{"task_id":"refactor_01_extract_shared_function","arm":"monolithic","passed":false,"llm_calls":1,"cumulative_tokens":362}
+{"task_id":"refactor_01_extract_shared_function","arm":"decomposed-real","passed":false,"llm_calls":4,"cumulative_tokens":1282,"steps_verified":0,"failure_mode":"no-decompose"}
+{"task_id":"refactor_02_rename_across_files","arm":"monolithic","passed":false,"llm_calls":1,"cumulative_tokens":308}
+{"task_id":"refactor_02_rename_across_files","arm":"decomposed-real","passed":false,"llm_calls":4,"cumulative_tokens":1227,"steps_verified":0,"failure_mode":"no-decompose"}
+{"task_id":"refactor_03_split_file","arm":"monolithic","passed":false,"llm_calls":1,"cumulative_tokens":321}
+{"task_id":"refactor_03_split_file","arm":"decomposed-real","passed":false,"llm_calls":4,"cumulative_tokens":1241,"steps_verified":0,"failure_mode":"no-decompose"}
+{"task_id":"refactor_04_consistent_api","arm":"monolithic","passed":false,"llm_calls":1,"cumulative_tokens":340}
+{"task_id":"refactor_04_consistent_api","arm":"decomposed-real","passed":false,"llm_calls":4,"cumulative_tokens":1260,"steps_verified":0,"failure_mode":"no-decompose"}

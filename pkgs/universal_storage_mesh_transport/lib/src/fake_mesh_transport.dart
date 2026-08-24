@@ -26,9 +26,6 @@ final class FakeMeshPair {
   final FakeMeshTransport b;
 }
 
-/// Callback invoked on the *responder* side when the peer initiates.
-typedef IncomingSessionHandler = Future<void> Function(MeshSession session);
-
 final class FakeMeshTransport implements MeshTransport {
   FakeMeshTransport._(this.selfId);
 
@@ -38,13 +35,12 @@ final class FakeMeshTransport implements MeshTransport {
   /// Set to make the next [connect] throw, simulating an unreachable peer.
   bool failNextConnect = false;
 
-  /// Handler for sessions initiated by the remote side. In production code
-  /// the owning provider assigns its session handler here.
-  IncomingSessionHandler? onIncomingSession;
+  final _incoming = StreamController<MeshSession>();
+
+  @override
+  Stream<MeshSession> get incoming => _incoming.stream;
 
   FakeMeshTransport? _remote;
-
-  void _link(final FakeMeshTransport remote) => _remote = remote;
 
   @override
   Future<MeshSession> connect(final MeshPeerRecord peer) async {
@@ -79,7 +75,7 @@ final class FakeMeshTransport implements MeshTransport {
     // Deliver the responder-side session asynchronously so the initiator's
     // connect() is not blocked on handler execution.
     scheduleMicrotask(() {
-      remote.onIncomingSession?.call(responderSession);
+      _incoming.add(responderSession);
     });
     return initiatorSession;
   }

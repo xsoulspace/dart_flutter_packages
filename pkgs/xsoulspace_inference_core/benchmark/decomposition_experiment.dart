@@ -157,7 +157,8 @@ Future<void> stepFrontierSystem(World world) async {
           break;
         }
       }
-      if (next != null) {
+      if (next != null &&
+          world.getResource<StepFrontierConfig>().openNextDecisions) {
         for (final (actorEntity, _, _) in world.query2<Actor, DGoalRef>().toList()) {
           if (!actorEntity.has<OpenDecision>()) {
             try {
@@ -291,6 +292,7 @@ Future<(World, List<int>, Directory)> _buildWorld(
     ..upsertResource(ModelRouterResource(router))
     ..upsertResource(ToolRegistryResource())
     ..upsertResource(AgencyPolicy(maxConcurrent: 1))
+    ..upsertResource(StepFrontierConfig())
     ..flush();
 
   final tokenTotal = <int>[0];
@@ -350,4 +352,305 @@ Future<(World, List<int>, Directory)> _buildWorld(
   }
   world.flush();
   return (world, tokenTotal, jail);
+}
+
+// =============================================================================
+// Real-model decomposed arm: decompose-once via guided schema, then MECHANICAL
+// execution of the planned steps (predictable parts never touch the LLM).
+// =============================================================================
+
+/// Guided schema for the single decompose call.
+final decomposeStepsSchema = SchemaBundle(
+  root: FM.object(
+    'decompose',
+    properties: () => [
+      FM.prop(
+        'steps',
+        FM.array(
+          FM.object(
+            'step',
+            properties: () => [
+              FM.prop('path', FM.string()),
+              FM.prop('content', FM.string()),
+            ],
+          ),
+          min: 1,
+        ),
+      ),
+    ],
+  ),
+);
+
+/// Draft captured from the decompose response, consumed by
+/// [mechanicalStepExecutorSystem].
+class DecomposeDraftResource extends Resource {
+  DecomposeDraftResource();
+  List<Map<String, dynamic>> steps = const [];
+  bool get hasDraft => steps.isNotEmpty;
+}
+
+String decomposeInstruction(CodingTask task) => 'GOAL: ${task.prompt}\n\n'
+    'Decompose this goal into an ordered list of file-write steps. For each '
+    'step provide the workspace-relative "path" and the FULL final file '
+    '"content". The harness will write and verify each step mechanically — '
+    'plan completely and precisely.';
+
+/// Executes the first open step's write MECHANICALLY (through the jailed
+/// `write` tool executor — seam 3), then lets [stepFrontierSystem] verify it.
+/// Runs every tick; no-ops when no draft/steps are pending.
+Future<void> mechanicalStepExecutorSystem(World world) async {
+  // Execute the first open step through the jailed write executor.
+  // (Draft transformation is [decomposeTransformSystem]'s job, which runs
+  // earlier on the same schedule.)
+  StepAction? action;
+  WorldEntity? stepFacade;
+  for (final (e, _, st) in world.query2<DGoalRef, DStepStatus>().toList()) {
+    if (st.value == 'open') {
+      action = e.get<StepAction>();
+      stepFacade = e;
+      break;
+    }
+  }
+  if (action == null || stepFacade == null) return;
+  final toolDef = world
+      .getResource<ToolRegistryResource>()
+      .get('default')
+      ?.get(const ToolName('write'));
+  if (toolDef == null) return;
+  await toolDef.execute(action.arguments);
+}
+
+/// Handler wrapper: captures a structured `steps` payload from the decompose
+/// response into [DecomposeDraftResource], then passes through unchanged.
+class DecomposeCaptureHandler implements GenerationHandler {
+  DecomposeCaptureHandler(this.inner, this.draft, this.total);
+  final GenerationHandler inner;
+  final DecomposeDraftResource draft;
+  final List<int> total;
+
+  @override
+  Future<ActorGenerateResponse> generate(
+    World world,
+    ActorGenerateRequest request,
+  ) async {
+    final situation = world.getEntity(request.actorEntity).$1.get<Situation>();
+    if (situation != null) total[0] += situation.tokensUsed;
+
+    // First call (draft pending, no steps yet): this IS the decompose call.
+    // Strip the tool registry so a wrapping StructuredToolDecisionHandler
+    // passes through to the backend with the REQUEST's decompose schema
+    // instead of forcing its act-vs-answer schema.
+    final isDecomposeCall =
+        !draft.hasDraft && _stepsSpawned(world) == 0;
+    final effective = isDecomposeCall ? _stripRegistry(request) : request;
+    final response = await inner.generate(world, effective);
+    if (isDecomposeCall) {
+      // ignore: avoid_print
+      final rawFlat =
+          (response.rawOutput ?? '<null>').replaceAll('\n', ' ');
+      stdout.writeln('[dbg] decompose raw='
+          + rawFlat.substring(0, rawFlat.length > 600 ? 600 : rawFlat.length));
+      // ignore: avoid_print
+      stdout.writeln('[dbg] decompose structured keys='
+          + response.structuredOutput.keys.toString());
+    }
+    return response;
+  }
+}
+  }
+
+  static int _stepsSpawned(World world) =>
+      world.query2<DGoalRef, DStepStatus>().length;
+
+  static ActorGenerateRequest _stripRegistry(ActorGenerateRequest r) =>
+      ActorGenerateRequest(
+        actorEntity: r.actorEntity,
+        agentId: r.agentId,
+        modelId: r.modelId,
+        prompt: r.prompt,
+        systemPrompt: r.systemPrompt,
+        contextFragments: r.contextFragments,
+        schema: r.schema,
+        toolRegistry: null,
+        task: InferenceTask.nativelyStructuredText,
+        taskId: r.taskId,
+      );
+}
+
+/// Frontier behavior: whether verifying a step opens an LLM decision for the
+/// NEXT step. True for the scripted decomposition arm (model executes each
+/// step); false for the real-model arm (steps execute MECHANICALLY from the
+/// decompose plan — no further agency at all).
+class StepFrontierConfig extends Resource {
+  StepFrontierConfig({this.openNextDecisions = true});
+  final bool openNextDecisions;
+}
+
+/// Result of one real-model decomposed run.
+class DecompRunResult {
+  DecompRunResult({
+    required this.passed,
+    required this.llmCalls,
+    required this.cumulativeTokens,
+    required this.stepsVerified,
+    this.failureMode = '',
+  });
+  final bool passed;
+  final int llmCalls;
+  final int cumulativeTokens;
+  final int stepsVerified;
+  final String failureMode;
+}
+
+/// Real-model decomposed arm: ONE guided decompose call → mechanical
+/// execution of every planned step through the jailed write executor →
+/// per-step verification → termination without further LLM calls.
+Future<DecompRunResult> runDecomposedArmReal(
+  CodingTask task, {
+  required GenerationHandler Function(CodingTask task) buildInnerHandler,
+  int maxTicks = 2000000,
+}) async {
+  final jail = await Directory.systemTemp.createTemp('decomp_real_${task.id}_');
+  try {
+    for (final f in task.fixtures) {
+      final file = File('${jail.path}/${f.path}');
+      await file.parent.create(recursive: true);
+      await file.writeAsString(f.content);
+    }
+
+    final world = World()..addPlugin(AgentPlugin());
+    world.components
+      ..registerObjectComponent<StepClaim>()
+      ..registerObjectComponent<StepAction>()
+      ..registerObjectComponent<StepIndex>()
+      ..registerObjectComponent<DStepStatus>()
+      ..registerObjectComponent<DGoalRef>();
+    final router = ModelRouter(inferenceClientsBuilders: {});
+    final modelId = ModelId('suite-model');
+    router.models[modelId] =
+        Model(id: modelId, name: DefaultModelNames.appleFoundation);
+    final draft = DecomposeDraftResource();
+    final tokenTotal = <int>[0];
+    world
+      ..upsertResource(ModelRouterResource(router))
+      ..upsertResource(ToolRegistryResource())
+      ..upsertResource(AgencyPolicy(maxConcurrent: 1))
+      ..upsertResource(draft)
+      ..flush();
+
+    // NO ReAct continuation: the only LLM call is the decompose call.
+    world.upsertResource(DecisionFlowResource(DecisionFlow(const [])));
+    world.upsertResource(StepFrontierConfig(openNextDecisions: false));
+
+    final inner = buildInnerHandler(task);
+    var llmCalls = 0;
+    world.getResource<GenerationHandlerResource>().registerDefault(
+          _CountingHandler(
+            DecomposeCaptureHandler(inner, draft, tokenTotal),
+            () => llmCalls++,
+          ),
+        );
+
+    final root = FsToolsRoot(jail.path);
+    world.upsertResource(FsToolsRootResource(root));
+    final registry = ToolRegistry();
+    fsTools(root).forEach(registry.register);
+    world.getResource<ToolRegistryResource>().register('default', registry);
+
+    // Mechanical pipeline on Narrative: transform → execute → verify/advance.
+    world.schedule(Schedules.narrative)
+      ..add(decomposeTransformSystem, name: 'decomposeTransform')
+      ..then(mechanicalStepExecutorSystem, name: 'mechanicalExecute')
+      ..then(stepFrontierSystem, name: 'stepFrontier');
+
+    final scene = world.spawnComponents([const Scene(), SceneFrame()]);
+    final actor = world.spawnComponents([
+      Actor(agentId: AgentId.create()),
+      ActorModel(modelId: modelId),
+      ActorSystemPrompt(text: task.systemPrompt),
+      ActorThreads(threads: []),
+      const ActorTools(registryName: 'default'),
+      PresentInScene(sceneEntity: scene),
+      OpenDecision(
+        prompt: decomposeInstruction(task),
+        schema: decomposeStepsSchema,
+      ),
+    ]);
+    final thread = spawnThread(world, actor, scene);
+    world.upsertComponent(actor, ActorThreads(threads: [thread]));
+    final goal = world.spawnComponents([Goal(text: task.prompt)]);
+    world.upsertComponent(actor, DGoalRef(goal));
+    world.flush();
+
+    await HarnessLoop(world: world).runUntilIdle(maxTicks: maxTicks);
+
+    var stepsVerified = 0;
+    for (final (_, _, st) in world.query2<DGoalRef, DStepStatus>().toList()) {
+      if (st.value == 'verified') stepsVerified++;
+    }
+    final checkersPassed = task.checkers.isNotEmpty &&
+        task.checkers.every((c) => evaluateChecker(c, jail.path).passed);
+    String failureMode = '';
+    if (!checkersPassed) {
+      if (llmCalls == 0) {
+        failureMode = 'no-llm';
+      } else if (!draft.hasDraft && stepsVerified == 0) {
+        failureMode = 'no-decompose';
+      } else if (stepsVerified == 0) {
+        failureMode = 'no-steps-executed';
+      } else {
+        failureMode = 'wrong-content';
+      }
+    }
+
+    return DecompRunResult(
+      passed: checkersPassed,
+      llmCalls: llmCalls,
+      cumulativeTokens: tokenTotal[0],
+      stepsVerified: stepsVerified,
+      failureMode: failureMode,
+    );
+  } finally {
+    jail.delete(recursive: true);
+  }
+}
+
+/// Consumes [DecomposeDraftResource]: spawns step entities from the captured
+/// draft. Pure graph logic.
+Future<void> decomposeTransformSystem(World world) async {
+  final draftResource = world.getResource<DecomposeDraftResource>();
+  if (!draftResource.hasDraft) return;
+  Entity? goal;
+  for (final (g, _, _) in world.query2<Goal, DGoalRef>().toList()) {
+    goal = g.entity;
+    break;
+  }
+  if (goal == null) return;
+  for (var i = 0; i < draftResource.steps.length; i++) {
+    final st = draftResource.steps[i];
+    world.spawnComponents([
+      DGoalRef(goal),
+      DStepStatus('open'),
+      StepClaim('write ${st['path']}'),
+      StepAction('write', {'path': st['path'], 'content': st['content']}),
+      StepIndex(i),
+    ]);
+  }
+  draftResource.steps = const [];
+}
+
+/// Counts generate() invocations (one per decision dispatched).
+class _CountingHandler implements GenerationHandler {
+  _CountingHandler(this.inner, this.onCall);
+  final GenerationHandler inner;
+  final void Function() onCall;
+
+  @override
+  Future<ActorGenerateResponse> generate(
+    World world,
+    ActorGenerateRequest request,
+  ) {
+    onCall();
+    return inner.generate(world, request);
+  }
 }

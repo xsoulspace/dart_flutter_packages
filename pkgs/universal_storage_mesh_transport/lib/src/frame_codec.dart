@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:typed_data';
 
 /// Length-prefixed message framing for stream transports (TCP, BLE
