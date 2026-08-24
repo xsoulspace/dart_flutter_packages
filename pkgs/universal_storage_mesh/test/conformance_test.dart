@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:test/test.dart';
 import 'package:universal_storage_conformance/universal_storage_conformance.dart';
 import 'package:universal_storage_interface/universal_storage_interface.dart';
 import 'package:universal_storage_mesh/universal_storage_mesh.dart';

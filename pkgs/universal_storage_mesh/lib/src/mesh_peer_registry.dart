@@ -16,7 +16,7 @@ final class MeshPeerRegistry {
   static Future<MeshPeerRegistry> load(final String filePath) async {
     final registry = MeshPeerRegistry(filePath: filePath);
     final file = File(filePath);
-    if (await file.exists()) {
+    if (file.existsSync()) {
       try {
         final raw = jsonDecode(await file.readAsString());
         if (raw is List) {

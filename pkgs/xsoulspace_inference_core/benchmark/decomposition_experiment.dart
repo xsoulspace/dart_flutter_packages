@@ -456,8 +456,6 @@ class DecomposeCaptureHandler implements GenerationHandler {
     }
     return response;
   }
-}
-  }
 
   static int _stepsSpawned(World world) =>
       world.query2<DGoalRef, DStepStatus>().length;

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:test/test.dart';
+import 'package:universal_storage_interface/universal_storage_interface.dart';
 import 'package:universal_storage_mesh/universal_storage_mesh.dart';
 import 'package:universal_storage_mesh_transport/universal_storage_mesh_transport.dart';
 

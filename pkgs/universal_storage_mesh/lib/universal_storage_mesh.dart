@@ -8,5 +8,4 @@
 library;
 
 export 'src/mesh_peer_registry.dart';
-export 'src/mesh_storage_config.dart';
 export 'src/mesh_storage_provider.dart';

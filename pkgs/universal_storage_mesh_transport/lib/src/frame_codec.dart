@@ -1,9 +1,9 @@
-import 'dart:typed_data';
-
 /// Length-prefixed message framing for stream transports (TCP, BLE
 /// characteristic streams). The in-memory fake transport preserves message
 /// boundaries natively and does not need this; real transports do.
 library;
+
+import 'dart:typed_data';
 
 /// 4-byte big-endian length prefix + payload.
 const int _lengthPrefixBytes = 4;

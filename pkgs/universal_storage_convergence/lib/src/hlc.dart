@@ -9,14 +9,6 @@ import 'package:meta/meta.dart';
 /// deterministic regardless of delivery order.
 @immutable
 final class Hlc implements Comparable<Hlc> {
-  const Hlc(this.wallMillis, this.counter, this.actorId)
-    : assert(wallMillis >= 0),
-      assert(counter >= 0),
-      assert(actorId != '');
-
-  /// Zero timestamp for [actorId]; strictly less than any real event.
-  static Hlc zero(final String actorId) => Hlc(0, 0, actorId);
-
   factory Hlc.fromJson(final Map<String, dynamic> json) => Hlc(
     (json['w'] as num).toInt(),
     (json['c'] as num).toInt(),
@@ -30,6 +22,14 @@ final class Hlc implements Comparable<Hlc> {
     }
     return Hlc(int.parse(parts[0]), int.parse(parts[1]), parts[2]);
   }
+
+  const Hlc(this.wallMillis, this.counter, this.actorId)
+    : assert(wallMillis >= 0),
+      assert(counter >= 0),
+      assert(actorId != '');
+
+  /// Zero timestamp for [actorId]; strictly less than any real event.
+  static Hlc zero(final String actorId) => Hlc(0, 0, actorId);
 
   final int wallMillis;
   final int counter;
@@ -78,7 +78,11 @@ final class Hlc implements Comparable<Hlc> {
     return actorId.compareTo(other.actorId);
   }
 
-  Map<String, dynamic> toJson() => {'w': wallMillis, 'c': counter, 'a': actorId};
+  Map<String, dynamic> toJson() => {
+    'w': wallMillis,
+    'c': counter,
+    'a': actorId,
+  };
 
   @override
   String toString() => '$wallMillis:$counter:$actorId';
@@ -98,10 +102,9 @@ final class Hlc implements Comparable<Hlc> {
 /// Serializes/derializes HLCs inside JSON payloads.
 Map<String, dynamic> hlcToJson(final Hlc hlc) => hlc.toJson();
 
-Hlc hlcFromJson(final Object? raw) =>
-    raw is Map<String, dynamic>
-        ? Hlc.fromJson(raw)
-        : throw ArgumentError.value(raw, 'raw', 'Not an Hlc json map');
+Hlc hlcFromJson(final Object? raw) => raw is Map<String, dynamic>
+    ? Hlc.fromJson(raw)
+    : throw ArgumentError.value(raw, 'raw', 'Not an Hlc json map');
 
 /// Restores a persisted last-issued timestamp so monotonicity survives
 /// process restarts (ADR 0011 obligation).
@@ -115,5 +118,3 @@ Hlc hlcRestoreMonotonic({
   }
   return persistedLast;
 }
-
-

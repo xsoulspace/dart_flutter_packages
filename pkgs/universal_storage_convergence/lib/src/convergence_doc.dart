@@ -55,6 +55,34 @@ final class ConvergenceDoc {
     this.strategy = const LwwMapStrategy(),
   }) : _state = strategy.initialState();
 
+  factory ConvergenceDoc.fromJson(final Map<String, dynamic> json) {
+    final strategyName = json['strategy'] as String? ?? 'lww_map';
+    if (strategyName != 'lww_map') {
+      throw ArgumentError.value(strategyName, 'strategy', 'Unknown strategy');
+    }
+    final doc = ConvergenceDoc._(
+      json['doc_id'] as String,
+      json['actor_id'] as String,
+      const LwwMapStrategy(),
+      Map<String, Object?>.from(json['state'] as Map<dynamic, dynamic>),
+      VersionVector.fromJson(
+        Map<String, dynamic>.from(json['vv'] as Map<dynamic, dynamic>),
+      ),
+      (json['log'] as List<dynamic>? ?? const <dynamic>[])
+          .whereType<Map<dynamic, dynamic>>()
+          .map((final e) => OpRecord.fromJson(Map<String, dynamic>.from(e)))
+          .toList(),
+    );
+    doc._seenOpIds.addAll(
+      (json['seen_op_ids'] as List<dynamic>? ?? const <dynamic>[])
+          .whereType<String>(),
+    );
+    for (final op in doc._log) {
+      doc._seenOpIds.add(op.opId);
+    }
+    return doc;
+  }
+
   ConvergenceDoc._(
     this.docId,
     this.actorId,
@@ -112,7 +140,8 @@ final class ConvergenceDoc {
   /// folds in ascending HLC order. Returns how many ops were new.
   int applyRemote(final Iterable<OpRecord> ops) {
     final fresh =
-        ops.where((final op) => op.docId == docId && _seenOpIds.add(op.opId))
+        ops
+            .where((final op) => op.docId == docId && _seenOpIds.add(op.opId))
             .toList()
           ..sort((final a, final b) => a.hlc.compareTo(b.hlc));
     for (final op in fresh) {
@@ -120,9 +149,8 @@ final class ConvergenceDoc {
       _vv = _vv.observed(op.hlc);
     }
     if (fresh.isNotEmpty) {
-      _log = [..._log, ...fresh]..sort(
-        (final a, final b) => a.hlc.compareTo(b.hlc),
-      );
+      _log = [..._log, ...fresh]
+        ..sort((final a, final b) => a.hlc.compareTo(b.hlc));
     }
     return fresh.length;
   }
@@ -166,10 +194,9 @@ final class ConvergenceDoc {
     if (!newer) return false;
     // Adopt wholesale: snapshot state is authoritative for everything up to
     // its base vector. Local pending ops beyond it are re-applied.
-    final localPending = _log
-        .where((final op) => !snapshot.baseVv.contains(op.hlc))
-        .toList()
-      ..sort((final a, final b) => a.hlc.compareTo(b.hlc));
+    final localPending =
+        _log.where((final op) => !snapshot.baseVv.contains(op.hlc)).toList()
+          ..sort((final a, final b) => a.hlc.compareTo(b.hlc));
     _state = strategy.initialState();
     // Seed fold with snapshot entries as pseudo-wins by merging vectors:
     // fold each snapshot key through the strategy so entry metadata survives.
@@ -209,32 +236,4 @@ final class ConvergenceDoc {
     'log': _log.map((final op) => op.toJson()).toList(),
     'seen_op_ids': _seenOpIds.toList(),
   };
-
-  factory ConvergenceDoc.fromJson(final Map<String, dynamic> json) {
-    final strategyName = json['strategy'] as String? ?? 'lww_map';
-    if (strategyName != 'lww_map') {
-      throw ArgumentError.value(strategyName, 'strategy', 'Unknown strategy');
-    }
-    final doc = ConvergenceDoc._(
-      json['doc_id'] as String,
-      json['actor_id'] as String,
-      const LwwMapStrategy(),
-      Map<String, Object?>.from(json['state'] as Map<dynamic, dynamic>),
-      VersionVector.fromJson(
-        Map<String, dynamic>.from(json['vv'] as Map<dynamic, dynamic>),
-      ),
-      (json['log'] as List<dynamic>? ?? const <dynamic>[])
-          .whereType<Map<dynamic, dynamic>>()
-          .map((final e) => OpRecord.fromJson(Map<String, dynamic>.from(e)))
-          .toList(),
-    );
-    doc._seenOpIds.addAll(
-      (json['seen_op_ids'] as List<dynamic>? ?? const <dynamic>[])
-          .whereType<String>(),
-    );
-    for (final op in doc._log) {
-      doc._seenOpIds.add(op.opId);
-    }
-    return doc;
-  }
 }

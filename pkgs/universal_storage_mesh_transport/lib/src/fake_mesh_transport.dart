@@ -11,7 +11,7 @@ import 'mesh_transport.dart';
 ///
 /// ```dart
 /// final pair = FakeMeshPair.paired(a: 'device-a', b: 'device-b');
-/// pair.a.onIncomingSession = responder.handleSession;
+/// final subscription = pair.a.incoming.listen(responder.handleSession);
 /// final session = await pair.b.connect(peerRecordOfA);
 /// ```
 final class FakeMeshPair {
@@ -20,7 +20,13 @@ final class FakeMeshPair {
   factory FakeMeshPair.paired({
     final String a = 'device-a',
     final String b = 'device-b',
-  }) => FakeMeshPair._(FakeMeshTransport._(a), FakeMeshTransport._(b));
+  }) {
+    final transportA = FakeMeshTransport._(a);
+    final transportB = FakeMeshTransport._(b);
+    transportA._remote = transportB;
+    transportB._remote = transportA;
+    return FakeMeshPair._(transportA, transportB);
+  }
 
   final FakeMeshTransport a;
   final FakeMeshTransport b;
@@ -75,7 +81,7 @@ final class FakeMeshTransport implements MeshTransport {
     // Deliver the responder-side session asynchronously so the initiator's
     // connect() is not blocked on handler execution.
     scheduleMicrotask(() {
-      _incoming.add(responderSession);
+      remote._incoming.add(responderSession);
     });
     return initiatorSession;
   }

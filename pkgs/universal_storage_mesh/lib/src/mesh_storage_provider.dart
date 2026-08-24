@@ -3,13 +3,12 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:meta/meta.dart';
 import 'package:universal_storage_convergence/universal_storage_convergence.dart';
 import 'package:universal_storage_interface/universal_storage_interface.dart';
 import 'package:universal_storage_mesh_transport/universal_storage_mesh_transport.dart';
 
+import 'mesh_path_utils.dart';
 import 'mesh_peer_registry.dart';
-import 'mesh_storage_config.dart';
 import 'mesh_sync_protocol.dart';
 
 /// Serverless P2P storage provider (ADR 0010).
@@ -36,11 +35,17 @@ final class MeshStorageProvider implements StorageProvider {
   /// Call once after [initWithConfig].
   void attachTransport(final MeshTransport transport) {
     _transport = transport;
-    transport.onIncomingSession = (final session) async {
-      await _runExchange(session);
-      await session.close();
-    };
+    unawaited(_incomingSubscription?.cancel());
+    _incomingSubscription = transport.incoming.listen((final session) async {
+      try {
+        await _runExchange(session);
+      } finally {
+        await session.close();
+      }
+    });
   }
+
+  StreamSubscription<MeshSession>? _incomingSubscription;
 
   /// Outcome of QR scanning: adds a paired peer to the durable registry.
   Future<void> registerPeer(final MeshPeerRecord peer) async {
@@ -87,7 +92,7 @@ final class MeshStorageProvider implements StorageProvider {
     final String? commitMessage,
   }) async {
     _ensureInitialized();
-    return _applyContentOp(normalizeMeshPath(path), content, allowNew: true);
+    return _applyContentOp(normalizeMeshPath(path), content, true);
   }
 
   @override
@@ -97,7 +102,7 @@ final class MeshStorageProvider implements StorageProvider {
     final String? commitMessage,
   }) async {
     _ensureInitialized();
-    return _applyContentOp(normalizeMeshPath(path), content, allowNew: false);
+    return _applyContentOp(normalizeMeshPath(path), content, false);
   }
 
   @override
@@ -128,12 +133,24 @@ final class MeshStorageProvider implements StorageProvider {
     final entries = <FileEntry>[];
     for (final docPath in _docs.keys) {
       if (!docPath.startsWith(prefix)) continue;
-      final value = LwwMapStrategy.readValue(_docs[docPath]!.state, _contentKey);
+      final value = LwwMapStrategy.readValue(
+        _docs[docPath]!.state,
+        _contentKey,
+      );
       if (value == null && !_hasLiveValue(_docs[docPath]!)) continue;
-      entries.add(FileEntry(name: docPath.substring(prefix.length), isDirectory: false));
+      entries.add(
+        FileEntry(name: docPath.substring(prefix.length), isDirectory: false),
+      );
     }
     entries.sort((final a, final b) => a.name.compareTo(b.name));
     return entries;
+  }
+
+  @override
+  Future<void> restore(final String path, {final String? versionId}) async {
+    throw const UnsupportedOperationException(
+      'Mesh replicas have no version history; restore is not supported.',
+    );
   }
 
   @override
@@ -161,7 +178,8 @@ final class MeshStorageProvider implements StorageProvider {
 
   @override
   Future<void> dispose() async {
-    _transport?.onIncomingSession = null;
+    await _incomingSubscription?.cancel();
+    _incomingSubscription = null;
     _transport = null;
     _docs.clear();
     _initialized = false;
@@ -196,10 +214,7 @@ final class MeshStorageProvider implements StorageProvider {
 
   ConvergenceDoc _ensureDoc(final String docPath) => _docs.putIfAbsent(
     docPath,
-    () => ConvergenceDoc(
-      docId: docPath,
-      actorId: _config!.peerId,
-    ),
+    () => ConvergenceDoc(docId: docPath, actorId: _config!.peerId),
   );
 
   Future<void> _runExchange(final MeshSession session) async {
@@ -207,7 +222,10 @@ final class MeshStorageProvider implements StorageProvider {
     final self = _config!;
     await session.send(
       MeshSyncProtocol.encode(
-        MeshSyncProtocol.hello(peerId: self.peerId, displayName: self.displayName),
+        MeshSyncProtocol.hello(
+          peerId: self.peerId,
+          displayName: self.displayName,
+        ),
       ),
     );
     await session.send(
@@ -218,8 +236,9 @@ final class MeshStorageProvider implements StorageProvider {
       ),
     );
 
-    await _recvOfType(session, MeshSyncProtocol.helloType);
-    final peerVvRaw = await _recvOfType(session, MeshSyncProtocol.vvType);
+    final inbound = StreamIterator<Uint8List>(session.inbound);
+    await _recvOfType(inbound, MeshSyncProtocol.helloType);
+    final peerVvRaw = await _recvOfType(inbound, MeshSyncProtocol.vvType);
     final peerVv = MeshSyncProtocol.parseVv(peerVvRaw);
 
     final opsOut = <OpRecord>[];
@@ -242,11 +261,13 @@ final class MeshStorageProvider implements StorageProvider {
       }
     }
     await session.send(
-      MeshSyncProtocol.encode(MeshSyncProtocol.delta(ops: opsOut, states: statesOut)),
+      MeshSyncProtocol.encode(
+        MeshSyncProtocol.delta(ops: opsOut, states: statesOut),
+      ),
     );
 
     final incoming = MeshSyncProtocol.parseDelta(
-      await _recvOfType(session, MeshSyncProtocol.deltaType),
+      await _recvOfType(inbound, MeshSyncProtocol.deltaType),
     );
     final touched = <ConvergenceDoc>{};
     final grouped = <String, List<OpRecord>>{};
@@ -268,17 +289,20 @@ final class MeshStorageProvider implements StorageProvider {
   }
 
   Future<Map<String, Object?>> _recvOfType(
-    final MeshSession session,
+    final StreamIterator<Uint8List> inbound,
     final String type,
   ) async {
     Uint8List? lastMismatch;
-    await for (final bytes in session.inbound) {
+    while (await inbound.moveNext()) {
+      final bytes = inbound.current;
       final message = MeshSyncProtocol.decode(bytes);
       if (message['type'] == type) return message;
       lastMismatch = bytes;
     }
-    throw StateError('Session closed while waiting for "$type" '
-        '(last unexpected: ${lastMismatch?.length ?? 0} bytes)');
+    throw StateError(
+      'Session closed while waiting for "$type" '
+      '(last unexpected: ${lastMismatch?.length ?? 0} bytes)',
+    );
   }
 
   Future<void> _loadDocs() async {
