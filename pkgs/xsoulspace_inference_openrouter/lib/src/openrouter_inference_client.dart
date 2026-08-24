@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import 'openrouter_schema.dart';
+import 'situation_messages_codec.dart';
 
 /// Model names for OpenRouter-backed models.
 ///

@@ -29,119 +29,16 @@
 /// Run: `dart run benchmark/plan_falsification_experiment.dart`
 library;
 
+
 import 'dart:io';
 
-import 'package:xsoulspace_inference_core/src/agent/tools/fs_tools.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
-import 'coding_suite/checkers.dart';
 import 'coding_suite/scripted_handler.dart';
 import 'coding_suite/task_spec.dart';
 
-/// Experiment-local verification outcome stamped by the mechanical
-/// goalVerificationSystem. The frontier policy reads ONLY this component —
-/// it never touches the filesystem, keeping the policy pure.
-class GoalVerified implements Component {
-  GoalVerified({required this.passed, this.detail = ''});
-  final bool passed;
-  final String detail;
-}
 
-/// Experiment-local step status component (ADR 0009 §2 data shape preview).
-class StepStatus implements Component {
-  StepStatus(this.value);
-  final String value; // open | verified | failed
-}
-
-/// Experiment-local backlink: which goal entity this step serves.
-class StepGoalLink implements Component {
-  const StepGoalLink(this.goal);
-  final Entity goal;
-}
-
-/// The plan-frontier policy: fires exactly where [ReActContinuationPolicy]
-/// fires (fresh tool result), but consults the GOAL first — via the pure
-/// [GoalVerified] component, never via I/O.
-///
-/// - All success criteria hold (verification landed mechanically) → abstain
-///   (no agency; the loop goes idle).
-/// - Any criterion fails → open ONE tight continuation carrying the failing
-///   predicate details (mechanical feedback, not narrative).
-///
-/// Purity note: an earlier draft evaluated checkers inside this policy by
-/// reading the jail directly — a documented deviation, now closed. Predicate
-/// execution lives in [goalVerificationSystem], which runs the registered
-/// `verify_workspace` tool through the same executor path tools take; the
-/// policy consumes only its component/beat residue.
-class PlanFrontierPolicy implements DecisionPolicy {
-  PlanFrontierPolicy();
-
-  @override
-  String get name => 'plan_frontier';
-
-  @override
-  DecisionDraft? evaluate(DecisionContext ctx) {
-    if (!ctx.has<ToolResultPendingMarker>()) return null;
-    final verified = ctx.get<GoalVerified>();
-    if (verified == null) return null; // verification has not landed yet
-    _updateStepEntities(ctx.world, verified.passed);
-    if (verified.passed) {
-      // Goal vector satisfied — mechanically done. No LLM call is spent on
-      // asking the model whether it finished. This is the entire bet.
-      return null;
-    }
-    return DecisionDraft(
-      prompt: 'Goal not yet verified. Failing criteria:\n${verified.detail}\n'
-          'Continue working toward the goal.',
-    );
-  }
-
-  void _updateStepEntities(World world, bool allPassed) {
-    for (final (entity, _, _) in world.query2<StepGoalLink, StepStatus>()
-        .toList()) {
-      entity.insert(StepStatus(allPassed ? 'verified' : 'failed'));
-    }
-  }
-}
-
-/// Mechanical verification: runs after tool results land, executes the
-/// `verify_workspace` tool through [ToolExecutorResource] (the same path
-/// LLM-dispatched tool calls take — predicates are seam-3 tools), and stamps
-/// [GoalVerified] + a verifier observation beat onto the graph. Never calls
-/// a model.
-Future<void> goalVerificationSystem(World world) async {
-  // ignore: avoid_print
-  stdout.writeln('[dbg] goalVerification ticked');
-  for (final (entity, _, _) in world
-      .query2<Actor, ToolResultPendingMarker>()
-      .toList()) {
-    // ignore: avoid_print
-    stdout.writeln('[dbg] verifying actor');
-
-    final executor = world
-        .getResource<ToolExecutorResource>()
-        .get(const ToolName('verify_workspace'));
-    if (executor == null) continue;
-    final output = await executor(const {});
-    final passed = output is Map && output['passed'] == true;
-    final detail = output is Map ? '${output['failures'] ?? ''}' : '$output';
-    entity.insert(GoalVerified(passed: passed, detail: detail));
-    // Verifier provenance stays in the graph as an observation beat.
-    final threads = entity.get<ActorThreads>()?.threads;
-    if (threads == null || threads.isEmpty) continue;
-    final beat = world.spawnComponents([
-      TextContent('verify_workspace → ${passed ? 'pass' : 'fail'} $detail'),
-      BeatStatus(BeatStatusEnum.complete),
-      BeatModality(BeatModalityEnum.observation),
-      BelongsToThread(threads.first),
-    ]);
-    indexBeat(
-      world,
-      beat,
-      keywordsOf('verify_workspace ${passed ? 'pass' : 'fail'}'),
-    );
-  }
-}
+import 'plan_frontier_arms.dart';
 
 /// Emits exactly one canned action per generation call — unlike
 /// [ScriptedSuiteHandler] which dumps every step plus a narrative close in
@@ -182,173 +79,6 @@ class OneActionPerCallHandler implements GenerationHandler {
   }
 }
 
-/// Plan-driven arm: mirrors CodingSuiteRunner.runTask's production world
-/// construction, swaps the decision flow, adds Goal+step entities.
-/// [planFrontier] selects the arm:
-/// - false → default ReAct flow (baseline: continuation after every tool
-///   result; the model must spend one final call to say "done").
-/// - true  → [PlanFrontierPolicy] (goal criteria verified mechanically;
-///   loop terminates with zero close-out calls).
-Future<_Row> _runArm(CodingTask task, {required bool planFrontier}) async {
-  final jail = await Directory.systemTemp.createTemp('plan_exp_${task.id}_');
-  try {
-    for (final f in task.fixtures) {
-      final file = File('${jail.path}/${f.path}');
-      await file.parent.create(recursive: true);
-      await file.writeAsString(f.content);
-    }
-
-    final world = World()..addPlugin(AgentPlugin());
-    // Experiment-local components (ADR 0009 §2 shape preview).
-    world.components
-      ..registerObjectComponent<StepGoalLink>()
-      ..registerObjectComponent<StepStatus>()
-      ..registerObjectComponent<GoalVerified>();
-    final router = ModelRouter(inferenceClientsBuilders: {});
-    final modelId = ModelId('suite-model');
-    router.models[modelId] = Model(id: modelId, name: DefaultModelNames.appleFoundation);
-    world
-      ..upsertResource(ModelRouterResource(router))
-      ..upsertResource(ToolRegistryResource())
-      ..upsertResource(AgencyPolicy(maxConcurrent: 1))
-      ..flush();
-
-    world.getResource<GenerationHandlerResource>().registerDefault(
-          OneActionPerCallHandler(taskId: task.id),
-        );
-    final registry = ToolRegistry();
-    fsTools(FsToolsRoot(jail.path)).forEach(registry.register);
-    if (planFrontier) {
-      // Goal success criteria as a seam-3 verifier tool — the ONLY place the
-      // jail filesystem is read. Executed mechanically by
-      // [goalVerificationSystem], never by a model decision.
-      registry.register(
-        ToolDef.encode(
-          name: const ToolName('verify_workspace'),
-          description: 'Evaluate the goal success criteria against the '
-              'workspace. Returns pass/fail per criterion.',
-          execute: (args) async {
-            final results = [
-              for (final c in task.checkers) evaluateChecker(c, jail.path),
-            ];
-            return {
-              'passed': results.isNotEmpty && results.every((r) => r.passed),
-              'failures': [
-                for (final (i, r) in results.indexed)
-                  if (!r.passed) 'criterion #$i: ${r.detail}',
-              ].join('\n'),
-            };
-          },
-        ),
-      );
-      // Mechanical verification runs inside the Mechanical schedule, after
-      // tool results land and BEFORE the schedule's flush, so the stamped
-      // [GoalVerified] is visible to the next tick's AgencyGrant pass.
-      world
-          .schedule(Schedules.mechanical)
-          .add(
-            goalVerificationSystem,
-            name: 'goalVerification',
-            runAfter: const ['processToolResults'],
-            runBefore: const ['flushAfterMechanical'],
-          );
-      // Replace the default ReAct flow with the plan frontier (ADR 0009 §3).
-      world.upsertResource(
-        DecisionFlowResource(DecisionFlow([PlanFrontierPolicy()])),
-      );
-    }
-    world.getResource<ToolRegistryResource>().register('default', registry);
-
-    final scene = world.spawnComponents([const Scene(), SceneFrame()]);
-    final actor = world.spawnComponents([
-      Actor(agentId: AgentId.create()),
-      ActorModel(modelId: modelId),
-      ActorSystemPrompt(text: task.systemPrompt),
-      ActorThreads(threads: []),
-      const ActorTools(registryName: 'default'),
-      PresentInScene(sceneEntity: scene),
-      OpenDecision(prompt: task.prompt),
-    ]);
-    final thread = spawnThread(world, actor, scene);
-    world.upsertComponent(actor, ActorThreads(threads: [thread]));
-
-    // Goal vector + step entity — durable facts in the graph (ADR 0009 §1–2).
-    // Present in BOTH arms so entity bookkeeping never confounds the delta;
-    // only the decision flow differs.
-    final goal = world.spawnComponents([
-      Goal(text: task.prompt),
-    ]);
-    world.spawnComponents([
-      StepGoalLink(goal),
-      StepStatus('open'),
-    ]);
-    world.flush();
-
-    final responsesAtStart = world.events.hasRegistered<ActorGenerateResponse>()
-        ? world.events.stats<ActorGenerateResponse>().sent
-        : 0;
-
-    final sw = Stopwatch()..start();
-    final loop = HarnessLoop(world: world);
-    await loop.runUntilIdle(maxTicks: 2000);
-    sw.stop();
-
-    var verifications = 0;
-    // Count mechanical verifications: one per tool result that landed while
-    // the frontier policy was active (each triggered a predicate evaluation
-    // that never touched an LLM).
-    for (final _ in world.query3<ToolResultContent, BeatStatus, TextContent>()) {
-      verifications++;
-    }
-
-    final llmCalls =
-        world.events.stats<ActorGenerateResponse>().sent - responsesAtStart;
-    var tokensUsed = 0;
-    for (final (_, _, situation) in world.query2<Actor, Situation>()) {
-      tokensUsed += situation.tokensUsed;
-    }
-
-    final checkerResults = [
-      for (final c in task.checkers) evaluateChecker(c, jail.path),
-    ];
-    final passed =
-        checkerResults.isNotEmpty && checkerResults.every((c) => c.passed);
-
-    return _Row(
-      taskId: task.id,
-      passed: passed,
-      llmCalls: llmCalls,
-      tokensUsed: tokensUsed,
-      wallMs: sw.elapsedMilliseconds,
-      mechanicalVerifications: verifications,
-      stepStatuses: [
-        for (final (_, _, s) in world.query2<StepGoalLink, StepStatus>()) s.value,
-      ],
-    );
-  } finally {
-    jail.delete(recursive: true);
-  }
-}
-
-class _Row {
-  _Row({
-    required this.taskId,
-    required this.passed,
-    required this.llmCalls,
-    required this.tokensUsed,
-    required this.wallMs,
-    required this.mechanicalVerifications,
-    required this.stepStatuses,
-  });
-  final String taskId;
-  final bool passed;
-  final int llmCalls;
-  final int tokensUsed;
-  final int wallMs;
-  final int mechanicalVerifications;
-  final List<String> stepStatuses;
-}
-
 Future<void> main(List<String> args) async {
   final filter = args.isEmpty ? '' : args.first;
   final tasks = loadTasks('benchmark/coding_suite/tasks')
@@ -363,11 +93,23 @@ Future<void> main(List<String> args) async {
   // ScriptedSuiteHandler for the baseline; it re-emits all steps on every
   // continuation round until maxToolRounds exhausts — 17 "calls" for a
   // one-write task — which measures the handler, not the harness.)
-  final baseline = <_Row>[];
-  final planRows = <_Row>[];
+  final baseline = <PlanRow>[];
+  final planRows = <PlanRow>[];
   for (final task in tasks) {
-    baseline.add(await _runArm(task, planFrontier: false));
-    planRows.add(await _runArm(task, planFrontier: true));
+    baseline.add(
+      await runPlanArm(
+        task,
+        planFrontier: false,
+        buildHandler: (t) => OneActionPerCallHandler(taskId: t.id),
+      ),
+    );
+    planRows.add(
+      await runPlanArm(
+        task,
+        planFrontier: true,
+        buildHandler: (t) => OneActionPerCallHandler(taskId: t.id),
+      ),
+    );
   }
 
   // Comparison table.

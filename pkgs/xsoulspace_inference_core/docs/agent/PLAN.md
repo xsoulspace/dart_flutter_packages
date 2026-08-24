@@ -48,8 +48,12 @@ production shape, in order:
    in-frame.
 5. Plan-frontier projection: explicit `goalLink`/`dependsOn` traversal,
    token-budgeted, green-screen elsewhere.
-6. Real-model probe: same A/B against AFM on the 6 edit tasks — does the
-   saved close-out call survive a real model, or does it reappear elsewhere?
+6. Real-model probe: **ran** — see
+   [results_plan_falsification.md](results_plan_falsification.md) §real-model.
+   Mechanism confirmed (17→1 call on a task the baseline failed), but
+   convergence dominates on-device. Follow-ups before re-probe: cumulative
+   token accounting in the runner; `asst:`/`tool:` fragment-prefix A/B
+   against the Phase 4 baseline.
 7. Decomposition as one agentic act per goal (amortized; escalation tier OK),
    fidelity measured via ADR 0004 causal coupling.
 

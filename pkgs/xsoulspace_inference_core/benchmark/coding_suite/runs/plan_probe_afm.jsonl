@@ -1,0 +1,12 @@
+{"task_id":"edit_01_rename_constant","arm":"baseline","passed":false,"llm_calls":17,"tokens_used":516,"wall_ms":138373}
+{"task_id":"edit_01_rename_constant","arm":"plan","passed":false,"llm_calls":17,"tokens_used":657,"wall_ms":104365}
+{"task_id":"edit_02_add_field","arm":"baseline","passed":false,"llm_calls":17,"tokens_used":581,"wall_ms":161618}
+{"task_id":"edit_02_add_field","arm":"plan","passed":false,"llm_calls":3,"tokens_used":463,"wall_ms":28874}
+{"task_id":"edit_03_fix_typo_string","arm":"baseline","passed":false,"llm_calls":17,"tokens_used":536,"wall_ms":229566}
+{"task_id":"edit_03_fix_typo_string","arm":"plan","passed":false,"llm_calls":17,"tokens_used":558,"wall_ms":179193}
+{"task_id":"edit_04_delete_function","arm":"baseline","passed":false,"llm_calls":17,"tokens_used":514,"wall_ms":56670}
+{"task_id":"edit_04_delete_function","arm":"plan","passed":false,"llm_calls":2,"tokens_used":398,"wall_ms":5583}
+{"task_id":"edit_05_write_new_file","arm":"baseline","passed":false,"llm_calls":17,"tokens_used":593,"wall_ms":63750}
+{"task_id":"edit_05_write_new_file","arm":"plan","passed":true,"llm_calls":1,"tokens_used":326,"wall_ms":2449}
+{"task_id":"edit_06_json_config_update","arm":"baseline","passed":false,"llm_calls":17,"tokens_used":488,"wall_ms":49866}
+{"task_id":"edit_06_json_config_update","arm":"plan","passed":false,"llm_calls":17,"tokens_used":575,"wall_ms":35372}
