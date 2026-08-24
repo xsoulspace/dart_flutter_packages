@@ -30,12 +30,7 @@ final class AddressedRelayProtocol {
     ),
   );
 
-  static ({
-    String fromPeerId,
-    String toPeerId,
-    Uint8List payload,
-    String kind,
-  })
+  static ({String fromPeerId, String toPeerId, Uint8List payload, String kind})
   decode(final List<int> bytes) {
     final raw = jsonDecode(utf8.decode(bytes)) as Map<dynamic, dynamic>;
     if (raw['v'] != version) {

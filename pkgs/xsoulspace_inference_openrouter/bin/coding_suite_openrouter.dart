@@ -160,7 +160,10 @@ class _LoggingHandler implements GenerationHandler {
     try {
       final response = await inner.generate(world, request);
       final names = response.toolCalls.map((t) => t.name.value).toList();
-      print('[decision] structured=${response.structuredOutput} $names');
+      print('[decision] tool_calls=$names raw=${response.rawOutput}');
+      if (names.isEmpty && response.structuredOutput.isNotEmpty) {
+        print('[decision] structured=${response.structuredOutput}');
+      }
       return response;
     } on Object catch (e) {
       print('[decision] THREW: $e');

@@ -11,7 +11,7 @@ const int _maxFrameBytes = 8 * 1024 * 1024;
 
 Uint8List frameMessage(final Uint8List payload) {
   final out = Uint8List(_lengthPrefixBytes + payload.length);
-    final header = ByteData.view(
+  final header = ByteData.view(
     out.buffer,
     out.offsetInBytes,
     _lengthPrefixBytes,
@@ -51,10 +51,9 @@ final class FrameDecoder {
       );
       offset += _lengthPrefixBytes + length;
     }
-    _buffer =
-        offset == combined.length
-            ? Uint8List(0)
-            : Uint8List.sublistView(combined, offset);
+    _buffer = offset == combined.length
+        ? Uint8List(0)
+        : Uint8List.sublistView(combined, offset);
     return frames;
   }
 }

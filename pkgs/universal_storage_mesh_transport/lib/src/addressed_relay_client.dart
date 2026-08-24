@@ -47,30 +47,37 @@ final class AddressedRelayClient implements MeshTransport {
       payload: utf8.encode('register'),
       kind: AddressedRelayProtocol.registerKind,
     );
-    channel.stream.listen((message) {
-      if (message is! List<int>) return;
-      final envelope = AddressedRelayProtocol.decode(message);
-      if (envelope.toPeerId != selfId) return;
-      if (envelope.kind == AddressedRelayProtocol.registerKind) return;
-      if (envelope.kind == AddressedRelayProtocol.openKind) return;
-      final session =
-          _sessions.putIfAbsent(
-            envelope.fromPeerId,
-            () {
-              final created = _AddressedSession(selfId, envelope.fromPeerId);
-              created.client = this;
-              scheduleMicrotask(() => _incoming.add(created));
-              return created;
-            },
-          );
-      session.receive(envelope.payload);
-    }, onDone: () {
-      for (final session in _sessions.values) {
-        session.closeRemote();
-      }
-      _sessions.clear();
-      _channel = null;
-    });
+    channel.stream.listen(
+      (message) {
+        if (message is! List<int>) return;
+        final envelope = AddressedRelayProtocol.decode(message);
+        if (envelope.toPeerId != selfId) return;
+        if (envelope.kind == AddressedRelayProtocol.registerKind) return;
+        if (envelope.kind == AddressedRelayProtocol.openKind) {
+          _sessions.putIfAbsent(envelope.fromPeerId, () {
+            final created = _AddressedSession(selfId, envelope.fromPeerId);
+            created.client = this;
+            scheduleMicrotask(() => _incoming.add(created));
+            return created;
+          });
+          return;
+        }
+        final session = _sessions.putIfAbsent(envelope.fromPeerId, () {
+          final created = _AddressedSession(selfId, envelope.fromPeerId);
+          created.client = this;
+          scheduleMicrotask(() => _incoming.add(created));
+          return created;
+        });
+        session.receive(envelope.payload);
+      },
+      onDone: () {
+        for (final session in _sessions.values) {
+          session.closeRemote();
+        }
+        _sessions.clear();
+        _channel = null;
+      },
+    );
   }
 
   @override
@@ -96,18 +103,19 @@ final class AddressedRelayClient implements MeshTransport {
     required final String toPeerId,
     required final List<int> payload,
     final String kind = AddressedRelayProtocol.dataKind,
-  }) =>
-      _channel?.sink.add(
-        AddressedRelayProtocol.encode(
-          fromPeerId: selfId,
-          toPeerId: toPeerId,
-          payload: payload,
-          kind: kind,
-        ),
-      );
+  }) => _channel?.sink.add(
+    AddressedRelayProtocol.encode(
+      fromPeerId: selfId,
+      toPeerId: toPeerId,
+      payload: payload,
+      kind: kind,
+    ),
+  );
 
-  void _route(final String peerId, final Uint8List bytes) =>
-      _sendEnvelope(toPeerId: peerId, payload: bytes);
+  Future<void> _route(final String peerId, final Uint8List bytes) async {
+    await _requireChannel();
+    _sendEnvelope(toPeerId: peerId, payload: bytes);
+  }
 }
 
 final class _AddressedSession implements MeshSession {

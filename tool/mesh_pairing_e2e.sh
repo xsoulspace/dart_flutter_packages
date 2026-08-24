@@ -84,12 +84,11 @@ MAC_WS=$(normalize_ws "$MAC_HTTP")
 WEB_WS=$(normalize_ws "$WEB_HTTP")
 
 fmtk_exec() {
-  local target=$1 name=$2 args=${3:-{}}
-  local json
-  printf 'FMTK_TOOL_ARGS=[%s]\n' "$args" >&2 || true
-  json=$(FMTK_TARGET_URI="$target" FMTK_TOOL_ARGS="$args" python3 -c \
-    'import json,os; d=json.loads(os.environ["FMTK_TOOL_ARGS"]); d.setdefault("connection",{})["uri"]=os.environ["FMTK_TARGET_URI"]; print(json.dumps(d))')
-  /tmp/fmtk-fixed exec --name "$name" --args "$json"
+  local target=$1 name=$2
+  shift 2 2>/dev/null || true
+  FMTK_TARGET_URI="$target" FMTK_TOOL_ARGS="${*:-"{}"}" python3 -c \
+    'import json,os; d=json.loads(os.environ["FMTK_TOOL_ARGS"]); d.setdefault("connection",{})["uri"]=os.environ["FMTK_TARGET_URI"]; print(json.dumps(d))' > /tmp/fmtk_args.json
+  /tmp/fmtk-fixed exec --name "$name" --args "$(cat /tmp/fmtk_args.json)"
 }
 
 assert_ok() {

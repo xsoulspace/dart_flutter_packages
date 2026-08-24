@@ -45,9 +45,7 @@ void main() {
     expect(remote.remotePeerId, 'a');
 
     final received = Completer<String>();
-    remote.inbound.listen(
-      (bytes) => received.complete(utf8.decode(bytes)),
-    );
+    remote.inbound.listen((bytes) => received.complete(utf8.decode(bytes)));
     await session.send(Uint8List.fromList('ping'.codeUnits));
     expect(await received.future, 'ping');
   });

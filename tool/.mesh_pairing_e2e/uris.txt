@@ -1,2 +1,2 @@
-MAC_HTTP=http://127.0.0.1:53715/9o_bf3yNtpA=/
-WEB_HTTP=http://127.0.0.1:53820/o8YPDBWmBlw=
+MAC_HTTP=http://127.0.0.1:55108/iENJ1U9nKcc=/
+WEB_HTTP=http://127.0.0.1:55229/FOeb8SrKJag=

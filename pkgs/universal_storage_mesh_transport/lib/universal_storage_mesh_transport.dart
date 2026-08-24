@@ -10,3 +10,4 @@ export 'src/mesh_peer.dart';
 export 'src/mesh_transport.dart';
 export 'src/addressed_relay_protocol.dart';
 export 'src/addressed_relay_client.dart';
+export 'src/addressed_relay_server.dart';

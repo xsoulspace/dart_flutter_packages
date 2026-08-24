@@ -53,3 +53,22 @@ Launching lib/main.dart on macOS in debug mode...
 Building macOS application...                                   
 ✓ Built build/macos/Build/Products/Debug/mesh_pairing_app.app
 [IMPORTANT:flutter/shell/platform/embedder/embedder_surface_metal_impeller.mm(53)] Using the Impeller rendering backend (MetalSDF).
+Failed to foreground app; open returned 1
+Syncing files to device macOS...                                
+flutter: [MCPToolkit] Posted tool registration events: 19 tools, 0 resources
+flutter: [MCPToolkit] Posted tool registration events: 1 tools, 0 resources
+flutter: [MCPToolkit] Posted tool registration events: 1 tools, 0 resources
+flutter: [MCPToolkit] Posted tool registration events: 1 tools, 0 resources
+flutter: [MCPToolkit] Posted tool registration events: 1 tools, 0 resources
+Syncing files to device macOS...                                    55ms
+
+Flutter run key commands.
+r Hot reload. 🔥🔥🔥
+R Hot restart.
+h List all available interactive commands.
+d Detach (terminate "flutter run" but leave application running).
+c Clear the screen
+q Quit (terminate the application on the device).
+
+A Dart VM Service on macOS is available at: http://127.0.0.1:55108/iENJ1U9nKcc=/
+The Flutter DevTools debugger and profiler on macOS is available at: http://127.0.0.1:55108/iENJ1U9nKcc=/devtools/?uri=ws://127.0.0.1:55108/iENJ1U9nKcc=/ws

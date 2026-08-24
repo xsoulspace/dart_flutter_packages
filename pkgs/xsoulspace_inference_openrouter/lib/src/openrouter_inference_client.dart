@@ -170,6 +170,8 @@ class OpenRouterInferenceClient implements InferenceClient {
     final body = <String, dynamic>{
       'model': model,
       'messages': messages,
+      if (toolRegistry != null && toolRegistry.tools.isNotEmpty)
+        'tool_choice': 'auto',
       if (jsonSchemaFormat != null) 'response_format': jsonSchemaFormat,
       if (toolRegistry != null && toolRegistry.tools.isNotEmpty)
         'tools': _buildTools(toolRegistry),
