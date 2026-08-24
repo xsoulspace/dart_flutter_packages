@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
-import 'package:meta/meta.dart';
 import 'package:universal_storage_mesh_transport/'
     'universal_storage_mesh_transport.dart';
 
@@ -18,11 +17,16 @@ final class MeshPairingSession {
     required this.selfId,
     required this.identityKeyPair,
     Future<SimpleKeyPair>? ephemeralKeyPair,
+    this.transportHint,
   }) : _ephemeralKeyPair = ephemeralKeyPair ?? X25519().newKeyPair();
 
   final String selfId;
   final SimpleKeyPair identityKeyPair;
   final Future<SimpleKeyPair> _ephemeralKeyPair;
+
+  /// Connection hint embedded in the signed advertisement (e.g. a relay
+  /// endpoint scanners should connect to).
+  final String? transportHint;
 
   Uint8List? _payload;
   var _accepted = false;
@@ -36,12 +40,16 @@ final class MeshPairingSession {
       identityKeyPair: identityKeyPair,
       ephemeralKeyPair: await _ephemeralKeyPair,
       peerId: selfId,
+      transportHint: transportHint,
     );
   }
 
   String pairingCode() => base64Encode(_payload!);
 
   /// Verifies and accepts an incoming signed advertisement.
+  ///
+  /// The returned record carries the peer's advertised connection hint
+  /// under the `ws` key of [MeshPeerRecord.endpointHints] when present.
   Future<MeshPeerRecord> acceptQrPayload(final Uint8List qrPayload) async {
     if (_accepted) {
       throw StateError('Pairing session already accepted a peer');
@@ -57,6 +65,10 @@ final class MeshPairingSession {
       peerId: result.peerId,
       displayName: result.peerId,
       identityKey: result.peerIdentityKey,
+      endpointHints: {
+        if (result.transportHint != null && result.transportHint!.isNotEmpty)
+          'ws': result.transportHint!,
+      },
     );
   }
 }

@@ -59,6 +59,43 @@ void main() {
       );
     });
 
+    test('transport hint round-trips and stays signature-protected', () async {
+      const hint = 'ws://192.168.1.20:54321';
+      final qr = await PairingService.buildQrPayload(
+        identityKeyPair: aliceIdentity,
+        ephemeralKeyPair: await X25519().newKeyPair(),
+        peerId: 'device-a',
+        transportHint: hint,
+      );
+      final result = await PairingService.acceptQrPayload(
+        qrPayload: qr,
+        peerIdentityKey: aliceIdentityPub,
+        ownEphemeralKeyPair: await X25519().newKeyPair(),
+        ourPeerId: 'device-b',
+      );
+      expect(result.transportHint, hint);
+
+      // Tampering with the hint must invalidate the signature.
+      final body = utf8.decode(
+        qr.sublist('mesh-pair/v1\n'.length, qr.length - 64),
+      );
+      final forgedBody = utf8.encode(body.replaceAll(hint, 'ws://evil:1'));
+      final forged = Uint8List.fromList([
+        ...utf8.encode('mesh-pair/v1\n'),
+        ...forgedBody,
+        ...qr.sublist(qr.length - 64),
+      ]);
+      await expectLater(
+        PairingService.acceptQrPayload(
+          qrPayload: forged,
+          peerIdentityKey: aliceIdentityPub,
+          ownEphemeralKeyPair: await X25519().newKeyPair(),
+          ourPeerId: 'device-b',
+        ),
+        throwsA(isA<PairingException>()),
+      );
+    });
+
     test('tampered payload is rejected', () async {
       final aliceEph = await X25519().newKeyPair();
       var qr = await PairingService.buildQrPayload(

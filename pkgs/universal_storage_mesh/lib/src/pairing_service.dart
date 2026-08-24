@@ -16,6 +16,7 @@ final class PairingResult {
     required this.peerIdentityKey,
     required this.sendKey,
     required this.receiveKey,
+    this.transportHint,
   });
 
   /// Stable id announced by the peer in its signed envelope.
@@ -29,6 +30,11 @@ final class PairingResult {
 
   /// AEAD key for frames we receive from the peer.
   final SecretKey receiveKey;
+
+  /// Optional connection hint advertised by the peer (e.g. a relay
+  /// endpoint like `ws://192.168.1.20:54321`). `null` when absent, so
+  /// payloads produced before hints existed keep pairing.
+  final String? transportHint;
 }
 
 /// Out-of-band trust bootstrap (ADR 0010 §3).
@@ -55,6 +61,9 @@ final class PairingService {
   /// Builds the signed pairing payload to embed in a QR code.
   ///
   /// [ephemeralKeyPair] must be freshly generated per pairing (X25519).
+  /// [transportHint] is an optional connection hint (e.g. a relay
+  /// endpoint) embedded in the signed body so scanners can reach this
+  /// device without manual endpoint entry.
   static Future<Uint8List> buildQrPayload({
     required final SimpleKeyPair identityKeyPair,
     required final SimpleKeyPair ephemeralKeyPair,
@@ -69,6 +78,8 @@ final class PairingService {
         'peer_id': peerId,
         'eph': base64Encode(ephPub.bytes),
         'idk': base64Encode(identityPub.bytes),
+        if (transportHint != null && transportHint.isNotEmpty)
+          'hint': transportHint,
       }),
     );
     final signature = await _ed25519.sign(body, keyPair: identityKeyPair);
@@ -141,6 +152,7 @@ final class PairingService {
       // second. The initiator mirrors this (see [deriveInitiatorKeys]).
       sendKey: SecretKey(bytes.sublist(0, 32)),
       receiveKey: SecretKey(bytes.sublist(32)),
+      transportHint: envelope['hint'] as String?,
     );
   }
 
