@@ -214,3 +214,62 @@ The plan-frontier mechanism delivers its scripted promise on-device where
 verification can pass, and halves spend overall. The binding constraint has
 moved decisively from harness mechanics to model decision quality — exactly
 where ADR 0009's decomposition and acceptance-criteria-in-frame are aimed.
+
+---
+
+## Round 4 — idle-verify rule + decomposition mechanics (2026-08)
+
+### 1. Idle-goal verification rule landed
+
+Closes the coverage gap from Round 2: an episode where the model **answers
+without acting** used to end silently on an unverified goal (edit_02 on
+device: 1 call, FAIL, nothing verified).
+
+- `goalVerificationSystem` now also runs while an actor sits **idle with an
+  open goal**: verifies mechanically; on failure opens ONE tight nudge
+  decision directly in-system (bounded by `maxIdleNudges = 1`).
+- **Two invariant lessons re-learned the hard way**:
+  1. First implementation deferred the nudge via a marker component for the
+     policy to pick up next tick — invisible to `canSleep()`, so
+     `runUntilIdle` exited first. Fixed by opening the decision in-system
+     (the exact "idle ⇒ nothing stranded" rule from the 2026-08 postmortem).
+  2. The idle check must mirror `canSleep()` **including in-flight tool tasks
+     and unconsumed result events** — otherwise the verifier races an
+     executing write and nudges on stale workspace state.
+- Proof: `benchmark/idle_verify_proof.dart` — a deterministic flaky handler
+  (answer-only first call) ends FAIL/1-call without the rule; WITH the rule:
+  caught → nudged once → goal achieved. **2 calls, PASS, 664 tokens.**
+- On-device cost data (`runs/plan_probe_afm_idlerule.jsonl`): with 2 nudges,
+  hopeless tasks reopened full tool-round chains (edit_04: 17→33 calls, zero
+  pass gain) → nudges capped at 1.
+
+### 2. Decomposition mechanics landed
+
+`benchmark/decomposition_experiment.dart`: steps as entities with per-step
+claims + exact-content acceptance predicates; each decision sees ONLY the
+current step's criterion; per-step verification is mechanical graph logic;
+frontier advances by opening the next step's decision — zero close-out calls.
+(The decompose-once transform itself is mocked; its fidelity is a separate
+measurement.)
+
+| task | base calls | decomp calls | base cum | decomp cum | cum Δ |
+| --- | --- | --- | --- | --- | --- |
+| refactor_01_extract_shared_function | 21 | 3 | 3863 | 1085 | −72% |
+| refactor_02_rename_across_files | 21 | 3 | 3778 | 1029 | −73% |
+| refactor_03_split_file | 20 | 4 | 2585 | 1449 | −44% |
+| refactor_04_consistent_api | 21 | 3 | 3770 | 1058 | −72% |
+
+All pass both shapes. Calls scale with STEPS (actions + 0 overhead), not
+rounds-budget; cumulative tokens roughly halve-to-third because each cut
+carries one step's criterion instead of a whole-goal prompt plus narrative.
+
+### Verdict after four rounds
+
+Every layer of ADR 0009 is now demonstrated end-to-end on the real harness:
+goal vector + mechanical verification (R1), pure frontier policy + verifier
+tools behind seam 3 (R2), fair-comparison accounting + codec ruling (R3),
+idle-coverage rule + per-step decomposition (R4). Scripted deltas: −39%
+calls/−19% tokens (whole-goal frontier); decomposition adds −44…−73%
+cumulative tokens on multi-step tasks at equal pass rate. Remaining unknowns,
+in order: real-model decomposition probe (needs an actual decompose call via
+guided schema), cumulative-token re-run of the Phase 4 matrix.

@@ -56,9 +56,13 @@ production shape, in order:
    pre-existing fs-jail path rejections (present 156× in the Phase 4 log),
    masked then by the checker-retry loop. **Mitigations landed + re-probed:
    −36% calls, −50% cumulative tokens on real AFM; edit_05 passes with 1 call
-   (baseline: 17, fail).** Known gap: answer-without-acting episodes end
-   unverified — candidate mechanical rule "idle + open goal ⇒ verify".
-   Next lever: decomposition with per-step criteria.
+   (baseline: 17, fail).** **Idle-coverage rule LANDED** (mechanical
+   "idle + open goal ⇒ verify", bounded to 1 nudge — results §round 4) and
+   **decomposition mechanics LANDED** (per-step criteria in-frame, zero
+   close-out: scripted refactor tasks −44…−72% cumulative tokens at equal
+   pass rate — `benchmark/decomposition_experiment.dart`). Next lever:
+   real-model decomposition probe (decompose call via guided schema), then
+   the Phase 4 matrix re-run under cumulative token accounting.
 7. Decomposition as one agentic act per goal (amortized; escalation tier OK),
    fidelity measured via ADR 0004 causal coupling.
 

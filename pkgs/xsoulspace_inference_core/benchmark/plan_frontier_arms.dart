@@ -45,6 +45,26 @@ class StepGoalLink implements Component {
   final Entity goal;
 }
 
+/// Experiment-local backlink: which goal entity this ACTOR serves.
+class ActorGoalRef implements Component {
+  const ActorGoalRef(this.goal);
+  final Entity goal;
+}
+
+/// How many idle nudges this actor has received (bounds the verify→nudge
+/// loop: total model calls ≤ initial attempt + maxIdleNudges).
+class IdleNudgeCount implements Component {
+  IdleNudgeCount(this.value);
+  int value;
+}
+
+/// Max idle nudges before giving up on an unverified goal (bounded loop).
+/// AFM probe data (runs/plan_probe_afm_idlerule.jsonl): with 2 nudges,
+/// hopeless tasks re-opened full tool-round chains (+16 calls on edit_04)
+/// with zero pass-rate gain. One nudge catches the answer-without-acting
+/// flake class (see idle_verify_proof.dart) at bounded cost.
+const int maxIdleNudges = 1;
+
 /// The plan-frontier policy: fires exactly where [ReActContinuationPolicy]
 /// fires (fresh tool result), but consults the GOAL first — via the pure
 /// [GoalVerified] component, never via I/O.
@@ -83,11 +103,15 @@ class PlanFrontierPolicy implements DecisionPolicy {
     );
   }
 
-  void _updateStepEntities(World world, bool allPassed) {
-    for (final (entity, _, _) in world.query2<StepGoalLink, StepStatus>()
-        .toList()) {
-      entity.insert(StepStatus(allPassed ? 'verified' : 'failed'));
-    }
+  void _updateStepEntities(World world, bool allPassed) =>
+      _updateStepStatuses(world, allPassed);
+}
+
+/// Flip every step entity's status (shared by policy + idle verifier).
+void _updateStepStatuses(World world, bool allPassed) {
+  for (final (entity, _, _) in world.query2<StepGoalLink, StepStatus>()
+      .toList()) {
+    entity.insert(StepStatus(allPassed ? 'verified' : 'failed'));
   }
 }
 
@@ -109,7 +133,6 @@ Future<void> goalVerificationSystem(World world) async {
         .getResource<ToolRegistryResource>()
         .get('default')
         ?.get(const ToolName('verify_workspace'));
-    stdout.writeln('[dbg] verifying actor, executor=' + (executor?.toString() ?? 'null') + ' toolDef=' + (toolDef?.toString() ?? 'null'));
     if (executor == null && toolDef == null) continue;
     Object? output;
     try {
@@ -145,6 +168,75 @@ Future<void> goalVerificationSystem(World world) async {
       keywordsOf('verify_workspace ${passed ? 'pass' : 'fail'}'),
     );
   }
+  // ---- Idle-goal verification -------------------------------------------
+  // Coverage rule (ADR 0009 §3): the frontier only gates after TOOL results,
+  // so an episode where the model ANSWERS WITHOUT ACTING would otherwise end
+  // silently on an unverified goal. While an actor sits idle with an open
+  // goal: verify mechanically; on failure, nudge ONCE per strike, bounded by
+  // [maxIdleNudges]. Purely mechanical — never a model call.
+  for (final (entity, _, _) in world.query2<Actor, ActorGoalRef>().toList()) {
+    // pendingWork MUST mirror HarnessLoop.canSleep() — including IN-FLIGHT
+    // tool tasks and unconsumed result events, not just actor components.
+    // Otherwise the idle verifier races an executing write and nudges based
+    // on stale workspace state (observed: strikes firing before the tool
+    // result landed).
+    final pendingWork = entity.has<OpenDecision>() ||
+        entity.has<Agency>() ||
+        entity.has<AwaitingResponse>() ||
+        entity.has<ToolResultPendingMarker>() ||
+        !world.getResource<TaskRegistryResource>().isEmpty ||
+        (world.events.hasRegistered<ToolResultEvent>() &&
+            world.events.reader<ToolResultEvent>().isNotEmpty);
+    if (pendingWork) continue;
+    final verified = entity.get<GoalVerified>();
+    if (verified != null && verified.passed) continue; // goal achieved
+    final strikes = entity.get<IdleNudgeCount>()?.value ?? 0;
+
+    // Verify NOW (same seam-3 verifier, same precedence as above).
+    final vExecutor = world
+        .getResource<ToolExecutorResource>()
+        .get(const ToolName('verify_workspace'));
+    final vDef = world
+        .getResource<ToolRegistryResource>()
+        .get('default')
+        ?.get(const ToolName('verify_workspace'));
+    if (vExecutor == null && vDef == null) continue;
+    Object? vOut;
+    try {
+      vOut = vExecutor != null
+          ? await vExecutor(const {})
+          : await vDef!.execute(const {});
+    } catch (_) {
+      continue; // verifier failure is data for the next tick, not fatal here
+    }
+    Object? vDecoded = vOut;
+    if (vDecoded is String) {
+      try {
+        vDecoded = jsonDecode(vDecoded);
+      } catch (_) {}
+    }
+    final vMap = vDecoded is Map ? vDecoded : null;
+    final vPassed = vMap?['passed'] == true;
+    final vDetail = vMap == null ? '$vOut' : '${vMap['failures'] ?? ''}';
+    _updateStepStatuses(world, vPassed);
+    entity.insert(GoalVerified(passed: vPassed, detail: vDetail));
+    if (!vPassed && strikes < maxIdleNudges) {
+      entity.insert(IdleNudgeCount(strikes + 1));
+      // Open the nudge decision DIRECTLY here — do NOT defer via a marker
+      // component. Deferred markers are invisible to canSleep(), so
+      // runUntilIdle would exit before the policy could turn them into a
+      // decision (the exact "idle ⇒ nothing stranded" violation from the
+      // 2026-08 postmortem). Inserting the decision in-system keeps the new
+      // work visible to the loop within this tick.
+      entity.insert(
+        OpenDecision(
+          prompt: 'Goal not yet verified. Failing criteria:\n$vDetail\n'
+              'Continue working toward the goal.',
+        ),
+      );
+    }
+  }
+
   // Flush NOW: the frontier policy reads [GoalVerified] at the START of the
   // next tick's AgencyGrant schedule. ecsly component inserts are queued
   // commands; without this flush the policy sees stale state and abstains,
@@ -234,7 +326,9 @@ Future<PlanRow> runPlanArm(
     world.components
       ..registerObjectComponent<StepGoalLink>()
       ..registerObjectComponent<StepStatus>()
-      ..registerObjectComponent<GoalVerified>();
+      ..registerObjectComponent<GoalVerified>()
+      ..registerObjectComponent<ActorGoalRef>()
+      ..registerObjectComponent<IdleNudgeCount>();
     final router = ModelRouter(inferenceClientsBuilders: {});
     final modelId = ModelId('suite-model');
     router.models[modelId] =
@@ -308,6 +402,7 @@ Future<PlanRow> runPlanArm(
     // Present in BOTH arms so entity bookkeeping never confounds the delta.
     final goal = world.spawnComponents([Goal(text: task.prompt)]);
     world.spawnComponents([StepGoalLink(goal), StepStatus('open')]);
+    world.upsertComponent(actor, ActorGoalRef(goal));
     world.flush();
 
     final responsesAtStart = world.events.hasRegistered<ActorGenerateResponse>()

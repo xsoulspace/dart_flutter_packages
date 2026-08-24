@@ -1,0 +1,121 @@
+import 'dart:async';
+import 'dart:typed_data';
+
+import 'mesh_peer.dart';
+import 'mesh_transport.dart';
+
+/// Deterministic in-memory transport for headless tests (ADR 0010
+/// consequences: the provider is proven against this before any radio code
+/// exists). Plaintext by design — session encryption belongs to real
+/// transports.
+///
+/// ```dart
+/// final pair = FakeMeshPair.paired(a: 'device-a', b: 'device-b');
+/// pair.a.onIncomingSession = responder.handleSession;
+/// final session = await pair.b.connect(peerRecordOfA);
+/// ```
+final class FakeMeshPair {
+  FakeMeshPair._(this.a, this.b);
+
+  factory FakeMeshPair.paired({
+    final String a = 'device-a',
+    final String b = 'device-b',
+  }) => FakeMeshPair._(FakeMeshTransport._(a), FakeMeshTransport._(b));
+
+  final FakeMeshTransport a;
+  final FakeMeshTransport b;
+}
+
+/// Callback invoked on the *responder* side when the peer initiates.
+typedef IncomingSessionHandler = Future<void> Function(MeshSession session);
+
+final class FakeMeshTransport implements MeshTransport {
+  FakeMeshTransport._(this.selfId);
+
+  /// Peer id of the device owning this transport.
+  final String selfId;
+
+  /// Set to make the next [connect] throw, simulating an unreachable peer.
+  bool failNextConnect = false;
+
+  /// Handler for sessions initiated by the remote side. In production code
+  /// the owning provider assigns its session handler here.
+  IncomingSessionHandler? onIncomingSession;
+
+  FakeMeshTransport? _remote;
+
+  void _link(final FakeMeshTransport remote) => _remote = remote;
+
+  @override
+  Future<MeshSession> connect(final MeshPeerRecord peer) async {
+    if (failNextConnect) {
+      failNextConnect = false;
+      throw MeshConnectionException(peer.peerId, 'simulated partition');
+    }
+    final remote = _remote;
+    if (remote == null) {
+      throw MeshConnectionException(peer.peerId, 'not linked');
+    }
+    return _openSessionPair(remote);
+  }
+
+  FakeMeshSession _openSessionPair(final FakeMeshTransport remote) {
+    // Single-subscription (not broadcast): events sent before the peer's
+    // handler subscribes must be buffered, never dropped.
+    final initiatorInbound = StreamController<Uint8List>();
+    final responderInbound = StreamController<Uint8List>();
+    final initiatorSession = FakeMeshSession(
+      remotePeerId: remote.selfId,
+      inbound: initiatorInbound.stream,
+      onSend: responderInbound.add,
+      onClose: () {},
+    );
+    final responderSession = FakeMeshSession(
+      remotePeerId: selfId,
+      inbound: responderInbound.stream,
+      onSend: initiatorInbound.add,
+      onClose: () {},
+    );
+    // Deliver the responder-side session asynchronously so the initiator's
+    // connect() is not blocked on handler execution.
+    scheduleMicrotask(() {
+      remote.onIncomingSession?.call(responderSession);
+    });
+    return initiatorSession;
+  }
+}
+
+final class FakeMeshSession implements MeshSession {
+  FakeMeshSession({
+    required this.remotePeerId,
+    required Stream<Uint8List> inbound,
+    required final void Function(Uint8List) onSend,
+    required final void Function() onClose,
+  }) : _inbound = inbound,
+       _onSend = onSend,
+       _onClose = onClose;
+
+  @override
+  final String remotePeerId;
+
+  final Stream<Uint8List> _inbound;
+  final void Function(Uint8List) _onSend;
+  final void Function() _onClose;
+  var _closed = false;
+
+  @override
+  Stream<Uint8List> get inbound => _inbound;
+
+  @override
+  Future<void> send(final Uint8List payload) async {
+    if (_closed) throw StateError('Session closed');
+    _onSend(payload);
+  }
+
+  @override
+  Future<void> close() async {
+    if (_closed) return;
+    _closed = true;
+    _onClose();
+  }
+}

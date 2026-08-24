@@ -1,0 +1,22 @@
+name: universal_storage_mesh_transport
+description: >-
+  Transport seam for Universal Storage mesh sync: peer/session interfaces,
+  message framing, and a deterministic fake transport for headless tests
+  (ADR 0010).
+version: 0.1.0-dev.1
+homepage: https://github.com/xsoulspace/universal_storage_sync
+repository: https://github.com/xsoulspace/universal_storage_sync
+issue_tracker: https://github.com/xsoulspace/universal_storage_sync/issues
+
+environment:
+  sdk: ^3.12.0
+
+resolution: workspace
+
+dependencies:
+  meta: ^1.19.0
+
+dev_dependencies:
+  lints: ^6.1.0
+  test: ^1.26.2
+  xsoulspace_lints: ^0.1.2
