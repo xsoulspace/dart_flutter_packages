@@ -38,6 +38,15 @@ import 'coding_suite/checkers.dart';
 import 'coding_suite/scripted_handler.dart';
 import 'coding_suite/task_spec.dart';
 
+/// Experiment-local verification outcome stamped by the mechanical
+/// goalVerificationSystem. The frontier policy reads ONLY this component —
+/// it never touches the filesystem, keeping the policy pure.
+class GoalVerified implements Component {
+  GoalVerified({required this.passed, this.detail = ''});
+  final bool passed;
+  final String detail;
+}
+
 /// Experiment-local step status component (ADR 0009 §2 data shape preview).
 class StepStatus implements Component {
   StepStatus(this.value);
@@ -51,19 +60,21 @@ class StepGoalLink implements Component {
 }
 
 /// The plan-frontier policy: fires exactly where [ReActContinuationPolicy]
-/// fires (fresh tool result), but consults the GOAL first.
+/// fires (fresh tool result), but consults the GOAL first — via the pure
+/// [GoalVerified] component, never via I/O.
 ///
-/// - All success criteria hold  → abstain (no agency; the loop goes idle).
-/// - Any criterion fails        → open ONE tight continuation carrying the
-///   failing predicate details (mechanical feedback, not narrative).
+/// - All success criteria hold (verification landed mechanically) → abstain
+///   (no agency; the loop goes idle).
+/// - Any criterion fails → open ONE tight continuation carrying the failing
+///   predicate details (mechanical feedback, not narrative).
 ///
-/// Deviation documented in the header: reads the jail fs directly instead of
-/// consuming verifier-tool beats.
+/// Purity note: an earlier draft evaluated checkers inside this policy by
+/// reading the jail directly — a documented deviation, now closed. Predicate
+/// execution lives in [goalVerificationSystem], which runs the registered
+/// `verify_workspace` tool through the same executor path tools take; the
+/// policy consumes only its component/beat residue.
 class PlanFrontierPolicy implements DecisionPolicy {
-  PlanFrontierPolicy({required this.jailPath, required this.checkers});
-
-  final String jailPath;
-  final List<CheckerSpec> checkers;
+  PlanFrontierPolicy();
 
   @override
   String get name => 'plan_frontier';
@@ -71,27 +82,16 @@ class PlanFrontierPolicy implements DecisionPolicy {
   @override
   DecisionDraft? evaluate(DecisionContext ctx) {
     if (!ctx.has<ToolResultPendingMarker>()) return null;
-
-    final results = [
-      for (final c in checkers) evaluateChecker(c, jailPath),
-    ];
-    final allPassed =
-        results.isNotEmpty && results.every((r) => r.passed);
-
-    // Flip step statuses in the graph (mechanical bookkeeping).
-    _updateStepEntities(ctx.world, allPassed);
-
-    if (allPassed) {
+    final verified = ctx.get<GoalVerified>();
+    if (verified == null) return null; // verification has not landed yet
+    _updateStepEntities(ctx.world, verified.passed);
+    if (verified.passed) {
       // Goal vector satisfied — mechanically done. No LLM call is spent on
       // asking the model whether it finished. This is the entire bet.
       return null;
     }
-    final failures = [
-      for (final (i, r) in results.indexed)
-        if (!r.passed) 'criterion #$i: ${r.detail}',
-    ].join('\n');
     return DecisionDraft(
-      prompt: 'Goal not yet verified. Failing criteria:\n$failures\n'
+      prompt: 'Goal not yet verified. Failing criteria:\n${verified.detail}\n'
           'Continue working toward the goal.',
     );
   }
@@ -101,6 +101,45 @@ class PlanFrontierPolicy implements DecisionPolicy {
         .toList()) {
       entity.insert(StepStatus(allPassed ? 'verified' : 'failed'));
     }
+  }
+}
+
+/// Mechanical verification: runs after tool results land, executes the
+/// `verify_workspace` tool through [ToolExecutorResource] (the same path
+/// LLM-dispatched tool calls take — predicates are seam-3 tools), and stamps
+/// [GoalVerified] + a verifier observation beat onto the graph. Never calls
+/// a model.
+Future<void> goalVerificationSystem(World world) async {
+  // ignore: avoid_print
+  stdout.writeln('[dbg] goalVerification ticked');
+  for (final (entity, _, _) in world
+      .query2<Actor, ToolResultPendingMarker>()
+      .toList()) {
+    // ignore: avoid_print
+    stdout.writeln('[dbg] verifying actor');
+
+    final executor = world
+        .getResource<ToolExecutorResource>()
+        .get(const ToolName('verify_workspace'));
+    if (executor == null) continue;
+    final output = await executor(const {});
+    final passed = output is Map && output['passed'] == true;
+    final detail = output is Map ? '${output['failures'] ?? ''}' : '$output';
+    entity.insert(GoalVerified(passed: passed, detail: detail));
+    // Verifier provenance stays in the graph as an observation beat.
+    final threads = entity.get<ActorThreads>()?.threads;
+    if (threads == null || threads.isEmpty) continue;
+    final beat = world.spawnComponents([
+      TextContent('verify_workspace → ${passed ? 'pass' : 'fail'} $detail'),
+      BeatStatus(BeatStatusEnum.complete),
+      BeatModality(BeatModalityEnum.observation),
+      BelongsToThread(threads.first),
+    ]);
+    indexBeat(
+      world,
+      beat,
+      keywordsOf('verify_workspace ${passed ? 'pass' : 'fail'}'),
+    );
   }
 }
 
@@ -163,7 +202,8 @@ Future<_Row> _runArm(CodingTask task, {required bool planFrontier}) async {
     // Experiment-local components (ADR 0009 §2 shape preview).
     world.components
       ..registerObjectComponent<StepGoalLink>()
-      ..registerObjectComponent<StepStatus>();
+      ..registerObjectComponent<StepStatus>()
+      ..registerObjectComponent<GoalVerified>();
     final router = ModelRouter(inferenceClientsBuilders: {});
     final modelId = ModelId('suite-model');
     router.models[modelId] = Model(id: modelId, name: DefaultModelNames.appleFoundation);
@@ -178,18 +218,46 @@ Future<_Row> _runArm(CodingTask task, {required bool planFrontier}) async {
         );
     final registry = ToolRegistry();
     fsTools(FsToolsRoot(jail.path)).forEach(registry.register);
-    world.getResource<ToolRegistryResource>().register('default', registry);
-
     if (planFrontier) {
-      // Replace the default ReAct flow with the plan frontier (ADR 0009 §3).
-      world.upsertResource(
-        DecisionFlowResource(
-          DecisionFlow([
-            PlanFrontierPolicy(jailPath: jail.path, checkers: task.checkers),
-          ]),
+      // Goal success criteria as a seam-3 verifier tool — the ONLY place the
+      // jail filesystem is read. Executed mechanically by
+      // [goalVerificationSystem], never by a model decision.
+      registry.register(
+        ToolDef.encode(
+          name: const ToolName('verify_workspace'),
+          description: 'Evaluate the goal success criteria against the '
+              'workspace. Returns pass/fail per criterion.',
+          execute: (args) async {
+            final results = [
+              for (final c in task.checkers) evaluateChecker(c, jail.path),
+            ];
+            return {
+              'passed': results.isNotEmpty && results.every((r) => r.passed),
+              'failures': [
+                for (final (i, r) in results.indexed)
+                  if (!r.passed) 'criterion #$i: ${r.detail}',
+              ].join('\n'),
+            };
+          },
         ),
       );
+      // Mechanical verification runs inside the Mechanical schedule, after
+      // tool results land and BEFORE the schedule's flush, so the stamped
+      // [GoalVerified] is visible to the next tick's AgencyGrant pass.
+      world
+          .schedule(Schedules.mechanical)
+          .add(
+            goalVerificationSystem,
+            name: 'goalVerification',
+            runAfter: const ['processToolResults'],
+            runBefore: const ['flushAfterMechanical'],
+          );
+      // Replace the default ReAct flow with the plan frontier (ADR 0009 §3).
+      world.upsertResource(
+        DecisionFlowResource(DecisionFlow([PlanFrontierPolicy()])),
+      );
     }
+    world.getResource<ToolRegistryResource>().register('default', registry);
 
     final scene = world.spawnComponents([const Scene(), SceneFrame()]);
     final actor = world.spawnComponents([

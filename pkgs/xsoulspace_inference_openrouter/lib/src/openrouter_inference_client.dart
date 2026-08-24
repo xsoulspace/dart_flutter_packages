@@ -34,6 +34,7 @@ class OpenRouterInferenceClient implements InferenceClient {
     this.baseUrl = 'https://openrouter.ai/api/v1',
     final http.Client? httpClient,
     this.timeout = const Duration(seconds: 60),
+    this.useMessagesCodec = false,
   }) : _httpClient = httpClient ?? http.Client(),
        _ownsHttpClient = httpClient == null;
 
@@ -43,6 +44,14 @@ class OpenRouterInferenceClient implements InferenceClient {
   final http.Client _httpClient;
   final bool _ownsHttpClient;
   final Duration timeout;
+
+  /// When true, projected context fragments are rendered into a native
+  /// multi-turn `messages` array via [SituationMessagesCodec] instead of a
+  /// flattened `CONTEXT:` block inside the user message. The messages array
+  /// is computed per call (codec, not state); the flag exists so the A/B
+  /// against the legacy single-shot path stays runnable (fair-comparison
+  /// plan Step 1).
+  final bool useMessagesCodec;
 
   @override
   Future<void> load() async {
@@ -146,7 +155,14 @@ class OpenRouterInferenceClient implements InferenceClient {
     }
     final messages = <Map<String, dynamic>>[
       if (systemPrompt.isNotEmpty) {'role': 'system', 'content': systemPrompt},
-      {'role': 'user', 'content': _buildUserContent(request)},
+      if (useMessagesCodec)
+        ...SituationMessagesCodec.render(
+          prompt: request.prompt,
+          systemPrompt: '', // already emitted as the system message above
+          fragments: request.contextFragments,
+        )
+      else
+        {'role': 'user', 'content': _buildUserContent(request)},
     ];
 
     final body = <String, dynamic>{

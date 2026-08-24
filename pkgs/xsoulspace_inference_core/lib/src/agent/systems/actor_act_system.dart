@@ -58,12 +58,27 @@ Future<void> actorActSystem(World world) async {
         : null;
 
     // The projected, budget-limited context beats — the cinematic cut.
+    // Fragments carry role prefixes per [ContextFragmentProtocol] so backend
+    // codecs (e.g. chat-completions messages) can render native roles; the
+    // protocol is a string contract, so FFI backends are unaffected.
     final contextFragments = <Object>[];
     for (final beat in situation.projectedBeats) {
       final beatEntity = world.getEntity(beat);
       if (!beatEntity.$2) continue;
       final textContent = beatEntity.$1.get<TextContent>();
-      if (textContent != null) {
+      if (textContent == null) continue;
+      final toolResult = beatEntity.$1.get<ToolResultContent>();
+      if (toolResult != null) {
+        contextFragments.add(
+          ContextFragmentProtocol.toolResult(toolResult.name, textContent.text),
+        );
+      } else if (beatEntity.$1.get<BeatModality>()?.value ==
+          BeatModalityEnum.text) {
+        // Text-modality beats in the actor's ray are overwhelmingly its own
+        // prior narration (single-actor v1 heuristic; refine with Speaker
+        // attribution when multi-actor codec conformance lands).
+        contextFragments.add(ContextFragmentProtocol.assistant(textContent.text));
+      } else {
         contextFragments.add(textContent.text);
       }
     }
