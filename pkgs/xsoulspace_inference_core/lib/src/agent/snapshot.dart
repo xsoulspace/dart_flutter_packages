@@ -1,549 +1,633 @@
+/// Persistent-identity world snapshot codec (A8).
+///
+/// Runtime `Entity` handles are world-local and regenerated every run, so
+/// they never cross the serialization boundary: persisted entities carry a
+/// ecsly_serialization [PersistentId], and every `Entity` reference inside
+/// an object component is encoded as its persistent id and translated back
+/// to a fresh handle on restore. Capture stamps missing ids onto persisted
+/// entities at capture time; runtime spawn paths are untouched.
+///
+/// Structure travels as component type names; values travel through
+/// per-type codecs registered with the ecsly serialization plugin. Restore
+// ignore_for_file: lines_longer_than_80_chars
+/// delegates to `restoreWorldSnapshot` into a fresh plugin-installed world,
+/// after which derived state (the facet index) is rebuilt from restored
+/// beats — derived state is never source-of-truth.
+library;
+
 import 'dart:convert';
 
 import 'package:ecsly/ecsly.dart';
+import 'package:ecsly_serialization/ecsly_serialization.dart';
 
 import 'data_models/data_models.dart';
 import 'events.dart';
 import 'model_router.dart';
+import 'structured_output/foundation_schema.dart';
 import 'narrative/narrative.dart';
 import 'plugin.dart';
 import 'resources/resources.dart';
 import 'systems/identity_systems.dart' show IdentitySeeded;
 import 'systems/projection/projection_systems.dart' show toolResultText;
-import 'systems/projection/relevance.dart';
+import 'systems/projection/relevance.dart' show keywordsOf;
 
-const int _snapshotVersion = 1;
+/// Envelope marker for the PersistentId-based payload format.
+const String kSnapshotFormat = 'ecsly-persistent-id';
 
-typedef _Decode =
-    Component Function(
-      Map<String, dynamic> json,
-      Entity Function(String) remap,
+/// Codec envelope version (bump on format changes).
+const int _snapshotFormatVersion = 1;
+
+/// Derived projections and transient loop state: never captured, never
+/// spawned back, even if a source entity carried them.
+const Set<String> _excludedComponents = {
+  'Situation',
+  'StreamingBeat',
+  'ToolResultPendingMarker',
+  'DecisionOrigin',
+  'DeferredThinking',
+};
+
+/// The world a codec currently reads from (capture) or writes into
+/// (restore). Codecs resolve references through it; restore sets it to the
+/// target world only after every carrier has been spawned.
+World? _ctx;
+
+int _ref(Entity entity) {
+  final pid = persistentIdOf(_ctx!, entity);
+  if (pid == null) {
+    throw StateError(
+      'Cannot serialize reference to $entity: target carries no PersistentId.',
     );
-
-final Map<Type, String> _componentTypes = {
-  Actor: 'Actor',
-  ActorModel: 'ActorModel',
-  ActorSystemPrompt: 'ActorSystemPrompt',
-  ActorTools: 'ActorTools',
-  ActorThreads: 'ActorThreads',
-  Agency: 'Agency',
-  AwaitingResponse: 'AwaitingResponse',
-  OpenDecision: 'OpenDecision',
-  EscalationRequest: 'EscalationRequest',
-  Scene: 'Scene',
-  SceneFrame: 'SceneFrame',
-  PresentInScene: 'PresentInScene',
-  PresentProp: 'PresentProp',
-  Prop: 'Prop',
-  Goal: 'Goal',
-  Thread: 'Thread',
-  ThreadScore: 'ThreadScore',
-  ThreadId: 'ThreadId',
-  ThreadStatus: 'ThreadStatus',
-  ParentScene: 'ParentScene',
-  OriginActor: 'OriginActor',
-  GoalLink: 'GoalLink',
-  DependsOnStep: 'DependsOnStep',
-  Step: 'Step',
-  DerivedFromThread: 'DerivedFromThread',
-  ThreadVisibility: 'ThreadVisibility',
-  BeatId: 'BeatId',
-  BelongsToThread: 'BelongsToThread',
-  SummarizesBeats: 'SummarizesBeats',
-  BeatSequence: 'BeatSequence',
-  Speaker: 'Speaker',
-  AddressedTo: 'AddressedTo',
-  BeatModality: 'BeatModality',
-  BeatStatus: 'BeatStatus',
-  ReplyToBeat: 'ReplyToBeat',
-  ObservesProp: 'ObservesProp',
-  PrivateToActor: 'PrivateToActor',
-  TextContent: 'TextContent',
-  TextStream: 'TextStream',
-  AudioStream: 'AudioStream',
-  ActionPayload: 'ActionPayload',
-  BeatToolCall: 'BeatToolCall',
-  ToolResult: 'ToolResult',
-  ThoughtContent: 'ThoughtContent',
-  ObservationData: 'ObservationData',
-  MemorySummary: 'MemorySummary',
-  SummaryOwner: 'SummaryOwner',
-  SummaryThread: 'SummaryThread',
-  ToolResultContent: 'ToolResultContent',
-  IdentityBeat: 'IdentityBeat',
-  RetryCount: 'RetryCount',
-  ToolRoundCount: 'ToolRoundCount',
-  IdentitySeeded: 'IdentitySeeded',
-};
-
-List<(Entity, Component)> _collect(Type type, World world) {
-  switch (type) {
-    case Actor:
-      return [
-        for (final (entity, component) in world.query<Actor>())
-          (entity.entity, component),
-      ];
-    case ActorModel:
-      return [for (final (e, c) in world.query<ActorModel>()) (e.entity, c)];
-    case ActorSystemPrompt:
-      return [
-        for (final (e, c) in world.query<ActorSystemPrompt>()) (e.entity, c),
-      ];
-    case ActorTools:
-      return [for (final (e, c) in world.query<ActorTools>()) (e.entity, c)];
-    case ActorThreads:
-      return [for (final (e, c) in world.query<ActorThreads>()) (e.entity, c)];
-    case Agency:
-      return [for (final (e, c) in world.query<Agency>()) (e.entity, c)];
-    case AwaitingResponse:
-      return [
-        for (final (e, c) in world.query<AwaitingResponse>()) (e.entity, c),
-      ];
-    case OpenDecision:
-      return [for (final (e, c) in world.query<OpenDecision>()) (e.entity, c)];
-    case EscalationRequest:
-      return [
-        for (final (e, c) in world.query<EscalationRequest>()) (e.entity, c),
-      ];
-    case Scene:
-      return [for (final (e, c) in world.query<Scene>()) (e.entity, c)];
-    case SceneFrame:
-      return [for (final (e, c) in world.query<SceneFrame>()) (e.entity, c)];
-    case PresentInScene:
-      return [
-        for (final (e, c) in world.query<PresentInScene>()) (e.entity, c),
-      ];
-    case PresentProp:
-      return [for (final (e, c) in world.query<PresentProp>()) (e.entity, c)];
-    case Prop:
-      return [for (final (e, c) in world.query<Prop>()) (e.entity, c)];
-    case Goal:
-      return [for (final (e, c) in world.query<Goal>()) (e.entity, c)];
-    case Thread:
-      return [for (final (e, c) in world.query<Thread>()) (e.entity, c)];
-    case ThreadScore:
-      return [for (final (e, c) in world.query<ThreadScore>()) (e.entity, c)];
-    case ThreadId:
-      return [for (final (e, c) in world.query<ThreadId>()) (e.entity, c)];
-    case ThreadStatus:
-      return [for (final (e, c) in world.query<ThreadStatus>()) (e.entity, c)];
-    case ParentScene:
-      return [for (final (e, c) in world.query<ParentScene>()) (e.entity, c)];
-    case OriginActor:
-      return [for (final (e, c) in world.query<OriginActor>()) (e.entity, c)];
-    case GoalLink:
-      return [for (final (e, c) in world.query<GoalLink>()) (e.entity, c)];
-    case DependsOnStep:
-      return [for (final (e, c) in world.query<DependsOnStep>()) (e.entity, c)];
-    case Step:
-      return [for (final (e, c) in world.query<Step>()) (e.entity, c)];
-    case DerivedFromThread:
-      return [
-        for (final (e, c) in world.query<DerivedFromThread>()) (e.entity, c),
-      ];
-    case ThreadVisibility:
-      return [
-        for (final (e, c) in world.query<ThreadVisibility>()) (e.entity, c),
-      ];
-    case BeatId:
-      return [for (final (e, c) in world.query<BeatId>()) (e.entity, c)];
-    case BelongsToThread:
-      return [
-        for (final (e, c) in world.query<BelongsToThread>()) (e.entity, c),
-      ];
-    case SummarizesBeats:
-      return [
-        for (final (e, c) in world.query<SummarizesBeats>()) (e.entity, c),
-      ];
-    case BeatSequence:
-      return [for (final (e, c) in world.query<BeatSequence>()) (e.entity, c)];
-    case Speaker:
-      return [for (final (e, c) in world.query<Speaker>()) (e.entity, c)];
-    case AddressedTo:
-      return [for (final (e, c) in world.query<AddressedTo>()) (e.entity, c)];
-    case BeatModality:
-      return [for (final (e, c) in world.query<BeatModality>()) (e.entity, c)];
-    case BeatStatus:
-      return [for (final (e, c) in world.query<BeatStatus>()) (e.entity, c)];
-    case ReplyToBeat:
-      return [for (final (e, c) in world.query<ReplyToBeat>()) (e.entity, c)];
-    case ObservesProp:
-      return [for (final (e, c) in world.query<ObservesProp>()) (e.entity, c)];
-    case PrivateToActor:
-      return [
-        for (final (e, c) in world.query<PrivateToActor>()) (e.entity, c),
-      ];
-    case TextContent:
-      return [for (final (e, c) in world.query<TextContent>()) (e.entity, c)];
-    case TextStream:
-      return [for (final (e, c) in world.query<TextStream>()) (e.entity, c)];
-    case AudioStream:
-      return [for (final (e, c) in world.query<AudioStream>()) (e.entity, c)];
-    case ActionPayload:
-      return [for (final (e, c) in world.query<ActionPayload>()) (e.entity, c)];
-    case BeatToolCall:
-      return [for (final (e, c) in world.query<BeatToolCall>()) (e.entity, c)];
-    case ToolResult:
-      return [for (final (e, c) in world.query<ToolResult>()) (e.entity, c)];
-    case ThoughtContent:
-      return [
-        for (final (e, c) in world.query<ThoughtContent>()) (e.entity, c),
-      ];
-    case ObservationData:
-      return [
-        for (final (e, c) in world.query<ObservationData>()) (e.entity, c),
-      ];
-    case MemorySummary:
-      return [for (final (e, c) in world.query<MemorySummary>()) (e.entity, c)];
-    case SummaryOwner:
-      return [for (final (e, c) in world.query<SummaryOwner>()) (e.entity, c)];
-    case SummaryThread:
-      return [for (final (e, c) in world.query<SummaryThread>()) (e.entity, c)];
-    case ToolResultContent:
-      return [
-        for (final (e, c) in world.query<ToolResultContent>()) (e.entity, c),
-      ];
-    case IdentityBeat:
-      return [for (final (e, c) in world.query<IdentityBeat>()) (e.entity, c)];
-    case RetryCount:
-      return [for (final (e, c) in world.query<RetryCount>()) (e.entity, c)];
-    case ToolRoundCount:
-      return [
-        for (final (e, c) in world.query<ToolRoundCount>()) (e.entity, c),
-      ];
-    case IdentitySeeded:
-      return [
-        for (final (e, c) in world.query<IdentitySeeded>()) (e.entity, c),
-      ];
   }
-  return const [];
+  return pid.value;
 }
 
-Map<String, dynamic> _encode(Component raw) {
-  const tag = 'type';
-  switch (raw) {
-    case Actor():
-      return {tag: 'Actor', 'agentId': raw.agentId.value};
-    case ActorModel():
-      return {tag: 'ActorModel', 'modelId': raw.modelId};
-    case ActorSystemPrompt():
-      return {tag: 'ActorSystemPrompt', 'text': raw.text};
-    case ActorTools():
-      return {tag: 'ActorTools', 'registryName': raw.registryName};
-    case ActorThreads():
-      return {
-        tag: 'ActorThreads',
-        'threads': raw.threads.map((v) => v.toJson()).toList(),
-      };
-    case Agency():
-      return {tag: 'Agency'};
-    case AwaitingResponse():
-      return {tag: 'AwaitingResponse', 'taskId': raw.taskId?.value};
-    case OpenDecision():
-      return {
-        tag: 'OpenDecision',
-        'schema': _jsonValue(raw.schema.toJson()),
-        'prompt': raw.prompt,
-        'priority': raw.priority,
-        'escalate': raw.escalate,
-        'threadId': raw.threadId?.toJson(),
-        'stepId': raw.stepId?.toJson(),
-      };
-    case EscalationRequest():
-      return {tag: 'EscalationRequest', 'reason': raw.reason};
-    case Scene():
-      return {tag: 'Scene'};
-    case SceneFrame():
-      return {tag: 'SceneFrame', 'frame': raw.frame};
-    case PresentInScene():
-      return {tag: 'PresentInScene', 'scene': raw.sceneEntity.toJson()};
-    case PresentProp():
-      return {tag: 'PresentProp', 'scene': raw.sceneEntity.toJson()};
-    case Prop():
-      return {tag: 'Prop', 'name': raw.name};
-    case Goal():
-      return {
-        tag: 'Goal',
-        'text': raw.text,
-        'successCriteria': raw.successCriteria,
-        'status': raw.status,
-      };
-    case Thread():
-      return {tag: 'Thread', 'parentThreadId': raw.parentThreadId?.toJson()};
-    case ThreadScore():
-      return {tag: 'ThreadScore', 'value': raw.value};
-    case ThreadId():
-      return {tag: 'ThreadId', 'value': raw.value};
-    case ThreadStatus():
-      return {tag: 'ThreadStatus', 'value': raw.value.name};
-    case ParentScene():
-      return {tag: 'ParentScene', 'scene': raw.scene.toJson()};
-    case OriginActor():
-      return {tag: 'OriginActor', 'actor': raw.actor.toJson()};
-    case GoalLink():
-      return {tag: 'GoalLink', 'goal': raw.goal?.toJson()};
-    case DependsOnStep():
-      return {
-        tag: 'DependsOnStep',
-        'dependencies': raw.dependencies.map((v) => v.toJson()).toList(),
-      };
-    case Step():
-      return {
-        tag: 'Step',
-        'claim': raw.claim,
-        'verificationKind': raw.verificationKind.name,
-        'status': raw.status.name,
-        'confidence': raw.confidence,
-        'criterionArgs': raw.criterionArgs,
-      };
-    case DerivedFromThread():
-      return {tag: 'DerivedFromThread', 'thread': raw.thread.toJson()};
-    case ThreadVisibility():
-      return {
-        tag: 'ThreadVisibility',
-        'visibleTo': raw.visibleTo.map((v) => v.value).toList(),
-      };
-    case BeatId():
-      return {tag: 'BeatId', 'value': raw.value};
-    case BelongsToThread():
-      return {tag: 'BelongsToThread', 'thread': raw.thread.toJson()};
-    case SummarizesBeats():
-      return {
-        tag: 'SummarizesBeats',
-        'sources': raw.sources.map((v) => v.toJson()).toList(),
-      };
-    case BeatSequence():
-      return {tag: 'BeatSequence', 'value': raw.value};
-    case Speaker():
-      return {tag: 'Speaker', 'actor': raw.actor.toJson()};
-    case AddressedTo():
-      return {tag: 'AddressedTo', 'actor': raw.actor?.toJson()};
-    case BeatModality():
-      return {tag: 'BeatModality', 'value': raw.value.name};
-    case BeatStatus():
-      return {tag: 'BeatStatus', 'value': raw.value.name};
-    case ReplyToBeat():
-      return {tag: 'ReplyToBeat', 'beat': raw.beat.toJson()};
-    case ObservesProp():
-      return {tag: 'ObservesProp', 'prop': raw.prop.toJson()};
-    case PrivateToActor():
-      return {tag: 'PrivateToActor', 'actor': raw.actor.toJson()};
-    case TextContent():
-      return {tag: 'TextContent', 'text': raw.text};
-    case TextStream():
-      return {tag: 'TextStream', 'chunks': raw.chunks, 'cursor': raw.cursor};
-    case AudioStream():
-      return {
-        tag: 'AudioStream',
-        'chunks': raw.chunks.map(base64Encode).toList(),
-      };
-    case ActionPayload():
-      return {tag: 'ActionPayload', 'data': raw.data};
-    case BeatToolCall():
-      return {tag: 'BeatToolCall', 'name': raw.name, 'args': raw.args};
-    case ToolResult():
-      return {tag: 'ToolResult', 'result': _jsonValue(raw.result)};
-    case ThoughtContent():
-      return {tag: 'ThoughtContent', 'text': raw.text};
-    case ObservationData():
-      return {tag: 'ObservationData', 'data': _jsonValue(raw.data)};
-    case MemorySummary():
-      return {tag: 'MemorySummary', 'text': raw.text};
-    case SummaryOwner():
-      return {tag: 'SummaryOwner', 'actor': raw.actor.toJson()};
-    case SummaryThread():
-      return {tag: 'SummaryThread', 'thread': raw.thread?.toJson()};
-    case ToolResultContent():
-      return {
-        tag: 'ToolResultContent',
-        'name': raw.name,
-        'output': _jsonValue(raw.output),
-      };
-    case IdentityBeat():
-      return {tag: 'IdentityBeat'};
-    case RetryCount():
-      return {tag: 'RetryCount', 'value': raw.value};
-    case ToolRoundCount():
-      return {tag: 'ToolRoundCount', 'value': raw.value};
-    case IdentitySeeded():
-      return {tag: 'IdentitySeeded'};
+Entity _deref(Object? value) {
+  if (value is! int) {
+    throw ArgumentError.value(value, 'value', 'not a persistent id');
   }
-  return <String, dynamic>{'type': 'Unknown'};
+  for (final (entity, pid) in _ctx!.query<PersistentId>()) {
+    if (pid.value == value) return entity.entity;
+  }
+  throw StateError('Snapshot references unknown persistent id $value.');
 }
 
-final Map<String, _Decode> _decoders = {
-  'Actor': (json, _) => Actor(agentId: AgentId(json['agentId'] as String)),
-  'ActorModel': (json, _) =>
-      ActorModel(modelId: ModelId(json['modelId'] as String)),
-  'ActorSystemPrompt': (json, _) =>
-      ActorSystemPrompt(text: json['text'] as String),
-  'ActorTools': (json, _) =>
-      ActorTools(registryName: json['registryName'] as String),
-  'ActorThreads': (json, r) =>
-      ActorThreads(threads: _entities(json['threads'], r)),
-  'Agency': (_, _) => const Agency(),
-  'AwaitingResponse': (json, _) =>
-      AwaitingResponse(taskId: _taskId(json['taskId'])),
-  'OpenDecision': (json, r) => OpenDecision(
-    schema: _schemaBundle(json['schema']),
-    prompt: json['prompt'] as String? ?? '',
-    priority: json['priority'] as int? ?? 0,
-    escalate: json['escalate'] as bool? ?? false,
-    threadId: _entityOrNull(json['threadId'], r),
-    stepId: _entityOrNull(json['stepId'], r),
+Entity? _refOrNull(Object? value) => value == null ? null : _deref(value);
+
+List<Entity> _derefList(Object? values) => [
+  for (final v in values as List? ?? const []) _deref(v),
+];
+
+List<int> _refList(Iterable<Entity> entities) => [
+  for (final e in entities) _ref(e),
+];
+
+class _Spec<T extends Component> extends ObjectComponentCodec<T> {
+  _Spec(this.sample, this.to, this.from);
+  Type get type => T;
+
+  /// Structural placeholder used at spawn time; real values are written
+  /// from column data afterwards.
+  final T Function() sample;
+  final Object? Function(T) to;
+  final T Function(Object? value) from;
+
+  String get typeName => T.toString();
+
+  void registerIn(ObjectComponentCodecRegistry registry) =>
+      registry.register<T>(this);
+
+  @override
+  Object? toJson(T component) => to(component);
+  @override
+  T fromJson(Object? value) => from(value);
+}
+
+final List<_Spec> _specs = [
+  _Spec<Actor>(
+    () => Actor(agentId: AgentId.create()),
+    (c) => {'agentId': c.agentId.value},
+    (v) => Actor(agentId: AgentId((v as Map)['agentId'] as String)),
   ),
-  'EscalationRequest': (json, _) =>
-      EscalationRequest(reason: json['reason'] as String),
-  'Scene': (_, _) => const Scene(),
-  'SceneFrame': (json, _) => SceneFrame(frame: json['frame'] as int? ?? 0),
-  'PresentInScene': (json, r) =>
-      PresentInScene(sceneEntity: r(json['scene'] as String)),
-  'PresentProp': (json, r) =>
-      PresentProp(sceneEntity: r(json['scene'] as String)),
-  'Prop': (json, _) => Prop(name: json['name'] as String),
-  'Goal': (json, _) => Goal(
-    text: json['text'] as String? ?? '',
-    successCriteria: List<String>.from(json['successCriteria'] as List? ?? []),
-    status: json['status'] as String? ?? 'active',
+  _Spec<ActorModel>(
+    () => ActorModel(modelId: ModelId.create()),
+    (c) => {'modelId': c.modelId},
+    (v) => ActorModel(modelId: ModelId((v as Map)['modelId'] as String)),
   ),
-  'Thread': (json, r) =>
-      Thread(parentThreadId: _entityOrNull(json['parentThreadId'], r)),
-  'ThreadScore': (json, _) => ThreadScore((json['value'] as num).toDouble()),
-  'ThreadId': (json, _) => ThreadId(json['value'] as String),
-  'ThreadStatus': (json, _) =>
-      ThreadStatus(ThreadStatusEnum.values.byName(json['value'] as String)),
-  'ParentScene': (json, r) => ParentScene(r(json['scene'] as String)),
-  'OriginActor': (json, r) => OriginActor(r(json['actor'] as String)),
-  'GoalLink': (json, r) => GoalLink(_entityOrNull(json['goal'], r)),
-  'DependsOnStep': (json, r) =>
-      DependsOnStep(_entities(json['dependencies'], r)),
-  'Step': (json, _) => Step(
-    claim: json['claim'] as String,
-    verificationKind: StepVerificationKind.values.byName(
-      json['verificationKind'] as String? ?? 'open',
+  _Spec<ActorSystemPrompt>(
+    () => const ActorSystemPrompt(text: ''),
+    (c) => {'text': c.text},
+    (v) => ActorSystemPrompt(text: (v as Map)['text'] as String),
+  ),
+  _Spec<ActorTools>(
+    () => const ActorTools(registryName: 'default'),
+    (c) => {'registryName': c.registryName},
+    (v) => ActorTools(
+      registryName: (v as Map)['registryName'] as String? ?? 'default',
     ),
-    status: StepLifecycle.values.byName(json['status'] as String? ?? 'open'),
-    confidence: (json['confidence'] as num?)?.toDouble() ?? 0,
-    criterionArgs: (json['criterionArgs'] as Map? ?? {})
-        .cast<String, dynamic>(),
   ),
-  'DerivedFromThread': (json, r) =>
-      DerivedFromThread(r(json['thread'] as String)),
-  'ThreadVisibility': (json, _) => ThreadVisibility(
-    (json['visibleTo'] as List? ?? []).map((v) => AgentId(v as String)).toSet(),
+  _Spec<ActorThreads>(
+    () => ActorThreads(threads: const []),
+    (c) => {'threads': _refList(c.threads)},
+    (v) => ActorThreads(threads: _derefList((v as Map)['threads'])),
   ),
-  'BeatId': (json, _) => BeatId(json['value'] as String),
-  'BelongsToThread': (json, r) => BelongsToThread(r(json['thread'] as String)),
-  'SummarizesBeats': (json, r) =>
-      SummarizesBeats(sources: _entities(json['sources'], r)),
-  'BeatSequence': (json, _) => BeatSequence(json['value'] as int),
-  'Speaker': (json, r) => Speaker(r(json['actor'] as String)),
-  'AddressedTo': (json, r) => AddressedTo(_entityOrNull(json['actor'], r)),
-  'BeatModality': (json, _) =>
-      BeatModality(BeatModalityEnum.values.byName(json['value'] as String)),
-  'BeatStatus': (json, _) =>
-      BeatStatus(BeatStatusEnum.values.byName(json['value'] as String)),
-  'ReplyToBeat': (json, r) => ReplyToBeat(r(json['beat'] as String)),
-  'ObservesProp': (json, r) => ObservesProp(r(json['prop'] as String)),
-  'PrivateToActor': (json, r) => PrivateToActor(r(json['actor'] as String)),
-  'TextContent': (json, _) => TextContent(json['text'] as String),
-  'TextStream': (json, _) => TextStream(
-    chunks: List<String>.from(json['chunks'] as List? ?? []),
-    cursor: json['cursor'] as int? ?? 0,
+  _Spec<Agency>(() => const Agency(), (_) => const {}, (_) => const Agency()),
+  _Spec<AwaitingResponse>(
+    () => const AwaitingResponse(),
+    (c) => {'taskId': c.taskId?.value},
+    (v) => AwaitingResponse(
+      taskId: (v as Map)['taskId'] == null
+          ? null
+          : TaskId(v['taskId'] as String),
+    ),
   ),
-  'AudioStream': (json, _) => AudioStream(
-    chunks: (json['chunks'] as List? ?? [])
-        .map((v) => base64Decode(v as String))
-        .toList(),
+  _Spec<OpenDecision>(
+    () => const OpenDecision(),
+    (c) => {
+      'schema': c.schema.toJson(),
+      'prompt': c.prompt,
+      'priority': c.priority,
+      'escalate': c.escalate,
+      'threadId': c.threadId == null ? null : _ref(c.threadId!),
+      'stepId': c.stepId == null ? null : _ref(c.stepId!),
+    },
+    (v) {
+      final m = v as Map;
+      final schema = m['schema'];
+      return OpenDecision(
+        schema: schema is! Map || schema.isEmpty
+            ? SchemaBundle.empty
+            : SchemaBundle.fromJson(schema.cast<String, dynamic>()),
+        prompt: m['prompt'] as String? ?? '',
+        priority: m['priority'] as int? ?? 0,
+        escalate: m['escalate'] as bool? ?? false,
+        threadId: _refOrNull(m['threadId']),
+        stepId: _refOrNull(m['stepId']),
+      );
+    },
   ),
-  'ActionPayload': (json, _) =>
-      ActionPayload(Map<String, dynamic>.from(json['data'] as Map? ?? {})),
-  'BeatToolCall': (json, _) => BeatToolCall(
-    json['name'] as String,
-    Map<String, dynamic>.from(json['args'] as Map? ?? {}),
+  _Spec<EscalationRequest>(
+    () => const EscalationRequest(),
+    (c) => {'reason': c.reason},
+    (v) => EscalationRequest(reason: (v as Map)['reason'] as String? ?? ''),
   ),
-  'ToolResult': (json, _) => ToolResult(json['result']),
-  'ThoughtContent': (json, _) => ThoughtContent(json['text'] as String),
-  'ObservationData': (json, _) => ObservationData(json['data']),
-  'MemorySummary': (json, _) => MemorySummary(json['text'] as String),
-  'SummaryOwner': (json, r) => SummaryOwner(r(json['actor'] as String)),
-  'SummaryThread': (json, r) => SummaryThread(_entityOrNull(json['thread'], r)),
-  'ToolResultContent': (json, _) =>
-      ToolResultContent(name: json['name'] as String, output: json['output']),
-  'IdentityBeat': (_, _) => const IdentityBeat(),
-  'RetryCount': (json, _) => RetryCount(json['value'] as int),
-  'ToolRoundCount': (json, _) => ToolRoundCount(json['value'] as int),
-  'IdentitySeeded': (_, _) => const IdentitySeeded(),
+  _Spec<Scene>(() => const Scene(), (_) => const {}, (_) => const Scene()),
+  _Spec<SceneFrame>(
+    () => SceneFrame(),
+    (c) => {'frame': c.frame},
+    (v) => SceneFrame(frame: (v as Map)['frame'] as int? ?? 0),
+  ),
+  _Spec<PresentInScene>(
+    () => PresentInScene(sceneEntity: Entity.create(0, 0)),
+    (c) => {'scene': _ref(c.sceneEntity)},
+    (v) => PresentInScene(sceneEntity: _deref((v as Map)['scene'])),
+  ),
+  _Spec<PresentProp>(
+    () => PresentProp(sceneEntity: Entity.create(0, 0)),
+    (c) => {'scene': _ref(c.sceneEntity)},
+    (v) => PresentProp(sceneEntity: _deref((v as Map)['scene'])),
+  ),
+  _Spec<Prop>(
+    () => const Prop(name: ''),
+    (c) => {'name': c.name},
+    (v) => Prop(name: (v as Map)['name'] as String),
+  ),
+  _Spec<Goal>(
+    () => Goal(text: ''),
+    (c) => {
+      'text': c.text,
+      'successCriteria': c.successCriteria,
+      'status': c.status,
+    },
+    (v) {
+      final m = v as Map;
+      return Goal(
+        text: m['text'] as String? ?? '',
+        successCriteria: List<String>.from(m['successCriteria'] as List? ?? []),
+        status: m['status'] as String? ?? 'active',
+      );
+    },
+  ),
+  _Spec<Thread>(
+    () => const Thread(),
+    (c) => {
+      'parentThreadId': c.parentThreadId == null
+          ? null
+          : _ref(c.parentThreadId!),
+    },
+    (v) => Thread(parentThreadId: _refOrNull((v as Map)['parentThreadId'])),
+  ),
+  _Spec<ThreadScore>(
+    () => ThreadScore(0),
+    (c) => {'value': c.value},
+    (v) => ThreadScore(((v as Map)['value'] as num?)?.toDouble() ?? 0),
+  ),
+  _Spec<ThreadId>(
+    () => const ThreadId(''),
+    (c) => {'value': c.value},
+    (v) => ThreadId((v as Map)['value'] as String),
+  ),
+  _Spec<ThreadStatus>(
+    () => ThreadStatus(ThreadStatusEnum.active),
+    (c) => {'value': c.value.name},
+    (v) => ThreadStatus(
+      ThreadStatusEnum.values.byName((v as Map)['value'] as String),
+    ),
+  ),
+  _Spec<ParentScene>(
+    () => ParentScene(Entity.create(0, 0)),
+    (c) => {'scene': _ref(c.scene)},
+    (v) => ParentScene(_deref((v as Map)['scene'])),
+  ),
+  _Spec<OriginActor>(
+    () => OriginActor(Entity.create(0, 0)),
+    (c) => {'actor': _ref(c.actor)},
+    (v) => OriginActor(_deref((v as Map)['actor'])),
+  ),
+  _Spec<GoalLink>(
+    () => const GoalLink(null),
+    (c) => {'goal': c.goal == null ? null : _ref(c.goal!)},
+    (v) => GoalLink(_refOrNull((v as Map)['goal'])),
+  ),
+  _Spec<DependsOnStep>(
+    () => const DependsOnStep(const []),
+    (c) => {'dependencies': _refList(c.dependencies)},
+    (v) => DependsOnStep(_derefList((v as Map)['dependencies'])),
+  ),
+  _Spec<Step>(
+    () => Step(claim: '', verificationKind: StepVerificationKind.mechanical),
+    (c) => {
+      'claim': c.claim,
+      'verificationKind': c.verificationKind.name,
+      'status': c.status.name,
+      'confidence': c.confidence,
+      'criterionArgs': c.criterionArgs,
+    },
+    (v) {
+      final m = v as Map;
+      return Step(
+        claim: m['claim'] as String? ?? '',
+        verificationKind: StepVerificationKind.values.byName(
+          m['verificationKind'] as String? ?? 'mechanical',
+        ),
+        status: StepLifecycle.values.byName(m['status'] as String? ?? 'open'),
+        confidence: (m['confidence'] as num?)?.toDouble() ?? 0,
+        criterionArgs: (m['criterionArgs'] as Map? ?? {})
+            .cast<String, dynamic>(),
+      );
+    },
+  ),
+  _Spec<DerivedFromThread>(
+    () => DerivedFromThread(Entity.create(0, 0)),
+    (c) => {'thread': _ref(c.thread)},
+    (v) => DerivedFromThread(_deref((v as Map)['thread'])),
+  ),
+  _Spec<ThreadVisibility>(
+    () => ThreadVisibility(const <AgentId>{}),
+    (c) => {
+      'visibleTo': [for (final a in c.visibleTo) a.value],
+    },
+    (v) => ThreadVisibility(
+      ((v as Map)['visibleTo'] as List? ?? [])
+          .map((a) => AgentId(a as String))
+          .toSet(),
+    ),
+  ),
+  _Spec<BeatId>(
+    () => const BeatId(''),
+    (c) => {'value': c.value},
+    (v) => BeatId((v as Map)['value'] as String),
+  ),
+  _Spec<BelongsToThread>(
+    () => BelongsToThread(Entity.create(0, 0)),
+    (c) => {'thread': _ref(c.thread)},
+    (v) => BelongsToThread(_deref((v as Map)['thread'])),
+  ),
+  _Spec<SummarizesBeats>(
+    () => SummarizesBeats(sources: const []),
+    (c) => {'sources': _refList(c.sources)},
+    (v) => SummarizesBeats(sources: _derefList((v as Map)['sources'])),
+  ),
+  _Spec<BeatSequence>(
+    () => BeatSequence(0),
+    (c) => {'value': c.value},
+    (v) => BeatSequence((v as Map)['value'] as int? ?? 0),
+  ),
+  _Spec<Speaker>(
+    () => Speaker(Entity.create(0, 0)),
+    (c) => {'actor': _ref(c.actor)},
+    (v) => Speaker(_deref((v as Map)['actor'])),
+  ),
+  _Spec<AddressedTo>(
+    () => const AddressedTo(null),
+    (c) => {'actor': c.actor == null ? null : _ref(c.actor!)},
+    (v) => AddressedTo(_refOrNull((v as Map)['actor'])),
+  ),
+  _Spec<BeatModality>(
+    () => BeatModality(BeatModalityEnum.text),
+    (c) => {'value': c.value.name},
+    (v) => BeatModality(
+      BeatModalityEnum.values.byName((v as Map)['value'] as String),
+    ),
+  ),
+  _Spec<BeatStatus>(
+    () => BeatStatus(BeatStatusEnum.complete),
+    (c) => {'value': c.value.name},
+    (v) =>
+        BeatStatus(BeatStatusEnum.values.byName((v as Map)['value'] as String)),
+  ),
+  _Spec<ReplyToBeat>(
+    () => ReplyToBeat(Entity.create(0, 0)),
+    (c) => {'beat': _ref(c.beat)},
+    (v) => ReplyToBeat(_deref((v as Map)['beat'])),
+  ),
+  _Spec<ObservesProp>(
+    () => ObservesProp(Entity.create(0, 0)),
+    (c) => {'prop': _ref(c.prop)},
+    (v) => ObservesProp(_deref((v as Map)['prop'])),
+  ),
+  _Spec<PrivateToActor>(
+    () => PrivateToActor(Entity.create(0, 0)),
+    (c) => {'actor': _ref(c.actor)},
+    (v) => PrivateToActor(_deref((v as Map)['actor'])),
+  ),
+  _Spec<TextContent>(
+    () => TextContent(''),
+    (c) => {'text': c.text},
+    (v) => TextContent((v as Map)['text'] as String),
+  ),
+  _Spec<TextStream>(
+    () => TextStream(chunks: const []),
+    (c) => {'chunks': c.chunks, 'cursor': c.cursor},
+    (v) {
+      final m = v as Map;
+      return TextStream(
+        chunks: List<String>.from(m['chunks'] as List? ?? []),
+        cursor: m['cursor'] as int? ?? 0,
+      );
+    },
+  ),
+  _Spec<AudioStream>(
+    () => AudioStream(chunks: const []),
+    (c) => {
+      'chunks': [for (final chunk in c.chunks) base64Encode(chunk)],
+    },
+    (v) => AudioStream(
+      chunks: [
+        for (final encoded in (v as Map)['chunks'] as List? ?? [])
+          base64Decode(encoded as String),
+      ],
+    ),
+  ),
+  _Spec<ActionPayload>(
+    () => ActionPayload(const {}),
+    (c) => {'data': c.data},
+    (v) => ActionPayload((v as Map)['data']),
+  ),
+  _Spec<BeatToolCall>(
+    () => BeatToolCall('', const {}),
+    (c) => {'name': c.name, 'args': c.args},
+    (v) {
+      final m = v as Map;
+      return BeatToolCall(
+        m['name'] as String,
+        (m['args'] as Map? ?? {}).cast<String, dynamic>(),
+      );
+    },
+  ),
+  _Spec<ToolResult>(
+    () => ToolResult(null),
+    (c) => {'result': c.result},
+    (v) => ToolResult((v as Map)['result']),
+  ),
+  _Spec<ThoughtContent>(
+    () => ThoughtContent(''),
+    (c) => {'text': c.text},
+    (v) => ThoughtContent((v as Map)['text'] as String),
+  ),
+  _Spec<ObservationData>(
+    () => ObservationData(null),
+    (c) => {'data': c.data},
+    (v) => ObservationData((v as Map)['data']),
+  ),
+  _Spec<MemorySummary>(
+    () => MemorySummary(''),
+    (c) => {'text': c.text},
+    (v) => MemorySummary((v as Map)['text'] as String),
+  ),
+  _Spec<SummaryOwner>(
+    () => SummaryOwner(Entity.create(0, 0)),
+    (c) => {'actor': _ref(c.actor)},
+    (v) => SummaryOwner(_deref((v as Map)['actor'])),
+  ),
+  _Spec<SummaryThread>(
+    () => const SummaryThread(null),
+    (c) => {'thread': c.thread == null ? null : _ref(c.thread!)},
+    (v) => SummaryThread(_refOrNull((v as Map)['thread'])),
+  ),
+  _Spec<ToolResultContent>(
+    () => ToolResultContent(name: '', output: null),
+    (c) => {'name': c.name, 'output': c.output},
+    (v) {
+      final m = v as Map;
+      return ToolResultContent(name: m['name'] as String, output: m['output']);
+    },
+  ),
+  _Spec<IdentityBeat>(
+    () => const IdentityBeat(),
+    (_) => const {},
+    (_) => const IdentityBeat(),
+  ),
+  _Spec<RetryCount>(
+    () => RetryCount(0),
+    (c) => {'value': c.value},
+    (v) => RetryCount((v as Map)['value'] as int? ?? 0),
+  ),
+  _Spec<ToolRoundCount>(
+    () => ToolRoundCount(0),
+    (c) => {'value': c.value},
+    (v) => ToolRoundCount((v as Map)['value'] as int? ?? 0),
+  ),
+  _Spec<IdentitySeeded>(
+    () => const IdentitySeeded(),
+    (_) => const {},
+    (_) => const IdentitySeeded(),
+  ),
+];
+
+Map<String, Component Function()> get _componentFactories => {
+  for (final spec in _specs) spec.typeName: spec.sample,
 };
 
-Map<String, dynamic> snapshotWorld(World world) {
-  world.flush();
-  final records = <Map<String, dynamic>>[];
-  for (final entry in _componentTypes.entries) {
-    for (final (entity, component) in _collect(entry.key, world)) {
-      final existing = records.where(
-        (record) => record['id'] == entity.toJson(),
-      );
-      if (existing.isNotEmpty) {
-        (existing.first['components'] as List).add(_encode(component));
-      } else {
-        records.add({
-          'id': entity.toJson(),
-          'components': [_encode(component)],
-        });
+ObjectComponentCodecRegistry get _codecRegistry {
+  final registry = ObjectComponentCodecRegistry();
+  for (final spec in _specs) {
+    spec.registerIn(registry);
+  }
+  return registry;
+}
+
+Set<ComponentId> _persistedComponentIds(World world) {
+  final ids = <ComponentId>{};
+  for (final spec in _specs) {
+    final id = world.components.getComponentIdByType(_typeOf(spec));
+    if (id != null) ids.add(id);
+  }
+  return ids;
+}
+
+Type _typeOf(_Spec spec) => spec.type;
+
+/// Stamps missing [PersistentId]s onto every entity carrying a persisted
+/// component. Existing ids are preserved; new ones are unique within the
+/// run. Mutates the captured world by attaching identity tags.
+void _stampPersistentIds(World world) {
+  registerPersistentId(world);
+  var next = 1;
+  for (final (_, pid) in world.query<PersistentId>()) {
+    if (pid.value >= next) next = pid.value + 1;
+  }
+  // Collect carriers first: upserts are queued, so an entity holding two
+  // persisted components would be seen twice before either stamp lands.
+  final carriers = <String, Entity>{};
+  for (final componentId in _persistedComponentIds(world)) {
+    for (final archetype in world.archetypes.all.toList()) {
+      if (!archetype.signature.has(componentId)) continue;
+      for (final entity in archetype.entities.toList()) {
+        carriers[entity.toJson()] = entity;
       }
     }
   }
-  return {'version': _snapshotVersion, 'entities': records};
+  for (final entity in carriers.values) {
+    if (persistentIdOf(world, entity) != null) continue;
+    world.upsertComponent(entity, PersistentId(next++));
+  }
+  world.flush();
 }
 
+/// Captures [world] into the envelope format handled by [restoreWorld].
+///
+/// Entities carrying persisted components receive a [PersistentId] if they
+/// do not already have one; the world graph itself is not modified beyond
+/// these identity tags. The facet index's per-thread insertion order is
+/// recorded alongside the payload — projection's recency tie-break depends
+/// on it, and it cannot be derived from component data alone.
+Map<String, dynamic> snapshotWorld(World world) {
+  world.flush();
+  _stampPersistentIds(world);
+  _ctx = world;
+  try {
+    final snapshot = captureWorldSnapshot(
+      world,
+      options: WorldSnapshotOptions(
+        includeOnly: _persistedComponentIds(world),
+        codecs: _codecRegistry,
+      ),
+    );
+    final index = world.getResource<FacetIndex>();
+    final indexOrder = <String, int>{};
+    var position = 0;
+    for (final (thread, _) in world.query<Thread>()) {
+      for (final beat in index.beatsOfThread(thread.entity)) {
+        final pid = persistentIdOf(world, beat);
+        if (pid != null) indexOrder['${pid.value}'] = position++;
+      }
+    }
+    return {
+      'format': kSnapshotFormat,
+      'version': _snapshotFormatVersion,
+      'payload': snapshot.toJson(),
+      'indexOrder': indexOrder,
+    };
+  } finally {
+    _ctx = null;
+  }
+}
+
+/// Restores a fresh world from a [snapshotWorld] envelope: plugin installed,
+/// default router attached, entities respawned under their persistent ids,
+/// facet index rebuilt from restored beats.
 World restoreWorld(Map<String, dynamic> snapshot) {
-  if (snapshot['version'] != _snapshotVersion) {
+  if (snapshot['format'] != kSnapshotFormat) {
+    throw ArgumentError.value(
+      snapshot['format'],
+      'format',
+      'expected "$kSnapshotFormat"',
+    );
+  }
+  if (snapshot['version'] != _snapshotFormatVersion) {
     throw ArgumentError.value(snapshot['version'], 'version', 'unsupported');
   }
-  final world = World()..addPlugin(AgentPlugin());
-  world.upsertResource(ModelRouterResource(ModelRouter()));
-  world.flush();
-
-  final records = (snapshot['entities'] as List).cast<Map<String, dynamic>>();
-  final newIds = [
-    for (var i = 0; i < records.length; i++) world.reserveEmptyEntity().entity,
-  ];
-  world.flush();
-
-  final oldToNew = <String, String>{
-    for (var i = 0; i < records.length; i++)
-      records[i]['id'] as String: newIds[i].toJson(),
+  final decoded = WorldSnapshot.fromJson(
+    (snapshot['payload'] as Map).cast<String, Object?>(),
+  );
+  final indexOrder = <int, int>{
+    for (final entry in ((snapshot['indexOrder'] as Map?) ?? const {}).entries)
+      int.parse(entry.key as String): entry.value as int,
   };
-  Entity remap(String oldId) {
-    final newId = oldToNew[oldId];
-    if (newId == null)
-      throw StateError('Snapshot references missing entity $oldId');
-    final parts = newId.split('-');
-    return Entity.create(int.parse(parts.first), int.parse(parts.last));
-  }
 
-  for (var i = 0; i < records.length; i++) {
-    for (final raw in records[i]['components'] as List) {
-      final data = Map<String, dynamic>.from(raw as Map);
-      final type = (data['type'] ?? '') as String;
-      final decoder = _decoders[type];
-      if (decoder == null) throw StateError('Unknown component type: $type');
-      world.upsertComponent(newIds[i], decoder(data, remap));
-    }
+  // Structural filter: derived/transient components must never materialize
+  // in the restored world even when the source entity carried them.
+  final filtered = WorldSnapshot(
+    version: decoded.version,
+    schemaVersion: decoded.schemaVersion,
+    componentIds: decoded.componentIds,
+    resources: decoded.resources,
+    entities: [
+      for (final entry in decoded.entities)
+        EntityEntry(
+          persistentId: entry.persistentId,
+          components: entry.components
+              .where((name) => !_excludedComponents.contains(name))
+              .toList(growable: false),
+          columns: entry.columns,
+        ),
+    ],
+  );
+
+  final world = World()..addPlugin(AgentPlugin());
+  world
+    ..upsertResource(ModelRouterResource(ModelRouter()))
+    ..upsertResource(ToolRegistryResource());
+  world.flush();
+
+  _ctx = world;
+  try {
+    restoreWorldSnapshot(
+      world,
+      filtered,
+      componentFactories: _componentFactories,
+      options: WorldSnapshotOptions(codecs: _codecRegistry),
+    );
+  } finally {
+    _ctx = null;
   }
   world.flush();
-  _rebuildFacetIndex(world);
+  _rebuildFacetIndex(world, indexOrder);
   world.flush();
   return world;
 }
 
-void _rebuildFacetIndex(World world) {
+void _rebuildFacetIndex(World world, Map<int, int> indexOrder) {
   final index = world.getResource<FacetIndex>();
   index.clear();
-  for (final (entity, text, thread)
-      in world.query2<TextContent, BelongsToThread>()) {
-    final structured = entity.get<ToolResultContent>();
+  // Re-insert in the source index's insertion order: projection's recency
+  // tie-break consumes this order, so parity requires reproducing it.
+  // Beats absent from the captured order (unindexed at capture time) go
+  // last, preserving their query order.
+  var fallback = 1 << 30;
+  final beats = [
+    for (final (facade, text, thread)
+        in world.query2<TextContent, BelongsToThread>())
+      (
+        facade,
+        text,
+        thread.thread,
+        indexOrder[persistentIdOf(world, facade.entity)?.value] ?? fallback++,
+      ),
+  ]..sort((a, b) => a.$4.compareTo(b.$4));
+  for (final (facade, text, thread, _) in beats) {
+    final structured = facade.get<ToolResultContent>();
     final indexedText = structured == null
         ? text.text
         : toolResultText(
@@ -552,31 +636,6 @@ void _rebuildFacetIndex(World world) {
               output: structured.output,
             ),
           );
-    index.indexBeat(
-      entity.entity,
-      keywordsOf(indexedText),
-      thread: thread.thread,
-    );
+    index.indexBeat(facade.entity, keywordsOf(indexedText), thread: thread);
   }
 }
-
-dynamic _jsonValue(dynamic value) {
-  if (value == null || value is String || value is num || value is bool)
-    return value;
-  if (value is Map || value is List) return value;
-  throw ArgumentError.value(value, 'value', 'not JSON-serializable');
-}
-
-List<Entity> _entities(dynamic values, Entity Function(String) remap) =>
-    (values as List? ?? []).map((value) => remap(value as String)).toList();
-
-Entity? _entityOrNull(dynamic value, Entity Function(String) remap) =>
-    value == null ? null : remap(value as String);
-
-SchemaBundle _schemaBundle(dynamic value) {
-  if (value is! Map || value.isEmpty) return SchemaBundle.empty;
-  return SchemaBundle.fromJson(Map<String, dynamic>.from(value));
-}
-
-TaskId? _taskId(dynamic value) =>
-    value == null ? null : TaskId(value as String);

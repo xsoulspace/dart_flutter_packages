@@ -23,6 +23,8 @@ dependency_overrides:
     path: /Users/antonio/mcp/cline/intentcall/packages/acp_toolkit
   ecsly:
     path: ../../ecsly/core_packages/ecsly
+  ecsly_serialization:
+    path: ../../ecsly/plugins/ecsly_serialization
   ecsly_flutter:
     path: ../../ecsly/core_packages/ecsly_flutter
   ecsly_codegen:

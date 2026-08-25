@@ -132,9 +132,11 @@ class SnapshotStore {
         'Session "$name" carries no world payload.',
       );
     }
-    if (world['version'] != _worldSnapshotVersion) {
+    if (world['format'] != kSnapshotFormat ||
+        world['version'] != _worldSnapshotVersion) {
       throw SnapshotFormatException(
-        'Session "$name" world payload is corrupt.',
+        'Session "$name" world payload is corrupt or from an unsupported '
+        'codec format.',
       );
     }
     return restoreWorld(world);

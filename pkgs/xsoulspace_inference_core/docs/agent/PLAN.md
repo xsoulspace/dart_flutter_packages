@@ -124,8 +124,8 @@ source-of-truth. Crash mid-decision: dangling `AwaitingResponse` taskId is
 safe, `OpenDecision` re-opens, projections byte-match pre-snapshot (golden,
 incl. goals/steps/tool-result beats). Headline comparison table published at
 [results_comparison.md](../../benchmark/docs/agent/results_comparison.md).
-Follow-up: the codec's runtime-id remapping is slated for replacement by
-`PersistentId` identity — see [A8](#a8-migrate-persistence-to-persistentid--ahead).
+Follow-up landed: the codec now runs on `PersistentId` identity — see
+[A8](#a8-migrate-persistence-to-persistentid--landed-2026-08).
 
 ### A6. Everyday CLI host (thin) — **landed 2026-08**
 
@@ -177,32 +177,39 @@ Non-goals held: no lib behavior change, no new seams, no schema versioning.
 Gravity check: serves (b) fewer calls and (d) LLM-free testable by removing
 fourth/fifth copies of world bootstrap and accounting machinery.
 
-### A8. Migrate persistence to `PersistentId` — **ahead**
+### A8. Migrate persistence to `PersistentId` — **landed 2026-08**
 
 Principle: `Entity` references are fine **at runtime** — graph wiring
 (`ActorThreads`, `BelongsToThread`, `GoalLink`, …) stays as-is. But across
 the serialization boundary they must never appear: `Entity` handles are
 regenerated every run, so snapshots carry `PersistentId` identity instead,
-translated back to fresh handles on restore. The A5 codec
-([snapshot.dart](../../lib/src/agent/snapshot.dart)) currently persists
-entity references as opaque runtime ids remapped by table order — migrate it
-onto ecsly_serialization's `PersistentId` model:
+translated back to fresh handles on restore.
 
-1. Stamp `PersistentId` on every persisted entity (scenes, actors, threads,
-   beats, goals, steps) at capture time — runtime spawn paths unchanged.
-2. Object-component codecs encode `Entity` fields as persistent ids and
-   decode through the restore mapping (two-pass restore: spawn all carriers
-   → obtain id→Entity map → restore columns).
-3. `SnapshotStore` switches its document payload to
-   `encodeWorldSnapshot(captureWorldSnapshot(...))`; envelope/meta stay.
-4. Acceptance gates unchanged: projection byte-match golden (incl.
-   goals/steps/tool-result beats), crash-mid-decision re-open, corrupt/
-   missing session errors.
-5. Delete the hand-rolled `_componentTypes`/`_encode`/`_decoders` table once
-   parity is proven — one serialization stack, not two.
+[snapshot.dart](../../lib/src/agent/snapshot.dart) rewritten onto
+ecsly_serialization; the hand-rolled `_componentTypes`/`_encode`/`_decoders`
+table is deleted — one serialization stack. Mechanics:
 
-Non-goals: no schema versioning beyond ecsly_serialization's own envelope;
-no behavior change outside persistence; no runtime graph-shape changes.
+1. Capture stamps missing `PersistentId`s onto persisted entities
+   (deduped carrier walk; runtime spawn paths untouched).
+2. Per-type codecs encode every `Entity` field as its persistent id and
+   decode through the target-world handle lookup — safe because the plugin's
+   restore spawns all carriers before writing columns.
+3. Structural filter drops derived/transient components (`Situation`,
+   `StreamingBeat`, flow markers) from spawn signatures so they never
+   materialize post-restore.
+4. Facet-index insertion order — projection's recency tie-break consumes it
+   and it is not derivable from components — is captured as `indexOrder` in
+   the envelope and reproduced on rebuild.
+5. `SnapshotStore` payload = `captureWorldSnapshot` JSON via the plugin;
+   legacy payloads rejected with `SnapshotFormatException`.
+
+E2E coverage ([persistent_snapshot_e2e_test.dart](../../test/persistent_snapshot_e2e_test.dart)):
+payload identity stable across save→load→save (impossible under runtime-id
+remapping); multi-actor cuts byte-match post-restore including privacy
+filtering and tie-break order; a restored world keeps living — new scripted
+turn appends beats, goes idle, and re-persists. Acceptance gates from A5 all
+hold: goals/steps/tool-result golden byte-match, crash-mid-decision re-open,
+corrupt/missing session errors. Core 210/210 green.
 
 ---
 

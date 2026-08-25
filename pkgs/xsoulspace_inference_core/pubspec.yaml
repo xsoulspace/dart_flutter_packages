@@ -12,6 +12,7 @@ dependencies:
   ecsly_app: ^0.1.0-dev.2
   ecsly_async_parallel: ^0.1.0
   ecsly_codegen: ^0.1.0-dev.2
+  ecsly_serialization: ^0.1.0-dev.1
   from_json_to_json: ^0.5.0
   is_dart_empty_or_not: ^0.4.0
   meta: ^1.19.0
