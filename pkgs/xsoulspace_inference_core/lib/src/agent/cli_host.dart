@@ -11,6 +11,7 @@ import 'package:ecsly/ecsly.dart';
 
 import 'data_models/data_models.dart';
 import 'harness_loop.dart';
+import 'narrative/narrative.dart';
 import 'resources/resources.dart';
 import 'tools/tool_registry.dart';
 
@@ -21,10 +22,22 @@ class CliHostConfig {
   const CliHostConfig({
     this.toolRegistryName = 'default',
     this.confirmationRequiredTools = const {},
+    this.onIdleTurnEnd,
   });
 
   final String toolRegistryName;
   final Set<String> confirmationRequiredTools;
+
+  /// Invoked when a turn completes and the harness settles idle — the seam
+  /// hosts use for snapshot autosave, tracing, or UI state resets without
+  /// core knowing about storage or presentation.
+  ///
+  /// Fires at most once per settled turn: direct world mutations followed by
+  /// [CliHost.wakeup] count as activity, a quiet startup does not. The
+  /// callback is invoked fire-and-forget; thrown or failed futures are
+  /// swallowed so a broken autosave can never kill the loop. Hosts that need
+  /// error visibility must catch inside the callback.
+  final Future<void> Function()? onIdleTurnEnd;
 }
 
 class CliHost {
@@ -87,12 +100,14 @@ class CliHost {
   /// Returns false when every actor already has agency or work in flight.
   bool feed(String input) {
     if (input.trim().isEmpty) return false;
+    _turnEnded = true;
 
     for (final (entity, _, _) in world.query2<Actor, OpenDecision>().toList()) {
       if (entity.has<Agency>() || entity.has<AwaitingResponse>()) continue;
       entity.insert(OpenDecision(prompt: input));
       world.flush();
       _loop.wakeup();
+      _armIdleTimer();
       return true;
     }
 
@@ -102,6 +117,7 @@ class CliHost {
     idleActors.first.$1.insert(OpenDecision(prompt: input));
     world.flush();
     _loop.wakeup();
+    _armIdleTimer();
     return true;
   }
 
@@ -112,6 +128,7 @@ class CliHost {
   void cancel() {
     _idleTimer?.cancel();
     _idleTimer = null;
+    _turnEnded = true;
     final taskRegistry = world.getResource<TaskRegistryResource>();
     for (final taskId in taskRegistry.tasks.keys.toList()) {
       final handle = taskRegistry.take(taskId);
@@ -134,7 +151,10 @@ class CliHost {
     }
     world.flush();
     _loop.wakeup();
-    scheduleMicrotask(_completeIdleTurn);
+    scheduleMicrotask(() {
+      _completeIdleTurn();
+      _armIdleTimer();
+    });
   }
 
   Map<Entity, Situation> inspectSituation() {
@@ -146,6 +166,50 @@ class CliHost {
     return situations;
   }
 
+  /// Human-readable rendering of [inspectSituation] for CLI hosts.
+  ///
+  /// One block per acting actor, sorted by agent id for determinism: tokens
+  /// used this projection, projected beat count, and each projected beat
+  /// truncated to ~120 characters with its modality tag. Returns `'(idle)'`
+  /// when no actor currently holds agency.
+  String renderSituation() {
+    final situations = inspectSituation();
+    if (situations.isEmpty) return '(idle)';
+    String agentIdOf(Entity entity) =>
+        world.getEntity(entity).$1.get<Actor>()?.agentId.value ?? '';
+    final entries = situations.entries.toList()
+      ..sort((a, b) => agentIdOf(a.key).compareTo(agentIdOf(b.key)));
+    final buffer = StringBuffer();
+    for (final entry in entries) {
+      buffer
+        ..writeln(
+          'actor ${agentIdOf(entry.key)}: '
+          'tokens=${entry.value.tokensUsed} '
+          'beats=${entry.value.projectedBeats.length}',
+        )
+        ..writeln('  prompt: ${_elide(entry.value.prompt)}');
+      for (final beat in entry.value.projectedBeats) {
+        final (beatEntity, valid) = world.getEntity(beat);
+        if (!valid) continue;
+        final modality = beatEntity.get<BeatModality>()?.value.name ?? 'text';
+        final text = beatEntity.get<TextContent>()?.text ?? '';
+        buffer.writeln('  [$modality] ${_elide(text)}');
+      }
+    }
+    return buffer.toString().trimRight();
+  }
+
+  /// Wake the sleeping loop after direct world mutations.
+  ///
+  /// Hosts that open decisions outside [feed] (e.g. spawning an actor with an
+  /// [OpenDecision]) call this so the loop picks the work up; the settled end
+  /// of that work still fires [CliHostConfig.onIdleTurnEnd].
+  void wakeup() {
+    _turnEnded = true;
+    _loop.wakeup();
+    _armIdleTimer();
+  }
+
   void _subscribeToStreamEvents() {
     for (final (entity, _, _) in world.query2<Actor, ActorModel>().toList()) {
       world
@@ -153,7 +217,14 @@ class CliHost {
           .subscribe(entity.entity)
           .listen(_output.add, onError: _output.addError);
     }
-    _idleTimer = Timer.periodic(const Duration(milliseconds: 10), (timer) {
+    _armIdleTimer();
+  }
+
+  /// Arm (or re-arm) idle detection. The timer disarms itself once the loop
+  /// settles, so every entry point that adds work must call this again —
+  /// otherwise later [waitForIdle] waiters would never be released.
+  void _armIdleTimer() {
+    _idleTimer ??= Timer.periodic(const Duration(milliseconds: 10), (timer) {
       if (_loop.canSleep()) {
         timer.cancel();
         _idleTimer = null;
@@ -163,6 +234,7 @@ class CliHost {
   }
 
   Timer? _idleTimer;
+  var _turnEnded = false;
 
   Future<void> waitForIdle() {
     if (_loop.canSleep()) return Future.value();
@@ -174,6 +246,16 @@ class CliHost {
     final completer = _idleTurn;
     _idleTurn = null;
     if (completer != null && !completer.isCompleted) completer.complete();
+    if (!_turnEnded) return;
+    _turnEnded = false;
+    final callback = config.onIdleTurnEnd;
+    if (callback == null) return;
+    unawaited(Future<void>.sync(callback).catchError((Object error) {}));
+  }
+
+  static String _elide(String text, [int max = 120]) {
+    final flat = text.replaceAll('\n', ' ');
+    return flat.length <= max ? flat : '${flat.substring(0, max)}…';
   }
 
   void _installConfirmationRegistry() {

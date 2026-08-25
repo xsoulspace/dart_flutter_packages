@@ -1,22 +1,30 @@
 // ignore_for_file: avoid_print, lines_longer_than_80_chars
 
-/// Interactive agent CLI over Apple Foundation Models — the battle-test
-/// vehicle for the harness.
+/// Interactive agent CLI over Apple Foundation Models — the everyday,
+/// battle-test vehicle for the harness, hosted on core's [CliHost].
 ///
 /// ```sh
 /// dart run bin/agent.dart --root /tmp/agent_ws
 /// ```
 ///
+/// The binary owns only provider wiring and presentation; the turn lifecycle
+/// (input-as-decisions, cancellation, idle detection, streaming fan-out,
+/// tool confirmation) lives in `CliHost`, so everything battle-tested here
+/// transfers to Flutter/ACP hosts unchanged.
+///
 /// REPL commands:
 /// - any text → sent to the actor as a decision; response streams live
-/// - `_stats`   → channel watermarks + thread/token metrics
-/// - `_trace`   → dump the execution ledger (last turn)
-/// - `_save` / `_load <path>` → world snapshot to/from JSON
-/// - `_exit`
+/// - `/situation` → human-readable projection state per acting actor
+/// - `/cancel`    → cancel in-flight generation + release agency (or Ctrl-C)
+/// - `/exit`      → stop the harness and tear down
+/// - `_stats`     → channel watermarks + thread/token metrics
+/// - `_trace`     → dump the execution ledger (last turn)
+/// - `_spawn <p>` → additional actor with its own thread of work
+/// - `_save <p>` / `_load <p>` → world snapshot to/from JSON
 ///
 /// Flags:
 /// - `--root <dir>`  tool jail root (default: system temp)
-/// - `--trace`       dump ledger after every turn
+/// - `--trace`       dump ledger after every settled turn
 /// - `--no-debug`    silence native debug traces
 library;
 
@@ -28,6 +36,46 @@ import 'package:ecsly_serialization/ecsly_serialization.dart';
 import 'package:xsoulspace_inference_apple_foundation/src/native_bridge/native_client.dart';
 import 'package:xsoulspace_inference_core/src/agent/tools/fs_tools.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
+
+/// Exclusive single-user stdin reader: each pulled line is consumed exactly
+/// once, whether it answers a tool-confirmation prompt or feeds the REPL.
+class _StdinLines {
+  _StdinLines() {
+    stdin
+        .transform(utf8.decoder)
+        .transform(const LineSplitter())
+        .listen(
+          (line) {
+            final waiter = _waiter;
+            if (waiter != null && !waiter.isCompleted) {
+              _waiter = null;
+              waiter.complete(line);
+            } else {
+              _buffer.add(line);
+            }
+          },
+          onDone: () {
+            _closed = true;
+            final waiter = _waiter;
+            if (waiter != null && !waiter.isCompleted) {
+              _waiter = null;
+              waiter.complete(null);
+            }
+          },
+        );
+  }
+
+  final _buffer = <String>[];
+  Completer<String?>? _waiter;
+  var _closed = false;
+
+  /// Next buffered line, or null on EOF (Ctrl-D).
+  Future<String?> next() {
+    if (_buffer.isNotEmpty) return Future.value(_buffer.removeAt(0));
+    if (_closed) return Future.value(null);
+    return (_waiter ??= Completer<String?>()).future;
+  }
+}
 
 Future<void> main(List<String> args) async {
   var root = Directory.systemTemp.path;
@@ -94,9 +142,16 @@ Future<void> main(List<String> args) async {
   ]);
   world.flush();
 
+  // ── Observability ────────────────────────────────────────────────────────
+  final ledger = HarnessExecutionLedger(world);
+  world.executionObserver = ledger;
+
+  var streaming = false;
+
+  // Late actors are not covered by CliHost's start-time subscriptions, so
+  // each spawn attaches its own labeled tap ([a0], [a1], …).
   var nextActorOrdinal = 0;
-  // Spawns an additional actor (Phase 5 battle-testing): same jail, own
-  // thread of work, streaming output prefixed with its label.
+  final spawnedSubscriptions = <StreamSubscription<String>>[];
   Entity spawnActor(final String prompt) {
     final ordinal = nextActorOrdinal++;
     final spawned = world.spawnComponents([
@@ -112,47 +167,17 @@ Future<void> main(List<String> args) async {
       const ActorTools(registryName: 'default'),
       PresentInScene(sceneEntity: scene),
     ]);
-    world.getResource<StreamingTapResource>().subscribe(spawned).listen((delta) {
-      stdout.write('\x1b[2m[a$ordinal]\x1b[0m $delta');
-    });
+    spawnedSubscriptions.add(
+      world.getResource<StreamingTapResource>().subscribe(spawned).listen((
+        delta,
+      ) {
+        stdout.write('\x1b[2m[a$ordinal]\x1b[0m $delta');
+      }),
+    );
     world.upsertComponent(spawned, OpenDecision(prompt: prompt));
     world.flush();
     print('spawned a$ordinal');
     return spawned;
-  }
-
-  // ── Loop + observability ─────────────────────────────────────────────────
-  final loop = HarnessLoop(world: world);
-  unawaited(loop.start());
-  final ledger = HarnessExecutionLedger(world);
-  world.executionObserver = ledger;
-  final tap = world.getResource<StreamingTapResource>();
-
-  var streaming = false;
-  final tapSub = tap
-      .subscribe(actor)
-      .listen(
-        (delta) {
-          if (!streaming) {
-            stdout.write('\x1b[2m');
-            streaming = true;
-          }
-          stdout.write(delta);
-        },
-        onDone: () {
-          if (streaming) {
-            stdout.writeln('\x1b[0m');
-            streaming = false;
-          }
-        },
-      );
-
-  String latestResponse() {
-    String? last;
-    for (final (_, _, content) in world.query2<BeatModality, TextContent>()) {
-      if (content.text.isNotEmpty) last = content.text;
-    }
-    return last ?? '';
   }
 
   void saveSession(String path) {
@@ -172,17 +197,88 @@ Future<void> main(List<String> args) async {
     );
   }
 
-  // ── REPL ─────────────────────────────────────────────────────────────────
+  // ── Host (turn lifecycle owned by core) ──────────────────────────────────
+  // Single-user stdin: a line answers a pending confirmation prompt if one is
+  // open, otherwise it reaches the REPL loop — never both.
+  Completer<String>? pendingConfirmation;
+
+  final host = CliHost(
+    world: world,
+    config: CliHostConfig(
+      confirmationRequiredTools: {'write'},
+      onIdleTurnEnd: () async {
+        // Settled turn: close the dim-wrapped stream window, drain the
+        // fire-and-forget dispatch watermark so _stats stays honest, and
+        // optionally dump the trace. Autosave hooks belong here too.
+        if (streaming) {
+          stdout.writeln('\x1b[0m');
+          streaming = false;
+        }
+        world.events.reader<ActorGenerateRequest>().drain();
+        world.events.channel<ActorGenerateRequest>().clear();
+        if (traceEveryTurn) print(ledger.dump());
+        ledger.reset();
+      },
+    ),
+    requestToolConfirmation: (name, arguments) async {
+      String target;
+      if (arguments case {'path': final path}) {
+        target = '$path';
+      } else {
+        target = '$arguments';
+      }
+      stderr.write('approve write to $target? [y/N] ');
+      pendingConfirmation = Completer<String>();
+      final answer = (await pendingConfirmation!.future).trim().toLowerCase();
+      return answer == 'y' || answer == 'yes';
+    },
+  );
+
+  // ── REPL ────────────────────────────────────────────────────────────────
   stdout.writeln(
     'xs_agent ready. jail=$root\n'
-    'type a task, or _stats | _trace | _spawn <p> | _save <p> | _load <p> | _exit',
+    'type a task, or /situation | /cancel | /exit | '
+    '_stats | _trace | _spawn <p> | _save <p> | _load <p>',
   );
-  await for (final line
-      in stdin.transform(utf8.decoder).transform(const LineSplitter())) {
+  unawaited(host.start());
+
+  host.output.listen((delta) {
+    if (!streaming) {
+      stdout.write('\x1b[2m');
+      streaming = true;
+    }
+    stdout.write(delta);
+  });
+
+  ProcessSignal.sigint.watch().listen((_) {
+    host.cancel();
+    stdout.writeln('\n(cancelled — type /exit to quit)');
+  });
+
+  final stdinLines = _StdinLines();
+  while (true) {
+    final line = await stdinLines.next();
+    if (line == null) break; // EOF (Ctrl-D)
+
+    final pending = pendingConfirmation;
+    if (pending != null) {
+      pendingConfirmation = null;
+      pending.complete(line);
+      continue;
+    }
+
     final input = line.trim();
     if (input.isEmpty) continue;
 
-    if (input == '_exit') break;
+    if (input == '/exit') break;
+    if (input == '/cancel') {
+      host.cancel();
+      continue;
+    }
+    if (input == '/situation') {
+      print(host.renderSituation());
+      continue;
+    }
     if (input == '_stats') {
       _printStats(world);
       continue;
@@ -200,43 +296,24 @@ Future<void> main(List<String> args) async {
       loadSession(_argOf(input, '/tmp/xs_agent_session.json'));
       continue;
     }
-
     if (input.startsWith('_spawn ')) {
-      spawnActor(input.substring('_spawn '.length).trim());
-      loop.wakeup();
-      stdout.write('> ');
+      final prompt = input.substring('_spawn '.length).trim();
+      if (prompt.isNotEmpty) {
+        spawnActor(prompt);
+        host.wakeup(); // sleeping loop must pick up the new decision
+      }
       continue;
     }
 
-    if (input.startsWith('_spawn ')) {
-      spawnActor(input.substring('_spawn '.length).trim());
-      loop.wakeup();
-      stdout.write('> ');
-      continue;
+    if (!host.feed(input)) {
+      stdout.writeln('(all actors busy — /cancel to interrupt, or wait)');
     }
-
-    ledger.reset();
-    world.upsertComponent(actor, OpenDecision(prompt: input));
-    world.flush();
-    loop.wakeup();
-
-    // Wait until this decision resolves (actor idle again).
-    while (!loop.canSleep()) {
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-    }
-    // ActorGenerateRequest is fire-and-forget (the handler is invoked
-    // inline, the event exists only as a watermark marker) — drain it so
-    // its buffered count doesn't grow unbounded and pollute _stats.
-    world.events.reader<ActorGenerateRequest>().drain();
-    world.events.channel<ActorGenerateRequest>().clear();
-    final reply = latestResponse();
-    if (!streaming && reply.isNotEmpty) print(reply);
-    if (traceEveryTurn) print(ledger.dump());
-    stdout.write('> ');
   }
 
-  await tapSub.cancel();
-  loop.stop();
+  for (final sub in spawnedSubscriptions) {
+    await sub.cancel();
+  }
+  await host.stop();
   world.clear();
 }
 

@@ -6,7 +6,6 @@ import '../../data_models/data_models.dart';
 import '../../tools/tool_registry.dart' show ToolName;
 import '../../decisions/decision_flow.dart' show DeferredThinking;
 import '../../events.dart';
-import '../../data_models/data_models.dart';
 import '../../model_router.dart';
 import '../../narrative/narrative.dart';
 import '../../resources/resources.dart';

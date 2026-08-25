@@ -1,5 +1,25 @@
 # A1 Fair Comparison — harness vs pi (same model via OpenRouter)
 
+## Headline (final, published 2026-08 — A5 deliverable)
+
+Same model (`poolside/laguna-xs-2.1:free`), same tasks, same retry parity:
+
+| column       | backend | decision path | tokens source | tool surface | pass | tokens |
+| ------------ | ------- | ------------- | ------------- | ------------ | ---- | ------ |
+| harness+OR   | OpenRouter | native provider tool calling | cumulative projection size | 3 fs tools | 6/20 | 128k |
+| pi+OR        | OpenRouter | pi SDK native loop | real SDK usage | pi built-ins | **19/20** | 1.29M |
+| harness+OR (guided) | OpenRouter | guided schema `--decision guided` | cumulative projection size | 3 fs tools | 0/20 | — |
+
+Read: guided schema is a bottleneck at tiny scale (C2). The remaining
+harness-vs-pi gap is edit quality, not decision machinery — the lever A2
+plan-frontier + decomposition attacks (scripted refactor tasks: −44…−72%
+cumulative tokens at equal pass rate; see
+[results_plan_falsification.md](../../docs/agent/results_plan_falsification.md)).
+Full per-task table below; failure modes live in the source JSONL under
+`benchmark/runs/`.
+
+---
+
 - Model: `poolside/laguna-xs-2.1:free`
 - Harness decision path: native provider tool calling
   (`DefaultGenerationHandler`; guided-schema arm scored 0/20 — see below)

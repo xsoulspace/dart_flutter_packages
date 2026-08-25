@@ -17,6 +17,8 @@ dependencies:
   meta: ^1.19.0
   recase: ^4.1.0
   dart_mcp: ^0.5.1
+  universal_storage_filesystem: ^0.1.0-dev.12
+  universal_storage_interface: ^0.1.0-dev.12
 
 dev_dependencies:
   yaml: ^3.1.3

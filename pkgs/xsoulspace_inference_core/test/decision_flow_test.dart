@@ -17,20 +17,10 @@ import 'dart:io';
 
 import 'support/agent_harness_support.dart';
 
-World _world(DecisionFlow flow) {
-  final world = World()..addPlugin(AgentPlugin());
-  world
-    ..upsertResource(ModelRouterResource(ModelRouter()))
-    ..upsertResource(ToolRegistryResource())
-    ..upsertResource(DecisionFlowResource(flow))
-    ..flush();
-  return world;
-}
-
 void main() {
   group('policy builders (pure evaluation)', () {
-    test('onToolResult fires only when the marker is present', () {
-      final world = _world(DecisionFlow([]));
+    test('onToolResult fires only when the marker is present', () async {
+      final world = await buildTestWorld(decisionFlow: DecisionFlow([]));
       final scene = spawnScene(world);
       final actor = spawnActor(world, scene);
       world.flush();
@@ -45,8 +35,8 @@ void main() {
       expect(draft?.prompt, 'continue');
     });
 
-    test('everyNTicks fires on multiples of n only', () {
-      final world = _world(DecisionFlow([]));
+    test('everyNTicks fires on multiples of n only', () async {
+      final world = await buildTestWorld(decisionFlow: DecisionFlow([]));
       final scene = spawnScene(world);
       final actor = spawnActor(world, scene);
       world.flush();
@@ -64,8 +54,8 @@ void main() {
       expect(eval(20), isTrue);
     });
 
-    test('when() evaluates an arbitrary deterministic predicate', () {
-      final world = _world(DecisionFlow([]));
+    test('when() evaluates an arbitrary deterministic predicate', () async {
+      final world = await buildTestWorld(decisionFlow: DecisionFlow([]));
       final scene = spawnScene(world);
       final actor = spawnActor(world, scene, openDecisionPrompt: 'busy');
       world.flush();
@@ -81,8 +71,8 @@ void main() {
   });
 
   group('flow evaluation', () {
-    test('first non-null draft wins', () {
-      final world = _world(DecisionFlow([]));
+    test('first non-null draft wins', () async {
+      final world = await buildTestWorld(decisionFlow: DecisionFlow([]));
       final scene = spawnScene(world);
       final actor = spawnActor(world, scene);
       world.getEntity(actor).$1.insert(const ToolResultPendingMarker());
@@ -99,8 +89,10 @@ void main() {
       expect(result?.draft.prompt, 'from-first');
     });
 
-    test('defaultReAct flow opens continuation on marker', () {
-      final world = _world(DecisionFlow.defaultReAct());
+    test('defaultReAct flow opens continuation on marker', () async {
+      final world = await buildTestWorld(
+        decisionFlow: DecisionFlow.defaultReAct(),
+      );
       final scene = spawnScene(world);
       final actor = spawnActor(world, scene);
       world.getEntity(actor).$1.insert(const ToolResultPendingMarker());
@@ -112,13 +104,15 @@ void main() {
       expect(result?.policyName, 'react_continuation');
     });
 
-    test('react_continuation prompt carries latest tool result', () {
-      final world = _world(DecisionFlow.defaultReAct());
+    test('react_continuation prompt carries latest tool result', () async {
+      final world = await buildTestWorld(
+        decisionFlow: DecisionFlow.defaultReAct(),
+      );
       final scene = spawnScene(world);
       final actor = spawnActor(world, scene);
       world.getEntity(actor).$1.insert(const ToolResultPendingMarker());
       // A completed tool-result beat spoken by this actor.
-      final beat = world.spawnComponents([
+      world.spawnComponents([
         TextContent('wrote 3 files to src/'),
         BeatStatus(BeatStatusEnum.complete),
         ToolResultContent(name: 'write', output: 'ok'),
@@ -147,8 +141,8 @@ void main() {
     test(
       'decisionFlowSystem opens attributed decisions and clears markers',
       () async {
-        final world = _world(
-          DecisionFlow([
+        final world = await buildTestWorld(
+          decisionFlow: DecisionFlow([
             whenIdleEveryNTicks(2).thenOpen(prompt: 'tick decision'),
           ]),
         );
@@ -180,30 +174,24 @@ void main() {
       final jail = await Directory.systemTemp.createTemp('flow_e2e_');
       addTearDown(() => jail.delete(recursive: true));
 
-      final world = World()..addPlugin(AgentPlugin());
-      world
-        ..upsertResource(ModelRouterResource(ModelRouter()))
-        ..upsertResource(ToolRegistryResource())
-        ..upsertResource(AgencyPolicy(maxConcurrent: 1))
-        ..upsertResource(
-          DecisionFlowResource(
-            DecisionFlow([
-              onToolResult().thenOpen(
-                prompt: 'CUSTOM ROUTING: reflect on the tool output.',
-              ),
-            ]),
-          ),
-        )
-        ..flush();
-
-      var calls = 0;
-      final prompts = <String>[];
-      world.getResource<GenerationHandlerResource>().registerDefault(
-        _WriteThenAnswer(prompts: prompts, calls: () => ++calls),
+      final writeThenAnswer = WriteThenAnswerHandler(
+        firstCall: const ToolCall(
+          name: ToolName('write'),
+          arguments: {'path': 'out.txt', 'content': 'hi'},
+        ),
       );
       final registry = ToolRegistry()
         ..register(writeTool(FsToolsRoot(jail.path)));
-      world.getResource<ToolRegistryResource>().register('default', registry);
+      final world = await buildTestWorld(
+        agencyPolicy: AgencyPolicy(maxConcurrent: 1),
+        decisionFlow: DecisionFlow([
+          onToolResult().thenOpen(
+            prompt: 'CUSTOM ROUTING: reflect on the tool output.',
+          ),
+        ]),
+        handler: writeThenAnswer,
+        toolRegistry: registry,
+      );
 
       final scene = spawnScene(world);
       final actor = spawnActor(world, scene, openDecisionPrompt: 'go');
@@ -217,19 +205,21 @@ void main() {
       // The custom prompt reached the model on the continuation turn —
       // proof that developer-authored flows route real decisions.
       expect(
-        prompts.any((p) => p.contains('CUSTOM ROUTING')),
+        writeThenAnswer.prompts.any((p) => p.contains('CUSTOM ROUTING')),
         isTrue,
         reason: 'the custom flow should have opened the continuation decision',
       );
-      expect(calls, 2);
+      expect(writeThenAnswer.calls, 2);
     });
 
     test('per-policy precision attribution', () async {
-      final world = _world(
-        DecisionFlow([whenIdleEveryNTicks(2).thenOpen(prompt: 'attributed')]),
+      final world = await buildTestWorld(
+        decisionFlow: DecisionFlow([
+          whenIdleEveryNTicks(2).thenOpen(prompt: 'attributed'),
+        ]),
       );
       final scene = spawnScene(world);
-      final actor = spawnActor(world, scene);
+      spawnActor(world, scene);
       world.flush();
 
       syncScheduleExecutionFrame(world, explicitFrameId: 6);
@@ -246,8 +236,8 @@ void main() {
 
   group('deferred thinking', () {
     test('thenDream stamps DeferredThinking on the decision', () async {
-      final world = _world(
-        DecisionFlow([whenIdleEveryNTicks(3).thenDream('dream')]),
+      final world = await buildTestWorld(
+        decisionFlow: DecisionFlow([whenIdleEveryNTicks(3).thenDream('dream')]),
       );
       final scene = spawnScene(world);
       final actor = spawnActor(world, scene);
@@ -263,33 +253,4 @@ void main() {
       expect(e.get<OpenDecision>()?.prompt, 'dream');
     });
   });
-}
-
-class _WriteThenAnswer implements GenerationHandler {
-  _WriteThenAnswer({required this.prompts, required this.calls});
-  final List<String> prompts;
-  final int Function() calls;
-
-  @override
-  Future<ActorGenerateResponse> generate(
-    World world,
-    ActorGenerateRequest request,
-  ) async {
-    final n = calls();
-    prompts.add(request.prompt);
-    return ActorGenerateResponse(
-      actorEntity: request.actorEntity,
-      structuredOutput: {'text': 'step $n'},
-      rawOutput: 'step $n',
-      toolCalls: n == 1
-          ? [
-              ToolCall(
-                name: ToolName('write'),
-                arguments: {'path': 'out.txt', 'content': 'hi'},
-              ),
-            ]
-          : const [],
-      taskId: request.taskId,
-    );
-  }
 }

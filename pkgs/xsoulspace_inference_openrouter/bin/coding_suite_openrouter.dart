@@ -27,6 +27,7 @@ import 'package:xsoulspace_inference_openrouter/xsoulspace_inference_openrouter.
 
 import '../../xsoulspace_inference_core/benchmark/coding_suite/runner.dart';
 import '../../xsoulspace_inference_core/benchmark/coding_suite/task_spec.dart';
+import '../../xsoulspace_inference_core/benchmark/shared/logging_handler.dart';
 
 Future<void> main(List<String> args) async {
   var tasksDir = '../xsoulspace_inference_core/benchmark/coding_suite/tasks';
@@ -111,10 +112,10 @@ Future<void> main(List<String> args) async {
   final sharedRouter = ModelRouter(
     inferenceClientsBuilders: {
       OpenRouterModelNames.openRouter: () => OpenRouterInferenceClient(
-            apiKey: apiKey,
-            defaultModel: model,
-            useMessagesCodec: true,
-          ),
+        apiKey: apiKey,
+        defaultModel: model,
+        useMessagesCodec: true,
+      ),
     },
   );
 
@@ -127,7 +128,7 @@ Future<void> main(List<String> args) async {
 
   GenerationHandler debugHandler(CodingTask task) {
     final innerHandler = buildHandler(task);
-    return verbose ? _LoggingHandler(innerHandler) : innerHandler;
+    return verbose ? LoggingHandler(innerHandler, enabled: true) : innerHandler;
   }
 
   final result = await CodingSuiteRunner(
@@ -146,28 +147,4 @@ Future<void> main(List<String> args) async {
     File(markdownPath).writeAsStringSync(result.toMarkdown());
   }
   exit(result.passRate == 1 ? 0 : 1);
-}
-
-class _LoggingHandler implements GenerationHandler {
-  _LoggingHandler(this.inner);
-  final GenerationHandler inner;
-
-  @override
-  Future<ActorGenerateResponse> generate(
-    World world,
-    ActorGenerateRequest request,
-  ) async {
-    try {
-      final response = await inner.generate(world, request);
-      final names = response.toolCalls.map((t) => t.name.value).toList();
-      print('[decision] tool_calls=$names raw=${response.rawOutput}');
-      if (names.isEmpty && response.structuredOutput.isNotEmpty) {
-        print('[decision] structured=${response.structuredOutput}');
-      }
-      return response;
-    } on Object catch (e) {
-      print('[decision] THREW: $e');
-      rethrow;
-    }
-  }
 }

@@ -11,3 +11,4 @@ pubspec.lock
 **/**/.dart_tool/
 /.steward/
 .gitnexus
+node_modules/

@@ -8,8 +8,6 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 import 'package:xsoulspace_inference_core/src/agent/schedules.dart';
-import 'package:xsoulspace_inference_core/src/agent/systems/projection/projection_systems.dart'
-    show fragmentText;
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import 'support/agent_harness_support.dart';
@@ -28,70 +26,7 @@ Future<(World, Entity)> _worldWith(
   return (world, actor);
 }
 
-Future<void> _cycle(World world) async {
-  world.runSchedule(Schedules.agencyGrant);
-  world.flush();
-  world.runSchedule(Schedules.project);
-  world.flush();
-  await world.runScheduleAsync(Schedules.actorAct);
-  world.flush();
-  await Future<void>.delayed(const Duration(milliseconds: 50));
-  world.runSchedule(Schedules.processResponses);
-  world.flush();
-  world.runSchedule(Schedules.mechanical);
-  world.flush();
-}
-
 void main() {
-  /// Drive one decision through the canonical cycle with exact cut capture.
-  Future<ScenarioMetrics> _driveOneDecisionForOracle(
-    World world,
-    Entity actorEntity,
-    String prompt,
-  ) async {
-    world.upsertComponent(actorEntity, OpenDecision(prompt: prompt));
-    world.flush();
-    final collector = MetricsCollector(world: world);
-    collector.beginDecision(actor: actorEntity, actorName: 'a', prompt: prompt);
-
-    world.runSchedule(Schedules.agencyGrant);
-    world.flush();
-    world.runSchedule(Schedules.project);
-    world.flush();
-    await world.runScheduleAsync(Schedules.actorAct);
-    world.flush();
-    world.runSchedule(Schedules.processResponses);
-    world.flush();
-    world.runSchedule(Schedules.mechanical);
-    world.flush();
-
-    final situation = world.getEntity(actorEntity).$1.get<Situation>();
-    collector.endDecision(actor: actorEntity, situation: situation);
-    final telemetry = collector.report().decisions.first;
-    return ScenarioMetrics(
-      name: 'driven',
-      decisions: [
-        DecisionMetrics(
-          actor: 'a',
-          prompt: prompt,
-          tokensUsed: situation?.tokensUsed ?? 0,
-          projectedBeats: situation?.projectedBeats.length ?? 0,
-          explicitAbsences: situation?.explicitAbsences ?? const [],
-          llmCalls: telemetry.llmCalls,
-          truncated: situation?.truncated ?? false,
-          projectedTexts: [
-            for (final beat in situation?.projectedBeats ?? const <Entity>[])
-              fragmentText(world, beat),
-          ],
-        ),
-      ],
-      totalLlmCalls: telemetry.llmCalls,
-      totalTokens: situation?.tokensUsed ?? 0,
-      prunedThreads: 0,
-      mergedThreads: 0,
-    );
-  }
-
   group('ScriptedGenerationHandler', () {
     test('serves turns in order and records requests', () async {
       final handler = ScriptedGenerationHandler([
@@ -109,7 +44,7 @@ void main() {
       for (final prompt in ['a', 'b', 'c']) {
         world.upsertComponent(actor, OpenDecision(prompt: prompt));
         world.flush();
-        await _cycle(world);
+        await runCycle(world);
       }
 
       expect(handler.requests, hasLength(3));
@@ -125,9 +60,9 @@ void main() {
       final (world, actor) = await _worldWith(handler);
 
       // First cycle returns empty → retry decision is created.
-      await _cycle(world);
+      await runCycle(world);
       // Second cycle resolves the retry with the recovery turn.
-      await _cycle(world);
+      await runCycle(world);
 
       expect(handler.requests, hasLength(2));
       expect(beatsWithText(world, 'recovered'), hasLength(1));
@@ -140,8 +75,8 @@ void main() {
       ]);
       final (world, actor) = await _worldWith(handler);
 
-      await _cycle(world);
-      await _cycle(world);
+      await runCycle(world);
+      await runCycle(world);
 
       expect(handler.requests, hasLength(2));
       expect(beatsWithText(world, 'after crash'), hasLength(1));
@@ -208,7 +143,7 @@ void main() {
     test('clean world has no violations', () async {
       final handler = MockGenerationHandler(responseText: 'ok');
       final (world, _) = await _worldWith(handler);
-      await _cycle(world);
+      await runCycle(world);
       expect(checkHarnessInvariants(world), isEmpty);
     });
 
@@ -218,7 +153,7 @@ void main() {
       );
       // Resolve the actor's own decision first, then forge the violation:
       // Agency present while no OpenDecision exists.
-      await _cycle(world);
+      await runCycle(world);
       world.getEntity(actor).$1.insert(const Agency());
       world.flush();
       final violations = checkHarnessInvariants(world);
@@ -304,7 +239,7 @@ void main() {
       final ledger = HarnessExecutionLedger(world);
       world.executionObserver = ledger;
       final scene = spawnScene(world);
-      final actor = spawnActor(world, scene, openDecisionPrompt: 'go');
+      spawnActor(world, scene, openDecisionPrompt: 'go');
       world.flush();
       await HarnessLoop(world: world).runUntilIdle(maxTicks: 5000);
 
@@ -335,7 +270,7 @@ void main() {
         ['parser'],
       );
 
-      final metrics = await _driveOneDecisionForOracle(
+      final metrics = await driveOneDecision(
         world,
         spawned.first.entity,
         'fix parser',
@@ -372,7 +307,7 @@ void main() {
         ['weather'],
       );
 
-      final metrics = await _driveOneDecisionForOracle(
+      final metrics = await driveOneDecision(
         world,
         spawned.first.entity,
         'weather?',

@@ -17,8 +17,6 @@ library;
 import 'dart:convert';
 import 'dart:io';
 
-import 'task_spec.dart';
-
 typedef Row = Map<String, dynamic>;
 
 void main(List<String> args) {
@@ -47,10 +45,7 @@ void main(List<String> args) {
     final rows = _latestPerTask(entry.value);
     final p = rows.where((r) => r['passed'] == true).length;
     final tok = rows.fold<int>(0, (a, r) => a + (r['tokens_used'] as int));
-    final wall = rows.fold<int>(
-      0,
-      (a, r) => a + (r['wall_clock_ms'] as int),
-    );
+    final wall = rows.fold<int>(0, (a, r) => a + (r['wall_clock_ms'] as int));
     print(
       '${entry.key.padRight(28)} $p/${rows.length} passed '
       '(${(p / rows.length * 100).toStringAsFixed(0)}%), '
@@ -61,21 +56,25 @@ void main(List<String> args) {
   print('═' * 72);
 
   // Per-category matrix.
-  final categories = traces.values
-      .expand((rows) => rows.map((r) => r['category'] as String))
-      .toSet()
-      .toList()
-    ..sort();
+  final categories =
+      traces.values
+          .expand((rows) => rows.map((r) => r['category'] as String))
+          .toSet()
+          .toList()
+        ..sort();
   print('\nper-category pass rate:');
-  final header = 'category'.padRight(26) +
-      traces.keys.map((k) => k.substring(0, k.length.clamp(0, 14)).padLeft(15)).join();
+  final header =
+      'category'.padRight(26) +
+      traces.keys
+          .map((k) => k.substring(0, k.length.clamp(0, 14)).padLeft(15))
+          .join();
   print(header);
   for (final cat in categories) {
     final cells = traces.keys.map((k) {
       // Latest occurrence per task within this trace, filtered by category.
-      final rows = _latestPerTask(traces[k]!)
-          .where((r) => r['category'] == cat)
-          .toList();
+      final rows = _latestPerTask(
+        traces[k]!,
+      ).where((r) => r['category'] == cat).toList();
       if (rows.isEmpty) return '-'.padLeft(15);
       final p = rows.where((r) => r['passed'] == true).length;
       return '$p/${rows.length}'.padLeft(15);
@@ -85,18 +84,22 @@ void main(List<String> args) {
 
   // Flakiness grid when several traces share task ids.
   if (traces.length > 1) {
-    final ids = traces.values
-        .expand((rows) => rows.map((r) => r['task_id'] as String))
-        .toSet()
-        .toList()
-      ..sort();
+    final ids =
+        traces.values
+            .expand((rows) => rows.map((r) => r['task_id'] as String))
+            .toSet()
+            .toList()
+          ..sort();
     print('\nper-task grid (✅/❌):');
-    print('task'.padRight(40) + traces.keys.map((k) => k.substring(0, k.length.clamp(0, 8)).padLeft(9)).join());
+    print(
+      'task'.padRight(40) +
+          traces.keys
+              .map((k) => k.substring(0, k.length.clamp(0, 8)).padLeft(9))
+              .join(),
+    );
     for (final id in ids) {
       final cells = traces.keys.map((k) {
-        final match = traces[k]!
-            .where((r) => r['task_id'] == id)
-            .toList();
+        final match = traces[k]!.where((r) => r['task_id'] == id).toList();
         if (match.isEmpty) return '—'.padLeft(9);
         final last = match.last;
         return ((last['passed'] == true) ? '✅' : '❌').padLeft(9);

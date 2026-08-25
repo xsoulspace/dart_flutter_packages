@@ -15,14 +15,21 @@ dart run bin/agent.dart --no-debug                  # silence native traces
 
 ## REPL commands
 
+The turn lifecycle (input-as-decisions, cancellation, idle detection,
+streaming, write confirmation) is owned by core's `CliHost`; this binary adds
+provider wiring and presentation only.
+
 | Command | Effect |
 |---|---|
-| `<text>` | Send as `OpenDecision`; response streams live; tools run in the jail |
+| `<text>` | Send as decision via `CliHost.feed`; response streams live; tools run in the jail; `write` asks on stderr (`[y/N]`) |
+| `/situation` | Print `host.renderSituation()` — per acting actor: tokens, beats, projected fragments |
+| `/cancel` (or Ctrl-C) | Cancel in-flight generation + release agency (`host.cancel`) |
+| `/exit` | Stop harness, tear down |
 | `_stats` | Channel watermarks (sent/consumed/dropped/cleared/buffered + invariant check), threads/beats/tokens |
 | `_trace` | Dump `HarnessExecutionLedger` for the last turn (per-system durations + channel transitions) |
 | `_save <path>` | Capture world snapshot to JSON (`ecsly_serialization`) |
 | `_load <path>` | Read snapshot (full restore lands with Phase 8) |
-| `_exit` | Stop loop, tear down |
+| `_spawn <prompt>` | Spawn an additional actor (own agent, same jail/tools); stream prefixed `[aN]` |
 
 ## What to watch while battle-testing
 

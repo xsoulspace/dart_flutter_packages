@@ -31,6 +31,8 @@ import 'dart:io';
 import 'package:xsoulspace_inference_core/src/agent/schedules.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
+import 'shared/token_estimate.dart';
+
 /// Result of one long-horizon run.
 class LongHorizonResult {
   LongHorizonResult({
@@ -207,7 +209,7 @@ class _RecordingHandler implements GenerationHandler {
     for (final f in request.contextFragments) {
       chars += '$f'.length;
     }
-    tokensServed.add((chars / 4).ceil());
+    tokensServed.add(estimateTokensFromChars(chars));
 
     // Response mentions its turn's topic so later rays can hit it.
     final text =

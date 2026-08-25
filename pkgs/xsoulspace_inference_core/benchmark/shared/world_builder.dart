@@ -130,7 +130,7 @@ void registerExperimentComponents(World world) {
 /// agency policy, and token meter registered. Returns the jail directory so
 /// callers can register tools / checkers against it.
 Future<({World world, Directory jail, List<int> tokenTotal})>
-    buildExperimentWorld(
+buildExperimentWorld(
   CodingTask task, {
   required GenerationHandler buildHandler(),
 }) async {
@@ -145,8 +145,10 @@ Future<({World world, Directory jail, List<int> tokenTotal})>
   registerExperimentComponents(world);
   final router = ModelRouter(inferenceClientsBuilders: {});
   const modelId = ModelId('suite-model');
-  router.models[modelId] =
-      Model(id: modelId, name: DefaultModelNames.appleFoundation);
+  router.models[modelId] = Model(
+    id: modelId,
+    name: DefaultModelNames.appleFoundation,
+  );
   world
     ..upsertResource(ModelRouterResource(router))
     ..upsertResource(ToolRegistryResource())
@@ -155,8 +157,8 @@ Future<({World world, Directory jail, List<int> tokenTotal})>
 
   final tokenTotal = <int>[0];
   world.getResource<GenerationHandlerResource>().registerDefault(
-        CumulativeTokenMeter(buildHandler(), tokenTotal),
-      );
+    CumulativeTokenMeter(buildHandler(), tokenTotal),
+  );
   return (world: world, jail: jail, tokenTotal: tokenTotal);
 }
 
@@ -176,7 +178,7 @@ Entity spawnStandardActor(
     ActorThreads(threads: []),
     const ActorTools(registryName: 'default'),
     PresentInScene(sceneEntity: scene),
-    OpenDecision(prompt: prompt, schema: schema),
+    OpenDecision(prompt: prompt, schema: schema ?? SchemaBundle.empty),
   ]);
   final thread = spawnThread(world, actor, scene);
   world.upsertComponent(actor, ActorThreads(threads: [thread]));
@@ -196,7 +198,8 @@ bool checkTask(CodingTask task, Directory jail) =>
     task.checkers.every((c) => evaluateChecker(c, jail.path).passed);
 
 /// Counts ActorGenerateResponse events sent since registration.
-int responseCount(World world) => world.events.hasRegistered<ActorGenerateResponse>()
+int responseCount(World world) =>
+    world.events.hasRegistered<ActorGenerateResponse>()
     ? world.events.stats<ActorGenerateResponse>().sent
     : 0;
 

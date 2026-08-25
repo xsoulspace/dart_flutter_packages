@@ -25,6 +25,7 @@ import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import 'checkers.dart';
 import 'task_spec.dart';
+import '../shared/world_builder.dart';
 
 /// Result of running one task.
 class TaskResult {
@@ -50,6 +51,7 @@ class TaskResult {
   final bool passed;
   final List<CheckerResult> checkerResults;
   final Duration wallClock;
+
   /// Last-decision projection size (legacy field, kept for comparability
   /// with earlier traces).
   final int tokensUsed;
@@ -222,14 +224,16 @@ class CodingSuiteRunner {
       // routers would desynchronize: the handler's fallback Model defaults
       // to appleFoundation and silently misses backend-specific clients.
       final router = this.router ?? ModelRouter(inferenceClientsBuilders: {});
-      router.models[modelId] = Model(
-        id: modelId,
-        name: modelName,
-      );
+      router.models[modelId] = Model(id: modelId, name: modelName);
       world
         ..upsertResource(ModelRouterResource(router))
         ..upsertResource(ToolRegistryResource())
-        ..upsertResource(AgencyPolicy(maxConcurrent: maxConcurrent, maxToolRounds: maxToolRounds))
+        ..upsertResource(
+          AgencyPolicy(
+            maxConcurrent: maxConcurrent,
+            maxToolRounds: maxToolRounds,
+          ),
+        )
         ..flush();
 
       final handler = buildHandler(task);
@@ -238,11 +242,10 @@ class CodingSuiteRunner {
       var transientErrors = 0;
       // Honest cumulative token accounting (see TaskResult.cumulativeTokens).
       final tokenTotal = <int>[0];
-      GenerationHandler metered =
-          _CumulativeTokenMeter(handler, tokenTotal);
+      GenerationHandler metered = CumulativeTokenMeter(handler, tokenTotal);
       world.getResource<GenerationHandlerResource>().registerDefault(
-            _ErrorCountingHandler(metered, () => transientErrors++),
-          );
+        _ErrorCountingHandler(metered, () => transientErrors++),
+      );
 
       final registry = ToolRegistry();
       fsTools(FsToolsRoot(jail.path)).forEach(registry.register);
@@ -335,9 +338,9 @@ class CodingSuiteRunner {
           checkerResults.isNotEmpty && checkerResults.every((c) => c.passed);
       String failureMode = '';
       if (!passed) {
-        final anyToolError = world
-            .query<ToolResultContent>()
-            .any((r) => r.$2.output.toString().contains('"error"'));
+        final anyToolError = world.query<ToolResultContent>().any(
+          (r) => r.$2.output.toString().contains('"error"'),
+        );
         if (sw.elapsed >= taskBudget) {
           failureMode = 'timeout';
         } else if (llmCalls == 0) {
@@ -392,7 +395,9 @@ class CodingSuiteRunner {
       for (final line in File(resumePath).readAsLinesSync()) {
         if (line.trim().isEmpty) continue;
         try {
-          done.add((jsonDecode(line) as Map<String, dynamic>)['task_id'] as String);
+          done.add(
+            (jsonDecode(line) as Map<String, dynamic>)['task_id'] as String,
+          );
         } on FormatException {
           // Torn last line from a killed run — ignore.
         }
@@ -430,24 +435,6 @@ class CodingSuiteRunner {
 /// Observability decorator: counts generations that came back with an error
 /// so failure-mode classification can distinguish backend flakiness from
 /// model-quality failures. Retry policy is untouched.
-/// Sums every decision's projection size at handler entry (post-projection).
-/// See [TaskResult.cumulativeTokens].
-class _CumulativeTokenMeter implements GenerationHandler {
-  _CumulativeTokenMeter(this.inner, this.total);
-  final GenerationHandler inner;
-  final List<int> total;
-
-  @override
-  Future<ActorGenerateResponse> generate(
-    World world,
-    ActorGenerateRequest request,
-  ) {
-    final situation = world.getEntity(request.actorEntity).$1.get<Situation>();
-    if (situation != null) total[0] += situation.tokensUsed;
-    return inner.generate(world, request);
-  }
-}
-
 class _ErrorCountingHandler implements GenerationHandler {
   _ErrorCountingHandler(this.inner, this.onError);
   final GenerationHandler inner;

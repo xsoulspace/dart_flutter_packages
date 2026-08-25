@@ -1,8 +1,6 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:ecsly/ecsly.dart';
-import 'package:meta/meta.dart';
 
 import 'data_models/data_models.dart';
 import 'events.dart';
@@ -30,6 +28,7 @@ final Map<Type, String> _componentTypes = {
   ActorThreads: 'ActorThreads',
   Agency: 'Agency',
   AwaitingResponse: 'AwaitingResponse',
+  OpenDecision: 'OpenDecision',
   EscalationRequest: 'EscalationRequest',
   Scene: 'Scene',
   SceneFrame: 'SceneFrame',
@@ -100,6 +99,8 @@ List<(Entity, Component)> _collect(Type type, World world) {
       return [
         for (final (e, c) in world.query<AwaitingResponse>()) (e.entity, c),
       ];
+    case OpenDecision:
+      return [for (final (e, c) in world.query<OpenDecision>()) (e.entity, c)];
     case EscalationRequest:
       return [
         for (final (e, c) in world.query<EscalationRequest>()) (e.entity, c),
@@ -238,6 +239,16 @@ Map<String, dynamic> _encode(Component raw) {
       return {tag: 'Agency'};
     case AwaitingResponse():
       return {tag: 'AwaitingResponse', 'taskId': raw.taskId?.value};
+    case OpenDecision():
+      return {
+        tag: 'OpenDecision',
+        'schema': _jsonValue(raw.schema.toJson()),
+        'prompt': raw.prompt,
+        'priority': raw.priority,
+        'escalate': raw.escalate,
+        'threadId': raw.threadId?.toJson(),
+        'stepId': raw.stepId?.toJson(),
+      };
     case EscalationRequest():
       return {tag: 'EscalationRequest', 'reason': raw.reason};
     case Scene():
@@ -373,6 +384,14 @@ final Map<String, _Decode> _decoders = {
   'Agency': (_, _) => const Agency(),
   'AwaitingResponse': (json, _) =>
       AwaitingResponse(taskId: _taskId(json['taskId'])),
+  'OpenDecision': (json, r) => OpenDecision(
+    schema: _schemaBundle(json['schema']),
+    prompt: json['prompt'] as String? ?? '',
+    priority: json['priority'] as int? ?? 0,
+    escalate: json['escalate'] as bool? ?? false,
+    threadId: _entityOrNull(json['threadId'], r),
+    stepId: _entityOrNull(json['stepId'], r),
+  ),
   'EscalationRequest': (json, _) =>
       EscalationRequest(reason: json['reason'] as String),
   'Scene': (_, _) => const Scene(),
@@ -541,7 +560,6 @@ void _rebuildFacetIndex(World world) {
   }
 }
 
-@immutable
 dynamic _jsonValue(dynamic value) {
   if (value == null || value is String || value is num || value is bool)
     return value;
@@ -554,6 +572,11 @@ List<Entity> _entities(dynamic values, Entity Function(String) remap) =>
 
 Entity? _entityOrNull(dynamic value, Entity Function(String) remap) =>
     value == null ? null : remap(value as String);
+
+SchemaBundle _schemaBundle(dynamic value) {
+  if (value is! Map || value.isEmpty) return SchemaBundle.empty;
+  return SchemaBundle.fromJson(Map<String, dynamic>.from(value));
+}
 
 TaskId? _taskId(dynamic value) =>
     value == null ? null : TaskId(value as String);

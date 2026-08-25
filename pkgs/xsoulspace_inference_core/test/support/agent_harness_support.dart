@@ -11,6 +11,9 @@ library;
 import 'dart:async';
 
 import 'package:test/test.dart';
+import 'package:xsoulspace_inference_core/src/agent/schedules.dart';
+import 'package:xsoulspace_inference_core/src/agent/systems/projection/projection_systems.dart'
+    show fragmentText;
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 /// A mock handler that simulates an LLM without requiring a real backend.
@@ -54,18 +57,83 @@ class MockGenerationHandler implements GenerationHandler {
   }
 }
 
+/// A handler that throws instead of producing a response.
+class ThrowingGenerationHandler implements GenerationHandler {
+  @override
+  Future<ActorGenerateResponse> generate(
+    World world,
+    ActorGenerateRequest request,
+  ) async {
+    throw StateError('backend crashed');
+  }
+}
+
+/// A handler that never responds (simulates a hung backend).
+class SilentGenerationHandler implements GenerationHandler {
+  @override
+  Future<ActorGenerateResponse> generate(
+    World world,
+    ActorGenerateRequest request,
+  ) => Completer<ActorGenerateResponse>().future;
+}
+
+/// A handler that issues one tool call on its first invocation, then answers
+/// with plain text on every later call — the minimal ReAct continuation twin.
+///
+/// The second call only happens if the harness re-opens a decision after the
+/// tool result lands, so [calls] and [prompts] are the observable
+/// "continuation happened" signals.
+class WriteThenAnswerHandler implements GenerationHandler {
+  WriteThenAnswerHandler({required this.firstCall});
+
+  /// The tool call emitted on the first invocation.
+  final ToolCall firstCall;
+
+  int calls = 0;
+  final List<String> prompts = [];
+
+  @override
+  Future<ActorGenerateResponse> generate(
+    World world,
+    ActorGenerateRequest request,
+  ) async {
+    calls++;
+    prompts.add(request.prompt);
+    return ActorGenerateResponse(
+      actorEntity: request.actorEntity,
+      structuredOutput: {'text': 'step $calls'},
+      rawOutput: 'step $calls',
+      toolCalls: calls == 1 ? [firstCall] : const [],
+      taskId: request.taskId,
+    );
+  }
+}
+
 /// Helper to build a minimal world with the agent plugin and resources.
 Future<World> buildTestWorld({
   ModelRouter? router,
   ToolRegistryResource? toolRegistryResource,
   GenerationHandler? handler,
+  AgencyPolicy? agencyPolicy,
+  DecisionFlow? decisionFlow,
+  ToolRegistry? toolRegistry,
 }) async {
   final world = World()..addPlugin(AgentPlugin());
+  final registryResource = toolRegistryResource ?? ToolRegistryResource();
+  if (toolRegistry != null) {
+    registryResource.register('default', toolRegistry);
+  }
 
   world
     ..upsertResource(ModelRouterResource(router ?? ModelRouter()))
-    ..upsertResource(toolRegistryResource ?? ToolRegistryResource());
+    ..upsertResource(registryResource);
 
+  if (agencyPolicy != null) {
+    world.upsertResource(agencyPolicy);
+  }
+  if (decisionFlow != null) {
+    world.upsertResource(DecisionFlowResource(decisionFlow));
+  }
   if (handler != null) {
     world.getResource<GenerationHandlerResource>().registerDefault(handler);
   }
@@ -165,6 +233,89 @@ void projectFor(World world) {
   world.flush();
   world.runSchedule(Schedules.project);
   world.flush();
+}
+
+/// Drive one mechanical cinematic cycle:
+/// agencyGrant → project → actorAct → processResponses → mechanical.
+///
+/// [settleDelay] lets async handler futures land BEFORE responses are
+/// processed; [drainDelay] runs a second mechanical pass afterwards so late
+/// tool completions become durable beats. End harness tests with
+/// [expectIdle].
+Future<void> runCycle(
+  World world, {
+  Duration settleDelay = const Duration(milliseconds: 50),
+  Duration drainDelay = Duration.zero,
+}) async {
+  world.runSchedule(Schedules.agencyGrant);
+  world.flush();
+  world.runSchedule(Schedules.project);
+  world.flush();
+  await world.runScheduleAsync(Schedules.actorAct);
+  world.flush();
+  if (settleDelay > Duration.zero) {
+    await Future<void>.delayed(settleDelay);
+  }
+  world.runSchedule(Schedules.processResponses);
+  world.flush();
+  world.runSchedule(Schedules.mechanical);
+  world.flush();
+  if (drainDelay > Duration.zero) {
+    // Let async tool completions / handler futures land.
+    await Future<void>.delayed(drainDelay);
+    world.runSchedule(Schedules.mechanical);
+    world.flush();
+  }
+}
+
+/// Drive one decision through the canonical cinematic cycle and return exact
+/// per-decision metrics (ADR 0004 capture path).
+Future<ScenarioMetrics> driveOneDecision(
+  World world,
+  Entity actorEntity,
+  String prompt,
+) async {
+  world.upsertComponent(actorEntity, OpenDecision(prompt: prompt));
+  world.flush();
+  final collector = MetricsCollector(world: world);
+  collector.beginDecision(actor: actorEntity, actorName: 'a', prompt: prompt);
+
+  world.runSchedule(Schedules.agencyGrant);
+  world.flush();
+  world.runSchedule(Schedules.project);
+  world.flush();
+  await world.runScheduleAsync(Schedules.actorAct);
+  world.flush();
+  world.runSchedule(Schedules.processResponses);
+  world.flush();
+  world.runSchedule(Schedules.mechanical);
+  world.flush();
+
+  final situation = world.getEntity(actorEntity).$1.get<Situation>();
+  collector.endDecision(actor: actorEntity, situation: situation);
+  final telemetry = collector.report().decisions.first;
+  return ScenarioMetrics(
+    name: 'driven',
+    decisions: [
+      DecisionMetrics(
+        actor: 'a',
+        prompt: prompt,
+        tokensUsed: situation?.tokensUsed ?? 0,
+        projectedBeats: situation?.projectedBeats.length ?? 0,
+        explicitAbsences: situation?.explicitAbsences ?? const [],
+        llmCalls: telemetry.llmCalls,
+        truncated: situation?.truncated ?? false,
+        projectedTexts: [
+          for (final beat in situation?.projectedBeats ?? const <Entity>[])
+            fragmentText(world, beat),
+        ],
+      ),
+    ],
+    totalLlmCalls: telemetry.llmCalls,
+    totalTokens: situation?.tokensUsed ?? 0,
+    prunedThreads: 0,
+    mergedThreads: 0,
+  );
 }
 
 /// All beats in [world] whose [TextContent] contains [text].

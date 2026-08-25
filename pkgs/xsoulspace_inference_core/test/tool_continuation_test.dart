@@ -20,53 +20,18 @@ import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import 'support/agent_harness_support.dart';
 
-/// Handler that issues one write, then (on its second call) answers.
-///
-/// The second call only happens if the harness re-opens a decision after the
-/// tool result lands — this is the observable "continuation happened" signal.
-class _WriteThenAnswerHandler implements GenerationHandler {
-  int calls = 0;
-  final List<String> prompts = [];
-
-  @override
-  Future<ActorGenerateResponse> generate(
-    World world,
-    ActorGenerateRequest request,
-  ) async {
-    calls++;
-    prompts.add(request.prompt);
-    final isFirst = calls == 1;
-    return ActorGenerateResponse(
-      actorEntity: request.actorEntity,
-      structuredOutput: {'text': 'step $calls'},
-      rawOutput: 'step $calls',
-      toolCalls: isFirst
-          ? [
-              ToolCall(
-                name: const ToolName('write'),
-                arguments: {'path': 'out.txt', 'content': 'hello'},
-              ),
-            ]
-          : const [],
-      taskId: request.taskId,
-    );
-  }
-}
-
-World _buildWorld(String jailPath, GenerationHandler handler) {
-  final world = World()..addPlugin(AgentPlugin());
+Future<World> _buildWorld(String jailPath, GenerationHandler handler) async {
   final router = ModelRouter(inferenceClientsBuilders: {});
   const modelId = ModelId('m');
   router.models[modelId] = Model(id: modelId, tier: 0);
-  world
-    ..upsertResource(ModelRouterResource(router))
-    ..upsertResource(ToolRegistryResource())
-    ..upsertResource(AgencyPolicy(maxConcurrent: 1))
-    ..flush();
-  world.getResource<GenerationHandlerResource>().registerDefault(handler);
   final registry = ToolRegistry();
   fsTools(FsToolsRoot(jailPath)).forEach(registry.register);
-  world.getResource<ToolRegistryResource>().register('default', registry);
+  final world = await buildTestWorld(
+    router: router,
+    handler: handler,
+    agencyPolicy: AgencyPolicy(maxConcurrent: 1),
+    toolRegistry: registry,
+  );
 
   final scene = spawnScene(world);
   final actor = spawnActor(world, scene, openDecisionPrompt: 'write out.txt');
@@ -84,8 +49,13 @@ void main() {
       final jail = await Directory.systemTemp.createTemp('continuation_');
       addTearDown(() => jail.delete(recursive: true));
 
-      final handler = _WriteThenAnswerHandler();
-      final world = _buildWorld(jail.path, handler);
+      final handler = WriteThenAnswerHandler(
+        firstCall: const ToolCall(
+          name: ToolName('write'),
+          arguments: {'path': 'out.txt', 'content': 'hello'},
+        ),
+      );
+      final world = await _buildWorld(jail.path, handler);
       await HarnessLoop(world: world).runUntilIdle();
 
       // The file was written — the tool executed.

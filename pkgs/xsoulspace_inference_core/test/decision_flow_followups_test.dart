@@ -13,16 +13,6 @@ import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import 'support/agent_harness_support.dart';
 
-World _world(DecisionFlow flow) {
-  final world = World()..addPlugin(AgentPlugin());
-  world
-    ..upsertResource(ModelRouterResource(ModelRouter()))
-    ..upsertResource(ToolRegistryResource())
-    ..upsertResource(DecisionFlowResource(flow))
-    ..flush();
-  return world;
-}
-
 /// Advance the harness tick to [tick] and run AgencyGrant
 /// (decisionFlow + grant). Uses the real tick source
 /// (ScheduleExecutionPolicyResource.frameId) that HarnessLoop advances.
@@ -39,8 +29,8 @@ void main() {
       'shared decision lands as an addressed beat in the target thread',
       () async {
         final teammate = AgentId('teammate-1');
-        final world = _world(
-          DecisionFlow([
+        final world = await buildTestWorld(
+          decisionFlow: DecisionFlow([
             whenIdleEveryNTicks(
               2,
             ).thenOpen(prompt: 'Status sync needed', shareWith: [teammate]),
@@ -78,8 +68,8 @@ void main() {
     );
 
     test('unknown target agent id is silently skipped', () async {
-      final world = _world(
-        DecisionFlow([
+      final world = await buildTestWorld(
+        decisionFlow: DecisionFlow([
           whenIdleEveryNTicks(2).thenOpen(
             prompt: 'nobody home',
             shareWith: [const AgentId('ghost')],
@@ -97,8 +87,10 @@ void main() {
 
   group('DeferredThinking projection expansion', () {
     test('dream turns project more beats than normal turns', () async {
-      final world = _world(
-        DecisionFlow([whenIdleEveryNTicks(3).thenDream('reflect deeply')]),
+      final world = await buildTestWorld(
+        decisionFlow: DecisionFlow([
+          whenIdleEveryNTicks(3).thenDream('reflect deeply'),
+        ]),
       );
       final scene = spawnScene(world);
       final actor = spawnActor(world, scene);
@@ -152,7 +144,7 @@ void main() {
 
       final handler = MockGenerationHandler(responseText: 'done');
       final runner = ScenarioRunner(world: world, handler: handler);
-      final metrics = await runner.run(
+      await runner.run(
         Scenario(
           name: 'precision',
           actors: [

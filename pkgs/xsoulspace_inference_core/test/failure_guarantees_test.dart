@@ -14,26 +14,6 @@ import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import 'support/agent_harness_support.dart';
 
-/// A handler that throws instead of producing a response.
-class ThrowingGenerationHandler implements GenerationHandler {
-  @override
-  Future<ActorGenerateResponse> generate(
-    World world,
-    ActorGenerateRequest request,
-  ) async {
-    throw StateError('backend crashed');
-  }
-}
-
-/// A handler that never responds (simulates a hung backend).
-class SilentGenerationHandler implements GenerationHandler {
-  @override
-  Future<ActorGenerateResponse> generate(
-    World world,
-    ActorGenerateRequest request,
-  ) => Completer<ActorGenerateResponse>().future;
-}
-
 Future<(World, Entity)> _worldWithDecision({GenerationHandler? handler}) async {
   final world = await buildTestWorld(handler: handler);
   world.getResource<AgencyPolicy>().taskTimeout = const Duration(
@@ -46,20 +26,8 @@ Future<(World, Entity)> _worldWithDecision({GenerationHandler? handler}) async {
 }
 
 /// Drive one full cinematic cycle.
-Future<void> _cycle(World world) async {
-  world.runSchedule(Schedules.agencyGrant);
-  world.flush();
-  world.runSchedule(Schedules.project);
-  world.flush();
-  await world.runScheduleAsync(Schedules.actorAct);
-  world.flush();
-  // Let async tool completions / handler futures land.
-  await Future<void>.delayed(const Duration(milliseconds: 200));
-  world.runSchedule(Schedules.processResponses);
-  world.flush();
-  world.runSchedule(Schedules.mechanical);
-  world.flush();
-}
+Future<void> _cycle(World world) =>
+    runCycle(world, settleDelay: const Duration(milliseconds: 200));
 
 void main() {
   group('tool failure guarantees', () {
@@ -72,16 +40,20 @@ void main() {
           execute: (args) async => throw StateError('boom'),
         ),
       );
-      ToolRegistryResource().register('default', registry);
       final handler = MockGenerationHandler(
         responseText: '',
         toolCalls: [const ToolCall(name: ToolName('boom'), arguments: {})],
       );
       final (world, actor) = await _worldWithDecision(handler: handler);
+      world.getResource<ToolRegistryResource>().register('default', registry);
       world.upsertComponent(actor, const ActorTools(registryName: 'default'));
       world.flush();
 
       await _cycle(world);
+      // Drain the async tool completion into a durable beat.
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      world.runSchedule(Schedules.mechanical);
+      world.flush();
 
       // The actor was freed despite the tool throwing.
       expect(world.getEntity(actor).$1.has<AwaitingResponse>(), isFalse);
@@ -99,16 +71,21 @@ void main() {
           execute: (args) => Completer<String>().future,
         ),
       );
-      ToolRegistryResource().register('default', registry);
       final handler = MockGenerationHandler(
         responseText: '',
         toolCalls: [const ToolCall(name: ToolName('hang'), arguments: {})],
       );
       final (world, actor) = await _worldWithDecision(handler: handler);
+      world.getResource<ToolRegistryResource>().register('default', registry);
       world.upsertComponent(actor, const ActorTools(registryName: 'default'));
       world.flush();
 
       await _cycle(world);
+      // Let the 100ms taskTimeout sweep the hung tool, then persist the
+      // timeout result as a beat.
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+      world.runSchedule(Schedules.mechanical);
+      world.flush();
 
       expect(world.getEntity(actor).$1.has<AwaitingResponse>(), isFalse);
       expect(world.getResource<TaskRegistryResource>().isEmpty, isTrue);

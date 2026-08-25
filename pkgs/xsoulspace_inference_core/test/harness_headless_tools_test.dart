@@ -11,7 +11,6 @@
 /// memory — with no real model involved.
 library;
 
-import 'dart:async';
 import 'dart:io';
 
 import 'package:test/test.dart';
@@ -19,34 +18,7 @@ import 'package:xsoulspace_inference_core/src/agent/schedules.dart';
 import 'package:xsoulspace_inference_core/src/agent/tools/fs_tools.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
-/// A [GenerationHandler] that simulates an LLM emitting a tool call.
-///
-/// Instead of calling a real model, it reads the [ActorGenerateRequest]'s
-/// tool registry, emits a single [ToolCall] (read or write), and sends the
-/// response back to the world. This proves the harness routing works without
-/// any LLM backend.
-class _ToolEmittingHandler implements GenerationHandler {
-  _ToolEmittingHandler({required this.toolName, required this.arguments});
-
-  final String toolName;
-  final Map<String, dynamic> arguments;
-
-  @override
-  Future<ActorGenerateResponse> generate(
-    World world,
-    ActorGenerateRequest request,
-  ) async {
-    final response = ActorGenerateResponse(
-      actorEntity: request.actorEntity,
-      structuredOutput: {'text': 'tool dispatched'},
-      rawOutput: 'tool dispatched',
-      toolCalls: [ToolCall(name: ToolName(toolName), arguments: arguments)],
-      taskId: request.taskId,
-    );
-    world.events.writer<ActorGenerateResponse>().send(response);
-    return response;
-  }
-}
+import 'support/agent_harness_support.dart';
 
 /// A [GenerationHandler] that records which handler it is and returns a plain
 /// text response. Used to prove per-agent handler routing.
@@ -66,32 +38,6 @@ class _TaggedHandler implements GenerationHandler {
       actorEntity: request.actorEntity,
       structuredOutput: {'text': 'from $tag'},
       rawOutput: 'from $tag',
-      taskId: request.taskId,
-    );
-    world.events.writer<ActorGenerateResponse>().send(response);
-    return response;
-  }
-}
-
-/// A [GenerationHandler] that returns a STRUCTURED tool call on the response
-/// (no tag round-trip) — mirroring what OpenRouter's native tool calling now
-/// produces via [InferenceResponse.toolCalls].
-class _StructuredToolHandler implements GenerationHandler {
-  _StructuredToolHandler({required this.name, required this.arguments});
-
-  final String name;
-  final Map<String, dynamic> arguments;
-
-  @override
-  Future<ActorGenerateResponse> generate(
-    World world,
-    ActorGenerateRequest request,
-  ) async {
-    final response = ActorGenerateResponse(
-      actorEntity: request.actorEntity,
-      structuredOutput: {'text': 'structured tool dispatched'},
-      rawOutput: 'structured tool dispatched',
-      toolCalls: [ToolCall(name: ToolName(name), arguments: arguments)],
       taskId: request.taskId,
     );
     world.events.writer<ActorGenerateResponse>().send(response);
@@ -126,16 +72,8 @@ class _ModelTaggedHandler implements GenerationHandler {
 }
 
 /// Build a world with the agent plugin and a coding-agent tool registry.
-Future<World> _buildWorld(ToolRegistry registry) async {
-  final world = World()..addPlugin(AgentPlugin());
-  final toolResource = ToolRegistryResource();
-  toolResource.register('default', registry);
-  world
-    ..upsertResource(ModelRouterResource(ModelRouter()))
-    ..upsertResource(toolResource)
-    ..flush();
-  return world;
-}
+Future<World> _buildWorld(ToolRegistry registry) =>
+    buildTestWorld(toolRegistry: registry);
 
 /// Spawn a scene + actor with an [OpenDecision] and the 'default' tool registry.
 Entity _spawnActor(World world, String decision) {
@@ -152,22 +90,11 @@ Entity _spawnActor(World world, String decision) {
 }
 
 /// Run the full schedule cycle once and drain responses.
-Future<void> _runCycle(World world) async {
-  world.runSchedule(Schedules.agencyGrant);
-  world.flush();
-  world.runSchedule(Schedules.project);
-  world.flush();
-  await world.runScheduleAsync(Schedules.actorAct);
-  world.flush();
-  world.runSchedule(Schedules.processResponses);
-  world.flush();
-  world.runSchedule(Schedules.mechanical);
-  world.flush();
-  // Let async tool execution complete.
-  await Future.delayed(const Duration(milliseconds: 50));
-  world.runSchedule(Schedules.mechanical);
-  world.flush();
-}
+Future<void> _runCycle(World world) => runCycle(
+      world,
+      settleDelay: Duration.zero,
+      drainDelay: const Duration(milliseconds: 50),
+    );
 
 void main() {
   group('headless coding-agent harness (no LLM)', () {
@@ -183,7 +110,12 @@ void main() {
 
       final world = await _buildWorld(registry);
       world.getResource<GenerationHandlerResource>().registerDefault(
-        _ToolEmittingHandler(toolName: 'read', arguments: {'path': filePath}),
+        MockGenerationHandler(
+          responseText: 'tool dispatched',
+          toolCalls: [
+            ToolCall(name: const ToolName('read'), arguments: {'path': filePath}),
+          ],
+        ),
       );
       _spawnActor(world, 'Read the file and report its contents.');
 
@@ -230,9 +162,14 @@ void main() {
 
       final world = await _buildWorld(registry);
       world.getResource<GenerationHandlerResource>().registerDefault(
-        _ToolEmittingHandler(
-          toolName: 'write',
-          arguments: {'path': filePath, 'content': 'agent wrote this'},
+        MockGenerationHandler(
+          responseText: 'tool dispatched',
+          toolCalls: [
+            ToolCall(
+              name: const ToolName('write'),
+              arguments: {'path': filePath, 'content': 'agent wrote this'},
+            ),
+          ],
         ),
       );
       _spawnActor(world, 'Write a file.');
@@ -273,9 +210,11 @@ void main() {
 
       final world = await _buildWorld(registry);
       world.getResource<GenerationHandlerResource>().registerDefault(
-        _ToolEmittingHandler(
-          toolName: 'list_dir',
-          arguments: {'path': temp.path},
+        MockGenerationHandler(
+          responseText: 'tool dispatched',
+          toolCalls: [
+            ToolCall(name: const ToolName('list_dir'), arguments: {'path': temp.path}),
+          ],
         ),
       );
       _spawnActor(world, 'List the directory.');
@@ -400,9 +339,14 @@ void main() {
         // A handler that returns a STRUCTURED tool call on the response —
         // exactly what OpenRouter now does (no tag round-trip).
         world.getResource<GenerationHandlerResource>().registerDefault(
-          _StructuredToolHandler(
-            name: 'write',
-            arguments: {'path': filePath, 'content': 'structured call'},
+          MockGenerationHandler(
+            responseText: 'structured tool dispatched',
+            toolCalls: [
+              ToolCall(
+                name: const ToolName('write'),
+                arguments: {'path': filePath, 'content': 'structured call'},
+              ),
+            ],
           ),
         );
         _spawnActor(world, 'Write via structured tool call.');

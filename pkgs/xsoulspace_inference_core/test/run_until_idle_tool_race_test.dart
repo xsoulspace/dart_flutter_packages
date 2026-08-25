@@ -27,49 +27,30 @@ import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import 'support/agent_harness_support.dart';
 
-class _ToolEmittingHandler implements GenerationHandler {
-  @override
-  Future<ActorGenerateResponse> generate(
-    World world,
-    ActorGenerateRequest request,
-  ) async {
-    final response = ActorGenerateResponse(
-      actorEntity: request.actorEntity,
-      structuredOutput: {'text': 'writing'},
-      rawOutput: 'writing',
-      toolCalls: [
-        ToolCall(
-          name: const ToolName('write'),
-          arguments: {'path': 'out.txt', 'content': 'hello'},
-        ),
-      ],
-      taskId: request.taskId,
-    );
-    world.events.writer<ActorGenerateResponse>().send(response);
-    return response;
-  }
-}
-
-World _buildWorld(String jailPath) {
-  final world = World()..addPlugin(AgentPlugin());
+Future<World> _buildWorld(String jailPath) async {
   final router = ModelRouter(inferenceClientsBuilders: {});
   const modelId = ModelId('m');
   router.models[modelId] = Model(
     id: modelId,
     name: DefaultModelNames.appleFoundation,
   );
-  world
-    ..upsertResource(ModelRouterResource(router))
-    ..upsertResource(ToolRegistryResource())
-    ..flush();
-  world.getResource<GenerationHandlerResource>().registerDefault(
-    _ToolEmittingHandler(),
-  );
   final registry = ToolRegistry();
   fsTools(FsToolsRoot(jailPath)).forEach(registry.register);
-  world.getResource<ToolRegistryResource>().register('default', registry);
+  final world = await buildTestWorld(
+    router: router,
+    handler: MockGenerationHandler(
+      responseText: 'writing',
+      toolCalls: [
+        const ToolCall(
+          name: ToolName('write'),
+          arguments: {'path': 'out.txt', 'content': 'hello'},
+        ),
+      ],
+    ),
+    toolRegistry: registry,
+  );
 
-  final scene = world.spawnComponents([const Scene(), SceneFrame()]);
+  final scene = spawnScene(world);
   world.spawnComponents([
     Actor(agentId: AgentId.create()),
     ActorModel(modelId: modelId),
@@ -89,7 +70,7 @@ void main() {
       final jail = await Directory.systemTemp.createTemp('regression_idle_');
       addTearDown(() => jail.delete(recursive: true));
 
-      final world = _buildWorld(jail.path);
+      final world = await _buildWorld(jail.path);
       await HarnessLoop(world: world).runUntilIdle();
 
       // The loop must not exit before the async write completed.
@@ -123,7 +104,7 @@ void main() {
       final jail = await Directory.systemTemp.createTemp('ledger_');
       addTearDown(() => jail.delete(recursive: true));
 
-      final world = _buildWorld(jail.path);
+      final world = await _buildWorld(jail.path);
       final ledger = HarnessExecutionLedger(world);
       world.executionObserver = ledger;
 
@@ -149,7 +130,7 @@ void main() {
     final jail = await Directory.systemTemp.createTemp('regression_sleep_');
     addTearDown(() => jail.delete(recursive: true));
 
-    final world = _buildWorld(jail.path);
+    final world = await _buildWorld(jail.path);
     final loop = HarnessLoop(world: world);
 
     // Drive one tick at a time; after ProcessResponses dispatches the tool

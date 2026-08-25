@@ -28,6 +28,8 @@ import 'package:xsoulspace_inference_core/src/agent/schedules.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'package:ecsly/ecsly.dart';
 
+import 'shared/token_estimate.dart';
+
 /// A single measured run of a scripted task.
 class BenchmarkRun {
   BenchmarkRun({
@@ -161,7 +163,7 @@ class MockGenerationHandler implements GenerationHandler {
     for (final f in request.contextFragments) {
       chars += '$f'.length;
     }
-    tokensServed.add(_estimateTokens(chars));
+    tokensServed.add(estimateTokensFromChars(chars));
 
     final response = ActorGenerateResponse(
       actorEntity: request.actorEntity,
@@ -174,9 +176,6 @@ class MockGenerationHandler implements GenerationHandler {
     return response;
   }
 }
-
-/// Rough token estimate: ~4 chars per token.
-int _estimateTokens(int chars) => (chars / 4).ceil();
 
 /// Run one [ScriptedTask] against a fresh world and return a [BenchmarkRun].
 Future<BenchmarkRun> runBenchmark(ScriptedTask task) async {
@@ -251,7 +250,7 @@ Future<BenchmarkRun> runBenchmark(ScriptedTask task) async {
           (a, b) => a + _beatChars(world, b),
         ) ??
         0;
-    contextGrowth.add(_estimateTokens(projectedChars));
+    contextGrowth.add(estimateTokensFromChars(projectedChars));
   }
 
   // Count thread graph behavior.

@@ -38,10 +38,14 @@ Guardrails:
 | --- | --- |
 | `lib/src/apple_foundation_inference_client.dart` | `InferenceClient` impl (transport-agnostic entry). |
 | `lib/src/dynamic_scheme/foundation_api.dart` | Flutter MethodChannel transport. |
-| `lib/src/native_bridge/` | FFI transport (planned): `@Native` decls + loader. |
+| `lib/src/native_bridge/` | FFI transport: `@Native` decls + loader. |
 | `macos/.../Sources/` | Swift core: bridge, schema materializer, plugin registrar. |
-| `bin/` | Native CLI entrypoint (planned). |
-| `acp/` | ACP stdio server surface (planned; standalone library lives in mcp_flutter). |
+| `bin/apple_foundation_cli.dart` | Native CLI smoke: `list` / `run --scenario=...`. |
+| `bin/stream_smoke.dart` | Streaming smoke through the FFI bridge. |
+| `bin/agent.dart` | REPL prototype host (streaming, `_stats`, `_trace`, `_spawn`). |
+| `bin/coding_suite_afm.dart` | Coding-suite runner over real AFM. |
+| `bin/coding_suite_plan_probe.dart`, `bin/coding_suite_decomp_probe.dart` | Thin real-model probe entrypoints over core's experiment arms (`adr0009_experiments.dart`). |
+| `acp/` | ACP stdio server surface (planned; not yet on disk; standalone library lives in mcp_flutter). |
 | `example/lib/main_stress_cli.dart` | Flutter-hosted stress CLI (current workaround). |
 
 ## Validation
@@ -58,13 +62,6 @@ Native CLI smoke (requires macOS 26+ with Apple Intelligence):
 ```bash
 dart run bin/apple_foundation_cli.dart list
 dart run bin/apple_foundation_cli.dart run --scenario=multi_actor --json
-```
-
-ACP conformance smoke:
-
-```bash
-echo '{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"protocolVersion":1,"clientCapabilities":{}}}' \
-  | dart run acp/bin/acp_server.dart
 ```
 
 ## Docs To Update

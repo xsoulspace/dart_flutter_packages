@@ -66,7 +66,9 @@ Practices:
 
 - ~~8 known-failing core tests~~ → fixed as Phase 4 blockers were cleared.
 - Migrate/delete legacy manual-schedule tests (sleep + second-pass crutch).
-- Delete bisection probes (`tool/probe_*.dart`, `benchmark/debug_*.dart`)
-  after extracting lessons into checks/tests.
+- ~~Delete bisection probes (`tool/probe_*.dart`, `benchmark/debug_*.dart`)
+  after extracting lessons into checks/tests~~ — done 2026-08-25 (A7): probes
+  deleted; lessons survive in `test/run_until_idle_tool_race_test.dart` and
+  the `expectIdle` helper (`test/support/agent_harness_support.dart`).
 - Fold `discussion.md` into ADRs — done via ADR 0009; discussion.md is now an
   archive of the design conversation (threads/beats/projection theory).

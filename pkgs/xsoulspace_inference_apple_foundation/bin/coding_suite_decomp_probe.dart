@@ -1,15 +1,17 @@
 // ignore_for_file: lines_longer_than_80_chars
 
-/// ADR 0009 real-model decomposition probe — Apple Foundation (macOS only).
+/// ADR 0009 real-model decomposition probe — Apple Foundation (macOS 26+).
 ///
-/// Arms per task (refactor_* = multi-file, multi-step):
-/// 1. **monolithic**: same writes as one canned script? NO — real model acts
-///    freely under default ReAct continuation until checkers pass or the
-///    round budget burns (via `runPlanArm`, planFrontier: false).
-/// 2. **decomposed-real**: ONE guided decompose call (structured schema:
-///    ordered file-write steps with full content) → mechanical execution of
-///    every step through the jailed write executor → mechanical per-step
-///    verification → termination. LLM called exactly once.
+/// Thin AFM entrypoint over core's injectable experiment arms
+/// (`xsoulspace_inference_core/benchmark/experiment_arms.dart`): this file
+/// owns only the availability gate and the per-task handler factory. Arms,
+/// markdown table, and JSONL trace live in core via [runDecompositionProbe]:
+///
+/// 1. **monolithic**: real model acts freely under default ReAct continuation
+///    until checkers pass or the tick budget burns.
+/// 2. **decomposed-real**: ONE guided decompose call → mechanical execution
+///    of every step through the jailed write executor → mechanical per-step
+///    verification. LLM called exactly once.
 ///
 /// ```sh
 /// cd pkgs/xsoulspace_inference_apple_foundation
@@ -17,19 +19,19 @@
 /// ```
 library;
 
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:xsoulspace_inference_apple_foundation/src/native_bridge/native_client.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import '../../xsoulspace_inference_core/benchmark/coding_suite/task_spec.dart';
-import '../../xsoulspace_inference_core/benchmark/decomposition_experiment.dart';
-import '../../xsoulspace_inference_core/benchmark/plan_frontier_arms.dart';
+import '../../xsoulspace_inference_core/benchmark/experiment_arms.dart';
+import '../../xsoulspace_inference_core/benchmark/shared/logging_handler.dart';
 
 Future<void> main(List<String> args) async {
   var tasksDir = '../xsoulspace_inference_core/benchmark/coding_suite/tasks';
   var filter = 'refactor';
+  var verbose = false;
   String? tracePath;
   for (var i = 0; i < args.length; i++) {
     switch (args[i]) {
@@ -39,6 +41,8 @@ Future<void> main(List<String> args) async {
         filter = args[++i];
       case '--trace':
         tracePath = args[++i];
+      case '--verbose':
+        verbose = true;
     }
   }
 
@@ -49,109 +53,34 @@ Future<void> main(List<String> args) async {
     exit(2);
   }
 
-  final tasks =
-      loadTasks(tasksDir).where((t) => t.id.contains(filter)).toList();
-  stdout.writeln(
-    'ADR 0009 real-model DECOMPOSITION probe — ${tasks.length} tasks\n',
-  );
+  final tasks = loadTasks(
+    tasksDir,
+  ).where((t) => t.id.contains(filter)).toList();
 
   // Guided act-vs-answer wrapper (same as the Phase 4 suite): tool syntax
-  // errors impossible by construction. DecomposeCaptureHandler strips the
-  // registry on the FIRST (decompose) call so its own schema drives output.
+  // errors impossible by construction. Fresh native client per task keeps
+  // state isolated between runs.
   GenerationHandler buildInner(CodingTask task) {
     final taskClient = AppleFoundationNativeClient();
-    return StructuredToolDecisionHandler(
-      inner: DefaultGenerationHandler(
-        router: ModelRouter(
-          inferenceClientsBuilders: {
-            DefaultModelNames.appleFoundation: () => taskClient,
-          },
+    return LoggingHandler(
+      StructuredToolDecisionHandler(
+        inner: DefaultGenerationHandler(
+          router: ModelRouter(
+            inferenceClientsBuilders: {
+              DefaultModelNames.appleFoundation: () => taskClient,
+            },
+          ),
         ),
       ),
+      enabled: verbose,
     );
   }
 
-  final b = StringBuffer()
-    ..writeln('| task | mono calls | decomp calls | mono cum | decomp cum |'
-        ' cum Δ | steps✓ | mono pass | decomp pass | decomp fail-mode |')
-    ..writeln('|---|---|---|---|---|---|---|---|---|---|');
-  var mcalls = 0, dcalls = 0, mtok = 0, dtok = 0;
-  for (final task in tasks) {
-    stdout.writeln('▶ ${task.id}');
-
-    final mono = await runPlanArm(
-      task,
-      planFrontier: false,
-      buildHandler: (t) => buildInner(t),
-      maxTicks: 2000000,
-    );
-    stdout.writeln(
-      '  monolithic: ${mono.passed ? "PASS" : "FAIL"} — '
-      '${mono.llmCalls} calls, cum ${mono.cumulativeTokens} tokens',
-    );
-
-    final dec = await runDecomposedArmReal(
-      task,
-      buildInnerHandler: buildInner,
-    );
-    stdout.writeln(
-      '  decomposed: ${dec.passed ? "PASS" : "FAIL"} — '
-      '${dec.llmCalls} call(s), cum ${dec.cumulativeTokens} tokens, '
-      'steps verified=${dec.stepsVerified}'
-      '${dec.failureMode.isEmpty ? "" : " [${dec.failureMode}]"}',
-    );
-
-    mcalls += mono.llmCalls;
-    dcalls += dec.llmCalls;
-    mtok += mono.cumulativeTokens;
-    dtok += dec.cumulativeTokens;
-    final delta = mono.cumulativeTokens == 0
-        ? 0
-        : ((dec.cumulativeTokens - mono.cumulativeTokens) /
-            mono.cumulativeTokens *
-            100);
-    b.writeln(
-      '| ${task.id} | ${mono.llmCalls} | ${dec.llmCalls} '
-      '| ${mono.cumulativeTokens} | ${dec.cumulativeTokens} '
-      '| ${delta.toStringAsFixed(0)}% | ${dec.stepsVerified} '
-      '| ${mono.passed ? '✅' : '❌'} | ${dec.passed ? '✅' : '❌'} '
-      '| ${dec.failureMode.isEmpty ? '—' : dec.failureMode} |',
-    );
-    if (tracePath != null) {
-      File(tracePath).writeAsStringSync(
-        jsonEncode({
-          'task_id': task.id,
-          'arm': 'monolithic',
-          'passed': mono.passed,
-          'llm_calls': mono.llmCalls,
-          'cumulative_tokens': mono.cumulativeTokens,
-        }) + '\n',
-        mode: FileMode.append,
-      );
-      File(tracePath).writeAsStringSync(
-        jsonEncode({
-          'task_id': task.id,
-          'arm': 'decomposed-real',
-          'passed': dec.passed,
-          'llm_calls': dec.llmCalls,
-          'cumulative_tokens': dec.cumulativeTokens,
-          'steps_verified': dec.stepsVerified,
-          'failure_mode': dec.failureMode,
-        }) + '\n',
-        mode: FileMode.append,
-      );
-    }
-  }
-
-  b..writeln()
-    ..writeln('**Totals** — calls: $mcalls → $dcalls '
-        '(${((dcalls - mcalls) / (mcalls == 0 ? 1 : mcalls) * 100).toStringAsFixed(0)}%), '
-        'cum tokens: $mtok → $dtok '
-        '(${((dtok - mtok) / (mtok == 0 ? 1 : mtok) * 100).toStringAsFixed(0)}%)')
-    ..writeln()
-    ..writeln('decomposed arm = ONE guided decompose call + fully mechanical '
-        'execution/verification. Failure modes: no-decompose (schema output '
-        'missing), wrong-content (steps ran but checkers disagree).');
-
-  stdout.writeln(b);
+  await runDecompositionProbe(
+    tasks,
+    buildInnerHandler: buildInner,
+    tracePath: tracePath,
+    backendLabel: 'afm',
+    modelLabel: 'apple-foundation',
+  );
 }

@@ -183,4 +183,121 @@ void main() {
     await secondExecution;
     expect(executed, isTrue);
   });
+
+  group('renderSituation', () {
+    test("shows '(idle)' before any turn", () async {
+      final world = await buildTestWorld(handler: _StreamingHandler());
+      final scene = spawnScene(world);
+      spawnActor(world, scene);
+      final host = buildCliTestHost(world, confirmation: (_, _) async => true);
+      unawaited(host.start());
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+
+      expect(host.renderSituation(), '(idle)');
+
+      await host.stop();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+    });
+
+    test('renders agent id, token count, and modality tags mid-turn', () async {
+      final world = await buildTestWorld(handler: _DelayedHandler());
+      final scene = spawnScene(world);
+      final actor = spawnActor(world, scene);
+      world.flush();
+      final thread = world.spawnComponents([const Thread()]);
+      world.flush();
+      addIndexedBeat(world, thread, actor, 'previously established context', [
+        'context',
+      ]);
+      final host = buildCliTestHost(world, confirmation: (_, _) async => true);
+      unawaited(host.start());
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      host.feed('recall the context');
+
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      final agentId =
+          world.getEntity(actor).$1.get<Actor>()?.agentId.value ?? '';
+      final rendered = host.renderSituation();
+      expect(rendered, contains('actor $agentId'));
+      expect(rendered, contains('tokens='));
+      expect(rendered, contains('beats='));
+      expect(rendered, contains('[text]'));
+
+      host.cancel();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(host.renderSituation(), '(idle)');
+
+      await host.stop();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+    });
+  });
+
+  group('onIdleTurnEnd', () {
+    test('fires exactly once per feed→waitForIdle cycle', () async {
+      var turns = 0;
+      final world = await buildTestWorld(
+        handler: MockGenerationHandler(responseText: 'done'),
+      );
+      final scene = spawnScene(world);
+      spawnActor(world, scene);
+      final host = buildCliTestHost(
+        world,
+        confirmation: (_, _) async => true,
+        config: CliHostConfig(onIdleTurnEnd: () async => turns++),
+      );
+      unawaited(host.start());
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(turns, isZero, reason: 'quiet startup is not a turn');
+
+      expect(host.feed('one'), isTrue);
+      await host.waitForIdle();
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+      expect(turns, 1);
+
+      expect(host.feed('two'), isTrue);
+      await host.waitForIdle();
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+      expect(turns, 2);
+
+      await host.stop();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+    });
+
+    test('callback errors do not break subsequent turns', () async {
+      var calls = 0;
+      final world = await buildTestWorld(
+        handler: MockGenerationHandler(responseText: 'done'),
+      );
+      final scene = spawnScene(world);
+      spawnActor(world, scene);
+      final host = buildCliTestHost(
+        world,
+        confirmation: (_, _) async => true,
+        config: CliHostConfig(
+          onIdleTurnEnd: () async {
+            calls++;
+            // Simulate a real autosave failing after an await boundary.
+            await Future<void>.delayed(Duration.zero);
+            throw StateError('autosave failed');
+          },
+        ),
+      );
+      unawaited(host.start());
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+
+      expect(host.feed('boom'), isTrue);
+      await host.waitForIdle();
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+      expect(calls, 1);
+
+      expect(host.feed('again'), isTrue);
+      await host.waitForIdle();
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+      expect(calls, 2, reason: 'second turn completed despite autosave error');
+      expect(host.isRunning, isTrue);
+
+      await host.stop();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+    });
+  });
 }

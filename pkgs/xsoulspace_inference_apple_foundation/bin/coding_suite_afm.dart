@@ -23,6 +23,7 @@ import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import '../../xsoulspace_inference_core/benchmark/coding_suite/runner.dart';
 import '../../xsoulspace_inference_core/benchmark/coding_suite/task_spec.dart';
+import '../../xsoulspace_inference_core/benchmark/shared/logging_handler.dart';
 
 Future<void> main(List<String> args) async {
   var tasksDir = '../xsoulspace_inference_core/benchmark/coding_suite/tasks';
@@ -80,7 +81,7 @@ Future<void> main(List<String> args) async {
 
   GenerationHandler debugHandler(CodingTask task) {
     final innerHandler = buildHandler(task);
-    return verbose ? _LoggingHandler(innerHandler, true) : innerHandler;
+    return verbose ? LoggingHandler(innerHandler, enabled: true) : innerHandler;
   }
 
   final result = await CodingSuiteRunner(
@@ -98,25 +99,3 @@ Future<void> main(List<String> args) async {
   }
   exit(result.passRate == 1 ? 0 : 1);
 }
-
-class _LoggingHandler implements GenerationHandler {
-  _LoggingHandler(this.inner, this.enabled);
-  final GenerationHandler inner;
-  final bool enabled;
-
-  @override
-  Future<ActorGenerateResponse> generate(
-    World world,
-    ActorGenerateRequest request,
-  ) async {
-    final response = await inner.generate(world, request);
-    if (!enabled) return response;
-    final names = response.toolCalls.map((t) => t.name.value).toList();
-    // ignore: avoid_print
-    stdout.writeln(
-      '[decision] structured=${response.structuredOutput} toolCalls=$names error=${response.error}',
-    );
-    return response;
-  }
-}
-

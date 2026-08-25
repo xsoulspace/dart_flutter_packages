@@ -5,9 +5,6 @@
 library;
 
 import 'package:test/test.dart';
-import 'package:xsoulspace_inference_core/src/agent/schedules.dart';
-import 'package:xsoulspace_inference_core/src/agent/systems/projection/projection_systems.dart'
-    show fragmentText;
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import 'support/agent_harness_support.dart';
@@ -114,7 +111,7 @@ void main() {
         ['museum'],
       );
 
-      final metrics = await _driveOneDecision(
+      final metrics = await driveOneDecision(
         world,
         spawned.first.entity,
         'fix parser',
@@ -147,7 +144,7 @@ void main() {
       ], scene);
       world.getResource<GenerationHandlerResource>().registerDefault(handler);
 
-      final metrics = await _driveOneDecision(
+      final metrics = await driveOneDecision(
         world,
         spawned.first.entity,
         'run lexer',
@@ -191,7 +188,7 @@ void main() {
         ['launch', 'codes'],
       );
 
-      final metrics = await _driveOneDecision(
+      final metrics = await driveOneDecision(
         world,
         spawned.first.entity,
         'what about launch codes?',
@@ -226,7 +223,7 @@ void main() {
       ], scene);
       // NO dependency beat seeded — projection cannot contain the phrase.
 
-      await _driveOneDecision(
+      await driveOneDecision(
         world,
         spawned.first.entity,
         'recall the secret sauce recipe',
@@ -237,90 +234,4 @@ void main() {
       expect(beatsWithText(world, 'MISSING CONTEXT'), hasLength(1));
     });
   });
-}
-
-/// Drive one decision through the canonical cinematic cycle and return exact
-/// per-decision metrics (ADR 0004 capture path).
-Future<ScenarioMetrics> _driveOneDecision(
-  World world,
-  Entity actorEntity,
-  String prompt,
-) async {
-  world.upsertComponent(actorEntity, OpenDecision(prompt: prompt));
-  world.flush();
-  final collector = MetricsCollector(world: world);
-  collector.beginDecision(actor: actorEntity, actorName: 'a', prompt: prompt);
-
-  world.runSchedule(Schedules.agencyGrant);
-  world.flush();
-  world.runSchedule(Schedules.project);
-  world.flush();
-  await world.runScheduleAsync(Schedules.actorAct);
-  world.flush();
-  world.runSchedule(Schedules.processResponses);
-  world.flush();
-  world.runSchedule(Schedules.mechanical);
-  world.flush();
-
-  final situation = world.getEntity(actorEntity).$1.get<Situation>();
-  collector.endDecision(actor: actorEntity, situation: situation);
-  final telemetry = collector.report().decisions.first;
-  return ScenarioMetrics(
-    name: 'driven',
-    decisions: [
-      DecisionMetrics(
-        actor: 'a',
-        prompt: prompt,
-        tokensUsed: situation?.tokensUsed ?? 0,
-        projectedBeats: situation?.projectedBeats.length ?? 0,
-        explicitAbsences: situation?.explicitAbsences ?? const [],
-        llmCalls: telemetry.llmCalls,
-        truncated: situation?.truncated ?? false,
-        projectedTexts: [
-          for (final beat in situation?.projectedBeats ?? const <Entity>[])
-            fragmentText(world, beat),
-        ],
-      ),
-    ],
-    totalLlmCalls: telemetry.llmCalls,
-    totalTokens: situation?.tokensUsed ?? 0,
-    prunedThreads: 0,
-    mergedThreads: 0,
-  );
-}
-
-/// Small helper so tests can spawn named actors without the full Scenario
-/// machinery (mirrors AgentWorldSetup.spawnActors).
-class ActorWorldSetupHelper {
-  ActorWorldSetupHelper({required this.world});
-  final World world;
-
-  List<SpawnedResult> spawnActors(List<ActorSpec> specs, Entity scene) {
-    final out = <SpawnedResult>[];
-    for (final spec in specs) {
-      final e = world.spawnComponents([
-        Actor(agentId: AgentId.create()),
-        ActorModel(modelId: ModelId.create()),
-        ActorSystemPrompt(text: spec.systemPrompt),
-        ActorThreads(threads: []),
-        const ActorTools(registryName: 'default'),
-        PresentInScene(sceneEntity: scene),
-      ]);
-      out.add(SpawnedResult(entity: e));
-    }
-    world.flush();
-    for (final r in out) {
-      final thread = spawnThread(world, r.entity, scene);
-      world.upsertComponent(r.entity, ActorThreads(threads: [thread]));
-      r.thread = thread;
-    }
-    world.flush();
-    return out;
-  }
-}
-
-class SpawnedResult {
-  SpawnedResult({required this.entity});
-  final Entity entity;
-  Entity thread = Entity.create(0);
 }

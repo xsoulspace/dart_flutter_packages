@@ -6,11 +6,12 @@
 > decisions: [ADR Index](../../../../docs/decisions/README.md).
 
 The working model is a living, multi-linear game world. Memory was removed as
-a primitive; now planning is too (ADR 0009). What remains ahead, in order:
+a primitive; now planning is too (ADR 0009). A1–A7 all landed as of
+2026-08 — this file is now the record of what shipped and the standing rules.
 
 ---
 
-## Ahead — ordered
+## The plan (all landed)
 
 ### A1. Fair comparison baseline — **landed 2026-08**
 
@@ -79,7 +80,7 @@ production shape, in order:
    "idle + open goal ⇒ verify", bounded to 1 nudge — results §round 4) and
    **decomposition mechanics LANDED** (per-step criteria in-frame, zero
    close-out: scripted refactor tasks −44…−72% cumulative tokens at equal
-   pass rate — `benchmark/decomposition_experiment.dart`). Next lever:
+   pass rate — `benchmark/adr0009_experiments.dart`). Next lever:
    real-model decomposition probe (decompose call via guided schema), then
    the Phase 4 matrix re-run under cumulative token accounting.
 8. Decomposition as one agentic act per goal (amortized; escalation tier OK),
@@ -90,34 +91,118 @@ already measured at 100% for verification in the falsification run),
 escalation rate per task class, decomposition fidelity via ADR 0004 causal
 coupling.
 
-### A3. Reduction fidelity / structurification (Phase 4b)
+### A3. Reduction fidelity / structurification (Phase 4b) — **landed 2026-08**
 
-Unchanged in substance, scope narrowed: keyword-drift recall now measures
-*execution-context* quality for steps (plan discovery uses explicit links and
-is drift-free by construction). Reduced beats must still trigger correct rays
-and causally gate scripted success.
+Keyword-drift recall measures *execution-context* quality for steps (plan
+discovery uses explicit links and is drift-free by construction).
+[test/reduction_fidelity_test.dart](../../test/reduction_fidelity_test.dart)
+proves: reduced beats still trigger correct rays after mechanical
+verification (evidence + observation survive budget pruning, decoys pruned,
+frontier exact), and scripted success is causally gated — a step verifies
+only when its evidence beat exists; without it the verdict fails with a
+teaching-shaped message, never silently.
 
-### A4. Seam conformance suites (Phase 5b)
+### A4. Seam conformance suites (Phase 5b) — **landed 2026-08**
 
-Per ADR 0007 §2: policy determinism + purity canary; tool timeout/error-shape/
-serialization round-trip; handler fault matrix; projection budget assertion in
-debug mode. Verifier-tool conformance joins this list when A2 lands.
+[test/seam_conformance_test.dart](../../test/seam_conformance_test.dart)
+(16 tests): policy determinism canary (double-evaluate identical drafts) +
+purity canary (evaluation leaves the world surface untouched); nested-JSON/
+unicode tool-result round-trip into beats losslessly; handler fault matrix;
+verifier-tool conformance (pass→verified, fail→teaches+failed, throw/missing
+executor→step stays open, determinism, timeout on the tool path); projection
+budget breach degrades by documented silent truncation (tokens ≤ budget,
+truncation flag, relevant kept / oversized pruned).
 
-### A5. Snapshot/restore + baseline table (Phase 6)
+### A5. Snapshot/restore + baseline table (Phase 6) — **landed 2026-08**
 
-Real deliverable, not the REPL prototype: persist beats/threads/**goals/
-steps** via `ecsly_serializable` + `universal_storage`; rebuild facet index
-from restored beats (derived state never source-of-truth); crash mid-decision
-restores to a re-opened decision; golden oracle — post-restore projections
-byte-match pre-snapshot cuts. Then publish the final comparison table from A1
-as the headline artifact.
+Beats/threads/**goals/steps** persist via the harness codec
+([snapshot.dart](../../lib/src/agent/snapshot.dart)) through
+`SnapshotStore` ([snapshot_store.dart](../../lib/src/agent/snapshot_store.dart))
+on `universal_storage_filesystem` (`StorageService`, one JSON document per
+session). Facet index rebuilds from restored beats — derived state never
+source-of-truth. Crash mid-decision: dangling `AwaitingResponse` taskId is
+safe, `OpenDecision` re-opens, projections byte-match pre-snapshot (golden,
+incl. goals/steps/tool-result beats). Headline comparison table published at
+[results_comparison.md](../../benchmark/docs/agent/results_comparison.md).
+Follow-up: the codec's runtime-id remapping is slated for replacement by
+`PersistentId` identity — see [A8](#a8-migrate-persistence-to-persistentid--ahead).
 
-### A6. Everyday CLI host (thin)
+### A6. Everyday CLI host (thin) — **landed 2026-08**
 
-REPL on `HarnessLoop.start()`: streaming deltas, input-as-decisions while
-idle, cancel-in-flight = task cancellation + agency release, `/situation`
-inspector, snapshot autosave, confirmation-gated tools. Anything beyond that
-is an extensibility-ledger entry, not core.
+[cli_host.dart](../../lib/src/agent/cli_host.dart): streaming deltas
+(`output`), input-as-decisions while idle (`feed`), cancel-in-flight = task
+cancellation + agency release (`cancel`), `/situation` inspector
+(`renderSituation()`), snapshot autosave seam (`onIdleTurnEnd`),
+confirmation-gated tools (`confirmationRequiredTools`). The everyday REPL is
+apple_foundation `bin/agent.dart`, rebuilt on `CliHost.start()` — hand-rolled
+loop removed; `_stats/_trace/_spawn/_save/_load` retained as host extras.
+
+### A7. Generational cleanup / architecture round — **landed 2026-08**
+
+One dedup + garbage-collection pass across `xsoulspace_inference_core` ↔
+provider packages (tests, benchmarks, examples, bins). Disposition rules:
+lessons extracted → delete; live intent behind broken scripts → unify;
+verbatim twins → one home; evidence artifacts stay tracked. Net: ~1.2k LOC
+removed across 38 files; core 184/184, afm 16/16 (+ example 6/6), benches
+8/8 green; no lib behavior change.
+
+1. **Probes deleted** — `tool/probe_*.dart`, `tool/led_*.dart` (~480 LOC):
+   mandated by the history.md cleanup ledger; lessons already live in
+   `run_until_idle_tool_race_test.dart` and the support helpers.
+2. **Real-model probes unified** — afm `coding_suite_plan_probe` /
+   `coding_suite_decomp_probe` and openrouter `decomposition_probe_or`
+   broke when their modules folded into `adr0009_experiments.dart`; now
+   thin (~70-line) entrypoints over backend-injected arms in
+   `benchmark/experiment_arms.dart` (`runPlanProbe` /
+   `runDecompositionProbe`). Restores the A2 §7 real-model decomposition
+   probe with one arm/table/trace implementation.
+3. **Single homes** — `CumulativeTokenMeter`, `LoggingHandler`, and the
+   chars/4 estimator (`benchmark/shared/`) replace their per-file twins in
+   the suite runner, both phase benchmarks, and every provider bin.
+4. **Test support promoted** — `runCycle`, parameterized `buildTestWorld`,
+   and handler fault variants in `test/support/`; `_cycle` ×4, world
+   builders ×6, oracle-driver clones, and near-clone mock handlers collapse
+   into it. Drift fixed: single scene per actor in seam conformance,
+   registry actually attached in failure guarantees, dead helper classes
+   removed.
+5. **Stale UI tests deleted** — both example `widget_test.dart`s asserted
+   UIs that no longer exist (counter boilerplate / removed button); afm's
+   was the package's only red test.
+6. **Docs reconciled** — PLAN/history/results pointers updated to surviving
+   entrypoints; afm AGENTS.md table matches disk (acp/ marked planned);
+   afm justfile parses again (duplicate `test` recipe + make syntax
+   removed).
+
+Non-goals held: no lib behavior change, no new seams, no schema versioning.
+Gravity check: serves (b) fewer calls and (d) LLM-free testable by removing
+fourth/fifth copies of world bootstrap and accounting machinery.
+
+### A8. Migrate persistence to `PersistentId` — **ahead**
+
+Principle: `Entity` references are fine **at runtime** — graph wiring
+(`ActorThreads`, `BelongsToThread`, `GoalLink`, …) stays as-is. But across
+the serialization boundary they must never appear: `Entity` handles are
+regenerated every run, so snapshots carry `PersistentId` identity instead,
+translated back to fresh handles on restore. The A5 codec
+([snapshot.dart](../../lib/src/agent/snapshot.dart)) currently persists
+entity references as opaque runtime ids remapped by table order — migrate it
+onto ecsly_serialization's `PersistentId` model:
+
+1. Stamp `PersistentId` on every persisted entity (scenes, actors, threads,
+   beats, goals, steps) at capture time — runtime spawn paths unchanged.
+2. Object-component codecs encode `Entity` fields as persistent ids and
+   decode through the restore mapping (two-pass restore: spawn all carriers
+   → obtain id→Entity map → restore columns).
+3. `SnapshotStore` switches its document payload to
+   `encodeWorldSnapshot(captureWorldSnapshot(...))`; envelope/meta stay.
+4. Acceptance gates unchanged: projection byte-match golden (incl.
+   goals/steps/tool-result beats), crash-mid-decision re-open, corrupt/
+   missing session errors.
+5. Delete the hand-rolled `_componentTypes`/`_encode`/`_decoders` table once
+   parity is proven — one serialization stack, not two.
+
+Non-goals: no schema versioning beyond ecsly_serialization's own envelope;
+no behavior change outside persistence; no runtime graph-shape changes.
 
 ---
 

@@ -1,8 +1,9 @@
 # ADR 0009 Falsification Results — plan-frontier vs ReAct close-out
 
 Date: 2026-08. Experiment:
-[`benchmark/plan_falsification_experiment.dart`](../../../benchmark/plan_falsification_experiment.dart).
-Run: `dart run benchmark/plan_falsification_experiment.dart`
+[`benchmark/adr0009_experiments.dart`](../../../benchmark/adr0009_experiments.dart)
+(`--mode falsification`). Run:
+`dart run benchmark/adr0009_experiments.dart --mode falsification`
 
 ## Design
 
@@ -129,7 +130,7 @@ targets. Next: cumulative token accounting, prefix A/B, then re-probe.
 
 - `TaskResult.cumulative_tokens` added to the production suite runner
   (`benchmark/coding_suite/runner.dart`) and JSONL traces.
-- `PlanRow.cumulativeTokens` in `plan_frontier_arms.dart`.
+- `PlanRow.cumulativeTokens` in `benchmark/shared/world_builder.dart`.
 
 Impact: real per-task spend on AFM is **~8.6–11k tokens** where the old field
 reported ~500 — a 20× gap. All published tokens/task numbers before this fix
@@ -236,7 +237,8 @@ device: 1 call, FAIL, nothing verified).
   2. The idle check must mirror `canSleep()` **including in-flight tool tasks
      and unconsumed result events** — otherwise the verifier races an
      executing write and nudges on stale workspace state.
-- Proof: `benchmark/idle_verify_proof.dart` — a deterministic flaky handler
+- Proof: `benchmark/adr0009_experiments.dart` (`--mode idle-proof`) — a
+  deterministic flaky handler
   (answer-only first call) ends FAIL/1-call without the rule; WITH the rule:
   caught → nudged once → goal achieved. **2 calls, PASS, 664 tokens.**
 - On-device cost data (`runs/plan_probe_afm_idlerule.jsonl`): with 2 nudges,
@@ -245,7 +247,8 @@ device: 1 call, FAIL, nothing verified).
 
 ### 2. Decomposition mechanics landed
 
-`benchmark/decomposition_experiment.dart`: steps as entities with per-step
+`benchmark/adr0009_experiments.dart` (`--mode decomposition`): steps as
+entities with per-step
 claims + exact-content acceptance predicates; each decision sees ONLY the
 current step's criterion; per-step verification is mechanical graph logic;
 frontier advances by opening the next step's decision — zero close-out calls.
