@@ -12,17 +12,15 @@
 /// stress_cli benchmark [--json]
 /// ```
 ///
-/// It is a Flutter-hosted CLI (Apple Foundation is a platform plugin, so it
-/// needs a Flutter engine), but the parsing/selection/output logic here is
-/// pure and testable without a model or engine.
+/// Pure Dart since the AFM transport is FFI-only: no Flutter engine
+/// involved. Parsing/selection/output is testable without a model.
 library;
 
 import 'dart:convert';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
-import '../scenario_definitions.dart';
+import 'scenario_definitions.dart';
 
 /// Exit codes — stable contract for scripts/CI.
 class ExitCode {

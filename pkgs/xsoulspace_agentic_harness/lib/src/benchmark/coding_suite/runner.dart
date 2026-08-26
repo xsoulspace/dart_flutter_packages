@@ -12,7 +12,7 @@
 ///    trace for diffing across runs/agents.
 ///
 /// The runner is agent-agnostic: any [GenerationHandler] works, so the same
-/// suite can be pointed at AFM (via AppleFoundationInferenceClient) or at pi
+/// suite can be pointed at AFM (via AppleFoundationNativeClient) or at pi
 /// (via a local OpenAI-compatible shim) for apples-to-apples comparison.
 library;
 

@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:from_json_to_json/from_json_to_json.dart';
 import 'package:mcp_toolkit/mcp_toolkit.dart' hide TextContent;
 
-import 'package:xsoulspace_inference_apple_foundation/xsoulspace_inference_apple_foundation_flutter.dart';
+import 'package:xsoulspace_inference_apple_foundation/xsoulspace_inference_apple_foundation.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 import 'package:xsoulspace_inference_openrouter/xsoulspace_inference_openrouter.dart';
@@ -96,9 +96,7 @@ sealed class Scenario {
     // Foundation is on-device; OpenRouter is a hosted API (requires a key).
     final router = ModelRouter(
       inferenceClientsBuilders: {
-        DefaultModelNames.appleFoundation: () => AppleFoundationInferenceClient(
-          api: AppleFoundationInferenceClient.initApi(),
-        ),
+        DefaultModelNames.appleFoundation: () => AppleFoundationNativeClient(),
         OpenRouterModelNames.openRouter: () =>
             OpenRouterInferenceClient(apiKey: openRouterApiKey),
       },

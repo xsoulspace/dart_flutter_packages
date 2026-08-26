@@ -20,7 +20,7 @@
 /// }
 /// ```
 ///
-/// For Apple Foundation Models use `AppleFoundationInferenceClient` from
+/// For Apple Foundation Models use `AppleFoundationNativeClient` from
 /// `xsoulspace_inference_apple_foundation`. The handler, loop, tools, and
 /// world stay identical — only the reasoning primitive changes.
 library;

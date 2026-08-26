@@ -1,8 +1,0 @@
-# build.yaml
-builders:
-  generable:
-    import: "package:xsoulspace_inference_apple_foundation/builder.dart"
-    builder_factories: ["generableBuilder"]
-    build_extensions: { ".dart": [".swift"] }
-    auto_apply: dependents
-    build_to: source

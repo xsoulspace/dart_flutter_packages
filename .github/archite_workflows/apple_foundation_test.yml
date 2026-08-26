@@ -26,18 +26,3 @@ jobs:
           cd pkgs/xsoulspace_inference_apple_foundation
           flutter pub get
           flutter test
-
-  integration-macos:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-      - name: Integration test (macOS)
-        run: |
-          cd pkgs/xsoulspace_inference_apple_foundation/example
-          flutter pub get
-          flutter test integration_test -d macos
-        continue-on-error: true

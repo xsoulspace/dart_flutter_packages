@@ -1,0 +1,12 @@
+// This is a generated file; do not edit or check into version control.
+FLUTTER_ROOT=/Users/antonio/fvm/versions/beta
+FLUTTER_APPLICATION_PATH=/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_apple_foundation
+FLUTTER_FRAMEWORK_SWIFT_PACKAGE_PATH=/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_apple_foundation/macos/Flutter/ephemeral/Packages/.packages/FlutterFramework
+COCOAPODS_PARALLEL_CODE_SIGN=true
+FLUTTER_BUILD_DIR=build
+FLUTTER_BUILD_NAME=0.1.0
+FLUTTER_BUILD_NUMBER=0.1.0
+DART_OBFUSCATION=false
+TRACK_WIDGET_CREATION=true
+TREE_SHAKE_ICONS=false
+PACKAGE_CONFIG=.dart_tool/package_config.json

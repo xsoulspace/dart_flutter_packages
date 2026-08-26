@@ -1,5 +1,6 @@
 name: xsoulspace_inference_apple_foundation
-description: Apple Foundation Models (SystemLanguageModel) implementation of xsoulspace_inference_core for macOS.
+description: Apple Foundation Models (SystemLanguageModel) backend for
+  xsoulspace_inference_core via a pure-Dart FFI bridge (macOS 26+).
 version: 0.1.0
 publish_to: none
 
@@ -10,11 +11,8 @@ resolution: workspace
 
 dependencies:
   code_assets: any
-  ecsly_serialization:
-    path: /Users/antonio/xs/ecsly/plugins/ecsly_serialization
+  ecsly_serialization: ^0.1.0-dev.1
   ffi: ^2.2.0
-  flutter:
-    sdk: flutter
   hooks: any
   path: ^1.9.1
   xsoulspace_agentic_harness:
@@ -24,14 +22,6 @@ dependencies:
   from_json_to_json: ^0.5.0
 
 dev_dependencies:
-  flutter_test:
-    sdk: flutter
   lints: ^6.1.0
   test: ^1.31.2
   xsoulspace_lints: ^0.1.2
-
-flutter:
-  plugin:
-    platforms:
-      macos:
-        pluginClass: XsoulspaceInferenceAppleFoundationPlugin
