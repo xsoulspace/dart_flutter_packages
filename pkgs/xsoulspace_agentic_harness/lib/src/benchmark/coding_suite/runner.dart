@@ -156,12 +156,18 @@ class CodingSuiteRunner {
     this.resumeFromTrace,
     this.backendLabel = 'harness',
     this.modelLabel = 'unknown',
+    this.extraTools = const [],
   });
 
   /// Builds the generation handler for each run (fresh per task so state
   /// never leaks between tasks). Receives the task so handlers can key
   /// behavior on [CodingTask.id].
   final GenerationHandler Function(CodingTask task) buildHandler;
+
+  /// Additional tools registered next to fs tools (e.g. `patch_file`,
+  /// `verify_pack`). Factories receive the per-task jail root. Additive
+  /// seam — no runner fork.
+  final List<ToolDef Function(String jailRoot)> extraTools;
 
   /// Parent directory for per-task jails. Defaults to a system temp dir.
   final Directory? jailParent;
@@ -250,6 +256,9 @@ class CodingSuiteRunner {
 
       final registry = ToolRegistry();
       fsTools(FsToolsRoot(jail.path)).forEach(registry.register);
+      for (final factory in extraTools) {
+        registry.register(factory(jail.path));
+      }
       world.getResource<ToolRegistryResource>().register('default', registry);
 
       final scene = world.spawnComponents([const Scene(), SceneFrame()]);

@@ -211,6 +211,47 @@ turn appends beats, goes idle, and re-persists. Acceptance gates from A5 all
 hold: goals/steps/tool-result golden byte-match, crash-mid-decision re-open,
 corrupt/missing session errors. Core 210/210 green.
 
+
+---
+
+## Ahead — SWE push (M-series, started 2026-08)
+
+Goal: push tiny-model SWE as far as declarative checking allows, with a
+feedback loop fast enough to iterate per-hour. Framing: SWE on a 4B model is
+a compression problem — minimize bits out of the model; maximize bits
+through determinism; spend calls only at irreducible ambiguity.
+
+- **M1 attribution ledger — landed.** `AttributionLedger` +
+  `AttributedHandler` (fragment classes via wire-protocol prefixes:
+  assistant/tool/absence/context) + `bin/harness_profile.dart` and
+  `runProfile()` with a provider-agnostic handler factory. First scripted
+  reading ranks tool-result bytes as the dominant context bucket (14.3k of
+  16k on edit_05) — confirming compact op-diagnostics as the next lever.
+- **M2 TransformFlow — landed (scripted gate).** DecisionFlow-style ETL in
+  `lib/src/tooling/transform_flow.dart`: read-only `TransformContext`,
+  guard-first stages (`onFile`, `onAnchor`, `when`), named stage outcomes,
+  one mechanical mutator (`applyOps`). Anchor-patch = exact-match span
+  replacement validated pre-mutation; applier re-checks = defense in depth.
+  Wired end-to-end on a real suite family: `tasks_ops/refactor_patch_01`
+  (fixture-seeded `lib/pricing.dart`, three deterministic checkers) run in
+  both arms via `CodingSuiteRunner(extraTools: [patchFileTool])`.
+  **Measured (M1 ledger, LLM-free): baseline 352 generated chars vs ops 144
+  = 59.1% cut at equal pass and equal call count.** Ledger fix included:
+  tool-call argument bytes now count as model output (whole-file writes hid
+  their payload in rawOutput).
+- **M3 tree-edit materializer** behind the same op surface (Dart analyzer +
+  canonical printer). Promoted only when anchors demonstrably fail on
+  recorded cases.
+- **M4 AE bridge — PoC landed** (`tooling/ae_bridge.dart`): parses AE's
+  schema'd `VerifyEntry.toJson()` wire shape into `AeGap`s, renders
+  tier-ordered blocking-first beats, and registers a `verify_pack` tool
+  (CLI executor; unit tests run on fixtures — no AE install needed).
+  Typed AE import deferred until the Transformer port exists in ae_core.
+  Guard still open: tiered diagnostics must beat prose retry feedback on
+  one real task family before this replaces checker-prose feedback.
+- **M5 real-model matrix re-run** under cumulative accounting + M1
+  attribution (AFM when unblocked, OR-tiny proxy otherwise).
+
 ---
 
 ## Standing rules

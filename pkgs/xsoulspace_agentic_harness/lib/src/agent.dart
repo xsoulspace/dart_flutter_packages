@@ -25,6 +25,11 @@ export 'schedules.dart';
 export 'systems/systems.dart';
 export 'testing/testing.dart';
 export 'world_setup.dart';
+export 'benchmark/profile.dart';
+export 'tooling/ae_bridge.dart';
+export 'benchmark/coding_suite/ops_handler.dart';
+export 'tooling/attribution.dart';
+export 'tooling/transform_flow.dart';
 // NOTE: tools/fs_tools.dart is intentionally NOT exported here — it uses
 // dart:io and would break web compilation of the core barrel. Import it
 // directly on VM-only targets:
