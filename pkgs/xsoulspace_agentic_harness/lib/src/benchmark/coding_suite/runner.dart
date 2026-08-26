@@ -141,6 +141,20 @@ class SuiteResult {
   }
 }
 
+/// Harness-side scaffolding, applied identically to every arm/backend: the
+/// runner already knows the seeded workspace deterministically, so it states
+/// those facts in the system prompt instead of spending model rounds
+/// rediscovering them (externalized cognition — the world carries what the
+/// model should not have to guess). Part of the measured context surface.
+String _systemPromptWithLayout(CodingTask task) {
+  if (task.fixtures.isEmpty) return task.systemPrompt;
+  final layout = task.fixtures.map((f) => '- ${f.path}').join('\n');
+  return '${task.systemPrompt}\n\n'
+      'Workspace layout (paths are relative to the workspace root):\n'
+      '$layout\n'
+      'All tool paths are relative to the workspace root.';
+}
+
 /// Runs [CodingTask]s through the real harness loop.
 class CodingSuiteRunner {
   CodingSuiteRunner({
@@ -269,7 +283,7 @@ class CodingSuiteRunner {
       final actor = world.spawnComponents([
         Actor(agentId: AgentId.create()),
         ActorModel(modelId: modelId),
-        ActorSystemPrompt(text: task.systemPrompt),
+        ActorSystemPrompt(text: _systemPromptWithLayout(task)),
         ActorThreads(threads: []),
         const ActorTools(registryName: 'default'),
         PresentInScene(sceneEntity: scene),

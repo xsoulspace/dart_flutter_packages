@@ -258,6 +258,81 @@ through determinism; spend calls only at irreducible ambiguity.
   one real task family before this replaces checker-prose feedback.
 - **M5 real-model matrix re-run** under cumulative accounting + M1
   attribution (AFM when unblocked, OR-tiny proxy otherwise).
+- **M6 externalization ladder — doctrine struck; stage 0 landed 2026-08.**
+  Thesis restated operationally: move intelligence out of the model into the
+  world's structure, projection discipline, and thread graph; the model only
+  fills the next low-entropy micro-decision. First real evidence pair
+  (edit_01_rename_constant, Apple Foundation, ops tools = fs + `patch_file`,
+  tokens = M1 ledger chars):
+
+  - native suspension: **PASS**, 1 decision, 26.5s — Swift ran
+    read→patch_file→write inline; final prose claims an error while
+    checkers pass (deterministic verification beats trusting narration).
+  - guided schema: FAIL, 17 decisions, 195s — dec#0 emitted the CORRECT
+    patch (schema fix validated); after the legitimate `anchor_not_unique`
+    rejection the flat AnyOf loop echoed diagnostic tokens back as
+    arguments for 15 rounds. Recovery steering, not arg emission, is the
+    guided path's binding constraint. (Pre-fix run: FAIL at 125s — the
+    model could not emit arguments at all.)
+
+  Stage 0 changes: `patchFileTool` declares a real object `argsSchema`
+  (before: guided Act branch had zero arg properties — `{"tool":
+  "patch_file"}` was legal output; native calls treated all args as
+  optional free-form); runner states seeded layout + relative-path rule in
+  the system prompt (`_systemPromptWithLayout` — deterministic world facts
+  never cost model rounds, applied identically to all arms/backends);
+  `coding_suite_afm_ops.dart` defaults to native suspension per the A1
+  finding, `--decision guided` kept for A/B, backend labels
+  `afm-ops-native` / `afm-ops-guided`. Attribution caveat recorded: under
+  native suspension, tool-argument bytes are generated inside the Swift
+  loop and do NOT surface in rawOutput — generated-char buckets are not
+  comparable across decision paths without this note.
+  Remaining stages, gated on data: (1) plan/decompose arms on the
+  refactor_patch01 family under attribution; (2) thin thread-fork probe
+  using existing primitives ONLY — spawn K children via
+  `DerivedFromThread`, stamp `ThreadScore` from checker pass-count, let
+  scheduled prune/merge select; today no system produces forks and the
+  scorer is a beat-count placeholder; (3) composition-surface ADR only if
+  a probe wins against retry-with-checkers at equal wall clock.
+  Non-claims: no ensemble/search gains asserted yet.
+- **M6.1 loop breaker (mechanical guards) — landed 2026-08.** Question from
+  the edit_01 guided failure: dec#0 was CORRECT (`anchor: MAX_USERS`) but
+  legitimately rejected — MAX_USERS occurs twice in the fixture and the
+  tool contract requires exactly-one-match; the model then echoed its own
+  diagnostics as arguments for 15 rounds. Three deterministic tiers in
+  `systems/loop_breaker_system.dart` (mechanical schedule, after
+  processToolResults): teach at identical-failing-streak 2 (harness
+  observation beat, projected like any other); raise-the-baton at streak 3
+  (`EscalationRequest` on the actor — priority now, second model tier when
+  registered); **fail fast** when taught-but-still-looping (suspend thread
+  + withdraw the ReAct continuation marker). Measured on real AFM
+  (guided arm): teach alone does NOT break this degenerate decoding
+  attractor (context bloats, echoing continues to round cap, 237s);
+  tier-3 stops it at **4 decisions / 30.8s vs 17 / 195–237s**, failure
+  still classified honestly. Native arm unaffected (1 decision, PASS).
+  Landed alongside, two engine fixes surfaced by the guard: (a)
+  `attachBeatToActorThread` now RETURNS the thread and both beat-indexing
+  call sites pass it directly — the old component read-back was null
+  pre-flush within the same mechanical tick, so tool/response beats were
+  wired to the graph but missing from FacetIndex membership; (b) noted for
+  follow-up: `scoreThreadsSystem`/`pruneThreadsSystem`/`mergeThreadsSystem`
+  query the `Thread` container component that `spawnThread` never stamps —
+  they are currently inert against real threads (ThreadStatus is the
+  actual marker). Accounting gap recorded: runner escalations count is an
+  end-state snapshot; mid-run escalation tags consumed by responses are
+  invisible — occurrence counting deferred until the second tier exists.
+  Non-claims: the guard does not make the guided path pass; native
+  suspension remains the default decision path per A1.
+- **M7 candidate — harness-as-context-engine over CLI/MCP (dogfood).**
+  Expose projection / facet-index / thread-graph / checkers as an MCP
+  server so EXTERNAL agents (coding assistants working in arbitrary repos)
+  get measurable context retrieval + deterministic verification. Rationale:
+  every outside agent exhibits the same failures our tiny models do
+  (context starvation, unverifiable edits); the projection cut is our
+  measured answer. Gate: only after M6 stages 1–2 produce data.
+  Falsifier: projection-based context pack must beat naive grep/ripgrep
+  packing on a fixed retrieval benchmark at equal or lower token spend,
+  measured with the same ledger discipline.
 
 ---
 

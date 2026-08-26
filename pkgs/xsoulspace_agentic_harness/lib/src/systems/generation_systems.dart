@@ -70,12 +70,12 @@ void processResponsesSystem(World world) {
     responseBeatEntity.insert(TextContent(responseText));
     responseBeatEntity.insert(BeatStatus(BeatStatusEnum.complete));
     responseBeatEntity.insert(BeatModality(BeatModalityEnum.text));
-    attachBeatToActorThread(world, we, responseBeat);
+    final attachedThread = attachBeatToActorThread(world, we, responseBeat);
     indexBeat(
       world,
       responseBeat,
       keywordsOf(responseText),
-      thread: responseBeatEntity.get<BelongsToThread>()?.thread,
+      thread: attachedThread,
     );
 
     // Dispatch parsed tool calls as ToolCallEvents for the

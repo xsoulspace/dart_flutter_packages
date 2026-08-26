@@ -152,6 +152,7 @@ class AgentPlugin extends Plugin {
     world.createSchedule(Schedules.mechanical)
       ..add(toolExecutionSystem, name: 'toolExecution')
       ..then(processToolResultsSystem, name: 'processToolResults')
+      ..then(loopBreakerSystem, name: 'loopBreaker')
       ..then(verifyStepSystem, name: 'verifyStep')
       ..then(scoreThreadsSystem, name: 'scoreThreads')
       ..then(pruneThreadsSystem, name: 'pruneThreads')

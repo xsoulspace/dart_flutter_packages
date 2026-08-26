@@ -179,12 +179,12 @@ void processToolResultsSystem(World world) {
     toolBeatEntity.insert(TextContent(toolText));
     toolBeatEntity.insert(BeatStatus(BeatStatusEnum.complete));
     toolBeatEntity.insert(BeatModality(BeatModalityEnum.toolCall));
-    attachBeatToActorThread(world, we, toolBeat);
+    final attachedThread = attachBeatToActorThread(world, we, toolBeat);
     indexBeat(
       world,
       toolBeat,
       keywordsOf(toolText),
-      thread: toolBeatEntity.get<BelongsToThread>()?.thread,
+      thread: attachedThread,
     );
 
     // ReAct continuation (ADR 0005): mark that a fresh tool result landed.
@@ -204,18 +204,23 @@ void processToolResultsSystem(World world) {
 /// If the actor is in a thread ([ActorThreads]), attach [beat] to that
 /// thread so it lives in the graph. The current decision's [OpenDecision.threadId]
 /// takes precedence (targeted thread), otherwise the actor's first thread.
-/// Mechanical — never a memory cache.
-void attachBeatToActorThread(World world, WorldEntity actor, Entity beat) {
+/// Returns the thread the beat was attached to, or null when the actor is
+/// threadless — callers index the beat with this so facet-index membership
+/// never desynchronizes from graph wiring (the component read-back can be
+/// null pre-flush within the same mechanical tick).
+Entity? attachBeatToActorThread(World world, WorldEntity actor, Entity beat) {
   final targeted = actor.get<OpenDecision>()?.threadId;
   if (targeted != null) {
     final (t, valid) = world.getEntity(targeted);
     // spawnThread stamps ThreadStatus; that's the thread-entity marker.
     if (valid && t.has<ThreadStatus>()) {
       world.getEntity(beat).$1.insert(BelongsToThread(targeted));
-      return;
+      return targeted;
     }
   }
   final threads = actor.get<ActorThreads>();
-  if (threads == null || threads.threads.isEmpty) return;
-  world.getEntity(beat).$1.insert(BelongsToThread(threads.threads.first));
+  if (threads == null || threads.threads.isEmpty) return null;
+  final first = threads.threads.first;
+  world.getEntity(beat).$1.insert(BelongsToThread(first));
+  return first;
 }

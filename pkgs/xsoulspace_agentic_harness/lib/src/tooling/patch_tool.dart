@@ -20,6 +20,35 @@ ToolDef patchFileTool(String jailRoot) => ToolDef.encode(
           '[new_text]. Fails with a structured diagnostic when the file is '
           'missing or the anchor matches more than once — nothing is written '
           'in that case. Cheaper and safer than rewriting whole files.',
+      // Declared object schema: without it both decision paths degrade —
+      // guided decisions embed zero arg properties (model can legally emit
+      // {"tool":"patch_file"} and stop), and AFM native calls treat every
+      // argument as optional free-form. Real schemas are what let tiny
+      // models emit complete, well-formed payloads.
+      argsSchema: SchemaBundle(
+        root: FM.object(
+          'patch_file',
+          description: 'Replace exactly one occurrence of anchor in path.',
+          properties: () => [
+            FM.prop(
+              'path',
+              FM.string(),
+              description: 'File to edit, relative to the workspace root.',
+            ),
+            FM.prop(
+              'anchor',
+              FM.string(),
+              description:
+                  'Exact existing text to replace; must occur exactly once.',
+            ),
+            FM.prop(
+              'new_text',
+              FM.string(),
+              description: 'Replacement text for the anchor.',
+            ),
+          ],
+        ),
+      ),
       execute: (args) async {
         final raw = args;
         final map = raw is Map
