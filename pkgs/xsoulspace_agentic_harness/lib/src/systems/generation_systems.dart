@@ -141,6 +141,10 @@ void processResponsesSystem(World world) {
     we.remove<Agency>();
     we.remove<AwaitingResponse>();
     we.remove<EscalationRequest>();
+    // The escalation baton passed — forget the stuck marker so the next
+    // loop (if any) re-triggers from a fresh streak rather than carrying a
+    // stale tag forward.
+    we.remove<LoopStuck>();
 
     // The turn is complete — close the streaming tap so host subscribers
     // (Flutter StreamBuilder / TUI) see an end-of-stream signal.

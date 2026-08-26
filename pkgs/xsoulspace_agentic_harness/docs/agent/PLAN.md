@@ -303,26 +303,59 @@ through determinism; spend calls only at irreducible ambiguity.
   `systems/loop_breaker_system.dart` (mechanical schedule, after
   processToolResults): teach at identical-failing-streak 2 (harness
   observation beat, projected like any other); raise-the-baton at streak 3
-  (`EscalationRequest` on the actor — priority now, second model tier when
-  registered); **fail fast** when taught-but-still-looping (suspend thread
-  + withdraw the ReAct continuation marker). Measured on real AFM
-  (guided arm): teach alone does NOT break this degenerate decoding
-  attractor (context bloats, echoing continues to round cap, 237s);
-  tier-3 stops it at **4 decisions / 30.8s vs 17 / 195–237s**, failure
-  still classified honestly. Native arm unaffected (1 decision, PASS).
-  Landed alongside, two engine fixes surfaced by the guard: (a)
-  `attachBeatToActorThread` now RETURNS the thread and both beat-indexing
-  call sites pass it directly — the old component read-back was null
-  pre-flush within the same mechanical tick, so tool/response beats were
-  wired to the graph but missing from FacetIndex membership; (b) noted for
-  follow-up: `scoreThreadsSystem`/`pruneThreadsSystem`/`mergeThreadsSystem`
-  query the `Thread` container component that `spawnThread` never stamps —
-  they are currently inert against real threads (ThreadStatus is the
-  actual marker). Accounting gap recorded: runner escalations count is an
-  end-state snapshot; mid-run escalation tags consumed by responses are
-  invisible — occurrence counting deferred until the second tier exists.
-  Non-claims: the guard does not make the guided path pass; native
-  suspension remains the default decision path per A1.
+   (`LoopStuck` tag on the actor — a [DecisionPolicy] consumes it; see
+   "Escalation seam" below); **fail fast** when taught-but-still-looping
+   (suspend thread + withdraw the ReAct continuation marker). Measured on
+   real AFM (guided arm): teach alone does NOT break this degenerate
+   decoding attractor (context bloats, echoing continues to round cap, 237s);
+   tier-3 stops it at **4 decisions / 30.8s vs 17 / 195–237s**, failure still
+   classified honestly. Native arm unaffected (1 decision, PASS). Landed
+   alongside (a) the `FacetIndex` desync fix (`attachBeatToActorThread` now
+   returns the thread; both indexing call sites pass it directly) and (b)
+   the documented inertness of `score/prune/mergeThreadsSystem` against
+   `spawnThread`'s threads. Accounting gap closed: the second tier exists, so
+   mid-run escalation tags consumed by responses are now counted (LoopStuck
+   is one-shot, cleared in `generation_systems` once the escalated decision
+   resolves). Non-claims: the guard does not make the guided path pass;
+   native suspension remains the default decision path per A1.
+
+ - **Escalation seam (refactor of M6.1's "raise-the-baton").** The baton
+   pass is now **declarative**, not mechanical: the loop breaker stamps a
+   `LoopStuck` component; `LoopEscalationPolicy` (installed in
+   `DecisionFlow.defaultReAct`) opens the next idle decision with
+   `DecisionDraft(escalate: true, priority: 10)`, which `grantAgencySystem`
+   bridges to `EscalationRequest` and `actorAct` routes to the stronger tier.
+   The detector and the handoff are split so a host can swap the policy —
+   e.g. delegate `LoopStuck` to a peer auditor via
+   `DecisionDraft.shareWith(...)` instead of escalating — through
+   `AgentCliConfig.extraPolicies` (injected in `AgentCli._build`), the same
+   one-line seam as `buildHandler`. `LoopStuck` is one-shot: cleared in
+   `generation_systems` alongside `EscalationRequest` when the escalated
+   decision is processed, so a persistent loop re-triggers from a fresh
+   streak instead of carrying a stale tag.
+
+  - **M3a tree-patch rename (in-file) — landed.** `treePatchSymbolRename`
+    + `rename_symbol` tool rewrite a declaration's name token AND all its
+    `Simple` identifier references within one file (including a top-level
+    `const`). Candidate is formatted by `DartFormatter` and re-parsed before
+    write — invalid Dart never reaches disk; result reports `renames`,
+    `edited`, `conflicts`. Exposed with a structured `argsSchema` so schema-
+    driven backends (AFM `StructuredToolDecisionHandler`) dispatch it by name.
+  - **M3b cross-file rename — landed.** `treePatchSymbolRenameMulti` +
+    `rename_symbol_multi` tool rewrite the declaration file + an
+    `extra_files` list (referencing files surfaced to the model via
+    `list_dir`). Each file is independently re-parsed before write;
+    `allowMissing` keeps a cross-file consumer that doesn't actually use the
+    symbol from aborting the run. Verified by unit test: `DataStore` →
+    `KeyValueStore` across `store.dart` + `app.dart` (renames=2, both edited).
+    AFM evidence: `refactor_02_rename_across_files` exercised `rename_symbol_multi`
+    (8 calls) but failed checkers — the model oscillated (patch_symbol
+    rewrites reverted by later rename_symbol on the wrong file). The tool is
+    correct (unit-proven); cross-file *discovery* remains a Stage-2
+    `AnalysisSession` element/uses walk (not yet implemented), so the model
+    must supply referencing files. `edit_01_rename_constant` now PASS on real
+    AFM with `rename_symbol` in 1 attempt (111s / 1417 tokens).
+
 - **M7 candidate — harness-as-context-engine over CLI/MCP (dogfood).**
   Expose projection / facet-index / thread-graph / checkers as an MCP
   server so EXTERNAL agents (coding assistants working in arbitrary repos)

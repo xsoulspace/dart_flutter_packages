@@ -32,6 +32,7 @@ class AgentPlugin extends Plugin {
       ..registerObjectComponent<AwaitingResponse>()
       ..registerObjectComponent<OpenDecision>()
       ..registerObjectComponent<EscalationRequest>()
+      ..registerObjectComponent<LoopStuck>()
       ..registerObjectComponent<Scene>()
       ..registerObjectComponent<SceneFrame>()
       ..registerObjectComponent<PresentInScene>()

@@ -87,7 +87,7 @@ void main() {
 
     final guards = beatsWithText(world, 'Loop guard');
     expect(guards, hasLength(1), reason: 'one teaching beat at streak 2');
-    expect(world.query2<Actor, EscalationRequest>(), isEmpty);
+    expect(world.query2<Actor, LoopStuck>(), isEmpty);
 
     // Idempotent: another mechanical pass with NO new failures must not
     // re-teach.
@@ -113,9 +113,13 @@ void main() {
     world.runSchedule(Schedules.mechanical);
     world.flush();
 
-    final escalations = world.query2<Actor, EscalationRequest>().toList();
-    expect(escalations, hasLength(1));
-    expect(escalations.first.$3.reason, contains('loop'));
+    final stuck = world.query2<Actor, LoopStuck>().toList();
+    expect(stuck, hasLength(1));
+    expect(stuck.first.$3.streak, greaterThanOrEqualTo(3));
+    // Escalation is now declarative: LoopStuck is consumed by a DecisionFlow
+    // policy into DecisionDraft(escalate:true); the mechanical layer no longer
+    // writes EscalationRequest directly.
+    expect(world.query2<Actor, EscalationRequest>(), isEmpty);
     expectIdle(world);
   });
 

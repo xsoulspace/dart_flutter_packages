@@ -26,6 +26,8 @@ import 'package:from_json_to_json/from_json_to_json.dart';
 
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
+import '../tooling/tree_patch.dart';
+
 /// The path jail for [fsTools]: every tool path is resolved against this root
 /// and must stay inside it.
 class FsToolsRoot {
@@ -127,6 +129,9 @@ List<ToolDef> fsTools(FsToolsRoot root) => [
   readTool(root),
   writeTool(root),
   listDirTool(root),
+  patchSymbolTool(root.rootPath),
+  renameSymbolTool(root.rootPath),
+  renameSymbolMultiTool(root.rootPath),
 ];
 
 /// Read a file's contents.

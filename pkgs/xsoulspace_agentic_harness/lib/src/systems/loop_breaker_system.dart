@@ -5,19 +5,21 @@
 ///
 /// Evidence (edit_01, guided arm): after a legitimate `anchor_not_unique`
 /// rejection the model echoed diagnostic tokens back as arguments for 15
-/// consecutive rounds — no mechanism noticed. Two guards live here:
+/// consecutive rounds — no mechanism noticed. Three tiers:
 ///
-/// 1. **Teach** (streak == 2): insert a harness observation beat into the
-///    thread stating the rule ("diagnostic words are not argument values;
-///    copy anchors from the file"). Projection carries it into the next
-///    Situation like any other beat.
-/// 2. **Raise the baton** (streak >= 3): stamp [EscalationRequest] on the
-///    owning actor so agency grants it priority and an escalated model tier
-///    when one is registered (single-tier backends resolve best-effort to
-///    the same model — the escalation metric still records it honestly).
+/// 1. **Teach** (streak == 2): insert a harness observation beat stating the
+///    rule ("diagnostic words are not argument values; read first").
+/// 2. **Raise the baton** (streak >= 3): stamp [LoopStuck] on the owning
+///    actor — a [DecisionPolicy] ([LoopEscalationPolicy]) consumes it and
+///    opens an escalated decision via [OpenDecision.escalate], so hosts can
+///    swap the handoff behavior declaratively instead of relying on
+///    baked-in escalation.
+/// 3. **Fail fast** (teaching already done + still looping): suspend the
+///    thread and withdraw the ReAct continuation marker so rounds aren't
+///    burned, then let checkers classify the workspace honestly.
 ///
-/// LLM-free, stateless (derived entirely from the beat graph), and bounded
-/// by the existing [AgencyPolicy.maxToolRounds].
+/// LLM-free, stateless (derived entirely from the beat graph), bounded by
+/// [AgencyPolicy.maxToolRounds].
 library;
 
 import 'dart:convert';
@@ -76,11 +78,11 @@ void loopBreakerSystem(World world) {
         verdict,
       );
     }
-    if (verdict.streak >= _escalateAtStreak &&
-        !actorWe.has<EscalationRequest>()) {
-      actorWe.insert(
-        const EscalationRequest(reason: 'tool-call loop detected'),
-      );
+    // Escalate: stamp LoopStuck so a DecisionFlow policy opens an escalated
+    // decision at the next agency grant (see LoopEscalationPolicy). Detection
+    // is mechanical; the response is declarative and host-replaceable.
+    if (verdict.streak >= _escalateAtStreak) {
+      actorWe.insert(LoopStuck(verdict.streak));
     }
     // Tier 3: taught but still looping → fail fast. Suspending the thread
     // also excludes it from projection; history stays queryable. Withdraw

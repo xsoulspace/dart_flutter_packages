@@ -170,6 +170,11 @@ final List<_Spec> _specs = [
     (c) => {'reason': c.reason},
     (v) => EscalationRequest(reason: (v as Map)['reason'] as String? ?? ''),
   ),
+  _Spec<LoopStuck>(
+    () => const LoopStuck(0),
+    (c) => {'streak': c.streak},
+    (v) => LoopStuck((v as Map)['streak'] as int? ?? 0),
+  ),
   _Spec<Scene>(() => const Scene(), (_) => const {}, (_) => const Scene()),
   _Spec<SceneFrame>(
     () => SceneFrame(),

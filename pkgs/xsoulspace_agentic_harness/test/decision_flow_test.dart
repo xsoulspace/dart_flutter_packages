@@ -254,4 +254,42 @@ void main() {
       expect(e.get<OpenDecision>()?.prompt, 'dream');
     });
   });
+
+  group('defaultReAct + LoopEscalationPolicy', () {
+    test('loop breaker stamps LoopStuck → default flow opens escalated decision',
+        () async {
+      final world = await buildTestWorld();
+      final scene = spawnScene(world);
+      final actor = spawnActor(world, scene);
+      world.flush();
+      final thread = spawnThread(world, actor, scene);
+      world.upsertComponent(actor, ActorThreads(threads: [thread]));
+      world.flush();
+
+      // Mimic the mechanical breaker at streak 3.
+      world.upsertComponent(actor, const LoopStuck(3));
+      world.flush();
+
+      expect(world.getEntity(actor).$1.has<OpenDecision>(), isFalse);
+      world.runSchedule(Schedules.agencyGrant);
+      world.flush();
+
+      final decision = world.getEntity(actor).$1.get<OpenDecision>();
+      expect(decision, isNotNull, reason: 'policy opened a decision');
+      expect(decision!.escalate, isTrue);
+      expect(decision.priority, 10);
+      expect(world.getEntity(actor).$1.has<LoopStuck>(), isTrue);
+    });
+
+    test('no LoopStuck → LoopEscalationPolicy is a no-op', () async {
+      final world = await buildTestWorld();
+      final scene = spawnScene(world);
+      final actor = spawnActor(world, scene);
+      world.flush();
+
+      world.runSchedule(Schedules.agencyGrant);
+      world.flush();
+      expect(world.getEntity(actor).$1.has<OpenDecision>(), isFalse);
+    });
+  });
 }

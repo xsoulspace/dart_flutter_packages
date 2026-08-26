@@ -45,6 +45,7 @@ class AgentCliConfig {
     this.confirmationRequiredTools = const {'write'},
     this.requestToolConfirmation,
     this.systemPromptSuffix,
+    this.extraPolicies = const [],
   });
 
   /// Display name used in banners/prompts.
@@ -69,6 +70,12 @@ class AgentCliConfig {
 
   /// Appended to every actor's system prompt.
   final String? systemPromptSuffix;
+
+  /// Extra decision policies appended to the default ReAct flow. Lets hosts
+  /// configure baton-passing behavior (e.g. delegation to a peer agent on
+  /// idle+goal) with the same one-line injection as [buildHandler], instead
+  /// of subclassing or forking the engine.
+  final List<DecisionPolicy> extraPolicies;
 }
 
 /// Embeddable everyday agent REPL. Owns no backend specifics.
@@ -116,6 +123,18 @@ class AgentCli {
       PresentInScene(sceneEntity: scene),
     ]);
     world.flush();
+
+    // Allow hosts to append decision policies (e.g. custom escalation /
+    // delegation handoffs) to the default ReAct flow, the same way they can
+    // inject a buildHandler.
+    world.upsertResource(
+      DecisionFlowResource(
+        DecisionFlow([
+          for (final p in DecisionFlow.defaultReAct().policies) p,
+          for (final p in config.extraPolicies) p,
+        ]),
+      ),
+    );
 
     final seen = <String>{};
     host = CliHost(

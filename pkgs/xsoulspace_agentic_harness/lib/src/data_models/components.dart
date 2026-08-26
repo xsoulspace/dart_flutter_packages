@@ -122,6 +122,17 @@ class EscalationRequest implements Component {
   final String reason;
 }
 
+/// Tag: this actor is stuck in a repeated-failing-tool-call loop and the
+/// loop breaker has escalated. A [DecisionPolicy] consumes this to open a
+/// fresh decision with [OpenDecision.escalate] set (route to a stronger
+/// tier), so hosts can swap the baton-pass behavior declaratively instead
+/// of relying on baked-in escalation. One-shot: cleared when the escalated
+/// decision is processed.
+class LoopStuck implements Component {
+  const LoopStuck(this.streak);
+  final int streak;
+}
+
 /// Tag component: this entity is a Scene (the current stage).
 class Scene implements Component {
   const Scene();

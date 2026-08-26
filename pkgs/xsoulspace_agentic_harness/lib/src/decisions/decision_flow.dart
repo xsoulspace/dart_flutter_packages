@@ -173,8 +173,10 @@ class DecisionFlow {
 
   /// The default harness flow: ReAct tool-result continuation (ADR 0005 §4),
   /// preserving pre-API behavior including maxToolRounds bounding.
-  static DecisionFlow defaultReAct() =>
-      DecisionFlow([ReActContinuationPolicy()]);
+  static DecisionFlow defaultReAct() => DecisionFlow([
+        ReActContinuationPolicy(),
+        LoopEscalationPolicy(),
+      ]);
 
   /// Evaluate all policies against [ctx]; return the first non-null draft
   /// with its policy name, or null.
@@ -244,5 +246,34 @@ class ReActContinuationPolicy implements DecisionPolicy {
         'either call one more tool with concrete arguments, or — if the task '
         'is fully satisfied by the current workspace state — give the final '
         'answer. Do not repeat a tool call that already succeeded.';
+  }
+}
+
+/// Idle-time escalation for actors the loop breaker flagged as stuck in a
+/// repeated-failing-tool-call loop ([LoopStuck]). Opens a fresh decision
+/// with [DecisionDraft.escalate], which the mechanical layer bridges to
+/// [EscalationRequest] — the baton to a stronger model tier, or a retry
+/// framing on single-tier backends.
+///
+/// Host-replaceable: drop this policy, or add one after it that delegates
+/// to a specific auditor actor via [DecisionDraft.shareWith], instead of /
+/// in addition to escalation. The detection (loop breaker) and the policy
+/// are deliberately separate so the handoff shape is the configurable seam.
+class LoopEscalationPolicy implements DecisionPolicy {
+  @override
+  String get name => 'loop_escalation';
+
+  @override
+  DecisionDraft? evaluate(DecisionContext ctx) {
+    final stuck = ctx.get<LoopStuck>();
+    if (stuck == null) return null;
+    return DecisionDraft(
+      prompt: 'You have been escalated out of a repeated tool-failure loop '
+          '(streak ${stuck.streak}). Attempt the task once more from a fresh '
+          'angle; if it fails again, you will be asked to restate the exact '
+          'facts rather than act.',
+      priority: 10,
+      escalate: true,
+    );
   }
 }

@@ -112,4 +112,86 @@ double discounted(double value, double pct, {double floor = 0}) {
       contains('v < floor ? floor : v'),
     );
   });
+
+  group('rename_symbol', () {
+    late Directory jailRename;
+    setUp(() async {
+      jailRename = await Directory.systemTemp.createTemp('tree-rename-test');
+      final f = File('${jailRename.path}/lib/consts.dart')
+        ..createSync(recursive: true);
+      f.writeAsStringSync('''
+const kTimeout = 5000;
+
+int retry(int attempts) {
+  if (attempts <= 0) return 0;
+  return (kTimeout + attempts) * 2;
+}
+
+class Service {
+  int call() => retry(kTimeout);
+}
+''');
+    });
+    tearDown(() => jailRename.delete(recursive: true));
+
+    Future<Map<String, dynamic>> runRename(Map<String, dynamic> args) async {
+      final tool = renameSymbolTool(jailRename.path);
+      final out = await tool.execute(args);
+      return (out is String ? jsonDecode(out) : out) as Map<String, dynamic>;
+    }
+
+    test('renames a top-level const, its own name token, and all references in-file', () async {
+      final out = await runRename({
+        'path': 'lib/consts.dart',
+        'symbol': 'kTimeout',
+        'new_name': 'requestTimeout',
+      });
+      expect(out['ok'], true);
+      expect(out['renames'], greaterThan(1));
+      final text = File('${jailRename.path}/lib/consts.dart').readAsStringSync();
+      expect(text, contains('const requestTimeout'));
+      expect(text, contains('(requestTimeout + attempts) * 2'));
+      expect(text, contains('retry(requestTimeout)'));
+      expect(text.contains('kTimeout'), isFalse);
+    });
+
+    test('unknown symbol → structured diagnostic, nothing written', () async {
+      final before = File('${jailRename.path}/lib/consts.dart').readAsStringSync();
+      final out = await runRename({
+        'path': 'lib/consts.dart',
+        'symbol': 'doesNotExist',
+        'new_name': 'whatever',
+      });
+      expect(out['ok'], false);
+      expect(out['code'], 'symbol_not_found');
+      expect(File('${jailRename.path}/lib/consts.dart').readAsStringSync(), before);
+    });
+
+    test('multi-file rename rewrites declaration + referencing file', () async {
+      final def = File('${jailRename.path}/lib/store.dart')
+        ..createSync(recursive: true);
+      def.writeAsStringSync('class DataStore {\n  final Map m = {};\n}\n');
+      final usr = File('${jailRename.path}/lib/app.dart')
+        ..createSync(recursive: true);
+      usr.writeAsStringSync("import 'store.dart';\nfinal store = DataStore();\n");
+
+      final tool = renameSymbolMultiTool(jailRename.path);
+      final raw = await tool.execute({
+        'path': 'lib/store.dart',
+        'symbol': 'DataStore',
+        'new_name': 'KeyValueStore',
+        'extra_files': ['lib/app.dart'],
+      });
+      final map = (raw is String ? jsonDecode(raw) : raw) as Map<String, dynamic>;
+      expect(map['ok'], true);
+      expect(map['renames'], 2);
+
+      final storeText = File('${jailRename.path}/lib/store.dart').readAsStringSync();
+      final appText = File('${jailRename.path}/lib/app.dart').readAsStringSync();
+      expect(storeText, contains('class KeyValueStore'));
+      expect(storeText.contains('DataStore'), isFalse);
+      expect(appText, contains('KeyValueStore'));
+      expect(appText.contains('DataStore'), isFalse);
+    });
+  });
 }
