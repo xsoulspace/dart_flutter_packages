@@ -7,6 +7,7 @@
 library;
 
 import 'package:apple_foundation_example/cli/stress_cli_app.dart';
+import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 import 'package:test/test.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 

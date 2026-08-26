@@ -13,3 +13,4 @@
 | [0009](0009_goals_as_vectors_plans_as_projections.md)  | Accepted | Goals as verifiable vectors; plans as derived projections                        |
 | [0010](0010_mesh_sync_architecture.md)                 | Accepted | Mesh sync architecture — serverless peers, QR pairing, transport seam            |
 | [0011](0011_convergence_kernel_dual_mode.md)           | Accepted | Convergence kernel — dual mode (op log + snapshots), shared by mesh and ecsly    |
+| [0012](0012_extract_agentic_harness_package.md)        | Accepted | Extract agentic harness into xsoulspace_agentic_harness (sub_star boundary)      |

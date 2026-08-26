@@ -3,8 +3,11 @@ export 'package:ecsly_app/ecsly_app.dart';
 export 'src/inference_parallel_io.dart'
     if (dart.library.js_interop) 'src/inference_parallel_stub.dart';
 
-export 'src/agent/agent.dart';
 export 'src/config/env_config.dart';
+export 'src/models/model_catalog.dart';
+export 'src/structured_output/structured_output.dart';
+export 'src/tools/tool_contracts.dart';
+export 'src/tools/tool_registry.dart';
 export 'src/inference_client.dart';
 export 'src/inference_readiness.dart';
 export 'src/inference_provisioning.dart';

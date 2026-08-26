@@ -1,5 +1,7 @@
 import '../xsoulspace_inference_core.dart';
-import 'agent/agent.dart';
+export 'tools/tool_contracts.dart';
+export 'tools/tool_registry.dart';
+export 'structured_output/structured_output.dart';
 import 'inference_result.dart';
 import 'models/inference_models.dart';
 

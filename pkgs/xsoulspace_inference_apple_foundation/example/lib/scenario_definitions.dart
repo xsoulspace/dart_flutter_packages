@@ -11,7 +11,8 @@
 library;
 
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
-import 'package:xsoulspace_inference_core/src/agent/tools/fs_tools.dart';
+import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
+import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart';
 
 /// A small "current time" tool the actors can use when a decision mentions
 /// date/time. Registered statically (part of [Scenario].tools).

@@ -1,6 +1,6 @@
 ---
 name: dart-flutter-packages
-description: Use when working in the dart_flutter_packages monorepo — editing packages under pkgs/ (especially xsoulspace_inference_core and its agent harness, or inference providers like xsoulspace_inference_gemma_flutter / xsoulspace_inference_apple_foundation), running validation, or onboarding to the repo.
+description: Use when working in the dart_flutter_packages monorepo — editing packages under pkgs/ (especially xsoulspace_agentic_harness (agent harness) and xsoulspace_inference_core (inference contracts), or inference providers like xsoulspace_inference_gemma_flutter / xsoulspace_inference_apple_foundation), running validation, or onboarding to the repo.
 ---
 
 # dart_flutter_packages Working Guide
@@ -21,11 +21,11 @@ and separate pre-existing failures from regressions.
 **Known-failing tests exist.** Before editing a package with red tests, record a
 baseline (`test_baseline_record`); before claiming done, use `test_baseline_check`.
 
-## Agent harness fast path (xsoulspace_inference_core)
+## Agent harness fast path (xsoulspace_agentic_harness)
 
 The harness is an ECS-based multi-actor agent loop. Read in this order:
 
-1. `pkgs/xsoulspace_inference_core/docs/agent/architecture.mdx` — one diagram +
+1. `pkgs/xsoulspace_agentic_harness/docs/agent/architecture.mdx` — one diagram +
    invariants (schedules → systems → events → resources).
 2. Runnable golden examples, pure Dart, run with `dart run` from `example/`:
    - `example/lib/headless/01_minimal_loop.dart` — bootstrap + run-until-idle

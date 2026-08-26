@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 import 'package:from_json_to_json/from_json_to_json.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 

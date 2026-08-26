@@ -21,6 +21,7 @@
 library;
 
 import 'dart:io';
+import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
 import 'package:flutter/widgets.dart';
 

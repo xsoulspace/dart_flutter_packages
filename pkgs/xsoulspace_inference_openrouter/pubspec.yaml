@@ -11,6 +11,8 @@ resolution: workspace
 
 dependencies:
   http: ^1.6.0
+  xsoulspace_agentic_harness:
+    path: ../xsoulspace_agentic_harness
   xsoulspace_inference_core: ^0.1.0-beta.1
 
 dev_dependencies:

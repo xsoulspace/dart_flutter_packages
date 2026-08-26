@@ -1,0 +1,30 @@
+name: xsoulspace_agentic_harness
+description: UI-agnostic cinematic multi-actor agent harness — tiny-context
+  projection, bounded agency, LLM-free testability, with CLI SDK and
+  benchmark tooling.
+version: 0.1.0-dev.1
+
+environment:
+  sdk: ^3.12.0
+
+resolution: workspace
+
+dependencies:
+  ecsly: ^0.0.1-dev.13
+  ecsly_app: ^0.1.0-dev.2
+  ecsly_async_parallel: ^0.1.0
+  ecsly_codegen: ^0.1.0-dev.2
+  ecsly_serialization: ^0.1.0-dev.1
+  from_json_to_json: ^0.5.0
+  is_dart_empty_or_not: ^0.4.0
+  meta: ^1.19.0
+  recase: ^4.1.0
+  universal_storage_filesystem: ^0.1.0-dev.12
+  universal_storage_interface: ^0.1.0-dev.12
+  xsoulspace_inference_core: ^0.1.0-beta.1
+
+dev_dependencies:
+  build_runner: ^2.7.1
+  lints: ^6.1.0
+  test: ^1.31.2
+  xsoulspace_lints: ^0.1.2

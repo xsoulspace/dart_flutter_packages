@@ -1,0 +1,206 @@
+import 'dart:async';
+
+import 'package:ecsly/ecsly.dart';
+
+import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
+import '../data_models/data_models.dart';
+import '../events.dart';
+import '../model_router.dart';
+import '../narrative/narrative.dart';
+import '../resources/resources.dart';
+
+/// Resolve the escalated model for an actor.
+///
+/// Uses [ModelRouterResource] to find the lowest-tier model strictly above
+/// the actor's current binding. If none is configured, falls back to the
+/// actor's own model (escalation is best-effort).
+ActorModel resolveEscalatedModel(World world, ActorModel current) {
+  final router = world.getResource<ModelRouterResource>().router;
+  final currentModel = router.models[current.modelId];
+  final currentTier = currentModel?.tier ?? 0;
+
+  Model? best;
+  for (final m in router.models.values) {
+    if (m.id == current.modelId) continue;
+    if (m.tier <= currentTier) continue;
+    if (best == null || m.tier < best.tier) best = m;
+  }
+  return best == null ? current : ActorModel(modelId: best.id);
+}
+
+/// Actors that hold [Agency] act.
+///
+/// Builds an [ActorGenerateRequest], registers an in-flight task, and
+/// dispatches it to the [GenerationHandler] resolved via
+/// [GenerationHandlerResource].
+Future<void> actorActSystem(World world) async {
+  final actorsWithAgency = world.query4<Actor, Agency, ActorModel, Situation>();
+  final handlerResource = world.getResource<GenerationHandlerResource>();
+  final taskRegistry = world.getResource<TaskRegistryResource>();
+
+  for (final (entity, actor, _, model, situation) in actorsWithAgency) {
+    // Never re-dispatch an actor that already has an in-flight request —
+    // otherwise the schedule re-fires the same actor endlessly, flooding the
+    // handler while runtime.generate is still awaiting a response.
+    if (entity.has<AwaitingResponse>()) continue;
+
+    final systemPrompt = entity.get<ActorSystemPrompt>();
+
+    final escalate = entity.has<EscalationRequest>();
+    final effectiveModel = escalate
+        ? resolveEscalatedModel(world, model)
+        : model;
+
+    final toolRegistry = situation.toolRegistryName != null
+        ? world.getResource<ToolRegistryResource>().get(
+            situation.toolRegistryName!,
+          )
+        : null;
+
+    // The projected, budget-limited context beats — the cinematic cut.
+    // Fragments carry role prefixes per [ContextFragmentProtocol] so backend
+    // codecs (e.g. chat-completions messages) can render native roles; the
+    // protocol is a string contract, so FFI backends are unaffected.
+    final contextFragments = <Object>[];
+    for (final beat in situation.projectedBeats) {
+      final beatEntity = world.getEntity(beat);
+      if (!beatEntity.$2) continue;
+      final textContent = beatEntity.$1.get<TextContent>();
+      if (textContent == null) continue;
+      if (!ContextFragmentProtocol.roleTagsEnabled) {
+        // Phase-4 wire format (prompt-format A/B scaffold).
+        contextFragments.add(textContent.text);
+        continue;
+      }
+      final toolResult = beatEntity.$1.get<ToolResultContent>();
+      if (toolResult != null) {
+        contextFragments.add(
+          ContextFragmentProtocol.toolResult(toolResult.name, textContent.text),
+        );
+      } else if (beatEntity.$1.get<BeatModality>()?.value ==
+          BeatModalityEnum.text) {
+        // Text-modality beats in the actor's ray are overwhelmingly its own
+        // prior narration (single-actor v1 heuristic; refine with Speaker
+        // attribution when multi-actor codec conformance lands).
+        contextFragments.add(
+          ContextFragmentProtocol.assistant(textContent.text),
+        );
+      } else {
+        contextFragments.add(textContent.text);
+      }
+    }
+    // Green-screen absences are part of the cut.
+    for (final absence in situation.explicitAbsences) {
+      contextFragments.add('absence:$absence');
+    }
+    // Plan-frontier steps (ADR 0009): acceptance criteria in-frame.
+    if (situation.planSteps.isNotEmpty) {
+      contextFragments.add(
+        'PLAN FRONTIER (open steps, do not skip verification):\n'
+        '${situation.planSteps.map((s) => '- $s').join('\n')}',
+      );
+    }
+
+    final taskId = TaskId.create();
+    taskRegistry.register(taskId, TaskHandle());
+
+    final request = ActorGenerateRequest(
+      actorEntity: entity.entity,
+      agentId: actor.agentId,
+      modelId: effectiveModel.modelId,
+      prompt: situation.prompt,
+      systemPrompt: systemPrompt?.text ?? '',
+      contextFragments: contextFragments,
+      schema: situation.schema,
+      toolRegistry: toolRegistry,
+      task: situation.schema.isEmpty
+          ? InferenceTask.text
+          : InferenceTask.nativelyStructuredText,
+      taskId: taskId,
+    );
+
+    // Add AwaitingResponse — preserves actor state for retry on failure.
+    entity.insert(AwaitingResponse(taskId: taskId));
+
+    // Publish the request to the event channel, then fire-and-forget the
+    // handler. A missing handler must fail the task immediately — otherwise
+    // the actor stays in AwaitingResponse forever and the loop never sleeps.
+    world.events.writer<ActorGenerateRequest>().send(request);
+    // Watermark before dispatch — used by the ADR 0002 fallback below to
+    // detect whether the handler published its own response.
+    final responsesSentAtDispatch =
+        world.events.hasRegistered<ActorGenerateResponse>()
+        ? world.events.stats<ActorGenerateResponse>().sent
+        : 0;
+    final handler = handlerResource.resolve(request);
+    if (handler == null) {
+      taskRegistry
+          .take(taskId)
+          ?.completer
+          .complete(
+            ToolExecutionResult(
+              name: 'generate',
+              output: 'No generation handler',
+            ),
+          );
+      world.events.writer<ActorGenerateResponse>().send(
+        ActorGenerateResponse(
+          actorEntity: entity.entity,
+          structuredOutput: const {},
+          rawOutput: '',
+          error: 'No generation handler registered',
+          taskId: taskId,
+        ),
+      );
+      continue;
+    }
+    unawaited(
+      handler
+          .generate(world, request)
+          .then((response) {
+            // Protocol guarantee (ADR 0002): the response MUST reach the
+            // event channel — processResponsesSystem only consumes channel
+            // events, never return values. A handler that only returns would
+            // otherwise deadlock the actor in AwaitingResponse forever.
+            //
+            // Detection uses the channel watermark, not channel contents:
+            // a compliant handler's send may already have been drained by
+            // processResponsesSystem before this callback runs, and drain()
+            // empties the buffer. The watermark is monotonic, so "sent count
+            // unchanged since dispatch" reliably means THIS handler never
+            // sent anything.
+            final sent = world.events.stats<ActorGenerateResponse>().sent;
+            if (sent <= responsesSentAtDispatch) {
+              world.events.writer<ActorGenerateResponse>().send(response);
+            }
+            return response;
+          })
+          .catchError((Object e) {
+            // A throwing handler must still resolve the task and free the
+            // actor, or the harness hangs.
+            final handle = taskRegistry.take(taskId);
+            if (handle != null && !handle.completer.isCompleted) {
+              handle.completer.complete(
+                ToolExecutionResult(name: 'generate', output: '$e'),
+              );
+            }
+            world.events.writer<ActorGenerateResponse>().send(
+              ActorGenerateResponse(
+                actorEntity: entity.entity,
+                structuredOutput: const {},
+                rawOutput: '',
+                error: '$e',
+                taskId: taskId,
+              ),
+            );
+            return ActorGenerateResponse(
+              actorEntity: entity.entity,
+              structuredOutput: const {},
+              rawOutput: '',
+              error: '$e',
+              taskId: taskId,
+            );
+          }),
+    );
+  }
+}

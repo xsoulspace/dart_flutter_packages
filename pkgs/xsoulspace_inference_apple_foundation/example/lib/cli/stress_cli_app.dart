@@ -18,6 +18,7 @@
 library;
 
 import 'dart:convert';
+import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 

@@ -56,6 +56,7 @@ docs:
   "Working agreement": AGENTS.md
   "Local command hub": justfile
   "Package working agreement": pkgs/xsoulspace_inference_core/AGENTS.md
+  "Agentic harness working agreement": pkgs/xsoulspace_agentic_harness/AGENTS.md
 
 actions:
   doctor.local:
@@ -157,6 +158,71 @@ actions:
     evidence:
       redact: []
 
+  xsoulspace_agentic_harness.analyze:
+    kind: command
+    desc: Analyze the xsoulspace_agentic_harness package.
+    command:
+      argv: [flutter, analyze]
+      shell: false
+    cwd: pkgs/xsoulspace_agentic_harness
+    effects:
+      fs_read:
+        - pkgs/xsoulspace_agentic_harness/lib/**
+        - pkgs/xsoulspace_agentic_harness/test/**
+        - pkgs/xsoulspace_agentic_harness/pubspec.yaml
+      fs_write: []
+      git: false
+      network: false
+      secrets: false
+      destructive: false
+    safety:
+      class: bounded_local
+      default_policy: auto
+      requires_confirmation: false
+    limits:
+      timeout_ms: 120000
+      max_output_bytes: 400000
+    outputs:
+      - id: stdout
+        kind: stream
+        required: true
+        retention: summary
+        format: text
+    evidence:
+      redact: []
+  xsoulspace_agentic_harness.test:
+    kind: command
+    desc: Run the xsoulspace_agentic_harness package tests.
+    command:
+      argv: [flutter, test]
+      shell: false
+    cwd: pkgs/xsoulspace_agentic_harness
+    effects:
+      fs_read:
+        - pkgs/xsoulspace_agentic_harness/lib/**
+        - pkgs/xsoulspace_agentic_harness/test/**
+        - pkgs/xsoulspace_agentic_harness/pubspec.yaml
+      fs_write: []
+      git: false
+      network: false
+      secrets: false
+      destructive: false
+    safety:
+      class: bounded_local
+      default_policy: auto
+      requires_confirmation: false
+    limits:
+      timeout_ms: 300000
+      max_output_bytes: 600000
+    outputs:
+      - id: stdout
+        kind: stream
+        required: true
+        retention: summary
+        format: text
+    evidence:
+      redact: []
+
 probes:
   quick:
     profile: quick
@@ -167,6 +233,13 @@ probes:
       - doctor.local
       - xsoulspace_inference_core.analyze
       - xsoulspace_inference_core.test
+
+  xsoulspace_agentic_harness:
+    profile: package
+    actions:
+      - doctor.local
+      - xsoulspace_agentic_harness.analyze
+      - xsoulspace_agentic_harness.test
 
 diagnostics:
   cases: {}

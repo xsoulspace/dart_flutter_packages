@@ -20,6 +20,7 @@
 library;
 
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
+import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
 /// Renders budgeted context fragments into an OpenRouter messages array.
 abstract final class SituationMessagesCodec {

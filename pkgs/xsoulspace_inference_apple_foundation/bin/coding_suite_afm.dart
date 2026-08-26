@@ -17,16 +17,15 @@
 library;
 
 import 'dart:io';
+import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
 import 'package:xsoulspace_inference_apple_foundation/src/native_bridge/native_client.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
-import '../../xsoulspace_inference_core/benchmark/coding_suite/runner.dart';
-import '../../xsoulspace_inference_core/benchmark/coding_suite/task_spec.dart';
-import '../../xsoulspace_inference_core/benchmark/shared/logging_handler.dart';
+import 'package:xsoulspace_agentic_harness/benchmark_api.dart';
 
 Future<void> main(List<String> args) async {
-  var tasksDir = '../xsoulspace_inference_core/benchmark/coding_suite/tasks';
+  var tasksDir = '../xsoulspace_agentic_harness/benchmark/coding_suite/tasks';
   String? tracePath;
   String? markdownPath;
   var retries = 2;

@@ -4,7 +4,8 @@ on:
   pull_request:
     paths:
       - 'pkgs/xsoulspace_inference_apple_foundation/**'
-      - 'pkgs/xsoulspace_inference_core/**'
+      - 'pkgs/xsoulspace_agentic_harness/**
+      - pkgs/xsoulspace_inference_core/**'
   push:
     branches: [main, master]
     paths:
