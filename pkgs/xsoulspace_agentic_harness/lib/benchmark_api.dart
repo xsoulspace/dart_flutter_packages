@@ -23,6 +23,7 @@ export 'src/tooling/token_estimate.dart';
 export 'src/tooling/ae_bridge.dart';
 export 'src/tooling/attribution.dart';
 export 'src/tooling/patch_tool.dart';
+export 'src/tooling/tree_patch.dart';
 export 'src/benchmark/coding_suite/ops_handler.dart';
 export 'src/tooling/transform_flow.dart';
 export 'src/tooling/world_builder.dart';

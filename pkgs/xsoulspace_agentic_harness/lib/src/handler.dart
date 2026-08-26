@@ -95,10 +95,13 @@ class DefaultGenerationHandler implements GenerationHandler {
     );
 
     if (response == null) {
+      // Backend failure (rate limit, auth, network) must surface as an
+      // error outcome — silent empty answers poison the feedback loop.
       return ActorGenerateResponse(
         actorEntity: request.actorEntity,
-        structuredOutput: {},
+        structuredOutput: const {},
         rawOutput: '',
+        error: 'backend_failed',
         taskId: request.taskId,
       );
     }

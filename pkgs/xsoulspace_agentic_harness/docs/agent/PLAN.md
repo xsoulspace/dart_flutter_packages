@@ -239,10 +239,17 @@ through determinism; spend calls only at irreducible ambiguity.
   = 59.1% cut at equal pass and equal call count.** Ledger fix included:
   tool-call argument bytes now count as model output (whole-file writes hid
   their payload in rawOutput).
-- **M3 tree-edit materializer** behind the same op surface (Dart analyzer +
-  canonical printer). Promoted only when anchors demonstrably fail on
-  recorded cases.
-- **M4 AE bridge — PoC landed** (`tooling/ae_bridge.dart`): parses AE's
+- **M3 tree-edit materializer — landed** (`tooling/tree_patch.dart`,
+  `patch_symbol` tool): analyzer-parsed symbol replacement + canonical
+  formatting; original and patched sources must both parse before any
+  write. Tests: sibling members untouched, unknown symbol, invalid body
+  rejected pre-write.
+- **M5 protocol published** (`docs/agent/results_m5_protocol.md`) with ready
+  commands and acceptance gates; execution awaits `OPENROUTER_API_KEY` or
+  AFM unblock.
+- **M4 AE bridge + M4b composition SDK — landed.** ae_core gains
+  `Transformer`/`TransformContext`/`TransformerPipeline` (ports, exported;
+  4 tests) extracted from the harness consumer shape. Harness side: (`tooling/ae_bridge.dart`): parses AE's
   schema'd `VerifyEntry.toJson()` wire shape into `AeGap`s, renders
   tier-ordered blocking-first beats, and registers a `verify_pack` tool
   (CLI executor; unit tests run on fixtures — no AE install needed).

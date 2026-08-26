@@ -10,6 +10,7 @@ library;
 
 
 import '../events.dart';
+import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import '../tooling/attribution.dart';
 import 'coding_suite/runner.dart';
 import 'coding_suite/task_spec.dart';
@@ -18,6 +19,8 @@ Future<String> runProfile(
   List<CodingTask> tasks, {
   required GenerationHandler Function(CodingTask task) buildHandler,
   int maxCheckerRetries = 2,
+  List<ToolDef Function(String jailRoot)> extraTools = const [],
+  String? tracePath,
 }) async {
   final ledger = AttributionLedger();
   GenerationHandler attributed(CodingTask task) =>
@@ -28,13 +31,30 @@ Future<String> runProfile(
     maxCheckerRetries: maxCheckerRetries,
     backendLabel: 'profile',
     modelLabel: 'attributed',
+    extraTools: extraTools,
   );
   final sw = Stopwatch()..start();
-  final result = await runner.runAll(tasks);
+  final result = await runner.runAll(tasks, tracePath: tracePath);
   sw.stop();
 
   final buf = StringBuffer()
     ..writeln(result.toMarkdown(label: 'profile'))
+    ..write('\n')
+    ..write(
+      result.results
+          .map(
+            (r) => r.passed
+                ? ''
+                : 'FAIL ${r.taskId} mode=${r.failureMode}\n' +
+                    r.checkerResults
+                        .where((c) => !c.passed)
+                        .map((c) => '  ✗ ${c.detail}')
+                        .join('\n'),
+          )
+          .where((t) => t.isNotEmpty)
+          .join('\n'),
+    )
+    ..write('\n')
     ..writeln('total wall: ${sw.elapsedMilliseconds} ms')
     ..write(ledger.report());
   return buf.toString();

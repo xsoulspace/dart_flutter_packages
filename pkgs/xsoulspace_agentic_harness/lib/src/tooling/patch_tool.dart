@@ -25,42 +25,55 @@ ToolDef patchFileTool(String jailRoot) => ToolDef.encode(
         final map = raw is Map
             ? raw.map((k, v) => MapEntry(k.toString(), v))
             : const <String, dynamic>{};
-        final path = map['path'] as String?;
-        final anchor = map['anchor'] as String?;
-        final newText = map['new_text'] as String?;
+        String? str(String key) => switch (map[key]) {
+              final String s => s,
+              final num n => n.toString(),
+              _ => null,
+            };
+        final path = str('path');
+        final anchor = str('anchor');
+        final newText = str('new_text');
         if (path == null || anchor == null || newText == null) {
           return {
             'ok': false,
             'code': 'bad_args',
-            'hint': 'required: path, anchor, new_text',
+            'got': map.keys.toList(),
+            'hint': 'required string args: path, anchor, new_text',
           };
         }
-        final ctx = TransformContext(jailRoot);
-        if (!ctx.exists(path)) {
+        try {
+          final ctx = TransformContext(jailRoot);
+          if (!ctx.exists(path)) {
+            return {
+              'ok': false,
+              'code': 'file_missing',
+              'path': path,
+              'hint': 'use write to create it first',
+            };
+          }
+          final matches = ctx.countMatches(path, anchor);
+          if (matches != 1) {
+            return {
+              'ok': false,
+              'code': 'anchor_not_unique',
+              'path': path,
+              'matches': matches,
+              'hint': 'extend the anchor until it matches exactly once',
+            };
+          }
+          final file = File('${ctx.root}/$path');
+          file.writeAsStringSync(
+            file.readAsStringSync().replaceFirst(anchor, newText),
+          );
           return {
-            'ok': false,
-            'code': 'file_missing',
+            'ok': true,
             'path': path,
-            'hint': 'use write to create it first',
+            'replaced_chars': anchor.length,
+            'generated_chars': newText.length,
           };
+        } on Object catch (e) {
+          // Never throw into the loop — teach instead.
+          return {'ok': false, 'code': 'patch_failed', 'message': e.toString()};
         }
-        final matches = ctx.countMatches(path, anchor);
-        if (matches != 1) {
-          return {
-            'ok': false,
-            'code': 'anchor_not_unique',
-            'path': path,
-            'matches': matches,
-            'hint': 'extend the anchor until it matches exactly once',
-          };
-        }
-        final file = File('${ctx.root}/$path');
-        file.writeAsStringSync(file.readAsStringSync().replaceFirst(anchor, newText));
-        return {
-          'ok': true,
-          'path': path,
-          'replaced_chars': anchor.length,
-          'generated_chars': newText.length,
-        };
       },
     );

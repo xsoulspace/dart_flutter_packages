@@ -320,6 +320,14 @@ class OpenRouterInferenceClient implements InferenceClient {
     }
 
     final output = <String, dynamic>{};
+
+    // ignore: avoid_print
+    if (contentStr.isEmpty && parsedCalls.isEmpty) {
+      print('[OR-DBG] empty completion; messageKeys=${messageMap.keys.toList()} '
+          'content=${content == null ? '<null>' : jsonEncode(content)} '
+          'finish=${first['finish_reason']}');
+    }
+
     if (contentStr.isNotEmpty) {
       // For structured tasks, try to parse the content as JSON.
       final parsed = parseStrictJsonObject(contentStr);

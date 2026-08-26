@@ -30,6 +30,8 @@ export 'tooling/ae_bridge.dart';
 export 'benchmark/coding_suite/ops_handler.dart';
 export 'tooling/attribution.dart';
 export 'tooling/transform_flow.dart';
+export 'tooling/tree_patch.dart';
+export 'tooling/patch_tool.dart';
 // NOTE: tools/fs_tools.dart is intentionally NOT exported here — it uses
 // dart:io and would break web compilation of the core barrel. Import it
 // directly on VM-only targets:

@@ -160,8 +160,15 @@ class ModelRuntime {
       // inline tools should be included to systemprompt or similar
       toolRegistry: toolRegistry,
     );
+    if (!response.success || response.data == null) {
+      // Failures remain data: surface them instead of returning null.
+      // ignore: avoid_print
+      print('[router] infer failed: '
+          '${response.error?.code}: ${response.error?.message}');
+      return null;
+    }
     final data = response.data;
-    log('rawOutput is ${data?.rawOutput}');
+    log('rawOutput is \${data?.rawOutput}');
     return data;
   }
 

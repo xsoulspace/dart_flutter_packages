@@ -9,6 +9,8 @@
 /// named outcomes; the ledger never mutates the world.
 library;
 
+import 'dart:io';
+
 import 'package:ecsly/ecsly.dart';
 
 import '../data_models/context_fragment_protocol.dart';
@@ -108,6 +110,9 @@ class AttributionLedger extends Resource {
   }
 }
 
+/// Verbose tap for debugging real-model runs.
+bool attributionDebug = false;
+
 /// Decorator that attributes every decision passing through a handler.
 ///
 /// Wraps any backend (scripted, OpenRouter, AFM FFI) identically — the
@@ -140,26 +145,38 @@ class AttributedHandler implements GenerationHandler {
     for (final call in response.toolCalls) {
       outChars += call.arguments.toString().length;
     }
-    ledger.record(
-      DecisionAttribution(
-        seq: ledger.nextSeq,
-        agentId: request.agentId.value,
-        systemBytes: request.systemPrompt.length,
-        promptBytes: request.prompt.length,
-        contextBytes: contextBytes,
-        generatedChars: outChars,
-        modelMs: sw.elapsedMilliseconds,
-        outcome: response.error.isNotEmpty
-            ? 'error'
-            : response.toolCalls.isNotEmpty
-                ? 'acted'
-                : 'answered',
-        retries: retries,
-        taskId: request.taskId,
-      ),
+    final r = DecisionAttribution(
+      seq: ledger.nextSeq,
+      agentId: request.agentId.value,
+      systemBytes: request.systemPrompt.length,
+      promptBytes: request.prompt.length,
+      contextBytes: contextBytes,
+      generatedChars: outChars,
+      modelMs: sw.elapsedMilliseconds,
+      outcome: response.error.isNotEmpty
+          ? 'error'
+          : response.toolCalls.isNotEmpty
+              ? 'acted'
+              : 'answered',
+      retries: retries,
+      taskId: request.taskId,
     );
+    ledger.record(r);
+    if (attributionDebug) {
+      final names = response.toolCalls
+          .map((c) => '${c.name.value}(${c.arguments})')
+          .join('; ');
+      // ignore: avoid_print
+      stdout.writeln(
+        '[dec#${r.seq}] ${r.outcome} tools=[$names] '
+        'raw=${_clip(response.rawOutput, 140)} err=${response.error}',
+      );
+    }
     return response;
   }
+
+  static String _clip(String s, [int n = 140]) =>
+      s.length <= n ? s : '${s.substring(0, n)}…';
 
   static String _classify(String fragment) {
     if (fragment.startsWith(ContextFragmentProtocol.assistantPrefix)) {
