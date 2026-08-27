@@ -7,6 +7,16 @@ One entry per landed body of work; durable decisions live in
 
 ## Landed
 
+- **Discovery tools** — jailed `grep` + `glob` in `fs_tools.dart`
+  (ADR 0014 §2); token-bounded, deterministic, read-only. Registered
+  everywhere `fsTools()` is, so every coding-suite arm inherits cheap find.
+- **Structural `locate` ray-cast** — `tooling/locate_index.dart`: heuristic
+  identifier index; definitions-first, jailed-relative, cappable, JSON
+  round-trip for persistence / AE-affordance. `test/locate_index_test.dart`.
+- **Dialogue/prose composed** — dialogue-archetype `FlowSpec` renders to
+  `DecisionFlow` and drives `HarnessLoop` to idle with a scripted handler
+  (`test/composition_dialogue_e2e_test.dart`), proving the general-agent
+  claim: same machinery, different loop shape.
 - **Cinematic projection** — `projectSituationSystem`: token-budgeted,
   relevance-ranked, thread-aware, green-screen-explicit `Situation`. System
   prompt + tool schemas counted against the real budget.

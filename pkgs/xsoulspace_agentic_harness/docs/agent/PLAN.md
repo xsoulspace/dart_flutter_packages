@@ -33,10 +33,11 @@ Current jail is read/write/list_dir (+ patch/rename). **No search.** A single
 to locate a file. For a 2–4k model the budget dies on discovery, not on the
 edge layer.
 
-- [PENDING → Stage 1] Add jailed `grep` / `glob` (seam-3 tools) for cheap
-  find. Deterministic, read-only, schema'd.
-- [PENDING → Stage 1.5] Structural `locate` (elements/uses walk over a
-  code index) — the ray-cast over an index, token-bounded like projection.
+- [DONE Stage 1] jailed `grep` / `glob` (seam-3 tools) for cheap find —
+  `fs_tools.dart`, `test/discovery_tools_test.dart`.
+- [DONE Stage 1.5] structural `locate` ray-cast (`tooling/locate_index.dart`)
+  — deterministic identifier index, defs-first, jailed, JSON-serializable;
+  `test/locate_index_test.dart`.
 - [follows] Budget-aware discovery: keep the cut token-bounded.
 
 ### P3 — Composition surface: declarative loops + eval/datasets (ADR 0014)
@@ -46,17 +47,13 @@ book) **and** long conversations, all exported as **data** — logic, tools,
 schemas, loops declared declaratively, eval/datasets declared once and run
 many ways (scripted / native / guided / pi-proxy).
 
-- [PENDING review Stage 2] Declarative `FlowSpec` (name + ordered `StageSpec[]`
-  - `ToolSurface` gate + `TaskArchetype`) rendered to the existing
-    `DecisionFlow` + mechanical stages. **Closed shape-set** — no user control
-    flow; any need past it is a missing seam (ADR 0007 three-failures rule).
-- [PENDING Stage 2] Declarative `DatasetSpec` (id + task/file refs + backend
-  matrix + columns + **eval tier**), rows with tokens / calls / wall-clock /
-  escalation. Tier split: `passable` (coding / deterministic checks) vs
-  `evidence` (prose / dialogue — never labeled pass).
+- [DONE Stage 2] Declarative `FlowSpec` (closed `StageSpec[]` + `ToolSurface`
+  gate + `TaskArchetype`) + `renderFlow` → `DecisionFlow`; `DatasetSpec`
+  (`passable` vs `evidence` tiers) — `lib/src/composition/` and
+  `test/composition_dialogue_e2e_test.dart`.
 - [following] Content targets: long-form one-dialogue use the same
   projection/budget rails, structure-as-beats, mechanical lint / consistency
-  checks as `verified` steps (ADR 0007-Exchange).
+  checks as `verified` steps — the prose `evidence` tier is already closed.
 
 ### P4 — Fair-matrix re-run under cumulative tokens
 

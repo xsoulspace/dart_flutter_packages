@@ -12,8 +12,18 @@
 ## Shipped increments
 
 - **Discovery (Stage 1)** — jailed `grep` / `glob` seam-3 tools in
-  `fs_tools.dart`; the concrete bottleneck cut (17-call recursive discovery
-  → cheap find). Wired into [ADR 0014](../../../../docs/decisions/0014_composition_surface_and_discovery.md) §2.
+  `fs_tools.dart`; the concrete bottleneck cut (17-call edit discovery →
+  cheap find). Wired into [ADR 0014](../../../../docs/decisions/0014_composition_surface_and_discovery.md) §2.
+- **Structural `locate` ray-cast (Stage 1.5)** — `tooling/locate_index.dart`:
+  a deterministic identifier index over the workspace; `locate` answers
+  "where is X defined / used" in one token-bounded, jailed call. Code
+  output-agnostic, JSON-serializable for AE-shaped world-affordance. See
+  `test/locate_index_test.dart`.
+- **Dialogue/prose composed end-to-end (Stage 2A)** — a `dialogue`
+  archetype `FlowSpec` declared in YAML, rendered onto [DecisionFlow], gated
+  to a surface, and driven through `HarnessLoop` by a scripted handler
+  (`test/composition_dialogue_e2e_test.dart`). Proves closings-to-Idle with
+  the same machinery that runs coding agents.
 - **Declarative surface (Stage 2)** — `lib/src/composition/` with `FlowSpec`
   (closed `StageSpec[]` + `ToolSurface` gate + `TaskArchetype`),
   `DatasetSpec` (tiered eval: `passable` vs `evidence`), and `renderFlow`
