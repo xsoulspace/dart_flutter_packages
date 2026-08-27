@@ -19,6 +19,16 @@
   "where is X defined / used" in one token-bounded, jailed call. Code
   output-agnostic, JSON-serializable for AE-shaped world-affordance. See
   `test/locate_index_test.dart`.
+- **Tool-efficiency measurement (Stage 1.6)** — `observation/tool_metrics.dart`
+  + `bin/tool_eval_profile.dart`: a measuring [ToolRegistry] wrapper recording
+  first-use, in-sequence reuse, cost-per-call, latency, and failure streaks;
+  `analyzeTools` → per-tool efficiency report. This is the "reliably measure
+  tool efficiency" surface (ADR 0014/0015), used to rank which tool
+  descriptions/shapes/sequences to simplify next.
+- **Simplified tool surface (Stage 1.8)** — unified `rename_symbol` with
+  `rename_symbol_multi`: ONE tool that auto-discovers referencing files, so the
+  model does not have to enumerate them. Redundant `_multi` removed from the
+  default surface (kept as a deprecated alias for hosts).
 - **Dialogue/prose composed end-to-end (host demo, ADR 0015)** — a
   `dialogue` archetype `FlowSpec` declared in YAML, rendered onto
   [DecisionFlow], gated to a surface, and driven through `HarnessLoop` by a

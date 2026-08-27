@@ -38,7 +38,15 @@ edge layer.
 - [DONE Stage 1.5] structural `locate` ray-cast (`tooling/locate_index.dart`)
   — deterministic identifier index, defs-first, jailed, JSON-serializable;
   `test/locate_index_test.dart`.
-- [follows] Budget-aware discovery: keep the cut token-bounded.
+- [DONE Stage 1.6] **tool-efficiency measurement** (`observation/tool_metrics.dart`)
+  + `bin/tool_eval_profile.dart` — a measuring [ToolRegistry] wrapper that
+  captures every call (native/guided): first-use, in-sequence position,
+  reuse, cost-per-call (chars≈tokens), latency, failure streaks, transitions.
+  `analyzeTools` → efficiency report. Used to rank tool simplification.
+- [DONE Stage 1.7] **simplify tool surface** — `rename_symbol` unified with
+  `rename_symbol_multi` into ONE tool that auto-discovers referencing files
+  (the model no longer enumerates them); removed from default surface.
+  [follows] Budget-aware discovery: keep the cut token-bounded.
 
 ### P3 — Composition surface: declarative loops + eval/datasets (ADR 0014)
 

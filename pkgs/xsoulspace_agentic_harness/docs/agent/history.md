@@ -7,6 +7,13 @@ One entry per landed body of work; durable decisions live in
 
 ## Landed
 
+- **Tool-efficiency measurement** — `observation/tool_metrics.dart` +
+  `bin/tool_eval_profile.dart`: measuring [ToolRegistry] wrapper records
+  first-use, in-sequence reuse, cost-per-call, latency, failure streaks;
+  `analyzeTools` → per-tool report. `test/tool_metrics_test.dart`.
+- **Simplified tool surface** — `rename_symbol` unified with
+  `rename_symbol_multi` (ONE tool, auto-discovers referencing files; removed
+  from default surface). `rename_symbol_multi` kept as a deprecated alias.
 - **Discovery tools** — jailed `grep` + `glob` in `fs_tools.dart`
   (ADR 0014 §2); token-bounded, deterministic, read-only. Registered
   everywhere `fsTools()` is, so every coding-suite arm inherits cheap find.

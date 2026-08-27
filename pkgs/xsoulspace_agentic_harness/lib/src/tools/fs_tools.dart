@@ -133,7 +133,6 @@ List<ToolDef> fsTools(FsToolsRoot root) => [
   globTool(root),
   patchSymbolTool(root.rootPath),
   renameSymbolTool(root.rootPath),
-  renameSymbolMultiTool(root.rootPath),
 ];
 
 /// Read a file's contents.

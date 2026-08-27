@@ -17,3 +17,4 @@
 | [0013](0013_native_tool_calling_first.md) | Accepted | Native tool calling is the default decision path; guided schema is an explicit exception |
 | [0014](0014_composition_surface_and_discovery.md) | Accepted | Declarative composition surface over the five seams; discovery tooling |
 | [0015](0015_domains_live_in_hosts_core_stays_generic.md) | Accepted | Domains live above the core; composition stays a generic seam |
+| [0016](0016_measure_tool_efficiency_simplify_surface.md) | Accepted | Measure tool efficiency; keep the tool surface minimal and composable |

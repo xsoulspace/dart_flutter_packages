@@ -529,20 +529,32 @@ ToolDef patchSymbolTool(String jailRoot) => ToolDef.encode(
 
 /// Agent-facing tool over [treePatchSymbolRename]: rename an in-file
 /// symbol and all of its references within `path`.
+///
+/// Unifies the former single + cross-file rename pair: this auto-discovers
+/// referencing `.dart` files under [jailRoot] (excluding [path]) and
+/// propagates the new name to them, so the model never has to enumerate
+/// files itself (discovery is the tool's job, not the model's). Optional
+/// `extra_files` forces files the auto-scan might miss (rare).
 ToolDef renameSymbolTool(String jailRoot) => ToolDef.encode(
       name: const ToolName('rename_symbol'),
       description:
-          'Rename a Dart declaration (class, function, const, etc.) and all '
-          'of its identifier references within the same file. The declaration '
-          'name itself is rewritten, not replaced with a body. Result is '
-          'canonically formatted and re-parsed before writing — never writes '
-          'invalid Dart. Cross-file references (other files importing this '
-          'symbol) are handled by rename_symbol_multi.',
+          'Rename a Dart declaration and automatically update every file '
+          'that references it in the workspace. Give `path` (the file with '
+          'the declaration), `symbol`, and `new_name`; this renames the '
+          'declaration and propagates to all files that use it, atomically '
+          'and formatted. Optional `extra_files` to force files the auto '
+          'scan missed. Never writes invalid Dart.',
       argsSchema: SchemaBundle(
         root: FM.object('rename_symbol', properties: () => [
           FM.prop('path', FM.string(), description: 'file containing the declaration'),
           FM.prop('symbol', FM.string(), description: 'declaration name to rename'),
           FM.prop('new_name', FM.string(), description: 'replacement identifier'),
+          FM.prop(
+            'extra_files',
+            FM.array(FM.string()),
+            description: 'optional extra referencing files to include',
+            optional: true,
+          ),
         ]),
       ),
       execute: (args) async {
@@ -559,55 +571,11 @@ ToolDef renameSymbolTool(String jailRoot) => ToolDef.encode(
             'hint': 'required: path, symbol, new_name',
           };
         }
-        return treePatchSymbolRename(
-          root: jailRoot,
-          path: path,
-          symbol: symbol,
-          newName: newName,
-        );
-      },
-    );
-
-/// Agent-facing tool over [treePatchSymbolRenameMulti]: cross-file rename.
-/// Pass `extra_files` to list referencing files the declaration's new name
-/// must propagate to (e.g. after `list_dir` reveals imports).
-ToolDef renameSymbolMultiTool(String jailRoot) => ToolDef.encode(
-      name: const ToolName('rename_symbol_multi'),
-      description:
-          'Rename a Dart declaration and propagate the new name to referencing '
-          'files. Requires `path` (the declaration file), `symbol`, `new_name`, '
-          'and optionally `extra_files` (a list of files to rewrite in the same '
-          'pass). Each file is formatted and re-parsed before write — never '
-          'writes invalid Dart. The declaration must exist in `path`; '
-          'referencing files are skipped if they do not use the symbol.',
-      argsSchema: SchemaBundle(
-        root: FM.object('rename_symbol_multi', properties: () => [
-          FM.prop('path', FM.string(), description: 'file containing the declaration'),
-          FM.prop('symbol', FM.string(), description: 'declaration name to rename'),
-          FM.prop('new_name', FM.string(), description: 'replacement identifier'),
-          FM.prop('extra_files', FM.array(FM.string()), description: 'referencing files to update', optional: true),
-        ]),
-      ),
-      execute: (args) async {
-        final map = args is Map
-            ? args.map((k, v) => MapEntry(k.toString(), v))
-            : const <String, dynamic>{};
-        final path = map['path'] as String?;
-        final symbol = map['symbol'] as String?;
-        final newName =
-            map['new_name'] as String? ?? map['newName'] as String?;
-        if (path == null || symbol == null || newName == null) {
-          return {
-            'ok': false,
-            'code': 'bad_args',
-            'hint': 'required: path, symbol, new_name',
-          };
-        }
         final rawExtras = map['extra_files'] ?? map['extraFiles'];
         final extraFiles = switch (rawExtras) {
           List l => l.map((e) => e.toString()).toList(),
           String s when s.isNotEmpty => [s],
-          _ => <String>[],
+          _ => _discoverReferences(jailRoot, symbol, exclude: path),
         };
         return treePatchSymbolRenameMulti(
           root: jailRoot,
@@ -618,3 +586,43 @@ ToolDef renameSymbolMultiTool(String jailRoot) => ToolDef.encode(
         );
       },
     );
+
+/// Find every `.dart` file under [root] (excluding [exclude]) whose source
+/// mentions the identifier [symbol] — a cheap deterministic discovery scan.
+/// False positives are safe: the AST renamer only rewrites actual reference
+/// sites, and files that merely import but don't use it become no-ops.
+List<String> _discoverReferences(
+  String root,
+  String symbol, {
+  String? exclude,
+}) {
+  final rootDir = root.endsWith('/') ? root : '$root/';
+  final out = <String>[];
+  void walk(String dir) {
+    final entries = Directory(dir).listSync()
+      ..sort((a, b) => a.path.compareTo(b.path));
+    for (final e in entries) {
+      if (e is Directory) {
+        walk(e.path);
+      } else if (e is File && e.path.endsWith('.dart')) {
+        final rel = e.path.startsWith(rootDir)
+            ? e.path.substring(rootDir.length)
+            : e.path;
+        if (rel == exclude) continue;
+        try {
+          if (e.readAsStringSync().contains(symbol)) out.add(rel);
+        } on FileSystemException {
+          // skip unreadable
+        }
+      }
+    }
+  }
+  if (Directory(root).existsSync()) walk(root);
+  return out;
+}
+
+/// @deprecated — superseded by [renameSymbolTool], which auto-discovers
+/// referencing files. Kept as a thin alias so older hosts keep compiling;
+/// the default tool surface (fsTools) exposes only the unified rename.
+@Deprecated('use renameSymbolTool — it auto-discovers referencing files')
+ToolDef renameSymbolMultiTool(String jailRoot) => renameSymbolTool(jailRoot);

@@ -167,7 +167,7 @@ class Service {
       expect(File('${jailRename.path}/lib/consts.dart').readAsStringSync(), before);
     });
 
-    test('multi-file rename rewrites declaration + referencing file', () async {
+    test('auto-discovery of referencing files (no extra_files needed)', () async {
       final def = File('${jailRename.path}/lib/store.dart')
         ..createSync(recursive: true);
       def.writeAsStringSync('class DataStore {\n  final Map m = {};\n}\n');
@@ -175,12 +175,13 @@ class Service {
         ..createSync(recursive: true);
       usr.writeAsStringSync("import 'store.dart';\nfinal store = DataStore();\n");
 
-      final tool = renameSymbolMultiTool(jailRename.path);
+      // The unified rename tool auto-discovers the referencing file — the
+      // model just says "rename DataStore to KeyValueStore".
+      final tool = renameSymbolTool(jailRename.path);
       final raw = await tool.execute({
         'path': 'lib/store.dart',
         'symbol': 'DataStore',
         'new_name': 'KeyValueStore',
-        'extra_files': ['lib/app.dart'],
       });
       final map = (raw is String ? jsonDecode(raw) : raw) as Map<String, dynamic>;
       expect(map['ok'], true);
