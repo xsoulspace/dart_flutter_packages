@@ -19,16 +19,16 @@
   "where is X defined / used" in one token-bounded, jailed call. Code
   output-agnostic, JSON-serializable for AE-shaped world-affordance. See
   `test/locate_index_test.dart`.
-- **Dialogue/prose composed end-to-end (Stage 2A)** — a `dialogue`
-  archetype `FlowSpec` declared in YAML, rendered onto [DecisionFlow], gated
-  to a surface, and driven through `HarnessLoop` by a scripted handler
-  (`test/composition_dialogue_e2e_test.dart`). Proves closings-to-Idle with
-  the same machinery that runs coding agents.
+- **Dialogue/prose composed end-to-end (host demo, ADR 0015)** — a
+  `dialogue` archetype `FlowSpec` declared in YAML, rendered onto
+  [DecisionFlow], gated to a surface, and driven through `HarnessLoop` by a
+  scripted handler (`test/composition_dialogue_e2e_test.dart`). This is a
+  **host::demo** showing how a domain (e.g. `last_answer`) composes the
+  generic surface — NOT a core feature. The core interprets no `archetype`.
 - **Declarative surface (Stage 2)** — `lib/src/composition/` with `FlowSpec`
-  (closed `StageSpec[]` + `ToolSurface` gate + `TaskArchetype`),
-  `DatasetSpec` (tiered eval: `passable` vs `evidence`), and `renderFlow`
-  mapping spec stages to the existing `DecisionFlow` builders (ADR 0005).
-  LLM-free testable; no core-loop change.
+  (closed `StageSpec[]` + `ToolSurface` gate + **free-form** `archetype`),
+  `DatasetSpec` (tiered eval: `passable` vs `evidence`), and `renderFlow` mapping spec stages to the existing `DecisionFlow` builders
+  (ADR 0005). LLM-free testable; no core-loop change.
 
 ## The gap this addresses
 
@@ -50,21 +50,23 @@ more than a default tool loop:
 ## Direction (falsifiable, phase-gated)
 
 1. **Loop as data today.** The harness already has `DecisionFlow` (ADR 0005)
-   and `TransformFlow` (M2). A next increment: express a *task archetype* as a
-   declarative `FlowSpec` (stages + verifiers + tool surface) that a runner
-   turns into a `DecisionFlow` for the model and mechanical stages (no LLM)
-   for the rest — with the ADR 0009 goal/step projection used to bound the cut.
+   and `TransformFlow` (M2). A next increment: express a *loop* as a
+   declarative `FlowSpec` (stages + a tool-surface gate + a free-form
+   `archetype` label) that a runner turns into a `DecisionFlow` for the
+   model and mechanical stages (no LLM) for the rest — with the ADR 0009
+   goal/step projection used to bound the cut.
 2. **Eval suite as data.** A `DatasetSpec` referencing `tasks/**` YAML +
    checkers + expected columns, runnable against any backend
    (native/guided/pi) via a shared matrix driver; tokens/calls/wall-clock per
-   row already exist (`CodingSuiteRunner`). Extend so coding-suite + prose +
-   dialogue fixtures share the same harness/checker plumbing.
-3. **Content targets.** For long-form (article/screenplay/book) and long
-   conversations: the same projection/budget rails, but the *product* is
-   structured beats (sections, scenes, dialogue turns) with `verified`
-   mechanical steps (format/lint/character-consistency checks). This is what
-   keeps the "harmless tiny model" viable for content too — the determinism
-   does the heavy lifting.
+   row already exist (`CodingSuiteRunner`). The `EvalTier` split
+   (`passable` vs `evidence`) keeps deterministic-checkable rows loud and
+   evidence-only rows honest — regardless of the host domain.
+3. **Content targets are HOST work, not engine work (ADR 0015).** Long-form
+   (article/screenplay/book) and long conversations get the same generic
+   projection/budget rails — but the *product* shape (sections, scenes,
+   dialogue turns as beats, format/lint/consistency verifiers) lives in the
+   host (e.g. `last_answer`). The harness supplies the generic shape and the
+   embedding surface; it does not curate a domain model.
 
 ## Non-goals / scope-tripwires
 

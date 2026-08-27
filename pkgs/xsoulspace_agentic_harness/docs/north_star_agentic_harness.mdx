@@ -37,25 +37,32 @@ That is the efficiency claim, and it must be measured, not asserted:
    On Android/desktop, Gemma via `xsoulspace_inference_gemma_flutter` serves
    the same claim through purpose-driven provisioning. (Phases 3–5)
 
-## Amendment: a general agent is a data-given composition (ADR 0014)
+## Amendment: a general agent derives from data over a generic core (ADR 0014, 0015)
 
-The harness is not just a coding agent — it should also write long articles /
-articles, drawings, essays, and hold long conversations. These are *different
-loops*, not different models. Every loop, tool, schema, and eval is exported
-as **data**: a declarative `FlowSpec` (stages + tool-surface gate + archetype)
-renders to the existing `DecisionFlow` + mechanical stages; a `DatasetSpec`
-(task refs + backend matrix + columns + **eval tier**) runs once, many ways.
-Depth comes from composing the five seams (ADR 0007) — **never** from breadth
-of the core. The declarative shape-set is closed; any task needing real
-control flow past it is a missing seam (three-failures rule), not a new DSL
-feature.
+The harness is not just a coding agent — it can also be the reasoning surface for a
+host that writes long articles / dialogue / conversations. These are *different
+loops, not different models*. The core ships the generic loop/tool/eval
+shapes as **data**: a declarative `FlowSpec` (stages + free-form `archetype`
+label + `ToolSurface` gate) renders to the existing `DecisionFlow` + mechanical
+stages; a `DatasetSpec` (task refs + backend matrix + columns + **eval tier**)
+runs once, many ways. Depth comes from composing the five seams (ADR 0007) —
+**never** from breadth of the core.
 
-Three guardrails:
+**Boundary (ADR 0015):** a domain — coding, or a conversation / screenplay /
+book product — lives **above** the seams as a *host*. The core interprets no
+`archetype`; a `dialogue` / `prose` / `coding` meaning is the host's,
+along with its own tool surface, doc model, and verifiers. A host embeds the
+harness through the existing public surface (`AgentWorldSetup` + `HarnessLoop`
++ `DecisionFlow` + `ToolRegistry`); general / parallel / cross-process work
+uses ACP (spawned agent) instead. The core adds no speculative `AgentHost`
+layer until three hosts prove they need one.
+
+Guardrails:
 1. **Discovery is a ray-cast**: `grep` / `glob` / structural `locate` make a
    tiny model *find* cheaply; the budget dies on naming, not acting.
-2. **Eval fidelity**: coding (deterministic checkers) is `passable`;
-   prose/dialogue (no falsifiable oracle) reports structured `evidence` and is
-   never labeled pass.
+2. **Eval fidelity**: deterministic-checkable evals (e.g. coding) are
+   `passable`; no-falsifiable-domain rows (prose/dialogue) report structured
+   `evidence` and are never labeled pass.
 3. **`agentic_executables` is world-input, never memory**: AE structure
    feeds `See`-seam tools and fixtures; beats + projection remain the only
    runtime truth.

@@ -14,16 +14,18 @@
 /// - [ToolSurface] / [applyToolSurface]: which registered seam-3 tools a flow
 ///   may wire; the registry resolves real bodies.
 /// - [DatasetSpec] / [EvalTier]: evals declared once, run many ways; the tier
-///   split keeps coding (`passable`) honest relative to prose/dialogue
-///   (`evidence`, never a loud pass label).
+///   split keeps deterministic-checkable rows (`passable`) honest relative to
+///   evidence-only rows (`evidence`, never a loud pass label).
 ///
 /// Two hard rules keep this from becoming a framework (ADR 0014 §1):
 /// 1. **Closed shape-set**: the declarative keys are fixed;
-///    [FlowSpec.fromYaml] rejects unknown keys. Any task needing real control
+///    [FlowSpec.fromYaml] rejects unknown key. Any task needing real control
 ///    flow past these is a *missing seam* (ADR 0007 three-failures rule), not
 ///    a DSL feature.
-/// 2. **No core loop**: rendering produces the existing [DecisionFlow]; the
-///    mechanical verifies are plain data. Nothing here mutates the world.
+/// 2. **No domain content, no core loop**: rendering produces the existing
+///    [DecisionFlow]; the mechanical verifies are plain data; nothing here
+///    understands what a "prose flow" or a "coding flow" *is* — the host owns
+///    that meaning and supplies it as the [FlowSpec.archetype] label + tools.
 ///
 /// Deterministic, LLM-free testable by construction.
 library;
@@ -36,28 +38,16 @@ import 'package:yaml/yaml.dart';
 import '../decisions/decision_flow.dart';
 
 // --------------------------------------------------------------------------
-// Task archetypes & eval tiers
+// Eval tiers & backends (generic) + tool surface
 // --------------------------------------------------------------------------
-
-/// The loop shape a flow implements. Not a different model — a composition.
-enum TaskArchetype {
-  codeEdit('code_edit'),
-  codeDiscovery('code_discovery'),
-  proseWrite('prose_write'),
-  dialogue('dialogue');
-
-  const TaskArchetype(this.key);
-  final String key;
-
-  static TaskArchetype parse(String key) =>
-      values.firstWhere((a) => a.key == key, orElse: () => proseWrite);
-}
 
 /// Whether a dataset row may carry a loud pass/fail.
 ///
-/// Coding has deterministic checkers → `passable`. Prose and dialogue have no
-/// falsifiable oracle → `evidence` rows report structured evidence and are
-/// **never** labeled `pass` (ADR 0014 §3).
+/// Deterministic-checkable evals (e.g. coding) → `passable`. Domains with no
+/// falsifiable oracle (long-form prose, dialogue) → `evidence` rows report
+/// structured evidence and are **never** labeled `pass` (ADR 0014 §3). The
+/// tier is a generic evaluation concept; the *choice* of tier for a given
+/// domain is the host's, not the core's.
 enum EvalTier {
   passable('passable'),
   evidence('evidence');
@@ -78,27 +68,6 @@ enum EvalBackend {
   static EvalBackend parse(String k) =>
       values.firstWhere((b) => b.key == k, orElse: () => EvalBackend.scripted);
 }
-
-/// Default tool surface per archetype (convenience; hosts may override).
-Set<String> defaultToolSurfaceFor(TaskArchetype archetype) => switch (archetype) {
-      TaskArchetype.codeEdit || TaskArchetype.codeDiscovery => const {
-        'read',
-        'write',
-        'list_dir',
-        'grep',
-        'glob',
-        'patch_file',
-      },
-      TaskArchetype.proseWrite || TaskArchetype.dialogue => const {
-        'read',
-        'write',
-        'list_dir',
-      },
-    };
-
-// --------------------------------------------------------------------------
-// Tool surface gate (seam 3)
-// --------------------------------------------------------------------------
 
 /// Which registered seam-3 tools a [FlowSpec] may expose to its actor.
 class ToolSurface {
@@ -154,8 +123,8 @@ class DecideStageSpec {
   final int everyNTicks;
   final int priority;
 
-  /// Route to a stronger tier — legitimate for **content** (prose/dialogue),
-  /// a fallback for coding (ADR 0014 §4).
+  /// Route to a stronger tier — legitimate for hosts whose domain is
+  /// content-rich (prose/dialogue); a fallback for coding (ADR 0014 §4).
   final bool escalate;
 }
 
@@ -189,7 +158,7 @@ class VerifyStage extends StageSpec {
 class FlowSpec {
   FlowSpec({
     required this.name,
-    this.archetype = TaskArchetype.codeEdit,
+    this.archetype = '',
     this.stages = const [],
     this.toolSurface = const ToolSurface(allowAll: true),
   });
@@ -200,7 +169,10 @@ class FlowSpec {
     final doc = loadYamlNode(source);
     if (doc is! YamlMap) throw ArgumentError('flow must be a YAML map');
     final name = doc['name'] as String? ?? 'unnamed';
-    final archetype = TaskArchetype.parse(doc['archetype'] as String? ?? '');
+    // Free-form label supplied by the host (e.g. 'dialogue', 'screenplay',
+    // 'code_edit'). The core does NOT interpret it — it is domain content
+    // that lives above the seams (ADR 0014 §1 / boundary correction).
+    final archetype = doc['archetype'] as String? ?? '';
     var surface = const ToolSurface(allowAll: true);
     final toolMap = doc['tools'];
     if (toolMap is YamlMap) {
@@ -243,7 +215,9 @@ class FlowSpec {
   }
 
   final String name;
-  final TaskArchetype archetype;
+
+  /// Free-form loop label owned by the host/domain, never interpreted here.
+  final String archetype;
   final List<StageSpec> stages;
   final ToolSurface toolSurface;
 }

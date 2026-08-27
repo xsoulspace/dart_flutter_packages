@@ -53,7 +53,7 @@ stages:
     every_n_ticks: 3
     prompt: Reflect on pacing, then write the next turn.
 ''');
-    expect(spec.archetype, TaskArchetype.dialogue);
+    expect(spec.archetype, 'dialogue');
     expect(spec.toolSurface.allows(const ToolName('write_beat')), isTrue);
     expect(spec.toolSurface.allows(const ToolName('grep')), isFalse);
 

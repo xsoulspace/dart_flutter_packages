@@ -48,12 +48,15 @@ schemas, loops declared declaratively, eval/datasets declared once and run
 many ways (scripted / native / guided / pi-proxy).
 
 - [DONE Stage 2] Declarative `FlowSpec` (closed `StageSpec[]` + `ToolSurface`
-  gate + `TaskArchetype`) + `renderFlow` → `DecisionFlow`; `DatasetSpec`
+  gate + free-form `archetype`) + `renderFlow` → `DecisionFlow`; `DatasetSpec`
   (`passable` vs `evidence` tiers) — `lib/src/composition/` and
-  `test/composition_dialogue_e2e_test.dart`.
-- [following] Content targets: long-form one-dialogue use the same
-  projection/budget rails, structure-as-beats, mechanical lint / consistency
-  checks as `verified` steps — the prose `evidence` tier is already closed.
+  `test/composition_surface_test.dart`.
+- [CLOSED via ADR 0015] **Content targets** are NO LONGER a harness phase.
+  Dialogue/screenplay/book/coding are *host domains above the seams* — the
+  harness core interprets no archetype. A host embeds via the existing public
+  surface (`AgentWorldSetup` + `HarnessLoop`); general/parallel work uses ACP.
+  `test/composition_dialogue_e2e_test.dart` stays as a **host-side demo** of
+  how a domain (e.g. `last_answer`) composes a loop, not as a core feature.
 
 ### P4 — Fair-matrix re-run under cumulative tokens
 

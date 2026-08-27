@@ -32,7 +32,7 @@ stages:
     path: lib/a.dart
 ''');
       expect(flow.name, 'quick_editor');
-      expect(flow.archetype, TaskArchetype.codeEdit);
+      expect(flow.archetype, 'code_edit');
       expect(flow.toolSurface.allows(const ToolName('read')), isTrue);
       expect(flow.toolSurface.allows(const ToolName('grep')), isFalse);
 

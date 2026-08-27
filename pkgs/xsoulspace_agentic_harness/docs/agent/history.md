@@ -13,10 +13,12 @@ One entry per landed body of work; durable decisions live in
 - **Structural `locate` ray-cast** — `tooling/locate_index.dart`: heuristic
   identifier index; definitions-first, jailed-relative, cappable, JSON
   round-trip for persistence / AE-affordance. `test/locate_index_test.dart`.
-- **Dialogue/prose composed** — dialogue-archetype `FlowSpec` renders to
+- **Dialogue/prose composed (host-placement demo, ADR 0015)** — a
+  dialogue-archetype `FlowSpec` (free-form archetype label) renders to
   `DecisionFlow` and drives `HarnessLoop` to idle with a scripted handler
-  (`test/composition_dialogue_e2e_test.dart`), proving the general-agent
-  claim: same machinery, different loop shape.
+  (`test/composition_dialogue_e2e_test.dart`). Demonstrates how a host
+  (e.g. `last_answer`) embeds the generic surface — the core still
+  interprets no domain meaning (ADR 0015).
 - **Cinematic projection** — `projectSituationSystem`: token-budgeted,
   relevance-ranked, thread-aware, green-screen-explicit `Situation`. System
   prompt + tool schemas counted against the real budget.

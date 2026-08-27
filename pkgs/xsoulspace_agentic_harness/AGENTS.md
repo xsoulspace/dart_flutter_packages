@@ -17,7 +17,7 @@ failures remain data; escalation rate ships next to pass-rate tables).
 | Path | Role |
 | --- | --- |
 | `lib/src/` | Engine: loop, schedules, systems, narrative, snapshot(+store), model_router |
-| `lib/src/composition/` | Declarative composition surface (ADR 0014): `FlowSpec`, `DatasetSpec`, tiered eval, `renderFlow` |
+| `lib/src/composition/` | Declarative composition surface (genuine, domain-agnostic — ADR 0014/0015): `FlowSpec`, `DatasetSpec`, tiered eval, `renderFlow` |
 | `lib/src/tools/` | Tool bodies: `fs_tools` (read/write/list_dir + `grep`/`glob` discovery), `tool_call_parser` \|
 | `lib/src/cli/` | CLI SDK (`AgentCli`) — provider-agnostic everyday REPL host |
 | `lib/src/benchmark/` | Coding suite, ADR 0009 experiment arms, phase benchmarks |
