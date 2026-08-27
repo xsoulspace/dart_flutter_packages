@@ -7,10 +7,10 @@
 ///     [--markdown report.md] [--retries 2]
 /// ```
 ///
-/// Uses [StructuredToolDecisionHandler] over the AFM backend: every decision
-/// is forced through a guided-generation schema (act vs answer), so tool
-/// syntax errors are impossible by construction. Failing checkers are fed
-/// back mechanically as new decisions, bounded by `--retries`.
+/// Uses native provider tool calling over the AFM backend by default
+/// (ADR 0013): the model drives tools natively (per A1, guided scored 0/20
+/// vs native 6/20 on the same suite). Failing checkers are fed back
+/// mechanically as new decisions, bounded by `--retries`.
 ///
 /// Artifacts match the scripted/pi runs (JSONL trace + markdown table) so
 /// results stay apples-to-apples.
@@ -67,13 +67,11 @@ Future<void> main(List<String> args) async {
   GenerationHandler buildHandler(CodingTask task) {
     // Fresh native client per task keeps state isolated between runs.
     final taskClient = AppleFoundationNativeClient();
-    return StructuredToolDecisionHandler(
-      inner: DefaultGenerationHandler(
-        router: ModelRouter(
-          inferenceClientsBuilders: {
-            DefaultModelNames.appleFoundation: () => taskClient,
-          },
-        ),
+    return DefaultGenerationHandler(
+      router: ModelRouter(
+        inferenceClientsBuilders: {
+          DefaultModelNames.appleFoundation: () => taskClient,
+        },
       ),
     );
   }

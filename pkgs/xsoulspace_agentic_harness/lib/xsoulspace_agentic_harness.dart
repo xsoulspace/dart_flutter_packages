@@ -15,3 +15,4 @@ export 'package:ecsly/ecsly.dart';
 export 'package:ecsly_app/ecsly_app.dart';
 
 export 'src/agent.dart';
+export 'src/composition/composition_surface.dart';

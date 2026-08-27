@@ -36,7 +36,7 @@ class OpenRouterInferenceClient implements InferenceClient {
     this.baseUrl = 'https://openrouter.ai/api/v1',
     final http.Client? httpClient,
     this.timeout = const Duration(seconds: 60),
-    this.useMessagesCodec = false,
+    this.useMessagesCodec = true,
   }) : _httpClient = httpClient ?? http.Client(),
        _apiKey = apiKey,
        _ownsHttpClient = httpClient == null;
@@ -48,12 +48,13 @@ class OpenRouterInferenceClient implements InferenceClient {
   final bool _ownsHttpClient;
   final Duration timeout;
 
-  /// When true, projected context fragments are rendered into a native
-  /// multi-turn `messages` array via [SituationMessagesCodec] instead of a
-  /// flattened `CONTEXT:` block inside the user message. The messages array
-  /// is computed per call (codec, not state); the flag exists so the A/B
-  /// against the legacy single-shot path stays runnable (fair-comparison
-  /// plan Step 1).
+  /// When true (default), projected context fragments are rendered into a
+  /// native multi-turn `messages` array via [SituationMessagesCodec] instead
+  /// of a flattened `CONTEXT:` block inside the single user message. The
+  /// messages array is computed per call (codec, not state) — per
+  /// ADR 0013, native chat-completions shape is the default; the legacy
+  /// flattened path is kept only for the A/B against the old single-shot
+  /// shape (fair-comparison plan Step 1).
   final bool useMessagesCodec;
 
   @override

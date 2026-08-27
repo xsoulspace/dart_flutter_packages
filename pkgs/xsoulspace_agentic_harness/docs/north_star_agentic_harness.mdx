@@ -37,6 +37,29 @@ That is the efficiency claim, and it must be measured, not asserted:
    On Android/desktop, Gemma via `xsoulspace_inference_gemma_flutter` serves
    the same claim through purpose-driven provisioning. (Phases 3–5)
 
+## Amendment: a general agent is a data-given composition (ADR 0014)
+
+The harness is not just a coding agent — it should also write long articles /
+articles, drawings, essays, and hold long conversations. These are *different
+loops*, not different models. Every loop, tool, schema, and eval is exported
+as **data**: a declarative `FlowSpec` (stages + tool-surface gate + archetype)
+renders to the existing `DecisionFlow` + mechanical stages; a `DatasetSpec`
+(task refs + backend matrix + columns + **eval tier**) runs once, many ways.
+Depth comes from composing the five seams (ADR 0007) — **never** from breadth
+of the core. The declarative shape-set is closed; any task needing real
+control flow past it is a missing seam (three-failures rule), not a new DSL
+feature.
+
+Three guardrails:
+1. **Discovery is a ray-cast**: `grep` / `glob` / structural `locate` make a
+   tiny model *find* cheaply; the budget dies on naming, not acting.
+2. **Eval fidelity**: coding (deterministic checkers) is `passable`;
+   prose/dialogue (no falsifiable oracle) reports structured `evidence` and is
+   never labeled pass.
+3. **`agentic_executables` is world-input, never memory**: AE structure
+   feeds `See`-seam tools and fixtures; beats + projection remain the only
+   runtime truth.
+
 ## What this subsection owns
 
 - **Projection** — a cinematic _cut_ per actor: only what the current decision
@@ -109,6 +132,7 @@ ends with a measurable artifact — no phase is done on vibes.
 | 4b  | **Reduction fidelity**                 | Structurization measured by causal coupling + keyword-drift recall over execution contexts (plan discovery is link-based, drift-free by construction — ADR 0009). | Retrieval honesty under vocabulary drift |
 | 5   | **Concurrency gating in AgencyPolicy** ✅ | `Model.maxInFlight` gates agency grants per resolved model (`grantAgencySystem`); `_spawn` CLI command battle-tests multi-actor under serial AFM. Timeout-sweeper false positives bounded by per-model budget. | Correct multi-actor behavior on-device  |
 | 6   | **Snapshot/restore + baseline table**  | World snapshot/restore via `ecsly_serializable` + `universal_storage` (ADR 0007 §5); facet index rebuilt from restored beats; CLI restart survival. Final comparison table published.          | CLI parity + the winning numbers        |
+| 7   | **Composition + discovery (ADR 0014)** | Declarative `FlowSpec` / `DatasetSpec` as closed data over the five seams; jailed `grep`/`glob`/`locate` discovery tools. Eval tiers (`passable` vs `evidence`); AE as world-input.                      | General agent (coding + writing + dialogue) |
 
 ## Extra notes
 

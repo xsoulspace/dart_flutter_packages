@@ -14,3 +14,5 @@
 | [0010](0010_mesh_sync_architecture.md)                 | Accepted | Mesh sync architecture — serverless peers, QR pairing, transport seam            |
 | [0011](0011_convergence_kernel_dual_mode.md)           | Accepted | Convergence kernel — dual mode (op log + snapshots), shared by mesh and ecsly    |
 | [0012](0012_extract_agentic_harness_package.md)        | Accepted | Extract agentic harness into xsoulspace_agentic_harness (sub_star boundary)      |
+| [0013](0013_native_tool_calling_first.md) | Accepted | Native tool calling is the default decision path; guided schema is an explicit exception |
+| [0014](0014_composition_surface_and_discovery.md) | Accepted | Declarative composition surface over the five seams; discovery tooling |

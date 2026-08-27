@@ -17,6 +17,8 @@ failures remain data; escalation rate ships next to pass-rate tables).
 | Path | Role |
 | --- | --- |
 | `lib/src/` | Engine: loop, schedules, systems, narrative, snapshot(+store), model_router |
+| `lib/src/composition/` | Declarative composition surface (ADR 0014): `FlowSpec`, `DatasetSpec`, tiered eval, `renderFlow` |
+| `lib/src/tools/` | Tool bodies: `fs_tools` (read/write/list_dir + `grep`/`glob` discovery), `tool_call_parser` \|
 | `lib/src/cli/` | CLI SDK (`AgentCli`) — provider-agnostic everyday REPL host |
 | `lib/src/benchmark/` | Coding suite, ADR 0009 experiment arms, phase benchmarks |
 | `lib/src/tooling/` | World builders, decorators, token estimator |
@@ -40,6 +42,6 @@ Steward-scoped: `steward action xsoulspace_agentic_harness.analyze|.test`.
 
 ## Plan & history
 
-[PLAN.md](docs/agent/PLAN.md) (A1–A8 landed) ·
+[PLAN.md](docs/agent/PLAN.md) (forward/frontier only — landed work lives in docs/agent/history.md) · [ADR 0013](../../../docs/decisions/0013_native_tool_calling_first.md) ·
 [north star](docs/north_star_agentic_harness.mdx) ·
 [architecture](docs/agent/architecture.mdx)

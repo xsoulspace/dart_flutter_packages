@@ -11,11 +11,12 @@
 ///     [--resume] [--verbose]
 /// ```
 ///
-/// Uses [StructuredToolDecisionHandler] over the OpenRouter backend: every
-/// decision is forced through a guided-generation schema (act vs answer), so
-/// tool syntax errors are impossible by construction. The backend/model pair
-/// is stamped into every trace row so `report.dart` can aggregate runs into a
-/// per-category comparison matrix across backends.
+/// Uses native provider tool calling by default (ADR 0013); pass
+/// `--decision guided` to force every decision through an act-vs-answer
+/// guided-generation schema instead (for A/B only — guided scored 0/20 vs
+/// native 6/20 on the same model). The backend/model pair is stamped into
+/// every trace row so `report.dart` can aggregate runs into a per-category
+/// comparison matrix across backends.
 library;
 
 import 'dart:async';
@@ -37,7 +38,7 @@ Future<void> main(List<String> args) async {
   String? filter;
   var verbose = false;
   var resume = false;
-  var decision = 'guided';
+  var decision = 'native';
   // Small, cheap, tool-capable default — the suite measures *agentic* quality,
   // not frontier-model ceiling. Override with --model for anything else.
   var model = '';
@@ -104,10 +105,10 @@ Future<void> main(List<String> args) async {
   // ONE router shared by handler and runner — model resolution cannot
   // desynchronize (see CodingSuiteRunner.router doc).
   //
-  // Fair-comparison: use StructuredToolDecisionHandler (guided schema) like
-  // AFM so decision machinery is identical across backends. OpenRouter client
-  // uses useMessagesCodec=true for proper chat-completions messages array
-  // (C1 fix).
+  // Default is native tool calling (ADR 0013). `--decision guided` opt-in
+  // wraps the native handler in StructuredToolDecisionHandler for A/B only.
+  // OpenRouter client uses the native chat-completions messages codec
+  // (useMessagesCodec default true, C1 fix).
   final sharedRouter = ModelRouter(
     inferenceClientsBuilders: {
       OpenRouterModelNames.openRouter: () => OpenRouterInferenceClient(
