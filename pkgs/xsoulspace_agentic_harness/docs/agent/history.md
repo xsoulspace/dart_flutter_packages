@@ -7,8 +7,34 @@ One entry per landed body of work; durable decisions live in
 
 ## Landed
 
-- **Tool-efficiency measurement** — `observation/tool_metrics.dart` +
-  `bin/tool_eval_profile.dart`: measuring [ToolRegistry] wrapper records
+- **Run/execute tool (Gate A)** — `runTool` in `tools/fs_tools.dart`: jailed,
+  time-bounded `dart run`/argv execute with stdout/stderr/exit-code capture,
+  structured timeout/spawn-error, jail cwd resolution. `test/run_tool_test.dart`.
+  Via `fsTools()` it is listed on the coding surface everywhere.
+- **`runs` checker (behavioral oracle)** — new `CheckerSpec` type in
+  `benchmark/coding_suite/checkers.dart`: a task only "passes" when its target
+  actually executes exit 0 (LLM-free, real `dart`). The deterministic verifier
+  can now grade that code runs, closing the gap previously reserved to content.
+- **Run-graded goal loop (Gate B)** — `tooling/build_gates.dart`:
+  `defaultGoalFlow()` + first-position `RunGradedGoalPolicy`; a goal advances
+  by running code (the `run` tool stamps `GoalVerified`), so a passed run
+  terminates and a failed run continues. `test/build_gates_test.dart`.
+- **Human-as-actor / a2h (Gate C)** — `askUserTool` + injectable
+  `HumanAnswerProvider` (+ `stdinAskUser` stdin default) in
+  `tooling/build_gates.dart`: the agent pauses, raises a question/option menu,
+  resumes on the typed answer as a tool result. `test/build_gates_test.dart`.
+- **AE-ETL plan-from-matrix (Stage D)** — `planFromMatrix` in
+  `tooling/build_gates.dart`: AE-style canonical matrix rows → Goal + Step
+  components (raw→structured→planning as a host seam, ADR 0015/0017).
+  `test/build_gates_test.dart`.
+- **a2a team primitive (Stage C)** — `spawnActorBranch` in
+  `tooling/build_gates.dart`: a second actor in the shared world with its own
+  open decision. `test/build_gates_test.dart`.
+- **Run-graded benchmark** — `bin/build_gate_benchmark.dart`: baseline
+  (`defaultReAct` + content checkers) vs run-graded arm on build tasks at flat
+  cumulative tokens (2503 vs 2503), both pass; the `runs` oracle locates
+  broken output. `bin/harness_profile.dart --all`: 20/20 (scripted).
+- **Tool-efficiency measurement** — `bin/tool_eval_profile.dart` + `observation/tool_metrics.dart`: measuring `[ToolRegistry]` wrapper records
   first-use, in-sequence reuse, cost-per-call, latency, failure streaks;
   `analyzeTools` → per-tool report. `test/tool_metrics_test.dart`.
 - **Simplified tool surface** — `rename_symbol` unified with

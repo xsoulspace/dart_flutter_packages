@@ -3,102 +3,236 @@
 > Forward/frontier record only. Landed work lives in
 > [history.md](history.md); durable decisions in the
 > [ADR Index](../../../../docs/decisions/README.md); benchmark numbers in
-> `results_*.md`. Goal: prove + harden the tiny-context (2–4k) cinematic multi-actor harness. Thesis: harness = intelligence amplifier; model =
-> replaceable reasoning primitive.
+> `results_*.md`. Goal: a tiny-context (2–4k) cinematic multi-actor harness
+> whose embedded coding agent codes **as well as pi** — e.g. "build a whole
+> tic-tac-toe from scratch" — with a2a-native actors and AE-ETL for
+> raw→structured→planning.
+>
+> This plan is written so **another agent can build and wire every piece**
+> reliably. Each stage is independently testable, LLM-free, and ends with an
+> `expectIdle`-clean harness test. Failures are data; gravity holds (tiny
+> model stays useful; fewer LLM calls; context bounded+derived; LLM-free
+> testable).
 
-**Status (2026-08-27):** native tool calling is the default (ADR 0013);
-P1 (edit-quality gap) is opened via ADR 0009 decomposition with
-−44…−72% cumulative-token wins at equal pass rate (scripted refactors).
-P2/P3 direction set by [ADR 0014](../../../../docs/decisions/0014_composition_surface_and_discovery.md).
-This document tracks only what is _next_.
+**Status (2026-08-27):** native tool calling default (ADR 0013); P2 discovery +
+tool measurement + rename simplification landed (ADR 0016); composition
+shape-set + host-boundary landed (ADR 0014/0015). **Gates A (run tool + runs
+checker), B (run-graded goal loop default), C (a2h ask_user), and Stage D
+(planFromMatrix) + C (a2a spawnActorBranch) are DONE**: each LLM-free-tested in
+`test/run_tool_test.dart` + `test/build_gates_test.dart`, benchmarked scripted at flat
+cumulative tokens vs baseline (2503/baseline vs 2503/run-graded). The 20-task
+deterministic suite passes 100% scripted.
+
+**Real-AFM re-measure (2026-08-27)**: `gate_run_afm.dart` on-device
+(`AppleFoundationNativeClient`) — gates A/B make the loop **execute and observe**
+its own output (run-graded board self-corrects across writes+runs after reading
+the compile error; baseline flails in discovery). Both arms still FAIL the build
+tasks: a real 2–4k cut model cannot emit syntactically valid Dart. The residual
+gate is **model edit-capability, not harness machinery**; the `runs` oracle is
+wired and pass now requires a working program, never a string match. See
+`pkgs/xsoulspace_inference_apple_foundation/docs/results_gate_run_afm.md`.*
 
 ---
 
-## Near-term frontier (ordered)
+## Target scenario (what "done" means)
 
-### P1. Edit-quality gap (harness 6/20 → wants 19/20 parity)
+An embedded coding agent, given **one sentence** — "build a tic-tac-toe game
+in Dart, playable from the terminal, human vs computer" — with **no external
+steering**, produces a compile-and-run `main.dart` that actually plays, and
+**pauses only to ask the user questions/options** at model-chosen moments.
+Metrics: ≥pi-parity pass on the interactive-build task; tokens/decision stay
+flat; the loop is a2a-native (several actors can collaborate, swap models at
+runtime, share Agency).
 
-Decision-machinery confound (C2) is resolved; the residual gap is **edit
-quality, not decision machinery** (11/14 failures classified `wrong-edit`).
+## The three gates (critical analysis, evidence-backed; PLAN 2026-08)
 
-- [in-progress] Goal/Step entities (ADR 0009 §2–4): `Goal` with tool-callable
-  success criteria; `Step` entities on a verifiability spectrum
-  (`mechanical | observable | open`). Real-model decomposition probe
-  (`bin/coding_suite_decomp_probe.dart`) under cumulative-token accounting.
+**Gate A — no `run`/execute tool.** The coding tool surface is
+read/write/list_dir/grep/glob/locate/patch/rename/verify — *none execute*.
+`Process.run` in tooling exists only in `ae_bridge.dart` (`verify_pack`).
+A coding agent that cannot run `dart run main.dart`, compile, or run a test
+**cannot observe whether its own output works**. pi's `bash` closes this.
+→ **Build a jailed `run`/execute seam-3 tool + behavior-`verify`** (Stage A).
 
-### P2 — Tool-surface breadth: discovery (the measured ceiling)
+**Gate B — the loop is a bounded ReAct chain (maxToolRounds=16), not a
+persistent plan/goal loop.** A whole-game build is dozens of tool calls; the
+actor is dropped mid-build at the cap. ADR 0009 (Goal = verifiable vector;
+Step on mechanical|observable|open) is implemented but opt-in
+(`PlanFrontierPolicy` in `experiment_arms.dart`). → **Make Goal→decompose→
+mechanical-advance the default flow**, wired through Gate A (a `run` advances
+an `observable`/`open` step and writes evidence back as a facet).
 
-Current jail is read/write/list_dir (+ patch/rename). **No search.** A single
-`edit_01` cost 17 tool calls because the model had to recursively `list_dir`
-to locate a file. For a 2–4k model the budget dies on discovery, not on the
-edge layer.
+**Gate C — no human-as-actor (a2h) affordance for "ask the user."** The presence
+of the actor model says a human is just another handler, and `AwaitingResponse`
+can wait on an LLM+tool+human simultaneously — but only the CLI's gated-tool
+y/N approval is wired. → **Wire a `HumanActor` (a GenerationHandler) + an
+`ask_user` decision/tool so a model-facing actor can pause and raise typed
+questions/options to the user.**
 
-- [DONE Stage 1] jailed `grep` / `glob` (seam-3 tools) for cheap find —
-  `fs_tools.dart`, `test/discovery_tools_test.dart`.
-- [DONE Stage 1.5] structural `locate` ray-cast (`tooling/locate_index.dart`)
-  — deterministic identifier index, defs-first, jailed, JSON-serializable;
-  `test/locate_index_test.dart`.
-- [DONE Stage 1.6] **tool-efficiency measurement** (`observation/tool_metrics.dart`)
-  + `bin/tool_eval_profile.dart` — a measuring [ToolRegistry] wrapper that
-  captures every call (native/guided): first-use, in-sequence position,
-  reuse, cost-per-call (chars≈tokens), latency, failure streaks, transitions.
-  `analyzeTools` → efficiency report. Used to rank tool simplification.
-- [DONE Stage 1.7] **simplify tool surface** — `rename_symbol` unified with
-  `rename_symbol_multi` into ONE tool that auto-discovers referencing files
-  (the model no longer enumerates them); removed from default surface.
-  [follows] Budget-aware discovery: keep the cut token-bounded.
+**Corollary (design, not a gate):** the 4k projection cut is the *10x* token
+advantage (128k vs pi's 1.29M) and must not be abandoned. The win is
+**projection improvement + tools**: Gate A's run-results land as facets so the
+cut includes "what I built / does it compile / last error"; Gate B's
+decomposition keeps only the current step + its immediate deps in the cut so
+small slices stay coherent. Cross-file coherence improves without sending more.
 
-### P3 — Composition surface: declarative loops + eval/datasets (ADR 0014)
+---
 
-General agent direction: coding **and** long-form (article / screenplay /
-book) **and** long conversations, all exported as **data** — logic, tools,
-schemas, loops declared declaratively, eval/datasets declared once and run
-many ways (scripted / native / guided / pi-proxy).
+## Stage A — run/execute + verify that runs a program (the #1 build path)
 
-- [DONE Stage 2] Declarative `FlowSpec` (closed `StageSpec[]` + `ToolSurface`
-  gate + free-form `archetype`) + `renderFlow` → `DecisionFlow`; `DatasetSpec`
-  (`passable` vs `evidence` tiers) — `lib/src/composition/` and
-  `test/composition_surface_test.dart`.
-- [CLOSED via ADR 0015] **Content targets** are NO LONGER a harness phase.
-  Dialogue/screenplay/book/coding are *host domains above the seams* — the
-  harness core interprets no archetype. A host embeds via the existing public
-  surface (`AgentWorldSetup` + `HarnessLoop`); general/parallel work uses ACP.
-  `test/composition_dialogue_e2e_test.dart` stays as a **host-side demo** of
-  how a domain (e.g. `last_answer`) composes a loop, not as a core feature.
+**Goal:** the coding agent can execute what it builds and grade real behavior.
 
-### P4 — Fair-matrix re-run under cumulative tokens
+- [DONE] `ToolDef runTool(FsToolsRoot root)` (seam-3, `lib/src/tools/fs_tools.dart`):
 
-Phase-4 matrix under honest cumulative-token accounting is outstanding
-(ADR 0004 §7). Re-run `harness+AFM`/`harness+OR` (native + codec) vs `pi+OR`
-with riding columns, now that native + codec are defaults. Headline still
-pending: `results_comparison.md` (AFM 5/20, OR 4/20; columns were not
-comparable — C1/C2/C3).
+  - name `run`, args `{command: string[], cwd?: string, timeout_ms?: int}`.
+  - Resolve `cwd` inside the jail (escape protection like `read`).
+  - `Process.run` with a cap (e.g. default 30s, override up to 120s); capture
+    `exitCode`, `stdout`, `stderr` into a structured result (trimmed, e.g.
+    first 4000 chars each) so it feeds the token budget.
+  - Never lets the loop dangle: honor `AgencyPolicy.taskTimeout`, return a
+    structured `{'ok': false, 'code': 'timeout'|'spawn_error', ...}` on failure.
+  - Deterministic + LLM-free testable: `test/run_tool_test.dart` asserts a
+    `dart` script prints `exitCode 0` + stdout, a failing script exit>0, a
+    missing cwd → jail error, and a timeout → `timeout`.  **(built, green)**
+- `A2` — `verify` grades by running: a new `verify_run` tool/checker that runs a
+  command and grades stdout/exit-code against a predicate. Reuses AE's tier
+  philosophy: `passable` vs `evidence` (see `DatasetSpec.evalTier`). Mechanical,
+  never touches an LLM — raises `mechanical-step share`.
+- `A3` — **trace through Measure** (ADR 0016): run `bin/tool_eval_profile.dart`
+  on a `run`+`verify` sequence to confirm cost/latency added is small vs the
+  loop turnaround it unlocks.
+- **Done check:** a `dart run main.dart` that prints a board cells actually runs
+  in a jar, exits 0, and a failing version returns nonzero — all LLM-free.
+
+## Stage B — make a long-horizon (plan-frontier) loop the default
+
+**Goal:** a whole build persists as a `Goal`; the loop advances mechanically.
+
+- [DONE] `defaultGoalFlow()` + `RunGradedGoalPolicy` in `tooling/build_gates.dart`
+  — a Goal advances by *running* code (the `run` tool stamps [GoalVerified]);
+  the run-graded continuation leads the default flow. `test/build_gates_test.dart`
+  proves a passed run terminates (no decision) and a failed run continues.
+- [DONE] the `run` tool + `runs` checker (behAVioral oracle, exit-code) is the
+  mechanical advance; `benchmark/coding_suite/checkers.dart` grades by executing
+  the built target, not just string-equality.
+- `maxToolRounds` stays as a per-step guard, not a whole-build cap.
+
+---
+
+## Stage C (a2a-native: many actors plan+work together)
+
+**Why in-scope:** the system is **a2a-native by design** (`discussion.md`: any
+Actor can address any other, high parallelism, runtime-swappable LLM, a2a/a2h/a2h2a).
+So "build the game" can be a **team**: a Planner actor (goal/dev by AE-ETL step 1) +
+a Coder actor (edits files, runs Gate A) + optionally a Reviewer/Verifier actor.
+
+- [DONE] `spawnActorBranch` in `tooling/build_gates.dart` — a second actor in
+  the shared world with its own open decision (a2a primitive). Deterministic;
+  `test/build_gates_test.dart` proves it spawns. Parallel-agency swarm is bound
+  by `AgencyPolicy(maxConcurrent)` and is a later stage.
+- `C1` — wire two actors with distinct responsibilities, each routing to its
+  own model/backend (`byAgent/byModel`).
+- `C2` — baton-pass handoff between actors (A2 uses an `AskUser` tool + a
+  shared `Goal` + thread), so the leaky separation holds ("planner produces
+  steps; coder fills them; verifier runs them"). Reuse the `FlowSpec`
+  (`composition_surface.dart`) to declare each role's loop + tool surface.
+- `C3` — a headless `team` test: Planner plans → Coder edits+`run` → Verifier
+  confirms → all idle. `expectIdle` for every actor.
+
+---
+
+## Stage D — ETL from agentic_executables (AE): raw → matrix → planning
+
+**Why:** "raw unstructured → planning" is exactly AE's `KnowSource` (raw) →
+`extractors`/`spec_importers` → `CanonicalMatrix` (structured) → `verify_report`
+(tier), and the harness already has `ae_bridge.dart` (`verify_pack`, tier-order
+beats). We use AE as **world-affordance** (ADR 0015), never as actor-memory.
+
+- [DONE] `planFromMatrix` in `tooling/build_gates.dart` — an AE-style matrix
+  (feature rows) → Goal + Step beats; `test/build_gates_test.dart` proves it.
+- `D1` — tap AE build blocks (upstream `~/xs/agentic_executables`, NOT this
+  repo's core):
+  - `KnowSource` (raw text / repo / URL / PDF) → `RepoExtractor`,
+    `SpecImportParser`, `dart_heuristic_extractor` → `CanonicalMatrix`.
+  - `ae canonical import-spec` (a spec → canonical), `ae canonical distill`
+    (partial).
+- `D2` — a harness-side `plan_from_spec` tool (seam-3, `tooling/`) that:
+  1. imports a natural-language brief (e.g. "build tic-tac-toe in Dart")
+     via AE's spec/importer into a `CanonicalMatrix` (features/columns),
+  2. renders that matrix as **goal + step beats** into the World, so the
+     `PlanFrontier` (Stage B) drives building from the AE-derived plan,
+  3. on `verify`, runs AE tier (`invariant_violation` > `upstream_blocker`)
+     and feeds the tier-ordered gaps back as the actor's next decision.
+- `D3` — a **`PlanForTask` policy** that reads the goal/steps and opens only the
+  current step as the decision prompt — the same "what chunk of the plan this
+  decision should act on" as ADR 0009 §4- projection union. LLM-free test uses
+  the scripted handler + a fake AE matrix fixture.
+- `D4` — end-to-end seam: `brief_sentence → (AE import-spec / distill) →
+  CanonicalMatrix → plan steps → code+run (Gate A) → verify tier → idle`.
+  Deterministic with a scripted/deterministic AE fixture; real AE optional.
+
+**Keep-out (ADR 0015):** AE structures the world’s affordances; the **beats +
+projection remain the actor’s truth**. No compiling AE inside the harness core.
+
+---
+
+## Stage E — human-as-actor (a2h): the "ask the user" seam
+
+**Goal:** the agent pauses and raises typed questions/options to the user.
+
+- [DONE] `askUserTool` in `tooling/build_gates.dart` — the model-facing actor
+  emits a question + optional option menu; an injectable `HumanAnswerProvider`
+  replies; the actor resumes on the answer. Deterministic + LLM-free;
+  `test/build_gates_test.dart` proves the injected answer returns as a tool result.
+- [DONE] `stdinAskUser` — default CLI provider calling the real `stdin`.
+
+- `E1` — a `HumanActor` = a `GenerationHandler` whose `generate` reads a human
+  answer (injectable: stdin / a `Future<String?>` UI callback), so the world
+  runs it exactly like an LLM (ADR- bottom note: a human is another handler).
+- `E2` — an `ask_user` decision tool (seam-1 `/seam-3`): the model-facing actor
+  emits it, opens a `DecisionDraft`/`ToolCall` with `{question, options}`; a
+  human answer lands as a beat / facet — no silent rewrite (mirrors
+  `AgentCli.requestToolConfirmation` but for open questions, not just y/N).
+- `E3` — CLI/UI wiring: reuse `AgentCli` approval callback; add a
+  `HumanAnswer` handler for injectable answers in tests. `train/human-in-the-
+  loop` LLM-free.
+- `E4` — a single interactive scenario: build → compile-error → ask "retry or
+  show me?" → user answers → agent reacts with the source fix and runs again.
+
+---
+
+## Stage A–E acceptance (the target, testable/started)
+
+1. `run` + `run_verify` are registered in the coding jail, deterministic,
+   time-bounded, LLM-free (`test/run_tool_test.dart`).
+2. A `main.dart` tic-tac-toe sketch runs in the jail (`dart run main.dart` →
+   exit 0; flaws → exit ≠0) with NO external steering.
+3. A **default** goal→step loop (B) drives editing + `run` + `verify` and has
+   `PlanFrontier` accessible not just via a flag.
+4. a2a: a Planner+Coder(+Verifier) team completes it via shared threads; each
+   actor ends `expectIdle`.
+5. AE→matrix → goal/steps drives the loop when provided a brief (`plan_from_spec`).
+6. The `ask_user` seam surfaces typed questions/options; a human answer
+   continues the build. Everything paths LLM-free with the scripted handler.
 
 ---
 
 ## Standing rules
 
-- Every published column states backend, decision path, tokens source, the
-  tested tool-surface. Failures are data.
+- Every published number states backend, decision path, tokens source, tool
+  surface. Failures are data.
 - Escalation-rate metric ships beside every pass-rate table.
-- Extensibility ledger: three host entries vs the same seam → design
-  conversation (ADR 0007).
-- Gravity: (a) tiny model stays useful, (b) fewer LLM calls, (c) context
-  bounded + derived, (d) LLM-free testable.
-- Native tool calling is the default; guided is opt-in only (ADR 0013).
-- Scope tripwires (A2): no replanning policy engine, no plan-schema
-  versioning, no planner agent. Steps in, projection out, checks fail loudly.
+- Extensibility ledger: three host entries vs the same seam → design conv
+  (ADR 0007). Native tool-calling default (ADR 0013); plan/scopes
+  internally via `FlowSpec`+`DecisionFlow`.
+- Gravity: tiny model stays useful; fewer LLM calls; context bounded+derived;
+  LLM-free testable. `expectIdle` ends every harness test. No spec-versioning
+  engine, no planner agent beyond an actor that decomposes, no AE embed in core.
 
-## Cleanup / hard-cut ledger (CI-mode)
+## Cleanup / hard-cut ledger (CI-paced)
 
-Following engineering-stewardship practice, cut as we go:
-
-- [ ] Delete legacy manual-schedule tests that would have masked the idle-race
-      class of bug; keep only production-path (`runUntilIdle`) tests from the
-      postmortem.
-- [ ] Remove dead/bisection probe bins (`bin/probe_*.dart`,
-      `benchmark/debug_*.dart`) after lessons are folded into checks/tests.
-- [ ] Fold `composition_surface.md` "design note" framing into the accepted
-      ADR 0014 stance; the note stays as a frontier detail doc, not a wish-list.
-- [ ] Trim the `benchmark/runs/` tracked-or-not evidence: keep per-backend
-      traces, drop throwaway `probe_verbose.jsonl`.
+- [ ] Delete legacy manual-schedule tests that mask the idle-race class.
+- [ ] Remove dead/bisection probe bins after folding lessons into
+  checks/tests (`bin/probe_*.dart`, `benchmark/debug_*.dart`).
+- [ ] Keep `benchmark/runs/` evidence; drop throwaway probes.
+- [ ] When Stage A lands, wire the new `run`/`verify` tools into
+  `defaultToolSurface` and the coding-suite default arms.

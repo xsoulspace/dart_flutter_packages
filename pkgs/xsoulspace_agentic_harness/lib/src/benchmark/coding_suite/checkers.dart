@@ -80,8 +80,38 @@ CheckerResult evaluateChecker(CheckerSpec spec, String root) {
           return _simple(false, '${spec.path} invalid JSON: ${e.message}');
         }
       });
+    // 'runs' — gate A: a task only "passes" when its target actually EXECUTES
+    // (exit 0). This is the behavioral oracle pi's `bash` closes. LLM-free and
+    // deterministic; uses the real `dart` on PATH.
+    case 'runs':
+      return _runs(root, spec);
     default:
       throw ArgumentError('unknown checker type: ${spec.type}');
+  }
+}
+
+/// Executes [spec.path] (a Dart entrypoint) against the jailed [root] and
+/// passes iff it runs to a 0 exit. [spec.value] may override the command,
+/// else defaults to `dart run <path>`.
+CheckerResult _runs(String root, CheckerSpec spec) {
+  try {
+    final path = spec.path;
+    final cmd = (spec.value ?? '').split(' ').where((s) => s.isNotEmpty).toList();
+    final argv = cmd.isEmpty ? ['dart', 'run', path ?? 'main.dart'] : cmd;
+    final result = Process.runSync(
+      argv[0],
+      argv.sublist(1),
+      workingDirectory: root,
+      stdoutEncoding: Encoding.getByName('utf-8'),
+      stderrEncoding: Encoding.getByName('utf-8'),
+    );
+    return _simple(
+      result.exitCode == 0,
+      '${argv.first} ${path ?? ''} exit=${result.exitCode}'
+      '${result.exitCode == 0 ? '' : ': ${result.stderr}'.trim()}',
+    );
+  } on ProcessException catch (e) {
+    return _simple(false, 'spawn error: ${e.message}');
   }
 }
 

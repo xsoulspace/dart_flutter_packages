@@ -28,3 +28,4 @@ export 'src/benchmark/coding_suite/ops_handler.dart';
 export 'src/tooling/transform_flow.dart';
 export 'src/tooling/locate_index.dart';
 export 'src/tooling/world_builder.dart';
+export 'src/tooling/build_gates.dart';

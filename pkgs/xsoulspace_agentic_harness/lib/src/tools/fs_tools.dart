@@ -131,6 +131,7 @@ List<ToolDef> fsTools(FsToolsRoot root) => [
   listDirTool(root),
   grepTool(root),
   globTool(root),
+  runTool(root),
   patchSymbolTool(root.rootPath),
   renameSymbolTool(root.rootPath),
 ];
@@ -402,6 +403,69 @@ ToolDef globTool(FsToolsRoot root) => ToolDef.encode(
     );
 
 /// Glob-segment matcher: `*` / `?` within a segment against [name].
+/// Execute a command inside the jail (cwd = jail root or a resolved subdir).
+///
+/// The loop's missing capability (Gate A): a coding agent can run its own
+/// output (e.g. `dart run main.dart`), capture stdout/stderr/exit code, and
+/// thus observe whether what it built actually works. Time-bounded and
+/// jailed, so a running program can never hang the loop or escape the root.
+ToolDef runTool(FsToolsRoot root) => ToolDef.encode(
+      name: const ToolName('run'),
+      description:
+          'Run a command or script inside the workspace and capture its '
+          'output and exit code. Command is an argv list (e.g. ["dart", '
+          '"run", "main.dart"]). Optional cwd (relative subdir, default "."), '
+          'optional timeout_ms (default 30000, max 120000). Does NOT hang: '
+          'timeouts return a structured failure. Use to compile/run/test the '
+          'code you are building.',
+      argsSchema: SchemaBundle(
+        root: FM.object(
+          'run',
+          properties: () => [
+            FM.prop('command', FM.array(FM.string())),
+            FM.prop('cwd', FM.string()),
+            FM.prop('timeout_ms', FM.integer()),
+          ],
+        ),
+      ),
+      execute: (args) async {
+        final params = _asMap(args);
+        final cmdRaw = params['command'];
+        final cmd = switch (cmdRaw) {
+          List l => l.map((e) => e.toString()).toList(),
+          String s when s.isNotEmpty => [s],
+          _ => const <String>[],
+        };
+        if (cmd.isEmpty) {
+          return const {'ok': false, 'code': 'bad_args', 'hint': 'command is required'};
+        }
+        final cwd = _str(params, 'cwd');
+        final resolvedCwd = (cwd == null || cwd.isEmpty) ? root.rootPath : root.resolve(cwd);
+        final timeoutMs = (_num(params, 'timeout_ms') ?? 30000).clamp(1, 120000).toInt();
+        try {
+          final result = await Process.run(
+            cmd.first,
+            cmd.sublist(1),
+            workingDirectory: resolvedCwd,
+            stdoutEncoding: utf8,
+            stderrEncoding: utf8,
+          ).timeout(
+            Duration(milliseconds: timeoutMs),
+            onTimeout: () => ProcessResult(0, -1, '', 'timeout'),
+          );
+          return {
+            'ok': result.exitCode == 0,
+            'exit_code': result.exitCode,
+            'stdout': _clip(result.stdout.toString()),
+            'stderr': _clip(result.stderr.toString()),
+            if (result.exitCode == -1) 'code': 'timeout',
+          };
+        } on ProcessException catch (e) {
+          return {'ok': false, 'code': 'spawn_error', 'message': e.message};
+        }
+      },
+    );
+
 bool _segMatches(String pat, String name) {
   final b = StringBuffer();
   for (final ch in pat.split('')) {
