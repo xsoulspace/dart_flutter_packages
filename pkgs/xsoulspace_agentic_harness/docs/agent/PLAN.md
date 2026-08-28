@@ -26,11 +26,17 @@ deterministic suite passes 100% scripted.
 **Real-AFM re-measure (2026-08-27)**: `gate_run_afm.dart` on-device
 (`AppleFoundationNativeClient`) — gates A/B make the loop **execute and observe**
 its own output (run-graded board self-corrects across writes+runs after reading
-the compile error; baseline flails in discovery). Both arms still FAIL the build
-tasks: a real 2–4k cut model cannot emit syntactically valid Dart. The residual
-gate is **model edit-capability, not harness machinery**; the `runs` oracle is
-wired and pass now requires a working program, never a string match. See
-`pkgs/xsoulspace_inference_apple_foundation/docs/results_gate_run_afm.md`.*
+the compile error; baseline flails in discovery). Both six-tool arms FAIL the
+build tasks: a real 2–4k cut model cannot emit syntactically valid Dart.
+
+**➜ resolution — one `act_with_project` tool (2026-08-27)**: same model, same
+task, switch the surface to ONE tool with a closed enum (`add/list/link/
+set_prop/materialize`) and hide the AST inside a host materializer: the model now
+**only picks tiny moves** (add board/player1/player2 x3, link x3, materialize x1 —
+no code token, no AST) and the host produces a **`dart run main.dart` exit=0**
+game. `pkgs/xsoulspace_inference_apple_foundation/docs/results_act_with_project_afm.md`.
+This is the load-bearing proof that the residual gap was surface-shape, not model-
+capability — the model reasons in MEANING; structure/AST stay internal.*
 
 ---
 

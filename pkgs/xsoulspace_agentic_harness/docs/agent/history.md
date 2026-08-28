@@ -7,6 +7,13 @@ One entry per landed body of work; durable decisions live in
 
 ## Landed
 
+- **`act_with_project` seam (structured editing, the "model picks a tiny move
+  over the MEANING" surface)** — `src/tooling/structured_editor.dart`: ONE tool
+  with a closed `FM.enum_` sub-action set; the AST is internal to a host
+  materializer; the model never writes code or sees a tree.
+  LLM-free-tested (`test/structured_editor_test.dart`).
+  On-device proof: the tiny 2-4k model that FAILED the six-tool surface now
+  builds a `dart run main.dart -> exit=0` game by picking only moves.
 - **Run/execute tool (Gate A)** — `runTool` in `tools/fs_tools.dart`: jailed,
   time-bounded `dart run`/argv execute with stdout/stderr/exit-code capture,
   structured timeout/spawn-error, jail cwd resolution. `test/run_tool_test.dart`.
