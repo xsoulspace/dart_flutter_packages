@@ -1,0 +1,16 @@
+id: intent_01_bookmark_manager
+category: intent_closure
+prompt: |
+  Build a bookmark manager as a program.dart implementing the intents
+  save_url(url) and list_saved() over a JSON state map, using the
+  initialState()/runIntent() contract. Do not write anything else.
+fixtures: []
+checkers:
+  - type: intents
+    value: |
+      {"calls": [
+        {"intent": "save_url", "args": {"url": "https://example.dev"}, "expect": {"saved": true}},
+        {"intent": "save_url", "args": {"url": "https://second.dev"}},
+        {"intent": "list_saved", "expect": {"count": 2}},
+        {"intent": "save_url", "args": {"url": "not-a-url"}, "expect": {"saved": false}}
+      ]}

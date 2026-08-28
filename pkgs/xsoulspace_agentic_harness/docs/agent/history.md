@@ -7,6 +7,32 @@ One entry per landed body of work; durable decisions live in
 
 ## Landed
 
+- **Stage G — AE wire port + canonical→meaning-tree ETL (2026-08-28)**:
+  `ae_bridge.dart` reduced to a host shim over the new AE-owned
+  `agentic_executables_wire` package (typed tiers, gap-beat renderer,
+  deterministic canonical→meaning-tree export); `planFromSpec` imports an AE
+  export into world state preserving canonical ids — one id vocabulary across
+  verify gaps, the model's cut, and the plan. `test/plan_from_spec_test.dart`.
+- **Stage H v1 — intent closure (2026-08-28)**: `intent_define`/`intent_call`
+  tools + `IntentRuntime` (host executors over the meaning view); modify =
+  re-define; `wireIntentGradedGoal` stamps `GoalVerified` from scripted intent
+  calls; suite `intents` checker grades real `dart` subprocess behavior of the
+  materialized `program.dart` contract; task `intent_01_bookmark_manager`
+  (suite: 21 tasks, scripted green). `test/intents_test.dart`,
+  `test/intents_checker_test.dart`. Committed argument (was D4): the intent
+  registry is **one truth, two projections** — behavior oracle in-world
+  (`intent_call`, no stdout parsing) and product surface later (projected to
+  MCP/WebMCP by intentcall/mcp_flutter); modify = re-define, a tree edit,
+  never a text patch.
+- **Stage F — meaning tree as ECS world state (2026-08-28)**: `MeaningNode`/
+  `MeaningProps`/`MeaningEdge` components + derived `MeaningIndex`;
+  `act_with_project` is a thin view returning budgeted cuts (`total` +
+  `truncated` green-screen); growth arm 1k→100k nodes LLM-free green;
+  snapshot parity via persistent-id edge refs. Hard cuts: `StructuredDoc`
+  deleted, AFM driver migrated, and the ecsly invariant landed — every
+  Component registered in `AgentPlugin` (unregistered object components
+  corrupt archetype column allocation); ADR-0009 components moved to
+  `data_models/components.dart`.
 - **`act_with_project` seam (structured editing, the "model picks a tiny move
   over the MEANING" surface)** — `src/tooling/structured_editor.dart`: ONE tool
   with a closed `FM.enum_` sub-action set; the AST is internal to a host
@@ -97,6 +123,34 @@ One entry per landed body of work; durable decisions live in
 | 4 | 20-task coding suite | Ran; results honest but claim-defining number low — see [results_phase4.md](results_phase4.md) and [plan_fair_pi_comparison.md](plan_fair_pi_comparison.md) for why columns weren't comparable (C1/C2/C3) |
 | 5 | Concurrency gating | **Done** — `Model.maxInFlight`, per-model agency gating, `_spawn` battle-tested under serial AFM. Follow-up: scale `taskTimeout` with queue depth |
 | 6 | Snapshot/restore | Open — REPL prototype only |
+
+## Stage I — measurement & stewardship (2026-08-28)
+
+Durable decisions extracted to [ADR 0018](../../../../docs/decisions/0018_meaning_view_zoom_projection_context_ownership.md); full analysis in [results_stage_i.md](results_stage_i.md).
+
+- **I1/I2 — matrix + zoom finding**: the AFM context overflow (12,055 tokens)
+  was the feedback channel, not the tree: move acks carried whole-tree cuts.
+  Fix = the meaning view cut IS a ray projection with a closed zoom
+  vocabulary (`point`/`local`/`region`/`summary`); move acks zoom to `point`
+  (O(1) feedback), `list` zooms out, summary structuralizes/destructurizes.
+  Ray-cast hits are SEEDS (expand by zoom radius). Same tree, same law, any
+  domain — and strategies can differ per actor (mover/overseer).
+- **Meaning-executor arm green scripted**: `intent_02` builds the bookmark
+  executor through 24 tiny meaning moves, passes the SAME real-dart intents
+  oracle as `intent_01`'s single big write; interpreter ⇄ materialized Dart
+  pinned by PARITY + FAILURE-PATH PARITY tests (a real divergence bug found
+  by the AFM run is now fixed and pinned).
+- **I3 — AFM re-measure, honest FAIL recorded**: channel proven (100+ moves,
+  materialization, self-verification); premature completion recovered by the
+  mechanical verifier loop; actionable errors (`op id` in failures) drove
+  `set_prop` self-repair; final blocker = append-only accretion across
+  retries. Logs in `benchmark/runs/intent_closure_afm_run*.log`; analysis in
+  `results_stage_i.md`. Next levers recorded (macros / compaction /
+  overseer-actor repair), not built.
+- **I4 — prose host #2 green**: sentence → meaning-tree outline (kind
+  `section`) → facet-indexed fill beats → `evidence` tier (`passed: null` by
+  construction). Same one-tool surface, same projection law.
+- Suite: 22 tasks scripted green; 281 package tests passing.
 
 ## Postmortem adopted as practice — idle-race bugs (fixed 2026-08)
 

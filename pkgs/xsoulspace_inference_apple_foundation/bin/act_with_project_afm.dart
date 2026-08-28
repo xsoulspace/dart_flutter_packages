@@ -10,13 +10,12 @@
 /// Proves "repurpose a small model via exposed-trivial-means" on-device.
 library;
 
-import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
-import 'package:xsoulspace_agentic_harness/src/tooling/structured_editor.dart'
-    show StructuredDoc, actWithProjectTool;
+import 'package:xsoulspace_agentic_harness/src/tooling/act_with_project.dart'
+    show actWithProjectTool;
 import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
     show FsToolsRoot, runTool;
 import 'package:xsoulspace_inference_apple_foundation/src/native_bridge/native_client.dart';
@@ -26,13 +25,13 @@ import 'package:xsoulspace_inference_apple_foundation/src/native_bridge/native_c
 // AST stays internal; this is the "another program" that talks meaning->code.
 // ---------------------------------------------------------------------------
 
-String materializeMainDart(StructuredDoc doc) {
-  final cells = doc.nodes.values.where((n) => n.kind == 'cell').toList();
+String materializeMainDart(MeaningView view) {
+  final cells = view.nodes.where((n) => n['kind'] == 'cell').toList();
   // Board dimension: prefer an explicit size prop, else by cell count.
   int size = 3;
-  final sizeProp = doc.nodes.values
-      .where((n) => n.kind == 'board')
-      .map((n) => n.props['size'])
+  final sizeProp = view.nodes
+      .where((n) => n['kind'] == 'board')
+      .map((n) => (n['props'] as Map?)?['size'])
       .whereType<Object>()
       .map((v) => num.tryParse('$v'))
       .whereType<num>()
@@ -83,14 +82,13 @@ Future<void> main(List<String> args) async {
         DefaultGenerationHandler(router: router),
       );
 
-  // The shared project doc lives in the closure; the one tool closes over it.
-  final doc = StructuredDoc();
+  // The meaning tree lives as world state; the one tool closes over it.
   final jail = await Directory.systemTemp.createTemp('act_project_');
   final registry = ToolRegistry();
   registry.register(actWithProjectTool(
-    doc: () => doc,
+    world: world,
     materialize: () async {
-      final src = materializeMainDart(doc);
+      final src = materializeMainDart(meaningView(world));
       File('${jail.path}/main.dart').writeAsStringSync(src);
       return {'path': 'main.dart', 'materialized': true, 'runs': 'see run'};
     },
@@ -134,8 +132,8 @@ Future<void> main(List<String> args) async {
   }
   stdout
     ..writeln('act_with_project (AFM):')
-    ..writeln('  nodes built: ${doc.nodes.length}')
-    ..writeln('  edges: ${doc.edges.length}')
+    ..writeln('  nodes built: ${meaningView(world).nodeCount}')
+    ..writeln('  edges: ${meaningView(world).edgeCount}')
     ..writeln('  main.dart exists: $exists')
     ..writeln('  dart run main.dart: $runResult');
   exit(exists && runResult.startsWith('exit=0') ? 0 : 1);

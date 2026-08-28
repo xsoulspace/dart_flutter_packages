@@ -29,4 +29,4 @@ export 'src/tooling/transform_flow.dart';
 export 'src/tooling/locate_index.dart';
 export 'src/tooling/world_builder.dart';
 export 'src/tooling/build_gates.dart';
-export 'src/tooling/structured_editor.dart';
+export 'src/tooling/act_with_project.dart';

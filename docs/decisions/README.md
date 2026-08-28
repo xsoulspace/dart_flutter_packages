@@ -19,3 +19,4 @@
 | [0015](0015_domains_live_in_hosts_core_stays_generic.md) | Accepted | Domains live above the core; composition stays a generic seam |
 | [0016](0016_measure_tool_efficiency_simplify_surface.md) | Accepted | Measure tool efficiency; keep the tool surface minimal and composable |
 | [0017](0017_ae_etl_planning_and_a2a_native.md) | Accepted | AE-ETL for raw→planning; a2a-native multi-actor default build path |
+| [0018](0018_meaning_view_zoom_projection_context_ownership.md) | Accepted | Meaning view is a zoom projection; context is harness-owned; macro gate fired |

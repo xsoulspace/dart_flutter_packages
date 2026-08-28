@@ -21,8 +21,8 @@ void main() {
       final tasks = loadTasks('benchmark/coding_suite/tasks');
       expect(
         tasks,
-        hasLength(20),
-        reason: 'suite must contain exactly 20 tasks',
+        hasLength(22),
+        reason: 'suite must contain exactly 22 tasks',
       );
 
       final result = await CodingSuiteRunner(

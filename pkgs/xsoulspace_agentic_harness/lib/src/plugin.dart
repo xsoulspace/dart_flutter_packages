@@ -8,6 +8,8 @@ import 'events.dart';
 import 'data_models/data_models.dart';
 import 'decisions/decision_flow.dart';
 import 'narrative/narrative.dart';
+import 'meaning/intents.dart' show IntentCallState, IntentRuntime;
+import 'meaning/meaning_tree.dart';
 import 'resources/resources.dart';
 import 'schedules.dart';
 import 'systems/systems.dart';
@@ -84,7 +86,26 @@ class AgentPlugin extends Plugin {
       ..registerObjectComponent<IdentitySeeded>()
       ..registerObjectComponent<DecisionOrigin>()
       ..registerObjectComponent<DeferredThinking>()
-      ..registerObjectComponent<ToolResultPendingMarker>();
+      ..registerObjectComponent<ToolResultPendingMarker>()
+      // ADR 0009 plan-frontier components (live in data_models).
+      ..registerObjectComponent<GoalVerified>()
+      ..registerObjectComponent<StepStatus>()
+      ..registerObjectComponent<StepGoalLink>()
+      ..registerObjectComponent<ActorGoalRef>()
+      ..registerObjectComponent<IdleNudgeCount>()
+      ..registerObjectComponent<StepClaim>()
+      ..registerObjectComponent<StepAction>()
+      ..registerObjectComponent<StepIndex>()
+      // Meaning tree (PLAN Stage F): nodes are entities, edges/props are
+      // components — projected per decision, never loaded whole.
+      //
+      // INVARIANT: every Component class must be registered here.
+      // An unregistered object component co-spawning with registered ones
+      // corrupts ecsly archetype column allocation ("Column should exist
+      // after archetype creation").
+      ..registerObjectComponent<MeaningNode>()
+      ..registerObjectComponent<MeaningProps>()
+      ..registerObjectComponent<MeaningEdge>();
 
     // Resources
     world
@@ -96,7 +117,10 @@ class AgentPlugin extends Plugin {
       ..upsertResource(FacetIndex())
       ..upsertResource(AgencyPolicy())
       ..upsertResource(ToolExecutorResource())
-      ..upsertResource(DecisionFlowResource(DecisionFlow.defaultReAct()));
+      ..upsertResource(DecisionFlowResource(DecisionFlow.defaultReAct()))
+      ..upsertResource(MeaningIndex())
+      ..upsertResource(IntentRuntime())
+      ..upsertResource(IntentCallState());
 
     // Event channels for async LLM I/O.
     //

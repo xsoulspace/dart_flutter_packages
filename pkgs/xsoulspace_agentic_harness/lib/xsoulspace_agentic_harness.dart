@@ -16,3 +16,6 @@ export 'package:ecsly_app/ecsly_app.dart';
 
 export 'src/agent.dart';
 export 'src/composition/composition_surface.dart';
+export 'src/meaning/intents.dart';
+export 'src/meaning/meaning_program.dart';
+export 'src/meaning/meaning_tree.dart';

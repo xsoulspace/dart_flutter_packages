@@ -304,3 +304,62 @@ class ToolResultContent implements Component {
   final String name;
   final dynamic output;
 }
+
+// ─────────────────────────────────────────────────────────────
+// ADR 0009 plan-frontier components (moved from tooling/world_builder.dart
+// so every Component class lives in data_models and is registered in
+// AgentPlugin — registering a Component twice is idempotent, but an
+// UNregistered object component co-spawning with registered ones corrupts
+// ecsly archetype column allocation).
+// ─────────────────────────────────────────────────────────────
+
+/// Verification outcome stamped by a mechanical verifier system.
+class GoalVerified implements Component {
+  GoalVerified({required this.passed, this.detail = ''});
+  final bool passed;
+  final String detail;
+}
+
+/// Step status component (ADR 0009 §2 data shape preview).
+class StepStatus implements Component {
+  StepStatus(this.value);
+  final String value; // open | verified | failed
+}
+
+/// Backlink: which goal entity this step serves.
+class StepGoalLink implements Component {
+  const StepGoalLink(this.goal);
+  final Entity goal;
+}
+
+/// Backlink: which goal entity this ACTOR serves.
+class ActorGoalRef implements Component {
+  const ActorGoalRef(this.goal);
+  final Entity goal;
+}
+
+/// How many idle nudges this actor has received (bounds the verify→nudge
+/// loop: total model calls ≤ initial attempt + maxIdleNudges).
+class IdleNudgeCount implements Component {
+  IdleNudgeCount(this.value);
+  int value;
+}
+
+/// Per-step claim text (decomposition experiments).
+class StepClaim implements Component {
+  StepClaim(this.text);
+  final String text;
+}
+
+/// The mechanical action associated with a step (decomposition experiments).
+class StepAction implements Component {
+  StepAction(this.toolName, this.arguments);
+  final String toolName;
+  final Map<String, dynamic> arguments;
+}
+
+/// Ordering index for steps.
+class StepIndex implements Component {
+  StepIndex(this.value);
+  final int value;
+}

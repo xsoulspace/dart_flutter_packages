@@ -21,6 +21,8 @@ import 'package:ecsly/ecsly.dart';
 import 'package:ecsly_serialization/ecsly_serialization.dart';
 
 import 'data_models/data_models.dart';
+import 'meaning/meaning_tree.dart'
+    show MeaningEdge, MeaningIndex, MeaningNode, MeaningProps, meaningKeywords;
 import 'model_router.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'narrative/narrative.dart';
@@ -130,6 +132,36 @@ final List<_Spec> _specs = [
     (c) => {'threads': _refList(c.threads)},
     (v) => ActorThreads(threads: _derefList((v as Map)['threads'])),
   ),
+  _Spec<MeaningNode>(
+    () => const MeaningNode(id: '', kind: '', label: ''),
+    (c) => {'id': c.id, 'kind': c.kind, 'label': c.label},
+    (v) => MeaningNode(
+      id: (v as Map)['id'] as String,
+      kind: (v)['kind'] as String,
+      label: (v)['label'] as String,
+    ),
+  ),
+  _Spec<MeaningProps>(
+    () => const MeaningProps(),
+    (c) => {'props': c.props},
+    (v) => MeaningProps(
+      ((v as Map)['props'] as Map?)?.cast<String, dynamic>(),
+    ),
+  ),
+  _Spec<MeaningEdge>(
+    () => MeaningEdge(
+      from: Entity.create(0),
+      relation: '',
+      to: Entity.create(0),
+    ),
+    (c) => {'from': _ref(c.from), 'relation': c.relation, 'to': _ref(c.to)},
+    (v) => MeaningEdge(
+      from: _deref((v as Map)['from']),
+      relation: (v)['relation'] as String,
+      to: _deref((v)['to']),
+    ),
+  ),
+
   _Spec<Agency>(() => const Agency(), (_) => const {}, (_) => const Agency()),
   _Spec<AwaitingResponse>(
     () => const AwaitingResponse(),
@@ -608,8 +640,37 @@ World restoreWorld(Map<String, dynamic> snapshot) {
   }
   world.flush();
   _rebuildFacetIndex(world, indexOrder);
+  _rebuildMeaningIndex(world);
   world.flush();
   return world;
+}
+
+/// Rebuilds the derived [MeaningIndex] and re-facets meaning nodes after a
+/// restore. The beat rebuild cannot see meaning nodes (they carry no
+/// [TextContent]), so the tree re-indexes itself here — derived state is
+/// never source-of-truth.
+void _rebuildMeaningIndex(World world) {
+  final index = world.getResource<MeaningIndex>();
+  index.clear();
+  for (final (facade, node, props) in world.query2<MeaningNode, MeaningProps>().toList()) {
+    index.registerNode(node.id, facade.entity);
+    // Continue per-kind id assignment past the restored ids. Only ids in
+    // the `kind_N` scheme feed the counter; external stable ids (e.g. AE
+    // canonical `entity.create`) keep their given ids and don't shift it.
+    if (node.id.startsWith('${node.kind}_')) {
+      final n = int.tryParse(node.id.substring(node.kind.length + 1));
+      if (n != null) {
+        index.kindCounts[node.kind] = n;
+      }
+    }
+    world.getResource<FacetIndex>().indexBeat(
+      facade.entity,
+      meaningKeywords(node.kind, node.label, props.props),
+    );
+  }
+  for (final (_, edge) in world.query<MeaningEdge>().toList()) {
+    index.registerEdge(edge.from, edge.relation, edge.to);
+  }
 }
 
 void _rebuildFacetIndex(World world, Map<int, int> indexOrder) {

@@ -49,6 +49,27 @@ The harness is an ECS-based multi-actor agent loop. Read in this order:
 
 ### Footguns
 
+- **Dart string interpolation: bare `$id.member` interpolates ONLY the id** —
+  `'$jail.path/file'` yields `<jail>/.path/file` (`.path/...` treated as a
+  literal suffix). Always write `'${jail.path}/file'`. This silently wrote
+  materialized files outside the jail and cost a debug cycle.
+- **Nested raw-string templates**: when a generated file embeds a JSON ops
+  table inside a template, the inner delimiter must be `r"""..."""` (raw
+  triple-double-quote) — non-raw `"""` consumes `\"` escapes (breaks JSON at
+  runtime), and `r'''` collides with an outer `r'''` template (syntax errors).
+- **Move acks must zoom to `point`**: AFM's native session accumulates every
+  tool result, so a full/local view cut per move floods a 4k context within
+  ~28 moves (12k tokens). `meaningCut(zoom: 'point')` keeps feedback O(1).
+- **ReAct continuation ends on text-only responses**: a scripted handler that
+  interleaves prose fills (no tool calls) with moves stops the chain at the
+  first prose turn. Pair non-terminal prose with a cheap tool call, or emit
+  all moves in one response.
+- **Every Component class MUST be registered in `AgentPlugin.install`**
+  (`registerObjectComponent`). An unregistered object component co-spawning
+  with registered ones corrupts ecsly archetype column allocation — tests
+  fail with "Bad state: Column should exist after archetype creation".
+  New components: add to the plugin chain; ADR-0009 plan-frontier components
+  live in `data_models/components.dart` (re-exported by `world_builder.dart`).
 - `fs_tools.dart` uses `dart:io` and is intentionally NOT exported from the core
   barrel — importing it into web-targeting code breaks compilation late.
 - Fire-and-forget actor concurrency means races; one flush is the coherence point.

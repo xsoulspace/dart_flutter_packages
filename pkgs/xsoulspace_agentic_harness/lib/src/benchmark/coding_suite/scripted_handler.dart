@@ -19,6 +19,127 @@ class ScriptedStep {
 
 /// Canned behavior per task id.
 final Map<String, List<ScriptedStep>> scriptedBehaviors = {
+  // Stage I: the MEANING-EXECUTOR arm — the same bookmark behavior, but the
+  // scripted model shapes the executor LOGIC through meaning moves (closed op
+  // vocabulary via act_with_project); the host materializes program.dart from
+  // the tree. Tokens/decision per move vs intent_01's single big write is the
+  // I1/I2 matrix column.
+  'intent_02_bookmark_meaning_executor': [
+    ScriptedStep('intent_define', {
+      'action': 'define',
+      'name': 'save_url',
+      'params': ['url:string'],
+      'returns': 'bool',
+      'description': 'Saves a URL if it starts with http.',
+    }),
+    ScriptedStep('intent_define', {
+      'action': 'define',
+      'name': 'list_saved',
+      'returns': 'int',
+      'description': 'Counts saved bookmarks.',
+    }),
+    // save_url chain: load_arg(url) -> starts_with(http) -> jump_if_false
+    // -> push_state(bookmarks) -> literal(saved:true) -> return; the false
+    // branch is literal(saved:false) -> return (shared return op).
+    ScriptedStep('act_with_project', {
+      'action': 'add', 'kind': 'op', 'label': 'load_arg',
+      'props': {'a': 'url'},
+    }),
+    ScriptedStep('act_with_project', {
+      'action': 'add', 'kind': 'op', 'label': 'starts_with',
+      'props': {'b': 'http'},
+    }),
+    ScriptedStep('act_with_project', {
+      'action': 'add', 'kind': 'op', 'label': 'jump_if_false',
+      'props': {'b': 'op_6'},
+    }),
+    ScriptedStep('act_with_project', {
+      'action': 'add', 'kind': 'op', 'label': 'push_state',
+      'props': {'a': 'bookmarks'},
+    }),
+    ScriptedStep('act_with_project', {
+      'action': 'add', 'kind': 'op', 'label': 'literal',
+      'props': {'b': '{"saved": true}'},
+    }),
+    ScriptedStep('act_with_project', {
+      'action': 'add', 'kind': 'op', 'label': 'literal',
+      'props': {'b': '{"saved": false, "reason": "invalid url"}'},
+    }),
+    ScriptedStep('act_with_project', {
+      'action': 'add', 'kind': 'op', 'label': 'load_state',
+      'props': {'a': 'bookmarks'},
+    }),
+    ScriptedStep('act_with_project', {
+      'action': 'add', 'kind': 'op', 'label': 'list_len',
+    }),
+    ScriptedStep('act_with_project', {
+      'action': 'add', 'kind': 'op', 'label': 'return',
+    }),
+    ScriptedStep('act_with_project', {
+      'action': 'link', 'from': 'save_url', 'relation': 'impl', 'to': 'op_1',
+    }),
+    ScriptedStep('act_with_project', {
+      'action': 'link', 'from': 'list_saved', 'relation': 'impl', 'to': 'op_7',
+    }),
+    ScriptedStep('act_with_project', {
+      'action': 'link', 'from': 'op_1', 'relation': 'then', 'to': 'op_2',
+    }),
+    ScriptedStep('act_with_project', {
+      'action': 'link', 'from': 'op_2', 'relation': 'then', 'to': 'op_3',
+    }),
+    ScriptedStep('act_with_project', {
+      'action': 'link', 'from': 'op_3', 'relation': 'then', 'to': 'op_4',
+    }),
+    ScriptedStep('act_with_project', {
+      'action': 'link', 'from': 'op_4', 'relation': 'then', 'to': 'op_5',
+    }),
+    ScriptedStep('act_with_project', {
+      'action': 'link', 'from': 'op_5', 'relation': 'then', 'to': 'op_9',
+    }),
+    ScriptedStep('act_with_project', {
+      'action': 'link', 'from': 'op_6', 'relation': 'then', 'to': 'op_9',
+    }),
+    ScriptedStep('act_with_project', {
+      'action': 'link', 'from': 'op_7', 'relation': 'then', 'to': 'op_8',
+    }),
+    ScriptedStep('act_with_project', {
+      'action': 'link', 'from': 'op_8', 'relation': 'then', 'to': 'op_9',
+    }),
+    ScriptedStep('act_with_project', {
+      'action': 'materialize',
+    }),
+    // Self-verification through intent calls (the closed feedback loop).
+    ScriptedStep('intent_call', {
+      'intent': 'save_url',
+      'args': ['url=https://selfcheck.dev'],
+    }),
+    ScriptedStep('intent_call', {'intent': 'list_saved'}),
+  ],
+  // Stage H: the materialized intent-closure program (host-written contract
+  // initialState() + runIntent(name, state, args) over a JSON state map).
+  'intent_01_bookmark_manager': [
+    ScriptedStep('write', {
+      'path': 'program.dart',
+      'content':
+          'Map<String, dynamic> initialState() => <String, dynamic>{"bookmarks": <String>[]};\n'
+          'Map<String, dynamic> runIntent(String name, Map<String, dynamic> state, Map<String, dynamic> args) {\n'
+          '  switch (name) {\n'
+          '    case "save_url":\n'
+          '      final url = args["url"] as String?;\n'
+          '      if (url == null || !url.startsWith("http")) {\n'
+          '        return {"saved": false, "reason": "invalid url"};\n'
+          '      }\n'
+          '      final bookmarks = [...(state["bookmarks"] as List).cast<String>(), url];\n'
+          '      return {"_state": <String, dynamic>{"bookmarks": bookmarks}, "_result": <String, dynamic>{"saved": true}};\n'
+          '    case "list_saved":\n'
+          '      return {"count": (state["bookmarks"] as List).length};\n'
+          '    default:\n'
+          '      throw ArgumentError("unknown intent: \$name");\n'
+          '  }\n'
+          '}\n',
+    }),
+  ],
+
   'edit_01_rename_constant': [
     ScriptedStep('write', {
       'path': 'config.dart',

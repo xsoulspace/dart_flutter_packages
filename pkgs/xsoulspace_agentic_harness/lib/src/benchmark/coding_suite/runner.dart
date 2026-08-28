@@ -26,6 +26,9 @@ import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
 import 'checkers.dart';
 import 'task_spec.dart';
+import '../../meaning/intents.dart' show intentCallTool, intentDefineTool;
+import '../../meaning/meaning_program.dart' show materializeMeaningProgram;
+import '../../tooling/act_with_project.dart' show actWithProjectTool;
 import '../../tooling/world_builder.dart';
 
 /// Result of running one task.
@@ -246,13 +249,21 @@ class CodingSuiteRunner {
       // to appleFoundation and silently misses backend-specific clients.
       final router = this.router ?? ModelRouter(inferenceClientsBuilders: {});
       router.models[modelId] = Model(id: modelId, name: modelName);
+      // Meaning-executor arms are STRUCTURALLY move-dense: the whole point
+      // is many tiny meaning moves instead of one big write. The default
+      // 16-round chain cap would cut them mid-build — lift it for the
+      // intent-closure category (a recorded I1/I2 matrix dimension: tiny
+      // moves trade round overhead for per-move tokens).
+      final rounds = task.category == TaskCategory.intentClosure
+          ? (maxToolRounds < 48 ? 48 : maxToolRounds)
+          : maxToolRounds;
       world
         ..upsertResource(ModelRouterResource(router))
         ..upsertResource(ToolRegistryResource())
         ..upsertResource(
           AgencyPolicy(
             maxConcurrent: maxConcurrent,
-            maxToolRounds: maxToolRounds,
+            maxToolRounds: rounds,
           ),
         )
         ..flush();
@@ -270,6 +281,30 @@ class CodingSuiteRunner {
 
       final registry = ToolRegistry();
       fsTools(FsToolsRoot(jail.path)).forEach(registry.register);
+      // Stage I: meaning-executor arm — intent-closure tasks speak through
+      // meaning moves (act_with_project + intents); the host materializer
+      // compiles the op chains into the suite's program.dart contract.
+      if (task.category == TaskCategory.intentClosure) {
+        registry.register(actWithProjectTool(
+          world: world,
+          materialize: () async {
+            final src = materializeMeaningProgram(world);
+            // NB: use explicit ${} — bare $jail.path would interpolate only
+            // `jail` and treat `.path/program.dart` as a literal suffix.
+            File('${jail.path}/program.dart').writeAsStringSync(src);
+            return {
+              'path': 'program.dart',
+              'materialized': true,
+              'intents': [for (final i in listIntents(world)) i['name']],
+              // Host-side chain validation: broken impl chains are caught
+              // NOW (op ids included) instead of one checker round later.
+              'problems': validateMeaningProgram(world),
+            };
+          },
+        ));
+        registry.register(intentDefineTool(world));
+        registry.register(intentCallTool(world));
+      }
       for (final factory in extraTools) {
         registry.register(factory(jail.path));
       }

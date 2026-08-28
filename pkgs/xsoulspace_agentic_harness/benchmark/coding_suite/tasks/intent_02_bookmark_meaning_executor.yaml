@@ -1,0 +1,18 @@
+id: intent_02_bookmark_meaning_executor
+category: intent_closure
+prompt: |
+  Shape the bookmark manager's executor logic through meaning moves:
+  define the intents, add op nodes from the closed executor vocabulary
+  (load_arg, starts_with, jump_if_false, push_state, literal, load_state,
+  list_len, return), link them with impl/then edges, then materialize.
+  Verify by calling the intents. You never write program code.
+fixtures: []
+checkers:
+  - type: intents
+    value: |
+      {"calls": [
+        {"intent": "save_url", "args": {"url": "https://example.dev"}, "expect": {"saved": true}},
+        {"intent": "save_url", "args": {"url": "https://second.dev"}},
+        {"intent": "list_saved", "expect": {"value": 2}},
+        {"intent": "save_url", "args": {"url": "not-a-url"}, "expect": {"saved": false}}
+      ]}

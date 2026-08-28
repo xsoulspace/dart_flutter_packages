@@ -32,13 +32,15 @@ import 'dart:io';
 
 import 'package:yaml/yaml.dart';
 
-/// Task categories matching the approved split (6/4/4/3/3).
+/// Task categories matching the approved split (6/4/4/3/3), plus the
+/// Stage-H intent-closure family (behavior graded by intent calls).
 enum TaskCategory {
   fileEdit('file_edit'),
   multiFileRefactor('multi_file_refactor'),
   searchThenEdit('search_then_edit'),
   toolChain('tool_chain'),
-  bugFixWithTest('bug_fix_with_test');
+  bugFixWithTest('bug_fix_with_test'),
+  intentClosure('intent_closure');
 
   const TaskCategory(this.yamlName);
   final String yamlName;

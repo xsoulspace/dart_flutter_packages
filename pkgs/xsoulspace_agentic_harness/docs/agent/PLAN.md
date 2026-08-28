@@ -1,244 +1,292 @@
-# Agent Harness — Plan
+# Agent Harness — Plan (Stage J/K: general agent via harness-absorbed complexity)
 
-> Forward/frontier record only. Landed work lives in
+> Forward/frontier record only. Landed work (Stages A–I) lives in
 > [history.md](history.md); durable decisions in the
-> [ADR Index](../../../../docs/decisions/README.md); benchmark numbers in
-> `results_*.md`. Goal: a tiny-context (2–4k) cinematic multi-actor harness
-> whose embedded coding agent codes **as well as pi** — e.g. "build a whole
-> tic-tac-toe from scratch" — with a2a-native actors and AE-ETL for
-> raw→structured→planning.
+> [ADR Index](../../../../docs/decisions/README.md) (notably
+> [0018](../../../../docs/decisions/0018_meaning_view_zoom_projection_context_ownership.md));
+> benchmark numbers in `results_*.md` + `benchmark/runs/`.
 >
 > This plan is written so **another agent can build and wire every piece**
-> reliably. Each stage is independently testable, LLM-free, and ends with an
-> `expectIdle`-clean harness test. Failures are data; gravity holds (tiny
-> model stays useful; fewer LLM calls; context bounded+derived; LLM-free
-> testable).
+> reliably. Each stage is independently testable, LLM-free first, and ends
+> with an `expectIdle`-clean harness test. Failures are data.
 
-**Status (2026-08-27):** native tool calling default (ADR 0013); P2 discovery +
-tool measurement + rename simplification landed (ADR 0016); composition
-shape-set + host-boundary landed (ADR 0014/0015). **Gates A (run tool + runs
-checker), B (run-graded goal loop default), C (a2h ask_user), and Stage D
-(planFromMatrix) + C (a2a spawnActorBranch) are DONE**: each LLM-free-tested in
-`test/run_tool_test.dart` + `test/build_gates_test.dart`, benchmarked scripted at flat
-cumulative tokens vs baseline (2503/baseline vs 2503/run-graded). The 20-task
-deterministic suite passes 100% scripted.
+**Status (2026-08-28).** Stages A–I landed: meaning tree as world state (zoom
+projection: point/local/region/summary), AE wire port, intent closure v1
+(`intent_define`/`intent_call`), 22-task suite 100% scripted (incl. the
+meaning-executor arm), prose host #2 at `evidence` tier, and four on-device
+AFM runs whose failures were converted into the zoom redesign, a parity fix,
+actionable errors, and host chain validation (`results_stage_i.md`).
 
-**Real-AFM re-measure (2026-08-27)**: `gate_run_afm.dart` on-device
-(`AppleFoundationNativeClient`) — gates A/B make the loop **execute and observe**
-its own output (run-graded board self-corrects across writes+runs after reading
-the compile error; baseline flails in discovery). Both six-tool arms FAIL the
-build tasks: a real 2–4k cut model cannot emit syntactically valid Dart.
+**What is proven vs open (the honest ledger):**
 
-**➜ resolution — one `act_with_project` tool (2026-08-27)**: same model, same
-task, switch the surface to ONE tool with a closed enum (`add/list/link/
-set_prop/materialize`) and hide the AST inside a host materializer: the model now
-**only picks tiny moves** (add board/player1/player2 x3, link x3, materialize x1 —
-no code token, no AST) and the host produces a **`dart run main.dart` exit=0**
-game. `pkgs/xsoulspace_inference_apple_foundation/docs/results_act_with_project_afm.md`.
-This is the load-bearing proof that the residual gap was surface-shape, not model-
-capability — the model reasons in MEANING; structure/AST stay internal.*
+| Layer | Status |
+|---|---|
+| Channel (context/feedback) | **Solved** — point-zoom acks: O(1) feedback; 12k→4.1k; no overflow in 95–145 rounds |
+| Oracle (verification) | **Solved** — intent-graded checker over real `dart` subprocess; mechanical verifier loop |
+| Repair (state mutation) | **Half** — actionable errors drive `set_prop`; append-only accretion across retries killed run4 |
+| Model horizon | **Open** — 2–4k model loses the plan over 100+ rounds; run variance dominates |
+| Generality of vocabulary | **Open** — materializers are hand-written per task; no Dart round-trip |
+
+**The strategic bet:** AFM becomes a general agent not by seeing more but by
+being asked for less — tiny selections over meaning; the harness owns
+decomposition, state hygiene, verification, repair, and context. Every item
+below is a host program or a data contract; nothing requires a smarter model.
 
 ---
 
 ## Target scenario (what "done" means)
 
-An embedded coding agent, given **one sentence** — "build a tic-tac-toe game
-in Dart, playable from the terminal, human vs computer" — with **no external
-steering**, produces a compile-and-run `main.dart` that actually plays, and
-**pauses only to ask the user questions/options** at model-chosen moments.
-Metrics: ≥pi-parity pass on the interactive-build task; tokens/decision stay
-flat; the loop is a2a-native (several actors can collaborate, swap models at
-runtime, share Agency).
+Given an arbitrary **Dart coding task** (greenfield sentence OR existing
+repo + issue) with **no external steering**, the agent:
 
-## The three gates (critical analysis, evidence-backed; PLAN 2026-08)
+1. decomposes the task into subtasks **as data** (AE canonical / FlowSpec),
+   each subtask scoped into its own world/scope with its own oracle;
+2. builds/edits the meaning tree through ONE collapsed surface
+   (`act_with_project` + intent tools + macros) — never code tokens;
+3. the host materializes to real Dart (diffs on existing code), runs
+   `dart analyze` + the behavior-spec oracle, and feeds **localized**
+   failures back (meaning-node addresses, not stack traces);
+4. escalates along a ladder (tiny model → overseer actor → bigger model /
+   human) when a subtask exhausts its retry budget, with the escalation
+   ledger shipped beside every pass rate;
+5. goes idle with every subtask graded.
 
-**Gate A — no `run`/execute tool.** The coding tool surface is
-read/write/list_dir/grep/glob/locate/patch/rename/verify — *none execute*.
-`Process.run` in tooling exists only in `ae_bridge.dart` (`verify_pack`).
-A coding agent that cannot run `dart run main.dart`, compile, or run a test
-**cannot observe whether its own output works**. pi's `bash` closes this.
-→ **Build a jailed `run`/execute seam-3 tool + behavior-`verify`** (Stage A).
+Honest boundary: "any complexity" = *any task decomposable into the supported
+meaning vocabulary*. The vocabulary grows per domain; domain materializers
+live in host packages (ADR 0015). Dart is the first and reference domain.
 
-**Gate B — the loop is a bounded ReAct chain (maxToolRounds=16), not a
-persistent plan/goal loop.** A whole-game build is dozens of tool calls; the
-actor is dropped mid-build at the cap. ADR 0009 (Goal = verifiable vector;
-Step on mechanical|observable|open) is implemented but opt-in
-(`PlanFrontierPolicy` in `experiment_arms.dart`). → **Make Goal→decompose→
-mechanical-advance the default flow**, wired through Gate A (a `run` advances
-an `observable`/`open` step and writes evidence back as a facet).
+## Committed decisions (standing; details in ADRs)
 
-**Gate C — no human-as-actor (a2h) affordance for "ask the user."** The presence
-of the actor model says a human is just another handler, and `AwaitingResponse`
-can wait on an LLM+tool+human simultaneously — but only the CLI's gated-tool
-y/N approval is wired. → **Wire a `HumanActor` (a GenerationHandler) + an
-`ask_user` decision/tool so a model-facing actor can pause and raise typed
-questions/options to the user.**
-
-**Corollary (design, not a gate):** the 4k projection cut is the *10x* token
-advantage (128k vs pi's 1.29M) and must not be abandoned. The win is
-**projection improvement + tools**: Gate A's run-results land as facets so the
-cut includes "what I built / does it compile / last error"; Gate B's
-decomposition keeps only the current step + its immediate deps in the cut so
-small slices stay coherent. Cross-file coherence improves without sending more.
+- **D1** — meaning tree is ECS world state; one projection law for beats and
+  meaning (ADR 0009).
+- **D2** — AE owns durable truth + verification; harness owns loop +
+  projection; one-directional sync; no AE embed (ADR 0017).
+- **D3** — one collapsed surface default; re-expansion only as a benchmark
+  arm; **macro gate FIRED** (ADR 0018) — macros are now committed (`J1`).
+- **D4** — intent closure: the built program's registry is part of the
+  agent's world; `intent_call` doubles as the behavior oracle.
+- **D5** — escapable transport; core learns no transport (ADR 0015).
+- **D6** — meaning view is a zoom projection; move acks zoom to `point`;
+  ray-cast hits are seeds; failures localize to op/meaning ids (ADR 0018).
+- **D7** — **context is harness-owned**: the budget law must bound everything
+  the model sees; native-session accumulation outside the harness is a bug
+  class (ADR 0018; experiment `J2` decides the mechanism).
 
 ---
 
-## Stage A — run/execute + verify that runs a program (the #1 build path)
+## Stage J — the concrete sequencing
 
-**Goal:** the coding agent can execute what it builds and grade real behavior.
+### J1 — Macros arm + context budget (gate for everything)
 
-- [DONE] `ToolDef runTool(FsToolsRoot root)` (seam-3, `lib/src/tools/fs_tools.dart`):
+**Goal:** make the bookmark executor pass on-device. Attack move density and
+prompt tax together.
 
-  - name `run`, args `{command: string[], cwd?: string, timeout_ms?: int}`.
-  - Resolve `cwd` inside the jail (escape protection like `read`).
-  - `Process.run` with a cap (e.g. default 30s, override up to 120s); capture
-    `exitCode`, `stdout`, `stderr` into a structured result (trimmed, e.g.
-    first 4000 chars each) so it feeds the token budget.
-  - Never lets the loop dangle: honor `AgencyPolicy.taskTimeout`, return a
-    structured `{'ok': false, 'code': 'timeout'|'spawn_error', ...}` on failure.
-  - Deterministic + LLM-free testable: `test/run_tool_test.dart` asserts a
-    `dart` script prints `exitCode 0` + stdout, a failing script exit>0, a
-    missing cwd → jail error, and a timeout → `timeout`.  **(built, green)**
-- `A2` — `verify` grades by running: a new `verify_run` tool/checker that runs a
-  command and grades stdout/exit-code against a predicate. Reuses AE's tier
-  philosophy: `passable` vs `evidence` (see `DatasetSpec.evalTier`). Mechanical,
-  never touches an LLM — raises `mechanical-step share`.
-- `A3` — **trace through Measure** (ADR 0016): run `bin/tool_eval_profile.dart`
-  on a `run`+`verify` sequence to confirm cost/latency added is small vs the
-  loop turnaround it unlocks.
-- **Done check:** a `dart run main.dart` that prints a board cells actually runs
-  in a jar, exits 0, and a failing version returns nonzero — all LLM-free.
+- [ ] `J1.1` — composite sub-actions as **host programs** on
+  `act_with_project` (closed enum extension): `add_chain(specs)` (build a
+  full op chain, host assigns ids), `link_chain(edges)`, `redefine_intent(
+  name, ops)` (**atomic drop + rebuild of one intent's chain** — the scoped
+  repair that absorbs accretion without general deletion). Every macro
+  returns a point-zoom ack + problems list (D6).
+- [ ] `J1.2` — prompt/schema budget: system prompt ≤ ~100 tokens; teaching
+  moves into tool descriptions + teaching beats; measure `overhead_tokens`
+  (prompt + schemas + system) and target ≤ 1500 of the 4096 window.
+- [ ] `J1.3` — macro surface is closed + countable (stewardship probe);
+  macro results identical to the equivalent primitive sequence (parity test).
+- **Tests (LLM-free):** macro parity vs primitive sequence; accretion test
+  (define → break → `redefine_intent` → oracle green); suite task
+  `intent_03_bookmark_macros` (same oracle, fewer moves); suite count 22→23.
+- **Benchmark gate (AFM):** bookmark executor passes at **pass@3 ≥ 1/3**
+  with zero context overflows; moves/subtask ≤ 6; `overhead_tokens` published.
 
-## Stage B — make a long-horizon (plan-frontier) loop the default
+### J2 — Context ownership experiment
 
-**Goal:** a whole build persists as a `Goal`; the loop advances mechanically.
+**Goal:** make D7 operational — the harness must own everything the model sees.
 
-- [DONE] `defaultGoalFlow()` + `RunGradedGoalPolicy` in `tooling/build_gates.dart`
-  — a Goal advances by *running* code (the `run` tool stamps [GoalVerified]);
-  the run-graded continuation leads the default flow. `test/build_gates_test.dart`
-  proves a passed run terminates (no decision) and a failed run continues.
-- [DONE] the `run` tool + `runs` checker (behAVioral oracle, exit-code) is the
-  mechanical advance; `benchmark/coding_suite/checkers.dart` grades by executing
-  the built target, not just string-equality.
-- `maxToolRounds` stays as a per-step guard, not a whole-build cap.
+- [ ] `J2.1` — A/B in the AFM driver: (a) session-per-decision (reset native
+  session each decision; history only via harness projection) vs (b)
+  persistent native session. Instrument: content tokens per decision
+  (from AFM error payloads when they fire), pass rate, variance.
+- [ ] `J2.2` — if (a) wins (expected): the native client gains a
+  `resetSession()` and the loop owns it; document in ADR 0018 follow-up.
+- [ ] `J2.3` — deterministic client-side test: session reset produces
+  identical first-token behavior; no cross-decision leakage.
+- **Tests (LLM-free):** client contract test (reset is total; history comes
+  only from `ActorGenerateRequest` projection).
+- **Benchmark gate:** no context errors across 3 full bookmark runs on the
+  winning arm; variance (pass/fail flips across 3 runs) recorded.
+
+### J3 — dart_meaning: Dart round-trip (the "general" unlock)
+
+**Goal:** work on EXISTING Dart — parse code into meaning, edit meaning,
+materialize as diffs.
+
+- [ ] `J3.1` — `dart_meaning` host package (per ADR 0015, lives in a host
+  package, not core): **Dart → meaning** via the `analyzer` package
+  (functions, classes, methods, fields, calls, control flow → meaning nodes
+  kind-vocabulary `dart_fn`/`dart_class`/…; source spans kept on props).
+- [ ] `J3.2` — **meaning → Dart diff**: edit-meaning → re-emit ONLY the
+  changed units (span-anchored text edits); no whole-file rewrite.
+- [ ] `J3.3` — round-trip parity: parse → materialize(parse-output) is
+  byte-stable on a fixture corpus (formatter-normalized); id stability
+  across re-parse (stable id = fqn + span hash).
+- [ ] `J3.4` — `act_with_project` gains `open(path)` (imports a file into the
+  meaning tree) and edit moves operate uniformly on greenfield and imported
+  nodes.
+- **Tests (LLM-free):** round-trip parity corpus; diff-minimality (edit one
+  fn → exactly that fn's span changes); id-stability test; growth arm at
+  1k/10k real-Dart nodes.
+- **Benchmark gate:** scripted suite task `dart_edit_01` (rename + body edit
+  on a fixture repo) passes intents/analyze oracles LLM-free.
+
+### J4 — dart analyze as a localized verification beat
+
+**Goal:** the compiler becomes part of the oracle, with meaning-node
+addresses.
+
+- [ ] `J4.1` — `analyze_check` host program: runs `dart analyze --format
+  machine` in the jail; maps each diagnostic's span → meaning node (via
+  `J3.1` spans) → emits structured failure beats
+  (`{node: fn_12, error: ...}`).
+- [ ] `J4.2` — verifier loop consumes analyze failures like checker failures
+  (mechanical, no LLM); model repairs via meaning moves at the named nodes.
+- **Tests (LLM-free):** seeded-error fixture (broken fn) → analyze beat
+  names the right node; repair loop green.
+- **Benchmark gate:** on the `dart_edit_01` slice, ≥ 80% of analyze failures
+  repaired without oracle escalation.
+
+### J5 — Behavior-spec oracles (universal tests at meaning level)
+
+**Goal:** keep "model never writes code" while making the oracle universal.
+
+- [ ] `J5.1` — generalize `intent_calls.json` into **behavior specs**:
+  tables of `(intent, args, expect)` + optional state threading, authored by
+  the host (from AE canonical / task spec), compiled to real Dart tests.
+- [ ] `J5.2` — specs live as meaning nodes (`kind: 'spec'`) — part of the
+  world, zoomable like everything else.
+- [ ] `J5.3` — the `intents` checker becomes the spec runner; `runs` stays
+  for exit-code tasks.
+- **Tests (LLM-free):** spec compile → real dart test green/red; spec nodes
+  appear in `summary` zoom; failure output localizes to spec row.
+- **Benchmark gate:** oracle-tier column in the K matrix: spec-graded vs
+  run-graded pass rate at equal tokens.
+
+### J6 — Hierarchical subtasks with scoped worlds
+
+**Goal:** complexity scaling via decomposition + isolation — never a longer
+prompt.
+
+- [ ] `J6.1` — task → subtask tree as data (`planFromSpec` extension):
+  each subtask carries its own fixtures, oracle spec, and budget.
+- [ ] `J6.2` — **scoped execution**: each subtask runs in a fresh jail +
+  world (or scoped subtree); parent receives graded results + evidence only.
+  Accretion cannot cross subtasks by construction.
+- [ ] `J6.3` — composition step: host merges subtask outputs (imports into
+  the parent world); cross-subtask conflicts surface as parent-level gaps.
+- [ ] `J6.4` — retry policy per subtask (bounded), then escalate (J8).
+- **Tests (LLM-free):** two-subtask fixture (fn + its caller) composed
+  green; cross-subtask breakage surfaces as a parent gap with addresses;
+  subtask isolation (poison in one scope never reaches another).
+- **Benchmark gate:** a 2-level task (multi-file feature) passes scripted
+  end-to-end; tokens/subtask flat vs single-task baseline.
+
+### J7 — Overseer actor (zoom strategies across actors)
+
+**Goal:** one actor takes small decisions (point zoom); a second holds the
+bigger picture (summary zoom) and reviews diffs/validation evidence.
+
+- [ ] `J7.1` — overseer spawns after each subtask attempt; sees ONLY
+  summary zoom + oracle evidence (never raw tool noise); its decision
+  vocabulary is closed: `approve` / `repair(intent)` / `escalate(reason)`.
+- [ ] `J7.2` — overseer teaching beats land in the mover's thread
+  (loop-breaker integration already exists).
+- **Tests (LLM-free):** scripted overseer approves a green subtask; scripted
+  `repair(intent)` re-opens exactly that scope; escalation request stamps
+  `EscalationRequest` (counted in the ledger).
+- **Benchmark gate:** mover+overseer pair beats mover-only recovery rate on
+  the accretion case (run4's failure mode) — the K matrix records it.
+
+### J8 — Escalation ladder
+
+**Goal:** escalation becomes a mechanism, not just a metric.
+
+- [ ] `J8.1` — ladder policy: mover retries (bounded) → overseer → bigger
+  model (`Model.maxInFlight`-gated second entry in the router) → human
+  (`ask_user` a2h already exists). Each rung increments the ledger.
+- [ ] `J8.2` — escalation carries a **structured reason** (failure class
+  from the deterministic failure-mode classifier), never raw noise.
+- **Tests (LLM-free):** each rung fires on its trigger; ledger rows carry
+  rung + reason; a fully-exhausted task still ends `expectIdle`.
+- **Benchmark gate:** every published pass-rate table ships the ladder
+  breakdown (standing rule, now structural).
 
 ---
 
-## Stage C (a2a-native: many actors plan+work together)
+## Stage K — benchmark protocol (publish-or-it-didn't-happen)
 
-**Why in-scope:** the system is **a2a-native by design** (`discussion.md`: any
-Actor can address any other, high parallelism, runtime-swappable LLM, a2a/a2h/a2h2a).
-So "build the game" can be a **team**: a Planner actor (goal/dev by AE-ETL step 1) +
-a Coder actor (edits files, runs Gate A) + optionally a Reviewer/Verifier actor.
+**Goal:** single-run claims are the weakest proof in the repo; make claims
+reproducible.
 
-- [DONE] `spawnActorBranch` in `tooling/build_gates.dart` — a second actor in
-  the shared world with its own open decision (a2a primitive). Deterministic;
-  `test/build_gates_test.dart` proves it spawns. Parallel-agency swarm is bound
-  by `AgencyPolicy(maxConcurrent)` and is a later stage.
-- `C1` — wire two actors with distinct responsibilities, each routing to its
-  own model/backend (`byAgent/byModel`).
-- `C2` — baton-pass handoff between actors (A2 uses an `AskUser` tool + a
-  shared `Goal` + thread), so the leaky separation holds ("planner produces
-  steps; coder fills them; verifier runs them"). Reuse the `FlowSpec`
-  (`composition_surface.dart`) to declare each role's loop + tool surface.
-- `C3` — a headless `team` test: Planner plans → Coder edits+`run` → Verifier
-  confirms → all idle. `expectIdle` for every actor.
+- [ ] `K1` — **pass@k protocol** (k=3 minimum) for every on-device claim;
+  report pass@k, variance (flips across runs), wall clock.
+- [ ] `K2` — per-arm columns (standing rules): tokens/decision, cumulative
+  tokens, `overhead_tokens`, moves/subtask, recovery rate, escalation rung
+  histogram, refusal-recovery rate, oracle tier.
+- [ ] `K3` — matrix rows to publish (each = one config, n≥3):
+  1. `intent_01` write-arm vs `intent_02` micro-moves vs `intent_03` macros
+     (scripted structure numbers + AFM where the gate allows);
+  2. J2 session arms (a) vs (b);
+  3. dart_edit slice: analyze-repair rate;
+  4. hierarchy: single-task vs two-level subtask tokens.
+- [ ] `K4` — evidence discipline: raw logs to `benchmark/runs/` with
+  `<name>_<arm>_run<i>.log`; summaries to `results_stage_j.md` + ADR-indexed
+  decisions; failures classified (context / divergence / capability /
+  oracle), never dropped.
+- **Acceptance:** every number in `results_stage_j.md` states backend,
+  decision path, tokens source, tool surface, and n.
 
----
+## Acceptance (end state)
 
-## Stage D — ETL from agentic_executables (AE): raw → matrix → planning
-
-**Why:** "raw unstructured → planning" is exactly AE's `KnowSource` (raw) →
-`extractors`/`spec_importers` → `CanonicalMatrix` (structured) → `verify_report`
-(tier), and the harness already has `ae_bridge.dart` (`verify_pack`, tier-order
-beats). We use AE as **world-affordance** (ADR 0015), never as actor-memory.
-
-- [DONE] `planFromMatrix` in `tooling/build_gates.dart` — an AE-style matrix
-  (feature rows) → Goal + Step beats; `test/build_gates_test.dart` proves it.
-- `D1` — tap AE build blocks (upstream `~/xs/agentic_executables`, NOT this
-  repo's core):
-  - `KnowSource` (raw text / repo / URL / PDF) → `RepoExtractor`,
-    `SpecImportParser`, `dart_heuristic_extractor` → `CanonicalMatrix`.
-  - `ae canonical import-spec` (a spec → canonical), `ae canonical distill`
-    (partial).
-- `D2` — a harness-side `plan_from_spec` tool (seam-3, `tooling/`) that:
-  1. imports a natural-language brief (e.g. "build tic-tac-toe in Dart")
-     via AE's spec/importer into a `CanonicalMatrix` (features/columns),
-  2. renders that matrix as **goal + step beats** into the World, so the
-     `PlanFrontier` (Stage B) drives building from the AE-derived plan,
-  3. on `verify`, runs AE tier (`invariant_violation` > `upstream_blocker`)
-     and feeds the tier-ordered gaps back as the actor's next decision.
-- `D3` — a **`PlanForTask` policy** that reads the goal/steps and opens only the
-  current step as the decision prompt — the same "what chunk of the plan this
-  decision should act on" as ADR 0009 §4- projection union. LLM-free test uses
-  the scripted handler + a fake AE matrix fixture.
-- `D4` — end-to-end seam: `brief_sentence → (AE import-spec / distill) →
-  CanonicalMatrix → plan steps → code+run (Gate A) → verify tier → idle`.
-  Deterministic with a scripted/deterministic AE fixture; real AE optional.
-
-**Keep-out (ADR 0015):** AE structures the world’s affordances; the **beats +
-projection remain the actor’s truth**. No compiling AE inside the harness core.
-
----
-
-## Stage E — human-as-actor (a2h): the "ask the user" seam
-
-**Goal:** the agent pauses and raises typed questions/options to the user.
-
-- [DONE] `askUserTool` in `tooling/build_gates.dart` — the model-facing actor
-  emits a question + optional option menu; an injectable `HumanAnswerProvider`
-  replies; the actor resumes on the answer. Deterministic + LLM-free;
-  `test/build_gates_test.dart` proves the injected answer returns as a tool result.
-- [DONE] `stdinAskUser` — default CLI provider calling the real `stdin`.
-
-- `E1` — a `HumanActor` = a `GenerationHandler` whose `generate` reads a human
-  answer (injectable: stdin / a `Future<String?>` UI callback), so the world
-  runs it exactly like an LLM (ADR- bottom note: a human is another handler).
-- `E2` — an `ask_user` decision tool (seam-1 `/seam-3`): the model-facing actor
-  emits it, opens a `DecisionDraft`/`ToolCall` with `{question, options}`; a
-  human answer lands as a beat / facet — no silent rewrite (mirrors
-  `AgentCli.requestToolConfirmation` but for open questions, not just y/N).
-- `E3` — CLI/UI wiring: reuse `AgentCli` approval callback; add a
-  `HumanAnswer` handler for injectable answers in tests. `train/human-in-the-
-  loop` LLM-free.
-- `E4` — a single interactive scenario: build → compile-error → ask "retry or
-  show me?" → user answers → agent reacts with the source fix and runs again.
-
----
-
-## Stage A–E acceptance (the target, testable/started)
-
-1. `run` + `run_verify` are registered in the coding jail, deterministic,
-   time-bounded, LLM-free (`test/run_tool_test.dart`).
-2. A `main.dart` tic-tac-toe sketch runs in the jail (`dart run main.dart` →
-   exit 0; flaws → exit ≠0) with NO external steering.
-3. A **default** goal→step loop (B) drives editing + `run` + `verify` and has
-   `PlanFrontier` accessible not just via a flag.
-4. a2a: a Planner+Coder(+Verifier) team completes it via shared threads; each
-   actor ends `expectIdle`.
-5. AE→matrix → goal/steps drives the loop when provided a brief (`plan_from_spec`).
-6. The `ask_user` seam surfaces typed questions/options; a human answer
-   continues the build. Everything paths LLM-free with the scripted handler.
-
----
+1. [ ] Bookmark executor passes on-device at pass@3 ≥ 1/3, no context
+   overflows, ≤ 6 moves/subtask, `overhead_tokens` ≤ 1500 (J1+J2).
+2. [ ] Existing-Dart edit loop green: import → meaning edit → diff
+   materialize → `dart analyze` localized repair → oracle green, LLM-free
+   (J3+J4).
+3. [ ] Behavior-spec oracle universal: greenfield and edit tasks both graded
+   by compiled specs (J5).
+4. [ ] A 2-level task passes via scoped subtasks with per-subtask oracles;
+   isolation proven (J6).
+5. [ ] Mover+overseer beats mover-only recovery on the accretion case; the
+   escalation ladder fires with structured reasons and is in every table (J7+J8).
+6. [ ] Benchmark protocol: pass@k + full column set for every published
+   claim (K).
+7. [ ] Every stage LLM-free reproducible; every harness test ends
+   `expectIdle`; the model never writes code tokens, never sees an AST,
+   never holds the whole tree.
 
 ## Standing rules
 
 - Every published number states backend, decision path, tokens source, tool
-  surface. Failures are data.
-- Escalation-rate metric ships beside every pass-rate table.
-- Extensibility ledger: three host entries vs the same seam → design conv
-  (ADR 0007). Native tool-calling default (ADR 0013); plan/scopes
-  internally via `FlowSpec`+`DecisionFlow`.
-- Gravity: tiny model stays useful; fewer LLM calls; context bounded+derived;
-  LLM-free testable. `expectIdle` ends every harness test. No spec-versioning
-  engine, no planner agent beyond an actor that decomposes, no AE embed in core.
+  surface, and n. Failures are data (classified, never dropped).
+- Escalation-rate breakdown ships beside every pass-rate table.
+- Gravity: tiny model stays useful; fewer LLM calls; context bounded+derived
+  (D7: harness-owned); LLM-free testable. `expectIdle` ends every test.
+- The model never writes code tokens, never sees an AST, never holds the
+  whole meaning tree. Materialization, verification, projection, macros,
+  decomposition, repair = pure host programs (`Agent = G ∘ F`).
+- No AE embed; no transport protocols in core; no domain materializers in
+  core (ADR 0015). Plans are data, never prose.
 
-## Cleanup / hard-cut ledger (CI-paced)
+## Cleanup / hard-cut ledger
 
+- [ ] Collapse overlapping edit paths (`patch_file` / `tree_patch` /
+  `structured_editor`): fold into registry-truth surfaces once J1 macros
+  replace their benchmark role; delete.
 - [ ] Delete legacy manual-schedule tests that mask the idle-race class.
-- [ ] Remove dead/bisection probe bins after folding lessons into
-  checks/tests (`bin/probe_*.dart`, `benchmark/debug_*.dart`).
-- [ ] Keep `benchmark/runs/` evidence; drop throwaway probes.
-- [ ] When Stage A lands, wire the new `run`/`verify` tools into
-  `defaultToolSurface` and the coding-suite default arms.
+- [ ] `dart_meaning` (J3) lands in a HOST package, not core (ADR 0015) —
+  create `pkgs/xsoulspace_agentic_dart_meaning` when J3 starts.
+- [ ] Drop `runTool`'s redundant role if J4's `analyze_check` + spec runner
+  subsume the exit-code oracle for coding tasks (keep for non-Dart hosts).
+- [ ] Deferred (evidence-gated, owner: mcp_flutter/intentcall): **H5** — drive
+  a *running* Flutter app (semantic snapshots, tap, hot-reload) through one
+  MCP tool surface; the harness sees the same `intent_call` shape over a
+  transport adapter (D5). Unblocks after J1/J2 prove the on-device loop.
