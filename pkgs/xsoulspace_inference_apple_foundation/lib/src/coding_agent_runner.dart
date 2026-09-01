@@ -25,7 +25,7 @@ import 'dart:io';
 import 'package:xsoulspace_agentic_harness/benchmark_api.dart'
     show CheckerResult, CheckerSpec, FixtureFile, defaultGoalFlow,
         openFreshDecision, wireIntentGradedGoal, wireRunGradedGoal,
-        wireOverseer, IntentExpectation, evaluateChecker;
+        wireOverseer, OverseerLedger, IntentExpectation, evaluateChecker;
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
     show fsTools, FsToolsRoot, CapturedWrite, JailWriteGateway, WriteGateMode;
@@ -455,6 +455,25 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
     await onSnapshot?.call(world);
   }
   await onSnapshot?.call(world);
+  if (!passed) {
+    // J7: the exhaustion stamp may land in the FINAL tick (no open
+    // decisions left), leaving no loop time for the overseer system to
+    // spawn. Give the overseer window one bounded session: it disposes
+    // (approve / repair(intent) / escalate) inside this single
+    // runUntilIdle; guards in the ledger keep it to one cycle.
+    OverseerLedger? ledger;
+    try {
+      ledger = world.getResource<OverseerLedger>();
+    } on StateError {
+      // overseer not wired → base ladder only
+    }
+    if (ledger != null && ledger.canAct) {
+      await HarnessLoop(world: world).runUntilIdle();
+      finalGate = grade();
+      passed = finalGate.isNotEmpty && finalGate.every((c) => c.passed);
+      await onSnapshot?.call(world);
+    }
+  }
   if (!passed) {
     // J8 rung 1: exhausted — the structured terminal record ships the
     // failure class, not raw noise.

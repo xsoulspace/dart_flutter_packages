@@ -182,3 +182,103 @@ intents failed: save_url -> {value: false}…"
 tick 53764: decisions=0 inFlight=0 pending=0 actors=agent-1788293552501172-0:0r/3a
 
 
+coding_agent run — task: intent_03_bookmark_macros
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 1496
+  decisions: 7
+  tool rounds (thread beats): 78
+  moves: {intent_define.define: 68, intent_define.list: 1, intent_call: 9}
+  projection tokens (honest spend, Situation.tokensUsed): 15628
+  meaning nodes: 15, edges: 13
+  wall clock: 914436 ms
+  final gate (outer oracle, once): FAIL
+    check: materialized program missing: program.dart (action materialize was never run)
+  failure class: final gate: materialized program missing: program.dart (action materialize was never run)
+--- harness pulse (J1.5.3) ---
+tick 7 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788295245334471-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: materialized program missing: program.dart (action materialize was never run)
+— agent-1788295245334471-0  [idle]  rounds 0/12 (Σ0)  attempts 3/3 EXHAUSTED
+    last: intent_define:{"returns":"bool","name":"save_url","action":"define","pa… → FAILED
+      error: {"error":"spec row 9: next 10 out of range (0..9)","valid_ops":["load_arg","load_state","store_state","push_state","d…
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 279496..304865
+tick 303053: decisions=1 inFlight=1 pending=0 actors=agent-1788295245334471-0:0r/3a
+    agent-1788295245334471-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 303153: decisions=1 inFlight=1 pending=0 actors=agent-1788295245334471-0:0r/3a
+    agent-1788295245334471-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 303253: decisions=1 inFlight=1 pending=0 actors=agent-1788295245334471-0:0r/3a
+    agent-1788295245334471-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 303353: decisions=1 inFlight=1 pending=0 actors=agent-1788295245334471-0:0r/3a
+    agent-1788295245334471-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 303453: decisions=1 inFlight=1 pending=0 actors=agent-1788295245334471-0:0r/3a
+    agent-1788295245334471-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 303553: decisions=1 inFlight=1 pending=0 actors=agent-1788295245334471-0:0r/3a
+    agent-1788295245334471-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 303653: decisions=1 inFlight=1 pending=0 actors=agent-1788295245334471-0:0r/3a
+    agent-1788295245334471-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 303753: decisions=1 inFlight=1 pending=0 actors=agent-1788295245334471-0:0r/3a
+    agent-1788295245334471-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 303853: decisions=1 inFlight=1 pending=0 actors=agent-1788295245334471-0:0r/3a
+    agent-1788295245334471-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 303953: decisions=1 inFlight=1 pending=0 actors=agent-1788295245334471-0:0r/3a
+    agent-1788295245334471-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 304053: decisions=1 inFlight=1 pending=0 actors=agent-1788295245334471-0:0r/3a
+    agent-1788295245334471-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 304153: decisions=1 inFlight=1 pending=0 actors=agent-1788295245334471-0:0r/3a
+    agent-1788295245334471-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 304253: decisions=1 inFlight=1 pending=0 actors=agent-1788295245334471-0:0r/3a
+    agent-1788295245334471-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 304353: decisions=1 inFlight=1 pending=0 actors=agent-1788295245334471-0:0r/3a
+    agent-1788295245334471-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 304453: decisions=1 inFlight=1 pending=0 actors=agent-1788295245334471-0:0r/3a
+    agent-1788295245334471-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 304553: decisions=1 inFlight=1 pending=0 actors=agent-1788295245334471-0:0r/3a
+    agent-1788295245334471-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 304653: decisions=1 inFlight=1 pending=0 actors=agent-1788295245334471-0:0r/3a
+    agent-1788295245334471-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 304753: decisions=1 inFlight=1 pending=0 actors=agent-1788295245334471-0:0r/3a
+    agent-1788295245334471-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 304853: decisions=1 inFlight=1 pending=0 actors=agent-1788295245334471-0:0r/3a
+    agent-1788295245334471-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 304865: decisions=0 inFlight=0 pending=0 actors=agent-1788295245334471-0:0r/3a
+
+
