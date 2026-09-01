@@ -39,7 +39,8 @@ import '../data_models/components.dart'
     show Actor, ActorSystemPrompt, ActorThreads, ActorTools, EscalationRequest,
         GoalAttemptsExhausted;
 import '../meaning/meaning_program.dart'
-    show interpretMeaningProgram, validateMeaningProgram;
+    show chainSpecError, interpretMeaningProgram, meaningExecutorOps,
+        validateMeaningProgram;
 import '../narrative/components.dart'
     show ThreadStatus, ThreadStatusEnum;
 import '../schedules.dart' show Schedules;
@@ -52,11 +53,15 @@ const overseerSystemPrompt =
     'program and exhausted its verification budget. You see only the '
     'summary zoom, the structured gate failure, and the failing chain '
     'dump — never raw tool noise. Decide ONCE with the overseer_decision '
-    'tool: approve (the state is acceptable as-is), repair(intent, notes) '
-    '(re-open exactly that intent with your notes — name the exact wrong '
-    'op/wiring you can see), or escalate(reason) (nothing salvageable). '
-    'Your notes are the ONLY steering the mover gets — be specific about '
-    'ops, ids, and the correct wiring.';
+    'tool: approve (the state is acceptable as-is), repair(intent, notes, '
+    'specs?) (re-open exactly that intent), or escalate(reason) (nothing '
+    'salvageable). HARD RULES: ops exist ONLY in the dump\'s valid_ops '
+    'list — NEVER name an op outside it (there is no return_value; the '
+    'vocabulary is exactly valid_ops). Prefer repair with SPECS: the '
+    'dump\'s chain_rows are already in intent_define row format — copy '
+    'them and change ONLY the rows that are wrong (fix label/a/b/next or '
+    'jumps_to → b: "#row"). With specs, the mover applies them verbatim; '
+    'notes alone make the mover guess.';
 
 /// The chain dump for one intent: validation problems, the chain ops
 /// (id/label/props/next), and an interpreter replay of the failing call
@@ -74,12 +79,18 @@ Map<String, dynamic> meaningChainDump(
     if (relation == 'impl' && from == intent) entry = to;
     if (relation == 'then') nextOf[from] = to;
   }
-  final ops = <Map<String, dynamic>>[];
+  // Render the chain as SPEC ROWS (the address space repairs happen in:
+  // intent_define rows carry `next` indices and `b: '#row'` jump targets —
+  // the on-device P2 finding showed op-entity ids like `op_11` are a
+  // different address space the mover cannot repair in).
+  final rows = <Map<String, dynamic>>[];
+  final opIdToRow = <String, int>{};
   var cursor = entry;
   var guard = 0;
   while (cursor != null && guard++ < 64) {
+    opIdToRow[cursor] = rows.length;
     final entity = index.byId[cursor];
-    Map<String, dynamic> json = {'id': cursor};
+    Map<String, dynamic> json = {'row': rows.length, 'op': '?'};
     if (entity != null) {
       final node = meaningComponentOf<MeaningNode>(world, entity);
       final props =
@@ -87,21 +98,30 @@ Map<String, dynamic> meaningChainDump(
           const MeaningProps();
       if (node != null) {
         json = {
-          'id': node.id,
+          'row': rows.length,
           'op': node.label,
           'a': props.props['a'],
           'b': props.props['b'],
         };
       }
     }
-    json['next'] = nextOf[cursor];
-    ops.add(json);
+    rows.add(json);
     cursor = nextOf[cursor];
+  }
+  // Rewrite jump targets ('#row' strings and raw ids) into row indices so
+  // the dump is directly diffable against intent_define specs.
+  for (final row in rows) {
+    final b = row['b'];
+    if (b is String && b.startsWith('#')) {
+      final target = int.tryParse(b.substring(1));
+      row['jumps_to'] = target;
+    }
   }
   return {
     'intent': intent,
+    'valid_ops': meaningExecutorOps,
     'problems': validateMeaningProgram(world),
-    'chain': ops,
+    'chain_rows': rows,
     'replay_result': replay['_result'],
   };
 }
@@ -249,6 +269,12 @@ ToolDef overseerDecisionTool(World world, {required Entity mover}) =>
           FM.prop('intent', FM.string(), optional: true),
           FM.prop('notes', FM.string(), optional: true),
           FM.prop('reason', FM.string(), optional: true),
+          FM.prop('specs', FM.array(FM.object('spec', properties: () => [
+            FM.prop('label', FM.string()),
+            FM.prop('a', FM.string(), optional: true),
+            FM.prop('b', FM.string(), optional: true),
+            FM.prop('next', FM.integer(), optional: true),
+          ])), optional: true),
         ]),
       ),
       execute: (args) async {
