@@ -38,7 +38,7 @@ import 'package:xsoulspace_inference_openrouter/xsoulspace_inference_openrouter.
 
 const _backendAfm = 'apple_foundation_afm';
 const _backendScripted = 'scripted_llm_free';
-const _defaultOpenRouterModel = 'poolside/laguna-xs-2.1:free';
+const _defaultOpenRouterModel = 'deepseek/deepseek-v4-flash-0731';
 
 Future<void> main(List<String> args) async {
   final cli = parseCliArgs(args);
@@ -50,7 +50,8 @@ Future<void> main(List<String> args) async {
   // P1 dogfooding: `--backend open_router --model <or/model>` runs the SAME
   // loop with an OpenRouter model (native tool_calls, session-per-decision
   // codec). The backend label names the model (K discipline).
-  final backendArg = cli['backend'] ?? (scripted ? _backendScripted : _backendAfm);
+  final backendArg =
+      cli['backend'] ?? (scripted ? _backendScripted : _backendAfm);
   final openRouter = backendArg == 'open_router';
   final orModel = cli['model'] ?? _defaultOpenRouterModel;
 
@@ -62,8 +63,7 @@ Future<void> main(List<String> args) async {
     exit(64);
   }
 
-  final backend =
-      openRouter ? 'open_router:$orModel' : backendArg;
+  final backend = openRouter ? 'open_router:$orModel' : backendArg;
   final task = taskId != null
       ? (codingAgentTasks[taskId] ??
             (throw ArgumentError.value(
@@ -93,8 +93,9 @@ Future<void> main(List<String> args) async {
     final jail = jailArg == null
         ? await Directory.systemTemp.createTemp('coding_agent_')
         : (runs == 1
-            ? (Directory(jailArg)..createSync(recursive: true))
-            : Directory('${jailArg}_run$i')..createSync(recursive: true));
+                ? (Directory(jailArg)..createSync(recursive: true))
+                : Directory('${jailArg}_run$i')
+            ..createSync(recursive: true));
     try {
       ModelRouter? router;
       if (openRouter) {
@@ -105,8 +106,10 @@ Future<void> main(List<String> args) async {
         }
         router = ModelRouter(
           inferenceClientsBuilders: {
-            OpenRouterModelNames.openRouter: () =>
-                OpenRouterInferenceClient(apiKey: apiKey, defaultModel: orModel),
+            OpenRouterModelNames.openRouter: () => OpenRouterInferenceClient(
+              apiKey: apiKey,
+              defaultModel: orModel,
+            ),
           },
         );
         final modelId = ModelId('coding_agent');
@@ -158,8 +161,10 @@ Future<void> main(List<String> args) async {
           'moves ${result.moves.values.fold(0, (a, b) => a + b)}) '
           '→ ${logFile.path}',
         )
-        ..writeln('  final gate: '
-            '${[for (final c in result.finalGate) c.detail].join(" | ")}');
+        ..writeln(
+          '  final gate: '
+          '${[for (final c in result.finalGate) c.detail].join(" | ")}',
+        );
     } finally {
       if (jailArg == null) {
         jail.deleteSync(recursive: true);

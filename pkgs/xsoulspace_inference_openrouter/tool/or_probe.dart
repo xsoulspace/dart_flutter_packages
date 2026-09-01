@@ -4,10 +4,14 @@ import 'dart:io';
 
 Future<void> main() async {
   final key = Platform.environment['OPENROUTER_API_KEY']!;
-  final model = Platform.environment['OR_MODEL'] ?? 'poolside/laguna-xs-2.1:free';
+  final model =
+      Platform.environment['OR_MODEL'] ?? 'deepseek/deepseek-v4-flash-0731';
   final client = OpenRouterInferenceClient(apiKey: key, defaultModel: model);
   final res = await client.infer(
-    InferenceRequest(task: InferenceTask.text, prompt: 'Reply with exactly: ok'),
+    InferenceRequest(
+      task: InferenceTask.text,
+      prompt: 'Reply with exactly: ok',
+    ),
   );
   print('ok: ${res.success}');
   if (!res.success) {

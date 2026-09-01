@@ -1,0 +1,434 @@
+// ignore_for_file: lines_longer_than_80_chars
+
+/// J7 — the overseer actor: zoom strategies across actors.
+///
+/// One actor takes small decisions (point zoom); a second holds the bigger
+/// picture (summary zoom) and reviews the structured gate evidence. When the
+/// mover's goal-attempt budget is exhausted (J1.5.1), the overseer system
+/// spawns an OVERSEER actor whose decision sees ONLY:
+///
+/// - the **summary zoom** of the meaning tree (`meaningCut(zoom: 'summary')`
+///   — kind histogram + aggregated edges, no node details);
+/// - the **structured gate failure** (the `GoalAttemptsExhausted` reason);
+/// - the **failing intent's chain dump** (`validateMeaningProgram` problems
+///   + the chain ops + an interpreter replay of the failing call).
+///
+/// Its decision vocabulary is CLOSED: `approve` / `repair(intent, notes)` /
+/// `escalate(reason)` — one tool (`overseer_decision`), no free-form path.
+/// `repair` re-opens exactly one intent's scope via [openFreshDecision] on
+/// the MOVER with the overseer's notes prepended (max [OverseerLedger.maxCycles]
+/// cycles). `escalate` is the J8.1 rung: swap to a higher `Model.tier` if the
+/// router declares one, else a structured FAIL. Approval never forces a pass:
+/// the mechanical final oracle still decides.
+///
+/// `Agent = G ∘ F`: the overseer is a tiny selection over a budgeted view;
+/// spawning, briefs, budgets and the disposition machinery are host programs.
+library;
+
+import 'dart:convert';
+
+import 'package:ecsly/ecsly.dart';
+
+import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart'
+    show FM, Model, SchemaBundle, ToolDef, ToolName;
+
+import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart'
+    show ActorModel, MeaningIndex, MeaningNode, MeaningProps, ModelRouterResource,
+        OpenDecision, PresentInScene, Scene, SceneFrame, ToolRegistry,
+        ToolRegistryResource, AgentId, ModelId, meaningComponentOf, meaningCut;
+
+import 'package:xsoulspace_agentic_harness/src/data_models/components.dart'
+    show Actor, ActorSystemPrompt, ActorTools, ActorThreads, EscalationRequest,
+        GoalAttemptsExhausted;
+import 'package:xsoulspace_agentic_harness/src/narrative/components.dart'
+    show ThreadStatus, ThreadStatusEnum;
+import 'package:xsoulspace_agentic_harness/src/meaning/meaning_program.dart'
+    show interpretMeaningProgram, validateMeaningProgram;
+import 'package:xsoulspace_agentic_harness/src/schedules.dart' show Schedules;
+import 'package:xsoulspace_agentic_harness/src/tooling/build_gates.dart'
+    show IntentGoalSpec, OverseerLedger, openFreshDecision;
+
+/// Teaching for the overseer actor (host-authored; only the overseer sees it).
+const overseerSystemPrompt =
+    'You are the OVERSEER. A mover actor tried to build/fix a meaning '
+    'program and exhausted its verification budget. You see only the '
+    'summary zoom, the structured gate failure, and the failing chain '
+    'dump — never raw tool noise. Decide ONCE with the overseer_decision '
+    'tool: approve (the state is acceptable as-is), repair(intent, notes) '
+    '(re-open exactly that intent with your notes — name the exact wrong '
+    'op/wiring you can see), or escalate(reason) (nothing salvageable). '
+    'Your notes are the ONLY steering the mover gets — be specific about '
+    'ops, ids, and the correct wiring.';
+
+/// The chain dump for one intent: validation problems, the chain ops
+/// (id/label/props/next), and an interpreter replay of the failing call
+/// over a FRESH state (the same semantics the oracle replay uses).
+Map<String, dynamic> meaningChainDump(
+  World world,
+  String intent,
+  Map<String, dynamic> args,
+) {
+  final replay = interpretMeaningProgram(world, intent, {}, args);
+  final index = world.getResource<MeaningIndex>();
+  String? entry;
+  final nextOf = <String, String>{};
+  for (final (from, relation, to) in index.triples) {
+    if (relation == 'impl' && from == intent) entry = to;
+    if (relation == 'then') nextOf[from] = to;
+  }
+  final ops = <Map<String, dynamic>>[];
+  var cursor = entry;
+  var guard = 0;
+  while (cursor != null && guard++ < 64) {
+    final entity = index.byId[cursor];
+    Map<String, dynamic> json = {'id': cursor};
+    if (entity != null) {
+      final node = meaningComponentOf<MeaningNode>(world, entity);
+      final props =
+          meaningComponentOf<MeaningProps>(world, entity) ??
+          const MeaningProps();
+      if (node != null) {
+        json = {
+          'id': node.id,
+          'op': node.label,
+          'a': props.props['a'],
+          'b': props.props['b'],
+        };
+      }
+    }
+    json['next'] = nextOf[cursor];
+    ops.add(json);
+    cursor = nextOf[cursor];
+  }
+  return {
+    'intent': intent,
+    'problems': validateMeaningProgram(world),
+    'chain': ops,
+    'replay_result': replay['_result'],
+  };
+}
+
+/// The overseer's ENTIRE decision view: summary zoom + structured gate
+/// failure + the failing intent's chain dump. Harness-owned context (D7).
+String buildOverseerBrief(
+  World world, {
+  required String gateFailure,
+  String? failingIntent,
+  Map<String, dynamic> failingArgs = const {},
+}) {
+  final summary = meaningCut(world, zoom: 'summary');
+  final buf = StringBuffer()
+    ..writeln('OVERSEER BRIEF')
+    ..writeln(
+      'The mover exhausted its goal-attempt budget. Decide the disposition '
+      'with the overseer_decision tool (exactly ONE call).',
+    )
+    ..writeln('--- structured gate failure ---')
+    ..writeln(gateFailure)
+    ..writeln('--- meaning summary zoom ---')
+    ..writeln(jsonEncode(summary));
+  if (failingIntent != null) {
+    buf
+      ..writeln('--- failing intent chain dump: $failingIntent ---')
+      ..writeln(jsonEncode(meaningChainDump(world, failingIntent, failingArgs)));
+  }
+  return buf.toString();
+}
+
+/// J7 system (schedule on [Schedules.narrative] via [wireOverseer]): when the
+/// mover's goal budget is exhausted and the overseer ledger has budget,
+/// spawn the overseer actor with the brief. The exhaustion record moves to
+/// the overseer's custody — the disposition tool re-stamps a terminal record
+/// unless it grants a repair.
+Future<void> overseerEscalationSystem(World world) async {
+  OverseerLedger? ledger;
+  try {
+    ledger = world.getResource<OverseerLedger>();
+  } on StateError {
+    return; // overseer not wired → no-op
+  }
+  if (ledger.overseerPending) return;
+  final exhausted = world.query2<Actor, GoalAttemptsExhausted>().toList();
+  if (exhausted.isEmpty) return;
+
+  final (facade, _, _) = exhausted.first;
+  final mover = facade.entity;
+  // The structured gate failure IS the exhaustion reason.
+  final we = world.getEntity(mover).$1;
+  final gateFailure = we.get<GoalAttemptsExhausted>()?.reason ?? 'unknown';
+  // Which intent failed? The verifier's structured detail names it
+  // ("intents failed: <intent> → ..."); args come from the wired spec.
+  String? failingIntent;
+  final match = RegExp('intents failed: (\\S+) →').firstMatch(gateFailure);
+  if (match != null) failingIntent = match.group(1);
+  var failingArgs = const <String, dynamic>{};
+  try {
+    final spec = world.getResource<IntentGoalSpec>();
+    if (failingIntent == null && spec.sequence.isNotEmpty) {
+      failingIntent = spec.sequence.first.intent;
+    }
+    for (final e in spec.sequence) {
+      if (e.intent == failingIntent) {
+        failingArgs = e.args;
+        break;
+      }
+    }
+  } on StateError {
+    // no intent spec (run-graded tasks): the gate failure still travels.
+  }
+
+  final brief = buildOverseerBrief(
+    world,
+    gateFailure: gateFailure,
+    failingIntent: failingIntent,
+    failingArgs: failingArgs,
+  );
+  ledger
+    ..overseerPending = true
+    ..lastGateFailure = gateFailure
+    ..lastBrief = brief;
+
+  // The overseer sees the same model the mover used (same ModelId).
+  final moverModel = we.get<ActorModel>()?.modelId ?? ModelId.create();
+  _ensureOverseerRegistry(world, mover: mover);
+
+  final scene = world.spawnComponents([const Scene(), SceneFrame()]);
+  world.spawnComponents([
+    Actor(agentId: AgentId.create()),
+    ActorModel(modelId: moverModel),
+    ActorSystemPrompt(text: overseerSystemPrompt),
+    ActorTools(registryName: 'overseer'),
+    PresentInScene(sceneEntity: scene),
+    OpenDecision(prompt: brief),
+  ]);
+  // The exhaustion record is now the overseer's to dispose; a repair grants
+  // a fresh decision, approve/escalate re-stamp the terminal record.
+  we.remove<GoalAttemptsExhausted>();
+  world.flush();
+}
+
+void _ensureOverseerRegistry(World world, {required Entity mover}) {
+  final resource = world.getResource<ToolRegistryResource>();
+  if (resource.get('overseer') == null) {
+    final registry = ToolRegistry();
+    registry.register(overseerDecisionTool(world, mover: mover));
+    resource.register('overseer', registry);
+  }
+}
+
+/// The overseer's CLOSED decision vocabulary — one tool, one call.
+ToolDef overseerDecisionTool(World world, {required Entity mover}) =>
+    ToolDef.encode(
+      name: const ToolName('overseer_decision'),
+      description:
+          'Your disposition for the exhausted mover. Exactly ONE call. '
+          'approve: the current state is acceptable as-is (the mechanical '
+          'final oracle still decides). repair: re-open exactly ONE intent '
+          'with your notes (notes are the mover\'s only steering — name the '
+          'wrong op/wiring and the correct one). escalate: nothing '
+          'salvageable — hand the structured reason to the ladder.',
+      argsSchema: SchemaBundle(
+        root: FM.object('overseer_decision', properties: () => [
+          FM.prop('action', FM.enum_('action', const [
+            'approve',
+            'repair',
+            'escalate',
+          ])),
+          FM.prop('intent', FM.string(), optional: true),
+          FM.prop('notes', FM.string(), optional: true),
+          FM.prop('reason', FM.string(), optional: true),
+        ]),
+      ),
+      execute: (args) async {
+        final map = args is Map ? args : const {};
+        final action = map['action'];
+        final ledger = world.getResource<OverseerLedger>();
+        ledger.overseerPending = false;
+        final we = world.getEntity(mover).$1;
+
+        String dispositionRecord(String disposition, Map<String, dynamic> extra) {
+          final record = {'disposition': disposition, ...extra};
+          ledger.records.add(record);
+          return jsonEncode(record);
+        }
+
+        switch (action) {
+          case 'repair':
+            final intent = map['intent'];
+            if (intent is! String || intent.isEmpty) {
+              ledger.overseerPending = true; // still undecided — retry
+              return {
+                'ok': false,
+                'error': 'repair requires the intent name to re-open',
+              };
+            }
+            if (!ledger.canRepair) {
+              // J8.1 rung: budget spent — structured FAIL, not a silent loop.
+              const reason = 'overseer repair budget exhausted';
+              _stampTerminal(world, mover, '$reason; last gate failure: '
+                  '${ledger.lastGateFailure}');
+              return {
+                'ok': false,
+                'disposition': 'repair_denied',
+                'record': dispositionRecord('repair_denied', {
+                  'intent': intent,
+                  'reason': reason,
+                }),
+              };
+            }
+            ledger.cycles++;
+            final notes = map['notes'] is String ? map['notes'] as String : '';
+            we
+              ..remove<GoalAttemptsExhausted>()
+              ..remove<EscalationRequest>();
+            _resumeThreads(world, mover);
+            // Fresh decision (the ONLY budget-reset path, J1.5.2) on the
+            // MOVER — the overseer's notes prepended, scope limited to the
+            // ONE intent the overseer named.
+            openFreshDecision(
+              world,
+              mover,
+              prompt: 'OVERSEER REPAIR (cycle ${ledger.cycles}/'
+                  '${ledger.maxCycles}) — repair ONLY the intent "$intent".\n'
+                  'Overseer notes: $notes\n\n'
+                  'Gate failure being repaired:\n${ledger.lastGateFailure}\n\n'
+                  'Fix the named intent (intent_define action=define with '
+                  'corrected specs replaces its chain atomically), materialize, '
+                  'and call the intents to verify.',
+            );
+            return {
+              'ok': true,
+              'disposition': 'repair',
+              'intent': intent,
+              'cycle': ledger.cycles,
+              'record': dispositionRecord('repair', {
+                'intent': intent,
+                'notes': notes,
+                'cycle': ledger.cycles,
+              }),
+            };
+          case 'approve':
+            // Approval never forces a pass: the terminal record is stamped
+            // and the mechanical final oracle still grades the run.
+            _stampTerminal(
+              world,
+              mover,
+              'overseer approved the current state; final mechanical oracle '
+                  'decides. Gate failure was: ${ledger.lastGateFailure}',
+            );
+            return {
+              'ok': true,
+              'disposition': 'approve',
+              'record': dispositionRecord('approve', const {}),
+            };
+          case 'escalate':
+            final reason = map['reason'] is String ? map['reason'] as String : 'unspecified';
+            // J8.1 rung: swap to a higher Model.tier if the router declares
+            // one; else structured FAIL.
+            final higher = _higherTierModel(world, mover);
+            if (higher != null && !ledger.escalatedToTier) {
+              // An escalation consumes the overseer's one cycle.
+              ledger
+                ..escalatedToTier = true
+                ..cycles = ledger.cycles + 1;
+              we.remove<GoalAttemptsExhausted>();
+              _resumeThreads(world, mover);
+              world.upsertComponent(mover, ActorModel(modelId: higher.id));
+              openFreshDecision(
+                world,
+                mover,
+                prompt: 'TIER ESCALATION — a stronger model now owns this '
+                    'goal.\nOverseer reason: $reason\n\n'
+                    'Gate failure:\n${ledger.lastGateFailure}\n'
+                    'Repair the goal.',
+              );
+              return {
+                'ok': true,
+                'disposition': 'escalate',
+                'tier': higher.tier,
+                'record': dispositionRecord('escalate', {
+                  'reason': reason,
+                  'tier': higher.tier,
+                }),
+              };
+            }
+            _stampTerminal(
+              world,
+              mover,
+              'escalate: $reason (no higher model tier available). '
+                  'Gate failure was: ${ledger.lastGateFailure}',
+            );
+            return {
+              'ok': true,
+              'disposition': 'escalate_failed',
+              'record': dispositionRecord('escalate_failed', {'reason': reason}),
+            };
+          default:
+            ledger.overseerPending = true; // still undecided — retry
+            return {'ok': false, 'error': 'unknown disposition: $action'};
+        }
+      },
+    );
+
+void _stampTerminal(World world, Entity mover, String reason) {
+  world.getEntity(mover).$1
+    ..insert(GoalAttemptsExhausted(reason))
+    ..insert(EscalationRequest(reason: reason));
+  world.flush();
+}
+
+/// Resumes the mover's suspended threads so the granted decision can run.
+void _resumeThreads(World world, Entity mover) {
+  final threads =
+      world.getEntity(mover).$1.get<ActorThreads>()?.threads ?? const [];
+  for (final t in threads) {
+    final (we, valid) = world.getEntity(t);
+    if (!valid) continue;
+    final status = we.get<ThreadStatus>();
+    if (status != null) status.value = ThreadStatusEnum.active;
+  }
+  world.flush();
+}
+
+/// Finds a declared higher-tier model in the router (J8.1 rung). Null when
+/// none exists — the structured FAIL path.
+Model? _higherTierModel(World world, Entity mover) {
+  try {
+    final router = world.getResource<ModelRouterResource>().router;
+    final currentTier =
+        world.getEntity(mover).$1.get<ActorModel>()?.let((am) {
+          return router.models[am.modelId]?.tier ?? 0;
+        }) ??
+        0;
+    Model? best;
+    for (final m in router.models.values) {
+      if (m.tier > currentTier && (best == null || m.tier > best.tier)) {
+        best = m;
+      }
+    }
+    return best;
+  } on StateError {
+    return null;
+  }
+}
+
+// The `.let` helper above keeps the tier lookup null-safe without pulling in
+// a package dependency.
+extension _Let<T> on T? {
+  R? let<R>(R Function(T) f) {
+    final self = this;
+    return self == null ? null : f(self);
+  }
+}
+
+// Schedules import kept last so the system can be scheduled by hosts; the
+// wire function mirrors wireRunGradedGoal's shape.
+/// Wires the J7 overseer: ledger + escalation system on the narrative
+/// schedule. [moverActor] is the goal-carrying actor the overseer reviews.
+void wireOverseer(World world, {required Entity moverActor, int maxCycles = 1}) {
+  world
+    ..upsertResource(OverseerLedger(maxCycles: maxCycles))
+    ..schedule(Schedules.narrative)
+    .add(overseerEscalationSystem, name: 'overseerEscalationSystem');
+  world.flush();
+}

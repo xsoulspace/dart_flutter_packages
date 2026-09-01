@@ -2,13 +2,13 @@
 
 ## Headline (final, published 2026-08 — A5 deliverable)
 
-Same model (`poolside/laguna-xs-2.1:free`), same tasks, same retry parity:
+Same model (`deepseek/deepseek-v4-flash-0731`), same tasks, same retry parity:
 
-| column       | backend | decision path | tokens source | tool surface | pass | tokens |
-| ------------ | ------- | ------------- | ------------- | ------------ | ---- | ------ |
-| harness+OR   | OpenRouter | native provider tool calling | cumulative projection size | 3 fs tools | 6/20 | 128k |
-| pi+OR        | OpenRouter | pi SDK native loop | real SDK usage | pi built-ins | **19/20** | 1.29M |
-| harness+OR (guided) | OpenRouter | guided schema `--decision guided` | cumulative projection size | 3 fs tools | 0/20 | — |
+| column              | backend    | decision path                     | tokens source              | tool surface | pass      | tokens |
+| ------------------- | ---------- | --------------------------------- | -------------------------- | ------------ | --------- | ------ |
+| harness+OR          | OpenRouter | native provider tool calling      | cumulative projection size | 3 fs tools   | 6/20      | 128k   |
+| pi+OR               | OpenRouter | pi SDK native loop                | real SDK usage             | pi built-ins | **19/20** | 1.29M  |
+| harness+OR (guided) | OpenRouter | guided schema `--decision guided` | cumulative projection size | 3 fs tools   | 0/20      | —      |
 
 Read: guided schema is a bottleneck at tiny scale (C2). The remaining
 harness-vs-pi gap is edit quality, not decision machinery — the lever A2
@@ -22,13 +22,13 @@ Full per-task table below; failure modes live in the source JSONL under
 
 ## Headline (final, published 2026-08 — A5 deliverable)
 
-Same model (`poolside/laguna-xs-2.1:free`), same tasks, same retry parity:
+Same model (`deepseek/deepseek-v4-flash-0731`), same tasks, same retry parity:
 
-| column       | backend | decision path | tokens source | tool surface | pass | tokens |
-| ------------ | ------- | ------------- | ------------- | ------------ | ---- | ------ |
-| harness+OR   | OpenRouter | native provider tool calling | cumulative projection size | 3 fs tools | 6/20 | 128k |
-| pi+OR        | OpenRouter | pi SDK native loop | real SDK usage | pi built-ins | **19/20** | 1.29M |
-| harness+OR (guided) | OpenRouter | guided schema `--decision guided` | cumulative projection size | 3 fs tools | 0/20 | — |
+| column              | backend    | decision path                     | tokens source              | tool surface | pass      | tokens |
+| ------------------- | ---------- | --------------------------------- | -------------------------- | ------------ | --------- | ------ |
+| harness+OR          | OpenRouter | native provider tool calling      | cumulative projection size | 3 fs tools   | 6/20      | 128k   |
+| pi+OR               | OpenRouter | pi SDK native loop                | real SDK usage             | pi built-ins | **19/20** | 1.29M  |
+| harness+OR (guided) | OpenRouter | guided schema `--decision guided` | cumulative projection size | 3 fs tools   | 0/20      | —      |
 
 Read: guided schema is a bottleneck at tiny scale (C2). The remaining
 harness-vs-pi gap is edit quality, not decision machinery — the lever A2
@@ -40,7 +40,7 @@ Full per-task table below; failure modes live in the source JSONL under
 
 ---
 
-- Model: `poolside/laguna-xs-2.1:free`
+- Model: `deepseek/deepseek-v4-flash-0731`
 - Harness decision path: native provider tool calling
   (`DefaultGenerationHandler`; guided-schema arm scored 0/20 — see below)
 - pi decision path: native loop (`createAgentSession()`)

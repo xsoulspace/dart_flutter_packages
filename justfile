@@ -173,7 +173,7 @@ pi-smoke model="z-ai/glm-4.5-air:free":
     cat "$tmp/pi_smoke.jsonl"
 
 # Full 20-task pi column. Writes JSONL + a compact summary.
-pi-bench model="poolside/laguna-xs-2.1:free" out="runs/pi_openrouter.jsonl":
+pi-bench model="deepseek/deepseek-v4-flash-0731" out="runs/pi_openrouter.jsonl":
     #!/usr/bin/env bash
     set -euo pipefail
     : "${OPENROUTER_API_KEY:?OPENROUTER_API_KEY must be set}"
@@ -185,7 +185,7 @@ pi-bench model="poolside/laguna-xs-2.1:free" out="runs/pi_openrouter.jsonl":
 
 # Harness+OpenRouter column. decision="native" uses provider tool calling;
 # decision="guided" forces the structured-schema decision path.
-harness-or-bench model="poolside/laguna-xs-2.1:free" decision="native" trace="runs/harness_or.jsonl" markdown="runs/harness_or.md" filter="":
+harness-or-bench model="deepseek/deepseek-v4-flash-0731" decision="native" trace="runs/harness_or.jsonl" markdown="runs/harness_or.md" filter="":
     #!/usr/bin/env bash
     set -euo pipefail
     : "${OPENROUTER_API_KEY:?OPENROUTER_API_KEY must be set}"
@@ -202,7 +202,7 @@ harness-or-bench model="poolside/laguna-xs-2.1:free" decision="native" trace="ru
     echo "harness+OR written to {{ trace }} / {{ markdown }}"
 
 # Build the A1 comparison artifact from both JSONL columns.
-a1-compare harness="runs/harness_or.jsonl" pi="runs/pi_openrouter.jsonl" model="poolside/laguna-xs-2.1:free" out="docs/agent/results_comparison.md":
+a1-compare harness="runs/harness_or.jsonl" pi="runs/pi_openrouter.jsonl" model="deepseek/deepseek-v4-flash-0731" out="docs/agent/results_comparison.md":
     dart run {{ BENCH_DIR }}/a1_compare.dart \
       --harness {{ BENCH_DIR }}/{{ harness }} \
       --pi {{ BENCH_DIR }}/{{ pi }} \

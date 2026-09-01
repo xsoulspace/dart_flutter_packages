@@ -1,6 +1,6 @@
 # A1 Fair Comparison — harness vs pi (same model via OpenRouter)
 
-- Model: `poolside/laguna-xs-2.1:free`
+- Model: `deepseek/deepseek-v4-flash-0731`
 - Harness decision path: guided schema (`StructuredToolDecisionHandler`)
 - pi decision path: native loop (`createAgentSession()`)
 - Harness tokens: cumulative projection size per decision.

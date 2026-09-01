@@ -18,7 +18,8 @@ import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'package:xsoulspace_inference_openrouter/xsoulspace_inference_openrouter.dart';
-import 'package:xsoulspace_agentic_harness/src/tooling/attribution.dart' as attr;
+import 'package:xsoulspace_agentic_harness/src/tooling/attribution.dart'
+    as attr;
 
 Future<void> main(List<String> args) async {
   var tasksDir = '../../benchmark/coding_suite/tasks';
@@ -52,8 +53,7 @@ Future<void> main(List<String> args) async {
   }
   if (model.isEmpty) {
     final config = await EnvConfig.load();
-    model =
-        config.get('openrouter.model') ?? 'poolside/laguna-xs-2.1:free';
+    model = config.get('openrouter.model') ?? 'deepseek/deepseek-v4-flash-0731';
   }
 
   final router = ModelRouter(
@@ -68,9 +68,9 @@ Future<void> main(List<String> args) async {
   final id = ModelId('profile-model');
   router.models[id] = Model(id: id, name: OpenRouterModelNames.openRouter);
 
-  final tasks = loadTasks(tasksDir)
-      .where((t) => filter.isEmpty || t.id.contains(filter))
-      .toList();
+  final tasks = loadTasks(
+    tasksDir,
+  ).where((t) => filter.isEmpty || t.id.contains(filter)).toList();
   if (tasks.isEmpty) {
     stderr.writeln('no tasks matched "$filter"');
     exit(2);

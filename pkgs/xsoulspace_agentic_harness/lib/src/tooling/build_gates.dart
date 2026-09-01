@@ -53,6 +53,42 @@ import 'package:xsoulspace_agentic_harness/src/tooling/world_builder.dart'
         StepIndex;
 
 // ---------------------------------------------------------------------------
+// J7 — overseer ledger (the escalation budget the policy reads)
+// ---------------------------------------------------------------------------
+
+/// J7/J8 escalation ledger: how many overseer repair cycles the mover has
+/// been granted, and whether a tier escalation already fired. The
+/// [RunGradedGoalPolicy] reads `cycles` to widen its attempt allowance
+/// MONOTONICALLY (base × (1 + cycles)) — never a reset; total attempts stay
+/// bounded by base × (1 + maxCycles).
+class OverseerLedger extends Resource {
+  OverseerLedger({this.maxCycles = 1});
+
+  /// How many overseer repair cycles may be granted (J7: 1; then J8.1).
+  int maxCycles;
+
+  /// Repair cycles granted so far.
+  int cycles = 0;
+
+  /// Whether a tier escalation (J8.1) already fired.
+  bool escalatedToTier = false;
+
+  /// An overseer actor is spawned and its decision is pending.
+  bool overseerPending = false;
+
+  /// The structured gate failure the overseer is reviewing.
+  String lastGateFailure = '';
+
+  /// The brief the overseer saw (audit trail).
+  String lastBrief = '';
+
+  /// Every disposition decision (approve/repair/escalate) as data.
+  final List<Map<String, Object?>> records = [];
+
+  bool get canRepair => cycles < maxCycles;
+}
+
+// ---------------------------------------------------------------------------
 // Gate C — human-as-actor (a2h): ask_user
 // ---------------------------------------------------------------------------
 
@@ -309,6 +345,15 @@ class RunGradedGoalPolicy implements DecisionPolicy {
       maxAttempts = ctx.world.getResource<AgencyPolicy>().maxGoalAttempts;
     } on StateError {
       // no AgencyPolicy wired → conservative default
+    }
+    // J7: each GRANTED overseer repair cycle widens the allowance
+    // monotonically (never a reset) — total attempts stay bounded by
+    // base × (1 + maxCycles).
+    try {
+      final ledger = ctx.world.getResource<OverseerLedger>();
+      maxAttempts = maxAttempts * (1 + ledger.cycles);
+    } on StateError {
+      // overseer not wired → base budget only
     }
     if (attempts >= maxAttempts) {
       final reason = 'goal_unverifiable: $attempts failed verification '

@@ -465,7 +465,7 @@ void main() {
             },
           },
           metadata: const <String, dynamic>{
-            'inferenceModel': 'poolside/laguna-xs-2.1:free',
+            'inferenceModel': 'deepseek/deepseek-v4-flash-0731',
           },
         ),
       );
@@ -474,7 +474,10 @@ void main() {
       final args = File(argsPath).readAsLinesSync();
       expect(
         args,
-        containsAllInOrder(<String>['--model', 'poolside/laguna-xs-2.1:free']),
+        containsAllInOrder(<String>[
+          '--model',
+          'deepseek/deepseek-v4-flash-0731',
+        ]),
       );
     }, skip: shellSkipReason);
 

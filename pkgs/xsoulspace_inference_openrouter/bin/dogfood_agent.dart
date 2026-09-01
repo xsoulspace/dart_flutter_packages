@@ -14,7 +14,7 @@
 ///
 /// ```sh
 /// OPENROUTER_API_KEY=... dart run bin/dogfood_agent.dart \
-///   [--model poolside/laguna-xs-2.1] [--runs 3]
+///   [--model deepseek/deepseek-v4-flash-0731] [--runs 3]
 /// ```
 /// Model policy: poolside tiers or `OR_MODEL` env override — never a
 /// non-partnering frontier model without explicit instruction.
@@ -56,7 +56,7 @@ const _taskPrompt =
 
 Future<void> main(List<String> args) async {
   var model =
-      Platform.environment['OR_MODEL'] ?? 'poolside/laguna-xs-2.1:free';
+      Platform.environment['OR_MODEL'] ?? 'deepseek/deepseek-v4-flash-0731';
   var runs = 1;
   var jailArg = '.dogfood_jail';
   for (var i = 0; i < args.length; i++) {
@@ -79,9 +79,8 @@ Future<void> main(List<String> args) async {
 
   final passed = <bool>[];
   for (var run = 1; run <= runs; run++) {
-    final jail = Directory(
-      run == 1 ? jailArg : '$jailArg$run',
-    )..createSync(recursive: true);
+    final jail = Directory(run == 1 ? jailArg : '$jailArg$run')
+      ..createSync(recursive: true);
 
     final world = World()..addPlugin(AgentPlugin());
     final recorder = FlightRecorder();
@@ -124,9 +123,9 @@ Future<void> main(List<String> args) async {
     final mid = ModelId('dogfood');
     router.models[mid] = Model(id: mid, name: OpenRouterModelNames.openRouter);
     world.upsertResource(ModelRouterResource(router));
-    world
-        .getResource<GenerationHandlerResource>()
-        .registerDefault(DefaultGenerationHandler(router: router));
+    world.getResource<GenerationHandlerResource>().registerDefault(
+      DefaultGenerationHandler(router: router),
+    );
 
     final scene = world.spawnComponents([const Scene(), SceneFrame()]);
     final actor = world.spawnComponents([
@@ -143,10 +142,13 @@ Future<void> main(List<String> args) async {
     world.flush();
 
     // Intent-graded verifier INSIDE the loop (bounded by J1.5 budgets).
-    wireIntentGradedGoal(world, sequence: const [
-      IntentExpectation('save_url', args: {'url': 'https://example.dev'}),
-      IntentExpectation('list_saved'),
-    ]);
+    wireIntentGradedGoal(
+      world,
+      sequence: const [
+        IntentExpectation('save_url', args: {'url': 'https://example.dev'}),
+        IntentExpectation('list_saved'),
+      ],
+    );
 
     final sigint = ProcessSignal.sigint.watch().listen((_) {
       stderr.writeln('\nSIGINT — recorder dump:\n${recorder.dump()}');
@@ -160,7 +162,10 @@ Future<void> main(List<String> args) async {
     var gateOk = true;
     final gateLog = <String>[];
     for (final check in const [
-      {'intent': 'save_url', 'args': {'url': 'https://gate.dev'}},
+      {
+        'intent': 'save_url',
+        'args': {'url': 'https://gate.dev'},
+      },
       {'intent': 'list_saved'},
     ]) {
       final out = await const _GateCaller().call(world, check);
@@ -168,15 +173,19 @@ Future<void> main(List<String> args) async {
       gateLog.add('${check['intent']} → $out');
     }
     passed.add(gateOk);
-    print('--- run $run/$runs — model: $model — verdict: '
-        '${gateOk ? 'PASS' : 'FAIL'}');
+    print(
+      '--- run $run/$runs — model: $model — verdict: '
+      '${gateOk ? 'PASS' : 'FAIL'}',
+    );
     print('gate: ${gateLog.join(' | ')}');
     print(sampleHarness(world).toText());
     print('recorder:\n${recorder.dump()}');
   }
-  print('summary — backend: open_router:$model n: $runs '
-      'passed: ${passed.where((p) => p).length} pass@$runs: '
-      '${passed.where((p) => p).length}/$runs');
+  print(
+    'summary — backend: open_router:$model n: $runs '
+    'passed: ${passed.where((p) => p).length} pass@$runs: '
+    '${passed.where((p) => p).length}/$runs',
+  );
   exit(passed.every((p) => p) ? 0 : 1);
 }
 
@@ -191,15 +200,16 @@ class _GateCaller {
     final call = registry(world).get(const ToolName('intent_call'))!;
     final args = <String>[
       'intent=${check['intent']}',
-      for (final e in (check['args'] as Map?)?.entries ?? const Iterable.empty())
+      for (final e
+          in (check['args'] as Map?)?.entries ?? const Iterable.empty())
         '${e.key}=${e.value}',
     ];
     final raw = await call.execute({'intent': check['intent'], 'args': args});
     return raw is Map
         ? (raw as Map).cast<String, dynamic>()
         : (raw as String).contains('"ok": true')
-            ? {'ok': true}
-            : {'ok': false, 'raw': raw};
+        ? {'ok': true}
+        : {'ok': false, 'raw': raw};
   }
 }
 

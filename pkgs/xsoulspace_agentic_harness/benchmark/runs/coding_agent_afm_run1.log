@@ -1,5 +1,5 @@
 coding_agent run — task: bugfix_01_off_by_one
-  backend: open_router:poolside/laguna-xs-2.1:free
+  backend: open_router:deepseek/deepseek-v4-flash-0731
   verdict: FAIL
   overhead tokens (system+schemas): 833
   decisions: 0
@@ -83,5 +83,3 @@ tick 300298: decisions=1 inFlight=1 pending=0 actors=agent-1788290661003650-0:0r
 tick 300398: decisions=1 inFlight=1 pending=0 actors=agent-1788290661003650-0:0r/3a
     agent-1788290661003650-0 ← : "Error: backend_failed. Retry with tighter context."
 tick 300486: decisions=0 inFlight=0 pending=0 actors=agent-1788290661003650-0:0r/3a
-
-
