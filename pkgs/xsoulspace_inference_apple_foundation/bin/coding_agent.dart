@@ -9,7 +9,10 @@
 ///
 /// - `--task intent_03_bookmark_macros` — the J1.4 gate (intent oracle).
 /// - `--task bugfix_01_off_by_one` — run-graded bugfix (runs-checker).
-/// - a bare sentence — run-graded build (`dart run main.dart` terminal proof).
+/// - a bare sentence + `--jail <dir>` — the workspace convention decides the
+///   check (D8/M0: `dart test` / `dart analyze` / `dart run main.dart`);
+///   `--check <command>` overrides it explicitly. A workspace with no
+///   resolvable convention is an honest exit(64) — pass `--check`.
 /// - `--runs N` (default 3) — pass@k protocol: fresh jail per run, per-run
 ///   logs + summary row to `benchmark/runs/` (K4). No single-run claims.
 /// - `--scripted` — LLM-free proof: the scripted suite handler through the
@@ -83,6 +86,34 @@ Future<void> main(List<String> args) async {
   final runs = resumePath != null
       ? 1 // one continuation per resume invocation
       : int.tryParse(cli['runs'] ?? '') ?? 3;
+  // M0/D8 — the free-sentence oracle: --check overrides, else the workspace
+  // convention resolved in the delegated jail (--jail). No jail → the legacy
+  // bare-file fallback (dart run main.dart); nothing resolvable in a
+  // provided workspace is an honest exit(64), never an invented criterion.
+  final check = cli['check'] == null
+      ? null
+      : splitCheckCommand(cli['check']!);
+  final workspaceDir = jailArg != null
+      ? (Directory(jailArg)..createSync(recursive: true))
+      : (resumeJail != null ? Directory(resumeJail) : null);
+  final CodingAgentTask task;
+  try {
+    task = taskId != null
+        ? (codingAgentTasks[taskId] ??
+              (throw ArgumentError.value(
+                taskId,
+                'task',
+                'unknown task; available: ${codingAgentTasks.keys.join(", ")}',
+              )))
+        : taskFromSentence(
+            sentence!,
+            check: check,
+            workspace: workspaceDir,
+          );
+  } on StateError catch (e) {
+    stderr.writeln('task: ${e.message}');
+    exit(64);
+  }
   // P1 dogfooding: `--backend open_router --model <or/model>` runs the SAME
   // loop with an OpenRouter model (native tool_calls, session-per-decision
   // codec). The backend label names the model (K discipline).
@@ -94,7 +125,8 @@ Future<void> main(List<String> args) async {
   if (taskId == null && sentence == null) {
     stderr.writeln(
       'usage: dart run bin/coding_agent.dart "<task sentence>" '
-      '[--task <suite-id>] [--jail <dir>] [--runs 3] [--scripted]',
+      '[--jail <dir>] [--check <command>] [--task <suite-id>] [--runs 3] '
+      '[--scripted]',
     );
     exit(64);
   }
@@ -108,14 +140,6 @@ Future<void> main(List<String> args) async {
   void emit(Map<String, Object?> event) {
     if (jsonOut) stdout.writeln(jsonEncode(event));
   }
-  final task = taskId != null
-      ? (codingAgentTasks[taskId] ??
-            (throw ArgumentError.value(
-              taskId,
-              'task',
-              'unknown task; available: ${codingAgentTasks.keys.join(", ")}',
-            )))
-      : taskFromSentence(sentence!);
 
   if (!scripted && !openRouter) {
     final client = AppleFoundationNativeClient();

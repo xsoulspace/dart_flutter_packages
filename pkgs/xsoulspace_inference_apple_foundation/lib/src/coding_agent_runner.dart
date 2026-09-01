@@ -188,14 +188,35 @@ final Map<String, CodingAgentTask> codingAgentTasks = {
   ),
 };
 
-/// A free-form task sentence → run-graded build task (`dart run main.dart`
-/// is the terminal proof — the PROVEN gate_run path, 5/20 on-device).
-CodingAgentTask taskFromSentence(String sentence) => CodingAgentTask(
-  id: 'free_form',
-  prompt: '$sentence Verify with the run tool (dart run main.dart).',
-  checkers: [CheckerSpec(type: 'runs', path: 'main.dart')],
-  runCommand: ['dart', 'run', 'main.dart'],
-);
+/// A free-form task sentence → run-graded task whose check comes from the
+/// **workspace convention** (D8/M0: the criterion lives in the workspace,
+/// not in per-task code) — the same implicit oracle pi uses. Resolution:
+/// explicit [check] (CLI `--check`) > workspace convention in [workspace] >
+/// `dart run main.dart` (the PROVEN bare-file fallback). Throws when nothing
+/// resolves — the host must fail honestly, never invent a criterion the
+/// workspace does not declare.
+CodingAgentTask taskFromSentence(
+  String sentence, {
+  List<String>? check,
+  Directory? workspace,
+}) {
+  final resolved =
+      check ?? (workspace == null ? null : resolveWorkspaceCheck(workspace));
+  final command = resolved ?? (workspace == null ? const ['dart', 'run', 'main.dart'] : null);
+  if (command == null) {
+    throw StateError(
+      'no verification criterion resolvable for the workspace at '
+      '"${workspace?.path}": no pubspec.yaml, no main.dart, no --check. '
+      'Pass --check <command> to declare what "done" means.',
+    );
+  }
+  return CodingAgentTask(
+    id: 'free_form',
+    prompt: '$sentence Verify with the run tool — the check must exit 0.',
+    checkers: [CheckerSpec(type: 'runs', path: command.last)],
+    runCommand: command,
+  );
+}
 
 /// One run's measured result — every published column is carried here.
 class CodingAgentRunResult {
@@ -457,11 +478,24 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
   }
   await onSnapshot?.call(world);
   if (!passed) {
-    // J7: the exhaustion stamp may land in the FINAL tick (no open
-    // decisions left), leaving no loop time for the overseer system to
-    // spawn. Give the overseer window one bounded session: it disposes
-    // (approve / repair(intent) / escalate) inside this single
-    // runUntilIdle; guards in the ledger keep it to one cycle.
+    // J8 rung 1 record FIRST: for NATIVE sessions the policy path cannot
+    // fire (no ToolResultPendingMarker — tools execute inside the native
+    // ReAct chain), so the DRIVER stamps the terminal record. The J7
+    // overseer window below keys off exactly this stamp.
+    if (world.query2<Actor, GoalAttemptsExhausted>().toList().isEmpty) {
+      world.getEntity(actor).$1.insert(
+        GoalAttemptsExhausted(
+          'goal_unverifiable: $attempt failed verification attempts '
+          '(budget $maxGoalAttempts). Last failure: '
+          '${[for (final c in finalGate) c.detail].join(" | ")}',
+        ),
+      );
+      world.flush();
+    }
+    // J7: the exhaustion stamp alone leaves NO open work — runUntilIdle
+    // would exit before the scheduled system ticks. Spawn the overseer
+    // explicitly, then give the disposition + (granted) repair one bounded
+    // session. Ledger guards keep it to one cycle.
     OverseerLedger? ledger;
     try {
       ledger = world.getResource<OverseerLedger>();
@@ -469,16 +503,7 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
       // overseer not wired → base ladder only
     }
     if (ledger != null && ledger.canAct) {
-      // Stamp-only worlds have no open work: runUntilIdle would exit before
-      // the scheduled system ticks. Spawn explicitly, then give the
-      // disposition + (granted) repair one bounded session.
-      final exhaustedCount =
-          world.query2<Actor, GoalAttemptsExhausted>().toList().length;
-      final spawned = maybeSpawnOverseer(world);
-      stderr.writeln(
-        '[p2-diag] fallback: ledger=${ledger.cycles}/${ledger.maxCycles} '
-        'exhausted=$exhaustedCount spawned=$spawned',
-      );
+      maybeSpawnOverseer(world);
       await HarnessLoop(world: world).runUntilIdle();
       finalGate = grade();
       passed = finalGate.isNotEmpty && finalGate.every((c) => c.passed);
@@ -486,16 +511,19 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
     }
   }
   if (!passed) {
-    // J8 rung 1: exhausted — the structured terminal record ships the
-    // failure class, not raw noise.
-    world.getEntity(actor).$1.insert(
-      GoalAttemptsExhausted(
-        'goal_unverifiable: $attempt failed verification attempts '
-        '(budget $maxGoalAttempts). Last failure: '
-        '${[for (final c in finalGate) c.detail].join(" | ")}',
-      ),
-    );
-    world.flush();
+    // The overseer window ran (approve/escalate/repair_denied) or the
+    // granted repair failed again — make sure the structured terminal
+    // record ships.
+    if (world.query2<Actor, GoalAttemptsExhausted>().toList().isEmpty) {
+      world.getEntity(actor).$1.insert(
+        GoalAttemptsExhausted(
+          'goal_unverifiable: $attempt failed verification attempts '
+          '(budget $maxGoalAttempts, overseer window spent). Last failure: '
+          '${[for (final c in finalGate) c.detail].join(" | ")}',
+        ),
+      );
+      world.flush();
+    }
   }
 
   // K columns from the durable thread record.

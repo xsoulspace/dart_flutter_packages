@@ -440,3 +440,124 @@ tick 192542: decisions=0 inFlight=0 pending=0 actors=agent-1788298251986394-0:0r
 tick 192542: decisions=0 inFlight=0 pending=0 actors=agent-1788298251986394-0:0r/3a
 
 
+coding_agent run — task: intent_03_bookmark_macros
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 1496
+  decisions: 7
+  tool rounds (thread beats): 47
+  moves: {intent_define.list: 1, intent_define.define: 44, intent_call: 2}
+  projection tokens (honest spend, Situation.tokensUsed): 15030
+  meaning nodes: 12, edges: 11
+  wall clock: 731222 ms
+  final gate (outer oracle, once): FAIL
+    check: materialized program missing: program.dart (action materialize was never run)
+  failure class: final gate: materialized program missing: program.dart (action materialize was never run)
+--- harness pulse (J1.5.3) ---
+tick 7 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788298902722115-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: materialized program missing: program.dart (action materialize was never run)
+— agent-1788298902722115-0  [idle]  rounds 0/12 (Σ0)  attempts 3/3 EXHAUSTED
+    last: intent_define:{"params":["url:string"],"specs":[{"b":"string","label":"… → FAILED
+      error: {"error":"spec row 8: next 9 out of range (0..8)","valid_ops":["load_arg","load_state","store_state","push_state","dr…
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 220625..245989
+tick 244225: decisions=1 inFlight=1 pending=0 actors=agent-1788298902722115-0:0r/3a
+    agent-1788298902722115-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 244325: decisions=1 inFlight=1 pending=0 actors=agent-1788298902722115-0:0r/3a
+    agent-1788298902722115-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 244425: decisions=1 inFlight=1 pending=0 actors=agent-1788298902722115-0:0r/3a
+    agent-1788298902722115-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 244525: decisions=1 inFlight=1 pending=0 actors=agent-1788298902722115-0:0r/3a
+    agent-1788298902722115-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 244625: decisions=1 inFlight=1 pending=0 actors=agent-1788298902722115-0:0r/3a
+    agent-1788298902722115-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 244725: decisions=1 inFlight=1 pending=0 actors=agent-1788298902722115-0:0r/3a
+    agent-1788298902722115-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 244825: decisions=1 inFlight=1 pending=0 actors=agent-1788298902722115-0:0r/3a
+    agent-1788298902722115-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 244925: decisions=1 inFlight=1 pending=0 actors=agent-1788298902722115-0:0r/3a
+    agent-1788298902722115-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 245025: decisions=1 inFlight=1 pending=0 actors=agent-1788298902722115-0:0r/3a
+    agent-1788298902722115-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 245125: decisions=1 inFlight=1 pending=0 actors=agent-1788298902722115-0:0r/3a
+    agent-1788298902722115-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 245225: decisions=1 inFlight=1 pending=0 actors=agent-1788298902722115-0:0r/3a
+    agent-1788298902722115-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 245325: decisions=1 inFlight=1 pending=0 actors=agent-1788298902722115-0:0r/3a
+    agent-1788298902722115-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 245425: decisions=1 inFlight=1 pending=0 actors=agent-1788298902722115-0:0r/3a
+    agent-1788298902722115-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 245525: decisions=1 inFlight=1 pending=0 actors=agent-1788298902722115-0:0r/3a
+    agent-1788298902722115-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 245625: decisions=1 inFlight=1 pending=0 actors=agent-1788298902722115-0:0r/3a
+    agent-1788298902722115-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 245725: decisions=1 inFlight=1 pending=0 actors=agent-1788298902722115-0:0r/3a
+    agent-1788298902722115-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 245825: decisions=1 inFlight=1 pending=0 actors=agent-1788298902722115-0:0r/3a
+    agent-1788298902722115-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 245925: decisions=1 inFlight=1 pending=0 actors=agent-1788298902722115-0:0r/3a
+    agent-1788298902722115-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 245989: decisions=0 inFlight=0 pending=0 actors=agent-1788298902722115-0:0r/3a
+tick 245989: decisions=0 inFlight=0 pending=0 actors=agent-1788298902722115-0:0r/3a
+
+
+coding_agent run — task: free_form
+  backend: open_router:deepseek/deepseek-v4-flash-0731
+  verdict: FAIL
+  overhead tokens (system+schemas): 1058
+  decisions: 0
+  tool rounds (thread beats): 0
+  moves: {}
+  projection tokens (honest spend, Situation.tokensUsed): 7593
+  meaning nodes: 0, edges: 0
+  wall clock: 1921 ms
+  final gate (outer oracle, once): FAIL
+    check: dart test exit=1:
+  failure class: final gate: dart test exit=1:
+--- harness pulse (J1.5.3) ---
+tick 0 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788299903068466-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: dart test exit=1:
+— agent-1788299903068466-0  [idle]  rounds 0/12 (Σ0)  attempts 3/3 EXHAUSTED
+--- flight recorder ---
+FlightRecorder: 3 pulse(s), ticks 8..12
+tick 8: decisions=0 inFlight=0 pending=0 actors=agent-1788299903068466-0:0r/1a
+tick 10: decisions=0 inFlight=0 pending=0 actors=agent-1788299903068466-0:0r/2a
+tick 12: decisions=0 inFlight=0 pending=0 actors=agent-1788299903068466-0:0r/3a
+
+

@@ -444,6 +444,56 @@ reproducible.
 - **Acceptance:** every number in `results_stage_j.md` states backend,
   decision path, tokens source, tool surface, and n.
 
+## Stage M — delegation surface: a2a dogfooding (ADR 0019)
+
+**Goal:** the harness is used as a real CLI coding agent (like pi), driven a2a
+by another agent (pi) — real work delegation + real problems discovery, with
+every delegation row doubling as Phase 8 evidence.
+
+**Decision D8 — the goal vector carries verification criteria; the oracle
+executor is generic host code.** Hardcoded per-task checkers conflated the
+criterion (what proves the task done — ADR 0009: part of the goal vector)
+with the executor (run a command → exit-0 — generic, already `RunGoalSpec`).
+Resolution:
+
+- **Default oracle = workspace convention** (LLM-free, zero per-task code):
+  mechanically discovered in the jail — Dart package with tests →
+  `dart test`; Dart package without tests → `dart analyze`; bare `main.dart`
+  → `dart run main.dart`. Same oracle for every task in a workspace class.
+- **`--check <command>`** carries a sentence-named criterion; explicit beats
+  convention.
+- **Model-proposed criteria as data** (M0b, follow-up): one native tool call
+  proposes criteria (commands/expectations); the host executes them
+  mechanically — the model proposes, exit-0 decides, never self-graded
+  (same trust model as `intent_define`).
+- Per-task suite fixtures (`--task`) remain as benchmark fixtures only.
+
+Shapes (sequenced; each produces signal before the next is built):
+
+- [x] `M0` — general oracle: `resolveWorkspaceCheck` (LLM-free fs resolver)
+  + `taskFromSentence` uses it + `--check` override + honest failure when no
+  convention resolves. LLM-free test.
+- [ ] `M0b` — model-proposed criteria as data (native tool call,
+  host-executed, mechanically graded).
+- [x] `M1` — sidecar delegation: pi drives `coding_agent.dart --json
+  --backend open_router --runs 1` per delegation via process spawn; NDJSON
+  events parsed; verdict + failure_class recorded. No core change (D5).
+- [x] `M2` — real-history replay miner (LLM-free): git log → delegation
+  manifest (commit, sentence, package, proposed check). Jail seeding
+  automation is the follow-up; the manifest IS the problems-discovery
+  artifact.
+- [ ] `M3` — `HarnessAcpBackend` over `dart_acp_toolkit` (IntentCall repo):
+  session/new → `--session` store, session/prompt → resume+inject,
+  session/update ← NDJSON events, request_permission ← write gate review
+  mode. Build AFTER ≥5 M1 delegations shape the API.
+- [ ] `M4` — pi-as-actor: host-injected decisions (`openFreshDecision`) for
+  external-agent messages on a shared thread (a2h2a). Same transport as M3
+  plus world-state semantics.
+
+Operating cautions: prefer `--backend open_router` until the P1 bridge crash
+is fixed; pin model ids; one process per delegation first; `--auto-approve`
+only inside a disposable jail.
+
 ## Acceptance (end state)
 
 1. [ ] Bookmark executor passes on-device at pass@3 ≥ 1/3, no context
