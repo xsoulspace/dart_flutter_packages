@@ -343,3 +343,100 @@ tick 319030: decisions=0 inFlight=0 pending=0 actors=agent-1788296818583839-0:0r
 tick 319030: decisions=0 inFlight=0 pending=0 actors=agent-1788296818583839-0:0r/3a
 
 
+coding_agent run — task: intent_03_bookmark_macros
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 1496
+  decisions: 6
+  tool rounds (thread beats): 39
+  moves: {intent_define.list: 6, intent_define.define: 16, act_with_project.materialize: 6, intent_call: 11}
+  projection tokens (honest spend, Situation.tokensUsed): 13455
+  meaning nodes: 13, edges: 11
+  wall clock: 561289 ms
+  final gate (outer oracle, once): FAIL
+    check: intents failed: save_url -> {error: return without value (op op_28): the chain reached the return op with an empty stack - push a literal (or the value to return) BEFORE the return op}; save_url -> {error: return without value (op op_28): the chain reached the return op with an empty stack - push a literal (or the value to return) BEFORE the return op}; list_saved -> {value: 0}; save_url -> {error: return without value (op op_28): the chain reached the return op with an empty stack - push a literal (or the value to return) BEFORE the return op}
+  failure class: final gate: intents failed: save_url -> {error: return without value (op op_28): the chain reached the return op with an empty stack - push a literal (or the value to return) BEFORE the return op}; save_url -> {error: return without value (op op_28): the chain reached the return op with an empty stack - push a literal (or the value to return) BEFORE the return op}; list_saved -> {value: 0}; save_url -> {error: return without value (op op_28): the chain reached the return op with an empty stack - push a literal (or the value to return) BEFORE the return op}
+--- harness pulse (J1.5.3) ---
+tick 6 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788298251986394-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: intents failed: save_url -> {error: return without value (op op_28): the chain reached the return op with an empty stack - push a literal (or the value to return) BEFORE the return op}; save_url -> {error: return without value (op op_28): the chain reached the return op with an empty stack - push a literal (or the value to return) BEFORE the return op}; list_saved -> {value: 0}; save_url -> {error: return without value (op op_28): the chain reached the return op with an empty stack - push a literal (or the value to return) BEFORE the return op}
+— agent-1788298251986394-0  [idle]  rounds 0/12 (Σ0)  attempts 3/3 EXHAUSTED
+    last: intent_call:{"args":["http://example.com/bookmark1"],"intent":"save_u… → FAILED
+      error: {"ok":false,"intent":"save_url","result":{"error":"return without value (op op_28): the chain reached the return op w…
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 167270..192542
+tick 190809: decisions=1 inFlight=1 pending=0 actors=agent-1788298251986394-0:0r/3a
+    agent-1788298251986394-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: true};…"
+tick 190909: decisions=1 inFlight=1 pending=0 actors=agent-1788298251986394-0:0r/3a
+    agent-1788298251986394-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: true};…"
+tick 191009: decisions=1 inFlight=1 pending=0 actors=agent-1788298251986394-0:0r/3a
+    agent-1788298251986394-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: true};…"
+tick 191109: decisions=1 inFlight=1 pending=0 actors=agent-1788298251986394-0:0r/3a
+    agent-1788298251986394-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: true};…"
+tick 191209: decisions=1 inFlight=1 pending=0 actors=agent-1788298251986394-0:0r/3a
+    agent-1788298251986394-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: true};…"
+tick 191309: decisions=1 inFlight=1 pending=0 actors=agent-1788298251986394-0:0r/3a
+    agent-1788298251986394-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: true};…"
+tick 191409: decisions=1 inFlight=1 pending=0 actors=agent-1788298251986394-0:0r/3a
+    agent-1788298251986394-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: true};…"
+tick 191509: decisions=1 inFlight=1 pending=0 actors=agent-1788298251986394-0:0r/3a
+    agent-1788298251986394-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: true};…"
+tick 191609: decisions=1 inFlight=1 pending=0 actors=agent-1788298251986394-0:0r/3a
+    agent-1788298251986394-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: true};…"
+tick 191709: decisions=1 inFlight=1 pending=0 actors=agent-1788298251986394-0:0r/3a
+    agent-1788298251986394-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: true};…"
+tick 191809: decisions=1 inFlight=1 pending=0 actors=agent-1788298251986394-0:0r/3a
+    agent-1788298251986394-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: true};…"
+tick 191909: decisions=1 inFlight=1 pending=0 actors=agent-1788298251986394-0:0r/3a
+    agent-1788298251986394-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: true};…"
+tick 192009: decisions=1 inFlight=1 pending=0 actors=agent-1788298251986394-0:0r/3a
+    agent-1788298251986394-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: true};…"
+tick 192109: decisions=1 inFlight=1 pending=0 actors=agent-1788298251986394-0:0r/3a
+    agent-1788298251986394-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: true};…"
+tick 192209: decisions=1 inFlight=1 pending=0 actors=agent-1788298251986394-0:0r/3a
+    agent-1788298251986394-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: true};…"
+tick 192309: decisions=1 inFlight=1 pending=0 actors=agent-1788298251986394-0:0r/3a
+    agent-1788298251986394-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: true};…"
+tick 192409: decisions=1 inFlight=1 pending=0 actors=agent-1788298251986394-0:0r/3a
+    agent-1788298251986394-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: true};…"
+tick 192509: decisions=1 inFlight=1 pending=0 actors=agent-1788298251986394-0:0r/3a
+    agent-1788298251986394-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: true};…"
+tick 192542: decisions=0 inFlight=0 pending=0 actors=agent-1788298251986394-0:0r/3a
+tick 192542: decisions=0 inFlight=0 pending=0 actors=agent-1788298251986394-0:0r/3a
+
+

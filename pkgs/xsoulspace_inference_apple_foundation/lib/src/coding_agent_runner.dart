@@ -472,7 +472,13 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
       // Stamp-only worlds have no open work: runUntilIdle would exit before
       // the scheduled system ticks. Spawn explicitly, then give the
       // disposition + (granted) repair one bounded session.
-      maybeSpawnOverseer(world);
+      final exhaustedCount =
+          world.query2<Actor, GoalAttemptsExhausted>().toList().length;
+      final spawned = maybeSpawnOverseer(world);
+      stderr.writeln(
+        '[p2-diag] fallback: ledger=${ledger.cycles}/${ledger.maxCycles} '
+        'exhausted=$exhaustedCount spawned=$spawned',
+      );
       await HarnessLoop(world: world).runUntilIdle();
       finalGate = grade();
       passed = finalGate.isNotEmpty && finalGate.every((c) => c.passed);
