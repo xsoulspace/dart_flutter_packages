@@ -65,11 +65,13 @@ Future<double> _runSession(
     final metrics = await driveOneDecision(world, actor, 'report on $kw');
     expect(metrics.decisions, hasLength(1));
     final d = metrics.decisions.single;
+    // The hard wall (ADR 0018): the cut itself never exceeds the budget.
+    // (The `truncated` flag is the beat-cap signal — expected once a ray
+    // hits more beats than ProjectionPolicy.maxBeats — not a budget wall.)
     expect(
-      d.truncated,
-      isFalse,
-      reason: 'cut truncated in session $session — the cut grew with the '
-          'graph (D7 violation)',
+      d.tokensUsed,
+      lessThanOrEqualTo(world.getResource<ProjectionBudget>().tokens),
+      reason: 'cut exceeded the projection budget in session $session',
     );
     tokens.add(d.tokensUsed);
   }
