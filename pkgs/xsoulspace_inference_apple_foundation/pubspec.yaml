@@ -11,6 +11,8 @@ resolution: workspace
 
 dependencies:
   code_assets: any
+  dart_acp_toolkit:
+    path: /Users/antonio/mcp/cline/intentcall/packages/acp_toolkit
   ecsly_serialization: ^0.1.0-dev.1
   ffi: ^2.2.0
   hooks: any

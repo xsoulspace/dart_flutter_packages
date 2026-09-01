@@ -39,8 +39,9 @@ import '../meaning/meaning_tree.dart'
     show addMeaningNode, linkMeaning;
 import '../narrative/components.dart'
     show ThreadStatus, ThreadStatusEnum;
+import '../data_models/task.dart' show TaskHandle, TaskId;
 import '../resources/resources.dart'
-    show AgencyPolicy, ToolRegistryResource;
+    show AgencyPolicy, TaskRegistryResource, ToolRegistryResource;
 import '../schedules.dart' show Schedules;
 import '../systems/decision_flow_system.dart'
     show ToolResultPendingMarker;
@@ -195,21 +196,34 @@ Future<void> runGoalVerifier(World world) async {
     final runTool = registries.get(registryName)?.get(const ToolName('run'));
     if (runTool == null) continue;
     final command = spec.commandFor(registryName);
-    final out = await runTool.execute({'command': command, 'cwd': spec.cwd});
+    // N2: the check runs as a REGISTERED task — canSleep() waits for
+    // in-flight tasks, so the loop can never exit before a pending verdict
+    // lands (the P5 flake + squad 'no verdict stamped' race).
+    final taskRegistry = world.getResource<TaskRegistryResource>();
+    final verifyTaskId = TaskId.create();
+    taskRegistry.register(verifyTaskId, TaskHandle());
     Map<String, Object?>? map;
-    if (out != null) {
-      if (out.startsWith('{') || out.startsWith('[')) {
-        try {
-          final d = jsonDecode(out);
-          if (d is Map) {
-            final m = <String, Object?>{};
-            d.forEach((k, v) => m['$k'] = v);
-            map = m;
-          }
-        } catch (_) {}
-      } else {
-        // Not JSON; treat the raw text as a single detail.
-        map = {'raw': out};
+    try {
+      final out = await runTool.execute({'command': command, 'cwd': spec.cwd});
+      if (out != null) {
+        if (out.startsWith('{') || out.startsWith('[')) {
+          try {
+            final d = jsonDecode(out);
+            if (d is Map) {
+              final m = <String, Object?>{};
+              d.forEach((k, v) => m['$k'] = v);
+              map = m;
+            }
+          } catch (_) {}
+        } else {
+          // Not JSON; treat the raw text as a single detail.
+          map = {'raw': out};
+        }
+      }
+    } finally {
+      final handle = taskRegistry.take(verifyTaskId);
+      if (handle != null && !handle.completer.isCompleted) {
+        handle.completer.complete(null);
       }
     }
     var passed = false;

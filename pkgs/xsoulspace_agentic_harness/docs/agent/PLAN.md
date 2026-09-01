@@ -521,28 +521,35 @@ race the flush coherence point does not cover. `JailWriteGateway` owns the
 rule. First squad tasks must be FILE-DISJOINT (analyzer issues partition by
 file; barrel+implementation pairs are ONE task).
 
-- [ ] `N1` — **analyzer task board** (LLM-free): parse
+- [x] `N1` — **analyzer task board** (LLM-free): parse
   `dart analyze --format=machine` → issues → file-disjoint board tasks, each
   a goal with a mechanical criterion (file analyzes clean). The board IS the
-  problems-discovery artifact.
-- [ ] `N2` — **multi-actor squad, single process**: several actors bound to
-  different router models; mechanical task assignment (assignment is NOT an
-  LLM decision — agency discipline); single-writer gateway; escalation =
-  address another actor, then structured FAIL. LLM-free scripted proof:
-  two actors, two disjoint tasks, board drains, `expectIdle`.
-- [ ] `N3` — **daemon** (`harnessd`): the N2 world as a long-lived process
-  + `HarnessAcpBackend` over `dart_acp_toolkit` (sessions = threads;
-  snapshot after every loop session; restart-safe via P5).
-- [ ] `N4` — **pi joins**: `session/prompt` → host-injected decision
-  (`openFreshDecision`) on a pi-actor; world events stream back; write-gate
-  diffs route to the client as permission requests (pi/human approves).
-  pi doubles as the TOP ESCALATION RUNG (a2a to the strongest model in the
-  squad, not a model swap).
-- [ ] `N5` — **squad hardening + metrics**: a2a columns (handoffs,
-  duplicate-work detection, stale-projection reads) beside the K columns;
-  AFM rejoins when the P1 bridge crash is fixed; free-tier models labeled
-  per row; roles become projections (scout = board + read surface; fixer =
-  one task's file set).
+  problems-discovery artifact. Tests: `analyze_board_test.dart`.
+- [x] `N2` — **multi-actor squad, single process**: per-file single-writer
+  (`FileLockTable` + per-actor gateways, cross-owner writes rejected before
+  the gate); per-actor run-graded verification (`commandByRegistry`, stamps
+  ONLY the pending actor); **race fixed** — verification now runs as a
+  registered task so `canSleep()` waits for pending verdicts (the P5 flake
+  was the same race). LLM-free proof: `squad_driver_test.dart` — two actors,
+  two disjoint tasks, one world, board drains, `expectIdle`.
+- [x] `N3` — **daemon** (`harnessd`): `bin/harnessd.dart` +
+  `HarnessAcpBackend` over `dart_acp_toolkit`; sessions = threads; world
+  snapshot persisted per turn (P5); free task sentence + D8 workspace
+  convention oracle.
+- [x] `N4` — **pi joins (LIVE)**: pi drove `harnessd` over raw stdio
+  JSON-RPC: initialize → session/new(cwd) → session/prompt → streamed
+  tool_call_update/agent_message_chunk → verdict. Protocol **PASS**; task
+  **FAIL (honest)**: deepseek-v4-flash exploration loop (26 decisions, no
+  write, `dart test exit=1`) — failure class feeds N5. pi-as-escalation-rung
+  (a2a to the strongest model in the squad) lands with N5; write-gate ACP
+  permission round-trips are the named N4 gap (apply-mode inside the
+  delegated workspace for now).
+- [ ] `N5` — **squad hardening + metrics**: loop-breaker must catch the
+  exploration loop class seen live; task-prompt templating (where to look,
+  write early); a2a columns (handoffs, duplicate-work detection,
+  stale-projection reads) beside the K columns; AFM rejoins when the P1
+  bridge crash is fixed; free-tier models labeled per row; roles become
+  projections; pi-as-escalation-rung; write-gate permission via ACP.
 
 Honest boundary: first squad tasks are file-disjoint analyzer issues and
 failing tests in harness packages. Cross-file refactors wait for N5

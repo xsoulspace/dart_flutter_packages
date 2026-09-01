@@ -28,3 +28,33 @@ Driver: pi (deepseek via pi coding agent) delegating over process spawn to
 
 Both are integration seams invisible without a real end-to-end delegation —
 the M1 shape earned its keep before Shape 2 started.
+
+# Stage N — live squad evidence (2026-09-02)
+
+## N1 — analyzer task board
+LLM-free: machine-format parse → file-disjoint tasks, criterion = `dart analyze <file>`.
+Tests: `analyze_board_test.dart` (4/4, incl. real analyzer on a dirty fixture).
+
+## N2 — multi-actor squad (single process)
+- Per-file single-writer: `FileLockTable` + per-actor gateways; cross-owner
+  writes rejected with a structured ack BEFORE the gate; test proves
+  rejected content never lands + release restores writability.
+- Per-actor run-graded verification: `RunGoalSpec.commandByRegistry` keyed by
+  registry name; verdicts stamp ONLY the pending actor.
+- **Race found + fixed**: the verifier's subprocess completed AFTER
+  `runUntilIdle` could sleep (P5 flake + squad 'no verdict stamped').
+  Fix: verification runs as a REGISTERED task — canSleep() now waits for it.
+- Tests: `squad_driver_test.dart` (2/2): two actors, two disjoint tasks,
+  one world, board drains, idle.
+
+## N3/N4 — daemon + pi joins (LIVE a2a proof)
+- `bin/harnessd.dart` + `HarnessAcpBackend` over `dart_acp_toolkit`:
+  initialize → session/new(cwd) → session/prompt(free sentence) → streamed
+  session/update (tool_call_update per move, agent_message_chunk) → verdict.
+- D8 end-to-end: check = workspace convention (`dart test`), zero per-task
+  checker code.
+- Protocol: **PASS** (pi drove the daemon over raw stdio JSON-RPC).
+- Task outcome: **FAIL (honest)** — deepseek-v4-flash ran an exploration
+  loop (26 decisions, 50 rounds, list_dir/glob, never wrote lib/greet.dart;
+  `dart test exit=1`). Failure class: exploration/no-write. Feeds N5:
+  loop-breaker catch + task-prompt templating (where to look, write early).
