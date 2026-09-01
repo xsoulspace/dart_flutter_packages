@@ -10,7 +10,9 @@
 > reliably. Each stage is independently testable, LLM-free first, and ends
 > with an `expectIdle`-clean harness test. Failures are data.
 
-**Status (2026-08-28).** Stages A–I landed: meaning tree as world state (zoom
+**Status (2026-08-28).** J1.1–J1.3 landed; J1.5 (loop bounds + runtime
+observability) landed after the fix-stage endless-loop incident — see its
+section for the traced hazards. Stages A–I landed: meaning tree as world state (zoom
 projection: point/local/region/summary), AE wire port, intent closure v1
 (`intent_define`/`intent_call`), 22-task suite 100% scripted (incl. the
 meaning-executor arm), prose host #2 at `evidence` tier, and four on-device
@@ -81,22 +83,87 @@ live in host packages (ADR 0015). Dart is the first and reference domain.
 **Goal:** make the bookmark executor pass on-device. Attack move density and
 prompt tax together.
 
-- [ ] `J1.1` — composite sub-actions as **host programs** on
+- [x] `J1.1` — composite sub-actions as **host programs** on
   `act_with_project` (closed enum extension): `add_chain(specs)` (build a
   full op chain, host assigns ids), `link_chain(edges)`, `redefine_intent(
   name, ops)` (**atomic drop + rebuild of one intent's chain** — the scoped
   repair that absorbs accretion without general deletion). Every macro
   returns a point-zoom ack + problems list (D6).
-- [ ] `J1.2` — prompt/schema budget: system prompt ≤ ~100 tokens; teaching
-  moves into tool descriptions + teaching beats; measure `overhead_tokens`
-  (prompt + schemas + system) and target ≤ 1500 of the 4096 window.
-- [ ] `J1.3` — macro surface is closed + countable (stewardship probe);
+- [x] `J1.2` — prompt/schema budget: teaching moves into tool descriptions
+  + teaching beats; `overhead_tokens` measured at **1487 ≤ 1500** of the
+  4096 window (`intent_closure_budget_test.dart`, published).
+- [x] `J1.3` — macro surface is closed + countable (stewardship probe);
   macro results identical to the equivalent primitive sequence (parity test).
+  Suite task `intent_03_bookmark_macros` scripted green (suite count 23).
+- [ ] `J1.4` (benchmark gate, still open) — AFM: bookmark executor passes
+  at **pass@3 ≥ 1/3** with zero context overflows; moves/subtask ≤ 6.
 - **Tests (LLM-free):** macro parity vs primitive sequence; accretion test
   (define → break → `redefine_intent` → oracle green); suite task
   `intent_03_bookmark_macros` (same oracle, fewer moves); suite count 22→23.
 - **Benchmark gate (AFM):** bookmark executor passes at **pass@3 ≥ 1/3**
   with zero context overflows; moves/subtask ≤ 6; `overhead_tokens` published.
+
+### J1.5 — Loop bounds + runtime observability (pulled forward from J6.4/J8.1; added 2026-08-28 after the fix-stage endless-loop incident)
+
+**Why:** the repair/fixing stage went live before its bounds existed. Traced
+hazards: (a) `RunGradedGoalPolicy` re-opens a fresh decision on every failing
+verifier stamp and `ToolRoundCount` is reset by any text-only turn, so
+fix→fail→fix cycles consume **no monotonic budget** — the only stop is
+`runUntilIdle`'s 2M-tick StateError, which names no loop and no cause;
+(b) driver-injected retries (AFM `intent_closure_afm.dart` upserts
+`OpenDecision` directly) do NOT reset `ToolRoundCount` → retries start with a
+silently shrunken round budget (non-deterministic starvation); (c) all run
+state (beats, decisions, loop streaks, verdicts, tokens) is post-hoc — a
+running harness is a silent terminal. Plan rule applied: *failures are data* —
+a hung run currently ships zero data.
+
+- [x] `J1.5.1` — **monotonic `AttemptCount`** (F1): every failing
+  `GoalVerified` stamp via the verifier→policy path increments a component
+  that is NEVER reset by prose turns. At `maxGoalAttempts` the policy stops
+  re-prompting, stamps `EscalationRequest` with a structured reason
+  (`failure class: goal_unverifiable`), and suspends the thread — the
+  ladder's bottom rung (J8.1) landed early; the loop provably terminates.
+- [x] `J1.5.2` — **round-budget semantics** (F2): fresh budgets come ONLY
+  from `openFreshDecision` (host-injected new tasks/retries) or a text-only
+  final answer; a monotonic `TotalRoundCount` keeps the lifetime ledger.
+  Policy `thenOpen` re-prompts stay chain-bounded — a policy-name-based
+  reset made composition flows unbounded (`prototype_from_sentence`
+  regression, caught by CI and reverted); `RunGradedGoalPolicy` cycling is
+  bounded instead by J1.5.1's `AttemptCount`.
+- [x] `J1.5.3` — **`WorldInspector` + `HarnessPulse` + `FlightRecorder`**
+  (F3/core): an in-world sampler emitting a typed per-tick snapshot —
+  per-actor decision stack (prompt, origin, round x/cap, retries, attempts,
+  last call/result, `LoopStuck`, `GoalVerified`), loop-smoke detector
+  (repeated failing signatures + decisions-opened-by-policy histogram with
+  the loop signature), token spend. `FlightRecorder` = ring buffer,
+  auto-dumped on maxTicks StateError / SIGINT so headless runs leave a
+  post-mortem. LLM-free testable.
+- [x] `J1.5.4` — **`HarnessProfilerView`** (host): Flutter widget over the
+  pulse — three panes: actor/decision stack, live beat timeline, meaning
+  cut at the same zoom the model sees (`meaningView` reuse — "profiler
+  shows what the model sees"). Lives in a host package (ADR 0015).
+- [x] `J1.5.5` — **driver wiring**: AFM driver registers the inspector,
+  resets `AttemptCount` on a FRESH task (not a repair retry), dumps the
+  flight recorder on exit (pass, fail, or interrupt); K-column data
+  (retries, verdicts, decisions) printed even for failed runs.
+- [x] `J1.5.6` — **backend-error retry budget** (found BY the monitor on
+  the first wired on-device run): `RetryCount` was reset by every resolved
+  response, so a flaky backend alternating `backend_failed` ↔ tool-calling
+  responses retried forever (255× identical prompts). Fix: the budget
+  survives tool-call continuations (ADR 0004 chain semantics), resets only
+  on a text-only final answer.
+- **Tests (LLM-free):** attempt budget exhausts → thread suspended +
+  `EscalationRequest`, world still `expectIdle`; retry decision resets
+  round budget; total count monotonic; pulse snapshot shape (stack, streak
+  detection, verdicts); flight recorder dumps on simulated exhaustion;
+  flaky-backend loop bounded; detector counts cycles, not held-open
+  decisions.
+- **Gate:** no on-device fix-stage run proceeds without the inspector
+  attached; every future "endless loop" incident report must cite the
+  pulse/flight-recorder dump, not a bisect-by-code-reading.
+- **Results:** [results_stage_j15.md](results_stage_j15.md) — full numbers
+  incl. on-device validation (J1.4 still open; blocker now precisely
+  diagnosed: meaning-executor wiring, no longer an observability blind spot).
 
 ### J2 — Context ownership experiment
 

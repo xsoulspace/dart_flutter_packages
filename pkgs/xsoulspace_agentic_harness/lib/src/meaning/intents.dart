@@ -20,12 +20,15 @@
 /// Transport adapters live in host/provider packages — never in core.
 library;
 
+import 'dart:convert';
+
 import 'package:ecsly/ecsly.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart'
     show FM, SchemaBundle, ToolDef, ToolName;
 
 import 'meaning_program.dart'
-    show hasMeaningExecutor, interpretMeaningProgram;
+    show addChainFromSpecs, chainSpecError, hasMeaningExecutor,
+        interpretMeaningProgram, meaningExecutorOps, validateMeaningProgram;
 import 'meaning_tree.dart' as mt;
 
 // ---------------------------------------------------------------------------
@@ -33,7 +36,7 @@ import 'meaning_tree.dart' as mt;
 // ---------------------------------------------------------------------------
 
 /// The model-facing vocabulary of `intent_define` sub-actions.
-const intentDefineActions = <String>['define', 'list'];
+const intentDefineActions = <String>['define', 'list', 'redefine_chain'];
 
 /// One intent definition as it travels on the wire / in the cut.
 Map<String, dynamic> intentNodeJson(Map<String, dynamic> node) {
@@ -146,9 +149,11 @@ ToolDef intentDefineTool(World world) => ToolDef.encode(
   name: const ToolName('intent_define'),
   description:
       'Define (or re-define) an intent of the program you are building: '
-      'its name, typed params (each as "name:type", e.g. "x:int"), return '
-      'type, and what it does. The host implements it — you describe the '
-      'contract. Sub-actions: define, list.',
+      'name, typed params ("name:type"), return type, description. '
+      'Sub-actions: define (contract only); list; redefine_chain (ONE move '
+      'defines the intent AND wires its whole op chain from specs — labels '
+      'MUST be from the closed op vocabulary; replacing an existing chain '
+      'is atomic).',
   argsSchema: SchemaBundle(
     root: FM.object('intent_define', properties: () => [
       FM.prop('action', FM.enum_('action', intentDefineActions)),
@@ -156,6 +161,12 @@ ToolDef intentDefineTool(World world) => ToolDef.encode(
       FM.prop('params', FM.array(FM.string()), optional: true),
       FM.prop('returns', FM.string(), optional: true),
       FM.prop('description', FM.string(), optional: true),
+      FM.prop('specs', FM.array(FM.object('spec', properties: () => [
+        FM.prop('label', FM.string()),
+        FM.prop('a', FM.string(), optional: true),
+        FM.prop('b', FM.string(), optional: true),
+        FM.prop('next', FM.integer(), optional: true),
+      ])), optional: true),
     ]),
   ),
   execute: (args) async {
@@ -182,6 +193,72 @@ ToolDef intentDefineTool(World world) => ToolDef.encode(
               : '',
         );
         return {'ok': true, 'defined': intent};
+      case 'redefine_chain':
+        // J1 macro (ADR 0018): ONE move defines the intent AND wires its
+        // whole op chain — declarative spec rows, host tracks every id,
+        // old chain dropped atomically. Scoped repair without deletion risk.
+        final name = map['name'];
+        if (name is! String || name.isEmpty) {
+          return {'error': 'redefine_chain requires name'};
+        }
+        final specs = map['specs'];
+        if (specs is! List || specs.isEmpty) {
+          return {'error': 'redefine_chain requires specs: [{label, a?, b?}]'};
+        }
+        // Shape-validate BEFORE touching state (atomicity: a malformed
+        // request must never drop a working chain). Errors carry the closed
+        // vocabulary so an invalid op name (e.g. `load`) is fixed in the
+        // NEXT move, not discovered at oracle time (AFM run3 finding).
+        final specError = chainSpecError(specs);
+        if (specError != null) {
+          return {'error': specError, 'valid_ops': meaningExecutorOps};
+        }
+        // Dedup guard (thrash damping): an identical, previously-built
+        // chain spec is a cheap no-op — no drop, no rebuild, no churn.
+        final normalized = jsonEncode([
+          for (final s in specs)
+            if (s is Map)
+              {
+                for (final k in ['label', 'a', 'b', 'next'])
+                  if (s[k] != null) k: s[k],
+              }
+        ]);
+        final existingSpec = _chainSpecProp(world, name);
+        if (existingSpec == normalized && mt.hasMeaningNode(world, name)) {
+          return {
+            'ok': true,
+            'intent': name,
+            'unchanged': true,
+            'problems': validateMeaningProgram(world),
+          };
+        }
+        final dropped = mt.hasMeaningNode(world, name)
+            ? mt.dropMeaningChain(world, name)
+            : 0;
+        defineIntent(
+          world,
+          name: name,
+          params: [
+            if (map['params'] is List)
+              for (final p in map['params'] as List)
+                if (p is String) p,
+          ],
+          returns: map['returns'] is String ? map['returns'] as String : 'void',
+          description: map['description'] is String
+              ? map['description'] as String
+              : '',
+        );
+        final ids = addChainFromSpecs(world, specs)!;
+        mt.linkMeaning(world, from: name, relation: 'impl', to: ids.first);
+        mt.setMeaningProp(world, id: name, key: '_chainSpec', value: normalized);
+        final problems = validateMeaningProgram(world);
+        return {
+          'ok': problems.isEmpty,
+          'defined': name,
+          'ids': ids,
+          'dropped': dropped,
+          'problems': problems,
+        };
       default:
         return {'error': 'unknown action: ${map['action']}'};
     }
@@ -264,3 +341,14 @@ ToolDef intentCallTool(World world) => ToolDef.encode(
     );
   },
 );
+
+/// Reads the stored `_chainSpec` signature from the intent node (dedup key).
+String? _chainSpecProp(World world, String name) {
+  for (final node in mt.meaningView(world).nodes) {
+    if (node['id'] == name && node['kind'] == 'intent') {
+      final v = (node['props'] as Map?)?['_chainSpec'];
+      return v is String ? v : null;
+    }
+  }
+  return null;
+}

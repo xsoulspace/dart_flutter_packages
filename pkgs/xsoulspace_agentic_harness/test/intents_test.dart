@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:xsoulspace_agentic_harness/src/tooling/build_gates.dart';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
+import 'package:xsoulspace_agentic_harness/src/meaning/meaning_tree.dart' as mt;
 
 World _world() => World()..addPlugin(AgentPlugin());
 Map<String, dynamic> _dec(Object? raw) {
@@ -161,5 +162,198 @@ void main() {
     // The run-graded policy consumes the same stamp → no next decision.
     final ctx = DecisionContext(actor: verified.$1.entity, world: world, tick: 1);
     expect(const RunGradedGoalPolicy().evaluate(ctx), isNull);
+  });
+
+  // ---- J1 macro on the intent surface: redefine_chain (ADR 0018) ----
+  test('redefine_chain macro: atomic drop + rebuild repairs accretion',
+      () async {
+    final world = _world();
+    final define = intentDefineTool(world);
+
+    // A BROKEN chain first: impl wired to a dead-end chain (no return op).
+    await define.execute({'action': 'define', 'name': 'save_url'});
+    addMeaningNode(world, kind: 'op', label: 'load_state', props: {'a': 'bookmarks'});
+    addMeaningNode(world, kind: 'op', label: 'list_len');
+    linkMeaning(world, from: 'save_url', relation: 'impl', to: 'op_1');
+    linkMeaning(world, from: 'op_1', relation: 'then', to: 'op_2');
+    expect(validateMeaningProgram(world), isNotEmpty);
+
+    // ONE move replaces the whole logic — declarative spec rows with
+    // `next` (default i+1) and `#row` jump targets; host tracks every id.
+    final r = _dec(await define.execute({
+      'action': 'redefine_chain',
+      'name': 'save_url',
+      'params': ['url:string'],
+      'returns': 'bool',
+      'specs': [
+        {'label': 'load_arg', 'a': 'url'}, // 0
+        {'label': 'starts_with', 'b': 'http'}, // 1
+        {'label': 'jump_if_false', 'b': '#5'}, // 2 → false branch
+        {'label': 'push_state', 'a': 'bookmarks'}, // 3
+        {'label': 'literal', 'b': '{"saved": true}', 'next': 6}, // 4
+        {'label': 'literal', 'b': '{"saved": false}'}, // 5
+        {'label': 'return'}, // 6
+      ],
+    }));
+    expect(r['ok'], true, reason: '${r['problems']}');
+    expect(r['dropped'], 2, reason: 'old 2-op chain dropped');
+    expect(r['ids'], [
+      'op_3', 'op_4', 'op_5', 'op_6', 'op_7', 'op_8', 'op_9',
+    ]);
+    expect((r['problems'] as List), isEmpty);
+
+    // The rebuilt chain branches correctly via the interpreter.
+    final ok = interpretMeaningProgram(
+      world,
+      'save_url',
+      {'bookmarks': <String>[]},
+      {'url': 'https://x.dev'},
+    );
+    expect((ok['_result'] as Map)['saved'], true);
+    final bad = interpretMeaningProgram(
+      world,
+      'save_url',
+      {'bookmarks': <String>[]},
+      {'url': 'nope'},
+    );
+    expect((bad['_result'] as Map)['saved'], false);
+    // Accretion absorbed: only intent + new chain remain.
+    expect(meaningView(world).nodeCount, 8);
+  });
+
+  test('redefine_chain rejects unresolvable #refs BEFORE any state change',
+      () async {
+    final world = _world();
+    final define = intentDefineTool(world);
+    // AFM run2: the model echoed the prompt's literal "#row" as a jump
+    // target. The macro must reject it as malformed — not let it into the
+    // tree where it becomes "unknown op: #row" at oracle time.
+    final r = _dec(await define.execute({
+      'action': 'redefine_chain',
+      'name': 'save_url',
+      'specs': [
+        {'label': 'load_arg', 'a': 'url'},
+        {'label': 'jump_if_false', 'b': '#row'},
+        {'label': 'return'},
+      ],
+    }));
+    expect(r['error'], isNotNull,
+        reason: 'unresolvable #ref must fail at spec validation');
+    expect(mt.hasMeaningNode(world, 'save_url'), isFalse,
+        reason: 'nothing spawned on a malformed request');
+    // A valid #ref still resolves.
+    final ok = _dec(await define.execute({
+      'action': 'redefine_chain',
+      'name': 'save_url',
+      'specs': [
+        {'label': 'literal', 'b': '1'},
+        {'label': 'return'},
+      ],
+    }));
+    expect(ok['ok'], true, reason: '${ok['problems']}');
+  });
+
+  test('redefine_chain topology gate: cyclic chains rejected at spec time '
+      '(AFM run4 finding — step limit exceeded at oracle time)', () async {
+    final world = _world();
+    final define = intentDefineTool(world);
+    // A self-loop: row 0 jumps to itself.
+    final r = _dec(await define.execute({
+      'action': 'redefine_chain',
+      'name': 'looped',
+      'specs': [
+        {'label': 'load_state', 'a': 'x', 'next': 0},
+        {'label': 'return'},
+      ],
+    }));
+    expect(r['error'], contains('cycle'));
+    expect(mt.hasMeaningNode(world, 'looped'), isFalse);
+
+    // No return reachable.
+    final r2 = _dec(await define.execute({
+      'action': 'redefine_chain',
+      'name': 'no_return',
+      'specs': [
+        {'label': 'load_state', 'a': 'x'},
+        {'label': 'list_len'},
+      ],
+    }));
+    expect(r2['error'], contains('no return op is reachable'));
+    expect(mt.hasMeaningNode(world, 'no_return'), isFalse);
+  });
+
+  test('redefine_chain dedup guard: identical spec is a cheap no-op '
+      '(thrash damping)', () async {
+    final world = _world();
+    final define = intentDefineTool(world);
+    final specs = {
+      'action': 'redefine_chain',
+      'name': 'save_url',
+      'specs': [
+        {'label': 'load_arg', 'a': 'url'},
+        {'label': 'return'},
+      ],
+    };
+    final first = _dec(await define.execute(specs));
+    expect(first['ok'], true);
+    final nodesAfterFirst = meaningView(world).nodeCount;
+    // Same call again: thrash pattern from the AFM runs. No drop/rebuild.
+    final again = _dec(await define.execute(specs));
+    expect(again['ok'], true);
+    expect(again['unchanged'], true);
+    expect(meaningView(world).nodeCount, nodesAfterFirst,
+        reason: 'dedup must not churn the tree');
+    // A DIFFERENT spec still rebuilds.
+    final changed = _dec(await define.execute({
+      ...specs,
+      'specs': [
+        {'label': 'load_arg', 'a': 'url'},
+        {'label': 'list_len'},
+        {'label': 'return'},
+      ],
+    }));
+    expect(changed['ok'], true);
+    expect(changed['unchanged'], isNull);
+    expect(meaningView(world).nodeCount, nodesAfterFirst + 1);
+  });
+
+  test('redefine_chain vocabulary guard: invalid op rejected with the '
+      'closed list (AFM run3 finding)', () async {
+    final world = _world();
+    final r = _dec(await intentDefineTool(world).execute({
+      'action': 'redefine_chain',
+      'name': 'save_url',
+      'specs': [
+        {'label': 'load'},
+        {'label': 'return'},
+      ],
+    }));
+    expect(r['error'], contains('outside the closed vocabulary'));
+    expect(r['error'], contains('load_arg'));
+    expect((r['valid_ops'] as List), contains('return'));
+    expect(mt.hasMeaningNode(world, 'save_url'), isFalse);
+  });
+
+  test('redefine_chain macro is atomic: malformed request keeps the chain',
+      () async {
+    final world = _world();
+    final define = intentDefineTool(world);
+    await define.execute({
+      'action': 'redefine_chain',
+      'name': 'good',
+      'specs': [
+        {'label': 'literal', 'b': '1'},
+        {'label': 'return'},
+      ],
+    });
+    expect(validateMeaningProgram(world), isEmpty);
+    final r = _dec(await define.execute({
+      'action': 'redefine_chain',
+      'name': 'good',
+      'specs': [{'a': 'x'}],
+    }));
+    expect(r['error'], isNotNull);
+    expect(validateMeaningProgram(world), isEmpty,
+        reason: 'atomicity: the working chain must survive a bad request');
   });
 }

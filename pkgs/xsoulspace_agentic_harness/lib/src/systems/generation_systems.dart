@@ -131,7 +131,16 @@ void processResponsesSystem(World world) {
     } else {
       // Remove the OpenDecision — it has been resolved
       we.remove<OpenDecision>();
-      we.remove<RetryCount>();
+      // J1.5.6 (found by the flight recorder on-device): the error-retry
+      // budget survives tool-call continuations — a resolved response WITH
+      // tool calls is mid-chain (ADR 0004), so a flaky backend alternating
+      // "backend_failed → tool-calling response" must still exhaust the
+      // SAME budget instead of resetting it every turn (unbounded retry
+      // loop, 255× identical prompts live). Reset ONLY on a text-only
+      // final answer, mirroring the ToolRoundCount chain semantics.
+      if (response.toolCalls.isEmpty) {
+        we.remove<RetryCount>();
+      }
       // A final answer (no tool calls) ends the tool-round chain — reset the
       // budget so the actor's NEXT task starts fresh (ADR 0004).
       if (response.toolCalls.isEmpty) {

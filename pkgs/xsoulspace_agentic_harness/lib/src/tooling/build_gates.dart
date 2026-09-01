@@ -35,14 +35,17 @@ import 'dart:convert';
 
 import 'package:ecsly/ecsly.dart' show Resource, World;
 import 'package:xsoulspace_agentic_harness/src/data_models/components.dart'
-    show Goal, Actor, ActorGoalRef;
+    show Goal, Actor, ActorGoalRef, ActorThreads, AttemptCount,
+        EscalationRequest, GoalAttemptsExhausted, ToolRoundCount;
+import 'package:xsoulspace_agentic_harness/src/narrative/components.dart'
+    show ThreadStatus, ThreadStatusEnum;
 import 'package:xsoulspace_agentic_harness/src/meaning/intents.dart'
     show callIntent;
 import 'package:xsoulspace_agentic_harness/src/meaning/meaning_tree.dart'
     show addMeaningNode, linkMeaning;
 import 'package:xsoulspace_agentic_harness/src/schedules.dart' show Schedules;
 import 'package:xsoulspace_agentic_harness/src/resources/resources.dart'
-    show ToolRegistryResource;
+    show AgencyPolicy, ToolRegistryResource;
 import 'package:xsoulspace_agentic_harness/src/systems/decision_flow_system.dart'
     show ToolResultPendingMarker;
 import 'package:xsoulspace_agentic_harness/src/tooling/world_builder.dart'
@@ -279,15 +282,88 @@ class RunGradedGoalPolicy implements DecisionPolicy {
 
   @override
   DecisionDraft? evaluate(DecisionContext ctx) {
+    // J1.5.1: budget exhausted — stop re-prompting FOREVER. The loop
+    // terminates even if the model keeps producing failing repairs.
+    if (ctx.has<GoalAttemptsExhausted>()) return null;
     final verified = ctx.get<GoalVerified>();
     if (verified == null) return null;
     if (verified.passed) return null; // goal run passed — stop.
+
+    // Monotonic failed-verification counter (never reset by prose turns —
+    // this is the fix-stage endless-loop fix).
+    final attempts = (ctx.get<AttemptCount>()?.value ?? 0) + 1;
+    ctx.actorEntity.insert(AttemptCount(attempts));
+
+    var maxAttempts = 3;
+    try {
+      maxAttempts = ctx.world.getResource<AgencyPolicy>().maxGoalAttempts;
+    } on StateError {
+      // no AgencyPolicy wired → conservative default
+    }
+    if (attempts >= maxAttempts) {
+      final reason = 'goal_unverifiable: $attempts failed verification '
+          'attempts (budget $maxAttempts). Last failure: ${verified.detail}';
+      ctx.actorEntity
+        ..insert(GoalAttemptsExhausted(reason))
+        // TRANSIENT baton (one-shot, may be consumed by a racing in-flight
+        // response — generation_systems clears it per turn). The DURABLE
+        // terminal record is GoalAttemptsExhausted + the suspended thread;
+        // hosts should key escalation ledgers off those.
+        ..insert(EscalationRequest(reason: reason));
+      // Suspend every thread + clear the pending trigger so no policy path
+      // can re-open a decision on stale verification state (same Tier-3
+      // mechanism as the loop breaker).
+      final threads = ctx.actorEntity.get<ActorThreads>()?.threads ?? const [];
+      for (final t in threads) {
+        final (_, valid) = ctx.world.getEntity(t);
+        if (valid) {
+          final we = ctx.world.getEntity(t).$1;
+          final status = we.get<ThreadStatus>();
+          if (status != null) status.value = ThreadStatusEnum.suspended;
+        }
+      }
+      ctx.actorEntity.remove<ToolResultPendingMarker>();
+      return null;
+    }
+
     return DecisionDraft(
       prompt:
-          'Goal not verified by running code.\nFailing:\n${verified.detail}\n'
+          'Goal not verified by running code (attempt $attempts/$maxAttempts).\n'
+          'Failing:\n${verified.detail}\n'
           'Fix the code so the target runs, then continue.',
     );
   }
+}
+
+/// Opens a FRESH decision on an actor: resets the per-decision ReAct round
+/// budget (J1.5.2) and clears stale verification verdicts so a host-injected
+/// retry (e.g. the AFM driver's repair loop) starts with a full round
+/// budget instead of a silently shrunken one. Use this INSTEAD of a bare
+/// `world.upsertComponent(actor, OpenDecision(...))` whenever the new
+/// decision is a new task/attempt, not a ReAct continuation.
+void openFreshDecision(
+  World world,
+  Entity actor, {
+  required String prompt,
+  int priority = 0,
+  bool escalate = false,
+  Entity? threadId,
+}) {
+  final we = world.getEntity(actor).$1;
+  we
+    ..remove<ToolRoundCount>() // fresh chain — full round budget
+    ..remove<GoalVerified>() // stale verdicts must not re-trigger policies
+    ..insert(
+      OpenDecision(
+        prompt: prompt,
+        priority: priority,
+        escalate: escalate,
+        threadId: threadId,
+      ),
+    );
+  // Flush immediately: the caller counts on the budget being reset when
+  // this returns (the driver's repair loop runs between loop sessions).
+  world.flush();
 }
 
 /// Default flow for a run-graded build. `run_graded_goal` leads so a passed

@@ -105,7 +105,15 @@ class AgentPlugin extends Plugin {
       // after archetype creation").
       ..registerObjectComponent<MeaningNode>()
       ..registerObjectComponent<MeaningProps>()
-      ..registerObjectComponent<MeaningEdge>();
+      ..registerObjectComponent<MeaningEdge>()
+      // J1.5 loop bounds — MUST stay at the very END of the registration
+      // chain: ecsly assigns component ids in registration order, and
+      // inserting earlier shifts ids of components registered by hosts
+      // AFTER the plugin (registerExperimentComponents) → archetype column
+      // corruption ("Column should exist after archetype creation").
+      ..registerObjectComponent<TotalRoundCount>()
+      ..registerObjectComponent<AttemptCount>()
+      ..registerObjectComponent<GoalAttemptsExhausted>();
 
     // Resources
     world

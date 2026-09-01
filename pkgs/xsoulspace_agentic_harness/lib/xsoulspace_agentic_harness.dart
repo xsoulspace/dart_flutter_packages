@@ -19,3 +19,5 @@ export 'src/composition/composition_surface.dart';
 export 'src/meaning/intents.dart';
 export 'src/meaning/meaning_program.dart';
 export 'src/meaning/meaning_tree.dart';
+export 'src/tooling/context_budget.dart';
+export 'src/tooling/world_builder.dart';

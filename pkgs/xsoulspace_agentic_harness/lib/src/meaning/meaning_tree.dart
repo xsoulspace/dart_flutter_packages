@@ -117,6 +117,31 @@ class MeaningIndex extends Resource {
     adjacency.clear();
     triples.clear();
   }
+
+  /// Removes one edge triple (after its entity is despawned).
+  void removeEdge(String from, String relation, String to) {
+    triples.remove((from, relation, to));
+    adjacency[from]?.removeWhere(
+      (r) => r.relation == relation && r.otherId == to && r.outgoing,
+    );
+    adjacency[to]?.removeWhere(
+      (r) => r.relation == relation && r.otherId == from && !r.outgoing,
+    );
+  }
+
+  /// Removes one node (after its entity is despawned). Edge cleanup is the
+  /// caller's job — a node whose edges still reference it has dangling
+  /// adjacency entries.
+  void removeNode(String id) {
+    final entity = byId.remove(id);
+    if (entity != null) idsByEntity.remove(entity);
+    for (final ref in (adjacency.remove(id) ?? const <_EdgeRef>[])) {
+      adjacency[ref.otherId]?.removeWhere(
+        (r) => r.relation == ref.relation && r.otherId == id,
+      );
+    }
+    triples.removeWhere((t) => t.$1 == id || t.$3 == id);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -233,6 +258,70 @@ bool setMeaningProp(
 /// Whether [id] exists in the tree.
 bool hasMeaningNode(World world, String id) =>
     _indexOf(world).entityOf(id) != null;
+
+/// HOST PROGRAM (macro support): drops the intent's `impl` chain — the impl
+/// edge and every op node reachable through `then` edges — and despawns
+/// them. The intent NODE itself is kept (re-define overwrites its props).
+/// Returns the number of dropped op nodes. Scoped by design: this is the
+/// only deletion in the tree, so a repair macro can rebuild one intent's
+/// logic without ever letting the model destroy unrelated structure.
+int dropMeaningChain(World world, String intentName) {
+  final index = _indexOf(world);
+  final intentEntity = index.entityOf(intentName);
+  if (intentEntity == null) return 0;
+
+  // Collect the impl entry + everything reachable through `then`.
+  String? entry;
+  final toDrop = <String>{};
+  final toDropEdges = <(String, String, String)>{};
+  for (final (f, r, t) in index.triples) {
+    if (f == intentName && r == 'impl') entry = t;
+  }
+  if (entry == null) return 0;
+  final queue = <String>[entry];
+  while (queue.isNotEmpty) {
+    final id = queue.removeLast();
+    if (!toDrop.add(id)) continue;
+    for (final (f, r, t) in index.triples) {
+      if (f == id && r == 'then') {
+        toDropEdges.add((f, r, t));
+        queue.add(t);
+      }
+    }
+  }
+
+  // Every edge touching a dropped node (impl/then/foreign) goes too.
+  for (final (f, r, t) in index.triples) {
+    if (toDrop.contains(f) || toDrop.contains(t)) toDropEdges.add((f, r, t));
+  }
+
+  // Despawn the edge ENTITIES whose triples touch the chain, then the op
+  // entities, then update the derived index. One query pass collects edge
+  // entities (they store entity refs; match them back to triples).
+  final edgeEntities = <Entity>[];
+  for (final (facade, edge) in world.query<MeaningEdge>().toList()) {
+    final fid = index.idsByEntity[edge.from];
+    final tid = index.idsByEntity[edge.to];
+    if (fid == null || tid == null) continue;
+    if (toDropEdges.contains((fid, edge.relation, tid))) {
+      edgeEntities.add(facade.entity);
+    }
+  }
+  for (final e in edgeEntities) {
+    world.commands.despawn(e);
+  }
+  for (final id in toDrop) {
+    final entity = index.entityOf(id);
+    if (entity == null) continue;
+    world.commands.despawn(entity);
+    index.removeNode(id);
+  }
+  for (final (f, r, t) in toDropEdges) {
+    index.removeEdge(f, r, t);
+  }
+  world.flush();
+  return toDrop.length;
+}
 
 // ---------------------------------------------------------------------------
 // Read API — budgeted cut (projection law) + full view (host materializers)

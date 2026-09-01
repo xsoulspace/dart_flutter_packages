@@ -1,0 +1,25 @@
+name: xsoulspace_agentic_harness_flutter_profiler
+description: >-
+  Runtime profiler view for xsoulspace_agentic_harness: live decision stack,
+  beat status, loop warnings, and the meaning cut the model sees (J1.5.4).
+  Host-side UI per ADR 0015; the core stays UI-agnostic.
+version: 0.1.0-dev.1
+publish_to: none
+
+environment:
+  sdk: ^3.12.0
+
+resolution: workspace
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # VM-only host package (dart:io tooling lives behind unexported files).
+  xsoulspace_agentic_harness:
+    path: ../xsoulspace_agentic_harness
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  lints: ^6.1.0
+  xsoulspace_lints: ^0.1.2

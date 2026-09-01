@@ -7,6 +7,46 @@ One entry per landed body of work; durable decisions live in
 
 ## Landed
 
+- **Stage J1.5 — loop bounds + runtime observability (2026-08-28)**: the
+  fix-stage endless-loop fix. Traced hazards: `RunGradedGoalPolicy`
+  re-prompted on every failing verifier stamp with NO monotonic budget
+  (`ToolRoundCount` was reset by prose turns), host-injected retries started
+  with a silently shrunken round budget, and a running harness was a silent
+  terminal. Landed: (F1) monotonic `AttemptCount` + `AgencyPolicy.maxGoalAttempts`
+  — at budget the policy stamps durable `GoalAttemptsExhausted` (+ transient
+  `EscalationRequest`) with a structured `goal_unverifiable` reason and
+  suspends the thread: the loop provably terminates, `expectIdle` holds;
+  (F2) `openFreshDecision` — the ONLY budget-reset path (host-injected
+  fresh decisions; policy `thenOpen` re-prompts stay chain-bounded — a
+  policy-name-based reset made composition flows unbounded, caught by
+  `prototype_from_sentence_test` and reverted); monotonic `TotalRoundCount`
+  ledger; (F3) `observation/harness_inspector.dart` — `sampleHarness` →
+  `HarnessPulse` (per-actor decision stack, round/attempt budgets, verdicts,
+  loop-breaker streaks, last tool signature/result) + `FlightRecorder`
+  (ring buffer, identical-prompt re-prompt detector, dump on maxTicks
+  StateError and SIGINT). `HarnessLoop.runUntilIdle` auto-samples a wired
+  recorder and appends its dump to the maxTicks StateError. Host side:
+  `pkgs/xsoulspace_agentic_harness_flutter_profiler` (`HarnessProfilerView`
+  — decision stack, warning banners, meaning-cut "what the model sees"
+  pane, flight-recorder-backed polls). AFM driver wired: recorder +
+  `openFreshDecision` retries + pulse/dump published even on failure.
+  **ecsly lesson (pinned by convention)**: new Component registrations MUST
+  be appended at the very END of `AgentPlugin.install` — ecsly assigns
+  component ids in registration order; mid-chain inserts shift host
+  registrations' ids → "Column should exist after archetype creation".
+  Tests: `test/loop_bounds_inspector_test.dart` (8), profiler widget tests (3).
+  Benchmark: `tool/j15_benchmark.dart` — pulse overhead 13–21 µs (≈2% of the
+  1kHz tick budget), incident replay bounded at 136 ms / 3 attempts.
+  **On-device validation (results_stage_j15.md):** the wired monitor caught
+  TWO loop classes live — (1) `RetryCount` reset on every resolved response
+  made a flaky backend retry forever (255× identical `backend_failed`
+  prompts) → fixed as J1.5.6 (budget survives tool-call continuations);
+  (2) the detector's own false positive on held-open decisions (60 s
+  generation sampled 100-tick apart) → detector now counts open→closed→open
+  cycles. Post-fix on-device run: decisions 7→4, tool rounds 51→19,
+  projection tokens −31%, honest bounded FAIL (model never wires a meaning
+  executor — the precisely-diagnosed J1.4 blocker).
+
 - **Stage G — AE wire port + canonical→meaning-tree ETL (2026-08-28)**:
   `ae_bridge.dart` reduced to a host shim over the new AE-owned
   `agentic_executables_wire` package (typed tiers, gap-beat renderer,

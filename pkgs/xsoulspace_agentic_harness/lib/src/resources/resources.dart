@@ -98,6 +98,7 @@ class AgencyPolicy extends Resource {
     this.maxRetries = 3,
     this.taskTimeout = const Duration(minutes: 5),
     this.maxToolRounds = 16,
+    this.maxGoalAttempts = 3,
   });
 
   /// Maximum number of actors that may hold [Agency] in a single tick.
@@ -119,6 +120,14 @@ class AgencyPolicy extends Resource {
   /// results, the chain is dropped instead of continued. Prevents a model
   /// that never stops calling tools from looping forever.
   int maxToolRounds;
+
+  /// Maximum failed goal verifications before the repair loop STOPS
+  /// re-prompting (J1.5.1). On exhaustion the policy stamps
+  /// [GoalAttemptsExhausted] + [EscalationRequest] with a structured reason
+  /// and suspends the actor's threads — the bottom rung of the J8 ladder.
+  /// Monotonic [AttemptCount] is NEVER reset by prose turns, so this is a
+  /// hard bound on fix→fail→fix cycling.
+  int maxGoalAttempts;
 }
 
 /// World resource routing generation requests to handlers.

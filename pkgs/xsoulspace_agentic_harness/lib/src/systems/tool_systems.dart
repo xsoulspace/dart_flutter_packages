@@ -196,6 +196,9 @@ void processToolResultsSystem(World world) {
     final rounds = we.get<ToolRoundCount>()?.value ?? 0;
     if (!we.has<OpenDecision>() && rounds < policy.maxToolRounds) {
       we.insert(ToolRoundCount(rounds + 1));
+      // Monotonic lifetime ledger (J1.5.2) — never reset, read by the
+      // WorldInspector pulse and benchmark columns (K2).
+      we.insert(TotalRoundCount((we.get<TotalRoundCount>()?.value ?? 0) + 1));
       we.insert(const ToolResultPendingMarker());
     }
   }

@@ -38,6 +38,14 @@ void decisionFlowSystem(World world) {
     if (result == null) continue;
 
     final draft = result.draft;
+    // NOTE (J1.5.2): policy-opened decisions do NOT reset the per-decision
+    // ReAct round budget — a `thenOpen` flow that re-prompts after every
+    // tool result is STILL the same repair cycle, and it must stay bounded
+    // by the accumulating ToolRoundCount (and by AttemptCount for goal
+    // verification). Resetting here made those flows unbounded (the
+    // prototype_from_sentence regression). Fresh budgets are granted ONLY
+    // via `openFreshDecision` (host-injected new tasks/retries) or by a
+    // text-only final answer (generation_systems).
     entity.insert(
       OpenDecision(
         prompt: draft.prompt,

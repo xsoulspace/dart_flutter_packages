@@ -116,8 +116,14 @@ void main() {
   test('sub-action surface is closed + countable (stewardship probe)', () {
     expect(actWithProjectSubActions, [
       'list', 'add', 'link', 'set_prop', 'materialize',
+      // Macros (J1, D3 gate fired): host-program composite moves. Intent-
+      // level repair lives on intent_define (`redefine_chain`) — one verb
+      // per domain, no near-tool collisions (ADR 0016).
+      'add_chain', 'link_chain',
     ]);
-    expect(actWithProjectSubActions.toSet().length, 5);
+    expect(actWithProjectSubActions.toSet().length, 7);
+    // The intent surface carries the intent-level macro.
+    expect(intentDefineActions, ['define', 'list', 'redefine_chain']);
   });
 
   test('unknown action returns a structured error, not a throw', () async {
@@ -280,4 +286,64 @@ void main() {
         (region['nodes'] as List).cast<Map>().map((n) => n['id']).toSet();
     expect(ids, containsAll(['chapter_1', 'paragraph_1']));
   });
+
+  // ---- J1 macros: one selection, host does the heavy lifting ----
+  test('add_chain macro: whole chain in one move, ids assigned, then-wired',
+      () async {
+    final world = _world();
+    final tool = actWithProjectTool(world: world, materialize: () async => {});
+    defineIntent(world, name: 'save_url');
+    final r = _dec(await tool.execute({
+      'action': 'add_chain',
+      'specs': [
+        {'label': 'load_arg', 'a': 'url'},
+        {'label': 'starts_with', 'b': 'http'},
+        {'label': 'return'},
+      ],
+    }));
+    expect(r['ok'], true);
+    final ids = (r['ids'] as List).cast<String>();
+    expect(ids, ['op_1', 'op_2', 'op_3']);
+    expect(r['added'], 3);
+    // The validator reports the intent as defined-but-unwired (no impl edge
+    // yet) — actionable data, exactly what the model should wire next.
+    expect(r['problems'], ['save_url: no meaning executor for intent: save_url']);
+    // then-wiring happened: interpreter walks load_arg → starts_with → return.
+    final out = interpretMeaningProgram(
+      world, 'save_url', <String, dynamic>{}, <String, dynamic>{},
+    );
+    // impl not linked yet — chain exists but intent not wired.
+    expect((out['_result'] as Map)['error'],
+        'no meaning executor for intent: save_url');
+  });
+
+  test('link_chain macro: many edges in one move, per-edge results', () async {
+    final world = _world();
+    final tool = actWithProjectTool(world: world, materialize: () async => {});
+    defineIntent(world, name: 'save_url');
+    final chain = _dec(await tool.execute({
+      'action': 'add_chain',
+      'specs': [
+        {'label': 'load_arg', 'a': 'url'},
+        {'label': 'starts_with', 'b': 'http'},
+        {'label': 'return'},
+      ],
+    }));
+    final ids = (chain['ids'] as List).cast<String>();
+    final r = _dec(await tool.execute({
+      'action': 'link_chain',
+      'edges': [
+        {'from': 'save_url', 'relation': 'impl', 'to': ids.first},
+        {'from': ids.last, 'relation': 'then', 'to': 'op_Nope'},
+      ],
+    }));
+    expect(r['ok'], false); // second edge is dangling
+    final results = (r['results'] as List).cast<Map>();
+    expect(results.first['ok'], true);
+    expect(results.last['ok'], false);
+    // The good edge still landed; oracle validates the chain.
+    final problems = validateMeaningProgram(world);
+    expect(problems, isEmpty);
+  });
+
 }

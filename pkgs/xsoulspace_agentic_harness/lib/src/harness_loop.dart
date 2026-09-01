@@ -65,6 +65,7 @@ import 'package:ecsly/ecsly.dart';
 
 import 'data_models/data_models.dart';
 import 'events.dart';
+import 'observation/harness_inspector.dart' show FlightRecorder, sampleHarness;
 import 'resources/resources.dart';
 import 'schedules.dart';
 import 'systems/decision_flow_system.dart' show ToolResultPendingMarker;
@@ -83,6 +84,17 @@ class HarnessLoop {
 
   /// Fixed timestep in seconds (default 60Hz).
   final double fixedDt;
+
+  /// How often (in ticks) a registered [FlightRecorder] samples a pulse.
+  static const int _recorderSampleEvery = 100;
+
+  T? _tryGetResource<T extends Resource>() {
+    try {
+      return world.getResource<T>();
+    } on StateError {
+      return null;
+    }
+  }
 
   /// Whether the loop is currently running.
   bool _running = false;
@@ -135,17 +147,42 @@ class HarnessLoop {
   /// call this, and read the resulting beats when it completes. A safety cap
   /// ([maxTicks]) guards against a world that keeps producing work forever —
   /// pass `null` for unbounded runs you control via [stop].
+  ///
+  /// When a [FlightRecorder] is registered (J1.5.3), the loop auto-samples a
+  /// [HarnessPulse] every [recorderSampleEvery] ticks and — on maxTicks
+  /// exhaustion — appends the recorder's dump to the StateError, so a
+  /// headless "endless loop" leaves a post-mortem naming the loop instead
+  /// of a silent hang.
   Future<void> runUntilIdle({int? maxTicks = 2000000}) async {
+    final recorder = _tryGetResource<FlightRecorder>();
     var ticks = 0;
     while (!canSleep()) {
       if (maxTicks != null && ticks >= maxTicks) {
+        var postMortem = '';
+        if (recorder != null) {
+          try {
+            recorder.record(sampleHarness(world));
+          } on Object catch (_) {
+            // never let instrumentation mask the real error
+          }
+          postMortem = '\n--- FlightRecorder dump (J1.5.3) ---\n'
+              '${recorder.dump()}';
+        }
         throw StateError(
           'HarnessLoop.runUntilIdle exceeded $maxTicks ticks without going '
           'idle. The world keeps producing work — check for retry loops or '
-          'self-spawning decisions.',
+          'self-spawning decisions.'
+          '$postMortem',
         );
       }
       ticks++;
+      if (recorder != null && ticks % _recorderSampleEvery == 0) {
+        try {
+          recorder.sampleAndRecord(world);
+        } on Object catch (_) {
+          // never let instrumentation kill the loop
+        }
+      }
       _tick();
       // Yield AND pace: Duration.zero alone busy-spins millions of iterations
       // while an async generation/tool task is in flight (on-device models
@@ -153,6 +190,16 @@ class HarnessLoop {
       // healthy waits. 1ms keeps wake-up latency negligible for microtask
       // worlds while bounding tick burnout to ~1000/s.
       await Future<void>.delayed(const Duration(milliseconds: 1));
+    }
+    // J1.5.3: record the final (idle) pulse — short incidents finish in
+    // fewer ticks than the sampling interval; the recorder must still
+    // carry the end-state for the post-mortem.
+    if (recorder != null) {
+      try {
+        recorder.record(sampleHarness(world));
+      } on Object catch (_) {
+        // never let instrumentation kill the loop
+      }
     }
     world.flush();
   }

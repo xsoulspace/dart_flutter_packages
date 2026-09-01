@@ -363,3 +363,42 @@ class StepIndex implements Component {
   StepIndex(this.value);
   final int value;
 }
+
+// ─────────────────────────────────────────────────────────────
+// J1.5 loop bounds (appended here + at the END of AgentPlugin.install:
+// ecsly assigns component ids in registration order — new components must
+// be appended last or host registrations shift ids → archetype corruption).
+// ─────────────────────────────────────────────────────────────
+
+/// Monotonic ledger: total tool→continuation rounds consumed across the
+/// actor's whole lifetime (J1.5.2). Unlike [ToolRoundCount], this is NEVER
+/// reset — the per-decision budget resets when a fresh decision opens, but
+/// the honest spend keeps accumulating for benchmark columns (K2).
+class TotalRoundCount implements Component {
+  TotalRoundCount(this.value);
+  int value;
+}
+
+/// Monotonic count of failed goal verifications for this actor (J1.5.1).
+///
+/// Incremented by `RunGradedGoalPolicy` (or any policy consuming a failed
+/// [GoalVerified]). NEVER reset by a text-only turn — that was the
+/// fix-stage endless-loop hazard: prose turns reset [ToolRoundCount], so
+/// fix→fail→fix cycles had no monotonic budget. Read by the policy to stop
+/// re-prompting once [AgencyPolicy.maxGoalAttempts] is reached.
+class AttemptCount implements Component {
+  AttemptCount(this.value);
+  int value;
+}
+
+/// Terminal tag: the goal-attempt budget is exhausted (J1.5.1).
+///
+/// Stamped together with [EscalationRequest] by the verifier-consumption
+/// policy when [AttemptCount] reaches [AgencyPolicy.maxGoalAttempts]. The
+/// policy then returns null forever (the loop provably terminates); the
+/// host decides whether to escalate the tier, re-scope the subtask (J6),
+/// or surface the structured reason to a human (J8 rung 4).
+class GoalAttemptsExhausted implements Component {
+  const GoalAttemptsExhausted(this.reason);
+  final String reason;
+}

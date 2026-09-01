@@ -1,0 +1,16 @@
+id: intent_03_bookmark_macros
+category: intent_closure
+prompt: |
+  Build the bookmark manager using the macro moves: redefine_intent
+  (one move defines an intent AND wires its whole op chain), materialize,
+  then verify by calling the intents. You never write program code.
+fixtures: []
+checkers:
+  - type: intents
+    value: |
+      {"calls": [
+        {"intent": "save_url", "args": {"url": "https://example.dev"}, "expect": {"saved": true}},
+        {"intent": "save_url", "args": {"url": "https://second.dev"}},
+        {"intent": "list_saved", "expect": {"value": 2}},
+        {"intent": "save_url", "args": {"url": "not-a-url"}, "expect": {"saved": false}}
+      ]}

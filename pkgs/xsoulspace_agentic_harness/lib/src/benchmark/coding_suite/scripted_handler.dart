@@ -115,6 +115,44 @@ final Map<String, List<ScriptedStep>> scriptedBehaviors = {
     }),
     ScriptedStep('intent_call', {'intent': 'list_saved'}),
   ],
+  // J1 macro arm: the SAME bookmark behavior in 5 moves instead of 24 —
+  // redefine_intent carries an intent's whole logic (branchy chain via
+  // declarative spec rows: 'next' + '#row' jump targets), the host does
+  // the drop+rebuild+impl-wiring. Moves/task is the J1 matrix column.
+  'intent_03_bookmark_macros': [
+    ScriptedStep('intent_define', {
+      'action': 'redefine_chain',
+      'name': 'save_url',
+      'params': ['url:string'],
+      'returns': 'bool',
+      'specs': [
+        {'label': 'load_arg', 'a': 'url'}, // 0
+        {'label': 'starts_with', 'b': 'http'}, // 1
+        {'label': 'jump_if_false', 'b': '#5'}, // 2 → false branch
+        {'label': 'push_state', 'a': 'bookmarks'}, // 3
+        {'label': 'literal', 'b': '{"saved": true}', 'next': 6}, // 4
+        {'label': 'literal', 'b': '{"saved": false}'}, // 5
+        {'label': 'return'}, // 6
+      ],
+    }),
+    ScriptedStep('intent_define', {
+      'action': 'redefine_chain',
+      'name': 'list_saved',
+      'returns': 'int',
+      'specs': [
+        {'label': 'load_state', 'a': 'bookmarks'}, // 0
+        {'label': 'list_len'}, // 1
+        {'label': 'return'}, // 2
+      ],
+    }),
+    ScriptedStep('act_with_project', {'action': 'materialize'}),
+    // Self-verification through intent calls (the closed feedback loop).
+    ScriptedStep('intent_call', {
+      'intent': 'save_url',
+      'args': ['url=https://selfcheck.dev'],
+    }),
+    ScriptedStep('intent_call', {'intent': 'list_saved'}),
+  ],
   // Stage H: the materialized intent-closure program (host-written contract
   // initialState() + runIntent(name, state, args) over a JSON state map).
   'intent_01_bookmark_manager': [

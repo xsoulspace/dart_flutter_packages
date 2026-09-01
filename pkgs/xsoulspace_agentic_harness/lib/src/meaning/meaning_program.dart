@@ -154,6 +154,164 @@ List<String> validateMeaningProgram(World world) {
   return problems;
 }
 
+/// Validates macro spec rows BEFORE any state change. Returns an actionable
+/// error message, or null when every row is buildable:
+/// - `label` must be a non-empty string IN the closed op vocabulary
+///   (`meaningExecutorOps`) — a typo like `load` fails here, not at oracle
+///   time (AFM run3 finding);
+/// - `next` must be a valid row index;
+/// - a `b` starting with `#` must resolve to a valid row (a verbatim
+///   prompt-echo like `#row` is malformed — AFM run2 finding).
+String? chainSpecError(List specs) {
+  for (var i = 0; i < specs.length; i++) {
+    final s = specs[i];
+    if (s is! Map) return 'spec row $i must be an object';
+    final label = s['label'];
+    if (label is! String || label.isEmpty) {
+      return 'spec row $i requires label (string)';
+    }
+    if (!meaningExecutorOps.contains(label)) {
+      return 'spec row $i: op "$label" is outside the closed vocabulary; '
+          'valid ops: ${meaningExecutorOps.join(', ')}';
+    }
+    final next = s['next'];
+    if (next is int && (next < 0 || next >= specs.length)) {
+      return 'spec row $i: next $next out of range (0..${specs.length - 1})';
+    }
+    final b = s['b'];
+    if (b is String && b.startsWith('#')) {
+      final ref = int.tryParse(b.substring(1));
+      if (ref == null || ref < 0 || ref >= specs.length) {
+        return 'spec row $i: jump target "$b" does not resolve to a spec '
+            'row (use "#<row index>", e.g. "#${specs.length - 1}")';
+      }
+    }
+  }
+  // Topology gate (AFM run4 finding): chains must TERMINATE. Walk the
+  // spec graph (then-edges + jump targets) from row 0; a revisited row on
+  // the current path is a cycle, and row 0 must reach a `return` row.
+  // Rationale: in this vocabulary a non-terminating loop can't be taught
+  // to a 2-4k model (it thrashed on cyclic chains across a whole run), and
+  // every intended chain so far is linear+branch. Hard cut until evidence
+  // demands loops — the closed vocabulary states this restriction.
+  final jumpOf = <int, int>{};
+  for (var i = 0; i < specs.length; i++) {
+    final s = specs[i] as Map;
+    final b = s['b'];
+    if (b is String && b.startsWith('#')) {
+      jumpOf[i] = int.parse(b.substring(1));
+    }
+  }
+  String? rowLabel(int i) => (specs[i] as Map)['label'] as String?;
+  final onPath = <int>{};
+  final done = <int>{};
+  var reachedReturn = false;
+  void walk(int i) {
+    if (reachedReturn || i < 0 || i >= specs.length) return;
+    if (done.contains(i)) {
+      reachedReturn = reachedReturn || rowLabel(i) == 'return';
+      return;
+    }
+    if (!onPath.add(i)) {
+      throw _CyclicChainException();
+    }
+    if (rowLabel(i) == 'return') reachedReturn = true;
+    final successors = <int>[];
+    final next = (specs[i] as Map)['next'];
+    if (next is int) {
+      successors.add(next);
+    } else if (i + 1 < specs.length) {
+      successors.add(i + 1);
+    }
+    if (jumpOf.containsKey(i)) successors.add(jumpOf[i]!);
+    for (final n in successors) {
+      walk(n);
+    }
+    onPath.remove(i);
+    done.add(i);
+  }
+
+  try {
+    walk(0);
+  } on _CyclicChainException {
+    return 'chain topology: the spec graph has a cycle reachable from row '
+        '0 — chains must terminate at a return op. Check next/# targets.';
+  }
+  if (!reachedReturn) {
+    return 'chain topology: no return op is reachable from row 0 — every '
+        'chain must end at a return op.';
+  }
+  return null;
+}
+
+class _CyclicChainException implements Exception {}
+
+/// Host program (J1 macros): two-pass build of an op chain from declarative
+/// spec rows. Pass 1 spawns the op nodes; pass 2 wires `then` edges —
+/// spec[i] → spec[spec[i].next ?? i+1] — and resolves jump targets of the
+/// form `b: '#<index>'` to the spawned stable id of spec[<index>].
+/// Declarative by design: the model emits a TABLE of rows with row-relative
+/// references; the host tracks every id. Returns the assigned ids in spec
+/// order, or null if any spec is malformed (nothing spawned on [dryRun]).
+List<String>? addChainFromSpecs(
+  World world,
+  List specs, {
+  bool dryRun = false,
+}) {
+  if (chainSpecError(specs) != null) return null;
+  final parsed = <({String label, String? a, String? b, int? next})>[];
+  for (final s in specs) {
+    if (s is! Map) return null;
+    final label = s['label'];
+    if (label is! String || label.isEmpty) return null;
+    final next = s['next'] is int ? s['next'] as int : null;
+    parsed.add((
+      label: label,
+      a: s['a'] is String ? s['a'] as String : null,
+      b: s['b'] is String ? s['b'] as String : null,
+      next: next,
+    ));
+  }
+  if (dryRun) return const ['ok'];
+
+  // Pass 1: spawn (b kept raw — jump targets resolve after all ids exist).
+  final ids = <String>[];
+  final rawB = <String?>[];
+  for (final spec in parsed) {
+    final entity = addMeaningNode(
+      world,
+      kind: 'op',
+      label: spec.label,
+      props: {
+        if (spec.a != null) 'a': spec.a!,
+      },
+    );
+    final node = meaningComponentOf<MeaningNode>(world, entity);
+    if (node == null) return null;
+    ids.add(node.id);
+    rawB.add(spec.b);
+  }
+
+  // Pass 2: write `b` props (resolving `#<index>` jump targets to the
+  // spawned stable id), then wire `then` edges.
+  for (var i = 0; i < parsed.length; i++) {
+    final b = rawB[i];
+    if (b != null) {
+      var resolved = b;
+      if (b.startsWith('#')) {
+        final ref = int.tryParse(b.substring(1));
+        resolved = (ref != null && ref >= 0 && ref < ids.length) ? ids[ref] : b;
+      }
+      setMeaningProp(world, id: ids[i], key: 'b', value: resolved);
+    }
+    final target = parsed[i].next ?? i + 1;
+    if (target < ids.length) {
+      linkMeaning(world, from: ids[i], relation: 'then', to: ids[target]);
+    }
+  }
+  return ids;
+}
+
 // ---------------------------------------------------------------------------
 // The VM — ONE implementation of the op semantics
 // ---------------------------------------------------------------------------

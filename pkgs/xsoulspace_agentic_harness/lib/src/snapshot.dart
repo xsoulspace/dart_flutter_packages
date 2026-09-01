@@ -484,6 +484,21 @@ final List<_Spec> _specs = [
     (c) => {'value': c.value},
     (v) => ToolRoundCount((v as Map)['value'] as int? ?? 0),
   ),
+  _Spec<TotalRoundCount>(
+    () => TotalRoundCount(0),
+    (c) => {'value': c.value},
+    (v) => TotalRoundCount((v as Map)['value'] as int? ?? 0),
+  ),
+  _Spec<AttemptCount>(
+    () => AttemptCount(0),
+    (c) => {'value': c.value},
+    (v) => AttemptCount((v as Map)['value'] as int? ?? 0),
+  ),
+  _Spec<GoalAttemptsExhausted>(
+    () => const GoalAttemptsExhausted(''),
+    (c) => {'reason': c.reason},
+    (v) => GoalAttemptsExhausted((v as Map)['reason'] as String? ?? ''),
+  ),
   _Spec<IdentitySeeded>(
     () => const IdentitySeeded(),
     (_) => const {},
