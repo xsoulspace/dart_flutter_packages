@@ -378,3 +378,103 @@ tick 278158: decisions=1 inFlight=1 pending=0 actors=agent-1788291714508573-2:0r
 tick 278181: decisions=0 inFlight=0 pending=0 actors=agent-1788291714508573-2:0r/3a
 
 
+coding_agent run — task: intent_03_bookmark_macros
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 1496
+  decisions: 6
+  tool rounds (thread beats): 49
+  moves: {intent_define.list: 1, intent_define.define: 48}
+  projection tokens (honest spend, Situation.tokensUsed): 13458
+  meaning nodes: 0, edges: 0
+  wall clock: 629843 ms
+  final gate (outer oracle, once): FAIL
+    check: materialized program missing: program.dart (action materialize was never run)
+  failure class: final gate: materialized program missing: program.dart (action materialize was never run)
+--- harness pulse (J1.5.3) ---
+tick 6 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788294226418116-2: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: materialized program missing: program.dart (action materialize was never run)
+— agent-1788294226418116-2  [idle]  rounds 0/12 (Σ0)  attempts 3/3 EXHAUSTED
+    last: intent_define:{"action":"define","returns":"bool","name":"save_url","pa… → FAILED
+      error: {"error":"spec row 4: next 5 out of range (0..4)","valid_ops":["load_arg","load_state","store_state","push_state","dr…
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 179078..204434
+tick 202605: decisions=1 inFlight=1 pending=0 actors=agent-1788294226418116-2:0r/3a
+    agent-1788294226418116-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 202705: decisions=1 inFlight=1 pending=0 actors=agent-1788294226418116-2:0r/3a
+    agent-1788294226418116-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 202805: decisions=1 inFlight=1 pending=0 actors=agent-1788294226418116-2:0r/3a
+    agent-1788294226418116-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 202905: decisions=1 inFlight=1 pending=0 actors=agent-1788294226418116-2:0r/3a
+    agent-1788294226418116-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 203005: decisions=1 inFlight=1 pending=0 actors=agent-1788294226418116-2:0r/3a
+    agent-1788294226418116-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 203105: decisions=1 inFlight=1 pending=0 actors=agent-1788294226418116-2:0r/3a
+    agent-1788294226418116-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 203205: decisions=1 inFlight=1 pending=0 actors=agent-1788294226418116-2:0r/3a
+    agent-1788294226418116-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 203305: decisions=1 inFlight=1 pending=0 actors=agent-1788294226418116-2:0r/3a
+    agent-1788294226418116-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 203405: decisions=1 inFlight=1 pending=0 actors=agent-1788294226418116-2:0r/3a
+    agent-1788294226418116-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 203505: decisions=1 inFlight=1 pending=0 actors=agent-1788294226418116-2:0r/3a
+    agent-1788294226418116-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 203605: decisions=1 inFlight=1 pending=0 actors=agent-1788294226418116-2:0r/3a
+    agent-1788294226418116-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 203705: decisions=1 inFlight=1 pending=0 actors=agent-1788294226418116-2:0r/3a
+    agent-1788294226418116-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 203805: decisions=1 inFlight=1 pending=0 actors=agent-1788294226418116-2:0r/3a
+    agent-1788294226418116-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 203905: decisions=1 inFlight=1 pending=0 actors=agent-1788294226418116-2:0r/3a
+    agent-1788294226418116-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 204005: decisions=1 inFlight=1 pending=0 actors=agent-1788294226418116-2:0r/3a
+    agent-1788294226418116-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 204105: decisions=1 inFlight=1 pending=0 actors=agent-1788294226418116-2:0r/3a
+    agent-1788294226418116-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 204205: decisions=1 inFlight=1 pending=0 actors=agent-1788294226418116-2:0r/3a
+    agent-1788294226418116-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 204305: decisions=1 inFlight=1 pending=0 actors=agent-1788294226418116-2:0r/3a
+    agent-1788294226418116-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 204405: decisions=1 inFlight=1 pending=0 actors=agent-1788294226418116-2:0r/3a
+    agent-1788294226418116-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 204434: decisions=0 inFlight=0 pending=0 actors=agent-1788294226418116-2:0r/3a
+
+

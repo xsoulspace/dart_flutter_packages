@@ -160,7 +160,7 @@ pi-install:
     cd {{ PI_DRIVER_DIR }} && npm install --no-fund --no-audit
 
 # Smoke: run pi against the first suite task and emit one JSONL row.
-pi-smoke model="z-ai/glm-4.5-air:free":
+pi-smoke model="deepseek/deepseek-v4-flash-0731":
     #!/usr/bin/env bash
     set -euo pipefail
     : "${OPENROUTER_API_KEY:?OPENROUTER_API_KEY must be set}"

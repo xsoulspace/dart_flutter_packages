@@ -22,7 +22,7 @@ Future<void> main(List<String> args) async {
   var apiKey = Platform.environment['OPENROUTER_API_KEY'] ?? '';
   if (model.isEmpty) {
     final config = await EnvConfig.load();
-    model = config.get('openrouter.model') ?? 'z-ai/glm-4.5-air:free';
+    model = config.get('openrouter.model') ?? 'deepseek/deepseek-v4-flash-0731';
   }
   if (apiKey.isEmpty) {
     final config = await EnvConfig.load();
@@ -40,8 +40,10 @@ Future<void> main(List<String> args) async {
     },
   );
   final suiteModelId = ModelId('agent-model');
-  sharedRouter.models[suiteModelId] =
-      Model(id: suiteModelId, name: OpenRouterModelNames.openRouter);
+  sharedRouter.models[suiteModelId] = Model(
+    id: suiteModelId,
+    name: OpenRouterModelNames.openRouter,
+  );
 
   final cli = AgentCli(
     config: AgentCliConfig(

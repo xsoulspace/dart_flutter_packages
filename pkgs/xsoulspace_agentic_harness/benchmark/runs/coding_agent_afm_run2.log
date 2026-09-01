@@ -514,3 +514,103 @@ intents failed: save_url -> {value: false}…"
 tick 55451: decisions=0 inFlight=0 pending=0 actors=agent-1788291559996961-1:0r/3a
 
 
+coding_agent run — task: intent_03_bookmark_macros
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 1496
+  decisions: 6
+  tool rounds (thread beats): 50
+  moves: {intent_define.define: 49, intent_define.list: 1}
+  projection tokens (honest spend, Situation.tokensUsed): 13700
+  meaning nodes: 0, edges: 0
+  wall clock: 518351 ms
+  final gate (outer oracle, once): FAIL
+    check: materialized program missing: program.dart (action materialize was never run)
+  failure class: final gate: materialized program missing: program.dart (action materialize was never run)
+--- harness pulse (J1.5.3) ---
+tick 6 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788293708081624-1: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: materialized program missing: program.dart (action materialize was never run)
+— agent-1788293708081624-1  [idle]  rounds 0/12 (Σ0)  attempts 3/3 EXHAUSTED
+    last: intent_define:{"name":"save_url","action":"define","returns":"bool","pa… → FAILED
+      error: {"error":"chain topology: the spec graph has a cycle reachable from row 0 — chains must terminate at a return op. Che…
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 147820..173202
+tick 171387: decisions=1 inFlight=1 pending=0 actors=agent-1788293708081624-1:0r/3a
+    agent-1788293708081624-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 171487: decisions=1 inFlight=1 pending=0 actors=agent-1788293708081624-1:0r/3a
+    agent-1788293708081624-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 171587: decisions=1 inFlight=1 pending=0 actors=agent-1788293708081624-1:0r/3a
+    agent-1788293708081624-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 171687: decisions=1 inFlight=1 pending=0 actors=agent-1788293708081624-1:0r/3a
+    agent-1788293708081624-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 171787: decisions=1 inFlight=1 pending=0 actors=agent-1788293708081624-1:0r/3a
+    agent-1788293708081624-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 171887: decisions=1 inFlight=1 pending=0 actors=agent-1788293708081624-1:0r/3a
+    agent-1788293708081624-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 171987: decisions=1 inFlight=1 pending=0 actors=agent-1788293708081624-1:0r/3a
+    agent-1788293708081624-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 172087: decisions=1 inFlight=1 pending=0 actors=agent-1788293708081624-1:0r/3a
+    agent-1788293708081624-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 172187: decisions=1 inFlight=1 pending=0 actors=agent-1788293708081624-1:0r/3a
+    agent-1788293708081624-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 172287: decisions=1 inFlight=1 pending=0 actors=agent-1788293708081624-1:0r/3a
+    agent-1788293708081624-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 172387: decisions=1 inFlight=1 pending=0 actors=agent-1788293708081624-1:0r/3a
+    agent-1788293708081624-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 172487: decisions=1 inFlight=1 pending=0 actors=agent-1788293708081624-1:0r/3a
+    agent-1788293708081624-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 172587: decisions=1 inFlight=1 pending=0 actors=agent-1788293708081624-1:0r/3a
+    agent-1788293708081624-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 172687: decisions=1 inFlight=1 pending=0 actors=agent-1788293708081624-1:0r/3a
+    agent-1788293708081624-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 172787: decisions=1 inFlight=1 pending=0 actors=agent-1788293708081624-1:0r/3a
+    agent-1788293708081624-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 172887: decisions=1 inFlight=1 pending=0 actors=agent-1788293708081624-1:0r/3a
+    agent-1788293708081624-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 172987: decisions=1 inFlight=1 pending=0 actors=agent-1788293708081624-1:0r/3a
+    agent-1788293708081624-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 173087: decisions=1 inFlight=1 pending=0 actors=agent-1788293708081624-1:0r/3a
+    agent-1788293708081624-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 173187: decisions=1 inFlight=1 pending=0 actors=agent-1788293708081624-1:0r/3a
+    agent-1788293708081624-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+materialized program missing: program.dart…"
+tick 173202: decisions=0 inFlight=0 pending=0 actors=agent-1788293708081624-1:0r/3a
+
+

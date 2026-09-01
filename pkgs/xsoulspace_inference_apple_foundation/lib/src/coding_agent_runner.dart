@@ -285,25 +285,44 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
   /// Host/test override for the approver (takes precedence over
   /// [autoApprove]); the LLM-free diff-gate test injects a scripted one.
   Future<bool> Function(CapturedWrite write)? writeApprover,
+
+  /// P5: resume — an existing world restored from a snapshot store. The
+  /// restored actor is idle-resumable (no open decisions); this runner
+  /// re-wires the tool surface, verifier and overseer onto it, seeds NO
+  /// fixtures (the workspace already carries the run's state), and
+  /// continues the goal from the persisted monotonic budgets.
+  World? restoredWorld,
+
+  /// P5: called after every loop session with the live world — the host
+  /// persists a snapshot (crash/resume support). Awaited: process exit must
+  /// never race a pending save.
+  Future<void> Function(World world)? onSnapshot,
 }) async {
   final sw = Stopwatch()..start();
-  final world = World()..addPlugin(AgentPlugin());
+  final resume = restoredWorld != null;
+  final world = restoredWorld ?? (World()..addPlugin(AgentPlugin()));
   final recorder = FlightRecorder();
   onRecorder?.call(recorder);
-  world
-    ..upsertResource(ToolRegistryResource())
-    ..upsertResource(recorder)
-    // B7: the verifier-in-loop policy chain — RunGradedGoalPolicy consumes
-    // GoalVerified stamps (maxGoalAttempts bounded), ReActContinuationPolicy
-    // is the engine. NO driver-level retry loop.
-    ..upsertResource(DecisionFlowResource(defaultGoalFlow()))
-    // J2 (ADR 0018): session-per-decision bridge — native accumulation is
-    // bounded by the harness round cap × per-round ack size.
-    ..upsertResource(AgencyPolicy(maxConcurrent: 1, maxToolRounds: 12))
-    ..flush();
+  if (!resume) {
+    world
+      ..upsertResource(ToolRegistryResource())
+      ..upsertResource(recorder)
+      // B7: the verifier-in-loop policy chain — RunGradedGoalPolicy consumes
+      // GoalVerified stamps (maxGoalAttempts bounded), ReActContinuationPolicy
+      // is the engine. NO driver-level retry loop.
+      ..upsertResource(DecisionFlowResource(defaultGoalFlow()))
+      // J2 (ADR 0018): session-per-decision bridge — native accumulation is
+      // bounded by the harness round cap × per-round ack size.
+      ..upsertResource(AgencyPolicy(maxConcurrent: 1, maxToolRounds: 12))
+      ..flush();
+  } else {
+    world.upsertResource(recorder);
+  }
 
   final meter = DecisionMeter(handler);
-  world.getResource<GenerationHandlerResource>().registerDefault(meter);
+  world
+    ..upsertResource(GenerationHandlerResource())
+    ..getResource<GenerationHandlerResource>().registerDefault(meter);
   // The agency grant reads per-model capacity from the router — scripted
   // runs still need the resource (an empty router = default capacity 1).
   world.upsertResource(ModelRouterResource(ModelRouter()));
@@ -331,29 +350,44 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
     world.getResource<ToolRegistryResource>().register('default', registry);
   }
 
-  // Host-seeded fixtures (loop.dart, check.dart, …).
-  for (final f in task.fixtures) {
-    final file = File('${jail.path}/${f.path}')
-      ..parent.createSync(recursive: true);
-    file.writeAsStringSync(f.content);
+  // Host-seeded fixtures (loop.dart, check.dart, …). NOT re-seeded on
+  // resume: the workspace already carries the run's state.
+  if (!resume) {
+    for (final f in task.fixtures) {
+      final file = File('${jail.path}/${f.path}')
+        ..parent.createSync(recursive: true);
+      file.writeAsStringSync(f.content);
+    }
   }
 
-  final scene = world.spawnComponents([Scene(), SceneFrame()]);
-  final actor = world.spawnComponents([
-    Actor(agentId: AgentId.create()),
-    ActorModel(modelId: ModelId.create()),
-    ActorSystemPrompt(text: task.systemPrompt),
-    ActorThreads(threads: []),
-    ActorTools(registryName: 'default'),
-    PresentInScene(sceneEntity: scene),
-    // The Goal + open decision: the acceptance criteria travel in-frame
-    // (ADR 0009) — the verifier stamps GoalVerified against THIS goal.
-    Goal(text: task.prompt),
-    OpenDecision(prompt: task.prompt),
-  ]);
-  final thread = spawnThread(world, actor, scene);
-  world.upsertComponent(actor, ActorThreads(threads: [thread]));
-  world.flush();
+  late final Entity actor;
+  Entity? resumedThread;
+  if (resume) {
+    // The goal-carrying actor comes from the snapshot.
+    final carriers = world.query2<Actor, Goal>().toList();
+    if (carriers.isEmpty) {
+      throw StateError('resume: the snapshot carries no goal-carrying actor');
+    }
+    actor = carriers.single.$1.entity;
+  } else {
+    final scene = world.spawnComponents([Scene(), SceneFrame()]);
+    actor = world.spawnComponents([
+      Actor(agentId: AgentId.create()),
+      ActorModel(modelId: ModelId.create()),
+      ActorSystemPrompt(text: task.systemPrompt),
+      ActorThreads(threads: []),
+      ActorTools(registryName: 'default'),
+      PresentInScene(sceneEntity: scene),
+      // The Goal + open decision: the acceptance criteria travel in-frame
+      // (ADR 0009) — the verifier stamps GoalVerified against THIS goal.
+      Goal(text: task.prompt),
+      OpenDecision(prompt: task.prompt),
+    ]);
+    final thread = spawnThread(world, actor, scene);
+    world.upsertComponent(actor, ActorThreads(threads: [thread]));
+    world.flush();
+    resumedThread = thread;
+  }
 
   // B7: verifier INSIDE the loop + bounded repair attempts.
   //
@@ -385,7 +419,11 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
   }
 
   const maxGoalAttempts = 3;
-  var attempt = 0;
+  // P5: the monotonic attempt budget persists across restarts — a resumed
+  // run continues where the counter stopped (never a reset).
+  var attempt = resume
+      ? (world.getEntity(actor).$1.get<AttemptCount>()?.value ?? 0)
+      : 0;
   List<CheckerResult> grade() => [
     for (final c in task.checkers) evaluateChecker(c, jail.path),
   ];
@@ -401,16 +439,22 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
     openFreshDecision(
       world,
       actor,
-      prompt:
-          'Your previous attempt did not satisfy verification (attempt '
-          '$attempt/$maxGoalAttempts).\nFailing:\n'
-          '${[for (final c in finalGate) if (!c.passed) c.detail].join("\n")}\n\n'
-          '${task.repairHint}\n\nOriginal task:\n${task.prompt}',
+      prompt: resume && attempt == 1
+          ? 'You were restored from a snapshot (previous attempt did not '
+              'satisfy verification).\nFailing:\n'
+              '${[for (final c in finalGate) if (!c.passed) c.detail].join("\n")}\n\n'
+              '${task.repairHint}\n\nOriginal task:\n${task.prompt}'
+          : 'Your previous attempt did not satisfy verification (attempt '
+              '$attempt/$maxGoalAttempts).\nFailing:\n'
+              '${[for (final c in finalGate) if (!c.passed) c.detail].join("\n")}\n\n'
+              '${task.repairHint}\n\nOriginal task:\n${task.prompt}',
     );
     await HarnessLoop(world: world).runUntilIdle();
     finalGate = grade();
     passed = finalGate.isNotEmpty && finalGate.every((c) => c.passed);
+    await onSnapshot?.call(world);
   }
+  await onSnapshot?.call(world);
   if (!passed) {
     // J8 rung 1: exhausted — the structured terminal record ships the
     // failure class, not raw noise.
@@ -427,7 +471,13 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
   // K columns from the durable thread record.
   final moves = <String, int>{};
   var toolRounds = 0;
-  for (final beat in world.getResource<FacetIndex>().beatsOfThread(thread)
+  final activeThread =
+      resumedThread ??
+      world.getEntity(actor).$1.get<ActorThreads>()?.threads.firstOrNull;
+  final threadEntity = activeThread;
+  for (final beat in (threadEntity == null
+          ? const <Entity>[]
+          : world.getResource<FacetIndex>().beatsOfThread(threadEntity))
       .toList()) {
     final we = world.getEntity(beat).$1;
     final call = we.get<BeatToolCall>();

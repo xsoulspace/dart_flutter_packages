@@ -142,6 +142,45 @@ class SnapshotStore {
     return restoreWorld(world);
   }
 
+  /// Reads session [name]'s raw envelope (meta + world payload) WITHOUT
+  /// restoring. P5: hosts need the metadata (task id, jail path) BEFORE
+  /// deciding whether/how to restore.
+  Future<Map<String, dynamic>> loadEnvelope(String name) async {
+    final path = sessionPath(name);
+    final raw = await _service.readFile(path);
+    if (raw == null) {
+      throw SnapshotNotFoundException('No session "$name" at $path.');
+    }
+    if (raw.isEmpty) {
+      throw SnapshotFormatException('Session "$name" at $path is empty.');
+    }
+    final dynamic decoded;
+    try {
+      decoded = jsonDecode(raw);
+    } on FormatException catch (error) {
+      throw SnapshotFormatException(
+        'Session "$name" at $path is not valid JSON.',
+        error,
+      );
+    }
+    if (decoded is! Map<String, dynamic>) {
+      throw SnapshotFormatException(
+        'Session "$name" is not an object envelope.',
+      );
+    }
+    if (decoded['schema'] != _schemaTag) {
+      throw SnapshotFormatException(
+        'Session "$name" has unknown schema "${decoded['schema']}".',
+      );
+    }
+    if (decoded['version'] != _envelopeVersion) {
+      throw SnapshotFormatException(
+        'Session "$name" has unsupported version "${decoded['version']}".',
+      );
+    }
+    return decoded;
+  }
+
   /// Lists saved session names, sorted, without extension.
   Future<List<String>> listSessions() async {
     final entries = await _service.listDirectory(directory);

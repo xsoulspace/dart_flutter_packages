@@ -4,7 +4,7 @@
 ///
 /// ```sh
 /// dart run bin/coding_agent.dart "<task sentence>" [--jail <dir>] [--task <suite-id>] [--runs 3] [--scripted]
-///                      [--diff-gate] [--auto-approve]
+///                      [--diff-gate] [--auto-approve] [--session <store-path>] [--resume <store-path>]
 /// ```
 ///
 /// - `--task intent_03_bookmark_macros` — the J1.4 gate (intent oracle).
@@ -22,11 +22,14 @@
 /// tool descriptions + the system prompt only.
 library;
 
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 import 'package:xsoulspace_agentic_harness/benchmark_api.dart'
     show ScriptedSuiteHandler;
+import 'package:xsoulspace_agentic_harness/src/snapshot_store.dart'
+    show SnapshotStore;
 import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
     show WriteGateMode;
 import 'package:xsoulspace_inference_apple_foundation/src/coding_agent_runner.dart';
@@ -42,11 +45,44 @@ const _defaultOpenRouterModel = 'deepseek/deepseek-v4-flash-0731';
 
 Future<void> main(List<String> args) async {
   final cli = parseCliArgs(args);
-  final runs = int.tryParse(cli['runs'] ?? '') ?? 3;
   final taskId = cli['task'];
   final jailArg = cli['jail'];
   final scripted = cli.containsKey('scripted');
   final sentence = cli['_positional'];
+  // P5: `--resume <store-path>` continues a saved session (task + jail come
+  // from the envelope meta; the world is restored idle-resumable and a fresh
+  // snapshot persists after every loop session). `--session <store-path>`
+  // persists WITHOUT resuming — the first half of a save/resume pair.
+  final resumePath = cli['resume'];
+  final sessionPath = resumePath ?? cli['session'];
+  SnapshotStore? store;
+  World? restoredWorld;
+  String? resumeJail;
+  if (sessionPath != null) {
+    store = SnapshotStore();
+    await store.open(sessionPath);
+  }
+  if (resumePath != null) {
+    final envelope = await store!.loadEnvelope('current');
+    final meta = (envelope['meta'] as Map?) ?? const {};
+    final restoredTask = meta['task'] as String?;
+    resumeJail = meta['jail'] as String?;
+    if (restoredTask == null || resumeJail == null) {
+      stderr.writeln(
+        'resume: the session envelope carries no task/jail meta — '
+        'cannot resume.',
+      );
+      exit(66);
+    }
+    restoredWorld = await store.load('current');
+    stderr.writeln(
+      '[resume] session loaded from $resumePath '
+      '(task $restoredTask, jail $resumeJail)',
+    );
+  }
+  final runs = resumePath != null
+      ? 1 // one continuation per resume invocation
+      : int.tryParse(cli['runs'] ?? '') ?? 3;
   // P1 dogfooding: `--backend open_router --model <or/model>` runs the SAME
   // loop with an OpenRouter model (native tool_calls, session-per-decision
   // codec). The backend label names the model (K discipline).
@@ -64,6 +100,14 @@ Future<void> main(List<String> args) async {
   }
 
   final backend = openRouter ? 'open_router:$orModel' : backendArg;
+
+  // P6 — NDJSON transport (--json): stdout streams one JSON object per line
+  // (run_start / decision / pulse / run_end / summary). The harness core
+  // learns no transport (D5): telemetry wraps the HANDLER here in the host.
+  final jsonOut = cli.containsKey('json');
+  void emit(Map<String, Object?> event) {
+    if (jsonOut) stdout.writeln(jsonEncode(event));
+  }
   final task = taskId != null
       ? (codingAgentTasks[taskId] ??
             (throw ArgumentError.value(
@@ -130,12 +174,25 @@ Future<void> main(List<String> args) async {
           name: DefaultModelNames.appleFoundation,
         );
       }
+      emit({
+        'type': 'run_start',
+        'run': i,
+        'task': task.id,
+        'backend': backend,
+        'jail': jail.path,
+        'resumed': restoredWorld != null,
+      });
       final result = await runCodingAgentOnce(
         task: task,
         jail: jail,
-        handler: scripted
-            ? ScriptedSuiteHandler(taskId: task.id)
-            : DefaultGenerationHandler(router: router!),
+        handler: _wrapTelemetry(
+          scripted
+              ? ScriptedSuiteHandler(taskId: task.id)
+              : DefaultGenerationHandler(router: router!),
+          jsonOut: jsonOut,
+          run: i,
+          emit: emit,
+        ),
         backend: backend,
         // J1.5.5: Ctrl-C during an on-device run still leaves a post-mortem.
         onRecorder: wireSigintDump,
@@ -145,6 +202,15 @@ Future<void> main(List<String> args) async {
             ? WriteGateMode.review
             : null,
         autoApprove: cli.containsKey('auto-approve'),
+        // P5: restore + persist the session around every loop session.
+        restoredWorld: restoredWorld,
+        onSnapshot: store == null
+            ? null
+            : (liveWorld) async => store!.save(
+                liveWorld,
+                name: 'current',
+                meta: {'task': task.id, 'jail': jail.path},
+              ),
       );
       results.add(result);
       final logFile = writeRunLog(
@@ -152,21 +218,42 @@ Future<void> main(List<String> args) async {
         'coding_agent${scripted ? "_scripted" : "_afm"}_run$i.log',
         formatRunLog(result),
       );
-      stdout
-        ..writeln(
+      final humanLine =
           '[$backend] ${task.id} run $i/$runs: '
           '${result.passed ? "PASS" : "FAIL"} '
           '(decisions ${result.decisions}, rounds ${result.toolRounds}, '
           'tokens ${result.projectionTokens}, '
           'moves ${result.moves.values.fold(0, (a, b) => a + b)}) '
-          '→ ${logFile.path}',
-        )
-        ..writeln(
-          '  final gate: '
-          '${[for (final c in result.finalGate) c.detail].join(" | ")}',
-        );
+          '→ ${logFile.path}';
+      // P6: in NDJSON mode stdout IS the transport — human lines go to stderr.
+      jsonOut ? stderr.writeln(humanLine) : stdout.writeln(humanLine);
+      (jsonOut ? stderr : stdout).writeln(
+        '  final gate: '
+        '${[for (final c in result.finalGate) c.detail].join(" | ")}',
+      );
+      if (jsonOut) {
+        emit({
+          'type': 'pulse',
+          'run': i,
+          'text': result.pulseText,
+        });
+        emit({
+          'type': 'run_end',
+          'run': i,
+          'task': task.id,
+          'backend': backend,
+          'verdict': result.passed ? 'PASS' : 'FAIL',
+          'decisions': result.decisions,
+          'tool_rounds': result.toolRounds,
+          'tokens': result.projectionTokens,
+          'moves': result.moves,
+          'gate': [for (final c in result.finalGate) c.detail],
+          'failure_class': result.failureClass,
+          'wall_clock_ms': result.wallClock.inMilliseconds,
+        });
+      }
     } finally {
-      if (jailArg == null) {
+      if (jailArg == null && resumeJail == null) {
         jail.deleteSync(recursive: true);
       }
     }
@@ -181,8 +268,59 @@ Future<void> main(List<String> args) async {
     results: results,
   );
   writeRunLog(runsDir, 'coding_agent_afm_summary.log', '$summary\n');
-  stdout
-    ..writeln(summary)
-    ..writeln('(logs in ${runsDir.path}/)');
+  if (jsonOut) {
+    emit({
+      'type': 'summary',
+      'row': summary,
+      'passed': results.where((r) => r.passed).length,
+      'runs': runs,
+    });
+  } else {
+    stdout
+      ..writeln(summary)
+      ..writeln('(logs in ${runsDir.path}/)');
+  }
   exit(results.any((r) => r.passed) ? 0 : 1);
 }
+
+/// P6 — decision-level telemetry: observes every generation the handler
+/// returns and emits one NDJSON `decision` event per tool-call turn. Pure
+/// observation: the response flows to the world unchanged (the handler never
+/// executes tools).
+class _NdjsonTelemetryHandler implements GenerationHandler {
+  _NdjsonTelemetryHandler(this._inner, {required this.run, required this.emit});
+  final GenerationHandler _inner;
+  final int run;
+  final void Function(Map<String, Object?> event) emit;
+  int _seq = 0;
+
+  @override
+  Future<ActorGenerateResponse> generate(
+    World world,
+    ActorGenerateRequest request,
+  ) async {
+    final response = await _inner.generate(world, request);
+    _seq++;
+    emit({
+      'type': 'decision',
+      'run': run,
+      'seq': _seq,
+      'actor': response.actorEntity.toString(),
+      if (response.error.isNotEmpty) 'error': response.error,
+      'tool_calls': [
+        for (final call in response.toolCalls)
+          {'name': call.name.value, 'args': call.arguments},
+      ],
+    });
+    return response;
+  }
+}
+
+GenerationHandler _wrapTelemetry(
+  GenerationHandler inner, {
+  required bool jsonOut,
+  required int run,
+  required void Function(Map<String, Object?> event) emit,
+}) => jsonOut
+    ? _NdjsonTelemetryHandler(inner, run: run, emit: emit)
+    : inner;

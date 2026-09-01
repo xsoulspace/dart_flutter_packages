@@ -5,11 +5,11 @@ way CLI coding agents do: two JSON files plus your process environment.
 
 ## Where values live
 
-| Scope | Path | Typical use |
-|---|---|---|
-| Process env | — | one-off overrides, CI |
-| Local | `./.xsoulspace/config.json` | per-project keys/settings (gitignore it if secret) |
-| Global | `~/.config/xsoulspace/inference/config.json`¹ | machine-wide defaults |
+| Scope       | Path                                          | Typical use                                        |
+| ----------- | --------------------------------------------- | -------------------------------------------------- |
+| Process env | —                                             | one-off overrides, CI                              |
+| Local       | `./.xsoulspace/config.json`                   | per-project keys/settings (gitignore it if secret) |
+| Global      | `~/.config/xsoulspace/inference/config.json`¹ | machine-wide defaults                              |
 
 Lookup order when reading a key: **process env → local → global**.
 ¹ honors `$XDG_CONFIG_HOME`.
@@ -19,7 +19,7 @@ File format is a flat JSON object of strings:
 ```json
 {
   "OPENROUTER_API_KEY": "sk-or-...",
-  "openrouter.model": "z-ai/glm-4.5-air:free"
+  "openrouter.model": "deepseek/deepseek-v4-flash-0731"
 }
 ```
 
@@ -32,7 +32,7 @@ final config = await EnvConfig.load();
 
 // Persist (creates directories; overwrites corrupt files).
 await config.set('OPENROUTER_API_KEY', 'sk-or-...', scope: ConfigScope.local);
-await config.set('openrouter.model', 'z-ai/glm-4.5-air:free',
+await config.set('openrouter.model', 'deepseek/deepseek-v4-flash-0731',
     scope: ConfigScope.global);
 
 // Read (merged across scopes).

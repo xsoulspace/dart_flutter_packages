@@ -1,0 +1,22 @@
+coding_agent run — task: intent_03_bookmark_macros
+  backend: scripted_llm_free
+  verdict: PASS
+  overhead tokens (system+schemas): 1496
+  decisions: 4
+  tool rounds (thread beats): 20
+  moves: {intent_define.define: 8, act_with_project.materialize: 4, intent_call: 8}
+  projection tokens (honest spend, Situation.tokensUsed): 7802
+  meaning nodes: 12, edges: 10
+  wall clock: 214 ms
+  final gate (outer oracle, once): PASS
+    check: intents: all 4 calls verified
+  failure class: -
+--- harness pulse (J1.5.3) ---
+tick 4 | decisions 0 | in-flight 0 | pending results 0
+— agent-1788294502346999-1  [idle via react_continuation]  rounds 12/12 (Σ12)  attempts 1/3  goal PASS
+    last: intent_call:{"intent":"list_saved"} → ok
+--- flight recorder ---
+FlightRecorder: 1 pulse(s), ticks 8..8
+tick 8: decisions=0 inFlight=0 pending=0 actors=agent-1788294502346999-1:12r/1a
+
+

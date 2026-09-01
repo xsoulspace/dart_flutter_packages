@@ -39,13 +39,24 @@ const String kSnapshotFormat = 'ecsly-persistent-id';
 const int _snapshotFormatVersion = 1;
 
 /// Derived projections and transient loop state: never captured, never
-/// spawned back, even if a source entity carried them.
+/// spawned back, even if a source entity carried them. P5 (persistent
+/// sessions): a restored actor is IDLE-RESUMABLE — open decisions, agency
+/// grants, in-flight awaits, stale verdicts, loop-smoke streaks and the
+/// transient escalation baton do NOT cross a restart. AttemptCount and
+/// ToolRoundCount DO (monotonic budgets survive), as does the durable
+/// GoalAttemptsExhausted terminal record.
 const Set<String> _excludedComponents = {
   'Situation',
   'StreamingBeat',
   'ToolResultPendingMarker',
   'DecisionOrigin',
   'DeferredThinking',
+  'OpenDecision',
+  'Agency',
+  'AwaitingResponse',
+  'LoopStuck',
+  'EscalationRequest',
+  'GoalVerified',
 };
 
 /// The world a codec currently reads from (capture) or writes into

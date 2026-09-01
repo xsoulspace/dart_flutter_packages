@@ -11117,7 +11117,7 @@ Terminal:
   if (model.isEmpty) {
     // --model flag wins; otherwise the saved local/global config.
     final config = await EnvConfig.load();
-    model = config.get('openrouter.model') ?? 'z-ai/glm-4.5-air:free';
+    model = config.get('openrouter.model') ?? 'deepseek/deepseek-v4-flash-0731';
   }
 
   if (apiKey.isEmpty) {
