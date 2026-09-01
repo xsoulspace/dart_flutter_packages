@@ -9,12 +9,10 @@ library;
 
 import 'dart:io';
 
-import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart';
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
-import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
-
+import '../../xsoulspace_agentic_harness.dart';
 import '../benchmark/coding_suite/checkers.dart';
 import '../benchmark/coding_suite/task_spec.dart';
+import '../tools/fs_tools.dart';
 
 // ---- Shared components -----------------------------------------------------
 //
@@ -23,8 +21,8 @@ import '../benchmark/coding_suite/task_spec.dart';
 // component co-spawning with registered ones corrupts ecsly archetype
 // column allocation). Re-exported here for source compatibility.
 export '../data_models/components.dart'
-    show GoalVerified, StepStatus, StepGoalLink, ActorGoalRef, IdleNudgeCount,
-        StepClaim, StepAction, StepIndex;
+    show ActorGoalRef, GoalVerified, IdleNudgeCount, StepAction, StepClaim,
+        StepGoalLink, StepIndex, StepStatus;
 
 /// Max idle nudges before giving up on an unverified goal (bounded loop).
 const int maxIdleNudges = 1;
@@ -90,7 +88,7 @@ void registerExperimentComponents(World world) {
 Future<({World world, Directory jail, List<int> tokenTotal})>
 buildExperimentWorld(
   CodingTask task, {
-  required GenerationHandler buildHandler(),
+  required GenerationHandler Function() buildHandler,
 }) async {
   final jail = await Directory.systemTemp.createTemp('exp_${task.id}_');
   for (final f in task.fixtures) {
@@ -103,9 +101,8 @@ buildExperimentWorld(
   registerExperimentComponents(world);
   final router = ModelRouter(inferenceClientsBuilders: {});
   const modelId = ModelId('suite-model');
-  router.models[modelId] = Model(
+  router.models[modelId] = const Model(
     id: modelId,
-    name: DefaultModelNames.appleFoundation,
   );
   world
     ..upsertResource(ModelRouterResource(router))
@@ -131,7 +128,7 @@ Entity spawnStandardActor(
   final scene = world.spawnComponents([const Scene(), SceneFrame()]);
   final actor = world.spawnComponents([
     Actor(agentId: AgentId.create()),
-    ActorModel(modelId: modelId),
+    const ActorModel(modelId: modelId),
     ActorSystemPrompt(text: systemPrompt),
     ActorThreads(threads: []),
     const ActorTools(registryName: 'default'),

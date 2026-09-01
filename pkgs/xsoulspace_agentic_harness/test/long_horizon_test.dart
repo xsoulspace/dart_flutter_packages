@@ -7,6 +7,8 @@
 /// 1. tokens/decision stays flat as the beat graph grows (bounded context);
 /// 2. per-decision latency grows far slower than the beat count;
 /// 3. no projection exceeds the token budget.
+library;
+
 
 import 'package:test/test.dart';
 

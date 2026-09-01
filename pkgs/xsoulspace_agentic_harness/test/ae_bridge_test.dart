@@ -3,9 +3,11 @@
 /// M4 bridge tests — pure fixtures in AE's `VerifyEntry.toJson()` wire
 /// shape (now consumed via `agentic_executables_wire`, Stage G3); no AE
 /// install, no subprocess.
+library;
+
 import 'package:test/test.dart';
-import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 import 'package:xsoulspace_agentic_harness/src/tooling/ae_bridge.dart';
+import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
 const _fixture = {
   'entries': [

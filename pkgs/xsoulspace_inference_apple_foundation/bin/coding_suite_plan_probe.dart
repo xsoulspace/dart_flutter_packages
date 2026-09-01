@@ -19,7 +19,6 @@ import 'dart:io';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
 import 'package:xsoulspace_inference_apple_foundation/src/native_bridge/native_client.dart';
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import 'package:xsoulspace_agentic_harness/benchmark_api.dart';
 

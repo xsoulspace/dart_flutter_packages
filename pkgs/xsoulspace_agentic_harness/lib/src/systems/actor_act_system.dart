@@ -1,11 +1,9 @@
 import 'dart:async';
 
-import 'package:ecsly/ecsly.dart';
 
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import '../data_models/data_models.dart';
 import '../events.dart';
-import '../model_router.dart';
 import '../narrative/narrative.dart';
 import '../resources/resources.dart';
 
@@ -138,7 +136,7 @@ Future<void> actorActSystem(World world) async {
           .take(taskId)
           ?.completer
           .complete(
-            ToolExecutionResult(
+            const ToolExecutionResult(
               name: 'generate',
               output: 'No generation handler',
             ),

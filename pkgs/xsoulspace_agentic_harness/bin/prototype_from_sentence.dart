@@ -23,7 +23,6 @@ import 'dart:io';
 
 import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 /// Run one sentence through the composition stack; return the summary.
 Future<DatasetResultSummary> prototypeFrom(String idea) async {
@@ -45,9 +44,8 @@ stages:
   final jail = await Directory.systemTemp.createTemp('proto_');
   final world = World()..addPlugin(AgentPlugin());
   final router = ModelRouter(inferenceClientsBuilders: {});
-  router.models[const ModelId('m')] = Model(
-    id: const ModelId('m'),
-    name: DefaultModelNames.appleFoundation,
+  router.models[const ModelId('m')] = const Model(
+    id: ModelId('m'),
   );
   world
     ..upsertResource(ModelRouterResource(router))
@@ -69,8 +67,8 @@ stages:
           ScriptedTurn(
             text: 'I saved the first bookmark.',
             toolCalls: [
-              ToolCall(
-                name: const ToolName('write'),
+              const ToolCall(
+                name: ToolName('write'),
                 arguments: {'path': 'bookmarks.json', 'content': '{"items":[]}'},
               ),
               ToolCall(

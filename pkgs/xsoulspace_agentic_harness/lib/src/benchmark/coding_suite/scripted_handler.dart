@@ -7,8 +7,7 @@
 /// pipeline (jail seeding → harness loop → tool execution → checkers) in CI.
 library;
 
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
-import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
+import '../../../xsoulspace_agentic_harness.dart';
 
 /// One scripted step: a tool call to dispatch.
 class ScriptedStep {
@@ -247,7 +246,7 @@ final Map<String, List<ScriptedStep>> scriptedBehaviors = {
   'refactor_03_split_file': [
     ScriptedStep('write', {
       'path': 'user.dart',
-      'content': 'class User {\n  String name = \'\';\n}\n',
+      'content': "class User {\n  String name = '';\n}\n",
     }),
     ScriptedStep('write', {
       'path': 'order.dart',
@@ -255,7 +254,7 @@ final Map<String, List<ScriptedStep>> scriptedBehaviors = {
     }),
     ScriptedStep('write', {
       'path': 'product.dart',
-      'content': 'class Product {\n  String sku = \'\';\n}\n',
+      'content': "class Product {\n  String sku = '';\n}\n",
     }),
     ScriptedStep('write', {
       'path': 'models.dart',
@@ -335,7 +334,7 @@ final Map<String, List<ScriptedStep>> scriptedBehaviors = {
     ScriptedStep('write', {
       'path': 'test_is_even.dart',
       'content':
-          'import \'math_utils.dart\';\nvoid check() {\n  assert(isEven(2));\n  assert(!isEven(3));\n  assert(isEven(0));\n}\n',
+          "import 'math_utils.dart';\nvoid check() {\n  assert(isEven(2));\n  assert(!isEven(3));\n  assert(isEven(0));\n}\n",
     }),
   ],
 };

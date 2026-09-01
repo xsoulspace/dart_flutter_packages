@@ -96,12 +96,12 @@ void main() {
     // Both writers issue at identical wall millis + counter: actorId
     // tiebreak decides, independent of arrival order.
     const wallMs = 5_000;
-    final aOp = OpRecord(
+    const aOp = OpRecord(
       docId: 'd',
       hlc: Hlc(wallMs, 0, 'actor-a'),
       payload: {'k': 'x', 'v': 'value-a'},
     );
-    final bOp = OpRecord(
+    const bOp = OpRecord(
       docId: 'd',
       hlc: Hlc(wallMs, 0, 'actor-b'),
       payload: {'k': 'x', 'v': 'value-b'},

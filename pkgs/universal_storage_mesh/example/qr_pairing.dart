@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -54,7 +53,6 @@ Future<void> main() async {
 String _terminalQr(final Uint8List payload) {
   final qr = QrCode(
     payload: QrPayload.fromTypedData(payload),
-    errorCorrectLevel: QrErrorCorrectLevel.medium,
   );
   final image = QrImage(qr);
   final modules = image.moduleCount;

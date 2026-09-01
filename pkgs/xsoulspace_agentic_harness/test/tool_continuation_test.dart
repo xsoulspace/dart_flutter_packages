@@ -16,7 +16,6 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart';
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
 import 'support/agent_harness_support.dart';
@@ -24,7 +23,7 @@ import 'support/agent_harness_support.dart';
 Future<World> _buildWorld(String jailPath, GenerationHandler handler) async {
   final router = ModelRouter(inferenceClientsBuilders: {});
   const modelId = ModelId('m');
-  router.models[modelId] = Model(id: modelId, tier: 0);
+  router.models[modelId] = const Model(id: modelId);
   final registry = ToolRegistry();
   fsTools(FsToolsRoot(jailPath)).forEach(registry.register);
   final world = await buildTestWorld(

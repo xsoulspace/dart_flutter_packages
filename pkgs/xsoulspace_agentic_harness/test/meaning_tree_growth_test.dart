@@ -33,8 +33,6 @@ void main() {
         world,
         query: 'cell 3',
         focusIds: ['cell_2'],
-        maxNodes: 64,
-        tokenBudget: 2048,
       );
       sw.stop();
       latencies.add(sw.elapsed);

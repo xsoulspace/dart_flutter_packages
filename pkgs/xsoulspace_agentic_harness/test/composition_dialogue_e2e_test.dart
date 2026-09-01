@@ -67,16 +67,16 @@ stages:
 
     // Scripted single-turn generator: fires the model-facing policies.
     final handler = ScriptedGenerationHandler([
-      ScriptedTurn(text: 'HERO: "So this is where the story starts."'),
-      ScriptedTurn(text: 'VILLAIN: "Starts? No. It ends here."'),
+      const ScriptedTurn(text: 'HERO: "So this is where the story starts."'),
+      const ScriptedTurn(text: 'VILLAIN: "Starts? No. It ends here."'),
     ]);
     world.getResource<GenerationHandlerResource>().registerDefault(handler);
 
     final scene = world.spawnComponents([const Scene(), SceneFrame()]);
     world.spawnComponents([
       Actor(agentId: AgentId.create()),
-      ActorModel(modelId: const ModelId('suite-model')),
-      ActorSystemPrompt(text: 'You are a screenwriter. One beat per turn.'),
+      const ActorModel(modelId: ModelId('suite-model')),
+      const ActorSystemPrompt(text: 'You are a screenwriter. One beat per turn.'),
       const ActorTools(registryName: 'default'),
       PresentInScene(sceneEntity: scene),
       const OpenDecision(prompt: 'Open on the scene.'),

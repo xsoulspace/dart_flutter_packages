@@ -3,8 +3,7 @@ import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 final class InferencePreflightPanel extends StatelessWidget {
   const InferencePreflightPanel({
-    super.key,
-    required this.snapshot,
+    required this.snapshot, super.key,
     this.title = 'Inference Readiness',
   });
 

@@ -2,13 +2,14 @@
 
 /// Text streaming through the harness: deltas land in StreamingBeat AND on
 /// the StreamingTapResource push channel; the final response is unchanged.
+library;
+
 
 import 'dart:async';
 
 import 'package:test/test.dart';
-import 'package:xsoulspace_agentic_harness/src/schedules.dart';
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
+import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import 'support/agent_harness_support.dart';
 
@@ -184,7 +185,7 @@ class _FakeSession implements InferenceStructuredTextStreamSession {
   @override
   Future<InferenceResult<InferenceResponse>> get result async =>
       InferenceResult<InferenceResponse>.ok(
-        InferenceResponse(rawOutput: 'abc'),
+        const InferenceResponse(rawOutput: 'abc'),
       );
 
   @override

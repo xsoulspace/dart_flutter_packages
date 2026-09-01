@@ -14,7 +14,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:xsoulspace_agentic_harness/src/benchmark/coding_suite/checkers.dart';
 import 'package:xsoulspace_agentic_harness/src/benchmark/coding_suite/task_spec.dart';
 
-const _programSource = '''
+const _programSource = r'''
 // The host materializer's output (hand-written fixture standing in for it):
 // pure intent functions over a JSON state map — no I/O.
 Map<String, dynamic> initialState() => {'bookmarks': <String>[]};
@@ -35,7 +35,7 @@ Map<String, dynamic> runIntent(
     case 'list_saved':
       return {'count': (state['bookmarks'] as List).length};
     default:
-      throw ArgumentError('unknown intent: \$name');
+      throw ArgumentError('unknown intent: $name');
   }
 }
 ''';

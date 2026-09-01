@@ -25,13 +25,12 @@
 /// 2. Per-decision latency at the end ≤ start latency × growth factor
 ///    (default 4×) — allows superlinear constants but forbids blowups.
 /// 3. No projection ever exceeded the token budget.
+library;
+
 
 import 'dart:io';
 
-import 'package:xsoulspace_agentic_harness/src/schedules.dart';
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
-import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
-
+import '../../xsoulspace_agentic_harness.dart';
 import '../tooling/token_estimate.dart';
 
 /// Result of one long-horizon run.
@@ -199,7 +198,7 @@ Future<LongHorizonResult> runLongHorizonBenchmark({
 /// (like a real agent producing progressively more context-relevant output).
 class _RecordingHandler implements GenerationHandler {
   final tokensServed = <int>[];
-  var turn = 0;
+  int turn = 0;
 
   @override
   Future<ActorGenerateResponse> generate(

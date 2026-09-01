@@ -31,8 +31,6 @@ import 'dart:io';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 import 'package:xsoulspace_agentic_harness/benchmark_api.dart'
     show ScriptedSuiteHandler;
-import 'package:xsoulspace_agentic_harness/src/snapshot_store.dart'
-    show SnapshotStore;
 import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
     show WriteGateMode;
 import 'package:xsoulspace_inference_apple_foundation/src/coding_agent_runner.dart';

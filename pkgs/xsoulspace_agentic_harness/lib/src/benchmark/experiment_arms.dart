@@ -16,14 +16,13 @@ library;
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
-import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
+import '../../xsoulspace_agentic_harness.dart';
+import '../tools/fs_tools.dart';
 import 'coding_suite/checkers.dart';
 import 'coding_suite/scripted_handler.dart';
 import 'coding_suite/task_spec.dart';
-import '../tooling/world_builder.dart';
 
 // =============================================================================
 // Plan-frontier arm
@@ -334,7 +333,7 @@ void registerStepVerifier(
     },
   );
   registry.register(def);
-  executors.register(def.name, (args) => def.execute(args));
+  executors.register(def.name, def.execute);
 }
 
 /// Decompose a task into steps derived from its canned behavior (the
@@ -537,7 +536,7 @@ Future<DecompRunResult> runDecomposedArmReal(
     // NO ReAct continuation: the only LLM call is the decompose call.
     world
       ..upsertResource(draft)
-      ..upsertResource(DecisionFlowResource(DecisionFlow(const [])))
+      ..upsertResource(DecisionFlowResource(const DecisionFlow([])))
       ..upsertResource(StepFrontierConfig(openNextDecisions: false))
       ..flush();
 
@@ -657,7 +656,10 @@ Future<String> runPlanProbe(
       ' cum Δ | pass |',
     )
     ..writeln('|---|---|---|---|---|---|---|');
-  var baseTok = 0, planTok = 0, baseCalls = 0, planCalls = 0;
+  var baseTok = 0;
+  var planTok = 0;
+  var baseCalls = 0;
+  var planCalls = 0;
   var allPass = true;
   for (final (br, pr) in rows) {
     if (br != null) {
@@ -686,7 +688,7 @@ Future<String> runPlanProbe(
     for (final r in [br, pr]) {
       if (r == null || tracePath == null) continue;
       File(tracePath).writeAsStringSync(
-        jsonEncode({
+        '${jsonEncode({
               'task_id': r.taskId,
               'arm': identical(r, br) ? 'baseline' : 'plan',
               'backend': backendLabel,
@@ -698,14 +700,13 @@ Future<String> runPlanProbe(
               'cumulative_tokens': r.cumulativeTokens,
               'wall_ms': r.wallMs,
               if (r.toolErrors.isNotEmpty) 'tool_errors': r.toolErrors,
-            }) +
-            '\n',
+            })}\n',
         mode: FileMode.append,
       );
     }
   }
   b
-    ..writeln('')
+    ..writeln()
     ..writeln(
       '**Totals (CUMULATIVE tokens)** — calls: $baseCalls → $planCalls'
       '${arms == 'both' ? ' (${((planCalls - baseCalls) / (baseCalls == 0 ? 1 : baseCalls) * 100).toStringAsFixed(0)}%)' : ''}, '
@@ -743,7 +744,10 @@ Future<String> runDecompositionProbe(
       ' cum Δ | steps✓ | mono pass | decomp pass | fail-mode |',
     )
     ..writeln('|---|---|---|---|---|---|---|---|---|---|');
-  var mcalls = 0, dcalls = 0, mtok = 0, dtok = 0;
+  var mcalls = 0;
+  var dcalls = 0;
+  var mtok = 0;
+  var dtok = 0;
   for (final task in tasks) {
     stdout.writeln('▶ ${task.id}');
     final mono = await runPlanArm(
@@ -786,7 +790,7 @@ Future<String> runDecompositionProbe(
     );
     if (tracePath != null) {
       File(tracePath).writeAsStringSync(
-        jsonEncode({
+        '${jsonEncode({
               'task_id': task.id,
               'arm': 'monolithic',
               'backend': backendLabel,
@@ -794,12 +798,11 @@ Future<String> runDecompositionProbe(
               'passed': mono.passed,
               'llm_calls': mono.llmCalls,
               'cumulative_tokens': mono.cumulativeTokens,
-            }) +
-            '\n',
+            })}\n',
         mode: FileMode.append,
       );
       File(tracePath).writeAsStringSync(
-        jsonEncode({
+        '${jsonEncode({
               'task_id': task.id,
               'arm': 'decomposed-real',
               'backend': backendLabel,
@@ -809,8 +812,7 @@ Future<String> runDecompositionProbe(
               'cumulative_tokens': dec.cumulativeTokens,
               'steps_verified': dec.stepsVerified,
               'failure_mode': dec.failureMode,
-            }) +
-            '\n',
+            })}\n',
         mode: FileMode.append,
       );
     }

@@ -5,8 +5,7 @@ library;
 
 import 'dart:io';
 
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
-import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
+import '../../xsoulspace_agentic_harness.dart';
 
 /// Logs every decision's tool calls, structured payload, and thrown errors to
 /// stdout. Wrap the real backend handler; enable only under `--verbose` so

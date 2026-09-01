@@ -13,7 +13,6 @@ import 'dart:io';
 
 import 'package:ecsly/ecsly.dart';
 
-import '../data_models/context_fragment_protocol.dart';
 import '../data_models/data_models.dart';
 import '../events.dart';
 
@@ -65,7 +64,10 @@ class AttributionLedger extends Resource {
 
   /// Aggregated rollup per outcome class and fragment bucket.
   Map<String, Object?> summarize() {
-    var sys = 0, prompt = 0, gen = 0, ms = 0;
+    var sys = 0;
+    var prompt = 0;
+    var gen = 0;
+    var ms = 0;
     final ctx = <String, int>{};
     final outcomes = <String, int>{};
     for (final r in rows) {
@@ -90,7 +92,7 @@ class AttributionLedger extends Resource {
   /// Ranked worst-part table: biggest budget consumers first.
   String report() {
     final s = summarize();
-    final ctx = (s['contextBytes'] as Map<String, int>)
+    final ctx = (s['contextBytes']! as Map<String, int>)
         .entries
         .toList()
       ..sort((a, b) => b.value.compareTo(a.value));
@@ -169,7 +171,7 @@ class AttributedHandler implements GenerationHandler {
       // ignore: avoid_print
       stdout.writeln(
         '[dec#${r.seq}] ${r.outcome} tools=[$names] '
-        'raw=${_clip(response.rawOutput, 140)} err=${response.error}',
+        'raw=${_clip(response.rawOutput)} err=${response.error}',
       );
     }
     return response;

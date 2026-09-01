@@ -336,7 +336,7 @@ class OfflineGitStorageProvider extends StorageProvider
   bool get supportsSync => _remoteUrl.isNotEmpty;
 
   @override
-  StorageCapabilities get declaredCapabilities => StorageCapabilities(
+  StorageCapabilities get declaredCapabilities => const StorageCapabilities(
     supportsRevisionMetadata: true,
     // Sync works, but only when a remote URL is configured.
     syncAvailability: SyncAvailability.withRemoteConfig,

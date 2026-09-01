@@ -1,4 +1,3 @@
-library;
 
 export 'src/inference_audio_stream_pump.dart';
 export 'src/inference_diagnostics_presenter.dart';

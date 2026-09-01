@@ -13,7 +13,6 @@
 /// [HarnessLoop] drive everything until idle.
 library;
 
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
 /// A tiny fake model. A real backend (Gemma, Apple Foundation, OpenRouter)

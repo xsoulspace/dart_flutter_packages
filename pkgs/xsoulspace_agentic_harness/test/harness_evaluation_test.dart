@@ -7,8 +7,6 @@ library;
 import 'dart:io';
 
 import 'package:test/test.dart';
-import 'package:xsoulspace_agentic_harness/src/schedules.dart';
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
 import 'support/agent_harness_support.dart';
@@ -32,7 +30,7 @@ void main() {
     test('serves turns in order and records requests', () async {
       final handler = ScriptedGenerationHandler([
         const ScriptedTurn(text: 'first'),
-        ScriptedTurn(
+        const ScriptedTurn(
           toolCalls: [
             ToolCall(name: ToolName('echo'), arguments: {'x': 1}),
           ],
@@ -119,7 +117,7 @@ void main() {
 
     test('streaming deltas land in StreamingBeat', () async {
       final handler = ScriptedGenerationHandler([
-        ScriptedTurn(deltas: ['Hel', 'lo'], text: 'Hello'),
+        const ScriptedTurn(deltas: ['Hel', 'lo'], text: 'Hello'),
       ]);
       final (world, actor) = await _worldWith(handler);
 
@@ -178,7 +176,7 @@ void main() {
       ]);
       world.getEntity(beat).$1.insert(PrivateToActor(other));
 
-      world.upsertComponent(actor, OpenDecision(prompt: 'diary'));
+      world.upsertComponent(actor, const OpenDecision(prompt: 'diary'));
       world.flush();
       projectFor(world);
 
@@ -195,7 +193,7 @@ void main() {
   group('golden ledger', () {
     test('two identical runs produce identical dumps', () async {
       String runOnce() {
-        var dump = '';
+        const dump = '';
         // Synchronous world construction; run inside a zone-free helper.
         return dump;
       }
@@ -210,7 +208,7 @@ void main() {
         world.flush();
         final thread = spawnThread(world, actor, scene);
         world.upsertComponent(actor, ActorThreads(threads: [thread]));
-        world.upsertComponent(actor, OpenDecision(prompt: 'go'));
+        world.upsertComponent(actor, const OpenDecision(prompt: 'go'));
         world.flush();
         await HarnessLoop(world: world).runUntilIdle(maxTicks: 5000);
         final out = ledger.dumpGolden();

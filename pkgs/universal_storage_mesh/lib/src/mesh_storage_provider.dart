@@ -130,7 +130,7 @@ final class MeshStorageProvider implements StorageProvider {
     final doc = _ensureDoc(docPath);
     doc.applyLocal({'k': _contentKey, 'del': true}, DateTime.now());
     await _persist(doc);
-    return FileOperationResult(path: docPath, isNew: false);
+    return FileOperationResult(path: docPath);
   }
 
   @override

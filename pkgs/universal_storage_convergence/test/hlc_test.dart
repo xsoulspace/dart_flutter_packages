@@ -4,7 +4,7 @@ import 'package:universal_storage_convergence/universal_storage_convergence.dart
 void main() {
   group('Hlc', () {
     test('tick is strictly monotonic across wall-clock regression', () {
-      final actor = 'a';
+      const actor = 'a';
       var clock = Hlc.zero(actor);
       final t1 = DateTime.fromMillisecondsSinceEpoch(1000);
       clock = clock.tick(t1);
@@ -14,12 +14,12 @@ void main() {
         DateTime.fromMillisecondsSinceEpoch(500),
       );
       expect(afterRegression > clock, isTrue);
-      expect(clock > Hlc(1000, 0, actor), isTrue);
+      expect(clock > const Hlc(1000, 0, actor), isTrue);
     });
 
     test('receive stays strictly above remote and local', () {
-      final a = Hlc(1000, 5, 'a');
-      final b = Hlc(1000, 9, 'b');
+      const a = Hlc(1000, 5, 'a');
+      const b = Hlc(1000, 9, 'b');
       final received = a.receive(b, DateTime.fromMillisecondsSinceEpoch(999));
       expect(received > a, isTrue);
       expect(received > b, isTrue);
@@ -27,7 +27,7 @@ void main() {
     });
 
     test('restore keeps monotonicity across process restart', () {
-      final persisted = Hlc(2000, 7, 'a');
+      const persisted = Hlc(2000, 7, 'a');
       // Wall clock behind persisted value.
       final restored = hlcRestoreMonotonic(
         persistedLast: persisted,
@@ -47,7 +47,7 @@ void main() {
   group('VersionVector', () {
     test('contains dedupes per-actor monotonic events', () {
       var vv = VersionVector.zero;
-      final h1 = Hlc(10, 0, 'a');
+      const h1 = Hlc(10, 0, 'a');
       final h2 = h1.tick(DateTime.fromMillisecondsSinceEpoch(11));
       vv = vv.observed(h1);
       expect(vv.contains(h1), isTrue);
@@ -57,8 +57,8 @@ void main() {
     });
 
     test('observed never regresses', () {
-      final older = Hlc(10, 0, 'a');
-      final newer = Hlc(20, 0, 'a');
+      const older = Hlc(10, 0, 'a');
+      const newer = Hlc(20, 0, 'a');
       final vv = VersionVector.zero.observed(newer).observed(older);
       expect(vv['a'], newer);
     });

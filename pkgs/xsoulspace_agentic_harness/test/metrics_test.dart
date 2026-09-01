@@ -6,9 +6,7 @@ library;
 import 'dart:io';
 
 import 'package:test/test.dart';
-import 'package:xsoulspace_agentic_harness/src/schedules.dart';
 import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart';
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
 import 'support/agent_harness_support.dart';
@@ -114,9 +112,9 @@ void main() {
       world.flush();
 
       collector.beginDecision(actor: actor, actorName: 'a', prompt: 'one');
-      collector.endDecision(actor: actor, situation: null);
+      collector.endDecision(actor: actor);
       collector.beginDecision(actor: actor, actorName: 'a', prompt: 'two');
-      collector.endDecision(actor: actor, situation: null);
+      collector.endDecision(actor: actor);
 
       final report = collector.report();
       expect(report.totalDecisions, 2);

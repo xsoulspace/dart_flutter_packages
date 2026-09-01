@@ -58,8 +58,8 @@ final class _SocketMeshSession implements MeshSession {
           _frames.add(frame);
         }
       },
-      onDone: () => _frames.close(),
-      onError: (final Object e) => _frames.addError(e),
+      onDone: _frames.close,
+      onError: _frames.addError,
     );
   }
 

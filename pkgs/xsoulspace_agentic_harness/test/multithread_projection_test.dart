@@ -2,10 +2,10 @@
 
 /// Multi-thread projection: visibility, status filtering, private beats,
 /// and targeted decisions ([OpenDecision.threadId]).
+library;
+
 
 import 'package:test/test.dart';
-import 'package:xsoulspace_agentic_harness/src/schedules.dart';
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
 import 'support/agent_harness_support.dart';
@@ -31,7 +31,7 @@ void main() {
       'boiler',
     ]);
     // A decision is required so AgencyGrant grants agency and projection runs.
-    world.upsertComponent(actor, OpenDecision(prompt: 'quantum and boiler'));
+    world.upsertComponent(actor, const OpenDecision(prompt: 'quantum and boiler'));
     world.flush();
 
     projectFor(world);
@@ -68,7 +68,7 @@ void main() {
         .$1
         .insert(ThreadStatus(ThreadStatusEnum.pruned));
     deindexBeat(world, beatsWithText(world, 'buried secret').first);
-    world.upsertComponent(actor, OpenDecision(prompt: 'signal or secret?'));
+    world.upsertComponent(actor, const OpenDecision(prompt: 'signal or secret?'));
     world.flush();
 
     projectFor(world);
@@ -101,7 +101,7 @@ void main() {
     world.getEntity(beat).$1.insert(PrivateToActor(alice));
 
     // Bob's decision mentions "diary" — the keyword hits, but privacy blocks it.
-    world.upsertComponent(bob, OpenDecision(prompt: 'what about diary?'));
+    world.upsertComponent(bob, const OpenDecision(prompt: 'what about diary?'));
     world.flush();
     projectFor(world);
 
@@ -169,7 +169,7 @@ void main() {
     // A prompt of pure stopwords + one real term still ray-traces the term.
     world.upsertComponent(
       actor,
-      OpenDecision(prompt: 'the parser and this with that'),
+      const OpenDecision(prompt: 'the parser and this with that'),
     );
     world.flush();
     projectFor(world);

@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:test/test.dart';
 import 'package:universal_storage_filesystem/universal_storage_filesystem.dart';
 import 'package:universal_storage_git_offline/universal_storage_git_offline.dart';
-import 'package:universal_storage_interface/universal_storage_interface.dart';
 import 'package:universal_storage_local_db/universal_storage_local_db.dart';
 import 'package:universal_storage_sync/universal_storage_sync.dart';
 import 'package:xsoulspace_foundation/xsoulspace_foundation.dart';
@@ -36,7 +35,7 @@ void main() {
     return StorageKernel(
       profile: StorageProfile(
         name: 'localdb_$keyspacePrefix',
-        namespaces: [
+        namespaces: const [
           StorageNamespaceProfile(
             namespace: StorageNamespace.settings,
             policy: StoragePolicy.localOnly,
@@ -81,7 +80,7 @@ void main() {
       StorageKernel(
         profile: StorageProfile(
           name: 'fs_${name ?? 'x'}',
-          namespaces: [
+          namespaces: const [
             StorageNamespaceProfile(
               namespace: StorageNamespace.settings,
               policy: StoragePolicy.localOnly,
@@ -132,7 +131,7 @@ void main() {
       StorageKernel(
         profile: StorageProfile(
           name: 'git_${name ?? 'x'}',
-          namespaces: [
+          namespaces: const [
             StorageNamespaceProfile(
               namespace: StorageNamespace.settings,
               policy: StoragePolicy.optimisticSync,

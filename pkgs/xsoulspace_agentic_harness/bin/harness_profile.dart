@@ -16,7 +16,6 @@ library;
 import 'dart:io';
 
 import 'package:xsoulspace_agentic_harness/benchmark_api.dart';
-import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
 Future<void> main(List<String> args) async {
   var task = '';

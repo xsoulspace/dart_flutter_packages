@@ -100,7 +100,7 @@ ToolDef actWithProjectTool({
     }) => mt.meaningCut(
           world,
           query: query,
-          focusIds: [if (focus != null) focus],
+          focusIds: [?focus],
           maxNodes: cutMaxNodes,
           tokenBudget: cutTokenBudget,
           zoom: zoom,
@@ -167,7 +167,7 @@ ToolDef actWithProjectTool({
             ? {'ok': true, 'view': cut(focus: id, zoom: 'point')}
             : {'ok': false, 'error': 'unknown node: $id'};
       case 'materialize':
-        return await materialize();
+        return materialize();
 
       // ---- Macros (J1): one selection, host does the heavy lifting ----
       case 'add_chain':
@@ -253,7 +253,7 @@ List<String>? _addChain(World world, List specs, {bool dryRun = false}) {
       kind: 'op',
       label: spec.label,
       props: {
-        if (spec.a != null) 'a': spec.a!,
+        if (spec.a != null) 'a': spec.a,
       },
     );
     final node = mt.meaningComponentOf<mt.MeaningNode>(world, entity)!;

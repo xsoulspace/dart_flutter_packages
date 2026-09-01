@@ -17,7 +17,7 @@ void main() {
   setUp(() async {
     dirA = await Directory.systemTemp.createTemp('mesh_a_');
     dirB = await Directory.systemTemp.createTemp('mesh_b_');
-    pair = FakeMeshPair.paired(a: 'device-a', b: 'device-b');
+    pair = FakeMeshPair.paired();
 
     replicaA = MeshStorageProvider();
     await replicaA.initWithConfig(

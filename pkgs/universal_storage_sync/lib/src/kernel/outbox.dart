@@ -11,10 +11,9 @@ import 'observation_hub.dart';
 /// Enqueues durable, deduplicated outbox entries for local operations.
 final class OutboxManager {
   OutboxManager({
-    required final SyncQueueStore queueStore,
-    required final ObservationHub observations,
-  }) : _queueStore = queueStore,
-       _observations = observations;
+    required this._queueStore,
+    required this._observations,
+  });
 
   final SyncQueueStore _queueStore;
   final ObservationHub _observations;
@@ -166,12 +165,10 @@ final class NamespaceSyncReport {
 /// dead-lettering exhausted entries and staging conflicts on conflict errors.
 final class OutboxReplayer {
   OutboxReplayer({
-    required final DecisionStore decisionStore,
-    required final ObservationHub observations,
-    required final ConflictDecisionHook? conflictDecisionHook,
-  }) : _decisionStore = decisionStore,
-       _observations = observations,
-       _conflictDecisionHook = conflictDecisionHook;
+    required this._decisionStore,
+    required this._observations,
+    required this._conflictDecisionHook,
+  });
 
   final DecisionStore _decisionStore;
   final ObservationHub _observations;

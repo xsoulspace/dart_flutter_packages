@@ -8,8 +8,6 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:test/test.dart';
-import 'package:xsoulspace_agentic_harness/src/schedules.dart';
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
 import 'support/agent_harness_support.dart';
@@ -435,7 +433,7 @@ void main() {
         ),
       ]);
       final blocked = world.spawnComponents([
-        GoalLink(null),
+        const GoalLink(null),
         Step(claim: 'blocked', status: StepLifecycle.blocked),
       ]);
       world.flush();
@@ -778,7 +776,7 @@ void main() {
 Future<World> _worldFor(GenerationHandler handler) async {
   final world = await buildTestWorld(
     handler: handler,
-    agencyPolicy: AgencyPolicy(taskTimeout: const Duration(minutes: 5)),
+    agencyPolicy: AgencyPolicy(),
   );
   spawnActor(world, spawnScene(world), openDecisionPrompt: 'go');
   world.flush();

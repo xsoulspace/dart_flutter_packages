@@ -39,7 +39,7 @@ class AgentProposal {
 /// All state transitions go through [SyncQueueStore.mutateState], so
 /// concurrent agents and UI reviews never lose entries.
 final class AgentEditStager {
-  AgentEditStager({required SyncQueueStore queueStore}) : _queueStore = queueStore;
+  AgentEditStager({required this._queueStore});
 
   final SyncQueueStore _queueStore;
 

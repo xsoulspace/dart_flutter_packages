@@ -105,7 +105,7 @@ void main() {
   });
 
   group('Intent-graded verifier — oracle replay semantics', () {
-    test('replay starts from initialState(): the actor\'s own intent_call '
+    test("replay starts from initialState(): the actor's own intent_call "
         'state must not leak into the oracle (tier-2 parity)', () async {
       final world = await buildTestWorld();
       // A stateful counter intent: each call appends one entry.
@@ -126,7 +126,7 @@ void main() {
       final actor = world.spawnComponents([
         Actor(agentId: AgentId.create()),
         ActorModel(modelId: ModelId.create()),
-        ActorSystemPrompt(text: 'build'),
+        const ActorSystemPrompt(text: 'build'),
         ActorGoalRef(goal),
         PresentInScene(sceneEntity: scene),
       ]);
@@ -148,7 +148,7 @@ void main() {
 
       final verified = world.query2<Actor, GoalVerified>().toList().single;
       expect(verified.$3.passed, isTrue,
-          reason: 'replay must start from initialState(), not the actor\'s '
+          reason: "replay must start from initialState(), not the actor's "
               'accumulated state (got ${verified.$3.detail})');
 
       // The actor's own state is restored after the replay.
@@ -174,7 +174,7 @@ void main() {
       final map = out is String ? (jsonDecode(out) as Map) : (out as Map);
       expect(map['ok'], isTrue);
       expect(map['exit_code'], 0);
-      expect((map['stdout'] as String), contains('board ready'));
+      expect(map['stdout'] as String, contains('board ready'));
     });
   });
 }

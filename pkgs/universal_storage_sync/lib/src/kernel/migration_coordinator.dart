@@ -6,12 +6,10 @@ import 'observation_hub.dart';
 /// Handles prepare/execute/rollback migration flows on behalf of the kernel.
 final class MigrationCoordinator {
   MigrationCoordinator({
-    required final MigrationEndpoint? endpoint,
-    required final DecisionStore decisionStore,
-    required final ObservationHub observations,
-  }) : _endpoint = endpoint,
-       _decisionStore = decisionStore,
-       _observations = observations;
+    required this._endpoint,
+    required this._decisionStore,
+    required this._observations,
+  });
 
   final MigrationEndpoint? _endpoint;
   final DecisionStore _decisionStore;

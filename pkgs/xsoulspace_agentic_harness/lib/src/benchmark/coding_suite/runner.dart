@@ -20,16 +20,11 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart';
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
-import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
-
+import '../../../xsoulspace_agentic_harness.dart';
+import '../../tooling/act_with_project.dart' show actWithProjectTool;
+import '../../tools/fs_tools.dart';
 import 'checkers.dart';
 import 'task_spec.dart';
-import '../../meaning/intents.dart' show intentCallTool, intentDefineTool;
-import '../../meaning/meaning_program.dart' show materializeMeaningProgram;
-import '../../tooling/act_with_project.dart' show actWithProjectTool;
-import '../../tooling/world_builder.dart';
 
 /// Result of running one task.
 class TaskResult {
@@ -133,7 +128,7 @@ class SuiteResult {
       );
     }
     b
-      ..writeln('')
+      ..writeln()
       ..writeln(
         '**$label**: $passedCount/$total passed '
         '(${(passRate * 100).toStringAsFixed(0)}%), '
@@ -274,7 +269,7 @@ class CodingSuiteRunner {
       var transientErrors = 0;
       // Honest cumulative token accounting (see TaskResult.cumulativeTokens).
       final tokenTotal = <int>[0];
-      GenerationHandler metered = CumulativeTokenMeter(handler, tokenTotal);
+      final GenerationHandler metered = CumulativeTokenMeter(handler, tokenTotal);
       world.getResource<GenerationHandlerResource>().registerDefault(
         _ErrorCountingHandler(metered, () => transientErrors++),
       );

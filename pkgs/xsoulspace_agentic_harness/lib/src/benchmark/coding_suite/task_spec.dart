@@ -53,13 +53,6 @@ enum TaskCategory {
 
 /// A single deterministic post-run assertion on the jail workspace.
 class CheckerSpec {
-  factory CheckerSpec.fromYaml(YamlMap y) => CheckerSpec(
-    type: y['type'] as String,
-    path: y['path'] as String?,
-    value: y['value'] as String?,
-    pattern: y['pattern'] as String?,
-    values: (y['values'] as YamlList?)?.cast<String>() ?? const [],
-  );
 
   CheckerSpec({
     required this.type,
@@ -68,6 +61,13 @@ class CheckerSpec {
     this.pattern,
     this.values = const [],
   });
+  factory CheckerSpec.fromYaml(YamlMap y) => CheckerSpec(
+    type: y['type'] as String,
+    path: y['path'] as String?,
+    value: y['value'] as String?,
+    pattern: y['pattern'] as String?,
+    values: (y['values'] as YamlList?)?.cast<String>() ?? const [],
+  );
 
   /// One of: contains | not_contains | equals | regex | file_exists |
   /// json_valid.
@@ -91,6 +91,15 @@ class FixtureFile {
 
 /// One coding task.
 class CodingTask {
+
+  CodingTask({
+    required this.id,
+    required this.category,
+    required this.prompt,
+    required this.checkers,
+    this.fixtures = const [],
+    this.systemPrompt = defaultSystemPrompt,
+  });
   factory CodingTask.fromYaml(String source) {
     final doc = loadYamlNode(source) as YamlMap;
     return CodingTask(
@@ -111,15 +120,6 @@ class CodingTask {
           .toList(),
     );
   }
-
-  CodingTask({
-    required this.id,
-    required this.category,
-    required this.prompt,
-    required this.checkers,
-    this.fixtures = const [],
-    this.systemPrompt = defaultSystemPrompt,
-  });
 
   static const defaultSystemPrompt =
       'You are a coding agent working inside a sandboxed directory. '

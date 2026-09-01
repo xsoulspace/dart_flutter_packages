@@ -7,6 +7,7 @@ abstract interface class LocalEngine implements StorageProvider {}
 
 /// Remote storage engine with capability declaration.
 abstract interface class RemoteEngine implements StorageProvider {
+  @override
   StorageCapabilities get declaredCapabilities;
 
   Future<StorageCapabilities> resolveCapabilities() async =>

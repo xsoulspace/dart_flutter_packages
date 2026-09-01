@@ -5,12 +5,12 @@
 /// A failing tool, a missing handler, or a crashed handler must never dangle
 /// an actor in `AwaitingResponse` — otherwise `HarnessLoop.canSleep()` is
 /// never true and the harness hangs forever.
+library;
+
 
 import 'dart:async';
 
 import 'package:test/test.dart';
-import 'package:xsoulspace_agentic_harness/src/schedules.dart';
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
 import 'support/agent_harness_support.dart';

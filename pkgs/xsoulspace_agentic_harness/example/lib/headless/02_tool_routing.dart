@@ -16,7 +16,6 @@
 /// `tool_calls` take.
 library;
 
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
 /// Fake model: answers the first round with one `lookup_course` call, then

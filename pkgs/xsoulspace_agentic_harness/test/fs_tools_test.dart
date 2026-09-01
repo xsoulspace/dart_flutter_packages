@@ -171,7 +171,7 @@ void main() {
 
     test('apply mode (default) is byte-identical to the ungated path',
         () async {
-      final gateway = JailWriteGateway(root, mode: WriteGateMode.apply);
+      final gateway = JailWriteGateway(root);
       root.writeGateway = gateway;
       await registry.get(const ToolName('write'))!.execute({
         'path': 'deep/nested.dart',

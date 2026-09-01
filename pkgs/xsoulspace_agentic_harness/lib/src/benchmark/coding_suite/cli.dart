@@ -17,7 +17,7 @@ library;
 
 import 'dart:io';
 
-import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
+import '../../../xsoulspace_agentic_harness.dart';
 
 import 'runner.dart';
 import 'scripted_handler.dart';

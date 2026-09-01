@@ -23,7 +23,6 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart';
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
 import 'support/agent_harness_support.dart';
@@ -31,9 +30,8 @@ import 'support/agent_harness_support.dart';
 Future<World> _buildWorld(String jailPath) async {
   final router = ModelRouter(inferenceClientsBuilders: {});
   const modelId = ModelId('m');
-  router.models[modelId] = Model(
+  router.models[modelId] = const Model(
     id: modelId,
-    name: DefaultModelNames.appleFoundation,
   );
   final registry = ToolRegistry();
   fsTools(FsToolsRoot(jailPath)).forEach(registry.register);
@@ -54,11 +52,11 @@ Future<World> _buildWorld(String jailPath) async {
   final scene = spawnScene(world);
   world.spawnComponents([
     Actor(agentId: AgentId.create()),
-    ActorModel(modelId: modelId),
+    const ActorModel(modelId: modelId),
     ActorThreads(threads: []),
     const ActorTools(registryName: 'default'),
     PresentInScene(sceneEntity: scene),
-    OpenDecision(prompt: 'write out.txt'),
+    const OpenDecision(prompt: 'write out.txt'),
   ]);
   world.flush();
   return world;

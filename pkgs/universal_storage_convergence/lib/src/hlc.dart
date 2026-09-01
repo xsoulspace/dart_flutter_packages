@@ -9,10 +9,15 @@ import 'package:meta/meta.dart';
 /// deterministic regardless of delivery order.
 @immutable
 final class Hlc implements Comparable<Hlc> {
+
+  const Hlc(this.wallMillis, this.counter, this.actorId)
+    : assert(wallMillis >= 0),
+      assert(counter >= 0),
+      assert(actorId != '');
   factory Hlc.fromJson(final Map<String, dynamic> json) => Hlc(
     (json['w'] as num).toInt(),
     (json['c'] as num).toInt(),
-    (json['a'] as String),
+    json['a'] as String,
   );
 
   factory Hlc.fromString(final String encoded) {
@@ -22,11 +27,6 @@ final class Hlc implements Comparable<Hlc> {
     }
     return Hlc(int.parse(parts[0]), int.parse(parts[1]), parts[2]);
   }
-
-  const Hlc(this.wallMillis, this.counter, this.actorId)
-    : assert(wallMillis >= 0),
-      assert(counter >= 0),
-      assert(actorId != '');
 
   /// Zero timestamp for [actorId]; strictly less than any real event.
   static Hlc zero(final String actorId) => Hlc(0, 0, actorId);

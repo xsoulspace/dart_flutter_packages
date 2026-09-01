@@ -8,20 +8,18 @@
 /// deferred thinking ("dreaming").
 library;
 
-import 'package:test/test.dart';
-import 'package:xsoulspace_agentic_harness/src/schedules.dart';
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
-import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
-
-import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart';
 import 'dart:io';
+
+import 'package:test/test.dart';
+import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart';
+import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
 import 'support/agent_harness_support.dart';
 
 void main() {
   group('policy builders (pure evaluation)', () {
     test('onToolResult fires only when the marker is present', () async {
-      final world = await buildTestWorld(decisionFlow: DecisionFlow([]));
+      final world = await buildTestWorld(decisionFlow: const DecisionFlow([]));
       final scene = spawnScene(world);
       final actor = spawnActor(world, scene);
       world.flush();
@@ -37,7 +35,7 @@ void main() {
     });
 
     test('everyNTicks fires on multiples of n only', () async {
-      final world = await buildTestWorld(decisionFlow: DecisionFlow([]));
+      final world = await buildTestWorld(decisionFlow: const DecisionFlow([]));
       final scene = spawnScene(world);
       final actor = spawnActor(world, scene);
       world.flush();
@@ -56,7 +54,7 @@ void main() {
     });
 
     test('when() evaluates an arbitrary deterministic predicate', () async {
-      final world = await buildTestWorld(decisionFlow: DecisionFlow([]));
+      final world = await buildTestWorld(decisionFlow: const DecisionFlow([]));
       final scene = spawnScene(world);
       final actor = spawnActor(world, scene, openDecisionPrompt: 'busy');
       world.flush();
@@ -73,7 +71,7 @@ void main() {
 
   group('flow evaluation', () {
     test('first non-null draft wins', () async {
-      final world = await buildTestWorld(decisionFlow: DecisionFlow([]));
+      final world = await buildTestWorld(decisionFlow: const DecisionFlow([]));
       final scene = spawnScene(world);
       final actor = spawnActor(world, scene);
       world.getEntity(actor).$1.insert(const ToolResultPendingMarker());

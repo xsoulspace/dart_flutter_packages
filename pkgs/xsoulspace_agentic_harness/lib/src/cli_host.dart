@@ -7,13 +7,12 @@ library;
 
 import 'dart:async';
 
-import 'package:ecsly/ecsly.dart';
+import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import 'data_models/data_models.dart';
 import 'harness_loop.dart';
 import 'narrative/narrative.dart';
 import 'resources/resources.dart';
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 typedef ToolConfirmationCallback =
     Future<bool> Function(ToolName name, Object? arguments);

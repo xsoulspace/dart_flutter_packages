@@ -26,7 +26,7 @@ void main() {
       dirA = await Directory.systemTemp.createTemp('mesh_it_a_');
       dirB = await Directory.systemTemp.createTemp('mesh_it_b_');
       dirC = await Directory.systemTemp.createTemp('mesh_it_c_');
-      pairAB = FakeMeshPair.paired(a: 'device-a', b: 'device-b');
+      pairAB = FakeMeshPair.paired();
       pairBC = FakeMeshPair.paired(a: 'device-b', b: 'device-c');
 
       Future<MeshStorageProvider> replica(

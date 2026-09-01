@@ -286,7 +286,7 @@ List<String>? addChainFromSpecs(
       kind: 'op',
       label: spec.label,
       props: {
-        if (spec.a != null) 'a': spec.a!,
+        if (spec.a != null) 'a': spec.a,
       },
     );
     final node = meaningComponentOf<MeaningNode>(world, entity);
@@ -418,15 +418,13 @@ class _MeaningVm {
       if (result != null) break;
       pc = next;
     }
-    if (result == null) {
-      result = {'error': 'chain ended without return'};
-    }
+    result ??= {'error': 'chain ended without return'};
     return {'_result': result, '_state': working};
   }
 }
 
 /// Decodes JSON when [v] looks like JSON; otherwise the raw string.
-dynamic _jsonish(dynamic v) {
+dynamic _jsonish(v) {
   final s = '$v';
   if (s.startsWith('{') || s.startsWith('[')) {
     try {

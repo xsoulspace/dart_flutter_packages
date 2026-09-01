@@ -26,7 +26,6 @@ library;
 
 import 'dart:convert';
 
-import 'package:ecsly/ecsly.dart' show World;
 
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'events.dart';
@@ -50,7 +49,7 @@ SchemaBundle decisionSchema(ToolRegistry registry) {
     final args = tool.argsSchema.root;
     if (args is ObjectSchema) {
       props.addAll(args.properties);
-    } else if (!tool.argsSchema.isEmpty) {
+    } else if (tool.argsSchema.isNotEmpty) {
       props.add(FM.prop('args_json', FM.string()));
     }
     choices.add(FM.object('Act_${tool.name.value}', properties: () => props));

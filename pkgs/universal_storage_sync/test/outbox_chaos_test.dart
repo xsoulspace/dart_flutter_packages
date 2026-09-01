@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 import 'package:universal_storage_filesystem/universal_storage_filesystem.dart';
-import 'package:universal_storage_interface/universal_storage_interface.dart';
 import 'package:universal_storage_sync/universal_storage_sync.dart';
 
 /// Chaos/durability tests for the outbox queue.
@@ -30,7 +29,7 @@ void main() {
       StorageKernel(
         profile: StorageProfile(
           name: 'chaos_$name',
-          namespaces: [
+          namespaces: const [
             StorageNamespaceProfile(
               namespace: StorageNamespace.projects,
               policy: StoragePolicy.optimisticSync,
@@ -82,7 +81,7 @@ void main() {
           ),
         );
         final recovered = StorageKernel(
-          profile: StorageProfile(
+          profile: const StorageProfile(
             name: 'chaos_corrupt',
             namespaces: [
               StorageNamespaceProfile(
@@ -141,7 +140,7 @@ void main() {
           ),
         );
         final recovered = StorageKernel(
-          profile: StorageProfile(
+          profile: const StorageProfile(
             name: 'chaos_deleted',
             namespaces: [
               StorageNamespaceProfile(

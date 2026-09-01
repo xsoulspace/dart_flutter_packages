@@ -13,8 +13,8 @@ library;
 
 import 'package:test/test.dart';
 import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart';
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
+import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 ToolDef _echoTool() => ToolDef(
   name: const ToolName('echo'),
@@ -25,7 +25,7 @@ ToolDef _echoTool() => ToolDef(
       properties: () => [FM.prop('message', FM.string())],
     ),
   ),
-  execute: (args) async => 'echo:${(args as Map)['message']}',
+  execute: (args) async => 'echo:${(args! as Map)['message']}',
 );
 
 void main() {
@@ -73,7 +73,7 @@ void main() {
       final world = World()..addPlugin(AgentPlugin());
       final router = ModelRouter(inferenceClientsBuilders: {});
       const modelId = ModelId('mock');
-      router.models[modelId] = Model(id: modelId, tier: 0);
+      router.models[modelId] = const Model(id: modelId);
       world
         ..upsertResource(ModelRouterResource(router))
         ..upsertResource(ToolRegistryResource())
@@ -95,11 +95,11 @@ void main() {
       final scene = world.spawnComponents([const Scene(), SceneFrame()]);
       world.spawnComponents([
         Actor(agentId: AgentId.create()),
-        ActorModel(modelId: modelId),
+        const ActorModel(modelId: modelId),
         ActorThreads(threads: []),
         const ActorTools(registryName: 'default'),
         PresentInScene(sceneEntity: scene),
-        OpenDecision(prompt: 'say hi via echo'),
+        const OpenDecision(prompt: 'say hi via echo'),
       ]);
       world.flush();
 

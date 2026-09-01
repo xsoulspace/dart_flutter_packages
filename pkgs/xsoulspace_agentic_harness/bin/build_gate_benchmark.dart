@@ -11,21 +11,18 @@ library;
 
 import 'dart:io';
 
-import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart';
-import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
-import 'package:xsoulspace_agentic_harness/src/tooling/build_gates.dart';
 import 'package:xsoulspace_agentic_harness/src/benchmark/coding_suite/checkers.dart';
 import 'package:xsoulspace_agentic_harness/src/benchmark/coding_suite/task_spec.dart'
     show CheckerSpec;
-import 'package:xsoulspace_agentic_harness/src/tooling/world_builder.dart';
+import 'package:xsoulspace_agentic_harness/src/tooling/build_gates.dart';
+import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart';
+import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
 class BuildTask {
   const BuildTask({
     required this.id,
     required this.prompt,
-    this.fixture,
-    required this.write,
-    required this.checkers,
+    required this.write, required this.checkers, this.fixture,
   });
   final String id;
   final String prompt;
@@ -93,7 +90,7 @@ class _Builder implements GenerationHandler {
       rawOutput: 'writing',
       toolCalls: [
         ToolCall(
-          name: ToolName('write'),
+          name: const ToolName('write'),
           arguments: {'path': next, 'content': task.write[next]},
         ),
       ],
@@ -121,10 +118,9 @@ Future<_Row> _run(
   final world = World()..addPlugin(AgentPlugin());
   if (goalFlow) registerExperimentComponents(world);
   final router = ModelRouter(inferenceClientsBuilders: {});
-  final modelId = ModelId('suite');
-  router.models[modelId] = Model(
+  const modelId = ModelId('suite');
+  router.models[modelId] = const Model(
     id: modelId,
-    name: DefaultModelNames.appleFoundation,
   );
   world
     ..upsertResource(ModelRouterResource(router))
@@ -147,13 +143,13 @@ Future<_Row> _run(
     ),
   );
 
-  final scene = world.spawnComponents([Scene(), SceneFrame()]);
+  final scene = world.spawnComponents([const Scene(), SceneFrame()]);
   final actor = world.spawnComponents([
     Actor(agentId: AgentId.create()),
-    ActorModel(modelId: modelId),
-    ActorSystemPrompt(text: 'Build it.'),
+    const ActorModel(modelId: modelId),
+    const ActorSystemPrompt(text: 'Build it.'),
     ActorThreads(threads: []),
-    ActorTools(registryName: 'default'),
+    const ActorTools(registryName: 'default'),
     PresentInScene(sceneEntity: scene),
     OpenDecision(prompt: task.prompt),
   ]);
@@ -197,13 +193,18 @@ Future<void> main() async {
 
   stdout.writeln('| task | arm | pass | calls | tokens | wall(ms) |');
   stdout.writeln('|---|---|---|---|---|---|');
-  var baseTok = 0, gradedTok = 0;
+  var baseTok = 0;
+  var gradedTok = 0;
   for (final r in rows) {
     stdout.writeln(
       '| ${r.id} | ${r.arm} | ${r.passed ? '✅' : '❌'} '
       '| ${r.calls} | ${r.tokens} | ${r.wallMs} |',
     );
-    if (r.arm == 'baseline') baseTok += r.tokens; else gradedTok += r.tokens;
+    if (r.arm == 'baseline') {
+      baseTok += r.tokens;
+    } else {
+      gradedTok += r.tokens;
+    }
   }
   stdout.writeln('baseline tokens: $baseTok, run-graded tokens: $gradedTok');
 }

@@ -15,10 +15,8 @@ library;
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 import 'package:xsoulspace_agentic_harness/src/tooling/act_with_project.dart';
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
+import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
 import 'support/agent_harness_support.dart';
 
@@ -89,7 +87,7 @@ class _ProseScriptedHandler implements GenerationHandler {
         rawOutput: fill,
         toolCalls: fillIndex == sections.length - 1
             ? const []
-            : [ToolCall(name: const ToolName('act_with_project'), arguments: {
+            : [const ToolCall(name: ToolName('act_with_project'), arguments: {
                   'action': 'list',
                 })],
         taskId: request.taskId,
@@ -118,13 +116,12 @@ void main() {
     final router = ModelRouter(inferenceClientsBuilders: {});
     router.models[const ModelId('prose')] = const Model(
       id: ModelId('prose'),
-      name: DefaultModelNames.appleFoundation,
     );
     world
       ..upsertResource(ModelRouterResource(router))
       ..upsertResource(ToolRegistryResource())
       ..upsertResource(
-        AgencyPolicy(maxConcurrent: 1, maxToolRounds: 16),
+        AgencyPolicy(maxConcurrent: 1),
       )
       ..flush();
     world.getResource<GenerationHandlerResource>().registerDefault(
@@ -138,18 +135,18 @@ void main() {
     ));
     world.getResource<ToolRegistryResource>().register('default', registry);
 
-    final scene = world.spawnComponents([Scene(), SceneFrame()]);
+    final scene = world.spawnComponents([const Scene(), SceneFrame()]);
     final actor = world.spawnComponents([
       Actor(agentId: AgentId.create()),
-      ActorModel(modelId: const ModelId('prose')),
-      ActorSystemPrompt(
+      const ActorModel(modelId: ModelId('prose')),
+      const ActorSystemPrompt(
         text: 'Outline the book, then fill each section with prose. '
             'One act_with_project move or one prose passage per turn.',
       ),
       ActorThreads(threads: []),
       const ActorTools(registryName: 'default'),
       PresentInScene(sceneEntity: scene),
-      OpenDecision(prompt: sentence),
+      const OpenDecision(prompt: sentence),
     ]);
     final thread = spawnThread(world, actor, scene);
     world.upsertComponent(actor, ActorThreads(threads: [thread]));
@@ -191,7 +188,6 @@ void main() {
         backend: EvalBackend.scripted,
         tokens: 0,
         calls: sections.length,
-        passed: null,
         evidence: '${sections.length} sections as meaning nodes',
       ),
       DatasetRow(
@@ -199,7 +195,6 @@ void main() {
         backend: EvalBackend.scripted,
         tokens: 0,
         calls: 0,
-        passed: null,
         evidence: '$filledCount/${sections.length} sections filled '
             'as facet-indexed beats',
       ),

@@ -1,10 +1,9 @@
-import 'package:ecsly/ecsly.dart';
-
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
-import 'model_router.dart';
+
 import 'events.dart';
-import 'tools/tool_call_parser.dart';
+import 'model_router.dart';
 import 'resources/resources.dart';
+import 'tools/tool_call_parser.dart';
 
 // ─────────────────────────────────────────────
 // Default generation handler
@@ -26,7 +25,7 @@ import 'resources/resources.dart';
 ///
 /// The handler NEVER executes tools itself — that's the ECS layer's job.
 class DefaultGenerationHandler implements GenerationHandler {
-  DefaultGenerationHandler({ModelRouter? router}) : _router = router;
+  DefaultGenerationHandler({this._router});
 
   ModelRouter? _router;
 

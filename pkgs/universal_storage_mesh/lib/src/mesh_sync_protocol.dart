@@ -44,7 +44,7 @@ final class MeshSyncProtocol {
 
   static Map<String, VersionVector> parseVv(final Object? raw) {
     final docs =
-        (raw as Map<dynamic, dynamic>)['docs'] as Map<dynamic, dynamic>;
+        (raw! as Map<dynamic, dynamic>)['docs'] as Map<dynamic, dynamic>;
     return docs.map(
       (final docId, final value) => MapEntry(
         docId as String,
@@ -65,7 +65,7 @@ final class MeshSyncProtocol {
   static ({List<OpRecord> ops, List<Snapshot> states}) parseDelta(
     final Object? raw,
   ) {
-    final body = raw as Map<dynamic, dynamic>;
+    final body = raw! as Map<dynamic, dynamic>;
     return (
       ops: ((body['ops'] ?? const []) as List<dynamic>)
           .whereType<Map<dynamic, dynamic>>()

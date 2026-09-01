@@ -21,15 +21,13 @@ typedef ConflictDecisionHook =
 final class StorageKernel implements StorageKernelContract {
   StorageKernel({
     required this.profile,
-    required StorageProfileResolver resolver,
-    final SyncEngine? syncEngine,
+    required this._resolver,
+    this._syncEngine,
     final MigrationEndpoint? migrationEndpoint,
     final DecisionStore? decisionStore,
     final SyncQueueStore? queueStore,
     final ConflictDecisionHook? conflictDecisionHook,
-  }) : _resolver = resolver,
-       _syncEngine = syncEngine,
-       _decisionStore = decisionStore ?? InMemoryDecisionStore(),
+  }) : _decisionStore = decisionStore ?? InMemoryDecisionStore(),
        _queueStore = queueStore ?? StorageServiceSyncQueueStore(),
        _observations = ObservationHub() {
     _outbox = OutboxManager(
@@ -416,7 +414,7 @@ final class StorageKernel implements StorageKernelContract {
       // successful no-op rather than a sync failure.
       return StorageOperationResult.success(
         message: 'Sync skipped: provider has no remote configured.',
-        metadata: <String, dynamic>{'sync_skipped': 'no_remote_configured'},
+        metadata: const <String, dynamic>{'sync_skipped': 'no_remote_configured'},
       );
     }
 

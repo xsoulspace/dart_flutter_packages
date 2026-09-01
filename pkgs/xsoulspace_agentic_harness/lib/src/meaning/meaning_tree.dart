@@ -524,7 +524,7 @@ Map<String, dynamic> meaningCut(
     }
   }
 
-  var ordered = selected.toList();
+  final ordered = selected.toList();
   var cut = {
     'nodes': nodeJsons(ordered),
     'edges': edgesJsons(ordered.toSet()),

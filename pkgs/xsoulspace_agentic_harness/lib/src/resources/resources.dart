@@ -191,5 +191,5 @@ class StreamingTapResource extends Resource {
   }
 
   StreamController<String> _controllerFor(Entity actor) => _controllers
-      .putIfAbsent(actor, () => StreamController<String>.broadcast());
+      .putIfAbsent(actor, StreamController<String>.broadcast);
 }

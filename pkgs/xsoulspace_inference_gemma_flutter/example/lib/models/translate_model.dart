@@ -1,5 +1,5 @@
-import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:flutter_gemma/core/model.dart';
+import 'package:flutter_gemma/flutter_gemma.dart';
 
 import '../translation/prompt_strategy.dart';
 import '../translation/translate_gemma_xml_strategy.dart';

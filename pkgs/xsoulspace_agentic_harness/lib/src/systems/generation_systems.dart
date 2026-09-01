@@ -1,12 +1,11 @@
 import 'dart:async';
 
-import 'package:ecsly/ecsly.dart';
+import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import '../data_models/data_models.dart';
 import '../events.dart';
 import '../narrative/narrative.dart';
 import '../resources/resources.dart';
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'projection/projection_systems.dart';
 import 'projection/relevance.dart' show keywordsOf;
 import 'tool_systems.dart';

@@ -17,40 +17,36 @@
 ///   with its own open decision, so a team can plan & build together.
 library;
 
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:agentic_executables_wire/agentic_executables_wire.dart'
     show MeaningTreeExport;
 import 'package:ecsly/ecsly.dart';
-
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart'
     show FM, SchemaBundle, ToolDef, ToolName;
 
-import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart'
-    show Actor, ActorModel, ActorSystemPrompt, DecisionContext, DecisionDraft,
-        DecisionFlow, DecisionPolicy, ReActContinuationPolicy, AgentId, ModelId,
-        PresentInScene, Scene, SceneFrame, OpenDecision;
-
-import 'dart:convert';
-
-import 'package:ecsly/ecsly.dart' show Resource, World;
-import 'package:xsoulspace_agentic_harness/src/data_models/components.dart'
-    show Goal, Actor, ActorGoalRef, ActorThreads, AttemptCount,
-        EscalationRequest, GoalAttemptsExhausted, ToolRoundCount;
-import 'package:xsoulspace_agentic_harness/src/narrative/components.dart'
-    show ThreadStatus, ThreadStatusEnum;
-import 'package:xsoulspace_agentic_harness/src/meaning/intents.dart'
+import '../../xsoulspace_agentic_harness.dart'
+    show Actor, ActorModel, ActorSystemPrompt, AgentId, DecisionContext,
+        DecisionDraft, DecisionFlow, DecisionPolicy, ModelId, OpenDecision,
+        PresentInScene, ReActContinuationPolicy, Scene, SceneFrame;
+import '../data_models/components.dart'
+    show Actor, ActorGoalRef, ActorThreads, AttemptCount, EscalationRequest,
+        Goal, GoalAttemptsExhausted, ToolRoundCount;
+import '../meaning/intents.dart'
     show IntentCallState, callIntent;
-import 'package:xsoulspace_agentic_harness/src/meaning/meaning_tree.dart'
+import '../meaning/meaning_tree.dart'
     show addMeaningNode, linkMeaning;
-import 'package:xsoulspace_agentic_harness/src/schedules.dart' show Schedules;
-import 'package:xsoulspace_agentic_harness/src/resources/resources.dart'
+import '../narrative/components.dart'
+    show ThreadStatus, ThreadStatusEnum;
+import '../resources/resources.dart'
     show AgencyPolicy, ToolRegistryResource;
-import 'package:xsoulspace_agentic_harness/src/systems/decision_flow_system.dart'
+import '../schedules.dart' show Schedules;
+import '../systems/decision_flow_system.dart'
     show ToolResultPendingMarker;
-import 'package:xsoulspace_agentic_harness/src/tooling/world_builder.dart'
-    show GoalVerified, StepStatus, StepGoalLink, StepAction, StepClaim,
-        StepIndex;
+import 'world_builder.dart'
+    show GoalVerified, StepAction, StepClaim, StepGoalLink, StepIndex,
+        StepStatus;
 
 // ---------------------------------------------------------------------------
 // J7 — overseer ledger (the escalation budget the policy reads)

@@ -1,12 +1,13 @@
 // ignore_for_file: lines_longer_than_80_chars
 
 /// CLI/server ergonomics: the fs-tools path jail and `HarnessLoop.runUntilIdle`.
+library;
+
 
 import 'dart:io';
 
 import 'package:test/test.dart';
 import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart';
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
 import 'support/agent_harness_support.dart';
@@ -32,7 +33,7 @@ class _SelfPerpetuatingHandler implements GenerationHandler {
     world.events.writer<ActorGenerateResponse>().send(response);
     // Re-open the decision after it is consumed by ProcessResponses.
     Future<void>.delayed(Duration.zero).then((_) {
-      world.upsertComponent(actor, OpenDecision(prompt: 'loop forever'));
+      world.upsertComponent(actor, const OpenDecision(prompt: 'loop forever'));
       world.flush();
     });
     return response;
@@ -57,7 +58,7 @@ void main() {
       final read = tools.firstWhere((t) => t.name.value == 'read');
 
       await write.execute({'path': 'notes.txt', 'content': 'hello'});
-      final content = await read.execute({'path': 'notes.txt'}) as String;
+      final content = (await read.execute({'path': 'notes.txt'}))!;
       expect(content, 'hello');
     });
 
@@ -66,7 +67,7 @@ void main() {
       final listDir = tools.firstWhere((t) => t.name.value == 'list_dir');
 
       Directory('${root.path}/sub').createSync();
-      final entries = await listDir.execute({'path': '.'}) as String;
+      final entries = (await listDir.execute({'path': '.'}))!;
       expect(entries, contains('sub'));
     });
 
@@ -107,7 +108,7 @@ void main() {
 
       final thread = spawnThread(world, actor, scene);
       world.upsertComponent(actor, ActorThreads(threads: [thread]));
-      world.upsertComponent(actor, OpenDecision(prompt: 'hello'));
+      world.upsertComponent(actor, const OpenDecision(prompt: 'hello'));
       world.flush();
 
       final loop = HarnessLoop(world: world);
@@ -132,7 +133,7 @@ void main() {
 
       final thread = spawnThread(world, actor, scene);
       world.upsertComponent(actor, ActorThreads(threads: [thread]));
-      world.upsertComponent(actor, OpenDecision(prompt: 'loop forever'));
+      world.upsertComponent(actor, const OpenDecision(prompt: 'loop forever'));
       world.flush();
 
       final loop = HarnessLoop(world: world);

@@ -2,10 +2,9 @@ import 'dart:async';
 import 'dart:developer';
 
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
+
 export 'package:xsoulspace_inference_core/src/models/model_catalog.dart'
     show DefaultModelNames, Model, ModelId, ModelName;
-
-import 'tools/tools.dart';
 
 
 
@@ -113,12 +112,10 @@ class ModelRuntime {
         client.supportsStructuredTextStreaming) {
       final session = await client.streamStructuredText(
         InferenceRequest.structured(
-          outputSchema: SchemaBundle.empty,
           prompt: prompt,
           systemPrompt: systemPrompt,
           task: task,
           contextFragments: contextFragments,
-          metadata: const {},
         ),
       );
       final buffer = StringBuffer();
@@ -155,7 +152,6 @@ class ModelRuntime {
         systemPrompt: systemPrompt,
         task: task,
         contextFragments: contextFragments,
-        metadata: const {},
       ),
       // inline tools should be included to systemprompt or similar
       toolRegistry: toolRegistry,
@@ -168,7 +164,7 @@ class ModelRuntime {
       return null;
     }
     final data = response.data;
-    log('rawOutput is \${data?.rawOutput}');
+    log(r'rawOutput is ${data?.rawOutput}');
     return data;
   }
 

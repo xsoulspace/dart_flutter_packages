@@ -34,9 +34,8 @@ stages:
 
   final world = World()..addPlugin(AgentPlugin());
   final router = ModelRouter(inferenceClientsBuilders: {});
-  router.models[const ModelId('m')] = Model(
-    id: const ModelId('m'),
-    name: DefaultModelNames.appleFoundation,
+  router.models[const ModelId('m')] = const Model(
+    id: ModelId('m'),
   );
   world
     ..upsertResource(ModelRouterResource(router))
@@ -53,11 +52,11 @@ stages:
 
   world.getResource<GenerationHandlerResource>().registerDefault(
     ScriptedGenerationHandler([
-      ScriptedTurn(
+      const ScriptedTurn(
         text: 'saved',
         toolCalls: [
           ToolCall(
-            name: const ToolName('write'),
+            name: ToolName('write'),
             arguments: {
               'path': 'bookmarks.json',
               'content': '{"items":[]}',

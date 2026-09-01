@@ -8,8 +8,8 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 final class WebSocketMeshSession implements MeshSession {
   WebSocketMeshSession({
     required this.remotePeerId,
-    required WebSocketChannel channel,
-  }) : _channel = channel;
+    required this._channel,
+  });
 
   @override
   final String remotePeerId;

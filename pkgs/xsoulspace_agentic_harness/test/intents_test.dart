@@ -8,10 +8,9 @@ library;
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-
+import 'package:xsoulspace_agentic_harness/src/meaning/meaning_tree.dart' as mt;
 import 'package:xsoulspace_agentic_harness/src/tooling/build_gates.dart';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
-import 'package:xsoulspace_agentic_harness/src/meaning/meaning_tree.dart' as mt;
 
 World _world() => World()..addPlugin(AgentPlugin());
 Map<String, dynamic> _dec(Object? raw) {
@@ -30,7 +29,7 @@ void registerBookmarkIntents(World world) {
     if (url is! String || !url.startsWith('http')) {
       return {'saved': false, 'reason': 'invalid url'};
     }
-    addMeaningNode(world, kind: 'bookmark', label: '$url', props: {'url': url});
+    addMeaningNode(world, kind: 'bookmark', label: url, props: {'url': url});
     return {'saved': true, 'url': url};
   });
   runtime.register('list_saved', (args, program) async {
@@ -99,7 +98,7 @@ void main() {
       'args': ['url=https://example.com'],
     }));
     expect(saved['ok'], true);
-    expect(((saved['result'] as Map)['saved']), true);
+    expect((saved['result'] as Map)['saved'], true);
 
     final listed2 = _dec(await call.execute({'intent': 'list_saved'}));
     expect((listed2['result'] as Map)['value'], 1);
@@ -118,7 +117,7 @@ void main() {
       'args': ['url=https://example.com'],
     }));
     expect(saved['ok'], true);
-    expect(((saved['result'] as Map)['saved']), true);
+    expect((saved['result'] as Map)['saved'], true);
   });
 
   test('define without specs is a teaching error, not a no-op (B1)',
@@ -132,7 +131,7 @@ void main() {
     expect(r['error'], contains('define requires specs'));
     expect(r['error'], contains('every intent needs an executor'));
     expect(r['repair'], intentExecutorRepairHint);
-    expect((r['valid_ops'] as List), contains('return'));
+    expect(r['valid_ops'] as List, contains('return'));
     // Nothing was spawned: the no-op path is gone.
     expect(mt.hasMeaningNode(world, 'future_intent'), isFalse);
   });
@@ -192,7 +191,7 @@ void main() {
     expect(r['ok'], false);
     expect(r['error'], contains('no meaning executor for intent'));
     expect(r['error'], contains('re-send intent_define'));
-    expect((r['defined'] as List), contains('future_intent'));
+    expect(r['defined'] as List, contains('future_intent'));
     expect(r['repair'], intentExecutorRepairHint);
   });
 
@@ -207,7 +206,7 @@ void main() {
     final actor = world.spawnComponents([
       Actor(agentId: AgentId.create()),
       ActorModel(modelId: ModelId.create()),
-      ActorSystemPrompt(text: 'build'),
+      const ActorSystemPrompt(text: 'build'),
       ActorGoalRef(goal),
       PresentInScene(sceneEntity: scene),
     ]);
@@ -220,7 +219,7 @@ void main() {
 
     // A tool result lands ON the actor (the trigger) → the verifier replays
     // the scripted sequence and stamps GoalVerified.
-    world.upsertComponent(actor, OpenDecision(prompt: 'continue'));
+    world.upsertComponent(actor, const OpenDecision(prompt: 'continue'));
     world.upsertComponent(actor, const ToolResultPendingMarker());
     world.flush();
 
@@ -272,7 +271,7 @@ void main() {
     expect(r['ids'], [
       'op_3', 'op_4', 'op_5', 'op_6', 'op_7', 'op_8', 'op_9',
     ]);
-    expect((r['problems'] as List), isEmpty);
+    expect(r['problems'] as List, isEmpty);
 
     // The rebuilt chain branches correctly via the interpreter.
     final ok = interpretMeaningProgram(
@@ -402,7 +401,7 @@ void main() {
     }));
     expect(r['error'], contains('outside the closed vocabulary'));
     expect(r['error'], contains('load_arg'));
-    expect((r['valid_ops'] as List), contains('return'));
+    expect(r['valid_ops'] as List, contains('return'));
     expect(mt.hasMeaningNode(world, 'save_url'), isFalse);
   });
 

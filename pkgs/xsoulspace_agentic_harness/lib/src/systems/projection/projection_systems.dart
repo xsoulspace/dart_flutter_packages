@@ -1,15 +1,14 @@
 import 'dart:convert';
 
-import 'package:ecsly/ecsly.dart';
+import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import '../../data_models/data_models.dart';
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import '../../decisions/decision_flow.dart' show DeferredThinking;
 import '../../model_router.dart';
 import '../../narrative/narrative.dart';
 import '../../resources/resources.dart';
-import 'relevance.dart' show keywordsOf;
 import '../decision_flow_system.dart' show ToolResultPendingMarker;
+import 'relevance.dart' show keywordsOf;
 
 /// System 2: Build a minimal [Situation] for each actor with [Agency].
 ///

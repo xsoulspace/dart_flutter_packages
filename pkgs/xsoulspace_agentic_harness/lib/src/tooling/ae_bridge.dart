@@ -65,9 +65,8 @@ ToolDef verifyPackTool({String? projectRoot}) => ToolDef.encode(
           'Verify an AE canonical pack against its realizations. Returns '
           'tier-classified gaps (T1 invariant violation > T2 upstream '
           'blocker > T3 partial). Read-only.',
-      argsSchema: SchemaBundle.empty,
       execute: (args) async {
-        final map = args as Map;
+        final map = args! as Map;
         final packArg = map['pack'];
         if (packArg is! String || packArg.isEmpty) {
           throw ArgumentError('args must carry non-empty string "pack"');

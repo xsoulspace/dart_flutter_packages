@@ -24,11 +24,7 @@ library;
 
 import 'dart:async';
 
-import 'package:xsoulspace_agentic_harness/src/schedules.dart';
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
-import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
-import 'package:ecsly/ecsly.dart';
-
+import '../../xsoulspace_agentic_harness.dart';
 import '../tooling/token_estimate.dart';
 
 /// A single measured run of a scripted task.

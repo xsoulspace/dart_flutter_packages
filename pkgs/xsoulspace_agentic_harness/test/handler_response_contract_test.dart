@@ -9,7 +9,6 @@
 library;
 
 import 'package:test/test.dart';
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
 import 'support/agent_harness_support.dart';
@@ -21,23 +20,20 @@ class _ReturnOnlyHandler implements GenerationHandler {
   Future<ActorGenerateResponse> generate(
     World world,
     ActorGenerateRequest request,
-  ) async {
-    return ActorGenerateResponse(
+  ) async => ActorGenerateResponse(
       actorEntity: request.actorEntity,
       structuredOutput: {'text': 'returned'},
       rawOutput: 'returned',
       taskId: request.taskId,
     );
-  }
 }
 
 void main() {
   test('return-only handler does not deadlock; response lands once', () async {
     final world = await buildTestWorld(handler: _ReturnOnlyHandler());
     const modelId = ModelId('m');
-    world.getResource<ModelRouterResource>().router.models[modelId] = Model(
+    world.getResource<ModelRouterResource>().router.models[modelId] = const Model(
       id: modelId,
-      tier: 0,
     );
     final scene = spawnScene(world);
     spawnActor(world, scene, openDecisionPrompt: 'hello');
@@ -58,9 +54,8 @@ void main() {
       handler: MockGenerationHandler(responseText: 'mocked'),
     );
     const modelId = ModelId('m');
-    world.getResource<ModelRouterResource>().router.models[modelId] = Model(
+    world.getResource<ModelRouterResource>().router.models[modelId] = const Model(
       id: modelId,
-      tier: 0,
     );
     final scene = spawnScene(world);
     spawnActor(world, scene, openDecisionPrompt: 'hello');

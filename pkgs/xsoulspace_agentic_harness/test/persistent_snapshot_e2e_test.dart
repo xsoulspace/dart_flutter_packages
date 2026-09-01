@@ -3,6 +3,8 @@
 /// End-to-end coverage for PersistentId-based persistence (A8):
 /// identity stability across save/load boundaries, privacy-respecting cut
 /// parity, and a restored world that keeps living through further turns.
+library;
+
 import 'dart:convert';
 import 'dart:io';
 
@@ -36,7 +38,7 @@ void main() {
     // Runtime Entity handles were regenerated between the two saves, yet
     // the payloads are identical: identity flows through PersistentId only.
     expect(second, equals(first));
-    expect((second['payload'] as Map)['entities'] as List, isNotEmpty);
+    expect((second['payload']! as Map)['entities'] as List, isNotEmpty);
   });
 
   test('cuts survive restore byte-for-byte, privacy included', () async {
@@ -159,14 +161,14 @@ World _twoActorWorld() {
   world.upsertResource(ModelRouterResource(ModelRouter()));
   final scene = world.spawnComponents([const Scene(), SceneFrame()]);
   final ada = world.spawnComponents([
-    Actor(agentId: const AgentId('ada')),
+    const Actor(agentId: AgentId('ada')),
     ActorModel(modelId: ModelId.create()),
     const ActorSystemPrompt(text: 'You are ada.'),
     PresentInScene(sceneEntity: scene),
     const OpenDecision(prompt: 'Plan the release'),
   ]);
   final maya = world.spawnComponents([
-    Actor(agentId: const AgentId('maya')),
+    const Actor(agentId: AgentId('maya')),
     ActorModel(modelId: ModelId.create()),
     const ActorSystemPrompt(text: 'You are maya.'),
     PresentInScene(sceneEntity: scene),

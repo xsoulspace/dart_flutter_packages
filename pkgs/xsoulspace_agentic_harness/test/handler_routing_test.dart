@@ -15,7 +15,6 @@ library;
 import 'package:test/test.dart';
 import 'package:xsoulspace_agentic_harness/benchmark_api.dart'
     show openFreshDecision;
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
 import 'support/agent_harness_support.dart';
@@ -62,16 +61,16 @@ void main() {
 
     final scene = world.spawnComponents([const Scene(), SceneFrame()]);
     world.spawnComponents([
-      Actor(agentId: const AgentId('agent-apple')),
+      const Actor(agentId: AgentId('agent-apple')),
       ActorModel(modelId: ModelId.create()),
       PresentInScene(sceneEntity: scene),
-      OpenDecision(prompt: 'Apple decision'),
+      const OpenDecision(prompt: 'Apple decision'),
     ]);
     world.spawnComponents([
-      Actor(agentId: const AgentId('agent-openrouter')),
+      const Actor(agentId: AgentId('agent-openrouter')),
       ActorModel(modelId: ModelId.create()),
       PresentInScene(sceneEntity: scene),
-      OpenDecision(prompt: 'OpenRouter decision'),
+      const OpenDecision(prompt: 'OpenRouter decision'),
     ]);
     world.flush();
 
@@ -107,8 +106,8 @@ void main() {
     final world = await buildTestWorld();
     // Two handlers registered by MODEL id — simulates Apple Foundation and
     // OpenRouter both being first-class models in the router.
-    final appleModelId = const ModelId('model-apple');
-    final openRouterModelId = const ModelId('model-openrouter');
+    const appleModelId = ModelId('model-apple');
+    const openRouterModelId = ModelId('model-openrouter');
     final appleHandler = _TaggedHandler('apple');
     final openRouterHandler = _TaggedHandler('openrouter');
     world
@@ -118,10 +117,10 @@ void main() {
 
     final scene = world.spawnComponents([const Scene(), SceneFrame()]);
     final actor = world.spawnComponents([
-      Actor(agentId: const AgentId('agent-apple')),
-      ActorModel(modelId: appleModelId),
+      const Actor(agentId: AgentId('agent-apple')),
+      const ActorModel(modelId: appleModelId),
       PresentInScene(sceneEntity: scene),
-      OpenDecision(prompt: 'First decision'),
+      const OpenDecision(prompt: 'First decision'),
     ]);
     world.flush();
 
@@ -131,7 +130,7 @@ void main() {
 
     // Swap the actor's model at runtime, then open a fresh decision (the
     // host-injected retry path — openFreshDecision resets round budgets).
-    world.upsertComponent(actor, ActorModel(modelId: openRouterModelId));
+    world.upsertComponent(actor, const ActorModel(modelId: openRouterModelId));
     openFreshDecision(world, actor, prompt: 'Second decision');
 
     await HarnessLoop(world: world).runUntilIdle();

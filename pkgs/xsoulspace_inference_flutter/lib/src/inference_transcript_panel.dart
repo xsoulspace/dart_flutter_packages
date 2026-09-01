@@ -2,13 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 final class InferenceTranscriptPanel extends StatelessWidget {
-  const InferenceTranscriptPanel({super.key, required this.snapshot});
+  const InferenceTranscriptPanel({required this.snapshot, super.key});
 
   final InferenceTranscriptSnapshot snapshot;
 
   @override
-  Widget build(final BuildContext context) {
-    return Card(
+  Widget build(final BuildContext context) => Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -31,5 +30,4 @@ final class InferenceTranscriptPanel extends StatelessWidget {
         ),
       ),
     );
-  }
 }

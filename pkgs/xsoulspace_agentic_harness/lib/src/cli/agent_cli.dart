@@ -23,15 +23,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:ecsly/ecsly.dart';
-
-import '../cli_host.dart';
-import '../resources/resources.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import '../agent.dart';
 import '../tools/fs_tools.dart';
-import '../model_router.dart';
 
 /// Injection point for a backend. Built once per session.
 typedef HandlerFactory = GenerationHandler Function();

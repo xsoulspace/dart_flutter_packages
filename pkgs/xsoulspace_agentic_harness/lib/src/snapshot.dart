@@ -17,14 +17,13 @@ library;
 
 import 'dart:convert';
 
-import 'package:ecsly/ecsly.dart';
 import 'package:ecsly_serialization/ecsly_serialization.dart';
+import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import 'data_models/data_models.dart';
 import 'meaning/meaning_tree.dart'
     show MeaningEdge, MeaningIndex, MeaningNode, MeaningProps, meaningKeywords;
 import 'model_router.dart';
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'narrative/narrative.dart';
 import 'plugin.dart';
 import 'resources/resources.dart';
@@ -119,57 +118,57 @@ final List<_Spec> _specs = [
   _Spec<Actor>(
     () => Actor(agentId: AgentId.create()),
     (c) => {'agentId': c.agentId.value},
-    (v) => Actor(agentId: AgentId((v as Map)['agentId'] as String)),
+    (v) => Actor(agentId: AgentId((v! as Map)['agentId'] as String)),
   ),
   _Spec<ActorModel>(
     () => ActorModel(modelId: ModelId.create()),
     (c) => {'modelId': c.modelId},
-    (v) => ActorModel(modelId: ModelId((v as Map)['modelId'] as String)),
+    (v) => ActorModel(modelId: ModelId((v! as Map)['modelId'] as String)),
   ),
   _Spec<ActorSystemPrompt>(
     () => const ActorSystemPrompt(text: ''),
     (c) => {'text': c.text},
-    (v) => ActorSystemPrompt(text: (v as Map)['text'] as String),
+    (v) => ActorSystemPrompt(text: (v! as Map)['text'] as String),
   ),
   _Spec<ActorTools>(
     () => const ActorTools(registryName: 'default'),
     (c) => {'registryName': c.registryName},
     (v) => ActorTools(
-      registryName: (v as Map)['registryName'] as String? ?? 'default',
+      registryName: (v! as Map)['registryName'] as String? ?? 'default',
     ),
   ),
   _Spec<ActorThreads>(
     () => ActorThreads(threads: const []),
     (c) => {'threads': _refList(c.threads)},
-    (v) => ActorThreads(threads: _derefList((v as Map)['threads'])),
+    (v) => ActorThreads(threads: _derefList((v! as Map)['threads'])),
   ),
   _Spec<MeaningNode>(
     () => const MeaningNode(id: '', kind: '', label: ''),
     (c) => {'id': c.id, 'kind': c.kind, 'label': c.label},
     (v) => MeaningNode(
-      id: (v as Map)['id'] as String,
-      kind: (v)['kind'] as String,
-      label: (v)['label'] as String,
+      id: (v! as Map)['id'] as String,
+      kind: v['kind'] as String,
+      label: v['label'] as String,
     ),
   ),
   _Spec<MeaningProps>(
     () => const MeaningProps(),
     (c) => {'props': c.props},
     (v) => MeaningProps(
-      ((v as Map)['props'] as Map?)?.cast<String, dynamic>(),
+      ((v! as Map)['props'] as Map?)?.cast<String, dynamic>(),
     ),
   ),
   _Spec<MeaningEdge>(
     () => MeaningEdge(
-      from: Entity.create(0),
+      from: Entity.create(),
       relation: '',
-      to: Entity.create(0),
+      to: Entity.create(),
     ),
     (c) => {'from': _ref(c.from), 'relation': c.relation, 'to': _ref(c.to)},
     (v) => MeaningEdge(
-      from: _deref((v as Map)['from']),
-      relation: (v)['relation'] as String,
-      to: _deref((v)['to']),
+      from: _deref((v! as Map)['from']),
+      relation: v['relation'] as String,
+      to: _deref(v['to']),
     ),
   ),
 
@@ -178,7 +177,7 @@ final List<_Spec> _specs = [
     () => const AwaitingResponse(),
     (c) => {'taskId': c.taskId?.value},
     (v) => AwaitingResponse(
-      taskId: (v as Map)['taskId'] == null
+      taskId: (v! as Map)['taskId'] == null
           ? null
           : TaskId(v['taskId'] as String),
     ),
@@ -194,7 +193,7 @@ final List<_Spec> _specs = [
       'stepId': c.stepId == null ? null : _ref(c.stepId!),
     },
     (v) {
-      final m = v as Map;
+      final m = v! as Map;
       final schema = m['schema'];
       return OpenDecision(
         schema: schema is! Map || schema.isEmpty
@@ -211,43 +210,43 @@ final List<_Spec> _specs = [
   _Spec<EscalationRequest>(
     () => const EscalationRequest(),
     (c) => {'reason': c.reason},
-    (v) => EscalationRequest(reason: (v as Map)['reason'] as String? ?? ''),
+    (v) => EscalationRequest(reason: (v! as Map)['reason'] as String? ?? ''),
   ),
   _Spec<LoopStuck>(
     () => const LoopStuck(0),
     (c) => {'streak': c.streak},
-    (v) => LoopStuck((v as Map)['streak'] as int? ?? 0),
+    (v) => LoopStuck((v! as Map)['streak'] as int? ?? 0),
   ),
   _Spec<Scene>(() => const Scene(), (_) => const {}, (_) => const Scene()),
   _Spec<SceneFrame>(
-    () => SceneFrame(),
+    SceneFrame.new,
     (c) => {'frame': c.frame},
-    (v) => SceneFrame(frame: (v as Map)['frame'] as int? ?? 0),
+    (v) => SceneFrame(frame: (v! as Map)['frame'] as int? ?? 0),
   ),
   _Spec<PresentInScene>(
-    () => PresentInScene(sceneEntity: Entity.create(0, 0)),
+    () => PresentInScene(sceneEntity: Entity.create()),
     (c) => {'scene': _ref(c.sceneEntity)},
-    (v) => PresentInScene(sceneEntity: _deref((v as Map)['scene'])),
+    (v) => PresentInScene(sceneEntity: _deref((v! as Map)['scene'])),
   ),
   _Spec<PresentProp>(
-    () => PresentProp(sceneEntity: Entity.create(0, 0)),
+    () => PresentProp(sceneEntity: Entity.create()),
     (c) => {'scene': _ref(c.sceneEntity)},
-    (v) => PresentProp(sceneEntity: _deref((v as Map)['scene'])),
+    (v) => PresentProp(sceneEntity: _deref((v! as Map)['scene'])),
   ),
   _Spec<Prop>(
     () => const Prop(name: ''),
     (c) => {'name': c.name},
-    (v) => Prop(name: (v as Map)['name'] as String),
+    (v) => Prop(name: (v! as Map)['name'] as String),
   ),
   _Spec<Goal>(
-    () => Goal(text: ''),
+    Goal.new,
     (c) => {
       'text': c.text,
       'successCriteria': c.successCriteria,
       'status': c.status,
     },
     (v) {
-      final m = v as Map;
+      final m = v! as Map;
       return Goal(
         text: m['text'] as String? ?? '',
         successCriteria: List<String>.from(m['successCriteria'] as List? ?? []),
@@ -262,44 +261,44 @@ final List<_Spec> _specs = [
           ? null
           : _ref(c.parentThreadId!),
     },
-    (v) => Thread(parentThreadId: _refOrNull((v as Map)['parentThreadId'])),
+    (v) => Thread(parentThreadId: _refOrNull((v! as Map)['parentThreadId'])),
   ),
   _Spec<ThreadScore>(
     () => ThreadScore(0),
     (c) => {'value': c.value},
-    (v) => ThreadScore(((v as Map)['value'] as num?)?.toDouble() ?? 0),
+    (v) => ThreadScore(((v! as Map)['value'] as num?)?.toDouble() ?? 0),
   ),
   _Spec<ThreadId>(
     () => const ThreadId(''),
     (c) => {'value': c.value},
-    (v) => ThreadId((v as Map)['value'] as String),
+    (v) => ThreadId((v! as Map)['value'] as String),
   ),
   _Spec<ThreadStatus>(
     () => ThreadStatus(ThreadStatusEnum.active),
     (c) => {'value': c.value.name},
     (v) => ThreadStatus(
-      ThreadStatusEnum.values.byName((v as Map)['value'] as String),
+      ThreadStatusEnum.values.byName((v! as Map)['value'] as String),
     ),
   ),
   _Spec<ParentScene>(
-    () => ParentScene(Entity.create(0, 0)),
+    () => ParentScene(Entity.create()),
     (c) => {'scene': _ref(c.scene)},
-    (v) => ParentScene(_deref((v as Map)['scene'])),
+    (v) => ParentScene(_deref((v! as Map)['scene'])),
   ),
   _Spec<OriginActor>(
-    () => OriginActor(Entity.create(0, 0)),
+    () => OriginActor(Entity.create()),
     (c) => {'actor': _ref(c.actor)},
-    (v) => OriginActor(_deref((v as Map)['actor'])),
+    (v) => OriginActor(_deref((v! as Map)['actor'])),
   ),
   _Spec<GoalLink>(
     () => const GoalLink(null),
     (c) => {'goal': c.goal == null ? null : _ref(c.goal!)},
-    (v) => GoalLink(_refOrNull((v as Map)['goal'])),
+    (v) => GoalLink(_refOrNull((v! as Map)['goal'])),
   ),
   _Spec<DependsOnStep>(
-    () => const DependsOnStep(const []),
+    () => const DependsOnStep(),
     (c) => {'dependencies': _refList(c.dependencies)},
-    (v) => DependsOnStep(_derefList((v as Map)['dependencies'])),
+    (v) => DependsOnStep(_derefList((v! as Map)['dependencies'])),
   ),
   _Spec<Step>(
     () => Step(claim: '', verificationKind: StepVerificationKind.mechanical),
@@ -311,7 +310,7 @@ final List<_Spec> _specs = [
       'criterionArgs': c.criterionArgs,
     },
     (v) {
-      final m = v as Map;
+      final m = v! as Map;
       return Step(
         claim: m['claim'] as String? ?? '',
         verificationKind: StepVerificationKind.values.byName(
@@ -325,9 +324,9 @@ final List<_Spec> _specs = [
     },
   ),
   _Spec<DerivedFromThread>(
-    () => DerivedFromThread(Entity.create(0, 0)),
+    () => DerivedFromThread(Entity.create()),
     (c) => {'thread': _ref(c.thread)},
-    (v) => DerivedFromThread(_deref((v as Map)['thread'])),
+    (v) => DerivedFromThread(_deref((v! as Map)['thread'])),
   ),
   _Spec<ThreadVisibility>(
     () => ThreadVisibility(const <AgentId>{}),
@@ -335,7 +334,7 @@ final List<_Spec> _specs = [
       'visibleTo': [for (final a in c.visibleTo) a.value],
     },
     (v) => ThreadVisibility(
-      ((v as Map)['visibleTo'] as List? ?? [])
+      ((v! as Map)['visibleTo'] as List? ?? [])
           .map((a) => AgentId(a as String))
           .toSet(),
     ),
@@ -343,71 +342,71 @@ final List<_Spec> _specs = [
   _Spec<BeatId>(
     () => const BeatId(''),
     (c) => {'value': c.value},
-    (v) => BeatId((v as Map)['value'] as String),
+    (v) => BeatId((v! as Map)['value'] as String),
   ),
   _Spec<BelongsToThread>(
-    () => BelongsToThread(Entity.create(0, 0)),
+    () => BelongsToThread(Entity.create()),
     (c) => {'thread': _ref(c.thread)},
-    (v) => BelongsToThread(_deref((v as Map)['thread'])),
+    (v) => BelongsToThread(_deref((v! as Map)['thread'])),
   ),
   _Spec<SummarizesBeats>(
     () => SummarizesBeats(sources: const []),
     (c) => {'sources': _refList(c.sources)},
-    (v) => SummarizesBeats(sources: _derefList((v as Map)['sources'])),
+    (v) => SummarizesBeats(sources: _derefList((v! as Map)['sources'])),
   ),
   _Spec<BeatSequence>(
     () => BeatSequence(0),
     (c) => {'value': c.value},
-    (v) => BeatSequence((v as Map)['value'] as int? ?? 0),
+    (v) => BeatSequence((v! as Map)['value'] as int? ?? 0),
   ),
   _Spec<Speaker>(
-    () => Speaker(Entity.create(0, 0)),
+    () => Speaker(Entity.create()),
     (c) => {'actor': _ref(c.actor)},
-    (v) => Speaker(_deref((v as Map)['actor'])),
+    (v) => Speaker(_deref((v! as Map)['actor'])),
   ),
   _Spec<AddressedTo>(
     () => const AddressedTo(null),
     (c) => {'actor': c.actor == null ? null : _ref(c.actor!)},
-    (v) => AddressedTo(_refOrNull((v as Map)['actor'])),
+    (v) => AddressedTo(_refOrNull((v! as Map)['actor'])),
   ),
   _Spec<BeatModality>(
     () => BeatModality(BeatModalityEnum.text),
     (c) => {'value': c.value.name},
     (v) => BeatModality(
-      BeatModalityEnum.values.byName((v as Map)['value'] as String),
+      BeatModalityEnum.values.byName((v! as Map)['value'] as String),
     ),
   ),
   _Spec<BeatStatus>(
     () => BeatStatus(BeatStatusEnum.complete),
     (c) => {'value': c.value.name},
     (v) =>
-        BeatStatus(BeatStatusEnum.values.byName((v as Map)['value'] as String)),
+        BeatStatus(BeatStatusEnum.values.byName((v! as Map)['value'] as String)),
   ),
   _Spec<ReplyToBeat>(
-    () => ReplyToBeat(Entity.create(0, 0)),
+    () => ReplyToBeat(Entity.create()),
     (c) => {'beat': _ref(c.beat)},
-    (v) => ReplyToBeat(_deref((v as Map)['beat'])),
+    (v) => ReplyToBeat(_deref((v! as Map)['beat'])),
   ),
   _Spec<ObservesProp>(
-    () => ObservesProp(Entity.create(0, 0)),
+    () => ObservesProp(Entity.create()),
     (c) => {'prop': _ref(c.prop)},
-    (v) => ObservesProp(_deref((v as Map)['prop'])),
+    (v) => ObservesProp(_deref((v! as Map)['prop'])),
   ),
   _Spec<PrivateToActor>(
-    () => PrivateToActor(Entity.create(0, 0)),
+    () => PrivateToActor(Entity.create()),
     (c) => {'actor': _ref(c.actor)},
-    (v) => PrivateToActor(_deref((v as Map)['actor'])),
+    (v) => PrivateToActor(_deref((v! as Map)['actor'])),
   ),
   _Spec<TextContent>(
     () => TextContent(''),
     (c) => {'text': c.text},
-    (v) => TextContent((v as Map)['text'] as String),
+    (v) => TextContent((v! as Map)['text'] as String),
   ),
   _Spec<TextStream>(
     () => TextStream(chunks: const []),
     (c) => {'chunks': c.chunks, 'cursor': c.cursor},
     (v) {
-      final m = v as Map;
+      final m = v! as Map;
       return TextStream(
         chunks: List<String>.from(m['chunks'] as List? ?? []),
         cursor: m['cursor'] as int? ?? 0,
@@ -421,7 +420,7 @@ final List<_Spec> _specs = [
     },
     (v) => AudioStream(
       chunks: [
-        for (final encoded in (v as Map)['chunks'] as List? ?? [])
+        for (final encoded in (v! as Map)['chunks'] as List? ?? [])
           base64Decode(encoded as String),
       ],
     ),
@@ -429,13 +428,13 @@ final List<_Spec> _specs = [
   _Spec<ActionPayload>(
     () => ActionPayload(const {}),
     (c) => {'data': c.data},
-    (v) => ActionPayload((v as Map)['data']),
+    (v) => ActionPayload((v! as Map)['data']),
   ),
   _Spec<BeatToolCall>(
     () => BeatToolCall('', const {}),
     (c) => {'name': c.name, 'args': c.args},
     (v) {
-      final m = v as Map;
+      final m = v! as Map;
       return BeatToolCall(
         m['name'] as String,
         (m['args'] as Map? ?? {}).cast<String, dynamic>(),
@@ -445,38 +444,38 @@ final List<_Spec> _specs = [
   _Spec<ToolResult>(
     () => ToolResult(null),
     (c) => {'result': c.result},
-    (v) => ToolResult((v as Map)['result']),
+    (v) => ToolResult((v! as Map)['result']),
   ),
   _Spec<ThoughtContent>(
     () => ThoughtContent(''),
     (c) => {'text': c.text},
-    (v) => ThoughtContent((v as Map)['text'] as String),
+    (v) => ThoughtContent((v! as Map)['text'] as String),
   ),
   _Spec<ObservationData>(
     () => ObservationData(null),
     (c) => {'data': c.data},
-    (v) => ObservationData((v as Map)['data']),
+    (v) => ObservationData((v! as Map)['data']),
   ),
   _Spec<MemorySummary>(
     () => MemorySummary(''),
     (c) => {'text': c.text},
-    (v) => MemorySummary((v as Map)['text'] as String),
+    (v) => MemorySummary((v! as Map)['text'] as String),
   ),
   _Spec<SummaryOwner>(
-    () => SummaryOwner(Entity.create(0, 0)),
+    () => SummaryOwner(Entity.create()),
     (c) => {'actor': _ref(c.actor)},
-    (v) => SummaryOwner(_deref((v as Map)['actor'])),
+    (v) => SummaryOwner(_deref((v! as Map)['actor'])),
   ),
   _Spec<SummaryThread>(
     () => const SummaryThread(null),
     (c) => {'thread': c.thread == null ? null : _ref(c.thread!)},
-    (v) => SummaryThread(_refOrNull((v as Map)['thread'])),
+    (v) => SummaryThread(_refOrNull((v! as Map)['thread'])),
   ),
   _Spec<ToolResultContent>(
     () => ToolResultContent(name: '', output: null),
     (c) => {'name': c.name, 'output': c.output},
     (v) {
-      final m = v as Map;
+      final m = v! as Map;
       return ToolResultContent(name: m['name'] as String, output: m['output']);
     },
   ),
@@ -488,27 +487,27 @@ final List<_Spec> _specs = [
   _Spec<RetryCount>(
     () => RetryCount(0),
     (c) => {'value': c.value},
-    (v) => RetryCount((v as Map)['value'] as int? ?? 0),
+    (v) => RetryCount((v! as Map)['value'] as int? ?? 0),
   ),
   _Spec<ToolRoundCount>(
     () => ToolRoundCount(0),
     (c) => {'value': c.value},
-    (v) => ToolRoundCount((v as Map)['value'] as int? ?? 0),
+    (v) => ToolRoundCount((v! as Map)['value'] as int? ?? 0),
   ),
   _Spec<TotalRoundCount>(
     () => TotalRoundCount(0),
     (c) => {'value': c.value},
-    (v) => TotalRoundCount((v as Map)['value'] as int? ?? 0),
+    (v) => TotalRoundCount((v! as Map)['value'] as int? ?? 0),
   ),
   _Spec<AttemptCount>(
     () => AttemptCount(0),
     (c) => {'value': c.value},
-    (v) => AttemptCount((v as Map)['value'] as int? ?? 0),
+    (v) => AttemptCount((v! as Map)['value'] as int? ?? 0),
   ),
   _Spec<GoalAttemptsExhausted>(
     () => const GoalAttemptsExhausted(''),
     (c) => {'reason': c.reason},
-    (v) => GoalAttemptsExhausted((v as Map)['reason'] as String? ?? ''),
+    (v) => GoalAttemptsExhausted((v! as Map)['reason'] as String? ?? ''),
   ),
   _Spec<IdentitySeeded>(
     () => const IdentitySeeded(),

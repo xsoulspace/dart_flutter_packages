@@ -23,13 +23,12 @@
 /// ```
 library;
 
-import 'package:ecsly/ecsly.dart';
+import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import 'data_models/data_models.dart';
 import 'model_router.dart';
 import 'narrative/narrative.dart';
 import 'resources/resources.dart';
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 /// A declarative actor description for [AgentWorldSetup.spawnActors].
 class ActorSpec {
@@ -45,7 +44,7 @@ class ActorSpec {
 /// One spawned actor: entity handle plus its thread and display name.
 class SpawnedActor {
   SpawnedActor({required this.entity, required this.name, Entity? thread})
-    : thread = thread ?? Entity.create(0);
+    : thread = thread ?? Entity.create();
   final Entity entity;
 
   /// The actor's first thread (projection ray-traces it). Assigned during

@@ -92,12 +92,10 @@ final class FakeMeshTransport implements MeshTransport {
 final class FakeMeshSession implements MeshSession {
   FakeMeshSession({
     required this.remotePeerId,
-    required Stream<Uint8List> inbound,
-    required final void Function(Uint8List) onSend,
-    required final void Function() onClose,
-  }) : _inbound = inbound,
-       _onSend = onSend,
-       _onClose = onClose;
+    required this._inbound,
+    required this._onSend,
+    required this._onClose,
+  });
 
   @override
   final String remotePeerId;

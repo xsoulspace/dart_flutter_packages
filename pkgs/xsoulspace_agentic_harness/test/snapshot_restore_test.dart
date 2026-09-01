@@ -3,9 +3,6 @@ import 'dart:convert';
 import 'package:ecsly/ecsly.dart';
 import 'package:test/test.dart';
 import 'package:xsoulspace_agentic_harness/src/agent.dart';
-import 'package:xsoulspace_agentic_harness/src/narrative/facet_index.dart';
-import 'package:xsoulspace_agentic_harness/src/narrative/graph_ops.dart';
-import 'package:xsoulspace_agentic_harness/src/systems/projection/relevance.dart';
 
 void main() {
   test('restores graph and reproduces projection byte-for-byte', () {
@@ -18,7 +15,7 @@ void main() {
       ActorModel(modelId: ModelId.create()),
       const ActorSystemPrompt(text: 'You are a planner.'),
       PresentInScene(sceneEntity: scene),
-      Goal(text: 'ship', successCriteria: ['tests-pass'], status: 'active'),
+      Goal(text: 'ship', successCriteria: ['tests-pass']),
       const OpenDecision(prompt: 'What is next?'),
     ]);
     original.flush();
@@ -26,7 +23,7 @@ void main() {
     final thread = original.spawnComponents([
       const Thread(),
       ThreadScore(0.8),
-      ThreadId('thread-1'),
+      const ThreadId('thread-1'),
       ThreadStatus(ThreadStatusEnum.active),
       ParentScene(scene),
       OriginActor(actor),
@@ -37,10 +34,9 @@ void main() {
       Step(
         claim: 'restore works',
         verificationKind: StepVerificationKind.mechanical,
-        status: StepLifecycle.open,
         confidence: 0.5,
       ),
-      DependsOnStep(const []),
+      const DependsOnStep(),
     ]);
     original.flush();
     final beat = startBeat(original, thread, actor, BeatModalityEnum.text);

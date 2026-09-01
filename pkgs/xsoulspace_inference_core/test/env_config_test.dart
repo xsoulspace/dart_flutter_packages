@@ -28,7 +28,7 @@ void main() {
       localPath: localPath,
     );
     await cfg.set('GLOBAL_KEY', 'g1', scope: ConfigScope.global);
-    await cfg.set('LOCAL_KEY', 'l1', scope: ConfigScope.local);
+    await cfg.set('LOCAL_KEY', 'l1');
 
     expect(cfg.get('GLOBAL_KEY'), 'g1');
     expect(cfg.get('LOCAL_KEY'), 'l1');
@@ -83,7 +83,7 @@ void main() {
     expect(reported, isTrue);
     expect(cfg.get('anything'), isNull);
     // And the store still works — set overwrites the broken file.
-    await cfg.set('K', 'v', scope: .local);
+    await cfg.set('K', 'v');
     final again = await EnvConfig.load(
       globalPath: globalPath,
       localPath: localPath,
@@ -97,11 +97,11 @@ void main() {
       localPath: localPath,
     );
     await cfg.set('K', 'global', scope: ConfigScope.global);
-    await cfg.set('K2', 'local', scope: ConfigScope.local);
+    await cfg.set('K2', 'local');
 
-    expect(await cfg.delete('K', scope: .local), isFalse);
+    expect(await cfg.delete('K'), isFalse);
     expect(cfg.get('K'), 'global'); // untouched in global
-    expect(await cfg.delete('K2', scope: .local), isTrue);
+    expect(await cfg.delete('K2'), isTrue);
     expect(cfg.get('K2'), isNull);
   });
 
@@ -112,7 +112,7 @@ void main() {
     final cfg = await EnvConfig.load(
       globalPath: globalPath,
       localPath: localPath,
-      onCorrupt: (_, __) => reported = true,
+      onCorrupt: (_, _) => reported = true,
     );
     expect(reported, isTrue);
     expect(cfg.keys(), isEmpty);

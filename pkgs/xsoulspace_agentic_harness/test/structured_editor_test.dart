@@ -9,10 +9,8 @@ library;
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 import 'package:xsoulspace_agentic_harness/src/tooling/act_with_project.dart';
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
+import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
 Map<String, dynamic> _dec(Object? raw) {
   final r = raw is String ? jsonDecode(raw) : raw;
@@ -30,7 +28,7 @@ void main() {
     );
     // list at start is empty
     var r = _dec(await tool.execute({'action': 'list'}));
-    expect((r['nodes'] as List), isEmpty);
+    expect(r['nodes'] as List, isEmpty);
 
     // add a board + cells
     r = _dec(await tool.execute({'action': 'add', 'kind': 'board', 'label': 'tictactoe'}));
@@ -40,7 +38,7 @@ void main() {
     final cellId = r['id'] as String;
 
     final view = r['view'] as Map;
-    expect((view['total'] as num), 2);
+    expect(view['total'] as num, 2);
 
     // link board -> cell
     r = _dec(await tool.execute({

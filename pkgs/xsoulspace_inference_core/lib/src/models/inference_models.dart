@@ -1,12 +1,12 @@
-export 'model_catalog.dart';
-
 import 'dart:convert';
 
 import 'package:from_json_to_json/from_json_to_json.dart';
 import 'package:recase/recase.dart';
 
-import '../tools/tool_contracts.dart';
 import '../structured_output/structured_output.dart';
+import '../tools/tool_contracts.dart';
+
+export 'model_catalog.dart';
 
 /// The idea is that inference task should be as atomic as possible
 /// so if structural output is needed it should be pointed as such

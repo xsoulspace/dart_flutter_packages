@@ -9,8 +9,6 @@
 library;
 
 import 'package:test/test.dart';
-import 'package:xsoulspace_agentic_harness/src/schedules.dart';
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
 import 'support/agent_harness_support.dart';
@@ -20,8 +18,8 @@ void main() {
     test('with no beats keeps a score of 0.0', () async {
       final world = await buildTestWorld();
 
-      world.spawnComponents([const Thread(), ThreadScore(0.0)]);
-      world.spawnComponents([const Thread(), ThreadScore(0.0)]);
+      world.spawnComponents([const Thread(), ThreadScore(0)]);
+      world.spawnComponents([const Thread(), ThreadScore(0)]);
       world.flush();
 
       world.runSchedule(Schedules.mechanical);

@@ -236,8 +236,8 @@ class JailWriteGateway {
   JailWriteGateway(
     this.root, {
     this.mode = WriteGateMode.apply,
-    Future<bool> Function(CapturedWrite write)? approver,
-  }) : _approver = approver;
+    this._approver,
+  });
 
   final FsToolsRoot root;
   final WriteGateMode mode;
@@ -801,8 +801,8 @@ ToolDef runTool(FsToolsRoot root) => ToolDef.encode(
         final params = _asMap(args);
         final cmdRaw = params['command'];
         final cmd = switch (cmdRaw) {
-          List l => l.map((e) => e.toString()).toList(),
-          String s when s.isNotEmpty => [s],
+          final List l => l.map((e) => e.toString()).toList(),
+          final String s when s.isNotEmpty => [s],
           _ => const <String>[],
         };
         if (cmd.isEmpty) {

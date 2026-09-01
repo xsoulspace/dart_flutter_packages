@@ -9,8 +9,6 @@
 library;
 
 import 'package:test/test.dart';
-import 'package:xsoulspace_agentic_harness/src/schedules.dart';
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
 import 'support/agent_harness_support.dart';
@@ -24,7 +22,7 @@ void main() {
       final speaker = world.spawnComponents([
         Actor(agentId: AgentId.create()),
         ActorModel(modelId: ModelId.create()),
-        ActorSystemPrompt(text: 'You are a helpful assistant.'),
+        const ActorSystemPrompt(text: 'You are a helpful assistant.'),
         PresentInScene(sceneEntity: scene),
         const OpenDecision(prompt: 'Fix the parser bug'),
         ActorThreads(threads: []),
@@ -62,7 +60,7 @@ void main() {
       world.upsertResource(ProjectionBudget(tokens: 20));
       world.flush();
 
-      final scene = world.spawnComponents([Scene(), SceneFrame()]);
+      final scene = world.spawnComponents([const Scene(), SceneFrame()]);
       final actor = world.spawnComponents([
         Actor(agentId: AgentId.create()),
         ActorModel(modelId: ModelId.create()),
@@ -94,7 +92,7 @@ void main() {
       world.upsertResource(ProjectionBudget(tokens: 10));
       world.flush();
 
-      final scene = world.spawnComponents([Scene(), SceneFrame()]);
+      final scene = world.spawnComponents([const Scene(), SceneFrame()]);
       final actor = world.spawnComponents([
         Actor(agentId: AgentId.create()),
         ActorModel(modelId: ModelId.create()),
@@ -127,7 +125,7 @@ void main() {
         world.upsertResource(ProjectionBudget(tokens: 30));
         world.flush();
 
-        final scene = world.spawnComponents([Scene(), SceneFrame()]);
+        final scene = world.spawnComponents([const Scene(), SceneFrame()]);
         final actor = world.spawnComponents([
           Actor(agentId: AgentId.create()),
           ActorModel(modelId: ModelId.create()),

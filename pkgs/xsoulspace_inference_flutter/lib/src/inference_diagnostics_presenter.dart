@@ -7,17 +7,14 @@ import 'inference_transcript_panel.dart';
 
 final class InferenceDiagnosticsPresenter extends StatelessWidget {
   const InferenceDiagnosticsPresenter({
-    super.key,
-    required this.readiness,
-    required this.transcript,
+    required this.readiness, required this.transcript, super.key,
   });
 
   final InferenceReadinessSnapshot readiness;
   final InferenceTranscriptSnapshot transcript;
 
   @override
-  Widget build(final BuildContext context) {
-    return Column(
+  Widget build(final BuildContext context) => Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
@@ -28,5 +25,4 @@ final class InferenceDiagnosticsPresenter extends StatelessWidget {
         InferenceTranscriptPanel(snapshot: transcript),
       ],
     );
-  }
 }

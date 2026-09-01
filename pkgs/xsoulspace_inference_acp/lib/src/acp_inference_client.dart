@@ -15,17 +15,14 @@ import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 class AcpInferenceClient
     implements InferenceClient, StructuredTextStreamingInferenceClient {
   AcpInferenceClient({
-    required String command,
-    List<String> arguments = const [],
+    required this._command,
+    this._arguments = const [],
     this.id = 'acp',
     this.workingDirectory,
     this.environment,
-    AcpPermissionDelegate? permissionHandler,
-    Duration availabilityCacheTtl = const Duration(seconds: 30),
-  })  : _command = command,
-        _arguments = arguments,
-        _permissionHandler = permissionHandler,
-        _availabilityCacheTtl = availabilityCacheTtl;
+    this._permissionHandler,
+    this._availabilityCacheTtl = const Duration(seconds: 30),
+  });
 
   final String _command;
   final List<String> _arguments;

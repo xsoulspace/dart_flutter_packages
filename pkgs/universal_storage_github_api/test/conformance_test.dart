@@ -28,8 +28,5 @@ void main() {
       );
       return provider;
     },
-    // NOTE: GitHubApiStorageProvider intentionally declares supportsSync=false;
-    // its remote operations live on VersionControlService, not StorageProvider.sync.
-    supportsSync: false,
   );
 }

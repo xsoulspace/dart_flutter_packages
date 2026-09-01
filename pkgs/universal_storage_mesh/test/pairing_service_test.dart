@@ -98,7 +98,7 @@ void main() {
 
     test('tampered payload is rejected', () async {
       final aliceEph = await X25519().newKeyPair();
-      var qr = await PairingService.buildQrPayload(
+      final qr = await PairingService.buildQrPayload(
         identityKeyPair: aliceIdentity,
         ephemeralKeyPair: aliceEph,
         peerId: 'device-a',

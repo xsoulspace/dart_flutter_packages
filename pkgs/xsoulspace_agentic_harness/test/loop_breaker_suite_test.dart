@@ -5,9 +5,8 @@
 library;
 
 import 'package:test/test.dart';
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
-import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart';
 import 'package:xsoulspace_agentic_harness/benchmark_api.dart';
+import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
 /// Emits the SAME failing tool call on every turn — the degenerate echo

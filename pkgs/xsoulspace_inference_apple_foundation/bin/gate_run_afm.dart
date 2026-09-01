@@ -20,8 +20,6 @@ import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 import 'package:xsoulspace_agentic_harness/src/tooling/build_gates.dart';
 import 'package:xsoulspace_agentic_harness/src/benchmark/coding_suite/checkers.dart';
 import 'package:xsoulspace_agentic_harness/src/benchmark/coding_suite/task_spec.dart';
-import 'package:xsoulspace_agentic_harness/src/tooling/world_builder.dart'
-    show registerExperimentComponents;
 import 'package:xsoulspace_inference_apple_foundation/src/native_bridge/native_client.dart';
 
 final buildTasks = <CodingTask>[

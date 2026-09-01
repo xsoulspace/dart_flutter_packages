@@ -98,10 +98,10 @@ Future<void> main() async {
   stdout.writeln('bob.sync done');
 
   stdout.writeln(
-    'alice sees bob\'s file: ${await alice.getFile('notes/other.json')}',
+    "alice sees bob's file: ${await alice.getFile('notes/other.json')}",
   );
   stdout.writeln(
-    'bob sees alice\'s file: ${await bob.getFile('notes/todo.json')}',
+    "bob sees alice's file: ${await bob.getFile('notes/todo.json')}",
   );
 
   // -- 5. Cleanup ----------------------------------------------------------

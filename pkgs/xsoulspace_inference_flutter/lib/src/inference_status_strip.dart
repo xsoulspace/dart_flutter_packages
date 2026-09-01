@@ -2,13 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 final class InferenceStatusStrip extends StatelessWidget {
-  const InferenceStatusStrip({super.key, required this.snapshot});
+  const InferenceStatusStrip({required this.snapshot, super.key});
 
   final InferenceTranscriptSnapshot snapshot;
 
   @override
-  Widget build(final BuildContext context) {
-    return Container(
+  Widget build(final BuildContext context) => Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       color: Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -19,5 +18,4 @@ final class InferenceStatusStrip extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
       ),
     );
-  }
 }

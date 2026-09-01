@@ -23,8 +23,6 @@ import 'dart:io';
 
 import 'package:xsoulspace_agentic_harness/benchmark_api.dart'
     show scriptedBehaviors;
-import 'package:xsoulspace_agentic_harness/src/meaning/intents.dart';
-import 'package:xsoulspace_agentic_harness/src/systems/decision_flow_system.dart';
 import 'package:xsoulspace_agentic_harness/src/tooling/build_gates.dart';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
@@ -45,10 +43,10 @@ World _worldWithLoad({required int beats}) {
   final actor = world.spawnComponents([
     Actor(agentId: AgentId.create()),
     ActorModel(modelId: ModelId.create()),
-    ActorSystemPrompt(text: 'bench'),
+    const ActorSystemPrompt(text: 'bench'),
     ActorThreads(threads: []),
     PresentInScene(sceneEntity: scene),
-    OpenDecision(prompt: 'bench decision'),
+    const OpenDecision(prompt: 'bench decision'),
   ]);
   final thread = spawnThread(world, actor, scene);
   world.upsertComponent(actor, ActorThreads(threads: [thread]));
@@ -154,9 +152,7 @@ Future<void> partC() async {
     ..upsertResource(
       AgencyPolicy(
         maxConcurrent: 1,
-        maxToolRounds: 16,
         taskTimeout: Duration.zero,
-        maxGoalAttempts: 3,
       ),
     )
     ..upsertResource(ModelRouterResource(ModelRouter()))
@@ -173,14 +169,14 @@ Future<void> partC() async {
   final goal = world.spawnComponents([Goal(text: 'the goal works')]);
   final scene = world.spawnComponents([const Scene(), SceneFrame()]);
   final actor = world.spawnComponents([
-    Actor(agentId: AgentId('thrasher')),
+    const Actor(agentId: AgentId('thrasher')),
     ActorModel(modelId: ModelId.create()),
-    ActorSystemPrompt(text: 'test'),
+    const ActorSystemPrompt(text: 'test'),
     ActorThreads(threads: []),
-    ActorTools(registryName: 'default'),
+    const ActorTools(registryName: 'default'),
     ActorGoalRef(goal),
     PresentInScene(sceneEntity: scene),
-    OpenDecision(prompt: 'build and verify'),
+    const OpenDecision(prompt: 'build and verify'),
   ]);
   final thread = spawnThread(world, actor, scene);
   world.upsertComponent(actor, ActorThreads(threads: [thread]));

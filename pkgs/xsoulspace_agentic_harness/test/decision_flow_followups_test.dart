@@ -5,11 +5,6 @@
 library;
 
 import 'package:test/test.dart';
-import 'package:ecsly/ecsly.dart' show syncScheduleExecutionFrame;
-import 'package:xsoulspace_agentic_harness/src/schedules.dart';
-import 'package:xsoulspace_agentic_harness/src/systems/decision_flow_system.dart'
-    show decisionPrecisionByPolicy;
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
 import 'support/agent_harness_support.dart';
@@ -29,7 +24,7 @@ void main() {
     test(
       'shared decision lands as an addressed beat in the target thread',
       () async {
-        final teammate = AgentId('teammate-1');
+        const teammate = AgentId('teammate-1');
         final world = await buildTestWorld(
           decisionFlow: DecisionFlow([
             whenIdleEveryNTicks(
@@ -41,7 +36,7 @@ void main() {
         final leader = spawnActor(world, scene);
         // The target must carry the exact AgentId the policy shares with.
         final helper = world.spawnComponents([
-          Actor(agentId: teammate),
+          const Actor(agentId: teammate),
           ActorModel(modelId: ModelId.create()),
           PresentInScene(sceneEntity: scene),
         ]);
@@ -107,7 +102,7 @@ void main() {
       world.flush();
 
       // Normal turn: cap at 8 projected beats.
-      world.upsertComponent(actor, OpenDecision(prompt: 'normal question'));
+      world.upsertComponent(actor, const OpenDecision(prompt: 'normal question'));
       world.flush();
       projectFor(world);
       final normal = world.getEntity(actor).$1.get<Situation>();
@@ -116,7 +111,7 @@ void main() {
       // Dream turn: expanded cut projects more.
       world.getEntity(actor).$1.remove<OpenDecision>();
       world.getEntity(actor).$1.insert(const DeferredThinking());
-      world.upsertComponent(actor, OpenDecision(prompt: 'dream question'));
+      world.upsertComponent(actor, const OpenDecision(prompt: 'dream question'));
       world.flush();
       projectFor(world);
       final dream = world.getEntity(actor).$1.get<Situation>();
@@ -191,7 +186,7 @@ void main() {
         world
           ..upsertResource(ModelRouterResource(ModelRouter()))
           ..upsertResource(ToolRegistryResource())
-          ..upsertResource(DecisionFlowResource(DecisionFlow([])))
+          ..upsertResource(DecisionFlowResource(const DecisionFlow([])))
           ..flush();
 
         final handler = MockGenerationHandler(responseText: 'ok');

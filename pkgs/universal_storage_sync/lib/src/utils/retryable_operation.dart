@@ -22,7 +22,7 @@ mixin RetryableOperation {
       try {
         return await operation();
         // ignore: avoid_catches_without_on_clauses
-      } catch (e, _) {
+      } catch (e) {
         lastException = e is Exception ? e : Exception(e.toString());
 
         // Don't retry on final attempt

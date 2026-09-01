@@ -11,10 +11,6 @@ library;
 import 'dart:async';
 
 import 'package:test/test.dart';
-import 'package:xsoulspace_agentic_harness/src/schedules.dart';
-import 'package:xsoulspace_agentic_harness/src/systems/projection/projection_systems.dart'
-    show fragmentText;
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
 /// A mock handler that simulates an LLM without requiring a real backend.

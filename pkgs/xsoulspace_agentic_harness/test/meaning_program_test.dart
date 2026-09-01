@@ -240,6 +240,6 @@ void main() {
     );
     final materialized = evaluateChecker(spec, jail.path);
     expect(materialized.detail, contains('return without value (op op_1)'),
-        reason: '${materialized.detail}');
+        reason: materialized.detail);
   });
 }

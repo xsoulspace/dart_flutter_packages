@@ -13,7 +13,7 @@ library;
 
 import 'dart:async';
 
-import 'package:ecsly/ecsly.dart';
+import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import '../data_models/data_models.dart';
 import '../events.dart';
@@ -24,7 +24,6 @@ import '../resources/resources.dart';
 import '../schedules.dart';
 import '../systems/decision_flow_system.dart' show decisionPrecisionByPolicy;
 import '../systems/projection/projection_systems.dart' show fragmentText;
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import '../world_setup.dart';
 
 // ─────────────────────────────────────────────

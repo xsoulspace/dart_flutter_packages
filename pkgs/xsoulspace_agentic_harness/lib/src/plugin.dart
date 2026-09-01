@@ -1,15 +1,13 @@
 import 'dart:developer';
 
-import 'package:ecsly/ecsly.dart';
-import 'package:ecsly_app/ecsly_app.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
-import 'events.dart';
 import 'data_models/data_models.dart';
 import 'decisions/decision_flow.dart';
-import 'narrative/narrative.dart';
+import 'events.dart';
 import 'meaning/intents.dart' show IntentCallState, IntentRuntime;
 import 'meaning/meaning_tree.dart';
+import 'narrative/narrative.dart';
 import 'resources/resources.dart';
 import 'schedules.dart';
 import 'systems/systems.dart';
@@ -143,7 +141,7 @@ class AgentPlugin extends Plugin {
         // Surfaced via dart:developer log; ScenarioRunner/MetricsCollector
         // can also detect dangling tools downstream.
         log(
-          'EventChannel<${T}> overflow: dropped '
+          'EventChannel<$T> overflow: dropped '
           '${overflow.dropped ? "new" : "old"} event',
         );
       },

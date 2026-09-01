@@ -170,7 +170,6 @@ class EnvConfig {
     // 0600 — these files routinely hold API keys.
     await file.writeAsString(
       '${const JsonEncoder.withIndent('  ').convert(map)}\n',
-      mode: FileMode.write,
       flush: true,
     );
   }

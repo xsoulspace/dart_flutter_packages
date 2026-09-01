@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:test/test.dart';
 import 'package:universal_storage_conformance/universal_storage_conformance.dart';
 import 'package:universal_storage_filesystem/universal_storage_filesystem.dart';
 import 'package:universal_storage_interface/universal_storage_interface.dart';
@@ -23,6 +22,5 @@ void main() {
       );
       return provider;
     },
-    supportsSync: false,
   );
 }

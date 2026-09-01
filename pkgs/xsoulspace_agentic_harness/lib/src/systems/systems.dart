@@ -15,7 +15,7 @@ export 'decision_flow_system.dart';
 export 'generation_systems.dart';
 export 'identity_systems.dart';
 export 'loop_breaker_system.dart'
-    show loopBreakerSystem, kLoopGuardKind;
+    show kLoopGuardKind, loopBreakerSystem;
 export 'projection/projection_systems.dart';
 export 'projection/relevance.dart' show keywordsOf;
 export 'summary.dart';

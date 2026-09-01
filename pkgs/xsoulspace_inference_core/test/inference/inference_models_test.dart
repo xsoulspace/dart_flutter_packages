@@ -79,7 +79,6 @@ void main() {
   test('InferenceResponse speech payload serialization round-trips', () {
     const response = InferenceResponse(
       task: InferenceTask.speechToText,
-      structuredOutput: <String, dynamic>{},
       transcript: 'Hello, world.',
       normalizedTranscript: 'Hello world',
       segments: <InferenceSpeechSegment>[

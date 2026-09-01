@@ -16,9 +16,6 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:xsoulspace_agentic_harness/src/decisions/decision_flow.dart';
-import 'package:xsoulspace_agentic_harness/src/meaning/intents.dart';
-import 'package:xsoulspace_agentic_harness/src/systems/decision_flow_system.dart';
 import 'package:xsoulspace_agentic_harness/src/tooling/build_gates.dart';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
@@ -70,7 +67,7 @@ class NeverRespondingHandler implements GenerationHandler {
 /// and cap the flapping.
 class _FlakyBackendHandler implements GenerationHandler {
   int served = 0;
-  var flip = false;
+  bool flip = false;
 
   @override
   Future<ActorGenerateResponse> generate(
@@ -114,7 +111,6 @@ World _wiredWorld({
     ..upsertResource(
       AgencyPolicy(
         maxConcurrent: 1,
-        maxToolRounds: 16,
         taskTimeout: Duration.zero, // disable timeout sweeper for determinism
         maxGoalAttempts: maxGoalAttempts,
       ),
@@ -135,9 +131,9 @@ World _wiredWorld({
   final actor = world.spawnComponents([
     Actor(agentId: AgentId.create()),
     ActorModel(modelId: ModelId.create()),
-    ActorSystemPrompt(text: 'test'),
+    const ActorSystemPrompt(text: 'test'),
     ActorThreads(threads: []),
-    ActorTools(registryName: 'default'),
+    const ActorTools(registryName: 'default'),
     ActorGoalRef(goal),
     PresentInScene(sceneEntity: scene),
     OpenDecision(prompt: prompt),
@@ -154,7 +150,6 @@ void main() {
         'with an expectIdle-clean world', () async {
       final world = _wiredWorld(
         handler: const AlwaysFailingToolHandler('never_implemented'),
-        maxGoalAttempts: 2,
       );
       final (actor, thread) = _spawnGoalActor(world, 'build and verify');
       wireIntentGradedGoal(world, sequence: [
@@ -265,7 +260,7 @@ void main() {
         ..insert(const ToolResultPendingMarker());
       world.flush();
 
-      final flow = DecisionFlow([
+      const flow = DecisionFlow([
         _NamedPolicy('run_graded_goal'),
       ]);
       decisionFlowSystem(
@@ -274,7 +269,7 @@ void main() {
       world.flush();
 
       // Re-fetch: ecsly facades are stale views after flush-moves.
-      var afterFlow = world.getEntity(actor).$1;
+      final afterFlow = world.getEntity(actor).$1;
       expect(afterFlow.get<ToolRoundCount>()?.value, 7,
           reason: 'a policy re-prompt is the SAME repair cycle — resetting '
               'here made thenOpen flows unbounded (regression guard)');
@@ -306,7 +301,7 @@ void main() {
       // Total generations served is bounded: maxRetries (3) error-retries
       // within the chain + the chain-capped tool rounds — NOT unbounded.
       final served =
-          (world.getResource<GenerationHandlerResource>().defaultHandler
+          (world.getResource<GenerationHandlerResource>().defaultHandler!
                   as _FlakyBackendHandler)
               .served;
       expect(served, lessThan(30),
@@ -362,7 +357,7 @@ void main() {
 
     test('flight recorder detects identical-prompt RE-PROMPT cycles (not '
         'held-open decisions) and wraps its ring buffer', () {
-      final recorder = FlightRecorder(capacity: 16, promptRepeatThreshold: 3);
+      final recorder = FlightRecorder(capacity: 16);
       ActorPulse actor(String prompt, bool open) => ActorPulse(
             agentId: 'a1',
             hasOpenDecision: open,

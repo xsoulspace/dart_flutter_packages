@@ -10,14 +10,11 @@ library;
 
 import 'dart:io';
 
-import 'package:ecsly/ecsly.dart';
 import 'package:test/test.dart';
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
-
 import 'package:xsoulspace_agentic_harness/src/agent.dart';
-import 'package:xsoulspace_agentic_harness/src/snapshot_store.dart';
-import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart';
 import 'package:xsoulspace_agentic_harness/src/tooling/build_gates.dart';
+import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart';
+import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import 'support/agent_harness_support.dart';
 
@@ -56,8 +53,8 @@ class _RestartHandler implements GenerationHandler {
     if (n == 1) {
       // Move 1: a helper module (half the work).
       return _respond(world, request, [
-        ToolCall(
-          name: const ToolName('write'),
+        const ToolCall(
+          name: ToolName('write'),
           arguments: {
             'path': 'lib.dart',
             'content': 'String greet(String name) => "hi \$name";\n',
@@ -68,8 +65,8 @@ class _RestartHandler implements GenerationHandler {
     if (n == 2) {
       // Move 2: the runner that still throws — HALF the task, then idle.
       return _respond(world, request, [
-        ToolCall(
-          name: const ToolName('write'),
+        const ToolCall(
+          name: ToolName('write'),
           arguments: {
             'path': 'main.dart',
             'content':
@@ -81,8 +78,8 @@ class _RestartHandler implements GenerationHandler {
     // Post-restore continuation: the fix that makes `dart run main.dart`
     // exit 0 (the gate).
     return _respond(world, request, [
-      ToolCall(
-        name: const ToolName('write'),
+      const ToolCall(
+        name: ToolName('write'),
         arguments: {
           'path': 'main.dart',
           'content':
@@ -124,16 +121,16 @@ void main() {
     }
     world.getResource<ToolRegistryResource>().register('default', registry);
 
-    final scene = world.spawnComponents([Scene(), SceneFrame()]);
+    final scene = world.spawnComponents([const Scene(), SceneFrame()]);
     final actor = world.spawnComponents([
       Actor(agentId: AgentId.create()),
       ActorModel(modelId: ModelId.create()),
-      ActorSystemPrompt(text: 'build the program'),
+      const ActorSystemPrompt(text: 'build the program'),
       ActorThreads(threads: []),
-      ActorTools(registryName: 'default'),
+      const ActorTools(registryName: 'default'),
       PresentInScene(sceneEntity: scene),
       Goal(text: 'make main.dart run clean'),
-      OpenDecision(prompt: 'build the program'),
+      const OpenDecision(prompt: 'build the program'),
     ]);
     final thread = spawnThread(world, actor, scene);
     world.upsertComponent(actor, ActorThreads(threads: [thread]));
@@ -156,9 +153,9 @@ void main() {
       ..flush();
 
     // ---- snapshot + "kill" (the world object is dropped entirely) ----
-    await store.save(world, name: 'current', meta: {'task': 'resume_01'});
+    await store.save(world, meta: {'task': 'resume_01'});
     // ignore: unused_local_variable
-    var killed = world; // the original handle is intentionally discarded
+    final killed = world; // the original handle is intentionally discarded
 
     // ---- phase 2: a NEW process rebuilds from the store ----
     final restored = await store.load('current');

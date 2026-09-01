@@ -19,7 +19,7 @@ Future<void> main() async {
   print('B: connecting');
   final socket = await Socket.connect('127.0.0.1', 45999);
   final frames = StreamController<List<int>>();
-  socket.listen(frames.add, onDone: () => frames.close());
+  socket.listen(frames.add, onDone: frames.close);
 
   final iterator = StreamIterator<List<int>>(frames.stream);
   while (await iterator.moveNext()) {

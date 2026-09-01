@@ -9,8 +9,9 @@
 library;
 
 
-import '../events.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
+
+import '../events.dart';
 import '../tooling/attribution.dart';
 import 'coding_suite/runner.dart';
 import 'coding_suite/task_spec.dart';
@@ -45,11 +46,10 @@ Future<String> runProfile(
           .map(
             (r) => r.passed
                 ? ''
-                : 'FAIL ${r.taskId} mode=${r.failureMode}\n' +
-                    r.checkerResults
+                : 'FAIL ${r.taskId} mode=${r.failureMode}\n${r.checkerResults
                         .where((c) => !c.passed)
                         .map((c) => '  ✗ ${c.detail}')
-                        .join('\n'),
+                        .join('\n')}',
           )
           .where((t) => t.isNotEmpty)
           .join('\n'),

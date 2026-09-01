@@ -28,24 +28,22 @@ library;
 import 'dart:convert';
 
 import 'package:ecsly/ecsly.dart';
-
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart'
     show FM, Model, SchemaBundle, ToolDef, ToolName;
 
-import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart'
-    show ActorModel, MeaningIndex, MeaningNode, MeaningProps, ModelRouterResource,
-        OpenDecision, PresentInScene, ToolRegistry, ToolRegistryResource, AgentId,
-        ModelId, meaningComponentOf, meaningCut;
-
-import 'package:xsoulspace_agentic_harness/src/data_models/components.dart'
-    show Actor, ActorSystemPrompt, ActorTools, ActorThreads, EscalationRequest,
+import '../../xsoulspace_agentic_harness.dart'
+    show ActorModel, AgentId, MeaningIndex, MeaningNode, MeaningProps,
+        ModelId, ModelRouterResource, OpenDecision, PresentInScene, ToolRegistry,
+        ToolRegistryResource, meaningComponentOf, meaningCut;
+import '../data_models/components.dart'
+    show Actor, ActorSystemPrompt, ActorThreads, ActorTools, EscalationRequest,
         GoalAttemptsExhausted;
-import 'package:xsoulspace_agentic_harness/src/narrative/components.dart'
-    show ThreadStatus, ThreadStatusEnum;
-import 'package:xsoulspace_agentic_harness/src/meaning/meaning_program.dart'
+import '../meaning/meaning_program.dart'
     show interpretMeaningProgram, validateMeaningProgram;
-import 'package:xsoulspace_agentic_harness/src/schedules.dart' show Schedules;
-import 'package:xsoulspace_agentic_harness/src/tooling/build_gates.dart'
+import '../narrative/components.dart'
+    show ThreadStatus, ThreadStatusEnum;
+import '../schedules.dart' show Schedules;
+import 'build_gates.dart'
     show IntentGoalSpec, OverseerLedger, openFreshDecision;
 
 /// Teaching for the overseer actor (host-authored; only the overseer sees it).
@@ -168,7 +166,7 @@ bool maybeSpawnOverseer(World world) {
   // Which intent failed? The verifier's structured detail names it
   // ("intents failed: <intent> → ..."); args come from the wired spec.
   String? failingIntent;
-  final match = RegExp('intents failed: (\\S+) →').firstMatch(gateFailure);
+  final match = RegExp(r'intents failed: (\S+) →').firstMatch(gateFailure);
   if (match != null) failingIntent = match.group(1);
   var failingArgs = const <String, dynamic>{};
   try {
@@ -207,8 +205,8 @@ bool maybeSpawnOverseer(World world) {
   final overseerComponents = <Component>[
     Actor(agentId: AgentId.create()),
     ActorModel(modelId: moverModel),
-    ActorSystemPrompt(text: overseerSystemPrompt),
-    ActorTools(registryName: 'overseer'),
+    const ActorSystemPrompt(text: overseerSystemPrompt),
+    const ActorTools(registryName: 'overseer'),
     OpenDecision(prompt: brief),
     if (moverScene != null) PresentInScene(sceneEntity: moverScene),
   ];
@@ -238,7 +236,7 @@ ToolDef overseerDecisionTool(World world, {required Entity mover}) =>
           'Your disposition for the exhausted mover. Exactly ONE call. '
           'approve: the current state is acceptable as-is (the mechanical '
           'final oracle still decides). repair: re-open exactly ONE intent '
-          'with your notes (notes are the mover\'s only steering — name the '
+          "with your notes (notes are the mover's only steering — name the "
           'wrong op/wiring and the correct one). escalate: nothing '
           'salvageable — hand the structured reason to the ladder.',
       argsSchema: SchemaBundle(
@@ -413,9 +411,7 @@ Model? _higherTierModel(World world, Entity mover) {
   try {
     final router = world.getResource<ModelRouterResource>().router;
     final currentTier =
-        world.getEntity(mover).$1.get<ActorModel>()?.let((am) {
-          return router.models[am.modelId]?.tier ?? 0;
-        }) ??
+        world.getEntity(mover).$1.get<ActorModel>()?.let((am) => router.models[am.modelId]?.tier ?? 0) ??
         0;
     Model? best;
     for (final m in router.models.values) {

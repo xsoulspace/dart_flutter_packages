@@ -16,7 +16,7 @@ Uint8List frameMessage(final Uint8List payload) {
     out.offsetInBytes,
     _lengthPrefixBytes,
   );
-  header.setUint32(0, payload.length, Endian.big);
+  header.setUint32(0, payload.length);
   out.setAll(_lengthPrefixBytes, payload);
   return out;
 }
@@ -37,7 +37,7 @@ final class FrameDecoder {
         combined.buffer,
         combined.offsetInBytes + offset,
         _lengthPrefixBytes,
-      ).getUint32(0, Endian.big);
+      ).getUint32(0);
       if (length > _maxFrameBytes) {
         throw ArgumentError('Frame of $length bytes exceeds $_maxFrameBytes');
       }

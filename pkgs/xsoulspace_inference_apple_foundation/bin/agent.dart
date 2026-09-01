@@ -36,7 +36,6 @@ import 'dart:io';
 import 'package:ecsly_serialization/ecsly_serialization.dart';
 import 'package:xsoulspace_inference_apple_foundation/src/native_bridge/native_client.dart';
 import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart';
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 /// Exclusive single-user stdin reader: each pulled line is consumed exactly
 /// once, whether it answers a tool-confirmation prompt or feeds the REPL.

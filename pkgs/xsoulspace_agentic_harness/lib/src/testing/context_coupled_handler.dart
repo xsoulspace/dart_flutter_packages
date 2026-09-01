@@ -70,9 +70,7 @@ class ContextCoupledHandler implements GenerationHandler {
   ) async {
     final dep = _next;
     final contextText = request.contextFragments.join(' ');
-    final sufficient = dep.requiredPhrase.isEmpty
-        ? true
-        : contextText.contains(dep.requiredPhrase);
+    final sufficient = dep.requiredPhrase.isEmpty || contextText.contains(dep.requiredPhrase);
     contextWasSufficient.add(sufficient);
 
     final text = sufficient ? dep.successText : dep.failureText;
