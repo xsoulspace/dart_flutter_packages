@@ -11,7 +11,9 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:xsoulspace_agentic_harness/benchmark_api.dart'
-    show CheckerSpec, ScriptedSuiteHandler;
+    show CheckerSpec, FixtureFile, ScriptedSuiteHandler;
+import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
+    show CapturedWrite, WriteGateMode;
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 import 'package:xsoulspace_inference_apple_foundation/src/coding_agent_runner.dart';
 
@@ -32,6 +34,38 @@ class _AlwaysFailingHandler implements GenerationHandler {
         ToolCall(
           name: ToolName('write'),
           arguments: {'path': 'main.dart', 'content': 'void main() => throw 1;'},
+        ),
+      ],
+      taskId: request.taskId,
+    );
+    world.events.writer<ActorGenerateResponse>().send(response);
+    return response;
+  }
+}
+
+/// A handler that writes a WORKING main.dart (approved by the gate) and a
+/// junk file (rejected by the gate) in the same decision.
+class _TwoWritesHandler implements GenerationHandler {
+  @override
+  Future<ActorGenerateResponse> generate(
+    World world,
+    ActorGenerateRequest request,
+  ) async {
+    final response = ActorGenerateResponse(
+      actorEntity: request.actorEntity,
+      structuredOutput: const {'text': 'applying the fix'},
+      rawOutput: 'applying the fix',
+      toolCalls: const [
+        ToolCall(
+          name: ToolName('write'),
+          arguments: {
+            'path': 'main.dart',
+            'content': "void main() { print('ok'); }\n",
+          },
+        ),
+        ToolCall(
+          name: ToolName('write'),
+          arguments: {'path': 'junk.txt', 'content': 'should never land'},
         ),
       ],
       taskId: request.taskId,
@@ -107,4 +141,67 @@ void main() {
     expect(formatRunLog(r), contains('goal_unverifiable'));
     expect(r.recorderDump, isNotEmpty);
   });
+
+  test('P3 diff gate end-to-end on a fixture git repo: dryRun→approve — '
+      'approved write lands, rejected write never does (LLM-free)',
+      () async {
+    final jail = await Directory.systemTemp.createTemp('ca_test_gate_');
+    addTearDown(() => jail.delete(recursive: true).catchError((_) {}));
+    // Make the jail a git repo (a coding agent on a real repo).
+    Future<void> git(List<String> args) async {
+      final r = await Process.run('git', args, workingDirectory: jail.path);
+      if (r.exitCode != 0) fail('git $args: ${r.stderr}');
+    }
+
+    await git(['init', '-q', '-b', 'main']);
+    await git(['config', 'user.email', 't@example.dev']);
+    await git(['config', 'user.name', 't']);
+
+    final task = CodingAgentTask(
+      id: 'gate_01',
+      prompt: 'make main.dart print ok',
+      fixtures: [
+        FixtureFile(
+          path: 'main.dart',
+          content: 'void main() => throw StateError("broken");',
+        ),
+      ],
+      checkers: [CheckerSpec(type: 'runs', path: 'main.dart')],
+      runCommand: ['dart', 'run', 'main.dart'],
+    );
+    final r = await runCodingAgentOnce(
+      task: task,
+      jail: jail,
+      handler: _TwoWritesHandler(),
+      backend: 'scripted_llm_free',
+      writeGateMode: WriteGateMode.review,
+      writeApprover: (CapturedWrite w) async => w.relativePath == 'main.dart',
+    );
+
+    // The approved fix landed and the gate went green.
+    expect(r.passed, isTrue, reason: '${r.failureClass}');
+    expect(File('${jail.path}/main.dart').readAsStringSync(),
+        contains("print('ok')"));
+    // The rejected write NEVER touched the disk.
+    expect(File('${jail.path}/junk.txt').existsSync(), isFalse);
+    // The audit ships the diffs + verdicts (K4 evidence). The scripted
+    // handler re-fires per decision round, so counts accumulate — the
+    // invariants are: every main.dart write approved+applied, every
+    // junk.txt write rejected.
+    expect(r.writeGateAudit, contains('writes applied:'));
+    expect(r.writeGateAudit, contains('rejected:'));
+    expect(r.writeGateAudit, contains('--- a/main.dart'));
+    expect(r.writeGateAudit, contains('--- /dev/null'));
+    expect(r.writeGateAudit, contains('+++ b/junk.txt'));
+    expect(r.writeGateAudit, contains('REJECTED'));
+    expect(
+      RegExp('applied: (\\d+), rejected: (\\d+)', multiLine: true)
+          .firstMatch(r.writeGateAudit),
+      isNotNull,
+    );
+    expect(r.writeGateAudit.contains('+should never land'), isTrue,
+        reason: 'the rejected diff is in the audit, not on the disk');
+  },
+  timeout: const Timeout(Duration(minutes: 3)),
+  );
 }

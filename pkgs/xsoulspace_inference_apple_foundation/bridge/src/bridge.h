@@ -31,6 +31,10 @@ extern "C" {
 /// 1 when SystemLanguageModel.default.isAvailable, else 0.
 int32_t xs_fm_is_available(void);
 
+/// ABI version of the bridge (2 = cancel contract present). Dart uses this
+/// to detect a stale dylib.
+int32_t xs_fm_abi_version(void);
+
 /// Starts an asynchronous generation turn. Returns the generation id (> 0)
 /// on accept, or -1 on immediate failure (done_cb is still invoked with the
 /// error). Every payload delivered via tool_cb/done_cb/stream_cb carries

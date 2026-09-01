@@ -41,6 +41,41 @@ public func xs_fm_set_debug(_ enabled: Int32) {
   XsFmDebug.log("debug tracing \(enabled != 0 ? "enabled" : "disabled")")
 }
 
+/// ABI version of the bridge. 2 = generation cancel contract (P1 fix).
+/// Dart reads this to detect a stale dylib (missing symbols degrade to
+/// logged no-ops instead of hard lookup crashes).
+@_cdecl("xs_fm_abi_version")
+public func xs_fm_abi_version() -> Int32 { 2 }
+
+// MARK: - Orphan tool registry
+
+/// Fallback for tools created OUTSIDE a generation (unit/live tests build
+/// [NativeDartTool] directly against their own LanguageModelSession). Real
+/// generations route tools through [GenerationState]; orphan tools fall back
+/// here so the old continue/response contract keeps working.
+final class PendingToolRegistry: @unchecked Sendable {
+  static let shared = PendingToolRegistry()
+  private let queue = DispatchQueue(label: "xs.fm.pendingTools")
+  private var pending: [String: CheckedContinuation<String, Error>] = [:]
+
+  func register(_ continuation: CheckedContinuation<String, Error>) -> String {
+    let id = "orphan_\(UUID().uuidString)"
+    queue.sync { pending[id] = continuation }
+    return id
+  }
+
+  func fulfill(id: String, result: String) -> Bool {
+    var resumed = false
+    queue.sync {
+      if let continuation = pending.removeValue(forKey: id) {
+        continuation.resume(returning: result)
+        resumed = true
+      }
+    }
+    return resumed
+  }
+}
+
 // MARK: - Generation state + registry
 
 /// Error resumed into pending tool continuations when a generation is
@@ -383,7 +418,10 @@ public func xs_fm_tool_respond(
   guard let idC = id, let resultC = result_json else { return 1 }
   let toolId = String(cString: idC)
   let result = String(cString: resultC)
-  let resumed = GenerationRegistry.shared.fulfillTool(id: toolId, result: result)
+  var resumed = GenerationRegistry.shared.fulfillTool(id: toolId, result: result)
+  if !resumed {
+    resumed = PendingToolRegistry.shared.fulfill(id: toolId, result: result)
+  }
   XsFmDebug.log(
     "tool respond: id=\(toolId) resumed=\(resumed) result=\(result.prefix(120))"
   )
@@ -614,15 +652,28 @@ public func xs_fm_generate_stream_async(
       // registered before the cancel is resumed with an error.
       return try await withCheckedThrowingContinuation {
         (continuation: CheckedContinuation<String, Error>) in
-        guard let state = self.state,
-          state.postToolCall(
-            name: name,
-            argumentsJSON: argsJSON,
-            continuation: continuation
-          ) != nil
-        else {
-          continuation.resume(throwing: NativeToolError(code: "generation_cancelled"))
+        guard let state = self.state else {
+          // Orphan tool (no owning generation — e.g. unit/live tests):
+          // legacy pending-registry contract.
+          let id = PendingToolRegistry.shared.register(continuation)
+          let payload: [String: Any] = [
+            "id": id,
+            "name": name,
+            "arguments": argsJSON,
+          ]
+          let data = (try? JSONSerialization.data(withJSONObject: payload)) ?? Data()
+          let payloadString = String(data: data, encoding: .utf8) ?? "{}"
+          payloadString.withCString { cString in
+            callback(strdup(cString))
+          }
           return
+        }
+        if state.postToolCall(
+          name: name,
+          argumentsJSON: argsJSON,
+          continuation: continuation
+        ) == nil {
+          continuation.resume(throwing: NativeToolError(code: "generation_cancelled"))
         }
       }
     }

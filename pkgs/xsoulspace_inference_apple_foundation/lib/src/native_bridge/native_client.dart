@@ -20,8 +20,16 @@ import 'library_loader.dart';
 /// are unavailable it falls back to [XsFmLibraryLoader] path resolution.
 class AppleFoundationNativeClient
     implements InferenceClient, StructuredTextStreamingInferenceClient {
-  AppleFoundationNativeClient({XsFmLibraryLoader? loader})
-    : _loader = loader ?? XsFmLibraryLoader() {
+  /// [bindings] and [inferTimeout] are injection points for tests: a fake
+  /// [XsFmBindings] can simulate bridge behaviour (hanging generations,
+  /// late callbacks) without the macOS runtime, and [inferTimeout] shrinks
+  /// the 5-minute generation timeout to something testable.
+  AppleFoundationNativeClient({
+    XsFmLibraryLoader? loader,
+    XsFmBindings? bindings,
+    this.inferTimeout = const Duration(minutes: 5),
+  }) : _loader = loader ?? XsFmLibraryLoader(),
+       _injectedBindings = bindings {
     _instance = this;
     if (_debugEnabled) {
       // Apply after first load; safe to call repeatedly.
@@ -36,11 +44,23 @@ class AppleFoundationNativeClient
   }
 
   final XsFmLibraryLoader _loader;
+  final XsFmBindings? _injectedBindings;
+
+  /// How long a generation may run before it is cancelled. On timeout the
+  /// Swift side is cancelled FIRST (see `cancelGeneration`) so no callback
+  /// can arrive after Dart releases the call.
+  final Duration inferTimeout;
 
   XsFmBindings? _bindings;
   NativeCallable<ToolCbNative>? _toolCallable;
   NativeCallable<DoneCbNative>? _doneCallable;
   NativeCallable<StreamCbNative>? _streamCallable;
+
+  /// Generation-id dispatch. Callback payloads carry `{"generation": id}`;
+  /// payloads carrying a foreign id are DROPPED. This is what makes a late
+  /// (in-flight) callback from a cancelled generation harmless instead of a
+  /// wrong-completion or a crash.
+  int? _activeGeneration;
 
   /// Whether the last load used the code-asset path (vs the fallback loader).
   static bool usedCodeAsset = false;
@@ -78,6 +98,10 @@ class AppleFoundationNativeClient
 
   XsFmBindings get _b {
     if (_bindings != null) return _bindings!;
+    if (_injectedBindings != null) {
+      _bindings = _injectedBindings;
+      return _bindings!;
+    }
     // Resolution order:
     // 1. Loader path (works today, all supported SDKs).
     // 2. Code-asset path (`@Native` bindings) once the workspace SDK is
@@ -177,6 +201,14 @@ class AppleFoundationNativeClient
       try {
         final payloadJson = payloadC.cast<Utf8>().toDartString();
         final payload = jsonDecode(payloadJson) as Map<String, dynamic>;
+        final generation = payload['generation'] as int?;
+        // Generation guard (see handleDone): drop payloads carrying a foreign
+        // generation id — a stale callback from a cancelled generation.
+        if (generation != null &&
+            _activeGeneration != null &&
+            generation != _activeGeneration) {
+          return;
+        }
         final id = payload['id'] as String;
         final name = payload['name'] as String;
         final argumentsJson = payload['arguments'] as String? ?? '{}';
@@ -225,13 +257,24 @@ class AppleFoundationNativeClient
                 as Map<String, dynamic>;
         if (_debugEnabled) {
           stderr.writeln(
-            '[xs_fm/dart] done: ok=${response["ok"]} '
-            'error=${response["error"] ?? "none"}',
+            '[xs_fm/dart] done: gen=${response["generation"]} '
+            'ok=${response["ok"]} error=${response["error"] ?? "none"}',
           );
         }
-        done.complete(response);
+        final generation = response['generation'] as int?;
+        // Callables are per-call, so payloads delivered here belong to this
+        // call — except a stale payload from a previously CANCELLED
+        // generation that was still in flight when teardown happened. Such a
+        // payload carries a foreign generation id: drop it instead of
+        // completing the wrong future (callback-after-delete fix).
+        if (generation != null &&
+            _activeGeneration != null &&
+            generation != _activeGeneration) {
+          return;
+        }
+        if (!done.isCompleted) done.complete(response);
       } on Object catch (e, st) {
-        done.completeError(e, st);
+        if (!done.isCompleted) done.completeError(e, st);
       } finally {
         _b.freeString(responseC);
       }
@@ -244,6 +287,8 @@ class AppleFoundationNativeClient
     _doneCallable = NativeCallable<DoneCbNative>.listener(handleDone)
       ..keepIsolateAlive = false;
 
+    // xs_fm_generate_async returns the generation id (> 0) on accept, or
+    // -1 on immediate failure (done_cb was invoked with the error).
     final accepted = _withCString(requestJson, (requestC) {
       return _b.generateAsync(
         requestC,
@@ -252,10 +297,28 @@ class AppleFoundationNativeClient
       );
     });
 
-    if (accepted != 0 || done.isCompleted) {
-      _closeCallables();
+    if (accepted <= 0) {
+      // Immediate synchronous failure was delivered via done_cb; give the
+      // listener event a moment to arrive, otherwise cancel + report
+      // rejection. Cancel FIRST (idempotent: the bridge returns 1 for an
+      // unknown id) so no callback can land after teardown.
+      try {
+        final response = await done.future.timeout(const Duration(seconds: 1));
+        return _toResult(response);
+      } on TimeoutException {
+        _cancelGeneration(accepted);
+        return InferenceResult<InferenceResponse>.fail(
+          code: 'generation_error',
+          message: 'Bridge rejected the request (accepted=$accepted)',
+          meta: <String, dynamic>{'provider': id},
+        );
+      }
+    }
+
+    if (accepted <= 0) {
       // Immediate synchronous failure was delivered via done_cb; give the
       // listener event a moment to arrive, otherwise report rejection.
+      // (Nothing to cancel: the bridge already finished the generation.)
       try {
         final response = await done.future.timeout(const Duration(seconds: 1));
         return _toResult(response);
@@ -268,18 +331,41 @@ class AppleFoundationNativeClient
       }
     }
 
+    _activeGeneration = accepted;
     try {
-      final response = await done.future.timeout(const Duration(minutes: 5));
+      final response = await done.future.timeout(inferTimeout);
       return _toResult(response);
     } on TimeoutException {
+      // Callback-after-delete fix: CANCEL the pending Swift call and release
+      // the done completer BEFORE any teardown. The bridge gates every
+      // callback path for the cancelled generation (pending tool
+      // continuations are resumed with an error, finish() becomes a no-op);
+      // any payload already in flight is dropped by the generation guard
+      // above. Only then does Dart release the call.
+      _cancelGeneration(accepted);
       return InferenceResult<InferenceResponse>.fail(
         code: 'generation_timeout',
-        message: 'Generation exceeded 5 minutes',
-        meta: <String, dynamic>{'provider': id},
+        message:
+            'Generation exceeded '
+            '${inferTimeout.inMinutes >= 1 ? '${inferTimeout.inMinutes} minute(s)' : '${inferTimeout.inMilliseconds} ms'}',
+        meta: <String, dynamic>{'provider': id, 'cancelled': true},
       );
     } finally {
-      _closeCallables();
+      if (_activeGeneration == accepted) _activeGeneration = null;
     }
+  }
+
+  /// Cancels a bridge generation and detaches it from this client. Safe to
+  /// call for unknown ids (the bridge returns 1).
+  void _cancelGeneration(int generationId) {
+    if (generationId <= 0) return;
+    try {
+      _b.cancelGeneration(generationId);
+    } on Object {
+      // Older bridge without the cancel symbol — the per-call callables +
+      // generation guard still drop any late callback.
+    }
+    if (_activeGeneration == generationId) _activeGeneration = null;
   }
 
   /// Best-effort decode of a JSON object payload. Returns null when the
@@ -395,6 +481,12 @@ class AppleFoundationNativeClient
         final payload =
             jsonDecode(payloadC.cast<Utf8>().toDartString())
                 as Map<String, dynamic>;
+        final generation = payload['generation'] as int?;
+        if (generation != null &&
+            _activeGeneration != null &&
+            generation != _activeGeneration) {
+          return; // stale delta from a cancelled generation
+        }
         final delta = payload['delta'] as String? ?? '';
         if (delta.isNotEmpty) {
           controller.add(
@@ -431,9 +523,17 @@ class AppleFoundationNativeClient
         final response =
             jsonDecode(responseC.cast<Utf8>().toDartString())
                 as Map<String, dynamic>;
-        done.complete(response);
+        final generation = response['generation'] as int?;
+        // Same generation guard as infer's handleDone: a stale done from a
+        // cancelled generation never completes this session's future.
+        if (generation != null &&
+            _activeGeneration != null &&
+            generation != _activeGeneration) {
+          return;
+        }
+        if (!done.isCompleted) done.complete(response);
       } on Object catch (e, st) {
-        done.completeError(e, st);
+        if (!done.isCompleted) done.completeError(e, st);
       } finally {
         _b.freeString(responseC);
       }
@@ -448,6 +548,8 @@ class AppleFoundationNativeClient
     _doneCallable = NativeCallable<DoneCbNative>.listener(handleDone)
       ..keepIsolateAlive = false;
 
+    // xs_fm_generate_stream_async returns the generation id (> 0) on accept,
+    // or -1 on immediate failure (done_cb invoked with the error).
     final accepted = _withCString(requestJson, (requestC) {
       return _b.generateStreamAsync(
         requestC,
@@ -457,38 +559,51 @@ class AppleFoundationNativeClient
       );
     });
 
-    if (accepted != 0) {
+    if (accepted <= 0) {
       _closeCallables();
       throw StateError('Bridge rejected the streaming request ($accepted)');
     }
+    _activeGeneration = accepted;
 
     return _NativeStreamSession(
       events: controller.stream,
       resultFuture: () async {
         try {
-          final response = await done.future.timeout(
-            const Duration(minutes: 5),
-          );
+          final response = await done.future.timeout(inferTimeout);
           return _toResult(response);
         } on TimeoutException {
+          // Cancel the Swift side BEFORE releasing the callables (see infer).
+          _cancelGeneration(accepted);
           return InferenceResult<InferenceResponse>.fail(
             code: 'generation_timeout',
-            message: 'Streaming generation exceeded 5 minutes',
-            meta: <String, dynamic>{'provider': id},
+            message:
+                'Streaming generation exceeded ${inferTimeout.inMinutes}'
+                ' minute(s)',
+            meta: <String, dynamic>{'provider': id, 'cancelled': true},
           );
         } finally {
+          if (_activeGeneration == accepted) _activeGeneration = null;
           await controller.close();
           _closeCallables();
         }
       }(),
       onCancel: () async {
-        // The bridge has no cancel entrypoint yet; closing the callables
-        // detaches Dart from the turn. The native task runs to completion and
-        // its done callback lands on a closed callable (no-op).
-        _closeCallables();
+        // Cancel the Swift turn first: pending continuations resume with an
+        // error and every callback path for this generation becomes a no-op,
+        // so no callback can land on the callables being closed.
+        _cancelGeneration(accepted);
         await controller.close();
+        _closeCallables();
       },
     );
+  }
+
+  /// Releases the native callables. Call only when no generation is in
+  /// flight (after a cancel or a completed turn) — see the cancel contract
+  /// in `bridge.h`.
+  void dispose() {
+    _cancelGeneration(_activeGeneration ?? 0);
+    _closeCallables();
   }
 }
 

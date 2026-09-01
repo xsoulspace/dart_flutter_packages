@@ -28,7 +28,7 @@ import 'package:xsoulspace_agentic_harness/benchmark_api.dart'
         IntentExpectation, evaluateChecker;
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
-    show fsTools, FsToolsRoot;
+    show fsTools, FsToolsRoot, CapturedWrite, JailWriteGateway, WriteGateMode;
 
 import 'intent_closure_runner.dart'
     show DecisionMeter, afmSystemPrompt, registerIntentClosureTools;
@@ -213,6 +213,7 @@ class CodingAgentRunResult {
     required this.edges,
     required this.pulseText,
     required this.recorderDump,
+    this.writeGateAudit = '',
   });
 
   final String taskId;
@@ -237,6 +238,10 @@ class CodingAgentRunResult {
   /// J1.5.3 observability — shipped on EVERY run, pass or fail.
   final String pulseText;
   final String recorderDump;
+
+  /// P3 (revised): unified diffs of every gated write (review/apply audit).
+  /// Empty when no host write gateway was attached.
+  final String writeGateAudit;
 
   String get failureClass {
     if (passed) return '';
@@ -264,6 +269,22 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
   /// Called once the run's [FlightRecorder] exists — the driver wires the
   /// SIGINT dump handler here (J1.5.5: even an interrupt leaves a dump).
   void Function(FlightRecorder recorder)? onRecorder,
+
+  /// P3 (revised): HOST write policy. Null (default) = writes apply
+  /// immediately — zero behavior change. [WriteGateMode.review] renders a
+  /// unified diff for EVERY jail mutation (model writes AND host
+  /// materializer output) and asks the approver before bytes land; the
+  /// model surface is unchanged (no new parameter, no content model-side).
+  /// The audit (all diffs + verdicts) ships in the run log.
+  WriteGateMode? writeGateMode,
+
+  /// Only meaningful with [writeGateMode]: true → every diff is approved
+  /// (CLI `--auto-approve`); false → interactive y/n on stdin.
+  bool autoApprove = false,
+
+  /// Host/test override for the approver (takes precedence over
+  /// [autoApprove]); the LLM-free diff-gate test injects a scripted one.
+  Future<bool> Function(CapturedWrite write)? writeApprover,
 }) async {
   final sw = Stopwatch()..start();
   final world = World()..addPlugin(AgentPlugin());
@@ -287,13 +308,24 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
   // runs still need the resource (an empty router = default capacity 1).
   world.upsertResource(ModelRouterResource(ModelRouter()));
 
-  // Tool surface (B3): fs_tools (read/write/list_dir/glob/grep/run) always
-  // for run-graded tasks; the intent surface (+ run) for intent tasks.
+  // Tool surface (B3): fs_tools (read/write/list_dir/glob/grep/run + the
+  // P3 git projections) always for run-graded tasks; the intent surface
+  // (+ run) for intent tasks.
+  final fsRoot = FsToolsRoot(jail.path);
+  JailWriteGateway? gateway;
+  if (writeGateMode != null) {
+    gateway = JailWriteGateway(
+      fsRoot,
+      mode: writeGateMode,
+      approver: writeApprover ?? (autoApprove ? (_) async => true : null),
+    );
+    fsRoot.writeGateway = gateway;
+  }
   if (task.usesIntentSurface) {
-    registerIntentClosureTools(world, jail);
+    registerIntentClosureTools(world, jail, gateway: gateway);
   } else {
     final registry = ToolRegistry();
-    for (final t in fsTools(FsToolsRoot(jail.path))) {
+    for (final t in fsTools(fsRoot)) {
       registry.register(t);
     }
     world.getResource<ToolRegistryResource>().register('default', registry);
@@ -426,6 +458,11 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
     edges: view.edgeCount,
     pulseText: sampleHarness(world, tick: meter.decisions).toText(),
     recorderDump: recorder.dump(),
+    writeGateAudit: gateway == null
+        ? ''
+        : 'writes applied: ${gateway.appliedCount}, '
+            'rejected: ${gateway.rejectedCount}\n'
+            '${gateway.renderDiffs()}',
   );
 }
 
@@ -450,7 +487,7 @@ ${[
 --- harness pulse (J1.5.3) ---
 ${r.pulseText}
 --- flight recorder ---
-${r.recorderDump}
+${r.recorderDump}${r.writeGateAudit.isEmpty ? '' : '\n--- write-gate audit (P3) ---\n${r.writeGateAudit}'}
 ''';
 
 /// The pass@k summary row (K discipline: backend, n, pass@k, tokens source,

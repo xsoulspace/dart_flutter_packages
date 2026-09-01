@@ -139,7 +139,8 @@ func testSchemaMaterialization() {
           id: id,
           result: "2026-01-01T00:00:00Z"
         )
-      }
+      },
+      state: nil
     )
   }
 
@@ -284,7 +285,8 @@ func testSchemaMaterialization() {
               (obj["arguments"] as? String) ?? "(missing)"
             PendingToolRegistry.shared.fulfill(id: id, result: "ok")
           }
-        })
+        },
+        state: nil)
       let e = await liveSessionTest(
         "live E: schema'd tool receives args",
         tools: [writeTool],
@@ -358,7 +360,8 @@ func testSchemaMaterialization() {
                 (obj["arguments"] as? String) ?? "(missing)"
               PendingToolRegistry.shared.fulfill(id: id, result: "ok")
             }
-          })
+          },
+          state: nil)
         let g = await liveSessionTest(
           "live G: reflected-schema tool receives args",
           tools: [gTool],
@@ -428,7 +431,8 @@ func testSchemaMaterialization() {
           let id = obj["id"] as? String
         else { return }
         PendingToolRegistry.shared.fulfill(id: id, result: "echo-ok")
-      }
+      },
+      state: nil
     )
     let d = await liveSessionTest(
       "live D: multi-tool session",
@@ -494,7 +498,96 @@ func testExtractArgsJSON() {
   #endif
 }
 
-// MARK: - Live test support types
+// MARK: - Unit: generation cancel gate (P1 bridge crash fix)
+
+// C-convention closures cannot capture; record deliveries in globals.
+var gateDoneDeliveries: [String] = []
+var gateToolPayloads: [String] = []
+
+let gateDoneCb: @convention(c) (UnsafePointer<CChar>?) -> Void = { p in
+  if let p { gateDoneDeliveries.append(String(cString: p)) }
+}
+let gateToolCb: @convention(c) (UnsafePointer<CChar>?) -> Void = { p in
+  if let p { gateToolPayloads.append(String(cString: p)) }
+}
+
+func makeGateState() -> GenerationState {
+  gateDoneDeliveries = []
+  gateToolPayloads = []
+  return GenerationRegistry.shared.create(
+    toolCallback: gateToolCb,
+    doneCallback: gateDoneCb
+  )
+}
+
+func testGenerationCancelGate() async throws {
+  // finish delivers exactly once.
+  let state = makeGateState()
+  state.finish("{\"generation\":\(state.id),\"ok\":true}")
+  state.finish("{\"generation\":\(state.id),\"ok\":true}")
+  check(
+    "finish delivers exactly once",
+    gateDoneDeliveries.count == 1 && gateDoneDeliveries[0].contains("\"ok\":true"),
+    "got \(gateDoneDeliveries)")
+  // finish removes the state from the registry → cancel returns 1.
+  check(
+    "cancel after finish returns 1",
+    GenerationRegistry.shared.cancel(state.id) == 1,
+    "expected unknown-id result")
+
+  // postToolCall on a LIVE state posts the payload and the continuation is
+  // resumable through xs_fm_tool_respond routing (generation-embedded ids).
+  let liveState = makeGateState()
+  let toolResult: String = try await withCheckedThrowingContinuation {
+    (continuation: CheckedContinuation<String, Error>) in
+    if let toolId = liveState.postToolCall(
+      name: "t", argumentsJSON: "{}", continuation: continuation)
+    {
+      check("tool payload posted with generation id", true)
+      DispatchQueue.global().asyncAfter(deadline: .now() + 0.05) {
+        _ = GenerationRegistry.shared.fulfillTool(id: toolId, result: "resp")
+      }
+    } else {
+      check("tool payload posted with generation id", false, "post refused")
+      continuation.resume(returning: "")
+    }
+  }
+  check("tool respond routes to the owning generation", toolResult == "resp", "got \(String(describing: toolResult))")
+
+  // After cancel: no done delivery, postToolCall refuses and resumes the
+  // continuation with a cancellation error, cancel of a dead id returns 1.
+  let cancelledState = makeGateState()
+  check(
+    "cancel live id returns 0",
+    GenerationRegistry.shared.cancel(cancelledState.id) == 0,
+    "expected cancelled")
+  check(
+    "cancel dead id returns 1",
+    GenerationRegistry.shared.cancel(cancelledState.id) == 1,
+    "expected unknown-id result")
+  cancelledState.finish("{\"generation\":\(cancelledState.id),\"ok\":true}")
+  check(
+    "no done delivery after cancel",
+    gateDoneDeliveries.isEmpty,
+    "got \(gateDoneDeliveries)")
+  do {
+    _ = try await withCheckedThrowingContinuation {
+      (continuation: CheckedContinuation<String, Error>) in
+      let posted = cancelledState.postToolCall(
+        name: "t", argumentsJSON: "{}", continuation: continuation)
+      if posted != nil {
+        check("postToolCall refuses after cancel", false, "posted after cancel")
+      }
+    }
+    check("postToolCall after cancel throws", false, "returned normally")
+  } catch {
+    check("postToolCall after cancel throws", true)
+  }
+  check(
+    "no tool payload posted after cancel",
+    gateToolPayloads.isEmpty,
+    "got \(gateToolPayloads)")
+}
 
 #if canImport(FoundationModels)
   @available(macOS 26.0, *)
@@ -516,6 +609,11 @@ struct TestMain {
     testJsonEscaped()
     testSchemaMaterialization()
     testExtractArgsJSON()
+    do {
+      try await testGenerationCancelGate()
+    } catch {
+      check("generation cancel gate", false, "threw: \(error)")
+    }
 
     #if canImport(FoundationModels)
       let live = ProcessInfo.processInfo.environment["LIVE"] ?? "1"

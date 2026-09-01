@@ -1,4 +1,5 @@
 import 'dart:ffi';
+import 'dart:io' show stderr;
 
 /// C-ABI bindings for the Apple Foundation native bridge.
 ///
@@ -67,6 +68,10 @@ typedef ToolRespondDart = int Function(Pointer<Char>, Pointer<Char>);
 typedef CancelNative = Int32 Function(Int32);
 typedef CancelDart = int Function(int);
 
+/// int32_t xs_fm_abi_version(void)
+typedef AbiVersionNative = Int32 Function();
+typedef AbiVersionDart = int Function();
+
 /// void xs_fm_free_string(char*)
 typedef FreeStringNative = Void Function(Pointer<Char>);
 typedef FreeStringDart = void Function(Pointer<Char>);
@@ -99,6 +104,10 @@ abstract interface class XsFmBindings {
   int cancelGeneration(int generationId);
   void freeString(Pointer<Char> s);
   void setDebug(int enabled);
+
+  /// ABI version of the loaded bridge (0 when the symbol is missing — a
+  /// stale dylib). Version 2 = cancel contract present.
+  int abiVersion();
 }
 
 /// Typed view over the bridge symbols resolved from a loaded library.
@@ -118,23 +127,43 @@ final class LibraryXsFmBindings implements XsFmBindings {
       toolRespondFn = library
           .lookup<NativeFunction<ToolRespondNative>>('xs_fm_tool_respond')
           .asFunction(),
-      cancelFn = library
-          .lookup<NativeFunction<CancelNative>>('xs_fm_cancel')
-          .asFunction(),
       freeStringFn = library
           .lookup<NativeFunction<FreeStringNative>>('xs_fm_free_string')
           .asFunction(),
       setDebugFn = library
           .lookup<NativeFunction<SetDebugNative>>('xs_fm_set_debug')
+          .asFunction() {
+    // Optional symbols (stale-dylib tolerance): a pre-cancel bridge still
+    // LOADS — cancel degrades to a logged no-op and the Dart-side generation
+    // guard drops late callbacks. abiVersion reports the staleness.
+    try {
+      cancelFn = library
+          .lookup<NativeFunction<CancelNative>>('xs_fm_cancel')
           .asFunction();
+    } on ArgumentError {
+      cancelFn = null;
+      hasCancel = false;
+    }
+    try {
+      abiVersionFn = library
+          .lookup<NativeFunction<AbiVersionNative>>('xs_fm_abi_version')
+          .asFunction();
+    } on ArgumentError {
+      abiVersionFn = null;
+    }
+  }
 
   final IsAvailableDart isAvailableFn;
   final GenerateAsyncDart generateAsyncFn;
   final GenerateStreamAsyncDart generateStreamAsyncFn;
   final ToolRespondDart toolRespondFn;
-  final CancelDart cancelFn;
   final FreeStringDart freeStringFn;
   final SetDebugDart setDebugFn;
+
+  /// Non-null when the loaded bridge ships the cancel contract.
+  CancelDart? cancelFn;
+  bool hasCancel = true;
+  AbiVersionDart? abiVersionFn;
 
   @override
   int isAvailable() => isAvailableFn();
@@ -159,7 +188,20 @@ final class LibraryXsFmBindings implements XsFmBindings {
       toolRespondFn(id, resultJson);
 
   @override
-  int cancelGeneration(int generationId) => cancelFn(generationId);
+  int cancelGeneration(int generationId) {
+    final fn = cancelFn;
+    if (fn == null) {
+      stderr.writeln(
+        '[xs_fm/dart] WARNING: stale bridge dylib without xs_fm_cancel '
+        '(abi ${abiVersion()}); cancel is a no-op — rebuild the bridge.',
+      );
+      return 1;
+    }
+    return fn(generationId);
+  }
+
+  @override
+  int abiVersion() => abiVersionFn?.call() ?? 0;
 
   @override
   void freeString(Pointer<Char> s) => freeStringFn(s);

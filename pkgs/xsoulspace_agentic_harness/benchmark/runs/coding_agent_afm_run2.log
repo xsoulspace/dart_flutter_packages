@@ -415,3 +415,102 @@ intents failed: save_url -> {error: return…"
 tick 44691: decisions=0 inFlight=0 pending=0 actors=agent-1788284987450720-1:0r/3a
 
 
+coding_agent run — task: intent_03_bookmark_macros
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 1496
+  decisions: 3
+  tool rounds (thread beats): 8
+  moves: {intent_define.define: 4, act_with_project.materialize: 2, intent_define.list: 1, intent_call: 1}
+  projection tokens (honest spend, Situation.tokensUsed): 6319
+  meaning nodes: 8, edges: 6
+  wall clock: 154511 ms
+  final gate (outer oracle, once): FAIL
+    check: intents failed: save_url -> {value: false}; save_url -> {value: false}; list_saved -> {value: 0}; save_url -> {value: false}
+  failure class: final gate: intents failed: save_url -> {value: false}; save_url -> {value: false}; list_saved -> {value: 0}; save_url -> {value: false}
+--- harness pulse (J1.5.3) ---
+tick 3 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788291559996961-1: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: intents failed: save_url -> {value: false}; save_url -> {value: false}; list_saved -> {value: 0}; save_url -> {value: false}
+— agent-1788291559996961-1  [idle]  rounds 0/12 (Σ0)  attempts 3/3 EXHAUSTED
+    last: intent_call:{"intent":"list_saved","args":[]} → ok
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 29998..55451
+tick 53570: decisions=1 inFlight=1 pending=0 actors=agent-1788291559996961-1:0r/3a
+    agent-1788291559996961-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: false}…"
+tick 53670: decisions=1 inFlight=1 pending=0 actors=agent-1788291559996961-1:0r/3a
+    agent-1788291559996961-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: false}…"
+tick 53770: decisions=1 inFlight=1 pending=0 actors=agent-1788291559996961-1:0r/3a
+    agent-1788291559996961-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: false}…"
+tick 53870: decisions=1 inFlight=1 pending=0 actors=agent-1788291559996961-1:0r/3a
+    agent-1788291559996961-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: false}…"
+tick 53970: decisions=1 inFlight=1 pending=0 actors=agent-1788291559996961-1:0r/3a
+    agent-1788291559996961-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: false}…"
+tick 54070: decisions=1 inFlight=1 pending=0 actors=agent-1788291559996961-1:0r/3a
+    agent-1788291559996961-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: false}…"
+tick 54170: decisions=1 inFlight=1 pending=0 actors=agent-1788291559996961-1:0r/3a
+    agent-1788291559996961-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: false}…"
+tick 54270: decisions=1 inFlight=1 pending=0 actors=agent-1788291559996961-1:0r/3a
+    agent-1788291559996961-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: false}…"
+tick 54370: decisions=1 inFlight=1 pending=0 actors=agent-1788291559996961-1:0r/3a
+    agent-1788291559996961-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: false}…"
+tick 54470: decisions=1 inFlight=1 pending=0 actors=agent-1788291559996961-1:0r/3a
+    agent-1788291559996961-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: false}…"
+tick 54570: decisions=1 inFlight=1 pending=0 actors=agent-1788291559996961-1:0r/3a
+    agent-1788291559996961-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: false}…"
+tick 54670: decisions=1 inFlight=1 pending=0 actors=agent-1788291559996961-1:0r/3a
+    agent-1788291559996961-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: false}…"
+tick 54770: decisions=1 inFlight=1 pending=0 actors=agent-1788291559996961-1:0r/3a
+    agent-1788291559996961-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: false}…"
+tick 54870: decisions=1 inFlight=1 pending=0 actors=agent-1788291559996961-1:0r/3a
+    agent-1788291559996961-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: false}…"
+tick 54970: decisions=1 inFlight=1 pending=0 actors=agent-1788291559996961-1:0r/3a
+    agent-1788291559996961-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: false}…"
+tick 55070: decisions=1 inFlight=1 pending=0 actors=agent-1788291559996961-1:0r/3a
+    agent-1788291559996961-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: false}…"
+tick 55170: decisions=1 inFlight=1 pending=0 actors=agent-1788291559996961-1:0r/3a
+    agent-1788291559996961-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: false}…"
+tick 55270: decisions=1 inFlight=1 pending=0 actors=agent-1788291559996961-1:0r/3a
+    agent-1788291559996961-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: false}…"
+tick 55370: decisions=1 inFlight=1 pending=0 actors=agent-1788291559996961-1:0r/3a
+    agent-1788291559996961-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {value: false}…"
+tick 55451: decisions=0 inFlight=0 pending=0 actors=agent-1788291559996961-1:0r/3a
+
+

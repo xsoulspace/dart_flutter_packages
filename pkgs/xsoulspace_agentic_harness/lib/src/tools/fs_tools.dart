@@ -40,6 +40,14 @@ class FsToolsRoot {
   /// Absolute path of the jail root. Created if missing; symlinks resolved.
   String rootPath;
 
+  /// Optional HOST write policy ([JailWriteGateway]) attached after
+  /// construction (`root.writeGateway = gateway`). Null = writes apply
+  /// immediately (zero behavior change). The gateway is a host-side policy:
+  /// the MODEL surface is unchanged — the model never learns it exists
+  /// (ADR 0015-clean; the model never writes code tokens through a new
+  /// parameter).
+  JailWriteGateway? writeGateway;
+
   /// Resolve [path] (absolute or relative) inside the jail.
   ///
   /// Throws [ArgumentError] when the resolved path escapes the root. The
@@ -134,6 +142,8 @@ List<ToolDef> fsTools(FsToolsRoot root) => [
   grepTool(root),
   globTool(root),
   runTool(root),
+  gitStatusTool(root),
+  gitDiffTool(root),
 ];
 
 /// Read a file's contents.
@@ -151,6 +161,10 @@ ToolDef readTool(FsToolsRoot root) => ToolDef(
 );
 
 /// Write content to a file.
+///
+/// When the host attached a [JailWriteGateway] to [root], the mutation flows
+/// through it (review/diff/approval is a HOST decision — the tool's schema
+/// and ack shape stay model-stable).
 ToolDef writeTool(FsToolsRoot root) => ToolDef(
   name: const ToolName('write'),
   description: 'Write a file',
@@ -167,6 +181,8 @@ ToolDef writeTool(FsToolsRoot root) => ToolDef(
     final params = jsonDecodeMapAs(args);
     final path = root.resolve(jsonDecodeString(params['path']));
     final content = jsonDecodeString(params['content']);
+    final gateway = root.writeGateway;
+    if (gateway != null) return gateway.interceptWrite(path, content);
     // Create parent directories so nested paths (src/lib.dart) work in a
     // fresh workspace — the common case for a coding agent.
     await File(path).parent.create(recursive: true);
@@ -174,6 +190,359 @@ ToolDef writeTool(FsToolsRoot root) => ToolDef(
     return 'wrote $path';
   },
 );
+
+/// One captured file mutation — a HOST-side record, never part of a model
+/// projection.
+class CapturedWrite {
+  CapturedWrite({
+    required this.relativePath,
+    required this.absolutePath,
+    required this.oldContent,
+    required this.newContent,
+  });
+
+  /// Jail-relative path (stable, loggable).
+  final String relativePath;
+  final String absolutePath;
+
+  /// Content BEFORE the write; null when the file is new.
+  final String? oldContent;
+  final String newContent;
+
+  bool approved = false;
+  bool applied = false;
+
+  bool get isNewFile => oldContent == null;
+}
+
+/// The host write gate for the coding agent (P3, revised).
+///
+/// EVERY jail file mutation — model `write` moves AND host materializer
+/// output — flows through here when the host attaches it. Two modes:
+///
+/// - [WriteGateMode.apply]: write immediately (default; zero behavior
+///   change), recording each mutation for the audit log.
+/// - [WriteGateMode.review]: render a unified diff, ask the [approver],
+///   apply ONLY on approval. The approver is a host callable (CLI:
+///   `--auto-approve` or an interactive y/n prompt; tests: scripted).
+///   The model sees only a structured ack ('wrote …' / 'REJECTED …').
+///
+/// Law note: this is a HOST policy wrapping the write path. It does NOT add
+/// a model-visible parameter; the model never writes new content kinds. The
+/// durable fix for whole-file writes is P4's span-anchored meaning edits.
+enum WriteGateMode { apply, review }
+
+class JailWriteGateway {
+  JailWriteGateway(
+    this.root, {
+    this.mode = WriteGateMode.apply,
+    Future<bool> Function(CapturedWrite write)? approver,
+  }) : _approver = approver;
+
+  final FsToolsRoot root;
+  final WriteGateMode mode;
+  final Future<bool> Function(CapturedWrite write)? _approver;
+
+  final List<CapturedWrite> captured = [];
+
+  String _rel(String absolutePath) {
+    final prefix = root.rootPath.endsWith('/')
+        ? root.rootPath
+        : '${root.rootPath}/';
+    return absolutePath.startsWith(prefix)
+        ? absolutePath.substring(prefix.length)
+        : absolutePath;
+  }
+
+  /// Intercepts a `write` tool move. Returns the tool ack (model-stable).
+  Future<String> interceptWrite(String absolutePath, String content) async {
+    final rel = _rel(absolutePath);
+    final old = File(absolutePath).existsSync()
+        ? File(absolutePath).readAsStringSync()
+        : null;
+    final write = CapturedWrite(
+      relativePath: rel,
+      absolutePath: absolutePath,
+      oldContent: old,
+      newContent: content,
+    );
+    if (mode == WriteGateMode.apply) {
+      write.approved = true;
+      _apply(write);
+      return 'wrote $rel';
+    }
+    final approve = _approver ?? _defaultInteractiveApprover;
+    write.approved = await approve(write);
+    if (!write.approved) {
+      captured.add(write);
+      return 'REJECTED $rel by host write policy — the change was NOT '
+          'applied. Adjust the change or continue without it.';
+    }
+    _apply(write);
+    return 'wrote $rel';
+  }
+
+  /// Intercepts a HOST materializer write (host code, not a model move).
+  /// Same gate; host writes default to approval via [approver] too.
+  String interceptHostWrite(String absolutePath, String content) {
+    final rel = _rel(absolutePath);
+    final old = File(absolutePath).existsSync()
+        ? File(absolutePath).readAsStringSync()
+        : null;
+    final write = CapturedWrite(
+      relativePath: rel,
+      absolutePath: absolutePath,
+      oldContent: old,
+      newContent: content,
+    )..approved = true; // host-authored output is trusted
+    _apply(write);
+    return 'wrote $rel';
+  }
+
+  void _apply(CapturedWrite write) {
+    File(write.absolutePath).parent.createSync(recursive: true);
+    File(write.absolutePath).writeAsStringSync(write.newContent);
+    write.applied = true;
+    captured.add(write);
+  }
+
+  Future<bool> _defaultInteractiveApprover(CapturedWrite write) async {
+    stdout
+      ..writeln('[write-gate] ${write.relativePath}')
+      ..write(unifiedDiff(write));
+    stdout.write('Apply this write? [y/N] ');
+    final line = stdin.readLineSync();
+    return line != null && (line.trim().toLowerCase() == 'y');
+  }
+
+  /// All captured writes as unified diffs with per-write verdicts (for the
+  /// run log / CLI audit).
+  String renderDiffs() => [
+    for (final w in captured)
+      '[${w.applied ? "APPLIED" : "REJECTED"}] ${w.relativePath}\n'
+          '${unifiedDiff(w)}',
+  ].join('\n');
+
+  int get appliedCount => captured.where((w) => w.applied).length;
+  int get rejectedCount => captured.where((w) => !w.applied).length;
+
+  /// Unified diff for one write. New files diff against /dev/null. A small
+  /// LCS over lines keeps the diff minimal without external deps.
+  static String unifiedDiff(CapturedWrite w) {
+    final oldLines = (w.oldContent ?? '').split('\n');
+    if (w.isNewFile) oldLines.clear();
+    final newLines = w.newContent.split('\n');
+    final hunks = _lineDiff(oldLines, newLines);
+    final from = w.isNewFile ? '/dev/null' : 'a/${w.relativePath}';
+    final to = 'b/${w.relativePath}';
+    final buf = StringBuffer('--- $from\n+++ $to\n');
+    if (hunks.isEmpty) {
+      buf.writeln('@@ -0,0 +1,0 @@ (no changes)');
+      return buf.toString();
+    }
+    for (final hunk in hunks) {
+      buf
+        ..writeln(
+          '@@ -${hunk.oldStart},${hunk.oldCount} '
+          '+${hunk.newStart},${hunk.newCount} @@',
+        )
+        ..write(hunk.body);
+    }
+    return buf.toString();
+  }
+}
+
+class _DiffHunk {
+  _DiffHunk({
+    required this.oldStart,
+    required this.oldCount,
+    required this.newStart,
+    required this.newCount,
+    required this.body,
+  });
+  final int oldStart;
+  final int oldCount;
+  final int newStart;
+  final int newCount;
+  final String body;
+}
+
+/// LCS-based line diff producing ONE hunk with context lines (small files —
+/// the jail's whole purpose). Good enough for a review gate; not a general
+/// diff engine.
+List<_DiffHunk> _lineDiff(List<String> a, List<String> b) {
+  final n = a.length;
+  final m = b.length;
+  // LCS table (O(n*m) — fine for source files in a jail).
+  final lcs = List.generate(
+    n + 1,
+    (_) => List.filled(m + 1, 0),
+  );
+  for (var i = n - 1; i >= 0; i--) {
+    for (var j = m - 1; j >= 0; j--) {
+      lcs[i][j] = a[i] == b[j] ? lcs[i + 1][j + 1] + 1 : _max(lcs[i + 1][j], lcs[i][j + 1]);
+    }
+  }
+  final body = StringBuffer();
+  var oldCount = 0;
+  var newCount = 0;
+  var i = 0;
+  var j = 0;
+  while (i < n && j < m) {
+    if (a[i] == b[j]) {
+      body.writeln(' ${a[i]}');
+      oldCount++;
+      newCount++;
+      i++;
+      j++;
+    } else if (lcs[i + 1][j] >= lcs[i][j + 1]) {
+      body.writeln('-${a[i]}');
+      oldCount++;
+      i++;
+    } else {
+      body.writeln('+${b[j]}');
+      newCount++;
+      j++;
+    }
+  }
+  while (i < n) {
+    body.writeln('-${a[i]}');
+    oldCount++;
+    i++;
+  }
+  while (j < m) {
+    body.writeln('+${b[j]}');
+    newCount++;
+    j++;
+  }
+  return [
+    _DiffHunk(
+      oldStart: n == 0 ? 0 : 1,
+      oldCount: oldCount,
+      newStart: m == 0 ? 0 : 1,
+      newCount: newCount,
+      body: body.toString(),
+    ),
+  ];
+}
+
+int _max(int x, int y) => x > y ? x : y;
+
+/// Jailed read-only `git status --porcelain` — repo-state PROJECTION for the
+/// coding agent (same pattern as grep/glob: read-only, structured, clipped).
+/// A coding agent on a real repo needs git visibility; without it it re-reads
+/// files to guess state. Rejects when the jail root has no .git.
+ToolDef gitStatusTool(FsToolsRoot root) => ToolDef.encode(
+      name: const ToolName('git_status'),
+      description:
+          'Read-only git status of the workspace (git status --porcelain '
+          'with the branch line). Returns structured entries '
+          '(index/worktree status + path). Fails with code not_a_git_repo '
+          'outside a repository. Arguments: none.',
+      argsSchema: SchemaBundle(
+        root: FM.object('git_status', properties: () => []),
+      ),
+      execute: (args) async {
+        if (!_isGitRepo(root.rootPath)) {
+          return const {
+            'ok': false,
+            'code': 'not_a_git_repo',
+            'hint': 'this workspace has no .git',
+          };
+        }
+        final result = await Process.run(
+          'git',
+          ['status', '--porcelain=v1', '-b'],
+          workingDirectory: root.rootPath,
+          stdoutEncoding: utf8,
+          stderrEncoding: utf8,
+        );
+        if (result.exitCode != 0) {
+          return {
+            'ok': false,
+            'code': 'git_error',
+            'stderr': _clip(result.stderr.toString(), 200),
+          };
+        }
+        final lines = result.stdout
+            .toString()
+            .split('\n')
+            .map((l) => l.trimRight())
+            .where((l) => l.isNotEmpty)
+            .take(100)
+            .toList();
+        return {
+          'ok': true,
+          'branch': lines.isEmpty ? '' : lines.first,
+          'entries': lines.skip(1).toList(),
+        };
+      },
+    );
+
+/// Jailed read-only `git diff` — bounded change visibility for the coding
+/// agent. Never mutates anything; output is clipped.
+ToolDef gitDiffTool(FsToolsRoot root) => ToolDef.encode(
+      name: const ToolName('git_diff'),
+      description:
+          'Read-only unified diff of uncommitted changes in the workspace '
+          '(git diff; with staged=true also/--cached instead). Output is '
+          'clipped. Fails with code not_a_git_repo outside a repository. '
+          'Arguments: staged (optional bool), path (optional subdir/file '
+          'limit, relative).',
+      argsSchema: SchemaBundle(
+        root: FM.object(
+          'git_diff',
+          properties: () => [
+            FM.prop('staged', FM.string()),
+            FM.prop('path', FM.string()),
+          ],
+        ),
+      ),
+      execute: (args) async {
+        final params = _asMap(args);
+        if (!_isGitRepo(root.rootPath)) {
+          return const {
+            'ok': false,
+            'code': 'not_a_git_repo',
+            'hint': 'this workspace has no .git',
+          };
+        }
+        final staged = switch (_str(params, 'staged')?.toLowerCase()) {
+          'true' || '1' || 'yes' => true,
+          _ => false,
+        };
+        final cmd = ['diff', if (staged) '--cached'];
+        final pathArg = _str(params, 'path');
+        if (pathArg != null && pathArg.isNotEmpty) {
+          cmd.add('--');
+          cmd.add(root.resolve(pathArg));
+        }
+        final result = await Process.run(
+          'git',
+          cmd,
+          workingDirectory: root.rootPath,
+          stdoutEncoding: utf8,
+          stderrEncoding: utf8,
+        );
+        if (result.exitCode != 0) {
+          return {
+            'ok': false,
+            'code': 'git_error',
+            'stderr': _clip(result.stderr.toString(), 200),
+          };
+        }
+        return {
+          'ok': true,
+          'diff': _clip(result.stdout.toString(), 4000),
+        };
+      },
+    );
+
+bool _isGitRepo(String rootPath) {
+  final dotGit = FileSystemEntity.typeSync('$rootPath/.git');
+  return dotGit == FileSystemEntityType.directory ||
+      dotGit == FileSystemEntityType.file; // worktrees keep a .git FILE
+}
 
 /// List the entries of a directory.
 ToolDef listDirTool(FsToolsRoot root) => ToolDef(

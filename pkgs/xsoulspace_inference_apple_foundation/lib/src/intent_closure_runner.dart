@@ -14,7 +14,7 @@ import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 import 'package:xsoulspace_agentic_harness/src/tooling/act_with_project.dart'
     show actWithProjectTool;
 import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
-    show FsToolsRoot, runTool;
+    show FsToolsRoot, JailWriteGateway, runTool;
 
 /// J1.5.5 — the shared decision meter: counts decisions (generate calls) and
 /// honest projection tokens (Situation.tokensUsed). Move counts come from
@@ -126,15 +126,29 @@ const oracleCallsJson =
 
 /// Registers the intent-closure tool surface AND returns the defs so the
 /// context overhead can be measured (J1.2) — one truth, two uses.
-List<ToolDef> registerIntentClosureTools(World world, Directory jail) {
+///
+/// [gateway] (P3, revised): when attached, the host materializer's
+/// program.dart write flows through the host write policy (diff/audit),
+/// exactly like model `write` moves. Never a model-visible parameter.
+List<ToolDef> registerIntentClosureTools(
+  World world,
+  Directory jail, {
+  JailWriteGateway? gateway,
+}) {
   final registry = ToolRegistry();
+  final fsRoot = FsToolsRoot(jail.path);
+  if (gateway != null) fsRoot.writeGateway = gateway;
   final tools = <ToolDef>[
     actWithProjectTool(
       world: world,
       materialize: () async {
         // Host program: meaning tree (op chains) -> real program.dart.
         final src = materializeMeaningProgram(world);
-        File('${jail.path}/program.dart').writeAsStringSync(src);
+        if (gateway != null) {
+          gateway.interceptHostWrite('${jail.path}/program.dart', src);
+        } else {
+          File('${jail.path}/program.dart').writeAsStringSync(src);
+        }
         return {
           'path': 'program.dart',
           'materialized': true,
@@ -147,7 +161,7 @@ List<ToolDef> registerIntentClosureTools(World world, Directory jail) {
     ),
     intentDefineTool(world),
     intentCallTool(world),
-    runTool(FsToolsRoot(jail.path)),
+    runTool(fsRoot),
   ];
   for (final t in tools) {
     registry.register(t);

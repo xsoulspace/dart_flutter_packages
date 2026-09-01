@@ -465,7 +465,7 @@ void main() {
             },
           },
           metadata: const <String, dynamic>{
-            'inferenceModel': 'claude-3-5-sonnet',
+            'inferenceModel': 'poolside/laguna-xs-2.1:free',
           },
         ),
       );
@@ -474,7 +474,7 @@ void main() {
       final args = File(argsPath).readAsLinesSync();
       expect(
         args,
-        containsAllInOrder(<String>['--model', 'claude-3-5-sonnet']),
+        containsAllInOrder(<String>['--model', 'poolside/laguna-xs-2.1:free']),
       );
     }, skip: shellSkipReason);
 

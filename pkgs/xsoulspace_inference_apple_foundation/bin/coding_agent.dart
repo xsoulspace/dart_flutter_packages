@@ -4,6 +4,7 @@
 ///
 /// ```sh
 /// dart run bin/coding_agent.dart "<task sentence>" [--jail <dir>] [--task <suite-id>] [--runs 3] [--scripted]
+///                      [--diff-gate] [--auto-approve]
 /// ```
 ///
 /// - `--task intent_03_bookmark_macros` — the J1.4 gate (intent oracle).
@@ -26,6 +27,8 @@ import 'dart:io';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 import 'package:xsoulspace_agentic_harness/benchmark_api.dart'
     show ScriptedSuiteHandler;
+import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
+    show WriteGateMode;
 import 'package:xsoulspace_inference_apple_foundation/src/coding_agent_runner.dart';
 import 'package:xsoulspace_inference_apple_foundation/src/intent_closure_runner.dart'
     show wireSigintDump;
@@ -133,6 +136,12 @@ Future<void> main(List<String> args) async {
         backend: backend,
         // J1.5.5: Ctrl-C during an on-device run still leaves a post-mortem.
         onRecorder: wireSigintDump,
+        // P3 (revised): host write gate — diff/review before bytes land.
+        // Default (no flag): apply immediately, zero behavior change.
+        writeGateMode: cli.containsKey('diff-gate')
+            ? WriteGateMode.review
+            : null,
+        autoApprove: cli.containsKey('auto-approve'),
       );
       results.add(result);
       final logFile = writeRunLog(
