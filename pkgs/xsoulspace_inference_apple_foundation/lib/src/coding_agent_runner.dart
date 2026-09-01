@@ -347,6 +347,9 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
       // J2 (ADR 0018): session-per-decision bridge — native accumulation is
       // bounded by the harness round cap × per-round ack size.
       ..upsertResource(AgencyPolicy(maxConcurrent: 1, maxToolRounds: 12))
+      // ADR 0020: the coder cut composition — goal/map/observations/verdict
+      // slots with dedup + drop-empty; required slots input-gated.
+      ..upsertResource(CutCompositionResource(CutComposition.coder()))
       ..flush();
   } else {
     world.upsertResource(recorder);

@@ -146,7 +146,7 @@ Situation buildSituation({
       composition: composition,
       candidates: ranked,
       textOf: (beat) => fragmentText(world, beat),
-      originalIndex: originalIndex[beat] ?? 0,
+      originalIndex: (beat) => originalIndex[beat] ?? 0,
       goalText: goalText,
       mapText: mapText,
       verdictText: verdict == null ? null : verdict.detail,

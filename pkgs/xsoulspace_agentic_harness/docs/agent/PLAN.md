@@ -546,17 +546,20 @@ file; barrel+implementation pairs are ONE task).
   (a2a to the strongest model in the squad) lands with N5; write-gate ACP
   permission round-trips are the named N4 gap (apply-mode inside the
   delegated workspace for now).
-- [ ] `N5` — **squad hardening + metrics**. Headline (ADR 0020): the **Cut
-  Composition API** — the cut is a composed document with typed slots
-  (system/goal/map/observations/lastVerdict/plan), per-slot policies (dedup,
-  drop-empty, capacity), required slots as an INPUT GATE (named failure
-  before the model is called), and per-composition LLM-free conformance
-  tests. Root cause of the N4 exploration loop (flat ranked soup: scrambled
-  order, duplicate reads, empty fragments, amnesiac eviction) is fixed here,
-  not by prompt patches. Then: fs file graph as the `map` slot's data source
-  (exploration becomes structurally impossible); roles as data (model ≠
-  actor: one model fields a whole squad, AFM offline included); a2a columns
-  beside the K columns; AFM rejoins when the P1 bridge crash is fixed;
+- [ ] `N5` — **squad hardening + metrics**. Headline (ADR 0020) — **DONE**:
+  the **Cut Composition API** (`cut_composition.dart`): typed slots
+  (goal/map/observations/lastVerdict), per-slot policies (dedup, drop-empty,
+  capacity, recency render within observations), required slots as an INPUT
+  GATE (`CutViolation`, never dispatched to the model), per-composition
+  LLM-free conformance suite (`cut_composition_test.dart`, 7/7). Wired into
+  `runCodingAgentOnce` (coder composition); flat ranked cut remains default
+  for non-declaring flows. **Live validation**: the N4 failure task re-run —
+  27→8 decisions, FAIL→PASS (write + self-verified run, 10.7k tokens);
+  `goalFirst=true` every decision. Evidence: `delegation_m1_evidence.md`.
+  Remaining N5 items: fs file graph as the `map` slot's provider (exploration
+  becomes structurally impossible); roles as data (model ≠ actor: one model
+  fields a whole squad, AFM offline included); a2a columns beside the K
+  columns; AFM rejoins when the P1 bridge crash is fixed;
   pi-as-escalation-rung; write-gate permission via ACP.
 
 Honest boundary: first squad tasks are file-disjoint analyzer issues and

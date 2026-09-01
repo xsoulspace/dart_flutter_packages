@@ -58,3 +58,35 @@ Tests: `analyze_board_test.dart` (4/4, incl. real analyzer on a dirty fixture).
   loop (26 decisions, 50 rounds, list_dir/glob, never wrote lib/greet.dart;
   `dart test exit=1`). Failure class: exploration/no-write. Feeds N5:
   loop-breaker catch + task-prompt templating (where to look, write early).
+
+# ADR 0020 — Cut Composition API validation (2026-09-02)
+
+## Root cause of the N4 exploration loop (traced, not guessed)
+Flat relevance-ranked cut rendered as a conversation: (F1) scrambled slot-less
+order — system prompt mid-sequence, tool results out of order; (F2) duplicate
+reads consuming beat slots; (F3) empty `asst:` fragments admitted; (F4) no
+working-set guarantee — the goal and the read test file were evicted, so the
+model re-learned its environment every decision (27 decisions, never wrote).
+
+## Fix
+`CutComposition` (ADR 0020): typed slots — goal (non-evictable, input-gated),
+map (absence-annotated until the fs graph lands), observations (relevance
+selection, chronological render, dedup, drop-empty), lastVerdict. Codec
+renders slots verbatim; never re-ranks. Input gate: unfilled required slots
+fail as named `CutViolation`s before any model call.
+
+## Conformance
+`cut_composition_test.dart` 7/7: slot order, dedup, drop-empty, capacity +
+chronological render within slot, goal survival under eviction pressure,
+input-gate violation, integration through the real projection→actorAct path.
+
+## Live before/after (same task, same model deepseek-v4-flash, fresh workspace)
+| | N4 (flat soup) | ADR 0020 (composed) |
+|---|---|---|
+| decisions | 27 | 8 |
+| tool rounds | 50 | 13 |
+| tokens | ~38k | 10,735 |
+| verdict | FAIL (exploration loop) | **PASS** |
+| goal in every cut | no | yes (goalFirst=true ×8) |
+
+d5/d6: `write` (the fix), d7: `run` (self-verification), d8: done.

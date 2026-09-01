@@ -16,6 +16,7 @@ export 'generation_systems.dart';
 export 'identity_systems.dart';
 export 'loop_breaker_system.dart'
     show kLoopGuardKind, loopBreakerSystem;
+export 'projection/cut_composition.dart';
 export 'projection/projection_systems.dart';
 export 'projection/relevance.dart' show keywordsOf;
 export 'summary.dart';
