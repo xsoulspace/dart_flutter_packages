@@ -207,65 +207,75 @@ a hung run currently ships zero data.
 
 Goal: a developer can point the agent at a real project (CLI first, editor
 host later) and get reliable, safe, verified work. Ordered by leverage;
-each item is an LLM-free-testable increment.
+each item is an LLM-free-testable increment. **Status (2026-09-01): P1,
+P2, P3, P5, P6 landed (P3 after a law re-review); P4 open.** Measured
+tables: [results_stage_p.md](results_stage_p.md).
 
-### P1 — Re-measure the return-error fix (n=3, unblocks honest numbers)
+### P1 — Bridge cancel contract (LANDED 2026-09-01)
 
-The op-localized `return`-error fix (already landed, parity-pinned) has
-ZERO completed on-device n — two pass@3 sets died to the AFM bridge crash.
-Re-run `bin/coding_agent.dart --task intent_03 --runs 3`. If the bridge
-crash reproduces, file/fix it in the bridge layer FIRST
-(`xsoulspace_inference_apple_foundation/lib/src/native_bridge/`) — suspected:
-the 5-min `generation_timeout` fires while the Swift side still holds the
-callback; a VM callback-after-delete crash follows. A `cancel()` path on
-timeout is the likely fix. Until then every intent-tier number is
-pre-fix and stale.
+The two crashed pass@3 sets died to the AFM bridge
+`generation_timeout` + Swift callback-after-delete VM crash. Fixed on both
+sides: per-generation state + registry gating every callback path,
+`xs_fm_cancel(gen_id)` (cancel BEFORE Dart teardown), generation ids in
+payloads, `xs_fm_abi_version` stale-dylib detection, structured timeout
+errors. Proofs: 26/26 Swift bridge tests (incl. 8 live sessions), fake-
+bridge Dart tests (timeout → structured error + cancel recorded before
+tear-down; stale payload harmless; subsequent generate succeeds). The
+first post-B1 pass@3 set COMPLETED: intent_03 0/3, ZERO bridge crashes,
+zero overflows (results_stage_p.md §1).
 
-### P2 — J7 overseer actor (the intent-tier lever; the ONE model-side fix)
+### P2 — J7 overseer actor (LANDED 2026-09-01; on-device gate still open)
 
-Single-mover repair is at its ceiling (3 sessions of bounded 0/3 with
-named logic bugs). Land the PLAN J7 slice: after the mover's attempt
-exhausts, an overseer actor opens with `summary` zoom + the structured
-gate failure; its closed vocabulary: `approve` / `repair(intent)` /
-`escalate(reason)`. `repair(intent)` re-opens exactly that intent's scope
-(a fresh decision with the chain dump from `validateMeaningProgram` + the
-interpreter trace of the failing call). J8.1 rung 2: escalate to a bigger
-tier via `Model.tier` (OpenRouter) only after the overseer fails.
+Landed `lib/src/tooling/overseer.dart`: on goal-attempt exhaustion an
+overseer actor spawns with a brief of ONLY the summary zoom + structured
+gate failure + failing intent's chain dump; closed vocabulary via ONE
+tool (`approve` / `repair(intent, notes)` / `escalate(reason)`);
+`repair` re-opens exactly one intent's scope on the MOVER via
+`openFreshDecision` (max 1 cycle; the attempt allowance widens
+monotonically, never resets); `approve` never forces a pass; `escalate`
+swaps to a higher `Model.tier` if declared, else structured FAIL.
+Scripted repair test green (`overseer_scripted_test.dart`) through the
+SAME driver as the AFM runs. On-device intent_03 pass@3 = 0/3 (honest
+FAIL, classified blockers, bounded, idle).
 
-### P3 — Safe-edit surface for existing projects (host seam, no core change)
+### P3 — Safe-edit surface (LANDED 2026-09-01, REVISED against the law)
 
-- `write` gains a dry-run mode + a host-side diff gate: writes land in the
-  jail, the host renders unified diffs, apply on approval. The MODEL always
-  writes via the same tool; approval is a HOST policy wrapping the tool —
-  ADR-0015-clean.
-- Add jailed read-only `git_status`/`git_diff` tools to the fs surface
-  (same pattern as `grep`/`glob`) — a coding agent on a real repo needs git
-  visibility; without it, it re-reads files to guess state.
-- `rename_symbol` is the only structured existing-code edit; keep it
-  advertised while J3 is unbuilt.
+The original mission text proposed a model-visible `writeMode` parameter —
+REJECTED in review: the model must never supply whole-file content (the
+"model never writes code tokens" law). Landed instead: `JailWriteGateway`
+on `FsToolsRoot` — a HOST write policy over every jail mutation (model
+`write` moves AND materializer output) with `apply` (default) / `review`
+(unified diffs + host approval; CLI `--diff-gate` / `--auto-approve`);
+jailed read-only `git_status`/`git_diff` (bounded projections, same
+pattern as grep/glob). The run-graded arm's whole-file-write teaching
+prompt remains a NAMED contradiction, closed by P4 (below) — do not
+extend the model-facing write surface.
 
-### P4 — J3 slice: analyzer-backed `open(path)` + span-anchored edits
+### P4 — J3 slice (OPEN — the next lever)
 
-The existing-repo unlock (PLAN J3.1–J3.4, host package
-`xsoulspace_agentic_dart_meaning`). Minimal viable slice for P: parse one
-file → meaning nodes with source spans → `act_with_project` gains
-`open(path)` + edit-moves that re-emit ONLY changed spans (no whole-file
-rewrite) → `dart analyze` failures localize to meaning nodes (J4.1).
-Round-trip parity tests on a fixture corpus.
+Host package `xsoulspace_agentic_dart_meaning` (ADR 0015): analyzer parse
+→ MeaningNode/MeaningProps WITH source spans → `act_with_project`
+`open(path)` → edit moves re-emit ONLY changed spans. This is also the
+law-closure item for existing code: the model edits meaning nodes and the
+HOST re-emits spans — no whole-file content anywhere in the model's
+surface. Tests: round-trip parity, span minimality, id stability.
 
-### P5 — Persistent sessions (Phase 6 finish)
+### P5 — Persistent sessions (LANDED 2026-09-01)
 
-`snapshotWorld`/`restoreWorld` + `SnapshotStore` exist; finish: restore a
-session with the facet index + budgets intact, CLI restart survival, and
-one scripted test proving a resumed actor completes a task. Prerequisite
-for a long-lived daemon host (editor integration).
+Snapshot exclusions (OpenDecision/Agency/AwaitingResponse/LoopStuck/
+EscalationRequest/GoalVerified never cross a restart; AttemptCount and
+ToolRoundCount DO) → a restored actor is idle-resumable. Restart-survival
+test green (2 moves → snapshot → kill → restore → one more decision →
+gate passes, idle). CLI: `--session <store>` persists without resuming,
+`--resume <store>` continues (task + jail from envelope meta).
 
-### P6 — Editor host (after P3+P5)
+### P6 — Editor host transport (LANDED 2026-09-01, task-per-invocation)
 
-Task-per-invocation first: an extension/CLI call streaming
-`coding_agent.dart` output (pulse JSON) into the editor. Daemon second:
-one world, actor+thread per task, MCP transport adapter (D5 — core learns
-no transport). `HarnessProfilerView` becomes the IDE debug panel.
+`coding_agent.dart --json` streams NDJSON events (run_start / decision /
+pulse / run_end / summary) on stdout — the foundation for a VSCode/Zed
+extension. Core learns no transport (D5); telemetry wraps the HANDLER in
+the host. Schema documented in pipeline_coding.md; smoke-tested (every
+line parses; counts match the run log). Daemon + MCP adapter post-scope.
 
 ---
 

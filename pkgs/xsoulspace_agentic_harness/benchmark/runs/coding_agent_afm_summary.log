@@ -36,3 +36,11 @@ summary — task: intent_03_bookmark_macros | backend: scripted_llm_free | n: 1 
 
 summary — task: intent_03_bookmark_macros | backend: apple_foundation_afm | n: 3 | passed: 0 | pass@3: 0/3 | tokens source: Situation.tokensUsed (projection) | tokens/run: [6671, 13700, 13458] | decisions/run: [3, 6, 6] | moves/run: [10, 50, 49] | context overflows: 0
 
+summary — task: intent_03_bookmark_macros | backend: scripted_llm_free | n: 1 | passed: 1 | pass@1: 1/1 | tokens source: Situation.tokensUsed (projection) | tokens/run: [7802] | decisions/run: [4] | moves/run: [20] | context overflows: 0
+
+summary — task: intent_03_bookmark_macros | backend: scripted_llm_free | n: 1 | passed: 1 | pass@1: 1/1 | tokens source: Situation.tokensUsed (projection) | tokens/run: [7802] | decisions/run: [4] | moves/run: [20] | context overflows: 0
+
+summary — task: intent_03_bookmark_macros | backend: scripted_llm_free | n: 1 | passed: 1 | pass@1: 1/1 | tokens source: Situation.tokensUsed (projection) | tokens/run: [7802] | decisions/run: [4] | moves/run: [20] | context overflows: 0
+
+summary — task: intent_03_bookmark_macros | backend: scripted_llm_free | n: 1 | passed: 1 | pass@1: 1/1 | tokens source: Situation.tokensUsed (projection) | tokens/run: [7802] | decisions/run: [4] | moves/run: [20] | context overflows: 0
+

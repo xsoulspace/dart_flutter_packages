@@ -71,6 +71,50 @@ loop streaks, last tool result). FlightRecorder ring-buffers pulses,
 detects identical-prompt re-open cycles, and dumps on maxTicks StateError /
 SIGINT / driver exit — even on FAIL. Flutter UI: HarnessProfilerView
 (shows the same zoomed cut the model sees).
+   │
+   ▼  RECOVERY — the overseer (J7/P2)
+When the goal-attempt budget exhausts, the OVERSEER system spawns an
+overseer actor whose decision sees ONLY the summary zoom + the structured
+gate failure + the failing intent's chain dump (validateMeaningProgram +
+an interpreter replay). Closed vocabulary via ONE tool: approve /
+repair(intent, notes) / escalate(reason). repair re-opens exactly that
+intent's scope (openFreshDecision on the MOVER, notes prepended; max 1
+cycle — the attempt allowance widens monotonically, never resets). approve
+NEVER forces a pass: the mechanical final oracle still decides. escalate
+swaps to a higher Model.tier if the router declares one, else structured
+FAIL.
+
+## Host seams around the loop (P3/P5/P6)
+
+- **Write gate (P3, revised)**: every jail file mutation — model `write`
+  moves AND host materializer output — can flow through `JailWriteGateway`
+  on `FsToolsRoot` (`apply` default / `review` renders unified diffs and
+  asks the HOST approver). The model surface is unchanged; the law
+  ("the model never writes code tokens") is enforced by P4's meaning-span
+  edits, not by new model-facing parameters. Jailed read-only
+  `git_status`/`git_diff` give bounded repo-state projections.
+- **Persistent sessions (P5)**: `snapshotWorld`/`restoreWorld` drop
+  in-flight state (OpenDecision/Agency/AwaitingResponse/stale verdicts)
+  and keep budgets (AttemptCount, ToolRoundCount) + beats; a restored
+  actor is idle-resumable. `coding_agent.dart --resume <store>` continues
+  a saved session (`--session <store>` persists without resuming).
+- **NDJSON transport (P6)**: `coding_agent.dart --json` streams one JSON
+  object per line on stdout — this IS the editor-extension transport (D5:
+  core learns no transport). Event schema:
+
+```jsonc
+{"type":"run_start","run":1,"task":"…","backend":"…","jail":"…","resumed":false}
+{"type":"decision","run":1,"seq":1,"actor":"2","tool_calls":[{"name":"intent_define","args":{…}}],"responses_sent_delta":5}
+{"type":"pulse","run":1,"text":"tick 4 | decisions 0 | …"}
+{"type":"run_end","run":1,"verdict":"PASS","decisions":4,"tool_rounds":20,"tokens":7802,"moves":{…},"gate":[…],"failure_class":""}
+{"type":"summary","row":"summary — task: … | n: 1 | pass@1: 1/1 | …","passed":1,"runs":1}
+```
+
+Human-readable lines move to stderr in `--json` mode. Decision-level
+"tool_calls" come from the returned response (the AFM native path carries
+every tool call there); the scripted suite handler sends its steps on the
+event channel instead, so its decision events show `tool_calls: []` —
+counts still match `responses_sent_delta`.
 ```
 
 ## What runs where (file map)
@@ -88,28 +132,38 @@ SIGINT / driver exit — even on FAIL. Flutter UI: HarnessProfilerView
 | **On-device coding agent (THE deliverable)** | `../xsoulspace_inference_apple_foundation/bin/coding_agent.dart` + `lib/src/coding_agent_runner.dart` |
 | Flutter profiler | `../xsoulspace_agentic_harness_flutter_profiler/` |
 
-## Current situation (2026-09-01, honest)
+## Current situation (2026-09-01, post P1–P5)
 
 - **Landed**: meaning tree as world state + zoom projection (ADR 0018);
   intent closure v1 (interpreter ⇄ materialized-Dart parity); macros
   (intent_03: 5 moves vs 24 micro-moves, suite 23/23 scripted); **B1** —
-  `intent_define` collapsed to ONE self-executing action (`define`
-  REQUIRES specs, always wires `impl`; `redefine_chain` = accepted alias);
-  **B2** — one honest structured failure dialect; **B4** — legacy edit
-  paths (`tree_patch`, `patch_tool`, `transform_flow`, `ops_handler`)
-  deleted from lib/ + barrels; **B5** — manual-schedule crutch tests
-  deleted (unique routing coverage ported to `runUntilIdle`); **B3/B7** —
-  ONE on-device entry point `bin/coding_agent.dart` with verifiers wired
-  inside the loop and bounded host repairs consuming AttemptCount;
-  **B8** — pass@3 protocol, per-run logs + summary rows.
-- **Open gate (J1.4)**: measured 2026-09-01 — run-graded tier PASSES
-  (bugfix_01 pass@3 = 3/3 on-device, zero overflows); intent tier FAILS
-  (intent_03 0/3, bounded, precisely classified blockers). Full table in
-  [results_stage_j15.md](results_stage_j15.md) §7.
-- **Next levers**: J7/J8 (overseer actor + escalation ladder get the
-  structured failure instead of the mover retrying), J2 (context-ownership
-  experiment — session-per-decision bridge already committed), J3+ (Dart
-  round-trip for EXISTING repos, via analyzer — host package).
+  `intent_define` collapsed to ONE self-executing action; **B2** — one
+  structured failure dialect; **B4/B5** — legacy edit paths + crutch tests
+  deleted; **B3/B7** — ONE on-device entry point `bin/coding_agent.dart`;
+  **B8** — pass@3 protocol; **P1** — the AFM bridge generation-cancel
+  contract (`xs_fm_cancel` + ABI version, no callback-after-delete crashes;
+  the first post-B1 pass@3 set COMPLETED — zero bridge crashes, zero
+  overflows); **P2** — the J7 overseer actor (summary-zoom brief, closed
+  `approve/repair/escalate` vocabulary, scripted repair test green);
+  **P3 (revised)** — the host write gate (`JailWriteGateway` on
+  `FsToolsRoot`: apply/review modes, unified diffs, host approval — NO
+  model-visible parameter) + jailed read-only `git_status`/`git_diff`;
+  **P5** — idle-resumable snapshot restore + `--resume`/`--session` CLI;
+  **P6** — `--json` NDJSON transport (host-side, D5). Full tables:
+  [results_stage_p.md](results_stage_p.md).
+- **Gate status (measured, results_stage_p.md §2)**: run-graded tier
+  PASSES (bugfix_01 pass@3 = 3/3); intent tier honest FAIL 0/3 — the
+  failure class is chain-logic correctness; the overseer grants ONE repair
+  cycle (scripted proof green), on-device pass still open.
+- **P4 (open)**: J3 analyzer round-trip in the host package
+  `xsoulspace_agentic_dart_meaning` — `open(path)` + span-anchored edits.
+  This is ALSO the law-closure item: the run-graded arm's teaching prompt
+  still says "make the change with write" — the model supplying whole-file
+  content violates the never-writes-code-tokens law. It is a NAMED
+  contradiction to be closed by P4's meaning-node span edits, not extended
+  (P3 deliberately added NO new model-visible write surface).
+- **Next levers**: P4 (span edits close the law gap on existing code),
+  J2 (context ownership), K-matrix rows beyond the two DoD tasks.
 
 ## Invariants an agent must not break
 

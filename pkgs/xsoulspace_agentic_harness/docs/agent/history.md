@@ -262,3 +262,38 @@ Practices:
   the `expectIdle` helper (`test/support/agent_harness_support.dart`).
 - Fold `discussion.md` into ADRs — done via ADR 0009; discussion.md is now an
   archive of the design conversation (threads/beats/projection theory).
+
+## 2026-09-01 (later session) — P-series: bridge fix, overseer, host seams
+
+Landed (detail + measured tables in [results_stage_p.md](results_stage_p.md);
+forward plan updated in PLAN.md §P):
+
+- **P1** — AFM bridge generation-cancel contract (`xs_fm_cancel`,
+  per-generation callback gating, generation ids on payloads, ABI version
+  stale-dylib detection, structured timeout errors). The first post-B1
+  pass@3 set completed: intent_03 0/3, ZERO bridge crashes / overflows.
+  26/26 Swift bridge tests incl. live sessions.
+- **P2** — J7 overseer actor (`lib/src/tooling/overseer.dart`): summary-zoom
+  brief + closed approve/repair/escalate vocabulary + one repair cycle
+  (monotonic allowance widening in RunGradedGoalPolicy). Scripted repair
+  test green through the real driver; on-device intent_03 still 0/3
+  (honest FAIL, classified).
+- **P3 (revised)** — `JailWriteGateway` host write policy (apply/review +
+  unified diffs + host approval; NO model-visible parameter — the mission's
+  `writeMode` param was rejected in law review) + jailed read-only
+  `git_status`/`git_diff` + write-gate audit in run logs.
+- **P5** — snapshot exclusions make a restored world idle-resumable
+  (budgets persist, in-flight state does not); restart-survival test;
+  `coding_agent.dart --session/--resume`.
+- **P6** — `coding_agent.dart --json` NDJSON transport (host-side handler
+  telemetry; schema in pipeline_coding.md).
+
+Practices:
+1. The law wins over mission text: P3's model-visible writeMode was caught
+   in re-review and replaced with a host-side gate.
+2. Callback-after-delete crash classes are closed by CONTRACT (cancel
+   before teardown + generation-id dispatch), not by hoping drains win
+   races.
+3. Escalation allowances widen monotonically (base × (1 + cycles)); no
+   budget ever resets except via `openFreshDecision` for host-injected
+   decisions.

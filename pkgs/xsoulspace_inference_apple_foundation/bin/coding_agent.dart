@@ -300,6 +300,11 @@ class _NdjsonTelemetryHandler implements GenerationHandler {
     ActorGenerateRequest request,
   ) async {
     final response = await _inner.generate(world, request);
+    // One `decision` event per generation turn. The tool calls ride on the
+    // RETURNED response (ADR 0002: the actorAct wrapper re-sends it onto the
+    // channel) — the native AFM path carries every tool call there. Channel
+    // observation is racy (processResponsesSystem drains concurrently), so
+    // telemetry never depends on channel contents.
     _seq++;
     emit({
       'type': 'decision',
@@ -307,13 +312,18 @@ class _NdjsonTelemetryHandler implements GenerationHandler {
       'seq': _seq,
       'actor': response.actorEntity.toString(),
       if (response.error.isNotEmpty) 'error': response.error,
+      'responses_sent_delta':
+          world.events.stats<ActorGenerateResponse>().sent - _lastSent,
       'tool_calls': [
         for (final call in response.toolCalls)
           {'name': call.name.value, 'args': call.arguments},
       ],
     });
+    _lastSent = world.events.stats<ActorGenerateResponse>().sent;
     return response;
   }
+
+  int _lastSent = 0;
 }
 
 GenerationHandler _wrapTelemetry(
