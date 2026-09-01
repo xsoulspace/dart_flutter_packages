@@ -503,6 +503,52 @@ Operating cautions: prefer `--backend open_router` until the P1 bridge crash
 is fixed; pin model ids; one process per delegation first; `--auto-approve`
 only inside a disposable jail.
 
+## Stage N — the live squad: real tasks, multi-model actors, one world (ADR 0019)
+
+**Goal:** delegate REAL tasks in this repository (analyzer issues, failing
+tests) to a multi-model actor squad working one shared world — pi, human,
+AFM, and OpenRouter models as peers — perfecting a2a and the harness on the
+harness itself. No git tools: the write gate in `review` mode is the VCS
+(pi/human approves diffs).
+
+**Sequencing principle: world-first, daemon-second.** The squad is world
+logic (the risk and the novelty); the daemon is transport (D5 — core learns
+no transport) and comes last.
+
+**Prerequisite discovered in design: per-file single-writer.** Real fs is
+shared mutable state outside the ECS graph; two actors editing one file is a
+race the flush coherence point does not cover. `JailWriteGateway` owns the
+rule. First squad tasks must be FILE-DISJOINT (analyzer issues partition by
+file; barrel+implementation pairs are ONE task).
+
+- [ ] `N1` — **analyzer task board** (LLM-free): parse
+  `dart analyze --format=machine` → issues → file-disjoint board tasks, each
+  a goal with a mechanical criterion (file analyzes clean). The board IS the
+  problems-discovery artifact.
+- [ ] `N2` — **multi-actor squad, single process**: several actors bound to
+  different router models; mechanical task assignment (assignment is NOT an
+  LLM decision — agency discipline); single-writer gateway; escalation =
+  address another actor, then structured FAIL. LLM-free scripted proof:
+  two actors, two disjoint tasks, board drains, `expectIdle`.
+- [ ] `N3` — **daemon** (`harnessd`): the N2 world as a long-lived process
+  + `HarnessAcpBackend` over `dart_acp_toolkit` (sessions = threads;
+  snapshot after every loop session; restart-safe via P5).
+- [ ] `N4` — **pi joins**: `session/prompt` → host-injected decision
+  (`openFreshDecision`) on a pi-actor; world events stream back; write-gate
+  diffs route to the client as permission requests (pi/human approves).
+  pi doubles as the TOP ESCALATION RUNG (a2a to the strongest model in the
+  squad, not a model swap).
+- [ ] `N5` — **squad hardening + metrics**: a2a columns (handoffs,
+  duplicate-work detection, stale-projection reads) beside the K columns;
+  AFM rejoins when the P1 bridge crash is fixed; free-tier models labeled
+  per row; roles become projections (scout = board + read surface; fixer =
+  one task's file set).
+
+Honest boundary: first squad tasks are file-disjoint analyzer issues and
+failing tests in harness packages. Cross-file refactors wait for N5
+coordination. Every squad task emits the standard row — dogfooding and the
+long-horizon tier are the same activity.
+
 ## Acceptance (end state)
 
 1. [ ] Bookmark executor passes on-device at pass@3 ≥ 1/3, no context

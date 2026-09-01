@@ -714,3 +714,85 @@ intents failed: save_url -> {value: false}…"
 tick 201205: decisions=0 inFlight=0 pending=0 actors=agent-1788296159759154-1:0r/3a
 
 
+coding_agent run — task: intent_03_bookmark_macros
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 1496
+  decisions: 5
+  tool rounds (thread beats): 15
+  moves: {intent_define.list: 3, act_with_project.materialize: 4, intent_call: 6, intent_define.define: 2}
+  projection tokens (honest spend, Situation.tokensUsed): 12544
+  meaning nodes: 4, edges: 3
+  wall clock: 260085 ms
+  final gate (outer oracle, once): FAIL
+    check: intents failed: save_url -> {error: return without value (op op_7): the chain reached the return op with an empty stack - push a literal (or the value to return) BEFORE the return op}; save_url -> {error: return without value (op op_7): the chain reached the return op with an empty stack - push a literal (or the value to return) BEFORE the return op}; list_saved -> {error: no meaning executor for intent: list_saved — every intent needs an executor. re-send intent_define (action define) with specs}; save_url -> {error: return without value (op op_7): the chain reached the return op with an empty stack - push a literal (or the value to return) BEFORE the return op}
+  failure class: final gate: intents failed: save_url -> {error: return without value (op op_7): the chain reached the return op with an empty stack - push a literal (or the value to return) BEFORE the return op}; save_url -> {error: return without value (op op_7): the chain reached the return op with an empty stack - push a literal (or the value to return) BEFORE the return op}; list_saved -> {error: no meaning executor for intent: list_saved — every intent needs an executor. re-send intent_define (action define) with specs}; save_url -> {error: return without value (op op_7): the chain reached the return op with an empty stack - push a literal (or the value to return) BEFORE the return op}
+--- harness pulse (J1.5.3) ---
+tick 5 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788300964738044-2: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3, overseer window spent). Last failure: intents failed: save_url -> {error: return without value (op op_7): the chain reached the return op with an empty stack - push a literal (or the value to return) BEFORE the return op}; save_url -> {error: return without value (op op_7): the chain reached the return op with an empty stack - push a literal (or the value to return) BEFORE the return op}; list_saved -> {error: no meaning executor for intent: list_saved — every intent needs an executor. re-send intent_define (action define) with specs}; save_url -> {error: return without value (op op_7): the chain reached the return op with an empty stack - push a literal (or the value to return) BEFORE the return op}
+— agent-1788300964738044-2  [idle]  rounds 0/12 (Σ0)  attempts 3/3 EXHAUSTED
+    last: intent_call:{"intent":"save_url","args":["http://example.com"]} → FAILED
+      error: {"ok":false,"intent":"save_url","result":{"error":"return without value (op op_7): the chain reached the return op wi…
+— agent-1788301173285160-3  [idle]  rounds 0/12 (Σ0)
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 60846..86264
+tick 84370: decisions=1 inFlight=1 pending=0 actors=agent-1788300964738044-2:0r/3a agent-1788301173285160-3:0r/0a
+    agent-1788300964738044-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: Wrong op/wiring: literal -> push_sta…"
+tick 84470: decisions=1 inFlight=1 pending=0 actors=agent-1788300964738044-2:0r/3a agent-1788301173285160-3:0r/0a
+    agent-1788300964738044-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: Wrong op/wiring: literal -> push_sta…"
+tick 84570: decisions=1 inFlight=1 pending=0 actors=agent-1788300964738044-2:0r/3a agent-1788301173285160-3:0r/0a
+    agent-1788300964738044-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: Wrong op/wiring: literal -> push_sta…"
+tick 84670: decisions=1 inFlight=1 pending=0 actors=agent-1788300964738044-2:0r/3a agent-1788301173285160-3:0r/0a
+    agent-1788300964738044-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: Wrong op/wiring: literal -> push_sta…"
+tick 84770: decisions=1 inFlight=1 pending=0 actors=agent-1788300964738044-2:0r/3a agent-1788301173285160-3:0r/0a
+    agent-1788300964738044-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: Wrong op/wiring: literal -> push_sta…"
+tick 84870: decisions=1 inFlight=1 pending=0 actors=agent-1788300964738044-2:0r/3a agent-1788301173285160-3:0r/0a
+    agent-1788300964738044-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: Wrong op/wiring: literal -> push_sta…"
+tick 84970: decisions=1 inFlight=1 pending=0 actors=agent-1788300964738044-2:0r/3a agent-1788301173285160-3:0r/0a
+    agent-1788300964738044-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: Wrong op/wiring: literal -> push_sta…"
+tick 85070: decisions=1 inFlight=1 pending=0 actors=agent-1788300964738044-2:0r/3a agent-1788301173285160-3:0r/0a
+    agent-1788300964738044-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: Wrong op/wiring: literal -> push_sta…"
+tick 85170: decisions=1 inFlight=1 pending=0 actors=agent-1788300964738044-2:0r/3a agent-1788301173285160-3:0r/0a
+    agent-1788300964738044-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: Wrong op/wiring: literal -> push_sta…"
+tick 85270: decisions=1 inFlight=1 pending=0 actors=agent-1788300964738044-2:0r/3a agent-1788301173285160-3:0r/0a
+    agent-1788300964738044-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: Wrong op/wiring: literal -> push_sta…"
+tick 85370: decisions=1 inFlight=1 pending=0 actors=agent-1788300964738044-2:0r/3a agent-1788301173285160-3:0r/0a
+    agent-1788300964738044-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: Wrong op/wiring: literal -> push_sta…"
+tick 85470: decisions=1 inFlight=1 pending=0 actors=agent-1788300964738044-2:0r/3a agent-1788301173285160-3:0r/0a
+    agent-1788300964738044-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: Wrong op/wiring: literal -> push_sta…"
+tick 85570: decisions=1 inFlight=1 pending=0 actors=agent-1788300964738044-2:0r/3a agent-1788301173285160-3:0r/0a
+    agent-1788300964738044-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: Wrong op/wiring: literal -> push_sta…"
+tick 85670: decisions=1 inFlight=1 pending=0 actors=agent-1788300964738044-2:0r/3a agent-1788301173285160-3:0r/0a
+    agent-1788300964738044-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: Wrong op/wiring: literal -> push_sta…"
+tick 85770: decisions=1 inFlight=1 pending=0 actors=agent-1788300964738044-2:0r/3a agent-1788301173285160-3:0r/0a
+    agent-1788300964738044-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: Wrong op/wiring: literal -> push_sta…"
+tick 85870: decisions=1 inFlight=1 pending=0 actors=agent-1788300964738044-2:0r/3a agent-1788301173285160-3:0r/0a
+    agent-1788300964738044-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: Wrong op/wiring: literal -> push_sta…"
+tick 85970: decisions=1 inFlight=1 pending=0 actors=agent-1788300964738044-2:0r/3a agent-1788301173285160-3:0r/0a
+    agent-1788300964738044-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: Wrong op/wiring: literal -> push_sta…"
+tick 86070: decisions=1 inFlight=1 pending=0 actors=agent-1788300964738044-2:0r/3a agent-1788301173285160-3:0r/0a
+    agent-1788300964738044-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: Wrong op/wiring: literal -> push_sta…"
+tick 86170: decisions=1 inFlight=1 pending=0 actors=agent-1788300964738044-2:0r/3a agent-1788301173285160-3:0r/0a
+    agent-1788300964738044-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: Wrong op/wiring: literal -> push_sta…"
+tick 86264: decisions=0 inFlight=0 pending=0 actors=agent-1788300964738044-2:0r/3a agent-1788301173285160-3:0r/0a
+
+
