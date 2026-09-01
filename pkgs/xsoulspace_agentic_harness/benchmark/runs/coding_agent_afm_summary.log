@@ -20,3 +20,7 @@ summary — task: intent_03_bookmark_macros | backend: scripted_llm_free | n: 1 
 
 summary — task: bugfix_01_off_by_one | backend: scripted_llm_free | n: 1 | passed: 1 | pass@1: 1/1 | tokens source: Situation.tokensUsed (projection) | tokens/run: [15416] | decisions/run: [13] | moves/run: [13] | context overflows: 0
 
+summary — task: bugfix_01_off_by_one | backend: open_router:poolside/laguna-xs-2.1:free | n: 1 | passed: 0 | pass@1: 0/1 | tokens source: Situation.tokensUsed (projection) | tokens/run: [6594] | decisions/run: [0] | moves/run: [0] | context overflows: 0
+
+summary — task: bugfix_01_off_by_one | backend: open_router:poolside/laguna-xs-2.1:free | n: 1 | passed: 0 | pass@1: 0/1 | tokens source: Situation.tokensUsed (projection) | tokens/run: [6594] | decisions/run: [0] | moves/run: [0] | context overflows: 0
+

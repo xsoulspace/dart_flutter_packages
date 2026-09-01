@@ -17,6 +17,10 @@ dependencies:
   path: ^1.9.1
   xsoulspace_agentic_harness:
     path: ../xsoulspace_agentic_harness
+  # B3 escalation rung (J8.1 tier 3) + dogfooding backend: the coding agent
+  # can run its loop with an OpenRouter model instead of / next to AFM.
+  xsoulspace_inference_openrouter:
+    path: ../xsoulspace_inference_openrouter
   xsoulspace_inference_core:
     path: ../xsoulspace_inference_core
   from_json_to_json: ^0.5.0

@@ -41,37 +41,201 @@ public func xs_fm_set_debug(_ enabled: Int32) {
   XsFmDebug.log("debug tracing \(enabled != 0 ? "enabled" : "disabled")")
 }
 
-// MARK: - Pending tool registry
+// MARK: - Generation state + registry
 
-/// Tracks in-flight tool calls so `xs_fm_tool_respond` can resume the right
-/// continuation. Access is serialized on a private queue.
-final class PendingToolRegistry: @unchecked Sendable {
-  static let shared = PendingToolRegistry()
-  private let queue = DispatchQueue(label: "xs.fm.pendingTools")
-  private var pending: [String: CheckedContinuation<String, Error>] = [:]
-  private var counter = 0
+/// Error resumed into pending tool continuations when a generation is
+/// cancelled (timeout / Dart-side teardown).
+struct XsFmGenerationCancelled: Error, LocalizedError {
+  var errorDescription: String? { "generation cancelled" }
+}
 
-  func register(_ continuation: CheckedContinuation<String, Error>) -> String {
-    let id = "tool_\(UUID().uuidString)"
-    queue.sync {
-      counter += 1
-      pending[id] = continuation
-    }
-    return id
+/// Per-generation state. Every callback path (done, tool payload, stream
+/// delta) is gated through `queue`, so once `cancel()` has claimed the state
+/// under the same lock, NO further callback invocation can start. This is the
+/// contract that lets Dart cancel before tearing down its NativeCallable
+/// listeners without a callback-after-delete VM crash.
+final class GenerationState: @unchecked Sendable {
+  let id: Int32
+  let queue = DispatchQueue(label: "xs.fm.generation")
+  let toolCallback: XsFmToolCallback?
+  let doneCallback: XsFmDoneCallback
+  var cancelled = false
+  var finished = false
+  var task: Task<Void, Never>?
+  var pendingTools: [String: CheckedContinuation<String, Error>] = [:]
+
+  init(
+    id: Int32,
+    toolCallback: XsFmToolCallback?,
+    doneCallback: XsFmDoneCallback,
+    streamCallback: XsFmStreamCallback? = nil
+  ) {
+    self.id = id
+    self.toolCallback = toolCallback
+    self.doneCallback = doneCallback
+    self.streamCallback = streamCallback
   }
 
-  func fulfill(id: String, result: String) -> Bool {
+  /// Delivers the final done payload exactly once, unless cancelled first.
+  func finish(_ responseJson: String) {
+    // Lock order: registry queue BEFORE state queue (same as cancel).
+    GenerationRegistry.shared.remove(id)
+    var deliver = false
+    queue.sync {
+      if cancelled || finished { return }
+      finished = true
+      deliver = true
+    }
+    guard deliver else { return }
+    // NativeCallable.listener delivers asynchronously on the Dart isolate,
+    // so the buffer must outlive this call: heap-allocate and let Dart
+    // free it via xs_fm_free_string.
+    responseJson.withCString { cString in
+      doneCallback(strdup(cString))
+    }
+  }
+
+  /// Registers a tool continuation and posts the payload while still holding
+  /// the state lock, so a concurrent cancel can never interleave between
+  /// "continuation stored" and "payload posted". Returns the tool id on
+  /// success, nil when the generation is dead — the continuation is resumed
+  /// with an error and nothing is posted.
+  func postToolCall(
+    name: String,
+    argumentsJSON: String,
+    continuation: CheckedContinuation<String, Error>
+  ) -> String? {
+    var postedId: String? = nil
+    var cancelledError = false
+    queue.sync {
+      if cancelled || finished {
+        cancelledError = true
+      } else {
+        // Tool ids embed the generation id so xs_fm_tool_respond can route
+        // without a second registry lookup (no toolOwners map, no lock-order
+        // hazard between the registry and state queues).
+        let toolId = "g\(id)_tool_\(UUID().uuidString)"
+        pendingTools[toolId] = continuation
+        let payload: [String: Any] = [
+          "generation": Int(id),
+          "id": toolId,
+          "name": name,
+          "arguments": argumentsJSON,
+        ]
+        if let callback = toolCallback,
+          let data = try? JSONSerialization.data(withJSONObject: payload),
+          let payloadString = String(data: data, encoding: .utf8)
+        {
+          payloadString.withCString { cString in
+            callback(strdup(cString))
+          }
+          postedId = toolId
+        }
+      }
+    }
+    if cancelledError {
+      continuation.resume(throwing: XsFmGenerationCancelled())
+    }
+    return postedId
+  }
+
+  /// Resumes one pending tool continuation (tool_respond path).
+  func fulfillTool(id toolId: String, result: String) -> Bool {
     var resumed = false
     queue.sync {
-      if let continuation = pending.removeValue(forKey: id) {
+      if let continuation = pendingTools.removeValue(forKey: toolId) {
         continuation.resume(returning: result)
         resumed = true
       }
     }
-    XsFmDebug.log(
-      "tool respond: id=\(id) resumed=\(resumed) result=\(result.prefix(120))"
-    )
     return resumed
+  }
+
+  /// Cancels the generation: gates every future callback, resumes all pending
+  /// tool continuations with a cancellation error, and cancels the Swift task.
+  func cancel() {
+    var toResume: [CheckedContinuation<String, Error>] = []
+    queue.sync {
+      cancelled = true
+      toResume = Array(pendingTools.values)
+      pendingTools.removeAll()
+      task?.cancel()
+    }
+    for continuation in toResume {
+      continuation.resume(throwing: XsFmGenerationCancelled())
+    }
+  }
+
+  /// Emits a stream delta unless the generation is dead.
+  func emitDelta(_ delta: String) {
+    var send = false
+    queue.sync {
+      if !cancelled && !finished { send = true }
+    }
+    guard send, let streamCallback else { return }
+    // Each snapshot is heap-allocated; Dart frees via xs_fm_free_string.
+    // jsonEscaped produces a properly escaped JSON string literal (newlines
+    // and quotes included) — never interpolate raw text into JSON.
+    let payload = "{\"generation\":\(id),\"delta\":\(jsonEscaped(delta))}"
+    payload.withCString { cString in
+      streamCallback(strdup(cString))
+    }
+  }
+
+  /// Stream callback, set at creation by the streaming entrypoint.
+  var streamCallback: XsFmStreamCallback?
+}
+
+/// Registry of in-flight generations. Lock order with [GenerationState.queue]:
+/// ALWAYS take the registry queue first, release, then the state queue.
+final class GenerationRegistry: @unchecked Sendable {
+  static let shared = GenerationRegistry()
+  private let queue = DispatchQueue(label: "xs.fm.generations")
+  private var byId: [Int32: GenerationState] = [:]
+  private var counter: Int32 = 0
+
+  func create(
+    toolCallback: XsFmToolCallback?,
+    doneCallback: XsFmDoneCallback,
+    streamCallback: XsFmStreamCallback? = nil
+  ) -> GenerationState {
+    return queue.sync {
+      counter += 1
+      let state = GenerationState(
+        id: counter,
+        toolCallback: toolCallback,
+        doneCallback: doneCallback,
+        streamCallback: streamCallback
+      )
+      byId[state.id] = state
+      return state
+    }
+  }
+
+  func state(for id: Int32) -> GenerationState? {
+    queue.sync { byId[id] }
+  }
+
+  func remove(_ id: Int32) {
+    queue.sync { _ = byId.removeValue(forKey: id) }
+  }
+
+  func cancel(_ id: Int32) -> Int32 {
+    let state: GenerationState? = queue.sync { byId.removeValue(forKey: id) }
+    guard let state else { return 1 }
+    state.cancel()
+    return 0
+  }
+
+  /// Routes a tool response to its owning generation (tool ids embed the
+  /// generation id: "g<gen>_tool_<uuid>").
+  func fulfillTool(id toolId: String, result: String) -> Bool {
+    guard toolId.hasPrefix("g") else { return false }
+    let genPart = toolId.dropFirst().prefix(while: { $0.isNumber })
+    guard let genId = Int32(genPart), let state = state(for: genId) else {
+      return false
+    }
+    return state.fulfillTool(id: toolId, result: result)
   }
 }
 
@@ -98,22 +262,30 @@ public func xs_fm_generate_async(
   let toolCallback: XsFmToolCallback? =
     tool_cb.map { unsafeBitCast($0, to: XsFmToolCallback.self) }
   guard let doneRaw = done_cb else {
-    return 1
+    return -1
   }
   let doneCallback = unsafeBitCast(doneRaw, to: XsFmDoneCallback.self)
 
+  let state = GenerationRegistry.shared.create(
+    toolCallback: toolCallback, doneCallback: doneCallback
+  )
+
+  /// Done payloads carry the generation id so Dart can drop stale callbacks
+  /// from cancelled generations.
+  func donePayload(_ body: String) -> String {
+    "{\"generation\":\(state.id),\(body)}"
+  }
+
   func finish(_ responseJson: String) {
-    // NativeCallable.listener delivers asynchronously on the Dart isolate,
-    // so the buffer must outlive this call: heap-allocate and let Dart
-    // free it via xs_fm_free_string.
-    responseJson.withCString { cString in
-      doneCallback(strdup(cString))
-    }
+    // Gated by the generation state: a no-op after cancel (the generation
+    // was already removed from the registry and marked cancelled), so the
+    // callback pointer is never invoked once Dart has cancelled + torn down.
+    state.finish(responseJson)
   }
 
   func failNow(code: String, message: String) -> Int32 {
-    finish(jsonEscapedError(code: code, message: message))
-    return 1
+    finish(donePayload(jsonErrorBody(code: code, message: message)))
+    return -1
   }
 
   guard let requestJson = request_json.map({ String(cString: $0) }) else {
@@ -142,7 +314,7 @@ public func xs_fm_generate_async(
       XsFmDebug.log(
         "generate: schema materialized=\(generationSchema != nil ? "yes" : "no (nil)")"
       )
-      let tools = try prepareNativeTools(from: toolsJson, callback: toolCallback)
+      let tools = try prepareNativeTools(from: toolsJson, callback: toolCallback, state: state)
       XsFmDebug.log(
         "generate: tools prepared=\(tools.count)/\(toolsJson.count) requested"
       )
@@ -152,9 +324,11 @@ public func xs_fm_generate_async(
           let model = SystemLanguageModel.default
           guard model.isAvailable else {
             finish(
-              jsonEscapedError(
-                code: "engine_unavailable",
-                message: "Apple Intelligence not available"
+              donePayload(
+                jsonErrorBody(
+                  code: "engine_unavailable",
+                  message: "Apple Intelligence not available"
+                )
               )
             )
             return
@@ -176,18 +350,20 @@ public func xs_fm_generate_async(
           }
 
           XsFmDebug.log("generate: ok, output=\(content.prefix(120))")
-          finish("{\"ok\":true,\"output\":\(jsonEscaped(content))}")
+          finish(donePayload("\"ok\":true,\"output\":\(jsonEscaped(content))"))
         } catch {
           XsFmDebug.log("generate: error — \(error)")
           finish(
-            jsonEscapedError(
-              code: "generation_error",
-              message: error.localizedDescription
+            donePayload(
+              jsonErrorBody(
+                code: "generation_error",
+                message: error.localizedDescription
+              )
             )
           )
         }
       }
-      return 0
+      return state.id
     } catch {
       return failNow(code: "schema_error", message: error.localizedDescription)
     }
@@ -207,7 +383,18 @@ public func xs_fm_tool_respond(
   guard let idC = id, let resultC = result_json else { return 1 }
   let toolId = String(cString: idC)
   let result = String(cString: resultC)
-  return PendingToolRegistry.shared.fulfill(id: toolId, result: result) ? 0 : 1
+  let resumed = GenerationRegistry.shared.fulfillTool(id: toolId, result: result)
+  XsFmDebug.log(
+    "tool respond: id=\(toolId) resumed=\(resumed) result=\(result.prefix(120))"
+  )
+  return resumed ? 0 : 1
+}
+
+@_cdecl("xs_fm_cancel")
+public func xs_fm_cancel(_ generation_id: Int32) -> Int32 {
+  let result = GenerationRegistry.shared.cancel(generation_id)
+  XsFmDebug.log("cancel: generation=\(generation_id) result=\(result)")
+  return result
 }
 
 // MARK: - Streaming generation
@@ -222,33 +409,31 @@ public func xs_fm_generate_stream_async(
   let toolCallback: XsFmToolCallback? =
     tool_cb.map { unsafeBitCast($0, to: XsFmToolCallback.self) }
   guard let doneRaw = done_cb else {
-    return 1
+    return -1
   }
   let doneCallback = unsafeBitCast(doneRaw, to: XsFmDoneCallback.self)
   guard let streamRaw = stream_cb else {
-    return 1
+    return -1
   }
   let streamCallback = unsafeBitCast(streamRaw, to: XsFmStreamCallback.self)
 
-  func finish(_ responseJson: String) {
-    responseJson.withCString { cString in
-      doneCallback(strdup(cString))
-    }
+  let state = GenerationRegistry.shared.create(
+    toolCallback: toolCallback,
+    doneCallback: doneCallback,
+    streamCallback: streamCallback
+  )
+
+  func donePayload(_ body: String) -> String {
+    "{\"generation\":\(state.id),\(body)}"
   }
 
-  func emitDelta(_ delta: String) {
-    // Each snapshot is heap-allocated; Dart frees via xs_fm_free_string.
-    // jsonEscaped produces a properly escaped JSON string literal (newlines
-    // and quotes included) — never interpolate raw text into JSON.
-    let payload = "{\"delta\":\(jsonEscaped(delta))}"
-    payload.withCString { cString in
-      streamCallback(strdup(cString))
-    }
+  func finish(_ responseJson: String) {
+    state.finish(responseJson)
   }
 
   func failNow(code: String, message: String) -> Int32 {
-    finish(jsonEscapedError(code: code, message: message))
-    return 1
+    finish(donePayload(jsonErrorBody(code: code, message: message)))
+    return -1
   }
 
   guard let requestJson = request_json.map({ String(cString: $0) }) else {
@@ -276,16 +461,18 @@ public func xs_fm_generate_stream_async(
   #if canImport(FoundationModels)
     do {
       let generationSchema = try materializeFromDartJSON(schemaJson ?? [:])
-      let tools = try prepareNativeTools(from: toolsJson, callback: toolCallback)
+      let tools = try prepareNativeTools(from: toolsJson, callback: toolCallback, state: state)
 
       Task.detached {
         do {
           let model = SystemLanguageModel.default
           guard model.isAvailable else {
             finish(
-              jsonEscapedError(
-                code: "engine_unavailable",
-                message: "Apple Intelligence not available"
+              donePayload(
+                jsonErrorBody(
+                  code: "engine_unavailable",
+                  message: "Apple Intelligence not available"
+                )
               )
             )
             return
@@ -304,7 +491,7 @@ public func xs_fm_generate_stream_async(
             XsFmDebug.log("generate-stream: schema present — falling back to blocking respond")
             let response = try await session.respond(to: prompt, schema: generationSchema!)
             let content = response.content.jsonString
-            finish("{\"ok\":true,\"output\":\(jsonEscaped(content))}")
+            finish(donePayload("\"ok\":true,\"output\":\(jsonEscaped(content))"))
             return
           }
 
@@ -317,7 +504,8 @@ public func xs_fm_generate_stream_async(
             if full.count > lastEmittedLength {
               let delta = String(full.suffix(full.count - lastEmittedLength))
               lastEmittedLength = full.count
-              emitDelta(delta)
+              // Gated by the generation state — a no-op after cancel.
+              state.emitDelta(delta)
             }
           }
 
@@ -325,18 +513,20 @@ public func xs_fm_generate_stream_async(
           // accumulated stream to avoid a second model call.
           let finalText = try await stream.collect().content
           XsFmDebug.log("generate-stream: ok, output=\(finalText.prefix(120))")
-          finish("{\"ok\":true,\"output\":\(jsonEscaped(finalText))}")
+          finish(donePayload("\"ok\":true,\"output\":\(jsonEscaped(finalText))"))
         } catch {
           XsFmDebug.log("generate-stream: error — \(error)")
           finish(
-            jsonEscapedError(
-              code: "generation_error",
-              message: error.localizedDescription
+            donePayload(
+              jsonErrorBody(
+                code: "generation_error",
+                message: error.localizedDescription
+              )
             )
           )
         }
       }
-      return 0
+      return state.id
     } catch {
       return failNow(code: "schema_error", message: error.localizedDescription)
     }
@@ -378,15 +568,20 @@ public func xs_fm_generate_stream_async(
     let description: String
     let parameters: GenerationSchema
     let callback: XsFmToolCallback
+    /// Generation state owning this tool's calls — gates the payload post so
+    /// a cancelled generation can never post a callback after Dart tore down.
+    weak var state: GenerationState?
 
     init(
       name: String,
       description: String,
       parameters: GenerationSchema?,
-      callback: XsFmToolCallback
+      callback: XsFmToolCallback,
+      state: GenerationState?
     ) {
       self.name = name
       self.description = description
+      self.state = state
       // Use the caller's schema when provided; only fall back to an
       // explicit empty-object schema for tools without arguments.
       // (This init previously DISCARDED `parameters` and always built an
@@ -412,19 +607,22 @@ public func xs_fm_generate_stream_async(
       let argsJSON = try extractArgsJSON(from: arguments.content)
       XsFmDebug.log("tool call: name=\(name) args=\(argsJSON.prefix(120))")
 
-      // Suspend until Dart calls xs_fm_tool_respond for our id.
+      // Suspend until Dart calls xs_fm_tool_respond for our id. The payload
+      // post happens under the generation state lock (see postToolCall), so
+      // it is atomic with respect to cancel — after xs_fm_cancel returns, no
+      // payload for this generation can be posted, and any continuation
+      // registered before the cancel is resumed with an error.
       return try await withCheckedThrowingContinuation {
         (continuation: CheckedContinuation<String, Error>) in
-        let id = PendingToolRegistry.shared.register(continuation)
-        let payload: [String: Any] = [
-          "id": id,
-          "name": name,
-          "arguments": argsJSON,
-        ]
-        let data = (try? JSONSerialization.data(withJSONObject: payload)) ?? Data()
-        let payloadString = String(data: data, encoding: .utf8) ?? "{}"
-        payloadString.withCString { cString in
-          callback(strdup(cString))
+        guard let state = self.state,
+          state.postToolCall(
+            name: name,
+            argumentsJSON: argsJSON,
+            continuation: continuation
+          ) != nil
+        else {
+          continuation.resume(throwing: NativeToolError(code: "generation_cancelled"))
+          return
         }
       }
     }
@@ -437,7 +635,8 @@ public func xs_fm_generate_stream_async(
 
   func prepareNativeTools(
     from toolsJSON: [[String: Any]],
-    callback: XsFmToolCallback?
+    callback: XsFmToolCallback?,
+    state: GenerationState
   ) throws -> [any Tool] {
     guard let callback = callback else {
       XsFmDebug.log(
@@ -463,7 +662,8 @@ public func xs_fm_generate_stream_async(
         name: name,
         description: description,
         parameters: schema,
-        callback: callback
+        callback: callback,
+        state: state
       )
     }
   }
@@ -518,14 +718,21 @@ func jsonEscaped(_ s: String) -> String {
 }
 
 func jsonEscapedError(code: String, message: String) -> String {
+  "{" + jsonErrorBody(code: code, message: message) + "}"
+}
+
+/// Error body WITHOUT the outer braces — embeddable inside a payload that
+/// carries additional top-level fields (e.g. the generation id).
+func jsonErrorBody(code: String, message: String) -> String {
   let payload: [String: Any] = [
     "ok": false,
     "error": ["code": code, "message": message],
   ]
   guard let data = try? JSONSerialization.data(withJSONObject: payload),
-    let s = String(data: data, encoding: .utf8)
+    let s = String(data: data, encoding: .utf8),
+    s.hasPrefix("{"), s.hasSuffix("}"), s.count >= 2
   else {
-    return "{\"ok\":false,\"error\":{\"code\":\"\(code)\",\"message\":\"\"}}"
+    return "\"ok\":false,\"error\":{\"code\":\"\(code)\",\"message\":\"\"}"
   }
-  return s
+  return String(s.dropFirst().dropLast())
 }

@@ -30,9 +30,12 @@ import 'package:xsoulspace_inference_apple_foundation/src/coding_agent_runner.da
 import 'package:xsoulspace_inference_apple_foundation/src/intent_closure_runner.dart'
     show wireSigintDump;
 import 'package:xsoulspace_inference_apple_foundation/src/native_bridge/native_client.dart';
+import 'package:xsoulspace_inference_openrouter/xsoulspace_inference_openrouter.dart'
+    show OpenRouterInferenceClient, OpenRouterModelNames;
 
 const _backendAfm = 'apple_foundation_afm';
 const _backendScripted = 'scripted_llm_free';
+const _defaultOpenRouterModel = 'poolside/laguna-xs-2.1:free';
 
 Future<void> main(List<String> args) async {
   final cli = parseCliArgs(args);
@@ -41,6 +44,12 @@ Future<void> main(List<String> args) async {
   final jailArg = cli['jail'];
   final scripted = cli.containsKey('scripted');
   final sentence = cli['_positional'];
+  // P1 dogfooding: `--backend open_router --model <or/model>` runs the SAME
+  // loop with an OpenRouter model (native tool_calls, session-per-decision
+  // codec). The backend label names the model (K discipline).
+  final backendArg = cli['backend'] ?? (scripted ? _backendScripted : _backendAfm);
+  final openRouter = backendArg == 'open_router';
+  final orModel = cli['model'] ?? _defaultOpenRouterModel;
 
   if (taskId == null && sentence == null) {
     stderr.writeln(
@@ -50,7 +59,8 @@ Future<void> main(List<String> args) async {
     exit(64);
   }
 
-  final backend = scripted ? _backendScripted : _backendAfm;
+  final backend =
+      openRouter ? 'open_router:$orModel' : backendArg;
   final task = taskId != null
       ? (codingAgentTasks[taskId] ??
             (throw ArgumentError.value(
@@ -60,13 +70,13 @@ Future<void> main(List<String> args) async {
             )))
       : taskFromSentence(sentence!);
 
-  if (!scripted) {
+  if (!scripted && !openRouter) {
     final client = AppleFoundationNativeClient();
     await client.load();
     if (!await client.refreshAvailability()) {
       stderr.writeln(
         'Apple Foundation Model unavailable. '
-        'Re-run with --scripted for the LLM-free proof '
+        'Re-run with --scripted or --backend open_router for the LLM proofs '
         '(on-device claims stay UNTESTED, never PASS).',
       );
       exit(2);
@@ -84,7 +94,24 @@ Future<void> main(List<String> args) async {
             : Directory('${jailArg}_run$i')..createSync(recursive: true));
     try {
       ModelRouter? router;
-      if (!scripted) {
+      if (openRouter) {
+        final apiKey = Platform.environment['OPENROUTER_API_KEY'];
+        if (apiKey == null || apiKey.isEmpty) {
+          stderr.writeln('OPENROUTER_API_KEY not set.');
+          exit(2);
+        }
+        router = ModelRouter(
+          inferenceClientsBuilders: {
+            OpenRouterModelNames.openRouter: () =>
+                OpenRouterInferenceClient(apiKey: apiKey, defaultModel: orModel),
+          },
+        );
+        final modelId = ModelId('coding_agent');
+        router.models[modelId] = Model(
+          id: modelId,
+          name: OpenRouterModelNames.openRouter,
+        );
+      } else if (!scripted) {
         router = ModelRouter(
           inferenceClientsBuilders: {
             DefaultModelNames.appleFoundation: () =>

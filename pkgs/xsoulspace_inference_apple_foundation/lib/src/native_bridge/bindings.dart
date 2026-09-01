@@ -63,6 +63,10 @@ typedef GenerateStreamAsyncDart =
 typedef ToolRespondNative = Int32 Function(Pointer<Char>, Pointer<Char>);
 typedef ToolRespondDart = int Function(Pointer<Char>, Pointer<Char>);
 
+/// int32_t xs_fm_cancel(int32_t)
+typedef CancelNative = Int32 Function(Int32);
+typedef CancelDart = int Function(int);
+
 /// void xs_fm_free_string(char*)
 typedef FreeStringNative = Void Function(Pointer<Char>);
 typedef FreeStringDart = void Function(Pointer<Char>);
@@ -88,6 +92,11 @@ abstract interface class XsFmBindings {
     Pointer<NativeFunction<DoneCbNative>> doneCb,
   );
   int toolRespond(Pointer<Char> id, Pointer<Char> resultJson);
+
+  /// Cancels an in-flight generation (callback-after-delete fix). After this
+  /// returns 0, the bridge guarantees no further callback invocations for
+  /// that generation.
+  int cancelGeneration(int generationId);
   void freeString(Pointer<Char> s);
   void setDebug(int enabled);
 }
@@ -109,6 +118,9 @@ final class LibraryXsFmBindings implements XsFmBindings {
       toolRespondFn = library
           .lookup<NativeFunction<ToolRespondNative>>('xs_fm_tool_respond')
           .asFunction(),
+      cancelFn = library
+          .lookup<NativeFunction<CancelNative>>('xs_fm_cancel')
+          .asFunction(),
       freeStringFn = library
           .lookup<NativeFunction<FreeStringNative>>('xs_fm_free_string')
           .asFunction(),
@@ -120,6 +132,7 @@ final class LibraryXsFmBindings implements XsFmBindings {
   final GenerateAsyncDart generateAsyncFn;
   final GenerateStreamAsyncDart generateStreamAsyncFn;
   final ToolRespondDart toolRespondFn;
+  final CancelDart cancelFn;
   final FreeStringDart freeStringFn;
   final SetDebugDart setDebugFn;
 
@@ -144,6 +157,9 @@ final class LibraryXsFmBindings implements XsFmBindings {
   @override
   int toolRespond(Pointer<Char> id, Pointer<Char> resultJson) =>
       toolRespondFn(id, resultJson);
+
+  @override
+  int cancelGeneration(int generationId) => cancelFn(generationId);
 
   @override
   void freeString(Pointer<Char> s) => freeStringFn(s);

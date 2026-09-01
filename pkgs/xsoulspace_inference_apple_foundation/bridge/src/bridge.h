@@ -31,8 +31,18 @@ extern "C" {
 /// 1 when SystemLanguageModel.default.isAvailable, else 0.
 int32_t xs_fm_is_available(void);
 
-/// Starts an asynchronous generation turn. Returns 0 on accept, 1 on
-/// immediate failure (done_cb is still invoked with the error).
+/// Starts an asynchronous generation turn. Returns the generation id (> 0)
+/// on accept, or -1 on immediate failure (done_cb is still invoked with the
+/// error). Every payload delivered via tool_cb/done_cb/stream_cb carries
+/// {"generation": <id>} so Dart can drop stale callbacks from cancelled
+/// generations.
+///
+/// Cancel contract (callback-after-delete fix): Dart MUST call
+/// xs_fm_cancel(generation_id) before closing its NativeCallable listeners.
+/// After xs_fm_cancel returns 0, the bridge guarantees NO further
+/// tool_cb/done_cb/stream_cb invocations for that generation: pending tool
+/// continuations are resumed with a cancellation error, the Swift task is
+/// cancelled, and every callback path is gated on the generation state.
 ///
 /// request_json shape:
 /// {
@@ -57,6 +67,12 @@ int32_t xs_fm_generate_stream_async(const char *request_json, void *tool_cb,
 /// Delivers a tool result for a pending tool_cb payload id.
 /// Returns 0 if the id was pending, 1 otherwise.
 int32_t xs_fm_tool_respond(const char *id, const char *result_json);
+
+/// Cancels an in-flight generation: resumes every pending tool continuation
+/// with a cancellation error, cancels the Swift task, and permanently gates
+/// all callbacks for that generation (they become no-ops). Returns 0 if the
+/// generation was cancelled, 1 if the id is unknown (already finished).
+int32_t xs_fm_cancel(int32_t generation_id);
 
 #ifdef __cplusplus
 }
