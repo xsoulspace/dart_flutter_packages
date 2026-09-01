@@ -6,18 +6,19 @@ library;
 
 import 'package:test/test.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
+import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart';
 import 'package:xsoulspace_agentic_harness/benchmark_api.dart';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
-/// Emits the SAME failing patch call on every turn — the degenerate echo
-/// attractor observed on edit_01 (guided arm).
+/// Emits the SAME failing tool call on every turn — the degenerate echo
+/// attractor observed on edit_01 (guided arm). (The legacy patch_file tool
+/// was hard-cut, B4; the echo vehicle is now a `read` of a missing file,
+/// which fails with a structured error every round.)
 class EchoLoopHandler implements GenerationHandler {
   static const call = ToolCall(
-    name: ToolName('patch_file'),
+    name: ToolName('read'),
     arguments: {
-      'path': 'config.dart',
-      'anchor': 'anchor_not_unique',
-      'new_text': 'unique_anchor',
+      'path': 'missing.dart',
     },
   );
 
@@ -60,7 +61,7 @@ void main() {
       final runner = CodingSuiteRunner(
         buildHandler: (_) => EchoLoopHandler(),
         backendLabel: 'loop-integration',
-        extraTools: [patchFileTool],
+        extraTools: [(root) => readTool(FsToolsRoot(root))],
       );
       final result = await runner.runAll([task]);
       final r = result.results.single;

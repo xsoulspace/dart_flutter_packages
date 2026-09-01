@@ -40,27 +40,43 @@ void registerBookmarkIntents(World world) {
 }
 
 void main() {
-  test('define → list → call: the model builds the program surface', () async {
+  test('define → list → call: ONE self-executing define (B1) builds the '
+      'program surface', () async {
     final world = _world();
-    registerBookmarkIntents(world);
     final define = intentDefineTool(world);
     final call = intentCallTool(world);
 
-    // define two intents (the model's contract moves — no code tokens)
+    // define two intents — ONE move each: intent node + whole op chain
+    // (host tracks every id, wires impl, validates the chain). No code
+    // tokens; specs rows are the closed op vocabulary.
+    const saveSpecs = [
+      {'label': 'load_arg', 'a': 'url'}, // 0
+      {'label': 'starts_with', 'b': 'http'}, // 1
+      {'label': 'jump_if_false', 'b': '#5'}, // 2 → false branch
+      {'label': 'push_state', 'a': 'bookmarks'}, // 3
+      {'label': 'literal', 'b': '{"saved": true}', 'next': 6}, // 4
+      {'label': 'literal', 'b': '{"saved": false}'}, // 5
+      {'label': 'return'}, // 6
+    ];
     final r = _dec(await define.execute({
       'action': 'define',
       'name': 'save_url',
       'params': ['url:string'],
       'returns': 'bool',
-      'description': 'Saves the current URL.',
+      'specs': saveSpecs,
     }));
-    expect(r['ok'], true);
-    expect((r['defined'] as Map)['name'], 'save_url');
+    expect(r['ok'], true, reason: '${r['problems']}');
+    expect(r['defined'], 'save_url');
+    expect(r['problems'], isEmpty);
     await define.execute({
       'action': 'define',
       'name': 'list_saved',
-      'returns': 'list',
-      'description': 'Lists saved URLs.',
+      'returns': 'int',
+      'specs': [
+        {'label': 'load_state', 'a': 'bookmarks'},
+        {'label': 'list_len'},
+        {'label': 'return'},
+      ],
     });
 
     // list shows both
@@ -77,7 +93,7 @@ void main() {
       contains('list_saved'),
     );
 
-    // call → typed result, defined-and-observable behavior
+    // call → typed result through the SELF-EXECUTING meaning chain
     final saved = _dec(await call.execute({
       'intent': 'save_url',
       'args': ['url=https://example.com'],
@@ -86,14 +102,58 @@ void main() {
     expect(((saved['result'] as Map)['saved']), true);
 
     final listed2 = _dec(await call.execute({'intent': 'list_saved'}));
-    expect((listed2['result'] as Map)['count'], 1);
-    expect(
-      ((listed2['result'] as Map)['urls'] as List),
-      contains('https://example.com'),
-    );
+    expect((listed2['result'] as Map)['value'], 1);
   });
 
-  test('modify = re-define over the same name (a meaning-tree edit)', () async {
+  test('host-registered executors still take precedence over chains '
+      '(host owns semantics; defineIntent is the host-level API)', () async {
+    final world = _world();
+    registerBookmarkIntents(world);
+    // Host API (not the tool): a contract + host executor pair is legal —
+    // the executor IS the implementation.
+    defineIntent(world, name: 'save_url', params: ['url:string']);
+    final call = intentCallTool(world);
+    final saved = _dec(await call.execute({
+      'intent': 'save_url',
+      'args': ['url=https://example.com'],
+    }));
+    expect(saved['ok'], true);
+    expect(((saved['result'] as Map)['saved']), true);
+  });
+
+  test('define without specs is a teaching error, not a no-op (B1)',
+      () async {
+    final world = _world();
+    final r = _dec(await intentDefineTool(world).execute({
+      'action': 'define',
+      'name': 'future_intent',
+    }));
+    expect(r['ok'], false);
+    expect(r['error'], contains('define requires specs'));
+    expect(r['error'], contains('every intent needs an executor'));
+    expect(r['repair'], intentExecutorRepairHint);
+    expect((r['valid_ops'] as List), contains('return'));
+    // Nothing was spawned: the no-op path is gone.
+    expect(mt.hasMeaningNode(world, 'future_intent'), isFalse);
+  });
+
+  test('redefine_chain is an accepted alias of define (one-release shim)',
+      () async {
+    final world = _world();
+    final r = _dec(await intentDefineTool(world).execute({
+      'action': 'redefine_chain',
+      'name': 'save_url',
+      'specs': [
+        {'label': 'literal', 'b': '1'},
+        {'label': 'return'},
+      ],
+    }));
+    expect(r['ok'], true, reason: '${r['problems']}');
+    expect(mt.hasMeaningNode(world, 'save_url'), isTrue);
+  });
+
+  test('modify = re-define over the same name (atomic chain replacement)',
+      () async {
     final world = _world();
     final define = intentDefineTool(world);
     await define.execute({
@@ -101,28 +161,39 @@ void main() {
       'name': 'save_url',
       'params': ['url:string'],
       'description': 'v1',
+      'specs': [
+        {'label': 'literal', 'b': '1'},
+        {'label': 'return'},
+      ],
     });
-    await define.execute({
+    final r = _dec(await define.execute({
       'action': 'define',
       'name': 'save_url',
       'params': ['url:string', 'title:string'],
       'description': 'v2 accepts a title',
-    });
+      'specs': [
+        {'label': 'load_arg', 'a': 'url'},
+        {'label': 'return'},
+      ],
+    }));
+    expect(r['ok'], true, reason: '${r['problems']}');
+    expect(r['dropped'], 2, reason: 'old 2-op chain dropped atomically');
     final intents = listIntents(world);
     expect(intents, hasLength(1)); // no duplicate node
     expect(intents.single['params'], contains('title:string'));
     expect(intents.single['description'], 'v2 accepts a title');
   });
 
-  test('calling an unimplemented intent fails with the defined set', () async {
+  test('calling an unimplemented intent fails with ONE structured dialect '
+      '(B2: what failed, what exists, the exact repair move)', () async {
     final world = _world();
-    await intentDefineTool(world).execute({
-      'action': 'define',
-      'name': 'future_intent',
-    });
+    defineIntent(world, name: 'future_intent');
     final r = await callIntent(world, name: 'future_intent');
     expect(r['ok'], false);
+    expect(r['error'], contains('no meaning executor for intent'));
+    expect(r['error'], contains('re-send intent_define'));
     expect((r['defined'] as List), contains('future_intent'));
+    expect(r['repair'], intentExecutorRepairHint);
   });
 
   test('intent-graded goal: the loop terminates when scripted calls verify',
@@ -164,14 +235,15 @@ void main() {
     expect(const RunGradedGoalPolicy().evaluate(ctx), isNull);
   });
 
-  // ---- J1 macro on the intent surface: redefine_chain (ADR 0018) ----
-  test('redefine_chain macro: atomic drop + rebuild repairs accretion',
+  // ---- J1 macro on the intent surface: self-executing define (ADR 0018) ----
+  test('define macro: atomic drop + rebuild repairs accretion',
       () async {
     final world = _world();
     final define = intentDefineTool(world);
 
     // A BROKEN chain first: impl wired to a dead-end chain (no return op).
-    await define.execute({'action': 'define', 'name': 'save_url'});
+    // Host-level setup (the tool's define now always requires specs).
+    defineIntent(world, name: 'save_url');
     addMeaningNode(world, kind: 'op', label: 'load_state', props: {'a': 'bookmarks'});
     addMeaningNode(world, kind: 'op', label: 'list_len');
     linkMeaning(world, from: 'save_url', relation: 'impl', to: 'op_1');
@@ -181,7 +253,7 @@ void main() {
     // ONE move replaces the whole logic — declarative spec rows with
     // `next` (default i+1) and `#row` jump targets; host tracks every id.
     final r = _dec(await define.execute({
-      'action': 'redefine_chain',
+      'action': 'define',
       'name': 'save_url',
       'params': ['url:string'],
       'returns': 'bool',

@@ -33,6 +33,7 @@ import 'dart:convert';
 
 import 'package:ecsly/ecsly.dart';
 
+import 'intents.dart' show noMeaningExecutorMessage;
 import 'meaning_tree.dart';
 
 /// The CLOSED executor vocabulary. Stewardship probe: countable, and every
@@ -86,7 +87,9 @@ Map<String, dynamic> interpretMeaningProgram(
   }
   if (entry == null) {
     return {
-      '_result': {'error': 'no meaning executor for intent: $intent'},
+      // B2: the ONE "no executor" dialect — same message the intent_call
+      // tool and the materialized program emit.
+      '_result': {'error': noMeaningExecutorMessage(intent)},
       '_state': state,
     };
   }
@@ -398,7 +401,15 @@ class _MeaningVm {
           }
           next = '$b';
         case 'return':
-          final top = stack.isEmpty ? null : stack.removeLast();
+          if (stack.isEmpty) {
+            result = {
+              'error': 'return without value (op $pc): the chain reached the '
+                  'return op with an empty stack — push a literal (or the '
+                  'value to return) BEFORE the return op',
+            };
+            break;
+          }
+          final top = stack.removeLast();
           result = top is Map ? top.cast<String, dynamic>() : {'value': top};
         case 'error':
           final top = stack.isEmpty ? null : stack.removeLast();
@@ -485,8 +496,15 @@ Map<String, dynamic> runIntent(
   final impl = (program['impl'] as Map).cast<String, dynamic>();
   final entry = impl[name];
   if (entry == null) {
+    // B2: canonical message, INLINED (generated program has no harness
+    // import) — parity with the interpreter is pinned by the parity test.
     return {
-      '_result': {'error': 'no meaning executor for intent: ' + name},
+      '_result': {
+        'error': 'no meaning executor for intent: ' +
+            name +
+            ' — every intent needs an executor. '
+                're-send intent_define (action define) with specs',
+      },
       '_state': state,
     };
   }
@@ -601,7 +619,17 @@ Map<String, dynamic> _runProgram(
         next = '$b';
         break;
       case 'return':
-        final top = stack.isEmpty ? null : stack.removeLast();
+        if (stack.isEmpty) {
+          result = {
+            'error': 'return without value (op ' +
+                pc! +
+                '): the chain reached the return op with an empty stack '
+                '- push a literal (or the value to return) BEFORE the '
+                'return op',
+          };
+          break;
+        }
+        final top = stack.removeLast();
         result =
             top is Map ? top.cast<String, dynamic>() : {'value': top};
         break;

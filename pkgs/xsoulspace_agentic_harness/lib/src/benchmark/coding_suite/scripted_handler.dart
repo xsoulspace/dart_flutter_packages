@@ -25,18 +25,17 @@ final Map<String, List<ScriptedStep>> scriptedBehaviors = {
   // the tree. Tokens/decision per move vs intent_01's single big write is the
   // I1/I2 matrix column.
   'intent_02_bookmark_meaning_executor': [
-    ScriptedStep('intent_define', {
-      'action': 'define',
-      'name': 'save_url',
-      'params': ['url:string'],
-      'returns': 'bool',
-      'description': 'Saves a URL if it starts with http.',
+    // B1: contract-only `define` no longer exists — every intent needs an
+    // executor. The micro-moves arm builds the intent NODES (stable id =
+    // the intent name, required by intent_call resolution) and its op
+    // chains entirely through act_with_project micro-moves.
+    ScriptedStep('act_with_project', {
+      'action': 'add', 'kind': 'intent', 'label': 'save_url',
+      'id': 'save_url',
     }),
-    ScriptedStep('intent_define', {
-      'action': 'define',
-      'name': 'list_saved',
-      'returns': 'int',
-      'description': 'Counts saved bookmarks.',
+    ScriptedStep('act_with_project', {
+      'action': 'add', 'kind': 'intent', 'label': 'list_saved',
+      'id': 'list_saved',
     }),
     // save_url chain: load_arg(url) -> starts_with(http) -> jump_if_false
     // -> push_state(bookmarks) -> literal(saved:true) -> return; the false
@@ -116,12 +115,13 @@ final Map<String, List<ScriptedStep>> scriptedBehaviors = {
     ScriptedStep('intent_call', {'intent': 'list_saved'}),
   ],
   // J1 macro arm: the SAME bookmark behavior in 5 moves instead of 24 —
-  // redefine_intent carries an intent's whole logic (branchy chain via
-  // declarative spec rows: 'next' + '#row' jump targets), the host does
-  // the drop+rebuild+impl-wiring. Moves/task is the J1 matrix column.
+  // intent_define (action define, B1) carries an intent's whole logic
+  // (branchy chain via declarative spec rows: 'next' + '#row' jump
+  // targets); the host does the drop+rebuild+impl-wiring. Moves/task is
+  // the J1 matrix column.
   'intent_03_bookmark_macros': [
     ScriptedStep('intent_define', {
-      'action': 'redefine_chain',
+      'action': 'define',
       'name': 'save_url',
       'params': ['url:string'],
       'returns': 'bool',
@@ -136,7 +136,7 @@ final Map<String, List<ScriptedStep>> scriptedBehaviors = {
       ],
     }),
     ScriptedStep('intent_define', {
-      'action': 'redefine_chain',
+      'action': 'define',
       'name': 'list_saved',
       'returns': 'int',
       'specs': [

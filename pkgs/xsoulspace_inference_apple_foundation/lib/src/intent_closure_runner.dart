@@ -16,18 +16,56 @@ import 'package:xsoulspace_agentic_harness/src/tooling/act_with_project.dart'
 import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
     show FsToolsRoot, runTool;
 
-/// J1.2 — measured, budgeted system prompt (~160 tokens). Teaching the flow
-/// lives HERE and in tool descriptions — nowhere else.
+/// J1.5.5 — the shared decision meter: counts decisions (generate calls) and
+/// honest projection tokens (Situation.tokensUsed). Move counts come from
+/// the world's durable tool beats AFTER the run — internal tool rounds never
+/// surface on the final response, so they must be read from thread history.
+/// Extracted here so `bin/intent_closure_afm.dart` and
+/// `bin/coding_agent.dart` share ONE implementation (K columns must be
+/// measured the same way to be comparable).
+class DecisionMeter implements GenerationHandler {
+  DecisionMeter(this.inner);
+  final GenerationHandler inner;
+  int decisions = 0;
+  int projectionTokens = 0;
+
+  @override
+  Future<ActorGenerateResponse> generate(
+    World world,
+    ActorGenerateRequest request,
+  ) async {
+    final situation = world.getEntity(request.actorEntity).$1.get<Situation>();
+    if (situation != null) projectionTokens += situation.tokensUsed;
+    final response = await inner.generate(world, request);
+    decisions++;
+    return response;
+  }
+}
+
+/// J1.5.5 — Ctrl-C during an on-device run still leaves a post-mortem.
+void wireSigintDump(FlightRecorder recorder) {
+  ProcessSignal.sigint.watch().listen((_) {
+    stderr
+      ..writeln('SIGINT — flight recorder dump (J1.5.3):')
+      ..writeln(recorder.dump());
+    exit(130);
+  });
+}
+
+/// J1.2 — measured, budgeted system prompt (~180 tokens). Teaching the flow
+/// lives HERE and in tool descriptions — nowhere else. B1: `define` is ONE
+/// self-executing action (REQUIRES specs — an intent without specs has no
+/// executor and can never be called).
 const afmSystemPrompt =
     'You build a bookmark manager by picking tiny moves. You never write '
     'code. Tools: intent_define, act_with_project, intent_call.\n'
-    'Flow: 1) intent_define action redefine_chain for save_url (param '
-    '"url:string", returns bool) and again for list_saved (returns int) '
-    '— ONE move per intent, the host wires the whole chain. Op vocabulary: '
-    'load_arg, load_state, push_state, literal, list_len, starts_with, eq, '
-    'not, jump_if_false, return. Spec rows: label + props a/b; jump '
-    'targets use "#row" (e.g. "#5" jumps to spec row 5); each row '
-    'continues to the next row unless "next" says otherwise. '
+    'Flow: 1) intent_define action define WITH specs — ONE move defines '
+    'the intent AND wires its whole op chain. Define save_url (param '
+    '"url:string", returns bool), then list_saved (returns int). Op '
+    'vocabulary: load_arg, load_state, push_state, literal, list_len, '
+    'starts_with, eq, not, jump_if_false, return. Spec rows: label + '
+    'props a/b; jump targets use "#row" (e.g. "#5"); each row continues '
+    'to the next row unless "next" says otherwise. '
     '2) act_with_project action materialize. 3) intent_call save_url then '
     'intent_call list_saved to verify.';
 

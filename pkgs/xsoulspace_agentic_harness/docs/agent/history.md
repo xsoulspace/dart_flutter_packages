@@ -7,6 +7,42 @@ One entry per landed body of work; durable decisions live in
 
 ## Landed
 
+- **Hard-cut pass: coding-agent deliverable + legacy edit paths (2026-09-01,
+  Stage J continuation — B1–B8 cuts)**: (B1) `intent_define` collapsed to
+  ONE self-executing action — `define` REQUIRES specs and ALWAYS wires the
+  `impl` edge + validates the chain host-side; the contract-only no-op path
+  (the J1.4 on-device blocker: the model picked `define` without specs, then
+  could not recover from `intent_call` failures) is deleted; `redefine_chain`
+  survives as an accepted alias for one release. (B2) ONE structured failure
+  dialect for unimplemented intents (intent name + defined set + the exact
+  repair move), shared by `intent_call`, the in-process interpreter, and the
+  materialized program (template inlines it; parity pinned). (B4) legacy
+  edit paths deleted: `tooling/tree_patch.dart` (628 lines incl.
+  `patch_symbol`/`rename_symbol`), `tooling/patch_tool.dart`,
+  `tooling/transform_flow.dart`, `benchmark/coding_suite/ops_handler.dart`,
+  the `tasks_ops` fixture, and all barrel exports — `grep -r
+  "tree_patch\|patch_tool\|transform_flow" lib/` is empty; superseded by
+  `act_with_project` + `fs_tools` (read/write/list_dir/glob/grep/run).
+  (B5) `test/harness_headless_tools_test.dart` (manual-schedule crutch,
+  50 ms sleeps) deleted; its two unique coverage pieces (per-agent handler
+  routing, runtime model swap) ported onto `runUntilIdle` in
+  `test/handler_routing_test.dart`. (B3/B7/B8, host package
+  `xsoulspace_inference_apple_foundation`) ONE entry point
+  `bin/coding_agent.dart` (+ `lib/src/coding_agent_runner.dart`): jail +
+  fs_tools + act_with_project + intent tools, session-per-decision AFM
+  bridge, `AgencyPolicy(maxToolRounds: 12)`, intent-graded OR run-graded
+  verifier wired inside the loop, bounded host repairs via
+  `openFreshDecision` consuming monotonic `AttemptCount` against
+  `maxGoalAttempts` (measured: the AFM native tool-loop runs a whole ReAct
+  chain inside ONE decision, so the pending-marker trigger never fires —
+  driver-level repairs must consume the same budget), pass@k protocol with
+  per-run logs + summary rows in `benchmark/runs/coding_agent_*`. Shared
+  meter/SIGINT extracted into the runner lib (one implementation). Also:
+  the intent-graded verifier's in-process replay now starts from
+  `initialState()` (the actor's own `intent_call` state no longer leaks
+  into the oracle replay — tier-2 semantics; regression test in
+  `build_gates_test.dart`).
+
 - **Stage J1.5 — loop bounds + runtime observability (2026-08-28)**: the
   fix-stage endless-loop fix. Traced hazards: `RunGradedGoalPolicy`
   re-prompted on every failing verifier stamp with NO monotonic budget
@@ -211,7 +247,15 @@ Practices:
 ## Cleanup ledger (historical)
 
 - ~~8 known-failing core tests~~ → fixed as Phase 4 blockers were cleared.
-- Migrate/delete legacy manual-schedule tests (sleep + second-pass crutch).
+- ~~Migrate/delete legacy manual-schedule tests (sleep + second-pass
+  crutch)~~ — done 2026-09-01 (B5): `harness_headless_tools_test.dart`
+  deleted; unique routing coverage ported to `test/handler_routing_test.dart`
+  (`runUntilIdle` path).
+- ~~Collapse overlapping edit paths (`patch_file` / `tree_patch` /
+  `structured_editor`): fold into registry-truth surfaces once J1 macros
+  replace their benchmark role; delete~~ — done 2026-09-01 (B4):
+  `tree_patch`/`patch_tool`/`transform_flow`/`ops_handler` deleted from lib/
+  + barrels (see Landed, 2026-09-01).
 - ~~Delete bisection probes (`tool/probe_*.dart`, `benchmark/debug_*.dart`)
   after extracting lessons into checks/tests~~ — done 2026-08-25 (A7): probes
   deleted; lessons survive in `test/run_until_idle_tool_race_test.dart` and

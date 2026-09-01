@@ -23,8 +23,11 @@ task sentence (host prompt, ~20 tokens)
 act_with_project (ONE tool, closed sub-action enum):
     add/link/set_prop/list · macros: add_chain, link_chain (whole chains,
     host assigns ids)
-intent_define: define / list / redefine_chain — redefine_chain is the
-    repair macro: ATOMIC drop+rebuild of one intent's whole op chain.
+intent_define: define / list — define is ONE self-executing action
+    (B1 hard cut): it REQUIRES specs (op rows) and ALWAYS wires the
+    `impl` edge + validates the chain host-side. Contract-only defines
+    (no executor) are DELETED — that no-op path stranded J1.4 on-device.
+    `redefine_chain` stays as an accepted alias for one release.
 intent_call: run an intent of the program you are building (in-process).
    │
    ▼  MEANING TREE = ECS world state (MeaningNode/MeaningProps/MeaningEdge)
@@ -47,16 +50,20 @@ act_with_project action=materialize → materializeMeaningProgram(world)
    expectations hold) — strongest tier
 3. runs checker: exit-0 of a target script
 Parity: interpreter ⇄ materialized Dart is pinned by tests (a real AFM
-divergence bug was found and pinned this way).
+divergence bug was found and pinned this way). `intent_call` failures
+carry ONE structured dialect (B2): intent name + defined intents + the
+exact repair move ("re-send intent_define with specs").
    │
-   ▼  REPAIR (bounded — J1.5)
+   ▼  REPAIR (bounded — J1.5 + B7)
 Failure details carry op/intent ids → model fixes via set_prop /
-redefine_chain. Verifier loop (wireIntentGradedGoal / wireRunGradedGoal)
-stamps GoalVerified mechanically; RunGradedGoalPolicy re-prompts at most
+define (specs). Verifiers (wireIntentGradedGoal / wireRunGradedGoal)
+stamp GoalVerified mechanically; RunGradedGoalPolicy re-prompts at most
 AgencyPolicy.maxGoalAttempts (3) times → then GoalAttemptsExhausted +
-thread suspended (J8 rung 1). Driver-level retries use openFreshDecision
-(fresh round budget). Every budget is monotonic: maxToolRounds (12/chain),
-maxRetries (3, survives tool-call continuations), maxGoalAttempts (3).
+thread suspended (J8 rung 1). Driver-level repairs use openFreshDecision
+(fresh round budget) and consume the SAME monotonic AttemptCount — never
+an unbounded while(true). Every budget is monotonic: maxToolRounds
+(12/chain), maxRetries (3, survives tool-call continuations),
+maxGoalAttempts (3).
    │
    ▼  OBSERVABILITY — no more silent hangs (J1.5.3)
 sampleHarness → HarnessPulse (per-actor decision stack, budgets, verdicts,
@@ -77,20 +84,27 @@ SIGINT / driver exit — even on FAIL. Flutter UI: HarnessProfilerView
 | Verifiers + goal loop + openFreshDecision | `lib/src/tooling/build_gates.dart` |
 | Loop, budgets (canSleep), recorder sampling | `lib/src/harness_loop.dart` |
 | Pulse + flight recorder | `lib/src/observation/harness_inspector.dart` |
-| On-device driver | `xsoulspace_inference_apple_foundation/bin/intent_closure_afm.dart` |
+| On-device intent-closure driver (J1.4 benchmark) | `../xsoulspace_inference_apple_foundation/bin/intent_closure_afm.dart` |
+| **On-device coding agent (THE deliverable)** | `../xsoulspace_inference_apple_foundation/bin/coding_agent.dart` + `lib/src/coding_agent_runner.dart` |
 | Flutter profiler | `../xsoulspace_agentic_harness_flutter_profiler/` |
 
-## Current situation (2026-08-28, honest)
+## Current situation (2026-09-01, honest)
 
 - **Landed**: meaning tree as world state + zoom projection (ADR 0018);
   intent closure v1 (interpreter ⇄ materialized-Dart parity); macros
-  (intent_03: 5 moves vs 24 micro-moves, suite 23/23 scripted); context
-  overhead 1,487 ≤ 1,500 tokens; J1.5 loop bounds + flight recorder +
-  profiler — every loop monotonic-budgeted, every stuck run ships a dump.
-- **Open blocker (J1.4 gate)**: on-device pass@3 = 0/3. The 2–4k model
-  reliably calls `redefine_chain`/`materialize` but does not connect
-  `intent_call` failures ("intent not implemented") to wiring a meaning
-  executor. Diagnosed, not hidden — the pulse shows it per-decision.
+  (intent_03: 5 moves vs 24 micro-moves, suite 23/23 scripted); **B1** —
+  `intent_define` collapsed to ONE self-executing action (`define`
+  REQUIRES specs, always wires `impl`; `redefine_chain` = accepted alias);
+  **B2** — one honest structured failure dialect; **B4** — legacy edit
+  paths (`tree_patch`, `patch_tool`, `transform_flow`, `ops_handler`)
+  deleted from lib/ + barrels; **B5** — manual-schedule crutch tests
+  deleted (unique routing coverage ported to `runUntilIdle`); **B3/B7** —
+  ONE on-device entry point `bin/coding_agent.dart` with verifiers wired
+  inside the loop and bounded host repairs consuming AttemptCount;
+  **B8** — pass@3 protocol, per-run logs + summary rows.
+- **Open gate (J1.4)**: on-device pass@3 — measured table in
+  [results_stage_j15.md](results_stage_j15.md) §7 (updated live this
+  session; honest PASS/FAIL with pulse dumps cited).
 - **Next levers**: J7/J8 (overseer actor + escalation ladder get the
   structured failure instead of the mover retrying), J2 (context-ownership
   experiment — session-per-decision bridge already committed), J3+ (Dart

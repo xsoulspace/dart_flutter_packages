@@ -22,30 +22,10 @@ import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 import 'package:xsoulspace_inference_apple_foundation/src/intent_closure_runner.dart';
 import 'package:xsoulspace_inference_apple_foundation/src/native_bridge/native_client.dart';
 
-/// Meter: decisions (generate calls) + honest projection tokens
-/// (Situation.tokensUsed). Move counts come from the world's durable tool
-/// beats AFTER the run — internal tool rounds never surface on the final
-/// response, so they must be read from thread history.
+// Meter + SIGINT wiring are SHARED with bin/coding_agent.dart (B3: one
+// implementation lives in the runner lib — DecisionMeter + wireSigintDump).
+
 final ProcessResult _notRun = ProcessResult(0, -1, '', 'not run');
-
-class _I3Meter implements GenerationHandler {
-  _I3Meter(this.inner);
-  final GenerationHandler inner;
-  int decisions = 0;
-  int projectionTokens = 0;
-
-  @override
-  Future<ActorGenerateResponse> generate(
-    World world,
-    ActorGenerateRequest request,
-  ) async {
-    final situation = world.getEntity(request.actorEntity).$1.get<Situation>();
-    if (situation != null) projectionTokens += situation.tokensUsed;
-    final response = await inner.generate(world, request);
-    decisions++;
-    return response;
-  }
-}
 
 Future<void> main(List<String> args) async {
   final client = AppleFoundationNativeClient();
@@ -81,16 +61,11 @@ Future<void> main(List<String> args) async {
     ..upsertResource(AgencyPolicy(maxConcurrent: 1, maxToolRounds: 12))
     ..flush();
 
-  final meter = _I3Meter(DefaultGenerationHandler(router: router));
+  final meter = DecisionMeter(DefaultGenerationHandler(router: router));
   world.getResource<GenerationHandlerResource>().registerDefault(meter);
 
   // J1.5.5: Ctrl-C during an on-device run still leaves a post-mortem.
-  ProcessSignal.sigint.watch().listen((_) {
-    stderr
-      ..writeln('SIGINT — flight recorder dump (J1.5.3):')
-      ..writeln(recorder.dump());
-    exit(130);
-  });
+  wireSigintDump(recorder);
 
   final jail = await Directory.systemTemp.createTemp('intent_closure_');
   final tools = registerIntentClosureTools(world, jail);
@@ -139,7 +114,7 @@ Future<void> main(List<String> args) async {
           'Fix the meaning tree (check your op chains with action list — '
           'every intent needs an impl edge to a FIRST op and a then-chain '
           'to a return op; if an op is missing props a or b, fix it with '
-          'set_prop using the op id from the error; redefine_intent '
+          'set_prop using the op id from the error; intent_define define '
           'replaces one intent\u2019s whole logic in one move), '
           're-materialize, and call the intents to verify. '
           'Original task:\n$afmTaskPrompt',

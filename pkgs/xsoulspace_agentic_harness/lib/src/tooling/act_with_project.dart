@@ -57,12 +57,12 @@ ToolDef actWithProjectTool({
   description:
       'Act on the project as a small graph of concepts (nodes + links). '
       'Sub-actions: list (zoom: point/local/region/summary); add (kind + '
-      'label); link (from/relation/to); set_prop (id/key/value); '
-      'materialize (host turns the tree into runnable source); '
-      'add_chain (whole op chain: specs=[{label, a?, b?, next?, '
+      'label, optional stable id); link (from/relation/to); set_prop '
+      '(id/key/value); materialize (host turns the tree into runnable '
+      'source); add_chain (whole op chain: specs=[{label, a?, b?, next?, '
       '\'b\': "#row" for jumps}]); link_chain (edges=[{from, relation, '
-      'to}]); redefine_intent (name/params/returns/specs — replaces one '
-      'intent\'s whole logic atomically). Answers carry just what changed.',
+      'to}]). Answers carry just what changed. Intent-level definition + '
+      'repair lives on intent_define (action define, requires specs).',
   argsSchema: SchemaBundle(root: FM.object('act', properties: () => [
     FM.prop('action', FM.enum_('action', actActionCases)),
     FM.prop('zoom', FM.enum_('zoom', mt.meaningZoomLevels), optional: true),
@@ -129,6 +129,13 @@ ToolDef actWithProjectTool({
           props: map['props'] is Map
               ? (map['props'] as Map).cast<String, dynamic>()
               : const {},
+          // Optional stable id (B1): pins a node id (e.g. an intent node
+          // whose id MUST be the intent name so intent_call resolves it).
+          // Duplicate ids fail loudly (ArgumentError) — never a silent
+          // overwrite.
+          id: map['id'] is String && (map['id'] as String).isNotEmpty
+              ? map['id'] as String
+              : null,
         );
         final node = mt.meaningComponentOf<mt.MeaningNode>(world, entity)!;
         return {

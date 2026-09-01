@@ -1,0 +1,16 @@
+summary — task: intent_03_bookmark_macros | backend: scripted_llm_free | n: 1 | passed: 1 | pass@1: 1/1 | tokens source: Situation.tokensUsed (projection) | tokens/run: [7755] | decisions/run: [4] | moves/run: [20] | context overflows: 0
+
+summary — task: intent_03_bookmark_macros | backend: scripted_llm_free | n: 1 | passed: 1 | pass@1: 1/1 | tokens source: Situation.tokensUsed (projection) | tokens/run: [7847] | decisions/run: [4] | moves/run: [20] | context overflows: 0
+
+summary — task: bugfix_01_off_by_one | backend: scripted_llm_free | n: 1 | passed: 1 | pass@1: 1/1 | tokens source: Situation.tokensUsed (projection) | tokens/run: [15335] | decisions/run: [13] | moves/run: [13] | context overflows: 0
+
+summary — task: intent_03_bookmark_macros | backend: apple_foundation_afm | n: 1 | passed: 0 | pass@1: 0/1 | tokens source: Situation.tokensUsed (projection) | tokens/run: [1776] | decisions/run: [1] | moves/run: [3] | context overflows: 0
+
+summary — task: intent_03_bookmark_macros | backend: scripted_llm_free | n: 1 | passed: 1 | pass@1: 1/1 | tokens source: Situation.tokensUsed (projection) | tokens/run: [7701] | decisions/run: [4] | moves/run: [20] | context overflows: 0
+
+summary — task: bugfix_01_off_by_one | backend: scripted_llm_free | n: 1 | passed: 1 | pass@1: 1/1 | tokens source: Situation.tokensUsed (projection) | tokens/run: [15416] | decisions/run: [13] | moves/run: [13] | context overflows: 0
+
+summary — task: bugfix_01_off_by_one | backend: apple_foundation_afm | n: 3 | passed: 3 | pass@3: 3/3 | tokens source: Situation.tokensUsed (projection) | tokens/run: [1153, 1153, 1153] | decisions/run: [1, 1, 1] | moves/run: [3, 3, 4] | context overflows: 0
+
+summary — task: intent_03_bookmark_macros | backend: apple_foundation_afm | n: 3 | passed: 0 | pass@3: 0/3 | tokens source: Situation.tokensUsed (projection) | tokens/run: [15704, 13256, 14888] | decisions/run: [7, 6, 7] | moves/run: [44, 50, 41] | context overflows: 0
+

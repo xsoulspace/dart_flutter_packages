@@ -72,23 +72,19 @@ void main() {
     expect(readStat.firstUseOk, isTrue); // first call succeeded
   });
 
-  test('rename surface is unified — auto-discovery, no multi duplicate', () async {
+  test('grep reuse is measured — first use + in-sequence reuse cost', () async {
     File('${jail.path}/lib_a.dart').writeAsStringSync('class Widget {}\n');
-    // One `rename_symbol` handles single + multi-file by auto-discovery.
-    // Call it twice to measure first-use + reuse cost.
-    await measured.get(const ToolName('rename_symbol'))!.execute({
-      'path': 'lib_a.dart', 'symbol': 'Widget', 'new_name': 'Widget2',
-    });
-    await measured.get(const ToolName('rename_symbol'))!.execute({
-      'path': 'lib_a.dart', 'symbol': 'Widget2', 'new_name': 'Widget3',
-    });
+    // The legacy rename_symbol surface was hard-cut (B4); the discovery
+    // sibling `grep` exercises first-use + reuse on the real surface.
+    await measured.get(const ToolName('grep'))!.execute({'pattern': 'Widget'});
+    await measured.get(const ToolName('grep'))!.execute({'pattern': 'class'});
 
     final report = analyzeTools(ledger);
-    final single = report.stat('rename_symbol');
-    expect(single, isNotNull);
-    expect(report.stat('rename_symbol_multi'), isNull); // removed
-    expect(single!.total, 2);
-    expect(single.firstUseOk, isTrue);
-    expect(single.successRate, 1.0);
+    final grep = report.stat('grep');
+    expect(grep, isNotNull);
+    expect(report.stat('rename_symbol'), isNull); // deleted (B4 hard cut)
+    expect(grep!.total, 2);
+    expect(grep.firstUseOk, isTrue);
+    expect(grep.successRate, 1.0);
   });
 }

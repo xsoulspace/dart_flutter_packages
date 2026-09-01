@@ -38,6 +38,18 @@ import 'meaning_tree.dart' as mt;
 /// The model-facing vocabulary of `intent_define` sub-actions.
 const intentDefineActions = <String>['define', 'list', 'redefine_chain'];
 
+/// B2: the ONE repair move for an unimplemented intent — one dialect, three
+/// surfaces (`intent_call`, the in-process interpreter, the materialized
+/// program) all carry this hint.
+const intentExecutorRepairHint =
+    're-send intent_define (action define) with specs';
+
+/// The canonical "intent has no executor" message (B2). Starts with the
+/// historical phrase so older `contains` diagnostics keep matching.
+String noMeaningExecutorMessage(String intent) =>
+    'no meaning executor for intent: $intent — every intent needs an '
+    'executor. $intentExecutorRepairHint';
+
 /// One intent definition as it travels on the wire / in the cut.
 Map<String, dynamic> intentNodeJson(Map<String, dynamic> node) {
   final props = (node['props'] as Map?) ?? const {};
@@ -148,12 +160,12 @@ class IntentCallState extends Resource {
 ToolDef intentDefineTool(World world) => ToolDef.encode(
   name: const ToolName('intent_define'),
   description:
-      'Define (or re-define) an intent of the program you are building: '
-      'name, typed params ("name:type"), return type, description. '
-      'Sub-actions: define (contract only); list; redefine_chain (ONE move '
-      'defines the intent AND wires its whole op chain from specs — labels '
-      'MUST be from the closed op vocabulary; replacing an existing chain '
-      'is atomic).',
+      'Define an intent of the program you are building AND its behavior: '
+      'ONE move defines the intent (name, typed params "name:type", return '
+      'type) AND wires its whole op chain from specs. Sub-actions: define '
+      '(REQUIRES specs — labels MUST be from the closed op vocabulary; '
+      'replacing an existing chain is atomic); list. An intent WITHOUT '
+      'specs has no executor and can never be called.',
   argsSchema: SchemaBundle(
     root: FM.object('intent_define', properties: () => [
       FM.prop('action', FM.enum_('action', intentDefineActions)),
@@ -175,35 +187,25 @@ ToolDef intentDefineTool(World world) => ToolDef.encode(
       case 'list':
         return {'intents': listIntents(world)};
       case 'define':
+      case 'redefine_chain': // accepted alias of define (B1 hard cut)
+        // B1 (J1.4 blocker): ONE self-executing action. `define` REQUIRES
+        // specs and ALWAYS wires the impl edge — the contract-only no-op
+        // path that stranded on-device runs is deleted.
         final name = map['name'];
         if (name is! String || name.isEmpty) {
           return {'error': 'define requires name'};
         }
-        final intent = defineIntent(
-          world,
-          name: name,
-          params: [
-            if (map['params'] is List)
-              for (final p in map['params'] as List)
-                if (p is String) p,
-          ],
-          returns: map['returns'] is String ? map['returns'] as String : 'void',
-          description: map['description'] is String
-              ? map['description'] as String
-              : '',
-        );
-        return {'ok': true, 'defined': intent};
-      case 'redefine_chain':
-        // J1 macro (ADR 0018): ONE move defines the intent AND wires its
-        // whole op chain — declarative spec rows, host tracks every id,
-        // old chain dropped atomically. Scoped repair without deletion risk.
-        final name = map['name'];
-        if (name is! String || name.isEmpty) {
-          return {'error': 'redefine_chain requires name'};
-        }
         final specs = map['specs'];
         if (specs is! List || specs.isEmpty) {
-          return {'error': 'redefine_chain requires specs: [{label, a?, b?}]'};
+          return {
+            'ok': false,
+            'error': 'define requires specs: every intent needs an executor '
+                '(op rows [{label, a?, b?, next?}]); an intent without an '
+                'op chain can never be called. $intentExecutorRepairHint.',
+            'intent': name,
+            'valid_ops': meaningExecutorOps,
+            'repair': intentExecutorRepairHint,
+          };
         }
         // Shape-validate BEFORE touching state (atomicity: a malformed
         // request must never drop a working chain). Errors carry the closed
@@ -299,12 +301,16 @@ Future<Map<String, dynamic>> callIntent(
         (out['_state'] as Map?)?.cast<String, dynamic>() ?? callState.state;
     result = (out['_result'] as Map?)?.cast<String, dynamic>() ?? {};
   } else {
+    // B2: ONE honest structured failure — what failed, what exists, and
+    // the exact repair move. No separate "not implemented" dialect.
     return {
       'ok': false,
-      'error': 'intent not implemented: $name',
+      'error': noMeaningExecutorMessage(name),
+      'intent': name,
       'defined': [
         for (final i in listIntents(world)) i['name'],
       ],
+      'repair': intentExecutorRepairHint,
     };
   }
   return {'ok': !result.containsKey('error'), 'intent': name, 'result': result};

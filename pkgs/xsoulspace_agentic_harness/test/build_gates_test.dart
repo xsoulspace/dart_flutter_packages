@@ -104,6 +104,62 @@ void main() {
     });
   });
 
+  group('Intent-graded verifier — oracle replay semantics', () {
+    test('replay starts from initialState(): the actor\'s own intent_call '
+        'state must not leak into the oracle (tier-2 parity)', () async {
+      final world = await buildTestWorld();
+      // A stateful counter intent: each call appends one entry.
+      world.getResource<IntentRuntime>().register('save', (args, _) async {
+        final state = world.getResource<IntentCallState>().state;
+        final list = ((state['saved'] ?? const []) as List).toList()
+          ..add(args['v']);
+        world.getResource<IntentCallState>().state = {'saved': list};
+        return {'saved': true};
+      });
+      world.getResource<IntentRuntime>().register('count', (args, _) async {
+        final state = world.getResource<IntentCallState>().state;
+        return {'value': ((state['saved'] ?? const []) as List).length};
+      });
+
+      final goal = world.spawnComponents([Goal(text: 'counts hold')]);
+      final scene = world.spawnComponents([const Scene(), SceneFrame()]);
+      final actor = world.spawnComponents([
+        Actor(agentId: AgentId.create()),
+        ActorModel(modelId: ModelId.create()),
+        ActorSystemPrompt(text: 'build'),
+        ActorGoalRef(goal),
+        PresentInScene(sceneEntity: scene),
+      ]);
+      world.flush();
+      wireIntentGradedGoal(world, sequence: [
+        const IntentExpectation('save', args: {'v': 'a'}),
+        const IntentExpectation('save', args: {'v': 'b'}),
+        const IntentExpectation('count', expect: {'value': 2}),
+      ]);
+
+      // The actor already called its own intents (state now holds 2) —
+      // exactly the on-device shape the scripted driver caught.
+      await callIntent(world, name: 'save', args: {'v': 'selfcheck-1'});
+      await callIntent(world, name: 'save', args: {'v': 'selfcheck-2'});
+
+      world.upsertComponent(actor, const ToolResultPendingMarker());
+      world.flush();
+      await intentGoalVerifier(world);
+
+      final verified = world.query2<Actor, GoalVerified>().toList().single;
+      expect(verified.$3.passed, isTrue,
+          reason: 'replay must start from initialState(), not the actor\'s '
+              'accumulated state (got ${verified.$3.detail})');
+
+      // The actor's own state is restored after the replay.
+      expect(
+        (world.getResource<IntentCallState>().state['saved'] as List).length,
+        2,
+      );
+      expectIdle(world);
+    });
+  });
+
   group('Gate A (run tool) end-to-end in the jail', () {
     test('dart run main.dart executes a jail target', () async {
       final jail = await Directory.systemTemp.createTemp('build_gate_a_');

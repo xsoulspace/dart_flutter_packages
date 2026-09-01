@@ -13,6 +13,8 @@ library;
 import 'dart:io';
 
 import 'package:xsoulspace_agentic_harness/benchmark_api.dart';
+import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
+    show FsToolsRoot, writeTool;
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'package:xsoulspace_inference_openrouter/xsoulspace_inference_openrouter.dart';
@@ -76,13 +78,15 @@ Future<void> main(List<String> args) async {
   if (args.contains('--debug')) attr.attributionDebug = true;
   print(
     'profile(openrouter:$model native) — ${tasks.length} task(s), '
-    'tools=${ops ? 'fs+patch_file' : 'fs'}\n',
+    "tools=${ops ? 'fs+write' : 'fs'}\n",
   );
 
   final report = await runProfile(
     tasks,
     buildHandler: (_) => DefaultGenerationHandler(router: router),
-    extraTools: ops ? [patchFileTool] : const [],
+    // B4 hard cut: the legacy patch_file tool is deleted; the ops-arm
+    // equivalent surface is the jailed `write` tool.
+    extraTools: ops ? [(root) => writeTool(FsToolsRoot(root))] : const [],
     tracePath: tracePath,
   );
   print(report);

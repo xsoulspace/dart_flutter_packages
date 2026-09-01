@@ -99,6 +99,65 @@ Two full `bin/intent_closure_afm.dart` runs, same task, one attempt each
 - [x] J1.5.4 HarnessProfilerView — 3 widget tests, analyze clean
 - [x] J1.5.5 driver wiring — pulse + dump on exit/SIGINT, both runs
 - [x] J1.5.6 backend-error budget (found *by* the monitor) — fixed + tested
-- [ ] **J1.4 AFM gate (pass@3 ≥ 1/3)** — open; blocker is now precisely
-      diagnosed (meaning-executor wiring), no longer an observability blind
-      spot. The escalation ladder (J7/J8) is the next lever.
+- [ ] **J1.4 AFM gate (pass@3 ≥ 1/3)** — still open for the INTENT tier;
+      the RUN-graded tier passes. Measured table in §7 below.
+
+## 7. Hard-cut session (2026-09-01) — B1–B8 + the coding-agent gate table
+
+Landed this session: B1 (`intent_define` collapsed to ONE self-executing
+action — the no-op `define` path is DELETED), B2 (one structured failure
+dialect), B4 (legacy edit paths deleted from lib/ + barrels), B5
+(manual-schedule crutch tests deleted), B3/B7 (`bin/coding_agent.dart` —
+verifier inside the loop, bounded host repairs consuming monotonic
+`AttemptCount`), B8 (pass@k protocol), B6 (overhead re-measured, §below).
+LLM-free proof through the SAME driver (scripted handlers, CI test
+`coding_agent_scripted_test.dart`): intent_03 PASS, bugfix_01 PASS.
+
+### Context overhead (B6, re-measured after B1)
+
+| Surface | overhead_tokens | Source |
+|---|---|---|
+| intent-closure (system+4 schemas) | **1,496 ≤ 1,500** | `intent_closure_budget_test.dart` |
+| fs_tools coding surface (run-graded) | 833 | per-run log `coding_agent_afm_run*.log` |
+
+### On-device gate table (Apple Foundation Model, 4k window; pass@3 protocol,
+fresh jail per run; tokens = Situation.tokensUsed per decision, summed)
+
+| Task | Arm / oracle | n | pass@n | decisions/run | moves/run | tokens/run | overflows | verdict |
+|---|---|---|---|---|---|---|---|---|
+| bugfix_01_off_by_one | run-graded (runs-checker in-loop + yaml final gate) | 3 | **3/3** | 1, 1, 1 | 3, 3, 4 | 1,153 × 3 | 0 | **GATE PASS** |
+| intent_03_bookmark_macros | intent-graded (verifier in-loop + dart oracle final gate) | 3 | **0/3** | 7, 6, 7 | 44, 50, 41 | 15,704 / 13,256 / 14,888 | 0 | **GATE FAIL — honest** |
+
+Raw logs: `benchmark/runs/coding_agent_afm_run<i>.log` (each ships the pulse
++ flight-recorder dump, PASS or FAIL) + `coding_agent_afm_summary.log`.
+
+### What the cuts changed on-device (n=4 AFM intent runs across two
+binaries)
+
+- **B1 worked as designed**: in every run the model now emits
+  `intent_define action=define WITH specs` (35–77 define moves) — the
+  contract-only no-op path that produced the old 0/3 ("intent not
+  implemented" at oracle time) is gone from the tool surface. `list`
+  zooms and `materialize` still appear.
+- **Remaining blocker (capability, precisely visible in the pulse)**: the
+  model's chains execute but return `{'value': null}` — the return op pops
+  an EMPTY stack (degenerate chains that pass structural validation), and
+  `list_saved` is frequently never defined at all (the model re-defines
+  save_url 30–70× instead). Repairs were bounded (maxGoalAttempts: 3) and
+  every run terminated idle; no loop, no hang.
+- **Fix landed in the same session**: `return` with an empty stack is now a
+  structured, op-localized error ('return without value (op op_id): push a
+  literal BEFORE the return op') in BOTH the interpreter and the materialized
+  Dart (parity-pinned) — the next pass@3 feeds the model the exact repair
+  move. Not yet re-measured on-device.
+- **Infra note (not a model claim)**: TWO pass@3 attempts died mid-run
+  with AFM `generation_timeout` (5 min) + a Swift-bridge
+  callback-after-delete VM crash, both AFTER emitting `Exceeded model
+  context window size` — recorded as infra flakiness + a context overflow
+  in those crashed runs; the completed pass@3 sets above have zero
+  overflows. The crash is in the bridge layer (`xs_fm_bridge`), not the
+  harness; the harness-side budgets held in every completed run.
+- **Session-c/d note**: a third attempt with the op-localized return error
+  also crashed the process (same bridge signature) before completing run 1
+  — the return-error fix therefore has ZERO completed on-device n and is
+  marked unmeasured, never PASS.

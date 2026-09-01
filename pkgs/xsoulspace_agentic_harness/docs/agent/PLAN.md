@@ -11,19 +11,27 @@
 > reliably. Each stage is independently testable, LLM-free first, and ends
 > with an `expectIdle`-clean harness test. Failures are data.
 
-## CURRENT SITUATION (read me first — 2026-08-28)
+## CURRENT SITUATION (read me first — 2026-09-01)
 
 - **Works, proven**: the generic loop (flat tokens/decision, 23/23 scripted
-  suite, 358 tests); intent closure v1 with materialized-Dart parity; macros
-  (5 moves vs 24); context overhead 1,487 ≤ 1,500 tokens; J1.5 loop bounds
-  (every loop monotonic-budgeted) + flight recorder + Flutter profiler —
-  two real on-device loop classes were caught BY the monitor and fixed
-  ([results_stage_j15.md](results_stage_j15.md)).
-- **Open blocker**: J1.4 on-device gate (pass@3 ≥ 1/3) at 0/3 — the 2–4k
-  model doesn't connect `intent_call` failures to wiring a meaning
-  executor. Precisely diagnosed via the pulse; next lever J7/J8 escalation.
+  suite); intent closure v1 with materialized-Dart parity; macros
+  (5 moves vs 24); context overhead 1,496 ≤ 1,500 tokens (re-measured after
+  the B1 collapse of `intent_define`); J1.5 loop bounds + flight recorder +
+  Flutter profiler. **New this session (hard cuts)**: B1 — `intent_define`
+  collapsed to ONE self-executing action (`define` REQUIRES specs, always
+  wires `impl`; the contract-only no-op path is deleted; `redefine_chain` is
+  an accepted alias); B2 — one structured failure dialect for unimplemented
+  intents; B4 — legacy edit paths deleted (tree_patch/patch_tool/
+  transform_flow/ops_handler + barrels); B5 — manual-schedule crutch tests
+  deleted; B3/B7 — ONE on-device entry point `bin/coding_agent.dart` with
+  the verifier wired inside the loop + bounded host repairs consuming
+  AttemptCount; B8 — pass@3 protocol with per-run logs. Scripted LLM-free
+  proof through the SAME driver: intent_03 PASS, bugfix_01 PASS.
+- **Open gate**: J1.4 on-device pass@3 — measured per-run in
+  [results_stage_j15.md](results_stage_j15.md) §7 (honest PASS/FAIL with
+  pulse dumps; no single-run claims).
 - **Not started**: J3+ (Dart round-trip for existing repos), J6 (scoped
-  subtask worlds), K (pass@k protocol for on-device claims).
+  subtask worlds), K matrix rows beyond the two DoD tasks.
 
 **Status (2026-08-28).** Stages A–I + J1.1–J1.5 landed (detail in
 [history.md](history.md)); J1.5 landed after the fix-stage endless-loop
@@ -106,8 +114,14 @@ prompt tax together.
 - [x] `J1.3` — macro surface is closed + countable (stewardship probe);
   macro results identical to the equivalent primitive sequence (parity test).
   Suite task `intent_03_bookmark_macros` scripted green (suite count 23).
-- [ ] `J1.4` (benchmark gate, still open) — AFM: bookmark executor passes
-  at **pass@3 ≥ 1/3** with zero context overflows; moves/subtask ≤ 6.
+- [ ] `J1.4` (benchmark gate, still open — tool-design fix landed, awaiting
+      measured pass@3) — AFM: bookmark executor passes at **pass@3 ≥ 1/3**
+      with zero context overflows; moves/subtask ≤ 6.
+      B1 hard cut landed 2026-09-01: the no-op `define` path is gone
+      (measured root cause of the 0/3), the deliverable driver
+      `bin/coding_agent.dart` runs the gate with the verifier wired inside
+      the loop + bounded host repairs. Measured table:
+      [results_stage_j15.md](results_stage_j15.md) §7.
 - **Tests (LLM-free):** macro parity vs primitive sequence; accretion test
   (define → break → `redefine_intent` → oracle green); suite task
   `intent_03_bookmark_macros` (same oracle, fewer moves); suite count 22→23.
@@ -356,11 +370,13 @@ reproducible.
 
 ## Cleanup / hard-cut ledger
 
-- [ ] Collapse overlapping edit paths (`patch_file` / `tree_patch` /
+- ~~Collapse overlapping edit paths (`patch_file` / `tree_patch` /
   `structured_editor`): fold into registry-truth surfaces once J1 macros
-  replace their benchmark role; delete.
-- [ ] Delete legacy manual-schedule tests that mask the idle-race class.
-- [ ] `dart_meaning` (J3) lands in a HOST package, not core (ADR 0015) —
+  replace their benchmark role; delete~~ — DONE 2026-09-01 (B4); moved to
+  [history.md](history.md).
+- ~~Delete legacy manual-schedule tests that mask the idle-race class~~ —
+  DONE 2026-09-01 (B5); moved to [history.md](history.md).
+- `dart_meaning` (J3) lands in a HOST package, not core (ADR 0015) —
   create `pkgs/xsoulspace_agentic_dart_meaning` when J3 starts.
 - [ ] Drop `runTool`'s redundant role if J4's `analyze_check` + spec runner
   subsume the exit-code oracle for coding tasks (keep for non-Dart hosts).

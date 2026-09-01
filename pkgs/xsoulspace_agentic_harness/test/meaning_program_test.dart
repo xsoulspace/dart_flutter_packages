@@ -210,4 +210,36 @@ void main() {
             'the op id so the model can repair with set_prop: '
             '$checkerDetail');
   });
+
+  test('AFM J1.4 diagnosis (2026-09-01): a degenerate return-only chain '
+      'fails with an op-localized error, not {value: null}', () async {
+    final world = _world();
+    defineIntent(world, name: 'save_url');
+    addMeaningNode(world, kind: 'op', label: 'return'); // no push before it
+    linkMeaning(world, from: 'save_url', relation: 'impl', to: 'op_1');
+
+    final out = interpretMeaningProgram(world, 'save_url', {}, {});
+    final error = (out['_result'] as Map)['error'] as String;
+    expect(error, contains('return without value (op op_1)'));
+    expect(error, contains('empty stack'));
+    // NOT the old silent {value: null} shape.
+    expect(error, isNot(contains('{value: null}')));
+
+    // Materialized parity: same localized error from the real dart VM.
+    final jail = await Directory.systemTemp.createTemp('meaning_parity_ret_');
+    addTearDown(() => jail.delete(recursive: true).catchError((_) {}));
+    File('${jail.path}/program.dart')
+        .writeAsStringSync(materializeMeaningProgram(world));
+    final spec = CheckerSpec(
+      type: 'intents',
+      value: jsonEncode({
+        'calls': [
+          {'intent': 'save_url'},
+        ],
+      }),
+    );
+    final materialized = evaluateChecker(spec, jail.path);
+    expect(materialized.detail, contains('return without value (op op_1)'),
+        reason: '${materialized.detail}');
+  });
 }

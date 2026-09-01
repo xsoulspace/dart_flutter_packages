@@ -26,8 +26,6 @@ import 'package:from_json_to_json/from_json_to_json.dart';
 
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
-import '../tooling/tree_patch.dart';
-
 /// The path jail for [fsTools]: every tool path is resolved against this root
 /// and must stay inside it.
 class FsToolsRoot {
@@ -121,10 +119,14 @@ class FsToolsRoot {
   }
 }
 
-/// A file-system tool suite: `read`, `write`, `list_dir`.
+/// A file-system tool suite: `read`, `write`, `list_dir`, `grep`, `glob`,
+/// `run`.
 ///
 /// Real tools (they touch the disk), jailed under [root]. Each is built with a
-/// structured [SchemaBundle].
+/// structured [SchemaBundle]. The legacy anchor-patch / symbol-rename edit
+/// paths are deleted (hard cut): editing happens through the model's own
+/// `write` moves or (preferred) the meaning pipeline (`act_with_project` +
+/// `intent_define`), never through AST surgery.
 List<ToolDef> fsTools(FsToolsRoot root) => [
   readTool(root),
   writeTool(root),
@@ -132,8 +134,6 @@ List<ToolDef> fsTools(FsToolsRoot root) => [
   grepTool(root),
   globTool(root),
   runTool(root),
-  patchSymbolTool(root.rootPath),
-  renameSymbolTool(root.rootPath),
 ];
 
 /// Read a file's contents.

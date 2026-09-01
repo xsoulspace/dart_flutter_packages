@@ -40,7 +40,7 @@ import 'package:xsoulspace_agentic_harness/src/data_models/components.dart'
 import 'package:xsoulspace_agentic_harness/src/narrative/components.dart'
     show ThreadStatus, ThreadStatusEnum;
 import 'package:xsoulspace_agentic_harness/src/meaning/intents.dart'
-    show callIntent;
+    show IntentCallState, callIntent;
 import 'package:xsoulspace_agentic_harness/src/meaning/meaning_tree.dart'
     show addMeaningNode, linkMeaning;
 import 'package:xsoulspace_agentic_harness/src/schedules.dart' show Schedules;
@@ -214,6 +214,15 @@ Future<void> intentGoalVerifier(World world) async {
     return; // no intent spec wired → no-op
   }
   if (world.query2<Actor, ToolResultPendingMarker>().isEmpty) return;
+  // The oracle replay must start from initialState() — the SAME semantics
+  // as the tier-2 dart-subprocess oracle. The model's own intent_call state
+  // (IntentCallState accumulates across the run) must not leak into the
+  // replay, or stateful expectations (e.g. list_saved → 2) fail spuriously.
+  // The actor's state is restored after the replay so its own observations
+  // stay consistent.
+  final callState = world.getResource<IntentCallState>();
+  final actorState = Map<String, dynamic>.of(callState.state);
+  callState.state = <String, dynamic>{};
   final details = <String>[];
   var passed = true;
   for (final expectation in spec.sequence) {
@@ -236,6 +245,7 @@ Future<void> intentGoalVerifier(World world) async {
   final detail = passed
       ? 'intents: all ${spec.sequence.length} calls verified'
       : 'intents failed: ${details.join('; ')}';
+  callState.state = actorState; // restore the actor's own state
   // Stamp every goal-carrying actor: either a direct Goal component or an
   // ActorGoalRef backlink — GoalVerified lives on the ACTOR because
   // RunGradedGoalPolicy reads it from the decision context.

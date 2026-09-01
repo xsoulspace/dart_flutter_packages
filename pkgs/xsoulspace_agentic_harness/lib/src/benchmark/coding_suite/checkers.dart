@@ -189,9 +189,11 @@ void main() {
 
 CheckerResult _intents(String root, CheckerSpec spec) {
   try {
-    final program = File('$root/' + (spec.path ?? 'program.dart'));
+    final programPath = spec.path ?? 'program.dart';
+    final program = File('$root/$programPath');
     if (!program.existsSync()) {
-      return _simple(false, 'materialized program missing: ${spec.path}');
+      return _simple(false, 'materialized program missing: $programPath '
+          '(action materialize was never run)');
     }
     File('$root/intent_calls.json').writeAsStringSync(spec.value ?? '{}');
     File('$root/intent_runner.dart').writeAsStringSync(_intentRunnerSource);

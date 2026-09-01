@@ -306,15 +306,29 @@ void main() {
     expect(ids, ['op_1', 'op_2', 'op_3']);
     expect(r['added'], 3);
     // The validator reports the intent as defined-but-unwired (no impl edge
-    // yet) — actionable data, exactly what the model should wire next.
-    expect(r['problems'], ['save_url: no meaning executor for intent: save_url']);
+    // yet) — actionable data with the B2 repair hint, exactly what the
+    // model should do next.
+    expect(
+      (r['problems'] as List).single,
+      contains('save_url: no meaning executor for intent: save_url'),
+    );
+    expect(
+      (r['problems'] as List).single,
+      contains('re-send intent_define'),
+    );
     // then-wiring happened: interpreter walks load_arg → starts_with → return.
     final out = interpretMeaningProgram(
       world, 'save_url', <String, dynamic>{}, <String, dynamic>{},
     );
     // impl not linked yet — chain exists but intent not wired.
-    expect((out['_result'] as Map)['error'],
-        'no meaning executor for intent: save_url');
+    expect(
+      (out['_result'] as Map)['error'],
+      contains('no meaning executor for intent: save_url'),
+    );
+    expect(
+      (out['_result'] as Map)['error'],
+      contains('re-send intent_define'),
+    );
   });
 
   test('link_chain macro: many edges in one move, per-edge results', () async {

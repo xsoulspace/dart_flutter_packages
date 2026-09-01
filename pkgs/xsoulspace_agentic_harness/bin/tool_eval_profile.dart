@@ -42,9 +42,10 @@ Future<void> main() async {
   final ledger = ToolMetricsLedger();
   final registry = instrumentRegistry(base, ledger);
 
-  // A deterministic "agent" sequence: discover, read, edit, rename (auto),
-  // grep to confirm. Includes a deliberate failure (missing file) so the
-  // failure-streak / error-code columns are exercised.
+  // A deterministic "agent" sequence: discover, read, grep, fail once, list,
+  // write. Includes a deliberate failure (missing file) so the failure-streak
+  // / error-code columns are exercised. (The legacy rename_symbol tool was
+  // hard-cut; rename flows go through the meaning pipeline.)
   Future<void> call(String name, Map args) {
     final coerced = args.map((k, v) => MapEntry(k.toString(), v));
     return registry.get(ToolName(name))!.execute(coerced);
@@ -53,11 +54,6 @@ Future<void> main() async {
   await call('glob', {'pattern': '**/*.dart'});
   await call('read', {'path': 'lib/util.dart'});
   await call('grep', {'pattern': 'greet'});
-  await call('rename_symbol', {
-    'path': 'lib/util.dart',
-    'symbol': 'greet',
-    'new_name': 'hello',
-  });
   try {
     await call('read', {'path': 'does_not_exist.dart'}); // deliberate fail
   } on Object {
