@@ -235,6 +235,10 @@ Future<void> main(List<String> args) async {
                 name: 'current',
                 meta: {'task': task.id, 'jail': jail.path},
               ),
+        // M1: the router the handler holds must ALSO be the world's router,
+        // and the actor must bind its registered model id.
+        router: router,
+        actorModelId: router?.models.keys.first,
       );
       results.add(result);
       final logFile = writeRunLog(

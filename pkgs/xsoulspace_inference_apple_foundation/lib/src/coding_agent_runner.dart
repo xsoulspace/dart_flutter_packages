@@ -319,6 +319,17 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
   /// persists a snapshot (crash/resume support). Awaited: process exit must
   /// never race a pending save.
   Future<void> Function(World world)? onSnapshot,
+
+  /// M1 dogfooding fix: the world's router (empty for scripted runs). The
+  /// actor's model must be resolvable HERE for escalation and capacity —
+  /// an empty router silently degrades both.
+  ModelRouter? router,
+
+  /// M1 dogfooding fix: the actor must bind a model id the ROUTER knows.
+  /// A random `ModelId.create()` resolves to a nameless Model whose client
+  /// builder is missing → `initRuntime` throws → the actor never generates
+  /// (measured: 3 verification attempts, 0 decisions, FAIL in ~2s).
+  ModelId? actorModelId,
 }) async {
   final sw = Stopwatch()..start();
   final resume = restoredWorld != null;
@@ -347,7 +358,9 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
     ..getResource<GenerationHandlerResource>().registerDefault(meter);
   // The agency grant reads per-model capacity from the router — scripted
   // runs still need the resource (an empty router = default capacity 1).
-  world.upsertResource(ModelRouterResource(ModelRouter()));
+  // M1: a REAL router (when the host provides one) must survive here —
+  // escalation (resolveEscalatedModel) reads this resource.
+  world.upsertResource(ModelRouterResource(router ?? ModelRouter()));
 
   // Tool surface (B3): fs_tools (read/write/list_dir/glob/grep/run + the
   // P3 git projections) always for run-graded tasks; the intent surface
@@ -395,7 +408,9 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
     final scene = world.spawnComponents([Scene(), SceneFrame()]);
     actor = world.spawnComponents([
       Actor(agentId: AgentId.create()),
-      ActorModel(modelId: ModelId.create()),
+      // M1: bind a model id the router registered — a random id resolves to
+      // a nameless Model with no client builder and the actor never generates.
+      ActorModel(modelId: actorModelId ?? ModelId.create()),
       ActorSystemPrompt(text: task.systemPrompt),
       ActorThreads(threads: []),
       ActorTools(registryName: 'default'),

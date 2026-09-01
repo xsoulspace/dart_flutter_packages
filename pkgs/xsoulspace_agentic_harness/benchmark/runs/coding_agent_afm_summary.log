@@ -48,3 +48,5 @@ summary — task: intent_03_bookmark_macros | backend: apple_foundation_afm | n:
 
 summary — task: free_form | backend: open_router:deepseek/deepseek-v4-flash-0731 | n: 1 | passed: 0 | pass@1: 0/1 | tokens source: Situation.tokensUsed (projection) | tokens/run: [7593] | decisions/run: [0] | moves/run: [0] | context overflows: 0
 
+summary — task: free_form | backend: open_router:deepseek/deepseek-v4-flash-0731 | n: 1 | passed: 1 | pass@1: 1/1 | tokens source: Situation.tokensUsed (projection) | tokens/run: [15725] | decisions/run: [11] | moves/run: [15] | context overflows: 0
+

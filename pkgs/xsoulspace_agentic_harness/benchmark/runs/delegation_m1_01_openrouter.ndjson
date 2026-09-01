@@ -1,0 +1,15 @@
+{"type":"run_start","run":1,"task":"free_form","backend":"open_router:deepseek/deepseek-v4-flash-0731","jail":"/tmp/delegation_m1_01","resumed":false}
+{"type":"decision","run":1,"seq":1,"actor":"2","responses_sent_delta":0,"tool_calls":[{"name":"list_dir","args":{"path":"."}},{"name":"glob","args":{"pattern":"**/*.dart"}}]}
+{"type":"decision","run":1,"seq":2,"actor":"2","responses_sent_delta":1,"tool_calls":[{"name":"list_dir","args":{"path":"."}},{"name":"glob","args":{"pattern":"**/*.dart"}}]}
+{"type":"decision","run":1,"seq":3,"actor":"2","responses_sent_delta":1,"tool_calls":[{"name":"read","args":{"path":"test/calc_test.dart"}},{"name":"read","args":{"path":"pubspec.yaml"}},{"name":"list_dir","args":{"path":"lib"}}]}
+{"type":"decision","run":1,"seq":4,"actor":"2","responses_sent_delta":1,"tool_calls":[{"name":"read","args":{"path":"test/calc_test.dart"}},{"name":"list_dir","args":{"path":"."}}]}
+{"type":"decision","run":1,"seq":5,"actor":"2","responses_sent_delta":1,"tool_calls":[{"name":"list_dir","args":{"path":"."}}]}
+{"type":"decision","run":1,"seq":6,"actor":"2","responses_sent_delta":1,"tool_calls":[{"name":"list_dir","args":{"path":"."}}]}
+{"type":"decision","run":1,"seq":7,"actor":"2","responses_sent_delta":1,"tool_calls":[{"name":"write","args":{"path":"lib/calc.dart","content":"/// Returns the sum of [a] and [b].\nint add(int a, int b) => a + b;"}}]}
+{"type":"decision","run":1,"seq":8,"actor":"2","responses_sent_delta":1,"tool_calls":[{"name":"run","args":{"command":["dart","test"],"cwd":"/private/tmp/delegation_m1_01","timeout_ms":60000}}]}
+{"type":"decision","run":1,"seq":9,"actor":"2","responses_sent_delta":1,"tool_calls":[{"name":"write","args":{"path":"lib/calc.dart","content":"/// Adds two integers and returns their sum.\nint add(int a, int b) => a + b;"}}]}
+{"type":"decision","run":1,"seq":10,"actor":"2","responses_sent_delta":1,"tool_calls":[{"name":"read","args":{"path":"lib/calc.dart"}}]}
+{"type":"decision","run":1,"seq":11,"actor":"2","responses_sent_delta":1,"tool_calls":[]}
+{"type":"pulse","run":1,"text":"tick 11 | decisions 0 | in-flight 0 | pending results 0\n⚠ actor agent-1788300275895431-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: run failed exit=1: \n— agent-1788300275895431-0  [idle via react_continuation]  rounds 0/12 (Σ7)  attempts 3/3 EXHAUSTED  goal PASS\n    last: read:{\"path\":\"lib/calc.dart\"} → ok"}
+{"type":"run_end","run":1,"task":"free_form","backend":"open_router:deepseek/deepseek-v4-flash-0731","verdict":"PASS","decisions":11,"tool_rounds":15,"tokens":15725,"moves":{"list_dir":6,"glob":2,"read":4,"write":2,"run":1},"gate":["dart test exit=0"],"failure_class":"","wall_clock_ms":30147}
+{"type":"summary","row":"summary — task: free_form | backend: open_router:deepseek/deepseek-v4-flash-0731 | n: 1 | passed: 1 | pass@1: 1/1 | tokens source: Situation.tokensUsed (projection) | tokens/run: [15725] | decisions/run: [11] | moves/run: [15] | context overflows: 0","passed":1,"runs":1}

@@ -472,16 +472,25 @@ Shapes (sequenced; each produces signal before the next is built):
 
 - [x] `M0` — general oracle: `resolveWorkspaceCheck` (LLM-free fs resolver)
   + `taskFromSentence` uses it + `--check` override + honest failure when no
-  convention resolves. LLM-free test.
+  convention resolves. LLM-free test (`workspace_conventions_test.dart`).
 - [ ] `M0b` — model-proposed criteria as data (native tool call,
   host-executed, mechanically graded).
 - [x] `M1` — sidecar delegation: pi drives `coding_agent.dart --json
   --backend open_router --runs 1` per delegation via process spawn; NDJSON
   events parsed; verdict + failure_class recorded. No core change (D5).
-- [x] `M2` — real-history replay miner (LLM-free): git log → delegation
-  manifest (commit, sentence, package, proposed check). Jail seeding
-  automation is the follow-up; the manifest IS the problems-discovery
-  artifact.
+  **First delegation PASSED end-to-end** (delegated_calc, 11 decisions,
+  `dart test exit=0`, 30s) and caught TWO real integration bugs — actor
+  bound to a random `ModelId.create()` unresolvable by the router (actor
+  never generated) and the empty `ModelRouterResource` overwrite (escalation
+  + capacity silently degraded). Both fixed in the runner; evidence:
+  `benchmark/runs/delegation_m1_evidence.md`.
+- [x] `M2` — real-history replay miner (LLM-free):
+  `tool/mine_delegations.sh` → delegation manifest JSONL (commit, parent,
+  sentence, package, proposed tier). Known limitation, recorded honestly:
+  commit subjects are weak task sentences ("fix: removed") — sentence
+  refinement is a named follow-up (mechanical templating first; ONE
+  structured decision only as a labeled exception per ADR 0013). Jail
+  seeding from parent hashes is the M2b follow-up.
 - [ ] `M3` — `HarnessAcpBackend` over `dart_acp_toolkit` (IntentCall repo):
   session/new → `--session` store, session/prompt → resume+inject,
   session/update ← NDJSON events, request_permission ← write gate review
