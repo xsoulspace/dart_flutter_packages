@@ -31,8 +31,8 @@ import '../../xsoulspace_agentic_harness.dart'
         DecisionDraft, DecisionFlow, DecisionPolicy, ModelId, OpenDecision,
         PresentInScene, ReActContinuationPolicy, Scene, SceneFrame;
 import '../data_models/components.dart'
-    show Actor, ActorGoalRef, ActorThreads, AttemptCount, EscalationRequest,
-        Goal, GoalAttemptsExhausted, ToolRoundCount;
+    show Actor, ActorGoalRef, ActorThreads, ActorTools, AttemptCount,
+        EscalationRequest, Goal, GoalAttemptsExhausted, ToolRoundCount;
 import '../meaning/intents.dart'
     show IntentCallState, callIntent;
 import '../meaning/meaning_tree.dart'
@@ -152,9 +152,25 @@ Future<String?> stdinAskUser(AskUserPrompt p) async {
 
 /// A resource carrying how a goal is verified by running code.
 class RunGoalSpec extends Resource {
-  RunGoalSpec({required this.command, this.cwd = ''});
+  RunGoalSpec({required this.command, this.cwd = '', this.commandByRegistry});
+
+  /// Default check command (single-actor / legacy path).
   final List<String> command;
   final String cwd;
+
+  /// Stage N2 multi-actor: per-actor check commands keyed by the actor's
+  /// `ActorTools.registryName` (1:1 with actors in a squad). When present
+  /// for the pending actor, it overrides [command]. The verifier stamps
+  /// ONLY the pending actor — never every Goal actor.
+  final Map<String, List<String>>? commandByRegistry;
+
+  List<String> commandFor(String? registryName) {
+    if (registryName != null) {
+      final per = commandByRegistry?[registryName];
+      if (per != null) return per;
+    }
+    return command;
+  }
 }
 
 /// Mechanical verifier (schedule on [Schedules.narrative]): after a tool
@@ -167,14 +183,19 @@ Future<void> runGoalVerifier(World world) async {
   } on StateError {
     return; // no run spec wired → no-op
   }
-  final registry = world
-      .getResource<ToolRegistryResource>()
-      .get('default');
-  final runTool = registry?.get(const ToolName('run'));
-  if (runTool == null) return;
 
-  for (final _ in world.query2<Actor, ToolResultPendingMarker>().toList()) {
-    final out = await runTool.execute({'command': spec.command, 'cwd': spec.cwd});
+  // Stage N2: verify PER pending actor — its own registry (tools) and its
+  // own check command. Stamping every Goal actor would cross-contaminate
+  // verdicts in a multi-actor world.
+  final registries = world.getResource<ToolRegistryResource>();
+  for (final (facade, _, _, tools) in world
+      .query3<Actor, ToolResultPendingMarker, ActorTools>()
+      .toList()) {
+    final registryName = tools.registryName;
+    final runTool = registries.get(registryName)?.get(const ToolName('run'));
+    if (runTool == null) continue;
+    final command = spec.commandFor(registryName);
+    final out = await runTool.execute({'command': command, 'cwd': spec.cwd});
     Map<String, Object?>? map;
     if (out != null) {
       if (out.startsWith('{') || out.startsWith('[')) {
@@ -201,15 +222,12 @@ Future<void> runGoalVerifier(World world) async {
           ? 'run: exit=0'
           : 'run failed exit=${map['exit_code']}: $stderr';
     }
-    // Stamp the run-graded verdict on the Actor bearing the Goal.
-    for (final (badge, _, _) in world.query2<Actor, Goal>().toList()) {
-      world.upsertComponent(
-        badge.entity,
-        GoalVerified(passed: passed, detail: detail),
-      );
-    }
+    // Stamp the run-graded verdict on THIS actor only (it bears the Goal).
+    world.upsertComponent(
+      facade.entity,
+      GoalVerified(passed: passed, detail: detail),
+    );
     world.flush();
-    break;
   }
 }
 

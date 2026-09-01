@@ -145,11 +145,14 @@ final List<_Spec> _specs = [
   _Spec<MeaningNode>(
     () => const MeaningNode(id: '', kind: '', label: ''),
     (c) => {'id': c.id, 'kind': c.kind, 'label': c.label},
-    (v) => MeaningNode(
-      id: (v! as Map)['id'] as String,
-      kind: v['kind'] as String,
-      label: v['label'] as String,
-    ),
+    (v) {
+      final m = v! as Map;
+      return MeaningNode(
+        id: m['id'] as String,
+        kind: m['kind'] as String,
+        label: m['label'] as String,
+      );
+    },
   ),
   _Spec<MeaningProps>(
     () => const MeaningProps(),
@@ -165,22 +168,26 @@ final List<_Spec> _specs = [
       to: Entity.create(),
     ),
     (c) => {'from': _ref(c.from), 'relation': c.relation, 'to': _ref(c.to)},
-    (v) => MeaningEdge(
-      from: _deref((v! as Map)['from']),
-      relation: v['relation'] as String,
-      to: _deref(v['to']),
-    ),
+    (v) {
+      final m = v! as Map;
+      return MeaningEdge(
+        from: _deref(m['from']),
+        relation: m['relation'] as String,
+        to: _deref(m['to']),
+      );
+    },
   ),
 
   _Spec<Agency>(() => const Agency(), (_) => const {}, (_) => const Agency()),
   _Spec<AwaitingResponse>(
     () => const AwaitingResponse(),
     (c) => {'taskId': c.taskId?.value},
-    (v) => AwaitingResponse(
-      taskId: (v! as Map)['taskId'] == null
-          ? null
-          : TaskId(v['taskId'] as String),
-    ),
+    (v) {
+      final m = v! as Map;
+      return AwaitingResponse(
+        taskId: m['taskId'] == null ? null : TaskId(m['taskId'] as String),
+      );
+    },
   ),
   _Spec<OpenDecision>(
     () => const OpenDecision(),

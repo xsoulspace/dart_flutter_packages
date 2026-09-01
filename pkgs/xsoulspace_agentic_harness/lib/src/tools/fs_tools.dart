@@ -232,16 +232,48 @@ class CapturedWrite {
 /// durable fix for whole-file writes is P4's span-anchored meaning edits.
 enum WriteGateMode { apply, review }
 
+/// Stage N2 — per-file single-writer lock table shared by every gateway in
+/// one squad. Real fs is shared mutable state OUTSIDE the ECS graph; two
+/// actors editing one file is a race the flush coherence point does not
+/// cover. The squad driver claims each task's file set for its actor; a
+/// write to a file claimed by ANOTHER owner is rejected with a structured
+/// ack (the model adjusts or the driver reassigns).
+class FileLockTable {
+  final _locks = <String, Object>{};
+
+  /// Claims [rel] for [owner]. Returns false when another owner holds it.
+  bool claim(String rel, Object owner) {
+    final current = _locks[rel];
+    if (current != null) return current == owner;
+    _locks[rel] = owner;
+    return true;
+  }
+
+  void release(String rel, Object owner) {
+    if (_locks[rel] == owner) _locks.remove(rel);
+  }
+
+  Object? ownerOf(String rel) => _locks[rel];
+}
+
 class JailWriteGateway {
   JailWriteGateway(
     this.root, {
     this.mode = WriteGateMode.apply,
     this._approver,
+    this.locks,
+    this.owner,
   });
 
   final FsToolsRoot root;
   final WriteGateMode mode;
   final Future<bool> Function(CapturedWrite write)? _approver;
+
+  /// Stage N2 single-writer: null (default) = legacy single-agent behavior
+  /// (no locking). When set, writes to files claimed by another [owner] are
+  /// rejected with a structured ack before ANY diff/approval happens.
+  final FileLockTable? locks;
+  final Object? owner;
 
   final List<CapturedWrite> captured = [];
 
@@ -257,6 +289,18 @@ class JailWriteGateway {
   /// Intercepts a `write` tool move. Returns the tool ack (model-stable).
   Future<String> interceptWrite(String absolutePath, String content) async {
     final rel = _rel(absolutePath);
+    // Stage N2 single-writer: reject cross-owner writes BEFORE the gate —
+    // the model sees a structured ack and can adjust (or the driver
+    // reassigns the task). The write never lands.
+    final table = locks;
+    if (table != null && owner != null) {
+      final holder = table.ownerOf(rel);
+      if (holder != null && holder != owner) {
+        return 'REJECTED $rel: single-writer violation — the file is '
+            'currently owned by another actor. Do not modify it; report '
+            'the conflict and finish.';
+      }
+    }
     final old = File(absolutePath).existsSync()
         ? File(absolutePath).readAsStringSync()
         : null;
