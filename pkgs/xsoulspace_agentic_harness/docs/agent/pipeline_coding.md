@@ -106,10 +106,13 @@ FAIL.
   edits, not by new model-facing parameters. Jailed read-only
   `git_status`/`git_diff` give bounded repo-state projections.
 - **Persistent sessions (P5)**: `snapshotWorld`/`restoreWorld` drop
-  in-flight state (OpenDecision/Agency/AwaitingResponse/stale verdicts)
-  and keep budgets (AttemptCount, ToolRoundCount) + beats; a restored
-  actor is idle-resumable. `coding_agent.dart --resume <store>` continues
-  a saved session (`--session <store>` persists without resuming).
+  transient state (stale verdicts, loop-smoke streaks, the escalation
+  baton) and keep budgets (AttemptCount, ToolRoundCount), beats, open
+  decisions, agency grants and in-flight awaits (crash-mid-decision
+  recovery: the timeout sweeper turns a dangling await into a retry). A
+  snapshot taken at idle restores idle-resumable.
+  `coding_agent.dart --resume <store>` continues a saved session
+  (`--session <store>` persists without resuming).
 - **NDJSON transport (P6)**: `coding_agent.dart --json` streams one JSON
   object per line on stdout — this IS the editor-extension transport (D5:
   core learns no transport). Event schema:

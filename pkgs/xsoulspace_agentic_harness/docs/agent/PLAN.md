@@ -281,9 +281,11 @@ surface. Tests: round-trip parity, span minimality, id stability.
 
 ### P5 — Persistent sessions (LANDED 2026-09-01)
 
-Snapshot exclusions (OpenDecision/Agency/AwaitingResponse/LoopStuck/
-EscalationRequest/GoalVerified never cross a restart; AttemptCount and
-ToolRoundCount DO) → a restored actor is idle-resumable. Restart-survival
+Snapshot exclusions reconciled with the standing crash-recovery contract
+(GoalVerified/LoopStuck/EscalationRequest never cross a restart;
+OpenDecision/Agency/AwaitingResponse DO — crash-mid-decision recovery;
+AttemptCount and ToolRoundCount DO) → a snapshot taken at idle restores
+idle-resumable. Restart-survival
 test green (2 moves → snapshot → kill → restore → one more decision →
 gate passes, idle). CLI: `--session <store>` persists without resuming,
 `--resume <store>` continues (task + jail from envelope meta).

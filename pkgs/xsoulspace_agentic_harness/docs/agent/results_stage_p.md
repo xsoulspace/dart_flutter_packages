@@ -86,18 +86,35 @@ save_url` in the gate failure, the chain dump with op rows), emits
 correctly, and the final gate goes green (`all 4 calls verified`).
 Exactly one disposition; world idle. **PASS.**
 
-### On-device (pass@3 with the overseer live)
+### On-device (pass@3 with the overseer live — the completed set)
 
-backend/path/tokens source as above. Numbers from
-`/tmp/p2b_intent03_pass3.log` + `benchmark/runs/` (this session's gate):
+backend/path/tokens source as above. `bin/coding_agent.dart --task
+intent_03_bookmark_macros --runs 3` WITH the overseer wired (driver-level
+exhaustion stamp + explicit `maybeSpawnOverseer` before the window — see
+the integration note below):
 
-| Task | n | pass@n | overflows | bridge crashes | verdict |
-|---|---|---|---|---|---|
-| intent_03_bookmark_macros | 3 | 0/3 | 0 | 0 | **GATE FAIL — honest** (overseer grants one repair cycle; a single model-side fix remains out of reach for the 2–4k model on the hardest failure class) |
+| Task | n | pass@n | decisions/run | tokens/run | overflows | bridge crashes | overseer dispositions | verdict |
+|---|---|---|---|---|---|---|---|---|
+| intent_03_bookmark_macros | 3 | **0/3** | 12, 5, 11 | 27,012 / 12,544 / 23,519 | 0 | 0 | **3/3 runs** (repair(save_url) each) | **GATE FAIL — honest** |
 
-Failures stay classified (return-without-empty-stack chains,
-missing-executor builds); every run bounded and idle. The overseer's
-escalation records ship in the run logs (ledger rows carry rung + reason).
+The overseer loop is FUNCTIONAL on-device end to end: every run spawned
+the overseer, delivered the brief (2,109 chars: summary zoom + structured
+gate failure + chain dump), got a `repair(save_url)` disposition with
+op-specific notes (e.g. "op_11: wrong op, should be 'return_value' instead
+of 'return'"; "literal -> push_state. Correct wiring: literal -> return"),
+re-opened exactly that intent's scope, and the mover repaired — but the
+gate still failed (the notes occasionally name ops outside the closed
+vocabulary; the 2–4k mover cannot always convert them). Every run
+bounded, terminated idle, zero overflows. This is the DoD's honest-FAIL
+arm: the overseer's structured escalation ships in every dump. Raw logs:
+`benchmark/runs/coding_agent_afm_run{1,2,3}.log` + summary.
+
+**Integration note (found by the on-device gate, fixed):** for NATIVE
+sessions the policy path cannot fire (no `ToolResultPendingMarker` — tools
+execute inside the native ReAct chain), so the DRIVER stamps the terminal
+`GoalAttemptsExhausted` record and calls `maybeSpawnOverseer` explicitly
+before the overseer session; a stamp-only world has no open work, so
+`runUntilIdle` would otherwise exit before the scheduled system ticks.
 
 ## 3. P3 — host write gate + git projections (LLM-free)
 
@@ -122,8 +139,8 @@ ships inside every per-run log (`--- write-gate audit (P3) ---`).
 
 | Proof | Result | Source |
 |---|---|---|
-| Restart survival: 2 moves → snapshot → world dropped → store restore → idle-resumable (no OpenDecision/Agency/AwaitingResponse), budgets persist (AttemptCount=2, ToolRoundCount=5), stale verdicts do NOT cross → one more decision → gate passes, world idle | PASS | `persistent_resume_test.dart` (harness) |
-| Exclusions: OpenDecision/Agency/AwaitingResponse/LoopStuck/EscalationRequest/GoalVerified never materialize post-restore | PASS | `_excludedComponents`, `snapshot.dart` |
+| Restart survival: 2 moves → snapshot → world dropped → store restore → one more decision → gate passes, world idle; budgets persist (AttemptCount=2, ToolRoundCount=5), stale verdicts do NOT cross | PASS | `persistent_resume_test.dart` (harness) |
+| Exclusions (reconciled with the standing crash-recovery contract): GoalVerified/LoopStuck/EscalationRequest never materialize post-restore; OpenDecision/Agency/AwaitingResponse DO persist (crash-mid-decision recovery — the timeout sweeper converts a dangling await into a retry; a granted actor re-projects on restore). An idle snapshot restores idle-resumable either way. | PASS | `_excludedComponents` + the full pre-existing snapshot suite (e2e/store/restore: 12/12) |
 | CLI round trip: `--task … --scripted --jail … --session <store>` (PASS + `current.json` written) then `--resume <store>` (session meta restored: task + jail; re-verified green) | PASS | scripted runs, logged in this session |
 
 ## 5. P6 — NDJSON transport (documented + smoke-tested)
