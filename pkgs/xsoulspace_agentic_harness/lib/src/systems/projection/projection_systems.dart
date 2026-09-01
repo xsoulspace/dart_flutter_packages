@@ -8,6 +8,7 @@ import '../../model_router.dart';
 import '../../narrative/narrative.dart';
 import '../../resources/resources.dart';
 import '../decision_flow_system.dart' show ToolResultPendingMarker;
+import 'cut_composition.dart';
 import 'relevance.dart' show keywordsOf;
 
 /// System 2: Build a minimal [Situation] for each actor with [Agency].
@@ -115,17 +116,64 @@ Situation buildSituation({
   // Cinematic cut: ray-trace the graph for beats relevant to this decision.
   final beats = raycastBeats(world, entity, prompt);
   final ranked = rankFragments(world, beats, prompt);
-  final fit = fitToBudget(
-    world: world,
-    fragments: ranked,
-    budget: budget,
-    prompt: prompt,
-    estimator: estimator,
-    maxBeats: policy.maxBeats,
-  );
-  final selected = fit.selected;
-  final tokensUsed = fit.tokensUsed;
-  final truncated = fit.truncated;
+  final absencesBuffer = <String>[];
+
+  // ADR 0020 — when the host declares a CutComposition, the cut is a
+  // composed document (typed slots, per-slot policies, input gate).
+  // Absent → legacy flat ranked cut (no breaking change).
+  CutCompositionResource? compositionResource;
+  try {
+    compositionResource = world.getResource<CutCompositionResource>();
+  } on StateError {
+    compositionResource = null;
+  }
+
+  var workingSet = const <String>[];
+  var cutViolations = const <CutViolation>[];
+  var selected = const <Entity>[];
+  var truncated = false;
+  var tokensUsed = 0;
+
+  if (compositionResource != null) {
+    final composition = compositionResource.composition;
+    final originalIndex = {
+      for (var i = 0; i < beats.length; i++) beats[i]: i,
+    };
+    final goalText = entity.get<Goal>()?.text ?? prompt;
+    final verdict = entity.get<GoalVerified>();
+    final mapText = compositionResource.mapProvider?.call();
+    final cut = composeCut(
+      composition: composition,
+      candidates: ranked,
+      textOf: (beat) => fragmentText(world, beat),
+      originalIndex: originalIndex[beat] ?? 0,
+      goalText: goalText,
+      mapText: mapText,
+      verdictText: verdict == null ? null : verdict.detail,
+      totalCandidates: beats.length,
+    );
+    selected = cut.orderedBeats;
+    workingSet = cut.workingSet;
+    cutViolations = cut.violations;
+    absencesBuffer.addAll(cut.absences);
+    tokensUsed = [
+      for (final beat in selected) estimator(fragmentText(world, beat)),
+      for (final fragment in workingSet) estimator(fragment),
+    ].fold(0, (a, b) => a + b);
+    truncated = beats.length > selected.length;
+  } else {
+    final fit = fitToBudget(
+      world: world,
+      fragments: ranked,
+      budget: budget,
+      prompt: prompt,
+      estimator: estimator,
+      maxBeats: policy.maxBeats,
+    );
+    selected = fit.selected;
+    tokensUsed = fit.tokensUsed;
+    truncated = fit.truncated;
+  }
 
   // The real context the model sees includes the system prompt and tool
   // schemas, not just the prompt + projected beats. Count them so the budget
@@ -142,8 +190,10 @@ Situation buildSituation({
   final realTruncated = truncated || realTokensUsed > budget;
 
   // Green-screen: explicit absences so the model knows what it does NOT see.
-  final absences = <String>[];
-  if (policy.greenScreen && beats.length > selected.length) {
+  final absences = absencesBuffer;
+  if (policy.greenScreen &&
+      compositionResource == null &&
+      beats.length > selected.length) {
     absences.add('${beats.length - selected.length} beat(s) are off-screen.');
   }
 
@@ -159,6 +209,8 @@ Situation buildSituation({
     tokensUsed: realTokensUsed,
     tokenBudget: budget,
     truncated: realTruncated,
+    workingSet: workingSet,
+    cutViolations: cutViolations,
   );
 }
 

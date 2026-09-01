@@ -546,12 +546,18 @@ file; barrel+implementation pairs are ONE task).
   (a2a to the strongest model in the squad) lands with N5; write-gate ACP
   permission round-trips are the named N4 gap (apply-mode inside the
   delegated workspace for now).
-- [ ] `N5` — **squad hardening + metrics**: loop-breaker must catch the
-  exploration loop class seen live; task-prompt templating (where to look,
-  write early); a2a columns (handoffs, duplicate-work detection,
-  stale-projection reads) beside the K columns; AFM rejoins when the P1
-  bridge crash is fixed; free-tier models labeled per row; roles become
-  projections; pi-as-escalation-rung; write-gate permission via ACP.
+- [ ] `N5` — **squad hardening + metrics**. Headline (ADR 0020): the **Cut
+  Composition API** — the cut is a composed document with typed slots
+  (system/goal/map/observations/lastVerdict/plan), per-slot policies (dedup,
+  drop-empty, capacity), required slots as an INPUT GATE (named failure
+  before the model is called), and per-composition LLM-free conformance
+  tests. Root cause of the N4 exploration loop (flat ranked soup: scrambled
+  order, duplicate reads, empty fragments, amnesiac eviction) is fixed here,
+  not by prompt patches. Then: fs file graph as the `map` slot's data source
+  (exploration becomes structurally impossible); roles as data (model ≠
+  actor: one model fields a whole squad, AFM offline included); a2a columns
+  beside the K columns; AFM rejoins when the P1 bridge crash is fixed;
+  pi-as-escalation-rung; write-gate permission via ACP.
 
 Honest boundary: first squad tasks are file-disjoint analyzer issues and
 failing tests in harness packages. Cross-file refactors wait for N5

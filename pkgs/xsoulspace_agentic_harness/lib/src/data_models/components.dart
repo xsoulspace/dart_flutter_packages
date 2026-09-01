@@ -3,6 +3,7 @@ import 'package:ecsly/ecsly.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart' show SchemaBundle;
 import '../model_router.dart';
 import '../narrative/narrative.dart';
+import '../systems/projection/cut_composition.dart' show CutViolation;
 import 'data_models.dart';
 
 // ─────────────────────────────────────────────
@@ -183,6 +184,8 @@ class Situation implements Component {
     this.tokenBudget = 4000,
     this.truncated = false,
     this.planSteps = const [],
+    this.workingSet = const [],
+    this.cutViolations = const [],
   });
   String prompt;
   SchemaBundle schema;
@@ -213,6 +216,15 @@ class Situation implements Component {
 
   /// True when relevant context was omitted to fit the budget.
   bool truncated;
+
+  /// ADR 0020 — non-evictable working-set fragments (goal, workspace map,
+  /// last verdict), rendered BEFORE the observation beats, in slot order.
+  /// Empty unless the host declared a CutCompositionResource.
+  List<String> workingSet;
+
+  /// ADR 0020 input gate: required slots that could not fill. Non-empty →
+  /// actorAct must NOT dispatch; this is a named harness failure.
+  List<CutViolation> cutViolations;
 }
 
 /// A goal assigned to an actor.

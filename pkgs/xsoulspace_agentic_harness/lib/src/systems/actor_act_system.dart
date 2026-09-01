@@ -60,6 +60,12 @@ Future<void> actorActSystem(World world) async {
     // codecs (e.g. chat-completions messages) can render native roles; the
     // protocol is a string contract, so FFI backends are unaffected.
     final contextFragments = <Object>[];
+    // ADR 0020: the composed working set (goal, map, last verdict) renders
+    // FIRST, in declared slot order, before any observation beat. The codec
+    // renders fragments in the order given — it never re-ranks.
+    for (final fragment in situation.workingSet) {
+      contextFragments.add(fragment);
+    }
     for (final beat in situation.projectedBeats) {
       final beatEntity = world.getEntity(beat);
       if (!beatEntity.$2) continue;
@@ -123,6 +129,24 @@ Future<void> actorActSystem(World world) async {
     // Publish the request to the event channel, then fire-and-forget the
     // handler. A missing handler must fail the task immediately — otherwise
     // the actor stays in AwaitingResponse forever and the loop never sleeps.
+    // ADR 0020 input gate: a cut with unfilled required slots is never sent
+    // to the model — the task fails with the named violation instead.
+    if (situation.cutViolations.isNotEmpty) {
+      final reason = situation.cutViolations.join('; ');
+      taskRegistry.take(taskId)?.completer.complete(
+            ToolExecutionResult(name: 'generate', output: 'input gate: $reason'),
+          );
+      world.events.writer<ActorGenerateResponse>().send(
+            ActorGenerateResponse(
+              actorEntity: entity.entity,
+              structuredOutput: {'text': 'input gate: $reason'},
+              rawOutput: 'input gate: $reason',
+              error: 'input gate: $reason',
+              taskId: taskId,
+            ),
+          );
+      continue;
+    }
     world.events.writer<ActorGenerateRequest>().send(request);
     // Watermark before dispatch — used by the ADR 0002 fallback below to
     // detect whether the handler published its own response.

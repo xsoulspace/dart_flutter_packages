@@ -116,6 +116,29 @@ execute inside the native ReAct chain), so the DRIVER stamps the terminal
 before the overseer session; a stamp-only world has no open work, so
 `runUntilIdle` would otherwise exit before the scheduled system ticks.
 
+### Overseer round 2 — structured repair (same session, after the 0/3)
+
+The first on-device set exposed three defects, all host-side:
+
+1. **The overseer invented ops** — notes said `should be 'return_value'`,
+   which is outside the closed vocabulary; the brief never included
+   `valid_ops`.
+2. **Address-space mismatch** — the dump rendered op-entity ids (`op_11`)
+   while repairs happen in `intent_define` SPEC-ROW space (`next: 5`,
+   `b: '#5'`).
+3. **Prose notes are lossy** — the 2–4k mover must translate prose into
+   spec rows and drops information exactly there.
+
+Fixes (all LLM-free-testable): the brief's chain dump is now rendered as
+**spec rows** (`chain_rows` with `row` indices + `jumps_to` resolved) and
+carries `valid_ops`; the disposition tool accepts **corrected `specs`**
+which the host validates (`chainSpecError`: closed vocabulary + row
+topology) BEFORE granting — an invalid spec bounces to the overseer
+WITHOUT consuming the cycle; the system prompt hard-forbids
+out-of-vocabulary ops and teaches copy-and-fix-row semantics. Regression
+tests: the exact on-device hallucination (`return_value`) is bounced and
+the valid repair still lands (`overseer_scripted_test.dart`, 2 tests).
+
 ## 3. P3 — host write gate + git projections (LLM-free)
 
 Law-first note: the mission text proposed a model-visible
