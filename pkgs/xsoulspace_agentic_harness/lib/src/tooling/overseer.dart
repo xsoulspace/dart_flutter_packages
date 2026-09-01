@@ -34,8 +34,8 @@ import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart'
 
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart'
     show ActorModel, MeaningIndex, MeaningNode, MeaningProps, ModelRouterResource,
-        OpenDecision, PresentInScene, Scene, SceneFrame, ToolRegistry,
-        ToolRegistryResource, AgentId, ModelId, meaningComponentOf, meaningCut;
+        OpenDecision, PresentInScene, ToolRegistry, ToolRegistryResource, AgentId,
+        ModelId, meaningComponentOf, meaningCut;
 
 import 'package:xsoulspace_agentic_harness/src/data_models/components.dart'
     show Actor, ActorSystemPrompt, ActorTools, ActorThreads, EscalationRequest,
@@ -147,7 +147,7 @@ Future<void> overseerEscalationSystem(World world) async {
   } on StateError {
     return; // overseer not wired → no-op
   }
-  if (ledger.overseerPending) return;
+  if (ledger.overseerPending || !ledger.canAct) return;
   final exhausted = world.query2<Actor, GoalAttemptsExhausted>().toList();
   if (exhausted.isEmpty) return;
 
@@ -190,20 +190,24 @@ Future<void> overseerEscalationSystem(World world) async {
 
   // The overseer sees the same model the mover used (same ModelId).
   final moverModel = we.get<ActorModel>()?.modelId ?? ModelId.create();
+  // The overseer joins the MOVER's existing scene (projection supports a
+  // single scene; the overseer is a peer actor in the same world).
+  final moverScene = we.get<PresentInScene>()?.sceneEntity;
   _ensureOverseerRegistry(world, mover: mover);
 
-  final scene = world.spawnComponents([const Scene(), SceneFrame()]);
-  world.spawnComponents([
+  final overseerComponents = <Component>[
     Actor(agentId: AgentId.create()),
     ActorModel(modelId: moverModel),
     ActorSystemPrompt(text: overseerSystemPrompt),
     ActorTools(registryName: 'overseer'),
-    PresentInScene(sceneEntity: scene),
     OpenDecision(prompt: brief),
-  ]);
-  // The exhaustion record is now the overseer's to dispose; a repair grants
-  // a fresh decision, approve/escalate re-stamp the terminal record.
-  we.remove<GoalAttemptsExhausted>();
+    if (moverScene != null) PresentInScene(sceneEntity: moverScene),
+  ];
+  world.spawnComponents(overseerComponents);
+  // NOTE: the mover's GoalAttemptsExhausted record STAYS stamped while the
+  // overseer deliberates (it also blocks the policy from re-prompting). The
+  // disposition tool moves it: a repair removes it (fresh decision);
+  // approve/escalate/repair_denied keep the terminal record.
   world.flush();
 }
 
@@ -265,6 +269,7 @@ ToolDef overseerDecisionTool(World world, {required Entity mover}) =>
             if (!ledger.canRepair) {
               // J8.1 rung: budget spent — structured FAIL, not a silent loop.
               const reason = 'overseer repair budget exhausted';
+              ledger.disposed = true;
               _stampTerminal(world, mover, '$reason; last gate failure: '
                   '${ledger.lastGateFailure}');
               return {
@@ -310,6 +315,7 @@ ToolDef overseerDecisionTool(World world, {required Entity mover}) =>
           case 'approve':
             // Approval never forces a pass: the terminal record is stamped
             // and the mechanical final oracle still grades the run.
+            ledger.disposed = true; // approve is final
             _stampTerminal(
               world,
               mover,
@@ -352,6 +358,7 @@ ToolDef overseerDecisionTool(World world, {required Entity mover}) =>
                 }),
               };
             }
+            ledger.disposed = true; // structured FAIL is final
             _stampTerminal(
               world,
               mover,

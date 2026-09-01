@@ -25,7 +25,7 @@ import 'dart:io';
 import 'package:xsoulspace_agentic_harness/benchmark_api.dart'
     show CheckerResult, CheckerSpec, FixtureFile, defaultGoalFlow,
         openFreshDecision, wireIntentGradedGoal, wireRunGradedGoal,
-        IntentExpectation, evaluateChecker;
+        wireOverseer, IntentExpectation, evaluateChecker;
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
     show fsTools, FsToolsRoot, CapturedWrite, JailWriteGateway, WriteGateMode;
@@ -375,6 +375,13 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
     wireIntentGradedGoal(world, sequence: task.intents!);
   } else {
     wireRunGradedGoal(world, command: task.runCommand!, cwd: jail.path);
+  }
+
+  // J7: the overseer watches for goal-attempt exhaustion and disposes
+  // (approve / repair(intent, notes) / escalate) — wired for the intent
+  // surface, whose gate failures are meaning-native (the chain-dump brief).
+  if (task.usesIntentSurface) {
+    wireOverseer(world, moverActor: actor, maxCycles: 1);
   }
 
   const maxGoalAttempts = 3;

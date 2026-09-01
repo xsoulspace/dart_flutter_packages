@@ -73,6 +73,10 @@ class OverseerLedger extends Resource {
   /// Whether a tier escalation (J8.1) already fired.
   bool escalatedToTier = false;
 
+  /// A FINAL disposition was made (approve / escalate without budget) —
+  /// no further overseer cycles may spawn.
+  bool disposed = false;
+
   /// An overseer actor is spawned and its decision is pending.
   bool overseerPending = false;
 
@@ -86,6 +90,9 @@ class OverseerLedger extends Resource {
   final List<Map<String, Object?>> records = [];
 
   bool get canRepair => cycles < maxCycles;
+
+  /// Whether the overseer may still act at all (spawn guard).
+  bool get canAct => !disposed && (canRepair || !escalatedToTier);
 }
 
 // ---------------------------------------------------------------------------
