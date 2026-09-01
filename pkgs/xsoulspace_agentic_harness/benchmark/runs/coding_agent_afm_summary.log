@@ -14,3 +14,9 @@ summary — task: bugfix_01_off_by_one | backend: apple_foundation_afm | n: 3 | 
 
 summary — task: intent_03_bookmark_macros | backend: apple_foundation_afm | n: 3 | passed: 0 | pass@3: 0/3 | tokens source: Situation.tokensUsed (projection) | tokens/run: [15704, 13256, 14888] | decisions/run: [7, 6, 7] | moves/run: [44, 50, 41] | context overflows: 0
 
+summary — task: intent_03_bookmark_macros | backend: apple_foundation_afm | n: 3 | passed: 0 | pass@3: 0/3 | tokens source: Situation.tokensUsed (projection) | tokens/run: [12212, 7193, 9928] | decisions/run: [6, 3, 5] | moves/run: [48, 10, 42] | context overflows: 0
+
+summary — task: intent_03_bookmark_macros | backend: scripted_llm_free | n: 1 | passed: 1 | pass@1: 1/1 | tokens source: Situation.tokensUsed (projection) | tokens/run: [7802] | decisions/run: [4] | moves/run: [20] | context overflows: 0
+
+summary — task: bugfix_01_off_by_one | backend: scripted_llm_free | n: 1 | passed: 1 | pass@1: 1/1 | tokens source: Situation.tokensUsed (projection) | tokens/run: [15416] | decisions/run: [13] | moves/run: [13] | context overflows: 0
+

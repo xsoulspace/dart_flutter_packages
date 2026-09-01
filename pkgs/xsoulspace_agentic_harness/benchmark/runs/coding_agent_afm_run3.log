@@ -216,3 +216,103 @@ intents failed: save_url -> {error: no mea…"
 tick 169306: decisions=0 inFlight=0 pending=0 actors=agent-1788281701817925-2:0r/3a
 
 
+coding_agent run — task: intent_03_bookmark_macros
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 1496
+  decisions: 5
+  tool rounds (thread beats): 42
+  moves: {intent_define.list: 2, intent_define.add: 5, intent_define.define: 29, act_with_project.materialize: 3, intent_call: 3}
+  projection tokens (honest spend, Situation.tokensUsed): 9928
+  meaning nodes: 4, edges: 3
+  wall clock: 439700 ms
+  final gate (outer oracle, once): FAIL
+    check: intents failed: save_url -> {error: no meaning executor for intent: save_url — every intent needs an executor. re-send intent_define (action define) with specs}; save_url -> {error: no meaning executor for intent: save_url — every intent needs an executor. re-send intent_define (action define) with specs}; list_saved -> {value: 0}; save_url -> {error: no meaning executor for intent: save_url — every intent needs an executor. re-send intent_define (action define) with specs}
+  failure class: final gate: intents failed: save_url -> {error: no meaning executor for intent: save_url — every intent needs an executor. re-send intent_define (action define) with specs}; save_url -> {error: no meaning executor for intent: save_url — every intent needs an executor. re-send intent_define (action define) with specs}; list_saved -> {value: 0}; save_url -> {error: no meaning executor for intent: save_url — every intent needs an executor. re-send intent_define (action define) with specs}
+--- harness pulse (J1.5.3) ---
+tick 5 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788285131756887-2: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: intents failed: save_url -> {error: no meaning executor for intent: save_url — every intent needs an executor. re-send intent_define (action define) with specs}; save_url -> {error: no meaning executor for intent: save_url — every intent needs an executor. re-send intent_define (action define) with specs}; list_saved -> {value: 0}; save_url -> {error: no meaning executor for intent: save_url — every intent needs an executor. re-send intent_define (action define) with specs}
+— agent-1788285131756887-2  [idle]  rounds 0/12 (Σ0)  attempts 3/3 EXHAUSTED
+    last: intent_call:{"intent":"save_url","args":["http://example.com"]} → FAILED
+      error: {"ok":false,"error":"no meaning executor for intent: save_url — every intent needs an executor. re-send intent_define…
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 118513..143919
+tick 142084: decisions=1 inFlight=1 pending=0 actors=agent-1788285131756887-2:0r/3a
+    agent-1788285131756887-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: no mea…"
+tick 142184: decisions=1 inFlight=1 pending=0 actors=agent-1788285131756887-2:0r/3a
+    agent-1788285131756887-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: no mea…"
+tick 142284: decisions=1 inFlight=1 pending=0 actors=agent-1788285131756887-2:0r/3a
+    agent-1788285131756887-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: no mea…"
+tick 142384: decisions=1 inFlight=1 pending=0 actors=agent-1788285131756887-2:0r/3a
+    agent-1788285131756887-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: no mea…"
+tick 142484: decisions=1 inFlight=1 pending=0 actors=agent-1788285131756887-2:0r/3a
+    agent-1788285131756887-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: no mea…"
+tick 142584: decisions=1 inFlight=1 pending=0 actors=agent-1788285131756887-2:0r/3a
+    agent-1788285131756887-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: no mea…"
+tick 142684: decisions=1 inFlight=1 pending=0 actors=agent-1788285131756887-2:0r/3a
+    agent-1788285131756887-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: no mea…"
+tick 142784: decisions=1 inFlight=1 pending=0 actors=agent-1788285131756887-2:0r/3a
+    agent-1788285131756887-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: no mea…"
+tick 142884: decisions=1 inFlight=1 pending=0 actors=agent-1788285131756887-2:0r/3a
+    agent-1788285131756887-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: no mea…"
+tick 142984: decisions=1 inFlight=1 pending=0 actors=agent-1788285131756887-2:0r/3a
+    agent-1788285131756887-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: no mea…"
+tick 143084: decisions=1 inFlight=1 pending=0 actors=agent-1788285131756887-2:0r/3a
+    agent-1788285131756887-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: no mea…"
+tick 143184: decisions=1 inFlight=1 pending=0 actors=agent-1788285131756887-2:0r/3a
+    agent-1788285131756887-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: no mea…"
+tick 143284: decisions=1 inFlight=1 pending=0 actors=agent-1788285131756887-2:0r/3a
+    agent-1788285131756887-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: no mea…"
+tick 143384: decisions=1 inFlight=1 pending=0 actors=agent-1788285131756887-2:0r/3a
+    agent-1788285131756887-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: no mea…"
+tick 143484: decisions=1 inFlight=1 pending=0 actors=agent-1788285131756887-2:0r/3a
+    agent-1788285131756887-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: no mea…"
+tick 143584: decisions=1 inFlight=1 pending=0 actors=agent-1788285131756887-2:0r/3a
+    agent-1788285131756887-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: no mea…"
+tick 143684: decisions=1 inFlight=1 pending=0 actors=agent-1788285131756887-2:0r/3a
+    agent-1788285131756887-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: no mea…"
+tick 143784: decisions=1 inFlight=1 pending=0 actors=agent-1788285131756887-2:0r/3a
+    agent-1788285131756887-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: no mea…"
+tick 143884: decisions=1 inFlight=1 pending=0 actors=agent-1788285131756887-2:0r/3a
+    agent-1788285131756887-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: no mea…"
+tick 143919: decisions=0 inFlight=0 pending=0 actors=agent-1788285131756887-2:0r/3a
+
+

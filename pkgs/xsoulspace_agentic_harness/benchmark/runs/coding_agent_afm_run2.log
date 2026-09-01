@@ -316,3 +316,102 @@ Fix th…"
 tick 207194: decisions=0 inFlight=0 pending=0 actors=agent-1788281006829460-1:0r/3a
 
 
+coding_agent run — task: intent_03_bookmark_macros
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 1496
+  decisions: 3
+  tool rounds (thread beats): 10
+  moves: {intent_define.define: 4, act_with_project.materialize: 2, intent_call: 3, intent_define.list: 1}
+  projection tokens (honest spend, Situation.tokensUsed): 7193
+  meaning nodes: 8, edges: 6
+  wall clock: 144342 ms
+  final gate (outer oracle, once): FAIL
+    check: intents failed: save_url -> {value: false}; save_url -> {value: false}; list_saved -> {value: 0}; save_url -> {value: false}
+  failure class: final gate: intents failed: save_url -> {value: false}; save_url -> {value: false}; list_saved -> {value: 0}; save_url -> {value: false}
+--- harness pulse (J1.5.3) ---
+tick 3 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788284987450720-1: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: intents failed: save_url -> {value: false}; save_url -> {value: false}; list_saved -> {value: 0}; save_url -> {value: false}
+— agent-1788284987450720-1  [idle]  rounds 0/12 (Σ0)  attempts 3/3 EXHAUSTED
+    last: intent_call:{"intent":"list_saved","args":[]} → ok
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 19299..44691
+tick 42799: decisions=1 inFlight=1 pending=0 actors=agent-1788284987450720-1:0r/3a
+    agent-1788284987450720-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: return…"
+tick 42899: decisions=1 inFlight=1 pending=0 actors=agent-1788284987450720-1:0r/3a
+    agent-1788284987450720-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: return…"
+tick 42999: decisions=1 inFlight=1 pending=0 actors=agent-1788284987450720-1:0r/3a
+    agent-1788284987450720-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: return…"
+tick 43099: decisions=1 inFlight=1 pending=0 actors=agent-1788284987450720-1:0r/3a
+    agent-1788284987450720-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: return…"
+tick 43199: decisions=1 inFlight=1 pending=0 actors=agent-1788284987450720-1:0r/3a
+    agent-1788284987450720-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: return…"
+tick 43299: decisions=1 inFlight=1 pending=0 actors=agent-1788284987450720-1:0r/3a
+    agent-1788284987450720-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: return…"
+tick 43399: decisions=1 inFlight=1 pending=0 actors=agent-1788284987450720-1:0r/3a
+    agent-1788284987450720-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: return…"
+tick 43499: decisions=1 inFlight=1 pending=0 actors=agent-1788284987450720-1:0r/3a
+    agent-1788284987450720-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: return…"
+tick 43599: decisions=1 inFlight=1 pending=0 actors=agent-1788284987450720-1:0r/3a
+    agent-1788284987450720-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: return…"
+tick 43699: decisions=1 inFlight=1 pending=0 actors=agent-1788284987450720-1:0r/3a
+    agent-1788284987450720-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: return…"
+tick 43799: decisions=1 inFlight=1 pending=0 actors=agent-1788284987450720-1:0r/3a
+    agent-1788284987450720-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: return…"
+tick 43899: decisions=1 inFlight=1 pending=0 actors=agent-1788284987450720-1:0r/3a
+    agent-1788284987450720-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: return…"
+tick 43999: decisions=1 inFlight=1 pending=0 actors=agent-1788284987450720-1:0r/3a
+    agent-1788284987450720-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: return…"
+tick 44099: decisions=1 inFlight=1 pending=0 actors=agent-1788284987450720-1:0r/3a
+    agent-1788284987450720-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: return…"
+tick 44199: decisions=1 inFlight=1 pending=0 actors=agent-1788284987450720-1:0r/3a
+    agent-1788284987450720-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: return…"
+tick 44299: decisions=1 inFlight=1 pending=0 actors=agent-1788284987450720-1:0r/3a
+    agent-1788284987450720-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: return…"
+tick 44399: decisions=1 inFlight=1 pending=0 actors=agent-1788284987450720-1:0r/3a
+    agent-1788284987450720-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: return…"
+tick 44499: decisions=1 inFlight=1 pending=0 actors=agent-1788284987450720-1:0r/3a
+    agent-1788284987450720-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: return…"
+tick 44599: decisions=1 inFlight=1 pending=0 actors=agent-1788284987450720-1:0r/3a
+    agent-1788284987450720-1 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+intents failed: save_url -> {error: return…"
+tick 44691: decisions=0 inFlight=0 pending=0 actors=agent-1788284987450720-1:0r/3a
+
+

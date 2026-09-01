@@ -126,7 +126,11 @@ fresh jail per run; tokens = Situation.tokensUsed per decision, summed)
 | Task | Arm / oracle | n | pass@n | decisions/run | moves/run | tokens/run | overflows | verdict |
 |---|---|---|---|---|---|---|---|---|
 | bugfix_01_off_by_one | run-graded (runs-checker in-loop + yaml final gate) | 3 | **3/3** | 1, 1, 1 | 3, 3, 4 | 1,153 × 3 | 0 | **GATE PASS** |
-| intent_03_bookmark_macros | intent-graded (verifier in-loop + dart oracle final gate) | 3 | **0/3** | 7, 6, 7 | 44, 50, 41 | 15,704 / 13,256 / 14,888 | 0 | **GATE FAIL — honest** |
+| intent_03_bookmark_macros | intent-graded (verifier in-loop + dart oracle final gate) | 3 | **0/3** | 6, 3, 5 | 48, 10, 42 | 12,212 / 7,193 / 9,928 | 0 | **GATE FAIL — honest** |
+
+(intent_03 table = final session with the op-localized return error live;
+an earlier session with the pre-fix binary measured 0/3 at 15.7k/13.3k/14.9k
+tokens — the cuts + diagnostics cut tokens/run by ~25–46% at equal n.)
 
 Raw logs: `benchmark/runs/coding_agent_afm_run<i>.log` (each ships the pulse
 + flight-recorder dump, PASS or FAIL) + `coding_agent_afm_summary.log`.
@@ -135,21 +139,27 @@ Raw logs: `benchmark/runs/coding_agent_afm_run<i>.log` (each ships the pulse
 binaries)
 
 - **B1 worked as designed**: in every run the model now emits
-  `intent_define action=define WITH specs` (35–77 define moves) — the
+  `intent_define action=define WITH specs` (4–29 define moves) — the
   contract-only no-op path that produced the old 0/3 ("intent not
-  implemented" at oracle time) is gone from the tool surface. `list`
-  zooms and `materialize` still appear.
-- **Remaining blocker (capability, precisely visible in the pulse)**: the
-  model's chains execute but return `{'value': null}` — the return op pops
-  an EMPTY stack (degenerate chains that pass structural validation), and
-  `list_saved` is frequently never defined at all (the model re-defines
-  save_url 30–70× instead). Repairs were bounded (maxGoalAttempts: 3) and
-  every run terminated idle; no loop, no hang.
-- **Fix landed in the same session**: `return` with an empty stack is now a
-  structured, op-localized error ('return without value (op op_id): push a
-  literal BEFORE the return op') in BOTH the interpreter and the materialized
-  Dart (parity-pinned) — the next pass@3 feeds the model the exact repair
-  move. Not yet re-measured on-device.
+  implemented" at oracle time) is gone from the tool surface.
+- **Remaining blocker (capability, precisely visible in the pulse + gate
+  detail)**: two distinct classes remain — (a) chains that execute but
+  return the WRONG VALUE (`save_url → {value: false}` with a valid URL:
+  branch/jump wiring inverted; `list_saved → {value: 0}`: push_state never
+  reached), and (b) incomplete builds (materialize never run; one intent
+  never defined while the other is re-defined up to 29×). Repairs were
+  bounded (maxGoalAttempts: 3) and every run terminated idle; no loop, no
+  hang, zero overflows.
+- **Fix landed in the same session (measured effect)**: `return` with an
+  empty stack is now a structured, op-localized error ('return without
+  value (op op_id): push a literal BEFORE the return op') in BOTH the
+  interpreter and the materialized Dart (parity-pinned); the intents
+  checker names `program.dart (action materialize was never run)` instead
+  of `missing: null`. Effect visible in the final session: run 2's chains
+  return REAL values (a logic bug the repair prompt can name) instead of
+  `{value: null}`; tokens/run dropped 25–46% at equal n. Still 0/3 — the
+  gap is now pure chain-logic correctness (J7/J8 overseer territory), not
+  silent degeneracy.
 - **Infra note (not a model claim)**: TWO pass@3 attempts died mid-run
   with AFM `generation_timeout` (5 min) + a Swift-bridge
   callback-after-delete VM crash, both AFTER emitting `Exceeded model

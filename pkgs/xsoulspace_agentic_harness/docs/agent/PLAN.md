@@ -11,13 +11,13 @@
 > reliably. Each stage is independently testable, LLM-free first, and ends
 > with an `expectIdle`-clean harness test. Failures are data.
 
-## CURRENT SITUATION (read me first — 2026-09-01)
+## CURRENT SITUATION (read me first — 2026-09-01, post hard-cuts)
 
 - **Works, proven**: the generic loop (flat tokens/decision, 23/23 scripted
   suite); intent closure v1 with materialized-Dart parity; macros
   (5 moves vs 24); context overhead 1,496 ≤ 1,500 tokens (re-measured after
   the B1 collapse of `intent_define`); J1.5 loop bounds + flight recorder +
-  Flutter profiler. **New this session (hard cuts)**: B1 — `intent_define`
+  Flutter profiler. **Landed (hard cuts, 2026-09-01)**: B1 — `intent_define`
   collapsed to ONE self-executing action (`define` REQUIRES specs, always
   wires `impl`; the contract-only no-op path is deleted; `redefine_chain` is
   an accepted alias); B2 — one structured failure dialect for unimplemented
@@ -27,11 +27,24 @@
   the verifier wired inside the loop + bounded host repairs consuming
   AttemptCount; B8 — pass@3 protocol with per-run logs. Scripted LLM-free
   proof through the SAME driver: intent_03 PASS, bugfix_01 PASS.
-- **Open gate**: J1.4 on-device pass@3 — measured per-run in
-  [results_stage_j15.md](results_stage_j15.md) §7 (honest PASS/FAIL with
-  pulse dumps; no single-run claims).
-- **Not started**: J3+ (Dart round-trip for existing repos), J6 (scoped
-  subtask worlds), K matrix rows beyond the two DoD tasks.
+- **Gate status (measured, results_stage_j15.md §7)**: run-graded tier
+  **PASSES** (bugfix_01 pass@3 = 3/3 on-device, 1,153 tokens/run, zero
+  overflows) — the pragmatic coding path for run-verifiable tasks is REAL.
+  Intent tier still **FAILS 0/3** — but the failure class changed: no longer
+  "no executor" (B1 killed it); now chains execute and return WRONG VALUES
+  (inverted branch/jump wiring) or builds are incomplete (materialize never
+  run, one intent re-defined 29×). This is **pure chain-logic correctness
+  = J7/J8 overseer territory**. Do NOT spend more mover-only attempts on it.
+- **Unmeasured (never claim PASS)**: the op-localized `return`-error fix
+  (both interpreter + materialized Dart, parity-pinned) cut tokens/run
+  25–46% in a crashed run but has ZERO completed on-device n — TWO pass@3
+  attempts died to an AFM bridge crash (`generation_timeout` + Swift
+  callback-after-delete VM crash after `Exceeded model context window
+  size`). Infra bug in `xs_fm_bridge`, not the harness; harness budgets
+  held in every completed run.
+- **Not started**: J3 (Dart round-trip for existing repos — the
+  existing-project unlock), J6 (scoped subtask worlds), J7 (overseer),
+  K matrix beyond the two DoD tasks.
 
 **Status (2026-08-28).** Stages A–I + J1.1–J1.5 landed (detail in
 [history.md](history.md)); J1.5 landed after the fix-stage endless-loop
@@ -114,13 +127,13 @@ prompt tax together.
 - [x] `J1.3` — macro surface is closed + countable (stewardship probe);
   macro results identical to the equivalent primitive sequence (parity test).
   Suite task `intent_03_bookmark_macros` scripted green (suite count 23).
-- [ ] `J1.4` (benchmark gate, still open — tool-design fix landed, awaiting
-      measured pass@3) — AFM: bookmark executor passes at **pass@3 ≥ 1/3**
-      with zero context overflows; moves/subtask ≤ 6.
-      B1 hard cut landed 2026-09-01: the no-op `define` path is gone
-      (measured root cause of the 0/3), the deliverable driver
-      `bin/coding_agent.dart` runs the gate with the verifier wired inside
-      the loop + bounded host repairs. Measured table:
+- [ ] `J1.4` (benchmark gate — MEASURED 2026-09-01, honest split): the
+      RUN-graded tier PASSES (bugfix_01_off_by_one pass@3 = 3/3 on-device,
+      zero overflows); the INTENT tier still fails (intent_03 pass@3 = 0/3,
+      zero overflows, bounded repairs, blockers now precisely classified:
+      branch-logic correctness + incomplete builds — no silent degeneracy,
+      no no-op path). Moves/subtask met by the macros arm (scripted);
+      on-device move counts are 10–48/run. Measured table:
       [results_stage_j15.md](results_stage_j15.md) §7.
 - **Tests (LLM-free):** macro parity vs primitive sequence; accretion test
   (define → break → `redefine_intent` → oracle green); suite task
@@ -189,6 +202,72 @@ a hung run currently ships zero data.
 - **Results:** [results_stage_j15.md](results_stage_j15.md) — full numbers
   incl. on-device validation (J1.4 still open; blocker now precisely
   diagnosed: meaning-executor wiring, no longer an observability blind spot).
+
+## P — Pragmatic path: "develop Dart projects with this agent" (2026-09-01)
+
+Goal: a developer can point the agent at a real project (CLI first, editor
+host later) and get reliable, safe, verified work. Ordered by leverage;
+each item is an LLM-free-testable increment.
+
+### P1 — Re-measure the return-error fix (n=3, unblocks honest numbers)
+
+The op-localized `return`-error fix (already landed, parity-pinned) has
+ZERO completed on-device n — two pass@3 sets died to the AFM bridge crash.
+Re-run `bin/coding_agent.dart --task intent_03 --runs 3`. If the bridge
+crash reproduces, file/fix it in the bridge layer FIRST
+(`xsoulspace_inference_apple_foundation/lib/src/native_bridge/`) — suspected:
+the 5-min `generation_timeout` fires while the Swift side still holds the
+callback; a VM callback-after-delete crash follows. A `cancel()` path on
+timeout is the likely fix. Until then every intent-tier number is
+pre-fix and stale.
+
+### P2 — J7 overseer actor (the intent-tier lever; the ONE model-side fix)
+
+Single-mover repair is at its ceiling (3 sessions of bounded 0/3 with
+named logic bugs). Land the PLAN J7 slice: after the mover's attempt
+exhausts, an overseer actor opens with `summary` zoom + the structured
+gate failure; its closed vocabulary: `approve` / `repair(intent)` /
+`escalate(reason)`. `repair(intent)` re-opens exactly that intent's scope
+(a fresh decision with the chain dump from `validateMeaningProgram` + the
+interpreter trace of the failing call). J8.1 rung 2: escalate to a bigger
+tier via `Model.tier` (OpenRouter) only after the overseer fails.
+
+### P3 — Safe-edit surface for existing projects (host seam, no core change)
+
+- `write` gains a dry-run mode + a host-side diff gate: writes land in the
+  jail, the host renders unified diffs, apply on approval. The MODEL always
+  writes via the same tool; approval is a HOST policy wrapping the tool —
+  ADR-0015-clean.
+- Add jailed read-only `git_status`/`git_diff` tools to the fs surface
+  (same pattern as `grep`/`glob`) — a coding agent on a real repo needs git
+  visibility; without it, it re-reads files to guess state.
+- `rename_symbol` is the only structured existing-code edit; keep it
+  advertised while J3 is unbuilt.
+
+### P4 — J3 slice: analyzer-backed `open(path)` + span-anchored edits
+
+The existing-repo unlock (PLAN J3.1–J3.4, host package
+`xsoulspace_agentic_dart_meaning`). Minimal viable slice for P: parse one
+file → meaning nodes with source spans → `act_with_project` gains
+`open(path)` + edit-moves that re-emit ONLY changed spans (no whole-file
+rewrite) → `dart analyze` failures localize to meaning nodes (J4.1).
+Round-trip parity tests on a fixture corpus.
+
+### P5 — Persistent sessions (Phase 6 finish)
+
+`snapshotWorld`/`restoreWorld` + `SnapshotStore` exist; finish: restore a
+session with the facet index + budgets intact, CLI restart survival, and
+one scripted test proving a resumed actor completes a task. Prerequisite
+for a long-lived daemon host (editor integration).
+
+### P6 — Editor host (after P3+P5)
+
+Task-per-invocation first: an extension/CLI call streaming
+`coding_agent.dart` output (pulse JSON) into the editor. Daemon second:
+one world, actor+thread per task, MCP transport adapter (D5 — core learns
+no transport). `HarnessProfilerView` becomes the IDE debug panel.
+
+---
 
 ### J2 — Context ownership experiment
 

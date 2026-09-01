@@ -102,9 +102,10 @@ SIGINT / driver exit — even on FAIL. Flutter UI: HarnessProfilerView
   ONE on-device entry point `bin/coding_agent.dart` with verifiers wired
   inside the loop and bounded host repairs consuming AttemptCount;
   **B8** — pass@3 protocol, per-run logs + summary rows.
-- **Open gate (J1.4)**: on-device pass@3 — measured table in
-  [results_stage_j15.md](results_stage_j15.md) §7 (updated live this
-  session; honest PASS/FAIL with pulse dumps cited).
+- **Open gate (J1.4)**: measured 2026-09-01 — run-graded tier PASSES
+  (bugfix_01 pass@3 = 3/3 on-device, zero overflows); intent tier FAILS
+  (intent_03 0/3, bounded, precisely classified blockers). Full table in
+  [results_stage_j15.md](results_stage_j15.md) §7.
 - **Next levers**: J7/J8 (overseer actor + escalation ladder get the
   structured failure instead of the mover retrying), J2 (context-ownership
   experiment — session-per-decision bridge already committed), J3+ (Dart
