@@ -25,7 +25,8 @@ import 'dart:io';
 import 'package:xsoulspace_agentic_harness/benchmark_api.dart'
     show CheckerResult, CheckerSpec, FixtureFile, defaultGoalFlow,
         openFreshDecision, wireIntentGradedGoal, wireRunGradedGoal,
-        wireOverseer, OverseerLedger, IntentExpectation, evaluateChecker;
+        wireOverseer, maybeSpawnOverseer, OverseerLedger, IntentExpectation,
+        evaluateChecker;
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
     show fsTools, FsToolsRoot, CapturedWrite, JailWriteGateway, WriteGateMode;
@@ -468,6 +469,10 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
       // overseer not wired → base ladder only
     }
     if (ledger != null && ledger.canAct) {
+      // Stamp-only worlds have no open work: runUntilIdle would exit before
+      // the scheduled system ticks. Spawn explicitly, then give the
+      // disposition + (granted) repair one bounded session.
+      maybeSpawnOverseer(world);
       await HarnessLoop(world: world).runUntilIdle();
       finalGate = grade();
       passed = finalGate.isNotEmpty && finalGate.every((c) => c.passed);

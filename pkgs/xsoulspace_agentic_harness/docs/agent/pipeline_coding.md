@@ -14,6 +14,18 @@ a budgeted view to a few typed moves. `F` — decomposition, materialization,
 verification, repair, projection, budgets — is ALL host code. The model
 **never writes code tokens, never sees an AST, never holds the whole tree**.
 
+> Scope (ADR 0019): this law is **absolute for code at every model size** —
+> a 4k on-device model and a frontier hosted model compose the same meaning
+> surface, because the law tracks verifiability, not artifact size: code has
+> closed semantics (interpreter / oracle), so the model composes meaning and
+> the host materializes. Untrained and invented languages strengthen the law
+> (an invented language = an intent set + a materializer spec, both data,
+> both host-verified). Free-form text (docs, prose, dialogue) is NOT code
+> and was never under the law: it routes to the `evidence` tier, never
+> `pass`. The surface grows intent-first (intents as data, host-verified;
+> AE owns durable truth per ADR 0017/D2; IntentCall projects intents to
+> MCP/ACP/platform), never vocabulary-by-hand.
+
 ## The pipeline (bookmark-manager reference path)
 
 ```

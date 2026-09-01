@@ -6,6 +6,15 @@ Status: proposed. Binding context: ADR 0007 §3–4,
 tokens/task deltas (ADR 0009), because hosted columns cannot account tokens
 honestly until C1 is fixed.
 
+> Tier scope (ADR 0019): this suite is the **conventional tier** — short,
+> single-session, mainstream-stack coding, the home turf of direct-grammar
+> conversation agents. A fair loss here to a direct-grammar agent is expected
+> and honest. The headline measurement is the **long-horizon tier**
+> (multi-session, cross-task, repo-scale, snapshot/restore mid-run):
+> [plan_long_horizon_tier.md](plan_long_horizon_tier.md) — that is the axis
+> where the North Star claim (flat tokens/decision, persistence, multi-actor)
+> actually binds and where the harness-vs-pi comparison is decisive.
+
 Cross-reference: ADR 0009's falsifying experiment already showed the
 plan-frontier mechanism removes the ReAct close-out call (−39% calls, −24%
 tokens/task on scripted runs,

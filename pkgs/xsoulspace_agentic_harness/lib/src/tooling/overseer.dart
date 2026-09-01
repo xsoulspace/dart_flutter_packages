@@ -141,15 +141,24 @@ String buildOverseerBrief(
 /// the overseer's custody — the disposition tool re-stamps a terminal record
 /// unless it grants a repair.
 Future<void> overseerEscalationSystem(World world) async {
+  maybeSpawnOverseer(world);
+}
+
+/// Spawns the overseer for the exhausted mover when the ledger allows.
+/// Returns true when a spawn happened. Callable from hosts DIRECTLY: a
+/// stamp-only world has no open work, so `runUntilIdle` may exit before the
+/// scheduled system ever ticks (the on-device P2 finding) — the driver
+/// therefore invokes this explicitly before its overseer session.
+bool maybeSpawnOverseer(World world) {
   OverseerLedger? ledger;
   try {
     ledger = world.getResource<OverseerLedger>();
   } on StateError {
-    return; // overseer not wired → no-op
+    return false; // overseer not wired → no-op
   }
-  if (ledger.overseerPending || !ledger.canAct) return;
+  if (ledger.overseerPending || !ledger.canAct) return false;
   final exhausted = world.query2<Actor, GoalAttemptsExhausted>().toList();
-  if (exhausted.isEmpty) return;
+  if (exhausted.isEmpty) return false;
 
   final (facade, _, _) = exhausted.first;
   final mover = facade.entity;
@@ -209,6 +218,7 @@ Future<void> overseerEscalationSystem(World world) async {
   // disposition tool moves it: a repair removes it (fresh decision);
   // approve/escalate/repair_denied keep the terminal record.
   world.flush();
+  return true;
 }
 
 void _ensureOverseerRegistry(World world, {required Entity mover}) {

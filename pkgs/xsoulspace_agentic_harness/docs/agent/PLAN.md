@@ -46,6 +46,25 @@
   existing-project unlock), J6 (scoped subtask worlds), J7 (overseer),
   K matrix beyond the two DoD tasks.
 
+**Status (2026-09-02).** ADR
+[0019](../../../../docs/decisions/0019_code_law_absolute_long_horizon_tier.md)
+landed: the code law is **ABSOLUTE at every model size** (verifiability, not
+artifact size — untrained/invented languages are the strongest case FOR it);
+free-form text was never under the law (`evidence` tier); the
+**long-horizon tier** (Phase 8,
+[plan_long_horizon_tier.md](plan_long_horizon_tier.md)) is the headline
+measurement — the 20-task suite is re-labeled the conventional tier
+(expected, honest losses to direct-grammar agents are published); growth is
+**intent-first** (intents as data + host verification — `intent_define`/
+`intent_call`/closure/macros already landed; AE owns durable truth per D2;
+IntentCall projects intents to MCP/WebMCP/ACP/platform), with model-proposed
+intent growth sequenced as the successor to J/K. ACP status corrected: the
+server exists (`dart_acp_toolkit`, intent-registry backend included); the
+remaining editor gap is one harness-backed `AcpAgentBackend` + a live Zed
+proof. CI gate: `test/long_horizon_multi_session_test.dart` pins
+tokens/decision flatness **across session boundaries** (snapshot/restore),
+complementing the within-run Phase 2 gate.
+
 **Status (2026-08-28).** Stages A–I + J1.1–J1.5 landed (detail in
 [history.md](history.md)); J1.5 landed after the fix-stage endless-loop
 incident — its section lists the traced hazards and results.

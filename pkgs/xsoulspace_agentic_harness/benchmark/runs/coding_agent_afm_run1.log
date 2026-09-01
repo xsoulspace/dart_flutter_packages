@@ -282,3 +282,64 @@ materialized program missing: program.dart…"
 tick 304865: decisions=0 inFlight=0 pending=0 actors=agent-1788295245334471-0:0r/3a
 
 
+coding_agent run — task: intent_03_bookmark_macros
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 1496
+  decisions: 9
+  tool rounds (thread beats): 83
+  moves: {intent_define.list: 8, intent_define.define: 63, intent_define.redefine_chain: 10, act_with_project.materialize: 1, intent_call: 1}
+  projection tokens (honest spend, Situation.tokensUsed): 19785
+  meaning nodes: 9, edges: 8
+  wall clock: 874997 ms
+  final gate (outer oracle, once): FAIL
+    check: intents failed: save_url -> {error: return without value (op op_8): the chain reached the return op with an empty stack - push a literal (or the value to return) BEFORE the return op}; save_url -> {error: return without value (op op_8): the chain reached the return op with an empty stack - push a literal (or the value to return) BEFORE the return op}; list_saved -> {error: no meaning executor for intent: list_saved — every intent needs an executor. re-send intent_define (action define) with specs}; save_url -> {error: return without value (op op_8): the chain reached the return op with an empty stack - push a literal (or the value to return) BEFORE the return op}
+  failure class: final gate: intents failed: save_url -> {error: return without value (op op_8): the chain reached the return op with an empty stack - push a literal (or the value to return) BEFORE the return op}; save_url -> {error: return without value (op op_8): the chain reached the return op with an empty stack - push a literal (or the value to return) BEFORE the return op}; list_saved -> {error: no meaning executor for intent: list_saved — every intent needs an executor. re-send intent_define (action define) with specs}; save_url -> {error: return without value (op op_8): the chain reached the return op with an empty stack - push a literal (or the value to return) BEFORE the return op}
+--- harness pulse (J1.5.3) ---
+tick 9 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788296818583839-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: intents failed: save_url -> {error: return without value (op op_8): the chain reached the return op with an empty stack - push a literal (or the value to return) BEFORE the return op}; save_url -> {error: return without value (op op_8): the chain reached the return op with an empty stack - push a literal (or the value to return) BEFORE the return op}; list_saved -> {error: no meaning executor for intent: list_saved — every intent needs an executor. re-send intent_define (action define) with specs}; save_url -> {error: return without value (op op_8): the chain reached the return op with an empty stack - push a literal (or the value to return) BEFORE the return op}
+— agent-1788296818583839-0  [idle]  rounds 0/12 (Σ0)  attempts 3/3 EXHAUSTED
+    last: intent_define:{"action":"define","specs":[{"label":"save_url","b":"retu… → FAILED
+      error: {"error":"define requires name"}
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 293653..319030
+tick 317253: decisions=1 inFlight=1 pending=0 actors=agent-1788296818583839-0:0r/3a
+    agent-1788296818583839-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 317353: decisions=1 inFlight=1 pending=0 actors=agent-1788296818583839-0:0r/3a
+    agent-1788296818583839-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 317453: decisions=1 inFlight=1 pending=0 actors=agent-1788296818583839-0:0r/3a
+    agent-1788296818583839-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 317553: decisions=1 inFlight=1 pending=0 actors=agent-1788296818583839-0:0r/3a
+    agent-1788296818583839-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 317653: decisions=1 inFlight=1 pending=0 actors=agent-1788296818583839-0:0r/3a
+    agent-1788296818583839-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 317753: decisions=1 inFlight=1 pending=0 actors=agent-1788296818583839-0:0r/3a
+    agent-1788296818583839-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 317853: decisions=1 inFlight=1 pending=0 actors=agent-1788296818583839-0:0r/3a
+    agent-1788296818583839-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 317953: decisions=1 inFlight=1 pending=0 actors=agent-1788296818583839-0:0r/3a
+    agent-1788296818583839-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 318053: decisions=1 inFlight=1 pending=0 actors=agent-1788296818583839-0:0r/3a
+    agent-1788296818583839-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 318153: decisions=1 inFlight=1 pending=0 actors=agent-1788296818583839-0:0r/3a
+    agent-1788296818583839-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 318253: decisions=1 inFlight=1 pending=0 actors=agent-1788296818583839-0:0r/3a
+    agent-1788296818583839-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 318353: decisions=1 inFlight=1 pending=0 actors=agent-1788296818583839-0:0r/3a
+    agent-1788296818583839-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 318453: decisions=1 inFlight=1 pending=0 actors=agent-1788296818583839-0:0r/3a
+    agent-1788296818583839-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 318553: decisions=1 inFlight=1 pending=0 actors=agent-1788296818583839-0:0r/3a
+    agent-1788296818583839-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 318653: decisions=1 inFlight=1 pending=0 actors=agent-1788296818583839-0:0r/3a
+    agent-1788296818583839-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 318753: decisions=1 inFlight=1 pending=0 actors=agent-1788296818583839-0:0r/3a
+    agent-1788296818583839-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 318853: decisions=1 inFlight=1 pending=0 actors=agent-1788296818583839-0:0r/3a
+    agent-1788296818583839-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 318953: decisions=1 inFlight=1 pending=0 actors=agent-1788296818583839-0:0r/3a
+    agent-1788296818583839-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 319030: decisions=0 inFlight=0 pending=0 actors=agent-1788296818583839-0:0r/3a
+tick 319030: decisions=0 inFlight=0 pending=0 actors=agent-1788296818583839-0:0r/3a
+
+

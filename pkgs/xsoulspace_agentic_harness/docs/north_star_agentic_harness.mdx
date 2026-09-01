@@ -67,6 +67,40 @@ Guardrails:
    feeds `See`-seam tools and fixtures; beats + projection remain the only
    runtime truth.
 
+## Amendment: the code law is absolute — verifiability, not model size (ADR 0019)
+
+The harness provides two services with different transfer profiles across
+model size. **Context/world management** (decomposition, projection,
+budgets, persistence, multi-actor shared state) is relative — no context
+window (1M included) solves attention degradation over long logs, cross-task
+persistence, or state shared by several actors; it transfers unchanged from
+a 4k model to a frontier model. The **code law** ("the model never writes
+code tokens") transfers the same way — it tracks **verifiability, not
+artifact size**: code has closed semantics (interpreter / oracle), so ALL
+code generation at every model size composes meaning and the host
+materializes. Untrained and invented languages are the strongest case FOR
+the law: an invented language = an intent set + a materializer spec, both
+data, both host-verified. Free-form text (docs, prose, dialogue) was never
+under the law — it routes to the `evidence` tier, never `pass`. Therefore:
+
+- **The long-horizon tier is the headline measurement** (Phase 8): hosted
+  same-model, multi-session, cross-task, repo-scale, hundreds of beats,
+  snapshot/restore mid-run — ours vs pi SDK. The 20-task suite is the
+  *conventional tier*: a fair loss there to a direct-grammar agent is
+  expected and honestly published.
+- **Growth is intent-first, not vocabulary-by-hand** — and already landed:
+  `intent_define` (specs-in, one self-executing action), `intent_call`
+  (calling convention + oracle), intent-closure parity, macros. Ops are the
+  substrate; intents are the self-extending primitive; AE (durable truth,
+  tiered verification; ADR 0017) and IntentCall (MCP/WebMCP/ACP/platform
+  projections) are sibling projections of the same intent truth.
+- Coding is the **first application** of the general agent; free-form
+  surfaces (e.g. long-document work) are host domains over the same seams
+  with their own verifiers (ADR 0014/0015; eval-tier honesty unchanged).
+- Cost columns (`cache_hit_rate`, $/task) are adoption metrics, never claim
+  metrics — KV-cache reuse amortizes cost; it solves neither attention
+  degradation nor persistence.
+
 ## What this subsection owns
 
 - **Projection** — a cinematic _cut_ per actor: only what the current decision

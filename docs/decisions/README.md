@@ -20,3 +20,4 @@
 | [0016](0016_measure_tool_efficiency_simplify_surface.md) | Accepted | Measure tool efficiency; keep the tool surface minimal and composable |
 | [0017](0017_ae_etl_planning_and_a2a_native.md) | Accepted | AE-ETL for raw→planning; a2a-native multi-actor default build path |
 | [0018](0018_meaning_view_zoom_projection_context_ownership.md) | Accepted | Meaning view is a zoom projection; context is harness-owned; macro gate fired |
+| [0019](0019_code_law_absolute_long_horizon_tier.md) | Accepted | Code law is absolute (verifiability, not model size); long-horizon tier is the headline measurement; growth is intent-first |
