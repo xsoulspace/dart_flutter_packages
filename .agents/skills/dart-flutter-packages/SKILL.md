@@ -43,6 +43,10 @@ The harness is an ECS-based multi-actor agent loop. Read in this order:
   transforms.
 - Projection is token-budgeted; benchmarks fail if exceeded.
 - End every harness test with `expectIdle(world)` (test/support).
+- **Every loop is monotonic-budgeted (J1.5)**: never reset `ToolRoundCount`/
+  `RetryCount`/`AttemptCount` inside a policy — use `openFreshDecision` for
+  host-injected fresh decisions; `RetryCount` must survive tool-call
+  continuations (a flaky backend looped 255× on-device before this rule).
 - Adding an inference provider = register an `InferenceClient` builder in
   `ModelRouter.inferenceClientsBuilders` + a `Model` entry. Nothing else changes.
   Do NOT modify core's public API from provider packages.
@@ -60,6 +64,12 @@ The harness is an ECS-based multi-actor agent loop. Read in this order:
 - **Move acks must zoom to `point`**: AFM's native session accumulates every
   tool result, so a full/local view cut per move floods a 4k context within
   ~28 moves (12k tokens). `meaningCut(zoom: 'point')` keeps feedback O(1).
+- **Component registration ORDER matters (J1.5 debug cycle)**: new Component
+  classes go at the very END of both `data_models/components.dart` AND the
+  `AgentPlugin.install` chain — ecsly assigns ids in registration order;
+  mid-chain inserts shift host-registered ids → "Bad state: Column should
+  exist after archetype creation". ADR-0009 plan-frontier components live
+  in `data_models/components.dart` (re-exported by `world_builder.dart`).
 - **ReAct continuation ends on text-only responses**: a scripted handler that
   interleaves prose fills (no tool calls) with moves stops the chain at the
   first prose turn. Pair non-terminal prose with a cheap tool call, or emit

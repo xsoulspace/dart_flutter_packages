@@ -1,23 +1,33 @@
 # Agent Harness — Plan (Stage J/K: general agent via harness-absorbed complexity)
 
-> Forward/frontier record only. Landed work (Stages A–I) lives in
+> Forward/frontier record only. Landed work (Stages A–I, J1.1–J1.5) lives in
 > [history.md](history.md); durable decisions in the
 > [ADR Index](../../../../docs/decisions/README.md) (notably
 > [0018](../../../../docs/decisions/0018_meaning_view_zoom_projection_context_ownership.md));
-> benchmark numbers in `results_*.md` + `benchmark/runs/`.
+> benchmark numbers in `results_*.md` + `benchmark/runs/`. The coding
+> pipeline end-to-end: [pipeline_coding.md](pipeline_coding.md).
 >
 > This plan is written so **another agent can build and wire every piece**
 > reliably. Each stage is independently testable, LLM-free first, and ends
 > with an `expectIdle`-clean harness test. Failures are data.
 
-**Status (2026-08-28).** J1.1–J1.3 landed; J1.5 (loop bounds + runtime
-observability) landed after the fix-stage endless-loop incident — see its
-section for the traced hazards. Stages A–I landed: meaning tree as world state (zoom
-projection: point/local/region/summary), AE wire port, intent closure v1
-(`intent_define`/`intent_call`), 22-task suite 100% scripted (incl. the
-meaning-executor arm), prose host #2 at `evidence` tier, and four on-device
-AFM runs whose failures were converted into the zoom redesign, a parity fix,
-actionable errors, and host chain validation (`results_stage_i.md`).
+## CURRENT SITUATION (read me first — 2026-08-28)
+
+- **Works, proven**: the generic loop (flat tokens/decision, 23/23 scripted
+  suite, 358 tests); intent closure v1 with materialized-Dart parity; macros
+  (5 moves vs 24); context overhead 1,487 ≤ 1,500 tokens; J1.5 loop bounds
+  (every loop monotonic-budgeted) + flight recorder + Flutter profiler —
+  two real on-device loop classes were caught BY the monitor and fixed
+  ([results_stage_j15.md](results_stage_j15.md)).
+- **Open blocker**: J1.4 on-device gate (pass@3 ≥ 1/3) at 0/3 — the 2–4k
+  model doesn't connect `intent_call` failures to wiring a meaning
+  executor. Precisely diagnosed via the pulse; next lever J7/J8 escalation.
+- **Not started**: J3+ (Dart round-trip for existing repos), J6 (scoped
+  subtask worlds), K (pass@k protocol for on-device claims).
+
+**Status (2026-08-28).** Stages A–I + J1.1–J1.5 landed (detail in
+[history.md](history.md)); J1.5 landed after the fix-stage endless-loop
+incident — its section lists the traced hazards and results.
 
 **What is proven vs open (the honest ledger):**
 
@@ -25,9 +35,10 @@ actionable errors, and host chain validation (`results_stage_i.md`).
 |---|---|
 | Channel (context/feedback) | **Solved** — point-zoom acks: O(1) feedback; 12k→4.1k; no overflow in 95–145 rounds |
 | Oracle (verification) | **Solved** — intent-graded checker over real `dart` subprocess; mechanical verifier loop |
-| Repair (state mutation) | **Half** — actionable errors drive `set_prop`; append-only accretion across retries killed run4 |
+| Repair (state mutation) | **Bounded, quality open** — `redefine_chain` absorbs accretion; every loop monotonic-budgeted (J1.5); remaining: model doesn't self-repair to wire executors (J1.4 blocker) |
 | Model horizon | **Open** — 2–4k model loses the plan over 100+ rounds; run variance dominates |
 | Generality of vocabulary | **Open** — materializers are hand-written per task; no Dart round-trip |
+| Observability | **Solved** (J1.5) — pulse + flight recorder; two on-device loops caught by the monitor, both fixed (results_stage_j15.md) |
 
 **The strategic bet:** AFM becomes a general agent not by seeing more but by
 being asked for less — tiny selections over meaning; the harness owns

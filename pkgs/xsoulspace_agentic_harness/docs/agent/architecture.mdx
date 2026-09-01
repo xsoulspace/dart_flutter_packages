@@ -1,7 +1,10 @@
 # Agent Harness Architecture Map
 
 One page, one diagram, so agents and humans stop re-deriving this from ~30
-source files. Full objective and non-goals:
+source files. **For how CODING actually happens (intents → meaning tree →
+materialization → oracle → repair), read [pipeline_coding.md](pipeline_coding.md)**
+— that is the domain pipeline; this page is the generic loop it runs on.
+Full objective and non-goals:
 [North Star](../north_star_agentic_harness.mdx).
 
 ## The loop in one sentence
@@ -51,10 +54,22 @@ flowchart LR
   (Apple FM) and tag-parsed tool calls share one path.
 - Memory is **projection over beat-threads**, never a log; summaries are
   deliberate transforms that stay traceable.
-- Projection is **token-budgeted** and fails benchmarks when exceeded.
+- Projection is **token-budgeted** and fails benchmarks when exceeded. The
+  meaning view is a **zoom projection** (`point/local/region/summary`, ADR
+  0018); move acks zoom to `point` — O(1) feedback.
 - One **flush** is the coherence point per phase; `runUntilIdle` must end with
   no pending decisions, agency, awaits, tasks, or stranded events
   (`expectIdle` in test support).
+- **Every loop is monotonic-budgeted** (J1.5): `maxToolRounds` per decision
+  chain, `maxRetries` for backend errors (survives tool-call continuations),
+  `maxGoalAttempts` for failed goal verifications (then `EscalationRequest`
+  + thread suspension). `openFreshDecision` is the only budget-reset path
+  for host-injected decisions.
+- A wired `FlightRecorder` is auto-sampled and dumped on maxTicks
+  StateError/SIGINT — a stuck run ships its own post-mortem.
+- **New Component classes are appended at the very END** of
+  `AgentPlugin.install` — ecsly assigns component ids in registration order;
+  mid-chain inserts corrupt host registrations.
 - Adding a provider = register an `InferenceClient` builder in
   [ModelRouter]; nothing else changes.
 
