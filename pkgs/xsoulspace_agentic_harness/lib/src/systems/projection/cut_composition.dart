@@ -86,13 +86,30 @@ class CutComposition {
 
 /// Host-wired composition for the projection to honor. Absent → legacy flat
 /// ranked cut (no breaking change for existing flows).
+///
+/// ADR 0020 §5 — model ≠ actor: a ROLE is (composition + tool surface +
+/// model binding). [compositionByRegistry] lets each actor's registry bind
+/// its own composition (same pattern as `RunGoalSpec.commandByRegistry`),
+/// so one model can field coder/writer/overseer actors — each seeing the
+/// world through its own tested cut.
 class CutCompositionResource extends Resource {
-  CutCompositionResource(this.composition, {this.mapProvider});
+  CutCompositionResource(this.composition, {this.mapProvider, this.compositionByRegistry});
   final CutComposition composition;
 
-  /// Optional workspace-map source (fs file graph, N5b). Null → the map slot
+  /// Optional workspace-map source (fs file graph). Null → the map slot
   /// renders as an explicit absence.
   final String? Function()? mapProvider;
+
+  /// Per-actor compositions keyed by the actor's `ActorTools.registryName`.
+  final Map<String, CutComposition>? compositionByRegistry;
+
+  CutComposition forRegistry(String? registryName) {
+    if (registryName != null) {
+      final per = compositionByRegistry?[registryName];
+      if (per != null) return per;
+    }
+    return composition;
+  }
 }
 
 /// A named input-gate failure: a required slot could not fill.

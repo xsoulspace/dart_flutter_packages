@@ -546,7 +546,7 @@ file; barrel+implementation pairs are ONE task).
   (a2a to the strongest model in the squad) lands with N5; write-gate ACP
   permission round-trips are the named N4 gap (apply-mode inside the
   delegated workspace for now).
-- [ ] `N5` — **squad hardening + metrics**. Headline (ADR 0020) — **DONE**:
+- [x] `N5` — **squad hardening + metrics**. Headline (ADR 0020) — **DONE**:
   the **Cut Composition API** (`cut_composition.dart`): typed slots
   (goal/map/observations/lastVerdict), per-slot policies (dedup, drop-empty,
   capacity, recency render within observations), required slots as an INPUT
@@ -556,11 +556,29 @@ file; barrel+implementation pairs are ONE task).
   for non-declaring flows. **Live validation**: the N4 failure task re-run —
   27→8 decisions, FAIL→PASS (write + self-verified run, 10.7k tokens);
   `goalFirst=true` every decision. Evidence: `delegation_m1_evidence.md`.
-  Remaining N5 items: fs file graph as the `map` slot's provider (exploration
-  becomes structurally impossible); roles as data (model ≠ actor: one model
-  fields a whole squad, AFM offline included); a2a columns beside the K
-  columns; AFM rejoins when the P1 bridge crash is fixed;
-  pi-as-escalation-rung; write-gate permission via ACP.
+- [x] `N5b` — **fs-as-graph v1**: `WorkspaceMapProvider` — bounded,
+  deterministic, skip-listed, cached per root stat; test→subject links
+  (`test/x_test.dart -> lib/x.dart`, honest `MISSING` annotation); overflow
+  as an explicit `+N more` absence. Feeds the `map` slot (non-evictable) in
+  `runCodingAgentOnce` + squad driver. Live: second delegation PASS at 7
+  decisions / 9.9k tokens. Tests: `workspace_map_test.dart` (4/4).
+- [x] `N5c` — **roles as data (model ≠ actor)**: `AgentRole` (composition +
+  prompt + registry + model binding); per-registry compositions
+  (`CutCompositionResource.compositionByRegistry`, same pattern as
+  `RunGoalSpec.commandByRegistry`); squad driver binds roles per task. One
+  model fields many roles; one role runs on any model. Tests:
+  `roles_test.dart` — two roles on one model, per-role cuts + prompts.
+- [x] `N5d` — **a2a columns**: `SquadRow.decisions` +
+  `SquadRow.projectionTokens` beside verdicts (K2-style per-actor rows).
+- [x] `M2b` — **delegation jail seeder**: `tool/seed_delegation.sh <commit>
+  <pkg> [jail]` — extracts the parent-commit package subtree into a
+  disposable jail; pairs with the miner so mined rows replay pre-fix state.
+- [ ] `N5 remaining` — AFM rejoins when the P1 bridge crash is fixed
+  (on-device infra, Swift); pi-as-escalation-rung (a2a to the strongest
+  model in the squad); write-gate permission round-trips via ACP (needs
+  backend→client request support confirmation in `dart_acp_toolkit`);
+  M0b model-proposed criteria as data (needs a tool-with-world-access
+  seam); embedding retrieval behind the `relevance.dart` seam (optional).
 
 Honest boundary: first squad tasks are file-disjoint analyzer issues and
 failing tests in harness packages. Cross-file refactors wait for N5

@@ -90,3 +90,21 @@ input-gate violation, integration through the real projection→actorAct path.
 | goal in every cut | no | yes (goalFirst=true ×8) |
 
 d5/d6: `write` (the fix), d7: `run` (self-verification), d8: done.
+
+# Stage N5 completion (2026-09-02, same day)
+
+- **N5b fs-as-graph v1**: `WorkspaceMapProvider` — bounded tree (skip-list,
+  `+N more` explicit absence), test→subject links with honest `MISSING`
+  annotation, cached per root stat. Feeds the non-evictable `map` slot.
+- **N5c roles**: `AgentRole` + per-registry compositions
+  (`compositionByRegistry`). `roles_test.dart`: two roles on ONE model class,
+  per-role cuts (overseer capacity-1 vs coder capacity-8) and prompts — the
+  model ≠ actor claim, tested.
+- **N5d a2a columns**: per-actor `decisions` + `projectionTokens` on every
+  squad row.
+- **M2b seeder**: `tool/seed_delegation.sh` — parent-commit package subtree
+  → disposable jail (validated on a real commit).
+- **Live re-delegation with map**: PASS, 7 decisions / 11 rounds / 9.9k
+  tokens / `dart test exit=0`.
+
+Full sweep at close: 46 harness tests + 6 apple_foundation tests, all green.

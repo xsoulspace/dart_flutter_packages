@@ -135,7 +135,8 @@ Situation buildSituation({
   var tokensUsed = 0;
 
   if (compositionResource != null) {
-    final composition = compositionResource.composition;
+    final tools = entity.get<ActorTools>();
+    final composition = compositionResource.forRegistry(tools?.registryName);
     final originalIndex = {
       for (var i = 0; i < beats.length; i++) beats[i]: i,
     };

@@ -28,6 +28,8 @@ import 'package:xsoulspace_agentic_harness/benchmark_api.dart'
         wireOverseer, maybeSpawnOverseer, OverseerLedger, IntentExpectation,
         evaluateChecker;
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
+import 'package:xsoulspace_agentic_harness/src/tooling/workspace_map.dart'
+    show WorkspaceMapProvider;
 import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
     show fsTools, FsToolsRoot, CapturedWrite, JailWriteGateway, WriteGateMode;
 
@@ -348,8 +350,14 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
       // bounded by the harness round cap × per-round ack size.
       ..upsertResource(AgencyPolicy(maxConcurrent: 1, maxToolRounds: 12))
       // ADR 0020: the coder cut composition — goal/map/observations/verdict
-      // slots with dedup + drop-empty; required slots input-gated.
-      ..upsertResource(CutCompositionResource(CutComposition.coder()))
+      // slots with dedup + drop-empty; required slots input-gated. The map
+      // slot is fed by the workspace map provider (fs-as-graph v1).
+      ..upsertResource(
+        CutCompositionResource(
+          CutComposition.coder(),
+          mapProvider: WorkspaceMapProvider(jail.path).map,
+        ),
+      )
       ..flush();
   } else {
     world.upsertResource(recorder);

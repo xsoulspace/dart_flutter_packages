@@ -21,8 +21,29 @@ import '../agent.dart';
 import '../handler.dart';
 import '../harness_loop.dart';
 import '../narrative/graph_ops.dart';
+import '../systems/projection/cut_composition.dart';
 import 'build_gates.dart';
 import '../tools/fs_tools.dart';
+import 'workspace_map.dart';
+
+/// ADR 0020 §5 — model ≠ actor: a ROLE is (composition + system prompt +
+/// tool surface + model binding). One model can field many roles; one role
+/// can run on any model. Roles are host data over the same seams.
+class AgentRole {
+  const AgentRole({
+    required this.name,
+    this.composition,
+    this.systemPrompt,
+  });
+
+  final String name;
+
+  /// Null → the squad default composition (coder).
+  final CutComposition? composition;
+
+  /// Null → the squad default prompt.
+  final String? systemPrompt;
+}
 
 /// One board task: goal sentence + mechanical criterion + owned files.
 class SquadTask {
@@ -32,6 +53,7 @@ class SquadTask {
     required this.checkCommand,
     required this.ownedFiles,
     this.fixtures = const [],
+    this.role,
   });
 
   final String id;
@@ -47,6 +69,9 @@ class SquadTask {
 
   /// Host-seeded files (check scripts, pre-state). NOT model-authored.
   final List<SquadFixture> fixtures;
+
+  /// Optional role binding (ADR 0020 §5): per-actor composition + prompt.
+  final AgentRole? role;
 }
 
 class SquadFixture {
@@ -55,24 +80,55 @@ class SquadFixture {
   final String content;
 }
 
-/// One actor's row in the squad result.
+/// One actor's row in the squad result (a2a columns, K2-style).
 class SquadRow {
   SquadRow({
     required this.actorName,
     required this.taskId,
     required this.passed,
     required this.verdict,
+    required this.decisions,
+    required this.projectionTokens,
   });
   final String actorName;
   final String taskId;
   final bool passed;
   final String verdict;
+
+  /// a2a column: generation calls this actor consumed.
+  final int decisions;
+
+  /// a2a column: honest projection spend of the final cut.
+  final int projectionTokens;
 }
 
 class SquadResult {
   SquadResult({required this.rows, required this.allPassed});
   final List<SquadRow> rows;
   final bool allPassed;
+}
+
+/// Counts generation calls per actor (a2a column) and delegates.
+class _CountingHandler implements GenerationHandler {
+  _CountingHandler({
+    required this.inner,
+    required this.decisions,
+    required this.entityName,
+  });
+
+  final GenerationHandler inner;
+  final Map<String, int> decisions;
+  final Map<Entity, String> entityName;
+
+  @override
+  Future<ActorGenerateResponse> generate(
+    World world,
+    ActorGenerateRequest request,
+  ) async {
+    final name = entityName[request.actorEntity];
+    if (name != null) decisions[name] = (decisions[name] ?? 0) + 1;
+    return inner.generate(world, request);
+  }
 }
 
 /// Routes generation requests to a per-actor handler (the resource resolves
@@ -132,7 +188,9 @@ Future<SquadResult> runSquad({
   final locks = FileLockTable();
   final entityName = <Entity, String>{};
   final byActor = <String, GenerationHandler>{};
+  final decisionsByActor = <String, int>{};
   final commandByRegistry = <String, List<String>>{};
+  final compositionByRegistry = <String, CutComposition>{};
   final actorTasks = <String, SquadTask>{};
 
   final scene = world.spawnComponents([Scene(), SceneFrame()]);
@@ -173,29 +231,55 @@ Future<SquadResult> runSquad({
     world.getResource<ToolRegistryResource>().register(registryName, registry);
     commandByRegistry[registryName] = task.checkCommand;
 
+    final role = task.role;
     final actor = world.spawnComponents([
       Actor(agentId: AgentId.create()),
       ActorModel(modelId: ModelId.create()),
-      ActorSystemPrompt(text: 'You are $actorName. Work ONLY on your task.'),
+      ActorSystemPrompt(
+        text: role?.systemPrompt ??
+            'You are $actorName. Work ONLY on your task.',
+      ),
       ActorThreads(threads: []),
       ActorTools(registryName: registryName),
       PresentInScene(sceneEntity: scene),
       Goal(text: task.prompt),
       OpenDecision(prompt: task.prompt),
     ]);
+    if (role?.composition != null) {
+      compositionByRegistry[registryName] = role!.composition!;
+    }
     final thread = spawnThread(world, actor, scene);
     world.upsertComponent(actor, ActorThreads(threads: [thread]));
     world.flush();
 
     entityName[actor] = actorName;
     byActor[actorName] = handlerFor(actorName);
+    decisionsByActor[actorName] = 0;
     actorTasks[actorName] = task;
   }
 
   world.getResource<GenerationHandlerResource>().registerDefault(
-        _SquadRoutingHandler(byActor: byActor, entityName: entityName),
+        _CountingHandler(
+          inner: _SquadRoutingHandler(
+            byActor: byActor,
+            entityName: entityName,
+          ),
+          decisions: decisionsByActor,
+          entityName: entityName,
+        ),
       );
   if (recorder != null) world.upsertResource(recorder);
+
+  // ADR 0020: squad composition with per-role cuts + the workspace map
+  // provider (fs-as-graph v1) feeding the required map slot.
+  final mapProvider = WorkspaceMapProvider(workspace.path);
+  world.upsertResource(
+    CutCompositionResource(
+      CutComposition.coder(),
+      compositionByRegistry: compositionByRegistry,
+      mapProvider: mapProvider.map,
+    ),
+  );
 
   // Per-actor run-graded verification (stamps ONLY the pending actor).
   world.upsertResource(
@@ -229,12 +313,15 @@ Future<SquadResult> runSquad({
     final name = entityName[facade.entity];
     if (name == null) continue;
     final verdict = world.getEntity(facade.entity).$1.get<GoalVerified>();
+    final situation = world.getEntity(facade.entity).$1.get<Situation>();
     rows.add(
       SquadRow(
         actorName: name,
         taskId: actorTasks[name]!.id,
         passed: verdict?.passed ?? false,
         verdict: verdict?.detail ?? 'no verdict stamped',
+        decisions: decisionsByActor[name] ?? 0,
+        projectionTokens: situation?.tokensUsed ?? 0,
       ),
     );
   }
