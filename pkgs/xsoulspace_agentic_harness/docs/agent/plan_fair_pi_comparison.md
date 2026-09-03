@@ -1,7 +1,7 @@
 # Plan — Fair pi vs harness comparison (Phase 4 follow-up)
 
 Status: proposed. Binding context: ADR 0007 §3–4,
-[results_phase4.md](results_phase4.md). This is item **A1** in the living
+[results_phase4.md](archive/results_phase4.md). This is item **A1** in the living
 [PLAN](PLAN.md) — it blocks every measured claim downstream, including A2's
 tokens/task deltas (ADR 0009), because hosted columns cannot account tokens
 honestly until C1 is fixed.

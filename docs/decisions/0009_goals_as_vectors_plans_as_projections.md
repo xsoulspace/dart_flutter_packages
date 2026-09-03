@@ -121,16 +121,16 @@ generators per ADR 0003.
   mechanical steps skipping the LLM, measure the tokens/task delta.
   **Executed 2026-08 across all 20 suite tasks: −39% LLM calls, −24%
   tokens/task, equal pass rate. Not noise — the mechanism survives.**
-  See [results](../../xsoulspace_inference_core/docs/agent/results_plan_falsification.md).
+  See [results](../../pkgs/xsoulspace_agentic_harness/docs/agent/results_plan_falsification.md).
   Known gap before production shape: the experiment's frontier policy reads
   the workspace fs directly; predicates must become verifier-tool beats to
   keep policies pure.
 
 ## References
 
-- [North Star](../../pkgs/xsoulspace_inference_core/docs/north_star_agentic_harness.mdx)
+- [North Star](../../pkgs/xsoulspace_agentic_harness/docs/north_star_agentic_harness.mdx)
 - ADR 0003 (LLM-free evaluation), ADR 0004 (causal coupling — reused for
   decomposition fidelity), ADR 0007 (seam 3 for verifier tools)
-- [Fair pi comparison](../../pkgs/xsoulspace_inference_core/docs/agent/plan_fair_pi_comparison.md)
+- [Fair pi comparison](../../pkgs/xsoulspace_agentic_harness/docs/agent/plan_fair_pi_comparison.md)
   — C1 fix determines whether hosted columns can even measure tokens honestly
   before/after this lands.

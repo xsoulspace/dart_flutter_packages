@@ -1,9 +1,9 @@
 # ADR 0009 Falsification Results — plan-frontier vs ReAct close-out
 
 Date: 2026-08. Experiment:
-[`benchmark/adr0009_experiments.dart`](../../../benchmark/adr0009_experiments.dart)
+[`lib/src/benchmark/adr0009_experiments.dart`](../../lib/src/benchmark/adr0009_experiments.dart)
 (`--mode falsification`). Run:
-`dart run benchmark/adr0009_experiments.dart --mode falsification`
+`dart run lib/src/benchmark/adr0009_experiments.dart --mode falsification`
 
 ## Design
 
@@ -237,7 +237,7 @@ device: 1 call, FAIL, nothing verified).
   2. The idle check must mirror `canSleep()` **including in-flight tool tasks
      and unconsumed result events** — otherwise the verifier races an
      executing write and nudges on stale workspace state.
-- Proof: `benchmark/adr0009_experiments.dart` (`--mode idle-proof`) — a
+- Proof: `lib/src/benchmark/adr0009_experiments.dart` (`--mode idle-proof`) — a
   deterministic flaky handler
   (answer-only first call) ends FAIL/1-call without the rule; WITH the rule:
   caught → nudged once → goal achieved. **2 calls, PASS, 664 tokens.**
@@ -247,7 +247,7 @@ device: 1 call, FAIL, nothing verified).
 
 ### 2. Decomposition mechanics landed
 
-`benchmark/adr0009_experiments.dart` (`--mode decomposition`): steps as
+`lib/src/benchmark/adr0009_experiments.dart` (`--mode decomposition`): steps as
 entities with per-step
 claims + exact-content acceptance predicates; each decision sees ONLY the
 current step's criterion; per-step verification is mechanical graph logic;

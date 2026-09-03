@@ -3,7 +3,7 @@
 Extracted from the former living PLAN so the plan stays forward-looking.
 One entry per landed body of work; durable decisions live in
 [ADR Index](../../../../docs/decisions/README.md), benchmark numbers in
-[results_phase4.md](results_phase4.md).
+[results_phase4.md](archive/results_phase4.md).
 
 ## Landed
 
@@ -73,7 +73,7 @@ One entry per landed body of work; durable decisions live in
   Tests: `test/loop_bounds_inspector_test.dart` (8), profiler widget tests (3).
   Benchmark: `tool/j15_benchmark.dart` — pulse overhead 13–21 µs (≈2% of the
   1kHz tick budget), incident replay bounded at 136 ms / 3 attempts.
-  **On-device validation (results_stage_j15.md):** the wired monitor caught
+  **On-device validation (archive/results_stage_j15.md):** the wired monitor caught
   TWO loop classes live — (1) `RetryCount` reset on every resolved response
   made a flaky backend retry forever (255× identical `backend_failed`
   prompts) → fixed as J1.5.6 (budget survives tool-call continuations);
@@ -196,7 +196,7 @@ One entry per landed body of work; durable decisions live in
 | 1 | Docs & North Star | Done — claims separated from proofs |
 | 2 | Long-horizon scaling | **Done** — flatness **1.07x** tokens/decision, latency **1.92x** @1,000 beats, budget never exceeded; CI-gated (`test/long_horizon_test.dart`) |
 | 3 | Streaming through FFI | **Done** — `xs_fm_generate_stream_async` Swift bridge → `streamStructuredText`; TTFT ~8.3s cold; smoke `bin/stream_smoke.dart` |
-| 4 | 20-task coding suite | Ran; results honest but claim-defining number low — see [results_phase4.md](results_phase4.md) and [plan_fair_pi_comparison.md](plan_fair_pi_comparison.md) for why columns weren't comparable (C1/C2/C3) |
+| 4 | 20-task coding suite | Ran; results honest but claim-defining number low — see [results_phase4.md](archive/results_phase4.md) and [plan_fair_pi_comparison.md](plan_fair_pi_comparison.md) for why columns weren't comparable (C1/C2/C3) |
 | 5 | Concurrency gating | **Done** — `Model.maxInFlight`, per-model agency gating, `_spawn` battle-tested under serial AFM. Follow-up: scale `taskTimeout` with queue depth |
 | 6 | Snapshot/restore | Open — REPL prototype only |
 
@@ -370,3 +370,49 @@ failure before the bridge is called (the recorded VM crash was preceded by
 to the same named code (belt-and-suspenders; needs a macOS bridge-test run
 for verification).
 
+
+---
+
+## R7 — edit-as-re-derivation (landed 2026-09-03; ADR 0023)
+
+Extracted from the living PLAN; the forward work is the production path in
+[PLAN.md](PLAN.md). Full rows: [results_r7.md](results_r7.md); transcript:
+`benchmark/runs/r7_daemon_transcript.txt`.
+
+- **R7b — span-edit materializer.** `span_editor.dart` in the
+  dart_meaning host: ONE tool (`edit_symbol`), closed enum
+  (`replace_member_body` / `insert_member` via the R6 compiler's public
+  `compileOpChainBody`, `apply_executable` pack-fed with the built-in
+  lexical `rename_symbol` expanding over the refs frontier — never a core
+  verb, the B4 lesson). Three host-enforced fences (expressiveness /
+  ORACLE COVERAGE / integration) bounce as named data before generation;
+  atomic batches with lock pre-check and in-memory revert; failure
+  attribution (revert only what the move caused). Gate: multi-file change,
+  zero `read`/`write` in registry AND beats. Write demotion: the run-graded
+  fs arm is LEGACY-HOST-ONLY. Perf lesson: the verify baseline is a WORLD
+  RESOURCE (`SpanVerifyBaseline` — one oracle run per state change),
+  post-analyze scoped to touched files, per-phase timings on every outcome
+  (a 2-file rename applies+verifies in 649 ms).
+- **R7c — daemon holds the world.** Sessions keyed per workspace; the
+  meaning tree is NEVER snapshotted (the codec excludes Meaning components
+  at capture — the 18s restore finding resolved by re-derivation);
+  mechanical `refresh` tick per prompt; `loadSession` real (restore from
+  `.dart_tool/harnessd_store`); `requestPermission` deny-by-default;
+  `cancelSession` real (flag observed at the turn boundary); escalation
+  capped (`min(3+rounds, 9)`); unique tool-call ids; tool RESULTS streamed
+  over ACP. Plus the meaning-profile surface in `runCodingAgentOnce` (the
+  actor always gets its first session) and the flutter-package fix in
+  `resolveWorkspaceCheck`.
+- **TASK 3 — pi through the daemon.** The pi driver
+  (`benchmark/pi_driver/run_r7_daemon_gate.mjs`) + the interactive
+  extension (`r7_harnessd_extension.ts`): pi with ONLY the five
+  daemon-backed tools; scripted mover (the gate measures the surface).
+  Gate PASS: scan → zoom → impact → rename (private symbol, `flutter
+  test` green) → verify, transcript committed. Friction recorded: a
+  silent client is DENIED by the approver — deny-by-default enforced
+  itself; the client must answer `session/request_permission`.
+- **R7d — pack-fed edits.** `EditExecutableWire` in
+  `agentic_executables_wire` (zero-dep; unknown kinds fail LOUDLY);
+  `registerPackExecutable` on the materializer; the worked example
+  `dart/fix_loop_bound` lands at ZERO authored tokens (the op-chain
+  travels with the pack).

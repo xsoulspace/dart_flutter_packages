@@ -14,6 +14,7 @@ host derives, materializes, and verifies.
 | `lib/src/code_etl.dart` | Repo-scale code ETL (scan → meaning tree → manifest fidelity) + impact-frontier decomposition. Tier 1/2 gates: `etl_scale_tier{1,2}_test.dart`; probe: `tool/etl_scale_probe.dart`. |
 | `test/workspace_oracle_e2e_test.dart` | THE R6 gate (ADR 0022 validation). |
 | `tool/r6_probe.dart` | Evidence re-run probe (`dart run tool/r6_probe.dart`). |
+| `lib/src/span_editor.dart` | **R7b (ADR 0023): the ACT verb** — `edit_symbol` tool (`replace_member_body` / `insert_member` op rows, `apply_executable` pack-fed, built-in lexical `rename_symbol` over the refs frontier). Three host-enforced fences (expressiveness / ORACLE COVERAGE / integration) bounce before generation; atomic batches; failure attribution + in-memory revert; verify baseline is a world resource (`SpanVerifyBaseline`), post-analyze scoped to touched files. Gate: `test/span_edit_gate_test.dart`; packs: `test/pack_edit_gate_test.dart`. |
 
 ## Invariants
 

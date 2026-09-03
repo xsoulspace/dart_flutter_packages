@@ -147,59 +147,44 @@ counts still match `responses_sent_delta`.
 | Pulse + flight recorder | `lib/src/observation/harness_inspector.dart` |
 | On-device intent-closure driver (J1.4 benchmark) | `../xsoulspace_inference_apple_foundation/bin/intent_closure_afm.dart` |
 | **On-device coding agent (THE deliverable)** | `../xsoulspace_inference_apple_foundation/bin/coding_agent.dart` + `lib/src/coding_agent_runner.dart` |
+| **R7 edit tier (ADR 0023): `edit_symbol` + fences + auto-revert** | `../xsoulspace_agentic_dart_meaning/lib/src/span_editor.dart` (gates: `span_edit_gate_test.dart`, `pack_edit_gate_test.dart`) |
+| **R7 daemon (`harnessd`: per-workspace world, ACP, meaning profile)** | `../xsoulspace_inference_apple_foundation/bin/harnessd.dart` + `lib/src/harness_acp_backend.dart` |
+| **R7 pi integration (daemon as the only file surface)** | `benchmark/pi_driver/run_r7_daemon_gate.mjs` + `r7_harnessd_extension.ts`; transcript `benchmark/runs/r7_daemon_transcript.txt` |
 | Flutter profiler | `../xsoulspace_agentic_harness_flutter_profiler/` |
 
-## Current situation (2026-09-01, post P1–P5)
+## Current situation (2026-09-03, post R7)
 
-- **Landed**: meaning tree as world state + zoom projection (ADR 0018);
-  intent closure v1 (interpreter ⇄ materialized-Dart parity); macros
-  (intent_03: 5 moves vs 24 micro-moves, suite 23/23 scripted); **B1** —
-  `intent_define` collapsed to ONE self-executing action; **B2** — one
-  structured failure dialect; **B4/B5** — legacy edit paths + crutch tests
-  deleted; **B3/B7** — ONE on-device entry point `bin/coding_agent.dart`;
-  **B8** — pass@3 protocol; **P1** — the AFM bridge generation-cancel
-  contract (`xs_fm_cancel` + ABI version, no callback-after-delete crashes;
-  the first post-B1 pass@3 set COMPLETED — zero bridge crashes, zero
-  overflows); **P2** — the J7 overseer actor (summary-zoom brief, closed
-  `approve/repair/escalate` vocabulary, scripted repair test green);
-  **P3 (revised)** — the host write gate (`JailWriteGateway` on
-  `FsToolsRoot`: apply/review modes, unified diffs, host approval — NO
-  model-visible parameter) + jailed read-only `git_status`/`git_diff`;
-  **P5** — idle-resumable snapshot restore + `--resume`/`--session` CLI;
-  **P6** — `--json` NDJSON transport (host-side, D5). Full tables:
+- **Landed (pre-R7)**: meaning tree as world state + zoom projection
+  (ADR 0018); intent closure v1 (interpreter ⇄ materialized-Dart parity);
+  macros; **B1/B2** — one self-executing `intent_define`, one structured
+  failure dialect; **B4/B5** — legacy edit paths deleted; **B3/B7/B8** —
+  ONE on-device entry point, pass@3 protocol; **P1** — AFM bridge cancel
+  contract + pre-flight context budget; **P2** — the J7 overseer;
+  **P3** — the host write gate; **P5** — idle-resumable snapshots;
+  **P6** — NDJSON transport. Full tables:
   [results_stage_p.md](results_stage_p.md).
-- **Gate status (measured, results_stage_p.md §2)**: run-graded tier
-  PASSES (bugfix_01 pass@3 = 3/3); intent tier honest FAIL 0/3 — the
-  failure class is chain-logic correctness; the overseer grants ONE repair
-  cycle (scripted proof green), on-device pass still open.
-- **P4 (open, REFRAMED by ADR 0022)**: J3 analyzer round-trip in the host
-  package `xsoulspace_agentic_dart_meaning` — `open(path)` + span-anchored
-  edits. P4 closes the *editing* surface only (modifying existing files
-  under the law). The run-graded arm's teaching prompt still says "make
-  the change with write" — the model supplying whole-file content violates
-  the never-writes-code-tokens law — but the *generation* path is NOT
-  closed by span edits: the intent tier is closed in three independent
-  ways (oracle replays host-authored expectations; 14-op vocabulary bans
-  arithmetic/loops/intent-calls; materializer emits VM-replay, not
-  workspace Dart). The generation law closes via ADR 0022's R6 tracks —
-  workspace-oracle ETL (tests → canonical rows → intent skeletons), an
-  idiomatic-Dart materializer spec, and vocabulary growth as verified
-  data. Span edits become one projection of the Dart ETL. Until R6's
-  ETL-in lands, the run-graded arm remains a transitional scaffold; no new
-  model-visible write surface is added either way.
-- **R6 STATUS (2026-09-02)**: the generation path is OPEN — ETL-in,
-  the workspace-Dart materializer, and the vocabulary growth (21 ops incl.
-  `call`) are LANDED and gated (`results_r6.md`: 1 decision, 7,857 tokens,
-  `dart test exit=0`, zero model code tokens, zero host-authored
-  expectations). Two of the three closures are now fixed: the oracle is
-  the workspace (A-closure) and the materializer targets workspace Dart
-  (C-closure). The vocabulary no longer bans arithmetic or intent-calls;
-  loops remain bounded-by-recursion (V2 vocabulary), not free-form.
-- **Next levers**: on-device AFM pass@3 through the workspace-oracle
-  runner (the model now fills NAMED slots — strictly easier than the
-  0/3 free-form authoring); tic-tac-toe-class task through the full
-  runner; P4 span edits as the editing projection; J2 (context
-  ownership), K-matrix rows beyond the two DoD tasks.
+- **R6 (DONE)**: the generation path is OPEN — workspace-oracle ETL-in,
+  the workspace-Dart materializer, vocabulary growth (21 ops incl.
+  `call`). Gate: 1 decision, 7,857 tokens, `dart test exit=0`, zero model
+  code tokens, zero host-authored expectations
+  ([results_r6.md](results_r6.md)).
+- **R7 (a–d DONE, see [results_r7.md](results_r7.md))**: the EDITING
+  surface closed under the law — the span-edit materializer (`edit_symbol`
+  with the three fences + auto-revert with failure attribution), the
+  meaning-profile registry (`repo_etl`/`meaning_zoom`/`meaning_impact`/
+  `edit_symbol`/`run`, zero fs tools), the daemon holding the world per
+  workspace (tree never snapshotted — re-derived; resume real;
+  deny-by-default permissions; real cancellation), and pack-fed edits
+  (`EditExecutableWire`; `dart/fix_loop_bound` at zero authored tokens).
+  Whole-file `write` is LEGACY-HOST-ONLY (ADR 0023 demotion): the
+  run-graded arm remains for direct-profile hosts only; the meaning
+  profile's only ACT verb is `edit_symbol`.
+- **The open frontier is the PRODUCTION PATH in [PLAN.md](PLAN.md)**:
+  full edit surface over ACP for pi (rename-only today), the
+  meaning-profile overhead row vs the AFM window, packs as the primary
+  path (capture loop → inventory), and R7e — one real AFM edit through
+  the daemon, pass@3. No real model has driven the edit surface yet;
+  that number decides the next move.
 
 ## Invariants an agent must not break
 

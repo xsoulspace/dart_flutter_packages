@@ -15,6 +15,16 @@ it interchangeably with hosted providers. One transport:
 1. **FFI** — `dart:ffi` C-ABI bridge; serves headless CLIs and compiled
    binaries without a Flutter engine.
 
+## R7 daemon surface (ADR 0023)
+
+| Path | Role |
+| --- | --- |
+| `bin/harnessd.dart` | The long-lived ACP agent (`--backend`, `--profile meaning`, `--scripted`). AFM-first default on macOS. |
+| `lib/src/harness_acp_backend.dart` | Per-workspace persistent worlds; meaning tree never snapshotted; `loadSession` restore; deny-by-default permissions; real cancellation; escalation capped `min(3+rounds, 9)`; unique tool-call ids; tool results streamed. |
+| `lib/src/coding_agent_runner.dart` | The runner core — meaning-profile surface (`repo_etl`/`meaning_zoom`/`meaning_impact`/`edit_symbol`/`run`, zero fs tools). The run-graded fs arm is LEGACY-HOST-ONLY. |
+
+Gate: `test/harnessd_r7c_test.dart`. Transcript: `../../xsoulspace_agentic_harness/benchmark/runs/r7_daemon_transcript.txt`.
+
 ## Layout
 
 | Path | Role |
