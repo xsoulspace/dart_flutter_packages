@@ -175,3 +175,33 @@ teaching error) unaided.
 
 **Verdict: AFM is UNBLOCKED** — all three guard layers are runtime-verified;
 the on-device actor can rejoin the squad (N5 tail).
+
+# THE RACE — first full cycle (2026-09-02)
+
+- **R1**: 7 real warnings (own session debris) → 4 delegated fix tasks →
+  2 PASS by harness actors, 2 escalated to the operator (honest failure:
+  multi-file show-list semantics in a large workspace). `dart analyze lib`
+  warnings 7 → 0. Failure data recorded.
+- **R2**: composed-cut flatness gate green (300 decisions, budget held).
+- **R4**: tier delta measured — coder 5852/4d vs coder_large 7703/5d
+  (1.32×, graceful).
+- **R5**: live ACP session transcript with 2 permission round-trips
+  (write gate asked the client; tools executed after allow) — committed.
+  Plus the fix it forced: analyze-only conventions never pass trivially
+  again (no tests → honest null; actor may declare_check).
+- **R3**: harness columns logged; pi column pending (pi_driver run).
+
+# ADR 0021 — diagnostics as AE-ETL canonical rows (2026-09-02)
+
+The R1 cycle's 448k-token failure was a representation failure: raw prose
+diagnostics forced exploration. Fix (with ~/xs/agentic_executables):
+- `agentic_executables_wire/problem_wire.dart` — ProblemRowWire (canonical
+  row: class id, span, evidence, source), RepairExecutableWire (project-
+  declared deterministic repair), RepairPackWire (the durable "resolvable
+  once" record). Wire tests 3/3; full AE wire suite 10/10.
+- Harness `problem_board.dart`: Dart machine adapter (syntax-only), pack
+  loader (missing pack → honest empty), coverage split, mechanical executor
+  with REAL re-analysis oracle and auto-revert. Tests 7/7.
+- Economics: known classes resolve at ZERO model tokens; novel classes once;
+  raw diagnostics never reach a model. Core-owned repair tables REJECTED
+  (project-guided packs; ADR 0015).

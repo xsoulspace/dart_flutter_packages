@@ -28,12 +28,13 @@ void main() {
     expect(resolveWorkspaceCheck(tempDir), const ['dart', 'test']);
   });
 
-  test('Dart package without tests → dart analyze', () {
+  test('Dart package WITHOUT tests → null (R5: analyze passes trivially, '
+      'never a done-criterion)', () {
     File('${tempDir.path}/pubspec.yaml').writeAsStringSync('name: x\n');
     // A test/ dir with NO *_test.dart files must not qualify.
     Directory('${tempDir.path}/test').createSync();
 
-    expect(resolveWorkspaceCheck(tempDir), const ['dart', 'analyze']);
+    expect(resolveWorkspaceCheck(tempDir), isNull);
   });
 
   test('bare main.dart (no pubspec) → dart run main.dart', () {

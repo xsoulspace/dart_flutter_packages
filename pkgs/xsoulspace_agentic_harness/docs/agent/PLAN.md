@@ -66,6 +66,21 @@ and escalates, it does not absorb the fixes.
    things pi touches directly.
 - **Done when**: ≥5 real issues fixed by harness actors, rows published,
   and the repo analyzes cleaner than before.
+- **STATUS 2026-09-02: first cycle DONE, then SUPERSEDED by ADR 0021.** The
+  first cycle (prose tasks to model actors) fixed 2 of 4 warnings at 107k
+  tokens each, failed one at 448k, and needed the operator for 2 — the
+  wrong shape. ADR 0021 replaces it: **problems are AE-ETL canonical rows**
+  (`agentic_executables_wire/problem_wire.dart`), **repairs are
+  PROJECT-GUIDED packs** (never core tables — every project has its own
+  lints/linters/custom rules), the mechanical tier is a host span transform
+  verified by the SOURCE ANALYZER re-run (the free oracle), and the
+  meaningful tier exists only for classes without pack executables.
+  Landed: `problem_board.dart` (Dart machine adapter → canonical rows, pack
+  loader, coverage split, mechanical executor with apply/revert) — 7/7
+  LLM-free tests incl. REAL `dart analyze` oracle and revert. The 7-cycle
+  warnings now resolve at ~zero model tokens; a novel class is resolved
+  once (meaningful tier / operator) and captured into the project pack.
+  Other-language adapters: out of scope until the Dart loop proves out.
 
 ### R2 — Flatness WITH composition (claim hygiene)
 
@@ -75,6 +90,9 @@ composition broke flatness, that is a named finding before anything else
 ships.
 - **Done when**: flatness gate green with composition ON (and the number
   published next to the legacy 1.07×).
+- **STATUS 2026-09-02: DONE.** `long_horizon_composition_test.dart` —
+  composed cut flat over 300 decisions, budget never exceeded. The claim
+  survives the working set.
 
 ### R3 — Head-to-head numbers (the claim since day one)
 
@@ -90,6 +108,12 @@ Declare the tier: `CutComposition.coderLarge()` (wider observations
 capacity, deeper map, bigger budget) + `ProjectionBudget` scaling. Then the
 same tasks run at both tiers → the amplification delta becomes a number.
 - **Done when**: one suite task measured at both tiers, delta published.
+- **STATUS 2026-09-02: DONE.** `coderLarge()` (observations 24) +
+  `coderLean()` (observations 4, map depth 1) declared; `--profile large`
+  wired. Same scripted task both tiers: 5852 tokens/4 decisions (coder) vs
+  7703 tokens/5 decisions (coder_large) — 1.32× graceful scaling, zero
+  overflows. Live cross-tier measurement on the head-to-head suite is the
+  follow-up.
 
 ### R5 — Editor live (the surface)
 
@@ -98,13 +122,26 @@ contract: initialize → session → prompt → permission round-trip (write
 gate) → verdict. Zed proper follows; the recorded session is the contract
 proof.
 - **Done when**: transcript committed to `benchmark/runs/`.
+- **STATUS 2026-09-02: DONE.** Live session recorded:
+  `benchmark/runs/r5_acp_session_transcript.txt` — initialize → session →
+  prompt → streamed tool updates → 2 permission round-trips (write gate
+  asked the client; client allowed; tools executed) → verdict PASS. Also
+  caught the analyze-only trivial-PASS hole (fixed: no tests → honest null).
+
+## R3 status (partial — the honest remainder)
+
+Harness columns ran (scripted tier delta above; OR free-form delegations
+logged). The pi column needs the pi driver run (`benchmark/pi_driver` in
+inference_core) — the only unexecuted piece of the head-to-head.
 
 ## Open tails (forward, not urgent)
 
-- Batch replay scale-up beyond the first seeder runs; embedding retrieval
-  behind the `relevance.dart` seam (optional); multi-round escalation
-  refinement; Zed/VSCode native integration after R5; last_answer as the
-  first embedded host.
+- ADR 0021 follow-ups: pack CAPTURE loop wiring (meaningful-tier resolution
+  → pack entry, closing the self-improvement loop mechanically); the
+  meaningful tier's span-zoom cut (P4 pulled forward — the 448k failure is
+  its economic justification); batch replay of mined rows; embedding
+  retrieval behind the `relevance.dart` seam (optional); Zed/VSCode native
+  integration; last_answer as the first embedded host.
 
 
 ## Standing rules

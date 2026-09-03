@@ -12,8 +12,11 @@
 /// Resolution order (first match wins):
 /// 1. Dart package (`pubspec.yaml`) with tests (`test/**/*_test.dart`)
 ///    → `dart test` (compilation errors fail the run — analyze is implied).
-/// 2. Dart package without tests → `dart analyze` (static gate; honest and
-///    mechanical, weaker than a run — the host may override with `--check`).
+/// 2. Dart package WITHOUT tests → `null` (honest failure). R5 finding:
+///    `dart analyze` passes trivially before any work (exit 0 on a clean
+///    empty package), so it can never be the done-criterion for a task that
+///    must PRODUCE something. The delegator passes `--check` explicitly, or
+///    the actor proposes one via `declare_check` (M0b).
 /// 3. Bare `main.dart` (no pubspec) → `dart run main.dart` (the PROVEN
 ///    gate_run terminal proof).
 /// 4. Nothing resolvable → `null` (the host must fail honestly — never
@@ -32,7 +35,9 @@ List<String>? resolveWorkspaceCheck(Directory root) {
 
   if (isDartPackage) {
     if (_hasTests(root)) return const ['dart', 'test'];
-    return const ['dart', 'analyze'];
+    // R5 finding: analyze-only passes trivially (0 decisions) on a clean
+    // package — it proves nothing about the task. Honest null.
+    return null;
   }
   if (main.existsSync()) return const ['dart', 'run', 'main.dart'];
   return null;
