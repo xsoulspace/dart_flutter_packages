@@ -254,10 +254,16 @@ Map<String, List<CodeFileScan>> scanTree(Directory repoRoot) {
 /// - `file --imports--> file` (resolved within the scanned set)
 /// - `file --refs--> symbol` (same-package, identifier intersection,
 ///   capped per file)
+///
+/// [repoRoot] is where scan-relative paths resolve against (R7 fix: the
+/// cached workspace-root guess only works for paths under the monorepo;
+/// a jail/temp workspace MUST pass its own root or refs edges silently
+/// vanish — the rename executable's frontier depends on them).
 ({int files, int symbols, int edges}) buildMeaningTreeFromCode(
   World world,
   Map<String, List<CodeFileScan>> scans, {
   int maxRefsPerFile = 200,
+  String? repoRoot,
 }) {
   var files = 0;
   var symbols = 0;
@@ -352,7 +358,7 @@ Map<String, List<CodeFileScan>> scanTree(Directory repoRoot) {
         }
       }
       // refs: tokenize the file, intersect with same-package symbol names.
-      final src = File('${_repoRootOf(scan.relPath)}/${scan.relPath}');
+      final src = File('${repoRoot ?? _repoRootOf(scan.relPath)}/${scan.relPath}');
       if (!src.existsSync()) continue;
       final tokens = RegExp(
         r'[A-Za-z_$][A-Za-z0-9_$]*',

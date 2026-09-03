@@ -113,7 +113,7 @@ ToolDef repoEtlTool(
                 ),
             ],
           };
-          final built = buildMeaningTreeFromCode(world, scans);
+          final built = buildMeaningTreeFromCode(world, scans, repoRoot: workspace.path);
           st
             ..lastScan = DateTime.now()
             ..files = built.files

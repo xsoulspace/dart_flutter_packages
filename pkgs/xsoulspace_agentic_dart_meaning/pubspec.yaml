@@ -17,6 +17,8 @@ dependencies:
   code_builder: ^4.12.0
   meta: ^1.19.0
   source_maps: ^0.10.10
+  from_json_to_json:
+  is_dart_empty_or_not:
   source_span: ^1.10.2
   xsoulspace_agentic_harness:
     path: ../xsoulspace_agentic_harness

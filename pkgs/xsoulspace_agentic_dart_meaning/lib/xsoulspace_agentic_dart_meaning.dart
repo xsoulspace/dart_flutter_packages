@@ -20,6 +20,7 @@ library;
 
 export 'src/code_etl.dart';
 export 'src/repo_etl_tool.dart';
+export 'src/span_editor.dart';
 export 'src/dart_materializer.dart';
 export 'src/test_etl.dart';
 export 'src/workspace_meaning_runner.dart';

@@ -77,6 +77,38 @@ class _OpRowPtr {
   final int entryIdx;
 }
 
+/// PUBLIC compiler entry (R7b): compiles an op-chain (rows of
+/// `{label, a?, b?}` — the same spec rows `intent_define` takes) into Dart
+/// statements, for the span-edit materializer's `replace_member_body` /
+/// `insert_member` moves. Rows are sequential (`#0..#n`); `jump_if_false` /
+/// `jump` targets are `'#<index>'`. Same closed vocabulary, same fences:
+/// state ops / backward jumps / undeclared load_args fail as NAMED problems
+/// (never silently) — the span editor turns them into structured bounces.
+({String? code, String? problem}) compileOpChainBody(
+  List<Map<String, String?>> rows, {
+  required Set<String> paramNames,
+}) {
+  final compiled = <_OpRow>[];
+  for (var i = 0; i < rows.length; i++) {
+    final r = rows[i];
+    compiled.add(
+      _OpRow('#$i', r['label'] ?? '', r['a'], r['b'], '#${i + 1}'),
+    );
+  }
+  try {
+    final result = _compile(
+      compiled,
+      0,
+      null,
+      <String>[],
+      paramNames,
+    );
+    return (code: result.code, problem: null);
+  } on _Unsupported catch (e) {
+    return (code: null, problem: e.reason);
+  }
+}
+
 /// Collects the intent's chain as an ordered row list. Fall-through order
 /// first (following `then` edges); then any jump-target sub-chains not yet
 /// collected (worklist — a target placed after the linear fall-through is

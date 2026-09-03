@@ -9,7 +9,8 @@ library;
 import 'dart:io';
 
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
-
+import 'package:from_json_to_json/from_json_to_json.dart';
+import 'package:is_dart_empty_or_not/is_dart_empty_or_not.dart';
 import 'package:xsoulspace_agentic_dart_meaning/xsoulspace_agentic_dart_meaning.dart';
 
 Future<void> main(List<String> args) async {
@@ -37,7 +38,9 @@ Future<void> main(List<String> args) async {
       totalSymbols += f.symbols.length;
     }
   }
-  stdout.writeln('scan: $totalFiles files, $totalSymbols symbols in ${scanMs}ms');
+  stdout.writeln(
+    'scan: $totalFiles files, $totalSymbols symbols in ${scanMs}ms',
+  );
 
   // Build the tree.
   final world = World()..addPlugin(AgentPlugin());
@@ -65,7 +68,9 @@ Future<void> main(List<String> args) async {
     (id) => id.startsWith('sym_') && index.nodeCount > 0,
     orElse: () => index.byId.keys.first,
   );
-  stdout.writeln('target: $target (present: ${index.byId.containsKey(target)})');
+  stdout.writeln(
+    'target: $target (present: ${index.byId.containsKey(target)})',
+  );
   for (final zoom in const ['point', 'local', 'region', 'summary']) {
     final cs = Stopwatch()..start();
     final cut = meaningCut(
@@ -77,8 +82,10 @@ Future<void> main(List<String> args) async {
     final ms = cs.elapsedMilliseconds;
     final json = cut.toString();
     final tokens = (json.length / 4).ceil();
+    final nodes = jsonDecodeList(cut['nodes']);
+    final kinds = jsonDecodeList(cut['kinds']);
     stdout.writeln(
-      'cut[$zoom]: ~$tokens tokens, ${cut['nodes']?.length ?? cut['kinds']?.length ?? 0} entries, ${ms}ms',
+      'cut[$zoom]: ~$tokens tokens, ${nodes.whenEmptyUse(kinds).length} entries, ${ms}ms',
     );
   }
 
@@ -88,7 +95,9 @@ Future<void> main(List<String> args) async {
 
   // Snapshot/restore equivalence at scale.
   final store = SnapshotStore();
-  await store.open('${Directory.systemTemp.path}/etl_probe_${DateTime.now().millisecondsSinceEpoch}/store');
+  await store.open(
+    '${Directory.systemTemp.path}/etl_probe_${DateTime.now().millisecondsSinceEpoch}/store',
+  );
   final sw2 = Stopwatch()..start();
   await store.save(world, name: 'scale', meta: {'tier': tier});
   final saveMs = sw2.elapsedMilliseconds;
@@ -101,5 +110,4 @@ Future<void> main(List<String> args) async {
     '${restoredIndex.nodeCount}/${index.nodeCount}, edges '
     '${restoredIndex.edgeCount}/${index.edgeCount}',
   );
-  
 }
