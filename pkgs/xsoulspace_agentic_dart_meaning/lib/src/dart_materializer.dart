@@ -14,6 +14,12 @@
 /// shapes (state ops, backward jumps, unstructured joins) fail as NAMED
 /// problems — never silently. Recovery for richer shapes is pulled by
 /// failing tasks, never pushed (ADR 0022 non-goals).
+///
+/// TODO(code_builder upgrade): when the vocabulary needs classes/generics
+/// imports, replace string concatenation with `code_builder` AST generation
+/// (https://pub.dev/packages/code_builder). `source_maps` will then map
+/// generated offsets back to meaning-tree ops for span-level error reporting.
+/// This is a host-side refactor: the model interface stays identical.
 library;
 
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart'

@@ -90,6 +90,21 @@ completes it for code.
    - *verify*: `dart analyze` + the workspace convention (free oracles),
      auto-revert on failure (ADR 0021 mechanical tier);
    - *persist*: beats, verdicts, budgets — never the tree.
+   - *materializer toolchain (adopted — official Dart-tools stack, all
+     already in the dependency graph)*: `source_span` is the patch
+     currency (byte-offset FileSpans; scanner props carry offset/endOffset;
+     analyzer diagnostics interop via SourceFile.span — failures land in
+     patch coordinates); `source_maps` records generated-range →
+     meaning-node-id mappings for materialized output, so analyzer/runtime
+     failures localize back to op rows mechanically (the B2 dialect for
+     compiled code); `code_builder` (+ dart_style) is the Dart EMISSION
+     backend behind the same fences — it replaces string assembly, NOT the
+     closed vocabulary, and the VM-replay program stays the parity oracle.
+     The materializer spec is data: `{span currency, map format, emitter,
+     oracle}` — source_span/source_maps are language-generic; only the
+     emitter field is Dart-specific. One emitter path per materializer
+     (no string/builders duplication); splices never reformat the whole
+     target file.
 
 3. **Edit executables come from packs, not from the model.** AE know packs
    / project repair packs (ADR 0021) supply parameterized edit executables

@@ -60,7 +60,15 @@ you DO need to keep every gate green.
 The actor's ACT verb for existing code. Semantic edit moves in; host
 span-anchored patches out; mechanical verification; auto-revert.
 
-1. New host module `pkgs/xsoulspace_agentic_dart_meaning/lib/src/span_editor.dart`:
+1. New host module `pkgs/xsoulspace_agentic_dart_meaning/lib/src/span_editor.dart`
+   (materializer toolchain — ADR 0023 §2: `source_span` is the patch
+   currency: scanner props gain offset/endOffset, patches are FileSpan-based
+   (overlap checks, splice, SourceSpanException rendering, analyzer-diagnostic
+   interop via SourceFile.span); `source_maps` records generated-range →
+   meaning-node-id mappings so analyzer/runtime failures localize back to
+   op rows; `code_builder` + dart_style is the emission backend for new
+   code — behind the fences, one emitter path, VM-replay stays the parity
+   oracle):
    - `SpanEditMaterializer`: given the meaning tree (symbols carry
      `file`+`line` props) + an edit move, produce a list of
      `SpanPatch{file, startLine, endLine, replacement}` — computed
@@ -80,6 +88,12 @@ span-anchored patches out; mechanical verification; auto-revert.
        hard-capped, degree-ranked) into per-file patches. NOT core
        sub-actions. Ambiguity (same-name symbols, unresolved ids) bounces
        as structured data — never guess; `dart analyze` is the oracle.
+       RENAME SCOPE: v1 is `scope: lexical` — two args, refs-frontier
+       expansion only (plain identifiers, private symbols, combinators,
+       doc refs). Getter/setter pairs, named constructors + file
+       conventions, operators, and named-parameter API breaks BOUNCE
+       (analyzer-grade rename is P4/J3; the executable spec carries
+       `scope: lexical|analyzer`).
    - Sequencing: land `replace_member_body`/`insert_member` FIRST (proves
      the materializer), the rename executable SECOND (proves frontier
      expansion). Both must be gated before the write demotion.
@@ -199,6 +213,12 @@ agent underneath).
   (rename `<=`-style bound fix as insert/replace member body op-chain),
   model supplies only symbol id + executable id; scripted gate proves a
   pack-fed edit at zero authored tokens.
+- If green and time remains: the distiller seam — `planFromMatrix`
+  consuming an AE canonical draft (`ae.canonical.draft.v1`) + a `distiller`
+  role composition (offline, evidence-tier; AE spec §Distillation ↔
+  harness planning). Plans from prose intent = the one planning source
+  tests/diagnostics/frontiers don't cover. NEVER build a harness-side text
+  distiller — AE owns text reduction.
 
 ## Order of work (code first)
 

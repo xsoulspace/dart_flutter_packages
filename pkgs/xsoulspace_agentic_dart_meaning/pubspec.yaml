@@ -14,7 +14,10 @@ resolution: workspace
 
 dependencies:
   analyzer: ">=6.9.0 <9.0.0"
+  code_builder: ^4.12.0
   meta: ^1.19.0
+  source_maps: ^0.10.10
+  source_span: ^1.10.2
   xsoulspace_agentic_harness:
     path: ../xsoulspace_agentic_harness
   xsoulspace_inference_core: ^0.1.0-beta.1

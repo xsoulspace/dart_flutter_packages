@@ -251,6 +251,17 @@ existing code (whole-file `write` is the only path). R7 closes both.
   North Star sentence end to end.
 - Demotion (hard cut, lands with R7b): whole-file `write` is demoted to
   legacy-host-only; new meaning-profile tasks must not use it.
+- **Distillation → planning seam (R7d sibling, AE-owned)**: AE's distill
+  DELEGATION protocol (`ae.distillation.task.v1` → external agent →
+  `ae.canonical.draft.v1`) feeds `planFromMatrix` — plans from prose intent
+  (ADRs, standards, issues), the one planning source tests/diagnostics/
+  frontiers don't cover. The distiller is a squad ROLE (offline, evidence
+  tier, own cut composition — N5c machinery); distilled rows are
+  evidence-tier, never auto-pass. Missing seam: `planFromMatrix` consuming
+  canonical drafts + the `distiller` role composition (AE spec:
+  `ae_harness_etl_spec.md` §Distillation ↔ harness planning). Harness NEVER
+  builds its own text distiller — the tier tests' section-split is a
+  fixture, not a product path.
 - Future (needs its own ADR): generational packages — ephemeral packages
   with structural caps (max deps per symbol/module), overrides only when
   API-necessary. The tree makes structure measurable first (ADR 0023 §5).

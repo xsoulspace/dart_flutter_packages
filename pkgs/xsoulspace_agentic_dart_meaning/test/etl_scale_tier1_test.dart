@@ -52,8 +52,10 @@ Map<String, List<CodeFileScan>> _scanHarnessPackage(Directory repoRoot) {
   };
 }
 
-/// Text ETL: raw markdown (ADR) → requirement nodes with verifiable
-/// criteria. Deterministic section split; every node cites its heading.
+/// Text ETL FIXTURE — deterministic section split for the tier tests ONLY.
+/// This is NOT a distiller: AE owns text reduction (know packs + delegated
+/// distill → canonical rows, see ae_harness_etl_spec.md §Distillation).
+/// A harness-side text distiller would be a duplication violation.
 int buildMeaningTreeFromText(
   World world,
   String markdown, {

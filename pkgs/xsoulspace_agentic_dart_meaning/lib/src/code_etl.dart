@@ -46,7 +46,11 @@ class CodeSymbol {
 
 /// One scanned file.
 class CodeFileScan {
-  CodeFileScan({required this.relPath, required this.imports, required this.symbols});
+  CodeFileScan({
+    required this.relPath,
+    required this.imports,
+    required this.symbols,
+  });
   final String relPath;
   final List<String> imports; // raw import URIs
   final List<CodeSymbol> symbols;
@@ -65,9 +69,9 @@ CodeFileScan scanDartFile(File f, String relPath) {
     r'^(?:abstract\s+|sealed\s+|final\s+|base\s+|interface\s+)*'
     r'(class|enum|mixin|extension)\s+(\w+)',
   );
-  fnDecl(String line) => RegExp(
-        r'^([A-Za-z_][\w<>, ?]*?)\s+([A-Za-z_]\w*)\s*(<[^>]*>)?\s*\(',
-      ).firstMatch(line);
+  RegExpMatch? fnDecl(String line) => RegExp(
+    r'^([A-Za-z_][\w<>, ?]*?)\s+([A-Za-z_]\w*)\s*(<[^>]*>)?\s*\(',
+  ).firstMatch(line);
   final typedefRe = RegExp(r'^typedef\s+(?:[\w<>, ?]+\s+)?(\w+)');
   final memberRe = RegExp(
     r'^  (?:static\s+|const\s+|final\s+|late\s+|override\s+)*'
@@ -116,8 +120,14 @@ CodeFileScan scanDartFile(File f, String relPath) {
       // Skip declarations that are clearly not functions.
       final fn = fnDecl(line);
       if (fn != null &&
-          !{'if', 'for', 'while', 'switch', 'return', 'catch'}
-              .contains(fn.group(2)) &&
+          !{
+            'if',
+            'for',
+            'while',
+            'switch',
+            'return',
+            'catch',
+          }.contains(fn.group(2)) &&
           !line.trimmed.startsWith('}') &&
           (line.contains('{') || line.contains('=>'))) {
         symbols.add(
@@ -260,7 +270,12 @@ Map<String, List<CodeFileScan>> scanTree(Directory repoRoot) {
     final pkg = entry.key;
     final perPkg = nameIndex.putIfAbsent(pkg, () => {});
     for (final scan in entry.value) {
-      addMeaningNode(world, kind: 'file', label: scan.relPath, id: 'f_${scan.relPath.replaceAll('/', '_')}');
+      addMeaningNode(
+        world,
+        kind: 'file',
+        label: scan.relPath,
+        id: 'f_${scan.relPath.replaceAll('/', '_')}',
+      );
       files++;
       for (final s in scan.symbols) {
         // FINDING (scale probe): same-name declarations in one file (e.g.
@@ -286,7 +301,12 @@ Map<String, List<CodeFileScan>> scanTree(Directory repoRoot) {
         );
         symbols++;
         (perPkg[s.name] ??= []).add(s.stableId);
-        linkMeaning(world, from: 'f_${scan.relPath.replaceAll('/', '_')}', relation: 'contains', to: s.stableId);
+        linkMeaning(
+          world,
+          from: 'f_${scan.relPath.replaceAll('/', '_')}',
+          relation: 'contains',
+          to: s.stableId,
+        );
         edges++;
       }
     }
@@ -303,7 +323,12 @@ Map<String, List<CodeFileScan>> scanTree(Directory repoRoot) {
       for (final imp in scan.imports) {
         final rel = _resolveImport(imp, scan.relPath, scans);
         if (rel != null && scans[entry.key]!.any((s) => s.relPath == rel)) {
-          if (linkMeaning(world, from: fromId, relation: 'imports', to: fileId(rel))) {
+          if (linkMeaning(
+            world,
+            from: fromId,
+            relation: 'imports',
+            to: fileId(rel),
+          )) {
             edges++;
           }
         }
@@ -315,7 +340,12 @@ Map<String, List<CodeFileScan>> scanTree(Directory repoRoot) {
               .where((o) => o.name == s.memberOf && o.memberOf == null)
               .firstOrNull;
           if (owner != null) {
-            if (linkMeaning(world, from: owner.stableId, relation: 'member', to: s.stableId)) {
+            if (linkMeaning(
+              world,
+              from: owner.stableId,
+              relation: 'member',
+              to: s.stableId,
+            )) {
               edges++;
             }
           }
@@ -324,10 +354,9 @@ Map<String, List<CodeFileScan>> scanTree(Directory repoRoot) {
       // refs: tokenize the file, intersect with same-package symbol names.
       final src = File('${_repoRootOf(scan.relPath)}/${scan.relPath}');
       if (!src.existsSync()) continue;
-      final tokens = RegExp(r'[A-Za-z_$][A-Za-z0-9_$]*')
-          .allMatches(src.readAsStringSync())
-          .map((m) => m.group(0)!)
-          .toSet();
+      final tokens = RegExp(
+        r'[A-Za-z_$][A-Za-z0-9_$]*',
+      ).allMatches(src.readAsStringSync()).map((m) => m.group(0)!).toSet();
       var refs = 0;
       for (final t in tokens) {
         if (!idRe.hasMatch(t) || t.length < 4) continue;
@@ -355,7 +384,8 @@ Directory? _findRepoRoot() {
   var dir = Directory.current;
   for (var i = 0; i < 6; i++) {
     final pubspec = File('${dir.path}/pubspec.yaml');
-    if (pubspec.existsSync() && pubspec.readAsStringSync().contains('workspace:')) {
+    if (pubspec.existsSync() &&
+        pubspec.readAsStringSync().contains('workspace:')) {
       return dir;
     }
     final parent = dir.parent;
@@ -368,7 +398,11 @@ Directory? _findRepoRoot() {
 String? _repoRootOf(String relPath) => _cachedRepoRoot?.path;
 
 /// Resolves an import URI to a scanned relative path when possible.
-String? _resolveImport(String uri, String fromRel, Map<String, List<CodeFileScan>> scans) {
+String? _resolveImport(
+  String uri,
+  String fromRel,
+  Map<String, List<CodeFileScan>> scans,
+) {
   if (uri.startsWith('dart:')) return null;
   if (uri.startsWith('package:')) {
     final rest = uri.substring('package:'.length);
@@ -444,5 +478,3 @@ Map<String, List<(String, String, int)>> manifestFromTree(World world) {
   }
   return (checked: checked, mismatches: mismatches, samples: samples);
 }
-
-
