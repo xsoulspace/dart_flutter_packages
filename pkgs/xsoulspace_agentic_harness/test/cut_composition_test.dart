@@ -36,7 +36,7 @@ void pureConformance() {
         composition: CutComposition.coder(),
         candidates: const [],
         textOf: _textOf,
-        originalIndex: (e) => _index[e.value.toString()] ?? 0,
+        originalIndex: (e) => _index[e] ?? 0,
         goalText: 'fix the test',
         mapText: 'lib/, test/',
         verdictText: 'dart test exit=1: expected hello',

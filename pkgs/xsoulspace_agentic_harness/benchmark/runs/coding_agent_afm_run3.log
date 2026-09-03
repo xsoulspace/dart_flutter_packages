@@ -722,3 +722,417 @@ forbidden v…"
 tick 13431: decisions=0 inFlight=0 pending=0 actors=agent-1788419420202962-2:0r/1a
 
 
+coding_agent run — task: free_form
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 1058
+  decisions: 4
+  tool rounds (thread beats): 13
+  moves: {list_dir: 4, write: 3, run: 3, git_status: 1, read: 2}
+  projection tokens (honest spend, Situation.tokensUsed): 5344
+  meaning nodes: 0, edges: 0
+  wall clock: 104042 ms
+  final gate (outer oracle, once): FAIL
+    check: dart test exit=65:
+  failure class: final gate: dart test exit=65:
+--- harness pulse (J1.5.3) ---
+tick 4 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788429776342398-2: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: dart test exit=65:
+— agent-1788429776342398-2  [idle]  rounds 0/12 (Σ0)  attempts 3/3 EXHAUSTED
+    last: run:{"cwd":".","command":["dart","lib/shout.dart"],"timeout_m… → FAILED
+      error: {"ok":false,"exit_code":254,"stdout":"","stderr":"lib/shout.dart:1:30: Error: The method 'upper' isn't defined for th…
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 8999..34328
+tick 32522: decisions=1 inFlight=1 pending=0 actors=agent-1788429776342398-2:0r/3a
+    agent-1788429776342398-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 32622: decisions=1 inFlight=1 pending=0 actors=agent-1788429776342398-2:0r/3a
+    agent-1788429776342398-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 32722: decisions=1 inFlight=1 pending=0 actors=agent-1788429776342398-2:0r/3a
+    agent-1788429776342398-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 32822: decisions=1 inFlight=1 pending=0 actors=agent-1788429776342398-2:0r/3a
+    agent-1788429776342398-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 32922: decisions=1 inFlight=1 pending=0 actors=agent-1788429776342398-2:0r/3a
+    agent-1788429776342398-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 33022: decisions=1 inFlight=1 pending=0 actors=agent-1788429776342398-2:0r/3a
+    agent-1788429776342398-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 33122: decisions=1 inFlight=1 pending=0 actors=agent-1788429776342398-2:0r/3a
+    agent-1788429776342398-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 33222: decisions=1 inFlight=1 pending=0 actors=agent-1788429776342398-2:0r/3a
+    agent-1788429776342398-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 33322: decisions=1 inFlight=1 pending=0 actors=agent-1788429776342398-2:0r/3a
+    agent-1788429776342398-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 33422: decisions=1 inFlight=1 pending=0 actors=agent-1788429776342398-2:0r/3a
+    agent-1788429776342398-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 33522: decisions=1 inFlight=1 pending=0 actors=agent-1788429776342398-2:0r/3a
+    agent-1788429776342398-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 33622: decisions=1 inFlight=1 pending=0 actors=agent-1788429776342398-2:0r/3a
+    agent-1788429776342398-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 33722: decisions=1 inFlight=1 pending=0 actors=agent-1788429776342398-2:0r/3a
+    agent-1788429776342398-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 33822: decisions=1 inFlight=1 pending=0 actors=agent-1788429776342398-2:0r/3a
+    agent-1788429776342398-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 33922: decisions=1 inFlight=1 pending=0 actors=agent-1788429776342398-2:0r/3a
+    agent-1788429776342398-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 34022: decisions=1 inFlight=1 pending=0 actors=agent-1788429776342398-2:0r/3a
+    agent-1788429776342398-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 34122: decisions=1 inFlight=1 pending=0 actors=agent-1788429776342398-2:0r/3a
+    agent-1788429776342398-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 34222: decisions=1 inFlight=1 pending=0 actors=agent-1788429776342398-2:0r/3a
+    agent-1788429776342398-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 34322: decisions=1 inFlight=1 pending=0 actors=agent-1788429776342398-2:0r/3a
+    agent-1788429776342398-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 34328: decisions=0 inFlight=0 pending=0 actors=agent-1788429776342398-2:0r/3a
+
+
+coding_agent run — task: free_form
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 1058
+  decisions: 4
+  tool rounds (thread beats): 11
+  moves: {list_dir: 3, write: 2, run: 2, git_status: 2, read: 1, git_diff: 1}
+  projection tokens (honest spend, Situation.tokensUsed): 5428
+  meaning nodes: 0, edges: 0
+  wall clock: 49962 ms
+  final gate (outer oracle, once): FAIL
+    check: dart test exit=65:
+  failure class: final gate: dart test exit=65:
+--- harness pulse (J1.5.3) ---
+tick 4 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788430155739356-2: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: dart test exit=65:
+— agent-1788430155739356-2  [idle]  rounds 0/12 (Σ0)  attempts 3/3 EXHAUSTED
+    last: git_status: → FAILED
+      error: {"ok":false,"code":"not_a_git_repo","hint":"this workspace has no .git"}
+--- flight recorder ---
+FlightRecorder: 172 pulse(s), ticks 99..16986
+tick 15182: decisions=1 inFlight=1 pending=0 actors=agent-1788430155739356-2:0r/3a
+    agent-1788430155739356-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 15282: decisions=1 inFlight=1 pending=0 actors=agent-1788430155739356-2:0r/3a
+    agent-1788430155739356-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 15382: decisions=1 inFlight=1 pending=0 actors=agent-1788430155739356-2:0r/3a
+    agent-1788430155739356-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 15482: decisions=1 inFlight=1 pending=0 actors=agent-1788430155739356-2:0r/3a
+    agent-1788430155739356-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 15582: decisions=1 inFlight=1 pending=0 actors=agent-1788430155739356-2:0r/3a
+    agent-1788430155739356-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 15682: decisions=1 inFlight=1 pending=0 actors=agent-1788430155739356-2:0r/3a
+    agent-1788430155739356-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 15782: decisions=1 inFlight=1 pending=0 actors=agent-1788430155739356-2:0r/3a
+    agent-1788430155739356-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 15882: decisions=1 inFlight=1 pending=0 actors=agent-1788430155739356-2:0r/3a
+    agent-1788430155739356-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 15982: decisions=1 inFlight=1 pending=0 actors=agent-1788430155739356-2:0r/3a
+    agent-1788430155739356-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 16082: decisions=1 inFlight=1 pending=0 actors=agent-1788430155739356-2:0r/3a
+    agent-1788430155739356-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 16182: decisions=1 inFlight=1 pending=0 actors=agent-1788430155739356-2:0r/3a
+    agent-1788430155739356-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 16282: decisions=1 inFlight=1 pending=0 actors=agent-1788430155739356-2:0r/3a
+    agent-1788430155739356-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 16382: decisions=1 inFlight=1 pending=0 actors=agent-1788430155739356-2:0r/3a
+    agent-1788430155739356-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 16482: decisions=1 inFlight=1 pending=0 actors=agent-1788430155739356-2:0r/3a
+    agent-1788430155739356-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 16582: decisions=1 inFlight=1 pending=0 actors=agent-1788430155739356-2:0r/3a
+    agent-1788430155739356-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 16682: decisions=1 inFlight=1 pending=0 actors=agent-1788430155739356-2:0r/3a
+    agent-1788430155739356-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 16782: decisions=1 inFlight=1 pending=0 actors=agent-1788430155739356-2:0r/3a
+    agent-1788430155739356-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 16882: decisions=1 inFlight=1 pending=0 actors=agent-1788430155739356-2:0r/3a
+    agent-1788430155739356-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 16982: decisions=1 inFlight=1 pending=0 actors=agent-1788430155739356-2:0r/3a
+    agent-1788430155739356-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 16986: decisions=0 inFlight=0 pending=0 actors=agent-1788430155739356-2:0r/3a
+
+
+coding_agent run — task: free_form
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 1058
+  decisions: 3
+  tool rounds (thread beats): 9
+  moves: {list_dir: 2, write: 2, run: 2, git_diff: 1, git_status: 1, read: 1}
+  projection tokens (honest spend, Situation.tokensUsed): 4406
+  meaning nodes: 0, edges: 0
+  wall clock: 108935 ms
+  final gate (outer oracle, once): FAIL
+    check: dart test exit=1:
+  failure class: final gate: dart test exit=1:
+--- harness pulse (J1.5.3) ---
+tick 3 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788430797205341-2: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: dart test exit=1:
+— agent-1788430797205341-2  [idle]  rounds 0/12 (Σ0)  attempts 3/3 EXHAUSTED
+    last: run:{"cwd":"/private/tmp/ta_add_run3","command":["dart","lib/… → FAILED
+      error: {"ok":false,"exit_code":254,"stdout":"","stderr":"lib/add.dart:1:35: Error: Can't return a value from a void function…
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 5499..30917
+tick 29041: decisions=1 inFlight=1 pending=0 actors=agent-1788430797205341-2:0r/3a
+    agent-1788430797205341-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Fix the workspace so th…"
+tick 29141: decisions=1 inFlight=1 pending=0 actors=agent-1788430797205341-2:0r/3a
+    agent-1788430797205341-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Fix the workspace so th…"
+tick 29241: decisions=1 inFlight=1 pending=0 actors=agent-1788430797205341-2:0r/3a
+    agent-1788430797205341-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Fix the workspace so th…"
+tick 29341: decisions=1 inFlight=1 pending=0 actors=agent-1788430797205341-2:0r/3a
+    agent-1788430797205341-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Fix the workspace so th…"
+tick 29441: decisions=1 inFlight=1 pending=0 actors=agent-1788430797205341-2:0r/3a
+    agent-1788430797205341-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Fix the workspace so th…"
+tick 29541: decisions=1 inFlight=1 pending=0 actors=agent-1788430797205341-2:0r/3a
+    agent-1788430797205341-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Fix the workspace so th…"
+tick 29641: decisions=1 inFlight=1 pending=0 actors=agent-1788430797205341-2:0r/3a
+    agent-1788430797205341-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Fix the workspace so th…"
+tick 29741: decisions=1 inFlight=1 pending=0 actors=agent-1788430797205341-2:0r/3a
+    agent-1788430797205341-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Fix the workspace so th…"
+tick 29841: decisions=1 inFlight=1 pending=0 actors=agent-1788430797205341-2:0r/3a
+    agent-1788430797205341-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Fix the workspace so th…"
+tick 29941: decisions=1 inFlight=1 pending=0 actors=agent-1788430797205341-2:0r/3a
+    agent-1788430797205341-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Fix the workspace so th…"
+tick 30041: decisions=1 inFlight=1 pending=0 actors=agent-1788430797205341-2:0r/3a
+    agent-1788430797205341-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Fix the workspace so th…"
+tick 30141: decisions=1 inFlight=1 pending=0 actors=agent-1788430797205341-2:0r/3a
+    agent-1788430797205341-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Fix the workspace so th…"
+tick 30241: decisions=1 inFlight=1 pending=0 actors=agent-1788430797205341-2:0r/3a
+    agent-1788430797205341-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Fix the workspace so th…"
+tick 30341: decisions=1 inFlight=1 pending=0 actors=agent-1788430797205341-2:0r/3a
+    agent-1788430797205341-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Fix the workspace so th…"
+tick 30441: decisions=1 inFlight=1 pending=0 actors=agent-1788430797205341-2:0r/3a
+    agent-1788430797205341-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Fix the workspace so th…"
+tick 30541: decisions=1 inFlight=1 pending=0 actors=agent-1788430797205341-2:0r/3a
+    agent-1788430797205341-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Fix the workspace so th…"
+tick 30641: decisions=1 inFlight=1 pending=0 actors=agent-1788430797205341-2:0r/3a
+    agent-1788430797205341-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Fix the workspace so th…"
+tick 30741: decisions=1 inFlight=1 pending=0 actors=agent-1788430797205341-2:0r/3a
+    agent-1788430797205341-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Fix the workspace so th…"
+tick 30841: decisions=1 inFlight=1 pending=0 actors=agent-1788430797205341-2:0r/3a
+    agent-1788430797205341-2 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Fix the workspace so th…"
+tick 30917: decisions=0 inFlight=0 pending=0 actors=agent-1788430797205341-2:0r/3a
+
+

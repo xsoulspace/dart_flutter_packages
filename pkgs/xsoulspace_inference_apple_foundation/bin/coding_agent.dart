@@ -154,14 +154,41 @@ Future<void> main(List<String> args) async {
 
   final runsDir = resolveRunsDirectory();
 
+  // First-application completeness: with `--runs N` (N>1) the provided jail
+  // is the TEMPLATE — each run gets a fresh copy of it (seeded pubspec,
+  // tests, fixtures intact). Before this, multi-run over a user-seeded jail
+  // silently ran in EMPTY per-run jails: the workspace convention failed on
+  // the missing pubspec and every row was an oracle failure, not model
+  // failure data. Single-run keeps using the jail in place (resume flow).
+  Future<Directory> cloneJail(int i) async {
+    final runJail = Directory('${jailArg}_run$i');
+    if (runJail.existsSync()) {
+      runJail.deleteSync(recursive: true);
+    }
+    runJail.createSync(recursive: true);
+    await for (final e in Directory(jailArg!).list(recursive: true)) {
+      final rel = e.path.substring('${Directory(jailArg!).path}/'.length);
+      if (rel.startsWith('.dart_tool') || rel.startsWith('build')) {
+        continue; // derived artifacts never cross into a fresh jail
+      }
+      final target = '${runJail.path}/$rel';
+      if (e is Directory) {
+        Directory(target).createSync(recursive: true);
+      } else if (e is File) {
+        await File(target).parent.create(recursive: true);
+        e.copySync(target);
+      }
+    }
+    return runJail;
+  }
+
   final results = <CodingAgentRunResult>[];
   for (var i = 1; i <= runs; i++) {
     final jail = jailArg == null
         ? await Directory.systemTemp.createTemp('coding_agent_')
-        : (runs == 1
-                ? (Directory(jailArg)..createSync(recursive: true))
-                : Directory('${jailArg}_run$i')
-            ..createSync(recursive: true));
+        : runs == 1
+        ? (Directory(jailArg)..createSync(recursive: true))
+        : await cloneJail(i);
     try {
       ModelRouter? router;
       if (openRouter) {
@@ -284,6 +311,8 @@ Future<void> main(List<String> args) async {
         });
       }
     } finally {
+      // An implicit temp jail is disposable; an explicit --jail (template or
+      // single-run) stays on disk for the user — it carries their workspace.
       if (jailArg == null && resumeJail == null) {
         jail.deleteSync(recursive: true);
       }

@@ -44,6 +44,11 @@
   board, miner, and seeder exist; zero real harness issues have been fixed
   by harness actors.
 - Editor: `harnessd` speaks ACP; no editor has connected.
+- **The meaning tier can never pass a non-pre-wired task** (diagnosed
+  2026-09-02, ADR 0022): its oracle replays host-authored expectations and
+  never reads the workspace; the 14-op vocabulary bans arithmetic, loops,
+  and intent-calls; the materializer emits VM-replay, not workspace Dart.
+  Three independent closures — tracked urgently as R6.
 - Large-model amplification ("small ×100 → large ×10000"): the tier system
   is built; no same-tools cross-size measurement exists.
 
@@ -127,6 +132,45 @@ proof.
   prompt → streamed tool updates → 2 permission round-trips (write gate
   asked the client; client allowed; tools executed) → verdict PASS. Also
   caught the analyze-only trivial-PASS hole (fixed: no tests → honest null).
+
+### R6 — Workspace-oracle meaning tier (URGENT — [ADR 0022](../../../../docs/decisions/0022_workspace_oracle_meaning_pipeline.md))
+
+Diagnosis (2026-09-02): the intent tier can never pass a real task as
+built. Three closures:
+
+1. **Oracle closure** — `wireIntentGradedGoal` + the `intents` checker
+   replay HOST-AUTHORED expectations; the workspace's real tests are never
+   read. D8 is reachable only via the run-graded arm's `write` (the law
+   violation).
+2. **Vocabulary closure** — `meaningExecutorOps` has no arithmetic, no
+   comparison beyond `eq`, cycles hard-banned (no loops), and **no `call`
+   op**: intents cannot call intents, so intent-first growth cannot
+   compound.
+3. **Materialization closure** — `materializeMeaningProgram` emits a
+   generic VM replaying embedded JSON; no workspace-shaped Dart, so
+   `dart test` can never grade it.
+
+Fix (each LLM-free-testable; AE supplies the wire per its bidirectional-ETL
+charter — `~/xs/agentic_executables/docs/ae_harness_etl_spec.md`):
+
+- **ETL-in**: `xsoulspace_agentic_dart_meaning` turns failing workspace
+  tests/analyze output into AE canonical rows → intent skeletons + derived
+  expectation tables. The workspace oracle IS the expectation table (D8
+  finally governs the meaning arm).
+- **Materializer-out**: idiomatic-Dart target as a materializer spec
+  (data); VM-replay stays as the interpreter-parity oracle only.
+- **Vocabulary as data**: arithmetic/compare/string ops, bounded
+  iteration, and a `call` op — added via the ADR 0019 §4 mechanism (spec +
+  one-VM semantics + parity test), pulled by failing tasks, never pushed.
+- **Division of labor** (ADR 0021 pattern): host decomposes; the model
+  fills bounded slots as data; chains are never authored from scratch.
+  P4 span edits are reframed as the editing-surface projection of this
+  ETL, not the law closure.
+
+- **Done when**: one real workspace task (e.g. suite-shaped `add(a,b)`,
+  then a tic-tac-toe `winner()`/`move()`) passes `dart test` end-to-end
+  through the meaning profile with zero model code tokens and zero
+  host-authored expectations.
 
 ## R3 status (partial — the honest remainder)
 

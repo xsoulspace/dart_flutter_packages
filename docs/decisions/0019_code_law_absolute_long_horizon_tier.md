@@ -129,6 +129,11 @@ Two discussion findings, both grounded in existing measured data:
 
 ## Consequences
 
+> **Amended by [ADR 0022](0022_workspace_oracle_meaning_pipeline.md):** the
+> generation-path law closure is the workspace-oracle ETL (tests → intent
+> skeletons → idiomatic materializer); P4 span edits close the *editing*
+> surface only.
+
 - `pipeline_coding.md`'s law statement is restated with its verifiability
   grounding and its explicit size-independence; the run-graded arm's
   teaching-prompt contradiction ("make the change with write", P4) is a

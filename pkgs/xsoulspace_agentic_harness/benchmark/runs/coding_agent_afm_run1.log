@@ -1605,3 +1605,339 @@ tick 28099: decisions=1 inFlight=1 pending=0 actors=agent-1788422613053642-0:12r
 tick 28197: decisions=0 inFlight=0 pending=0 actors=agent-1788422613053642-0:12r/3a ⚠ actor agent-1788422613053642-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: run failed exit=2: 
 
 
+coding_agent run — task: free_form
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 1058
+  decisions: 4
+  tool rounds (thread beats): 14
+  moves: {list_dir: 4, write: 4, run: 3, read: 2, git_status: 1}
+  projection tokens (honest spend, Situation.tokensUsed): 5610
+  meaning nodes: 0, edges: 0
+  wall clock: 111578 ms
+  final gate (outer oracle, once): FAIL
+    check: dart test exit=1:
+  failure class: final gate: dart test exit=1:
+--- harness pulse (J1.5.3) ---
+tick 4 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788429429706836-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: dart test exit=1:
+— agent-1788429429706836-0  [idle]  rounds 0/12 (Σ0)  attempts 3/3 EXHAUSTED
+    last: run:{"timeout_ms":30000,"command":["dart","test_dir/test_file… → FAILED
+      error: {"ok":false,"exit_code":254,"stdout":"","stderr":"Error when reading 'test_dir/test_file.dart': No such file or direc…
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 7699..33010
+tick 31203: decisions=1 inFlight=1 pending=0 actors=agent-1788429429706836-0:0r/3a
+    agent-1788429429706836-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 31303: decisions=1 inFlight=1 pending=0 actors=agent-1788429429706836-0:0r/3a
+    agent-1788429429706836-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 31403: decisions=1 inFlight=1 pending=0 actors=agent-1788429429706836-0:0r/3a
+    agent-1788429429706836-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 31503: decisions=1 inFlight=1 pending=0 actors=agent-1788429429706836-0:0r/3a
+    agent-1788429429706836-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 31603: decisions=1 inFlight=1 pending=0 actors=agent-1788429429706836-0:0r/3a
+    agent-1788429429706836-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 31703: decisions=1 inFlight=1 pending=0 actors=agent-1788429429706836-0:0r/3a
+    agent-1788429429706836-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 31803: decisions=1 inFlight=1 pending=0 actors=agent-1788429429706836-0:0r/3a
+    agent-1788429429706836-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 31903: decisions=1 inFlight=1 pending=0 actors=agent-1788429429706836-0:0r/3a
+    agent-1788429429706836-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 32003: decisions=1 inFlight=1 pending=0 actors=agent-1788429429706836-0:0r/3a
+    agent-1788429429706836-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 32103: decisions=1 inFlight=1 pending=0 actors=agent-1788429429706836-0:0r/3a
+    agent-1788429429706836-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 32203: decisions=1 inFlight=1 pending=0 actors=agent-1788429429706836-0:0r/3a
+    agent-1788429429706836-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 32303: decisions=1 inFlight=1 pending=0 actors=agent-1788429429706836-0:0r/3a
+    agent-1788429429706836-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 32403: decisions=1 inFlight=1 pending=0 actors=agent-1788429429706836-0:0r/3a
+    agent-1788429429706836-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 32503: decisions=1 inFlight=1 pending=0 actors=agent-1788429429706836-0:0r/3a
+    agent-1788429429706836-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 32603: decisions=1 inFlight=1 pending=0 actors=agent-1788429429706836-0:0r/3a
+    agent-1788429429706836-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 32703: decisions=1 inFlight=1 pending=0 actors=agent-1788429429706836-0:0r/3a
+    agent-1788429429706836-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 32803: decisions=1 inFlight=1 pending=0 actors=agent-1788429429706836-0:0r/3a
+    agent-1788429429706836-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 32903: decisions=1 inFlight=1 pending=0 actors=agent-1788429429706836-0:0r/3a
+    agent-1788429429706836-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 33003: decisions=1 inFlight=1 pending=0 actors=agent-1788429429706836-0:0r/3a
+    agent-1788429429706836-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 33010: decisions=0 inFlight=0 pending=0 actors=agent-1788429429706836-0:0r/3a
+
+
+coding_agent run — task: free_form
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 1058
+  decisions: 4
+  tool rounds (thread beats): 10
+  moves: {list_dir: 3, write: 2, run: 1, git_status: 3, git_diff: 1}
+  projection tokens (honest spend, Situation.tokensUsed): 5356
+  meaning nodes: 0, edges: 0
+  wall clock: 89474 ms
+  final gate (outer oracle, once): FAIL
+    check: dart test exit=65:
+  failure class: final gate: dart test exit=65:
+--- harness pulse (J1.5.3) ---
+tick 4 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788429592553514-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: dart test exit=65:
+— agent-1788429592553514-0  [idle]  rounds 0/12 (Σ0)  attempts 3/3 EXHAUSTED
+    last: git_status: → FAILED
+      error: {"ok":false,"code":"not_a_git_repo","hint":"this workspace has no .git"}
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 4299..29585
+tick 27732: decisions=1 inFlight=1 pending=0 actors=agent-1788429592553514-0:0r/3a
+    agent-1788429592553514-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 27832: decisions=1 inFlight=2 pending=0 actors=agent-1788429592553514-0:0r/3a
+    agent-1788429592553514-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 27932: decisions=1 inFlight=1 pending=0 actors=agent-1788429592553514-0:0r/3a
+    agent-1788429592553514-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 28032: decisions=1 inFlight=1 pending=0 actors=agent-1788429592553514-0:0r/3a
+    agent-1788429592553514-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 28132: decisions=1 inFlight=1 pending=0 actors=agent-1788429592553514-0:0r/3a
+    agent-1788429592553514-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 28232: decisions=1 inFlight=1 pending=0 actors=agent-1788429592553514-0:0r/3a
+    agent-1788429592553514-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 28332: decisions=1 inFlight=1 pending=0 actors=agent-1788429592553514-0:0r/3a
+    agent-1788429592553514-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 28432: decisions=1 inFlight=1 pending=0 actors=agent-1788429592553514-0:0r/3a
+    agent-1788429592553514-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 28532: decisions=1 inFlight=1 pending=0 actors=agent-1788429592553514-0:0r/3a
+    agent-1788429592553514-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 28632: decisions=1 inFlight=1 pending=0 actors=agent-1788429592553514-0:0r/3a
+    agent-1788429592553514-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 28732: decisions=1 inFlight=1 pending=0 actors=agent-1788429592553514-0:0r/3a
+    agent-1788429592553514-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 28832: decisions=1 inFlight=1 pending=0 actors=agent-1788429592553514-0:0r/3a
+    agent-1788429592553514-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 28932: decisions=1 inFlight=1 pending=0 actors=agent-1788429592553514-0:0r/3a
+    agent-1788429592553514-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 29032: decisions=1 inFlight=1 pending=0 actors=agent-1788429592553514-0:0r/3a
+    agent-1788429592553514-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 29132: decisions=1 inFlight=1 pending=0 actors=agent-1788429592553514-0:0r/3a
+    agent-1788429592553514-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 29232: decisions=1 inFlight=1 pending=0 actors=agent-1788429592553514-0:0r/3a
+    agent-1788429592553514-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 29332: decisions=1 inFlight=1 pending=0 actors=agent-1788429592553514-0:0r/3a
+    agent-1788429592553514-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 29432: decisions=1 inFlight=1 pending=0 actors=agent-1788429592553514-0:0r/3a
+    agent-1788429592553514-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 29532: decisions=1 inFlight=1 pending=0 actors=agent-1788429592553514-0:0r/3a
+    agent-1788429592553514-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 29585: decisions=0 inFlight=0 pending=0 actors=agent-1788429592553514-0:0r/3a
+
+
+coding_agent run — task: free_form
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 1058
+  decisions: 3
+  tool rounds (thread beats): 12
+  moves: {list_dir: 3, write: 3, run: 3, read: 2, git_diff: 1}
+  projection tokens (honest spend, Situation.tokensUsed): 4231
+  meaning nodes: 0, edges: 0
+  wall clock: 109605 ms
+  final gate (outer oracle, once): FAIL
+    check: dart test exit=65:
+  failure class: final gate: dart test exit=65:
+--- harness pulse (J1.5.3) ---
+tick 3 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788429967122317-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: dart test exit=65:
+— agent-1788429967122317-0  [idle]  rounds 0/12 (Σ0)  attempts 3/3 EXHAUSTED
+    last: git_diff:{"path":"lib/add.dart","staged":"true"} → FAILED
+      error: {"ok":false,"code":"not_a_git_repo","hint":"this workspace has no .git"}
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 10499..35826
+tick 34005: decisions=1 inFlight=1 pending=0 actors=agent-1788429967122317-0:0r/3a
+    agent-1788429967122317-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 34105: decisions=1 inFlight=1 pending=0 actors=agent-1788429967122317-0:0r/3a
+    agent-1788429967122317-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 34205: decisions=1 inFlight=1 pending=0 actors=agent-1788429967122317-0:0r/3a
+    agent-1788429967122317-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 34305: decisions=1 inFlight=1 pending=0 actors=agent-1788429967122317-0:0r/3a
+    agent-1788429967122317-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 34405: decisions=1 inFlight=1 pending=0 actors=agent-1788429967122317-0:0r/3a
+    agent-1788429967122317-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 34505: decisions=1 inFlight=1 pending=0 actors=agent-1788429967122317-0:0r/3a
+    agent-1788429967122317-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 34605: decisions=1 inFlight=1 pending=0 actors=agent-1788429967122317-0:0r/3a
+    agent-1788429967122317-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 34705: decisions=1 inFlight=1 pending=0 actors=agent-1788429967122317-0:0r/3a
+    agent-1788429967122317-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 34805: decisions=1 inFlight=1 pending=0 actors=agent-1788429967122317-0:0r/3a
+    agent-1788429967122317-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 34905: decisions=1 inFlight=1 pending=0 actors=agent-1788429967122317-0:0r/3a
+    agent-1788429967122317-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 35005: decisions=1 inFlight=1 pending=0 actors=agent-1788429967122317-0:0r/3a
+    agent-1788429967122317-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 35105: decisions=1 inFlight=1 pending=0 actors=agent-1788429967122317-0:0r/3a
+    agent-1788429967122317-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 35205: decisions=1 inFlight=1 pending=0 actors=agent-1788429967122317-0:0r/3a
+    agent-1788429967122317-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 35305: decisions=1 inFlight=1 pending=0 actors=agent-1788429967122317-0:0r/3a
+    agent-1788429967122317-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 35405: decisions=1 inFlight=1 pending=0 actors=agent-1788429967122317-0:0r/3a
+    agent-1788429967122317-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 35505: decisions=1 inFlight=1 pending=0 actors=agent-1788429967122317-0:0r/3a
+    agent-1788429967122317-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 35605: decisions=1 inFlight=1 pending=0 actors=agent-1788429967122317-0:0r/3a
+    agent-1788429967122317-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 35705: decisions=1 inFlight=1 pending=0 actors=agent-1788429967122317-0:0r/3a
+    agent-1788429967122317-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 35805: decisions=1 inFlight=1 pending=0 actors=agent-1788429967122317-0:0r/3a
+    agent-1788429967122317-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=65:
+
+Fix the workspace so t…"
+tick 35826: decisions=0 inFlight=0 pending=0 actors=agent-1788429967122317-0:0r/3a
+
+
+coding_agent run — task: free_form
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 1058
+  decisions: 4
+  tool rounds (thread beats): 17
+  moves: {list_dir: 4, write: 5, run: 5, read: 3}
+  projection tokens (honest spend, Situation.tokensUsed): 5479
+  meaning nodes: 0, edges: 0
+  wall clock: 236943 ms
+  final gate (outer oracle, once): FAIL
+    check: dart test exit=1:
+  failure class: final gate: dart test exit=1:
+--- harness pulse (J1.5.3) ---
+tick 4 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788430336163743-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: dart test exit=1:
+— agent-1788430336163743-0  [idle]  rounds 0/12 (Σ0)  attempts 3/3 EXHAUSTED
+    last: run:{"cwd":"/private/tmp/ta_add_run1","timeout_ms":30000,"com… → FAILED
+      error: {"ok":false,"exit_code":254,"stdout":"","stderr":"Error: Invalid package URI 'package:dart:convert':\n  Package URIs …
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 51153..76618
+tick 74753: decisions=1 inFlight=1 pending=0 actors=agent-1788430336163743-0:0r/3a
+    agent-1788430336163743-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 74853: decisions=1 inFlight=1 pending=0 actors=agent-1788430336163743-0:0r/3a
+    agent-1788430336163743-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 74953: decisions=1 inFlight=1 pending=0 actors=agent-1788430336163743-0:0r/3a
+    agent-1788430336163743-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 75053: decisions=1 inFlight=2 pending=0 actors=agent-1788430336163743-0:0r/3a
+    agent-1788430336163743-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 75153: decisions=1 inFlight=1 pending=0 actors=agent-1788430336163743-0:0r/3a
+    agent-1788430336163743-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 75253: decisions=1 inFlight=1 pending=0 actors=agent-1788430336163743-0:0r/3a
+    agent-1788430336163743-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 75353: decisions=1 inFlight=1 pending=0 actors=agent-1788430336163743-0:0r/3a
+    agent-1788430336163743-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 75453: decisions=1 inFlight=1 pending=0 actors=agent-1788430336163743-0:0r/3a
+    agent-1788430336163743-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 75553: decisions=1 inFlight=1 pending=0 actors=agent-1788430336163743-0:0r/3a
+    agent-1788430336163743-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 75653: decisions=1 inFlight=1 pending=0 actors=agent-1788430336163743-0:0r/3a
+    agent-1788430336163743-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 75753: decisions=1 inFlight=1 pending=0 actors=agent-1788430336163743-0:0r/3a
+    agent-1788430336163743-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 75853: decisions=1 inFlight=1 pending=0 actors=agent-1788430336163743-0:0r/3a
+    agent-1788430336163743-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 75953: decisions=1 inFlight=1 pending=0 actors=agent-1788430336163743-0:0r/3a
+    agent-1788430336163743-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 76053: decisions=1 inFlight=1 pending=0 actors=agent-1788430336163743-0:0r/3a
+    agent-1788430336163743-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 76153: decisions=1 inFlight=1 pending=0 actors=agent-1788430336163743-0:0r/3a
+    agent-1788430336163743-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 76253: decisions=1 inFlight=1 pending=0 actors=agent-1788430336163743-0:0r/3a
+    agent-1788430336163743-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 76353: decisions=1 inFlight=1 pending=0 actors=agent-1788430336163743-0:0r/3a
+    agent-1788430336163743-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 76453: decisions=1 inFlight=1 pending=0 actors=agent-1788430336163743-0:0r/3a
+    agent-1788430336163743-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 76553: decisions=1 inFlight=1 pending=0 actors=agent-1788430336163743-0:0r/3a
+    agent-1788430336163743-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 76618: decisions=0 inFlight=0 pending=0 actors=agent-1788430336163743-0:0r/3a
+
+

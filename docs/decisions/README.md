@@ -22,3 +22,5 @@
 | [0018](0018_meaning_view_zoom_projection_context_ownership.md) | Accepted | Meaning view is a zoom projection; context is harness-owned; macro gate fired |
 | [0019](0019_code_law_absolute_long_horizon_tier.md) | Accepted | Code law is absolute (verifiability, not model size); long-horizon tier is the headline measurement; growth is intent-first |
 | [0020](0020_cut_composition_api.md) | Accepted | The cut is a composed document — typed slots, per-slot policies, input gate; model ≠ actor (roles as data) |
+| [0021](0021_problems_as_canonical_rows_project_repair_packs.md) | Accepted | Problems are AE-ETL canonical rows; repairs are project-guided repair packs |
+| [0022](0022_workspace_oracle_meaning_pipeline.md) | Accepted | Meaning pipeline grades through the workspace oracle; vocabulary grows as verified data (bidirectional ETL) |

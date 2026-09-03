@@ -21,7 +21,9 @@ most apparent shortcuts are forbidden for reasons recorded in ADRs.
 3. `docs/agent/pipeline_coding.md`, `docs/agent/history.md`
 4. ADRs: `0018` (zoom/context), `0019` (code law / tiers), `0020` (cut
    composition), `0021` (problems = AE-ETL canonical rows, project-guided repair
-   packs) — in `docs/decisions/`
+   packs), `0022` (meaning pipeline grades through the workspace oracle;
+   vocabulary grows as verified data — **URGENT**, explains why the intent
+   tier cannot pass non-pre-wired tasks) — in `docs/decisions/`
 5. Evidence: `pkgs/xsoulspace_agentic_harness/benchmark/runs/delegation_m1_evidence.md`
 
 ## Entry points (already working — verify, don't rebuild)
@@ -101,11 +103,38 @@ squad; the user watches progress and approves writes (permission round-trip).
 5. Constraints: no Firebase/account work; isolate the feature so the app
    builds and existing tests stay green (`flutter analyze`, `flutter test`).
 
+## TASK C — URGENT: un-stick the meaning tier (ADR 0022 / PLAN R6)
+
+The intent tier can never pass a real task as built — three closures:
+host-authored expectations (the workspace's tests are never read), a
+14-op vocabulary with no arithmetic/loops/`call`, and a VM-replay
+materializer that can never satisfy `dart test`. Do NOT run more
+pre-wired intent-tier delegation cycles, and do NOT treat P4 span edits
+as the law closure (they cover the editing surface only).
+
+1. ETL-in: extend the `xsoulspace_agentic_dart_meaning` work item —
+   failing workspace tests/analyze → AE canonical rows → intent skeletons
+   + DERIVED expectation tables (AE wire per
+   `~/xs/agentic_executables/docs/ae_harness_etl_spec.md`).
+2. Materializer-out: idiomatic-Dart materializer spec (data); VM-replay
+   stays the parity oracle only.
+3. Vocabulary as verified data: arithmetic/compare/string ops, bounded
+   iteration, a `call` op (intents call intents) — each added via ADR 0019
+   §4 (spec + one-VM semantics + parity test), pulled by a failing task.
+4. Division of labor (ADR 0021 pattern): host decomposes; the model fills
+   bounded slots; chains are never authored from scratch.
+- Done when: a workspace-derived task (not pre-wired) passes `dart test`
+  end-to-end through the meaning profile with zero model code tokens and
+  zero host-authored expectations (LLM-free scripted first, then AFM).
+
 ## Definition of done
 
 - TASK A: a user can run one command locally (AFM) and get mechanically
   verified work; the self-improvement loop has fixed ≥3 real issues at zero
   model tokens for known classes; rows + docs committed.
+- TASK C (URGENT, supersedes further pre-wired intent-tier cycles): the R6
+  first-track gate above — a workspace-derived task passing through the
+  meaning profile lawfully.
 - TASK B: last_answer builds with the embedded harness; one scripted
   end-to-end session (delegate → permission → verdict) green; the daemon
   lifecycle controllable from the app.

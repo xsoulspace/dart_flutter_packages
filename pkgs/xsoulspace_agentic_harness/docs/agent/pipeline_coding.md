@@ -5,7 +5,8 @@
 > decisions: ADR [0009](../../../../docs/decisions/0009_goals_as_vectors_plans_as_projections.md),
 > [0015](../../../../docs/decisions/0015_domains_live_in_hosts_core_stays_generic.md),
 > [0018](../../../../docs/decisions/0018_meaning_view_zoom_projection_context_ownership.md),
-> [0020](../../../../docs/decisions/0020_cut_composition_api.md)
+> [0020](../../../../docs/decisions/0020_cut_composition_api.md),
+> [0022](../../../../docs/decisions/0022_workspace_oracle_meaning_pipeline.md)
 > · forward plan: [PLAN.md](PLAN.md).
 
 ## The law (memorize this)
@@ -171,15 +172,25 @@ counts still match `responses_sent_delta`.
   PASSES (bugfix_01 pass@3 = 3/3); intent tier honest FAIL 0/3 — the
   failure class is chain-logic correctness; the overseer grants ONE repair
   cycle (scripted proof green), on-device pass still open.
-- **P4 (open)**: J3 analyzer round-trip in the host package
-  `xsoulspace_agentic_dart_meaning` — `open(path)` + span-anchored edits.
-  This is ALSO the law-closure item: the run-graded arm's teaching prompt
-  still says "make the change with write" — the model supplying whole-file
-  content violates the never-writes-code-tokens law. It is a NAMED
-  contradiction to be closed by P4's meaning-node span edits, not extended
-  (P3 deliberately added NO new model-visible write surface).
-- **Next levers**: P4 (span edits close the law gap on existing code),
-  J2 (context ownership), K-matrix rows beyond the two DoD tasks.
+- **P4 (open, REFRAMED by ADR 0022)**: J3 analyzer round-trip in the host
+  package `xsoulspace_agentic_dart_meaning` — `open(path)` + span-anchored
+  edits. P4 closes the *editing* surface only (modifying existing files
+  under the law). The run-graded arm's teaching prompt still says "make
+  the change with write" — the model supplying whole-file content violates
+  the never-writes-code-tokens law — but the *generation* path is NOT
+  closed by span edits: the intent tier is closed in three independent
+  ways (oracle replays host-authored expectations; 14-op vocabulary bans
+  arithmetic/loops/intent-calls; materializer emits VM-replay, not
+  workspace Dart). The generation law closes via ADR 0022's R6 tracks —
+  workspace-oracle ETL (tests → canonical rows → intent skeletons), an
+  idiomatic-Dart materializer spec, and vocabulary growth as verified
+  data. Span edits become one projection of the Dart ETL. Until R6's
+  ETL-in lands, the run-graded arm remains a transitional scaffold; no new
+  model-visible write surface is added either way.
+- **Next levers**: R6 ETL-in first (workspace oracle derived expectations),
+  then the idiomatic materializer + `call` op; P4 span edits follow as the
+  editing projection; J2 (context ownership), K-matrix rows beyond the two
+  DoD tasks.
 
 ## Invariants an agent must not break
 
