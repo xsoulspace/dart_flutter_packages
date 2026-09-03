@@ -49,7 +49,7 @@ library;
 import 'dart:io';
 
 import 'package:agentic_executables_wire/agentic_executables_wire.dart'
-    show EditExecutableWire;
+    show EditExecutableKind, EditExecutableWire;
 import 'package:ecsly/ecsly.dart';
 import 'package:source_span/source_span.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart'

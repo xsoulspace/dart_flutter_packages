@@ -222,7 +222,7 @@ existing code (whole-file `write` is the only path). R7 closes both.
   — the harness LOOP scans the harness package (repo-scale), zooms and
   impacts through the actor registry, LLM-free; `read`/`write` do not
   exist in the registry at all; Situation ≤ 4,000 tokens.
-- **R7b — the span-edit materializer (CRITICAL PATH).** ONE edit tool
+- **R7b — the span-edit materializer (DONE 2026-09-03).** ONE edit tool
   (`edit_symbol`), minimal closed enum: `apply_executable` (pack-fed) +
   `replace_member_body`/`insert_member` (op-chain — the only model-composed
   moves, via the R6 compiler) → host span-anchored patch → `dart
@@ -231,22 +231,60 @@ existing code (whole-file `write` is the only path). R7 closes both.
   impact frontier — NOT core sub-actions: B4 (2026-09-01) deleted
   `tree_patch`/`rename_symbol` as a parallel text-patch path, and
   reintroducing rename as a hardcoded verb would repeat that mistake
-  (ADR 0023 §2 records the resolution). Sequencing: op-chain moves prove
-  the materializer first; frontier expansion (rename) second, with
-  ambiguity bounce (never guess). Precondition: whole-file `write` is
-  DEMOTED in the meaning profile when this lands — no parallel edit paths
-  a second time. **Gate: a scripted actor performs a multi-file code
-  change on a repo-scale world with ZERO `read` and ZERO `write` moves.**
-  This is the critical path — R7c/d/e wire to it.
-- **R7c — daemon persistence.** `harnessd` holds the world + tree keyed per
-  workspace; tree is NEVER snapshotted (re-derivable — incremental re-scan
-  by git status/mtime is a mechanical tick); snapshots persist beats,
-  verdicts, budgets only. Resolves the 18s repo-tree restore finding by
-  not restoring trees.
-- **R7d — pack-fed edits.** AE know packs / project packs supply
-  parameterized edit executables; the model fills bounded slots; the
-  capture loop records novel resolutions (self-improvement for code edits,
-  ~zero tokens for known classes).
+  (ADR 0023 §2 records the resolution). Landed:
+  `pkgs/xsoulspace_agentic_dart_meaning/lib/src/span_editor.dart` + the
+  public chain compiler (`compileOpChainBody`) + the flutter-package fix
+  in `resolveWorkspaceCheck`. Gate GREEN (`test/span_edit_gate_test.dart`,
+  6 tests): a scripted actor performs a multi-file code change on a
+  scanned world with ZERO `read` and ZERO `write` moves (registry AND
+  beats); all three host-enforced fences bounce as named data; auto-revert
+  restores byte-identical files on a deliberately-failing move; failure
+  attribution distinguishes move-caused failures from pre-existing red.
+  Failure classes: bounce:{expressiveness,coverage,integration},
+  workspace_check_failed, analyze_failed, lock_conflict,
+  permission_denied. Performance lesson (ECS discipline, measured): the
+  first cut ran the whole-package oracle twice per move → 10-minute
+  daemon turns; the verify baseline is now a WORLD RESOURCE
+  (`SpanVerifyBaseline` — one oracle run per state change, never per
+  move), post-analyze is scoped to the touched files, and per-phase
+  timings ship in every outcome. Probe: a 2-file lexical rename
+  applies+verifies in 649 ms. Rows: [results_r7.md](results_r7.md).
+- **R7b demotion (DONE with the gate):** the run-graded fs arm is marked
+  LEGACY-HOST-ONLY in `coding_agent_runner.dart` (direct-profile hosts
+  keep it); the meaning profile's only ACT verb is `edit_symbol`.
+- **R7c — daemon persistence (DONE 2026-09-03).** Sessions keyed per
+  workspace (`cwd`); world + meaning tree stay warm; the tree is NEVER
+  snapshotted (the snapshot codec excludes MeaningNode/Props/Edge at
+  capture — the 18s super-linear restore finding is resolved by NOT
+  restoring trees; re-derivation is measured instead); a mechanical
+  `refresh` tick re-scans mtime-changed files before every prompt;
+  `loadSession: true` is REAL (restore from `.dart_tool/harnessd_store`);
+  `requestPermission` deny-by-default (routes to the client approver);
+  `cancelSession` aborts generation (flag observed at the turn boundary —
+  the loop swallows handler errors by design); escalation capped
+  (`min(3+rounds, 9)`); tool-call updates stream UNIQUE ids and the tool
+  RESULTS (patches, verify verdicts, bounce reasons, timings). Gate:
+  `harnessd_r7c_test.dart` (5 tests) + the meaning-profile surface in
+  `runCodingAgentOnce` (the actor always gets its first session — an
+  already-green workspace must not silently skip the turn).
+- **R7d — pack-fed edits (gate DONE 2026-09-03).** `EditExecutableWire`
+  in `agentic_executables_wire` (zero-dep, syntax-only; unknown kinds
+  fail LOUDLY; api-breaking kinds flagged) + `registerPackExecutable` on
+  the materializer. Worked example `dart/fix_loop_bound`: the model
+  supplies ONLY ids; the op-chain travels with the pack —
+  `test/pack_edit_gate_test.dart` green at zero authored tokens.
+- **TASK 3 — pi through the daemon (DONE 2026-09-03, fallback-proof).**
+  pi session (SDK, `noTools: 'builtin'` + explicit excludes) with ONLY
+  the daemon-backed five tools over stdio JSON-RPC to
+  `harnessd --profile meaning --scripted`; scripted OpenAI-compatible
+  mover (LLM-free: the gate measures the SURFACE). Gate PASS:
+  `benchmark/runs/r7_daemon_transcript.txt` — scan → zoom → impact →
+  rename (private symbol, 2 patches, `flutter test` green) → verify, ZERO
+  pi fs tools. The interactive extension (`r7_harnessd_extension.ts`) is
+  shipped alongside (blocks pi's built-ins when `PI_HARNESSD=1`).
+  Frictions recorded: `session/request_permission` must be ANSWERED by
+  the client (deny-by-default enforced on a silent client — the correct
+  behavior); the interactive extension pass is the follow-up.
 - **R7e — on-device.** One real AFM edit through the daemon — the full
   North Star sentence end to end.
 - Demotion (hard cut, lands with R7b): whole-file `write` is demoted to
