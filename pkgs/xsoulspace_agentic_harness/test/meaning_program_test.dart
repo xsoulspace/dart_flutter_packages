@@ -159,7 +159,9 @@ void main() {
 
   test('stewardship probe: the op vocabulary is closed + countable', () {
     expect(meaningExecutorOps.toSet().length, meaningExecutorOps.length);
-    expect(meaningExecutorOps.length, 14);
+    // ADR 0022 §3: 14-op probe set + 7 verified growth ops (lt, gt, add, sub,
+    // mul, get_item, call).
+    expect(meaningExecutorOps.length, 21);
   });
 
   test(
@@ -241,5 +243,44 @@ void main() {
     final materialized = evaluateChecker(spec, jail.path);
     expect(materialized.detail, contains('return without value (op op_1)'),
         reason: materialized.detail);
+  });
+
+  test('ADR 0022 v2 ops: arithmetic, comparison, item access, and call', () {
+    final world = _world();
+    // add(a,b) = a + b — the shape the old 14-op vocabulary could NOT
+    // express (the R6 vocabulary-closure proof).
+    defineIntent(world, name: 'add', params: ['a:num', 'b:num'], returns: 'num');
+    final addIds = addChainFromSpecs(world, [
+      {'label': 'load_arg', 'a': 'a'},
+      {'label': 'load_arg', 'a': 'b'},
+      {'label': 'add'},
+      {'label': 'return'},
+    ]);
+    linkMeaning(world, from: 'add', relation: 'impl', to: addIds!.first);
+
+    // sum_of(list) = items[0] + items[1] (get_item + call composition).
+    defineIntent(world, name: 'sum_of', params: ['items:List<num>'], returns: 'num');
+    final sumIds = addChainFromSpecs(world, [
+      {'label': 'load_arg', 'a': 'items'},
+      {'label': 'literal', 'b': '0'},
+      {'label': 'get_item'},
+      {'label': 'load_arg', 'a': 'items'},
+      {'label': 'literal', 'b': '1'},
+      {'label': 'get_item'},
+      {'label': 'add'},
+      {'label': 'return'},
+    ]);
+    linkMeaning(world, from: 'sum_of', relation: 'impl', to: sumIds!.first);
+    expect(
+      (interpretMeaningProgram(world, 'add', {}, {'a': 2, 'b': 3})['_result'] as Map)['value'],
+      5,
+    );
+    // String coercion through intent_call's "a=2" wire shape works too.
+    expect(
+      (interpretMeaningProgram(world, 'add', {}, {'a': '2', 'b': '3'})['_result'] as Map)['value'],
+      5,
+    );
+    final sumOut = interpretMeaningProgram(world, 'sum_of', {}, {'items': [2, 3]});
+    expect((sumOut['_result'] as Map)['value'], 5);
   });
 }

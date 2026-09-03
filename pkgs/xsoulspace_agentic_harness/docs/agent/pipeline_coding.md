@@ -187,10 +187,19 @@ counts still match `responses_sent_delta`.
   data. Span edits become one projection of the Dart ETL. Until R6's
   ETL-in lands, the run-graded arm remains a transitional scaffold; no new
   model-visible write surface is added either way.
-- **Next levers**: R6 ETL-in first (workspace oracle derived expectations),
-  then the idiomatic materializer + `call` op; P4 span edits follow as the
-  editing projection; J2 (context ownership), K-matrix rows beyond the two
-  DoD tasks.
+- **R6 STATUS (2026-09-02)**: the generation path is OPEN — ETL-in,
+  the workspace-Dart materializer, and the vocabulary growth (21 ops incl.
+  `call`) are LANDED and gated (`results_r6.md`: 1 decision, 7,857 tokens,
+  `dart test exit=0`, zero model code tokens, zero host-authored
+  expectations). Two of the three closures are now fixed: the oracle is
+  the workspace (A-closure) and the materializer targets workspace Dart
+  (C-closure). The vocabulary no longer bans arithmetic or intent-calls;
+  loops remain bounded-by-recursion (V2 vocabulary), not free-form.
+- **Next levers**: on-device AFM pass@3 through the workspace-oracle
+  runner (the model now fills NAMED slots — strictly easier than the
+  0/3 free-form authoring); tic-tac-toe-class task through the full
+  runner; P4 span edits as the editing projection; J2 (context
+  ownership), K-matrix rows beyond the two DoD tasks.
 
 ## Invariants an agent must not break
 

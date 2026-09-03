@@ -135,6 +135,31 @@ proof.
 
 ### R6 — Workspace-oracle meaning tier (URGENT — [ADR 0022](../../../../docs/decisions/0022_workspace_oracle_meaning_pipeline.md))
 
+> **STATUS 2026-09-02: FIRST TRACK DONE — the R6 gate is GREEN.**
+> `pkgs/xsoulspace_agentic_dart_meaning` (new host package) + the vocabulary
+> growth in core. Measured row (`results_r6.md`):
+>
+> - scripted (LLM-free), n=1, wall ~10s: **1 decision, 7,857 projection
+>   tokens, `dart test exit=0`** on a greenfield workspace (failing suite,
+>   no lib/ file).
+> - vs the run-graded `write` arm on the same task shape (delegation M1):
+>   11 decisions, 15,725 tokens — and that arm violated the law.
+> - vs the pre-wired intent tier: 0/3 pass@3 at ~20k tokens (results_stage_p).
+> - ZERO model code tokens (moves: `intent_define.define` only); ZERO
+>   host-authored expectations (the table derives from the suite's own
+>   expect() calls — provenance cited per row).
+>
+> Landed: ETL-in (`test_etl.dart` — declared signatures + greenfield
+> inference from suite imports/literals), ETL-out (`dart_materializer.dart`
+> — expression-stack → structured if/else compiler, named unsupported
+> shapes), the runner (`workspace_meaning_runner.dart`), and the vocabulary
+> growth (7 ops incl. `call` — intents now compose intents; parity +
+> stewardship-probe tests updated to 21 ops).
+> Honest tails: greenfield param names are inferred (`arg0:int` — suite
+> literals carry no names); state-op chains have no workspace-Dart
+> realization yet (VM-replay still grades them); on-device pass@3 through
+> this path is the next gate.
+
 Diagnosis (2026-09-02): the intent tier can never pass a real task as
 built. Three closures:
 

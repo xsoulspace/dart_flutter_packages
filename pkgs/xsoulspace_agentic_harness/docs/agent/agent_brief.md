@@ -105,6 +105,23 @@ squad; the user watches progress and approves writes (permission round-trip).
 
 ## TASK C — URGENT: un-stick the meaning tier (ADR 0022 / PLAN R6)
 
+> **STATUS 2026-09-02: FIRST TRACK DONE.** The workspace-oracle gate is
+> GREEN (LLM-free): failing suite → derived skeleton → meaning moves →
+> materialized workspace Dart → `dart test exit=0`, at 1 decision /
+> 7,857 tokens, zero model code tokens, zero host-authored expectations.
+> Evidence: `docs/agent/results_r6.md`. Landed: `pkgs/xsoulspace_agentic_dart_meaning`
+> (ETL-in + idiomatic-Dart materializer + runner) and the 21-op vocabulary
+> (incl. `call`) in core.
+>
+> Remaining TASK C work (in priority order):
+> 1. On-device AFM pass@3 through `runWorkspaceMeaningAgent` (the model now
+>    fills NAMED slots — strictly easier than the 0/3 free-form authoring).
+> 2. A tic-tac-toe-class task (`winner(board)`/`move(board)`) through the
+>    full runner (per-op unit-proven; full loop unmeasured).
+> 3. Greenfield param naming from call-site context when available.
+> 4. P4 span edits (editing projection) — modifying EXISTING files still
+>    has no lawful path.
+
 The intent tier can never pass a real task as built — three closures:
 host-authored expectations (the workspace's tests are never read), a
 14-op vocabulary with no arithmetic/loops/`call`, and a VM-replay

@@ -1,0 +1,25 @@
+name: xsoulspace_agentic_dart_meaning
+description: >-
+  Dart domain host for the agentic harness (ADR 0015/0022): workspace-oracle
+  ETL (failing tests → intent skeletons + derived expectations), an
+  idiomatic-Dart materializer target, and the meaning-profile coding runner.
+  The model never writes code tokens; the host derives, materializes and
+  verifies.
+version: 0.1.0-dev.1
+publish_to: none
+
+environment:
+  sdk: ^3.12.0
+resolution: workspace
+
+dependencies:
+  analyzer: ">=6.9.0 <9.0.0"
+  meta: ^1.19.0
+  xsoulspace_agentic_harness:
+    path: ../xsoulspace_agentic_harness
+  xsoulspace_inference_core: ^0.1.0-beta.1
+
+dev_dependencies:
+  lints: ^6.1.0
+  test: ^1.31.2
+  xsoulspace_lints: ^0.1.2

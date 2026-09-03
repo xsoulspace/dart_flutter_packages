@@ -45,6 +45,7 @@ Use `steward.yaml` and harness proof only when typed actions, probes, or benchma
 ## Package Working Agreements
 
 - `pkgs/xsoulspace_agentic_harness`: [AGENTS.md](pkgs/xsoulspace_agentic_harness/AGENTS.md)
+- `pkgs/xsoulspace_agentic_dart_meaning`: [AGENTS.md](pkgs/xsoulspace_agentic_dart_meaning/AGENTS.md)
 - `pkgs/xsoulspace_inference_core`: [AGENTS.md](pkgs/xsoulspace_inference_core/AGENTS.md)
 - `pkgs/xsoulspace_inference_apple_foundation`: [AGENTS.md](pkgs/xsoulspace_inference_apple_foundation/AGENTS.md)
 

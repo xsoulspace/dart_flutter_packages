@@ -49,10 +49,27 @@ const meaningExecutorOps = <String>[
   'starts_with', // pop v; push v.toString().startsWith(b)
   'eq', // pop y, pop x; push x == y
   'not', // pop; push !top
+  'lt', // pop y, pop x; push num(x) < num(y)
+  'gt', // pop y, pop x; push num(x) > num(y)
+  'add', // pop y, pop x; push num(x) + num(y)
+  'sub', // pop y, pop x; push num(x) - num(y)
+  'mul', // pop y, pop x; push num(x) * num(y)
+  'get_item', // pop i, pop c; push c[i] (list index or map key)
+  'call', // call intent a with args from b (comma-separated keys); push result
   'jump_if_false', // pop c; if c != true → pc = b
   'jump', // pc = b
   'return', // result = pop (maps as-is, else {"value": v})
   'error', // result = {"error": pop}; halt
+];
+
+/// ADR 0022 §3 — the vocabulary grows as verified data. Growth history:
+/// v1 was the 14-op arithmetic-free probe set; the R6 workspace-oracle gate
+/// pulled the math/compare/item/call surface (each op below was added with
+/// spec + VM semantics + parity test, pulled by a failing workspace task).
+/// `call` is the composition primitive: intents call intents (ADR 0019 §4
+/// only becomes true with it).
+const meaningExecutorOpsV2 = <String>[
+  'add', 'sub', 'mul', 'lt', 'gt', 'get_item', 'call',
 ];
 
 /// The max VM steps per call — a deterministic bound against looping chains.
@@ -73,18 +90,8 @@ Map<String, dynamic> interpretMeaningProgram(
   Map<String, dynamic> state,
   Map<String, dynamic> args,
 ) {
-  final index = _indexOf(world);
-  String? entry;
-  final nextOf = <String, String>{};
-  final opIds = <String>{};
-  for (final (from, relation, to) in index.triples) {
-    if (relation == 'impl' && from == intent) entry = to;
-    if (relation == 'then') {
-      nextOf[from] = to;
-      opIds.add(from);
-      opIds.add(to);
-    }
-  }
+  final program = _collectProgram(world);
+  final entry = program.impl[intent];
   if (entry == null) {
     return {
       // B2: the ONE "no executor" dialect — same message the intent_call
@@ -93,29 +100,43 @@ Map<String, dynamic> interpretMeaningProgram(
       '_state': state,
     };
   }
-  opIds.add(entry);
-  final ops = <String, Map<String, dynamic>>{};
-  for (final id in opIds) {
-    final entity = index.byId[id];
-    if (entity == null) continue;
-    final json = _opJson(world, entity);
-    json['next'] = nextOf[id];
-    ops[id] = json;
-  }
-  final vm = _MeaningVm(ops);
+  final vm = _MeaningVm(program.ops, program.impl);
   return vm.run(entry, state, args);
 }
 
-Map<String, dynamic> _opJson(World world, Entity opEntity) {
-  final node = meaningComponentOf<MeaningNode>(world, opEntity)!;
-  final props =
-      meaningComponentOf<MeaningProps>(world, opEntity) ?? const MeaningProps();
-  return {
-    'id': node.id,
-    'op': node.label,
-    'a': props.props['a'],
-    'b': props.props['b'],
-  };
+/// The FULL meaning program as data: every op node + every impl edge. `call`
+/// needs the whole program (intents call intents) — a per-intent slice is
+/// no longer sufficient.
+class _CollectedProgram {
+  _CollectedProgram(this.ops, this.impl);
+  final Map<String, Map<String, dynamic>> ops;
+  final Map<String, String> impl;
+}
+
+_CollectedProgram _collectProgram(World world) {
+  final index = _indexOf(world);
+  final implOf = <String, String>{};
+  final nextOf = <String, String>{};
+  for (final (from, relation, to) in index.triples) {
+    if (relation == 'impl') implOf[from] = to;
+    if (relation == 'then') nextOf[from] = to;
+  }
+  final ops = <String, Map<String, dynamic>>{};
+  for (final entry in index.byId.entries) {
+    final node = meaningComponentOf<MeaningNode>(world, entry.value);
+    if (node == null || node.kind != 'op') continue;
+    final props =
+        meaningComponentOf<MeaningProps>(world, entry.value) ??
+        const MeaningProps();
+    ops[entry.key] = {
+      'id': node.id,
+      'op': node.label,
+      'a': props.props['a'],
+      'b': props.props['b'],
+      'next': nextOf[entry.key],
+    };
+  }
+  return _CollectedProgram(ops, implOf);
 }
 
 MeaningIndex _indexOf(World world) => world.getResource<MeaningIndex>();
@@ -320,8 +341,22 @@ List<String>? addChainFromSpecs(
 // ---------------------------------------------------------------------------
 
 class _MeaningVm {
-  _MeaningVm(this.ops);
+  _MeaningVm(this.ops, this.implOf, {this.depth = 0});
   final Map<String, Map<String, dynamic>> ops;
+
+  /// intent → entry op id (`call` resolves callees through this).
+  final Map<String, String> implOf;
+
+  /// call nesting depth — bounded so recursive/mutual intent calls fail as
+  /// structured data instead of overflowing the stack.
+  final int depth;
+  static const maxCallDepth = 16;
+
+  /// Numeric coercion for the math/compare ops: `intent_call` passes text
+  /// ("a=2"), the oracle passes typed values — both must work. Null → not
+  /// a number (structured error, never a silent coercion).
+  static num? _numOf(dynamic v) =>
+      v is num ? v : (v is String ? num.tryParse(v) : null);
 
   Map<String, dynamic> run(
     String entry,
@@ -384,6 +419,89 @@ class _MeaningVm {
           final y = stack.isEmpty ? null : stack.removeLast();
           final x = stack.isEmpty ? null : stack.removeLast();
           stack.add(x == y);
+        case 'lt':
+        case 'gt':
+          final y = stack.isEmpty ? null : stack.removeLast();
+          final x = stack.isEmpty ? null : stack.removeLast();
+          final xn = _numOf(x);
+          final yn = _numOf(y);
+          if (xn == null || yn == null) {
+            result = {
+              'error': '$kind requires numbers (got: $x, $y) — op $pc',
+            };
+            break;
+          }
+          stack.add(kind == 'lt' ? xn < yn : xn > yn);
+        case 'add':
+        case 'sub':
+        case 'mul':
+          final y = stack.isEmpty ? null : stack.removeLast();
+          final x = stack.isEmpty ? null : stack.removeLast();
+          final xn = _numOf(x);
+          final yn = _numOf(y);
+          if (xn == null || yn == null) {
+            result = {
+              'error': '$kind requires numbers (got: $x, $y) — op $pc',
+            };
+            break;
+          }
+          stack.add(
+            kind == 'add' ? xn + yn : kind == 'sub' ? xn - yn : xn * yn,
+          );
+        case 'get_item':
+          final i = stack.isEmpty ? null : stack.removeLast();
+          final c = stack.isEmpty ? null : stack.removeLast();
+          if (c is List) {
+            final idx = _numOf(i);
+            if (idx == null || idx < 0 || idx >= c.length) {
+              result = {
+                'error': 'get_item index out of range: $i (len ${c.length}) '
+                    '— op $pc',
+              };
+              break;
+            }
+            stack.add(c[idx.toInt()]);
+          } else if (c is Map) {
+            stack.add(c['$i']);
+          } else {
+            result = {'error': 'get_item on non-collection ($c) — op $pc'};
+          }
+        case 'call':
+          final callee = '$a';
+          final subEntry = implOf[callee];
+          if (subEntry == null) {
+            result = {
+              'error': 'call: no meaning executor for intent: $callee — '
+                  'every intent needs an executor. op $pc',
+            };
+            break;
+          }
+          if (depth >= maxCallDepth) {
+            result = {'error': 'call depth exceeded ($maxCallDepth) — op $pc'};
+            break;
+          }
+          final keys = '$b'
+              .split(',')
+              .map((s) => s.trim())
+              .where((s) => s.isNotEmpty);
+          final callArgs = <String, dynamic>{
+            for (final k in keys) k: args[k] ?? working[k],
+          };
+          final sub = _MeaningVm(
+            ops,
+            implOf,
+            depth: depth + 1,
+          ).run(implOf[callee]!, working, callArgs);
+          final subResult = sub['_result'];
+          if (subResult is Map && subResult['error'] != null) {
+            result = subResult.cast<String, dynamic>();
+            break;
+          }
+          stack.add(
+            subResult is Map && subResult.containsKey('value')
+                ? subResult['value']
+                : subResult,
+          );
         case 'not':
           final top = stack.isEmpty ? null : stack.removeLast();
           stack.add(top != true);
@@ -526,12 +644,16 @@ dynamic _jsonish(dynamic v) {
   return v;
 }
 
+num? _numOf(dynamic v) =>
+    v is num ? v : (v is String ? num.tryParse(v) : null);
+
 Map<String, dynamic> _runProgram(
   Map program,
   String entry,
   Map<String, dynamic> state,
-  Map<String, dynamic> args,
-) {
+  Map<String, dynamic> args, {
+  int depth = 0,
+}) {
   final ops = <String, Map<String, dynamic>>{
     for (final o in (program['ops'] as List).cast<Map>())
       o['id'] as String: o.cast<String, dynamic>(),
@@ -597,6 +719,96 @@ Map<String, dynamic> _runProgram(
         final x = stack.isEmpty ? null : stack.removeLast();
         stack.add(x == y);
         break;
+      case 'lt':
+      case 'gt':
+      case 'add':
+      case 'sub':
+      case 'mul': {
+        final y = stack.isEmpty ? null : stack.removeLast();
+        final x = stack.isEmpty ? null : stack.removeLast();
+        final xn = _numOf(x);
+        final yn = _numOf(y);
+        if (xn == null || yn == null) {
+          result = {
+            'error': '${kind ?? 'op'} requires numbers (got: ' +
+                (x?.toString() ?? 'null') + ', ' +
+                (y?.toString() ?? 'null') + ') — op ' + (pc ?? '?'),
+          };
+          break;
+        }
+        if (kind == 'lt') {
+          stack.add(xn < yn);
+        } else if (kind == 'gt') {
+          stack.add(xn > yn);
+        } else if (kind == 'add') {
+          stack.add(xn + yn);
+        } else if (kind == 'sub') {
+          stack.add(xn - yn);
+        } else {
+          stack.add(xn * yn);
+        }
+        break;
+      }
+      case 'get_item': {
+        final i = stack.isEmpty ? null : stack.removeLast();
+        final c = stack.isEmpty ? null : stack.removeLast();
+        if (c is List) {
+          final idx = _numOf(i);
+          if (idx == null || idx < 0 || idx >= c.length) {
+            result = {
+              'error': 'get_item index out of range: ' +
+                  (i?.toString() ?? 'null') + ' (len ' +
+                  c.length.toString() + ') — op ' + pc!,
+            };
+            break;
+          }
+          stack.add(c[idx.toInt()]);
+        } else if (c is Map) {
+          stack.add(c['$i']);
+        } else {
+          result = {
+            'error': 'get_item on non-collection (' +
+                (c?.toString() ?? 'null') + ') — op ' + pc!,
+          };
+        }
+        break;
+      }
+      case 'call': {
+        final callee = a?.toString() ?? '';
+        final impl = (program['impl'] as Map).cast<String, String>();
+        final subEntry = impl[callee];
+        if (subEntry == null) {
+          result = {
+            'error': 'call: no meaning executor for intent: ' + callee +
+                ' — every intent needs an executor. op ' + pc!,
+          };
+          break;
+        }
+        if (depth >= 16) {
+          result = {'error': 'call depth exceeded (16) — op ' + pc!};
+          break;
+        }
+        final keys = (b?.toString() ?? '')
+            .split(',')
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty);
+        final callArgs = <String, dynamic>{
+          for (final k in keys) k: args[k] ?? working[k],
+        };
+        final sub = _runProgram(program, subEntry, working, callArgs,
+            depth: depth + 1);
+        final subResult = sub['_result'];
+        if (subResult is Map && subResult['error'] != null) {
+          result = (subResult as Map).cast<String, dynamic>();
+          break;
+        }
+        stack.add(
+          subResult is Map && (subResult as Map).containsKey('value')
+              ? subResult['value']
+              : subResult,
+        );
+        break;
+      }
       case 'not':
         final top = stack.isEmpty ? null : stack.removeLast();
         stack.add(top != true);
