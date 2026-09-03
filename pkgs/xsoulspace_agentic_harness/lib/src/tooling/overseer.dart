@@ -39,7 +39,7 @@ import '../data_models/components.dart'
     show Actor, ActorSystemPrompt, ActorThreads, ActorTools, EscalationRequest,
         GoalAttemptsExhausted;
 import '../meaning/meaning_program.dart'
-    show chainSpecError, interpretMeaningProgram, meaningExecutorOps,
+    show interpretMeaningProgram, meaningExecutorOps,
         validateMeaningProgram;
 import '../narrative/components.dart'
     show ThreadStatus, ThreadStatusEnum;

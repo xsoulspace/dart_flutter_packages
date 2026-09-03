@@ -29,8 +29,6 @@ library;
 
 import 'package:ecsly/ecsly.dart';
 
-import '../../resources/resources.dart' show Resource;
-
 /// What source fills a slot.
 enum CutSlotFill { goal, map, observations, lastVerdict }
 
@@ -72,16 +70,51 @@ class CutComposition {
   final List<CutSlot> slots;
 
   /// The coder decision composition (run-graded native fs surface).
-  static CutComposition coder() => const CutComposition(name: 'coder', slots: [
-    CutSlot(name: 'goal', fill: CutSlotFill.goal, capacity: 1, required: true),
-    CutSlot(name: 'map', fill: CutSlotFill.map, capacity: 1),
-    CutSlot(
-      name: 'observations',
-      fill: CutSlotFill.observations,
-      capacity: 8,
-    ),
-    CutSlot(name: 'lastVerdict', fill: CutSlotFill.lastVerdict, capacity: 1),
-  ]);
+  static CutComposition coder() => const CutComposition(
+    name: 'coder',
+    slots: [
+      CutSlot(
+        name: 'goal',
+        fill: CutSlotFill.goal,
+        capacity: 1,
+        required: true,
+      ),
+      CutSlot(name: 'map', fill: CutSlotFill.map, capacity: 1),
+      CutSlot(
+        name: 'observations',
+        fill: CutSlotFill.observations,
+        capacity: 8,
+      ),
+      CutSlot(name: 'lastVerdict', fill: CutSlotFill.lastVerdict, capacity: 1),
+    ],
+  );
+
+  /// The small-window tier (AFM ~4k): same slots, LEANEST capacities —
+  /// fewer observation beats so system + tool schemas + cut fit the window.
+  /// The pre-flight guard (`maxContextTokens`) bounces over-window requests;
+  /// this composition is how a task fits under it.
+  static CutComposition coderLean() => const CutComposition(
+    name: 'coder_lean',
+    slots: [
+      CutSlot(name: 'goal', fill: .goal, capacity: 1, required: true),
+      CutSlot(name: 'map', fill: .map, capacity: 1),
+      CutSlot(name: 'observations', fill: .observations, capacity: 4),
+      CutSlot(name: 'lastVerdict', fill: .lastVerdict, capacity: 1),
+    ],
+  );
+
+  /// R4 — the large-model tier: same slots, wider cut. What works small
+  /// amplifies large: identical SEMANTICS, scaled capacities. Paired with a
+  /// raised [ProjectionBudget] by the host (see `runCodingAgentOnce`).
+  static CutComposition coderLarge() => const CutComposition(
+    name: 'coder_large',
+    slots: [
+      CutSlot(name: 'goal', fill: .goal, capacity: 1, required: true),
+      CutSlot(name: 'map', fill: .map, capacity: 1),
+      CutSlot(name: 'observations', fill: .observations, capacity: 24),
+      CutSlot(name: 'lastVerdict', fill: .lastVerdict, capacity: 1),
+    ],
+  );
 }
 
 /// Host-wired composition for the projection to honor. Absent → legacy flat
@@ -93,7 +126,11 @@ class CutComposition {
 /// so one model can field coder/writer/overseer actors — each seeing the
 /// world through its own tested cut.
 class CutCompositionResource extends Resource {
-  CutCompositionResource(this.composition, {this.mapProvider, this.compositionByRegistry});
+  CutCompositionResource(
+    this.composition, {
+    this.mapProvider,
+    this.compositionByRegistry,
+  });
   final CutComposition composition;
 
   /// Optional workspace-map source (fs file graph). Null → the map slot
@@ -176,10 +213,8 @@ ComposedCut composeCut({
   final orderedBeats = <Entity>[];
 
   // Normalization key for dedup: collapse whitespace once.
-  String key(String text) => text.trim().toLowerCase().replaceAll(
-    RegExp(r'\s+'),
-    ' ',
-  );
+  String key(String text) =>
+      text.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
 
   void admit(String label, String? content, CutSlot slot) {
     if (content == null || content.trim().isEmpty) {
@@ -201,7 +236,6 @@ ComposedCut composeCut({
     workingSet.add(fragment);
   }
 
-  Entity? mapMarker;
   for (final slot in composition.slots) {
     switch (slot.fill) {
       case CutSlotFill.goal:

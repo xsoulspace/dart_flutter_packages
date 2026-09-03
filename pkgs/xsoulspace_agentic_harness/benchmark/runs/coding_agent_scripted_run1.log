@@ -354,3 +354,33 @@ FlightRecorder: 1 pulse(s), ticks 8..8
 tick 8: decisions=0 inFlight=0 pending=0 actors=agent-1788295197098519-0:12r/1a
 
 
+coding_agent run — task: bugfix_01_off_by_one
+  backend: scripted_llm_free
+  verdict: PASS
+  overhead tokens (system+schemas): 1058
+  decisions: 14
+  tool rounds (thread beats): 14
+  moves: {write: 14}
+  projection tokens (honest spend, Situation.tokensUsed): 18662
+  meaning nodes: 0, edges: 0
+  wall clock: 1028 ms
+  final gate (outer oracle, once): PASS
+    check: all values present in loop.dart
+    check: no forbidden values in loop.dart
+  failure class: -
+--- harness pulse (J1.5.3) ---
+tick 14 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788419554157355-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: run failed exit=254: check.dart:8:5: Error: Undefined name 'stderr'.
+    stderr.writeln('sumTo(3) = $r, want 6');
+    ^^^^^^
+check.dart:9:5: Error: Method not fo…
+— agent-1788419554157355-0  [idle via run_graded_goal]  rounds 12/12 (Σ12)  attempts 3/3 EXHAUSTED  goal FAIL
+    last: write:{"path":"loop.dart","content":"int sumTo(int n) {\n  var … → ok
+--- flight recorder ---
+FlightRecorder: 1 pulse(s), ticks 78..78
+tick 78: decisions=0 inFlight=0 pending=0 actors=agent-1788419554157355-0:12r/3a ⚠ actor agent-1788419554157355-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: run failed exit=254: check.dart:8:5: Error: Undefined name 'stderr'.
+    stderr.writeln('sumTo(3) = $r, want 6');
+    ^^^^^^
+check.dart:9:5: Error: Method not fo…
+
+

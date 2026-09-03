@@ -56,3 +56,23 @@ summary — task: free_form | backend: open_router:deepseek/deepseek-v4-flash-07
 
 summary — task: intent_03_bookmark_macros | backend: apple_foundation_afm | n: 3 | passed: 0 | pass@3: 0/3 | tokens source: Situation.tokensUsed (projection) | tokens/run: [22319, 23584, 22975] | decisions/run: [10, 10, 10] | moves/run: [50, 74, 57] | context overflows: 0
 
+summary — task: bugfix_01_off_by_one | backend: apple_foundation_afm | n: 3 | passed: 3 | pass@3: 3/3 | tokens source: Situation.tokensUsed (projection) | tokens/run: [1302, 1302, 1302] | decisions/run: [1, 1, 1] | moves/run: [3, 3, 3] | context overflows: 0
+
+summary — task: bugfix_01_off_by_one | backend: scripted_llm_free | n: 1 | passed: 1 | pass@1: 1/1 | tokens source: Situation.tokensUsed (projection) | tokens/run: [18662] | decisions/run: [14] | moves/run: [14] | context overflows: 0
+
+summary — task: free_form | backend: scripted | n: 1 | passed: 0 | pass@1: 0/1 | tokens source: Situation.tokensUsed (projection) | tokens/run: [5852] | decisions/run: [4] | moves/run: [13] | context overflows: 0
+
+summary — task: free_form | backend: scripted | n: 1 | passed: 0 | pass@1: 0/1 | tokens source: Situation.tokensUsed (projection) | tokens/run: [7703] | decisions/run: [5] | moves/run: [17] | context overflows: 0
+
+summary — task: free_form | backend: apple_foundation_afm | n: 1 | passed: 0 | pass@1: 0/1 | tokens source: Situation.tokensUsed (projection) | tokens/run: [29938] | decisions/run: [6] | moves/run: [1] | context overflows: 0
+
+summary — task: free_form | backend: apple_foundation_afm | n: 1 | passed: 1 | pass@1: 1/1 | tokens source: Situation.tokensUsed (projection) | tokens/run: [0] | decisions/run: [0] | moves/run: [0] | context overflows: 0
+
+summary — task: free_form | backend: apple_foundation_afm | n: 1 | passed: 0 | pass@1: 0/1 | tokens source: Situation.tokensUsed (projection) | tokens/run: [30223] | decisions/run: [6] | moves/run: [1] | context overflows: 0
+
+summary — task: free_form | backend: open_router:deepseek/deepseek-v4-flash-0731 | n: 1 | passed: 1 | pass@1: 1/1 | tokens source: Situation.tokensUsed (projection) | tokens/run: [107626] | decisions/run: [16] | moves/run: [28] | context overflows: 0
+
+summary — task: free_form | backend: open_router:deepseek/deepseek-v4-flash-0731 | n: 1 | passed: 0 | pass@1: 0/1 | tokens source: Situation.tokensUsed (projection) | tokens/run: [448147] | decisions/run: [24] | moves/run: [58] | context overflows: 0
+
+summary — task: free_form | backend: open_router:deepseek/deepseek-v4-flash-0731 | n: 1 | passed: 1 | pass@1: 1/1 | tokens source: Situation.tokensUsed (projection) | tokens/run: [106945] | decisions/run: [16] | moves/run: [18] | context overflows: 0
+

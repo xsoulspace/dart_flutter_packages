@@ -35,7 +35,7 @@ import '../data_models/components.dart'
     show Actor, ActorGoalRef, ActorThreads, ActorTools, AttemptCount,
         EscalationRequest, Goal, GoalAttemptsExhausted, ToolRoundCount;
 import '../meaning/intents.dart'
-    show IntentCallState, IntentExpectation, IntentGoalSpec, callIntent;
+    show IntentCallState, callIntent;
 import 'workspace_conventions.dart' show splitCheckCommand;
 import '../meaning/meaning_tree.dart'
     show addMeaningNode, linkMeaning;

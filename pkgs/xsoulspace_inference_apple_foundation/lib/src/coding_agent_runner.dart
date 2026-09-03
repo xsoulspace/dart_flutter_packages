@@ -351,6 +351,16 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
   /// Escalation rung (N4): widened attempt allowance for a guidance round.
   /// Monotonic within the session: callers must never LOWER it.
   int maxGoalAttempts = 3,
+
+  /// R4 — large-model tier: wider cut (observations 24) + raised projection
+  /// budget (32k). Same slot semantics, scaled capacities — the
+  /// amplification delta is then a measurement, not an illustration.
+  bool largeContextProfile = false,
+
+  /// R1/AFM — small-window tier: leanest cut (observations 4) so system +
+  /// tool schemas + working set + observations fit AFM's ~4k window under
+  /// the pre-flight `maxContextTokens` guard.
+  bool leanContextProfile = false,
 }) async {
   final sw = Stopwatch()..start();
   final resume = restoredWorld != null;
@@ -371,11 +381,24 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
       // ADR 0020: the coder cut composition — goal/map/observations/verdict
       // slots with dedup + drop-empty; required slots input-gated. The map
       // slot is fed by the workspace map provider (fs-as-graph v1).
+      // R4: the large-model tier scales the cut + budget for 200k-class
+      // models; identical slot semantics.
       ..upsertResource(
         CutCompositionResource(
-          CutComposition.coder(),
-          mapProvider: WorkspaceMapProvider(jail.path).map,
+          largeContextProfile
+              ? CutComposition.coderLarge()
+              : leanContextProfile
+              ? CutComposition.coderLean()
+              : CutComposition.coder(),
+          mapProvider: WorkspaceMapProvider(
+            jail.path,
+            maxDepth: leanContextProfile ? 1 : 2,
+            maxEntries: leanContextProfile ? 16 : 30,
+          ).map,
         ),
+      )
+      ..upsertResource(
+        ProjectionBudget(tokens: largeContextProfile ? 32000 : 4000),
       )
       ..flush();
   } else {

@@ -31,6 +31,7 @@ library;
 import 'dart:io';
 
 import '../../xsoulspace_agentic_harness.dart';
+import '../systems/projection/cut_composition.dart';
 import '../tooling/token_estimate.dart';
 
 /// Result of one long-horizon run.
@@ -123,6 +124,11 @@ class LongHorizonResult {
 Future<LongHorizonResult> runLongHorizonBenchmark({
   int decisions = 1000,
   int tokenBudget = 4000,
+
+  /// R2 (ADR 0020): when true, the run declares the coder cut composition —
+  /// the flatness claim must survive the working set (goal/map slots), not
+  /// only the legacy ranked cut.
+  bool withComposition = false,
 }) async {
   final world = World()..addPlugin(AgentPlugin());
   final handler = _RecordingHandler();
@@ -131,12 +137,18 @@ Future<LongHorizonResult> runLongHorizonBenchmark({
     ..upsertResource(ToolRegistryResource())
     ..upsertResource(ProjectionBudget(tokens: tokenBudget))
     ..upsertResource(GenerationHandlerResource()..registerDefault(handler));
+  if (withComposition) {
+    // No map provider in the benchmark world — the map slot renders its
+    // explicit absence; the working set is goal + verdict only.
+    world.upsertResource(CutCompositionResource(CutComposition.coder()));
+  }
   world.flush();
 
   final scene = world.spawnComponents([const Scene(), SceneFrame()]);
   final actor = world.spawnComponents([
     Actor(agentId: AgentId.create()),
     ActorModel(modelId: ModelId.create()),
+    if (withComposition) Goal(text: 'hold the long-horizon goal in-frame'),
     PresentInScene(sceneEntity: scene),
     ActorThreads(threads: []),
   ]);

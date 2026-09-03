@@ -351,22 +351,6 @@ class AppleFoundationNativeClient
       }
     }
 
-    if (accepted <= 0) {
-      // Immediate synchronous failure was delivered via done_cb; give the
-      // listener event a moment to arrive, otherwise report rejection.
-      // (Nothing to cancel: the bridge already finished the generation.)
-      try {
-        final response = await done.future.timeout(const Duration(seconds: 1));
-        return _toResult(response);
-      } on TimeoutException {
-        return InferenceResult<InferenceResponse>.fail(
-          code: 'generation_error',
-          message: 'Bridge rejected the request (accepted=$accepted)',
-          meta: <String, dynamic>{'provider': id},
-        );
-      }
-    }
-
     _activeGeneration = accepted;
     try {
       final response = await done.future.timeout(inferTimeout);

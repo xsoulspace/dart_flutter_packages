@@ -152,3 +152,26 @@ two mid-benchmark runs — this is the gate), and (b) the macOS bridge test
 suite (`bridge/tests/BridgeTests.swift`) runs green with the Swift change.
 Neither has run yet; both are runtime-gated on this machine, not blocked by
 open code work.
+
+# AFM runtime gates CLEARED (2026-09-02)
+
+## Gate (b) — macOS bridge test suite
+`sh tool/check_bridge_swift.sh` → **26 passed, 0 failed** — unit tests
+(cancel contract, callback-after-delete guards, tool payload routing) AND
+live AFM sessions A–H (plain, nil-schema, materialized schemas, multi-tool,
+macro/reflected/raw-capture tools). Includes the Swift
+`context_window_exceeded` mapping change.
+
+## Gate (a) — on-device pass@3
+`coding_agent.dart --task bugfix_01_off_by_one --runs 3` (apple_foundation_afm):
+**pass@3 = 3/3**, tokens/run [1302, 1302, 1302], decisions/run [1,1,1],
+context overflows: 0, zero native crashes. The tool loop (write → run →
+done) worked; the model recovered from a path-escape bounce (structured
+teaching error) unaided.
+
+## Also
+- Dead duplicated `accepted <= 0` block removed from
+  `native_client.dart` (7/7 bridge tests + scripted run still green).
+
+**Verdict: AFM is UNBLOCKED** — all three guard layers are runtime-verified;
+the on-device actor can rejoin the squad (N5 tail).

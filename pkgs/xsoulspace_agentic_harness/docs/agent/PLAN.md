@@ -1,498 +1,111 @@
-# Agent Harness — Plan (Stage J/K: general agent via harness-absorbed complexity)
+# Agent Harness — Plan (THE RACE: real dogfooding, head-to-head numbers, migration)
 
-> Forward/frontier record only. Landed work (Stages A–I, J1.1–J1.5) lives in
+> Forward/frontier record only. All landed stages (A–I, J/K, M, N) live in
 > [history.md](history.md); durable decisions in the
 > [ADR Index](../../../../docs/decisions/README.md) (notably
-> [0018](../../../../docs/decisions/0018_meaning_view_zoom_projection_context_ownership.md));
+> [0018](../../../../docs/decisions/0018_meaning_view_zoom_projection_context_ownership.md),
+> [0019](../../../../docs/decisions/0019_code_law_absolute_long_horizon_tier.md),
+> [0020](../../../../docs/decisions/0020_cut_composition_api.md));
 > benchmark numbers in `results_*.md` + `benchmark/runs/`. The coding
 > pipeline end-to-end: [pipeline_coding.md](pipeline_coding.md).
 >
-> This plan is written so **another agent can build and wire every piece**
-> reliably. Each stage is independently testable, LLM-free first, and ends
-> with an `expectIdle`-clean harness test. Failures are data.
-
-## CURRENT SITUATION (read me first — 2026-09-01, post hard-cuts)
-
-- **Works, proven**: the generic loop (flat tokens/decision, 23/23 scripted
-  suite); intent closure v1 with materialized-Dart parity; macros
-  (5 moves vs 24); context overhead 1,496 ≤ 1,500 tokens (re-measured after
-  the B1 collapse of `intent_define`); J1.5 loop bounds + flight recorder +
-  Flutter profiler. **Landed (hard cuts, 2026-09-01)**: B1 — `intent_define`
-  collapsed to ONE self-executing action (`define` REQUIRES specs, always
-  wires `impl`; the contract-only no-op path is deleted; `redefine_chain` is
-  an accepted alias); B2 — one structured failure dialect for unimplemented
-  intents; B4 — legacy edit paths deleted (tree_patch/patch_tool/
-  transform_flow/ops_handler + barrels); B5 — manual-schedule crutch tests
-  deleted; B3/B7 — ONE on-device entry point `bin/coding_agent.dart` with
-  the verifier wired inside the loop + bounded host repairs consuming
-  AttemptCount; B8 — pass@3 protocol with per-run logs. Scripted LLM-free
-  proof through the SAME driver: intent_03 PASS, bugfix_01 PASS.
-- **Gate status (measured, results_stage_j15.md §7)**: run-graded tier
-  **PASSES** (bugfix_01 pass@3 = 3/3 on-device, 1,153 tokens/run, zero
-  overflows) — the pragmatic coding path for run-verifiable tasks is REAL.
-  Intent tier still **FAILS 0/3** — but the failure class changed: no longer
-  "no executor" (B1 killed it); now chains execute and return WRONG VALUES
-  (inverted branch/jump wiring) or builds are incomplete (materialize never
-  run, one intent re-defined 29×). This is **pure chain-logic correctness
-  = J7/J8 overseer territory**. Do NOT spend more mover-only attempts on it.
-- **Unmeasured (never claim PASS)**: the op-localized `return`-error fix
-  (both interpreter + materialized Dart, parity-pinned) cut tokens/run
-  25–46% in a crashed run but has ZERO completed on-device n — TWO pass@3
-  attempts died to an AFM bridge crash (`generation_timeout` + Swift
-  callback-after-delete VM crash after `Exceeded model context window
-  size`). Infra bug in `xs_fm_bridge`, not the harness; harness budgets
-  held in every completed run.
-- **Not started**: J3 (Dart round-trip for existing repos — the
-  existing-project unlock), J6 (scoped subtask worlds), J7 (overseer),
-  K matrix beyond the two DoD tasks.
-
-**Status (2026-09-02).** ADR
-[0019](../../../../docs/decisions/0019_code_law_absolute_long_horizon_tier.md)
-landed: the code law is **ABSOLUTE at every model size** (verifiability, not
-artifact size — untrained/invented languages are the strongest case FOR it);
-free-form text was never under the law (`evidence` tier); the
-**long-horizon tier** (Phase 8,
-[plan_long_horizon_tier.md](plan_long_horizon_tier.md)) is the headline
-measurement — the 20-task suite is re-labeled the conventional tier
-(expected, honest losses to direct-grammar agents are published); growth is
-**intent-first** (intents as data + host verification — `intent_define`/
-`intent_call`/closure/macros already landed; AE owns durable truth per D2;
-IntentCall projects intents to MCP/WebMCP/ACP/platform), with model-proposed
-intent growth sequenced as the successor to J/K. ACP status corrected: the
-server exists (`dart_acp_toolkit`, intent-registry backend included); the
-remaining editor gap is one harness-backed `AcpAgentBackend` + a live Zed
-proof. CI gate: `test/long_horizon_multi_session_test.dart` pins
-tokens/decision flatness **across session boundaries** (snapshot/restore),
-complementing the within-run Phase 2 gate.
-
-**Status (2026-08-28).** Stages A–I + J1.1–J1.5 landed (detail in
-[history.md](history.md)); J1.5 landed after the fix-stage endless-loop
-incident — its section lists the traced hazards and results.
-
-**What is proven vs open (the honest ledger):**
-
-| Layer | Status |
-|---|---|
-| Channel (context/feedback) | **Solved** — point-zoom acks: O(1) feedback; 12k→4.1k; no overflow in 95–145 rounds |
-| Oracle (verification) | **Solved** — intent-graded checker over real `dart` subprocess; mechanical verifier loop |
-| Repair (state mutation) | **Bounded, quality open** — `redefine_chain` absorbs accretion; every loop monotonic-budgeted (J1.5); remaining: model doesn't self-repair to wire executors (J1.4 blocker) |
-| Model horizon | **Open** — 2–4k model loses the plan over 100+ rounds; run variance dominates |
-| Generality of vocabulary | **Open** — materializers are hand-written per task; no Dart round-trip |
-| Observability | **Solved** (J1.5) — pulse + flight recorder; two on-device loops caught by the monitor, both fixed (results_stage_j15.md) |
-
-**The strategic bet:** AFM becomes a general agent not by seeing more but by
-being asked for less — tiny selections over meaning; the harness owns
-decomposition, state hygiene, verification, repair, and context. Every item
-below is a host program or a data contract; nothing requires a smarter model.
-
----
-
-## Target scenario (what "done" means)
-
-Given an arbitrary **Dart coding task** (greenfield sentence OR existing
-repo + issue) with **no external steering**, the agent:
-
-1. decomposes the task into subtasks **as data** (AE canonical / FlowSpec),
-   each subtask scoped into its own world/scope with its own oracle;
-2. builds/edits the meaning tree through ONE collapsed surface
-   (`act_with_project` + intent tools + macros) — never code tokens;
-3. the host materializes to real Dart (diffs on existing code), runs
-   `dart analyze` + the behavior-spec oracle, and feeds **localized**
-   failures back (meaning-node addresses, not stack traces);
-4. escalates along a ladder (tiny model → overseer actor → bigger model /
-   human) when a subtask exhausts its retry budget, with the escalation
-   ledger shipped beside every pass rate;
-5. goes idle with every subtask graded.
-
-Honest boundary: "any complexity" = *any task decomposable into the supported
-meaning vocabulary*. The vocabulary grows per domain; domain materializers
-live in host packages (ADR 0015). Dart is the first and reference domain.
-
-## Committed decisions (standing; details in ADRs)
-
-- **D1** — meaning tree is ECS world state; one projection law for beats and
-  meaning (ADR 0009).
-- **D2** — AE owns durable truth + verification; harness owns loop +
-  projection; one-directional sync; no AE embed (ADR 0017).
-- **D3** — one collapsed surface default; re-expansion only as a benchmark
-  arm; **macro gate FIRED** (ADR 0018) — macros are now committed (`J1`).
-- **D4** — intent closure: the built program's registry is part of the
-  agent's world; `intent_call` doubles as the behavior oracle.
-- **D5** — escapable transport; core learns no transport (ADR 0015).
-- **D6** — meaning view is a zoom projection; move acks zoom to `point`;
-  ray-cast hits are seeds; failures localize to op/meaning ids (ADR 0018).
-- **D7** — **context is harness-owned**: the budget law must bound everything
-  the model sees; native-session accumulation outside the harness is a bug
-  class (ADR 0018; experiment `J2` decides the mechanism).
-
----
-
-## Stage J — the concrete sequencing
-
-### J1 — Macros arm + context budget (gate for everything)
-
-**Goal:** make the bookmark executor pass on-device. Attack move density and
-prompt tax together.
-
-- [x] `J1.1` — composite sub-actions as **host programs** on
-  `act_with_project` (closed enum extension): `add_chain(specs)` (build a
-  full op chain, host assigns ids), `link_chain(edges)`, `redefine_intent(
-  name, ops)` (**atomic drop + rebuild of one intent's chain** — the scoped
-  repair that absorbs accretion without general deletion). Every macro
-  returns a point-zoom ack + problems list (D6).
-- [x] `J1.2` — prompt/schema budget: teaching moves into tool descriptions
-  + teaching beats; `overhead_tokens` measured at **1487 ≤ 1500** of the
-  4096 window (`intent_closure_budget_test.dart`, published).
-- [x] `J1.3` — macro surface is closed + countable (stewardship probe);
-  macro results identical to the equivalent primitive sequence (parity test).
-  Suite task `intent_03_bookmark_macros` scripted green (suite count 23).
-- [ ] `J1.4` (benchmark gate — MEASURED 2026-09-01, honest split): the
-      RUN-graded tier PASSES (bugfix_01_off_by_one pass@3 = 3/3 on-device,
-      zero overflows); the INTENT tier still fails (intent_03 pass@3 = 0/3,
-      zero overflows, bounded repairs, blockers now precisely classified:
-      branch-logic correctness + incomplete builds — no silent degeneracy,
-      no no-op path). Moves/subtask met by the macros arm (scripted);
-      on-device move counts are 10–48/run. Measured table:
-      [results_stage_j15.md](results_stage_j15.md) §7.
-- **Tests (LLM-free):** macro parity vs primitive sequence; accretion test
-  (define → break → `redefine_intent` → oracle green); suite task
-  `intent_03_bookmark_macros` (same oracle, fewer moves); suite count 22→23.
-- **Benchmark gate (AFM):** bookmark executor passes at **pass@3 ≥ 1/3**
-  with zero context overflows; moves/subtask ≤ 6; `overhead_tokens` published.
-
-### J1.5 — Loop bounds + runtime observability (pulled forward from J6.4/J8.1; added 2026-08-28 after the fix-stage endless-loop incident)
-
-**Why:** the repair/fixing stage went live before its bounds existed. Traced
-hazards: (a) `RunGradedGoalPolicy` re-opens a fresh decision on every failing
-verifier stamp and `ToolRoundCount` is reset by any text-only turn, so
-fix→fail→fix cycles consume **no monotonic budget** — the only stop is
-`runUntilIdle`'s 2M-tick StateError, which names no loop and no cause;
-(b) driver-injected retries (AFM `intent_closure_afm.dart` upserts
-`OpenDecision` directly) do NOT reset `ToolRoundCount` → retries start with a
-silently shrunken round budget (non-deterministic starvation); (c) all run
-state (beats, decisions, loop streaks, verdicts, tokens) is post-hoc — a
-running harness is a silent terminal. Plan rule applied: *failures are data* —
-a hung run currently ships zero data.
-
-- [x] `J1.5.1` — **monotonic `AttemptCount`** (F1): every failing
-  `GoalVerified` stamp via the verifier→policy path increments a component
-  that is NEVER reset by prose turns. At `maxGoalAttempts` the policy stops
-  re-prompting, stamps `EscalationRequest` with a structured reason
-  (`failure class: goal_unverifiable`), and suspends the thread — the
-  ladder's bottom rung (J8.1) landed early; the loop provably terminates.
-- [x] `J1.5.2` — **round-budget semantics** (F2): fresh budgets come ONLY
-  from `openFreshDecision` (host-injected new tasks/retries) or a text-only
-  final answer; a monotonic `TotalRoundCount` keeps the lifetime ledger.
-  Policy `thenOpen` re-prompts stay chain-bounded — a policy-name-based
-  reset made composition flows unbounded (`prototype_from_sentence`
-  regression, caught by CI and reverted); `RunGradedGoalPolicy` cycling is
-  bounded instead by J1.5.1's `AttemptCount`.
-- [x] `J1.5.3` — **`WorldInspector` + `HarnessPulse` + `FlightRecorder`**
-  (F3/core): an in-world sampler emitting a typed per-tick snapshot —
-  per-actor decision stack (prompt, origin, round x/cap, retries, attempts,
-  last call/result, `LoopStuck`, `GoalVerified`), loop-smoke detector
-  (repeated failing signatures + decisions-opened-by-policy histogram with
-  the loop signature), token spend. `FlightRecorder` = ring buffer,
-  auto-dumped on maxTicks StateError / SIGINT so headless runs leave a
-  post-mortem. LLM-free testable.
-- [x] `J1.5.4` — **`HarnessProfilerView`** (host): Flutter widget over the
-  pulse — three panes: actor/decision stack, live beat timeline, meaning
-  cut at the same zoom the model sees (`meaningView` reuse — "profiler
-  shows what the model sees"). Lives in a host package (ADR 0015).
-- [x] `J1.5.5` — **driver wiring**: AFM driver registers the inspector,
-  resets `AttemptCount` on a FRESH task (not a repair retry), dumps the
-  flight recorder on exit (pass, fail, or interrupt); K-column data
-  (retries, verdicts, decisions) printed even for failed runs.
-- [x] `J1.5.6` — **backend-error retry budget** (found BY the monitor on
-  the first wired on-device run): `RetryCount` was reset by every resolved
-  response, so a flaky backend alternating `backend_failed` ↔ tool-calling
-  responses retried forever (255× identical prompts). Fix: the budget
-  survives tool-call continuations (ADR 0004 chain semantics), resets only
-  on a text-only final answer.
-- **Tests (LLM-free):** attempt budget exhausts → thread suspended +
-  `EscalationRequest`, world still `expectIdle`; retry decision resets
-  round budget; total count monotonic; pulse snapshot shape (stack, streak
-  detection, verdicts); flight recorder dumps on simulated exhaustion;
-  flaky-backend loop bounded; detector counts cycles, not held-open
-  decisions.
-- **Gate:** no on-device fix-stage run proceeds without the inspector
-  attached; every future "endless loop" incident report must cite the
-  pulse/flight-recorder dump, not a bisect-by-code-reading.
-- **Results:** [results_stage_j15.md](results_stage_j15.md) — full numbers
-  incl. on-device validation (J1.4 still open; blocker now precisely
-  diagnosed: meaning-executor wiring, no longer an observability blind spot).
-
-## P — Pragmatic path: "develop Dart projects with this agent" (2026-09-01)
-
-Goal: a developer can point the agent at a real project (CLI first, editor
-host later) and get reliable, safe, verified work. Ordered by leverage;
-each item is an LLM-free-testable increment. **Status (2026-09-01): P1,
-P2, P3, P5, P6 landed (P3 after a law re-review); P4 open.** Measured
-tables: [results_stage_p.md](results_stage_p.md).
-
-### P1 — Bridge cancel contract (LANDED 2026-09-01)
-
-The two crashed pass@3 sets died to the AFM bridge
-`generation_timeout` + Swift callback-after-delete VM crash. Fixed on both
-sides: per-generation state + registry gating every callback path,
-`xs_fm_cancel(gen_id)` (cancel BEFORE Dart teardown), generation ids in
-payloads, `xs_fm_abi_version` stale-dylib detection, structured timeout
-errors. Proofs: 26/26 Swift bridge tests (incl. 8 live sessions), fake-
-bridge Dart tests (timeout → structured error + cancel recorded before
-tear-down; stale payload harmless; subsequent generate succeeds). The
-first post-B1 pass@3 set COMPLETED: intent_03 0/3, ZERO bridge crashes,
-zero overflows (results_stage_p.md §1).
-
-### P2 — J7 overseer actor (LANDED 2026-09-01; on-device gate still open)
-
-Landed `lib/src/tooling/overseer.dart`: on goal-attempt exhaustion an
-overseer actor spawns with a brief of ONLY the summary zoom + structured
-gate failure + failing intent's chain dump; closed vocabulary via ONE
-tool (`approve` / `repair(intent, notes)` / `escalate(reason)`);
-`repair` re-opens exactly one intent's scope on the MOVER via
-`openFreshDecision` (max 1 cycle; the attempt allowance widens
-monotonically, never resets); `approve` never forces a pass; `escalate`
-swaps to a higher `Model.tier` if declared, else structured FAIL.
-Scripted repair test green (`overseer_scripted_test.dart`) through the
-SAME driver as the AFM runs. On-device intent_03 pass@3 = 0/3 (honest
-FAIL, classified blockers, bounded, idle).
-
-### P3 — Safe-edit surface (LANDED 2026-09-01, REVISED against the law)
-
-The original mission text proposed a model-visible `writeMode` parameter —
-REJECTED in review: the model must never supply whole-file content (the
-"model never writes code tokens" law). Landed instead: `JailWriteGateway`
-on `FsToolsRoot` — a HOST write policy over every jail mutation (model
-`write` moves AND materializer output) with `apply` (default) / `review`
-(unified diffs + host approval; CLI `--diff-gate` / `--auto-approve`);
-jailed read-only `git_status`/`git_diff` (bounded projections, same
-pattern as grep/glob). The run-graded arm's whole-file-write teaching
-prompt remains a NAMED contradiction, closed by P4 (below) — do not
-extend the model-facing write surface.
-
-### P4 — J3 slice (OPEN — the next lever)
-
-Host package `xsoulspace_agentic_dart_meaning` (ADR 0015): analyzer parse
-→ MeaningNode/MeaningProps WITH source spans → `act_with_project`
-`open(path)` → edit moves re-emit ONLY changed spans. This is also the
-law-closure item for existing code: the model edits meaning nodes and the
-HOST re-emits spans — no whole-file content anywhere in the model's
-surface. Tests: round-trip parity, span minimality, id stability.
-
-### P5 — Persistent sessions (LANDED 2026-09-01)
-
-Snapshot exclusions reconciled with the standing crash-recovery contract
-(GoalVerified/LoopStuck/EscalationRequest never cross a restart;
-OpenDecision/Agency/AwaitingResponse DO — crash-mid-decision recovery;
-AttemptCount and ToolRoundCount DO) → a snapshot taken at idle restores
-idle-resumable. Restart-survival
-test green (2 moves → snapshot → kill → restore → one more decision →
-gate passes, idle). CLI: `--session <store>` persists without resuming,
-`--resume <store>` continues (task + jail from envelope meta).
-
-### P6 — Editor host transport (LANDED 2026-09-01, task-per-invocation)
-
-`coding_agent.dart --json` streams NDJSON events (run_start / decision /
-pulse / run_end / summary) on stdout — the foundation for a VSCode/Zed
-extension. Core learns no transport (D5); telemetry wraps the HANDLER in
-the host. Schema documented in pipeline_coding.md; smoke-tested (every
-line parses; counts match the run log). Daemon + MCP adapter post-scope.
-
----
-
-### J2 — Context ownership experiment
-
-**Goal:** make D7 operational — the harness must own everything the model sees.
-
-- [ ] `J2.1` — A/B in the AFM driver: (a) session-per-decision (reset native
-  session each decision; history only via harness projection) vs (b)
-  persistent native session. Instrument: content tokens per decision
-  (from AFM error payloads when they fire), pass rate, variance.
-- [ ] `J2.2` — if (a) wins (expected): the native client gains a
-  `resetSession()` and the loop owns it; document in ADR 0018 follow-up.
-- [ ] `J2.3` — deterministic client-side test: session reset produces
-  identical first-token behavior; no cross-decision leakage.
-- **Tests (LLM-free):** client contract test (reset is total; history comes
-  only from `ActorGenerateRequest` projection).
-- **Benchmark gate:** no context errors across 3 full bookmark runs on the
-  winning arm; variance (pass/fail flips across 3 runs) recorded.
-
-### J3 — dart_meaning: Dart round-trip (the "general" unlock)
-
-**Goal:** work on EXISTING Dart — parse code into meaning, edit meaning,
-materialize as diffs.
-
-- [ ] `J3.1` — `dart_meaning` host package (per ADR 0015, lives in a host
-  package, not core): **Dart → meaning** via the `analyzer` package
-  (functions, classes, methods, fields, calls, control flow → meaning nodes
-  kind-vocabulary `dart_fn`/`dart_class`/…; source spans kept on props).
-- [ ] `J3.2` — **meaning → Dart diff**: edit-meaning → re-emit ONLY the
-  changed units (span-anchored text edits); no whole-file rewrite.
-- [ ] `J3.3` — round-trip parity: parse → materialize(parse-output) is
-  byte-stable on a fixture corpus (formatter-normalized); id stability
-  across re-parse (stable id = fqn + span hash).
-- [ ] `J3.4` — `act_with_project` gains `open(path)` (imports a file into the
-  meaning tree) and edit moves operate uniformly on greenfield and imported
-  nodes.
-- **Tests (LLM-free):** round-trip parity corpus; diff-minimality (edit one
-  fn → exactly that fn's span changes); id-stability test; growth arm at
-  1k/10k real-Dart nodes.
-- **Benchmark gate:** scripted suite task `dart_edit_01` (rename + body edit
-  on a fixture repo) passes intents/analyze oracles LLM-free.
-
-### J4 — dart analyze as a localized verification beat
-
-**Goal:** the compiler becomes part of the oracle, with meaning-node
-addresses.
-
-- [ ] `J4.1` — `analyze_check` host program: runs `dart analyze --format
-  machine` in the jail; maps each diagnostic's span → meaning node (via
-  `J3.1` spans) → emits structured failure beats
-  (`{node: fn_12, error: ...}`).
-- [ ] `J4.2` — verifier loop consumes analyze failures like checker failures
-  (mechanical, no LLM); model repairs via meaning moves at the named nodes.
-- **Tests (LLM-free):** seeded-error fixture (broken fn) → analyze beat
-  names the right node; repair loop green.
-- **Benchmark gate:** on the `dart_edit_01` slice, ≥ 80% of analyze failures
-  repaired without oracle escalation.
-
-### J5 — Behavior-spec oracles (universal tests at meaning level)
-
-**Goal:** keep "model never writes code" while making the oracle universal.
-
-- [ ] `J5.1` — generalize `intent_calls.json` into **behavior specs**:
-  tables of `(intent, args, expect)` + optional state threading, authored by
-  the host (from AE canonical / task spec), compiled to real Dart tests.
-- [ ] `J5.2` — specs live as meaning nodes (`kind: 'spec'`) — part of the
-  world, zoomable like everything else.
-- [ ] `J5.3` — the `intents` checker becomes the spec runner; `runs` stays
-  for exit-code tasks.
-- **Tests (LLM-free):** spec compile → real dart test green/red; spec nodes
-  appear in `summary` zoom; failure output localizes to spec row.
-- **Benchmark gate:** oracle-tier column in the K matrix: spec-graded vs
-  run-graded pass rate at equal tokens.
-
-### J6 — Hierarchical subtasks with scoped worlds
-
-**Goal:** complexity scaling via decomposition + isolation — never a longer
-prompt.
-
-- [ ] `J6.1` — task → subtask tree as data (`planFromSpec` extension):
-  each subtask carries its own fixtures, oracle spec, and budget.
-- [ ] `J6.2` — **scoped execution**: each subtask runs in a fresh jail +
-  world (or scoped subtree); parent receives graded results + evidence only.
-  Accretion cannot cross subtasks by construction.
-- [ ] `J6.3` — composition step: host merges subtask outputs (imports into
-  the parent world); cross-subtask conflicts surface as parent-level gaps.
-- [ ] `J6.4` — retry policy per subtask (bounded), then escalate (J8).
-- **Tests (LLM-free):** two-subtask fixture (fn + its caller) composed
-  green; cross-subtask breakage surfaces as a parent gap with addresses;
-  subtask isolation (poison in one scope never reaches another).
-- **Benchmark gate:** a 2-level task (multi-file feature) passes scripted
-  end-to-end; tokens/subtask flat vs single-task baseline.
-
-### J7 — Overseer actor (zoom strategies across actors)
-
-**Goal:** one actor takes small decisions (point zoom); a second holds the
-bigger picture (summary zoom) and reviews diffs/validation evidence.
-
-- [ ] `J7.1` — overseer spawns after each subtask attempt; sees ONLY
-  summary zoom + oracle evidence (never raw tool noise); its decision
-  vocabulary is closed: `approve` / `repair(intent)` / `escalate(reason)`.
-- [ ] `J7.2` — overseer teaching beats land in the mover's thread
-  (loop-breaker integration already exists).
-- **Tests (LLM-free):** scripted overseer approves a green subtask; scripted
-  `repair(intent)` re-opens exactly that scope; escalation request stamps
-  `EscalationRequest` (counted in the ledger).
-- **Benchmark gate:** mover+overseer pair beats mover-only recovery rate on
-  the accretion case (run4's failure mode) — the K matrix records it.
-
-### J8 — Escalation ladder
-
-**Goal:** escalation becomes a mechanism, not just a metric.
-
-- [ ] `J8.1` — ladder policy: mover retries (bounded) → overseer → bigger
-  model (`Model.maxInFlight`-gated second entry in the router) → human
-  (`ask_user` a2h already exists). Each rung increments the ledger.
-- [ ] `J8.2` — escalation carries a **structured reason** (failure class
-  from the deterministic failure-mode classifier), never raw noise.
-- **Tests (LLM-free):** each rung fires on its trigger; ledger rows carry
-  rung + reason; a fully-exhausted task still ends `expectIdle`.
-- **Benchmark gate:** every published pass-rate table ships the ladder
-  breakdown (standing rule, now structural).
-
----
-
-## Stage K — benchmark protocol (publish-or-it-didn't-happen)
-
-**Goal:** single-run claims are the weakest proof in the repo; make claims
-reproducible.
-
-- [ ] `K1` — **pass@k protocol** (k=3 minimum) for every on-device claim;
-  report pass@k, variance (flips across runs), wall clock.
-- [ ] `K2` — per-arm columns (standing rules): tokens/decision, cumulative
-  tokens, `overhead_tokens`, moves/subtask, recovery rate, escalation rung
-  histogram, refusal-recovery rate, oracle tier.
-- [ ] `K3` — matrix rows to publish (each = one config, n≥3):
-  1. `intent_01` write-arm vs `intent_02` micro-moves vs `intent_03` macros
-     (scripted structure numbers + AFM where the gate allows);
-  2. J2 session arms (a) vs (b);
-  3. dart_edit slice: analyze-repair rate;
-  4. hierarchy: single-task vs two-level subtask tokens.
-- [ ] `K4` — evidence discipline: raw logs to `benchmark/runs/` with
-  `<name>_<arm>_run<i>.log`; summaries to `results_stage_j.md` + ADR-indexed
-  decisions; failures classified (context / divergence / capability /
-  oracle), never dropped.
-- **Acceptance:** every number in `results_stage_j.md` states backend,
-  decision path, tokens source, tool surface, and n.
-
-## Stage M/N — delegation surface + live squad (LANDED 2026-09-02 → history.md)
-
-Stages M (general oracle, sidecar delegation, replay miner) and N (analyzer
-board, multi-actor squad, harnessd daemon, pi-as-client, Cut Composition API,
-workspace map, roles, a2a columns) are LANDED — full detail extracted to
-[history.md](history.md); durable decisions: ADR [0019](../../../../docs/decisions/0019_code_law_absolute_long_horizon_tier.md),
-[0020](../../../../docs/decisions/0020_cut_composition_api.md). Open tails
-remain in the "Open tails" block below.
-
-### Open tails (forward work only)
-
-- `M0b` — model-proposed criteria as data: `declare_check` tool LANDED
-  (propose-as-data, host allowlist + metachar validation, verifier executes
-  mechanically). Wired behind `runCodingAgentOnce(allowDeclaredChecks)`.
-- `M2b` — jail seeder LANDED (`tool/seed_delegation.sh`). Remaining: batch
-  replay of the mined manifest rows through the CLI.
-- `N5 remaining` — AFM rejoins the squad when the P1 bridge crash is closed
-  (see below); pi-as-escalation-rung BEYOND the first guidance round;
-  embedding retrieval behind the `relevance.dart` seam (optional).
-- `AFM reliability (P1 closure criteria)` — the crash precursor is handled
-  at three layers now: (1) ABI v2 cancel contract (Swift `GenerationState`,
-  Dart cancels BEFORE teardown); (2) pre-flight context budget in
-  `AppleFoundationNativeClient` (`maxContextTokens`, named
-  `context_window_exceeded` failure before the bridge is called); (3) Swift
-  maps context-window errors to the same named code (belt-and-suspenders).
-  **A reliable AFM claim still requires one green on-device pass@3 run**
-  (the recorded crash killed two runs mid-benchmark) + the macOS bridge test
-  suite — neither has run since the fixes.
-
-## Acceptance (end state)
-
-1. [ ] Bookmark executor passes on-device at pass@3 ≥ 1/3, no context
-   overflows, ≤ 6 moves/subtask, `overhead_tokens` ≤ 1500 (J1+J2).
-2. [ ] Existing-Dart edit loop green: import → meaning edit → diff
-   materialize → `dart analyze` localized repair → oracle green, LLM-free
-   (J3+J4).
-3. [ ] Behavior-spec oracle universal: greenfield and edit tasks both graded
-   by compiled specs (J5).
-4. [ ] A 2-level task passes via scoped subtasks with per-subtask oracles;
-   isolation proven (J6).
-5. [ ] Mover+overseer beats mover-only recovery on the accretion case; the
-   escalation ladder fires with structured reasons and is in every table (J7+J8).
-6. [ ] Benchmark protocol: pass@k + full column set for every published
-   claim (K).
-7. [ ] Every stage LLM-free reproducible; every harness test ends
-   `expectIdle`; the model never writes code tokens, never sees an AST,
-   never holds the whole tree.
+> House rule for this plan: **the coding agent IS the coding agent.** Issues
+> in its own packages are its backlog, delegated to its own actors. pi
+> orchestrates and escalates; pi does not absorb fixes the harness can do.
+
+
+## CURRENT SITUATION (read me first — 2026-09-02, post N5 + AFM closure)
+
+**Proven (runtime-verified, not asserted):**
+
+- On-device AFM coding: bugfix_01 pass@3 = **3/3** post-fixes (P1 closed:
+  bridge suite 26/26 incl. live sessions; pre-flight context budget; Swift
+  named codes). AFM is UNBLOCKED for the squad.
+- Flat tokens/decision at scale — on the LEGACY projection (Phase 2 gate,
+  1.07×) and across snapshot/restore sessions
+  (`long_horizon_multi_session_test.dart`).
+- The delegation loop works end-to-end: pi → CLI/daemon → world → verdict →
+  evidence (`benchmark/runs/delegation_m1_evidence.md`).
+- The Cut Composition API (ADR 0020) fixed the exploration-loop failure
+  class: 27→8 decisions, FAIL→PASS on the traced task; conformance 7/7.
+- Multi-actor squad, single-writer locks, per-actor verification, roles,
+  a2a columns, analyzer board, replay miner + seeder: all LLM-free proven.
+- M0b `declare_check`: model-proposed criteria as data, host-validated,
+  mechanically executed. Escalation rung: budget exhaustion → operator
+  guidance continues the SAME task (scripted proof).
+
+**NOT proven (the race):**
+
+- The head-to-head numbers: harness(OR/AFM) vs pi(OR, same model) on a fixed
+  suite — never run. Tokens-per-task dominance is still a hypothesis.
+- Flatness WITH the composition active (working set + map add constant
+  tokens; the claim must survive the fix).
+- The self-improvement loop has never turned on real material: the analyzer
+  board, miner, and seeder exist; zero real harness issues have been fixed
+  by harness actors.
+- Editor: `harnessd` speaks ACP; no editor has connected.
+- Large-model amplification ("small ×100 → large ×10000"): the tier system
+  is built; no same-tools cross-size measurement exists.
+
+**The strategic shift (this PLAN):** stop building mechanisms. Turn the
+loops on real material, take the missing measurements, and migrate real
+work onto the harness. The coding agent IS the coding agent: issues in its
+own packages are its backlog, delegated to its own actors — pi orchestrates
+and escalates, it does not absorb the fixes.
+
+## THE RACE (tracks; each ends in a number or a live artifact)
+
+### R1 — Self-improvement loop, LIVE (the core)
+
+1. Build the real board: `dart analyze --format=machine` over the harness's
+   own packages → file-disjoint tasks (N1 parser).
+2. Delegate bounded batches to harness actors (AFM first — the local-model
+   goal; OpenRouter for parity rows). File-disjoint only.
+3. Every task: standard row (backend, decisions, tokens, failure class).
+   Failures are data; fix flows the harness cannot fix itself are the ONLY
+   things pi touches directly.
+- **Done when**: ≥5 real issues fixed by harness actors, rows published,
+  and the repo analyzes cleaner than before.
+
+### R2 — Flatness WITH composition (claim hygiene)
+
+Extend the long-horizon benchmark to declare the coder composition (+
+workspace map) and assert flatness with the working set included. If the
+composition broke flatness, that is a named finding before anything else
+ships.
+- **Done when**: flatness gate green with composition ON (and the number
+  published next to the legacy 1.07×).
+
+### R3 — Head-to-head numbers (the claim since day one)
+
+Minimal honest matrix on a fixed suite (mined replays + analyzer tasks):
+harness(OR, composed) vs pi(OR, same pinned model), plus harness(AFM) as
+the local column. Same tool class, same retries, stamped rows.
+- **Done when**: `results_head_to_head.md` exists with the standing column
+  labels (backend, decision path, tokens source, composition, n).
+
+### R4 — Large-model profile (amplification, measured)
+
+Declare the tier: `CutComposition.coderLarge()` (wider observations
+capacity, deeper map, bigger budget) + `ProjectionBudget` scaling. Then the
+same tasks run at both tiers → the amplification delta becomes a number.
+- **Done when**: one suite task measured at both tiers, delta published.
+
+### R5 — Editor live (the surface)
+
+One recorded live client session against `harnessd` exercising the full
+contract: initialize → session → prompt → permission round-trip (write
+gate) → verdict. Zed proper follows; the recorded session is the contract
+proof.
+- **Done when**: transcript committed to `benchmark/runs/`.
+
+## Open tails (forward, not urgent)
+
+- Batch replay scale-up beyond the first seeder runs; embedding retrieval
+  behind the `relevance.dart` seam (optional); multi-round escalation
+  refinement; Zed/VSCode native integration after R5; last_answer as the
+  first embedded host.
+
 
 ## Standing rules
 

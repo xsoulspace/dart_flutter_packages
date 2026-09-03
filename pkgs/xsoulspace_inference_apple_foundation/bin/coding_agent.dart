@@ -237,6 +237,11 @@ Future<void> main(List<String> args) async {
         // and the actor must bind its registered model id.
         router: router,
         actorModelId: router?.models.keys.first,
+        // R4: --profile large scales the cut + projection budget.
+        largeContextProfile: cli['profile'] == 'large',
+        // R1/AFM: the small-window tier keeps the cut under the pre-flight
+        // context guard.
+        leanContextProfile: backend == 'apple_foundation_afm',
       );
       results.add(result);
       final logFile = writeRunLog(
