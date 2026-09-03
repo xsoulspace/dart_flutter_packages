@@ -56,6 +56,18 @@ const Set<String> _excludedComponents = {
   'GoalVerified',
 };
 
+/// ADR 0023 §2 — the meaning tree is RE-DERIVABLE, so it is NEVER
+/// snapshotted: snapshots carry beats, verdicts, budgets only. The tree
+/// owner re-derives it (repo_etl scan/refresh — the R7c mechanical tick)
+/// instead of restoring it. This also resolves the 18s super-linear
+/// repo-tree restore finding by NOT restoring trees. (The names below are
+/// also kept in the restore-side structural filter for forward safety.)
+const Set<String> _meaningTreeComponents = {
+  'MeaningNode',
+  'MeaningProps',
+  'MeaningEdge',
+};
+
 /// The world a codec currently reads from (capture) or writes into
 /// (restore). Codecs resolve references through it; restore sets it to the
 /// target world only after every carrier has been spawned.
@@ -542,6 +554,16 @@ Set<ComponentId> _persistedComponentIds(World world) {
   return ids;
 }
 
+Set<ComponentId> _meaningTreeIds(World world) {
+  const meaningTypes = [MeaningNode, MeaningProps, MeaningEdge];
+  final ids = <ComponentId>{};
+  for (final t in meaningTypes) {
+    final id = world.components.getComponentIdByType(t);
+    if (id != null) ids.add(id);
+  }
+  return ids;
+}
+
 Type _typeOf(_Spec spec) => spec.type;
 
 /// Stamps missing [PersistentId]s onto every entity carrying a persisted
@@ -583,10 +605,14 @@ Map<String, dynamic> snapshotWorld(World world) {
   _stampPersistentIds(world);
   _ctx = world;
   try {
+    // Capture-side exclusion of the meaning tree (ADR 0023 §2): the tree
+    // components never enter the envelope at all — restore-side filtering
+    // alone would still pay their encode cost.
+    final excludedIds = _meaningTreeIds(world);
     final snapshot = captureWorldSnapshot(
       world,
       options: WorldSnapshotOptions(
-        includeOnly: _persistedComponentIds(world),
+        includeOnly: _persistedComponentIds(world).difference(excludedIds),
         codecs: _codecRegistry,
       ),
     );

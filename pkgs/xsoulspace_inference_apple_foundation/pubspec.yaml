@@ -19,6 +19,11 @@ dependencies:
   path: ^1.9.1
   xsoulspace_agentic_harness:
     path: ../xsoulspace_agentic_harness
+  # R7b/c: the meaning-profile edit surface (repo_etl / meaning_zoom /
+  # meaning_impact / edit_symbol) is wired through this host package —
+  # the core learns no Dart (ADR 0015), the daemon learns no scanner.
+  xsoulspace_agentic_dart_meaning:
+    path: ../xsoulspace_agentic_dart_meaning
   # B3 escalation rung (J8.1 tier 3) + dogfooding backend: the coding agent
   # can run its loop with an OpenRouter model instead of / next to AFM.
   xsoulspace_inference_openrouter:

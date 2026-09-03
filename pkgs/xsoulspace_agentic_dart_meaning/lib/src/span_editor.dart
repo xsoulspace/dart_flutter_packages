@@ -48,6 +48,8 @@ library;
 
 import 'dart:io';
 
+import 'package:agentic_executables_wire/agentic_executables_wire.dart'
+    show EditExecutableWire;
 import 'package:ecsly/ecsly.dart';
 import 'package:source_span/source_span.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart'
@@ -93,6 +95,19 @@ class SpanEditPlan {
   bool get isAtomic => patches.length > 1;
 }
 
+/// The verify-state baseline of a workspace, cached as a WORLD RESOURCE
+/// (the ECS discipline: state lives in the world, not in process reruns).
+/// The post-state of a green move IS the next move's pre-state — one
+/// oracle run per STATE CHANGE, never per move. This is what keeps the
+/// edit tier microseconds-cheap in the tree work and seconds-only in the
+/// free oracle tier (whole-package runs happen once per session baseline,
+/// never per move).
+class SpanVerifyBaseline extends Resource {
+  /// null = unknown (not yet measured). True = full analyze + workspace
+  /// convention were green at the last state change.
+  bool? clean;
+}
+
 /// The outcome of applying a plan. Failures are classified data — never
 /// dropped ([failureClass]).
 class SpanEditOutcome {
@@ -104,6 +119,8 @@ class SpanEditOutcome {
     this.filesTouched = const [],
     this.analyzeExit,
     this.checkExit,
+    this.analyzeMs,
+    this.checkMs,
     this.failureClass = '',
   });
   final bool ok;
@@ -114,6 +131,11 @@ class SpanEditOutcome {
   final List<String> filesTouched;
   final int? analyzeExit;
   final int? checkExit;
+
+  /// Per-phase wall-clock (transparency: the profiler reads these — the
+  /// ECS/projection work is microseconds; the oracle tier is seconds).
+  final int? analyzeMs;
+  final int? checkMs;
   final String detail;
   final String failureClass;
 
@@ -126,6 +148,8 @@ class SpanEditOutcome {
     'files': filesTouched,
     if (analyzeExit != null) 'analyze_exit': analyzeExit,
     if (checkExit != null) 'check_exit': checkExit,
+    if (analyzeMs != null) 'analyze_ms': analyzeMs,
+    if (checkMs != null) 'check_ms': checkMs,
     'detail': detail,
     if (failureClass.isNotEmpty) 'failure_class': failureClass,
   };
@@ -200,15 +224,39 @@ class SpanEditMaterializer {
     /// Lazy oracle-coverage provider (fence b). Default: derived from the
     /// workspace's own test suite (zero host-authored expectations).
     Set<String> Function()? coverage,
+
+    /// R7c: the HOST approver (deny-by-default). When wired, every applied
+    /// move asks the approver before ANY byte lands — the daemon routes
+    /// this to the ACP client's permission round-trip.
+    Future<bool> Function(SpanEditPlan plan)? approver,
+
+    /// R7d: PACK-DECLARED edit executables (ADR 0023 §3) — know packs and
+    /// project repair packs supply parameterized moves as DATA; the model
+    /// picks an id and fills bounded slots (for body-kind executables the
+    /// op-chain itself travels with the pack, so a pack-fed move costs
+    /// ZERO authored tokens). The host validates every wire shape and
+    /// realizes the kinds it knows; unknown kinds bounce as named data.
+    List<EditExecutableWire>? packExecutables,
   }) : locks = locks ?? FileLockTable(),
-       _coverageProvider = coverage;
+       _coverageProvider = coverage,
+       _approver = approver,
+       _packExecutables = {
+         for (final e in packExecutables ?? const <EditExecutableWire>[]) e.id: e,
+       };
 
   final World world;
   final Directory workspace;
   final FileLockTable locks;
   final Object owner;
   final Set<String> Function()? _coverageProvider;
+  final Future<bool> Function(SpanEditPlan plan)? _approver;
+  final Map<String, EditExecutableWire> _packExecutables;
   Set<String>? _coverageCache;
+
+  /// The op-chains a pack's body-kind executables carry (data, per pack —
+  /// this is the R7d zero-authored-tokens seam; the wire shape carries the
+  /// verification + scope, the chain rides on the same pack entry).
+  final Map<String, List<Map<String, String?>>> _packOpChains = {};
 
   /// Symbol names the workspace oracle has expectations for (fence b).
   Set<String> coverageSet() =>
@@ -630,11 +678,37 @@ class SpanEditMaterializer {
   }) {
     final spec = defaultEditExecutables[executableId];
     if (spec == null) {
-      throw SpanEditBounce(
-        'unknown edit executable: $executableId',
-        'built-ins: ${defaultEditExecutables.keys.join(", ")}; project '
-        'packs supply more (ADR 0019 §4 / ADR 0023 §3)',
-      );
+      // R7d: pack-declared executables — the primary verb; growth is
+      // pack/data-driven (ADR 0019 §4 / ADR 0023 §3).
+      final pack = _packExecutables[executableId];
+      if (pack == null) {
+        throw SpanEditBounce(
+          'unknown edit executable: $executableId',
+          'built-ins: ${defaultEditExecutables.keys.join(", ")}; project '
+          'packs supply more (register via registerPackExecutable)',
+        );
+      }
+      switch (pack.kind) {
+        case EditExecutableKind.replaceMemberBody:
+          final chain = _packOpChains[executableId];
+          if (chain == null || chain.isEmpty) {
+            throw SpanEditBounce(
+              'pack executable "$executableId" carries no op-chain '
+              '(the host realizes body-kind packs from pack data)',
+              'register the op-chain with the pack entry (data, never '
+              'authored by the model)',
+            );
+          }
+          return _planReplaceMemberBody(symbolId: symbolId, opChain: chain);
+        case EditExecutableKind.renameSymbol:
+          return _planRename(symbolId, params);
+        default:
+          throw SpanEditBounce(
+            'pack executable kind "${pack.kind.wire}" has no host '
+            'realization in this span editor',
+            'realize the kind host-side (the wire stays syntax-only)',
+          );
+      }
     }
     switch (executableId) {
       case 'rename_symbol':
@@ -645,6 +719,17 @@ class SpanEditMaterializer {
           'register it in a project pack with a host-side expansion',
         );
     }
+  }
+
+  /// R7d — registers a pack-declared executable with its (optional) body
+  /// op-chain. The chain travels with the PACK as data; the model never
+  /// authors it (zero authored tokens for known classes).
+  void registerPackExecutable(
+    EditExecutableWire wire, {
+    List<Map<String, String?>>? opChain,
+  }) {
+    _packExecutables[wire.id] = wire;
+    if (opChain != null) _packOpChains[wire.id] = opChain;
   }
 
   /// The lexical rename executable: expand over the impact frontier into
@@ -829,21 +914,57 @@ class SpanEditMaterializer {
     // auto-reverted for failures it CAUSED. A workspace whose suite is
     // already red (the failing suite IS the task spec) must not revert
     // every intermediate move — the goal loop grades the end state.
+    // R7c: the HOST approver gates the move BEFORE any byte lands
+    // (deny-by-default — no approver wired means the caller chose
+    // apply-mode; a wired approver that refuses blocks the move).
+    final approver = _approver;
+    if (approver != null && !await approver(plan)) {
+      for (final f in files) {
+        locks.release(f, owner);
+      }
+      return SpanEditOutcome(
+        ok: false,
+        reverted: false,
+        detail: 'edit not approved: ${plan.description} — no bytes were '
+            'touched',
+        failureClass: 'permission_denied',
+      );
+    }
     final originals = <String, String>{};
     for (final f in files) {
       originals[f] = File(_abs(f)).readAsStringSync();
     }
-    final preAnalyze = await Process.run(
-      'dart',
-      ['analyze'],
-      workingDirectory: workspace.path,
-    );
-    var preCheckExit = 0;
-    final preCheckCmd = resolveWorkspaceCheck(workspace);
-    if (preCheckCmd != null) {
-      preCheckExit = (await _runCheck(preCheckCmd)).exitCode;
+
+    // FAILURE ATTRIBUTION (R7b) with a WORLD-CACHED baseline (the ECS
+    // discipline): the workspace's verify state is a resource on the world
+    // — the post-state of a green move IS the next move's pre-state, so
+    // the full-package oracle runs ONCE per session (when unknown), never
+    // per move. A workspace whose suite is already red (the failing suite
+    // IS the task spec) must not revert every intermediate move — the
+    // goal loop grades the end state.
+    final baseline = _baselineResource();
+    final swAnalyze = Stopwatch();
+    final swCheck = Stopwatch();
+    int preAnalyzeExit;
+    int preCheckExit;
+    if (baseline.clean == null) {
+      final preAnalyze = await Process.run(
+        'dart',
+        ['analyze'],
+        workingDirectory: workspace.path,
+      );
+      preAnalyzeExit = preAnalyze.exitCode;
+      preCheckExit = 0;
+      final preCheckCmd = resolveWorkspaceCheck(workspace);
+      if (preCheckCmd != null) {
+        preCheckExit = (await _runCheck(preCheckCmd)).exitCode;
+      }
+      baseline.clean = preAnalyzeExit == 0 && preCheckExit == 0;
+    } else {
+      preAnalyzeExit = baseline.clean! ? 0 : 1;
+      preCheckExit = baseline.clean! ? 0 : 1;
     }
-    final preClean = preAnalyze.exitCode == 0 && preCheckExit == 0;
+    final preClean = preAnalyzeExit == 0 && preCheckExit == 0;
 
     // Validate + splice. All patches or none: any validation failure
     // bounces before the first write.
@@ -908,28 +1029,33 @@ class SpanEditMaterializer {
         File(_abs(entry.key)).writeAsStringSync(entry.value);
       }
 
-      // Mechanical verification tier (ADR 0021): analyze → workspace
-      // convention. A failure ATTRIBUTABLE to this move (pre-move green →
-      // post-move red) reverts every patch of the move; a pre-existing red
-      // workspace is the goal loop's business, not the move's.
+      // Mechanical verification tier (ADR 0021): the free oracle re-run.
+      // SCOPED to the touched files (the blast radius the tree already
+      // knows — sub-second) instead of the whole package; the FULL
+      // analyzer + workspace convention run at the goal gate (once per
+      // turn) and in the once-per-session baseline above.
+      swAnalyze.start();
       final analyze = await Process.run(
         'dart',
-        ['analyze'],
+        ['analyze', ...files.map(_abs)],
         workingDirectory: workspace.path,
       );
+      swAnalyze.stop();
       final analyzeExit = analyze.exitCode;
       if (analyzeExit != 0 && preClean) {
         _revert(files, originals);
+        baseline.clean = false;
         return SpanEditOutcome(
           ok: false,
           reverted: true,
           detail:
-              'dart analyze exit=$analyzeExit after ${plan.description}; '
-              'ALL patches reverted\n'
+              'dart analyze (scoped to touched files) exit=$analyzeExit '
+              'after ${plan.description}; ALL patches reverted\n'
               '${_tail("${analyze.stdout}${analyze.stderr}")}',
           patchesApplied: plan.patches.length,
           filesTouched: files,
           analyzeExit: analyzeExit,
+          analyzeMs: swAnalyze.elapsedMilliseconds,
           failureClass: 'analyze_failed',
         );
       }
@@ -937,11 +1063,14 @@ class SpanEditMaterializer {
       int? checkExit;
       var checkDetail = 'no workspace convention (analyze only)';
       if (checkCmd != null) {
+        swCheck.start();
         final check = await _runCheck(checkCmd);
+        swCheck.stop();
         checkExit = check.exitCode;
         checkDetail = '${checkCmd.join(" ")} exit=$checkExit';
         if (checkExit != 0 && preClean) {
           _revert(files, originals);
+          baseline.clean = false;
           return SpanEditOutcome(
             ok: false,
             reverted: true,
@@ -952,24 +1081,31 @@ class SpanEditMaterializer {
             filesTouched: files,
             analyzeExit: analyzeExit,
             checkExit: checkExit,
+            analyzeMs: swAnalyze.elapsedMilliseconds,
+            checkMs: swCheck.elapsedMilliseconds,
             failureClass: 'workspace_check_failed',
           );
         }
       }
+      // The workspace's new state: green → the baseline carries forward
+      // (the next move's pre-state costs nothing); red → cached as red so
+      // no further move re-pays for the measurement.
+      baseline.clean = analyzeExit == 0 && (checkExit == null || checkExit == 0);
       // Patches KEPT: any remaining red state pre-dated the move (or was
       // not attributable) — the goal loop grades the end state.
       return SpanEditOutcome(
         ok: true,
         reverted: false,
         detail:
-            '${plan.description} — analyze exit=$analyzeExit '
-            '(pre ${preAnalyze.exitCode}), $checkDetail (pre $preCheckExit); '
-            'patches kept (red state pre-dates the move — the goal loop '
-            'grades the end state)',
+            '${plan.description} — scoped analyze exit=$analyzeExit '
+            '(baseline: ${baseline.clean == true ? "clean" : "pre-existing red"}), '
+            '$checkDetail; patches kept',
         patchesApplied: plan.patches.length,
         filesTouched: files,
         analyzeExit: analyzeExit,
         checkExit: checkExit,
+        analyzeMs: swAnalyze.elapsedMilliseconds,
+        checkMs: swCheck.elapsedMilliseconds,
       );
     } on SpanEditBounce catch (b) {
       // Validation failed before/without writes; bytes untouched.
@@ -989,6 +1125,19 @@ class SpanEditMaterializer {
   void _revert(List<String> files, Map<String, String> originals) {
     for (final f in files) {
       File(_abs(f)).writeAsStringSync(originals[f]!, flush: true);
+    }
+  }
+
+  /// The workspace verify baseline as world state (persisted with the
+  /// session world; re-derived measurements, cached verdicts).
+  SpanVerifyBaseline _baselineResource() {
+    try {
+      return world.getResource<SpanVerifyBaseline>();
+    } on StateError {
+      final r = SpanVerifyBaseline();
+      world.upsertResource(r);
+      world.flush();
+      return r;
     }
   }
 
@@ -1349,6 +1498,7 @@ ToolDef editSymbolTool(
   FileLockTable? locks,
   Object owner = 'span_editor',
   Set<String> Function()? coverage,
+  Future<bool> Function(SpanEditPlan plan)? approver,
   SpanEditMaterializer? materializer,
 }) {
   final mat =
@@ -1359,6 +1509,7 @@ ToolDef editSymbolTool(
         locks: locks,
         owner: owner,
         coverage: coverage,
+        approver: approver,
       );
   return ToolDef.encode(
     name: const ToolName('edit_symbol'),

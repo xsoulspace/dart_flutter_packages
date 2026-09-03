@@ -217,7 +217,15 @@ async function main() {
   // The daemon: the R7 meaning-profile surface, scripted mover (LLM-free).
   const daemon = new HarnessdClient(
     "dart",
-    ["run", "bin/harnessd.dart", "--profile", "meaning", "--scripted"],
+    [
+      "run",
+      "bin/harnessd.dart",
+      "--backend",
+      "open_router",
+      "--profile",
+      "meaning",
+      "--scripted",
+    ],
     DAEMON_PKG,
     HARNESS_PKG,
     (line) => transcript.push(line),
@@ -225,7 +233,9 @@ async function main() {
 
   transcript.push("=== R7 daemon transcript gate ===");
   transcript.push(`workspace: ${HARNESS_PKG}`);
-  transcript.push(`daemon: dart run bin/harnessd.dart --profile meaning --scripted (cwd ${DAEMON_PKG})`);
+  transcript.push(
+  `daemon: dart run bin/harnessd.dart --backend open_router --profile meaning --scripted (cwd ${DAEMON_PKG})`,
+);
 
   const { capabilities, sessionId } = await daemon.start();
   transcript.push(

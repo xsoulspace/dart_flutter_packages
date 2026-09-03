@@ -34,6 +34,13 @@ List<String>? resolveWorkspaceCheck(Directory root) {
   final main = File('${root.path}/main.dart');
 
   if (isDartPackage) {
+    // R7 fix (measured: harnessd gate, dart test exit=65 on a Flutter
+    // package): Flutter packages must be graded by `flutter test` — pure
+    // `dart test` cannot resolve flutter_test and fails every run.
+    if (isFlutterPackage(pubspec)) {
+      if (_hasTests(root)) return const ['flutter', 'test'];
+      return const ['flutter', 'analyze'];
+    }
     if (_hasTests(root)) return const ['dart', 'test'];
     // R5 finding: analyze-only passes trivially (0 decisions) on a clean
     // package — it proves nothing about the task. Honest null.
@@ -41,6 +48,14 @@ List<String>? resolveWorkspaceCheck(Directory root) {
   }
   if (main.existsSync()) return const ['dart', 'run', 'main.dart'];
   return null;
+}
+
+/// A Flutter package declares the Flutter SDK in its pubspec (`sdk: flutter`
+/// under dependencies or a `flutter:` section).
+bool isFlutterPackage(File pubspec) {
+  final src = pubspec.readAsStringSync();
+  return src.contains('sdk: flutter') ||
+      RegExp(r'^flutter:', multiLine: true).hasMatch(src);
 }
 
 bool _hasTests(Directory root) {

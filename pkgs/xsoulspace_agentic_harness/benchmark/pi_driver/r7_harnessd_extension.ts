@@ -68,6 +68,21 @@ class HarnessdClient {
       if (message.method === "session/update") {
         // dart_acp_toolkit wraps: params = {sessionId, update}.
         this.updates.push(message.params?.update ?? message.params);
+        return;
+      }
+      // Server-initiated REQUESTS (session/request_permission): the R7c
+      // edit approver asks the client; deny-by-default means an
+      // unanswering client DENIES the move. The extension answers allow
+      // (a real deployment renders the consent UI here).
+      if (message.method != null && message.id != null) {
+        const response =
+          message.method === "session/request_permission"
+            ? { outcome: { outcome: "allow", optionId: "allow" } }
+            : {};
+        this.proc.stdin.write(
+          `${JSON.stringify({ jsonrpc: "2.0", id: message.id, result: response })}\n`,
+        );
+        return;
       }
     }
   }

@@ -74,7 +74,39 @@ ToolDef repoEtlTool(
           };
         case 'refresh':
           if (st.lastScan == null) {
-            return {'ok': false, 'error': 'nothing scanned yet — action scan'};
+            // R7c persistent world: the tree may already live in the
+            // restored world (built once per workspace) while this tool
+            // instance's state is fresh — treat as a full refresh pass.
+            final existing = world.maybeGetResource<MeaningIndex>();
+            if (existing != null && existing.nodeCount > 0) {
+              st
+                ..lastScan = DateTime.now()
+                ..files = existing.byId.keys
+                    .where((id) => id.startsWith('f_'))
+                    .length;
+              final touched = _changedFiles(workspace, st);
+              var syms = 0;
+              for (final f in touched) {
+                final rel = f.path.startsWith('${workspace.path}/')
+                    ? f.path.substring(workspace.path.length + 1)
+                    : f.path;
+                syms += _rescanFile(
+                  world,
+                  scanDartFile(f, rel),
+                );
+              }
+              return {
+                'ok': true,
+                'refreshed_files': touched.length,
+                'symbols_touched': syms,
+                'files': st.files,
+                'note': 'persistent tree refreshed (world carried it)',
+              };
+            }
+            return {
+              'ok': false,
+              'error': 'nothing scanned yet — action scan',
+            };
           }
           final touched = _changedFiles(workspace, st);
           var syms = 0;
@@ -99,6 +131,28 @@ ToolDef repoEtlTool(
               'ok': false,
               'error': 'tree already built — use action refresh',
               'files': st.files,
+            };
+          }
+          // R7c persistent world: the restored world may already carry the
+          // tree — never double-build (ids would collide). The daemon's
+          // mechanical tick refreshes mtimes before the prompt.
+          final preexisting = world.maybeGetResource<MeaningIndex>();
+          if (preexisting != null && preexisting.nodeCount > 0) {
+            st
+              ..lastScan = DateTime.now()
+              ..files = preexisting.byId.keys
+                  .where((id) => id.startsWith('f_'))
+                  .length
+              ..symbols = preexisting.byId.keys
+                  .where((id) => id.startsWith('sym_'))
+                  .length;
+            return {
+              'ok': true,
+              'already': true,
+              'files': st.files,
+              'symbols': st.symbols,
+              'note': 'tree already present in this persistent world — the '
+                  'host refreshes it mechanically; zoom/impact away',
             };
           }
           final files = dartFiles(workspace);

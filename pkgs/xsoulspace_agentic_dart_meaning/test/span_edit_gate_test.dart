@@ -186,8 +186,10 @@ class _ScriptedEditor implements GenerationHandler {
     if (step == 2 && !paused) {
       // Pause once: close the chain after the scan. The driver's grade
       // fails (surfaceArea undefined) and it must re-open a decision —
-      // AttemptCount 1, monotonic, never a reset.
+      // AttemptCount 1, monotonic, never a reset. The step is re-executed
+      // after the resume (the invalid move still costs its round).
       paused = true;
+      step--;
       return _respond(world, request, 'pausing after scan', const []);
     }
     final calls = switch (step) {

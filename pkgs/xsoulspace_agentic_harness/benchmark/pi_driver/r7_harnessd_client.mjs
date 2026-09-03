@@ -61,6 +61,23 @@ export class HarnessdClient {
   }
 
   #onMessage(message) {
+    // Server-initiated REQUESTS (session/request_permission): the R7c
+    // edit approver asks the client; deny-by-default means an unanswering
+    // client DENIES the move. The gate answers allow (a real client asks
+    // the human).
+    if (message.method != null && message.id != null) {
+      const response =
+        message.method === "session/request_permission"
+          ? { outcome: { outcome: "allow", optionId: "allow" } }
+          : {};
+      this.proc.stdin.write(
+        `${JSON.stringify({ jsonrpc: "2.0", id: message.id, result: response })}\n`,
+      );
+      this.log?.(
+        `[acp <- answer] ${message.method} -> ${JSON.stringify(response)}`,
+      );
+      return;
+    }
     if (message.id != null && (message.result !== undefined || message.error !== undefined)) {
       const pending = this.pending.get(message.id);
       if (pending) {

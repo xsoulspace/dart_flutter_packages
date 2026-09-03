@@ -25,44 +25,59 @@ World _built() {
   return world;
 }
 
+/// R7 hard cut (ADR 0023 §2): the tree is a RE-DERIVABLE projection target
+/// and is NEVER snapshotted — snapshots carry beats, verdicts, budgets
+/// only. The old parity expectation ("the tree survives restore") is the
+/// contract this test now NEGATES: restore yields a tree-free world and
+/// the tree owner re-derives (repo_etl scan/refresh — the R7c tick).
 void main() {
-  test('snapshot → restore keeps the tree; cut output is identical', () {
-    final before = _built();
-    final snapshot = snapshotWorld(before);
-    final after = restoreWorld(snapshot);
+  test(
+    'snapshot → restore carries NO meaning tree (re-derivation contract); '
+    'beats/verdicts/budgets still restore',
+    () {
+      final before = _built();
+      final snapshot = snapshotWorld(before);
+      final after = restoreWorld(snapshot);
 
-    // Component truth survived (edge entity refs translated via persistent ids)
-    final view = meaningView(after);
-    expect(view.nodeCount, 3);
-    expect(view.edgeCount, 2);
-    final board = view.nodes.firstWhere((n) => n['id'] == 'board_1');
-    expect((board['props'] as Map)['size'], 3);
-    final cell = view.nodes.firstWhere((n) => n['id'] == 'cell_1');
-    expect((cell['props'] as Map)['marker'], 'X');
-    expect(
-      view.edges.map((e) => '${e['from']}→${e['to']}'),
-      containsAll(['board_1→cell_1', 'board_1→cell_2']),
-    );
+      // The tree did NOT cross the persistence boundary.
+      final view = meaningView(after);
+      expect(view.nodeCount, 0, reason: 'the tree is re-derived, never restored');
+      expect(view.edgeCount, 0);
+      expect(hasMeaningNode(after, 'cell_2'), isFalse);
 
-    // Derived state (meaning index + facet keywords) re-derived: same cut.
-    final cutBefore = jsonEncode(
-      meaningCut(before, focusIds: ['board_1'], maxNodes: 8, tokenBudget: 4096),
-    );
-    final cutAfter = jsonEncode(
-      meaningCut(after, focusIds: ['board_1'], maxNodes: 8, tokenBudget: 4096),
-    );
-    expect(cutAfter, cutBefore);
+      // The snapshot ENVELOPE itself carries no meaning components.
+      final encoded = jsonEncode(snapshot);
+      expect(encoded, isNot(contains('MeaningNode')));
+      expect(encoded, isNot(contains('MeaningProps')));
+      expect(encoded, isNot(contains('MeaningEdge')));
 
-    // The derived index resolves lookups post-restore.
-    expect(hasMeaningNode(after, 'cell_2'), isTrue);
-    expect(
-      linkMeaning(after, from: 'cell_2', relation: 'next', to: 'cell_1'),
-      isTrue,
-    );
-  });
+      // Re-derivation (the host's mechanical tick) rebuilds the same tree:
+      addMeaningNode(after, kind: 'board', label: 'tictactoe', props: {'size': 3});
+      addMeaningNode(after, kind: 'cell', label: 'top-left');
+      addMeaningNode(after, kind: 'cell', label: 'top-right');
+      linkMeaning(after, from: 'board_1', relation: 'contains', to: 'cell_1');
+      linkMeaning(after, from: 'board_1', relation: 'contains', to: 'cell_2');
+      setMeaningProp(after, id: 'cell_1', key: 'marker', value: 'X');
+      final cutBefore = meaningCut(
+        _built(),
+        focusIds: ['board_1'],
+        maxNodes: 8,
+        tokenBudget: 4096,
+      );
+      final cutAfter = meaningCut(
+        after,
+        focusIds: ['board_1'],
+        maxNodes: 8,
+        tokenBudget: 4096,
+      );
+      expect(jsonEncode(cutAfter), jsonEncode(cutBefore));
+    },
+  );
 
-  test('facet ray-cast finds meaning nodes after restore', () {
+  test('facet ray-cast finds re-derived meaning nodes', () {
     final after = restoreWorld(snapshotWorld(_built()));
+    // Re-derive (the R7c tick): the tree is world state again.
+    addMeaningNode(after, kind: 'cell', label: 'top-left');
     final cut = meaningCut(after, query: 'top-left', maxNodes: 8);
     final ids = (cut['nodes'] as List).cast<Map>().map((n) => n['id']);
     expect(ids, contains('cell_1'));

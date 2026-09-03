@@ -104,7 +104,9 @@ void main() {
       final frontier = impactFrontier(world, target, maxDepth: 2, maxNodes: 64);
       expect(frontier.length, lessThanOrEqualTo(64));
 
-      // 4. Snapshot/restore preserves everything.
+      // 4. Snapshot carries NO code tree — it re-derives (ADR 0023 §2).
+      // This is the fix for the 18s super-linear restore finding: NOT
+      // restoring trees. Measure the re-derivation instead.
       final store = SnapshotStore();
       await store.open(
         '${Directory.systemTemp.path}/etl_t2_${DateTime.now().millisecondsSinceEpoch}/store',
@@ -112,9 +114,14 @@ void main() {
       await store.save(world, name: 't2', meta: {'tier': 2});
       final restored = await store.load('t2');
       final rIndex = restored.getResource<MeaningIndex>();
+      expect(rIndex.nodeCount, 0,
+          reason: 'the tree is re-derived, never restored (ADR 0023 §2)');
+      final rederiveSw = Stopwatch()..start();
+      buildMeaningTreeFromCode(restored, scans);
+      rederiveSw.stop();
       expect(rIndex.nodeCount, index.nodeCount);
       expect(rIndex.edgeCount, index.edgeCount);
-      // Restored tree is queryable, not just counted.
+      // Re-derived tree is queryable, not just counted.
       final cutAfterRestore = meaningCut(
         restored,
         focusIds: [target],
@@ -131,8 +138,8 @@ void main() {
         'TIER2 row — files: $files | symbols: $symbols | edges: '
         '${built.edges} | scan: ${scanMs}ms | build: ${buildMs}ms | '
         'fidelity: ${fid.checked}/${fid.checked} | cuts(tokens): '
-        '$cutTokens | restore nodes/edges: ${rIndex.nodeCount}/'
-        '${rIndex.edgeCount}',
+        '$cutTokens | re-derivation: ${rIndex.nodeCount}/'
+        '${rIndex.edgeCount} in ${rederiveSw.elapsedMilliseconds}ms',
       );
     },
     timeout: const Timeout(Duration(minutes: 10)),

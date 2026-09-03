@@ -74,6 +74,14 @@ class AppleFoundationNativeClient
   /// wrong-completion or a crash.
   int? _activeGeneration;
 
+  /// Client-side cancel (R7c): cancels the in-flight bridge generation via
+  /// `xs_fm_cancel` and detaches it — a `session/cancel` lands as a
+  /// generation_timeout-shaped failure, never a hang. Safe when idle.
+  void cancelActiveGeneration() {
+    final id = _activeGeneration;
+    if (id != null) _cancelGeneration(id);
+  }
+
   /// Whether the last load used the code-asset path (vs the fallback loader).
   static bool usedCodeAsset = false;
 

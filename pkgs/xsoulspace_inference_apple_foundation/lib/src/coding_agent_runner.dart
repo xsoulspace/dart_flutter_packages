@@ -31,13 +31,22 @@ import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 import 'package:xsoulspace_agentic_harness/src/tooling/workspace_map.dart'
     show WorkspaceMapProvider;
 import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
-    show fsTools, FsToolsRoot, CapturedWrite, JailWriteGateway, WriteGateMode;
+    show fsTools, FsToolsRoot, CapturedWrite, JailWriteGateway, WriteGateMode,
+    runTool;
 
 import 'intent_closure_runner.dart'
     show DecisionMeter, afmSystemPrompt, registerIntentClosureTools;
+import 'package:xsoulspace_agentic_dart_meaning/xsoulspace_agentic_dart_meaning.dart'
+    show SpanEditPlan, editSymbolTool, repoEtlTool;
 
 /// ~110 tokens — the run-graded (fs_tools) teaching prompt. B6: teaching
 /// lives in tool descriptions + the system prompt ONLY.
+///
+/// R7b DEMOTION (ADR 0023): this run-graded fs arm is LEGACY-HOST-ONLY —
+/// direct-profile hosts keep it; the meaning profile edits through
+/// `edit_symbol` (the span materializer) and never sees `write`. Do not
+/// add new tasks/surfaces to this arm; new work routes through the
+/// meaning profile ([CodingAgentTask.meaningProfile]).
 const codingSystemPrompt =
     'You build or fix Dart code inside the workspace. You never leave it. '
     'Tools: read, write, list_dir, glob, grep, run.\n'
@@ -46,6 +55,20 @@ const codingSystemPrompt =
     'it must exit 0. A mechanical verifier runs the goal check after your '
     'tool results; when it reports a failure, fix the code and try again. '
     'Keep going until the check passes. Finish by stating what you changed.';
+
+/// The meaning-profile teaching prompt (R7): the actor scans the workspace
+/// into the meaning tree, reads it budgeted, and edits through meaning
+/// moves. It never reads a file and never writes code tokens.
+const meaningProfileSystemPrompt =
+    'You edit code through the meaning tree — never file reads, never '
+    'code tokens. Flow: 1) repo_etl action scan (once per session; the '
+    'host refreshes the tree mechanically after that). 2) meaning_zoom / '
+    'meaning_impact to find symbols and blast radius. 3) edit_symbol to '
+    'act: apply_executable (rename_symbol) for cross-file renames, '
+    'insert_member for new members, replace_member_body for covered '
+    'members (op rows over the closed pure vocabulary). Every move is '
+    'verified by dart analyze + the workspace check and auto-reverted on '
+    'failure. Finish when the check is green.';
 
 /// One coding task as data: prompt + fixtures + final-gate checkers + which
 /// mechanical verifier is wired inside the loop.
@@ -57,12 +80,13 @@ class CodingAgentTask {
     this.checkers = const [],
     this.intents,
     this.runCommand,
+    this.meaningProfile = false,
     this.repairHint =
         'Fix the workspace so the check passes, verify with the tools, '
         'then finish.',
     this.systemPrompt = codingSystemPrompt,
   }) : assert(
-          (intents == null) != (runCommand == null),
+          (intents == null) != (runCommand == null) || meaningProfile,
           'exactly one in-loop verifier per task: intent-graded OR run-graded',
         );
 
@@ -80,7 +104,15 @@ class CodingAgentTask {
   final List<IntentExpectation>? intents;
 
   /// Non-null → run-graded verifier inside the loop + the fs_tools surface.
+  /// LEGACY-HOST-ONLY (R7b demotion, ADR 0023): direct-profile hosts keep
+  /// whole-file writes; the meaning profile must not gain them back.
   final List<String>? runCommand;
+
+  /// R7: the meaning-profile surface — [repo_etl, meaning_zoom,
+  /// meaning_impact, edit_symbol, run]. Zero `read`, zero `write`: the
+  /// tree is the code interface, `edit_symbol` is the only ACT verb. The
+  /// workspace convention stays the gate (run-graded).
+  final bool meaningProfile;
 
   /// Repair teaching for the bounded retry prompts (host-authored; NOT new
   /// teaching in the model's context — it only appears on a failing gate).
@@ -89,6 +121,7 @@ class CodingAgentTask {
   final String systemPrompt;
 
   bool get usesIntentSurface => intents != null;
+  bool get usesMeaningSurface => meaningProfile && intents == null;
 }
 
 /// The intent-graded oracle sequence (same calls as the suite's `intents`
@@ -201,6 +234,7 @@ CodingAgentTask taskFromSentence(
   String sentence, {
   List<String>? check,
   Directory? workspace,
+  bool meaningProfile = false,
 }) {
   final resolved =
       check ?? (workspace == null ? null : resolveWorkspaceCheck(workspace));
@@ -214,7 +248,14 @@ CodingAgentTask taskFromSentence(
   }
   return CodingAgentTask(
     id: 'free_form',
-    prompt: '$sentence Verify with the run tool — the check must exit 0.',
+    prompt: meaningProfile
+        ? '$sentence Work through the meaning tree: repo_etl scan, '
+            'meaning_zoom / meaning_impact to read, edit_symbol to act. '
+            'Never read or write files.'
+        : '$sentence Verify with the run tool — the check must exit 0.',
+    // R7: the meaning profile — the tree is the only code interface.
+    meaningProfile: meaningProfile,
+    systemPrompt: meaningProfile ? meaningProfileSystemPrompt : codingSystemPrompt,
     // The final gate mirrors the SAME command the in-loop verifier runs
     // ('runs' checkers default to `dart run <path>` — an override value is
     // required for non-run commands like `dart analyze`).
@@ -244,6 +285,7 @@ class CodingAgentRunResult {
     required this.pulseText,
     required this.recorderDump,
     this.writeGateAudit = '',
+    this.toolResults = const [],
   });
 
   final String taskId;
@@ -268,6 +310,12 @@ class CodingAgentRunResult {
   /// J1.5.3 observability — shipped on EVERY run, pass or fail.
   final String pulseText;
   final String recorderDump;
+
+  /// R7 transparency: the tool RESULT texts recorded on this run's beats
+  /// (name + output excerpt, in order). The daemon streams these so an ACP
+  /// client sees not just "edit_symbol completed" but WHAT the host did —
+  /// patches, verify tier verdicts, bounce reasons, auto-reverts.
+  final List<String> toolResults;
 
   /// P3 (revised): unified diffs of every gated write (review/apply audit).
   /// Empty when no host write gateway was attached.
@@ -352,6 +400,11 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
   /// Monotonic within the session: callers must never LOWER it.
   int maxGoalAttempts = 3,
 
+  /// R7c item 3: HOST edit approver for the meaning profile — every
+  /// `edit_symbol` move asks this approver before any byte lands
+  /// (deny-by-default; the daemon routes it to the ACP client).
+  Future<bool> Function(SpanEditPlan plan)? editApprover,
+
   /// R4 — large-model tier: wider cut (observations 24) + raised projection
   /// budget (32k). Same slot semantics, scaled capacities — the
   /// amplification delta is then a measurement, not an illustration.
@@ -431,6 +484,26 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
   final declaredChecks = <String, List<String>>{};
   if (task.usesIntentSurface) {
     registerIntentClosureTools(world, jail, gateway: gateway);
+  } else if (task.usesMeaningSurface) {
+    // R7 meaning profile: scan + zoom + impact + edit_symbol + run. NO
+    // read, NO write, NO fs_tools — the tree is the only code interface.
+    // The tree is REUSED from the restored world when the daemon already
+    // scanned it (R7c: built once per workspace, refreshed by tick).
+    final registry = ToolRegistry();
+    final etl = repoEtlTool(world, jail);
+    if (world.getResource<MeaningIndex>().nodeCount > 0) {
+      // Host-side mechanical refresh tick: mtime-changed files re-scan
+      // before the actor sees the tree (zero model tokens).
+      await etl.execute({'action': 'refresh'});
+    }
+    registry.register(etl);
+    registry.register(meaningZoomTool(world));
+    registry.register(meaningImpactTool(world));
+    registry.register(
+      editSymbolTool(world, jail, approver: editApprover),
+    );
+    registry.register(runTool(fsRoot));
+    world.getResource<ToolRegistryResource>().register('default', registry);
   } else {
     final registry = ToolRegistry();
     for (final t in fsTools(fsRoot)) {
@@ -506,6 +579,16 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
   // GoalAttemptsExhausted (the J8 rung 1 terminal record).
   if (task.usesIntentSurface) {
     wireIntentGradedGoal(world, sequence: task.intents!);
+  } else if (task.usesMeaningSurface) {
+    // The workspace convention is the gate (D8); explicit runCommand wins
+    // when the delegator declared one.
+    final command = task.runCommand ??
+        resolveWorkspaceCheck(jail) ??
+        (throw StateError(
+          'meaning-profile task: no verification criterion resolvable for '
+          '${jail.path} — pass runCommand or declare a workspace convention',
+        ));
+    wireRunGradedGoal(world, command: command, cwd: jail.path);
   } else {
     wireRunGradedGoal(
       world,
@@ -530,6 +613,29 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
   List<CheckerResult> grade() => [
     for (final c in task.checkers) evaluateChecker(c, jail.path),
   ];
+
+  // THE ACTOR ALWAYS GETS ITS FIRST SESSION — R7 daemon finding: a
+  // workspace whose gate is ALREADY green must not silently skip the
+  // turn (decisions 0): the actor may still need to act (scan / zoom /
+  // edit directives), and a task is not "done" before the actor ran.
+  // Measured on the R7 daemon gate: without this, an already-green
+  // workspace graded PASS with zero work.
+  if (!resume) {
+    await HarnessLoop(world: world).runUntilIdle();
+  } else {
+    // Resumed actor: idle-resumable, so the new prompt needs an open
+    // decision even when the gate already passes.
+    openFreshDecision(
+      world,
+      actor,
+      prompt:
+          '${task.prompt}\n\n(Continuing a restored session — the gate '
+          'currently passes; do any work the task still needs, or state '
+          'what you changed.)',
+    );
+    await HarnessLoop(world: world).runUntilIdle();
+  }
+
   var finalGate = grade();
   var passed = finalGate.isNotEmpty && finalGate.every((c) => c.passed);
   while (!passed && attempt < maxGoalAttempts) {
@@ -609,6 +715,7 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
 
   // K columns from the durable thread record.
   final moves = <String, int>{};
+  final toolResults = <String>[];
   var toolRounds = 0;
   final activeThread =
       resumedThread ??
@@ -620,14 +727,23 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
       .toList()) {
     final we = world.getEntity(beat).$1;
     final call = we.get<BeatToolCall>();
-    if (call == null) continue;
-    toolRounds++;
-    final action = call.args['action'];
-    moves.update(
-      action is String ? '${call.name}.$action' : call.name,
-      (v) => v + 1,
-      ifAbsent: () => 1,
-    );
+    if (call != null) {
+      toolRounds++;
+      final action = call.args['action'];
+      moves.update(
+        action is String ? '${call.name}.$action' : call.name,
+        (v) => v + 1,
+        ifAbsent: () => 1,
+      );
+    }
+    final result = we.get<ToolResultContent>();
+    if (result != null) {
+      final out = '${result.output}';
+      toolResults.add(
+        '${result.name}: '
+        '${out.length > 240 ? out.substring(0, 240) : out}',
+      );
+    }
   }
   final view = meaningView(world);
   // Overhead measured over the SAME surface the actor saw (one truth: the
@@ -659,6 +775,7 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
     edges: view.edgeCount,
     pulseText: sampleHarness(world, tick: meter.decisions).toText(),
     recorderDump: recorder.dump(),
+    toolResults: toolResults,
     writeGateAudit: gateway == null
         ? ''
         : 'writes applied: ${gateway.appliedCount}, '

@@ -20,6 +20,10 @@ dependencies:
   from_json_to_json:
   is_dart_empty_or_not:
   source_span: ^1.10.2
+  # R7d: pack-declared edit executables (the wire shape only — the host
+  # owns realizations; AE owns semantics).
+  agentic_executables_wire:
+    path: ../../agentic_executables/agentic_executables_wire
   xsoulspace_agentic_harness:
     path: ../xsoulspace_agentic_harness
   xsoulspace_inference_core: ^0.1.0-beta.1

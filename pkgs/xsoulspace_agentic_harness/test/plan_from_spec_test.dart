@@ -98,8 +98,18 @@ void main() {
     final cutIds = (cut['nodes'] as List).cast<Map>().map((n) => n['id']);
     expect(cutIds, contains('entity.create'));
 
-    // …and the tree round-trips through the snapshot store.
+    // R7 hard cut (ADR 0023 §2): the tree does NOT round-trip through the
+    // snapshot — it is RE-DERIVABLE. The snapshot carries beats/verdicts/
+    // budgets only; the owner re-derives (here: re-importing the same
+    // canonical spec into the restored world).
     final after = restoreWorld(snapshotWorld(world));
+    expect(meaningView(after).nodeCount, 0,
+        reason: 'the tree is re-derived, never restored');
+    planFromSpec(
+      after,
+      spec: canonicalToMeaningTree(_ecsPack),
+      goalText: 'Build an ECS tick loop that runs.',
+    );
     final restored = meaningView(after);
     expect(restored.nodeCount, 6);
     expect(

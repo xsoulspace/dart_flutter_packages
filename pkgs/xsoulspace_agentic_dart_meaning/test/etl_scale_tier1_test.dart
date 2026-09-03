@@ -278,7 +278,7 @@ void main() {
   );
 
   test(
-    'TIER 1: snapshot/restore preserves the whole code tree',
+    'TIER 1: snapshot carries NO code tree — it re-derives (ADR 0023 §2)',
     () async {
       final scans = _scanHarnessPackage(repoRoot!);
       final world = _world();
@@ -291,9 +291,17 @@ void main() {
       final restored = await store.load('t1');
       final index = world.getResource<MeaningIndex>();
       final rIndex = restored.getResource<MeaningIndex>();
+      // R7 hard cut: snapshots persist beats/verdicts/budgets ONLY — the
+      // tree is re-derivable and never restored. The restored world starts
+      // tree-free; the owner re-derives (repo_etl scan/refresh) and the
+      // re-derived tree must be byte-equivalent to the original.
+      expect(rIndex.nodeCount, 0,
+          reason: 'the tree is re-derived, never restored (ADR 0023 §2)');
+      expect(rIndex.edgeCount, 0);
+      buildMeaningTreeFromCode(restored, scans);
       expect(rIndex.nodeCount, index.nodeCount);
       expect(rIndex.edgeCount, index.edgeCount);
-      // The tree is not just counted — it is USABLE after restore.
+      // The RE-DERIVED tree is not just counted — it is USABLE.
       final fid = fidelityCheck(restored, scans);
       expect(fid.mismatches, 0, reason: fid.samples.join('\n'));
       expect(built.symbols, greaterThan(1500));
