@@ -11,6 +11,7 @@ host derives, materializes, and verifies.
 | `lib/src/test_etl.dart` | ETL-in: failing suite → intent skeletons + DERIVED expectations (declared signatures, or greenfield inference from suite imports/literals). Zero host-authored expectations. |
 | `lib/src/dart_materializer.dart` | ETL-out: meaning chains → idiomatic workspace Dart (expression-stack → structured if/else). Unsupported shapes fail as NAMED problems. |
 | `lib/src/workspace_meaning_runner.dart` | The runner: derive → model fills bounded slots → derived-expectation replay in-loop → HOST materializes → workspace convention (`dart test`) grades. |
+| `lib/src/code_etl.dart` | Repo-scale code ETL (scan → meaning tree → manifest fidelity) + impact-frontier decomposition. Tier 1/2 gates: `etl_scale_tier{1,2}_test.dart`; probe: `tool/etl_scale_probe.dart`. |
 | `test/workspace_oracle_e2e_test.dart` | THE R6 gate (ADR 0022 validation). |
 | `tool/r6_probe.dart` | Evidence re-run probe (`dart run tool/r6_probe.dart`). |
 

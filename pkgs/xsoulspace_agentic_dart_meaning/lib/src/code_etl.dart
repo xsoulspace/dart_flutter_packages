@@ -263,6 +263,15 @@ Map<String, List<CodeFileScan>> scanTree(Directory repoRoot) {
       addMeaningNode(world, kind: 'file', label: scan.relPath, id: 'f_${scan.relPath.replaceAll('/', '_')}');
       files++;
       for (final s in scan.symbols) {
+        // FINDING (scale probe): same-name declarations in one file (e.g.
+        // private handlers in separate class scopes) collide on the stable
+        // id — disambiguate with a per-file ordinal.
+        var id = s.stableId;
+        var ordinal = 1;
+        final index = world.getResource<MeaningIndex>();
+        while (index.byId.containsKey(id)) {
+          id = '${s.stableId}_${ordinal++}';
+        }
         addMeaningNode(
           world,
           kind: 'symbol',
@@ -273,7 +282,7 @@ Map<String, List<CodeFileScan>> scanTree(Directory repoRoot) {
             'decl': s.declKind,
             if (s.memberOf != null) 'member_of': s.memberOf,
           },
-          id: s.stableId,
+          id: id,
         );
         symbols++;
         (perPkg[s.name] ??= []).add(s.stableId);
@@ -436,30 +445,4 @@ Map<String, List<(String, String, int)>> manifestFromTree(World world) {
   return (checked: checked, mismatches: mismatches, samples: samples);
 }
 
-/// Reverse-reference closure (impact frontier) for a symbol — the
-/// deterministic decomposition input.
-Set<String> impactFrontier(
-  World world,
-  String symbolId, {
-  int maxDepth = 2,
-  int maxNodes = 64,
-}) {
-  final index = world.getResource<MeaningIndex>();
-  final out = <String>{};
-  var frontier = {symbolId};
-  for (var d = 0; d < maxDepth && out.length < maxNodes; d++) {
-    final next = <String>{};
-    for (final id in frontier) {
-      for (final (f, r, t) in index.triples) {
-        if (r != 'refs' && r != 'contains' && r != 'member') continue;
-        if (t == id && !out.contains(f)) next.add(f);
-        if (f == id && !out.contains(t)) next.add(t);
-      }
-    }
-    out.addAll(next);
-    frontier = next;
-    if (frontier.isEmpty) break;
-  }
-  out.remove(symbolId);
-  return out;
-}
+

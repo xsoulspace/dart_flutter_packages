@@ -555,3 +555,44 @@ String _kindOf(MeaningIndex index, World world, String id) {
 /// surfaces). `point`/`local` zoom in on the frontier; `region` widens;
 /// `summary` shows the bigger picture without details.
 const meaningZoomLevels = <String>['point', 'local', 'region', 'summary'];
+
+/// Reverse-reference closure (impact frontier) for a node — the
+/// deterministic decomposition input (ADR 0023 §2, the `see` seam).
+/// Walks `refs`/`contains`/`member` edges backwards, HARD-CAPPED:
+/// real frontiers reach 1,000+ nodes (scale finding) — the model never
+/// receives an unbounded frontier; overflow is ranked by edge degree
+/// (most-referenced first).
+Set<String> impactFrontier(
+  World world,
+  String symbolId, {
+  int maxDepth = 2,
+  int maxNodes = 64,
+}) {
+  final index = _indexOf(world);
+  final out = <String>{};
+  var frontier = {symbolId};
+  for (var d = 0; d < maxDepth && out.length < maxNodes; d++) {
+    final next = <String>{};
+    for (final id in frontier) {
+      for (final (f, r, t) in index.triples) {
+        if (r != 'refs' && r != 'contains' && r != 'member') continue;
+        if (t == id && !out.contains(f)) next.add(f);
+        if (f == id && !out.contains(t)) next.add(t);
+      }
+    }
+    out.addAll(next);
+    frontier = next;
+    if (frontier.isEmpty) break;
+  }
+  out.remove(symbolId);
+  if (out.length > maxNodes) {
+    final degree = <String, int>{};
+    for (final id in out) {
+      degree[id] = index.adjacency[id]?.length ?? 0;
+    }
+    final ranked = out.toList()
+      ..sort((a, b) => (degree[b] ?? 0).compareTo(degree[a] ?? 0));
+    return ranked.take(maxNodes).toSet();
+  }
+  return out;
+}

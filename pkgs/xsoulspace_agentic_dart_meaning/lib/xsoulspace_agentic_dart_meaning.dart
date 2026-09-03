@@ -18,6 +18,8 @@
 /// oracle; this package owns the workspace-Dart realization.
 library;
 
+export 'src/code_etl.dart';
+export 'src/repo_etl_tool.dart';
 export 'src/dart_materializer.dart';
 export 'src/test_etl.dart';
 export 'src/workspace_meaning_runner.dart';

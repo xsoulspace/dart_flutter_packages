@@ -33,5 +33,6 @@ export 'tooling/attribution.dart';
 // dart:io and would break web compilation of the core barrel. Import it
 // directly on VM-only targets:
 //   import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart';
+export 'tools/meaning_query_tools.dart';
 export 'tools/tool_call_parser.dart';
 export 'world_setup.dart';

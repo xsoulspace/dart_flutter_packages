@@ -101,6 +101,23 @@ under the law — it routes to the `evidence` tier, never `pass`. Therefore:
   metrics — KV-cache reuse amortizes cost; it solves neither attention
   degradation nor persistence.
 
+## Amendment: the filesystem is a projection target (ADR 0023)
+
+The repo-scale ETL verdict (results_etl_scale.md) closed the loop: the
+meaning tree holds the whole repository (10.6k symbols, 67k edges, 100%
+round-trip fidelity) and every projection stays flat (~2k tokens). The
+generational consequence: **files exist for human convenience and slow
+editing — they are a cache of the last materialization, not the actor's
+interface.** In the meaning profile: `read` → `zoom` (budgeted ray-cast),
+`write` → semantic edit move (host materializes the patch; analyzer/test
+verify; auto-revert). ETL enters through the five seams (`repo_etl` /
+`zoom` / `impact` / span materializer / mechanical persist tick); the tree
+is re-derivable and never snapshotted. AE know packs feed parameterized
+edit executables — the model picks and fills, never authors. Future
+(measured by the tree, built only under a future ADR): generational
+packages — ephemeral, structure-capped, dependency overrides only when
+API-necessary.
+
 ## What this subsection owns
 
 - **Projection** — a cinematic _cut_ per actor: only what the current decision

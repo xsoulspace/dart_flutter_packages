@@ -135,6 +135,16 @@ proof.
 
 ### R6 — Workspace-oracle meaning tier (URGENT — [ADR 0022](../../../../docs/decisions/0022_workspace_oracle_meaning_pipeline.md))
 
+> **SCALE VERDICT (2026-09-02, later) — [results_etl_scale.md](results_etl_scale.md):**
+> the mechanics hold at repo scale. Tier 2 (whole repo): 941 files →
+> 11,590 nodes / 67,444 edges, ETL-out fidelity **10,649/10,649**, cuts
+> **FLAT vs tier 1** (local/region 2,044 tokens at both tiers; summary ~70),
+> latency 6–61ms, decomposition hard-bounded, text+matrix ETL into the same
+> tree, model-visible Situation ≤ 4,000 tokens with beats + plan steps.
+> Two findings fixed (stable-id collisions; frontier hard cap); one OPEN
+> critical: **snapshot restore is super-linear** (67.4k edges → ~18.3s) —
+> the remaining scale blocker, not projection.
+
 > **STATUS 2026-09-02: FIRST TRACK DONE — the R6 gate is GREEN.**
 > `pkgs/xsoulspace_agentic_dart_meaning` (new host package) + the vocabulary
 > growth in core. Measured row (`results_r6.md`):
@@ -196,6 +206,54 @@ charter — `~/xs/agentic_executables/docs/ae_harness_etl_spec.md`):
   then a tic-tac-toe `winner()`/`move()`) passes `dart test` end-to-end
   through the meaning profile with zero model code tokens and zero
   host-authored expectations.
+
+### R7 — Edit-as-re-derivation: the filesystem is a projection target ([ADR 0023](../../../../docs/decisions/0023_filesystem_projection_target_edit_as_rederivation.md))
+
+The scale verdict proved the containers hold (flat 2,044-token cuts at
+67k edges). What is NOT proven: the harness LOOP working that scale — the
+ETL ran as an outer-agent script, and there is no lawful act for editing
+existing code (whole-file `write` is the only path). R7 closes both.
+
+- **R7a — ETL as seams (DONE 2026-09-02).** `repo_etl` (touch world),
+  `meaning_zoom` + `meaning_impact` (see) are actor-facing registry tools
+  in core (`lib/src/tools/meaning_query_tools.dart`, domain-generic), the
+  dart_meaning host wires them to the code scanner (`repo_etl_tool.dart`).
+  Gate GREEN: `pkgs/xsoulspace_agentic_dart_meaning/test/repo_etl_tools_test.dart`
+  — the harness LOOP scans the harness package (repo-scale), zooms and
+  impacts through the actor registry, LLM-free; `read`/`write` do not
+  exist in the registry at all; Situation ≤ 4,000 tokens.
+- **R7b — the span-edit materializer (CRITICAL PATH).** ONE edit tool
+  (`edit_symbol`), minimal closed enum: `apply_executable` (pack-fed) +
+  `replace_member_body`/`insert_member` (op-chain — the only model-composed
+  moves, via the R6 compiler) → host span-anchored patch → `dart
+  analyze`/test, auto-revert (ADR 0021 tier). Cross-file operations
+  (rename/move) are DEFAULT-PACK edit executables expanding over the
+  impact frontier — NOT core sub-actions: B4 (2026-09-01) deleted
+  `tree_patch`/`rename_symbol` as a parallel text-patch path, and
+  reintroducing rename as a hardcoded verb would repeat that mistake
+  (ADR 0023 §2 records the resolution). Sequencing: op-chain moves prove
+  the materializer first; frontier expansion (rename) second, with
+  ambiguity bounce (never guess). Precondition: whole-file `write` is
+  DEMOTED in the meaning profile when this lands — no parallel edit paths
+  a second time. **Gate: a scripted actor performs a multi-file code
+  change on a repo-scale world with ZERO `read` and ZERO `write` moves.**
+  This is the critical path — R7c/d/e wire to it.
+- **R7c — daemon persistence.** `harnessd` holds the world + tree keyed per
+  workspace; tree is NEVER snapshotted (re-derivable — incremental re-scan
+  by git status/mtime is a mechanical tick); snapshots persist beats,
+  verdicts, budgets only. Resolves the 18s repo-tree restore finding by
+  not restoring trees.
+- **R7d — pack-fed edits.** AE know packs / project packs supply
+  parameterized edit executables; the model fills bounded slots; the
+  capture loop records novel resolutions (self-improvement for code edits,
+  ~zero tokens for known classes).
+- **R7e — on-device.** One real AFM edit through the daemon — the full
+  North Star sentence end to end.
+- Demotion (hard cut, lands with R7b): whole-file `write` is demoted to
+  legacy-host-only; new meaning-profile tasks must not use it.
+- Future (needs its own ADR): generational packages — ephemeral packages
+  with structural caps (max deps per symbol/module), overrides only when
+  API-necessary. The tree makes structure measurable first (ADR 0023 §5).
 
 ## R3 status (partial — the honest remainder)
 

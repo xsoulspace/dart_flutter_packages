@@ -140,6 +140,9 @@ as the law closure (they cover the editing surface only).
    §4 (spec + one-VM semantics + parity test), pulled by a failing task.
 4. Division of labor (ADR 0021 pattern): host decomposes; the model fills
    bounded slots; chains are never authored from scratch.
+5. R7 (ADR 0023, next): the meaning profile's read/write verbs are DEMOTED
+   — `repo_etl`/`meaning_zoom`/`meaning_impact` are the actor's eyes;
+   span-edit moves are its hands (R7b is the gate).
 - Done when: a workspace-derived task (not pre-wired) passes `dart test`
   end-to-end through the meaning profile with zero model code tokens and
   zero host-authored expectations (LLM-free scripted first, then AFM).
