@@ -297,3 +297,76 @@ Practices:
 3. Escalation allowances widen monotonically (base × (1 + cycles)); no
    budget ever resets except via `openFreshDecision` for host-injected
    decisions.
+
+
+## Stage M/N — delegation surface + live squad (2026-09-02, LANDED)
+
+**Stage M — delegation surface.** (M0/D8) The default coding oracle is the
+WORKSPACE CONVENTION, resolved mechanically (`resolveWorkspaceCheck`): Dart
+package with tests → `dart test`; without tests → `dart analyze`; bare
+`main.dart` → `dart run main.dart`; nothing resolvable → honest exit(64).
+`--check <command>` overrides. Hardcoded per-task checkers are gone; the
+criterion is part of the goal vector (ADR 0009), the executor is generic
+`RunGoalSpec`. (M1) pi delegates a2a via `coding_agent.dart --json --backend
+open_router`; first delegation PASSED end-to-end (delegated_calc) and caught
+TWO integration bugs: the actor was spawned with a random `ModelId.create()`
+unresolvable by the router (`initRuntime` throws → the actor NEVER
+generated), and the runner overwrote the host router with an empty one
+(escalation + capacity silently degraded). Both fixed; evidence:
+`benchmark/runs/delegation_m1_evidence.md`. (M2) `tool/mine_delegations.sh` —
+LLM-free git-history replay miner → delegation manifest JSONL.
+
+**Stage N — the live squad.** (N1) `analyze_board.dart`: parses
+`dart analyze --format=machine` → file-disjoint board tasks with mechanical
+criteria — the problems-discovery artifact. (N2) `squad_driver.dart`:
+multi-actor, one shared workspace, per-file single-writer (`FileLockTable` +
+per-actor gateways; cross-owner writes rejected BEFORE the gate), per-actor
+run-graded verification (`RunGoalSpec.commandByRegistry`, stamps ONLY the
+pending actor), verification runs as a REGISTERED task so `canSleep()` waits
+for pending verdicts (the P5 flake + squad 'no verdict stamped' race). (N3)
+`harnessd` — the harness as a long-lived ACP agent (`HarnessAcpBackend` over
+`dart_acp_toolkit`): sessions = threads, world snapshot per turn, D8
+convention oracle. (N4) pi joined LIVE over raw stdio JSON-RPC: streamed
+tool_call_updates + verdict round-trip. First live task FAILED honestly —
+deepseek-v4-flash exploration loop (27 decisions, 50 rounds, never wrote) —
+traced to FOUR cut defects, not the model.
+
+**ADR 0020 — the cut is a composed document.** (N5) `CutComposition`: typed
+slots (goal non-evictable + input-gated, map, observations with dedup +
+drop-empty + capacity + chronological render, lastVerdict); the codec renders
+slots verbatim and never re-ranks; unfilled required slots are named
+`CutViolation`s — the INPUT GATE (never dispatched to the model). Conformance
+suite 7/7 (`cut_composition_test.dart`). **Live before/after**: the N4
+failure task re-run — 27→8 decisions, FAIL→PASS, 10.7k tokens,
+goal-in-cut every decision. (N5b) `WorkspaceMapProvider` — fs-as-graph v1:
+bounded tree, skip-list, test→subject links (honest `MISSING` annotation),
+`+N more` overflow absences, cached per root stat; feeds the non-evictable
+`map` slot. Live second delegation PASS at 7 decisions / 9.9k tokens. (N5c)
+Roles as data (model ≠ actor): `AgentRole` + per-registry compositions
+(`compositionByRegistry`); `roles_test.dart` — two roles on ONE model class,
+per-role cuts and prompts. (N5d) a2a columns: per-actor `decisions` +
+`projectionTokens` on every squad row. (M2b) `tool/seed_delegation.sh` —
+parent-commit jail seeder, validated.
+
+**dart_acp_toolkit (IntentCall repo) — permission round-trip + concurrency
+fix.** (1) `AcpPermissionRequesting` interface: backends that implement it
+get a client-permission requester attached at server startup
+(`session/request_permission` round-trip). (2) CONCURRENCY FIX: the input
+loop awaited `_handleMessage` inline, so a permission RESPONSE (or
+`session/cancel`) arriving mid-prompt could never be read — the round-trip
+deadlocked and cancel was dead code. Responses now route out-of-band and
+dispatch is concurrent (`_handleMessageSafe`). Test:
+`test/permission_roundtrip_test.dart`. Harness side: `HarnessAcpBackend`
+implements the interface and wires the write gate in `review` mode — every
+write asks the client (pi/human approves diffs; no git tools needed).
+
+**AFM reliability (P1 closure, three layers).** (1) ABI v2 cancel contract
+(Swift `GenerationState` queue-gated callbacks, Dart cancels BEFORE teardown)
+— landed earlier. (2) NEW: pre-flight context budget in
+`AppleFoundationNativeClient` (`maxContextTokens`, default 3800) — an
+over-window request is rejected with the NAMED `context_window_exceeded`
+failure before the bridge is called (the recorded VM crash was preceded by
+'Exceeded model context window size'). (3) Swift maps context-window errors
+to the same named code (belt-and-suspenders; needs a macOS bridge-test run
+for verification).
+

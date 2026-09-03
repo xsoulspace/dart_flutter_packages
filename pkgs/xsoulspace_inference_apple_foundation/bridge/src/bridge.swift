@@ -388,12 +388,17 @@ public func xs_fm_generate_async(
           finish(donePayload("\"ok\":true,\"output\":\(jsonEscaped(content))"))
         } catch {
           XsFmDebug.log("generate: error — \(error)")
+          // Named code for the P1 crash precursor: an over-window request.
+          // Dart-side pre-flight (maxContextTokens) should reject these
+          // before the bridge is called; this is the belt-and-suspenders.
+          let code = error.localizedDescription.lowercased().contains(
+            "context window"
+          )
+            ? "context_window_exceeded"
+            : "generation_error"
           finish(
             donePayload(
-              jsonErrorBody(
-                code: "generation_error",
-                message: error.localizedDescription
-              )
+              jsonErrorBody(code: code, message: error.localizedDescription)
             )
           )
         }

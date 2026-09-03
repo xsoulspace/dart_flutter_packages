@@ -796,3 +796,123 @@ Overseer notes: Wrong op/wiring: literal -> push_sta…"
 tick 86264: decisions=0 inFlight=0 pending=0 actors=agent-1788300964738044-2:0r/3a agent-1788301173285160-3:0r/0a
 
 
+coding_agent run — task: intent_03_bookmark_macros
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 1496
+  decisions: 10
+  tool rounds (thread beats): 74
+  moves: {intent_define.list: 4, intent_define.define: 68, act_with_project.materialize: 1, act_with_project.define: 1}
+  projection tokens (honest spend, Situation.tokensUsed): 23584
+  meaning nodes: 5, edges: 4
+  wall clock: 922457 ms
+  final gate (outer oracle, once): FAIL
+    check: intents failed: save_url -> {value: boolean}; save_url -> {value: boolean}; list_saved -> {error: no meaning executor for intent: list_saved — every intent needs an executor. re-send intent_define (action define) with specs}; save_url -> {value: boolean}
+  failure class: final gate: intents failed: save_url -> {value: boolean}; save_url -> {value: boolean}; list_saved -> {error: no meaning executor for intent: list_saved — every intent needs an executor. re-send intent_define (action define) with specs}; save_url -> {value: boolean}
+--- harness pulse (J1.5.3) ---
+tick 10 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788306615071822-2: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3, overseer window spent). Last failure: intents failed: save_url -> {value: boolean}; save_url -> {value: boolean}; list_saved -> {error: no meaning executor for intent: list_saved — every intent needs an executor. re-send intent_define (action define) with specs}; save_url -> {value: boolean}
+— agent-1788306615071822-2  [idle]  rounds 0/12 (Σ0)  attempts 3/3 EXHAUSTED
+    last: intent_define:{"specs":[{"b":"returns bool","a":"url:string","label":"s… → FAILED
+      error: {"error":"define requires name"}
+— agent-1788307311878099-3  [idle]  rounds 0/12 (Σ0)
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 240022..265451
+tick 263622: decisions=1 inFlight=1 pending=0 actors=agent-1788306615071822-2:0r/3a agent-1788307311878099-3:0r/0a
+    agent-1788306615071822-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: re-send intent_define with specs
+
+Ga…"
+tick 263722: decisions=1 inFlight=1 pending=0 actors=agent-1788306615071822-2:0r/3a agent-1788307311878099-3:0r/0a
+    agent-1788306615071822-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: re-send intent_define with specs
+
+Ga…"
+tick 263822: decisions=1 inFlight=1 pending=0 actors=agent-1788306615071822-2:0r/3a agent-1788307311878099-3:0r/0a
+    agent-1788306615071822-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: re-send intent_define with specs
+
+Ga…"
+tick 263922: decisions=1 inFlight=1 pending=0 actors=agent-1788306615071822-2:0r/3a agent-1788307311878099-3:0r/0a
+    agent-1788306615071822-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: re-send intent_define with specs
+
+Ga…"
+tick 264022: decisions=1 inFlight=1 pending=0 actors=agent-1788306615071822-2:0r/3a agent-1788307311878099-3:0r/0a
+    agent-1788306615071822-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: re-send intent_define with specs
+
+Ga…"
+tick 264122: decisions=1 inFlight=1 pending=0 actors=agent-1788306615071822-2:0r/3a agent-1788307311878099-3:0r/0a
+    agent-1788306615071822-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: re-send intent_define with specs
+
+Ga…"
+tick 264222: decisions=1 inFlight=1 pending=0 actors=agent-1788306615071822-2:0r/3a agent-1788307311878099-3:0r/0a
+    agent-1788306615071822-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: re-send intent_define with specs
+
+Ga…"
+tick 264322: decisions=1 inFlight=1 pending=0 actors=agent-1788306615071822-2:0r/3a agent-1788307311878099-3:0r/0a
+    agent-1788306615071822-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: re-send intent_define with specs
+
+Ga…"
+tick 264422: decisions=1 inFlight=1 pending=0 actors=agent-1788306615071822-2:0r/3a agent-1788307311878099-3:0r/0a
+    agent-1788306615071822-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: re-send intent_define with specs
+
+Ga…"
+tick 264522: decisions=1 inFlight=1 pending=0 actors=agent-1788306615071822-2:0r/3a agent-1788307311878099-3:0r/0a
+    agent-1788306615071822-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: re-send intent_define with specs
+
+Ga…"
+tick 264622: decisions=1 inFlight=1 pending=0 actors=agent-1788306615071822-2:0r/3a agent-1788307311878099-3:0r/0a
+    agent-1788306615071822-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: re-send intent_define with specs
+
+Ga…"
+tick 264722: decisions=1 inFlight=1 pending=0 actors=agent-1788306615071822-2:0r/3a agent-1788307311878099-3:0r/0a
+    agent-1788306615071822-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: re-send intent_define with specs
+
+Ga…"
+tick 264822: decisions=1 inFlight=1 pending=0 actors=agent-1788306615071822-2:0r/3a agent-1788307311878099-3:0r/0a
+    agent-1788306615071822-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: re-send intent_define with specs
+
+Ga…"
+tick 264922: decisions=1 inFlight=1 pending=0 actors=agent-1788306615071822-2:0r/3a agent-1788307311878099-3:0r/0a
+    agent-1788306615071822-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: re-send intent_define with specs
+
+Ga…"
+tick 265022: decisions=1 inFlight=1 pending=0 actors=agent-1788306615071822-2:0r/3a agent-1788307311878099-3:0r/0a
+    agent-1788306615071822-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: re-send intent_define with specs
+
+Ga…"
+tick 265122: decisions=1 inFlight=1 pending=0 actors=agent-1788306615071822-2:0r/3a agent-1788307311878099-3:0r/0a
+    agent-1788306615071822-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: re-send intent_define with specs
+
+Ga…"
+tick 265222: decisions=1 inFlight=1 pending=0 actors=agent-1788306615071822-2:0r/3a agent-1788307311878099-3:0r/0a
+    agent-1788306615071822-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: re-send intent_define with specs
+
+Ga…"
+tick 265322: decisions=1 inFlight=1 pending=0 actors=agent-1788306615071822-2:0r/3a agent-1788307311878099-3:0r/0a
+    agent-1788306615071822-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: re-send intent_define with specs
+
+Ga…"
+tick 265422: decisions=1 inFlight=1 pending=0 actors=agent-1788306615071822-2:0r/3a agent-1788307311878099-3:0r/0a
+    agent-1788306615071822-2 ← : "OVERSEER REPAIR (cycle 1/1) — repair ONLY the intent "save_url".
+Overseer notes: re-send intent_define with specs
+
+Ga…"
+tick 265451: decisions=0 inFlight=0 pending=0 actors=agent-1788306615071822-2:0r/3a agent-1788307311878099-3:0r/0a
+
+

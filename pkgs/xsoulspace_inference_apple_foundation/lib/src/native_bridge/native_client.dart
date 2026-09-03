@@ -28,6 +28,15 @@ class AppleFoundationNativeClient
     XsFmLibraryLoader? loader,
     XsFmBindings? bindings,
     this.inferTimeout = const Duration(minutes: 5),
+
+    /// AFM reliability guard (P1 follow-up): the on-device context window is
+    /// ~4k tokens. A request whose estimated total (system + prompt +
+    /// fragments + transcript) exceeds the budget is rejected with the named
+    /// code `context_window_exceeded` BEFORE the bridge is called — the
+    /// over-window call was the precursor of the P1 VM crash, and a named
+    /// failure beats a native crash. tokens ≈ chars/4 (the harness default
+    /// estimator).
+    this.maxContextTokens = 3800,
   }) : _loader = loader ?? XsFmLibraryLoader(),
        _injectedBindings = bindings {
     _instance = this;
@@ -50,6 +59,9 @@ class AppleFoundationNativeClient
   /// Swift side is cancelled FIRST (see `cancelGeneration`) so no callback
   /// can arrive after Dart releases the call.
   final Duration inferTimeout;
+
+  /// P1 follow-up: pre-flight context budget (see constructor doc).
+  final int maxContextTokens;
 
   XsFmBindings? _bindings;
   NativeCallable<ToolCbNative>? _toolCallable;
@@ -147,6 +159,30 @@ class AppleFoundationNativeClient
         details: <String, dynamic>{
           'supported_tasks': supportedTasks.map((t) => t.name).toList(),
           'requested_task': request.task.name,
+        },
+      );
+    }
+
+    // P1 follow-up — pre-flight context budget. The recorded on-device
+    // crash was preceded by 'Exceeded model context window size': a request
+    // whose native transcript overflowed AFM's ~4k window. Estimate the
+    // total the bridge will build and fail NAMED before touching it.
+    final estimateChars = request.systemPrompt.length +
+        request.prompt.length +
+        [for (final f in request.contextFragments) f.toString().length]
+            .fold(0, (a, b) => a + b) +
+        ((request.metadata['transcript'] as String?)?.length ?? 0);
+    final estimateTokens = estimateChars ~/ 4;
+    if (estimateTokens > maxContextTokens) {
+      return InferenceResult<InferenceResponse>.fail(
+        code: 'context_window_exceeded',
+        message:
+            'estimated $estimateTokens tokens > $maxContextTokens budget — '
+            'shrink the cut (composition/zoom) before calling AFM',
+        meta: <String, dynamic>{
+          'provider': id,
+          'estimated_tokens': estimateTokens,
+          'budget_tokens': maxContextTokens,
         },
       );
     }

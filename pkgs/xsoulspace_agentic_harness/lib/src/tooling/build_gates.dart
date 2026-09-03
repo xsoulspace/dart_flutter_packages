@@ -23,6 +23,7 @@ import 'dart:io';
 import 'package:agentic_executables_wire/agentic_executables_wire.dart'
     show MeaningTreeExport;
 import 'package:ecsly/ecsly.dart';
+import 'package:from_json_to_json/from_json_to_json.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart'
     show FM, SchemaBundle, ToolDef, ToolName;
 
@@ -34,7 +35,8 @@ import '../data_models/components.dart'
     show Actor, ActorGoalRef, ActorThreads, ActorTools, AttemptCount,
         EscalationRequest, Goal, GoalAttemptsExhausted, ToolRoundCount;
 import '../meaning/intents.dart'
-    show IntentCallState, callIntent;
+    show IntentCallState, IntentExpectation, IntentGoalSpec, callIntent;
+import 'workspace_conventions.dart' show splitCheckCommand;
 import '../meaning/meaning_tree.dart'
     show addMeaningNode, linkMeaning;
 import '../narrative/components.dart'
@@ -250,12 +252,80 @@ void wireRunGradedGoal(
   World world, {
   required List<String> command,
   String cwd = '',
+  Map<String, List<String>>? commandByRegistry,
 }) {
-  world.upsertResource(RunGoalSpec(command: command, cwd: cwd));
+  world.upsertResource(
+    RunGoalSpec(command: command, cwd: cwd, commandByRegistry: commandByRegistry),
+  );
   world
       .schedule(Schedules.narrative)
       .add(runGoalVerifier, name: 'runGradedVerifier');
   world.flush();
+}
+
+// ---------------------------------------------------------------------------
+// M0b — model-proposed criteria as data (declare_check)
+// ---------------------------------------------------------------------------
+
+/// Binaries the model may propose as a check command. Deliberately narrow:
+/// the model proposes, the HOST validates the shape and executes mechanically
+/// — the same trust model as `intent_define` (propose as data, host
+/// verifies, exit-0 decides, never self-graded).
+const defaultAllowedCheckBinaries = {
+  'dart', 'flutter', 'make', 'just', 'npm', 'npx', 'python3', 'cargo', 'go',
+};
+
+const _checkMetacharacters = {';', '|', '&', '`', r'$', '(', ')', '>', '<', '\n'};
+
+/// M0b: the actor may DECLARE its own verification command as data. The
+/// declared command joins [RunGoalSpec.commandByRegistry] for the actor's
+/// registry — the verifier executes it mechanically; a failing exit is still
+/// a failing goal. The model can never SELF-GRADE: declare only proposes.
+ToolDef declareCheckTool({
+  required Map<String, List<String>> declaredChecks,
+  required String registryName,
+  Set<String> allowedBinaries = defaultAllowedCheckBinaries,
+}) {
+  return ToolDef(
+    name: const ToolName('declare_check'),
+    description:
+        'Declare the verification command for this task, e.g. '
+        '"dart test" or "dart analyze lib". Allowed programs: '
+        '${allowedBinaries.join(", ")}. The mechanical verifier will run the '
+        'declared command; exit 0 = task done. Declare it EARLY, before '
+        'you finish.',
+    argsSchema: SchemaBundle(
+      root: FM.object(
+        'declare_check',
+        properties: () => [
+          FM.prop('command', FM.string()),
+        ],
+      ),
+    ),
+    execute: (args) async {
+      final params = jsonDecodeMapAs(args);
+      final raw = jsonDecodeString(params['command']);
+      final tokens = splitCheckCommand(raw);
+      if (tokens.isEmpty) {
+        return 'REJECTED: empty command. Pass {"command": "<program> <args>"}.';
+      }
+      for (final token in tokens) {
+        for (final ch in _checkMetacharacters) {
+          if (token.contains(ch)) {
+            return 'REJECTED: shell metacharacter "$ch" is not allowed. '
+                'Declare a single plain command.';
+          }
+        }
+      }
+      if (!allowedBinaries.contains(tokens.first)) {
+        return 'REJECTED: program "${tokens.first}" is not allowed. '
+            'Allowed: ${allowedBinaries.join(", ")}.';
+      }
+      declaredChecks[registryName] = tokens;
+      return 'check declared: ${tokens.join(" ")} — the mechanical '
+          'verifier will run it after your changes; exit 0 = done.';
+    },
+  );
 }
 
 // ---------------------------------------------------------------------------

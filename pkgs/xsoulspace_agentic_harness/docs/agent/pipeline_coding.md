@@ -4,7 +4,8 @@
 > Architecture-generic loop: [architecture.mdx](architecture.mdx) · durable
 > decisions: ADR [0009](../../../../docs/decisions/0009_goals_as_vectors_plans_as_projections.md),
 > [0015](../../../../docs/decisions/0015_domains_live_in_hosts_core_stays_generic.md),
-> [0018](../../../../docs/decisions/0018_meaning_view_zoom_projection_context_ownership.md)
+> [0018](../../../../docs/decisions/0018_meaning_view_zoom_projection_context_ownership.md),
+> [0020](../../../../docs/decisions/0020_cut_composition_api.md)
 > · forward plan: [PLAN.md](PLAN.md).
 
 ## The law (memorize this)

@@ -21,23 +21,42 @@ import 'dart:io';
 
 import 'package:dart_acp_toolkit/dart_acp_toolkit.dart';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
+import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
+    show WriteGateMode;
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'package:xsoulspace_inference_openrouter/xsoulspace_inference_openrouter.dart'
     show OpenRouterInferenceClient, OpenRouterModelNames;
 
 import 'coding_agent_runner.dart'
-    show CodingAgentRunResult, runCodingAgentOnce, taskFromSentence;
+    show CodingAgentRunResult, CodingAgentTask, runCodingAgentOnce, taskFromSentence;
 import 'native_bridge/native_client.dart';
 
-class HarnessAcpBackend implements AcpAgentBackend {
+class HarnessAcpBackend implements AcpAgentBackend, AcpPermissionRequesting {
   HarnessAcpBackend({
     this.backend = 'open_router',
     this.model = 'deepseek/deepseek-v4-flash-0731',
+    this.handlerFactory,
   });
 
   /// `open_router` (native tool calls) or `apple_foundation_afm`.
   final String backend;
   final String model;
+
+  /// Injectable handler factory (LLM-free tests). Null → the real backend.
+  final GenerationHandler Function(ModelRouter router)? handlerFactory;
+
+  /// N4 — pi-as-escalation-rung: the client's permission requester, attached
+  /// by the server (dart_acp_toolkit `AcpPermissionRequesting`).
+  Future<AcpPermissionOutcome> Function(AcpPermissionRequest request)?
+      _permissionRequester;
+
+  @override
+  void attachPermissionRequester(
+    Future<AcpPermissionOutcome> Function(AcpPermissionRequest request)
+    requester,
+  ) {
+    _permissionRequester = requester;
+  }
 
   final _sessions = <String, _Session>{};
   var _counter = 0;
@@ -122,12 +141,41 @@ class HarnessAcpBackend implements AcpAgentBackend {
     }
 
     // D8: the workspace convention decides the criterion — no per-task code.
-    final CodingAgentRunResult result;
-    try {
-      final task = taskFromSentence(
-        text,
-        workspace: Directory(session.cwd),
+    CodingAgentTask? task;
+    var guidance = '';
+    // N4 escalation rung: a budget-exhausted task awaits operator guidance.
+    // The next prompt CONTINUES it (restored world, widened monotonic
+    // allowance) instead of starting a new task.
+    if (session.pendingEscalation != null) {
+      final pending = session.pendingEscalation!;
+      // Guidance reaches the model through the repair hint — the SAME
+      // bounded repair channel the driver already uses, never a new one.
+      task = CodingAgentTask(
+        id: pending.id,
+        prompt: pending.prompt,
+        fixtures: pending.fixtures,
+        checkers: pending.checkers,
+        intents: pending.intents,
+        runCommand: pending.runCommand,
+        repairHint:
+            'Operator guidance (escalation round '
+            '${session.escalationRounds + 1}): $text\n\n'
+            '${pending.repairHint}',
+        systemPrompt: pending.systemPrompt,
       );
+      guidance = 'continuing';
+      emit(
+        AgentMessageChunk(
+          content: AcpTextBlock(
+            'escalation round ${session.escalationRounds + 1}: continuing '
+            '"${task!.prompt}" with guidance\n',
+          ),
+        ),
+      );
+    }
+    CodingAgentRunResult result;
+    try {
+      task ??= taskFromSentence(text, workspace: Directory(session.cwd));
       emit(
         AgentMessageChunk(
           content: AcpTextBlock(
@@ -139,11 +187,32 @@ class HarnessAcpBackend implements AcpAgentBackend {
       result = await runCodingAgentOnce(
         task: task,
         jail: Directory(session.cwd),
-        handler: _Telemetry(emit, session),
+        handler: handlerFactory?.call(session.router!) ??
+            _Telemetry(emit, session),
         backend: '$backend:$model',
         router: session.router,
         actorModelId: session.router?.models.keys.first,
         restoredWorld: session.world,
+        allowDeclaredChecks: true,
+        maxGoalAttempts: 3 + session.escalationRounds,
+        // N4: the write gate asks the CLIENT (pi/human) per write — the
+        // permission round-trip lands as a session/request_permission call.
+        writeGateMode: _permissionRequester == null
+            ? null
+            : WriteGateMode.review,
+        writeApprover: _permissionRequester == null
+            ? null
+            : (write) async {
+                final outcome = await _permissionRequester!(
+                  AcpPermissionRequest(
+                    sessionId: request.sessionId,
+                    toolCallId: 'write',
+                    title: 'write ${write.relativePath}',
+                    kind: 'edit',
+                  ),
+                );
+                return outcome == AcpPermissionOutcome.allow;
+              },
         onSnapshot: (live) async {
           session.world = live;
           await session.store.save(
@@ -168,7 +237,31 @@ class HarnessAcpBackend implements AcpAgentBackend {
         ),
       ),
     );
-    return result.passed ? AcpStopReason.endTurn : AcpStopReason.refusal;
+    if (result.passed) {
+      session
+        ..pendingEscalation = null
+        ..escalationRounds = 0;
+      return AcpStopReason.endTurn;
+    }
+    // N4 escalation rung: budget exhaustion hands the task to the client
+    // (pi/human = the strongest model in the squad) instead of dropping it.
+    if (result.attemptsExhausted) {
+      session
+        ..pendingEscalation = task
+        ..escalationRounds += 1;
+      emit(
+        AgentMessageChunk(
+          content: AcpTextBlock(
+            '\nescalation: the attempt budget is exhausted. Send a follow-up '
+            'prompt with guidance to continue this task (round '
+            '${session.escalationRounds + 1}), or start a new task to abandon '
+            'it.',
+          ),
+        ),
+      );
+      return AcpStopReason.endTurn;
+    }
+    return AcpStopReason.refusal;
   }
 
   @override
@@ -197,6 +290,12 @@ class _Session {
   final SnapshotStore store;
   final ModelRouter? router;
   World? world;
+
+  /// N4 escalation rung: the task whose budget exhausted, awaiting operator
+  /// guidance. The next prompt continues it with a widened (monotonic)
+  /// attempt allowance.
+  CodingAgentTask? pendingEscalation;
+  int escalationRounds = 0;
 }
 
 /// Streams one ACP update per generation: the tool calls the actor made and

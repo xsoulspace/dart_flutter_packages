@@ -25,8 +25,8 @@ import 'dart:io';
 import 'package:xsoulspace_agentic_harness/benchmark_api.dart'
     show CheckerResult, CheckerSpec, FixtureFile, defaultGoalFlow,
         openFreshDecision, wireIntentGradedGoal, wireRunGradedGoal,
-        wireOverseer, maybeSpawnOverseer, OverseerLedger, IntentExpectation,
-        evaluateChecker;
+        declareCheckTool, wireOverseer, maybeSpawnOverseer, OverseerLedger,
+        IntentExpectation, evaluateChecker;
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 import 'package:xsoulspace_agentic_harness/src/tooling/workspace_map.dart'
     show WorkspaceMapProvider;
@@ -215,7 +215,12 @@ CodingAgentTask taskFromSentence(
   return CodingAgentTask(
     id: 'free_form',
     prompt: '$sentence Verify with the run tool — the check must exit 0.',
-    checkers: [CheckerSpec(type: 'runs', path: command.last)],
+    // The final gate mirrors the SAME command the in-loop verifier runs
+    // ('runs' checkers default to `dart run <path>` — an override value is
+    // required for non-run commands like `dart analyze`).
+    checkers: [
+      CheckerSpec(type: 'runs', path: command.last, value: command.join(' ')),
+    ],
     runCommand: command,
   );
 }
@@ -233,6 +238,7 @@ class CodingAgentRunResult {
     required this.moves,
     required this.overheadTokens,
     required this.wallClock,
+    this.attemptsExhausted = false,
     required this.nodes,
     required this.edges,
     required this.pulseText,
@@ -266,6 +272,10 @@ class CodingAgentRunResult {
   /// P3 (revised): unified diffs of every gated write (review/apply audit).
   /// Empty when no host write gateway was attached.
   final String writeGateAudit;
+
+  /// J8 rung 1: the monotonic attempt budget exhausted and the mechanical
+  /// oracle still fails — the terminal record the escalation ladder keys off.
+  final bool attemptsExhausted;
 
   String get failureClass {
     if (passed) return '';
@@ -332,6 +342,15 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
   /// builder is missing → `initRuntime` throws → the actor never generates
   /// (measured: 3 verification attempts, 0 decisions, FAIL in ~2s).
   ModelId? actorModelId,
+
+  /// M0b: register the `declare_check` tool — the actor may propose its own
+  /// verification command as data; the host validates the shape (allowlist,
+  /// no shell metacharacters) and the verifier executes mechanically.
+  bool allowDeclaredChecks = false,
+
+  /// Escalation rung (N4): widened attempt allowance for a guidance round.
+  /// Monotonic within the session: callers must never LOWER it.
+  int maxGoalAttempts = 3,
 }) async {
   final sw = Stopwatch()..start();
   final resume = restoredWorld != null;
@@ -386,12 +405,21 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
     );
     fsRoot.writeGateway = gateway;
   }
+  final declaredChecks = <String, List<String>>{};
   if (task.usesIntentSurface) {
     registerIntentClosureTools(world, jail, gateway: gateway);
   } else {
     final registry = ToolRegistry();
     for (final t in fsTools(fsRoot)) {
       registry.register(t);
+    }
+    if (allowDeclaredChecks) {
+      registry.register(
+        declareCheckTool(
+          declaredChecks: declaredChecks,
+          registryName: 'default',
+        ),
+      );
     }
     world.getResource<ToolRegistryResource>().register('default', registry);
   }
@@ -456,7 +484,12 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
   if (task.usesIntentSurface) {
     wireIntentGradedGoal(world, sequence: task.intents!);
   } else {
-    wireRunGradedGoal(world, command: task.runCommand!, cwd: jail.path);
+    wireRunGradedGoal(
+      world,
+      command: task.runCommand!,
+      cwd: jail.path,
+      commandByRegistry: declaredChecks.isEmpty ? null : declaredChecks,
+    );
   }
 
   // J7: the overseer watches for goal-attempt exhaustion and disposes
@@ -466,7 +499,6 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
     wireOverseer(world, moverActor: actor, maxCycles: 1);
   }
 
-  const maxGoalAttempts = 3;
   // P5: the monotonic attempt budget persists across restarts — a resumed
   // run continues where the counter stopped (never a reset).
   var attempt = resume
@@ -584,10 +616,15 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
   );
   sw.stop();
 
+  final attemptsExhausted = world
+      .query2<Actor, GoalAttemptsExhausted>()
+      .toList()
+      .isNotEmpty;
   return CodingAgentRunResult(
     taskId: task.id,
     backend: backend,
     passed: passed,
+    attemptsExhausted: attemptsExhausted,
     finalGate: finalGate,
     decisions: meter.decisions,
     projectionTokens: meter.projectionTokens,

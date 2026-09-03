@@ -54,3 +54,5 @@ summary — task: intent_03_bookmark_macros | backend: apple_foundation_afm | n:
 
 summary — task: free_form | backend: open_router:deepseek/deepseek-v4-flash-0731 | n: 1 | passed: 1 | pass@1: 1/1 | tokens source: Situation.tokensUsed (projection) | tokens/run: [9887] | decisions/run: [7] | moves/run: [11] | context overflows: 0
 
+summary — task: intent_03_bookmark_macros | backend: apple_foundation_afm | n: 3 | passed: 0 | pass@3: 0/3 | tokens source: Situation.tokensUsed (projection) | tokens/run: [22319, 23584, 22975] | decisions/run: [10, 10, 10] | moves/run: [50, 74, 57] | context overflows: 0
+

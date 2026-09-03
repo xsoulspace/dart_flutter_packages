@@ -446,144 +446,34 @@ reproducible.
 - **Acceptance:** every number in `results_stage_j.md` states backend,
   decision path, tokens source, tool surface, and n.
 
-## Stage M — delegation surface: a2a dogfooding (ADR 0019)
+## Stage M/N — delegation surface + live squad (LANDED 2026-09-02 → history.md)
 
-**Goal:** the harness is used as a real CLI coding agent (like pi), driven a2a
-by another agent (pi) — real work delegation + real problems discovery, with
-every delegation row doubling as Phase 8 evidence.
+Stages M (general oracle, sidecar delegation, replay miner) and N (analyzer
+board, multi-actor squad, harnessd daemon, pi-as-client, Cut Composition API,
+workspace map, roles, a2a columns) are LANDED — full detail extracted to
+[history.md](history.md); durable decisions: ADR [0019](../../../../docs/decisions/0019_code_law_absolute_long_horizon_tier.md),
+[0020](../../../../docs/decisions/0020_cut_composition_api.md). Open tails
+remain in the "Open tails" block below.
 
-**Decision D8 — the goal vector carries verification criteria; the oracle
-executor is generic host code.** Hardcoded per-task checkers conflated the
-criterion (what proves the task done — ADR 0009: part of the goal vector)
-with the executor (run a command → exit-0 — generic, already `RunGoalSpec`).
-Resolution:
+### Open tails (forward work only)
 
-- **Default oracle = workspace convention** (LLM-free, zero per-task code):
-  mechanically discovered in the jail — Dart package with tests →
-  `dart test`; Dart package without tests → `dart analyze`; bare `main.dart`
-  → `dart run main.dart`. Same oracle for every task in a workspace class.
-- **`--check <command>`** carries a sentence-named criterion; explicit beats
-  convention.
-- **Model-proposed criteria as data** (M0b, follow-up): one native tool call
-  proposes criteria (commands/expectations); the host executes them
-  mechanically — the model proposes, exit-0 decides, never self-graded
-  (same trust model as `intent_define`).
-- Per-task suite fixtures (`--task`) remain as benchmark fixtures only.
-
-Shapes (sequenced; each produces signal before the next is built):
-
-- [x] `M0` — general oracle: `resolveWorkspaceCheck` (LLM-free fs resolver)
-  + `taskFromSentence` uses it + `--check` override + honest failure when no
-  convention resolves. LLM-free test (`workspace_conventions_test.dart`).
-- [ ] `M0b` — model-proposed criteria as data (native tool call,
-  host-executed, mechanically graded).
-- [x] `M1` — sidecar delegation: pi drives `coding_agent.dart --json
-  --backend open_router --runs 1` per delegation via process spawn; NDJSON
-  events parsed; verdict + failure_class recorded. No core change (D5).
-  **First delegation PASSED end-to-end** (delegated_calc, 11 decisions,
-  `dart test exit=0`, 30s) and caught TWO real integration bugs — actor
-  bound to a random `ModelId.create()` unresolvable by the router (actor
-  never generated) and the empty `ModelRouterResource` overwrite (escalation
-  + capacity silently degraded). Both fixed in the runner; evidence:
-  `benchmark/runs/delegation_m1_evidence.md`.
-- [x] `M2` — real-history replay miner (LLM-free):
-  `tool/mine_delegations.sh` → delegation manifest JSONL (commit, parent,
-  sentence, package, proposed tier). Known limitation, recorded honestly:
-  commit subjects are weak task sentences ("fix: removed") — sentence
-  refinement is a named follow-up (mechanical templating first; ONE
-  structured decision only as a labeled exception per ADR 0013). Jail
-  seeding from parent hashes is the M2b follow-up.
-- [ ] `M3` — `HarnessAcpBackend` over `dart_acp_toolkit` (IntentCall repo):
-  session/new → `--session` store, session/prompt → resume+inject,
-  session/update ← NDJSON events, request_permission ← write gate review
-  mode. Build AFTER ≥5 M1 delegations shape the API.
-- [ ] `M4` — pi-as-actor: host-injected decisions (`openFreshDecision`) for
-  external-agent messages on a shared thread (a2h2a). Same transport as M3
-  plus world-state semantics.
-
-Operating cautions: prefer `--backend open_router` until the P1 bridge crash
-is fixed; pin model ids; one process per delegation first; `--auto-approve`
-only inside a disposable jail.
-
-## Stage N — the live squad: real tasks, multi-model actors, one world (ADR 0019)
-
-**Goal:** delegate REAL tasks in this repository (analyzer issues, failing
-tests) to a multi-model actor squad working one shared world — pi, human,
-AFM, and OpenRouter models as peers — perfecting a2a and the harness on the
-harness itself. No git tools: the write gate in `review` mode is the VCS
-(pi/human approves diffs).
-
-**Sequencing principle: world-first, daemon-second.** The squad is world
-logic (the risk and the novelty); the daemon is transport (D5 — core learns
-no transport) and comes last.
-
-**Prerequisite discovered in design: per-file single-writer.** Real fs is
-shared mutable state outside the ECS graph; two actors editing one file is a
-race the flush coherence point does not cover. `JailWriteGateway` owns the
-rule. First squad tasks must be FILE-DISJOINT (analyzer issues partition by
-file; barrel+implementation pairs are ONE task).
-
-- [x] `N1` — **analyzer task board** (LLM-free): parse
-  `dart analyze --format=machine` → issues → file-disjoint board tasks, each
-  a goal with a mechanical criterion (file analyzes clean). The board IS the
-  problems-discovery artifact. Tests: `analyze_board_test.dart`.
-- [x] `N2` — **multi-actor squad, single process**: per-file single-writer
-  (`FileLockTable` + per-actor gateways, cross-owner writes rejected before
-  the gate); per-actor run-graded verification (`commandByRegistry`, stamps
-  ONLY the pending actor); **race fixed** — verification now runs as a
-  registered task so `canSleep()` waits for pending verdicts (the P5 flake
-  was the same race). LLM-free proof: `squad_driver_test.dart` — two actors,
-  two disjoint tasks, one world, board drains, `expectIdle`.
-- [x] `N3` — **daemon** (`harnessd`): `bin/harnessd.dart` +
-  `HarnessAcpBackend` over `dart_acp_toolkit`; sessions = threads; world
-  snapshot persisted per turn (P5); free task sentence + D8 workspace
-  convention oracle.
-- [x] `N4` — **pi joins (LIVE)**: pi drove `harnessd` over raw stdio
-  JSON-RPC: initialize → session/new(cwd) → session/prompt → streamed
-  tool_call_update/agent_message_chunk → verdict. Protocol **PASS**; task
-  **FAIL (honest)**: deepseek-v4-flash exploration loop (26 decisions, no
-  write, `dart test exit=1`) — failure class feeds N5. pi-as-escalation-rung
-  (a2a to the strongest model in the squad) lands with N5; write-gate ACP
-  permission round-trips are the named N4 gap (apply-mode inside the
-  delegated workspace for now).
-- [x] `N5` — **squad hardening + metrics**. Headline (ADR 0020) — **DONE**:
-  the **Cut Composition API** (`cut_composition.dart`): typed slots
-  (goal/map/observations/lastVerdict), per-slot policies (dedup, drop-empty,
-  capacity, recency render within observations), required slots as an INPUT
-  GATE (`CutViolation`, never dispatched to the model), per-composition
-  LLM-free conformance suite (`cut_composition_test.dart`, 7/7). Wired into
-  `runCodingAgentOnce` (coder composition); flat ranked cut remains default
-  for non-declaring flows. **Live validation**: the N4 failure task re-run —
-  27→8 decisions, FAIL→PASS (write + self-verified run, 10.7k tokens);
-  `goalFirst=true` every decision. Evidence: `delegation_m1_evidence.md`.
-- [x] `N5b` — **fs-as-graph v1**: `WorkspaceMapProvider` — bounded,
-  deterministic, skip-listed, cached per root stat; test→subject links
-  (`test/x_test.dart -> lib/x.dart`, honest `MISSING` annotation); overflow
-  as an explicit `+N more` absence. Feeds the `map` slot (non-evictable) in
-  `runCodingAgentOnce` + squad driver. Live: second delegation PASS at 7
-  decisions / 9.9k tokens. Tests: `workspace_map_test.dart` (4/4).
-- [x] `N5c` — **roles as data (model ≠ actor)**: `AgentRole` (composition +
-  prompt + registry + model binding); per-registry compositions
-  (`CutCompositionResource.compositionByRegistry`, same pattern as
-  `RunGoalSpec.commandByRegistry`); squad driver binds roles per task. One
-  model fields many roles; one role runs on any model. Tests:
-  `roles_test.dart` — two roles on one model, per-role cuts + prompts.
-- [x] `N5d` — **a2a columns**: `SquadRow.decisions` +
-  `SquadRow.projectionTokens` beside verdicts (K2-style per-actor rows).
-- [x] `M2b` — **delegation jail seeder**: `tool/seed_delegation.sh <commit>
-  <pkg> [jail]` — extracts the parent-commit package subtree into a
-  disposable jail; pairs with the miner so mined rows replay pre-fix state.
-- [ ] `N5 remaining` — AFM rejoins when the P1 bridge crash is fixed
-  (on-device infra, Swift); pi-as-escalation-rung (a2a to the strongest
-  model in the squad); write-gate permission round-trips via ACP (needs
-  backend→client request support confirmation in `dart_acp_toolkit`);
-  M0b model-proposed criteria as data (needs a tool-with-world-access
-  seam); embedding retrieval behind the `relevance.dart` seam (optional).
-
-Honest boundary: first squad tasks are file-disjoint analyzer issues and
-failing tests in harness packages. Cross-file refactors wait for N5
-coordination. Every squad task emits the standard row — dogfooding and the
-long-horizon tier are the same activity.
+- `M0b` — model-proposed criteria as data: `declare_check` tool LANDED
+  (propose-as-data, host allowlist + metachar validation, verifier executes
+  mechanically). Wired behind `runCodingAgentOnce(allowDeclaredChecks)`.
+- `M2b` — jail seeder LANDED (`tool/seed_delegation.sh`). Remaining: batch
+  replay of the mined manifest rows through the CLI.
+- `N5 remaining` — AFM rejoins the squad when the P1 bridge crash is closed
+  (see below); pi-as-escalation-rung BEYOND the first guidance round;
+  embedding retrieval behind the `relevance.dart` seam (optional).
+- `AFM reliability (P1 closure criteria)` — the crash precursor is handled
+  at three layers now: (1) ABI v2 cancel contract (Swift `GenerationState`,
+  Dart cancels BEFORE teardown); (2) pre-flight context budget in
+  `AppleFoundationNativeClient` (`maxContextTokens`, named
+  `context_window_exceeded` failure before the bridge is called); (3) Swift
+  maps context-window errors to the same named code (belt-and-suspenders).
+  **A reliable AFM claim still requires one green on-device pass@3 run**
+  (the recorded crash killed two runs mid-benchmark) + the macOS bridge test
+  suite — neither has run since the fixes.
 
 ## Acceptance (end state)
 

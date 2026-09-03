@@ -108,3 +108,47 @@ d5/d6: `write` (the fix), d7: `run` (self-verification), d8: done.
   tokens / `dart test exit=0`.
 
 Full sweep at close: 46 harness tests + 6 apple_foundation tests, all green.
+
+# Cleanup pass + open-issue closure (2026-09-02, later)
+
+## dart_acp_toolkit changes (IntentCall repo)
+- `AcpPermissionRequesting`: backends implementing it receive a client-
+  permission requester at server startup (backend→client
+  `session/request_permission` round-trip).
+- **Concurrency fix**: the input loop awaited `_handleMessage` inline — a
+  permission RESPONSE or `session/cancel` arriving mid-prompt was unreadable
+  (round-trip deadlocked; cancel was dead code). Responses now route
+  out-of-band; dispatch is concurrent (`_handleMessageSafe`).
+- Tests: `permission_roundtrip_test.dart` + all 14 existing tests green.
+
+## Harness side
+- `HarnessAcpBackend` implements the interface: the write gate runs in
+  `review` mode — every write asks the client (pi/human approves diffs).
+- **pi-as-escalation-rug (N4)**: budget exhaustion → structured escalation
+  chunk → the next client prompt CONTINUES the same task through the
+  repaired world with a widened monotonic allowance (`maxGoalAttempts`
+  param); PASS clears it. Scripted LLM-free proof:
+  `harnessd_escalation_test.dart` (turn1 FAIL+escalation → turn2 PASS).
+- **M0b landed**: `declare_check` tool — the model PROPOSES its verification
+  command as data; host validates (binary allowlist, metacharacter
+  rejection); the verifier executes mechanically. Proposing is never
+  self-grading. Tests: `declare_check_test.dart` 5/5. Wired behind
+  `runCodingAgentOnce(allowDeclaredChecks: true)` (daemon on).
+
+## AFM reliability — P1 closure criteria (the critical pass)
+Three layers now guard the recorded crash (timeout + callback-after-delete
+after 'Exceeded model context window size'):
+1. ABI v2 cancel contract — Swift `GenerationState` queue-gated callbacks,
+   Dart cancels BEFORE teardown (landed earlier).
+2. NEW Dart pre-flight: `AppleFoundationNativeClient(maxContextTokens:
+   3800)` — over-window requests fail NAMED (`context_window_exceeded`)
+   before the bridge is called.
+3. NEW Swift: context-window errors map to the same named code
+   (belt-and-suspenders; needs a macOS bridge-test run).
+
+**When can we reliably work with AFM?** When: (a) one green on-device pass@3
+through `coding_agent.dart` completes post-fixes (the recorded crash killed
+two mid-benchmark runs — this is the gate), and (b) the macOS bridge test
+suite (`bridge/tests/BridgeTests.swift`) runs green with the Swift change.
+Neither has run yet; both are runtime-gated on this machine, not blocked by
+open code work.

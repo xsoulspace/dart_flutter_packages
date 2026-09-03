@@ -57,6 +57,20 @@ flowchart LR
 - Projection is **token-budgeted** and fails benchmarks when exceeded. The
   meaning view is a **zoom projection** (`point/local/region/summary`, ADR
   0018); move acks zoom to `point` — O(1) feedback.
+- **The cut is a composed document** (ADR 0020): typed slots (goal/map/
+  observations/lastVerdict) with per-slot policies; the codec renders slots
+  verbatim and NEVER re-ranks; unfilled required slots are named
+  `CutViolation`s — the input gate stops dispatch before the model is
+  called. Dedup + drop-empty are admission policies, not post-filters.
+- **Verification runs as a registered task**: the run-graded verifier's
+  subprocess is in-flight work — `canSleep()` must wait for a pending
+  verdict to land.
+- **model ≠ actor** (ADR 0020 §5): a role = composition + tool surface +
+  model binding; many actors may share one model; one local model may
+  field a whole squad.
+- **Single-writer per file in multi-actor squads**: real fs is shared
+  mutable state outside the graph; `FileLockTable` rejects cross-owner
+  writes BEFORE the write gate runs.
 - One **flush** is the coherence point per phase; `runUntilIdle` must end with
   no pending decisions, agency, awaits, tasks, or stranded events
   (`expectIdle` in test support).
