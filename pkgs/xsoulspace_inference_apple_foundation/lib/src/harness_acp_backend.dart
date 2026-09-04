@@ -73,6 +73,7 @@ class HarnessAcpBackend
     this.scripted = false,
     this.remoteMover = false,
     this.apiKey,
+    this.checkCommand,
   });
 
   /// `open_router` (native tool calls) or `apple_foundation_afm`.
@@ -83,6 +84,11 @@ class HarnessAcpBackend
   /// cannot rely on `OPENROUTER_API_KEY` in the process environment).
   /// Null → the environment variable is read, as before.
   final String? apiKey;
+
+  /// Explicit verification criterion overriding the D8 workspace
+  /// convention (the CLI spells it `--check`). The product host (agent
+  /// docs) declares it as data on the binding. Null → convention decides.
+  final List<String>? checkCommand;
 
   /// R7: when true, delegated tasks run through the MEANING-PROFILE
   /// surface ([repo_etl, meaning_zoom, meaning_impact, edit_symbol, run])
@@ -318,6 +324,11 @@ class HarnessAcpBackend
         text,
         workspace: Directory(session.cwd),
         meaningProfile: meaningProfile,
+        // An EMPTY override means "the workspace convention decides" —
+        // never an empty command (that would be a degenerate gate).
+        check: (checkCommand == null || checkCommand.isEmpty)
+            ? null
+            : checkCommand,
       );
       emit(
         AgentMessageChunk(
@@ -638,7 +649,14 @@ class _RemoteMoverHandler implements GenerationHandler {
             {
               'name': t.name.value,
               'description': t.description,
-              'parameters': t.argsSchema.toJson(),
+              // R7 production #7 finding: the schema bundle wraps the
+              // properties in a `root` key — clients rendering the bundle
+              // verbatim degraded every call ({root: {...}}). The daemon
+              // unwraps SERVER-SIDE so every client gets the tool's own
+              // parameter shape (the pi driver no longer needs the
+              // workaround).
+              'parameters':
+                  (t.argsSchema.toJson())['root'] ?? t.argsSchema.toJson(),
             },
       ],
       budgets: {

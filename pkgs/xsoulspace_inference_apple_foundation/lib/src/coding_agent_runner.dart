@@ -527,7 +527,22 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
     registry.register(meaningZoomTool(world));
     registry.register(meaningImpactTool(world));
     registry.register(editSymbolTool(world, jail, approver: editApprover));
-    registry.register(runTool(fsRoot));
+    // R7 production #7 finding: the run tool in the meaning profile is
+    // CONSTRAINED to the convention commands — the free-form arm was a
+    // write hole (`perl -pi` edited files through it; measured in the pi
+    // row). File mutation goes through the edit verbs, never the shell.
+    registry.register(
+      runTool(
+        fsRoot,
+        allowlist: const [
+          ['dart', 'analyze'],
+          ['dart', 'test'],
+          ['dart', 'run'],
+          ['flutter', 'analyze'],
+          ['flutter', 'test'],
+        ],
+      ),
+    );
     world.getResource<ToolRegistryResource>().register('default', registry);
   } else {
     final registry = ToolRegistry();

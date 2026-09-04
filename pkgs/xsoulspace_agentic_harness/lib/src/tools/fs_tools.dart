@@ -418,13 +418,12 @@ List<_DiffHunk> _lineDiff(List<String> a, List<String> b) {
   final n = a.length;
   final m = b.length;
   // LCS table (O(n*m) — fine for source files in a jail).
-  final lcs = List.generate(
-    n + 1,
-    (_) => List.filled(m + 1, 0),
-  );
+  final lcs = List.generate(n + 1, (_) => List.filled(m + 1, 0));
   for (var i = n - 1; i >= 0; i--) {
     for (var j = m - 1; j >= 0; j--) {
-      lcs[i][j] = a[i] == b[j] ? lcs[i + 1][j + 1] + 1 : _max(lcs[i + 1][j], lcs[i][j + 1]);
+      lcs[i][j] = a[i] == b[j]
+          ? lcs[i + 1][j + 1] + 1
+          : _max(lcs[i + 1][j], lcs[i][j + 1]);
     }
   }
   final body = StringBuffer();
@@ -477,110 +476,105 @@ int _max(int x, int y) => x > y ? x : y;
 /// A coding agent on a real repo needs git visibility; without it it re-reads
 /// files to guess state. Rejects when the jail root has no .git.
 ToolDef gitStatusTool(FsToolsRoot root) => ToolDef.encode(
-      name: const ToolName('git_status'),
-      description:
-          'Read-only git status of the workspace (git status --porcelain '
-          'with the branch line). Returns structured entries '
-          '(index/worktree status + path). Fails with code not_a_git_repo '
-          'outside a repository. Arguments: none.',
-      argsSchema: SchemaBundle(
-        root: FM.object('git_status', properties: () => []),
-      ),
-      execute: (args) async {
-        if (!_isGitRepo(root.rootPath)) {
-          return const {
-            'ok': false,
-            'code': 'not_a_git_repo',
-            'hint': 'this workspace has no .git',
-          };
-        }
-        final result = await Process.run(
-          'git',
-          ['status', '--porcelain=v1', '-b'],
-          workingDirectory: root.rootPath,
-          stdoutEncoding: utf8,
-          stderrEncoding: utf8,
-        );
-        if (result.exitCode != 0) {
-          return {
-            'ok': false,
-            'code': 'git_error',
-            'stderr': _clip(result.stderr.toString(), 200),
-          };
-        }
-        final lines = result.stdout
-            .toString()
-            .split('\n')
-            .map((l) => l.trimRight())
-            .where((l) => l.isNotEmpty)
-            .take(100)
-            .toList();
-        return {
-          'ok': true,
-          'branch': lines.isEmpty ? '' : lines.first,
-          'entries': lines.skip(1).toList(),
-        };
-      },
+  name: const ToolName('git_status'),
+  description:
+      'Read-only git status of the workspace (git status --porcelain '
+      'with the branch line). Returns structured entries '
+      '(index/worktree status + path). Fails with code not_a_git_repo '
+      'outside a repository. Arguments: none.',
+  argsSchema: SchemaBundle(root: FM.object('git_status', properties: () => [])),
+  execute: (args) async {
+    if (!_isGitRepo(root.rootPath)) {
+      return const {
+        'ok': false,
+        'code': 'not_a_git_repo',
+        'hint': 'this workspace has no .git',
+      };
+    }
+    final result = await Process.run(
+      'git',
+      ['status', '--porcelain=v1', '-b'],
+      workingDirectory: root.rootPath,
+      stdoutEncoding: utf8,
+      stderrEncoding: utf8,
     );
+    if (result.exitCode != 0) {
+      return {
+        'ok': false,
+        'code': 'git_error',
+        'stderr': _clip(result.stderr.toString(), 200),
+      };
+    }
+    final lines = result.stdout
+        .toString()
+        .split('\n')
+        .map((l) => l.trimRight())
+        .where((l) => l.isNotEmpty)
+        .take(100)
+        .toList();
+    return {
+      'ok': true,
+      'branch': lines.isEmpty ? '' : lines.first,
+      'entries': lines.skip(1).toList(),
+    };
+  },
+);
 
 /// Jailed read-only `git diff` — bounded change visibility for the coding
 /// agent. Never mutates anything; output is clipped.
 ToolDef gitDiffTool(FsToolsRoot root) => ToolDef.encode(
-      name: const ToolName('git_diff'),
-      description:
-          'Read-only unified diff of uncommitted changes in the workspace '
-          '(git diff; with staged=true also/--cached instead). Output is '
-          'clipped. Fails with code not_a_git_repo outside a repository. '
-          'Arguments: staged (optional bool), path (optional subdir/file '
-          'limit, relative).',
-      argsSchema: SchemaBundle(
-        root: FM.object(
-          'git_diff',
-          properties: () => [
-            FM.prop('staged', FM.string()),
-            FM.prop('path', FM.string()),
-          ],
-        ),
-      ),
-      execute: (args) async {
-        final params = _asMap(args);
-        if (!_isGitRepo(root.rootPath)) {
-          return const {
-            'ok': false,
-            'code': 'not_a_git_repo',
-            'hint': 'this workspace has no .git',
-          };
-        }
-        final staged = switch (_str(params, 'staged')?.toLowerCase()) {
-          'true' || '1' || 'yes' => true,
-          _ => false,
-        };
-        final cmd = ['diff', if (staged) '--cached'];
-        final pathArg = _str(params, 'path');
-        if (pathArg != null && pathArg.isNotEmpty) {
-          cmd.add('--');
-          cmd.add(root.resolve(pathArg));
-        }
-        final result = await Process.run(
-          'git',
-          cmd,
-          workingDirectory: root.rootPath,
-          stdoutEncoding: utf8,
-          stderrEncoding: utf8,
-        );
-        if (result.exitCode != 0) {
-          return {
-            'ok': false,
-            'code': 'git_error',
-            'stderr': _clip(result.stderr.toString(), 200),
-          };
-        }
-        return {
-          'ok': true,
-          'diff': _clip(result.stdout.toString(), 4000),
-        };
-      },
+  name: const ToolName('git_diff'),
+  description:
+      'Read-only unified diff of uncommitted changes in the workspace '
+      '(git diff; with staged=true also/--cached instead). Output is '
+      'clipped. Fails with code not_a_git_repo outside a repository. '
+      'Arguments: staged (optional bool), path (optional subdir/file '
+      'limit, relative).',
+  argsSchema: SchemaBundle(
+    root: FM.object(
+      'git_diff',
+      properties: () => [
+        FM.prop('staged', FM.string()),
+        FM.prop('path', FM.string()),
+      ],
+    ),
+  ),
+  execute: (args) async {
+    final params = _asMap(args);
+    if (!_isGitRepo(root.rootPath)) {
+      return const {
+        'ok': false,
+        'code': 'not_a_git_repo',
+        'hint': 'this workspace has no .git',
+      };
+    }
+    final staged = switch (_str(params, 'staged')?.toLowerCase()) {
+      'true' || '1' || 'yes' => true,
+      _ => false,
+    };
+    final cmd = ['diff', if (staged) '--cached'];
+    final pathArg = _str(params, 'path');
+    if (pathArg != null && pathArg.isNotEmpty) {
+      cmd.add('--');
+      cmd.add(root.resolve(pathArg));
+    }
+    final result = await Process.run(
+      'git',
+      cmd,
+      workingDirectory: root.rootPath,
+      stdoutEncoding: utf8,
+      stderrEncoding: utf8,
     );
+    if (result.exitCode != 0) {
+      return {
+        'ok': false,
+        'code': 'git_error',
+        'stderr': _clip(result.stderr.toString(), 200),
+      };
+    }
+    return {'ok': true, 'diff': _clip(result.stdout.toString(), 4000)};
+  },
+);
 
 bool _isGitRepo(String rootPath) {
   final dotGit = FileSystemEntity.typeSync('$rootPath/.git');
@@ -624,7 +618,6 @@ ToolDef listDirTool(FsToolsRoot root) => ToolDef(
   },
 );
 
-
 /// Read-only regex search over the jail (discovery cut of ADR 0014 §2).
 ///
 /// Deterministic and token-bounded: a find costs one call instead of a
@@ -632,188 +625,187 @@ ToolDef listDirTool(FsToolsRoot root) => ToolDef(
 /// capped and the scan budget-limited so a huge workspace cannot eat a tiny
 /// model's budget.
 ToolDef grepTool(FsToolsRoot root) => ToolDef.encode(
-      name: const ToolName('grep'),
-      description:
-          'Search file contents under the workspace for a regular '
-          'expression. Returns matching relative paths with a match count '
-          'and one line snippet each. Cap: max_results (default 50). '
-          'Arguments: pattern (regex, required), path (subdir or file to '
-          'limit, default "."), max_results (optional), ignore_case '
-          '(optional bool).',
-      argsSchema: SchemaBundle(
-        root: FM.object(
-          'grep',
-          properties: () => [
-            FM.prop('pattern', FM.string()),
-            FM.prop('path', FM.string()),
-            FM.prop('max_results', FM.integer()),
-          ],
-        ),
-      ),
-      execute: (args) async {
-        final params = _asMap(args);
-        final pattern = _str(params, 'pattern');
-        if (pattern == null || pattern.isEmpty) {
-          return {'ok': false, 'code': 'bad_args', 'hint': 'required "pattern"'};
-        }
-        final maxResults = (_num(params, 'max_results') ?? 50).clamp(1, 200);
-        final ignoreCase = params['ignore_case'] == true;
-        final RegExp re;
-        try {
-          re = RegExp(pattern, caseSensitive: !ignoreCase);
-        } on FormatException {
-          return {'ok': false, 'code': 'bad_regex', 'pattern': pattern};
-        }
-        var raw = _str(params, 'path');
-        if (raw == null || raw.isEmpty) raw = '.';
-        final startDir = root.resolve(raw);
-        final prefix = root.rootPath.endsWith('/')
-            ? root.rootPath
-            : '${root.rootPath}/';
-        const maxScanned = 4000;
-        var scanned = 0;
-        final results = <Map<String, Object>>[];
-        bool exhausted() =>
-            results.length >= maxResults || scanned >= maxScanned;
+  name: const ToolName('grep'),
+  description:
+      'Search file contents under the workspace for a regular '
+      'expression. Returns matching relative paths with a match count '
+      'and one line snippet each. Cap: max_results (default 50). '
+      'Arguments: pattern (regex, required), path (subdir or file to '
+      'limit, default "."), max_results (optional), ignore_case '
+      '(optional bool).',
+  argsSchema: SchemaBundle(
+    root: FM.object(
+      'grep',
+      properties: () => [
+        FM.prop('pattern', FM.string()),
+        FM.prop('path', FM.string()),
+        FM.prop('max_results', FM.integer()),
+      ],
+    ),
+  ),
+  execute: (args) async {
+    final params = _asMap(args);
+    final pattern = _str(params, 'pattern');
+    if (pattern == null || pattern.isEmpty) {
+      return {'ok': false, 'code': 'bad_args', 'hint': 'required "pattern"'};
+    }
+    final maxResults = (_num(params, 'max_results') ?? 50).clamp(1, 200);
+    final ignoreCase = params['ignore_case'] == true;
+    final RegExp re;
+    try {
+      re = RegExp(pattern, caseSensitive: !ignoreCase);
+    } on FormatException {
+      return {'ok': false, 'code': 'bad_regex', 'pattern': pattern};
+    }
+    var raw = _str(params, 'path');
+    if (raw == null || raw.isEmpty) raw = '.';
+    final startDir = root.resolve(raw);
+    final prefix = root.rootPath.endsWith('/')
+        ? root.rootPath
+        : '${root.rootPath}/';
+    const maxScanned = 4000;
+    var scanned = 0;
+    final results = <Map<String, Object>>[];
+    bool exhausted() => results.length >= maxResults || scanned >= maxScanned;
 
-        void scanFile(String path) {
-          scanned++;
-          try {
-            final lines = File(path).readAsLinesSync();
-            var count = 0;
-            String? snippet;
-            for (final ln in lines) {
-              if (re.hasMatch(ln)) {
-                count++;
-                snippet ??= _clip(ln, 120);
-              }
-            }
-            if (count > 0) {
-              final rel = path.startsWith(prefix)
-                  ? path.substring(prefix.length)
-                  : path;
-              results.add({
-                'path': rel,
-                'matches': count,
-                'snippet': snippet ?? '',
-              });
-            }
-          } on FileSystemException {
-            // Unreadable file — skip rather than abort the search.
+    void scanFile(String path) {
+      scanned++;
+      try {
+        final lines = File(path).readAsLinesSync();
+        var count = 0;
+        String? snippet;
+        for (final ln in lines) {
+          if (re.hasMatch(ln)) {
+            count++;
+            snippet ??= _clip(ln, 120);
           }
         }
-
-        void walk(String dir) {
-          if (exhausted()) return;
-          final entries = Directory(dir).listSync()
-            ..sort((a, b) => a.path.compareTo(b.path));
-          for (final e in entries) {
-            if (exhausted()) return;
-            if (e is Directory) {
-              walk(e.path);
-            } else if (e is File) {
-              scanFile(e.path);
-            }
-          }
+        if (count > 0) {
+          final rel = path.startsWith(prefix)
+              ? path.substring(prefix.length)
+              : path;
+          results.add({
+            'path': rel,
+            'matches': count,
+            'snippet': snippet ?? '',
+          });
         }
+      } on FileSystemException {
+        // Unreadable file — skip rather than abort the search.
+      }
+    }
 
-        if (File(startDir).existsSync()) {
-          scanFile(startDir);
-        } else {
-          walk(startDir);
+    void walk(String dir) {
+      if (exhausted()) return;
+      final entries = Directory(dir).listSync()
+        ..sort((a, b) => a.path.compareTo(b.path));
+      for (final e in entries) {
+        if (exhausted()) return;
+        if (e is Directory) {
+          walk(e.path);
+        } else if (e is File) {
+          scanFile(e.path);
         }
-        return {
-          'ok': true,
-          'total': results.length,
-          'results': results,
-          if (scanned >= maxScanned)
-            'hint': 'scan budget reached; narrow path or pattern',
-        };
-      },
-    );
+      }
+    }
+
+    if (File(startDir).existsSync()) {
+      scanFile(startDir);
+    } else {
+      walk(startDir);
+    }
+    return {
+      'ok': true,
+      'total': results.length,
+      'results': results,
+      if (scanned >= maxScanned)
+        'hint': 'scan budget reached; narrow path or pattern',
+    };
+  },
+);
 
 /// Glob-style file discovery — the cheap find sibling of [grepTool].
 ///
 /// Supports `*` (any chars within one path segment), `?` (single char), and
 /// `**` (any number of directories). Deterministic, read-only, jail-bounded.
 ToolDef globTool(FsToolsRoot root) => ToolDef.encode(
-      name: const ToolName('glob'),
-      description:
-          'Return workspace files whose path matches a glob pattern. '
-          'Supports * (within a segment), ? (single char), ** (any '
-          'directories). Examples: "*.dart", "tests/**/*_test.dart". Returns '
-          'sorted relative paths, capped at max_results. Arguments: pattern '
-          '(required), path (subdir, default "."), max_results (optional).',
-      argsSchema: SchemaBundle(
-        root: FM.object(
-          'glob',
-          properties: () => [
-            FM.prop('pattern', FM.string()),
-            FM.prop('path', FM.string()),
-            FM.prop('max_results', FM.integer()),
-          ],
-        ),
-      ),
-      execute: (args) async {
-        final params = _asMap(args);
-        final pattern = _str(params, 'pattern');
-        if (pattern == null || pattern.isEmpty) {
-          return {'ok': false, 'code': 'bad_args', 'hint': 'required "pattern"'};
-        }
-        final maxResults = (_num(params, 'max_results') ?? 100).clamp(1, 500);
-        var raw = _str(params, 'path');
-        if (raw == null || raw.isEmpty) raw = '.';
-        final startDir = root.resolve(raw);
-        final prefix = root.rootPath.endsWith('/')
-            ? root.rootPath
-            : '${root.rootPath}/';
-        final segs = pattern.split('/').where((s) => s.isNotEmpty).toList();
-        final hits = <String>[];
+  name: const ToolName('glob'),
+  description:
+      'Return workspace files whose path matches a glob pattern. '
+      'Supports * (within a segment), ? (single char), ** (any '
+      'directories). Examples: "*.dart", "tests/**/*_test.dart". Returns '
+      'sorted relative paths, capped at max_results. Arguments: pattern '
+      '(required), path (subdir, default "."), max_results (optional).',
+  argsSchema: SchemaBundle(
+    root: FM.object(
+      'glob',
+      properties: () => [
+        FM.prop('pattern', FM.string()),
+        FM.prop('path', FM.string()),
+        FM.prop('max_results', FM.integer()),
+      ],
+    ),
+  ),
+  execute: (args) async {
+    final params = _asMap(args);
+    final pattern = _str(params, 'pattern');
+    if (pattern == null || pattern.isEmpty) {
+      return {'ok': false, 'code': 'bad_args', 'hint': 'required "pattern"'};
+    }
+    final maxResults = (_num(params, 'max_results') ?? 100).clamp(1, 500);
+    var raw = _str(params, 'path');
+    if (raw == null || raw.isEmpty) raw = '.';
+    final startDir = root.resolve(raw);
+    final prefix = root.rootPath.endsWith('/')
+        ? root.rootPath
+        : '${root.rootPath}/';
+    final segs = pattern.split('/').where((s) => s.isNotEmpty).toList();
+    final hits = <String>[];
 
-        void addHit(File f) {
-          if (hits.length >= maxResults) return;
-          final p = f.path.startsWith(prefix)
-              ? f.path.substring(prefix.length)
-              : f.path;
-          if (!hits.contains(p)) hits.add(p);
-        }
+    void addHit(File f) {
+      if (hits.length >= maxResults) return;
+      final p = f.path.startsWith(prefix)
+          ? f.path.substring(prefix.length)
+          : f.path;
+      if (!hits.contains(p)) hits.add(p);
+    }
 
-        void walk(String path, List<String> rest) {
-          if (hits.length >= maxResults) return;
-          final entries = Directory(path).listSync()
-            ..sort((a, b) => a.path.compareTo(b.path));
-          for (final e in entries) {
-            if (hits.length >= maxResults) return;
-            final name = e.path.split('/').last;
-            if (rest.isEmpty) return;
-            final head = rest.first;
-            if (head == '**') {
-              // '**' consumes zero-or-more directories: keep expanding into
-              // dirs, and also try the tail pattern against this entry.
-              if (e is Directory) walk(e.path, rest);
-              final tail = rest.sublist(1);
-              if (tail.isEmpty) {
-                if (e is File) addHit(e);
-              } else if (_segMatches(tail.first, name)) {
-                if (e is File && tail.length == 1) addHit(e);
-                if (e is Directory) walk(e.path, tail);
-              }
-            } else if (_segMatches(head, name)) {
-              final tail = rest.sublist(1);
-              if (tail.isEmpty) {
-                if (e is File) addHit(e);
-              } else if (e is Directory) {
-                walk(e.path, tail);
-              }
-            }
+    void walk(String path, List<String> rest) {
+      if (hits.length >= maxResults) return;
+      final entries = Directory(path).listSync()
+        ..sort((a, b) => a.path.compareTo(b.path));
+      for (final e in entries) {
+        if (hits.length >= maxResults) return;
+        final name = e.path.split('/').last;
+        if (rest.isEmpty) return;
+        final head = rest.first;
+        if (head == '**') {
+          // '**' consumes zero-or-more directories: keep expanding into
+          // dirs, and also try the tail pattern against this entry.
+          if (e is Directory) walk(e.path, rest);
+          final tail = rest.sublist(1);
+          if (tail.isEmpty) {
+            if (e is File) addHit(e);
+          } else if (_segMatches(tail.first, name)) {
+            if (e is File && tail.length == 1) addHit(e);
+            if (e is Directory) walk(e.path, tail);
+          }
+        } else if (_segMatches(head, name)) {
+          final tail = rest.sublist(1);
+          if (tail.isEmpty) {
+            if (e is File) addHit(e);
+          } else if (e is Directory) {
+            walk(e.path, tail);
           }
         }
+      }
+    }
 
-        if (Directory(startDir).existsSync()) walk(startDir, segs);
-        hits.sort();
-        return {'ok': true, 'total': hits.length, 'paths': hits};
-      },
-    );
+    if (Directory(startDir).existsSync()) walk(startDir, segs);
+    hits.sort();
+    return {'ok': true, 'total': hits.length, 'paths': hits};
+  },
+);
 
 /// Glob-segment matcher: `*` / `?` within a segment against [name].
 /// Execute a command inside the jail (cwd = jail root or a resolved subdir).
@@ -822,7 +814,16 @@ ToolDef globTool(FsToolsRoot root) => ToolDef.encode(
 /// output (e.g. `dart run main.dart`), capture stdout/stderr/exit code, and
 /// thus observe whether what it built actually works. Time-bounded and
 /// jailed, so a running program can never hang the loop or escape the root.
-ToolDef runTool(FsToolsRoot root) => ToolDef.encode(
+/// [allowlist] — R7 production #7 finding (the pi row): the free-form run
+/// tool is a WRITE HOLE in the meaning profile (`perl -pi -e` edited the
+/// file through it — a law-violation surface). When set, the command's
+/// argv must START with one of the allowlisted prefixes (e.g.
+/// `['dart', 'flutter']`); anything else fails as named data
+/// (`command_not_allowed`) BEFORE spawning — no bytes are touched. The
+/// legacy run-graded arm keeps the unconstrained tool (direct-profile
+/// hosts only; LEGACY-HOST-ONLY).
+ToolDef runTool(FsToolsRoot root, {List<List<String>>? allowlist}) =>
+    ToolDef.encode(
       name: const ToolName('run'),
       description:
           'Run a command or script inside the workspace and capture its '
@@ -850,22 +851,50 @@ ToolDef runTool(FsToolsRoot root) => ToolDef.encode(
           _ => const <String>[],
         };
         if (cmd.isEmpty) {
-          return const {'ok': false, 'code': 'bad_args', 'hint': 'command is required'};
+          return const {
+            'ok': false,
+            'code': 'bad_args',
+            'hint': 'command is required',
+          };
+        }
+        if (allowlist != null &&
+            !allowlist.any(
+              (prefix) =>
+                  cmd.length >= prefix.length &&
+                  List.generate(
+                    prefix.length,
+                    (i) => cmd[i] == prefix[i],
+                  ).every((m) => m),
+            )) {
+          return {
+            'ok': false,
+            'code': 'command_not_allowed',
+            'hint':
+                'this surface runs only the workspace convention '
+                'commands (e.g. dart analyze / dart test / dart run <file>) '
+                '— file mutation goes through the edit verbs',
+            'command': cmd,
+          };
         }
         final cwd = _str(params, 'cwd');
-        final resolvedCwd = (cwd == null || cwd.isEmpty) ? root.rootPath : root.resolve(cwd);
-        final timeoutMs = (_num(params, 'timeout_ms') ?? 30000).clamp(1, 120000).toInt();
+        final resolvedCwd = (cwd == null || cwd.isEmpty)
+            ? root.rootPath
+            : root.resolve(cwd);
+        final timeoutMs = (_num(params, 'timeout_ms') ?? 30000)
+            .clamp(1, 120000)
+            .toInt();
         try {
-          final result = await Process.run(
-            cmd.first,
-            cmd.sublist(1),
-            workingDirectory: resolvedCwd,
-            stdoutEncoding: utf8,
-            stderrEncoding: utf8,
-          ).timeout(
-            Duration(milliseconds: timeoutMs),
-            onTimeout: () => ProcessResult(0, -1, '', 'timeout'),
-          );
+          final result =
+              await Process.run(
+                cmd.first,
+                cmd.sublist(1),
+                workingDirectory: resolvedCwd,
+                stdoutEncoding: utf8,
+                stderrEncoding: utf8,
+              ).timeout(
+                Duration(milliseconds: timeoutMs),
+                onTimeout: () => ProcessResult(0, -1, '', 'timeout'),
+              );
           return {
             'ok': result.exitCode == 0,
             'exit_code': result.exitCode,
@@ -897,9 +926,8 @@ bool _segMatches(String pat, String name) {
 String _clip(String s, [int max = 140]) =>
     s.length <= max ? s : '${s.substring(0, max)}…';
 
-Map<String, Object?> _asMap(Object? args) => args is Map
-    ? args.map((k, v) => MapEntry(k.toString(), v))
-    : const {};
+Map<String, Object?> _asMap(Object? args) =>
+    args is Map ? args.map((k, v) => MapEntry(k.toString(), v)) : const {};
 
 String? _str(Map<String, Object?> map, String key) {
   final v = map[key];

@@ -168,6 +168,15 @@ session through the new surface; pack inventory + capture loop (R7d).
   yet (SDK 3.12, no `DynamicLibrary.codeAsset` in Flutter builds) — the
   gate passes `XS_FM_BRIDGE_PATH` to the hook-built dylib. Follow-up:
   bundle the dylib in the Runner build phase.
+  Product boundary: the agent-doc model, topology rules and the
+  composition law are owned by the product — last_answer
+  `docs/decisions/0003-agents-live-in-docs.md`. Two OPEN problems that
+  belong HERE (product-agnostic, pulled by that direction): (a) **actor
+  topology** — 1 world/N actors (squad, proven) vs N worlds/1 brain
+  (remote mover, proven) vs mixed; which topology a task uses is task-
+  and CLI-dependent DATA, no engine yet; (b) **multi-workspace daemon** —
+  one process hosting several worlds (one per workspace, Zed/monorepo
+  parity) with per-workspace single-instance locks unchanged.
 
 ## Standing rules
 
