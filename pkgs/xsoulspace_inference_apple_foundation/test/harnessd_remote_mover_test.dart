@@ -221,7 +221,10 @@ void main() {
       unawaited(
         AcpStdioServer(
           backend: backend,
-          inputStream: client,
+          // List<int> cast: Stream<Uint8List>.transform(utf8.decoder)
+          // fails a runtime generic check (the binary applies the same
+          // fix — see bin/harnessd.dart).
+          inputStream: client.map<List<int>>((d) => d),
           outputSink: client,
         ).run(),
       );
@@ -261,6 +264,56 @@ void main() {
     await clientA.close();
     await clientB.close();
   }, timeout: const Timeout(Duration(minutes: 3)));
+
+  test('production #5 single-instance: a second daemon for the SAME workspace '
+      'is refused (exit 2) — never two worlds over one workspace', () async {
+    final wsLock = await Directory.systemTemp.createTemp('r7_daemon_lock_');
+    addTearDown(() => wsLock.deleteSync(recursive: true));
+    final pkg = Directory.current.path;
+    Process? first;
+    try {
+      first = await Process.start('dart', [
+        'run',
+        'bin/harnessd.dart',
+        '--scripted',
+        '--workspace',
+        wsLock.path,
+      ], workingDirectory: pkg);
+      // Wait until the first daemon holds the lock (socket advertised).
+      final ready = Completer<void>();
+      late final StreamSubscription<String> sub;
+      sub = first.stderr.transform(utf8.decoder).listen((line) {
+        if (line.contains('socket listening') && !ready.isCompleted) {
+          ready.complete();
+        }
+      });
+      await ready.future.timeout(const Duration(minutes: 3));
+
+      final second = await Process.start('dart', [
+        'run',
+        'bin/harnessd.dart',
+        '--scripted',
+        '--workspace',
+        wsLock.path,
+      ], workingDirectory: pkg);
+      final stderrB = await second.stderr
+          .transform(utf8.decoder)
+          .join()
+          .timeout(const Duration(minutes: 3));
+      await sub.cancel();
+      final codeB = await second.exitCode.timeout(const Duration(minutes: 3));
+      expect(
+        codeB,
+        2,
+        reason:
+            'a second daemon must refuse: two daemons = two worlds = '
+            'single-writer broken at process level\n$stderrB',
+      );
+      expect(stderrB, contains('REFUSED'));
+    } finally {
+      first?.kill();
+    }
+  }, timeout: const Timeout(Duration(minutes: 8)));
 }
 
 /// A minimal newline-delimited JSON-RPC CLIENT over a unix socket — the

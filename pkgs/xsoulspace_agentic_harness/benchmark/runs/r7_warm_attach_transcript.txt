@@ -1,0 +1,16 @@
+[2026-09-04T16:47:18.995Z] fixture workspace: /var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/r7_warm_attach_CgTpIv
+[2026-09-04T16:47:18.996Z] daemon spawn: /tmp/harnessd_aot/bundle/bin/harnessd --scripted --profile meaning --workspace /var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/r7_warm_attach_CgTpIv (AOT)
+[2026-09-04T16:47:19.020Z] [harnessd] [harnessd] starting (backend apple_foundation_afm, profile meaning, scripted mover, workspace /var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/r7_warm_attach_CgTpIv) — ACP v1 over stdio + unix socket
+[2026-09-04T16:47:19.020Z] [harnessd] [harnessd] socket listening: /tmp/harnessd-6d259c6c5ef4.sock (pointer /var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/r7_warm_attach_CgTpIv/.dart_tool/harnessd/harnessd.sock)
+[2026-09-04T16:47:19.098Z] socket pointer: /var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/r7_warm_attach_CgTpIv/.dart_tool/harnessd/harnessd.sock → /tmp/harnessd-6d259c6c5ef4.sock
+[2026-09-04T16:47:19.099Z] [harnessd] [harnessd] client attached over socket
+[2026-09-04T16:47:19.101Z] client A: session=sess_1 (connect→init→session/new: 2 ms)
+[2026-09-04T16:47:19.106Z] [harnessd] [xs_fm] debug tracing enabled
+[2026-09-04T16:47:22.949Z] client A: [scan] → stop=end_turn
+[2026-09-04T16:47:22.950Z] [harnessd] [harnessd] client attached over socket
+[2026-09-04T16:47:22.950Z] client B: session=sess_1 (attach startup: 1 ms)
+[2026-09-04T16:47:23.900Z] client B: [zoom greet] → stop=end_turn text="delegated: \"[zoom greet] Work through the meaning tree: repo_etl scan, meaning_zoom / meaning_impact to read, edit_symbol to act. Never read or write files.\"\ncheck: dart test\nacting on 1 directive(s) "
+[2026-09-04T16:47:23.900Z] daemon spawn: /tmp/harnessd_aot/bundle/bin/harnessd --scripted --profile meaning --workspace /var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/r7_warm_attach_CgTpIv (AOT)
+[2026-09-04T16:47:23.914Z] [harnessd] [harnessd] REFUSED: a daemon is already running for workspace /var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/r7_warm_attach_CgTpIv (single-instance is mandatory — two daemons = two worlds = single-writer broken). Connect to the running one (/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/r7_warm_attach_CgTpIv/.dart_tool/harnessd/harnessd.sock).
+[2026-09-04T16:47:23.915Z] second daemon exit code: 2
+[2026-09-04T16:47:23.915Z] === VERDICT: PASS (warm attach: second session continues ONE world per workspace, startup < 2s, zero re-scan; single-instance enforced) ===

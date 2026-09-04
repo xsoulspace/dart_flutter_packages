@@ -175,10 +175,13 @@ Future<void> main(List<String> args) async {
       stderr.writeln('[harnessd] client attached over socket');
       // Each connection is a FULL ACP server over the shared backend —
       // sessions are keyed per workspace, so a second client continues
-      // the live world instead of re-deriving it.
+      // the live world instead of re-deriving it. The socket chunk type
+      // is cast to List<int>: Stream<Uint8List>.transform(utf8.decoder)
+      // fails a runtime generic check (measured — the mapped stream is
+      // the fix).
       final connection = AcpStdioServer(
         backend: backendInstance,
-        inputStream: client,
+        inputStream: client.map<List<int>>((d) => d),
         outputSink: client,
       );
       unawaited(
@@ -193,10 +196,22 @@ Future<void> main(List<String> args) async {
   try {
     await server.run();
   } finally {
-    idleTimer?.cancel();
-    await socketServer?.close();
-    lock?.closeSync();
-    socketPointer?.deleteSync();
+    // R7 production #5 — keep-warm: in workspace mode the stdio transport
+    // ending (the spawning pi exited) does NOT terminate the daemon — the
+    // socket keeps serving and the idle-exit timer owns shutdown.
+    if (workspace == null) {
+      idleTimer?.cancel();
+      await socketServer?.close();
+      lock?.closeSync();
+      socketPointer?.deleteSync();
+    }
+  }
+  if (workspace != null) {
+    stderr.writeln(
+      '[harnessd] stdio transport ended — keeping warm for socket clients '
+      '(idle-exit after $idleLimit minutes)',
+    );
+    await Completer<void>().future; // the idle timer exit(0)s
   }
 }
 

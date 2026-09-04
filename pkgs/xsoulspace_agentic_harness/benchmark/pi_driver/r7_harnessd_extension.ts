@@ -1,5 +1,5 @@
 // r7_harnessd_extension.ts — pi extension (TASK 3, option a): registers
-// daemon-backed tools (scan/zoom/impact/edit/verify) over stdio JSON-RPC to
+// daemon-backed tools (scan/zoom/impact/edit/verify) over JSON-RPC to
 // `harnessd` and BLOCKS pi's built-in file tools for sessions flagged with
 // PI_HARNESSD=1.
 //
@@ -9,24 +9,40 @@
 // executableParams) serialized into the session/prompt as a JSON payload
 // the daemon mover executes verbatim. No prose directives for edits.
 //
-// Use (from the apple_foundation package, where the daemon lives):
-//   dart run bin/harnessd.dart --profile meaning   # in another shell, OR
-//   let this extension spawn it (HARNESSD_PKG points at that package)
+// R7 production #5 — the PERSISTENT daemon lifecycle:
+//   - connect-if-live: a daemon holding the workspace is reachable
+//     through the socket pointer at
+//     `<workspace>/.dart_tool/harnessd/harnessd.sock` (health ping =
+//     initialize); a second pi session ATTACHES to the warm daemon — one
+//     world per workspace, zero re-scan;
+//   - spawn-if-absent: no live daemon → spawn one with --workspace (the
+//     single-instance lock refuses racing spawns with exit 2) and attach
+//     through the SAME socket (one transport, one code path);
+//   - keep-warm: the daemon is NEVER killed on session end — it
+//     self-idle-exits after 10 minutes without activity.
+//
+// Use:
 //   PI_HARNESSD=1 HARNESSD_PKG=../../xsoulspace_inference_apple_foundation \
 //     pi -e benchmark/pi_driver/r7_harnessd_extension.ts
+//   (HARNESSD_SCRIPTED=1 runs the LLM-free scripted mover for gates.)
 //
 // The daemon runs `--profile meaning` (R7 surface: repo_etl / meaning_zoom
-// / meaning_impact / edit_symbol / run — zero `read`, zero `write`) and
-// optionally `--scripted` for LLM-free gates. Every file access pi makes
-// goes through the daemon; the daemon tools are the only code surface.
+// / meaning_impact / edit_symbol / run — zero `read`, zero `write`). Every
+// file access pi makes goes through the daemon; the daemon tools are the
+// only code surface.
 
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
+import net from "node:net";
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
 import process from "node:process";
 
-// --- minimal ACP client (newline-delimited JSON-RPC over stdio) ----------
+// --- minimal ACP client (newline-delimited JSON-RPC; stdio OR socket) ----
 
 class HarnessdClient {
-  proc: any;
+  // stdio (spawned daemon) or net.Socket (attached to the warm daemon).
+  wire: any;
+  proc: ChildProcess | null = null;
   buffer = "";
   pending = new Map<
     number,
@@ -36,14 +52,27 @@ class HarnessdClient {
   nextId = 1;
   sessionId = "";
 
-  constructor(command: string, args: string[], cwd: string) {
-    this.proc = spawn(command, args, { cwd, stdio: ["pipe", "pipe", "pipe"] });
-    this.proc.stdout.setEncoding("utf8");
-    this.proc.stdout.on("data", (chunk: string) => this.#onData(chunk));
-    this.proc.stderr.setEncoding("utf8");
-    this.proc.stderr.on("data", (chunk: string) =>
+  static spawnDaemon(command: string, args: string[], cwd: string) {
+    const client = new HarnessdClient();
+    client.proc = spawn(command, args, { cwd, stdio: ["pipe", "pipe", "pipe"] });
+    client.proc.stdout!.setEncoding("utf8");
+    client.proc.stdout!.on("data", (chunk: string) => client.#onData(chunk));
+    client.proc.stderr!.setEncoding("utf8");
+    client.proc.stderr!.on("data", (chunk: string) =>
       process.stderr.write(`[harnessd] ${chunk}`),
     );
+    client.wire = {
+      write: (s: string) => client.proc!.stdin!.write(s),
+    };
+    return client;
+  }
+
+  static attachSocket(socketPath: string) {
+    const client = new HarnessdClient();
+    client.wire = net.createConnection(socketPath);
+    client.wire.setEncoding("utf8");
+    client.wire.on("data", (chunk: string) => client.#onData(chunk));
+    return client;
   }
 
   #onData(chunk: string) {
@@ -69,26 +98,31 @@ class HarnessdClient {
             pending.resolve(message.result);
           }
         }
-        return;
+        continue;
       }
       if (message.method === "session/update") {
         // dart_acp_toolkit wraps: params = {sessionId, update}.
         this.updates.push(message.params?.update ?? message.params);
-        return;
+        continue;
       }
-      // Server-initiated REQUESTS (session/request_permission): the R7c
-      // edit approver asks the client; deny-by-default means an
-      // unanswering client DENIES the move. The extension answers allow
-      // (a real deployment renders the consent UI here).
+      // Server-initiated REQUESTS:
+      //   session/request_permission — the R7c edit approver; deny-by-
+      //     default means an unanswering client DENIES the move. The
+      //     extension answers allow (a real deployment renders the
+      //     consent UI here).
+      //   session/propose_move — the R7 production #4 remote-mover
+      //     round-trip: the daemon's decision asks for typed tool calls.
+      //     Answering it with a real model needs the pi model bridge; the
+      //     scripted extension answers empty (the loop closes the
+      //     decision) — use the gate drivers for remote-mover runs.
       if (message.method != null && message.id != null) {
         const response =
           message.method === "session/request_permission"
             ? { outcome: { outcome: "allow", optionId: "allow" } }
             : {};
-        this.proc.stdin.write(
+        this.wire.write(
           `${JSON.stringify({ jsonrpc: "2.0", id: message.id, result: response })}\n`,
         );
-        return;
       }
     }
   }
@@ -103,17 +137,19 @@ class HarnessdClient {
           reject(new Error(`${method} timed out`));
         }
       }, timeoutMs);
-      this.proc.stdin.write(
+      this.wire.write(
         `${JSON.stringify({ jsonrpc: "2.0", id, method, params })}\n`,
       );
     });
   }
 
   async start(workspace: string) {
-    const init = await this.call("initialize", {
-      protocolVersion: 1,
-      clientCapabilities: {},
-    });
+    // The initialize doubles as the health ping (connect-if-live).
+    const init = await this.call(
+      "initialize",
+      { protocolVersion: 1, clientCapabilities: {} },
+      10000,
+    );
     const created = await this.call("session/new", { cwd: workspace });
     this.sessionId = created.sessionId;
     return init;
@@ -135,11 +171,9 @@ class HarnessdClient {
   }
 
   dispose() {
-    try {
-      this.proc.kill();
-    } catch {
-      // best effort
-    }
+    // R7 production #5 — KEEP-WARM: the daemon is never killed on session
+    // end; it self-idle-exits (10 minutes without activity). A second pi
+    // session attaches to the same world through the socket.
   }
 }
 
@@ -160,15 +194,57 @@ interface PiAPI {
   setActiveTools?(names: string[]): void;
 }
 
+function socketPointerPath(workspace: string): string {
+  return path.join(workspace, ".dart_tool", "harnessd", "harnessd.sock");
+}
+
+function readSocketPointer(workspace: string): string | null {
+  const p = socketPointerPath(workspace);
+  if (!existsSync(p)) return null;
+  const real = readFileSync(p, "utf8").trim();
+  return real || null;
+}
+
+function waitForPointer(workspace: string, timeoutMs: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const started = Date.now();
+    const t = setInterval(() => {
+      const real = readSocketPointer(workspace);
+      if (real) {
+        clearInterval(t);
+        resolve(real);
+      } else if (Date.now() - started > timeoutMs) {
+        clearInterval(t);
+        reject(new Error("daemon socket pointer never appeared"));
+      }
+    }, 200);
+  });
+}
+
 export default function (pi: PiAPI) {
   const enabled = process.env.PI_HARNESSD === "1";
   const workspace = process.cwd();
   const daemonPkg = process.env.HARNESSD_PKG ?? ".";
   const scripted = process.env.HARNESSD_SCRIPTED === "1";
 
-  const ensureClient = (): HarnessdClient => {
+  const ensureClient = async (): Promise<HarnessdClient> => {
     if (client) return client;
-    client = new HarnessdClient(
+    // connect-if-live: a daemon holding this workspace answers the
+    // initialize health ping over the socket pointer.
+    const pointer = readSocketPointer(workspace);
+    if (pointer) {
+      try {
+        const attached = HarnessdClient.attachSocket(pointer);
+        await attached.start(workspace);
+        client = attached;
+        return client;
+      } catch {
+        // stale pointer (crashed daemon) — fall through to spawn.
+      }
+    }
+    // spawn-if-absent: --workspace arms the single-instance lock + socket
+    // listener; the extension attaches through the socket (uniform).
+    const spawned = HarnessdClient.spawnDaemon(
       "dart",
       [
         "run",
@@ -176,16 +252,24 @@ export default function (pi: PiAPI) {
         "--profile",
         "meaning",
         ...(scripted ? ["--scripted"] : []),
+        "--workspace",
+        workspace,
       ],
       daemonPkg,
     );
+    const socketPath = await waitForPointer(workspace, 180000);
+    spawned.wire.end?.(); // the spawned proc's stdio pipe is not used
+    client = spawned; // retained so the process is not GC'd/reaped
+    const attached = HarnessdClient.attachSocket(socketPath);
+    await attached.start(workspace);
+    client = attached;
     return client;
   };
 
   const delegated = async (
     directive: string,
   ): Promise<{ content: any[]; details: Record<string, unknown> }> => {
-    const c = ensureClient();
+    const c = await ensureClient();
     if (!c.sessionId) await c.start(workspace);
     const { text, updates } = await c.prompt(directive);
     return {
@@ -209,8 +293,9 @@ export default function (pi: PiAPI) {
     name: "harness_zoom",
     label: "Harness Zoom",
     description:
-      "Cut a bounded view of the meaning tree by keyword query. This is " +
-      "how you READ structure — never file reads.",
+      "Cut a bounded view of the meaning tree by keyword query. The cut " +
+      "carries node ids — use them for impact/edit. This is how you READ " +
+      "structure — never file reads.",
     parameters: {
       type: "object",
       properties: { query: { type: "string" } },

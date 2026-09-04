@@ -17,11 +17,15 @@ Everything below is ordered; each item names its gate. The R7 machinery
 [results_r7.md](results_r7.md). Landed on the path: **#1 the full edit
 surface over ACP** (the structured `harness_edit` contract —
 `insert_member` + `replace_member_body` + `apply_executable` all driven
-from a pi transcript) and **#2 the overhead row** (the meaning-profile
+from a pi transcript), **#2 the overhead row** (the meaning-profile
 surface is 1408 fixed tokens — fits the AFM window with 2392 working
-memory left). What is NOT yet true: **no real model has ever driven the
-edit surface**, packs have no capture loop, and pi still delegates whole
-task cycles.
+memory left), **#3 the capture loop** (novel resolution → project pack →
+reuse at zero authored tokens), **#4 the remote mover** (the daemon runs
+MODEL-LESS; the client's model decides via `session/propose_move`), and
+**#5 the persistent daemon** (single-instance, warm attach, keep-warm,
+AOT composes with native assets). What is NOT yet true: **no real model
+has ever driven the edit surface** — #6 (R7e, on-device AFM) and #7
+(pi's model answering propose_move) remain.
 
 1. **~~Full edit surface over ACP~~ — DONE (production #1).** The prose
    directives (`[rename old new]`) are gone: `harness_edit` carries the
@@ -44,29 +48,20 @@ task cycles.
    pack. Gate was green: scripted novel resolution → pack entry → a
    second task consumes it at ZERO authored tokens
    ([results_r7.md](results_r7.md)).
-4. **Remote mover / actor registration (the precondition for #7).** pi
-   stops delegating task cycles and JOINS as the session actor's brain:
-   the daemon runs the loop, pi is the GenerationHandler. Server→client
-   `session/propose_move` (same JSON-RPC pattern as
-   `session/request_permission`): bounded cut + tool schemas out, typed
-   tool calls back. Kills the per-call task cycle (~23s grades → ~1 model
-   call); budgets/consent/cancel become native to the world. Seam exists:
-   `handlerFactory` / `--scripted` prove the mover is pluggable. Bounded
-   protocol only — pi never gets raw files. Gate: a scripted
-   client-as-mover test (LLM-free) proves one decision = one
-   `propose_move` round-trip; budgets consumed in-world; cancel
-   mid-decision works.
-5. **Persistent daemon + AOT.** (a) `dart compile exe bin/harnessd.dart`
-   — VERIFY it composes with the native-assets hook (the AFM bridge is a
-   code asset); fallback: AOT for open_router/scripted, `dart run` for
-   AFM. (b) Extension lifecycle: pid/lock file under
-   `<workspace>/.dart_tool/harnessd/` → connect-if-live (initialize
-   health ping) / spawn-if-absent / keep-warm on session_end (idle-exit
-   after N minutes). SINGLE-INSTANCE PER WORKSPACE IS MANDATORY (two
-   daemons = two worlds = single-writer broken at process level). Snapshot
-   store demotes to crash recovery only. Gate: a second pi session
-   attaches to the warm daemon — zero re-scan (mechanical refresh tick
-   only), startup < 2s.
+4. **~~Remote mover / actor registration~~ — DONE (production #4).** The
+   daemon runs MODEL-LESS: every decision round-trips to the client as
+   `session/propose_move` (bounded cut + tool schemas out, typed tool
+   calls back; decisionId echo-checked; the ACP toolkit gained the
+   `AcpMoveProposing` capability, symmetric with `request_permission`).
+   Gate was green (LLM-free): one decision = one propose_move;
+   budgets consumed in-world; cancel mid-decision works
+   ([results_r7.md](results_r7.md)).
+5. **~~Persistent daemon + AOT~~ — DONE (production #5).** Single-instance
+   per workspace (exclusive lock; a second daemon exits 2), warm attach
+   over a unix socket (second session continues ONE world — measured
+   ~0–1 ms startup, zero re-scan), keep-warm with idle-exit, and AOT
+   composes with the native-assets hook (no fallback needed)
+   ([results_r7.md](results_r7.md)).
 6. **R7e — THE GATE: one real AFM edit through the daemon, pass@3.**
    In-process (not stdio) from the AFM app: meaning-profile surface, one
    fixture edit (use the pack path from #3), `dart analyze` + the
@@ -171,8 +166,15 @@ session through the new surface; pack inventory + capture loop (R7d).
       DONE 2026-09-04 (1408 fixed tokens; fits); [results_r7.md](results_r7.md).
 - [x] Edit-tier capture loop → pack inventory (production #3) —
       DONE 2026-09-04; [results_r7.md](results_r7.md).
-- [ ] R7e gate: one real AFM edit through the daemon, pass@3 (production #4).
-- [ ] Real-model pi row through the daemon (production #5).
+- [x] Remote mover / actor registration (production #4) — DONE
+      2026-09-04; [results_r7.md](results_r7.md).
+- [x] Persistent daemon + AOT (production #5) — DONE 2026-09-04
+      (single-instance, warm attach, keep-warm, AOT composes);
+      [results_r7.md](results_r7.md).
+- [ ] R7e gate: one real AFM edit through the daemon, pass@3 (production
+      #6; needs the on-device AFM runtime).
+- [ ] Real-model pi row (production #7, model-less daemon — pi's model
+      answers propose_move; needs a live pi session with a real provider).
 - [ ] Drop `runTool`'s redundant role if J4's `analyze_check` + spec runner
   subsume the exit-code oracle for coding tasks (keep for non-Dart hosts).
 - [ ] Deferred (evidence-gated, owner: mcp_flutter/intentcall): **H5** —

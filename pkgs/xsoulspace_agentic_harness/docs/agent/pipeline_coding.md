@@ -148,8 +148,8 @@ counts still match `responses_sent_delta`.
 | On-device intent-closure driver (J1.4 benchmark) | `../xsoulspace_inference_apple_foundation/bin/intent_closure_afm.dart` |
 | **On-device coding agent (THE deliverable)** | `../xsoulspace_inference_apple_foundation/bin/coding_agent.dart` + `lib/src/coding_agent_runner.dart` |
 | **R7 edit tier (ADR 0023): `edit_symbol` + fences + auto-revert** | `../xsoulspace_agentic_dart_meaning/lib/src/span_editor.dart` (gates: `span_edit_gate_test.dart`, `pack_edit_gate_test.dart`); the capture loop → project pack: `edit_pack_capture.dart` (gate: `edit_pack_capture_test.dart`) |
-| **R7 daemon (`harnessd`: per-workspace world, ACP, meaning profile)** | `../xsoulspace_inference_apple_foundation/bin/harnessd.dart` + `lib/src/harness_acp_backend.dart` |
-| **R7 pi integration (daemon as the only file surface)** | `benchmark/pi_driver/run_r7_daemon_gate.mjs` + `r7_harnessd_extension.ts`; transcript `benchmark/runs/r7_edit_surface_transcript.txt` (production #1: the structured `harness_edit` contract — the mover executes exact `edit_symbol` args from the session/prompt JSON, never guesses ids) |
+| **R7 daemon (`harnessd`: per-workspace world, ACP, meaning profile)** | `../xsoulspace_inference_apple_foundation/bin/harnessd.dart` + `lib/src/harness_acp_backend.dart`; production #4 remote mover (`--remote-mover` → `session/propose_move`) and #5 lifecycle (`--workspace`: single-instance lock + unix socket + idle-exit) live here |
+| **R7 pi integration (daemon as the only file surface)** | `benchmark/pi_driver/run_r7_daemon_gate.mjs` + `r7_harnessd_extension.ts`; transcript `benchmark/runs/r7_edit_surface_transcript.txt` (production #1: the structured `harness_edit` contract — the mover executes exact `edit_symbol` args from the session/prompt JSON, never guesses ids); warm-attach gate: `run_r7_warm_attach_gate.mjs` → `r7_warm_attach_transcript.txt` |
 | Flutter profiler | `../xsoulspace_agentic_harness_flutter_profiler/` |
 
 ## Current situation (2026-09-03, post R7)
@@ -180,11 +180,13 @@ counts still match `responses_sent_delta`.
   run-graded arm remains for direct-profile hosts only; the meaning
   profile's only ACT verb is `edit_symbol`.
 - **The open frontier is the PRODUCTION PATH in [PLAN.md](PLAN.md)**:
-  the structured `harness_edit` contract over ACP and the
-  meaning-profile overhead row have LANDED (1408 fixed tokens — fits the
-  AFM window); packs as the primary path (capture loop → inventory), the
-  remote mover, the persistent daemon, and R7e — one real AFM edit
-  through the daemon, pass@3 — remain. No real model has driven the edit
+  the structured `harness_edit` contract over ACP, the meaning-profile
+  overhead row (1408 fixed tokens — fits the AFM window), the capture
+  loop → project pack, the remote mover (model-less daemon:
+  `session/propose_move`), and the persistent daemon (single-instance,
+  warm attach, keep-warm, AOT) have LANDED; R7e — one real AFM edit
+  through the daemon, pass@3 — and the real-model pi row (pi's model
+  answering propose_move) remain. No real model has driven the edit
   surface yet; that number decides the next move.
 
 ## Invariants an agent must not break

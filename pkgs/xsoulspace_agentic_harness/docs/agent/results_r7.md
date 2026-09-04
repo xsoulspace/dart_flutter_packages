@@ -62,6 +62,62 @@ projection law uses); n=1 registry construction, gate-asserted in
 — nothing needs cutting to reach R7e; the only free parameter left is the
 cut itself (`coderLean` / `ProjectionBudget`), never the schemas.
 
+## R7 production #4 — the remote mover (pi joins as the session actor's brain)
+
+Landed: the daemon can run **MODEL-LESS**. `HarnessAcpBackend` implements
+`AcpMoveProposing` (new ACP toolkit capability, symmetric with
+`request_permission`): every decision round-trips to the CLIENT as
+`session/propose_move` — bounded cut (`request.prompt`, the projected
+situation, never file text) + the CLOSED tool schemas + the live budgets
+out; typed tool calls back (`AcpMoveResponse.toolCalls`), decisionId
+echo-checked (a stale reply is an empty move, never applied elsewhere).
+The loop, its budgets and its oracles are unchanged — only WHO decides is
+pluggable (`--scripted` > `--remote-mover` > `handlerFactory` > router).
+This is the precondition for production #7: pi's own model decides
+through the surface; the daemon never needs open_router/AFM while pi
+calls it.
+
+| Row | Gate | n | backend | decision path | tokens source | composition | verdict |
+|---|---|---|---|---|---|---|---|
+| decision economy | scripted client-as-mover: 2 propose_move round-trips for 2 decisions; the verdict chunk counts `decisions 2` (one truth: the meter over the loop) | 1 | remote mover (LLM-free client) | loop → propose_move (cut + schemas + budgets) → typed tool call (repo_etl scan) → loop → propose_move → done → goal gate | Situation.tokensUsed (projection) | coderLean + meaning profile | PASS — budgets consumed IN-WORLD: proposal 2 carries the live round count advanced by the scan ([harnessd_remote_mover_test.dart](../../../xsoulspace_inference_apple_foundation/test/harnessd_remote_mover_test.dart)) |
+| bounded protocol | every proposal carries cut + schemas + budgets; NO file text (`hello x` absent from every prompt); schemas contain the full meaning-profile surface | 2 proposals | same | same | — | — | PASS |
+| cancel mid-decision | the client never answers → `cancelSession` completes the pending propose_move → the decision unblocks, the turn ends `cancelled`, zero leaked awaits | 1 | same | same | — | — | PASS |
+
+## R7 production #5 — the persistent daemon (single-instance + warm attach + AOT)
+
+Landed in `bin/harnessd.dart` (`--workspace <path>`, `--idle-exit-minutes`):
+
+- **SINGLE-INSTANCE PER WORKSPACE (mandatory)**: an exclusive file lock at
+  `<workspace>/.dart_tool/harnessd/harnessd.lock`; a second daemon for the
+  same workspace exits **2** before touching any state (two daemons = two
+  worlds = single-writer broken at process level).
+- **Warm attach**: the daemon listens on a unix socket (SHORT hashed
+  `/tmp/harnessd-<hash>.sock` — macOS caps socket paths at ~104 chars, a
+  real workspace path exceeds that; the workspace keeps a POINTER file
+  `harnessd.sock` with the real path). Each connection is a full ACP
+  server over the SHARED backend; sessions are keyed per workspace, so a
+  second pi session continues the live world (zero re-scan — the only
+  tree work is the mechanical mtime tick). Measured finding shipped as a
+  fix: a raw `Socket` (`Stream<Uint8List>`) as ACP input fails
+  `utf8.decoder`'s runtime generic check — the input is mapped to
+  `List<int>`.
+- **Keep-warm + idle-exit**: the daemon survives session ends (stdio EOF
+  does not terminate it in workspace mode); it exits after N idle minutes
+  (default 10). The snapshot store is crash recovery only — the WORLD
+  stays in the process.
+- **AOT**: `dart build cli bin/harnessd.dart` (dart compile is refused
+  with build hooks — the `dart build` CLI composes): the binary runs the
+  full ACP surface WITH the native-assets hook (the AFM bridge
+  `libxs_fm_bridge.dylib` ships in the bundle). NO fallback needed.
+
+| Row | Gate | n | verdict |
+|---|---|---|---|
+| warm attach | second client (socket) attaches to the warm daemon: SAME sessionId, attach startup < 2s (measured ~0–1 ms), zero re-scan (zoom reads the warm tree) | 1 session pair | PASS ([run_r7_warm_attach_gate.mjs](../../benchmark/pi_driver/run_r7_warm_attach_gate.mjs), transcript [r7_warm_attach_transcript.txt](../../benchmark/runs/r7_warm_attach_transcript.txt)) |
+| single-instance | second daemon process, same workspace → exit 2 + `REFUSED` | 1 | PASS (in-process gate + wire gate) |
+| socket transport | two connections over the shared backend; per-workspace world continues | 1 | PASS ([harnessd_remote_mover_test.dart](../../../xsoulspace_inference_apple_foundation/test/harnessd_remote_mover_test.dart)) |
+| AOT | `dart build cli` composes with native assets; the binary answers ACP initialize; dylib bundled | 1 | PASS — no fallback needed |
+| keep-warm | stdio EOF in workspace mode → daemon stays serving socket clients; idle-exit after 10 min | 1 | PASS (code path; idle-exit timer asserted by inspection of the gate runs)
+
 ## R7 production #3 — packs as the PRIMARY path (the capture loop)
 
 Landed: the ADR 0021 capture loop wired to the edit tier
