@@ -205,3 +205,38 @@ diagnostics forced exploration. Fix (with ~/xs/agentic_executables):
 - Economics: known classes resolve at ZERO model tokens; novel classes once;
   raw diagnostics never reach a model. Core-owned repair tables REJECTED
   (project-guided packs; ADR 0015).
+
+# TASK B — last_answer hosts the harness (ADR 0015, R8) (2026-09-04)
+
+The app's first embedded domain host: `lastanswer/lib/coding_agent/` owns
+the daemon lifecycle IN-PROCESS — `HarnessAcpBackend` + `AcpStdioServer`
+over an in-memory duplex channel + `AcpClient` (dart_acp_toolkit). The
+backend is re-exported from `xsoulspace_inference_apple_foundation` so
+hosts own the lifecycle without importing `src/`. Per-workspace worlds and
+snapshot stores stay backend-owned (R7c) — the host never touches them.
+
+Multiplayer-ready by construction: the user's task input is a
+host-injected decision (`session/prompt`); their write approvals ride the
+EXISTING `session/request_permission` round-trip. No second protocol.
+
+## Rows (LLM-free, scripted mover `ScriptedWriteMover` — one gated
+`write`, then done; fixture = bare `main.dart`, D8 convention
+`dart run main.dart`; tokens source: backend verdict chunk)
+
+| row | flow | backend | verdict | n |
+|---|---|---|---|---|
+| host e2e ALLOW | delegate → permission round-trip (allow) → write lands → oracle exit 0 | scripted `handlerFactory` | `verdict: PASS` (decisions 2, rounds 1) | 1 |
+| host e2e REJECT | delegate → permission (reject) → write never lands → oracle fails | scripted `handlerFactory` | `verdict: FAIL` (honest failure, file untouched) | 1 |
+| host lifecycle | start → `session/new` ×2 same cwd → ONE session (per-workspace keying) → stop; snapshot store exists | scripted `handlerFactory` | PASS | 1 |
+| widget e2e | type workspace + sentence → tap Delegate → permission card surfaces → tap Allow → verdict banner `verdict: PASS` | scripted `handlerFactory` | PASS | 1 |
+
+Tests: `lastanswer/test/coding_agent/` (3 host + 1 widget, all green,
+`flutter test`). Widget-test note (durable mechanics): the loop
+interleaves fake-async stream deliveries (flushed by `tester.pump`) and
+real file/process IO (only inside `tester.runAsync`) —
+`pump_until.dart` alternates both; documented so the next embedded host
+does not re-derive it.
+
+AFM/real-model backends ride the SAME surface (`HarnessHostConfig.backend`),
+flagged; the scripted seam is the LLM-free gate. Failure classes: none
+dropped — the reject row is kept as the deny-path proof.

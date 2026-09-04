@@ -1,0 +1,138 @@
+coding_agent run — task: r7e_pack_edit
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 1408
+  decisions: 6
+  tool rounds (thread beats): 44
+  moves: {repo_etl.scan: 5, meaning_zoom: 13, edit_symbol.apply_executable: 11, repo_etl.refresh: 13, meaning_impact: 2}
+  projection tokens (honest spend, Situation.tokensUsed): 11373
+  meaning nodes: 4, edges: 7
+  wall clock: 337769 ms
+  final gate (outer oracle, once): FAIL
+    check: dart test exit=1:
+  failure class: final gate: dart test exit=1:
+--- harness pulse (J1.5.3) ---
+tick 6 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788546081806530-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: dart test exit=1:
+— agent-1788546081806530-0  [idle]  rounds 0/12 (Σ0)  attempts 3/3 EXHAUSTED
+    last: edit_symbol:{"executableParams":{"scope":"global","newName":"fixed_in… → FAILED
+      error: {"ok":false,"bounce":true,"error":"missing symbolId","repair":"re-send the move with the symbol id from meaning_zoom"}
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 71855..97259
+tick 95411: decisions=1 inFlight=1 pending=0 actors=agent-1788546081806530-0:0r/3a
+    agent-1788546081806530-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Flow: repo_etl action s…"
+tick 95511: decisions=1 inFlight=1 pending=0 actors=agent-1788546081806530-0:0r/3a
+    agent-1788546081806530-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Flow: repo_etl action s…"
+tick 95611: decisions=1 inFlight=1 pending=0 actors=agent-1788546081806530-0:0r/3a
+    agent-1788546081806530-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Flow: repo_etl action s…"
+tick 95711: decisions=1 inFlight=1 pending=0 actors=agent-1788546081806530-0:0r/3a
+    agent-1788546081806530-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Flow: repo_etl action s…"
+tick 95811: decisions=1 inFlight=1 pending=0 actors=agent-1788546081806530-0:0r/3a
+    agent-1788546081806530-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Flow: repo_etl action s…"
+tick 95911: decisions=1 inFlight=1 pending=0 actors=agent-1788546081806530-0:0r/3a
+    agent-1788546081806530-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Flow: repo_etl action s…"
+tick 96011: decisions=1 inFlight=1 pending=0 actors=agent-1788546081806530-0:0r/3a
+    agent-1788546081806530-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Flow: repo_etl action s…"
+tick 96111: decisions=1 inFlight=1 pending=0 actors=agent-1788546081806530-0:0r/3a
+    agent-1788546081806530-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Flow: repo_etl action s…"
+tick 96211: decisions=1 inFlight=1 pending=0 actors=agent-1788546081806530-0:0r/3a
+    agent-1788546081806530-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Flow: repo_etl action s…"
+tick 96311: decisions=1 inFlight=1 pending=0 actors=agent-1788546081806530-0:0r/3a
+    agent-1788546081806530-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Flow: repo_etl action s…"
+tick 96411: decisions=1 inFlight=1 pending=0 actors=agent-1788546081806530-0:0r/3a
+    agent-1788546081806530-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Flow: repo_etl action s…"
+tick 96511: decisions=1 inFlight=1 pending=0 actors=agent-1788546081806530-0:0r/3a
+    agent-1788546081806530-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Flow: repo_etl action s…"
+tick 96611: decisions=1 inFlight=1 pending=0 actors=agent-1788546081806530-0:0r/3a
+    agent-1788546081806530-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Flow: repo_etl action s…"
+tick 96711: decisions=1 inFlight=1 pending=0 actors=agent-1788546081806530-0:0r/3a
+    agent-1788546081806530-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Flow: repo_etl action s…"
+tick 96811: decisions=1 inFlight=1 pending=0 actors=agent-1788546081806530-0:0r/3a
+    agent-1788546081806530-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Flow: repo_etl action s…"
+tick 96911: decisions=1 inFlight=1 pending=0 actors=agent-1788546081806530-0:0r/3a
+    agent-1788546081806530-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Flow: repo_etl action s…"
+tick 97011: decisions=1 inFlight=1 pending=0 actors=agent-1788546081806530-0:0r/3a
+    agent-1788546081806530-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Flow: repo_etl action s…"
+tick 97111: decisions=1 inFlight=1 pending=0 actors=agent-1788546081806530-0:0r/3a
+    agent-1788546081806530-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Flow: repo_etl action s…"
+tick 97211: decisions=1 inFlight=1 pending=0 actors=agent-1788546081806530-0:0r/3a
+    agent-1788546081806530-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+Flow: repo_etl action s…"
+tick 97259: decisions=0 inFlight=0 pending=0 actors=agent-1788546081806530-0:0r/3a
+
+

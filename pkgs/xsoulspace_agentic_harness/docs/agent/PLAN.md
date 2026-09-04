@@ -136,6 +136,21 @@ session through the new surface; pack inventory + capture loop (R7d).
   production #1 (full edit surface over ACP), #2 (overhead row) and #3
   (capture loop → pack inventory) LANDED 2026-09-04; **R7e (real AFM
   edit through the daemon) is the open track — production path #6.**
+- **R8 — last_answer hosts the harness (ADR 0015, TASK B): LANDED
+  (LLM-free).** The app's first embedded domain host:
+  `lastanswer/lib/coding_agent/` owns the daemon lifecycle IN-PROCESS
+  (`HarnessAcpBackend` + `AcpStdioServer` over an in-memory duplex
+  channel + `AcpClient`); per-workspace worlds/snapshot stores stay
+  backend-owned. The user is an actor: task input = host-injected
+  decision (`session/prompt`), approvals ride the EXISTING
+  `session/request_permission` round-trip — no second protocol. UI:
+  task sentence + workspace, session list, streamed progress,
+  permission allow/reject, verdict banner. Gate: LLM-free scripted e2e
+  green in the app's own suite — delegate → permission (allow) →
+  `verdict: PASS` + write lands; delegate → permission (reject) →
+  write never lands, `verdict: FAIL`; host lifecycle (start/stop,
+  per-workspace session continuation, snapshot store). Real backends
+  ride the same surface behind the config flag.
 
 ## Standing rules
 

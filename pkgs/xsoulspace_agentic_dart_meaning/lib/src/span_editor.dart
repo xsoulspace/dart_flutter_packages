@@ -303,7 +303,10 @@ class SpanEditMaterializer {
     if (id == null || id.isEmpty) {
       throw SpanEditBounce(
         'missing symbolId',
-        're-send the move with the symbol id from meaning_zoom',
+        're-send the move with symbolId as a TOP-LEVEL edit_symbol arg '
+            '(the id from meaning_zoom, e.g. "sym_lib_loop.dart_inBounds") '
+            '— NOT inside executableParams and NOT as name; executableParams '
+            'carries only the executable\'s own slots (e.g. newName)',
       );
     }
     final n = _node(id);
