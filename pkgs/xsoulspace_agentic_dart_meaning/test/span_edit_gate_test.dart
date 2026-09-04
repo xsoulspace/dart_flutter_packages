@@ -194,53 +194,53 @@ class _ScriptedEditor implements GenerationHandler {
     }
     final calls = switch (step) {
       1 => [
-          ToolCall(
-            name: const ToolName('repo_etl'),
-            arguments: {'action': 'scan'},
-          ),
-        ],
+        ToolCall(
+          name: const ToolName('repo_etl'),
+          arguments: {'action': 'scan'},
+        ),
+      ],
       2 => [
-          // The intermediate INVALID move: illegal identifier — must bounce
-          // as structured data.
-          ToolCall(
-            name: const ToolName('edit_symbol'),
-            arguments: {
-              'action': 'apply_executable',
-              'executableId': 'rename_symbol',
-              'symbolId': areaId,
-              'executableParams': {'newName': '9surface-area'},
-            },
-          ),
-        ],
+        // The intermediate INVALID move: illegal identifier — must bounce
+        // as structured data.
+        ToolCall(
+          name: const ToolName('edit_symbol'),
+          arguments: {
+            'action': 'apply_executable',
+            'executableId': 'rename_symbol',
+            'symbolId': areaId,
+            'executableParams': {'newName': '9surface-area'},
+          },
+        ),
+      ],
       3 => [
-          ToolCall(
-            name: const ToolName('edit_symbol'),
-            arguments: {
-              'action': 'apply_executable',
-              'executableId': 'rename_symbol',
-              'symbolId': areaId,
-              'executableParams': {'newName': 'surfaceArea'},
-            },
-          ),
-        ],
+        ToolCall(
+          name: const ToolName('edit_symbol'),
+          arguments: {
+            'action': 'apply_executable',
+            'executableId': 'rename_symbol',
+            'symbolId': areaId,
+            'executableParams': {'newName': 'surfaceArea'},
+          },
+        ),
+      ],
       4 => [
-          ToolCall(
-            name: const ToolName('edit_symbol'),
-            arguments: {
-              'action': 'insert_member',
-              'classSymbolId': boxId,
-              'name': 'doubled',
-              'returns': 'int',
-              'params': ['f:int'],
-              'opChain': [
-                {'label': 'load_arg', 'a': 'f'},
-                {'label': 'literal', 'b': '2'},
-                {'label': 'mul'},
-                {'label': 'return'},
-              ],
-            },
-          ),
-        ],
+        ToolCall(
+          name: const ToolName('edit_symbol'),
+          arguments: {
+            'action': 'insert_member',
+            'classSymbolId': boxId,
+            'name': 'doubled',
+            'returns': 'int',
+            'params': ['f:int'],
+            'opChain': [
+              {'label': 'load_arg', 'a': 'f'},
+              {'label': 'literal', 'b': '2'},
+              {'label': 'mul'},
+              {'label': 'return'},
+            ],
+          },
+        ),
+      ],
       _ => const <ToolCall>[],
     };
     return _respond(world, request, 'edit step $step', calls);
@@ -280,9 +280,7 @@ void main() {
       final preScan = repoEtlTool(pre, jail);
       await preScan.execute({'action': 'scan'});
       final index = pre.getResource<MeaningIndex>();
-      final areaId = index.byId.keys
-          .where((id) => id.endsWith('_area'))
-          .first;
+      final areaId = index.byId.keys.where((id) => id.endsWith('_area')).first;
       final boxId = index.byId.keys.where((id) => id.endsWith('_Box')).first;
 
       final world = _world(jail, _Meter(_ScriptedEditor(areaId, '', boxId)));
@@ -326,14 +324,13 @@ void main() {
       var attempt = 0;
       const maxGoalAttempts = 3;
       Future<({bool passed, String detail})> grade() async {
-        final run = await Process.run(
-          'dart',
-          ['test'],
-          workingDirectory: jail.path,
-        );
+        final run = await Process.run('dart', [
+          'test',
+        ], workingDirectory: jail.path);
         return (
           passed: run.exitCode == 0,
-          detail: 'dart test exit=${run.exitCode}\n'
+          detail:
+              'dart test exit=${run.exitCode}\n'
               '${run.stdout}${run.stderr}',
         );
       }
@@ -346,7 +343,8 @@ void main() {
         openFreshDecision(
           world,
           actor,
-          prompt: 'Your previous attempt did not satisfy verification '
+          prompt:
+              'Your previous attempt did not satisfy verification '
               '(attempt $attempt/$maxGoalAttempts).\nFailing:\n'
               '${gate.detail}\n\nOriginal task:\n$taskPrompt',
         );
@@ -365,7 +363,9 @@ void main() {
       // The moves landed: multi-file rename + insert, verified by the
       // mechanical tier (the in-loop verifier already graded dart test;
       // assert the bytes directly).
-      final geometry = File('${jail.path}/lib/geometry.dart').readAsStringSync();
+      final geometry = File(
+        '${jail.path}/lib/geometry.dart',
+      ).readAsStringSync();
       final report = File('${jail.path}/lib/report.dart').readAsStringSync();
       final boxes = File('${jail.path}/lib/boxes.dart').readAsStringSync();
       expect(geometry, contains('int surfaceArea(int w, int h)'));
@@ -373,22 +373,15 @@ void main() {
       expect(report, contains('surfaceArea(2, 3)'));
       expect(
         boxes,
-        stringContainsInOrder([
-          'int doubled(int f) {',
-          'return (f * 2);',
-        ]),
+        stringContainsInOrder(['int doubled(int f) {', 'return (f * 2);']),
       );
-      final analyze = await Process.run(
-        'dart',
-        ['analyze'],
-        workingDirectory: jail.path,
-      );
+      final analyze = await Process.run('dart', [
+        'analyze',
+      ], workingDirectory: jail.path);
       expect(analyze.exitCode, 0, reason: '${analyze.stdout}${analyze.stderr}');
-      final testRun = await Process.run(
-        'dart',
-        ['test'],
-        workingDirectory: jail.path,
-      );
+      final testRun = await Process.run('dart', [
+        'test',
+      ], workingDirectory: jail.path);
       expect(testRun.exitCode, 0, reason: '${testRun.stdout}${testRun.stderr}');
 
       // ZERO read/write in the registry…
@@ -403,8 +396,12 @@ void main() {
       expect(tools, isNot(contains('write')));
       expect(
         tools,
-        containsAll(['repo_etl', 'meaning_zoom', 'meaning_impact',
-            'edit_symbol']),
+        containsAll([
+          'repo_etl',
+          'meaning_zoom',
+          'meaning_impact',
+          'edit_symbol',
+        ]),
       );
       // …AND in the thread beats (the actor could not have cheated even by
       // emitting the moves blind).
@@ -420,7 +417,10 @@ void main() {
       }
       expect(beatTools, everyElement(isNot('read')));
       expect(beatTools, everyElement(isNot('write')));
-      expect(beatTools.where((t) => t == 'edit_symbol').length, greaterThanOrEqualTo(2));
+      expect(
+        beatTools.where((t) => t == 'edit_symbol').length,
+        greaterThanOrEqualTo(2),
+      );
 
       // The invalid intermediate move bounced as structured data:
       // its beat result carries the bounce + the exact repair move.
@@ -432,8 +432,11 @@ void main() {
           bounceBeats.add('${result.output}');
         }
       }
-      expect(bounceBeats, isNotEmpty,
-          reason: 'the invalid intermediate move must leave a bounce beat');
+      expect(
+        bounceBeats,
+        isNotEmpty,
+        reason: 'the invalid intermediate move must leave a bounce beat',
+      );
       expect(
         bounceBeats.join(' '),
         contains('newName'),
@@ -443,164 +446,142 @@ void main() {
     timeout: const Timeout(Duration(minutes: 8)),
   );
 
-  test(
-    'R7b fence (a) expressiveness: a state-op chain bounces as named data '
-    '— never a silent downgrade',
-    () async {
-      final jail = await _coveredJail();
-      addTearDown(() => jail.delete(recursive: true).catchError((_) => jail));
-      await _pubGet(jail);
-      final world = _world(jail, _Meter(_Noop()));
-      registryFor(world, jail);
-      final scan = repoEtlTool(world, jail);
-      await scan.execute({'action': 'scan'});
-      final index = world.getResource<MeaningIndex>();
-      final areaId = index.byId.keys.where((id) => id.endsWith('_area')).first;
+  test('R7b fence (a) expressiveness: a state-op chain bounces as named data '
+      '— never a silent downgrade', () async {
+    final jail = await _coveredJail();
+    addTearDown(() => jail.delete(recursive: true).catchError((_) => jail));
+    await _pubGet(jail);
+    final world = _world(jail, _Meter(_Noop()));
+    registryFor(world, jail);
+    final scan = repoEtlTool(world, jail);
+    await scan.execute({'action': 'scan'});
+    final index = world.getResource<MeaningIndex>();
+    final areaId = index.byId.keys.where((id) => id.endsWith('_area')).first;
 
-      final out = await runTool(world, 'edit_symbol', {
-        'action': 'replace_member_body',
-        'symbolId': areaId,
-        'opChain': [
-          {'label': 'load_state', 'a': 'total'},
-          {'label': 'return'},
-        ],
-      });
-      expect(out['ok'], false);
-      expect(out['fence'], 'expressiveness');
-      expect(
-        '${out['error']}', contains('load_state'),
-      );
-      // Bytes untouched.
-      expect(
-        File('${jail.path}/lib/geometry.dart').readAsStringSync(),
-        contains('int area('),
-      );
-    },
-    timeout: const Timeout(Duration(minutes: 4)),
-  );
+    final out = await runTool(world, 'edit_symbol', {
+      'action': 'replace_member_body',
+      'symbolId': areaId,
+      'opChain': [
+        {'label': 'load_state', 'a': 'total'},
+        {'label': 'return'},
+      ],
+    });
+    expect(out['ok'], false);
+    expect(out['fence'], 'expressiveness');
+    expect('${out['error']}', contains('load_state'));
+    // Bytes untouched.
+    expect(
+      File('${jail.path}/lib/geometry.dart').readAsStringSync(),
+      contains('int area('),
+    );
+  }, timeout: const Timeout(Duration(minutes: 4)));
 
-  test(
-    'R7b fence (b) oracle coverage: replacing an UNCOVERED legacy member '
-    'bounces — add coverage first',
-    () async {
-      final jail = await _coveredJail();
-      addTearDown(() => jail.delete(recursive: true).catchError((_) => jail));
-      await _pubGet(jail);
-      final world = _world(jail, _Meter(_Noop()));
-      registryFor(world, jail);
-      await repoEtlTool(world, jail).execute({'action': 'scan'});
-      final index = world.getResource<MeaningIndex>();
-      final labelId = index.byId.keys.where((id) => id.endsWith('_label')).first;
+  test('R7b fence (b) oracle coverage: replacing an UNCOVERED legacy member '
+      'bounces — add coverage first', () async {
+    final jail = await _coveredJail();
+    addTearDown(() => jail.delete(recursive: true).catchError((_) => jail));
+    await _pubGet(jail);
+    final world = _world(jail, _Meter(_Noop()));
+    registryFor(world, jail);
+    await repoEtlTool(world, jail).execute({'action': 'scan'});
+    final index = world.getResource<MeaningIndex>();
+    final labelId = index.byId.keys.where((id) => id.endsWith('_label')).first;
 
-      // A perfectly valid pure chain — it STILL bounces: the suite derives
-      // no expectations for `label`, so replacing it would destroy
-      // untested behavior with nothing in the pipeline noticing.
-      final out = await runTool(world, 'edit_symbol', {
-        'action': 'replace_member_body',
-        'symbolId': labelId,
-        'opChain': [
-          {'label': 'load_arg', 'a': 'name'},
-          {'label': 'starts_with', 'b': 'shape'},
-          {'label': 'return'},
-        ],
-      });
-      expect(out['ok'], false);
-      expect(out['fence'], 'coverage');
-      expect('${out['error']}', contains('coverage'));
-      expect(
-        File('${jail.path}/lib/geometry.dart').readAsStringSync(),
-        contains("'shape: "),
-        reason: 'uncovered member must be byte-identical after the bounce',
-      );
-      // And the COVERED member passes the same fence by construction
-      // (sanity: area is covered in this fixture).
-      final mat = SpanEditMaterializer(world: world, workspace: jail);
-      expect(mat.coverageSet(), contains('area'));
-      expect(mat.coverageSet(), isNot(contains('label')));
-    },
-    timeout: const Timeout(Duration(minutes: 4)),
-  );
+    // A perfectly valid pure chain — it STILL bounces: the suite derives
+    // no expectations for `label`, so replacing it would destroy
+    // untested behavior with nothing in the pipeline noticing.
+    final out = await runTool(world, 'edit_symbol', {
+      'action': 'replace_member_body',
+      'symbolId': labelId,
+      'opChain': [
+        {'label': 'load_arg', 'a': 'name'},
+        {'label': 'starts_with', 'b': 'shape'},
+        {'label': 'return'},
+      ],
+    });
+    expect(out['ok'], false);
+    expect(out['fence'], 'coverage');
+    expect('${out['error']}', contains('coverage'));
+    expect(
+      File('${jail.path}/lib/geometry.dart').readAsStringSync(),
+      contains("'shape: "),
+      reason: 'uncovered member must be byte-identical after the bounce',
+    );
+    // And the COVERED member passes the same fence by construction
+    // (sanity: area is covered in this fixture).
+    final mat = SpanEditMaterializer(world: world, workspace: jail);
+    expect(mat.coverageSet(), contains('area'));
+    expect(mat.coverageSet(), isNot(contains('label')));
+  }, timeout: const Timeout(Duration(minutes: 4)));
 
-  test(
-    'R7b fence (c) integration: a signature-mismatched chain bounces '
-    'BEFORE generation',
-    () async {
-      final jail = await _coveredJail();
-      addTearDown(() => jail.delete(recursive: true).catchError((_) => jail));
-      await _pubGet(jail);
-      final world = _world(jail, _Meter(_Noop()));
-      registryFor(world, jail);
-      await repoEtlTool(world, jail).execute({'action': 'scan'});
-      final index = world.getResource<MeaningIndex>();
-      final areaId = index.byId.keys.where((id) => id.endsWith('_area')).first;
+  test('R7b fence (c) integration: a signature-mismatched chain bounces '
+      'BEFORE generation', () async {
+    final jail = await _coveredJail();
+    addTearDown(() => jail.delete(recursive: true).catchError((_) => jail));
+    await _pubGet(jail);
+    final world = _world(jail, _Meter(_Noop()));
+    registryFor(world, jail);
+    await repoEtlTool(world, jail).execute({'action': 'scan'});
+    final index = world.getResource<MeaningIndex>();
+    final areaId = index.byId.keys.where((id) => id.endsWith('_area')).first;
 
-      final out = await runTool(world, 'edit_symbol', {
-        'action': 'replace_member_body',
-        'symbolId': areaId,
-        'opChain': [
-          {'label': 'load_arg', 'a': 'z'},
-          {'label': 'return'},
-        ],
-      });
-      expect(out['ok'], false);
-      expect(out['fence'], 'integration');
-      expect('${out['error']}', contains('z'));
-      // No generation happened: the bytes are untouched and no body was
-      // compiled in.
-      expect(
-        File('${jail.path}/lib/geometry.dart').readAsStringSync(),
-        contains('return w * h;'),
-      );
-    },
-    timeout: const Timeout(Duration(minutes: 4)),
-  );
+    final out = await runTool(world, 'edit_symbol', {
+      'action': 'replace_member_body',
+      'symbolId': areaId,
+      'opChain': [
+        {'label': 'load_arg', 'a': 'z'},
+        {'label': 'return'},
+      ],
+    });
+    expect(out['ok'], false);
+    expect(out['fence'], 'integration');
+    expect('${out['error']}', contains('z'));
+    // No generation happened: the bytes are untouched and no body was
+    // compiled in.
+    expect(
+      File('${jail.path}/lib/geometry.dart').readAsStringSync(),
+      contains('return w * h;'),
+    );
+  }, timeout: const Timeout(Duration(minutes: 4)));
 
-  test(
-    'R7b auto-revert: a deliberately-failing scripted move (wrong body '
-    'under a COVERED member) is applied, fails dart test, and every byte '
-    'is restored',
-    () async {
-      final jail = await _coveredJail();
-      addTearDown(() => jail.delete(recursive: true).catchError((_) => jail));
-      await _pubGet(jail);
-      final world = _world(jail, _Meter(_Noop()));
-      registryFor(world, jail);
-      await repoEtlTool(world, jail).execute({'action': 'scan'});
-      final index = world.getResource<MeaningIndex>();
-      final areaId = index.byId.keys.where((id) => id.endsWith('_area')).first;
+  test('R7b auto-revert: a deliberately-failing scripted move (wrong body '
+      'under a COVERED member) is applied, fails dart test, and every byte '
+      'is restored', () async {
+    final jail = await _coveredJail();
+    addTearDown(() => jail.delete(recursive: true).catchError((_) => jail));
+    await _pubGet(jail);
+    final world = _world(jail, _Meter(_Noop()));
+    registryFor(world, jail);
+    await repoEtlTool(world, jail).execute({'action': 'scan'});
+    final index = world.getResource<MeaningIndex>();
+    final areaId = index.byId.keys.where((id) => id.endsWith('_area')).first;
 
-      final before = File(
-        '${jail.path}/lib/geometry.dart',
-      ).readAsStringSync();
-      // Compiles cleanly, analyze-clean — but WRONG (2+3 != 6): the
-      // workspace convention must catch it and the host must revert.
-      final out = await runTool(world, 'edit_symbol', {
-        'action': 'replace_member_body',
-        'symbolId': areaId,
-        'opChain': [
-          {'label': 'load_arg', 'a': 'w'},
-          {'label': 'load_arg', 'a': 'h'},
-          {'label': 'add'},
-          {'label': 'return'},
-        ],
-      });
-      expect(out['ok'], false, reason: '$out');
-      expect(out['reverted'], true, reason: '$out');
-      expect(out['failure_class'], 'workspace_check_failed');
-      expect(out['check_exit'], isNot(0));
-      final after = File('${jail.path}/lib/geometry.dart').readAsStringSync();
-      expect(after, before, reason: 'auto-revert must restore exact bytes');
-      // The tree does NOT track the reverted body as changed state — the
-      // next scan re-derives truth (projection target, never snapshot).
-      final analyze = await Process.run(
-        'dart',
-        ['analyze'],
-        workingDirectory: jail.path,
-      );
-      expect(analyze.exitCode, 0);
-    },
-    timeout: const Timeout(Duration(minutes: 5)),
-  );
+    final before = File('${jail.path}/lib/geometry.dart').readAsStringSync();
+    // Compiles cleanly, analyze-clean — but WRONG (2+3 != 6): the
+    // workspace convention must catch it and the host must revert.
+    final out = await runTool(world, 'edit_symbol', {
+      'action': 'replace_member_body',
+      'symbolId': areaId,
+      'opChain': [
+        {'label': 'load_arg', 'a': 'w'},
+        {'label': 'load_arg', 'a': 'h'},
+        {'label': 'add'},
+        {'label': 'return'},
+      ],
+    });
+    expect(out['ok'], false, reason: '$out');
+    expect(out['reverted'], true, reason: '$out');
+    expect(out['failure_class'], 'workspace_check_failed');
+    expect(out['check_exit'], isNot(0));
+    final after = File('${jail.path}/lib/geometry.dart').readAsStringSync();
+    expect(after, before, reason: 'auto-revert must restore exact bytes');
+    // The tree does NOT track the reverted body as changed state — the
+    // next scan re-derives truth (projection target, never snapshot).
+    final analyze = await Process.run('dart', [
+      'analyze',
+    ], workingDirectory: jail.path);
+    expect(analyze.exitCode, 0);
+  }, timeout: const Timeout(Duration(minutes: 5)));
 
   test(
     'R7b repo-scale plan: the lexical rename executable expands over the '
@@ -615,7 +596,9 @@ void main() {
         }
         dir = dir.parent;
       }
-      final workspace = Directory('${dir.path}/pkgs/xsoulspace_agentic_harness');
+      final workspace = Directory(
+        '${dir.path}/pkgs/xsoulspace_agentic_harness',
+      );
       final world = _world(workspace, _Meter(_Noop()));
       await repoEtlTool(world, workspace).execute({'action': 'scan'});
       final index = world.getResource<MeaningIndex>();
@@ -631,14 +614,63 @@ void main() {
       );
       expect(plan.isAtomic, true, reason: plan.description);
       final files = plan.patches.map((p) => p.file).toSet();
-      expect(files.length, greaterThan(1),
-          reason: 'HarnessLoop is referenced across files: ${plan.description}');
+      expect(
+        files.length,
+        greaterThan(1),
+        reason: 'HarnessLoop is referenced across files: ${plan.description}',
+      );
       // Plan-only: zero bytes touched.
       expect(
-        File(
-          '${workspace.path}/lib/src/harness_loop.dart',
-        ).readAsStringSync(),
+        File('${workspace.path}/lib/src/harness_loop.dart').readAsStringSync(),
         contains('class HarnessLoop'),
+      );
+    },
+    timeout: const Timeout(Duration(minutes: 4)),
+  );
+
+  test(
+    'R7e slot-misplacement dialect: symbolId inside executableParams (or '
+    'as name) bounces with the EXACT repair — never a generic retry loop',
+    () async {
+      final jail = await _coveredJail();
+      addTearDown(() => jail.delete(recursive: true).catchError((_) => jail));
+      await _pubGet(jail);
+      final world = _world(jail, _Meter(_Noop()));
+      registryFor(world, jail);
+      await repoEtlTool(world, jail).execute({'action': 'scan'});
+
+      // The exact shape the REAL AFM run produced (11× identical bounces
+      // before the dialect fix): symbolId inside executableParams.
+      final misplaced = await runTool(world, 'edit_symbol', {
+        'action': 'apply_executable',
+        'executableId': 'rename_symbol',
+        'executableParams': {
+          'symbolId': 'sym_lib_geometry.dart_area',
+          'newName': 'surfaceArea',
+        },
+      });
+      expect(misplaced['failureClass'], 'slot_misplaced');
+      expect('${misplaced['error']}', contains('inside executableParams'));
+      expect(
+        '${misplaced['repair']}',
+        contains('TOP-LEVEL'),
+        reason: 'the repair must name WHERE the slot goes',
+      );
+      expect(misplaced['seen'], isNotNull);
+
+      // Variant: symbolId smuggled through name (also seen in the run).
+      final viaName = await runTool(world, 'edit_symbol', {
+        'action': 'apply_executable',
+        'executableId': 'rename_symbol',
+        'name': 'sym_lib_geometry.dart_area',
+      });
+      expect(viaName['failureClass'], 'slot_misplaced');
+      expect("${viaName['error']}", contains("as 'name'"));
+
+      // Bytes untouched: a bounce never writes.
+      expect(
+        File('${jail.path}/lib/geometry.dart').readAsStringSync(),
+        contains('int area('),
       );
     },
     timeout: const Timeout(Duration(minutes: 4)),

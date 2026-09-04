@@ -1594,6 +1594,38 @@ ToolDef editSymbolTool(
               },
       ];
       try {
+        // R7e finding (REAL AFM run, 2026-09-04): the model repeatedly put
+        // symbolId inside executableParams (or into name) — 11 identical
+        // bounces because the generic repair text didn't name the
+        // misplacement. The B2 dialect must say WHERE the slot goes. When
+        // the top-level symbolId is missing but a misplaced one is
+        // present, bounce with the exact repair (never promote silently —
+        // the schema is the contract).
+        final paramsMap =
+            (map['executableParams'] as Map?)?.cast<String, dynamic>() ??
+            const {};
+        final topSymbolId = map['symbolId'] as String?;
+        if ((topSymbolId == null || topSymbolId.isEmpty) &&
+            (paramsMap['symbolId'] is String ||
+                (map['name'] is String &&
+                    (map['name'] as String).startsWith('sym_')))) {
+          return {
+            'error':
+                'symbolId misplaced: it arrived '
+                '${paramsMap['symbolId'] is String ? 'inside executableParams' : "as 'name'"} instead of the TOP-LEVEL symbolId arg',
+            'bounce': true,
+            'failureClass': 'slot_misplaced',
+            'repair':
+                're-send edit_symbol with {action, symbolId: <the id '
+                'from meaning_zoom, TOP-LEVEL>, executableId, '
+                "executableParams: {only the executable's own slots}}",
+            'seen': {
+              if (paramsMap['symbolId'] is String)
+                'executableParams.symbolId': paramsMap['symbolId'],
+              if (map['name'] is String) 'name': map['name'],
+            },
+          };
+        }
         final composedChain = chainOf(map['opChain']);
         final plan = mat.plan(
           action: map['action'] as String?,

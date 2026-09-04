@@ -72,11 +72,17 @@ class HarnessAcpBackend
     this.meaningProfile = false,
     this.scripted = false,
     this.remoteMover = false,
+    this.apiKey,
   });
 
   /// `open_router` (native tool calls) or `apple_foundation_afm`.
   final String backend;
   final String model;
+
+  /// Explicit OpenRouter API key (embedded hosts — e.g. last_answer —
+  /// cannot rely on `OPENROUTER_API_KEY` in the process environment).
+  /// Null → the environment variable is read, as before.
+  final String? apiKey;
 
   /// R7: when true, delegated tasks run through the MEANING-PROFILE
   /// surface ([repo_etl, meaning_zoom, meaning_impact, edit_symbol, run])
@@ -164,7 +170,8 @@ class HarnessAcpBackend
 
   ModelRouter? _buildRouter() {
     if (backend == 'open_router') {
-      final apiKey = Platform.environment['OPENROUTER_API_KEY'];
+      final apiKey =
+          this.apiKey ?? Platform.environment['OPENROUTER_API_KEY'];
       if (apiKey == null || apiKey.isEmpty) return null;
       final router = ModelRouter(
         inferenceClientsBuilders: {
