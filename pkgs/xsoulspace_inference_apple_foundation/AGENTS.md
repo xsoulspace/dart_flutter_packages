@@ -19,11 +19,16 @@ it interchangeably with hosted providers. One transport:
 
 | Path | Role |
 | --- | --- |
-| `bin/harnessd.dart` | The long-lived ACP agent (`--backend`, `--profile meaning`, `--scripted`). AFM-first default on macOS. |
-| `lib/src/harness_acp_backend.dart` | Per-workspace persistent worlds; meaning tree never snapshotted; `loadSession` restore; deny-by-default permissions; real cancellation; escalation capped `min(3+rounds, 9)`; unique tool-call ids; tool results streamed. |
-| `lib/src/coding_agent_runner.dart` | The runner core — meaning-profile surface (`repo_etl`/`meaning_zoom`/`meaning_impact`/`edit_symbol`/`run`, zero fs tools). The run-graded fs arm is LEGACY-HOST-ONLY. |
+| `bin/harnessd.dart` | The long-lived ACP agent: `--backend`, `--profile meaning`, `--scripted`, `--remote-mover` (MODEL-LESS daemon — pi's model decides via `session/propose_move`), `--workspace <path>` (single-instance lock + unix socket + idle-exit), `--idle-exit-minutes`. AFM-first default on macOS. |
+| `lib/src/harness_acp_backend.dart` | Per-workspace persistent worlds; meaning tree never snapshotted; `loadSession` restore; deny-by-default permissions; real cancellation; escalation capped `min(3+rounds, 9)`; unique tool-call ids; tool results streamed MID-TURN; the remote mover (`AcpMoveProposing`). |
+| `lib/src/coding_agent_runner.dart` | The runner core — meaning-profile surface (`repo_etl`/`meaning_zoom`/`meaning_impact`/`edit_symbol`/`run`, zero fs tools; `run` is ALLOWLISTED to the convention commands). The run-graded fs arm is LEGACY-HOST-ONLY. |
 
-Gate: `test/harnessd_r7c_test.dart`. Transcript: `../../xsoulspace_agentic_harness/benchmark/runs/r7_daemon_transcript.txt`.
+Gates: `test/harnessd_r7c_test.dart`, `test/harnessd_remote_mover_test.dart`,
+`test/meaning_profile_overhead_test.dart`. Rows + transcripts:
+`../../xsoulspace_agentic_harness/docs/agent/results_r7.md` (the
+`r7_daemon_transcript.txt` referenced by older rows lives in
+`xsoulspace_agentic_harness/benchmark/runs/` — superseded by
+`r7_edit_surface_transcript.txt` and `r7_warm_attach_transcript.txt`).
 
 ## Layout
 

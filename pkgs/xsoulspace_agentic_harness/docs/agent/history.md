@@ -7,6 +7,42 @@ One entry per landed body of work; durable decisions live in
 
 ## Landed
 
+- **R7 production path COMPLETE — #1–#7 gated with published rows
+  (2026-09-04, macOS 26.6.2, real AFM + real pi)**: (1) the FULL edit
+  surface over ACP — the scripted mover's prose directives are gone; the
+  id-bearing verbs travel as structured JSON payloads (`harness_edit`/
+  `harness_impact`) and the mover never guesses ids; (2) the
+  meaning-profile overhead row — 1408 fixed tokens, fits the AFM window
+  with 2392 working memory left; (3) packs as the PRIMARY path — the ADR
+  0021 capture loop records verified-green novel resolutions into the
+  project pack (`.dart_tool/harnessd/edit_pack.json`, mechanical
+  fingerprint id) and every `edit_symbol` auto-realizes it; (4) the
+  REMOTE MOVER — the daemon runs MODEL-LESS, every decision round-trips
+  as `session/propose_move` (bounded cut + tool schemas + budgets out,
+  typed tool calls back; the ACP toolkit gained `AcpMoveProposing`,
+  symmetric with `request_permission`); (5) the persistent daemon —
+  single-instance per workspace (exclusive lock; a second daemon exits
+  2), warm attach over a unix socket (second session continues ONE
+  world, ~0–1 ms startup, zero re-scan), keep-warm with idle-exit, AOT
+  composes with the native-assets hook (no fallback); (6) R7e — **pass@3
+  = 3/3**: the real on-device AFM model performed the pack-fed edit in
+  ONE decision (2,008 tokens, 45% of the window); (7) the real-model pi
+  row — pi's model drove the MODEL-LESS daemon (8 decisions = 8
+  round-trips). R7e's failing runs found the predicted failure classes
+  and the surface was tuned WITHOUT touching the law: optional schema
+  slots get dropped by the 2–4k model (measured), so `symbolId` became
+  the ONE REQUIRED id, `executableParams.symbolId` is promoted (the wire
+  declares the slot), `label` resolves mechanically with ambiguity
+  bounces; the free-form run tool in the meaning profile was a WRITE
+  HOLE (`perl -pi` reached the file — measured) and is now constrained
+  to the convention commands. Rows + transcripts:
+  [results_r7.md](results_r7.md). Gates: `span_edit_gate_test.dart`,
+  `edit_pack_capture_test.dart`, `meaning_profile_overhead_test.dart`,
+  `harnessd_r7c_test.dart`, `harnessd_remote_mover_test.dart`,
+  `run_allowlist_test.dart` (harness pkg);
+  drivers `run_r7_daemon_gate.mjs`, `run_r7_warm_attach_gate.mjs`,
+  `run_r7_pi_remote_mover_gate.mjs`.
+
 - **Hard-cut pass: coding-agent deliverable + legacy edit paths (2026-09-01,
   Stage J continuation — B1–B8 cuts)**: (B1) `intent_define` collapsed to
   ONE self-executing action — `define` REQUIRES specs and ALWAYS wires the

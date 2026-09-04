@@ -14,3 +14,5 @@ R7e (production #6) — task: r7e_pack_edit (pack-fed apply_executable via dart/
 
 R7e (production #6) — task: r7e_pack_edit (pack-fed apply_executable via dart/fix_loop_bound) | backend: apple_foundation_afm (REAL on-device model) | decision path: meaning-profile surface (repo_etl/meaning_zoom/meaning_impact/edit_symbol/run) | tokens source: Situation.tokensUsed (projection) | composition: coderLean (lean context profile) | n: 3 | pass@3: 3/3 | failure classes: -
 
+R7e (production #6) — task: r7e_pack_edit (pack-fed apply_executable via dart/fix_loop_bound) | backend: apple_foundation_afm (REAL on-device model) | decision path: meaning-profile surface (repo_etl/meaning_zoom/meaning_impact/edit_symbol/run) | tokens source: Situation.tokensUsed (projection) | composition: coderLean (lean context profile) | n: 1 | pass@1: 1/1 | failure classes: -
+

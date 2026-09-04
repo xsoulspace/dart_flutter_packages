@@ -10,79 +10,62 @@
 > in its own packages are its backlog, delegated to its own actors. pi
 > orchestrates and escalates; pi does not absorb fixes the harness can do.
 
-## NOW — the production path (what stands between here and AFM production)
+## NOW — the pi-dogfooding path (pi does the repo's real work THROUGH the harness daemon)
 
-Everything below is ordered; each item names its gate. The R7 machinery
-(edit tier, daemon, packs) is landed and LLM-free-gated — see
-[results_r7.md](results_r7.md). Landed on the path: **#1 the full edit
-surface over ACP** (the structured `harness_edit` contract —
-`insert_member` + `replace_member_body` + `apply_executable` all driven
-from a pi transcript), **#2 the overhead row** (the meaning-profile
-surface is 1408 fixed tokens — fits the AFM window with 2392 working
-memory left), **#3 the capture loop** (novel resolution → project pack →
-reuse at zero authored tokens), **#4 the remote mover** (the daemon runs
-MODEL-LESS; the client's model decides via `session/propose_move`), and
-**#5 the persistent daemon** (single-instance, warm attach, keep-warm,
-AOT composes with native assets), **#6 R7e** (**pass@3 = 3/3 — a real
-on-device AFM model performed a real pack-fed edit through the surface,
-2,008 tokens/decision**) and **#7 the real-model pi row** (**PASS —
-pi's model drove the MODEL-LESS daemon via `session/propose_move`, 8
-decisions = 8 round-trips**). THE PRODUCTION PATH IS COMPLETE — every
-gate has a published row; the follow-ups are in the ledger below.
+The production path (#1–#7) is COMPLETE — every gate has a published row
+([history.md](history.md), [results_r7.md](results_r7.md)). The next
+race is **turning the harness into pi's own work surface**: every
+mutation pi makes to this repo — Dart code, Markdown docs, config and
+asset files — routes through `harnessd`, so every mutation is
+gate-checked (mechanical oracles), locked (single-writer), permission-
+gated (the human allows), and logged (beats/verdicts). This is the
+intent-first growth loop the law demands: pi's real work names the
+surface gaps as structured failures, and the surface grows intent-first
+— never vocabulary-by-hand.
 
-1. **~~Full edit surface over ACP~~ — DONE (production #1).** The prose
-   directives (`[rename old new]`) are gone: `harness_edit` carries the
-   exact `edit_symbol` args as a structured JSON payload; the mover
-   executes verbatim and never guesses ids. Gate was green: the pi driver
-   transcript performs an insert + a body replacement (+ rename) with
-   analyze + workspace convention green
-   ([results_r7.md](results_r7.md), [transcript](../../benchmark/runs/r7_edit_surface_transcript.txt)).
-2. **~~Meaning-profile overhead vs the AFM window~~ — DONE (production
-   #2).** Measured: 1408 fixed tokens (system 141 + 5 schemas,
-   `edit_symbol` largest at 594) vs the P1 guard (3800) — the surface
-   FITS; only the cut is a free parameter
-   ([results_r7.md](results_r7.md)).
-3. **~~Packs as the PRIMARY path~~ — DONE (production #3).** The ADR 0021
-   capture loop is wired to the edit tier: a model-composed
-   `replace_member_body` that passed all fences + oracles becomes a
-   registered `EditExecutableWire` + op-chain (`registerPackExecutable`),
-   persisted in the project pack (`.dart_tool/harnessd/edit_pack.json`,
-   mechanical fingerprint id); every `edit_symbol` auto-realizes the
-   pack. Gate was green: scripted novel resolution → pack entry → a
-   second task consumes it at ZERO authored tokens
-   ([results_r7.md](results_r7.md)).
-4. **~~Remote mover / actor registration~~ — DONE (production #4).** The
-   daemon runs MODEL-LESS: every decision round-trips to the client as
-   `session/propose_move` (bounded cut + tool schemas out, typed tool
-   calls back; decisionId echo-checked; the ACP toolkit gained the
-   `AcpMoveProposing` capability, symmetric with `request_permission`).
-   Gate was green (LLM-free): one decision = one propose_move;
-   budgets consumed in-world; cancel mid-decision works
-   ([results_r7.md](results_r7.md)).
-5. **~~Persistent daemon + AOT~~ — DONE (production #5).** Single-instance
-   per workspace (exclusive lock; a second daemon exits 2), warm attach
-   over a unix socket (second session continues ONE world — measured
-   ~0–1 ms startup, zero re-scan), keep-warm with idle-exit, and AOT
-   composes with the native-assets hook (no fallback needed)
-   ([results_r7.md](results_r7.md)).
-6. **~~R7e — THE GATE~~ — DONE (production #6): pass@3 = 3/3.** The REAL
-   on-device AFM model performed the pack-fed edit through the
-   meaning-profile surface in ONE decision (2,008 tokens — 45% of the
-   window). The failing runs found the predicted failure classes and the
-   surface was tuned (never the law): `symbolId` is the ONE REQUIRED id
-   (optional slots get dropped by the 2–4k model — measured),
-   `executableParams.symbolId` is promoted (the wire declares the slot),
-   `label` resolves mechanically with ambiguity bounces
-   ([results_r7.md](results_r7.md)).
-7. **~~Real-model pi row~~ — DONE (production #7): PASS.** The MODEL-LESS
-   daemon (`--remote-mover`), pi's real model answering propose_move with
-   tools built VERBATIM from the proposal schemas: 8 decisions = 8
-   round-trips, the pack edit landed with an id the model self-corrected
-   from the cut. Findings shipped: pi prompts are SERIALIZED (proposals
-   land mid-turn), the schema bundle's `root` wrapper must be unwrapped
-   client-side, and the meaning profile's `run` tool is a WRITE HOLE
-   (`perl -pi` reached the file — follow-up in the ledger)
-   ([results_r7.md](results_r7.md)).
+Ordered work items (each names its gate):
+
+1. **Constrain the meaning profile's `run` tool (P0, LAW-CRITICAL —
+   DONE 2026-09-04).** `runTool` gained an argv-prefix `allowlist`
+   (`dart analyze / dart test / dart run / flutter analyze / flutter
+   test`); violations fail as named data (`command_not_allowed`) BEFORE
+   spawning. Gate: `run_allowlist_test.dart` (harness pkg).
+2. **Unwrap the schema bundle's `root` server-side (P0, DONE).** The
+   remote mover now emits `parameters.root` — the client workaround is
+   gone (measured in the pi row: the wrapper degraded every call).
+3. **Filesystem verbs over ACP (P1).** Expose the core's read-only fs
+   verbs (`list_dir`/`glob`/`grep` + jailed `git_status`/`git_diff`)
+   plus whole-file write ONLY through the P3 `JailWriteGateway` in
+   `review` mode (unified diff → `session/request_permission` → the
+   human allows/rejects). Target: pi edits configs, YAML, scripts,
+   assets — everything that is NOT Dart — through the daemon, audited,
+   locked, and consent-gated. Gate: an fs-profile e2e (scripted) proves
+   read → glob → grep → permission → write-lands; reject → never lands.
+4. **Markdown meaning tier (P2).** Extend `repo_etl` to scan `.md`
+   into the meaning tree (headings as section nodes, links as edges),
+   one bounded prose move (`edit_doc` — whole-section replacement,
+   host-spliced, never reflowing the whole file), and the MECHANICAL
+   docs oracle: the 0-broken-links check (the docs workspace convention,
+   D8). Prose is NOT code (ADR 0019): doc tasks grade through the docs
+   oracle only — they can never `pass` a code gate, and code fences
+   never apply to them. Gate: scripted doc-edit e2e — section replace
+   lands, broken link bounces as named data, link-check green.
+5. **Interactive remote mover in the pi extension (P3).** The gate
+   driver script answers proposals; interactive `pi` must too: the
+   extension hook answers `session/propose_move` with pi's configured
+   model (the daemon stays the only file surface; pi never gets raw
+   files). Gate: one real-model interactive session, pi → daemon, with
+   the consent UI wired to `session/request_permission`.
+6. **Actor-topology engine + multi-workspace daemon (P4, pulled by
+   last_answer `docs/decisions/0003`).** The two proven topologies
+   (1 world/N actors squad; N worlds/1 brain remote mover) become
+   task-declared DATA with per-task topology selection; one process
+   hosts several worlds with per-workspace single-instance locks.
+
+Sequencing rule: P1 (fs verbs) before P2 (docs tier) — zoom-for-docs
+needs the same read seam; the law-critical P0s are done. Detour stop:
+any friction that blocks a pi task twice becomes a named failure class
+in results_r7.md — the surface grows from those, not from guesses.
 
 Interactive hygiene (parallel, small): ~~mid-turn streaming of tool
 results~~ DONE (production #1 — a 40ms observer in `runCodingAgentOnce`
@@ -97,11 +80,13 @@ UI to `session/request_permission` (the gate driver auto-answers today).
   repo-scale ETL verdict: 11,590 nodes / 67,444 edges, ETL-out fidelity
   10,649/10,649, cuts FLAT vs tier 1 (2,044 tokens local at both tiers),
   cuts 4–61ms ([results_etl_scale.md](results_etl_scale.md)).
-- The edit tier exists and is gated: `edit_symbol` with the three fences,
-  auto-revert with failure attribution, zero `read`/`write` moves; the
-  daemon persists beats/verdicts/budgets per workspace and re-derives the
-  tree ([results_r7.md](results_r7.md)).
-- On-device AFM coding: bugfix_01 pass@3 = 3/3 post-fixes (P1 closed).
+- The edit tier is CLOSED under the law AND proven on real models:
+  `edit_symbol` with the three fences, auto-revert with failure
+  attribution, zero `read`/`write` moves; the daemon persists
+  beats/verdicts/budgets per workspace and re-derives the tree
+  ([results_r7.md](results_r7.md)).
+- On-device AFM coding: bugfix_01 pass@3 = 3/3 post-fixes (P1 closed);
+  R7e (pack-fed edit through the daemon surface) pass@3 = 3/3.
 - Delegation loop end-to-end: pi → CLI/daemon → world → verdict →
   evidence (`benchmark/runs/delegation_m1_evidence.md`).
 - Multi-actor squad, single-writer locks, per-actor verification, roles,
@@ -109,22 +94,21 @@ UI to `session/request_permission` (the gate driver auto-answers today).
 - M0b `declare_check`: model-proposed criteria as data, host-validated,
   mechanically executed.
 
-**NOT proven (the remaining race):** the head-to-head (R3) pi column;
-a real-model edit through the daemon (R7e); flatness claims on a real-model
-session through the new surface; pack inventory + capture loop (R7d).
+**Open race (the dogfooding path, §NOW above):** pi's whole tool surface
+through the daemon (fs verbs, docs tier, interactive remote mover,
+topology engine).
 
 ## Race tracks (each ends in a number or a live artifact)
 
 - **R1 — self-improvement loop:** SUPERSEDED by ADR 0021 (problems as
   canonical rows, project-guided packs, source-analyzer oracle). Landed:
   `problem_board.dart` — 7/7 LLM-free tests incl. real `dart analyze`
-  oracle and revert. Follow-up: capture-loop wiring to the EDIT tier (see
-  production path #3).
+  oracle and revert. Capture-loop wiring to the EDIT tier: DONE
+  (production #3 — see history).
 - **R2 — flatness WITH composition:** DONE. The claim survives the working
   set (`long_horizon_composition_test.dart`).
-- **R3 — head-to-head numbers:** harness columns ran; scripted tier delta
-  published. The ONLY unexecuted piece is the real-model pi column — see
-  production path #5.
+- **R3 — head-to-head numbers:** DONE — the real-model pi column ran
+  (production #7: pi's model drove the MODEL-LESS daemon; row published).
 - **R4 — large-model profile:** DONE. `coderLarge()`/`coderLean()` declared;
   1.32× graceful scaling, zero overflows.
 - **R5 — editor live:** DONE. `benchmark/runs/r5_acp_session_transcript.txt`.
@@ -194,6 +178,22 @@ session through the new surface; pack inventory + capture loop (R7d).
   0023): `read` → zoom, `write` → edit move. Whole-file `write` is
   LEGACY-HOST-ONLY.
 
+## Standing rules
+
+- Every published number states backend, decision path, tokens source,
+  tool surface, and n. Failures are data (classified, never dropped).
+- Escalation-rate breakdown ships beside every pass-rate table.
+- Gravity: tiny model stays useful; fewer LLM calls; context bounded+derived
+  (D7: harness-owned); LLM-free testable. `expectIdle` ends every test.
+- The model never writes code tokens, never sees an AST, never holds the
+  whole tree. Materialization, verification, projection, macros,
+  decomposition, repair = pure host programs (`Agent = G ∘ F`).
+- No AE embed; no transport protocols in core; no domain materializers in
+  core (ADR 0015). Plans are data, never prose.
+- The filesystem is a projection target, never the actor's interface (ADR
+  0023): `read` → zoom, `write` → edit move. Whole-file `write` is
+  LEGACY-HOST-ONLY.
+
 ## Cleanup / hard-cut ledger
 
 - ~~Collapse overlapping edit paths; delete~~ — DONE 2026-09-01 (B4);
@@ -212,16 +212,11 @@ session through the new surface; pack inventory + capture loop (R7d).
 - [x] Persistent daemon + AOT (production #5) — DONE 2026-09-04
       (single-instance, warm attach, keep-warm, AOT composes);
       [results_r7.md](results_r7.md).
-- [x] R7e gate: one real AFM edit through the daemon, pass@3 (production
-      #6) — DONE 2026-09-04, **3/3**; [results_r7.md](results_r7.md).
-- [x] Real-model pi row (production #7, model-less daemon — pi's model
-      answers propose_move) — DONE 2026-09-04, **PASS**;
-      [results_r7.md](results_r7.md).
-- [ ] Constrain the meaning profile's `run` tool to the convention
-      commands (analyze/test/run — no file-mutating flags): the pi row
-      found `perl -pi` as a write path (law violation surface).
-- [ ] Unwrap the schema bundle's `root` wrapper server-side (the pi row
-      client works around it today).
+- [x] Constrain the meaning profile's `run` tool to the convention
+      commands (analyze/test/run — no file-mutating flags) — DONE
+      2026-09-04 (`run_allowlist_test.dart`); found by the pi row.
+- [x] Unwrap the schema bundle's `root` wrapper server-side — DONE
+      2026-09-04 (the remote mover emits `parameters.root`).
 - [ ] Drop `runTool`'s redundant role if J4's `analyze_check` + spec runner
   subsume the exit-code oracle for coding tasks (keep for non-Dart hosts).
 - [ ] Deferred (evidence-gated, owner: mcp_flutter/intentcall): **H5** —

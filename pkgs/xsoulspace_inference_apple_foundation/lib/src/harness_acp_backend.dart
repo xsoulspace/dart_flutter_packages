@@ -326,7 +326,8 @@ class HarnessAcpBackend
         meaningProfile: meaningProfile,
         // An EMPTY override means "the workspace convention decides" —
         // never an empty command (that would be a degenerate gate).
-        check: (checkCommand == null || checkCommand.isEmpty)
+        // (Local copy: public fields do not promote in Dart.)
+        check: (checkCommand == null || checkCommand!.isEmpty)
             ? null
             : checkCommand,
       );
