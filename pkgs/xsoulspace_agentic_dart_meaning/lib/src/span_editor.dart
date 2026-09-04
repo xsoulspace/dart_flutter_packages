@@ -1526,15 +1526,22 @@ ToolDef editSymbolTool(
         'text and never write code tokens. Actions: '
         'replace_member_body {symbolId, opChain} (host compiles the chain '
         'into the member body; the member MUST have suite coverage), '
-        'insert_member {classSymbolId, name, returns, params:[name:type], '
-        'opChain}, apply_executable {executableId, symbolId, params} '
-        '(pack-fed; built-in: rename_symbol {newName} — lexical scope, '
-        'multi-file, atomic). opChain rows: {label, a?, b?} over the closed '
-        'pure vocabulary (load_arg, literal, add, sub, mul, lt, gt, eq, '
-        'not, starts_with, list_len, get_item, call, jump_if_false, '
-        'return). Every move is verified by dart analyze + the workspace '
-        'check and AUTO-REVERTED on failure — a failed move costs an '
-        'attempt, so compose carefully from the zoom/impact data.',
+        'insert_member {symbolId, name, returns, params:[name:type], '
+        'opChain} (symbolId is the HOST CLASS to insert into), '
+        'apply_executable {symbolId, executableId, params} '
+        '(pack-fed; built-in: rename_symbol with executableParams '
+        '{newName} — lexical scope, multi-file, atomic). ARG SHAPE: '
+        'symbolId is a REQUIRED TOP-LEVEL arg (the id from '
+        'meaning_zoom/meaning_impact) — never inside executableParams and '
+        'never as name; executableParams carries ONLY the executable\'s '
+        'own slots (for rename_symbol: {newName}; for pack executables '
+        'that declare no params: EMPTY {}). opChain rows: {label, a?, b?} '
+        'over the closed pure vocabulary (load_arg, literal, add, sub, '
+        'mul, lt, gt, eq, not, starts_with, list_len, get_item, call, '
+        'jump_if_false, return). Every move is verified by dart analyze + '
+        'the workspace check and AUTO-REVERTED on failure — a failed move '
+        'costs an attempt, so compose carefully from the zoom/impact '
+        'data.',
     argsSchema: SchemaBundle(
       root: FM.object(
         'edit_symbol',
@@ -1547,8 +1554,15 @@ ToolDef editSymbolTool(
               'apply_executable',
             ]),
           ),
-          FM.prop('symbolId', FM.string(), optional: true),
-          FM.prop('classSymbolId', FM.string(), optional: true),
+          FM.prop('symbolId', FM.string()),
+          // REQUIRED (R7e finding: the on-device model reliably emits the
+          // REQUIRED props and drops optional ones — action always landed,
+          // symbolId never did). ONE required id: the symbol this move
+          // targets — for insert_member that is the HOST CLASS.
+          // R7e: a 2-4k model copies a symbol LABEL far more reliably
+          // than a raw tree id — the host resolves it mechanically
+          // (exact match; ambiguity bounces as data).
+          FM.prop('label', FM.string(), optional: true),
           FM.prop('executableId', FM.string(), optional: true),
           FM.prop('name', FM.string(), optional: true),
           FM.prop('returns', FM.string(), optional: true),
@@ -1594,43 +1608,87 @@ ToolDef editSymbolTool(
               },
       ];
       try {
-        // R7e finding (REAL AFM run, 2026-09-04): the model repeatedly put
-        // symbolId inside executableParams (or into name) — 11 identical
-        // bounces because the generic repair text didn't name the
-        // misplacement. The B2 dialect must say WHERE the slot goes. When
-        // the top-level symbolId is missing but a misplaced one is
-        // present, bounce with the exact repair (never promote silently —
-        // the schema is the contract).
+        // R7e findings (REAL AFM runs, 2026-09-04) — surface tuning, never
+        // the law:
+        // (1) the pack WIRE declares its own slots (e.g. params:
+        //     ['symbolId']) — a symbolId inside executableParams is
+        //     contract-consistent, so PROMOTE it (normalized: true), never
+        //     bounce;
+        // (2) a 2-4k model copies a symbol LABEL far more reliably than a
+        //     raw tree id — a top-level `label` resolves mechanically
+        //     (exact match on symbol labels; ambiguity bounces as data).
         final paramsMap =
             (map['executableParams'] as Map?)?.cast<String, dynamic>() ??
             const {};
-        final topSymbolId = map['symbolId'] as String?;
-        if ((topSymbolId == null || topSymbolId.isEmpty) &&
-            (paramsMap['symbolId'] is String ||
-                (map['name'] is String &&
-                    (map['name'] as String).startsWith('sym_')))) {
+        var symbolId = map['symbolId'] as String?;
+        var normalized = false;
+        final action = map['action'] as String?;
+        if ((symbolId == null || symbolId.isEmpty) &&
+            paramsMap['symbolId'] is String) {
+          symbolId = paramsMap['symbolId'] as String;
+          normalized = true; // a declared/bounded slot — canonicalize
+        }
+        if ((symbolId == null || symbolId.isEmpty) &&
+            action != 'insert_member' &&
+            map['name'] is String &&
+            (map['name'] as String).startsWith('sym_')) {
           return {
             'error':
-                'symbolId misplaced: it arrived '
-                '${paramsMap['symbolId'] is String ? 'inside executableParams' : "as 'name'"} instead of the TOP-LEVEL symbolId arg',
+                "symbolId arrived as 'name' — edit_symbol takes it as "
+                'the TOP-LEVEL symbolId arg (or, for pack executables that '
+                'declare it, inside executableParams)',
             'bounce': true,
             'failureClass': 'slot_misplaced',
             'repair':
-                're-send edit_symbol with {action, symbolId: <the id '
-                'from meaning_zoom, TOP-LEVEL>, executableId, '
-                "executableParams: {only the executable's own slots}}",
-            'seen': {
-              if (paramsMap['symbolId'] is String)
-                'executableParams.symbolId': paramsMap['symbolId'],
-              if (map['name'] is String) 'name': map['name'],
-            },
+                're-send with {action, symbolId: <TOP-LEVEL id from '
+                'meaning_zoom>, executableId, executableParams: {only the '
+                "executable's own slots}}",
+            'seen': {'name': map['name']},
           };
         }
+        if ((symbolId == null || symbolId.isEmpty) && map['label'] is String) {
+          // Mechanical label → id resolution: exact match on symbol
+          // labels; ambiguity/missing bounce as structured data (never a
+          // guess).
+          final index = world.getResource<MeaningIndex>();
+          final query = map['label'] as String;
+          final hits = <String>[];
+          for (final entry in index.byId.entries) {
+            final node = meaningComponentOf<MeaningNode>(world, entry.value);
+            if (node != null && node.kind == 'symbol' && node.label == query) {
+              hits.add(entry.key);
+            }
+          }
+          if (hits.length == 1) {
+            symbolId = hits.single;
+            normalized = true;
+          } else {
+            return {
+              'error': hits.isEmpty
+                  ? 'no symbol labeled "$query" in the tree (scan first)'
+                  : 'ambiguous label "$query": ${hits.join(", ")}',
+              'bounce': true,
+              'failureClass': 'label_resolution',
+              'repair': hits.isEmpty
+                  ? 'repo_etl action scan, then meaning_zoom to confirm the '
+                        'label'
+                  : 'disambiguate with the TOP-LEVEL symbolId from the cut',
+              'hints': hits,
+            };
+          }
+        }
+        // ONE required id: the symbol this move targets. For
+        // insert_member that is the HOST CLASS (the old classSymbolId —
+        // removed from the schema; a required slot beats two optional
+        // ones for the on-device model).
+        final isInsert = action == 'insert_member';
+        final classSymbolId = isInsert ? symbolId : null;
+        if (isInsert) symbolId = null;
         final composedChain = chainOf(map['opChain']);
         final plan = mat.plan(
-          action: map['action'] as String?,
-          symbolId: map['symbolId'] as String?,
-          classSymbolId: map['classSymbolId'] as String?,
+          action: action,
+          symbolId: symbolId,
+          classSymbolId: classSymbolId,
           executableId: map['executableId'] as String?,
           name: map['name'] as String?,
           returns: map['returns'] as String?,
@@ -1668,6 +1726,7 @@ ToolDef editSymbolTool(
           ...outcome.toJson(),
           'move': plan.description,
           'atomic': plan.isAtomic,
+          if (normalized) 'normalized': true,
           if (capturedId != null) 'capturedExecutableId': capturedId,
         };
       } on SpanEditBounce catch (b) {

@@ -228,7 +228,7 @@ class _ScriptedEditor implements GenerationHandler {
           name: const ToolName('edit_symbol'),
           arguments: {
             'action': 'insert_member',
-            'classSymbolId': boxId,
+            'symbolId': boxId,
             'name': 'doubled',
             'returns': 'int',
             'params': ['f:int'],
@@ -628,49 +628,114 @@ void main() {
     timeout: const Timeout(Duration(minutes: 4)),
   );
 
+  test('R7e surface tuning (REAL AFM findings): executableParams.symbolId is '
+      'PROMOTED (the wire declares the slot), label resolves mechanically, '
+      'name-smuggling bounces', () async {
+    final jail = await _coveredJail();
+    addTearDown(() => jail.delete(recursive: true).catchError((_) => jail));
+    await _pubGet(jail);
+    final world = _world(jail, _Meter(_Noop()));
+    registryFor(world, jail);
+    await repoEtlTool(world, jail).execute({'action': 'scan'});
+
+    // (1) executableParams.symbolId: contract-consistent (the wire
+    // declares params: ['symbolId']) — promoted, not bounced.
+    final promoted = await runTool(world, 'edit_symbol', {
+      'action': 'replace_member_body',
+      'executableParams': {'symbolId': 'sym_lib_geometry.dart_area'},
+      'opChain': [
+        {'label': 'load_arg', 'a': 'w'},
+        {'label': 'load_arg', 'a': 'h'},
+        {'label': 'mul'},
+        {'label': 'return'},
+      ],
+    });
+    expect(promoted['ok'], true, reason: '${promoted['error']}');
+    expect(promoted['normalized'], true);
+    expect(
+      File('${jail.path}/lib/geometry.dart').readAsStringSync(),
+      contains('return (w * h);'),
+    );
+
+    // (2) label resolution: exact match, mechanical.
+    final byLabel = await runTool(world, 'edit_symbol', {
+      'action': 'replace_member_body',
+      'label': 'area',
+      'opChain': [
+        {'label': 'load_arg', 'a': 'w'},
+        {'label': 'load_arg', 'a': 'h'},
+        {'label': 'mul'},
+        {'label': 'return'},
+      ],
+    });
+    expect(byLabel['ok'], true, reason: '${byLabel['error']}');
+    expect(byLabel['normalized'], true);
+
+    // (3) ambiguity: same label on two symbols bounces with hints.
+    File(
+      '${jail.path}/lib/extra.dart',
+    ).writeAsStringSync('int area(int a, int b) => a * b;\n');
+    await repoEtlTool(world, jail).execute({'action': 'refresh'});
+    final ambiguous = await runTool(world, 'edit_symbol', {
+      'action': 'replace_member_body',
+      'label': 'area',
+      'opChain': [
+        {'label': 'load_arg', 'a': 'w'},
+        {'label': 'return'},
+      ],
+    });
+    expect(ambiguous['failureClass'], 'label_resolution');
+    expect('${ambiguous['error']}', contains('ambiguous label'));
+
+    // (4) name-smuggling still bounces (name is never a symbol slot).
+    final viaName = await runTool(world, 'edit_symbol', {
+      'action': 'apply_executable',
+      'executableId': 'rename_symbol',
+      'name': 'sym_lib_geometry.dart_area',
+    });
+    expect(viaName['failureClass'], 'slot_misplaced');
+  }, timeout: const Timeout(Duration(minutes: 5)));
+
   test(
-    'R7e slot-misplacement dialect: symbolId inside executableParams (or '
-    'as name) bounces with the EXACT repair — never a generic retry loop',
+    'R7b repo-scale plan: the lexical rename executable expands over the '
+    'refs frontier of the REAL harness package (plan-only, zero writes)',
     () async {
-      final jail = await _coveredJail();
-      addTearDown(() => jail.delete(recursive: true).catchError((_) => jail));
-      await _pubGet(jail);
-      final world = _world(jail, _Meter(_Noop()));
-      registryFor(world, jail);
-      await repoEtlTool(world, jail).execute({'action': 'scan'});
-
-      // The exact shape the REAL AFM run produced (11× identical bounces
-      // before the dialect fix): symbolId inside executableParams.
-      final misplaced = await runTool(world, 'edit_symbol', {
-        'action': 'apply_executable',
-        'executableId': 'rename_symbol',
-        'executableParams': {
-          'symbolId': 'sym_lib_geometry.dart_area',
-          'newName': 'surfaceArea',
-        },
-      });
-      expect(misplaced['failureClass'], 'slot_misplaced');
-      expect('${misplaced['error']}', contains('inside executableParams'));
-      expect(
-        '${misplaced['repair']}',
-        contains('TOP-LEVEL'),
-        reason: 'the repair must name WHERE the slot goes',
+      var dir = Directory.current;
+      for (var i = 0; i < 6; i++) {
+        final pubspec = File('${dir.path}/pubspec.yaml');
+        if (pubspec.existsSync() &&
+            pubspec.readAsStringSync().contains('workspace:')) {
+          break;
+        }
+        dir = dir.parent;
+      }
+      final workspace = Directory(
+        '${dir.path}/pkgs/xsoulspace_agentic_harness',
       );
-      expect(misplaced['seen'], isNotNull);
-
-      // Variant: symbolId smuggled through name (also seen in the run).
-      final viaName = await runTool(world, 'edit_symbol', {
-        'action': 'apply_executable',
-        'executableId': 'rename_symbol',
-        'name': 'sym_lib_geometry.dart_area',
-      });
-      expect(viaName['failureClass'], 'slot_misplaced');
-      expect("${viaName['error']}", contains("as 'name'"));
-
-      // Bytes untouched: a bounce never writes.
+      final world = _world(workspace, _Meter(_Noop()));
+      await repoEtlTool(world, workspace).execute({'action': 'scan'});
+      final index = world.getResource<MeaningIndex>();
+      final loopId = index.byId.keys
+          .where((id) => id.endsWith('_HarnessLoop'))
+          .first;
+      final mat = SpanEditMaterializer(world: world, workspace: workspace);
+      final plan = mat.plan(
+        action: 'apply_executable',
+        executableId: 'rename_symbol',
+        symbolId: loopId,
+        executableParams: {'newName': 'HarnessLoopRenamed'},
+      );
+      expect(plan.isAtomic, true, reason: plan.description);
+      final files = plan.patches.map((p) => p.file).toSet();
       expect(
-        File('${jail.path}/lib/geometry.dart').readAsStringSync(),
-        contains('int area('),
+        files.length,
+        greaterThan(1),
+        reason: 'HarnessLoop is referenced across files: ${plan.description}',
+      );
+      // Plan-only: zero bytes touched.
+      expect(
+        File('${workspace.path}/lib/src/harness_loop.dart').readAsStringSync(),
+        contains('class HarnessLoop'),
       );
     },
     timeout: const Timeout(Duration(minutes: 4)),

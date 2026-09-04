@@ -118,6 +118,87 @@ Landed in `bin/harnessd.dart` (`--workspace <path>`, `--idle-exit-minutes`):
 | AOT | `dart build cli` composes with native assets; the binary answers ACP initialize; dylib bundled | 1 | PASS — no fallback needed |
 | keep-warm | stdio EOF in workspace mode → daemon stays serving socket clients; idle-exit after 10 min | 1 | PASS (code path; idle-exit timer asserted by inspection of the gate runs)
 
+## R7 production #6 — R7e, THE GATE: a real AFM edit through the daemon, pass@3
+
+**pass@3: 3/3 — a REAL on-device model performed a REAL code edit through
+the meaning-profile surface, and every claim below is measured.**
+
+Driver: [r7e_afm_gate.dart](../../../xsoulspace_inference_apple_foundation/bin/r7e_afm_gate.dart)
+(in-process, not stdio — the AFM app path), fixture jail per run, the
+project pack carries the repair executable `dart/fix_loop_bound` (the #3
+pack path — the model supplies ONLY the id), the goal gate is the
+workspace convention (`dart test`).
+
+| Row | Gate | n | backend | decision path | tokens source | composition | verdict |
+|---|---|---|---|---|---|---|---|
+| R7e MAIN | real AFM model: scan → zoom → pack-fed `apply_executable` → convention green | 3 (fresh jail per run) | apple_foundation_afm (REAL on-device model) | meaning profile (repo_etl/meaning_zoom/meaning_impact/edit_symbol/run) | Situation.tokensUsed (projection) | coderLean, 1408 fixed overhead | **PASS 3/3** — 1 decision/run, 3–4 rounds, 2,008 tokens/run (45% of the 4k window), wall 47–102s; ZERO read/write; zero authored op tokens (chain from the pack) |
+
+**R7e failure classes found and fixed (the runs that FAILED are the data):**
+
+1. **Run 1 (pre-fix): 0/1 — slot misplacement + generic bounce loop.**
+   The model put `symbolId` inside `executableParams`/`name` and retried
+   the same wrong shape 11× — the bounce said "missing symbolId" without
+   naming WHERE the slot goes. Fix: the B2 dialect now names the exact
+   repair; a symbolId inside `executableParams` is PROMOTED (the wire
+   itself declares `params: ['symbolId']` — contract-consistent, gate:
+   `normalized: true`).
+2. **Run 2 (mid-fix): the model dropped `symbolId` ENTIRELY — across 4
+   runs, `action` (the only REQUIRED schema prop) was always emitted,
+   everything optional was eventually dropped.** Root cause: optional
+   schema slots. Fix (law-preserving): `symbolId` is now the ONE REQUIRED
+   id — "the symbol this move targets" (for `insert_member` that is the
+   host class; the old optional `classSymbolId` is removed — one required
+   slot beats two optional ones). Post-fix the model emitted a
+   placeholder (`INPUT_SYMBOL_ID` — read from the prompt example), took
+   ONE bounce, then copied `sym_lib_loop.dart_inBounds` from the zoom
+   cut: the required-slot guidance worked.
+3. **Label resolution (ergonomic, mechanical):** a top-level `label`
+   resolves to the tree id by exact match on symbol labels;
+   ambiguity/missing bounce as structured data (`label_resolution` with
+   hints). A 2–4k model copies a LABEL far more reliably than a raw id.
+
+The three fences, the auto-revert, the pack contract and the capture
+loop are UNCHANGED — every fix is surface teaching or mechanical
+canonicalization, never the law. Full logs:
+[benchmark/runs/r7e_afm_run1.log](../../benchmark/runs/r7e_afm_run1.log) +
+summary ([r7e_afm_summary.log](../../benchmark/runs/r7e_afm_summary.log)).
+
+## R7 production #7 — the real-model pi row (MODEL-LESS daemon)
+
+**PASS — pi's own model, driving the model-less daemon through
+`session/propose_move`, fixed the fixture through the pack path.**
+Scope (fixed in PLAN.md): the daemon under test runs NO mover model —
+pi's model is the session actor's brain; the `--scripted`/`--remote-mover`
+split exists so the surface gate never depends on a mover model.
+
+Driver: [run_r7_pi_remote_mover_gate.mjs](../../benchmark/pi_driver/run_r7_pi_remote_mover_gate.mjs)
+— daemon `--profile meaning --remote-mover --workspace <fixture>`; each
+`session/propose_move` (bounded cut + tool schemas + budgets out) is
+answered by prompting a REAL pi session whose tools are built VERBATIM
+from `proposal.toolSchemas`; a tool call is a PASSTHROUGH that submits
+the typed call back (the daemon validates, materializes, verifies).
+
+| Row | Gate | n | backend | decision path | tokens source | composition | verdict |
+|---|---|---|---|---|---|---|---|
+| pi row | real model (z-ai/glm-5.3-flash via the pi SDK — pi's default `stealth/ox-alpha` was RETIRED by OpenRouter mid-gate; classified data) drives scan → zoom (4×) → pack-fed `edit_symbol` → PASS; every decision = one propose_move round-trip; budgets advanced in-world (visible in the proposals) | 1 session, 8 decisions = 8 round-trips, 7 tool rounds, 17,239 projection tokens, wall 45 s | pi SDK model → daemon `--remote-mover` → harness loop (model-less) | propose_move (cut + schemas + budgets) → typed tool call → host executes → next cut | Situation.tokensUsed (projection; 17.2k over 13 decisions) | coderLean + meaning profile | PASS — the final edit_symbol call carries the pack executable with the id CORRECTED from the cut (`lib/loop.dart::inBounds` → `sym_lib_loop.dart_inBounds`) — the model self-recovered from the zoom data ([transcript](../../benchmark/runs/r7_pi_remote_mover_transcript.txt)) |
+
+**Findings shipped with the row (classified data):**
+- **pi prompts must be SERIALIZED**: proposals arrive while pi is still
+  closing its previous turn (the daemon's ReAct continuation opens the
+  next decision immediately after a submission) — the driver queues them
+  (measured: without the queue, mid-prompt proposals silently answered
+  "no move proposed" and burned the attempt budget).
+- **The schema bundle's `root` wrapper** degraded every client-rendered
+  call (`{root: {...}}` — the registry read defaults instead of the
+  model's intent). The client now unwraps `parameters.root`; the schema
+  bundle should carry the unwrap server-side (follow-up).
+- **The meaning profile's `run` tool is a WRITE HOLE**: the first pi run
+  reached PASS partly through `perl -pi -e` editing the file via the run
+  tool — a law violation surface the run-graded arm tolerates. Follow-up
+  (recorded in PLAN.md): constrain the meaning profile's run tool to the
+  convention commands (analyze/test/run — no file-mutating flags).
+
+
 ## R7 production #3 — packs as the PRIMARY path (the capture loop)
 
 Landed: the ADR 0021 capture loop wired to the edit tier

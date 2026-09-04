@@ -5,7 +5,7 @@
 //
 // R7 production #1: the id-bearing verbs (harness_impact, harness_edit)
 // carry the STRUCTURED contract — the exact registry args (focusId /
-// action, symbolId, classSymbolId, opChain, executableId,
+// action, symbolId, opChain, executableId,
 // executableParams) serialized into the session/prompt as a JSON payload
 // the daemon mover executes verbatim. No prose directives for edits.
 //
@@ -333,7 +333,7 @@ export default function (pi: PiAPI) {
       "Edit code through meaning moves — atomic, analyzer-verified, " +
       "auto-reverted on failure. Carries the EXACT edit_symbol args: " +
       "{action: replace_member_body|insert_member|apply_executable, " +
-      "symbolId?, classSymbolId?, executableId?, name?, returns?, params?, " +
+      "symbolId (REQUIRED — for insert_member it is the host class), executableId?, name?, returns?, params?, " +
       "opChain?, executableParams?}. opChain rows: {label, a?, b?} over " +
       "the closed pure vocabulary (load_arg, literal, add, sub, mul, lt, " +
       "gt, eq, not, starts_with, list_len, get_item, call, " +
@@ -349,7 +349,6 @@ export default function (pi: PiAPI) {
           enum: ["replace_member_body", "insert_member", "apply_executable"],
         },
         symbolId: { type: "string" },
-        classSymbolId: { type: "string" },
         executableId: { type: "string" },
         name: { type: "string" },
         returns: { type: "string" },
@@ -374,7 +373,7 @@ export default function (pi: PiAPI) {
           },
         },
       },
-      required: ["action"],
+      required: ["action", "symbolId"],
     },
     execute: async (_id: string, params: any) =>
       delegated(`harness_edit ${JSON.stringify(params)}`),

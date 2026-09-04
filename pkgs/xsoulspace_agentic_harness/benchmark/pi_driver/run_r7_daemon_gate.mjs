@@ -115,7 +115,7 @@ function createFixtureWorkspace() {
 //
 // Decides the next daemon-tool call from how many tool results pi has
 // produced. ID-BEARING calls carry the STRUCTURED contract: harness_edit
-// {action, symbolId/classSymbolId, opChain, executableId, executableParams}
+// {action, symbolId (REQUIRED; for insert_member it is the host class), opChain, executableId, executableParams}
 // — the exact `edit_symbol` args — and harness_impact {focusId,...}. Ids
 // are READ OUT OF THE STREAMED CUT (what a real model would do); the mover
 // never resolves or guesses them.
@@ -201,7 +201,7 @@ const SEQUENCE = [
       requireIds();
       return {
         action: "insert_member",
-        classSymbolId: state.boxId,
+        symbolId: state.boxId, // insert_member: the HOST CLASS
         name: "doubled",
         returns: "int",
         params: ["f:int"],
@@ -475,7 +475,7 @@ async function main() {
       label: "Harness Edit",
       description:
         "Edit code through meaning moves (atomic, analyzer-verified, auto-reverted on failure). Carries the EXACT edit_symbol args: " +
-        "{action: replace_member_body|insert_member|apply_executable, symbolId?, classSymbolId?, executableId?, name?, returns?, params?, opChain?, executableParams?}. " +
+        "{action, symbolId (REQUIRED — for insert_member it is the host class), executableId?, name?, returns?, params?, opChain?, executableParams?}. " +
         "opChain rows: {label, a?, b?} over the closed pure vocabulary. There is NO write tool — edits move through meaning.",
       parameters: {
         type: "object",
@@ -485,7 +485,6 @@ async function main() {
             enum: ["replace_member_body", "insert_member", "apply_executable"],
           },
           symbolId: { type: "string" },
-          classSymbolId: { type: "string" },
           executableId: { type: "string" },
           name: { type: "string" },
           returns: { type: "string" },

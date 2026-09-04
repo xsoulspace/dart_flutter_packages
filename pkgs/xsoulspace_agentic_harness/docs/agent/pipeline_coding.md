@@ -184,10 +184,13 @@ counts still match `responses_sent_delta`.
   overhead row (1408 fixed tokens — fits the AFM window), the capture
   loop → project pack, the remote mover (model-less daemon:
   `session/propose_move`), and the persistent daemon (single-instance,
-  warm attach, keep-warm, AOT) have LANDED; R7e — one real AFM edit
-  through the daemon, pass@3 — and the real-model pi row (pi's model
-  answering propose_move) remain. No real model has driven the edit
-  surface yet; that number decides the next move.
+  warm attach, keep-warm, AOT) have LANDED — and the REAL-MODEL gates are
+  GREEN: R7e pass@3 = 3/3 (the on-device AFM model performs the pack-fed
+  edit in ONE decision, 2,008 tokens) and the pi row PASS (pi's model
+  drives the model-less daemon via propose_move, 8 round-trips). The
+  follow-ups are in the PLAN ledger: constrain the meaning profile's
+  `run` tool (a write hole found by the pi row) and unwrap the schema
+  bundle's `root` wrapper server-side.
 
 ## Invariants an agent must not break
 

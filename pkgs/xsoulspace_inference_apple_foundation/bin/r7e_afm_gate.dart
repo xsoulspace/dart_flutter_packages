@@ -26,8 +26,7 @@ library;
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:xsoulspace_agentic_harness/benchmark_api.dart'
-    show CheckerSpec;
+import 'package:xsoulspace_agentic_harness/benchmark_api.dart' show CheckerSpec;
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 import 'package:xsoulspace_inference_apple_foundation/src/coding_agent_runner.dart';
 import 'package:xsoulspace_inference_apple_foundation/src/intent_closure_runner.dart'
@@ -65,11 +64,15 @@ const _packJson = {
 const _taskPrompt =
     'lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE '
     'bound (inBounds(3, 3) is true). The project pack carries the repair '
-    'executable `$_packId` — apply it through edit_symbol '
-    '(action apply_executable, that executableId, the symbolId of '
-    'inBounds from the zoom cut). Scan first, zoom to find inBounds, '
-    'apply, then verify with the run tool (dart analyze). Never read or '
-    'write files.';
+    'executable `$_packId`. Fix it with ONE edit_symbol call of EXACTLY '
+    'this shape: {"action": "apply_executable", "executableId": '
+    '"$_packId", "symbolId": <the TOP-LEVEL symbol id of inBounds, '
+    'from the meaning_zoom cut>, "executableParams": {}} — this '
+    'executable takes NO slots, so executableParams is EMPTY; symbolId '
+    'is a top-level arg, never inside executableParams. Flow: repo_etl '
+    'action scan (once) → meaning_zoom query inBounds → the edit_symbol '
+    'call above → run dart analyze. Never read or write files. Do not '
+    'rename anything and do not re-scan.';
 
 Future<Directory> _seedJail(int run) async {
   final jail = await Directory.systemTemp.createTemp('r7e_afm_$run\_');
@@ -115,14 +118,15 @@ CodingAgentTask _task() => CodingAgentTask(
   meaningProfile: true,
   systemPrompt: meaningProfileSystemPrompt,
   runCommand: const ['dart', 'test'],
-  checkers: [
-    CheckerSpec(type: 'runs', path: 'test', value: 'dart test'),
-  ],
+  checkers: [CheckerSpec(type: 'runs', path: 'test', value: 'dart test')],
   repairHint:
-      'Flow: repo_etl action scan → meaning_zoom (query inBounds) to find '
-      'the symbolId → edit_symbol action apply_executable, executableId '
-      '$_packId, symbolId from the cut → run dart analyze. If a move '
-      'bounces, the bounce text names the exact repair.',
+      'The exact move that fixes this task: edit_symbol with '
+      '{"action": "apply_executable", "executableId": "$_packId", '
+      '"symbolId": <TOP-LEVEL id of inBounds from meaning_zoom>, '
+      '"executableParams": {}}. If a move bounced, the bounce text names '
+      'the exact repair — symbolId goes at the TOP LEVEL of the call, '
+      'executableParams stays EMPTY for this executable. Do not rename '
+      'and do not re-scan; the tree is already built.',
 );
 
 Future<void> main(List<String> args) async {
@@ -138,8 +142,10 @@ Future<void> main(List<String> args) async {
     );
     exit(2);
   }
-  stderr.writeln('[r7e] AFM available — pass@$runs against the real '
-      'on-device model through the meaning-profile surface.');
+  stderr.writeln(
+    '[r7e] AFM available — pass@$runs against the real '
+    'on-device model through the meaning-profile surface.',
+  );
 
   final router = ModelRouter(
     inferenceClientsBuilders: {
@@ -195,8 +201,7 @@ Future<void> main(List<String> args) async {
   final passed = results.where((r) => r.passed).length;
   final failureClasses = {
     for (final r in results)
-      if (!r.passed)
-        r.failureClass.isEmpty ? 'unclassified' : r.failureClass,
+      if (!r.passed) r.failureClass.isEmpty ? 'unclassified' : r.failureClass,
   };
   final summary =
       'R7e (production #6) — task: r7e_pack_edit (pack-fed apply_executable '

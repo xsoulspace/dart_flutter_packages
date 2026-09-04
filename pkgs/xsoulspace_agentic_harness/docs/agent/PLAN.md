@@ -23,9 +23,12 @@ memory left), **#3 the capture loop** (novel resolution → project pack →
 reuse at zero authored tokens), **#4 the remote mover** (the daemon runs
 MODEL-LESS; the client's model decides via `session/propose_move`), and
 **#5 the persistent daemon** (single-instance, warm attach, keep-warm,
-AOT composes with native assets). What is NOT yet true: **no real model
-has ever driven the edit surface** — #6 (R7e, on-device AFM) and #7
-(pi's model answering propose_move) remain.
+AOT composes with native assets), **#6 R7e** (**pass@3 = 3/3 — a real
+on-device AFM model performed a real pack-fed edit through the surface,
+2,008 tokens/decision**) and **#7 the real-model pi row** (**PASS —
+pi's model drove the MODEL-LESS daemon via `session/propose_move`, 8
+decisions = 8 round-trips**). THE PRODUCTION PATH IS COMPLETE — every
+gate has a published row; the follow-ups are in the ledger below.
 
 1. **~~Full edit surface over ACP~~ — DONE (production #1).** The prose
    directives (`[rename old new]`) are gone: `harness_edit` carries the
@@ -62,26 +65,24 @@ has ever driven the edit surface** — #6 (R7e, on-device AFM) and #7
    ~0–1 ms startup, zero re-scan), keep-warm with idle-exit, and AOT
    composes with the native-assets hook (no fallback needed)
    ([results_r7.md](results_r7.md)).
-6. **R7e — THE GATE: one real AFM edit through the daemon, pass@3.**
-   In-process (not stdio) from the AFM app: meaning-profile surface, one
-   fixture edit (use the pack path from #3), `dart analyze` + the
-   workspace convention green. Everything above exists to make this run
-   measurable. If the overhead row (#2) ever stops fitting, cut the
-   surface first (lean schemas), never the law.
-7. **Real-model pi row (SCOPE FIXED 2026-09-04 — the pi column has NO
-   daemon mover).** The daemon under test runs MODEL-LESS: pi's own real
-   model is the session actor's brain via the #4 remote-mover protocol —
-   wiring the daemon to open_router/AFM *while pi calls it* would put a
-   second, worse model inside the loop and prove nothing about what we
-   are actually testing: how the harness TOOL SURFACE behaves from pi's
-   perspective (flows, latency, ergonomics) against pi's native tools.
-   Production movers (AFM on-device, open_router for the coding CLI /
-   general agent) are a SEPARATE track — the `--scripted`/`--remote-mover`
-   split exists exactly so the surface gate never depends on a mover
-   model. Gate: one real-model pi session, pi → daemon (remote mover),
-   fixture task via `run_r7_daemon_gate.mjs` with pi on a real provider —
-   publish the row even if it FAILS; classify the failure (schema size?
-   slot ambiguity? cut composition?).
+6. **~~R7e — THE GATE~~ — DONE (production #6): pass@3 = 3/3.** The REAL
+   on-device AFM model performed the pack-fed edit through the
+   meaning-profile surface in ONE decision (2,008 tokens — 45% of the
+   window). The failing runs found the predicted failure classes and the
+   surface was tuned (never the law): `symbolId` is the ONE REQUIRED id
+   (optional slots get dropped by the 2–4k model — measured),
+   `executableParams.symbolId` is promoted (the wire declares the slot),
+   `label` resolves mechanically with ambiguity bounces
+   ([results_r7.md](results_r7.md)).
+7. **~~Real-model pi row~~ — DONE (production #7): PASS.** The MODEL-LESS
+   daemon (`--remote-mover`), pi's real model answering propose_move with
+   tools built VERBATIM from the proposal schemas: 8 decisions = 8
+   round-trips, the pack edit landed with an id the model self-corrected
+   from the cut. Findings shipped: pi prompts are SERIALIZED (proposals
+   land mid-turn), the schema bundle's `root` wrapper must be unwrapped
+   client-side, and the meaning profile's `run` tool is a WRITE HOLE
+   (`perl -pi` reached the file — follow-up in the ledger)
+   ([results_r7.md](results_r7.md)).
 
 Interactive hygiene (parallel, small): ~~mid-turn streaming of tool
 results~~ DONE (production #1 — a 40ms observer in `runCodingAgentOnce`
@@ -133,9 +134,9 @@ session through the new surface; pack inventory + capture loop (R7d).
   1 decision, 7,857 projection tokens, `dart test exit=0`, zero model code
   tokens, zero host-authored expectations ([results_r6.md](results_r6.md)).
 - **R7 — edit-as-re-derivation:** a/b/c/d LANDED + gated (see history);
-  production #1 (full edit surface over ACP), #2 (overhead row) and #3
-  (capture loop → pack inventory) LANDED 2026-09-04; **R7e (real AFM
-  edit through the daemon) is the open track — production path #6.**
+  the ENTIRE production path LANDED 2026-09-04 (#1 edit surface, #2
+  overhead row, #3 capture loop, #4 remote mover, #5 persistent daemon,
+  **#6 R7e pass@3 = 3/3 on real AFM**, **#7 real-model pi row PASS**).
 - **R8 — last_answer hosts the harness (ADR 0015, TASK B): LANDED
   (LLM-free).** The app's first embedded domain host:
   `lastanswer/lib/coding_agent/` owns the daemon lifecycle IN-PROCESS
@@ -151,6 +152,22 @@ session through the new surface; pack inventory + capture loop (R7d).
   write never lands, `verdict: FAIL`; host lifecycle (start/stop,
   per-workspace session continuation, snapshot store). Real backends
   ride the same surface behind the config flag.
+  **Backend switch (AFM ↔ OpenRouter) LANDED:** UI segmented control →
+  `HarnessSessionController.switchBackend` restarts the daemon;
+  per-workspace snapshot stores restore the world on the next session
+  (R7c `loadSession` — proven scripted: switch mid-workspace, second
+  turn PASSes on the restored world). OpenRouter keys come from the UI
+  field or `OPENROUTER_API_KEY`; an unresolvable key is an honest
+  pre-session config error, never a mid-turn crash.
+  **AFM e2e gate GREEN (2026-09-04, macOS 26.6.2, real app):**
+  `flutter test integration_test/coding_agent_afm_e2e_test.dart -d macos`
+  — real on-device fixture fix through the embedded daemon:
+  `verdict: PASS` (1 decision, 3 rounds, 1,360 projection tokens,
+  31.8 s wall; moves read → declare_check → write; lean profile).
+  Known constraint: the Flutter app cannot resolve the bridge code asset
+  yet (SDK 3.12, no `DynamicLibrary.codeAsset` in Flutter builds) — the
+  gate passes `XS_FM_BRIDGE_PATH` to the hook-built dylib. Follow-up:
+  bundle the dylib in the Runner build phase.
 
 ## Standing rules
 
@@ -186,10 +203,16 @@ session through the new surface; pack inventory + capture loop (R7d).
 - [x] Persistent daemon + AOT (production #5) — DONE 2026-09-04
       (single-instance, warm attach, keep-warm, AOT composes);
       [results_r7.md](results_r7.md).
-- [ ] R7e gate: one real AFM edit through the daemon, pass@3 (production
-      #6; needs the on-device AFM runtime).
-- [ ] Real-model pi row (production #7, model-less daemon — pi's model
-      answers propose_move; needs a live pi session with a real provider).
+- [x] R7e gate: one real AFM edit through the daemon, pass@3 (production
+      #6) — DONE 2026-09-04, **3/3**; [results_r7.md](results_r7.md).
+- [x] Real-model pi row (production #7, model-less daemon — pi's model
+      answers propose_move) — DONE 2026-09-04, **PASS**;
+      [results_r7.md](results_r7.md).
+- [ ] Constrain the meaning profile's `run` tool to the convention
+      commands (analyze/test/run — no file-mutating flags): the pi row
+      found `perl -pi` as a write path (law violation surface).
+- [ ] Unwrap the schema bundle's `root` wrapper server-side (the pi row
+      client works around it today).
 - [ ] Drop `runTool`'s redundant role if J4's `analyze_check` + spec runner
   subsume the exit-code oracle for coding tasks (keep for non-Dart hosts).
 - [ ] Deferred (evidence-gated, owner: mcp_flutter/intentcall): **H5** —

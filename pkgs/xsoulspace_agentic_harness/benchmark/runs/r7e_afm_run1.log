@@ -274,3 +274,672 @@ Flow: repo_etl action s…"
 tick 73230: decisions=0 inFlight=0 pending=0 actors=agent-1788548367958830-0:0r/3a
 
 
+coding_agent run — task: r7e_pack_edit
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 1481
+  decisions: 6
+  tool rounds (thread beats): 18
+  moves: {repo_etl.scan: 4, meaning_zoom: 5, edit_symbol.apply_executable: 4, meaning_impact: 3, repo_etl.refresh: 2}
+  projection tokens (honest spend, Situation.tokensUsed): 13489
+  meaning nodes: 4, edges: 7
+  wall clock: 253048 ms
+  final gate (outer oracle, once): FAIL
+    check: dart test exit=1:
+  failure class: final gate: dart test exit=1:
+--- harness pulse (J1.5.3) ---
+tick 6 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788548885338468-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: dart test exit=1:
+— agent-1788548885338468-0  [idle]  rounds 0/12 (Σ0)  attempts 3/3 EXHAUSTED
+    last: edit_symbol:{"executableParams":{},"action":"apply_executable","execu… → FAILED
+      error: {"ok":false,"bounce":true,"error":"missing symbolId","repair":"re-send the move with symbolId as a TOP-LEVEL edit_sym…
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 55336..80724
+tick 78883: decisions=1 inFlight=1 pending=0 actors=agent-1788548885338468-0:0r/3a
+    agent-1788548885338468-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 78983: decisions=1 inFlight=1 pending=0 actors=agent-1788548885338468-0:0r/3a
+    agent-1788548885338468-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 79083: decisions=1 inFlight=1 pending=0 actors=agent-1788548885338468-0:0r/3a
+    agent-1788548885338468-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 79183: decisions=1 inFlight=1 pending=0 actors=agent-1788548885338468-0:0r/3a
+    agent-1788548885338468-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 79283: decisions=1 inFlight=1 pending=0 actors=agent-1788548885338468-0:0r/3a
+    agent-1788548885338468-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 79383: decisions=1 inFlight=1 pending=0 actors=agent-1788548885338468-0:0r/3a
+    agent-1788548885338468-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 79483: decisions=1 inFlight=1 pending=0 actors=agent-1788548885338468-0:0r/3a
+    agent-1788548885338468-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 79583: decisions=1 inFlight=1 pending=0 actors=agent-1788548885338468-0:0r/3a
+    agent-1788548885338468-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 79683: decisions=1 inFlight=1 pending=0 actors=agent-1788548885338468-0:0r/3a
+    agent-1788548885338468-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 79783: decisions=1 inFlight=1 pending=0 actors=agent-1788548885338468-0:0r/3a
+    agent-1788548885338468-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 79883: decisions=1 inFlight=1 pending=0 actors=agent-1788548885338468-0:0r/3a
+    agent-1788548885338468-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 79983: decisions=1 inFlight=1 pending=0 actors=agent-1788548885338468-0:0r/3a
+    agent-1788548885338468-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 80083: decisions=1 inFlight=1 pending=0 actors=agent-1788548885338468-0:0r/3a
+    agent-1788548885338468-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 80183: decisions=1 inFlight=1 pending=0 actors=agent-1788548885338468-0:0r/3a
+    agent-1788548885338468-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 80283: decisions=1 inFlight=1 pending=0 actors=agent-1788548885338468-0:0r/3a
+    agent-1788548885338468-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 80383: decisions=1 inFlight=1 pending=0 actors=agent-1788548885338468-0:0r/3a
+    agent-1788548885338468-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 80483: decisions=1 inFlight=1 pending=0 actors=agent-1788548885338468-0:0r/3a
+    agent-1788548885338468-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 80583: decisions=1 inFlight=1 pending=0 actors=agent-1788548885338468-0:0r/3a
+    agent-1788548885338468-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 80683: decisions=1 inFlight=1 pending=0 actors=agent-1788548885338468-0:0r/3a
+    agent-1788548885338468-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 80724: decisions=0 inFlight=0 pending=0 actors=agent-1788548885338468-0:0r/3a
+
+
+coding_agent run — task: r7e_pack_edit
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 1481
+  decisions: 5
+  tool rounds (thread beats): 18
+  moves: {meaning_zoom: 7, repo_etl.scan: 3, edit_symbol.apply_executable: 4, meaning_impact: 3, repo_etl.refresh: 1}
+  projection tokens (honest spend, Situation.tokensUsed): 11117
+  meaning nodes: 4, edges: 7
+  wall clock: 212253 ms
+  final gate (outer oracle, once): FAIL
+    check: dart test exit=1:
+  failure class: final gate: dart test exit=1:
+--- harness pulse (J1.5.3) ---
+tick 5 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788549262482876-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: dart test exit=1:
+— agent-1788549262482876-0  [idle]  rounds 0/12 (Σ0)  attempts 3/3 EXHAUSTED
+    last: meaning_zoom:{"query":"inBounds","zoom":"region","maxNodes":1000} → ok
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 35359..60734
+tick 58883: decisions=1 inFlight=1 pending=0 actors=agent-1788549262482876-0:0r/3a
+    agent-1788549262482876-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 58983: decisions=1 inFlight=1 pending=0 actors=agent-1788549262482876-0:0r/3a
+    agent-1788549262482876-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 59083: decisions=1 inFlight=1 pending=0 actors=agent-1788549262482876-0:0r/3a
+    agent-1788549262482876-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 59183: decisions=1 inFlight=1 pending=0 actors=agent-1788549262482876-0:0r/3a
+    agent-1788549262482876-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 59283: decisions=1 inFlight=1 pending=0 actors=agent-1788549262482876-0:0r/3a
+    agent-1788549262482876-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 59383: decisions=1 inFlight=1 pending=0 actors=agent-1788549262482876-0:0r/3a
+    agent-1788549262482876-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 59483: decisions=1 inFlight=1 pending=0 actors=agent-1788549262482876-0:0r/3a
+    agent-1788549262482876-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 59583: decisions=1 inFlight=1 pending=0 actors=agent-1788549262482876-0:0r/3a
+    agent-1788549262482876-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 59683: decisions=1 inFlight=1 pending=0 actors=agent-1788549262482876-0:0r/3a
+    agent-1788549262482876-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 59783: decisions=1 inFlight=1 pending=0 actors=agent-1788549262482876-0:0r/3a
+    agent-1788549262482876-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 59883: decisions=1 inFlight=1 pending=0 actors=agent-1788549262482876-0:0r/3a
+    agent-1788549262482876-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 59983: decisions=1 inFlight=1 pending=0 actors=agent-1788549262482876-0:0r/3a
+    agent-1788549262482876-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 60083: decisions=1 inFlight=1 pending=0 actors=agent-1788549262482876-0:0r/3a
+    agent-1788549262482876-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 60183: decisions=1 inFlight=1 pending=0 actors=agent-1788549262482876-0:0r/3a
+    agent-1788549262482876-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 60283: decisions=1 inFlight=1 pending=0 actors=agent-1788549262482876-0:0r/3a
+    agent-1788549262482876-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 60383: decisions=1 inFlight=1 pending=0 actors=agent-1788549262482876-0:0r/3a
+    agent-1788549262482876-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 60483: decisions=1 inFlight=1 pending=0 actors=agent-1788549262482876-0:0r/3a
+    agent-1788549262482876-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 60583: decisions=1 inFlight=1 pending=0 actors=agent-1788549262482876-0:0r/3a
+    agent-1788549262482876-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 60683: decisions=1 inFlight=1 pending=0 actors=agent-1788549262482876-0:0r/3a
+    agent-1788549262482876-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 60734: decisions=0 inFlight=0 pending=0 actors=agent-1788549262482876-0:0r/3a
+
+
+coding_agent run — task: r7e_pack_edit
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 1504
+  decisions: 5
+  tool rounds (thread beats): 20
+  moves: {repo_etl.scan: 2, meaning_zoom: 5, edit_symbol.apply_executable: 6, repo_etl.refresh: 1, meaning_impact: 5, run: 1}
+  projection tokens (honest spend, Situation.tokensUsed): 10991
+  meaning nodes: 4, edges: 7
+  wall clock: 308517 ms
+  final gate (outer oracle, once): FAIL
+    check: dart test exit=1:
+  failure class: final gate: dart test exit=1:
+--- harness pulse (J1.5.3) ---
+tick 5 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788550108723339-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: dart test exit=1:
+— agent-1788550108723339-0  [idle]  rounds 0/12 (Σ0)  attempts 3/3 EXHAUSTED
+    last: edit_symbol:{"action":"apply_executable","executableId":"dart/fix_loo… → FAILED
+      error: {"ok":false,"bounce":true,"error":"missing symbolId","repair":"re-send the move with symbolId as a TOP-LEVEL edit_sym…
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 66536..91945
+tick 90135: decisions=1 inFlight=1 pending=0 actors=agent-1788550108723339-0:0r/3a
+    agent-1788550108723339-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 90235: decisions=1 inFlight=1 pending=0 actors=agent-1788550108723339-0:0r/3a
+    agent-1788550108723339-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 90335: decisions=1 inFlight=1 pending=0 actors=agent-1788550108723339-0:0r/3a
+    agent-1788550108723339-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 90435: decisions=1 inFlight=1 pending=0 actors=agent-1788550108723339-0:0r/3a
+    agent-1788550108723339-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 90535: decisions=1 inFlight=1 pending=0 actors=agent-1788550108723339-0:0r/3a
+    agent-1788550108723339-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 90635: decisions=1 inFlight=1 pending=0 actors=agent-1788550108723339-0:0r/3a
+    agent-1788550108723339-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 90735: decisions=1 inFlight=1 pending=0 actors=agent-1788550108723339-0:0r/3a
+    agent-1788550108723339-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 90835: decisions=1 inFlight=1 pending=0 actors=agent-1788550108723339-0:0r/3a
+    agent-1788550108723339-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 90935: decisions=1 inFlight=1 pending=0 actors=agent-1788550108723339-0:0r/3a
+    agent-1788550108723339-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 91035: decisions=1 inFlight=1 pending=0 actors=agent-1788550108723339-0:0r/3a
+    agent-1788550108723339-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 91135: decisions=1 inFlight=1 pending=0 actors=agent-1788550108723339-0:0r/3a
+    agent-1788550108723339-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 91235: decisions=1 inFlight=1 pending=0 actors=agent-1788550108723339-0:0r/3a
+    agent-1788550108723339-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 91335: decisions=1 inFlight=1 pending=0 actors=agent-1788550108723339-0:0r/3a
+    agent-1788550108723339-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 91435: decisions=1 inFlight=1 pending=0 actors=agent-1788550108723339-0:0r/3a
+    agent-1788550108723339-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 91535: decisions=1 inFlight=1 pending=0 actors=agent-1788550108723339-0:0r/3a
+    agent-1788550108723339-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 91635: decisions=1 inFlight=1 pending=0 actors=agent-1788550108723339-0:0r/3a
+    agent-1788550108723339-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 91735: decisions=1 inFlight=1 pending=0 actors=agent-1788550108723339-0:0r/3a
+    agent-1788550108723339-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 91835: decisions=1 inFlight=1 pending=0 actors=agent-1788550108723339-0:0r/3a
+    agent-1788550108723339-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 91935: decisions=1 inFlight=1 pending=0 actors=agent-1788550108723339-0:0r/3a
+    agent-1788550108723339-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 91945: decisions=0 inFlight=0 pending=0 actors=agent-1788550108723339-0:0r/3a
+
+
+coding_agent run — task: r7e_pack_edit
+  backend: apple_foundation_afm
+  verdict: PASS
+  overhead tokens (system+schemas): 1492
+  decisions: 2
+  tool rounds (thread beats): 7
+  moves: {repo_etl.scan: 1, meaning_zoom: 3, edit_symbol.apply_executable: 2, meaning_impact: 1}
+  projection tokens (honest spend, Situation.tokensUsed): 4149
+  meaning nodes: 4, edges: 7
+  wall clock: 102848 ms
+  final gate (outer oracle, once): PASS
+    check: dart test exit=0
+  failure class: -
+--- harness pulse (J1.5.3) ---
+tick 2 | decisions 0 | in-flight 0 | pending results 0
+— agent-1788551526571424-0  [idle]  rounds 0/12 (Σ0)  attempts 1/3
+    last: edit_symbol:{"action":"apply_executable","symbolId":"sym_lib_loop.dar… → ok
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 7099..32516
+tick 30621: decisions=1 inFlight=1 pending=0 actors=agent-1788551526571424-0:0r/1a
+    agent-1788551526571424-0 ← : "Your previous attempt did not satisfy verification (attempt 1/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 30721: decisions=1 inFlight=1 pending=0 actors=agent-1788551526571424-0:0r/1a
+    agent-1788551526571424-0 ← : "Your previous attempt did not satisfy verification (attempt 1/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 30821: decisions=1 inFlight=1 pending=0 actors=agent-1788551526571424-0:0r/1a
+    agent-1788551526571424-0 ← : "Your previous attempt did not satisfy verification (attempt 1/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 30921: decisions=1 inFlight=1 pending=0 actors=agent-1788551526571424-0:0r/1a
+    agent-1788551526571424-0 ← : "Your previous attempt did not satisfy verification (attempt 1/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 31021: decisions=1 inFlight=1 pending=0 actors=agent-1788551526571424-0:0r/1a
+    agent-1788551526571424-0 ← : "Your previous attempt did not satisfy verification (attempt 1/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 31121: decisions=1 inFlight=1 pending=0 actors=agent-1788551526571424-0:0r/1a
+    agent-1788551526571424-0 ← : "Your previous attempt did not satisfy verification (attempt 1/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 31221: decisions=1 inFlight=1 pending=0 actors=agent-1788551526571424-0:0r/1a
+    agent-1788551526571424-0 ← : "Your previous attempt did not satisfy verification (attempt 1/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 31321: decisions=1 inFlight=1 pending=0 actors=agent-1788551526571424-0:0r/1a
+    agent-1788551526571424-0 ← : "Your previous attempt did not satisfy verification (attempt 1/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 31421: decisions=1 inFlight=1 pending=0 actors=agent-1788551526571424-0:0r/1a
+    agent-1788551526571424-0 ← : "Your previous attempt did not satisfy verification (attempt 1/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 31521: decisions=1 inFlight=1 pending=0 actors=agent-1788551526571424-0:0r/1a
+    agent-1788551526571424-0 ← : "Your previous attempt did not satisfy verification (attempt 1/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 31621: decisions=1 inFlight=1 pending=0 actors=agent-1788551526571424-0:0r/1a
+    agent-1788551526571424-0 ← : "Your previous attempt did not satisfy verification (attempt 1/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 31721: decisions=1 inFlight=1 pending=0 actors=agent-1788551526571424-0:0r/1a
+    agent-1788551526571424-0 ← : "Your previous attempt did not satisfy verification (attempt 1/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 31821: decisions=1 inFlight=1 pending=0 actors=agent-1788551526571424-0:0r/1a
+    agent-1788551526571424-0 ← : "Your previous attempt did not satisfy verification (attempt 1/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 31921: decisions=1 inFlight=1 pending=0 actors=agent-1788551526571424-0:0r/1a
+    agent-1788551526571424-0 ← : "Your previous attempt did not satisfy verification (attempt 1/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 32021: decisions=1 inFlight=1 pending=0 actors=agent-1788551526571424-0:0r/1a
+    agent-1788551526571424-0 ← : "Your previous attempt did not satisfy verification (attempt 1/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 32121: decisions=1 inFlight=1 pending=0 actors=agent-1788551526571424-0:0r/1a
+    agent-1788551526571424-0 ← : "Your previous attempt did not satisfy verification (attempt 1/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 32221: decisions=1 inFlight=1 pending=0 actors=agent-1788551526571424-0:0r/1a
+    agent-1788551526571424-0 ← : "Your previous attempt did not satisfy verification (attempt 1/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 32321: decisions=1 inFlight=1 pending=0 actors=agent-1788551526571424-0:0r/1a
+    agent-1788551526571424-0 ← : "Your previous attempt did not satisfy verification (attempt 1/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 32421: decisions=1 inFlight=1 pending=0 actors=agent-1788551526571424-0:0r/1a
+    agent-1788551526571424-0 ← : "Your previous attempt did not satisfy verification (attempt 1/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 32516: decisions=0 inFlight=0 pending=0 actors=agent-1788551526571424-0:0r/1a
+
+
+coding_agent run — task: r7e_pack_edit
+  backend: apple_foundation_afm
+  verdict: PASS
+  overhead tokens (system+schemas): 1492
+  decisions: 1
+  tool rounds (thread beats): 4
+  moves: {repo_etl.scan: 1, meaning_zoom: 1, meaning_impact: 1, edit_symbol.apply_executable: 1}
+  projection tokens (honest spend, Situation.tokensUsed): 2008
+  meaning nodes: 4, edges: 7
+  wall clock: 73808 ms
+  final gate (outer oracle, once): PASS
+    check: dart test exit=0
+  failure class: -
+--- harness pulse (J1.5.3) ---
+tick 1 | decisions 0 | in-flight 0 | pending results 0
+— agent-1788551662652906-0  [idle]  rounds 0/12 (Σ0)
+    last: edit_symbol:{"executableParams":{},"action":"apply_executable","execu… → ok
+--- flight recorder ---
+FlightRecorder: 250 pulse(s), ticks 99..24983
+tick 23099: decisions=1 inFlight=1 pending=0 actors=agent-1788551662652906-0:0r/0a
+    agent-1788551662652906-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 23199: decisions=1 inFlight=1 pending=0 actors=agent-1788551662652906-0:0r/0a
+    agent-1788551662652906-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 23299: decisions=1 inFlight=1 pending=0 actors=agent-1788551662652906-0:0r/0a
+    agent-1788551662652906-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 23399: decisions=1 inFlight=1 pending=0 actors=agent-1788551662652906-0:0r/0a
+    agent-1788551662652906-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 23499: decisions=1 inFlight=1 pending=0 actors=agent-1788551662652906-0:0r/0a
+    agent-1788551662652906-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 23599: decisions=1 inFlight=1 pending=0 actors=agent-1788551662652906-0:0r/0a
+    agent-1788551662652906-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 23699: decisions=1 inFlight=1 pending=0 actors=agent-1788551662652906-0:0r/0a
+    agent-1788551662652906-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 23799: decisions=1 inFlight=1 pending=0 actors=agent-1788551662652906-0:0r/0a
+    agent-1788551662652906-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 23899: decisions=1 inFlight=1 pending=0 actors=agent-1788551662652906-0:0r/0a
+    agent-1788551662652906-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 23999: decisions=1 inFlight=1 pending=0 actors=agent-1788551662652906-0:0r/0a
+    agent-1788551662652906-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 24099: decisions=1 inFlight=1 pending=0 actors=agent-1788551662652906-0:0r/0a
+    agent-1788551662652906-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 24199: decisions=1 inFlight=1 pending=0 actors=agent-1788551662652906-0:0r/0a
+    agent-1788551662652906-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 24299: decisions=1 inFlight=1 pending=0 actors=agent-1788551662652906-0:0r/0a
+    agent-1788551662652906-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 24399: decisions=1 inFlight=1 pending=0 actors=agent-1788551662652906-0:0r/0a
+    agent-1788551662652906-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 24499: decisions=1 inFlight=1 pending=0 actors=agent-1788551662652906-0:0r/0a
+    agent-1788551662652906-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 24599: decisions=1 inFlight=1 pending=0 actors=agent-1788551662652906-0:0r/0a
+    agent-1788551662652906-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 24699: decisions=1 inFlight=1 pending=0 actors=agent-1788551662652906-0:0r/0a
+    agent-1788551662652906-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 24799: decisions=1 inFlight=1 pending=0 actors=agent-1788551662652906-0:0r/0a
+    agent-1788551662652906-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 24899: decisions=1 inFlight=1 pending=0 actors=agent-1788551662652906-0:0r/0a
+    agent-1788551662652906-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 24983: decisions=0 inFlight=0 pending=0 actors=agent-1788551662652906-0:0r/0a
+
+
+coding_agent run — task: r7e_pack_edit
+  backend: apple_foundation_afm
+  verdict: PASS
+  overhead tokens (system+schemas): 1492
+  decisions: 1
+  tool rounds (thread beats): 4
+  moves: {repo_etl.scan: 1, meaning_zoom: 1, meaning_impact: 1, edit_symbol.apply_executable: 1}
+  projection tokens (honest spend, Situation.tokensUsed): 2008
+  meaning nodes: 4, edges: 7
+  wall clock: 67060 ms
+  final gate (outer oracle, once): PASS
+    check: dart test exit=0
+  failure class: -
+--- harness pulse (J1.5.3) ---
+tick 1 | decisions 0 | in-flight 0 | pending results 0
+— agent-1788554935169291-0  [idle]  rounds 0/12 (Σ0)
+    last: edit_symbol:{"symbolId":"sym_lib_loop.dart_inBounds","action":"apply_… → ok
+--- flight recorder ---
+FlightRecorder: 234 pulse(s), ticks 99..23326
+tick 21499: decisions=1 inFlight=1 pending=0 actors=agent-1788554935169291-0:0r/0a
+    agent-1788554935169291-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 21599: decisions=1 inFlight=1 pending=0 actors=agent-1788554935169291-0:0r/0a
+    agent-1788554935169291-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 21699: decisions=1 inFlight=1 pending=0 actors=agent-1788554935169291-0:0r/0a
+    agent-1788554935169291-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 21799: decisions=1 inFlight=1 pending=0 actors=agent-1788554935169291-0:0r/0a
+    agent-1788554935169291-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 21899: decisions=1 inFlight=1 pending=0 actors=agent-1788554935169291-0:0r/0a
+    agent-1788554935169291-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 21999: decisions=1 inFlight=1 pending=0 actors=agent-1788554935169291-0:0r/0a
+    agent-1788554935169291-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 22099: decisions=1 inFlight=1 pending=0 actors=agent-1788554935169291-0:0r/0a
+    agent-1788554935169291-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 22199: decisions=1 inFlight=1 pending=0 actors=agent-1788554935169291-0:0r/0a
+    agent-1788554935169291-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 22299: decisions=1 inFlight=1 pending=0 actors=agent-1788554935169291-0:0r/0a
+    agent-1788554935169291-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 22399: decisions=1 inFlight=1 pending=0 actors=agent-1788554935169291-0:0r/0a
+    agent-1788554935169291-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 22499: decisions=1 inFlight=1 pending=0 actors=agent-1788554935169291-0:0r/0a
+    agent-1788554935169291-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 22599: decisions=1 inFlight=1 pending=0 actors=agent-1788554935169291-0:0r/0a
+    agent-1788554935169291-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 22699: decisions=1 inFlight=1 pending=0 actors=agent-1788554935169291-0:0r/0a
+    agent-1788554935169291-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 22799: decisions=1 inFlight=1 pending=0 actors=agent-1788554935169291-0:0r/0a
+    agent-1788554935169291-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 22899: decisions=1 inFlight=1 pending=0 actors=agent-1788554935169291-0:0r/0a
+    agent-1788554935169291-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 22999: decisions=1 inFlight=1 pending=0 actors=agent-1788554935169291-0:0r/0a
+    agent-1788554935169291-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 23099: decisions=1 inFlight=1 pending=0 actors=agent-1788554935169291-0:0r/0a
+    agent-1788554935169291-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 23199: decisions=1 inFlight=1 pending=0 actors=agent-1788554935169291-0:0r/0a
+    agent-1788554935169291-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 23299: decisions=1 inFlight=1 pending=0 actors=agent-1788554935169291-0:0r/0a
+    agent-1788554935169291-0 ← : "lib/loop.dart has an off-by-one bug: inBounds must be the INCLUSIVE bound (inBounds(3, 3) is true). The project pack …"
+tick 23326: decisions=0 inFlight=0 pending=0 actors=agent-1788554935169291-0:0r/0a
+
+

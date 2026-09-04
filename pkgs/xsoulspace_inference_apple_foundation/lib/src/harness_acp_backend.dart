@@ -170,8 +170,7 @@ class HarnessAcpBackend
 
   ModelRouter? _buildRouter() {
     if (backend == 'open_router') {
-      final apiKey =
-          this.apiKey ?? Platform.environment['OPENROUTER_API_KEY'];
+      final apiKey = this.apiKey ?? Platform.environment['OPENROUTER_API_KEY'];
       if (apiKey == null || apiKey.isEmpty) return null;
       final router = ModelRouter(
         inferenceClientsBuilders: {

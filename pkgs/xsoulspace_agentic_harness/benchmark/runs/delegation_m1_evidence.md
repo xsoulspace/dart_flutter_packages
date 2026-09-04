@@ -240,3 +240,33 @@ does not re-derive it.
 AFM/real-model backends ride the SAME surface (`HarnessHostConfig.backend`),
 flagged; the scripted seam is the LLM-free gate. Failure classes: none
 dropped — the reject row is kept as the deny-path proof.
+
+## TASK B addendum — backend switch + the AFM e2e gate (2026-09-04, macOS 26.6.2)
+
+Backend switching (AFM on-device ↔ OpenRouter) landed in the app:
+`HarnessHostConfig.copyWith` + `HarnessSessionController.switchBackend`
+(restarts the daemon; the per-workspace snapshot store restores the world
+on the next session — R7c `loadSession`). OpenRouter keys: UI field or
+`OPENROUTER_API_KEY`; unresolvable key = honest pre-session config error.
+
+| row | flow | backend | verdict | spend | n |
+|---|---|---|---|---|---|
+| switch (scripted) | AFM-configured turn PASS → `switchBackend(open_router)` → new session, SAME workspace → turn PASS on the restored world | scripted `handlerFactory` (LLM-free) | PASS → PASS | scripted | 1 |
+| **AFM e2e (REAL)** | real macOS app (`last_answer.app`), UI flow: type workspace + sentence → tap Delegate → write-gate round-trip auto-allowed by the user-actor → oracle `dart run main.dart` exit 0 | `apple_foundation_afm` (lean, on-device) | **`verdict: PASS`** | **1 decision, 3 rounds, 1,360 projection tokens, 31.8 s wall; moves read → declare_check → write** | 1 |
+
+Command: `XS_FM_BRIDGE_PATH=<hook-built dylib> flutter test
+integration_test/coding_agent_afm_e2e_test.dart -d macos`.
+
+Constraint recorded: the Flutter macOS app cannot resolve the bridge code
+asset (workspace SDK 3.12; `DynamicLibrary.codeAsset` not available in
+Flutter builds) — the path-based loader needs `XS_FM_BRIDGE_PATH` pointed
+at `pkgs/xsoulspace_inference_apple_foundation/.dart_tool/lib/
+libxs_fm_bridge.dylib`. Follow-up (owner: last_answer/AFM host): bundle
+the dylib in the Runner build phase.
+
+Concurrent-session finding (NOT this task's regression): while the AFM
+e2e ran, the R7e session's `edit_symbol` schema additions (`label` prop +
+ARG SHAPE text) pushed the meaning-profile fixed overhead from 1,408 to
+**1,504** tokens — `meaning_profile_overhead_test.dart` now FAILS its own
+≤1,500 gate (production #2: cut the surface first, never the law). Owner:
+the R7e loop that made the edit.
