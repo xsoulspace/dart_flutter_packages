@@ -19,6 +19,7 @@
 library;
 
 export 'src/code_etl.dart';
+export 'src/edit_pack_capture.dart';
 export 'src/repo_etl_tool.dart';
 export 'src/span_editor.dart';
 export 'src/dart_materializer.dart';

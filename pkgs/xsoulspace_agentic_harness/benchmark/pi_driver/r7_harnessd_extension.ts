@@ -3,6 +3,12 @@
 // `harnessd` and BLOCKS pi's built-in file tools for sessions flagged with
 // PI_HARNESSD=1.
 //
+// R7 production #1: the id-bearing verbs (harness_impact, harness_edit)
+// carry the STRUCTURED contract — the exact registry args (focusId /
+// action, symbolId, classSymbolId, opChain, executableId,
+// executableParams) serialized into the session/prompt as a JSON payload
+// the daemon mover executes verbatim. No prose directives for edits.
+//
 // Use (from the apple_foundation package, where the daemon lives):
 //   dart run bin/harnessd.dart --profile meaning   # in another shell, OR
 //   let this extension spawn it (HARNESSD_PKG points at that package)
@@ -218,31 +224,75 @@ export default function (pi: PiAPI) {
     name: "harness_impact",
     label: "Harness Impact",
     description:
-      "Impact frontier of a symbol (reverse-reference closure, " +
-      "hard-capped) — the decomposition input for any change.",
+      "Impact frontier of a node (reverse-reference closure, " +
+      "hard-capped) — the decomposition input for any change. Carries the " +
+      "exact args: {focusId, depth?, maxNodes?} — focusId comes from the " +
+      "zoom cut, never a guessed name.",
     parameters: {
       type: "object",
-      properties: { symbol: { type: "string" } },
-      required: ["symbol"],
+      properties: {
+        focusId: { type: "string" },
+        depth: { type: "number" },
+        maxNodes: { type: "number" },
+      },
+      required: ["focusId"],
     },
     execute: async (_id: string, params: any) =>
-      delegated(`[impact ${params.symbol}]`),
+      delegated(`harness_impact ${JSON.stringify(params)}`),
   });
 
   pi.registerTool({
     name: "harness_edit",
     label: "Harness Edit",
     description:
-      "Edit code through the daemon: rename a symbol across its refs " +
-      "frontier (atomic, analyzer-verified, auto-reverted on failure). " +
-      "There is NO write tool — edits move through meaning.",
+      "Edit code through meaning moves — atomic, analyzer-verified, " +
+      "auto-reverted on failure. Carries the EXACT edit_symbol args: " +
+      "{action: replace_member_body|insert_member|apply_executable, " +
+      "symbolId?, classSymbolId?, executableId?, name?, returns?, params?, " +
+      "opChain?, executableParams?}. opChain rows: {label, a?, b?} over " +
+      "the closed pure vocabulary (load_arg, literal, add, sub, mul, lt, " +
+      "gt, eq, not, starts_with, list_len, get_item, call, " +
+      "jump_if_false, return). replace_member_body requires suite " +
+      "coverage for the member. There is NO write tool — edits move " +
+      "through meaning; ids come from the zoom/impact cuts, never a " +
+      "guessed name.",
     parameters: {
       type: "object",
-      properties: { oldName: { type: "string" }, newName: { type: "string" } },
-      required: ["oldName", "newName"],
+      properties: {
+        action: {
+          type: "string",
+          enum: ["replace_member_body", "insert_member", "apply_executable"],
+        },
+        symbolId: { type: "string" },
+        classSymbolId: { type: "string" },
+        executableId: { type: "string" },
+        name: { type: "string" },
+        returns: { type: "string" },
+        params: { type: "array", items: { type: "string" } },
+        opChain: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              label: { type: "string" },
+              a: { type: "string" },
+              b: { type: "string" },
+            },
+            required: ["label"],
+          },
+        },
+        executableParams: {
+          type: "object",
+          properties: {
+            newName: { type: "string" },
+            scope: { type: "string" },
+          },
+        },
+      },
+      required: ["action"],
     },
     execute: async (_id: string, params: any) =>
-      delegated(`[rename ${params.oldName} ${params.newName}]`),
+      delegated(`harness_edit ${JSON.stringify(params)}`),
   });
 
   pi.registerTool({

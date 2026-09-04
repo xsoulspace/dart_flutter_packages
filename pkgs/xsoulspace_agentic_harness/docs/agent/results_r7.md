@@ -5,7 +5,87 @@
 Date: 2026-09-03. LLM-free gates throughout (scripted movers; zero model
 code tokens everywhere). ADR: [0023](../../../../docs/decisions/0023_filesystem_projection_target_edit_as_rederivation.md).
 Standing rule: every row states backend, decision path, tokens source,
-composition, and n. Failures are classified data.
+composition, and n. Failures are classified data. Forward rows (the
+production path) live at the TOP; the landed R7a–d records follow.
+
+## R7 production #1 — FULL edit surface over ACP (the pi surface opens)
+
+Landed: the scripted mover's prose directives (`[rename old new]`,
+`[impact <symbol>]`) are GONE (hard cut). The id-bearing verbs now travel
+as STRUCTURED JSON payloads — `harness_edit {…}` carries the exact
+`edit_symbol` args (action, symbolId/classSymbolId, opChain,
+executableId, executableParams) and `harness_impact {…}` the exact
+`meaning_impact` args — serialized into the `session/prompt` text by the
+pi driver ([run_r7_daemon_gate.mjs](../../benchmark/pi_driver/run_r7_daemon_gate.mjs))
+and the pi extension ([r7_harnessd_extension.ts](../../benchmark/pi_driver/r7_harnessd_extension.ts)).
+The mover executes the payload VERBATIM against the real registry and
+NEVER resolves or guesses ids — the caller reads them from the streamed
+zoom/impact cuts (the R7d division of labor, now the only path). A
+malformed payload is dropped AND COUNTED (classified data, never repaired
+into a guess; rescan continues after the broken `{` so a bad group cannot
+swallow a following valid payload — gate-asserted).
+
+| Row | Gate | n | backend | decision path | tokens source | composition | verdict |
+|---|---|---|---|---|---|---|---|
+| production #1 | pi driver transcript performs `insert_member` AND `replace_member_body` (+ `apply_executable` rename) through the structured contract; `dart analyze` + workspace convention (`dart test`) green; pi fs tools disabled | 1 session, 7 daemon turns, 3 edit moves | scripted-daemon-actor (pi surface) → harnessd `open_router:scripted` mover | pi tool call → structured JSON payload in `session/prompt` → harness actor (meaning profile) → `edit_symbol` → verdict chunk | Situation.tokensUsed (projection; model-free mover) | coderLean + meaning profile surface | PASS — body replacement (`return (w * h);`), rename (`area` → `surfaceArea`, test file refs updated), insert (`Box.doubled`, `return (f * 2);`) all landed in a DISPOSABLE fixture workspace (no repo mutation, no revert dance); transcript: [r7_edit_surface_transcript.txt](../../benchmark/runs/r7_edit_surface_transcript.txt) |
+| malformed-payload gate | `harness_edit {broken` + one valid payload in one prompt → malformed dropped + counted, valid payload executed, result streamed | 1 | scripted mover (unit, LLM-free) | same | — | — | PASS — `(1 malformed dropped)` reported; `[edit_symbol]` bounce streamed mid-turn ([harnessd_r7c_test.dart](../../../xsoulspace_inference_apple_foundation/test/harnessd_r7c_test.dart)) |
+
+Design notes shipped with the gate: the edit fixture workspace is created
+fresh per gate run (pubspec + covered `area` + `Box`) — the coverage fence
+(b) is satisfied by the suite's own `expect(area(2, 3), 6)`; ids reach the
+caller only through the streamed cut (the mover's `_resolve` name-guessing
+path is deleted).
+
+## R7 production #2 — meaning-profile overhead vs the AFM window
+
+Mechanical measurement (LLM-free, zero model tokens): the FIXED cost of
+one meaning-profile decision before any content — `meaningProfileSystemPrompt`
++ the 5 tool schemas exactly as `runCodingAgentOnce` wires them — metered
+with the harness estimator (`overheadTokens`, chars/4) against the P1
+pre-flight `maxContextTokens` guard (3800).
+
+| Row | tokens | note |
+|---|---|---|
+| system prompt (`meaningProfileSystemPrompt`) | 141 | the law + flow, no per-task code |
+| `repo_etl` schema+desc | 132 | |
+| `meaning_zoom` schema+desc | 211 | |
+| `meaning_impact` schema+desc | 144 | |
+| `edit_symbol` schema+desc | 594 | the LARGEST schema, as predicted — the named lever if the row ever stops fitting (lean schemas, never the law) |
+| `run` schema+desc | 187 | |
+| **FIXED OVERHEAD TOTAL** | **1408** | fits the harness fixed-overhead target (≤ 1500) |
+| AFM window (P1 `maxContextTokens`) | 3800 | working memory left for cut + transcript: **2392** |
+
+Tokens source: `overheadTokens` (chars/4, the same estimator the
+projection law uses); n=1 registry construction, gate-asserted in
+[meaning_profile_overhead_test.dart](../../../xsoulspace_inference_apple_foundation/test/meaning_profile_overhead_test.dart)
+(edit_symbol-largest, totals under budget). **Verdict: the surface FITS**
+— nothing needs cutting to reach R7e; the only free parameter left is the
+cut itself (`coderLean` / `ProjectionBudget`), never the schemas.
+
+## R7 production #3 — packs as the PRIMARY path (the capture loop)
+
+Landed: the ADR 0021 capture loop wired to the edit tier
+([edit_pack_capture.dart](../../../xsoulspace_agentic_dart_meaning/lib/src/edit_pack_capture.dart)).
+A MODEL-COMPOSED `replace_member_body` that passes all three fences AND
+the free oracles (fully green — a move merely KEPT under a pre-existing
+red baseline is NOT a proven resolution) is captured by the HOST as a
+project-pack entry: an `EditExecutableWire` (kind `replace_member_body`,
+params `['symbolId']`) + the op-chain as data, persisted under
+`<workspace>/.dart_tool/harnessd/edit_pack.json`. The executable id is a
+MECHANICAL fingerprint of the repair class (action + normalized op rows,
+stable FNV-1a) — never model-authored, never prose. Every
+`edit_symbol` tool over the workspace AUTO-REALIZES the pack
+(`registerPackExecutable`), so the next task consumes the entry via
+`apply_executable {executableId, symbolId}` at ZERO authored tokens; the
+integration fence still validates the chain against the new symbol's
+signature (a wrong repair class bounces as data). Capture is idempotent
+(dedup by id) and host-only (the model never sees the pack file).
+
+| Row | Gate | n | backend | decision path | tokens source | composition | verdict |
+|---|---|---|---|---|---|---|---|
+| capture → reuse | scripted novel resolution (`area`, composed chain) → pack entry (`dart/captured/<fingerprint>`) → a SECOND task/session fixes `product` via `apply_executable` with NO op rows; `dart test` green both tasks | 1 workspace, 2 tasks (2 sessions) | scripted mover (LLM-free) | edit moves; task 2's call carries only executableId + symbolId | task 2 edit: ZERO authored tokens (chain from the pack) | coderLean + meaning profile | PASS — `product` body = the captured chain, convention green ([edit_pack_capture_test.dart](../../../xsoulspace_agentic_dart_meaning/test/edit_pack_capture_test.dart)) |
+| proven-only capture | composed move lands under a PRE-EXISTING RED baseline (suite still failing) → move KEPT, pack NOT written | 1 | scripted mover (LLM-free) | same | — | — | PASS — `edit_pack.json` absent; unproven resolutions never enter the pack |
+| idempotence | re-capturing the same repair class returns the same id; no duplicate entry; non-capturable actions (`insert_member`) return null | 3 | unit (LLM-free) | — | — | — | PASS |
 
 ## R7b — the span-edit materializer (the ACT verb for existing code)
 
@@ -125,9 +205,12 @@ planning source. NEVER a harness-side text distiller (AE spec §Distillation
 - The daemon gate is seconds, not microseconds: per-turn wall is
   dominated by the free-oracle tier (`flutter test` ~23s on the harness
   package; baseline once per session, scoped analyze ~0.4s per move). The
-  ECS world itself is microseconds (cuts 4–61ms at 67k edges). Further
-  lever: skip the turn-grade when no move applied and the baseline is
-  cached-green — not shipped; recorded.
+  ECS world itself is microseconds (cuts 4–61ms at 67k edges). Mid-turn
+  tool-result streaming SHIPPED with production #1 (a 40ms observer in
+  `runCodingAgentOnce` emits `ToolResultContent` beats as they land —
+  replacing the old emit-at-run-end truncated copy). Still not shipped:
+  skip the turn-grade when no move applied and the baseline is
+  cached-green; wire pi's consent UI to `session/request_permission`.
 - The daemon's in-package `dart analyze` exit=2 (warning-y workspace) is
   correctly treated as a pre-existing red baseline — attribution then
   rests on the workspace convention. Analyzer-grade diagnostics routing

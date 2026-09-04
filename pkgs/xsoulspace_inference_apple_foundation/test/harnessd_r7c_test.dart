@@ -293,6 +293,62 @@ void main() {
     },
     timeout: const Timeout(Duration(minutes: 3)),
   );
+
+  test(
+    'R7 production #1 — the scripted mover executes the STRUCTURED '
+    'harness_edit contract and DROPS malformed payloads (never guesses)',
+    () async {
+      final backend = HarnessAcpBackend(
+        backend: 'open_router',
+        meaningProfile: true,
+        scripted: true,
+      );
+      final sid = await backend.createSession(AcpSessionNewRequest(cwd: ws.path));
+      final updates = <String>[];
+      await backend.prompt(
+        AcpPromptRequest(
+          sessionId: sid,
+          prompt: const [
+            AcpTextBlock(
+              'harness_edit {broken json — unbalanced '
+              'harness_edit {"action":"apply_executable",'
+              '"executableId":"rename_symbol","symbolId":"sym_greet",'
+              '"executableParams":{"newName":"greeting"}}',
+            ),
+          ],
+        ),
+        emit: (u) {
+          final c = switch (u) {
+            AgentMessageChunk(:final content) => content,
+            _ => null,
+          };
+          if (c is AcpTextBlock) updates.add(c.text);
+        },
+        isCancelled: () => false,
+      );
+      final text = updates.join();
+      expect(
+        text,
+        contains('(1 malformed dropped)'),
+        reason: 'a malformed payload is classified data — dropped and '
+            'reported, never repaired into a guess',
+      );
+      expect(
+        text,
+        contains('[edit_symbol]'),
+        reason: 'the VALID structured payload reached the REAL edit_symbol '
+            'tool and its result (a structured bounce — no tree scanned in '
+            'this workspace) streamed back MID-TURN',
+      );
+      expect(
+        text,
+        isNot(contains('[rename')),
+        reason: 'the prose [rename] directive is gone — the structured '
+            'contract replaced it (hard cut)',
+      );
+    },
+    timeout: const Timeout(Duration(minutes: 3)),
+  );
 }
 
 /// Emits two tool calls in one turn (id-uniqueness proof).

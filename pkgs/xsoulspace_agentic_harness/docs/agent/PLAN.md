@@ -14,66 +14,85 @@
 
 Everything below is ordered; each item names its gate. The R7 machinery
 (edit tier, daemon, packs) is landed and LLM-free-gated — see
-[results_r7.md](results_r7.md). What is NOT yet true: **no real model has
-ever driven the edit surface**, and pi can only rename.
+[results_r7.md](results_r7.md). Landed on the path: **#1 the full edit
+surface over ACP** (the structured `harness_edit` contract —
+`insert_member` + `replace_member_body` + `apply_executable` all driven
+from a pi transcript) and **#2 the overhead row** (the meaning-profile
+surface is 1408 fixed tokens — fits the AFM window with 2392 working
+memory left). What is NOT yet true: **no real model has ever driven the
+edit surface**, packs have no capture loop, and pi still delegates whole
+task cycles.
 
-1. **Full edit surface over ACP (blocks everything else).** pi can only
-   reach rename today: the extension's `harness_edit` maps to the
-   scripted mover's `[rename old new]` directive, so `insert_member` and
-   `replace_member_body` — the two model-composed moves of R7b — are
-   unreachable from the outer agent. Replace the prose directive protocol
-   with a STRUCTURED tool contract: `harness_edit` carries the exact
-   `edit_symbol` args (action, symbolId, opChain, executableId, params).
-   Gate: the pi driver performs an insert + a body replacement through
-   the transcript.
-2. **Meaning-profile overhead vs the AFM window (mechanical, unblocks
-   R7e).** Measure system prompt + 5 tool schemas + cut against the ~4k
-   window with the P1 pre-flight guard (`maxContextTokens`). `edit_symbol`
-   is the largest schema in the registry — never measured. Gate: a row in
-   results_r7.md with the honest overhead number.
-3. **Packs as the PRIMARY path.** AFM measured 0/3 hand-writing VM
-   assembly; R7d's answer (the model supplies ids, the pack carries the
-   chain) exists as one worked example with NO inventory and NO capture
-   loop. Production readiness = the model rarely composes op-chains:
-   wire the ADR 0021 capture loop (novel resolution → pack entry) to the
-   edit tier. Gate: a novel scripted resolution becomes a pack entry and
-   the next task costs zero authored tokens.
-4. **R7e — THE gate: one real AFM edit through the daemon, pass@3.** In-app
-   (in-process, not stdio) → meaning-profile edit → `dart analyze` + the
+1. **~~Full edit surface over ACP~~ — DONE (production #1).** The prose
+   directives (`[rename old new]`) are gone: `harness_edit` carries the
+   exact `edit_symbol` args as a structured JSON payload; the mover
+   executes verbatim and never guesses ids. Gate was green: the pi driver
+   transcript performs an insert + a body replacement (+ rename) with
+   analyze + workspace convention green
+   ([results_r7.md](results_r7.md), [transcript](../../benchmark/runs/r7_edit_surface_transcript.txt)).
+2. **~~Meaning-profile overhead vs the AFM window~~ — DONE (production
+   #2).** Measured: 1408 fixed tokens (system 141 + 5 schemas,
+   `edit_symbol` largest at 594) vs the P1 guard (3800) — the surface
+   FITS; only the cut is a free parameter
+   ([results_r7.md](results_r7.md)).
+3. **~~Packs as the PRIMARY path~~ — DONE (production #3).** The ADR 0021
+   capture loop is wired to the edit tier: a model-composed
+   `replace_member_body` that passed all fences + oracles becomes a
+   registered `EditExecutableWire` + op-chain (`registerPackExecutable`),
+   persisted in the project pack (`.dart_tool/harnessd/edit_pack.json`,
+   mechanical fingerprint id); every `edit_symbol` auto-realizes the
+   pack. Gate was green: scripted novel resolution → pack entry → a
+   second task consumes it at ZERO authored tokens
+   ([results_r7.md](results_r7.md)).
+4. **Remote mover / actor registration (the precondition for #7).** pi
+   stops delegating task cycles and JOINS as the session actor's brain:
+   the daemon runs the loop, pi is the GenerationHandler. Server→client
+   `session/propose_move` (same JSON-RPC pattern as
+   `session/request_permission`): bounded cut + tool schemas out, typed
+   tool calls back. Kills the per-call task cycle (~23s grades → ~1 model
+   call); budgets/consent/cancel become native to the world. Seam exists:
+   `handlerFactory` / `--scripted` prove the mover is pluggable. Bounded
+   protocol only — pi never gets raw files. Gate: a scripted
+   client-as-mover test (LLM-free) proves one decision = one
+   `propose_move` round-trip; budgets consumed in-world; cancel
+   mid-decision works.
+5. **Persistent daemon + AOT.** (a) `dart compile exe bin/harnessd.dart`
+   — VERIFY it composes with the native-assets hook (the AFM bridge is a
+   code asset); fallback: AOT for open_router/scripted, `dart run` for
+   AFM. (b) Extension lifecycle: pid/lock file under
+   `<workspace>/.dart_tool/harnessd/` → connect-if-live (initialize
+   health ping) / spawn-if-absent / keep-warm on session_end (idle-exit
+   after N minutes). SINGLE-INSTANCE PER WORKSPACE IS MANDATORY (two
+   daemons = two worlds = single-writer broken at process level). Snapshot
+   store demotes to crash recovery only. Gate: a second pi session
+   attaches to the warm daemon — zero re-scan (mechanical refresh tick
+   only), startup < 2s.
+6. **R7e — THE GATE: one real AFM edit through the daemon, pass@3.**
+   In-process (not stdio) from the AFM app: meaning-profile surface, one
+   fixture edit (use the pack path from #3), `dart analyze` + the
    workspace convention green. Everything above exists to make this run
-   measurable. This is the last open race track.
-5. **First real-model pi row (after 1–2).** One real-model session, pi →
-   daemon, fixture task — publish the row even if it FAILS. The failure
-   class (schema size? slot ambiguity? cut composition?) decides whether
-   we tune the surface or the model tier. Worth more than any further
-   scripted hardening.
+   measurable. If the overhead row (#2) ever stops fitting, cut the
+   surface first (lean schemas), never the law.
+7. **Real-model pi row (SCOPE FIXED 2026-09-04 — the pi column has NO
+   daemon mover).** The daemon under test runs MODEL-LESS: pi's own real
+   model is the session actor's brain via the #4 remote-mover protocol —
+   wiring the daemon to open_router/AFM *while pi calls it* would put a
+   second, worse model inside the loop and prove nothing about what we
+   are actually testing: how the harness TOOL SURFACE behaves from pi's
+   perspective (flows, latency, ergonomics) against pi's native tools.
+   Production movers (AFM on-device, open_router for the coding CLI /
+   general agent) are a SEPARATE track — the `--scripted`/`--remote-mover`
+   split exists exactly so the surface gate never depends on a mover
+   model. Gate: one real-model pi session, pi → daemon (remote mover),
+   fixture task via `run_r7_daemon_gate.mjs` with pi on a real provider —
+   publish the row even if it FAILS; classify the failure (schema size?
+   slot ambiguity? cut composition?).
 
-Interactive hygiene (parallel, small): mid-turn streaming of tool results
-(today they land at run end — a 30–60s silent tool call reads as a hang);
-skip the turn-grade when no move applied and the baseline is cached-green;
-wire pi's consent UI to `session/request_permission` (the gate driver
-auto-answers today).
-
-Architecture next (both shrink latency and unify ownership — record now,
-build after #1):
-
-- **Remote mover / actor registration.** pi stops delegating task cycles
-  and JOINS as the session actor's brain: the daemon runs the loop, pi is
-  the GenerationHandler (server→client `session/propose_move`: bounded cut
-  + tool schemas out, typed tool calls back — same pattern as
-  `session/request_permission`). Kills the per-call task cycle (~23s
-  grades → ~1 model call), unifies budgets/consent/cancel inside the
-  world, keeps the law (host still validates + materializes everything;
-  pi never touches files). Seam exists: `handlerFactory` / `--scripted`
-  already prove the mover is pluggable.
-- **Persistent daemon + AOT.** `dart compile exe bin/harnessd.dart`
-  (VERIFY with the native-assets hook — the AFM bridge is a code asset;
-  fallback: AOT for open_router/scripted, `dart run` for AFM) + extension
-  lifecycle: pid/lock file under `<workspace>/.dart_tool/harnessd/`,
-  connect-if-live / spawn-if-absent / keep-warm on session end. Two
-  daemons on one workspace break single-writer at the process level —
-  single-instance is mandatory. Snapshot store becomes crash recovery
-  only.
+Interactive hygiene (parallel, small): ~~mid-turn streaming of tool
+results~~ DONE (production #1 — a 40ms observer in `runCodingAgentOnce`
+emits tool-result beats as they land); REMAINING: skip the turn-grade
+when no move applied and the baseline is cached-green; wire pi's consent
+UI to `session/request_permission` (the gate driver auto-answers today).
 
 ## Proven (runtime-verified, not asserted)
 
@@ -94,8 +113,8 @@ build after #1):
 - M0b `declare_check`: model-proposed criteria as data, host-validated,
   mechanically executed.
 
-**NOT proven (the remaining race):** the head-to-head (R3) pi column; a
-real-model edit through the daemon (R7e); flatness claims on a real-model
+**NOT proven (the remaining race):** the head-to-head (R3) pi column;
+a real-model edit through the daemon (R7e); flatness claims on a real-model
 session through the new surface; pack inventory + capture loop (R7d).
 
 ## Race tracks (each ends in a number or a live artifact)
@@ -119,8 +138,9 @@ session through the new surface; pack inventory + capture loop (R7d).
   1 decision, 7,857 projection tokens, `dart test exit=0`, zero model code
   tokens, zero host-authored expectations ([results_r6.md](results_r6.md)).
 - **R7 — edit-as-re-derivation:** a/b/c/d LANDED + gated (see history);
-  **R7e (real AFM edit through the daemon) is the open track — production
-  path #4.**
+  production #1 (full edit surface over ACP), #2 (overhead row) and #3
+  (capture loop → pack inventory) LANDED 2026-09-04; **R7e (real AFM
+  edit through the daemon) is the open track — production path #6.**
 
 ## Standing rules
 
@@ -145,9 +165,12 @@ session through the new surface; pack inventory + capture loop (R7d).
 - ~~Delete legacy manual-schedule tests~~ — DONE 2026-09-01 (B5).
 - ~~Docs cleanup: superseded briefs/plan docs moved to [archive/](archive/)~~
   — DONE 2026-09-03 (ADR-referenced docs kept in place; links fixed).
-- [ ] Structured `harness_edit` tool contract over ACP (production #1).
-- [ ] Meaning-profile overhead row vs the AFM window (production #2).
-- [ ] Edit-tier capture loop → pack inventory (production #3).
+- [x] Structured `harness_edit` tool contract over ACP (production #1) —
+      DONE 2026-09-04; [results_r7.md](results_r7.md).
+- [x] Meaning-profile overhead row vs the AFM window (production #2) —
+      DONE 2026-09-04 (1408 fixed tokens; fits); [results_r7.md](results_r7.md).
+- [x] Edit-tier capture loop → pack inventory (production #3) —
+      DONE 2026-09-04; [results_r7.md](results_r7.md).
 - [ ] R7e gate: one real AFM edit through the daemon, pass@3 (production #4).
 - [ ] Real-model pi row through the daemon (production #5).
 - [ ] Drop `runTool`'s redundant role if J4's `analyze_check` + spec runner

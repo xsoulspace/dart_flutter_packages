@@ -19,20 +19,36 @@
 /// materialization, verification and repair budgets are all host programs.
 library;
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:xsoulspace_agentic_harness/benchmark_api.dart'
-    show CheckerResult, CheckerSpec, FixtureFile, defaultGoalFlow,
-        openFreshDecision, wireIntentGradedGoal, wireRunGradedGoal,
-        declareCheckTool, wireOverseer, maybeSpawnOverseer, OverseerLedger,
-        IntentExpectation, evaluateChecker;
+    show
+        CheckerResult,
+        CheckerSpec,
+        FixtureFile,
+        defaultGoalFlow,
+        openFreshDecision,
+        wireIntentGradedGoal,
+        wireRunGradedGoal,
+        declareCheckTool,
+        wireOverseer,
+        maybeSpawnOverseer,
+        OverseerLedger,
+        IntentExpectation,
+        evaluateChecker;
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 import 'package:xsoulspace_agentic_harness/src/tooling/workspace_map.dart'
     show WorkspaceMapProvider;
 import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
-    show fsTools, FsToolsRoot, CapturedWrite, JailWriteGateway, WriteGateMode,
-    runTool;
+    show
+        fsTools,
+        FsToolsRoot,
+        CapturedWrite,
+        JailWriteGateway,
+        WriteGateMode,
+        runTool;
 
 import 'intent_closure_runner.dart'
     show DecisionMeter, afmSystemPrompt, registerIntentClosureTools;
@@ -86,9 +102,9 @@ class CodingAgentTask {
         'then finish.',
     this.systemPrompt = codingSystemPrompt,
   }) : assert(
-          (intents == null) != (runCommand == null) || meaningProfile,
-          'exactly one in-loop verifier per task: intent-graded OR run-graded',
-        );
+         (intents == null) != (runCommand == null) || meaningProfile,
+         'exactly one in-loop verifier per task: intent-graded OR run-graded',
+       );
 
   final String id;
   final String prompt;
@@ -238,7 +254,9 @@ CodingAgentTask taskFromSentence(
 }) {
   final resolved =
       check ?? (workspace == null ? null : resolveWorkspaceCheck(workspace));
-  final command = resolved ?? (workspace == null ? const ['dart', 'run', 'main.dart'] : null);
+  final command =
+      resolved ??
+      (workspace == null ? const ['dart', 'run', 'main.dart'] : null);
   if (command == null) {
     throw StateError(
       'no verification criterion resolvable for the workspace at '
@@ -250,12 +268,14 @@ CodingAgentTask taskFromSentence(
     id: 'free_form',
     prompt: meaningProfile
         ? '$sentence Work through the meaning tree: repo_etl scan, '
-            'meaning_zoom / meaning_impact to read, edit_symbol to act. '
-            'Never read or write files.'
+              'meaning_zoom / meaning_impact to read, edit_symbol to act. '
+              'Never read or write files.'
         : '$sentence Verify with the run tool — the check must exit 0.',
     // R7: the meaning profile — the tree is the only code interface.
     meaningProfile: meaningProfile,
-    systemPrompt: meaningProfile ? meaningProfileSystemPrompt : codingSystemPrompt,
+    systemPrompt: meaningProfile
+        ? meaningProfileSystemPrompt
+        : codingSystemPrompt,
     // The final gate mirrors the SAME command the in-loop verifier runs
     // ('runs' checkers default to `dart run <path>` — an override value is
     // required for non-run commands like `dart analyze`).
@@ -414,6 +434,13 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
   /// tool schemas + working set + observations fit AFM's ~4k window under
   /// the pre-flight `maxContextTokens` guard.
   bool leanContextProfile = false,
+
+  /// R7 transparency (parallel hygiene): called MID-TURN as each tool
+  /// result lands — the host observes the actor's thread for new
+  /// [ToolResultContent] beats while the loop runs instead of emitting at
+  /// run end, so a 30–60s tool call is never silent. Emission-only: the
+  /// poller never mutates the world.
+  void Function(String toolName, Object? output)? onToolResult,
 }) async {
   final sw = Stopwatch()..start();
   final resume = restoredWorld != null;
@@ -499,9 +526,7 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
     registry.register(etl);
     registry.register(meaningZoomTool(world));
     registry.register(meaningImpactTool(world));
-    registry.register(
-      editSymbolTool(world, jail, approver: editApprover),
-    );
+    registry.register(editSymbolTool(world, jail, approver: editApprover));
     registry.register(runTool(fsRoot));
     world.getResource<ToolRegistryResource>().register('default', registry);
   } else {
@@ -561,232 +586,271 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
     resumedThread = thread;
   }
 
-  // B7: verifier INSIDE the loop + bounded repair attempts.
-  //
-  // The intent-graded / run-graded verifiers are wired into the schedules:
-  // they fire whenever a tool result lands (ToolResultPendingMarker) and
-  // stamp GoalVerified, which RunGradedGoalPolicy consumes mid-chain.
-  //
-  // Native tool-loop caveat (measured, coding_agent_afm_run1.log): the AFM
-  // native session runs its WHOLE ReAct chain inside ONE decision, so no
-  // pending-result marker fires after the model closes that decision — the
-  // loop would idle with the goal unverified and ZERO attempts consumed
-  // (the exact J1.4 failure shape). The repair loop below is therefore NOT
-  // an unbounded while(true): each repair is a fresh host-injected decision
-  // (openFreshDecision — the ONLY budget-reset path, J1.5.2) that consumes
-  // the monotonic AttemptCount against maxGoalAttempts (J1.5.1), and the
-  // mechanical oracle re-grades after every session. Exhaustion stamps
-  // GoalAttemptsExhausted (the J8 rung 1 terminal record).
-  if (task.usesIntentSurface) {
-    wireIntentGradedGoal(world, sequence: task.intents!);
-  } else if (task.usesMeaningSurface) {
-    // The workspace convention is the gate (D8); explicit runCommand wins
-    // when the delegator declared one.
-    final command = task.runCommand ??
-        resolveWorkspaceCheck(jail) ??
-        (throw StateError(
-          'meaning-profile task: no verification criterion resolvable for '
-          '${jail.path} — pass runCommand or declare a workspace convention',
-        ));
-    wireRunGradedGoal(world, command: command, cwd: jail.path);
-  } else {
-    wireRunGradedGoal(
-      world,
-      command: task.runCommand!,
-      cwd: jail.path,
-      commandByRegistry: declaredChecks.isEmpty ? null : declaredChecks,
-    );
+  // R7 transparency: MID-TURN tool-result streaming. A 40ms observer
+  // polls the actor's thread for new [ToolResultContent] beats and emits
+  // them as they land (ECS queries are microseconds; the poller only
+  // reads). This replaces the old emit-at-run-end copy — a long `run` or
+  // `edit_symbol` verify now streams into the ACP session while it
+  // executes.
+  final pollThread =
+      resumedThread ??
+      world.getEntity(actor).$1.get<ActorThreads>()?.threads.firstOrNull;
+  final emittedBeats = <Entity>{};
+  Timer? resultPoller;
+  if (onToolResult != null && pollThread != null) {
+    resultPoller = Timer.periodic(const Duration(milliseconds: 40), (_) {
+      for (final beat
+          in world
+              .getResource<FacetIndex>()
+              .beatsOfThread(pollThread)
+              .toList()) {
+        if (!emittedBeats.add(beat)) continue;
+        final result = world.getEntity(beat).$1.get<ToolResultContent>();
+        if (result != null) onToolResult(result.name, result.output);
+      }
+    });
   }
-
-  // J7: the overseer watches for goal-attempt exhaustion and disposes
-  // (approve / repair(intent, notes) / escalate) — wired for the intent
-  // surface, whose gate failures are meaning-native (the chain-dump brief).
-  if (task.usesIntentSurface) {
-    wireOverseer(world, moverActor: actor, maxCycles: 1);
-  }
-
-  // P5: the monotonic attempt budget persists across restarts — a resumed
-  // run continues where the counter stopped (never a reset).
-  var attempt = resume
-      ? (world.getEntity(actor).$1.get<AttemptCount>()?.value ?? 0)
-      : 0;
-  List<CheckerResult> grade() => [
-    for (final c in task.checkers) evaluateChecker(c, jail.path),
-  ];
-
-  // THE ACTOR ALWAYS GETS ITS FIRST SESSION — R7 daemon finding: a
-  // workspace whose gate is ALREADY green must not silently skip the
-  // turn (decisions 0): the actor may still need to act (scan / zoom /
-  // edit directives), and a task is not "done" before the actor ran.
-  // Measured on the R7 daemon gate: without this, an already-green
-  // workspace graded PASS with zero work.
-  if (!resume) {
-    await HarnessLoop(world: world).runUntilIdle();
-  } else {
-    // Resumed actor: idle-resumable, so the new prompt needs an open
-    // decision even when the gate already passes.
-    openFreshDecision(
-      world,
-      actor,
-      prompt:
-          '${task.prompt}\n\n(Continuing a restored session — the gate '
-          'currently passes; do any work the task still needs, or state '
-          'what you changed.)',
-    );
-    await HarnessLoop(world: world).runUntilIdle();
-  }
-
-  var finalGate = grade();
-  var passed = finalGate.isNotEmpty && finalGate.every((c) => c.passed);
-  while (!passed && attempt < maxGoalAttempts) {
-    attempt++;
-    // Uniform budget accounting: the policy increments AttemptCount on the
-    // marker path; the driver increments it on the native-session path.
-    // Same monotonic component, same cap — no double reset.
-    world.getEntity(actor).$1.insert(AttemptCount(attempt));
-    world.flush();
-    openFreshDecision(
-      world,
-      actor,
-      prompt: resume && attempt == 1
-          ? 'You were restored from a snapshot (previous attempt did not '
-              'satisfy verification).\nFailing:\n'
-              '${[for (final c in finalGate) if (!c.passed) c.detail].join("\n")}\n\n'
-              '${task.repairHint}\n\nOriginal task:\n${task.prompt}'
-          : 'Your previous attempt did not satisfy verification (attempt '
-              '$attempt/$maxGoalAttempts).\nFailing:\n'
-              '${[for (final c in finalGate) if (!c.passed) c.detail].join("\n")}\n\n'
-              '${task.repairHint}\n\nOriginal task:\n${task.prompt}',
-    );
-    await HarnessLoop(world: world).runUntilIdle();
-    finalGate = grade();
-    passed = finalGate.isNotEmpty && finalGate.every((c) => c.passed);
-    await onSnapshot?.call(world);
-  }
-  await onSnapshot?.call(world);
-  if (!passed) {
-    // J8 rung 1 record FIRST: for NATIVE sessions the policy path cannot
-    // fire (no ToolResultPendingMarker — tools execute inside the native
-    // ReAct chain), so the DRIVER stamps the terminal record. The J7
-    // overseer window below keys off exactly this stamp.
-    if (world.query2<Actor, GoalAttemptsExhausted>().toList().isEmpty) {
-      world.getEntity(actor).$1.insert(
-        GoalAttemptsExhausted(
-          'goal_unverifiable: $attempt failed verification attempts '
-          '(budget $maxGoalAttempts). Last failure: '
-          '${[for (final c in finalGate) c.detail].join(" | ")}',
-        ),
+  try {
+    // B7: verifier INSIDE the loop + bounded repair attempts.
+    //
+    // The intent-graded / run-graded verifiers are wired into the schedules:
+    // they fire whenever a tool result lands (ToolResultPendingMarker) and
+    // stamp GoalVerified, which RunGradedGoalPolicy consumes mid-chain.
+    //
+    // Native tool-loop caveat (measured, coding_agent_afm_run1.log): the AFM
+    // native session runs its WHOLE ReAct chain inside ONE decision, so no
+    // pending-result marker fires after the model closes that decision — the
+    // loop would idle with the goal unverified and ZERO attempts consumed
+    // (the exact J1.4 failure shape). The repair loop below is therefore NOT
+    // an unbounded while(true): each repair is a fresh host-injected decision
+    // (openFreshDecision — the ONLY budget-reset path, J1.5.2) that consumes
+    // the monotonic AttemptCount against maxGoalAttempts (J1.5.1), and the
+    // mechanical oracle re-grades after every session. Exhaustion stamps
+    // GoalAttemptsExhausted (the J8 rung 1 terminal record).
+    if (task.usesIntentSurface) {
+      wireIntentGradedGoal(world, sequence: task.intents!);
+    } else if (task.usesMeaningSurface) {
+      // The workspace convention is the gate (D8); explicit runCommand wins
+      // when the delegator declared one.
+      final command =
+          task.runCommand ??
+          resolveWorkspaceCheck(jail) ??
+          (throw StateError(
+            'meaning-profile task: no verification criterion resolvable for '
+            '${jail.path} — pass runCommand or declare a workspace convention',
+          ));
+      wireRunGradedGoal(world, command: command, cwd: jail.path);
+    } else {
+      wireRunGradedGoal(
+        world,
+        command: task.runCommand!,
+        cwd: jail.path,
+        commandByRegistry: declaredChecks.isEmpty ? null : declaredChecks,
       );
+    }
+
+    // J7: the overseer watches for goal-attempt exhaustion and disposes
+    // (approve / repair(intent, notes) / escalate) — wired for the intent
+    // surface, whose gate failures are meaning-native (the chain-dump brief).
+    if (task.usesIntentSurface) {
+      wireOverseer(world, moverActor: actor, maxCycles: 1);
+    }
+
+    // P5: the monotonic attempt budget persists across restarts — a resumed
+    // run continues where the counter stopped (never a reset).
+    var attempt = resume
+        ? (world.getEntity(actor).$1.get<AttemptCount>()?.value ?? 0)
+        : 0;
+    List<CheckerResult> grade() => [
+      for (final c in task.checkers) evaluateChecker(c, jail.path),
+    ];
+
+    // THE ACTOR ALWAYS GETS ITS FIRST SESSION — R7 daemon finding: a
+    // workspace whose gate is ALREADY green must not silently skip the
+    // turn (decisions 0): the actor may still need to act (scan / zoom /
+    // edit directives), and a task is not "done" before the actor ran.
+    // Measured on the R7 daemon gate: without this, an already-green
+    // workspace graded PASS with zero work.
+    if (!resume) {
+      await HarnessLoop(world: world).runUntilIdle();
+    } else {
+      // Resumed actor: idle-resumable, so the new prompt needs an open
+      // decision even when the gate already passes.
+      openFreshDecision(
+        world,
+        actor,
+        prompt:
+            '${task.prompt}\n\n(Continuing a restored session — the gate '
+            'currently passes; do any work the task still needs, or state '
+            'what you changed.)',
+      );
+      await HarnessLoop(world: world).runUntilIdle();
+    }
+
+    var finalGate = grade();
+    var passed = finalGate.isNotEmpty && finalGate.every((c) => c.passed);
+    while (!passed && attempt < maxGoalAttempts) {
+      attempt++;
+      // Uniform budget accounting: the policy increments AttemptCount on the
+      // marker path; the driver increments it on the native-session path.
+      // Same monotonic component, same cap — no double reset.
+      world.getEntity(actor).$1.insert(AttemptCount(attempt));
       world.flush();
-    }
-    // J7: the exhaustion stamp alone leaves NO open work — runUntilIdle
-    // would exit before the scheduled system ticks. Spawn the overseer
-    // explicitly, then give the disposition + (granted) repair one bounded
-    // session. Ledger guards keep it to one cycle.
-    OverseerLedger? ledger;
-    try {
-      ledger = world.getResource<OverseerLedger>();
-    } on StateError {
-      // overseer not wired → base ladder only
-    }
-    if (ledger != null && ledger.canAct) {
-      maybeSpawnOverseer(world);
+      openFreshDecision(
+        world,
+        actor,
+        prompt: resume && attempt == 1
+            ? 'You were restored from a snapshot (previous attempt did not '
+                  'satisfy verification).\nFailing:\n'
+                  '${[for (final c in finalGate)
+                    if (!c.passed) c.detail].join("\n")}\n\n'
+                  '${task.repairHint}\n\nOriginal task:\n${task.prompt}'
+            : 'Your previous attempt did not satisfy verification (attempt '
+                  '$attempt/$maxGoalAttempts).\nFailing:\n'
+                  '${[for (final c in finalGate)
+                    if (!c.passed) c.detail].join("\n")}\n\n'
+                  '${task.repairHint}\n\nOriginal task:\n${task.prompt}',
+      );
       await HarnessLoop(world: world).runUntilIdle();
       finalGate = grade();
       passed = finalGate.isNotEmpty && finalGate.every((c) => c.passed);
       await onSnapshot?.call(world);
     }
-  }
-  if (!passed) {
-    // The overseer window ran (approve/escalate/repair_denied) or the
-    // granted repair failed again — make sure the structured terminal
-    // record ships.
-    if (world.query2<Actor, GoalAttemptsExhausted>().toList().isEmpty) {
-      world.getEntity(actor).$1.insert(
-        GoalAttemptsExhausted(
-          'goal_unverifiable: $attempt failed verification attempts '
-          '(budget $maxGoalAttempts, overseer window spent). Last failure: '
-          '${[for (final c in finalGate) c.detail].join(" | ")}',
-        ),
-      );
-      world.flush();
+    await onSnapshot?.call(world);
+    if (!passed) {
+      // J8 rung 1 record FIRST: for NATIVE sessions the policy path cannot
+      // fire (no ToolResultPendingMarker — tools execute inside the native
+      // ReAct chain), so the DRIVER stamps the terminal record. The J7
+      // overseer window below keys off exactly this stamp.
+      if (world.query2<Actor, GoalAttemptsExhausted>().toList().isEmpty) {
+        world
+            .getEntity(actor)
+            .$1
+            .insert(
+              GoalAttemptsExhausted(
+                'goal_unverifiable: $attempt failed verification attempts '
+                '(budget $maxGoalAttempts). Last failure: '
+                '${[for (final c in finalGate) c.detail].join(" | ")}',
+              ),
+            );
+        world.flush();
+      }
+      // J7: the exhaustion stamp alone leaves NO open work — runUntilIdle
+      // would exit before the scheduled system ticks. Spawn the overseer
+      // explicitly, then give the disposition + (granted) repair one bounded
+      // session. Ledger guards keep it to one cycle.
+      OverseerLedger? ledger;
+      try {
+        ledger = world.getResource<OverseerLedger>();
+      } on StateError {
+        // overseer not wired → base ladder only
+      }
+      if (ledger != null && ledger.canAct) {
+        maybeSpawnOverseer(world);
+        await HarnessLoop(world: world).runUntilIdle();
+        finalGate = grade();
+        passed = finalGate.isNotEmpty && finalGate.every((c) => c.passed);
+        await onSnapshot?.call(world);
+      }
     }
-  }
+    if (!passed) {
+      // The overseer window ran (approve/escalate/repair_denied) or the
+      // granted repair failed again — make sure the structured terminal
+      // record ships.
+      if (world.query2<Actor, GoalAttemptsExhausted>().toList().isEmpty) {
+        world
+            .getEntity(actor)
+            .$1
+            .insert(
+              GoalAttemptsExhausted(
+                'goal_unverifiable: $attempt failed verification attempts '
+                '(budget $maxGoalAttempts, overseer window spent). Last failure: '
+                '${[for (final c in finalGate) c.detail].join(" | ")}',
+              ),
+            );
+        world.flush();
+      }
+    }
 
-  // K columns from the durable thread record.
-  final moves = <String, int>{};
-  final toolResults = <String>[];
-  var toolRounds = 0;
-  final activeThread =
-      resumedThread ??
-      world.getEntity(actor).$1.get<ActorThreads>()?.threads.firstOrNull;
-  final threadEntity = activeThread;
-  for (final beat in (threadEntity == null
-          ? const <Entity>[]
-          : world.getResource<FacetIndex>().beatsOfThread(threadEntity))
-      .toList()) {
-    final we = world.getEntity(beat).$1;
-    final call = we.get<BeatToolCall>();
-    if (call != null) {
-      toolRounds++;
-      final action = call.args['action'];
-      moves.update(
-        action is String ? '${call.name}.$action' : call.name,
-        (v) => v + 1,
-        ifAbsent: () => 1,
-      );
+    // K columns from the durable thread record.
+    final moves = <String, int>{};
+    final toolResults = <String>[];
+    var toolRounds = 0;
+    final activeThread =
+        resumedThread ??
+        world.getEntity(actor).$1.get<ActorThreads>()?.threads.firstOrNull;
+    final threadEntity = activeThread;
+    for (final beat
+        in (threadEntity == null
+                ? const <Entity>[]
+                : world.getResource<FacetIndex>().beatsOfThread(threadEntity))
+            .toList()) {
+      final we = world.getEntity(beat).$1;
+      final call = we.get<BeatToolCall>();
+      if (call != null) {
+        toolRounds++;
+        final action = call.args['action'];
+        moves.update(
+          action is String ? '${call.name}.$action' : call.name,
+          (v) => v + 1,
+          ifAbsent: () => 1,
+        );
+      }
+      final result = we.get<ToolResultContent>();
+      if (result != null) {
+        final out = '${result.output}';
+        toolResults.add(
+          '${result.name}: '
+          '${out.length > 240 ? out.substring(0, 240) : out}',
+        );
+      }
     }
-    final result = we.get<ToolResultContent>();
-    if (result != null) {
-      final out = '${result.output}';
-      toolResults.add(
-        '${result.name}: '
-        '${out.length > 240 ? out.substring(0, 240) : out}',
-      );
-    }
-  }
-  final view = meaningView(world);
-  // Overhead measured over the SAME surface the actor saw (one truth: the
-  // registry, not a rebuilt list).
-  final seenTools = world.getResource<ToolRegistryResource>().get('default');
-  final overhead = overheadTokens(
-    systemPrompt: task.systemPrompt,
-    tools: seenTools?.tools.values.toList() ?? const [],
-  );
-  sw.stop();
+    final view = meaningView(world);
+    // Overhead measured over the SAME surface the actor saw (one truth: the
+    // registry, not a rebuilt list).
+    final seenTools = world.getResource<ToolRegistryResource>().get('default');
+    final overhead = overheadTokens(
+      systemPrompt: task.systemPrompt,
+      tools: seenTools?.tools.values.toList() ?? const [],
+    );
+    sw.stop();
 
-  final attemptsExhausted = world
-      .query2<Actor, GoalAttemptsExhausted>()
-      .toList()
-      .isNotEmpty;
-  return CodingAgentRunResult(
-    taskId: task.id,
-    backend: backend,
-    passed: passed,
-    attemptsExhausted: attemptsExhausted,
-    finalGate: finalGate,
-    decisions: meter.decisions,
-    projectionTokens: meter.projectionTokens,
-    toolRounds: toolRounds,
-    moves: moves,
-    overheadTokens: overhead,
-    wallClock: sw.elapsed,
-    nodes: view.nodeCount,
-    edges: view.edgeCount,
-    pulseText: sampleHarness(world, tick: meter.decisions).toText(),
-    recorderDump: recorder.dump(),
-    toolResults: toolResults,
-    writeGateAudit: gateway == null
-        ? ''
-        : 'writes applied: ${gateway.appliedCount}, '
-            'rejected: ${gateway.rejectedCount}\n'
-            '${gateway.renderDiffs()}',
-  );
+    final attemptsExhausted = world
+        .query2<Actor, GoalAttemptsExhausted>()
+        .toList()
+        .isNotEmpty;
+    return CodingAgentRunResult(
+      taskId: task.id,
+      backend: backend,
+      passed: passed,
+      attemptsExhausted: attemptsExhausted,
+      finalGate: finalGate,
+      decisions: meter.decisions,
+      projectionTokens: meter.projectionTokens,
+      toolRounds: toolRounds,
+      moves: moves,
+      overheadTokens: overhead,
+      wallClock: sw.elapsed,
+      nodes: view.nodeCount,
+      edges: view.edgeCount,
+      pulseText: sampleHarness(world, tick: meter.decisions).toText(),
+      recorderDump: recorder.dump(),
+      toolResults: toolResults,
+      writeGateAudit: gateway == null
+          ? ''
+          : 'writes applied: ${gateway.appliedCount}, '
+                'rejected: ${gateway.rejectedCount}\n'
+                '${gateway.renderDiffs()}',
+    );
+  } finally {
+    resultPoller?.cancel();
+  }
 }
 
 /// Formats one run as its honest log body (B8: every run ships the pulse +
 /// flight-recorder dump, pass or fail).
-String formatRunLog(CodingAgentRunResult r) => '''
+String formatRunLog(CodingAgentRunResult r) =>
+    '''
 coding_agent run — task: ${r.taskId}
   backend: ${r.backend}
   verdict: ${r.passed ? 'PASS' : 'FAIL'}
@@ -798,9 +862,7 @@ coding_agent run — task: ${r.taskId}
   meaning nodes: ${r.nodes}, edges: ${r.edges}
   wall clock: ${r.wallClock.inMilliseconds} ms
   final gate (outer oracle, once): ${r.passed ? 'PASS' : 'FAIL'}
-${[
-  for (final c in r.finalGate) '    check: ${c.detail}',
-].join('\n')}
+${[for (final c in r.finalGate) '    check: ${c.detail}'].join('\n')}
   failure class: ${r.failureClass.isEmpty ? '-' : r.failureClass}
 --- harness pulse (J1.5.3) ---
 ${r.pulseText}
@@ -817,12 +879,8 @@ String formatSummary({
   required int passes,
   required List<CodingAgentRunResult> results,
 }) {
-  final tokenTotals = [
-    for (final r in results) r.projectionTokens,
-  ];
-  final decisionTotals = [
-    for (final r in results) r.decisions,
-  ];
+  final tokenTotals = [for (final r in results) r.projectionTokens];
+  final decisionTotals = [for (final r in results) r.decisions];
   final moveTotals = [
     for (final r in results) r.moves.values.fold(0, (a, b) => a + b),
   ];
@@ -885,8 +943,10 @@ Map<String, String?> parseCliArgs(List<String> args) {
       positional.add(a);
     }
   }
-  return {'_positional': positional.isEmpty ? null : positional.first,
-    ...named};
+  return {
+    '_positional': positional.isEmpty ? null : positional.first,
+    ...named,
+  };
 }
 
 /// jsonEncode helper for logs (keeps the summary row one line).

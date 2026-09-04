@@ -57,10 +57,16 @@ import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart'
 import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
     show FileLockTable;
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart'
-    show MeaningIndex, MeaningNode, MeaningProps, resolveWorkspaceCheck,
-    impactFrontier, meaningComponentOf;
+    show
+        MeaningIndex,
+        MeaningNode,
+        MeaningProps,
+        resolveWorkspaceCheck,
+        impactFrontier,
+        meaningComponentOf;
 
 import 'dart_materializer.dart' show compileOpChainBody;
+import 'edit_pack_capture.dart' show EditPackCapture;
 import 'test_etl.dart' show deriveWorkspaceIntents;
 
 // ---------------------------------------------------------------------------
@@ -175,7 +181,8 @@ class SpanEditBounce implements Exception {
   };
 
   @override
-  String toString() => fence == null ? '$error — $repair' : '[$fence] $error — $repair';
+  String toString() =>
+      fence == null ? '$error — $repair' : '[$fence] $error — $repair';
 }
 
 /// The default (built-in) edit executables. Growth is pack/data-driven
@@ -241,7 +248,8 @@ class SpanEditMaterializer {
        _coverageProvider = coverage,
        _approver = approver,
        _packExecutables = {
-         for (final e in packExecutables ?? const <EditExecutableWire>[]) e.id: e,
+         for (final e in packExecutables ?? const <EditExecutableWire>[])
+           e.id: e,
        };
 
   final World world;
@@ -259,13 +267,9 @@ class SpanEditMaterializer {
   final Map<String, List<Map<String, String?>>> _packOpChains = {};
 
   /// Symbol names the workspace oracle has expectations for (fence b).
-  Set<String> coverageSet() =>
-      _coverageCache ??=
-          _coverageProvider?.call() ??
-          {
-            for (final i in deriveWorkspaceIntents(workspace).intents)
-              i.intent,
-          };
+  Set<String> coverageSet() => _coverageCache ??=
+      _coverageProvider?.call() ??
+      {for (final i in deriveWorkspaceIntents(workspace).intents) i.intent};
 
   String _abs(String rel) => '${workspace.path}/$rel';
 
@@ -280,8 +284,9 @@ class SpanEditMaterializer {
     }
   }
 
-  ({String id, String kind, String label, Map<String, dynamic> props})?
-  _node(String id) {
+  ({String id, String kind, String label, Map<String, dynamic> props})? _node(
+    String id,
+  ) {
     final index = _index();
     final entity = index.byId[id];
     if (entity == null) return null;
@@ -312,7 +317,7 @@ class SpanEditMaterializer {
       throw SpanEditBounce(
         'unknown symbol id: $id',
         'zoom to find the symbol, then re-send with a valid symbolId'
-        '${hints.isEmpty ? "" : " (candidates: ${hints.join(", ")})"}',
+            '${hints.isEmpty ? "" : " (candidates: ${hints.join(", ")})"}',
       );
     }
     return n;
@@ -345,10 +350,7 @@ class SpanEditMaterializer {
   }) {
     switch (action) {
       case 'replace_member_body':
-        return _planReplaceMemberBody(
-          symbolId: symbolId,
-          opChain: opChain,
-        );
+        return _planReplaceMemberBody(symbolId: symbolId, opChain: opChain);
       case 'insert_member':
         return _planInsertMember(
           classSymbolId: classSymbolId,
@@ -367,7 +369,7 @@ class SpanEditMaterializer {
         throw SpanEditBounce(
           'unknown edit action: $action',
           'valid actions: replace_member_body, insert_member, '
-          'apply_executable',
+              'apply_executable',
         );
     }
   }
@@ -382,9 +384,9 @@ class SpanEditMaterializer {
     if (!bodyKinds.contains(decl)) {
       throw SpanEditBounce(
         '${sym.id} is a $decl — only methods, functions and getters have '
-        'replaceable bodies',
+            'replaceable bodies',
         'target a method/function symbol (see meaning_zoom), or use '
-        'insert_member for new members',
+            'insert_member for new members',
       );
     }
     final file = sym.props['file'] as String?;
@@ -399,7 +401,7 @@ class SpanEditMaterializer {
       throw SpanEditBounce(
         'empty opChain',
         're-send with specs (op rows {label, a?, b?}) — the host compiles '
-        'the body, you compose meaning only',
+            'the body, you compose meaning only',
       );
     }
     final site = _memberSite(file, sym.label, declLine);
@@ -412,10 +414,10 @@ class SpanEditMaterializer {
       if (_impureOps.contains(label)) {
         throw SpanEditBounce(
           'op "$label" has no pure-dart realization — the v1 dart target '
-          'compiles pure/static-like bodies only',
+              'compiles pure/static-like bodies only',
           'express the logic as pure ops over the declared params '
-          '(${site.paramNames.join(", ")}), or target a different member; '
-          'never replace working stateful code with a downgrade',
+              '(${site.paramNames.join(", ")}), or target a different member; '
+              'never replace working stateful code with a downgrade',
           fence: 'expressiveness',
         );
       }
@@ -426,9 +428,9 @@ class SpanEditMaterializer {
             !_knownSymbolLabels().contains(callee)) {
           throw SpanEditBounce(
             'call target "$callee" is neither a declared param nor a '
-            'known symbol of this workspace',
+                'known symbol of this workspace',
             'call an existing intent/symbol (check with meaning_zoom) or '
-            'a param',
+                'a param',
             fence: 'integration',
           );
         }
@@ -436,9 +438,9 @@ class SpanEditMaterializer {
       if (label == 'load_arg' && !site.paramNames.contains(row['a'] ?? '')) {
         throw SpanEditBounce(
           'load_arg "${row['a']}" is not a declared param of '
-          '${sym.label}(${site.paramNames.join(", ")})',
+              '${sym.label}(${site.paramNames.join(", ")})',
           'use exactly the declared params: '
-          '${site.paramNames.join(", ")}',
+              '${site.paramNames.join(", ")}',
           fence: 'integration',
         );
       }
@@ -448,7 +450,7 @@ class SpanEditMaterializer {
     if (needsReturn && !hasReturn) {
       throw SpanEditBounce(
         '${sym.label} returns ${site.returnType} — the chain must end at a '
-        'return op',
+            'return op',
         'append {label: return} after pushing the result value',
         fence: 'integration',
       );
@@ -461,8 +463,8 @@ class SpanEditMaterializer {
       throw SpanEditBounce(
         'chain does not compile to pure dart: ${compiled.problem}',
         're-compose the chain within the closed pure vocabulary '
-        '(load_arg, literal, add, sub, mul, lt, gt, eq, not, starts_with, '
-        'list_len, get_item, call, jump_if_false, return)',
+            '(load_arg, literal, add, sub, mul, lt, gt, eq, not, starts_with, '
+            'list_len, get_item, call, jump_if_false, return)',
         fence: 'expressiveness',
       );
     }
@@ -472,10 +474,10 @@ class SpanEditMaterializer {
     if (!coverageSet().contains(sym.label)) {
       throw SpanEditBounce(
         'no oracle coverage for "${sym.label}": the workspace suite derives '
-        'no expectations for it, so a replacement would destroy untested '
-        'behavior with nothing in the pipeline noticing',
+            'no expectations for it, so a replacement would destroy untested '
+            'behavior with nothing in the pipeline noticing',
         'add suite coverage first (expect(${sym.label}(...), ...) in '
-        'test/) — the coverage routes to the pack/operator capture loop',
+            'test/) — the coverage routes to the pack/operator capture loop',
         fence: 'coverage',
       );
     }
@@ -519,7 +521,7 @@ class SpanEditMaterializer {
     if (!{'class', 'mixin', 'extension'}.contains(decl)) {
       throw SpanEditBounce(
         '${sym.id} is a $decl — insert_member targets a class/mixin/'
-        'extension symbol',
+            'extension symbol',
         'zoom to find the enclosing class symbol id',
       );
     }
@@ -551,7 +553,7 @@ class SpanEditMaterializer {
       if (_impureOps.contains(label)) {
         throw SpanEditBounce(
           'op "$label" has no pure-dart realization — the v1 dart target '
-          'compiles pure/static-like bodies only',
+              'compiles pure/static-like bodies only',
           'express the logic as pure ops over the declared params',
           fence: 'expressiveness',
         );
@@ -563,9 +565,9 @@ class SpanEditMaterializer {
             !_knownSymbolLabels().contains(callee)) {
           throw SpanEditBounce(
             'call target "$callee" is neither a declared param nor a known '
-            'symbol of this workspace',
+                'symbol of this workspace',
             'call an existing intent/symbol (check with meaning_zoom) or a '
-            'param',
+                'param',
             fence: 'integration',
           );
         }
@@ -610,7 +612,7 @@ class SpanEditMaterializer {
         throw SpanEditBounce(
           'class $className already has a member named $name',
           'pick another name or replace the existing member with '
-          'replace_member_body (symbolId: ${entry.key})',
+              'replace_member_body (symbolId: ${entry.key})',
           fence: 'integration',
         );
       }
@@ -635,7 +637,7 @@ class SpanEditMaterializer {
       throw SpanEditBounce(
         'cannot locate the class body brace of $className in $file',
         're-run repo_etl scan; if the file is not dart-formatted it is '
-        'outside the v1 scanner scope',
+            'outside the v1 scanner scope',
       );
     }
     final closeLine0 = _matchBrace(lines, openLine0);
@@ -643,7 +645,7 @@ class SpanEditMaterializer {
       throw SpanEditBounce(
         'cannot locate the closing brace line of $className in $file',
         'the v1 materializer expects dart-formatted sources (closing brace '
-        'on its own line)',
+            'on its own line)',
       );
     }
     final paramStr = parsedParams.map((p) => '${p.$2} ${p.$1}').join(', ');
@@ -685,7 +687,7 @@ class SpanEditMaterializer {
         throw SpanEditBounce(
           'unknown edit executable: $executableId',
           'built-ins: ${defaultEditExecutables.keys.join(", ")}; project '
-          'packs supply more (register via registerPackExecutable)',
+              'packs supply more (register via registerPackExecutable)',
         );
       }
       switch (pack.kind) {
@@ -694,9 +696,9 @@ class SpanEditMaterializer {
           if (chain == null || chain.isEmpty) {
             throw SpanEditBounce(
               'pack executable "$executableId" carries no op-chain '
-              '(the host realizes body-kind packs from pack data)',
+                  '(the host realizes body-kind packs from pack data)',
               'register the op-chain with the pack entry (data, never '
-              'authored by the model)',
+                  'authored by the model)',
             );
           }
           return _planReplaceMemberBody(symbolId: symbolId, opChain: chain);
@@ -705,7 +707,7 @@ class SpanEditMaterializer {
         default:
           throw SpanEditBounce(
             'pack executable kind "${pack.kind.wire}" has no host '
-            'realization in this span editor',
+                'realization in this span editor',
             'realize the kind host-side (the wire stays syntax-only)',
           );
       }
@@ -739,8 +741,7 @@ class SpanEditMaterializer {
     final sym = _requireSymbol(symbolId);
     final oldName = sym.label;
     final newName = params['newName'] as String?;
-    if (newName == null ||
-        !RegExp(r'^[A-Za-z_$][\w$]*$').hasMatch(newName)) {
+    if (newName == null || !RegExp(r'^[A-Za-z_$][\w$]*$').hasMatch(newName)) {
       throw SpanEditBounce(
         'invalid newName: $newName',
         're-send params: {newName: <legal dart identifier>}',
@@ -750,22 +751,24 @@ class SpanEditMaterializer {
     if (decl == 'getter') {
       throw SpanEditBounce(
         '"$oldName" is a getter — getter/setter pairs break under a '
-        'lexical rename',
+            'lexical rename',
         'bounce accepted: use scope analyzer (P4/J3) or rename both '
-        'accessors via separate covered moves',
+            'accessors via separate covered moves',
         fence: 'integration',
       );
     }
     final declLine = (sym.props['line'] as num?)?.toInt();
     final file = sym.props['file'] as String?;
     if (file != null && declLine != null) {
-      final line = File(_abs(file)).readAsStringSync().split('\n')[declLine - 1];
+      final line = File(
+        _abs(file),
+      ).readAsStringSync().split('\n')[declLine - 1];
       if (RegExp(r'\w+\.\w+\s*\(').hasMatch(line)) {
         throw SpanEditBounce(
           '"$oldName" looks like a named constructor/tear-off — file '
-          'conventions break under a lexical rename',
+              'conventions break under a lexical rename',
           'bounce accepted: named constructors are out of the lexical '
-          'scope (P4/J3)',
+              'scope (P4/J3)',
           fence: 'integration',
         );
       }
@@ -792,9 +795,9 @@ class SpanEditMaterializer {
     if (twins.isNotEmpty) {
       throw SpanEditBounce(
         'ambiguous rename: ${twins.length} other symbol(s) named '
-        '"$oldName": ${twins.join(", ")}',
+            '"$oldName": ${twins.join(", ")}',
         'disambiguate first (rename the others away or narrow the scan), '
-        'then retry — the analyzer is the oracle, guessing is banned',
+            'then retry — the analyzer is the oracle, guessing is banned',
       );
     }
     // Collision with an existing name.
@@ -842,7 +845,7 @@ class SpanEditMaterializer {
       throw SpanEditBounce(
         'no references to "$oldName" found on the frontier',
         'refresh the tree (repo_etl action refresh) — the refs edges may '
-        'be stale',
+            'be stale',
       );
     }
     return SpanEditPlan(
@@ -925,7 +928,8 @@ class SpanEditMaterializer {
       return SpanEditOutcome(
         ok: false,
         reverted: false,
-        detail: 'edit not approved: ${plan.description} — no bytes were '
+        detail:
+            'edit not approved: ${plan.description} — no bytes were '
             'touched',
         failureClass: 'permission_denied',
       );
@@ -948,11 +952,9 @@ class SpanEditMaterializer {
     int preAnalyzeExit;
     int preCheckExit;
     if (baseline.clean == null) {
-      final preAnalyze = await Process.run(
-        'dart',
-        ['analyze'],
-        workingDirectory: workspace.path,
-      );
+      final preAnalyze = await Process.run('dart', [
+        'analyze',
+      ], workingDirectory: workspace.path);
       preAnalyzeExit = preAnalyze.exitCode;
       preCheckExit = 0;
       final preCheckCmd = resolveWorkspaceCheck(workspace);
@@ -973,9 +975,7 @@ class SpanEditMaterializer {
       for (final f in files) {
         final text = originals[f]!;
         final sf = SourceFile.fromString(text);
-        final filePatches = plan.patches
-            .where((p) => p.file == f)
-            .toList()
+        final filePatches = plan.patches.where((p) => p.file == f).toList()
           ..sort((a, b) => a.startLine.compareTo(b.startLine));
         final lineCount = text.split('\n').length;
         // In-range + non-overlap checks (source_span coordinates; the
@@ -992,8 +992,8 @@ class SpanEditMaterializer {
             final span = sf.span(0, text.length);
             throw SpanEditBounce(
               'patch range ${p.startLine}..${p.endLine} exceeds the '
-              '$lineCount lines of $f — re-run repo_etl refresh '
-              '(file span: ${span.start.toolString})',
+                  '$lineCount lines of $f — re-run repo_etl refresh '
+                  '(file span: ${span.start.toolString})',
               'the tree is stale; refresh then retry',
             );
           }
@@ -1003,10 +1003,10 @@ class SpanEditMaterializer {
             final a = filePatches[i - 1];
             throw SpanEditBounce(
               'overlapping patches in $f '
-              '(${a.startLine}..${a.endLine} vs '
-              '${filePatches[i].startLine}..${filePatches[i].endLine}) '
-              '[span ${sf.getOffset(a.startLine - 1)}..'
-              '${a.endLine < lineCount ? sf.getOffset(a.endLine) : text.length}]',
+                  '(${a.startLine}..${a.endLine} vs '
+                  '${filePatches[i].startLine}..${filePatches[i].endLine}) '
+                  '[span ${sf.getOffset(a.startLine - 1)}..'
+                  '${a.endLine < lineCount ? sf.getOffset(a.endLine) : text.length}]',
               'host bug — report the move as failed data',
             );
           }
@@ -1035,11 +1035,10 @@ class SpanEditMaterializer {
       // analyzer + workspace convention run at the goal gate (once per
       // turn) and in the once-per-session baseline above.
       swAnalyze.start();
-      final analyze = await Process.run(
-        'dart',
-        ['analyze', ...files.map(_abs)],
-        workingDirectory: workspace.path,
-      );
+      final analyze = await Process.run('dart', [
+        'analyze',
+        ...files.map(_abs),
+      ], workingDirectory: workspace.path);
       swAnalyze.stop();
       final analyzeExit = analyze.exitCode;
       if (analyzeExit != 0 && preClean) {
@@ -1090,7 +1089,8 @@ class SpanEditMaterializer {
       // The workspace's new state: green → the baseline carries forward
       // (the next move's pre-state costs nothing); red → cached as red so
       // no further move re-pays for the measurement.
-      baseline.clean = analyzeExit == 0 && (checkExit == null || checkExit == 0);
+      baseline.clean =
+          analyzeExit == 0 && (checkExit == null || checkExit == 0);
       // Patches KEPT: any remaining red state pre-dated the move (or was
       // not attributable) — the goal loop grades the end state.
       return SpanEditOutcome(
@@ -1145,11 +1145,10 @@ class SpanEditMaterializer {
     if (!File(
       '${workspace.path}/.dart_tool/package_config.json',
     ).existsSync()) {
-      await Process.run(
-        'dart',
-        ['pub', 'get'],
-        workingDirectory: workspace.path,
-      );
+      await Process.run('dart', [
+        'pub',
+        'get',
+      ], workingDirectory: workspace.path);
     }
     return Process.run(
       cmd.first,
@@ -1214,7 +1213,7 @@ class SpanEditMaterializer {
     if (nameIdx < 0) {
       throw SpanEditBounce(
         'symbol $name not found on its recorded decl line $declLine1 of '
-        '$file',
+            '$file',
         're-run repo_etl refresh (the tree is stale)',
       );
     }
@@ -1227,9 +1226,9 @@ class SpanEditMaterializer {
     if (parenRel < 0) {
       throw SpanEditBounce(
         'member $name has no parameter list on its decl line — outside the '
-        'v1 span-editor scope',
+            'v1 span-editor scope',
         'target a brace-bodied method/function with a single-line '
-        'signature',
+            'signature',
       );
     }
     final parenStart = lineStart + parenRel;
@@ -1242,7 +1241,11 @@ class SpanEditMaterializer {
     }
     // What follows the parameter list decides the body shape.
     var cursor = parenEnd + 1;
-    while (cursor < text.length && (text[cursor] == ' ' || text[cursor] == '\n' || text[cursor] == '\t' || text[cursor] == '\r')) {
+    while (cursor < text.length &&
+        (text[cursor] == ' ' ||
+            text[cursor] == '\n' ||
+            text[cursor] == '\t' ||
+            text[cursor] == '\r')) {
       cursor++;
     }
     if (cursor >= text.length ||
@@ -1259,7 +1262,7 @@ class SpanEditMaterializer {
         '— the v1 materializer replaces brace-bodied members only',
         text[cursor] == '=>'
             ? 'convert to a brace body first (out of scope for a meaning '
-                'move) or target the brace-bodied variant'
+                  'move) or target the brace-bodied variant'
             : 'abstract/external members have no body to replace',
         fence: 'expressiveness',
       );
@@ -1292,9 +1295,7 @@ class SpanEditMaterializer {
         .trim();
     var returnType = prefix;
     if (prefix.endsWith('get') || prefix.endsWith('set')) {
-      returnType = prefix
-          .substring(0, prefix.length - 3)
-          .trim();
+      returnType = prefix.substring(0, prefix.length - 3).trim();
     }
     // Decl line for the patch: the line the SIGNATURE starts on. For
     // single-line signatures that is declLine0; the body close line comes
@@ -1324,16 +1325,11 @@ class SpanEditMaterializer {
     );
   }
 
-  int? _findClassBodyOpen(
-    List<String> lines,
-    int declLine0,
-    String className,
-  ) {
+  int? _findClassBodyOpen(List<String> lines, int declLine0, String className) {
     // The class body opens on the first line at/after the decl whose
     // trimmed content ends with '{' (dart-formatted: single-line decl head).
     for (var i = declLine0; i < lines.length && i <= declLine0 + 8; i++) {
-      if (lines[i].trimRight().endsWith('{') &&
-          lines[i].contains(className)) {
+      if (lines[i].trimRight().endsWith('{') && lines[i].contains(className)) {
         return i;
       }
       if (i > declLine0 && lines[i].trim() == '{') return i;
@@ -1458,7 +1454,9 @@ class SpanEditMaterializer {
 
 String _tail(String s, {int lines = 12}) {
   final ls = s.trim().split('\n');
-  return ls.length <= lines ? s.trim() : ls.sublist(ls.length - lines).join('\n');
+  return ls.length <= lines
+      ? s.trim()
+      : ls.sublist(ls.length - lines).join('\n');
 }
 
 /// Parsed member site (pure data; offsets resolved by the caller).
@@ -1511,6 +1509,13 @@ ToolDef editSymbolTool(
         coverage: coverage,
         approver: approver,
       );
+  // R7 production #3 — realize the PROJECT PACK: captured novel
+  // resolutions (the ADR 0021 capture loop) are available to every task
+  // over this workspace at ZERO authored tokens (the model picks the id,
+  // the chain travels with the pack).
+  for (final captured in EditPackCapture(workspace).load()) {
+    mat.registerPackExecutable(captured.wire, opChain: captured.opChain);
+  }
   return ToolDef.encode(
     name: const ToolName('edit_symbol'),
     description:
@@ -1528,39 +1533,50 @@ ToolDef editSymbolTool(
         'check and AUTO-REVERTED on failure — a failed move costs an '
         'attempt, so compose carefully from the zoom/impact data.',
     argsSchema: SchemaBundle(
-      root: FM.object('edit_symbol', properties: () => [
-            FM.prop(
-              'action',
-              FM.enum_('action', const [
-                'replace_member_body',
-                'insert_member',
-                'apply_executable',
-              ]),
+      root: FM.object(
+        'edit_symbol',
+        properties: () => [
+          FM.prop(
+            'action',
+            FM.enum_('action', const [
+              'replace_member_body',
+              'insert_member',
+              'apply_executable',
+            ]),
+          ),
+          FM.prop('symbolId', FM.string(), optional: true),
+          FM.prop('classSymbolId', FM.string(), optional: true),
+          FM.prop('executableId', FM.string(), optional: true),
+          FM.prop('name', FM.string(), optional: true),
+          FM.prop('returns', FM.string(), optional: true),
+          FM.prop('params', FM.array(FM.string()), optional: true),
+          FM.prop(
+            'opChain',
+            FM.array(
+              FM.object(
+                'op',
+                properties: () => [
+                  FM.prop('label', FM.string()),
+                  FM.prop('a', FM.string(), optional: true),
+                  FM.prop('b', FM.string(), optional: true),
+                ],
+              ),
             ),
-            FM.prop('symbolId', FM.string(), optional: true),
-            FM.prop('classSymbolId', FM.string(), optional: true),
-            FM.prop('executableId', FM.string(), optional: true),
-            FM.prop('name', FM.string(), optional: true),
-            FM.prop('returns', FM.string(), optional: true),
-            FM.prop('params', FM.array(FM.string()), optional: true),
-            FM.prop(
-              'opChain',
-              FM.array(FM.object('op', properties: () => [
-                    FM.prop('label', FM.string()),
-                    FM.prop('a', FM.string(), optional: true),
-                    FM.prop('b', FM.string(), optional: true),
-                  ])),
-              optional: true,
-            ),
-            FM.prop(
+            optional: true,
+          ),
+          FM.prop(
+            'executableParams',
+            FM.object(
               'executableParams',
-              FM.object('executableParams', properties: () => [
-                    FM.prop('newName', FM.string(), optional: true),
-                    FM.prop('scope', FM.string(), optional: true),
-                  ]),
-              optional: true,
+              properties: () => [
+                FM.prop('newName', FM.string(), optional: true),
+                FM.prop('scope', FM.string(), optional: true),
+              ],
             ),
-          ]),
+            optional: true,
+          ),
+        ],
+      ),
     ),
     execute: (args) async {
       final map = args is Map ? args : const {};
@@ -1575,6 +1591,7 @@ ToolDef editSymbolTool(
               },
       ];
       try {
+        final composedChain = chainOf(map['opChain']);
         final plan = mat.plan(
           action: map['action'] as String?,
           symbolId: map['symbolId'] as String?,
@@ -1587,16 +1604,36 @@ ToolDef editSymbolTool(
               for (final p in map['params'] as List)
                 if (p is String) p,
           ],
-          opChain: chainOf(map['opChain']),
+          opChain: composedChain,
           executableParams:
               (map['executableParams'] as Map?)?.cast<String, dynamic>() ??
               const {},
         );
         final outcome = await mat.apply(plan);
+        // R7 production #3 — the CAPTURE LOOP: a model-composed body
+        // replacement that passed all fences AND the free oracles (fully
+        // green — a move merely KEPT under a pre-existing red baseline is
+        // not a proven resolution) becomes a project-pack entry, so the
+        // next task over the same repair class costs ZERO authored
+        // tokens. Host-side, mechanical, idempotent.
+        String? capturedId;
+        if ((map['action'] as String?) == 'replace_member_body' &&
+            map['executableId'] == null &&
+            outcome.ok &&
+            !outcome.reverted &&
+            outcome.analyzeExit == 0 &&
+            (outcome.checkExit == null || outcome.checkExit == 0)) {
+          capturedId = EditPackCapture(workspace).captureVerified(
+            action: 'replace_member_body',
+            opChain: composedChain,
+            description: plan.description,
+          );
+        }
         return {
           ...outcome.toJson(),
           'move': plan.description,
           'atomic': plan.isAtomic,
+          if (capturedId != null) 'capturedExecutableId': capturedId,
         };
       } on SpanEditBounce catch (b) {
         return b.toJson(); // structured data — the exact repair move

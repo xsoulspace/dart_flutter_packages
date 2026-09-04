@@ -30,6 +30,7 @@
 library;
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
@@ -62,13 +63,15 @@ const maxEscalationCeiling = 9;
 int escalationAllowance(int escalationRounds) =>
     min(3 + escalationRounds, maxEscalationCeiling);
 
-class HarnessAcpBackend implements AcpAgentBackend, AcpPermissionRequesting {
+class HarnessAcpBackend
+    implements AcpAgentBackend, AcpPermissionRequesting, AcpMoveProposing {
   HarnessAcpBackend({
     this.backend = 'open_router',
     this.model = 'deepseek/deepseek-v4-flash-0731',
     this.handlerFactory,
     this.meaningProfile = false,
     this.scripted = false,
+    this.remoteMover = false,
   });
 
   /// `open_router` (native tool calls) or `apple_foundation_afm`.
@@ -84,17 +87,42 @@ class HarnessAcpBackend implements AcpAgentBackend, AcpPermissionRequesting {
   final GenerationHandler Function(ModelRouter router)? handlerFactory;
 
   /// R7 gate mode: the mover is a SCRIPTED directive interpreter — the
-  /// prompt carries bracketed directives (`[scan]`, `[zoom <query>]`,
-  /// `[impact <symbol>]`, `[rename <old> <new>]`, `[verify]`) and the
-  /// actor emits the corresponding REAL registry tool calls. The daemon
-  /// surface (registry, oracles, auto-revert, budgets) is the production
-  /// one; only the mover is deterministic (LLM-free gate discipline).
+  /// prompt carries bracketed READ directives (`[scan]`,
+  /// `[zoom <query>]`, `[verify]`) and STRUCTURED JSON payloads for the
+  /// id-bearing verbs (`harness_edit {…}`, `harness_impact {…}` — the
+  /// exact registry args, R7 production #1), and the actor emits the
+  /// corresponding REAL registry tool calls. The daemon surface
+  /// (registry, oracles, auto-revert, budgets) is the production one;
+  /// only the mover is deterministic (LLM-free gate discipline).
   final bool scripted;
+
+  /// R7 production #4 — the REMOTE MOVER: the daemon runs the harness
+  /// loop but has NO mover model; every decision round-trips to the
+  /// CLIENT (pi's model) as `session/propose_move` (bounded cut + tool
+  /// schemas out, typed tool calls back). The client never touches files
+  /// and never executes anything — the host validates, materializes and
+  /// verifies every proposed move. Precedence: [scripted] > [remoteMover]
+  /// > [handlerFactory] > the real backend router.
+  final bool remoteMover;
 
   /// N4 — pi-as-escalation-rung: the client's permission requester, attached
   /// by the server (dart_acp_toolkit `AcpPermissionRequesting`).
   Future<AcpPermissionOutcome> Function(AcpPermissionRequest request)?
-      _permissionRequester;
+  _permissionRequester;
+
+  /// R7 production #4: the client's move proposer (attached by the
+  /// server; in-process tests attach it directly).
+  Future<AcpMoveResponse> Function(AcpMoveProposal proposal)? _moveProposer;
+
+  /// Test visibility: the in-flight propose_move completions of a session
+  /// (empty after a cancel — no leaked awaits).
+  Map<String, Completer<AcpMoveResponse>> sessionsDebugPendingMoves(
+    String sessionId,
+  ) => _sessions[sessionId]?.pendingMoves ?? const {};
+
+  /// R7 production #5: called on every session activity (create/prompt/
+  /// cancel) — the daemon's idle-exit timer resets here.
+  void Function()? onActivity;
 
   /// The retained AFM client (when [backend] is the AFM bridge) so
   /// `cancelSession` can reach `xs_fm_cancel`.
@@ -106,6 +134,14 @@ class HarnessAcpBackend implements AcpAgentBackend, AcpPermissionRequesting {
     requester,
   ) {
     _permissionRequester = requester;
+  }
+
+  /// R7 production #4 — the server attaches the propose_move round-trip.
+  @override
+  void attachMoveProposer(
+    Future<AcpMoveResponse> Function(AcpMoveProposal proposal) proposer,
+  ) {
+    _moveProposer = proposer;
   }
 
   /// Sessions keyed by id; the workspace index maps cwd → session so the
@@ -132,14 +168,15 @@ class HarnessAcpBackend implements AcpAgentBackend, AcpPermissionRequesting {
       if (apiKey == null || apiKey.isEmpty) return null;
       final router = ModelRouter(
         inferenceClientsBuilders: {
-          OpenRouterModelNames.openRouter: () => OpenRouterInferenceClient(
-            apiKey: apiKey,
-            defaultModel: model,
-          ),
+          OpenRouterModelNames.openRouter: () =>
+              OpenRouterInferenceClient(apiKey: apiKey, defaultModel: model),
         },
       );
       final modelId = ModelId('harnessd');
-      router.models[modelId] = Model(id: modelId, name: OpenRouterModelNames.openRouter);
+      router.models[modelId] = Model(
+        id: modelId,
+        name: OpenRouterModelNames.openRouter,
+      );
       return router;
     }
     // AFM-first (North Star): the retained client is reachable for cancel.
@@ -162,6 +199,7 @@ class HarnessAcpBackend implements AcpAgentBackend, AcpPermissionRequesting {
 
   @override
   Future<String> createSession(AcpSessionNewRequest request) async {
+    onActivity?.call();
     // Per-workspace persistence: a live session for the same workspace
     // CONTINUES (the world — and the meaning tree — stay warm).
     final live = _sessions.values
@@ -200,7 +238,11 @@ class HarnessAcpBackend implements AcpAgentBackend, AcpPermissionRequesting {
     } on Object {
       return;
     }
-    final tool = repoEtlTool(world, Directory(session.cwd), state: session.etlState);
+    final tool = repoEtlTool(
+      world,
+      Directory(session.cwd),
+      state: session.etlState,
+    );
     await tool.execute({'action': 'refresh'});
   }
 
@@ -220,6 +262,7 @@ class HarnessAcpBackend implements AcpAgentBackend, AcpPermissionRequesting {
       return AcpStopReason.refusal;
     }
     session.cancelled = false;
+    onActivity?.call();
     await _mechanicalTick(session);
 
     final text = [
@@ -296,6 +339,8 @@ class HarnessAcpBackend implements AcpAgentBackend, AcpPermissionRequesting {
       }
       final baseHandler = scripted
           ? _ScriptedDaemonActor()
+          : remoteMover
+          ? _RemoteMoverHandler(session, _moveProposer!)
           : handlerFactory != null
           // Scripted/LLM-free tests inject handlers and may carry no
           // router — the factory receives whatever the session has.
@@ -311,7 +356,10 @@ class HarnessAcpBackend implements AcpAgentBackend, AcpPermissionRequesting {
         restoredWorld: session.world,
         allowDeclaredChecks: true,
         // R7c item 5: monotonic widening with a HARD CEILING.
-        maxGoalAttempts: min(3 + session.escalationRounds, maxEscalationCeiling),
+        maxGoalAttempts: min(
+          3 + session.escalationRounds,
+          maxEscalationCeiling,
+        ),
         // N4: the write gate asks the CLIENT (pi/human) per write — the
         // permission round-trip lands as a session/request_permission call.
         writeGateMode: _permissionRequester == null
@@ -337,6 +385,20 @@ class HarnessAcpBackend implements AcpAgentBackend, AcpPermissionRequesting {
             live,
             name: 'current',
             meta: {'cwd': session.cwd},
+          );
+        },
+        // R7 transparency: stream every tool result MID-TURN (patches,
+        // verify verdicts, bounce reasons, cuts) — the ACP client sees the
+        // mechanical tier as it works, not a silent 30–60s tool call.
+        onToolResult: (name, output) {
+          final text = '$output';
+          emit(
+            AgentMessageChunk(
+              content: AcpTextBlock(
+                '\n[$name] '
+                '${text.length > 4000 ? "${text.substring(0, 4000)}…" : text}\n',
+              ),
+            ),
           );
         },
       );
@@ -385,12 +447,8 @@ class HarnessAcpBackend implements AcpAgentBackend, AcpPermissionRequesting {
         ),
       ),
     );
-    // R7 transparency: stream WHAT the host tools did (patches, verify
-    // verdicts, bounce reasons, auto-reverts) — an ACP client sees the
-    // mechanical tier, not just its name.
-    for (final r in result.toolResults) {
-      emit(AgentMessageChunk(content: AcpTextBlock('\n$r')));
-    }
+    // Tool results already streamed MID-TURN via onToolResult above —
+    // no emit-at-run-end copy (the old truncated transcript list).
     if (result.passed) {
       session
         ..pendingEscalation = null
@@ -440,6 +498,13 @@ class HarnessAcpBackend implements AcpAgentBackend, AcpPermissionRequesting {
     final session = _sessions[sessionId];
     if (session == null) return;
     session.cancelled = true;
+    // R7 production #4: unblock a remote-mover decision that is awaiting
+    // the client's propose_move response (one decision = one round-trip;
+    // cancel must work MID-decision, not only between decisions).
+    for (final pending in session.pendingMoves.values) {
+      if (!pending.isCompleted) pending.completeError(_Cancelled());
+    }
+    session.pendingMoves.clear();
     _afmClient?.cancelActiveGeneration();
   }
 
@@ -472,6 +537,12 @@ class _Session {
 
   /// R7c item 4: set by `cancelSession`; checked per generation.
   bool cancelled = false;
+
+  /// R7 production #4: the in-flight `session/propose_move` completions.
+  /// `cancelSession` completes them with [_Cancelled] so a decision
+  /// blocked awaiting the client's typed tool calls unblocks and the turn
+  /// ends cancelled (never a hang).
+  final pendingMoves = <String, Completer<AcpMoveResponse>>{};
 
   /// N4 escalation rung: the task whose budget exhausted, awaiting operator
   /// guidance. The next prompt continues it with a widened (monotonic,
@@ -530,10 +601,90 @@ class _Cancelled implements Exception {
   String toString() => 'cancelled';
 }
 
-/// R7 gate mover: maps bracketed directives in the prompt to REAL tool
-/// calls over the session's registry (repo_etl / meaning_zoom /
-/// meaning_impact / edit_symbol / run). Symbol ids resolve from the tree
-/// by exact-name suffix; ambiguity bounces as text (never a guess).
+/// R7 production #4 — the REMOTE MOVER: the daemon's GenerationHandler is
+/// a round-trip to the CLIENT (`session/propose_move`). Each generate()
+/// call = exactly ONE propose_move: bounded cut out (the request prompt —
+/// the projected situation, never file text), the CLOSED tool schemas out,
+/// the live budgets out; typed tool calls back. Budgets/consent/cancel
+/// stay native to the world — the loop, its budgets and its oracles are
+/// unchanged; only WHO decides is pluggable.
+class _RemoteMoverHandler implements GenerationHandler {
+  _RemoteMoverHandler(this.session, this.proposer);
+  final _Session session;
+  final Future<AcpMoveResponse> Function(AcpMoveProposal proposal) proposer;
+  var _seq = 0;
+
+  @override
+  Future<ActorGenerateResponse> generate(
+    World world,
+    ActorGenerateRequest request,
+  ) async {
+    if (session.cancelled) throw _Cancelled();
+    final registry = world.getResource<ToolRegistryResource>().get('default');
+    final actorWe = world.getEntity(request.actorEntity).$1;
+    final proposal = AcpMoveProposal(
+      sessionId: session.id,
+      decisionId: 'move_${++_seq}',
+      prompt: request.prompt,
+      toolSchemas: [
+        if (registry != null)
+          for (final t in registry.tools.values)
+            {
+              'name': t.name.value,
+              'description': t.description,
+              'parameters': t.argsSchema.toJson(),
+            },
+      ],
+      budgets: {
+        'tool_rounds': actorWe.get<ToolRoundCount>()?.value ?? 0,
+        'total_rounds': actorWe.get<TotalRoundCount>()?.value ?? 0,
+        'attempts': actorWe.get<AttemptCount>()?.value ?? 0,
+        'max_tool_rounds': 12,
+      },
+    );
+    final pending = Completer<AcpMoveResponse>();
+    session.pendingMoves[proposal.decisionId] = pending;
+    try {
+      // Race the client's answer against a cancellation: `cancelSession`
+      // completes [pending] with the cancel signal, so a decision blocked
+      // awaiting a hung client still unblocks mid-decision.
+      final response = await Future.any<AcpMoveResponse>([
+        proposer(proposal),
+        pending.future,
+      ]);
+      if (session.cancelled) throw _Cancelled();
+      return ActorGenerateResponse(
+        actorEntity: request.actorEntity,
+        structuredOutput: {'text': response.text},
+        rawOutput: response.text,
+        toolCalls: [
+          for (final c in response.toolCalls)
+            ToolCall(
+              name: ToolName(c.name),
+              arguments: Map<String, dynamic>.of(c.arguments),
+            ),
+        ],
+        taskId: request.taskId,
+      );
+    } finally {
+      session.pendingMoves.remove(proposal.decisionId);
+    }
+  }
+}
+
+/// R7 gate mover (production #1 — the structured edit surface): maps the
+/// prompt's directives to REAL tool calls over the session's registry
+/// (repo_etl / meaning_zoom / meaning_impact / edit_symbol / run).
+///
+/// READ verbs with free-text args stay bracketed prose (`[scan]`,
+/// `[zoom <query>]`, `[verify]`). Every ID-BEARING verb travels as a
+/// STRUCTURED JSON payload — `harness_edit {…}` carries the exact
+/// `edit_symbol` args (action, symbolId/classSymbolId, opChain,
+/// executableId, executableParams) and `harness_impact {…}` the exact
+/// `meaning_impact` args. The mover NEVER resolves or guesses ids — the
+/// caller supplies them from zoom/impact data (the R7d division of
+/// labor); a malformed payload is dropped and reported, never repaired
+/// into a guess.
 class _ScriptedDaemonActor implements GenerationHandler {
   @override
   Future<ActorGenerateResponse> generate(
@@ -559,31 +710,15 @@ class _ScriptedDaemonActor implements GenerationHandler {
         ),
       );
     }
-    for (final m in RegExp(r'\[impact ([^\]]+)\]').allMatches(prompt)) {
-      final id = _resolve(world, m.group(1)!.trim());
-      if (id == null) continue;
+    final impacts = _payloads(prompt, 'harness_impact');
+    for (final args in impacts.items) {
       calls.add(
-        ToolCall(
-          name: const ToolName('meaning_impact'),
-          arguments: {'focusId': id, 'depth': 2, 'maxNodes': 32},
-        ),
+        ToolCall(name: const ToolName('meaning_impact'), arguments: args),
       );
     }
-    for (final m
-        in RegExp(r'\[rename ([^\]]+?) ([^\]]+)\]').allMatches(prompt)) {
-      final id = _resolve(world, m.group(1)!.trim());
-      if (id == null) continue;
-      calls.add(
-        ToolCall(
-          name: const ToolName('edit_symbol'),
-          arguments: {
-            'action': 'apply_executable',
-            'executableId': 'rename_symbol',
-            'symbolId': id,
-            'executableParams': {'newName': m.group(2)!.trim()},
-          },
-        ),
-      );
+    final edits = _payloads(prompt, 'harness_edit');
+    for (final args in edits.items) {
+      calls.add(ToolCall(name: const ToolName('edit_symbol'), arguments: args));
     }
     if (RegExp(r'\[verify\]').hasMatch(prompt)) {
       calls.add(
@@ -596,14 +731,22 @@ class _ScriptedDaemonActor implements GenerationHandler {
         ),
       );
     }
+    final dropped = impacts.dropped + edits.dropped;
     final response = ActorGenerateResponse(
       actorEntity: request.actorEntity,
       structuredOutput: {
-        'text': calls.isEmpty ? 'no directive matched the prompt' : 'acting',
+        'text': calls.isEmpty
+            ? (dropped > 0
+                  ? 'malformed payload(s): $dropped — re-send valid JSON'
+                  : 'no directive matched the prompt')
+            : 'acting',
       },
       rawOutput: calls.isEmpty
-          ? 'no directive matched the prompt'
-          : 'acting on ${calls.length} directive(s)',
+          ? (dropped > 0
+                ? 'malformed payload(s): $dropped — re-send valid JSON'
+                : 'no directive matched the prompt')
+          : 'acting on ${calls.length} directive(s)'
+                '${dropped > 0 ? " ($dropped malformed dropped)" : ""}',
       toolCalls: calls,
       taskId: request.taskId,
     );
@@ -611,14 +754,59 @@ class _ScriptedDaemonActor implements GenerationHandler {
     return response;
   }
 
-  /// Resolves a symbol NAME to its tree id by exact-suffix match; null
-  /// (with the miss noted in the response) when ambiguous or unknown.
-  String? _resolve(World world, String name) {
-    final index = world.getResource<MeaningIndex>();
-    final hits = [
-      for (final id in index.byId.keys)
-        if (id == 'sym_$name' || id.endsWith('_$name')) id,
-    ];
-    return hits.length == 1 ? hits.single : null;
+  /// Extracts every balanced `{…}` JSON payload following [tag] in the
+  /// prompt. A malformed (unbalanced / non-object) payload is DROPPED and
+  /// counted — never guessed around.
+  static _Payloads _payloads(String prompt, String tag) {
+    final payloads = <Map<String, dynamic>>[];
+    var dropped = 0;
+    var from = 0;
+    while (true) {
+      final tagIdx = prompt.indexOf(tag, from);
+      if (tagIdx < 0) break;
+      from = tagIdx + tag.length;
+      final open = prompt.indexOf('{', from);
+      if (open < 0) break;
+      var depth = 0;
+      String? payload;
+      var closed = false;
+      for (var i = open; i < prompt.length; i++) {
+        final c = prompt[i];
+        if (c == '{') depth++;
+        if (c == '}') {
+          depth--;
+          if (depth == 0) {
+            payload = prompt.substring(open, i + 1);
+            from = i + 1;
+            closed = true;
+            break;
+          }
+        }
+      }
+      if (!closed || payload == null) {
+        dropped++;
+        // Rescan AFTER this '{' — a broken group must never swallow a
+        // well-formed payload that follows it. Never guess: only decoded
+        // JSON objects execute.
+        from = open + 1;
+        continue;
+      }
+      try {
+        final decoded = jsonDecode(payload);
+        if (decoded is Map<String, dynamic>) {
+          payloads.add(decoded);
+        } else {
+          dropped++;
+        }
+      } on FormatException {
+        dropped++;
+        // Broken JSON — same rescan rule: skip this '{', keep looking.
+        from = open + 1;
+      }
+    }
+    return (items: payloads, dropped: dropped);
   }
 }
+
+/// Parsed structured payloads + how many malformed ones were dropped.
+typedef _Payloads = ({List<Map<String, dynamic>> items, int dropped});
