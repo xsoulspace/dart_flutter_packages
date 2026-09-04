@@ -25,3 +25,4 @@
 | [0021](0021_problems_as_canonical_rows_project_repair_packs.md) | Accepted | Problems are AE-ETL canonical rows; repairs are project-guided repair packs |
 | [0022](0022_workspace_oracle_meaning_pipeline.md) | Accepted | Meaning pipeline grades through the workspace oracle; vocabulary grows as verified data (bidirectional ETL) |
 | [0023](0023_filesystem_projection_target_edit_as_rederivation.md) | Accepted | The filesystem is a projection target: edit-as-re-derivation; read/write demoted in the meaning profile (R7) |
+| [0024](0024_filesystem_one_map_graph_typed_materializers.md) | Accepted | The filesystem is one map-graph: typed materializer specs per file class, uniform edit verbs, tiny-model-first surfaces |

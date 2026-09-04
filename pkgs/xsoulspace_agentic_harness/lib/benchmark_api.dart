@@ -19,6 +19,7 @@ export 'src/tooling/act_with_project.dart';
 export 'src/tooling/ae_bridge.dart';
 export 'src/tooling/attribution.dart';
 export 'src/tooling/build_gates.dart';
+export 'src/tooling/verify_tiers.dart';
 export 'src/tooling/locate_index.dart';
 // ---- tooling --------------------------------------------------------------
 export 'src/tooling/logging_handler.dart';

@@ -7,6 +7,19 @@ One entry per landed body of work; durable decisions live in
 
 ## Landed
 
+- **Tiered verification moved INTO the harness (2026-09-04)**: the first
+  cut lived in apple_foundation as a stateful closure
+  (`MeaningVerifyPlanner` with a private grade counter) — a shadow ledger
+  invisible to projection/metrics/snapshot, exactly the drift ADR 0009
+  forbids ("no planner subsystem"; plans/verifications are derived from
+  the graph). Corrected: `VerifyTierPlanner` + `VerifyConvention` in
+  `lib/src/tooling/verify_tiers.dart` (stateless, beat-derived; grades
+  become `goal_verify` beats via the run-graded verifier); the host
+  contributes only the convention as data (`dartVerifyConvention`). The
+  mechanism is now language-agnostic — a rust/ts host supplies its own
+  convention + ETL and changes nothing in the mechanism. Gate:
+  `verify_tier_planner_test.dart` (skip → narrow → full fallback,
+  including the REAL `runGoalVerifier` grade path writing the beat).
 - **R7 production path COMPLETE — #1–#7 gated with published rows
   (2026-09-04, macOS 26.6.2, real AFM + real pi)**: (1) the FULL edit
   surface over ACP — the scripted mover's prose directives are gone; the

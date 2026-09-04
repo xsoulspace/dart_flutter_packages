@@ -270,3 +270,42 @@ ARG SHAPE text) pushed the meaning-profile fixed overhead from 1,408 to
 **1,504** tokens — `meaning_profile_overhead_test.dart` now FAILS its own
 ≤1,500 gate (production #2: cut the surface first, never the law). Owner:
 the R7e loop that made the edit.
+
+## TASK B Phase 1 — Agents in Docs (ADR 0003, last_answer) (2026-09-04)
+
+The coding-agent surface is absorbed into the product document model:
+`ProjectModel.doc` gains `formatId: 'agent'` + an `AgentDocModel` payload
+(workspace set, backend, check override — syncable doc data);
+`AgentDocSurface` replaces the standalone screen (ProjectView dispatch);
+the home entry creates an agent doc. MCP/intent entries
+(`agent_doc_state` / `agent_task_delegate` / `agent_permission_answer`)
+project the same typed state for agent drivers (mcp_toolkit + intentcall
+`AgentCallEntry`, registered debug/profile).
+
+Harness support: `HarnessAcpBackend(checkCommand:)` — the doc binding's
+declarative `--check` (empty = D8 workspace convention decides).
+
+| row | flow | backend | verdict | spend | n |
+|---|---|---|---|---|---|
+| doc e2e (widget, scripted) | delegate → permission allow → verdict PASS + doc payload pins workspace + debugState projection live | scripted `handlerFactory` | PASS | scripted | 1 |
+| doc e2e (AFM, real app) | ProjectModel.emptyAgent → delegate → permission → oracle `dart run main.dart` | `apple_foundation_afm` | **PASS** | 1 decision, ~1.4k tokens, ~29 s | 1 |
+| **self-profile (AFM, real repo)** | agent doc bound to last_answer ITSELF; honest fixture oracle (`tool/agent_fixture/main.dart` throws until fixed; check override `dart run` it; fixture restored after) | `apple_foundation_afm` | **PASS** | read → write → run; verdict PASS | 1 |
+
+Dogfooding findings (all recorded, none dropped):
+1. **Stale-world leak**: the per-workspace snapshot store carried the
+   PREVIOUS task's goal; the restored world made the small model replay
+   its old moves (identical stray writes). Gate mitigation: wipe
+   `.dart_tool/harnessd_store` per run (derived cache). Product question
+   (open): new-task goal isolation on a resumed world.
+2. **R5 triviality** hit the first self-profile shape (`dart analyze` over
+   a clean dir passed with an unchanged tree). Fix: honest fixture oracle
+   that FAILS until the agent acts.
+3. **Small-model cwd confusion**: the model passed a redundant `cwd` to
+   the run tool, breaking its own in-loop verification; the OUTER oracle
+   (final gate, jail cwd) held. Harness surface is correct; repair-hint
+   candidate ("don't pass cwd unless you mean a subdir").
+4. **`dart run` inside the app process** triggers repo build-hook churn
+   ("File modified during build…") — functional but slow; plain
+   `dart <file>` may be the better checkCommand shape for fixtures.
+5. **Dart gotcha recorded**: `File.existsSync()` returns FALSE for
+   directories (cost one debug cycle in the gate).

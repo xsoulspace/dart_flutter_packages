@@ -27,6 +27,8 @@ import 'package:xsoulspace_agentic_harness/benchmark_api.dart'
     show
         CheckerResult,
         CheckerSpec,
+        VerifyTierPlanner,
+        dartVerifyConvention,
         FixtureFile,
         defaultGoalFlow,
         openFreshDecision,
@@ -654,7 +656,17 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
             'meaning-profile task: no verification criterion resolvable for '
             '${jail.path} — pass runCommand or declare a workspace convention',
           ));
-      wireRunGradedGoal(world, command: command, cwd: jail.path);
+      wireRunGradedGoal(
+        world,
+        command: command,
+        cwd: jail.path,
+        // Tiered verification (the 20–23s fix): skip grades with no new
+        // move, narrow to frontier-selected tests; the full suite stays
+        // the terminal proof at the final gate.
+        // Tiered verification is HARNESS machinery (verify_tiers.dart): the
+        // beat-derived stateless planner; the dart convention is data.
+        planProvider: const VerifyTierPlanner(convention: dartVerifyConvention),
+      );
     } else {
       wireRunGradedGoal(
         world,

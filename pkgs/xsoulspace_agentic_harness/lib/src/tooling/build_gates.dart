@@ -28,27 +28,69 @@ import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart'
     show FM, SchemaBundle, ToolDef, ToolName;
 
 import '../../xsoulspace_agentic_harness.dart'
-    show Actor, ActorModel, ActorSystemPrompt, AgentId, DecisionContext,
-        DecisionDraft, DecisionFlow, DecisionPolicy, ModelId, OpenDecision,
-        PresentInScene, ReActContinuationPolicy, Scene, SceneFrame;
+    show
+        Actor,
+        ActorModel,
+        ActorSystemPrompt,
+        AgentId,
+        DecisionContext,
+        DecisionDraft,
+        DecisionFlow,
+        DecisionPolicy,
+        ModelId,
+        OpenDecision,
+        PresentInScene,
+        ReActContinuationPolicy,
+        Scene,
+        SceneFrame;
 import '../data_models/components.dart'
-    show Actor, ActorGoalRef, ActorThreads, ActorTools, AttemptCount,
-        EscalationRequest, Goal, GoalAttemptsExhausted, ToolRoundCount;
-import '../meaning/intents.dart'
-    show IntentCallState, callIntent;
+    show
+        Actor,
+        ActorGoalRef,
+        ActorThreads,
+        ActorTools,
+        AttemptCount,
+        BeatModality,
+        BeatModalityEnum,
+        BeatStatus,
+        BeatStatusEnum,
+        BeatToolCall,
+        EscalationRequest,
+        Goal,
+        GoalAttemptsExhausted,
+        Speaker,
+        TextContent,
+        ToolResultContent,
+        ToolRoundCount;
+import '../meaning/intents.dart' show IntentCallState, callIntent;
 import 'workspace_conventions.dart' show splitCheckCommand;
-import '../meaning/meaning_tree.dart'
-    show addMeaningNode, linkMeaning;
+import '../meaning/meaning_tree.dart' show addMeaningNode, linkMeaning;
+import '../narrative/facet_index.dart' show indexBeat;
+import '../systems/projection/relevance.dart' show keywordsOf;
+import '../systems/tool_systems.dart' show attachBeatToActorThread;
 import '../narrative/components.dart'
-    show ThreadStatus, ThreadStatusEnum;
+    show
+        BeatModality,
+        BeatModalityEnum,
+        BeatStatus,
+        BeatStatusEnum,
+        BeatToolCall,
+        Speaker,
+        TextContent,
+        ThreadStatus,
+        ThreadStatusEnum;
 import '../data_models/task.dart' show TaskHandle, TaskId;
 import '../resources/resources.dart'
     show AgencyPolicy, TaskRegistryResource, ToolRegistryResource;
 import '../schedules.dart' show Schedules;
-import '../systems/decision_flow_system.dart'
-    show ToolResultPendingMarker;
+import '../systems/decision_flow_system.dart' show ToolResultPendingMarker;
 import 'world_builder.dart'
-    show GoalVerified, StepAction, StepClaim, StepGoalLink, StepIndex,
+    show
+        GoalVerified,
+        StepAction,
+        StepClaim,
+        StepGoalLink,
+        StepIndex,
         StepStatus;
 
 // ---------------------------------------------------------------------------
@@ -118,10 +160,13 @@ ToolDef askUserTool(HumanAnswerProvider provider) => ToolDef.encode(
       'option menu. Pauses until the human replies; you resume with their '
       'answer as the tool result.',
   argsSchema: SchemaBundle(
-    root: FM.object('ask_user', properties: () => [
-      FM.prop('question', FM.string()),
-      FM.prop('options', FM.array(FM.string())),
-    ]),
+    root: FM.object(
+      'ask_user',
+      properties: () => [
+        FM.prop('question', FM.string()),
+        FM.prop('options', FM.array(FM.string())),
+      ],
+    ),
   ),
   execute: (args) async {
     final map = args is Map ? args : const {};
@@ -132,10 +177,9 @@ ToolDef askUserTool(HumanAnswerProvider provider) => ToolDef.encode(
         for (final o in opts)
           if (o is String) o,
     ];
-    final answer =
-        await provider(
-            AskUserPrompt(text: q is String ? q : 'Please answer.', options: options),
-          );
+    final answer = await provider(
+      AskUserPrompt(text: q is String ? q : 'Please answer.', options: options),
+    );
     return {'answered': true, 'answer': '$answer'};
   },
 );
@@ -143,7 +187,8 @@ ToolDef askUserTool(HumanAnswerProvider provider) => ToolDef.encode(
 /// Default stdin-backed provider (CLI).
 Future<String?> stdinAskUser(AskUserPrompt p) async {
   stdout.writeln(p.text);
-  if (p.options.isNotEmpty) stdout.writeln(p.options.map((o) => '  - $o').join());
+  if (p.options.isNotEmpty)
+    stdout.writeln(p.options.map((o) => '  - $o').join());
   stdout.write('> ');
   final line = stdin.readLineSync();
   return (line == null || line.trim().isEmpty) ? null : line.trim();
@@ -155,7 +200,12 @@ Future<String?> stdinAskUser(AskUserPrompt p) async {
 
 /// A resource carrying how a goal is verified by running code.
 class RunGoalSpec extends Resource {
-  RunGoalSpec({required this.command, this.cwd = '', this.commandByRegistry});
+  RunGoalSpec({
+    required this.command,
+    this.cwd = '',
+    this.commandByRegistry,
+    this.planProvider,
+  });
 
   /// Default check command (single-actor / legacy path).
   final List<String> command;
@@ -167,6 +217,14 @@ class RunGoalSpec extends Resource {
   /// ONLY the pending actor — never every Goal actor.
   final Map<String, List<String>>? commandByRegistry;
 
+  /// R7 follow-up — TIERED VERIFICATION (the 20–23s fix). The full
+  /// convention command is the TERMINAL proof (the driver's final gate,
+  /// once); in-loop grades may be SKIPPED (no new move since the last
+  /// grade) or NARROWED (frontier-selected tests) by a host-supplied
+  /// planner. The core stays generic (ADR 0015): the host knows the tree
+  /// and owns the selection; the verifier only honors the plan.
+  final Future<RunGoalPlan?> Function(World world)? planProvider;
+
   List<String> commandFor(String? registryName) {
     if (registryName != null) {
       final per = commandByRegistry?[registryName];
@@ -174,6 +232,20 @@ class RunGoalSpec extends Resource {
     }
     return command;
   }
+}
+
+/// One tiered-verification decision from the host planner (see
+/// [RunGoalSpec.planProvider]).
+class RunGoalPlan {
+  const RunGoalPlan({required this.skip, this.command});
+
+  /// true → the verifier grades NOTHING this pass (no new move since the
+  /// last grade; the driver's final gate remains the terminal proof).
+  final bool skip;
+
+  /// Overrides the convention command for THIS grade (e.g. frontier-
+  /// selected test files). Null → the convention command runs.
+  final List<String>? command;
 }
 
 /// Mechanical verifier (schedule on [Schedules.narrative]): after a tool
@@ -191,13 +263,21 @@ Future<void> runGoalVerifier(World world) async {
   // own check command. Stamping every Goal actor would cross-contaminate
   // verdicts in a multi-actor world.
   final registries = world.getResource<ToolRegistryResource>();
-  for (final (facade, _, _, tools) in world
-      .query3<Actor, ToolResultPendingMarker, ActorTools>()
-      .toList()) {
+  for (final (facade, _, _, tools)
+      in world.query3<Actor, ToolResultPendingMarker, ActorTools>().toList()) {
     final registryName = tools.registryName;
     final runTool = registries.get(registryName)?.get(const ToolName('run'));
     if (runTool == null) continue;
-    final command = spec.commandFor(registryName);
+    // Tiered verification (see [RunGoalSpec.planProvider]): the host may
+    // SKIP this grade (no new move since the last one) or NARROW it to
+    // frontier-selected tests. The full convention command remains the
+    // terminal proof at the driver's final gate.
+    var command = spec.commandFor(registryName);
+    if (spec.planProvider != null) {
+      final plan = await spec.planProvider!(world);
+      if (plan?.skip ?? false) continue;
+      command = plan?.command ?? command;
+    }
     // N2: the check runs as a REGISTERED task — canSleep() waits for
     // in-flight tasks, so the loop can never exit before a pending verdict
     // lands (the P5 flake + squad 'no verdict stamped' race).
@@ -243,6 +323,35 @@ Future<void> runGoalVerifier(World world) async {
       facade.entity,
       GoalVerified(passed: passed, detail: detail),
     );
+    // ADR 0009 discipline (R7 follow-up): the grade is GRAPH STATE — a
+    // verification beat on the actor's thread — never a side-channel
+    // counter. Downstream tiering derives "edits since the last grade"
+    // from beats; projection/metrics/snapshot see verifications like any
+    // other work.
+    final we = world.getEntity(facade.entity).$1;
+    final verifyBeat = world.reserveEmptyEntity().entity;
+    final verifyWe = world.getEntity(verifyBeat).$1;
+    verifyWe
+      ..insert(BeatToolCall('goal_verify', {'command': command}))
+      ..insert(
+        ToolResultContent(
+          name: 'goal_verify',
+          output: {'ok': passed, 'command': command, 'detail': detail},
+        ),
+      )
+      ..insert(Speaker(facade.entity))
+      ..insert(TextContent(detail))
+      ..insert(BeatStatus(BeatStatusEnum.complete))
+      ..insert(BeatModality(BeatModalityEnum.toolCall));
+    final attached = attachBeatToActorThread(world, we, verifyBeat);
+    if (attached != null) {
+      indexBeat(
+        world,
+        verifyBeat,
+        keywordsOf('goal_verify $detail'),
+        thread: attached,
+      );
+    }
     world.flush();
   }
 }
@@ -253,9 +362,15 @@ void wireRunGradedGoal(
   required List<String> command,
   String cwd = '',
   Map<String, List<String>>? commandByRegistry,
+  Future<RunGoalPlan?> Function(World world)? planProvider,
 }) {
   world.upsertResource(
-    RunGoalSpec(command: command, cwd: cwd, commandByRegistry: commandByRegistry),
+    RunGoalSpec(
+      command: command,
+      cwd: cwd,
+      commandByRegistry: commandByRegistry,
+      planProvider: planProvider,
+    ),
   );
   world
       .schedule(Schedules.narrative)
@@ -272,10 +387,29 @@ void wireRunGradedGoal(
 /// — the same trust model as `intent_define` (propose as data, host
 /// verifies, exit-0 decides, never self-graded).
 const defaultAllowedCheckBinaries = {
-  'dart', 'flutter', 'make', 'just', 'npm', 'npx', 'python3', 'cargo', 'go',
+  'dart',
+  'flutter',
+  'make',
+  'just',
+  'npm',
+  'npx',
+  'python3',
+  'cargo',
+  'go',
 };
 
-const _checkMetacharacters = {';', '|', '&', '`', r'$', '(', ')', '>', '<', '\n'};
+const _checkMetacharacters = {
+  ';',
+  '|',
+  '&',
+  '`',
+  r'$',
+  '(',
+  ')',
+  '>',
+  '<',
+  '\n',
+};
 
 /// M0b: the actor may DECLARE its own verification command as data. The
 /// declared command joins [RunGoalSpec.commandByRegistry] for the actor's
@@ -297,9 +431,7 @@ ToolDef declareCheckTool({
     argsSchema: SchemaBundle(
       root: FM.object(
         'declare_check',
-        properties: () => [
-          FM.prop('command', FM.string()),
-        ],
+        properties: () => [FM.prop('command', FM.string())],
       ),
     ),
     execute: (args) async {
@@ -335,7 +467,11 @@ ToolDef declareCheckTool({
 /// One scripted intent call the verifier replays: [intent] with [args] must
 /// return ok and (optionally) contain every key/value in [expect].
 class IntentExpectation {
-  const IntentExpectation(this.intent, {this.args = const {}, this.expect = const {}});
+  const IntentExpectation(
+    this.intent, {
+    this.args = const {},
+    this.expect = const {},
+  });
   final String intent;
   final Map<String, dynamic> args;
   final Map<String, dynamic> expect;
@@ -367,7 +503,11 @@ Future<void> intentGoalVerifier(World world) async {
   final details = <String>[];
   var passed = true;
   for (final expectation in spec.sequence) {
-    final out = await callIntent(world, name: expectation.intent, args: expectation.args);
+    final out = await callIntent(
+      world,
+      name: expectation.intent,
+      args: expectation.args,
+    );
     final ok = out['ok'] == true;
     var matches = true;
     if (ok && expectation.expect.isNotEmpty) {
@@ -409,7 +549,10 @@ class IntentGoalSpec extends Resource {
 }
 
 /// Wire the intent-graded goal loop.
-void wireIntentGradedGoal(World world, {required List<IntentExpectation> sequence}) {
+void wireIntentGradedGoal(
+  World world, {
+  required List<IntentExpectation> sequence,
+}) {
   world.upsertResource(IntentGoalSpec(sequence: sequence));
   world
       .schedule(Schedules.narrative)
@@ -461,7 +604,8 @@ class RunGradedGoalPolicy implements DecisionPolicy {
       // overseer not wired → base budget only
     }
     if (attempts >= maxAttempts) {
-      final reason = 'goal_unverifiable: $attempts failed verification '
+      final reason =
+          'goal_unverifiable: $attempts failed verification '
           'attempts (budget $maxAttempts). Last failure: ${verified.detail}';
       ctx.actorEntity
         ..insert(GoalAttemptsExhausted(reason))
@@ -537,8 +681,12 @@ DecisionFlow defaultGoalFlow() =>
 
 /// One feature row of an AE-style canonical matrix (ADR 0015/0017 wire shape).
 class PlanFeature {
-  const PlanFeature(this.id, this.expected,
-      {this.tool = 'write', this.args = const {}});
+  const PlanFeature(
+    this.id,
+    this.expected, {
+    this.tool = 'write',
+    this.args = const {},
+  });
   final String id;
   final String expected;
   final String tool;

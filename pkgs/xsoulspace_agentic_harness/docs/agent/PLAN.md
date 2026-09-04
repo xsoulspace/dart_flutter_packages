@@ -69,12 +69,37 @@ in results_r7.md — the surface grows from those, not from guesses.
 
 Interactive hygiene (parallel, small): ~~mid-turn streaming of tool
 results~~ DONE (production #1 — a 40ms observer in `runCodingAgentOnce`
-emits tool-result beats as they land); REMAINING: skip the turn-grade
-when no move applied and the baseline is cached-green; wire pi's consent
-UI to `session/request_permission` (the gate driver auto-answers today).
+emits tool-result beats as they land); ~~skip the turn-grade when no move
+applied and the baseline is cached-green~~ DONE (tiered verification —
+`VerifyTierPlanner`, see Proven); REMAINING: wire pi's consent UI to
+`session/request_permission` (the gate driver auto-answers today).
+
+Surface ergonomics (host program, the intentcall/mcp_flutter registry
+lesson — P0.5, NOT STARTED): registration-time validation of tool
+surfaces — a linter over `ToolDef`s enforcing the R7e rules (required
+anchor slots declared on the wire, mechanical label resolution,
+bounces carry repairs) so ANY model — tiny or large — gets a
+convenient, uniform surface. Materializer specs stay data (ADR 0023):
+`{span currency, map format, emitter, oracle}` per file type — md and
+dart today, more later — so new materializations register, never fork.
 
 ## Proven (runtime-verified, not asserted)
 
+- **Tiered verification is HARNESS machinery (2026-09-04).** The 20–23s
+  full-suite grade after every tool round is fixed in the harness, not
+  the host: `VerifyTierPlanner` (stateless, derives "edits pending since
+  the last `goal_verify` beat" purely from thread beats — no side-channel
+  counters, snapshot-safe) + `VerifyConvention` as DATA (edit-beat names,
+  test-scope prefixes, narrow-command template). The verifier writes a
+  `goal_verify` beat per grade, so grades are graph state visible to
+  projection/metrics. Hosts contribute conventions as data —
+  `dartVerifyConvention` (`edit_symbol`, `test/`, `dart test <files…>`);
+  a future rust/ts host supplies its own ETL + convention and changes
+  nothing else (intentcall registry pattern: canonical contract upstream,
+  mechanical resolution; a convention registry resource graduates only
+  when a second stack coexists). Gate: `verify_tier_planner_test.dart`
+  (harness pkg) — skip → narrow (real `runGoalVerifier` grade path) →
+  full fallback.
 - Flat tokens/decision at scale — legacy projection 1.07×, composed cut
   flat over 300 decisions (`long_horizon_composition_test.dart`), and the
   repo-scale ETL verdict: 11,590 nodes / 67,444 edges, ETL-out fidelity
@@ -154,13 +179,23 @@ topology engine).
   bundle the dylib in the Runner build phase.
   Product boundary: the agent-doc model, topology rules and the
   composition law are owned by the product — last_answer
-  `docs/decisions/0003-agents-live-in-docs.md`. Two OPEN problems that
+  `docs/decisions/0003-agents-live-in-docs.md`. **Phase 1 LANDED
+  (2026-09-04):** the doc surface (`formatId: 'agent'`, AgentDocModel
+  payload, AgentDocSurface in ProjectView, MCP/intent entries) plus
+  `HarnessAcpBackend(checkCommand:)` — the doc binding's declarative
+  `--check`. Self-profile gate GREEN: an agent doc bound to last_answer
+  itself fixed a committed failing fixture on-device (AFM), graded by an
+  oracle that fails until the agent acts (rows + dogfooding findings in
+  `benchmark/runs/delegation_m1_evidence.md`). Two OPEN problems that
   belong HERE (product-agnostic, pulled by that direction): (a) **actor
   topology** — 1 world/N actors (squad, proven) vs N worlds/1 brain
   (remote mover, proven) vs mixed; which topology a task uses is task-
   and CLI-dependent DATA, no engine yet; (b) **multi-workspace daemon** —
   one process hosting several worlds (one per workspace, Zed/monorepo
-  parity) with per-workspace single-instance locks unchanged.
+  parity) with per-workspace single-instance locks unchanged; (c) from
+  the Phase-1 dogfood: **new-task goal isolation on a resumed world** —
+  the per-workspace store carried the previous goal and the small model
+  replayed it.
 
 ## Standing rules
 
