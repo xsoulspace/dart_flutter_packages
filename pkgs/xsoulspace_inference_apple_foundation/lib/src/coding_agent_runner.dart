@@ -55,7 +55,12 @@ import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
 import 'intent_closure_runner.dart'
     show DecisionMeter, afmSystemPrompt, registerIntentClosureTools;
 import 'package:xsoulspace_agentic_dart_meaning/xsoulspace_agentic_dart_meaning.dart'
-    show SpanEditPlan, editSymbolTool, repoEtlTool;
+    show
+        SpanEditPlan,
+        editSymbolTool,
+        meaningSpanReader,
+        repoEtlTool,
+        writeReviewTool;
 
 /// ~110 tokens — the run-graded (fs_tools) teaching prompt. B6: teaching
 /// lives in tool descriptions + the system prompt ONLY.
@@ -77,16 +82,23 @@ const codingSystemPrompt =
 /// The meaning-profile teaching prompt (R7): the actor scans the workspace
 /// into the meaning tree, reads it budgeted, and edits through meaning
 /// moves. It never reads a file and never writes code tokens.
+///
+/// fs tier (ADR 0024, as amended): the map-graph covers EVERY file —
+/// mapped classes (md/yaml/json) have section/keypath sub-nodes; point zoom
+/// on an anchor reads its span (budgeted). Text NEVER enters context as a
+/// whole file or line window. Non-code files mutate ONLY through
+/// `write_review` (consent-gated escape hatch; a reject never lands);
+/// code moves through `edit_symbol` only.
 const meaningProfileSystemPrompt =
     'You edit code through the meaning tree — never file reads, never '
-    'code tokens. Flow: 1) repo_etl action scan (once per session; the '
-    'host refreshes the tree mechanically after that). 2) meaning_zoom / '
-    'meaning_impact to find symbols and blast radius. 3) edit_symbol to '
-    'act: apply_executable (rename_symbol) for cross-file renames, '
-    'insert_member for new members, replace_member_body for covered '
-    'members (op rows over the closed pure vocabulary). Every move is '
-    'verified by dart analyze + the workspace check and auto-reverted on '
-    'failure. Finish when the check is green.';
+    'code tokens. Flow: 1) repo_etl scan (once; the host refreshes the '
+    'tree). 2) meaning_zoom / meaning_impact to read; mapped files '
+    '(md/yaml/json) have section/keypath anchors — point-zoom one to '
+    'read its span (budgeted). 3) edit_symbol for code '
+    '(apply_executable/insert_member/replace_member_body); write_review '
+    'is the ONLY mutation for non-code files (the human consents; a '
+    'reject never lands; never for Dart). Moves are verified and '
+    'auto-reverted on failure. Finish when the check is green.';
 
 /// One coding task as data: prompt + fixtures + final-gate checkers + which
 /// mechanical verifier is wired inside the loop.
@@ -270,8 +282,9 @@ CodingAgentTask taskFromSentence(
     id: 'free_form',
     prompt: meaningProfile
         ? '$sentence Work through the meaning tree: repo_etl scan, '
-              'meaning_zoom / meaning_impact to read, edit_symbol to act. '
-              'Never read or write files.'
+              'meaning_zoom / meaning_impact to read, edit_symbol to act '
+              'on code, write_review for non-code files (the human '
+              'consents). Never touch files directly.'
         : '$sentence Verify with the run tool — the check must exit 0.',
     // R7: the meaning profile — the tree is the only code interface.
     meaningProfile: meaningProfile,
@@ -526,9 +539,21 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
       await etl.execute({'action': 'refresh'});
     }
     registry.register(etl);
-    registry.register(meaningZoomTool(world));
+    // fs tier (ADR 0024, as amended): span cuts — a POINT zoom on a mapped
+    // file's section/keypath anchor serves that span's text, budget-bounded,
+    // jail-bounded, named bounces. Text enters ONLY under a meaning anchor.
+    registry.register(
+      meaningZoomTool(world, spanReader: meaningSpanReader(fsRoot)),
+    );
     registry.register(meaningImpactTool(world));
     registry.register(editSymbolTool(world, jail, approver: editApprover));
+    // fs tier (ADR 0024 §4): the escape-hatch WRITE — registered ONLY when a
+    // review gateway exists (deny-by-default is structural: no approver, no
+    // verb). The gateway renders the unified diff and asks the client via
+    // session/request_permission; a reject never lands.
+    if (gateway != null) {
+      registry.register(writeReviewTool(fsRoot, gateway));
+    }
     // R7 production #7 finding: the run tool in the meaning profile is
     // CONSTRAINED to the convention commands — the free-form arm was a
     // write hole (`perl -pi` edited files through it; measured in the pi

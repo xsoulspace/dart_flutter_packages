@@ -1,0 +1,1 @@
+../../pkgs/xsoulspace_agentic_harness/benchmark/pi_driver/r7_harnessd_extension.ts

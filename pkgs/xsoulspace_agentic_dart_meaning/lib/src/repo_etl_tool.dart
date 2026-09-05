@@ -21,13 +21,21 @@ import 'dart:io';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart' show FM;
 
-import 'code_etl.dart' show CodeFileScan, buildMeaningTreeFromCode,
-    dartFiles, scanDartFile;
+import 'code_etl.dart'
+    show CodeFileScan, buildMeaningTreeFromCode, dartFiles, scanDartFile;
+import 'fs_etl.dart'
+    show buildFsTier, refreshFsTier, scanWorkspaceFs;
 
 /// Mutable scan bookkeeping for one workspace (staleness, file count).
 class RepoEtlState {
   DateTime? lastScan;
+
+  /// Files indexed by the fs tier (EVERY file — ADR 0024 §1).
   int files = 0;
+  int dirs = 0;
+
+  /// Dart files scanned by the code tier (the mtime-tick comparison base).
+  int dartFiles = 0;
   int symbols = 0;
 }
 
@@ -46,11 +54,11 @@ ToolDef repoEtlTool(
   return ToolDef.encode(
     name: const ToolName('repo_etl'),
     description:
-        'Scan this workspace into the meaning tree (the code graph you '
-        'work through). Actions: scan (build — call once before zooming), '
-        'status (file/symbol counts + staleness), refresh (re-scan files '
-        'whose mtime changed). After scan, use meaning_zoom / '
-        'meaning_impact to read structure — never file reads.',
+        'Scan the workspace into the meaning tree — the ONE map-graph you '
+        'work through (code symbols + dir/file nodes for EVERY file; md/'
+        'yaml/json carry section/keypath anchors). Actions: scan (once '
+        'before zooming), status, refresh (mtime tick). Then '
+        'meaning_zoom/meaning_impact — never file reads.',
     argsSchema: SchemaBundle(
       root: FM.object('repo_etl', properties: () => [
             FM.prop(
@@ -68,6 +76,8 @@ ToolDef repoEtlTool(
             'scanned': st.lastScan != null,
             'lastScan': st.lastScan?.toIso8601String(),
             'files': st.files,
+            'dirs': st.dirs,
+            'dart_files': st.dartFiles,
             'symbols': st.symbols,
             'tree_nodes':
                 world.maybeGetResource<MeaningIndex>()?.nodeCount ?? 0,
@@ -79,11 +89,6 @@ ToolDef repoEtlTool(
             // instance's state is fresh — treat as a full refresh pass.
             final existing = world.maybeGetResource<MeaningIndex>();
             if (existing != null && existing.nodeCount > 0) {
-              st
-                ..lastScan = DateTime.now()
-                ..files = existing.byId.keys
-                    .where((id) => id.startsWith('f_'))
-                    .length;
               final touched = _changedFiles(workspace, st);
               var syms = 0;
               for (final f in touched) {
@@ -95,11 +100,21 @@ ToolDef repoEtlTool(
                   scanDartFile(f, rel),
                 );
               }
+              // Fs tier (ADR 0024): the same mechanical tick keeps dir/file
+              // nodes honest for EVERY file class (no cutoff — full pass).
+              final fs = refreshFsTier(world, workspace);
+              st
+                ..lastScan = DateTime.now()
+                ..files = fs.files
+                ..dirs = fs.dirs
+                ..dartFiles = _countDartFiles(workspace);
               return {
                 'ok': true,
                 'refreshed_files': touched.length,
                 'symbols_touched': syms,
                 'files': st.files,
+                'fs_added': fs.added,
+                'fs_dropped': fs.dropped,
                 'note': 'persistent tree refreshed (world carried it)',
               };
             }
@@ -117,12 +132,19 @@ ToolDef repoEtlTool(
             final scan = scanDartFile(f, rel);
             syms += _rescanFile(world, scan);
           }
-          st.lastScan = DateTime.now();
+          // Fs tier: same tick — new nodes added, stale nodes dropped.
+          final fs = refreshFsTier(world, workspace, cutoff: st.lastScan);
+          st
+            ..lastScan = DateTime.now()
+            ..files = fs.files
+            ..dirs = fs.dirs;
           return {
             'ok': true,
             'refreshed_files': touched.length,
             'symbols_touched': syms,
             'files': st.files,
+            'fs_added': fs.added,
+            'fs_dropped': fs.dropped,
           };
         case 'scan':
         default:
@@ -143,6 +165,10 @@ ToolDef repoEtlTool(
               ..files = preexisting.byId.keys
                   .where((id) => id.startsWith('f_'))
                   .length
+              ..dirs = preexisting.byId.keys
+                  .where((id) => id.startsWith('dir_'))
+                  .length
+              ..dartFiles = _countDartFiles(workspace)
               ..symbols = preexisting.byId.keys
                   .where((id) => id.startsWith('sym_'))
                   .length;
@@ -155,31 +181,36 @@ ToolDef repoEtlTool(
                   'host refreshes it mechanically; zoom/impact away',
             };
           }
-          final files = dartFiles(workspace);
+          // ONE scan pass (ADR 0024 §1): the fs walk yields every file; the
+          // code ETL reuses the dart subset — zero model tokens, same tick.
+          final fsScan = scanWorkspaceFs(workspace);
           final scans = <String, List<CodeFileScan>>{
             'workspace': [
-              for (final f in files)
+              for (final f in fsScan.dartFiles)
                 scanDartFile(
-                  f,
-                  f.path.startsWith('${workspace.path}/')
-                      ? f.path.substring(workspace.path.length + 1)
-                      : f.path,
+                  File('${workspace.path}/${f.rel}'),
+                  f.rel,
                 ),
             ],
           };
           final built = buildMeaningTreeFromCode(world, scans, repoRoot: workspace.path);
+          final fs = buildFsTier(world, workspace, scan: fsScan);
           st
             ..lastScan = DateTime.now()
-            ..files = built.files
+            ..files = fs.files
+            ..dirs = fs.dirs
+            ..dartFiles = built.files
             ..symbols = built.symbols;
           return {
             'ok': true,
-            'files': built.files,
+            'files': fs.files,
+            'dirs': fs.dirs,
+            'dart_files': built.files,
             'symbols': built.symbols,
             'edges': built.edges,
-            'note': 'tree is world state — use meaning_zoom / '
-                'meaning_impact to read it; it is re-derivable and never '
-                'snapshotted',
+            'note': 'tree is world state (code graph + fs tier) — use '
+                'meaning_zoom / meaning_impact to read it; it is '
+                're-derivable and never snapshotted',
           };
       }
     },
@@ -188,13 +219,15 @@ ToolDef repoEtlTool(
 
 List<File> _changedFiles(Directory workspace, RepoEtlState st) {
   final all = dartFiles(workspace);
-  if (all.length != st.files) return all; // structural change — full pass
+  if (all.length != st.dartFiles) return all; // structural change — full pass
   final cutoff = st.lastScan!;
   return [
     for (final f in all)
       if (f.statSync().modified.isAfter(cutoff)) f,
   ];
 }
+
+int _countDartFiles(Directory workspace) => dartFiles(workspace).length;
 
 /// Re-extracts one file's symbols into the tree (best-effort incremental:
 /// new symbols are added; dropped ones are left stale until a full rescan

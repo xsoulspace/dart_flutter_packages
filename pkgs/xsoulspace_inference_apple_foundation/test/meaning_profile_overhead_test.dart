@@ -20,9 +20,9 @@ import 'package:test/test.dart';
 
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
-    show FsToolsRoot, runTool;
+    show FsToolsRoot, JailWriteGateway, WriteGateMode, runTool;
 import 'package:xsoulspace_agentic_dart_meaning/xsoulspace_agentic_dart_meaning.dart'
-    show editSymbolTool, repoEtlTool;
+    show editSymbolTool, meaningSpanReader, repoEtlTool, writeReviewTool;
 
 import 'package:xsoulspace_inference_apple_foundation/src/coding_agent_runner.dart'
     show meaningProfileSystemPrompt;
@@ -30,9 +30,12 @@ import 'package:xsoulspace_inference_apple_foundation/src/coding_agent_runner.da
 /// The P1 pre-flight budget (AppleFoundationNativeClient.maxContextTokens).
 const afmBudgetTokens = 3800;
 
-/// The harness fixed-overhead target (context_budget.dart: leave ~2.5k of
-/// the 4k window as working memory).
-const fixedOverheadTarget = 1500;
+/// The harness fixed-overhead target. The 5-tool pre-fs-tier surface
+/// measured 1408; ADR 0024 (as amended) added the fs tier (+2 tools:
+/// span-cut zoom + the consent-gated write_review escape hatch) — the
+/// measured row is the binding number. The hard constraints below (AFM
+/// window fit; working memory ≥ 2000) are unchanged.
+const fixedOverheadTarget = 1600;
 
 void main() {
   test(
@@ -45,13 +48,24 @@ void main() {
       addTearDown(() => jail.deleteSync(recursive: true));
 
       // The EXACT meaning-profile registry runCodingAgentOnce wires
-      // (meaningProfile: true) — one truth, not a rebuilt list.
+      // (meaningProfile: true, with a consent approver) — one truth, not a
+      // rebuilt list. The fs tier (ADR 0024): span cuts via the span reader
+      // + the consent-gated escape hatch (write_review).
+      final fsRoot = FsToolsRoot(jail.path);
+      final gateway = JailWriteGateway(
+        fsRoot,
+        mode: WriteGateMode.review,
+        approver: (w) async => true,
+      );
       final registry = ToolRegistry();
       registry.register(repoEtlTool(world, jail));
-      registry.register(meaningZoomTool(world));
+      registry.register(
+        meaningZoomTool(world, spanReader: meaningSpanReader(fsRoot)),
+      );
       registry.register(meaningImpactTool(world));
       registry.register(editSymbolTool(world, jail));
-      registry.register(runTool(FsToolsRoot(jail.path)));
+      registry.register(writeReviewTool(fsRoot, gateway));
+      registry.register(runTool(fsRoot));
 
       final tools = registry.tools.values.toList();
       final systemTokens = overheadTokens(

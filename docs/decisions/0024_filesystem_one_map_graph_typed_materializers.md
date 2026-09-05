@@ -119,3 +119,36 @@ does big things and a larger model does bigger ones.
 | yaml materializer e2e | keypath change lands, comments preserved (byte-level), parse oracle green |
 | tiny-model R7e gate per materializer | small model performs the real edit within measured token budget |
 | real-repo dogfood e2e | one dart edit + one yaml edit + one md edit through the daemon, consented, graded, on THIS repo |
+
+## Amendment (2026-09-05) — the escape hatch's READ side is retired; text
+## enters ONLY as budgeted span cuts under meaning anchors
+
+MoE review of the first fs-tier implementation (three lenses: projection
+law, tiny-model ergonomics, generational skepticism) found the §4
+small-file read clause was implemented as a size gate (`file_too_large` on
+bytes) — a budget that only decides whether the WHOLE file passes is not a
+cut, it is the conventional read surface wearing a zoom name. The corrected
+law, per the project's deeper principle (the small model works with MEANING
+via ETL/projection, at ANY file size — never with raw text, not even for
+small files):
+
+1. **The zoom vocabulary stays CLOSED at `[point, local, region, summary]`**
+   (ADR 0018). There is no `zoom=file` level.
+2. **The MAP HALF of each materializer spec lands with the fs tier**
+   (mechanical, zero model tokens): md → `section` nodes (heading spans,
+   fences inert), yaml/json → `keypath` nodes, dart → symbols (as before).
+   Reading a file = zooming its outline; reading CONTENT = a `point` zoom
+   on one anchor, which serves that anchor's span text as a budgeted cut
+   (clamped to the view budget, green-screen fact — never refused by file
+   size).
+3. **A file class with no map has NO text read** — only node facts
+   (`path/class/bytes/...`) and the named bounce (`no map for class X`),
+   which is the intent-first signal to grow a materializer. Mutation for
+   mapless classes stays `write_review` (consent-gated); the human, not
+   the model, holds the diff.
+4. The §4 sentence "zoom-to-file may show raw text for SMALL files" is
+   superseded by this amendment; the WRITE side of the escape hatch
+   (review-mode consent) stands.
+
+Gate impact: the fs-tier e2e gate's "map-read" leg is the map-graph read
+(outline → anchor span cut); all other gates unchanged.

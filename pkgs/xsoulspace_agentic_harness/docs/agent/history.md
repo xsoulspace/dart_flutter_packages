@@ -7,6 +7,29 @@ One entry per landed body of work; durable decisions live in
 
 ## Landed
 
+- **FS TIER v1 — the map-graph covers EVERY file (2026-09-05, ADR 0024 as
+  amended; PLAN §NOW #3)**: `repo_etl` now indexes `dir`/`file` nodes for
+  every file in ONE scan pass (same mtime refresh tick as dart — zero
+  model tokens), and the MAP HALF lands with it: md files are ETL'd into
+  `section` nodes (heading spans, code fences inert), yaml/json into
+  `keypath` nodes — so ANY document is readable as MEANING at ANY file
+  size. Text enters model context ONLY as a budgeted span cut: a `point`
+  zoom on a span-bearing anchor serves that span (clamped to the view
+  budget, green-screen fact — never refused by file size; the closed ADR
+  0018 zoom vocabulary `[point, local, region, summary]` is untouched).
+  The MoE-critiqued first cut (whole-file raw text under a byte gate — a
+  size axis, the conventional read wearing a zoom name) was amended away
+  per ADR 0024's Amendment (2026-09-05). Mutation for mapless classes:
+  `write_review` — the escape hatch registered ONLY when a consent
+  approver is wired (deny-by-default is structural: no approver → no
+  verb; rejects NEVER land; Dart is refused by the verb itself).
+  Gates: `fs_tier_test.dart` (dart_meaning: one-pass map-read, zoom
+  ladder, span cuts, refresh/map-rebuild, consent/reject); the daemon
+  e2e `harnessd_fs_tier_test.dart` (apple_foundation: map-read → zoom →
+  consented review write lands via session/request_permission; a REJECT
+  never lands; surface law — no generic fs tools); overhead row re-metered
+  (1585 fixed tokens, working memory 2215 — the fs tier's honest price,
+  fixed per decision, never per file).
 - **Tiered verification moved INTO the harness (2026-09-04)**: the first
   cut lived in apple_foundation as a stateful closure
   (`MeaningVerifyPlanner` with a private grade counter) — a shadow ledger

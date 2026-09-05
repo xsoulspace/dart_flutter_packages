@@ -323,6 +323,38 @@ int dropMeaningChain(World world, String intentName) {
   return toDrop.length;
 }
 
+/// Drops ONE node and every edge touching it (fs-tier refresh tick: a file
+/// that no longer exists must not stay in the map-graph). Returns true when
+/// the node existed.
+bool dropMeaningNode(World world, String id) {
+  final index = _indexOf(world);
+  final entity = index.entityOf(id);
+  if (entity == null) return false;
+  final touching = <(String, String, String)>{
+    for (final (f, r, t) in index.triples)
+      if (f == id || t == id) (f, r, t),
+  };
+  final edgeEntities = <Entity>[];
+  for (final (facade, edge) in world.query<MeaningEdge>().toList()) {
+    final fid = index.idsByEntity[edge.from];
+    final tid = index.idsByEntity[edge.to];
+    if (fid == null || tid == null) continue;
+    if (touching.contains((fid, edge.relation, tid))) {
+      edgeEntities.add(facade.entity);
+    }
+  }
+  for (final e in edgeEntities) {
+    world.commands.despawn(e);
+  }
+  world.commands.despawn(entity);
+  index.removeNode(id);
+  for (final (f, r, t) in touching) {
+    index.removeEdge(f, r, t);
+  }
+  world.flush();
+  return true;
+}
+
 // ---------------------------------------------------------------------------
 // Read API — budgeted cut (projection law) + full view (host materializers)
 // ---------------------------------------------------------------------------

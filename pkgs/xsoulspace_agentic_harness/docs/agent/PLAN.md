@@ -23,7 +23,9 @@ intent-first growth loop the law demands: pi's real work names the
 surface gaps as structured failures, and the surface grows intent-first
 — never vocabulary-by-hand.
 
-Ordered work items (each names its gate):
+Ordered work items (each names its gate; the fs tier follows ADR 0024
+[filesystem as one map-graph — typed materializer specs, uniform edit
+verbs, tiny-model-first surfaces]):
 
 1. **Constrain the meaning profile's `run` tool (P0, LAW-CRITICAL —
    DONE 2026-09-04).** `runTool` gained an argv-prefix `allowlist`
@@ -33,39 +35,55 @@ Ordered work items (each names its gate):
 2. **Unwrap the schema bundle's `root` server-side (P0, DONE).** The
    remote mover now emits `parameters.root` — the client workaround is
    gone (measured in the pi row: the wrapper degraded every call).
-3. **Filesystem verbs over ACP (P1).** Expose the core's read-only fs
-   verbs (`list_dir`/`glob`/`grep` + jailed `git_status`/`git_diff`)
-   plus whole-file write ONLY through the P3 `JailWriteGateway` in
-   `review` mode (unified diff → `session/request_permission` → the
-   human allows/rejects). Target: pi edits configs, YAML, scripts,
-   assets — everything that is NOT Dart — through the daemon, audited,
-   locked, and consent-gated. Gate: an fs-profile e2e (scripted) proves
-   read → glob → grep → permission → write-lands; reject → never lands.
-4. **Markdown meaning tier (P2).** Extend `repo_etl` to scan `.md`
-   into the meaning tree (headings as section nodes, links as edges),
-   one bounded prose move (`edit_doc` — whole-section replacement,
-   host-spliced, never reflowing the whole file), and the MECHANICAL
-   docs oracle: the 0-broken-links check (the docs workspace convention,
-   D8). Prose is NOT code (ADR 0019): doc tasks grade through the docs
-   oracle only — they can never `pass` a code gate, and code fences
-   never apply to them. Gate: scripted doc-edit e2e — section replace
-   lands, broken link bounces as named data, link-check green.
-5. **Interactive remote mover in the pi extension (P3).** The gate
-   driver script answers proposals; interactive `pi` must too: the
-   extension hook answers `session/propose_move` with pi's configured
-   model (the daemon stays the only file surface; pi never gets raw
-   files). Gate: one real-model interactive session, pi → daemon, with
-   the consent UI wired to `session/request_permission`.
-6. **Actor-topology engine + multi-workspace daemon (P4, pulled by
+3. **Filesystem tier v1 — one map-graph + escape hatch (P1, ADR 0024 —
+   DONE 2026-09-05, with the Amendment: the escape hatch's READ side is
+   retired; text enters ONLY as budgeted span cuts under meaning
+   anchors).** `repo_etl` indexes dir/file nodes for EVERY file plus the
+   md/yaml/json map half (section/keypath anchors) in one mechanical
+   pass; `meaning_zoom` point cuts serve anchor spans (budgeted); mapless
+   classes mutate only through `write_review` (review-gated, deny-by-
+   default). Gate: fs-tier e2e — map-read → zoom → consented review
+   write lands; reject → never lands (`harnessd_fs_tier_test.dart`).
+4. **Markdown materializer (P2, first non-dart spec).** The md spec as
+   data (`{span: heading section, map: headings+link edges, emitter:
+   whole-section splice, oracle: 0-broken-links}`, D8 docs convention);
+   `edit_doc` in the uniform verb shape (required anchor slot = section
+   label, mechanical resolution, bounce-with-repair). Prose is NOT code
+   (ADR 0019): doc tasks grade through the docs oracle only — they can
+   never `pass` a code gate, and code fences never apply to them. Gate:
+   doc-edit e2e — section replace lands, broken link bounces as named
+   data, link oracle green + the R7e tiny-model gate (ADR 0024 §5).
+5. **YAML/JSON materializers (P2.5).** Keypath spans; offset-based
+   splice (the `yaml` package does NOT round-trip comments —
+   re-serialization forbidden); oracle = parse + intended-change
+   semantic diff. Real-repo target: pubspec.yaml dependency bumps — a
+   real pi task. Gate: yaml e2e (byte-level comment preservation) +
+   tiny-model gate; json via stable re-serialization.
+6. **Interactive remote mover in the pi extension (P3 — the LEGITIMACY
+   blocker, co-critical with P1).** The gate driver answers proposals;
+   real pi must too: the extension hook answers `session/propose_move`
+   with pi's configured model (the daemon stays the only file surface;
+   pi never gets raw files), and the consent UI is wired to
+   `session/request_permission` — the scripted extension auto-allows
+   and answers `{}`, which neutralizes deny-by-default and closes
+   decisions model-less; that artifact must never be the thing pi works
+   through. Gate: one real-model interactive session, pi → daemon,
+   consent UI exercised.
+7. **Actor-topology engine + multi-workspace daemon (P4, pulled by
    last_answer `docs/decisions/0003`).** The two proven topologies
    (1 world/N actors squad; N worlds/1 brain remote mover) become
    task-declared DATA with per-task topology selection; one process
    hosts several worlds with per-workspace single-instance locks.
 
-Sequencing rule: P1 (fs verbs) before P2 (docs tier) — zoom-for-docs
-needs the same read seam; the law-critical P0s are done. Detour stop:
-any friction that blocks a pi task twice becomes a named failure class
-in results_r7.md — the surface grows from those, not from guesses.
+Sequencing rule: P1 (fs map-graph + escape hatch) and P3 (interactive
+extension, consent UI) are CO-CRITICAL — pi working "through the daemon"
+without consent is theater (the scripted extension auto-allows and closes
+decisions model-less). Then P2 (md materializer), P2.5 (yaml/json) —
+zoom-for-docs needs the same read seam. The law-critical P0s are done.
+Detour stop: any friction that blocks a pi task twice becomes a named
+failure class in results_r7.md — the surface grows from those, not from
+guesses. Every new materializer lands with an R7e tiny-model gate
+(ADR 0024 §5).
 
 Interactive hygiene (parallel, small): ~~mid-turn streaming of tool
 results~~ DONE (production #1 — a 40ms observer in `runCodingAgentOnce`
@@ -177,9 +195,29 @@ topology engine).
   yet (SDK 3.12, no `DynamicLibrary.codeAsset` in Flutter builds) — the
   gate passes `XS_FM_BRIDGE_PATH` to the hook-built dylib. Follow-up:
   bundle the dylib in the Runner build phase.
+  **Phase 1.5 (the HUMAN gate) GREEN (2026-09-05, product side):** the
+  dylib is bundled in the app's Runner build phase (no `XS_FM_BRIDGE_PATH`);
+  the GUI loop ran on the last_answer repo itself — findings that belong
+  HERE (pull, do not absorb): (a) an unanswered `session/request_permission`
+  stalls the write tool for its full 5-minute deadline and the model
+  retries into another 5-minute wait — the tool wait needs a short
+  deadline or an explicit deny-on-timeout; (b) `session/cancel` does not
+  promptly interrupt an in-flight permission wait (product mitigates by
+  rejecting the pending permission on cancel); (c) intermittent
+  first-write-of-turn executing without a surfaced permission (F3 — needs
+  attribution in the write/edit approver wiring); (d) bridge crash on
+  cancel during a live tool call (`GenerationState.postToolCall` →
+  `_dispatch_lane_barrier_sync` — the callback-after-delete class). Full
+  rows: `benchmark/runs/delegation_phase1_5.md`.
   Product boundary: the agent-doc model, topology rules and the
   composition law are owned by the product — last_answer
-  `docs/decisions/0003-agents-live-in-docs.md`. **Phase 1 LANDED
+  `docs/decisions/0003-agents-live-in-docs.md`, forward plan
+  `last_answer/docs/PLAN.md` (its Phase 1.5 = the HUMAN gate: the AFM
+  pipeline usable in the GUI with no terminal; the dylib bundling lands
+  in the Runner build phase, loader changes in
+  `xsoulspace_inference_apple_foundation` — product-agnostic), handoff
+  brief `last_answer/docs/HANDOFF-agents-in-docs.md`, landed record
+  `last_answer/docs/history.md`. **Phase 1 LANDED
   (2026-09-04):** the doc surface (`formatId: 'agent'`, AgentDocModel
   payload, AgentDocSurface in ProjectView, MCP/intent entries) plus
   `HarnessAcpBackend(checkCommand:)` — the doc binding's declarative

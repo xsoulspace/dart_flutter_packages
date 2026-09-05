@@ -826,12 +826,10 @@ ToolDef runTool(FsToolsRoot root, {List<List<String>>? allowlist}) =>
     ToolDef.encode(
       name: const ToolName('run'),
       description:
-          'Run a command or script inside the workspace and capture its '
-          'output and exit code. Command is an argv list (e.g. ["dart", '
-          '"run", "main.dart"]). Optional cwd (relative subdir, default "."), '
-          'optional timeout_ms (default 30000, max 120000). Does NOT hang: '
-          'timeouts return a structured failure. Use to compile/run/test the '
-          'code you are building.',
+          'Run a command inside the workspace (argv list), capture output '
+          'and exit code. Optional cwd, timeout_ms (default 30000, max '
+          '120000; timeouts return a structured failure). Use to '
+          'compile/run/test.',
       argsSchema: SchemaBundle(
         root: FM.object(
           'run',

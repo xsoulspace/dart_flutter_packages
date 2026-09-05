@@ -21,20 +21,42 @@ import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart'
 
 import '../meaning/meaning_tree.dart';
 
+/// Host-supplied SPAN reader (ADR 0024, as amended: text enters model
+/// context ONLY as a budgeted span cut under a meaning anchor — never as a
+/// whole file, never as line windows). A node whose props declare a source
+/// span (`path` + `span_start`/`span_end`) is a span-bearing node; on a
+/// `point` zoom the host reader serves that span's text, budget-clamped,
+/// with the green-screen fact. The core stays fs-blind (ADR 0015); the
+/// host closes over the jail and returns NAMED bounces, never silent
+/// degradation. The model works with MEANING: files are ETL'd into
+/// section/keypath nodes (the map half of the materializer spec), and the
+/// model reads one anchor's span at a time — at any file size.
+typedef MeaningSpanReader = Map<String, Object?>? Function(
+  Map<String, dynamic> nodeProps,
+  int budgetTokens,
+);
+
 /// `meaning_zoom`: a budgeted cut of the tree — the actor's READ verb at
 /// scale (replaces file reads in the meaning profile; ADR 0023 §1).
 ///
 /// Params: `query` (facet ray-cast), `focusId` (start node), `zoom`
-/// (point/local/region/summary), `budget` (token cap, default 2048),
-/// `maxNodes`. Every response carries the green-screen fact (`total`,
-/// `truncated`) — what the actor does NOT see is explicit.
-ToolDef meaningZoomTool(World world) => ToolDef.encode(
+/// (point/local/region/summary — the CLOSED ADR 0018 vocabulary), `budget`
+/// (token cap, default 2048), `maxNodes`. Every response carries the
+/// green-screen fact (`total`, `truncated`) — what the actor does NOT see
+/// is explicit.
+///
+/// Span cuts (fs tier, ADR 0024): `zoom=point` on a span-bearing node
+/// (`section`/`key` — the ETL'd map of an md/yaml/json file) attaches that
+/// span's text to the cut, budget-bounded by the host [spanReader]. Files
+/// without a map expose only structural facts — text never enters context
+/// outside a meaning anchor.
+ToolDef meaningZoomTool(World world, {MeaningSpanReader? spanReader}) => ToolDef.encode(
       name: const ToolName('meaning_zoom'),
       description:
-          'Cut a bounded view of the meaning tree (the code/requirement '
-          'graph of this world). zoom=point (focus node + its edges), '
-          'local (1-hop), region (2-hop), summary (structure counts). '
-          'This is how you READ structure at any scale — no file reads.',
+          'Budgeted cut of the meaning tree. zoom=point (focus + edges; '
+          'a section/keypath anchor also yields its text span, budgeted), '
+          'local (1-hop — a file shows its outline), region, summary. '
+          'The map-graph IS the search.',
       argsSchema: SchemaBundle(
         root: FM.object('meaning_zoom', properties: () => [
               FM.prop('query', FM.string(), optional: true),
@@ -71,21 +93,44 @@ ToolDef meaningZoomTool(World world) => ToolDef.encode(
             'total': index.nodeCount,
           };
         }
+        final zoomLevel = map['zoom'] is String ? map['zoom'] as String : 'local';
+        final budget = map['budget'] is int ? map['budget'] as int : 2048;
         final cut = meaningCut(
           world,
           query: query,
           focusIds: [?focus],
-          zoom: map['zoom'] is String ? map['zoom'] as String : 'local',
+          zoom: zoomLevel,
           maxNodes: map['maxNodes'] is int ? map['maxNodes'] as int : 48,
-          tokenBudget:
-              map['budget'] is int ? map['budget'] as int : 2048,
+          tokenBudget: budget,
         );
-        return {
+        final result = <String, Object?>{
           'ok': true,
           'cut': cut,
           'tree_nodes': index.nodeCount,
           'tree_edges': index.edgeCount,
         };
+        // Span cut (fs tier): a POINT zoom on a span-bearing node serves
+        // that anchor's text as a budgeted projection — text as meaning,
+        // never a whole file (ADR 0024, as amended).
+        if (zoomLevel == 'point' && focus != null) {
+          final entity = index.entityOf(focus);
+          final props = meaningComponentOf<MeaningProps>(world, entity!)?.props;
+          if (props != null &&
+              props.containsKey('span_start') &&
+              props.containsKey('span_end')) {
+            final reader = spanReader;
+            if (reader == null) {
+              result['span'] = {
+                'ok': false,
+                'error': 'span_reader_unavailable',
+                'hint': 'this session has no span read surface',
+              };
+            } else {
+              result['span'] = reader(props, budget);
+            }
+          }
+        }
+        return result;
       },
     );
 

@@ -6,7 +6,9 @@
 > [0015](../../../../docs/decisions/0015_domains_live_in_hosts_core_stays_generic.md),
 > [0018](../../../../docs/decisions/0018_meaning_view_zoom_projection_context_ownership.md),
 > [0020](../../../../docs/decisions/0020_cut_composition_api.md),
-> [0022](../../../../docs/decisions/0022_workspace_oracle_meaning_pipeline.md)
+> [0022](../../../../docs/decisions/0022_workspace_oracle_meaning_pipeline.md),
+> [0023](../../../../docs/decisions/0023_filesystem_projection_target_edit_as_rederivation.md),
+> [0024](../../../../docs/decisions/0024_filesystem_one_map_graph_typed_materializers.md)
 > · forward plan: [PLAN.md](PLAN.md).
 
 ## The law (memorize this)
@@ -27,6 +29,21 @@ verification, repair, projection, budgets — is ALL host code. The model
 > `pass`. The surface grows intent-first (intents as data, host-verified;
 > AE owns durable truth per ADR 0017/D2; IntentCall projects intents to
 > MCP/ACP/platform), never vocabulary-by-hand.
+
+## The fs tier (non-dart materializers — ADR 0024)
+
+The map-graph covers EVERY file: dir/file nodes always; typed sub-nodes
+per registered materializer spec (data: `{fileClass, span currency, map
+format, emitter, oracle, anchors}`). Uniform edit-verb shape per class —
+required anchor slot (section label / keypath), mechanical resolution,
+bounce-with-repair, host-spliced emitter, named oracle (md → 0-broken-
+links; yaml/json → parse + intended-change diff; a class with NO oracle
+has NO edit verb — `JailWriteGateway` review mode only). No generic
+`read`/`write`/`glob`/`grep` in the meaning profile — zoom over the
+map-graph IS the search. Every materializer lands with an R7e tiny-model
+gate (a 2–4k model performs the real edit; the 1408-fixed-token overhead
+row is the template). Landing order: md → yaml/json (PLAN §NOW items
+4–5); the escape hatch (review-mode write) is P1 item 3.
 
 ## The pipeline (bookmark-manager reference path)
 

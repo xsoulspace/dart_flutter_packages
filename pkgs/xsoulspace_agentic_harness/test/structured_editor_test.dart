@@ -259,6 +259,8 @@ void main() {
   });
 
   test('zoom vocabulary is closed + countable (stewardship probe)', () {
+    // ADR 0018's closed vocabulary holds — fs-tier span cuts ride point
+    // zoom (a span-bearing node's text is a budgeted cut, not a level).
     expect(meaningZoomLevels, ['point', 'local', 'region', 'summary']);
   });
 

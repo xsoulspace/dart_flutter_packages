@@ -37,7 +37,7 @@ import 'dart:math';
 import 'package:dart_acp_toolkit/dart_acp_toolkit.dart';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
-    show WriteGateMode;
+    show JailWriteGateway, WriteGateMode;
 import 'package:xsoulspace_agentic_dart_meaning/xsoulspace_agentic_dart_meaning.dart'
     show RepoEtlState, SpanEditPlan, repoEtlTool;
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
@@ -341,6 +341,8 @@ class HarnessAcpBackend
       );
       // R7c item 3: the edit/write approver routes to the CLIENT
       // (deny-by-default — no requester wired means no approval path).
+      // The consent carries the unified diff (write) / plan description
+      // (edit) so the human decides on the CHANGE, not just the path.
       Future<bool> Function(SpanEditPlan)? editApprover;
       if (_permissionRequester != null) {
         editApprover = (plan) async {
@@ -392,6 +394,7 @@ class HarnessAcpBackend
                     toolCallId: 'write:${write.hashCode}',
                     title: 'write ${write.relativePath}',
                     kind: 'edit',
+                    details: JailWriteGateway.unifiedDiff(write),
                   ),
                 );
                 return outcome == AcpPermissionOutcome.allow;
@@ -699,17 +702,20 @@ class _RemoteMoverHandler implements GenerationHandler {
 
 /// R7 gate mover (production #1 — the structured edit surface): maps the
 /// prompt's directives to REAL tool calls over the session's registry
-/// (repo_etl / meaning_zoom / meaning_impact / edit_symbol / run).
+/// (repo_etl / meaning_zoom / meaning_impact / edit_symbol / run /
+/// write_review).
 ///
 /// READ verbs with free-text args stay bracketed prose (`[scan]`,
-/// `[zoom <query>]`, `[verify]`). Every ID-BEARING verb travels as a
-/// STRUCTURED JSON payload — `harness_edit {…}` carries the exact
+/// `[zoom <query>]`, `[verify]`). Every ID- or SLOT-BEARING verb travels as
+/// a STRUCTURED JSON payload — `harness_edit {…}` carries the exact
 /// `edit_symbol` args (action, symbolId/classSymbolId, opChain,
-/// executableId, executableParams) and `harness_impact {…}` the exact
-/// `meaning_impact` args. The mover NEVER resolves or guesses ids — the
-/// caller supplies them from zoom/impact data (the R7d division of
-/// labor); a malformed payload is dropped and reported, never repaired
-/// into a guess.
+/// executableId, executableParams), `harness_impact {…}` the exact
+/// `meaning_impact` args, `harness_zoom {…}` the exact `meaning_zoom` args
+/// (incl. zoom=file, the fs-tier escape-hatch read), and `harness_fs_write
+/// {path, content}` the exact `write_review` args (consent-gated). The
+/// mover NEVER resolves or guesses ids — the caller supplies them from
+/// zoom/impact data (the R7d division of labor); a malformed payload is
+/// dropped and reported, never repaired into a guess.
 class _ScriptedDaemonActor implements GenerationHandler {
   @override
   Future<ActorGenerateResponse> generate(
@@ -735,6 +741,14 @@ class _ScriptedDaemonActor implements GenerationHandler {
         ),
       );
     }
+    // Structured zoom args (incl. zoom=file — the fs-tier escape-hatch
+    // read; ADR 0024 §4) travel verbatim, like harness_edit.
+    final zooms = _payloads(prompt, 'harness_zoom');
+    for (final args in zooms.items) {
+      calls.add(
+        ToolCall(name: const ToolName('meaning_zoom'), arguments: args),
+      );
+    }
     final impacts = _payloads(prompt, 'harness_impact');
     for (final args in impacts.items) {
       calls.add(
@@ -744,6 +758,14 @@ class _ScriptedDaemonActor implements GenerationHandler {
     final edits = _payloads(prompt, 'harness_edit');
     for (final args in edits.items) {
       calls.add(ToolCall(name: const ToolName('edit_symbol'), arguments: args));
+    }
+    // fs-tier escape hatch (ADR 0024 §4): whole-file write through the
+    // review gate — the payload carries the exact write_review args.
+    final writes = _payloads(prompt, 'harness_fs_write');
+    for (final args in writes.items) {
+      calls.add(
+        ToolCall(name: const ToolName('write_review'), arguments: args),
+      );
     }
     if (RegExp(r'\[verify\]').hasMatch(prompt)) {
       calls.add(
@@ -756,7 +778,7 @@ class _ScriptedDaemonActor implements GenerationHandler {
         ),
       );
     }
-    final dropped = impacts.dropped + edits.dropped;
+    final dropped = zooms.dropped + impacts.dropped + edits.dropped + writes.dropped;
     final response = ActorGenerateResponse(
       actorEntity: request.actorEntity,
       structuredOutput: {
