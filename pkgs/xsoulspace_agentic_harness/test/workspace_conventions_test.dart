@@ -49,6 +49,18 @@ void main() {
     expect(resolveWorkspaceCheck(tempDir), const ['flutter', 'test']);
   });
 
+  test('ADR 0027 dogfood: a WORKSPACE root pubspec → flutter test (dart '
+      'test cannot resolve a workspace containing Flutter packages)', () {
+    File('${tempDir.path}/pubspec.yaml').writeAsStringSync(
+      'name: _\nworkspace:\n  - pkgs/*\n',
+    );
+    final testDir = Directory('${tempDir.path}/test')
+      ..createSync(recursive: true);
+    File('${testDir.path}/root_test.dart').writeAsStringSync('void main() {}\n');
+
+    expect(resolveWorkspaceCheck(tempDir), const ['flutter', 'test']);
+  });
+
   test('bare main.dart (no pubspec) → dart run main.dart', () {
     File('${tempDir.path}/main.dart').writeAsStringSync('void main() {}\n');
 

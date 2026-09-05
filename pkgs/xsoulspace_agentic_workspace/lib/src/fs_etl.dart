@@ -291,6 +291,20 @@ bool _ensureContainsEdge(World world, String fromId, String toId) {
   var added = 0;
   var dropped = 0;
   var refreshed = 0;
+  // ADR 0027 dogfood fix: with a cutoff, the node rebuild processes ONLY
+  // files modified since the last tick — the old path re-built props and
+  // re-looked-up EVERY node per prompt (measured: ~5–8 s no-op ticks on
+  // the monorepo). Adds (mtime > cutoff) and the stale drop above cover
+  // the rest of the lifecycle.
+  final changedScan = cutoff == null
+      ? fs
+      : FsScan(
+          files: [
+            for (final f in fs.files)
+              if (f.modified.isAfter(cutoff)) f,
+          ],
+          dirs: fs.dirs,
+        );
   // 1) files gone from disk → drop the node (entity + edges) and its map.
   final staleIds = [
     for (final id in index.byId.keys)
@@ -301,7 +315,7 @@ bool _ensureContainsEdge(World world, String fromId, String toId) {
     if (dropMeaningNode(world, id)) dropped++;
   }
   // 2) new/changed files → add or refresh (buildFsTier is idempotent).
-  final built = buildFsTier(world, workspace, scan: fs);
+  final built = buildFsTier(world, workspace, scan: changedScan);
   added = built.added;
   for (final f in fs.files) {
     if (cutoff == null) continue;

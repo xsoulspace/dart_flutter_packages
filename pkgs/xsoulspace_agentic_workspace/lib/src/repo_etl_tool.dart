@@ -89,7 +89,7 @@ ToolDef repoEtlTool(
             // instance's state is fresh — treat as a full refresh pass.
             final existing = world.maybeGetResource<MeaningIndex>();
             if (existing != null && existing.nodeCount > 0) {
-              final touched = _changedFiles(workspace, st);
+              final touched = _changedFilesFromTree(world, workspace, st);
               var syms = 0;
               for (final f in touched) {
                 final rel = f.path.startsWith('${workspace.path}/')
@@ -123,7 +123,7 @@ ToolDef repoEtlTool(
               'error': 'nothing scanned yet — action scan',
             };
           }
-          final touched = _changedFiles(workspace, st);
+          final touched = _changedFilesFromTree(world, workspace, st);
           var syms = 0;
           for (final f in touched) {
             final rel = f.path.startsWith('${workspace.path}/')
