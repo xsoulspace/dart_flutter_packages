@@ -263,8 +263,13 @@ async function answerProposal(proposal: any): Promise<any> {
   // Bounded retry: an upstream provider error (stop=error) kills a
   // decision it lands in, so the answerer retries — never an unbounded
   // loop; after the budget the decision closes EMPTY (the gate grades).
+  // ADR 0027 §4: budget + backoff base are configuration (env), not
+  // magic numbers: PI_HARNESSD_RETRIES (default 5),
+  // PI_HARNESSD_BACKOFF_MS (default 1500, linear ×attempt).
+  const maxRetries = parseInt(process.env.PI_HARNESSD_RETRIES ?? "5", 10);
+  const backoffMs = parseInt(process.env.PI_HARNESSD_BACKOFF_MS ?? "1500", 10);
   let response: any = null;
-  for (let attempt = 1; attempt <= 5; attempt++) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
     response = await ctx.modelRegistry.complete(
       model,
       { messages, tools },
@@ -275,7 +280,7 @@ async function answerProposal(proposal: any): Promise<any> {
       `[harnessd-ext] model error (attempt ${attempt}): ` +
         `${response?.errorMessage ?? "?"}\n`,
     );
-    await new Promise((r) => setTimeout(r, 1500 * attempt));
+    await new Promise((r) => setTimeout(r, backoffMs * attempt));
   }
   const content: any[] = response?.content ?? [];
   process.stderr.write(
@@ -305,11 +310,20 @@ async function answerProposal(proposal: any): Promise<any> {
     .filter((c) => c.type === "text")
     .map((c: any) => c.text ?? "")
     .join(" ");
+  // ADR 0027 §3: the model's reasoning travels with the move so the daemon
+  // can record a reasoning beat (measured, never re-projected, reused on
+  // escalation). Extracted from the thinking block when present.
+  const thinking = content
+    .filter((c) => c.type === "thinking")
+    .map((c: any) => c.text ?? c.thinking ?? "")
+    .join("\n");
   process.stderr.write(
     `[harnessd-ext] move ${proposal.decisionId}: ` +
-      `${toolCalls.map((t: any) => t.name).join(",") || "(none)"}\n`,
+      `${toolCalls.map((t: any) => t.name).join(",") || "(none)"} ` +
+      `(reasoning=${proposal.reasoning ?? "high"}, ` +
+      `thinking=${thinking.length} chars)\n`,
   );
-  return { toolCalls, text };
+  return { toolCalls, text, thinking };
 }
 
 /// Surfaces ONE consent request through pi's UI (title + the unified diff
@@ -417,18 +431,28 @@ export default function (pi: PiAPI) {
     }
     // spawn-if-absent: --remote-mover by default (pi decides), --workspace
     // arms the single-instance lock + socket listener.
-    const spawned = HarnessdClient.spawnDaemon(
-      "dart",
-      [
-        "run",
-        "bin/harnessd.dart",
-        "--profile",
-        "meaning",
-        ...(scripted ? ["--scripted"] : ["--remote-mover"]),
-        "--workspace",
-        workspace,
-      ],
-      daemonPkg,
+    // ADR 0027 §4 — AOT-first: spawn the prebuilt harnessd binary when
+    // present (kills the ~10–15s JIT + native-hooks cold start); `dart run`
+    // is the fallback. Override the path with HARNESSD_AOT.
+    const aotBin =
+      process.env.HARNESSD_AOT ?? "/tmp/harnessd_aot/bundle/bin/harnessd";
+    const useAot = existsSync(aotBin);
+    const daemonArgs = [
+      "--profile",
+      "meaning",
+      ...(scripted ? ["--scripted"] : ["--remote-mover"]),
+      "--workspace",
+      workspace,
+    ];
+    const spawned = useAot
+      ? HarnessdClient.spawnDaemon(aotBin, daemonArgs, daemonPkg)
+      : HarnessdClient.spawnDaemon(
+          "dart",
+          ["run", "bin/harnessd.dart", ...daemonArgs],
+          daemonPkg,
+        );
+    process.stderr.write(
+      `[harnessd-ext] spawning daemon (${useAot ? "AOT" : "dart run"})\n`,
     );
     const socketPath = await waitForPointer(workspace, 300000);
     spawned.wire.end?.(); // the spawned proc's stdio pipe is not used

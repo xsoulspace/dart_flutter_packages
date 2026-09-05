@@ -111,6 +111,7 @@ class CodingAgentTask {
     this.intents,
     this.runCommand,
     this.meaningProfile = false,
+    this.readOnly = false,
     this.repairHint =
         'Fix the workspace so the check passes, verify with the tools, '
         'then finish.',
@@ -122,6 +123,13 @@ class CodingAgentTask {
 
   final String id;
   final String prompt;
+
+  /// ADR 0027 §1: the delegator DECLARED this a read task (host-declared
+  /// data, never inferred from laziness). The actor runs and streams its
+  /// reads, but no verifier is wired and the final gate is stamped
+  /// `read_only_not_applicable` — recorded as data, excluded from
+  /// pass-rate columns. Mutation tasks can NEVER take this flag.
+  final bool readOnly;
 
   /// Host-seeded files (also oracle artifacts — the host authors them).
   final List<FixtureFile> fixtures;
@@ -265,6 +273,7 @@ CodingAgentTask taskFromSentence(
   List<String>? check,
   Directory? workspace,
   bool meaningProfile = false,
+  bool readOnly = false,
 }) {
   final resolved =
       check ?? (workspace == null ? null : resolveWorkspaceCheck(workspace));
@@ -286,6 +295,8 @@ CodingAgentTask taskFromSentence(
               'on code, write_review for non-code files (the human '
               'consents). Never touch files directly.'
         : '$sentence Verify with the run tool — the check must exit 0.',
+    // ADR 0027: host-declared read task — no oracle, no grade.
+    readOnly: readOnly,
     // R7: the meaning profile — the tree is the only code interface.
     meaningProfile: meaningProfile,
     systemPrompt: meaningProfile
@@ -669,7 +680,11 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
     // the monotonic AttemptCount against maxGoalAttempts (J1.5.1), and the
     // mechanical oracle re-grades after every session. Exhaustion stamps
     // GoalAttemptsExhausted (the J8 rung 1 terminal record).
-    if (task.usesIntentSurface) {
+    // ADR 0027: read-only tasks wire NO verifier — reads have no oracle
+    // (the zoom cut IS the answer); the gate would be theater.
+    if (task.readOnly) {
+      // no verifier wiring — the loop runs to idle and the turn ends.
+    } else if (task.usesIntentSurface) {
       wireIntentGradedGoal(world, sequence: task.intents!);
     } else if (task.usesMeaningSurface) {
       // The workspace convention is the gate (D8); explicit runCommand wins
@@ -713,6 +728,41 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
     var attempt = resume
         ? (world.getEntity(actor).$1.get<AttemptCount>()?.value ?? 0)
         : 0;
+
+    /// ADR 0027 §2 — analyzer-before-tests: when the gate is a test
+    /// command and the jail has a resolved package config, a full
+    /// `dart analyze` runs FIRST. An analyze failure IS the failure data
+    /// (named, with the analyzer output) and skips the ~20–40s test
+    /// compile. The oracle is invoked less, never diluted. Skipped
+    /// honestly when the jail has no package config (bare fixtures).
+    Future<List<CheckerResult>?> analyzeBeforeTests() async {
+      final isTestGate = task.checkers.any(
+        (c) =>
+            c.type == 'runs' &&
+            (c.value?.startsWith('dart test') ?? false ||
+                (c.value?.startsWith('flutter test') ?? false)),
+      );
+      if (!isTestGate) return null;
+      if (!File('${jail.path}/.dart_tool/package_config.json').existsSync()) {
+        return null;
+      }
+      final analyze = await Process.run(
+        'dart',
+        ['analyze'],
+        workingDirectory: jail.path,
+      );
+      if (analyze.exitCode == 0) return null; // clean — run the tests
+      return [
+        CheckerResult(
+          passed: false,
+          detail:
+              'analyzer_before_tests: dart analyze exit '
+              '${analyze.exitCode} — tests not run (fail fast).\n'
+              '${analyze.stdout}\n${analyze.stderr}',
+        ),
+      ];
+    }
+
     List<CheckerResult> grade() => [
       for (final c in task.checkers) evaluateChecker(c, jail.path),
     ];
@@ -739,7 +789,22 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
       await HarnessLoop(world: world).runUntilIdle();
     }
 
-    var finalGate = grade();
+    // ADR 0027 §1: read-only tasks stream their reads and end — the gate
+    // is honestly stamped not-applicable (the task DECLARED itself a
+    // read; laziness cannot manufacture this, only the delegator can).
+    List<CheckerResult> finalGate;
+    if (task.readOnly) {
+      finalGate = [
+        CheckerResult(
+          passed: true,
+          detail:
+              'read_only_not_applicable: no oracle for reads (ADR 0027) — '
+              'excluded from pass-rate columns',
+        ),
+      ];
+    } else {
+      finalGate = await analyzeBeforeTests() ?? grade();
+    }
     var passed = finalGate.isNotEmpty && finalGate.every((c) => c.passed);
     while (!passed && attempt < maxGoalAttempts) {
       attempt++;
@@ -764,7 +829,9 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
                   '${task.repairHint}\n\nOriginal task:\n${task.prompt}',
       );
       await HarnessLoop(world: world).runUntilIdle();
-      finalGate = grade();
+      if (!task.readOnly) {
+        finalGate = await analyzeBeforeTests() ?? grade();
+      }
       passed = finalGate.isNotEmpty && finalGate.every((c) => c.passed);
       await onSnapshot?.call(world);
     }

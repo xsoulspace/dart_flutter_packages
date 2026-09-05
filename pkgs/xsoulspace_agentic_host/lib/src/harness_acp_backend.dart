@@ -43,9 +43,11 @@ import 'dart:math';
 import 'package:dart_acp_toolkit/dart_acp_toolkit.dart';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
-    show JailWriteGateway, WriteGateMode;
+    show FsToolsRoot, JailWriteGateway, WriteGateMode;
+import 'package:xsoulspace_agentic_harness/src/tools/meaning_query_tools.dart'
+    show meaningImpactTool, meaningSpanReader, meaningZoomTool;
 import 'package:xsoulspace_agentic_workspace/xsoulspace_agentic_workspace.dart'
-    show RepoEtlState, SpanEditPlan, repoEtlTool;
+    show RepoEtlState, SpanEditPlan, meaningSpanReader, repoEtlTool;
 
 import 'coding_agent_runner.dart'
     show
@@ -85,6 +87,52 @@ final class HarnessBackendBinding {
 /// Hard ceiling for the monotonic escalation widening (R7c): 3 base
 /// attempts + up to 6 escalation rounds — never unbounded.
 const maxEscalationCeiling = 9;
+
+/// ADR 0027 §1 — is [text] a DIRECTIVE-ONLY read prompt? True iff it
+/// carries ≥1 read directive (`[scan]`, `[zoom …]`, structured
+/// `harness_zoom`/`harness_impact` payloads) AND no mutation marker
+/// (`harness_edit`, `harness_fs_write`, `[verify]`) AND no leftover task
+/// prose after stripping the directives (free prose = a delegated task).
+bool isReadOnlyDirectivePrompt(String text) {
+  if (_hasMutationMarker(text)) return false;
+  final hasRead =
+      RegExp(r'\[scan\]').hasMatch(text) ||
+      RegExp(r'\[zoom [^\]]+\]').hasMatch(text) ||
+      text.contains('harness_zoom') ||
+      text.contains('harness_impact');
+  if (!hasRead) return false;
+  // Strip every directive form; whatever remains must be empty.
+  var stripped = text
+      .replaceAll(RegExp(r'\[scan\]'), '')
+      .replaceAll(RegExp(r'\[zoom [^\]]+\]'), '');
+  stripped = _ScriptedDaemonActor.stripPayloads(stripped, 'harness_zoom');
+  stripped = _ScriptedDaemonActor.stripPayloads(stripped, 'harness_impact');
+  return stripped.trim().isEmpty;
+}
+
+/// `[read-only]` host-declared marker on a free-form delegation (ADR 0027
+/// §1: the read/no-read decision is DATA from the delegator, never
+/// inferred from laziness).
+bool _marksReadOnly(String text) =>
+    text.startsWith('[read-only]') || text.contains('[read-only]');
+
+bool _hasMutationMarker(String text) =>
+    text.contains('harness_edit') ||
+    text.contains('harness_fs_write') ||
+    RegExp(r'\[verify\]').hasMatch(text) ||
+    RegExp(r'\[edit[\s]').hasMatch(text);
+
+/// ADR 0027 §3 — the mover REASONING CLASS for a decision (the daemon
+/// classifies; the client maps it to model/thinking config):
+/// mechanical reads → `none`, structured edits → `low`, everything else
+/// (decomposition, planning, repair) → `high`.
+String classifyReasoning(String prompt) {
+  if (isReadOnlyDirectivePrompt(prompt)) return 'none';
+  if (prompt.contains('harness_edit') || prompt.contains('harness_fs_write')) {
+    return 'low';
+  }
+  return 'high';
+}
 
 /// The monotonic (hard-capped) attempt allowance for an escalation round:
 /// `3 + rounds`, never above [maxEscalationCeiling], never a reset.
@@ -261,6 +309,93 @@ class HarnessAcpBackend
     await tool.execute({'action': 'refresh'});
   }
 
+  /// ADR 0027 §1 — the READ WORLD: a lazy, read-verbs-only registry
+  /// (repo_etl / meaning_zoom / meaning_impact — NO edit verbs) over the
+  /// session's own ETL state. Reads never mutate; the task path's
+  /// single-writer world is untouched. Its own RepoEtlState keeps the
+  /// mtime bookkeeping independent.
+  Future<void> _ensureReadWorld(_Session session) async {
+    if (session.readWorld != null) return;
+    final world = World()..addPlugin(AgentPlugin());
+    world
+      ..upsertResource(ToolRegistryResource())
+      ..upsertResource(ModelRouterResource(session.router ?? ModelRouter()));
+    final jail = Directory(session.cwd);
+    final registry = ToolRegistry();
+    final etl = repoEtlTool(world, jail, state: session.readEtlState);
+    registry.register(etl);
+    registry.register(
+      meaningZoomTool(world, spanReader: meaningSpanReader(FsToolsRoot(jail.path))),
+    );
+    registry.register(meaningImpactTool(world));
+    world.getResource<ToolRegistryResource>().register('default', registry);
+    session.readWorld = world;
+    // Initial scan so zoom/impact targets exist (mechanical, zero tokens).
+    await etl.execute({'action': 'scan'});
+  }
+
+  /// Executes the read directives of [text] against the read registry and
+  /// streams every result. Mechanical host program — no model involved.
+  Future<void> _runReadDirectives(
+    _Session session,
+    String text,
+    void Function(AcpSessionUpdate update) emit,
+  ) async {
+    final registry = session.readWorld!
+        .getResource<ToolRegistryResource>()
+        .get('default')!;
+    Future<void> run(String name, Map<String, dynamic> args) async {
+      final tool = registry.tools[ToolName(name)];
+      if (tool == null) {
+        emit(
+          AgentMessageChunk(
+            content: AcpTextBlock('\n[$name] unknown read tool\n'),
+          ),
+        );
+        return;
+      }
+      final out = await tool.execute(args);
+      final s = out ?? '{}';
+      emit(
+        AgentMessageChunk(
+          content: AcpTextBlock(
+            '\n[$name] '
+            '${s.length > 4000 ? "${s.substring(0, 4000)}…" : s}\n',
+          ),
+        ),
+      );
+    }
+
+    if (RegExp(r'\[scan\]').hasMatch(text)) {
+      await run('repo_etl', {'action': 'scan'});
+    }
+    for (final m in RegExp(r'\[zoom ([^\]]+)\]').allMatches(text)) {
+      await run('meaning_zoom', {
+        'query': m.group(1)!.trim(),
+        'zoom': 'local',
+      });
+    }
+    final zooms = _ScriptedDaemonActor._payloads(text, 'harness_zoom');
+    for (final args in zooms.items) {
+      await run('meaning_zoom', args);
+    }
+    final impacts = _ScriptedDaemonActor._payloads(text, 'harness_impact');
+    for (final args in impacts.items) {
+      await run('meaning_impact', args);
+    }
+    final dropped = zooms.dropped + impacts.dropped;
+    if (dropped > 0) {
+      emit(
+        AgentMessageChunk(
+          content: AcpTextBlock(
+            '\n[read path] $dropped malformed payload(s) dropped — never '
+            'guessed (ADR 0027)\n',
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Future<AcpStopReason> prompt(
     AcpPromptRequest request, {
@@ -289,6 +424,31 @@ class HarnessAcpBackend
       return AcpStopReason.refusal;
     }
 
+    // ADR 0027 §1 — READS ARE NOT BUILDS: a directive-only read prompt
+    // ([scan]/[zoom]/harness_zoom/harness_impact, no mutation payloads,
+    // no leftover task prose) executes MECHANICALLY against the session's
+    // registry — zero model, zero grade — and the cuts stream back. A
+    // `[read-only]`-marked free-form delegation runs as a readOnly task
+    // (the real model decides what to zoom; the gate is stamped
+    // not-applicable). Everything else routes to the graded task path.
+    session.lastMoverRefusal = false;
+    if (isReadOnlyDirectivePrompt(text)) {
+      final sw = Stopwatch()..start();
+      await _ensureReadWorld(session);
+      await _runReadDirectives(session, text, emit);
+      sw.stop();
+      emit(
+        AgentMessageChunk(
+          content: AcpTextBlock(
+            '\n[read path] mechanical — no task, no grade '
+            '(ADR 0027); wall ${sw.elapsedMilliseconds} ms\n',
+          ),
+        ),
+      );
+      return AcpStopReason.endTurn;
+    }
+    final readOnlyTask = _marksReadOnly(text);
+
     // D8: the workspace convention decides the criterion — no per-task code.
     CodingAgentTask? task;
     // N4 escalation rung: a budget-exhausted task awaits operator guidance.
@@ -309,6 +469,11 @@ class HarnessAcpBackend
         repairHint:
             'Operator guidance (escalation round '
             '${session.escalationRounds + 1}): $text\n\n'
+            // ADR 0027 §3: reasoning REUSE — the failed round's mover
+            // reasoning rides the repair hint (truncated tail = the most
+            // recent constraints), so the next round builds on it instead
+            // of re-deriving. Never re-projected into routine cuts.
+            '${session.lastThinking.isEmpty ? "" : "Mover reasoning from the failed round (build on it, do not repeat it):\n${session.lastThinking.length > 1500 ? "…${session.lastThinking.substring(session.lastThinking.length - 1500)}" : session.lastThinking}\n\n"}'
             '${pending.repairHint}',
         systemPrompt: pending.systemPrompt,
       );
@@ -327,6 +492,7 @@ class HarnessAcpBackend
         text,
         workspace: Directory(session.cwd),
         meaningProfile: meaningProfile,
+        readOnly: readOnlyTask,
         // An EMPTY override means "the workspace convention decides" —
         // never an empty command (that would be a degenerate gate).
         // (Local copy: public fields do not promote in Dart.)
@@ -466,8 +632,15 @@ class HarnessAcpBackend
           '(decisions ${result.decisions}, rounds ${result.toolRounds}, '
           'tokens ${result.projectionTokens}, '
           'wall ${result.wallClock.inMilliseconds} ms, '
-          'moves ${result.moves})'
-          '${result.failureClass.isEmpty ? "" : "\n${result.failureClass}"}',
+          'moves ${result.moves}'
+          '${session.reasoningChars > 0 ? ", reasoning ${session.reasoningChars} chars" : ""}'
+          '${task!.readOnly ? ", gate read_only_not_applicable (ADR 0027)" : ""})'
+          '${result.failureClass.isEmpty && !session.lastMoverRefusal
+              ? ""
+              : "\n${session.lastMoverRefusal && result.failureClass.isEmpty
+                  ? "mover_refusal: empty move — the mover model refused the "
+                      "task text (ADR 0027); phrase fixture payloads neutrally"
+                  : result.failureClass}"}',
         ),
       ),
     );
@@ -573,6 +746,18 @@ class _Session {
   /// hard-capped) attempt allowance.
   CodingAgentTask? pendingEscalation;
   int escalationRounds = 0;
+
+  /// ADR 0027 §1 — the lazy read-verbs-only world (see _ensureReadWorld).
+  World? readWorld;
+  final RepoEtlState readEtlState = RepoEtlState();
+
+  /// ADR 0027 §3 — reasoning records: total chars (the ledger column), the
+  /// latest decision's thinking (reused on escalation as structured
+  /// context — never re-projected into routine cuts), and the
+  /// `mover_refusal` flag (empty move = the mover model refused).
+  int reasoningChars = 0;
+  String lastThinking = '';
+  bool lastMoverRefusal = false;
 }
 
 /// Streams one ACP update per generation: the tool calls the actor made and
@@ -650,6 +835,9 @@ class _RemoteMoverHandler implements GenerationHandler {
       sessionId: session.id,
       decisionId: 'move_${++_seq}',
       prompt: request.prompt,
+      // ADR 0027 §3: the daemon CLASSIFIES the decision; the client maps
+      // the hint to model/thinking config (none = cheap path).
+      reasoning: classifyReasoning(request.prompt),
       toolSchemas: [
         if (registry != null)
           for (final t in registry.tools.values)
@@ -684,6 +872,18 @@ class _RemoteMoverHandler implements GenerationHandler {
         pending.future,
       ]);
       if (session.cancelled) throw _Cancelled();
+      // ADR 0027 §3 — reasoning capture: measured (chars), kept per-session
+      // (reused on escalation), NEVER re-projected into routine cuts.
+      if (response.thinking.isNotEmpty) {
+        session.reasoningChars += response.thinking.length;
+        session.lastThinking = response.thinking;
+      }
+      // mover_refusal: an empty move (no calls, no text) is a BOUNCE with a
+      // named class — the mover model refused the task text (measured on
+      // adversarial fixtures); never a silent pass.
+      if (response.toolCalls.isEmpty && response.text.trim().isEmpty) {
+        session.lastMoverRefusal = true;
+      }
       return ActorGenerateResponse(
         actorEntity: request.actorEntity,
         structuredOutput: {'text': response.text},
@@ -802,6 +1002,36 @@ class _ScriptedDaemonActor implements GenerationHandler {
     );
     world.events.writer<ActorGenerateResponse>().send(response);
     return response;
+  }
+
+  /// Strips every balanced `{…}` payload following [tag] (plus the tag
+  /// itself) — used by the read-directive classifier to detect leftover
+  /// task prose (ADR 0027 §1).
+  static String stripPayloads(String prompt, String tag) {
+    var out = prompt;
+    var from = 0;
+    while (true) {
+      final tagIdx = out.indexOf(tag, from);
+      if (tagIdx < 0) break;
+      final open = out.indexOf('{', tagIdx);
+      if (open < 0) break;
+      var depth = 0;
+      var closed = false;
+      for (var i = open; i < out.length; i++) {
+        if (out[i] == '{') depth++;
+        if (out[i] == '}') {
+          depth--;
+          if (depth == 0) {
+            out = out.replaceRange(tagIdx, i + 1, '');
+            from = tagIdx;
+            closed = true;
+            break;
+          }
+        }
+      }
+      if (!closed) break;
+    }
+    return out;
   }
 
   /// Extracts every balanced `{…}` JSON payload following [tag] in the

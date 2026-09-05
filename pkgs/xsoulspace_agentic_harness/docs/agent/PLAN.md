@@ -83,6 +83,14 @@ verbs, tiny-model-first surfaces]):
    transport moved to the host (`HarnessEmbed`); stress scenarios moved to
    the harness. Anti-drift: the rejection list at the top of
    [pipeline_coding.md](pipeline_coding.md) + `pipeline.drift_check`.
+9. **Reads are not builds (ADR 0027, DONE 2026-09-06).** The dogfood hot
+   path: read-directive prompts execute mechanically (zero model, zero
+   grade); free-form read delegations run as `readOnly` tasks (actor
+   streams, gate stamped `read_only_not_applicable`); analyzer-before-tests
+   fail-fast tier; `reasoning` policy on proposals + `thinking` capture
+   (measured, never re-projected, reused on escalation); `mover_refusal`
+   failure class; AOT-first + attach-if-live in the pi extension.
+   Measured scripted + AFM: [results_seam_speed.md](results_seam_speed.md).
 
 Sequencing rule: P1 (fs map-graph + escape hatch) and P3 (interactive
 extension, consent UI) are CO-CRITICAL — pi working "through the daemon"
