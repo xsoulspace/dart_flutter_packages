@@ -10,6 +10,50 @@
 > in its own packages are its backlog, delegated to its own actors. pi
 > orchestrates and escalates; pi does not absorb fixes the harness can do.
 
+## Open issues & untested surface (honest ledger, 2026-09-06)
+
+The race is REAL dogfooding — the surface below is built but not yet
+proven by daily use. Working via harness for ALL files, dart + md first,
+means closing this list.
+
+### Open issues (named, unowned)
+
+| Issue | Where | Next move |
+|---|---|---|
+| Double-spawn race in extension recovery (two spawns race → one client attaches to a dead socket) | `r7_harnessd_extension.ts` | serialize `ensureClient` behind a spawn promise (small TS fix) |
+| Warm-tick floor ~1.4 s on the monorepo (full fs walk per tick for add/drop detection) | `fs_etl.dart` | tree-driven fs reconcile: stat from stored file nodes, walk only to catch adds |
+| `harness_verify` unwired: the extension cannot pass a per-package `--check`; monorepo-root verify is meaningless | `harnessd_cli.dart` (`--check` exists) + extension env | wire `HARNESSD_CHECK` → spawn args; package-scoped verify |
+| Root convention is a MONOREPO compromise (`flutter test` over root test/) — per-package tasks need per-package gates | `workspace_conventions.dart` | task sentences carry `--check` (the D8 convention stays the default) |
+| Zoom staleness: cut props can lag a just-refreshed tree (mtime-reconciled nodes) | `meaning_query_tools.dart` | zoom re-stats the focus node (cheap) |
+
+### Untested surface (built, never proven end-to-end)
+
+| Feature | Gate that must run | Status |
+|---|---|---|
+| Consent plans (bounded grants, audit) | host unit tests green; NO real pi session has granted/audited one | unit-only |
+| Reasoning beats (`thinking` capture, escalation reuse, `reasoning` hints) | scripted tests green; NO real-model run has exercised them | unit-only |
+| `remove_member` (retire) on a REAL model flow | scripted gates green; no AFM/OpenRouter retirement attempt | unit-only |
+| `harnessd --check` override | implemented this session, zero runs | untested |
+| File-class registry extension path (register md/yaml/json `parse` fns) | registry unit-tested via tick; no non-dart class registered yet | path-only |
+| md/yaml/json EDIT-side materializer specs (ADR 0024 §2 P2) | — | designed, not built |
+| Pack work-orders (multi-edit consent-once work orders) | — | designed (ledger row), not built |
+| Multi-workspace daemon (last_answer co-tenancy) | — | P4, not built |
+| Refactor executables (`rename_package` packs) | — | designed (ledger row), not built |
+
+### How to start working via harness for ALL files (the route)
+
+1. **Dart** (works today): `harness_scan` → `harness_zoom`/`harness_impact`
+   → `harness_edit` (replace/insert/remove/apply_executable) →
+   `harness_verify`. Fences: coverage, expressiveness, integration, refs.
+2. **md/yaml/json** (read today, edit via review gate): anchors are in the
+   tree (zoom serves budgeted spans); writes route through
+   `harness_fs_write` (consent) until each class's materializer spec lands.
+3. **everything else** (`other`): visible in the tree, review-gated writes
+   only — by design, never by omission.
+4. **The extension of the surface itself** = register a file-class spec +
+   materializer spec (see `xsoulspace_agentic_workspace/AGENTS.md`) — the
+   same closed verb surface, more covered reality.
+
 ## NOW — the pi-dogfooding path (pi does the repo's real work THROUGH the harness daemon)
 
 The production path (#1–#7) is COMPLETE — every gate has a published row

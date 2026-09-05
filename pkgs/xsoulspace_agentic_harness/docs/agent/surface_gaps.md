@@ -29,6 +29,8 @@
 | 2026-09-06 | Dogfood: recovery retry raced a still-spawning daemon (double-spawn → attached to the loser socket) | (recovery worked on the next call) | spawn + waitForPointer is not serialized across concurrent tool calls | extension: a spawn lock/promise so concurrent ensureClient calls share one spawn (small TS fix) |
 | 2026-09-06 | Warm-tick floor | ~1.4 s per prompt on the monorepo | the tick still walks the full fs (scanWorkspaceFs + dir lookups) to detect adds/drops | tree-driven fs tier: stat from stored file nodes, walk only to reconcile; target <300 ms |
 
+| 2026-09-06 | Extensibility concern (hardcoded `FsScan.dartFiles`) | (design review, no bash needed) | the class→extractor wiring was hardcoded (tick filtered `.dart` by label suffix, scan called `scanDartFile` directly) | CLOSED: `file_class_spec.dart` — the FILE-CLASS SPEC registry (extensions + optional parse fn as data); scan, tick and code-tier dispatch all go through `specForRel`; adding md/yaml/json/text = registering a spec + a materializer spec, zero new verbs |
+
 ## Closed gaps (moved to results when landed)
 
 (none yet — this ledger was opened 2026-09-06)

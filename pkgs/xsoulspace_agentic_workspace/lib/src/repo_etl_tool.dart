@@ -22,7 +22,8 @@ import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart' show FM;
 
 import 'code_etl.dart'
-    show CodeFileScan, buildMeaningTreeFromCode, dartFiles, scanDartFile;
+    show CodeFileScan, buildMeaningTreeFromCode, dartFiles;
+import 'file_class_spec.dart' show fileClassSpecs, specForRel;
 import 'fs_etl.dart'
     show
         FsScan,
@@ -103,10 +104,7 @@ ToolDef repoEtlTool(
                 final rel = f.path.startsWith('${workspace.path}/')
                     ? f.path.substring(workspace.path.length + 1)
                     : f.path;
-                syms += _rescanFile(
-                  world,
-                  scanDartFile(f, rel),
-                );
+                syms += _rescanParse(world, f, rel);
               }
               // Fs tier (ADR 0024): the same walk keeps dir/file nodes
               // honest for EVERY file class.
@@ -143,8 +141,7 @@ ToolDef repoEtlTool(
             final rel = f.path.startsWith('${workspace.path}/')
                 ? f.path.substring(workspace.path.length + 1)
                 : f.path;
-            final scan = scanDartFile(f, rel);
-            syms += _rescanFile(world, scan);
+            syms += _rescanParse(world, f, rel);
           }
           // Fs tier: same walk — new nodes added, stale nodes dropped,
           // unchanged nodes skipped (cutoff-gated rebuild).
@@ -204,13 +201,17 @@ ToolDef repoEtlTool(
           // ONE scan pass (ADR 0024 §1): the fs walk yields every file; the
           // code ETL reuses the dart subset — zero model tokens, same tick.
           final fsScan = scanWorkspaceFs(workspace);
+          // Class-generic: every spec WITH a parse fn contributes its
+          // extraction to the code tier (dart today; md/yaml/json anchor
+          // builders land as parse fns when their spec families mature).
           final scans = <String, List<CodeFileScan>>{
             'workspace': [
-              for (final f in fsScan.dartFiles)
-                scanDartFile(
-                  File('${workspace.path}/${f.rel}'),
-                  f.rel,
-                ),
+              for (final f in fsScan.files)
+                if (specForRel(f.rel).parse != null)
+                  specForRel(f.rel).parse!(
+                    File('${workspace.path}/${f.rel}'),
+                    f.rel,
+                  ),
             ],
           };
           final built = buildMeaningTreeFromCode(world, scans, repoRoot: workspace.path);
@@ -256,7 +257,10 @@ List<File> _changedFiles(
   for (final entry in world.getResource<MeaningIndex>().byId.entries) {
     if (!entry.key.startsWith('f_')) continue;
     final node = meaningComponentOf<MeaningNode>(world, entry.value);
-    if (node == null || !node.label.endsWith('.dart')) continue;
+    if (node == null) continue;
+    // Only classes with a mechanical extractor enter the code tick; the
+    // fs tier owns the rest (md/yaml/json anchors, other).
+    if (specForRel(node.label).parse == null) continue;
     inTree.add(node.label);
     final f = File('${workspace.path}/${node.label}');
     if (!f.existsSync()) continue; // dropped — pruned by the fs tier below
@@ -266,16 +270,38 @@ List<File> _changedFiles(
   }
   // NEW dart files (never in the tree) ALWAYS parse — the ambiguity and
   // refs fences only work when every symbol is in the tree.
-  for (final df in fsScan.dartFiles) {
-    if (inTree.contains(df.rel)) continue;
-    touched.add(File('${workspace.path}/${df.rel}'));
+  for (final f in fsScan.files) {
+    if (inTree.contains(f.rel)) continue;
+    if (specForRel(f.rel).parse == null) continue;
+    touched.add(File('${workspace.path}/${f.rel}'));
   }
   return touched;
 }
 
 
 
-int _countDartFiles(Directory workspace) => dartFiles(workspace).length;
+int _countDartFiles(Directory workspace) =>
+    fsFilesByParseableClass(workspace).length;
+
+/// Dart files enumerated the SAME way the scan's spec dispatch does — the
+/// legacy `_changedFiles` comparison base (kept honest with the registry).
+List<File> fsFilesByParseableClass(Directory workspace) => [
+      for (final f in dartFiles(workspace))
+        if (specForRel(_relOf(workspace, f)).parse != null) f,
+    ];
+
+String _relOf(Directory workspace, File f) =>
+    f.path.startsWith('${workspace.path}/')
+        ? f.path.substring(workspace.path.length + 1)
+        : f.path;
+
+/// Runs the file-class spec's mechanical extractor (registry dispatch —
+/// no hardcoded scanDartFile, no `.dart` suffix filters).
+int _rescanParse(World world, File f, String rel) {
+  final parse = specForRel(rel).parse;
+  if (parse == null) return 0;
+  return _rescanFile(world, parse(f, rel));
+}
 
 /// Re-extracts one file's symbols into the tree (best-effort incremental:
 /// new symbols are added; dropped ones are left stale until a full rescan

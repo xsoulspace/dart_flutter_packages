@@ -25,6 +25,8 @@ import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
 import 'package:xsoulspace_agentic_harness/src/tools/meaning_query_tools.dart'
     show MeaningSpanReader;
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
+
+import 'file_class_spec.dart' show fileClassOf;
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart'
     show FM, SchemaBundle, ToolDef, ToolName;
 
@@ -42,17 +44,7 @@ const fsSkipDirs = <String>[
 /// Files never indexed (OS noise).
 const fsSkipFiles = <String>['.DS_Store'];
 
-/// The file class of [rel] — the materializer-registry key (ADR 0024 §2).
-/// `dart` is materialized today; md/yaml/json specs land per PLAN §NOW;
-/// everything else is `other` (visible node, review-mode write only).
-String fileClassOf(String relPath) {
-  final lower = relPath.toLowerCase();
-  if (lower.endsWith('.dart')) return 'dart';
-  if (lower.endsWith('.md') || lower.endsWith('.mdx')) return 'md';
-  if (lower.endsWith('.yaml') || lower.endsWith('.yml')) return 'yaml';
-  if (lower.endsWith('.json')) return 'json';
-  return 'other';
-}
+
 
 /// One workspace walk: every indexed directory and file (workspace-relative,
 /// '/' separators). Dart files are listed in [dartFiles] so the code ETL

@@ -11,6 +11,27 @@ the registry per ADR 0024, never as a fork.
 **Law (ADR 0026 §1): a new problem class lands as a materializer spec —
 never a new loop, a new tool, or a raw read/write path.**
 
+## Adding a file class (the extensibility answer — ADR 0024 §2 as data)
+
+The read side is registry-driven (`lib/src/file_class_spec.dart`): a file
+class = one `FileClassSpec` entry (extensions + optional mechanical
+extractor). To extend:
+
+1. **Register the spec** (extensions; `parse` fn when the class has
+   symbol/anchor structure for the code tier — md/yaml/json anchors are
+   built by the fs tier's map builder today, so their `parse` stays null).
+2. **Edit side** = a materializer spec in the same family (uniform edit
+   verbs, span/keypath splices, named bounces) — until it lands, edits to
+   that class route through the review gate (write_review), never raw
+   write.
+3. **Oracle** = the class's convention (dart: `dart test`; md: docs
+   oracle; yaml/json: parse + semantic diff).
+
+No hardcoded `dartFiles` remains: the scan, the tick and the code-tier
+dispatch all go through `specForRel`. The model never learns a new verb
+per class — `repo_etl` / `meaning_zoom` / `edit_symbol` / `write_review`
+stay the closed surface.
+
 The model never writes code tokens; the host derives, materializes, and
 verifies.
 
