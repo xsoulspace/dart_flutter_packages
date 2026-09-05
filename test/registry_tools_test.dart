@@ -53,7 +53,7 @@ dependencies:
 
         expect(packages.single.pubspecJson['topics'], ['logging', 'registry']);
         expect(packages.single.pubspecJson['environment'], {
-          'sdk': '>=3.11.0 <4.0.0',
+          'sdk': '^3.12.0',
         });
       },
     );
@@ -108,7 +108,7 @@ environment:
           'name': 'archive_pkg',
           'description': 'Archive package',
           'version': '1.0.0',
-          'environment': {'sdk': '>=3.11.0 <4.0.0'},
+          'environment': {'sdk': '^3.12.0'},
         },
         publishTo: null,
       );
@@ -169,6 +169,8 @@ dependencies:
   });
 
   group('validation script', () {
+    // Two `dart run` subprocesses each pay JIT compile (~15 s) — the
+    // default 30 s test timeout cannot hold both.
     test('fails when stale metadata or archive files exist', () async {
       final repoRoot = await _createRepoFixture();
       final outputDir = await Directory.systemTemp.createTemp(
@@ -184,7 +186,7 @@ dependencies:
       });
 
       final buildResult =
-          await Process.run(Platform.resolvedExecutable, <String>[
+          await Process.run('dart', <String>[
             'registry/tools/build_registry_index.dart',
             '--repo-root',
             repoRoot.path,
@@ -213,7 +215,7 @@ dependencies:
       ).writeAsBytes(const <int>[1, 2, 3]);
 
       final validateResult =
-          await Process.run(Platform.resolvedExecutable, <String>[
+          await Process.run('dart', <String>[
             'registry/tools/validate_registry.dart',
             '--repo-root',
             repoRoot.path,
@@ -234,7 +236,7 @@ dependencies:
         validateResult.stderr.toString(),
         contains('archives contents do not exactly match'),
       );
-    });
+    }, timeout: const Timeout(Duration(minutes: 3)));
   });
 
   group('semantic versions', () {

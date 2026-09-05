@@ -12,3 +12,4 @@ pubspec.lock
 /.steward/
 .gitnexus
 node_modules/
+.flutter_mcp

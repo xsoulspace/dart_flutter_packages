@@ -77,6 +77,7 @@ Future<void> runHarnessdCli(
   var scripted = false;
   var remoteMover = false;
   int? idleExitMinutes;
+  List<String>? checkCommand;
   for (var i = 0; i < args.length; i++) {
     if (args[i] == '--backend' && i + 1 < args.length) backend = args[++i];
     if (args[i] == '--model' && i + 1 < args.length) model = args[++i];
@@ -89,6 +90,18 @@ Future<void> runHarnessdCli(
     }
     if (args[i] == '--scripted') scripted = true;
     if (args[i] == '--remote-mover') remoteMover = true;
+    // ADR 0027 amendment — per-workspace verification criterion: the
+    // composition root (or a monorepo root, which has NO package
+    // convention) declares what 'done' means: `--check dart analyze`.
+    // Consumes words until the next -- flag. An EMPTY check would be a
+    // degenerate gate — never stored.
+    if (args[i] == '--check' && i + 1 < args.length) {
+      checkCommand = <String>[];
+      while (i + 1 < args.length && !args[i + 1].startsWith('--')) {
+        checkCommand!.add(args[++i]);
+      }
+      if (checkCommand.isEmpty) checkCommand = null;
+    }
   }
   // AFM-first on macOS when the composition root registers the AFM
   // binding; otherwise the single registered backend wins.
@@ -142,6 +155,7 @@ Future<void> runHarnessdCli(
     meaningProfile: meaningProfile,
     scripted: scripted,
     remoteMover: remoteMover,
+    checkCommand: checkCommand,
   );
 
   // R7 production #5 — keep-warm + idle-exit: the daemon survives session

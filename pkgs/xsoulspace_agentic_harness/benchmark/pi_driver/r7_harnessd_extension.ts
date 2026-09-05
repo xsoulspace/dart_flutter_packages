@@ -473,9 +473,12 @@ export default function (pi: PiAPI) {
     // ADR 0027 §4 — AOT-first: spawn the prebuilt harnessd binary when
     // present (kills the ~10–15s JIT + native-hooks cold start); `dart run`
     // is the fallback. Override the path with HARNESSD_AOT.
-    const aotBin =
-      process.env.HARNESSD_AOT ?? "/tmp/harnessd_aot/bundle/bin/harnessd";
-    const useAot = existsSync(aotBin);
+    // ADR 0027 hotfix (dogfood): the AOT bundle is OPT-IN via
+    // HARNESSD_AOT — an auto-detected STALE bundle silently serves old
+    // daemon code (measured: a Sep-4 bundle predated ADR 0025–0027 and
+    // defeated the read router). `dart run` is always current.
+    const aotBin = process.env.HARNESSD_AOT ?? "";
+    const useAot = aotBin.length > 0 && existsSync(aotBin);
     const daemonArgs = [
       "--profile",
       "meaning",
@@ -486,6 +489,12 @@ export default function (pi: PiAPI) {
       // exceed 10 min — the default. Configurable via env.
       "--idle-exit-minutes",
       process.env.HARNESSD_IDLE_EXIT_MINUTES ?? "30",
+      // ADR 0027 amendment: a monorepo root has NO package convention —
+      // the composition declares the criterion explicitly (fail fast
+      // beats a wrong default). Env: HARNESSD_CHECK="dart analyze".
+      ...(process.env.HARNESSD_CHECK
+        ? ["--check", ...process.env.HARNESSD_CHECK.split(" ")]
+        : []),
     ];
     const spawned = useAot
       ? HarnessdClient.spawnDaemon(aotBin, daemonArgs, daemonPkg)

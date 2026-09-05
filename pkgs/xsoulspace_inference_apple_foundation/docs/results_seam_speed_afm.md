@@ -7,9 +7,9 @@ gate — results_r7.md).
 
 | prompt class | wall | gate | surface |
 | --- | --- | --- | --- |
-| `directive read [scan][zoom]` | 54 ms | no-task (mechanical) | cuts streamed |
-| `[read-only] free-form` | 44759 ms | no-grade (declared read) | cuts streamed |
-| `mutation task (baseline)` | 34809 ms | full oracle | cuts streamed |
+| `directive read [scan][zoom]` | 51 ms | no-task (mechanical) | cuts streamed |
+| `[read-only] free-form` | 44099 ms | no-grade (declared read) | cuts streamed |
+| `mutation task (baseline)` | 63682 ms | full oracle | cuts streamed |
 
 ## Reading
 
