@@ -14,12 +14,9 @@ import 'package:xsoulspace_agentic_host/xsoulspace_agentic_host.dart';
 
 Future<Directory> _fixture() async {
   final dir = await Directory.systemTemp.createTemp('consent_plan_');
-  File('${dir.path}/pubspec.yaml')
-    ..parent.createSync(recursive: true)
-    ..writeAsStringSync(
-      'name: consent_plan_e2e\nenvironment:\n  sdk: ^3.0.0\ndev_dependencies:\n  test: any\n',
-    );
+  // Bare-file workspace: the convention resolves to `dart run main.dart`.
   File('${dir.path}/notes.md').writeAsStringSync('# Notes\n\nscratch\n');
+  File('${dir.path}/report.md').writeAsStringSync('# Report\n\nbody\n');
   File('${dir.path}/main.dart')
     .writeAsStringSync("void main() { print('ok'); }\n");
   return dir;
@@ -85,10 +82,7 @@ void main() {
     final (stop, out) = await _writeNotes(
       backend,
       sid,
-      r'# Notes
-
-plan-allowed write landed
-',
+      r'# Notes\n\nplan-allowed write landed\n',
     );
     expect(stop, AcpStopReason.endTurn, reason: 'output: $out');
     expect(
@@ -130,8 +124,8 @@ plan-allowed write landed
         prompt: [
           AcpTextBlock(
             '[scan] '
-            'harness_fs_write {"path": "lib/greet.dart", "content": '
-            '"String greet(String name) => hi;\\n"}',
+            'harness_fs_write {"path": "report.md", "content": '
+            '"# Report\\n\\nout-of-scope write\\n"}',
           ),
         ],
       ),
@@ -146,8 +140,8 @@ plan-allowed write landed
     );
     expect(asked, 1, reason: 'out-of-scope writes still ask the client');
     expect(
-      File('${ws.path}/lib/greet.dart').readAsStringSync(),
-      contains('greet'),
+      File('${ws.path}/report.md').readAsStringSync(),
+      contains('out-of-scope write'),
       reason: 'the client allowed, so it lands — the plan never blocks, '
           'it only answers in place of the prompt',
     );

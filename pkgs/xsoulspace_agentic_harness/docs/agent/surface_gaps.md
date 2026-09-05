@@ -20,6 +20,9 @@
 | 2026-09-06 | Cross-repo work (last_answer) | direct edits | one daemon per workspace; no multi-workspace daemon (PLAN P4) | multi-workspace daemon (actor-topology P4) |
 | 2026-09-06 | Whole-session verification | `dart analyze` per package via bash | `harness_verify` not exercised this session (trust gap; also ETL cold start) | measure harness-path vs bash-path on real tasks (A/B rows in results_seam_speed.md); warm daemon by default |
 
+| 2026-09-06 | Dogfood: harness_scan via the pi extension | (extension sent prose → graded task → `dart test` over the whole monorepo, 260 s FAIL) | read tools wrapped directives in prose — the classifier correctly refused to treat them as reads (leftover prose = task) | FIXED in-session: extension sends PURE directives (`[scan]`, `harness_zoom {…}`) → mechanical read path (34–54 ms). Lesson: the classifier's strictness is the LAW working |
+| 2026-09-06 | Dogfood: harness_verify via the pi extension | (not run — prose would grade `dart test` at monorepo root) | verify needs a PER-WORKSPACE convention: the root has no package convention; `harnessd_cli` lacks a `--check` passthrough and package-scoped verify | `--check` flag on `runHarnessdCli` + extension passes the active package's convention; verify = analyzer tier + scoped convention, never monorepo-wide |
+
 ## Closed gaps (moved to results when landed)
 
 (none yet — this ledger was opened 2026-09-06)

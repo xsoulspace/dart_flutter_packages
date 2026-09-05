@@ -149,14 +149,48 @@ Future<void> runHarnessdCli(
   // recovery only) and exits when nobody has used it for N minutes.
   Timer? idleTimer;
   final idleLimit = idleExitMinutes ?? 10;
+  var shuttingDown = false;
+  // Declared here so the graceful shutdown closes over them.
+  File? socketPointer;
+  ServerSocket? socketServer;
+
+  // ADR 0027 hotfix — GRACEFUL idle shutdown: the old path called exit(0)
+  // directly, leaving a STALE socket pointer + socket file behind; every
+  // attached client then hit a dead socket with no notification (the
+  // 'only a session restart works' failure). Tear down in order, then exit.
+  Future<void> shutdown(String reason) async {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    stderr.writeln('[harnessd] $reason');
+    idleTimer?.cancel();
+    try {
+      await socketServer?.close();
+    } on Object {
+      // already dead
+    }
+    try {
+      socketPointer?.deleteSync();
+    } on Object {
+      // best effort
+    }
+    try {
+      lock?.closeSync();
+    } on Object {
+      // best effort
+    }
+    exit(0);
+  }
+
   void bumpIdle() {
     if (workspace == null) return;
     idleTimer?.cancel();
     idleTimer = Timer(Duration(minutes: idleLimit), () {
-      stderr.writeln(
-        '[harnessd] idle-exit (no session activity for $idleLimit minutes)',
+      unawaited(
+        shutdown(
+          'idle-exit (no session activity for $idleLimit minutes) — '
+          'clients will re-spawn on demand',
+        ),
       );
-      exit(0);
     });
   }
 
@@ -169,8 +203,6 @@ Future<void> runHarnessdCli(
   // continues the live world (zero re-scan). macOS caps unix-socket
   // paths at ~104 chars, so the socket lives at a SHORT hashed path
   // under the temp dir; the workspace keeps a POINTER file for discovery.
-  File? socketPointer;
-  ServerSocket? socketServer;
   if (workspace != null) {
     final socketPath = '/tmp/harnessd-${_workspaceHash(workspace)}.sock';
     final socketFile = File(socketPath);
@@ -187,6 +219,9 @@ Future<void> runHarnessdCli(
     );
     socketServer.listen((client) {
       stderr.writeln('[harnessd] client attached over socket');
+      // An attach IS activity (ADR 0027 hotfix): a warm daemon must not
+      // idle-exit underneath a client that just connected.
+      bumpIdle();
       // Each connection is a FULL ACP server over the shared backend —
       // sessions are keyed per workspace, so a second client continues
       // the live world instead of re-deriving it. The socket chunk type

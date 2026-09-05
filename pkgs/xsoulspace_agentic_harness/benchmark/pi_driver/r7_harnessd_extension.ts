@@ -82,12 +82,33 @@ class HarnessdClient {
     return client;
   }
 
+  // ADR 0027 hotfix: a dead daemon (idle-exit, crash) must be DETECTED —
+  // an attached client without error/close handlers writes into the void
+  // and every later call fails until the pi session restarts.
+  dead = false;
+
   static attachSocket(socketPath: string) {
     const client = new HarnessdClient();
     client.wire = net.createConnection(socketPath);
     client.wire.setEncoding("utf8");
     client.wire.on("data", (chunk: string) => client.#onData(chunk));
+    client.wire.on("error", () => {
+      client.dead = true;
+      for (const pending of client.pending.values()) {
+        pending.reject(new Error("daemon socket died (idle-exit or crash)"));
+      }
+      client.pending.clear();
+    });
+    client.wire.on("close", () => {
+      client.dead = true;
+    });
     return client;
+  }
+
+  isDead(): boolean {
+    if (this.dead) return true;
+    if (this.proc && this.proc.exitCode != null) return true; // spawned daemon exited
+    return false;
   }
 
   #onData(chunk: string) {
@@ -396,7 +417,11 @@ function waitForPointer(workspace: string, timeoutMs: number): Promise<string> {
 export default function (pi: PiAPI) {
   const enabled = process.env.PI_HARNESSD === "1";
   const workspace = process.cwd();
-  const daemonPkg = process.env.HARNESSD_PKG ?? ".";
+  // ADR 0025/0027: the provider-less daemon bin lives in the HOST package
+  // (scripted / remote-mover modes need no mover model; reads are
+  // mechanical). Override with HARNESSD_PKG for provider-backed roots
+  // (e.g. pkgs/xsoulspace_inference_apple_foundation).
+  const daemonPkg = process.env.HARNESSD_PKG ?? "pkgs/xsoulspace_agentic_host";
   // HARNESSD_SCRIPTED=1 keeps the LLM-free gate mover; DEFAULT is the
   // interactive remote mover (pi's model is the brain — production #4).
   const scripted = process.env.HARNESSD_SCRIPTED === "1";
@@ -411,6 +436,20 @@ export default function (pi: PiAPI) {
   });
 
   const ensureClient = async (): Promise<HarnessdClient> => {
+    // ADR 0027 hotfix: a cached DEAD client (daemon idle-exited/crashed)
+    // must be dropped, never returned — the old `if (client) return client`
+    // is what made every later call fail until a session restart.
+    if (client && client.isDead()) {
+      process.stderr.write(
+        "[harnessd-ext] cached daemon is dead (idle-exit or crash) — respawning\n",
+      );
+      try {
+        client.wire.end?.();
+      } catch {}
+      client = null;
+      // A stale pointer makes the next attach attempt fail fast; the
+      // daemon deletes it on graceful shutdown anyway.
+    }
     if (client) return client;
     // connect-if-live: a daemon holding this workspace answers the
     // initialize health ping over the socket pointer.
@@ -443,6 +482,10 @@ export default function (pi: PiAPI) {
       ...(scripted ? ["--scripted"] : ["--remote-mover"]),
       "--workspace",
       workspace,
+      // Interactive pauses (reading/thinking between calls) commonly
+      // exceed 10 min — the default. Configurable via env.
+      "--idle-exit-minutes",
+      process.env.HARNESSD_IDLE_EXIT_MINUTES ?? "30",
     ];
     const spawned = useAot
       ? HarnessdClient.spawnDaemon(aotBin, daemonArgs, daemonPkg)
@@ -470,8 +513,33 @@ export default function (pi: PiAPI) {
   const delegated = async (
     directive: string,
   ): Promise<{ content: any[]; details: Record<string, unknown> }> => {
-    const c = await ensureClient();
+    // ADR 0027 hotfix: ONE recovery attempt — if the daemon died between
+    // calls (idle-exit), drop the dead client, re-ensure (attach fails
+    // fast on a stale pointer → spawn) and retry the directive once. A
+    // failure on the retry is honest data, not a session restart.
+    let c = await ensureClient();
     if (!c.sessionId) await c.start(workspace);
+    try {
+      return await finishPrompt(c, directive);
+    } catch (err) {
+      process.stderr.write(
+        `[harnessd-ext] daemon call failed (${String(err)}) — recovering: ` +
+          `drop client, respawn, retry once\n`,
+      );
+      try {
+        c.wire.end?.();
+      } catch {}
+      client = null;
+      c = await ensureClient();
+      if (!c.sessionId) await c.start(workspace);
+      return await finishPrompt(c, directive);
+    }
+  };
+
+  const finishPrompt = async (
+    c: HarnessdClient,
+    directive: string,
+  ): Promise<{ content: any[]; details: Record<string, unknown> }> => {
     const { text, updates } = await c.prompt(directive);
     process.stderr.write(
       `[harnessd-ext] daemon result: ${text.replace(/\s+/g, " ").slice(0, 500)}\n`,
@@ -495,7 +563,10 @@ export default function (pi: PiAPI) {
     parameters: { type: "object", properties: {}, required: [] },
     execute: async (_id: string, _params: any, _signal: any, _onUpdate: any, ctx: PiCtx) => {
       capturedCtx = ctx;
-      return delegated("Scan the workspace into the meaning tree (repo_etl scan).");
+      // ADR 0027: a PURE directive — the read-directive router executes it
+      // mechanically (zero model, zero grade); prose would route it to a
+      // graded task (measured: dart test over the whole monorepo, 260 s).
+      return delegated("[scan]");
     },
   });
 
@@ -519,9 +590,8 @@ export default function (pi: PiAPI) {
     },
     execute: async (_id: string, params: any, _signal: any, _onUpdate: any, ctx: PiCtx) => {
       capturedCtx = ctx;
-      return delegated(
-        `Read the meaning tree: harness_zoom ${JSON.stringify(params ?? {})}`,
-      );
+      // ADR 0027: pure directive — mechanical read path.
+      return delegated(`harness_zoom ${JSON.stringify(params ?? {})}`);
     },
   });
 
