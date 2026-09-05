@@ -84,6 +84,28 @@ final class HarnessBackendBinding {
   final void Function()? cancelActiveGeneration;
 }
 
+/// ADR 0027 amendment — CONSENT PLAN: one bounded grant covering a class
+/// of writes/edits (host-side policy, invisible to the model). Deny-
+/// by-default OUTSIDE the plan is untouched; every plan answer is logged.
+class ConsentPlan {
+  const ConsentPlan({
+    required this.pathGlob,
+    this.verbs = const {'write', 'edit'},
+    this.maxUses = 50,
+  });
+
+  /// Glob over workspace-relative paths the plan covers
+  /// (e.g. `lib/src/.*` — grant writes within one package's subtree).
+  final String pathGlob;
+
+  /// Verbs covered: `write` (whole-file via write_review) and/or `edit`
+  /// (span-edit moves).
+  final Set<String> verbs;
+
+  /// Hard cap — a plan is NOT an unbounded grant (monotonic budgets).
+  final int maxUses;
+}
+
 /// Hard ceiling for the monotonic escalation widening (R7c): 3 base
 /// attempts + up to 6 escalation rounds — never unbounded.
 const maxEscalationCeiling = 9;
@@ -218,6 +240,21 @@ class HarnessAcpBackend
   /// R7 production #5: called on every session activity (create/prompt/
   /// cancel) — the daemon's idle-exit timer resets here.
   void Function()? onActivity;
+
+  /// ADR 0027 amendment — sets the session's bounded consent plan (host
+  /// policy; the model never sees it). Deny-by-default outside the plan.
+  void setConsentPlan(String sessionId, ConsentPlan? plan) {
+    final session = _sessions[sessionId];
+    if (session == null) return;
+    session
+      ..consentPlan = plan
+      ..consentPlanUses = 0;
+  }
+
+  /// ADR 0027 amendment — the session's consent audit log (every
+  /// plan-allowed answer lands here as named data).
+  List<String> consentAudit(String sessionId) =>
+      List.unmodifiable(_sessions[sessionId]?.consentLog ?? const []);
 
 
   @override
@@ -512,9 +549,33 @@ class HarnessAcpBackend
       // (deny-by-default — no requester wired means no approval path).
       // The consent carries the unified diff (write) / plan description
       // (edit) so the human decides on the CHANGE, not just the path.
+      // ADR 0027 amendment — CONSENT PLANS: a session-level bounded grant
+      // (host-side, INVISIBLE to the model) answers matching writes/edits
+      // without a per-write prompt — autonomous runs keep deny-by-default
+      // OUTSIDE the plan and stop stalling INSIDE it. Every plan answer
+      // is logged as session data.
+      bool planAllows(String path, String kind) {
+        final plan = session.consentPlan;
+        if (plan == null) return false;
+        if (session.consentPlanUses >= plan.maxUses) return false;
+        final matches =
+            plan.verbs.contains(kind) &&
+            RegExp(plan.pathGlob).hasMatch(path);
+        if (matches) session.consentPlanUses++;
+        return matches;
+      }
+
       Future<bool> Function(SpanEditPlan)? editApprover;
       if (_permissionRequester != null) {
         editApprover = (plan) async {
+          final target = plan.patches.firstOrNull?.file ?? '';
+          if (planAllows(target, 'edit')) {
+            session.consentLog.add(
+              'plan-allowed edit: ${plan.description} '
+              '(${session.consentPlanUses}/${session.consentPlan!.maxUses})',
+            );
+            return true;
+          }
           final outcome = await _permissionRequester!(
             AcpPermissionRequest(
               sessionId: request.sessionId,
@@ -557,6 +618,13 @@ class HarnessAcpBackend
         writeApprover: _permissionRequester == null
             ? null
             : (write) async {
+                if (planAllows(write.relativePath, 'write')) {
+                  session.consentLog.add(
+                    'plan-allowed write: ${write.relativePath} '
+                    '(${session.consentPlanUses}/${session.consentPlan!.maxUses})',
+                  );
+                  return true;
+                }
                 final outcome = await _permissionRequester!(
                   AcpPermissionRequest(
                     sessionId: request.sessionId,
@@ -758,6 +826,12 @@ class _Session {
   int reasoningChars = 0;
   String lastThinking = '';
   bool lastMoverRefusal = false;
+
+  /// ADR 0027 amendment — the session's bounded consent grant (host-side;
+  /// the model never sees it) + its usage counter + audit log.
+  ConsentPlan? consentPlan;
+  int consentPlanUses = 0;
+  final consentLog = <String>[];
 }
 
 /// Streams one ACP update per generation: the tool calls the actor made and

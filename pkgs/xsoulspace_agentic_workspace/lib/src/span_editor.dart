@@ -368,11 +368,13 @@ class SpanEditMaterializer {
           symbolId: symbolId,
           params: executableParams,
         );
+      case 'remove_member':
+        return _planRemoveMember(symbolId: symbolId);
       default:
         throw SpanEditBounce(
           'unknown edit action: $action',
           'valid actions: replace_member_body, insert_member, '
-              'apply_executable',
+              'apply_executable, remove_member',
         );
     }
   }
@@ -860,6 +862,104 @@ class SpanEditMaterializer {
     );
   }
 
+  /// ADR 0027 amendment — RETIRE (meaning-first deletion): the model
+  /// never addresses files. Removing a member is a meaning decision
+  /// ("this intent is dead"); the HOST derives the fs consequence (the
+  /// member's line range plus its doc comment pruned) and the
+  /// refs-frontier fence proves the model retired the referencers first
+  /// (multi-op decision, composable). The scoped post-analyze is the
+  /// nothing-dangles oracle — a lexical miss (strings, comments) still
+  /// bounces as named data.
+  SpanEditPlan _planRemoveMember({String? symbolId}) {
+    final sym = _requireSymbol(symbolId);
+    final decl = sym.props['decl'] as String?;
+    final file = sym.props['file'] as String?;
+    final declLine = (sym.props['line'] as num?)?.toInt();
+    if (file == null || declLine == null) {
+      throw SpanEditBounce(
+        '${sym.id} carries no file/line props — re-run repo_etl scan',
+        'action scan, then retry the move',
+      );
+    }
+    // v1 scope: brace-bodied members with a paren list (the same shape
+    // replace_member_body realizes). Everything else bounces honestly.
+    final site = _memberSite(file, sym.label, declLine);
+    if (decl != null && !{'method', 'function', 'getter'}.contains(decl)) {
+      throw SpanEditBounce(
+        '${sym.id} is a $decl — remove_member v1 targets methods, '
+            'functions and getters (brace-bodied, single-line signature)',
+        'retire the enclosing class/intent instead, or express the '
+            'removal as a refactor executable in the project pack',
+      );
+    }
+
+    // REFS FENCE — every remaining whole-identifier reference OUTSIDE the
+    // member's own span bounces as named data. The model composes the
+    // retire as a multi-op decision (referencers first).
+    final frontier = impactFrontier(world, sym.id, maxDepth: 2, maxNodes: 256);
+    final files = <String>{if (file != null) file};
+    for (final id in frontier) {
+      final n = _node(id);
+      if (n == null) continue;
+      if (n.kind == 'file') {
+        files.add(n.label);
+      } else if (n.props['file'] is String) {
+        files.add(n.props['file'] as String);
+      }
+    }
+    final refs = <String>[];
+    for (final f in files) {
+      final lines = File(_abs(f)).readAsStringSync().split('\n');
+      for (var i = 0; i < lines.length; i++) {
+        final onOwnSpan =
+            f == file &&
+            i + 1 >= site.declLine0 + 1 &&
+            i + 1 <= site.closeLine0 + 1;
+        if (onOwnSpan) continue; // the member's own span goes away with it
+        if (_replaceWholeIdentifiers(lines[i], sym.label, '\u0000') != null) {
+          refs.add('$f:${i + 1}');
+          if (refs.length >= 10) break;
+        }
+      }
+      if (refs.length >= 10) break;
+    }
+    if (refs.isNotEmpty) {
+      throw SpanEditBounce(
+        '"${sym.label}" still has ${refs.length}+ reference(s): '
+            '${refs.join(", ")}',
+        'retire the referencers first (one decision may carry the whole '
+            'op chain), then re-send this move',
+        fence: 'integration',
+      );
+    }
+
+    // Doc-comment pruning: contiguous `///` lines above the decl die with
+    // the member (the materializer prunes, it never leaves skeletons).
+    final lines = File(_abs(file)).readAsStringSync().split('\n');
+    var startLine0 = site.declLine0;
+    while (startLine0 > 0 &&
+        lines[startLine0 - 1].trimLeft().startsWith('///')) {
+      startLine0--;
+    }
+
+    return SpanEditPlan(
+      description:
+          'remove_member ${sym.label} (${sym.id}) in $file '
+          '[${startLine0 + 1}..${site.closeLine0 + 1}] (retired — fs '
+          'layout re-derives)',
+      patches: [
+        SpanPatch(
+          file: file,
+          startLine: startLine0 + 1,
+          endLine: site.closeLine0 + 1,
+          replacement: '',
+          reason: 'retired: orphan pruning by re-derivation (ADR 0027 '
+              'amendment — the model never addresses files)',
+        ),
+      ],
+    );
+  }
+
   /// Whole-identifier replacement on one line; null when the name does not
   /// occur as a standalone identifier.
   String? _replaceWholeIdentifiers(String line, String from, String to) {
@@ -1022,7 +1122,14 @@ class SpanEditMaterializer {
           final end = p.endLine >= lineCount
               ? text.length
               : sf.getOffset(p.endLine);
-          out = out.replaceRange(start, end, '${p.replacement}\n');
+          // ADR 0027 amendment (retire): an EMPTY replacement deletes the
+          // line range outright (no blank-line residue) — the materializer
+          // prunes, it never leaves skeleton gaps.
+          out = out.replaceRange(
+            start,
+            end,
+            p.replacement.isEmpty ? '' : '${p.replacement}\n',
+          );
         }
         newContents[f] = out;
       }
@@ -1528,6 +1635,10 @@ ToolDef editSymbolTool(
         'into the member body; the member MUST have suite coverage), '
         'insert_member {symbolId, name, returns, params:[name:type], '
         'opChain} (symbolId is the HOST CLASS to insert into), '
+        'remove_member {symbolId} (RETIRE — meaning-first deletion: the '
+        'host prunes the member + its doc comment and re-derives the fs '
+        'layout; the refs fence bounces until referencers are retired '
+        'first — compose the whole retire as ONE multi-op decision), '
         'apply_executable {symbolId, executableId, params} '
         '(pack-fed; built-in: rename_symbol with executableParams '
         '{newName} — lexical scope, multi-file, atomic). ARG SHAPE: '
