@@ -24,7 +24,11 @@ import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart' show F
 import 'code_etl.dart'
     show CodeFileScan, buildMeaningTreeFromCode, dartFiles, scanDartFile;
 import 'fs_etl.dart'
-    show buildFsTier, refreshFsTier, scanWorkspaceFs;
+    show
+        FsScan,
+        buildFsTier,
+        refreshFsTier,
+        scanWorkspaceFs;
 
 /// Mutable scan bookkeeping for one workspace (staleness, file count).
 class RepoEtlState {
@@ -89,7 +93,11 @@ ToolDef repoEtlTool(
             // instance's state is fresh — treat as a full refresh pass.
             final existing = world.maybeGetResource<MeaningIndex>();
             if (existing != null && existing.nodeCount > 0) {
-              final touched = _changedFilesFromTree(world, workspace, st);
+              // Fresh state over a restored tree: no cutoff — every tree
+              // file re-derives and every NEW dart file parses (it was
+              // never in the tree).
+              final fsScan = scanWorkspaceFs(workspace);
+              final touched = _changedFiles(world, workspace, st, fsScan);
               var syms = 0;
               for (final f in touched) {
                 final rel = f.path.startsWith('${workspace.path}/')
@@ -100,14 +108,13 @@ ToolDef repoEtlTool(
                   scanDartFile(f, rel),
                 );
               }
-              // Fs tier (ADR 0024): the same mechanical tick keeps dir/file
-              // nodes honest for EVERY file class (no cutoff — full pass).
-              final fs = refreshFsTier(world, workspace);
+              // Fs tier (ADR 0024): the same walk keeps dir/file nodes
+              // honest for EVERY file class.
+              final fs = refreshFsTier(world, workspace, scan: fsScan);
               st
                 ..lastScan = DateTime.now()
                 ..files = fs.files
-                ..dirs = fs.dirs
-                ..dartFiles = _countDartFiles(workspace);
+                ..dirs = fs.dirs;
               return {
                 'ok': true,
                 'refreshed_files': touched.length,
@@ -123,7 +130,14 @@ ToolDef repoEtlTool(
               'error': 'nothing scanned yet — action scan',
             };
           }
-          final touched = _changedFilesFromTree(world, workspace, st);
+          // ONE walk per tick, shared by the code tick and the fs tier.
+          final fsScan = scanWorkspaceFs(workspace);
+          final touched = _changedFiles(
+            world,
+            workspace,
+            st,
+            fsScan,
+          );
           var syms = 0;
           for (final f in touched) {
             final rel = f.path.startsWith('${workspace.path}/')
@@ -132,8 +146,14 @@ ToolDef repoEtlTool(
             final scan = scanDartFile(f, rel);
             syms += _rescanFile(world, scan);
           }
-          // Fs tier: same tick — new nodes added, stale nodes dropped.
-          final fs = refreshFsTier(world, workspace, cutoff: st.lastScan);
+          // Fs tier: same walk — new nodes added, stale nodes dropped,
+          // unchanged nodes skipped (cutoff-gated rebuild).
+          final fs = refreshFsTier(
+            world,
+            workspace,
+            cutoff: st.lastScan,
+            scan: fsScan,
+          );
           st
             ..lastScan = DateTime.now()
             ..files = fs.files
@@ -217,15 +237,43 @@ ToolDef repoEtlTool(
   );
 }
 
-List<File> _changedFiles(Directory workspace, RepoEtlState st) {
-  final all = dartFiles(workspace);
-  if (all.length != st.dartFiles) return all; // structural change — full pass
-  final cutoff = st.lastScan!;
-  return [
-    for (final f in all)
-      if (f.statSync().modified.isAfter(cutoff)) f,
-  ];
+/// ADR 0027 dogfood fix — the tick enumerates from the TREE, not from a
+/// second walker. The old path re-walked with `dartFiles()`, whose skip
+/// rules differ from the fs walk's (`1,071` vs `1,123` on this repo) — the
+/// count mismatch forced a FULL re-parse on every no-op tick (measured:
+/// 5.8 s per prompt on the monorepo).
+List<File> _changedFiles(
+  World world,
+  Directory workspace,
+  RepoEtlState st,
+  FsScan fsScan,
+) {
+  // Tree dart files: parse only when mtime > cutoff (fresh tool state over
+  // a restored tree → cutoff null → the honest pass is ALL tree files).
+  final cutoff = st.lastScan;
+  final inTree = <String>{};
+  final touched = <File>[];
+  for (final entry in world.getResource<MeaningIndex>().byId.entries) {
+    if (!entry.key.startsWith('f_')) continue;
+    final node = meaningComponentOf<MeaningNode>(world, entry.value);
+    if (node == null || !node.label.endsWith('.dart')) continue;
+    inTree.add(node.label);
+    final f = File('${workspace.path}/${node.label}');
+    if (!f.existsSync()) continue; // dropped — pruned by the fs tier below
+    if (cutoff == null || f.statSync().modified.isAfter(cutoff)) {
+      touched.add(f);
+    }
+  }
+  // NEW dart files (never in the tree) ALWAYS parse — the ambiguity and
+  // refs fences only work when every symbol is in the tree.
+  for (final df in fsScan.dartFiles) {
+    if (inTree.contains(df.rel)) continue;
+    touched.add(File('${workspace.path}/${df.rel}'));
+  }
+  return touched;
 }
+
+
 
 int _countDartFiles(Directory workspace) => dartFiles(workspace).length;
 

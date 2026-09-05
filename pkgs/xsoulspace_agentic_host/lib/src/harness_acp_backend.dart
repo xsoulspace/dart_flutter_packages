@@ -104,6 +104,40 @@ class ConsentPlan {
 
   /// Hard cap — a plan is NOT an unbounded grant (monotonic budgets).
   final int maxUses;
+
+  /// Loads the WORKSPACE-LEVEL consent policy from
+  /// `<workspace>/.harnessd/consent.json` — the policy lives with the
+  /// workspace it scopes, survives daemon restarts, and is honored for
+  /// every host consumer (applied automatically at session creation).
+  /// Shape: `{"pathGlob": "...", "verbs": ["write", "edit"],
+  /// "maxUses": 50}` — `verbs`/`maxUses` optional. Absent or malformed
+  /// file → null (deny-by-default unchanged, never a crash).
+  static ConsentPlan? forWorkspace(final Directory workspace) {
+    final file = File(
+      '${workspace.path}${Platform.pathSeparator}.harnessd'
+      '${Platform.pathSeparator}consent.json',
+    );
+    if (!file.existsSync()) return null;
+    try {
+      final raw = jsonDecode(file.readAsStringSync());
+      if (raw is! Map) return null;
+      final glob = raw['pathGlob'];
+      if (glob is! String || glob.isEmpty) return null;
+      final verbsRaw = raw['verbs'];
+      final verbs = <String>{
+        if (verbsRaw is List)
+          for (final v in verbsRaw)
+            if (v is String) v,
+      };
+      return ConsentPlan(
+        pathGlob: glob,
+        verbs: verbs.isEmpty ? const {'write', 'edit'} : verbs,
+        maxUses: raw['maxUses'] is int ? raw['maxUses'] as int : 50,
+      );
+    } on Object {
+      return null;
+    }
+  }
 }
 
 /// Hard ceiling for the monotonic escalation widening (R7c): 3 base
@@ -324,6 +358,11 @@ class HarnessAcpBackend
       world: restored,
     );
     _sessions[id] = session;
+    // ADR 0027 amendment — the WORKSPACE-LEVEL consent policy
+    // (`<cwd>/.harnessd/consent.json`) applies to every new session
+    // automatically; absent/malformed → deny-by-default unchanged.
+    final workspacePlan = ConsentPlan.forWorkspace(Directory(request.cwd));
+    if (workspacePlan != null) setConsentPlan(id, workspacePlan);
     return id;
   }
 

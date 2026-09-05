@@ -25,6 +25,10 @@
 
 | 2026-09-06 | Dogfood: daemon idle-exit bricked the session (`idle-exit after 10 minutes` → every call fails → only session restart) | (extension had a forever-cached dead client + the daemon exit(0) left stale socket pointer) | THREE compounding defects: daemon exit(0) without cleanup; socket attach without error/close handlers; ensureClient returning dead cached clients | FIXED in-session: graceful shutdown (pointer/socket/lock pruned), attach bumps idle, extension detects dead clients + retries once across respawn (HARNESSD_IDLE_EXIT_MINUTES default 30) |
 
+| 2026-09-06 | Dogfood run #2 (reads + fixes) | five REAL defects caught by working through the surface | (1) stale AOT bundle auto-detected → served pre-0025 daemon code silently; (2) workspace-root pubspec resolved `dart test` → exit 65 (workspace needs flutter tooling); (3) the mtime tick re-parsed 1,121 files on NO changes (count mismatch: tree-node count vs enumerated dart count); (4) fs-tier rebuild churned all 2,448 nodes per tick (8.3 s); (5) new dart files never had symbols parsed by the tick (ambiguity fence blind) | ALL FIXED in-session: AOT opt-in only; workspace root → flutter test; tick = tree-driven + cutoff-gated fs rebuild + new-file ingestion (warm tick 5.8 s → 1.4 s, 0 re-parses; locked by `etl_tick_test.dart`). Registry tests: `Platform.resolvedExecutable` under flutter test = flutter_tester HANGS running CLI scripts → use `'dart'` (2 zombie processes killed; root suite green again) |
+| 2026-09-06 | Dogfood: recovery retry raced a still-spawning daemon (double-spawn → attached to the loser socket) | (recovery worked on the next call) | spawn + waitForPointer is not serialized across concurrent tool calls | extension: a spawn lock/promise so concurrent ensureClient calls share one spawn (small TS fix) |
+| 2026-09-06 | Warm-tick floor | ~1.4 s per prompt on the monorepo | the tick still walks the full fs (scanWorkspaceFs + dir lookups) to detect adds/drops | tree-driven fs tier: stat from stored file nodes, walk only to reconcile; target <300 ms |
+
 ## Closed gaps (moved to results when landed)
 
 (none yet — this ledger was opened 2026-09-06)
