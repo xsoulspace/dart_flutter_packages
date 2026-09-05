@@ -5,6 +5,17 @@ workspace North Star (ADR 0012): *a small local model (2–4k context) is
 genuinely useful because the harness does the heavy lifting* — the model is a
 replaceable reasoning primitive.
 
+## Surface routing law (REQUIRED — mirrors root AGENTS.md)
+
+Dart edits in this repo route through the meaning surface
+(`harness_scan`/`harness_zoom`/`harness_impact`/`harness_edit`/
+`harness_verify`); bash escapes are honest but MUST append a gap row to
+[docs/agent/surface_gaps.md](docs/agent/surface_gaps.md) — the gap becomes
+a materializer spec or surface verb (ADR 0024/0026), so the same tools
+later serve the tiny on-device model. **No GitHub/tracker integration**:
+tasks enter as task sentences + the workspace convention; the workspace
+oracle is the gate.
+
 ## Doc reading order (for agents landing cold)
 
 1. [docs/agent/pipeline_coding.md](docs/agent/pipeline_coding.md) — **how

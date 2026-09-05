@@ -83,3 +83,32 @@ macOS 26.6.2).
   reason a human needs the check override for repo-bound docs.
 - Widget tests still do not run AFM; the OpenRouter GUI path is verified
   for the missing-key error surface only (no network calls made).
+
+# Post-refactor re-validation (ADR 0025/0026, 2026-09-05)
+
+The concurrent refactor moved the daemon + ACP host policy into
+`xsoulspace_agentic_host` (`HarnessEmbed`, `HarnessBackendBinding`,
+provider-thin apple_foundation). Re-run against it:
+
+| gate | backend | verdict | spend | n |
+|---|---|---|---|---|
+| clean-env build + bundled dylib | n/a | green (hook refreshed, phase copied) | — | 1 |
+| AFM e2e (real app, no env vars) | `apple_foundation_afm` | **PASS** | 1 decision, 3 rounds, 1,323 tokens, 44.4 s | 1 |
+| self-profile (this repo, no bridge env var) | `apple_foundation_afm` | **PASS** | 1 decision, 3 rounds, 1,554 tokens, 41.5 s | 1 |
+
+New findings from the re-validation (none dropped):
+
+8. **The gate can be destroyed by its own actor.** During a failing
+   self-profile run the wandering model wrote to
+   `integration_test/coding_agent_self_profile_test.dart` — and the test's
+   blanket auto-allow user-actor LET IT THROUGH (the file was found
+   truncated to one comment line afterwards). Fix: the scripted
+   user-actor now allows ONLY fixture-path writes and rejects everything
+   else (deny-by-default applies to the test harness too). The full
+   permission log as UI data (this phase) made the incident traceable.
+9. **`dart run` as the fixture check keeps derailing the small model**
+   (build-hook churn, finding #4 confirmed twice more). The gate now uses
+   plain `dart tool/agent_fixture/main.dart` — same oracle, no hook
+   churn. Recommendation stands for fixture-shaped checks generally.
+10. Runtime labels: AFM is the real-work default; OpenRouter (deepseek/
+    deepseek-v4-flash-0731) is labeled the BACKUP in the surface.

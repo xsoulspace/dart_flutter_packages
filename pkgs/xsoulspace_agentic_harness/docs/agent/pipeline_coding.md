@@ -22,8 +22,10 @@ decided ADR, not contributing:
 | a driver `while(true)` oracle loop | ADR 0009 (bounded budgets) | `RunGradedGoalPolicy` / monotonic `AttemptCount`, hard-capped |
 | a `bin/` in a provider package | ADR 0025 §4 (provider-thin) | a composition root calling `runHarnessdCli` with bindings |
 | a new loop/tool for a new file class | ADR 0026 §1 (specs are data) | a materializer spec family in `xsoulspace_agentic_workspace` |
+| an fs-shaped verb (`move_file`, `delete_file`, `create_file`) | ADR 0023 §2 (fs is a projection target — the model must never do fs addressing) | meaning verbs + refactor executables: rename/retire/define in tree terms; the host re-derives the fs layout and the refs-frontier oracle proves nothing dangles. "Batch" is likewise invisible: the DECISION carries the op chain; packs carry pre-known refactors |
 | a second messages/codec path per provider | ADR 0026 §2 (wire contract) | `SituationMessagesCodec` in the harness, protocol in core |
 | a copied daemon/REPL/embed loop | ADR 0025 (one host surface) | `runHarnessdCli` / `HarnessAcpBackend` / `HarnessEmbed` |
+| raw bash/edit on a `pkgs/**/*.dart` change the surface covers | the surface routing law (root AGENTS.md; ADR 0027 measured: reads 34–54 ms) | `harness_scan` → `harness_edit` → `harness_verify`; if the surface lacks the verb, append a gap row to [surface_gaps.md](surface_gaps.md) and escape honestly — the gap is the next work item, because the same tools must serve the 2–4k AFM model |
 
 Mechanical guard: `steward action dart_flutter_packages.pipeline.drift_check`.
 

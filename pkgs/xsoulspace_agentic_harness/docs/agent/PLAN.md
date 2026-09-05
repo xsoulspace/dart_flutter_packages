@@ -21,7 +21,12 @@ gate-checked (mechanical oracles), locked (single-writer), permission-
 gated (the human allows), and logged (beats/verdicts). This is the
 intent-first growth loop the law demands: pi's real work names the
 surface gaps as structured failures, and the surface grows intent-first
-— never vocabulary-by-hand.
+— never vocabulary-by-hand. **The gap ledger is
+[surface_gaps.md](surface_gaps.md)** (opened 2026-09-06, seeded with the
+ADR 0025/0026 session's honest escapes): every bash escape appends a row
+(what bash did, why the surface didn't cover it, the verb/spec to build);
+gaps close as materializer specs / surface verbs — the same tools must
+later serve the 2–4k AFM model, for whom raw bash does not exist.
 
 Ordered work items (each names its gate; the fs tier follows ADR 0024
 [filesystem as one map-graph — typed materializer specs, uniform edit

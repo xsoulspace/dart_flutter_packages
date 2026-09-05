@@ -5,6 +5,35 @@ description: Use when working in the dart_flutter_packages monorepo — editing 
 
 # dart_flutter_packages Working Guide
 
+## Harness surface routing (REQUIRED — the tiny-model law)
+
+**Work THROUGH the harness surface where it covers the work.** The North
+Star: the model is a replaceable reasoning primitive — the same tools must
+serve a 2–4k on-device model (AFM), for whom raw bash does not exist.
+Every bash escape today is a place the tiny model cannot work tomorrow;
+closing that gap IS the product (the intent-first growth loop).
+
+Decision procedure, per change:
+
+1. **Dart code edits in `pkgs/*/`** → the meaning surface:
+   `harness_scan` (once per session) → `harness_zoom` / `harness_impact`
+   (read) → `harness_edit` (act) → `harness_verify` (gate). Reads are
+   mechanical (34–54 ms measured, ADR 0027); `edit_symbol` bounces with
+   analyzer verification + auto-revert — protection raw `edit` cannot give.
+2. **Whole-file / non-Dart / generational operations** (new files, renames,
+   deletes, doc/config/TS edits, bulk sed) → bash honestly, THEN append a
+   row to
+   [surface_gaps.md](../../xsoulspace_agentic_harness/docs/agent/surface_gaps.md):
+   what bash did, why the surface didn't cover it, the verb/spec to build.
+   A gap row is a work item, not a defeat — silent escapes starve the
+   tiny-model path.
+3. **Never** re-implement surface verbs in bash (rejection list in
+   `pipeline_coding.md` § Drift rejection list): no raw read/write/grep
+   tools, no `while(true)` oracle loops, no bins in provider packages.
+
+Non-goal: **no GitHub/tracker integration** — tasks enter as plain task
+sentences + the workspace convention; the workspace oracle is the gate.
+
 ## Validation (scoped, never full-workspace)
 
 ```bash
