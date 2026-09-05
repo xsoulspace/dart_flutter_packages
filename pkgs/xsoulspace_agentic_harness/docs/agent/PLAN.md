@@ -74,6 +74,15 @@ verbs, tiny-model-first surfaces]):
    (1 world/N actors squad; N worlds/1 brain remote mover) become
    task-declared DATA with per-task topology selection; one process
    hosts several worlds with per-workspace single-instance locks.
+8. **Seam purity (ADR 0026, DONE 2026-09-06).** The workspace host
+   renamed to its true scope (`xsoulspace_agentic_workspace` — specs are
+   data, md/json/text families land beside the registry, never a fork);
+   the context-fragment protocol moved to `inference_core` (it defines
+   core's `contextFragments` field) and the wire codec to the harness —
+   openrouter is now a pure core-only client; the in-process ACP embed
+   transport moved to the host (`HarnessEmbed`); stress scenarios moved to
+   the harness. Anti-drift: the rejection list at the top of
+   [pipeline_coding.md](pipeline_coding.md) + `pipeline.drift_check`.
 
 Sequencing rule: P1 (fs map-graph + escape hatch) and P3 (interactive
 extension, consent UI) are CO-CRITICAL — pi working "through the daemon"

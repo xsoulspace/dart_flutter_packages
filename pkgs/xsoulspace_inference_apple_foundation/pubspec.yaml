@@ -17,20 +17,19 @@ dependencies:
   ffi: ^2.2.0
   hooks: any
   path: ^1.9.1
+  # ADR 0025: provider-thin — this package owns only the FFI transport and
+  # the thin `harnessd` composition root (bin/harnessd.dart); the daemon,
+  # coding runner and ACP host policy live in the host package.
+  xsoulspace_agentic_host:
+    path: ../xsoulspace_agentic_host
   xsoulspace_agentic_harness:
     path: ../xsoulspace_agentic_harness
-  # R7b/c: the meaning-profile edit surface (repo_etl / meaning_zoom /
-  # meaning_impact / edit_symbol) is wired through this host package —
-  # the core learns no Dart (ADR 0015), the daemon learns no scanner.
-  xsoulspace_agentic_dart_meaning:
-    path: ../xsoulspace_agentic_dart_meaning
-  # B3 escalation rung (J8.1 tier 3) + dogfooding backend: the coding agent
-  # can run its loop with an OpenRouter model instead of / next to AFM.
+  # B3 escalation rung (J8.1 tier 3): the daemon's open_router binding.
   xsoulspace_inference_openrouter:
     path: ../xsoulspace_inference_openrouter
   xsoulspace_inference_core:
     path: ../xsoulspace_inference_core
-  from_json_to_json: ^0.5.0
+
 
 dev_dependencies:
   lints: ^6.1.0

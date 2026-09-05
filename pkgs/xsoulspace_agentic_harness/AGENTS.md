@@ -41,8 +41,20 @@ failures remain data; escalation rate ships next to pass-rate tables).
 | `lib/src/cli/` | CLI SDK (`AgentCli`) — provider-agnostic everyday REPL host |
 | `lib/src/benchmark/` | Coding suite, ADR 0009 experiment arms, phase benchmarks |
 | `lib/src/tooling/` | World builders, decorators, token estimator |
+| `lib/src/benchmark/` | Coding suite, ADR 0009 experiment arms, phase benchmarks, `stress/` (ScenarioRunner stress CLI — provider-agnostic, router injected by composition roots; ADR 0026 §4) |
+| `lib/src/wire/` → moved to core | The context-fragment protocol + `SituationMessagesCodec` live in `inference_core` (ADR 0026 §2 — wire contract for core's `contextFragments` field); re-exported here via `data_models`. |
+| `lib/src/tooling/` | World builders, decorators, token estimator |
 | `bin/xsoulspace_agent.dart` | Real agent entrypoint (mock backend built in) |
+| `bin/stress_cli.dart` | Provider-less stress composition root (`list` works; providers inject routers) |
 | `benchmark/runs/` | Tracked evidence artifacts |
+| `example/headless/`, `example/agents/` | Golden examples + runnable agents |
+
+> Host layer (daemon, ACP backend, coding runner) lives in
+> `../xsoulspace_agentic_host` (ADR 0025) — embed THAT surface in apps,
+> CLIs and pi extensions; providers only register `HarnessBackendBinding`
+> entries. This package's `lib/src/meaning/` remains the engine-side
+> interpreter; the Dart-domain ETL/materializer stays in
+> `xsoulspace_agentic_workspace`.
 | `example/headless/`, `example/agents/` | Golden examples + runnable agents |
 
 Providers inject backends via `AgentCliConfig.buildHandler`; no provider code

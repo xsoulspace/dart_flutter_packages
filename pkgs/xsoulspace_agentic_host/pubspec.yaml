@@ -1,0 +1,30 @@
+name: xsoulspace_agentic_host
+description: >-
+  Host layer for the agentic harness (ADR 0025): the harnessd ACP daemon
+  (transport + host policy), the coding-agent runner core, and the
+  intent-closure driver — backend-agnostic. Apps (last_answer), CLIs and
+  pi extensions embed this surface; inference providers register
+  HarnessBackendBinding entries. No provider code lives here.
+version: 0.1.0-dev.1
+publish_to: none
+
+environment:
+  sdk: ^3.12.0
+
+resolution: workspace
+
+dependencies:
+  dart_acp_toolkit: any
+  ecsly: ^0.0.1-dev.13
+  meta: ^1.19.0
+  xsoulspace_agentic_workspace:
+    path: ../xsoulspace_agentic_workspace
+  xsoulspace_agentic_harness:
+    path: ../xsoulspace_agentic_harness
+  xsoulspace_inference_core:
+    path: ../xsoulspace_inference_core
+
+dev_dependencies:
+  lints: ^6.1.0
+  test: ^1.31.2
+  xsoulspace_lints: ^0.1.2

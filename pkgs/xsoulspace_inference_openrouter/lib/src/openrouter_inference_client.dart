@@ -1,5 +1,9 @@
 import 'dart:async';
-import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
+// ADR 0026: the client is PURE — it depends only on inference_core; the
+// situation→messages codec lives in the harness and is composed above this
+// transport (the client renders whatever `messages` arrive via the request
+// fragments contract).
+import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'dart:convert';
 import 'dart:io';
 
@@ -7,7 +11,6 @@ import 'package:http/http.dart' as http;
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import 'openrouter_schema.dart';
-import 'situation_messages_codec.dart';
 
 /// Model names for OpenRouter-backed models.
 ///

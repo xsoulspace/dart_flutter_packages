@@ -26,3 +26,5 @@
 | [0022](0022_workspace_oracle_meaning_pipeline.md) | Accepted | Meaning pipeline grades through the workspace oracle; vocabulary grows as verified data (bidirectional ETL) |
 | [0023](0023_filesystem_projection_target_edit_as_rederivation.md) | Accepted | The filesystem is a projection target: edit-as-re-derivation; read/write demoted in the meaning profile (R7) |
 | [0024](0024_filesystem_one_map_graph_typed_materializers.md) | Accepted | The filesystem is one map-graph: typed materializer specs per file class, uniform edit verbs, tiny-model-first surfaces |
+| [0025](0025_host_layer_extraction_composable_embedding.md) | Accepted | The host layer is a package: one canonical daemon/CLI surface, providers stay thin, embedding is one import |
+| [0026](0026_workspace_domain_specs_as_data_wire_codec.md) | Accepted | The workspace is the domain: specs are data; the wire contract lives with the request |

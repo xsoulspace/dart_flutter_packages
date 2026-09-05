@@ -1,0 +1,38 @@
+name: xsoulspace_agentic_workspace
+description: >-
+  Workspace domain host for the agentic harness (ADR 0026, renamed from
+  xsoulspace_agentic_dart_meaning): the GENERIC map-graph ETL, zoom,
+  materializer registry and span-splice edit engine; language support is a
+  SPEC FAMILY as data (dart today; md/yaml/json/text per ADR 0024).
+  Workspace-oracle ETL (failing tests → intent skeletons + derived
+  expectations) and the meaning-profile coding runner. The model never
+  writes code tokens; the host derives, materializes and verifies.
+  LAW: a new problem class lands as a materializer spec — never a new
+  loop, a new tool, or a raw read/write path.
+version: 0.1.0-dev.1
+publish_to: none
+
+environment:
+  sdk: ^3.12.0
+resolution: workspace
+
+dependencies:
+  analyzer: ">=6.9.0 <9.0.0"
+  code_builder: ^4.12.0
+  meta: ^1.19.0
+  source_maps: ^0.10.10
+  from_json_to_json:
+  is_dart_empty_or_not:
+  source_span: ^1.10.2
+  # R7d: pack-declared edit executables (the wire shape only — the host
+  # owns realizations; AE owns semantics).
+  agentic_executables_wire:
+    path: ../../agentic_executables/agentic_executables_wire
+  xsoulspace_agentic_harness:
+    path: ../xsoulspace_agentic_harness
+  xsoulspace_inference_core: ^0.1.0-beta.1
+
+dev_dependencies:
+  lints: ^6.1.0
+  test: ^1.31.2
+  xsoulspace_lints: ^0.1.2

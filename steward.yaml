@@ -223,6 +223,119 @@ actions:
     evidence:
       redact: []
 
+    outputs:
+      - id: stdout
+        kind: stream
+        required: true
+        retention: summary
+        format: text
+    evidence:
+      redact: []
+
+  xsoulspace_agentic_host.analyze:
+    kind: command
+    desc: Analyze the xsoulspace_agentic_host package.
+    command:
+      argv: [flutter, analyze]
+      shell: false
+    cwd: pkgs/xsoulspace_agentic_host
+    effects:
+      fs_read:
+        - pkgs/xsoulspace_agentic_host/lib/**
+        - pkgs/xsoulspace_agentic_host/test/**
+        - pkgs/xsoulspace_agentic_host/pubspec.yaml
+      fs_write: []
+      git: false
+      network: false
+      secrets: false
+      destructive: false
+    safety:
+      class: bounded_local
+      default_policy: auto
+      requires_confirmation: false
+    limits:
+      timeout_ms: 120000
+      max_output_bytes: 400000
+    outputs:
+      - id: stdout
+        kind: stream
+        required: true
+        retention: summary
+        format: text
+    evidence:
+      redact: []
+
+  xsoulspace_agentic_host.test:
+    kind: command
+    desc: Run the xsoulspace_agentic_host package tests.
+    command:
+      argv: [flutter, test]
+      shell: false
+    cwd: pkgs/xsoulspace_agentic_host
+    effects:
+      fs_read:
+        - pkgs/xsoulspace_agentic_host/lib/**
+        - pkgs/xsoulspace_agentic_host/test/**
+        - pkgs/xsoulspace_agentic_host/pubspec.yaml
+      fs_write: []
+      git: false
+      network: false
+      secrets: false
+      destructive: false
+    safety:
+      class: bounded_local
+      default_policy: auto
+      requires_confirmation: false
+    limits:
+      timeout_ms: 300000
+      max_output_bytes: 600000
+    outputs:
+      - id: stdout
+        kind: stream
+        required: true
+        retention: summary
+        format: text
+    evidence:
+      redact: []
+
+  pipeline.drift_check:
+    kind: command
+    desc: >-
+      Mechanical guard for the ADR 0025/0026 seams (rejection list in
+      pipeline_coding.md): provider library purity, no scenarios in
+      providers, no raw read/write in the meaning profile.
+    command:
+      argv: [dart, run, tool/pipeline_drift_check.dart]
+      shell: false
+    cwd: .
+    effects:
+      fs_read:
+        - pkgs/xsoulspace_inference_*/lib/**
+        - pkgs/xsoulspace_inference_*/test/**
+        - pkgs/xsoulspace_agentic_workspace/lib/**
+        - pkgs/xsoulspace_agentic_host/lib/**
+        - tool/pipeline_drift_check.dart
+      fs_write: []
+      git: false
+      network: false
+      secrets: false
+      destructive: false
+    safety:
+      class: bounded_local
+      default_policy: auto
+      requires_confirmation: false
+    limits:
+      timeout_ms: 60000
+      max_output_bytes: 200000
+    outputs:
+      - id: stdout
+        kind: stream
+        required: true
+        retention: summary
+        format: text
+    evidence:
+      redact: []
+
 probes:
   quick:
     profile: quick
@@ -240,6 +353,19 @@ probes:
       - doctor.local
       - xsoulspace_agentic_harness.analyze
       - xsoulspace_agentic_harness.test
+
+  xsoulspace_agentic_host:
+    profile: package
+    actions:
+      - doctor.local
+      - xsoulspace_agentic_host.analyze
+      - xsoulspace_agentic_host.test
+
+  pipeline:
+    profile: quick
+    actions:
+      - doctor.local
+      - pipeline.drift_check
 
 diagnostics:
   cases: {}

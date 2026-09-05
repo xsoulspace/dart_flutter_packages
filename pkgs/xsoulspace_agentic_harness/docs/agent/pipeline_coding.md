@@ -11,6 +11,22 @@
 > [0024](../../../../docs/decisions/0024_filesystem_one_map_graph_typed_materializers.md)
 > · forward plan: [PLAN.md](PLAN.md).
 
+## Drift rejection list (ADR 0026 §5 — read BEFORE adding anything)
+
+If you are about to do one of these, STOP — you are re-implementing a
+decided ADR, not contributing:
+
+| You are adding… | You are re-implementing… | Do instead |
+|---|---|---|
+| a `read`/`write`/`grep`/`glob` tool | ADR 0023 §2 (read/write demotion) | the meaning profile (`repo_etl`/`meaning_zoom`/`meaning_impact`/`edit_symbol`) |
+| a driver `while(true)` oracle loop | ADR 0009 (bounded budgets) | `RunGradedGoalPolicy` / monotonic `AttemptCount`, hard-capped |
+| a `bin/` in a provider package | ADR 0025 §4 (provider-thin) | a composition root calling `runHarnessdCli` with bindings |
+| a new loop/tool for a new file class | ADR 0026 §1 (specs are data) | a materializer spec family in `xsoulspace_agentic_workspace` |
+| a second messages/codec path per provider | ADR 0026 §2 (wire contract) | `SituationMessagesCodec` in the harness, protocol in core |
+| a copied daemon/REPL/embed loop | ADR 0025 (one host surface) | `runHarnessdCli` / `HarnessAcpBackend` / `HarnessEmbed` |
+
+Mechanical guard: `steward action dart_flutter_packages.pipeline.drift_check`.
+
 ## The law (memorize this)
 
 **Agent = G ∘ F.** The model is `G` — a tiny (2–4k) replaceable function from
@@ -162,10 +178,10 @@ counts still match `responses_sent_delta`.
 | Verifiers + goal loop + openFreshDecision | `lib/src/tooling/build_gates.dart` |
 | Loop, budgets (canSleep), recorder sampling | `lib/src/harness_loop.dart` |
 | Pulse + flight recorder | `lib/src/observation/harness_inspector.dart` |
-| On-device intent-closure driver (J1.4 benchmark) | `../xsoulspace_inference_apple_foundation/bin/intent_closure_afm.dart` |
-| **On-device coding agent (THE deliverable)** | `../xsoulspace_inference_apple_foundation/bin/coding_agent.dart` + `lib/src/coding_agent_runner.dart` |
-| **R7 edit tier (ADR 0023): `edit_symbol` + fences + auto-revert** | `../xsoulspace_agentic_dart_meaning/lib/src/span_editor.dart` (gates: `span_edit_gate_test.dart`, `pack_edit_gate_test.dart`); the capture loop → project pack: `edit_pack_capture.dart` (gate: `edit_pack_capture_test.dart`) |
-| **R7 daemon (`harnessd`: per-workspace world, ACP, meaning profile)** | `../xsoulspace_inference_apple_foundation/bin/harnessd.dart` + `lib/src/harness_acp_backend.dart`; production #4 remote mover (`--remote-mover` → `session/propose_move`) and #5 lifecycle (`--workspace`: single-instance lock + unix socket + idle-exit) live here |
+| On-device intent-closure driver (J1.4 benchmark) | `../xsoulspace_agentic_host/lib/src/intent_closure_runner.dart` (ADR 0025 host layer) |
+| **Coding runner core (THE deliverable, ADR 0025)** | `../xsoulspace_agentic_host/lib/src/coding_agent_runner.dart` — composed by thin provider bins (e.g. `../xsoulspace_inference_apple_foundation/bin/harnessd.dart`) or embedded directly (`package:xsoulspace_agentic_host`) |
+| **R7 edit tier (ADR 0023): `edit_symbol` + fences + auto-revert** | `../xsoulspace_agentic_workspace/lib/src/span_editor.dart` (gates: `span_edit_gate_test.dart`, `pack_edit_gate_test.dart`); the capture loop → project pack: `edit_pack_capture.dart` (gate: `edit_pack_capture_test.dart`) |
+| **R7 daemon (`harnessd`: per-workspace world, ACP, meaning profile)** | `../xsoulspace_agentic_host/lib/src/harness_acp_backend.dart` + `lib/src/harnessd_cli.dart` (ADR 0025 host layer); production #4 remote mover (`--remote-mover` → `session/propose_move`) and #5 lifecycle (`--workspace`: single-instance lock + unix socket + idle-exit) live here; provider bindings come from composition roots (e.g. `../xsoulspace_inference_apple_foundation/bin/harnessd.dart`) |
 | **R7 pi integration (daemon as the only file surface)** | `benchmark/pi_driver/run_r7_daemon_gate.mjs` + `r7_harnessd_extension.ts`; transcript `benchmark/runs/r7_edit_surface_transcript.txt` (production #1: the structured `harness_edit` contract — the mover executes exact `edit_symbol` args from the session/prompt JSON, never guesses ids); warm-attach gate: `run_r7_warm_attach_gate.mjs` → `r7_warm_attach_transcript.txt` |
 | Flutter profiler | `../xsoulspace_agentic_harness_flutter_profiler/` |
 

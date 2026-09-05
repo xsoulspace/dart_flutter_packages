@@ -253,7 +253,9 @@ async function answerProposal(proposal: any): Promise<any> {
         `You are the harness session actor's brain. The cut below is your ` +
         `entire bounded view — there are no files for you, only this ` +
         `projection. Think BRIEFLY, then submit the next move by calling ` +
-        `ONE of the harness tools (or none if the task is done).\n\n` +
+        `ONE of the harness tools. If the task in the cut is not yet ` +
+        `fully complete you MUST call a tool — reply with NO tool call ` +
+        `only when the goal is verifiably done.\n\n` +
         `CUT:\n${String(proposal.prompt ?? "")}`,
       timestamp: Date.now(),
     },
@@ -262,7 +264,7 @@ async function answerProposal(proposal: any): Promise<any> {
   // decision it lands in, so the answerer retries — never an unbounded
   // loop; after the budget the decision closes EMPTY (the gate grades).
   let response: any = null;
-  for (let attempt = 1; attempt <= 3; attempt++) {
+  for (let attempt = 1; attempt <= 5; attempt++) {
     response = await ctx.modelRegistry.complete(
       model,
       { messages, tools },
@@ -273,7 +275,7 @@ async function answerProposal(proposal: any): Promise<any> {
       `[harnessd-ext] model error (attempt ${attempt}): ` +
         `${response?.errorMessage ?? "?"}\n`,
     );
-    await new Promise((r) => setTimeout(r, 1000 * attempt));
+    await new Promise((r) => setTimeout(r, 1500 * attempt));
   }
   const content: any[] = response?.content ?? [];
   process.stderr.write(
@@ -447,6 +449,9 @@ export default function (pi: PiAPI) {
     const c = await ensureClient();
     if (!c.sessionId) await c.start(workspace);
     const { text, updates } = await c.prompt(directive);
+    process.stderr.write(
+      `[harnessd-ext] daemon result: ${text.replace(/\s+/g, " ").slice(0, 500)}\n`,
+    );
     return {
       content: [{ type: "text", text: text || "(daemon returned no text)" }],
       details: { daemonUpdateCount: updates.length, directive },
