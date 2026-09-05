@@ -1,0 +1,25 @@
+get:
+    flutter pub get
+
+test:
+    flutter test
+
+analyze:
+    flutter analyze
+
+format:
+    dart format .
+
+publish-dry:
+    flutter pub publish --dry-run
+
+publish:
+    flutter pub publish
+    
+# Unit tests (no native engine).
+test-unit:
+	flutter test
+
+# Integration test on macOS (real plugin; engine unavailable is OK).
+test-integration:
+	cd example && flutter test integration_test -d macos
