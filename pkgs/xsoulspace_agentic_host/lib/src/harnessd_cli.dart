@@ -178,6 +178,16 @@ Future<void> runHarnessdCli(
     } on Object {
       // best effort
     }
+    try {
+      // Prune the dead lock file — the OS lock died with the process, but
+      // the stale FILE would confuse humans (the next daemon locks it
+      // fine; this is hygiene, not correctness).
+      if (workspace != null) {
+        File('$workspace/.dart_tool/harnessd/harnessd.lock').deleteSync();
+      }
+    } on Object {
+      // best effort
+    }
     exit(0);
   }
 
@@ -211,6 +221,12 @@ Future<void> runHarnessdCli(
       InternetAddress(socketPath, type: InternetAddressType.unix),
       0,
     );
+    // Race guard (ADR 0027 hotfix): if the idle timer fired during
+    // startup, do NOT re-create the pointer the shutdown just deleted.
+    if (shuttingDown) {
+      await shutdown('startup raced the idle timer');
+      return;
+    }
     socketPointer = File('$workspace/.dart_tool/harnessd/harnessd.sock')
       ..writeAsStringSync('$socketPath\n');
     stderr.writeln(

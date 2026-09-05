@@ -23,6 +23,8 @@
 | 2026-09-06 | Dogfood: harness_scan via the pi extension | (extension sent prose → graded task → `dart test` over the whole monorepo, 260 s FAIL) | read tools wrapped directives in prose — the classifier correctly refused to treat them as reads (leftover prose = task) | FIXED in-session: extension sends PURE directives (`[scan]`, `harness_zoom {…}`) → mechanical read path (34–54 ms). Lesson: the classifier's strictness is the LAW working |
 | 2026-09-06 | Dogfood: harness_verify via the pi extension | (not run — prose would grade `dart test` at monorepo root) | verify needs a PER-WORKSPACE convention: the root has no package convention; `harnessd_cli` lacks a `--check` passthrough and package-scoped verify | `--check` flag on `runHarnessdCli` + extension passes the active package's convention; verify = analyzer tier + scoped convention, never monorepo-wide |
 
+| 2026-09-06 | Dogfood: daemon idle-exit bricked the session (`idle-exit after 10 minutes` → every call fails → only session restart) | (extension had a forever-cached dead client + the daemon exit(0) left stale socket pointer) | THREE compounding defects: daemon exit(0) without cleanup; socket attach without error/close handlers; ensureClient returning dead cached clients | FIXED in-session: graceful shutdown (pointer/socket/lock pruned), attach bumps idle, extension detects dead clients + retries once across respawn (HARNESSD_IDLE_EXIT_MINUTES default 30) |
+
 ## Closed gaps (moved to results when landed)
 
 (none yet — this ledger was opened 2026-09-06)
