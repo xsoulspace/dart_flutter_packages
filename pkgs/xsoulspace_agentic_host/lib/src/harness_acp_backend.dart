@@ -46,14 +46,10 @@ import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
     show FsToolsRoot, JailWriteGateway, WriteGateMode;
 import 'package:xsoulspace_agentic_harness/src/tools/meaning_query_tools.dart'
     show meaningImpactTool, meaningSpanReader, meaningZoomTool;
+import 'package:xsoulspace_agentic_harness/src/tools/meaning_locate_tool.dart'
+    show meaningLocateTool;
 import 'package:xsoulspace_agentic_workspace/xsoulspace_agentic_workspace.dart'
-    show
-        RepoEtlState,
-        SpanEditPlan,
-        fileClassOf,
-        meaningSpanReader,
-        repoEtlTool,
-        writeReviewTool;
+    show RepoEtlState, SpanEditPlan, meaningSpanReader, repoEtlTool, writeReviewTool;
 
 import 'coding_agent_runner.dart'
     show
@@ -161,7 +157,8 @@ bool isReadOnlyDirectivePrompt(String text) {
       RegExp(r'\[scan\]').hasMatch(text) ||
       RegExp(r'\[zoom [^\]]+\]').hasMatch(text) ||
       text.contains('harness_zoom') ||
-      text.contains('harness_impact');
+      text.contains('harness_impact') ||
+      text.contains('harness_locate');
   if (!hasRead) return false;
   // Strip every directive form; whatever remains must be empty.
   var stripped = text
@@ -169,6 +166,7 @@ bool isReadOnlyDirectivePrompt(String text) {
       .replaceAll(RegExp(r'\[zoom [^\]]+\]'), '');
   stripped = _ScriptedDaemonActor.stripPayloads(stripped, 'harness_zoom');
   stripped = _ScriptedDaemonActor.stripPayloads(stripped, 'harness_impact');
+  stripped = _ScriptedDaemonActor.stripPayloads(stripped, 'harness_locate');
   return stripped.trim().isEmpty;
 }
 
@@ -434,6 +432,9 @@ class HarnessAcpBackend
       meaningZoomTool(world, spanReader: meaningSpanReader(FsToolsRoot(jail.path))),
     );
     registry.register(meaningImpactTool(world));
+    // Discovery ray (ADR 0014 §2 re-based on the tree) — the mechanical
+    // read tier gains "where is X?" with zero model, zero grade.
+    registry.register(meaningLocateTool(world));
     world.getResource<ToolRegistryResource>().register('default', registry);
     session.readWorld = world;
     // Initial scan so zoom/impact targets exist (mechanical, zero tokens).
@@ -489,7 +490,11 @@ class HarnessAcpBackend
     for (final args in impacts.items) {
       await run('meaning_impact', args);
     }
-    final dropped = zooms.dropped + impacts.dropped;
+    final locates = _ScriptedDaemonActor._payloads(text, 'harness_locate');
+    for (final args in locates.items) {
+      await run('meaning_locate', args);
+    }
+    final dropped = zooms.dropped + impacts.dropped + locates.dropped;
     if (dropped > 0) {
       emit(
         AgentMessageChunk(
@@ -535,6 +540,22 @@ class HarnessAcpBackend
         FsToolsRoot(session.cwd),
         mode: WriteGateMode.review,
         approver: (write) async {
+          // R9.1 consent inheritance: a workspace-level plan
+          // (.harnessd/consent.json) or a session-level grant answers
+          // matching writes mechanically — pi's consent is inherited, the
+          // human is prompted only OUTSIDE the plan.
+          final plan = session.consentPlan;
+          if (plan != null &&
+              session.consentPlanUses < plan.maxUses &&
+              plan.verbs.contains('write') &&
+              RegExp(plan.pathGlob).hasMatch(write.relativePath)) {
+            session.consentPlanUses++;
+            session.consentLog.add(
+              'plan-allowed mechanical write: ${write.relativePath} '
+              '(${session.consentPlanUses}/${plan.maxUses})',
+            );
+            return true;
+          }
           final outcome = await requester(
             AcpPermissionRequest(
               sessionId: sessionId,
@@ -1226,6 +1247,14 @@ class _ScriptedDaemonActor implements GenerationHandler {
         ToolCall(name: const ToolName('meaning_impact'), arguments: args),
       );
     }
+    // Discovery ray (ADR 0014 §2 re-based on the tree): the payload IS the
+    // meaning_locate args — ids for zoom/impact come FROM locate rows.
+    final locates = _payloads(prompt, 'harness_locate');
+    for (final args in locates.items) {
+      calls.add(
+        ToolCall(name: const ToolName('meaning_locate'), arguments: args),
+      );
+    }
     final edits = _payloads(prompt, 'harness_edit');
     for (final args in edits.items) {
       calls.add(ToolCall(name: const ToolName('edit_symbol'), arguments: args));
@@ -1249,7 +1278,8 @@ class _ScriptedDaemonActor implements GenerationHandler {
         ),
       );
     }
-    final dropped = zooms.dropped + impacts.dropped + edits.dropped + writes.dropped;
+    final dropped =
+        zooms.dropped + impacts.dropped + edits.dropped + writes.dropped + locates.dropped;
     final response = ActorGenerateResponse(
       actorEntity: request.actorEntity,
       structuredOutput: {

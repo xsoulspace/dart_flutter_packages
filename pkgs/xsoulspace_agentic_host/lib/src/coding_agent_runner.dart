@@ -51,6 +51,8 @@ import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
         JailWriteGateway,
         WriteGateMode,
         runTool;
+import 'package:xsoulspace_agentic_harness/src/tools/meaning_locate_tool.dart'
+    show meaningLocateTool;
 
 import 'intent_closure_runner.dart'
     show DecisionMeter, afmSystemPrompt, registerIntentClosureTools;
@@ -557,6 +559,9 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
       meaningZoomTool(world, spanReader: meaningSpanReader(fsRoot)),
     );
     registry.register(meaningImpactTool(world));
+    // Discovery ray (ADR 0014 §2 re-based on the tree): "where is X?" in
+    // one token-bounded call — BEFORE zoom/impact, never a text search.
+    registry.register(meaningLocateTool(world));
     registry.register(editSymbolTool(world, jail, approver: editApprover));
     // fs tier (ADR 0024 §4): the escape-hatch WRITE — registered ONLY when a
     // review gateway exists (deny-by-default is structural: no approver, no

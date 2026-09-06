@@ -48,6 +48,69 @@ verification, repair, projection, budgets — is ALL host code. The model
 > AE owns durable truth per ADR 0017/D2; IntentCall projects intents to
 > MCP/ACP/platform), never vocabulary-by-hand.
 
+## The two-layer vocabulary (why "closed" never means "frozen")
+
+- **Words (intents): the model extends its OWN vocabulary at runtime.**
+  `intent_define` is ONE self-executing action — specs required, impl-edge
+  wired, host-validated; contract-only defines are deleted. Composing a new
+  intent IS vocabulary growth; the op set below is the substrate, not a
+  ceiling.
+- **Letters (ops): closed but grown as VERIFIED DATA** (ADR 0022 §3).
+  14 ops (v1 probe) → 21 ops (R6 pulled math/compare/item/call); each op
+  lands with a spec + VM semantics + interpreter⇄materialized parity test.
+  `jump`/`jump_if_false` backward = loops (step-limit 1000); `call` =
+  intent→intent; full arithmetic/compare surface. **Algorithmic intent
+  bodies ARE expressible.**
+- **THE CAPABILITY-GAP LAW**: when a task needs a capability the op set
+  lacks (e.g. fs I/O — the set is pure by design), the route is
+  **executor-op growth** (spec + semantics + parity, pulled by the failing
+  task) — NEVER body editing, NEVER a new loop, NEVER "just read the Dart
+  and rewrite it". If you (the agent) conclude "the closed vocabulary can't
+  express this", you have conflated the layers — re-read this section.
+
+## Discovery is a RAY, not a search
+
+`meaning_locate` (ADR 0014 §2, re-based on the tree) answers "where is X?"
+from the map-graph in one token-bounded call — ranked (exact > prefix >
+contains), class-agnostic (symbols, intents, sections, keys, files — the
+model discovers MEANINGS, never files), usage counts from the tree's own
+`refs` edges. The ids zoom/impact require come FROM locate rows. Never
+grep, never zoom-as-search: **zoom is projection** — the context
+materializer that ray-traces a bounded cut of the beats/meaning graph —
+and the model must never need file text at any class (md, dart, yaml: the
+class is invisible at the meaning tier). Actor attention is the implicit
+discovery channel: actors (models, users, AND meaning parts) attend to
+what the projection ray surfaces; explicit locate + implicit attention
+together replace search. The md map follows the same principle:
+structural nodes first, fill gaps in-between — any file size, any context
+budget.
+
+## Planning is projection (ADR 0009 — use it EVERYWHERE)
+
+Goals are vectors; plans are projections over Step/GoalLink/DependsOnStep
+components. `projectPlanFrontier` (systems/projection/projection_systems.dart)
+is the **next-actionable frontier**: open steps whose dependencies are
+verified, token-budgeted — "what can be done next", mechanically. Use it
+for actor decision cuts, small and large decisions, long-term planning,
+and free-form → structural planning (declare the plan as steps, then work
+the frontier). Future projection beyond the current actor is the same
+mechanic pointed forward: the frontier IS the prediction path — what CAN
+be done next, before anything is. If you are planning in prose, you are
+drifting: declare steps and project the frontier.
+
+## The mechanical tier (reads AND consented writes)
+
+Directives execute with zero model, zero grade: `[scan]`,
+`harness_zoom {…}`, `harness_impact {…}`, `harness_locate {…}` (reads) —
+and `harness_fs_write {…}` (CONSENTED whole-file writes through the
+review gate; a consented write is DATA plus the human's decision, never a
+mover task — routing it as one measured `mover_refusal` after a 9-minute
+wall). Consent is inherited, not re-asked: a workspace-level plan
+(`​.harnessd/consent.json` — `{pathGlob, verbs, maxUses}`, R9.1) or a
+session grant answers matching writes/edits mechanically; the human is
+prompted only OUTSIDE the plan. Mixed prompts (directive + prose) never
+take the mechanical path — deny-by-default on ambiguity.
+
 ## The fs tier (non-dart materializers — ADR 0024)
 
 The map-graph covers EVERY file: dir/file nodes always; typed sub-nodes
@@ -175,6 +238,8 @@ counts still match `responses_sent_delta`.
 |---|---|
 | The one tool + sub-actions | `lib/src/tooling/act_with_project.dart` |
 | Meaning tree + zoom projection | `lib/src/meaning/meaning_tree.dart` |
+| Discovery ray (locate over the tree) | `lib/src/tools/meaning_locate_tool.dart` (+ legacy lexical index: `lib/src/tooling/locate_index.dart`) |
+| Plan frontier projection ("what can be done next") | `lib/src/systems/projection/projection_systems.dart` (`projectPlanFrontier`) |
 | Intents + IntentRuntime + intent tools | `lib/src/meaning/intents.dart` |
 | Materializer (op chains → program.dart) | `lib/src/meaning/meaning_program.dart` |
 | Verifiers + goal loop + openFreshDecision | `lib/src/tooling/build_gates.dart` |

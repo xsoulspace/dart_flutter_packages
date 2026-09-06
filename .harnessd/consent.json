@@ -1,0 +1,5 @@
+{
+  "pathGlob": "^(pkgs|docs|\\.pi|\\.agents)/",
+  "verbs": ["write", "edit"],
+  "maxUses": 50
+}

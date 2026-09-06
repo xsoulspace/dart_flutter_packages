@@ -181,6 +181,21 @@ class AppleFoundationNativeClient
             .fold(0, (a, b) => a + b) +
         ((request.metadata['transcript'] as String?)?.length ?? 0);
     final estimateTokens = estimateChars ~/ 4;
+    // R9.1 investigation A: per-decision prompt size at the client — logged
+    // on EVERY call so the growth curve across decisions is visible in the
+    // trace, not only when the pre-flight rejects (the harness cut is flat
+    // by construction; the native transcript is not — see bridge "context:"
+    // traces).
+    if (_debugEnabled) {
+      final fragmentsChars = [for (final f in request.contextFragments) f.toString().length]
+          .fold(0, (a, b) => a + b);
+      stderr.writeln(
+        '[xs_fm/dart] preflight: estimateTokens=$estimateTokens '
+        'budget=$maxContextTokens '
+        '(system=${request.systemPrompt.length}ch '
+        'prompt=${request.prompt.length}ch fragments=${fragmentsChars}ch)',
+      );
+    }
     if (estimateTokens > maxContextTokens) {
       return InferenceResult<InferenceResponse>.fail(
         code: 'context_window_exceeded',

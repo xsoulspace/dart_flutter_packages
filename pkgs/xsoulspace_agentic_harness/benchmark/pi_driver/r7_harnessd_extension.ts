@@ -253,6 +253,7 @@ let consentChain: Promise<unknown> = Promise.resolve();
 
 const DAEMON_TOOL_NAMES = [
   "harness_scan",
+  "harness_locate",
   "harness_zoom",
   "harness_impact",
   "harness_edit",
@@ -637,6 +638,31 @@ export default function (pi: PiAPI) {
       capturedCtx = ctx;
       // ADR 0027: pure directive — mechanical read path.
       return delegated(`harness_zoom ${JSON.stringify(params ?? {})}`);
+    },
+  });
+
+  pi.registerTool({
+    name: "harness_locate",
+    label: "Harness Locate",
+    description:
+      "Structural discovery ray over the meaning tree (ADR 0014 §2): " +
+      'answer "where is X?" — definitions, usages, related meanings — in ' +
+      "ONE token-bounded call. Matches ANY meaning node label (symbols, " +
+      "intents, sections, keys, files); never a text search. Use BEFORE " +
+      "zoom/impact: locate yields the focus ids those verbs require. Args: " +
+      "{query (required), maxRows?}.",
+    parameters: {
+      type: "object",
+      properties: {
+        query: { type: "string" },
+        maxRows: { type: "number" },
+      },
+      required: ["query"],
+    },
+    execute: async (_id: string, params: any, _signal: any, _onUpdate: any, ctx: PiCtx) => {
+      capturedCtx = ctx;
+      // ADR 0027: pure directive — mechanical read path (zero model).
+      return delegated(`harness_locate ${JSON.stringify(params)}`);
     },
   });
 

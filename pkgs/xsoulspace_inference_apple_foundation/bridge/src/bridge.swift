@@ -98,6 +98,13 @@ final class GenerationState: @unchecked Sendable {
   var finished = false
   var task: Task<Void, Never>?
   var pendingTools: [String: CheckedContinuation<String, Error>] = [:]
+  #if canImport(FoundationModels)
+    /// R9.1 investigation A (context accumulation): the session driving this
+    /// generation. The per-round transcript token counts — the actual context
+    /// the model re-reads on every native tool round — are read through it.
+    /// Weak: teardown order must never keep the session alive.
+    weak var session: LanguageModelSession?
+  #endif
 
   init(
     id: Int32,
@@ -374,6 +381,25 @@ public func xs_fm_generate_async(
             tools: tools,
             instructions: instructions
           )
+          state.session = session
+
+          // R9.1 investigation A: per-decision native context baseline —
+          // the window plus the token cost of each component the session's
+          // first model call is built from. baselineTranscriptTokens covers
+          // the instructions exactly as the session materialized them.
+          let baselineTokens = (try? await model.tokenCount(for: session.transcript)) ?? -1
+          let promptTokens = (try? await model.tokenCount(for: prompt)) ?? -1
+          let toolTokens = (try? await model.tokenCount(for: tools)) ?? -1
+          var schemaTokens = -1
+          if let schema = generationSchema {
+            schemaTokens = (try? await model.tokenCount(for: schema)) ?? -1
+          }
+          XsFmDebug.log(
+            "context: gen=\(state.id) window=\(model.contextSize) "
+              + "baselineTranscriptTokens=\(baselineTokens) "
+              + "promptTokens=\(promptTokens) toolTokens=\(toolTokens) "
+              + "schemaTokens=\(schemaTokens)"
+          )
 
           let content: String
           if let schema = generationSchema {
@@ -384,6 +410,13 @@ public func xs_fm_generate_async(
             content = response.content
           }
 
+          // R9.1 investigation A: the decision's final native context —
+          // every round's tool I/O accumulated.
+          let finalTokens = (try? await model.tokenCount(for: session.transcript)) ?? -1
+          XsFmDebug.log(
+            "context: gen=\(state.id) decision_final entries=\(session.transcript.count) "
+              + "transcriptTokens=\(finalTokens)"
+          )
           XsFmDebug.log("generate: ok, output=\(content.prefix(120))")
           finish(donePayload("\"ok\":true,\"output\":\(jsonEscaped(content))"))
         } catch {
@@ -649,6 +682,22 @@ public func xs_fm_generate_stream_async(
     func call(arguments: BridgeToolArguments) async throws -> String {
       let argsJSON = try extractArgsJSON(from: arguments.content)
       XsFmDebug.log("tool call: name=\(name) args=\(argsJSON.prefix(120))")
+
+      // R9.1 investigation A: per-round native context. At tool-call time the
+      // transcript holds instructions + prompt + every prior round's tool I/O,
+      // so this count is what the model re-reads on THIS round. A flat harness
+      // cut does not imply a flat native context — the growth curve across
+      // rounds is the accumulation tell.
+      if let session = state?.session {
+        let entries = session.transcript.count
+        let tokens =
+          (try? await SystemLanguageModel.default.tokenCount(for: session.transcript))
+          ?? -1
+        XsFmDebug.log(
+          "context: gen=\(state?.id ?? -1) tool_round entries=\(entries) "
+            + "transcriptTokens=\(tokens)"
+        )
+      }
 
       // Suspend until Dart calls xs_fm_tool_respond for our id. The payload
       // post happens under the generation state lock (see postToolCall), so

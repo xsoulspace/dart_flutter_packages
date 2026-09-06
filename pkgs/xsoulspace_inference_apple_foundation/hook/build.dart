@@ -52,6 +52,24 @@ void main(List<String> args) async {
       throw Exception('swiftc failed with exit code ${result.exitCode}');
     }
 
+    // Keep the path-loader's preferred candidate fresh (R9.1 stale-dylib
+    // finding): `XsFmLibraryLoader` resolves `.dart_tool/lib/
+    // libxs_fm_bridge.dylib` FIRST, but only the code-asset path is updated
+    // by the native-assets pipeline — so without this copy every consumer
+    // (flutter test, dart run, the harnessd daemon) silently loads a STALE
+    // bridge while the fresh dylib sits in the native-assets output dir.
+    // If the code asset is used, this copy is simply ignored.
+    final staleCandidate = Directory('.dart_tool/lib');
+    if (staleCandidate.existsSync()) {
+      try {
+        File(libPath).copy(
+          '${staleCandidate.path}/libxs_fm_bridge.dylib',
+        );
+      } on Object catch (e) {
+        stderr.writeln('[xs_fm hook] stale-candidate refresh skipped: $e');
+      }
+    }
+
     output.dependencies.addAll([
       Uri.file('bridge/src/bridge.swift'),
       Uri.file('bridge/src/DartSchemaMaterializer.swift'),
