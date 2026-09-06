@@ -43,7 +43,7 @@ import 'dart:math';
 import 'package:dart_acp_toolkit/dart_acp_toolkit.dart';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
-    show FsToolsRoot, JailWriteGateway, WriteGateMode;
+    show FsToolsRoot, JailWriteGateway, WriteGateMode, runTool;
 import 'package:xsoulspace_agentic_harness/src/tools/meaning_query_tools.dart'
     show meaningImpactTool, meaningSpanReader, meaningZoomTool;
 import 'package:xsoulspace_agentic_harness/src/tools/meaning_locate_tool.dart'
@@ -175,6 +175,20 @@ bool isReadOnlyDirectivePrompt(String text) {
 /// inferred from laziness).
 bool _marksReadOnly(String text) =>
     text.startsWith('[read-only]') || text.contains('[read-only]');
+
+bool isMechanicalRunDirective(String text) {
+  if (text.contains('harness_edit') ||
+      text.contains('harness_fs_write') ||
+      RegExp(r'\[verify\]').hasMatch(text) ||
+      RegExp(r'\[edit[\s]').hasMatch(text) ||
+      _marksReadOnly(text)) {
+    return false;
+  }
+  final payloads = _ScriptedDaemonActor._payloads(text, 'harness_run');
+  if (payloads.items.isEmpty) return false;
+  final stripped = _ScriptedDaemonActor.stripPayloads(text, 'harness_run');
+  return stripped.trim().isEmpty;
+}
 
 bool _hasMutationMarker(String text) =>
     text.contains('harness_edit') ||
@@ -435,6 +449,21 @@ class HarnessAcpBackend
     // Discovery ray (ADR 0014 §2 re-based on the tree) — the mechanical
     // read tier gains "where is X?" with zero model, zero grade.
     registry.register(meaningLocateTool(world));
+    // Mechanical EXECUTION directive (allowlist enforced inside the tool —
+    // the same convention prefixes the meaning profile's run uses). A run
+    // is not a read (tests write files) — it rides its own classifier.
+    registry.register(
+      runTool(
+        FsToolsRoot(session.cwd),
+        allowlist: const [
+          ['dart', 'analyze'],
+          ['dart', 'test'],
+          ['dart', 'run'],
+          ['flutter', 'analyze'],
+          ['flutter', 'test'],
+        ],
+      ),
+    );
     world.getResource<ToolRegistryResource>().register('default', registry);
     session.readWorld = world;
     // Initial scan so zoom/impact targets exist (mechanical, zero tokens).
@@ -626,6 +655,64 @@ class HarnessAcpBackend
     return AcpStopReason.endTurn;
   }
 
+  /// ADR 0027 amendment — MECHANICAL RUNS: executes `harness_run {…}`
+  /// payloads through the allowlisted run tool (per-file test/analyze
+  /// scopes included). Zero mover, zero grade; the allowlist bounces
+  /// non-convention commands as named data BEFORE spawning.
+  Future<AcpStopReason> _runMechanicalRuns(
+    _Session session,
+    String text,
+    void Function(AcpSessionUpdate update) emit,
+  ) async {
+    await _ensureReadWorld(session);
+    final registry = session.readWorld!
+        .getResource<ToolRegistryResource>()
+        .get('default')!;
+    final tool = registry.tools[const ToolName('run')];
+    if (tool == null) {
+      emit(
+        AgentMessageChunk(
+          content: const AcpTextBlock('\n[harness_run] run tool missing\n'),
+        ),
+      );
+      return AcpStopReason.refusal;
+    }
+    final payloads = _ScriptedDaemonActor._payloads(text, 'harness_run');
+    if (payloads.dropped > 0) {
+      emit(
+        AgentMessageChunk(
+          content: AcpTextBlock(
+            '\n[harness_run] ${payloads.dropped} malformed payload(s) '
+            'dropped — never guessed (ADR 0027)\n',
+          ),
+        ),
+      );
+    }
+    for (final args in payloads.items) {
+      final command = args['command'];
+      if (command is! List || command.isEmpty) {
+        emit(
+          AgentMessageChunk(
+            content: const AcpTextBlock(
+              '\n[harness_run] payload needs command: [argv…] — dropped\n',
+            ),
+          ),
+        );
+        continue;
+      }
+      final out = await tool.execute(args) ?? '{}';
+      emit(
+        AgentMessageChunk(
+          content: AcpTextBlock(
+            '\n[run] '
+            '${out.length > 4000 ? "${out.substring(0, 4000)}…" : out}\n',
+          ),
+        ),
+      );
+    }
+    return AcpStopReason.endTurn;
+  }
+
   @override
   Future<AcpStopReason> prompt(
     AcpPromptRequest request, {
@@ -693,6 +780,22 @@ class HarnessAcpBackend
         AgentMessageChunk(
           content: AcpTextBlock(
             '\n[write path] mechanical, consent-gated — no task, no grade '
+            '(ADR 0027 amendment); wall ${sw.elapsedMilliseconds} ms\n',
+          ),
+        ),
+      );
+      return stop;
+    }
+    // ADR 0027 amendment — MECHANICAL RUNS: a directive-only
+    // `harness_run {…}` prompt executes through the allowlisted run tool.
+    if (isMechanicalRunDirective(text)) {
+      final sw = Stopwatch()..start();
+      final stop = await _runMechanicalRuns(session, text, emit);
+      sw.stop();
+      emit(
+        AgentMessageChunk(
+          content: AcpTextBlock(
+            '\n[run path] mechanical, allowlist-gated — no task, no grade '
             '(ADR 0027 amendment); wall ${sw.elapsedMilliseconds} ms\n',
           ),
         ),

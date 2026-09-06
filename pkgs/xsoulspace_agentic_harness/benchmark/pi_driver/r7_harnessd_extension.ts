@@ -258,6 +258,7 @@ const DAEMON_TOOL_NAMES = [
   "harness_impact",
   "harness_edit",
   "harness_fs_write",
+  "harness_run",
   "harness_verify",
 ];
 
@@ -738,6 +739,30 @@ export default function (pi: PiAPI) {
     execute: async (_id: string, params: any, _signal: any, _onUpdate: any, ctx: PiCtx) => {
       capturedCtx = ctx;
       return delegated(`harness_edit ${JSON.stringify(params)}`);
+    },
+  });
+
+  pi.registerTool({
+    name: "harness_run",
+    label: "Harness Run",
+    description:
+      "Mechanical EXECUTION directive through the daemon's allowlisted " +
+      "run tool (dart/flutter analyze/test/run prefixes; per-file scopes " +
+      "pass, e.g. command: [\"dart\", \"test\", \"test/foo_test.dart\"]). " +
+      "The allowlist bounces other commands as named data — never a shell. " +
+      "Args: {command: [argv…], timeout_ms?}.",
+    parameters: {
+      type: "object",
+      properties: {
+        command: { type: "array", items: { type: "string" } },
+        timeout_ms: { type: "number" },
+      },
+      required: ["command"],
+    },
+    execute: async (_id: string, params: any, _signal: any, _onUpdate: any, ctx: PiCtx) => {
+      capturedCtx = ctx;
+      // ADR 0027: pure directive — mechanical run path (zero model).
+      return delegated(`harness_run ${JSON.stringify(params ?? {})}`);
     },
   });
 

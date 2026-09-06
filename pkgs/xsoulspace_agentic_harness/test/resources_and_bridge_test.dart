@@ -230,7 +230,7 @@ void main() {
         await Future.delayed(const Duration(milliseconds: 50));
         final firstResult = await first;
         expect(
-          jsonDecode(firstResult) as Map<String, dynamic>,
+          jsonDecode(firstResult!) as Map<String, dynamic>,
           containsPair('moved', true),
         );
         expect(executions, 1);
@@ -245,7 +245,7 @@ void main() {
           reason: 'a bounced call must not enter the world',
         );
         expect(executions, 1, reason: 'the dropped move must never execute');
-        final bounce = jsonDecode(second) as Map<String, dynamic>;
+        final bounce = jsonDecode(second!) as Map<String, dynamic>;
         expect(bounce['ok'], false);
         expect(bounce['bounce'], true);
         expect(bounce['contract'], 'one_move_per_decision');

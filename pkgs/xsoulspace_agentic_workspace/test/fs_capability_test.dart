@@ -86,7 +86,7 @@ void main() {
         id: 'i_x$idx',
       );
       linkMeaning(world, from: 'i_x$idx', relation: 'impl', to: ids.first);
-      final out = await runIntent('i_x', const {});
+      final out = await runIntent('i_x$idx', const {});
       expect(
         (out['_result'] as Map)['error'],
         contains('workspace-relative'),
