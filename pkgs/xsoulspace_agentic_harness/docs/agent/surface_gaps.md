@@ -50,3 +50,18 @@
   the workspace convention (`--check`); the workspace oracle is the gate.
   An external tracker would add a protocol level the composition law
   forbids (no second protocol, ever).
+
+## 2026-09-06 — member reorder + import lint (mechanical tier escape)
+
+- **What bash/edit did**: fixed `sort_constructors_first` + `unnecessary_import`
+  + `unnecessary_parenthesis` in `test/one_move_contract_test.dart` (ADR 0028
+  gate, landed uncommitted by the concurrent session) via the `edit` tool.
+- **Why the surface didn't cover it**: `harness_edit` actions are
+  `replace_member_body` / `insert_member` / `apply_executable` — there is NO
+  member-REORDER verb (moving a constructor above a field) and no
+  import-directive edit verb. `harness_fs_write` is forbidden for Dart.
+- **The verb/spec to build**: a `reorder_member` executable kind (or
+  generalize `apply_executable` to member-level moves with the same three
+  fences — coverage + refs + integration) plus a lint-class repair pack
+  executable family (the trusted-author tier, PLAN §NOW P1, is the natural
+  host for both).

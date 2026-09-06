@@ -68,11 +68,21 @@ sees; append-only native accumulation is anti-flat by construction.
      (`contract: one_move_per_decision`, naming the executed and
      dropped calls plus the repair hint) and are NOT executed — no
      `ToolCallEvent`, no side effects.
-   - **Client-parsed path** (`processResponsesSystem`): only
-     `response.toolCalls.first` is dispatched; every dropped call is
-     recorded as a contract-violation result beat (projection-visible,
-     never executed) so the next decision's cut carries the repair
-     hint.
+   - **Client-parsed path** (`DefaultGenerationHandler`, the real-model
+     handler): a model response carrying multiple tool calls keeps its
+     FIRST call; the rest ride [ActorGenerateResponse.droppedToolCalls]
+     so the response processor records them as contract-violation result
+     beats (projection-visible, never executed) — the next decision's
+     cut carries the repair hint.
+   **Domain boundary.** The contract binds MODEL decisions only — the
+   two paths above are the only places model tool calls enter the
+   world. LLM-free scripted seams (test movers building their own
+   responses) and the daemon's mechanical directive relay (operator
+   directives, no model in the loop — batching by design, ADR 0027)
+   never accumulate model context and never populate
+   [droppedToolCalls]; they are out of the contract's domain by
+   construction, with no escape hatch reachable from any inference
+   backend.
    The model recovers through the existing repair-hint pattern: it ends
    its turn, and the NEXT decision starts fresh — with a cut that
    re-admits the prior tool result as a projected, budgeted beat.

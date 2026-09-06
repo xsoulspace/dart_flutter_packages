@@ -86,6 +86,7 @@ class ActorGenerateResponse implements EcsEvent {
     this.toolCalls = const [],
     this.error = '',
     this.taskId,
+    this.droppedToolCalls = const [],
   });
 
   final Entity actorEntity;
@@ -96,6 +97,17 @@ class ActorGenerateResponse implements EcsEvent {
   /// Non-empty when generation failed.
   final String error;
   final TaskId? taskId;
+
+  /// ADR 0028 — calls the one-move-per-decision CONTRACT dropped (the
+  /// response already kept its single executed move in [toolCalls]). The
+  /// model-facing handlers (DefaultGenerationHandler for client-parsed
+  /// calls, WorldToolBridge for the native inline loop) enforce the
+  /// contract; this list carries the dropped calls so the response
+  /// processor can record them as projection-visible bounce beats. Only
+  /// model-facing handlers populate it — LLM-free scripted seams and the
+  /// daemon's mechanical directive relay never do (no model, no
+  /// accumulation, no contract).
+  final List<ToolCall> droppedToolCalls;
 }
 
 /// Streaming chunk from the handler during generation.

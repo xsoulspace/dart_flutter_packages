@@ -87,26 +87,29 @@ void processResponsesSystem(World world) {
     // completes. Without this, runUntilIdle can exit between dispatch and
     // completion — the tool result then lands in a dead loop and is lost.
     //
-    // ADR 0028 — one move per decision (CONTRACT): only the FIRST call is
-    // dispatched; every further call is recorded as a contract-violation
-    // result beat (projection-visible, never executed) so the next
-    // decision's cut carries the named repair hint. Applies to every
-    // backend — client-parsed calls here, native inline calls in
-    // [WorldToolBridge].
-    if (response.toolCalls.isNotEmpty) {
-      final first = response.toolCalls.first;
+    // ADR 0028 — the one-move CONTRACT is enforced in the model-facing
+    // handlers (DefaultGenerationHandler for client-parsed calls,
+    // WorldToolBridge for the native inline loop); this system only records
+    // what they dropped as projection-visible bounce beats so the next
+    // decision's cut carries the repair hint. LLM-free scripted seams and
+    // the daemon's mechanical directive relay never populate
+    // [droppedToolCalls] — no model, no accumulation, no contract.
+    for (final call in response.toolCalls) {
       final toolTaskId = TaskId.create();
       taskRegistry.register(toolTaskId, TaskHandle());
       toolCallWriter.send(
         ToolCallEvent(
           actorEntity: response.actorEntity,
-          call: first,
+          call: call,
           taskId: toolTaskId,
         ),
       );
-      for (final dropped in response.toolCalls.skip(1)) {
+    }
+    if (response.droppedToolCalls.isNotEmpty) {
+      final executed = response.toolCalls.firstOrNull?.name.value;
+      for (final dropped in response.droppedToolCalls) {
         final bounceText = oneMoveContractBounceText(
-          executed: first.name.value,
+          executed: executed,
           dropped: dropped.name.value,
         );
         final bounceBeat = world.reserveEmptyEntity().entity;

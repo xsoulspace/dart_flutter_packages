@@ -111,15 +111,30 @@ class DefaultGenerationHandler implements GenerationHandler {
     // the tag parser. The client owns wire-format parsing; ecsly stays
     // structured + raw output. Tool execution always happens in the world
     // (toolExecutionSystem) — the handler never executes tools itself.
-    final toolCalls = response.toolCalls.isNotEmpty
+    var toolCalls = response.toolCalls.isNotEmpty
         ? response.toolCalls
         : parseToolCalls(response.rawOutput ?? '');
+
+    // ADR 0028 — one move per decision (CONTRACT): a MODEL decision
+    // executes at most one tool call. The native inline path enforces the
+    // same law inside WorldToolBridge; here it bounds client-parsed calls
+    // (OpenRouter/OpenAI structured calls, tag parsers). The first call is
+    // kept; the rest ride [ActorGenerateResponse.droppedToolCalls] so the
+    // response processor records them as projection-visible bounce beats —
+    // the next decision's cut carries the repair hint, the model ends its
+    // turn, and no tool output ever accumulates natively ungoverned.
+    List<ToolCall> dropped = const [];
+    if (toolCalls.length > 1) {
+      dropped = toolCalls.skip(1).toList();
+      toolCalls = [toolCalls.first];
+    }
 
     return ActorGenerateResponse(
       actorEntity: request.actorEntity,
       structuredOutput: response.structuredOutput,
       rawOutput: response.rawOutput ?? '',
       toolCalls: toolCalls,
+      droppedToolCalls: dropped,
       taskId: request.taskId,
     );
   }
