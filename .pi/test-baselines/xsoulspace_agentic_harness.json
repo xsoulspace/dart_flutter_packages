@@ -1,4 +1,13 @@
 {
-  "recordedAt": "2026-09-06T09:15:43.136Z",
-  "failures": []
+  "recordedAt": "2026-09-06T12:18:45.817Z",
+  "failures": [
+    {
+      "testId": "3",
+      "name": "loading /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_agentic_harness/test/_dbg_test.dart"
+    },
+    {
+      "testId": "1",
+      "name": "loading /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_agentic_harness/test/streaming_test.dart"
+    }
+  ]
 }

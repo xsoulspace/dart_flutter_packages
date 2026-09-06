@@ -13,6 +13,11 @@ final class AddressedRelayProtocol {
   static const openKind = 'open';
   static const dataKind = 'data';
 
+  /// Envelope kind for ephemeral frames (ADR 0029 §1). Relayed exactly
+  /// like [dataKind] — the relay is an untrusted router with no durable
+  /// view of them; they are never persisted and never enter anti-entropy.
+  static const ephemeralKind = 'ephemeral';
+
   static Uint8List encode({
     required final String fromPeerId,
     required final String toPeerId,

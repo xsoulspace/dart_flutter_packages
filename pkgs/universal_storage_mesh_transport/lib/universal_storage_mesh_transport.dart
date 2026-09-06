@@ -7,6 +7,7 @@ library;
 export 'src/addressed_relay_client.dart';
 export 'src/addressed_relay_protocol.dart';
 export 'src/addressed_relay_server.dart';
+export 'src/ephemeral_frame.dart';
 export 'src/fake_mesh_transport.dart';
 export 'src/frame_codec.dart';
 export 'src/mesh_peer.dart';

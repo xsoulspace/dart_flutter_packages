@@ -51,6 +51,11 @@ import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
         JailWriteGateway,
         WriteGateMode,
         runTool;
+import 'package:xsoulspace_agentic_harness/src/tools/task_grammar.dart'
+    show
+        executableDecisionForTask,
+        parseTaskSentence,
+        TaskGrammarMatch;
 import 'package:agentic_executables_wire/agentic_executables_wire.dart'
     show EditExecutableWire;
 import 'package:xsoulspace_agentic_harness/src/tools/meaning_locate_tool.dart'
@@ -318,6 +323,37 @@ CodingAgentTask taskFromSentence(
   );
 }
 
+/// P2 — the TASK-GRAMMAR PRE-PASS (decision amortization, PLAN §NOW): a
+/// task sentence is parsed HOST-SIDE into {verb-class, target, params} —
+/// ZERO model tokens, ZERO decisions (the classifier runs before the
+/// actor exists). On a parse hit with a pack executable whose repair
+/// class matches, the ready `apply_executable` decision data is returned
+/// for the goal frame — the actor's next decision carries it verbatim
+/// (ONE decision for the structured path). A no-parse (named class) or a
+/// named lookup miss returns null: the loop falls through to the normal
+/// decision path — never a guess, never a crash.
+///
+/// The tree must exist for the lookup; a fresh world has none, and a
+/// parse hit justifies the host-side scan (mechanical, zero tokens — the
+/// same ETL the actor would run as its first move anyway).
+Future<String?> taskGrammarPrepass(
+  World world,
+  ToolDef etl,
+  String taskPrompt,
+) async {
+  final reading = parseTaskSentence(taskPrompt);
+  if (reading is! TaskGrammarMatch) return null;
+  if ((world.maybeGetResource<MeaningIndex>()?.nodeCount ?? 0) == 0) {
+    await etl.execute({'action': 'scan'});
+  }
+  final lookup = executableDecisionForTask(world, reading);
+  if (!lookup.matched || lookup.decision == null) return null;
+  return 'task-grammar pre-pass (host, 0 tokens): this task parses to '
+      '{verb-class: ${reading.verbClass}, target: ${reading.target}} and '
+      'pack executable ${lookup.decision!['executableId']} matches — the '
+      'ready decision: harness_edit ${jsonEncode(lookup.decision!)}';
+}
+
 /// One run's measured result — every published column is carried here.
 class CodingAgentRunResult {
   CodingAgentRunResult({
@@ -541,6 +577,11 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
   // P3 git projections) always for run-graded tasks; the intent surface
   // (+ run) for intent tasks.
   final fsRoot = FsToolsRoot(jail.path);
+  // P2 — task-grammar pre-pass result (the ready apply_executable decision
+  // data when the sentence parses to the structured grammar AND a pack
+  // executable matches; null → the normal decision path). Computed below
+  // for meaning-profile runs, threaded into the goal frame at spawn.
+  String? grammarDirective;
   JailWriteGateway? gateway;
   if (writeGateMode != null) {
     gateway = JailWriteGateway(
@@ -613,6 +654,10 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
       ),
     );
     world.getResource<ToolRegistryResource>().register('default', registry);
+    // P2 — the pre-pass runs AFTER the tool surface exists (the tree may
+    // have been refreshed above) and BEFORE the actor's first decision:
+    // host-side, zero model tokens, zero decisions.
+    grammarDirective = await taskGrammarPrepass(world, etl, task.prompt);
   } else {
     final registry = ToolRegistry();
     for (final t in fsTools(fsRoot)) {
@@ -650,6 +695,11 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
     actor = carriers.single.$1.entity;
   } else {
     final scene = world.spawnComponents([Scene(), SceneFrame()]);
+    // P2 — the pre-pass decision data rides the goal frame: ONE decision
+    // carries it verbatim; without a parse hit the frame is untouched.
+    final goalText = grammarDirective == null
+        ? task.prompt
+        : '${task.prompt}\n\n$grammarDirective';
     actor = world.spawnComponents([
       Actor(agentId: AgentId.create()),
       // M1: bind a model id the router registered — a random id resolves to
@@ -661,8 +711,8 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
       PresentInScene(sceneEntity: scene),
       // The Goal + open decision: the acceptance criteria travel in-frame
       // (ADR 0009) — the verifier stamps GoalVerified against THIS goal.
-      Goal(text: task.prompt),
-      OpenDecision(prompt: task.prompt),
+      Goal(text: goalText),
+      OpenDecision(prompt: goalText),
     ]);
     final thread = spawnThread(world, actor, scene);
     world.upsertComponent(actor, ActorThreads(threads: [thread]));

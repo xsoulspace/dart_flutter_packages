@@ -53,6 +53,9 @@ final class AddressedRelayClient implements MeshTransport {
         final envelope = AddressedRelayProtocol.decode(message);
         if (envelope.toPeerId != selfId) return;
         if (envelope.kind == AddressedRelayProtocol.registerKind) return;
+        // [AddressedRelayProtocol.ephemeralKind] (ADR 0029 §1) falls
+        // through to the same delivery path as data: ephemeral frames are
+        // relayed like other frames, with no durable treatment anywhere.
         if (envelope.kind == AddressedRelayProtocol.openKind) {
           _sessions.putIfAbsent(envelope.fromPeerId, () {
             final created = _AddressedSession(envelope.fromPeerId);
@@ -127,6 +130,24 @@ final class AddressedRelayClient implements MeshTransport {
   Future<void> _route(final String peerId, final Uint8List bytes) async {
     await _requireChannel();
     _sendEnvelope(toPeerId: peerId, payload: bytes);
+  }
+
+  /// Sends an ephemeral-frame payload (ADR 0029 §1) under the relay's
+  /// [AddressedRelayProtocol.ephemeralKind] envelope kind. Ephemeral
+  /// frames are relayed exactly like data — the receiver's delivery path
+  /// is identical — but the explicit kind lets observability at the relay
+  /// tell unlogged traffic apart from sync traffic, with no durable
+  /// treatment anywhere.
+  Future<void> sendEphemeral({
+    required final String toPeerId,
+    required final List<int> payload,
+  }) async {
+    await _requireChannel();
+    _sendEnvelope(
+      toPeerId: toPeerId,
+      payload: payload,
+      kind: AddressedRelayProtocol.ephemeralKind,
+    );
   }
 }
 

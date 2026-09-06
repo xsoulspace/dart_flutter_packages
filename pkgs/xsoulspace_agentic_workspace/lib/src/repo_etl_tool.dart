@@ -18,11 +18,14 @@ library;
 
 import 'dart:io';
 
+import 'package:xsoulspace_agentic_harness/src/meaning/capability_nodes.dart'
+    show CapabilityEntry, reconcileCapabilityNodes;
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart' show FM;
 
 import 'code_etl.dart'
     show CodeFileScan, buildMeaningTreeFromCode, dartFiles;
+import 'edit_pack_capture.dart' show EditPackCapture;
 import 'file_class_spec.dart' show fileClassSpecs, specForRel;
 import 'fs_etl.dart'
     show
@@ -114,6 +117,9 @@ ToolDef repoEtlTool(
               // Fs tier (ADR 0024): the same walk keeps dir/file nodes
               // honest for EVERY file class.
               final fs = refreshFsTier(world, workspace, scan: fsScan);
+              // P2 — pack inventory reconcile rides EVERY refresh tick
+              // (idempotent: updates in place, removals prune).
+              final capabilities = registerPackInventory(world, workspace);
               st
                 ..lastScan = DateTime.now()
                 ..files = fs.files
@@ -125,6 +131,7 @@ ToolDef repoEtlTool(
                 'files': st.files,
                 'fs_added': fs.added,
                 'fs_dropped': fs.dropped,
+                'capabilities': capabilities,
                 'note': 'persistent tree refreshed (world carried it)',
               };
             }
@@ -160,6 +167,8 @@ ToolDef repoEtlTool(
             ..lastScan = DateTime.now()
             ..files = tick.files
             ..dirs = tick.dirs;
+          // P2 — pack inventory reconcile rides EVERY refresh tick.
+          final capabilities = registerPackInventory(world, workspace);
           return {
             'ok': true,
             'refreshed_files': touched,
@@ -167,6 +176,7 @@ ToolDef repoEtlTool(
             'files': tick.files,
             'fs_added': tick.added,
             'fs_dropped': tick.dropped,
+            'capabilities': capabilities,
             if (tick.staleDirs > 0) 'fs_stale_dirs': tick.staleDirs,
           };
         case 'scan':
@@ -183,6 +193,9 @@ ToolDef repoEtlTool(
           // mechanical tick refreshes mtimes before the prompt.
           final preexisting = world.maybeGetResource<MeaningIndex>();
           if (preexisting != null && preexisting.nodeCount > 0) {
+            // P2 — the restored persistent tree still reconciles the pack
+            // (the tool instance is fresh; the inventory must not drift).
+            final capabilities = registerPackInventory(world, workspace);
             st
               ..lastScan = DateTime.now()
               ..files = preexisting.byId.keys
@@ -200,6 +213,7 @@ ToolDef repoEtlTool(
               'already': true,
               'files': st.files,
               'symbols': st.symbols,
+              'capabilities': capabilities,
               'note': 'tree already present in this persistent world — the '
                   'host refreshes it mechanically; zoom/impact away',
             };
@@ -222,6 +236,10 @@ ToolDef repoEtlTool(
           };
           final built = buildMeaningTreeFromCode(world, scans, repoRoot: workspace.path);
           final fs = buildFsTier(world, workspace, scan: fsScan);
+          // P2 — pack inventory as MEANING nodes: the pack executables
+          // join the tree in the SAME scan pass (zero model tokens) — the
+          // agent LOCATEs and ZOOMs its own capabilities.
+          final capabilities = registerPackInventory(world, workspace);
           st
             ..lastScan = DateTime.now()
             ..files = fs.files
@@ -235,6 +253,7 @@ ToolDef repoEtlTool(
             'dart_files': built.files,
             'symbols': built.symbols,
             'edges': built.edges,
+            'capabilities': capabilities,
             'note': 'tree is world state (code graph + fs tier) — use '
                 'meaning_zoom / meaning_impact to read it; it is '
                 're-derivable and never snapshotted',
@@ -291,6 +310,29 @@ List<File> _changedFiles(
 
 int _countDartFiles(Directory workspace) =>
     fsFilesByParseableClass(workspace).length;
+
+/// P2 — pack inventory as MEANING nodes: loads the project pack and
+/// reconciles every executable into the tree (kind 'executable', label =
+/// executable id, impl edge to the pack anchor, capability_of → dir_root).
+/// Idempotent across refreshes: re-scan updates in place; entries removed
+/// from the pack are dropped — never resurrected. Returns the live
+/// inventory size. A corrupt/missing pack contributes ZERO entries (the
+/// pack loader skips corrupt rows as named data) — registration never
+/// throws into the scan path.
+int registerPackInventory(World world, Directory workspace) {
+  final entries = [
+    for (final e in EditPackCapture(workspace).load())
+      CapabilityEntry(
+        executableId: e.wire.id,
+        kind: e.wire.kind.wire,
+        params: e.wire.params,
+        verification: [for (final v in e.wire.verification) v.wire],
+        description: e.wire.description,
+      ),
+  ];
+  reconcileCapabilityNodes(world, entries);
+  return entries.length;
+}
 
 /// Dart files enumerated the SAME way the scan's spec dispatch does — the
 /// legacy `_changedFiles` comparison base (kept honest with the registry).

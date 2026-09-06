@@ -26,6 +26,8 @@ import 'package:from_json_to_json/from_json_to_json.dart';
 
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
+import '../meaning/execution_meaning.dart' show RunMeaningRecorder;
+
 /// The path jail for [fsTools]: every tool path is resolved against this root
 /// and must stay inside it.
 class FsToolsRoot {
@@ -822,7 +824,11 @@ ToolDef globTool(FsToolsRoot root) => ToolDef.encode(
 /// (`command_not_allowed`) BEFORE spawning — no bytes are touched. The
 /// legacy run-graded arm keeps the unconstrained tool (direct-profile
 /// hosts only; LEGACY-HOST-ONLY).
-ToolDef runTool(FsToolsRoot root, {List<List<String>>? allowlist}) =>
+ToolDef runTool(
+  FsToolsRoot root, {
+  List<List<String>>? allowlist,
+  RunMeaningRecorder? meaning,
+}) =>
     ToolDef.encode(
       name: const ToolName('run'),
       description:
@@ -855,24 +861,33 @@ ToolDef runTool(FsToolsRoot root, {List<List<String>>? allowlist}) =>
             'hint': 'command is required',
           };
         }
-        if (allowlist != null &&
-            !allowlist.any(
-              (prefix) =>
-                  cmd.length >= prefix.length &&
-                  List.generate(
-                    prefix.length,
-                    (i) => cmd[i] == prefix[i],
-                  ).every((m) => m),
-            )) {
-          return {
-            'ok': false,
-            'code': 'command_not_allowed',
-            'hint':
-                'this surface runs only the workspace convention '
-                'commands (e.g. dart analyze / dart test / dart run <file>) '
-                '— file mutation goes through the edit verbs',
-            'command': cmd,
-          };
+        // THE ALLOWLIST LAW (run_allowlist_test.dart): the argv must START
+        // with an allowlisted prefix. The check happens BEFORE spawning AND
+        // BEFORE any execution-meaning write — a refused command leaves the
+        // meaning tree untouched (zero nodes, zero beats, zero spans).
+        String? matchedScope;
+        if (allowlist != null) {
+          for (final prefix in allowlist) {
+            if (cmd.length >= prefix.length &&
+                List.generate(
+                  prefix.length,
+                  (i) => cmd[i] == prefix[i],
+                ).every((m) => m)) {
+              matchedScope = prefix.join(' ');
+              break;
+            }
+          }
+          if (matchedScope == null) {
+            return {
+              'ok': false,
+              'code': 'command_not_allowed',
+              'hint':
+                  'this surface runs only the workspace convention '
+                  'commands (e.g. dart analyze / dart test / dart run <file>) '
+                  '— file mutation goes through the edit verbs',
+              'command': cmd,
+            };
+          }
         }
         final cwd = _str(params, 'cwd');
         final resolvedCwd = (cwd == null || cwd.isEmpty)
@@ -881,6 +896,13 @@ ToolDef runTool(FsToolsRoot root, {List<List<String>>? allowlist}) =>
         final timeoutMs = (_num(params, 'timeout_ms') ?? 30000)
             .clamp(1, 120000)
             .toInt();
+        // Execution as meaning (PLAN §NOW P2): the allowlist check already
+        // passed, so — and only now — the run is declared/re-used as an
+        // intent node and its outcome lands as an append-only beat + a
+        // write-time-budgeted output span. Output itself NEVER flows back
+        // through the meaning layer except as a bounded span.
+        final scope = matchedScope ?? 'unrestricted';
+        final sw = Stopwatch()..start();
         try {
           final result =
               await Process.run(
@@ -893,6 +915,16 @@ ToolDef runTool(FsToolsRoot root, {List<List<String>>? allowlist}) =>
                 Duration(milliseconds: timeoutMs),
                 onTimeout: () => ProcessResult(0, -1, '', 'timeout'),
               );
+          sw.stop();
+          meaning?.recordOutcome(
+            command: cmd,
+            allowlistScope: scope,
+            exitCode: result.exitCode,
+            durationMs: sw.elapsedMilliseconds,
+            stdout: result.stdout.toString(),
+            stderr: result.stderr.toString(),
+            timedOut: result.exitCode == -1,
+          );
           return {
             'ok': result.exitCode == 0,
             'exit_code': result.exitCode,
@@ -901,6 +933,15 @@ ToolDef runTool(FsToolsRoot root, {List<List<String>>? allowlist}) =>
             if (result.exitCode == -1) 'code': 'timeout',
           };
         } on ProcessException catch (e) {
+          sw.stop();
+          meaning?.recordOutcome(
+            command: cmd,
+            allowlistScope: scope,
+            exitCode: -1,
+            durationMs: sw.elapsedMilliseconds,
+            stdout: '',
+            stderr: e.message,
+          );
           return {'ok': false, 'code': 'spawn_error', 'message': e.message};
         }
       },

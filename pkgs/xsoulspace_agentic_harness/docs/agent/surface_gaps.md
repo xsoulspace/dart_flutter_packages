@@ -140,3 +140,93 @@
 - **The verb/spec to build**: none new — the trusted-author
   "structural executables" kind covers constructor-param threading when
   evidence demands; new-file bootstrap remains the materializer-spec gap.
+
+## 2026-09-06 — `ae know` CLI + hub manifest (P3 knowledge plane, lane G)
+
+- **What bash/escape-hatch did**: lane G edited `~/xs/agentic_executables`
+  (OUTSIDE the meaning surface) with root_edit/write/bash: added the
+  `ae.hub_manifest.v1` wire contract (`agentic_executables_wire`, new file
+  `hub_manifest_wire.dart` + `canonicalJsonForm` extraction), the `ae know`
+  command in `agentic_executables_cli/lib/src/cli.dart` (parser case +
+  `_handleKnow`/`_knowBuild`/`_knowExport`/`_knowImport`/`_writeKnowPack`
+  handlers inserted by exact-text edit), and two new test files. No dart
+  code in dart_flutter_packages packages was touched.
+- **Why the surface didn't cover it**: the repo is not registered as a
+  meaning-tree workspace root — `harness_scan`/`harness_edit` operate on
+  dart_flutter_packages only, so cross-repo Dart edits fall back to the
+  honest-edit path by routing (AGENTS.md: "everything else … bash is
+  HONEST and allowed" with this note).
+- **The verb/spec to build**: a cross-root meaning surface — register
+  sibling repos (e.g. `~/xs/agentic_executables`) as harnessd roots so
+  `harness_scan`/`harness_zoom`/`harness_edit`/`harness_verify` cover their
+  Dart packages too; the `ae know`/hub-manifest work is exactly the kind of
+  seam-first change (wire contract + CLI verb + round-trip gate) the
+  meaning surface is designed to edit through.
+
+## 2026-09-06 — P3 VCS-as-meaning projection bootstrap (lane H)
+
+- **What bash/edit did**: (a) wrote the NEW files `lib/src/meaning/vcs_meaning.dart` +
+  `test/vcs_meaning_test.dart` via the write tool — the projection under construction IS
+  the new meaning surface (same new-file bootstrap gap lane B named: `harness_edit`
+  compiles op-chains into COVERED member bodies and cannot create files); (b) ran
+  `git init/commit` in SYSTEM TEMP fixture dirs inside the GATE (test-side fixture
+  commands, never model surface; the adapter itself is jailed to
+  `gitReadOnlyCommands` = {status, branch, log, rev-parse} with named refusals).
+- **Why the surface didn't cover it**: new-file bootstrap (no prior coverage → the
+  coverage fence cannot admit it) plus fixture repo setup that must run OUTSIDE the
+  jail by design.
+- **The verb/spec to build**: none new for reading — the projection lands as pure
+  MeaningNode/MeaningProps/MeaningEdge data consumable through the EXISTING
+  locate/zoom rays. NAMED, NOT BUILT (registration seam, owned with lanes E/F): (1)
+  export `vcs_meaning.dart` from the package barrel + wire `projectVcsMeaning` into
+  the daemon's tree-refresh tick (alongside repo_etl) so `vcs.repo` nodes enter the
+  live workspace world; (2) mutation verbs (branch/create, stage/commit as meaning
+  moves) stay with the edit tier — deliberately not built this round.
+
+## 2026-09-06 — Execution-as-meaning bootstrap (lane F)
+
+- **What the meaning surface did**: `harness_scan` → `harness_locate`(`runTool`)
+  → `harness_zoom`(point) before any edit (34 ms / 16 ms walls — ADR 0027
+  confirmed); then `harness_edit` `replace_member_body` on the runTool symbol was
+  REFUSED (`mover_refusal: empty move` — no captured `EditExecutableWire` for an
+  uncaptured symbol whose "body" is a `ToolDef.encode(...)` expression wrapping a
+  nested `execute` closure).
+- **What the edit tool did**: (a) `runTool` signature change (new optional
+  `RunMeaningRecorder? meaning` param) + nested-closure body threading
+  (allowlist-scope capture, stopwatch, `meaning?.recordOutcome` on
+  success/timeout/spawn-error) + one import line in `lib/src/tools/fs_tools.dart`;
+  (b) wrote NEW files `lib/src/meaning/execution_meaning.dart` +
+  `test/execution_meaning_test.dart` (same new-file bootstrap gap lane B/H named:
+  the coverage fence cannot admit a file it has never covered).
+- **Why the surface didn't cover it**: `edit_symbol`'s span currency is top-level
+  member bodies with captured executables — it has no verb for (1) signature
+  changes on uncaptured symbols, (2) editing NESTED closures inside a returned
+  expression body, (3) import insertion, (4) new-file bootstrap.
+- **The verb/spec to build**: a capture path that admits `ToolDef` factory bodies
+  (the execute closure as a named sub-executable: `runTool/execute`), so the
+  run tool's meaning-threading evolves through the surface like any other member;
+  plus the standing new-file bootstrap verb. Nothing re-implemented in bash — the
+  escape was one honest edit-tool pass, logged here per the routing law.
+
+## 2026-09-06 — Pack inventory as meaning nodes + task-grammar classifier (lane E)
+
+- **What the meaning surface did**: `harness_scan` → `harness_locate`/`harness_zoom`
+  to read `repoEtlTool`, `editSymbolTool`'s pack load loop, `meaning_locate`'s ray
+  and the `RunGradedGoalPolicy`/`ReActContinuationPolicy` flow order before any
+  edit; `harness_edit` was NOT used for the code changes of this lane.
+- **What the escapes did**: (1) wrote NEW files `lib/src/meaning/capability_nodes.dart`,
+  `lib/src/tools/task_grammar.dart` + three NEW test files (the standing new-file
+  bootstrap gap — same shape lanes B/F/H named; the coverage fence cannot admit a
+  file it has never covered); (2) applied multi-block exact-text edits via the
+  host edit tool on `repo_etl_tool.dart` and `coding_agent_runner.dart` (5-block
+  and 3-block replacements around non-member code: import lists, result-map
+  literals, spawn arguments — `edit_symbol`'s member-body span currency has no
+  verb for import-list or multi-site literal splices on uncaptured symbols);
+  (3) two mechanical `python3` inline splices for const-correctness fixes in the
+  new test file.
+- **Why the surface didn't cover it**: same named gaps as lane F — no new-file
+  materializer verb; no verb for import-block / argument-list / map-literal edits
+  (the span tier covers member bodies with captured executables only).
+- **The verb/spec to build**: new-file bootstrap verb + an "anchored splice"
+  edit class (import block, argument list, record/map literal) with the same
+  fence family; then this lane's edits become `edit_symbol` moves.
