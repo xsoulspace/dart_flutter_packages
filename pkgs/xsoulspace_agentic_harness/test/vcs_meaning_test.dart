@@ -16,7 +16,6 @@ import 'dart:convert' show jsonDecode;
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:xsoulspace_agentic_harness/src/meaning/vcs_meaning.dart';
 import 'package:xsoulspace_agentic_harness/src/tools/meaning_locate_tool.dart';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 

@@ -237,6 +237,34 @@ void main() {
     expect((cut['span'] as Map)['text'], contains('Updated prose'));
   });
 
+  test('zoom staleness: WITHOUT a scan/refresh, a point zoom after a '
+      'materializer edit serves the POST-edit span (refreshed: true)',
+      () async {
+    await _scan(world, jail);
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    final body = 'Zoom-stale prose served fresh from disk.\n';
+    final r = await _edit(root, {
+      'path': guideRel,
+      'op': 'replace_section',
+      'anchor': 'Usage',
+      'body': body,
+    });
+    expect(r['ok'], true, reason: '$r');
+    // NO refresh tick — the POINT zoom itself re-stats the focus node's
+    // file (one stat + one bounded re-read) and re-derives that ONE node
+    // before serving the cut (PLAN §NOW "Zoom staleness").
+    final zoom = meaningZoomTool(world, spanReader: meaningSpanReader(root));
+    final cut = _decoded(await zoom.execute({
+      'focusId': 'sec_f_docs_guide.md_2',
+      'zoom': 'point',
+      'budget': 1024,
+    }));
+    expect(cut['refreshed'], true, reason: '$cut');
+    expect(cut['refreshed_path'], guideRel);
+    expect((cut['span'] as Map)['text'], contains('Zoom-stale prose'),
+        reason: 'a just-edited file must never serve pre-edit text');
+  });
+
   test('a broken relative link AUTO-REVERTS with the named failure class '
       '(zero_broken_links)', () async {
     await _scan(world, jail);

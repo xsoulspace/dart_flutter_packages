@@ -151,6 +151,25 @@ class ConsentPlan {
 /// attempts + up to 6 escalation rounds — never unbounded.
 const maxEscalationCeiling = 9;
 
+/// P1 consent UX hardening — the permission-wait DEADLINE as DATA. 45 s:
+/// well under the 5-minute ACP permission timeout that produced the Phase
+/// 1.5 unbounded stall loop (an unanswered request held the whole tool
+/// round for its deadline and the model retried into another 5-minute
+/// wait), yet above typical human glance latency for a consent card so a
+/// real approver is never raced. It is a LOOP-BREAKER, not a policy
+/// change: the deadline resolves THIS wait as DENY (deny-by-default
+/// holds); the human can still allow a LATER retry by re-delegating.
+/// Tests inject a shorter deadline through
+/// [HarnessAcpBackend.permissionDeadline].
+const defaultPermissionDeadline = Duration(seconds: 45);
+
+/// The outcome of ONE bounded client permission round-trip: WHICH path
+/// answered (F3 attribution: `approver` | `timeout` | `cancel-deny` |
+/// `no-approver`) and whether the change is allowed. `failureClass` names
+/// the deny for the tool result (`permission_timeout` /
+/// `permission_cancelled`); empty for a plain approver answer.
+typedef _PermissionAnswer = ({bool allowed, String path, String failureClass});
+
 /// ADR 0027 §1 — is [text] a DIRECTIVE-ONLY read prompt? True iff it
 /// carries ≥1 read directive (`[scan]`, `[zoom …]`, structured
 /// `harness_zoom`/`harness_impact` payloads) AND no mutation marker
@@ -254,6 +273,7 @@ class HarnessAcpBackend
     this.remoteMover = false,
     this.apiKey,
     this.checkCommand,
+    this.permissionDeadline = defaultPermissionDeadline,
   });
 
   /// Backend name, resolved against [bindings] (e.g. `open_router`,
@@ -275,6 +295,11 @@ class HarnessAcpBackend
   /// convention (the CLI spells it `--check`). The product host (agent
   /// docs) declares it as data on the binding. Null → convention decides.
   final List<String>? checkCommand;
+
+  /// P1 consent UX hardening: how long a client permission round-trip may
+  /// stay unanswered before it resolves as DENY (deny-on-timeout). See
+  /// [defaultPermissionDeadline] for the default's rationale.
+  final Duration permissionDeadline;
 
   /// R7: when true, delegated tasks run through the MEANING-PROFILE
   /// surface ([repo_etl, meaning_zoom, meaning_impact, edit_symbol, run])
@@ -336,6 +361,96 @@ class HarnessAcpBackend
   /// plan-allowed answer lands here as named data).
   List<String> consentAudit(String sessionId) =>
       List.unmodifiable(_sessions[sessionId]?.consentLog ?? const []);
+
+  var _permissionSeq = 0;
+
+  /// P1 consent UX hardening — the ONE bounded client permission
+  /// round-trip. Races the client's answer against (a) the permission
+  /// deadline (deny-on-timeout, `permission_timeout`) and (b) a session
+  /// cancel (deny, `permission_cancelled` — [cancelSession] completes the
+  /// pending wait; never a dangling Future, the Phase 1.5 bridge-crash
+  /// class). The plan path does NOT go through here: a plan answers
+  /// BEFORE the client is asked and logs its own single audit line.
+  ///
+  /// F3 attribution: every answer is audited WITH ITS PATH (`via approver`
+  /// / `via timeout` / `via cancel-deny` / `via no-approver`) — a silent
+  /// allow is detectable in the audit. A LATE answer (after the deadline
+  /// or after a cancel) is LOGGED and IGNORED: the wait already resolved
+  /// DENY, and a permission that outlives its deadline can never
+  /// retroactively allow (deny-by-default is monotonic in time) — a later
+  /// allow requires a NEW round-trip (the deadline is a loop-breaker, not
+  /// a policy change).
+  Future<_PermissionAnswer> _askClientPermission(
+    _Session? session, {
+    required String sessionId,
+    required AcpPermissionRequest request,
+    required String subject,
+  }) async {
+    final requester = _permissionRequester;
+    if (requester == null) {
+      // No approver wired: deny is structural (never an unconditional
+      // allow) — and audited like every other answer.
+      session?.consentLog.add('$subject DENIED via no-approver (structural)');
+      return (allowed: false, path: 'no-approver', failureClass: '');
+    }
+    final pending = Completer<_PermissionAnswer>();
+    final key = 'perm_${++_permissionSeq}';
+    session?.pendingPermissions[key] = pending;
+    // Deadline as DATA: on expiry the wait resolves DENY — the model's
+    // tool round is never held for the client's full silence.
+    final timer = Timer(permissionDeadline, () {
+      if (!pending.isCompleted) {
+        pending.complete(
+          (
+            allowed: false,
+            path: 'timeout',
+            failureClass: 'permission_timeout',
+          ),
+        );
+      }
+    });
+    // The client's answer is observed TO THE END: a late answer resolves
+    // the LOG only (see the doc comment) — never the resolved wait.
+    unawaited(() async {
+      AcpPermissionOutcome outcome;
+      try {
+        outcome = await requester(request);
+      } on Object {
+        // A throwing requester must never dangle the wait (Phase 1.5).
+        if (!pending.isCompleted) {
+          pending.complete(
+            (
+              allowed: false,
+              path: 'approver',
+              failureClass: 'permission_approver_error',
+            ),
+          );
+        }
+        return;
+      }
+      final allowed = outcome == AcpPermissionOutcome.allow;
+      if (pending.isCompleted) {
+        session?.consentLog.add(
+          '$subject LATE ${allowed ? "APPROVED" : "DENIED"} via approver '
+          '(IGNORED — the wait already resolved deny; the deadline is a '
+          'loop-breaker, not a policy change)',
+        );
+        return;
+      }
+      pending.complete(
+        (allowed: allowed, path: 'approver', failureClass: ''),
+      );
+    }());
+    final answer = await pending.future;
+    timer.cancel();
+    session?.pendingPermissions.remove(key);
+    session?.consentLog.add(
+      '$subject ${answer.allowed ? "APPROVED" : "DENIED"} via '
+      '${answer.path}'
+      '${answer.failureClass.isEmpty ? "" : " (${answer.failureClass})"}',
+    );
+    return answer;
+  }
 
 
   @override
@@ -1100,10 +1215,17 @@ class HarnessAcpBackend
     // R7c item 3 — DENY-BY-DEFAULT: route to the attached client requester
     // (the write gate / edit approver); with no approver wired there is NO
     // approval path, so the answer is reject — never an unconditional
-    // allow.
-    final requester = _permissionRequester;
-    if (requester == null) return AcpPermissionOutcome.reject;
-    return requester(request);
+    // allow. P1: bounded like every client round-trip — deny-on-timeout,
+    // cancel-interruptible, audited with its path.
+    final answer = await _askClientPermission(
+      _sessions[request.sessionId],
+      sessionId: request.sessionId,
+      request: request,
+      subject: 'request_permission ${request.title}',
+    );
+    return answer.allowed
+        ? AcpPermissionOutcome.allow
+        : AcpPermissionOutcome.reject;
   }
 
   @override
@@ -1121,6 +1243,21 @@ class HarnessAcpBackend
       if (!pending.isCompleted) pending.completeError(_Cancelled());
     }
     session.pendingMoves.clear();
+    // P1 consent UX hardening: cancel interrupts permission waits — every
+    // pending wait resolves as DENY promptly, the tool returns and the
+    // loop idles (never a dangling await; Phase 1.5 findings b/F3).
+    for (final pending in session.pendingPermissions.values) {
+      if (!pending.isCompleted) {
+        pending.complete(
+          (
+            allowed: false,
+            path: 'cancel-deny',
+            failureClass: 'permission_cancelled',
+          ),
+        );
+      }
+    }
+    session.pendingPermissions.clear();
     bindings[backend]?.cancelActiveGeneration?.call();
   }
 
@@ -1159,6 +1296,12 @@ class _Session {
   /// blocked awaiting the client's typed tool calls unblocks and the turn
   /// ends cancelled (never a hang).
   final pendingMoves = <String, Completer<AcpMoveResponse>>{};
+
+  /// P1 consent UX hardening: the in-flight permission waits of this
+  /// session. `cancelSession` resolves every pending wait as DENY
+  /// promptly — never a dangling Future (the Phase 1.5 bridge-crash
+  /// class). Keyed by permission-wait id.
+  final pendingPermissions = <String, Completer<_PermissionAnswer>>{};
 
   /// N4 escalation rung: the task whose budget exhausted, awaiting operator
   /// guidance. The next prompt continues it with a widened (monotonic,

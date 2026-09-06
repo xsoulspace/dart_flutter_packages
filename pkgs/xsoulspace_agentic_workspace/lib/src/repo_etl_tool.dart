@@ -34,6 +34,7 @@ import 'fs_etl.dart'
         reconcileFsTier,
         refreshFsTier,
         registerFsCapabilities,
+        registerMeaningNodeRefresher,
         scanWorkspaceFs;
 
 /// Mutable scan bookkeeping for one workspace (staleness, file count).
@@ -64,6 +65,10 @@ ToolDef repoEtlTool(
   // Capability ops (effects-as-data): fs_stat is registered on the world
   // so intents can compose jailed fs capabilities (interpreter tier).
   registerFsCapabilities(world, workspace);
+  // Zoom staleness refresher (PLAN §NOW): world data the harness
+  // `meaning_zoom` point cut discovers — every zoom serves post-edit
+  // spans without waiting for a tick.
+  registerMeaningNodeRefresher(world, workspace);
   return ToolDef.encode(
     name: const ToolName('repo_etl'),
     description:
@@ -117,6 +122,10 @@ ToolDef repoEtlTool(
               // Fs tier (ADR 0024): the same walk keeps dir/file nodes
               // honest for EVERY file class.
               final fs = refreshFsTier(world, workspace, scan: fsScan);
+              // VCS registration seam (PLAN §NOW P3): the restored world
+              // also re-projects the VCS state — the tick never breaks
+              // over VCS (named status, zero nodes on degradation).
+              final vcs = await _projectVcs(world, workspace);
               // P2 — pack inventory reconcile rides EVERY refresh tick
               // (idempotent: updates in place, removals prune).
               final capabilities = registerPackInventory(world, workspace);
@@ -132,6 +141,7 @@ ToolDef repoEtlTool(
                 'fs_added': fs.added,
                 'fs_dropped': fs.dropped,
                 'capabilities': capabilities,
+                'vcs': vcs,
                 'note': 'persistent tree refreshed (world carried it)',
               };
             }
@@ -169,6 +179,10 @@ ToolDef repoEtlTool(
             ..dirs = tick.dirs;
           // P2 — pack inventory reconcile rides EVERY refresh tick.
           final capabilities = registerPackInventory(world, workspace);
+          // VCS registration seam (PLAN §NOW P3): the daemon's mechanical
+          // tick carries branch/head/change into the live world — zero
+          // model tokens, named skip on degradation, never a tick breaker.
+          final vcs = await _projectVcs(world, workspace);
           return {
             'ok': true,
             'refreshed_files': touched,
@@ -177,6 +191,7 @@ ToolDef repoEtlTool(
             'fs_added': tick.added,
             'fs_dropped': tick.dropped,
             'capabilities': capabilities,
+            'vcs': vcs,
             if (tick.staleDirs > 0) 'fs_stale_dirs': tick.staleDirs,
           };
         case 'scan':
@@ -196,6 +211,10 @@ ToolDef repoEtlTool(
             // P2 — the restored persistent tree still reconciles the pack
             // (the tool instance is fresh; the inventory must not drift).
             final capabilities = registerPackInventory(world, workspace);
+            // VCS registration seam: a scan that found a restored tree
+            // still projects the VCS state (the world may never have
+            // carried it).
+            final vcs = await _projectVcs(world, workspace);
             st
               ..lastScan = DateTime.now()
               ..files = preexisting.byId.keys
@@ -214,6 +233,7 @@ ToolDef repoEtlTool(
               'files': st.files,
               'symbols': st.symbols,
               'capabilities': capabilities,
+              'vcs': vcs,
               'note': 'tree already present in this persistent world — the '
                   'host refreshes it mechanically; zoom/impact away',
             };
@@ -240,6 +260,12 @@ ToolDef repoEtlTool(
           // join the tree in the SAME scan pass (zero model tokens) — the
           // agent LOCATEs and ZOOMs its own capabilities.
           final capabilities = registerPackInventory(world, workspace);
+          // VCS registration seam (PLAN §NOW P3): vcs.repo/branch/head/
+          // change nodes enter the tree in the SAME pass (zero model
+          // tokens) — the daemon world carries VCS state without any test
+          // bootstrap. Not-a-repo → zero nodes; adapter error → named
+          // skip; the scan pass NEVER breaks over VCS.
+          final vcs = await _projectVcs(world, workspace);
           st
             ..lastScan = DateTime.now()
             ..files = fs.files
@@ -254,6 +280,7 @@ ToolDef repoEtlTool(
             'symbols': built.symbols,
             'edges': built.edges,
             'capabilities': capabilities,
+            'vcs': vcs,
             'note': 'tree is world state (code graph + fs tier) — use '
                 'meaning_zoom / meaning_impact to read it; it is '
                 're-derivable and never snapshotted',
@@ -261,6 +288,27 @@ ToolDef repoEtlTool(
       }
     },
   );
+}
+
+/// VCS registration seam (PLAN §NOW P3) — the ONE helper every scan/
+/// refresh/tick result reports: projects the VCS state through the
+/// read-only adapter into the live world. Failure-HONEST: not-a-repo →
+/// the projection's own named `not_a_repo` (zero nodes); an adapter
+/// error → a NAMED skip — the scan pass never breaks over VCS.
+Future<Map<String, Object?>> _projectVcs(
+  World world,
+  Directory workspace,
+) async {
+  try {
+    final r = await projectVcsMeaning(
+      world,
+      const GitVcsAdapter(),
+      workspace.path,
+    );
+    return {'status': r.status, 'nodes': r.nodeIds.length};
+  } on Object catch (e) {
+    return {'status': 'vcs_skip', 'nodes': 0, 'error': '$e'};
+  }
 }
 
 /// ADR 0027 dogfood fix — the restored-tree pass enumerates from the TREE,

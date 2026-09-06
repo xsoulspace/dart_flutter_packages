@@ -249,3 +249,32 @@
   json emitter needed a comma fix-up whose fence must WIDEN to the adjusted
   adjacent line — `keypath_splice`'s fence contract should name
   "adjacent-line punctuation repair" as part of the intended change.
+
+## 2026-09-06 — lane B′ (VCS registration seam + zoom staleness)
+
+- **What bash/edit did**: (1) one barrel export line (`vcs_meaning.dart` in
+  `lib/xsoulspace_agentic_harness.dart`); (2) restructured the
+  `meaning_zoom` `execute` closure in `meaning_query_tools.dart`
+  (multi-site splice inside one closure body: staleness re-stat before the
+  cut, `refreshed`/`refreshed_path` result fields, null-safe span props
+  re-read) plus a NEW typedef + `Resource` class
+  (`MeaningNodeRefresher`/`MeaningNodeRefresh`); (3) new top-level
+  functions in the workspace pkg (`registerMeaningNodeRefresher` in
+  fs_etl.dart, `_projectVcs` + four result-map splices in repo_etl_tool.dart);
+  (4) new test files (`vcs_registration_test.dart`, a staleness gate in
+  md_materializer_test.dart, `tool/zoom_staleness_probe.dart`); (5) scoped
+  per-package test runs via `flutter test` in the package dir.
+- **Why the surface didn't cover it**: `harness_edit`'s span currency is
+  member bodies/insert-members with captured executables — no verb for
+  (a) barrel export lines, (b) top-level type declarations (typedef +
+  Resource class), (c) closure-body restructures with map-literal splices
+  at multiple sites, (d) new files (the known new-file class). The run
+  tool's allowlist has NO package-cwd scope: `dart test` from the repo
+  root fails on flutter deps ("Because xsoulspace_monetization_rustore
+  requires the Flutter SDK") — every scoped test run escaped to bash.
+- **The verb/spec to build**: (a) a package-scoped cwd pin on the run tool
+  (`{"command":["dart","test",…],"pkg":"xsoulspace_agentic_harness"}` or
+  auto-derive from the path scope) — closes the EVERY-session escape;
+  (b) covered by the standing new-file + anchored-splice rows (lanes B/E/F/D);
+  (c) a `declare_resource`/`declare_typedef` insert verb for top-level
+  declarations would have covered the `MeaningNodeRefresh` half of this lane.

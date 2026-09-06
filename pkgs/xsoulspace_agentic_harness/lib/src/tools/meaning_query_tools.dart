@@ -36,6 +36,32 @@ typedef MeaningSpanReader = Map<String, Object?>? Function(
   int budgetTokens,
 );
 
+/// Host-supplied SINGLE-NODE refresher (PLAN §NOW "Zoom staleness"): on a
+/// `point` zoom of a file-bearing node (a non-empty `path` prop — file /
+/// section / key), the tool calls this BEFORE serving the cut, so a
+/// just-edited file never serves pre-edit text while the tree lags. The
+/// host stats the underlying file (mtime + size) and, only when the
+/// node's recorded props differ, re-derives that ONE node from disk — one
+/// stat plus at most one small re-read, never a tree-wide rebuild. The
+/// core stays fs-blind (ADR 0015): the same host-closes-over-the-jail
+/// shape as [MeaningSpanReader]. Returns named data when a refresh fired
+/// (e.g. `{'refreshed': true, 'file_node': …}`) or null when the node was
+/// already current — the common case costs exactly one stat.
+typedef MeaningNodeRefresher = Map<String, Object?>? Function(
+  String focusId,
+  Map<String, dynamic> nodeProps,
+);
+
+/// The refresher as WORLD data: the workspace registers it once (in the
+/// same registration pass that wires the fs capabilities), and EVERY
+/// [meaningZoomTool] built over the world — harness, daemon, host — picks
+/// it up with no constructor change.
+class MeaningNodeRefresh extends Resource {
+  MeaningNodeRefresh(this.refresh);
+
+  final MeaningNodeRefresher refresh;
+}
+
 /// `meaning_zoom`: a budgeted cut of the tree — the actor's READ verb at
 /// scale (replaces file reads in the meaning profile; ADR 0023 §1).
 ///
@@ -108,10 +134,55 @@ ToolDef meaningZoomTool(World world, {MeaningSpanReader? spanReader}) => ToolDef
               'was served as zoom=local (pick an id from the cut, then '
               'point-zoom it for the span)';
         }
+        // Zoom staleness (PLAN §NOW): a POINT zoom of a file-bearing node
+        // re-stats the underlying file through the host refresher BEFORE
+        // the cut — a just-edited file must never serve pre-edit text.
+        // Bounded: one stat + at most one small re-read, ONE node, never a
+        // tree-wide rebuild. Failures are named, never fatal (the span
+        // reader bounces on its own); a missing refresher (no workspace
+        // wired) costs nothing.
+        var effectiveFocus = focus;
+        String? refreshedPath;
+        String? refreshError;
+        if (zoomLevel == 'point' && effectiveFocus != null) {
+          final refresher = world.maybeGetResource<MeaningNodeRefresh>();
+          if (refresher != null) {
+            final entity = index.entityOf(effectiveFocus);
+            final props = entity == null
+                ? null
+                : meaningComponentOf<MeaningProps>(world, entity)?.props;
+            final path = props?['path'];
+            if (props != null && path is String && path.isNotEmpty) {
+              Map<String, Object?>? refresh;
+              try {
+                refresh = refresher.refresh(effectiveFocus, props);
+              } on Object catch (e) {
+                refreshError = '$e';
+              }
+              if (refresh != null) {
+                refreshedPath = path;
+                if (refresh['error'] is String) {
+                  refreshError = refresh['error'] as String;
+                } else if (!index.byId.containsKey(effectiveFocus)) {
+                  // The anchor was re-derived (an ordinal/keypath shifted
+                  // under the edit): fall back to its file node — the cut
+                  // stays navigable, never dead.
+                  final fileNode = refresh['file_node'];
+                  if (fileNode is String && index.byId.containsKey(fileNode)) {
+                    degradedNote = 'focus anchor was re-derived after the '
+                        'staleness refresh — the cut serves the file node '
+                        '($fileNode)';
+                    effectiveFocus = fileNode;
+                  }
+                }
+              }
+            }
+          }
+        }
         final cut = meaningCut(
           world,
           query: query,
-          focusIds: [?focus],
+          focusIds: [?effectiveFocus],
           zoom: zoomLevel,
           maxNodes: map['maxNodes'] is int ? map['maxNodes'] as int : 48,
           tokenBudget: budget,
@@ -126,6 +197,11 @@ ToolDef meaningZoomTool(World world, {MeaningSpanReader? spanReader}) => ToolDef
           'tree_nodes': index.nodeCount,
           'tree_edges': index.edgeCount,
           'note': ?degradedNote,
+          // The staleness fact: WHICH file was re-derived to serve this
+          // cut (the green-screen law — what the host did is explicit).
+          if (refreshedPath != null) 'refreshed': true,
+          if (refreshedPath != null) 'refreshed_path': refreshedPath,
+          if (refreshError != null) 'refresh_error': refreshError,
         };
         // Empty ray-cast → navigable, never a dead end: suggest ids whose
         // path/kind text contains any query token (the same repair-hint
@@ -150,9 +226,13 @@ ToolDef meaningZoomTool(World world, {MeaningSpanReader? spanReader}) => ToolDef
         // Span cut (fs tier): a POINT zoom on a span-bearing node serves
         // that anchor's text as a budgeted projection — text as meaning,
         // never a whole file (ADR 0024, as amended).
-        if (zoomLevel == 'point' && focus != null) {
-          final entity = index.entityOf(focus);
-          final props = meaningComponentOf<MeaningProps>(world, entity!)?.props;
+        if (zoomLevel == 'point' && effectiveFocus != null) {
+          // Props are read AFTER the staleness refresh — the span served
+          // is the POST-edit span by construction.
+          final entity = index.entityOf(effectiveFocus);
+          final props = entity == null
+              ? null
+              : meaningComponentOf<MeaningProps>(world, entity)?.props;
           if (props != null &&
               props.containsKey('span_start') &&
               props.containsKey('span_end')) {

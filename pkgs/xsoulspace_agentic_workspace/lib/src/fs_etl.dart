@@ -23,7 +23,7 @@ import 'dart:math';
 import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
     show FsToolsRoot, JailWriteGateway, WriteGateMode;
 import 'package:xsoulspace_agentic_harness/src/tools/meaning_query_tools.dart'
-    show MeaningSpanReader;
+    show MeaningNodeRefresh, MeaningSpanReader;
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
 import 'file_class_spec.dart' show fileClassOf, materializerSpecFor;
@@ -653,6 +653,60 @@ int _indexKeypaths(World world, FsFileScan f, String content, {required bool isJ
     built++;
   }
   return built;
+}
+
+/// The zoom staleness refresher (PLAN §NOW): ONE file node re-derived from
+/// disk when the harness `meaning_zoom` point cut hits a node whose file
+/// moved under the tree (the model edits through a materializer; the cut
+/// must serve post-edit text WITHOUT waiting for the next tick). Bounded:
+/// one stat; the re-read happens ONLY on a real mtime/size drift and only
+/// for the focus's file (mapped classes re-read ≤ [maxMapFileBytes]).
+/// Registered as [MeaningNodeRefresh] WORLD data — the fs-blind harness
+/// core discovers it on the world (ADR 0015), the workspace owns the I/O.
+void registerMeaningNodeRefresher(World world, Directory workspace) {
+  world.upsertResource(
+    MeaningNodeRefresh((focusId, nodeProps) {
+      final rel = nodeProps['path'];
+      if (rel is! String || rel.isEmpty) return null;
+      final FileStat stat;
+      try {
+        stat = File('${workspace.path}/$rel').statSync();
+      } on FileSystemException {
+        return null; // gone — the span reader names file_not_found
+      }
+      if (stat.type == FileSystemEntityType.notFound) return null;
+      // The file node that owns this path: the focus itself (a file node)
+      // or its parent file (section/key anchors).
+      final fileId = focusId.startsWith('f_')
+          ? focusId
+          : 'f_${rel.replaceAll('/', '_')}';
+      final index = world.getResource<MeaningIndex>();
+      final entity = index.byId[fileId];
+      final props = entity == null
+          ? null
+          : meaningComponentOf<MeaningProps>(world, entity)?.props;
+      final mtime = stat.modified.toIso8601String();
+      final stale =
+          props == null || props['mtime'] != mtime || props['bytes'] != stat.size;
+      if (!stale) return null; // current — zero cost beyond the one stat
+      // ONE file re-derivation through the SAME idempotent buildFsTier the
+      // refresh tick uses: props refreshed in place, stale map nodes
+      // dropped and rebuilt (anchor ids survive when the structure did;
+      // the harness zoom falls back to the file node when an ordinal/
+      // keypath shifted).
+      buildFsTier(
+        world,
+        workspace,
+        scan: FsScan(dirs: const [], files: [_fsScanOf(rel, stat)]),
+      );
+      return {
+        'ok': true,
+        'refreshed': true,
+        'path': rel,
+        'file_node': fileId,
+      };
+    }),
+  );
 }
 
 /// Effects-as-data (capability ops) — the workspace's jailed fs I/O op.
