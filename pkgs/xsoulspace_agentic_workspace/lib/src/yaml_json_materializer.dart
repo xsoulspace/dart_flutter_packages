@@ -1632,20 +1632,13 @@ ToolDef editKeyTool(
   return ToolDef.encode(
     name: const ToolName('edit_key'),
     description:
-        'Edit a YAML or JSON document through its keypath map — never a '
-        'raw write. Args: path (workspace-relative .yaml/.yml/.json), op '
-        '(set_key: create or overwrite a key — empty body sets null | '
-        'replace_value: swap the value at the anchor | delete_key: remove '
-        'the key | append_list_item: add an element to the list at the '
-        'anchor), anchor (the dot/bracket keypath, e.g. "deps.build" or '
-        '"jobs.build[0].name", or the key node id from meaning_zoom), '
-        'body (the scalar/fragment, as data). The host splices '
-        'byte-precisely — comments, siblings and formatting stay '
-        'untouched — and runs the parse_semantic_diff oracle: the ONLY '
-        'semantic change must be the intended one, or the edit '
-        'AUTO-REVERTS with the named failure class. Keypath misses bounce '
-        'with the resolved outline; read keypaths via meaning_zoom point '
-        'cuts, never file reads.',
+        'Edit a YAML or JSON value by keypath (anchors from meaning_zoom). '
+        'Args: path (.yaml/.yml/.json), op (set_key | replace_value | '
+        'delete_key | append_list_item), anchor (dot/bracket keypath or key '
+        'node id), body (scalar/fragment as data). The host splices '
+        'byte-precisely (comments/siblings preserved) and runs the '
+        'parse_semantic_diff oracle — a violating edit AUTO-REVERTS. Misses '
+        'bounce with the outline.',
     argsSchema: SchemaBundle(
       root: FM.object('edit_key', properties: () => [
             FM.prop('path', FM.string()),

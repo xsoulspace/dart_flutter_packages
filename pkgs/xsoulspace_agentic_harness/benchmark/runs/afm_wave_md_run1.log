@@ -1,0 +1,73 @@
+coding_agent run — task: wave_md_edit_section
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 2268
+  decisions: 7
+  tool rounds (thread beats): 7
+  moves: {repo_etl.scan: 7}
+  projection tokens (honest spend, Situation.tokensUsed): 21821
+  meaning nodes: 20, edges: 20
+  wall clock: 362770 ms
+  final gate (outer oracle, once): FAIL
+    check: dart test exit=1:
+    check: missing from docs/README.md: [--serve]
+    check: forbidden values present in docs/README.md: [to start the gateway. Read the]
+    check: missing from docs/README.md: [config.yaml]
+  failure class: final gate: dart test exit=1: | missing from docs/README.md: [--serve] | forbidden values present in docs/README.md: [to start the gateway. Read the] | missing from docs/README.md: [config.yaml]
+--- harness pulse (J1.5.3) ---
+tick 7 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788736300747868-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: dart test exit=1: | missing from docs/README.md: [--serve] | forbidden values present in docs/README.md: [to start the gateway. Read the] | missing from docs/README.md: [config.yaml]
+— agent-1788736300747868-0  [idle]  rounds 0/12 (Σ0)  attempts 3/3 EXHAUSTED
+    last: repo_etl:{"action":"scan"} → ok
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 86689..112172
+tick 110289: decisions=1 inFlight=1 pending=0 actors=agent-1788736300747868-0:0r/3a
+    agent-1788736300747868-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 110389: decisions=1 inFlight=1 pending=0 actors=agent-1788736300747868-0:0r/3a
+    agent-1788736300747868-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 110489: decisions=1 inFlight=1 pending=0 actors=agent-1788736300747868-0:0r/3a
+    agent-1788736300747868-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 110589: decisions=1 inFlight=1 pending=0 actors=agent-1788736300747868-0:0r/3a
+    agent-1788736300747868-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 110689: decisions=1 inFlight=1 pending=0 actors=agent-1788736300747868-0:0r/3a
+    agent-1788736300747868-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 110789: decisions=1 inFlight=1 pending=0 actors=agent-1788736300747868-0:0r/3a
+    agent-1788736300747868-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 110889: decisions=1 inFlight=1 pending=0 actors=agent-1788736300747868-0:0r/3a
+    agent-1788736300747868-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 110989: decisions=1 inFlight=1 pending=0 actors=agent-1788736300747868-0:0r/3a
+    agent-1788736300747868-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 111089: decisions=1 inFlight=1 pending=0 actors=agent-1788736300747868-0:0r/3a
+    agent-1788736300747868-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 111189: decisions=1 inFlight=1 pending=0 actors=agent-1788736300747868-0:0r/3a
+    agent-1788736300747868-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 111289: decisions=1 inFlight=1 pending=0 actors=agent-1788736300747868-0:0r/3a
+    agent-1788736300747868-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 111389: decisions=1 inFlight=1 pending=0 actors=agent-1788736300747868-0:0r/3a
+    agent-1788736300747868-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 111489: decisions=1 inFlight=1 pending=0 actors=agent-1788736300747868-0:0r/3a
+    agent-1788736300747868-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 111589: decisions=1 inFlight=1 pending=0 actors=agent-1788736300747868-0:0r/3a
+    agent-1788736300747868-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 111689: decisions=1 inFlight=1 pending=0 actors=agent-1788736300747868-0:0r/3a
+    agent-1788736300747868-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 111789: decisions=1 inFlight=1 pending=0 actors=agent-1788736300747868-0:0r/3a
+    agent-1788736300747868-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 111889: decisions=1 inFlight=1 pending=0 actors=agent-1788736300747868-0:0r/3a
+    agent-1788736300747868-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 111989: decisions=1 inFlight=1 pending=0 actors=agent-1788736300747868-0:0r/3a
+    agent-1788736300747868-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 112089: decisions=1 inFlight=1 pending=0 actors=agent-1788736300747868-0:0r/3a
+    agent-1788736300747868-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 112172: decisions=0 inFlight=0 pending=0 actors=agent-1788736300747868-0:0r/3a
+
+
+--- tool results (truncated per beat) ---
+repo_etl: {"ok":true,"files":6,"dirs":3,"dart_files":1,"symbols":1,"edges":3,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0},"note":"tree is world state (code graph + fs tier) — use meaning_zoom / meaning_impact to read it; it is re-derivabl
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+

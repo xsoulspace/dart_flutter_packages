@@ -1,0 +1,249 @@
+coding_agent run — task: wave_task_grammar
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 2268
+  decisions: 3
+  tool rounds (thread beats): 3
+  moves: {meaning_zoom: 2, repo_etl.scan: 1}
+  projection tokens (honest spend, Situation.tokensUsed): 9929
+  meaning nodes: 16, edges: 20
+  wall clock: 128011 ms
+  final gate (outer oracle, once): FAIL
+    check: dart test exit=1:
+  failure class: final gate: dart test exit=1:
+--- harness pulse (J1.5.3) ---
+tick 3 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788734093954266-0: goal-attempt budget exhausted — goal_unverifiable: 1 failed verification attempts (budget 1). Last failure: dart test exit=1:
+— agent-1788734093954266-0  [idle]  rounds 0/12 (Σ0)  attempts 1/3 EXHAUSTED
+    last: repo_etl:{"action":"scan"} → FAILED
+      error: {"ok":false,"error":"tree already built — use action refresh","files":4}
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 16699..42069
+tick 40208: decisions=1 inFlight=1 pending=0 actors=agent-1788734093954266-0:0r/1a
+    agent-1788734093954266-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 40308: decisions=1 inFlight=1 pending=0 actors=agent-1788734093954266-0:0r/1a
+    agent-1788734093954266-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 40408: decisions=1 inFlight=1 pending=0 actors=agent-1788734093954266-0:0r/1a
+    agent-1788734093954266-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 40508: decisions=1 inFlight=1 pending=0 actors=agent-1788734093954266-0:0r/1a
+    agent-1788734093954266-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 40608: decisions=1 inFlight=1 pending=0 actors=agent-1788734093954266-0:0r/1a
+    agent-1788734093954266-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 40708: decisions=1 inFlight=1 pending=0 actors=agent-1788734093954266-0:0r/1a
+    agent-1788734093954266-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 40808: decisions=1 inFlight=1 pending=0 actors=agent-1788734093954266-0:0r/1a
+    agent-1788734093954266-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 40908: decisions=1 inFlight=1 pending=0 actors=agent-1788734093954266-0:0r/1a
+    agent-1788734093954266-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 41008: decisions=1 inFlight=1 pending=0 actors=agent-1788734093954266-0:0r/1a
+    agent-1788734093954266-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 41108: decisions=1 inFlight=1 pending=0 actors=agent-1788734093954266-0:0r/1a
+    agent-1788734093954266-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 41208: decisions=1 inFlight=1 pending=0 actors=agent-1788734093954266-0:0r/1a
+    agent-1788734093954266-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 41308: decisions=1 inFlight=1 pending=0 actors=agent-1788734093954266-0:0r/1a
+    agent-1788734093954266-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 41408: decisions=1 inFlight=1 pending=0 actors=agent-1788734093954266-0:0r/1a
+    agent-1788734093954266-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 41508: decisions=1 inFlight=1 pending=0 actors=agent-1788734093954266-0:0r/1a
+    agent-1788734093954266-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 41608: decisions=1 inFlight=1 pending=0 actors=agent-1788734093954266-0:0r/1a
+    agent-1788734093954266-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 41708: decisions=1 inFlight=1 pending=0 actors=agent-1788734093954266-0:0r/1a
+    agent-1788734093954266-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 41808: decisions=1 inFlight=1 pending=0 actors=agent-1788734093954266-0:0r/1a
+    agent-1788734093954266-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 41908: decisions=1 inFlight=1 pending=0 actors=agent-1788734093954266-0:0r/1a
+    agent-1788734093954266-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 42008: decisions=1 inFlight=1 pending=0 actors=agent-1788734093954266-0:0r/1a
+    agent-1788734093954266-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 42069: decisions=0 inFlight=0 pending=0 actors=agent-1788734093954266-0:0r/1a
+
+
+coding_agent run — task: wave_task_grammar
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 2268
+  decisions: 7
+  tool rounds (thread beats): 7
+  moves: {run: 1, repo_etl.scan: 3, meaning_locate: 1, meaning_zoom: 2}
+  projection tokens (honest spend, Situation.tokensUsed): 23987
+  meaning nodes: 16, edges: 20
+  wall clock: 298741 ms
+  final gate (outer oracle, once): FAIL
+    check: dart test exit=1:
+  failure class: final gate: dart test exit=1:
+--- harness pulse (J1.5.3) ---
+tick 7 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788734318590627-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: dart test exit=1:
+— agent-1788734318590627-0  [idle]  rounds 0/12 (Σ0)  attempts 3/3 EXHAUSTED
+    last: repo_etl:{"action":"scan"} → FAILED
+      error: {"ok":false,"error":"tree already built — use action refresh","files":4}
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 72134..97520
+tick 95650: decisions=1 inFlight=1 pending=0 actors=agent-1788734318590627-0:0r/3a
+    agent-1788734318590627-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 95750: decisions=1 inFlight=1 pending=0 actors=agent-1788734318590627-0:0r/3a
+    agent-1788734318590627-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 95850: decisions=1 inFlight=1 pending=0 actors=agent-1788734318590627-0:0r/3a
+    agent-1788734318590627-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 95950: decisions=1 inFlight=1 pending=0 actors=agent-1788734318590627-0:0r/3a
+    agent-1788734318590627-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 96050: decisions=1 inFlight=1 pending=0 actors=agent-1788734318590627-0:0r/3a
+    agent-1788734318590627-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 96150: decisions=1 inFlight=1 pending=0 actors=agent-1788734318590627-0:0r/3a
+    agent-1788734318590627-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 96250: decisions=1 inFlight=1 pending=0 actors=agent-1788734318590627-0:0r/3a
+    agent-1788734318590627-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 96350: decisions=1 inFlight=1 pending=0 actors=agent-1788734318590627-0:0r/3a
+    agent-1788734318590627-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 96450: decisions=1 inFlight=1 pending=0 actors=agent-1788734318590627-0:0r/3a
+    agent-1788734318590627-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 96550: decisions=1 inFlight=1 pending=0 actors=agent-1788734318590627-0:0r/3a
+    agent-1788734318590627-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 96650: decisions=1 inFlight=1 pending=0 actors=agent-1788734318590627-0:0r/3a
+    agent-1788734318590627-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 96750: decisions=1 inFlight=1 pending=0 actors=agent-1788734318590627-0:0r/3a
+    agent-1788734318590627-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 96850: decisions=1 inFlight=1 pending=0 actors=agent-1788734318590627-0:0r/3a
+    agent-1788734318590627-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 96950: decisions=1 inFlight=1 pending=0 actors=agent-1788734318590627-0:0r/3a
+    agent-1788734318590627-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 97050: decisions=1 inFlight=1 pending=0 actors=agent-1788734318590627-0:0r/3a
+    agent-1788734318590627-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 97150: decisions=1 inFlight=1 pending=0 actors=agent-1788734318590627-0:0r/3a
+    agent-1788734318590627-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 97250: decisions=1 inFlight=1 pending=0 actors=agent-1788734318590627-0:0r/3a
+    agent-1788734318590627-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 97350: decisions=1 inFlight=1 pending=0 actors=agent-1788734318590627-0:0r/3a
+    agent-1788734318590627-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 97450: decisions=1 inFlight=1 pending=0 actors=agent-1788734318590627-0:0r/3a
+    agent-1788734318590627-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 97520: decisions=0 inFlight=0 pending=0 actors=agent-1788734318590627-0:0r/3a
+
+
+coding_agent run — task: wave_task_grammar
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 2268
+  decisions: 7
+  tool rounds (thread beats): 7
+  moves: {edit_symbol.apply_executable: 1, repo_etl.scan: 3, meaning_zoom: 2, meaning_locate: 1}
+  projection tokens (honest spend, Situation.tokensUsed): 21603
+  meaning nodes: 16, edges: 20
+  wall clock: 271653 ms
+  final gate (outer oracle, once): FAIL
+    check: dart test exit=1:
+  failure class: final gate: dart test exit=1:
+--- harness pulse (J1.5.3) ---
+tick 7 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788734889431012-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: dart test exit=1:
+— agent-1788734889431012-0  [idle]  rounds 0/12 (Σ0)  attempts 3/3 EXHAUSTED
+    last: repo_etl:{"action":"scan"} → FAILED
+      error: {"ok":false,"error":"tree already built — use action refresh","files":4}
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 65757..91166
+tick 89267: decisions=1 inFlight=1 pending=0 actors=agent-1788734889431012-0:0r/3a
+    agent-1788734889431012-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 89367: decisions=1 inFlight=1 pending=0 actors=agent-1788734889431012-0:0r/3a
+    agent-1788734889431012-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 89467: decisions=1 inFlight=1 pending=0 actors=agent-1788734889431012-0:0r/3a
+    agent-1788734889431012-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 89567: decisions=1 inFlight=1 pending=0 actors=agent-1788734889431012-0:0r/3a
+    agent-1788734889431012-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 89667: decisions=1 inFlight=1 pending=0 actors=agent-1788734889431012-0:0r/3a
+    agent-1788734889431012-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 89767: decisions=1 inFlight=1 pending=0 actors=agent-1788734889431012-0:0r/3a
+    agent-1788734889431012-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 89867: decisions=1 inFlight=1 pending=0 actors=agent-1788734889431012-0:0r/3a
+    agent-1788734889431012-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 89967: decisions=1 inFlight=1 pending=0 actors=agent-1788734889431012-0:0r/3a
+    agent-1788734889431012-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 90067: decisions=1 inFlight=1 pending=0 actors=agent-1788734889431012-0:0r/3a
+    agent-1788734889431012-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 90167: decisions=1 inFlight=1 pending=0 actors=agent-1788734889431012-0:0r/3a
+    agent-1788734889431012-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 90267: decisions=1 inFlight=1 pending=0 actors=agent-1788734889431012-0:0r/3a
+    agent-1788734889431012-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 90367: decisions=1 inFlight=1 pending=0 actors=agent-1788734889431012-0:0r/3a
+    agent-1788734889431012-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 90467: decisions=1 inFlight=1 pending=0 actors=agent-1788734889431012-0:0r/3a
+    agent-1788734889431012-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 90567: decisions=1 inFlight=1 pending=0 actors=agent-1788734889431012-0:0r/3a
+    agent-1788734889431012-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 90667: decisions=1 inFlight=1 pending=0 actors=agent-1788734889431012-0:0r/3a
+    agent-1788734889431012-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 90767: decisions=1 inFlight=1 pending=0 actors=agent-1788734889431012-0:0r/3a
+    agent-1788734889431012-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 90867: decisions=1 inFlight=1 pending=0 actors=agent-1788734889431012-0:0r/3a
+    agent-1788734889431012-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 90967: decisions=1 inFlight=1 pending=0 actors=agent-1788734889431012-0:0r/3a
+    agent-1788734889431012-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 91067: decisions=1 inFlight=1 pending=0 actors=agent-1788734889431012-0:0r/3a
+    agent-1788734889431012-0 ← : "Error: backend_failed. Retry with tighter context."
+tick 91166: decisions=0 inFlight=0 pending=0 actors=agent-1788734889431012-0:0r/3a
+
+
+coding_agent run — task: wave_task_grammar
+  backend: apple_foundation_afm
+  verdict: PASS
+  overhead tokens (system+schemas): 2268
+  decisions: 1
+  tool rounds (thread beats): 1
+  moves: {edit_symbol.apply_executable: 1}
+  projection tokens (honest spend, Situation.tokensUsed): 2864
+  meaning nodes: 16, edges: 20
+  wall clock: 49551 ms
+  final gate (outer oracle, once): PASS
+    check: dart test exit=0
+  failure class: -
+--- harness pulse (J1.5.3) ---
+tick 1 | decisions 0 | in-flight 0 | pending results 0
+— agent-1788735291116468-0  [idle]  rounds 0/12 (Σ0)
+    last: edit_symbol:{"action":"apply_executable","symbolId":"sym_lib_loop.dar… → ok
+--- flight recorder ---
+FlightRecorder: 163 pulse(s), ticks 99..16281
+tick 14399: decisions=1 inFlight=1 pending=0 actors=agent-1788735291116468-0:0r/0a
+    agent-1788735291116468-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 14499: decisions=1 inFlight=1 pending=0 actors=agent-1788735291116468-0:0r/0a
+    agent-1788735291116468-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 14599: decisions=1 inFlight=1 pending=0 actors=agent-1788735291116468-0:0r/0a
+    agent-1788735291116468-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 14699: decisions=1 inFlight=1 pending=0 actors=agent-1788735291116468-0:0r/0a
+    agent-1788735291116468-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 14799: decisions=1 inFlight=1 pending=0 actors=agent-1788735291116468-0:0r/0a
+    agent-1788735291116468-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 14899: decisions=1 inFlight=1 pending=0 actors=agent-1788735291116468-0:0r/0a
+    agent-1788735291116468-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 14999: decisions=1 inFlight=1 pending=0 actors=agent-1788735291116468-0:0r/0a
+    agent-1788735291116468-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 15099: decisions=1 inFlight=1 pending=0 actors=agent-1788735291116468-0:0r/0a
+    agent-1788735291116468-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 15199: decisions=1 inFlight=1 pending=0 actors=agent-1788735291116468-0:0r/0a
+    agent-1788735291116468-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 15299: decisions=1 inFlight=1 pending=0 actors=agent-1788735291116468-0:0r/0a
+    agent-1788735291116468-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 15399: decisions=1 inFlight=1 pending=0 actors=agent-1788735291116468-0:0r/0a
+    agent-1788735291116468-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 15499: decisions=1 inFlight=1 pending=0 actors=agent-1788735291116468-0:0r/0a
+    agent-1788735291116468-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 15599: decisions=1 inFlight=1 pending=0 actors=agent-1788735291116468-0:0r/0a
+    agent-1788735291116468-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 15699: decisions=1 inFlight=1 pending=0 actors=agent-1788735291116468-0:0r/0a
+    agent-1788735291116468-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 15799: decisions=1 inFlight=1 pending=0 actors=agent-1788735291116468-0:0r/0a
+    agent-1788735291116468-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 15899: decisions=1 inFlight=1 pending=0 actors=agent-1788735291116468-0:0r/0a
+    agent-1788735291116468-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 15999: decisions=1 inFlight=1 pending=0 actors=agent-1788735291116468-0:0r/0a
+    agent-1788735291116468-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 16099: decisions=1 inFlight=1 pending=0 actors=agent-1788735291116468-0:0r/0a
+    agent-1788735291116468-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 16199: decisions=1 inFlight=1 pending=0 actors=agent-1788735291116468-0:0r/0a
+    agent-1788735291116468-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 16281: decisions=0 inFlight=0 pending=0 actors=agent-1788735291116468-0:0r/0a
+
+
+--- tool results (truncated per beat) ---
+edit_symbol: {"ok":true,"reverted":false,"patches":1,"files":["lib/loop.dart"],"analyze_exit":0,"check_exit":0,"analyze_ms":124,"check_ms":520,"detail":"replace_member_body inBounds (sym_lib_loop.dart_inBounds) in lib/loop.dart [1..3] — scoped analyze e
+

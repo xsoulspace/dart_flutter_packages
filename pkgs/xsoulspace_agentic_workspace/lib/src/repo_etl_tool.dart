@@ -196,11 +196,49 @@ ToolDef repoEtlTool(
           };
         case 'scan':
         default:
+          // TINY-MODEL TEACHING FIX (measured on-device, afm_wave row 2):
+          // a small model's natural first move is `scan` — bouncing it as an
+          // ERROR on an already-built tree looped the real AFM run 4× until
+          // the budget died. Scan is now an IDEMPOTENT ENSURE: same
+          // mechanical reconcile as refresh (zero model tokens), ok:true +
+          // `already_built` so the actor learns the tree is current and
+          // moves on. The restored-persistent-world path below is unchanged.
           if (st.lastScan != null) {
+            final tick = reconcileFsTier(
+              world,
+              workspace,
+              cutoff: st.lastScan!,
+            );
+            var syms = 0;
+            var touched = 0;
+            for (final f in tick.changed) {
+              if (specForRel(f.rel).parse == null) continue;
+              touched++;
+              syms += _rescanParse(
+                world,
+                File('${workspace.path}/${f.rel}'),
+                f.rel,
+              );
+            }
+            st
+              ..lastScan = DateTime.now()
+              ..files = tick.files
+              ..dirs = tick.dirs;
+            final capabilities = registerPackInventory(world, workspace);
+            final vcs = await _projectVcs(world, workspace);
             return {
-              'ok': false,
-              'error': 'tree already built — use action refresh',
-              'files': st.files,
+              'ok': true,
+              'already_built': true,
+              'refreshed_files': touched,
+              'symbols_touched': syms,
+              'files': tick.files,
+              'fs_added': tick.added,
+              'fs_dropped': tick.dropped,
+              'capabilities': capabilities,
+              'vcs': vcs,
+              'note': 'the tree was already built — reconciled to current '
+                  '(zero model tokens); zoom/locate away or run the ready '
+                  'move',
             };
           }
           // R7c persistent world: the restored world may already carry the

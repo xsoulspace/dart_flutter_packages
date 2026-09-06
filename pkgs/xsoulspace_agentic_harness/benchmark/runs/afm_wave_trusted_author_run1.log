@@ -1,0 +1,431 @@
+coding_agent run — task: wave_trusted_author
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 2268
+  decisions: 4
+  tool rounds (thread beats): 4
+  moves: {repo_etl.scan: 4}
+  projection tokens (honest spend, Situation.tokensUsed): 12200
+  meaning nodes: 16, edges: 20
+  wall clock: 227040 ms
+  final gate (outer oracle, once): FAIL
+    check: dart test exit=1:
+  failure class: final gate: dart test exit=1:
+--- harness pulse (J1.5.3) ---
+tick 4 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788735456812831-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: dart test exit=1:
+— agent-1788735456812831-0  [idle]  rounds 0/12 (Σ0)  attempts 3/3 EXHAUSTED
+    last: repo_etl:{"action":"scan"} → FAILED
+      error: {"ok":false,"error":"tree already built — use action refresh","files":4}
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 44780..70124
+tick 68312: decisions=1 inFlight=1 pending=0 actors=agent-1788735456812831-0:0r/3a ⚠ actor agent-1788735456812831-0: loop-breaker streak 3 (repeated failing tool calls)
+    agent-1788735456812831-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 68412: decisions=1 inFlight=1 pending=0 actors=agent-1788735456812831-0:0r/3a ⚠ actor agent-1788735456812831-0: loop-breaker streak 3 (repeated failing tool calls)
+    agent-1788735456812831-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 68512: decisions=1 inFlight=1 pending=0 actors=agent-1788735456812831-0:0r/3a ⚠ actor agent-1788735456812831-0: loop-breaker streak 3 (repeated failing tool calls)
+    agent-1788735456812831-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 68612: decisions=1 inFlight=1 pending=0 actors=agent-1788735456812831-0:0r/3a ⚠ actor agent-1788735456812831-0: loop-breaker streak 3 (repeated failing tool calls)
+    agent-1788735456812831-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 68712: decisions=1 inFlight=1 pending=0 actors=agent-1788735456812831-0:0r/3a ⚠ actor agent-1788735456812831-0: loop-breaker streak 3 (repeated failing tool calls)
+    agent-1788735456812831-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 68812: decisions=1 inFlight=1 pending=0 actors=agent-1788735456812831-0:0r/3a ⚠ actor agent-1788735456812831-0: loop-breaker streak 3 (repeated failing tool calls)
+    agent-1788735456812831-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 68912: decisions=1 inFlight=1 pending=0 actors=agent-1788735456812831-0:0r/3a ⚠ actor agent-1788735456812831-0: loop-breaker streak 3 (repeated failing tool calls)
+    agent-1788735456812831-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 69012: decisions=1 inFlight=1 pending=0 actors=agent-1788735456812831-0:0r/3a ⚠ actor agent-1788735456812831-0: loop-breaker streak 3 (repeated failing tool calls)
+    agent-1788735456812831-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 69112: decisions=1 inFlight=1 pending=0 actors=agent-1788735456812831-0:0r/3a ⚠ actor agent-1788735456812831-0: loop-breaker streak 3 (repeated failing tool calls)
+    agent-1788735456812831-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 69212: decisions=1 inFlight=1 pending=0 actors=agent-1788735456812831-0:0r/3a ⚠ actor agent-1788735456812831-0: loop-breaker streak 3 (repeated failing tool calls)
+    agent-1788735456812831-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 69312: decisions=1 inFlight=1 pending=0 actors=agent-1788735456812831-0:0r/3a ⚠ actor agent-1788735456812831-0: loop-breaker streak 3 (repeated failing tool calls)
+    agent-1788735456812831-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 69412: decisions=1 inFlight=1 pending=0 actors=agent-1788735456812831-0:0r/3a ⚠ actor agent-1788735456812831-0: loop-breaker streak 3 (repeated failing tool calls)
+    agent-1788735456812831-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 69512: decisions=1 inFlight=1 pending=0 actors=agent-1788735456812831-0:0r/3a ⚠ actor agent-1788735456812831-0: loop-breaker streak 3 (repeated failing tool calls)
+    agent-1788735456812831-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 69612: decisions=1 inFlight=1 pending=0 actors=agent-1788735456812831-0:0r/3a ⚠ actor agent-1788735456812831-0: loop-breaker streak 3 (repeated failing tool calls)
+    agent-1788735456812831-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 69712: decisions=1 inFlight=1 pending=0 actors=agent-1788735456812831-0:0r/3a ⚠ actor agent-1788735456812831-0: loop-breaker streak 3 (repeated failing tool calls)
+    agent-1788735456812831-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 69812: decisions=1 inFlight=1 pending=0 actors=agent-1788735456812831-0:0r/3a ⚠ actor agent-1788735456812831-0: loop-breaker streak 3 (repeated failing tool calls)
+    agent-1788735456812831-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 69912: decisions=1 inFlight=1 pending=0 actors=agent-1788735456812831-0:0r/3a ⚠ actor agent-1788735456812831-0: loop-breaker streak 3 (repeated failing tool calls)
+    agent-1788735456812831-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 70012: decisions=1 inFlight=1 pending=0 actors=agent-1788735456812831-0:0r/3a ⚠ actor agent-1788735456812831-0: loop-breaker streak 3 (repeated failing tool calls)
+    agent-1788735456812831-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 70112: decisions=1 inFlight=1 pending=0 actors=agent-1788735456812831-0:0r/3a ⚠ actor agent-1788735456812831-0: loop-breaker streak 3 (repeated failing tool calls)
+    agent-1788735456812831-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 70124: decisions=0 inFlight=0 pending=0 actors=agent-1788735456812831-0:0r/3a
+
+
+--- tool results (truncated per beat) ---
+repo_etl: {"ok":true,"files":4,"dirs":3,"dart_files":2,"symbols":2,"edges":7,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"tree is world state (code graph + fs tier) — use meaning_zoom / meaning_impact to read it; it is re-derivabl
+repo_etl: {"ok":false,"error":"tree already built — use action refresh","files":4}
+repo_etl: {"ok":false,"error":"tree already built — use action refresh","files":4}
+repo_etl: {"ok":false,"error":"tree already built — use action refresh","files":4}
+
+coding_agent run — task: wave_trusted_author
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 2268
+  decisions: 4
+  tool rounds (thread beats): 4
+  moves: {repo_etl.scan: 4}
+  projection tokens (honest spend, Situation.tokensUsed): 11987
+  meaning nodes: 16, edges: 20
+  wall clock: 257409 ms
+  final gate (outer oracle, once): FAIL
+    check: dart test exit=1:
+  failure class: final gate: dart test exit=1:
+--- harness pulse (J1.5.3) ---
+tick 4 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788735903070152-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: dart test exit=1:
+— agent-1788735903070152-0  [idle]  rounds 0/12 (Σ0)  attempts 3/3 EXHAUSTED
+    last: repo_etl:{"action":"scan"} → ok
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 53671..79123
+tick 77227: decisions=1 inFlight=1 pending=0 actors=agent-1788735903070152-0:0r/3a
+    agent-1788735903070152-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 77327: decisions=1 inFlight=1 pending=0 actors=agent-1788735903070152-0:0r/3a
+    agent-1788735903070152-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 77427: decisions=1 inFlight=1 pending=0 actors=agent-1788735903070152-0:0r/3a
+    agent-1788735903070152-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 77527: decisions=1 inFlight=1 pending=0 actors=agent-1788735903070152-0:0r/3a
+    agent-1788735903070152-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 77627: decisions=1 inFlight=1 pending=0 actors=agent-1788735903070152-0:0r/3a
+    agent-1788735903070152-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 77727: decisions=1 inFlight=1 pending=0 actors=agent-1788735903070152-0:0r/3a
+    agent-1788735903070152-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 77827: decisions=1 inFlight=1 pending=0 actors=agent-1788735903070152-0:0r/3a
+    agent-1788735903070152-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 77927: decisions=1 inFlight=1 pending=0 actors=agent-1788735903070152-0:0r/3a
+    agent-1788735903070152-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 78027: decisions=1 inFlight=1 pending=0 actors=agent-1788735903070152-0:0r/3a
+    agent-1788735903070152-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 78127: decisions=1 inFlight=1 pending=0 actors=agent-1788735903070152-0:0r/3a
+    agent-1788735903070152-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 78227: decisions=1 inFlight=1 pending=0 actors=agent-1788735903070152-0:0r/3a
+    agent-1788735903070152-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 78327: decisions=1 inFlight=1 pending=0 actors=agent-1788735903070152-0:0r/3a
+    agent-1788735903070152-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 78427: decisions=1 inFlight=1 pending=0 actors=agent-1788735903070152-0:0r/3a
+    agent-1788735903070152-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 78527: decisions=1 inFlight=1 pending=0 actors=agent-1788735903070152-0:0r/3a
+    agent-1788735903070152-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 78627: decisions=1 inFlight=1 pending=0 actors=agent-1788735903070152-0:0r/3a
+    agent-1788735903070152-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 78727: decisions=1 inFlight=1 pending=0 actors=agent-1788735903070152-0:0r/3a
+    agent-1788735903070152-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 78827: decisions=1 inFlight=1 pending=0 actors=agent-1788735903070152-0:0r/3a
+    agent-1788735903070152-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 78927: decisions=1 inFlight=1 pending=0 actors=agent-1788735903070152-0:0r/3a
+    agent-1788735903070152-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 79027: decisions=1 inFlight=1 pending=0 actors=agent-1788735903070152-0:0r/3a
+    agent-1788735903070152-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 79123: decisions=0 inFlight=0 pending=0 actors=agent-1788735903070152-0:0r/3a
+
+
+--- tool results (truncated per beat) ---
+repo_etl: {"ok":true,"files":4,"dirs":3,"dart_files":2,"symbols":2,"edges":7,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"tree is world state (code graph + fs tier) — use meaning_zoom / meaning_impact to read it; it is re-derivabl
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+
+coding_agent run — task: wave_trusted_author
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 2078
+  decisions: 5
+  tool rounds (thread beats): 5
+  moves: {repo_etl.scan: 5}
+  projection tokens (honest spend, Situation.tokensUsed): 13910
+  meaning nodes: 16, edges: 20
+  wall clock: 207079 ms
+  final gate (outer oracle, once): FAIL
+    check: dart test exit=1:
+  failure class: final gate: dart test exit=1:
+--- harness pulse (J1.5.3) ---
+tick 5 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788737181399166-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: dart test exit=1:
+— agent-1788737181399166-0  [idle]  rounds 0/12 (Σ0)  attempts 3/3 EXHAUSTED
+    last: repo_etl:{"action":"scan"} → ok
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 39116..64472
+tick 62629: decisions=1 inFlight=1 pending=0 actors=agent-1788737181399166-0:0r/3a
+    agent-1788737181399166-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 62729: decisions=1 inFlight=1 pending=0 actors=agent-1788737181399166-0:0r/3a
+    agent-1788737181399166-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 62829: decisions=1 inFlight=1 pending=0 actors=agent-1788737181399166-0:0r/3a
+    agent-1788737181399166-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 62929: decisions=1 inFlight=1 pending=0 actors=agent-1788737181399166-0:0r/3a
+    agent-1788737181399166-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 63029: decisions=1 inFlight=1 pending=0 actors=agent-1788737181399166-0:0r/3a
+    agent-1788737181399166-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 63129: decisions=1 inFlight=1 pending=0 actors=agent-1788737181399166-0:0r/3a
+    agent-1788737181399166-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 63229: decisions=1 inFlight=1 pending=0 actors=agent-1788737181399166-0:0r/3a
+    agent-1788737181399166-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 63329: decisions=1 inFlight=1 pending=0 actors=agent-1788737181399166-0:0r/3a
+    agent-1788737181399166-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 63429: decisions=1 inFlight=1 pending=0 actors=agent-1788737181399166-0:0r/3a
+    agent-1788737181399166-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 63529: decisions=1 inFlight=1 pending=0 actors=agent-1788737181399166-0:0r/3a
+    agent-1788737181399166-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 63629: decisions=1 inFlight=1 pending=0 actors=agent-1788737181399166-0:0r/3a
+    agent-1788737181399166-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 63729: decisions=1 inFlight=1 pending=0 actors=agent-1788737181399166-0:0r/3a
+    agent-1788737181399166-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 63829: decisions=1 inFlight=1 pending=0 actors=agent-1788737181399166-0:0r/3a
+    agent-1788737181399166-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 63929: decisions=1 inFlight=1 pending=0 actors=agent-1788737181399166-0:0r/3a
+    agent-1788737181399166-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 64029: decisions=1 inFlight=1 pending=0 actors=agent-1788737181399166-0:0r/3a
+    agent-1788737181399166-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 64129: decisions=1 inFlight=1 pending=0 actors=agent-1788737181399166-0:0r/3a
+    agent-1788737181399166-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 64229: decisions=1 inFlight=1 pending=0 actors=agent-1788737181399166-0:0r/3a
+    agent-1788737181399166-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 64329: decisions=1 inFlight=1 pending=0 actors=agent-1788737181399166-0:0r/3a
+    agent-1788737181399166-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 64429: decisions=1 inFlight=1 pending=0 actors=agent-1788737181399166-0:0r/3a
+    agent-1788737181399166-0 ← : "Your previous attempt did not satisfy verification (attempt 3/3).
+Failing:
+dart test exit=1:
+
+The exact move that fix…"
+tick 64472: decisions=0 inFlight=0 pending=0 actors=agent-1788737181399166-0:0r/3a
+
+
+--- tool results (truncated per beat) ---
+repo_etl: {"ok":true,"files":4,"dirs":3,"dart_files":2,"symbols":2,"edges":7,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"tree is world state (code graph + fs tier) — use meaning_zoom / meaning_impact to read it; it is re-derivabl
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+

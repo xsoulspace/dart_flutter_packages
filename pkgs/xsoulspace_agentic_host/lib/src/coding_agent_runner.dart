@@ -70,6 +70,8 @@ import 'package:xsoulspace_agentic_workspace/xsoulspace_agentic_workspace.dart'
     show
         SpanEditMaterializer,
         SpanEditPlan,
+        editKeyTool,
+        editMdTool,
         editSymbolTool,
         meaningSpanReader,
         repoEtlTool,
@@ -351,10 +353,18 @@ Future<String?> taskGrammarPrepass(
   }
   final lookup = executableDecisionForTask(world, reading);
   if (!lookup.matched || lookup.decision == null) return null;
-  return 'task-grammar pre-pass (host, 0 tokens): this task parses to '
-      '{verb-class: ${reading.verbClass}, target: ${reading.target}} and '
-      'pack executable ${lookup.decision!['executableId']} matches — the '
-      'ready decision: harness_edit ${jsonEncode(lookup.decision!)}';
+  // R7e teaching lesson (measured on-device, afm_wave row 1): a tiny model
+  // reads the FIRST line and starts exploring — the ready move must LEAD,
+  // be imperative, and forbid the natural first move (scan), which bounces
+  // on an already-built tree and derails the whole decision path.
+  return 'READY MOVE — execute this harness_edit call NOW with EXACTLY '
+      'these args. Do NOT scan (the meaning tree is already built), do NOT '
+      'zoom or explore first:\n'
+      'harness_edit ${jsonEncode(lookup.decision!)}\n'
+      '(host task-grammar pre-pass, 0 tokens: verb-class '
+      '${reading.verbClass}, target ${reading.target}, pack executable '
+      '${lookup.decision!['executableId']}. After the move, end your '
+      'turn.)';
 }
 
 /// One run's measured result — every published column is carried here.
@@ -640,6 +650,11 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
             packConsent: packConsent,
           );
     registry.register(editSymbolTool(world, jail, materializer: materializer));
+    // Non-dart materializers (ADR 0024): md (`edit_section`) and yaml/json
+    // (`edit_key`) — the SAME single-writer lock table instance so a span
+    // move and a doc move can never interleave on one file.
+    registry.register(editMdTool(fsRoot, locks: materializer?.locks));
+    registry.register(editKeyTool(fsRoot, locks: materializer?.locks));
     // fs tier (ADR 0024 §4): the escape-hatch WRITE — registered ONLY when a
     // review gateway exists (deny-by-default is structural: no approver, no
     // verb). The gateway renders the unified diff and asks the client via
@@ -707,9 +722,11 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
     final scene = world.spawnComponents([Scene(), SceneFrame()]);
     // P2 — the pre-pass decision data rides the goal frame: ONE decision
     // carries it verbatim; without a parse hit the frame is untouched.
+    // The ready move LEADS (R7e/afm_wave lesson: the model reads the first
+    // line; the task sentence follows as context).
     final goalText = grammarDirective == null
         ? task.prompt
-        : '${task.prompt}\n\n$grammarDirective';
+        : '$grammarDirective\n\nOriginal task: ${task.prompt}';
     actor = world.spawnComponents([
       Actor(agentId: AgentId.create()),
       // M1: bind a model id the router registered — a random id resolves to

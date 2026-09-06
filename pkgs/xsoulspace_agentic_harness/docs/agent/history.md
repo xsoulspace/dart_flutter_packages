@@ -689,3 +689,18 @@ Extracted from the living PLAN; the forward work is the production path in
 - Post-merge sweep: harness 461/0 (machine-counted) + 12 pre-existing
   `avoid_dynamic_calls` analyzer ERRORS from the mesh commits fixed (typed
   casts; tests unchanged); workspace 67/67; host 50/50; `harness_verify` PASS.
+
+## AFM wave gate — first on-device run (2026-09-06)
+
+`bin/afm_wave_gate.dart` (apple_foundation) ran the four new tiers against
+the REAL on-device AFM. **task_grammar: PASS 1/1 — 1 decision, 1 tool round,
+2,864 tokens, 49.5 s** (the decision-amortization endpoint, real-model
+proven). Rows 2–4 (trusted_author, md, yaml) FAIL with a measured systemic
+class: the meaning profile's fixed overhead (2,268 tokens vs R7e's 1,408)
+overflows the 4k AFM window on multi-round rows → `backend_failed` retry
+loops consume the budget. **ADR 0030 convergence is evidence-backed as the
+required next step.** Dogfood fixes landed during the runs: the pre-pass
+ready move now LEADS the goal frame imperatively (23,987-token FAIL →
+2,864-token PASS); `repo_etl scan` is an idempotent ensure (never an error
+bounce on a built tree); `edit_section`/`edit_key` registered on the daemon
+profile. Full rows: `benchmark/runs/afm_wave_results.md`.

@@ -361,3 +361,27 @@
   new-file bootstraps leave the raw-write class; (b) a workspace root that
   spans the monorepo (multi-workspace daemon, PLAN P4) so the repo's own
   yaml/md files are in-jail and the yaml/md edit verbs can serve them.
+
+## 2026-09-06 — lane C′ follow-up: harness_edit has NO mechanical directive path (mover_refusal ×3, measured)
+
+- **What bash/edit did**: nothing — three `harness_edit {insert_member …}`
+  delegations through the remote-mover daemon each ended
+  `mover_refusal: empty move` (walls 103 s / 117 s / 183 s, each burning a
+  root-convention fallback verify). The single-package verify derivation
+  could NOT be exercised end-to-end by the agent: the touched-file beat
+  never landed because the mutation verb routes through the mover
+  round-trip, and the mover model closed every decision empty.
+- **Why the surface didn't cover it**: reads (`[scan]`/`[zoom]`/
+  `harness_locate`), `harness_run {…}` and `harness_fs_write {…}` all have
+  MECHANICAL directive paths (`isReadOnlyDirectivePrompt` /
+  `isMechanicalRunDirective` / `isMechanicalWriteDirective`) —
+  `harness_edit {…}` does not: in remote-mover mode it is always a graded
+  mover task, so the one verb that feeds the per-package verify
+  derivation is the one verb with no deterministic route.
+- **The verb/spec to build**: a mechanical edit-directive path for
+  `harness_edit {…}` payloads — same shape as the write path
+  (payload-validated, edit-approver consent round-trip, dropped-payload
+  accounting, beat lands on the goal actor's thread) — or, minimally,
+  mover-refusal fallback that executes a SINGLE well-formed
+  `harness_edit` payload mechanically instead of grading the root
+  convention. Until then, a mover flake costs a full root verify.

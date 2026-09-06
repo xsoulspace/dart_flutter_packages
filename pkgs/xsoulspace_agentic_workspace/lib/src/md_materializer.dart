@@ -710,18 +710,12 @@ ToolDef editMdTool(
   return ToolDef.encode(
     name: const ToolName('edit_section'),
     description:
-        'Edit a Markdown document through its section map — never a raw '
-        'write. Args: path (workspace-relative .md), op '
-        '(replace_section: swap the section content, heading preserved | '
-        'insert_section: insert a NEW section after the anchor — body '
-        'MUST start with a heading | append_to_section: extend the '
-        'anchor\'s content), anchor (the exact section label, or the '
-        'section node id from meaning_zoom), body (the prose, as data). '
-        'The host splices byte-precisely and runs the md_docs_oracle (0 '
-        'broken relative links + heading anchors resolve) — a broken-link '
-        'edit AUTO-REVERTS with the named failure class. Anchor misses '
-        'bounce with the outline; read sections via meaning_zoom point '
-        'cuts, never file reads.',
+        'Edit a Markdown section by heading anchor. Args: path (.md), op '
+        '(replace_section | insert_section | append_to_section), anchor '
+        '(exact section label or section node id), body (prose as data). '
+        'The host splices byte-precisely (heading preserved) and runs the '
+        'zero_broken_links oracle — a violating edit AUTO-REVERTS. Misses '
+        'bounce with the outline.',
     argsSchema: SchemaBundle(
       root: FM.object('edit_section', properties: () => [
             FM.prop('path', FM.string()),

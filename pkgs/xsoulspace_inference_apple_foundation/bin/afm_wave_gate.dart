@@ -695,7 +695,8 @@ Future<Map<String, Object?>> _runRow(
       final logFile = writeRunLog(
         runsDir,
         'afm_wave_${row.name}_run$i.log',
-        formatRunLog(result),
+        '${formatRunLog(result)}\n--- tool results (truncated per beat) ---\n'
+        '${result.toolResults.join('\n')}\n',
       );
       if (result.passed) passed++;
       final failureClass = result.failureClass.isEmpty
