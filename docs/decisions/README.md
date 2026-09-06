@@ -30,6 +30,7 @@
 | [0026](0026_workspace_domain_specs_as_data_wire_codec.md) | Accepted | The workspace is the domain: specs are data; the wire contract lives with the request |
 | [0027](0027_reads_are_not_builds_reasoning_beats.md) | Accepted | Reads are not builds: reasoning beats and the decision-classified mover |
 | [0028](0028_one_move_per_decision_native_loop_bounded.md) | Accepted | One move per decision: the native tool loop is not a decision loop (contract, backend-agnostic) |
+| [0030](0030_one_decision_one_program_surface_convergence.md) | Accepted | One decision, one program: the meaning surface converges; the format is never the model's choice |
 | [0029](0029_convergence_kernel_presence_and_sequence_strategy.md) | Accepted | Convergence kernel — presence/ephemeral contract and sequence strategy pulled forward |
 | [0030](0030_convergence_kernel_composite_strategy.md) | Accepted | Convergence kernel — composite strategy (one document, one kernel doc); per-op tags deferred with recorded trigger |
 | [0031](0031_presence_link_topology_and_session_foundation.md) | Accepted | Presence link topology (shared connection, doc-scoped, app-owned) and transport-agnostic presence foundation |

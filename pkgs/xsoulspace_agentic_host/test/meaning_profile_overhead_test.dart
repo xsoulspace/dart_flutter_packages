@@ -19,6 +19,8 @@ import 'dart:io';
 import 'package:test/test.dart';
 
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
+import 'package:xsoulspace_agentic_harness/src/meaning/meaning_read_program.dart'
+    show meaningProgramTool, defaultProgramVerdictBudgetTokens;
 import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
     show FsToolsRoot, JailWriteGateway, WriteGateMode, runTool;
 import 'package:xsoulspace_agentic_workspace/xsoulspace_agentic_workspace.dart'
@@ -121,6 +123,77 @@ void main() {
       expect(total, lessThanOrEqualTo(afmBudgetTokens));
       expect(total, lessThanOrEqualTo(fixedOverheadTarget));
       expect(workingMemory, greaterThanOrEqualTo(2000));
+    },
+  );
+
+  test(
+    'ADR 0030 — the CONVERGED profile: the program tool REPLACES '
+    'zoom+impact; the surface must SHRINK, never grow',
+    () {
+      final world = World()..addPlugin(AgentPlugin());
+      final jail = Directory.systemTemp.createTempSync('converged_probe_');
+      addTearDown(() => jail.deleteSync(recursive: true));
+
+      final fsRoot = FsToolsRoot(jail.path);
+      final gateway = JailWriteGateway(
+        fsRoot,
+        mode: WriteGateMode.review,
+        approver: (w) async => true,
+      );
+
+      // Current profile (the row above) for the delta.
+      final current = ToolRegistry()
+        ..register(repoEtlTool(world, jail))
+        ..register(
+          meaningZoomTool(world, spanReader: meaningSpanReader(fsRoot)),
+        )
+        ..register(meaningImpactTool(world))
+        ..register(editSymbolTool(world, jail))
+        ..register(writeReviewTool(fsRoot, gateway))
+        ..register(runTool(fsRoot));
+      final currentTotal = overheadTokens(
+        systemPrompt: meaningProfileSystemPrompt,
+        tools: current.tools.values.toList(),
+      );
+
+      // The CONVERGED profile (ADR 0030 §3): zoom+impact (+locate, when it
+      // surfaces) come OUT; the program comes IN — the model chains reads
+      // instead of paying a schema per verb.
+      final converged = ToolRegistry()
+        ..register(repoEtlTool(world, jail))
+        ..register(
+          meaningProgramTool(world, spanReader: meaningSpanReader(fsRoot)),
+        )
+        ..register(editSymbolTool(world, jail))
+        ..register(writeReviewTool(fsRoot, gateway))
+        ..register(runTool(fsRoot));
+      final convergedTotal = overheadTokens(
+        systemPrompt: meaningProfileSystemPrompt,
+        tools: converged.tools.values.toList(),
+      );
+
+      // ignore: avoid_print
+      print('ADR 0030 — surface convergence row');
+      // ignore: avoid_print
+      print(
+        'current profile: ${current.tools.length} tools, '
+        '$currentTotal est tokens',
+      );
+      // ignore: avoid_print
+      print(
+        'converged profile: ${converged.tools.length} tools, '
+        '$convergedTotal est tokens (program verdict budget: '
+        '$defaultProgramVerdictBudgetTokens est tokens)',
+      );
+
+      // The law: convergence SHRINKS the fixed surface.
+      expect(
+        convergedTotal,
+        lessThan(currentTotal),
+        reason: 'the program must REPLACE the verbs it subsumes — '
+            'the profile shrinks, never grows (ADR 0030 §3)',
+      );
+      expect(convergedTotal, lessThanOrEqualTo(fixedOverheadTarget));
     },
   );
 }

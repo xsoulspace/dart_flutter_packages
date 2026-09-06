@@ -20,10 +20,28 @@ final class AddressedRelayClient implements MeshTransport {
 
   WebSocketChannel? _channel;
   final _incoming = StreamController<MeshSession>();
+  final _ephemeralIncoming = StreamController<Uint8List>();
+  final _connectionStates = StreamController<bool>.broadcast();
+  var _connected = false;
   final Map<String, _AddressedSession> _sessions = {};
 
   @override
   Stream<MeshSession> get incoming => _incoming.stream;
+
+  /// Inbound ephemeral-frame payloads (ADR 0029 §1, ADR 0031 §2).
+  ///
+  /// Delivered in ADDITION to the historical session path below: existing
+  /// consumers of [MeshSession.inbound] keep seeing every envelope kind,
+  /// while ephemeral-frame adapters consume this dedicated stream so
+  /// presence traffic never mixes with sync data. Buffered until listened.
+  Stream<Uint8List> get ephemeralIncoming => _ephemeralIncoming.stream;
+
+  /// Whether the relay socket is currently attached.
+  bool get isConnected => _connected;
+
+  /// Emits `true` when the relay socket attaches and `false` when it
+  /// drops or is closed.
+  Stream<bool> get onConnectionChanged => _connectionStates.stream;
 
   /// Connects to an addressed relay and registers [selfId].
   Future<void> openRelay() async {
@@ -42,6 +60,7 @@ final class AddressedRelayClient implements MeshTransport {
 
   void _attach(final WebSocketChannel channel) {
     _channel = channel;
+    _setConnected(true);
     _sendEnvelope(
       toPeerId: '',
       payload: utf8.encode('register'),
@@ -51,11 +70,20 @@ final class AddressedRelayClient implements MeshTransport {
       (message) {
         if (message is! List<int>) return;
         final envelope = AddressedRelayProtocol.decode(message);
-        if (envelope.toPeerId != selfId) return;
+        // Broadcast envelopes (empty `to`, ADR 0031 §2) are addressed to
+        // every peer; directed ones only to us.
+        if (envelope.toPeerId != selfId && envelope.toPeerId.isNotEmpty) {
+          return;
+        }
         if (envelope.kind == AddressedRelayProtocol.registerKind) return;
         // [AddressedRelayProtocol.ephemeralKind] (ADR 0029 §1) falls
         // through to the same delivery path as data: ephemeral frames are
         // relayed like other frames, with no durable treatment anywhere.
+        // A copy also lands on [ephemeralIncoming] for the dedicated
+        // presence channel (ADR 0031 §2).
+        if (envelope.kind == AddressedRelayProtocol.ephemeralKind) {
+          _ephemeralIncoming.add(Uint8List.fromList(envelope.payload));
+        }
         if (envelope.kind == AddressedRelayProtocol.openKind) {
           _sessions.putIfAbsent(envelope.fromPeerId, () {
             final created = _AddressedSession(envelope.fromPeerId);
@@ -79,6 +107,7 @@ final class AddressedRelayClient implements MeshTransport {
         }
         _sessions.clear();
         _channel = null;
+        _setConnected(false);
       },
     );
   }
@@ -108,10 +137,19 @@ final class AddressedRelayClient implements MeshTransport {
       session.closeRemote();
     }
     _sessions.clear();
-    _incoming.close();
+    await _incoming.close();
+    await _ephemeralIncoming.close();
+    _setConnected(false);
+    await _connectionStates.close();
     final channel = _channel;
     _channel = null;
     await channel?.sink.close();
+  }
+
+  void _setConnected(final bool value) {
+    if (_connected == value) return;
+    _connected = value;
+    _connectionStates.add(value);
   }
 
   void _sendEnvelope({

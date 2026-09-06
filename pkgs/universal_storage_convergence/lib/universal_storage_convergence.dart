@@ -11,6 +11,7 @@
 /// fold rules.
 library;
 
+export 'src/composite_merge_strategy.dart';
 export 'src/convergence_doc.dart';
 export 'src/hlc.dart';
 export 'src/lww_map_strategy.dart';

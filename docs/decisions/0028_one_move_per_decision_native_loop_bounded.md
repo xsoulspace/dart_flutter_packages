@@ -11,7 +11,7 @@
   ADR 0004 (the meaning runtime; beats cross the boundary, the
   transcript is derived).
 - Related: `pkgs/xsoulspace_inference_apple_foundation/bin/
-  afm_context_probe.dart` (the measuring probe),
+  afm_flatness_probe.dart` (the measuring probe),
   `pkgs/xsoulspace_agentic_harness/benchmark/runs/delegation_r9.md`
   (findings 13–15), `bridge/src/bridge.swift` (session contract).
 
@@ -121,7 +121,7 @@ sees; append-only native accumulation is anti-flat by construction.
   recorded as `BeatToolCall` moves (they never executed); the bounce
   text is the record. If violation rates become decision-relevant,
   count them explicitly — do not re-admit silent execution.
-- The verification probe (`afm_context_probe.dart`) demonstrates the
+- The verification probe (`afm_flatness_probe.dart`) demonstrates the
   law: sequential decisions, one executed move each, per-decision
   native context printed from `model.tokenCount(for:)` /
   `model.contextSize` — the flatness measurement.

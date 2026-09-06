@@ -31,6 +31,15 @@ final class AddressedRelayServer {
             return;
           }
           if (peerId == null || envelope.fromPeerId != peerId) return;
+          if (envelope.toPeerId.isEmpty) {
+            // Broadcast (ADR 0031 §2): ephemeral presence frames fan out
+            // to every other registered peer — the relay is still an
+            // untrusted router, forwarding the envelope unchanged.
+            for (final entry in _clients.entries) {
+              if (entry.key != peerId) entry.value.sink.add(message);
+            }
+            return;
+          }
           _clients[envelope.toPeerId]?.sink.add(message);
         },
         onDone: () {

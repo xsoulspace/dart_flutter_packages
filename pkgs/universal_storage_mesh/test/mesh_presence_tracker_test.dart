@@ -64,6 +64,53 @@ void main() {
     });
   });
 
+  group('details namespace (ADR 0031 §6)', () {
+    test('register values nest consumer payloads under `details`', () {
+      final a = MeshPresenceTracker(actorId: 'device-a');
+      final frame = a.announce(
+        docId: 'd',
+        event: MeshEphemeralEvent.join,
+        now: t0,
+        ttl: const Duration(seconds: 30),
+        details: {'display': 'Alice', 'agent': 'writer-v2'},
+      );
+
+      final op = frame.payload['op'] as Map<dynamic, dynamic>;
+      final payload = op['payload'] as Map<dynamic, dynamic>;
+      final value = payload['v'] as Map<dynamic, dynamic>;
+      expect(
+        value.keys.toSet(),
+        {'peer', 'event', 'ttl_ms', 'details'},
+        reason: 'only tracker-reserved keys live beside the details map',
+      );
+      expect(value['peer'], 'device-a');
+      expect(value['event'], 'join');
+      expect(value['ttl_ms'], 30000);
+      expect(value['details'], {
+        'display': 'Alice',
+        'agent': 'writer-v2',
+      });
+    });
+
+    test('consumer payloads never collide with reserved keys', () {
+      final a = MeshPresenceTracker(actorId: 'device-a');
+      a.announce(
+        docId: 'd',
+        event: MeshEphemeralEvent.join,
+        now: t0,
+        details: {'peer': 'spoof', 'event': 'spoof', 'ttl_ms': 0},
+      );
+      final entry = a.presence('d').single;
+      expect(entry.peerId, 'device-a');
+      expect(entry.lastEvent, MeshEphemeralEvent.join);
+      expect(entry.details, {
+        'peer': 'spoof',
+        'event': 'spoof',
+        'ttl_ms': 0,
+      });
+    });
+  });
+
   group('ttl expiry', () {
     test('sweep expires entries past their ttl, idempotently', () {
       final a = MeshPresenceTracker(actorId: 'device-a')

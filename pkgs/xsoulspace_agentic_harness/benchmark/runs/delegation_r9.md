@@ -38,7 +38,7 @@ n=1 per row (single runs, on-device, macOS 26.6.2).
 | R9.1 meaning e2e, run 2 (after the finding-9 fix) | same | `apple_foundation_afm` | **FAIL** (cut fatness + re-scan churn — findings 10/11, open) | 7 decisions, 5 rounds, 38,299 tokens, wall 46.1 s; moves scan×2 zoom×2 refresh×1 | 1 |
 | A/B reference: conventional self-profile (recorded 2026-09-05) | same workspace, same oracle, command profile | `apple_foundation_afm` | **PASS** | 1 decision, 3 rounds, 1,554 tokens, 41.5 s | 1 |
 | ADR 0028 one-move contract (LLM-free gates) | multi-call model response through `DefaultGenerationHandler` + second native call through `WorldToolBridge` | scripted | **PASS** — first move executes, dropped calls bounce (never execute) with named repair beats; single-move responses unaffected; `340` harness + `41` host tests green | — | 2 gate files |
-| R9.1 investigation A probe (`bin/afm_context_probe.dart`, real bridge, scripted decision-path: direct `client.infer`, no ACP) | one decision forced through 3 sequential native tool rounds (list → read → answer) | `apple_foundation_afm` | **PASS** (probe completed; growth curve captured) | native tokenCount truth: window **4,096**; baseline (instructions) 1,037 + prompt (cut) 1,499 + tool schemas 182; per-round transcript 2,562 → 2,735 → **decision_final 3,673** | 1 |
+| R9.1 investigation A probe (`tool/afm_flatness_probe.dart`, real bridge, scripted decision-path: direct `client.infer`, no ACP) | one decision forced through 3 sequential native tool rounds (list → read → answer) | `apple_foundation_afm` | **PASS** (probe completed; growth curve captured) | native tokenCount truth: window **4,096**; baseline (instructions) 1,037 + prompt (cut) 1,499 + tool schemas 182; per-round transcript 2,562 → 2,735 → **decision_final 3,673** | 1 |
 
 Tokens source: backend verdict chunks. The honest reading: the meaning
 surface's MACHINERY is right (ETL 812 files / 4,567 symbols in-app;
@@ -49,6 +49,31 @@ the conventional profile on a trivial task. That is the measured frontier
 10/11 are the harness's next work items, pulled, never absorbed.
 
 ## Findings (each named, none dropped)
+
+16. **Fixed-surface saturation (measured 2026-09-06, post-R9.1
+    landings): the meaning profile is 6 tools at 1,598 of the 1,600-token
+    gate** (`meaning_profile_overhead_test.dart`) — one rebalance from
+    full, with `meaning_locate` + the md/yaml verbs still unsurfaced, and
+    the native truth ~45% heavier than the estimator (finding 13).
+    Reading: every capability that wants a verb is now BLOCKED by the
+    window law — by design. The pressure forces the convergence ADR 0030
+    names: capabilities live in the tree (capability_nodes), programs
+    carry chains (one call, N reads), and the profile must SHRINK when
+    the program tool graduates (replace, never add). New verbs enter via
+    the program op set first, never as additional per-decision schemas.
+    Tokens source: overheadTokens (chars/4 estimator); n = 1 measured
+    row.
+17. **Surface convergence row (ADR 0030, positive finding).** The
+    converged profile — repo_etl + `meaning_program` + edit_symbol +
+    write_review + run — measures **5 tools / 1,537 est tokens vs the
+    current 6 / 1,598**: the program REPLACES zoom+impact and the fixed
+    surface SHRINKS by 61 est tokens while gaining locate + read
+    chaining. First gate catch: the program schema initially carried 7
+    op props (1,604 — the gate rejected it) and was leaned to 4
+    (op/query/focusId/budget); the law held by measurement, not by
+    intent. Gates: `meaning_profile_overhead_test.dart` (2 rows),
+    `meaning_read_program_test.dart` 7/7 (LLM-free). Tokens source:
+    overheadTokens estimator; n = 1 per row.
 
 9. **Meaning-profile discovery: the query ray-cast sent as `zoom=point`
    silently returned an EMPTY cut** (point admits focus ids only and
@@ -138,7 +163,7 @@ the daemon's mechanical directive relay are out of the contract's domain
 re-admits the prior tool result as a projected beat — context ownership
 holds at every token. Verification: contract gates in
 `one_move_contract_test.dart` + `resources_and_bridge_test.dart`; the
-probe (`afm_context_probe.dart`) prints per-decision native context from
+probe (`afm_flatness_probe.dart`) prints per-decision native context from
 `model.tokenCount(for:)` / `model.contextSize`.
 
 6. **Conversation-profile blind writes corrupt targets (R9.b, THE

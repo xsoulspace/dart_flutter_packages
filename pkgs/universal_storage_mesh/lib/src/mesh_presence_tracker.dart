@@ -31,7 +31,8 @@ final class MeshPresenceEntry {
   /// When this entry dies: issuing wall clock + event TTL.
   final DateTime expiresAt;
 
-  /// Opaque event details carried by the frames (display name, cursors…).
+  /// Opaque event details carried by the frames (display name, cursors…),
+  /// read from the register value's nested `details` map (ADR 0031 §6).
   final Map<String, Object?> details;
 
   @override
@@ -77,11 +78,17 @@ final class MeshPresenceTracker {
   /// expires out of the fold.
   final Duration defaultTtl;
 
-  /// Payload keys inside the per-peer LWW register value — one register
-  /// per peer, so the latest event from a peer wins by HLC.
+  /// Register-value keys inside the per-peer LWW register value — one
+  /// register per peer, so the latest event from a peer wins by HLC.
+  ///
+  /// Consumer payloads are NAMESPACED: they ride under the nested
+  /// `_detailsKey` map (ADR 0031 §6), never flat beside the reserved
+  /// keys — no key-coupling between the tracker and consumers, and no
+  /// consumer payload can collide with one of these.
   static const _eventKey = 'event';
   static const _peerKey = 'peer';
   static const _ttlKey = 'ttl_ms';
+  static const _detailsKey = 'details';
 
   final Map<String, ConvergenceDoc> _docs = {};
 
@@ -186,11 +193,15 @@ final class MeshPresenceTracker {
     required final Duration ttl,
     required final Map<String, Object?> details,
   }) {
+    // Consumer payloads live ONLY under the nested `details` map (ADR
+    // 0031 §6 — wire shape taken before any consumer depended on the
+    // flat form). Entries must be JSON-encodable: the register rides
+    // inside the kernel op JSON on the frame.
     final value = <String, Object?>{
-      ...details,
       _peerKey: peerId,
       _eventKey: event.name,
       _ttlKey: ttl.inMilliseconds,
+      _detailsKey: Map<String, Object?>.of(details),
     };
     // `leave` tombstones the register so the peer drops out immediately;
     // the tombstone itself expires with the same TTL.
@@ -222,10 +233,13 @@ final class MeshPresenceTracker {
       }
     }
     if (event == null) return null;
-    final details = Map<String, Object?>.from(value)
-      ..remove(_peerKey)
-      ..remove(_eventKey)
-      ..remove(_ttlKey);
+    // Consumer payloads are read back from the nested `details` map (ADR
+    // 0031 §6); a register without one carries no consumer payload.
+    final rawDetails = value[_detailsKey];
+    final details =
+        rawDetails is Map
+            ? Map<String, Object?>.from(rawDetails)
+            : const <String, Object?>{};
     return MeshPresenceEntry(
       docId: docId,
       peerId: peerId,

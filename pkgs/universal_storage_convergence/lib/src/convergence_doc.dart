@@ -1,5 +1,6 @@
 import 'package:meta/meta.dart';
 
+import 'composite_merge_strategy.dart';
 import 'hlc.dart';
 import 'lww_map_strategy.dart';
 import 'op_record.dart';
@@ -108,11 +109,18 @@ final class ConvergenceDoc {
 
   /// Strategy registry (serialization contract). Changing a doc's
   /// strategy across replicas is a protocol-breaking change (ADR 0011).
-  static MergeStrategy strategyFor(final String name) => switch (name) {
-    'lww_map' => const LwwMapStrategy(),
-    'rga_text' => const RgaTextStrategy(),
-    _ => throw ArgumentError.value(name, 'name', 'Unknown strategy'),
-  };
+  /// Composite strategies restore their full lane map from the wire-stable
+  /// `composite:<lane-spec-id>` name — no parent-side re-routing (ADR 0030 §1).
+  static MergeStrategy strategyFor(final String name) {
+    if (name == 'lww_map') return const LwwMapStrategy();
+    if (name == 'rga_text') return const RgaTextStrategy();
+    if (name.startsWith(CompositeMergeStrategy.specPrefix)) {
+      return CompositeMergeStrategy.fromSpec(
+        name.substring(CompositeMergeStrategy.specPrefix.length),
+      );
+    }
+    throw ArgumentError.value(name, 'name', 'Unknown strategy');
+  }
 
   final String docId;
   final String actorId;
@@ -244,17 +252,29 @@ final class ConvergenceDoc {
   /// relative to [now] (expired ops stay deduped — expiry is monotonic in
   /// real time). Returns how many ops were newly applied.
   int applyRemote(final Iterable<OpRecord> ops, {final DateTime? now}) {
-    final fresh =
-        ops
-            .where((final op) => op.docId == docId && _seenOpIds.add(op.opId))
-            .toList()
-          ..sort((final a, final b) => a.hlc.compareTo(b.hlc));
+    // Dedupe WITHOUT committing yet: an op is marked seen only after its
+    // fold succeeded (or it was deliberately dropped as expired), so a
+    // fold error — e.g. a composite lane mismatch (ADR 0030 §1) — leaves
+    // the op unseen and redelivery retries it. Ops are never silently
+    // dropped on a failed fold.
+    final freshById = <String, OpRecord>{};
+    for (final op in ops) {
+      if (op.docId != docId || _seenOpIds.contains(op.opId)) continue;
+      freshById.putIfAbsent(op.opId, () => op);
+    }
+    final fresh = freshById.values.toList()
+      ..sort((final a, final b) => a.hlc.compareTo(b.hlc));
     var applied = 0;
     final durable = <OpRecord>[];
     for (final op in fresh) {
       if (op.ttl != null) {
-        if (now != null && op.isExpiredAt(now)) continue;
+        // Expired ops stay deduped — expiry is monotonic in real time.
+        if (now != null && op.isExpiredAt(now)) {
+          _seenOpIds.add(op.opId);
+          continue;
+        }
         strategy.fold(_ephemeralState, op);
+        _seenOpIds.add(op.opId);
         _ephemeralLog = [..._ephemeralLog, op];
         applied++;
       } else {
@@ -264,6 +284,7 @@ final class ConvergenceDoc {
     for (final op in durable) {
       strategy.fold(_state, op);
       _vv = _vv.observed(op.hlc);
+      _seenOpIds.add(op.opId);
     }
     if (durable.isNotEmpty) {
       applied += durable.length;
