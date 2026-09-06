@@ -31,6 +31,8 @@
 
 | 2026-09-06 | Extensibility concern (hardcoded `FsScan.dartFiles`) | (design review, no bash needed) | the class→extractor wiring was hardcoded (tick filtered `.dart` by label suffix, scan called `scanDartFile` directly) | CLOSED: `file_class_spec.dart` — the FILE-CLASS SPEC registry (extensions + optional parse fn as data); scan, tick and code-tier dispatch all go through `specForRel`; adding md/yaml/json/text = registering a spec + a materializer spec, zero new verbs |
 
+| 2026-09-06 | Tiny-model spec writing (the frontier unlocked as DATA) | (no bash — the unlock is a prompt + a validator) | a model-written spec cannot land safely without a mechanical validator | `spec_check` tool: schema + golden round-trip + oracle-failability + fence-name resolution → PASS registers the spec as data, FAIL bounces with named repair. Work order: `docs/agent/prompts/spec_writer_work_order.md` (standing preamble = the nine laws) |
+
 ## Closed gaps (moved to results when landed)
 
 (none yet — this ledger was opened 2026-09-06)

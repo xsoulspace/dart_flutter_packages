@@ -18,27 +18,26 @@ means closing this list.
 
 ### Open issues (named, unowned)
 
-| Issue | Where | Next move |
-|---|---|---|
-| Double-spawn race in extension recovery (two spawns race → one client attaches to a dead socket) | `r7_harnessd_extension.ts` | serialize `ensureClient` behind a spawn promise (small TS fix) |
-| Warm-tick floor ~1.4 s on the monorepo (full fs walk per tick for add/drop detection) | `fs_etl.dart` | tree-driven fs reconcile: stat from stored file nodes, walk only to catch adds |
-| `harness_verify` unwired: the extension cannot pass a per-package `--check`; monorepo-root verify is meaningless | `harnessd_cli.dart` (`--check` exists) + extension env | wire `HARNESSD_CHECK` → spawn args; package-scoped verify |
-| Root convention is a MONOREPO compromise (`flutter test` over root test/) — per-package tasks need per-package gates | `workspace_conventions.dart` | task sentences carry `--check` (the D8 convention stays the default) |
-| Zoom staleness: cut props can lag a just-refreshed tree (mtime-reconciled nodes) | `meaning_query_tools.dart` | zoom re-stats the focus node (cheap) |
+| Issue                                                                                                                | Where                                                  | Next move                                                                      |
+| -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| Double-spawn race in extension recovery (two spawns race → one client attaches to a dead socket)                     | `r7_harnessd_extension.ts`                             | serialize `ensureClient` behind a spawn promise (small TS fix)                 |
+| Warm-tick floor ~1.4 s on the monorepo (full fs walk per tick for add/drop detection)                                | `fs_etl.dart`                                          | tree-driven fs reconcile: stat from stored file nodes, walk only to catch adds |
+| `harness_verify` unwired: the extension cannot pass a per-package `--check`; monorepo-root verify is meaningless     | `harnessd_cli.dart` (`--check` exists) + extension env | wire `HARNESSD_CHECK` → spawn args; package-scoped verify                      |
+| Root convention is a MONOREPO compromise (`flutter test` over root test/) — per-package tasks need per-package gates | `workspace_conventions.dart`                           | task sentences carry `--check` (the D8 convention stays the default)           |
+| Zoom staleness: cut props can lag a just-refreshed tree (mtime-reconciled nodes)                                     | `meaning_query_tools.dart`                             | zoom re-stats the focus node (cheap)                                           |
 
 ### Untested surface (built, never proven end-to-end)
 
-| Feature | Gate that must run | Status |
-|---|---|---|
-| Consent plans (bounded grants, audit) | host unit tests green; NO real pi session has granted/audited one | unit-only |
-| Reasoning beats (`thinking` capture, escalation reuse, `reasoning` hints) | scripted tests green; NO real-model run has exercised them | unit-only |
-| `remove_member` (retire) on a REAL model flow | scripted gates green; no AFM/OpenRouter retirement attempt | unit-only |
-| `harnessd --check` override | implemented this session, zero runs | untested |
-| File-class registry extension path (register md/yaml/json `parse` fns) | registry unit-tested via tick; no non-dart class registered yet | path-only |
-| md/yaml/json EDIT-side materializer specs (ADR 0024 §2 P2) | — | designed, not built |
-| Pack work-orders (multi-edit consent-once work orders) | — | designed (ledger row), not built |
-| Multi-workspace daemon (last_answer co-tenancy) | — | P4, not built |
-| Refactor executables (`rename_package` packs) | — | designed (ledger row), not built |
+| Feature                                                                   | Gate that must run                                                | Status                           |
+| ------------------------------------------------------------------------- | ----------------------------------------------------------------- | -------------------------------- |
+| Consent plans (bounded grants, audit)                                     | host unit tests green; NO real pi session has granted/audited one | unit-only                        |
+| Reasoning beats (`thinking` capture, escalation reuse, `reasoning` hints) | scripted tests green; NO real-model run has exercised them        | unit-only                        |
+| `remove_member` (retire) on a REAL model flow                             | scripted gates green; no AFM/OpenRouter retirement attempt        | unit-only                        |
+| `harnessd --check` override                                               | implemented this session, zero runs                               | untested                         |
+| File-class registry extension path (register md/yaml/json `parse` fns)    | registry unit-tested via tick; no non-dart class registered yet   | path-only                        |
+| Pack work-orders (multi-edit consent-once work orders)                    | —                                                                 | designed (ledger row), not built |
+| Multi-workspace daemon (last_answer co-tenancy)                           | —                                                                 | P4, not built                    |
+| Refactor executables (`rename_package` packs)                             | —                                                                 | designed (ledger row), not built |
 
 ### How to start working via harness for ALL files (the route)
 
@@ -79,7 +78,7 @@ verbs, tiny-model-first surfaces]):
 1. **Constrain the meaning profile's `run` tool (P0, LAW-CRITICAL —
    DONE 2026-09-04).** `runTool` gained an argv-prefix `allowlist`
    (`dart analyze / dart test / dart run / flutter analyze / flutter
-   test`); violations fail as named data (`command_not_allowed`) BEFORE
+test`); violations fail as named data (`command_not_allowed`) BEFORE
    spawning. Gate: `run_allowlist_test.dart` (harness pkg).
 2. **Unwrap the schema bundle's `root` server-side (P0, DONE).** The
    remote mover now emits `parameters.root` — the client workaround is
@@ -95,7 +94,7 @@ verbs, tiny-model-first surfaces]):
    write lands; reject → never lands (`harnessd_fs_tier_test.dart`).
 4. **Markdown materializer (P2, first non-dart spec).** The md spec as
    data (`{span: heading section, map: headings+link edges, emitter:
-   whole-section splice, oracle: 0-broken-links}`, D8 docs convention);
+whole-section splice, oracle: 0-broken-links}`, D8 docs convention);
    `edit_doc` in the uniform verb shape (required anchor slot = section
    label, mechanical resolution, bounce-with-repair). Prose is NOT code
    (ADR 0019): doc tasks grade through the docs oracle only — they can
@@ -357,9 +356,9 @@ topology engine).
 - [x] Unwrap the schema bundle's `root` wrapper server-side — DONE
       2026-09-04 (the remote mover emits `parameters.root`).
 - [ ] Drop `runTool`'s redundant role if J4's `analyze_check` + spec runner
-  subsume the exit-code oracle for coding tasks (keep for non-Dart hosts).
+      subsume the exit-code oracle for coding tasks (keep for non-Dart hosts).
 - [ ] Deferred (evidence-gated, owner: mcp_flutter/intentcall): **H5** —
-  drive a *running* Flutter app (semantic snapshots, tap, hot-reload)
-  through one MCP tool surface; the harness sees the same `intent_call`
-  shape over a transport adapter (D5). Unblocks after the edit-tier loop
-  proves on-device.
+      drive a _running_ Flutter app (semantic snapshots, tap, hot-reload)
+      through one MCP tool surface; the harness sees the same `intent_call`
+      shape over a transport adapter (D5). Unblocks after the edit-tier loop
+      proves on-device.

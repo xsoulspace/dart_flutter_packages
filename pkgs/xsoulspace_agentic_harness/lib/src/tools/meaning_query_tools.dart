@@ -93,8 +93,21 @@ ToolDef meaningZoomTool(World world, {MeaningSpanReader? spanReader}) => ToolDef
             'total': index.nodeCount,
           };
         }
-        final zoomLevel = map['zoom'] is String ? map['zoom'] as String : 'local';
+        var zoomLevel = map['zoom'] is String ? map['zoom'] as String : 'local';
         final budget = map['budget'] is int ? map['budget'] as int : 2048;
+        // Tiny-model guard (measured: a keyword ray-cast sent as zoom=point
+        // silently returned an EMPTY cut — point admits focus ids only and
+        // ignores the query, so the actor looped on nothing). A query-only
+        // point zoom is auto-served as the ray-cast it obviously is:
+        // zoom=local, with the degradation named in the result.
+        String? degradedNote;
+        if (zoomLevel == 'point' && focus == null && query != null) {
+          zoomLevel = 'local';
+          degradedNote =
+              'point zoom requires a valid focusId — the query ray-cast '
+              'was served as zoom=local (pick an id from the cut, then '
+              'point-zoom it for the span)';
+        }
         final cut = meaningCut(
           world,
           query: query,
@@ -106,9 +119,34 @@ ToolDef meaningZoomTool(World world, {MeaningSpanReader? spanReader}) => ToolDef
         final result = <String, Object?>{
           'ok': true,
           'cut': cut,
+          // Echo the cut's inputs so an empty cut is ATTRIBUTABLE (the
+          // operator — and the model — see what was actually searched).
+          'query': ?query,
+          'focusId': ?focus,
           'tree_nodes': index.nodeCount,
           'tree_edges': index.edgeCount,
+          'note': ?degradedNote,
         };
+        // Empty ray-cast → navigable, never a dead end: suggest ids whose
+        // path/kind text contains any query token (the same repair-hint
+        // pattern as the unknown-focusId bounce).
+        final nodes = cut['nodes'];
+        if (nodes is List && nodes.isEmpty && query != null) {
+          final tokens = query
+              .toLowerCase()
+              .split(RegExp(r'[^a-z0-9_]+'))
+              .where((t) => t.length > 2)
+              .toSet();
+          final hints = [
+            for (final id in index.byId.keys)
+              if (tokens.any(id.toLowerCase().contains)) id,
+          ].take(8).toList();
+          result['empty_ray_cast'] = true;
+          result['hints'] = hints;
+          result['hint'] =
+              'the query matched no nodes — try tokens from these ids, or '
+              'zoom=summary for the shape of the tree';
+        }
         // Span cut (fs tier): a POINT zoom on a span-bearing node serves
         // that anchor's text as a budgeted projection — text as meaning,
         // never a whole file (ADR 0024, as amended).

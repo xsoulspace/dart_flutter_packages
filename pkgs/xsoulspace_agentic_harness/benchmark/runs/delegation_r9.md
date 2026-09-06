@@ -30,7 +30,79 @@ moves {read: 1, write: 1, run: 1})`). Decision path: host-injected
 `session/prompt` (delegate + guide) over the ACP permission round-trip.
 n=1 per row (single runs, on-device, macOS 26.6.2).
 
+## Rows (R9.1 — the meaning runtime, 2026-09-06)
+
+| gate | flow | backend | verdict | spend | n |
+|---|---|---|---|---|---|
+| R9.1 meaning e2e, run 1 (real app, no env vars) | fixture task through the meaning tree (repo_etl → zoom → impact → edit_symbol) | `apple_foundation_afm` | **FAIL** (discovery loop — finding 9) | 4 decisions, 19 rounds, 10,147 tokens, wall 199.4 s; moves scan×4 zoom×5 impact×5 edit×2 refresh×3 | 1 |
+| R9.1 meaning e2e, run 2 (after the finding-9 fix) | same | `apple_foundation_afm` | **FAIL** (cut fatness + re-scan churn — findings 10/11, open) | 7 decisions, 5 rounds, 38,299 tokens, wall 46.1 s; moves scan×2 zoom×2 refresh×1 | 1 |
+| A/B reference: conventional self-profile (recorded 2026-09-05) | same workspace, same oracle, command profile | `apple_foundation_afm` | **PASS** | 1 decision, 3 rounds, 1,554 tokens, 41.5 s | 1 |
+
+Tokens source: backend verdict chunks. The honest reading: the meaning
+surface's MACHINERY is right (ETL 812 files / 4,567 symbols in-app;
+bounces carry repair hints; the overhead gate enforces the window) but
+its tiny-model ERGONOMICS are not yet — the A/B is currently dominated by
+the conventional profile on a trivial task. That is the measured frontier
+"reach quality for AFM with the agentic harness" starts from; findings
+10/11 are the harness's next work items, pulled, never absorbed.
+
 ## Findings (each named, none dropped)
+
+9. **Meaning-profile discovery: the query ray-cast sent as `zoom=point`
+   silently returned an EMPTY cut** (point admits focus ids only and
+   ignores the query — the actor looped on nothing, run 1: 4 decisions,
+   19 rounds, 10,147 tokens, 199 s, FAIL). FIXED in-session
+   (`meaning_query_tools.dart`): a query-only point zoom degrades to
+   `zoom=local` with a named note; every cut echoes its query/focusId;
+   an empty ray-cast returns keyword-matched id hints (the same
+   repair-hint pattern as the unknown-focusId bounce). Run 2 confirmed
+   the ray-cast returns real candidate ids.
+10. **Meaning-profile cuts are too fat for the 3.8k AFM window (OPEN —
+    harness track).** Run 2: 7 decisions, 5 rounds, **38,299 tokens**
+    (~7.6k tokens/decision observed vs the flat ~2k projection target),
+    wall 46 s, FAIL — the model never reached an edit. The local-zoom
+    fill + verbose node props blow the budget the overhead gate
+    (1,600-token fixed surface) implies. Candidate levers: per-window
+    `maxNodes`/props projection (lean node JSON), cut budget derived from
+    the resolved model window (P1 maxContextTokens), not a constant.
+11. **`repo_etl` re-scan churn (OPEN — agentic_workspace track).** A
+    second `scan` returns `ok:false "tree already built — use action
+    refresh"`, which the model treats as a failure signal and loops on
+    (refresh ×3 in run 2). Candidate: return `ok:true` + a named
+    `already_built` note (a no-op is not an error), or a bounce-with-
+    repair shape the model follows. NOT absorbed: `repo_etl_tool.dart`
+    is the concurrent session's file.
+12. **The teaching prompt is budget-gated (positive finding).**
+    `meaning_profile_overhead_test.dart` (fixed overhead ≤ 1,600 tokens
+    against the 3,800-token AFM window) caught the first prompt rewrite
+    (+86 tokens) and forced the recipe down to exactly 1,600 — the
+    window law is enforced by a test, not by vibes.
+
+6. **Conversation-profile blind writes corrupt targets (R9.b, THE
+   trigger for the redefined plan — ADR 0004 in last_answer).** The
+   dogfood run (fix ProjectView wiring through the conversation surface):
+   the model made 4 allowed whole-file writes to `lib/home/
+   project_view.dart` and the final state REPLACED the file with broken
+   nonsense (a self-referential MaterialApp stub). The outer mechanical
+   oracle held (check exit 1 → honest FAIL verdict) and nothing outside
+   the target was touched — but the "right" file itself was corrupted.
+   Class: in the conventional command profile, a small model's whole-file
+   `write` is one diff away from destruction with nothing between decision
+   and disk except a title-only consent prompt. In the meaning profile the
+   shape is impossible-by-construction (edits are span moves the host
+   materializes, verifies, auto-reverts; `write` does not exist).
+   Resolution: R9.1 — the meaning runtime becomes the agent doc's only
+   embedded profile.
+7. **The in-loop `run` tool's 30 s default timeout cannot fit test-compiling
+   gates** (R9.b prep): `runGoalVerifier` invokes the run tool without
+   `timeout_ms`, so a doc check override of `flutter test <file>` fails on
+   the compile alone. Harness-side fix candidate: pass a verifier-scoped
+   timeout (or honor the task's declared grade budget). R9.6's mechanical
+   check is a plain `dart <file>` script as a consequence.
+8. **Driver ergonomics: `agent_doc_state` could not report the check
+   override or the runtime profile** until R9.a added `checkCommand` /
+   R9.1 added `runtimeProfile` — keep the projection dense enough to
+   drive from (standing rule).
 
 1. **Create → surface-open lag (product, R9.a)**: after
    `agent_doc_create`, the route push + first mount of the doc surface can

@@ -91,14 +91,14 @@ const codingSystemPrompt =
 /// code moves through `edit_symbol` only.
 const meaningProfileSystemPrompt =
     'You edit code through the meaning tree — never file reads, never '
-    'code tokens. Flow: 1) repo_etl scan (once; the host refreshes the '
-    'tree). 2) meaning_zoom / meaning_impact to read; mapped files '
-    '(md/yaml/json) have section/keypath anchors — point-zoom one to '
-    'read its span (budgeted). 3) edit_symbol for code '
-    '(apply_executable/insert_member/replace_member_body); write_review '
-    'is the ONLY mutation for non-code files (the human consents; a '
-    'reject never lands; never for Dart). Moves are verified and '
-    'auto-reverted on failure. Finish when the check is green.';
+    'code tokens. Flow: 1) repo_etl scan (once). 2) DISCOVER: meaning_zoom '
+    '{"query": "<task keywords>", "zoom": "local"} — pick an id from '
+    'the cut; never guess ids. 3) READ: meaning_zoom {"focusId": id, '
+    '"zoom": "point"} (mapped files serve the span); meaning_impact '
+    '{"focusId": id} for blast radius. 4) ACT: edit_symbol (symbolId '
+    'from a cut) for code; write_review only for non-code (the human '
+    'consents; never Dart). A bounce names valid ids in repair/hints. '
+    'Moves verify and auto-revert. Finish when the check is green.';
 
 /// One coding task as data: prompt + fixtures + final-gate checkers + which
 /// mechanical verifier is wired inside the loop.
