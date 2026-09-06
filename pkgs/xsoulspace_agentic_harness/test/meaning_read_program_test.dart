@@ -236,4 +236,108 @@ void main() {
       );
     },
   );
+
+  group('host-registered effect ops (ADR 0015/0022 — the mutation path)', () {
+    test(
+      'a host op runs under the same laws: executes, returns, never advances '
+      'the cursor',
+      () async {
+        var edits = 0;
+        final editOp = ToolDef.encode(
+          name: const ToolName('edit'),
+          description: 'Host- jailed edit (consent + verify live host-side)',
+          execute: (args) async {
+            edits++;
+            final m = args is Map ? args : const <String, dynamic>{};
+            return {
+              'ok': true,
+              'applied': m['symbolId'],
+              'verified': true,
+            };
+          },
+        );
+        final tool = meaningProgramTool(
+          world,
+          spanReader: reader,
+          hostOps: {'edit': editOp},
+        );
+        final out = await tool.execute({
+          'ops': [
+            {'op': 'locate', 'query': 'refreshFsTier'},
+            {
+              'op': 'edit',
+              'symbolId': 'sym_a',
+              'name': 'return',
+              'returns': 'a + b',
+            },
+          ],
+        });
+        final verdict = jsonDecode(out!) as Map<String, dynamic>;
+        expect(verdict['ok'], true);
+        expect(verdict['ops_run'], 2);
+        expect(edits, 1);
+        final edit = (verdict['results'][1] as Map)['edit'] as Map;
+        expect(edit['verified'], true);
+        // Cursor law: an effect never advances the cursor — the next read
+        // after an edit still sees what locate found.
+        expect((verdict['cursor'] as List).first, 'sym_a');
+      },
+    );
+
+    test(
+      'a FAILING host op halts the program with the named bounce',
+      () async {
+        final editOp = ToolDef.encode(
+          name: const ToolName('edit'),
+          description: 'Host edit that bounces (verify failed)',
+          execute: (args) async => {
+            'ok': false,
+            'error': 'verify_failed: analyze exit 1',
+            'hint': 'the host auto-reverted; fix op and resend',
+          },
+        );
+        final tool = meaningProgramTool(
+          world,
+          hostOps: {'edit': editOp},
+        );
+        final out = await tool.execute({
+          'ops': [
+            {'op': 'edit', 'symbolId': 'sym_a'},
+            {'op': 'read'},
+          ],
+        });
+        final verdict = jsonDecode(out!) as Map<String, dynamic>;
+        expect(verdict['ok'], false);
+        final halt = verdict['program_halt'] as Map;
+        expect(halt['index'], 0);
+        expect('${halt['error']}', contains('verify_failed'));
+        expect(verdict['ops_run'], 0);
+      },
+    );
+
+    test(
+      'unregistered ops still halt with the closed set NAMING the '
+      'registered ones',
+      () async {
+        final editOp = ToolDef.encode(
+          name: const ToolName('edit'),
+          description: 'registered',
+          execute: (args) async => {'ok': true},
+        );
+        final tool = meaningProgramTool(
+          world,
+          hostOps: {'edit': editOp},
+        );
+        final out = await tool.execute({
+          'ops': [
+            {'op': 'write'},
+          ],
+        });
+        final verdict = jsonDecode(out!) as Map<String, dynamic>;
+        final err = '${(verdict['program_halt'] as Map)['error']}';
+        expect(err, contains('unknown_op'));
+        expect(err, contains('registered: [edit]'));
+      },
+    );
+  });
 }

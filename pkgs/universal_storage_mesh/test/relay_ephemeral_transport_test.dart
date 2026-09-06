@@ -21,9 +21,11 @@ void main() {
     expect(transport.connectionState, EphemeralLinkState.disconnected);
 
     await client.openRelay();
+    await _settle(); // state events are delivered asynchronously
     expect(transport.connectionState, EphemeralLinkState.connected);
 
     await client.close();
+    await _settle();
     expect(transport.connectionState, EphemeralLinkState.disconnected);
   });
 

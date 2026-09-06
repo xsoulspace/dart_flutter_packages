@@ -38,6 +38,7 @@ n=1 per row (single runs, on-device, macOS 26.6.2).
 | R9.1 meaning e2e, run 2 (after the finding-9 fix) | same | `apple_foundation_afm` | **FAIL** (cut fatness + re-scan churn — findings 10/11, open) | 7 decisions, 5 rounds, 38,299 tokens, wall 46.1 s; moves scan×2 zoom×2 refresh×1 | 1 |
 | A/B reference: conventional self-profile (recorded 2026-09-05) | same workspace, same oracle, command profile | `apple_foundation_afm` | **PASS** | 1 decision, 3 rounds, 1,554 tokens, 41.5 s | 1 |
 | ADR 0028 one-move contract (LLM-free gates) | multi-call model response through `DefaultGenerationHandler` + second native call through `WorldToolBridge` | scripted | **PASS** — first move executes, dropped calls bounce (never execute) with named repair beats; single-move responses unaffected; `340` harness + `41` host tests green | — | 2 gate files |
+| ADR 0030 flatness row — sequential mode (`tool/afm_flatness_probe.dart sequential 3`, decision-path: direct `client.infer`, one move per decision) | 3 decisions, fresh native session each | `apple_foundation_afm` | **PARTIAL** — flat reset PROVEN (identical baselines 1,037 + ~1,476 + 182; transcripts bounded ~2,545; zero cross-decision growth), but decisions 2–3 died `context_window_exceeded` at response-generation time (finding 18) | native tokenCount truth, per decision: baseline 1,037 / prompt ~1,476 / tools 182; transcript ≤ 2,545 | 1 |
 | R9.1 investigation A probe (`tool/afm_flatness_probe.dart`, real bridge, scripted decision-path: direct `client.infer`, no ACP) | one decision forced through 3 sequential native tool rounds (list → read → answer) | `apple_foundation_afm` | **PASS** (probe completed; growth curve captured) | native tokenCount truth: window **4,096**; baseline (instructions) 1,037 + prompt (cut) 1,499 + tool schemas 182; per-round transcript 2,562 → 2,735 → **decision_final 3,673** | 1 |
 
 Tokens source: backend verdict chunks. The honest reading: the meaning
@@ -74,6 +75,20 @@ the conventional profile on a trivial task. That is the measured frontier
     intent. Gates: `meaning_profile_overhead_test.dart` (2 rows),
     `meaning_read_program_test.dart` 7/7 (LLM-free). Tokens source:
     overheadTokens estimator; n = 1 per row.
+18. **Output-reserve gap (measured, on-device, n=1): a decision that
+    FITS the input pre-flight can still die at response-generation
+    time.** Sequential flatness run: decision 1 (two tool rounds,
+    transcript 3,730) completed; decisions 2–3 (transcript 2,545 + a
+    ~700-token probe_read result) failed with
+    `context_window_exceeded` while GENERATING the response — the input
+    fit, the input+output did not. The client pre-flight
+    (`maxContextTokens` 3,800) reserves INPUT only; the window law must
+    reserve OUTPUT too. Fix landed: `outputReserveTokens` (default
+    1,024) — the pre-flight now rejects when
+    `estimate + reserve > maxContextTokens`. Budget derivation for every
+    backend: `window − native(instructions) − native(schemas) −
+    result − outputReserve`. Tokens source: FoundationModels tokenCount
+    + bridge error code; backend `apple_foundation_afm`; n = 1.
 
 9. **Meaning-profile discovery: the query ray-cast sent as `zoom=point`
    silently returned an EMPTY cut** (point admits focus ids only and

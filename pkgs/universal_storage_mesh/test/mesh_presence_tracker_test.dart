@@ -75,9 +75,9 @@ void main() {
         details: {'display': 'Alice', 'agent': 'writer-v2'},
       );
 
-      final op = frame.payload['op'] as Map<dynamic, dynamic>;
-      final payload = op['payload'] as Map<dynamic, dynamic>;
-      final value = payload['v'] as Map<dynamic, dynamic>;
+      final op = frame.payload['op']! as Map<dynamic, dynamic>;
+      final payload = op['payload']! as Map<dynamic, dynamic>;
+      final value = payload['v']! as Map<dynamic, dynamic>;
       expect(
         value.keys.toSet(),
         {'peer', 'event', 'ttl_ms', 'details'},
@@ -93,9 +93,9 @@ void main() {
     });
 
     test('consumer payloads never collide with reserved keys', () {
-      final a = MeshPresenceTracker(actorId: 'device-a');
-      a.announce(
-        docId: 'd',
+      final a = MeshPresenceTracker(actorId: 'device-a')
+        ..announce(
+          docId: 'd',
         event: MeshEphemeralEvent.join,
         now: t0,
         details: {'peer': 'spoof', 'event': 'spoof', 'ttl_ms': 0},

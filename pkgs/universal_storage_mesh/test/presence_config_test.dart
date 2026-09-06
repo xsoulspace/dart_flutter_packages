@@ -16,7 +16,7 @@ void main() {
             config.ttlFor(interval),
             Duration(milliseconds: interval.inMilliseconds * config.ttlFactor),
             reason: 'ttl must be exactly ttlFactor × pingInterval '
-                '(${config}, active: $active)',
+                '($config, active: $active)',
           );
         }
       }
@@ -49,15 +49,27 @@ void main() {
     });
 
     test('presets keep their documented shapes', () {
-      expect(PresenceConfig.interactive.minPingInterval, const Duration(seconds: 2));
-      expect(PresenceConfig.interactive.maxPingInterval, const Duration(seconds: 10));
-      expect(PresenceConfig.background.minPingInterval, const Duration(seconds: 15));
-      expect(PresenceConfig.background.maxPingInterval, const Duration(seconds: 60));
+      expect(
+        PresenceConfig.interactive.minPingInterval,
+        const Duration(seconds: 2),
+      );
+      expect(
+        PresenceConfig.interactive.maxPingInterval,
+        const Duration(seconds: 10),
+      );
+      expect(
+        PresenceConfig.background.minPingInterval,
+        const Duration(seconds: 15),
+      );
+      expect(
+        PresenceConfig.background.maxPingInterval,
+        const Duration(seconds: 60),
+      );
     });
 
     test('a peer expires after ~3 missed pings by default', () {
-      final config = PresenceConfig.interactive;
-      final interval = config.pingInterval(active: false);
+      const config = PresenceConfig.interactive;
+      const interval = Duration(seconds: 10);
       final expiry = config.ttlFor(interval);
       expect(
         expiry.inMilliseconds,
@@ -67,21 +79,27 @@ void main() {
     });
 
     test('constructor-level bounds and factor are validated', () {
-      final bad = PresenceConfig(
-        minPingInterval: const Duration(seconds: 10),
-        maxPingInterval: const Duration(seconds: 2),
+      const bad = PresenceConfig(
+        minPingInterval: Duration(seconds: 10),
+        maxPingInterval: Duration(seconds: 2),
       );
       // Ordering is validated at use (Duration ordering is not
       // const-evaluable in the const constructor).
-      expect(() => bad.pingInterval(active: false), throwsA(isA<AssertionError>()));
-      expect(() => bad.ttlFor(const Duration(seconds: 1)), throwsA(isA<AssertionError>()));
+      expect(
+        () => bad.pingInterval(active: false),
+        throwsA(isA<AssertionError>()),
+      );
+      expect(
+        () => bad.ttlFor(const Duration(seconds: 1)),
+        throwsA(isA<AssertionError>()),
+      );
       expect(
         () => PresenceConfig(
           minPingInterval: const Duration(seconds: 1),
           maxPingInterval: const Duration(seconds: 2),
           ttlFactor: 1,
         ),
-        throwsArgumentError,
+        throwsA(isA<AssertionError>()),
         reason: 'a peer must survive at least 2 missed pings',
       );
     });

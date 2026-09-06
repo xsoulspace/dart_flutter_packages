@@ -188,9 +188,11 @@ Future<void> _sequential(int decisions) async {
       toolRegistry: registry,
     );
     ok = ok && result.success;
+    final err = result.error?.code ?? '';
     // ignore: avoid_print
     print(
       'CURVE decision $d/$decisions ok=${result.success} '
+      '${err.isEmpty ? '' : 'error=$err '}'
       'listCalls=$listCalls readCalls=$readCalls',
     );
   }
@@ -199,6 +201,7 @@ Future<void> _sequential(int decisions) async {
     mode: 'sequential (ADR 0028 contract shape)',
     sw: sw,
     result: null,
+    ok: ok,
     listCalls: listCalls,
     readCalls: readCalls,
     decisions: decisions,
@@ -213,12 +216,13 @@ void _summary({
   required int listCalls,
   required int readCalls,
   int? decisions,
+  bool? ok,
 }) {
-  final ok = result?.success ?? true;
+  final success = ok ?? result?.success ?? true;
   // ignore: avoid_print
   print(
     'CURVE probe done in ${sw.elapsedMilliseconds} ms | mode=$mode | '
-    'ok=$ok | decisions=${decisions ?? 1} | '
+    'ok=$success | decisions=${decisions ?? 1} | '
     'listCalls=$listCalls readCalls=$readCalls',
   );
   // ignore: avoid_print

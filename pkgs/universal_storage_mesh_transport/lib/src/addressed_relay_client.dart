@@ -137,10 +137,10 @@ final class AddressedRelayClient implements MeshTransport {
       session.closeRemote();
     }
     _sessions.clear();
-    await _incoming.close();
-    await _ephemeralIncoming.close();
+    unawaited(_incoming.close());
+    unawaited(_ephemeralIncoming.close());
     _setConnected(false);
-    await _connectionStates.close();
+    unawaited(_connectionStates.close());
     final channel = _channel;
     _channel = null;
     await channel?.sink.close();

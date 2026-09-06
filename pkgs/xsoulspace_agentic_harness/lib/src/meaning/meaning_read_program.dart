@@ -30,6 +30,14 @@
 /// while the fixed-surface gate is saturated (1,598/1,600). It graduates
 /// ONLY BY REPLACING the verbs it subsumes — the profile shrinks, never
 /// grows.
+///
+/// **Mutation and effects join as HOST-REGISTERED ops** ([hostOps], the
+/// ADR 0015/0022 effects-as-data pattern): the core stays read-only and
+/// domain-generic; a host (workspace, daemon) registers jailed effect ops
+/// — an `edit` backed by edit_symbol, a `write_review` backed by the
+/// consent gateway — as ordinary [ToolDef]s. Registered ops obey the SAME
+/// laws as the built-ins: fail-fast with named bounces, result-cut, one
+/// call per decision; jailing and consent stay with the registering host.
 library;
 
 import 'dart:convert';
@@ -62,7 +70,11 @@ const programCursorCap = 8;
 
 int _estTokens(Object? o) => ('${o ?? ''}'.length / 4).ceil();
 
-ToolDef meaningProgramTool(World world, {MeaningSpanReader? spanReader}) {
+ToolDef meaningProgramTool(
+  World world, {
+  MeaningSpanReader? spanReader,
+  Map<String, ToolDef> hostOps = const {},
+}) {
   // The program interpreter CALLS the existing tool implementations —
   // ranking, budget shrink-loops and repair hints are inherited, never
   // reimplemented (composition, not a second pipeline).
@@ -73,7 +85,15 @@ ToolDef meaningProgramTool(World world, {MeaningSpanReader? spanReader}) {
   Future<Map<String, dynamic>> runOp(
     Map<String, dynamic> args,
   ) async {
-    final raw = switch (args['op'] as String?) {
+    final opName = args['op'] as String?;
+    // Host-registered effect ops first (ADR 0015/0022): the host owns
+    // jailing, consent and verification — the runner only owns the laws.
+    final hostOp = hostOps[opName];
+    if (hostOp != null) {
+      final out = await hostOp.execute(args);
+      return jsonDecode(out ?? '{}') as Map<String, dynamic>;
+    }
+    final raw = switch (opName) {
       // `read` IS a point zoom (ADR 0030 §2): the node's class routes the
       // host span reader — md section, yaml keypath or Dart span — and the
       // op never names a format.
@@ -162,23 +182,33 @@ ToolDef meaningProgramTool(World world, {MeaningSpanReader? spanReader}) {
         }
         final spec = Map<String, dynamic>.from(opArgs);
         final op = spec['op'];
-        if (op is! String || !meaningReadProgramOps.contains(op)) {
+        final knownOp = op is String &&
+            (meaningReadProgramOps.contains(op) || hostOps.containsKey(op));
+        if (!knownOp) {
+          final registered = hostOps.isEmpty
+              ? ''
+              : ' + registered: ${hostOps.keys.toList()}';
           return _halt(
             i,
             '$op',
-            'unknown_op — closed set: $meaningReadProgramOps',
+            'unknown_op — closed set: $meaningReadProgramOps$registered',
             results,
             cursor,
           );
         }
 
-        // Cursor law: reads consume cursor.first unless focusId overrides.
+        // Cursor law: BUILT-IN reads consume cursor.first unless focusId
+        // overrides. Host-registered ops define their own args — the focus
+        // requirement does not apply to them.
         if (op != 'locate' &&
+            !hostOps.containsKey(op) &&
             spec['focusId'] == null &&
             cursor.isNotEmpty) {
           spec['focusId'] = cursor.first;
         }
-        if (op != 'locate' && spec['focusId'] == null) {
+        if (op != 'locate' &&
+            !hostOps.containsKey(op) &&
+            spec['focusId'] == null) {
           return _halt(
             i,
             op,

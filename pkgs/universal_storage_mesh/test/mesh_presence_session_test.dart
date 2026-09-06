@@ -34,7 +34,11 @@ final class _FakeEndpoint implements EphemeralFrameTransport {
     _frames.add(frame);
   }
 
-  Future<void> dispose() => _frames.close();
+  /// Never awaited: a listener-less single-subscription controller's
+  /// close future does not complete.
+  void dispose() {
+    unawaited(_frames.close());
+  }
 }
 
 final class _FakeHub {
@@ -109,14 +113,16 @@ void main() {
       expect(endpoint.sent.last.event, MeshEphemeralEvent.ping);
 
       // Throttled: a burst of activity does not flood frames.
-      await session.notifyActivity(now: t0.add(const Duration(seconds: 1, milliseconds: 5)));
+      await session.notifyActivity(
+        now: t0.add(const Duration(seconds: 1, milliseconds: 5)),
+      );
       expect(endpoint.sent, hasLength(2));
 
       await session.close(now: t0.add(const Duration(seconds: 2)));
       expect(session.isOpen, isFalse);
       expect(endpoint.sent.last.event, MeshEphemeralEvent.leave);
       expect(tracker.presence('doc/1'), isEmpty);
-      await endpoint.dispose();
+      endpoint.dispose();
     });
 
     test('ttl expiry via sweep: silent peers drop out, idempotently', () async {
@@ -140,12 +146,15 @@ void main() {
 
       final atBoundary = t0.add(ttl);
       expect(session.sweep(now: atBoundary), 0);
-      expect(session.sweep(now: atBoundary.add(const Duration(milliseconds: 1))), 1);
+      expect(
+        session.sweep(now: atBoundary.add(const Duration(milliseconds: 1))),
+        1,
+      );
       expect(tracker.presence('doc/1'), isEmpty);
       expect(session.sweep(now: atBoundary.add(const Duration(seconds: 1))), 0);
 
       await session.close();
-      await endpoint.dispose();
+      endpoint.dispose();
     });
 
     test('frames for other channels are ignored, not folded, not rejected',
@@ -169,7 +178,7 @@ void main() {
       expect(session.rejectedFrameCount, 0);
 
       await session.close();
-      await endpoint.dispose();
+      endpoint.dispose();
     });
   });
 
@@ -184,8 +193,8 @@ void main() {
       final sessionA = _session(transport: endpointA, tracker: trackerA);
       final sessionB = _session(transport: endpointB, tracker: trackerB);
 
-      await sessionA.open(now: t0, details: {'display': 'Alice'});
-      await sessionB.open(now: t0, details: {'display': 'Bob'});
+      await sessionA.open(details: {'display': 'Alice'});
+      await sessionB.open(details: {'display': 'Bob'});
       await _settle();
 
       final onA = trackerA.presence('doc/1');
@@ -199,13 +208,13 @@ void main() {
         containsAll(['device-a', 'device-b']),
       );
 
-      await sessionA.close(now: t0);
+      await sessionA.close();
       await _settle();
       expect(trackerB.presence('doc/1').map((e) => e.peerId), ['device-b']);
 
       await sessionB.close();
-      await endpointA.dispose();
-      await endpointB.dispose();
+      endpointA.dispose();
+      endpointB.dispose();
     });
   });
 
@@ -237,10 +246,14 @@ void main() {
       );
 
       // A's signed join verifies against A's registered key, then folds.
-      await sessionA.open(now: t0);
+      await sessionB.open(); // subscribes B before A's frame arrives
+      await sessionA.open();
       await _settle();
       expect(sessionB.rejectedFrameCount, 0);
-      expect(trackerB.presence('doc/1').map((e) => e.peerId), ['device-a']);
+      expect(trackerB.presence('doc/1').map((e) => e.peerId), [
+        'device-a',
+        'device-b',
+      ]);
 
       // Tampered: a real signature, but over a mutated payload.
       final signed = endpointA.sent.single;
@@ -251,7 +264,7 @@ void main() {
           event: signed.event,
           ttl: signed.ttl,
           payload: {...signed.payload, 'op': 'smuggled'},
-          issuedAtMs: signed.issuedAtMs,
+          issuedAtMs: DateTime.now().millisecondsSinceEpoch,
           signature: signed.signature,
         ),
       );
@@ -263,7 +276,13 @@ void main() {
       );
       expect(sessionB.rejections.single.frame.fromPeerId, 'device-a');
       expect(sessionB.rejections.single.frame.docId, 'doc/1');
-      expect(trackerB.presence('doc/1').map((e) => e.peerId), ['device-a']);
+      // Rejection never touched the fold: A is still present.
+      expect(
+        trackerB
+            .presence('doc/1')
+            .where((e) => e.peerId == 'device-a'),
+        hasLength(1),
+      );
 
       // Forged: C signs a frame claiming to be A — no fold, no trace.
       final forgedBase = MeshEphemeralFrame(
@@ -281,12 +300,17 @@ void main() {
       );
       await _settle();
       expect(sessionB.rejectedFrameCount, 2);
-      expect(trackerB.presence('doc/1').map((e) => e.peerId), ['device-a']);
+      expect(
+        trackerB
+            .presence('doc/1')
+            .where((e) => e.peerId == 'device-a'),
+        hasLength(1),
+      );
 
       await sessionA.close();
       await sessionB.close();
-      await endpointA.dispose();
-      await endpointB.dispose();
+      endpointA.dispose();
+      endpointB.dispose();
     });
 
     test('unsigned frames are rejected when an authenticator is configured',
@@ -324,8 +348,8 @@ void main() {
       expect(trackerB.presence('doc/1').map((e) => e.peerId), ['device-b']);
 
       await sessionB.close();
-      await endpointA.dispose();
-      await endpointB.dispose();
+      endpointA.dispose();
+      endpointB.dispose();
     });
   });
 
@@ -366,14 +390,14 @@ void main() {
       expect(endpoint.sent.length, afterActivity);
 
       await session.close();
-      await endpoint.dispose();
+      endpoint.dispose();
     });
 
     test('every published frame keeps the ttl invariant', () async {
       final hub = _FakeHub();
       final endpoint = hub.endpoint('device-a');
       final tracker = MeshPresenceTracker(actorId: 'device-a');
-      final config = const PresenceConfig(
+      const config = PresenceConfig(
         minPingInterval: Duration(milliseconds: 10),
         maxPingInterval: Duration(milliseconds: 60),
       );
@@ -392,13 +416,16 @@ void main() {
         final ttl = frame.ttl;
         expect(
           ttl,
-          anyOf(config.ttlFor(config.minPingInterval), config.ttlFor(config.maxPingInterval)),
+          anyOf(
+            config.ttlFor(config.minPingInterval),
+            config.ttlFor(config.maxPingInterval),
+          ),
           reason: 'ttl = ttlFactor × pingInterval, within preset bounds',
         );
       }
 
       await session.close();
-      await endpoint.dispose();
+      endpoint.dispose();
     });
   });
 }

@@ -64,7 +64,9 @@ final class AddressedRelayEphemeralTransport
   Future<void> dispose() async {
     await _framesSub?.cancel();
     await _linkSub?.cancel();
-    await _frames.close();
-    await _changes.close();
+    // Never awaited: a listener-less single-subscription controller's
+    // close future does not complete.
+    unawaited(_frames.close());
+    unawaited(_changes.close());
   }
 }

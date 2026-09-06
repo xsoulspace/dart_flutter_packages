@@ -43,7 +43,18 @@ class AppleFoundationNativeClient
     /// therefore optimistic, not conservative. The durable fix is native
     /// truth (`model.tokenCount(for:)`) for the pre-flight, not a smaller
     /// constant. Until then treat rejections as a floor, not a guarantee.
+    ///
+    /// Finding 18 (MEASURED, on-device): an input that FITS can still die
+    /// while GENERATING the response — a tool result appended mid-decision
+    /// pushes input+output past the window. The pre-flight therefore also
+    /// reserves [outputReserveTokens] of generation space: reject when
+    /// `estimate + reserve > maxContextTokens`.
     this.maxContextTokens = 3800,
+
+    /// Generation space reserved OUT of the input budget (finding 18): the
+    /// model must decode its response (and, on the native loop, tool-call
+    /// text) inside the same window the input occupies.
+    this.outputReserveTokens = 1024,
   }) : _loader = loader ?? XsFmLibraryLoader(),
        _injectedBindings = bindings {
     _instance = this;
@@ -69,6 +80,9 @@ class AppleFoundationNativeClient
 
   /// P1 follow-up: pre-flight context budget (see constructor doc).
   final int maxContextTokens;
+
+  /// Generation space reserved out of [maxContextTokens] (finding 18).
+  final int outputReserveTokens;
 
   XsFmBindings? _bindings;
   NativeCallable<ToolCbNative>? _toolCallable;
@@ -198,12 +212,15 @@ class AppleFoundationNativeClient
           .fold(0, (a, b) => a + b);
       stderr.writeln(
         '[xs_fm/dart] preflight: estimateTokens=$estimateTokens '
-        'budget=$maxContextTokens '
+        'budget=$maxContextTokens reserve=$outputReserveTokens '
         '(system=${request.systemPrompt.length}ch '
         'prompt=${request.prompt.length}ch fragments=${fragmentsChars}ch)',
       );
     }
-    if (estimateTokens > maxContextTokens) {
+    // Finding 18: reserve generation space — input + output must fit the
+    // same window. A near-budget input that leaves no room to decode the
+    // response is rejected HERE, with the named code, not mid-decision.
+    if (estimateTokens + outputReserveTokens > maxContextTokens) {
       return InferenceResult<InferenceResponse>.fail(
         code: 'context_window_exceeded',
         message:
