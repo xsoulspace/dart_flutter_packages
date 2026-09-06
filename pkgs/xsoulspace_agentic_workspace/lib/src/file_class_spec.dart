@@ -41,12 +41,79 @@ class FileClassSpec {
   }
 }
 
+/// ADR 0024 §2 — a materializer spec as DATA: the edit-side registration
+/// of one file class. A class WITH a registered spec has (a) a map format
+/// (the fs tier builds its typed sub-nodes in the same mechanical pass)
+/// and (b) ONE uniform edit verb with a named oracle. A class WITHOUT one
+/// routes edits through the review gate (`write_review`) — never raw.
+/// Registering a spec is DATA + the materializer file, never a new loop
+/// (ADR 0026 §1). md is the first non-dart class registered (PLAN item 4);
+/// yaml/json land next (item 5).
+class MaterializerSpec {
+  const MaterializerSpec({
+    required this.fileClass,
+    required this.spanCurrency,
+    required this.mapFormat,
+    required this.emitter,
+    required this.oracle,
+    required this.anchors,
+    required this.verb,
+  });
+
+  /// The registry key (must equal a [FileClassSpec.fileClass]).
+  final String fileClass;
+
+  /// The span currency the emitter splices (md: `section`).
+  final String spanCurrency;
+
+  /// The tree sub-structure the map half builds (`heading_tree`).
+  final String mapFormat;
+
+  /// The host-spliced emitter realization (`section_splice`).
+  final String emitter;
+
+  /// The named mechanical oracle (`zero_broken_links`). A class with NO
+  /// oracle has NO edit verb (ADR 0024 §6).
+  final String oracle;
+
+  /// The required anchor slot's currency (`heading_path`).
+  final String anchors;
+
+  /// The edit verb's tool name (`edit_section`).
+  final String verb;
+}
+
+/// The materializer registry — DATA. One entry per file class with an edit
+/// verb; the fs tier stamps the verb on file nodes (`edit_verb` prop) so
+/// the tick itself surfaces what a class can do.
+const materializerSpecs = <String, MaterializerSpec>{
+  'md': MaterializerSpec(
+    fileClass: 'md',
+    spanCurrency: 'section',
+    mapFormat: 'heading_tree',
+    emitter: 'section_splice',
+    oracle: 'zero_broken_links',
+    anchors: 'heading_path',
+    verb: 'edit_section',
+  ),
+};
+
+/// Registry lookup; null → the class has no edit verb yet (review gate
+/// only — named, never silent).
+MaterializerSpec? materializerSpecFor(String fileClass) =>
+    materializerSpecs[fileClass];
+
 /// The registry — DATA. Dart is realized today (symbols + imports);
 /// md/yaml/json read-side anchors live in the fs tier's map builder;
-/// their EDIT-side materializer specs are the P2 work (PLAN §NOW).
+/// md's EDIT-side materializer spec is registered above (the first);
+/// yaml/json edit specs are the next PLAN item.
 /// `other` is the implicit fallback (visible node, review-mode writes).
 const fileClassSpecs = <FileClassSpec>[
   FileClassSpec(fileClass: 'dart', extensions: {'.dart'}, parse: scanDartFile),
+  // md is the FIRST non-dart class with a registered materializer spec
+  // (the registry map above): the realization is md_materializer.dart
+  // (edit_section + the zero_broken_links oracle). yaml/json follow
+  // (PLAN §NOW).
   FileClassSpec(fileClass: 'md', extensions: {'.md', '.mdx'}),
   FileClassSpec(fileClass: 'yaml', extensions: {'.yaml', '.yml'}),
   FileClassSpec(fileClass: 'json', extensions: {'.json'}),

@@ -1,5 +1,5 @@
 {
-  "pathGlob": "^(pkgs|docs|\\.pi|\\.agents)/",
-  "verbs": ["write", "edit"],
+  "pathGlob": "^(pkgs|docs|\\.pi|\\.agents)/|^\\.dart_tool/harnessd/edit_pack\\.json$",
+  "verbs": ["write", "edit", "pack_write"],
   "maxUses": 50
 }

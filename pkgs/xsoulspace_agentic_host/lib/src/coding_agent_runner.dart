@@ -51,6 +51,8 @@ import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
         JailWriteGateway,
         WriteGateMode,
         runTool;
+import 'package:agentic_executables_wire/agentic_executables_wire.dart'
+    show EditExecutableWire;
 import 'package:xsoulspace_agentic_harness/src/tools/meaning_locate_tool.dart'
     show meaningLocateTool;
 
@@ -58,6 +60,7 @@ import 'intent_closure_runner.dart'
     show DecisionMeter, afmSystemPrompt, registerIntentClosureTools;
 import 'package:xsoulspace_agentic_workspace/xsoulspace_agentic_workspace.dart'
     show
+        SpanEditMaterializer,
         SpanEditPlan,
         editSymbolTool,
         meaningSpanReader,
@@ -454,6 +457,16 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
   /// (deny-by-default; the daemon routes it to the ACP client).
   Future<bool> Function(SpanEditPlan plan)? editApprover,
 
+  /// P1 trusted-author tier: the PACK-WRITE consent gate for authored-body
+  /// pack executables ([SpanEditMaterializer.packConsent]). The daemon
+  /// threads a SYNC consent-plan answer here (the pack load loop inside
+  /// `editSymbolTool` is synchronous — the async ACP permission
+  /// round-trip cannot reach it): a plan allowing `pack_write` over the
+  /// pack path consents at registration; no plan / exhausted uses / no
+  /// match → false (the entry skips as named data — never a crash).
+  bool Function(EditExecutableWire wire, String authoredBodyDiff)?
+  packConsent,
+
   /// R4 — large-model tier: wider cut (observations 24) + raised projection
   /// budget (32k). Same slot semantics, scaled capacities — the
   /// amplification delta is then a measurement, not an illustration.
@@ -563,7 +576,19 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
     // Discovery ray (ADR 0014 §2 re-based on the tree): "where is X?" in
     // one token-bounded call — BEFORE zoom/impact, never a text search.
     registry.register(meaningLocateTool(world));
-    registry.register(editSymbolTool(world, jail, approver: editApprover));
+    // P1 trusted-author tier: when the host carries an edit approver or a
+    // pack-write consent gate, the materializer is built HERE so both
+    // land on the same instance (the pack load loop below realizes
+    // authored_body entries only through the consent gate).
+    final materializer = editApprover == null && packConsent == null
+        ? null
+        : SpanEditMaterializer(
+            world: world,
+            workspace: jail,
+            approver: editApprover,
+            packConsent: packConsent,
+          );
+    registry.register(editSymbolTool(world, jail, materializer: materializer));
     // fs tier (ADR 0024 §4): the escape-hatch WRITE — registered ONLY when a
     // review gateway exists (deny-by-default is structural: no approver, no
     // verb). The gateway renders the unified diff and asks the client via

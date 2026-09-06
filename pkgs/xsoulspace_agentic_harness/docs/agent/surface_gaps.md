@@ -60,11 +60,12 @@
   `replace_member_body` / `insert_member` / `apply_executable` — there is NO
   member-REORDER verb (moving a constructor above a field) and no
   import-directive edit verb. `harness_fs_write` is forbidden for Dart.
-- **The verb/spec to build**: a `reorder_member` executable kind (or
-  generalize `apply_executable` to member-level moves with the same three
-  fences — coverage + refs + integration) plus a lint-class repair pack
-  executable family (the trusted-author tier, PLAN §NOW P1, is the natural
-  host for both).
+- **DISPOSITION (2026-09-06, owner decision): SKIP — not a surface verb.**
+  Lints are configurable PER PROJECT, so they are not generalizable into the
+  meaning surface; lint-class repairs route to the tools that own them:
+  `dart fix` / the analyzer's own fix arm, or a per-project custom-lint /
+  lint-CLI pack. The span surface stays structural (meaning moves), never
+  lint-shaped.
 
 ## 2026-09-06 — trusted-author tier bootstrap (cross-repo wire + span editor)
 
@@ -86,3 +87,56 @@
   root (or export its tree into the hub — AE knowledge plane, PLAN P3); (2)
   structural executables for class-shape changes (add param, add enum case)
   as trusted-author pack kinds — the authored-body tier is the right host.
+
+## 2026-09-06 — P3 AE knowledge plane gate (cross-repo wire, lane C)
+
+- **What bash/edit did**: edited `agentic_executables_wire/lib/src/meaning_tree_export.dart` + `test/meaning_tree_round_trip_test.dart` in the SEPARATE `~/xs/agentic_executables` repo (outside every registered workspace root — the meaning surface does not cover it); verified via `dart test`/`dart analyze` there (26 tests, 0 issues).
+- **Gap (verb/spec to build)**: hub/registry wiring — `ae know` construct/deconstruct over `.ae_ln/` canonicals so harness intent/plan/spec populations package through `ae.knowledge_pack.v1` (PLAN P3 remains: seam proven, wiring named-not-built).
+
+## 2026-09-06 — new-file materializer bootstrap (md, lane B)
+
+- **What bash/edit did**: (a) wrote the NEW files `md_materializer.dart` +
+  `test/md_materializer_test.dart` (pkgs/xsoulspace_agentic_workspace) via
+  the write tool — the materializer under construction IS the missing verb
+  (its own bootstrap cannot ride it, same chicken-and-egg as the
+  trusted-author row); (b) additive Dart edits outside the op-chain
+  vocabulary via the edit tool: `MaterializerSpec` registration plumbing in
+  `file_class_spec.dart` (shared with the concurrent lane; consolidated to
+  one registry map + `materializerSpecFor`), `fs_etl.dart` md map
+  delegation to the materializer's ONE heading parser
+  (`parseMdSections` — map and emitter must agree byte-precise), and the
+  package export.
+- **Why the surface didn't cover it**: `harness_edit` actions
+  (replace_member_body/insert_member/apply_executable) compile pure
+  op-chains into member bodies — they cannot add a registry map, a
+  top-level const, a new file, or re-point a private top-level function's
+  body at a new import; the coverage fence also requires prior suite
+  coverage, which a bootstrap cannot have.
+- **The verb/spec to build**: none new — the gap CLOSES as the landed
+  spec itself (`materializerSpecs['md']` + `edit_section`); future md edits
+  in this repo route through the verb, not bash. Structural-class-shape
+  changes (constructor params, top-level consts) remain a generic gap: the
+  trusted-author row's "structural executables" kind covers them when
+  evidence demands.
+
+## 2026-09-06 — packConsent daemon wiring (constructor plumbing, lane A)
+
+- **What edit did**: additive constructor plumbing in
+  `pkgs/xsoulspace_agentic_host/lib/src/coding_agent_runner.dart` (new
+  `packConsent` param + materializer construction at the
+  `editSymbolTool` registration), a new sync plan-answer closure in
+  `harness_acp_backend.dart` (threaded into `runCodingAgentOnce`), a
+  pubspec path-dep line, and the new gate
+  `test/harnessd_pack_consent_test.dart` (2 tests, green; full host suite
+  43/43). `harness_scan` ran first; `harness_locate`/`harness_edit` were
+  NOT used.
+- **Why the surface didn't cover it**: the change is constructor/call-site
+  plumbing (thread a callback through a parameter list and a registry
+  call) plus a top-level test FILE — `harness_edit` compiles pure
+  op-chains into COVERED member bodies and cannot add constructor params,
+  re-point call sites' named args, or bootstrap a new file (the coverage
+  fence requires prior coverage). Same generic structural-class gap lane B
+  named above.
+- **The verb/spec to build**: none new — the trusted-author
+  "structural executables" kind covers constructor-param threading when
+  evidence demands; new-file bootstrap remains the materializer-spec gap.

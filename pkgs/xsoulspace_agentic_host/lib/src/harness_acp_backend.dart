@@ -40,6 +40,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:agentic_executables_wire/agentic_executables_wire.dart'
+    show EditExecutableWire;
 import 'package:dart_acp_toolkit/dart_acp_toolkit.dart';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
@@ -100,8 +102,11 @@ class ConsentPlan {
   /// (e.g. `lib/src/.*` — grant writes within one package's subtree).
   final String pathGlob;
 
-  /// Verbs covered: `write` (whole-file via write_review) and/or `edit`
-  /// (span-edit moves).
+  /// Verbs covered: `write` (whole-file via write_review), `edit`
+  /// (span-edit moves) and/or `pack_write` (P1 trusted-author tier — the
+  /// pack-write consent for authored-body pack executables; SYNC, the
+  /// pack path `.dart_tool/harnessd/edit_pack.json` is what the glob
+  /// matches).
   final Set<String> verbs;
 
   /// Hard cap — a plan is NOT an unbounded grant (monotonic budgets).
@@ -884,6 +889,33 @@ class HarnessAcpBackend
       }
 
       Future<bool> Function(SpanEditPlan)? editApprover;
+      // P1 trusted-author tier: the pack-write consent for authored-body
+      // pack executables answers from the consent plan — SYNC, planAllows-
+      // style (pack registration runs inside `editSymbolTool`'s sync load
+      // loop; the async permission round-trip cannot reach it). The plan
+      // path targets the PACK FILE (the workspace-relative path the
+      // consent plan scopes); `pack_write` is its own verb — it never
+      // rides `write`/`edit`. Deny-by-default: no plan, exhausted uses,
+      // or no match → false (the entry skips as named data, tool
+      // construction never crashes); every answer lands in the audit log.
+      bool packConsent(EditExecutableWire wire, String authoredBodyDiff) {
+        final plan = session.consentPlan;
+        const packPath = '.dart_tool/harnessd/edit_pack.json';
+        final allowed =
+            plan != null &&
+            session.consentPlanUses < plan.maxUses &&
+            plan.verbs.contains('pack_write') &&
+            RegExp(plan.pathGlob).hasMatch(packPath);
+        if (allowed) session.consentPlanUses++;
+        session.consentLog.add(
+          allowed
+              ? 'plan-allowed pack_write: ${wire.id} '
+                  '(uses ${session.consentPlanUses}/${plan.maxUses})'
+              : 'pack_write REFUSED: ${wire.id} — '
+                  '${plan == null ? "no consent plan" : "outside/exhausted plan"}',
+        );
+        return allowed;
+      }
       if (_permissionRequester != null) {
         editApprover = (plan) async {
           final target = plan.patches.firstOrNull?.file ?? '';
@@ -955,6 +987,7 @@ class HarnessAcpBackend
                 return outcome == AcpPermissionOutcome.allow;
               },
         editApprover: editApprover,
+        packConsent: packConsent,
         onSnapshot: (live) async {
           session.world = live;
           await session.store.save(

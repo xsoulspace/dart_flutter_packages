@@ -1,4 +1,57 @@
 {
-  "recordedAt": "2026-09-06T05:47:29.015Z",
-  "failures": []
+  "recordedAt": "2026-09-06T10:13:19.436Z",
+  "failures": [
+    {
+      "testId": "1",
+      "name": "loading /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_agentic_host/test/harnessd_fs_tier_test.dart"
+    },
+    {
+      "testId": "3",
+      "name": "loading /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_agentic_host/test/meaning_profile_overhead_test.dart"
+    },
+    {
+      "testId": "5",
+      "name": "loading /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_agentic_host/test/intent_closure_budget_test.dart"
+    },
+    {
+      "testId": "7",
+      "name": "loading /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_agentic_host/test/consent_plan_test.dart"
+    },
+    {
+      "testId": "9",
+      "name": "loading /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_agentic_host/test/harnessd_mechanical_run_test.dart"
+    },
+    {
+      "testId": "11",
+      "name": "loading /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_agentic_host/test/reads_are_not_builds_test.dart"
+    },
+    {
+      "testId": "13",
+      "name": "loading /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_agentic_host/test/harnessd_r7c_test.dart"
+    },
+    {
+      "testId": "15",
+      "name": "loading /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_agentic_host/test/consent_workspace_file_test.dart"
+    },
+    {
+      "testId": "17",
+      "name": "loading /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_agentic_host/test/overseer_scripted_test.dart"
+    },
+    {
+      "testId": "19",
+      "name": "loading /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_agentic_host/test/harnessd_mechanical_write_test.dart"
+    },
+    {
+      "testId": "21",
+      "name": "loading /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_agentic_host/test/harnessd_remote_mover_test.dart"
+    },
+    {
+      "testId": "23",
+      "name": "loading /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_agentic_host/test/coding_agent_scripted_test.dart"
+    },
+    {
+      "testId": "25",
+      "name": "loading /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_agentic_host/test/harnessd_escalation_test.dart"
+    }
+  ]
 }

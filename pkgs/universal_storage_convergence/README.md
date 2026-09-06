@@ -14,10 +14,18 @@ North Star: [docs/north_star.mdx](docs/north_star.mdx).
 | ---------------------------------- | ------------------------------------------------------------ |
 | `Hlc`                              | Hybrid logical clock; total order `(wall, counter, actorId)` |
 | `VersionVector`                    | Per-actor high-water marks; dedupe + anti-entropy header     |
-| `OpRecord`                         | One immutable convergence event                              |
+| `OpRecord`                         | One immutable convergence event (`ttl` marks it ephemeral)   |
 | `Snapshot`                         | Folded state at a version-vector watermark                   |
 | `ConvergenceDoc`                   | Dual-mode replica: folded state + pending op log             |
 | `MergeStrategy` / `LwwMapStrategy` | Pluggable fold semantics (v1: LWW map)                       |
+| `RgaTextStrategy`                  | Sequence merge for block text (ADR 0029; streamed agent text) |
+| ephemeral ops                      | TTL'd presence registry; never durable, never snapshotted     |
+
+Ephemeral contract (ADR 0029 §1): `applyLocalEphemeral` issues a TTL'd op
+that rides the normal convergence path but folds into `ephemeralState`
+only — never into durable state, snapshots, or the version vector.
+`sweepEphemeral(now)` drops expired ops (commutative, idempotent);
+`applyRemote(ops, now:)` drops already-expired deliveries.
 
 ## Quick start
 

@@ -8,6 +8,9 @@ import 'op_record.dart';
 /// kernel enforces deterministic arrival by sorting on [Hlc] before folding,
 /// but strategies must not rely on that alone.
 abstract interface class MergeStrategy {
+  /// Registry name (serialization contract of `ConvergenceDoc.fromJson`).
+  String get name;
+
   /// Fresh, empty state container for a document.
   Map<String, Object?> initialState();
 
@@ -27,6 +30,9 @@ final class LwwMapStrategy implements MergeStrategy {
   const LwwMapStrategy();
 
   static const _deletedKey = 'del';
+
+  @override
+  String get name => 'lww_map';
 
   @override
   Map<String, Object?> initialState() => <String, Object?>{};

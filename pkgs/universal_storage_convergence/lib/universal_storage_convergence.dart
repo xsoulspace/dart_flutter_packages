@@ -15,4 +15,5 @@ export 'src/convergence_doc.dart';
 export 'src/hlc.dart';
 export 'src/lww_map_strategy.dart';
 export 'src/op_record.dart';
+export 'src/rga_text_strategy.dart';
 export 'src/version_vector.dart';

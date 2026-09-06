@@ -14,6 +14,8 @@ environment:
 resolution: workspace
 
 dependencies:
+  agentic_executables_wire:
+    path: ../../agentic_executables/agentic_executables_wire
   dart_acp_toolkit: any
   ecsly: ^0.0.1-dev.13
   meta: ^1.19.0

@@ -26,7 +26,8 @@ import 'package:xsoulspace_agentic_harness/src/tools/meaning_query_tools.dart'
     show MeaningSpanReader;
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
-import 'file_class_spec.dart' show fileClassOf;
+import 'file_class_spec.dart' show fileClassOf, materializerSpecFor;
+import 'md_materializer.dart' show parseMdSections;
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart'
     show FM, SchemaBundle, ToolDef, ToolName;
 
@@ -173,6 +174,10 @@ String _parentOf(String rel) {
     added++;
   }
   for (final f in fs.files) {
+    // Edit-side registration (ADR 0024 §2): a class with a materializer
+    // spec carries its verb as a prop — the tick itself surfaces what a
+    // class can do (md → edit_section today; review-gate classes: none).
+    final spec = materializerSpecFor(f.fileClass);
     final props = <String, dynamic>{
       'path': f.rel,
       'class': f.fileClass,
@@ -180,6 +185,7 @@ String _parentOf(String rel) {
       'bytes': f.bytes,
       'mtime': f.modified.toIso8601String(),
       if (_mapClasses.contains(f.fileClass)) 'has_map': true,
+      if (spec != null) 'edit_verb': spec.verb,
     };
     if (hasMeaningNode(world, f.nodeId)) {
       // Existing node (dart file from the code ETL): refresh fs props only
@@ -548,44 +554,30 @@ MeaningSpanReader meaningSpanReader(FsToolsRoot root) => (props, budgetTokens) {
 /// and later edits (the materializer's emitter splices by these offsets).
 
 /// Indexes an md file's ATX headings (outside code fences) as `section`
-/// nodes. A section spans from its heading to the next heading (any level)
-/// or EOF. Setext headings are honestly skipped (v1 map limitation).
+/// nodes, via the md materializer's ONE heading parser (`parseMdSections`
+/// — the SAME parser the edit emitter resolves anchors with, so the zoom
+/// anchors and the splice anchors agree byte-precise; ADR 0024 §2). A
+/// section spans from its heading to the next heading (any level) or EOF.
+/// Setext headings are honestly skipped (v1 map limitation).
 int _indexMdSections(World world, FsFileScan f, String content) {
-  final unitRe = RegExp(r'^(#{1,6})\s+(.*?)\s*#*\s*$', multiLine: true);
-  final fenceRe = RegExp(r'^\s*(```|~~~)');
-  var offset = 0;
-  var inFence = false;
-  final headings = <(int, int, String)>[]; // (start, level, title)
-  for (final line in content.split('\n')) {
-    final lineStart = offset;
-    offset += line.length + 1;
-    if (fenceRe.hasMatch(line)) {
-      inFence = !inFence; // ``` and ~~~ toggle (an opening fence's marker)
-      continue;
-    }
-    if (inFence) continue; // fences are INERT (ADR 0019)
-    final m = unitRe.firstMatch(line);
-    if (m == null) continue;
-    headings.add((lineStart, m.group(1)!.length, m.group(2)!));
-  }
+  final sections = parseMdSections(content);
   var built = 0;
-  for (var i = 0; i < headings.length && built < maxMapNodesPerFile; i++) {
-    final (start, level, title) = headings[i];
-    final end = i + 1 < headings.length ? headings[i + 1].$1 : content.length;
-    final id = 'sec_${f.nodeId}_${i + 1}';
+  for (final s in sections) {
+    if (built >= maxMapNodesPerFile) break;
+    final id = 'sec_${f.nodeId}_${s.ordinal}';
     addMeaningNode(
       world,
       kind: 'section',
-      label: title.length > 80 ? title.substring(0, 80) : title,
+      label: s.title.length > 80 ? s.title.substring(0, 80) : s.title,
       id: id,
       props: {
         'path': f.rel,
         'class': 'md',
-        'level': level,
-        'ordinal': i + 1,
-        'span_start': start,
-        'span_end': end,
-        'line': content.substring(0, start).split('\n').length,
+        'level': s.level,
+        'ordinal': s.ordinal,
+        'span_start': s.start,
+        'span_end': s.end,
+        'line': s.line,
       },
     );
     _ensureContainsEdge(world, f.nodeId, id);
