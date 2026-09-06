@@ -29,3 +29,4 @@
 | [0025](0025_host_layer_extraction_composable_embedding.md) | Accepted | The host layer is a package: one canonical daemon/CLI surface, providers stay thin, embedding is one import |
 | [0026](0026_workspace_domain_specs_as_data_wire_codec.md) | Accepted | The workspace is the domain: specs are data; the wire contract lives with the request |
 | [0027](0027_reads_are_not_builds_reasoning_beats.md) | Accepted | Reads are not builds: reasoning beats and the decision-classified mover |
+| [0028](0028_one_move_per_decision_native_loop_bounded.md) | Accepted | One move per decision: the native tool loop is not a decision loop (contract, backend-agnostic) |

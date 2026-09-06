@@ -75,6 +75,28 @@ const meaningExecutorOpsV2 = <String>[
 /// The max VM steps per call — a deterministic bound against looping chains.
 const meaningExecutorStepLimit = 1000;
 
+/// A capability (effect) op registered AS DATA by a host (ADR 0015: the
+/// core stays domain-generic — the host jails and owns the effect).
+/// The handler receives the op's `b` slot (null when empty) and the
+/// current top of stack (PEEKED, never popped) and returns the value to
+/// push. A throw becomes a structured error — never a crash. Effects are
+/// interpreter-tier: `materializeMeaningProgram` bounces them as NAMED
+/// problems until the op's emitter lands (an op without an emitter has no
+/// materialization — the same law as a class without an oracle).
+typedef MeaningEffectHandler = Object? Function(String? b, Object? top);
+
+class MeaningEffects extends Resource {
+  final Map<String, MeaningEffectHandler> ops = {};
+
+  void register(String label, MeaningEffectHandler handler) =>
+      ops[label] = handler;
+
+  bool contains(String label) => ops.containsKey(label);
+
+  /// The vocabulary a chain may use: built-in ops ∪ registered effects.
+  Set<String> vocabulary() => {...meaningExecutorOps, ...ops.keys.toSet()};
+}
+
 // ---------------------------------------------------------------------------
 // Interpreter (in-process host)
 // ---------------------------------------------------------------------------
@@ -100,7 +122,11 @@ Map<String, dynamic> interpretMeaningProgram(
       '_state': state,
     };
   }
-  final vm = _MeaningVm(program.ops, program.impl);
+  final vm = _MeaningVm(
+    program.ops,
+    program.impl,
+    effects: world.maybeGetResource<MeaningEffects>()?.ops,
+  );
   return vm.run(entry, state, args);
 }
 
@@ -186,7 +212,7 @@ List<String> validateMeaningProgram(World world) {
 /// - `next` must be a valid row index;
 /// - a `b` starting with `#` must resolve to a valid row (a verbatim
 ///   prompt-echo like `#row` is malformed — AFM run2 finding).
-String? chainSpecError(List specs) {
+String? chainSpecError(List specs, {Set<String>? effectOps}) {
   for (var i = 0; i < specs.length; i++) {
     final s = specs[i];
     if (s is! Map) return 'spec row $i must be an object';
@@ -194,9 +220,13 @@ String? chainSpecError(List specs) {
     if (label is! String || label.isEmpty) {
       return 'spec row $i requires label (string)';
     }
-    if (!meaningExecutorOps.contains(label)) {
+    if (!meaningExecutorOps.contains(label) &&
+        !(effectOps?.contains(label) ?? false)) {
+      final effectList = effectOps == null || effectOps.isEmpty
+          ? ''
+          : ' + registered effects: ${effectOps.join(', ')}';
       return 'spec row $i: op "$label" is outside the closed vocabulary; '
-          'valid ops: ${meaningExecutorOps.join(', ')}';
+          'valid ops: ${meaningExecutorOps.join(', ')}$effectList';
     }
     final next = s['next'];
     if (next is int && (next < 0 || next >= specs.length)) {
@@ -281,8 +311,9 @@ List<String>? addChainFromSpecs(
   World world,
   List specs, {
   bool dryRun = false,
+  Set<String>? effectOps,
 }) {
-  if (chainSpecError(specs) != null) return null;
+  if (chainSpecError(specs, effectOps: effectOps) != null) return null;
   final parsed = <({String label, String? a, String? b, int? next})>[];
   for (final s in specs) {
     if (s is! Map) return null;
@@ -341,11 +372,15 @@ List<String>? addChainFromSpecs(
 // ---------------------------------------------------------------------------
 
 class _MeaningVm {
-  _MeaningVm(this.ops, this.implOf, {this.depth = 0});
+  _MeaningVm(this.ops, this.implOf, {this.depth = 0, this.effects});
   final Map<String, Map<String, dynamic>> ops;
 
   /// intent → entry op id (`call` resolves callees through this).
   final Map<String, String> implOf;
+
+  /// Host-registered capability ops (effects-as-data) — null when the
+  /// host registered none.
+  final Map<String, MeaningEffectHandler>? effects;
 
   /// call nesting depth — bounded so recursive/mutual intent calls fail as
   /// structured data instead of overflowing the stack.
@@ -382,9 +417,29 @@ class _MeaningVm {
       final a = op['a'];
       final b = op['b'];
       var next = op['next'] as String?;
-      if (!meaningExecutorOps.contains(kind)) {
+      final effect = meaningExecutorOps.contains(kind)
+          ? null
+          : effects?[kind];
+      if (!meaningExecutorOps.contains(kind) && effect == null) {
         result = {'error': 'op outside closed vocabulary: $kind'};
         break;
+      }
+      if (effect != null) {
+        // Capability op (effects-as-data): the host executes; the VM only
+        // moves values. Structured failure on throw — never a crash.
+        try {
+          stack.add(
+            effect(
+              b is String && b.isNotEmpty ? b : null,
+              stack.isEmpty ? null : stack.last,
+            ),
+          );
+        } on Object catch (e) {
+          result = {'error': 'effect op $kind failed: $e'};
+          break;
+        }
+        pc = next;
+        continue;
       }
       switch (kind) {
         case 'load_arg':

@@ -27,8 +27,14 @@ import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart'
     show FM, SchemaBundle, ToolDef, ToolName;
 
 import 'meaning_program.dart'
-    show addChainFromSpecs, chainSpecError, hasMeaningExecutor,
-        interpretMeaningProgram, meaningExecutorOps, validateMeaningProgram;
+    show
+        MeaningEffects,
+        addChainFromSpecs,
+        chainSpecError,
+        hasMeaningExecutor,
+        interpretMeaningProgram,
+        meaningExecutorOps,
+        validateMeaningProgram;
 import 'meaning_tree.dart' as mt;
 
 // ---------------------------------------------------------------------------
@@ -196,6 +202,15 @@ ToolDef intentDefineTool(World world) => ToolDef.encode(
           return {'error': 'define requires name'};
         }
         final specs = map['specs'];
+        final effectLabels = world
+            .maybeGetResource<MeaningEffects>()
+            ?.ops
+            .keys
+            .toSet();
+        final validOps = {
+          ...meaningExecutorOps,
+          ...?effectLabels,
+        }.toList();
         if (specs is! List || specs.isEmpty) {
           return {
             'ok': false,
@@ -203,7 +218,7 @@ ToolDef intentDefineTool(World world) => ToolDef.encode(
                 '(op rows [{label, a?, b?, next?}]); an intent without an '
                 'op chain can never be called. $intentExecutorRepairHint.',
             'intent': name,
-            'valid_ops': meaningExecutorOps,
+            'valid_ops': validOps,
             'repair': intentExecutorRepairHint,
           };
         }
@@ -211,9 +226,9 @@ ToolDef intentDefineTool(World world) => ToolDef.encode(
         // request must never drop a working chain). Errors carry the closed
         // vocabulary so an invalid op name (e.g. `load`) is fixed in the
         // NEXT move, not discovered at oracle time (AFM run3 finding).
-        final specError = chainSpecError(specs);
+        final specError = chainSpecError(specs, effectOps: effectLabels);
         if (specError != null) {
-          return {'error': specError, 'valid_ops': meaningExecutorOps};
+          return {'error': specError, 'valid_ops': validOps};
         }
         // Dedup guard (thrash damping): an identical, previously-built
         // chain spec is a cheap no-op — no drop, no rebuild, no churn.
@@ -250,7 +265,7 @@ ToolDef intentDefineTool(World world) => ToolDef.encode(
               ? map['description'] as String
               : '',
         );
-        final ids = addChainFromSpecs(world, specs)!;
+        final ids = addChainFromSpecs(world, specs, effectOps: effectLabels)!;
         mt.linkMeaning(world, from: name, relation: 'impl', to: ids.first);
         mt.setMeaningProp(world, id: name, key: '_chainSpec', value: normalized);
         final problems = validateMeaningProgram(world);

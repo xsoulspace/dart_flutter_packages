@@ -30,6 +30,7 @@ import 'fs_etl.dart'
         buildFsTier,
         reconcileFsTier,
         refreshFsTier,
+        registerFsCapabilities,
         scanWorkspaceFs;
 
 /// Mutable scan bookkeeping for one workspace (staleness, file count).
@@ -57,6 +58,9 @@ ToolDef repoEtlTool(
   RepoEtlState? state,
 }) {
   final st = state ?? RepoEtlState();
+  // Capability ops (effects-as-data): fs_stat is registered on the world
+  // so intents can compose jailed fs capabilities (interpreter tier).
+  registerFsCapabilities(world, workspace);
   return ToolDef.encode(
     name: const ToolName('repo_etl'),
     description:

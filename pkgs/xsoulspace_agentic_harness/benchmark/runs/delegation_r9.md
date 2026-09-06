@@ -122,6 +122,21 @@ the conventional profile on a trivial task. That is the measured frontier
     means CLI-side probe results before 2026-09-06 09:59 may reflect an
     older bridge.
 
+## Decision (R9.1, 2026-09-06): one move per decision — ADR 0028
+
+Investigation A's resolution: the native side stays a stateless
+per-decision generation primitive (verified — fresh
+`LanguageModelSession` per decision, no cross-decision accumulation);
+the WITHIN-decision native tool loop is bounded by the
+**one-move-per-decision CONTRACT** (enforced mechanically at
+`WorldToolBridge` and `processResponsesSystem`, bounce-with-repair on
+k>1, backend-agnostic per ADR 0028). The next decision is a fresh cut
+that re-admits the prior tool result as a projected beat — context
+ownership holds at every token. Verification: the probe
+(`afm_context_probe.dart`) runs sequential decisions and prints
+per-decision native context from `model.tokenCount(for:)` /
+`model.contextSize`.
+
 6. **Conversation-profile blind writes corrupt targets (R9.b, THE
    trigger for the redefined plan — ADR 0004 in last_answer).** The
    dogfood run (fix ProjectView wiring through the conversation surface):

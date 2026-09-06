@@ -663,6 +663,40 @@ int _indexKeypaths(World world, FsFileScan f, String content, {required bool isJ
   return built;
 }
 
+/// Effects-as-data (capability ops) — the workspace's jailed fs I/O op.
+/// `fs_stat` — stat one workspace-relative path: `{exists, size, mtime,
+/// type}` or `{exists: false}`. Jailed: rejects absolute paths and `..`
+/// traversal (the same law the span reader enforces). Registered as DATA
+/// on the world's [MeaningEffects] so every meaning session can compose
+/// fs capabilities into intents — the core stays domain-generic (ADR
+/// 0015), the host owns the effect. Interpreter-tier: materialization of
+/// effect ops bounces as a named problem until the op's emitter lands.
+void registerFsCapabilities(World world, Directory workspace) {
+  final effects = world.maybeGetResource<MeaningEffects>() ?? MeaningEffects();
+  if (!effects.contains('fs_stat')) {
+    effects.register('fs_stat', (b, top) {
+      final raw = (b == null || b.isEmpty) ? '$top' : b;
+      if (raw.startsWith('/') || raw.contains('..')) {
+        throw ArgumentError(
+          'fs_stat path must be workspace-relative (no .., no absolute): '
+          '$raw',
+        );
+      }
+      final stat = File('${workspace.path}/$raw').statSync();
+      if (stat.type == FileSystemEntityType.notFound) {
+        return {'exists': false};
+      }
+      return {
+        'exists': true,
+        'size': stat.size,
+        'mtime': stat.modified.toIso8601String(),
+        'type': '${stat.type}'.split('.').last,
+      };
+    });
+  }
+  world.upsertResource(effects);
+}
+
 /// The fs-tier ESCAPE HATCH (ADR 0024 §4): whole-file write for file classes
 /// WITHOUT a materializer — review mode ONLY. The gateway renders the
 /// unified diff and asks the approver (over ACP: `session/request_permission`

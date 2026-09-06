@@ -179,5 +179,83 @@ void main() {
         expect(world.getResource<TaskRegistryResource>().isEmpty, isTrue);
       },
     );
+
+    test(
+      'ADR 0028 one-move contract: a second call in the same decision is '
+      'bounced, never executed',
+      () async {
+        var executions = 0;
+        final toolRegistry = ToolRegistry()
+          ..register(
+            ToolDef.encode(
+              name: const ToolName('first_move'),
+              description: 'Counts executions',
+              execute: (args) async {
+                executions++;
+                return {'moved': true};
+              },
+            ),
+          )
+          ..register(
+            ToolDef.encode(
+              name: const ToolName('second_move'),
+              description: 'Must never run in the same decision',
+              execute: (args) async {
+                executions++;
+                return {'moved': true};
+              },
+            ),
+          );
+
+        final toolResource = ToolRegistryResource()
+          ..register('default', toolRegistry);
+
+        final world = await buildTestWorld(toolRegistryResource: toolResource);
+        final scene = spawnScene(world);
+        final actor = spawnActor(world, scene);
+        world.upsertComponent(actor, const ActorTools(registryName: 'default'));
+        world.flush();
+
+        final bridge = WorldToolBridge(
+          world: world,
+          actorEntity: actor,
+          source: toolRegistry,
+        );
+        final bridged = bridge.buildRegistry();
+
+        // Move 1 — executes normally.
+        final first = bridged.execute(const ToolName('first_move'), {});
+        world.runSchedule(Schedules.mechanical);
+        world.flush();
+        await Future.delayed(const Duration(milliseconds: 50));
+        final firstResult = await first;
+        expect(
+          jsonDecode(firstResult) as Map<String, dynamic>,
+          containsPair('moved', true),
+        );
+        expect(executions, 1);
+
+        // Move 2 within the SAME decision — contract bounce, no execution,
+        // no ToolCallEvent (no side effects, nothing for the tool system).
+        final eventCount = world.events.reader<ToolCallEvent>().length;
+        final second = await bridged.execute(const ToolName('second_move'), {});
+        expect(
+          world.events.reader<ToolCallEvent>().length,
+          eventCount,
+          reason: 'a bounced call must not enter the world',
+        );
+        expect(executions, 1, reason: 'the dropped move must never execute');
+        final bounce = jsonDecode(second) as Map<String, dynamic>;
+        expect(bounce['ok'], false);
+        expect(bounce['bounce'], true);
+        expect(bounce['contract'], 'one_move_per_decision');
+        expect(bounce['executed'], 'first_move');
+        expect(bounce['dropped'], 'second_move');
+        expect(
+          (bounce['hint'] as String).contains('One tool call per decision'),
+          isTrue,
+        );
+      },
+    );
   });
 }

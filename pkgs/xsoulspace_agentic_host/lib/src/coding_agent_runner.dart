@@ -92,15 +92,16 @@ const codingSystemPrompt =
 /// `write_review` (consent-gated escape hatch; a reject never lands);
 /// code moves through `edit_symbol` only.
 const meaningProfileSystemPrompt =
-    'You edit code through the meaning tree — never file reads, never '
-    'code tokens. Flow: 1) repo_etl scan (once). 2) DISCOVER: meaning_zoom '
-    '{"query": "<task keywords>", "zoom": "local"} — pick an id from '
-    'the cut; never guess ids. 3) READ: meaning_zoom {"focusId": id, '
-    '"zoom": "point"} (mapped files serve the span); meaning_impact '
-    '{"focusId": id} for blast radius. 4) ACT: edit_symbol (symbolId '
-    'from a cut) for code; write_review only for non-code (the human '
-    'consents; never Dart). A bounce names valid ids in repair/hints. '
-    'Moves verify and auto-revert. Finish when the check is green.';
+    'Edit code through the meaning tree — no file reads, no code '
+    'tokens. ONE tool call per decision: after the result, end the '
+    'turn; next decision gets a fresh cut. Flow: 1) repo_etl scan '
+    '(once). 2) DISCOVER: meaning_zoom {"query":"<keywords>",'
+    '"zoom":"local"} — pick an id; never guess. 3) READ: meaning_zoom '
+    '{"focusId":id,"zoom":"point"} (mapped files serve spans); '
+    'meaning_impact for blast radius. 4) ACT: edit_symbol (symbolId '
+    'from a cut) for code; write_review only for non-code (human '
+    'consents; never Dart). Bounces name valid ids. Moves verify and '
+    'auto-revert. Finish when green.';
 
 /// One coding task as data: prompt + fixtures + final-gate checkers + which
 /// mechanical verifier is wired inside the loop.

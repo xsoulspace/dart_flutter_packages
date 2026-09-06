@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
@@ -173,6 +174,23 @@ class WorldToolBridge {
   final Entity actorEntity;
   final ToolRegistry source;
 
+  /// ADR 0028 — one move per decision (CONTRACT, backend-agnostic). The
+  /// bridge instance is per-decision (built fresh inside the generation
+  /// handler), so it is the natural enforcement scope for the native inline
+  /// path: the first tool call executes; any further call within the SAME
+  /// decision is bounced WITHOUT execution (no `ToolCallEvent`, no side
+  /// effects) with a named repair hint. The model ends its turn; the next
+  /// decision starts from a fresh cut that re-admits the prior tool result
+  /// as a projected beat.
+  ToolName? _executedMove;
+
+  /// The named contract bounce returned instead of executing a second move.
+  String oneMoveContractBounce(ToolName dropped) =>
+      oneMoveContractBounceText(
+        executed: _executedMove?.value,
+        dropped: dropped.value,
+      );
+
   /// Build a [ToolRegistry] whose tool executions route through the world.
   ToolRegistry buildRegistry() {
     final bridged = ToolRegistry();
@@ -189,7 +207,14 @@ class WorldToolBridge {
     return bridged;
   }
 
-  Future<String> _routeToolCall(ToolDef tool, Object? args) {
+  Future<String> _routeToolCall(ToolDef tool, Object? args) async {
+    // ADR 0028: the one-move contract — a second call in this decision is
+    // bounced, never executed.
+    if (_executedMove != null) {
+      return oneMoveContractBounce(tool.name);
+    }
+    _executedMove = tool.name;
+
     final taskId = TaskId.create();
     final completer = Completer<ToolExecutionResult>();
 
@@ -217,3 +242,21 @@ class WorldToolBridge {
     return {'value': args};
   }
 }
+
+/// The named `one_move_per_decision` contract bounce (ADR 0028) — returned
+/// to the model instead of executing a second tool call within one decision.
+/// Repair-hint pattern: the model ends its turn; the next decision starts
+/// fresh and re-admits prior results as projected beats.
+String oneMoveContractBounceText({
+  required String? executed,
+  required String dropped,
+}) => jsonEncode(<String, dynamic>{
+  'ok': false,
+  'bounce': true,
+  'contract': 'one_move_per_decision',
+  'executed': executed ?? '',
+  'dropped': dropped,
+  'hint': 'One tool call per decision. This decision already executed its '
+      'move; your call was NOT run. End your turn now — the next decision '
+      'starts fresh and will see this result.',
+});

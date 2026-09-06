@@ -86,16 +86,41 @@ void processResponsesSystem(World world) {
     // so [HarnessLoop.canSleep] stays false until the (async) execution
     // completes. Without this, runUntilIdle can exit between dispatch and
     // completion — the tool result then lands in a dead loop and is lost.
-    for (final call in response.toolCalls) {
+    //
+    // ADR 0028 — one move per decision (CONTRACT): only the FIRST call is
+    // dispatched; every further call is recorded as a contract-violation
+    // result beat (projection-visible, never executed) so the next
+    // decision's cut carries the named repair hint. Applies to every
+    // backend — client-parsed calls here, native inline calls in
+    // [WorldToolBridge].
+    if (response.toolCalls.isNotEmpty) {
+      final first = response.toolCalls.first;
       final toolTaskId = TaskId.create();
       taskRegistry.register(toolTaskId, TaskHandle());
       toolCallWriter.send(
         ToolCallEvent(
           actorEntity: response.actorEntity,
-          call: call,
+          call: first,
           taskId: toolTaskId,
         ),
       );
+      for (final dropped in response.toolCalls.skip(1)) {
+        final bounceText = oneMoveContractBounceText(
+          executed: first.name.value,
+          dropped: dropped.name.value,
+        );
+        final bounceBeat = world.reserveEmptyEntity().entity;
+        final bounceBeatEntity = world.getEntity(bounceBeat).$1;
+        bounceBeatEntity.insert(
+          ToolResultContent(name: dropped.name.value, output: bounceText),
+        );
+        bounceBeatEntity.insert(Speaker(response.actorEntity));
+        bounceBeatEntity.insert(TextContent(bounceText));
+        bounceBeatEntity.insert(BeatStatus(BeatStatusEnum.complete));
+        bounceBeatEntity.insert(BeatModality(BeatModalityEnum.toolCall));
+        final attached = attachBeatToActorThread(world, we, bounceBeat);
+        indexBeat(world, bounceBeat, keywordsOf(bounceText), thread: attached);
+      }
     }
 
     // Consume Agency + AwaitingResponse + OpenDecision — actor responded.
