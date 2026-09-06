@@ -29,13 +29,20 @@ class AppleFoundationNativeClient
     XsFmBindings? bindings,
     this.inferTimeout = const Duration(minutes: 5),
 
-    /// AFM reliability guard (P1 follow-up): the on-device context window is
-    /// ~4k tokens. A request whose estimated total (system + prompt +
+    /// AFM reliability guard (P1 follow-up): the on-device context window
+    /// is ~4k tokens. A request whose estimated total (system + prompt +
     /// fragments + transcript) exceeds the budget is rejected with the named
     /// code `context_window_exceeded` BEFORE the bridge is called — the
     /// over-window call was the precursor of the P1 VM crash, and a named
     /// failure beats a native crash. tokens ≈ chars/4 (the harness default
     /// estimator).
+    ///
+    /// R9.1 investigation A (MEASURED, delegation_r9.md finding 13): the
+    /// true window is 4,096 (`model.contextSize`) and chars/4 UNDERCOUNTS
+    /// the native tokenizer ~45% on JSON-heavy content — this budget is
+    /// therefore optimistic, not conservative. The durable fix is native
+    /// truth (`model.tokenCount(for:)`) for the pre-flight, not a smaller
+    /// constant. Until then treat rejections as a floor, not a guarantee.
     this.maxContextTokens = 3800,
   }) : _loader = loader ?? XsFmLibraryLoader(),
        _injectedBindings = bindings {

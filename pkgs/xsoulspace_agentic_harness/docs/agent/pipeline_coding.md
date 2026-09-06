@@ -58,15 +58,20 @@ verification, repair, projection, budgets — is ALL host code. The model
 - **Letters (ops): closed but grown as VERIFIED DATA** (ADR 0022 §3).
   14 ops (v1 probe) → 21 ops (R6 pulled math/compare/item/call); each op
   lands with a spec + VM semantics + interpreter⇄materialized parity test.
-  `jump`/`jump_if_false` backward = loops (step-limit 1000); `call` =
-  intent→intent; full arithmetic/compare surface. **Algorithmic intent
-  bodies ARE expressible.**
+  Full arithmetic/compare surface; `call` = intent→intent; forward
+  branching via `jump`/`jump_if_false`. **Loops are HARD-CUT** by the
+  chain-topology gate (chains must terminate) until evidence demands
+  them — do not claim loop support in specs. Plus **capability (effect)
+  ops**: hosts register fs/exec I/O ops AS DATA (jailed, spec'd) — the
+  pure core stays domain-generic (ADR 0015) while intents compose real
+  capabilities. **Algorithmic intent bodies ARE expressible.**
 - **THE CAPABILITY-GAP LAW**: when a task needs a capability the op set
-  lacks (e.g. fs I/O — the set is pure by design), the route is
-  **executor-op growth** (spec + semantics + parity, pulled by the failing
-  task) — NEVER body editing, NEVER a new loop, NEVER "just read the Dart
-  and rewrite it". If you (the agent) conclude "the closed vocabulary can't
-  express this", you have conflated the layers — re-read this section.
+  lacks (e.g. fs I/O — the base set is pure by design), the route is
+  **executor-op growth** (a registered capability op: jail + spec +
+  semantics + test, pulled by the failing task) — NEVER body editing,
+  NEVER a new loop, NEVER "just read the Dart and rewrite it". If you
+  (the agent) conclude "the closed vocabulary can't express this", you
+  have conflated the layers — re-read this section.
 
 ## Discovery is a RAY, not a search
 

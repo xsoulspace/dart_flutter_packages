@@ -55,92 +55,67 @@ means closing this list.
    materializer spec (see `xsoulspace_agentic_workspace/AGENTS.md`) — the
    same closed verb surface, more covered reality.
 
-## NOW — the pi-dogfooding path (pi does the repo's real work THROUGH the harness daemon)
+## NOW — the pi-dogfooding path (prioritized, transparent)
 
 The production path (#1–#7) is COMPLETE — every gate has a published row
 ([history.md](history.md), [results_r7.md](results_r7.md)). The next
-race is **turning the harness into pi's own work surface**: every
-mutation pi makes to this repo — Dart code, Markdown docs, config and
-asset files — routes through `harnessd`, so every mutation is
-gate-checked (mechanical oracles), locked (single-writer), permission-
-gated (the human allows), and logged (beats/verdicts). This is the
-intent-first growth loop the law demands: pi's real work names the
-surface gaps as structured failures, and the surface grows intent-first
-— never vocabulary-by-hand. **The gap ledger is
-[surface_gaps.md](surface_gaps.md)** (opened 2026-09-06, seeded with the
-ADR 0025/0026 session's honest escapes): every bash escape appends a row
-(what bash did, why the surface didn't cover it, the verb/spec to build);
-gaps close as materializer specs / surface verbs — the same tools must
-later serve the 2–4k AFM model, for whom raw bash does not exist.
+race is **turning the harness into pi's own work surface** — and into a
+surface where ANY model needs no raw tools (grep/read/bash have no role).
+Priorities below are ordered by the dogfood evidence: every row exists
+because a real session hit the wall, and every row names its gate and its
+status. Nothing here is aspirational prose.
 
-Ordered work items (each names its gate; the fs tier follows ADR 0024
-[filesystem as one map-graph — typed materializer specs, uniform edit
-verbs, tiny-model-first surfaces]):
+### Priority ledger (2026-09-06)
 
-1. **Constrain the meaning profile's `run` tool (P0, LAW-CRITICAL —
-   DONE 2026-09-04).** `runTool` gained an argv-prefix `allowlist`
-   (`dart analyze / dart test / dart run / flutter analyze / flutter
-test`); violations fail as named data (`command_not_allowed`) BEFORE
-   spawning. Gate: `run_allowlist_test.dart` (harness pkg).
-2. **Unwrap the schema bundle's `root` server-side (P0, DONE).** The
-   remote mover now emits `parameters.root` — the client workaround is
-   gone (measured in the pi row: the wrapper degraded every call).
-3. **Filesystem tier v1 — one map-graph + escape hatch (P1, ADR 0024 —
-   DONE 2026-09-05, with the Amendment: the escape hatch's READ side is
-   retired; text enters ONLY as budgeted span cuts under meaning
-   anchors).** `repo_etl` indexes dir/file nodes for EVERY file plus the
-   md/yaml/json map half (section/keypath anchors) in one mechanical
-   pass; `meaning_zoom` point cuts serve anchor spans (budgeted); mapless
-   classes mutate only through `write_review` (review-gated, deny-by-
-   default). Gate: fs-tier e2e — map-read → zoom → consented review
-   write lands; reject → never lands (`harnessd_fs_tier_test.dart`).
-4. **Markdown materializer (P2, first non-dart spec).** The md spec as
-   data (`{span: heading section, map: headings+link edges, emitter:
-whole-section splice, oracle: 0-broken-links}`, D8 docs convention);
-   `edit_doc` in the uniform verb shape (required anchor slot = section
-   label, mechanical resolution, bounce-with-repair). Prose is NOT code
-   (ADR 0019): doc tasks grade through the docs oracle only — they can
-   never `pass` a code gate, and code fences never apply to them. Gate:
-   doc-edit e2e — section replace lands, broken link bounces as named
-   data, link oracle green + the R7e tiny-model gate (ADR 0024 §5).
-5. **YAML/JSON materializers (P2.5).** Keypath spans; offset-based
-   splice (the `yaml` package does NOT round-trip comments —
-   re-serialization forbidden); oracle = parse + intended-change
-   semantic diff. Real-repo target: pubspec.yaml dependency bumps — a
-   real pi task. Gate: yaml e2e (byte-level comment preservation) +
-   tiny-model gate; json via stable re-serialization.
-6. **Interactive remote mover in the pi extension (P3 — the LEGITIMACY
-   blocker, co-critical with P1).** The gate driver answers proposals;
-   real pi must too: the extension hook answers `session/propose_move`
-   with pi's configured model (the daemon stays the only file surface;
-   pi never gets raw files), and the consent UI is wired to
-   `session/request_permission` — the scripted extension auto-allows
-   and answers `{}`, which neutralizes deny-by-default and closes
-   decisions model-less; that artifact must never be the thing pi works
-   through. Gate: one real-model interactive session, pi → daemon,
-   consent UI exercised.
-7. **Actor-topology engine + multi-workspace daemon (P4, pulled by
-   last_answer `docs/decisions/0003`).** The two proven topologies
-   (1 world/N actors squad; N worlds/1 brain remote mover) become
-   task-declared DATA with per-task topology selection; one process
-   hosts several worlds with per-workspace single-instance locks.
-8. **Seam purity (ADR 0026, DONE 2026-09-06).** The workspace host
-   renamed to its true scope (`xsoulspace_agentic_workspace` — specs are
-   data, md/json/text families land beside the registry, never a fork);
-   the context-fragment protocol moved to `inference_core` (it defines
-   core's `contextFragments` field) and the wire codec to the harness —
-   openrouter is now a pure core-only client; the in-process ACP embed
-   transport moved to the host (`HarnessEmbed`); stress scenarios moved to
-   the harness. Anti-drift: the rejection list at the top of
-   [pipeline_coding.md](pipeline_coding.md) + `pipeline.drift_check`.
-9. **Reads are not builds (ADR 0027, DONE 2026-09-06).** The dogfood hot
-   path: read-directive prompts execute mechanically (zero model, zero
-   grade); free-form read delegations run as `readOnly` tasks (actor
-   streams, gate stamped `read_only_not_applicable`); analyzer-before-tests
-   fail-fast tier; `reasoning` policy on proposals + `thinking` capture
-   (measured, never re-projected, reused on escalation); `mover_refusal`
-   failure class; AOT-first + attach-if-live in the pi extension.
-   Measured scripted + AFM: [results_seam_speed.md](results_seam_speed.md).
+| P | Item | Status | Gate |
+|---|---|---|---|
+| P0 | Mechanical directive tier: reads (`[scan]`/zoom/impact/locate) + consented writes (`harness_fs_write` through the review gate, consent-plan inherited) | **DONE 2026-09-06** — measured: reads 12–144 ms; writes bounce no more (`mover_refusal` class dead) | `reads_are_not_builds_test.dart`, `harnessd_mechanical_write_test.dart` |
+| P0 | Discovery ray on the tree: `meaning_locate` (ranked, class-agnostic, refs-counted) on meaning profile + daemon + extension | **DONE 2026-09-06** | `meaning_locate_tool_test.dart` |
+| P0 | Warm tick < 300 ms (tree-driven reconcile) | **DONE 2026-09-06** — 24 ms on 2,450 files | `etl_tick_test.dart`, `tool/warm_tick_probe.dart` |
+| P0 | Capability ops (effects-as-data): hosts register jailed I/O ops AS DATA; intents compose real capabilities | **LANDED 2026-09-06** (`fs_stat` first) — interpreter tier; materialization of effect ops = named bounce until each op's emitter lands | effects tests (harness + workspace) |
+| P1 | `harness_run` on the pi surface (allowlisted commands, per-file test/analyze scopes) | **LANDED 2026-09-06** — mechanical directive, server-side allowlist | `harnessd_mechanical_run_test.dart` |
+| P1 | Consent plans shipped for this repo (`.harnessd/consent.json`) | **DONE 2026-09-06** | `consent_workspace_file_test.dart` |
+| P1 | Trusted-author tier: authored-body pack executable (consent-at-pack-write, same three fences + oracle + auto-revert) — completes harness self-hosting | designed (surface_gaps 2026-09-06), not built | span_edit gate extension + a real self-hosting row |
+| P1 | Docs oracle for md (structural nodes first, fill gaps in-between); yaml/json materializers | P2 items 4–5 of the old list, unchanged | doc-edit e2e + tiny-model gate |
+| P2 | Pack inventory as MEANING nodes (`kind: 'executable'`, impl edges) — the agent zooms its own capabilities; task-grammar classifier → one-decision e2e for the structured 80% | designed (decision-amortization discussion), not built | capture-loop e2e + pass@1 row |
+| P2 | Topology engine: task-declared `{worlds, actors, roles, model-tiers, budgets}` as data; **meaning-part actors** (mechanical systems are zero-token actors with scripted handlers — same loop, same beats, same budgets) | P4, expanded 2026-09-06 | topology selection e2e |
+| P2 | Execution as meaning: `run` declarations as intent nodes, run OUTCOMES as beats (append-only — the tree stays re-derivable), stdout/stderr as budgeted span anchors; speculative verify actor after git-as-meaning | **DESIGN below**, not built | run-meaning e2e |
+| P3 | VCS as meaning projection (versions/branches as nodes; git replaceable) | direction, not built | refs-frontier oracle |
+| P3 | AE knowledge plane: harness trees ⇄ AE canonical packs (`.ae_ln/` canonicals, `ae know`, hub/registry construct-deconstruct); `meaning_tree_export.dart` is the seam | direction (AE spec `ae_harness_etl_spec.md`), not built | round-trip ETL gate |
+
+### Directions (discussed 2026-09-06 — the design behind the ledger)
+
+1. **Decision amortization.** One prompt → one decision → verdict, for
+   the structured 80%: authored tokens per task → 0 (R7d proved the
+   endpoint: pack-fed edit, pass@3, zero authored tokens). The capture
+   loop is a compiler of experience; bounces are future pack entries;
+   the pack inventory becomes zoomable meaning. Working with code is
+   highly structural — most task sentences parse to
+   `{verb-class, target, params}` → repair-class lookup →
+   `apply_executable` → oracle.
+2. **Execution as meaning (critical design).** A process is a meaning:
+   `run` DECLARATIONS are intent nodes (re-derivable); run OUTCOMES are
+   BEATS (append-only, never projected as re-derivable state — a process
+   outcome is not re-derivable, so it must not lie in the tree);
+   stdout/stderr are span anchors read budgeted (like md sections);
+   exit/duration are props. Composability: pipelines = intent chains
+   calling run intents; speculative worlds branch at run nodes.
+   Safety: the allowlist law stands; capability grants are per-actor
+   data; output never enters context except as a span cut. Beats and
+   projections apply to executions exactly as the user framed it —
+   execution context is just another dimension of the map-graph.
+3. **AE knowledge plane.** AE canonical packs are the meaning tree AT
+   REST (verified, hub-distributed); the harness tree is the same
+   meaning IN MOTION. Construct/deconstruct = distill (sources →
+   canonical rows) and export (canonical → tree nodes) — both exist in
+   `meaning_tree_export.dart`; what's missing is wiring harness intent/
+   plan/spec populations through it so knowledge is packaged, versioned
+   and shared via the local/remote hubs instead of living only in
+   session state. We own both projects — the seam is ours to cut.
+4. **MMO frame.** Many small fast decisions; several actors may share
+   one model; mechanical systems are zero-token actors. Latency of truth
+   leaves the critical path via speculative verification (verifier as a
+   concurrent actor; roll back at run-node boundaries).
 
 Sequencing rule: P1 (fs map-graph + escape hatch) and P3 (interactive
 extension, consent UI) are CO-CRITICAL — pi working "through the daemon"

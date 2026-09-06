@@ -37,6 +37,7 @@ n=1 per row (single runs, on-device, macOS 26.6.2).
 | R9.1 meaning e2e, run 1 (real app, no env vars) | fixture task through the meaning tree (repo_etl → zoom → impact → edit_symbol) | `apple_foundation_afm` | **FAIL** (discovery loop — finding 9) | 4 decisions, 19 rounds, 10,147 tokens, wall 199.4 s; moves scan×4 zoom×5 impact×5 edit×2 refresh×3 | 1 |
 | R9.1 meaning e2e, run 2 (after the finding-9 fix) | same | `apple_foundation_afm` | **FAIL** (cut fatness + re-scan churn — findings 10/11, open) | 7 decisions, 5 rounds, 38,299 tokens, wall 46.1 s; moves scan×2 zoom×2 refresh×1 | 1 |
 | A/B reference: conventional self-profile (recorded 2026-09-05) | same workspace, same oracle, command profile | `apple_foundation_afm` | **PASS** | 1 decision, 3 rounds, 1,554 tokens, 41.5 s | 1 |
+| R9.1 investigation A probe (`bin/afm_context_probe.dart`, real bridge, scripted decision-path: direct `client.infer`, no ACP) | one decision forced through 3 sequential native tool rounds (list → read → answer) | `apple_foundation_afm` | **PASS** (probe completed; growth curve captured) | native tokenCount truth: window **4,096**; baseline (instructions) 1,037 + prompt (cut) 1,499 + tool schemas 182; per-round transcript 2,562 → 2,735 → **decision_final 3,673** | 1 |
 
 Tokens source: backend verdict chunks. The honest reading: the meaning
 surface's MACHINERY is right (ETL 812 files / 4,567 symbols in-app;
@@ -58,7 +59,11 @@ the conventional profile on a trivial task. That is the measured frontier
    repair-hint pattern as the unknown-focusId bounce). Run 2 confirmed
    the ray-cast returns real candidate ids.
 10. **Meaning-profile cuts are too fat for the 3.8k AFM window (OPEN —
-    harness track).** Run 2: 7 decisions, 5 rounds, **38,299 tokens**
+    harness track; ROOT-CAUSE ANALYSIS in finding 13: the chars/4
+    estimator undercounts the native tokenizer ~45% and the window truth
+    is 4,096 — the 1,600 fixed surface + a full 2,048-estimated cut
+    cannot fit natively even at round zero).** Run 2: 7 decisions, 5
+    rounds, **38,299 tokens**
     (~7.6k tokens/decision observed vs the flat ~2k projection target),
     wall 46 s, FAIL — the model never reached an edit. The local-zoom
     fill + verbose node props blow the budget the overhead gate
@@ -77,6 +82,45 @@ the conventional profile on a trivial task. That is the measured frontier
     against the 3,800-token AFM window) caught the first prompt rewrite
     (+86 tokens) and forced the recipe down to exactly 1,600 — the
     window law is enforced by a test, not by vibes.
+13. **Investigation A PROVEN and REFINED: two compounding context
+    effects, both now instrumented (2026-09-06).** The bridge creates a
+    FRESH `LanguageModelSession` per decision (no cross-decision
+    accumulation — reset-per-decision was already true), but WITHIN a
+    decision the native tool loop accumulates: the transcript grows
+    monotonically and the model re-reads everything on every round
+    (measured curve, n=1: baseline 1,037 → round 1 2,562 → round 2
+    2,735 → final 3,673; the decision consumed ~9k token-rounds against
+    a ~2.7k flat estimate). SECOND, larger effect: the chars/4 estimator
+    UNDERCOUNTS the native tokenizer by ~45% on JSON-heavy cuts (a
+    7,330-char "2,048-token" cut = 3,101 native tokens; ≈2.4 chars/token
+    vs 4 assumed) — so the client pre-flight (chars/4, budget 3,800)
+    passes decisions that are natively over the TRUE 4,096 window before
+    round 1. This, not cut composition alone, is why run 2 spent
+    38,299 tokens across 7 decisions (~4k/round unaccounted). The native
+    truth API exists (`model.tokenCount(for:)`, `model.contextSize`) —
+    the client pre-flight and the harness meter should consume it
+    (backend/decision-path/tokens-source/n: `apple_foundation_afm`,
+    scripted direct `client.infer`, FoundationModels tokenCount, n=1).
+14. **AFM language-gate failure class (named data).** A JSON-dominant
+    prompt fails AFM with "An unsupported language or locale was used" —
+    a DIFFERENT named error from `exceeded_context_window` (both
+    observed this session). Cut rendering must keep natural-language
+    framing dominant around structured payloads, or decisions die at the
+    language gate before any tool round. Reproduced twice with the probe
+    at >~50% JSON content; the framed prompt (prose intro/outro around
+    the cut) passed.
+15. **Stale-dylib shadowing (infrastructure, FIXED).**
+    `XsFmLibraryLoader` resolves `.dart_tool/lib/libxs_fm_bridge.dylib`
+    FIRST, but the native-assets hook only updated the code-asset
+    location — so every consumer (flutter test, dart run, the harnessd
+    daemon) silently loaded the Sep 1 bridge while the fresh dylib sat in
+    `build/native_assets/macos/`. Bridge changes therefore did not take
+    effect in any run. FIXED in `hook/build.dart`: the hook now refreshes
+    the `.dart_tool/lib` candidate after each build (harmless when the
+    code-asset path is used). This invalidates NO earlier rows — the
+    R9.1 e2e runs went through the app's own compiled binary — but it
+    means CLI-side probe results before 2026-09-06 09:59 may reflect an
+    older bridge.
 
 6. **Conversation-profile blind writes corrupt targets (R9.b, THE
    trigger for the redefined plan — ADR 0004 in last_answer).** The
