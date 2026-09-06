@@ -25,6 +25,8 @@ library;
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:agentic_executables_wire/agentic_executables_wire.dart'
+    show EditExecutableKind, EditExecutableWire, EditVerification;
 import 'package:test/test.dart';
 
 import 'package:xsoulspace_agentic_harness/benchmark_api.dart'
@@ -740,6 +742,268 @@ void main() {
     },
     timeout: const Timeout(Duration(minutes: 4)),
   );
+
+  // -----------------------------------------------------------------------
+  // P1 TRUSTED-AUTHOR TIER — authored_body pack executables (consent at
+  // pack-write via the unified-diff gate; model applies at zero authored
+  // tokens; coverage fence + free oracles + auto-revert unchanged).
+  // -----------------------------------------------------------------------
+
+  test(
+    'P1 trusted-author MAIN GATE: a consented authored-body pack '
+    'executable lands at zero authored tokens — the model supplies ids '
+    'only, the body was consented as a unified diff at pack-write',
+    () async {
+      final jail = await _coveredJail();
+      addTearDown(() => jail.delete(recursive: true).catchError((_) => jail));
+      await _pubGet(jail);
+      final world = _world(jail, _Meter(_Noop()));
+      await repoEtlTool(world, jail).execute({'action': 'scan'});
+      final index = world.getResource<MeaningIndex>();
+      final areaId = index.byId.keys
+          .where((id) => id.endsWith('_area'))
+          .first;
+
+      // The pack-write consent gate — the SAME review-gate contract the
+      // mechanical write path shows the human: a unified diff of the
+      // authored body. Deny-by-default (no callback wired → registration
+      // refuses, next test).
+      String? consentDiff;
+      final mat = SpanEditMaterializer(
+        world: world,
+        workspace: jail,
+        packConsent: (wire, diff) {
+          consentDiff = diff;
+          return true;
+        },
+      );
+      final registry = ToolRegistry();
+      registry.register(repoEtlTool(world, jail));
+      registry.register(editSymbolTool(world, jail, materializer: mat));
+      world.getResource<ToolRegistryResource>().register('default', registry);
+
+      const body = 'return w * h; // trusted-authored';
+      const wire = EditExecutableWire(
+        id: 'dart/author_area',
+        kind: EditExecutableKind.authoredBody,
+        params: const ['symbolId'],
+        verification: const [EditVerification.analyze, EditVerification.test],
+        description: 'trusted-author area body (consented at pack-write)',
+      );
+      mat.registerPackExecutable(wire, authoredBody: body);
+
+      // The consent saw a unified diff of the authored body — the exact
+      // review-gate rendering, never raw model text.
+      expect(consentDiff, isNotNull, reason: 'consent must see the body');
+      final seen = consentDiff ?? '';
+      expect(seen, startsWith('--- a/pack:dart/author_area '));
+      expect(seen, contains('+++ b/pack:dart/author_area '));
+      expect(seen, contains('\n+$body'));
+
+      // THE MODEL MOVE: ids only. No body text, no op rows, no patch.
+      final out = await runTool(world, 'edit_symbol', {
+        'action': 'apply_executable',
+        'executableId': 'dart/author_area',
+        'symbolId': areaId,
+      });
+      expect(out['ok'], true, reason: '${out['error']}');
+      expect(out['reverted'], false);
+      expect(out['patches'], 1);
+
+      // The body landed re-indented under the VERBATIM signature; the
+      // free oracles graded it (per-phase timings ship in the outcome).
+      final geometry = File(
+        '${jail.path}/lib/geometry.dart',
+      ).readAsStringSync();
+      expect(geometry, contains('int area(int w, int h) {'));
+      expect(geometry, contains('return w * h; // trusted-authored'));
+      expect(out['analyze_exit'], 0);
+      expect(out['analyze_ms'], isNotNull);
+      final testRun = await Process.run('dart', [
+        'test',
+      ], workingDirectory: jail.path);
+      expect(testRun.exitCode, 0, reason: '${testRun.stdout}${testRun.stderr}');
+
+      // Idempotent second application: same consented body, suite green.
+      final second = await runTool(world, 'edit_symbol', {
+        'action': 'apply_executable',
+        'executableId': 'dart/author_area',
+        'symbolId': areaId,
+      });
+      expect(second['ok'], true, reason: '${second['error']}');
+    },
+    timeout: const Timeout(Duration(minutes: 4)),
+  );
+
+  test('P1 trusted-author deny-by-default: registration without a consent '
+      'gate REFUSES (named bounce), and a DENIED consent never registers — '
+      'the apply then bounces unknown-executable', () async {
+    final jail = await _coveredJail();
+    addTearDown(() => jail.delete(recursive: true).catchError((_) => jail));
+    await _pubGet(jail);
+    final world = _world(jail, _Meter(_Noop()));
+    await repoEtlTool(world, jail).execute({'action': 'scan'});
+
+    const wire = EditExecutableWire(
+      id: 'dart/author_refused',
+      kind: EditExecutableKind.authoredBody,
+      params: const ['symbolId'],
+      verification: const [EditVerification.analyze],
+    );
+
+    // (1) No consent gate wired → registration refuses.
+    final ungated = SpanEditMaterializer(world: world, workspace: jail);
+    expect(
+      () => ungated.registerPackExecutable(wire, authoredBody: 'return 1;'),
+      throwsA(
+        isA<SpanEditBounce>().having(
+          (b) => b.error,
+          'error',
+          contains('deny-by-default'),
+        ),
+      ),
+    );
+
+    // (2) Consent DENIED → never registered; apply bounces as named data.
+    var consentCalls = 0;
+    final denied = SpanEditMaterializer(
+      world: world,
+      workspace: jail,
+      packConsent: (wire, diff) {
+        consentCalls++;
+        return false;
+      },
+    );
+    expect(
+      () => denied.registerPackExecutable(wire, authoredBody: 'return 1;'),
+      throwsA(
+        isA<SpanEditBounce>().having(
+          (b) => b.error,
+          'error',
+          contains('DENIED'),
+        ),
+      ),
+    );
+    expect(consentCalls, 1, reason: 'the gate saw the diff and refused');
+    final out = await denied.perform(
+      action: 'apply_executable',
+      executableId: 'dart/author_refused',
+      symbolId: 'sym_lib_geometry.dart_area',
+    ); // symbolId irrelevant — the id never registered
+    expect(out.ok, false);
+    expect(out.failureClass, contains('bounce'));
+    // An unconsented executable is ENTIRELY unknown — it never even
+    // registered, so the apply bounces at the unknown-id check.
+    expect(out.detail, contains('unknown edit executable'));
+    // Bytes untouched.
+    expect(
+      File('${jail.path}/lib/geometry.dart').readAsStringSync(),
+      contains('return w * h;'),
+    );
+  }, timeout: const Timeout(Duration(minutes: 4)));
+
+  test('P1 trusted-author fences: coverage still fires on an UNCOVERED '
+      'member (consent vouches for the body, never for untested '
+      'behavior); kind mismatch bounces at registration', () async {
+    final jail = await _coveredJail();
+    addTearDown(() => jail.delete(recursive: true).catchError((_) => jail));
+    await _pubGet(jail);
+    final world = _world(jail, _Meter(_Noop()));
+    registryFor(world, jail);
+    await repoEtlTool(world, jail).execute({'action': 'scan'});
+    final index = world.getResource<MeaningIndex>();
+    final labelId = index.byId.keys
+        .where((id) => id.endsWith('_label'))
+        .first;
+
+    final mat = SpanEditMaterializer(
+      world: world,
+      workspace: jail,
+      packConsent: (wire, diff) => true,
+    );
+    mat.registerPackExecutable(
+      const EditExecutableWire(
+        id: 'dart/author_label',
+        kind: EditExecutableKind.authoredBody,
+        params: const ['symbolId'],
+        verification: const [EditVerification.analyze],
+      ),
+      authoredBody: r"return 'shape: x';",
+    );
+    final out = await mat.perform(
+      action: 'apply_executable',
+      executableId: 'dart/author_label',
+      symbolId: labelId,
+    );
+    expect(out.ok, false);
+    expect(out.failureClass, 'bounce:coverage');
+    expect(out.detail, contains('coverage'));
+    expect(
+      File('${jail.path}/lib/geometry.dart').readAsStringSync(),
+      contains("'shape: \$name'"),
+      reason: 'uncovered member byte-identical after the bounce',
+    );
+
+    // Kind mismatch: authoredBody on a non-authored wire bounces.
+    expect(
+      () => mat.registerPackExecutable(
+        const EditExecutableWire(
+          id: 'dart/mismatch',
+          kind: EditExecutableKind.replaceMemberBody,
+          params: const ['symbolId'],
+          verification: const [EditVerification.analyze],
+        ),
+        authoredBody: 'return 1;',
+      ),
+      throwsA(isA<SpanEditBounce>()),
+    );
+  }, timeout: const Timeout(Duration(minutes: 4)));
+
+  test('P1 trusted-author auto-revert: a consented but WRONG body under a '
+      'COVERED member fails the workspace convention and every byte is '
+      'restored — consent never buys a pass', () async {
+    final jail = await _coveredJail();
+    addTearDown(() => jail.delete(recursive: true).catchError((_) => jail));
+    await _pubGet(jail);
+    final world = _world(jail, _Meter(_Noop()));
+    registryFor(world, jail);
+    await repoEtlTool(world, jail).execute({'action': 'scan'});
+    final index = world.getResource<MeaningIndex>();
+    final areaId = index.byId.keys
+        .where((id) => id.endsWith('_area'))
+        .first;
+
+    final mat = SpanEditMaterializer(
+      world: world,
+      workspace: jail,
+      packConsent: (wire, diff) => true,
+    );
+    mat.registerPackExecutable(
+      const EditExecutableWire(
+        id: 'dart/author_wrong',
+        kind: EditExecutableKind.authoredBody,
+        params: const ['symbolId'],
+        verification: const [EditVerification.analyze, EditVerification.test],
+      ),
+      authoredBody: 'return w + h;',
+    );
+    final before = File(
+      '${jail.path}/lib/geometry.dart',
+    ).readAsStringSync();
+    final out = await mat.perform(
+      action: 'apply_executable',
+      executableId: 'dart/author_wrong',
+      symbolId: areaId,
+    );
+    expect(out.ok, false, reason: out.detail);
+    expect(out.reverted, true, reason: out.detail);
+    expect(out.failureClass, 'workspace_check_failed');
+    expect(
+      File('${jail.path}/lib/geometry.dart').readAsStringSync(),
+      before,
+      reason: 'auto-revert must restore exact bytes',
+    );
+  }, timeout: const Timeout(Duration(minutes: 4)));
 }
 
 class _Noop implements GenerationHandler {

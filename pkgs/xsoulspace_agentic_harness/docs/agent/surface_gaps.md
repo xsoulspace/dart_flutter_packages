@@ -65,3 +65,24 @@
   fences — coverage + refs + integration) plus a lint-class repair pack
   executable family (the trusted-author tier, PLAN §NOW P1, is the natural
   host for both).
+
+## 2026-09-06 — trusted-author tier bootstrap (cross-repo wire + span editor)
+
+- **What bash/edit did**: (a) edited `EditExecutableKind` in the SEPARATE
+  `~/xs/agentic_executables` repo (outside every registered workspace root —
+  the meaning tree does not cover it); (b) constructor/field/switch-case
+  changes in `span_editor.dart` (op-chain verbs cannot express constructor
+  signatures or enum-case additions); (c) fixed the expression-bodied cursor
+  bug in `_memberSite` (same non-body-shape limits); (d) wrote the pack
+  entry JSON (host data; in a real session this routes through
+  `harness_fs_write` + consent — here the session was the trusted author,
+  diff published in `benchmark/runs/trusted_author_row.md`).
+- **Why the surface didn't cover it**: the tier under construction IS the
+  missing verb (chicken-and-egg — its own bootstrap cannot ride it); the AE
+  wire repo is not a registered root; Dart structural changes (constructor
+  params, enum cases, member reorders) are outside
+  replace_member_body/insert_member/apply_executable.
+- **The verb/spec to build**: (1) register the AE wire repo as a workspace
+  root (or export its tree into the hub — AE knowledge plane, PLAN P3); (2)
+  structural executables for class-shape changes (add param, add enum case)
+  as trusted-author pack kinds — the authored-body tier is the right host.

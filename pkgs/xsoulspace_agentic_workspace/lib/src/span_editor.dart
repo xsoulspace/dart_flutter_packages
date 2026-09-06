@@ -244,9 +244,23 @@ class SpanEditMaterializer {
     /// ZERO authored tokens). The host validates every wire shape and
     /// realizes the kinds it knows; unknown kinds bounce as named data.
     List<EditExecutableWire>? packExecutables,
+
+    /// P1 TRUSTED-AUTHOR TIER — consent at PACK-WRITE. Registering an
+    /// authored-body executable REQUIRES a wired consent callback that
+    /// receives the authored body rendered as a unified diff (the same
+    /// review-gate rendering the mechanical write path shows the human).
+    /// Deny-by-default: no callback wired → registration refuses (named
+    /// bounce, never a silent downgrade). The consent IS the
+    /// expressiveness fence for the kind: a human decision — not model
+    /// composition — vouches for the body leaving the closed op
+    /// vocabulary. Everything else is unchanged: coverage fence, the free
+    /// oracles, auto-revert.
+    bool Function(EditExecutableWire wire, String authoredBodyDiff)?
+    packConsent,
   }) : locks = locks ?? FileLockTable(),
        _coverageProvider = coverage,
        _approver = approver,
+       _packConsent = packConsent,
        _packExecutables = {
          for (final e in packExecutables ?? const <EditExecutableWire>[])
            e.id: e,
@@ -258,6 +272,8 @@ class SpanEditMaterializer {
   final Object owner;
   final Set<String> Function()? _coverageProvider;
   final Future<bool> Function(SpanEditPlan plan)? _approver;
+  final bool Function(EditExecutableWire wire, String authoredBodyDiff)?
+  _packConsent;
   final Map<String, EditExecutableWire> _packExecutables;
   Set<String>? _coverageCache;
 
@@ -265,6 +281,11 @@ class SpanEditMaterializer {
   /// this is the R7d zero-authored-tokens seam; the wire shape carries the
   /// verification + scope, the chain rides on the same pack entry).
   final Map<String, List<Map<String, String?>>> _packOpChains = {};
+
+  /// The CONSENTED authored bodies of trusted-author pack executables
+  /// (data, per pack — registered only through the pack-write consent
+  /// gate; the model never sees or authors this text).
+  final Map<String, String> _packAuthoredBodies = {};
 
   /// Symbol names the workspace oracle has expectations for (fence b).
   Set<String> coverageSet() => _coverageCache ??=
@@ -707,6 +728,22 @@ class SpanEditMaterializer {
             );
           }
           return _planReplaceMemberBody(symbolId: symbolId, opChain: chain);
+        case EditExecutableKind.authoredBody:
+          final body = _packAuthoredBodies[executableId];
+          if (body == null) {
+            throw SpanEditBounce(
+              'pack executable "$executableId" carries no consented '
+                  'authored body (trusted-author tier)',
+              'register it through the pack-write consent gate '
+                  '(registerPackExecutable with authoredBody) — an '
+                  'unconsented body never realizes',
+            );
+          }
+          return _planAuthoredBody(
+            symbolId: symbolId,
+            executableId: executableId!, // non-null: the body lookup passed
+            body: body,
+          );
         case EditExecutableKind.renameSymbol:
           return _planRename(symbolId, params);
         default:
@@ -731,12 +768,140 @@ class SpanEditMaterializer {
   /// R7d — registers a pack-declared executable with its (optional) body
   /// op-chain. The chain travels with the PACK as data; the model never
   /// authors it (zero authored tokens for known classes).
+  ///
+  /// P1 trusted-author tier: [authoredBody] registers an `authored_body`
+  /// executable. The registration REQUIRES the pack-write consent gate
+  /// (deny-by-default) and the body is presented to it as a unified diff.
   void registerPackExecutable(
     EditExecutableWire wire, {
     List<Map<String, String?>>? opChain,
+    String? authoredBody,
   }) {
+    if (authoredBody != null) {
+      if (wire.kind != EditExecutableKind.authoredBody) {
+        throw SpanEditBounce(
+          'authoredBody given for "${wire.id}" whose kind is '
+              '${wire.kind.wire} — only authored_body executables carry '
+              'authored bodies',
+          'declare the pack entry with kind: authored_body',
+        );
+      }
+      final consent = _packConsent;
+      if (consent == null) {
+        throw SpanEditBounce(
+          'authored-body executable "${wire.id}" REFUSED: no pack-write '
+              'consent gate wired (deny-by-default)',
+          'wire SpanEditMaterializer(packConsent:) — a trusted-author body '
+              'enters the world only through a consented pack write',
+        );
+      }
+      final diff = _authoredBodyDiff(wire.id, authoredBody);
+      if (!consent(wire, diff)) {
+        throw SpanEditBounce(
+          'pack-write consent DENIED for authored-body executable '
+              '"${wire.id}" — it was never registered',
+          'fix the pack (or re-consent) before applying it',
+        );
+      }
+      _packAuthoredBodies[wire.id] = authoredBody;
+    }
     _packExecutables[wire.id] = wire;
     if (opChain != null) _packOpChains[wire.id] = opChain;
+  }
+
+  /// The unified-diff rendering the pack-write consent gate sees: every
+  /// line of the authored body as an addition (the body replaces a
+  /// member's body span at apply time; the target symbol is per-move and
+  /// deliberately NOT part of the consented text).
+  String _authoredBodyDiff(String id, String body) {
+    final lines = body.split('\n');
+    return '--- a/pack:$id (authored body)\n'
+        '+++ b/pack:$id (authored body)\n'
+        '${[for (final l in lines) '+$l'].join("\n")}';
+  }
+
+  /// P1 trusted-author tier — the plan for a CONSENTED authored body:
+  /// the same span mechanics as replace_member_body (host-computed
+  /// anchors, re-indentation, verbatim signature) minus the op-chain
+  /// compiler. Fences:
+  /// - (a) expressiveness = the pack-write CONSENT (a human decision
+  ///   vouches for the body; there is no op-chain to compile);
+  /// - (b) ORACLE COVERAGE — unchanged, a consented body replacing an
+  ///   uncovered member would still destroy untested behavior;
+  /// - (c) integration — the member must be brace-bodied; the free
+  ///   oracles (scoped analyze + workspace convention) grade the result
+  ///   and AUTO-REVERT on failure, exactly like every other move.
+  SpanEditPlan _planAuthoredBody({
+    String? symbolId,
+    required String executableId,
+    required String body,
+  }) {
+    final sym = _requireSymbol(symbolId);
+    final decl = sym.props['decl'] as String?;
+    const bodyKinds = {'method', 'function', 'getter'};
+    if (!bodyKinds.contains(decl)) {
+      throw SpanEditBounce(
+        '${sym.id} is a $decl — authored-body executables replace the '
+            'bodies of methods, functions and getters only',
+        'target a method/function symbol (see meaning_zoom)',
+      );
+    }
+    final file = sym.props['file'] as String?;
+    final declLine = (sym.props['line'] as num?)?.toInt();
+    if (file == null || declLine == null) {
+      throw SpanEditBounce(
+        '${sym.id} carries no file/line props — re-run repo_etl scan',
+        'action scan, then retry the move',
+      );
+    }
+    if (body.trim().isEmpty) {
+      throw SpanEditBounce(
+        'authored body of "$executableId" is empty',
+        'fix the pack entry (the consent gate never passes an empty '
+            'body — host bug if seen)',
+      );
+    }
+    // FENCE (b) — ORACLE COVERAGE: consent vouches for the body's shape,
+    // never for THIS member's tested behavior.
+    if (!coverageSet().contains(sym.label)) {
+      throw SpanEditBounce(
+        'no oracle coverage for "${sym.label}": the workspace suite '
+            'derives no expectations for it, so a replacement would '
+            'destroy untested behavior with nothing in the pipeline '
+            'noticing',
+        'add suite coverage first (expect(${sym.label}(...), ...) in '
+            'test/) — even a trusted-author body applies only to covered '
+            'members',
+        fence: 'coverage',
+      );
+    }
+    final site = _memberSite(file, sym.label, declLine);
+    final indent = site.declIndent;
+    final bodyIndent = '$indent  ';
+    final bodyText = body
+        .trim()
+        .split('\n')
+        .map((l) => l.trim().isEmpty ? '' : '$bodyIndent$l')
+        .join('\n');
+    final replacement =
+        '${site.signatureText}\n'
+        '$bodyText\n'
+        '$indent}';
+    return SpanEditPlan(
+      description:
+          'apply_executable $executableId (authored body) ${sym.label} '
+          '(${sym.id}) in $file [${site.declLine0 + 1}..'
+          '${site.closeLine0 + 1}]',
+      patches: [
+        SpanPatch(
+          file: file,
+          startLine: site.declLine0 + 1,
+          endLine: site.closeLine0 + 1,
+          replacement: replacement,
+          reason: 'consented authored body (trusted-author tier)',
+        ),
+      ],
+    );
   }
 
   /// The lexical rename executable: expand over the impact frontier into
@@ -897,7 +1062,7 @@ class SpanEditMaterializer {
     // member's own span bounces as named data. The model composes the
     // retire as a multi-op decision (referencers first).
     final frontier = impactFrontier(world, sym.id, maxDepth: 2, maxNodes: 256);
-    final files = <String>{if (file != null) file};
+    final files = <String>{file};
     for (final id in frontier) {
       final n = _node(id);
       if (n == null) continue;
@@ -1359,31 +1524,77 @@ class SpanEditMaterializer {
       cursor++;
     }
     if (cursor >= text.length ||
-        (text[cursor] != '{' && text[cursor] != '=>' && text[cursor] != ';')) {
+        (text[cursor] != '{' &&
+            !text.startsWith('=>', cursor) &&
+            text[cursor] != ';')) {
       throw SpanEditBounce(
         'member $name: unexpected token after the parameter list',
-        'the v1 materializer replaces brace-bodied members only',
+        'the v1 materializer replaces brace-bodied and expression-bodied '
+            'members',
         fence: 'expressiveness',
       );
     }
-    if (text[cursor] != '{') {
+    if (text[cursor] == ';') {
       throw SpanEditBounce(
-        'member $name is ${text[cursor] == "=>" ? "expression-bodied" : "abstract/external"} '
-        '— the v1 materializer replaces brace-bodied members only',
-        text[cursor] == '=>'
-            ? 'convert to a brace body first (out of scope for a meaning '
-                  'move) or target the brace-bodied variant'
-            : 'abstract/external members have no body to replace',
+        'member $name is abstract/external — no body to replace',
+        'abstract/external members have no body to swap',
         fence: 'expressiveness',
       );
     }
-    final openOffset = cursor;
-    final closeOffset = _matchBraceText(text, openOffset);
-    if (closeOffset == null) {
-      throw SpanEditBounce(
-        'unbalanced body braces of $name in $file',
-        'the v1 scanner expects dart-formatted sources',
-      );
+    // Expression-bodied (`=>`) members ARE realizable: the body swap
+    // re-materializes the member into brace form — the signature up to
+    // the arrow is preserved byte-for-byte and the `=> <expr>;` span is
+    // replaced by a braced body (trusted-author bodies and compiled
+    // chains are STATEMENTS, so the brace form is the common currency).
+    final expressionBodied = text.startsWith('=>', cursor);
+    final int closeOffset;
+    if (expressionBodied) {
+      // First `;` at bracket depth 0 after the arrow (strings respected).
+      var depth = 0;
+      var inStr = false;
+      var strCh = '';
+      int? semi;
+      for (var j = cursor + 2; j < text.length; j++) {
+        final c = text[j];
+        if (inStr) {
+          if (c == r'\') {
+            j++;
+          } else if (c == strCh) {
+            inStr = false;
+          }
+          continue;
+        }
+        if (c == "'" || c == '"') {
+          inStr = true;
+          strCh = c;
+          continue;
+        }
+        if ('([{'.contains(c)) depth++;
+        if (')]}'.contains(c)) {
+          depth--;
+          continue;
+        }
+        if (c == ';' && depth == 0) {
+          semi = j;
+          break;
+        }
+      }
+      if (semi == null) {
+        throw SpanEditBounce(
+          'unbalanced expression of $name in $file',
+          'the v1 scanner expects dart-formatted sources',
+        );
+      }
+      closeOffset = semi;
+    } else {
+      final braceClose = _matchBraceText(text, cursor);
+      if (braceClose == null) {
+        throw SpanEditBounce(
+          'unbalanced body braces of $name in $file',
+          'the v1 scanner expects dart-formatted sources',
+        );
+      }
+      closeOffset = braceClose;
     }
     // Param names from the paren text.
     final paramText = text.substring(parenStart + 1, parenEnd);
@@ -1421,10 +1632,12 @@ class SpanEditMaterializer {
     }
     final declIndent =
         RegExp(r'^\s*').firstMatch(lines[declLine0])?.group(0) ?? '';
-    final signatureText = text.substring(
-      lineStart,
-      openOffset + 1,
-    ); // signature + ' {'
+    // Signature text INCLUDING the opening ' {'. For an expression-bodied
+    // member the signature is re-materialized: everything before the
+    // arrow, then the braced body replaces the `=> <expr>;` span.
+    final signatureText = expressionBodied
+        ? '${text.substring(lineStart, cursor).trimRight()} {'
+        : text.substring(lineStart, cursor + 1);
     return _MemberSite(
       paramNames: paramNames,
       returnType: returnType,
@@ -1622,9 +1835,20 @@ ToolDef editSymbolTool(
   // R7 production #3 — realize the PROJECT PACK: captured novel
   // resolutions (the ADR 0021 capture loop) are available to every task
   // over this workspace at ZERO authored tokens (the model picks the id,
-  // the chain travels with the pack).
+  // the chain travels with the pack). Trusted-author entries (kind
+  // authored_body) realize only when the pack-write consent gate approves
+  // at registration; a refused entry is skipped as named data (the pack
+  // is host state — consent is a host-side decision, never model-facing).
   for (final captured in EditPackCapture(workspace).load()) {
-    mat.registerPackExecutable(captured.wire, opChain: captured.opChain);
+    try {
+      mat.registerPackExecutable(
+        captured.wire,
+        opChain: captured.opChain,
+        authoredBody: captured.authoredBody,
+      );
+    } on SpanEditBounce {
+      continue; // refused at the consent gate — named data, never silent
+    }
   }
   return ToolDef.encode(
     name: const ToolName('edit_symbol'),
@@ -1638,8 +1862,8 @@ ToolDef editSymbolTool(
         'remove_member {symbolId} (RETIRE — host prunes member+docs; '
         'retire referencers first or the refs fence bounces), '
         'apply_executable {symbolId, executableId, params} '
-        '(pack-fed; built-in: rename_symbol {newName}, multi-file '
-        'atomic). ARG SHAPE: '
+        '(pack-fed; packs: op-chains + consented authored bodies). '
+        'ARG SHAPE: '
         'symbolId is a REQUIRED TOP-LEVEL arg (the id from '
         'meaning_zoom/meaning_impact) — never inside executableParams and '
         'never as name; executableParams carries ONLY the executable\'s '

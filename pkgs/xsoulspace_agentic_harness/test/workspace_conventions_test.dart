@@ -86,5 +86,20 @@ void main() {
     );
     expect(splitCheckCommand('make  check'), const ['make', 'check']);
   });
+
+  test('splitCheckCommand is QUOTE-AWARE (trusted-author row 2026-09-06): '
+      'quotes group whitespace, adjacent segments concatenate, unterminated '
+      'quotes stay literal', () {
+    expect(
+      splitCheckCommand("flutter test 'test/my file_test.dart'"),
+      const ['flutter', 'test', 'test/my file_test.dart'],
+    );
+    expect(splitCheckCommand('dart "test" x'), const ['dart', 'test', 'x']);
+    expect(
+      splitCheckCommand("check a'b c'd"),
+      const ['check', "ab cd"],
+    );
+    // Unterminated quote: grouped text kept literally, no crash, no guess.
+    expect(splitCheckCommand("dart 'test"), const ['dart', 'test']);
+  });
 }
-// wait - appended below properly

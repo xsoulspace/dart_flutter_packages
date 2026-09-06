@@ -77,5 +77,41 @@ bool _hasTests(Directory root) {
 /// Splits a `--check <command>` value into argv shell-words (no shell
 /// interpolation — the command runs via `Process.run` without a shell, so
 /// quoting is literal and injection is impossible by construction).
-List<String> splitCheckCommand(String raw) =>
-    raw.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+List<String> splitCheckCommand(String raw) {
+  final out = <String>[];
+  final word = StringBuffer();
+  var inWord = false;
+  String? quote;
+  for (var i = 0; i < raw.length; i++) {
+    final c = raw[i];
+    if (quote != null) {
+      if (c == quote) {
+        quote = null;
+      } else {
+        word.write(c);
+      }
+      continue;
+    }
+    if (c == '\'' || c == '"') {
+      // A quote GROUPS whitespace (and may straddle it): the grouped
+      // text is one word, the quote mark itself is consumed.
+      quote = c;
+      inWord = true;
+      continue;
+    }
+    if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
+      if (inWord) {
+        out.add(word.toString());
+        word.clear();
+        inWord = false;
+      }
+      continue;
+    }
+    inWord = true;
+    word.write(c);
+  }
+  // Unterminated quote: the grouped text is kept literally (honest
+  // data, never a guess) — the same no-shell contract as before.
+  if (inWord) out.add(word.toString());
+  return out;
+}

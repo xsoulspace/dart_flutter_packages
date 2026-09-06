@@ -32,23 +32,32 @@ import 'package:agentic_executables_wire/agentic_executables_wire.dart'
     show EditExecutableKind, EditExecutableWire, EditVerification;
 
 /// One captured entry: the wire (the model-facing handle) + the op-chain
-/// (the data that makes it zero-authored-tokens on reuse).
+/// (the data that makes it zero-authored-tokens on reuse). Trusted-author
+/// entries carry an [authoredBody] instead of an op-chain (kind
+/// `authored_body`); the body is consented at pack-write — loading an
+/// unconsented entry refuses at registration, never realizes.
 class CapturedEditExecutable {
-  CapturedEditExecutable({required this.wire, required this.opChain});
+  CapturedEditExecutable({required this.wire, required this.opChain, this.authoredBody});
 
   final EditExecutableWire wire;
   final List<Map<String, String?>> opChain;
 
+  /// Trusted-author tier: the consented body text (null for op-chain
+  /// entries). Present only on kind `authored_body` entries.
+  final String? authoredBody;
+
   Map<String, Object?> toJson() => {
     ...wire.toJson(),
-    'opChain': [
-      for (final row in opChain)
-        {
-          'label': row['label'],
-          if (row['a'] != null) 'a': row['a'],
-          if (row['b'] != null) 'b': row['b'],
-        },
-    ],
+    if (opChain.isNotEmpty)
+      'opChain': [
+        for (final row in opChain)
+          {
+            'label': row['label'],
+            if (row['a'] != null) 'a': row['a'],
+            if (row['b'] != null) 'b': row['b'],
+          },
+      ],
+    if (authoredBody != null) 'authoredBody': authoredBody,
   };
 
   static CapturedEditExecutable fromJson(Map<String, Object?> json) =>
@@ -64,6 +73,7 @@ class CapturedEditExecutable {
                   'b': row['b'] as String?,
                 },
         ],
+        authoredBody: json['authoredBody'] as String?,
       );
 }
 
