@@ -683,8 +683,11 @@ class HarnessAcpBackend
     final registry = session.readWorld!
         .getResource<ToolRegistryResource>()
         .get('default')!;
+    // P1: the failure class of the LAST permission round-trip (the loop is
+    // sequential — the approver answers BEFORE the tool ack streams), so
+    // the named class can ride the tool result below.
+    var lastDenyClass = '';
     if (!registry.tools.containsKey(const ToolName('write_review'))) {
-      final requester = _permissionRequester!;
       final gateway = JailWriteGateway(
         FsToolsRoot(session.cwd),
         mode: WriteGateMode.review,
@@ -705,21 +708,23 @@ class HarnessAcpBackend
             );
             return true;
           }
-          final outcome = await requester(
-            AcpPermissionRequest(
+          // P1 consent UX hardening: the round-trip is bounded (deadline
+          // + cancel) and audited WITH ITS PATH — a silent allow is
+          // detectable in the audit (F3 attribution).
+          final answer = await _askClientPermission(
+            session,
+            sessionId: sessionId,
+            request: AcpPermissionRequest(
               sessionId: sessionId,
               toolCallId: 'write:${write.hashCode}',
               title: 'write ${write.relativePath}',
               kind: 'edit',
               details: JailWriteGateway.unifiedDiff(write),
             ),
+            subject: 'mechanical write ${write.relativePath}',
           );
-          final allowed = outcome == AcpPermissionOutcome.allow;
-          session.consentLog.add(
-            'mechanical write ${allowed ? "ALLOWED" : "DENIED"}: '
-            '${write.relativePath}',
-          );
-          return allowed;
+          lastDenyClass = answer.failureClass;
+          return answer.allowed;
         },
       );
       registry.register(writeReviewTool(FsToolsRoot(session.cwd), gateway));
@@ -738,6 +743,7 @@ class HarnessAcpBackend
     }
     var applied = 0;
     for (final args in payloads.items) {
+      lastDenyClass = '';
       final out = await tool.execute(args) ?? '{}';
       if (out.contains('"ack":"wrote') || out.startsWith('wrote')) applied++;
       emit(
@@ -748,6 +754,20 @@ class HarnessAcpBackend
           ),
         ),
       );
+      // P1: the named failure class rides the TOOL RESULT — a timeout or
+      // cancel-deny permission wait is visible to the client without
+      // re-reading the audit.
+      if (lastDenyClass.isNotEmpty) {
+        emit(
+          AgentMessageChunk(
+            content: AcpTextBlock(
+              '\n[write_review] failure_class: $lastDenyClass — the '
+              'permission wait resolved DENY (a loop-breaker, not a policy '
+              'change; re-send the write to retry)\n',
+            ),
+          ),
+        );
+      }
     }
     if (applied > 0) {
       // The tree must not lie: reconcile immediately (mechanical — the
@@ -762,6 +782,17 @@ class HarnessAcpBackend
           ),
         );
       }
+    }
+    if (session.cancelled) {
+      // P1: a cancel during an open permission wait (or anywhere in the
+      // mechanical path) ends the turn CANCELLED — the loop idles, the
+      // turn never pretends to have completed.
+      emit(
+        AgentMessageChunk(
+          content: const AcpTextBlock('\ncancelled by the client\n'),
+        ),
+      );
+      return AcpStopReason.cancelled;
     }
     emit(
       AgentMessageChunk(
@@ -1004,6 +1035,12 @@ class HarnessAcpBackend
       }
 
       Future<bool> Function(SpanEditPlan)? editApprover;
+      // P1: the failure class of the LAST permission round-trip this turn
+      // (write/edit paths) — consumed by onToolResult to annotate the
+      // generic workspace deny ack with the named class. The loop is
+      // sequential: the approver answers BEFORE the tool ack streams.
+      var lastWriteDenyClass = '';
+      var lastEditDenyClass = '';
       // P1 trusted-author tier: the pack-write consent for authored-body
       // pack executables answers from the consent plan — SYNC, planAllows-
       // style (pack registration runs inside `editSymbolTool`'s sync load
@@ -1041,15 +1078,20 @@ class HarnessAcpBackend
             );
             return true;
           }
-          final outcome = await _permissionRequester!(
-            AcpPermissionRequest(
+          // P1 consent UX hardening: bounded round-trip + path audit (F3).
+          final answer = await _askClientPermission(
+            session,
+            sessionId: request.sessionId,
+            request: AcpPermissionRequest(
               sessionId: request.sessionId,
               toolCallId: 'edit_symbol:${plan.hashCode}',
               title: plan.description,
               kind: 'edit',
             ),
+            subject: 'edit ${plan.description}',
           );
-          return outcome == AcpPermissionOutcome.allow;
+          lastEditDenyClass = answer.failureClass;
+          return answer.allowed;
         };
       }
       final baseHandler = scripted
@@ -1090,16 +1132,22 @@ class HarnessAcpBackend
                   );
                   return true;
                 }
-                final outcome = await _permissionRequester!(
-                  AcpPermissionRequest(
+                // P1 consent UX hardening: bounded round-trip + path
+                // audit (F3 attribution — a silent allow is detectable).
+                final answer = await _askClientPermission(
+                  session,
+                  sessionId: request.sessionId,
+                  request: AcpPermissionRequest(
                     sessionId: request.sessionId,
                     toolCallId: 'write:${write.hashCode}',
                     title: 'write ${write.relativePath}',
                     kind: 'edit',
                     details: JailWriteGateway.unifiedDiff(write),
                   ),
+                  subject: 'write ${write.relativePath}',
                 );
-                return outcome == AcpPermissionOutcome.allow;
+                lastWriteDenyClass = answer.failureClass;
+                return answer.allowed;
               },
         editApprover: editApprover,
         packConsent: packConsent,
@@ -1115,7 +1163,22 @@ class HarnessAcpBackend
         // verify verdicts, bounce reasons, cuts) — the ACP client sees the
         // mechanical tier as it works, not a silent 30–60s tool call.
         onToolResult: (name, output) {
-          final text = '$output';
+          var text = '$output';
+          // P1: the named failure class rides the TOOL RESULT — a timeout
+          // or cancel-deny permission wait is visible in the stream, not
+          // only in the audit. The generic workspace deny acks
+          // ('REJECTED … by host write policy' for writes,
+          // '"failureClass":"permission_denied"' for edits) are annotated
+          // when the last permission round-trip of this turn resolved deny
+          // with a named class (plain approver denies keep the ack as-is).
+          if (lastWriteDenyClass.isNotEmpty && text.startsWith('REJECTED ')) {
+            text += '\nfailure_class: $lastWriteDenyClass';
+            lastWriteDenyClass = '';
+          } else if (lastEditDenyClass.isNotEmpty &&
+              text.contains('"failureClass":"permission_denied"')) {
+            text += '\nfailure_class: $lastEditDenyClass';
+            lastEditDenyClass = '';
+          }
           emit(
             AgentMessageChunk(
               content: AcpTextBlock(

@@ -145,6 +145,6 @@ void main() {
     expect(rows.single['label'], 'dart/fix_loop_bound');
     expect(rows.single['id'], capabilityNodeId('dart/fix_loop_bound'));
     // Zoom-ready: the row id IS the node id the zoom verbs take.
-    expect(jsonDecode(jsonEncode(rows.single))['kind'], 'executable');
+    expect((jsonDecode(jsonEncode(rows.single)) as Map)['kind'], 'executable');
   });
 }

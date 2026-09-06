@@ -278,3 +278,30 @@
   (b) covered by the standing new-file + anchored-splice rows (lanes B/E/F/D);
   (c) a `declare_resource`/`declare_typedef` insert verb for top-level
   declarations would have covered the `MeaningNodeRefresh` half of this lane.
+
+## 2026-09-06 — lane A′ consent-UX hardening (host P1)
+
+- **What bash/edit did**: (a) the P1 consent-UX changes in
+  `harness_acp_backend.dart` (permission deadline as data, the bounded
+  `_askClientPermission` round-trip with Timer/Completer/closures,
+  cancel-interrupts-permission-waits, F3 path-attribution audit) and the new
+  gate `test/harnessd_consent_ux_test.dart` landed via the `edit`/`write`
+  tools, not `edit_symbol`; (b) scoped test runs
+  (`flutter test test/harnessd_consent_ux_test.dart` etc.) ran via bash.
+- **Why the surface didn't cover it**: (a) the bodies race a client answer
+  against a `Timer` deadline and a cancel `Completer` with `unawaited`
+  observers and try/catch — outside the closed op-chain compiler
+  (`compileOpChainBody`: state ops, literals, jumps; no async, no closures,
+  no try/catch), and the constant/typedef/field additions are top-level or
+  constructor-initializer shapes `replace_member_body` does not span;
+  (b) the daemon `run` tool executes from the workspace root only — it has
+  no cwd arg, so a per-package `flutter test` fails pub resolution
+  (`xsoulspace_monetization_rustore requires the Flutter SDK`).
+- **The verb/spec to build**: (a) a `replace_member_body` escape for
+  imperative async bodies — either a wider `authoredBody`-style span
+  materializer for host Dart (fenced whole-member splice with the existing
+  capture/revert oracles) or compiler growth for try/catch + await +
+  closures; plus top-level declaration insert (`declare_const`,
+  `declare_typedef`) and constructor-initializer edit verbs; (b) a `cwd`
+  (workspace-relative) param on the mechanical `run` directive — the
+  allowlist stays, the jail resolves the scope.

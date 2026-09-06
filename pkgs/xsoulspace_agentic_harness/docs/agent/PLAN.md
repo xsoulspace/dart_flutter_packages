@@ -16,12 +16,8 @@
 
 | Issue | Where | Next move |
 | --- | --- | --- |
-| Consent wait needs a short deadline + deny-on-timeout | `harness_acp_backend.dart` | Phase 1.5 finding (a): an unanswered `session/request_permission` stalls the write tool for its full 5-minute deadline and the model retries into another wait |
-| `session/cancel` does not promptly interrupt an in-flight permission wait | `harness_acp_backend.dart` | Phase 1.5 finding (b); product mitigates by rejecting the pending permission on cancel |
-| First-write-of-turn sometimes executes without a surfaced permission (F3) | write/edit approver wiring | Phase 1.5 finding (c): attribution in the approver path |
 | `harness_verify` per-package convention: the extension cannot derive the ACTIVE package's check automatically | `harnessd_cli.dart` + extension env | `HARNESSD_CHECK` env works; derive the package from the touched files instead |
 | Root convention is a MONOREPO compromise (`flutter test` over root test/) | `workspace_conventions.dart` | per-package tasks carry `--check`; the D8 convention stays the default |
-| Zoom staleness: cut props can lag a just-refreshed tree | `meaning_query_tools.dart` | zoom re-stats the focus node (cheap) |
 | New-task goal isolation on a resumed world | per-workspace snapshot store | the store carried the previous goal; the small model replayed it (Phase 1 dogfood) |
 | Bridge crash on cancel during a live tool call | `GenerationState.postToolCall` → `_dispatch_lane_barrier_sync` | callback-after-delete class (Phase 1.5 finding (d)) |
 
@@ -33,7 +29,6 @@
 | Consent plans granted/audited in a REAL pi session | a real session grants one, audits consentLog | unit-only |
 | Reasoning beats (`thinking` capture, escalation reuse) | a real-model run exercises them | unit-only |
 | `remove_member` (retire) on a REAL model flow | an AFM/OpenRouter retirement attempt | unit-only |
-| VCS projection wired into the daemon tick | export + one wiring call (see NOW P3) | API-only |
 | Pack work-orders (multi-edit consent-once work orders) | — | designed, not built |
 | Refactor executables (`rename_package` packs) | — | designed, not built |
 | Multi-workspace daemon (last_answer co-tenancy) | — | P4, not built |
@@ -43,7 +38,7 @@
 1. **Dart**: `harness_scan` → `harness_locate` → `harness_zoom`/`harness_impact` → `harness_edit` (replace/insert/remove/apply_executable) → `harness_verify`. Fences: coverage, expressiveness, integration, refs.
 2. **md**: `edit_section` — heading-path anchors, byte-precise section splice, 0-broken-links oracle.
 3. **yaml/json**: `edit_key` — keypath anchors, comment-preserving splice, parse+semantic-diff oracle.
-4. **trusted-author fixes**: a consented `authored_body` pack entry applies via `apply_executable` at zero authored tokens (consent plans: `pack_write` verb).
+4. **trusted-author fixes**: a consented `authored_body` pack entry applies via `apply_executable` at zero authored tokens (consent plans: `pack_write` verb; permission waits resolve deny at 45 s — `permission_timeout` — and cancel denies promptly; every decision audited with its path).
 5. **everything else** (`other`): visible in the tree, review-gated `write_review` only — by design, never by omission.
 6. **The extension of the surface itself** = register a file-class spec + materializer spec (`xsoulspace_agentic_workspace/AGENTS.md`) — the same closed verb surface, more covered reality. Lint-class repairs are OUT of scope by disposition (per-project; `dart fix` / custom lint CLIs own them).
 
@@ -52,18 +47,18 @@
 The pi-dogfooding surface wave of 2026-09-06 landed the mechanical tier, the
 discovery ray, the warm tick, the trusted-author tier, the md/yaml/json
 materializers, the pack inventory + task-grammar one-decision path,
-execution-as-meaning, the VCS projection slice, and the AE knowledge plane
-(gates + counts: [history.md](history.md)). What remains, ordered:
+execution-as-meaning, the VCS projection + live registration seam, consent UX
+hardening (45 s deadline + deny-on-timeout, cancel-deny, F3 audit paths, zoom
+re-stat), and the AE knowledge plane (gates + counts:
+[history.md](history.md)). What remains, ordered:
 
 | P | Item | Status | Gate |
 |---|---|---|---|
 | P1 | REAL-model gate rows for the new tiers (trusted-author `apply_executable`, `edit_section`, `edit_key`, task-grammar pre-pass) — one on-device AFM session covers all four | named deferred — needs the on-device run | one R7e-style row per tier |
-| P1 | Consent UX hardening: short deadline + deny-on-timeout; cancel interrupts permission waits; F3 attribution | Phase 1.5 findings, not built | scripted e2e + one real session |
 | P2 | One decision, one program (ADR 0030): `meaning_program` — model-emitted read chains (locate→zoom→impact→read) in ONE call, single-cursor dataflow, format-blind (the node's class routes the host reader), fail-fast named bounces, result-cut verdicts. **LANDED, GATED** — surface-convergence row measured: converged profile 5 tools / 1,537 est tokens vs current 6 / 1,598 (the profile SHRINKS when the program graduates — replaces zoom+impact). Gates: `meaning_read_program_test.dart` 7/7, overhead-convergence row. NAMED, NOT BUILT: mutation ops behind a verified on-device row; program-mode flatness rows (`tool/afm_flatness_probe.dart`); daemon registration | on-device program rows + graduation |
 | P2 | Speculative verify actor: run-node world-fork primitive (beat watermark), outcome-beat arbitration (canonical wins, `speculative: true` flag), shared `RunMeaningExecutor` reusing `runTool`'s allowlist verbatim | designed (lane F report, 2026-09-06), not built | speculative-vs-canonical disagree → rollback e2e |
 | P2 | Topology engine: task-declared `{worlds, actors, roles, model-tiers, budgets}` as data; meaning-part actors (zero-token, scripted handlers — same loop, beats, budgets) | designed, not built | topology selection e2e |
 | P2 | Surface ergonomics (P0.5): registration-time linter over `ToolDef`s enforcing the R7e rules (required anchor slots on the wire, mechanical label resolution, bounces carry repairs) | not started | registry-lint gate |
-| P3 | VCS-as-meaning: registration seam into the daemon tick (export `vcs_meaning.dart` + wire `projectVcsMeaning` alongside repo_etl); mutation verbs stay with the edit tier | first slice landed; seam named | the ray sees `vcs.repo` nodes without a test bootstrap |
 | P3 | AE knowledge plane completion: harness-side host adapter (export → `MeaningNode` world state); remote hub fetch/push + trust/signing model; `ae know` subcommand family per the AE repo's `docs/ae_know_design.md` | CLI + local hub landed; adapter/remote named | hub round-trip against a LIVE harness world |
 | P3 | Multi-workspace daemon (last_answer co-tenancy) | not built | co-tenancy e2e |
 

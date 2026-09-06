@@ -107,11 +107,11 @@ void main() {
       expect(verdict['ops_run'], 3);
       // Cursor law: locate set it to the exact-match hit, reads consumed it.
       expect((verdict['cursor'] as List).first, 'sym_a');
-      final locateResult = (verdict['results'][0] as Map)['locate'] as Map;
+      final locateResult = ((verdict['results'] as List)[0] as Map)['locate'] as Map;
       expect(locateResult['ok'], true);
-      final zoomResult = (verdict['results'][1] as Map)['zoom'] as Map;
+      final zoomResult = ((verdict['results'] as List)[1] as Map)['zoom'] as Map;
       expect(zoomResult['ok'], true);
-      final readResult = (verdict['results'][2] as Map)['read'] as Map;
+      final readResult = ((verdict['results'] as List)[2] as Map)['read'] as Map;
       expect(readResult['ok'], true);
       // The read served the node's span through the host reader. The point
       // zoom served it too (read IS a point cut) — both through the SAME
@@ -133,10 +133,12 @@ void main() {
         {'op': 'locate', 'query': 'tick.interval'},
         {'op': 'read', 'budget': 128},
       ]);
-      final mdSpan = (md['results'][1] as Map)['read'] as Map;
-      final yamlSpan = (yaml['results'][1] as Map)['read'] as Map;
-      expect(mdSpan['span']['class'], 'md');
-      expect(yamlSpan['span']['class'], 'yaml');
+      final mdSpan = ((md['results'] as List)[1] as Map)['read'] as Map;
+      final yamlSpan = ((yaml['results'] as List)[1] as Map)['read'] as Map;
+      final mdClass = ((mdSpan['span'] as Map)['class']) as String;
+      final yamlClass = ((yamlSpan['span'] as Map)['class']) as String;
+      expect(mdClass, 'md');
+      expect(yamlClass, 'yaml');
       expect(readerCalls.map((r) => r.$1).toSet(), {'md', 'yaml'});
       // No op ever carried a format parameter.
       expect(
@@ -155,7 +157,7 @@ void main() {
         {'op': 'impact', 'focusId': 'sym_b'},
       ]);
       expect(verdict['ok'], true);
-      final impact = (verdict['results'][1] as Map)['impact'] as Map;
+      final impact = ((verdict['results'] as List)[1] as Map)['impact'] as Map;
       expect(impact['ok'], true);
       expect(impact['focus'], 'sym_b');
     },
@@ -210,9 +212,9 @@ void main() {
         ],
       });
       final verdict = jsonDecode(out!) as Map<String, dynamic>;
-      final readResult = (verdict['results'][1] as Map)['read'];
+      final readResult = ((verdict['results'] as List)[1] as Map)['read'];
       expect(readResult, isNull, reason: 'the fat body never enters context');
-      final clipped = verdict['results'][1] as Map;
+      final clipped = (verdict['results'] as List)[1] as Map;
       expect(clipped['clipped'], true);
       expect(clipped['est_tokens'], greaterThan(perOpResultBudgetTokens));
       expect(
@@ -276,7 +278,7 @@ void main() {
         expect(verdict['ok'], true);
         expect(verdict['ops_run'], 2);
         expect(edits, 1);
-        final edit = (verdict['results'][1] as Map)['edit'] as Map;
+        final edit = ((verdict['results'] as List)[1] as Map)['edit'] as Map;
         expect(edit['verified'], true);
         // Cursor law: an effect never advances the cursor — the next read
         // after an edit still sees what locate found.

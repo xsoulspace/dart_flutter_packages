@@ -660,3 +660,32 @@ Extracted from the living PLAN; the forward work is the production path in
 - Self-hosting row (2026-09-06): a real harness fix landed through the
   trusted-author tier at zero authored tokens
   (`benchmark/runs/trusted_author_row.md`).
+
+## Consent UX hardening + VCS seam + zoom re-stat (2026-09-06, lanes A′/B′)
+
+- **Consent UX hardening (lane A′, host pkg)**: `defaultPermissionDeadline`
+  = 45 s (named constant + constructor field; tests inject) — an unanswered
+  `session/request_permission` resolves DENY at the deadline
+  (`permission_timeout` on the tool result, audited) instead of the 5-minute
+  Phase 1.5 stall loop; all client round-trips centralized in ONE bounded
+  helper racing answer/deadline/cancel; `session/cancel` completes every
+  pending wait as deny (`permission_cancelled`) — no dangling futures; a
+  LATE answer is logged and IGNORED (deny-by-default monotonic in time);
+  F3 attribution: every decision names its path in consentLog (plan /
+  approver / timeout / cancel-deny / no-approver / late). Gate
+  `harnessd_consent_ux_test.dart` 5 gates; host 50/50.
+- **VCS registration seam (lane B′)**: `vcs_meaning.dart` barrel-exported;
+  `projectVcsMeaning` rides all four repo_etl paths (scan fresh/restored,
+  refresh persistent, refresh tick) — `vcs.repo`/branch/head/change nodes
+  live in EVERY daemon world with zero model tokens, failure-honest
+  (`not_a_repo`/`vcs_unavailable`/`vcs_skip` never break the scan). Gate
+  `vcs_registration_test.dart` 4/4.
+- **Zoom staleness FIXED (lane B′)**: point zooms of file-bearing nodes run
+  a one-stat refresher (`MeaningNodeRefresh` resource + `registerMeaningNodeRefresher`)
+  — mtime/size drift re-derives that ONE file through the idempotent fs-tier
+  builder; the served span is post-edit by construction (`refreshed: true`).
+  Measured: 148 µs no-op, 7.7 ms drift (budget 2 s). Gate added to
+  `md_materializer_test.dart` (10/10 in file).
+- Post-merge sweep: harness 461/0 (machine-counted) + 12 pre-existing
+  `avoid_dynamic_calls` analyzer ERRORS from the mesh commits fixed (typed
+  casts; tests unchanged); workspace 67/67; host 50/50; `harness_verify` PASS.
