@@ -230,3 +230,22 @@
 - **The verb/spec to build**: new-file bootstrap verb + an "anchored splice"
   edit class (import block, argument list, record/map literal) with the same
   fence family; then this lane's edits become `edit_symbol` moves.
+
+## 2026-09-06 — lane D finishing pass (yaml/json materializer, post-timeout)
+
+- **What bash/edit did**: the lane D subagent died on an upstream idle timeout
+  after writing `yaml_json_materializer.dart` but before integration. The
+  finishing pass (main session): fixed 6 compile errors in the interrupted
+  generation (dead `_finalize`, `_OpenEntry.indexPlaceholder` → `index0`,
+  `_short` promotion, `trimEnd` → `trimRight`), added the `edit_key` ToolDef,
+  registered the yaml/json `MaterializerSpec`s, barrel export, `yaml` dep,
+  and the gate `test/yaml_json_materializer_test.dart` (6 tests) — via the
+  `edit`/`write` tools, not the meaning surface.
+- **Why the surface didn't cover it**: interrupted-generation repair (dead
+  code removal, constructor reshapes) is outside the member-body span
+  currency; the gate + wiring bootstrap is the known new-file class.
+- **The verb/spec to build**: covered by the earlier new-file bootstrap +
+  anchored-splice rows (lanes B/E/F). ADDITIONAL finding from the gate: the
+  json emitter needed a comma fix-up whose fence must WIDEN to the adjusted
+  adjacent line — `keypath_splice`'s fence contract should name
+  "adjacent-line punctuation repair" as part of the intended change.

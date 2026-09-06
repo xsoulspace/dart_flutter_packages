@@ -7,6 +7,103 @@ One entry per landed body of work; durable decisions live in
 
 ## Landed
 
+- **THE PI-DOGFOODING SURFACE WAVE (2026-09-06 — the §NOW priority ledger,
+  landed in one day via parallel subagent lanes; every row's gates + counts
+  are in the per-lane reports `/tmp`-archived and in the gate files
+  themselves)**:
+  - **Mechanical directive tier (P0)**: reads (`[scan]`/zoom/impact/locate)
+    + consented writes (`harness_fs_write` through the review gate,
+    consent-plan inherited — `isMechanicalWriteDirective` +
+    `_runMechanicalWrites`, ZERO mover involvement, `mover_refusal` class
+    dead) + `harness_run` (allowlisted commands, per-file scopes). Measured:
+    reads 12–144 ms. Gates: `reads_are_not_builds_test.dart`,
+    `harnessd_mechanical_write_test.dart`, `harnessd_mechanical_run_test.dart`.
+  - **Discovery ray on the tree (P0)**: `meaning_locate` — ranked,
+    class-agnostic, refs-counted, token-bounded — on meaning profile +
+    daemon + scripted actor + pi extension. Gate:
+    `meaning_locate_tool_test.dart` (5 tests).
+  - **Warm tick < 300 ms (P0)**: `reconcileFsTier` — 24 ms no-op tick on
+    2,450 files (was ~1.4 s full walk). Gates: `etl_tick_test.dart`,
+    `tool/warm_tick_probe.dart`.
+  - **Capability ops / effects-as-data (P0)**: hosts register jailed I/O ops
+    AS DATA (`fs_stat` first) — interpreter tier; materialization of effect
+    ops = named bounce until each op's emitter lands. Gates: effects tests
+    (harness + workspace).
+  - **Consent plans shipped for this repo (P1)**: `.harnessd/consent.json`
+    (write/edit/pack_write verbs); gate `consent_workspace_file_test.dart`.
+  - **Trusted-author tier (P1)**: `EditExecutableKind.authoredBody` (AE
+    wire) + span-editor realization — consent at pack-write (deny-by-default,
+    unified-diff rendering), coverage fence + oracles + auto-revert
+    unchanged, pack round-trip; daemon `packConsent` wired (SYNC
+    consent-plan answer, `pack_write` verb, audited; gate
+    `harnessd_pack_consent_test.dart`); EXPRESSION-BODIED (`=>`) members now
+    realizable (pre-existing cursor bug found by the dogfood).
+    **SELF-HOSTING ROW GREEN** (`benchmark/runs/trusted_author_row.md`):
+    real fix `dart/quote_aware_check_split` landed at zero authored tokens
+    (ids only), scoped analyze 167 ms, full suite 34 s, auto-revert armed,
+    413/0 vs baseline 412/0. Gate: `span_edit_gate_test.dart` (+4
+    trusted-author tests).
+  - **md materializer (P1, lane B)**: `md_materializer.dart` + `edit_section`
+    — spec AS DATA `{spanCurrency: section, mapFormat: heading_tree,
+    emitter: section_splice, oracle: zero_broken_links, anchors:
+    heading_path}`; anchor resolved mechanically (ambiguity/missing bounce
+    with outline + repair), byte-precise splice, broken-link/broken-anchor
+    edits AUTO-REVERT, 13 named failure classes, tick maps md. Gate
+    `md_materializer_test.dart` 8/8.
+  - **yaml/json materializers (P1, lane D + main-session finishing pass
+    after an upstream timeout)**: `yaml_json_materializer.dart` — ONE
+    `edit_key` verb for BOTH classes; keypath splice COMMENT-PRESERVING;
+    `parse_semantic_diff` oracle with auto-revert; specs registered AS DATA.
+    Gate `yaml_json_materializer_test.dart` 6/6 — caught 3 real emitter
+    bugs (json open-entry indexing, append envelope, delete comma fix-up —
+    all fixed). Workspace suite 62/62.
+  - **Pack inventory as meaning nodes + task-grammar classifier (P2, lane
+    E)**: `capability_nodes.dart` — every pack executable is a
+    kind-`executable` meaning node (impl edges, idempotent reconcile,
+    removals never resurrect) registered in the SAME scan pass (zero model
+    tokens); `task_grammar.dart` — mechanical sentence → {verb-class,
+    target, params} (honest fail classes, prose excluded by design) +
+    repair-class lookup over the tree inventory; host pre-pass in
+    `coding_agent_runner.dart` runs BEFORE the actor (0 decisions).
+    **PASS@1 ROW: 1/1, move_decisions: 1, pre-pass decisions: 0.** Gates:
+    `capability_nodes_test.dart` 5/5, `task_grammar_test.dart` 14/14,
+    `harnessd_task_grammar_gate_test.dart` e2e.
+  - **Execution as meaning (P2, lane F)**: `execution_meaning.dart` — run
+    DECLARATIONS are kind-`intent` nodes (FNV-1a id from the command
+    template, idempotent); OUTCOMES are append-only BEATS (exit/duration/
+    `span_key` — gate-asserted: the tree stays byte-identical across
+    outcomes); stdout/stderr are budgeted SPAN anchors (`RunSpanStore`,
+    write-time 4,000-char clip, `runSpanCut` can only narrow; output never
+    enters the tree or beats); allowlist refusal happens BEFORE any
+    node/beat/span exists. Gate `execution_meaning_test.dart` 6/6.
+    Speculative-verify design rows named (world-fork at run nodes, outcome
+    arbitration, shared `RunMeaningExecutor` seam).
+  - **VCS-as-meaning, first slice (P3, lane H)**: `vcs_meaning.dart` —
+    `VcsAdapter` abstraction (git replaceable; jj/Sapling swap the impl),
+    read-only law STRUCTURAL (status/branch/log/rev-parse ONLY,
+    gate-asserted; writes → named `VcsCommandRefusal`), projection =
+    vcs/branch/head/change nodes (idempotent, deterministic, locatable
+    through the existing ray). Gate `vcs_meaning_test.dart` 6/6.
+  - **AE knowledge plane (P3, lanes C + G, in `~/xs/agentic_executables`)**:
+    `ae.knowledge_pack.v1` — construct/deconstruct over intent (impl/then
+    op-chains), op, step (DependsOnStep + GoalLink), goal, section, spec,
+    feature; deterministic byte-identical canonical form; unknown kinds fail
+    LOUDLY; round-trip gate `meaning_tree_round_trip_test.dart` 13 tests.
+    Then the CLI + distribution seam: `ae know <sources…> | --export |
+    --import` over `.ae_ln/` canonicals; `ae.hub_manifest.v1` (pack → file
+    + sha256 + version, loud validation); CLI e2e (rows → pack → manifest →
+    export → import → byte-identical); 8 named error codes in the playbook;
+    also fixed a PRE-EXISTING embedded-skill drift failure. Wire 33/33,
+    cli 82/82.
+  - **Dogfood fixes pulled from real sessions**: double-spawn race in the
+    extension recovery FIXED (one shared in-flight spawn promise);
+    `meaning_locate` re-based onto the tree (was: agents bootstrapped ids by
+    grep); ADR 0028 one-move-per-decision CONTRACT landed (client-parsed +
+    native paths; scripted seams + mechanical relay out of domain by
+    construction); lint-class repairs DISPOSITIONED OUT of the meaning
+    surface (per-project configurable — `dart fix` / custom lint CLIs own
+    them; surface_gaps.md row).
+
 - **FS TIER v1 — the map-graph covers EVERY file (2026-09-05, ADR 0024 as
   amended; PLAN §NOW #3)**: `repo_etl` now indexes `dir`/`file` nodes for
   every file in ONE scan pass (same mtime refresh tick as dart — zero
@@ -488,3 +585,78 @@ Extracted from the living PLAN; the forward work is the production path in
   `registerPackExecutable` on the materializer; the worked example
   `dart/fix_loop_bound` lands at ZERO authored tokens (the op-chain
   travels with the pack).
+
+## Race tracks R1–R8 (all closed; extracted from PLAN 2026-09-06)
+
+- **R1 — self-improvement loop:** SUPERSEDED by ADR 0021 (problems as
+  canonical rows, project-guided packs, source-analyzer oracle). Landed:
+  `problem_board.dart` — 7/7 LLM-free tests incl. real `dart analyze`
+  oracle and revert. Capture-loop wiring to the EDIT tier: DONE
+  (production #3).
+- **R2 — flatness WITH composition:** DONE. The claim survives the working
+  set (`long_horizon_composition_test.dart`).
+- **R3 — head-to-head numbers:** DONE — the real-model pi column ran
+  (production #7: pi's model drove the MODEL-LESS daemon; row published).
+- **R4 — large-model profile:** DONE. `coderLarge()`/`coderLean()` declared;
+  1.32× graceful scaling, zero overflows.
+- **R5 — editor live:** DONE. `benchmark/runs/r5_acp_session_transcript.txt`;
+  superseded by the R7 daemon contract (tool results stream too).
+- **R6 — workspace-oracle meaning tier:** DONE. Gate: 1 decision, 7,857
+  projection tokens, `dart test exit=0`, zero model code tokens, zero
+  host-authored expectations ([results_r6.md](results_r6.md)).
+- **R7 — edit-as-re-derivation:** a/b/c/d LANDED + gated; the ENTIRE
+  production path LANDED 2026-09-04 (#1 edit surface, #2 overhead row,
+  #3 capture loop, #4 remote mover, #5 persistent daemon, #6 R7e pass@3 =
+  3/3 on real AFM, #7 real-model pi row PASS). Rows:
+  [results_r7.md](results_r7.md).
+- **R8 — last_answer hosts the harness (ADR 0015, TASK B): LANDED
+  (LLM-free).** The app's first embedded domain host:
+  `lastanswer/lib/coding_agent/` owns the daemon lifecycle IN-PROCESS;
+  the user is an actor (task = host-injected decision, approvals ride the
+  EXISTING `session/request_permission` round-trip). Backend switch
+  (AFM ↔ OpenRouter) LANDED; **AFM e2e gate GREEN (2026-09-04, real
+  app)** — verdict PASS (1 decision, 3 rounds, 1,360 projection tokens,
+  31.8 s wall). **Phase 1.5 (the HUMAN gate) GREEN (2026-09-05):** the
+  dylib is bundled; the GUI loop ran on the last_answer repo itself —
+  findings pulled HERE: (a) permission waits need a short deadline +
+  deny-on-timeout; (b) `session/cancel` must interrupt in-flight
+  permission waits; (c) first-write-without-surfaced-permission (F3)
+  needs approver attribution; (d) bridge crash on cancel during a live
+  tool call. Full rows: `benchmark/runs/delegation_phase1_5.md`.
+  Product boundary: last_answer `docs/decisions/0003-agents-live-in-docs.md`,
+  `last_answer/docs/PLAN.md`, handoff
+  `last_answer/docs/HANDOFF-agents-in-docs.md`. Open problems pulled into
+  PLAN §NOW: actor topology engine, multi-workspace daemon, new-task goal
+  isolation on a resumed world.
+
+## Proven — runtime-verified claims (as of 2026-09-06)
+
+- **Tiered verification is HARNESS machinery (2026-09-04).**
+  `VerifyTierPlanner` (stateless, beat-derived — no side-channel counters,
+  snapshot-safe) + `VerifyConvention` as DATA; grades become `goal_verify`
+  beats. Hosts contribute conventions as data (`dartVerifyConvention`);
+  a future rust/ts host changes nothing else. Gate:
+  `verify_tier_planner_test.dart`.
+- Flat tokens/decision at scale — legacy projection 1.07×, composed cut
+  flat over 300 decisions (`long_horizon_composition_test.dart`); repo-scale
+  ETL: 11,590 nodes / 67,444 edges, ETL-out fidelity 10,649/10,649, cuts
+  FLAT vs tier 1 (2,044 tokens), cuts 4–61 ms
+  ([results_etl_scale.md](results_etl_scale.md)).
+- The edit tier is CLOSED under the law AND proven on real models:
+  `edit_symbol` with the three fences, auto-revert with failure
+  attribution, zero `read`/`write` moves; the daemon persists
+  beats/verdicts/budgets per workspace and re-derives the tree
+  ([results_r7.md](results_r7.md)).
+- On-device AFM coding: bugfix_01 pass@3 = 3/3 post-fixes; R7e (pack-fed
+  edit through the daemon surface) pass@3 = 3/3.
+- Delegation loop end-to-end: pi → CLI/daemon → world → verdict → evidence
+  (`benchmark/runs/delegation_m1_evidence.md`).
+- Multi-actor squad, single-writer locks, per-actor verification, roles,
+  a2a columns, analyzer board, replay miner + seeder: all LLM-free proven.
+- M0b `declare_check`: model-proposed criteria as data, host-validated,
+  mechanically executed.
+- Task-grammar one-decision row (2026-09-06): pass@1 1/1, 1 move decision,
+  0 classifier decisions (`harnessd_task_grammar_gate_test.dart`).
+- Self-hosting row (2026-09-06): a real harness fix landed through the
+  trusted-author tier at zero authored tokens
+  (`benchmark/runs/trusted_author_row.md`).

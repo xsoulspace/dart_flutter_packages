@@ -128,8 +128,10 @@ has NO edit verb — `JailWriteGateway` review mode only). No generic
 `read`/`write`/`glob`/`grep` in the meaning profile — zoom over the
 map-graph IS the search. Every materializer lands with an R7e tiny-model
 gate (a 2–4k model performs the real edit; the 1408-fixed-token overhead
-row is the template). Landing order: md → yaml/json (PLAN §NOW items
-4–5); the escape hatch (review-mode write) is P1 item 3.
+row is the template). LANDED (2026-09-06): md (`edit_section`,
+zero-broken-links oracle) and yaml/json (`edit_key`, keypath splice
+comment-preserving, parse_semantic_diff oracle) — the escape hatch
+(review-mode write) now covers only mapless classes.
 
 ## The pipeline (bookmark-manager reference path)
 
@@ -253,49 +255,32 @@ counts still match `responses_sent_delta`.
 | On-device intent-closure driver (J1.4 benchmark) | `../xsoulspace_agentic_host/lib/src/intent_closure_runner.dart` (ADR 0025 host layer) |
 | **Coding runner core (THE deliverable, ADR 0025)** | `../xsoulspace_agentic_host/lib/src/coding_agent_runner.dart` — composed by thin provider bins (e.g. `../xsoulspace_inference_apple_foundation/bin/harnessd.dart`) or embedded directly (`package:xsoulspace_agentic_host`) |
 | **R7 edit tier (ADR 0023): `edit_symbol` + fences + auto-revert** | `../xsoulspace_agentic_workspace/lib/src/span_editor.dart` (gates: `span_edit_gate_test.dart`, `pack_edit_gate_test.dart`); the capture loop → project pack: `edit_pack_capture.dart` (gate: `edit_pack_capture_test.dart`) |
+| **Non-dart materializers (ADR 0024)** | `../xsoulspace_agentic_workspace/lib/src/md_materializer.dart` (`edit_section`, zero-broken-links oracle) + `yaml_json_materializer.dart` (`edit_key`, keypath splice comment-preserving, parse_semantic_diff oracle); specs AS DATA in `file_class_spec.dart` (gates: `md_materializer_test.dart`, `yaml_json_materializer_test.dart`) |
+| **Capability inventory + task grammar (P2)** | `../xsoulspace_agentic_harness/lib/src/meaning/capability_nodes.dart` (pack executables as meaning nodes) + `lib/src/tools/task_grammar.dart` (sentence → {verb-class, target, params}; host pre-pass, pass@1 1/1 at 1 move decision); gates: `capability_nodes_test.dart`, `task_grammar_test.dart`, `harnessd_task_grammar_gate_test.dart` |
+| **Execution as meaning + VCS projection (P2/P3)** | `../xsoulspace_agentic_harness/lib/src/meaning/execution_meaning.dart` (run declarations = intent nodes, outcomes = beats, output = budgeted spans; gate: `execution_meaning_test.dart`) + `lib/src/meaning/vcs_meaning.dart` (read-only VcsAdapter projection; gate: `vcs_meaning_test.dart`) |
+| **Trusted-author tier (P1)** | `EditExecutableKind.authoredBody` in `~/xs/agentic_executables/agentic_executables_wire` + `registerPackExecutable(authoredBody:)` in span_editor.dart; self-hosting row: `benchmark/runs/trusted_author_row.md` |
 | **R7 daemon (`harnessd`: per-workspace world, ACP, meaning profile)** | `../xsoulspace_agentic_host/lib/src/harness_acp_backend.dart` + `lib/src/harnessd_cli.dart` (ADR 0025 host layer); production #4 remote mover (`--remote-mover` → `session/propose_move`) and #5 lifecycle (`--workspace`: single-instance lock + unix socket + idle-exit) live here; provider bindings come from composition roots (e.g. `../xsoulspace_inference_apple_foundation/bin/harnessd.dart`) |
 | **R7 pi integration (daemon as the only file surface)** | `benchmark/pi_driver/run_r7_daemon_gate.mjs` + `r7_harnessd_extension.ts`; transcript `benchmark/runs/r7_edit_surface_transcript.txt` (production #1: the structured `harness_edit` contract — the mover executes exact `edit_symbol` args from the session/prompt JSON, never guesses ids); warm-attach gate: `run_r7_warm_attach_gate.mjs` → `r7_warm_attach_transcript.txt` |
 | Flutter profiler | `../xsoulspace_agentic_harness_flutter_profiler/` |
 
-## Current situation (2026-09-03, post R7)
+## Current situation (2026-09-06, post surface wave)
 
-- **Landed (pre-R7)**: meaning tree as world state + zoom projection
-  (ADR 0018); intent closure v1 (interpreter ⇄ materialized-Dart parity);
-  macros; **B1/B2** — one self-executing `intent_define`, one structured
-  failure dialect; **B4/B5** — legacy edit paths deleted; **B3/B7/B8** —
-  ONE on-device entry point, pass@3 protocol; **P1** — AFM bridge cancel
-  contract + pre-flight context budget; **P2** — the J7 overseer;
-  **P3** — the host write gate; **P5** — idle-resumable snapshots;
-  **P6** — NDJSON transport. Full tables:
-  [results_stage_p.md](results_stage_p.md).
-- **R6 (DONE)**: the generation path is OPEN — workspace-oracle ETL-in,
-  the workspace-Dart materializer, vocabulary growth (21 ops incl.
-  `call`). Gate: 1 decision, 7,857 tokens, `dart test exit=0`, zero model
-  code tokens, zero host-authored expectations
-  ([results_r6.md](results_r6.md)).
-- **R7 (a–d DONE, see [results_r7.md](results_r7.md))**: the EDITING
-  surface closed under the law — the span-edit materializer (`edit_symbol`
-  with the three fences + auto-revert with failure attribution), the
-  meaning-profile registry (`repo_etl`/`meaning_zoom`/`meaning_impact`/
-  `edit_symbol`/`run`, zero fs tools), the daemon holding the world per
-  workspace (tree never snapshotted — re-derived; resume real;
-  deny-by-default permissions; real cancellation), and pack-fed edits
-  (`EditExecutableWire`; `dart/fix_loop_bound` at zero authored tokens).
-  Whole-file `write` is LEGACY-HOST-ONLY (ADR 0023 demotion): the
-  run-graded arm remains for direct-profile hosts only; the meaning
-  profile's only ACT verb is `edit_symbol`.
-- **The open frontier is the PRODUCTION PATH in [PLAN.md](PLAN.md)**:
-  the structured `harness_edit` contract over ACP, the meaning-profile
-  overhead row (1408 fixed tokens — fits the AFM window), the capture
-  loop → project pack, the remote mover (model-less daemon:
-  `session/propose_move`), and the persistent daemon (single-instance,
-  warm attach, keep-warm, AOT) have LANDED — and the REAL-MODEL gates are
-  GREEN: R7e pass@3 = 3/3 (the on-device AFM model performs the pack-fed
-  edit in ONE decision, 2,008 tokens) and the pi row PASS (pi's model
-  drives the model-less daemon via propose_move, 8 round-trips). The
-  follow-ups are in the PLAN ledger: constrain the meaning profile's
-  `run` tool (a write hole found by the pi row) and unwrap the schema
-  bundle's `root` wrapper server-side.
+- **Landed through R7 + the 2026-09-06 pi-dogfooding surface wave** (full
+  bullets in [history.md](history.md)): the meaning tree + zoom, intent
+  closure, the edit tier closed under the law and proven on real models
+  (R7e pass@3 = 3/3 on-device; pi row PASS), the persistent daemon, the
+  mechanical directive tier (reads + consented writes + allowlisted run),
+  the discovery ray, the 24 ms warm tick, the trusted-author tier
+  (authored-body pack executables, self-hosting row green), the md and
+  yaml/json materializers, the pack inventory as meaning nodes + the
+  task-grammar one-decision path (pass@1 1/1), execution-as-meaning, the
+  read-only VCS projection, and the AE knowledge plane (round-trip gate +
+  `ae know` CLI + hub manifest).
+- **The remaining frontier is the forward ledger in [PLAN.md](PLAN.md)**:
+  the REAL-model gate rows for the new tiers (one on-device AFM session),
+  consent UX hardening (deadline + deny-on-timeout, cancel interruption,
+  F3 attribution), the speculative verify actor, the topology engine, the
+  VCS registration seam, and the AE host adapter + remote hub.
 
 ## Invariants an agent must not break
 

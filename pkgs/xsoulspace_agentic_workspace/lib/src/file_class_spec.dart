@@ -96,6 +96,24 @@ const materializerSpecs = <String, MaterializerSpec>{
     anchors: 'heading_path',
     verb: 'edit_section',
   ),
+  'yaml': MaterializerSpec(
+    fileClass: 'yaml',
+    spanCurrency: 'keypath',
+    mapFormat: 'keypath_tree',
+    emitter: 'keypath_splice',
+    oracle: 'parse_semantic_diff',
+    anchors: 'keypath',
+    verb: 'edit_key',
+  ),
+  'json': MaterializerSpec(
+    fileClass: 'json',
+    spanCurrency: 'keypath',
+    mapFormat: 'keypath_tree',
+    emitter: 'keypath_splice',
+    oracle: 'parse_semantic_diff',
+    anchors: 'keypath',
+    verb: 'edit_key',
+  ),
 };
 
 /// Registry lookup; null → the class has no edit verb yet (review gate
@@ -105,8 +123,9 @@ MaterializerSpec? materializerSpecFor(String fileClass) =>
 
 /// The registry — DATA. Dart is realized today (symbols + imports);
 /// md/yaml/json read-side anchors live in the fs tier's map builder;
-/// md's EDIT-side materializer spec is registered above (the first);
-/// yaml/json edit specs are the next PLAN item.
+/// md's EDIT-side spec is `edit_section` (md_materializer.dart); yaml and
+/// json share the `edit_key` verb (yaml_json_materializer.dart: keypath
+/// splice, comment-preserving, parse_semantic_diff oracle).
 /// `other` is the implicit fallback (visible node, review-mode writes).
 const fileClassSpecs = <FileClassSpec>[
   FileClassSpec(fileClass: 'dart', extensions: {'.dart'}, parse: scanDartFile),

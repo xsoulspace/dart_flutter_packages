@@ -24,6 +24,7 @@ dependencies:
   from_json_to_json:
   is_dart_empty_or_not:
   source_span: ^1.10.2
+  yaml: ^3.1.2
   # R7d: pack-declared edit executables (the wire shape only — the host
   # owns realizations; AE owns semantics).
   agentic_executables_wire:

@@ -140,8 +140,8 @@ class _JsonFrame {
 
 /// A json builder entry still awaiting its end line.
 class _OpenEntry {
-  _OpenEntry(this.entry, this.depth);
-  final int indexPlaceholder; // unused, keeps analyzer quiet about lint
+  _OpenEntry(this.index0, this.entry, this.depth);
+  final int index0; // the entries[] slot this open entry finalizes
   final KeypathEntry entry;
   final int depth;
 }
@@ -185,25 +185,6 @@ KeypathEntry _entry(
       hasInlineValue: hasInlineValue,
       isBlockScalar: isBlockScalar,
     );
-
-/// Closes [open] entries nested at or under the frame depth [fromDepth]
-/// with end line [endLine] (exclusive-of-the-closer rule: the closer line
-/// itself belongs to the parent).
-void _finalize(
-  List<_OpenEntry> open,
-  int fromDepth,
-  int endLine,
-) {
-  for (var i = open.length - 1; i >= 0; i--) {
-    if (open[i].depth >= fromDepth) {
-      final e = open.removeAt(i).entry;
-      if (e.endLine < e.lineIdx) {
-        // Mutate via a new entry (fields are final) — replace in place.
-        e = e; // ignore: unnecessary_statements
-      }
-    }
-  }
-}
 
 /// Parses pretty-printed JSON: object keys (nested via a frame stack) and
 /// array elements (bracket-indexed). One key/element per line — the
@@ -276,11 +257,12 @@ List<KeypathEntry> _parseJsonKeypaths(String content) {
         hasInlineValue: true,
         isBlockScalar: false,
       ));
-      open.add(_OpenEntry(entries[idx], depth));
-      // Value part: does it open exactly one container?
+      // Only a key that OPENS a container stays open (finalized when the
+      // frame pops) — a leaf's span ends on its own line.
       final valuePart = work.substring(work.indexOf(':') + 1).trim();
       final opener = _singleTrailingOpener(valuePart);
       if (opener != null) {
+        open.add(_OpenEntry(idx, entries[idx], depth));
         frames.add(_JsonFrame(opener, keypath));
       } else if (valuePart.startsWith('{') || valuePart.startsWith('[')) {
         // inline (balanced) collection — leaf, no frame.
@@ -306,7 +288,7 @@ List<KeypathEntry> _parseJsonKeypaths(String content) {
         hasInlineValue: true,
         isBlockScalar: false,
       ));
-      open.add(_OpenEntry(entries[idx], depth));
+      open.add(_OpenEntry(idx, entries[idx], depth));
       final opener = _singleTrailingOpener(trimmed);
       if (opener != null) frames.add(_JsonFrame(opener, keypath));
       continue;
@@ -516,7 +498,11 @@ class SemanticChange {
 }
 
 String _short(Object? v) {
-  final s = '${v is Map || v is List ? (v is Map ? "{…${v.length}}" : "[…${v.length}]") : v}';
+  final s = v is Map
+      ? '{…${v.length}}'
+      : v is List
+          ? '[…${v.length}]'
+          : '$v';
   return s.length > 40 ? '${s.substring(0, 40)}…' : s;
 }
 
@@ -1068,7 +1054,7 @@ class KeypathMaterializer {
       var spliced = content_replaceRange(
           lines, offsets, target.lineIdx, target.endLine, rendered);
       // json comma fix-up: a property following the block needs the comma.
-      if (isJson && !multiline && !rendered.trimEnd().endsWith(',')) {
+      if (isJson && !multiline && !rendered.trimRight().endsWith(',')) {
         final next = target.endLine + 1 < lines.length
             ? lines[target.endLine + 1].trim()
             : '';
@@ -1078,7 +1064,7 @@ class KeypathMaterializer {
         if (needsComma) {
           spliced = content_replaceLine(
               _splitOf(spliced), _lineOffsets(_splitOf(spliced)),
-              target.lineIdx, '${rendered.trimEnd()},');
+              target.lineIdx, '${rendered.trimRight()},');
         }
       }
       _assertUntouched(path, content_of(lines), spliced, keepStart, keepEnd);
@@ -1197,12 +1183,35 @@ class KeypathMaterializer {
         'keypath_not_found',
       );
     }
-    final keepStart = offsets[target.lineIdx];
+    var keepStart = offsets[target.lineIdx];
     final keepEnd = target.endLine + 1 < lines.length
         ? offsets[target.endLine + 1]
         : content_keepEndOfFile(lines, offsets);
-    final spliced =
+    var spliced =
         content_deleteRange(lines, offsets, target.lineIdx, target.endLine);
+    if (isJson && target.lineIdx > 0) {
+      // json comma fix-up: deleting the LAST key of a block orphans the
+      // PRECEDING sibling's trailing comma (invalid json). Stripping it is
+      // part of the intended change — the fence widens to include that
+      // line so the byte assertion stays honest.
+      final prev = lines[target.lineIdx - 1];
+      final nextTrimmed = target.endLine + 1 < lines.length
+          ? lines[target.endLine + 1].trim()
+          : '';
+      if (prev.trimRight().endsWith(',') &&
+          (nextTrimmed.startsWith('}') || nextTrimmed.startsWith(']'))) {
+        final trimmedPrev = prev.trimRight();
+        final fixedPrev = trimmedPrev.substring(0, trimmedPrev.length - 1);
+        final splicedLines = _splitOf(spliced);
+        spliced = content_replaceLine(
+          splicedLines,
+          _lineOffsets(splicedLines),
+          target.lineIdx - 1, // before the deleted range: index unchanged
+          fixedPrev,
+        );
+        keepStart = offsets[target.lineIdx - 1];
+      }
+    }
     _assertUntouched(path, content_of(lines), spliced, keepStart, keepEnd);
     return KeypathEditPlan(
       path: path,
@@ -1352,16 +1361,30 @@ class KeypathMaterializer {
   /// blank lines stay byte-identical; mechanically asserted at plan time).
   void _assertUntouched(
       String path, String original, String spliced, int keepStart, int keepEnd) {
-    final origSuffix = original.length >= keepEnd
-        ? original.substring(keepEnd.clamp(0, original.length))
-        : '';
-    final splSuffix = spliced.length >= keepEnd
-        ? spliced.substring(
-            spliced.length - origSuffix.length.clamp(0, spliced.length))
-        : '';
+    // PREFIX: same string coordinates — everything before the fence start
+    // is untouched (edits begin AT keepStart).
     if (original.substring(0, keepStart.clamp(0, original.length)) !=
-            spliced.substring(0, keepStart.clamp(0, spliced.length)) ||
-        origSuffix != splSuffix) {
+        spliced.substring(0, keepStart.clamp(0, spliced.length))) {
+      throw KeypathEditBounce(
+        'the emitter touched bytes outside the target keypath span in '
+            '$path (byte fence violated)',
+        'host bug — report as data: the keypath_splice emitter must edit '
+            'ONLY the target span',
+        'emitter_violation',
+      );
+    }
+    // SUFFIX: the splice may change the byte length inside the fence, so
+    // coordinates after it shift — compare the trailing LINE SEQUENCE
+    // instead (the tail is the file suffix by construction).
+    final origTail = original
+        .substring(keepEnd.clamp(0, original.length))
+        .split('\n');
+    final splLines = spliced.split('\n');
+    if (splLines.length < origTail.length ||
+        splLines
+                .sublist(splLines.length - origTail.length)
+                .join('\n') !=
+            origTail.join('\n')) {
       throw KeypathEditBounce(
         'the emitter touched bytes outside the target keypath span in '
             '$path (byte fence violated)',
@@ -1532,12 +1555,17 @@ class KeypathMaterializer {
                   '${changes.length}: ${changes.take(5)}';
         }
         final c = changes.single;
-        if (c.path != target) {
-          return 'expected the change at "$target", got ${c.kind} at '
+        // Appending an item surfaces in the diff as a NEW leaf under the
+        // anchor (`features[1]`), or as the anchor turning null → list.
+        final atAnchorOrItem =
+            c.path == target || c.path.startsWith('$target[');
+        if (!atAnchorOrItem) {
+          return 'expected the new item under "$target", got ${c.kind} at '
                   '"${c.path}"';
         }
         if (c.kind != 'added' && c.kind != 'changed') {
-          return 'expected added/changed at "$target", got ${c.kind}';
+          return 'expected added/changed under "$target", got ${c.kind} at '
+                  '"${c.path}"';
         }
         if (c.kind == 'changed') {
           // null → list (the key held no value before): after must be a
@@ -1588,6 +1616,63 @@ class KeypathMaterializer {
       );
     }
   }
+}
+
+/// `edit_key`: the ONE uniform edit verb for BOTH yaml and json (the host
+/// dispatches on the file class mechanically). The model supplies the
+/// keypath anchor + the body AS DATA; the host resolves the anchor from a
+/// fresh parse, splices byte-precisely (comments/siblings untouched), and
+/// runs the parse_semantic_diff oracle — a violating edit AUTO-REVERTS.
+ToolDef editKeyTool(
+  FsToolsRoot root, {
+  FileLockTable? locks,
+  Object owner = 'keypath_materializer',
+}) {
+  final mat = KeypathMaterializer(root: root, locks: locks, owner: owner);
+  return ToolDef.encode(
+    name: const ToolName('edit_key'),
+    description:
+        'Edit a YAML or JSON document through its keypath map — never a '
+        'raw write. Args: path (workspace-relative .yaml/.yml/.json), op '
+        '(set_key: create or overwrite a key — empty body sets null | '
+        'replace_value: swap the value at the anchor | delete_key: remove '
+        'the key | append_list_item: add an element to the list at the '
+        'anchor), anchor (the dot/bracket keypath, e.g. "deps.build" or '
+        '"jobs.build[0].name", or the key node id from meaning_zoom), '
+        'body (the scalar/fragment, as data). The host splices '
+        'byte-precisely — comments, siblings and formatting stay '
+        'untouched — and runs the parse_semantic_diff oracle: the ONLY '
+        'semantic change must be the intended one, or the edit '
+        'AUTO-REVERTS with the named failure class. Keypath misses bounce '
+        'with the resolved outline; read keypaths via meaning_zoom point '
+        'cuts, never file reads.',
+    argsSchema: SchemaBundle(
+      root: FM.object('edit_key', properties: () => [
+            FM.prop('path', FM.string()),
+            FM.prop(
+              'op',
+              FM.enum_('op', const [
+                'set_key',
+                'replace_value',
+                'delete_key',
+                'append_list_item',
+              ]),
+            ),
+            FM.prop('anchor', FM.string()),
+            FM.prop('body', FM.string()),
+          ]),
+    ),
+    execute: (args) async {
+      final map = args is Map ? args : const {};
+      final outcome = mat.perform(
+        path: map['path'] as String?,
+        op: map['op'] as String?,
+        anchor: map['anchor'] as String?,
+        body: map['body'] as String?,
+      );
+      return outcome.toJson();
+    },
+  );
 }
 
 // -- pure line/offset helpers (plan-time splice arithmetic) -----------------
