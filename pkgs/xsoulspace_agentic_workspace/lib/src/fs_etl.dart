@@ -322,6 +322,163 @@ bool _ensureContainsEdge(World world, String fromId, String toId) {
   );
 }
 
+/// ADR 0027 dogfood — the TREE-DRIVEN reconcile (the warm-tick floor item,
+/// PLAN §Open issues): the tick used to walk the WHOLE workspace (listSync
+/// on every directory + statSync on every file) on every prompt just to
+/// catch adds/drops — measured ~1.4 s per no-op tick on this monorepo
+/// (~2,450 files). The tree already knows every indexed path, so:
+/// stat each stored file node (one syscall, no walk) for changes/drops,
+/// and listSync ONLY directories whose own mtime moved past the cutoff —
+/// a directory's mtime changes exactly when an entry is added, removed or
+/// renamed inside it. New subdirectories are walked fully (rare, bounded
+/// by the same skip rules as the scan). Known limitation (honest): on a
+/// filesystem with coarse mtime granularity a same-second add can hide
+/// until the entry's dir mtime next moves — action `scan` re-derives
+/// everything.
+///
+/// Returns the reconciled counts plus every file needing a (re)build as
+/// [FsFileScan]s (changed AND new) — the code tier's input for the same
+/// tick (parseable entries re-parse; the rest is fs-tier-owned).
+({int added, int dropped, int staleDirs, int refreshed, int files, int dirs,
+    List<FsFileScan> changed})
+reconcileFsTier(
+  World world,
+  Directory workspace, {
+  required DateTime cutoff,
+}) {
+  final index = world.getResource<MeaningIndex>();
+  final root = workspace.path;
+  final knownFiles = <String>{};
+  final knownDirs = <String>{};
+  final dirAbs = <String, String>{};
+  final changed = <FsFileScan>[];
+  final staleIds = <String>[];
+  var dropped = 0;
+  // 1) files — stat the STORED paths; no walk.
+  for (final entry in index.byId.entries) {
+    if (!entry.key.startsWith('f_')) continue;
+    final props = meaningComponentOf<MeaningProps>(world, entry.value)?.props;
+    final rel = props?['path'] as String?;
+    if (rel == null || rel.isEmpty) continue;
+    knownFiles.add(rel);
+    final stat = File('$root/$rel').statSync();
+    if (stat.type == FileSystemEntityType.notFound) {
+      staleIds.add(entry.key);
+    } else if (stat.modified.isAfter(cutoff)) {
+      changed.add(_fsScanOf(rel, stat));
+    }
+  }
+  // 2) dirs — list only entries whose mtime moved (adds/renames land here);
+  //    dir deletions stay honest-by-omission until a full scan, as before.
+  for (final entry in index.byId.entries) {
+    if (!entry.key.startsWith('dir_')) continue;
+    final props = meaningComponentOf<MeaningProps>(world, entry.value)?.props;
+    final rel = props?['path'] as String?;
+    if (rel == null || rel.isEmpty) continue;
+    knownDirs.add(rel);
+    dirAbs[rel] = rel == '.' ? root : '$root/$rel';
+  }
+  final newDirs = <String>[];
+  var staleDirs = 0;
+  for (final rel in knownDirs.toList()..sort()) {
+    final stat = Directory(dirAbs[rel]!).statSync();
+    if (stat.type == FileSystemEntityType.notFound) {
+      staleDirs++;
+      continue;
+    }
+    if (!stat.modified.isAfter(cutoff)) continue;
+    _walkDirForAdds(
+      Directory(dirAbs[rel]!),
+      rel,
+      knownFiles: knownFiles,
+      knownDirs: knownDirs,
+      newFiles: changed,
+      newDirs: newDirs,
+    );
+  }
+  // 3) drops first (the tree must not lie), then add/refresh through the
+  //    idempotent buildFsTier (props rewritten only when they differ — the
+  //    map of a changed file is dropped and rebuilt in the same step).
+  for (final id in staleIds) {
+    _dropMapNodes(world, id);
+    if (dropMeaningNode(world, id)) dropped++;
+  }
+  changed.sort((a, b) => a.rel.compareTo(b.rel));
+  final built = buildFsTier(
+    world,
+    workspace,
+    scan: FsScan(dirs: newDirs..sort(), files: changed),
+  );
+  var files = 0;
+  var dirs = 0;
+  for (final id in index.byId.keys) {
+    if (id.startsWith('f_')) {
+      files++;
+    } else if (id.startsWith('dir_')) {
+      dirs++;
+    }
+  }
+  return (
+    added: built.added,
+    dropped: dropped,
+    staleDirs: staleDirs,
+    refreshed: changed.length,
+    files: files,
+    dirs: dirs,
+    changed: changed,
+  );
+}
+
+/// One [FsFileScan] from a rel path + stat (structural facts only).
+FsFileScan _fsScanOf(String rel, FileStat stat) => FsFileScan(
+      rel: rel,
+      dir: _parentOf(rel),
+      fileClass: fileClassOf(rel),
+      ext: rel.contains('.') ? rel.split('.').last.toLowerCase() : '',
+      bytes: stat.size,
+      modified: stat.modified,
+    );
+
+/// Enumerates the ADDS of one mtime-moved directory (recursing into
+/// subdirectories that are themselves new) with the SAME skip rules as
+/// [scanWorkspaceFs]. Existing rels are skipped via the known sets — a
+/// tick can only add, never double-index.
+void _walkDirForAdds(
+  Directory dir,
+  String dirRel, {
+  required Set<String> knownFiles,
+  required Set<String> knownDirs,
+  required List<FsFileScan> newFiles,
+  required List<String> newDirs,
+}) {
+  final entries = dir.listSync()..sort((a, b) => a.path.compareTo(b.path));
+  for (final e in entries) {
+    final name = e.path.split('/').last;
+    final childRel = dirRel == '.' ? name : '$dirRel/$name';
+    if (e is Directory) {
+      if (fsSkipDirs.contains(name) || name.startsWith('.')) continue;
+      if (!knownDirs.add(childRel)) continue; // already indexed
+      newDirs.add(childRel);
+      _walkDirForAdds(
+        e,
+        childRel,
+        knownFiles: knownFiles,
+        knownDirs: knownDirs,
+        newFiles: newFiles,
+        newDirs: newDirs,
+      );
+    } else if (e is File) {
+      if (fsSkipFiles.contains(name) || name.startsWith('.')) continue;
+      // Do not follow symlinked files out of the workspace jail.
+      if (FileSystemEntity.typeSync(e.path) == FileSystemEntityType.link) {
+        continue;
+      }
+      if (!knownFiles.add(childRel)) continue; // already indexed
+      newFiles.add(_fsScanOf(childRel, e.statSync()));
+    }
+  }
+}
+
 /// The SPAN reader factory (ADR 0024, as amended — the only way text
 /// enters model context): a meaning anchor (`section`/`key` node) declares
 /// its source span; the reader serves EXACTLY that span, budget-clamped

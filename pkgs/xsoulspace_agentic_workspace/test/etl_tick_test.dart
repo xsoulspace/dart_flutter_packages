@@ -69,4 +69,36 @@ void main() {
     final r = await _execute(etl, {'action': 'refresh'});
     expect(r['refreshed_files'], 1, reason: '$r');
   }, timeout: const Timeout(Duration(minutes: 2)));
+
+  test('tree-driven tick reconciles change/add/drop/new-dir (no full walk)',
+      () async {
+    final world = World()..addPlugin(AgentPlugin());
+    world..upsertResource(ToolRegistryResource());
+    final state = RepoEtlState();
+    final etl = repoEtlTool(world, jail, state: state);
+    await _execute(etl, {'action': 'scan'});
+    // Guarantee mtimes strictly after the scan window, then hit every
+    // lifecycle branch in ONE tick: change, add, drop, new dir + file.
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    File('${jail.path}/lib/b.dart').writeAsStringSync('int b() => 30;\n');
+    File('${jail.path}/lib/c.dart').writeAsStringSync('int c() => 3;\n');
+    File('${jail.path}/lib/a.dart').deleteSync();
+    Directory('${jail.path}/lib/deep').createSync();
+    File('${jail.path}/lib/deep/d.dart')
+        .writeAsStringSync('int d() => 4;\n');
+    final r = await _execute(etl, {'action': 'refresh'});
+    expect(r['ok'], true, reason: '$r');
+    expect(
+      r['refreshed_files'],
+      3,
+      reason: 'b changed; c and d are new parseable files: $r',
+    );
+    expect(r['fs_dropped'], 1, reason: 'a.dart is gone: $r');
+    expect(
+      r['fs_added'],
+      3,
+      reason: 'c.dart, d.dart and the new deep/ dir: $r',
+    );
+    expect(r['files'], 4, reason: 'b, c, d + pubspec.yaml (a dropped): $r');
+  }, timeout: const Timeout(Duration(minutes: 2)));
 }

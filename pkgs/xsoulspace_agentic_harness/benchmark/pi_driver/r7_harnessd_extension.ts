@@ -231,6 +231,16 @@ const REJECT = { outcome: { outcome: "reject", optionId: "reject" } };
 
 let client: HarnessdClient | null = null;
 
+// The in-flight ensure (spawn-or-attach), shared by concurrent callers.
+// ADR 0027 dogfood gap (surface_gaps.md): tool calls race mid-turn (a
+// delegated prompt can be answered while another tool awaits), and two
+// concurrent ensureClient calls both saw `client == null` and BOTH spawned
+// a daemon — the loser attached to a socket the winner's daemon replaced.
+// ONE promise per ensure window: every concurrent caller awaits the same
+// spawn/attach; the promise is cleared on settle so a later failure
+// retries honestly instead of caching a rejection.
+let ensureInFlight: Promise<HarnessdClient> | null = null;
+
 // The latest extension context (set by every tool execute and turn event) —
 // the model + UI entry points the handlers need.
 let capturedCtx: PiCtx | null = null;
@@ -435,39 +445,43 @@ export default function (pi: PiAPI) {
     capturedCtx = ctx;
   });
 
-  const ensureClient = async (): Promise<HarnessdClient> => {
-    // ADR 0027 hotfix: a cached DEAD client (daemon idle-exited/crashed)
-    // must be dropped, never returned — the old `if (client) return client`
-    // is what made every later call fail until a session restart.
-    if (client && client.isDead()) {
-      process.stderr.write(
-        "[harnessd-ext] cached daemon is dead (idle-exit or crash) — respawning\n",
-      );
-      try {
-        client.wire.end?.();
-      } catch {}
-      client = null;
-      // A stale pointer makes the next attach attempt fail fast; the
-      // daemon deletes it on graceful shutdown anyway.
-    }
-    if (client) return client;
-    // connect-if-live: a daemon holding this workspace answers the
-    // initialize health ping over the socket pointer.
-    const pointer = readSocketPointer(workspace);
-    if (pointer) {
-      try {
-        const attached = HarnessdClient.attachSocket(pointer);
-        attached.onProposeMove = (proposal) =>
-          (moveChain = moveChain.then(() => answerProposal(proposal)));
-        attached.onPermissionRequest = (params) =>
-          (consentChain = consentChain.then(() => answerPermission(params)));
-        await attached.start(workspace);
-        client = attached;
-        return client;
-      } catch {
-        // stale pointer (crashed daemon) — fall through to spawn.
+  const ensureClient = (): Promise<HarnessdClient> => {
+    if (client && !client.isDead()) return Promise.resolve(client);
+    // Serialize: concurrent callers share ONE spawn-or-attach attempt.
+    if (ensureInFlight) return ensureInFlight;
+    ensureInFlight = (async (): Promise<HarnessdClient> => {
+      // ADR 0027 hotfix: a cached DEAD client (daemon idle-exited/crashed)
+      // must be dropped, never returned — the old `if (client) return client`
+      // is what made every later call fail until a session restart.
+      if (client && client.isDead()) {
+        process.stderr.write(
+          "[harnessd-ext] cached daemon is dead (idle-exit or crash) — respawning\n",
+        );
+        try {
+          client.wire.end?.();
+        } catch {}
+        client = null;
+        // A stale pointer makes the next attach attempt fail fast; the
+        // daemon deletes it on graceful shutdown anyway.
       }
-    }
+      if (client) return client;
+      // connect-if-live: a daemon holding this workspace answers the
+      // initialize health ping over the socket pointer.
+      const pointer = readSocketPointer(workspace);
+      if (pointer) {
+        try {
+          const attached = HarnessdClient.attachSocket(pointer);
+          attached.onProposeMove = (proposal) =>
+            (moveChain = moveChain.then(() => answerProposal(proposal)));
+          attached.onPermissionRequest = (params) =>
+            (consentChain = consentChain.then(() => answerPermission(params)));
+          await attached.start(workspace);
+          client = attached;
+          return client;
+        } catch {
+          // stale pointer (crashed daemon) — fall through to spawn.
+        }
+      }
     // spawn-if-absent: --remote-mover by default (pi decides), --workspace
     // arms the single-instance lock + socket listener.
     // ADR 0027 §4 — AOT-first: spawn the prebuilt harnessd binary when
@@ -514,9 +528,29 @@ export default function (pi: PiAPI) {
       (moveChain = moveChain.then(() => answerProposal(proposal)));
     attached.onPermissionRequest = (params) =>
       (consentChain = consentChain.then(() => answerPermission(params)));
-    await attached.start(workspace);
+    try {
+      await attached.start(workspace);
+    } catch (err) {
+      // The daemon IS live (its pointer appeared) but the handshake failed
+      // — drop the cached stdio shell so the next call RE-ATTACHES to the
+      // running daemon instead of returning a dead pipe (the old path left
+      // `client = spawned` here and bricked every later call).
+      client = null;
+      throw err;
+    }
     client = attached;
     return client;
+  })();
+  return ensureInFlight.then(
+    (c) => {
+      ensureInFlight = null;
+      return c;
+    },
+    (err: unknown) => {
+      ensureInFlight = null;
+      throw err;
+    },
+  );
   };
 
   const delegated = async (
@@ -543,6 +577,8 @@ export default function (pi: PiAPI) {
       if (!c.sessionId) await c.start(workspace);
       return await finishPrompt(c, directive);
     }
+    // (recovery re-enters ensureClient: the shared in-flight promise makes
+    // the retry wait out a still-settling spawn instead of racing it)
   };
 
   const finishPrompt = async (

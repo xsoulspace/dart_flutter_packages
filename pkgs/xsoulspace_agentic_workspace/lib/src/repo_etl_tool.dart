@@ -28,6 +28,7 @@ import 'fs_etl.dart'
     show
         FsScan,
         buildFsTier,
+        reconcileFsTier,
         refreshFsTier,
         scanWorkspaceFs;
 
@@ -128,40 +129,41 @@ ToolDef repoEtlTool(
               'error': 'nothing scanned yet — action scan',
             };
           }
-          // ONE walk per tick, shared by the code tick and the fs tier.
-          final fsScan = scanWorkspaceFs(workspace);
-          final touched = _changedFiles(
+          // TREE-DRIVEN tick (ADR 0027 warm-tick floor): stat the stored
+          // file nodes, listSync only dirs whose mtime moved past the
+          // cutoff — the full-fs-walk-per-prompt is gone (measured ~1.4 s
+          // no-op ticks on this monorepo; the reconcile is syscall-per-node).
+          final tick = reconcileFsTier(
             world,
             workspace,
-            st,
-            fsScan,
+            cutoff: st.lastScan!,
           );
+          // Code tier: parseable entries of the SAME reconcile result —
+          // changed AND new parseable files re-parse (the ambiguity and
+          // refs fences only work when every symbol is in the tree).
           var syms = 0;
-          for (final f in touched) {
-            final rel = f.path.startsWith('${workspace.path}/')
-                ? f.path.substring(workspace.path.length + 1)
-                : f.path;
-            syms += _rescanParse(world, f, rel);
+          var touched = 0;
+          for (final f in tick.changed) {
+            if (specForRel(f.rel).parse == null) continue;
+            touched++;
+            syms += _rescanParse(
+              world,
+              File('${workspace.path}/${f.rel}'),
+              f.rel,
+            );
           }
-          // Fs tier: same walk — new nodes added, stale nodes dropped,
-          // unchanged nodes skipped (cutoff-gated rebuild).
-          final fs = refreshFsTier(
-            world,
-            workspace,
-            cutoff: st.lastScan,
-            scan: fsScan,
-          );
           st
             ..lastScan = DateTime.now()
-            ..files = fs.files
-            ..dirs = fs.dirs;
+            ..files = tick.files
+            ..dirs = tick.dirs;
           return {
             'ok': true,
-            'refreshed_files': touched.length,
+            'refreshed_files': touched,
             'symbols_touched': syms,
-            'files': st.files,
-            'fs_added': fs.added,
-            'fs_dropped': fs.dropped,
+            'files': tick.files,
+            'fs_added': tick.added,
+            'fs_dropped': tick.dropped,
+            if (tick.staleDirs > 0) 'fs_stale_dirs': tick.staleDirs,
           };
         case 'scan':
         default:
@@ -238,11 +240,14 @@ ToolDef repoEtlTool(
   );
 }
 
-/// ADR 0027 dogfood fix — the tick enumerates from the TREE, not from a
-/// second walker. The old path re-walked with `dartFiles()`, whose skip
-/// rules differ from the fs walk's (`1,071` vs `1,123` on this repo) — the
-/// count mismatch forced a FULL re-parse on every no-op tick (measured:
-/// 5.8 s per prompt on the monorepo).
+/// ADR 0027 dogfood fix — the restored-tree pass enumerates from the TREE,
+/// not from a second walker. The old path re-walked with `dartFiles()`,
+/// whose skip rules differ from the fs walk's (`1,071` vs `1,123` on this
+/// repo) — the count mismatch forced a FULL re-parse on every no-op tick
+/// (measured: 5.8 s per prompt on the monorepo).
+/// (The INCREMENTAL tick no longer routes here: `reconcileFsTier` stats
+/// stored nodes and walks only mtime-moved dirs. This pass remains the
+/// cutoff-null honest pass over a restored persistent tree.)
 List<File> _changedFiles(
   World world,
   Directory workspace,

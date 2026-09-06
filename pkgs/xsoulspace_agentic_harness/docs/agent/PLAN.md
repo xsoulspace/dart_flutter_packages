@@ -20,9 +20,10 @@ means closing this list.
 
 | Issue                                                                                                                | Where                                                  | Next move                                                                      |
 | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------ |
-| Double-spawn race in extension recovery (two spawns race → one client attaches to a dead socket)                     | `r7_harnessd_extension.ts`                             | serialize `ensureClient` behind a spawn promise (small TS fix)                 |
-| Warm-tick floor ~1.4 s on the monorepo (full fs walk per tick for add/drop detection)                                | `fs_etl.dart`                                          | tree-driven fs reconcile: stat from stored file nodes, walk only to catch adds |
-| `harness_verify` unwired: the extension cannot pass a per-package `--check`; monorepo-root verify is meaningless     | `harnessd_cli.dart` (`--check` exists) + extension env | wire `HARNESSD_CHECK` → spawn args; package-scoped verify                      |
+| ~~Double-spawn race in extension recovery (two spawns race → one client attaches to a dead socket)~~ | `r7_harnessd_extension.ts` | FIXED 2026-09-06: `ensureClient` serialized behind ONE shared in-flight promise (concurrent callers await the same spawn/attach); failed attach no longer caches the dead stdio shell |
+| ~~Warm-tick floor ~1.4 s on the monorepo (full fs walk per tick for add/drop detection)~~ | `fs_etl.dart` | FIXED 2026-09-06: `reconcileFsTier` — stat stored file nodes, listSync only mtime-moved dirs; MEASURED 24 ms no-op tick (budget <300 ms PASS); gates `etl_tick_test.dart` + `tool/warm_tick_probe.dart` |
+| ~~`harness_verify` unwired: the extension cannot pass a per-package `--check`; monorepo-root verify is meaningless~~ | `harnessd_cli.dart` (`--check` exists) + extension env | MOSTLY FIXED: `HARNESSD_CHECK` env → spawn args wired (ADR 0027 §4). REMAINING: the extension should derive the ACTIVE package's convention automatically (today it is env-declared by the caller) |
+| `harness_fs_write` routes whole-file content through the MOVER as a graded task | `harness_acp_backend.dart` (remote mover) | fs_write joins the PURE-directive class: mechanical in the daemon (jail-check + consent + write + reconcile), zero mover involvement. Measured bounce: `mover_refusal` after a 9-minute wall on a large payload |
 | Root convention is a MONOREPO compromise (`flutter test` over root test/) — per-package tasks need per-package gates | `workspace_conventions.dart`                           | task sentences carry `--check` (the D8 convention stays the default)           |
 | Zoom staleness: cut props can lag a just-refreshed tree (mtime-reconciled nodes)                                     | `meaning_query_tools.dart`                             | zoom re-stats the focus node (cheap)                                           |
 
@@ -315,19 +316,6 @@ topology engine).
 - The filesystem is a projection target, never the actor's interface (ADR
   0023): `read` → zoom, `write` → edit move. Whole-file `write` is
   LEGACY-HOST-ONLY.
-
-## Standing rules
-
-- Every published number states backend, decision path, tokens source,
-  tool surface, and n. Failures are data (classified, never dropped).
-- Escalation-rate breakdown ships beside every pass-rate table.
-- Gravity: tiny model stays useful; fewer LLM calls; context bounded+derived
-  (D7: harness-owned); LLM-free testable. `expectIdle` ends every test.
-- The model never writes code tokens, never sees an AST, never holds the
-  whole tree. Materialization, verification, projection, macros,
-  decomposition, repair = pure host programs (`Agent = G ∘ F`).
-- No AE embed; no transport protocols in core; no domain materializers in
-  core (ADR 0015). Plans are data, never prose.
 - The filesystem is a projection target, never the actor's interface (ADR
   0023): `read` → zoom, `write` → edit move. Whole-file `write` is
   LEGACY-HOST-ONLY.
