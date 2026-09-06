@@ -16,7 +16,7 @@
 
 | Issue | Where | Next move |
 | --- | --- | --- |
-| `harness_verify` per-package convention: the extension cannot derive the ACTIVE package's check automatically | `harnessd_cli.dart` + extension env | `HARNESSD_CHECK` env works; derive the package from the touched files instead |
+| **URGENT — `harness_verify` over budget (MEASURED 156.9 s vs the 90 s dart-turn budget, 2026-09-06)**: resolve VIA DOGFOODING — the verify directive derives the ACTIVE package(s) from the touched-file beats (the `VerifyTierPlanner` derivation already knows them) and runs THAT package's convention in ITS directory (narrow `dart test <files>` shape; root convention only as fallback); the verify wall is REPORTED in the verdict data so misses are visible | `harnessd_cli.dart` + `verify_tiers.dart` + `workspace_conventions.dart` | verify-after-touch runs the touched package's convention, wall < 90 s; fallback proven; harness_verify re-metered on this repo |
 | Root convention is a MONOREPO compromise (`flutter test` over root test/) | `workspace_conventions.dart` | per-package tasks carry `--check`; the D8 convention stays the default |
 | New-task goal isolation on a resumed world | per-workspace snapshot store | the store carried the previous goal; the small model replayed it (Phase 1 dogfood) |
 | Bridge crash on cancel during a live tool call | `GenerationState.postToolCall` → `_dispatch_lane_barrier_sync` | callback-after-delete class (Phase 1.5 finding (d)) |
@@ -54,7 +54,7 @@ re-stat), and the AE knowledge plane (gates + counts:
 
 | P | Item | Status | Gate |
 |---|---|---|---|
-| P1 | REAL-model gate rows for the new tiers (trusted-author `apply_executable`, `edit_section`, `edit_key`, task-grammar pre-pass) — one on-device AFM session covers all four | named deferred — needs the on-device run | one R7e-style row per tier |
+| P1 | REAL-model gate rows for the new tiers (trusted-author `apply_executable`, `edit_section`, `edit_key`, task-grammar pre-pass) — one on-device AFM session covers all four | **IN FLIGHT 2026-09-06** — driver `bin/afm_wave_gate.dart` (apple_foundation, modeled on the archived R7e gate) + this device's run | one R7e-style row per tier |
 | P2 | One decision, one program (ADR 0030): `meaning_program` — model-emitted read chains (locate→zoom→impact→read) in ONE call, single-cursor dataflow, format-blind (the node's class routes the host reader), fail-fast named bounces, result-cut verdicts. **LANDED, GATED** — surface-convergence row measured: converged profile 5 tools / 1,537 est tokens vs current 6 / 1,598 (the profile SHRINKS when the program graduates — replaces zoom+impact). Gates: `meaning_read_program_test.dart` 7/7, overhead-convergence row. NAMED, NOT BUILT: mutation ops behind a verified on-device row; program-mode flatness rows (`tool/afm_flatness_probe.dart`); daemon registration | on-device program rows + graduation |
 | P2 | Speculative verify actor: run-node world-fork primitive (beat watermark), outcome-beat arbitration (canonical wins, `speculative: true` flag), shared `RunMeaningExecutor` reusing `runTool`'s allowlist verbatim | designed (lane F report, 2026-09-06), not built | speculative-vs-canonical disagree → rollback e2e |
 | P2 | Topology engine: task-declared `{worlds, actors, roles, model-tiers, budgets}` as data; meaning-part actors (zero-token, scripted handlers — same loop, beats, budgets) | designed, not built | topology selection e2e |

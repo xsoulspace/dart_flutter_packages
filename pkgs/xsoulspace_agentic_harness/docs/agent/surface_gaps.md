@@ -305,3 +305,59 @@
   `declare_typedef`) and constructor-initializer edit verbs; (b) a `cwd`
   (workspace-relative) param on the mechanical `run` directive — the
   allowlist stays, the jail resolves the scope.
+
+## 2026-09-06 — lane C′ per-package verify derivation (P1)
+
+- **What bash/edit did**: (a) the derivation (`derivePerPackageVerify`,
+  `pendingEditsOf`/`sessionTouchedFiles` — new top-level functions + the
+  record/typed-hole walk restructure in `verify_tiers.dart`), the
+  `RunGoalCommand` type + field additions on `RunGoalPlan`, the multi-step
+  imperative `runGoalVerifier` body (per-step loop, fail-fast,
+  `verify_wall_ms` beat stamp), the per-package final-gate closures in
+  `coding_agent_runner.dart`, and the new gate
+  `xsoulspace_agentic_host/test/harnessd_per_package_verify_test.dart`
+  landed via the `edit`/`write` tools, not `edit_symbol`; (b) scoped test
+  runs (`flutter test test/…` inside pkgs/xsoulspace_agentic_harness /
+  xsoulspace_agentic_host) ran via bash — `harness_run` executes from the
+  repo root only, where `dart test` fails pub resolution (the standing
+  no-package-cwd row below, measured again this session).
+- **Why the surface didn't cover it**: (a) the derivation is new
+  top-level function/class-declaration authorship plus an imperative
+  async body with records, early returns and a Stopwatch — outside the
+  closed op-chain compiler and the member-body capture verbs (same class
+  as the lane A′ row); `RunGoalPlan` field additions + a new record type
+  are declaration-shape edits no verb spans; (b) unchanged: the mechanical
+  run directive has no cwd/pkg scope.
+- **The verb/spec to build**: (a) covered by the standing new-file +
+  anchored-splice + imperative-body rows — no new verb class observed;
+  (b) the package-scoped run scope (`{"command":["dart","test",…],
+  "pkg":"…"}` or auto-derived from the file scope) remains the single
+  highest-frequency escape; NOTE: this very task fixed the VERIFY seam of
+  that gap (per-package verify derivation + `RunGoalCommand.cwd`), so the
+  remaining escape is only the interactive test-run surface.
+
+## 2026-09-06 — lane D′ afm_wave_gate driver (new-file bootstrap, apple_foundation)
+
+- **What bash/edit did**: (a) the new gate driver
+  `pkgs/xsoulspace_inference_apple_foundation/bin/afm_wave_gate.dart` (the P1
+  REAL-model gate rows for the four 2026-09-06 surface-wave tiers:
+  task-grammar pre-pass, trusted-author consent, `edit_section`, `edit_key`)
+  landed via the `write` tool — a NEW file has no meaning node to focus, so
+  the whole-file bootstrap cannot ride `edit_symbol`; (b) the package's
+  `pubspec.yaml` gained two workspace-local deps
+  (`xsoulspace_agentic_workspace` for the REAL md/yaml materializers the
+  `--dry` mode validates against; `agentic_executables_wire` for the
+  authored-body wire enum) — a yaml edit outside any materializer's jail.
+- **Why the surface didn't cover it**: (a) the standing new-file class —
+  bootstrapping a file is not a meaning edit over an existing node; the
+  meaning surface grows by registration, not by authoring new registries
+  model-side; (b) pubspec is class `yaml` in the file-class spec, but the
+  workspace's OWN pubspec is outside the daemon's per-workspace jail (the
+  daemon serves the package workspace, not the monorepo root), so
+  `edit_key` had no workspace to serve it in.
+- **The verb/spec to build**: (a) a `file_bootstrap` verb (`{path, content,
+  reason}`) — mechanical jail-checked write + tree reconcile, the
+  `harness_fs_write` shape extended to CREATE (registered files only), so
+  new-file bootstraps leave the raw-write class; (b) a workspace root that
+  spans the monorepo (multi-workspace daemon, PLAN P4) so the repo's own
+  yaml/md files are in-jail and the yaml/md edit verbs can serve them.

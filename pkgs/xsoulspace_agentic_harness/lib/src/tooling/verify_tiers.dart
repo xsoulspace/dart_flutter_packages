@@ -22,6 +22,8 @@
 /// the graph already records everything). Snapshot/restore safe.
 library;
 
+import 'dart:io';
+
 import 'package:ecsly/ecsly.dart';
 
 import '../data_models/components.dart'
@@ -30,7 +32,8 @@ import '../narrative/components.dart' show BeatToolCall;
 import '../meaning/meaning_tree.dart'
     show MeaningIndex, MeaningNode, impactFrontier, meaningComponentOf;
 import '../narrative/facet_index.dart' show FacetIndex;
-import 'build_gates.dart' show RunGoalPlan;
+import 'build_gates.dart' show RunGoalCommand, RunGoalPlan, RunGoalSpec;
+import 'workspace_conventions.dart' show resolveWorkspaceCheck;
 
 /// Per-language/workspace verification convention, contributed by hosts as
 /// DATA (the intentcall registry pattern: canonical contract upstream,
@@ -40,6 +43,8 @@ class VerifyConvention {
     required this.editBeatNames,
     required this.testScopePrefixes,
     required this.narrowCommand,
+    this.packageMarker = 'pubspec.yaml',
+    this.checkResolver = resolveWorkspaceCheck,
   });
 
   /// Beat names that carry edits (the host's structured edit tool, e.g.
@@ -55,10 +60,23 @@ class VerifyConvention {
   /// dart → `dart test <files…>`, vitest → `npx vitest run <files…>`).
   /// Return null to force the full convention command instead.
   final List<String>? Function(List<String> testFiles) narrowCommand;
+
+  /// P1 per-package tier — the file that marks a PACKAGE root (dart:
+  /// `pubspec.yaml`; a rust host contributes `Cargo.toml`). The derivation
+  /// walks UP from a touched file to the nearest marker file.
+  final String packageMarker;
+
+  /// P1 per-package tier — resolves the check command for a package
+  /// directory (dart hosts: [resolveWorkspaceCheck] — `flutter test` vs
+  /// `dart test` vs null when the package declares no convention). Null
+  /// for ANY active package → the derivation fails honestly → the root
+  /// convention (never invented, never skipped).
+  final List<String>? Function(Directory packageDir) checkResolver;
 }
 
 /// The dart stack convention (edit_symbol beats, `test/` labels,
-/// `dart test <files…>`).
+/// `dart test <files…>`, `pubspec.yaml` package markers,
+/// [resolveWorkspaceCheck] per-package conventions).
 const VerifyConvention dartVerifyConvention = VerifyConvention(
   editBeatNames: {'edit_symbol'},
   testScopePrefixes: ['test/'],
@@ -71,12 +89,166 @@ List<String>? _dartNarrowCommand(List<String> testFiles) => [
   ...testFiles,
 ];
 
+/// P1 (ADR 0009/0023 — PER-PACKAGE VERIFY DERIVATION, resolved via
+/// dogfooding): the delegated verify used to grade the ROOT convention
+/// (`flutter test` over a whole monorepo — measured 156.9 s wall vs the
+/// 90 s dart-turn budget) even when the session touched ONE package.
+/// This derivation resolves the ACTIVE packages from the session's own
+/// touched-file beats: touched file → walk UP to the nearest
+/// [VerifyConvention.packageMarker] → that directory IS the package → its
+/// [VerifyConvention.checkResolver] command runs with the working
+/// directory set to the package.
+///
+/// The steps carry a workspace-root-RELATIVE [RunGoalCommand.cwd] (the
+/// jail resolves it — absolute paths would break on symlinked roots like
+/// macOS `/var` ↔ `/private/var`).
+///
+/// Fallback law (never a skipped gate) — returns null (the caller runs
+/// the ROOT convention unchanged) when:
+/// - there are no touched files (a read-only session); or
+/// - ANY touched file resolves to the workspace root itself or to no
+///   package at all (a partial map would silently under-verify); or
+/// - more than [maxPackages] distinct packages are active (bounded cost:
+///   3+ packages re-grade cheaper through the root convention); or
+/// - any active package's convention does not resolve (null).
+List<RunGoalCommand>? derivePerPackageVerify({
+  required String workspaceRoot,
+  required Iterable<String> touchedFiles,
+  required VerifyConvention convention,
+  int maxPackages = 2,
+}) {
+  final root = _stripTrailingSlash(workspaceRoot);
+  if (root.isEmpty) return null;
+  final files = touchedFiles.toList();
+  if (files.isEmpty) return null; // a read-only session → root fallback
+  final packages = <String>[];
+  for (final raw in files) {
+    final rel = raw.replaceAll('\\', '/').trim();
+    if (rel.isEmpty) return null;
+    final segs = (rel.startsWith('/') ? rel.substring(1) : rel).split('/');
+    // Never escape the root, never resolve through `..` — a touched path
+    // that cannot be trusted fails the WHOLE derivation honestly.
+    if (segs.any((s) => s == '..' || s.trim().isEmpty)) return null;
+    // Walk UP from the touched file's directory to the nearest package
+    // marker STRICTLY BELOW the workspace root (a monorepo root pubspec is
+    // the workspace, not a package — mapping there IS the root fallback).
+    String? packageDir;
+    for (var i = segs.length - 1; i >= 1; i--) {
+      final candidateRel = segs.sublist(0, i).join('/');
+      if (File(
+        '$root/$candidateRel/${convention.packageMarker}',
+      ).existsSync()) {
+        packageDir = candidateRel;
+        break;
+      }
+    }
+    if (packageDir == null) return null;
+    if (!packages.contains(packageDir)) packages.add(packageDir);
+    if (packages.length > maxPackages) return null;
+  }
+  final steps = <RunGoalCommand>[];
+  for (final dir in packages) {
+    final command = convention.checkResolver(Directory('$root/$dir'));
+    if (command == null) return null;
+    steps.add(RunGoalCommand(command: command, cwd: dir));
+  }
+  return steps;
+}
+
+String _stripTrailingSlash(String p) =>
+    p.length > 1 && p.endsWith('/') ? p.substring(0, p.length - 1) : p;
+
+/// The goal actor's first thread (the same thread the planner grades), or
+/// null when the world carries no goal-carrying actor yet.
+Entity? _goalThreadOf(World world) {
+  final goalActors = world.query2<Actor, Goal>().toList();
+  if (goalActors.isEmpty) return null;
+  final actor = goalActors.first.$1.entity;
+  final threads =
+      world.getEntity(actor).$1.get<ActorThreads>()?.threads ?? const [];
+  if (threads.isEmpty) return null;
+  return threads.first;
+}
+
+/// Touched files from [editBeatNames] beats on the goal actor's thread,
+/// walked in thread order (stateless: derived from beats every call —
+/// no side-channel counters).
+({int edits, List<String> touched}) _walkEditBeats(
+  World world, {
+  required Set<String> editBeatNames,
+  required bool resetOnVerify,
+}) {
+  final thread = _goalThreadOf(world);
+  if (thread == null) return (edits: 0, touched: const <String>[]);
+  var edits = 0;
+  List<String> touched = const [];
+  final accumulated = <String>{};
+  for (final beat
+      in world.getResource<FacetIndex>().beatsOfThread(thread).toList()) {
+    final we = world.getEntity(beat).$1;
+    final call = we.get<BeatToolCall>();
+    if (call == null) continue;
+    if (editBeatNames.contains(call.name)) {
+      edits++;
+      final output = we.get<ToolResultContent>()?.output;
+      if (output is Map) {
+        final files = output['files'];
+        if (files is List && files.isNotEmpty) {
+          final beatFiles = [
+            for (final f in files)
+              if (f is String) f,
+          ];
+          if (resetOnVerify) {
+            // The tier-planner semantics (unchanged): the LAST edit beat's
+            // files are the pending set.
+            touched = beatFiles;
+          } else {
+            accumulated.addAll(beatFiles);
+          }
+        }
+      }
+    } else if (call.name == 'goal_verify' && resetOnVerify) {
+      // A grade consumed the pending changes.
+      edits = 0;
+      touched = const <String>[];
+    }
+  }
+  if (!resetOnVerify) touched = accumulated.toList()..sort();
+  return (edits: edits, touched: touched);
+}
+
+/// The pending-edits view the tier planner grades with: edits since the
+/// last `goal_verify` beat and the files they touched.
+({int edits, List<String> touched}) pendingEditsOf(
+  World world,
+  VerifyConvention convention,
+) => _walkEditBeats(
+  world,
+  editBeatNames: convention.editBeatNames,
+  resetOnVerify: true,
+);
+
+/// The delegated verify's derivation input: EVERY edit beat's files on the
+/// goal actor's thread (the session's touched set). An in-loop grade
+/// consumes the PENDING changes, but the session still owns the touched
+/// set — the terminal gate must grade what the session touched, not what
+/// happened to be pending when it ran.
+List<String> sessionTouchedFiles(World world, VerifyConvention convention) =>
+    _walkEditBeats(
+      world,
+      editBeatNames: convention.editBeatNames,
+      resetOnVerify: false,
+    ).touched;
+
 /// Stateless planner wired as [RunGoalSpec.planProvider]. Derives the
 /// verification tier purely from graph state:
 ///
 /// - **skip** — no edits pending since the last `goal_verify` beat: the
 ///   graph state cannot have changed, re-grading is pure cost. The
 ///   driver's final gate remains the terminal proof (it always grades).
+/// - **per-package** — the pending touched files resolve to ACTIVE
+///   packages ([derivePerPackageVerify]): each package's own convention
+///   runs in its own directory (the 156.9 s monorepo-root fix).
 /// - **narrow** — grade only the test files in the refs frontier of the
 ///   touched files (DERIVED from the tree, never model-chosen).
 /// - **full** — no frontier knowledge → null (the convention command runs
@@ -87,43 +259,27 @@ class VerifyTierPlanner {
   final VerifyConvention convention;
 
   Future<RunGoalPlan?> call(World world) async {
-    final goalActors = world.query2<Actor, Goal>().toList();
-    if (goalActors.isEmpty) return null;
-    final actor = goalActors.first.$1.entity;
-    final threads =
-        world.getEntity(actor).$1.get<ActorThreads>()?.threads ?? const [];
-    if (threads.isEmpty) return null;
-    final thread = threads.first;
-
-    // Walk the thread IN ORDER, deriving pending-work state: edits since
-    // the last verification, and the files they touched.
-    var editsSinceVerify = 0;
-    List<String> touched = const [];
-    for (final beat
-        in world.getResource<FacetIndex>().beatsOfThread(thread).toList()) {
-      final we = world.getEntity(beat).$1;
-      final call = we.get<BeatToolCall>();
-      if (call == null) continue;
-      if (convention.editBeatNames.contains(call.name)) {
-        editsSinceVerify++;
-        final output = we.get<ToolResultContent>()?.output;
-        if (output is Map) {
-          final files = output['files'];
-          if (files is List && files.isNotEmpty) {
-            touched = [
-              for (final f in files)
-                if (f is String) f,
-            ];
-          }
-        }
-      } else if (call.name == 'goal_verify') {
-        // A grade consumed the pending changes.
-        editsSinceVerify = 0;
-        touched = const [];
-      }
-    }
+    final (:edits, :touched) = pendingEditsOf(world, convention);
+    final editsSinceVerify = edits;
     if (editsSinceVerify == 0) return const RunGoalPlan(skip: true);
     if (touched.isEmpty) return null; // edits without file data: full grade
+
+    // P1 PER-PACKAGE tier: the touched files resolve to the ACTIVE
+    // packages; each package's convention runs in its own directory. The
+    // workspace root comes from the wired [RunGoalSpec] (the verify cwd IS
+    // the workspace root — no side-channel). Derivation failure → the
+    // legacy tiers below → the root convention. Never skipped.
+    final workspaceRoot = _workspaceRootOf(world);
+    if (workspaceRoot != null) {
+      final steps = derivePerPackageVerify(
+        workspaceRoot: workspaceRoot,
+        touchedFiles: touched,
+        convention: convention,
+      );
+      if (steps != null && steps.isNotEmpty) {
+        return RunGoalPlan(skip: false, commands: steps);
+      }
+    }
 
     // NARROW: test files in the refs frontier of the touched files.
     final index = world.getResource<MeaningIndex>();
@@ -148,5 +304,17 @@ class VerifyTierPlanner {
       skip: false,
       command: convention.narrowCommand(testFiles.toList()..sort()) ?? null,
     );
+  }
+
+  /// The verify workspace root from the wired [RunGoalSpec] (the planner
+  /// grades through it, so it is always present on the verify path); null
+  /// → the per-package derivation declines (legacy tiers only).
+  String? _workspaceRootOf(World world) {
+    try {
+      final cwd = world.getResource<RunGoalSpec>().cwd;
+      return cwd.isEmpty ? null : cwd;
+    } on StateError {
+      return null;
+    }
   }
 }

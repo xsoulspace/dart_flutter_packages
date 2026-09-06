@@ -27,8 +27,11 @@ import 'package:xsoulspace_agentic_harness/benchmark_api.dart'
     show
         CheckerResult,
         CheckerSpec,
+        RunGoalCommand,
         VerifyTierPlanner,
         dartVerifyConvention,
+        derivePerPackageVerify,
+        sessionTouchedFiles,
         FixtureFile,
         defaultGoalFlow,
         openFreshDecision,
@@ -374,6 +377,7 @@ class CodingAgentRunResult {
     required this.recorderDump,
     this.writeGateAudit = '',
     this.toolResults = const [],
+    this.verifyWallMs = 0,
   });
 
   final String taskId;
@@ -412,6 +416,12 @@ class CodingAgentRunResult {
   /// J8 rung 1: the monotonic attempt budget exhausted and the mechanical
   /// oracle still fails — the terminal record the escalation ladder keys off.
   final bool attemptsExhausted;
+
+  /// P1 BUDGET LAW: the wall of the FINAL gate's verification work
+  /// (analyzer-before-tests + the convention/steps runs), reported in the
+  /// verdict so a dart-turn budget miss is visible on every verify —
+  /// never a silent cost. 0 when no gate ran (read-only tasks).
+  final int verifyWallMs;
 
   String get failureClass {
     if (passed) return '';
@@ -810,43 +820,76 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
         ? (world.getEntity(actor).$1.get<AttemptCount>()?.value ?? 0)
         : 0;
 
+    /// P1 (ADR 0009/0023) — PER-PACKAGE FINAL GATE derivation: the ACTIVE
+    /// packages come from the session's own touched-file beats, resolved
+    /// fresh at every grade. Null (no touched files, root-level files,
+    /// 3+ packages, an unresolvable convention, or a non-convention gate)
+    /// → the root checkers run unchanged — never a skipped gate.
+    List<RunGoalCommand>? deriveVerifySteps() {
+      final isSingleRunsGate =
+          task.checkers.length == 1 && task.checkers.single.type == 'runs';
+      if (!isSingleRunsGate) return null;
+      return derivePerPackageVerify(
+        workspaceRoot: jail.path,
+        touchedFiles: sessionTouchedFiles(world, dartVerifyConvention),
+        convention: dartVerifyConvention,
+      );
+    }
+
     /// ADR 0027 §2 — analyzer-before-tests: when the gate is a test
     /// command and the jail has a resolved package config, a full
     /// `dart analyze` runs FIRST. An analyze failure IS the failure data
     /// (named, with the analyzer output) and skips the ~20–40s test
     /// compile. The oracle is invoked less, never diluted. Skipped
     /// honestly when the jail has no package config (bare fixtures).
+    /// P1: with the per-package derivation active, the analyzer runs IN
+    /// each ACTIVE package (fail fast on the package that changed), never
+    /// at the monorepo root.
     Future<List<CheckerResult>?> analyzeBeforeTests() async {
-      final isTestGate = task.checkers.any(
-        (c) =>
-            c.type == 'runs' &&
-            (c.value?.startsWith('dart test') ?? false ||
-                (c.value?.startsWith('flutter test') ?? false)),
-      );
+      final steps = deriveVerifySteps();
+      final isTestGate =
+          steps != null ||
+          task.checkers.any(
+            (c) =>
+                c.type == 'runs' &&
+                (c.value?.startsWith('dart test') ?? false ||
+                    (c.value?.startsWith('flutter test') ?? false)),
+          );
       if (!isTestGate) return null;
       if (!File('${jail.path}/.dart_tool/package_config.json').existsSync()) {
         return null;
       }
-      final analyze = await Process.run(
-        'dart',
-        ['analyze'],
-        workingDirectory: jail.path,
-      );
-      if (analyze.exitCode == 0) return null; // clean — run the tests
-      return [
-        CheckerResult(
-          passed: false,
-          detail:
-              'analyzer_before_tests: dart analyze exit '
-              '${analyze.exitCode} — tests not run (fail fast).\n'
-              '${analyze.stdout}\n${analyze.stderr}',
-        ),
-      ];
+      final analyzeTargets = steps == null
+          ? [jail.path]
+          : [for (final s in steps) '${jail.path}/${s.cwd}'];
+      for (final dir in analyzeTargets) {
+        final analyze = await Process.run(
+          'dart',
+          ['analyze'],
+          workingDirectory: dir,
+        );
+        if (analyze.exitCode != 0) {
+          return [
+            CheckerResult(
+              passed: false,
+              detail:
+                  'analyzer_before_tests: dart analyze exit '
+                  '${analyze.exitCode} in $dir — tests not run (fail fast).\n'
+                  '${analyze.stdout}\n${analyze.stderr}',
+            ),
+          ];
+        }
+      }
+      return null; // clean — run the tests
     }
 
-    List<CheckerResult> grade() => [
-      for (final c in task.checkers) evaluateChecker(c, jail.path),
-    ];
+    List<CheckerResult> grade() {
+      final steps = deriveVerifySteps();
+      if (steps != null) {
+        return [for (final s in steps) _runVerifyStep(s, jail.path)];
+      }
+      return [for (final c in task.checkers) evaluateChecker(c, jail.path)];
+    }
 
     // THE ACTOR ALWAYS GETS ITS FIRST SESSION — R7 daemon finding: a
     // workspace whose gate is ALREADY green must not silently skip the
@@ -874,6 +917,7 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
     // is honestly stamped not-applicable (the task DECLARED itself a
     // read; laziness cannot manufacture this, only the delegator can).
     List<CheckerResult> finalGate;
+    var verifyWallMs = 0;
     if (task.readOnly) {
       finalGate = [
         CheckerResult(
@@ -884,7 +928,10 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
         ),
       ];
     } else {
+      final gateSw = Stopwatch()..start();
       finalGate = await analyzeBeforeTests() ?? grade();
+      gateSw.stop();
+      verifyWallMs = gateSw.elapsedMilliseconds;
     }
     var passed = finalGate.isNotEmpty && finalGate.every((c) => c.passed);
     while (!passed && attempt < maxGoalAttempts) {
@@ -911,7 +958,10 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
       );
       await HarnessLoop(world: world).runUntilIdle();
       if (!task.readOnly) {
+        final gateSw = Stopwatch()..start();
         finalGate = await analyzeBeforeTests() ?? grade();
+        gateSw.stop();
+        verifyWallMs = gateSw.elapsedMilliseconds;
       }
       passed = finalGate.isNotEmpty && finalGate.every((c) => c.passed);
       await onSnapshot?.call(world);
@@ -1035,6 +1085,7 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
       edges: view.edgeCount,
       pulseText: sampleHarness(world, tick: meter.decisions).toText(),
       recorderDump: recorder.dump(),
+      verifyWallMs: verifyWallMs,
       toolResults: toolResults,
       writeGateAudit: gateway == null
           ? ''
@@ -1045,6 +1096,32 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
   } finally {
     resultPoller?.cancel();
   }
+}
+
+/// P1: ONE per-package verify step of the final gate — the package's own
+/// convention in its own directory, wall-measured into the verdict detail
+/// (the same budget-law data the `goal_verify` beat carries as
+/// `verify_wall_ms`).
+CheckerResult _runVerifyStep(RunGoalCommand step, String workspaceRoot) {
+  final cwd = step.cwd == null || step.cwd!.isEmpty
+      ? workspaceRoot
+      : '$workspaceRoot/${step.cwd}';
+  final sw = Stopwatch()..start();
+  final result = Process.runSync(
+    step.command.first,
+    step.command.sublist(1),
+    workingDirectory: cwd,
+    stdoutEncoding: utf8,
+    stderrEncoding: utf8,
+  );
+  sw.stop();
+  return CheckerResult(
+    passed: result.exitCode == 0,
+    detail:
+        '${step.command.join(" ")} in ${step.cwd ?? "."} '
+        'exit=${result.exitCode} (verify_wall_ms=${sw.elapsedMilliseconds})'
+        '${result.exitCode == 0 ? "" : ": ${result.stderr}".trim()}',
+  );
 }
 
 /// Formats one run as its honest log body (B8: every run ships the pulse +

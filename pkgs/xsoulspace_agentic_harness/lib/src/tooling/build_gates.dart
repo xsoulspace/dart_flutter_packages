@@ -234,10 +234,25 @@ class RunGoalSpec extends Resource {
   }
 }
 
+/// One verify execution: a command plus the working directory to run it in.
+/// [cwd] is RELATIVE to the verify workspace root (the jail resolves it —
+/// absolute paths would break on symlinked roots); null → the spec cwd
+/// (the legacy root tier).
+class RunGoalCommand {
+  const RunGoalCommand({required this.command, this.cwd});
+  final List<String> command;
+  final String? cwd;
+}
+
 /// One tiered-verification decision from the host planner (see
 /// [RunGoalSpec.planProvider]).
 class RunGoalPlan {
-  const RunGoalPlan({required this.skip, this.command});
+  const RunGoalPlan({
+    required this.skip,
+    this.command,
+    this.cwd,
+    this.commands = const [],
+  });
 
   /// true → the verifier grades NOTHING this pass (no new move since the
   /// last grade; the driver's final gate remains the terminal proof).
@@ -246,6 +261,17 @@ class RunGoalPlan {
   /// Overrides the convention command for THIS grade (e.g. frontier-
   /// selected test files). Null → the convention command runs.
   final List<String>? command;
+
+  /// P1 — working-directory override for [command] (relative to the verify
+  /// workspace root): the single-package tier runs the package's own
+  /// convention in its own directory. Null → the spec cwd (root).
+  final String? cwd;
+
+  /// P1 per-package tier: ONE step per ACTIVE package (each with its own
+  /// cwd, see [RunGoalCommand]). Non-empty → every step runs (conjunction
+  /// verdict, fail fast); [command]/[cwd] stay null. Empty → the legacy
+  /// single-command tiers.
+  final List<RunGoalCommand> commands;
 }
 
 /// Mechanical verifier (schedule on [Schedules.narrative]): after a tool
@@ -269,14 +295,20 @@ Future<void> runGoalVerifier(World world) async {
     final runTool = registries.get(registryName)?.get(const ToolName('run'));
     if (runTool == null) continue;
     // Tiered verification (see [RunGoalSpec.planProvider]): the host may
-    // SKIP this grade (no new move since the last one) or NARROW it to
-    // frontier-selected tests. The full convention command remains the
-    // terminal proof at the driver's final gate.
-    var command = spec.commandFor(registryName);
+    // SKIP this grade (no new move since the last one), run the
+    // PER-PACKAGE steps (each ACTIVE package's convention in its own
+    // directory), NARROW it to frontier-selected tests, or leave the full
+    // convention command. The root convention remains the fallback.
+    final rootCommand = spec.commandFor(registryName);
+    var steps = <RunGoalCommand>[RunGoalCommand(command: rootCommand)];
     if (spec.planProvider != null) {
       final plan = await spec.planProvider!(world);
       if (plan?.skip ?? false) continue;
-      command = plan?.command ?? command;
+      if (plan != null && plan.commands.isNotEmpty) {
+        steps = plan.commands;
+      } else if (plan?.command != null) {
+        steps = [RunGoalCommand(command: plan!.command!, cwd: plan.cwd)];
+      }
     }
     // N2: the check runs as a REGISTERED task — canSleep() waits for
     // in-flight tasks, so the loop can never exit before a pending verdict
@@ -284,23 +316,56 @@ Future<void> runGoalVerifier(World world) async {
     final taskRegistry = world.getResource<TaskRegistryResource>();
     final verifyTaskId = TaskId.create();
     taskRegistry.register(verifyTaskId, TaskHandle());
-    Map<String, Object?>? map;
+    // P1 BUDGET LAW: the verify WALL is measured and stamped on the beat
+    // (`verify_wall_ms`) — a budget miss is graph data, never a silent
+    // cost. Fail fast across the steps (bounded cost).
+    final verifySw = Stopwatch()..start();
+    final stepOuts =
+        <({bool ok, String detail, List<String> command, String cwd})>[];
     try {
-      final out = await runTool.execute({'command': command, 'cwd': spec.cwd});
-      if (out != null) {
-        if (out.startsWith('{') || out.startsWith('[')) {
-          try {
-            final d = jsonDecode(out);
-            if (d is Map) {
-              final m = <String, Object?>{};
-              d.forEach((k, v) => m['$k'] = v);
-              map = m;
-            }
-          } catch (_) {}
-        } else {
-          // Not JSON; treat the raw text as a single detail.
-          map = {'raw': out};
+      for (final step in steps) {
+        final stepCwd = step.cwd ?? spec.cwd;
+        final out = await runTool.execute({
+          'command': step.command,
+          'cwd': stepCwd,
+          'timeout_ms': 120000,
+        });
+        Map<String, Object?>? map;
+        if (out != null) {
+          if (out.startsWith('{') || out.startsWith('[')) {
+            try {
+              final d = jsonDecode(out);
+              if (d is Map) {
+                final m = <String, Object?>{};
+                d.forEach((k, v) => m['$k'] = v);
+                map = m;
+              }
+            } catch (_) {}
+          } else {
+            // Not JSON; treat the raw text as a single detail.
+            map = {'raw': out};
+          }
         }
+        if (map == null) {
+          stepOuts.add((
+            ok: false,
+            detail: 'run tool unavailable',
+            command: step.command,
+            cwd: stepCwd,
+          ));
+        } else {
+          final ok = map['ok'] == true;
+          final stderr = '${map['stderr'] ?? ''}';
+          stepOuts.add((
+            ok: ok,
+            detail: ok
+                ? 'run: exit=0'
+                : 'run failed exit=${map['exit_code']}: $stderr',
+            command: step.command,
+            cwd: stepCwd,
+          ));
+        }
+        if (!stepOuts.last.ok) break; // fail fast — bounded verify cost
       }
     } finally {
       final handle = taskRegistry.take(verifyTaskId);
@@ -308,16 +373,13 @@ Future<void> runGoalVerifier(World world) async {
         handle.completer.complete(null);
       }
     }
-    var passed = false;
-    var detail = 'run tool unavailable';
-    if (map != null) {
-      final ok = map['ok'] == true;
-      final stderr = '${map['stderr'] ?? ''}';
-      passed = ok;
-      detail = ok
-          ? 'run: exit=0'
-          : 'run failed exit=${map['exit_code']}: $stderr';
-    }
+    verifySw.stop();
+    final passed = stepOuts.isNotEmpty && stepOuts.every((s) => s.ok);
+    final detail = passed
+        ? (steps.length == 1
+              ? 'run: exit=0'
+              : 'per-package verify: ${stepOuts.length}/${steps.length} exit=0')
+        : stepOuts.firstWhere((s) => !s.ok).detail;
     // Stamp the run-graded verdict on THIS actor only (it bears the Goal).
     world.upsertComponent(
       facade.entity,
@@ -327,16 +389,27 @@ Future<void> runGoalVerifier(World world) async {
     // verification beat on the actor's thread — never a side-channel
     // counter. Downstream tiering derives "edits since the last grade"
     // from beats; projection/metrics/snapshot see verifications like any
-    // other work.
+    // other work. P1: the beat carries the verify WALL and (when the
+    // per-package tier ran) every step as data.
     final we = world.getEntity(facade.entity).$1;
     final verifyBeat = world.reserveEmptyEntity().entity;
     final verifyWe = world.getEntity(verifyBeat).$1;
     verifyWe
-      ..insert(BeatToolCall('goal_verify', {'command': command}))
+      ..insert(BeatToolCall('goal_verify', {'command': steps.first.command}))
       ..insert(
         ToolResultContent(
           name: 'goal_verify',
-          output: {'ok': passed, 'command': command, 'detail': detail},
+          output: {
+            'ok': passed,
+            'command': steps.first.command,
+            if (steps.length > 1)
+              'steps': [
+                for (final s in stepOuts)
+                  {'command': s.command.join(' '), 'cwd': s.cwd, 'ok': s.ok},
+              ],
+            'verify_wall_ms': verifySw.elapsedMilliseconds,
+            'detail': detail,
+          },
         ),
       )
       ..insert(Speaker(facade.entity))

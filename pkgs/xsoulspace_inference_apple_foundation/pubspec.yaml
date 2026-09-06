@@ -11,6 +11,8 @@ resolution: workspace
 
 dependencies:
   code_assets: any
+  agentic_executables_wire:
+    path: ../../agentic_executables/agentic_executables_wire
   dart_acp_toolkit:
     path: /Users/antonio/mcp/cline/intentcall/packages/acp_toolkit
   ecsly_serialization: ^0.1.0-dev.1
@@ -24,6 +26,11 @@ dependencies:
     path: ../xsoulspace_agentic_host
   xsoulspace_agentic_harness:
     path: ../xsoulspace_agentic_harness
+  # afm_wave_gate: the trusted-author/md/yaml gate rows validate their
+  # fixture plumbing against the REAL materializers (pack capture, edit_
+  # section, edit_key) — the workspace package owns them (ADR 0024/0026).
+  xsoulspace_agentic_workspace:
+    path: ../xsoulspace_agentic_workspace
   # B3 escalation rung (J8.1 tier 3): the daemon's open_router binding.
   xsoulspace_inference_openrouter:
     path: ../xsoulspace_inference_openrouter

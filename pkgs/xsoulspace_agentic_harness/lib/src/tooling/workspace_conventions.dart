@@ -57,6 +57,13 @@ List<String>? resolveWorkspaceCheck(Directory root) {
   return null;
 }
 
+/// A WORKSPACE root pubspec (`workspace:`): a monorepo root declares its
+/// packages but is NOT itself a package — the per-package verify tier
+/// (verify_tiers.dart) resolves packages strictly BELOW such a root and
+/// falls back to the root convention for anything that maps to it.
+bool isWorkspacePubspec(File pubspec) =>
+    pubspec.readAsStringSync().contains('workspace:');
+
 /// A Flutter package declares the Flutter SDK in its pubspec (`sdk: flutter`
 /// under dependencies or a `flutter:` section).
 bool isFlutterPackage(File pubspec) {

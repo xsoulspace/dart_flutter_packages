@@ -1230,6 +1230,7 @@ class HarnessAcpBackend
           'tokens ${result.projectionTokens}, '
           'wall ${result.wallClock.inMilliseconds} ms, '
           'moves ${result.moves}'
+          '${result.verifyWallMs > 0 ? ", verify wall ${result.verifyWallMs} ms" : ""}'
           '${session.reasoningChars > 0 ? ", reasoning ${session.reasoningChars} chars" : ""}'
           '${task!.readOnly ? ", gate read_only_not_applicable (ADR 0027)" : ""})'
           '${result.failureClass.isEmpty && !session.lastMoverRefusal
