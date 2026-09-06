@@ -47,7 +47,13 @@ import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
 import 'package:xsoulspace_agentic_harness/src/tools/meaning_query_tools.dart'
     show meaningImpactTool, meaningSpanReader, meaningZoomTool;
 import 'package:xsoulspace_agentic_workspace/xsoulspace_agentic_workspace.dart'
-    show RepoEtlState, SpanEditPlan, meaningSpanReader, repoEtlTool;
+    show
+        RepoEtlState,
+        SpanEditPlan,
+        fileClassOf,
+        meaningSpanReader,
+        repoEtlTool,
+        writeReviewTool;
 
 import 'coding_agent_runner.dart'
     show
@@ -177,6 +183,30 @@ bool _hasMutationMarker(String text) =>
     text.contains('harness_fs_write') ||
     RegExp(r'\[verify\]').hasMatch(text) ||
     RegExp(r'\[edit[\s]').hasMatch(text);
+
+/// ADR 0027 amendment (dogfood 2026-09-06) — is [text] a MECHANICAL WRITE
+/// directive? True iff it carries ≥1 `harness_fs_write {…}` payload, NO
+/// other directive/mutation form, and NO leftover prose. A consented
+/// whole-file write is NOT a mover decision: the content is DATA and the
+/// human is the approver (the review gate) — routing it through the mover
+/// as a graded task measured `mover_refusal` after a 9-minute wall.
+/// Mixed prompts (write + prose/edit/verify) NEVER take this path —
+/// deny-by-default on ambiguity.
+bool isMechanicalWriteDirective(String text) {
+  if (text.contains('harness_edit') ||
+      RegExp(r'\[verify\]').hasMatch(text) ||
+      RegExp(r'\[edit[\s]').hasMatch(text) ||
+      _marksReadOnly(text)) {
+    return false;
+  }
+  final payloads = _ScriptedDaemonActor._payloads(text, 'harness_fs_write');
+  if (payloads.items.isEmpty) return false;
+  final stripped = _ScriptedDaemonActor.stripPayloads(
+    text,
+    'harness_fs_write',
+  );
+  return stripped.trim().isEmpty;
+}
 
 /// ADR 0027 §3 — the mover REASONING CLASS for a decision (the daemon
 /// classifies; the client maps it to model/thinking config):
@@ -472,6 +502,109 @@ class HarnessAcpBackend
     }
   }
 
+  /// ADR 0027 amendment — MECHANICAL WRITES: executes `harness_fs_write`
+  /// payloads through the review gate (jail-resolve → consent round-trip
+  /// → write → tree reconcile). Zero mover, zero grade; no consent
+  /// approver wired → refuse (deny-by-default is STRUCTURAL, same law as
+  /// write_review). The tool's own validation (dart refusal, payload
+  /// shape) is reused — never duplicated here.
+  Future<AcpStopReason> _runMechanicalWrites(
+    _Session session,
+    String text,
+    String sessionId,
+    void Function(AcpSessionUpdate update) emit,
+  ) async {
+    if (_permissionRequester == null) {
+      emit(
+        AgentMessageChunk(
+          content: const AcpTextBlock(
+            '\n[harness_fs_write] refused: no consent approver wired — '
+            'deny-by-default is structural\n',
+          ),
+        ),
+      );
+      return AcpStopReason.refusal;
+    }
+    await _ensureReadWorld(session);
+    final registry = session.readWorld!
+        .getResource<ToolRegistryResource>()
+        .get('default')!;
+    if (!registry.tools.containsKey(const ToolName('write_review'))) {
+      final requester = _permissionRequester!;
+      final gateway = JailWriteGateway(
+        FsToolsRoot(session.cwd),
+        mode: WriteGateMode.review,
+        approver: (write) async {
+          final outcome = await requester(
+            AcpPermissionRequest(
+              sessionId: sessionId,
+              toolCallId: 'write:${write.hashCode}',
+              title: 'write ${write.relativePath}',
+              kind: 'edit',
+              details: JailWriteGateway.unifiedDiff(write),
+            ),
+          );
+          final allowed = outcome == AcpPermissionOutcome.allow;
+          session.consentLog.add(
+            'mechanical write ${allowed ? "ALLOWED" : "DENIED"}: '
+            '${write.relativePath}',
+          );
+          return allowed;
+        },
+      );
+      registry.register(writeReviewTool(FsToolsRoot(session.cwd), gateway));
+    }
+    final tool = registry.tools[const ToolName('write_review')]!;
+    final payloads = _ScriptedDaemonActor._payloads(text, 'harness_fs_write');
+    if (payloads.dropped > 0) {
+      emit(
+        AgentMessageChunk(
+          content: AcpTextBlock(
+            '\n[harness_fs_write] ${payloads.dropped} malformed payload(s) '
+            'dropped — never guessed (ADR 0027)\n',
+          ),
+        ),
+      );
+    }
+    var applied = 0;
+    for (final args in payloads.items) {
+      final out = await tool.execute(args) ?? '{}';
+      if (out.contains('"ack":"wrote') || out.startsWith('wrote')) applied++;
+      emit(
+        AgentMessageChunk(
+          content: AcpTextBlock(
+            '\n[write_review] '
+            '${out.length > 4000 ? "${out.substring(0, 4000)}…" : out}\n',
+          ),
+        ),
+      );
+    }
+    if (applied > 0) {
+      // The tree must not lie: reconcile immediately (mechanical — the
+      // tree-driven tick stats stored nodes and walks only mtime-moved
+      // dirs; a landed write is visible to zoom on the next cut).
+      final etl = registry.tools[const ToolName('repo_etl')];
+      if (etl != null) {
+        final out = await etl.execute({'action': 'refresh'}) ?? '{}';
+        emit(
+          AgentMessageChunk(
+            content: AcpTextBlock('\n[repo_etl refresh] $out\n'),
+          ),
+        );
+      }
+    }
+    emit(
+      AgentMessageChunk(
+        content: AcpTextBlock(
+          '\n[mechanical write path] $applied applied, '
+          '${payloads.items.length - applied} refused/dropped — no task, '
+          'no grade (ADR 0027 amendment)\n',
+        ),
+      ),
+    );
+    return AcpStopReason.endTurn;
+  }
+
   @override
   Future<AcpStopReason> prompt(
     AcpPromptRequest request, {
@@ -522,6 +655,28 @@ class HarnessAcpBackend
         ),
       );
       return AcpStopReason.endTurn;
+    }
+    // ADR 0027 amendment — MECHANICAL WRITES: a directive-only
+    // `harness_fs_write {…}` prompt executes through the review gate
+    // (consent round-trip to the client) — never through the mover.
+    if (isMechanicalWriteDirective(text)) {
+      final sw = Stopwatch()..start();
+      final stop = await _runMechanicalWrites(
+        session,
+        text,
+        request.sessionId,
+        emit,
+      );
+      sw.stop();
+      emit(
+        AgentMessageChunk(
+          content: AcpTextBlock(
+            '\n[write path] mechanical, consent-gated — no task, no grade '
+            '(ADR 0027 amendment); wall ${sw.elapsedMilliseconds} ms\n',
+          ),
+        ),
+      );
+      return stop;
     }
     final readOnlyTask = _marksReadOnly(text);
 
