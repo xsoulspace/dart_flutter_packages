@@ -738,3 +738,15 @@ one-move contract held) and closed the seams as MECHANISMS:
   WITH creation support.
 - The on-device wave re-run (P0 in [PLAN.md](PLAN.md)) is the graduation
   measurement — blocked 2026-09-07 only by concurrent-build contention.
+
+**P0 re-run executed same day** (converged surface): task_grammar PASS 1/1
+at 2,024 tokens / 1 decision / 24.5 s — `end_after_tool` proven on-device
+(the amortization endpoint at half the 2026-09-06 tokens). Rows 2–4
+exposed the next systemic class: **opaque schema-invalid tool calls**
+(`ToolCallError` → bare `generation_error` → same-cut retry — the call
+never reaches Dart, so the ADR 0034 named-bounce contract cannot fire;
+18/8/10 ToolCallErrors per row, 59–109-generation loops uncontained by
+maxToolRounds). P1 = the named `tool_args_invalid` class + bounce-class
+beat; the re-run after it measures bounce-driven recovery (or the enum
+splits per class). Rows: `afm_wave_results.md` § P0 RE-RUN; logs
+`afm_wave_rerun_*.log`; PLAN.md NOW updated.

@@ -117,3 +117,57 @@ floor). Until then the only expected-viable rows are one-decision
   quiet machine: `dart run bin/afm_wave_gate.dart` (expect: derivation
   row per run; `decision_dropped` never `backend_failed` retry loops;
   no `tool_round entries` growth past one round).
+
+---
+
+## P0 RE-RUN (2026-09-07, the converged surface — ADR 0033/0034)
+
+Driver state: dylib rebuilt (crash fix in), one-truth profile 1,424 →
+cutBudget 625 fits=true, `end_after_tool` live. Logs:
+`afm_wave_rerun_*.log`.
+
+| row | verdict | decisions | tokens | wall | failure class |
+|---|---|---|---|---|---|
+| task_grammar | **PASS** 1/1 | **1** | **2,024** | 24.5 s | — |
+| trusted_author | killed @900 s | gen=109 | — | — | opaque-ToolCallError loop (18) + model flailing (wrong-class actions, malformed programs, refresh loops) |
+| md | FAIL (published) | 15 | 30,144 | 237 s | final gate: the edit NEVER landed — 1 wrong-class action (bounced) + 8 opaque ToolCallErrors |
+| yaml | killed @820 s | gen=59 | — | — | opaque-ToolCallError loop (10): garbage slots (`executableId:"null"`, body=Dart prose), same-cut retries |
+
+### Row 1 proves the wave's structural claims end-to-end
+
+1 decision / 1 tool round / 2,024 tokens (was 2,864 at 49.5 s → 24.5 s):
+the ready move executed via `edit_symbol.apply_executable`, the patch
+landed (analyze_exit 0, check_exit 0), and the generation ENDED on the
+first tool result — `end_after_tool` proven on-device (immediate `done`,
+no `decision_final` trace, transcript held at 3 entries). The
+amortization endpoint now runs at HALF the tokens of the 2026-09-06 row.
+
+### The systemic finding: opaque schema-invalid calls bypass the named-bounce architecture
+
+All three failing rows died in ONE new class: **the model's tool call
+fails the framework's GenerationSchema validation → `ToolCallError` →
+generic `generation_error` → same-cut retry.** The call NEVER reaches
+Dart — so the one-move bounce, the class-teaching hints (ADR 0034), and
+the whole repair-hint contract never fire; the ladder is blind (the
+error is not window-class, so it retries; the retry recomposes the same
+confusing cut). Measured: 18/8/10 ToolCallErrors per failing row, loops
+of 59–109 generations — and the J1.5 budgets (maxToolRounds × attempts)
+did NOT contain the class (a failed generation is not a tool ROUND).
+
+The trigger is concrete: a 2–4k model facing the 10-action union enum +
+8 slots omits required slots or invents values (`executableId:"null"`,
+Dart prose in `body`). ADR 0034's per-class bounce teaching is the right
+shape but requires the call to LAND.
+
+### The fix (next P1 — named, not built)
+
+1. The bridge catches `ToolCallError` and surfaces a NAMED code
+   (`tool_args_invalid`) carrying the failing tool + the framework's
+   detail — never a bare `generation_error`.
+2. The harness treats it as bounce-class DATA: a named beat on the
+   actor's thread ("args failed validation for <tool>; required slots:
+   …"), no same-cut retry burn.
+3. The named-bounce loop (ADR 0034) then engages — and the row re-runs:
+   does the tiny model RECOVER through class-teaching bounces? That is
+   the graduation measurement for the union enum itself. If it does not
+   recover, the enum splits per class (a measured surface change, ADR).

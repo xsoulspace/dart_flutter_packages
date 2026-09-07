@@ -1,0 +1,21 @@
+Running build hooks...Running build hooks...[xs_fm] debug tracing enabled
+[afm_wave] AFM available — pass@1 per row against the real on-device model through the meaning-profile surface (in-run attempts budget: 3).
+[afm_wave] task_grammar run 1/1 — /var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/afm_wave_grammar1_Dpv2p7
+[derived-context] backend=apple_foundation_afm window=4096 reserve=1024 nativeTruth=1.45 nativeOverhead=2065 margin=100 → cutBudget=625 fits=true
+[xs_fm/dart] preflight: estimateTokens=972 budget=3800 reserve=1024 (system=551ch prompt=872ch fragments=2465ch)
+[xs_fm/dart] infer: prompt=872ch schema=absent tools=[repo_etl, meaning_program, edit_symbol, run]
+[xs_fm/dart] tool repo_etl: argsSchema=present
+[xs_fm/dart] tool meaning_program: argsSchema=present
+[xs_fm/dart] tool edit_symbol: argsSchema=present
+[xs_fm/dart] tool run: argsSchema=present
+[xs_fm] generate: prompt=READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT  schema=absent tools=[repo_etl, meaning_program, edit_symbol, run] callback=set
+[xs_fm] generate: schema materialized=no (nil)
+[xs_fm] generate: tools prepared=4/4 requested
+[xs_fm] context: gen=1 window=4096 baselineTranscriptTokens=1507 promptTokens=242 toolTokens=1358 schemaTokens=-1
+[xs_fm] tool call: name=edit_symbol args={"executableId":"dart\/fix_inclusive_bound","action":"apply_executable","executableParams":{},"symbolId":"sym_lib_loop.d
+[xs_fm] context: gen=1 tool_round entries=3 transcriptTokens=1821
+[xs_fm/dart] tool "edit_symbol" handler ok → responding
+[xs_fm] tool respond: id=g1_tool_75DE85E1-44B2-4380-9E83-3F9B51D73E33 resumed=true result="{\"ok\":true,\"reverted\":false,\"patches\":1,\"files\":[\"lib/loop.dart\"],\"analyze_exit\":0,\"check_exit\":0,\"analy
+[xs_fm/dart] done: gen=1 ok=true error=none
+{"row":"task_grammar","run":1,"verdict":"PASS","decisions":1,"tool_rounds":1,"tokens":2024,"wall_ms":24511,"moves":{"edit_symbol.apply_executable":1},"failure_class":"","log":"../xsoulspace_agentic_harness/benchmark/runs/afm_wave_task_grammar_run1.log"}
+{"row":"task_grammar","verdict":"PASS","runs":1,"passed":1,"pass":"1/1","tokens_source":"Situation.tokensUsed (projection)","attempts_budget":3,"wall_ms":30205,"failure_classes":[],"runs_detail":["{\"row\":\"task_grammar\",\"run\":1,\"verdict\":\"PASS\",\"decisions\":1,\"tool_rounds\":1,\"tokens\":2024,\"wall_ms\":24511,\"moves\":{\"edit_symbol.apply_executable\":1},\"failure_class\":\"\",\"log\":\"../xsoulspace_agentic_harness/benchmark/runs/afm_wave_task_grammar_run1.log\"}"]}
