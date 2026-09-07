@@ -1,12 +1,16 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:meta/meta.dart';
 import 'package:universal_storage_convergence/universal_storage_convergence.dart';
 import 'package:universal_storage_interface/universal_storage_interface.dart';
 import 'package:universal_storage_mesh_transport/universal_storage_mesh_transport.dart';
 
+import 'mesh_kv_store.dart';
+import 'mesh_kv_store_factory.dart'
+    if (dart.library.js_interop) 'mesh_kv_store_web.dart'
+    if (dart.library.io) 'mesh_kv_store_io.dart';
 import 'mesh_path_utils.dart';
 import 'mesh_peer_registry.dart';
 import 'mesh_sync_protocol.dart';
@@ -22,8 +26,17 @@ import 'mesh_sync_protocol.dart';
 ///   [MeshTransport]; unreachable peers are skipped silently — sync is
 ///   opportunistic, manual-trigger friendly, and never blocks local work.
 final class MeshStorageProvider implements StorageProvider {
+  /// Overrides the platform-selected persistence backing. Production
+  /// builds pick the backing via compile-time conditional import (file
+  /// backed under `dart:io`, `localStorage`-backed on web); tests inject
+  /// a store directly to exercise web semantics on the VM.
+  MeshStorageProvider({@visibleForTesting this._kvStoreFactory});
+
+  final MeshKeyValueStore Function(String root)? _kvStoreFactory;
+
   static const _contentKey = 'content';
 
+  MeshKeyValueStore? _store;
   MeshStorageConfig? _config;
   MeshPeerRegistry? _registry;
   var _inMemory = false;
@@ -84,10 +97,18 @@ final class MeshStorageProvider implements StorageProvider {
       _initialized = true;
       return;
     }
-    final docsDir = Directory('${config.storePath}/docs');
-    await docsDir.create(recursive: true);
+    // Persistence backing is selected per platform: file-backed under
+    // dart:io (storePath is a real directory), `localStorage`-backed on
+    // web (storePath is only a namespace and is never used as a path).
+    _store =
+        _kvStoreFactory?.call(config.storePath) ??
+        createMeshKvStore(config.storePath);
     _config = config;
-    _registry = await MeshPeerRegistry.load('${config.storePath}/peers.json');
+    _registry = await MeshPeerRegistry.loadFromStore(
+      store: _store!,
+      key: 'peers.json',
+      filePath: '${config.storePath}/peers.json',
+    );
     await _loadDocs();
     _initialized = true;
   }
@@ -196,6 +217,7 @@ final class MeshStorageProvider implements StorageProvider {
     _incomingSubscriptions.clear();
     _transports.clear();
     _docs.clear();
+    _store = null;
     _initialized = false;
   }
 
@@ -335,12 +357,12 @@ final class MeshStorageProvider implements StorageProvider {
 
   Future<void> _loadDocs() async {
     if (_inMemory) return;
-    final docsDir = Directory('${_config!.storePath}/docs');
-    await for (final entity in docsDir.list()) {
-      if (entity is! File || !entity.path.endsWith('.json')) continue;
+    for (final key in await _store!.list('docs')) {
+      if (!key.endsWith('.json')) continue;
+      final content = await _store!.read(key);
+      if (content == null) continue;
       try {
-        final raw =
-            jsonDecode(await entity.readAsString()) as Map<dynamic, dynamic>;
+        final raw = jsonDecode(content) as Map<dynamic, dynamic>;
         final path = raw['path'] as String;
         _docs[path] = ConvergenceDoc.fromJson(
           Map<String, dynamic>.from(raw['doc'] as Map<dynamic, dynamic>),
@@ -354,8 +376,8 @@ final class MeshStorageProvider implements StorageProvider {
   Future<void> _persist(final ConvergenceDoc doc) async {
     if (_inMemory) return;
     final fileName = encodeDocFileName(doc.docId);
-    final file = File('${_config!.storePath}/docs/$fileName.json');
-    await file.writeAsString(
+    await _store!.write(
+      'docs/$fileName.json',
       jsonEncode({'path': doc.docId, 'doc': doc.toJson()}),
     );
   }

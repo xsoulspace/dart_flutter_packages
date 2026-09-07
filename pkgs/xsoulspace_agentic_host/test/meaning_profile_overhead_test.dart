@@ -108,11 +108,13 @@ void main() {
       // ONE-TRUTH binding (ADR 0033 §2): the metered total must sit in the
       // published range. Any verb, action, or description change moves
       // this number → re-measure, re-print, re-publish.
-      // Measured 2026-09-07 (graduated + unified edit verb: etl + program
-      // + edit_symbol + run; the union absorbed edit_section/edit_key).
+      // Measured 2026-09-07 (graduated + ONE edit verb: etl + program +
+      // edit_symbol(705) + run; the union absorbed edit_section/edit_key;
+      // teaching prose deduplicated — bounces/system-prompt carry the
+      // arg-shape repair). fits=true: cutBudget 628 ≥ the 600 floor.
       expect(
         total,
-        inExclusiveRange(1250, 1400),
+        inExclusiveRange(1380, 1460),
         reason: 'the graduated one-truth overhead drifted out of the '
             'published range — re-measure and re-publish the row',
       );

@@ -117,8 +117,7 @@ final class MeshPresenceSession {
   int get rejectedFrameCount => _rejections.length;
 
   /// Every dropped frame with its rejection reason, oldest first.
-  List<MeshFrameRejection> get rejections =>
-      List.unmodifiable(_rejections);
+  List<MeshFrameRejection> get rejections => List.unmodifiable(_rejections);
 
   /// Joins the channel: announces presence, starts listening for peer
   /// frames, and starts the adaptive ping/sweep cycle.
@@ -253,10 +252,9 @@ final class MeshPresenceSession {
         _rejections.add(
           MeshFrameRejection(
             frame: frame,
-            reason:
-                frame.signature == null
-                    ? MeshFrameRejectionReason.unsigned
-                    : MeshFrameRejectionReason.unauthenticated,
+            reason: frame.signature == null
+                ? MeshFrameRejectionReason.unsigned
+                : MeshFrameRejectionReason.unauthenticated,
           ),
         );
         return; // dropped as named data — never folded (ADR 0031 §3)

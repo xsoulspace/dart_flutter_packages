@@ -14,9 +14,17 @@ import 'package:xsoulspace_agentic_host/xsoulspace_agentic_host.dart';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
-import 'src/native_bridge/native_client.dart';
+// ADR 0003 — the native FFI bridge only exists where dart:ffi does. On the
+// web target the barrel binds the honest web stub instead (`isAvailable`
+// is false, `infer` fails with the named code `engine_unavailable`); the
+// VM/macOS path below is byte-identical to the unconditional import it
+// replaces. NOTE: `dart.library.io` is TRUE on Flutter web (the SDK ships
+// a stub dart:io), so web is detected via `dart.library.js_interop`.
+import 'src/native_bridge/native_client.dart'
+    if (dart.library.js_interop) 'src/native_bridge/native_client_web.dart';
 
-export 'src/native_bridge/native_client.dart';
+export 'src/native_bridge/native_client.dart'
+    if (dart.library.js_interop) 'src/native_bridge/native_client_web.dart';
 
 /// The `apple_foundation_afm` backend binding (ADR 0025) — the one-liner
 /// an app, CLI or test composes to embed AFM in the harnessd daemon:

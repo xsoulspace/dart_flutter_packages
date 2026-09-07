@@ -201,6 +201,9 @@ final class GenerationState: @unchecked Sendable {
           // OUTSIDE the state queue (finish takes the registry queue —
           // lock order: registry BEFORE state).
           endAfterMove = true
+          // `finished` is set UNDER THE LOCK so any further tool post
+          // takes the cancellation path immediately — no race window.
+          finished = true
           continuation.resume(returning: result)
           task?.cancel()
         } else {
@@ -209,13 +212,18 @@ final class GenerationState: @unchecked Sendable {
       }
     }
     if endAfterMove {
-      // The tool result is already valid JSON (Dart jsonEncodes it) —
-      // embedded raw. `finish` is a no-op if the generation already
-      // completed or was cancelled (deliver is gated).
-      finish(
+      // Manual done delivery OUTSIDE the state queue (the registry remove
+      // takes the registry queue FIRST — lock order preserved):
+      // state.finish would no-op on the already-set finished flag. The
+      // tool result is already valid JSON (Dart jsonEncodes it) —
+      // embedded raw.
+      GenerationRegistry.shared.remove(id)
+      let payload =
         "{\"generation\":\(id),\"ok\":true,\"output\":\(result),"
-          + "\"ended_by\":\"one_move\"}"
-      )
+        + "\"ended_by\":\"one_move\"}"
+      payload.withCString { cString in
+        doneCallback(strdup(cString))
+      }
     }
     return resumed
   }
@@ -752,12 +760,19 @@ public func xs_fm_generate_stream_async(
           }
           return
         }
-        if state.postToolCall(
-          name: name,
-          argumentsJSON: argsJSON,
-          continuation: continuation
-        ) == nil {
-          continuation.resume(throwing: NativeToolError(code: "generation_cancelled"))
+        if let state = self.state {
+          // postToolCall resumes the continuation ITSELF on the
+          // cancelled/finished path (the established contract, gated by
+          // the "postToolCall after cancel throws" unit test) — resuming
+          // here too was a FATAL double resume, unreachable until
+          // ADR 0033 §4 (end-after-move) made finished-then-cancelled
+          // a common state. Single resume site: postToolCall.
+          _ = state.postToolCall(
+            name: name,
+            argumentsJSON: argsJSON,
+            continuation: continuation
+          )
+          return
         }
       }
     }

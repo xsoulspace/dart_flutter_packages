@@ -14,7 +14,7 @@
 /// `open_router` from the OpenRouter client) and may pin the default.
 ///
 /// `--profile meaning` runs every delegated task through the R7
-/// meaning-profile surface (repo_etl / meaning_zoom / meaning_impact /
+/// meaning-profile surface (repo_etl / meaning_program /
 /// edit_symbol / run) — zero `read`, zero `write` moves; the meaning tree
 /// is the only code interface (ADR 0023).
 ///
@@ -294,14 +294,25 @@ Future<void> runHarnessdCli(
   }
 }
 
+/// FNV-1a 64-bit constants — kept as hex STRINGS, not integer literals:
+/// the values exceed the JS safe-integer range and 64-bit integer
+/// literals are a compile ERROR on the web target (ADR 0003). `int.parse`
+/// yields the identical wrapped int64 on the VM — the only platform where
+/// the socket transport (the consumer of this hash) ever runs.
+const String _fnvOffsetBasis = '0xcbf29ce484222325';
+const String _fnvPrime = '0x100000001b3';
+const String _fnvMask = '0x7fffffffffffffff';
+
 /// Stable short socket name per workspace (unix sockets cap at ~104
 /// chars — workspaces exceed that; the workspace path itself is hashed
 /// with FNV-1a, never stored in the name).
 String _workspaceHash(String workspace) {
-  var hash = 0xcbf29ce484222325;
+  final prime = int.parse(_fnvPrime);
+  final mask = int.parse(_fnvMask);
+  var hash = int.parse(_fnvOffsetBasis);
   for (final code in workspace.codeUnits) {
     hash ^= code;
-    hash = (hash * 0x100000001b3) & 0x7fffffffffffffff;
+    hash = (hash * prime) & mask;
   }
   return hash.toRadixString(16).padLeft(16, '0').substring(0, 12);
 }

@@ -69,7 +69,12 @@ import 'intent_closure_runner.dart'
     show DecisionMeter, afmSystemPrompt, registerIntentClosureTools;
 import 'meaning_profile_surface.dart'
     show buildMeaningProfileSurface;
+// ADR 0003 — conditional workspace import: on the web target the honest
+// stub (agentic_workspace_web_stub.dart) replaces the workspace barrel, so
+// its dart:io edit/ETL tier stays OUT of the web graph. VM/macOS: the real
+// import, unchanged.
 import 'package:xsoulspace_agentic_workspace/xsoulspace_agentic_workspace.dart'
+    if (dart.library.js_interop) 'agentic_workspace_web_stub.dart'
     show SpanEditPlan;
 
 /// ~110 tokens — the run-graded (fs_tools) teaching prompt. B6: teaching
@@ -303,7 +308,7 @@ CodingAgentTask taskFromSentence(
     id: 'free_form',
     prompt: meaningProfile
         ? '$sentence Work through the meaning tree: repo_etl scan, '
-              'meaning_zoom / meaning_impact to read, edit_symbol to act '
+              'the meaning_program read ops to read, edit_symbol to act '
               'on code, write_review for non-code files (the human '
               'consents). Never touch files directly.'
         : '$sentence Verify with the run tool — the check must exit 0.',

@@ -35,10 +35,10 @@ void main() {
   group('read-directive router (mechanical — zero model, zero grade)', () {
     test('classifier: directive-only → true; prose/mutation → false', () {
       expect(isReadOnlyDirectivePrompt('[scan]'), isTrue);
-      expect(isReadOnlyDirectivePrompt('[scan] [zoom meaning]'), isTrue);
       expect(
         isReadOnlyDirectivePrompt(
-          'harness_zoom {"focusId":"f_x","zoom":"point"}',
+          'harness_meaning_program '
+          '{"ops":[{"op":"locate","query":"meaning"}]}',
         ),
         isTrue,
       );
@@ -61,7 +61,10 @@ void main() {
           AcpPromptRequest(
             sessionId: sid,
             prompt: const [
-              AcpTextBlock('[scan] [zoom main] [zoom main.dart]'),
+              AcpTextBlock(
+            '[scan] harness_meaning_program '
+            '{"ops":[{"op":"locate","query":"main"},{"op":"zoom"}]}',
+          ),
             ],
           ),
           emit: (u) => updates.add(
@@ -73,7 +76,7 @@ void main() {
         final out = updates.join();
         expect(stop, AcpStopReason.endTurn);
         expect(out, contains('[repo_etl]'));
-        expect(out, contains('[meaning_zoom]'));
+        expect(out, contains('[meaning_program]'));
         expect(out, contains('[read path] mechanical — no task, no grade'));
         expect(out, isNot(contains('verdict:')), reason: 'reads are not builds');
         // Honest wall budget: the OLD path paid ~68s (dart test cold

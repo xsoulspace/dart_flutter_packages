@@ -11,7 +11,12 @@ import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
     show FsToolsRoot, JailWriteGateway, runTool;
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart'
     show ToolDef;
+// ADR 0003 — conditional workspace import: on the web target the honest
+// stub (agentic_workspace_web_stub.dart) replaces the workspace barrel, so
+// its dart:io edit/ETL tier stays OUT of the web graph. VM/macOS: the real
+// import, unchanged.
 import 'package:xsoulspace_agentic_workspace/xsoulspace_agentic_workspace.dart'
+    if (dart.library.js_interop) 'agentic_workspace_web_stub.dart'
     show
         SpanEditMaterializer,
         SpanEditPlan,

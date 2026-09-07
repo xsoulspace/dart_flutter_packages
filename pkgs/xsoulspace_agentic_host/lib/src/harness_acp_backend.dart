@@ -46,11 +46,16 @@ import 'package:dart_acp_toolkit/dart_acp_toolkit.dart';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
     show FsToolsRoot, JailWriteGateway, WriteGateMode, runTool;
+import 'package:xsoulspace_agentic_harness/src/meaning/meaning_read_program.dart'
+    show meaningProgramTool;
 import 'package:xsoulspace_agentic_harness/src/tools/meaning_query_tools.dart'
-    show meaningImpactTool, meaningSpanReader, meaningZoomTool;
-import 'package:xsoulspace_agentic_harness/src/tools/meaning_locate_tool.dart'
-    show meaningLocateTool;
+    show meaningSpanReader;
+// ADR 0003 — conditional workspace import: on the web target the honest
+// stub (agentic_workspace_web_stub.dart) replaces the workspace barrel, so
+// its dart:io edit/ETL tier stays OUT of the web graph. VM/macOS: the real
+// import, unchanged.
 import 'package:xsoulspace_agentic_workspace/xsoulspace_agentic_workspace.dart'
+    if (dart.library.js_interop) 'agentic_workspace_web_stub.dart'
     show RepoEtlState, SpanEditPlan, meaningSpanReader, repoEtlTool, writeReviewTool;
 
 import 'coding_agent_runner.dart'
@@ -172,7 +177,7 @@ typedef _PermissionAnswer = ({bool allowed, String path, String failureClass});
 
 /// ADR 0027 §1 — is [text] a DIRECTIVE-ONLY read prompt? True iff it
 /// carries ≥1 read directive (`[scan]`, `[zoom …]`, structured
-/// `harness_zoom`/`harness_impact` payloads) AND no mutation marker
+/// `harness_meaning_program` payloads) AND no mutation marker
 /// (`harness_edit`, `harness_fs_write`, `[verify]`) AND no leftover task
 /// prose after stripping the directives (free prose = a delegated task).
 bool isReadOnlyDirectivePrompt(String text) {
@@ -180,17 +185,16 @@ bool isReadOnlyDirectivePrompt(String text) {
   final hasRead =
       RegExp(r'\[scan\]').hasMatch(text) ||
       RegExp(r'\[zoom [^\]]+\]').hasMatch(text) ||
-      text.contains('harness_zoom') ||
-      text.contains('harness_impact') ||
-      text.contains('harness_locate');
+      text.contains('harness_meaning_program');
   if (!hasRead) return false;
   // Strip every directive form; whatever remains must be empty.
   var stripped = text
       .replaceAll(RegExp(r'\[scan\]'), '')
       .replaceAll(RegExp(r'\[zoom [^\]]+\]'), '');
-  stripped = _ScriptedDaemonActor.stripPayloads(stripped, 'harness_zoom');
-  stripped = _ScriptedDaemonActor.stripPayloads(stripped, 'harness_impact');
-  stripped = _ScriptedDaemonActor.stripPayloads(stripped, 'harness_locate');
+  stripped = _ScriptedDaemonActor.stripPayloads(
+    stripped,
+    'harness_meaning_program',
+  );
   return stripped.trim().isEmpty;
 }
 
@@ -302,7 +306,7 @@ class HarnessAcpBackend
   final Duration permissionDeadline;
 
   /// R7: when true, delegated tasks run through the MEANING-PROFILE
-  /// surface ([repo_etl, meaning_zoom, meaning_impact, edit_symbol, run])
+  /// surface ([repo_etl, meaning_program, edit_symbol, run])
   /// — zero `read`, zero `write`; the tree is the only code interface.
   final bool meaningProfile;
 
@@ -312,8 +316,8 @@ class HarnessAcpBackend
   /// R7 gate mode: the mover is a SCRIPTED directive interpreter — the
   /// prompt carries bracketed READ directives (`[scan]`,
   /// `[zoom <query>]`, `[verify]`) and STRUCTURED JSON payloads for the
-  /// id-bearing verbs (`harness_edit {…}`, `harness_impact {…}` — the
-  /// exact registry args, R7 production #1), and the actor emits the
+  /// id-bearing verbs (`harness_edit {…}`, `harness_meaning_program {…}`
+  /// — the exact registry args, R7 production #1), and the actor emits the
   /// corresponding REAL registry tool calls. The daemon surface
   /// (registry, oracles, auto-revert, budgets) is the production one;
   /// only the mover is deterministic (LLM-free gate discipline).
@@ -548,10 +552,11 @@ class HarnessAcpBackend
   }
 
   /// ADR 0027 §1 — the READ WORLD: a lazy, read-verbs-only registry
-  /// (repo_etl / meaning_zoom / meaning_impact — NO edit verbs) over the
-  /// session's own ETL state. Reads never mutate; the task path's
-  /// single-writer world is untouched. Its own RepoEtlState keeps the
-  /// mtime bookkeeping independent.
+  /// (repo_etl + the ONE read program — NO edit verbs) over the session's
+  /// own ETL state. ADR 0030 §3 graduation: the program REPLACED
+  /// meaning_zoom/impact/locate here too — one read dialect everywhere.
+  /// Reads never mutate; the task path's single-writer world is untouched.
+  /// Its own RepoEtlState keeps the mtime bookkeeping independent.
   Future<void> _ensureReadWorld(_Session session) async {
     if (session.readWorld != null) return;
     final world = World()..addPlugin(AgentPlugin());
@@ -563,12 +568,11 @@ class HarnessAcpBackend
     final etl = repoEtlTool(world, jail, state: session.readEtlState);
     registry.register(etl);
     registry.register(
-      meaningZoomTool(world, spanReader: meaningSpanReader(FsToolsRoot(jail.path))),
+      meaningProgramTool(
+        world,
+        spanReader: meaningSpanReader(FsToolsRoot(jail.path)),
+      ),
     );
-    registry.register(meaningImpactTool(world));
-    // Discovery ray (ADR 0014 §2 re-based on the tree) — the mechanical
-    // read tier gains "where is X?" with zero model, zero grade.
-    registry.register(meaningLocateTool(world));
     // Mechanical EXECUTION directive (allowlist enforced inside the tool —
     // the same convention prefixes the meaning profile's run uses). A run
     // is not a read (tests write files) — it rides its own classifier.
@@ -625,25 +629,11 @@ class HarnessAcpBackend
     if (RegExp(r'\[scan\]').hasMatch(text)) {
       await run('repo_etl', {'action': 'scan'});
     }
-    for (final m in RegExp(r'\[zoom ([^\]]+)\]').allMatches(text)) {
-      await run('meaning_zoom', {
-        'query': m.group(1)!.trim(),
-        'zoom': 'local',
-      });
+    final programs = _ScriptedDaemonActor._payloads(text, 'harness_meaning_program');
+    for (final args in programs.items) {
+      await run('meaning_program', args);
     }
-    final zooms = _ScriptedDaemonActor._payloads(text, 'harness_zoom');
-    for (final args in zooms.items) {
-      await run('meaning_zoom', args);
-    }
-    final impacts = _ScriptedDaemonActor._payloads(text, 'harness_impact');
-    for (final args in impacts.items) {
-      await run('meaning_impact', args);
-    }
-    final locates = _ScriptedDaemonActor._payloads(text, 'harness_locate');
-    for (final args in locates.items) {
-      await run('meaning_locate', args);
-    }
-    final dropped = zooms.dropped + impacts.dropped + locates.dropped;
+    final dropped = programs.dropped;
     if (dropped > 0) {
       emit(
         AgentMessageChunk(
@@ -893,7 +883,7 @@ class HarnessAcpBackend
     }
 
     // ADR 0027 §1 — READS ARE NOT BUILDS: a directive-only read prompt
-    // ([scan]/[zoom]/harness_zoom/harness_impact, no mutation payloads,
+    // ([scan]/harness_meaning_program, no mutation payloads,
     // no leftover task prose) executes MECHANICALLY against the session's
     // registry — zero model, zero grade — and the cuts stream back. A
     // `[read-only]`-marked free-form delegation runs as a readOnly task
@@ -1537,20 +1527,32 @@ class _RemoteMoverHandler implements GenerationHandler {
 
 /// R7 gate mover (production #1 — the structured edit surface): maps the
 /// prompt's directives to REAL tool calls over the session's registry
-/// (repo_etl / meaning_zoom / meaning_impact / edit_symbol / run /
+/// (repo_etl / meaning_program / edit_symbol / run /
 /// write_review).
 ///
 /// READ verbs with free-text args stay bracketed prose (`[scan]`,
 /// `[zoom <query>]`, `[verify]`). Every ID- or SLOT-BEARING verb travels as
 /// a STRUCTURED JSON payload — `harness_edit {…}` carries the exact
 /// `edit_symbol` args (action, symbolId/classSymbolId, opChain,
-/// executableId, executableParams), `harness_impact {…}` the exact
-/// `meaning_impact` args, `harness_zoom {…}` the exact `meaning_zoom` args
+/// executableId, executableParams), `harness_meaning_program {…}` the
+/// exact read-program args (the closed op set — ADR 0030 §3)
 /// (incl. zoom=file, the fs-tier escape-hatch read), and `harness_fs_write
 /// {path, content}` the exact `write_review` args (consent-gated). The
-/// mover NEVER resolves or guesses ids — the caller supplies them from
-/// zoom/impact data (the R7d division of labor); a malformed payload is
-/// dropped and reported, never repaired into a guess.
+/// R7 gate mover (production #1 — the structured edit surface): maps the
+/// prompt's directives to REAL tool calls over the session's registry
+/// (repo_etl / meaning_program / edit_symbol / run / write_review).
+///
+/// READ verbs with free-text args stay bracketed prose (`[scan]`,
+/// `[verify]`). Every ID- or SLOT-BEARING verb travels as a STRUCTURED
+/// JSON payload — `harness_edit {…}` carries the exact `edit_symbol` args
+/// (action, symbolId, opChain, executableId, executableParams),
+/// `harness_meaning_program {…}` the exact read-program args (the closed
+/// locate/zoom/impact/read op set — ADR 0030 §3 graduation), and
+/// `harness_fs_write {path, content}` the exact `write_review` args
+/// (consent-gated). The mover NEVER resolves or guesses ids — the caller
+/// supplies them from program data (the R7d division of labor); a
+/// malformed payload is dropped and reported, never repaired into a
+/// guess.
 class _ScriptedDaemonActor implements GenerationHandler {
   @override
   Future<ActorGenerateResponse> generate(
@@ -1568,34 +1570,12 @@ class _ScriptedDaemonActor implements GenerationHandler {
         ),
       );
     }
-    for (final m in RegExp(r'\[zoom ([^\]]+)\]').allMatches(prompt)) {
+    // ADR 0030 §3 graduation — the ONE read program carries the closed
+    // op set (locate/zoom/impact/read); the payload IS the program args.
+    final programs = _payloads(prompt, 'harness_meaning_program');
+    for (final args in programs.items) {
       calls.add(
-        ToolCall(
-          name: const ToolName('meaning_zoom'),
-          arguments: {'query': m.group(1)!.trim(), 'zoom': 'local'},
-        ),
-      );
-    }
-    // Structured zoom args (incl. zoom=file — the fs-tier escape-hatch
-    // read; ADR 0024 §4) travel verbatim, like harness_edit.
-    final zooms = _payloads(prompt, 'harness_zoom');
-    for (final args in zooms.items) {
-      calls.add(
-        ToolCall(name: const ToolName('meaning_zoom'), arguments: args),
-      );
-    }
-    final impacts = _payloads(prompt, 'harness_impact');
-    for (final args in impacts.items) {
-      calls.add(
-        ToolCall(name: const ToolName('meaning_impact'), arguments: args),
-      );
-    }
-    // Discovery ray (ADR 0014 §2 re-based on the tree): the payload IS the
-    // meaning_locate args — ids for zoom/impact come FROM locate rows.
-    final locates = _payloads(prompt, 'harness_locate');
-    for (final args in locates.items) {
-      calls.add(
-        ToolCall(name: const ToolName('meaning_locate'), arguments: args),
+        ToolCall(name: const ToolName('meaning_program'), arguments: args),
       );
     }
     final edits = _payloads(prompt, 'harness_edit');
@@ -1622,7 +1602,7 @@ class _ScriptedDaemonActor implements GenerationHandler {
       );
     }
     final dropped =
-        zooms.dropped + impacts.dropped + edits.dropped + writes.dropped + locates.dropped;
+        programs.dropped + edits.dropped + writes.dropped;
     final response = ActorGenerateResponse(
       actorEntity: request.actorEntity,
       structuredOutput: {

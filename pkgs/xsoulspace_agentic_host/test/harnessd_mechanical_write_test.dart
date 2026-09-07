@@ -107,7 +107,8 @@ void main() {
     // The tree must not lie: the reconcile ran — the new file is zoomable.
     final zoom = await delegate(
       backend,
-      'harness_zoom {"query": "New Note", "zoom": "local", "budget": 512}',
+      'harness_meaning_program {"ops":[{"op":"locate","query":"New '
+          'Note"}]}',
     );
     expect(zoom.updates, contains('new_note'), reason: zoom.updates);
   });

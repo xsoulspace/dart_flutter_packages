@@ -236,10 +236,9 @@ final class MeshPresenceTracker {
     // Consumer payloads are read back from the nested `details` map (ADR
     // 0031 §6); a register without one carries no consumer payload.
     final rawDetails = value[_detailsKey];
-    final details =
-        rawDetails is Map
-            ? Map<String, Object?>.from(rawDetails)
-            : const <String, Object?>{};
+    final details = rawDetails is Map
+        ? Map<String, Object?>.from(rawDetails)
+        : const <String, Object?>{};
     return MeshPresenceEntry(
       docId: docId,
       peerId: peerId,

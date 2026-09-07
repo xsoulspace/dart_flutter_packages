@@ -3,27 +3,31 @@ import 'package:universal_storage_mesh/universal_storage_mesh.dart';
 
 void main() {
   group('PresenceConfig (ADR 0031 §5)', () {
-    test('presets respect the ttl invariant: ttl = ttlFactor × pingInterval',
-        () {
-      for (final config in [
-        PresenceConfig.interactive,
-        PresenceConfig.background,
-      ]) {
-        expect(config.ttlFactor, PresenceConfig.defaultTtlFactor);
-        for (final active in [true, false]) {
-          final interval = config.pingInterval(active: active);
-          expect(
-            config.ttlFor(interval),
-            Duration(milliseconds: interval.inMilliseconds * config.ttlFactor),
-            reason: 'ttl must be exactly ttlFactor × pingInterval '
-                '($config, active: $active)',
-          );
+    test(
+      'presets respect the ttl invariant: ttl = ttlFactor × pingInterval',
+      () {
+        for (final config in [
+          PresenceConfig.interactive,
+          PresenceConfig.background,
+        ]) {
+          expect(config.ttlFactor, PresenceConfig.defaultTtlFactor);
+          for (final active in [true, false]) {
+            final interval = config.pingInterval(active: active);
+            expect(
+              config.ttlFor(interval),
+              Duration(
+                milliseconds: interval.inMilliseconds * config.ttlFactor,
+              ),
+              reason:
+                  'ttl must be exactly ttlFactor × pingInterval '
+                  '($config, active: $active)',
+            );
+          }
         }
-      }
-    });
+      },
+    );
 
-    test('activity adapts the interval strictly within the preset bounds',
-        () {
+    test('activity adapts the interval strictly within the preset bounds', () {
       for (final config in [
         PresenceConfig.interactive,
         PresenceConfig.background,

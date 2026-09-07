@@ -85,10 +85,17 @@ reader. The write side did not:
 
 ## Consequences
 
-- The model surface loses `edit_section` + `edit_key` (−453 chars/4);
-  the unified enum adds 7 action names to `edit_symbol` — net surface
-  SHRINKS and the md/yaml rows become runnable on the graduated 4k tier
-  (the `mdKeyEdits` pre-graduation variant is deleted).
+- **Measured (2026-09-07, one truth, LLM-free gate)**: the unified edit
+  verb absorbed `edit_section` + `edit_key`; with teaching prose
+  deduplicated (bounces and the system prompt carry the arg-shape
+  repair), the graduated profile measures **1,420 chars/4 →
+  cutBudget 628, fits=true** — the 4k AFM tier funds a minimal cut for
+  the FIRST time (pre-graduation: 2,268 → 36; program-only: 1,858 →
+  234). The md/yaml rows run on the graduated tier.
+- The daemon's read world (the mechanical directive relay) converged to
+  the same dialect: `harness_meaning_program {"ops":[…]}` replaced
+  `harness_zoom`/`harness_impact`/`harness_locate` — one read dialect
+  everywhere, or the tiny model learns two.
 - The md/key ToolDefs remain in the workspace package for LLM-free
   materializer tests — they are no longer model-facing verbs.
 - Named, not built: the `edit_node` rename; mutation ops joining

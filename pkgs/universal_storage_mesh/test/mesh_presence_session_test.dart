@@ -44,10 +44,8 @@ final class _FakeEndpoint implements EphemeralFrameTransport {
 final class _FakeHub {
   final Map<String, _FakeEndpoint> _endpoints = {};
 
-  _FakeEndpoint endpoint(final String peerId) => _endpoints.putIfAbsent(
-    peerId,
-    () => _FakeEndpoint(peerId, this),
-  );
+  _FakeEndpoint endpoint(final String peerId) =>
+      _endpoints.putIfAbsent(peerId, () => _FakeEndpoint(peerId, this));
 
   void _deliverFrom(final String from, final MeshEphemeralFrame frame) {
     for (final endpoint in _endpoints.values) {
@@ -157,65 +155,73 @@ void main() {
       endpoint.dispose();
     });
 
-    test('frames for other channels are ignored, not folded, not rejected',
-        () async {
-      final hub = _FakeHub();
-      final endpoint = hub.endpoint('device-a');
-      final tracker = MeshPresenceTracker(actorId: 'device-a');
-      final session = _session(transport: endpoint, tracker: tracker);
+    test(
+      'frames for other channels are ignored, not folded, not rejected',
+      () async {
+        final hub = _FakeHub();
+        final endpoint = hub.endpoint('device-a');
+        final tracker = MeshPresenceTracker(actorId: 'device-a');
+        final session = _session(transport: endpoint, tracker: tracker);
 
-      await session.open(now: t0);
-      // A foreign-channel frame (built by a real tracker, by construction
-      // valid) must be ignored: not folded, not rejected.
-      hub.endpoint('device-b')._receive(
-        MeshPresenceTracker(
-          actorId: 'device-b',
-        ).announce(docId: 'doc/2', event: MeshEphemeralEvent.join, now: t0),
-      );
-      await _settle();
-      expect(tracker.presence('doc/1'), hasLength(1)); // only the local peer
-      expect(tracker.presence('doc/2'), isEmpty);
-      expect(session.rejectedFrameCount, 0);
+        await session.open(now: t0);
+        // A foreign-channel frame (built by a real tracker, by construction
+        // valid) must be ignored: not folded, not rejected.
+        hub
+            .endpoint('device-b')
+            ._receive(
+              MeshPresenceTracker(actorId: 'device-b').announce(
+                docId: 'doc/2',
+                event: MeshEphemeralEvent.join,
+                now: t0,
+              ),
+            );
+        await _settle();
+        expect(tracker.presence('doc/1'), hasLength(1)); // only the local peer
+        expect(tracker.presence('doc/2'), isEmpty);
+        expect(session.rejectedFrameCount, 0);
 
-      await session.close();
-      endpoint.dispose();
-    });
+        await session.close();
+        endpoint.dispose();
+      },
+    );
   });
 
   group('two sessions over one fake transport (ADR 0031 §2)', () {
-    test('sessions see each other; leave removes the peer from the fold',
-        () async {
-      final hub = _FakeHub();
-      final endpointA = hub.endpoint('device-a');
-      final endpointB = hub.endpoint('device-b');
-      final trackerA = MeshPresenceTracker(actorId: 'device-a');
-      final trackerB = MeshPresenceTracker(actorId: 'device-b');
-      final sessionA = _session(transport: endpointA, tracker: trackerA);
-      final sessionB = _session(transport: endpointB, tracker: trackerB);
+    test(
+      'sessions see each other; leave removes the peer from the fold',
+      () async {
+        final hub = _FakeHub();
+        final endpointA = hub.endpoint('device-a');
+        final endpointB = hub.endpoint('device-b');
+        final trackerA = MeshPresenceTracker(actorId: 'device-a');
+        final trackerB = MeshPresenceTracker(actorId: 'device-b');
+        final sessionA = _session(transport: endpointA, tracker: trackerA);
+        final sessionB = _session(transport: endpointB, tracker: trackerB);
 
-      await sessionA.open(details: {'display': 'Alice'});
-      await sessionB.open(details: {'display': 'Bob'});
-      await _settle();
+        await sessionA.open(details: {'display': 'Alice'});
+        await sessionB.open(details: {'display': 'Bob'});
+        await _settle();
 
-      final onA = trackerA.presence('doc/1');
-      expect(onA.map((e) => e.peerId), containsAll(['device-a', 'device-b']));
-      expect(
-        onA.singleWhere((e) => e.peerId == 'device-b').details['display'],
-        'Bob',
-      );
-      expect(
-        trackerB.presence('doc/1').map((e) => e.peerId),
-        containsAll(['device-a', 'device-b']),
-      );
+        final onA = trackerA.presence('doc/1');
+        expect(onA.map((e) => e.peerId), containsAll(['device-a', 'device-b']));
+        expect(
+          onA.singleWhere((e) => e.peerId == 'device-b').details['display'],
+          'Bob',
+        );
+        expect(
+          trackerB.presence('doc/1').map((e) => e.peerId),
+          containsAll(['device-a', 'device-b']),
+        );
 
-      await sessionA.close();
-      await _settle();
-      expect(trackerB.presence('doc/1').map((e) => e.peerId), ['device-b']);
+        await sessionA.close();
+        await _settle();
+        expect(trackerB.presence('doc/1').map((e) => e.peerId), ['device-b']);
 
-      await sessionB.close();
-      endpointA.dispose();
-      endpointB.dispose();
-    });
+        await sessionB.close();
+        endpointA.dispose();
+        endpointB.dispose();
+      },
+    );
   });
 
   group('frame authentication (ADR 0031 §3)', () {
@@ -278,9 +284,7 @@ void main() {
       expect(sessionB.rejections.single.frame.docId, 'doc/1');
       // Rejection never touched the fold: A is still present.
       expect(
-        trackerB
-            .presence('doc/1')
-            .where((e) => e.peerId == 'device-a'),
+        trackerB.presence('doc/1').where((e) => e.peerId == 'device-a'),
         hasLength(1),
       );
 
@@ -301,9 +305,7 @@ void main() {
       await _settle();
       expect(sessionB.rejectedFrameCount, 2);
       expect(
-        trackerB
-            .presence('doc/1')
-            .where((e) => e.peerId == 'device-a'),
+        trackerB.presence('doc/1').where((e) => e.peerId == 'device-a'),
         hasLength(1),
       );
 
@@ -313,85 +315,89 @@ void main() {
       endpointB.dispose();
     });
 
-    test('unsigned frames are rejected when an authenticator is configured',
-        () async {
-      final hub = _FakeHub();
-      final endpointA = hub.endpoint('device-a');
-      final endpointB = hub.endpoint('device-b');
-      final keyPairA = await PairingService.newIdentityKeyPair();
-      final publicKeyA = await keyPairA.extractPublicKey();
-      final trackerB = MeshPresenceTracker(actorId: 'device-b');
-      final sessionB = _session(
-        transport: endpointB,
-        tracker: trackerB,
-        authenticator: MeshFrameAuthenticator(
-          identityKeys: {'device-a': publicKeyA.bytes},
-        ),
-      );
-      await sessionB.open();
+    test(
+      'unsigned frames are rejected when an authenticator is configured',
+      () async {
+        final hub = _FakeHub();
+        final endpointA = hub.endpoint('device-a');
+        final endpointB = hub.endpoint('device-b');
+        final keyPairA = await PairingService.newIdentityKeyPair();
+        final publicKeyA = await keyPairA.extractPublicKey();
+        final trackerB = MeshPresenceTracker(actorId: 'device-b');
+        final sessionB = _session(
+          transport: endpointB,
+          tracker: trackerB,
+          authenticator: MeshFrameAuthenticator(
+            identityKeys: {'device-a': publicKeyA.bytes},
+          ),
+        );
+        await sessionB.open();
 
-      endpointB._receive(
-        MeshEphemeralFrame(
-          docId: 'doc/1',
-          fromPeerId: 'device-a',
-          event: MeshEphemeralEvent.join,
-          ttl: const Duration(seconds: 30),
-          issuedAtMs: t0.millisecondsSinceEpoch,
-        ),
-      );
-      await _settle();
-      expect(sessionB.rejectedFrameCount, 1);
-      expect(
-        sessionB.rejections.single.reason,
-        MeshFrameRejectionReason.unsigned,
-      );
-      expect(trackerB.presence('doc/1').map((e) => e.peerId), ['device-b']);
+        endpointB._receive(
+          MeshEphemeralFrame(
+            docId: 'doc/1',
+            fromPeerId: 'device-a',
+            event: MeshEphemeralEvent.join,
+            ttl: const Duration(seconds: 30),
+            issuedAtMs: t0.millisecondsSinceEpoch,
+          ),
+        );
+        await _settle();
+        expect(sessionB.rejectedFrameCount, 1);
+        expect(
+          sessionB.rejections.single.reason,
+          MeshFrameRejectionReason.unsigned,
+        );
+        expect(trackerB.presence('doc/1').map((e) => e.peerId), ['device-b']);
 
-      await sessionB.close();
-      endpointA.dispose();
-      endpointB.dispose();
-    });
+        await sessionB.close();
+        endpointA.dispose();
+        endpointB.dispose();
+      },
+    );
   });
 
   group('adaptive cadence (ADR 0031 §5)', () {
-    test('idle cycles run at the max bound, activity pings immediately',
-        () async {
-      final hub = _FakeHub();
-      final endpoint = hub.endpoint('device-a');
-      final tracker = MeshPresenceTracker(actorId: 'device-a');
-      final session = _session(
-        transport: endpoint,
-        tracker: tracker,
-        presenceConfig: const PresenceConfig(
-          minPingInterval: Duration(milliseconds: 10),
-          maxPingInterval: Duration(milliseconds: 60),
-        ),
-      );
+    test(
+      'idle cycles run at the max bound, activity pings immediately',
+      () async {
+        final hub = _FakeHub();
+        final endpoint = hub.endpoint('device-a');
+        final tracker = MeshPresenceTracker(actorId: 'device-a');
+        final session = _session(
+          transport: endpoint,
+          tracker: tracker,
+          presenceConfig: const PresenceConfig(
+            minPingInterval: Duration(milliseconds: 10),
+            maxPingInterval: Duration(milliseconds: 60),
+          ),
+        );
 
-      await session.open();
-      // Idle: the cycle runs at the max bound — 3+ pings within 200ms.
-      await Future<void>.delayed(const Duration(milliseconds: 200));
-      final pingsBefore = endpoint.sent
-          .where((f) => f.event == MeshEphemeralEvent.ping)
-          .length;
-      expect(pingsBefore, greaterThanOrEqualTo(3));
+        await session.open();
+        // Idle: the cycle runs at the max bound — 3+ pings within 200ms.
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+        final pingsBefore = endpoint.sent
+            .where((f) => f.event == MeshEphemeralEvent.ping)
+            .length;
+        expect(pingsBefore, greaterThanOrEqualTo(3));
 
-      // Activity: immediate ping, stamped with the activity-cadence ttl.
-      await session.notifyActivity();
-      expect(endpoint.sent.last.event, MeshEphemeralEvent.ping);
-      expect(
-        endpoint.sent.last.ttl,
-        const Duration(milliseconds: 30),
-        reason: 'ttl = ttlFactor × pingInterval = 3 × 10ms under activity',
-      );
-      // Throttle: an immediate second burst adds nothing (min interval).
-      final afterActivity = endpoint.sent.length;
-      await session.notifyActivity();
-      expect(endpoint.sent.length, afterActivity);
+        // Activity: immediate ping, stamped with the activity-cadence ttl.
+        await session.notifyActivity();
+        expect(endpoint.sent.last.event, MeshEphemeralEvent.ping);
+        expect(
+          endpoint.sent.last.ttl,
+          const Duration(milliseconds: 30),
+          reason: 'ttl = ttlFactor × pingInterval = 3 × 10ms under activity',
+        );
+        // Throttle: an immediate second burst adds nothing (min interval).
+        final afterActivity = endpoint.sent.length;
+        await session.notifyActivity();
+        expect(endpoint.sent.length, afterActivity);
 
-      await session.close();
-      endpoint.dispose();
-    });
+        await session.close();
+        endpoint.dispose();
+      },
+    );
 
     test('every published frame keeps the ttl invariant', () async {
       final hub = _FakeHub();

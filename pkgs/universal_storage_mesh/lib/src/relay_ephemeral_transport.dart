@@ -26,10 +26,9 @@ final class AddressedRelayEphemeralTransport
       if (frame != null) _frames.add(frame);
     });
     _linkSub = client.onConnectionChanged.listen((connected) {
-      _state =
-          connected
-              ? EphemeralLinkState.connected
-              : EphemeralLinkState.disconnected;
+      _state = connected
+          ? EphemeralLinkState.connected
+          : EphemeralLinkState.disconnected;
       if (!_changes.isClosed) _changes.add(_state);
     });
     if (client.isConnected) {

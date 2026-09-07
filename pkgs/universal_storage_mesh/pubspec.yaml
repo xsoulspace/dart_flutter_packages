@@ -19,6 +19,7 @@ dependencies:
   universal_storage_convergence: ^0.1.0-dev.1
   universal_storage_interface: ^0.1.0-dev.12
   universal_storage_mesh_transport: ^0.1.0-dev.1
+  web: ^1.1.0
 
 dev_dependencies:
   lints: ^6.1.0

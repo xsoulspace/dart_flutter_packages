@@ -6,7 +6,7 @@
 ///
 /// Before this tool, repo-scale ETL was an outer-agent script — the harness
 /// loop could not do it. With it, the actor's loop is: `repo_etl` (scan) →
-/// `meaning_zoom` (read, budgeted) → `meaning_impact` (decompose) → edit
+/// the read program (locate/zoom/impact/read) → edit
 /// moves (R7b, the span materializer). No file reads; the tree is the code
 /// interface.
 ///
@@ -66,7 +66,7 @@ ToolDef repoEtlTool(
   // so intents can compose jailed fs capabilities (interpreter tier).
   registerFsCapabilities(world, workspace);
   // Zoom staleness refresher (PLAN §NOW): world data the harness
-  // `meaning_zoom` point cut discovers — every zoom serves post-edit
+  // the program's read cut discovers — every read serves post-edit
   // spans without waiting for a tick.
   registerMeaningNodeRefresher(world, workspace);
   return ToolDef.encode(
@@ -76,7 +76,7 @@ ToolDef repoEtlTool(
         'work through (code symbols + dir/file nodes for EVERY file; md/'
         'yaml/json carry section/keypath anchors). Actions: scan (once '
         'before zooming), status, refresh (mtime tick). Then '
-        'meaning_zoom/meaning_impact — never file reads.',
+        'the meaning_program read ops — never file reads.',
     argsSchema: SchemaBundle(
       root: FM.object('repo_etl', properties: () => [
             FM.prop(
@@ -320,7 +320,7 @@ ToolDef repoEtlTool(
             'capabilities': capabilities,
             'vcs': vcs,
             'note': 'tree is world state (code graph + fs tier) — use '
-                'meaning_zoom / meaning_impact to read it; it is '
+                'the meaning_program read ops to read it; it is '
                 're-derivable and never snapshotted',
           };
       }

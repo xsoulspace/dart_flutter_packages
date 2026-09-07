@@ -19,6 +19,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:test/test.dart';
+import 'package:xsoulspace_agentic_harness/src/meaning/meaning_read_program.dart'
+    show meaningProgramTool;
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 import 'package:xsoulspace_agentic_workspace/xsoulspace_agentic_workspace.dart'
     show editSymbolTool, repoEtlTool;
@@ -86,7 +88,8 @@ void main() {
         prompt: [
           AcpTextBlock(
             '[scan] '
-            'harness_zoom {"query": "notes", "zoom": "local", "budget": 512} '
+            'harness_meaning_program {"ops":[{"op":"locate","query":'
+            '"notes"},{"op":"zoom"}]} '
             'harness_fs_write {"path": "notes.md", "content": "# Notes\\n\\n'
             'fs-tier write landed through the review gate\\n"}',
           ),
@@ -154,8 +157,7 @@ void main() {
     addTearDown(() => jail.deleteSync(recursive: true));
     final registry = ToolRegistry();
     registry.register(repoEtlTool(world, jail));
-    registry.register(meaningZoomTool(world));
-    registry.register(meaningImpactTool(world));
+    registry.register(meaningProgramTool(world));
     registry.register(editSymbolTool(world, jail));
     final names = registry.tools.keys.map((t) => t.value).toSet();
     for (final banned in ['read', 'write', 'glob', 'grep', 'write_review']) {
@@ -163,10 +165,20 @@ void main() {
           reason: 'generic fs tools never return to the meaning profile '
               '(ADR 0023/0024) — and the escape hatch needs an approver');
     }
-    // The zoom vocabulary stays CLOSED (ADR 0018) — span cuts ride point
-    // zoom; the schema must not have grown a raw-text level.
-    final zoomSchema =
-        registry.get(const ToolName('meaning_zoom'))!.argsSchema.toJson();
-    expect(jsonEncode(zoomSchema), contains('"point","local","region","summary"'));
+    // ADR 0030 §3 + ADR 0034 — the read program REPLACED the read verbs,
+    // and the ONE edit verb carries the class-routed action union.
+    expect(names.contains('meaning_zoom'), isFalse);
+    expect(names.contains('meaning_impact'), isFalse);
+    expect(names.contains('meaning_locate'), isFalse);
+    expect(names.contains('edit_section'), isFalse);
+    expect(names.contains('edit_key'), isFalse);
+    // The program's op set stays CLOSED (ADR 0030 §1) — the schema
+    // exposes only the closed op envelope (the set itself is enforced by
+    // the interpreter's named bounce, gated in the harness suite).
+    final programSchema =
+        registry.get(const ToolName('meaning_program'))!.argsSchema.toJson();
+    expect(jsonEncode(programSchema), contains('"name":"focusId"'),
+        reason: 'the cursor law is the schema: locate sets the cursor, '
+            'later ops consume it');
   });
 }

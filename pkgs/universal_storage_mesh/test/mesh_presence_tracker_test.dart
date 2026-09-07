@@ -78,36 +78,30 @@ void main() {
       final op = frame.payload['op']! as Map<dynamic, dynamic>;
       final payload = op['payload']! as Map<dynamic, dynamic>;
       final value = payload['v']! as Map<dynamic, dynamic>;
-      expect(
-        value.keys.toSet(),
-        {'peer', 'event', 'ttl_ms', 'details'},
-        reason: 'only tracker-reserved keys live beside the details map',
-      );
+      expect(value.keys.toSet(), {
+        'peer',
+        'event',
+        'ttl_ms',
+        'details',
+      }, reason: 'only tracker-reserved keys live beside the details map');
       expect(value['peer'], 'device-a');
       expect(value['event'], 'join');
       expect(value['ttl_ms'], 30000);
-      expect(value['details'], {
-        'display': 'Alice',
-        'agent': 'writer-v2',
-      });
+      expect(value['details'], {'display': 'Alice', 'agent': 'writer-v2'});
     });
 
     test('consumer payloads never collide with reserved keys', () {
       final a = MeshPresenceTracker(actorId: 'device-a')
         ..announce(
           docId: 'd',
-        event: MeshEphemeralEvent.join,
-        now: t0,
-        details: {'peer': 'spoof', 'event': 'spoof', 'ttl_ms': 0},
-      );
+          event: MeshEphemeralEvent.join,
+          now: t0,
+          details: {'peer': 'spoof', 'event': 'spoof', 'ttl_ms': 0},
+        );
       final entry = a.presence('d').single;
       expect(entry.peerId, 'device-a');
       expect(entry.lastEvent, MeshEphemeralEvent.join);
-      expect(entry.details, {
-        'peer': 'spoof',
-        'event': 'spoof',
-        'ttl_ms': 0,
-      });
+      expect(entry.details, {'peer': 'spoof', 'event': 'spoof', 'ttl_ms': 0});
     });
   });
 
@@ -288,12 +282,11 @@ void main() {
       await replicaA.sync();
 
       for (final dir in [dirA, dirB]) {
-        final docFiles =
-            Directory('${dir.path}/docs')
-                .listSync()
-                .whereType<File>()
-                .where((f) => f.path.endsWith('.json'))
-                .toList();
+        final docFiles = Directory('${dir.path}/docs')
+            .listSync()
+            .whereType<File>()
+            .where((f) => f.path.endsWith('.json'))
+            .toList();
         expect(docFiles, isNotEmpty);
         for (final file in docFiles) {
           final raw =
@@ -310,7 +303,8 @@ void main() {
           expect(
             ephemeralLog,
             isEmpty,
-            reason: 'no ephemeral ops may persist in the replica store '
+            reason:
+                'no ephemeral ops may persist in the replica store '
                 '(${file.path})',
           );
         }
