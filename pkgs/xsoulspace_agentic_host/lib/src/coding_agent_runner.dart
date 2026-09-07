@@ -108,14 +108,12 @@ const meaningProfileSystemPrompt =
     'Edit code through the meaning tree — no file reads, no code '
     'tokens. ONE tool call per decision: after the result, end the '
     'turn; next decision gets a fresh cut. Flow: 1) repo_etl scan '
-    '(once). 2) READ in ONE call: meaning_program {"ops":['
-    '{"op":"locate","query":"<keywords>"},{"op":"zoom"},'
-    '{"op":"read"}]} — locate sets the cursor; later ops consume '
-    'cursor.first (focusId overrides); read serves the span through '
-    'the node\'s own class. 3) ACT: edit_symbol (symbolId from a '
-    'cut) for code; write_review only for non-code (human consents; '
-    'never Dart). Bounces name valid ids. Moves verify and '
-    'auto-revert. Finish when green.';
+    '(once). 2) READ in ONE call: meaning_program — ops: locate(query) '
+    'sets the cursor; zoom/impact/read consume it (focusId overrides); '
+    'read serves the span through the node\'s own class. 3) ACT: '
+    'edit_symbol (symbolId from a cut) for code; write_review only for '
+    'non-code (human consents; never Dart). Bounces name valid ids. '
+    'Moves verify and auto-revert. Finish when green.';
 
 /// One coding task as data: prompt + fixtures + final-gate checkers + which
 /// mechanical verifier is wired inside the loop.

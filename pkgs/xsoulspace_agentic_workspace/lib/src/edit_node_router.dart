@@ -96,6 +96,17 @@ Future<Map<String, dynamic>> routeNodeEdit({
   required String symbolId,
   required String action,
   String? body,
+
+  /// CREATION anchor (ADR 0034 — parent-addressed creation): the literal
+  /// anchor in the class's DECLARED currency (a keypath for yaml/json —
+  /// the registry's `anchors` field), scoped to the file of [symbolId].
+  /// For `set_key` on a key that has NO node yet, [symbolId] scopes the
+  /// file (any node of it — parent key node, file node, a sibling) and
+  /// [anchor] is the full new keypath (its parent keypath must resolve).
+  /// The keypath is the anchor vocabulary, never a format leak — and
+  /// never a file path. Absent → [symbolId] itself is the anchor (the
+  /// node-id form).
+  String? anchor,
   FileLockTable? locks,
   Object owner = 'edit_node_router',
 }) async {
@@ -104,7 +115,12 @@ Future<Map<String, dynamic>> routeNodeEdit({
     throw NodeEditBounce(
       'unknown node id: $symbolId',
       'locate/zoom to find the node, then re-send with a valid symbolId '
-          '(ids look like sym_lib_main.dart_main, sec_…, key_…)',
+          '(ids look like sym_lib_main.dart_main, sec_…, key_…). '
+          'CREATING a key/section that has no node yet? symbolId must be '
+          'an EXISTING node of the target file (it scopes the file); '
+          'set_key takes anchor = the full new keypath (its parent '
+          'keypath must resolve), insert_section takes a body starting '
+          'with the new heading.',
     );
   }
   final fileClass = node.fileClass;
@@ -139,11 +155,13 @@ Future<Map<String, dynamic>> routeNodeEdit({
     'key' => KeypathMaterializer(root: fsRoot, locks: locks, owner: owner)
         // The anchor is the node's KEYPATH (the semantic-diff oracle's
         // change-at accounting names changes by keypath — the node id is
-        // only the model's handle; the props carry the truth).
+        // only the model's handle; the props carry the truth) — or the
+        // literal CREATION keypath when the op creates a key that has no
+        // node yet (ADR 0034 — parent-addressed creation).
         .perform(
           path: path,
           op: action,
-          anchor: '${node.props['keypath'] ?? symbolId}',
+          anchor: anchor ?? '${node.props['keypath'] ?? symbolId}',
           body: body,
         )
         .toJson(),

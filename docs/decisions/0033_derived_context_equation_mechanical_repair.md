@@ -1,6 +1,11 @@
 # ADR 0033 — The derived context equation: one truth, mechanical repair, decision ends after the move
 
-- Status: Accepted (2026-09-07)
+- Status: Accepted (2026-09-07); amended same day — §1's window/reserve/
+  factor/margin/floor are CONFIGURABLE per backend (`DerivedContextLimits`,
+  ADR 0008 keys `derived_context_*`, per-backend scoping `<key>_<backend>`;
+  AFM ships the measured defaults) — a different inference (e.g. an
+  OpenRouter model) sets its own window and the SAME equation derives that
+  tier's cut budget.
 - North Star impact: `amends` (0028 §3's re-admission policy narrows from
   "relevance-ranked beats" to a bounded last-result set; the amendment is
   recorded HERE, before code) + `clarifies` (applies the context-ownership

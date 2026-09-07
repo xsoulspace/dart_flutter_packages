@@ -99,3 +99,21 @@ Rows 2–4 re-run AFTER ADR 0030 graduation (program replaces
 locate/zoom/impact schemas — the profile must SHRINK below the derived
 floor). Until then the only expected-viable rows are one-decision
 (ready-move) rows.
+
+---
+
+## STATUS (2026-09-07, post ADR 0033/0034 — pre re-run)
+
+- Graduation LANDED and gate-proven: program replaced locate/zoom/impact;
+  the ONE edit verb absorbed edit_section/edit_key (creation included);
+  the one-truth surface measures **1,424 chars/4 → cutBudget 628,
+  fits=true** (was 2,268 → 36 at the 2026-09-06 run).
+- The on-device smoke (task_grammar, attempts 1) PROVED `end_after_tool`
+  (generations end on the first tool result, `ended_by:one_move`) and
+  found+fixed a FATAL bridge double-resume; dylib rebuilt, bridge suite
+  17/17.
+- The full re-run (all four rows) is PENDING — the 2026-09-07 attempt was
+  SIGKILLed by concurrent-build contention on this machine. Run on a
+  quiet machine: `dart run bin/afm_wave_gate.dart` (expect: derivation
+  row per run; `decision_dropped` never `backend_failed` retry loops;
+  no `tool_round entries` growth past one round).

@@ -704,3 +704,37 @@ ready move now LEADS the goal frame imperatively (23,987-token FAIL →
 2,864-token PASS); `repo_etl scan` is an idempotent ensure (never an error
 bounce on a built tree); `edit_section`/`edit_key` registered on the daemon
 profile. Full rows: `benchmark/runs/afm_wave_results.md`.
+
+## 2026-09-07 — the derived-context wave (ADR 0033/0034)
+
+The retrospective on the first AFM wave run corrected the failure
+attribution (per-decision arithmetic, not cross-decision accumulation; the
+one-move contract held) and closed the seams as MECHANISMS:
+
+- **Derived context equation** (ADR 0033 §1): `window(native, measured) −
+  native-truth overhead − output reserve − margin`, min-cut floor 600;
+  configurable per backend via `derived_context_*` EnvConfig keys
+  (per-backend scoping). The runner derives the cut budget from the LIVE
+  registry — the four-constant era is over.
+- **One-truth overhead gate** (§2): `buildMeaningProfileSurface` is the
+  single builder for the runner AND the gate (the gate previously metered
+  6 of the runner's 9 verbs). Measured graduated row: **1,424 chars/4 →
+  cutBudget 628, fits=true** — the 4k AFM tier funds a cut for the first
+  time.
+- **Mechanical repair ladder** (§3): failure codes threaded from the
+  router; window-class failures DROP the decision with a named
+  `decision_dropped` beat — the ~20× futile same-cut retry loops are dead.
+- **Mechanical one-move end** (§4): `end_after_tool` — the Swift bridge
+  finishes the generation on the FIRST tool result. The first on-device
+  smoke PROVED it and found a FATAL pre-existing double-resume
+  (`postToolCall` + `call()` both resuming); fixed, gated 17/17, dylib
+  rebuilt.
+- **ADR 0034 — ONE edit verb**: `edit_symbol` absorbed edit_section/
+  edit_key (class-routed action union, `MaterializerSpec.verb` →
+  `actions`); parent-addressed creation restored (and a pre-existing
+  set_key-CREATE oracle bug fixed — `plan.target` carried the parent,
+  mis-routing the envelope); the daemon read world converged to
+  `harness_meaning_program`. Measured: the profile shrank 2,268 → 1,424
+  WITH creation support.
+- The on-device wave re-run (P0 in [PLAN.md](PLAN.md)) is the graduation
+  measurement — blocked 2026-09-07 only by concurrent-build contention.

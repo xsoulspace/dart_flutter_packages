@@ -117,10 +117,8 @@ ToolDef meaningProgramTool(
         'Run a READ program over the meaning tree in ONE call: '
         'ops = [locate, zoom, impact, read]. locate SETS the cursor (its '
         'hit ids); zoom/impact/read consume cursor.first unless focusId '
-        'overrides. You never name a file language — a node reads as '
-        'code, md section or yaml key through its OWN class. Fail-fast: '
-        'an invalid op halts with a named bounce. Per-op results and '
-        'the verdict are budget-clipped honestly.',
+        'overrides. Invalid ops halt with a named bounce; results and '
+        'the verdict are budget-clipped.',
     argsSchema: SchemaBundle(
       root: FM.object(
         'meaning_program',

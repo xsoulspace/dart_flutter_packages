@@ -41,6 +41,8 @@ Run the tool.
 const cfgOriginal = '''
 name: demo
 max_attempts: 3
+server:
+  port: 8080
 ''';
 
 Future<Directory> _jail() async {
@@ -168,6 +170,42 @@ void main() {
       reason: 'a key node answers key actions, never dart actions — the '
           'bounce teaches the class vocabulary',
     );
+  });
+
+
+  test('CREATION: set_key with a literal keypath anchor creates a key '
+      'that has no node — symbolId scopes the file', () async {
+    final parentNode = _nodeId(world, 'key', 'server');
+    final out = _decoded(
+      await edit.execute({
+        'action': 'set_key',
+        'symbolId': parentNode,
+        'anchor': 'server.feature_flags',
+        'body': 'true',
+      }),
+    );
+    expect(out['ok'], isTrue, reason: '$out');
+    final text = File('${jail.path}/$cfgRel').readAsStringSync();
+    expect(text, contains('feature_flags: true'));
+    expect(text, contains('port: 8080'), reason: 'siblings untouched');
+  });
+
+  test('CREATION: insert_section through the router adds a new section '
+      'after the anchor node (body carries the new heading)', () async {
+    final symbolId = _nodeId(world, 'section', 'Usage');
+    final out = _decoded(
+      await edit.execute({
+        'action': 'insert_section',
+        'symbolId': symbolId,
+        'body': '## Configuration\n\nFlags live here.',
+      }),
+    );
+    expect(out['ok'], isTrue, reason: '\$out');
+    final text = File('${jail.path}/$docRel').readAsStringSync();
+    expect(text, contains('## Configuration'));
+    expect(text, contains('Flags live here.'));
+    expect(text.indexOf('## Usage'), lessThan(text.indexOf('## Configuration')),
+        reason: 'inserted AFTER the anchor');
   });
 
   test('an unknown node id bounces with the locate/zoom repair hint',

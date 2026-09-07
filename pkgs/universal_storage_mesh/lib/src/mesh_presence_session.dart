@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:meta/meta.dart';
 import 'package:universal_storage_mesh_transport/universal_storage_mesh_transport.dart';
@@ -205,7 +206,37 @@ final class MeshPresenceSession {
     );
     final localSigner = signer;
     if (localSigner != null) {
-      frame = frame.withSignature(await localSigner.sign(frame));
+      var outgoing = frame;
+      // Identity-key ride-along (v1 relay-owned TOFU): signers that
+      // publish their public identity key let UNKNOWN receivers bind
+      // `peerId → key` on first contact — the asymmetric-pairing fix.
+      // Receivers with the key pinned verify against the PIN and ignore
+      // the ride-along. The key rides in the (opaque) payload, so the
+      // signature below commits to it: the signed frame is the one sent.
+      // Pattern match (not `is` promotion): the publisher seam is
+      // unrelated to [EphemeralFrameSigner], so no intersection
+      // narrowing applies — the case pattern binds the capability.
+      final publisher = switch (localSigner) {
+        final EphemeralFrameIdentityPublisher p => p,
+        _ => null,
+      };
+      if (publisher != null) {
+        final identityKey = await publisher.identityKeyForPayload();
+        if (identityKey != null && identityKey.isNotEmpty) {
+          outgoing = MeshEphemeralFrame(
+            docId: outgoing.docId,
+            fromPeerId: outgoing.fromPeerId,
+            event: outgoing.event,
+            ttl: outgoing.ttl,
+            payload: {
+              ...outgoing.payload,
+              kIdentityKeyPayloadKey: base64Encode(identityKey),
+            },
+            issuedAtMs: outgoing.issuedAtMs,
+          );
+        }
+      }
+      frame = outgoing.withSignature(await localSigner.sign(outgoing));
     }
     await transport.send(frame);
   }
@@ -239,7 +270,12 @@ final class MeshPresenceSession {
 
   void _onFrame(final MeshEphemeralFrame frame) {
     // Serialize processing so verification + fold order matches arrival.
-    _inbound = _inbound.then((_) => _processFrame(frame));
+    // One bad frame (a throwing authenticator, say) must never kill the
+    // pipeline: the chain swallows the error and stays usable — that
+    // frame is simply not folded, the next one is still processed.
+    _inbound = _inbound
+        .then((_) => _processFrame(frame))
+        .catchError((final Object _) {});
   }
 
   Future<void> _processFrame(final MeshEphemeralFrame frame) async {

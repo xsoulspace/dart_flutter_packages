@@ -1894,13 +1894,14 @@ ToolDef editSymbolTool(
         'append_to_section {symbolId, body: prose-as-data}. Config keys '
         '(key_…, yaml/json): set_key | replace_value | delete_key | '
         'append_list_item {symbolId, body: scalar/fragment-as-data}. '
+        'Creation ops take anchor (the new keypath / the new heading in '
+        'the body) with symbolId scoping the file. '
         'ARG SHAPE: symbolId is a REQUIRED TOP-LEVEL arg (the id from a '
         'meaning_program cut) — never inside executableParams, never as '
         'name. opChain rows: {label, a?, b?} over the closed pure '
         'vocabulary (load_arg, literal, add, sub, mul, lt, gt, eq, not, '
         'starts_with, list_len, get_item, call, jump_if_false, return). '
-        'Every move is verified by its class oracle and AUTO-REVERTED on '
-        'failure — a failed move costs an attempt.',
+        'A failed move costs an attempt.',
     argsSchema: SchemaBundle(
       root: FM.object(
         'edit_symbol',
@@ -1924,6 +1925,12 @@ ToolDef editSymbolTool(
             ]),
           ),
           FM.prop('symbolId', FM.string()),
+          // ADR 0034 — the unified edit payload: prose/scalar body as data
+          // (sections and keys); the CREATION anchor (a literal keypath in
+          // the class's declared currency, scoped to symbolId's file) for
+          // set_key on a key that has no node yet.
+          FM.prop('body', FM.string(), optional: true),
+          FM.prop('anchor', FM.string(), optional: true),
           // REQUIRED (R7e finding: the on-device model reliably emits the
           // REQUIRED props and drops optional ones — action always landed,
           // symbolId never did). ONE required id: the symbol this move
@@ -2077,6 +2084,7 @@ ToolDef editSymbolTool(
               symbolId: id,
               action: action,
               body: map['body'] as String?,
+              anchor: map['anchor'] as String?,
               locks: mat.locks,
               owner: owner,
             );

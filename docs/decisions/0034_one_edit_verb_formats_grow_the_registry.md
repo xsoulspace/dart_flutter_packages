@@ -83,6 +83,45 @@ reader. The write side did not:
    per-class action names are vocabulary, not format knowledge — the
    addressed node teaches them.
 
+## Named-not-built — DISPOSITIONS (2026-09-07)
+
+Each named item carries a disposition, not an open question:
+
+1. **Parent-addressed creation — LANDED (this iteration).** The
+   unification had silently REGRESSED creation: the pre-unification
+   verbs accepted literal anchors (`set_key` on a not-yet-existing
+   keypath; `insert_section` with a heading-bearing body) — the node-id
+   router v1 could only edit EXISTING nodes. Restored within the one
+   verb: `set_key {symbolId: <any node of the file>, anchor:
+   <full new keypath>, body: <value>}` — the keypath is the class's
+   DECLARED anchor currency, never a file path; md `insert_section`
+   creation already worked on node anchors. Fixing it surfaced a
+   PRE-EXISTING oracle bug: the set_key CREATE branch filled
+   `plan.target` with the PARENT entry, mis-routing the envelope to the
+   update case (`changed` instead of `added`) — never caught because no
+   test exercised creation. `target: null` semantics restored; creation
+   gated LLM-free (`edit_node_unified_test.dart`). The creation slots
+   (`body`, `anchor`) + their teaching cost ~64 chars/4, absorbed by
+   deduplicating description prose against the system prompt and the
+   bounces: the row holds at **1,424 → cutBudget 625, fits=true** (the
+   creation teaching lives in the UNKNOWN-ID bounce — mechanical repair
+   teaching beats schema prose, which is paid per decision forever).
+2. **`edit_symbol` → `edit_node` rename — DEFERRED, trigger = the
+   on-device wave re-run.** The rename is string-mechanical (87
+   references) and token-neutral; it lands in the SAME batch as any fix
+   the wave run forces, so the surface is churned once, after the
+   measurement — and not before (the parallel unification work in this
+   area makes mid-flight renames a conflict hazard).
+3. **Mutation ops joining `meaning_program` — DEFERRED, trigger = a
+   measured row where read/edit alternation dominates tokens/decision.**
+   It is NOT a wiring task: a program carrying mutations needs (a)
+   TRANSACTIONAL semantics — staged splices, oracles over the staged
+   result, one revert on any op failure (all-or-nothing, never named
+   partial application); (b) CONSENT scoping — per-op consent inherited
+   from the host gateway vs one consent for the program; (c) the
+   one-move interpretation — a program IS the move (ADR 0027: the
+   decision is the batch); a 3-op program is one decision's move, not
+   three. These constraints are the design; the row pulls the build.
 ## Consequences
 
 - **Measured (2026-09-07, one truth, LLM-free gate)**: the unified edit
@@ -98,10 +137,5 @@ reader. The write side did not:
   everywhere, or the tiny model learns two.
 - The md/key ToolDefs remain in the workspace package for LLM-free
   materializer tests — they are no longer model-facing verbs.
-- Named, not built: the `edit_node` rename; mutation ops joining
-  `meaning_program` (0030 §4 — unchanged, needs a verified on-device
-  row); parent-addressed creation of keys/sections where no node yet
-  exists (the router v1 edits EXISTING nodes; creation follows the
-  materializers' existing anchor semantics and gets its own row).
 - The on-device wave re-run (P4 flag + rows) lands on THIS surface: the
   graduation measurement and the unified-edit row are the same run.

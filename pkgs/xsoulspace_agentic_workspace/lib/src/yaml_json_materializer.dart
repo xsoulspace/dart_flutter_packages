@@ -1156,7 +1156,11 @@ class KeypathMaterializer {
       isJson: isJson,
       anchorKeypath: anchor,
       body: body,
-      target: parent,
+      // CREATION: target is null — the envelope oracle keys on this to
+      // expect `added` (not `changed`) at the anchor. (It previously
+      // carried the PARENT entry, which mis-routed the envelope to the
+      // update case — never caught because no test exercised creation.)
+      target: null,
       content: spliced,
       keepStart: keepStart,
       keepEnd: keepEnd,
