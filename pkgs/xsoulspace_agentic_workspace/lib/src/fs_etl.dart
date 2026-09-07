@@ -26,8 +26,8 @@ import 'package:xsoulspace_agentic_harness/src/tools/meaning_query_tools.dart'
     show MeaningNodeRefresh, MeaningSpanReader;
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
 
-import 'file_class_spec.dart' show fileClassOf, materializerSpecFor;
-import 'md_materializer.dart' show parseMdSections;
+import 'file_class_spec.dart' show MapParser, MappedSubNode, fileClassOf;
+import 'materializer_binding.dart' show materializerRegistry;
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart'
     show FM, SchemaBundle, ToolDef, ToolName;
 
@@ -174,18 +174,20 @@ String _parentOf(String rel) {
     added++;
   }
   for (final f in fs.files) {
-    // Edit-side registration (ADR 0024 §2): a class with a materializer
-    // spec carries its verb as a prop — the tick itself surfaces what a
-    // class can do (md → edit_section today; review-gate classes: none).
-    final spec = materializerSpecFor(f.fileClass);
+    // Edit-side registration (ADR 0035 §1): a class with a binding
+    // carries its legal actions as a prop — the tick itself surfaces
+    // what a class can do (review-gate classes: none).
+    final binding = materializerRegistry.bindingFor(f.fileClass);
+    final hasMap = binding?.mapParser != null;
     final props = <String, dynamic>{
       'path': f.rel,
       'class': f.fileClass,
       'ext': f.ext,
       'bytes': f.bytes,
       'mtime': f.modified.toIso8601String(),
-      if (_mapClasses.contains(f.fileClass)) 'has_map': true,
-      if (spec != null) 'edit_actions': spec.actions.join(','),
+      if (hasMap) 'has_map': true,
+      if (binding != null && binding.actions.isNotEmpty)
+        'edit_actions': binding.actions.join(','),
     };
     if (hasMeaningNode(world, f.nodeId)) {
       // Existing node (dart file from the code ETL): refresh fs props only
@@ -225,17 +227,15 @@ String _parentOf(String rel) {
   return (dirs: fs.dirs.length, files: fs.files.length, added: added);
 }
 
-/// The file classes with a mechanical map format today (ADR 0024 §2).
-const _mapClasses = <String>{'md', 'yaml', 'json'};
-
-/// Sub-node id prefixes per file node — the map is OWNED by its file node.
-const _mapPrefixes = <String>['sec_', 'key_'];
-
-/// Drops every map sub-node of one file (stale on change, gone on delete).
+/// Drops every map sub-node of one file (stale on change, gone on
+/// delete). The prefixes come from the REGISTRY (ADR 0035 §2 — the
+/// sub-node id prefix is binding-declared stale-map drop ownership; no
+/// hardcoded prefix list).
 void _dropMapNodes(World world, String fileNodeId) {
+  final prefixes = materializerRegistry.mapSubNodePrefixes;
   final stale = [
     for (final id in world.getResource<MeaningIndex>().byId.keys)
-      if (_mapPrefixes.any((p) => id.startsWith(p)) && id.contains(fileNodeId)) id,
+      if (prefixes.any((p) => id.startsWith(p)) && id.contains(fileNodeId)) id,
   ];
   for (final id in stale) {
     dropMeaningNode(world, id);
@@ -243,23 +243,66 @@ void _dropMapNodes(World world, String fileNodeId) {
 }
 
 /// Builds one mapped file's sub-nodes (mechanical, zero model tokens).
+/// The binding supplies the PARSER (structure) — the engine owns the
+/// budget caps, the ids and the green-screen facts (ADR 0035 §2).
 void _buildMapHalf(World world, Directory workspace, FsFileScan f) {
-  if (!_mapClasses.contains(f.fileClass)) return;
+  final binding = materializerRegistry.bindingFor(f.fileClass);
+  final MapParser? parser = binding?.mapParser;
+  final String? prefix = binding?.subNodePrefix;
+  if (parser == null || prefix == null) return; // mapless class (§2)
   if (f.bytes > maxMapFileBytes) {
     // Honest green-screen fact — the map omits this file, named.
     setMeaningProp(world, id: f.nodeId, key: 'map_skipped', value: 'too_large');
     return;
   }
   final content = File('${workspace.path}/${f.rel}').readAsStringSync();
-  final built = switch (f.fileClass) {
-    'md' => _indexMdSections(world, f, content),
-    'yaml' || 'json' => _indexKeypaths(world, f, content, isJson: f.fileClass == 'json'),
-    _ => 0,
-  };
-  if (built >= maxMapNodesPerFile) {
-    setMeaningProp(world, id: f.nodeId, key: 'map_truncated', value: built);
+  final entries = parser(content);
+  final built = _stampMapNodes(
+    world,
+    file: f,
+    prefix: prefix,
+    entries: entries,
+  );
+  if (entries.length >= maxMapNodesPerFile) {
+    setMeaningProp(
+      world,
+      id: f.nodeId,
+      key: 'map_truncated',
+      value: entries.length,
+    );
   }
   setMeaningProp(world, id: f.nodeId, key: 'map_nodes', value: built);
+}
+
+/// Stamps the parsed sub-node DATA into the tree: ids
+/// `<prefix><fileNodeId>_<idTail>` (prefix binding-declared), path/class
+/// props engine-stamped, `contains` edges over the ONE relation.
+int _stampMapNodes(
+  World world, {
+  required FsFileScan file,
+  required String prefix,
+  required List<MappedSubNode> entries,
+}) {
+  var built = 0;
+  for (final e in entries) {
+    if (built >= maxMapNodesPerFile) break;
+    final id = '$prefix${file.nodeId}_${e.idTail}';
+    if (hasMeaningNode(world, id)) continue; // idempotent re-tick
+    addMeaningNode(
+      world,
+      kind: e.kind,
+      label: e.label,
+      id: id,
+      props: {
+        'path': file.rel,
+        'class': file.fileClass,
+        ...e.props,
+      },
+    );
+    _ensureContainsEdge(world, file.nodeId, id);
+    built++;
+  }
+  return built;
 }
 
 /// Map caps (green-screen facts when hit — never a silent omission).
@@ -546,114 +589,16 @@ MeaningSpanReader meaningSpanReader(FsToolsRoot root) => (props, budgetTokens) {
       }
     };
 
-/// --- The MAP HALF (ADR 0024 §2, map-before-emitter) -----------------------
+/// --- The MAP HALF (ADR 0024 §2, map-before-emitter; ADR 0035 §2) ---------
 ///
-/// Mechanical, zero-model-token indexers: md → heading sections (fences
-/// inert per ADR 0019), yaml/json → keypath trees. Each sub-node declares
-/// its source span — the anchor the model zooms, reads (budgeted span cut)
-/// and later edits (the materializer's emitter splices by these offsets).
-
-/// Indexes an md file's ATX headings (outside code fences) as `section`
-/// nodes, via the md materializer's ONE heading parser (`parseMdSections`
-/// — the SAME parser the edit emitter resolves anchors with, so the zoom
-/// anchors and the splice anchors agree byte-precise; ADR 0024 §2). A
-/// section spans from its heading to the next heading (any level) or EOF.
-/// Setext headings are honestly skipped (v1 map limitation).
-int _indexMdSections(World world, FsFileScan f, String content) {
-  final sections = parseMdSections(content);
-  var built = 0;
-  for (final s in sections) {
-    if (built >= maxMapNodesPerFile) break;
-    final id = 'sec_${f.nodeId}_${s.ordinal}';
-    addMeaningNode(
-      world,
-      kind: 'section',
-      label: s.title.length > 80 ? s.title.substring(0, 80) : s.title,
-      id: id,
-      props: {
-        'path': f.rel,
-        'class': 'md',
-        'level': s.level,
-        'ordinal': s.ordinal,
-        'span_start': s.start,
-        'span_end': s.end,
-        'line': s.line,
-      },
-    );
-    _ensureContainsEdge(world, f.nodeId, id);
-    built++;
-  }
-  return built;
-}
-
-/// Indexes a yaml/json file's keys as `keypath` nodes (indentation-based;
-/// comments are lines of the file — the map records spans, it never
-/// re-serializes). A key's span covers its whole block (key line through
-/// the last line of its nested content) — the anchor the materializer's
-/// offset-splice emitter will edit by (PLAN item 5).
-int _indexKeypaths(World world, FsFileScan f, String content, {required bool isJson}) {
-  final lines = content.split('\n');
-  final keyRe = isJson
-      ? RegExp(r'^([ ]*)"([^"]+)"\s*:')
-      : RegExp(r'^([ ]*)([A-Za-z_][\w.\- ]*)\s*:');
-  final offsetOf = <int>[];
-  var off = 0;
-  for (final line in lines) {
-    offsetOf.add(off);
-    off += line.length + 1;
-  }
-  // Pass 1: key lines with (indent, key, lineIdx).
-  final keys = <(int, String, int)>[];
-  for (var i = 0; i < lines.length; i++) {
-    final line = lines[i];
-    if (line.trim().isEmpty || line.trim().startsWith('#')) continue;
-    final m = keyRe.firstMatch(line);
-    if (m == null) continue;
-    keys.add((m.group(1)!.length, isJson ? m.group(2)! : m.group(2)!.trim(), i));
-  }
-  // Pass 2: spans (to the next key with indent <= this one) + nodes.
-  var built = 0;
-  final stack = <(int, String)>[]; // (indent, keypath) frames
-  for (var i = 0; i < keys.length && built < maxMapNodesPerFile; i++) {
-    final (indent, key, lineIdx) = keys[i];
-    while (stack.isNotEmpty && stack.last.$1 >= indent) {
-      stack.removeLast();
-    }
-    final keypath = [
-      for (final (_, k) in stack) k,
-      key,
-    ].join('.');
-    stack.add((indent, key));
-    var endLine = lines.length - 1;
-    for (var j = i + 1; j < keys.length; j++) {
-      if (keys[j].$1 <= indent) {
-        endLine = keys[j].$3 - 1;
-        break;
-      }
-    }
-    final slug = keypath.replaceAll(RegExp(r'[^\w]'), '_');
-    final id = 'key_${f.nodeId}_$slug';
-    if (hasMeaningNode(world, id)) continue;
-    addMeaningNode(
-      world,
-      kind: 'key',
-      label: keypath,
-      id: id,
-      props: {
-        'path': f.rel,
-        'class': f.fileClass,
-        'keypath': keypath,
-        'indent': indent,
-        'span_start': offsetOf[lineIdx],
-        'span_end': offsetOf[endLine] + lines[endLine].length,
-        'line': lineIdx + 1,
-      },
-    );
-    _ensureContainsEdge(world, f.nodeId, id);
-    built++;
-  }
-  return built;
-}
+/// The indexers LIVE IN THE BINDINGS now: each mapped class's map parser
+/// (md → heading sections, fences inert per ADR 0019; yaml/json →
+/// keypath trees) is registered on its binding (materializer_binding.dart)
+/// and realized beside the emitter it must agree with (md_materializer.dart
+/// / yaml_json_materializer.dart — ONE parser per class serves the zoom
+/// anchors and the splice anchors, byte-precise). The ENGINE half stays
+/// here: the budget caps, the id stamping, the `contains` edges and the
+/// green-screen facts — zero model tokens, unchanged.
 
 /// The zoom staleness refresher (PLAN §NOW): ONE file node re-derived from
 /// disk when the harness `meaning_zoom` point cut hits a node whose file

@@ -125,12 +125,13 @@ void main() {
     }
   });
 
-  test('the md spec is registered DATA; the tick maps md sections and '
+  test('the md binding is registered DATA; the tick maps md sections and '
       'stamps the edit verb on the file node', () async {
-    // The spec — data, not code (ADR 0024 §2).
-    final spec = materializerSpecs['md'];
+    // The binding — data + the realizations (ADR 0035 §1), not code in a
+    // switch.
+    final spec = materializerBindings['md'];
     expect(spec, isNotNull, reason: 'md is the FIRST registered non-dart '
-        'materializer spec');
+        'materializer binding');
     expect(spec!.fileClass, 'md');
     expect(spec.spanCurrency, 'section');
     expect(spec.mapFormat, 'heading_tree');

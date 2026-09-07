@@ -24,6 +24,7 @@ class ScriptedTurn {
     this.structuredOutput,
     this.deltas,
     this.mode = ScriptedTurnMode.respond,
+    this.errorMessage = 'scripted backend error',
   });
 
   /// Plain text response.
@@ -40,6 +41,11 @@ class ScriptedTurn {
 
   /// Fault mode — see [ScriptedTurnMode].
   final ScriptedTurnMode mode;
+
+  /// The error string carried by [ScriptedTurnMode.error] turns. Defaults
+  /// to the generic backend error; set it to a NAMED failure code (e.g.
+  /// `tool_args_invalid: …`) to exercise the repair-ladder classification.
+  final String errorMessage;
 }
 
 /// Fault modes for a [ScriptedTurn].
@@ -129,7 +135,7 @@ class ScriptedGenerationHandler implements GenerationHandler {
           actorEntity: request.actorEntity,
           structuredOutput: const {},
           rawOutput: '',
-          error: 'scripted backend error',
+          error: turn.errorMessage,
           taskId: request.taskId,
         );
         world.events.writer<ActorGenerateResponse>().send(response);

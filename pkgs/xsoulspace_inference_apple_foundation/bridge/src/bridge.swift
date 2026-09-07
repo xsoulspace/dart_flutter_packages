@@ -622,15 +622,14 @@ public func xs_fm_generate_stream_async(
           XsFmDebug.log("generate-stream: ok, output=\(finalText.prefix(120))")
           finish(donePayload("\"ok\":true,\"output\":\(jsonEscaped(finalText))"))
         } catch {
-          XsFmDebug.log("generate-stream: error — \(error)")
-          finish(
-            donePayload(
-              jsonErrorBody(
-                code: "generation_error",
-                message: error.localizedDescription
-              )
-            )
-          )
+          // P1 (the P0 re-run finding): the SAME named-code classification
+          // as the blocking path — a schema-invalid tool call arriving
+          // through the streaming path must surface as the NAMED
+          // `tool_args_invalid` bounce class, never a bare
+          // `generation_error` (the opaque loop class).
+          let (code, message) = xsErrorClassification(error)
+          XsFmDebug.log("generate-stream: error — \(error) [code=\(code)]")
+          finish(donePayload(jsonErrorBody(code: code, message: message)))
         }
       }
       return state.id

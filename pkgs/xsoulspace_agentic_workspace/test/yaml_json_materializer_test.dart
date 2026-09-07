@@ -96,16 +96,26 @@ void main() {
   });
   tearDown(() => jail.delete(recursive: true).catchError((_) => jail));
 
-  test('specs are REGISTERED DATA: yaml + json carry verb edit_key; the '
-      'tick stamps edit_actions on their file nodes and maps keypath anchors',
-      () async {
+  test('bindings are REGISTERED DATA: yaml + json share ONE keypath '
+      'materializer across two bindings; the tick stamps edit_actions on '
+      'their file nodes and maps keypath anchors', () async {
     for (final fc in ['yaml', 'json']) {
-      final spec = materializerSpecFor(fc);
-      expect(spec, isNotNull, reason: '$fc must have an edit spec');
+      final spec = materializerBindings[fc];
+      expect(spec, isNotNull, reason: '$fc must have an edit binding');
       expect(spec!.spanCurrency, 'keypath');
       expect(spec.oracle, 'parse_semantic_diff');
       expect(spec.actions, ['set_key', 'replace_value', 'delete_key', 'append_list_item']);
     }
+    // Class-routing, not kind-routing (ADR 0035 §1): ONE shared perform
+    // fn across the two bindings.
+    expect(
+      identical(
+        materializerBindings['yaml']!.materializer,
+        materializerBindings['json']!.materializer,
+      ),
+      isTrue,
+      reason: 'yaml and json share ONE keypath materializer',
+    );
     final world = _world();
     final scan = _decoded(
       await repoEtlTool(world, jail).execute({'action': 'scan'}),

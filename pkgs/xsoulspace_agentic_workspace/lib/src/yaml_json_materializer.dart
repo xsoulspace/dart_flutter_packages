@@ -3,10 +3,10 @@
 /// The YAML/JSON MATERIALIZER (ADR 0024 §2 — the yaml + json file-class
 /// specs, realized). PLAN §NOW P1 item 5.
 ///
-/// The specs are DATA — registered in `file_class_spec.dart` as
-/// `materializerSpecs['yaml']` and `materializerSpecs['json']` (both with
-/// `verb: edit_key`; the fs tier stamps `edit_verb: edit_key` on their
-/// file nodes):
+/// The specs are DATA — registered as the yaml + json BINDINGS in
+/// `materializer_binding.dart` (ADR 0035 §1; one shared keypath
+/// materializer across two bindings; the fs tier stamps `edit_actions`
+/// on their file nodes):
 /// `{fileClass: yaml|json, span currency: keypath, map format: keypath_tree
 /// (dot/bracket paths; lists indexed), emitter: keypath_splice,
 /// oracle: parse_semantic_diff, anchors: keypath}`.
@@ -36,8 +36,9 @@
 /// the only semantic change is the intended one and the byte assertion
 /// proves every line outside the target span is untouched.
 ///
-/// The map half (`parseKeypathTree`) is the SAME parser the fs tier's map
-/// builder consumes (`fs_etl._indexKeypaths` delegates here), so the
+/// The map half (`parseKeypathTree`) is the SAME parser the bindings'
+/// map builders consume (the fs tier stamps their output — ADR 0035 §2),
+/// so the
 /// anchors the model zooms and the anchors the emitter splices can never
 /// disagree. A class with NO oracle has NO edit verb — the oracle is
 /// named above, which is what makes the verb lawful.
@@ -59,7 +60,8 @@ import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart'
     show FM, SchemaBundle, ToolDef, ToolName;
 
-import 'file_class_spec.dart' show fileClassOf;
+import 'file_class_spec.dart' show MappedSubNode, fileClassOf;
+import 'materializer_binding.dart' show NodeEditRequest;
 
 // ---------------------------------------------------------------------------
 // The map half — the ONE keypath parser (fs tier's map builder + this
@@ -589,6 +591,45 @@ Object? _plain(Object? node) {
   }
   return node;
 }
+
+// ---------------------------------------------------------------------------
+// The binding realizations (ADR 0035 §1/§2) — the perform fn + the map
+// parsers the yaml/json bindings register. ONE materializer serves BOTH
+// classes (class-routing, never kind-routing); the map parsers close over
+// the yaml/json dialect difference as two top-level functions.
+// ---------------------------------------------------------------------------
+
+/// The keypath binding's perform fn — SHARED by the yaml and json
+/// bindings (the proven shape `{action, anchor, body} → outcome.toJson()`
+/// over one request envelope).
+Map<String, dynamic> keypathMaterializerPerform(NodeEditRequest r) =>
+    KeypathMaterializer(root: r.root, locks: r.locks, owner: r.owner)
+        .perform(path: r.path, op: r.action, anchor: r.anchor, body: r.body)
+        .toJson();
+
+List<MappedSubNode> _keypathMap(String content, {required bool isJson}) => [
+      for (final e in parseKeypathTree(content, isJson: isJson))
+        MappedSubNode(
+          kind: 'key',
+          label: e.keypath,
+          idTail: e.keypath.replaceAll(RegExp(r'[^\w]'), '_'),
+          props: {
+            'keypath': e.keypath,
+            'indent': e.indent,
+            'span_start': e.start,
+            'span_end': e.end,
+            'line': e.lineIdx + 1,
+          },
+        ),
+    ];
+
+/// The yaml binding's map parser (indentation keypaths).
+List<MappedSubNode> yamlMapParser(String content) =>
+    _keypathMap(content, isJson: false);
+
+/// The json binding's map parser (quoted keys, bracket-indexed arrays).
+List<MappedSubNode> jsonMapParser(String content) =>
+    _keypathMap(content, isJson: true);
 
 // ---------------------------------------------------------------------------
 // The materializer — plan (mechanical anchor resolution + splice + byte

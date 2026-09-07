@@ -21,9 +21,11 @@ library;
 
 export 'src/code_etl.dart';
 export 'src/edit_node_router.dart';
+export 'src/edit_pack.dart';
 export 'src/edit_pack_capture.dart';
 export 'src/file_class_spec.dart';
 export 'src/fs_etl.dart';
+export 'src/materializer_binding.dart';
 export 'src/md_materializer.dart';
 export 'src/yaml_json_materializer.dart';
 export 'src/repo_etl_tool.dart';

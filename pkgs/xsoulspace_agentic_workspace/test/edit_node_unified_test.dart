@@ -229,7 +229,7 @@ void main() {
           'never raw code',
     );
     // Nothing moved.
-    expect(File('\${jail.path}/\$docRel').readAsStringSync(), docOriginal);
+    expect(File('${jail.path}/$docRel').readAsStringSync(), docOriginal);
   });
 
   test('slot scoping is symmetric: a section move with dart slots bounces',

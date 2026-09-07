@@ -1,0 +1,24 @@
+name: xsoulspace_treesitter_raw
+description: >-
+  LEAF raw package (ADR 0035 §8): a SourceParser FFI implementation over the
+  tree-sitter C API (tree-sitter-typescript, pinned revision), the UTF-8 →
+  UTF-16 span bridge, the generic GrammarMapper interpreter, and the
+  ParserConformance battery. The ONLY dart:ffi import in the tree-sitter
+  spike; ZERO imports of xsoulspace_agentic_workspace / agentic_harness /
+  ecsly — the workspace consumes the pure-Dart seam, never this package.
+version: 0.1.0-beta.1
+repository: https://github.com/xsoulspace/dart_flutter_packages
+issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
+
+environment:
+  sdk: ^3.12.0
+
+resolution: workspace
+
+dependencies:
+  ffi: ^2.2.0
+  source_span: ^1.10.2
+
+dev_dependencies:
+  lints: ^6.1.0
+  test: ^1.31.2

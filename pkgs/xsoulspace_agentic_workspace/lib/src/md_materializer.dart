@@ -3,9 +3,10 @@
 /// The MD MATERIALIZER (ADR 0024 §2 — the md file-class spec, realized):
 /// the edit tier for Markdown. PLAN §NOW P1 "Docs oracle for md".
 ///
-/// The spec is DATA — registered in `file_class_spec.dart` as
-/// `materializerSpecs['md']` (the `md` entry, with `verb: edit_section`;
-/// the fs tier stamps `edit_verb` on md file nodes):
+/// The spec is DATA — registered as the md BINDING in
+/// `materializer_binding.dart` (ADR 0035 §1; the old `MaterializerSpec`
+/// folded into the binding's metadata view; the fs tier stamps
+/// `edit_actions` on md file nodes):
 /// `{fileClass: md, span currency: section, map format: heading_tree
 /// (ATX outline, fences inert — ADR 0019), emitter: section_splice,
 /// oracle: zero_broken_links, anchors: heading_path}`.
@@ -30,8 +31,8 @@
 ///   code fences are inert. A broken-link edit AUTO-REVERTS with the
 ///   named failure class.
 ///
-/// The map half (`parseMdSections`) is the SAME parser the fs tier's map
-/// builder consumes (`fs_etl._indexMdSections` delegates here), so the
+/// The map half (`parseMdSections`) is the SAME parser the binding's map
+/// builder consumes (the fs tier stamps its output — ADR 0035 §2), so the
 /// anchors the model zooms and the anchors the emitter splices can never
 /// disagree. A class with NO oracle has NO edit verb — md's oracle is
 /// named above, which is what makes the verb lawful.
@@ -44,7 +45,8 @@ import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart'
     show FM, SchemaBundle, ToolDef, ToolName;
 
-import 'file_class_spec.dart' show fileClassOf;
+import 'file_class_spec.dart' show MappedSubNode, fileClassOf;
+import 'materializer_binding.dart' show NodeEditRequest;
 
 // ---------------------------------------------------------------------------
 // The map half — the ONE heading parser (fs tier's map builder + this
@@ -271,6 +273,39 @@ String? _normalizeRel(String path, String baseDir) {
   }
   return out.join('/');
 }
+
+// ---------------------------------------------------------------------------
+// The binding realizations (ADR 0035 §1/§2) — the perform fn + the map
+// parser the md binding registers. The router reaches them ONLY through
+// the registry (class-routed); nothing dispatches on a kind switch.
+// ---------------------------------------------------------------------------
+
+/// The md binding's perform fn: the proven shape
+/// `{action, anchor, body} → outcome.toJson()` over one request envelope.
+Map<String, dynamic> mdMaterializerPerform(NodeEditRequest r) =>
+    MdMaterializer(root: r.root, locks: r.locks, owner: r.owner)
+        .perform(path: r.path, op: r.action, anchor: r.anchor, body: r.body)
+        .toJson();
+
+/// The md binding's map parser (ADR 0035 §2): headings → sub-node DATA;
+/// the fs tier stamps nodes (ids/budgets engine-owned, prefix
+/// binding-declared) — the SAME parser the edit emitter resolves anchors
+/// with, so zoom anchors and splice anchors agree byte-precise.
+List<MappedSubNode> mdMapParser(String content) => [
+      for (final s in parseMdSections(content))
+        MappedSubNode(
+          kind: 'section',
+          label: s.title.length > 80 ? s.title.substring(0, 80) : s.title,
+          idTail: '${s.ordinal}',
+          props: {
+            'level': s.level,
+            'ordinal': s.ordinal,
+            'span_start': s.start,
+            'span_end': s.end,
+            'line': s.line,
+          },
+        ),
+    ];
 
 // ---------------------------------------------------------------------------
 // The materializer — plan (mechanical anchor resolution + splice) / apply

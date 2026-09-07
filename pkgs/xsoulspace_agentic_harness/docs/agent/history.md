@@ -750,3 +750,19 @@ maxToolRounds). P1 = the named `tool_args_invalid` class + bounce-class
 beat; the re-run after it measures bounce-driven recovery (or the enum
 splits per class). Rows: `afm_wave_results.md` § P0 RE-RUN; logs
 `afm_wave_rerun_*.log`; PLAN.md NOW updated.
+
+**P1 ToolCallError fix landed (unit-gated, 2026-09-07)**: the named
+`tool_args_invalid` class is wired end-to-end and gated LLM-free. Bridge
+(declared Swift escape, surface_gaps): BOTH generate paths route failures
+through `xsErrorClassification` — the streaming path previously still
+emitted a bare `generation_error`; unit suite 27/27 (live-session flakes
+environmental). Harness: the failure is a NAMED bounce beat
+(`ToolResultContent` name `tool_args_invalid`, per-action-class slot
+teaching), NEVER a same-cut retry (the repair path re-prompts with the
+bounce text + framework detail per the B2 dialect; RetryCount stays
+untouched), and a FAILED generation is a SPENT round — maxToolRounds now
+counts failed generations of EVERY class and DROPS the decision when
+spent (the P0 59–109-generation loop class is contained by construction).
+Gate: `test/tool_args_invalid_bounce_test.dart` 3/3 (named bounce beat +
+no-retry repair prompt + round counter) + 41 regression tests green.
+PLAN P1 row updated; rows 2–4 re-run still pending (on-device).

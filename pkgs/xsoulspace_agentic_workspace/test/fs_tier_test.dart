@@ -37,7 +37,7 @@ Future<Directory> _fixture() async {
     ..writeAsStringSync('# Guide\n\nSee [pubspec](../pubspec.yaml).\n');
   File('${dir.path}/assets/config.json')
     ..parent.createSync(recursive: true)
-    ..writeAsStringSync('{"theme": "dark"}\n');
+    ..writeAsStringSync('{\n  "theme": "dark"\n}\n');
   File('${dir.path}/notes.txt').writeAsStringSync('plain text\n');
   File('${dir.path}/.dart_tool/junk.txt')
     ..parent.createSync(recursive: true)
@@ -246,6 +246,43 @@ void main() {
     expect(refresh2['fs_dropped'], 1);
     expect(world.getResource<MeaningIndex>().byId['f_added.md'], isNull,
         reason: 'a dropped file must not stay in the map-graph');
+  });
+
+  test('ORPHANED-SUB-NODE gate (ADR 0035 §2): editing a mapped file and '
+      're-ticking drops every stale sub-node — the tree never lies', () async {
+    final etl = repoEtlTool(world, ws);
+    await etl.execute({'action': 'scan'});
+    final index = world.getResource<MeaningIndex>();
+    // md: one heading → one section sub-node; json: one keypath sub-node.
+    expect(index.byId['sec_f_docs_guide.md_1'], isNotNull);
+    final keyIds = [
+      for (final id in index.byId.keys)
+        if (id.startsWith('key_f_assets_config.json')) id,
+    ];
+    expect(keyIds, isNotEmpty, reason: 'the json file must map');
+
+    // Edit BOTH mapped files: remove the heading; remove the key.
+    File('${ws.path}/docs/guide.md').writeAsStringSync('plain prose now\n');
+    File('${ws.path}/assets/config.json').writeAsStringSync('{}\n');
+    final refresh = _decoded(await etl.execute({'action': 'refresh'}));
+    expect(refresh['ok'], true, reason: '$refresh');
+
+    final after = world.getResource<MeaningIndex>();
+    expect(
+      after.byId.containsKey('sec_f_docs_guide.md_1'),
+      isFalse,
+      reason: 'the stale section sub-node survived the re-tick',
+    );
+    for (final id in keyIds) {
+      expect(
+        after.byId.containsKey(id),
+        isFalse,
+        reason: 'the stale keypath sub-node $id survived the re-tick',
+      );
+    }
+    // The file nodes stay (the files exist) — only the sub-nodes died.
+    expect(after.byId['f_docs_guide.md'], isNotNull);
+    expect(after.byId['f_assets_config.json'], isNotNull);
   });
 
   test('write_review: refuses apply-mode gateways and dart paths; the '

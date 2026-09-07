@@ -143,6 +143,18 @@ void processResponsesSystem(World world) {
       // way). The decision is DROPPED with a named outcome beat — repair
       // routes to the host ladder (converged profile / ready-move tier /
       // escalate), never back into the same cut.
+      //
+      // P1 (the P0 re-run finding): a FAILED generation is a SPENT round —
+      // counted against [AgencyPolicy.maxToolRounds] whatever the class.
+      // The 2026-09-06 budgets counted only successful tool rounds, so the
+      // opaque ToolCallError class looped 59–109 failed generations
+      // uncontained. When the round budget is spent the decision is DROPPED
+      // (host-ladder repair), never retried into the same cut.
+      final priorRounds = we.get<ToolRoundCount>()?.value ?? 0;
+      if (failed) {
+        we.insert(ToolRoundCount(priorRounds + 1));
+      }
+      final rounds = failed ? priorRounds + 1 : priorRounds;
       if (failed && isWindowClassFailure(response.error)) {
         final outcome =
             'decision_dropped: ${response.error} — the cut exceeds the '
@@ -158,14 +170,12 @@ void processResponsesSystem(World world) {
         we.remove<OpenDecision>();
       } else if (failed && isArgsInvalidFailure(response.error)) {
         // ADR 0034 amendment — the call failed the framework's schema
-        // validation BEFORE reaching the host: bounce-class DATA. The
-        // named beat teaches the action-scoped slots in the next cut
-        // (the model recovers through the repair-hint loop, or the enum
-        // splits per class — a measured change). ToolRoundCount contains
-        // the loop: a failed generation is a SPENT round.
-        final rounds = (we.get<ToolRoundCount>()?.value ?? 0) + 1;
-        we.insert(ToolRoundCount(rounds));
-        final outcome =
+        // validation BEFORE reaching the host: bounce-class DATA, never a
+        // same-cut retry. The named beat teaches the action-scoped slots
+        // per class in the next cut (the model recovers through the
+        // repair-hint loop, or the enum splits per class — a measured
+        // change); the round it spent is contained by maxToolRounds.
+        const outcome =
             'tool_args_invalid: the previous call failed argument '
                 'validation before reaching the host. SLOTS ARE '
                 'ACTION-SCOPED — dart moves take opChain/executableId '
@@ -174,6 +184,11 @@ void processResponsesSystem(World world) {
                 'top-level slot. Re-send with every required slot.';
         final bounceBeat = world.reserveEmptyEntity().entity;
         final bounceBeatEntity = world.getEntity(bounceBeat).$1;
+        // NAMED bounce beat: the tool-result slot carries the failure class
+        // so projection and the repair ladder can key off it mechanically.
+        bounceBeatEntity.insert(
+          ToolResultContent(name: 'tool_args_invalid', output: outcome),
+        );
         bounceBeatEntity.insert(TextContent(outcome));
         bounceBeatEntity.insert(BeatStatus(BeatStatusEnum.complete));
         bounceBeatEntity.insert(BeatModality(BeatModalityEnum.observation));
@@ -201,7 +216,7 @@ void processResponsesSystem(World world) {
             ),
           );
         }
-      } else if (retries < policy.maxRetries) {
+      } else if (retries < policy.maxRetries && rounds < policy.maxToolRounds) {
         final prior = we.get<OpenDecision>();
         we.insert(RetryCount(retries + 1));
         we.insert(

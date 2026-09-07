@@ -287,6 +287,6 @@ bool isWindowClassFailure(String error) =>
 /// BEFORE reaching the host (the bridge names it `tool_args_invalid`).
 /// BOUNCE-CLASS data, not a retry: the named beat teaches the required
 /// slots in the next cut, and [ToolRoundCount] contains the loop (a
-/// failed generation is not a tool ROUND — the 2026-09-06 budgets let
-/// 59–109-generation loops through).
+/// failed generation IS a spent round — the 2026-09-06 budgets counted
+/// only successful tool rounds, so 59–109-generation loops went through).
 bool isArgsInvalidFailure(String error) => error.contains('tool_args_invalid');

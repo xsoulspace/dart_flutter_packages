@@ -1,23 +1,30 @@
 // ignore_for_file: lines_longer_than_80_chars
 
-/// ADR 0034 — the ONE edit verb's class router: edits address MEANING
-/// NODES; the node's class routes the materializer.
+/// ADR 0035 §1 — the ONE edit verb's registry router: edits address
+/// MEANING NODES; the node's STAMPED `class` prop routes the materializer
+/// through the binding registry. There is NO `switch (node.kind)` and no
+/// kind-based special case — a new format lands as a binding
+/// registration (materializer_binding.dart), never a router edit.
 ///
-/// The model supplies `{action, symbolId, body?}` to `edit_symbol` —
-/// never a path, never a format. The router resolves the node in the
-/// meaning tree, reads its class, checks the action against the class's
-/// registered `MaterializerSpec.actions`, and dispatches to the class
-/// materializer (splice + named oracle + locks + auto-revert — all
-/// existing machinery, class-routed). A wrong action for a class is a
-/// NAMED bounce listing that node's legal actions — legality is taught
-/// by the bounce and the cut, never by knowing formats.
+/// The model supplies `{action, symbolId, body?, anchor?}` — never a
+/// path, never a format. The router resolves the node in the meaning
+/// tree, reads its class, dispatches through the registry: the binding's
+/// materializer plans, splices, oracles and auto-reverts (all existing
+/// machinery, class-routed). A wrong action for a class is a NAMED
+/// bounce listing that node's legal actions — legality is taught by the
+/// bounce and the cut, never by knowing formats.
+///
+/// ADR 0035 §5 — the bounces are MECHANISM-FIRST and bounded for every
+/// future class: the repair names the move (the read program locates the
+/// node; zoom rows stamp the id) and points at the node's own props
+/// (`edit_actions` names the legal actions AND the anchor currency).
+/// ZERO per-class recipe prose; no format name appears in any bounce.
 ///
 /// Non-dart classes only: `sym_*` nodes stay on the span editor's dart
-/// path (compiled op-chains, packs, coverage fence). The router handles
-/// the classes that registered a materializer spec: `section` (md) and
-/// `key` (yaml/json) today. A class with NO spec (or no oracle) has NO
-/// edit actions — its writes route through the review gate (ADR 0024 §6,
-/// named never silent).
+/// path (compiled op-chains, packs, coverage fence). A class with NO
+/// binding has NO edit actions — its writes route through the review
+/// gate (ADR 0024 §6, named never silent). Absence of registration IS
+/// the enforcement.
 library;
 
 import 'dart:io';
@@ -28,9 +35,8 @@ import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart'
     show MeaningIndex, MeaningNode, MeaningProps, meaningComponentOf;
 
-import 'file_class_spec.dart' show materializerSpecFor;
-import 'md_materializer.dart' show MdMaterializer;
-import 'yaml_json_materializer.dart' show KeypathMaterializer;
+import 'materializer_binding.dart'
+    show NodeEditRequest, materializerRegistry;
 
 /// A named edit bounce (mirrors [SpanEditBounce]'s contract: reason +
 /// repair hint, navigable, never silent).
@@ -58,11 +64,15 @@ class ResolvedNode {
   final String kind;
   final Map<String, dynamic> props;
 
-  /// The node's file class prop (`md`, `yaml`, `json`, `dart`).
+  /// The node's stamped `class` prop — THE routing key (ADR 0035 §1).
   String get fileClass => '${props['class'] ?? ''}';
 
   /// The node's file path (the model never names it — ADR 0034 §3).
   String get path => '${props['path'] ?? ''}';
+
+  /// The file node's declared legal actions (stamped by the tick from
+  /// the registry) — the bounce points here, never at a format.
+  String get editActions => '${props['edit_actions'] ?? ''}';
 }
 
 /// Resolves [symbolId] in the meaning tree. Null → the id is unknown.
@@ -78,17 +88,15 @@ ResolvedNode? resolveMeaningNode(World world, String symbolId) {
   return ResolvedNode(id: node.id, kind: node.kind, props: props);
 }
 
-/// Routes ONE non-dart node edit: `{action, symbolId, body}` through the
-/// node class's registered materializer.
+/// Routes ONE node edit — `{action, symbolId, body?, anchor?}` — through
+/// the class binding's registered materializer.
 ///
-/// - `section` (md) → [MdMaterializer.perform] (anchor = the node id —
-///   the md materializer accepts section node ids natively).
-/// - `key` (yaml/json) → [KeypathMaterializer.perform] (anchor = the
-///   node id — the keypath materializer accepts key node ids natively).
-///
-/// Throws [NodeEditBounce] for: unknown id, class without registered
-/// actions, or an action outside the class's legal set. Bytes only move
-/// through the materializer's own splice + oracle + auto-revert.
+/// Dispatch is REGISTRY DISPATCH keyed on the node's stamped `class`
+/// prop (ADR 0035 §1): the binding resolves the anchor into its declared
+/// currency and performs (plan → splice → oracle → auto-revert). Throws
+/// [NodeEditBounce] for: unknown id, class without registered actions,
+/// or an action outside the class's legal set — all mechanism-first
+/// bounces (ADR 0035 §5), bounded for every future class.
 Future<Map<String, dynamic>> routeNodeEdit({
   required World world,
   required Directory workspace,
@@ -98,47 +106,57 @@ Future<Map<String, dynamic>> routeNodeEdit({
   String? body,
 
   /// CREATION anchor (ADR 0034 — parent-addressed creation): the literal
-  /// anchor in the class's DECLARED currency (a keypath for yaml/json —
-  /// the registry's `anchors` field), scoped to the file of [symbolId].
-  /// For `set_key` on a key that has NO node yet, [symbolId] scopes the
-  /// file (any node of it — parent key node, file node, a sibling) and
-  /// [anchor] is the full new keypath (its parent keypath must resolve).
-  /// The keypath is the anchor vocabulary, never a format leak — and
-  /// never a file path. Absent → [symbolId] itself is the anchor (the
-  /// node-id form).
+  /// anchor in the class's DECLARED currency (the binding's
+  /// `anchors`/`resolveAnchor`), scoped to the file of [symbolId].
+  /// Absent → the node itself is the anchor (the node-id form).
   String? anchor,
   FileLockTable? locks,
   Object owner = 'edit_node_router',
 }) async {
   final node = resolveMeaningNode(world, symbolId);
   if (node == null) {
+    // ADR 0035 §5 — the UNKNOWN-ID bounce is MECHANISM-FIRST, bounded for
+    // every future class: name the repair move (the read program; zoom
+    // rows stamp the id) and the creation rule (an EXISTING node of the
+    // target file scopes it; the file node's edit_actions prop names the
+    // legal actions and the anchor currency). ZERO per-class recipe
+    // prose; no format name appears here — the registry teaches
+    // vocabulary through the node's own props, never through prose.
     throw NodeEditBounce(
       'unknown node id: $symbolId',
-      'locate/zoom to find the node, then re-send with a valid symbolId '
-          '(ids look like sym_lib_main.dart_main, sec_…, key_…). '
-          'CREATING a key/section that has no node yet? symbolId must be '
-          'an EXISTING node of the target file (it scopes the file); '
-          'set_key takes anchor = the full new keypath (its parent '
-          'keypath must resolve), insert_section takes a body starting '
-          'with the new heading.',
+      'the id resolved to no node in the tree. REPAIR: run the read '
+          'program (locate, then zoom the target) — zoom rows stamp the '
+          'id; re-send with a stamped symbolId. CREATING something that '
+          'has no node yet? symbolId must be an EXISTING node of the '
+          "target file (it scopes the file) — that file node's "
+          'edit_actions prop names the legal actions AND the anchor '
+          'currency for the creation anchor.',
     );
   }
   final fileClass = node.fileClass;
-  final spec = materializerSpecFor(fileClass);
-  if (spec == null || spec.actions.isEmpty) {
+  final binding = materializerRegistry.bindingFor(fileClass);
+  if (binding == null || binding.actions.isEmpty) {
+    // Mechanism-first (§5): the class's write power is REGISTRY FACT —
+    // unregistered = review gate. The repair names the registration
+    // move, never a format.
     throw NodeEditBounce(
       'class "$fileClass" has no registered edit actions',
       'writes to this class route through write_review (the human '
-          'consents the diff) — register a MaterializerSpec with a named '
-          'oracle to give it edit actions (ADR 0024 §6, ADR 0034 §5)',
+          'consents the diff) — give the class edit power by registering '
+          'a binding with a named oracle in the materializer registry '
+          '(ADR 0024 §6, ADR 0035 §1/§3)',
     );
   }
-  if (!spec.actions.contains(action)) {
+  if (!binding.actions.contains(action)) {
+    // Mechanism-first (§5): legality is the binding's declared union,
+    // taught by THIS node's own props (the file node's edit_actions —
+    // the same registry data, stamped by the tick).
     throw NodeEditBounce(
       'action "$action" is not legal for a $fileClass node',
       'legal actions for THIS node (${node.id}): '
-          "${spec.actions.join(", ")} — the node's class teaches the "
-          'vocabulary; never the format',
+          "${binding.actions.join(", ")} — the node's edit_actions prop "
+          'carries the same list AND the anchor currency; the registry '
+          'teaches the vocabulary, never the format',
     );
   }
   final path = node.path;
@@ -148,28 +166,18 @@ Future<Map<String, dynamic>> routeNodeEdit({
       're-scan the workspace (repo_etl scan) — the tree is stale',
     );
   }
-  return switch (node.kind) {
-    'section' => MdMaterializer(root: fsRoot, locks: locks, owner: owner)
-        .perform(path: path, op: action, anchor: symbolId, body: body)
-        .toJson(),
-    'key' => KeypathMaterializer(root: fsRoot, locks: locks, owner: owner)
-        // The anchor is the node's KEYPATH (the semantic-diff oracle's
-        // change-at accounting names changes by keypath — the node id is
-        // only the model's handle; the props carry the truth) — or the
-        // literal CREATION keypath when the op creates a key that has no
-        // node yet (ADR 0034 — parent-addressed creation).
-        .perform(
-          path: path,
-          op: action,
-          anchor: anchor ?? '${node.props['keypath'] ?? symbolId}',
-          body: body,
-        )
-        .toJson(),
-    _ => throw NodeEditBounce(
-      'node kind "${node.kind}" is not routed for edits',
-      'dart symbols edit through the span path (replace_member_body / '
-          'insert_member / apply_executable); other kinds need a '
-          'registered materializer spec',
+  // The binding resolves the anchor into its DECLARED currency (§3d) —
+  // a registry field, not a kind-based special case.
+  final anchorValue = binding.resolveAnchor(node.id, node.props, anchor);
+  return binding.materializer(
+    NodeEditRequest(
+      root: fsRoot,
+      locks: locks,
+      owner: owner,
+      path: path,
+      action: action,
+      anchor: anchorValue,
+      body: body,
     ),
-  };
+  );
 }

@@ -65,11 +65,22 @@ import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart'
         impactFrontier,
         meaningComponentOf;
 
+import 'dart_lexicon.dart'
+    show
+        MemberSite,
+        findClassBodyOpen,
+        matchBrace,
+        matchBraceText,
+        matchParen,
+        replaceWholeIdentifiers,
+        topLevelCommas;
 import 'dart_materializer.dart' show compileOpChainBody;
 import 'edit_node_router.dart'
     show NodeEditBounce, routeNodeEdit;
+import 'edit_pack.dart'
+    show EditPackRegistry, defaultEditExecutables;
 import 'edit_pack_capture.dart' show EditPackCapture;
-import 'file_class_spec.dart' show materializerSpecFor;
+import 'materializer_binding.dart' show materializerRegistry;
 import 'test_etl.dart' show deriveWorkspaceIntents;
 
 // ---------------------------------------------------------------------------
@@ -194,26 +205,12 @@ class SpanEditBounce implements Exception {
       fence == null ? '$error — $repair' : '[$fence] $error — $repair';
 }
 
-/// The default (built-in) edit executables. Growth is pack/data-driven
-/// (ADR 0019 §4 / ADR 0023 §3): never a hand-added core verb. The rename
-/// executable lives HERE, as data, exactly so it cannot become a hardcoded
-/// core sub-action again (the B4 hard cut).
-const defaultEditExecutables = <String, Map<String, dynamic>>{
-  'rename_symbol': {
-    'scope': 'lexical',
-    'atomic': true,
-    'args': ['newName'],
-    'description':
-        'Lexical rename across the refs frontier (whole-identifier '
-        'replacement in files that reference the symbol). Bounces on '
-        'getters/setters, operators, named constructors and same-name '
-        'ambiguity (scope: lexical; analyzer-grade is P4/J3).',
-  },
-};
-
 /// State-carrying / non-pure ops: the v1 dart target compiles pure,
 /// static-like bodies only (fence a) — never silently downgrade a working
 /// member.
+///
+/// (`defaultEditExecutables`, the built-in pack table, and the rest of the
+/// pack registry live in edit_pack.dart — ADR 0035 §4 extraction.)
 const _impureOps = {
   'load_state',
   'store_state',
@@ -269,11 +266,10 @@ class SpanEditMaterializer {
   }) : locks = locks ?? FileLockTable(),
        _coverageProvider = coverage,
        _approver = approver,
-       _packConsent = packConsent,
-       _packExecutables = {
-         for (final e in packExecutables ?? const <EditExecutableWire>[])
-           e.id: e,
-       };
+       _packRegistry = EditPackRegistry(
+         initial: packExecutables,
+         consent: packConsent,
+       );
 
   final World world;
   final Directory workspace;
@@ -281,20 +277,11 @@ class SpanEditMaterializer {
   final Object owner;
   final Set<String> Function()? _coverageProvider;
   final Future<bool> Function(SpanEditPlan plan)? _approver;
-  final bool Function(EditExecutableWire wire, String authoredBodyDiff)?
-  _packConsent;
-  final Map<String, EditExecutableWire> _packExecutables;
+  /// The pack registry (edit_pack.dart — ADR 0035 §4): pack tables, wire
+  /// validation and the authored-body machinery live there; this materializer
+  /// keeps only the public registration/lookup surface.
+  final EditPackRegistry _packRegistry;
   Set<String>? _coverageCache;
-
-  /// The op-chains a pack's body-kind executables carry (data, per pack —
-  /// this is the R7d zero-authored-tokens seam; the wire shape carries the
-  /// verification + scope, the chain rides on the same pack entry).
-  final Map<String, List<Map<String, String?>>> _packOpChains = {};
-
-  /// The CONSENTED authored bodies of trusted-author pack executables
-  /// (data, per pack — registered only through the pack-write consent
-  /// gate; the model never sees or authors this text).
-  final Map<String, String> _packAuthoredBodies = {};
 
   /// Symbol names the workspace oracle has expectations for (fence b).
   Set<String> coverageSet() => _coverageCache ??=
@@ -346,14 +333,14 @@ class SpanEditMaterializer {
       // class vocabulary (legal actions from the registry), never the
       // format.
       if (n != null) {
-        final spec = materializerSpecFor(
+        final binding = materializerRegistry.bindingFor(
           '${n.props['class'] ?? ''}',
         );
-        if (spec != null) {
+        if (binding != null) {
           throw SpanEditBounce(
             'node $id is a ${n.kind} node (${n.props['class']}), not a '
                 'dart symbol',
-            'legal actions for THIS node: ${spec.actions.join(", ")} — '
+            'legal actions for THIS node: ${binding.actions.join(", ")} — '
                 'the node\'s class teaches the vocabulary; never the format',
           );
         }
@@ -684,7 +671,7 @@ class SpanEditMaterializer {
     final declIndent =
         RegExp(r'^\s*').firstMatch(lines[declLine0])?.group(0) ?? '';
     final bodyIndent = '$declIndent  ';
-    final openLine0 = _findClassBodyOpen(lines, declLine0, className);
+    final openLine0 = findClassBodyOpen(lines, declLine0, className);
     if (openLine0 == null) {
       throw SpanEditBounce(
         'cannot locate the class body brace of $className in $file',
@@ -692,7 +679,7 @@ class SpanEditMaterializer {
             'outside the v1 scanner scope',
       );
     }
-    final closeLine0 = _matchBrace(lines, openLine0);
+    final closeLine0 = matchBrace(lines, openLine0);
     if (closeLine0 == null || lines[closeLine0].trim() != '}') {
       throw SpanEditBounce(
         'cannot locate the closing brace line of $className in $file',
@@ -734,7 +721,7 @@ class SpanEditMaterializer {
     if (spec == null) {
       // R7d: pack-declared executables — the primary verb; growth is
       // pack/data-driven (ADR 0019 §4 / ADR 0023 §3).
-      final pack = _packExecutables[executableId];
+      final pack = _packRegistry.executables[executableId];
       if (pack == null) {
         throw SpanEditBounce(
           'unknown edit executable: $executableId',
@@ -744,7 +731,7 @@ class SpanEditMaterializer {
       }
       switch (pack.kind) {
         case EditExecutableKind.replaceMemberBody:
-          final chain = _packOpChains[executableId];
+          final chain = _packRegistry.opChains[executableId];
           if (chain == null || chain.isEmpty) {
             throw SpanEditBounce(
               'pack executable "$executableId" carries no op-chain '
@@ -755,7 +742,7 @@ class SpanEditMaterializer {
           }
           return _planReplaceMemberBody(symbolId: symbolId, opChain: chain);
         case EditExecutableKind.authoredBody:
-          final body = _packAuthoredBodies[executableId];
+          final body = _packRegistry.authoredBodies[executableId];
           if (body == null) {
             throw SpanEditBounce(
               'pack executable "$executableId" carries no consented '
@@ -792,58 +779,15 @@ class SpanEditMaterializer {
   }
 
   /// R7d — registers a pack-declared executable with its (optional) body
-  /// op-chain. The chain travels with the PACK as data; the model never
-  /// authors it (zero authored tokens for known classes).
-  ///
-  /// P1 trusted-author tier: [authoredBody] registers an `authored_body`
-  /// executable. The registration REQUIRES the pack-write consent gate
-  /// (deny-by-default) and the body is presented to it as a unified diff.
+  /// op-chain. Delegates to the pack registry (edit_pack.dart — ADR 0035
+  /// §4): the wire validation and the trusted-author consent gate live
+  /// there; this public method is the unchanged SpanEditMaterializer API.
   void registerPackExecutable(
     EditExecutableWire wire, {
     List<Map<String, String?>>? opChain,
     String? authoredBody,
   }) {
-    if (authoredBody != null) {
-      if (wire.kind != EditExecutableKind.authoredBody) {
-        throw SpanEditBounce(
-          'authoredBody given for "${wire.id}" whose kind is '
-              '${wire.kind.wire} — only authored_body executables carry '
-              'authored bodies',
-          'declare the pack entry with kind: authored_body',
-        );
-      }
-      final consent = _packConsent;
-      if (consent == null) {
-        throw SpanEditBounce(
-          'authored-body executable "${wire.id}" REFUSED: no pack-write '
-              'consent gate wired (deny-by-default)',
-          'wire SpanEditMaterializer(packConsent:) — a trusted-author body '
-              'enters the world only through a consented pack write',
-        );
-      }
-      final diff = _authoredBodyDiff(wire.id, authoredBody);
-      if (!consent(wire, diff)) {
-        throw SpanEditBounce(
-          'pack-write consent DENIED for authored-body executable '
-              '"${wire.id}" — it was never registered',
-          'fix the pack (or re-consent) before applying it',
-        );
-      }
-      _packAuthoredBodies[wire.id] = authoredBody;
-    }
-    _packExecutables[wire.id] = wire;
-    if (opChain != null) _packOpChains[wire.id] = opChain;
-  }
-
-  /// The unified-diff rendering the pack-write consent gate sees: every
-  /// line of the authored body as an addition (the body replaces a
-  /// member's body span at apply time; the target symbol is per-move and
-  /// deliberately NOT part of the consented text).
-  String _authoredBodyDiff(String id, String body) {
-    final lines = body.split('\n');
-    return '--- a/pack:$id (authored body)\n'
-        '+++ b/pack:$id (authored body)\n'
-        '${[for (final l in lines) '+$l'].join("\n")}';
+    _packRegistry.register(wire, opChain: opChain, authoredBody: authoredBody);
   }
 
   /// P1 trusted-author tier — the plan for a CONSENTED authored body:
@@ -1024,7 +968,7 @@ class SpanEditMaterializer {
       final text = File(_abs(f)).readAsStringSync();
       final lines = text.split('\n');
       for (var i = 0; i < lines.length; i++) {
-        final modified = _replaceWholeIdentifiers(lines[i], oldName, newName);
+        final modified = replaceWholeIdentifiers(lines[i], oldName, newName);
         if (modified == null) continue;
         patches.add(
           SpanPatch(
@@ -1107,7 +1051,7 @@ class SpanEditMaterializer {
             i + 1 >= site.declLine0 + 1 &&
             i + 1 <= site.closeLine0 + 1;
         if (onOwnSpan) continue; // the member's own span goes away with it
-        if (_replaceWholeIdentifiers(lines[i], sym.label, '\u0000') != null) {
+        if (replaceWholeIdentifiers(lines[i], sym.label, '\u0000') != null) {
           refs.add('$f:${i + 1}');
           if (refs.length >= 10) break;
         }
@@ -1149,34 +1093,6 @@ class SpanEditMaterializer {
         ),
       ],
     );
-  }
-
-  /// Whole-identifier replacement on one line; null when the name does not
-  /// occur as a standalone identifier.
-  String? _replaceWholeIdentifiers(String line, String from, String to) {
-    if (!line.contains(from)) return null;
-    final buf = StringBuffer();
-    var changed = false;
-    var i = 0;
-    while (i < line.length) {
-      if (line.startsWith(from, i)) {
-        final before = i == 0 ? '' : line[i - 1];
-        final after = i + from.length >= line.length
-            ? ''
-            : line[i + from.length];
-        final boundaryBefore = !RegExp(r'[\w$]').hasMatch(before);
-        final boundaryAfter = !RegExp(r'[\w$]').hasMatch(after);
-        if (boundaryBefore && boundaryAfter) {
-          buf.write(to);
-          changed = true;
-          i += from.length;
-          continue;
-        }
-      }
-      buf.write(line[i]);
-      i++;
-    }
-    return changed ? buf.toString() : null;
   }
 
   // -------------------------------------------------------------------------
@@ -1502,7 +1418,7 @@ class SpanEditMaterializer {
   // contract as the scanner; the analyzer is the oracle downstream)
   // -------------------------------------------------------------------------
 
-  _MemberSite _memberSite(String file, String name, int declLine1) {
+  MemberSite _memberSite(String file, String name, int declLine1) {
     final text = File(_abs(file)).readAsStringSync();
     final lines = text.split('\n');
     final declLine0 = declLine1 - 1;
@@ -1536,7 +1452,7 @@ class SpanEditMaterializer {
       );
     }
     final parenStart = lineStart + parenRel;
-    final parenEnd = _matchParen(text, parenStart);
+    final parenEnd = matchParen(text, parenStart);
     if (parenEnd == null) {
       throw SpanEditBounce(
         'unbalanced parameter list of $name in $file',
@@ -1616,7 +1532,7 @@ class SpanEditMaterializer {
       }
       closeOffset = semi;
     } else {
-      final braceClose = _matchBraceText(text, cursor);
+      final braceClose = matchBraceText(text, cursor);
       if (braceClose == null) {
         throw SpanEditBounce(
           'unbalanced body braces of $name in $file',
@@ -1628,7 +1544,7 @@ class SpanEditMaterializer {
     // Param names from the paren text.
     final paramText = text.substring(parenStart + 1, parenEnd);
     final paramNames = <String>{};
-    for (final raw in _topLevelCommas(paramText)) {
+    for (final raw in topLevelCommas(paramText)) {
       var p = raw;
       final eq = p.indexOf('=');
       if (eq >= 0) p = p.substring(0, eq);
@@ -1667,7 +1583,7 @@ class SpanEditMaterializer {
     final signatureText = expressionBodied
         ? '${text.substring(lineStart, cursor).trimRight()} {'
         : text.substring(lineStart, cursor + 1);
-    return _MemberSite(
+    return MemberSite(
       paramNames: paramNames,
       returnType: returnType,
       declLine0: declLine0,
@@ -1677,131 +1593,6 @@ class SpanEditMaterializer {
     );
   }
 
-  int? _findClassBodyOpen(List<String> lines, int declLine0, String className) {
-    // The class body opens on the first line at/after the decl whose
-    // trimmed content ends with '{' (dart-formatted: single-line decl head).
-    for (var i = declLine0; i < lines.length && i <= declLine0 + 8; i++) {
-      if (lines[i].trimRight().endsWith('{') && lines[i].contains(className)) {
-        return i;
-      }
-      if (i > declLine0 && lines[i].trim() == '{') return i;
-    }
-    return null;
-  }
-
-  /// 0-based line of the '}' matching the '{' that opens on line
-  /// [openLine0] (strings respected).
-  int? _matchBrace(List<String> lines, int openLine0) {
-    final text = lines.join('\n');
-    var offset = 0;
-    for (var i = 0; i < openLine0; i++) {
-      offset += lines[i].length + 1;
-    }
-    offset += lines[openLine0].indexOf('{');
-    final close = _matchBraceText(text, offset);
-    if (close == null) return null;
-    var acc = 0;
-    for (var i = 0; i < lines.length; i++) {
-      if (acc <= close && close <= acc + lines[i].length) return i;
-      acc += lines[i].length + 1;
-    }
-    return null;
-  }
-
-  int? _matchBraceText(String text, int openOffset) {
-    var depth = 0;
-    var inStr = false;
-    var strCh = '';
-    for (var i = openOffset; i < text.length; i++) {
-      final c = text[i];
-      if (inStr) {
-        if (c == r'\') {
-          i++;
-        } else if (c == strCh) {
-          inStr = false;
-        }
-        continue;
-      }
-      if (c == "'" || c == '"') {
-        inStr = true;
-        strCh = c;
-        continue;
-      }
-      if (c == '{') depth++;
-      if (c == '}') {
-        depth--;
-        if (depth == 0) return i;
-      }
-    }
-    return null;
-  }
-
-  int? _matchParen(String text, int openOffset) {
-    var depth = 0;
-    var inStr = false;
-    var strCh = '';
-    for (var i = openOffset; i < text.length; i++) {
-      final c = text[i];
-      if (inStr) {
-        if (c == r'\') {
-          i++;
-        } else if (c == strCh) {
-          inStr = false;
-        }
-        continue;
-      }
-      if (c == "'" || c == '"') {
-        inStr = true;
-        strCh = c;
-        continue;
-      }
-      if (c == '(') depth++;
-      if (c == ')') {
-        depth--;
-        if (depth == 0) return i;
-      }
-    }
-    return null;
-  }
-
-  List<String> _topLevelCommas(String s) {
-    final parts = <String>[];
-    final buf = StringBuffer();
-    var depth = 0;
-    var inStr = false;
-    var strCh = '';
-    for (var i = 0; i < s.length; i++) {
-      final c = s[i];
-      if (inStr) {
-        buf.write(c);
-        if (c == r'\' && i + 1 < s.length) {
-          buf.write(s[i + 1]);
-          i++;
-        } else if (c == strCh) {
-          inStr = false;
-        }
-        continue;
-      }
-      if (c == "'" || c == '"') {
-        inStr = true;
-        strCh = c;
-        buf.write(c);
-        continue;
-      }
-      if ('([{'.contains(c)) depth++;
-      if (')]}'.contains(c)) depth--;
-      if (c == ',' && depth == 0) {
-        parts.add(buf.toString());
-        buf.clear();
-        continue;
-      }
-      buf.write(c);
-    }
-    if (buf.toString().trim().isNotEmpty || parts.isNotEmpty) {
-      parts.add(buf.toString());
-    }
-    return parts;
-  }
 }
 
 String _tail(String s, {int lines = 12}) {
@@ -1809,28 +1600,6 @@ String _tail(String s, {int lines = 12}) {
   return ls.length <= lines
       ? s.trim()
       : ls.sublist(ls.length - lines).join('\n');
-}
-
-/// Parsed member site (pure data; offsets resolved by the caller).
-class _MemberSite {
-  _MemberSite({
-    required this.paramNames,
-    required this.returnType,
-    required this.declLine0,
-    required this.closeLine0,
-    required this.declIndent,
-    required this.signatureText,
-  });
-  final Set<String> paramNames;
-  final String returnType;
-  final int declLine0;
-  final int closeLine0;
-  final String declIndent;
-
-  /// Signature text INCLUDING the opening ' {' — re-emitted verbatim so
-  /// the declared signature survives the body swap byte-for-byte (the
-  /// integration fence validates against it before generation).
-  final String signatureText;
 }
 
 // ---------------------------------------------------------------------------
@@ -2092,6 +1861,7 @@ ToolDef editSymbolTool(
             : presentSlots.intersection(dartSlots);
         if (foreignSlots.isNotEmpty) {
           return {
+            'ok': false,
             'error': 'slots are ACTION-SCOPED: a '
                 '${isDartAction ? "dart" : "section/key"} move does not '
                 'take ${foreignSlots.join(", ")}',
