@@ -96,13 +96,22 @@ class ModelRuntime {
     await client.refreshAvailability();
   }
 
-  Future<InferenceResponse?> generate({
+  /// ADR 0033 §3 — failures remain NAMED: returns `(response, errorCode)`.
+  /// The router previously swallowed `InferenceResult.error.code` into a
+  /// bare `null`, so the response processor could not distinguish a
+  /// window-class rejection (mechanically futile to retry) from a
+  /// transient failure — every failure retried the same cut ~20×.
+  /// [endAfterTool] (ADR 0033 §4) rides the request metadata as
+  /// `end_after_tool`: the native inline loop finishes the generation on
+  /// the first tool result.
+  Future<(InferenceResponse?, String?)> generate({
     required String prompt,
     required List<Object> contextFragments,
     required String systemPrompt,
     required SchemaBundle outputSchema,
     required ToolRegistry? toolRegistry,
     required InferenceTask task,
+    bool endAfterTool = false,
     void Function(String delta)? onDelta,
   }) async {
     // Streaming path: only for plain-text tasks where the client supports it.
@@ -133,15 +142,18 @@ class ModelRuntime {
       final result = results.$1;
       if (!result.success || result.data == null) {
         log('stream failed: ${result.error?.code}');
-        return null;
+        return (null, result.error?.code ?? 'stream_failed');
       }
       // Prefer the accumulated buffer (complete text); fall back to rawOutput.
       final data = result.data!;
       final streamed = buffer.toString();
-      return InferenceResponse(
-        structuredOutput: data.structuredOutput,
-        rawOutput: streamed.isNotEmpty ? streamed : data.rawOutput,
-        meta: data.meta,
+      return (
+        InferenceResponse(
+          structuredOutput: data.structuredOutput,
+          rawOutput: streamed.isNotEmpty ? streamed : data.rawOutput,
+          meta: data.meta,
+        ),
+        null,
       );
     }
 
@@ -152,20 +164,23 @@ class ModelRuntime {
         systemPrompt: systemPrompt,
         task: task,
         contextFragments: contextFragments,
+        metadata: endAfterTool
+            ? const {'end_after_tool': true}
+            : const <String, dynamic>{},
       ),
       // inline tools should be included to systemprompt or similar
       toolRegistry: toolRegistry,
     );
     if (!response.success || response.data == null) {
-      // Failures remain data: surface them instead of returning null.
-      // ignore: avoid_print
-      print('[router] infer failed: '
+      // Failures remain data: surface the NAMED code instead of a bare
+      // null (ADR 0033 §3 — the repair ladder keys off the code class).
+      log('infer failed: '
           '${response.error?.code}: ${response.error?.message}');
-      return null;
+      return (null, response.error?.code ?? 'backend_failed');
     }
     final data = response.data;
     log(r'rawOutput is ${data?.rawOutput}');
-    return data;
+    return (data, null);
   }
 
   Future<Map<String, dynamic>> generateStructuredText({
@@ -175,7 +190,7 @@ class ModelRuntime {
     required SchemaBundle outputSchema,
     required ToolRegistry toolRegistry,
   }) async {
-    final data = await generate(
+    final (response, errorCode) = await generate(
       outputSchema: outputSchema,
       toolRegistry: toolRegistry,
       prompt: prompt,
@@ -183,7 +198,10 @@ class ModelRuntime {
       task: InferenceTask.nativelyStructuredText,
       contextFragments: contextFragments,
     );
-    final output = data?.structuredOutput;
+    if (response == null) {
+      log('structured generate failed: $errorCode');
+    }
+    final output = response?.structuredOutput;
     if (output == null || output.isEmpty) {
       log('output is empty: $output');
     }

@@ -90,6 +90,18 @@ class ProjectionPolicy extends Resource {
   int maxCoPresent;
 }
 
+/// ADR 0033 §4 — native-loop policy: when true, the native inline tool
+/// loop FINISHES the generation on the first tool result instead of
+/// resuming the model (the decision ends mechanically after the move —
+/// the one-move contract 0028 enforced by mechanism, not by prompt
+/// hint). The flag rides the inference request as `end_after_tool`;
+/// backends without the flag ignore it (default OFF = unchanged
+/// behavior everywhere until the on-device wave row re-runs).
+class NativeLoopPolicy extends Resource {
+  NativeLoopPolicy({this.endAfterFirstTool = false});
+  final bool endAfterFirstTool;
+}
+
 /// Agency policy: how to prioritize competing agency grants and how to
 /// bound in-flight work.
 class AgencyPolicy extends Resource {

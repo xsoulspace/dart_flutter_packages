@@ -1,4 +1,4 @@
-# ADR 0030: Convergence kernel — composite strategy (one document, one kernel doc)
+# ADR 0032: Convergence kernel — composite strategy (one document, one kernel doc)
 
 - Status: Accepted
 - Date: 2026-09-06

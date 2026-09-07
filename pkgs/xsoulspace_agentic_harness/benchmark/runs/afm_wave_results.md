@@ -51,3 +51,51 @@ task-grammar path — the amortization endpoint) fit the window.
   (`plan-allowed pack_write … — diff: 3 lines` audited in-run).
 - md / yaml: FAIL — overflow class; materializers remain LLM-free-gated
   (their real-model rows re-run after ADR 0030 graduation).
+
+---
+
+## CORRECTION (2026-09-07 retrospective — ADR 0033)
+
+The first post-mortem of these rows ("the conversation came back through
+the native bridge and a recency replay") was materially wrong:
+
+1. **No cross-decision resume occurred in these runs.** The `resumed=true
+   … entries=…` evidence cited is from the Aug 28 intent-closure logs —
+   the PRE-0028 era. The wave logs show the one-move contract HOLDING:
+   `decisions: 7, tool rounds: 7, moves: {repo_etl.scan: 7}` — one call
+   per decision, fresh cut per decision.
+2. **The binding failure was per-decision arithmetic, not accumulation.**
+   Fixed overhead 2,268 chars/4 ≈ 3.3k native (×1.45, ADR 0028 §Context.3)
+   + 1,024 output reserve vs the 4,096 window → no room for a cut BEFORE
+   any content. No composition change could have saved rows 2–4.
+3. **"Retry with tighter context" is harness-authored** (a fixed prompt
+   stamped onto any failure, generation_systems) — the backend never
+   "managed context by shrinking a conversation". Nothing shrank on
+   retry; the loop burned ~20 futile rounds per row.
+
+### What landed (ADR 0033)
+
+- **Derived context equation** (`derived_context.dart`): the runner
+  derives the cut budget from the LIVE registry — window(native, 4,096,
+  measured) − native-truth overhead (×1.45) − output reserve (1,024) −
+  margin, with a named min-cut floor (600). The wave row now prints the
+  derivation; the current profile honestly derives `cutBudget≈36,
+  fits=false`.
+- **One-truth overhead gate**: `buildMeaningProfileSurface` is the ONE
+  builder for the runner AND `meaning_profile_overhead_test.dart` (the
+  gate previously hand-built 6 of the runner's 9 verbs). Measured
+  one-truth: 2,078 chars/4 lean (8 verbs; +write_review ≈ 2,268).
+- **Mechanical repair ladder**: window-class failures (`context_window_exceeded`)
+  DROP the decision with a named `decision_dropped` beat — no same-cut
+  retry, attempts unburned. Failure codes are threaded from the router
+  (previously swallowed into null).
+- **Mechanical one-move end**: `end_after_tool` flag — the Swift bridge
+  finishes the generation on the FIRST tool result instead of resuming
+  the model (bridge/tests green; on-device wave re-run pending).
+
+### Re-run route
+
+Rows 2–4 re-run AFTER ADR 0030 graduation (program replaces
+locate/zoom/impact schemas — the profile must SHRINK below the derived
+floor). Until then the only expected-viable rows are one-decision
+(ready-move) rows.

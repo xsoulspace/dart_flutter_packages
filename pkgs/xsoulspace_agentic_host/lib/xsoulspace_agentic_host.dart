@@ -15,7 +15,9 @@ library;
 /// the composition root (a thin bin in a provider package, an app, or a
 /// test) — the host learns no provider.
 export 'src/coding_agent_runner.dart';
+export 'src/derived_context.dart';
 export 'src/harness_acp_backend.dart';
 export 'src/harness_embed.dart';
 export 'src/harnessd_cli.dart';
 export 'src/intent_closure_runner.dart';
+export 'src/meaning_profile_surface.dart';

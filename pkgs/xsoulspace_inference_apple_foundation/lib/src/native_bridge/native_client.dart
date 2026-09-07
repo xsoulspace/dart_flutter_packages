@@ -255,6 +255,11 @@ class AppleFoundationNativeClient
       'instructions': systemPrompt.isEmpty ? null : systemPrompt,
       if (request.outputSchema.isNotEmpty) 'schema': request.outputSchema,
       'tools': toolRegistry?.getToolsJsons(),
+      // ADR 0033 §4 — when set, the Swift side finishes the generation on
+      // the FIRST tool result instead of resuming the model (mechanical
+      // one-move end; the native transcript can no longer grow past one
+      // round). Absent/false → unchanged resume behavior.
+      'end_after_tool': request.metadata['end_after_tool'] == true,
     });
 
     if (_debugEnabled) {

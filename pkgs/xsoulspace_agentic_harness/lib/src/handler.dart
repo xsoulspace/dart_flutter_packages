@@ -72,13 +72,18 @@ class DefaultGenerationHandler implements GenerationHandler {
     final canStream = request.schema.isEmpty && request.toolRegistry == null;
     final tap = world.getResource<StreamingTapResource>();
 
-    final response = await runtime.generate(
+    final (response, errorCode) = await runtime.generate(
       prompt: request.prompt,
       systemPrompt: request.systemPrompt,
       contextFragments: request.contextFragments,
       outputSchema: request.schema,
       toolRegistry: bridgedRegistry,
       task: request.task,
+      // ADR 0033 §4 — when the host policy declares it, the native loop
+      // finishes the generation on the first tool result (mechanical
+      // one-move end; no resume, no native transcript growth). Absent
+      // policy → false (unchanged behavior everywhere else).
+      endAfterTool: _endAfterFirstTool(world),
       onDelta: canStream
           ? (delta) {
               world.events.writer<ActorGenerateStreamEvent>().send(
@@ -94,13 +99,16 @@ class DefaultGenerationHandler implements GenerationHandler {
     );
 
     if (response == null) {
-      // Backend failure (rate limit, auth, network) must surface as an
-      // error outcome — silent empty answers poison the feedback loop.
+      // Backend failure (rate limit, auth, network, window overflow) must
+      // surface as a NAMED error outcome — silent empty answers poison the
+      // feedback loop, and the repair ladder (ADR 0033 §3) keys off the
+      // code class: a window-class rejection is mechanically futile to
+      // retry, so it must arrive distinguishable from a transient failure.
       return ActorGenerateResponse(
         actorEntity: request.actorEntity,
         structuredOutput: const {},
         rawOutput: '',
-        error: 'backend_failed',
+        error: errorCode ?? 'backend_failed',
         taskId: request.taskId,
       );
     }
@@ -137,5 +145,14 @@ class DefaultGenerationHandler implements GenerationHandler {
       droppedToolCalls: dropped,
       taskId: request.taskId,
     );
+  }
+
+  /// ADR 0033 §4 — absent [NativeLoopPolicy] → false (unchanged behavior).
+  static bool _endAfterFirstTool(World world) {
+    try {
+      return world.getResource<NativeLoopPolicy>().endAfterFirstTool;
+    } on StateError {
+      return false;
+    }
   }
 }

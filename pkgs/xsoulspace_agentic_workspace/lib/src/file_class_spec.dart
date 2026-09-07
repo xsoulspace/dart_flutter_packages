@@ -57,7 +57,7 @@ class MaterializerSpec {
     required this.emitter,
     required this.oracle,
     required this.anchors,
-    required this.verb,
+    required this.actions,
   });
 
   /// The registry key (must equal a [FileClassSpec.fileClass]).
@@ -73,19 +73,25 @@ class MaterializerSpec {
   final String emitter;
 
   /// The named mechanical oracle (`zero_broken_links`). A class with NO
-  /// oracle has NO edit verb (ADR 0024 §6).
+  /// oracle has NO edit actions (ADR 0024 §6) — its writes route through
+  /// the review gate, never raw.
   final String oracle;
 
   /// The required anchor slot's currency (`heading_path`).
   final String anchors;
 
-  /// The edit verb's tool name (`edit_section`).
-  final String verb;
+  /// ADR 0034 §2 — the class's legal EDIT ACTION names (the closed union
+  /// served by the ONE edit verb, class-scoped). Was `verb` (one
+  /// per-format verb — the format leak): the surface is one verb; the
+  /// registry declares which actions a class answers. Adding a format =
+  /// registering this spec (+ materializer), never a new verb.
+  final List<String> actions;
 }
 
-/// The materializer registry — DATA. One entry per file class with an edit
-/// verb; the fs tier stamps the verb on file nodes (`edit_verb` prop) so
-/// the tick itself surfaces what a class can do.
+/// The materializer registry — DATA. One entry per file class with edit
+/// actions; the fs tier stamps `edit_actions` on file nodes (`edit_verb`
+/// was the per-format verb — ADR 0034 §4) so the tick itself surfaces
+/// what a class can do.
 const materializerSpecs = <String, MaterializerSpec>{
   'md': MaterializerSpec(
     fileClass: 'md',
@@ -94,7 +100,7 @@ const materializerSpecs = <String, MaterializerSpec>{
     emitter: 'section_splice',
     oracle: 'zero_broken_links',
     anchors: 'heading_path',
-    verb: 'edit_section',
+    actions: ['replace_section', 'insert_section', 'append_to_section'],
   ),
   'yaml': MaterializerSpec(
     fileClass: 'yaml',
@@ -103,7 +109,7 @@ const materializerSpecs = <String, MaterializerSpec>{
     emitter: 'keypath_splice',
     oracle: 'parse_semantic_diff',
     anchors: 'keypath',
-    verb: 'edit_key',
+    actions: ['set_key', 'replace_value', 'delete_key', 'append_list_item'],
   ),
   'json': MaterializerSpec(
     fileClass: 'json',
@@ -112,7 +118,7 @@ const materializerSpecs = <String, MaterializerSpec>{
     emitter: 'keypath_splice',
     oracle: 'parse_semantic_diff',
     anchors: 'keypath',
-    verb: 'edit_key',
+    actions: ['set_key', 'replace_value', 'delete_key', 'append_list_item'],
   ),
 };
 

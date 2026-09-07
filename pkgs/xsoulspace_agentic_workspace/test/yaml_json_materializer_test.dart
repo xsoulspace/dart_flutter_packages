@@ -4,7 +4,7 @@
 /// realized; PLAN §NOW P1 item 5). LLM-free e2e on a temp jail:
 ///
 /// - the specs are REGISTERED DATA (`materializerSpecs['yaml']`/`['json']`,
-///   verb `edit_key`) and the tick stamps `edit_verb` on their file nodes;
+///   actions (ADR 0034)) and the tick stamps `edit_verb` on their file nodes;
 /// - ONE uniform verb for both classes (`edit_key`): the model supplies
 ///   {path, op, anchor (keypath), body-as-data}; the HOST resolves the
 ///   keypath from a fresh parse and splices byte-precisely;
@@ -97,14 +97,14 @@ void main() {
   tearDown(() => jail.delete(recursive: true).catchError((_) => jail));
 
   test('specs are REGISTERED DATA: yaml + json carry verb edit_key; the '
-      'tick stamps edit_verb on their file nodes and maps keypath anchors',
+      'tick stamps edit_actions on their file nodes and maps keypath anchors',
       () async {
     for (final fc in ['yaml', 'json']) {
       final spec = materializerSpecFor(fc);
       expect(spec, isNotNull, reason: '$fc must have an edit spec');
       expect(spec!.spanCurrency, 'keypath');
       expect(spec.oracle, 'parse_semantic_diff');
-      expect(spec.verb, 'edit_key');
+      expect(spec.actions, ['set_key', 'replace_value', 'delete_key', 'append_list_item']);
     }
     final world = _world();
     final scan = _decoded(
@@ -120,7 +120,7 @@ void main() {
       world,
       index.byId[yamlNode!]!,
     )!.props;
-    expect(props['edit_verb'], 'edit_key');
+    expect(props['edit_actions'], 'set_key,replace_value,delete_key,append_list_item');
     // The keypath anchors are in the tree (zoom serves them).
     final keyNodes = index.byId.keys.where((id) => id.startsWith('key_'));
     expect(keyNodes, isNotEmpty, reason: 'keypath nodes must exist');

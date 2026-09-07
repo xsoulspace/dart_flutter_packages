@@ -1,17 +1,30 @@
 // ignore_for_file: lines_longer_than_80_chars
 
-/// R7 PRODUCTION #2 — the meaning-profile overhead vs the AFM window.
+/// R7 PRODUCTION #2, as amended by ADR 0033 §1–2 + ADR 0034 — the
+/// meaning-profile overhead vs the AFM window, metered from the ONE-TRUTH
+/// surface.
 ///
-/// Never measured until now: the FIXED cost of one meaning-profile decision
-/// before any content — `meaningProfileSystemPrompt` + the 5 tool schemas
-/// (`repo_etl`/`meaning_zoom`/`meaning_impact`/`edit_symbol`/`run`;
-/// `edit_symbol` was expected to dominate) — metered with the SAME
-/// chars/4 estimator the harness uses everywhere (`overheadTokens`),
-/// checked against the P1 pre-flight `maxContextTokens` guard (3800).
+/// History: this gate previously claimed "the EXACT registry
+/// runCodingAgentOnce wires — one truth, not a rebuilt list" while
+/// hand-registering 6 tools; the runner registered 9. ADR 0033 §2: both
+/// the runner and this gate call `buildMeaningProfileSurface` — drift is
+/// structurally impossible.
 ///
-/// LLM-free: constructs the exact registry `runCodingAgentOnce` wires for
-/// `meaningProfile: true` and meters it. Publishes the row the results doc
-/// cites (the printed lines ARE the row's source).
+/// ADR 0033 §1: the binding is the DERIVED CONTEXT EQUATION, not a hand
+/// constant: window(native, measured) − native-truth overhead − output
+/// reserve − margin, with a named min-cut floor (600).
+///
+/// ADR 0034: ONE edit verb — doc sections (sec_…) and config keys (key_…)
+/// edit through `edit_symbol`'s class-routed union. The per-format verbs
+/// (`edit_section`, `edit_key`) are GONE from the model surface; the row
+/// below proves the union still fits the 4k AFM tier (the pre-graduation
+/// variant measured 1,823 → fits=false; the unified verb removed it).
+///
+/// The range assertion has teeth: any verb, action, or description change
+/// moves the metered number and forces re-publication.
+///
+/// LLM-free: constructs the one-truth surface and meters it with the
+/// SAME chars/4 estimator the harness uses everywhere (`overheadTokens`).
 library;
 
 import 'dart:io';
@@ -19,181 +32,101 @@ import 'dart:io';
 import 'package:test/test.dart';
 
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
-import 'package:xsoulspace_agentic_harness/src/meaning/meaning_read_program.dart'
-    show meaningProgramTool, defaultProgramVerdictBudgetTokens;
 import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
-    show FsToolsRoot, JailWriteGateway, WriteGateMode, runTool;
-import 'package:xsoulspace_agentic_workspace/xsoulspace_agentic_workspace.dart'
-    show editSymbolTool, meaningSpanReader, repoEtlTool, writeReviewTool;
-
-import 'package:xsoulspace_agentic_host/xsoulspace_agentic_host.dart'
-    show meaningProfileSystemPrompt;
+    show FsToolsRoot;
+import 'package:xsoulspace_agentic_host/xsoulspace_agentic_host.dart';
+import 'package:xsoulspace_agentic_host/src/derived_context.dart'
+    show deriveContextRow;
+import 'package:xsoulspace_agentic_host/src/meaning_profile_surface.dart'
+    show buildMeaningProfileSurface;
 
 /// The P1 pre-flight budget (AppleFoundationNativeClient.maxContextTokens).
 const afmBudgetTokens = 3800;
 
-/// The harness fixed-overhead target. The 5-tool pre-fs-tier surface
-/// measured 1408; ADR 0024 (as amended) added the fs tier (+2 tools:
-/// span-cut zoom + the consent-gated write_review escape hatch) — the
-/// measured row is the binding number. The hard constraints below (AFM
-/// window fit; working memory ≥ 2000) are unchanged.
-const fixedOverheadTarget = 1600;
-
 void main() {
   test(
-    'meaning-profile fixed overhead fits the AFM window; edit_symbol is '
-    'the largest schema; nothing to cut but the cut',
-    () {
+    'GRADUATED meaning-profile overhead: one-truth surface, one edit '
+    'verb, the row FITS the 4k AFM tier',
+    () async {
       final world = World()..addPlugin(AgentPlugin());
       world.upsertResource(ToolRegistryResource());
       final jail = Directory.systemTemp.createTempSync('overhead_probe_');
       addTearDown(() => jail.deleteSync(recursive: true));
 
-      // The EXACT meaning-profile registry runCodingAgentOnce wires
-      // (meaningProfile: true, with a consent approver) — one truth, not a
-      // rebuilt list. The fs tier (ADR 0024): span cuts via the span reader
-      // + the consent-gated escape hatch (write_review).
-      final fsRoot = FsToolsRoot(jail.path);
-      final gateway = JailWriteGateway(
-        fsRoot,
-        mode: WriteGateMode.review,
-        approver: (w) async => true,
+      final surface = await buildMeaningProfileSurface(
+        world: world,
+        workspace: jail,
+        fsRoot: FsToolsRoot(jail.path),
+        refreshTree: false,
       );
-      final registry = ToolRegistry();
-      registry.register(repoEtlTool(world, jail));
-      registry.register(
-        meaningZoomTool(world, spanReader: meaningSpanReader(fsRoot)),
-      );
-      registry.register(meaningImpactTool(world));
-      registry.register(editSymbolTool(world, jail));
-      registry.register(writeReviewTool(fsRoot, gateway));
-      registry.register(runTool(fsRoot));
-
-      final tools = registry.tools.values.toList();
+      final tools = surface.registry.tools.values.toList();
       final systemTokens = overheadTokens(
         systemPrompt: meaningProfileSystemPrompt,
         tools: const [],
       );
+      // The published row (the printed lines ARE the row's source).
+      // ignore: avoid_print
+      print(
+        'GRADUATED — surface: ${tools.map((t) => t.name.value).join(", ")}',
+      );
+      // ignore: avoid_print
+      print('system prompt: $systemTokens');
       final perTool = {
         for (final t in tools)
           t.name.value: overheadTokens(systemPrompt: '', tools: [t]),
       };
-      final total = overheadTokens(
-        systemPrompt: meaningProfileSystemPrompt,
-        tools: tools,
-      );
-      final workingMemory = afmBudgetTokens - total;
-
-      // The published row (results_r7.md cites this printout).
-      // ignore: avoid_print
-      print('R7 production #2 — meaning-profile overhead row');
-      // ignore: avoid_print
-      print('tokens source: overheadTokens (chars/4, the harness estimator)');
-      // ignore: avoid_print
-      print('system prompt (meaningProfileSystemPrompt): $systemTokens');
       for (final entry in perTool.entries) {
         // ignore: avoid_print
         print('tool ${entry.key}: ${entry.value}');
       }
-      // ignore: avoid_print
-      print('FIXED OVERHEAD TOTAL: $total tokens');
-      // ignore: avoid_print
-      print(
-        'AFM window (P1 maxContextTokens): $afmBudgetTokens → '
-        'working memory left for cut+transcript: $workingMemory',
-      );
-
-      // edit_symbol is the largest schema (the expected lever if the row
-      // ever stops fitting — lean schemas, never the law).
-      expect(perTool['edit_symbol'], isNotNull);
-      for (final entry in perTool.entries) {
-        if (entry.key == 'edit_symbol') continue;
-        expect(
-          perTool['edit_symbol']!,
-          greaterThanOrEqualTo(entry.value),
-          reason: 'edit_symbol should be the largest schema; '
-              '${entry.key}=${entry.value}',
-        );
-      }
-
-      // The law of the row: the fixed surface fits the AFM window WITH the
-      // harness fixed-overhead target honored — the surface needs no
-      // further cutting to reach R7e; only the cut budget is a free
-      // parameter (coderLean / ProjectionBudget), never the schemas.
-      expect(total, lessThanOrEqualTo(afmBudgetTokens));
-      expect(total, lessThanOrEqualTo(fixedOverheadTarget));
-      expect(workingMemory, greaterThanOrEqualTo(2000));
-    },
-  );
-
-  test(
-    'ADR 0030 — the CONVERGED profile: the program tool REPLACES '
-    'zoom+impact; the surface must SHRINK, never grow',
-    () {
-      final world = World()..addPlugin(AgentPlugin());
-      final jail = Directory.systemTemp.createTempSync('converged_probe_');
-      addTearDown(() => jail.deleteSync(recursive: true));
-
-      final fsRoot = FsToolsRoot(jail.path);
-      final gateway = JailWriteGateway(
-        fsRoot,
-        mode: WriteGateMode.review,
-        approver: (w) async => true,
-      );
-
-      // Current profile (the row above) for the delta.
-      final current = ToolRegistry()
-        ..register(repoEtlTool(world, jail))
-        ..register(
-          meaningZoomTool(world, spanReader: meaningSpanReader(fsRoot)),
-        )
-        ..register(meaningImpactTool(world))
-        ..register(editSymbolTool(world, jail))
-        ..register(writeReviewTool(fsRoot, gateway))
-        ..register(runTool(fsRoot));
-      final currentTotal = overheadTokens(
+      final total = overheadTokens(
         systemPrompt: meaningProfileSystemPrompt,
-        tools: current.tools.values.toList(),
+        tools: tools,
       );
-
-      // The CONVERGED profile (ADR 0030 §3): zoom+impact (+locate, when it
-      // surfaces) come OUT; the program comes IN — the model chains reads
-      // instead of paying a schema per verb.
-      final converged = ToolRegistry()
-        ..register(repoEtlTool(world, jail))
-        ..register(
-          meaningProgramTool(world, spanReader: meaningSpanReader(fsRoot)),
-        )
-        ..register(editSymbolTool(world, jail))
-        ..register(writeReviewTool(fsRoot, gateway))
-        ..register(runTool(fsRoot));
-      final convergedTotal = overheadTokens(
-        systemPrompt: meaningProfileSystemPrompt,
-        tools: converged.tools.values.toList(),
-      );
-
-      // ignore: avoid_print
-      print('ADR 0030 — surface convergence row');
+      final derivation = deriveContextRow(overheadTokens: total);
       // ignore: avoid_print
       print(
-        'current profile: ${current.tools.length} tools, '
-        '$currentTotal est tokens',
+        'FIXED OVERHEAD TOTAL: $total → derived: window=${derivation.window} '
+        'reserve=${derivation.reserve} nativeTruth=${derivation.nativeTruthFactor} '
+        'nativeOverhead=${derivation.nativeOverhead} margin=${derivation.margin} '
+        '→ cutBudget=${derivation.derivedBudget} fits=${derivation.fits}',
       );
       // ignore: avoid_print
       print(
-        'converged profile: ${converged.tools.length} tools, '
-        '$convergedTotal est tokens (program verdict budget: '
-        '$defaultProgramVerdictBudgetTokens est tokens)',
+        'pre-flight budget (P1 maxContextTokens): $afmBudgetTokens → '
+        'estimator working memory: ${afmBudgetTokens - total}',
       );
 
-      // The law: convergence SHRINKS the fixed surface.
+      // ADR 0034 §1 — ONE edit verb: the per-format verbs are GONE from
+      // the model surface.
+      expect(perTool.containsKey('edit_section'), isFalse,
+          reason: 'edit_section left the model surface (ADR 0034)');
+      expect(perTool.containsKey('edit_key'), isFalse,
+          reason: 'edit_key left the model surface (ADR 0034)');
+      expect(perTool.containsKey('edit_symbol'), isTrue);
+
+      // ONE-TRUTH binding (ADR 0033 §2): the metered total must sit in the
+      // published range. Any verb, action, or description change moves
+      // this number → re-measure, re-print, re-publish.
+      // Measured 2026-09-07 (graduated + unified edit verb: etl + program
+      // + edit_symbol + run; the union absorbed edit_section/edit_key).
       expect(
-        convergedTotal,
-        lessThan(currentTotal),
-        reason: 'the program must REPLACE the verbs it subsumes — '
-            'the profile shrinks, never grows (ADR 0030 §3)',
+        total,
+        inExclusiveRange(1250, 1400),
+        reason: 'the graduated one-truth overhead drifted out of the '
+            'published range — re-measure and re-publish the row',
       );
-      expect(convergedTotal, lessThanOrEqualTo(fixedOverheadTarget));
+
+      // THE GRADUATION ROW (ADR 0030 §3 + ADR 0034): the profile must FIT
+      // the 4k AFM tier at native truth — cutBudget ≥ the min-cut floor
+      // (600). Was FALSE pre-graduation (cutBudget 36).
+      expect(
+        derivation.fits,
+        isTrue,
+        reason: 'the graduated profile must fund a minimal cut on the 4k '
+            'AFM tier — if this regresses, the surface grew or the '
+            'derivation constants moved',
+      );
     },
   );
 }

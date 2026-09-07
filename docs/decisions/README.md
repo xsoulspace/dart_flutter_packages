@@ -32,5 +32,7 @@
 | [0028](0028_one_move_per_decision_native_loop_bounded.md) | Accepted | One move per decision: the native tool loop is not a decision loop (contract, backend-agnostic) |
 | [0030](0030_one_decision_one_program_surface_convergence.md) | Accepted | One decision, one program: the meaning surface converges; the format is never the model's choice |
 | [0029](0029_convergence_kernel_presence_and_sequence_strategy.md) | Accepted | Convergence kernel — presence/ephemeral contract and sequence strategy pulled forward |
-| [0030](0030_convergence_kernel_composite_strategy.md) | Accepted | Convergence kernel — composite strategy (one document, one kernel doc); per-op tags deferred with recorded trigger |
 | [0031](0031_presence_link_topology_and_session_foundation.md) | Accepted | Presence link topology (shared connection, doc-scoped, app-owned) and transport-agnostic presence foundation |
+| [0032](0032_convergence_kernel_composite_strategy.md) | Accepted | Convergence kernel — composite strategy (one document, one kernel doc); per-op tags deferred with recorded trigger |
+| [0033](0033_derived_context_equation_mechanical_repair.md) | Accepted | The derived context equation: one-truth overhead gate, mechanical repair ladder, decision ends after the move |
+| [0034](0034_one_edit_verb_formats_grow_the_registry.md) | Accepted | One edit verb: edits address meaning nodes; formats grow the registry, never the surface |

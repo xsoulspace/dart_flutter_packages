@@ -137,7 +137,26 @@ void processResponsesSystem(World world) {
       // text on retry.
       final policy = world.getResource<AgencyPolicy>();
       final retries = we.get<RetryCount>()?.value ?? 0;
-      if (retries < policy.maxRetries) {
+      // ADR 0033 §3 — the mechanical repair ladder. A WINDOW-CLASS failure
+      // is never retried: the retry recomposes the same-sized cut and is
+      // futile BY CONSTRUCTION (the wave md row burned ~20 retries this
+      // way). The decision is DROPPED with a named outcome beat — repair
+      // routes to the host ladder (converged profile / ready-move tier /
+      // escalate), never back into the same cut.
+      if (failed && isWindowClassFailure(response.error)) {
+        final outcome =
+            'decision_dropped: ${response.error} — the cut exceeds the '
+            'model window; repair is mechanical (shrink the surface, '
+            'converged profile, escalate), never a same-cut retry.';
+        final dropBeat = world.reserveEmptyEntity().entity;
+        final dropBeatEntity = world.getEntity(dropBeat).$1;
+        dropBeatEntity.insert(TextContent(outcome));
+        dropBeatEntity.insert(BeatStatus(BeatStatusEnum.complete));
+        dropBeatEntity.insert(BeatModality(BeatModalityEnum.observation));
+        final dropThread = attachBeatToActorThread(world, we, dropBeat);
+        indexBeat(world, dropBeat, keywordsOf(outcome), thread: dropThread);
+        we.remove<OpenDecision>();
+      } else if (retries < policy.maxRetries) {
         final prior = we.get<OpenDecision>();
         we.insert(RetryCount(retries + 1));
         we.insert(

@@ -4,7 +4,7 @@
 /// "Docs oracle for md"). LLM-free e2e on a temp jail with a real doc:
 ///
 /// - scan → the md file maps to `section` anchors (the FIRST non-dart
-///   class registered — the file node carries `edit_verb: edit_section`);
+///   class registered — the file node carries `edit_actions` (ADR 0034));
 /// - zoom serves section anchors (point cut = budgeted span text);
 /// - ONE decision's edit through the uniform verb (`edit_section` — the
 ///   model supplies {anchor, op, body-as-data}; the HOST splices);
@@ -137,7 +137,7 @@ void main() {
     expect(spec.emitter, 'section_splice');
     expect(spec.oracle, 'zero_broken_links');
     expect(spec.anchors, 'heading_path');
-    expect(spec.verb, 'edit_section');
+    expect(spec.actions, ['replace_section', 'insert_section', 'append_to_section']);
     expect(specForRel(guideRel).fileClass, 'md');
 
     final scan = await _scan(world, jail);
@@ -148,7 +148,7 @@ void main() {
         meaningComponentOf<MeaningProps>(world, fileEntity)?.props ?? {};
     expect(props['class'], 'md');
     expect(props['has_map'], true);
-    expect(props['edit_verb'], 'edit_section',
+    expect(props['edit_actions'], 'replace_section,insert_section,append_to_section',
         reason: 'the tick itself surfaces what the class can do');
     // Five section anchors over the SAME contains relation as code.
     const sectionIds = [

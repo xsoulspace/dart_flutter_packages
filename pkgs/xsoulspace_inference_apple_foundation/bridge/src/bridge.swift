@@ -96,6 +96,10 @@ final class GenerationState: @unchecked Sendable {
   let doneCallback: XsFmDoneCallback
   var cancelled = false
   var finished = false
+  /// ADR 0033 §4 — mechanical one-move end: when true, the generation
+  /// finishes on the FIRST tool result instead of resuming the model.
+  /// Written once before the generation task starts; read under `queue`.
+  var endAfterTool = false
   var task: Task<Void, Never>?
   var pendingTools: [String: CheckedContinuation<String, Error>] = [:]
   #if canImport(FoundationModels)
@@ -184,11 +188,34 @@ final class GenerationState: @unchecked Sendable {
   /// Resumes one pending tool continuation (tool_respond path).
   func fulfillTool(id toolId: String, result: String) -> Bool {
     var resumed = false
+    var endAfterMove = false
     queue.sync {
       if let continuation = pendingTools.removeValue(forKey: toolId) {
-        continuation.resume(returning: result)
         resumed = true
+        if endAfterTool && !cancelled {
+          // ADR 0033 §4 — the one-move contract ends the decision
+          // MECHANICALLY: the continuation is still resumed exactly once
+          // (framework contract) but the task is cancelled so the model
+          // never starts another round; the native transcript can no
+          // longer grow past one round. The done payload is delivered
+          // OUTSIDE the state queue (finish takes the registry queue —
+          // lock order: registry BEFORE state).
+          endAfterMove = true
+          continuation.resume(returning: result)
+          task?.cancel()
+        } else {
+          continuation.resume(returning: result)
+        }
       }
+    }
+    if endAfterMove {
+      // The tool result is already valid JSON (Dart jsonEncodes it) —
+      // embedded raw. `finish` is a no-op if the generation already
+      // completed or was cancelled (deliver is gated).
+      finish(
+        "{\"generation\":\(id),\"ok\":true,\"output\":\(result),"
+          + "\"ended_by\":\"one_move\"}"
+      )
     }
     return resumed
   }
@@ -345,6 +372,9 @@ public func xs_fm_generate_async(
   let instructions = request["instructions"] as? String
   let schemaJson = request["schema"] as? [String: Any]
   let toolsJson = request["tools"] as? [[String: Any]] ?? []
+  // ADR 0033 §4 — mechanical one-move end (flag rides the request JSON
+  // from the Dart client; absent → false, unchanged resume behavior).
+  state.endAfterTool = request["end_after_tool"] as? Bool ?? false
 
   XsFmDebug.log(
     "generate: prompt=\(prompt.prefix(80)) schema=\(schemaJson != nil ? "present" : "absent") tools=[\(toolsJson.map { $0["name"] as? String ?? "?" }.joined(separator: ", "))] callback=\(toolCallback != nil ? "set" : "NULL")"

@@ -52,8 +52,9 @@ import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
         FsToolsRoot,
         CapturedWrite,
         JailWriteGateway,
-        WriteGateMode,
-        runTool;
+        WriteGateMode;
+import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart'
+    show EnvConfig;
 import 'package:xsoulspace_agentic_harness/src/tools/task_grammar.dart'
     show
         executableDecisionForTask,
@@ -61,21 +62,15 @@ import 'package:xsoulspace_agentic_harness/src/tools/task_grammar.dart'
         TaskGrammarMatch;
 import 'package:agentic_executables_wire/agentic_executables_wire.dart'
     show EditExecutableWire;
-import 'package:xsoulspace_agentic_harness/src/tools/meaning_locate_tool.dart'
-    show meaningLocateTool;
 
+import 'derived_context.dart'
+    show DerivedContextLimits, deriveContextRow;
 import 'intent_closure_runner.dart'
     show DecisionMeter, afmSystemPrompt, registerIntentClosureTools;
+import 'meaning_profile_surface.dart'
+    show buildMeaningProfileSurface;
 import 'package:xsoulspace_agentic_workspace/xsoulspace_agentic_workspace.dart'
-    show
-        SpanEditMaterializer,
-        SpanEditPlan,
-        editKeyTool,
-        editMdTool,
-        editSymbolTool,
-        meaningSpanReader,
-        repoEtlTool,
-        writeReviewTool;
+    show SpanEditPlan;
 
 /// ~110 tokens — the run-graded (fs_tools) teaching prompt. B6: teaching
 /// lives in tool descriptions + the system prompt ONLY.
@@ -108,12 +103,13 @@ const meaningProfileSystemPrompt =
     'Edit code through the meaning tree — no file reads, no code '
     'tokens. ONE tool call per decision: after the result, end the '
     'turn; next decision gets a fresh cut. Flow: 1) repo_etl scan '
-    '(once). 2) DISCOVER: meaning_zoom {"query":"<keywords>",'
-    '"zoom":"local"} — pick an id; never guess. 3) READ: meaning_zoom '
-    '{"focusId":id,"zoom":"point"} (mapped files serve spans); '
-    'meaning_impact for blast radius. 4) ACT: edit_symbol (symbolId '
-    'from a cut) for code; write_review only for non-code (human '
-    'consents; never Dart). Bounces name valid ids. Moves verify and '
+    '(once). 2) READ in ONE call: meaning_program {"ops":['
+    '{"op":"locate","query":"<keywords>"},{"op":"zoom"},'
+    '{"op":"read"}]} — locate sets the cursor; later ops consume '
+    'cursor.first (focusId overrides); read serves the span through '
+    'the node\'s own class. 3) ACT: edit_symbol (symbolId from a '
+    'cut) for code; write_review only for non-code (human consents; '
+    'never Dart). Bounces name valid ids. Moves verify and '
     'auto-revert. Finish when green.';
 
 /// One coding task as data: prompt + fixtures + final-gate checkers + which
@@ -615,74 +611,82 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
   if (task.usesIntentSurface) {
     registerIntentClosureTools(world, jail, gateway: gateway);
   } else if (task.usesMeaningSurface) {
-    // R7 meaning profile: scan + zoom + impact + edit_symbol + run. NO
-    // read, NO write, NO fs_tools — the tree is the only code interface.
-    // The tree is REUSED from the restored world when the daemon already
-    // scanned it (R7c: built once per workspace, refreshed by tick).
-    final registry = ToolRegistry();
-    final etl = repoEtlTool(world, jail);
-    if (world.getResource<MeaningIndex>().nodeCount > 0) {
-      // Host-side mechanical refresh tick: mtime-changed files re-scan
-      // before the actor sees the tree (zero model tokens).
-      await etl.execute({'action': 'refresh'});
-    }
-    registry.register(etl);
-    // fs tier (ADR 0024, as amended): span cuts — a POINT zoom on a mapped
-    // file's section/keypath anchor serves that span's text, budget-bounded,
-    // jail-bounded, named bounces. Text enters ONLY under a meaning anchor.
-    registry.register(
-      meaningZoomTool(world, spanReader: meaningSpanReader(fsRoot)),
+    // R7 meaning profile, GRADUATED (ADR 0030 §3, 2026-09-07): repo_etl +
+    // meaning_program + edit_symbol + (write_review) + run — the program
+    // REPLACED the locate/zoom/impact verbs. NO read, NO write, NO
+    // fs_tools — the tree is the only code interface. ADR 0033 §2: the
+    // surface is built by the ONE-TRUTH builder (`buildMeaningProfileSurface`)
+    // shared with the overhead gate — the metered registry and the wired
+    // registry can no longer drift.
+    final surface = await buildMeaningProfileSurface(
+      world: world,
+      workspace: jail,
+      fsRoot: fsRoot,
+      gateway: gateway,
+      editApprover: editApprover,
+      packConsent: packConsent,
     );
-    registry.register(meaningImpactTool(world));
-    // Discovery ray (ADR 0014 §2 re-based on the tree): "where is X?" in
-    // one token-bounded call — BEFORE zoom/impact, never a text search.
-    registry.register(meaningLocateTool(world));
-    // P1 trusted-author tier: when the host carries an edit approver or a
-    // pack-write consent gate, the materializer is built HERE so both
-    // land on the same instance (the pack load loop below realizes
-    // authored_body entries only through the consent gate).
-    final materializer = editApprover == null && packConsent == null
-        ? null
-        : SpanEditMaterializer(
-            world: world,
-            workspace: jail,
-            approver: editApprover,
-            packConsent: packConsent,
-          );
-    registry.register(editSymbolTool(world, jail, materializer: materializer));
-    // Non-dart materializers (ADR 0024): md (`edit_section`) and yaml/json
-    // (`edit_key`) — the SAME single-writer lock table instance so a span
-    // move and a doc move can never interleave on one file.
-    registry.register(editMdTool(fsRoot, locks: materializer?.locks));
-    registry.register(editKeyTool(fsRoot, locks: materializer?.locks));
-    // fs tier (ADR 0024 §4): the escape-hatch WRITE — registered ONLY when a
-    // review gateway exists (deny-by-default is structural: no approver, no
-    // verb). The gateway renders the unified diff and asks the client via
-    // session/request_permission; a reject never lands.
-    if (gateway != null) {
-      registry.register(writeReviewTool(fsRoot, gateway));
-    }
-    // R7 production #7 finding: the run tool in the meaning profile is
-    // CONSTRAINED to the convention commands — the free-form arm was a
-    // write hole (`perl -pi` edited files through it; measured in the pi
-    // row). File mutation goes through the edit verbs, never the shell.
-    registry.register(
-      runTool(
-        fsRoot,
-        allowlist: const [
-          ['dart', 'analyze'],
-          ['dart', 'test'],
-          ['dart', 'run'],
-          ['flutter', 'analyze'],
-          ['flutter', 'test'],
-        ],
-      ),
+    world.getResource<ToolRegistryResource>().register(
+      'default',
+      surface.registry,
     );
-    world.getResource<ToolRegistryResource>().register('default', registry);
+    // ADR 0033 §1 — the derived context equation (AFM tier only: the
+    // constants are the measured AFM window; the large tier derives
+    // against its own window in a later row). The cut budget is DERIVED
+    // from the LIVE registry (never a constant): window(native) −
+    // native-truth overhead − output reserve − margin. When the derived
+    // budget cannot fund a cut, the run proceeds with the honest 0-budget
+    // (the pre-flight bounces named) — the repair is surface convergence
+    // (ADR 0030), never a bigger constant.
+    if (leanContextProfile) {
+      // ADR 0033 §1 as amended — the limits are CONFIGURABLE per backend
+      // (ADR 0008 EnvConfig: process env → ./.xsoulspace/config.json →
+      // global). AFM ships the measured defaults (4,096 / 1,024 / 1.45);
+      // an OpenRouter model sets derived_context_window_tokens (and
+      // friends) and the SAME equation derives that tier's cut budget.
+      // Per-backend scoping: derived_context_window_tokens_<backend>.
+      final config = await EnvConfig.load(
+        localPath:
+            EnvConfig.discoverLocalPath(start: jail.path) ??
+            EnvConfig.defaultLocalPath(),
+      );
+      final limits = DerivedContextLimits.resolve(
+        config: config,
+        backend: backend,
+      );
+      final derivation = deriveContextRow(
+        overheadTokens: overheadTokens(
+          systemPrompt: task.systemPrompt,
+          tools: surface.registry.tools.values.toList(),
+        ),
+        nativeWindowTokens: limits.windowTokens,
+        outputReserveTokens: limits.outputReserveTokens,
+        nativeTruthFactor: limits.nativeTruthFactor,
+        marginFraction: limits.marginFraction,
+        minCutTokens: limits.minCutTokens,
+      );
+      // ignore: avoid_print
+      print(
+        '[derived-context] backend=$backend window=${derivation.window} '
+        'reserve=${derivation.reserve} '
+        'nativeTruth=${derivation.nativeTruthFactor} '
+        'nativeOverhead=${derivation.nativeOverhead} '
+        'margin=${derivation.margin} '
+        '→ cutBudget=${derivation.derivedBudget} '
+        'fits=${derivation.fits}',
+      );
+      world.upsertResource(ProjectionBudget(tokens: derivation.derivedBudget));
+    }
+    world
+      // ADR 0033 §4 — the decision ends MECHANICALLY after the move: the
+      // native inline loop finishes the generation on the first tool
+      // result instead of trusting the model to end its turn.
+      ..upsertResource(NativeLoopPolicy(endAfterFirstTool: true))
+      ..flush();
     // P2 — the pre-pass runs AFTER the tool surface exists (the tree may
     // have been refreshed above) and BEFORE the actor's first decision:
     // host-side, zero model tokens, zero decisions.
-    grammarDirective = await taskGrammarPrepass(world, etl, task.prompt);
+    grammarDirective = await taskGrammarPrepass(world, surface.etl, task.prompt);
   } else {
     final registry = ToolRegistry();
     for (final t in fsTools(fsRoot)) {

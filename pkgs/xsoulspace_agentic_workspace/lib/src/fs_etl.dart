@@ -185,7 +185,7 @@ String _parentOf(String rel) {
       'bytes': f.bytes,
       'mtime': f.modified.toIso8601String(),
       if (_mapClasses.contains(f.fileClass)) 'has_map': true,
-      if (spec != null) 'edit_verb': spec.verb,
+      if (spec != null) 'edit_actions': spec.actions.join(','),
     };
     if (hasMeaningNode(world, f.nodeId)) {
       // Existing node (dart file from the code ETL): refresh fs props only

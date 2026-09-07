@@ -120,7 +120,7 @@ void main() {
       client: _FakeStreamingClient(),
     );
     final deltas = <String>[];
-    final response = await runtime.generate(
+    final (response, errorCode) = await runtime.generate(
       prompt: 'hi',
       systemPrompt: '',
       contextFragments: const [],
@@ -130,6 +130,7 @@ void main() {
       onDelta: deltas.add,
     );
     expect(deltas.join(), 'abc');
+    expect(errorCode, isNull);
     expect(response?.rawOutput, 'abc');
   });
 }

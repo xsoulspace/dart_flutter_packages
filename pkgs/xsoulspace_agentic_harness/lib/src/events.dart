@@ -272,3 +272,12 @@ String oneMoveContractBounceText({
       'move; your call was NOT run. End your turn now — the next decision '
       'starts fresh and will see this result.',
 });
+
+/// ADR 0033 §3 — window-class failure codes: re-sending the same cut is
+/// mechanically futile (the retry recomposes the same-sized request), so
+/// these NEVER take the retry path. Matches the Dart pre-flight code
+/// (`context_window_exceeded`, native_client.dart) and the Swift-side
+/// overflow mapping (bridge.swift, the same named code).
+bool isWindowClassFailure(String error) =>
+    error.contains('context_window_exceeded') ||
+    error.contains('context window');

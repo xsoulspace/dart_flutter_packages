@@ -55,7 +55,7 @@ import 'package:source_span/source_span.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart'
     show FM, SchemaBundle, ToolDef, ToolName;
 import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
-    show FileLockTable;
+    show FileLockTable, FsToolsRoot;
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart'
     show
         MeaningIndex,
@@ -66,7 +66,10 @@ import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart'
         meaningComponentOf;
 
 import 'dart_materializer.dart' show compileOpChainBody;
+import 'edit_node_router.dart'
+    show NodeEditBounce, routeNodeEdit;
 import 'edit_pack_capture.dart' show EditPackCapture;
+import 'file_class_spec.dart' show materializerSpecFor;
 import 'test_etl.dart' show deriveWorkspaceIntents;
 
 // ---------------------------------------------------------------------------
@@ -128,6 +131,7 @@ class SpanEditOutcome {
     this.analyzeMs,
     this.checkMs,
     this.failureClass = '',
+    this.repair = '',
   });
   final bool ok;
 
@@ -145,6 +149,10 @@ class SpanEditOutcome {
   final String detail;
   final String failureClass;
 
+  /// ADR 0034 — the exact repair move when the outcome is a named bounce
+  /// (from [SpanEditBounce.repair]; empty when the outcome is not one).
+  final String repair;
+
   bool get appliedClean => ok && !reverted;
 
   Map<String, dynamic> toJson() => {
@@ -158,6 +166,7 @@ class SpanEditOutcome {
     if (checkMs != null) 'check_ms': checkMs,
     'detail': detail,
     if (failureClass.isNotEmpty) 'failure_class': failureClass,
+    if (repair.isNotEmpty) 'repair': repair,
   };
 }
 
@@ -332,6 +341,23 @@ class SpanEditMaterializer {
     }
     final n = _node(id);
     if (n == null || n.kind != 'symbol') {
+      // ADR 0034 — the id space is ONE: a non-symbol node means the DART
+      // action addressed a node of another class — the bounce teaches the
+      // class vocabulary (legal actions from the registry), never the
+      // format.
+      if (n != null) {
+        final spec = materializerSpecFor(
+          '${n.props['class'] ?? ''}',
+        );
+        if (spec != null) {
+          throw SpanEditBounce(
+            'node $id is a ${n.kind} node (${n.props['class']}), not a '
+                'dart symbol',
+            'legal actions for THIS node: ${spec.actions.join(", ")} — '
+                'the node\'s class teaches the vocabulary; never the format',
+          );
+        }
+      }
       // Fail with navigable data: suffix-match hints.
       final index = _index();
       final hints = [
@@ -1459,11 +1485,14 @@ class SpanEditMaterializer {
       );
       return await apply(plan);
     } on SpanEditBounce catch (b) {
+      // ADR 0034 — the repair hint travels with the bounce: the exact
+      // move is data, never dropped at the boundary.
       return SpanEditOutcome(
         ok: false,
         reverted: false,
         detail: b.error,
         failureClass: 'bounce${b.fence == null ? "" : ":${b.fence}"}',
+        repair: b.repair,
       );
     }
   }
@@ -1853,38 +1882,45 @@ ToolDef editSymbolTool(
   return ToolDef.encode(
     name: const ToolName('edit_symbol'),
     description:
-        'Edit existing code through meaning moves — you never see file '
-        'text and never write code tokens. Actions: '
-        'replace_member_body {symbolId, opChain} (host compiles the chain '
-        'into the member body; the member MUST have suite coverage), '
+        'Edit a MEANING NODE through one verb — never file text, never a '
+        'file path, never code tokens. The node\'s CLASS teaches the '
+        'legal actions (a wrong action bounces with the legal set). '
+        'Dart symbols (sym_…): replace_member_body {symbolId, opChain} '
+        '(host compiles the chain; the member MUST have suite coverage), '
         'insert_member {symbolId, name, returns, params:[name:type], '
-        'opChain} (symbolId is the HOST CLASS to insert into), '
-        'remove_member {symbolId} (RETIRE — host prunes member+docs; '
-        'retire referencers first or the refs fence bounces), '
-        'apply_executable {symbolId, executableId, params} '
-        '(pack-fed; packs: op-chains + consented authored bodies). '
-        'ARG SHAPE: '
-        'symbolId is a REQUIRED TOP-LEVEL arg (the id from '
-        'meaning_zoom/meaning_impact) — never inside executableParams and '
-        'never as name; executableParams carries ONLY the executable\'s '
-        'own slots (rename_symbol: {newName}; no-param packs: {}). '
-        'opChain rows: {label, a?, b?} '
-        'over the closed pure vocabulary (load_arg, literal, add, sub, '
-        'mul, lt, gt, eq, not, starts_with, list_len, get_item, call, '
-        'jump_if_false, return). Every move is verified by dart analyze + '
-        'the workspace check and AUTO-REVERTED on failure — a failed move '
-        'costs an attempt, so compose carefully from the zoom/impact '
-        'data.',
+        'opChain} (symbolId is the HOST CLASS), apply_executable '
+        '{symbolId, executableId, params} (pack-fed). Doc sections '
+        '(sec_…, md): replace_section | insert_section | '
+        'append_to_section {symbolId, body: prose-as-data}. Config keys '
+        '(key_…, yaml/json): set_key | replace_value | delete_key | '
+        'append_list_item {symbolId, body: scalar/fragment-as-data}. '
+        'ARG SHAPE: symbolId is a REQUIRED TOP-LEVEL arg (the id from a '
+        'meaning_program cut) — never inside executableParams, never as '
+        'name. opChain rows: {label, a?, b?} over the closed pure '
+        'vocabulary (load_arg, literal, add, sub, mul, lt, gt, eq, not, '
+        'starts_with, list_len, get_item, call, jump_if_false, return). '
+        'Every move is verified by its class oracle and AUTO-REVERTED on '
+        'failure — a failed move costs an attempt.',
     argsSchema: SchemaBundle(
       root: FM.object(
         'edit_symbol',
         properties: () => [
           FM.prop(
             'action',
+            // ADR 0034 §2 — the closed UNION, class-scoped by the
+            // registry: a dart action on a sec_ node (or vice versa) is a
+            // named bounce listing the node's legal actions.
             FM.enum_('action', const [
               'replace_member_body',
               'insert_member',
               'apply_executable',
+              'replace_section',
+              'insert_section',
+              'append_to_section',
+              'set_key',
+              'replace_value',
+              'delete_key',
+              'append_list_item',
             ]),
           ),
           FM.prop('symbolId', FM.string()),
@@ -2008,6 +2044,44 @@ ToolDef editSymbolTool(
                   : 'disambiguate with the TOP-LEVEL symbolId from the cut',
               'hints': hits,
             };
+          }
+        }
+        // ADR 0034 §1 — ONE edit verb, class-routed. A non-dart node id
+        // (sec_…/key_… — any kind the registry gave edit actions) routes
+        // to its class materializer HERE; the dart path below is
+        // untouched. The model never named a format: the node's class
+        // teaches the legal actions, the bounce names them.
+        const dartActions = {
+          'replace_member_body',
+          'insert_member',
+          'apply_executable',
+          'remove_member',
+        };
+        if (action != null && !dartActions.contains(action)) {
+          final id = symbolId;
+          if (id == null || id.isEmpty) {
+            return {
+              'error': 'action "$action" needs the node id as the '
+                  'TOP-LEVEL symbolId arg (e.g. sec_… or key_… from a '
+                  'meaning_program cut)',
+              'bounce': true,
+              'failureClass': 'slot_misplaced',
+              'repair': 're-send with {action, symbolId, body}',
+            };
+          }
+          try {
+            return await routeNodeEdit(
+              world: world,
+              workspace: workspace,
+              fsRoot: FsToolsRoot(workspace.path),
+              symbolId: id,
+              action: action,
+              body: map['body'] as String?,
+              locks: mat.locks,
+              owner: owner,
+            );
+          } on NodeEditBounce catch (b) {
+            return b.toJson();
           }
         }
         // ONE required id: the symbol this move targets. For
