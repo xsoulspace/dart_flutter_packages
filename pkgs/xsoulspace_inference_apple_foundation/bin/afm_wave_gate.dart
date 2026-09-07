@@ -19,13 +19,16 @@
 ///    `editApprover` (the daemon routes this to session/
 ///    request_permission with a 45 s deny-on-timeout; in-process the
 ///    driver IS the permission client and answers immediately).
-/// 3. `md` — a README fixture; the sentence drives ONE `edit_section`
-///    replace_section move; the host splices byte-precisely and the
-///    `zero_broken_links` oracle auto-reverts any broken link.
-/// 4. `yaml` — a commented config.yaml fixture; ONE `edit_key`
-///    replace_value move; the byte fence keeps comments/siblings
-///    byte-identical and the `parse_semantic_diff` oracle demands the
-///    diff be EXACTLY the intended change.
+/// 3. `md` — a README fixture; the sentence drives ONE unified
+///    `edit_symbol` move ({action: replace_section, symbolId: <the
+///    section node id from the zoom cut>, body}); the host splices
+///    byte-precisely and the `zero_broken_links` oracle auto-reverts any
+///    broken link.
+/// 4. `yaml` — a commented config.yaml fixture; ONE unified `edit_symbol`
+///    move ({action: replace_value, symbolId: <the key node id>, body:
+///    "5"}); the byte fence keeps comments/siblings byte-identical and
+///    the `parse_semantic_diff` oracle demands the diff be EXACTLY the
+///    intended change.
 ///
 /// In-process (not stdio — the R7e app path): the REAL on-device Apple
 /// Foundation Model drives `runCodingAgentOnce` (package:
@@ -48,12 +51,12 @@
 /// exits 0 only when every jail's plumbing validates against the REAL
 /// materializers (no model, no dylib — sandbox-safe).
 ///
-/// SURFACE NOTE (honest): rows 3 and 4 drive `edit_section`/`edit_key` —
-/// those verbs must be REGISTERED on the meaning profile's tool surface
-/// (host partition) for the real rows to have them; until that lands the
-/// rows publish honest FAIL rows (the actor never gains the verb). The
-/// fixtures, prompts and checkers here are exactly what those rows need
-/// (proved by `--dry`, which splices through the REAL materializers).
+/// SURFACE NOTE (ADR 0034/0035 — the one-verb surface): ALL rows drive
+/// `edit_symbol` — the unified edit verb ({action, symbolId, body?,
+/// anchor?}); per-class actions (replace_section / replace_value / …)
+/// are registry data taught by bounces, never separate verbs. A row that
+/// hardcodes a dead verb or a format literal in its prompt is a drift
+/// bug — the dry validators grep for this (the §5 format-literal gate).
 library;
 
 import 'dart:convert';
@@ -217,7 +220,10 @@ const _trustedPrompt =
     'instead of w*h (area(2, 3) must be 6). The trusted-author project '
     'pack carries the CONSENTED executable `$_trustedExecutableId` — the '
     'human already allowed the pack write, so you need ONLY the ids. '
-    'Flow: repo_etl scan (once) → meaning_zoom query area → ONE '
+    'Flow: repo_etl scan (once) → meaning_program with read ops to find '
+    'the id — [{"op": "locate", "query": "area"}] then '
+    '[{"op": "zoom", "focusId": <the id from the locate ROWS>}] — the '
+    'locate result\'s rows CARRY the exact ids (never invent one) → ONE '
     'edit_symbol call of EXACTLY this shape: {"action": '
     '"apply_executable", "executableId": "$_trustedExecutableId", '
     '"symbolId": <the TOP-LEVEL symbol id of area from the zoom cut>, '
@@ -268,9 +274,10 @@ CodingAgentTask _trustedTask() => CodingAgentTask(
       'The exact move that fixes this task: edit_symbol with '
       '{"action": "apply_executable", "executableId": '
       '"$_trustedExecutableId", "symbolId": <TOP-LEVEL id of area from '
-      'meaning_zoom>, "executableParams": {}} — the body is CONSENTED '
-      'pack data; you never author it. If a move bounced, the bounce '
-      'text names the exact repair. Do not rename and do not re-scan.',
+      'the locate ROWS / zoom cut>, "executableParams": {}} — the body '
+      'is CONSENTED pack data; you never author it. If a move bounced, '
+      'the bounce text names the exact repair. Do not rename and do not '
+      're-scan.',
 );
 
 /// The in-process consent plan (the ACP `ConsentPlan` shape, driver-side):
@@ -343,10 +350,12 @@ const _mdPrompt =
     'Replace the Usage section of docs/README.md with EXACTLY this body '
     '(the host preserves the `## Usage` heading line itself): '
     '$_mdBody'
-    'Drive it as ONE edit_section move: {"path": "docs/README.md", "op": '
-    '"replace_section", "anchor": "Usage", "body": <the prose above>}. '
-    'Flow: repo_etl scan (once) → meaning_zoom on the README to confirm '
-    'the section anchor → the edit_section call. The host splices '
+    'Drive it as ONE edit_symbol call: {"action": "replace_section", '
+    '"symbolId": <the Usage section\'s node id from the zoom cut>, '
+    '"body": <the prose above>}. Flow: repo_etl scan (once) → '
+    'meaning_program read ops ([{"op": "locate", "query": "README"}]) — '
+    'the rows CARRY the section node ids (never invent one) — then the '
+    'edit_symbol call. The host splices '
     'byte-precisely and runs the zero-broken-links oracle (a broken link '
     'auto-reverts). Never read or write files.';
 
@@ -390,7 +399,7 @@ void main() {
 }
 
 CodingAgentTask _mdTask() => CodingAgentTask(
-  id: 'wave_md_edit_section',
+  id: 'wave_md_section',
   prompt: _mdPrompt,
   meaningProfile: true,
   systemPrompt: meaningProfileSystemPrompt,
@@ -406,11 +415,12 @@ CodingAgentTask _mdTask() => CodingAgentTask(
     CheckerSpec(type: 'contains', path: _mdRel, value: 'config.yaml'),
   ],
   repairHint:
-      'The exact move that fixes this task: edit_section with '
-      '{"path": "docs/README.md", "op": "replace_section", "anchor": '
-      '"Usage", "body": <the body from the task prompt>}. If the anchor '
-      'bounced, the bounce carries the outline — pick the exact section '
-      'label. Do not re-scan and do not write files.',
+      'The exact move that fixes this task: edit_symbol with '
+      '{"action": "replace_section", "symbolId": <the Usage section\'s '
+      'node id from the zoom cut>, "body": <the body from the task '
+      'prompt>}. If the action bounced, the bounce names the legal '
+      'actions for THAT node — pick from them. Do not re-scan and do '
+      'not write files.',
 );
 
 // ---------------------------------------------------------------------------
@@ -439,13 +449,15 @@ features:
 
 const _yamlPrompt =
     'Set retry.max_attempts to 5 in config.yaml (its inline comment must '
-    'survive). Drive it as ONE edit_key move: {"path": "config.yaml", '
-    '"op": "replace_value", "anchor": "retry.max_attempts", "body": '
-    '"5"}. Flow: repo_etl scan (once) → meaning_zoom on config.yaml to '
-    'confirm the keypath anchor → the edit_key call. The host splices '
-    'byte-precisely (comments and siblings stay untouched) and runs the '
-    'parse-semantic-diff oracle (any other change auto-reverts). Never '
-    'read or write files.';
+    'survive). Drive it as ONE edit_symbol call: {"action": '
+    '"replace_value", "symbolId": <the retry.max_attempts key node id '
+    'from the zoom cut>, "body": "5"}. Flow: repo_etl scan (once) → '
+    'meaning_program read ops ([{"op": "locate", "query": '
+    '"max_attempts"}]) — the rows CARRY the key node ids and their '
+    'keypaths (never invent one) — then the edit_symbol call. The host '
+    'splices byte-precisely (comments and siblings stay untouched) and '
+    'runs the parse-semantic-diff oracle (any other change '
+    'auto-reverts). Never read or write files.';
 
 Future<Directory> _seedYamlJail(int run, bool pubGet) async {
   final jail = await Directory.systemTemp.createTemp('afm_wave_yaml$run\_');
@@ -482,7 +494,7 @@ void main() {
 }
 
 CodingAgentTask _yamlTask() => CodingAgentTask(
-  id: 'wave_yaml_edit_key',
+  id: 'wave_yaml_keypath',
   prompt: _yamlPrompt,
   meaningProfile: true,
   systemPrompt: meaningProfileSystemPrompt,
@@ -502,11 +514,11 @@ CodingAgentTask _yamlTask() => CodingAgentTask(
     ),
   ],
   repairHint:
-      'The exact move that fixes this task: edit_key with '
-      '{"path": "config.yaml", "op": "replace_value", "anchor": '
-      '"retry.max_attempts", "body": "5"}. If the keypath bounced, the '
-      'bounce carries the resolved outline — use the exact keypath. Do '
-      'not re-scan and do not write files.',
+      'The exact move that fixes this task: edit_symbol with '
+      '{"action": "replace_value", "symbolId": <the retry.max_attempts '
+      'key node id from the zoom cut>, "body": "5"}. If the action '
+      'bounced, the bounce names the legal actions for THAT node — pick '
+      'from them. Do not re-scan and do not write files.',
 );
 
 // ---------------------------------------------------------------------------
@@ -889,6 +901,18 @@ String _consentDiff(String body) =>
 /// the fixture — byte-precise splice (heading preserved, nothing else
 /// reflows), zero_broken_links green, no auto-revert.
 Future<bool> _dryMd(Directory jail, List<String> problems) async {
+  // Surface-drift gate (ADR 0034/0035 §5): the prompt teaches the ONE
+  // unified verb, never a dead per-format verb or an fs-shaped path arg.
+  for (final dead in ['edit_section', 'edit_key', '"path":']) {
+    if (_mdPrompt.contains(dead)) {
+      problems.add('md prompt teaches the DEAD surface ("$dead") — the '
+          'unified verb is edit_symbol {action, symbolId, body?}');
+    }
+  }
+  if (!_mdPrompt.contains('"action": "replace_section"')) {
+    problems.add('md prompt does not carry the unified replace_section '
+        'move shape');
+  }
   final mat = MdMaterializer(root: FsToolsRoot(jail.path));
   final outcome = mat.perform(
     path: _mdRel,
@@ -925,6 +949,17 @@ Future<bool> _dryMd(Directory jail, List<String> problems) async {
 /// on the fixture — comments/siblings byte-identical, parse_semantic_diff
 /// exactly the intended change, no auto-revert.
 Future<bool> _dryYaml(Directory jail, List<String> problems) async {
+  // Surface-drift gate (ADR 0034/0035 §5) — same law as the md row.
+  for (final dead in ['edit_section', 'edit_key', '"path":']) {
+    if (_yamlPrompt.contains(dead)) {
+      problems.add('yaml prompt teaches the DEAD surface ("$dead") — the '
+          'unified verb is edit_symbol {action, symbolId, body?}');
+    }
+  }
+  if (!_yamlPrompt.contains('"action": "replace_value"')) {
+    problems.add('yaml prompt does not carry the unified replace_value '
+        'move shape');
+  }
   final mat = KeypathMaterializer(root: FsToolsRoot(jail.path));
   final outcome = mat.perform(
     path: _yamlRel,

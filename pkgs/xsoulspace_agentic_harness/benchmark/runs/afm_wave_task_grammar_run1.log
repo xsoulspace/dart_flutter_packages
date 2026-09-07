@@ -310,3 +310,217 @@ tick 7551: decisions=0 inFlight=0 pending=0 actors=agent-1788779296119603-0:0r/0
 --- tool results (truncated per beat) ---
 edit_symbol: {"ok":true,"reverted":false,"patches":1,"files":["lib/loop.dart"],"analyze_exit":0,"check_exit":0,"analyze_ms":165,"check_ms":571,"detail":"replace_member_body inBounds (sym_lib_loop.dart_inBounds) in lib/loop.dart [1..3] — scoped analyze e
 
+coding_agent run — task: wave_task_grammar
+  backend: apple_foundation_afm
+  verdict: PASS
+  overhead tokens (system+schemas): 1473
+  decisions: 1
+  tool rounds (thread beats): 1
+  moves: {edit_symbol.apply_executable: 1}
+  projection tokens (honest spend, Situation.tokensUsed): 2073
+  meaning nodes: 16, edges: 20
+  wall clock: 19039 ms
+  final gate (outer oracle, once): PASS
+    check: dart test exit=0
+  failure class: -
+--- harness pulse (J1.5.3) ---
+tick 1 | decisions 0 | in-flight 0 | pending results 0
+— agent-1788812864364022-0  [idle]  rounds 0/12 (Σ0)
+    last: edit_symbol:{"action":"apply_executable","executableId":"dart/fix_inc… → ok
+--- flight recorder ---
+FlightRecorder: 61 pulse(s), ticks 99..6087
+tick 4199: decisions=1 inFlight=1 pending=0 actors=agent-1788812864364022-0:0r/0a
+    agent-1788812864364022-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 4299: decisions=1 inFlight=1 pending=0 actors=agent-1788812864364022-0:0r/0a
+    agent-1788812864364022-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 4399: decisions=1 inFlight=1 pending=0 actors=agent-1788812864364022-0:0r/0a
+    agent-1788812864364022-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 4499: decisions=1 inFlight=2 pending=0 actors=agent-1788812864364022-0:0r/0a
+    agent-1788812864364022-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 4599: decisions=1 inFlight=2 pending=0 actors=agent-1788812864364022-0:0r/0a
+    agent-1788812864364022-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 4699: decisions=1 inFlight=2 pending=0 actors=agent-1788812864364022-0:0r/0a
+    agent-1788812864364022-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 4799: decisions=1 inFlight=2 pending=0 actors=agent-1788812864364022-0:0r/0a
+    agent-1788812864364022-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 4899: decisions=1 inFlight=2 pending=0 actors=agent-1788812864364022-0:0r/0a
+    agent-1788812864364022-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 4999: decisions=1 inFlight=2 pending=0 actors=agent-1788812864364022-0:0r/0a
+    agent-1788812864364022-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 5099: decisions=1 inFlight=2 pending=0 actors=agent-1788812864364022-0:0r/0a
+    agent-1788812864364022-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 5199: decisions=1 inFlight=2 pending=0 actors=agent-1788812864364022-0:0r/0a
+    agent-1788812864364022-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 5299: decisions=1 inFlight=2 pending=0 actors=agent-1788812864364022-0:0r/0a
+    agent-1788812864364022-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 5399: decisions=1 inFlight=2 pending=0 actors=agent-1788812864364022-0:0r/0a
+    agent-1788812864364022-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 5499: decisions=1 inFlight=2 pending=0 actors=agent-1788812864364022-0:0r/0a
+    agent-1788812864364022-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 5599: decisions=1 inFlight=2 pending=0 actors=agent-1788812864364022-0:0r/0a
+    agent-1788812864364022-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 5699: decisions=1 inFlight=2 pending=0 actors=agent-1788812864364022-0:0r/0a
+    agent-1788812864364022-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 5799: decisions=1 inFlight=2 pending=0 actors=agent-1788812864364022-0:0r/0a
+    agent-1788812864364022-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 5899: decisions=1 inFlight=2 pending=0 actors=agent-1788812864364022-0:0r/0a
+    agent-1788812864364022-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 5999: decisions=1 inFlight=2 pending=0 actors=agent-1788812864364022-0:0r/0a
+    agent-1788812864364022-0 ← : "READY MOVE — execute this harness_edit call NOW with EXACTLY these args. Do NOT scan (the meaning tree is already bui…"
+tick 6087: decisions=0 inFlight=0 pending=0 actors=agent-1788812864364022-0:0r/0a
+
+
+--- tool results (truncated per beat) ---
+edit_symbol: {"ok":true,"reverted":false,"patches":1,"files":["lib/loop.dart"],"analyze_exit":0,"check_exit":0,"analyze_ms":120,"check_ms":520,"detail":"replace_member_body inBounds (sym_lib_loop.dart_inBounds) in lib/loop.dart [1..3] — scoped analyze e
+
+coding_agent run — task: wave_task_grammar
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 1473
+  decisions: 31
+  tool rounds (thread beats): 31
+  moves: {meaning_program: 16, repo_etl.scan: 8, repo_etl.status: 1, repo_etl.refresh: 4, edit_symbol.replace_member_body: 1, goal_verify: 1}
+  projection tokens (honest spend, Situation.tokensUsed): 66055
+  meaning nodes: 16, edges: 20
+  wall clock: 930549 ms
+  final gate (outer oracle, once): FAIL
+    check: dart test exit=1:
+  failure class: final gate: dart test exit=1:
+--- harness pulse (J1.5.3) ---
+tick 31 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788815451855031-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: run failed exit=1: 
+— agent-1788815451855031-0  [idle via run_graded_goal]  rounds 1/12 (Σ30)  attempts 3/3 EXHAUSTED  goal FAIL
+    last: repo_etl:{"action":"scan"} → ok
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 166699..192112
+tick 190280: decisions=1 inFlight=1 pending=0 actors=agent-1788815451855031-0:1r/2a
+    agent-1788815451855031-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 190380: decisions=1 inFlight=1 pending=0 actors=agent-1788815451855031-0:1r/2a
+    agent-1788815451855031-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 190480: decisions=1 inFlight=1 pending=0 actors=agent-1788815451855031-0:1r/2a
+    agent-1788815451855031-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 190580: decisions=1 inFlight=1 pending=0 actors=agent-1788815451855031-0:1r/2a
+    agent-1788815451855031-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 190680: decisions=1 inFlight=1 pending=0 actors=agent-1788815451855031-0:1r/2a
+    agent-1788815451855031-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 190780: decisions=1 inFlight=1 pending=0 actors=agent-1788815451855031-0:1r/2a
+    agent-1788815451855031-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 190880: decisions=1 inFlight=1 pending=0 actors=agent-1788815451855031-0:1r/2a
+    agent-1788815451855031-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 190980: decisions=1 inFlight=1 pending=0 actors=agent-1788815451855031-0:1r/2a
+    agent-1788815451855031-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 191080: decisions=1 inFlight=1 pending=0 actors=agent-1788815451855031-0:1r/2a
+    agent-1788815451855031-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 191180: decisions=1 inFlight=1 pending=0 actors=agent-1788815451855031-0:1r/2a
+    agent-1788815451855031-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 191280: decisions=1 inFlight=1 pending=0 actors=agent-1788815451855031-0:1r/2a
+    agent-1788815451855031-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 191380: decisions=1 inFlight=1 pending=0 actors=agent-1788815451855031-0:1r/2a
+    agent-1788815451855031-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 191480: decisions=1 inFlight=1 pending=0 actors=agent-1788815451855031-0:1r/2a
+    agent-1788815451855031-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 191580: decisions=1 inFlight=1 pending=0 actors=agent-1788815451855031-0:1r/2a
+    agent-1788815451855031-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 191680: decisions=1 inFlight=1 pending=0 actors=agent-1788815451855031-0:1r/2a
+    agent-1788815451855031-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 191780: decisions=1 inFlight=1 pending=0 actors=agent-1788815451855031-0:1r/2a
+    agent-1788815451855031-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 191880: decisions=1 inFlight=1 pending=0 actors=agent-1788815451855031-0:1r/2a
+    agent-1788815451855031-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 191980: decisions=1 inFlight=1 pending=0 actors=agent-1788815451855031-0:1r/2a
+    agent-1788815451855031-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 192080: decisions=1 inFlight=1 pending=0 actors=agent-1788815451855031-0:1r/2a
+    agent-1788815451855031-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 192112: decisions=0 inFlight=0 pending=0 actors=agent-1788815451855031-0:1r/3a ⚠ actor agent-1788815451855031-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: run failed exit=1: 
+
+
+--- tool results (truncated per beat) ---
+meaning_program: {"ok":false,"program_halt":{"index":0,"op":"null","error":"unknown_op — closed set: [locate, zoom, impact, read]","hint":"fix op 0 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":0,"results":[
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: main.dart","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query
+repo_etl: {"ok":true,"scanned":true,"lastScan":"2026-09-08T00:11:44.808380","files":4,"dirs":3,"dart_files":2,"symbols":2,"tree_nodes":16}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: 1","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query":"test"
+meaning_program: {"ok":false,"program_halt":{"index":0,"op":"null","error":"unknown_op — closed set: [locate, zoom, impact, read]","hint":"fix op 0 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":0,"results":[
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"no_focus — run locate first (it sets the cursor) or pass focusId","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"no_focus — run locate first (it sets the cursor) or pass focusId","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"zoom","error":"unknown focusId: main.dart","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: main.dart","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":false,"program_halt":{"index":0,"op":"null","error":"unknown_op — closed set: [locate, zoom, impact, read]","hint":"fix op 0 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":0,"results":[
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: main.dart","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query
+meaning_program: {"ok":true,"ops_run":1,"results":[{"locate":{"ok":true,"query":"main.dart","total":0,"rows":[],"hint":"no meaning matched — try a shorter identifier or a zoom query"}}]}
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"no_focus — run locate first (it sets the cursor) or pass focusId","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":false,"program_halt":{"index":0,"op":"read","error":"no_focus — run locate first (it sets the cursor) or pass focusId","hint":"fix op 0 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":0,
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":false,"program_halt":{"index":0,"op":"null","error":"unknown_op — closed set: [locate, zoom, impact, read]","hint":"fix op 0 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":0,"results":[
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"apply_executable","error":"unknown_op — closed set: [locate, zoom, impact, read]","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1
+edit_symbol: {"ok":false,"bounce":true,"error":"inBounds returns bool — the chain must end at a return op","repair":"append {label: return} after pushing the result value","fence":"integration"}
+goal_verify: {ok: false, command: [dart, test], verify_wall_ms: 1336, detail: run failed exit=1: }
+meaning_program: {"ok":false,"program_halt":{"index":0,"op":"null","error":"unknown_op — closed set: [locate, zoom, impact, read]","hint":"fix op 0 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":0,"results":[
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+

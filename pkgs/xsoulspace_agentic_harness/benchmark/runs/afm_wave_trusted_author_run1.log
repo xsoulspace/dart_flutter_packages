@@ -429,3 +429,227 @@ repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":
 repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
 repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
 
+coding_agent run — task: wave_trusted_author
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 1473
+  decisions: 27
+  tool rounds (thread beats): 27
+  moves: {meaning_program: 13, repo_etl.status: 3, repo_etl.scan: 7, repo_etl.refresh: 2, edit_symbol.replace_member_body: 1, goal_verify: 1}
+  projection tokens (honest spend, Situation.tokensUsed): 54447
+  meaning nodes: 16, edges: 20
+  wall clock: 796894 ms
+  final gate (outer oracle, once): FAIL
+    check: dart test exit=1:
+  failure class: final gate: dart test exit=1:
+--- harness pulse (J1.5.3) ---
+tick 27 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788812910496286-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: run failed exit=1: 
+— agent-1788812910496286-0  [idle via react_continuation]  rounds 2/12 (Σ26)  attempts 1/3 EXHAUSTED
+    last: meaning_program:{"budget":1000,"ops":[{"a":"main.dart","b":"main.js","lab… → FAILED
+      error: {"ok":false,"program_halt":{"index":0,"op":"null","error":"unknown_op — closed set: [locate, zoom, impact, read]","hi…
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 176263..201763
+tick 199863: decisions=1 inFlight=1 pending=0 actors=agent-1788812910496286-0:1r/1a ⚠ actor agent-1788812910496286-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: run failed exit=1: 
+    agent-1788812910496286-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":0,"op":"null",…"
+tick 199963: decisions=1 inFlight=1 pending=0 actors=agent-1788812910496286-0:1r/1a ⚠ actor agent-1788812910496286-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: run failed exit=1: 
+    agent-1788812910496286-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":0,"op":"null",…"
+tick 200063: decisions=1 inFlight=1 pending=0 actors=agent-1788812910496286-0:1r/1a ⚠ actor agent-1788812910496286-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: run failed exit=1: 
+    agent-1788812910496286-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":0,"op":"null",…"
+tick 200163: decisions=1 inFlight=1 pending=0 actors=agent-1788812910496286-0:1r/1a ⚠ actor agent-1788812910496286-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: run failed exit=1: 
+    agent-1788812910496286-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":0,"op":"null",…"
+tick 200263: decisions=1 inFlight=1 pending=0 actors=agent-1788812910496286-0:1r/1a ⚠ actor agent-1788812910496286-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: run failed exit=1: 
+    agent-1788812910496286-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":0,"op":"null",…"
+tick 200363: decisions=1 inFlight=1 pending=0 actors=agent-1788812910496286-0:1r/1a ⚠ actor agent-1788812910496286-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: run failed exit=1: 
+    agent-1788812910496286-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":0,"op":"null",…"
+tick 200463: decisions=1 inFlight=1 pending=0 actors=agent-1788812910496286-0:1r/1a ⚠ actor agent-1788812910496286-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: run failed exit=1: 
+    agent-1788812910496286-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":0,"op":"null",…"
+tick 200563: decisions=1 inFlight=1 pending=0 actors=agent-1788812910496286-0:1r/1a ⚠ actor agent-1788812910496286-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: run failed exit=1: 
+    agent-1788812910496286-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":0,"op":"null",…"
+tick 200663: decisions=1 inFlight=1 pending=0 actors=agent-1788812910496286-0:1r/1a ⚠ actor agent-1788812910496286-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: run failed exit=1: 
+    agent-1788812910496286-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":0,"op":"null",…"
+tick 200763: decisions=1 inFlight=1 pending=0 actors=agent-1788812910496286-0:1r/1a ⚠ actor agent-1788812910496286-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: run failed exit=1: 
+    agent-1788812910496286-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":0,"op":"null",…"
+tick 200863: decisions=1 inFlight=1 pending=0 actors=agent-1788812910496286-0:1r/1a ⚠ actor agent-1788812910496286-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: run failed exit=1: 
+    agent-1788812910496286-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":0,"op":"null",…"
+tick 200963: decisions=1 inFlight=1 pending=0 actors=agent-1788812910496286-0:1r/1a ⚠ actor agent-1788812910496286-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: run failed exit=1: 
+    agent-1788812910496286-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":0,"op":"null",…"
+tick 201063: decisions=1 inFlight=1 pending=0 actors=agent-1788812910496286-0:1r/1a ⚠ actor agent-1788812910496286-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: run failed exit=1: 
+    agent-1788812910496286-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":0,"op":"null",…"
+tick 201163: decisions=1 inFlight=1 pending=0 actors=agent-1788812910496286-0:1r/1a ⚠ actor agent-1788812910496286-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: run failed exit=1: 
+    agent-1788812910496286-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":0,"op":"null",…"
+tick 201263: decisions=1 inFlight=1 pending=0 actors=agent-1788812910496286-0:1r/1a ⚠ actor agent-1788812910496286-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: run failed exit=1: 
+    agent-1788812910496286-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":0,"op":"null",…"
+tick 201363: decisions=1 inFlight=1 pending=0 actors=agent-1788812910496286-0:1r/1a ⚠ actor agent-1788812910496286-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: run failed exit=1: 
+    agent-1788812910496286-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":0,"op":"null",…"
+tick 201463: decisions=1 inFlight=1 pending=0 actors=agent-1788812910496286-0:1r/1a ⚠ actor agent-1788812910496286-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: run failed exit=1: 
+    agent-1788812910496286-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":0,"op":"null",…"
+tick 201563: decisions=1 inFlight=1 pending=0 actors=agent-1788812910496286-0:1r/1a ⚠ actor agent-1788812910496286-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: run failed exit=1: 
+    agent-1788812910496286-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":0,"op":"null",…"
+tick 201663: decisions=1 inFlight=1 pending=0 actors=agent-1788812910496286-0:1r/1a ⚠ actor agent-1788812910496286-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: run failed exit=1: 
+    agent-1788812910496286-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":0,"op":"null",…"
+tick 201763: decisions=0 inFlight=0 pending=0 actors=agent-1788812910496286-0:2r/1a ⚠ actor agent-1788812910496286-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: run failed exit=1: 
+
+
+--- tool results (truncated per beat) ---
+meaning_program: {"ok":false,"program_halt":{"index":0,"op":"locate","error":"tree_empty","hint":"fix op 0 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":0,"results":[]}
+repo_etl: {"ok":true,"scanned":false,"lastScan":null,"files":0,"dirs":0,"dart_files":0,"symbols":0,"tree_nodes":0}
+meaning_program: {"ok":false,"program_halt":{"index":0,"op":"locate","error":"tree_empty","hint":"fix op 0 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":0,"results":[]}
+repo_etl: {"ok":true,"files":4,"dirs":3,"dart_files":2,"symbols":2,"edges":7,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"tree is world state (code graph + fs tier) — use the meaning_program read ops to read it; it is re-derivable
+meaning_program: {"ok":false,"program_halt":{"index":0,"op":"null","error":"unknown_op — closed set: [locate, zoom, impact, read]","hint":"fix op 0 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":0,"results":[
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"no_focus — run locate first (it sets the cursor) or pass focusId","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,
+repo_etl: {"ok":true,"scanned":true,"lastScan":"2026-09-07T23:30:50.775817","files":4,"dirs":3,"dart_files":2,"symbols":2,"tree_nodes":16}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: focusId1","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query"
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: main.dart","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"zoom","error":"unknown focusId: foo","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query":"foo
+repo_etl: {"ok":true,"scanned":true,"lastScan":"2026-09-07T23:33:11.173378","files":4,"dirs":3,"dart_files":2,"symbols":2,"tree_nodes":16}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"no_focus — run locate first (it sets the cursor) or pass focusId","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"zoom","error":"unknown focusId: test","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query":"te
+edit_symbol: {"ok":false,"bounce":true,"error":"unknown symbol id: dir_test","repair":"zoom to find the symbol, then re-send with a valid symbolId (candidates: dir_test)"}
+goal_verify: {ok: false, command: [dart, test], verify_wall_ms: 3719, detail: run failed exit=1: }
+meaning_program: {"ok":true,"ops_run":1,"results":[{"locate":{"ok":true,"query":"dir_test","total":0,"rows":[],"hint":"no meaning matched — try a shorter identifier or a zoom query"}}]}
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"zoom","error":"unknown focusId: main.dart","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query
+meaning_program: {"ok":true,"ops_run":1,"results":[{"locate":{"ok":true,"query":"main.dart","total":0,"rows":[],"hint":"no meaning matched — try a shorter identifier or a zoom query"}}]}
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":false,"program_halt":{"index":0,"op":"null","error":"unknown_op — closed set: [locate, zoom, impact, read]","hint":"fix op 0 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":0,"results":[
+
+coding_agent run — task: wave_trusted_author
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 1473
+  decisions: 12
+  tool rounds (thread beats): 13
+  moves: {repo_etl.scan: 3, meaning_program: 6, repo_etl.status: 2, edit_symbol.replace_member_body: 1, goal_verify: 1}
+  projection tokens (honest spend, Situation.tokensUsed): 25124
+  meaning nodes: 16, edges: 20
+  wall clock: 369301 ms
+  final gate (outer oracle, once): FAIL
+    check: dart test exit=1:
+  failure class: final gate: dart test exit=1:
+--- harness pulse (J1.5.3) ---
+tick 12 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788814684050179-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: run failed exit=1: 
+— agent-1788814684050179-0  [idle via run_graded_goal]  rounds 1/12 (Σ11)  attempts 3/3 EXHAUSTED  goal FAIL
+    last: meaning_program:{"budget":1000,"ops":[{"op":"locate","query":"target"}]} → ok
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 76226..101666
+tick 99826: decisions=1 inFlight=1 pending=0 actors=agent-1788814684050179-0:1r/2a
+    agent-1788814684050179-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 99926: decisions=1 inFlight=1 pending=0 actors=agent-1788814684050179-0:1r/2a
+    agent-1788814684050179-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 100026: decisions=1 inFlight=1 pending=0 actors=agent-1788814684050179-0:1r/2a
+    agent-1788814684050179-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 100126: decisions=1 inFlight=1 pending=0 actors=agent-1788814684050179-0:1r/2a
+    agent-1788814684050179-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 100226: decisions=1 inFlight=1 pending=0 actors=agent-1788814684050179-0:1r/2a
+    agent-1788814684050179-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 100326: decisions=1 inFlight=1 pending=0 actors=agent-1788814684050179-0:1r/2a
+    agent-1788814684050179-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 100426: decisions=1 inFlight=1 pending=0 actors=agent-1788814684050179-0:1r/2a
+    agent-1788814684050179-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 100526: decisions=1 inFlight=1 pending=0 actors=agent-1788814684050179-0:1r/2a
+    agent-1788814684050179-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 100626: decisions=1 inFlight=1 pending=0 actors=agent-1788814684050179-0:1r/2a
+    agent-1788814684050179-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 100726: decisions=1 inFlight=1 pending=0 actors=agent-1788814684050179-0:1r/2a
+    agent-1788814684050179-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 100826: decisions=1 inFlight=1 pending=0 actors=agent-1788814684050179-0:1r/2a
+    agent-1788814684050179-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 100926: decisions=1 inFlight=1 pending=0 actors=agent-1788814684050179-0:1r/2a
+    agent-1788814684050179-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 101026: decisions=1 inFlight=1 pending=0 actors=agent-1788814684050179-0:1r/2a
+    agent-1788814684050179-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 101126: decisions=1 inFlight=1 pending=0 actors=agent-1788814684050179-0:1r/2a
+    agent-1788814684050179-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 101226: decisions=1 inFlight=1 pending=0 actors=agent-1788814684050179-0:1r/2a
+    agent-1788814684050179-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 101326: decisions=1 inFlight=1 pending=0 actors=agent-1788814684050179-0:1r/2a
+    agent-1788814684050179-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 101426: decisions=1 inFlight=1 pending=0 actors=agent-1788814684050179-0:1r/2a
+    agent-1788814684050179-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 101526: decisions=1 inFlight=1 pending=0 actors=agent-1788814684050179-0:1r/2a
+    agent-1788814684050179-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 101626: decisions=1 inFlight=1 pending=0 actors=agent-1788814684050179-0:1r/2a
+    agent-1788814684050179-0 ← run_graded_goal: "Goal not verified by running code (attempt 2/3).
+Failing:
+run failed exit=1: 
+Fix the code so the target runs, then c…"
+tick 101666: decisions=0 inFlight=0 pending=0 actors=agent-1788814684050179-0:1r/3a ⚠ actor agent-1788814684050179-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: run failed exit=1: 
+
+
+--- tool results (truncated per beat) ---
+repo_etl: {"ok":true,"files":4,"dirs":3,"dart_files":2,"symbols":2,"edges":7,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"tree is world state (code graph + fs tier) — use the meaning_program read ops to read it; it is re-derivable
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":true,"ops_run":1,"results":[{"locate":{"ok":true,"query":"main.dart","total":0,"rows":[],"hint":"no meaning matched — try a shorter identifier or a zoom query"}}]}
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"zoom","error":"unknown focusId: main","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query":"ma
+repo_etl: {"ok":true,"scanned":true,"lastScan":"2026-09-08T00:00:13.618211","files":4,"dirs":3,"dart_files":2,"symbols":2,"tree_nodes":16}
+meaning_program: {"ok":false,"program_halt":{"index":0,"op":"null","error":"unknown_op — closed set: [locate, zoom, impact, read]","hint":"fix op 0 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":0,"results":[
+repo_etl: {"ok":true,"scanned":true,"lastScan":"2026-09-08T00:00:13.618211","files":4,"dirs":3,"dart_files":2,"symbols":2,"tree_nodes":16}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: test","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query":"te
+edit_symbol: {"ok":false,"bounce":true,"error":"unknown symbol id: dir_test.dart","repair":"zoom to find the symbol, then re-send with a valid symbolId"}
+goal_verify: {ok: false, command: [dart, test], verify_wall_ms: 1527, detail: run failed exit=1: }
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"zoom","error":"unknown focusId: dir_test.dart","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"q
+meaning_program: {"ok":true,"ops_run":1,"results":[{"locate":{"ok":true,"query":"target","total":0,"rows":[],"hint":"no meaning matched — try a shorter identifier or a zoom query"}}]}
+

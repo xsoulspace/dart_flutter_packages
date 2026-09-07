@@ -277,7 +277,15 @@ ToolDef meaningImpactTool(World world) => ToolDef.encode(
         }
         final index = world.getResource<MeaningIndex>();
         if (!index.byId.containsKey(focus)) {
-          return {'error': 'unknown focusId: $focus'};
+          final hints = [
+            for (final id in index.byId.keys)
+              if (focus.length > 3 && id.contains(focus)) id,
+          ].take(5).toList();
+          return {
+            'error': 'unknown focusId: $focus',
+            'hints': hints,
+            'total': index.nodeCount,
+          };
         }
         final depth = map['depth'] is int ? map['depth'] as int : 2;
         final maxNodes = map['maxNodes'] is int ? map['maxNodes'] as int : 64;

@@ -23,3 +23,18 @@ test-unit:
 # Integration test on macOS (real plugin; engine unavailable is OK).
 test-integration:
 	cd example && flutter test integration_test -d macos
+
+# --- AFM wave gate (the P0 re-run; runbook: docs/afm_wave_runbook.md) ---
+
+# Sandbox-safe plumbing validation (no model, no dylib). Run FIRST.
+wave-dry:
+	dart run bin/afm_wave_gate.dart --dry
+
+# THE wave re-run: all 4 rows, pass@1, on-device AFM.
+wave:
+	dart run bin/afm_wave_gate.dart
+
+# One row (grammar | trusted | md | yaml), n runs. Use per-row when a
+# turn/session budget is tight (rows can run minutes each).
+wave-row row="md" runs="1":
+	dart run bin/afm_wave_gate.dart --row {{row}} --runs {{runs}}
