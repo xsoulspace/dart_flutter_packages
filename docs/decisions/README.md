@@ -36,3 +36,4 @@
 | [0032](0032_convergence_kernel_composite_strategy.md) | Accepted | Convergence kernel — composite strategy (one document, one kernel doc); per-op tags deferred with recorded trigger |
 | [0033](0033_derived_context_equation_mechanical_repair.md) | Accepted | The derived context equation: one-truth overhead gate, mechanical repair ladder, decision ends after the move |
 | [0034](0034_one_edit_verb_formats_grow_the_registry.md) | Accepted | One edit verb: edits address meaning nodes; formats grow the registry, never the surface |
+| [0035](0035_materializer_bindings_language_families.md) | Accepted | Materializer bindings: the registry IS the format seam; languages land as spec families (TS, C# next) |

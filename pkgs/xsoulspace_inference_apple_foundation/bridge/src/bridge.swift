@@ -459,17 +459,10 @@ public func xs_fm_generate_async(
           finish(donePayload("\"ok\":true,\"output\":\(jsonEscaped(content))"))
         } catch {
           XsFmDebug.log("generate: error — \(error)")
-          // Named code for the P1 crash precursor: an over-window request.
-          // Dart-side pre-flight (maxContextTokens) should reject these
-          // before the bridge is called; this is the belt-and-suspenders.
-          let code = error.localizedDescription.lowercased().contains(
-            "context window"
-          )
-            ? "context_window_exceeded"
-            : "generation_error"
+          let (code, message) = xsErrorClassification(error)
           finish(
             donePayload(
-              jsonErrorBody(code: code, message: error.localizedDescription)
+              jsonErrorBody(code: code, message: message)
             )
           )
         }
@@ -885,4 +878,29 @@ func jsonErrorBody(code: String, message: String) -> String {
     return "\"ok\":false,\"error\":{\"code\":\"\(code)\",\"message\":\"\"}"
   }
   return String(s.dropFirst().dropLast())
+}
+
+/// ADR 0033/0034 — NAMED failure codes, never a bare `generation_error`:
+/// the P0 on-device run (2026-09-07) proved that schema-invalid tool
+/// calls (`ToolCallError`) died opaquely — the call never reached Dart,
+/// so the named-bounce contract could not fire and the same-cut retry
+/// looped 59–109 generations. The repair ladder keys off the class:
+/// window-class drops the decision; args-invalid is BOUNCE-CLASS data
+/// (the model must learn the required slots from the next cut).
+func xsErrorClassification(_ error: Error) -> (code: String, message: String) {
+  let lowered = error.localizedDescription.lowercased()
+  if lowered.contains("context window") {
+    // The P1 crash precursor: an over-window request. Dart-side
+    // pre-flight (maxContextTokens) rejects these first; this is the
+    // belt-and-suspenders.
+    return ("context_window_exceeded", error.localizedDescription)
+  }
+  let described = String(describing: error)
+  if described.contains("ToolCallError") || described.contains("toolCallError") {
+    // The tool arguments failed the framework's GenerationSchema
+    // validation — bounce-class: the model gets the detail and the
+    // required-slot teaching in the next cut.
+    return ("tool_args_invalid", described)
+  }
+  return ("generation_error", error.localizedDescription)
 }

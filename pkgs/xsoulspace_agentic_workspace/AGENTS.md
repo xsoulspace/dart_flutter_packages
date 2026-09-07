@@ -11,7 +11,15 @@ the registry per ADR 0024, never as a fork.
 **Law (ADR 0026 §1): a new problem class lands as a materializer spec —
 never a new loop, a new tool, or a raw read/write path.**
 
-## Adding a file class (the extensibility answer — ADR 0024 §2 as data)
+## Adding a file class (the extensibility answer — ADR 0024 §2 as data, ADR 0035 §6 tiers)
+
+The format seam is the BINDING REGISTRY: routing keys on the node's
+stamped `class` prop — never a switch — and a new class = one binding
+registration + its materializer file. Languages land tiered (ADR 0035 §6):
+mapless → review-gate only; fs-tier → sub-nodes + class actions; code-tier
+→ symbol map + analyzer oracle + convention. TS and C# are the next
+families (v1 pack-fed bodies, v2 op-chain back-ends evidence-gated;
+zero-arg-delta on the model surface — dart action names reused verbatim).
 
 The read side is registry-driven (`lib/src/file_class_spec.dart`): a file
 class = one `FileClassSpec` entry (extensions + optional mechanical

@@ -554,6 +554,22 @@ func testGenerationCancelGate() async throws {
   }
   check("tool respond routes to the owning generation", toolResult == "resp", "got \(String(describing: toolResult))")
 
+  // ADR 0033/0034 — the failure ladder keys off NAMED codes: schema-
+  // invalid tool calls must NEVER die as a bare generation_error (the
+  // P0 on-device run looped 59–109 generations on exactly that).
+  struct FakeToolCallError: Error {}
+  let (argsCode, argsMessage) = xsErrorClassification(FakeToolCallError())
+  check(
+    "tool_args_invalid: schema-invalid calls are a NAMED bounce class",
+    argsCode == "tool_args_invalid" && !argsMessage.isEmpty,
+    "got \(argsCode)")
+  struct FakeOtherError: Error {}
+  let (fallbackCode, _) = xsErrorClassification(FakeOtherError())
+  check(
+    "generation_error is the fallback code",
+    fallbackCode == "generation_error",
+    "got \(fallbackCode)")
+
   // After cancel: no done delivery, postToolCall refuses and resumes the
   // continuation with a cancellation error, cancel of a dead id returns 1.
   let cancelledState = makeGateState()

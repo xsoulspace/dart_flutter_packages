@@ -156,6 +156,51 @@ void processResponsesSystem(World world) {
         final dropThread = attachBeatToActorThread(world, we, dropBeat);
         indexBeat(world, dropBeat, keywordsOf(outcome), thread: dropThread);
         we.remove<OpenDecision>();
+      } else if (failed && isArgsInvalidFailure(response.error)) {
+        // ADR 0034 amendment — the call failed the framework's schema
+        // validation BEFORE reaching the host: bounce-class DATA. The
+        // named beat teaches the action-scoped slots in the next cut
+        // (the model recovers through the repair-hint loop, or the enum
+        // splits per class — a measured change). ToolRoundCount contains
+        // the loop: a failed generation is a SPENT round.
+        final rounds = (we.get<ToolRoundCount>()?.value ?? 0) + 1;
+        we.insert(ToolRoundCount(rounds));
+        final outcome =
+            'tool_args_invalid: the previous call failed argument '
+                'validation before reaching the host. SLOTS ARE '
+                'ACTION-SCOPED — dart moves take opChain/executableId '
+                '(NEVER body: the model never writes code tokens); '
+                'sections/keys take body/anchor; symbolId is a REQUIRED '
+                'top-level slot. Re-send with every required slot.';
+        final bounceBeat = world.reserveEmptyEntity().entity;
+        final bounceBeatEntity = world.getEntity(bounceBeat).$1;
+        bounceBeatEntity.insert(TextContent(outcome));
+        bounceBeatEntity.insert(BeatStatus(BeatStatusEnum.complete));
+        bounceBeatEntity.insert(BeatModality(BeatModalityEnum.observation));
+        final bounceThread = attachBeatToActorThread(world, we, bounceBeat);
+        indexBeat(
+          world,
+          bounceBeat,
+          keywordsOf(outcome),
+          thread: bounceThread,
+        );
+        final maxRounds = policy.maxToolRounds;
+        if (rounds >= maxRounds) {
+          we.remove<OpenDecision>();
+        } else {
+          final prior = we.get<OpenDecision>();
+          we.insert(
+            OpenDecision(
+              prompt: 'Error: ${response.error}. Check the '
+                  'tool_args_invalid beat on your thread — re-send with '
+                  'every required slot.',
+              schema: prior?.schema ?? SchemaBundle.empty,
+              priority: prior?.priority ?? 0,
+              escalate: prior?.escalate ?? false,
+              threadId: prior?.threadId,
+            ),
+          );
+        }
       } else if (retries < policy.maxRetries) {
         final prior = we.get<OpenDecision>();
         we.insert(RetryCount(retries + 1));

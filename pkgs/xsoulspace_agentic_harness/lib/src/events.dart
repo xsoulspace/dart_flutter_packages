@@ -281,3 +281,12 @@ String oneMoveContractBounceText({
 bool isWindowClassFailure(String error) =>
     error.contains('context_window_exceeded') ||
     error.contains('context window');
+
+/// ADR 0034 amendment (the P0 run 2026-09-07) — args-invalid failure
+/// codes: the model's tool call failed the framework's schema validation
+/// BEFORE reaching the host (the bridge names it `tool_args_invalid`).
+/// BOUNCE-CLASS data, not a retry: the named beat teaches the required
+/// slots in the next cut, and [ToolRoundCount] contains the loop (a
+/// failed generation is not a tool ROUND — the 2026-09-06 budgets let
+/// 59–109-generation loops through).
+bool isArgsInvalidFailure(String error) => error.contains('tool_args_invalid');

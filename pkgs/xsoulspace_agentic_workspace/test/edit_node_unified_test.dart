@@ -208,6 +208,46 @@ void main() {
         reason: 'inserted AFTER the anchor');
   });
 
+
+  test('THE LAW (P0 finding): a dart move with body bounces — the model '
+      'never writes code tokens, even schema-validly', () async {
+    final symbolId = _nodeId(world, 'section', 'Usage');
+    final out = _decoded(
+      await edit.execute({
+        'action': 'replace_member_body',
+        'symbolId': symbolId,
+        'body': "final main() { print('prose'); }",
+        'opChain': const [],
+      }),
+    );
+    expect(out['ok'], isFalse);
+    expect(out['failureClass'], 'slot_scoping');
+    expect(
+      '${out['repair']}',
+      contains('NEVER take raw code'),
+      reason: 'the bounce teaches the law: dart moves compose opChain, '
+          'never raw code',
+    );
+    // Nothing moved.
+    expect(File('\${jail.path}/\$docRel').readAsStringSync(), docOriginal);
+  });
+
+  test('slot scoping is symmetric: a section move with dart slots bounces',
+      () async {
+    final symbolId = _nodeId(world, 'section', 'Usage');
+    final out = _decoded(
+      await edit.execute({
+        'action': 'replace_section',
+        'symbolId': symbolId,
+        'body': 'Fine prose.',
+        'opChain': const [],
+      }),
+    );
+    expect(out['ok'], isFalse);
+    expect(out['failureClass'], 'slot_scoping');
+    expect('${out['repair']}', contains('dart-move slots'));
+  });
+
   test('an unknown node id bounces with the locate/zoom repair hint',
       () async {
     final out = _decoded(

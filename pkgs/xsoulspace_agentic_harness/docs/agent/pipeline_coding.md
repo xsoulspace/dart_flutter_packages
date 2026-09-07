@@ -133,6 +133,13 @@ zero-broken-links oracle) and yaml/json (`edit_key`, keypath splice
 comment-preserving, parse_semantic_diff oracle) — the escape hatch
 (review-mode write) now covers only mapless classes.
 
+The format seam is the BINDING REGISTRY (ADR
+[0035](../../../../docs/decisions/0035_materializer_bindings_language_families.md)):
+routing keys on the node's stamped `class` prop — never a switch — and the
+next languages (TS, C#) land as spec families behind the SAME one edit verb
+(zero-arg-delta, dart action names reused, v1 pack-fed bodies, v2 op-chain
+back-ends evidence-gated).
+
 ## The pipeline (bookmark-manager reference path)
 
 ```

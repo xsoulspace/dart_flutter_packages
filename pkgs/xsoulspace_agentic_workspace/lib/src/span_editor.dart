@@ -1898,10 +1898,13 @@ ToolDef editSymbolTool(
         'the body) with symbolId scoping the file. '
         'ARG SHAPE: symbolId is a REQUIRED TOP-LEVEL arg (the id from a '
         'meaning_program cut) — never inside executableParams, never as '
-        'name. opChain rows: {label, a?, b?} over the closed pure '
-        'vocabulary (load_arg, literal, add, sub, mul, lt, gt, eq, not, '
-        'starts_with, list_len, get_item, call, jump_if_false, return). '
-        'A failed move costs an attempt.',
+        'name. SLOTS ARE ACTION-SCOPED: dart moves take opChain/'
+        'executableId — NEVER body (the model never writes code tokens; '
+        'the host compiles the chain); sections/keys take body/anchor. A '
+        'foreign slot bounces. opChain rows: {label, a?, b?} over the '
+        'closed pure vocabulary (load_arg, literal, add, sub, mul, lt, '
+        'gt, eq, not, starts_with, list_len, get_item, call, '
+        'jump_if_false, return). A failed move costs an attempt.',
     argsSchema: SchemaBundle(
       root: FM.object(
         'edit_symbol',
@@ -2064,6 +2067,46 @@ ToolDef editSymbolTool(
           'apply_executable',
           'remove_member',
         };
+        // ADR 0034 amendment (P0 run 2026-09-07) — slots are
+        // ACTION-SCOPED. The union surface must not accept a slot from
+        // another class: the P0 on-device run caught the model writing
+        // DART PROSE into `body` on `replace_member_body` — schema-valid,
+        // so the leak ADVERTISED raw-code replacement even though the
+        // executor ignores it. The law (the model never writes code
+        // tokens) is enforced HERE, at the surface, with a teaching
+        // bounce — never silently ignored.
+        const dartSlots = {
+          'opchain',
+          'executableid',
+          'name',
+          'returns',
+          'params',
+          'executableparams',
+          'label',
+        };
+        const dataSlots = {'body', 'anchor'};
+        final presentSlots = map.keys.map((k) => '$k'.toLowerCase()).toSet();
+        final isDartAction = action != null && dartActions.contains(action);
+        final foreignSlots = isDartAction
+            ? presentSlots.intersection(dataSlots)
+            : presentSlots.intersection(dartSlots);
+        if (foreignSlots.isNotEmpty) {
+          return {
+            'error': 'slots are ACTION-SCOPED: a '
+                '${isDartAction ? "dart" : "section/key"} move does not '
+                'take ${foreignSlots.join(", ")}',
+            'bounce': true,
+            'failureClass': 'slot_scoping',
+            'repair': isDartAction
+                ? 'dart moves NEVER take raw code: compose opChain over '
+                    'the closed vocabulary (the host compiles it) or '
+                    'apply_executable a pack — body/anchor are '
+                    'section/key slots'
+                : 'section/key moves take body (prose/fragment as data) '
+                    'and anchor (creation only) — opChain/executableId '
+                    'are dart-move slots',
+          };
+        }
         if (action != null && !dartActions.contains(action)) {
           final id = symbolId;
           if (id == null || id.isEmpty) {
