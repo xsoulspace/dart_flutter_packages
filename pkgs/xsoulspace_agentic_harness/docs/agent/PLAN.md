@@ -82,6 +82,10 @@ double-resume in the bridge. What remains, ordered:
 | P3 | AE knowledge plane completion: harness-side host adapter (export → `MeaningNode` world state); remote hub fetch/push + trust/signing model; `ae know` subcommand family per the AE repo's `docs/ae_know_design.md` | CLI + local hub landed; adapter/remote named | hub round-trip against a LIVE harness world |
 | P3 | Multi-workspace daemon (last_answer co-tenancy) | not built | co-tenancy e2e |
 
+| P1 | **Resolvers INTO the plan frontier (repair (a), DECIDED + owner-corrected — NO new mechanism)**: `StepAction` steps get mechanical resolution (pack/grammar/prompt-named anchors) and the ready decision delivers via the EXISTING decision flow (`openFreshDecision`); zero-token mechanical actors work consented ready steps while the model actor works (the ADR 0009 accelerate-and-predict frontier, unified with the task-grammar pre-pass fork). Prerequisite: the exhausted-attempt pump fix | measured (0% of failed steps needed composition) + machinery exists (StepAction/projectPlanFrontier/decision flow), wiring not built | wave rows 2–4 re-run: pass@1, 1–2 decisions; the pre-pass fork RETIRED into the frontier |
+| P2 | **Tier routing as a FRONTIER PROPERTY (repair (b), DECIDED)**: a step the resolver cannot resolve projects as tier-routed (topology-engine model-tiers-per-role); up-front routing, J8.2 overseer stays fallback. Build trigger: the first unresolvable-frontier task (three-failures rule) | named (0% of failed steps needed it — unmeasured), not built | the trigger task row + the routing beat logged with its class |
+| P2 | **Wave-log classifier as a repeatable analyzer**: classify each burned step (mechanically-resolvable vs composition-required) from run logs — the decision instrument for (a)/(b) boundaries | named, not built | the analyzer runs on every wave re-run; summary rows carry the class split |
+
 ## Per-language gate matrix (ADR 0035 §6 — one row per family, all through the ONE edit verb)
 
 | gate | dart | ts | c# |

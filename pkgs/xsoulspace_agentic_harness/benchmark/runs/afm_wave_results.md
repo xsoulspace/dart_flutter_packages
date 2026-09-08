@@ -178,6 +178,62 @@ criterion the surface must adapt for this tier; the named repairs
   (J8 rung 2) promotes the row to a larger model when the bounce ladder
   exhausts.
 
+### DECIDED (2026-09-08): both repairs land — (a) first, (b) as the residual — with the measurement
+
+The open decision was measured against the EXISTING logs (no new on-device
+runs needed). Classification of every burned step across all 5 failed
+trusted runs + md/yaml:
+
+- **0% of failed steps required model composition.** The target identifier
+  (`area`) was in the prompt — the model never queried it once (queries:
+  "main.dart"×4, "test"×2, "target"×2, "import"×2, "symbol1", "dir_test" —
+  all invented). Every focusId was invented (main.dart×5, test×3, foo×2,
+  "1"×2, "Symbol.class", "root.main.dart"). Every edit bounce was an
+  id/action problem. md/yaml: file, section, keypath and value ALL named
+  in the prompt; failures were early-stop.
+- **100% was mechanically resolvable** → repair (a) covers the ENTIRE
+  measured failure surface; repair (b) is not sampled by any current row.
+
+**Disposition (CORRECTED 2026-09-08 after owner review — NO new
+mechanism; the frontier projection already IS this machinery):**
+
+The first disposition drafted a "pre-pass generalization" — that would
+have DUPLICATED the existing plan-frontier machinery (ADR 0009):
+`StepAction(toolName, arguments)` already exists as a step component
+("the mechanical action associated with a step"), `StepStatus` /
+`StepGoalLink` / `projectPlanFrontier` already project the
+next-actionable frontier, and ADR 0009 §Planning says "the frontier IS
+the prediction path — what CAN be done next, BEFORE anything is" —
+exactly the accelerate-and-predict behavior the wave rows need. The
+task-grammar pre-pass (row 1) was a special-case FORK of this; the
+generalization UNIFIES it into the frontier:
+
+- **(a) P1 — resolvers INTO the frontier** (no new loop, no new
+  mechanism): the frontier projection gains the resolver classification
+  per step — `StepAction` gets resolved mechanically (pack executables
+  name the symbol; grammar verbs; prompt-named file+anchor/keypath) and
+  the step's ready decision is DELIVERED through the existing decision
+  flow (`openFreshDecision` — host-injected decisions exist). The model
+  actor's cut shows the ready step (row-1's carry-the-move pattern);
+  mechanically-executable steps with consent can be worked by zero-token
+  mechanical actors (the topology-engine shape) WHILE the model actor
+  still works — the accelerate-and-predict behavior, through beats and
+  the frontier, not beside it. Ambiguity = named bounce with candidates
+  (the locate-hints law), never a guess.
+- **(b) P2 — tier routing AS A FRONTIER PROPERTY**: a step the resolver
+  cannot resolve is projected as tier-routed (needs the larger tier) —
+  the topology engine's model-tiers-per-role data. Up-front routing, not
+  exhaust-then-escalate; the J8.2 overseer path stays the fallback.
+  Build trigger: the first real task with an unresolvable frontier step
+  (three-failures rule) — currently UNMEASURED (0% of failed steps needed
+  composition).
+- **Prerequisite P1 — the exhausted-attempt pump fix**: poisons both
+  paths. Land before the re-measurement.
+- **Measurement duty**: the re-run re-classifies rows 2–4 (pass@1 gate).
+  The log-classification becomes a repeatable benchmark analyzer — as a
+  HARNESS verb, never agent bash (the analysis itself was done in bash
+  this once and is ledgered in surface_gaps).
+
 ### New named driver defects (harness backlog)
 
 - **Exhausted-attempt pump**: after the goal-attempt budget exhausts,

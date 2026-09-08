@@ -423,3 +423,23 @@
   lag. The doc edits in this session stayed raw edits (this row).
 
 | 2026-09-08 | ADR 0035 §6: TS family landing (ts_materializer repairs: mask buffer, function-body member guard, span-boundary parse; registration of the ts FileClassSpec + binding; test/ts_materializer_test.dart incl. the scanner↔tree-sitter conformance delta) | raw `edit`/`write` on 4 lib files + 2 test files in xsoulspace_agentic_workspace; full suite green (95/0) + analyze 0 new errors before claim | the materializer under repair is DART in `pkgs/*/` — but the work was scanner-debug + fixture-data replication + registration DATA: no single meaning node addresses "fix the mask buffer inside tsScanSymbols" (function-level surgery inside a `final RegExp`-hosting library, cross-cutting the scanner/oracle/splice halves), and the conformance fixtures had to be embedded as test DATA because the workspace may not import the FFI leaf (§8 layering) — a copy, not a meaning move | a `conform_scanner` refactor executable: spec declares the fixture set + the named failure classes; host runs the battery against the scanner AND repairs named classes mechanically (the delta table is already the data contract — it just needs to drive the edit, not only the gate) |
+
+## 2026-09-08 — the (a)/(b) decision analysis ran in bash+python (the harness should have carried it)
+
+- **What bash/python did**: classified every burned step across the wave
+  logs (grep/uniq counts of invented queries/focusIds; edit-bounce
+  classes) and applied multi-section python replacements to PLAN.md /
+  afm_wave_results.md.
+- **Why the surface didn't cover it**: (1) the log-classification verb
+  does not exist — the wave-log analyzer (mechanically-resolvable vs
+  composition-required) should be a benchmark/mechanical directive
+  reading run logs through the surface; (2) the session's read tools
+  route via the mover (the extension gap above), pushing even doc edits
+  to raw paths.
+- **The verb/spec to build**: `wave_log_classify` (mechanical directive
+  over `benchmark/runs/*.log` → the per-run class-split summary rows);
+  the extension read-dialect fix (above) so analysis READS are
+  mechanical; doc multi-edits via the md binding's section actions once
+  reads work.
+- **Non-claims**: the analysis CONCLUSION stands (0% vs 100%); the escape
+  is the process debt, not the result.
