@@ -335,7 +335,9 @@ class GoalVerified implements Component {
 /// Step status component (ADR 0009 §2 data shape preview).
 class StepStatus implements Component {
   StepStatus(this.value);
-  final String value; // open | verified | failed
+  // Mutable residue (the mechanical actor / verify systems flip it) —
+  // the same pattern as ToolRoundCount.
+  String value; // open | verified | failed
 }
 
 /// Backlink: which goal entity this step serves.
@@ -364,10 +366,21 @@ class StepClaim implements Component {
 }
 
 /// The mechanical action associated with a step (decomposition experiments).
+///
+/// ADR 0009 Amendment (2026-09-08): this is THE mechanical slot — a step
+/// whose target is mechanically resolvable carries a RESOLVED StepAction
+/// (the ready decision, delivered via `openFreshDecision`); the resolver
+/// classification (pack executable / grammar verb / prompt-named anchor)
+/// and the mechanical actor's outcome ride [outcome] as named data.
 class StepAction implements Component {
   StepAction(this.toolName, this.arguments);
   final String toolName;
   final Map<String, dynamic> arguments;
+
+  /// The resolver/mechanical-actor outcome as named data (`source`,
+  /// `ok`, `error`, `failureClass`) — the frontier projection and metrics
+  /// read this instead of re-parsing text. Null until resolved/worked.
+  Map<String, Object?>? outcome;
 }
 
 /// Ordering index for steps.

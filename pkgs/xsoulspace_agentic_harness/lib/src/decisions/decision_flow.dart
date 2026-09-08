@@ -219,6 +219,10 @@ class ReActContinuationPolicy implements DecisionPolicy {
 
   @override
   DecisionDraft? evaluate(DecisionContext ctx) {
+    // J8.1 (the exhausted-attempt pump): a continuation NEVER outlives the
+    // goal-attempt budget — after exhaustion the decision chain ENDS (the
+    // overseer window is the post-exhaustion path, not more continuations).
+    if (ctx.has<GoalAttemptsExhausted>()) return null;
     if (!ctx.has<ToolResultPendingMarker>()) return null;
     return DecisionDraft(prompt: _continuationPrompt(ctx));
   }

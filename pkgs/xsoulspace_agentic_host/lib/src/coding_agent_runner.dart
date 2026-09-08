@@ -55,11 +55,18 @@ import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
         WriteGateMode;
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart'
     show EnvConfig;
-import 'package:xsoulspace_agentic_harness/src/tools/task_grammar.dart'
+import 'package:xsoulspace_agentic_harness/src/decisions/step_resolver.dart'
     show
-        executableDecisionForTask,
-        parseTaskSentence,
-        TaskGrammarMatch;
+        AmbiguousStep,
+        HostVerbStep,
+        ReadyStep,
+        TierRoutedStep,
+        ambiguousStepDirective,
+        readyStepDirective,
+        resolveTaskPrompt,
+        spawnResolvedStep;
+import 'package:xsoulspace_agentic_harness/src/tools/task_grammar.dart'
+    show executableDecisionForTask, parseTaskSentence, TaskGrammarMatch;
 import 'package:agentic_executables_wire/agentic_executables_wire.dart'
     show EditExecutableWire;
 
@@ -328,17 +335,16 @@ CodingAgentTask taskFromSentence(
   );
 }
 
-/// P2 — the TASK-GRAMMAR PRE-PASS (decision amortization, PLAN §NOW): a
-/// task sentence is parsed HOST-SIDE into {verb-class, target, params} —
-/// ZERO model tokens, ZERO decisions (the classifier runs before the
-/// actor exists). On a parse hit with a pack executable whose repair
-/// class matches, the ready `apply_executable` decision data is returned
-/// for the goal frame — the actor's next decision carries it verbatim
-/// (ONE decision for the structured path). A no-parse (named class) or a
-/// named lookup miss returns null: the loop falls through to the normal
-/// decision path — never a guess, never a crash.
+/// P2 — the TASK-GRAMMAR PRE-PASS, retired INTO the frontier resolver
+/// (ADR 0009 Amendment 2026-09-08 — NO parallel pre-pass): the ONE
+/// mechanical resolver ([resolveTaskPrompt]) covers the grammar verbs
+/// (pack executables), the prompt-named anchors (md sections / yaml
+/// keypaths / backticked symbol+executable — the wave rows 2–4 class),
+/// and bounces with REAL candidate ids when resolution is ambiguous. The
+/// ready decision is host-injected (the row-1 pattern, pass@1 ×3
+/// on-device): the actor CARRIES the move, never composes ids.
 ///
-/// The tree must exist for the lookup; a fresh world has none, and a
+/// The tree must exist for the resolution; a fresh world has none, and a
 /// parse hit justifies the host-side scan (mechanical, zero tokens — the
 /// same ETL the actor would run as its first move anyway).
 Future<String?> taskGrammarPrepass(
@@ -346,25 +352,26 @@ Future<String?> taskGrammarPrepass(
   ToolDef etl,
   String taskPrompt,
 ) async {
-  final reading = parseTaskSentence(taskPrompt);
-  if (reading is! TaskGrammarMatch) return null;
   if ((world.maybeGetResource<MeaningIndex>()?.nodeCount ?? 0) == 0) {
     await etl.execute({'action': 'scan'});
   }
-  final lookup = executableDecisionForTask(world, reading);
-  if (!lookup.matched || lookup.decision == null) return null;
-  // R7e teaching lesson (measured on-device, afm_wave row 1): a tiny model
-  // reads the FIRST line and starts exploring — the ready move must LEAD,
-  // be imperative, and forbid the natural first move (scan), which bounces
-  // on an already-built tree and derails the whole decision path.
-  return 'READY MOVE — execute this harness_edit call NOW with EXACTLY '
-      'these args. Do NOT scan (the meaning tree is already built), do NOT '
-      'zoom or explore first:\n'
-      'harness_edit ${jsonEncode(lookup.decision!)}\n'
-      '(host task-grammar pre-pass, 0 tokens: verb-class '
-      '${reading.verbClass}, target ${reading.target}, pack executable '
-      '${lookup.decision!['executableId']}. After the move, end your '
-      'turn.)';
+  final resolution = resolveTaskPrompt(world, taskPrompt);
+  switch (resolution) {
+    case final ReadyStep ready:
+      // The resolved step lands on the frontier as graph data (claim +
+      // resolved StepAction + classification) — the projection/metrics
+      // and the mechanical actor read it from the tree, never from prose.
+      spawnResolvedStep(world, ready, claim: taskPrompt);
+      return readyStepDirective(ready);
+    case final AmbiguousStep ambiguous:
+      // TOTAL-or-bounce: the bounce carries REAL candidate ids — the
+      // model picks one or zooms; it never invents an id.
+      return ambiguousStepDirective(ambiguous);
+    case HostVerbStep() || TierRoutedStep():
+      // The host verb (run) owns it / no mechanical pattern covers the
+      // sentence — the normal decision path is the right surface.
+      return null;
+  }
 }
 
 /// One run's measured result — every published column is carried here.
@@ -960,7 +967,22 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
     }
     var passed = finalGate.isNotEmpty && finalGate.every((c) => c.passed);
     while (!passed && attempt < maxGoalAttempts) {
-      attempt++;
+      // J8.1 (the exhausted-attempt pump, measured on-device Σ26): the
+      // monotonic budget is ONE truth. When the in-run policy stamped
+      // [GoalAttemptsExhausted], the decision ENDS — no driver re-send on
+      // an exhausted actor (the overseer window below is the designated
+      // post-exhaustion path, never more attempt prompts).
+      if (world.query2<Actor, GoalAttemptsExhausted>().toList().isNotEmpty) {
+        break;
+      }
+      // ONE truth (P5): the monotonic [AttemptCount] is the budget — the
+      // driver READS it, never clobbers it (the in-run policy consumes the
+      // same counter for its 1:1 verification re-sends). The old code
+      // overwrote the counter with its own loop index — two writers, the
+      // divergence the pump lived in.
+      attempt =
+          (world.getEntity(actor).$1.get<AttemptCount>()?.value ?? attempt) +
+          1;
       // Uniform budget accounting: the policy increments AttemptCount on the
       // marker path; the driver increments it on the native-session path.
       // Same monotonic component, same cap — no double reset.

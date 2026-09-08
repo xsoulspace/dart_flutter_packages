@@ -444,3 +444,28 @@
 - **Non-claims**: the analysis CONCLUSION stands (0% vs 100%); the escape
   is the process debt, not the result.
 | 2026-09-08 | cs-family landing (ADR 0035 §6 Tier C v1: cs_materializer + binding + tests + baseline doc) | the whole task ran on raw read/write/bash: `read` over the 1,746-line materializer, `write` for the 9-test suite, regex probes via throwaway `dart run` scripts to pin scanner behavior (the scanner returned zero nodes — `\p{L}` regexes missing `unicode: true` — and block-scoped-namespace declarations were unindexed; both found by hand-probing, not by a surface read), doc appends via `cat >>` | no harness surface covers NEW-format materializer landing: the cs files are not yet editable through a cs binding (chicken-and-egg — the binding lands in this very task), and the harness has no "run a one-off probe script against package lib code" verb for scanner debugging; md/doc appends could have used the md binding only if the task docs were registered meaning nodes in THIS workspace | when the NEXT format family lands (v2), bootstrap it the way ts→cs did: land the binding, then re-point the family's own docs/tests at the surface (self-hosting); a `probe` directive (run a named pure fn over inline source, return rows) would have turned the two scanner-bug probes into surface reads — spec as a harness read dialect extension, never a new loop |
+
+## 2026-09-08 — frontier-resolver session: reads routed through the mover, then closed (the extension-dialect row above, EXECUTED)
+
+- **What happened (A side, measured in-session)**: `harness_locate` ×2 and a
+  `harness_edit` probe delegated to the mover (194,114 / 194,122 / 183,302 ms —
+  `mover_refusal` ×2, zero moves, verify burned 8,999 ms each) — the session
+  could not read the tree mechanically while the debt row above stood.
+- **What closed it (B side)**: (1) the extension now exposes ONE read tool
+  (`harness_meaning_program {ops:[…]}`; legacy wrappers REMOVED);
+  (2) the mechanical-read set is asserted against the LIVE one-truth registry
+  (`pkgs/xsoulspace_agentic_host/test/mechanical_read_registry_test.dart` —
+  both directions: every recognized read form is served by a registry tool,
+  the program op set is derived from the LIVE tool's closed-set halt bounce,
+  and the legacy wrapper names are pinned OUT);
+  (3) the read wall over the REAL monorepo tree measured **28 ms** (scripted
+  probe, `run_dogfood_seam_ab.mjs`);
+  (4) one REAL `harness_edit` md insert (the A/B row into
+  `results_seam_speed.md`) landed THROUGH the md binding via the scripted
+  daemon — byte-precise, consented, oracle-gated (edit wall 41.5 s incl. the
+  in-materializer verify; the pure splice is ms-scale).
+- **Non-claims**: the on-device wave rows 2–4 re-run (the repair-(a)
+  graduation measurement) is a separate, machine-quiet gate; the A/B rows are
+  n=1 in-session observations. The 41.5 s edit wall is the verify convention
+  (flutter test over the touched package), not the splice.
+| 2026-09-08 | ADR 0009 (last_answer) session registry + profiler protocol layer (host: `HarnessSessionRegistry`, `SessionHandle`; profiler: pure-Dart `session_protocol.dart` reader + gates) | whole task ran on raw `read`/`write`/`edit`/`bash` (6 new Dart files + 3 barrel/pubspec integration edits); gates verified via `flutter test`/`flutter analyze` + a plain-VM `dart run` probe | the pi session this task ran in had NO harness surface tools mounted (no harness_scan/harness_edit/harness_verify directives available) — the registry/protocol files are new files in pkgs/*/ Dart packages, which the surface covers in principle, but the session's tool list did not expose them | when surface tools mount, new-file Dart work in pkgs/*/ should route harness_scan → harness_edit → harness_verify as the AGENTS.md law says; the headless gate (protocol answers with no Flutter in the process) is exactly the shape a `verify` directive should carry as a named gate |

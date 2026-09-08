@@ -203,10 +203,15 @@ void main() {
       expect(we.get<AttemptCount>()?.value, 1);
 
       // Prose turn: response with NO tool calls resets ToolRoundCount —
-      // but AttemptCount must survive.
+      // but AttemptCount must survive. J8.1: the FIRST evaluation consumed
+      // the verdict (one failed verification re-prompts EXACTLY ONCE), so
+      // the counter's second increment needs the NEXT failed verification
+      // stamp — never the stale one.
       world.upsertComponent(actor, ToolRoundCount(5));
       we.remove<OpenDecision>();
       // (generation system would do this on a text-only final answer)
+      we.insert(GoalVerified(passed: false, detail: 'x again'));
+      world.flush();
       ctx = DecisionContext(actor: actor, world: world, tick: 2);
       final draft = const RunGradedGoalPolicy().evaluate(ctx);
       world.flush();

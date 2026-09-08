@@ -587,3 +587,270 @@ tick 6884: decisions=0 inFlight=0 pending=0 actors=agent-1788819088740626-0:0r/0
 --- tool results (truncated per beat) ---
 edit_symbol: {"ok":true,"reverted":false,"patches":1,"files":["lib/loop.dart"],"analyze_exit":0,"check_exit":0,"analyze_ms":124,"check_ms":529,"detail":"replace_member_body inBounds (sym_lib_loop.dart_inBounds) in lib/loop.dart [1..3] — scoped analyze e
 
+coding_agent run — task: wave_task_grammar
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 1440
+  decisions: 67
+  tool rounds (thread beats): 66
+  moves: {edit_symbol.apply_executable: 1, goal_verify: 1, repo_etl.scan: 14, meaning_program: 33, repo_etl.status: 5, repo_etl.refresh: 12}
+  projection tokens (honest spend, Situation.tokensUsed): 145164
+  meaning nodes: 16, edges: 20
+  wall clock: 1872601 ms
+  final gate (outer oracle, once): FAIL
+    check: dart test exit=1:
+  failure class: final gate: dart test exit=1:
+--- harness pulse (J1.5.3) ---
+tick 67 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788842483593199-0: goal-attempt budget exhausted — goal_unverifiable: 2 failed verification attempts (budget 1). Last failure: dart test exit=1:
+— agent-1788842483593199-0  [idle via react_continuation]  rounds 2/12 (Σ65)  attempts 2/3 EXHAUSTED
+    last: meaning_program:{"budget":100,"ops":[{"query":"test","op":"locate"},{"op"… → FAILED
+      error: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: test","hint":"fix op 1 and resend the pro…
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 326842..352304
+tick 350442: decisions=1 inFlight=1 pending=0 actors=agent-1788842483593199-0:1r/2a
+    agent-1788842483593199-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":1,"op":"read",…"
+tick 350542: decisions=1 inFlight=1 pending=0 actors=agent-1788842483593199-0:1r/2a
+    agent-1788842483593199-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":1,"op":"read",…"
+tick 350642: decisions=1 inFlight=1 pending=0 actors=agent-1788842483593199-0:1r/2a
+    agent-1788842483593199-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":1,"op":"read",…"
+tick 350742: decisions=1 inFlight=1 pending=0 actors=agent-1788842483593199-0:1r/2a
+    agent-1788842483593199-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":1,"op":"read",…"
+tick 350842: decisions=1 inFlight=1 pending=0 actors=agent-1788842483593199-0:1r/2a
+    agent-1788842483593199-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":1,"op":"read",…"
+tick 350942: decisions=1 inFlight=1 pending=0 actors=agent-1788842483593199-0:1r/2a
+    agent-1788842483593199-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":1,"op":"read",…"
+tick 351042: decisions=1 inFlight=1 pending=0 actors=agent-1788842483593199-0:1r/2a
+    agent-1788842483593199-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":1,"op":"read",…"
+tick 351142: decisions=1 inFlight=1 pending=0 actors=agent-1788842483593199-0:1r/2a
+    agent-1788842483593199-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":1,"op":"read",…"
+tick 351242: decisions=1 inFlight=1 pending=0 actors=agent-1788842483593199-0:1r/2a
+    agent-1788842483593199-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":1,"op":"read",…"
+tick 351342: decisions=1 inFlight=1 pending=0 actors=agent-1788842483593199-0:1r/2a
+    agent-1788842483593199-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":1,"op":"read",…"
+tick 351442: decisions=1 inFlight=1 pending=0 actors=agent-1788842483593199-0:1r/2a
+    agent-1788842483593199-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":1,"op":"read",…"
+tick 351542: decisions=1 inFlight=1 pending=0 actors=agent-1788842483593199-0:1r/2a
+    agent-1788842483593199-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":1,"op":"read",…"
+tick 351642: decisions=1 inFlight=1 pending=0 actors=agent-1788842483593199-0:1r/2a
+    agent-1788842483593199-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":1,"op":"read",…"
+tick 351742: decisions=1 inFlight=1 pending=0 actors=agent-1788842483593199-0:1r/2a
+    agent-1788842483593199-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":1,"op":"read",…"
+tick 351842: decisions=1 inFlight=1 pending=0 actors=agent-1788842483593199-0:1r/2a
+    agent-1788842483593199-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":1,"op":"read",…"
+tick 351942: decisions=1 inFlight=1 pending=0 actors=agent-1788842483593199-0:1r/2a
+    agent-1788842483593199-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":1,"op":"read",…"
+tick 352042: decisions=1 inFlight=1 pending=0 actors=agent-1788842483593199-0:1r/2a
+    agent-1788842483593199-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":1,"op":"read",…"
+tick 352142: decisions=1 inFlight=1 pending=0 actors=agent-1788842483593199-0:1r/2a
+    agent-1788842483593199-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":1,"op":"read",…"
+tick 352242: decisions=1 inFlight=1 pending=0 actors=agent-1788842483593199-0:1r/2a
+    agent-1788842483593199-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":1,"op":"read",…"
+tick 352304: decisions=0 inFlight=0 pending=0 actors=agent-1788842483593199-0:2r/2a
+
+
+--- tool results (truncated per beat) ---
+edit_symbol: {"ok":false,"error":"slots are ACTION-SCOPED: a dart move does not take anchor, body","bounce":true,"failureClass":"slot_scoping","repair":"dart moves NEVER take raw code: compose opChain over the closed vocabulary (the host compiles it) or
+goal_verify: {ok: false, command: [dart, test], verify_wall_ms: 3768, detail: run failed exit=1: }
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"zoom","error":"unknown focusId: main.dart","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query
+repo_etl: {"ok":true,"scanned":true,"lastScan":"2026-09-08T07:42:34.632430","files":4,"dirs":3,"dart_files":2,"symbols":2,"tree_nodes":16}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: 0","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query":"test"
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"no_focus — run locate first (it sets the cursor) or pass focusId","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: main.dart","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query
+repo_etl: {"ok":true,"scanned":true,"lastScan":"2026-09-08T07:46:23.080853","files":4,"dirs":3,"dart_files":2,"symbols":2,"tree_nodes":16}
+meaning_program: {"ok":true,"ops_run":1,"results":[{"locate":{"ok":true,"query":"symbol:MySymbol","total":0,"rows":[],"hint":"no meaning matched — zoom ONE of these ids (a file node's cut carries its sections/keys), then edit","hints":["f_lib_loop.dart","sy
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: main.dart","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query
+meaning_program: {"ok":true,"ops_run":1,"results":[{"locate":{"ok":true,"query":"main.dart","total":0,"rows":[],"hint":"no meaning matched — zoom ONE of these ids (a file node's cut carries its sections/keys), then edit","hints":["f_lib_loop.dart","sym_lib_
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":false,"program_halt":{"index":0,"op":"read","error":"no_focus — run locate first (it sets the cursor) or pass focusId","hint":"fix op 0 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":0,
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: main.dart","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"zoom","error":"unknown focusId: symbolId","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query"
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":true,"ops_run":1,"results":[{"locate":{"ok":true,"query":"main.dart","total":0,"rows":[],"hint":"no meaning matched — zoom ONE of these ids (a file node's cut carries its sections/keys), then edit","hints":["f_lib_loop.dart","sym_lib_
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: main.dart","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: string","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query":"
+repo_etl: {"ok":true,"scanned":true,"lastScan":"2026-09-08T07:54:11.284296","files":4,"dirs":3,"dart_files":2,"symbols":2,"tree_nodes":16}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: foo","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query":"foo
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":false,"program_halt":{"index":0,"op":"null","error":"unknown_op — closed set: [locate, zoom, impact, read]","hint":"fix op 0 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":0,"results":[
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":true,"ops_run":1,"results":[{"locate":{"ok":true,"query":"symbolId:foo","total":0,"rows":[],"hint":"no meaning matched — zoom ONE of these ids (a file node's cut carries its sections/keys), then edit","hints":["f_lib_loop.dart","sym_l
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: example.dart.1","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"
+repo_etl: {"ok":true,"scanned":true,"lastScan":"2026-09-08T07:57:24.542639","files":4,"dirs":3,"dart_files":2,"symbols":2,"tree_nodes":16}
+meaning_program: {"ok":false,"program_halt":{"index":0,"op":"null","error":"unknown_op — closed set: [locate, zoom, impact, read]","hint":"fix op 0 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":0,"results":[
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: main.dart.main","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"
+meaning_program: {"ok":true,"ops_run":1,"results":[{"locate":{"ok":true,"query":"main.dart","total":0,"rows":[],"hint":"no meaning matched — zoom ONE of these ids (a file node's cut carries its sections/keys), then edit","hints":["f_lib_loop.dart","sym_lib_
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: main.dart","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: test","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query":"te
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":false,"program_halt":{"index":0,"op":"read","error":"no_focus — run locate first (it sets the cursor) or pass focusId","hint":"fix op 0 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":0,
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":false,"program_halt":{"index":0,"op":"null","error":"unknown_op — closed set: [locate, zoom, impact, read]","hint":"fix op 0 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":0,"results":[
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"no_focus — run locate first (it sets the cursor) or pass focusId","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":true,"ops_run":1,"results":[{"locate":{"ok":true,"query":"main.dart","total":0,"rows":[],"hint":"no meaning matched — zoom ONE of these ids (a file node's cut carries its sections/keys), then edit","hints":["f_lib_loop.dart","sym_lib_
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: dart:string","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"que
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: 123456","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query":"
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":true,"ops_run":1,"results":[{"locate":{"ok":true,"query":"main.dart","total":0,"rows":[],"hint":"no meaning matched — zoom ONE of these ids (a file node's cut carries its sections/keys), then edit","hints":["f_lib_loop.dart","sym_lib_
+meaning_program: {"ok":true,"ops_run":1,"results":[{"locate":{"ok":true,"query":"main.dart","total":0,"rows":[],"hint":"no meaning matched — zoom ONE of these ids (a file node's cut carries its sections/keys), then edit","hints":["f_lib_loop.dart","sym_lib_
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"zoom","error":"unknown focusId: main.dart","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":true,"ops_run":1,"results":[{"locate":{"ok":true,"query":"main.dart","total":0,"rows":[],"hint":"no meaning matched — zoom ONE of these ids (a file node's cut carries its sections/keys), then edit","hints":["f_lib_loop.dart","sym_lib_
+repo_etl: {"ok":true,"scanned":true,"lastScan":"2026-09-08T08:10:12.638093","files":4,"dirs":3,"dart_files":2,"symbols":2,"tree_nodes":16}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: test","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query":"te
+
+coding_agent run — task: wave_task_grammar
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 1440
+  decisions: 9
+  tool rounds (thread beats): 8
+  moves: {run: 1, repo_etl.refresh: 1, meaning_program: 1, edit_symbol.replace_member_body: 1, goal_verify: 1, repo_etl.scan: 3}
+  projection tokens (honest spend, Situation.tokensUsed): 20464
+  meaning nodes: 16, edges: 20
+  wall clock: 1432547 ms
+  final gate (outer oracle, once): FAIL
+    check: dart test exit=1:
+  failure class: final gate: dart test exit=1:
+--- harness pulse (J1.5.3) ---
+tick 9 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788845005794246-0: goal-attempt budget exhausted — goal_unverifiable: 1 failed verification attempts (budget 1). Last failure: dart test exit=1:
+— agent-1788845005794246-0  [idle via react_continuation]  rounds 0/12 (Σ6)  attempts 2/3 EXHAUSTED
+    last: repo_etl:{"action":"scan"} → ok
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 56506..81942
+tick 80106: decisions=1 inFlight=1 pending=0 actors=agent-1788845005794246-0:2r/2a
+    agent-1788845005794246-0 ← react_continuation: "Error: Generation timed out after 300000ms. Retry with tighter context."
+tick 80206: decisions=1 inFlight=1 pending=0 actors=agent-1788845005794246-0:2r/2a
+    agent-1788845005794246-0 ← react_continuation: "Error: Generation timed out after 300000ms. Retry with tighter context."
+tick 80306: decisions=1 inFlight=1 pending=0 actors=agent-1788845005794246-0:2r/2a
+    agent-1788845005794246-0 ← react_continuation: "Error: Generation timed out after 300000ms. Retry with tighter context."
+tick 80406: decisions=1 inFlight=1 pending=0 actors=agent-1788845005794246-0:2r/2a
+    agent-1788845005794246-0 ← react_continuation: "Error: Generation timed out after 300000ms. Retry with tighter context."
+tick 80506: decisions=1 inFlight=1 pending=0 actors=agent-1788845005794246-0:2r/2a
+    agent-1788845005794246-0 ← react_continuation: "Error: Generation timed out after 300000ms. Retry with tighter context."
+tick 80606: decisions=1 inFlight=1 pending=0 actors=agent-1788845005794246-0:2r/2a
+    agent-1788845005794246-0 ← react_continuation: "Error: Generation timed out after 300000ms. Retry with tighter context."
+tick 80706: decisions=1 inFlight=1 pending=0 actors=agent-1788845005794246-0:2r/2a
+    agent-1788845005794246-0 ← react_continuation: "Error: Generation timed out after 300000ms. Retry with tighter context."
+tick 80806: decisions=1 inFlight=1 pending=0 actors=agent-1788845005794246-0:2r/2a
+    agent-1788845005794246-0 ← react_continuation: "Error: Generation timed out after 300000ms. Retry with tighter context."
+tick 80906: decisions=1 inFlight=1 pending=0 actors=agent-1788845005794246-0:2r/2a
+    agent-1788845005794246-0 ← react_continuation: "Error: Generation timed out after 300000ms. Retry with tighter context."
+tick 81006: decisions=1 inFlight=1 pending=0 actors=agent-1788845005794246-0:2r/2a
+    agent-1788845005794246-0 ← react_continuation: "Error: Generation timed out after 300000ms. Retry with tighter context."
+tick 81106: decisions=1 inFlight=1 pending=0 actors=agent-1788845005794246-0:2r/2a
+    agent-1788845005794246-0 ← react_continuation: "Error: Generation timed out after 300000ms. Retry with tighter context."
+tick 81206: decisions=1 inFlight=1 pending=0 actors=agent-1788845005794246-0:2r/2a
+    agent-1788845005794246-0 ← react_continuation: "Error: Generation timed out after 300000ms. Retry with tighter context."
+tick 81306: decisions=1 inFlight=1 pending=0 actors=agent-1788845005794246-0:2r/2a
+    agent-1788845005794246-0 ← react_continuation: "Error: Generation timed out after 300000ms. Retry with tighter context."
+tick 81406: decisions=1 inFlight=1 pending=0 actors=agent-1788845005794246-0:2r/2a
+    agent-1788845005794246-0 ← react_continuation: "Error: Generation timed out after 300000ms. Retry with tighter context."
+tick 81506: decisions=1 inFlight=1 pending=0 actors=agent-1788845005794246-0:2r/2a
+    agent-1788845005794246-0 ← react_continuation: "Error: Generation timed out after 300000ms. Retry with tighter context."
+tick 81606: decisions=1 inFlight=1 pending=0 actors=agent-1788845005794246-0:2r/2a
+    agent-1788845005794246-0 ← react_continuation: "Error: Generation timed out after 300000ms. Retry with tighter context."
+tick 81706: decisions=1 inFlight=1 pending=0 actors=agent-1788845005794246-0:2r/2a
+    agent-1788845005794246-0 ← react_continuation: "Error: Generation timed out after 300000ms. Retry with tighter context."
+tick 81806: decisions=1 inFlight=1 pending=0 actors=agent-1788845005794246-0:2r/2a
+    agent-1788845005794246-0 ← react_continuation: "Error: Generation timed out after 300000ms. Retry with tighter context."
+tick 81906: decisions=1 inFlight=1 pending=0 actors=agent-1788845005794246-0:2r/2a
+    agent-1788845005794246-0 ← react_continuation: "Error: Generation timed out after 300000ms. Retry with tighter context."
+tick 81942: decisions=0 inFlight=0 pending=0 actors=agent-1788845005794246-0:0r/2a
+
+
+--- tool results (truncated per beat) ---
+run: {"ok":true,"exit_code":0,"stdout":"Analyzing afm_wave_grammar1_IU3dnJ...\nNo issues found!\n","stderr":""}
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":true,"ops_run":2,"results":[{"locate":{"ok":true,"query":"inBounds","total":1,"rows":[{"id":"sym_lib_loop.dart_inBounds","kind":"symbol","label":"inBounds","rank":0,"refs":2}]}},{"read":{"ok":true,"cut":{"nodes":[{"id":"sym_lib_loop.d
+edit_symbol: {"ok":false,"bounce":true,"error":"inBounds returns bool — the chain must end at a return op","repair":"append {label: return} after pushing the result value","fence":"integration"}
+goal_verify: {ok: false, command: [dart, test], verify_wall_ms: 676, detail: run failed exit=1: }
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":4,"fs_added":0,"fs_dropped":0,"capabilities":1,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+
+coding_agent run — task: wave_task_grammar
+  backend: apple_foundation_afm
+  verdict: PASS
+  overhead tokens (system+schemas): 1440
+  decisions: 2
+  tool rounds (thread beats): 3
+  moves: {edit_symbol.apply_executable: 1, goal_verify: 1, run: 1}
+  projection tokens (honest spend, Situation.tokensUsed): 4246
+  meaning nodes: 16, edges: 20
+  wall clock: 28512 ms
+  final gate (outer oracle, once): PASS
+    check: dart test exit=0
+  failure class: -
+--- harness pulse (J1.5.3) ---
+tick 2 | decisions 0 | in-flight 0 | pending results 0
+— agent-1788847473495050-0  [idle via react_continuation]  rounds 0/12 (Σ1)  goal PASS
+    last: run:{"timeout_ms":10000,"cwd":".","command":["dart","test","l… → FAILED
+      error: {"ok":false,"exit_code":1,"stdout":"00:00 +0: loading lib/loop.dart\n00:00 +0 -1: loading lib/loop.dart [E]\n  Failed…
+--- flight recorder ---
+FlightRecorder: 94 pulse(s), ticks 99..9387
+tick 7499: decisions=1 inFlight=1 pending=0 actors=agent-1788847473495050-0:1r/0a
+    agent-1788847473495050-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":true,"reverted":false,"patches":1,"files":["lib/loop…"
+tick 7599: decisions=1 inFlight=1 pending=0 actors=agent-1788847473495050-0:1r/0a
+    agent-1788847473495050-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":true,"reverted":false,"patches":1,"files":["lib/loop…"
+tick 7699: decisions=1 inFlight=1 pending=0 actors=agent-1788847473495050-0:1r/0a
+    agent-1788847473495050-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":true,"reverted":false,"patches":1,"files":["lib/loop…"
+tick 7799: decisions=1 inFlight=1 pending=0 actors=agent-1788847473495050-0:1r/0a
+    agent-1788847473495050-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":true,"reverted":false,"patches":1,"files":["lib/loop…"
+tick 7899: decisions=1 inFlight=1 pending=0 actors=agent-1788847473495050-0:1r/0a
+    agent-1788847473495050-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":true,"reverted":false,"patches":1,"files":["lib/loop…"
+tick 7999: decisions=1 inFlight=1 pending=0 actors=agent-1788847473495050-0:1r/0a
+    agent-1788847473495050-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":true,"reverted":false,"patches":1,"files":["lib/loop…"
+tick 8099: decisions=1 inFlight=1 pending=0 actors=agent-1788847473495050-0:1r/0a
+    agent-1788847473495050-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":true,"reverted":false,"patches":1,"files":["lib/loop…"
+tick 8199: decisions=1 inFlight=1 pending=0 actors=agent-1788847473495050-0:1r/0a
+    agent-1788847473495050-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":true,"reverted":false,"patches":1,"files":["lib/loop…"
+tick 8299: decisions=1 inFlight=1 pending=0 actors=agent-1788847473495050-0:1r/0a
+    agent-1788847473495050-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":true,"reverted":false,"patches":1,"files":["lib/loop…"
+tick 8399: decisions=1 inFlight=1 pending=0 actors=agent-1788847473495050-0:1r/0a
+    agent-1788847473495050-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":true,"reverted":false,"patches":1,"files":["lib/loop…"
+tick 8499: decisions=1 inFlight=1 pending=0 actors=agent-1788847473495050-0:1r/0a
+    agent-1788847473495050-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":true,"reverted":false,"patches":1,"files":["lib/loop…"
+tick 8599: decisions=1 inFlight=1 pending=0 actors=agent-1788847473495050-0:1r/0a
+    agent-1788847473495050-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":true,"reverted":false,"patches":1,"files":["lib/loop…"
+tick 8699: decisions=1 inFlight=1 pending=0 actors=agent-1788847473495050-0:1r/0a
+    agent-1788847473495050-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":true,"reverted":false,"patches":1,"files":["lib/loop…"
+tick 8799: decisions=1 inFlight=1 pending=0 actors=agent-1788847473495050-0:1r/0a
+    agent-1788847473495050-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":true,"reverted":false,"patches":1,"files":["lib/loop…"
+tick 8899: decisions=1 inFlight=1 pending=0 actors=agent-1788847473495050-0:1r/0a
+    agent-1788847473495050-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":true,"reverted":false,"patches":1,"files":["lib/loop…"
+tick 8999: decisions=1 inFlight=1 pending=0 actors=agent-1788847473495050-0:1r/0a
+    agent-1788847473495050-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":true,"reverted":false,"patches":1,"files":["lib/loop…"
+tick 9099: decisions=1 inFlight=1 pending=0 actors=agent-1788847473495050-0:1r/0a
+    agent-1788847473495050-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":true,"reverted":false,"patches":1,"files":["lib/loop…"
+tick 9199: decisions=1 inFlight=1 pending=0 actors=agent-1788847473495050-0:1r/0a
+    agent-1788847473495050-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":true,"reverted":false,"patches":1,"files":["lib/loop…"
+tick 9299: decisions=1 inFlight=1 pending=0 actors=agent-1788847473495050-0:1r/0a
+    agent-1788847473495050-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":true,"reverted":false,"patches":1,"files":["lib/loop…"
+tick 9387: decisions=0 inFlight=0 pending=0 actors=agent-1788847473495050-0:0r/0a
+
+
+--- tool results (truncated per beat) ---
+edit_symbol: {"ok":true,"reverted":false,"patches":1,"files":["lib/loop.dart"],"analyze_exit":0,"check_exit":0,"analyze_ms":127,"check_ms":519,"detail":"replace_member_body inBounds (sym_lib_loop.dart_inBounds) in lib/loop.dart [1..3] — scoped analyze e
+goal_verify: {ok: true, command: [dart, test], verify_wall_ms: 576, detail: run: exit=0}
+run: {"ok":false,"exit_code":1,"stdout":"00:00 +0: loading lib/loop.dart\n00:00 +0 -1: loading lib/loop.dart [E]\n  Failed to load \"lib/loop.dart\": Missing definition of `main` method…","stderr":""}
+

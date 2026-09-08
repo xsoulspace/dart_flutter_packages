@@ -68,10 +68,18 @@ import 'package:xsoulspace_agentic_harness/benchmark_api.dart'
     show CheckerSpec;
 import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
     show FsToolsRoot;
+import 'package:xsoulspace_agentic_harness/src/decisions/step_resolver.dart'
+    show AmbiguousStep, ReadyStep, resolveTaskPrompt;
 import 'package:xsoulspace_agentic_harness/src/tools/task_grammar.dart'
     show TaskGrammarMatch, executableDecisionForTask, parseTaskSentence;
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart'
-    show AgentPlugin, DefaultGenerationHandler, ModelRouter, World, WorldPluginX;
+    show
+        AgentPlugin,
+        DefaultGenerationHandler,
+        ModelRouter,
+        World,
+        WorldPluginX,
+        classifyWaveLog;
 import 'package:xsoulspace_agentic_host/xsoulspace_agentic_host.dart'
     show
         CodingAgentTask,
@@ -682,6 +690,13 @@ Future<Map<String, Object?>> _runRow(
   var passed = 0;
   final rowSw = Stopwatch()..start();
   final failureClasses = <String>[];
+  // P2 gate — wave-log classifier accumulators: the class split is
+  // parsed from every published log text, never guessed
+  // (xsoulspace_agentic_harness wave_log_classifier.dart).
+  var burned = 0;
+  var resolvable = 0;
+  var composition = 0;
+  final classCounts = <String, int>{};
   for (var i = 1; i <= runs; i++) {
     final jail = await row.seed(i, true);
     try {
@@ -710,6 +725,17 @@ Future<Map<String, Object?>> _runRow(
         '${formatRunLog(result)}\n--- tool results (truncated per beat) ---\n'
         '${result.toolResults.join('\n')}\n',
       );
+      // P2 gate — the wave-log classifier runs on EVERY wave re-run;
+      // the split row comes from parsing the published log text.
+      final logReport = classifyWaveLog(
+        File(logFile.path).readAsStringSync(),
+      );
+      burned += logReport.burnedSteps;
+      resolvable += logReport.mechanicallyResolvable;
+      composition += logReport.compositionRequired;
+      logReport.classes.forEach((name, n) {
+        classCounts[name] = (classCounts[name] ?? 0) + n;
+      });
       if (result.passed) passed++;
       final failureClass = result.failureClass.isEmpty
           ? ''
@@ -728,6 +754,18 @@ Future<Map<String, Object?>> _runRow(
         if (plan != null) 'consent_audit': plan.audit,
         'failure_class': failureClass,
         'log': logFile.path,
+        'log_class_split': <String, Object?>{
+          'burned_steps': logReport.burnedSteps,
+          'mechanically_resolvable': logReport.mechanicallyResolvable,
+          'composition_required': logReport.compositionRequired,
+          // writeRunLog APPENDS — the file accumulates runs across
+          // invocations, so the split classifies the LAST run block (the
+          // one this invocation wrote); never .single (measured crash).
+          'failure_class': logReport.runs.isEmpty
+              ? 'unparseable'
+              : logReport.runs.last.failureClass,
+          'classes': Map<String, int>.of(logReport.classes),
+        },
       });
       stdout.writeln(detail);
       runDetails.add(detail);
@@ -750,6 +788,12 @@ Future<Map<String, Object?>> _runRow(
     'attempts_budget': attempts,
     'wall_ms': rowSw.elapsed.inMilliseconds,
     'failure_classes': failureClasses.toSet().toList(),
+    'class_split': <String, Object?>{
+      'burned_steps': burned,
+      'mechanically_resolvable': resolvable,
+      'composition_required': composition,
+      'classes': classCounts,
+    },
     'runs_detail': runDetails,
   };
 }
@@ -771,6 +815,12 @@ Future<bool> _dryAll(List<_WaveRow> rows) async {
       } else {
         await row.dry!(jail, problems);
       }
+      // ADR 0009 Amendment pre-flight (repair (a)): the ONE frontier
+      // resolver must resolve the row's REAL prompt over the REAL jail
+      // tree — the ready decision the actor carries. A miss here means
+      // the on-device row would burn decisions on id composition (the
+      // measured 100%-mechanically-resolvable class).
+      await _dryResolver(row, jail, problems);
     } on Object catch (e) {
       problems.add('dry validator threw: $e');
     } finally {
@@ -801,6 +851,67 @@ Future<bool> _dryAll(List<_WaveRow> rows) async {
   );
   return allOk;
 }
+
+/// The resolver pre-flight: scan the jail, run [resolveTaskPrompt] on the
+/// row's REAL prompt, and demand a Ready resolution with the exact ids
+/// (the wave rows are the measured 100%-mechanically-resolvable class).
+Future<void> _dryResolver(
+  _WaveRow row,
+  Directory jail,
+  List<String> problems,
+) async {
+  final world = World()..addPlugin(AgentPlugin());
+  final etl = repoEtlTool(world, jail);
+  final scan = await etl.execute({'action': 'scan'});
+  if ('$scan'.contains('"ok":false')) {
+    problems.add('resolver pre-flight: scan failed: $scan');
+    return;
+  }
+  final resolution = resolveTaskPrompt(world, row.task().prompt);
+  final expected = _resolverExpectations[row.name];
+  if (expected == null) {
+    problems.add('no resolver expectation registered for ${row.name}');
+    return;
+  }
+  if (resolution is! ReadyStep) {
+    problems.add(
+      'resolver pre-flight: the row prompt did NOT resolve Ready — '
+      '${resolution.runtimeType}'
+      '${resolution is AmbiguousStep ? " (${resolution.reason})" : ""} '
+      '— the on-device row would compose ids (the measured failure class)',
+    );
+    return;
+  }
+  for (final e in expected.entries) {
+    if (resolution.args[e.key] != e.value) {
+      problems.add('resolver pre-flight: args[${e.key}] = '
+          '${resolution.args[e.key]} — wanted ${e.value}');
+    }
+  }
+}
+
+/// Per-row ready-args expectations (the exact ids the materializers
+/// resolve — the same law the dry validators pin for the manual path).
+const _resolverExpectations = <String, Map<String, Object>>{
+  'task_grammar': {
+    'action': 'apply_executable',
+    'executableId': _grammarExecutableId,
+    'symbolId': 'sym_lib_loop.dart_inBounds',
+  },
+  'trusted_author': {
+    'action': 'apply_executable',
+    'executableId': _trustedExecutableId,
+    'symbolId': 'sym_lib_geometry.dart_area',
+  },
+  'md': {
+    'action': 'replace_section',
+    'symbolId': 'sec_f_docs_README.md_2',
+  },
+  'yaml': {
+    'action': 'replace_value',
+    'symbolId': 'key_f_config.yaml_retry_max_attempts',
+  },
+};
 
 /// Row 1 dry: the sentence parses; the scanned jail tree carries the pack
 /// executable AND the symbol; the lookup emits the READY decision with the

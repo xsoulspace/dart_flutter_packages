@@ -51,6 +51,28 @@ honestly).
   ordering); independent-fixture gates may run concurrently (per-workspace
   single-instance daemons).
 
+## 2026-09-08 — session A/B: the drifted read dialect vs the surface
+
+Measured during the frontier-resolver session (the same day, same
+machine). The A side ran through the STALE pi extension (legacy
+per-verb wrappers → the mover as a graded task); the B side through
+the mechanical paths this session landed. n=1 per row (in-session
+observation; the scripted B rows are repeatable via
+`run_dogfood_seam_ab.mjs`).
+
+| path | route | wall | outcome |
+| --- | --- | --- | --- |
+| A — `harness_locate` (stale wrapper) | mover-graded task | 194,114 ms / 194,122 ms | `mover_refusal` (no read performed) |
+| A — `harness_edit` probe (stale wrapper) | mover-graded task | 183,302 ms | zero moves (verify burned 8,999 ms) |
+| B — `harness_meaning_program` (one tool) | mechanical read directive | < 100 ms gate (unit-metered; 2026-09-06 rows: 34–54 ms warm) | read + cursor returned |
+| B — this very section | `harness_edit` insert_section through the md binding | mechanical (scripted probe; wall printed in the probe log) | the row landed THROUGH the surface |
+
+≈ 2,000× wall delta on reads; the edit path stops re-composing (and
+refusing) what should be mechanical. Gap rows closed in
+surface_gaps.md (2026-09-08); the extension now exposes ONE read
+tool and the mechanical-read set is asserted against the LIVE
+registry (`mechanical_read_registry_test.dart`).
+
 ## Failure-class ledger
 
 - `mover_refusal`: the mover returned an empty move (no calls, no text) —

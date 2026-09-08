@@ -661,6 +661,16 @@ class RunGradedGoalPolicy implements DecisionPolicy {
     final attempts = (ctx.get<AttemptCount>()?.value ?? 0) + 1;
     ctx.actorEntity.insert(AttemptCount(attempts));
 
+    // J8.1 (the exhausted-attempt pump, measured on-device: Σ26 identical
+    // "attempt N/3" re-opens, ~2 min wall, ~10k tokens in ONE wave run):
+    // CONSUME the verdict — one failed verification re-prompts EXACTLY
+    // ONCE. The stale failed verdict previously stayed on the actor, so
+    // EVERY ToolResultPendingMarker between verify stamps re-opened the
+    // identical repair decision (the react-continuation pump burned the
+    // attempt budget on one verification). The NEXT verifier stamp gates
+    // the next re-prompt — re-sends track failed verifications 1:1.
+    ctx.actorEntity.remove<GoalVerified>();
+
     var maxAttempts = 3;
     try {
       maxAttempts = ctx.world.getResource<AgencyPolicy>().maxGoalAttempts;
@@ -680,6 +690,9 @@ class RunGradedGoalPolicy implements DecisionPolicy {
       final reason =
           'goal_unverifiable: $attempts failed verification '
           'attempts (budget $maxAttempts). Last failure: ${verified.detail}';
+      // J8.1: the exhausted budget also consumes the verdict — no policy
+      // path may re-open a decision on a stale failed verification.
+      ctx.actorEntity.remove<GoalVerified>();
       ctx.actorEntity
         ..insert(GoalAttemptsExhausted(reason))
         // TRANSIENT baton (one-shot, may be consumed by a racing in-flight

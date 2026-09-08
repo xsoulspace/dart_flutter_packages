@@ -17,3 +17,7 @@
 library;
 
 export 'src/harness_profiler_view.dart';
+// ADR 0009 (D3) — the pure-Dart protocol layer beside the panes: the
+// registry-backed headless reader (also importable WITHOUT Flutter via
+// `package:xsoulspace_agentic_harness_flutter_profiler/session_protocol.dart`).
+export 'src/session_protocol.dart';

@@ -253,9 +253,7 @@ let consentChain: Promise<unknown> = Promise.resolve();
 
 const DAEMON_TOOL_NAMES = [
   "harness_scan",
-  "harness_locate",
-  "harness_zoom",
-  "harness_impact",
+  "harness_meaning_program",
   "harness_edit",
   "harness_fs_write",
   "harness_run",
@@ -618,75 +616,50 @@ export default function (pi: PiAPI) {
   });
 
   pi.registerTool({
-    name: "harness_zoom",
-    label: "Harness Zoom",
+    name: "harness_meaning_program",
+    label: "Harness Read Program",
     description:
-      "Cut a bounded view of the meaning tree by keyword query or focus " +
-      "id (zoom: point/local/region/summary; a mapped file's " +
-      "section/keypath anchor also yields its text span on point zoom). " +
-      "This is how you READ structure — never file reads.",
+      "Run a READ program over the meaning tree in ONE mechanical call " +
+      "(ADR 0030 — the ONE read surface; zero model tokens, sub-100 ms). " +
+      "ops is a non-empty array of {op, query?, focusId?, budget?} over " +
+      "the closed set [locate, zoom, impact, read]. locate SETS the " +
+      "cursor (its ranked hit ids, capped); zoom/impact/read consume " +
+      "cursor.first unless focusId overrides — never invent an id, the " +
+      "locate rows carry the exact ids. Invalid ops halt with a named " +
+      "bounce; results are budget-clipped. Args: {ops: […], budget?}.",
     parameters: {
       type: "object",
       properties: {
-        query: { type: "string" },
-        focusId: { type: "string" },
-        zoom: { type: "string" },
+        ops: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              op: {
+                type: "string",
+                enum: ["locate", "zoom", "impact", "read"],
+              },
+              query: { type: "string" },
+              focusId: { type: "string" },
+              budget: { type: "number" },
+            },
+            required: ["op"],
+          },
+        },
         budget: { type: "number" },
       },
-      required: [],
+      required: ["ops"],
     },
     execute: async (_id: string, params: any, _signal: any, _onUpdate: any, ctx: PiCtx) => {
       capturedCtx = ctx;
-      // ADR 0027: pure directive — mechanical read path.
-      return delegated(`harness_zoom ${JSON.stringify(params ?? {})}`);
-    },
-  });
-
-  pi.registerTool({
-    name: "harness_locate",
-    label: "Harness Locate",
-    description:
-      "Structural discovery ray over the meaning tree (ADR 0014 §2): " +
-      'answer "where is X?" — definitions, usages, related meanings — in ' +
-      "ONE token-bounded call. Matches ANY meaning node label (symbols, " +
-      "intents, sections, keys, files); never a text search. Use BEFORE " +
-      "zoom/impact: locate yields the focus ids those verbs require. Args: " +
-      "{query (required), maxRows?}.",
-    parameters: {
-      type: "object",
-      properties: {
-        query: { type: "string" },
-        maxRows: { type: "number" },
-      },
-      required: ["query"],
-    },
-    execute: async (_id: string, params: any, _signal: any, _onUpdate: any, ctx: PiCtx) => {
-      capturedCtx = ctx;
-      // ADR 0027: pure directive — mechanical read path (zero model).
-      return delegated(`harness_locate ${JSON.stringify(params)}`);
-    },
-  });
-
-  pi.registerTool({
-    name: "harness_impact",
-    label: "Harness Impact",
-    description:
-      "Impact frontier of a node (reverse-reference closure, " +
-      "hard-capped) — the decomposition input for any change. Carries the " +
-      "exact args: {focusId, depth?, maxNodes?} — focusId comes from the " +
-      "zoom cut, never a guessed name.",
-    parameters: {
-      type: "object",
-      properties: {
-        focusId: { type: "string" },
-        depth: { type: "number" },
-        maxNodes: { type: "number" },
-      },
-      required: ["focusId"],
-    },
-    execute: async (_id: string, params: any, _signal: any, _onUpdate: any, ctx: PiCtx) => {
-      capturedCtx = ctx;
-      return delegated(`harness_impact ${JSON.stringify(params)}`);
+      // ADR 0027/0030: the payload IS the program args — the daemon's
+      // mechanical read-directive router executes it (zero model, zero
+      // grade). The 2026-09-08 drift (the legacy per-verb wrappers fell
+      // through to the mover: ~140 s + refusal) is closed by construction:
+      // this is the ONLY read tool, and the mechanical-read set is
+      // asserted against the LIVE registry
+      // (pkgs/xsoulspace_agentic_host/test/mechanical_read_registry_test.dart).
+      return delegated(`harness_meaning_program ${JSON.stringify(params ?? {})}`);
     },
   });
 
