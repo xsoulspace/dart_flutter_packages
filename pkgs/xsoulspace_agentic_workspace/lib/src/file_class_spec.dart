@@ -101,6 +101,14 @@ const fileClassSpecs = <FileClassSpec>[
   // the edit half is the ts binding (insert_member / remove_member /
   // apply_executable via pack executables; tsc_no_emit oracle).
   FileClassSpec(fileClass: 'ts', extensions: {'.ts', '.tsx'}),
+  // cs is the SECOND full-code non-dart class (ADR 0035 §6 Tier C v1):
+  // the map half is the mechanical scanner (cs_materializer.dart
+  // csScanSymbols/csMapParser — sym + member nodes, byte-precise spans);
+  // the edit half is the cs binding (same three actions; dotnet_build
+  // oracle). *.csproj stays class `other` (Tier A: review-gate writes
+  // only) — the xml binding is the named-not-built Tier B disposition
+  // (PLAN ledger, ADR 0035 §6 Tier B decision 2026-09-08).
+  FileClassSpec(fileClass: 'cs', extensions: {'.cs'}),
 ];
 
 /// Registry lookup; unknown classes fall back to `other` (never a bounce —

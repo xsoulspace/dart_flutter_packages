@@ -103,6 +103,17 @@ mechanic pointed forward: the frontier IS the prediction path — what CAN
 be done next, before anything is. If you are planning in prose, you are
 drifting: declare steps and project the frontier.
 
+**Steps carry mechanical work** (ADR 0009 Amendment, 2026-09-08): a step
+whose target is mechanically resolvable carries a RESOLVED
+`StepAction(toolName, arguments)` — the ready decision, delivered through
+`openFreshDecision`; the actor CARRIES the move, never composes ids
+(the wave rows measured this: ready-move rows pass@1 at 1 decision;
+compose-the-ids rows fail in named classes). Zero-token mechanical actors
+work consented ready steps while the model actor still works; steps no
+resolver can resolve project as TIER-ROUTED (up-front, never
+exhaust-then-escalate). Never build a parallel pre-pass — the frontier is
+the one mechanism (see the ADR 0009 Amendment before implementing).
+
 ## The mechanical tier (reads AND consented writes)
 
 Directives execute with zero model, zero grade: `[scan]`,

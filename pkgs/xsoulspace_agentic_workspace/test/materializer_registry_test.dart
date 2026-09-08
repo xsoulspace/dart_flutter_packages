@@ -134,11 +134,22 @@ void main() {
             'limitation IS registry data (§5)');
     expect(ts.subNodePrefix, 'tsym_');
     expect(ts.mapParser, isNotNull);
+    expect(materializerRegistry.bindingFor('cs'), isNotNull,
+        reason: 'the cs family is registered (ADR 0035 §6 Tier C v1)');
+    final cs = materializerRegistry.bindingFor('cs')!;
+    expect(cs.oracle, 'dotnet_build');
+    expect(cs.anchors, 'node_id');
+    expect(cs.actions, ['insert_member', 'remove_member', 'apply_executable'],
+        reason: 'replace_member_body is deliberately OMITTED — the v1 '
+            'limitation IS registry data (§5)');
+    expect(cs.subNodePrefix, 'csym_');
+    expect(cs.mapParser, isNotNull);
+    expect(cs.extensions, {'.cs'});
     expect(materializerRegistry.bindingFor('dart'), isNull,
         reason: 'dart moves stay on the span path — never routed through '
             'a node binding');
     expect(materializerRegistry.mapSubNodePrefixes.toSet(),
-        unorderedEquals(['sec_', 'key_', 'tsym_']));
+        unorderedEquals(['sec_', 'key_', 'tsym_', 'csym_']));
   });
 
   test('zero-arg-delta is a hard gate: every binding answers the SAME '

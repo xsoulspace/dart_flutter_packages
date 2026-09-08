@@ -155,3 +155,78 @@ insufficiency; state that honestly):
   scanner half now runs the same battery; the FFI half was already green
   — the full cross-implementation run in one process still needs the
   dylib+scanner in one suite).
+
+## C# scanner baseline (2026-09-08)
+
+The v1 mechanical C# scanner landed (ADR 0035 §6 Tier C v1, the second
+full-code non-Dart family:
+`xsoulspace_agentic_workspace/lib/src/cs_materializer.dart`, registered as
+the `cs` binding — actions `insert_member`/`remove_member`/
+`apply_executable` ONLY; `replace_member_body` is deliberately OMITTED,
+the v1 limitation IS registry data). The battery ran the same way the ts
+landing did: the 2 annotated fixtures (`Kennel.cs`, `Shapes.cs`) through
+the scanner's map fn (`csScanSymbols`) with the expected-node derivation
+REPLICATED as test data from the `// @map` marker grammar
+(`test/cs_materializer_test.dart` — the workspace may not import the FFI
+leaf, §8 layering). Kind/name/memberOf compared as multisets; spans
+verified byte-precise (the UTF-8 slice at the span offsets must be the
+declaration; member spans ABSORB the immediately preceding contiguous
+attribute lines — no phantom attribute nodes). A third golden fixture
+(multibyte: CJK identifiers, emoji in comments/strings) asserts the
+byte-offset span bridge decodes exactly.
+
+| Fixture | Scanner nodes | tree-sitter (marker-derived) | Delta | Named class |
+| --- | --- | --- | --- | --- |
+| Kennel.cs | 5 (2 sym: file_scoped_namespace_declaration Kennel, class_declaration Dog; 3 member: field/property/method, `[Fact]` rides the method span) | not built — grammar pending | 0 (vs markers) | none |
+| Shapes.cs | 8 (5 sym: block namespace_declaration Geometry, interface IShape, struct Point, enum Kind, class Square; 3 member: IShape.Area, Point.X, Square.Area; enum members not indexed — v1 scope) | not built — grammar pending | 0 (vs markers) | none |
+
+**Final delta: ZERO** against the marker-derived expectations on both
+fixtures, spans byte-precise over CJK/emoji. The tree-sitter-c-sharp
+column is **not built — grammar pending**: the baseline pins the scanner
+to the tree-sitter-c-sharp NODE-KIND VOCABULARY (the same kind strings
+the markers carry) so the conformance delta becomes measurable as data
+the day an FFI mapper lands (ADR 0035 §8 item 5) — today only the
+marker-derived half of the battery runs.
+
+### Named scanner failure classes found and repaired BEFORE landing
+
+Caught by the first probe runs of the conformance battery + the
+byte-precision gate during landing (integration-test evidence, NOT real
+task rows):
+
+- `unicode_property_regex_unflagged` — the declaration regexes
+  (`_nsRe`, `_classRe`, `_interfaceRe`, `_structRe`, `_enumRe`,
+  `_recordRe`, `_modifiersRe`, `_ctorRe`) used `\p{L}` Unicode property
+  escapes WITHOUT Dart's `unicode: true` flag, where they silently match
+  nothing: the scanner returned ZERO nodes on every input (the §7
+  "scanner returns nothing" total-map-outage shape, again caught before
+  landing). The member regexes (`_methodRe`, `_propertyRe`, `_fieldRe`)
+  had the flag; the fix adds it uniformly.
+- `block_namespace_declarations_unindexed` — the declaration branch
+  fired only at brace depth 0 or inside a container-kind body, so
+  declarations inside a block-scoped `namespace X { }` (depth 1, and the
+  namespace is NOT a container kind) were never indexed. Caught by the
+  Shapes.cs fixture (the ONLY fixture exercising the block-scoped form —
+  fixture-first evidence working as designed). Fixed by a namespace-
+  scope depth guard; namespaces stay OUT of the container kinds, so
+  `insert_member` still targets declaring TYPE bodies only (the
+  namespace node itself is not an insert target — the §6 brief
+  contract).
+
+### Honest scope notes
+
+- The delta compares node KINDS/NAMES/memberOf + span byte-precision,
+  not grammar-node identity: member spans include access modifiers and
+  ride attributes (tree-sitter starts at the attribute/keyword boundary
+  differently) — an OBSERVATION, not a measured mismatch; the splice
+  fences on the member span, so the boundary choice is safe.
+- v1 scanner omissions (honest, never wrong spans): delegates, operator
+  overloads, indexers, local functions, enum members, and
+  multi-declarator fields past the first declarator are not indexed;
+  interpolated-string holes are masked whole (braces inside holes never
+  count as structure).
+- The `dotnet_build` oracle is graded by a FAKE jail-local `.dotnet/dotnet`
+  in the tests (the mirror of the ts jail's fake `tsc`); a real SDK run
+  is not exercised on this runner (dotnet absent from PATH — the
+  `oracle_unavailable` precondition test runs for real here, the
+  `cs_error` auto-revert runs against the fake's exit code).

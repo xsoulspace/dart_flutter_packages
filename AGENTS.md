@@ -61,6 +61,12 @@ primitive; the harness is the intelligence amplifier).
   — never as new loops. Silent escapes starve the tiny-model path.
 - **Never** re-implement surface verbs in bash (rejection list:
   `pkgs/xsoulspace_agentic_harness/docs/agent/pipeline_coding.md`).
+- **Mechanical work is FRONTIER work (ADR 0009 Amendment)**: steps carry
+  resolved `StepAction`s; ready decisions deliver via `openFreshDecision`
+  — the actor carries moves, never composes ids; zero-token mechanical
+  actors work consented ready steps ahead of the model actor; unresolvable
+  steps project as tier-routed. Never build a parallel pre-pass — extend
+  the frontier (see pipeline_coding.md § Planning is projection).
 - **No GitHub/tracker integration**: tasks enter as task sentences + the
   workspace convention; the workspace oracle is the gate.
 

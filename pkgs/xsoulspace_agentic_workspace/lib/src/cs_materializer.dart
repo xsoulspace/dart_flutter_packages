@@ -25,9 +25,9 @@
 /// Spans are BYTE-precise (UTF-8 byte offsets — the span reader's
 /// currency; the multibyte discipline). Attributes (`[Foo]`) on members
 /// RIDE the member span (the immediately preceding contiguous
-/// attribute-only lines are absorbed into the span start). Shapes the
-/// scanner cannot span reliably are honestly OMITTED or bounced
-/// (`unsupported_shape`) — never a wrong span.
+/// attribute-only lines are absorbed into the span start — no phantom
+/// nodes). Shapes the scanner cannot span reliably are honestly OMITTED
+/// or bounced (`unsupported_shape`) — never a wrong span.
 ///
 /// NAMESPACE handling (documented per the §6 brief): namespaces map to
 /// `sym` nodes in BOTH forms — block-scoped `namespace X { }` maps as
@@ -60,15 +60,14 @@
 /// NAMED ORACLE `dotnet_build`: after EVERY apply, `dotnet build` grades
 /// the jail (the first `*.csproj` found — root first, then a bounded
 /// walk skipping bin/obj/VCS dirs). The analyzer binary resolves from
-/// PATH (the .NET SDK ships `dotnet` on PATH; host-injected override
+/// the jail's `.dotnet/dotnet` first, then PATH (host-injected override
 /// supported for tests). When the analyzer or a project file is
 /// UNAVAILABLE the move bounces with failureClass `oracle_unavailable`
 /// BEFORE any byte is touched — named, never a silent pass (the honesty
 /// law, ADR 0024 §6). A failing build AUTO-REVERTS with failureClass
 /// `cs_error`. The test convention (`dotnet test` when the jail carries
 /// a project) rides the outcome as DATA — graded by the verify tier,
-/// never silently claimed here (honest null when the jail has none).
-library;
+/// never silently claimed here (honest null when the jail has none).library;
 
 import 'dart:convert';
 import 'dart:io';
@@ -202,7 +201,7 @@ String _maskContent(String src) {
         i = _maskQuoted(src, out, i, j, verbatim);
         continue;
       }
-      // Not a string prefix (a verbatim identifier like `@class`):
+      // Not a string prefix (e.g. a verbatim identifier like `@class`):
       // advance past the prefix characters without masking.
       i = j;
       continue;
@@ -300,14 +299,19 @@ List<int> _utf16ToUtf8Map(String s) {
 
 // -- declaration patterns (the tree-sitter-c-sharp vocabulary) --------------
 
-final RegExp _identRe = RegExp(r'[\p{L}_][\p{L}\p{N}_]*', unicode: true);
-final RegExp _nsRe = RegExp(r'^namespace\s+([\p{L}_][\p{L}\p{N}_.]*)');
-final RegExp _classRe = RegExp(r'^class\s+([\p{L}_][\p{L}\p{N}_]*)');
-final RegExp _interfaceRe = RegExp(r'^interface\s+([\p{L}_][\p{L}\p{N}_]*)');
-final RegExp _structRe = RegExp(r'^struct\s+([\p{L}_][\p{L}\p{N}_]*)');
-final RegExp _enumRe = RegExp(r'^enum\s+([\p{L}_][\p{L}\p{N}_]*)');
-final RegExp _recordRe =
-    RegExp(r'^record\s+(?:class\s+|struct\s+)?([\p{L}_][\p{L}\p{N}_]*)');
+final RegExp _nsRe =
+    RegExp(r'^namespace\s+([\p{L}_][\p{L}\p{N}_.]*)', unicode: true);
+final RegExp _classRe =
+    RegExp(r'^class\s+([\p{L}_][\p{L}\p{N}_]*)', unicode: true);
+final RegExp _interfaceRe =
+    RegExp(r'^interface\s+([\p{L}_][\p{L}\p{N}_]*)', unicode: true);
+final RegExp _structRe =
+    RegExp(r'^struct\s+([\p{L}_][\p{L}\p{N}_]*)', unicode: true);
+final RegExp _enumRe =
+    RegExp(r'^enum\s+([\p{L}_][\p{L}\p{N}_]*)', unicode: true);
+final RegExp _recordRe = RegExp(
+    r'^record\s+(?:class\s+|struct\s+)?([\p{L}_][\p{L}\p{N}_]*)',
+    unicode: true);
 
 /// Access modifiers / qualifiers that may prefix any declaration — the
 /// declaration KEYWORD follows them (the sym span starts at the keyword;
@@ -316,14 +320,16 @@ final RegExp _modifiersRe = RegExp(
   r'^(?:(?:public|private|protected|internal|static|sealed|abstract|virtual'
   r'|override|async|const|readonly|extern|new|unsafe|partial|ref|required'
   r'|file|volatile|scoped)\s+)*',
+  unicode: true,
 );
 
 /// Constructor head: `Name(` where Name equals the containing type.
-final RegExp _ctorRe = RegExp(r'^([\p{L}_][\p{L}\p{N}_]*)\s*\(');
+final RegExp _ctorRe =
+    RegExp(r'^([\p{L}_][\p{L}\p{N}_]*)\s*\(', unicode: true);
 
-/// Method head: `Type Name(` (type may carry generics/dots/commas/nullable
-/// and ONE space inside `Dictionary<string, int>`); generic constraints
-/// after the parameter list are part of the span, not the head.
+/// Method head: `Type Name(` (the type may carry generics/dots/commas/
+/// nullable/array markers and one space inside `Dictionary<string, int>`;
+/// generic constraints after the parameter list ride the span).
 final RegExp _methodRe = RegExp(
   r'^[\p{L}_][\p{L}\p{N}_<>\[\],.?\s]*\s+([\p{L}_][\p{L}\p{N}_]*)\s*'
   r'(?:<[^>()]*>)?\s*\(',
@@ -344,6 +350,14 @@ final RegExp _fieldRe = RegExp(
   r'^[\p{L}_][\p{L}\p{N}_<>\[\],.?\s]*\s+([\p{L}_][\p{L}\p{N}_]*)\s*(?:=|;|,|$)',
   unicode: true,
 );
+
+/// The namespace grammar kinds (declaration-bearing scopes — a
+/// block-scoped namespace body's declarations attach to it as parent;
+/// NOT container kinds: insert_member targets TYPE bodies only).
+const _namespaceKinds = <String>{
+  'namespace_declaration',
+  'file_scoped_namespace_declaration',
+};
 
 /// The class-like container kinds whose bodies take members (the
 /// insert_member targets and the member-attachment parents).
@@ -367,19 +381,18 @@ class _Scope {
 
 /// Scans [content] into symbols: line/brace-based extraction (dependency-
 /// light, deterministic). Honest v1 limitations (never a wrong span):
-/// delegates and operator declarations are not indexed; local functions
-/// and method-body statements are not indexed; the first declarator of a
-/// multi-declarator field only; enum members are not indexed; attributes
-/// are absorbed into the following declaration's span (no phantom
-/// symbols); interpolated-string holes are masked whole (braces inside
-/// holes never count as structure). A declaration whose body opener is
-/// NOT on the declaration line still spans correctly (the body-closing
-/// search crosses lines), but its members only attach when the opener
-/// discipline is one-declaration-per-line.
+/// delegates, operator overloads and indexers are not indexed; local
+/// functions and method-body statements are not indexed; the first
+/// declarator of a multi-declarator field only; enum members are not
+/// indexed; attributes are absorbed into the following declaration's
+/// span (no phantom symbols); interpolated-string holes are masked whole
+/// (braces inside holes never count as structure). One-declaration-per-
+/// line discipline is assumed for the scope stack (same v1 rule as the
+/// ts scanner).
 List<CsSymbol> csScanSymbols(String content) {
   final masked = _maskContent(content);
   final maskedLines = masked.split('\n');
-  final lines = content.split('\n');
+  final srcLines = content.split('\n');
   final cuToByte = _utf16ToUtf8Map(content);
   // Cumulative depth at each line start — braceAtLine[i] is the depth
   // BEFORE line i (so braceAtLine[i+1] is the depth AFTER line i).
@@ -409,17 +422,25 @@ List<CsSymbol> csScanSymbols(String content) {
   }
   braceAtLine[maskedLines.length] = brace;
   parenAtLine[maskedLines.length] = paren;
-  lineStart[maskedLines.length] =
-      off - 1 < 0 ? 0 : lineStart[maskedLines.length - 1] + maskedLines.last.length + 1;
+  lineStart[maskedLines.length] = masked.length;
 
-  final out = <CsSymbol>[];
-  final scopes = <_Scope>[];
-  final usedTails = <String, int>{};
+  // Source-line starts (content coordinates — for attribute absorption).
+  final srcStart = List<int>.filled(srcLines.length, 0);
+  var srcOff = 0;
+  for (var i = 0; i < srcLines.length; i++) {
+    srcStart[i] = srcOff;
+    srcOff += srcLines[i].length + 1;
+  }
 
+  /// True when line [i] is attribute-only (`[…]`) — the span-absorption
+  /// walk's input (masked view, so string contents cannot fake it).
   bool attrLine(int i) {
     final t = maskedLines[i].trim();
     return t.startsWith('[') && t.endsWith(']');
   }
+
+  final out = <CsSymbol>[];
+  final scopes = <_Scope>[];
 
   for (var i = 0; i < maskedLines.length; i++) {
     final mLine = maskedLines[i];
@@ -436,139 +457,109 @@ List<CsSymbol> csScanSymbols(String content) {
     if (trimmed.isEmpty) continue;
     if (trimmed.startsWith('#')) continue; // preprocessor: never symbols
     if (trimmed.startsWith('//') || trimmed.startsWith('/*')) continue;
+    if (attrLine(i)) continue; // attributes ride the NEXT declaration
 
-    final atTopLevel = beforeDepth == 0 && lineParen == 0;
     final top = scopes.isEmpty ? null : scopes.last;
     final inContainer =
         top != null && _containerKinds.contains(top.grammarType);
-    final atContainerMember = inContainer && beforeDepth == top!.entryDepth;
-
-    // Attribute-only lines ride the NEXT declaration's span (no phantom
-    // symbols) — skipped here; [_absorbAttributes] walks back over them.
-    if (attrLine(i)) continue;
+    final atContainerMember = inContainer && beforeDepth == top.entryDepth;
+    // A namespace body carries declarations too (block-scoped forms at
+    // the body depth; the file-scoped scope sits at the CURRENT depth).
+    // The namespace is NOT a container kind — insert_member still
+    // targets declaring TYPE bodies only (the doc contract above).
+    final inNamespace = top != null && _namespaceKinds.contains(top.grammarType);
+    final atNamespaceDepth = inNamespace && beforeDepth == top.entryDepth;
 
     // ---- namespaces (BOTH forms map — sym nodes, documented) ----------
-    final nsm = _nsRe.firstMatch(trimmed);
-    if (nsm != null && atTopLevel) {
+    final nsm = atTopLevelGuard(beforeDepth, lineParen)
+        ? _nsRe.firstMatch(trimmed)
+        : null;
+    if (nsm != null) {
       final name = nsm.group(1)!;
       final fileScoped = trimmed.contains(';');
+      final grammarType = fileScoped
+          ? 'file_scoped_namespace_declaration'
+          : 'namespace_declaration';
       out.add(_addSymbol(
         kind: 'sym',
-        grammarType: fileScoped
-            ? 'file_scoped_namespace_declaration'
-            : 'namespace_declaration',
+        grammarType: grammarType,
         name: name,
         parentName: top?.name,
-        content: content,
-        masked: masked,
         mLine: mLine,
         lineIdx: i,
         lineStart: lineStart[i],
-        leadWs: mLine.length - mLine.trimLeft().length,
-        absorbAttr: true,
+        srcLines: srcLines,
+        srcStart: srcStart,
         attrLine: attrLine,
+        masked: masked,
         cuToByte: cuToByte,
-        usedTails: usedTails,
-        out: out,
       ));
       // File-scoped: push at the CURRENT depth (declarations that follow
       // at depth 0 attach to the namespace). Block-scoped: push at +1
       // (the opener may sit on the next line — the after-depth pop rule
       // keeps the scope alive across a brace-only line).
-      scopes.add(_Scope(
-        fileScoped
-            ? 'file_scoped_namespace_declaration'
-            : 'namespace_declaration',
-        name,
-        fileScoped ? beforeDepth : beforeDepth + 1,
-      ));
+      scopes.add(_Scope(grammarType, name, fileScoped ? beforeDepth : beforeDepth + 1));
       continue;
     }
 
-    // ---- declarations (top-level or nested in a container) ------------
-    if (atTopLevel || atContainerMember) {
+    // ---- declarations (top-level, in a namespace body, or nested in a
+    // container) ----------------------------------------------------------
+    if ((beforeDepth == 0 && lineParen == 0) ||
+        atContainerMember ||
+        atNamespaceDepth) {
       final dm = _declOf(trimmed);
       if (dm != null) {
-        final grammarType = dm.$1;
-        final name = dm.$2;
         out.add(_addSymbol(
           kind: 'sym',
-          grammarType: grammarType,
-          name: name,
+          grammarType: dm.$1,
+          name: dm.$2,
           parentName: top?.name,
-          content: content,
-          masked: masked,
           mLine: mLine,
           lineIdx: i,
           lineStart: lineStart[i],
-          leadWs: mLine.length - mLine.trimLeft().length,
-          absorbAttr: true,
+          srcLines: srcLines,
+          srcStart: srcStart,
           attrLine: attrLine,
+          masked: masked,
           cuToByte: cuToByte,
-          usedTails: usedTails,
-          out: out,
         ));
         // Brace-bodied containers push at +1 uniformly (opener on this
         // line or the next — the after-depth pop rule handles both; a
         // `;`-terminated record is popped by the next top-level line).
-        scopes.add(_Scope(grammarType, name, beforeDepth + 1));
+        scopes.add(_Scope(dm.$1, dm.$2, beforeDepth + 1));
         continue;
       }
     }
 
     // ---- container members (methods/properties/fields/ctors) ----------
     if (atContainerMember) {
-      final container = top!;
+      final container = top;
       final stripped = trimmed.replaceFirst(_modifiersRe, '');
-      final leadWs = mLine.length - mLine.trimLeft().length;
-      final modSkip = trimmed.length - stripped.length;
-      final declLine =
-          stripped == trimmed ? mLine : mLine; // spans include modifiers
-      String? name;
-      var grammarType = '';
-      if (trimmed.startsWith('[')) {
-        // An attribute prefix on the declaration line (e.g.
-        // `[Fact] public void T() {}`): drop it before head matching.
-        final close = stripped.indexOf(']');
-        if (close >= 0 && close + 1 < stripped.length) {
-          final after = stripped.substring(close + 1).trimLeft();
-          if (attrOnDeclLine(after)) {
-            name = null; // handled by the head match below via `after`
-          }
-        }
-      }
-      final head = _headOf(trimmed, stripped, container.name);
+      final head = _headOf(stripped, container.name);
       if (head != null) {
-        name = head.$1;
-        grammarType = head.$2;
-      }
-      if (name != null && grammarType.isNotEmpty) {
+        final name = head.$1;
+        final grammarType = head.$2;
         out.add(_addSymbol(
           kind: 'member',
           grammarType: grammarType,
           name: name,
           parentName: container.name,
-          content: content,
-          masked: masked,
           mLine: mLine,
           lineIdx: i,
           lineStart: lineStart[i],
-          leadWs: leadWs,
-          absorbAttr: true,
+          srcLines: srcLines,
+          srcStart: srcStart,
           attrLine: attrLine,
-          modSkip: 0, // spans start at the attribute/keyword boundary
+          masked: masked,
           cuToByte: cuToByte,
-          usedTails: usedTails,
-          out: out,
         ));
-        // Brace-bodied members (method/ctor/property bodies) push a
-        // scope so accessor lines and locals never classify (and pop
-        // exactly at the body close).
-        final entry = beforeDepth + 1;
+        // Body-carrying members push a scope so accessor lines and
+        // locals never classify (and pop exactly at the body close; an
+        // expression-bodied member is popped by the very next line).
         if (grammarType == 'method_declaration' ||
             grammarType == 'constructor_declaration' ||
             grammarType == 'property_declaration') {
-          scopes.add(_Scope(grammarType, name, entry));
+          scopes.add(_Scope(grammarType, name, beforeDepth + 1));
         }
         continue;
       }
@@ -578,10 +569,8 @@ List<CsSymbol> csScanSymbols(String content) {
   return out;
 }
 
-/// An attribute prefix ON the declaration line (`[Fact] public void …`):
-/// true when the remainder after `]` looks like a declaration.
-bool attrOnDeclLine(String after) =>
-    after.isNotEmpty && !after.startsWith(']');
+bool atTopLevelGuard(int beforeDepth, int lineParen) =>
+    beforeDepth == 0 && lineParen == 0;
 
 (String, String)? _declOf(String trimmed) {
   final stripped = trimmed.replaceFirst(_modifiersRe, '');
@@ -602,11 +591,7 @@ bool attrOnDeclLine(String after) =>
 /// null (content — never a symbol). Order: constructor → method →
 /// property → field (a `(` head wins over the type heads; `{`/`=>` wins
 /// over `=`/`;`).
-(String, String)? _headOf(
-  String trimmed,
-  String stripped,
-  String containerName,
-) {
+(String, String)? _headOf(String stripped, String containerName) {
   final cm = _ctorRe.firstMatch(stripped);
   if (cm != null && cm.group(1) == containerName) {
     return (cm.group(1)!, 'constructor_declaration');
@@ -629,39 +614,32 @@ CsSymbol _addSymbol({
   required String grammarType,
   required String name,
   required String? parentName,
-  required String content,
-  required String masked,
   required String mLine,
   required int lineIdx,
   required int lineStart,
-  required int leadWs,
-  required bool absorbAttr,
+  required List<String> srcLines,
+  required List<int> srcStart,
   required _AttrLine attrLine,
+  required String masked,
   required List<int> cuToByte,
-  required Map<String, int> usedTails,
-  required List<CsSymbol> out,
-  int modSkip = 0,
 }) {
   // Attribute absorption: the span starts at the `[` of the first line
   // of the contiguous attribute block immediately above (attributes RIDE
   // the declared span — ADR 0035 §6 brief). No phantom attribute nodes.
+  final leadWs = mLine.length - mLine.trimLeft().length;
   var startCu = lineStart + leadWs;
-  var attrStart = -1;
-  if (absorbAttr) {
-    var walk = lineIdx - 1;
-    var last = -1;
-    while (walk >= 0 && attrLine(walk)) {
-      last = walk;
-      walk--;
-    }
-    if (last >= 0) {
-      final aLine = maskedLinesOf(content)[last];
-      attrStart = lineStartOf(content, last) + (aLine.length - aLine.trimLeft().length);
-    }
+  var walk = lineIdx - 1;
+  var last = -1;
+  while (walk >= 0 && attrLine(walk)) {
+    last = walk;
+    walk--;
   }
-  if (attrStart >= 0) startCu = attrStart;
-  final endCu = _statementEnd(masked, lineStart + leadWs + modSkip, _braceBodied(grammarType));
-  final s = CsSymbol(
+  if (last >= 0) {
+    final aLine = srcLines[last];
+    startCu = srcStart[last] + (aLine.length - aLine.trimLeft().length);
+  }
+  final endCu = _statementEnd(masked, lineStart + leadWs, _braceBodied(grammarType));
+  return CsSymbol(
     kind: kind,
     grammarType: grammarType,
     name: name,
@@ -671,8 +649,6 @@ CsSymbol _addSymbol({
     line: lineIdx + 1,
     indent: leadWs,
   );
-  usedTails['$kind|$grammarType|$parentName|${s.startByte}'] = 0; // (stable key)
-  return s;
 }
 
 /// Brace-bodied grammar kinds: the span ends at the matching `}`
@@ -761,20 +737,6 @@ List<MappedSubNode> csMapParser(String content) {
   ];
 }
 
-// -- helpers the scanner shares with the emitter (line/byte plumbing) ------
-
-List<String> _contentLines(String content) => content.split('\n');
-
-List<String> maskedLinesOf(String content) => _contentLines(content);
-
-int lineStartOf(String content, int lineIdx) {
-  var off = 0;
-  for (var i = 0; i < lineIdx; i++) {
-    off += content.split('\n')[i].length + 1;
-  }
-  return off;
-}
-
 // ---------------------------------------------------------------------------
 // The convention half — the test runner the jail declares (honest null)
 // ---------------------------------------------------------------------------
@@ -786,15 +748,28 @@ int lineStartOf(String content, int lineIdx) {
 /// workspace does not declare). DATA on the outcome — graded by the
 /// verify tier, never claimed as run by the materializer.
 List<String>? resolveCsConvention(Directory root) {
-  final project = _findProject(root);
+  final project = findCsProject(root);
   return project == null ? null : const ['dotnet', 'test'];
 }
 
-/// The first `*.csproj` in [root] (root first, then a bounded walk that
-/// skips bin/obj/build/VCS dirs). Null when the jail carries no project.
-String? _findProject(Directory rootDir) {
+const _csWalkSkipDirs = {
+  'bin',
+  'obj',
+  '.git',
+  'build',
+  '.dart_tool',
+  'node_modules',
+};
+
+/// The first `*.csproj` in [rootDir] (root first, then a bounded walk
+/// that skips bin/obj/build/VCS dirs). Null when the jail carries no
+/// project. Workspace-relative when nested.
+String? findCsProject(Directory rootDir) {
   if (!rootDir.existsSync()) return null;
-  final skipDirs = {'bin', 'obj', '.git', 'build', '.dart_tool', 'node_modules'};
+  final rootPath =
+      rootDir.path.endsWith('/') || rootDir.path.endsWith(r'\')
+          ? rootDir.path.substring(0, rootDir.path.length - 1)
+          : rootDir.path;
   for (final e in rootDir.listSync(followLinks: false)) {
     if (e is File && e.path.endsWith('.csproj')) {
       return e.uri.pathSegments.last;
@@ -803,20 +778,21 @@ String? _findProject(Directory rootDir) {
   final stack = <Directory>[
     for (final e in rootDir.listSync(followLinks: false))
       if (e is Directory &&
-          !skipDirs.contains(e.uri.pathSegments.reversed.skip(1).first))
+          !_csWalkSkipDirs.contains(e.uri.pathSegments.reversed.skip(1).first))
         e,
   ];
   while (stack.isNotEmpty) {
     final dir = stack.removeLast();
     for (final e in dir.listSync(followLinks: false)) {
       if (e is File && e.path.endsWith('.csproj')) {
-        final rootPath = rootDir.path.endsWith('/')
-            ? rootDir.path.substring(0, rootDir.path.length - 1)
-            : rootDir.path;
-        return e.path.substring(rootPath.length + 1);
+        final rel = e.path
+            .substring(rootPath.length)
+            .replaceAll('\\', '/')
+            .replaceFirst(RegExp(r'^/'), '');
+        return rel;
       }
       if (e is Directory &&
-          !skipDirs.contains(e.uri.pathSegments.reversed.skip(1).first)) {
+          !_csWalkSkipDirs.contains(e.uri.pathSegments.reversed.skip(1).first)) {
         stack.add(e);
       }
     }
@@ -1069,7 +1045,7 @@ class CsMaterializer {
         'oracle_unavailable',
       );
     }
-    final project = _findProject(Directory(root.rootPath));
+    final project = findCsProject(Directory(root.rootPath));
     if (project == null) {
       throw CsEditBounce(
         'the named analyzer oracle (dotnet_build) cannot grade this '
@@ -1091,7 +1067,7 @@ class CsMaterializer {
       action: action,
       anchor: anchor,
       targetSymbol: target.symbol,
-      oracle: (oracle: oracle, project: project),
+      oracleInfo: (oracle: oracle, project: project),
       convention: convention,
       exeId: action == 'apply_executable' ? (body ?? '').trim() : null,
     );
@@ -1112,13 +1088,13 @@ class CsMaterializer {
     final candidates = <String>[];
     final rootDir = Directory(root.rootPath);
     if (!rootDir.existsSync()) return null;
-    final skipDirs = {'bin', 'obj', '.git', 'build', '.dart_tool', 'node_modules'};
     final stack = <Directory>[rootDir];
     while (stack.isNotEmpty) {
       final dir = stack.removeLast();
       for (final e in dir.listSync(followLinks: false)) {
         if (e is Directory) {
-          if (!skipDirs.contains(e.uri.pathSegments.reversed.skip(1).first)) {
+          if (!_csWalkSkipDirs
+              .contains(e.uri.pathSegments.reversed.skip(1).first)) {
             stack.add(e);
           }
           continue;
@@ -1273,10 +1249,7 @@ class CsMaterializer {
     }
     var memberIndent = containerIndent + 4;
     for (final m in before) {
-      if (m.parentName == s.name &&
-          _containerKinds.contains(m.grammarType) == false &&
-          m.grammarType != 'namespace_declaration' &&
-          m.grammarType != 'file_scoped_namespace_declaration') {
+      if (m.kind == 'member' && m.parentName == s.name) {
         // Recover the member's leading spaces from the source line.
         final ls = _lineStartOfByte(content, m.startByte, cuToByte);
         var ind = 0;
@@ -1577,7 +1550,6 @@ class CsMaterializer {
     }
     switch (action) {
       case 'insert_member':
-        final targetKey = key(target);
         if (removed.isNotEmpty) {
           return 'symbols removed: $removed';
         }
@@ -1587,12 +1559,11 @@ class CsMaterializer {
         }
         return null;
       case 'remove_member':
-        final targetKey = key(target);
         if (added.isNotEmpty) {
           return 'symbols added: $added';
         }
-        if (removed.length != 1 || removed.single != targetKey) {
-          return 'expected exactly the target removed ($targetKey), got '
+        if (removed.length != 1 || removed.single != key(target)) {
+          return 'expected exactly the target removed (${key(target)}), got '
               '$removed';
         }
         return null;
@@ -1609,14 +1580,20 @@ class CsMaterializer {
 
   // -- the analyzer oracle ---------------------------------------------------
 
-  /// Resolves the analyzer binary: PATH (the .NET SDK ships `dotnet` on
-  /// PATH), or the host-injected override. Null → unavailable (the named
-  /// pre-apply bounce).
+  /// Resolves the analyzer binary: the jail-local `.dotnet/dotnet`
+  /// first (the jail's own toolchain — the mirror of the ts jail's
+  /// `node_modules/.bin/tsc`), then PATH (the .NET SDK ships `dotnet`
+  /// on PATH), or the host-injected override. Null → unavailable (the
+  /// named pre-apply bounce).
   String? _resolveAnalyzer() {
     if (dotnetBin != null) {
       // Host-injected override — trust it verbatim (availability is
       // proven by the run itself).
       return dotnetBin!;
+    }
+    final jailBin = File('${root.rootPath}/.dotnet/dotnet');
+    if (jailBin.existsSync()) {
+      return jailBin.path;
     }
     try {
       final probe = Process.runSync('dotnet', const ['--version']);

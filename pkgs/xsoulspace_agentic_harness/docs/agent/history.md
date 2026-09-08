@@ -806,7 +806,18 @@ data in `../benchmark/runs/afm_wave_results.md` § P1-FIX RE-RUN:
 - One-command ergonomics: `just wave-dry|wave|wave-row` +
   `xsoulspace_inference_apple_foundation/docs/afm_wave_runbook.md`.
 
-**TS family (ADR 0035 §6, in flight)**: the first agent died on an
-upstream idle timeout after `ts_materializer.dart` (1,683 lines: scanner
-+ perform + bounce/outcome); the continuation agent lands registration +
-tests + the conformance delta.
+**TS + C# families LANDED (ADR 0035 §6, 2026-09-08)**: ts
+(`ts_materializer.dart` — tsym_ scanner with member symbols day one,
+tsc_no_emit oracle with the PRE-BYTES oracle_unavailable bounce, delta 0
+on all 4 tree-sitter fixtures) and cs (`cs_materializer.dart` — csym_
+scanner incl. block-scoped namespaces + attribute riding, dotnet_build
+oracle, delta 0 on 2 fixtures; two scanner bugs found and named:
+unflagged unicode property regexes returned zero nodes; block-namespace
+declarations unindexed). Both omit `replace_member_body` — the v1
+limitation IS the registry data (the class-scoped bounce teaches it,
+format-literal-gated). csproj = Tier A disposition (xml binding
+named-not-built). Workspace suite **104/0**. Both first agents died on
+upstream timeouts mid-write; the continuation agents landed with
+finish-early-and-often briefed. Per-language gate matrix in PLAN.md —
+the R7e on-device rows (ts/cs) are the open gate, built after the
+frontier-resolver repair.

@@ -126,6 +126,36 @@ generators per ADR 0003.
   the workspace fs directly; predicates must become verifier-tool beats to
   keep policies pure.
 
+## Amendment (2026-09-08) — StepAction IS the mechanical slot; resolvers live IN the frontier
+
+The wave rows (ADR 0035 era) measured that the 4k tier composes READY
+moves reliably (pass@1 ×3 at 1 decision) but cannot compose multi-step
+id resolution (5 named-class failures). The correction: **do not build a
+parallel "pre-pass" mechanism** — the frontier IS the prediction path.
+Concretely, for agents implementing on this ADR:
+
+1. **`StepAction(toolName, arguments)` is the mechanical-action slot on a
+   step** (data_models/components.dart). A step whose target is
+   mechanically resolvable (pack executables name the symbol; task-grammar
+   verbs; prompt-named file+anchor/keypath) carries a RESOLVED StepAction —
+   the ready decision.
+2. **Delivery goes through the existing decision flow** (`openFreshDecision`,
+   decision_flow_system): host-injected fresh decisions, never a new loop.
+   The actor's cut shows the ready step; the actor CARRIES the move (the
+   proven row-1 pattern), never composes ids.
+3. **Zero-token mechanical actors** (topology-engine role data) may WORK
+   consented ready steps while the model actor is still working — the
+   accelerate-and-predict behavior: the frontier branches, checks and
+   validates mechanically ahead of the model (this is §Planning's
+   "pointed forward" made concrete).
+4. **Tier routing is a frontier property**: a step the resolver cannot
+   resolve projects as tier-routed (needs a larger model tier) — up-front
+   routing, never exhaust-then-escalate; the overseer (J8.2) stays the
+   fallback. Ambiguous resolution bounces with candidates (the
+   locate-hints law) — mechanical resolution must be TOTAL or bounce.
+5. The task-grammar pre-pass (wave row 1) is a special-case fork of this —
+   RETIRE it into the frontier when wiring the resolvers (one mechanism).
+
 ## References
 
 - [North Star](../../pkgs/xsoulspace_agentic_harness/docs/north_star_agentic_harness.mdx)
