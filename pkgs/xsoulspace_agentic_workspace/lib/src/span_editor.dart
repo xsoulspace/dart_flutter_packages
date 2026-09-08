@@ -321,7 +321,7 @@ class SpanEditMaterializer {
       throw SpanEditBounce(
         'missing symbolId',
         're-send the move with symbolId as a TOP-LEVEL edit_symbol arg '
-            '(the id from meaning_zoom, e.g. "sym_lib_loop.dart_inBounds") '
+            '(the id from the meaning_program zoom cut, e.g. "sym_lib_loop.dart_inBounds") '
             '— NOT inside executableParams and NOT as name; executableParams '
             'carries only the executable\'s own slots (e.g. newName)',
       );
@@ -424,7 +424,7 @@ class SpanEditMaterializer {
       throw SpanEditBounce(
         '${sym.id} is a $decl — only methods, functions and getters have '
             'replaceable bodies',
-        'target a method/function symbol (see meaning_zoom), or use '
+        'target a method/function symbol (zoom via meaning_program), or use '
             'insert_member for new members',
       );
     }
@@ -468,7 +468,7 @@ class SpanEditMaterializer {
           throw SpanEditBounce(
             'call target "$callee" is neither a declared param nor a '
                 'known symbol of this workspace',
-            'call an existing intent/symbol (check with meaning_zoom) or '
+            'call an existing intent/symbol (check via a meaning_program zoom) or '
                 'a param',
             fence: 'integration',
           );
@@ -605,7 +605,7 @@ class SpanEditMaterializer {
           throw SpanEditBounce(
             'call target "$callee" is neither a declared param nor a known '
                 'symbol of this workspace',
-            'call an existing intent/symbol (check with meaning_zoom) or a '
+            'call an existing intent/symbol (check via a meaning_program zoom) or a '
                 'param',
             fence: 'integration',
           );
@@ -813,7 +813,7 @@ class SpanEditMaterializer {
       throw SpanEditBounce(
         '${sym.id} is a $decl — authored-body executables replace the '
             'bodies of methods, functions and getters only',
-        'target a method/function symbol (see meaning_zoom)',
+        'target a method/function symbol (zoom via meaning_program)',
       );
     }
     final file = sym.props['file'] as String?;
@@ -944,7 +944,7 @@ class SpanEditMaterializer {
     if (_knownSymbolLabels().contains(newName)) {
       throw SpanEditBounce(
         'rename collides with an existing symbol named "$newName"',
-        'pick a free name (check with meaning_zoom query)',
+        'pick a free name (check via a meaning_program locate)',
       );
     }
 
@@ -1603,7 +1603,7 @@ String _tail(String s, {int lines = 12}) {
 }
 
 // ---------------------------------------------------------------------------
-// The ONE edit tool — same registry discipline as repo_etl/meaning_zoom
+// The ONE edit tool — same registry discipline as repo_etl/meaning_program
 // (the core learns no Dart; this lives in the dart_meaning host, ADR 0015)
 // ---------------------------------------------------------------------------
 
@@ -1789,7 +1789,7 @@ ToolDef editSymbolTool(
             'failureClass': 'slot_misplaced',
             'repair':
                 're-send with {action, symbolId: <TOP-LEVEL id from '
-                'meaning_zoom>, executableId, executableParams: {only the '
+                'the zoom cut>, executableId, executableParams: {only the '
                 "executable's own slots}}",
             'seen': {'name': map['name']},
           };
@@ -1818,7 +1818,7 @@ ToolDef editSymbolTool(
               'bounce': true,
               'failureClass': 'label_resolution',
               'repair': hits.isEmpty
-                  ? 'repo_etl action scan, then meaning_zoom to confirm the '
+                  ? 'repo_etl action scan, then a meaning_program zoom to confirm the '
                         'label'
                   : 'disambiguate with the TOP-LEVEL symbolId from the cut',
               'hints': hits,

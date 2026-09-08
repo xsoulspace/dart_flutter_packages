@@ -21,6 +21,8 @@ import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
 
 import 'file_class_spec.dart' show FileClassSpec, MapParser, fileClassSpecs;
 import 'md_materializer.dart' show mdMapParser, mdMaterializerPerform;
+import 'ts_materializer.dart'
+    show tsMapParser, tsMaterializerPerform;
 import 'yaml_json_materializer.dart'
     show jsonMapParser, keypathMaterializerPerform, yamlMapParser;
 
@@ -210,6 +212,26 @@ const materializerBindings = <String, MaterializerBinding>{
     mapParser: jsonMapParser,
     subNodePrefix: 'key_',
     resolveAnchor: _keypathAnchor,
+  ),
+  // ADR 0035 §6 — the ts family (Tier C v1): symbol map via the
+  // dependency-light scanner (tsScanSymbols), member-body edits via PACK
+  // EXECUTABLES only (apply_executable — replace_member_body is
+  // deliberately OMITTED from the declared union: the v1 limitation IS
+  // registry data, never prose, §5). Anchor currency = the node id (the
+  // default [_nodeIdAnchor]); the named oracle tsc_no_emit bounces
+  // BEFORE bytes when unavailable.
+  'ts': MaterializerBinding(
+    fileClass: 'ts',
+    extensions: {'.ts', '.tsx'},
+    spanCurrency: 'member_span',
+    mapFormat: 'symbol_tree',
+    emitter: 'member_splice',
+    oracle: 'tsc_no_emit',
+    anchors: 'node_id',
+    actions: ['insert_member', 'remove_member', 'apply_executable'],
+    materializer: tsMaterializerPerform,
+    mapParser: tsMapParser,
+    subNodePrefix: 'tsym_',
   ),
 };
 

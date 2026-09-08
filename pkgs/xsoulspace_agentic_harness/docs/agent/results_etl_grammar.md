@@ -92,3 +92,66 @@ package is standalone; the workspace consumes only the pure-Dart
   serves and the conformance suite still runs (missing dylib = a NAMED
   skip reason, never a silent fallback).
 - Non-goals honored: no wasm, no grammar authoring, no windows dylib.
+
+## Scanner↔tree-sitter delta (2026-09-08)
+
+The v1 mechanical TS scanner landed (ADR 0035 §6 Tier C v1:
+`xsoulspace_agentic_workspace/lib/src/ts_materializer.dart`, registered as
+the `ts` binding). The battery ran BOTH ways the ADR demanded: the 4
+annotated fixtures (`calculator.ts`, `functions.ts`, `generics.ts`,
+`multibyte.ts`) went through the scanner's map fn (`tsScanSymbols`) with
+the expected-node derivation REPLICATED as test data from the `// @map`
+marker grammar (the workspace may not import the FFI leaf — §8 layering).
+Kind/name/memberOf compared as multisets; spans verified byte-precise
+(the UTF-8 slice at the span offsets must be the declaration, emoji/CJK
+included).
+
+| Fixture | Scanner nodes | tree-sitter (marker-derived) | Delta | Named class |
+| --- | --- | --- | --- | --- |
+| calculator.ts | 5 (1 sym + 4 member, incl. member arrow const; decorator skipped) | 5 | 0 | none |
+| functions.ts | 4 (2 sym + 2 member: arrow consts as lexical_declaration) | 4 | 0 | none |
+| generics.ts | 6 (2 sym + 4 member: property_signature/method_signature included) | 6 | 0 | none |
+| multibyte.ts | 3 (1 sym + 2 member; function-local const 縮める.ラベル included) | 3 | 0 | none |
+
+**Final delta: ZERO** — the scanner matches the FFI-derived expectations
+on every fixture, spans byte-precise over emoji/CJK.
+
+### Named scanner failure classes found and repaired BEFORE landing
+
+These were caught by the conformance battery + the byte-precision gate
+during landing (integration-test evidence, NOT real task rows — the §7
+clause-1 gate still needs REAL bounces attributed to extractor
+insufficiency; state that honestly):
+
+- `mask_buffer_all_inert` — `_maskContent` wrote its masked output into a
+  space-filled buffer without copying unmasked characters: EVERY character
+  was inert, the scanner returned zero nodes everywhere. Caught by the
+  first ts test run (the §7 "scanner returns nothing" shape would have
+  been a total map outage).
+- `function_body_members_unindexed` — the var-decl branch (function-local
+  consts are member nodes under the nearest mapped ancestor) sat behind an
+  `atTopLevel || atContainerMember` guard, so `const ラベル` inside
+  `縮める` was never reached. Caught by the multibyte fixture (the ONLY
+  fixture exercising the shape — fixture-first evidence working as
+  designed).
+- `span_boundary_parse_ambiguous` — the `tsym_<fileNodeId>_<idTail>`
+  anchor's file/tail boundary was parsed at the FIRST underscore, but the
+  file id itself is path-flattened (`f_src_pets.ts`) — every nested-path
+  edit bounced `file_not_found: src`. Fixed by resolving the boundary
+  against the files the jail actually scans (longest file-id prefix) and
+  deriving the tail from the RESOLVED path.
+
+### Honest scope notes
+
+- The delta compares node KINDS/NAMES/memberOf + span byte-precision, not
+  grammar-node identity: tree-sitter starts a declaration's span at the
+  declaration keyword, the scanner spans include `export`/modifiers. The
+  markers carry no spans, so this is an OBSERVATION, not a measured
+  mismatch; it matters only if a consumer ever needs the export-modifier
+  boundary (none today — the splice fences on the member span).
+- §7 clause status after this landing: clauses 1–2 remain **OPEN** (the
+  three classes above are integration-fixture evidence, not measured task
+  bounces); clause 3 advances from PRE-SEEDED to **half-proven** (the
+  scanner half now runs the same battery; the FFI half was already green
+  — the full cross-implementation run in one process still needs the
+  dylib+scanner in one suite).

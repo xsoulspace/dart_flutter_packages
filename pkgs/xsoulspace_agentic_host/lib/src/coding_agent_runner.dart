@@ -161,8 +161,9 @@ class CodingAgentTask {
   /// whole-file writes; the meaning profile must not gain them back.
   final List<String>? runCommand;
 
-  /// R7: the meaning-profile surface — [repo_etl, meaning_zoom,
-  /// meaning_impact, edit_symbol, run]. Zero `read`, zero `write`: the
+  /// R7: the meaning-profile surface — [repo_etl, meaning_program,
+  /// edit_symbol, run] (ADR 0030 §3 graduation). Zero `read`, zero
+  /// `write`: the
   /// tree is the code interface, `edit_symbol` is the only ACT verb. The
   /// workspace convention stays the gate (run-graded).
   final bool meaningProfile;

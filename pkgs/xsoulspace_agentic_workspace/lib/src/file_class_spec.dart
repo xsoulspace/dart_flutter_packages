@@ -95,6 +95,12 @@ const fileClassSpecs = <FileClassSpec>[
   FileClassSpec(fileClass: 'md', extensions: {'.md', '.mdx'}),
   FileClassSpec(fileClass: 'yaml', extensions: {'.yaml', '.yml'}),
   FileClassSpec(fileClass: 'json', extensions: {'.json'}),
+  // ts is the FIRST full-code non-dart class (ADR 0035 §6 Tier C v1):
+  // the map half is the mechanical scanner (ts_materializer.dart
+  // tsScanSymbols/tsMapParser — sym + member nodes, byte-precise spans);
+  // the edit half is the ts binding (insert_member / remove_member /
+  // apply_executable via pack executables; tsc_no_emit oracle).
+  FileClassSpec(fileClass: 'ts', extensions: {'.ts', '.tsx'}),
 ];
 
 /// Registry lookup; unknown classes fall back to `other` (never a bounce —

@@ -766,3 +766,47 @@ spent (the P0 59–109-generation loop class is contained by construction).
 Gate: `test/tool_args_invalid_bounce_test.dart` 3/3 (named bounce beat +
 no-retry repair prompt + round counter) + 41 regression tests green.
 PLAN P1 row updated; rows 2–4 re-run still pending (on-device).
+
+## 2026-09-08 — the binding registry + the P1-fix wave re-run (ADR 0035)
+
+**ADR 0035 landed (four MoE-reviewed lanes):** the tiny
+`MaterializerBinding` record + validated registry (routing keys on the
+node's stamped `class` prop — the `switch (node.kind)` in
+edit_node_router is DEAD, grep-gated); fs-tier map ownership
+(`_mapClasses`/`_mapPrefixes`/the index switch dead; budget caps
+engine-owned; binding-declared sub-node prefixes + the orphaned-sub-node
+gate test); registration-time honesty (binding↔spec agreement, extension
+disjointness, actions⇒oracle — each a named error test); the
+mechanism-first unknown-id bounce with a DURABLE format-literal gate
+test. Suite 74/2 → 86/0. SpanEditor safe decomposition: `dart_lexicon.dart`
++ `edit_pack.dart` extracted (block-by-block verified vs HEAD; 2,196 →
+1,965 lines). Tree-sitter spike (§8): `xsoulspace_treesitter_raw` — the
+leaf FFI package (grammar BUILT on macOS/arm64, pinned), the span bridge
+(UTF-8→UTF-16 with multibyte goldens), the generic GrammarMapper, the
+conformance battery, budget proof fits=true.
+
+**The P1-fix wave re-run executed (all four rows, on-device)** — full
+data in `../benchmark/runs/afm_wave_results.md` § P1-FIX RE-RUN:
+- The opaque ToolCallError class is GONE (verdicts publish; classes named).
+- task_grammar PASS 1/1 reproducibly (1 decision / ~2k tokens / 21 s).
+- Driver + surface teaching drift FIXED mid-run: the wave rows 3/4 still
+  taught dead verbs; ~20 model-facing bounce strings taught
+  `meaning_zoom`/`meaning_locate`/`meaning_impact` after the ADR 0030 §3
+  graduation removed those tools — the tiny model OBEYED the stale
+  teaching. All converged to the read-program dialect (grep-gated in
+  `--dry`); read bounces now carry candidate-id hints (all node classes —
+  the first version's symbol-only filter was itself a bug, caught by the
+  md row) + the cursor-law hint.
+- **The measured no-recovery verdict**: rows 2–4 fail in named classes
+  (read-side query/id composition; early-stop) — the 4k tier does not
+  reliably compose the multi-step read→edit flow. Named repairs recorded
+  (host pre-pass for mechanically-resolvable rows; J8.2 tier escalation).
+- New named driver defects: the exhausted-attempt pump (Σ26 identical
+  re-sends); one scoped-check-vs-outer-gate anomaly (needs LLM-free repro).
+- One-command ergonomics: `just wave-dry|wave|wave-row` +
+  `xsoulspace_inference_apple_foundation/docs/afm_wave_runbook.md`.
+
+**TS family (ADR 0035 §6, in flight)**: the first agent died on an
+upstream idle timeout after `ts_materializer.dart` (1,683 lines: scanner
++ perform + bounce/outcome); the continuation agent lands registration +
+tests + the conformance delta.

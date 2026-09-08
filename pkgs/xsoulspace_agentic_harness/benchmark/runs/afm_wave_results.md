@@ -120,6 +120,78 @@ floor). Until then the only expected-viable rows are one-decision
 
 ---
 
+## P1-FIX RE-RUN (2026-09-08, the named-bounce loop engaged — driver + surface drift fixed first)
+
+Driver state: rows 3/4 re-pointed to the unified verb (the old prompts
+still taught `edit_section`/`edit_key` — dead after ADR 0034); ALL
+teaching surfaces converged to the read program (the `task_grammar`
+suffix + ~20 model-facing bounce strings still taught
+`meaning_zoom`/`meaning_locate`/`meaning_impact` — tools removed from
+the profile by the ADR 0030 §3 graduation; the tiny model OBEYED the
+stale teaching and burned rounds on ghost verbs — fixed and grep-gated
+in `--dry`); read bounces now carry mechanical repair data (top-5
+candidate ids on unknown focusId AND on no-match locate; the cursor-law
+hint: "omit focusId — the last locate's top hit feeds zoom/impact/read"). Logs: `afm_wave_*_run1.log` (2026-09-08 entries).
+
+| row | verdict | decisions | tokens | wall | failure class |
+|---|---|---|---|---|---|
+| task_grammar | **PASS** 1/1 (3rd consecutive) | **1** | **2,073** | 21 s | — |
+| trusted_author | **FAIL** (5th published) | 30 | 63,633 | 845 s | final gate: dart test exit=1 — read-side query-composition class |
+| md | **FAIL** (2nd published) | ~3 | ~8k | 70 s | the model STOPPED EARLY: one pre-scan locate (tree_empty bounce), a scan, then no further moves — never reached the edit |
+| yaml | **FAIL** (1st published) | 3 | 6,176 | 131 s | 2 tool rounds, near-immediate give-up — same early-stop class |
+
+### What the P1 fix proved (rows publish, classes named)
+
+1. **The opaque ToolCallError class is GONE.** Every failed call now
+   reaches Dart as named bounce data; verdicts publish; no 59–109-gen
+   verdict-less loops. The P1 fix holds.
+2. **Consent + permission surfaces work on-device** (`plan-allowed
+   pack_write: dart/author_area (1/2)` in every trusted run) — the
+   trusted-author MACHINERY is proven; the model's path to it is not.
+3. **Row 1 is the amortization endpoint, reproducibly**: 1 decision /
+   1 round / ~2k tokens whenever the surface teaching is honest; it
+   broke (3–31 decisions) exactly when stale teaching leaked — the
+   strongest small-surface-sensitivity evidence yet.
+
+### The measured no-recovery verdict (ADR 0034's graduation question)
+
+FINAL (2026-09-08, all four rows measured): **the 4k AFM tier does not
+reliably compose the multi-step read→edit flow on the unified surface.**
+Row 1 (the single READY move) passes reproducibly at 1 decision; every
+multi-step row fails, each in a NAMED class: invented queries/focusIds
+(trusted — 5 runs), early-stop before any edit (md, yaml). The bounce
+ladder teaches mechanically (all classes named, hints carry real node
+ids incl. the fs tier after the kind-filter fix) — teaching fires but
+does not converge within the tier's budget. Per ADR 0034's own
+criterion the surface must adapt for this tier; the named repairs
+(decision needed, NOT built):
+
+- **(a) host pre-pass for consented packs AND multi-step rows** — the
+  pack names the symbol; the host resolves the id mechanically (row 1's
+  proven pre-pass path) and emits the READY decision. The model's only
+  job: carry the move; consent stays host-side. The row then measures
+  CONSENT (its stated purpose), not id-resolution. Generalizes: any
+  row whose steps are mechanically resolvable gets a ready-decision
+  pre-pass; the multi-step tier is the LARGER model's surface (J8 rung
+  2 escalation) — that split is now measured, not assumed.
+- **(b) tier escalation for multi-step rows** — the overseer swap path
+  (J8 rung 2) promotes the row to a larger model when the bounce ladder
+  exhausts.
+
+### New named driver defects (harness backlog)
+
+- **Exhausted-attempt pump**: after the goal-attempt budget exhausts,
+  the react-continuation pump re-sends the identical "attempt N/3"
+  prompt (measured Σ26, ~2 min wall, ~10k tokens) instead of ending
+  the decision. The decision must END on exhaustion (J8 rung 1).
+- **Scoped-check vs outer-gate anomaly** (one observation): an edit
+  landed with the in-materializer check exit 0 (520 ms — warm kernel)
+  while the outer `dart test` gate failed (3,719 ms). Same command,
+  same jail — needs a controlled LLM-free reproduction before any
+  code change.
+
+---
+
 ## P0 RE-RUN (2026-09-07, the converged surface — ADR 0033/0034)
 
 Driver state: dylib rebuilt (crash fix in), one-truth profile 1,424 →

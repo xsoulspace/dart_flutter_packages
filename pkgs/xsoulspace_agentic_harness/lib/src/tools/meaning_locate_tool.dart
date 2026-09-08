@@ -82,13 +82,29 @@ ToolDef meaningLocateTool(World world) => ToolDef.encode(
           hits.add((rank, node.kind, node.label, entry.key));
         }
         if (hits.isEmpty) {
+          // Mechanical repair-teaching law (ADR 0034 disposition 1, read
+          // side): a no-match query bounces with the workspace's actual
+          // node ids — ALL classes (symbols, files, sections, keys), not
+          // just the code tier: an md row needs the file/section node,
+          // not a Dart symbol. Capped, token-budgeted.
+          final hints = [
+            for (final entry in index.byId.entries)
+              if (const [
+                'symbol',
+                'file',
+                'section',
+                'key',
+              ].contains(meaningComponentOf<MeaningNode>(world, entry.value)?.kind))
+                entry.key,
+          ].take(6).toList();
           return {
             'ok': true,
             'query': query,
             'total': 0,
             'rows': const [],
-            'hint': 'no meaning matched — try a shorter identifier or a '
-                'zoom query',
+            'hint': 'no meaning matched — zoom ONE of these ids (a file '
+                "node's cut carries its sections/keys), then edit",
+            'hints': hints,
           };
         }
         hits.sort((a, b) {

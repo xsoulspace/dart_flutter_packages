@@ -601,7 +601,7 @@ MeaningSpanReader meaningSpanReader(FsToolsRoot root) => (props, budgetTokens) {
 /// green-screen facts — zero model tokens, unchanged.
 
 /// The zoom staleness refresher (PLAN §NOW): ONE file node re-derived from
-/// disk when the harness `meaning_zoom` point cut hits a node whose file
+/// disk when the harness meaning_program `zoom` point cut hits a node whose file
 /// moved under the tree (the model edits through a materializer; the cut
 /// must serve post-edit text WITHOUT waiting for the next tick). Bounded:
 /// one stat; the re-read happens ONLY on a real mtime/size drift and only

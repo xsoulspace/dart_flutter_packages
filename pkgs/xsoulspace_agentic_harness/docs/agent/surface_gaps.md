@@ -399,3 +399,27 @@
 | 2026-09-07 | ADR 0035 §1/§2/§3/§5: materializer bindings (the registry IS the format seam — kind-switch router dies, fs-tier map hardcodes die, registration-time registry linter, mechanism-first unknown-id bounce) | raw `edit`/`write` on 7 lib files + 4 test files in xsoulspace_agentic_workspace (1 new lib file + 1 new test file); full suite green before claim (86 pass, incl. 2 pre-existing failures in edit_node_unified_test repaired: slot_scoping bounce maps missing `ok:false` + an escaped-`$` test typo) | Dart edits in `pkgs/*/` have no meaning surface here: the refactor spans ROUTING (no indexed symbol to address — the switch is a control-flow shape, not a member), REGISTRY DATA (new file of binding records), and fs-tier ETL plumbing; `harness_edit` actions (replace_member_body/insert_member/apply_executable) cannot express "replace dispatch mechanism across files" (same gap class as the ADR 0033 §4 row) | a `converge_dispatch`/`register_binding` refactor executable: spec declares the registry + the bindings; host rewrites the router dispatch, kills the switch, and lints registration (the §3 linter is already the seed — it just needs to be the EDIT mechanism too, not only a gate) |
 
 | 2026-09-07 | ADR 0035 §4: SAFE span_editor decomposition (lexical utils → `dart_lexicon.dart`, pack registry + wire validation + authored-body machinery → `edit_pack.dart` with `EditPackRegistry`; span_editor keeps its public API and delegates) | raw `edit`/`write` on 2 lib files + 2 new lib files in xsoulspace_agentic_workspace; analyze identical to baseline (214 issues, all pre-existing) + full suite green (86/0) before claim | a mechanical CODE MOVE between libraries has no meaning move: the tree indexes class symbols in one file — there is no verb for "relocate members to a new/existing library and rewrite call-site prefixes" (member spans don't carry their library), and `_`-private helpers can't cross libraries without the rename that only the host can do atomically (same gap class as the ADR 0033 §4 row) | a `move_members`/`extract_library` refactor executable: spec declares the source members + target library + renames; host performs the relocation, de-privatizes, rewrites call sites, and re-runs the scoped analyze oracle (the gates — span_edit_gate/pack_edit_gate/edit_pack_capture — already exist as the verify tier) |
+
+## 2026-09-08 — the session's own reads route through the mover (extension lags the graduated read dialect)
+
+- **What happened**: this pi session's `harness_locate` / `harness_zoom`
+  tool calls DELEGATED to the mover model (~140 s each, `mover_refusal`)
+  instead of the mechanical read path — the extension still wraps the
+  LEGACY per-verb read tools, while the daemon's graduated read world
+  (ADR 0034) serves ONE `harness_meaning_program` directive. The exact
+  drift class the wave rows measured (stale teaching vs the graduated
+  surface), reproduced by the session itself.
+- **Why the surface didn't cover it**: the pi extension
+  (`r7_harnessd_extension.ts` / the dart-workspace extension) was not
+  updated to the one-read-dialect graduation; its tool names no longer
+  match the daemon's mechanical read set.
+- **The verb/spec to build**: the extension exposes ONE read tool
+  (`harness_meaning_program {ops:[…]}`) and drops/aliases the per-verb
+  wrappers; the mechanical-directive classifier's read set is asserted
+  against the LIVE registry (a registry-derived test, not a name list) so
+  this class cannot silently return.
+- **Non-claims**: the daemon's mechanical read path itself is proven
+  (34–54 ms rows; the warm tick 24 ms); only the session's tool wrappers
+  lag. The doc edits in this session stayed raw edits (this row).
+
+| 2026-09-08 | ADR 0035 §6: TS family landing (ts_materializer repairs: mask buffer, function-body member guard, span-boundary parse; registration of the ts FileClassSpec + binding; test/ts_materializer_test.dart incl. the scanner↔tree-sitter conformance delta) | raw `edit`/`write` on 4 lib files + 2 test files in xsoulspace_agentic_workspace; full suite green (95/0) + analyze 0 new errors before claim | the materializer under repair is DART in `pkgs/*/` — but the work was scanner-debug + fixture-data replication + registration DATA: no single meaning node addresses "fix the mask buffer inside tsScanSymbols" (function-level surgery inside a `final RegExp`-hosting library, cross-cutting the scanner/oracle/splice halves), and the conformance fixtures had to be embedded as test DATA because the workspace may not import the FFI leaf (§8 layering) — a copy, not a meaning move | a `conform_scanner` refactor executable: spec declares the fixture set + the named failure classes; host runs the battery against the scanner AND repairs named classes mechanically (the delta table is already the data contract — it just needs to drive the edit, not only the gate) |

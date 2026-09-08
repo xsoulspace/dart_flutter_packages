@@ -117,6 +117,8 @@ ToolDef meaningZoomTool(World world, {MeaningSpanReader? spanReader}) => ToolDef
             'error': 'unknown focusId: $focus',
             'hints': hints,
             'total': index.nodeCount,
+            'cursor': 'SIMPLEST REPAIR: omit focusId entirely — the last '
+                "locate's top hit feeds zoom/impact/read via the cursor",
           };
         }
         var zoomLevel = map['zoom'] is String ? map['zoom'] as String : 'local';
@@ -285,6 +287,8 @@ ToolDef meaningImpactTool(World world) => ToolDef.encode(
             'error': 'unknown focusId: $focus',
             'hints': hints,
             'total': index.nodeCount,
+            'cursor': 'SIMPLEST REPAIR: omit focusId entirely — the last '
+                "locate's top hit feeds zoom/impact/read via the cursor",
           };
         }
         final depth = map['depth'] is int ? map['depth'] as int : 2;

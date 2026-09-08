@@ -78,9 +78,10 @@ class TaskGrammarNoParse extends TaskGrammarReading {
 /// sentence (fixed constants — stripping them is mechanical, not prose
 /// understanding).
 const _knownSuffixes = [
-  'Work through the meaning tree: repo_etl scan, meaning_zoom / '
-      'meaning_impact to read, edit_symbol to act on code, write_review '
-      'for non-code files (the human consents). Never touch files directly.',
+  'Work through the meaning tree: repo_etl scan, meaning_program read '
+      'ops (locate/zoom/impact/read) to read, edit_symbol to act on '
+      'code, write_review for non-code files (the human consents). '
+      'Never touch files directly.',
   'Verify with the run tool — the check must exit 0.',
 ];
 

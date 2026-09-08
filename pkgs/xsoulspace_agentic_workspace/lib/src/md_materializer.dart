@@ -16,7 +16,7 @@
 /// - required anchor slot (the section) — resolved MECHANICALLY from a
 ///   fresh parse of the file (never from stale tree offsets): exact
 ///   section label, or the section node id (`sec_…_<ordinal>`) from
-///   meaning_zoom; ambiguity/missing bounces as named data with
+///   the meaning_program zoom cut; ambiguity/missing bounces as named data with
 ///   navigable hints;
 /// - body-as-data (PROSE — evidence tier, pipeline_coding.md Scope: free
 ///   text is allowed there; the fences are anchor-resolution + oracle,
@@ -437,7 +437,7 @@ class MdMaterializer {
       throw MdEditBounce(
         'missing path',
         're-send with path as a workspace-relative .md path (the id/label '
-            'from meaning_zoom, e.g. "docs/guide.md")',
+            'from the meaning_program zoom cut, e.g. "docs/guide.md")',
         'invalid_path',
       );
     }
@@ -467,7 +467,7 @@ class MdMaterializer {
     if (!f.existsSync()) {
       throw MdEditBounce(
         'file not found: $path',
-        'zoom the tree (meaning_zoom) for existing files; a NEW file lands '
+        'zoom the tree (a meaning_program zoom op) for existing files; a NEW file lands '
             'through the host materializer bootstrap, never a guessed path',
         'file_not_found',
       );
@@ -544,7 +544,7 @@ class MdMaterializer {
         throw MdEditBounce(
           'ambiguous anchor "$anchor": ${hits.length} sections share the '
               'label in $path',
-          're-send anchor as the section NODE ID from meaning_zoom (one '
+          're-send anchor as the section NODE ID from the zoom cut (one '
               'of the candidates below)',
           'ambiguous_anchor',
           hints: [

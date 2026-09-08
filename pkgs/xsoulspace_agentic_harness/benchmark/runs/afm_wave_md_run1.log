@@ -153,3 +153,203 @@ repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":
 meaning_program: {"ok":false,"program_halt":{"index":1,"op":"zoom","error":"unknown focusId: main.dart","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query
 repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
 
+coding_agent run — task: wave_md_section
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 1473
+  decisions: 8
+  tool rounds (thread beats): 8
+  moves: {meaning_program: 4, repo_etl.scan: 3, repo_etl.refresh: 1}
+  projection tokens (honest spend, Situation.tokensUsed): 17121
+  meaning nodes: 20, edges: 20
+  wall clock: 225855 ms
+  final gate (outer oracle, once): FAIL
+    check: dart test exit=1:
+    check: missing from docs/README.md: [--serve]
+    check: forbidden values present in docs/README.md: [to start the gateway. Read the]
+    check: missing from docs/README.md: [config.yaml]
+  failure class: final gate: dart test exit=1: | missing from docs/README.md: [--serve] | forbidden values present in docs/README.md: [to start the gateway. Read the] | missing from docs/README.md: [config.yaml]
+--- harness pulse (J1.5.3) ---
+tick 8 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788822201284517-0: goal-attempt budget exhausted — goal_unverifiable: 1 failed verification attempts (budget 1). Last failure: dart test exit=1: | missing from docs/README.md: [--serve] | forbidden values present in docs/README.md: [to start the gateway. Read the] | missing from docs/README.md: [config.yaml]
+— agent-1788822201284517-0  [idle via react_continuation]  rounds 0/12 (Σ6)  attempts 1/3 EXHAUSTED
+    last: repo_etl:{"action":"refresh"} → ok
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 29634..55119
+tick 53234: decisions=1 inFlight=1 pending=0 actors=agent-1788822201284517-0:1r/1a
+    agent-1788822201284517-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":true,"ops_run":1,"results":[{"locate":{"ok":…"
+tick 53334: decisions=1 inFlight=1 pending=0 actors=agent-1788822201284517-0:1r/1a
+    agent-1788822201284517-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":true,"ops_run":1,"results":[{"locate":{"ok":…"
+tick 53434: decisions=1 inFlight=1 pending=0 actors=agent-1788822201284517-0:1r/1a
+    agent-1788822201284517-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":true,"ops_run":1,"results":[{"locate":{"ok":…"
+tick 53534: decisions=1 inFlight=1 pending=0 actors=agent-1788822201284517-0:1r/1a
+    agent-1788822201284517-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":true,"ops_run":1,"results":[{"locate":{"ok":…"
+tick 53634: decisions=1 inFlight=1 pending=0 actors=agent-1788822201284517-0:1r/1a
+    agent-1788822201284517-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":true,"ops_run":1,"results":[{"locate":{"ok":…"
+tick 53734: decisions=1 inFlight=1 pending=0 actors=agent-1788822201284517-0:1r/1a
+    agent-1788822201284517-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":true,"ops_run":1,"results":[{"locate":{"ok":…"
+tick 53834: decisions=1 inFlight=1 pending=0 actors=agent-1788822201284517-0:1r/1a
+    agent-1788822201284517-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":true,"ops_run":1,"results":[{"locate":{"ok":…"
+tick 53934: decisions=1 inFlight=1 pending=0 actors=agent-1788822201284517-0:1r/1a
+    agent-1788822201284517-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":true,"ops_run":1,"results":[{"locate":{"ok":…"
+tick 54034: decisions=1 inFlight=1 pending=0 actors=agent-1788822201284517-0:1r/1a
+    agent-1788822201284517-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":true,"ops_run":1,"results":[{"locate":{"ok":…"
+tick 54134: decisions=1 inFlight=1 pending=0 actors=agent-1788822201284517-0:1r/1a
+    agent-1788822201284517-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":true,"ops_run":1,"results":[{"locate":{"ok":…"
+tick 54234: decisions=1 inFlight=1 pending=0 actors=agent-1788822201284517-0:1r/1a
+    agent-1788822201284517-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":true,"ops_run":1,"results":[{"locate":{"ok":…"
+tick 54334: decisions=1 inFlight=1 pending=0 actors=agent-1788822201284517-0:1r/1a
+    agent-1788822201284517-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":true,"ops_run":1,"results":[{"locate":{"ok":…"
+tick 54434: decisions=1 inFlight=1 pending=0 actors=agent-1788822201284517-0:1r/1a
+    agent-1788822201284517-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":true,"ops_run":1,"results":[{"locate":{"ok":…"
+tick 54534: decisions=1 inFlight=1 pending=0 actors=agent-1788822201284517-0:1r/1a
+    agent-1788822201284517-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":true,"ops_run":1,"results":[{"locate":{"ok":…"
+tick 54634: decisions=1 inFlight=1 pending=0 actors=agent-1788822201284517-0:1r/1a
+    agent-1788822201284517-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":true,"ops_run":1,"results":[{"locate":{"ok":…"
+tick 54734: decisions=1 inFlight=1 pending=0 actors=agent-1788822201284517-0:1r/1a
+    agent-1788822201284517-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":true,"ops_run":1,"results":[{"locate":{"ok":…"
+tick 54834: decisions=1 inFlight=1 pending=0 actors=agent-1788822201284517-0:1r/1a
+    agent-1788822201284517-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":true,"ops_run":1,"results":[{"locate":{"ok":…"
+tick 54934: decisions=1 inFlight=1 pending=0 actors=agent-1788822201284517-0:1r/1a
+    agent-1788822201284517-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":true,"ops_run":1,"results":[{"locate":{"ok":…"
+tick 55034: decisions=1 inFlight=1 pending=0 actors=agent-1788822201284517-0:1r/1a
+    agent-1788822201284517-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":true,"ops_run":1,"results":[{"locate":{"ok":…"
+tick 55119: decisions=0 inFlight=0 pending=0 actors=agent-1788822201284517-0:0r/1a
+
+
+--- tool results (truncated per beat) ---
+meaning_program: {"ok":false,"program_halt":{"index":0,"op":"locate","error":"tree_empty","hint":"fix op 0 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":0,"results":[]}
+repo_etl: {"ok":true,"files":6,"dirs":3,"dart_files":1,"symbols":1,"edges":3,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0},"note":"tree is world state (code graph + fs tier) — use the meaning_program read ops to read it; it is re-derivable
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":true,"ops_run":1,"results":[{"locate":{"ok":true,"query":"//main.dart","total":0,"rows":[],"hint":"no meaning matched — re-send with ONE of these exact ids as the zoom/apply focusId","hints":["sym_test_docs_test.dart_main"]}}]}
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"zoom","error":"unknown focusId: main.dart","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query
+meaning_program: {"ok":true,"ops_run":1,"results":[{"locate":{"ok":true,"query":"main.dart","total":0,"rows":[],"hint":"no meaning matched — re-send with ONE of these exact ids as the zoom/apply focusId","hints":["sym_test_docs_test.dart_main"]}}]}
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0}}
+
+coding_agent run — task: wave_md_section
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 1473
+  decisions: 3
+  tool rounds (thread beats): 3
+  moves: {meaning_program: 1, repo_etl.scan: 2}
+  projection tokens (honest spend, Situation.tokensUsed): 6372
+  meaning nodes: 20, edges: 20
+  wall clock: 64897 ms
+  final gate (outer oracle, once): FAIL
+    check: dart test exit=1:
+    check: missing from docs/README.md: [--serve]
+    check: forbidden values present in docs/README.md: [to start the gateway. Read the]
+    check: missing from docs/README.md: [config.yaml]
+  failure class: final gate: dart test exit=1: | missing from docs/README.md: [--serve] | forbidden values present in docs/README.md: [to start the gateway. Read the] | missing from docs/README.md: [config.yaml]
+--- harness pulse (J1.5.3) ---
+tick 3 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788823526905783-0: goal-attempt budget exhausted — goal_unverifiable: 1 failed verification attempts (budget 1). Last failure: dart test exit=1: | missing from docs/README.md: [--serve] | forbidden values present in docs/README.md: [to start the gateway. Read the] | missing from docs/README.md: [config.yaml]
+— agent-1788823526905783-0  [idle via react_continuation]  rounds 0/12 (Σ1)  attempts 1/3 EXHAUSTED
+    last: repo_etl:{"action":"scan"} → ok
+--- flight recorder ---
+FlightRecorder: 141 pulse(s), ticks 99..13942
+tick 12121: decisions=1 inFlight=1 pending=0 actors=agent-1788823526905783-0:0r/1a
+    agent-1788823526905783-0 ← react_continuation: "Your previous attempt did not satisfy verification (attempt 1/1).
+Failing:
+dart test exit=1:
+missing from docs/README…"
+tick 12221: decisions=1 inFlight=1 pending=0 actors=agent-1788823526905783-0:0r/1a
+    agent-1788823526905783-0 ← react_continuation: "Your previous attempt did not satisfy verification (attempt 1/1).
+Failing:
+dart test exit=1:
+missing from docs/README…"
+tick 12321: decisions=1 inFlight=1 pending=0 actors=agent-1788823526905783-0:0r/1a
+    agent-1788823526905783-0 ← react_continuation: "Your previous attempt did not satisfy verification (attempt 1/1).
+Failing:
+dart test exit=1:
+missing from docs/README…"
+tick 12421: decisions=1 inFlight=1 pending=0 actors=agent-1788823526905783-0:0r/1a
+    agent-1788823526905783-0 ← react_continuation: "Your previous attempt did not satisfy verification (attempt 1/1).
+Failing:
+dart test exit=1:
+missing from docs/README…"
+tick 12521: decisions=1 inFlight=1 pending=0 actors=agent-1788823526905783-0:0r/1a
+    agent-1788823526905783-0 ← react_continuation: "Your previous attempt did not satisfy verification (attempt 1/1).
+Failing:
+dart test exit=1:
+missing from docs/README…"
+tick 12621: decisions=1 inFlight=1 pending=0 actors=agent-1788823526905783-0:0r/1a
+    agent-1788823526905783-0 ← react_continuation: "Your previous attempt did not satisfy verification (attempt 1/1).
+Failing:
+dart test exit=1:
+missing from docs/README…"
+tick 12721: decisions=1 inFlight=1 pending=0 actors=agent-1788823526905783-0:0r/1a
+    agent-1788823526905783-0 ← react_continuation: "Your previous attempt did not satisfy verification (attempt 1/1).
+Failing:
+dart test exit=1:
+missing from docs/README…"
+tick 12821: decisions=1 inFlight=1 pending=0 actors=agent-1788823526905783-0:0r/1a
+    agent-1788823526905783-0 ← react_continuation: "Your previous attempt did not satisfy verification (attempt 1/1).
+Failing:
+dart test exit=1:
+missing from docs/README…"
+tick 12921: decisions=1 inFlight=1 pending=0 actors=agent-1788823526905783-0:0r/1a
+    agent-1788823526905783-0 ← react_continuation: "Your previous attempt did not satisfy verification (attempt 1/1).
+Failing:
+dart test exit=1:
+missing from docs/README…"
+tick 13021: decisions=1 inFlight=1 pending=0 actors=agent-1788823526905783-0:0r/1a
+    agent-1788823526905783-0 ← react_continuation: "Your previous attempt did not satisfy verification (attempt 1/1).
+Failing:
+dart test exit=1:
+missing from docs/README…"
+tick 13121: decisions=1 inFlight=1 pending=0 actors=agent-1788823526905783-0:0r/1a
+    agent-1788823526905783-0 ← react_continuation: "Your previous attempt did not satisfy verification (attempt 1/1).
+Failing:
+dart test exit=1:
+missing from docs/README…"
+tick 13221: decisions=1 inFlight=1 pending=0 actors=agent-1788823526905783-0:0r/1a
+    agent-1788823526905783-0 ← react_continuation: "Your previous attempt did not satisfy verification (attempt 1/1).
+Failing:
+dart test exit=1:
+missing from docs/README…"
+tick 13321: decisions=1 inFlight=1 pending=0 actors=agent-1788823526905783-0:0r/1a
+    agent-1788823526905783-0 ← react_continuation: "Your previous attempt did not satisfy verification (attempt 1/1).
+Failing:
+dart test exit=1:
+missing from docs/README…"
+tick 13421: decisions=1 inFlight=1 pending=0 actors=agent-1788823526905783-0:0r/1a
+    agent-1788823526905783-0 ← react_continuation: "Your previous attempt did not satisfy verification (attempt 1/1).
+Failing:
+dart test exit=1:
+missing from docs/README…"
+tick 13521: decisions=1 inFlight=1 pending=0 actors=agent-1788823526905783-0:0r/1a
+    agent-1788823526905783-0 ← react_continuation: "Your previous attempt did not satisfy verification (attempt 1/1).
+Failing:
+dart test exit=1:
+missing from docs/README…"
+tick 13621: decisions=1 inFlight=1 pending=0 actors=agent-1788823526905783-0:0r/1a
+    agent-1788823526905783-0 ← react_continuation: "Your previous attempt did not satisfy verification (attempt 1/1).
+Failing:
+dart test exit=1:
+missing from docs/README…"
+tick 13721: decisions=1 inFlight=1 pending=0 actors=agent-1788823526905783-0:0r/1a
+    agent-1788823526905783-0 ← react_continuation: "Your previous attempt did not satisfy verification (attempt 1/1).
+Failing:
+dart test exit=1:
+missing from docs/README…"
+tick 13821: decisions=1 inFlight=1 pending=0 actors=agent-1788823526905783-0:0r/1a
+    agent-1788823526905783-0 ← react_continuation: "Your previous attempt did not satisfy verification (attempt 1/1).
+Failing:
+dart test exit=1:
+missing from docs/README…"
+tick 13921: decisions=1 inFlight=1 pending=0 actors=agent-1788823526905783-0:0r/1a
+    agent-1788823526905783-0 ← react_continuation: "Your previous attempt did not satisfy verification (attempt 1/1).
+Failing:
+dart test exit=1:
+missing from docs/README…"
+tick 13942: decisions=0 inFlight=0 pending=0 actors=agent-1788823526905783-0:0r/1a
+
+
+--- tool results (truncated per beat) ---
+meaning_program: {"ok":false,"program_halt":{"index":0,"op":"locate","error":"tree_empty","hint":"fix op 0 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":0,"results":[]}
+repo_etl: {"ok":true,"files":6,"dirs":3,"dart_files":1,"symbols":1,"edges":3,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0},"note":"tree is world state (code graph + fs tier) — use the meaning_program read ops to read it; it is re-derivable
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+

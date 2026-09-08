@@ -124,11 +124,21 @@ void main() {
     expect(materializerRegistry.bindingFor('md'), isNotNull);
     expect(materializerRegistry.bindingFor('yaml'), isNotNull);
     expect(materializerRegistry.bindingFor('json'), isNotNull);
+    expect(materializerRegistry.bindingFor('ts'), isNotNull,
+        reason: 'the ts family is registered (ADR 0035 §6 Tier C v1)');
+    final ts = materializerRegistry.bindingFor('ts')!;
+    expect(ts.oracle, 'tsc_no_emit');
+    expect(ts.anchors, 'node_id');
+    expect(ts.actions, ['insert_member', 'remove_member', 'apply_executable'],
+        reason: 'replace_member_body is deliberately OMITTED — the v1 '
+            'limitation IS registry data (§5)');
+    expect(ts.subNodePrefix, 'tsym_');
+    expect(ts.mapParser, isNotNull);
     expect(materializerRegistry.bindingFor('dart'), isNull,
         reason: 'dart moves stay on the span path — never routed through '
             'a node binding');
     expect(materializerRegistry.mapSubNodePrefixes.toSet(),
-        unorderedEquals(['sec_', 'key_']));
+        unorderedEquals(['sec_', 'key_', 'tsym_']));
   });
 
   test('zero-arg-delta is a hard gate: every binding answers the SAME '

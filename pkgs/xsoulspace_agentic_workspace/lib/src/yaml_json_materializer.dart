@@ -16,7 +16,7 @@
 /// - required anchor slot (the keypath) — resolved MECHANICALLY from a
 ///   fresh parse of the file (never stale tree offsets): the dot/bracket
 ///   keypath (`deps.build`, `jobs.build[0].name`) or the keypath node id
-///   (`key_…_<slug>`) from meaning_zoom; missing/ambiguous bounces as
+///   (`key_…_<slug>`) from the meaning_program zoom cut; missing/ambiguous bounces as
 ///   named data with the outline + the exact repair move;
 /// - body-as-data (the scalar/fragment — evidence-tier data, never code
 ///   tokens), byte-bounded by [KeypathMaterializer.maxKeyBodyChars];
@@ -784,7 +784,7 @@ class KeypathMaterializer {
       throw KeypathEditBounce(
         'missing path',
         're-send with path as a workspace-relative yaml/json path (the id '
-            'from meaning_zoom, e.g. "pubspec.yaml")',
+            'from the meaning_program zoom cut, e.g. "pubspec.yaml")',
         'invalid_path',
       );
     }
@@ -816,7 +816,7 @@ class KeypathMaterializer {
     if (!f.existsSync()) {
       throw KeypathEditBounce(
         'file not found: $path',
-        'zoom the tree (meaning_zoom) for existing files; a NEW file lands '
+        'zoom the tree (a meaning_program zoom op) for existing files; a NEW file lands '
             'through the host materializer bootstrap, never a guessed path',
         'file_not_found',
       );
@@ -889,7 +889,7 @@ class KeypathMaterializer {
       if (!anchor.startsWith(prefix)) {
         throw KeypathEditBounce(
           'keypath id "$anchor" belongs to another file',
-          're-send the node id from THIS file\'s meaning_zoom outline (or '
+          're-send the node id from THIS file\'s zoom outline (or '
               'the bare keypath)',
           'keypath_not_found',
           hints: _outlineHints(entries),
@@ -925,7 +925,7 @@ class KeypathMaterializer {
         throw KeypathEditBounce(
           'ambiguous keypath "$anchor": ${hits.length} entries share it in '
               '$path (duplicate keys?)',
-          're-send anchor as the keypath NODE ID from meaning_zoom (one '
+          're-send anchor as the keypath NODE ID from the zoom cut (one '
               'of the candidates below); duplicate keys are a data smell '
               'the parse oracle refuses',
           'ambiguous_keypath',
@@ -1131,7 +1131,7 @@ class KeypathMaterializer {
         throw KeypathEditBounce(
           'ambiguous parent keypath "$parentPath": ${hits.length} entries '
               'share it in $path',
-          're-send anchor as the keypath NODE ID from meaning_zoom of the '
+          're-send anchor as the keypath NODE ID from the zoom cut of the '
               'parent, then set the child (candidates below)',
           'ambiguous_keypath',
           hints: [for (final h in hits) _candidate(h)],
@@ -1677,7 +1677,7 @@ ToolDef editKeyTool(
   return ToolDef.encode(
     name: const ToolName('edit_key'),
     description:
-        'Edit a YAML or JSON value by keypath (anchors from meaning_zoom). '
+        'Edit a YAML or JSON value by keypath (anchors from the zoom cut). '
         'Args: path (.yaml/.yml/.json), op (set_key | replace_value | '
         'delete_key | append_list_item), anchor (dot/bracket keypath or key '
         'node id), body (scalar/fragment as data). The host splices '
