@@ -46,7 +46,8 @@ import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart'
     show FM, SchemaBundle, ToolDef, ToolName;
 
 import 'file_class_spec.dart' show MappedSubNode, fileClassOf;
-import 'materializer_binding.dart' show NodeEditRequest;
+import 'materializer_binding.dart'
+    show NodeEditRequest, fileCreationAction;
 
 // ---------------------------------------------------------------------------
 // The map half — the ONE heading parser (fs tier's map builder + this
@@ -372,6 +373,7 @@ class MdEditOutcome {
     this.repair,
     this.hints = const [],
     this.problems = const [],
+    this.created = false,
   });
   final bool ok;
 
@@ -389,12 +391,17 @@ class MdEditOutcome {
   final List<String> hints;
   final List<MdLinkProblem> problems;
 
+  /// True when this move CREATED the file (a failed creation reverts to
+  /// absence — the file is removed, never left half-written).
+  final bool created;
+
   bool get appliedClean => ok && !reverted;
 
   Map<String, dynamic> toJson() => {
         'ok': ok,
         'reverted': reverted,
         if (bounce) 'bounce': true,
+        if (created) 'created': true,
         'op': op,
         'path': path,
         if (anchor.isNotEmpty) 'anchor': anchor,
@@ -464,15 +471,35 @@ class MdMaterializer {
       );
     }
     final f = File(abs);
-    if (!f.existsSync()) {
+    // CREATION (build order item 7 — the binding's fileCreation
+    // capability): the file must NOT exist (creation never overwrites —
+    // the router bounces the same class before the materializer runs);
+    // every other op edits EXISTING bytes.
+    final isCreate = op == fileCreationAction;
+    if (isCreate && f.existsSync()) {
+      throw MdEditBounce(
+        'file already exists: $path',
+        'creation never overwrites — edit the document through its '
+            "section actions (the file node's edit_actions prop lists "
+            'them)',
+        'file_exists',
+      );
+    }
+    if (!isCreate && !f.existsSync()) {
       throw MdEditBounce(
         'file not found: $path',
-        'zoom the tree (a meaning_program zoom op) for existing files; a NEW file lands '
-            'through the host materializer bootstrap, never a guessed path',
+        'zoom the tree (a meaning_program zoom op) for existing files; a '
+            'NEW file lands through the host materializer bootstrap, '
+            'never a guessed path',
         'file_not_found',
       );
     }
-    const ops = {'replace_section', 'insert_section', 'append_to_section'};
+    const ops = {
+      'replace_section',
+      'insert_section',
+      'append_to_section',
+      fileCreationAction,
+    };
     if (op == null || !ops.contains(op)) {
       throw MdEditBounce(
         'unknown op: $op',
@@ -497,6 +524,15 @@ class MdMaterializer {
         'body_over_budget',
       );
     }
+    if (op == fileCreationAction && body.trim().isEmpty) {
+      throw MdEditBounce(
+        'empty body for $fileCreationAction',
+        'the body IS the initial document — re-send as '
+            r'"<#-heading>\n\n<prose>"; the created file node + '
+            'content sub-nodes project from the binding',
+        'create_needs_heading',
+      );
+    }
     if (op != 'replace_section' && body.trim().isEmpty) {
       throw MdEditBounce(
         'empty body for $op',
@@ -504,6 +540,36 @@ class MdMaterializer {
             'only replace_section may pass an empty body (it clears the '
             'section content, heading preserved)',
         'empty_body',
+      );
+    }
+
+    if (op == fileCreationAction) {
+      // CREATION PLAN (build order item 7 — the binding's fileCreation
+      // capability): nothing exists yet — NO anchor resolution (the read
+      // below parses EXISTING bytes), the body is the initial document,
+      // and it must be heading-bearing (the map's currency: the created
+      // file anchors on headings, same as every section edit).
+      final firstLine = body.trimLeft().split('\n').first.trim();
+      if (!RegExp(r'^#{1,6}\s+\S').hasMatch(firstLine)) {
+        throw MdEditBounce(
+          '$fileCreationAction body must START with a heading line — the '
+              "created document anchors on headings (the map's currency)",
+          r're-send body as "<#-heading>\n\n<prose>" — the initial '
+              'heading structure IS the creation anchor',
+          'create_needs_heading',
+        );
+      }
+      final content = _withTrailingNewline(body);
+      final created = parseMdSections(content);
+      return MdEditPlan(
+        path: path,
+        op: fileCreationAction,
+        anchorLabel: created.first.title,
+        body: body,
+        section: created.first,
+        content: content,
+        description: '$fileCreationAction $path (initial heading '
+            '"${created.first.title}", level ${created.first.level})',
       );
     }
 
@@ -632,7 +698,88 @@ class MdMaterializer {
   String _withTrailingNewline(String body) =>
       body.endsWith('\n') ? body : '$body\n';
 
+  /// CREATION apply (build order item 7): the file did not exist; the
+  /// write lands the emitter's exact bytes and the named oracle gates
+  /// them — a violating creation REVERTS TO ABSENCE (the file is
+  /// removed), never half-landed bytes.
+  MdEditOutcome _applyCreateDocument(MdEditPlan plan) {
+    final rel = plan.path;
+    if (!locks.claim(rel, owner)) {
+      final holder = locks.ownerOf(rel);
+      return MdEditOutcome(
+        ok: false,
+        reverted: false,
+        op: plan.op,
+        path: rel,
+        anchor: plan.anchorLabel,
+        detail: 'lock conflict on $rel (held by $holder) — the move '
+            'claimed no bytes',
+        failureClass: 'lock_conflict',
+      );
+    }
+    try {
+      final f = File(root.resolve(rel));
+      if (f.existsSync()) {
+        return MdEditOutcome(
+          ok: false,
+          reverted: false,
+          op: plan.op,
+          path: rel,
+          anchor: plan.anchorLabel,
+          detail: 'file already exists: $rel — creation never overwrites',
+          failureClass: 'file_exists',
+        );
+      }
+      f.writeAsStringSync(plan.content, flush: true);
+      // THE NAMED ORACLE — the created bytes must satisfy
+      // 0-broken-links to land at all.
+      final problems = mdDocsOracle(
+        plan.content,
+        rel: rel,
+        rootPath: root.rootPath,
+      );
+      if (problems.isNotEmpty) {
+        // AUTO-REVERT TO ABSENCE: the file did not exist before this
+        // move, so reverting means REMOVING it (never half-landed).
+        _unlinkQuietly(f);
+        final classes = problems.map((p) => p.failureClass).toSet();
+        const revertHint =
+            'fix the link target (or create the target first) and re-send '
+            'the move — a created doc must satisfy 0-broken-links to land';
+        return MdEditOutcome(
+          ok: false,
+          reverted: true,
+          op: plan.op,
+          path: rel,
+          anchor: plan.anchorLabel,
+          detail: 'md_docs_oracle FAILED after ${plan.description}: '
+              '${problems.length} broken link(s) — the created file was '
+              'REMOVED (revert to absence)',
+          failureClass:
+              classes.length == 1 ? classes.single : classes.join('+'),
+          hints: const [revertHint],
+          problems: problems,
+        );
+      }
+      return MdEditOutcome(
+        ok: true,
+        reverted: false,
+        created: true,
+        op: plan.op,
+        path: rel,
+        anchor: plan.anchorLabel,
+        detail: '${plan.description} — created byte-precise '
+            '(${plan.content.length} bytes); md_docs_oracle green '
+            '(0 broken links). The tree re-derives the file node + '
+            'section map on the next tick.',
+      );
+    } finally {
+      locks.release(rel, owner);
+    }
+  }
+
   MdEditOutcome apply(MdEditPlan plan) {
+    if (plan.op == fileCreationAction) return _applyCreateDocument(plan);
     final rel = plan.path;
     if (!locks.claim(rel, owner)) {
       final holder = locks.ownerOf(rel);
@@ -722,6 +869,20 @@ class MdMaterializer {
         hints: b.hints,
       );
     }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Shared creation helper
+// ---------------------------------------------------------------------------
+
+/// Revert-to-absence for failed creations: remove the half-landed file;
+/// a missing file is already the reverted state (never throws).
+void _unlinkQuietly(File f) {
+  try {
+    if (f.existsSync()) f.deleteSync();
+  } on FileSystemException {
+    // best effort — the oracle outcome already reports the failure
   }
 }
 

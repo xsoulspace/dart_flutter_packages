@@ -21,6 +21,9 @@ export 'src/harness_embed.dart';
 export 'src/harnessd_cli.dart';
 export 'src/intent_closure_runner.dart';
 export 'src/meaning_profile_surface.dart';
+// ADR 0027 amendment — the mechanical edit directive classifier (the
+// deterministic `harness_edit {…}` route; gates assert on it).
+export 'src/mechanical_edit_directive.dart';
 // ADR 0009 (D1) — the session registry: the one index of live sessions
 // (pure Dart; the inspector's headless substrate, D3).
 export 'src/session_registry.dart';

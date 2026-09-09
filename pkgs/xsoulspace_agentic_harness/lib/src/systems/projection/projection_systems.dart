@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
 import '../../data_models/data_models.dart';
+import '../../decisions/actor_topology.dart'
+    show claimantIdOf, isStepClaimable;
 import '../../decisions/decision_flow.dart' show DeferredThinking;
 import '../../model_router.dart';
 import '../../narrative/narrative.dart';
@@ -227,8 +229,10 @@ PlanProjection projectPlanFrontier(
   required TokenEstimator estimator,
 }) {
   final selected = <Entity>[];
+  final rows = <PlanFrontierRow>[];
   var tokensUsed = 0;
   var omitted = 0;
+  var claimedCount = 0;
   final visited = <Entity>{};
 
   void visit(Entity entity) {
@@ -257,6 +261,25 @@ PlanProjection projectPlanFrontier(
     }
     tokensUsed += cost;
     selected.add(entity);
+    // Claim state projects WITH the row (worker-gradient rung 2): the
+    // claim fields are graph data reads, not token spend — the budget
+    // law is unchanged. A claimed step STILL projects (its `claimedBy`
+    // tells every other actor whose work it is); only `claimable` is
+    // false. Contention itself bounces loudly at claimStep — the
+    // frontier never merges silently.
+    final claimant = facade.get<StepClaimant>();
+    final claimable = isStepClaimable(world, entity);
+    if (!claimable && claimant != null) claimedCount++;
+    rows.add(
+      PlanFrontierRow(
+        step: entity,
+        claim: step.claim,
+        claimedBy: claimant == null
+            ? null
+            : claimantIdOf(world, claimant.actor),
+        claimable: claimable,
+      ),
+    );
   }
 
   if (stepId != null) {
@@ -273,7 +296,10 @@ PlanProjection projectPlanFrontier(
     truncated: omitted > 0,
     explicitAbsences: [
       if (omitted > 0) '$omitted plan step(s) are off-screen.',
+      if (claimedCount > 0)
+        '$claimedCount frontier step(s) are claimed by another actor.',
     ],
+    rows: rows,
   );
 }
 
@@ -326,6 +352,12 @@ Future<void> verifyStepSystem(World world) async {
 }
 
 /// Budgeted result of explicit-link plan traversal.
+///
+/// Claim state (worker-gradient rung 2) rides the frontier AS DATA: every
+/// projected step emits a [PlanFrontierRow] with its `claimedBy` id and its
+/// `claimable` predicate. The shared frontier IS the coordination surface —
+/// no coordinator subsystem; claims + loud bounces cover disjoint work.
+/// Token budgeting is unchanged (claim fields cost no tokens).
 class PlanProjection {
   const PlanProjection({
     required this.steps,
@@ -333,12 +365,38 @@ class PlanProjection {
     required this.tokenBudget,
     this.truncated = false,
     this.explicitAbsences = const [],
+    this.rows = const [],
   });
   final List<Entity> steps;
   final int tokensUsed;
   final int tokenBudget;
   final bool truncated;
   final List<String> explicitAbsences;
+
+  /// One row per projected step, carrying the projected claim state
+  /// (`claimedBy` = claimant's stable id, null = unclaimed; `claimable` =
+  /// open + verified deps + no claimant).
+  final List<PlanFrontierRow> rows;
+}
+
+/// One frontier row's projected claim state.
+class PlanFrontierRow {
+  const PlanFrontierRow({
+    required this.step,
+    required this.claim,
+    required this.claimable,
+    this.claimedBy,
+  });
+  final Entity step;
+  final String claim;
+
+  /// The current claimant's stable id (`TopologyActor.id`, else
+  /// `AgentId.value`), or null when unclaimed.
+  final String? claimedBy;
+
+  /// Open + verified dependencies + no claimant — claimable by a
+  /// registered topology actor right now.
+  final bool claimable;
 }
 
 /// Ray-trace the graph for beats relevant to [prompt].

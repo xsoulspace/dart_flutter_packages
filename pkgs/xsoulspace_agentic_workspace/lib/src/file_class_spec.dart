@@ -12,6 +12,14 @@
 /// BINDING (md/yaml/json section/key anchors — ADR 0035 §2) and its EDIT
 /// side is the binding's perform fn — until then edits route through the
 /// review gate.
+///
+/// Whole-FILE creation is likewise binding-declared, never a raw write:
+/// a binding's `fileCreation` capability (materializer_binding.dart)
+/// declares the create action + the creation anchor currency, the router
+/// addresses it at a DIR node, and the created file node + content
+/// sub-nodes land in the map-graph through the same buildFsTier tick. A
+/// class whose binding does not declare the capability has NO creation
+/// route (a named bounce — never a silent raw-write fallback).
 library;
 
 import 'dart:io';

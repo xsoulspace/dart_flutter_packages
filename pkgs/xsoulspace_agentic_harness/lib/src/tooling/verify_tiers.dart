@@ -28,10 +28,12 @@ import 'package:ecsly/ecsly.dart';
 
 import '../data_models/components.dart'
     show Actor, ActorThreads, Goal, ToolResultContent;
-import '../narrative/components.dart' show BeatToolCall;
 import '../meaning/meaning_tree.dart'
     show MeaningIndex, MeaningNode, impactFrontier, meaningComponentOf;
+import '../narrative/components.dart' show BeatToolCall;
 import '../narrative/facet_index.dart' show FacetIndex;
+import '../systems/deferred_task_policy.dart'
+    show DeferredRouting, classifyCommand, deferredVerifyPoolKey;
 import 'build_gates.dart' show RunGoalCommand, RunGoalPlan, RunGoalSpec;
 import 'workspace_conventions.dart' show resolveWorkspaceCheck;
 
@@ -318,3 +320,36 @@ class VerifyTierPlanner {
     }
   }
 }
+
+// ─────────────────────────────────────────────
+// The deferred-task law (item 3) — ADDITIVE pooling keys + classification
+// over the per-package derivation. Nothing above changes: with deferral
+// DISABLED (the default) every planner/verifier path runs exactly as
+// before — the inline full/narrow/per-package tiers remain the fallback.
+// ─────────────────────────────────────────────
+
+/// The deferred-verify POOL key for one per-package verify step: the
+/// (package, convention) join identity of the pooling law (see
+/// [deferredVerifyPoolKey] in systems/deferred_task_policy.dart). Two
+/// actors deriving the same package + convention command share ONE
+/// in-flight task; different packages (or a different convention command)
+/// never join.
+String verifyPoolKeyForStep(RunGoalCommand step) =>
+    deferredVerifyPoolKey(packageDir: step.cwd ?? '', convention: step.command);
+
+/// Pool keys for a whole derived plan ([derivePerPackageVerify] output):
+/// ONE entry per ACTIVE package — the keys a deferred wire consults when
+/// deciding whether a second actor's verify JOINS the in-flight task.
+List<String> verifyPoolKeysForSteps(List<RunGoalCommand> steps) =>
+    [for (final s in steps) verifyPoolKeyForStep(s)];
+
+/// The verify command's deferral class under the deferred-task law (the
+/// class table lives in systems/deferred_task_policy.dart — DATA, never a
+/// switch): test conventions classify deferred (test-run); the
+/// interactive-classes-never-defer law is enforced there and pinned by the
+/// gate. With deferral DISABLED this ALWAYS routes inline — the fallback
+/// law preserving the legacy tiers verbatim.
+DeferredRouting classifyVerifyCommand(
+  Iterable<String> command, {
+  bool deferralEnabled = true,
+}) => classifyCommand(command, deferralEnabled: deferralEnabled);

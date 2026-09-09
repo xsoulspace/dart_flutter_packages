@@ -100,6 +100,10 @@ ToolDef editSymbolTool(
   World world,
   Directory workspace, {
   SpanEditMaterializer? materializer,
+
+  /// Host edit approver (consent-gated mechanical edits); the verb itself
+  /// still refuses — the web peer never runs the dart:io edit tier.
+  Future<bool> Function(SpanEditPlan plan)? approver,
 }) => _refuse('edit_symbol');
 
 /// Legacy doc-section verb (surface parity only) — refuses.

@@ -56,7 +56,13 @@ import 'package:xsoulspace_agentic_harness/src/tools/meaning_query_tools.dart'
 // import, unchanged.
 import 'package:xsoulspace_agentic_workspace/xsoulspace_agentic_workspace.dart'
     if (dart.library.js_interop) 'agentic_workspace_web_stub.dart'
-    show RepoEtlState, SpanEditPlan, meaningSpanReader, repoEtlTool, writeReviewTool;
+    show
+        RepoEtlState,
+        SpanEditPlan,
+        editSymbolTool,
+        meaningSpanReader,
+        repoEtlTool,
+        writeReviewTool;
 
 import 'coding_agent_runner.dart'
     show
@@ -64,6 +70,11 @@ import 'coding_agent_runner.dart'
         CodingAgentTask,
         runCodingAgentOnce,
         taskFromSentence;
+
+// ADR 0027 amendment — MECHANICAL EDITS: the directive classifier (this
+// package; minimal local shape checks only — the deep validation stays in
+// the workspace materializer, which bounces as structured data).
+import 'mechanical_edit_directive.dart';
 
 /// One registered inference backend (ADR 0025): the host learns no
 /// provider — the composition root binds a backend NAME to the factory
@@ -346,6 +357,12 @@ class HarnessAcpBackend
   Map<String, Completer<AcpMoveResponse>> sessionsDebugPendingMoves(
     String sessionId,
   ) => _sessions[sessionId]?.pendingMoves ?? const {};
+
+  /// Test visibility: the GOAL world of a session (mechanical edits land
+  /// touched-file beats on its goal actor's thread; the verify-tier
+  /// derivation reads the same world). Null when no goal world exists yet.
+  World? sessionsDebugWorld(String sessionId) =>
+      _sessions[sessionId]?.world;
 
   /// R7 production #5: called on every session activity (create/prompt/
   /// cancel) — the daemon's idle-exit timer resets here.
@@ -854,6 +871,316 @@ class HarnessAcpBackend
     return AcpStopReason.endTurn;
   }
 
+  /// ADR 0027 amendment — the MECHANICAL EDIT DIRECTIVE path: classify,
+  /// bounce what is structurally invalid, execute the rest through
+  /// [_executeMechanicalEdits]. Zero mover, zero grade; the mover model is
+  /// NEVER involved.
+  Future<AcpStopReason> _runMechanicalEditDirectives(
+    _Session session,
+    String text,
+    String sessionId,
+    void Function(AcpSessionUpdate update) emit,
+  ) async {
+    final c = classifyMechanicalEditDirective(text);
+    final bounced = c.malformed + c.invalid;
+    if (c.malformed > 0) {
+      emit(
+        AgentMessageChunk(
+          content: AcpTextBlock(
+            '\n[harness_edit] ${c.malformed} malformed payload(s) dropped '
+            '— never guessed (ADR 0027)\n',
+          ),
+        ),
+      );
+    }
+    if (c.invalid > 0) {
+      emit(
+        AgentMessageChunk(
+          content: AcpTextBlock(
+            '\n[harness_edit] ${c.invalid} invalid payload(s) bounced — '
+            'the mechanical edit union is replace_member_body / '
+            'insert_member / apply_executable with a required symbolId '
+            'and its action-scoped slots; the mover is never reached for '
+            'structurally invalid directives\n',
+          ),
+        ),
+      );
+    }
+    return _executeMechanicalEdits(
+      session,
+      c.payloads,
+      sessionId: sessionId,
+      bounced: bounced,
+      emit: emit,
+    );
+  }
+
+  /// ADR 0027 amendment — MOVER-REFUSAL FALLBACK: a graded edit task that
+  /// ended `mover_refusal: empty move` with EXACTLY ONE well-formed
+  /// `harness_edit` payload executes that payload mechanically. The
+  /// payload was DATA all along; the mover refused to judge it and the
+  /// burned root-convention verify only added cost. Null → the prompt
+  /// carries no single well-formed payload (the graded verdict stands).
+  Future<AcpStopReason?> _runMoverRefusalEditFallback(
+    _Session session,
+    String text,
+    String sessionId,
+    void Function(AcpSessionUpdate update) emit,
+  ) async {
+    if (_permissionRequester == null) return null;
+    final extracted = extractEditPayloads(text);
+    if (extracted.groups.length != 1) return null;
+    final payload = validateMechanicalEditPayload(extracted.groups.single);
+    if (payload == null) return null;
+    emit(
+      AgentMessageChunk(
+        content: const AcpTextBlock(
+          '\nmover_refusal with a single well-formed harness_edit payload '
+          '— executing the payload mechanically (ADR 0027 amendment; the '
+          'mover model is never re-asked)\n',
+        ),
+      ),
+    );
+    return _executeMechanicalEdits(
+      session,
+      [payload],
+      sessionId: sessionId,
+      emit: emit,
+    );
+  }
+
+  /// ADR 0027 amendment — MECHANICAL EDIT EXECUTION: validated payloads →
+  /// consent (the SAME consent-UX machinery the write path uses: consent
+  /// plan inheritance, the bounded client round-trip with deadline +
+  /// cancel + path attribution) → the SAME edit materializer path a
+  /// mover-approved edit uses (`edit_symbol` → SpanEditMaterializer, with
+  /// its fences, oracles and auto-revert) → the touched-file beat lands
+  /// on the goal actor's thread so the verify-tier derivation sees the
+  /// touched set without a mover round-trip. No approver wired → refuse
+  /// (deny-by-default is STRUCTURAL, same law as write_review).
+  Future<AcpStopReason> _executeMechanicalEdits(
+    _Session session,
+    List<MechanicalEditPayload> payloads, {
+    required String sessionId,
+    required void Function(AcpSessionUpdate update) emit,
+    int bounced = 0,
+  }) async {
+    if (_permissionRequester == null) {
+      emit(
+        AgentMessageChunk(
+          content: const AcpTextBlock(
+            '\n[harness_edit] refused: no consent approver wired — '
+            'deny-by-default is structural\n',
+          ),
+        ),
+      );
+      return AcpStopReason.refusal;
+    }
+    await _ensureReadWorld(session);
+    final registry = session.readWorld!
+        .getResource<ToolRegistryResource>()
+        .get('default')!;
+    // The edit verb is registered ON DEMAND with the consent approver —
+    // the read world stays read-verbs-only for every other route.
+    // P1: the failure class of the LAST permission round-trip rides the
+    // tool result below (the loop is sequential — the approver answers
+    // BEFORE the tool ack streams).
+    var lastDenyClass = '';
+    if (!registry.tools.containsKey(const ToolName('edit_symbol'))) {
+      registry.register(
+        editSymbolTool(
+          session.readWorld!,
+          Directory(session.cwd),
+          approver: (plan) async {
+            // R9.1 consent inheritance: a workspace-level plan
+            // (.harnessd/consent.json) or a session-level grant answers
+            // matching edits mechanically — the human is prompted only
+            // OUTSIDE the plan.
+            final target = plan.patches.firstOrNull?.file ?? '';
+            final grant = session.consentPlan;
+            if (grant != null &&
+                session.consentPlanUses < grant.maxUses &&
+                grant.verbs.contains('edit') &&
+                RegExp(grant.pathGlob).hasMatch(target)) {
+              session.consentPlanUses++;
+              session.consentLog.add(
+                'plan-allowed mechanical edit: ${plan.description} '
+                '(${session.consentPlanUses}/${grant.maxUses})',
+              );
+              return true;
+            }
+            // P1 consent UX hardening: bounded round-trip + path audit
+            // (F3 attribution) — the SAME machinery the write path uses.
+            final answer = await _askClientPermission(
+              session,
+              sessionId: sessionId,
+              request: AcpPermissionRequest(
+                sessionId: sessionId,
+                toolCallId: 'edit_symbol:${plan.hashCode}',
+                title: plan.description,
+                kind: 'edit',
+              ),
+              subject: 'mechanical edit ${plan.description}',
+            );
+            lastDenyClass = answer.failureClass;
+            return answer.allowed;
+          },
+        ),
+      );
+    }
+    final tool = registry.tools[const ToolName('edit_symbol')]!;
+    var applied = 0;
+    final touchedFiles = <String>{};
+    for (final payload in payloads) {
+      lastDenyClass = '';
+      final out = await tool.execute(payload.args) ?? '{}';
+      var ok = false;
+      try {
+        final decoded = jsonDecode(out);
+        if (decoded is Map) {
+          ok = decoded['ok'] == true && decoded['reverted'] != true;
+          final files = decoded['files'];
+          if (files is List) {
+            touchedFiles.addAll([
+              for (final f in files)
+                if (f is String) f,
+            ]);
+          }
+        }
+      } on FormatException {
+        // Non-JSON tool output: the emitted chunk carries the detail.
+      }
+      if (ok) applied++;
+      emit(
+        AgentMessageChunk(
+          content: AcpTextBlock(
+            '\n[edit_symbol] '
+            '${out.length > 4000 ? "${out.substring(0, 4000)}…" : out}\n',
+          ),
+        ),
+      );
+      // P1: the named failure class rides the TOOL RESULT — a timeout or
+      // cancel-deny permission wait is visible to the client without
+      // re-reading the audit (identical in shape to the write path).
+      if (lastDenyClass.isNotEmpty) {
+        emit(
+          AgentMessageChunk(
+            content: AcpTextBlock(
+              '\n[edit_symbol] failure_class: $lastDenyClass — the '
+              'permission wait resolved DENY (a loop-breaker, not a '
+              'policy change; re-send the directive to retry)\n',
+            ),
+          ),
+        );
+      }
+    }
+    if (applied > 0) {
+      // The touched-file beat lands on the GOAL actor's thread — the
+      // same shape a mover-approved edit leaves — so the per-package
+      // verify derivation is exercisable end-to-end (the surface-gap
+      // finding: the beat never landed because the mutation verb routed
+      // through the mover round-trip).
+      _landTouchedFileBeat(session, touchedFiles.toList()..sort());
+      // The tree must not lie: reconcile immediately (same law as the
+      // write path — a landed edit is visible to zoom on the next cut).
+      final etl = registry.tools[const ToolName('repo_etl')];
+      if (etl != null) {
+        final out = await etl.execute({'action': 'refresh'}) ?? '{}';
+        emit(
+          AgentMessageChunk(
+            content: AcpTextBlock('\n[repo_etl refresh] $out\n'),
+          ),
+        );
+      }
+    }
+    if (session.cancelled) {
+      // P1: a cancel during an open permission wait (or anywhere in the
+      // mechanical path) ends the turn CANCELLED — identical to the
+      // write path.
+      emit(
+        AgentMessageChunk(
+          content: const AcpTextBlock('\ncancelled by the client\n'),
+        ),
+      );
+      return AcpStopReason.cancelled;
+    }
+    emit(
+      AgentMessageChunk(
+        content: AcpTextBlock(
+          '\n[mechanical edit path] $applied applied, '
+          '${payloads.length - applied + bounced} bounced/refused — no '
+          'task, no grade, no mover (ADR 0027 amendment)\n',
+        ),
+      ),
+    );
+    return AcpStopReason.endTurn;
+  }
+
+  /// The touched-file beat (ADR 0023 §2): a beat named `edit_symbol` with
+  /// the touched `files` on the GOAL actor's first thread — the exact
+  /// shape `sessionTouchedFiles` / the verify-tier planner read. A world
+  /// without a goal-carrying actor is bootstrapped minimally (the graded
+  /// resume path opens a FRESH decision for the next task, so a
+  /// bootstrapped goal never hijacks a later run).
+  void _landTouchedFileBeat(_Session session, List<String> files) {
+    var world = session.world;
+    if (world == null) {
+      world = World()..addPlugin(AgentPlugin());
+      world.upsertResource(ToolRegistryResource());
+      session.world = world;
+    }
+    Entity? actor;
+    Entity? thread;
+    final carriers = world.query2<Actor, Goal>().toList();
+    if (carriers.isNotEmpty) {
+      actor = carriers.first.$1.entity;
+      thread = world
+          .getEntity(actor!)
+          .$1
+          .get<ActorThreads>()
+          ?.threads
+          .firstOrNull;
+    }
+    if (actor == null || thread == null) {
+      final scene = world.spawnComponents([Scene(), SceneFrame()]);
+      actor = world.spawnComponents([
+        Actor(agentId: AgentId.create()),
+        ActorModel(modelId: ModelId.create()),
+        ActorThreads(threads: const []),
+        ActorTools(registryName: 'default'),
+        PresentInScene(sceneEntity: scene),
+        Goal(text: 'mechanical edit directives'),
+      ]);
+      thread = spawnThread(world, actor, scene);
+      world.upsertComponent(actor, ActorThreads(threads: [thread]));
+      world.flush();
+    }
+    final beat = world.reserveEmptyEntity().entity;
+    final detail = 'mechanical edit landed: ${files.join(", ")}';
+    world
+        .getEntity(beat)
+        .$1
+      ..insert(BeatToolCall('edit_symbol', const {}))
+      ..insert(
+        ToolResultContent(
+          name: 'edit_symbol',
+          output: {
+            'ok': true,
+            'mechanical': true,
+            'patches': files.length,
+            'files': files,
+            'detail': detail,
+          },
+        ),
+      )
+      ..insert(Speaker(actor))
+      ..insert(TextContent(detail))
+      ..insert(BeatStatus(BeatStatusEnum.complete))
+      ..insert(BeatModality(BeatModalityEnum.toolCall))
+      ..insert(BelongsToThread(thread));
+    indexBeat(world, beat, const <String>[], thread: thread);
+  }
+
   @override
   Future<AcpStopReason> prompt(
     AcpPromptRequest request, {
@@ -921,6 +1248,32 @@ class HarnessAcpBackend
         AgentMessageChunk(
           content: AcpTextBlock(
             '\n[write path] mechanical, consent-gated — no task, no grade '
+            '(ADR 0027 amendment); wall ${sw.elapsedMilliseconds} ms\n',
+          ),
+        ),
+      );
+      return stop;
+    }
+    // ADR 0027 amendment — MECHANICAL EDITS: a directive-only
+    // `harness_edit {…}` prompt executes through the edit materializer
+    // with consent — never through the mover. The measured failure this
+    // closes: three real `harness_edit` delegations each ended
+    // `mover_refusal: empty move` (103 / 117 / 183 s) burning a
+    // root-convention fallback verify, the touched-file beat never
+    // landing. The payload is DATA; the human is the approver.
+    if (isMechanicalEditDirective(text)) {
+      final sw = Stopwatch()..start();
+      final stop = await _runMechanicalEditDirectives(
+        session,
+        text,
+        request.sessionId,
+        emit,
+      );
+      sw.stop();
+      emit(
+        AgentMessageChunk(
+          content: AcpTextBlock(
+            '\n[edit path] mechanical, consent-gated — no task, no grade '
             '(ADR 0027 amendment); wall ${sw.elapsedMilliseconds} ms\n',
           ),
         ),
@@ -1210,6 +1563,22 @@ class HarnessAcpBackend
         ),
       );
       return AcpStopReason.cancelled;
+    }
+    // ADR 0027 amendment — MOVER-REFUSAL FALLBACK: a graded edit task that
+    // ended `mover_refusal: empty move` with EXACTLY ONE well-formed
+    // `harness_edit` payload executes that payload mechanically — the
+    // payload was DATA all along, the mover refused to judge it, and the
+    // burned verify above must not be the whole answer. The consent UX
+    // and the materializer path are the SAME ones a directive-only
+    // mechanical edit uses.
+    if (!result.passed && session.lastMoverRefusal) {
+      final stop = await _runMoverRefusalEditFallback(
+        session,
+        text,
+        request.sessionId,
+        emit,
+      );
+      if (stop != null) return stop;
     }
 
     emit(

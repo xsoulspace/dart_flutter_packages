@@ -199,7 +199,15 @@ class HarnessdClient {
       { protocolVersion: 1, clientCapabilities: {} },
       10000,
     );
-    const created = await this.call("session/new", { cwd: workspace });
+    const created = await this.call("session/new", {
+      cwd: workspace,
+      // Tier contract: the session tier is declared ONCE per session.
+      // The toolkit tolerates unknown session/new params today (the
+      // backend drops them); the consuming hook is the backend
+      // constructor's `sessionTier:` field — documented exactly in
+      // harnessd_cli.dart (this lane does not own that file).
+      _meta: { sessionTier: { ...SESSION_TIER } },
+    });
     this.sessionId = created.sessionId;
     return init;
   }
@@ -223,6 +231,72 @@ class HarnessdClient {
     // KEEP-WARM: the daemon is never killed on session end; it self-idle-exits.
   }
 }
+
+// --- session tier (build order item 1: the session-actor tier contract) --
+//
+// The session actor declares its tier ONCE per session: at session/new, and
+// (operatively this round) as the DEFAULT op budget of
+// harness_meaning_program. A tier is a READING property only — budgets,
+// never capabilities; consent and the closed op set are orthogonal.
+//
+// This block is the wire MIRROR of the daemon's `resolveSessionTier`
+// (xsoulspace_agentic_host/lib/src/session_tier.dart): the ladder derives
+// from the window (window ~/ 32 clamped [512, 4096]; verdict budget =
+// max(1200, perOp * 2)); env overrides; a malformed value is a NAMED error
+// thrown at extension load (fail fast — never a silent fallback).
+// Measured tiers: AFM window 4096 → 512 / 1200 (bit-identical to the
+// daemon's previous hardcoded read-program defaults); hosted 128k/200k
+// windows → 4096 / 8192.
+
+interface SessionTierProfile {
+  backend: string;
+  windowTokens: number;
+  outputReserveTokens: number;
+  perOpReadBudget: number;
+  verdictBudget: number;
+}
+
+function positiveInt(
+  raw: string | undefined,
+  key: string,
+): number | null {
+  if (raw == null || raw === "") return null;
+  const v = parseInt(raw, 10);
+  if (!Number.isInteger(v) || v <= 0) {
+    throw new Error(
+      `config "${key}" must be a positive integer, got "${raw}"`,
+    );
+  }
+  return v;
+}
+
+function resolveSessionTier(): SessionTierProfile {
+  const windowTokens =
+    positiveInt(
+      process.env.HARNESSD_TIER_WINDOW_TOKENS,
+      "HARNESSD_TIER_WINDOW_TOKENS",
+    ) ?? 4096;
+  const perOpDerived = Math.max(
+    512,
+    Math.min(4096, Math.floor(windowTokens / 32)),
+  );
+  const perOpReadBudget =
+    positiveInt(
+      process.env.HARNESSD_TIER_PER_OP_READ_BUDGET,
+      "HARNESSD_TIER_PER_OP_READ_BUDGET",
+    ) ?? perOpDerived;
+  return {
+    backend: process.env.HARNESSD_BACKEND ?? "apple_foundation_afm",
+    windowTokens,
+    outputReserveTokens: 1024,
+    perOpReadBudget,
+    verdictBudget: Math.max(1200, perOpReadBudget * 2),
+  };
+}
+
+// Declared ONCE at extension load = once per session (named fail-fast on a
+// malformed tier env — the daemon refuses to start on the same condition).
+const SESSION_TIER: SessionTierProfile = resolveSessionTier();
 
 const EMPTY_MOVE = { toolCalls: [], text: "" };
 const REJECT = { outcome: { outcome: "reject", optionId: "reject" } };
@@ -626,7 +700,12 @@ export default function (pi: PiAPI) {
       "cursor (its ranked hit ids, capped); zoom/impact/read consume " +
       "cursor.first unless focusId overrides — never invent an id, the " +
       "locate rows carry the exact ids. Invalid ops halt with a named " +
-      "bounce; results are budget-clipped. Args: {ops: […], budget?}.",
+      "bounce; results are budget-clipped. Op budgets are TIER-SOURCED " +
+      "(the session-actor tier contract, declared once at session/new): " +
+      "an omitted budget defaults to the session tier's perOpReadBudget " +
+      "(window/32 clamped [512,4096] — AFM 512, hosted 128k/200k 4096) " +
+      "and the verdict budget to its verdictBudget (1200 / 8192) — never " +
+      "a hardcoded constant. Explicit budgets win. Args: {ops: […], budget?}.",
     parameters: {
       type: "object",
       properties: {
@@ -659,7 +738,21 @@ export default function (pi: PiAPI) {
       // this is the ONLY read tool, and the mechanical-read set is
       // asserted against the LIVE registry
       // (pkgs/xsoulspace_agentic_host/test/mechanical_read_registry_test.dart).
-      return delegated(`harness_meaning_program ${JSON.stringify(params ?? {})}`);
+      // Tier contract: the op budget is TIER-SOURCED, not the daemon's
+      // hardcoded 2048/512 defaults — omitted budgets get the session
+      // tier's perOpReadBudget (declared at session/new above); explicit
+      // budgets win. Same derivation both sides (resolveSessionTier and
+      // this mirror) so the tiers can never disagree silently.
+      const tiered = { ...(params ?? {}) };
+      if (Array.isArray(tiered.ops)) {
+        tiered.ops = tiered.ops.map((op: any) =>
+          op && typeof op === "object" && op.budget == null
+            ? { ...op, budget: SESSION_TIER.perOpReadBudget }
+            : op,
+        );
+      }
+      if (tiered.budget == null) tiered.budget = SESSION_TIER.verdictBudget;
+      return delegated(`harness_meaning_program ${JSON.stringify(tiered)}`);
     },
   });
 

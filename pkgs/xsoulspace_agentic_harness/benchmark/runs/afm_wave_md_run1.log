@@ -353,3 +353,253 @@ meaning_program: {"ok":false,"program_halt":{"index":0,"op":"locate","error":"tr
 repo_etl: {"ok":true,"files":6,"dirs":3,"dart_files":1,"symbols":1,"edges":3,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0},"note":"tree is world state (code graph + fs tier) — use the meaning_program read ops to read it; it is re-derivable
 repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
 
+coding_agent run — task: wave_md_section
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 1440
+  decisions: 70
+  tool rounds (thread beats): 71
+  moves: {meaning_program: 37, edit_symbol.replace_member_body: 2, goal_verify: 2, repo_etl.refresh: 15, repo_etl.scan: 10, repo_etl.status: 5}
+  projection tokens (honest spend, Situation.tokensUsed): 158137
+  meaning nodes: 20, edges: 20
+  wall clock: 1610806 ms
+  final gate (outer oracle, once): FAIL
+    check: dart test exit=1:
+    check: missing from docs/README.md: [--serve]
+    check: forbidden values present in docs/README.md: [to start the gateway. Read the]
+    check: missing from docs/README.md: [config.yaml]
+  failure class: final gate: dart test exit=1: | missing from docs/README.md: [--serve] | forbidden values present in docs/README.md: [to start the gateway. Read the] | missing from docs/README.md: [config.yaml]
+--- harness pulse (J1.5.3) ---
+tick 70 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788847539381044-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 1). Last failure: dart test exit=1: | missing from docs/README.md: [--serve] | forbidden values present in docs/README.md: [to start the gateway. Read the] | missing from docs/README.md: [config.yaml]
+— agent-1788847539381044-0  [idle via react_continuation]  rounds 0/12 (Σ68)  attempts 3/3 EXHAUSTED
+    last: repo_etl:{"action":"refresh"} → ok
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 291299..316680
+tick 314860: decisions=1 inFlight=1 pending=0 actors=agent-1788847539381044-0:1r/3a
+    agent-1788847539381044-0 ← react_continuation: "Your `repo_etl` tool call returned: <result|repo_etl|{"ok":true,"already_built":true,"refreshed_files":0,"symbols_tou…"
+tick 314960: decisions=1 inFlight=1 pending=0 actors=agent-1788847539381044-0:1r/3a
+    agent-1788847539381044-0 ← react_continuation: "Your `repo_etl` tool call returned: <result|repo_etl|{"ok":true,"already_built":true,"refreshed_files":0,"symbols_tou…"
+tick 315060: decisions=1 inFlight=1 pending=0 actors=agent-1788847539381044-0:1r/3a
+    agent-1788847539381044-0 ← react_continuation: "Your `repo_etl` tool call returned: <result|repo_etl|{"ok":true,"already_built":true,"refreshed_files":0,"symbols_tou…"
+tick 315160: decisions=1 inFlight=1 pending=0 actors=agent-1788847539381044-0:1r/3a
+    agent-1788847539381044-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":0,"op":"null",…"
+tick 315260: decisions=1 inFlight=1 pending=0 actors=agent-1788847539381044-0:1r/3a
+    agent-1788847539381044-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":0,"op":"null",…"
+tick 315360: decisions=1 inFlight=1 pending=0 actors=agent-1788847539381044-0:1r/3a
+    agent-1788847539381044-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":0,"op":"null",…"
+tick 315460: decisions=1 inFlight=1 pending=0 actors=agent-1788847539381044-0:1r/3a
+    agent-1788847539381044-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":0,"op":"null",…"
+tick 315560: decisions=1 inFlight=1 pending=0 actors=agent-1788847539381044-0:1r/3a
+    agent-1788847539381044-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":0,"op":"null",…"
+tick 315660: decisions=1 inFlight=1 pending=0 actors=agent-1788847539381044-0:1r/3a
+    agent-1788847539381044-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":0,"op":"null",…"
+tick 315760: decisions=1 inFlight=1 pending=0 actors=agent-1788847539381044-0:1r/3a
+    agent-1788847539381044-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":0,"op":"null",…"
+tick 315860: decisions=1 inFlight=1 pending=0 actors=agent-1788847539381044-0:1r/3a
+    agent-1788847539381044-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":0,"op":"null",…"
+tick 315960: decisions=1 inFlight=1 pending=0 actors=agent-1788847539381044-0:1r/3a
+    agent-1788847539381044-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":0,"op":"null",…"
+tick 316060: decisions=1 inFlight=1 pending=0 actors=agent-1788847539381044-0:1r/3a
+    agent-1788847539381044-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":0,"op":"null",…"
+tick 316160: decisions=1 inFlight=1 pending=0 actors=agent-1788847539381044-0:1r/3a
+    agent-1788847539381044-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":0,"op":"null",…"
+tick 316260: decisions=1 inFlight=1 pending=0 actors=agent-1788847539381044-0:1r/3a
+    agent-1788847539381044-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":0,"op":"null",…"
+tick 316360: decisions=1 inFlight=1 pending=0 actors=agent-1788847539381044-0:1r/3a
+    agent-1788847539381044-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":0,"op":"null",…"
+tick 316460: decisions=1 inFlight=1 pending=0 actors=agent-1788847539381044-0:1r/3a
+    agent-1788847539381044-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":0,"op":"null",…"
+tick 316560: decisions=1 inFlight=1 pending=0 actors=agent-1788847539381044-0:1r/3a
+    agent-1788847539381044-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":0,"op":"null",…"
+tick 316660: decisions=1 inFlight=1 pending=0 actors=agent-1788847539381044-0:1r/3a
+    agent-1788847539381044-0 ← react_continuation: "Your `meaning_program` tool call returned: <result|meaning_program|{"ok":false,"program_halt":{"index":0,"op":"null",…"
+tick 316680: decisions=0 inFlight=0 pending=0 actors=agent-1788847539381044-0:0r/3a
+
+
+--- tool results (truncated per beat) ---
+meaning_program: {"ok":true,"ops_run":1,"results":[{"locate":{"ok":true,"query":"README","total":1,"rows":[{"id":"f_docs_README.md","kind":"file","label":"docs/README.md","rank":2}]}}],"cursor":["f_docs_README.md"]}
+edit_symbol: {"ok":false,"error":"slots are ACTION-SCOPED: a dart move does not take body","bounce":true,"failureClass":"slot_scoping","repair":"dart moves NEVER take raw code: compose opChain over the closed vocabulary (the host compiles it) or apply_e
+goal_verify: {ok: false, command: [dart, test], verify_wall_ms: 3690, detail: run failed exit=1: }
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":false,"program_halt":{"index":0,"op":"null","error":"unknown_op — closed set: [locate, zoom, impact, read]","hint":"fix op 0 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":0,"results":[
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: 0","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query":"//mai
+meaning_program: {"ok":false,"program_halt":{"index":0,"op":"null","error":"unknown_op — closed set: [locate, zoom, impact, read]","hint":"fix op 0 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":0,"results":[
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"zoom","error":"unknown focusId: test","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query":"te
+repo_etl: {"ok":true,"scanned":true,"lastScan":"2026-09-08T09:08:29.477059","files":6,"dirs":3,"dart_files":1,"symbols":1,"tree_nodes":20}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: foo","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query":"foo
+repo_etl: {"ok":true,"scanned":true,"lastScan":"2026-09-08T09:08:29.477059","files":6,"dirs":3,"dart_files":1,"symbols":1,"tree_nodes":20}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: test","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query":"te
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":false,"program_halt":{"index":0,"op":"read","error":"no_focus — run locate first (it sets the cursor) or pass focusId","hint":"fix op 0 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":0,
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: 1","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query":"main.
+meaning_program: {"ok":true,"ops_run":1,"results":[{"locate":{"ok":true,"query":"main.dart","total":0,"rows":[],"hint":"no meaning matched — zoom ONE of these ids (a file node's cut carries its sections/keys), then edit","hints":["f_test_docs_test.dart","sy
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: compilation.code","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: main.dart","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"no_focus — run locate first (it sets the cursor) or pass focusId","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,
+repo_etl: {"ok":true,"scanned":true,"lastScan":"2026-09-08T09:14:03.848850","files":6,"dirs":3,"dart_files":1,"symbols":1,"tree_nodes":20}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"no_focus — run locate first (it sets the cursor) or pass focusId","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":true,"ops_run":1,"results":[{"locate":{"ok":true,"query":"main.dart","total":0,"rows":[],"hint":"no meaning matched — zoom ONE of these ids (a file node's cut carries its sections/keys), then edit","hints":["f_test_docs_test.dart","sy
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: test","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query":"te
+meaning_program: {"ok":true,"ops_run":1,"results":[{"locate":{"ok":true,"query":"test","total":3,"rows":[{"id":"dir_test","kind":"dir","label":"test","rank":0},{"id":"f_test_docs_test.dart","kind":"file","label":"test/docs_test.dart","rank":1},{"id":"key_f_
+edit_symbol: {"ok":false,"bounce":true,"error":"unknown symbol id: dir_test/f_test_docs_test.dart","repair":"zoom to find the symbol, then re-send with a valid symbolId"}
+goal_verify: {ok: false, command: [dart, test], verify_wall_ms: 778, detail: run failed exit=1: }
+meaning_program: {"ok":true,"ops_run":1,"results":[{"locate":{"ok":true,"query":"dir_test/f_test_docs_test.dart","total":0,"rows":[],"hint":"no meaning matched — zoom ONE of these ids (a file node's cut carries its sections/keys), then edit","hints":["f_tes
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: main.dart","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query
+repo_etl: {"ok":true,"scanned":true,"lastScan":"2026-09-08T09:19:28.548385","files":6,"dirs":3,"dart_files":1,"symbols":1,"tree_nodes":20}
+meaning_program: {"ok":false,"program_halt":{"index":0,"op":"null","error":"unknown_op — closed set: [locate, zoom, impact, read]","hint":"fix op 0 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":0,"results":[
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":false,"program_halt":{"index":0,"op":"null","error":"unknown_op — closed set: [locate, zoom, impact, read]","hint":"fix op 0 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":0,"results":[
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: main.dart","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":true,"ops_run":1,"results":[{"locate":{"ok":true,"query":"main.dart","total":0,"rows":[],"hint":"no meaning matched — zoom ONE of these ids (a file node's cut carries its sections/keys), then edit","hints":["f_test_docs_test.dart","sy
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: 0","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query":"//mai
+meaning_program: {"ok":true,"ops_run":1,"results":[{"locate":{"ok":true,"query":"//main.dart","total":0,"rows":[],"hint":"no meaning matched — zoom ONE of these ids (a file node's cut carries its sections/keys), then edit","hints":["f_test_docs_test.dart","
+meaning_program: {"ok":false,"program_halt":{"index":0,"op":"null","error":"unknown_op — closed set: [locate, zoom, impact, read]","hint":"fix op 0 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":0,"results":[
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"zoom","error":"unknown focusId: main.dart","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query
+repo_etl: {"ok":true,"scanned":true,"lastScan":"2026-09-08T09:25:21.747018","files":6,"dirs":3,"dart_files":1,"symbols":1,"tree_nodes":20}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"no_focus — run locate first (it sets the cursor) or pass focusId","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"zoom","error":"unknown focusId: main.dart","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: main.dart","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: main.dart","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":true,"ops_run":1,"results":[{"locate":{"ok":true,"query":"symbolName","total":0,"rows":[],"hint":"no meaning matched — zoom ONE of these ids (a file node's cut carries its sections/keys), then edit","hints":["f_test_docs_test.dart","s
+meaning_program: {"ok":true,"ops_run":1,"results":[{"locate":{"ok":true,"query":"symbolName","total":0,"rows":[],"hint":"no meaning matched — zoom ONE of these ids (a file node's cut carries its sections/keys), then edit","hints":["f_test_docs_test.dart","s
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: main.dart","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":false,"program_halt":{"index":0,"op":"read","error":"no_focus — run locate first (it sets the cursor) or pass focusId","hint":"fix op 0 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":0,
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"no_focus — run locate first (it sets the cursor) or pass focusId","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":false,"program_halt":{"index":0,"op":"null","error":"unknown_op — closed set: [locate, zoom, impact, read]","hint":"fix op 0 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":0,"results":[
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0}}
+
+coding_agent run — task: wave_md_section
+  backend: apple_foundation_afm
+  verdict: FAIL
+  overhead tokens (system+schemas): 1440
+  decisions: 44
+  tool rounds (thread beats): 47
+  moves: {meaning_program: 22, edit_symbol.replace_member_body: 3, goal_verify: 3, run: 1, repo_etl.status: 5, repo_etl.scan: 5, repo_etl.refresh: 8}
+  projection tokens (honest spend, Situation.tokensUsed): 100394
+  meaning nodes: 20, edges: 20
+  wall clock: 1032272 ms
+  final gate (outer oracle, once): FAIL
+    check: dart test exit=1:
+    check: missing from docs/README.md: [--serve]
+    check: forbidden values present in docs/README.md: [to start the gateway. Read the]
+    check: missing from docs/README.md: [config.yaml]
+  failure class: final gate: dart test exit=1: | missing from docs/README.md: [--serve] | forbidden values present in docs/README.md: [to start the gateway. Read the] | missing from docs/README.md: [config.yaml]
+--- harness pulse (J1.5.3) ---
+tick 44 | decisions 0 | in-flight 0 | pending results 0
+⚠ actor agent-1788849421109103-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: run failed exit=1: 
+— agent-1788849421109103-0  [idle via react_continuation]  rounds 1/12 (Σ43)  attempts 3/3 EXHAUSTED
+    last: repo_etl:{"action":"status"} → ok
+--- flight recorder ---
+FlightRecorder: 256 pulse(s), ticks 200703..226115
+tick 224303: decisions=1 inFlight=1 pending=0 actors=agent-1788849421109103-0:1r/2a
+    agent-1788849421109103-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":false,"bounce":true,"error":"unknown symbol id: symb…"
+tick 224403: decisions=1 inFlight=1 pending=0 actors=agent-1788849421109103-0:1r/2a
+    agent-1788849421109103-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":false,"bounce":true,"error":"unknown symbol id: symb…"
+tick 224503: decisions=1 inFlight=1 pending=0 actors=agent-1788849421109103-0:1r/2a
+    agent-1788849421109103-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":false,"bounce":true,"error":"unknown symbol id: symb…"
+tick 224603: decisions=1 inFlight=1 pending=0 actors=agent-1788849421109103-0:1r/2a
+    agent-1788849421109103-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":false,"bounce":true,"error":"unknown symbol id: symb…"
+tick 224703: decisions=1 inFlight=1 pending=0 actors=agent-1788849421109103-0:1r/2a
+    agent-1788849421109103-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":false,"bounce":true,"error":"unknown symbol id: symb…"
+tick 224803: decisions=1 inFlight=1 pending=0 actors=agent-1788849421109103-0:1r/2a
+    agent-1788849421109103-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":false,"bounce":true,"error":"unknown symbol id: symb…"
+tick 224903: decisions=1 inFlight=1 pending=0 actors=agent-1788849421109103-0:1r/2a
+    agent-1788849421109103-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":false,"bounce":true,"error":"unknown symbol id: symb…"
+tick 225003: decisions=1 inFlight=1 pending=0 actors=agent-1788849421109103-0:1r/2a
+    agent-1788849421109103-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":false,"bounce":true,"error":"unknown symbol id: symb…"
+tick 225103: decisions=1 inFlight=1 pending=0 actors=agent-1788849421109103-0:1r/2a
+    agent-1788849421109103-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":false,"bounce":true,"error":"unknown symbol id: symb…"
+tick 225203: decisions=1 inFlight=1 pending=0 actors=agent-1788849421109103-0:1r/2a
+    agent-1788849421109103-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":false,"bounce":true,"error":"unknown symbol id: symb…"
+tick 225303: decisions=1 inFlight=1 pending=0 actors=agent-1788849421109103-0:1r/2a
+    agent-1788849421109103-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":false,"bounce":true,"error":"unknown symbol id: symb…"
+tick 225403: decisions=1 inFlight=1 pending=0 actors=agent-1788849421109103-0:1r/2a
+    agent-1788849421109103-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":false,"bounce":true,"error":"unknown symbol id: symb…"
+tick 225503: decisions=1 inFlight=1 pending=0 actors=agent-1788849421109103-0:1r/2a
+    agent-1788849421109103-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":false,"bounce":true,"error":"unknown symbol id: symb…"
+tick 225603: decisions=1 inFlight=1 pending=0 actors=agent-1788849421109103-0:1r/2a
+    agent-1788849421109103-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":false,"bounce":true,"error":"unknown symbol id: symb…"
+tick 225703: decisions=1 inFlight=1 pending=0 actors=agent-1788849421109103-0:1r/2a
+    agent-1788849421109103-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":false,"bounce":true,"error":"unknown symbol id: symb…"
+tick 225803: decisions=1 inFlight=1 pending=0 actors=agent-1788849421109103-0:1r/2a
+    agent-1788849421109103-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":false,"bounce":true,"error":"unknown symbol id: symb…"
+tick 225903: decisions=1 inFlight=1 pending=0 actors=agent-1788849421109103-0:1r/2a
+    agent-1788849421109103-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":false,"bounce":true,"error":"unknown symbol id: symb…"
+tick 226003: decisions=1 inFlight=1 pending=0 actors=agent-1788849421109103-0:1r/2a
+    agent-1788849421109103-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":false,"bounce":true,"error":"unknown symbol id: symb…"
+tick 226103: decisions=1 inFlight=1 pending=0 actors=agent-1788849421109103-0:1r/2a
+    agent-1788849421109103-0 ← react_continuation: "Your `edit_symbol` tool call returned: <result|edit_symbol|{"ok":false,"bounce":true,"error":"unknown symbol id: symb…"
+tick 226115: decisions=0 inFlight=0 pending=0 actors=agent-1788849421109103-0:1r/3a ⚠ actor agent-1788849421109103-0: goal-attempt budget exhausted — goal_unverifiable: 3 failed verification attempts (budget 3). Last failure: run failed exit=1: 
+
+
+--- tool results (truncated per beat) ---
+meaning_program: {"ok":true,"ops_run":1,"results":[{"locate":{"ok":true,"query":"README","total":1,"rows":[{"id":"f_docs_README.md","kind":"file","label":"docs/README.md","rank":2}]}}],"cursor":["f_docs_README.md"]}
+edit_symbol: {"ok":false,"error":"slots are ACTION-SCOPED: a dart move does not take body","bounce":true,"failureClass":"slot_scoping","repair":"dart moves NEVER take raw code: compose opChain over the closed vocabulary (the host compiles it) or apply_e
+goal_verify: {ok: false, command: [dart, test], verify_wall_ms: 3864, detail: run failed exit=1: }
+meaning_program: {"ok":false,"program_halt":{"index":0,"op":"null","error":"unknown_op — closed set: [locate, zoom, impact, read]","hint":"fix op 0 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":0,"results":[
+run: {"ok":false,"exit_code":1,"stdout":"00:00 +0: loading test/docs_test.dart\n00:00 +0: test/docs_test.dart: the Usage section was replaced, links intact\n00:00 +0 -1: test/docs_tes…","stderr":""}
+repo_etl: {"ok":true,"scanned":true,"lastScan":"2026-09-08T09:37:01.104831","files":6,"dirs":3,"dart_files":1,"symbols":1,"tree_nodes":20}
+meaning_program: {"ok":true,"ops_run":1,"results":[{"locate":{"ok":true,"query":"main.dart","total":0,"rows":[],"hint":"no meaning matched — zoom ONE of these ids (a file node's cut carries its sections/keys), then edit","hints":["f_test_docs_test.dart","sy
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":false,"program_halt":{"index":0,"op":"null","error":"unknown_op — closed set: [locate, zoom, impact, read]","hint":"fix op 0 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":0,"results":[
+meaning_program: {"ok":false,"program_halt":{"index":0,"op":"null","error":"unknown_op — closed set: [locate, zoom, impact, read]","hint":"fix op 0 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":0,"results":[
+meaning_program: {"ok":false,"program_halt":{"index":0,"op":"null","error":"unknown_op — closed set: [locate, zoom, impact, read]","hint":"fix op 0 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":0,"results":[
+meaning_program: {"ok":false,"program_halt":{"index":0,"op":"null","error":"unknown_op — closed set: [locate, zoom, impact, read]","hint":"fix op 0 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":0,"results":[
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"zoom","error":"unknown focusId: symbol_name","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"que
+repo_etl: {"ok":true,"scanned":true,"lastScan":"2026-09-08T09:41:43.833171","files":6,"dirs":3,"dart_files":1,"symbols":1,"tree_nodes":20}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: root.test","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query
+meaning_program: {"ok":true,"ops_run":1,"results":[{"locate":{"ok":true,"query":"test","total":3,"rows":[{"id":"dir_test","kind":"dir","label":"test","rank":0},{"id":"f_test_docs_test.dart","kind":"file","label":"test/docs_test.dart","rank":1},{"id":"key_f_
+edit_symbol: {"ok":false,"bounce":true,"error":"unknown symbol id: dir_test/f_test_docs_test.dart","repair":"zoom to find the symbol, then re-send with a valid symbolId"}
+goal_verify: {ok: false, command: [dart, test], verify_wall_ms: 739, detail: run failed exit=1: }
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: main.dart","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"zoom","error":"unknown focusId: main.dart","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: main.dart","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"query
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":false,"program_halt":{"index":0,"op":"null","error":"unknown_op — closed set: [locate, zoom, impact, read]","hint":"fix op 0 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":0,"results":[
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":false,"program_halt":{"index":0,"op":"read","error":"no_focus — run locate first (it sets the cursor) or pass focusId","hint":"fix op 0 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":0,
+repo_etl: {"ok":true,"already_built":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0},"note":"the tree was already built — reconciled to current (zero model to
+meaning_program: {"ok":true,"ops_run":1,"results":[{"locate":{"ok":true,"query":"main.dart","total":0,"rows":[],"hint":"no meaning matched — zoom ONE of these ids (a file node's cut carries its sections/keys), then edit","hints":["f_test_docs_test.dart","sy
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":true,"ops_run":1,"results":[{"locate":{"ok":true,"query":"symbol123","total":0,"rows":[],"hint":"no meaning matched — zoom ONE of these ids (a file node's cut carries its sections/keys), then edit","hints":["f_test_docs_test.dart","sy
+repo_etl: {"ok":true,"scanned":true,"lastScan":"2026-09-08T09:49:01.833078","files":6,"dirs":3,"dart_files":1,"symbols":1,"tree_nodes":20}
+meaning_program: {"ok":true,"ops_run":1,"results":[{"locate":{"ok":true,"query":"symbol123","total":0,"rows":[],"hint":"no meaning matched — zoom ONE of these ids (a file node's cut carries its sections/keys), then edit","hints":["f_test_docs_test.dart","sy
+repo_etl: {"ok":true,"scanned":true,"lastScan":"2026-09-08T09:49:01.833078","files":6,"dirs":3,"dart_files":1,"symbols":1,"tree_nodes":20}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: my_module.main","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":false,"program_halt":{"index":0,"op":"null","error":"unknown_op — closed set: [locate, zoom, impact, read]","hint":"fix op 0 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":0,"results":[
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":true,"ops_run":1,"results":[{"locate":{"ok":true,"query":"main.dart","total":0,"rows":[],"hint":"no meaning matched — zoom ONE of these ids (a file node's cut carries its sections/keys), then edit","hints":["f_test_docs_test.dart","sy
+repo_etl: {"ok":true,"refreshed_files":0,"symbols_touched":0,"files":6,"fs_added":0,"fs_dropped":0,"capabilities":0,"vcs":{"status":"not_a_repo","nodes":0}}
+meaning_program: {"ok":false,"program_halt":{"index":1,"op":"read","error":"unknown focusId: symbol_name","hint":"fix op 1 and resend the program — the next decision sees this verdict and the results-so-far"},"ops_run":1,"results":[{"locate":{"ok":true,"que
+edit_symbol: {"ok":false,"bounce":true,"error":"unknown symbol id: symbol_name","repair":"zoom to find the symbol, then re-send with a valid symbolId"}
+goal_verify: {ok: false, command: [dart, test], verify_wall_ms: 1663, detail: run failed exit=1: }
+repo_etl: {"ok":true,"scanned":true,"lastScan":"2026-09-08T09:52:25.312451","files":6,"dirs":3,"dart_files":1,"symbols":1,"tree_nodes":20}
+

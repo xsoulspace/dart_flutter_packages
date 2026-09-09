@@ -487,7 +487,9 @@ String readyStepDirective(ReadyStep ready) {
       : 'No body is composed — the pack executable carries it.';
   return 'READY MOVE — execute this harness_edit call NOW with EXACTLY '
       'these args. Do NOT scan (the meaning tree is already built), do '
-      'NOT zoom or explore first:\n'
+      'NOT zoom or explore first. This READY MOVE REPLACES any '
+      'scan/locate/zoom flow the task text describes — do not follow '
+      'it:\n'
       'harness_edit ${jsonEncode(payload)}\n'
       '(host frontier resolver, 0 tokens: ${ready.source}. $tail After '
       'the move, end your turn.)';

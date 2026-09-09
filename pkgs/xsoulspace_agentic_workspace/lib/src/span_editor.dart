@@ -189,7 +189,8 @@ class SpanEditBounce implements Exception {
   final String repair;
 
   /// Which host-enforced fence fired: 'expressiveness' | 'coverage' |
-  /// 'integration' | null (plain validation).
+  /// 'integration' | 'consent' (trusted-author structural executables) |
+  /// null (plain validation).
   final String? fence;
 
   Map<String, dynamic> toJson() => {
@@ -759,6 +760,18 @@ class SpanEditMaterializer {
           );
         case EditExecutableKind.renameSymbol:
           return _planRename(symbolId, params);
+        case EditExecutableKind.addConstructorParam:
+          return _planAddConstructorParam(
+            symbolId: symbolId,
+            params: params,
+            executableId: executableId!, // non-null: the lookup passed
+          );
+        case EditExecutableKind.addEnumCase:
+          return _planAddEnumCase(
+            symbolId: symbolId,
+            params: params,
+            executableId: executableId!, // non-null: the lookup passed
+          );
         default:
           throw SpanEditBounce(
             'pack executable kind "${pack.kind.wire}" has no host '
@@ -1093,6 +1106,536 @@ class SpanEditMaterializer {
         ),
       ],
     );
+  }
+
+  // -------------------------------------------------------------------------
+  // STRUCTURAL EXECUTABLES (trusted-author tier — build order item 8):
+  // class-shape packs AS DATA. The pack declares the spec — for
+  // add_constructor_param: {paramName, paramType, required?, default?,
+  // constructor?, field?, initializer?}; for add_enum_case:
+  // {caseName, args?} — and the HOST splices the constructor signature,
+  // the backing field and (when required) the initializer — or the enum
+  // case — byte-precisely, fence-resolved, with the same free-oracle
+  // verify + AUTO-REVERT family as every other move. Consent is
+  // SEPARATE from the pack: registration is free, application REFUSES
+  // without a wired consent approver (deny-by-default). Adjacent-line
+  // punctuation repair (a missing trailing comma at the splice point)
+  // is part of the intended change — the same repair language the yaml
+  // keypath splice uses. NON-GOAL (v1): the coverage fence (b) is not
+  // required for structural kinds — they ADD shape, never replace
+  // tested behavior; the analyzer + workspace-convention oracles still
+  // grade the result.
+  // -------------------------------------------------------------------------
+
+  void _requireStructuralConsent(String executableId) {
+    if (_approver != null) return;
+    throw SpanEditBounce(
+      'structural executable "$executableId" REFUSED: no consent '
+          'approver is wired (trusted-author tier)',
+      'wire SpanEditMaterializer(approver:) — a structural class-shape '
+          'move applies only through the consent gate; consent is '
+          'separate from the pack itself',
+      fence: 'consent',
+    );
+  }
+
+  SpanEditPlan _planAddConstructorParam({
+    required Map<String, dynamic> params,
+    required String executableId,
+    String? symbolId,
+  }) {
+    _requireStructuralConsent(executableId);
+    final sym = _requireSymbol(symbolId);
+    final decl = sym.props['decl'] as String?;
+    if (decl != 'class') {
+      throw SpanEditBounce(
+        '${sym.id} is a $decl — add_constructor_param targets a class '
+            'symbol',
+        'zoom to find the enclosing class symbol id',
+      );
+    }
+    final paramName = params['paramName'] as String?;
+    if (paramName == null || !_isIdentifier(paramName)) {
+      throw SpanEditBounce(
+        'invalid paramName: $paramName',
+        're-send params: {paramName: <legal dart identifier>, paramType: '
+            '<type>, required?: bool, defaultValue?, constructor?, '
+            'field?: bool, initializer?}',
+        fence: 'integration',
+      );
+    }
+    final paramType = (params['paramType'] as String?)?.trim() ?? '';
+    if (paramType.isEmpty ||
+        RegExp('[;{}]').hasMatch(paramType)) {
+      throw SpanEditBounce(
+        'invalid paramType: $paramType',
+        're-send paramType as a dart type expression (e.g. int, String?, '
+            'List<int>)',
+        fence: 'integration',
+      );
+    }
+    final required = _asBool(params['required']);
+    final rawDefault = params['defaultValue'];
+    final hasDefault =
+        rawDefault != null && '$rawDefault'.trim().isNotEmpty;
+    final defaultText = hasDefault ? '$rawDefault'.trim() : '';
+    if (required && hasDefault) {
+      throw SpanEditBounce(
+        'a required parameter cannot declare a default',
+        're-send with required: false + defaultValue, or drop the '
+            'defaultValue',
+        fence: 'integration',
+      );
+    }
+    final ctorName = (params['constructor'] as String?)?.trim() ?? '';
+    final withField =
+        params['field'] == null || _asBool(params['field']);
+    final initializer = (params['initializer'] as String?)?.trim() ?? '';
+    if (initializer.isNotEmpty && withField) {
+      throw SpanEditBounce(
+        'conflicting spec: initializer + field — pick either the '
+            'this.$paramName shorthand (field: true) or a plain param + '
+            'initializer (field: false)',
+        're-send with field: false + initializer, or drop the initializer',
+        fence: 'integration',
+      );
+    }
+    // Collision fence: the class must not already carry a member with
+    // the param's name (ambiguity is data, never a silent overwrite).
+    final index = _index();
+    for (final entry in index.byId.entries) {
+      final node = meaningComponentOf<MeaningNode>(world, entry.value);
+      if (node == null || node.kind != 'symbol' || node.label != paramName) {
+        continue;
+      }
+      final props =
+          meaningComponentOf<MeaningProps>(world, entry.value)?.props ??
+          const <String, dynamic>{};
+      if (props['member_of'] == sym.label) {
+        throw SpanEditBounce(
+          'class ${sym.label} already has a member named $paramName',
+          'pick another name (check via a meaning_program zoom)',
+          fence: 'integration',
+        );
+      }
+    }
+    final file = sym.props['file'] as String?;
+    final declLine = (sym.props['line'] as num?)?.toInt();
+    if (file == null || declLine == null) {
+      throw SpanEditBounce(
+        '${sym.id} carries no file/line props — re-run repo_etl scan',
+        'action scan, then retry the move',
+      );
+    }
+    final text = File(_abs(file)).readAsStringSync();
+    final lines = text.split('\n');
+    final declLine0 = declLine - 1;
+    final openLine0 = findClassBodyOpen(lines, declLine0, sym.label);
+    if (openLine0 == null) {
+      throw SpanEditBounce(
+        'cannot locate the class body brace of ${sym.label} in $file',
+        're-run repo_etl scan; the v1 materializer expects '
+            'dart-formatted sources',
+      );
+    }
+    final closeLine0 = matchBrace(lines, openLine0);
+    if (closeLine0 == null) {
+      throw SpanEditBounce(
+        'cannot locate the closing brace line of ${sym.label} in $file',
+        'the v1 materializer expects dart-formatted sources',
+      );
+    }
+    // The constructor to splice: the unnamed one, or the named one.
+    final ctorRe = RegExp(
+      '^  (?:const\\s+)?${RegExp.escape(sym.label)}'
+      '${ctorName.isEmpty ? '' : '\\.$ctorName'}\\(',
+    );
+    int? ctorLine0;
+    for (var i = openLine0 + 1; i < closeLine0; i++) {
+      if (ctorRe.hasMatch(lines[i])) {
+        ctorLine0 = i;
+        break;
+      }
+    }
+    if (ctorLine0 == null) {
+      throw SpanEditBounce(
+        'class ${sym.label} has no '
+            '${ctorName.isEmpty ? 'unnamed' : '"$ctorName" '}constructor '
+            'in $file',
+        'target an existing constructor (zoom via meaning_program) or use '
+            'insert_member to add one',
+        fence: 'integration',
+      );
+    }
+    final ctorLineStart = _lineStartOffset(text, ctorLine0);
+    final parenStart =
+        ctorLineStart + lines[ctorLine0].indexOf('(');
+    final parenEnd = matchParen(text, parenStart);
+    if (parenEnd == null) {
+      throw SpanEditBounce(
+        'unbalanced parameter list of the constructor in $file',
+        'the v1 materializer expects dart-formatted sources',
+      );
+    }
+    final inner = text.substring(parenStart + 1, parenEnd);
+    if (RegExp('\\b${RegExp.escape(paramName)}\\b').hasMatch(inner)) {
+      throw SpanEditBounce(
+        'the constructor already has a parameter named $paramName',
+        'pick another name or re-run repo_etl scan (the tree may be '
+            'stale)',
+        fence: 'integration',
+      );
+    }
+    // Splice region: the named section when present, else the whole
+    // parameter list.
+    final namedRel = inner.indexOf('{');
+    final bool inNamed;
+    var regionOpen = parenStart;
+    var regionClose = parenEnd;
+    if (namedRel >= 0) {
+      final namedAbs = parenStart + 1 + namedRel;
+      final namedClose = matchBraceText(text, namedAbs);
+      if (namedClose == null || namedClose > parenEnd) {
+        throw SpanEditBounce(
+          'unbalanced named-parameter section of the constructor in '
+              '$file',
+          'the v1 materializer expects dart-formatted sources',
+        );
+      }
+      inNamed = true;
+      regionOpen = namedAbs;
+      regionClose = namedClose;
+    } else {
+      inNamed = false;
+    }
+    final region = text.substring(regionOpen + 1, regionClose);
+    String fragment({required bool namedSlot}) {
+      final reqPrefix =
+          namedSlot && required && !hasDefault ? 'required ' : '';
+      final base = initializer.isEmpty
+          ? 'this.$paramName'
+          : '$paramType $paramName';
+      final dflt = hasDefault ? ' = $defaultText' : '';
+      return '$reqPrefix$base$dflt';
+    }
+
+    final String region2;
+    if (inNamed || required) {
+      // Splice as the last entry of the region: named sections take
+      // `required this.x`; positional lists take the param positionally.
+      region2 = _appendToRegion(region, fragment(namedSlot: inNamed));
+    } else {
+      // Optional param and no named section yet: CREATE the section.
+      final head = region.trimRight();
+      final tail = region.substring(head.length);
+      final frag = fragment(namedSlot: true);
+      region2 = head.trim().isEmpty
+          ? '{$frag}$tail'
+          : '${head.endsWith(',') ? head : '$head,'} {$frag}$tail';
+    }
+    var newText =
+        text.substring(0, regionOpen + 1) +
+        region2 +
+        text.substring(regionClose);
+    final newRegionClose = regionClose + (region2.length - region.length);
+
+    // Initializer splice (when required): the host inserts
+    // `: paramName = <expr>` between the parameter list and the body —
+    // v1 scope: generative brace-bodied constructors without an
+    // initializer list, the insert landing on the `)` line so the patch
+    // slice below stays byte-precise.
+    if (initializer.isNotEmpty) {
+      var cursor = newRegionClose + 1;
+      while (cursor < newText.length &&
+          (' \t\r\n'.contains(newText[cursor]))) {
+        cursor++;
+      }
+      if (cursor >= newText.length) {
+        throw SpanEditBounce(
+          'unexpected end of file after the constructor parameter list',
+          'the v1 materializer expects dart-formatted sources',
+        );
+      }
+      if (newText.startsWith('=>', cursor) || newText[cursor] == ';') {
+        throw SpanEditBounce(
+          'the constructor is expression-bodied or abstract — outside the '
+              'add_constructor_param initializer scope',
+          'target a generative brace-bodied constructor',
+          fence: 'expressiveness',
+        );
+      }
+      if (newText[cursor] == ':') {
+        throw SpanEditBounce(
+          'the constructor already has an initializer list — outside the '
+              'add_constructor_param v1 scope',
+          'express the move as a trusted-author executable (authored '
+              'body) instead',
+          fence: 'expressiveness',
+        );
+      }
+      if (newText[cursor] != '{' ||
+          _lineOfOffset(newText, cursor) !=
+              _lineOfOffset(newText, newRegionClose)) {
+        throw SpanEditBounce(
+          'the constructor body does not open on the `)` line — outside '
+              'the add_constructor_param v1 scope',
+          'reformat the constructor (dart format) and retry',
+          fence: 'expressiveness',
+        );
+      }
+      newText = newText.replaceRange(
+        cursor,
+        cursor,
+        ': $paramName = $initializer ',
+      );
+    }
+    final oldEndLine0 = _lineOfOffset(text, parenEnd);
+    final newEndLine0 = _lineOfOffset(newText, newRegionClose);
+    final patches = [
+      SpanPatch(
+        file: file,
+        startLine: ctorLine0 + 1,
+        endLine: oldEndLine0 + 1,
+        replacement: _sliceLines(newText, ctorLine0, newEndLine0),
+        reason:
+            'host-spliced constructor param $paramName'
+            '${initializer.isEmpty ? '' : ' + initializer'} '
+            '(structural pack $executableId)',
+      ),
+    ];
+    if (withField) {
+      final classIndent =
+          RegExp(r'^\s*').firstMatch(lines[declLine0])?.group(0) ?? '';
+      final fieldIndent = '$classIndent  ';
+      patches.add(
+        SpanPatch(
+          file: file,
+          startLine: openLine0 + 1,
+          endLine: openLine0 + 1,
+          replacement:
+              '${lines[openLine0]}\n${fieldIndent}final $paramType '
+              '$paramName;',
+          reason: 'backing field for constructor param $paramName',
+        ),
+      );
+    }
+    return SpanEditPlan(
+      description:
+          'add_constructor_param $paramName: $paramType → '
+          '${ctorName.isEmpty ? sym.label : '${sym.label}.$ctorName'} '
+          '(${sym.id}) in $file${withField ? ' (+ backing field)' : ''}',
+      patches: patches,
+    );
+  }
+
+  SpanEditPlan _planAddEnumCase({
+    required Map<String, dynamic> params,
+    required String executableId,
+    String? symbolId,
+  }) {
+    _requireStructuralConsent(executableId);
+    final sym = _requireSymbol(symbolId);
+    final decl = sym.props['decl'] as String?;
+    if (decl != 'enum') {
+      throw SpanEditBounce(
+        '${sym.id} is a $decl — add_enum_case targets an enum symbol',
+        'zoom to find the enum symbol id',
+      );
+    }
+    final caseName = params['caseName'] as String?;
+    if (caseName == null || !_isIdentifier(caseName)) {
+      throw SpanEditBounce(
+        'invalid case name: $caseName',
+        're-send params: {caseName: <legal dart identifier>, args?: '
+            '<const args>}',
+        fence: 'integration',
+      );
+    }
+    final rawArgs = (params['args'] as String?)?.trim() ?? '';
+    final caseText = rawArgs.isEmpty
+        ? caseName
+        : rawArgs.startsWith('(')
+        ? '$caseName$rawArgs'
+        : '$caseName($rawArgs)';
+    final file = sym.props['file'] as String?;
+    final declLine = (sym.props['line'] as num?)?.toInt();
+    if (file == null || declLine == null) {
+      throw SpanEditBounce(
+        '${sym.id} carries no file/line props — re-run repo_etl scan',
+        'action scan, then retry the move',
+      );
+    }
+    final text = File(_abs(file)).readAsStringSync();
+    final lines = text.split('\n');
+    final declLine0 = declLine - 1;
+    var openLine0 = declLine0;
+    if (!lines[declLine0].contains('{')) {
+      final found = findClassBodyOpen(lines, declLine0, sym.label);
+      if (found == null) {
+        throw SpanEditBounce(
+          'cannot locate the enum body brace of ${sym.label} in $file',
+          're-run repo_etl scan; the v1 materializer expects '
+              'dart-formatted sources',
+        );
+      }
+      openLine0 = found;
+    }
+    final openOffset =
+        _lineStartOffset(text, openLine0) + lines[openLine0].indexOf('{');
+    final closeOffset = matchBraceText(text, openOffset);
+    if (closeOffset == null) {
+      throw SpanEditBounce(
+        'unbalanced braces of enum ${sym.label} in $file',
+        'the v1 materializer expects dart-formatted sources',
+      );
+    }
+    final bodyStart = openOffset + 1;
+    // The first top-level `;` in the enum body IS the constants
+    // terminator (members always follow it) — string-aware scan.
+    final semi = _firstTopLevelSemicolon(text, bodyStart, closeOffset);
+    final spliceEnd = semi ?? closeOffset;
+    final before = text.substring(bodyStart, spliceEnd);
+    // Collision fence: the constants region must not already carry the
+    // case name (ambiguity is data, never a silent overwrite).
+    if (RegExp('\\b${RegExp.escape(caseName)}\\b').hasMatch(before)) {
+      throw SpanEditBounce(
+        'enum ${sym.label} already has a case named $caseName',
+        'pick another name or re-run repo_etl scan (the tree may be '
+            'stale)',
+        fence: 'integration',
+      );
+    }
+    final head = before.trimRight();
+    final tail = before.substring(head.length);
+    final indent = _regionIndent(before);
+    // Splice: before the `;` (the constants keep their terminator; no
+    // trailing comma on the new case) or before the closing brace (a
+    // trailing comma is repaired on the adjacent line — the yaml-keypath
+    // adjacent-line repair language).
+    final String before2;
+    if (semi != null) {
+      before2 = head.trim().isEmpty
+          ? '$head$indent$caseText$tail'
+          : '${head.endsWith(',') ? head : '$head,'}\n$indent$caseText$tail';
+    } else if (!before.contains('\n')) {
+      before2 = head.trim().isEmpty
+          ? ' $caseText$tail'
+          : '$head, $caseText$tail';
+    } else {
+      before2 = head.trim().isEmpty
+          ? '\n$indent$caseText,\n$tail'
+          : '${head.endsWith(',') ? head : '$head,'}\n$indent$caseText,$tail';
+    }
+    final newText =
+        text.substring(0, bodyStart) + before2 + text.substring(spliceEnd);
+    final newClose = closeOffset + (before2.length - before.length);
+    return SpanEditPlan(
+      description:
+          'add_enum_case $caseText → ${sym.label} (${sym.id}) in $file',
+      patches: [
+        SpanPatch(
+          file: file,
+          startLine: openLine0 + 1,
+          endLine: _lineOfOffset(text, closeOffset) + 1,
+          replacement: _sliceLines(
+            newText,
+            openLine0,
+            _lineOfOffset(newText, newClose),
+          ),
+          reason: 'host-spliced enum case (structural pack $executableId)',
+        ),
+      ],
+    );
+  }
+
+  static bool _asBool(Object? v) =>
+      v == true || (v is String && v.toLowerCase() == 'true');
+
+  static bool _isIdentifier(String s) =>
+      RegExp(r'^[A-Za-z_$][A-Za-z0-9_$]*$').hasMatch(s);
+
+  static int _lineStartOffset(String text, int line0) {
+    var off = 0;
+    for (var i = 0; i < line0; i++) {
+      final next = text.indexOf('\n', off);
+      if (next < 0) return off;
+      off = next + 1;
+    }
+    return off;
+  }
+
+  static int _lineOfOffset(String text, int offset) =>
+      '\n'.allMatches(text.substring(0, offset)).length;
+
+  static String _sliceLines(String text, int a0, int b0) =>
+      text.split('\n').sublist(a0, b0 + 1).join('\n');
+
+  /// Indentation of the first content line of a splice region (the
+  /// adjacent line the new entry aligns with).
+  static String _regionIndent(String region) {
+    for (final line in region.split('\n')) {
+      if (line.trim().isEmpty) continue;
+      return RegExp(r'^\s*').firstMatch(line)!.group(0)!;
+    }
+    return '';
+  }
+
+  /// Appends [fragment] as the last entry of a delimited region (the
+  /// text between the region's open and close chars, exclusive).
+  /// Byte-precise: single-line regions splice inline; multi-line
+  /// regions splice as a new line aligned with the region's own
+  /// indentation, REPAIRING a missing trailing comma on the adjacent
+  /// line — the same adjacent-line repair language the yaml keypath
+  /// splice uses.
+  static String _appendToRegion(String region, String fragment) {
+    final head = region.trimRight();
+    final tail = region.substring(head.length);
+    if (!region.contains('\n')) {
+      if (head.trim().isEmpty) {
+        return tail.contains('\n') ? '$head$fragment$tail' : fragment;
+      }
+      final sep = head.endsWith(',') ? ' ' : ', ';
+      return '$head$sep$fragment$tail';
+    }
+    final base = head.trim().isEmpty
+        ? ''
+        : head.endsWith(',')
+        ? head
+        : '$head,';
+    return '$base\n${_regionIndent(region)}$fragment,$tail';
+  }
+
+  /// The first `;` at bracket depth 0 in [from]..[to) — strings
+  /// respected. For enum bodies the first top-level `;` IS the constants
+  /// terminator (members always follow it).
+  static int? _firstTopLevelSemicolon(String text, int from, int to) {
+    var depth = 0;
+    var inStr = false;
+    var strCh = '';
+    for (var i = from; i < to; i++) {
+      final c = text[i];
+      if (inStr) {
+        if (c == r'\') {
+          i++;
+        } else if (c == strCh) {
+          inStr = false;
+        }
+        continue;
+      }
+      if (c == "'" || c == '"') {
+        inStr = true;
+        strCh = c;
+        continue;
+      }
+      if (c == '(' || c == '[' || c == '{') {
+        depth++;
+      } else if (c == ')' || c == ']' || c == '}') {
+        depth--;
+      } else if (c == ';' && depth == 0) {
+        return i;
+      }
+    }
+    return null;
   }
 
   // -------------------------------------------------------------------------
@@ -1658,7 +2201,8 @@ ToolDef editSymbolTool(
         '(host compiles the chain; the member MUST have suite coverage), '
         'insert_member {symbolId, name, returns, params:[name:type], '
         'opChain} (symbolId is the HOST CLASS), apply_executable '
-        '{symbolId, executableId, params} (pack-fed). Doc sections '
+        '{symbolId, executableId, params} (pack-fed; the pack declares '
+        'its spec — bounces teach it). Doc sections '
         '(sec_…, md): replace_section | insert_section | '
         'append_to_section {symbolId, body: prose-as-data}. Config keys '
         '(key_…, yaml/json): set_key | replace_value | delete_key | '
@@ -1734,6 +2278,10 @@ ToolDef editSymbolTool(
               properties: () => [
                 FM.prop('newName', FM.string(), optional: true),
                 FM.prop('scope', FM.string(), optional: true),
+                // ADR 0030 convergence: executableParams is a free map —
+                // the pack's spec data (structural kinds included) is
+                // taught by the pack registry + named bounces, never by
+                // flat per-kind schema props.
               ],
             ),
             optional: true,

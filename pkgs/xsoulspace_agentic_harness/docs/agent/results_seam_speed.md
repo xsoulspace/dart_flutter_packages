@@ -65,7 +65,7 @@ observation; the scripted B rows are repeatable via
 | A — `harness_locate` (stale wrapper) | mover-graded task | 194,114 ms / 194,122 ms | `mover_refusal` (no read performed) |
 | A — `harness_edit` probe (stale wrapper) | mover-graded task | 183,302 ms | zero moves (verify burned 8,999 ms) |
 | B — `harness_meaning_program` (one tool) | mechanical read directive | < 100 ms gate (unit-metered; 2026-09-06 rows: 34–54 ms warm) | read + cursor returned |
-| B — this very section | `harness_edit` insert_section through the md binding | mechanical (scripted probe; wall printed in the probe log) | the row landed THROUGH the surface |
+| B — this very section | `harness_edit` insert_section through the md binding | mechanical splice; probe wall 41,555 ms incl. the in-materializer verify convention | the row landed THROUGH the surface |
 
 ≈ 2,000× wall delta on reads; the edit path stops re-composing (and
 refusing) what should be mechanical. Gap rows closed in

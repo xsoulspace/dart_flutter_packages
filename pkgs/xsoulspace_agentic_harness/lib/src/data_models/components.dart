@@ -427,3 +427,53 @@ class GoalAttemptsExhausted implements Component {
   const GoalAttemptsExhausted(this.reason);
   final String reason;
 }
+
+// ─────────────────────────────────────────────────────────────
+// Actor topology + step claiming (ADR 0009 Amendment §3, worker-gradient
+// rung 2). APPENDED AT THE VERY END of this file AND of AgentPlugin.install:
+// ecsly assigns component ids in registration order and HOSTS register
+// components AFTER this plugin (registerExperimentComponents) — a mid-chain
+// insert shifts ids → archetype column corruption. Append-only, always.
+// ─────────────────────────────────────────────────────────────
+
+/// One registered actor of the topology, AS GRAPH DATA (not a loop, not a
+/// coordinator): spawned by `registerActorTopology` (decisions/
+/// actor_topology.dart) from a validated `ActorTopologySpec`.
+///
+/// [role] is declared data; the MECHANICAL CLASS is the `role ==
+/// 'mechanical'` declaration — a zero-token actor that may work CONSENTED
+/// ready steps while the model actor works (deny-by-default consent, see
+/// mechanical_actor.dart). A mechanical actor MUST carry [budget] == 0
+/// (validation enforces the zero-token law as named data).
+///
+/// [tier] is the actor's model tier (data for tier routing — the frontier
+/// projects steps a resolver cannot resolve as tier-routed).
+/// [toolRegistry] names the registry this actor may act through, resolved
+/// against `ToolRegistryResource` at registration time.
+class TopologyActor implements Component {
+  const TopologyActor({
+    required this.id,
+    required this.role,
+    required this.tier,
+    this.budget = 0,
+    this.toolRegistry,
+  });
+  final String id;
+  final String role;
+  final String tier;
+  final int budget;
+  final String? toolRegistry;
+}
+
+/// Claimant link on a plan step: WHICH topology actor holds the claim.
+///
+/// Coordination law (no coordinator subsystem — ADR 0009's no-planner
+/// clause applies to multi-actor): claims + locks + loud bounces cover
+/// disjoint work. Open step + verified dependencies + no claimant →
+/// claimable by a registered topology actor; a SECOND claim BOUNCES LOUDLY
+/// (named reason carrying the current claimant — `step_already_claimed`),
+/// never silently merges. Release/steal is NOT built (named non-claim).
+class StepClaimant implements Component {
+  const StepClaimant(this.actor);
+  final Entity actor;
+}

@@ -145,6 +145,29 @@ void resolveToolTask(
   }
 }
 
+/// ADDITIVE (the deferred-task law, item 3): the multi-requester variant of
+/// [resolveToolTask]. ONE registered task completes, and EVERY requesting
+/// actor gets the completion [ToolResultEvent] so the scheduled
+/// [processToolResultsSystem] lands a verification beat per actor's thread
+/// and re-opens each actor via the ToolResultPendingMarker continuation —
+/// the exact fan-out a JOINED pooled verify needs (one task runs, BOTH
+/// actors get the completion beat). Interactive (single-requester) tool
+/// calls keep using [resolveToolTask] unchanged.
+void resolveToolTaskForRequesters(
+  World world,
+  TaskRegistryResource taskRegistry,
+  TaskId taskId,
+  ToolExecutionResult result,
+  Iterable<Entity> requesters,
+) {
+  for (final requester in requesters) {
+    world.events.writer<ToolResultEvent>().send(
+          ToolResultEvent(actorEntity: requester, result: result),
+        );
+  }
+  resolveToolTask(world, taskRegistry, taskId, result);
+}
+
 /// System 6: Process tool results from [ToolResultEvent]s.
 ///
 /// Reads [ToolResultEvent]s and stores them as Beat entities.

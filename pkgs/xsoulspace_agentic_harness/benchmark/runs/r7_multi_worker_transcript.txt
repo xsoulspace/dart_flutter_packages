@@ -1,0 +1,35 @@
+[2026-09-08T22:48:41.001Z] === rung-1 multi-worker gate (SCRIPTED) ===
+[2026-09-08T22:48:47.019Z] fixture workspace: /var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/r7_multi_worker_A1b9gp
+[2026-09-08T22:48:47.019Z] daemon spawn: dart run bin/harnessd.dart --scripted --profile meaning --workspace /var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/r7_multi_worker_A1b9gp (JIT dart run)
+[2026-09-08T22:48:47.063Z] [harnessd] Running build hooks...
+[2026-09-08T22:48:49.176Z] [harnessd] Running build hooks...
+[2026-09-08T22:48:51.244Z] [harnessd] [harnessd] starting (backend apple_foundation_afm, profile meaning, scripted mover, workspace /var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/r7_multi_worker_A1b9gp) — ACP v1 over stdio + unix socket
+[2026-09-08T22:48:51.250Z] [harnessd] [harnessd] socket listening: /tmp/harnessd-6e9df0c1c2df.sock (pointer /var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/r7_multi_worker_A1b9gp/.dart_tool/harnessd/harnessd.sock)
+[2026-09-08T22:48:51.261Z] socket pointer: /var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/r7_multi_worker_A1b9gp/.dart_tool/harnessd/harnessd.sock → /tmp/harnessd-6e9df0c1c2df.sock
+[2026-09-08T22:48:51.262Z] [harnessd] [harnessd] client attached over socket
+[2026-09-08T22:48:51.287Z] worker A: session=sess_1 (attached over the daemon socket)
+[2026-09-08T22:48:51.325Z] [harnessd] [xs_fm] debug tracing enabled
+[2026-09-08T22:48:51.401Z] worker A: [scan] → stop=end_turn
+[2026-09-08T22:48:51.402Z] [harnessd] [harnessd] client attached over socket
+[2026-09-08T22:48:51.402Z] worker B: session=sess_1 (attach startup: 0 ms)
+[2026-09-08T22:48:51.410Z] worker A: locate+zoom Box → stop=end_turn
+[2026-09-08T22:48:51.410Z] worker A: Box id=sym_lib_geometry.dart_Box (read from the cut, never guessed)
+[2026-09-08T22:48:51.412Z] worker B: locate+zoom Speaker (warm tree, zero re-scan) → stop=end_turn
+[2026-09-08T22:48:51.413Z] worker B: Speaker id=sym_lib_text_ops.dart_Speaker
+[2026-09-08T22:48:57.711Z] worker A: harness_edit insert_member doubled → stop=end_turn text="delegated: \"harness_edit {\"action\":\"insert_member\",\"symbolId\":\"sym_lib_geometry.dart_Box\",\"name\":\"doubled\",\"returns\":\"int\",\"params\":[\"f:int\"],\"opChain\":[{\"label\":\"load_arg\",\"a\":\"f\"},{\"label\":\"literal\""
+[2026-09-08T22:48:59.954Z] worker B: harness_edit insert_member louder → stop=end_turn text="delegated: \"harness_edit {\"action\":\"insert_member\",\"symbolId\":\"sym_lib_text_ops.dart_Speaker\",\"name\":\"louder\",\"returns\":\"int\",\"params\":[\"n:int\"],\"opChain\":[{\"label\":\"load_arg\",\"a\":\"n\"},{\"label\":\"liter"
+[2026-09-08T22:49:00.516Z] worker A: harness_run dart test → stop=end_turn text="\n[run] {\"ok\":true,\"exit_code\":0,\"stdout\":\"00:00 +0: loading test/geometry_test.dart\\n00:00 +0: test/geometry_test.dart: area\\n00:00 +1: test/text_ops_test.dart: shout\\n00:00 +2: All tes…\",\"stderr\":\"\"}\n\n[run path] mechanical, allowlist-gated — no task, no grade (ADR 0027 amendment); wall 548 ms\n"
+[2026-09-08T22:49:00.516Z] daemon spawn: dart run bin/harnessd.dart --scripted --profile meaning --workspace /var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/r7_multi_worker_A1b9gp (JIT dart run)
+[2026-09-08T22:49:00.518Z] [harnessd] [harnessd] socket client detached
+[2026-09-08T22:49:00.519Z] [harnessd] [harnessd] socket client detached
+[2026-09-08T22:49:00.561Z] [harnessd] Running build hooks...
+[2026-09-08T22:49:00.638Z] [harnessd] Running build hooks...
+[2026-09-08T22:49:02.919Z] [harnessd] [harnessd] REFUSED: a daemon is already running for workspace /var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/r7_multi_worker_A1b9gp (single-instance is mandatory — two daemons = two worlds = single-writer broken). Connect to the running one (/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/r7_multi_worker_A1b9gp/.dart_tool/harnessd/harnessd.sock).
+[2026-09-08T22:49:02.925Z] second daemon exit code: 2
+[2026-09-08T22:49:02.926Z] [post] worker A: lib/geometry.dart carries ["int doubled(int f)","return (f * 2);"]
+[2026-09-08T22:49:02.926Z] [post] worker B: lib/text_ops.dart carries ["int louder(int n)","return (n * 3);"]
+[2026-09-08T22:49:03.439Z] [post] dart test exit=0
+00:00 +1: test/text_ops_test.dart: shout
+00:00 +2: All tests passed!
+
+[2026-09-08T22:49:03.439Z] === VERDICT: PASS (rung 1: two workers as extension clients of ONE per-workspace daemon — warm attach, per-workspace session keying, disjoint edits landed through the mechanical surface, single-instance enforced, package suite green) ===

@@ -61,7 +61,8 @@ import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart'
     show FM, SchemaBundle, ToolDef, ToolName;
 
 import 'file_class_spec.dart' show MappedSubNode, fileClassOf;
-import 'materializer_binding.dart' show NodeEditRequest;
+import 'materializer_binding.dart'
+    show NodeEditRequest, fileCreationAction;
 
 // ---------------------------------------------------------------------------
 // The map half — the ONE keypath parser (fs tier's map builder + this
@@ -712,6 +713,7 @@ class KeypathEditOutcome {
     this.repair,
     this.hints = const [],
     this.changes = const [],
+    this.created = false,
   });
   final bool ok;
 
@@ -729,12 +731,17 @@ class KeypathEditOutcome {
   final List<String> hints;
   final List<SemanticChange> changes;
 
+  /// True when this move CREATED the file (a failed creation reverts to
+  /// absence — the file is removed, never left half-written).
+  final bool created;
+
   bool get appliedClean => ok && !reverted;
 
   Map<String, dynamic> toJson() => {
         'ok': ok,
         'reverted': reverted,
         if (bounce) 'bounce': true,
+        if (created) 'created': true,
         'op': op,
         'path': path,
         if (anchor.isNotEmpty) 'anchor': anchor,
@@ -772,6 +779,7 @@ class KeypathMaterializer {
     'replace_value',
     'delete_key',
     'append_list_item',
+    fileCreationAction,
   };
 
   KeypathEditPlan plan({
@@ -813,7 +821,21 @@ class KeypathMaterializer {
     }
     final isJson = fc == 'json';
     final f = File(abs);
-    if (!f.existsSync()) {
+    // CREATION (build order item 7 — the binding's fileCreation
+    // capability): the file must NOT exist (creation never overwrites —
+    // the router bounces the same class before the materializer runs);
+    // every other op edits EXISTING bytes.
+    final isCreate = op == fileCreationAction;
+    if (isCreate && f.existsSync()) {
+      throw KeypathEditBounce(
+        'file already exists: $path',
+        'creation never overwrites — edit the document through its '
+            "keypath actions (the file node's edit_actions prop lists "
+            'them)',
+        'file_exists',
+      );
+    }
+    if (!isCreate && !f.existsSync()) {
       throw KeypathEditBounce(
         'file not found: $path',
         'zoom the tree (a meaning_program zoom op) for existing files; a NEW file lands '
@@ -866,6 +888,25 @@ class KeypathMaterializer {
             'or set_key with an empty body to set null',
         'invalid_body',
       );
+    }
+    if (op == fileCreationAction) {
+      // CREATION (build order item 7 — the binding's fileCreation
+      // capability): the anchor is the class's declared creation currency
+      // minus the file path (the router splits `path#keypath` and passes
+      // the keypath part) — '' creates the empty map document; a keypath
+      // renders the nested key lines with body as the leaf scalar value.
+      if (multiline) {
+        throw KeypathEditBounce(
+          '$fileCreationAction takes a single-line scalar value for the '
+              'first key; a ${body.split('\n').length}-line fragment was '
+              'supplied',
+          'create the file empty (or with one scalar key), then set_key '
+              'the fragment — one verified move per step',
+          'invalid_body',
+        );
+      }
+      return _planCreateDocument(
+          path, isJson, anchor ?? '', body);
     }
 
     final content = f.readAsStringSync();
@@ -1388,6 +1429,44 @@ class KeypathMaterializer {
     );
   }
 
+  // -- creation (build order item 7 — the fileCreation capability) ------
+
+  /// CREATION PLAN: the file does not exist; the rendered document is the
+  /// emitter's exact output. The parent directory must exist (the router
+  /// addresses the DIR node — a stale tree bounces, never auto-mkdirs:
+  /// the dir node IS the meaning handle).
+  KeypathEditPlan _planCreateDocument(
+    String path,
+    bool isJson,
+    String keypath,
+    String body,
+  ) {
+    if (keypath.isNotEmpty) _validateCreationKeypath(keypath);
+    final dirRel = _parentDirOf(path);
+    if (dirRel.isNotEmpty &&
+        !Directory('${root.rootPath}/$dirRel').existsSync()) {
+      throw KeypathEditBounce(
+        'directory "$dirRel" does not exist on disk (the tree is stale?)',
+        'rescan (repo_etl scan), then re-send the move',
+        'parent_dir_missing',
+      );
+    }
+    final content = _renderNewDocument(isJson, keypath, body);
+    return KeypathEditPlan(
+      path: path,
+      op: fileCreationAction,
+      isJson: isJson,
+      anchorKeypath: keypath,
+      body: body,
+      target: null,
+      content: content,
+      keepStart: 0,
+      keepEnd: 0,
+      description: '$fileCreationAction $path'
+          '${keypath.isEmpty ? '' : ' (first key $keypath)'}',
+    );
+  }
+
   int _offsetAfterCommaFix(
       List<String> lines, List<int> offsets, int closerLine) {
     // The comma fix touches the last element line BEFORE the closer; keep
@@ -1443,6 +1522,7 @@ class KeypathMaterializer {
   // -- apply: atomic write + parse_semantic_diff + auto-revert ---------------
 
   KeypathEditOutcome apply(KeypathEditPlan plan) {
+    if (plan.op == fileCreationAction) return _applyCreateDocument(plan);
     final rel = plan.path;
     if (!locks.claim(rel, owner)) {
       final holder = locks.ownerOf(rel);
@@ -1636,6 +1716,94 @@ class KeypathMaterializer {
     return keypath.substring(0, end);
   }
 
+  /// CREATION apply (build order item 7): write the created bytes, parse
+  /// with the REAL parser, and require the result to deep-equal the
+  /// intended document — any violation REMOVES the file (revert to
+  /// absence; the file did not exist before the move).
+  KeypathEditOutcome _applyCreateDocument(KeypathEditPlan plan) {
+    final rel = plan.path;
+    if (!locks.claim(rel, owner)) {
+      final holder = locks.ownerOf(rel);
+      return KeypathEditOutcome(
+        ok: false,
+        reverted: false,
+        op: plan.op,
+        path: rel,
+        anchor: plan.anchorKeypath,
+        detail: 'lock conflict on $rel (held by $holder) — the move '
+            'claimed no bytes',
+        failureClass: 'lock_conflict',
+      );
+    }
+    try {
+      final f = File(root.resolve(rel));
+      if (f.existsSync()) {
+        return KeypathEditOutcome(
+          ok: false,
+          reverted: false,
+          op: plan.op,
+          path: rel,
+          anchor: plan.anchorKeypath,
+          detail: 'file already exists: $rel — creation never overwrites',
+          failureClass: 'file_exists',
+        );
+      }
+      f.writeAsStringSync(plan.content, flush: true);
+      Object? after;
+      try {
+        after = keypathParse(plan.content, isJson: plan.isJson);
+      } on Object catch (e) {
+        _unlinkQuietly(f);
+        return KeypathEditOutcome(
+          ok: false,
+          reverted: true,
+          op: plan.op,
+          path: rel,
+          anchor: plan.anchorKeypath,
+          detail: 'parse_semantic_diff FAILED after ${plan.description}: '
+              'the created document does not parse '
+              '(${plan.isJson ? "jsonDecode" : "yaml"}: ${_oneLine(e)}) — '
+              'the created file was REMOVED (revert to absence)',
+          failureClass: 'parse_failed',
+        );
+      }
+      // THE NAMED ORACLE — the created parse tree must be EXACTLY the
+      // intended first document (the keypath = value at the anchor, or
+      // the empty map document), nothing else.
+      final expected =
+          _createdDocumentValue(plan.isJson, plan.anchorKeypath, plan.body);
+      if (!_deepEq(after, expected)) {
+        _unlinkQuietly(f);
+        return KeypathEditOutcome(
+          ok: false,
+          reverted: true,
+          op: plan.op,
+          path: rel,
+          anchor: plan.anchorKeypath,
+          detail: 'parse_semantic_diff FAILED after ${plan.description}: '
+              'the created document is not exactly the intended one — '
+              'the created file was REMOVED (revert to absence)',
+          failureClass: 'semantic_diff_mismatch',
+          changes: semanticDiff(expected, after),
+        );
+      }
+      return KeypathEditOutcome(
+        ok: true,
+        reverted: false,
+        created: true,
+        op: plan.op,
+        path: rel,
+        anchor: plan.anchorKeypath,
+        detail: '${plan.description} — created byte-precise '
+            '(${plan.content.length} bytes); parse_semantic_diff green '
+            '(exactly the intended first document). The tree re-derives '
+            'the file node + keypath map on the next tick.',
+      );
+    } finally {
+      locks.release(rel, owner);
+    }
+  }
+
   /// One move, plan + apply. Bounces surface as the outcome's structured
   /// detail (the non-throwing shape the tool layer prefers).
   KeypathEditOutcome perform({
@@ -1711,6 +1879,101 @@ ToolDef editKeyTool(
       return outcome.toJson();
     },
   );
+}
+
+// -- creation helpers (build order item 7, the fileCreation capability) ----
+
+/// The parent directory of a workspace-relative rel ('' = root).
+String _parentDirOf(String rel) {
+  final slash = rel.lastIndexOf('/');
+  return slash < 0 ? '' : rel.substring(0, slash);
+}
+
+/// The creation keypath currency: dot-separated bare keys (letters,
+/// digits, underscore, hyphen). Brackets/spaces/colons are NOT creation
+/// currency in v1 — create the file, then set_key/append_list_item —
+/// and every foreign shape bounces NAMED before any byte.
+void _validateCreationKeypath(String keypath) {
+  for (final seg in keypath.split('.')) {
+    if (!RegExp(r'^[A-Za-z_][\w\-]*$').hasMatch(seg)) {
+      throw KeypathEditBounce(
+        'invalid creation keypath "$keypath": segment "$seg" is not a '
+            'bare key',
+        'the creation keypath is dot-separated bare keys (the keypath '
+            'currency); create the file, then set_key/append_list_item '
+            'for brackets, quotes or exotic keys',
+        'invalid_anchor',
+      );
+    }
+  }
+}
+
+/// The CREATION EMITTER: the created document's exact bytes — an empty
+/// map document (no keypath: `{}` for json, the empty document for yaml)
+/// or the nested key lines with [body] as the leaf scalar (2-space
+/// nesting; single-line values only — plan validates).
+String _renderNewDocument(bool isJson, String keypath, String body) {
+  if (keypath.isEmpty) return isJson ? '{}\n' : '';
+  final segs = keypath.split('.');
+  if (isJson) {
+    final buf = <String>['{'];
+    for (var i = 0; i < segs.length - 1; i++) {
+      buf.add('${' ' * (2 * (i + 1))}"${_jsonKeyText(segs[i])}": {');
+    }
+    final leafIndent = ' ' * (2 * segs.length);
+    final value = body.trim().isEmpty ? 'null' : _jsonValueLiteral(body);
+    buf.add('$leafIndent"${_jsonKeyText(segs.last)}": $value');
+    for (var i = segs.length - 1; i >= 1; i--) {
+      buf.add('${' ' * (2 * i)}}');
+    }
+    buf.add('}');
+    return '${buf.join('\n')}\n';
+  }
+  final buf = <String>[
+    for (var i = 0; i < segs.length - 1; i++)
+      '${' ' * (2 * i)}${segs[i]}:',
+  ];
+  final leafIndent = ' ' * (2 * (segs.length - 1));
+  buf.add(body.trim().isEmpty
+      ? '$leafIndent${segs.last}:'
+      : '$leafIndent${segs.last}: ${body.trim()}');
+  return '${buf.join('\n')}\n';
+}
+
+/// The intended parse tree of a created document — the creation oracle's
+/// expectation (deep-equal to the post-write parse, nothing else). The
+/// leaf is the emitter's own literal re-parsed, so the expectation and
+/// the bytes can never disagree.
+Object? _createdDocumentValue(bool isJson, String keypath, String body) {
+  if (keypath.isEmpty) return isJson ? <String, dynamic>{} : null;
+  Object? leaf;
+  final raw = body.trim();
+  if (raw.isNotEmpty) {
+    if (isJson) {
+      leaf = jsonDecode(_jsonValueLiteral(raw));
+    } else {
+      try {
+        leaf = _plain(loadYaml(raw));
+        // ignore: avoid_catching_errors
+      } on Object {
+        leaf = raw; // plain scalar fallback — the parse oracle decides
+      }
+    }
+  }
+  for (final seg in keypath.split('.').reversed) {
+    leaf = {seg: leaf};
+  }
+  return leaf;
+}
+
+/// Revert-to-absence for failed creations: remove the half-landed file;
+/// a missing file is already the reverted state (never throws).
+void _unlinkQuietly(File f) {
+  try {
+    if (f.existsSync()) f.deleteSync();
+  } on FileSystemException {
+    // best effort — the outcome already reports the failure
+  }
 }
 
 // -- pure line/offset helpers (plan-time splice arithmetic) -----------------

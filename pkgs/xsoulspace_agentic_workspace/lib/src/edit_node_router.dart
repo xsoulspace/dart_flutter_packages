@@ -35,8 +35,10 @@ import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart'
     show MeaningIndex, MeaningNode, MeaningProps, meaningComponentOf;
 
+import 'file_class_spec.dart' show fileClassOf;
+import 'fs_etl.dart' show FsFileScan, FsScan, buildFsTier;
 import 'materializer_binding.dart'
-    show NodeEditRequest, materializerRegistry;
+    show NodeEditRequest, fileCreationAction, materializerRegistry;
 
 /// A named edit bounce (mirrors [SpanEditBounce]'s contract: reason +
 /// repair hint, navigable, never silent).
@@ -133,6 +135,25 @@ Future<Map<String, dynamic>> routeNodeEdit({
           'currency for the creation anchor.',
     );
   }
+  // BUILD ORDER ITEM 7 — whole-FILE creation is a BINDING capability,
+  // addressed at a DIR node (the parent in the map-graph): the file
+  // node + content sub-nodes project from the binding, the path from
+  // the anchor. No raw file_bootstrap verb, no jail escape, no raw
+  // write fallback — a binding without the declared capability has NO
+  // creation route (the bounce names the binding + the field).
+  if (node.kind == 'dir' || action == fileCreationAction) {
+    return _routeFileCreation(
+      world: world,
+      workspace: workspace,
+      fsRoot: fsRoot,
+      scope: node,
+      action: action,
+      anchor: anchor,
+      body: body,
+      locks: locks,
+      owner: owner,
+    );
+  }
   final fileClass = node.fileClass;
   final binding = materializerRegistry.bindingFor(fileClass);
   if (binding == null || binding.actions.isEmpty) {
@@ -180,4 +201,181 @@ Future<Map<String, dynamic>> routeNodeEdit({
       body: body,
     ),
   );
+}
+
+/// FILE-CREATION routing (build order item 7 — the binding-declared
+/// [FileCreation] capability). Creation is addressed at a DIR node (the
+/// parent in the map-graph); the anchor names the new file
+/// (workspace-relative) so the path PROJECTS from meaning — the jail
+/// never sees a model-named absolute path, and there is no raw write
+/// fallback: the class's binding materializer produces the bytes, the
+/// named oracle gates them, and the tree re-derives the file node +
+/// content sub-nodes through the SAME buildFsTier the tick runs
+/// (mechanical, zero model tokens).
+///
+/// Every miss bounces NAMED (ADR 0035 §5, mechanism-first — the class
+/// name below interpolates the registry-resolved class prop, never a
+/// format literal): missing/escaping anchor, dir-scope mismatch,
+/// existing file, unregistered class, and — the honesty law — a binding
+/// that does not DECLARE the creation capability (the repair names the
+/// binding and the exact field to register).
+Future<Map<String, dynamic>> _routeFileCreation({
+  required World world,
+  required Directory workspace,
+  required FsToolsRoot fsRoot,
+  required ResolvedNode scope,
+  required String action,
+  required String? anchor,
+  required String? body,
+  required FileLockTable? locks,
+  required Object owner,
+}) async {
+  if (action != fileCreationAction) {
+    throw NodeEditBounce(
+      'dir nodes hold no content to edit',
+      'documents are edited through their file/section/key nodes; to '
+          'CREATE one in this directory, action "$fileCreationAction" '
+          'with this dir node as symbolId and the new file path as the '
+          'anchor',
+    );
+  }
+  if (scope.kind != 'dir') {
+    throw NodeEditBounce(
+      'file creation addresses the DIR node, not a ${scope.kind} node',
+      'zoom the parent directory of the new document and re-send with '
+          'the dir node id as symbolId — the created file node + content '
+          'sub-nodes contain under it',
+    );
+  }
+  // The creation anchor: `newFilePath` or `newFilePath#firstKeypath`
+  // (the suffix is lawful only when the binding's declared currency
+  // carries it). The router splits it; the binding owns the currency.
+  final raw = (anchor ?? '').trim();
+  final hash = raw.indexOf('#');
+  final rel = (hash < 0 ? raw : raw.substring(0, hash)).trim();
+  final keypath = hash < 0 ? '' : raw.substring(hash + 1).trim();
+  if (rel.isEmpty) {
+    throw NodeEditBounce(
+      'missing creation anchor (the new file path)',
+      "re-send with anchor as the new document's workspace-relative "
+          'path — the file node + content project from the binding; a '
+          '"#keypath" suffix sets the first key for keypath-currency '
+          "classes (the binding's fileCreation.anchorCurrency declares "
+          'the exact form)',
+    );
+  }
+  final String abs;
+  try {
+    abs = fsRoot.resolve(rel);
+    // ignore: avoid_catching_errors
+  } on ArgumentError {
+    throw NodeEditBounce(
+      'path escapes the workspace jail: $rel',
+      'use a workspace-relative path (no .., no absolute) — the created '
+          'file node lives under the addressed dir node',
+    );
+  }
+  final dirRel = _dirOf(rel);
+  if (scope.path.isEmpty || dirRel != scope.path) {
+    throw NodeEditBounce(
+      'dir node ${scope.id} scopes '
+          '"${scope.path.isEmpty ? "." : scope.path}" — the anchor '
+          'resolves to "$dirRel"',
+      "re-send with the dir node whose path prop is the anchor's "
+          'directory (zoom the parent directory)',
+    );
+  }
+  final fileClass = fileClassOf(rel);
+  final binding = materializerRegistry.bindingFor(fileClass);
+  if (binding == null) {
+    throw NodeEditBounce(
+      'class "$fileClass" has no registered binding — file creation is '
+          'a binding capability, never a raw write',
+      'register a FileClassSpec + a MaterializerBinding (with a named '
+          'oracle) in the materializer registry; until then this class '
+          'has NO creation route (ADR 0024 §6, ADR 0035 §1/§3)',
+    );
+  }
+  final creation = binding.fileCreation;
+  if (creation == null || creation.action != action) {
+    throw NodeEditBounce(
+      'binding "$fileClass" does not declare file creation '
+          '(no MaterializerBinding.fileCreation capability)',
+      'register the creation capability on THIS binding in '
+          'materializer_binding.dart: fileCreation: FileCreation(action: '
+          '"$fileCreationAction", anchorCurrency: <the class\'s '
+          'creation anchor currency>) — creation is declared binding '
+          'data, never a per-format verb and never a raw write',
+    );
+  }
+  if (keypath.isNotEmpty && !creation.anchorCurrency.contains('#keypath')) {
+    throw NodeEditBounce(
+      'the "$fileClass" creation anchor currency is '
+          '"${creation.anchorCurrency}" — no "#keypath" suffix',
+      're-send anchor as the bare new-file path; the initial content '
+          'rides body whole',
+    );
+  }
+  if (File(abs).existsSync()) {
+    throw NodeEditBounce(
+      'file already exists: $rel',
+      'creation never overwrites — edit it through its class actions '
+          "(the file node's edit_actions prop lists them)",
+    );
+  }
+  final parentDir = Directory(
+    dirRel == '.' ? workspace.path : '${workspace.path}/$dirRel',
+  );
+  if (!parentDir.existsSync()) {
+    throw NodeEditBounce(
+      'directory "$dirRel" does not exist on disk (the tree is stale?)',
+      'rescan the workspace (repo_etl scan), then re-send — the dir '
+          'node must exist both in the tree and on disk',
+    );
+  }
+  final outcome = binding.materializer(
+    NodeEditRequest(
+      root: fsRoot,
+      locks: locks,
+      owner: owner,
+      path: rel,
+      action: action,
+      anchor: keypath,
+      body: body,
+    ),
+  );
+  if (outcome['ok'] != true) return outcome;
+  // TREE RECONCILE — creation lands MEANING: the file node + content
+  // sub-nodes appear in the map-graph through the SAME buildFsTier the
+  // refresh tick runs (mechanical, zero model tokens; the dir node and
+  // its contains edge already exist — the scope check proved it).
+  final stat = File(abs).statSync();
+  buildFsTier(
+    world,
+    workspace,
+    scan: FsScan(
+      dirs: const [],
+      files: [
+        FsFileScan(
+          rel: rel,
+          dir: dirRel,
+          fileClass: fileClass,
+          ext: rel.contains('.') ? rel.split('.').last.toLowerCase() : '',
+          bytes: stat.size,
+          modified: stat.modified,
+        ),
+      ],
+    ),
+  );
+  return {
+    ...outcome,
+    'file_node': 'f_${rel.replaceAll('/', '_')}',
+  };
+}
+
+/// The parent directory of a workspace-relative rel ('.' = root) — the
+/// same convention the fs tier stamps into the nodes' path props.
+String _dirOf(String rel) {
+  final slash = rel.lastIndexOf('/');
+  return slash < 0 ? '.' : rel.substring(0, slash);
 }

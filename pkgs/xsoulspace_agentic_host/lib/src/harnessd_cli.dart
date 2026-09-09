@@ -57,8 +57,11 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:dart_acp_toolkit/dart_acp_toolkit.dart';
+import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart'
+    show EnvConfig;
 
 import 'harness_acp_backend.dart';
+import 'session_tier.dart';
 
 /// Runs the `harnessd` daemon (ACP v1 over stdio, plus a unix socket in
 /// workspace mode). [bindings] are the backends the composition root
@@ -111,6 +114,51 @@ Future<void> runHarnessdCli(
       (bindings.containsKey('apple_foundation_afm')
           ? 'apple_foundation_afm'
           : bindings.keys.firstOrNull ?? 'open_router');
+
+  // Session-actor tier contract (build order item 1): the actor declares
+  // its tier ONCE per session — HERE, at daemon start, before any
+  // session/new. A tier is a READING property (budgets), never a DOING
+  // property: consent and the closed op set are orthogonal. Resolution
+  // derives from the ADR 0033 equation (DerivedContextLimits.resolve — one
+  // truth) and throws a NAMED error on a malformed config value; the daemon
+  // refuses to start rather than silently degrade its budgets.
+  final EnvConfig tierConfig;
+  SessionTierProfile sessionTier;
+  try {
+    tierConfig = await EnvConfig.load(
+      localPath: workspace == null
+          ? null
+          : (EnvConfig.discoverLocalPath(start: workspace) ??
+              EnvConfig.defaultLocalPath()),
+    );
+    sessionTier = resolveSessionTier(
+      backend: resolvedBackend,
+      config: tierConfig,
+    );
+  } on Object catch (err) {
+    stderr.writeln('[harnessd] REFUSED: $err');
+    exit(2);
+  }
+  stderr.writeln(
+    '[harnessd] session tier: backend=$resolvedBackend '
+    'window=${sessionTier.windowTokens} '
+    'reserve=${sessionTier.outputReserveTokens} '
+    'nativeTruth=${sessionTier.nativeTruthFactor} '
+    'margin=${sessionTier.marginFraction} '
+    'minCut=${sessionTier.minCutTokens} '
+    'perOpRead=${sessionTier.perOpReadBudget} '
+    'verdict=${sessionTier.verdictBudget}',
+  );
+  // INTEGRATION HOOK (exact one line — for the harness_acp_backend.dart
+  // owner; that lane owns the file, so this lane only documents):
+  //   HarnessAcpBackend({ …, this.sessionTier })
+  // with the field threaded to the read world's `meaningProgramTool` as the
+  // tier-sourced default per-op read budget. Until that lane lands it, the
+  // operative tier consumers are (a) the pi extension, which declares the
+  // SAME profile in `session/new` `_meta.sessionTier` and sources the
+  // harness_meaning_program op budgets from it (both mirrors of
+  // resolveSessionTier — the derivation is data, not a layer secret), and
+  // (b) this CLI row (the once-per-session declaration + audit).
 
   // R7 production #5 — SINGLE-INSTANCE PER WORKSPACE (mandatory): an
   // exclusive lock file; a second daemon for the same workspace exits

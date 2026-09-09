@@ -14,6 +14,16 @@
 /// ADR 0035 §3 — registration-time honesty: the registry is validated at
 /// init (machine-checked, named errors); a wiring error is a startup
 /// failure, never a silent misattribution ("class has no actions").
+///
+/// FILE CREATION is a BINDING property (build order item 7): creating a
+/// file = creating meaning — a file node + content sub-nodes under its
+/// binding, the path projecting from the ADDRESSED DIR NODE. There is no
+/// raw `file_bootstrap` verb (fs-thinking relapse) and no per-format
+/// create verb: the ONE edit verb serves the declared creation action
+/// ([fileCreationAction]) when — and only when — the binding declares
+/// the [FileCreation] capability. A class whose binding does not declare
+/// it has NO creation route: the router bounces NAMING the binding and
+/// the field to register — never a silent fallback to a raw write.
 library;
 
 import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
@@ -27,6 +37,44 @@ import 'cs_materializer.dart'
     show csMapParser, csMaterializerPerform;
 import 'yaml_json_materializer.dart'
     show jsonMapParser, keypathMaterializerPerform, yamlMapParser;
+
+/// The create-file action name served through the ONE edit verb when the
+/// binding declares the [FileCreation] capability. One name for every
+/// creation-capable class (the semantics are class-agnostic: whole-file
+/// meaning creation); the class teaches its anchor currency through the
+/// capability's declared fields, never through a per-format verb.
+const fileCreationAction = 'create_document';
+
+/// The FILE-CREATION capability, declared as binding data (build order
+/// item 7): the binding declares WHETHER the class supports creation and
+/// in which anchor currency — not a per-format verb, not a raw write.
+///
+/// The router addresses creation at a DIR node (the parent in the
+/// map-graph); the anchor names the new file (workspace-relative), so
+/// the path PROJECTS from meaning and the jail never sees a model-named
+/// absolute path. The class's initial-content semantics (heading-bearing
+/// body for heading classes; empty map document + first key at the
+/// anchor keypath for keypath classes) live in the class's materializer
+/// — the capability declares the CONTRACT (action + currency), the
+/// materializer realizes it, and the registry linter keeps them honest.
+class FileCreation {
+  const FileCreation({required this.action, required this.anchorCurrency});
+
+  /// The create-file action name (one of the ONE verb's servable
+  /// actions for this class). Use [fileCreationAction].
+  final String action;
+
+  /// The creation anchor's declared currency:
+  /// - `new_file_path` — the anchor is the new file's workspace-relative
+  ///   path; the initial content rides the body whole (heading classes:
+  ///   the body must carry the initial heading structure);
+  /// - `new_file_path#keypath` — the anchor is the path plus an optional
+  ///   `#keypath` suffix; the suffix sets the FIRST key into the created
+  ///   empty map document (keypath classes), the body being its value.
+  final String anchorCurrency;
+}
+
+
 
 /// One node edit routed to a binding's materializer — the arg envelope of
 /// the proven `perform` shape (the router resolves the node and the
@@ -115,6 +163,7 @@ class MaterializerBinding {
     this.mapParser,
     this.subNodePrefix,
     this.resolveAnchor = _nodeIdAnchor,
+    this.fileCreation,
   });
 
   /// The registry key — the node's stamped `class` prop. MUST equal a
@@ -166,6 +215,11 @@ class MaterializerBinding {
 
   /// The anchor resolver (§3d).
   final AnchorResolver resolveAnchor;
+
+  /// The FILE-CREATION capability (build order item 7): null → the class
+  /// has NO creation route (the router bounces NAMING this binding and
+  /// field — never a silent raw-write fallback). Declared, never implied.
+  final FileCreation? fileCreation;
 }
 
 /// THE REGISTRY — DATA (ADR 0035 §1). One entry per file class with edit
@@ -186,6 +240,10 @@ const materializerBindings = <String, MaterializerBinding>{
     materializer: mdMaterializerPerform,
     mapParser: mdMapParser,
     subNodePrefix: 'sec_',
+    fileCreation: FileCreation(
+      action: fileCreationAction,
+      anchorCurrency: 'new_file_path',
+    ),
   ),
   'yaml': MaterializerBinding(
     fileClass: 'yaml',
@@ -200,6 +258,12 @@ const materializerBindings = <String, MaterializerBinding>{
     mapParser: yamlMapParser,
     subNodePrefix: 'key_',
     resolveAnchor: _keypathAnchor,
+    // Creation: the anchor is the new file's path; the `#keypath` suffix
+    // sets the FIRST key into the created empty map document.
+    fileCreation: FileCreation(
+      action: fileCreationAction,
+      anchorCurrency: 'new_file_path#keypath',
+    ),
   ),
   'json': MaterializerBinding(
     fileClass: 'json',
@@ -214,6 +278,12 @@ const materializerBindings = <String, MaterializerBinding>{
     mapParser: jsonMapParser,
     subNodePrefix: 'key_',
     resolveAnchor: _keypathAnchor,
+    // Creation: same keypath currency as the yaml binding — ONE shared
+    // materializer realizes BOTH classes' creation (class-routing).
+    fileCreation: FileCreation(
+      action: fileCreationAction,
+      anchorCurrency: 'new_file_path#keypath',
+    ),
   ),
   // ADR 0035 §6 — the ts family (Tier C v1): symbol map via the
   // dependency-light scanner (tsScanSymbols), member-body edits via PACK
@@ -276,6 +346,13 @@ const materializerBindings = <String, MaterializerBinding>{
 ///   currency — the ADR 0034 disposition-1 pattern as assertion.
 /// - `map_without_sub_node_prefix` (§2): a map parser without the
 ///   stale-map drop ownership (the sub-node id prefix).
+/// - `creation_without_map` (build order item 7): a creation capability
+///   without a map parser — creation promises the file node + content
+///   sub-nodes under the binding; a mapless creation would create bytes
+///   the tree cannot see.
+/// - `creation_declaration_incomplete`: a creation capability without
+///   its action name or anchor currency — an undeclared currency is the
+///   fs-shaped relapse the capability exists to prevent.
 List<String> validateMaterializerBindings(
   List<MaterializerBinding> bindings, {
   List<FileClassSpec> classes = fileClassSpecs,
@@ -332,6 +409,24 @@ List<String> validateMaterializerBindings(
         'map_without_sub_node_prefix: binding "${b.fileClass}" builds a '
         'map but owns no sub-node id prefix — stale map drops would lie '
         'about the tree (§2)',
+      );
+    }
+    final creation = b.fileCreation;
+    if (creation != null && b.mapParser == null) {
+      errors.add(
+        'creation_without_map: binding "${b.fileClass}" declares file '
+        'creation but builds no map — creation promises the file node + '
+        'content sub-nodes under its binding; register mapParser + '
+        'subNodePrefix (build order item 7)',
+      );
+    }
+    if (creation != null &&
+        (creation.action.isEmpty || creation.anchorCurrency.isEmpty)) {
+      errors.add(
+        'creation_declaration_incomplete: binding "${b.fileClass}" '
+        'declares file creation without its action name or anchor '
+        'currency — declare both (an undeclared creation currency is '
+        'the fs-shaped relapse the capability exists to prevent)',
       );
     }
   }

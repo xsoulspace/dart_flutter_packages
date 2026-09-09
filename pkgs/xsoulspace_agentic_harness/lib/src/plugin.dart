@@ -111,7 +111,12 @@ class AgentPlugin extends Plugin {
       // corruption ("Column should exist after archetype creation").
       ..registerObjectComponent<TotalRoundCount>()
       ..registerObjectComponent<AttemptCount>()
-      ..registerObjectComponent<GoalAttemptsExhausted>();
+      ..registerObjectComponent<GoalAttemptsExhausted>()
+      // Actor topology + step claiming (ADR 0009 Amendment §3) — appended
+      // at the VERY END of the chain: ids are registration-ordered and
+      // hosts register components AFTER this plugin. Never insert above.
+      ..registerObjectComponent<TopologyActor>()
+      ..registerObjectComponent<StepClaimant>();
 
     // Resources
     world

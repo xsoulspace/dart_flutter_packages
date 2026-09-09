@@ -299,3 +299,54 @@ shape but requires the call to LAND.
    does the tiny model RECOVER through class-teaching bounces? That is
    the graduation measurement for the union enum itself. If it does not
    recover, the enum splits per class (a measured surface change, ADR).
+
+---
+
+## FRONTIER-RESOLVER RUNS (2026-09-08, repair (a) landed — the pre-pass fork retired into the resolver)
+
+Driver state: `taskGrammarPrepass` retired INTO `resolveTaskPrompt` (the ONE
+frontier resolver: grammar verbs → prompt-named anchors (md sections / yaml
+keypaths / backticked symbol+executable) → total-or-bounce with REAL
+candidate ids; the resolved step lands as graph data via `spawnResolvedStep`).
+The J8.1 pump fix landed (verdict consumption + continuation exhaustion gate
++ one-truth AttemptCount). The wave-log classifier ran mechanically on every
+row (the `class_split` fields below are its output, zero agent bash). The
+`--dry` pre-flight asserts all four row prompts resolve Ready with exact ids
+over the real jail trees. Rows run pass@1, attempts budget 1.
+
+| row | verdict | decisions | tokens | wall | class split (analyzer) |
+|---|---|---|---|---|---|
+| task_grammar | **PASS 1/1** (4th) | **2** | **4,246** | 28.5 s | clean run block |
+| md (attempt 1 — generic directive) | FAIL | 67 | 145,164 | 31 min | 108 burned / 108 mech / 0 comp |
+| md (attempt 2 — class-aware directive) | FAIL | 9 | 20,464 | 24 min | 108 / 108 / 0 |
+| md (attempt 3 — supersession line) | FAIL | 44 | 100,394 | 17 min | 89 / 89 / 1 |
+
+### What the resolver proved on-device
+
+1. **Row 1 graduates THROUGH the resolver**: pass@1 at 2 decisions — the
+   actor carried the resolver's ready `apply_executable` move (ids resolved
+   host-side) and the run verified. The pre-pass fork is one mechanism now.
+2. **The class split holds mechanically**: across every burned step today,
+   **composition_required = 0–1** (the DECIDED 0%-composition measurement,
+   reproduced by the analyzer on every run — never agent bash again).
+3. **The pump fix held**: no identical repair-prompt re-opens; budgets
+   contained every chain (12-round chains × attempts); verdicts published.
+
+### The named residual class (the md row — 3 attempts, machine-time law invoked)
+
+The 4k model does NOT carry a ready move when the task text is long and
+carries its own contradictory flow teaching — the directive led AND
+explicitly superseded ("This READY MOVE REPLACES any scan/locate/zoom flow
+the task text describes") and the model still explored (scan×10-14,
+meaning_program×22-37, invented `main.dart` queries) and attempted
+**wrong-class actions** (`replace_member_body` on an md section — bounced
+`slot_scoping`, the action union teaching fired but did not converge).
+Directive-wording repairs measured today: generic carry-line → worse;
+class-aware tail → 9 decisions (best) but still a miss; supersession line →
+no material change. **Next named repair (not built)**: the goal-frame
+composition — when a ready move resolves, the frame should carry the
+directive + the task's body DATA only (the flow teaching stripped
+entirely), not directive + full task prose. Host-side, mechanical,
+LLM-free-gatable. The (b) tier-routing trigger remains unmet
+(composition_required ≈ 0 — the steps are mechanically resolvable; the
+failure is compliance, not composition).

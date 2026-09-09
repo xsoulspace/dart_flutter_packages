@@ -34,6 +34,15 @@ const defaultEditExecutables = <String, Map<String, dynamic>>{
 /// the op-chains the body-kind executables carry, and the consented
 /// authored bodies of trusted-author executables. All state is DATA, per
 /// pack — registration is the only write path and it validates the wire.
+///
+/// Structural class-shape kinds (`add_constructor_param`,
+/// `add_enum_case` — trusted-author tier, build order item 8) ride the
+/// SAME registry: registration is free (the spec — param name/type/
+/// optionality/constructor, case name/args — declares the shape), and
+/// CONSENT is separate from the pack: application refuses without a
+/// wired consent approver, then the host splices the signature/field/
+/// initializer/case byte-precisely with the free-oracle + auto-revert
+/// family (realization lives in span_editor.dart).
 class EditPackRegistry {
   EditPackRegistry({
     List<EditExecutableWire>? initial,

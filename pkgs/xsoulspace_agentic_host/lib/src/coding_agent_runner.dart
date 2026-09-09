@@ -53,6 +53,13 @@ import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
         CapturedWrite,
         JailWriteGateway,
         WriteGateMode;
+import 'package:xsoulspace_agentic_harness/src/systems/deferred_task_policy.dart'
+    show
+        DeferredTaskAccounting,
+        DeferredTaskPolicy,
+        DeferredVerifyEntry,
+        DeferredVerifyPool,
+        completeDeferredVerify;
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart'
     show EnvConfig;
 import 'package:xsoulspace_agentic_harness/src/decisions/step_resolver.dart'
@@ -395,6 +402,12 @@ class CodingAgentRunResult {
     this.writeGateAudit = '',
     this.toolResults = const [],
     this.verifyWallMs = 0,
+    // ADDITIVE (the deferred-task law, item 3): accounting on the task
+    // outcome. Zero/empty when deferral is not wired (the disabled
+    // fallback runs the legacy inline verify — nothing to account).
+    this.deferralRate = 0,
+    this.deferredVerifyBeats = 0,
+    this.deferredVerifyDefects = const [],
   });
 
   final String taskId;
@@ -439,6 +452,19 @@ class CodingAgentRunResult {
   /// verdict so a dart-turn budget miss is visible on every verify —
   /// never a silent cost. 0 when no gate ran (read-only tasks).
   final int verifyWallMs;
+
+  /// ADDITIVE (the deferred-task law): deferred share of verify-shaped
+  /// requests ([DeferredTaskAccounting.deferralRate]); 0 when unwired.
+  final double deferralRate;
+
+  /// ADDITIVE: completion beats landed on requesting actors' threads by
+  /// the pooled verify ([DeferredTaskAccounting.completionBeats]).
+  final int deferredVerifyBeats;
+
+  /// ADDITIVE: the named defects of THIS outcome — a deferral that never
+  /// produced its verification beat ([DeferredTaskAccounting
+  /// .namedDefects]). Empty when every deferral kept its beat contract.
+  final List<String> deferredVerifyDefects;
 
   String get failureClass {
     if (passed) return '';
@@ -1116,6 +1142,16 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
         .query2<Actor, GoalAttemptsExhausted>()
         .toList()
         .isNotEmpty;
+    // ADDITIVE (the deferred-task law, item 3): the deferral accounting
+    // rides the task outcome when a host wired the pool; unwired → zeros
+    // (the disabled fallback — the legacy inline verify has nothing to
+    // account).
+    DeferredTaskAccounting? deferredAccounting;
+    try {
+      deferredAccounting = world.getResource<DeferredTaskAccounting>();
+    } on StateError {
+      deferredAccounting = null;
+    }
     return CodingAgentRunResult(
       taskId: task.id,
       backend: backend,
@@ -1134,6 +1170,9 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
       recorderDump: recorder.dump(),
       verifyWallMs: verifyWallMs,
       toolResults: toolResults,
+      deferralRate: deferredAccounting?.deferralRate ?? 0,
+      deferredVerifyBeats: deferredAccounting?.completionBeats ?? 0,
+      deferredVerifyDefects: deferredAccounting?.namedDefects() ?? const [],
       writeGateAudit: gateway == null
           ? ''
           : 'writes applied: ${gateway.appliedCount}, '
@@ -1188,6 +1227,7 @@ coding_agent run — task: ${r.taskId}
   final gate (outer oracle, once): ${r.passed ? 'PASS' : 'FAIL'}
 ${[for (final c in r.finalGate) '    check: ${c.detail}'].join('\n')}
   failure class: ${r.failureClass.isEmpty ? '-' : r.failureClass}
+  deferred verify (item 3): rate=${r.deferralRate.toStringAsFixed(3)} beats=${r.deferredVerifyBeats}${r.deferredVerifyDefects.isEmpty ? '' : ' DEFECTS: ${r.deferredVerifyDefects.join(" | ")}'}
 --- harness pulse (J1.5.3) ---
 ${r.pulseText}
 --- flight recorder ---
@@ -1275,3 +1315,75 @@ Map<String, String?> parseCliArgs(List<String> args) {
 
 /// jsonEncode helper for logs (keeps the summary row one line).
 String summaryLine(Map<String, Object?> row) => jsonEncode(row);
+
+// ─────────────────────────────────────────────
+// The deferred-task law (item 3) — minimal ADDITIVE wiring
+// ─────────────────────────────────────────────
+
+/// Deferred-verify wiring for a coding-runner world. ADDITIVE and OPT-IN:
+/// a host that never calls this keeps EVERY existing behavior byte-identical
+/// (the disabled-fallback law — the verifier runs inline exactly as before).
+/// When called, the policy (enabled), the (package, convention) pool and the
+/// deferral accounting exist, and per-package verify steps may route through
+/// [maybeJoinDeferredVerify] — one pooled task per (package, convention),
+/// completion beats re-opening every requesting actor.
+void wireDeferredVerify(World world) {
+  world
+    ..upsertResource(DeferredTaskPolicy(enabled: true))
+    ..upsertResource(DeferredVerifyPool())
+    ..upsertResource(DeferredTaskAccounting())
+    ..flush();
+}
+
+/// Route ONE derived per-package verify step through the pooling law:
+/// the same (package, convention) → JOIN the in-flight task (one task
+/// runs, both actors get the completion beat); otherwise register a NEW
+/// pooled task. Returns null (and the caller runs the EXISTING inline
+/// step) when deferral is unwired/disabled or the step classifies inline —
+/// the disabled fallback preserving the legacy behavior verbatim.
+DeferredVerifyEntry? maybeJoinDeferredVerify(
+  World world, {
+  required RunGoalCommand step,
+  required Entity requester,
+}) {
+  DeferredTaskPolicy? policy;
+  try {
+    policy = world.getResource<DeferredTaskPolicy>();
+  } on StateError {
+    return null; // unwired → inline fallback
+  }
+  if (!policy.enabled) return null; // disabled → inline fallback
+  DeferredVerifyPool? pool;
+  try {
+    pool = world.getResource<DeferredVerifyPool>();
+  } on StateError {
+    return null; // policy without a pool → honest inline fallback
+  }
+  return pool.join(
+    world: world,
+    packageDir: step.cwd ?? '',
+    conventionCommand: step.command,
+    requester: requester,
+  );
+}
+
+/// Complete a pooled deferred verify (thin host-side alias over the
+/// harness completion — the EXISTING in-flight task machinery: the
+/// registered TaskHandle completer resolves, and every requesting actor
+/// gets the completion beat + re-open via the ToolResultPendingMarker
+/// continuation; no poll loop anywhere).
+void completeDeferredVerifyTask(
+  World world, {
+  required TaskId taskId,
+  required bool passed,
+  required String detail,
+  int? verifyWallMs,
+  List<String>? command,
+}) => completeDeferredVerify(
+  world,
+  taskId: taskId,
+  passed: passed,
+  detail: detail,
+  verifyWallMs: verifyWallMs,
+  command: command,
+);

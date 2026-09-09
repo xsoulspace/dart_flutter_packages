@@ -821,3 +821,60 @@ upstream timeouts mid-write; the continuation agents landed with
 finish-early-and-often briefed. Per-language gate matrix in PLAN.md —
 the R7e on-device rows (ts/cs) are the open gate, built after the
 frontier-resolver repair.
+
+## 2026-09-08 (later) — the frontier-resolver wave: pump fix, repair (a) landed, the dogfood debt closed
+
+The session that executed `next_session_frontier_dogfood.md` (all decisions
+pre-measured; this session executed, did not re-litigate):
+
+- **J8.1 pump fix (P1 prerequisite)**: the pump's fuel was the STALE failed
+  `GoalVerified` re-firing `RunGradedGoalPolicy` on every tool-result marker.
+  The policy now CONSUMES the verdict (one failed verification re-prompts
+  EXACTLY ONCE; the next verifier stamp gates the next re-send);
+  `ReActContinuationPolicy` gained the exhaustion gate (a continuation never
+  outlives the budget); the driver's repair loop BREAKS on
+  `GoalAttemptsExhausted` and READS the monotonic `AttemptCount` (one budget
+  truth, never clobbered). Gates: `exactly_one_resend_test.dart` (4),
+  `harnessd_pump_gate_test.dart` (scripted, LLM-free: no duplicate repair
+  prompt, attempt numbers strictly advance, the run ends on exhaustion); the
+  J1.5 F1 suite re-pointed to the fixed law.
+- **Repair (a) — resolvers INTO the frontier** (ADR 0009 Amendment): the ONE
+  resolver `step_resolver.dart` (grammar verbs → prompt-named anchors —
+  md sections / yaml keypaths / backticked symbol+executable, the wave rows
+  2–4 class — → total-or-bounce with REAL candidate ids / TierRoutedStep);
+  the task-grammar pre-pass RETIRED into it; `spawnResolvedStep` lands the
+  resolved step as graph data (the resolver classification rides
+  `StepAction.outcome`); `mechanical_actor.dart` executes CONSENTED ready
+  steps (deny-by-default, outcome recorded as step data). The `--dry`
+  pre-flight resolves ALL FOUR row prompts Ready with exact ids over the
+  real jail trees (it caught two real id-convention bugs pre-device: the
+  binding-declared `sec_`/`key_` prefixes and the trailing-punctuation file
+  token). Tier routing (b) landed as DATA only (`TierRoutedStep`) — the
+  machinery stays named-not-built (trigger unmet).
+- **On-device**: row 1 (grammar path) **PASS 1/1 at 2 decisions / 4,246
+  tokens / 28.5 s THROUGH the resolver** — the pre-pass fork is one
+  mechanism. The md row failed ×3 in a NAMED residual class (the 4k model
+  does not carry a ready move over a long task text with contradictory flow
+  teaching — even with the directive leading and superseding; wrong-class
+  `replace_member_body` attempts bounced slot_scoping and did not converge).
+  Machine-time law invoked (3 × ~20-min rows). Next repair named: the
+  goal-frame carries directive + body DATA only (flow teaching stripped).
+  Full rows in `afm_wave_results.md` § FRONTIER-RESOLVER RUNS.
+- **wave_log_classify (P2)**: the repeatable analyzer landed
+  (`benchmark/wave_log_classifier.dart`; the (a)/(b) boundary is a const
+  DATA TABLE; `unparseable` publishes as data), wired into the wave driver
+  summary. Reproduced the DECIDED measurement mechanically on every run:
+  composition_required ≈ 0.
+- **The pi extension read dialect (the two 2026-09-08 dogfood-debt rows, EXECUTED)**:
+  ONE read tool (`harness_meaning_program {ops:[…]}`; legacy wrappers
+  removed); the mechanical-read set asserted against the LIVE registry both
+  ways (`mechanical_read_registry_test.dart` — including the <100 ms read
+  wall over a real scanned tree). Dogfood A/B measured IN-SESSION and
+  published: the stale-wrapper reads cost 194 s ×2 (mover_refusal) vs 28 ms
+  mechanical; one REAL `harness_edit` md insert (the A/B row itself) landed
+  THROUGH the md binding via `run_dogfood_seam_ab.mjs`. A/B row in
+  `results_seam_speed.md` § 2026-09-08; gap rows closed in surface_gaps.md.
+- Suites: harness 409/0, host 76/0, workspace 104/0, analyze at baseline.
+- Named defects found by the dogfood (fixed in-session): the driver's
+  class-split crashed on accumulating logs (`.single` → `.last`);
+  `writeRunLog` appends (the split must classify the LAST run block).

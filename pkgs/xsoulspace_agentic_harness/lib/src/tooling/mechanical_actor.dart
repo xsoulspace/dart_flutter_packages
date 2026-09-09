@@ -27,7 +27,7 @@ import 'dart:convert';
 import 'package:ecsly/ecsly.dart';
 
 import '../data_models/data_models.dart'
-    show StepAction, StepStatus;
+    show StepAction, StepClaimant, StepStatus, TopologyActor;
 import '../narrative/narrative.dart' show Step, StepLifecycle;
 
 /// Executes ONE consented ready step through the injected tool executor.
@@ -105,4 +105,85 @@ void recordStepOutcome(
     };
   }
   world.flush();
+}
+
+/// Works ONE claimed ready step AS A REGISTERED TOPOLOGY ACTOR (ADR 0009
+/// Amendment §3 + worker-gradient rung 2): the accelerate-and-predict
+/// behavior gated by the DECLARED topology instead of an ad-hoc actor tag.
+///
+/// Laws that bind here (all named, deny-by-default — never a guess):
+/// - the actor must be a REGISTERED topology actor
+///   (`mechanical_actor_not_registered`);
+/// - the actor must DECLARE the mechanical class (`role == 'mechanical'`,
+///   zero-token budget validated at registration —
+///   `mechanical_actor_not_declared`);
+/// - the step must carry the actor's own claim (`StepClaimant` —
+///   `step_not_claimed_by_actor`), be `open`, and carry a RESOLVED
+///   [StepAction] (`step_not_resolved`);
+/// - the CONSENT gate is deny-by-default exactly as in
+///   [executeReadyStep] — no fork, the same refusal class
+///   (`mechanical_actor_unconsented`);
+/// - the outcome is DATA and is recorded mechanically via
+///   [recordStepOutcome] (one step, one execution).
+Future<Map<String, dynamic>> workClaimedReadyStep({
+  required World world,
+  required Entity stepEntity,
+  required Entity actorEntity,
+  required Future<Object?> Function(Map<String, dynamic> args) editExecutor,
+  required bool Function(Map<String, Object?> args) consent,
+}) async {
+  Map<String, dynamic> refusal(String code, String hint) => {
+    'ok': false,
+    'code': code,
+    'hint': hint,
+  };
+  final (actorFacade, actorValid) = world.getEntity(actorEntity);
+  final topo = actorValid ? actorFacade.get<TopologyActor>() : null;
+  if (topo == null) {
+    return refusal('mechanical_actor_not_registered',
+        'the actor is not registered in the topology — register it via '
+        'registerActorTopology first');
+  }
+  if (topo.role != 'mechanical') {
+    return refusal('mechanical_actor_not_declared',
+        'role "${topo.role}" does not declare the mechanical class — '
+        'only role "mechanical" works ready steps with zero tokens');
+  }
+  final (stepFacade, stepValid) = world.getEntity(stepEntity);
+  final step = stepValid ? stepFacade.get<Step>() : null;
+  if (step == null) {
+    return refusal('step_missing', 'the step entity does not exist');
+  }
+  final claimant = stepFacade.get<StepClaimant>();
+  if (claimant == null || claimant.actor != actorEntity) {
+    return refusal('step_not_claimed_by_actor',
+        'the step is not claimed by this actor — claim it first '
+        '(claimStep)');
+  }
+  if (step.status != StepLifecycle.open) {
+    return refusal(
+      'step_not_open',
+      'the step is ${step.status.name} — one step, one execution',
+    );
+  }
+  final action = stepFacade.get<StepAction>();
+  if (action == null) {
+    return refusal('step_not_resolved',
+        'the step carries no resolved StepAction — nothing mechanical to '
+        'work');
+  }
+  final out = await executeReadyStep(
+    editExecutor: editExecutor,
+    args: action.arguments,
+    consent: consent,
+    toolName: action.toolName,
+  );
+  // A denial is NOT an execution outcome: nothing ran, so the step stays
+  // open (still claimed — release/steal is a named non-claim; the claim
+  // ends only when the step's own lifecycle resolves it). Recording a
+  // denial as `failed` would forge evidence.
+  if (out['ok'] == true || out['code'] != 'mechanical_actor_unconsented') {
+    recordStepOutcome(world, stepEntity, out);
+  }
+  return out;
 }
