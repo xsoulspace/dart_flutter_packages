@@ -878,3 +878,56 @@ pre-measured; this session executed, did not re-litigate):
 - Named defects found by the dogfood (fixed in-session): the driver's
   class-split crashed on accumulating logs (`.single` → `.last`);
   `writeRunLog` appends (the split must classify the LAST run block).
+
+## 2026-09-08 (latest) — the actor-contract wave: 8 lanes, pi agents as rung-1 workers
+
+The build order from the pi-as-actor analysis (tier contract, mechanical
+edit path, deferred-task law, actor-scoped consent, workers-as-clients,
+topology + step claiming, binding-typed creation, structural executables)
+landed as EIGHT PARALLEL LANES — spawned pi agents with strict
+file-ownership discipline (OWN lists; `harness_acp_backend.dart` and the
+extension single-owned). This session itself was rung-1 dogfood: the
+workers built the machinery that will later absorb them. Six lanes died
+once on API timeouts ("Request timed out") and were completed as
+continuations that inventoried + finished the partial work (consent
+scoping's model, step_resolver's directive note, the workers-runway docs
+survived and were verified rather than rewritten — the completion rule:
+inventory, re-derive, finish; never restart over extant work).
+
+Landed (full table with gates in PLAN.md § NOW):
+1. Session-actor tier contract (`session_tier.dart`; AFM row reproduces
+   from tier terms; the extension declares the tier at session/new and
+   sources per-op budgets from it; `.pi/extensions` copy symlinked).
+2. Mechanical `harness_edit` directive path — the measured 103–183 s
+   `mover_refusal`×3 class is dead; consent + beats identical to the
+   write path; mover-refusal fallback lands the single payload.
+3. The deferred-task law as data (`kDeferredClasses`, pooling per
+   (package, convention), completion beats via the existing TaskHandle
+   machinery, accounting + named defects; opt-in, disabled by default).
+4. Actor-scoped consent plans v2 (pure model, deny-by-default, actor-keyed
+   audit, v1 backward compat; integration hooks documented, not wired).
+5. Workers as extension clients — the rung-1 gate PROVED: two ACP clients,
+   one daemon, one session, both edits landed, suite green, second daemon
+   refused (`run_r7_multi_worker_gate.mjs --scripted` PASS).
+6. Topology as data + step claiming — `TopologyActor`/`StepClaimant`
+   components (append-only), loud `step_already_claimed` bounce, frontier
+   projects claims, mechanical actors declared in topology work consented
+   ready steps. NO coordinator (ADR 0009 clause extends to multi-actor).
+7. Binding-typed file creation — `create_document` as a binding
+   capability through the ONE edit verb, named bounces, revert-to-absence,
+   tree re-derives; dart deliberately excluded (trusted-author tier).
+8. Structural executables — `add_constructor_param`/`add_enum_case` pack
+   kinds (wire + span_editor), consent-required, auto-revert family.
+
+Integration pass: the structural kinds grew the metered surface past the
+AFM tier (fits=FALSE, cutBudget 381) — repaired per ADR 0030 convergence
+(redundant flat executableParams props dropped; bounce-teaching retained):
+total 1,452, fits=true. Suites after integration: workspace 130/0, harness
+446/0, host 89/0; analyze 0 errors ×3 packages; wire repo 35/0. The
+pre-existing `zoom_staleness_probe.dart` error fixed in passing.
+
+Named follow-ups: server-side tier enforcement (needs `_meta` on
+`AcpSessionNewRequest` — cross-repo wire task), production deferral wiring
+(`maybeJoinDeferredVerify` into the daemon verify wall), consent-scoping
+integration (documented one-line swaps), mechanical-actor consent ← the
+consent ledger.

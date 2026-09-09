@@ -45,5 +45,5 @@ Future<void> main() async {
   print('noop point zoom: ${noopUs}us avg (n=200) | drift zoom: '
       '${driftUs}us (incl. one re-read + map rebuild) | refreshed: '
       '${cut['refreshed']} | post-edit span served: '
-      "${(cut['span'] as Map)['text'].contains('Edited prose')}");
+      "${((cut['span'] as Map)['text'] as String).contains('Edited prose')}");
 }

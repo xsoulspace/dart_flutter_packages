@@ -44,6 +44,46 @@
 
 ## NOW — the remaining frontier (prioritized)
 
+**2026-09-08 (latest) — the ACTOR-CONTRACT WAVE (8 lanes, landed + integrated):**
+the build order from the pi-as-actor analysis landed as eight parallel lanes
+(spawned pi agents with strict file-ownership discipline — rung-1 workers
+building their own rungs; 6 lanes died once on API timeouts and were
+completed as continuations that inventoried + finished the partial work):
+
+| # | Item | Landed as | Gate |
+|---|---|---|---|
+| 1 | Session-actor tier contract | `session_tier.dart` (host): `SessionTierProfile` + `resolveSessionTier` deriving from the ADR 0033 equation; ladder `perOp = clamp(window/32, 512, 4096)`, `verdict = max(1200, perOp×2)`; AFM 4096 → 512/1200 (bit-identical to the read program's defaults); 128k/200k → 4096/8192; config keys `session_tier_per_op_read_budget(_<backend>)`; the extension declares the tier at `session/new` (`_meta.sessionTier`) and sources per-op budgets from it (`.pi/extensions` copy is now a symlink to the pi_driver copy) | `host/test/session_tier_test.dart` 4/4 (AFM 628-row reproduces from tier terms; cross-truth row pins the AFM budgets == the harness constants) |
+| 2 | Mechanical `harness_edit` directive path (P0) | `mechanical_edit_directive.dart` (host): pure-JSON classifier (deny-by-default, mixed prose never mechanical) + payload validation; backend routes it BEFORE the graded path (consent via the existing UX machinery; touched-file beat lands on the goal actor's thread); `_runMoverRefusalEditFallback` executes a single well-formed payload mechanically after a mover refusal — the measured 103–183 s `mover_refusal` class is dead | `host/test/harnessd_mechanical_edit_test.dart` 6/6 + mechanical_write 4/4 no-regression |
+| 3 | The deferred-task law | `deferred_task_policy.dart` (harness): `kDeferredClasses` table AS DATA (test-run, pub-get, build, app-run, dylib-build), interactive intents NEVER defer; `DeferredVerifyPool` keyed per (package, convention) — a second requester JOINS, one task, N completion beats; accounting + named defects for a deferral that never produced its verification beat; OPT-IN (`wireDeferredVerify`), disabled by default | `harness/test/deferred_task_policy_test.dart` 8/8 + `host/test/deferred_verify_pool_test.dart` 3/3 (join proven: one task, two beats, `verify_wall_ms` as beat data) |
+| 4 | Actor-scoped consent plans | `tooling/consent_scoping.dart` (harness): ConsentPlan v2 `{planId, actor, scopePathGlob, verbs, maxUses, ttl, grantedAt}`, PURE deny-by-default evaluator with named reasons, actor-keyed append-only audit, v1 backward-compatible parse, named errors; NOT wired (pure model — integration hooks documented in `docs/agent/consent_scoping.md`) | `harness/test/consent_scoping_test.dart` 18/18 |
+| 5 | Workers as extension clients (rung 1) | `docs/agent/multi_actor_workers.md` (the rung-1 contract; rung 1 honestly a TRANSITIONAL wedge; replacement metric = harness-decision share + escape rate → 0) + `worker_spawn_brief_template.md` + `run_r7_multi_worker_gate.mjs` — the SCRIPTED gate PROVED rung 1 end-to-end: two ACP clients on one daemon, same session, both edits landed, suite green, second daemon refused | driver `--scripted` PASS (~22 s; transcript `benchmark/runs/r7_multi_worker_transcript.txt`) |
+| 6 | Topology as data + step claiming (rung 2) | `decisions/actor_topology.dart`: `ActorTopologySpec` (`{worlds, actors:[{id, role, tier, budget, toolRegistry}]}`) registered as graph data (`TopologyActor` + `StepClaimant` components, APPEND-ONLY per the ecsly invariant); `claimStep`/`claimStepStrict` — second claim bounces `step_already_claimed` carrying the claimant; frontier rows project `claim`/`claimedBy`/`claimable`; `workClaimedReadyStep` reuses mechanical_actor's deny-by-default. NO coordinator (ADR 0009 clause holds); release/steal NOT built | `harness/test/actor_topology_test.dart` + `step_claim_test.dart` 11/11 (every world test `expectIdle`) + projection/regression suites 79 pass |
+| 7 | Binding-typed file creation | ADR 0035 bindings gain `fileCreation` capability data (`create_document`; md `new_file_path`, yaml/json `new_file_path#keypath`); routed through the ONE edit verb with named bounces (no-creation binding, never-overwrite, stale-dir); oracle-gated with revert-to-absence; tree re-derives (file node + sub-nodes). Dart deliberately NOT covered (code creation = trusted-author tier) | `workspace/test/file_creation_binding_test.dart` 21/21 + existing materializer gates 33/33 |
+| 8 | Structural executables | `EditExecutableKind.addConstructorParam`/`addEnumCase` (wire repo, +2 round-trip tests) realized in `span_editor.dart`: host splices constructor signature + backing field + initializer / enum case byte-precisely (adjacent-line punctuation repair family); `_requireStructuralConsent` — deny-by-default at apply time; coverage fence deliberately NOT applied (shape-adding, not behavior-replacing) | `workspace/test/structural_pack_test.dart` 5/5 + span/pack gates 14/14; wire repo 35 tests, analyze clean |
+
+**Integration pass (this session, after the lanes):** the structural kinds
+grew `edit_symbol`'s metered surface (705 → 1,029; total 1,695 →
+cutBudget 381, fits=FALSE) — repaired per ADR 0030 convergence (the 9
+redundant flat `executableParams` props dropped — the pack's named bounce
+teaches the spec — and the description compacted): edit_symbol 786, total
+**1,452, inside the published range, fits=true**; the overhead gate is the
+trace that polices every surface change. Pre-existing
+`zoom_staleness_probe.dart` analyzer error fixed (dynamic-call cast).
+Full suites after integration: **workspace 130/0, harness 446/0, host
+89/0**; analyze 0 errors in all three; wire repo 35/0.
+
+**Named follow-ups (recorded, not built):** (1) server-side tier
+enforcement — the backend hook (`HarnessAcpBackend.sessionTier` threaded
+to the read world's per-op defaults) requires `AcpSessionNewRequest` to
+carry `_meta` in `dart_acp_toolkit` (the extension already sends it);
+separate task, the external wire package is cross-repo. (2) Production
+deferral wiring — `maybeJoinDeferredVerify` into the daemon's verify wall
+(the pool machinery + completion contract are proven; the executor call
+site is the next step). (3) Consent-scoping integration — one-line swaps
+documented in `consent_scoping.md` (write_review approver, `planAllows`,
+`packConsent`, consentLog). (4) Consent callback on mechanical actors ←
+the consent ledger (lanes 4+6 decoupled by design).
+
 **2026-09-07 state (the derived-context wave, ADR 0033/0034):** the meaning
 profile GRADUATED — the read program replaced locate/zoom/impact (daemon
 read world converged too), the ONE edit verb absorbed edit_section/edit_key
