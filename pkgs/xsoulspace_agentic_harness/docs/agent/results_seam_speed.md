@@ -79,3 +79,43 @@ registry (`mechanical_read_registry_test.dart`).
   a bounce, named in the verdict, repair hint "phrase fixture payloads
   neutrally". First observed on adversarial fixture text read as an
   injection warning (R7 dogfood, 2026-09-06).
+
+## 2026-09-09 — deferred verify (production deferral wiring, follow-up 2)
+
+The deferred-task law + `DeferredVerifyPool` were landed but NO production
+path called them — the daemon's run-graded verify wall still ran INLINE
+(the 41.5 s edit-wall row above IS that wall riding the edit path). The
+wiring: `runCodingAgentOnce(deferVerify:)` wraps the tier planner in
+`DeferredVerifyPlanner` (coding_agent_runner.dart) — a `test-run`-class
+per-package step joins the (package, convention) pool, the requester-side
+executor (`runDeferredVerifyTask`) spawns the package's convention AS the
+registered task's work, the `goal_verify` completion beat carries
+`verify_wall_ms` and re-opens the requester, and the driver's final gate
+stays the INLINE terminal proof. The daemon opts in at the composition
+root (`harnessd_cli.dart`: ON by default, `--no-defer-verify` restores the
+inline fallback; the library default stays OFF — unwired hosts and every
+suite run the legacy inline path verbatim).
+
+| wall | route | measured | gate |
+| --- | --- | --- | --- |
+| edit-apply path's grade decision (the wall the actor's decision pays) | run-graded verify, planProvider seam, deferral ON | **11 ms** (n=1, cold pass incl. the planner's first file walk; the inline convention run: 0 — deferred) | `host/test/deferred_verify_production_test.dart` (scripted, LLM-free) |
+| verify wall (deferred, beat-carried) | the pooled task's convention run (`dart test` in the package dir; simulated 20 ms via the injected runner) | **24 ms** carried on the `goal_verify` completion beat as `verify_wall_ms`; requester re-opened on the beat | same gate (the beat wall asserts ≥ the simulated convention wall) |
+
+- backend: scripted (LLM-free, 0 tokens); decision path:
+  `runGoalVerifier` → `DeferredVerifyPlanner` → pool join → executor →
+  `completeDeferredVerify` (the EXISTING in-flight machinery — one task,
+  N completion beats, no poll loop); n=1 per row.
+- Context: the inline walls this replaces are the measured 8,999 ms
+  (delegated `harness_verify`, the A/B row above) and 41.5 s
+  (the md-binding edit row's in-materializer verify). The 11 ms grade
+  decision is the edit-apply path's remaining verify cost; the convention
+  wall still runs — deferred, beat-carried, JOIN-able per
+  (package, convention) — and the final gate still grades inline once.
+- Non-claims: the 11/24 ms rows are fixture-package, scripted-runner
+  measurements (n=1) — they meter the WIRING, not a real `dart test`
+  wall; the end-to-end REAL-daemon session (scripted handler editing +
+  deferring through `HarnessAcpBackend`) is not exercised by this gate —
+  the gate drives the daemon's actual verify seam
+  (`wireRunGradedGoal`/`runGoalVerifier`/pool/executor) componentwise, and
+  the full host (104) + harness (454) suites are green with the daemon
+  default ON.

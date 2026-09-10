@@ -133,10 +133,20 @@ ledgers keep today's isolation — both work unchanged.
 
 ## Non-claims
 
-- Not wired: no backend call-site uses this model yet (deliberately pure,
-  LLM-free, one-line-integration ready).
-- No storage: the ledger is in-memory; persistence of the audit log is
-  the backend lane's concern.
+- ~~Not wired~~ **WIRED 2026-09-09** (the consent-integration lane): the
+  daemon's consent paths (write_review approver, `planAllows`,
+  `packConsent`, the mechanical-edit approver) route through
+  `ConsentLedger.matches(actor: session.consentActor, verb, path)`; every
+  answer lands as an actor-keyed `ConsentAuditEntry` (structured
+  `consent-row {…}` JSON in `consentLog`, legacy phrases preserved). The
+  actor id is `sessionConsentActor(cwd)` = `harnessd@<workspace-path>`
+  (stable per workspace, distinct across workspaces). Mechanical actors
+  source their deny-by-default callback via `consentFromLedger`.
+  Gates: `consent_integration_gate_test.dart` (8) +
+  `harnessd_consent_scoping_test.dart` (4). STILL OPEN: v2 document
+  auto-load at session creation (v1 auto-apply unchanged; v2 loads via
+  the explicit `setSessionConsentDocument`), audit persistence (the
+  ledger stays in-memory per session).
 - No reading-side effect: consent never widens reads (law §2) — tier
   profiles are untouched.
 - `scopePathGlob` is regex, not glob syntax, despite the historical name

@@ -29,6 +29,7 @@ import 'package:ecsly/ecsly.dart';
 import '../data_models/data_models.dart'
     show StepAction, StepClaimant, StepStatus, TopologyActor;
 import '../narrative/narrative.dart' show Step, StepLifecycle;
+import 'consent_scoping.dart';
 
 /// Executes ONE consented ready step through the injected tool executor.
 ///
@@ -187,3 +188,43 @@ Future<Map<String, dynamic>> workClaimedReadyStep({
   }
   return out;
 }
+
+/// The step-args target path, as the mechanical tier carries it today
+/// (the `edit_symbol`-shape registry args use a `path`/file key; the
+/// resolver reads the same key). Null when the args carry no usable
+/// target — the callback then DENIES (deny-by-default is structural).
+String? _defaultConsentPath(Map<String, Object?> args) {
+  final path = args['path'];
+  return path is String && path.isNotEmpty ? path : null;
+}
+
+/// The deny-by-default consent callback for [executeReadyStep] /
+/// [workClaimedReadyStep], SOURCED FROM A [ConsentLedger] — the
+/// consent-scoping integration (follow-up 4): a session (or world) that
+/// already carries a ledger hands the mechanical actor the SAME consent
+/// authority the daemon's human-facing paths use, instead of an ad-hoc
+/// closure.
+///
+/// - [actor] — the ledger actor that owns the move (the session's
+///   [sessionConsentActor] derivation for daemon sessions; the topology
+///   actor id for world-registered mechanical actors).
+/// - [verb] — the consent verb; defaults to `edit` (the mechanical tier
+///   works span-edit moves).
+/// - [pathOf] — extracts the workspace-relative target path from the
+///   step's args; defaults to the `path` key. A null path → DENY.
+///
+/// DENY-BY-DEFAULT UNCHANGED: with NO ledger (null), pass `consent:
+/// (_) => false` as before — the named refusal
+/// (`mechanical_actor_unconsented`) stays the outcome, never a guess.
+/// Every ledger answer is an audited, actor-keyed [ConsentAuditEntry].
+bool Function(Map<String, Object?> args) consentFromLedger({
+  required ConsentLedger ledger,
+  required String actor,
+  String verb = 'edit',
+  String? Function(Map<String, Object?> args) pathOf = _defaultConsentPath,
+}) =>
+    (args) {
+      final path = pathOf(args);
+      if (path == null) return false;
+      return ledger.matches(actor: actor, verb: verb, path: path).allowed;
+    };

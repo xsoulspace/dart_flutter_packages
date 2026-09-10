@@ -74,7 +74,19 @@ ToolDef meaningProgramTool(
   World world, {
   MeaningSpanReader? spanReader,
   Map<String, ToolDef> hostOps = const {},
+
+  /// Server-side tier enforcement (follow-up 1): the DAEMON threads the
+  /// session tier's read budgets here so non-extension clients get
+  /// tier-sourced op defaults (the extension sources the same numbers
+  /// client-side). Absent → the hardcoded consts below — bit-identical
+  /// behavior, never a second truth.
+  int? perOpResultBudget,
+  int? verdictBudget,
 }) {
+  final effectivePerOpResultBudget =
+      perOpResultBudget ?? perOpResultBudgetTokens;
+  final effectiveVerdictBudget =
+      verdictBudget ?? defaultProgramVerdictBudgetTokens;
   // The program interpreter CALLS the existing tool implementations —
   // ranking, budget shrink-loops and repair hints are inherited, never
   // reimplemented (composition, not a second pipeline).
@@ -103,7 +115,9 @@ ToolDef meaningProgramTool(
       'read' => zoom.execute({
         ...args,
         'zoom': 'point',
-        'budget': args['budget'] is int ? args['budget'] as int : 512,
+        'budget': args['budget'] is int
+            ? args['budget'] as int
+            : effectivePerOpResultBudget,
       }),
       _ => null,
     };
@@ -167,7 +181,7 @@ ToolDef meaningProgramTool(
       }
       final verdictBudget = map['budget'] is int && (map['budget'] as int) > 0
           ? map['budget'] as int
-          : defaultProgramVerdictBudgetTokens;
+          : effectiveVerdictBudget;
 
       final cursor = <String>[];
       final results = <Map<String, dynamic>>[];
@@ -241,7 +255,7 @@ ToolDef meaningProgramTool(
 
         // Result-cut law: an over-budget op result is CLIPPED to a named
         // marker — the model re-reads narrowly, the verdict stays small.
-        if (_estTokens(out) > perOpResultBudgetTokens) {
+        if (_estTokens(out) > effectivePerOpResultBudget) {
           results.add({
             'op': op,
             'clipped': true,

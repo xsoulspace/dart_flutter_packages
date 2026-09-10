@@ -72,17 +72,31 @@ trace that polices every surface change. Pre-existing
 Full suites after integration: **workspace 130/0, harness 446/0, host
 89/0**; analyze 0 errors in all three; wire repo 35/0.
 
-**Named follow-ups (recorded, not built):** (1) server-side tier
-enforcement — the backend hook (`HarnessAcpBackend.sessionTier` threaded
-to the read world's per-op defaults) requires `AcpSessionNewRequest` to
-carry `_meta` in `dart_acp_toolkit` (the extension already sends it);
-separate task, the external wire package is cross-repo. (2) Production
-deferral wiring — `maybeJoinDeferredVerify` into the daemon's verify wall
-(the pool machinery + completion contract are proven; the executor call
-site is the next step). (3) Consent-scoping integration — one-line swaps
-documented in `consent_scoping.md` (write_review approver, `planAllows`,
-`packConsent`, consentLog). (4) Consent callback on mechanical actors ←
-the consent ledger (lanes 4+6 decoupled by design).
+**Named follow-ups — EXECUTED 2026-09-09 (the 3-lane follow-up wave, verified):**
+(1) server-side tier enforcement — LANDED: `AcpSessionNewRequest` carries
+`_meta` through `dart_acp_toolkit` (17/17 wire tests), the backend parses
+`_meta.sessionTier` (`parseSessionTierMeta`, named errors) and threads the
+tier's budgets into `meaningProgramTool` (opt-in params, zero change when
+absent); gate `session_tier_server_test.dart` 4/4 — a budget-less `read`
+serves WHOLE under a hosted tier vs CLIPPED at the 512 default.
+(2) Production deferral wiring — LANDED, ON for the harnessd daemon path
+(`--no-defer-verify` restores inline; library default OFF): the verify
+call-site wraps the planner in `DeferredVerifyPlanner` (join per
+(package, convention), executor-once), the executor spawns the package's
+convention (120 s ceiling), and the final gate stays the INLINE terminal
+proof; measured row in `results_seam_speed.md` (grade decision 11 ms,
+verify wall 24 ms as beat data, join 2→1 task/2 beats; fixture-metered,
+n=1, scripted). (3) Consent-scoping integration — LANDED: the daemon's
+consent paths route through `ConsentLedger.matches` with the
+`harnessd@<workspace-path>` actor id; actor-keyed append-only audit with
+structured `consent-row` lines; v1 workspace consent unchanged; v2 loads
+via `setSessionConsentDocument` (auto-load at session creation still
+open). (4) Mechanical-actor consent ← the ledger — LANDED
+(`consentFromLedger`; proven at the harness gate; no host call-site yet).
+Verification: host 104/104, harness 454/454 (one long-horizon timing
+flake passed on re-run — parallel-suite latency gate), analyze 0 errors
+across workspace/harness/host + the acp_toolkit wire repo (17/17 tests,
+0 errors). `consent_scoping.md` § Non-claims updated (wired status).
 
 **2026-09-07 state (the derived-context wave, ADR 0033/0034):** the meaning
 profile GRADUATED — the read program replaced locate/zoom/impact (daemon

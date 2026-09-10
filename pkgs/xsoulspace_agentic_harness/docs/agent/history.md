@@ -931,3 +931,37 @@ Named follow-ups: server-side tier enforcement (needs `_meta` on
 (`maybeJoinDeferredVerify` into the daemon verify wall), consent-scoping
 integration (documented one-line swaps), mechanical-actor consent ← the
 consent ledger.
+
+## 2026-09-09 — the follow-up wave: tier server-side, deferral in production, consent wired
+
+The four named follow-ups from the actor-contract wave executed as THREE
+parallel lanes (shared-file conflict managed by REGION partitioning on
+`harness_acp_backend.dart`: tier lane = session-creation/registry regions,
+consent lane = consent regions; precise edit calls, re-read before every
+edit — zero cross-lane corruption):
+
+1. **Server-side tier enforcement**: `AcpSessionNewRequest` carries `_meta`
+   through dart_acp_toolkit (cross-repo, 17/17 wire tests); the backend
+   parses `_meta.sessionTier` and threads the tier budgets into
+   `meaningProgramTool` — a non-extension client now gets tier-sourced
+   read budgets; absent `_meta` = bit-identical defaults.
+2. **Production deferral wiring**: ON for the harnessd daemon path — the
+   verify wall is POOLED per (package, convention), executor-once, the
+   grade decision stops blocking (11 ms fixture row), the verdict lands
+   as a `goal_verify` completion beat (24 ms wall as beat data), the
+   requester re-opens on the beat, and the final gate remains the inline
+   terminal proof (deferral never skips the oracle). Library default OFF;
+   `--no-defer-verify` restores inline. Measured row in
+   results_seam_speed.md (fixture-metered, n=1, scripted).
+3. **Consent integration (+4)**: the daemon's consent paths route through
+   `ConsentLedger.matches` (actor id `harnessd@<workspace-path>`),
+   actor-keyed append-only audit with structured rows, mechanical actors
+   source consent via `consentFromLedger`; v1 workspace consent.json
+   unchanged; consent_scoping.md's "not wired" non-claim retired.
+
+Verification (independent, this session): host 104/104, harness 454/454
+(one long-horizon latency flake passed on re-run — the parallel-suite
+timing gate, not a regression), analyze 0 errors ×3 packages + the
+acp_toolkit wire repo. Named residuals: v2 consent auto-load at session
+creation; audit persistence; a real-daemon end-to-end deferral session;
+the "applied, verifying…" client surface string.

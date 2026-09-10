@@ -44,6 +44,11 @@ import 'package:agentic_executables_wire/agentic_executables_wire.dart'
     show EditExecutableWire;
 import 'package:dart_acp_toolkit/dart_acp_toolkit.dart';
 import 'package:xsoulspace_agentic_harness/xsoulspace_agentic_harness.dart';
+// Consent-scoping integration (follow-ups 3+4): the v2 actor-scoped
+// consent model. PREFIXED — the host keeps its own legacy `ConsentPlan`
+// (the v1 wire shape) unambiguous.
+import 'package:xsoulspace_agentic_harness/src/tooling/consent_scoping.dart'
+    as consent;
 import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
     show FsToolsRoot, JailWriteGateway, WriteGateMode, runTool;
 import 'package:xsoulspace_agentic_harness/src/meaning/meaning_read_program.dart'
@@ -75,6 +80,10 @@ import 'coding_agent_runner.dart'
 // package; minimal local shape checks only — the deep validation stays in
 // the workspace materializer, which bounces as structured data).
 import 'mechanical_edit_directive.dart';
+// Server-side tier enforcement (follow-up 1): the session actor's tier
+// declaration (`_meta.sessionTier`) parsed at session/new; the tier's
+// read budgets thread into the read world's meaning program.
+import 'session_tier.dart';
 
 /// One registered inference backend (ADR 0025): the host learns no
 /// provider — the composition root binds a backend NAME to the factory
@@ -370,16 +379,57 @@ class HarnessAcpBackend
 
   /// ADR 0027 amendment — sets the session's bounded consent plan (host
   /// policy; the model never sees it). Deny-by-default outside the plan.
+  ///
+  /// Consent-scoping integration: the plan is ALSO registered into the
+  /// session's [consent.ConsentLedger] as the legacy workspace fallback
+  /// (actor `*`, v1 semantics) — every consent path routes through
+  /// `ledger.matches` and every answer lands as an actor-keyed
+  /// `ConsentAuditEntry`. Resetting the plan resets the ledger's plan set
+  /// (use counters start fresh — the old `consentPlanUses = 0` semantic);
+  /// the ledger's audit log is preserved (append-only, never rewritten).
   void setConsentPlan(String sessionId, ConsentPlan? plan) {
     final session = _sessions[sessionId];
     if (session == null) return;
     session
       ..consentPlan = plan
-      ..consentPlanUses = 0;
+      ..consentPlanUses = 0
+      ..consentLedger.resetPlans([
+        if (plan != null)
+          consent.ConsentPlan.v1(
+            pathGlob: plan.pathGlob,
+            verbs: plan.verbs,
+            maxUses: plan.maxUses,
+          ),
+      ]);
   }
 
+  /// Consent-scoping integration (follow-up 3) — loads a v1-or-v2 consent
+  /// DOCUMENT (`{plan}` or `{"plans": [...]}` — see
+  /// `parseConsentPlanDocument`) into the session's ledger. A v2 document
+  /// carries the workspace `*` fallback and per-actor plans SIDE BY SIDE;
+  /// an explicit plan for this session's actor id
+  /// (`consent.sessionConsentActor(cwd)`) always beats the `*` fallback
+  /// (the ledger enforces precedence). The document REPLACES the ledger's
+  /// plan set — include the workspace fallback in `plans` when both are
+  /// wanted. A malformed document raises `ConsentPlanError` with a named
+  /// code — never a silent fallback.
+  void setSessionConsentDocument(String sessionId, Object? document) {
+    final session = _sessions[sessionId];
+    if (session == null) return;
+    session
+      ..consentPlan = null
+      ..consentPlanUses = 0
+      ..consentLedger.resetPlans(consent.parseConsentPlanDocument(document));
+  }
+
+  /// Test visibility: the session's consent ledger (the ONE consent
+  /// authority for every daemon consent path). Null when no such session.
+  consent.ConsentLedger? sessionsDebugConsentLedger(String sessionId) =>
+      _sessions[sessionId]?.consentLedger;
+
   /// ADR 0027 amendment — the session's consent audit log (every
-  /// plan-allowed answer lands here as named data).
+  /// plan-allowed answer lands here as named data; each line carries the
+  /// structured `consent-row {…}` rendering of its `ConsentAuditEntry`).
   List<String> consentAudit(String sessionId) =>
       List.unmodifiable(_sessions[sessionId]?.consentLog ?? const []);
 
@@ -401,17 +451,32 @@ class HarnessAcpBackend
   /// retroactively allow (deny-by-default is monotonic in time) — a later
   /// allow requires a NEW round-trip (the deadline is a loop-breaker, not
   /// a policy change).
+  ///
+  /// Consent-scoping integration: EVERY answer (approver, timeout,
+  /// cancel-deny, no-approver, late-ignored) is recorded OUT-OF-BAND in
+  /// the session ledger's append-only audit via `auditAppend` — an
+  /// actor-keyed `ConsentAuditEntry` — and the consentLog line carries
+  /// the structured `consent-row {…}` rendering ([verb] defaults to
+  /// `edit`; [consentPath] is the workspace-relative target when the
+  /// call site knows it, else the request title as best attribution).
   Future<_PermissionAnswer> _askClientPermission(
     _Session? session, {
     required String sessionId,
     required AcpPermissionRequest request,
     required String subject,
+    String verb = 'edit',
+    String? consentPath,
   }) async {
+    final auditPath = consentPath ?? request.title;
     final requester = _permissionRequester;
     if (requester == null) {
       // No approver wired: deny is structural (never an unconditional
       // allow) — and audited like every other answer.
-      session?.consentLog.add('$subject DENIED via no-approver (structural)');
+      final entry = _auditConsentOutcome(session, verb: verb, path: auditPath);
+      session?.consentLog.add(
+        '$subject DENIED via no-approver (structural)'
+        '${entry == null ? '' : ' | ${_consentRow(entry)}'}',
+      );
       return (allowed: false, path: 'no-approver', failureClass: '');
     }
     final pending = Completer<_PermissionAnswer>();
@@ -451,10 +516,17 @@ class HarnessAcpBackend
       }
       final allowed = outcome == AcpPermissionOutcome.allow;
       if (pending.isCompleted) {
+        final lateEntry = _auditConsentOutcome(
+          session,
+          verb: verb,
+          path: auditPath,
+          allowed: allowed,
+        );
         session?.consentLog.add(
           '$subject LATE ${allowed ? "APPROVED" : "DENIED"} via approver '
           '(IGNORED — the wait already resolved deny; the deadline is a '
-          'loop-breaker, not a policy change)',
+          'loop-breaker, not a policy change)'
+          '${lateEntry == null ? '' : ' | ${_consentRow(lateEntry)}'}',
         );
         return;
       }
@@ -465,12 +537,66 @@ class HarnessAcpBackend
     final answer = await pending.future;
     timer.cancel();
     session?.pendingPermissions.remove(key);
+    final entry = _auditConsentOutcome(
+      session,
+      verb: verb,
+      path: auditPath,
+      allowed: answer.allowed,
+    );
     session?.consentLog.add(
       '$subject ${answer.allowed ? "APPROVED" : "DENIED"} via '
       '${answer.path}'
-      '${answer.failureClass.isEmpty ? "" : " (${answer.failureClass})"}',
+      '${answer.failureClass.isEmpty ? "" : " (${answer.failureClass})"}'
+      '${entry == null ? '' : ' | ${_consentRow(entry)}'}',
     );
     return answer;
+  }
+
+  /// Consent-scoping integration: records ONE out-of-band consent
+  /// outcome (a human approver's answer / timeout / cancel-deny /
+  /// no-approver) in the session ledger's append-only audit — the SAME
+  /// log `ConsentLedger.matches` writes, keyed by the session's actor id.
+  /// Returns the entry (null without a session) for the consentLog line.
+  consent.ConsentAuditEntry? _auditConsentOutcome(
+    _Session? session, {
+    required String verb,
+    required String path,
+    bool allowed = false,
+  }) {
+    if (session == null) return null;
+    final entry = consent.ConsentAuditEntry(
+      actor: session.consentActor,
+      verb: verb,
+      path: path,
+      decision: allowed
+          ? const consent.ConsentDecision.allow('approver')
+          : const consent.ConsentDecision.deny(
+              consent.ConsentReason.approverDenied,
+              planId: 'approver',
+            ),
+      timestamp: session.consentLedger.clock(),
+    );
+    session.consentLedger.auditAppend(entry);
+    return entry;
+  }
+
+  /// The structured `consent-row {…}` rendering appended to every
+  /// consentLog line — session.consentLog carries the structured rows
+  /// while the ledger's audit stays append-only (never rewritten).
+  static String _consentRow(consent.ConsentAuditEntry entry) =>
+      'consent-row ${jsonEncode(entry.toJson())}';
+
+  /// The uses label of the plan that decided [decision] — consumed/max
+  /// from the LEDGER's counters (the single authority; the legacy
+  /// `consentPlanUses` display field no longer feeds these paths).
+  static String _usesLabel(_Session session, consent.ConsentDecision decision) {
+    for (final plan in session.consentLedger.plans) {
+      if (plan.planId == decision.planId) {
+        return '${plan.maxUses - session.consentLedger.remainingUses(plan.planId)}'
+            '/${plan.maxUses}';
+      }
+    }
+    return 'n/a';
   }
 
 
@@ -517,6 +643,14 @@ class HarnessAcpBackend
   @override
   Future<String> createSession(AcpSessionNewRequest request) async {
     onActivity?.call();
+    // Server-side tier enforcement (follow-up 1): the tier the client
+    // declares at `session/new` (`_meta.sessionTier` — the extension
+    // always sends it; non-extension clients may not) is parsed HERE,
+    // ONCE per session. Absent/unknown → null = the daemon's current
+    // hardcoded read-program defaults (bit-identical); malformed → named
+    // bounce (createSession throws, the transport surfaces it as the
+    // wire error — defaults stay unchanged).
+    final tier = parseSessionTierMeta(request.meta);
     // Per-workspace persistence: a live session for the same workspace
     // CONTINUES (the world — and the meaning tree — stay warm).
     final live = _sessions.values
@@ -539,6 +673,7 @@ class HarnessAcpBackend
       store: store,
       router: _buildRouter(),
       world: restored,
+      tier: tier,
     );
     _sessions[id] = session;
     // ADR 0027 amendment — the WORKSPACE-LEVEL consent policy
@@ -584,10 +719,16 @@ class HarnessAcpBackend
     final registry = ToolRegistry();
     final etl = repoEtlTool(world, jail, state: session.readEtlState);
     registry.register(etl);
+    // Server-side tier enforcement (follow-up 1): the session's declared
+    // tier sources the program's per-op result budget and verdict budget
+    // (and the `read` op's default budget through them). Null tier →
+    // meaningProgramTool's own hardcoded consts — bit-identical defaults.
     registry.register(
       meaningProgramTool(
         world,
         spanReader: meaningSpanReader(FsToolsRoot(jail.path)),
+        perOpResultBudget: session.tier?.perOpReadBudget,
+        verdictBudget: session.tier?.verdictBudget,
       ),
     );
     // Mechanical EXECUTION directive (allowlist enforced inside the tool —
@@ -702,16 +843,21 @@ class HarnessAcpBackend
           // R9.1 consent inheritance: a workspace-level plan
           // (.harnessd/consent.json) or a session-level grant answers
           // matching writes mechanically — pi's consent is inherited, the
-          // human is prompted only OUTSIDE the plan.
-          final plan = session.consentPlan;
-          if (plan != null &&
-              session.consentPlanUses < plan.maxUses &&
-              plan.verbs.contains('write') &&
-              RegExp(plan.pathGlob).hasMatch(write.relativePath)) {
-            session.consentPlanUses++;
+          // human is prompted only OUTSIDE the plan. Consent-scoping
+          // integration: the answer IS the session ledger's
+          // `matches(actor, verb, path)` — actor-keyed, budget-tracked,
+          // every outcome an audited `ConsentAuditEntry`.
+          final decision = session.consentLedger.matches(
+            actor: session.consentActor,
+            verb: 'write',
+            path: write.relativePath,
+          );
+          if (decision.allowed) {
             session.consentLog.add(
               'plan-allowed mechanical write: ${write.relativePath} '
-              '(${session.consentPlanUses}/${plan.maxUses})',
+              '(plan: ${decision.planId}, '
+              'uses: ${_usesLabel(session, decision)}) | '
+              '${_consentRow(session.consentLedger.audit.last)}',
             );
             return true;
           }
@@ -729,6 +875,8 @@ class HarnessAcpBackend
               details: JailWriteGateway.unifiedDiff(write),
             ),
             subject: 'mechanical write ${write.relativePath}',
+            verb: 'write',
+            consentPath: write.relativePath,
           );
           lastDenyClass = answer.failureClass;
           return answer.allowed;
@@ -995,17 +1143,20 @@ class HarnessAcpBackend
             // R9.1 consent inheritance: a workspace-level plan
             // (.harnessd/consent.json) or a session-level grant answers
             // matching edits mechanically — the human is prompted only
-            // OUTSIDE the plan.
+            // OUTSIDE the plan. Consent-scoping integration: the answer
+            // IS the session ledger's `matches(actor, verb, path)`.
             final target = plan.patches.firstOrNull?.file ?? '';
-            final grant = session.consentPlan;
-            if (grant != null &&
-                session.consentPlanUses < grant.maxUses &&
-                grant.verbs.contains('edit') &&
-                RegExp(grant.pathGlob).hasMatch(target)) {
-              session.consentPlanUses++;
+            final decision = session.consentLedger.matches(
+              actor: session.consentActor,
+              verb: 'edit',
+              path: target,
+            );
+            if (decision.allowed) {
               session.consentLog.add(
                 'plan-allowed mechanical edit: ${plan.description} '
-                '(${session.consentPlanUses}/${grant.maxUses})',
+                '(plan: ${decision.planId}, '
+                'uses: ${_usesLabel(session, decision)}) | '
+                '${_consentRow(session.consentLedger.audit.last)}',
               );
               return true;
             }
@@ -1021,6 +1172,8 @@ class HarnessAcpBackend
                 kind: 'edit',
               ),
               subject: 'mechanical edit ${plan.description}',
+              verb: 'edit',
+              consentPath: target,
             );
             lastDenyClass = answer.failureClass;
             return answer.allowed;
@@ -1365,17 +1518,17 @@ class HarnessAcpBackend
       // (host-side, INVISIBLE to the model) answers matching writes/edits
       // without a per-write prompt — autonomous runs keep deny-by-default
       // OUTSIDE the plan and stop stalling INSIDE it. Every plan answer
-      // is logged as session data.
-      bool planAllows(String path, String kind) {
-        final plan = session.consentPlan;
-        if (plan == null) return false;
-        if (session.consentPlanUses >= plan.maxUses) return false;
-        final matches =
-            plan.verbs.contains(kind) &&
-            RegExp(plan.pathGlob).hasMatch(path);
-        if (matches) session.consentPlanUses++;
-        return matches;
-      }
+      // is logged as session data. Consent-scoping integration: the
+      // answer IS the session ledger's `matches(actor, verb, path)` —
+      // actor-keyed, budget-tracked, every outcome an audited
+      // `ConsentAuditEntry` (explicit actor plans beat the `*` fallback;
+      // the ledger enforces precedence).
+      consent.ConsentDecision planAllows(String path, String kind) =>
+          session.consentLedger.matches(
+            actor: session.consentActor,
+            verb: kind,
+            path: path,
+          );
 
       Future<bool> Function(SpanEditPlan)? editApprover;
       // P1: the failure class of the LAST permission round-trip this turn
@@ -1392,32 +1545,34 @@ class HarnessAcpBackend
       // consent plan scopes); `pack_write` is its own verb — it never
       // rides `write`/`edit`. Deny-by-default: no plan, exhausted uses,
       // or no match → false (the entry skips as named data, tool
-      // construction never crashes); every answer lands in the audit log.
+      // construction never crashes); every answer lands in the audit log
+      // (ledger + the structured consentLog row).
       bool packConsent(EditExecutableWire wire, String authoredBodyDiff) {
-        final plan = session.consentPlan;
         const packPath = '.dart_tool/harnessd/edit_pack.json';
-        final allowed =
-            plan != null &&
-            session.consentPlanUses < plan.maxUses &&
-            plan.verbs.contains('pack_write') &&
-            RegExp(plan.pathGlob).hasMatch(packPath);
-        if (allowed) session.consentPlanUses++;
+        final decision = planAllows(packPath, 'pack_write');
+        final row = _consentRow(session.consentLedger.audit.last);
         session.consentLog.add(
-          allowed
+          decision.allowed
               ? 'plan-allowed pack_write: ${wire.id} '
-                  '(uses ${session.consentPlanUses}/${plan.maxUses})'
+                  '(plan: ${decision.planId}, '
+                  'uses: ${_usesLabel(session, decision)}) | $row'
               : 'pack_write REFUSED: ${wire.id} — '
-                  '${plan == null ? "no consent plan" : "outside/exhausted plan"}',
+                  '${decision.reason == consent.ConsentReason.noPlan
+                      ? "no consent plan"
+                      : "outside/exhausted plan"} | $row',
         );
-        return allowed;
+        return decision.allowed;
       }
       if (_permissionRequester != null) {
         editApprover = (plan) async {
           final target = plan.patches.firstOrNull?.file ?? '';
-          if (planAllows(target, 'edit')) {
+          final decision = planAllows(target, 'edit');
+          if (decision.allowed) {
             session.consentLog.add(
               'plan-allowed edit: ${plan.description} '
-              '(${session.consentPlanUses}/${session.consentPlan!.maxUses})',
+              '(plan: ${decision.planId}, '
+              'uses: ${_usesLabel(session, decision)}) | '
+              '${_consentRow(session.consentLedger.audit.last)}',
             );
             return true;
           }
@@ -1432,6 +1587,8 @@ class HarnessAcpBackend
               kind: 'edit',
             ),
             subject: 'edit ${plan.description}',
+            verb: 'edit',
+            consentPath: target,
           );
           lastEditDenyClass = answer.failureClass;
           return answer.allowed;
@@ -1468,10 +1625,13 @@ class HarnessAcpBackend
         writeApprover: _permissionRequester == null
             ? null
             : (write) async {
-                if (planAllows(write.relativePath, 'write')) {
+                final decision = planAllows(write.relativePath, 'write');
+                if (decision.allowed) {
                   session.consentLog.add(
                     'plan-allowed write: ${write.relativePath} '
-                    '(${session.consentPlanUses}/${session.consentPlan!.maxUses})',
+                    '(plan: ${decision.planId}, '
+                    'uses: ${_usesLabel(session, decision)}) | '
+                    '${_consentRow(session.consentLedger.audit.last)}',
                   );
                   return true;
                 }
@@ -1488,6 +1648,8 @@ class HarnessAcpBackend
                     details: JailWriteGateway.unifiedDiff(write),
                   ),
                   subject: 'write ${write.relativePath}',
+                  verb: 'write',
+                  consentPath: write.relativePath,
                 );
                 lastWriteDenyClass = answer.failureClass;
                 return answer.allowed;
@@ -1697,11 +1859,22 @@ class _Session {
     required this.store,
     required this.router,
     this.world,
+    this.tier,
   });
   final String id;
   final String cwd;
   final SnapshotStore store;
   final ModelRouter? router;
+
+  /// Server-side tier enforcement (follow-up 1): the tier the client
+  /// declared at `session/new` (`_meta.sessionTier`, parsed ONCE at
+  /// creation). Null → absent/unknown tier = the daemon's current
+  /// hardcoded read-program defaults (bit-identical behavior). A tier is
+  /// a READING property only — budgets, never capabilities (see
+  /// session_tier.dart); the read world threads these budgets into
+  /// meaningProgramTool so NON-extension clients get tier-sourced
+  /// defaults too.
+  final SessionTierProfile? tier;
 
   /// R7c: the persistent world. The meaning tree lives HERE (built once
   /// per workspace via repo_etl, refreshed by the mechanical tick) and is
@@ -1746,9 +1919,32 @@ class _Session {
 
   /// ADR 0027 amendment — the session's bounded consent grant (host-side;
   /// the model never sees it) + its usage counter + audit log.
+  ///
+  /// Consent-scoping integration: `consentPlan`/`consentPlanUses` are the
+  /// LEGACY v1 display fields (kept for `setConsentPlan` compatibility);
+  /// the LEDGER below is the single consent authority — every daemon
+  /// consent path (write_review approver, `planAllows`, `packConsent`,
+  /// the client permission round-trip) routes through
+  /// `consentLedger.matches(...)` and every outcome lands as an
+  /// actor-keyed, append-only `ConsentAuditEntry`.
   ConsentPlan? consentPlan;
   int consentPlanUses = 0;
   final consentLog = <String>[];
+
+  /// The session's CONSENT LEDGER (follow-ups 3+4): registered plans
+  /// (the `*` workspace fallback from `setConsentPlan`, plus any explicit
+  /// per-actor plans loaded via `setSessionConsentDocument`), per-plan
+  /// use counters, and the append-only audit log.
+  consent.ConsentLedger consentLedger = consent.ConsentLedger();
+
+  /// The session's stable ACTOR ID for consent purposes — derived from
+  /// the workspace path (`harnessd@<cwd>`; sessions are keyed per
+  /// workspace, so the derivation is stable across restarts of the same
+  /// workspace and distinct across workspaces — see
+  /// `consent.sessionConsentActor`). This is the actor every consent
+  /// decision of this session is audited under, and the actor a v2 plan
+  /// scopes its explicit grants to.
+  String get consentActor => consent.sessionConsentActor(cwd);
 }
 
 /// Streams one ACP update per generation: the tool calls the actor made and

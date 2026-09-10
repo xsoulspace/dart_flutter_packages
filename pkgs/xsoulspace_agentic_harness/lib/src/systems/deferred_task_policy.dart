@@ -342,6 +342,15 @@ class DeferredVerifyEntry {
   /// actor's same-package verify appends itself here — one task runs,
   /// BOTH actors get the completion beat).
   final List<Entity> requesters;
+
+  /// ADDITIVE (production deferral wiring, follow-up 2): the registered
+  /// task's WORK has been spawned for this entry (the requester-side
+  /// executor is running the convention). The spawner flips this in the
+  /// same synchronous block that registered the entry — a JOINER never
+  /// spawns (one task runs; a second executor would double-run the
+  /// convention). No await sits between `join` and this flag's flip, so
+  /// the single-threaded event loop makes the decision atomic.
+  bool workSpawned = false;
 }
 
 /// The canonical (package, convention) pool key. Different packages NEVER
@@ -386,7 +395,13 @@ class DeferredVerifyPool extends Resource {
     final existing = _inFlight[key];
     if (existing != null &&
         world.getResource<TaskRegistryResource>().has(existing.taskId)) {
-      existing.requesters.add(requester);
+      // IDEMPOTENT per requester (production wiring hardening): a pending
+      // actor's repeated grade pass re-requests the SAME in-flight verify
+      // — appending it twice would double its completion beats. A
+      // DIFFERENT requester still joins (the law: one task, N beats).
+      if (!existing.requesters.contains(requester)) {
+        existing.requesters.add(requester);
+      }
       deferredAccountingOf(world).recordJoin();
       return existing;
     }

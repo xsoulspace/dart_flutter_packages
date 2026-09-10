@@ -64,6 +64,13 @@ const maxPerOpReadBudgetTokens = 4096;
 /// (`defaultProgramVerdictBudgetTokens`) — the AFM tier reproduces it.
 const minVerdictBudgetTokens = 1200;
 
+// Const aliases so the [SessionTierProfile] constructor defaults can
+// reference the measured constants without shadowing (the field names
+// collide with the top-level consts inside the class scope) — the same
+// convention [DerivedContextLimits] uses.
+const double _kNativeTruthFactor = nativeTruthFactor;
+const double _kMarginFraction = derivationMarginFraction;
+
 /// The immutable, once-per-session tier declaration. Pure budget data —
 /// no capability, no verb, no consent field (a tier is a READING property;
 /// see the library doc).
@@ -71,12 +78,12 @@ class SessionTierProfile {
   const SessionTierProfile({
     required this.backend,
     required this.windowTokens,
-    required this.outputReserveTokens,
-    required this.nativeTruthFactor,
-    required this.marginFraction,
-    required this.minCutTokens,
     required this.perOpReadBudget,
     required this.verdictBudget,
+    this.outputReserveTokens = afmOutputReserveTokens,
+    this.nativeTruthFactor = _kNativeTruthFactor,
+    this.marginFraction = _kMarginFraction,
+    this.minCutTokens = minCutBudgetTokens,
   });
 
   /// The inference the tier is declared for (the [DerivedContextLimits]
@@ -156,5 +163,54 @@ SessionTierProfile resolveSessionTier({
       verdictBudgetConfigKey,
       deriveVerdictBudgetTokens(perOpReadBudget),
     ),
+  );
+}
+
+/// Server-side tier enforcement (follow-up 1) — parses the tier a client
+/// declared at session/new: `_meta.sessionTier` is the ONCE-PER-SESSION
+/// declaration, and the DAEMON honors it too so non-extension clients get
+/// tier-sourced defaults (the pi extension sources the same numbers
+/// client-side; see r7_harnessd_extension.ts `resolveSessionTier`).
+///
+/// The wire shape is the extension's `SessionTierProfile` interface —
+/// exactly `{backend, windowTokens, outputReserveTokens, perOpReadBudget,
+/// verdictBudget}`. The three ADR 0033 cut terms the wire omits default to
+/// the measured AFM constants (the declaring client resolved its own tier
+/// through the same equation — the daemon never re-derives a declared
+/// tier, one declaration per session).
+///
+/// Returns null when `_meta` is absent or carries no `sessionTier` — the
+/// current hardcoded defaults, bit-for-bit. A malformed value is a NAMED
+/// error naming `_meta.sessionTier.<field>` — never a silent fallback.
+SessionTierProfile? parseSessionTierMeta(Map<String, Object?>? meta) {
+  if (meta == null) return null;
+  final raw = meta['sessionTier'];
+  if (raw == null) return null;
+  if (raw is! Map) {
+    throw StateError(
+      '_meta.sessionTier must be a JSON object, got "${raw.runtimeType}"',
+    );
+  }
+  final map = Map<String, Object?>.from(raw);
+
+  int intFor(String field) {
+    final value = map[field];
+    final parsed = value is int ? value : int.tryParse('$value');
+    if (parsed == null || parsed <= 0) {
+      throw StateError(
+        '_meta.sessionTier.$field must be a positive integer, got "$value"',
+      );
+    }
+    return parsed;
+  }
+
+  final backend = map['backend'];
+  return SessionTierProfile(
+    backend: backend is String && backend.isNotEmpty
+        ? backend
+        : 'apple_foundation_afm',
+    windowTokens: intFor('windowTokens'),
+    perOpReadBudget: intFor('perOpReadBudget'),
+    verdictBudget: intFor('verdictBudget'),
   );
 }

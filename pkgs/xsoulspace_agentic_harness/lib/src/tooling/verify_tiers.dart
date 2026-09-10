@@ -353,3 +353,18 @@ DeferredRouting classifyVerifyCommand(
   Iterable<String> command, {
   bool deferralEnabled = true,
 }) => classifyCommand(command, deferralEnabled: deferralEnabled);
+
+/// ADDITIVE (production deferral wiring, follow-up 2): the per-package
+/// steps a plan carries — the deferred wire grades the SAME steps the
+/// inline verifier would have run, so pooling keys and execution stay
+/// one-truth. `commands` (the per-package tier) wins; the legacy
+/// single-command tiers project as ONE step carrying [RunGoalPlan.cwd];
+/// an empty result means the plan grades the ROOT convention unchanged
+/// (the caller's own root step — nothing to pool).
+List<RunGoalCommand> planStepsOf(RunGoalPlan plan) {
+  if (plan.commands.isNotEmpty) return plan.commands;
+  if (plan.command != null) {
+    return [RunGoalCommand(command: plan.command!, cwd: plan.cwd)];
+  }
+  return const <RunGoalCommand>[];
+}

@@ -52,6 +52,13 @@ enum ConsentReason {
 
   /// The plan granted the move. The ONLY allow reason.
   granted,
+
+  /// An OUT-OF-BAND human-approver outcome recorded via
+  /// [ConsentLedger.auditAppend] (allow, deny, timeout or cancel-deny —
+  /// the via/failure-class attribution rides the session's consent log
+  /// line). Added by the integration wave; appended at the end so the
+  /// existing reason values keep their order.
+  approverDenied,
 }
 
 /// The verdict of ONE consent evaluation: allow|deny + the named reason
@@ -107,6 +114,19 @@ class ConsentAuditEntry {
 
   /// The deciding plan id, when one existed.
   String? get planId => decision.planId;
+
+  /// The STRUCTURED ROW — the JSON-carriable shape of this audit entry.
+  /// The backend's session consent log carries this rendering alongside
+  /// its human-readable line; the ledger's own audit stays append-only.
+  Map<String, Object?> toJson() => {
+    'actor': actor,
+    'verb': verb,
+    'path': path,
+    'decision': decision.allowed ? 'allow' : 'deny',
+    'reason': decision.reason.name,
+    if (decision.planId != null) 'plan': decision.planId,
+    'timestamp': timestamp.toUtc().toIso8601String(),
+  };
 
   @override
   String toString() =>
@@ -565,11 +585,55 @@ class ConsentLedger {
   /// Append-only: entries are never rewritten or removed.
   void auditAppend(ConsentAuditEntry entry) => _record(entry);
 
+  /// Installs [plans] as the ledger's plan set (a CONFIG reset — e.g. a
+  /// session-level grant replacing the workspace fallback at
+  /// `setConsentPlan` time). The append-only audit log is PRESERVED:
+  /// entries are never rewritten or removed; only the plan configuration
+  /// and its use counters start fresh (each installed plan's counter =
+  /// its own `maxUses`).
+  void resetPlans(Iterable<ConsentPlan> plans) {
+    _plans.clear();
+    _remainingUses.clear();
+    plans.forEach(addPlan);
+  }
+
   ConsentDecision _record(ConsentAuditEntry entry) {
     _audit.add(entry);
     return entry.decision;
   }
 }
+
+/// Builds a ledger from an already-decoded consent DOCUMENT (the shape
+/// `parseConsentPlanDocument` accepts: one v1/v2 plan object or
+/// `{"plans": [...]}`). A malformed document raises [ConsentPlanError]
+/// with its named code — callers that need tolerant loading (the daemon's
+/// "absent/malformed file → deny-by-default, never a crash") catch it
+/// themselves. This is the ledger-from-session factory the integration
+/// recipe names: one call at plan-load time, [ConsentLedger.matches] at
+/// every consent site afterwards.
+ConsentLedger consentLedgerFromDocument(
+  Object? document, {
+  ConsentClock? clock,
+  DateTime? legacyGrantedAt,
+}) {
+  final ledger = ConsentLedger(clock: clock);
+  parseConsentPlanDocument(
+    document,
+    legacyGrantedAt: legacyGrantedAt,
+  ).forEach(ledger.addPlan);
+  return ledger;
+}
+
+/// The STABLE ACTOR ID of a per-workspace daemon session.
+///
+/// Derivation (documented, deterministic): `harnessd@<workspace-path>`.
+/// Daemon sessions are keyed PER WORKSPACE (a second `session/new` for
+/// the same cwd CONTINUES the live session), so the actor id keys on the
+/// same identity: stable within a daemon run AND across restarts of the
+/// same workspace path, and distinct across workspaces — two workspaces
+/// never share one actor's grants, so a v2 plan scoped to
+/// `actor: "harnessd@/path/to/ws"` covers exactly that session.
+String sessionConsentActor(String workspacePath) => 'harnessd@$workspacePath';
 
 /// Injectable clock: returns the current evaluation time.
 typedef ConsentClock = DateTime Function();

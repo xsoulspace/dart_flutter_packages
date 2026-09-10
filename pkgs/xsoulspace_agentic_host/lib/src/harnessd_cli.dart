@@ -60,8 +60,27 @@ import 'package:dart_acp_toolkit/dart_acp_toolkit.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart'
     show EnvConfig;
 
+import 'coding_agent_runner.dart' show deferVerifyHostDefault;
 import 'harness_acp_backend.dart';
 import 'session_tier.dart';
+
+/// The deferred-verify daemon flag (follow-up 2 data surface — pure parse,
+/// unit-gated in deferred_verify_production_test.dart). The DAEMON PATH
+/// wires the deferred-task law ON by default: the in-loop run-graded
+/// verify is the last ≳1 s block on the interactive edit path, and the
+/// deferred law defers it as a pooled registered task (completion beat +
+/// re-open) while the driver's final gate stays the inline terminal
+/// proof. `--no-defer-verify` restores the inline verify verbatim; an
+/// explicit `--defer-verify` wins over an earlier `--no-defer-verify`
+/// (last flag wins — the standard CLI precedence).
+bool resolveDeferVerifyFlag(List<String> args) {
+  var on = true;
+  for (final a in args) {
+    if (a == '--defer-verify') on = true;
+    if (a == '--no-defer-verify') on = false;
+  }
+  return on;
+}
 
 /// Runs the `harnessd` daemon (ACP v1 over stdio, plus a unix socket in
 /// workspace mode). [bindings] are the backends the composition root
@@ -81,6 +100,11 @@ Future<void> runHarnessdCli(
   var remoteMover = false;
   int? idleExitMinutes;
   List<String>? checkCommand;
+  // ADDITIVE (follow-up 2): the daemon opts into the deferred-verify law
+  // HERE, at the composition root, before any session/new — the flag is a
+  // plain library flag on the runner (HarnessAcpBackend is another lane's
+  // file; no constructor arg was added).
+  deferVerifyHostDefault = resolveDeferVerifyFlag(args);
   for (var i = 0; i < args.length; i++) {
     if (args[i] == '--backend' && i + 1 < args.length) backend = args[++i];
     if (args[i] == '--model' && i + 1 < args.length) model = args[++i];
@@ -148,6 +172,16 @@ Future<void> runHarnessdCli(
     'minCut=${sessionTier.minCutTokens} '
     'perOpRead=${sessionTier.perOpReadBudget} '
     'verdict=${sessionTier.verdictBudget}',
+  );
+  // ADDITIVE (follow-up 2) — the once-per-daemon deferral audit row:
+  // whether in-loop `test-run` verifies DEFER as pooled registered tasks
+  // (completion beat + re-open; the final gate stays inline) or run
+  // inline verbatim (the disabled fallback).
+  stderr.writeln(
+    '[harnessd] deferred verify: '
+    '${deferVerifyHostDefault
+        ? "ON (test-run grades defer as pooled tasks)"
+        : "OFF (inline verbatim)"}',
   );
   // INTEGRATION HOOK (exact one line — for the harness_acp_backend.dart
   // owner; that lane owns the file, so this lane only documents):

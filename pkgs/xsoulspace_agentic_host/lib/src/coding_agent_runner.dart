@@ -28,7 +28,11 @@ import 'package:xsoulspace_agentic_harness/benchmark_api.dart'
         CheckerResult,
         CheckerSpec,
         RunGoalCommand,
+        RunGoalPlan,
+        RunGoalSpec,
         VerifyTierPlanner,
+        classifyVerifyCommand,
+        planStepsOf,
         dartVerifyConvention,
         derivePerPackageVerify,
         sessionTouchedFiles,
@@ -55,6 +59,7 @@ import 'package:xsoulspace_agentic_harness/src/tools/fs_tools.dart'
         WriteGateMode;
 import 'package:xsoulspace_agentic_harness/src/systems/deferred_task_policy.dart'
     show
+        DeferredRouting,
         DeferredTaskAccounting,
         DeferredTaskPolicy,
         DeferredVerifyEntry,
@@ -572,12 +577,31 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
   /// run end, so a 30–60s tool call is never silent. Emission-only: the
   /// poller never mutates the world.
   void Function(String toolName, Object? output)? onToolResult,
+
+  /// ADDITIVE (production deferral wiring, follow-up 2): when true, the
+  /// meaning-profile run-graded verify path wires [DeferredTaskPolicy]
+  /// (`wireDeferredVerify`) and the tier planner routes `test-run`-class
+  /// steps through the (package, convention) pool — the in-loop grade
+  /// DEFERS as a registered task, the actor's decision no longer blocks
+  /// on the verify wall, and the completion beat re-opens it. Null →
+  /// [deferVerifyHostDefault] (the composition-root data surface — the
+  /// daemon CLI opts in there). Default OFF: every existing inline
+  /// behavior is preserved verbatim (the disabled-fallback law).
+  bool? deferVerify,
 }) async {
+  final deferVerifyOn = deferVerify ?? deferVerifyHostDefault;
   final sw = Stopwatch()..start();
   final resume = restoredWorld != null;
   final world = restoredWorld ?? (World()..addPlugin(AgentPlugin()));
   final recorder = FlightRecorder();
   onRecorder?.call(recorder);
+  // ADDITIVE (production deferral wiring, follow-up 2): the deferred-verify
+  // pool + policy + accounting are WORLD resources — wired once per run
+  // when the host opted in (the daemon CLI or the [deferVerify] param).
+  // Idempotent on a resumed world (upsert). Unwired/disabled → every
+  // verify request takes the EXISTING inline path verbatim (the
+  // disabled-fallback law — zero behavior change).
+  if (deferVerifyOn) wireDeferredVerify(world);
   if (!resume) {
     world
       ..upsertResource(ToolRegistryResource())
@@ -854,7 +878,13 @@ Future<CodingAgentRunResult> runCodingAgentOnce({
         // the terminal proof at the final gate.
         // Tiered verification is HARNESS machinery (verify_tiers.dart): the
         // beat-derived stateless planner; the dart convention is data.
-        planProvider: const VerifyTierPlanner(convention: dartVerifyConvention),
+        // ADDITIVE (follow-up 2): with deferral ON the SAME planner is
+        // wrapped by the deferred wire — `test-run`-class steps become
+        // pooled deferred tasks (join by (package, convention)), the
+        // completion beat carries the verdict and re-opens the actor, and
+        // the final gate below stays the INLINE terminal proof. Unwired
+        // worlds run the inner planner verbatim (the fallback law).
+        planProvider: _meaningProfilePlanner(deferVerifyOn: deferVerifyOn),
       );
     } else {
       wireRunGradedGoal(
@@ -1387,3 +1417,215 @@ void completeDeferredVerifyTask(
   verifyWallMs: verifyWallMs,
   command: command,
 );
+
+// ─────────────────────────────────────────────
+// Production deferral wiring (follow-up 2) — the executor + the planner
+// ─────────────────────────────────────────────
+
+/// The production inner planner: the beat-derived tier planner (verify
+/// tiers stay HARNESS machinery — the deferred wire only wraps them).
+Future<RunGoalPlan?> _tierPlannerInner(World world) =>
+    const VerifyTierPlanner(convention: dartVerifyConvention).call(world);
+
+/// The meaning-profile verify planner (the call-site seam, follow-up 2):
+/// the tier planner when deferral is OFF (legacy inline verbatim), the
+/// deferred wire when ON. The explicitly-typed local is what makes the
+/// callable-object tear-offs type-check in the ternary.
+Future<RunGoalPlan?> Function(World world) _meaningProfilePlanner({
+  required bool deferVerifyOn,
+}) {
+  // Separate assignments (not a ternary): a conditional expression's
+  // static type is the LUB of its branches — two callable classes LUB to
+  // Object BEFORE the implicit call-tear-off applies.
+  if (deferVerifyOn) {
+    return const DeferredVerifyPlanner();
+  }
+  return const VerifyTierPlanner(convention: dartVerifyConvention);
+}
+
+/// The composition-root data surface for the deferral default (the OTHER
+/// half of the opt-in: `HarnessAcpBackend` is owned by another lane, so
+/// the daemon CLI flips THIS flag — imported directly — instead of
+/// threading a new constructor arg). Default OFF: hosts that never opt in
+/// run the legacy inline verify verbatim (the disabled-fallback law).
+bool deferVerifyHostDefault = false;
+
+/// One deferred verify execution: the convention command, its working
+/// directory, and the wall budget (the same 120 s ceiling the jailed run
+/// tool enforces). Returns the honest outcome.
+typedef DeferredVerifyRunner =
+    Future<({bool ok, String detail})> Function(
+      List<String> command,
+      String workingDirectory,
+      int timeoutMs,
+    );
+
+/// The DEFAULT executor body: spawn the package's convention command
+/// (`dart test` / `flutter test` per the convention derivation) in the
+/// package directory — the same semantics as the jailed run tool
+/// (timeout → structured failure; output clipped by the completion
+/// detail, never a side-channel stream).
+Future<({bool ok, String detail})> processRunDeferredVerify(
+  List<String> command,
+  String workingDirectory,
+  int timeoutMs,
+) async {
+  try {
+    final result = await Process.run(
+      command.first,
+      command.sublist(1),
+      workingDirectory: workingDirectory,
+      stdoutEncoding: utf8,
+      stderrEncoding: utf8,
+    ).timeout(
+      Duration(milliseconds: timeoutMs),
+      onTimeout: () => ProcessResult(0, -1, '', 'timeout'),
+    );
+    return (
+      ok: result.exitCode == 0,
+      detail: result.exitCode == 0
+          ? 'run: exit=0'
+          : 'run failed exit=${result.exitCode}: ${result.stderr}'.trim(),
+    );
+  } on ProcessException catch (e) {
+    return (ok: false, detail: 'deferred verify spawn_error: ${e.message}');
+  }
+}
+
+/// THE REQUESTER-SIDE EXECUTOR (the missing half, follow-up 2): run the
+/// registered pooled task's work — the package's convention AS the task —
+/// then complete through the EXISTING machinery
+/// ([completeDeferredVerifyTask]): the TaskHandle resolves, EVERY
+/// requester gets the `goal_verify` completion beat carrying
+/// `verify_wall_ms`, and each is re-opened via the
+/// ToolResultPendingMarker continuation. One task runs — a JOINED entry
+/// never spawns a second executor (the caller guards via
+/// [DeferredVerifyEntry.workSpawned]).
+Future<void> runDeferredVerifyTask(
+  World world, {
+  required RunGoalCommand step,
+  required DeferredVerifyEntry entry,
+  required String? workspaceRoot,
+  DeferredVerifyRunner? runner,
+}) async {
+  final run = runner ?? processRunDeferredVerify;
+  // The step cwd is workspace-root-RELATIVE (the jail resolves it) — no
+  // root means the convention would spawn against the PROCESS cwd (a jail
+  // escape). Honest failure — never a dangling task (the named-defect
+  // law), never a relative-dir spawn.
+  if (workspaceRoot == null || workspaceRoot.isEmpty) {
+    completeDeferredVerifyTask(
+      world,
+      taskId: entry.taskId,
+      passed: false,
+      detail: 'deferred verify: no workspace root resolvable for '
+          '${step.command.join(" ")}',
+      command: step.command,
+    );
+    return;
+  }
+  final relCwd = step.cwd ?? '';
+  final cwd = relCwd.isEmpty ? workspaceRoot : '$workspaceRoot/$relCwd';
+  final sw = Stopwatch()..start();
+  final outcome = await run(step.command, cwd, 120000);
+  sw.stop();
+  completeDeferredVerifyTask(
+    world,
+    taskId: entry.taskId,
+    passed: outcome.ok,
+    detail: outcome.detail,
+    verifyWallMs: sw.elapsedMilliseconds,
+    command: step.command,
+  );
+}
+
+/// THE DEFERRED VERIFY PLANNER (follow-up 2): wraps the tier planner and
+/// routes `test-run`-class steps through the (package, convention) pool.
+///
+/// The laws this wire enforces, in order:
+/// 1. UNWIRED/DISABLED → the inner plan runs INLINE verbatim (the
+///    disabled-fallback law — [maybeJoinDeferredVerify] returns null).
+/// 2. ANY inline-class step → the WHOLE plan inline: the run-graded
+///    verifier's verdict is a fail-fast conjunction, and forking it
+///    across two completion paths would make the verdict unattributable.
+/// 3. EVERY step deferred → each joins the pool (same (package,
+///    convention) JOINS the in-flight task — one task, N beats) and the
+///    FIRST requester spawns the executor ([DeferredVerifyEntry
+///    .workSpawned] — no await between join and flip, so the event loop
+///    makes it atomic).
+/// 4. The plan returns `skip: true` — the in-loop verifier grades
+///    NOTHING inline this pass; the grade is IN FLIGHT as a registered
+///    task (canSleep never exits under it), the completion beat carries
+///    the verdict and RE-OPENS the actor, and the driver's final gate
+///    remains the INLINE terminal proof. `skip` is the honest encoding
+///    available in the closed plan shape.
+/// 5. The completion beat is named `goal_verify`, so the pending-edit
+///    walk CONSUMES the graded edits on the next pass — a second
+///    verifier pass skips (no re-registration loop).
+///
+/// Requester selection: EVERY pending actor at grade time joins the step
+/// (the daemon path has exactly one; a squad's second pending peer JOINS
+/// and receives the completion beat too — one task, N beats). A repeated
+/// grade pass by the same actor joins idempotently (no duplicate beats).
+class DeferredVerifyPlanner {
+  const DeferredVerifyPlanner({this.inner = _tierPlannerInner, this.runner});
+
+  /// The wrapped planner. Typed as a FUNCTION so gates can inject a stub
+  /// (mixed-plan, fallback laws); production uses the default — the
+  /// beat-derived tier planner (an implicit call tear-off can't be a const
+  /// default, hence the named top-level inner below).
+  final Future<RunGoalPlan?> Function(World world) inner;
+
+  /// Test seam for the LLM-free gate — null (production) spawns the REAL
+  /// convention via [processRunDeferredVerify].
+  final DeferredVerifyRunner? runner;
+
+  Future<RunGoalPlan?> call(World world) async {
+    final plan = await inner(world);
+    if (plan == null || plan.skip) return plan;
+    final steps = planStepsOf(plan);
+    if (steps.isEmpty) return plan;
+    for (final step in steps) {
+      if (classifyVerifyCommand(step.command) != DeferredRouting.deferred) {
+        return plan; // mixed verdict paths never fork — inline verbatim
+      }
+    }
+    final pending = world.query2<Actor, ToolResultPendingMarker>().toList();
+    if (pending.isEmpty) return plan; // nobody to re-open → inline
+    String? root;
+    try {
+      root = world.getResource<RunGoalSpec>().cwd;
+    } on StateError {
+      root = null; // the executor fails the task honestly (named detail)
+    }
+    for (final step in steps) {
+      final entry = maybeJoinDeferredVerify(
+        world,
+        step: step,
+        requester: pending.first.$1.entity,
+      );
+      if (entry == null) return plan; // raced to unwired → inline
+      // EVERY pending actor is a requester of this grade (one task, N
+      // beats); the idempotent join keeps repeated passes honest.
+      for (var i = 1; i < pending.length; i++) {
+        maybeJoinDeferredVerify(
+          world,
+          step: step,
+          requester: pending[i].$1.entity,
+        );
+      }
+      if (entry.workSpawned) continue; // a joiner never spawns
+      entry.workSpawned = true;
+      unawaited(
+        runDeferredVerifyTask(
+          world,
+          step: step,
+          entry: entry,
+          workspaceRoot: root,
+          runner: runner,
+        ),
+      );
+    }
+    return const RunGoalPlan(skip: true);
+  }
+}
