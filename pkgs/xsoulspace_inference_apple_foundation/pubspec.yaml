@@ -11,29 +11,12 @@ resolution: workspace
 
 dependencies:
   code_assets: any
-  agentic_executables_wire:
-    path: ../../agentic_executables/agentic_executables_wire
-  dart_acp_toolkit:
-    path: /Users/antonio/mcp/cline/intentcall/packages/acp_toolkit
   ecsly_serialization: ^0.1.0-dev.1
   ffi: ^2.2.0
   hooks: any
   path: ^1.9.1
-  # ADR 0025: provider-thin — this package owns only the FFI transport and
-  # the thin `harnessd` composition root (bin/harnessd.dart); the daemon,
-  # coding runner and ACP host policy live in the host package.
-  xsoulspace_agentic_host:
-    path: ../xsoulspace_agentic_host
-  xsoulspace_agentic_harness:
-    path: ../xsoulspace_agentic_harness
-  # afm_wave_gate: the trusted-author/md/yaml gate rows validate their
-  # fixture plumbing against the REAL materializers (pack capture, edit_
-  # section, edit_key) — the workspace package owns them (ADR 0024/0026).
-  xsoulspace_agentic_workspace:
-    path: ../xsoulspace_agentic_workspace
-  # B3 escalation rung (J8.1 tier 3): the daemon's open_router binding.
-  xsoulspace_inference_openrouter:
-    path: ../xsoulspace_inference_openrouter
+  # FFI transport only (ADR 0036). The harnessd composition root lives in
+  # ~/xs/ecsai_harness/pkgs/xsoulspace_agentic_afm.
   xsoulspace_inference_core:
     path: ../xsoulspace_inference_core
 

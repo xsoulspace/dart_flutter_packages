@@ -1,122 +1,36 @@
 ---
 name: dart-flutter-packages
-description: Use when working in the dart_flutter_packages monorepo — editing packages under pkgs/ (especially xsoulspace_agentic_harness (agent harness) and xsoulspace_inference_core (inference contracts), or inference providers like xsoulspace_inference_gemma_flutter / xsoulspace_inference_apple_foundation), running validation, or onboarding to the repo.
+description: Use when editing, validating, or diagnosing packages in the dart_flutter_packages monorepo. The agentic harness product lives in ~/xs/ecsai_harness and is not maintained from this skill.
 ---
 
-# dart_flutter_packages Working Guide
+# dart_flutter_packages working guide
 
-## Harness surface routing (REQUIRED — the tiny-model law)
+[Root AGENTS.md](../../../AGENTS.md) is the entrypoint. Read the affected
+package's `AGENTS.md` before editing. Skill Steward owns the operational map.
 
-**Work THROUGH the harness surface where it covers the work.** The North
-Star: the model is a replaceable reasoning primitive — the same tools must
-serve a 2–4k on-device model (AFM), for whom raw bash does not exist.
-Every bash escape today is a place the tiny model cannot work tomorrow;
-closing that gap IS the product (the intent-first growth loop).
+The agentic harness product (engine, host, workspace, AFM composition) is
+`~/xs/ecsai_harness`. Inference packages and shared contracts stay here.
+Do not reintroduce a dependency from a provider package onto the harness.
 
-Decision procedure, per change:
+## Validation
 
-1. **Dart code edits in `pkgs/*/`** → the meaning surface:
-   `harness_scan` (once per session) → `harness_zoom` / `harness_impact`
-   (read) → `harness_edit` (act) → `harness_verify` (gate). Reads are
-   mechanical (34–54 ms measured, ADR 0027); `edit_symbol` bounces with
-   analyzer verification + auto-revert — protection raw `edit` cannot give.
-2. **Whole-file / non-Dart / generational operations** (new files, renames,
-   deletes, doc/config/TS edits, bulk sed) → bash honestly, THEN append a
-   row to
-   [surface_gaps.md](../../xsoulspace_agentic_harness/docs/agent/surface_gaps.md):
-   what bash did, why the surface didn't cover it, the verb/spec to build.
-   A gap row is a work item, not a defeat — silent escapes starve the
-   tiny-model path.
-3. **Never** re-implement surface verbs in bash (rejection list in
-   `pipeline_coding.md` § Drift rejection list): no raw read/write/grep
-   tools, no `while(true)` oracle loops, no bins in provider packages.
-
-Non-goal: **no GitHub/tracker integration** — tasks enter as plain task
-sentences + the workspace convention; the workspace oracle is the gate.
-
-## Validation (scoped, never full-workspace)
+From the repository root, name the package. The Justfile defaults to
+`xsoulspace_inference_core` when the argument is omitted.
 
 ```bash
-just check [package]        # analyze + test for one package
-just analyze-one <package>  # analyze only
-just test-one <package>     # test only
-just demo                   # run headless golden examples of the agent harness
+just check xsoulspace_inference_core
+just analyze-one <package>
+just test-one <package>
 ```
 
-Prefer the pi tools `workspace_check`, `test_baseline_record`, `test_baseline_check`
-(see `.pi/extensions/dart-workspace.ts`) over raw `flutter test` — they scope output
-and separate pre-existing failures from regressions.
+Record a baseline before editing a package that already has failing tests.
+Do not treat a pre-existing failure as permission to add another.
 
-**Known-failing tests exist.** Before editing a package with red tests, record a
-baseline (`test_baseline_record`); before claiming done, use `test_baseline_check`.
+## Conventions
 
-## Agent harness fast path (xsoulspace_agentic_harness)
-
-The harness is an ECS-based multi-actor agent loop. Read in this order:
-
-1. `pkgs/xsoulspace_agentic_harness/docs/agent/architecture.mdx` — one diagram +
-   invariants (schedules → systems → events → resources).
-2. Runnable golden examples, pure Dart, run with `dart run` from `example/`:
-   - `example/lib/headless/01_minimal_loop.dart` — bootstrap + run-until-idle
-   - `02_tool_routing.dart` — tool registration & world-routed execution
-   - `03_scripted_faults.dart` — deterministic testing via ScriptedGenerationHandler
-   - `04_real_model_openrouter.dart` — real provider wiring
-3. Recipes are embedded as dartdoc on `HarnessLoop`, `AgentWorldSetup`,
-   `ScriptedGenerationHandler`.
-
-### Invariants worth defending
-
-- The generation handler **never executes tools**; the world's
-  `toolExecutionSystem` does. Native (Apple FM) and tag-parsed calls share one path.
-- Memory is **projection over beat-threads**, never a log; summaries are deliberate
-  transforms.
-- Projection is token-budgeted; benchmarks fail if exceeded.
-- End every harness test with `expectIdle(world)` (test/support).
-- **Every loop is monotonic-budgeted (J1.5)**: never reset `ToolRoundCount`/
-  `RetryCount`/`AttemptCount` inside a policy — use `openFreshDecision` for
-  host-injected fresh decisions; `RetryCount` must survive tool-call
-  continuations (a flaky backend looped 255× on-device before this rule).
-- Adding an inference provider = register an `InferenceClient` builder in
-  `ModelRouter.inferenceClientsBuilders` + a `Model` entry. Nothing else changes.
-  Do NOT modify core's public API from provider packages.
-
-### Footguns
-
-- **Dart string interpolation: bare `$id.member` interpolates ONLY the id** —
-  `'$jail.path/file'` yields `<jail>/.path/file` (`.path/...` treated as a
-  literal suffix). Always write `'${jail.path}/file'`. This silently wrote
-  materialized files outside the jail and cost a debug cycle.
-- **Nested raw-string templates**: when a generated file embeds a JSON ops
-  table inside a template, the inner delimiter must be `r"""..."""` (raw
-  triple-double-quote) — non-raw `"""` consumes `\"` escapes (breaks JSON at
-  runtime), and `r'''` collides with an outer `r'''` template (syntax errors).
-- **Move acks must zoom to `point`**: AFM's native session accumulates every
-  tool result, so a full/local view cut per move floods a 4k context within
-  ~28 moves (12k tokens). `meaningCut(zoom: 'point')` keeps feedback O(1).
-- **Component registration ORDER matters (J1.5 debug cycle)**: new Component
-  classes go at the very END of both `data_models/components.dart` AND the
-  `AgentPlugin.install` chain — ecsly assigns ids in registration order;
-  mid-chain inserts shift host-registered ids → "Bad state: Column should
-  exist after archetype creation". ADR-0009 plan-frontier components live
-  in `data_models/components.dart` (re-exported by `world_builder.dart`).
-- **ReAct continuation ends on text-only responses**: a scripted handler that
-  interleaves prose fills (no tool calls) with moves stops the chain at the
-  first prose turn. Pair non-terminal prose with a cheap tool call, or emit
-  all moves in one response.
-- **Every Component class MUST be registered in `AgentPlugin.install`**
-  (`registerObjectComponent`). An unregistered object component co-spawning
-  with registered ones corrupts ecsly archetype column allocation — tests
-  fail with "Bad state: Column should exist after archetype creation".
-  New components: add to the plugin chain; ADR-0009 plan-frontier components
-  live in `data_models/components.dart` (re-exported by `world_builder.dart`).
-- `fs_tools.dart` uses `dart:io` and is intentionally NOT exported from the core
-  barrel — importing it into web-targeting code breaks compilation late.
-- Fire-and-forget actor concurrency means races; one flush is the coherence point.
-  See `run_until_idle_tool_race_test.dart` before adding systems.
-
-## Repo conventions
-
-- Skill Steward: `steward map` shows the operational desk; validate via
-  `steward action <pkg>.analyze|.test`.
-- Each package has its own AGENTS.md working agreement — read it before editing.
-- Classify `north_star_impact` before durable structural changes (see root AGENTS.md).
+- `steward map` shows the operational desk. Package gates are
+  `steward action <pkg>.analyze` and `steward action <pkg>.test`.
+- Classify `north_star_impact` before a durable structural change.
+  `amends` / `conflicts` need an ADR first.
+- Provider packages implement `InferenceClient`. They do not host daemon,
+  runner, or ACP policy.

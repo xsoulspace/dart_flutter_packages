@@ -1,5 +1,10 @@
 # ADR 0001: Native FFI bridge + ACP server for Apple Foundation
 
+> The FFI bridge in this ADR still lives in
+> `xsoulspace_inference_apple_foundation`. The harness engine and the AFM
+> composition root moved to `~/xs/ecsai_harness` (ADR 0036). This package
+> no longer hosts `harnessd`.
+
 - Status: Accepted
 - Date: 2026-08-22
 - North Star impact: `applies`

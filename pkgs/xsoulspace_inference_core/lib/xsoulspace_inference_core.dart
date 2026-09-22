@@ -2,6 +2,7 @@ export 'package:ecsly/ecsly.dart';
 export 'package:ecsly_app/ecsly_app.dart';
 
 export 'src/config/env_config.dart';
+export 'src/decision/decision.dart';
 export 'src/inference_client.dart';
 export 'src/inference_parallel_io.dart'
     if (dart.library.js_interop) 'src/inference_parallel_stub.dart';

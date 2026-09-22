@@ -42,39 +42,15 @@ If this repo needs a current claim ledger, run `steward evidence init --minimal`
 Default to no harness: do not add actions, probes, benchmarks, or scenarios unless typed actions, probes, or benchmarks help real repo work.
 Use `steward.yaml` and harness proof only when typed actions, probes, or benchmarks help real repo work.
 
-## Harness Surface Routing (REQUIRED)
+## Harness product
 
-Agents work **through the agentic harness surface** where it covers the
-work — this is how the surface grows intent-first AND how the same tools
-stay usable by a 2–4k on-device model (AFM), for whom raw shell access
-does not exist (North Star: the model is a replaceable reasoning
-primitive; the harness is the intelligence amplifier).
-
-- **Dart edits in `pkgs/*/`**: meaning surface — `harness_scan` →
-  `harness_zoom`/`harness_impact` → `harness_edit` → `harness_verify`.
-- **Everything else** (new files, renames, deletes, md/yaml/json/TS,
-  bulk operations): bash is HONEST and allowed — but every escape appends
-  a row to
-  [pkgs/xsoulspace_agentic_harness/docs/agent/surface_gaps.md](pkgs/xsoulspace_agentic_harness/docs/agent/surface_gaps.md)
-  (what bash did, why the surface didn't cover it, the verb/spec to
-  build). Gaps close as materializer specs / surface verbs (ADR 0024/0026)
-  — never as new loops. Silent escapes starve the tiny-model path.
-- **Never** re-implement surface verbs in bash (rejection list:
-  `pkgs/xsoulspace_agentic_harness/docs/agent/pipeline_coding.md`).
-- **Mechanical work is FRONTIER work (ADR 0009 Amendment)**: steps carry
-  resolved `StepAction`s; ready decisions deliver via `openFreshDecision`
-  — the actor carries moves, never composes ids; zero-token mechanical
-  actors work consented ready steps ahead of the model actor; unresolvable
-  steps project as tier-routed. Never build a parallel pre-pass — extend
-  the frontier (see pipeline_coding.md § Planning is projection).
-- **No GitHub/tracker integration**: tasks enter as task sentences + the
-  workspace convention; the workspace oracle is the gate.
+The agentic harness (engine, host, workspace, AFM composition) lives in
+`~/xs/ecsai_harness`. This monorepo keeps inference transports and the
+shared contract packages. It does not route package maintenance through
+the harness. See [ADR 0036](docs/decisions/0036_harness_product_relocated.md).
 
 ## Package Working Agreements
 
-- `pkgs/xsoulspace_agentic_harness`: [AGENTS.md](pkgs/xsoulspace_agentic_harness/AGENTS.md)
-- `pkgs/xsoulspace_agentic_host`: [AGENTS.md](pkgs/xsoulspace_agentic_host/AGENTS.md)
-- `pkgs/xsoulspace_agentic_workspace`: [AGENTS.md](pkgs/xsoulspace_agentic_workspace/AGENTS.md)
 - `pkgs/xsoulspace_inference_core`: [AGENTS.md](pkgs/xsoulspace_inference_core/AGENTS.md)
 - `pkgs/xsoulspace_inference_apple_foundation`: [AGENTS.md](pkgs/xsoulspace_inference_apple_foundation/AGENTS.md)
 

@@ -1,4 +1,4 @@
-include: package:xsoulspace_lints/library.dart
+include: package:xsoulspace_lints/library.yaml
 analyzer:
   exclude:
     - build/**

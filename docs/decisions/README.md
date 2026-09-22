@@ -1,39 +1,17 @@
 # ADR Index
 
-| ADR                                                    | Status   | Title                                                                                            |
-| ------------------------------------------------------ | -------- | ------------------------------------------------------------------------------------------------ |
-| [0001](0001_native_ffi_bridge_acp.md)                  | Accepted | Native FFI bridge + ACP server for Apple Foundation                                              |
-| [0002](0002_handler_response_contract.md)              | Accepted | Handler response contract — return value is authoritative                                        |
-| [0003](0003_llm_free_harness_evaluation.md)            | Accepted | LLM-free harness evaluation (scripted actors, oracles, invariants)                               |
-| [0004](0004_intelligence_grade_harness_evaluation.md)  | Accepted | Intelligence-grade evaluation — exact cuts, decoy oracles, causal coupling                       |
-| [0005](0005_decision_flow_api.md)                      | Accepted | DecisionFlow — public composable decision-creation API                                           |
-| [0006](0006_universal_storage_production_hardening.md) | Accepted | Universal Storage hardening — kernel split, conformance suite, capability model, batched commits |
-| [0007](0007_extensibility_seams_and_conformance.md)    | Accepted | Extensibility seams, conformance suites, and adapter policy (MCP yes, pi-extension reuse no)     |
-| [0008](0008_env_config_store.md)                       | Accepted | EnvConfig — global/local environment configuration store                                         |
-| [0009](0009_goals_as_vectors_plans_as_projections.md)  | Accepted | Goals as verifiable vectors; plans as derived projections                        |
-| [0010](0010_mesh_sync_architecture.md)                 | Accepted | Mesh sync architecture — serverless peers, QR pairing, transport seam            |
-| [0011](0011_convergence_kernel_dual_mode.md)           | Accepted | Convergence kernel — dual mode (op log + snapshots), shared by mesh and ecsly    |
-| [0012](0012_extract_agentic_harness_package.md)        | Accepted | Extract agentic harness into xsoulspace_agentic_harness (sub_star boundary)      |
-| [0013](0013_native_tool_calling_first.md) | Accepted | Native tool calling is the default decision path; guided schema is an explicit exception |
-| [0014](0014_composition_surface_and_discovery.md) | Accepted | Declarative composition surface over the five seams; discovery tooling |
-| [0015](0015_domains_live_in_hosts_core_stays_generic.md) | Accepted | Domains live above the core; composition stays a generic seam |
-| [0016](0016_measure_tool_efficiency_simplify_surface.md) | Accepted | Measure tool efficiency; keep the tool surface minimal and composable |
-| [0017](0017_ae_etl_planning_and_a2a_native.md) | Accepted | AE-ETL for raw→planning; a2a-native multi-actor default build path |
-| [0018](0018_meaning_view_zoom_projection_context_ownership.md) | Accepted | Meaning view is a zoom projection; context is harness-owned; macro gate fired |
-| [0019](0019_code_law_absolute_long_horizon_tier.md) | Accepted | Code law is absolute (verifiability, not model size); long-horizon tier is the headline measurement; growth is intent-first |
-| [0020](0020_cut_composition_api.md) | Accepted | The cut is a composed document — typed slots, per-slot policies, input gate; model ≠ actor (roles as data) |
-| [0021](0021_problems_as_canonical_rows_project_repair_packs.md) | Accepted | Problems are AE-ETL canonical rows; repairs are project-guided repair packs |
-| [0022](0022_workspace_oracle_meaning_pipeline.md) | Accepted | Meaning pipeline grades through the workspace oracle; vocabulary grows as verified data (bidirectional ETL) |
-| [0023](0023_filesystem_projection_target_edit_as_rederivation.md) | Accepted | The filesystem is a projection target: edit-as-re-derivation; read/write demoted in the meaning profile (R7) |
-| [0024](0024_filesystem_one_map_graph_typed_materializers.md) | Accepted | The filesystem is one map-graph: typed materializer specs per file class, uniform edit verbs, tiny-model-first surfaces |
-| [0025](0025_host_layer_extraction_composable_embedding.md) | Accepted | The host layer is a package: one canonical daemon/CLI surface, providers stay thin, embedding is one import |
-| [0026](0026_workspace_domain_specs_as_data_wire_codec.md) | Accepted | The workspace is the domain: specs are data; the wire contract lives with the request |
-| [0027](0027_reads_are_not_builds_reasoning_beats.md) | Accepted | Reads are not builds: reasoning beats and the decision-classified mover |
-| [0028](0028_one_move_per_decision_native_loop_bounded.md) | Accepted | One move per decision: the native tool loop is not a decision loop (contract, backend-agnostic) |
-| [0030](0030_one_decision_one_program_surface_convergence.md) | Accepted | One decision, one program: the meaning surface converges; the format is never the model's choice |
-| [0029](0029_convergence_kernel_presence_and_sequence_strategy.md) | Accepted | Convergence kernel — presence/ephemeral contract and sequence strategy pulled forward |
-| [0031](0031_presence_link_topology_and_session_foundation.md) | Accepted | Presence link topology (shared connection, doc-scoped, app-owned) and transport-agnostic presence foundation |
-| [0032](0032_convergence_kernel_composite_strategy.md) | Accepted | Convergence kernel — composite strategy (one document, one kernel doc); per-op tags deferred with recorded trigger |
-| [0033](0033_derived_context_equation_mechanical_repair.md) | Accepted | The derived context equation: one-truth overhead gate, mechanical repair ladder, decision ends after the move |
-| [0034](0034_one_edit_verb_formats_grow_the_registry.md) | Accepted | One edit verb: edits address meaning nodes; formats grow the registry, never the surface |
-| [0035](0035_materializer_bindings_language_families.md) | Accepted | Materializer bindings: the registry IS the format seam; languages land as spec families (TS, C# next) |
+Harness product decisions (0002–0005, 0007, 0009, 0012–0028, 0030,
+0033–0035) moved to `~/xs/ecsai_harness/docs/decisions/` with
+[0036](0036_harness_product_relocated.md).
+
+| ADR | Status | Title |
+| --- | --- | --- |
+| [0001](0001_native_ffi_bridge_acp.md) | Accepted | Native FFI bridge for Apple Foundation |
+| [0006](0006_universal_storage_production_hardening.md) | Accepted | Universal Storage hardening |
+| [0008](0008_env_config_store.md) | Accepted | EnvConfig store |
+| [0010](0010_mesh_sync_architecture.md) | Accepted | Mesh sync architecture |
+| [0011](0011_convergence_kernel_dual_mode.md) | Accepted | Convergence kernel, dual mode |
+| [0029](0029_convergence_kernel_presence_and_sequence_strategy.md) | Accepted | Convergence kernel presence and sequence |
+| [0031](0031_presence_link_topology_and_session_foundation.md) | Accepted | Presence link topology |
+| [0032](0032_convergence_kernel_composite_strategy.md) | Accepted | Convergence kernel composite strategy |
+| [0036](0036_harness_product_relocated.md) | Accepted | Harness product relocated to ecsai_harness |

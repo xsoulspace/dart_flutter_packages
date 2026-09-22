@@ -3,42 +3,14 @@
 Please notice: this package is under development and not ready for production use.
 
 Provider-agnostic inference contracts and validation utilities for text, STT,
-and TTS task flows — plus a **UI-agnostic cinematic multi-actor agent harness**
-built on ecsly.
+and TTS task flows. The agentic harness now lives in `~/xs/ecsai_harness`;
+see [ADR 0036](../../docs/decisions/0036_harness_product_relocated.md).
 
-## Agent harness (agentic core)
-
-The harness gives each actor a tiny, budgeted "cut" of a living narrative
-graph — the model is a replaceable 2–4k-context reasoning primitive, not the
-source of intelligence. See [docs/DX_FAQ.md](docs/DX_FAQ.md) for day-to-day
-usage and [docs/agent/PLAN.md](docs/agent/PLAN.md) for the roadmap.
-
-Key surfaces:
-
-- `AgentPlugin` — installs components, resources, events, and schedules into an
-  ecsly `World`.
-- `HarnessLoop` — non-blocking loop; sleeps when idle;
-  `runUntilIdle()` for headless CLI/server hosts.
-- `ScenarioRunner` + `MetricsCollector` — stress-test real models over
-  multi-actor, tool-using scenarios without an LLM in unit tests.
-- `fsTools(FsToolsRoot(...))` — jailed read/write/list tools (VM hosts only).
-
-Minimal headless loop:
-
-```dart
-final world = World()..addPlugin(AgentPlugin());
-world.upsertResource(ModelRouterResource(router));
-world.getResource<GenerationHandlerResource>().registerDefault(handler);
-final scene = world.spawnComponents([const Scene(), SceneFrame()]);
-final actor = world.spawnComponents([
-  Actor(agentId: AgentId.create()),
-  ActorModel(modelId: myModelId),
-  PresentInScene(sceneEntity: scene),
-  OpenDecision(prompt: 'What should I do next?'),
-]);
-await HarnessLoop(world: world).runUntilIdle();
-// response beats are now in the graph, indexed by FacetIndex
-```
+The [optional decision provider plan](docs/decision_provider_PLAN.md) describes
+proposed additive contracts. They are not implemented capabilities. Concrete
+providers remain optional and core does not depend on them or the harness.
+The proposed choice interface can support repeated evaluations for reasoning
+or semantic composition as well as routing; each role requires its own evidence.
 
 ## Included API
 
