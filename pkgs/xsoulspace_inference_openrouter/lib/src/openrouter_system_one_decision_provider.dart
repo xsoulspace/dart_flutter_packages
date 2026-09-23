@@ -341,6 +341,7 @@ final class OpenRouterSystemOneDecisionProvider implements DecisionProvider {
         );
       }
       final answers = <DecisionAnswer>[];
+      final roundingAdjustments = <String, Object?>{};
       for (final question in request.questions) {
         final rawAnswer = answersMap[question.id.value];
         if (rawAnswer is! Map) {
@@ -378,6 +379,37 @@ final class OpenRouterSystemOneDecisionProvider implements DecisionProvider {
           probabilities[DecisionOptionId(entry.key as String)] =
               (entry.value as num).toDouble();
         }
+        // Live System One replies can round each probability to hundredths,
+        // yielding 0.99 (observed) or 1.01 total mass. Normalize only this
+        // narrow wire representation; the shared complete-distribution
+        // contract remains strict. Preserve the original values for audit.
+        final rawSum = probabilities.values.fold<double>(0, (a, b) => a + b);
+        final expectedOptions = question.options.map((o) => o.id).toSet();
+        final hundredthRounded =
+            probabilities.isNotEmpty &&
+            probabilities.keys.toSet().containsAll(expectedOptions) &&
+            probabilities.length == expectedOptions.length &&
+            probabilities.values.every(
+              (value) =>
+                  value.isFinite &&
+                  value >= 0 &&
+                  value <= 1 &&
+                  (value * 100 - (value * 100).round()).abs() < 1e-8,
+            );
+        if (hundredthRounded &&
+            ((rawSum - 0.99).abs() < 1e-8 || (rawSum - 1.01).abs() < 1e-8)) {
+          roundingAdjustments[question.id.value] = <String, Object?>{
+            'raw_sum': rawSum,
+            'raw_probabilities': <String, double>{
+              for (final entry in probabilities.entries)
+                entry.key.value: entry.value,
+            },
+            'method': 'hundredth_rounding_unit_mass',
+          };
+          for (final key in probabilities.keys.toList()) {
+            probabilities[key] = probabilities[key]! / rawSum;
+          }
+        }
         final selectedId = DecisionOptionId(selected);
         answers.add(
           DecisionAnswer(
@@ -411,6 +443,8 @@ final class OpenRouterSystemOneDecisionProvider implements DecisionProvider {
               'usage',
             }.contains(entry.key))
               entry.key: entry.value,
+          if (roundingAdjustments.isNotEmpty)
+            'probability_normalization': roundingAdjustments,
         },
       );
       final completion = DecisionCompleted(

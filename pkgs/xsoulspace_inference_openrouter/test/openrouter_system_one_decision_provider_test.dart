@@ -107,6 +107,90 @@ void main() {
       },
     );
 
+    for (final probabilities in <Map<String, double>>[
+      {'apply_edit': 0.93, 'inspect': 0.05, 'insufficient_evidence': 0.01},
+      {'apply_edit': 0.93, 'inspect': 0.07, 'insufficient_evidence': 0.01},
+    ]) {
+      test(
+        'normalizes hundredth wire rounding $probabilities with raw audit',
+        () async {
+          final base = _question();
+          final question = FiniteChoiceQuestion(
+            id: base.id,
+            version: base.version,
+            candidateSetId: base.candidateSetId,
+            instructions: base.instructions,
+            options: [
+              ...base.options,
+              const DecisionOption(
+                id: DecisionOptionId('inspect'),
+                description: 'Inspect',
+              ),
+            ],
+            abstainOptionId: base.abstainOptionId,
+          );
+          final request = _request(questions: [question]);
+          final provider = _provider(
+            MockClient(
+              (_) async => http.Response(
+                jsonEncode(
+                  _successPayload(
+                    answerOverrides: {'probabilities': probabilities},
+                  ),
+                ),
+                200,
+              ),
+            ),
+          );
+          final result = await provider.decide(request) as DecisionCompleted;
+          expect(
+            validateDecisionCompletion(
+              request: request,
+              completion: result,
+              requireCompleteProbabilityDistribution: true,
+            ).success,
+            isTrue,
+          );
+          expect(
+            result.answers.single.selectedOptionId,
+            const DecisionOptionId('apply_edit'),
+          );
+          expect(result.answers.single.confidence, 0.6);
+          final audit =
+              result.metadata.additional['probability_normalization'] as Map;
+          expect(
+            (audit['next_operation'] as Map)['raw_probabilities'],
+            probabilities,
+          );
+          expect(
+            (audit['next_operation'] as Map)['raw_sum'],
+            closeTo(probabilities.values.reduce((a, b) => a + b), 1e-10),
+          );
+        },
+      );
+    }
+
+    test('does not normalize non-hundredth near-unit probabilities', () async {
+      final provider = _provider(
+        MockClient(
+          (_) async => http.Response(
+            jsonEncode(
+              _successPayload(
+                answerOverrides: {
+                  'probabilities': {
+                    'apply_edit': 0.795,
+                    'insufficient_evidence': 0.195,
+                  },
+                },
+              ),
+            ),
+            200,
+          ),
+        ),
+      );
+      expect(await provider.decide(_request()), isA<DecisionFailed>());
+    });
+
     test(
       'missing key is unavailable and causes zero network requests',
       () async {
