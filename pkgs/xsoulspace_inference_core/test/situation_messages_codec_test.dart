@@ -7,7 +7,6 @@ library;
 
 import 'package:test/test.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
-import 'package:xsoulspace_inference_openrouter/xsoulspace_inference_openrouter.dart';
 
 void main() {
   group('SituationMessagesCodec', () {

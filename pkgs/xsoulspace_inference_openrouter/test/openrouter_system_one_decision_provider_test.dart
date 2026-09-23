@@ -149,6 +149,52 @@ void main() {
       expect(requests, 0);
     });
 
+    test(
+      'rejects out-of-bounds requests as unsupported before any network call',
+      () async {
+        var requests = 0;
+        final provider = _provider(
+          MockClient((_) async {
+            requests++;
+            return _successResponse();
+          }),
+        );
+        final tooManyQuestions = _request(
+          questions: List<FiniteChoiceQuestion>.generate(
+            65,
+            (final index) => FiniteChoiceQuestion(
+              id: DecisionQuestionId('q$index'),
+              version: const DecisionQuestionVersion('v1'),
+              candidateSetId: const DecisionCandidateSetId('candidates-a'),
+              instructions: 'Choose the next grounded operation.',
+              options: const <DecisionOption>[
+                DecisionOption(
+                  id: DecisionOptionId('apply_edit'),
+                  description: 'Apply the grounded semantic edit',
+                ),
+                DecisionOption(
+                  id: DecisionOptionId('insufficient_evidence'),
+                  description: 'Gather more evidence before proposing',
+                ),
+              ],
+              abstainOptionId: const DecisionOptionId('insufficient_evidence'),
+            ),
+          ),
+        );
+        final oversizedState = _request(
+          state: 'x' * ((1 << 20) + 1),
+          cancellationId: const DecisionCancellationId('cancel-c'),
+        );
+
+        final tooMany = await provider.decide(tooManyQuestions);
+        final oversized = await provider.decide(oversizedState);
+
+        expect(tooMany, isA<DecisionUnsupported>());
+        expect(oversized, isA<DecisionUnsupported>());
+        expect(requests, 0);
+      },
+    );
+
     for (final malformedCase in <String, String>{
       'non-JSON response': 'not json',
       'non-object response': '[]',
@@ -271,10 +317,8 @@ void main() {
       const privateText = 'private-state-and-key';
       final provider = _provider(
         MockClient(
-          (_) async => http.Response(
-            '{"error":{"message":"$privateText"}}',
-            401,
-          ),
+          (_) async =>
+              http.Response('{"error":{"message":"$privateText"}}', 401),
         ),
       );
 

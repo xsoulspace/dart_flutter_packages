@@ -27,6 +27,7 @@
 library;
 
 /// Prefixes and helpers for role-tagged context fragments.
+// ignore: avoid_classes_with_only_static_members
 abstract final class ContextFragmentProtocol {
   /// Benchmark scaffolding for prompt-format A/B (results_plan_falsification
   /// §real-model): when false, producers emit plain untagged text — the exact

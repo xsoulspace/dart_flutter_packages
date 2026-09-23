@@ -215,10 +215,7 @@ final class _FakeInferenceClient implements InferenceClient {
   };
 
   @override
-  Future<bool> refreshAvailability() async {
-    _available = true;
-    return _available;
-  }
+  Future<bool> refreshAvailability() async => _available = true;
 
   @override
   void resetAvailabilityCache() {

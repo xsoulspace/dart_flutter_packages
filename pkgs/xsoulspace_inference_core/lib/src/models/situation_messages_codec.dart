@@ -28,6 +28,7 @@ import 'context_fragment_protocol.dart';
 
 /// Renders budgeted context fragments into a chat-completions `messages`
 /// array (the de-facto wire standard; OpenRouter and most hosted APIs).
+// ignore: avoid_classes_with_only_static_members
 abstract final class SituationMessagesCodec {
   /// Build the messages array. [prompt] is the current decision prompt;
   /// [systemPrompt] the actor's system prompt; [fragments] the projected,
@@ -50,7 +51,9 @@ abstract final class SituationMessagesCodec {
             ContextFragmentProtocol.assistantPrefix.length,
           ),
         });
-      } else if (fragment.startsWith(ContextFragmentProtocol.toolResultPrefix)) {
+      } else if (fragment.startsWith(
+        ContextFragmentProtocol.toolResultPrefix,
+      )) {
         toolNotes.add(
           fragment.substring(ContextFragmentProtocol.toolResultPrefix.length),
         );
@@ -84,14 +87,13 @@ abstract final class SituationMessagesCodec {
 
   /// True when every non-absence fragment carries a recognizable role tag —
   /// guards against silently rendering untagged legacy cuts as empty roles.
-  static bool isRenderable(final List<Object> fragments) => fragments.every(
-    (final f) {
-      final s = f.toString();
-      return s.startsWith(ContextFragmentProtocol.assistantPrefix) ||
-          s.startsWith(ContextFragmentProtocol.toolResultPrefix) ||
-          s.startsWith(ContextFragmentProtocol.absencePrefix) ||
-          !s.contains(':') ||
-          s.startsWith('absence:');
-    },
-  );
+  static bool isRenderable(final List<Object> fragments) =>
+      fragments.every((final f) {
+        final s = f.toString();
+        return s.startsWith(ContextFragmentProtocol.assistantPrefix) ||
+            s.startsWith(ContextFragmentProtocol.toolResultPrefix) ||
+            s.startsWith(ContextFragmentProtocol.absencePrefix) ||
+            !s.contains(':') ||
+            s.startsWith('absence:');
+      });
 }

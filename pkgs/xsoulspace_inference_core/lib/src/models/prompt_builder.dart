@@ -14,11 +14,13 @@ class PromptBuilder extends StringBuffer {
   PromptBuilder(
     String super.content, {
     this.structuredOutputSystemPrompt =
-        'FINAL RESPONSE FORMAT'
-        'When you have all the information you need (or when no tool is required),'
-        'your entire reply must be a single valid JSON object that matches this schema.'
-        'No markdown, no explanation, no text before or after the JSON.'
-        ''
+        'FINAL RESPONSE FORMAT\n'
+        'When you have all the information you need '
+        '(or when no tool is required),\n'
+        'your entire reply must be a single valid JSON object '
+        'that matches this schema.\n'
+        'No markdown, no explanation, no text before or after the JSON.\n'
+        '\n'
         'Schema:',
   });
   final String structuredOutputSystemPrompt;

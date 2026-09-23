@@ -9,6 +9,12 @@ import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 /// Construction is explicit and performs no I/O. This adapter calls
 /// `/api/v1/systemone`; it is independent from [OpenRouterInferenceClient] and
 /// never uses the chat-completions endpoint.
+///
+/// Cancellation is enforced by the adapter, not by the server: a cancelled
+/// request is blocked before dispatch or its late response is discarded, even
+/// though the remote model cannot abort computation. [capabilities]
+/// therefore reports `supportsCancellation: true` in the adapter-enforced
+/// sense; hosts must not assume server-side compute abort.
 final class OpenRouterSystemOneDecisionProvider implements DecisionProvider {
   OpenRouterSystemOneDecisionProvider({
     required final String apiKey,

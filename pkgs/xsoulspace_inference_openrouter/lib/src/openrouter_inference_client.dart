@@ -3,7 +3,6 @@ import 'dart:async';
 // situation→messages codec lives in the harness and is composed above this
 // transport (the client renders whatever `messages` arrive via the request
 // fragments contract).
-import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'dart:convert';
 import 'dart:io';
 
@@ -147,11 +146,7 @@ class OpenRouterInferenceClient implements InferenceClient {
       );
       jsonSchemaFormat = {
         'type': 'json_schema',
-        'json_schema': {
-          'name': 'response',
-          'strict': true,
-          'schema': schema,
-        },
+        'json_schema': {'name': 'response', 'strict': true, 'schema': schema},
       };
       final schemaJson = const JsonEncoder.withIndent('  ').convert(schema);
       systemPrompt =
@@ -326,9 +321,11 @@ class OpenRouterInferenceClient implements InferenceClient {
 
     // ignore: avoid_print
     if (contentStr.isEmpty && parsedCalls.isEmpty) {
-      print('[OR-DBG] empty completion; messageKeys=${messageMap.keys.toList()} '
-          'content=${content == null ? '<null>' : jsonEncode(content)} '
-          'finish=${first['finish_reason']}');
+      print(
+        '[OR-DBG] empty completion; messageKeys=${messageMap.keys.toList()} '
+        'content=${content == null ? '<null>' : jsonEncode(content)} '
+        'finish=${first['finish_reason']}',
+      );
     }
 
     if (contentStr.isNotEmpty) {

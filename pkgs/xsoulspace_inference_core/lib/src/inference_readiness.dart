@@ -83,6 +83,7 @@ final class InferenceReadinessSnapshot {
   };
 }
 
+// ignore: one_member_abstracts -- interface seam mirroring DecisionProvider.
 abstract interface class InferenceReadinessProbe {
   FutureOr<InferenceReadinessSnapshot> probe();
 }
