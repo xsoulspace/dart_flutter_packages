@@ -15,3 +15,6 @@ Harness product decisions (0002–0005, 0007, 0009, 0012–0028, 0030,
 | [0031](0031_presence_link_topology_and_session_foundation.md) | Accepted | Presence link topology |
 | [0032](0032_convergence_kernel_composite_strategy.md) | Accepted | Convergence kernel composite strategy |
 | [0036](0036_harness_product_relocated.md) | Accepted | Harness product relocated to ecsai_harness |
+| [0037](0037_universal_automation_family.md) | Accepted | `universal_automation_*` family: drivers, screencast, WebRTC |
+| [0038](0038_automation_kernel_unification.md) | Accepted | The family is the automation kernel; toolkit/IntentCall adoption |
+| [0039](0039_mesh_session_aead_channel_crypto.md) | Accepted | Mesh session AEAD channel crypto (`universal_storage_session_aead`) |

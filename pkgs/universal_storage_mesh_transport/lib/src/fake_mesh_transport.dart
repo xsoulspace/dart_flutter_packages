@@ -121,3 +121,87 @@ final class FakeMeshSession implements MeshSession {
     _onClose();
   }
 }
+
+
+/// Multi-peer in-memory transport for HOST-side tests: several controllers
+/// dial one host and the test injects frames per session (born from the
+/// vosges multi-sender arbiter tests).
+///
+/// ```dart
+/// final hub = FakeMeshHub();
+/// final phone = hub.openSession('phone');
+/// final mac = hub.openSession('mac-controller');
+/// hub.incoming.listen(hostAcceptsSession);
+/// phone.receive(frame);
+/// phone.sentStream.listen(assertHeartbeats);
+/// ```
+final class FakeMeshHub implements MeshTransport {
+  final _incoming = StreamController<MeshSession>.broadcast();
+  final _opened = <String, FakeHubSession>{};
+
+  @override
+  Stream<MeshSession> get incoming => _incoming.stream;
+
+  List<MeshSession> get openSessions => List.unmodifiable(_opened.values);
+
+  /// Opens (or re-opens) a session from [peerId]. A re-open closes the
+  /// previous session for that peer, matching reconnect semantics.
+  FakeHubSession openSession(final String peerId) {
+    final previous = _opened.remove(peerId);
+    previous?.closeLocally();
+    final inbound = StreamController<Uint8List>();
+    final session = FakeHubSession._(peerId, inbound);
+    _opened[peerId] = session;
+    _incoming.add(session);
+    return session;
+  }
+
+  @override
+  Future<MeshSession> connect(final MeshPeerRecord peer) async {
+    throw UnimplementedError('the hub is host-side only');
+  }
+}
+
+final class FakeHubSession implements MeshSession {
+  FakeHubSession._(this.remotePeerId, StreamController<Uint8List> inbound)
+    : _inbound = inbound;
+
+  @override
+  final String remotePeerId;
+
+  final StreamController<Uint8List> _inbound;
+  final _sent = <Uint8List>[];
+  var _closed = false;
+
+  /// Frames the peer under test sent to this session.
+  List<Uint8List> get sent => List.unmodifiable(_sent);
+
+  /// Whether the peer under test closed this session.
+  bool get closedByPeer => _closed;
+
+  @override
+  Stream<Uint8List> get inbound => _inbound.stream;
+
+  @override
+  Future<void> send(final Uint8List payload) async {
+    if (_closed) throw StateError('Session closed');
+    _sent.add(payload);
+  }
+
+  @override
+  Future<void> close() async {
+    if (_closed) return;
+    _closed = true;
+    await _inbound.close();
+  }
+
+  /// Simulates the peer's socket dying (done event on the inbound stream).
+  void closeLocally() {
+    if (_closed) return;
+    _closed = true;
+    unawaited(_inbound.close());
+  }
+
+  /// Injects a frame as if the peer sent it.
+  void receive(final Uint8List bytes) => _inbound.add(bytes);
+}

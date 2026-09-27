@@ -1,0 +1,28 @@
+name: universal_browser_cdp
+description: >-
+  Pure-Dart Chrome DevTools Protocol (CDP) client: discovery, WebSocket
+  JSON-RPC, accessibility snapshots, input synthesis, screenshots, and a
+  fake CDP server for tests. No Flutter, no Node.
+version: 0.1.0
+homepage: https://github.com/xsoulspace/dart_flutter_packages
+repository: https://github.com/xsoulspace/dart_flutter_packages
+issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
+documentation: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/universal_browser_cdp
+
+environment:
+  sdk: ^3.12.0
+
+resolution: workspace
+
+dependencies:
+  universal_automation_interface: ^0.1.0
+
+dev_dependencies:
+  test: ^1.31.2
+  universal_automation_conformance: ^0.1.0
+  xsoulspace_lints: ^0.1.2
+topics:
+  - automation
+  - browser
+  - cdp
+  - devtools

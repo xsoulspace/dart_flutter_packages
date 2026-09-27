@@ -1,0 +1,26 @@
+name: universal_webrtc_raw
+description: >-
+  Raw client for the xs-webrtc-sidecar/1 wire protocol: process
+  supervision, JSON-lines request correlation, and event stream for the
+  webrtc-rs engine sidecar.
+version: 0.1.0
+homepage: https://github.com/xsoulspace/dart_flutter_packages
+repository: https://github.com/xsoulspace/dart_flutter_packages
+issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
+documentation: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/universal_webrtc_raw
+
+environment:
+  sdk: ^3.12.0
+
+resolution: workspace
+
+dependencies:
+  meta: ^1.19.0
+
+dev_dependencies:
+  test: ^1.31.2
+  xsoulspace_lints: ^0.1.2
+topics:
+  - webrtc
+  - sidecar
+  - rust

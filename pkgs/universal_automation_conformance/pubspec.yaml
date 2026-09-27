@@ -1,0 +1,27 @@
+name: universal_automation_conformance
+description: >-
+  Conformance suites for the universal automation family: prove drivers,
+  frame sources, and frame sinks are swappable by adopting one call in
+  your tests.
+version: 0.1.0
+homepage: https://github.com/xsoulspace/dart_flutter_packages
+repository: https://github.com/xsoulspace/dart_flutter_packages
+issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
+documentation: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/universal_automation_conformance
+
+environment:
+  sdk: ^3.12.0
+
+resolution: workspace
+
+dependencies:
+  test: ^1.31.2
+  universal_automation_interface: ^0.1.0
+  universal_screencast: ^0.1.0
+
+dev_dependencies:
+  xsoulspace_lints: ^0.1.2
+topics:
+  - automation
+  - conformance
+  - testing

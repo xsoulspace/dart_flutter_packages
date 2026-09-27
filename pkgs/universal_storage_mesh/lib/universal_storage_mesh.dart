@@ -16,6 +16,7 @@ export 'src/mesh_path_utils.dart';
 export 'src/mesh_peer_registry.dart';
 export 'src/mesh_presence_observer.dart';
 export 'src/mesh_presence_session.dart';
+export 'src/isolate_frame_crypto.dart';
 export 'src/mesh_presence_tracker.dart';
 export 'src/mesh_storage_provider.dart';
 export 'src/pairing_service.dart';

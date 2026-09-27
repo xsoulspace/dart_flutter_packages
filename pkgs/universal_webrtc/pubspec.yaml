@@ -1,0 +1,30 @@
+name: universal_webrtc
+description: >-
+  High-level WebRTC for pure Dart over the webrtc-rs sidecar: signaling
+  channel contracts, a loopback signaling implementation, a peer factory,
+  and a FrameSink that pumps screencast frames through the WebRTC data
+  channel.
+version: 0.1.0
+homepage: https://github.com/xsoulspace/dart_flutter_packages
+repository: https://github.com/xsoulspace/dart_flutter_packages
+issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
+documentation: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/universal_webrtc
+
+environment:
+  sdk: ^3.12.0
+
+resolution: workspace
+
+dependencies:
+  universal_automation_interface: ^0.1.0
+  universal_screencast: ^0.1.0
+  universal_webrtc_raw: ^0.1.0
+
+  meta: any
+dev_dependencies:
+  test: ^1.31.2
+  xsoulspace_lints: ^0.1.2
+topics:
+  - webrtc
+  - signaling
+  - screencast

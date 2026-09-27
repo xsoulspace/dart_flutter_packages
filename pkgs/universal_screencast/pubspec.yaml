@@ -1,0 +1,31 @@
+name: universal_screencast
+description: >-
+  Declarative frame pipeline for automation targets: FrameSource (CDP
+  screencast, paced polling) to FrameSink (binary WebSocket, MJPEG HTTP,
+  file recorder) with fail-closed composition validation and audience
+  policies.
+version: 0.1.0
+homepage: https://github.com/xsoulspace/dart_flutter_packages
+repository: https://github.com/xsoulspace/dart_flutter_packages
+issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
+documentation: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/universal_screencast
+
+environment:
+  sdk: ^3.12.0
+
+resolution: workspace
+
+dependencies:
+  meta: ^1.19.0
+  universal_automation_interface: ^0.1.0
+  universal_browser_cdp: ^0.1.0
+
+dev_dependencies:
+  test: ^1.31.2
+  universal_automation_conformance: ^0.1.0
+  xsoulspace_lints: ^0.1.2
+topics:
+  - screencast
+  - frames
+  - pipeline
+  - mjpeg

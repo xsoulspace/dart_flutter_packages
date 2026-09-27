@@ -1,0 +1,25 @@
+name: universal_storage_session_aead
+description: >-
+  Session encryption for Universal Storage mesh links: a Noise-shaped,
+  mutually-authenticated handshake over pairing identity keys derives
+  ChaCha20-Poly1305 session keys, and a MeshTransport wrapper seals every
+  frame (ADR 0010 §1 confidentiality obligation, ADR 0039).
+version: 0.1.0-dev.1
+homepage: https://github.com/xsoulspace/universal_storage_sync
+repository: https://github.com/xsoulspace/universal_storage_sync
+issue_tracker: https://github.com/xsoulspace/universal_storage_sync/issues
+
+environment:
+  sdk: ^3.12.0
+
+resolution: workspace
+
+dependencies:
+  cryptography: ^2.7.0
+  meta: ^1.19.0
+  universal_storage_mesh_transport: ^0.1.0-dev.1
+
+dev_dependencies:
+  lints: ^6.1.0
+  test: ^1.26.2
+  xsoulspace_lints: ^0.1.2

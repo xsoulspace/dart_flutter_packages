@@ -1,0 +1,30 @@
+name: universal_capture_macos
+description: >-
+  macOS-native screen capture and accessibility checks for pure Dart,
+  wired through Dart native-assets build hooks (swiftc-compiled code
+  asset, @Native bindings). No Flutter, no plugin surface.
+version: 0.1.0
+homepage: https://github.com/xsoulspace/dart_flutter_packages
+repository: https://github.com/xsoulspace/dart_flutter_packages
+issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
+documentation: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/universal_capture_macos
+
+environment:
+  sdk: ^3.12.0
+
+resolution: workspace
+
+dependencies:
+  code_assets: any
+  ffi: ^2.2.0
+  hooks: any
+  universal_automation_interface: ^0.1.0
+  universal_screencast: ^0.1.0
+
+dev_dependencies:
+  test: ^1.31.2
+  xsoulspace_lints: ^0.1.2
+topics:
+  - macos
+  - screen-capture
+  - accessibility

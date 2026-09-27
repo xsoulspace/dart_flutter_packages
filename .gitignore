@@ -13,3 +13,5 @@ pubspec.lock
 .gitnexus
 node_modules/
 .flutter_mcp
+/target/
+**/target/

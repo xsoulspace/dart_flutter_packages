@@ -1,0 +1,28 @@
+name: universal_browser_webdriver
+description: >-
+  Pure-Dart W3C WebDriver client with a safaridriver endpoint adapter for
+  Safari automation. No Java, no Node, no Selenium grid.
+version: 0.1.0
+homepage: https://github.com/xsoulspace/dart_flutter_packages
+repository: https://github.com/xsoulspace/dart_flutter_packages
+issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
+documentation: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/universal_browser_webdriver
+
+environment:
+  sdk: ^3.12.0
+
+resolution: workspace
+
+dependencies:
+  universal_automation_interface: ^0.1.0
+
+  meta: any
+dev_dependencies:
+  test: ^1.31.2
+  universal_automation_conformance: ^0.1.0
+  xsoulspace_lints: ^0.1.2
+topics:
+  - automation
+  - browser
+  - webdriver
+  - safari
