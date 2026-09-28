@@ -198,8 +198,17 @@ final class SessionAeadSession implements MeshSession {
         signature: confirm.signature,
         identityKey: verifiedKey,
       )) {
-        throw const SessionHandshakeException(
-          'initiator failed transcript verification',
+        // Field-diagnostic material: distinguishes a stale/foreign pin
+        // (keyPrefix ≠ claimedKeyPrefix) from a transcript mismatch over the
+        // SAME key (hello/reply byte counts differ between peers).
+        final detail =
+            'keyPrefix: ${_hex4(verifiedKey)}, '
+            'claimedKeyPrefix: ${_hex4(hello.identityKey)}, '
+            'helloBytes: ${helloBody.length}, '
+            'replyBytes: ${unsignedBody.length}';
+        throw SessionHandshakeException(
+          'initiator failed transcript verification '
+          '(againstPinnedKey: ${!learned}, $detail)',
         );
       }
       final cipher = await _deriveCipher(
@@ -225,6 +234,11 @@ final class SessionAeadSession implements MeshSession {
       rethrow;
     }
   }
+
+  static String _hex4(final List<int> bytes) => bytes
+      .take(4)
+      .map((final b) => b.toRadixString(16).padLeft(2, '0'))
+      .join();
 
   static Future<SessionCipher> _deriveCipher({
     required final SimpleKeyPair ephemeral,
