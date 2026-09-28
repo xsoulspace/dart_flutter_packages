@@ -6,7 +6,10 @@
 /// never share a queue.
 ///
 /// **Frame-flow contract** (proven by the loopback integration test):
-/// the **offerer receives** frames and the **answerer sends** them.
+/// Frames flow in **both directions** through the data channel: the
+/// offerer's created channel and the answerer's received channel use the
+/// same chunked envelope and reassembling handler (verified in both
+/// directions, multi-chunk included).
 /// A [WebrtcDataChannelSink] therefore binds to an *answerer* peer;
 /// viewers build offerer peers via [SidecarPeerFactory.acceptPath].
 /// v1 ships the data-channel transport (ICE/DTLS/SRTP-secured SCTP with

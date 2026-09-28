@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## 0.1.0 - 2026-09-27
 
 ### Added
+
+- feat: `SidecarPeerFactory.relayOnly` — `transportPolicy: relay` on the
+  wire; gathering restricted to relayed candidates so connectivity is
+  relay-mediated by construction (TURN proofs).
+- feat: TURN relay proof (`test/turn_relay_test.dart`, env-gated
+  `XS_TEST_TURN=1`): relay-only peers connect through a real coturn
+  allocation, assert a `typ relay` candidate, and exchange frames both
+  directions (multi-chunk included).
+- feat: offerer→answerer (A→B) direction test; the historical
+  "answerer sends only" restriction is retired — it was a
+  send-before-open race, covered by `createPeer`'s `opened` handshake.
+- docs: frame-flow contract corrected — frames flow in both directions.
+
 - feat: TURN/STUN — `IceServerSpec` flows through `SidecarPeerFactory`
   to the sidecar's `RTCConfiguration`; cross-network pairing is now
   configurable per factory.

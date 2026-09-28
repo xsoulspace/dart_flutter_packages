@@ -71,12 +71,23 @@ implementations. The same observe/act/verify shape exists in all three.
   `VmScreenshotGrabber` over the toolkit's `view_screenshots` extension,
   conformant with the family frame-source suite.
 - **IntentCall hint landed**: `IntentAutomationHint` (driver transport +
-  locator) is carried on `AgentIntentDescriptor`; IntentCall states how
-  an intent could be driven and still grows no drivers.
+  action + locator) is carried on `AgentIntentDescriptor`; IntentCall
+  states how an intent could be driven and still grows no drivers. The
+  hint projects onto the MCP wire as tool `_meta`
+  (`dev.intentcall/automation`), and mcp_flutter's harness
+  (`IntentDriverRouter`) routes hints into `AutomationDriver` actions —
+  proven live against the showcase app (routed click/type/navigate).
+- **Composition owns the capture adapters** (mcp_flutter restructure):
+  the showcase drive programs live in a `showcase/drivers` composition
+  package whose `FlutterAppFrames` implements `FrameSource` over the
+  harness's own VM client; `flutter_mcp_harness` depends only on
+  contracts and protocol clients. The generic
+  `universal_capture_flutter` (with `VmScreenshotGrabber`) remains the
+  family's self-contained option for non-harness consumers.
 
 ## Non-claims
 
 - This ADR does not move packages, republish toolkit APIs, or define
   IntentCall's manifest schema; the wire projection of the automation
-  hint (MCP tool annotations) and driver-routed invocation remain
-  future work.
+  hint (a richer MCP tool-annotation schema) remains future work;
+  the `_meta` projection and driver-routed invocation have landed.

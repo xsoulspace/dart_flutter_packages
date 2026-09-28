@@ -117,6 +117,51 @@ class CdpPage {
     });
   }
 
+  /// Wheels the page by [distance] logical pixels in [direction]
+  /// (`up`, `down`, `left`, `right`), dispatched at the viewport center.
+  Future<void> scroll({
+    String direction = 'down',
+    double distance = 300,
+  }) async {
+    _ensureOpen();
+    final viewport = await evaluate(
+      "JSON.stringify({w: window.innerWidth, h: window.innerHeight})",
+    );
+    int? width;
+    int? height;
+    try {
+      final decoded =
+          jsonDecode(viewport as String) as Map<String, Object?>;
+      width = (decoded['w'] as num?)?.toInt();
+      height = (decoded['h'] as num?)?.toInt();
+    } on FormatException {
+      // Keep the fallback center below.
+    } on TypeError {
+      // Keep the fallback center below.
+    }
+    final (x, y) = (
+      (width ?? 800) / 2,
+      (height ?? 600) / 2,
+    );
+    final (deltaX, deltaY) = switch (direction.toLowerCase()) {
+      'up' => (0.0, -distance),
+      'down' => (0.0, distance),
+      'left' => (-distance, 0.0),
+      'right' => (distance, 0.0),
+      _ => throw ProtocolException(
+        'unknown scroll direction "$direction" '
+        '(use up, down, left, right)',
+      ),
+    };
+    await connection.send('Input.dispatchMouseEvent', {
+      'type': 'mouseWheel',
+      'x': x,
+      'y': y,
+      'deltaX': deltaX,
+      'deltaY': deltaY,
+    });
+  }
+
   /// Focuses [css] (when given) and inserts [text]; [submit] presses Enter.
   Future<void> type(String text, {String? css, bool submit = false}) async {
     _ensureOpen();

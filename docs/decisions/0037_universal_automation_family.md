@@ -105,3 +105,10 @@ House rules applied to the family:
   candidates (same machine/LAN); any cross-network peer pairing — a
   remote viewer watching a local browser session — requires STUN, and
   roughly a fifth of real-world paths require TURN.
+  **Proven (2026-09-27):** `transportPolicy: relay` + a real coturn
+  allocation — relay-only peers connect and exchange frames through the
+  relay (`XS_TEST_TURN=1`; `universal_webrtc/test/turn_relay_test.dart`).
+  The relay-forced proof runs both peers on one host with coturn's
+  `--allow-loopback-peers`; a physical two-network pass (peers on
+  distinct subnets, coturn on a third vantage) needs a second network
+  and remains the full-field evidence gate.

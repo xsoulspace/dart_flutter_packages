@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- feat: `CdpPage.scroll` + `CdpDriver` `ScrollAction` support —
+  `Input.dispatchMouseEvent` mouse-wheel at the viewport center.
+### Added
+
 - feat: `CdpDiscovery` readiness probe and target enumeration.
 - feat: `CdpConnection` correlated JSON-RPC WebSocket client with events.
 - feat: `CdpPage` navigation, evaluation, a11y snapshots, screenshots,

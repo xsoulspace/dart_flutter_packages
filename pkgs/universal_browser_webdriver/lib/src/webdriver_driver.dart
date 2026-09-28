@@ -46,7 +46,16 @@ class WebDriverDriver implements AutomationDriver {
         final element = await _client.findElementByCss(css ?? 'body');
         await _client.sendKeys(element, text);
         if (submit) await _client.keyPress('\n');
+      case ScrollAction():
+        throw const DriverUnsupportedException(
+          'surface scrolling is not part of this driver\'s protocol; '
+          'it refuses loudly instead of silently dropping it',
+        );
       case KeyPressAction(:final key):
+        throw const DriverUnsupportedException(
+          'WebDriver: the W3C classic wheel-actions API is not portable across; this driver refuses scroll loudly '
+          'instead of silently dropping it',
+        );
         final wireKey = _wireKeys[key] ?? key;
         await _client.keyPress(wireKey);
       case EvaluateAction(:final expression):

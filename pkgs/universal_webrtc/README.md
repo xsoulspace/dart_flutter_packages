@@ -15,7 +15,8 @@ Part of the `universal_automation_*` family
   `IceCandidate` envelopes over `LoopbackSignalingChannel` (same host,
   tests) or `WebSocketSignalingChannel` (production).
 - `SidecarPeerFactory` — peer bring-up with the frame-flow contract:
-  **the offerer receives, the answerer sends.**
+  frames flow in both directions (offerer ↔ answerer), reassembled by the
+  sidecar; bind the sink to whichever peer produces frames.
 - `WebrtcDataChannelSink` — a screencast `FrameSink`; each `push`
   becomes a `send_frame` on the data channel.
 - `FrameChunkCodec` / `FrameReassembler` — the 12-byte chunk envelope

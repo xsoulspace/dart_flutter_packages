@@ -80,6 +80,30 @@ final class KeyPressAction extends AutomationAction {
   String toString() => 'KeyPressAction($key)';
 }
 
+/// Scroll the surface (or the scrollable containing [css]) by
+/// [distance] logical pixels in [direction].
+///
+/// [direction] is one of `up`, `down`, `left`, `right` (lowercase;
+/// drivers normalize case). `distance` may be null — the driver then
+/// uses its default step. Scrolling is how off-screen semantics become
+/// visible: the instrumented tier exposes them only once scrolled into
+/// view.
+@immutable
+final class ScrollAction extends AutomationAction {
+  /// Creates a scroll action.
+  const ScrollAction({this.direction = 'down', this.distance});
+
+  /// Scroll direction: `up`, `down`, `left`, or `right`.
+  final String direction;
+
+  /// Distance in logical pixels; null means the driver's default step.
+  final double? distance;
+
+  @override
+  String toString() =>
+      'ScrollAction($direction, ${distance ?? 'default'})';
+}
+
 /// Evaluate a read-only expression in the live surface.
 ///
 /// Drivers may refuse evaluation (capability `evaluate` is `false`); when

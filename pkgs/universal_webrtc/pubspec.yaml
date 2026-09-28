@@ -20,7 +20,7 @@ dependencies:
   universal_screencast: ^0.1.0
   universal_webrtc_raw: ^0.1.0
 
-  meta: any
+  meta: ^1.19.0
 dev_dependencies:
   test: ^1.31.2
   xsoulspace_lints: ^0.1.2

@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- feat: `ScrollAction` — scroll the surface (direction + optional
+  distance) so harness scenarios can reach off-screen semantics.
+### Added
+
 - feat: `ElementNotFoundException` — a locator matched no node in the driver's latest observation (distinct from `DriverUnsupportedException`; retrying after a fresh snapshot is meaningful).
 
 - feat: `AutomationEndpoint`, `AutomationTransport`, and oka-compatible

@@ -7,8 +7,10 @@ import 'signaling_channel.dart';
 
 /// Who a peer is in the frame-flow contract.
 ///
-/// Per ADR 0037's proven loopback semantics: the **offerer receives**
-/// frames; the **answerer sends** them.
+/// Both peers exchange frames in either direction over the same
+/// data channel; the historical answerer-sends-only restriction was a
+/// send-before-open race, covered by [SidecarPeerFactory.createPeer]'s
+/// `opened` handshake.
 enum PeerRole {
   /// Creates the offer and the data channel; receives frames.
   offerer,
@@ -87,6 +89,7 @@ class SidecarPeerFactory {
     required SignalingChannel signaling,
     this.label = 'side',
     this.iceServers = const [],
+    this.relayOnly = false,
   }) : _sidecar = sidecar,
        _signaling = signaling {
     _subscription = sidecar.events.listen(_onSidecarEvent);
@@ -97,6 +100,11 @@ class SidecarPeerFactory {
   final SignalingChannel _signaling;
   final String label;
   final List<IceServerSpec> iceServers;
+
+  /// `transportPolicy: relay` on the wire: gather relayed candidates
+  /// only, forcing the media through the TURN allocation. Use for TURN
+  /// proofs; the default (host/srflx/relay) stays `false`.
+  final bool relayOnly;
   final _peers = <String, _PeerState>{};
   final _pendingOffers = <String, String>{};
   StreamSubscription<SidecarEvent>? _subscription;
@@ -111,6 +119,7 @@ class SidecarPeerFactory {
     await _sidecar.request('create_peer', {
       'peerId': peerId,
       if (role == PeerRole.answerer) 'createChannel': false,
+      if (relayOnly) 'transportPolicy': 'relay',
     });
     switch (role) {
       case PeerRole.offerer:

@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## 0.1.0 - 2026-09-27
 
 ### Added
+
+- feat: `create_peer` accepts `transportPolicy: "relay"` — restricts ICE
+  gathering to relayed candidates (TURN proofs).
+- fix: one shared reassembling message handler for both channel sides —
+  the offerer's created channel previously skipped chunk reassembly, so
+  multi-chunk frames arriving on it were mangled.
+
 - feat: `create_peer` accepts `iceServers` (STUN/TURN with optional
   credentials) mapped onto webrtc-rs `RTCIceServer`s.
 

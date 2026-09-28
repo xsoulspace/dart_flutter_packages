@@ -41,6 +41,11 @@ class CdpDriver implements AutomationDriver {
         await _page.type(text, css: css, submit: submit);
       case KeyPressAction(:final key):
         await _page.keyPress(key);
+      case ScrollAction(:final direction, :final distance):
+        await _page.scroll(
+          direction: direction,
+          distance: distance ?? 300,
+        );
       case EvaluateAction(:final expression):
         await _page.evaluate(expression);
     }

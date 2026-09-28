@@ -17,6 +17,7 @@ use serde::Deserialize;
 use bytes::Bytes;
 use base64::Engine;
 use serde_json::{json, Value};
+use std::pin::Pin;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
@@ -121,6 +122,66 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
+/// Builds the data-channel message handler shared by both directions:
+/// validates the `XS` magic, reassembles chunked frames per peer, and
+/// emits one `frame` event per complete frame. Chunking is
+/// direction-agnostic — the offerer's created channel and the
+/// answerer's received channel MUST behave identically.
+fn on_frame_message(
+    peer_id: String,
+    partials: PartialFrames,
+) -> Box<
+    dyn FnMut(webrtc::data_channel::data_channel_message::DataChannelMessage)
+        -> Pin<Box<dyn std::future::Future<Output = ()> + Send>>
+        + Send
+        + Sync,
+> {
+    Box::new(move |message| {
+        let peer_id = peer_id.clone();
+        let partials = Arc::clone(&partials);
+        Box::pin(async move {
+            let bytes = &message.data[..];
+            if bytes.len() < 12
+                || u16::from_be_bytes([bytes[0], bytes[1]]) != MAGIC
+            {
+                return;
+            }
+            let flags = bytes[2];
+            let seq = u32::from_be_bytes([
+                bytes[4], bytes[5], bytes[6], bytes[7],
+            ]);
+            let revision = u32::from_be_bytes([
+                bytes[8], bytes[9], bytes[10], bytes[11],
+            ]);
+            let payload = &bytes[12..];
+            let complete = {
+                let mut partials = partials.lock().await;
+                if flags & FLAG_FIRST != 0 {
+                    partials.insert(peer_id.clone(), payload.to_vec());
+                } else if let Some(buffer) = partials.get_mut(&peer_id) {
+                    buffer.extend_from_slice(payload);
+                }
+                if flags & FLAG_LAST != 0 {
+                    partials.remove(&peer_id)
+                } else {
+                    None
+                }
+            };
+            if let Some(buffer) = complete {
+                let _ = emit(
+                    event("frame", &peer_id, json!({
+                        "seq": seq,
+                        "revision": revision,
+                        "bytes": base64::engine::general_purpose::
+                            STANDARD.encode(buffer),
+                    })),
+                )
+                .await;
+            }
+        })
+    })
+}
+
 fn event(kind: &str, peer_id: &str, extra: Value) -> Value {
     let mut payload = json!({"event": kind, "peerId": peer_id});
     if let (Value::Object(event), Value::Object(extra)) =
@@ -169,13 +230,27 @@ fn peer_id_of(message: &Value) -> Result<String> {
 
 async fn new_peer_connection(
     ice_servers: Vec<webrtc::ice_transport::ice_server::RTCIceServer>,
+    relay_only: bool,
 ) -> Result<RTCPeerConnection> {
     // Data-channel-only sidecar: the bare API (no media engine, no
     // interceptors) matches the upstream data-channels example and keeps
     // the wire free of unused media m-lines.
     let api = APIBuilder::new().build();
+    // `transportPolicy: "relay"` restricts gathering to relayed
+    // candidates — the knob the TURN proof uses to FORCE the media
+    // through the TURN allocation (with the default `all`, same-host
+    // peers would quietly connect via host candidates and prove
+    // nothing about the relay path).
+    let ice_transport_policy = if relay_only {
+        webrtc::peer_connection::policy::ice_transport_policy::
+            RTCIceTransportPolicy::Relay
+    } else {
+        webrtc::peer_connection::policy::ice_transport_policy::
+            RTCIceTransportPolicy::All
+    };
     let config = RTCConfiguration {
         ice_servers,
+        ice_transport_policy,
         ..Default::default()
     };
     Ok(api.new_peer_connection(config).await?)
@@ -209,7 +284,10 @@ async fn create_peer(
             });
         }
     }
-    let connection = Arc::new(new_peer_connection(ice_servers).await?);
+    let relay_only = message["transportPolicy"].as_str() == Some("relay");
+    let connection = Arc::new(
+        new_peer_connection(ice_servers, relay_only).await?,
+    );
     // Only the offerer creates the channel; the answerer receives it via
     // on_data_channel. Both sides creating collides on SCTP stream ids.
     let channel = if create_channel {
@@ -227,40 +305,15 @@ async fn create_peer(
                 })
             }));
         }
-        // Mirror message handling on the created side too so B-to-A
-        // frames work identically to A-to-B.
+        // The created (offerer) side uses the same reassembling handler
+        // as the received side — chunked frames are direction-agnostic.
         {
             let peer_id = peer_id.clone();
             let partials = Arc::clone(&partial_frames);
-            created.on_message(Box::new(move |message| {
-                let peer_id = peer_id.clone();
-                let partials = Arc::clone(&partials);
-                Box::pin(async move {
-                    let bytes = &message.data[..];
-                    if bytes.len() < 12
-                        || u16::from_be_bytes([bytes[0], bytes[1]])
-                            != MAGIC
-                    {
-                        return;
-                    }
-                    let seq = u32::from_be_bytes([
-                        bytes[4], bytes[5], bytes[6], bytes[7],
-                    ]);
-                    let revision = u32::from_be_bytes([
-                        bytes[8], bytes[9], bytes[10], bytes[11],
-                    ]);
-                    let payload = bytes[12..].to_vec();
-                    let _ = emit(
-                        event("frame", &peer_id, json!({
-                            "seq": seq,
-                            "revision": revision,
-                            "bytes": base64::engine::general_purpose::
-                                STANDARD.encode(payload),
-                        })),
-                    )
-                    .await;
-                })
-            }));
+            created.on_message(on_frame_message(
+                peer_id,
+                partials,
+            ));
         }
         Some(created)
     } else {
@@ -334,59 +387,10 @@ async fn create_peer(
                     })),
                 )
                 .await;
-                let peer_for_messages = peer_id.clone();
-                let partials_for_messages = partials_for_outer;
-                channel.on_message(Box::new(move |message| {
-                    let peer_id = peer_for_messages.clone();
-                    let partials = Arc::clone(&partials_for_messages);
-                    Box::pin(async move {
-                        let bytes = &message.data[..];
-                        if bytes.len() < 12
-                            || u16::from_be_bytes([
-                                bytes[0], bytes[1],
-                            ]) != MAGIC
-                        {
-                            return;
-                        }
-                        let flags = bytes[2];
-                        let seq = u32::from_be_bytes([
-                            bytes[4], bytes[5], bytes[6], bytes[7],
-                        ]);
-                        let revision = u32::from_be_bytes([
-                            bytes[8], bytes[9], bytes[10], bytes[11],
-                        ]);
-                        let payload = &bytes[12..];
-                        {
-                            let mut partials = partials.lock().await;
-                            if flags & FLAG_FIRST != 0 {
-                                partials.insert(
-                                    peer_id.clone(),
-                                    payload.to_vec(),
-                                );
-                            } else if let Some(buffer) =
-                                partials.get_mut(&peer_id)
-                            {
-                                buffer.extend_from_slice(payload);
-                            }
-                            if flags & FLAG_LAST != 0 {
-                                if let Some(buffer) =
-                                    partials.remove(&peer_id)
-                                {
-                                    let _ = emit(
-                                        event("frame", &peer_id, json!({
-                                            "seq": seq,
-                                            "revision": revision,
-                                            "bytes": base64::engine::
-                                                general_purpose::STANDARD
-                                                .encode(buffer),
-                                        })),
-                                    )
-                                    .await;
-                                }
-                            }
-                        }
-                    })
-                }));
+                channel.on_message(on_frame_message(
+                    peer_id.clone(),
+                    partials_for_outer,
+                ));
             })
         }));
     }

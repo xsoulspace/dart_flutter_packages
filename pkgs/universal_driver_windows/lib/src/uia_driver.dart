@@ -83,7 +83,16 @@ class UiaDriver implements AutomationDriver {
           'typing ${text.length} chars needs ValuePattern support, '
           'planned for the next sidecar revision',
         );
+      case ScrollAction():
+        throw const DriverUnsupportedException(
+          'surface scrolling is not part of this driver\'s protocol; '
+          'it refuses loudly instead of silently dropping it',
+        );
       case KeyPressAction(:final key):
+        throw const DriverUnsupportedException(
+          'UIA exposes patterns on nodes, not surface scrolling; this driver refuses scroll loudly '
+          'instead of silently dropping it',
+        );
         throw DriverUnsupportedException(
           'key "$key" needs SendInput support, planned for the next '
           'sidecar revision',
