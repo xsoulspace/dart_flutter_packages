@@ -3,7 +3,6 @@ import 'dart:typed_data';
 
 import 'package:universal_screencast/universal_screencast.dart';
 
-import 'vm_screenshot_grab.dart';
 
 /// [FrameSource] over a running Flutter app's MCP toolkit screenshots.
 ///
