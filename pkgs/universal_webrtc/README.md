@@ -9,6 +9,12 @@ WebRTC from day one with the media plane separated from signaling
 Part of the `universal_automation_*` family
 ([ADR 0037](../../docs/decisions/0037_universal_automation_family.md)).
 
+> **Status: lab-proven, still under development.** Frame transfer works
+> in both directions, including relay-forced TURN (env-gated
+> `XS_TEST_TURN=1` against a local coturn). A physical two-network pass
+> over real NATs is still pending; consider the NAT-traversal story
+> unproven until then.
+
 ## What it does
 
 - `SignalingChannel` — the control plane: `SdpOffer`/`SdpAnswer`/

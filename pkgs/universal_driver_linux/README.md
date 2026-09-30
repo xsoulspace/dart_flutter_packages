@@ -8,6 +8,11 @@ trusted path screen readers use). No X11 tools, no native binary.
 Part of [ADR 0037](../../docs/decisions/0037_universal_automation_family.md);
 OS-native tier alongside `universal_capture_macos`.
 
+> **Status: under development — not yet tested on Linux.** The AT-SPI2
+> driver passes the family conformance suite against a stub, but no live
+> GNOME/AT-SPI desktop pass has verified real behavior yet. Treat the
+> driver as unproven until a Linux run lands.
+
 ## What it does
 
 - `AtspiDriver` — the family observe/act/verify contract: the AT-SPI

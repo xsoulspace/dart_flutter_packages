@@ -8,6 +8,11 @@ through `InvokePattern`.
 
 Part of [ADR 0037](../../docs/decisions/0037_universal_automation_family.md).
 
+> **Status: under development — not yet tested on Windows.** The UIA
+> sidecar engine and `UiaDriver` pass the family conformance suite against
+> a stub, but no live Windows pass has verified real UI Automation
+> behavior yet. Treat the driver as unproven until a Windows run lands.
+
 ## Layout
 
 - `rust/uia_sidecar/` — the Windows engine (windows-rs, `CUIAutomation`,
