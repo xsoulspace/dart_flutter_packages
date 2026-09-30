@@ -3,7 +3,7 @@ description: >-
   Pure-Dart contracts for the universal automation family: endpoints,
   session handles, drivers, actions, snapshots, fail-closed specs, and
   structured events. No Flutter, no protocol clients.
-version: 0.1.0
+version: 0.1.1
 homepage: https://github.com/xsoulspace/dart_flutter_packages
 repository: https://github.com/xsoulspace/dart_flutter_packages
 issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
