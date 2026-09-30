@@ -18,3 +18,7 @@ Harness product decisions (0002–0005, 0007, 0009, 0012–0028, 0030,
 | [0037](0037_universal_automation_family.md) | Accepted | `universal_automation_*` family: drivers, screencast, WebRTC |
 | [0038](0038_automation_kernel_unification.md) | Accepted | The family is the automation kernel; toolkit/IntentCall adoption |
 | [0039](0039_mesh_session_aead_channel_crypto.md) | Accepted | Mesh session AEAD channel crypto (`universal_storage_session_aead`) |
+| [0040](0040_universal_driver_macos.md) | Accepted | `universal_driver_macos`: AXUIElement observation + CGEvent synthesis driver |
+| [0041](0041_mesh_realtime_durable_push_channel.md) | Accepted | Mesh realtime durable push channel (live mode + change notifications) |
+| [0042](0042_content_addressed_chunk_store.md) | Accepted | Content-addressed chunk store — native binary deltas (amends 0010 §5) |
+| [0043](0043_storage_shrink_exploration_tracks.md) | Accepted | Storage-shrink and tooling exploration tracks (triggers + kill criteria) |
