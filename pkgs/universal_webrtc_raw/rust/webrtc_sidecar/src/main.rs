@@ -143,10 +143,11 @@ fn on_frame_message(
             let bytes = &message.data[..];
             if bytes.len() < 12
                 || u16::from_be_bytes([bytes[0], bytes[1]]) != MAGIC
+                || bytes[2] != FRAME_TYPE
             {
                 return;
             }
-            let flags = bytes[2];
+            let flags = bytes[3];
             let seq = u32::from_be_bytes([
                 bytes[4], bytes[5], bytes[6], bytes[7],
             ]);
