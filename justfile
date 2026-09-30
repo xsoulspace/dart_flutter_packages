@@ -5,6 +5,32 @@
 default:
     just pub-get
 
+# Machine hygiene sweep (prevention: browser-automation Chrome clones once
+# reached 118GB in /private/var/folders; oka's oka_engine_* temp dirs leak by
+# construction). Only touches $TMPDIR patterns and unavailable simulators.
+# Files younger than 24h are never touched, so active runs are safe.
+sweep-machine:
+    #!/usr/bin/env bash
+    set -uo pipefail
+    tmp="${TMPDIR%/}"
+    x_dir="$(dirname "$tmp")/X"
+    echo "== terminating headless automation Chrome (user-data-dir under var/folders) =="
+    pkill -f "user-data-dir=/var/folders/.*scoped_dir" 2>/dev/null && sleep 3 || true
+    echo "== Chrome code-sign clones =="
+    if [ -d "$x_dir" ]; then
+      find "$x_dir" -maxdepth 1 -type d -name '*.code_sign_clone' -mmin +1440 -print -exec rm -rf {} + 2>/dev/null || true
+    fi
+    echo "== stale tool temp dirs (flutter_tools.*, dart_test.*, oka_*) =="
+    find "$tmp" -maxdepth 1 -type d \( \
+      -name 'flutter_tools.*' -o -name 'dart_test.*' -o -name 'oka_engine_*' -o \
+      -name 'oka_kotlin_*' -o -name 'oka_r8_*' -o -name 'oka_bundletool_*' -o \
+      -name 'oka_platform_tools_*' -o -name 'oka_cft_*' -o \
+      -name 'org.chromium.Chromium.scoped_dir.*' \) -mmin +1440 -exec rm -rf {} + 2>/dev/null || true
+    echo "== unavailable simulators =="
+    xcrun simctl delete unavailable 2>/dev/null || true
+    echo "== disk =="
+    df -h /System/Volumes/Data | tail -1
+
 # Fast scoped gate for one package (default: xsoulspace_inference_core).
 # Usage: just check [package]  — pub get is reused from workspace resolution.
 check package="xsoulspace_inference_core":
