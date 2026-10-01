@@ -12,7 +12,7 @@ import '../frame_sink.dart';
 /// Two artifacts land in [directory]: `<base>.mjpeg` — the raw frame
 /// payloads concatenated (playable by any MJPEG tool when frames are
 /// JPEG) — and `<base>.meta.jsonl`, one JSON receipt per frame with its
-/// byte offset, aligning with the plagiarism project's ADR-035 contract
+/// byte offset, aligning with the established recording receipt contract
 /// families (`recording`, `receipts`). Frames are evidence-grade bytes
 /// here; the sink never invents content (`video != evidence`, but a
 /// receipt makes it checkable).

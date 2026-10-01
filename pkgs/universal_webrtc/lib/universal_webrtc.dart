@@ -1,6 +1,6 @@
 /// High-level WebRTC for pure Dart, engine by the webrtc-rs sidecar.
 ///
-/// Media-plane discipline (plagiarism ADR-032, encoded here): signaling
+/// Media-plane discipline (encoded here): signaling
 /// and control travel over [SignalingChannel]; frames travel over the
 /// WebRTC data channel through [WebrtcDataChannelSink]. The two planes
 /// never share a queue.

@@ -109,6 +109,29 @@ docs-check:
     fi
     echo "All packages contain README.md, CHANGELOG.md, and LICENSE."
 
+# Fails if tracked content matches forbidden patterns (private project
+# names/paths). The patterns live OUTSIDE the repo, in an untracked file,
+# so this guard never embeds what it hunts. One pattern per line, matched
+# case-insensitively. Runs in registry-release-preflight.
+leak-audit:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    pat_file="${LEAK_AUDIT_PATTERNS:-$HOME/.config/leak-audit/patterns.txt}"
+    if [ ! -f "$pat_file" ]; then
+      echo "leak-audit: no pattern file at $pat_file - skipping"
+      exit 0
+    fi
+    pats="$(grep -Ev '^(#|$)' "$pat_file" | sed 's/[.[\*+?(){|\\^$]/\\&/g' | paste -sd'|' -)"
+    if [ -z "$pats" ]; then
+      echo "leak-audit: empty pattern file - skipping"
+      exit 0
+    fi
+    if rg -n -i -e "$pats" docs pkgs tool registry test steward skills.json 2>/dev/null; then
+      echo "leak-audit: FAIL - forbidden reference found above"
+      exit 1
+    fi
+    echo "leak-audit: clean"
+
 storage-path-audit:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -347,6 +370,7 @@ registry-release-preflight output="build/registry" registry_url="https://pub.xso
     #!/usr/bin/env bash
     set -euo pipefail
     just docs-check
+    just leak-audit
     just storage-release-g6
     just platform-sdk-verify
     just registry-test

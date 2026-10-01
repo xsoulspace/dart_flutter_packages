@@ -5,7 +5,7 @@ import 'package:universal_screencast/universal_screencast.dart';
 
 /// Contract suite for [FrameSource] implementations.
 ///
-/// Encodes the plagiarism-project invariants: sequences are monotonic,
+/// Encodes the frame-source invariants: sequences are monotonic,
 /// capturedAt never goes backwards, and after [FrameSource.stop] no frame
 /// is ever emitted again.
 void frameSourceConformanceTests(

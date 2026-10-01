@@ -6,8 +6,8 @@ observations — `frames != semantics`.
 
 Part of the `universal_automation_*` family
 ([ADR 0037](../../docs/decisions/0037_universal_automation_family.md)).
-The invariants encode the sibling plagiarism project's accepted ADRs
-(ADR-032 media-plane separation, ADR-035 SDK/product boundaries):
+The invariants encode production-proven discipline
+(media-plane separation, SDK/product boundaries):
 
 - pacing and single-flight at the **source**;
 - per-sink isolation: a failing sink degrades alone (`SinkDegraded`);
@@ -28,7 +28,7 @@ The invariants encode the sibling plagiarism project's accepted ADRs
   with `?token=` auth and error-frame-then-close semantics.
 - `MjpegHttpSink` — multipart MJPEG any browser can render in `<img>`.
 - `FileRecorderSink` — payload file + JSONL receipts (offset, revision,
-  capturedAt) aligned with ADR-035 `recording`/`receipts` contracts.
+  capturedAt) aligned with the `recording`/`receipts` contracts.
 
 ## Audiences
 

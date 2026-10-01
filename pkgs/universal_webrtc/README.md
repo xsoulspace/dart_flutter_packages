@@ -4,7 +4,7 @@ High-level WebRTC for pure Dart: signaling contracts, a peer factory over
 the webrtc-rs sidecar, and a `FrameSink` that pumps screencast frames
 through the WebRTC data channel. Cross-platform wherever cargo runs;
 WebRTC from day one with the media plane separated from signaling
-(plagiarism ADR-032 discipline).
+(media-plane discipline).
 
 Part of the `universal_automation_*` family
 ([ADR 0037](../../docs/decisions/0037_universal_automation_family.md)).

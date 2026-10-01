@@ -16,9 +16,9 @@ Sibling projects already prove the need for a shared automation stack:
 - `oka` owns declarative runtime/session lifecycle (browser session targets,
   process leases, `StartMode {start, attach}`) and deliberately excludes
   protocol clients: a readiness probe, never a CDP client.
-- `~/xs/smartdev/plagiarism` drives browser fleets in production and already
-  paid for the screencast lessons: socket-frame media rejected for the media
-  plane, frames are read-only and never evidence, pacing and single-flight at
+- A production browser-fleet automation consumer already paid for the
+  screencast lessons: socket-frame media rejected for the media plane,
+  frames are read-only and never evidence, pacing and single-flight at
   the source, error-frame-then-close, `frames != semantics`,
   `video != evidence`.
 
@@ -63,9 +63,9 @@ House rules applied to the family:
   protocol-client consumer without breaking oka's no-CDP-client boundary.
 - `mcp_flutter`'s harness can add web/Jaspr targets by adapting
   `universal_browser_cdp`, mirroring `oka_harness.AndroidAppTarget`.
-- The plagiarism project's invariants are encoded in
-  `universal_screencast` composition validation and the conformance suites,
-  so adopting the Dart packages later is contract-compatible.
+- The screencast invariants above are encoded in `universal_screencast`
+  composition validation and the conformance suites, so a production
+  consumer adopting the Dart packages later is contract-compatible.
 - The family must ship `README.md`, `CHANGELOG.md`, `LICENSE`, and pass the
   workspace gates (`just docs-check`, analyze, test) like every other package.
 

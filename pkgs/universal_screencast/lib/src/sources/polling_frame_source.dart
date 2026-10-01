@@ -10,7 +10,7 @@ import '../frame_source.dart';
 ///
 /// Pacing and single-flight live here, at the source: a [grab] that is
 /// slower than [interval] simply skips ticks instead of queueing work —
-/// the plagiarism-project rule, encoded.
+/// the source-pacing rule, encoded.
 class PollingFrameSource implements FrameSource {
   /// Creates a source that calls [grab] every [_interval].
   ///
