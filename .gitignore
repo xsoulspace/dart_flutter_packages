@@ -15,3 +15,7 @@ node_modules/
 .flutter_mcp
 /target/
 **/target/
+
+# Flutter-generated build artifacts (machine-local paths, regenerated on build)
+**/Flutter/ephemeral/
+**/GeneratedPluginRegistrant.swift
