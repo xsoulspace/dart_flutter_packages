@@ -17,6 +17,7 @@
 library;
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
@@ -29,6 +30,7 @@ class AppleFoundationNativeClient
     this.inferTimeout = const Duration(minutes: 5),
     this.maxContextTokens = 3800,
     this.outputReserveTokens = 1024,
+    this.onTransportDiagnostic,
   });
 
   /// Generation timeout — accepted for API parity; never armed on web
@@ -40,6 +42,55 @@ class AppleFoundationNativeClient
 
   /// Generation space reserved out of [maxContextTokens] — API parity.
   final int outputReserveTokens;
+
+  /// Transport observer accepted for API parity; no transport runs on web.
+  final void Function(Map<String, Object?> event)? onTransportDiagnostic;
+
+  /// Estimated input allowance after reserving output in the same window.
+  /// API parity with the VM client.
+  int get maxInputTokens => maxContextTokens - outputReserveTokens;
+
+  /// Pure chars/4 input estimate over the SAME encoded packet shape the VM
+  /// client submits (`_buildNativeRequestJson` there). No native tokenizer
+  /// exists on web (the backend is unavailable; this feeds budget math the
+  /// web peer never executes).
+  int estimateInputTokensFor(
+    InferenceRequest request, {
+    ToolRegistry? toolRegistry,
+    bool streaming = false,
+  }) =>
+      (_encodedPacketJson(request, toolRegistry, streaming).length + 3) ~/ 4;
+
+  /// The request rendered as the VM client's native packet JSON.
+  String _encodedPacketJson(
+    InferenceRequest request,
+    ToolRegistry? toolRegistry,
+    bool streaming,
+  ) {
+    var systemPrompt = request.systemPrompt;
+    if (request.task == InferenceTask.implicitlyStructuredText) {
+      final builder = PromptBuilder(systemPrompt);
+      builder.writeStructuredOutputPrompt(request.outputSchema);
+      systemPrompt = builder.toString();
+    }
+    final fragments = request.contextFragments;
+    final prompt = PromptBuilder(request.prompt);
+    if (fragments.isNotEmpty) {
+      prompt.skipLines();
+      prompt.write(
+        fragments.map((fragment) => fragment.toString()).join('\n\n'),
+      );
+    }
+    return jsonEncode(<String, dynamic>{
+      'prompt': prompt.toString(),
+      'instructions': systemPrompt.isEmpty ? null : systemPrompt,
+      if (!streaming && request.outputSchema.isNotEmpty)
+        'schema': request.outputSchema,
+      'tools': streaming ? null : toolRegistry?.getToolsJsons(),
+      if (!streaming)
+        'end_after_tool': request.metadata['end_after_tool'] == true,
+    });
+  }
 
   @override
   String get id => 'apple_foundation_native';
