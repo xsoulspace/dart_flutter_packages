@@ -15,7 +15,7 @@ Frame _frame(int sequence) => Frame(
 
 /// Contract suite for [FrameSink] implementations.
 ///
-/// Encodes the plagiarism-project invariants: close terminates delivery
+/// Encodes the frame-sink invariants: close terminates delivery
 /// deterministically, use-after-close is a loud programming error, and a
 /// close with error surfaces the error instead of swallowing it.
 void frameSinkConformanceTests(

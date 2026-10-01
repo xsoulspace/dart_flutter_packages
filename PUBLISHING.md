@@ -33,8 +33,8 @@ Before opening a release PR, run the full preflight (recommended):
 just registry-release-preflight
 ```
 
-This runs in order: `docs-check`, `storage-release-g6`, `platform-sdk-verify`,
-`registry-test`, `registry-rewrite-hosted`, `registry-build-index`,
+This runs in order: `docs-check`, `leak-audit`, `storage-release-g6`,
+`platform-sdk-verify`, `registry-test`, `registry-rewrite-hosted`, `registry-build-index`,
 `registry-validate`, then prints a "Would publish" summary. If any step fails,
 stop and fix before pushing.
 
