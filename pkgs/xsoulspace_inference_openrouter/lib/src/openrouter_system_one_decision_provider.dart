@@ -24,6 +24,7 @@ final class OpenRouterSystemOneDecisionProvider implements DecisionProvider {
     this.timeout = const Duration(seconds: 30),
     this.maxTransientRetries = 0,
     this.retryDelay = const Duration(milliseconds: 100),
+    this.onDiagnosticEvent,
     final int maxStateUtf8Bytes = 1 << 20,
     final int maxRequestUtf8Bytes = 2 << 20,
     final int maxQuestionsPerRequest = 64,
@@ -88,6 +89,11 @@ final class OpenRouterSystemOneDecisionProvider implements DecisionProvider {
   final Duration timeout;
   final int maxTransientRetries;
   final Duration retryDelay;
+
+  /// Optional observer for exact POST bodies at the HTTP transport boundary.
+  /// Events include decision correlation but never headers or credentials.
+  /// Observer errors are ignored and cannot affect retries or outcomes.
+  final void Function(Map<String, Object?> event)? onDiagnosticEvent;
 
   @override
   String get id => 'openrouter_system_one';
@@ -188,7 +194,7 @@ final class OpenRouterSystemOneDecisionProvider implements DecisionProvider {
         }
         final transportResult =
             await Future.any<_TransportResult>(<Future<_TransportResult>>[
-              _send(body, remaining),
+              _send(body, remaining, correlation, attempt),
               cancellationSignal.whenCancelled.then(
                 (_) => const _TransportCancelled(),
               ),
@@ -267,8 +273,17 @@ final class OpenRouterSystemOneDecisionProvider implements DecisionProvider {
   Future<_TransportResult> _send(
     final String body,
     final Duration remaining,
+    final DecisionCorrelation correlation,
+    final int attempt,
   ) async {
     try {
+      _notifyDiagnosticEvent(<String, Object?>{
+        'type': 'openrouter.system_one.post',
+        'uri': endpoint.toString(),
+        'body': body,
+        'correlation': correlation.toJson(),
+        'attempt': attempt,
+      });
       final response = await _httpClient
           .post(
             endpoint,
@@ -285,6 +300,14 @@ final class OpenRouterSystemOneDecisionProvider implements DecisionProvider {
       return const _TransportTimeout();
     } on Object {
       return const _TransportFailure();
+    }
+  }
+
+  void _notifyDiagnosticEvent(Map<String, Object?> event) {
+    try {
+      onDiagnosticEvent?.call(event);
+    } on Object {
+      // Diagnostic observers are explicitly non-authoritative.
     }
   }
 

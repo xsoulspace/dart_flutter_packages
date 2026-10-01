@@ -149,6 +149,65 @@ void main() {
       expect(fn['name'], 'get_weather');
     });
 
+    test(
+      'opt-in transport event matches submitted body and omits headers',
+      () async {
+        http.Request? submitted;
+        Map<String, Object?>? event;
+        final client = OpenRouterInferenceClient(
+          apiKey: 'secret-test-key',
+          httpClient: http_testing.MockClient((request) async {
+            submitted = request;
+            return http.Response(
+              '{"choices":[{"message":{"content":"ok"}}]}',
+              200,
+            );
+          }),
+          onTransportDiagnostic: (value) => event = value,
+        );
+        final metadata = <String, dynamic>{
+          'actor': 'actor-7',
+          'task': 'task-2',
+        };
+        final request = InferenceRequest(
+          prompt: 'specific prompt',
+          metadata: metadata,
+        );
+
+        final result = await client.infer(request);
+
+        expect(result.success, isTrue);
+        expect(event, isNotNull);
+        expect(event!['type'], 'openrouter.post');
+        expect(event!['body'], submitted!.body);
+        expect(event!['uri'], submitted!.url.toString());
+        expect(event!['metadata'], metadata);
+        expect(event!.containsKey('headers'), isFalse);
+        expect(event!.toString(), isNot(contains('secret-test-key')));
+      },
+    );
+
+    test('transport observer exceptions do not alter dispatch', () async {
+      var submitted = false;
+      final client = OpenRouterInferenceClient(
+        apiKey: 'test-key',
+        httpClient: http_testing.MockClient((_) async {
+          submitted = true;
+          return http.Response(
+            '{"choices":[{"message":{"content":"still dispatched"}}]}',
+            200,
+          );
+        }),
+        onTransportDiagnostic: (_) => throw StateError('observer failure'),
+      );
+
+      final result = await client.infer(InferenceRequest(prompt: 'hello'));
+
+      expect(submitted, isTrue);
+      expect(result.success, isTrue);
+      expect(result.data?.rawOutput, 'still dispatched');
+    });
+
     test('fails without an API key', () async {
       final client = _clientWithMock(_respondWith('{}'), apiKey: '');
       final result = await client.infer(

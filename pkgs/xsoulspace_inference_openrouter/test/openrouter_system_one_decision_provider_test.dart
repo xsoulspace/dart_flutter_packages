@@ -85,6 +85,39 @@ void main() {
     );
 
     test(
+      'diagnostic captures exact POST and correlation; observer may throw',
+      () async {
+        late http.Request captured;
+        final events = <Map<String, Object?>>[];
+        final provider = OpenRouterSystemOneDecisionProvider(
+          apiKey: 'test-key',
+          model: 'jev-1.13',
+          httpClient: MockClient((request) async {
+            captured = request;
+            return _successResponse();
+          }),
+          onDiagnosticEvent: (event) {
+            events.add(event);
+            throw StateError('diagnostic sink unavailable');
+          },
+        );
+        final request = _request();
+
+        final outcome = await provider.decide(request);
+
+        expect(outcome, isA<DecisionCompleted>());
+        expect(events, hasLength(1));
+        expect(events.single['type'], 'openrouter.system_one.post');
+        expect(events.single['uri'], captured.url.toString());
+        expect(events.single['body'], captured.body);
+        expect(events.single['correlation'], request.correlation.toJson());
+        expect(events.single['attempt'], 0);
+        expect(events.single.containsKey('headers'), isFalse);
+        expect(events.single.toString(), isNot(contains('test-key')));
+      },
+    );
+
+    test(
       'constructs host correlation locally instead of response echoes',
       () async {
         final response = _successPayload()

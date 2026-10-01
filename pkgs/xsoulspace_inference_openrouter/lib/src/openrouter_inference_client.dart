@@ -39,6 +39,7 @@ class OpenRouterInferenceClient implements InferenceClient {
     final http.Client? httpClient,
     this.timeout = const Duration(seconds: 60),
     this.useMessagesCodec = true,
+    this.onTransportDiagnostic,
   }) : _httpClient = httpClient ?? http.Client(),
        _ownsHttpClient = httpClient == null;
 
@@ -57,6 +58,11 @@ class OpenRouterInferenceClient implements InferenceClient {
   /// flattened path is kept only for the A/B against the old single-shot
   /// shape (fair-comparison plan Step 1).
   final bool useMessagesCodec;
+
+  /// Optional observer for the exact HTTP request body at the transport
+  /// boundary. Events omit headers and credentials. Observer errors are
+  /// ignored so diagnostics cannot change inference behavior.
+  final void Function(Map<String, Object?> event)? onTransportDiagnostic;
 
   @override
   Future<void> load() async {
@@ -178,15 +184,23 @@ class OpenRouterInferenceClient implements InferenceClient {
     };
 
     try {
+      final uri = Uri.https('openrouter.ai', '/api/v1/chat/completions');
+      final encodedBody = jsonEncode(body);
+      _notifyTransportDiagnostic(<String, Object?>{
+        'type': 'openrouter.post',
+        'uri': uri.toString(),
+        'body': encodedBody,
+        'metadata': Map<String, Object?>.from(request.metadata),
+      });
       final response = await _httpClient
           .post(
-            Uri.https('openrouter.ai', '/api/v1/chat/completions'),
+            uri,
             headers: <String, String>{
               'authorization': 'Bearer $_apiKey',
               'content-type': 'application/json',
               'accept': 'application/json',
             },
-            body: jsonEncode(body),
+            body: encodedBody,
           )
           .timeout(timeout);
 
@@ -244,6 +258,14 @@ class OpenRouterInferenceClient implements InferenceClient {
         details: error.toString(),
         meta: <String, dynamic>{'provider': id},
       );
+    }
+  }
+
+  void _notifyTransportDiagnostic(Map<String, Object?> event) {
+    try {
+      onTransportDiagnostic?.call(event);
+    } on Object {
+      // Diagnostic observers are explicitly non-authoritative.
     }
   }
 
