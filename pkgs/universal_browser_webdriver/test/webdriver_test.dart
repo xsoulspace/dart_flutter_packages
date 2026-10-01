@@ -76,7 +76,11 @@ void main() {
       );
       await expectLater(
         client.findElementByCss('#missing'),
-        throwsA(isA<DriverUnsupportedException>()),
+        throwsA(
+          isA<ElementNotFoundException>()
+              .having((error) => error.locator, 'locator', 'unspecified')
+              .having((error) => error.locatorValue, 'locatorValue', '#missing'),
+        ),
       );
     });
 
@@ -85,6 +89,20 @@ void main() {
       await client.deleteSession();
       await client.deleteSession();
       expect(client.sessionId, isNull);
+    });
+
+    test('KeyPressAction presses the W3C wire key', () async {
+      final base = client.serverUri;
+      final sessionClient = WebDriverClient(base);
+      await sessionClient.newSession();
+      final driver = WebDriverDriver(sessionClient);
+      addTearDown(sessionClient.deleteSession);
+      await driver.perform(const KeyPressAction('Enter'));
+      expect(server.keyPresses, ['\uE007']);
+      await expectLater(
+        driver.perform(const KeyPressAction('F5')),
+        throwsA(isA<DriverUnsupportedException>()),
+      );
     });
   });
 

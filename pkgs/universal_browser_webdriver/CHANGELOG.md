@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.1
+
+- interface constraint bump to ^0.2.0.
+- `KeyPressAction` actually presses keys (the wire-key mapping was dead
+  code after an unconditional throw); unknown keys refuse with the
+  supported set named.
+- `no such element` envelopes map to `ElementNotFoundException`
+  (surface state) instead of `DriverUnsupportedException`.
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),

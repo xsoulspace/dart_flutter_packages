@@ -5,7 +5,7 @@ description: >-
   synthesis over CGEvent. Pure Dart through native-assets build hooks
   (swiftc-compiled code asset, @Native bindings). No Flutter, no plugin
   surface.
-version: 0.1.0
+version: 0.1.1
 homepage: https://github.com/xsoulspace/dart_flutter_packages
 repository: https://github.com/xsoulspace/dart_flutter_packages
 issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
@@ -25,9 +25,9 @@ dependencies:
   code_assets: any
   ffi: ^2.2.0
   hooks: any
-  universal_automation_interface: ^0.1.0
+  universal_automation_interface: ^0.2.0
 
 dev_dependencies:
   test: ^1.31.2
-  universal_automation_conformance: ^0.1.0
+  universal_automation_conformance: ^0.2.0
   xsoulspace_lints: ^0.1.2

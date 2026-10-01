@@ -12,7 +12,10 @@
 library;
 
 export 'src/automation_exceptions_export.dart';
+export 'src/cdp_behavior.dart';
+export 'src/cdp_browser.dart';
 export 'src/cdp_connection.dart';
 export 'src/cdp_discovery.dart';
 export 'src/cdp_driver.dart';
+export 'src/cdp_network.dart';
 export 'src/cdp_page.dart';

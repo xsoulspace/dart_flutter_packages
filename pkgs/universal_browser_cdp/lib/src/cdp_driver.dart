@@ -16,7 +16,13 @@ class CdpDriver implements AutomationDriver {
   bool _closed = false;
 
   @override
-  DriverCapabilities get capabilities => DriverCapabilities.full;
+  DriverCapabilities get capabilities => const DriverCapabilities(
+    screenshot: true,
+    screencast: true,
+    a11yTree: true,
+    inputSynthesis: true,
+    evaluate: true,
+  );
 
   /// The underlying page facade (screencast sources attach through it).
   CdpPage get page => _page;
@@ -29,14 +35,12 @@ class CdpDriver implements AutomationDriver {
     switch (action) {
       case NavigateAction(:final url):
         await _page.navigate(url);
-      case ClickAction(:final css):
-        if (css == null) {
-          throw const DriverUnsupportedException(
-            'CdpDriver.click needs a css selector; role/name locators '
-            'require a semantic index (use snapshot() first)',
-          );
+      case ClickAction(:final css, :final role, :final name):
+        if (css != null) {
+          await _page.click(css: css);
+        } else {
+          await _clickSemantic(role: role, name: name);
         }
-        await _page.click(css: css);
       case TypeAction(:final text, :final css, :final submit):
         await _page.type(text, css: css, submit: submit);
       case KeyPressAction(:final key):
@@ -49,6 +53,40 @@ class CdpDriver implements AutomationDriver {
       case EvaluateAction(:final expression):
         await _page.evaluate(expression);
     }
+  }
+
+  /// Resolves role/name locators through the semantic snapshot: the
+  /// matched node's CDP `backendDOMNodeId` resolves to a DOM node, which
+  /// is hit-checked and clicked at its center. First match in snapshot
+  /// order wins (exact role and name equality).
+  Future<void> _clickSemantic({String? role, String? name}) async {
+    final snapshot = await _page.accessibilitySnapshot();
+    AxNode? match;
+    for (final node in snapshot.nodes) {
+      final roleOk = role == null || node.role == role;
+      final nameOk = name == null || node.name == name;
+      if (roleOk && nameOk) {
+        match = node;
+        break;
+      }
+    }
+    if (match == null) {
+      throw ElementNotFoundException(
+        role != null ? 'role' : 'name',
+        role ?? name!,
+      );
+    }
+    final backendNodeId =
+        int.tryParse(match.attributes['cdp.backendDOMNodeId'] ?? '');
+    if (backendNodeId == null) {
+      throw DriverUnsupportedException(
+        'semantic node (${match.role} "${match.name ?? ''}") carries no '
+        'cdp.backendDOMNodeId; cannot resolve click coordinates',
+      );
+    }
+    final bounds = await _page.resolveNodeRect(backendNodeId);
+    final (x, y) = bounds.center;
+    await _page.clickAt(x, y);
   }
 
   @override
@@ -66,11 +104,13 @@ class CdpDriver implements AutomationDriver {
 /// driver. Production lifecycle (spawning, leases) belongs to oka; this
 /// class only consumes an already-published debug endpoint.
 class CdpBrowserSession {
-  CdpBrowserSession._(this.version, this._connection, this.page);
+  CdpBrowserSession._(this.version, this.page);
 
+  /// The `/json/version` payload the session probed at attach.
   final CdpVersionInfo version;
+
+  /// The page facade this session drives.
   final CdpPage page;
-  final CdpConnection _connection;
   bool _closed = false;
 
   /// Probes [httpBase], picks the first target of [type], connects, and
@@ -98,16 +138,23 @@ class CdpBrowserSession {
       timeout: timeout,
     );
     final page = await CdpPage.attach(connection, target);
-    return CdpBrowserSession._(version, connection, page);
+    return CdpBrowserSession._(version, page);
   }
 
   /// A driver over the attached page.
   CdpDriver get driver => CdpDriver(page);
 
   /// Closes page and connection. Idempotent.
-  Future<void> close() async {
+  ///
+  /// For borrowed sessions (an adopted browser), prefer [detach] — it
+  /// keeps the page target alive and closes only this client's socket.
+  Future<void> close({bool closeTarget = true}) async {
     if (_closed) return;
     _closed = true;
-    await _connection.close();
+    await page.close(closeTarget: closeTarget);
   }
+
+  /// Detaches without closing the page target. The borrowed-lease
+  /// teardown. Idempotent.
+  Future<void> detach() => close(closeTarget: false);
 }

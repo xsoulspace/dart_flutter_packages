@@ -48,8 +48,39 @@ class FakeCdpServer {
   List<Map<String, Object?>> axNodes = _cannedAxNodes();
 
   /// Value returned verbatim by `Runtime.evaluate` (default: the canned
-  /// element rect JSON, so [clicks] resolve).
-  String evaluateValue = '{"x":40,"y":60,"width":200,"height":80}';
+  /// element rect JSON with a passing hit-target check, so clicks
+  /// resolve).
+  String evaluateValue =
+      '{"x":40,"y":60,"width":200,"height":80,"hitOk":true}';
+
+  /// When set, answers `Runtime.evaluate` instead of [evaluateValue]; a
+  /// `null` result falls back to the default. Tests use this to script
+  /// hit-target failures and viewport payloads.
+  String? Function(String expression)? evaluateHandler;
+
+  /// When set, `Page.navigate` answers with this `errorText` and emits no
+  /// `Page.frameNavigated` — CDP's real navigation-failure shape.
+  String? navigateErrorText;
+
+  /// Whether `Page.navigate` also emits `Page.domContentEventFired` and
+  /// `Page.loadEventFired` (default true; tests gate it to script
+  /// slow-loading pages).
+  bool emitLifecycleEvents = true;
+
+  /// Value returned by `Network.getResponseBody` (plain text).
+  String networkResponseBody = '{"ok":true}';
+
+  /// Value returned by `Runtime.callFunctionOn` (defaults to
+  /// [evaluateValue]).
+  String? callFunctionOnValue;
+
+  /// Target ids created via `Target.createTarget`.
+  final List<String> createdTargets = [];
+
+  /// Session ids created via `Target.attachToTarget`.
+  final List<String> sessions = [];
+
+  int _targetCounter = 0;
 
   /// When set, the next request is answered with this error payload.
   Map<String, Object?>? failNextWithError;
@@ -161,11 +192,24 @@ class FakeCdpServer {
       case 'Accessibility.enable':
         respond(const {});
       case 'Page.navigate':
+        final errorText = navigateErrorText;
+        if (errorText != null) {
+          respond({'frameId': 'frame-1', 'errorText': errorText});
+          break;
+        }
         currentUrl = params['url'] as String? ?? currentUrl;
-        respond({'frameId': 'frame-1'});
+        respond({'frameId': 'frame-1', 'loaderId': 'loader-1'});
         emit('Page.frameNavigated', {
-          'frame': {'id': 'frame-1', 'url': currentUrl},
+          'frame': {
+            'id': 'frame-1',
+            'loaderId': 'loader-1',
+            'url': currentUrl,
+          },
         });
+        if (emitLifecycleEvents) {
+          emit('Page.domContentEventFired', const {});
+          emit('Page.loadEventFired', const {});
+        }
       case 'Page.captureScreenshot':
         respond({'data': screenshotBase64});
       case 'Page.startScreencast':
@@ -180,11 +224,49 @@ class FakeCdpServer {
         screencastAcks.add(params);
         respond(const {});
       case 'Runtime.evaluate':
+        final expression = params['expression'] as String? ?? '';
+        final scripted = evaluateHandler?.call(expression);
         respond({
-          'result': {'type': 'string', 'value': evaluateValue},
+          'result': {
+            'type': 'string',
+            'value': scripted ?? evaluateValue,
+          },
         });
       case 'Accessibility.getFullAXTree':
         respond({'nodes': axNodes});
+      case 'Target.closeTarget':
+        respond(const {});
+      case 'Network.enable':
+        respond(const {});
+      case 'Network.getResponseBody':
+        respond({'body': networkResponseBody, 'base64Encoded': false});
+      case 'DOM.resolveNode':
+        final backendId = params['backendNodeId'];
+        respond({
+          'object': {'objectId': 'obj-backend-$backendId'},
+        });
+      case 'Runtime.callFunctionOn':
+        respond({
+          'result': {
+            'type': 'string',
+            'value': callFunctionOnValue ?? evaluateValue,
+          },
+        });
+      case 'Target.createTarget':
+        final targetId = 'page-${++_targetCounter}';
+        createdTargets.add(targetId);
+        respond({'targetId': targetId});
+      case 'Target.attachToTarget':
+        final targetId = params['targetId'] as String? ?? 'unknown';
+        final sessionId = 'session-$targetId';
+        sessions.add(sessionId);
+        respond({'sessionId': sessionId});
+      case 'Target.getTargets':
+        respond({
+          'targetInfos': [
+            {'targetId': 'page-1', 'type': 'page', 'url': currentUrl},
+          ],
+        });
       default:
         if (method.startsWith('Input.')) {
           inputEvents.add({'method': method, ...params});

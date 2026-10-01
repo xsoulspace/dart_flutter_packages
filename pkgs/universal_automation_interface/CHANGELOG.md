@@ -1,30 +1,20 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+## 0.2.0
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## 0.1.1 - 2026-09-30
-
-### Added
-
-- feat: `ScrollAction` — scroll the surface (direction + optional
-  distance) so harness scenarios can reach off-screen semantics.
-
-## 0.1.0 - 2026-09-27
-
-### Added
-
-- feat: `ElementNotFoundException` — a locator matched no node in the driver's latest observation (distinct from `DriverUnsupportedException`; retrying after a fresh snapshot is meaningful).
-
-- feat: `AutomationEndpoint`, `AutomationTransport`, and oka-compatible
-  `SessionHandles` naming convention.
-- feat: `AutomationDriver` observe/act/verify contract with
-  `DriverCapabilities`.
-- feat: intent-level `AutomationAction` types and `Snapshot`/`AxNode`
-  semantic-tree model.
-- feat: fail-closed `TypedSpec` and `SessionDescriptor` (borrowed sessions
-  can never be started).
-- feat: structured `AutomationEvent` types (payload-free).
-- feat: `AutomationException` hierarchy with structured details.
+- **Behavior dynamics contract (ADR 0044)**: declarative, composable input
+  profiles for humans and agents.
+  - New `behavior` module: `BehaviorStep` timed input-step vocabulary,
+    `BehaviorPlan`, `BehaviorProfile` (facets: `ActionRhythm`,
+    `ReactionDelay`, `SessionPacing`, `PointerMotion`, `KeystrokeCadence`),
+    priors (`agentImmediate` degenerate profile, `humanPrior(seed)`
+    hyper-prior), `synthesizeBehavior`/`projectBehavior` deterministic
+    synthesis, `auditBehavior` self-consistency reporting,
+    `BehaviorReceipts` encoders, canonical JSON + SHA-256 hashing, and the
+    pinned `xoshiro128**`/splitmix32 PRNG.
+  - New `BehavioralDriver` opt-in capability surface (`performWith` with
+    typed `BehaviorOutcome`), `ProfiledDriver` wrapper, and
+    `DriverCapabilities.behaviorDynamics` (default `false`; `full` sets it).
+  - Breaking: `DriverCapabilities.full` now sets `behaviorDynamics: true`;
+    drivers claiming `full` without implementing `BehavioralDriver` should
+    declare an explicit capability set instead.

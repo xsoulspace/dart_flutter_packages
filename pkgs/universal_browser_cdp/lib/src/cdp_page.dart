@@ -6,52 +6,177 @@ import 'package:universal_automation_interface/universal_automation_interface.da
 
 import 'cdp_connection.dart';
 import 'cdp_discovery.dart';
+import 'cdp_network.dart';
+
+/// What a navigation waits for before [CdpPage.navigate] returns.
+enum NavigateWait {
+  /// The main frame committed (navigation confirmed, document swapping).
+  commit,
+
+  /// The `load` event fired (default — static resources settled).
+  load,
+
+  /// `DOMContentLoaded` fired (DOM parsed; long-loading images may lag).
+  domContentLoaded,
+
+  /// Load finished *and* the network sat idle (no in-flight requests,
+  /// nothing moved for 500ms) — the SPA-friendly wait.
+  networkIdle,
+}
 
 /// A page-level CDP facade: navigation, evaluation, accessibility
 /// snapshots, screenshots, and trusted-input synthesis.
 ///
 /// Input synthesis dispatches real `Input.dispatch*` events at resolved
 /// element coordinates (not `element.click()` script calls), so the browser
-/// treats them like user input.
+/// treats them like user input. Input targets are auto-waited
+/// (attached → visible → stable → hittable) before dispatch; `force`
+/// skips the checks.
 class CdpPage {
   CdpPage._(this.connection, this.target);
 
-  final CdpConnection connection;
+  /// The transport carrying this page's traffic: a dedicated socket
+  /// ([CdpConnection]) or a browser-level flat session ([CdpFlatSession]).
+  final CdpTransport connection;
 
   /// The page target this facade drives.
   final CdpTargetInfo target;
   int _revision = 0;
   bool _closed = false;
+  CdpNetworkLog? _network;
 
-  /// Attaches the facade: enables `Page`, `Runtime`, and `Accessibility`
-  /// domains.
+  /// Attaches the facade: enables `Page`, `Runtime`, `Accessibility`,
+  /// and `Network` domains.
   ///
   /// `Accessibility.enable` matters on real Chromium: without it the
   /// renderer keeps its AX tree uncomputed and `getFullAXTree` answers
   /// with the root node only (headless behaves this way reliably).
+  /// `Network.enable` feeds the observation log (`network`) that
+  /// `NavigateWait.networkIdle` counts on.
   static Future<CdpPage> attach(
-    CdpConnection connection,
+    CdpTransport connection,
     CdpTargetInfo target,
   ) async {
     await connection.send('Page.enable');
     await connection.send('Runtime.enable');
     await connection.send('Accessibility.enable');
-    return CdpPage._(connection, target);
+    return CdpPage._(connection, target)
+      .._network = await CdpNetworkLog.attach(connection);
   }
 
   /// Monotonic revision; bumps on every navigation.
   int get revision => _revision;
 
-  /// Navigates the page and waits for the frame-navigated event.
-  Future<void> navigate(Uri url) async {
+  /// Observation-only network log (requests, statuses, in-flight count,
+  /// response bodies). Enabled at attach.
+  CdpNetworkLog get network {
+    final log = _network;
+    if (log == null) {
+      throw StateError('CdpPage was constructed without a network log');
+    }
+    return log;
+  }
+
+  /// Whether the page target is gone or the transport is dead.
+  bool get isClosed => _closed || connection.isClosed;
+
+  /// Marks the page dead without touching the transport. Called by
+  /// `CdpBrowser` when the underlying target is destroyed externally;
+  /// not for general use.
+  void markClosed() => _closed = true;
+
+  /// When the last observation (`accessibilitySnapshot`) completed, or
+  /// `null` if none has happened yet. Behavioral dispatch enforces
+  /// reaction floors against this timestamp; navigation clears it.
+  DateTime? get lastObservationAt => _lastObservationAt;
+  DateTime? _lastObservationAt;
+
+  /// Navigates the page and waits per [waitUntil].
+  ///
+  /// Correctness contract: navigation failures surface as typed errors —
+  /// CDP answers `Page.navigate` successfully with an `errorText` field
+  /// (e.g. `ERR_NAME_NOT_RESOLVED`), so the response is inspected and a
+  /// `ProtocolException` thrown instead of waiting out the timeout. The
+  /// commit wait matches the `loaderId` returned for this navigation and
+  /// ignores subframe events, so an iframe finishing early cannot resolve
+  /// a main frame navigation. [NavigateWait.networkIdle] additionally
+  /// requires the network to sit quiet (no in-flight requests, nothing
+  /// moved for 500ms).
+  Future<void> navigate(
+    Uri url, {
+    NavigateWait waitUntil = NavigateWait.load,
+    Duration timeout = const Duration(seconds: 30),
+  }) async {
     _ensureOpen();
-    final navigated = connection
-        .on('Page.frameNavigated')
-        .first
-        .timeout(const Duration(seconds: 15));
-    await connection.send('Page.navigate', {'url': url.toString()});
-    await navigated;
+    // Subscribe BEFORE sending: the socket delivers the result and the
+    // event in order, but a listener registered after the response would
+    // miss the event on the broadcast stream.
+    var loaderId = '';
+    var committed = false;
+    var loaded = false;
+    var domContentLoaded = false;
+    final stage = Completer<void>();
+    void check() {
+      if (stage.isCompleted) return;
+      final ready = switch (waitUntil) {
+        NavigateWait.commit => committed,
+        NavigateWait.load => loaded,
+        NavigateWait.domContentLoaded => domContentLoaded || loaded,
+        NavigateWait.networkIdle => loaded || domContentLoaded,
+      };
+      if (ready) stage.complete();
+    }
+
+    late final List<StreamSubscription<CdpEvent>> subscriptions;
+    subscriptions = [
+      connection.on('Page.frameNavigated').listen((event) {
+        final frame = event.params['frame'] as Map<String, Object?>?;
+        if (frame == null || frame.containsKey('parentId')) return;
+        final frameLoader = frame['loaderId'];
+        final matches = loaderId.isEmpty ||
+            frameLoader is! String ||
+            frameLoader.isEmpty ||
+            frameLoader == loaderId;
+        if (matches) committed = true;
+        check();
+      }),
+      connection.on('Page.loadEventFired').listen((_) {
+        loaded = true;
+        check();
+      }),
+      connection.on('Page.domContentEventFired').listen((_) {
+        domContentLoaded = true;
+        check();
+      }),
+    ];
+    final watch = Stopwatch()..start();
+    try {
+      final result = await connection.send(
+        'Page.navigate',
+        {'url': url.toString()},
+        timeout,
+      );
+      final errorText = result['errorText'];
+      if (errorText is String && errorText.isNotEmpty) {
+        throw ProtocolException(
+          'navigation failed: $errorText',
+          details: {'url': url.toString(), 'errorText': errorText},
+        );
+      }
+      final resultLoader = result['loaderId'];
+      if (resultLoader is String) loaderId = resultLoader;
+      check();
+      await stage.future.timeout(timeout - watch.elapsed);
+      if (waitUntil == NavigateWait.networkIdle) {
+        await network.waitIdle(timeout: timeout - watch.elapsed);
+      }
+    } finally {
+      for (final subscription in subscriptions) {
+        await subscription.cancel();
+      }
+    }
     _revision++;
+    _lastObservationAt = null;
   }
 
   /// Evaluates [expression] with `returnByValue` and returns the value.
@@ -68,10 +193,14 @@ class CdpPage {
   /// Captures the accessibility tree as an [Snapshot].
   ///
   /// Ignored nodes (`ignored: true`) are filtered out; the remaining nodes
-  /// are rebuilt into a hierarchy via CDP `childIds`.
+  /// are rebuilt into a hierarchy via CDP `childIds`. Each node's CDP
+  /// `backendDOMNodeId` survives in
+  /// `attributes['cdp.backendDOMNodeId']` — the handle semantic locators
+  /// resolve against.
   Future<Snapshot> accessibilitySnapshot() async {
     _ensureOpen();
     final result = await connection.send('Accessibility.getFullAXTree');
+    _lastObservationAt = DateTime.now();
     final raw = (result['nodes'] as List<Object?>? ?? const [])
         .whereType<Map<String, Object?>>()
         .toList(growable: false);
@@ -96,11 +225,30 @@ class CdpPage {
     return base64Decode(data);
   }
 
-  /// Clicks the element at [css] by dispatching mouse events at its center.
-  Future<void> click({required String css}) async {
+  /// Clicks the element at [css] by dispatching mouse events at its
+  /// center, after it becomes actionable (attached → visible → stable →
+  /// hittable). [force] skips the checks (coords come from the first
+  /// existing rect); a missing element always refuses.
+  Future<void> click({
+    required String css,
+    Duration timeout = const Duration(seconds: 10),
+    bool force = false,
+  }) async {
     _ensureOpen();
-    final rect = await _resolveRect(css);
+    final rect = await resolveRect(css, timeout: timeout, force: force);
     final (x, y) = rect.center;
+    await clickAt(x, y);
+  }
+
+  /// Dispatches a click at explicit viewport coordinates: a move to the
+  /// point, then press + release (hover states see the pointer arrive).
+  Future<void> clickAt(double x, double y) async {
+    _ensureOpen();
+    await connection.send('Input.dispatchMouseEvent', {
+      'type': 'mouseMoved',
+      'x': x,
+      'y': y,
+    });
     await connection.send('Input.dispatchMouseEvent', {
       'type': 'mousePressed',
       'x': x,
@@ -136,8 +284,6 @@ class CdpPage {
       height = (decoded['h'] as num?)?.toInt();
     } on FormatException {
       // Keep the fallback center below.
-    } on TypeError {
-      // Keep the fallback center below.
     }
     final (x, y) = (
       (width ?? 800) / 2,
@@ -162,13 +308,46 @@ class CdpPage {
     });
   }
 
-  /// Focuses [css] (when given) and inserts [text]; [submit] presses Enter.
-  Future<void> type(String text, {String? css, bool submit = false}) async {
+  /// Focuses [css] (when given), waits for it to become actionable, then
+  /// types [text] as real per-key events (printable ASCII) with
+  /// IME-style character events as the non-ASCII fallback — the same
+  /// lowering the behavioral path uses. [submit] presses Enter.
+  Future<void> type(
+    String text, {
+    String? css,
+    bool submit = false,
+    Duration timeout = const Duration(seconds: 10),
+    bool force = false,
+  }) async {
     _ensureOpen();
     if (css != null) {
+      await resolveRect(css, timeout: timeout, force: force);
       await evaluate('document.querySelector(${_jsString(css)})?.focus()');
     }
-    await connection.send('Input.insertText', {'text': text});
+    for (final rune in text.runes) {
+      final ch = String.fromCharCode(rune);
+      final keyCode = rune >= 0x20 && rune <= 0x7e
+          ? printableVirtualKeyCode(ch)
+          : null;
+      if (keyCode == null) {
+        await connection.send('Input.insertText', {'text': ch});
+        continue;
+      }
+      await connection.send('Input.dispatchKeyEvent', {
+        'type': 'keyDown',
+        'key': ch,
+        'code': ch,
+        'windowsVirtualKeyCode': keyCode,
+        'text': ch,
+        'unmodifiedText': ch,
+      });
+      await connection.send('Input.dispatchKeyEvent', {
+        'type': 'keyUp',
+        'key': ch,
+        'code': ch,
+        'windowsVirtualKeyCode': keyCode,
+      });
+    }
     if (submit) await keyPress('Enter');
   }
 
@@ -176,10 +355,11 @@ class CdpPage {
   /// `Backspace`, `ArrowUp`/`Down`/`Left`/`Right`.
   Future<void> keyPress(String key) async {
     _ensureOpen();
-    final code = _keyCodes[key];
+    final code = namedVirtualKeyCode(key);
     if (code == null) {
       throw DriverUnsupportedException(
-        'key "$key" is not in the supported set: ${_keyCodes.keys.toList()}',
+        'key "$key" is not in the supported set: Enter, Tab, Escape, '
+        'Backspace, ArrowLeft, ArrowUp, ArrowRight, ArrowDown',
       );
     }
     await connection.send('Input.dispatchKeyEvent', {
@@ -197,52 +377,183 @@ class CdpPage {
   }
 
   /// Closes the page target and the underlying connection.
-  Future<void> close() async {
+  ///
+  /// For borrowed sessions (an adopted browser this process must not
+  /// tear down), use [detach] instead — it closes only this client's
+  /// socket and leaves the target alive. Over a flat session
+  /// ([CdpFlatSession]) the connection close is a no-op; page-target
+  /// lifecycle then belongs to `CdpBrowser.closePage`.
+  Future<void> close({bool closeTarget = true}) async {
     if (_closed) return;
     _closed = true;
+    await _network?.dispose();
     final ws = connection;
-    try {
-      await ws.send('Target.closeTarget', {'targetId': target.id});
-    } on Object {
-      // The target may already be gone; connection close is what matters.
+    if (closeTarget) {
+      try {
+        await ws.send('Target.closeTarget', {'targetId': target.id});
+      } on Object {
+        // The target may already be gone; connection close is what
+        // matters.
+      }
     }
     await ws.close();
   }
 
+  /// Closes only this client's connection; the target stays alive. The
+  /// borrowed-lease teardown.
+  Future<void> detach() => close(closeTarget: false);
+
   void _ensureOpen() {
-    if (_closed || connection.isClosed) {
+    if (isClosed) {
       throw StateError('CdpPage is closed');
     }
   }
 
-  Future<AxBounds> _resolveRect(String css) async {
-    final value = await evaluate(
-      'JSON.stringify((() => { const el = document.querySelector'
-      '(${_jsString(css)}); if (!el) return null; '
-      'const r = el.getBoundingClientRect(); '
-      'return {x: r.x, y: r.y, width: r.width, height: r.height}; })())',
-    );
-    if (value is! String || value.isEmpty || value == 'null') {
-      throw ProtocolException(
-        'element not found for selector: $css',
-        details: {'selector': css},
+  /// Resolves [css] to viewport-space bounds once the element is
+  /// actionable: attached → visible → stable (two identical consecutive
+  /// rects) → center-point hittable, polling every 50ms until [timeout].
+  /// [force] returns the first existing rect without the checks.
+  Future<AxBounds> resolveRect(
+    String css, {
+    Duration timeout = const Duration(seconds: 10),
+    bool force = false,
+  }) =>
+      _waitForActionableRect(
+        probe: () => evaluate(_elementProbe(_cssProbeBody(css))),
+        label: css,
+        timeout: timeout,
+        force: force,
       );
+
+  /// Resolves a semantic-snapshot node (by CDP `backendDOMNodeId`, the
+  /// handle `accessibilitySnapshot` records) to actionable viewport
+  /// bounds, with the same checks as [resolveRect].
+  Future<AxBounds> resolveNodeRect(
+    int backendNodeId, {
+    Duration timeout = const Duration(seconds: 10),
+    bool force = false,
+  }) {
+    Future<Object?> probe() async {
+      try {
+        final resolved = await connection.send(
+          'DOM.resolveNode',
+          {'backendNodeId': backendNodeId},
+        );
+        final objectId =
+            (resolved['object'] as Map<String, Object?>?)?['objectId'];
+        if (objectId is! String) return null;
+        final result = await connection.send('Runtime.callFunctionOn', {
+          'objectId': objectId,
+          'functionDeclaration': _nodeProbeFunction,
+          'returnByValue': true,
+        });
+        return (result['result'] as Map<String, Object?>?)?['value'];
+      } on ProtocolException {
+        // Stale node handle — report detached; the poll keeps trying
+        // with a fresh resolve until the deadline.
+        return null;
+      }
     }
-    final decoded = jsonDecode(value);
-    if (decoded is! Map<String, Object?>) {
-      throw ProtocolException(
-        'unexpected rect payload for selector: $css',
-        details: {'selector': css},
-      );
-    }
-    return AxBounds(
-      left: (decoded['x']! as num).toDouble(),
-      top: (decoded['y']! as num).toDouble(),
-      width: (decoded['width']! as num).toDouble(),
-      height: (decoded['height']! as num).toDouble(),
+
+    return _waitForActionableRect(
+      probe: probe,
+      label: 'backend-node-$backendNodeId',
+      timeout: timeout,
+      force: force,
     );
   }
+
+  /// The shared actionability loop: probe → decode → (detached | empty |
+  /// hidden | occluded | ready), requiring two identical consecutive
+  /// rects before declaring stability.
+  Future<AxBounds> _waitForActionableRect({
+    required Future<Object?> Function() probe,
+    required String label,
+    required Duration timeout,
+    required bool force,
+  }) async {
+    _ensureOpen();
+    final deadline = DateTime.now().add(timeout);
+    String? previousKey;
+    var lastState = 'unknown';
+    while (true) {
+      var decoded = const <String, Object?>{'state': 'detached'};
+      final value = await probe();
+      if (value is String && value.isNotEmpty && value != 'null') {
+        final parsed = jsonDecode(value);
+        if (parsed is Map<String, Object?>) decoded = parsed;
+      }
+      final state = decoded['state'] as String?;
+      if (state == null) {
+        // Legacy payload shape (rect + hitOk) from canned endpoints.
+        if (decoded['hitOk'] == true) return _boundsFrom(decoded);
+        lastState = 'occluded';
+      } else if (state == 'detached') {
+        lastState = state;
+      } else if (force) {
+        return _boundsFrom(decoded);
+      } else if (state == 'ready') {
+        final key =
+            '${decoded['x']}|${decoded['y']}|'
+            '${decoded['width']}|${decoded['height']}';
+        if (previousKey != null && previousKey == key) {
+          return _boundsFrom(decoded);
+        }
+        previousKey = key;
+        lastState = 'stable?';
+      } else {
+        lastState = state;
+      }
+      if (DateTime.now().isAfter(deadline)) {
+        throw ProtocolException(
+          'element "$label" not actionable within '
+          '${timeout.inMilliseconds}ms (last state: $lastState)',
+          details: {'target': label, 'state': lastState},
+        );
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    }
+  }
+
+  AxBounds _boundsFrom(Map<String, Object?> decoded) => AxBounds(
+    left: (decoded['x']! as num).toDouble(),
+    top: (decoded['y']! as num).toDouble(),
+    width: (decoded['width']! as num).toDouble(),
+    height: (decoded['height']! as num).toDouble(),
+  );
 }
+
+/// One actionability probe over a CSS-located element, as JSON.
+String _cssProbeBody(String css) =>
+    'const el = document.querySelector(${_jsString(css)}); '
+    '${_elementProbeTail()}';
+
+/// The element-scoped probe body parameterized over `this` (used via
+/// `Runtime.callFunctionOn` for semantic nodes).
+final String _nodeProbeFunction =
+    'function() { return (function() { '
+    'const el = this; '
+    'return JSON.stringify((function() { ${_elementProbeTail()} })()); '
+    '})(); }';
+
+String _elementProbe(String body) => 'JSON.stringify((() => { $body })())';
+
+/// Shared probe tail: [el] must be in scope. Scrolls into view, then
+/// reports the actionability state plus the viewport rect.
+String _elementProbeTail() =>
+    'if (!el) return {state: "detached"}; '
+    'el.scrollIntoView({block: "center", inline: "center"}); '
+    'const r = el.getBoundingClientRect(); '
+    'const rect = {x: r.x, y: r.y, width: r.width, height: r.height}; '
+    'if (r.width <= 0 || r.height <= 0) '
+    'return Object.assign({state: "empty"}, rect); '
+    'const style = getComputedStyle(el); '
+    'if (style.display === "none" || style.visibility === "hidden") '
+    'return Object.assign({state: "hidden"}, rect); '
+    'const cx = r.x + r.width / 2; const cy = r.y + r.height / 2; '
+    'const hit = document.elementFromPoint(cx, cy); '
+    'const hitOk = !!(hit && (el === hit || el.contains(hit))); '
+    'return Object.assign({state: hitOk ? "ready" : "occluded"}, rect);';
 
 List<AxNode> _buildTree(List<Map<String, Object?>> raw) {
   final byId = <String, Map<String, Object?>>{
@@ -279,6 +590,7 @@ List<AxNode> _buildTree(List<Map<String, Object?>> raw) {
     final children = [
       for (final childId in childIds) ...build(childId),
     ];
+    final backendNodeId = node['backendDOMNodeId'];
     return [
       AxNode(
         role: role,
@@ -292,6 +604,12 @@ List<AxNode> _buildTree(List<Map<String, Object?>> raw) {
                 width: (boundsJson['width']! as num).toDouble(),
                 height: (boundsJson['height']! as num).toDouble(),
               ),
+        attributes: {
+          // The semantic-locator handle: resolves to a DOM node for
+          // coordinate dispatch (see `CdpPage.resolveNodeRect`).
+          if (backendNodeId is int)
+            'cdp.backendDOMNodeId': backendNodeId.toString(),
+        },
         children: children,
       ),
     ];
@@ -305,14 +623,3 @@ List<AxNode> _buildTree(List<Map<String, Object?>> raw) {
 
 String _jsString(String value) =>
     "'${value.replaceAll(r'\', r'\\').replaceAll("'", r"\'")}'";
-
-const _keyCodes = <String, int>{
-  'Enter': 13,
-  'Tab': 9,
-  'Escape': 27,
-  'Backspace': 8,
-  'ArrowLeft': 37,
-  'ArrowUp': 38,
-  'ArrowRight': 39,
-  'ArrowDown': 40,
-};

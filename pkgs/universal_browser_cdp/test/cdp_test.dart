@@ -137,23 +137,28 @@ void main() {
     test('clicks dispatch trusted mouse events at the rect center', () async {
       await session.page.click(css: '#submit');
       final events = server.inputEvents;
-      expect(events, hasLength(2));
+      // Auto-waited click: move to the point, then press + release.
+      expect(events, hasLength(3));
       expect(events[0]['method'], 'Input.dispatchMouseEvent');
-      expect(events[0]['type'], 'mousePressed');
+      expect(events[0]['type'], 'mouseMoved');
       expect((events[0]['x']! as num).toDouble(), 140.0);
       expect((events[0]['y']! as num).toDouble(), 100.0);
-      expect(events[1]['type'], 'mouseReleased');
+      expect(events[1]['type'], 'mousePressed');
+      expect(events[2]['type'], 'mouseReleased');
     });
 
-    test('typing inserts text and submits with Enter', () async {
+    test('typing emits per-key events and submits with Enter', () async {
       await session.page.type('hi', css: '#email', submit: true);
-      final methods = server.methods;
-      expect(methods.contains('Input.insertText'), isTrue);
       final keyEvents = server.inputEvents
           .where((event) => event['method'] == 'Input.dispatchKeyEvent')
           .toList();
-      expect(keyEvents, hasLength(2));
-      expect(keyEvents.first['key'], 'Enter');
+      // h down, h up, i down, i up, Enter down, Enter up.
+      expect(keyEvents, hasLength(6));
+      expect(keyEvents.first['key'], 'h');
+      expect(keyEvents.first['windowsVirtualKeyCode'], 72);
+      expect(keyEvents.first['text'], 'h');
+      expect(keyEvents.last['key'], 'Enter');
+      expect(keyEvents.last['type'], 'keyUp');
     });
 
     test('unknown keys are refused loudly', () async {

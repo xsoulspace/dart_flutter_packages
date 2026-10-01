@@ -3,7 +3,7 @@ description: >-
   FrameSource over a running Flutter app's MCP toolkit screenshots: paced
   polling of `ext.mcp.toolkit.view_screenshots` through the Dart VM
   service, feeding the universal_screencast pipeline.
-version: 0.1.0
+version: 0.1.1
 homepage: https://github.com/xsoulspace/dart_flutter_packages
 repository: https://github.com/xsoulspace/dart_flutter_packages
 issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
@@ -20,7 +20,7 @@ dependencies:
 
 dev_dependencies:
   test: ^1.31.2
-  universal_automation_conformance: ^0.1.0
+  universal_automation_conformance: ^0.2.0
   xsoulspace_lints: ^0.1.2
 topics:
   - flutter

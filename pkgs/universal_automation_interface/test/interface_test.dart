@@ -120,7 +120,7 @@ void main() {
 
   group('ElementNotFoundException', () {
     test('carries locator identity and a stable kind', () {
-      final error = const ElementNotFoundException('name', 'Buy');
+      const error = ElementNotFoundException('name', 'Buy');
       expect(error.kind, 'elementNotFound');
       expect(error.locator, 'name');
       expect(error.locatorValue, 'Buy');

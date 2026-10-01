@@ -12,6 +12,7 @@ class DriverCapabilities {
     this.a11yTree = false,
     this.inputSynthesis = false,
     this.evaluate = false,
+    this.behaviorDynamics = false,
   });
 
   /// The canonical all-features set.
@@ -21,6 +22,7 @@ class DriverCapabilities {
     a11yTree: true,
     inputSynthesis: true,
     evaluate: true,
+    behaviorDynamics: true,
   );
 
   /// Attaching to an existing target is supported.
@@ -41,6 +43,9 @@ class DriverCapabilities {
   /// Read-only evaluation (`EvaluateAction`).
   final bool evaluate;
 
+  /// Declarative behavior delivery (`BehavioralDriver.performWith`).
+  final bool behaviorDynamics;
+
   /// Serializes the capability set.
   Map<String, Object?> toJson() => {
     'attach': attach,
@@ -49,6 +54,7 @@ class DriverCapabilities {
     'a11yTree': a11yTree,
     'inputSynthesis': inputSynthesis,
     'evaluate': evaluate,
+    'behaviorDynamics': behaviorDynamics,
   };
 
   @override

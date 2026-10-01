@@ -4,7 +4,7 @@ description: >-
   screencast, paced polling) to FrameSink (binary WebSocket, MJPEG HTTP,
   file recorder) with fail-closed composition validation and audience
   policies.
-version: 0.1.0
+version: 0.1.1
 homepage: https://github.com/xsoulspace/dart_flutter_packages
 repository: https://github.com/xsoulspace/dart_flutter_packages
 issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
@@ -17,12 +17,12 @@ resolution: workspace
 
 dependencies:
   meta: ^1.19.0
-  universal_automation_interface: ^0.1.0
-  universal_browser_cdp: ^0.1.0
+  universal_automation_interface: ^0.2.0
+  universal_browser_cdp: ^0.2.0
 
 dev_dependencies:
   test: ^1.31.2
-  universal_automation_conformance: ^0.1.0
+  universal_automation_conformance: ^0.2.0
   xsoulspace_lints: ^0.1.2
 topics:
   - screencast

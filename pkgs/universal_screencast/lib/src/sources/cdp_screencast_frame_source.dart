@@ -24,7 +24,7 @@ class CdpScreencastFrameSource implements FrameSource {
     this._quality = 80,
   }) : _revisionProbe = revisionProbe ?? (() => 0);
 
-  final CdpConnection _connection;
+  final CdpTransport _connection;
   final int Function() _revisionProbe;
   final String _format;
   final int _quality;

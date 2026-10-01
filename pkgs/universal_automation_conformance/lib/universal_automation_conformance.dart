@@ -16,5 +16,6 @@
 library;
 
 export 'src/automation_driver_conformance.dart';
+export 'src/behavior_synthesis_conformance.dart';
 export 'src/frame_sink_conformance.dart';
 export 'src/frame_source_conformance.dart';

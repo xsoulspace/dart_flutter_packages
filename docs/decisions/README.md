@@ -22,3 +22,4 @@ Harness product decisions (0002–0005, 0007, 0009, 0012–0028, 0030,
 | [0041](0041_mesh_realtime_durable_push_channel.md) | Accepted | Mesh realtime durable push channel (live mode + change notifications) |
 | [0042](0042_content_addressed_chunk_store.md) | Accepted | Content-addressed chunk store — native binary deltas (amends 0010 §5) |
 | [0043](0043_storage_shrink_exploration_tracks.md) | Accepted | Storage-shrink and tooling exploration tracks (triggers + kill criteria) |
+| [0044](0044_behavior_dynamics_contract.md) | Accepted | Behavior dynamics contract — declarative input profiles for humans and agents (amends 0037/0038) |

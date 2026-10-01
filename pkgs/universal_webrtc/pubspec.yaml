@@ -4,7 +4,7 @@ description: >-
   channel contracts, a loopback signaling implementation, a peer factory,
   and a FrameSink that pumps screencast frames through the WebRTC data
   channel.
-version: 0.1.0
+version: 0.1.1
 homepage: https://github.com/xsoulspace/dart_flutter_packages
 repository: https://github.com/xsoulspace/dart_flutter_packages
 issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
@@ -16,7 +16,7 @@ environment:
 resolution: workspace
 
 dependencies:
-  universal_automation_interface: ^0.1.0
+  universal_automation_interface: ^0.2.0
   universal_screencast: ^0.1.0
   universal_webrtc_raw: ^0.1.0
 

@@ -20,6 +20,9 @@ class WebDriverException extends ProtocolException {
   static Object fromEnvelope(String error, String message, int httpStatus) {
     switch (error) {
       case 'no such element':
+        // A missing element is a surface state, not an unsupported
+        // operation; the wire envelope carries no locator context.
+        return ElementNotFoundException('unspecified', message);
       case 'no such window':
       case 'no such alert':
         return DriverUnsupportedException('$error: $message');

@@ -52,11 +52,13 @@ class WebDriverDriver implements AutomationDriver {
           'it refuses loudly instead of silently dropping it',
         );
       case KeyPressAction(:final key):
-        throw const DriverUnsupportedException(
-          'WebDriver: the W3C classic wheel-actions API is not portable across; this driver refuses scroll loudly '
-          'instead of silently dropping it',
-        );
-        final wireKey = _wireKeys[key] ?? key;
+        final wireKey = _wireKeys[key];
+        if (wireKey == null) {
+          throw DriverUnsupportedException(
+            'WebDriver: key "$key" is not in the supported set '
+            '(${_wireKeys.keys.toList()})',
+          );
+        }
         await _client.keyPress(wireKey);
       case EvaluateAction(:final expression):
         throw DriverUnsupportedException(

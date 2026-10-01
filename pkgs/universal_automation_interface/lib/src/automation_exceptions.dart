@@ -101,7 +101,8 @@ class ElementNotFoundException extends AutomationException {
   @override
   String get kind => 'elementNotFound';
 
-  /// Locator kind that did not match (`ref`, `name`, `role`, `css`).
+  /// Locator kind that did not match (`ref`, `name`, `role`, `css`, or
+  /// `unspecified` when the transport could not attribute the locator).
   final String locator;
 
   /// Locator value that did not match.
