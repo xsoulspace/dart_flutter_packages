@@ -19,6 +19,25 @@ dependency_overrides:
   intl: 0.20.3
   dart_acp_toolkit:
     path: /Users/antonio/mcp/cline/intentcall/packages/acp_toolkit
+  # dart_acp_toolkit needs the intentcall 0.7.0 family while hosted
+  # mcp_toolkit 5.0.4 pins ^0.6.0 — the checkouts satisfy both (path
+  # overrides bypass version solving), same pin as the vosges workspace.
+  intentcall_schema:
+    path: /Users/antonio/mcp/cline/intentcall/packages/intentcall_schema
+  intentcall_core:
+    path: /Users/antonio/mcp/cline/intentcall/packages/intentcall_core
+  intentcall_bridge:
+    path: /Users/antonio/mcp/cline/intentcall/packages/intentcall_bridge
+  intentcall_platform:
+    path: /Users/antonio/mcp/cline/intentcall/packages/intentcall_platform
+  intentcall_platform_sync:
+    path: /Users/antonio/mcp/cline/intentcall/packages/intentcall_platform_sync
+  intentcall_platform_apple:
+    path: /Users/antonio/mcp/cline/intentcall/packages/intentcall_platform_apple
+  intentcall_platform_android:
+    path: /Users/antonio/mcp/cline/intentcall/packages/intentcall_platform_android
+  intentcall_session:
+    path: /Users/antonio/mcp/cline/intentcall/packages/intentcall_session
   agentic_executables_wire:
     path: ../../agentic_executables/agentic_executables_wire
   ecsly:
