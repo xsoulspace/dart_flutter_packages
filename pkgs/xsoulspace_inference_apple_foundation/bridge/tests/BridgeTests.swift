@@ -503,9 +503,10 @@ func testExtractArgsJSON() {
 // C-convention closures cannot capture; record deliveries in globals.
 var gateDoneDeliveries: [String] = []
 var gateToolPayloads: [String] = []
+var gateDoneSignal = DispatchSemaphore(value: 0)
 
 let gateDoneCb: @convention(c) (UnsafePointer<CChar>?) -> Void = { p in
-  if let p { gateDoneDeliveries.append(String(cString: p)) }
+  if let p { gateDoneDeliveries.append(String(cString: p)); gateDoneSignal.signal() }
 }
 let gateToolCb: @convention(c) (UnsafePointer<CChar>?) -> Void = { p in
   if let p { gateToolPayloads.append(String(cString: p)) }
@@ -513,6 +514,7 @@ let gateToolCb: @convention(c) (UnsafePointer<CChar>?) -> Void = { p in
 
 func makeGateState() -> GenerationState {
   gateDoneDeliveries = []
+  gateDoneSignal = DispatchSemaphore(value: 0)
   gateToolPayloads = []
   return GenerationRegistry.shared.create(
     toolCallback: gateToolCb,
@@ -605,6 +607,87 @@ func testGenerationCancelGate() async throws {
     "got \(gateToolPayloads)")
 }
 
+/// Wait off the cooperative executor; every test gate has a bounded timeout.
+func waitGate(_ gate: DispatchSemaphore, timeout: Double = 2) async -> DispatchTimeoutResult {
+  await withCheckedContinuation { continuation in
+    DispatchQueue.global().async {
+      continuation.resume(returning: gate.wait(timeout: .now() + timeout))
+    }
+  }
+}
+
+// A held worker proves done is tied to physical unwind, not tool fulfillment.
+func testRetainedNativeTaskLifecycle() async throws {
+  let state = makeGateState()
+  state.endAfterTool = true
+  let moved = DispatchSemaphore(value: 0)
+  let release = DispatchSemaphore(value: 0)
+  let unwound = DispatchSemaphore(value: 0)
+  state.startTask {
+    do {
+      let result: String = try await withCheckedThrowingContinuation { continuation in
+        if let id = state.postToolCall(name: "move", argumentsJSON: "{}", continuation: continuation) {
+          _ = state.fulfillTool(id: id, result: "{\"accepted\":true}")
+          check("duplicate response refused", !state.fulfillTool(id: id, result: "{}"))
+        }
+      }
+      check("first move continuation retains result", result == "{\"accepted\":true}")
+      moved.signal()
+      _ = await waitGate(release)
+      check("retained worker receives cancellation", Task.isCancelled)
+      do {
+        _ = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<String, Error>) in
+          _ = state.postToolCall(name: "late", argumentsJSON: "{}", continuation: continuation)
+        }
+        check("later tool is fenced", false)
+      } catch { check("later tool is fenced", error is XsFmGenerationCancelled) }
+      state.finish("{\"ok\":false,\"error\":\"cancelled\"}")
+    } catch { check("first move succeeds", false, "\(error)"); moved.signal() }
+    unwound.signal()
+  }
+  check("first move reached", await waitGate(moved, timeout: 2) == .success)
+  check("no early done while worker held", gateDoneDeliveries.isEmpty)
+  release.signal()
+  check("completion after release", await waitGate(gateDoneSignal, timeout: 2) == .success)
+  check("worker unwound before done", await waitGate(unwound, timeout: 0) == .success)
+  check("one successful completion survives cancellation", gateDoneDeliveries.count == 1
+    && gateDoneDeliveries[0].contains("\"ended_by\":\"one_move\"")
+    && gateDoneDeliveries[0].contains("\"accepted\":true"))
+  check("only first tool posted", gateToolPayloads.count == 1)
+  check("completed worker released", state.queue.sync { state.task == nil })
+
+  // The same lifecycle gates ordinary generation/stream completion.
+  let ordinary = makeGateState()
+  let recorded = DispatchSemaphore(value: 0)
+  let finishRelease = DispatchSemaphore(value: 0)
+  ordinary.startTask {
+    ordinary.finish("{\"ok\":true}")
+    recorded.signal()
+    _ = await waitGate(finishRelease)
+  }
+  check("normal result recorded", await waitGate(recorded, timeout: 2) == .success)
+  check("normal finish waits for worker", gateDoneDeliveries.isEmpty)
+  finishRelease.signal()
+  check("normal done after unwind", await waitGate(gateDoneSignal, timeout: 2) == .success)
+
+  let cancelled = makeGateState()
+  let started = DispatchSemaphore(value: 0)
+  let cancelRelease = DispatchSemaphore(value: 0)
+  let cancelledUnwind = DispatchSemaphore(value: 0)
+  cancelled.startTask {
+    started.signal()
+    _ = await waitGate(cancelRelease)
+    check("cancel propagates to retained task", Task.isCancelled)
+    cancelled.finish("{\"ok\":true}")
+    cancelledUnwind.signal()
+  }
+  check("cancel worker started", await waitGate(started, timeout: 2) == .success)
+  _ = GenerationRegistry.shared.cancel(cancelled.id)
+  cancelRelease.signal()
+  check("cancel worker unwinds", await waitGate(cancelledUnwind, timeout: 2) == .success)
+  check("cancel suppresses completion", await waitGate(gateDoneSignal, timeout: 0.05) == .timedOut)
+}
+
 #if canImport(FoundationModels)
   @available(macOS 26.0, *)
   @Generable struct WriteArgs {
@@ -613,6 +696,53 @@ func testGenerationCancelGate() async throws {
     @Guide(description: "Text content to write")
     var content: String
   }
+#endif
+
+#if canImport(FoundationModels)
+let oneMoveToolCb: @convention(c) (UnsafePointer<CChar>?) -> Void = { pointer in
+  guard let pointer else { return }
+  let payload = String(cString: pointer)
+  free(UnsafeMutablePointer(mutating: pointer))
+  gateToolPayloads.append(payload)
+  guard let data = payload.data(using: .utf8),
+    let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+    let id = object["id"] as? String else { return }
+  DispatchQueue.global().async {
+    _ = GenerationRegistry.shared.fulfillTool(id: id, result: "{\"hour\":12}")
+  }
+}
+
+@available(macOS 26.0, *)
+func testLiveSequentialOneMove() async {
+  guard SystemLanguageModel.default.isAvailable else {
+    check("live one-move model available", false)
+    return
+  }
+  for index in 1...2 {
+    gateDoneDeliveries = []
+    gateToolPayloads = []
+    gateDoneSignal = DispatchSemaphore(value: 0)
+    let request = """
+      {"prompt":"Call the clock tool now. Use the clock tool again after its result.",
+       "instructions":"You must call the clock tool to find the hour.",
+       "end_after_tool":true,"tools":[{"name":"clock","description":"Find the current hour","parameters":{}}]}
+      """
+    let id = request.withCString {
+      xs_fm_generate_async($0, unsafeBitCast(oneMoveToolCb, to: UnsafeRawPointer.self),
+        unsafeBitCast(gateDoneCb, to: UnsafeRawPointer.self))
+    }
+    let retained = GenerationRegistry.shared.state(for: id)
+    let completed = await waitGate(gateDoneSignal, timeout: 60) == .success
+    check("live one-move \(index) completes", completed, "generation \(id)")
+    if !completed { _ = xs_fm_cancel(id); return }
+    check("live one-move \(index) successful result", gateDoneDeliveries.count == 1
+      && gateDoneDeliveries[0].contains("\"ended_by\":\"one_move\"")
+      && gateDoneDeliveries[0].contains("\"hour\":12"), "\(gateDoneDeliveries)")
+    check("live one-move \(index) native task quiescent before next generation",
+      retained != nil && retained!.queue.sync { retained!.task == nil })
+    check("live one-move \(index) exactly one tool callback", gateToolPayloads.count == 1)
+  }
+}
 #endif
 
 // MARK: - Entry
@@ -627,13 +757,16 @@ struct TestMain {
     testExtractArgsJSON()
     do {
       try await testGenerationCancelGate()
+      try await testRetainedNativeTaskLifecycle()
     } catch {
       check("generation cancel gate", false, "threw: \(error)")
     }
 
     #if canImport(FoundationModels)
       let live = ProcessInfo.processInfo.environment["LIVE"] ?? "1"
-      if live == "1" {
+      if live == "one_move" {
+        if #available(macOS 26.0, *) { await testLiveSequentialOneMove() }
+      } else if live == "1" {
         if #available(macOS 26.0, *) {
           await runLiveTests()
         } else {

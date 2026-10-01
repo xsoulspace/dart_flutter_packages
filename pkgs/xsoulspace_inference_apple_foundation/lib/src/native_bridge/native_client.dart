@@ -31,7 +31,7 @@ class AppleFoundationNativeClient
 
     /// AFM reliability guard (P1 follow-up): the on-device context window
     /// is ~4k tokens. A request whose estimated total (system + prompt +
-    /// fragments + transcript) exceeds the budget is rejected with the named
+    /// fragments + encoded schemas/tools) exceeds the budget is rejected with the named
     /// code `context_window_exceeded` BEFORE the bridge is called — the
     /// over-window call was the precursor of the P1 VM crash, and a named
     /// failure beats a native crash. tokens ≈ chars/4 (the harness default
@@ -55,18 +55,25 @@ class AppleFoundationNativeClient
     /// model must decode its response (and, on the native loop, tool-call
     /// text) inside the same window the input occupies.
     this.outputReserveTokens = 1024,
+
+    /// Opt-in observer for exact strings submitted to the native bridge and
+    /// tool-response callback. Events contain request metadata but no
+    /// credentials. Observer exceptions are ignored.
+    this.onTransportDiagnostic,
   }) : _loader = loader ?? XsFmLibraryLoader(),
        _injectedBindings = bindings {
     _instance = this;
     if (_debugEnabled) {
       // Apply after first load; safe to call repeatedly.
-      Future<void>.microtask(() {
-        try {
-          _b.setDebug(1);
-        } on Object {
-          // Load failure surfaces on first use instead.
-        }
-      });
+      unawaited(
+        Future<void>.microtask(() {
+          try {
+            _b.setDebug(1);
+          } on Object {
+            // Load failure surfaces on first use instead.
+          }
+        }),
+      );
     }
   }
 
@@ -83,6 +90,28 @@ class AppleFoundationNativeClient
 
   /// Generation space reserved out of [maxContextTokens] (finding 18).
   final int outputReserveTokens;
+
+  /// Opt-in transport diagnostic callback. Disabled unless supplied.
+  final void Function(Map<String, Object?> event)? onTransportDiagnostic;
+
+  /// Estimated input allowance after reserving output in the same window.
+  int get maxInputTokens => maxContextTokens - outputReserveTokens;
+
+  /// Pure estimate of the same packet submitted by inference or streaming.
+  /// No availability check, native submission or diagnostic logging occurs.
+  /// This remains a chars/4 approximation, not native tokenizer truth.
+  int estimateInputTokensFor(
+    InferenceRequest request, {
+    ToolRegistry? toolRegistry,
+    bool streaming = false,
+  }) => _estimateInputTokens(
+    _buildNativeRequestJson(
+      request,
+      toolRegistry: toolRegistry,
+      streaming: streaming,
+    ),
+    trace: false,
+  );
 
   XsFmBindings? _bindings;
   NativeCallable<ToolCbNative>? _toolCallable;
@@ -122,6 +151,37 @@ class AppleFoundationNativeClient
   static bool _cachedAvailable = false;
   static bool _availabilityChecked = false;
 
+  /// WHY [isAvailable] last read false — the bridge's availability
+  /// REASON (`xs_fm_availability_reason`, additive; a bridge without the
+  /// symbol reads `unknown`). Empty when available or never checked.
+  /// `modelNotReady` is TRANSIENT (the on-device model warms or
+  /// downloads; generation succeeds minutes later) — a false there is
+  /// NOT an absent model, and naming it is what keeps consumers from
+  /// starving decisions through a healthy window (the 2026-09-29
+  /// zero-decision diagnosis).
+  static String availabilityDetail = '';
+
+  static const _availabilityReasonNames = {
+    0: 'available',
+    1: 'modelNotReady',
+    2: 'appleIntelligenceNotEnabled',
+    3: 'deviceNotEligible',
+    4: 'frameworkUnavailable',
+    5: 'unknown',
+  };
+
+  String _resolveAvailabilityReason() {
+    try {
+      final fn = _loader
+          .load()
+          .lookup<NativeFunction<Int32 Function()>>('xs_fm_availability_reason')
+          .asFunction<int Function()>();
+      return _availabilityReasonNames[fn()] ?? 'unknown';
+    } on Object {
+      return 'unknown';
+    }
+  }
+
   /// Enables/disables native + Dart debug traces (stderr). On by default.
   /// Traces cover: request receipt, schema materialization, tool
   /// preparation, tool call payloads, tool responses, and completion.
@@ -160,6 +220,7 @@ class AppleFoundationNativeClient
     } on Object {
       _cachedAvailable = false;
     }
+    availabilityDetail = _cachedAvailable ? '' : _resolveAvailabilityReason();
     _availabilityChecked = true;
     return _cachedAvailable;
   }
@@ -174,6 +235,52 @@ class AppleFoundationNativeClient
   Future<void> load() async {
     // Force-load the dylib eagerly.
     _b;
+  }
+
+  /// Compose the exact packet shared by preflight and native submission.
+  /// Fragments are already host-rendered; preserve their order and contents.
+  String _buildNativeRequestJson(
+    InferenceRequest request, {
+    ToolRegistry? toolRegistry,
+    bool streaming = false,
+  }) {
+    var systemPrompt = request.systemPrompt;
+    if (request.task case .implicitlyStructuredText) {
+      final builder = PromptBuilder(systemPrompt);
+      builder.writeStructuredOutputPrompt(request.outputSchema);
+      systemPrompt = builder.toString();
+    }
+    final fragments = request.contextFragments;
+    final prompt = PromptBuilder(request.prompt);
+    if (fragments.isNotEmpty) {
+      prompt.skipLines();
+      prompt.write(
+        fragments.map((fragment) => fragment.toString()).join('\n\n'),
+      );
+    }
+    return jsonEncode(<String, dynamic>{
+      'prompt': prompt.toString(),
+      'instructions': systemPrompt.isEmpty ? null : systemPrompt,
+      if (!streaming && request.outputSchema.isNotEmpty)
+        'schema': request.outputSchema,
+      'tools': streaming ? null : toolRegistry?.getToolsJsons(),
+      if (!streaming)
+        'end_after_tool': request.metadata['end_after_tool'] == true,
+    });
+  }
+
+  /// Approximation over the final encoded packet, including tool/schema cost.
+  /// It is not the native tokenizer or a guarantee that the model window fits.
+  int _estimateInputTokens(String requestJson, {bool trace = true}) {
+    final estimate = (requestJson.length + 3) ~/ 4;
+    if (trace && _debugEnabled) {
+      stderr.writeln(
+        '[xs_fm/dart] preflight: estimateTokens=$estimate '
+        'estimator=encoded_packet_chars_over_4 inputChars=${requestJson.length} '
+        'budget=$maxContextTokens reserve=$outputReserveTokens',
+      );
+    }
+    return estimate;
   }
 
   @override
@@ -192,31 +299,11 @@ class AppleFoundationNativeClient
       );
     }
 
-    // P1 follow-up — pre-flight context budget. The recorded on-device
-    // crash was preceded by 'Exceeded model context window size': a request
-    // whose native transcript overflowed AFM's ~4k window. Estimate the
-    // total the bridge will build and fail NAMED before touching it.
-    final estimateChars = request.systemPrompt.length +
-        request.prompt.length +
-        [for (final f in request.contextFragments) f.toString().length]
-            .fold(0, (a, b) => a + b) +
-        ((request.metadata['transcript'] as String?)?.length ?? 0);
-    final estimateTokens = estimateChars ~/ 4;
-    // R9.1 investigation A: per-decision prompt size at the client — logged
-    // on EVERY call so the growth curve across decisions is visible in the
-    // trace, not only when the pre-flight rejects (the harness cut is flat
-    // by construction; the native transcript is not — see bridge "context:"
-    // traces).
-    if (_debugEnabled) {
-      final fragmentsChars = [for (final f in request.contextFragments) f.toString().length]
-          .fold(0, (a, b) => a + b);
-      stderr.writeln(
-        '[xs_fm/dart] preflight: estimateTokens=$estimateTokens '
-        'budget=$maxContextTokens reserve=$outputReserveTokens '
-        '(system=${request.systemPrompt.length}ch '
-        'prompt=${request.prompt.length}ch fragments=${fragmentsChars}ch)',
-      );
-    }
+    final requestJson = _buildNativeRequestJson(
+      request,
+      toolRegistry: toolRegistry,
+    );
+    final estimateTokens = _estimateInputTokens(requestJson);
     // Finding 18: reserve generation space — input + output must fit the
     // same window. A near-budget input that leaves no room to decode the
     // response is rejected HERE, with the named code, not mid-decision.
@@ -229,6 +316,8 @@ class AppleFoundationNativeClient
         meta: <String, dynamic>{
           'provider': id,
           'estimated_tokens': estimateTokens,
+          'estimator': 'encoded_packet_chars_over_4',
+          'input_chars': requestJson.length,
           'budget_tokens': maxContextTokens,
         },
       );
@@ -242,25 +331,6 @@ class AppleFoundationNativeClient
             'Apple Foundation Model unavailable (Apple Intelligence or device)',
       );
     }
-
-    var systemPrompt = request.systemPrompt;
-    if (request.task case .implicitlyStructuredText) {
-      final promptBuilder = PromptBuilder(systemPrompt);
-      promptBuilder.writeStructuredOutputPrompt(request.outputSchema);
-      systemPrompt = promptBuilder.toString();
-    }
-
-    final requestJson = jsonEncode(<String, dynamic>{
-      'prompt': request.prompt,
-      'instructions': systemPrompt.isEmpty ? null : systemPrompt,
-      if (request.outputSchema.isNotEmpty) 'schema': request.outputSchema,
-      'tools': toolRegistry?.getToolsJsons(),
-      // ADR 0033 §4 — when set, the Swift side finishes the generation on
-      // the FIRST tool result instead of resuming the model (mechanical
-      // one-move end; the native transcript can no longer grow past one
-      // round). Absent/false → unchanged resume behavior.
-      'end_after_tool': request.metadata['end_after_tool'] == true,
-    });
 
     if (_debugEnabled) {
       final toolNames = toolRegistry?.tools.keys.map((t) => t.value).join(', ');
@@ -284,6 +354,26 @@ class AppleFoundationNativeClient
     // inline: the Swift side suspends its tool continuation until Dart calls
     // xs_fm_tool_respond, so no queue is needed here.
     final done = Completer<Map<String, dynamic>>();
+
+    void respondTool(
+      String toolCallId,
+      String resultJson, {
+      required String callId,
+      required String toolName,
+      required String argumentsJson,
+      int? generation,
+    }) {
+      _notifyTransportDiagnostic(<String, Object?>{
+        'type': 'afm.tool_result',
+        'metadata': Map<String, Object?>.from(request.metadata),
+        'generationId': generation,
+        'callId': callId,
+        'toolName': toolName,
+        'argumentsJson': argumentsJson,
+        'resultJson': resultJson,
+      });
+      _respondTool(toolCallId, resultJson);
+    }
 
     void handleToolPayload(Pointer<Char> payloadC) {
       try {
@@ -310,27 +400,50 @@ class AppleFoundationNativeClient
               '(known: ${toolRegistry?.tools.keys.map((t) => t.value).join(", ") ?? "none"})',
             );
           }
-          _respondTool(id, '{"error":"no handler for $name"}');
+          respondTool(
+            id,
+            '{"error":"no handler for $name"}',
+            generation: generation,
+            callId: id,
+            toolName: name,
+            argumentsJson: argumentsJson,
+          );
           return;
         }
         final arguments =
             jsonDecode(argumentsJson) as Map<String, dynamic>? ?? {};
 
-        handler(arguments)
-            .then((result) {
-              if (_debugEnabled) {
-                stderr.writeln(
-                  '[xs_fm/dart] tool "$name" handler ok → responding',
+        unawaited(
+          handler(arguments)
+              .then((result) {
+                if (_debugEnabled) {
+                  stderr.writeln(
+                    '[xs_fm/dart] tool "$name" handler ok → responding',
+                  );
+                }
+                respondTool(
+                  id,
+                  jsonEncode(result),
+                  generation: generation,
+                  callId: id,
+                  toolName: name,
+                  argumentsJson: argumentsJson,
                 );
-              }
-              _respondTool(id, jsonEncode(result));
-            })
-            .catchError((Object e) {
-              if (_debugEnabled) {
-                stderr.writeln('[xs_fm/dart] tool "$name" handler error: $e');
-              }
-              _respondTool(id, '{"error":${jsonEncode(e.toString())}}');
-            });
+              })
+              .catchError((Object e) {
+                if (_debugEnabled) {
+                  stderr.writeln('[xs_fm/dart] tool "$name" handler error: $e');
+                }
+                respondTool(
+                  id,
+                  '{"error":${jsonEncode(e.toString())}}',
+                  generation: generation,
+                  callId: id,
+                  toolName: name,
+                  argumentsJson: argumentsJson,
+                );
+              }),
+        );
       } on Object catch (e) {
         stderr.writeln('xs_fm tool payload error: $e');
       } finally {
@@ -378,6 +491,11 @@ class AppleFoundationNativeClient
     // xs_fm_generate_async returns the generation id (> 0) on accept, or
     // -1 on immediate failure (done_cb was invoked with the error).
     final accepted = _withCString(requestJson, (requestC) {
+      _notifyTransportDiagnostic(<String, Object?>{
+        'type': 'afm.generate',
+        'metadata': Map<String, Object?>.from(request.metadata),
+        'requestJson': requestJson,
+      });
       return _b.generateAsync(
         requestC,
         _toolCallable!.nativeFunction,
@@ -489,6 +607,14 @@ class AppleFoundationNativeClient
     });
   }
 
+  void _notifyTransportDiagnostic(Map<String, Object?> event) {
+    try {
+      onTransportDiagnostic?.call(event);
+    } on Object {
+      // Diagnostic observers are explicitly non-authoritative.
+    }
+  }
+
   void _closeCallables() {
     _toolCallable?.close();
     _toolCallable = null;
@@ -524,26 +650,21 @@ class AppleFoundationNativeClient
       );
     }
 
+    final requestJson = _buildNativeRequestJson(request, streaming: true);
+    final estimateTokens = _estimateInputTokens(requestJson);
+    if (estimateTokens + outputReserveTokens > maxContextTokens) {
+      throw StateError(
+        'context_window_exceeded: estimated $estimateTokens input tokens + '
+        '$outputReserveTokens reserve exceeds $maxContextTokens (encoded_packet_chars_over_4)',
+      );
+    }
+
     if (!_availabilityChecked) await refreshAvailability();
     if (!_cachedAvailable) {
       throw StateError(
         'Apple Foundation Model unavailable (Apple Intelligence or device)',
       );
     }
-
-    var systemPrompt = request.systemPrompt;
-    if (request.task case .implicitlyStructuredText) {
-      final promptBuilder = PromptBuilder(systemPrompt);
-      promptBuilder.writeStructuredOutputPrompt(request.outputSchema);
-      systemPrompt = promptBuilder.toString();
-    }
-
-    final requestJson = jsonEncode(<String, dynamic>{
-      'prompt': request.prompt,
-      'instructions': systemPrompt.isEmpty ? null : systemPrompt,
-      // No schema: streaming is text-only; structured output uses infer().
-      'tools': null,
-    });
 
     final controller = StreamController<InferenceStructuredTextStreamEvent>();
     final done = Completer<Map<String, dynamic>>();
@@ -582,7 +703,20 @@ class AppleFoundationNativeClient
         final payload =
             jsonDecode(payloadC.cast<Utf8>().toDartString())
                 as Map<String, dynamic>;
-        _respondTool(payload['id'] as String, '{"error":"no tools in stream"}');
+        final id = payload['id'] as String;
+        final name = payload['name'] as String? ?? '';
+        final argumentsJson = payload['arguments'] as String? ?? '{}';
+        const resultJson = '{"error":"no tools in stream"}';
+        _notifyTransportDiagnostic(<String, Object?>{
+          'type': 'afm.tool_result',
+          'metadata': Map<String, Object?>.from(request.metadata),
+          'generationId': payload['generation'] as int?,
+          'callId': id,
+          'toolName': name,
+          'argumentsJson': argumentsJson,
+          'resultJson': resultJson,
+        });
+        _respondTool(id, resultJson);
       } on Object {
         // ignore
       } finally {
@@ -623,6 +757,11 @@ class AppleFoundationNativeClient
     // xs_fm_generate_stream_async returns the generation id (> 0) on accept,
     // or -1 on immediate failure (done_cb invoked with the error).
     final accepted = _withCString(requestJson, (requestC) {
+      _notifyTransportDiagnostic(<String, Object?>{
+        'type': 'afm.generate_stream',
+        'metadata': Map<String, Object?>.from(request.metadata),
+        'requestJson': requestJson,
+      });
       return _b.generateStreamAsync(
         requestC,
         _toolCallable!.nativeFunction,

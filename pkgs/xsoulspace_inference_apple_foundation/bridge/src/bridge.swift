@@ -101,6 +101,28 @@ final class GenerationState: @unchecked Sendable {
   /// Written once before the generation task starts; read under `queue`.
   var endAfterTool = false
   var task: Task<Void, Never>?
+  private var taskActive = false
+  private var pendingCompletion: String?
+  private var oneMoveCompletion: String?
+
+  /// Publish completion only after the retained native worker unwinds.
+  func startTask(_ operation: @escaping @Sendable () async -> Void) {
+    queue.sync { taskActive = true }
+    let worker = Task.detached { await operation() }
+    queue.sync {
+      task = worker
+      if cancelled || oneMoveCompletion != nil { worker.cancel() }
+    }
+    Task.detached { [self] in
+      await worker.value
+      let completion: String? = queue.sync {
+        taskActive = false
+        task = nil
+        return oneMoveCompletion ?? pendingCompletion
+      }
+      if let completion { finish(completion) }
+    }
+  }
   var pendingTools: [String: CheckedContinuation<String, Error>] = [:]
   #if canImport(FoundationModels)
     /// R9.1 investigation A (context accumulation): the session driving this
@@ -123,7 +145,16 @@ final class GenerationState: @unchecked Sendable {
   }
 
   /// Delivers the final done payload exactly once, unless cancelled first.
-  func finish(_ responseJson: String) {
+  @Sendable func finish(_ responseJson: String) {
+    // A worker records its outcome; the observer delivers after worker.value.
+    let deferred = queue.sync {
+      if taskActive {
+        if pendingCompletion == nil { pendingCompletion = responseJson }
+        return true
+      }
+      return false
+    }
+    if deferred { return }
     // Lock order: registry queue BEFORE state queue (same as cancel).
     GenerationRegistry.shared.remove(id)
     var deliver = false
@@ -154,7 +185,7 @@ final class GenerationState: @unchecked Sendable {
     var postedId: String? = nil
     var cancelledError = false
     queue.sync {
-      if cancelled || finished {
+      if cancelled || finished || oneMoveCompletion != nil {
         cancelledError = true
       } else {
         // Tool ids embed the generation id so xs_fm_tool_respond can route
@@ -185,45 +216,26 @@ final class GenerationState: @unchecked Sendable {
     return postedId
   }
 
-  /// Resumes one pending tool continuation (tool_respond path).
+  /// Resume exactly once and retain the successful first move until unwind.
   func fulfillTool(id toolId: String, result: String) -> Bool {
     var resumed = false
-    var endAfterMove = false
+    var abandoned: [CheckedContinuation<String, Error>] = []
     queue.sync {
       if let continuation = pendingTools.removeValue(forKey: toolId) {
         resumed = true
-        if endAfterTool && !cancelled {
-          // ADR 0033 §4 — the one-move contract ends the decision
-          // MECHANICALLY: the continuation is still resumed exactly once
-          // (framework contract) but the task is cancelled so the model
-          // never starts another round; the native transcript can no
-          // longer grow past one round. The done payload is delivered
-          // OUTSIDE the state queue (finish takes the registry queue —
-          // lock order: registry BEFORE state).
-          endAfterMove = true
-          // `finished` is set UNDER THE LOCK so any further tool post
-          // takes the cancellation path immediately — no race window.
-          finished = true
-          continuation.resume(returning: result)
+        if endAfterTool && !cancelled && oneMoveCompletion == nil {
+          oneMoveCompletion =
+            "{\"generation\":\(id),\"ok\":true,\"output\":\(result),"
+            + "\"ended_by\":\"one_move\"}"
+          abandoned = Array(pendingTools.values)
+          pendingTools.removeAll()
           task?.cancel()
-        } else {
-          continuation.resume(returning: result)
         }
+        continuation.resume(returning: result)
       }
     }
-    if endAfterMove {
-      // Manual done delivery OUTSIDE the state queue (the registry remove
-      // takes the registry queue FIRST — lock order preserved):
-      // state.finish would no-op on the already-set finished flag. The
-      // tool result is already valid JSON (Dart jsonEncodes it) —
-      // embedded raw.
-      GenerationRegistry.shared.remove(id)
-      let payload =
-        "{\"generation\":\(id),\"ok\":true,\"output\":\(result),"
-        + "\"ended_by\":\"one_move\"}"
-      payload.withCString { cString in
-        doneCallback(strdup(cString))
-      }
+    for continuation in abandoned {
+      continuation.resume(throwing: XsFmGenerationCancelled())
     }
     return resumed
   }
@@ -247,7 +259,7 @@ final class GenerationState: @unchecked Sendable {
   func emitDelta(_ delta: String) {
     var send = false
     queue.sync {
-      if !cancelled && !finished { send = true }
+      if !cancelled && !finished && oneMoveCompletion == nil { send = true }
     }
     guard send, let streamCallback else { return }
     // Each snapshot is heap-allocated; Dart frees via xs_fm_free_string.
@@ -325,6 +337,33 @@ public func xs_fm_is_available() -> Int32 {
   #endif
 }
 
+/// WHY the default system language model is (un)available — additive to
+/// `xs_fm_is_available`, which flattens the reason away. Measured
+/// consequence (2026-09-29, the harness zero-decision diagnosis): a bare
+/// `false` conflates the TRANSIENT `modelNotReady` (the on-device model
+/// warms/downloads; generation succeeds minutes later) with the
+/// permanent `deviceNotEligible` — consumers gating on the boolean
+/// starve decisions through a window where generation would work.
+/// Codes: 0 available, 1 modelNotReady (transient — retry), 2
+/// appleIntelligenceNotEnabled, 3 deviceNotEligible,
+/// 4 frameworkUnavailable, 5 unknown. Old Dart consumers ignore this
+/// symbol; new consumers tolerate a bridge without it (lookup failure →
+/// unknown).
+@_cdecl("xs_fm_availability_reason")
+public func xs_fm_availability_reason() -> Int32 {
+  #if canImport(FoundationModels)
+    switch SystemLanguageModel.default.availability {
+    case .available: return 0
+    case .unavailable(.modelNotReady): return 1
+    case .unavailable(.appleIntelligenceNotEnabled): return 2
+    case .unavailable(.deviceNotEligible): return 3
+    default: return 5
+    }
+  #else
+    return 4
+  #endif
+}
+
 @_cdecl("xs_fm_free_string")
 public func xs_fm_free_string(_ s: UnsafeMutablePointer<CChar>?) {
   free(s)
@@ -349,11 +388,11 @@ public func xs_fm_generate_async(
 
   /// Done payloads carry the generation id so Dart can drop stale callbacks
   /// from cancelled generations.
-  func donePayload(_ body: String) -> String {
+  @Sendable func donePayload(_ body: String) -> String {
     "{\"generation\":\(state.id),\(body)}"
   }
 
-  func finish(_ responseJson: String) {
+  @Sendable func finish(_ responseJson: String) {
     // Gated by the generation state: a no-op after cancel (the generation
     // was already removed from the registry and marked cancelled), so the
     // callback pointer is never invoked once Dart has cancelled + torn down.
@@ -399,7 +438,7 @@ public func xs_fm_generate_async(
         "generate: tools prepared=\(tools.count)/\(toolsJson.count) requested"
       )
 
-      Task.detached {
+      state.startTask {
         do {
           let model = SystemLanguageModel.default
           guard model.isAvailable else {
@@ -530,11 +569,11 @@ public func xs_fm_generate_stream_async(
     streamCallback: streamCallback
   )
 
-  func donePayload(_ body: String) -> String {
+  @Sendable func donePayload(_ body: String) -> String {
     "{\"generation\":\(state.id),\(body)}"
   }
 
-  func finish(_ responseJson: String) {
+  @Sendable func finish(_ responseJson: String) {
     state.finish(responseJson)
   }
 
@@ -570,7 +609,7 @@ public func xs_fm_generate_stream_async(
       let generationSchema = try materializeFromDartJSON(schemaJson ?? [:])
       let tools = try prepareNativeTools(from: toolsJson, callback: toolCallback, state: state)
 
-      Task.detached {
+      state.startTask {
         do {
           let model = SystemLanguageModel.default
           guard model.isAvailable else {
