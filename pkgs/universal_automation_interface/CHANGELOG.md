@@ -2,6 +2,25 @@
 
 ## 0.2.0
 
+- **Surface action catalog (the `InvokeAction` tier)**: the
+  dynamic-registry shape for drivers — framework- and app-specific verbs
+  no longer require growing the universal verb set.
+  - New sealed `InvokeAction(name, args)`: invoke a named action the
+    surface under test registered for automation.
+  - New `SurfaceActionDescriptor` (name, description, JSON-Schema-subset
+    `inputSchema` carried as plain data — the family depends on no schema
+    library) and the opt-in `AutomationActionCatalog` interface
+    (`actions()`); implementing it is non-breaking.
+  - `CdpDriver` implements the catalog over the page's
+    `window.__mcpActions` registry, so any web surface (Jaspr, plain JS,
+    Flutter web) composes named, async handlers; new
+    `CdpPage.evaluateAsync` awaits Promise results and surfaces JS
+    rejections instead of silent `undefined`.
+  - WebDriver, AT-SPI, UIA, and AX drivers refuse `InvokeAction` loudly —
+    those tiers have no surface action registry.
+  - Breaking: exhaustive switches over `AutomationAction` must handle
+    `InvokeAction` (all family drivers do; behavioral synthesis refuses
+    it — catalog actions carry their own dispatch).
 - **Behavior dynamics contract (ADR 0044)**: declarative, composable input
   profiles for humans and agents.
   - New `behavior` module: `BehaviorStep` timed input-step vocabulary,

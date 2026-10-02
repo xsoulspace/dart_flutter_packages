@@ -2,6 +2,8 @@
 
 ## 0.1.1
 
+- Handle the sealed `InvokeAction` case (universal_automation_interface 0.2.0): the tier has no surface action registry, so the driver refuses loudly instead of failing to compile.
+
 - interface constraint bump only; no code changes.
 
 All notable changes to this project will be documented in this file.

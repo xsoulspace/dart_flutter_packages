@@ -2,6 +2,14 @@
 
 ## 0.2.0
 
+- **Surface action registry (ADR-0017 invoke tier)**: `CdpDriver`
+  implements `AutomationActionCatalog` over the page's
+  `window.__mcpActions` convention — any web surface (Jaspr, plain JS,
+  Flutter web) publishes named `{description, schema, invoke(args)}`
+  handlers and the driver lists and invokes them; async handlers are
+  awaited, JS rejections surface as `ProtocolException`. New
+  `CdpPage.evaluateAsync` awaits Promise results with
+  `exceptionDetails` surfaced.
 - **Behavior dynamics lowering (ADR 0044)**: `BehavioralCdpDriver`
   (`capabilities.behaviorDynamics`) with the client-side scheduler —
   planned-timestamp stamping on every dispatch, serialized awaited sends,

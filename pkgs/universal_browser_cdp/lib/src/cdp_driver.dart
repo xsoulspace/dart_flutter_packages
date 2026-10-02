@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:universal_automation_interface/universal_automation_interface.dart';
@@ -8,7 +9,16 @@ import 'cdp_page.dart';
 
 /// [AutomationDriver] over a CDP page: the observe/act/verify loop for
 /// Chromium-based browsers and webviews.
-class CdpDriver implements AutomationDriver {
+///
+/// Surface actions (`InvokeAction`) compose through the page's
+/// `window.__mcpActions` registry — a convention, not a framework: any
+/// web surface (Jaspr, plain JS, Flutter web, a design system's storybook)
+/// publishes named handlers and this driver lists and invokes them.
+/// Handlers may be async; a JS rejection surfaces as the rejection's
+/// message. Action *results* are dropped by the observe/act/verify
+/// contract — a handler that wants to report state writes the surface
+/// (or a probe slot) and the caller observes.
+class CdpDriver implements AutomationDriver, AutomationActionCatalog {
   /// Creates a driver over an attached [CdpPage].
   CdpDriver(this._page);
 
@@ -29,6 +39,21 @@ class CdpDriver implements AutomationDriver {
 
   @override
   Future<Snapshot> snapshot() => _page.accessibilitySnapshot();
+
+  @override
+  Future<List<SurfaceActionDescriptor>> actions() async {
+    final raw = await _page.evaluate(
+      'Object.entries(window.__mcpActions ?? {}).map(([name, action]) => '
+      '({name: name, description: (action && action.description) || "", '
+      'inputSchema: (action && action.schema) || null}))',
+    );
+    return [
+      if (raw is List<Object?>)
+        for (final entry in raw)
+          if (SurfaceActionDescriptor.fromJson(entry)
+              case final descriptor?) descriptor,
+    ];
+  }
 
   @override
   Future<void> perform(AutomationAction action) async {
@@ -52,7 +77,27 @@ class CdpDriver implements AutomationDriver {
         );
       case EvaluateAction(:final expression):
         await _page.evaluate(expression);
+      case InvokeAction(:final name, :final args):
+        await _invokeSurfaceAction(name, args);
     }
+  }
+
+  /// Dispatches one `window.__mcpActions` handler and awaits its result.
+  Future<void> _invokeSurfaceAction(
+    final String name,
+    final Map<String, Object?> args,
+  ) async {
+    final nameJson = jsonEncode(name);
+    final argsJson = jsonEncode(args);
+    await _page.evaluateAsync(
+      '(async () => {'
+      'const action = (window.__mcpActions ?? {})[$nameJson];'
+      'if (!action || typeof action.invoke !== "function") {'
+      'throw new Error("unknown surface action: $name");}'
+      'await action.invoke($argsJson);'
+      'return {ok: true};'
+      '})()',
+    );
   }
 
   /// Resolves role/name locators through the semantic snapshot: the

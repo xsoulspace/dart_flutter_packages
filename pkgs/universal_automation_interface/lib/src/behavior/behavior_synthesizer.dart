@@ -159,6 +159,11 @@ BehaviorPlan synthesizeBehavior(
       steps.add(
         WheelStep(plannedAtUs: cursorUs, deltaX: deltaX, deltaY: deltaY),
       );
+    case InvokeAction(:final name):
+      throw SpecViolationException([
+        'InvokeAction("$name") carries its own dispatch; behavioral '
+        'synthesis does not apply to catalog actions',
+      ]);
   }
 
   return BehaviorPlan(steps: steps);

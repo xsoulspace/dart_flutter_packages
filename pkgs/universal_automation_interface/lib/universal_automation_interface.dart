@@ -15,6 +15,7 @@
 library;
 
 export 'src/automation_action.dart';
+export 'src/automation_action_catalog.dart';
 export 'src/automation_endpoint.dart';
 export 'src/automation_event.dart';
 export 'src/automation_exceptions.dart';
@@ -33,3 +34,4 @@ export 'src/behavior/timing.dart';
 export 'src/driver.dart';
 export 'src/driver_capabilities.dart';
 export 'src/snapshot.dart';
+export 'src/surface_action.dart';

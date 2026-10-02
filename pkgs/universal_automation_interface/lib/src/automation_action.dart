@@ -119,3 +119,32 @@ final class EvaluateAction extends AutomationAction {
   @override
   String toString() => 'EvaluateAction(${expression.length} chars)';
 }
+
+/// Invoke a named action the surface under test registered for automation
+/// (the `invoke` tier — the dynamic-registry shape for drivers).
+///
+/// The universal verbs above stay deliberately small: growing them is a
+/// family-wide release. Everything framework- or app-specific — a gesture
+/// choreography, a checkout flow, a Jaspr component contract, a test
+/// backdoor — travels through [InvokeAction] instead, against the action
+/// catalog the surface advertises (see [AutomationActionCatalog]).
+///
+/// Names and argument schemas come from that catalog; drivers refuse
+/// unknown names with `DriverUnsupportedException`, and surfaced actions
+/// validate on their own tier (the instrumented tier checks before the
+/// wire, the CDP tier inside the page).
+@immutable
+final class InvokeAction extends AutomationAction {
+  /// Creates an invoke action for [name].
+  const InvokeAction(this.name, {this.args = const {}})
+    : assert(name != '', 'name must not be empty');
+
+  /// The catalog name of the surface action.
+  final String name;
+
+  /// JSON-encodable arguments, shaped by the action's declared schema.
+  final Map<String, Object?> args;
+
+  @override
+  String toString() => 'InvokeAction($name)';
+}

@@ -149,6 +149,11 @@ class MacosDriver implements AutomationDriver {
           'AX cannot evaluate expressions (${expression.length} chars); '
           'evaluation is an instrumented-tier capability',
         );
+      case InvokeAction(:final name):
+        throw DriverUnsupportedException(
+          'the AX tier has no surface action registry; '
+          'InvokeAction("$name") needs the instrumented or CDP tier',
+        );
     }
   }
 

@@ -101,6 +101,11 @@ class UiaDriver implements AutomationDriver {
         throw DriverUnsupportedException(
           'UIA has no script surface (got ${expression.length} chars)',
         );
+      case InvokeAction(:final name):
+        throw DriverUnsupportedException(
+          'the UIA tier has no surface action registry; '
+          'InvokeAction("$name") needs the instrumented or CDP tier',
+        );
     }
   }
 

@@ -65,6 +65,11 @@ class WebDriverDriver implements AutomationDriver {
           'classic WebDriver has no script endpoint; got '
           '${expression.length} chars',
         );
+      case InvokeAction(:final name):
+        throw DriverUnsupportedException(
+          'the WebDriver tier has no surface action registry; '
+          'InvokeAction("$name") needs the instrumented or CDP tier',
+        );
     }
   }
 

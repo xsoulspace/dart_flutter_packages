@@ -190,6 +190,31 @@ class CdpPage {
     return ((result['result'] as Map<String, Object?>?) ?? const {})['value'];
   }
 
+  /// Evaluates [expression], awaiting a Promise result, with
+  /// `returnByValue`.
+  ///
+  /// The bridge for surface-registered actions
+  /// (`window.__mcpActions`) whose handlers complete asynchronously; a JS
+  /// rejection surfaces as the rejection's message, not a silent
+  /// `undefined`.
+  Future<Object?> evaluateAsync(String expression) async {
+    _ensureOpen();
+    final result = await connection.send('Runtime.evaluate', {
+      'expression': expression,
+      'returnByValue': true,
+      'awaitPromise': true,
+    });
+    final details = result['exceptionDetails'] as Map<String, Object?>?;
+    if (details != null) {
+      final exception = details['exception'] as Map<String, Object?>?;
+      throw ProtocolException(
+        'page evaluation failed: '
+        '${exception?['description'] ?? details['text'] ?? 'unknown'}',
+      );
+    }
+    return ((result['result'] as Map<String, Object?>?) ?? const {})['value'];
+  }
+
   /// Captures the accessibility tree as an [Snapshot].
   ///
   /// Ignored nodes (`ignored: true`) are filtered out; the remaining nodes

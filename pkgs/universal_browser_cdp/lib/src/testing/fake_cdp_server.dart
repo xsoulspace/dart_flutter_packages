@@ -55,8 +55,15 @@ class FakeCdpServer {
 
   /// When set, answers `Runtime.evaluate` instead of [evaluateValue]; a
   /// `null` result falls back to the default. Tests use this to script
-  /// hit-target failures and viewport payloads.
-  String? Function(String expression)? evaluateHandler;
+  /// hit-target failures, viewport payloads, and `window.__mcpActions`
+  /// registries. Returned values reach the driver exactly as returned —
+  /// real CDP `returnByValue` semantics.
+  Object? Function(String expression)? evaluateHandler;
+
+  /// When set, `Runtime.evaluate` answers with `exceptionDetails` whose
+  /// exception description carries this text — the JS-rejection path
+  /// (`CdpPage.evaluateAsync` surfaces it).
+  String? evaluateException;
 
   /// When set, `Page.navigate` answers with this `errorText` and emits no
   /// `Page.frameNavigated` — CDP's real navigation-failure shape.
@@ -225,6 +232,19 @@ class FakeCdpServer {
         respond(const {});
       case 'Runtime.evaluate':
         final expression = params['expression'] as String? ?? '';
+        if (evaluateException != null) {
+          respond({
+            'result': const {'type': 'object'},
+            'exceptionDetails': {
+              'text': 'Uncaught',
+              'exception': {
+                'type': 'object',
+                'description': evaluateException,
+              },
+            },
+          });
+          break;
+        }
         final scripted = evaluateHandler?.call(expression);
         respond({
           'result': {
