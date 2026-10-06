@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'lexicon.dart';
 
 /// The default [Lexicon]: an in-memory sorted word list with a frequency
@@ -72,6 +74,68 @@ final class ListLexicon implements Lexicon {
       matches.sort(_rankOrder);
     }
     return matches.take(limit).toList(growable: false);
+  }
+
+  @override
+  List<LexiconMatch> fuzzyPrefixCandidates(
+    final String prefix, {
+    final int limit = 3,
+    final int maxDistance = 1,
+  }) {
+    if (limit <= 0 || prefix.isEmpty) return const <LexiconMatch>[];
+    final probe = prefix.toLowerCase();
+    final scored = <(int, LexiconMatch)>[];
+    for (final word in _words) {
+      final head = word.length <= probe.length
+          ? word
+          : word.substring(0, probe.length);
+      final distance = _boundedEditDistance(probe, head, maxDistance);
+      if (distance <= maxDistance) {
+        scored.add((
+          distance,
+          LexiconMatch(word: word, frequency: _frequencies[word] ?? 0.0),
+        ));
+      }
+    }
+    if (scored.isEmpty) return const <LexiconMatch>[];
+    // Distance first (a near-exact head outranks a rough one), then the
+    // family's frequency ranking.
+    scored.sort((final a, final b) {
+      final byDistance = a.$1.compareTo(b.$1);
+      if (byDistance != 0) return byDistance;
+      final byFrequency = b.$2.frequency.compareTo(a.$2.frequency);
+      if (byFrequency != 0) return byFrequency;
+      return a.$2.word.length.compareTo(b.$2.word.length);
+    });
+    return scored.take(limit).map((final entry) => entry.$2).toList(
+      growable: false,
+    );
+  }
+
+  /// Levenshtein distance with an early exit once the row minimum
+  /// exceeds [cap] — the scan runs over the whole dictionary, so the
+  /// bound is what keeps a 50k-word commit at one-shot latency.
+  static int _boundedEditDistance(
+    final String a,
+    final String b,
+    final int cap,
+  ) {
+    if (a == b) return 0;
+    var previous = List<int>.generate(b.length + 1, (final i) => i);
+    for (var i = 1; i <= a.length; i++) {
+      final current = List<int>.filled(b.length + 1, i);
+      for (var j = 1; j <= b.length; j++) {
+        final substitution =
+            previous[j - 1] + (a[i - 1] == b[j - 1] ? 0 : 1);
+        current[j] = math.min(
+          math.min(current[j - 1] + 1, previous[j] + 1),
+          substitution,
+        );
+      }
+      if (current.reduce(math.min) > cap) return cap + 1;
+      previous = current;
+    }
+    return previous[b.length];
   }
 
   /// First index whose word is >= [probe] (classic lower bound).

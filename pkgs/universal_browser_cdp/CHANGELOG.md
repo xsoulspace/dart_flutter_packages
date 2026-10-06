@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- ADR 0045: Flutter-web driving primitives — `DOM.enable` at attach,
+  semantic-click ladder with live-DOM name fallback
+  (`resolveNamedRect`/`hasNamedElement`), node-probe hardening
+  (text-node walk-up, `this` capture), `bringToFront`/`insertText`,
+  `fieldValue`/`editableValues`, `TypeAction` without a locator lowers
+  to caret insertion, and an opt-in real-Chromium conformance fixture
+  (`XS_TEST_CDP_LIVE=1`).
 ## 0.2.0
 
 - **Surface action registry (ADR-0017 invoke tier)**: `CdpDriver`

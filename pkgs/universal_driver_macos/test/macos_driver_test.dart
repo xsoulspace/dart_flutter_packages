@@ -109,11 +109,77 @@ final class FakeBridge implements AxDriverBridge {
     calls.add('screenshot($displayId)');
     return screenshotResult;
   }
+
+  // -- app management (scripted results + call log) --
+
+  BridgeJsonResult appsResult = (code: 0, json: _appsJson);
+  BridgeJsonResult frontmostResult = (code: 0, json: _safariJson);
+  BridgeJsonResult snapshotAppResult = (code: 0, json: _appJson);
+  int activateResult = 0;
+  int launchResult = 4242;
+  int terminateResult = 0;
+  String? lastLaunchedBundleId;
+  int? lastActivatedPid;
+  int? lastTerminatedPid;
+  int? lastSnapshotPid;
+
+  @override
+  BridgeJsonResult appsJson() {
+    calls.add('apps');
+    return appsResult;
+  }
+
+  @override
+  BridgeJsonResult frontmostJson() {
+    calls.add('frontmost');
+    return frontmostResult;
+  }
+
+  @override
+  BridgeJsonResult snapshotAppJson({
+    required int maxDepth,
+    required int maxNodes,
+    required int pid,
+  }) {
+    calls.add('snapshotApp(pid=$pid)');
+    lastSnapshotPid = pid;
+    return snapshotAppResult;
+  }
+
+  @override
+  int activateApp(int pid) {
+    calls.add('activate($pid)');
+    lastActivatedPid = pid;
+    return activateResult;
+  }
+
+  @override
+  int launchApp(String bundleId) {
+    calls.add('launch($bundleId)');
+    lastLaunchedBundleId = bundleId;
+    return launchResult;
+  }
+
+  @override
+  int terminateApp(int pid) {
+    calls.add('terminate($pid)');
+    lastTerminatedPid = pid;
+    return terminateResult;
+  }
 }
 
 const _buttonJson =
     '{"role":"button","name":"Save","attributes":{"axid":"0"},'
     '"bounds":{"left":10,"top":20,"width":80,"height":24}}';
+
+const _appsJson =
+    '[{"pid":42,"bundleId":"com.appleFinder","name":"Finder",'
+    '"active":true,"hidden":false},'
+    '{"pid":4242,"name":"Terminal","active":false,"hidden":false}]';
+
+const _safariJson =
+    '{"pid":1234,"bundleId":"com.apple.Safari","name":"Safari",'
+    '"active":true,"hidden":false}';
 
 const _appJson =
     '{"role":"application","name":"Finder","attributes":{"axid":"0"},'
@@ -132,6 +198,68 @@ void main() {
     expect(driver.capabilities.inputSynthesis, isTrue);
     expect(driver.capabilities.screenshot, isTrue);
     expect(driver.capabilities.evaluate, isFalse);
+  });
+
+  test('app management: discover/activate/launch/terminate/snapshot',
+      () async {
+    final bridge = FakeBridge();
+    final driver = driverWith(bridge);
+
+    final apps = await driver.runningApps();
+    expect(apps, hasLength(2));
+    expect(apps.first.bundleId, 'com.appleFinder');
+    expect(apps.first.active, isTrue);
+    expect(apps[1].pid, 4242);
+
+    await driver.activate(4242);
+    expect(bridge.lastActivatedPid, 4242);
+
+    final pid = await driver.launch('com.apple.Safari');
+    expect(pid, 4242);
+    expect(bridge.lastLaunchedBundleId, 'com.apple.Safari');
+
+    await driver.terminate(4242);
+    expect(bridge.lastTerminatedPid, 4242);
+
+    final snapshot = await driver.snapshotOfApp(42);
+    expect(snapshot.roots.first.name, 'Finder');
+    expect(bridge.lastSnapshotPid, 42);
+  });
+
+  test('app management errors map to the family exceptions', () async {
+    final bridge = FakeBridge();
+    final driver = driverWith(bridge);
+    bridge
+      ..activateResult = 7
+      ..terminateResult = 8
+      ..launchResult = -7
+      ..snapshotAppResult = (code: 7, json: '');
+
+    await expectLater(
+      driver.activate(99),
+      throwsA(isA<ElementNotFoundException>()),
+    );
+    await expectLater(
+      driver.terminate(99),
+      throwsA(isA<ProtocolException>()),
+    );
+    await expectLater(
+      driver.launch('no.such.App'),
+      throwsA(isA<ElementNotFoundException>()),
+    );
+    await expectLater(
+      driver.snapshotOfApp(99),
+      throwsA(isA<ElementNotFoundException>()),
+    );
+  });
+
+  test('frontmost parses the bridge record', () async {
+    final driver = driverWith(FakeBridge());
+    final app = await driver.frontmost();
+    expect(app.pid, 1234);
+    expect(app.bundleId, 'com.apple.Safari');
+    expect(app.name, 'Safari');
+    expect(app.active, isTrue);
   });
 
   test('snapshot parses the bridge JSON into the family model', () async {

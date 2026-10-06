@@ -47,4 +47,20 @@ abstract interface class Lexicon {
   /// Words starting with [prefix] (lowercased), ranked most frequent
   /// first, shorter words breaking ties. At most [limit] results.
   List<LexiconMatch> prefixCandidates(final String prefix, {final int limit});
+
+  /// Words whose head is a NOISY version of [prefix]: the locked
+  /// sequence may carry an extra letter, miss one, or swap a neighbor
+  /// (a hand sweep is not a keyboard). A word qualifies when the edit
+  /// distance between [prefix] and the word's same-length head is at
+  /// most [maxDistance]; exact prefixes score 0. Ranked by distance
+  /// first, then most frequent. At most [limit] results.
+  ///
+  /// This is the completion tier's query: `helo` must still find
+  /// `hello`, and `he` must find it too — strict prefixes silently
+  /// refuse everything a real hand writes.
+  List<LexiconMatch> fuzzyPrefixCandidates(
+    final String prefix, {
+    final int limit,
+    final int maxDistance,
+  });
 }

@@ -17,6 +17,7 @@ final class PairingResult {
     required this.sendKey,
     required this.receiveKey,
     this.transportHint,
+    this.applicationData,
   });
 
   /// Stable id announced by the peer in its signed envelope.
@@ -35,6 +36,13 @@ final class PairingResult {
   /// endpoint like `ws://192.168.1.20:54321`). `null` when absent, so
   /// payloads produced before hints existed keep pairing.
   final String? transportHint;
+
+  /// Optional signed application data the advertiser attached to the
+  /// envelope (ADR 0072: e.g. a harness-world announcement). OPAQUE to
+  /// the mesh — the mesh carries it, never interprets it; consumers
+  /// own the shape and the trust decision. `null` when absent, so old
+  /// payloads keep pairing.
+  final Map<String, Object?>? applicationData;
 }
 
 /// Out-of-band trust bootstrap (ADR 0010 §3).
@@ -69,6 +77,7 @@ final class PairingService {
     required final SimpleKeyPair ephemeralKeyPair,
     required final String peerId,
     final String? transportHint,
+    final Map<String, Object?>? applicationData,
   }) async {
     final ephPub = await ephemeralKeyPair.extractPublicKey();
     final identityPub = await identityKeyPair.extractPublicKey();
@@ -80,6 +89,8 @@ final class PairingService {
         'idk': base64Encode(identityPub.bytes),
         if (transportHint != null && transportHint.isNotEmpty)
           'hint': transportHint,
+        if (applicationData != null && applicationData.isNotEmpty)
+          'data': applicationData,
       }),
     );
     final signature = await _ed25519.sign(body, keyPair: identityKeyPair);
@@ -153,6 +164,9 @@ final class PairingService {
       sendKey: SecretKey(bytes.sublist(0, 32)),
       receiveKey: SecretKey(bytes.sublist(32)),
       transportHint: envelope['hint'] as String?,
+      applicationData: envelope['data'] is Map
+          ? Map<String, Object?>.from(envelope['data'] as Map)
+          : null,
     );
   }
 

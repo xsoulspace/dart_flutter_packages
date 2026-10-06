@@ -69,4 +69,60 @@ void main() {
     // Zero-frequency tie → shorter word first.
     expect(lexicon.prefixCandidates('al').first.word, 'also');
   });
+  fuzzyPrefixTests();
+}
+
+void fuzzyPrefixTests() {
+  late ListLexicon lexicon;
+  setUp(() {
+    lexicon = ListLexicon(
+      words: const ['hello', 'help', 'held', 'here', 'name', 'same', 'go'],
+      frequencies: const {
+        'hello': 0.9,
+        'help': 0.5,
+        'held': 0.4,
+        'here': 0.3,
+        'name': 0.8,
+        'same': 0.2,
+        'go': 0.6,
+      },
+    );
+  });
+
+  test('fuzzy prefix: an extra letter still finds the word', () {
+    final matches = lexicon.fuzzyPrefixCandidates('helo');
+    expect(matches.first.word, 'hello', reason: 'frequency breaks near-ties');
+    expect(matches, contains(isA<LexiconMatch>()));
+  });
+
+  test('fuzzy prefix: a missing letter still finds the word', () {
+    final matches = lexicon.fuzzyPrefixCandidates('hell');
+    expect(matches.map((m) => m.word), contains('hello'));
+  });
+
+  test('fuzzy prefix: exact prefixes rank first (distance order)', () {
+    final matches = lexicon.fuzzyPrefixCandidates('hel', limit: 5);
+    expect(matches.first.word, 'hello',
+        reason: 'distance-0 head AND the highest frequency');
+    expect(
+      matches.map((m) => m.word).take(3),
+      containsAllInOrder(['hello', 'help']),
+      reason: 'distance first, then frequency',
+    );
+    for (final match in matches) {
+      expect(match.word, startsWith('h'));
+    }
+  });
+
+  test('fuzzy prefix: the distance cap refuses strangers', () {
+    expect(
+      lexicon.fuzzyPrefixCandidates('xyz'),
+      isEmpty,
+    );
+  });
+
+  test('fuzzy prefix: a short probe matches longer heads', () {
+    final matches = lexicon.fuzzyPrefixCandidates('na');
+    expect(matches.map((m) => m.word), contains('name'));
+  });
 }

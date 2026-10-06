@@ -12,7 +12,8 @@ import Foundation
 //
 // Error codes: 0 ok · 1 invalid argument · 2 no focused application ·
 // 3 AX api error · 4 no element at position · 5 unknown element handle ·
-// 6 driver closed · 10 accessibility permission missing.
+// 6 driver closed · 7 app not found · 8 activation/launch/terminate
+// failed · 10 accessibility permission missing.
 
 /// Element handles resolved during the last snapshot / hit-test. Reset on
 /// every new observation so stale ids fail closed (code 5) instead of
@@ -435,4 +436,155 @@ public func xs_axdrv_screenshot_png(
 @_cdecl("xs_axdrv_free")
 public func xs_axdrv_free(_ pointer: UnsafeMutableRawPointer?) {
     free(pointer)
+}
+
+// MARK: - App management (the macOS rung: manage APPLICATIONS, not only
+// the focused one — discover what is running, activate it, launch by
+// bundle id, terminate, and snapshot ANY app's tree, not just the
+// focused one).
+
+/// Serializes one NSRunningApplication into a JSON dict.
+private func appDict(_ app: NSRunningApplication) -> [String: Any] {
+    var dict: [String: Any] = [
+        "pid": app.processIdentifier,
+        "name": app.localizedName ?? "",
+        "active": app.isActive,
+        "hidden": app.isHidden,
+    ]
+    if let bundleId = app.bundleIdentifier {
+        dict["bundleId"] = bundleId
+    }
+    return dict
+}
+
+private func runningRegularApps() -> [NSRunningApplication] {
+    ensureAppRegistered()
+    return NSWorkspace.shared.runningApplications.filter {
+        $0.activationPolicy == .regular
+    }
+}
+
+/// Serializes the running regular (Dock-able) applications to JSON:
+/// `[{pid, bundleId, name, active, hidden}, ...]`.
+@_cdecl("xs_axdrv_apps_json")
+public func xs_axdrv_apps_json(
+    _ outJson: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+) -> Int32 {
+    guard let outJson else { return 1 }
+    let apps = runningRegularApps().map(appDict)
+    guard let data = try? JSONSerialization.data(withJSONObject: apps),
+          let json = String(data: data, encoding: .utf8)
+    else { return 3 }
+    return strdupOut(json, outJson)
+}
+
+/// Serializes the frontmost application to JSON (same shape as one
+/// element of `xs_axdrv_apps_json`).
+@_cdecl("xs_axdrv_frontmost_json")
+public func xs_axdrv_frontmost_json(
+    _ outJson: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+) -> Int32 {
+    guard let outJson else { return 1 }
+    ensureAppRegistered()
+    guard let app = NSWorkspace.shared.frontmostApplication else { return 2 }
+    guard let data = try? JSONSerialization.data(withJSONObject: appDict(app)),
+          let json = String(data: data, encoding: .utf8)
+    else { return 3 }
+    return strdupOut(json, outJson)
+}
+
+/// Brings the application with [pid] to the front. 0 ok · 7 unknown pid ·
+/// 8 activation refused.
+@_cdecl("xs_axdrv_activate_app")
+public func xs_axdrv_activate_app(_ pid: Int32) -> Int32 {
+    ensureAppRegistered()
+    guard let app = NSRunningApplication(processIdentifier: pid) else { return 7 }
+    // `activate` without options is the post-macOS-14 API; the options
+    // variant stays for older hosts. Either failing falls back to
+    // unhiding, which is the common reason an activation "did nothing".
+    if app.activate() { return 0 }
+    if app.activate(options: []) { return 0 }
+    if app.unhide() { return 0 }
+    return 8
+}
+
+/// Launches (or activates) the app with [bundleId]; returns the new (or
+/// existing) pid. 0 = newly launched pid, negative = error: -7 unknown
+/// bundle id, -8 launch failed.
+@_cdecl("xs_axdrv_launch_app")
+public func xs_axdrv_launch_app(_ bundleId: UnsafePointer<CChar>?) -> Int32 {
+    guard let bundleId else { return -1 }
+    ensureAppRegistered()
+    let id = String(cString: bundleId)
+    // Already running? Activation IS the launch (the borrowed-lease rule).
+    if let running = NSWorkspace.shared.runningApplications
+        .first(where: { $0.bundleIdentifier == id }) {
+        _ = running.activate()
+        return Int32(running.processIdentifier)
+    }
+    guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: id) else {
+        return -7
+    }
+    let configuration = NSWorkspace.OpenConfiguration()
+    let launched = DispatchSemaphore(value: 0)
+    var launchError: Error?
+    NSWorkspace.shared.openApplication(
+        at: url, configuration: configuration
+    ) { app, error in
+        launchError = error
+        launched.signal()
+    }
+    launched.wait()
+    if launchError != nil { return -8 }
+    // The completion hands the app back on newer macOS; scan as the
+    // portable fallback (the app may also have been adopted mid-launch).
+    let deadline = Date().addingTimeInterval(5)
+    while Date() < deadline {
+        if let app = NSWorkspace.shared.runningApplications
+            .first(where: { $0.bundleIdentifier == id }) {
+            return Int32(app.processIdentifier)
+        }
+        usleep(100_000)
+    }
+    return -8
+}
+
+/// Asks the application with [pid] to terminate (graceful, like choosing
+/// Quit). 0 ok · 7 unknown pid · 8 refused.
+@_cdecl("xs_axdrv_terminate_app")
+public func xs_axdrv_terminate_app(_ pid: Int32) -> Int32 {
+    ensureAppRegistered()
+    guard let app = NSRunningApplication(processIdentifier: pid) else { return 7 }
+    return app.terminate() ? 0 : 8
+}
+
+/// Serializes ANY application's accessibility tree (by pid) to JSON —
+/// the per-app observation the focused-app-only snapshot could not do.
+/// `xs_axdrv_snapshot_json` remains the focused-app shorthand.
+@_cdecl("xs_axdrv_snapshot_app_json")
+public func xs_axdrv_snapshot_app_json(
+    _ maxDepth: Int32,
+    _ maxNodes: Int32,
+    _ pid: Int32,
+    _ outJson: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+) -> Int32 {
+    guard let outJson, maxDepth > 0, maxNodes > 0, pid > 0 else { return 1 }
+    guard AXIsProcessTrusted() else { return 10 }
+    registry.reset()
+    let app = AXUIElementCreateApplication(pid)
+    // A pid that is gone (or not an AX-capable app) surfaces as
+    // attributeUnsupported / noValue; map the obvious ones to 7.
+    var raw: CFTypeRef?
+    let roleCode = AXUIElementCopyAttributeValue(
+        app, kAXRoleAttribute as CFString, &raw
+    )
+    if roleCode == .attributeUnsupported || roleCode == .noValue {
+        return 7
+    }
+    var budget = Int(maxNodes) - 1
+    let tree = walkTree(app, depth: 0, maxDepth: Int(maxDepth), budget: &budget)
+    guard let data = try? JSONSerialization.data(withJSONObject: tree),
+          let json = String(data: data, encoding: .utf8)
+    else { return 3 }
+    return strdupOut(json, outJson)
 }

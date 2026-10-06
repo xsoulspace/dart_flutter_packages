@@ -18,6 +18,7 @@ final class MeshPairingSession {
     required this.identityKeyPair,
     Future<SimpleKeyPair>? ephemeralKeyPair,
     this.transportHint,
+    this.applicationData,
   }) : _ephemeralKeyPair = ephemeralKeyPair ?? X25519().newKeyPair();
 
   final String selfId;
@@ -27,6 +28,10 @@ final class MeshPairingSession {
   /// Connection hint embedded in the signed advertisement (e.g. a relay
   /// endpoint scanners should connect to).
   final String? transportHint;
+
+  /// Optional signed application data embedded in the advertisement
+  /// (ADR 0072) — opaque to the mesh; consumers own shape and trust.
+  final Map<String, Object?>? applicationData;
 
   Uint8List? _payload;
   var _accepted = false;
@@ -41,6 +46,7 @@ final class MeshPairingSession {
       ephemeralKeyPair: await _ephemeralKeyPair,
       peerId: selfId,
       transportHint: transportHint,
+      applicationData: applicationData,
     );
   }
 
@@ -65,9 +71,14 @@ final class MeshPairingSession {
       peerId: result.peerId,
       displayName: result.peerId,
       identityKey: result.peerIdentityKey,
+      // The signed application data rides the record under 'data'
+      // (ADR 0072) — JSON-encoded to keep the wire shape
+      // (Map<String, String>) intact; consumers own the decode.
       endpointHints: {
         if (result.transportHint != null && result.transportHint!.isNotEmpty)
           'ws': result.transportHint!,
+        if (result.applicationData != null)
+          'data': jsonEncode(result.applicationData),
       },
     );
   }

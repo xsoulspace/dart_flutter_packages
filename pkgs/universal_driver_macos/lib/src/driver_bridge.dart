@@ -31,6 +31,29 @@ abstract interface class AxDriverBridge {
   /// the error-code table.
   BridgeJsonResult snapshotJson({required int maxDepth, required int maxNodes});
 
+  /// Serializes ANY application's tree by pid (7 = unknown pid).
+  BridgeJsonResult snapshotAppJson({
+    required int maxDepth,
+    required int maxNodes,
+    required int pid,
+  });
+
+  /// Serializes the running regular applications as a JSON array.
+  BridgeJsonResult appsJson();
+
+  /// Serializes the frontmost application as a JSON object.
+  BridgeJsonResult frontmostJson();
+
+  /// Brings the application with [pid] to the front (7 unknown, 8 failed).
+  int activateApp(int pid);
+
+  /// Launches (or activates) [bundleId]; returns its pid, negative on
+  /// error (-7 unknown bundle id, -8 launch failed).
+  int launchApp(String bundleId);
+
+  /// Asks the application with [pid] to quit (7 unknown, 8 refused).
+  int terminateApp(int pid);
+
   /// Hit-tests one element at top-left-origin screen coordinates.
   BridgeJsonResult elementAtPositionJson({
     required double x,
@@ -102,6 +125,62 @@ final class NativeAxDriverBridge implements AxDriverBridge {
       calloc.free(out);
     }
   }
+
+  @override
+  BridgeJsonResult snapshotAppJson({
+    required int maxDepth,
+    required int maxNodes,
+    required int pid,
+  }) {
+    final out = calloc<Pointer<Utf8>>();
+    try {
+      final code = axdrvSnapshotAppJson(maxDepth, maxNodes, pid, out);
+      final json = code == 0 ? copyAndFreeCString(out.value) : '';
+      return (code: code, json: json);
+    } finally {
+      calloc.free(out);
+    }
+  }
+
+  @override
+  BridgeJsonResult appsJson() {
+    final out = calloc<Pointer<Utf8>>();
+    try {
+      final code = axdrvAppsJson(out);
+      final json = code == 0 ? copyAndFreeCString(out.value) : '';
+      return (code: code, json: json);
+    } finally {
+      calloc.free(out);
+    }
+  }
+
+  @override
+  BridgeJsonResult frontmostJson() {
+    final out = calloc<Pointer<Utf8>>();
+    try {
+      final code = axdrvFrontmostJson(out);
+      final json = code == 0 ? copyAndFreeCString(out.value) : '';
+      return (code: code, json: json);
+    } finally {
+      calloc.free(out);
+    }
+  }
+
+  @override
+  int activateApp(int pid) => axdrvActivateApp(pid);
+
+  @override
+  int launchApp(String bundleId) {
+    final pointer = bundleId.toNativeUtf8();
+    try {
+      return axdrvLaunchApp(pointer);
+    } finally {
+      calloc.free(pointer);
+    }
+  }
+
+  @override
+  int terminateApp(int pid) => axdrvTerminateApp(pid);
 
   @override
   int press(int handle) => axdrvPress(handle);

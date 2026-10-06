@@ -365,7 +365,13 @@ class OpenRouterInferenceClient implements InferenceClient {
       rawOutput: contentStr,
       task: InferenceTask.text,
       toolCalls: parsedCalls,
-      meta: <String, dynamic>{'provider': id},
+      meta: <String, dynamic>{
+        'provider': id,
+        // Provider-reported token usage passes through as reported; honest
+        // absence when the API response carries none.
+        if (decoded['usage'] is Map<String, dynamic>)
+          'usage': decoded['usage'] as Map<String, dynamic>,
+      },
     );
   }
 

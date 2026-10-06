@@ -24,6 +24,16 @@ enum NavigateWait {
   networkIdle,
 }
 
+/// How [CdpPage.resolveNamedRect] matches the accessible name.
+enum NameMatch {
+  /// The whole aria-label / text content equals the name.
+  exact,
+
+  /// The aria-label / text content contains the name (dialog labels and
+  /// Flutter tiles concatenate title + subtitle into one name).
+  contains,
+}
+
 /// A page-level CDP facade: navigation, evaluation, accessibility
 /// snapshots, screenshots, and trusted-input synthesis.
 ///
@@ -45,20 +55,25 @@ class CdpPage {
   bool _closed = false;
   CdpNetworkLog? _network;
 
-  /// Attaches the facade: enables `Page`, `Runtime`, `Accessibility`,
-  /// and `Network` domains.
+  /// Attaches the facade: enables `Page`, `Runtime`, `DOM`,
+  /// `Accessibility`, and `Network` domains.
   ///
   /// `Accessibility.enable` matters on real Chromium: without it the
   /// renderer keeps its AX tree uncomputed and `getFullAXTree` answers
   /// with the root node only (headless behaves this way reliably).
-  /// `Network.enable` feeds the observation log (`network`) that
-  /// `NavigateWait.networkIdle` counts on.
+  /// `DOM.enable` is the semantic-locator prerequisite:
+  /// `DOM.resolveNode` — how a snapshot's `backendDOMNodeId` becomes a
+  /// clickable node — answers nothing usable without the DOM domain on
+  /// real Chromium (the fake answers anyway, which is exactly how the
+  /// gap survived the suite). `Network.enable` feeds the observation
+  /// log (`network`) that `NavigateWait.networkIdle` counts on.
   static Future<CdpPage> attach(
     CdpTransport connection,
     CdpTargetInfo target,
   ) async {
     await connection.send('Page.enable');
     await connection.send('Runtime.enable');
+    await connection.send('DOM.enable');
     await connection.send('Accessibility.enable');
     return CdpPage._(connection, target)
       .._network = await CdpNetworkLog.attach(connection);
@@ -401,6 +416,121 @@ class CdpPage {
     });
   }
 
+  /// Brings the page's tab to the front — restores OS focus.
+  ///
+  /// Prerequisite for everything key-shaped: a background window has no
+  /// OS focus, and `Input.dispatchKeyEvent` events (per-key [type],
+  /// [keyPress]) land NOWHERE — measured: the field stayed empty while
+  /// `document.hasFocus()` answered false. Mouse events
+  /// ([clickAt]) and [insertText] do not need OS focus, but key events
+  /// do; call this first when the browser window may be in the
+  /// background (automation driving a visible browser almost always is).
+  Future<void> bringToFront() async {
+    _ensureOpen();
+    await connection.send('Page.bringToFront');
+  }
+
+  /// Inserts [text] at the focused editable's caret via
+  /// `Input.insertText` — one event, no OS focus required.
+  ///
+  /// The reliable text-entry path for background windows: focus the
+  /// field (click it or `evaluate('el.focus()')`), then insert. Per-key
+  /// [type] remains the choice when an app listens for individual key
+  /// events (key combinations, live filters) — but only after
+  /// [bringToFront].
+  Future<void> insertText(String text) async {
+    _ensureOpen();
+    await connection.send('Input.insertText', {'text': text});
+  }
+
+  /// The `value` of the editable at [css] (input/textarea), or `null`
+  /// when the element has none. The reliable field-content read: the AX
+  /// snapshot's `value` is unreliable for picking among several fields
+  /// (Flutter web exposes every field's content on each node).
+  Future<String?> fieldValue(String css) async {
+    _ensureOpen();
+    final raw = await evaluate(
+      '(() => { const el = document.querySelector(${_jsString(css)}); '
+      'return el ? String(el.value ?? "") : null; })()',
+    );
+    return raw is String && raw.isNotEmpty ? raw : null;
+  }
+
+  /// Every editable's tag and value, in DOM order — the last entry is
+  /// the deepest overlay's field (dialogs append after page content).
+  /// Pair with [resolveNamedRect] to target one; see [fieldValue] for a
+  /// selector-addressed read.
+  Future<List<({String tag, String value})>> editableValues() async {
+    _ensureOpen();
+    final raw = await evaluate(
+      'JSON.stringify([...document.querySelectorAll('
+      "'input, textarea')].map((el) => ({tag: el.tagName, "
+      'value: String(el.value ?? "")})))',
+    );
+    if (raw is! String || raw.isEmpty) return const [];
+    final decoded = jsonDecode(raw);
+    if (decoded is! List<Object?>) return const [];
+    return [
+      for (final entry in decoded)
+        if (entry is Map<String, Object?>)
+          (
+            tag: (entry['tag'] ?? '') as String,
+            value: (entry['value'] ?? '') as String,
+          ),
+    ];
+  }
+
+  /// Cheap presence probe for the accessible-name locator: true when
+  /// any element would match [resolveNamedRect]'s search (exact or
+  /// contains — presence, not actionability). Absence is decided HERE,
+  /// fast, so callers can refuse with a named locator instead of
+  /// waiting out an actionability timeout.
+  Future<bool> hasNamedElement(String name, {String? role}) async {
+    _ensureOpen();
+    final raw = await evaluate(
+      '(() => { const NAME = ${_jsString(name)}; '
+      'const els = '
+      '[...document.querySelectorAll(${_jsString(_nameSelector(role))})]; '
+      'const label = (e) => e.getAttribute("aria-label") || ""; '
+      'const text = (e) => e.textContent || ""; '
+      'return els.some((e) => label(e) === NAME || text(e) === NAME || '
+      'label(e).includes(NAME) || text(e).includes(NAME)); })()',
+    );
+    return raw == true;
+  }
+
+
+  /// Resolves an element by accessible NAME — the live-DOM locator that
+  /// keeps working when Chromium's AX-cache `backendDOMNodeId`s have
+  /// gone stale (Flutter web replaces semantics DOM nodes as the tree
+  /// updates, so an id from a fresh snapshot can be dead milliseconds
+  /// later; [resolveNodeRect] then polls a dead id forever).
+  ///
+  /// The search walks semantic elements (`flt-semantics` — Flutter
+  /// web's DOM — plus generic `[aria-label]`/`[role]` elements),
+  /// matching [name] against `aria-label` or text content per [match];
+  /// when [role] is given the candidate set is scoped to that role.
+  /// The LAST match wins — overlays and dialogs sit deeper in the DOM
+  /// than the page chrome, and a newer row is newer data. The winner
+  /// runs the standard actionability loop ([resolveRect] semantics).
+  Future<AxBounds> resolveNamedRect(
+    String name, {
+    String? role,
+    NameMatch match = NameMatch.exact,
+    Duration timeout = const Duration(seconds: 10),
+    bool force = false,
+  }) async {
+    if (!await hasNamedElement(name, role: role)) {
+      throw ElementNotFoundException('name', name);
+    }
+    return _waitForActionableRect(
+      probe: () => evaluate(_namedProbe(role, name, match)),
+      label: role == null ? '"$name"' : '$role "$name"',
+      timeout: timeout,
+      force: force,
+    );
+  }
+
   /// Closes the page target and the underlying connection.
   ///
   /// For borrowed sessions (an adopted browser this process must not
@@ -555,13 +685,55 @@ String _cssProbeBody(String css) =>
 
 /// The element-scoped probe body parameterized over `this` (used via
 /// `Runtime.callFunctionOn` for semantic nodes).
+///
+/// Chromium resolves an AX node's `backendDOMNodeId` to the node that
+/// carries the layout text — frequently the TEXT node inside the
+/// button, not the button (measured: `scrollIntoView is not a
+/// function`). Walk up to the nearest element first.
 final String _nodeProbeFunction =
-    'function() { return (function() { '
-    'const el = this; '
-    'return JSON.stringify((function() { ${_elementProbeTail()} })()); '
-    '})(); }';
+    'function() { const node = this; '
+    'return JSON.stringify((function() { '
+    'let el = node; '
+    'if (el && el.nodeType === 3) el = el.parentElement; '
+    '${_elementProbeTail()} '
+    '})()); }';
 
 String _elementProbe(String body) => 'JSON.stringify((() => { $body })())';
+
+/// Locates an element by accessible name in the LIVE DOM, then runs the
+/// shared probe tail on it. Exact match first (aria-label or text
+/// content, scoped by role when given), then contains; last match wins.
+
+/// The candidate set for accessible-name lookups: Flutter web's
+/// semantics DOM plus generic labeled/role'd elements. Built in Dart —
+/// building it by JS string concatenation produced a malformed
+/// `querySelectorAll` argument (SyntaxError swallowed as `evaluate`
+/// null, measured).
+String _nameSelector(String? role) {
+  const base = 'flt-semantics, [aria-label], [role]';
+  if (role == null) return base;
+  // The role scopes FIRST (explicit-role elements win the front of the
+  // candidate order) but never EXCLUDES: plain HTML buttons carry the
+  // button role implicitly — no role attribute — so a scoped-only
+  // selector misses them (measured).
+  return 'flt-semantics[role="$role"], [role="$role"], $base';
+}
+
+String _namedProbe(String? role, String name, NameMatch match) {
+  final compare = match == NameMatch.exact ? 't === NAME' : 't.includes(NAME)';
+  return 'JSON.stringify((() => { '
+      'const NAME = ${_jsString(name)}; '
+      'const els = '
+      '[...document.querySelectorAll(${_jsString(_nameSelector(role))})]; '
+      'const label = (e) => e.getAttribute("aria-label") || ""; '
+      'const text = (e) => e.textContent || ""; '
+      'const matching = (test) =>'
+      ' els.filter((e) => test(label(e)) || test(text(e))); '
+      'const el = matching((t) => $compare).pop(); '
+      'if (!el) return {state: "detached"}; '
+      '${_elementProbeTail()} '
+      '})())';
+}
 
 /// Shared probe tail: [el] must be in scope. Scrolls into view, then
 /// reports the actionability state plus the viewport rect.

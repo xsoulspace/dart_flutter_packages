@@ -67,7 +67,17 @@ class CdpDriver implements AutomationDriver, AutomationActionCatalog {
           await _clickSemantic(role: role, name: name);
         }
       case TypeAction(:final text, :final css, :final submit):
-        await _page.type(text, css: css, submit: submit);
+        if (css != null) {
+          await _page.type(text, css: css, submit: submit);
+        } else {
+          // Focused-element entry, background-window safe: per-key
+          // dispatchKeyEvent events land nowhere without OS focus
+          // (measured — the field stayed empty, document.hasFocus()
+          // false), while insertText writes the caret directly.
+          await _page.bringToFront();
+          await _page.insertText(text);
+          if (submit) await _page.keyPress('Enter');
+        }
       case KeyPressAction(:final key):
         await _page.keyPress(key);
       case ScrollAction(:final direction, :final distance):
@@ -100,38 +110,94 @@ class CdpDriver implements AutomationDriver, AutomationActionCatalog {
     );
   }
 
-  /// Resolves role/name locators through the semantic snapshot: the
-  /// matched node's CDP `backendDOMNodeId` resolves to a DOM node, which
-  /// is hit-checked and clicked at its center. First match in snapshot
-  /// order wins (exact role and name equality).
+  /// Resolves role/name locators to a click.
+  ///
+  /// Two resolution paths, tried per attempt with a FRESH snapshot each
+  /// time (Flutter web replaces semantics DOM nodes as the tree updates,
+  /// so a `backendDOMNodeId` can be dead the moment it is issued — the
+  /// actionability probe then reports `detached` forever):
+  ///
+  /// 1. The AX-snapshot path: match by exact role/name, resolve the
+  ///    node's `backendDOMNodeId` to actionable bounds, click the
+  ///    center. Works everywhere the AX cache is trustworthy.
+  /// 2. The live-DOM path ([CdpPage.resolveNamedRect]): find the element
+  ///    by aria-label/text content in the current DOM — Flutter web's
+  ///    `flt-semantics` included — and click its center. Last match
+  ///    wins, so a dialog's field beats page chrome.
+  ///
+  /// First match in snapshot order wins on path 1; exact name first,
+  /// then contains, on path 2 (Flutter tiles concatenate title + hint
+  /// into one accessible name).
   Future<void> _clickSemantic({String? role, String? name}) async {
-    final snapshot = await _page.accessibilitySnapshot();
-    AxNode? match;
-    for (final node in snapshot.nodes) {
-      final roleOk = role == null || node.role == role;
-      final nameOk = name == null || node.name == name;
-      if (roleOk && nameOk) {
-        match = node;
-        break;
+    if (role == null && name == null) {
+      throw const DriverUnsupportedException(
+        'semantic click needs a role, a name, or both',
+      );
+    }
+    Object? lastError;
+    for (var attempt = 1; attempt <= 3; attempt++) {
+      try {
+        final snapshot = await _page.accessibilitySnapshot();
+        AxNode? match;
+        for (final node in snapshot.nodes) {
+          final roleOk = role == null || node.role == role;
+          final nameOk = name == null || node.name == name;
+          if (roleOk && nameOk) {
+            match = node;
+            break;
+          }
+        }
+        if (match != null) {
+          final backendNodeId =
+              int.tryParse(match.attributes['cdp.backendDOMNodeId'] ?? '');
+          if (backendNodeId != null) {
+            final bounds = await _page.resolveNodeRect(backendNodeId);
+            await _page.clickAt(bounds.center.$1, bounds.center.$2);
+            return;
+          }
+        }
+      } on ProtocolException catch (error) {
+        // Stale backend id / not actionable — fall through to the
+        // live-DOM path with a fresh snapshot next attempt.
+        lastError = error;
+      }
+      if (name != null) {
+        try {
+          final bounds = await _page.resolveNamedRect(
+            name,
+            role: role,
+            match: NameMatch.exact,
+          );
+          await _page.clickAt(bounds.center.$1, bounds.center.$2);
+          return;
+        } on ElementNotFoundException {
+          // Absent from the live DOM too — the target is genuinely
+          // gone; retrying cannot conjure it. Refuse with the locator
+          // named.
+          rethrow;
+        } on ProtocolException catch (error) {
+          lastError = error;
+          if (attempt < 3) {
+            try {
+              final bounds = await _page.resolveNamedRect(
+                name,
+                role: role,
+                match: NameMatch.contains,
+              );
+              await _page.clickAt(bounds.center.$1, bounds.center.$2);
+              return;
+            } on ProtocolException catch (error2) {
+              lastError = error2;
+            }
+          }
+        }
       }
     }
-    if (match == null) {
-      throw ElementNotFoundException(
-        role != null ? 'role' : 'name',
-        role ?? name!,
-      );
-    }
-    final backendNodeId =
-        int.tryParse(match.attributes['cdp.backendDOMNodeId'] ?? '');
-    if (backendNodeId == null) {
-      throw DriverUnsupportedException(
-        'semantic node (${match.role} "${match.name ?? ''}") carries no '
-        'cdp.backendDOMNodeId; cannot resolve click coordinates',
-      );
-    }
-    final bounds = await _page.resolveNodeRect(backendNodeId);
-    final (x, y) = bounds.center;
-    await _page.clickAt(x, y);
+    throw ProtocolException(
+      'semantic click "$role"/"$name" never landed after 3 attempts '
+      '(last error: $lastError)',
+      details: {'role': ?role, 'name': ?name},
+    );
   }
 
   @override

@@ -12,3 +12,4 @@ export 'src/fake_mesh_transport.dart';
 export 'src/frame_codec.dart';
 export 'src/mesh_peer.dart';
 export 'src/mesh_transport.dart';
+export 'src/web_socket_lan_transport.dart';

@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:universal_automation_interface/universal_automation_interface.dart';
 
 import 'driver_bridge.dart';
+import 'macos_app.dart';
 
 /// The host refuses to answer AX queries until the user grants
 /// Accessibility (System Settings → Privacy & Security). Fixable
@@ -75,6 +76,75 @@ class MacosDriver implements AutomationDriver {
     return bridge.requestTrust();
   }
 
+  // -- APP MANAGEMENT (the macOS rung: manage APPLICATIONS, not only
+  // whatever currently holds focus) --
+
+  /// The running, Dock-able applications — the discovery record every
+  /// app-targeted call consumes.
+  Future<List<MacosApp>> runningApps() async {
+    _ensureOpen();
+    final result = bridge.appsJson();
+    if (result.code != 0) {
+      throw ProtocolException('runningApps failed', code: result.code);
+    }
+    return MacosApp.listFromJson(result.json);
+  }
+
+  /// The application that currently owns the key window.
+  Future<MacosApp> frontmost() async {
+    _ensureOpen();
+    final result = bridge.frontmostJson();
+    if (result.code == 2) {
+      throw const ElementNotFoundException('frontmostApplication', 'frontmost');
+    }
+    if (result.code != 0) {
+      throw ProtocolException('frontmost failed', code: result.code);
+    }
+    final decoded = jsonDecode(result.json);
+    if (decoded is! Map<String, Object?>) {
+      throw const ProtocolException('frontmost returned a non-object');
+    }
+    return MacosApp.fromJson(decoded);
+  }
+
+  /// Brings the application with [pid] to the front.
+  Future<void> activate(int pid) async {
+    _ensureOpen();
+    final code = bridge.activateApp(pid);
+    if (code == 7) {
+      throw ElementNotFoundException('application', 'activate pid=$pid');
+    }
+    if (code != 0) {
+      throw ProtocolException('activate failed', code: code);
+    }
+  }
+
+  /// Launches (or activates, if already running) [bundleId]; returns the
+  /// application's pid.
+  Future<int> launch(String bundleId) async {
+    _ensureOpen();
+    final pid = bridge.launchApp(bundleId);
+    if (pid == -7) {
+      throw ElementNotFoundException('application', 'launch $bundleId');
+    }
+    if (pid < 0) {
+      throw ProtocolException('launch failed', code: pid);
+    }
+    return pid;
+  }
+
+  /// Asks the application with [pid] to quit (graceful terminate).
+  Future<void> terminate(int pid) async {
+    _ensureOpen();
+    final code = bridge.terminateApp(pid);
+    if (code == 7) {
+      throw ElementNotFoundException('application', 'terminate pid=$pid');
+    }
+    if (code != 0) {
+      throw ProtocolException('terminate failed', code: code);
+    }
+  }
+
   /// The accessibility element at top-left-origin screen coordinates
   /// (the same system CGEvent mouse coordinates use). This is the hover
   /// query: throttle it to pointer-cadence, never per frame.
@@ -98,6 +168,28 @@ class MacosDriver implements AutomationDriver {
       maxDepth: snapshotDepth,
       maxNodes: snapshotMaxNodes,
     );
+    return _snapshotFrom(result);
+  }
+
+  /// Observes ANY running application's tree by pid — the background-app
+    /// read the focused-app-only [snapshot] could not do (7 = unknown pid).
+  Future<Snapshot> snapshotOfApp(int pid) async {
+    _ensureOpen();
+    if (!bridge.axTrusted()) {
+      throw const AccessibilityPermissionRequiredException();
+    }
+    final result = bridge.snapshotAppJson(
+      maxDepth: snapshotDepth,
+      maxNodes: snapshotMaxNodes,
+      pid: pid,
+    );
+    if (result.code == 7) {
+      throw ElementNotFoundException('application', 'snapshot pid=$pid');
+    }
+    return _snapshotFrom(result);
+  }
+
+  Snapshot _snapshotFrom(BridgeJsonResult result) {
     final root = _nodeFromResult(result, 'snapshot');
     _revision += 1;
     _lastSnapshot = Snapshot(

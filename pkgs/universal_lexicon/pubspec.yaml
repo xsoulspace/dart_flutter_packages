@@ -5,7 +5,7 @@ description: >-
   normalization, and a block-compressed DefinitionPack format that keeps
   word definitions on-device with a constant few-MB memory footprint —
   no network, no server, no full-dictionary load.
-version: 0.1.0-dev.2
+version: 0.1.0-dev.3
 homepage: https://github.com/xsoulspace/dart_flutter_packages
 repository: https://github.com/xsoulspace/dart_flutter_packages
 issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues

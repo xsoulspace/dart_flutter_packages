@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.0-dev.3
+
+- `Lexicon.fuzzyPrefixCandidates`: the NOISY-prefix query — a word
+  qualifies when the edit distance between the probe and the word's
+  same-length head is within the cap; ranked distance-first, then the
+  family's frequency order. Bounded Levenshtein with an early-exit row
+  minimum keeps a 50k-word scan at one-shot latency. The glide
+  keyboard's completion tier needed it: strict prefixes silently refuse
+  everything a real hand writes (`helo` matches no prefix of anything).
 ## 0.1.0-dev.1
 
 - Initial release: `Lexicon` interface + `ListLexicon` (sorted list,

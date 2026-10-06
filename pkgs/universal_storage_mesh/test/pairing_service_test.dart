@@ -16,6 +16,88 @@ void main() {
       aliceIdentityPub = Uint8List.fromList(pub.bytes);
     });
 
+    test('ADR 0072: applicationData rides the SIGNED envelope', () async {
+      // The advertiser embeds its world announcement; the scanner reads
+      // it back byte-identical, and the signature still verifies (the
+      // data is inside the signed body).
+      final aliceEph = await X25519().newKeyPair();
+      const worlds = [
+        {
+          'worldId': 'harnessd-abc',
+          'endpoint': 'http://192.168.1.20:8190',
+          'token': 's3cret',
+          'workspace': '/tmp/ws',
+        },
+      ];
+      final qr = await PairingService.buildQrPayload(
+        identityKeyPair: aliceIdentity,
+        ephemeralKeyPair: aliceEph,
+        peerId: 'device-a',
+        applicationData: {'worlds': worlds},
+      );
+      final bobEph = await X25519().newKeyPair();
+      final bob = await PairingService.acceptQrPayload(
+        qrPayload: qr,
+        peerIdentityKey: aliceIdentityPub,
+        ownEphemeralKeyPair: bobEph,
+        ourPeerId: 'device-b',
+      );
+      expect(bob.applicationData, isNotNull);
+      expect((bob.applicationData!['worlds'] as List).single, worlds.single);
+      expect(bob.peerId, 'device-a');
+    });
+
+    test('ADR 0072: a tampered applicationData fails the signature', () async {
+      final aliceEph = await X25519().newKeyPair();
+      final qr = await PairingService.buildQrPayload(
+        identityKeyPair: aliceIdentity,
+        ephemeralKeyPair: aliceEph,
+        peerId: 'device-a',
+        applicationData: {
+          'worlds': [
+            {
+              'worldId': 'harnessd-abc',
+              'endpoint': 'http://x',
+              'token': 's3cret',
+            },
+          ],
+        },
+      );
+      // Flip ONE byte inside the signed body (same length, so the
+      // framing stays intact — only the signature breaks).
+      final marker = utf8.encode('s3cret');
+      final forged = utf8.encode('s3cr3t');
+      var index = -1;
+      for (var i = 0; i + marker.length <= qr.length; i++) {
+        var match = true;
+        for (var j = 0; j < marker.length; j++) {
+          if (qr[i + j] != marker[j]) {
+            match = false;
+            break;
+          }
+        }
+        if (match) {
+          index = i;
+          break;
+        }
+      }
+      expect(index, greaterThan(0), reason: 'the token is in the body');
+      final tampered = Uint8List.fromList(qr);
+      tampered.setRange(index, index + forged.length, forged);
+      final bobEph = await X25519().newKeyPair();
+      expect(
+        () => PairingService.acceptQrPayload(
+          qrPayload: tampered,
+          peerIdentityKey: aliceIdentityPub,
+          ownEphemeralKeyPair: bobEph,
+          ourPeerId: 'device-b',
+        ),
+        throwsA(isA<PairingException>()),
+        reason: 'editing the announcement breaks the signature — the '
+            'announcement is as trustworthy as the pairing itself',
+      );
+    });
+
     test('build → accept derives matching keys on both sides', () async {
       // Alice (initiator) builds the QR; Bob scans it.
       final aliceEph = await X25519().newKeyPair();

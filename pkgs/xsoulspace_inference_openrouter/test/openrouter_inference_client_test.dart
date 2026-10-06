@@ -61,6 +61,45 @@ void main() {
       expect(result.data, isNotNull);
       expect(result.data!.structuredOutput['text'], 'Hello from OpenRouter');
       expect(result.data!.rawOutput, 'Hello from OpenRouter');
+      // No usage object in the response body → honest absence on the meta.
+      expect(result.data!.meta.containsKey('usage'), isFalse);
+    });
+
+    test('passes provider-reported usage through onto the response meta', () async {
+      final client = _clientWithMock(
+        _respondWith('''
+          {
+            "choices": [
+              {
+                "message": {
+                  "role": "assistant",
+                  "content": "Hello from OpenRouter"
+                }
+              }
+            ],
+            "usage": {
+              "prompt_tokens": 120,
+              "completion_tokens": 34,
+              "total_tokens": 154
+            }
+          }
+          '''),
+      );
+
+      final result = await client.infer(
+        InferenceRequest.structured(
+          prompt: 'Say hello',
+          systemPrompt: 'You are helpful.',
+          task: InferenceTask.text,
+        ),
+      );
+
+      expect(result.success, isTrue);
+      final usage = result.data!.meta['usage'];
+      expect(usage, isNotNull);
+      expect(usage['prompt_tokens'], 120);
+      expect(usage['completion_tokens'], 34);
+      expect(usage['total_tokens'], 154);
     });
 
     test('parses native tool calls into structured toolCalls', () async {

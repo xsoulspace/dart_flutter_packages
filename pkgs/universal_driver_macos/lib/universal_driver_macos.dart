@@ -25,4 +25,5 @@ export 'package:universal_automation_interface/universal_automation_interface.da
     show AutomationAction, AxNode, Snapshot;
 
 export 'src/driver_bridge.dart';
+export 'src/macos_app.dart';
 export 'src/macos_driver.dart';

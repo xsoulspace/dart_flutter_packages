@@ -108,6 +108,53 @@ external int axdrvScreenshotPng(
   Pointer<IntPtr> outLen,
 );
 
+@Native<Int32 Function(Pointer<Pointer<Utf8>>)>(
+  symbol: 'xs_axdrv_apps_json',
+  assetId: 'package:universal_driver_macos/xs_ax_driver',
+)
+/// Fills [outJson] with the running regular applications as JSON.
+external int axdrvAppsJson(Pointer<Pointer<Utf8>> outJson);
+
+@Native<Int32 Function(Pointer<Pointer<Utf8>>)>(
+  symbol: 'xs_axdrv_frontmost_json',
+  assetId: 'package:universal_driver_macos/xs_ax_driver',
+)
+/// Fills [outJson] with the frontmost application as JSON.
+external int axdrvFrontmostJson(Pointer<Pointer<Utf8>> outJson);
+
+@Native<Int32 Function(Int32)>(
+  symbol: 'xs_axdrv_activate_app',
+  assetId: 'package:universal_driver_macos/xs_ax_driver',
+)
+/// Brings the application with [pid] to the front.
+external int axdrvActivateApp(int pid);
+
+@Native<Int32 Function(Pointer<Utf8>)>(
+  symbol: 'xs_axdrv_launch_app',
+  assetId: 'package:universal_driver_macos/xs_ax_driver',
+)
+/// Launches (or activates) [bundleId]; returns its pid, negative on error.
+external int axdrvLaunchApp(Pointer<Utf8> bundleId);
+
+@Native<Int32 Function(Int32)>(
+  symbol: 'xs_axdrv_terminate_app',
+  assetId: 'package:universal_driver_macos/xs_ax_driver',
+)
+/// Asks the application with [pid] to quit.
+external int axdrvTerminateApp(int pid);
+
+@Native<Int32 Function(Int32, Int32, Int32, Pointer<Pointer<Utf8>>)>(
+  symbol: 'xs_axdrv_snapshot_app_json',
+  assetId: 'package:universal_driver_macos/xs_ax_driver',
+)
+/// Fills [outJson] with ANY application's tree by [pid].
+external int axdrvSnapshotAppJson(
+  int maxDepth,
+  int maxNodes,
+  int pid,
+  Pointer<Pointer<Utf8>> outJson,
+);
+
 @Native<Void Function(Pointer<Void>)>(
   symbol: 'xs_axdrv_free',
   assetId: 'package:universal_driver_macos/xs_ax_driver',
