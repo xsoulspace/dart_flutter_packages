@@ -10,7 +10,7 @@ pubspec.lock
 **/**/build
 **/**/.dart_tool/
 /.steward/
-.gitnexus
+/.codemap/
 node_modules/
 .flutter_mcp
 /target/

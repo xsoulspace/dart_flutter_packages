@@ -64,3 +64,24 @@ For more information on the project charter and decisions:
 
 - Read [NORTH_STAR.mdx](docs/NORTH_STAR.mdx) (if present)
 - Read [ADR Index](docs/decisions/README) (if present)
+
+<!-- codemap-index:start -->
+# Codemap Graph Index — Code Intelligence for this repo
+
+This repo is indexed by codemap's persistent graph index (`.codemap/index/`, gitignored,
+derivable — the same parser-backed payload all codemap surfaces use). Navigation is fast
+and carries an honest freshness contract: a stale index refuses or degrades loudly, never
+silently. MCP tools `map_index_search` / `map_index_query` / `map_index_status` /
+`map_index_changes` / `map_index_build` are globally mounted; the CLI form runs from the
+codemap checkout: `~/xs/codemap/.venv/bin/python ~/xs/codemap/codemap_cli.py --json exec <command> --args '{"root": "/Users/antonio/xs/storage_problem/dart_flutter_packages", ...}'`.
+
+## Always Do
+
+- **Find symbols by graph, not grep:** `map_index_search` with `{"root": "/Users/antonio/xs/storage_problem/dart_flutter_packages", "query": "<substr>"}` (regex via `"use_regex": true`).
+- **Blast radius before editing a symbol:** `map_index_query` with `{"root": "/Users/antonio/xs/storage_problem/dart_flutter_packages", "kind": "impact", "symbol": "<rel/path.ext::unit.name>"}`; `{"kind": "context"}` for the node + inbound/outbound edges.
+- **Freshness before trusting:** every payload carries `freshness`; a stale index REFUSES by default — pass `"require_fresh": false` only when a visible-stale answer is acceptable; `map_index_status` reports full drift.
+- **Before committing:** `map_index_changes` maps file drift to changed symbols + one-hop affected callers.
+- **Rebuild when stale:** `map_index_build` with `{"root": "/Users/antonio/xs/storage_problem/dart_flutter_packages", "ignore_prefixes": ["build/"]}` — incremental (unchanged files splice from cached contributions); a fresh tree answers in seconds.
+- Symbol ids are `rel/path.ext::unit.name` — get exact ids from `index_search`. Never invent edges from grep; unresolved calls are in the payload, never guessed.
+
+<!-- codemap-index:end -->
