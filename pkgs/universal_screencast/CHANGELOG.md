@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2
+
+- chore: universal_browser_cdp 0.3.0
+
 ## 0.1.1
 
 - interface/cdp constraint bump only; no code changes.
