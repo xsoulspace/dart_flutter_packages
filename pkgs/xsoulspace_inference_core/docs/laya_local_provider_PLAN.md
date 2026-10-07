@@ -111,6 +111,35 @@ Gate: `flutter test test/laya_binding_test.dart test/jev_binding_test.dart
 test/jev_diagnostics_test.dart` — green; pre-existing `tool/` analyzer
 findings unchanged (baseline).
 
+## Second increment (2026-10-07): the pure-Dart wire server
+
+Antonio's correction: the **server** side needs no Python either. Dart has
+native hooks, and we just built the API in Dart — so the wire got a Dart
+twin in the laya package:
+
+- `LayaDecisionServer` — a laya-compatible System One server in pure Dart
+  (`GET /health` open, `POST /v1/systemone` with optional bearer auth,
+  responses normalized into the strict shape our clients validate). Binds
+  loopback, ephemeral port by default.
+- `LayaDecisionEngine` — the seam that answers. `ScriptedLayaDecisionEngine`
+  pins answers by question id against wire descriptions (the same semantics
+  the harness fixtures use); a real model runtime can attach here later
+  through Dart native assets without touching clients or the harness path.
+
+New end-to-end proof — `xsoulspace_agentic_afm/test/laya_wire_integration_test.dart`:
+the canonical host decision handler (workspace domains, ADR-0042 batching,
+budgets) drives a ten-row `opChain` through `layaDecisionBinding` over the
+loopback Dart server to a real tool execution, and the server observes
+exactly `binding.providerCalls` requests — every host decision crossed the
+wire. Wired declaratively as harness lane `laya-integration`
+(`tool/laya_integration_lane.dart`, launched by `tool/hot_laya_integration.sh`;
+the one-shot CI gate is the same test command). Lane smoke: ready →
+`command_receipt ok:true` in 12.3 s.
+
+Consequence: the whole integration path — clients, binding, handler,
+server, tests, lane — is Python-free. The trained checkpoints remain
+external (see non-claims).
+
 ## Non-claims
 
 - **No live model has been evaluated from these packages.** All wire,
@@ -120,12 +149,18 @@ findings unchanged (baseline).
   here. The hosted Jev pilot's evidence rules
   ([jev_pilot_PLAN.md](../../xsoulspace_inference_openrouter/docs/jev_pilot_PLAN.md))
   apply unchanged to any future Laya measurements.
+- **`LayaDecisionServer` is a wire server, not a model.** Its scripted
+  engine is deterministic; usage counts are estimates. The trained
+  checkpoints still need `laya-serve`/`laya-mlx` (Python/MLX) or a future
+  native engine on the `LayaDecisionEngine` seam. What is Python-free is
+  everything around the model: the client, the server wire, the harness
+  path, the tests, and the lane.
 - **No in-process native MLX bridge.** A from-scratch Swift port would mean
   reimplementing laya's custom decision architecture (decision transformer,
   scoring head, action head) that the `laya-mlx` runtime owns; the
   local-server path delivers the capability today. Revisit only under
   measured constraints (e.g. embedding decisions where no Python runtime
-  may run).
+  may run) — the engine seam above is the attach point.
 - `score` and `noul` question kinds are not modeled in the neutral contract
   yet; sending them is impossible from Dart today, not silently degraded.
 - SSE streaming for Anthropic is not implemented; the client is

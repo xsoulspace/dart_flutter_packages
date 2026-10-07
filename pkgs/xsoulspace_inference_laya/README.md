@@ -37,14 +37,37 @@ Bind it wherever a hosted decision provider would bind (the harness
 `jevDecisionBinding` seam); local-only policy admits it through the
 capability facts alone.
 
-## Setup (one-time, outside Dart)
+## Setup: pure Dart first, Python only for the trained weights
 
-macOS with Apple Silicon (Python 3.11+):
+**No Python is needed to run the decision path.** This package ships a
+laya-compatible System One server in pure Dart:
+
+```dart
+final server = LayaDecisionServer(
+  engine: ScriptedLayaDecisionEngine([
+    LayaDecisionPin('next_operation', 'Apply the grounded', isPrefix: true),
+  ]),
+);
+await server.start(); // 127.0.0.1:<ephemeral>, GET /health + POST /v1/systemone
+```
+
+`LayaDecisionEngine` is the seam: today's engines are deterministic
+(scripted pins matched against wire descriptions); a native model runtime
+attaches here later without touching clients or the harness. The harness
+end-to-end proof lives in `xsoulspace_agentic_afm`
+(`test/laya_wire_integration_test.dart`, wired as the declarative
+`laya-integration` lane).
+
+**For the trained checkpoints** (the real model), attach the upstream
+runtime instead — macOS with Apple Silicon (Python 3.11+):
 
 ```bash
 python -m pip install "laya[serve]"   # or laya-mlx for the MLX runtime
 laya-serve                            # 127.0.0.1:8000, GET /health, POST /v1/systemone
 ```
+
+Either server speaks the same wire: point
+`LayaLocalDecisionProvider`/`LayaServerDecisionProvider` at it.
 
 ## Question kinds
 
