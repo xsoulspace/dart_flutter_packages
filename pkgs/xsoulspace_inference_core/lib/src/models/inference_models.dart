@@ -74,6 +74,13 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     InferenceTask task = InferenceTask.text,
     InferenceAudioInput? audioInput,
     InferenceVoiceOptions? voiceOptions,
+
+    /// Upper bound on generated tokens. Providers with a required limit
+    /// (Anthropic `max_tokens`) reject the request when this is absent
+    /// instead of inventing a provider-specific default.
+    int? maxTokens,
+    double? temperature,
+    List<String> stopSequences = const [],
   }) => InferenceRequest._({
     'task': task.name,
     'prompt': prompt,
@@ -84,6 +91,9 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     'metadata': metadata,
     'audio_input': ?audioInput?.toJson(),
     'voice_options': ?voiceOptions?.toJson(),
+    'max_tokens': ?maxTokens,
+    'temperature': ?temperature,
+    if (stopSequences.isNotEmpty) 'stop_sequences': stopSequences,
   });
   factory InferenceRequest.structured({
     required String prompt,
@@ -95,6 +105,9 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     InferenceTask task = InferenceTask.text,
     InferenceAudioInput? audioInput,
     InferenceVoiceOptions? voiceOptions,
+    int? maxTokens,
+    double? temperature,
+    List<String> stopSequences = const [],
   }) => InferenceRequest._({
     'task': task.name,
     'prompt': prompt,
@@ -105,6 +118,9 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     'metadata': metadata,
     'audio_input': ?audioInput?.toJson(),
     'voice_options': ?voiceOptions?.toJson(),
+    'max_tokens': ?maxTokens,
+    'temperature': ?temperature,
+    if (stopSequences.isNotEmpty) 'stop_sequences': stopSequences,
   });
   factory InferenceRequest.fromJson(final Map<String, dynamic> json) =>
       InferenceRequest._(json);
@@ -166,6 +182,16 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
   String get contextFragmentsJson =>
       contextFragments.isNotEmpty ? jsonEncode(contextFragments) : '';
   String get systemPrompt => jsonDecodeString(value['system_prompt']);
+  int? get maxTokens => switch (value['max_tokens']) {
+    final int tokens => tokens,
+    _ => null,
+  };
+  double? get temperature => switch (value['temperature']) {
+    final num temperature => temperature.toDouble(),
+    _ => null,
+  };
+  List<String> get stopSequences =>
+      jsonDecodeListAs<String>(value['stop_sequences']);
 }
 
 class InferenceResponse {

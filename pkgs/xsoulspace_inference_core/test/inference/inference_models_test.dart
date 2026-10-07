@@ -194,6 +194,65 @@ void main() {
     expect(result.success, isTrue);
     await session.dispose();
   });
+
+  test('InferenceRequest generation params round-trip', () {
+    final request = InferenceRequest(
+      prompt: 'summarize',
+      maxTokens: 1024,
+      temperature: 0.2,
+      stopSequences: <String>['END', 'STOP'],
+    );
+
+    final decoded = InferenceRequest.fromJson(request.value);
+
+    expect(decoded.maxTokens, 1024);
+    expect(decoded.temperature, 0.2);
+    expect(decoded.stopSequences, <String>['END', 'STOP']);
+  });
+
+  test(
+    'InferenceRequest generation params default to absent for old payloads',
+    () {
+      final request = InferenceRequest(
+        prompt: 'summarize',
+        metadata: const <String, dynamic>{'max_tokens': 512},
+      );
+      final decoded = InferenceRequest.fromJson(<String, dynamic>{
+        'task': 'text',
+        'prompt': 'summarize',
+        'output_schema': <String, dynamic>{},
+        'working_directory': '',
+        'system_prompt': '',
+        'context_fragments': <Object>[],
+        'metadata': <String, dynamic>{},
+      });
+
+      expect(decoded.maxTokens, isNull);
+      expect(decoded.temperature, isNull);
+      expect(decoded.stopSequences, isEmpty);
+      expect(
+        decoded.value.containsKey('max_tokens'),
+        isFalse,
+        reason: 'absent params must not serialize as explicit nulls',
+      );
+      expect(request.metadata['max_tokens'], 512,
+          reason: 'metadata stays available for provider-specific extras');
+    },
+  );
+
+  test('InferenceRequest.structured carries generation params', () {
+    final request = InferenceRequest.structured(
+      prompt: 'extract',
+      maxTokens: 256,
+      temperature: 0,
+    );
+
+    final decoded = InferenceRequest.fromJson(request.value);
+
+    expect(decoded.maxTokens, 256);
+    expect(decoded.temperature, 0.0);
+    expect(decoded.stopSequences, isEmpty);
+  });
 }
 
 final class _FakeInferenceClient implements InferenceClient {

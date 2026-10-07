@@ -1,0 +1,65 @@
+# xsoulspace_inference_laya
+
+Local **Laya** decision-model composition for
+[xsoulspace_inference_core](https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_inference_core)
+on macOS (and any host that can run a local `laya-serve`).
+
+Laya (`convaiinnovations/laya`, Apache-2.0) is an open-weights System One
+decision model: a ModernBERT-large encoder that answers typed `choice` /
+`score` / `noul` questions with calibrated probabilities in a single forward
+pass (~33 ms measured upstream; 7.2 ms/question batched). It never generates
+text. Its `laya-serve` HTTP runtime exposes `POST /v1/systemone` — the same
+wire the hosted OpenRouter System One endpoint speaks.
+
+## What this package owns
+
+- **`LayaServeRuntime`** — is a laya-serve answering at the health endpoint?
+  Attaches to an already-running server by default; spawning one is an
+  explicit `spawnOnMiss` opt-in (it never installs anything or downloads
+  checkpoints, and kills only what it spawned).
+- **`LayaLocalDecisionProvider`** — a `DecisionProvider` bound to the
+  runtime, composing the shared System One wire adapter from
+  `xsoulspace_inference_openrouter` (the wire is identical, so it is
+  composed, not duplicated). Capability facts are honest:
+  `executionLocation: local`, `networkRequirement: none` (no external
+  egress; requests travel over loopback). A detached runtime surfaces as a
+  typed `DecisionUnavailable`, never a socket error.
+
+```dart
+final runtime = LayaServeRuntime();          // attach mode
+final provider = LayaLocalDecisionProvider(runtime: runtime);
+if (await runtime.ensureRunning()) {
+  final outcome = await provider.decide(request);
+}
+```
+
+Bind it wherever a hosted decision provider would bind (the harness
+`jevDecisionBinding` seam); local-only policy admits it through the
+capability facts alone.
+
+## Setup (one-time, outside Dart)
+
+macOS with Apple Silicon (Python 3.11+):
+
+```bash
+python -m pip install "laya[serve]"   # or laya-mlx for the MLX runtime
+laya-serve                            # 127.0.0.1:8000, GET /health, POST /v1/systemone
+```
+
+## Question kinds
+
+Only `choice` questions cross the wire in v0 (`DecisionQuestionKind
+.finiteChoice`). Laya's ordinal `score` and boolean `noul` kinds are
+deferred until the neutral decision contract grows those question kinds.
+
+## Non-claims
+
+- No live model has been evaluated from this package. The wire, bounds,
+  cancellation, and failure mapping are fixture-tested against a fake
+  server; accuracy, latency, and calibration are upstream properties
+  (see the `laya-mlx` validation report) and remain unmeasured here.
+- No in-process native MLX bridge exists. A from-scratch Swift port would
+  mean reimplementing laya's custom decision architecture (decision
+  transformer, scoring head, action head) that the `laya-mlx` runtime
+  owns; the local-server path delivers the same capability today. Revisit
+  only if measured constraints require it.

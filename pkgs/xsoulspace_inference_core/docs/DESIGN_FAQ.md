@@ -101,3 +101,31 @@ machinery everywhere.
   planning, tool use, research) rather than the core mode.
 - **Not** a monolith: the core stays UI-agnostic; UI/CLI/TUI/Flutter are thin
   hosts over the same world.
+
+## 8. Why three wire families — OpenAI, Anthropic, Decisions
+
+Inference APIs are not one API. There are two chat wire families and one
+decision family, and mixing them is how capability lies start.
+
+- **OpenAI-family chat** (`/chat/completions` shapes): role-message arrays,
+  `tool_calls`, `response_format`. Owned by `xsoulspace_inference_openrouter`
+  (and anything else that speaks the shape).
+- **Anthropic-family chat** (`/v1/messages`): top-level `system`, content
+  blocks, `tool_use`, a **required** `max_tokens`. Owned by
+  `xsoulspace_inference_anthropic`.
+- **Decisions** (`POST /v1/systemone` — hosted Jev via OpenRouter, local
+  laya-serve): a finite-choice surface with calibrated probabilities and
+  abstention. This is *not* a chat mode and must never ride a chat client:
+  it is the separate `DecisionProvider` contract
+  ([ADR 0038](../../../../../ecsai_harness/docs/decisions/0038_optional_decision_providers.md)),
+  with its own capability facts (`local` vs `hosted`, network requirement)
+  that local-only policy filters read.
+
+Core owns only the neutral contracts (`InferenceClient`,
+`DecisionProvider`, `SchemaBundle` → JSON-Schema conversion). Wire
+vocabulary never enters core; each provider package owns exactly one family
+and translates at its boundary. A consumer composes families at a
+composition root (e.g. the harness binds hosted Jev and local laya beside
+AFM chat) — the neutral contract is what makes them swappable, which is why
+adding a family never breaks the others. Details and the concrete Laya
+delivery: [laya_local_provider_PLAN.md](laya_local_provider_PLAN.md).

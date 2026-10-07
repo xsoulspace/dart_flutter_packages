@@ -1,75 +1,77 @@
 import 'dart:async';
-// ADR 0026: the client is PURE — it depends only on inference_core; the
-// situation→messages codec lives in the harness and is composed above this
-// transport (the client renders whatever `messages` arrive via the request
-// fragments contract).
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
-
-/// Model names for OpenRouter-backed models.
+/// Model names for Anthropic-backed models.
 ///
 /// Register these in a [ModelRouter] alongside [DefaultModelNames] so an actor
 /// can swap inference backends at runtime by changing its [ActorModel].
-enum OpenRouterModelNames implements ModelName { openRouter }
+enum AnthropicModelNames implements ModelName { anthropic }
 
-/// OpenRouter API-backed [InferenceClient].
+/// Anthropic Messages API-backed [InferenceClient].
 ///
-/// Calls the OpenRouter `/chat/completions` endpoint. Supports free text and
-/// structured output (via `response_format: {type: "json_object"}`), and
-/// native tool calling.
+/// Calls `POST /v1/messages` with the `x-api-key` and `anthropic-version`
+/// headers. Supports free text, best-effort structured output (schema spelled
+/// out in the system prompt — Anthropic has no server-enforced
+/// `response_format`), and native tool calling via `tool_use` content blocks.
+///
+/// ## Required generation budget
+///
+/// The Messages API requires `max_tokens` on every request. This client takes
+/// it from [InferenceRequest.maxTokens]; when absent the request is rejected
+/// with the named code `missing_max_tokens` instead of inventing a
+/// provider-specific default. [InferenceRequest.temperature] and
+/// [InferenceRequest.stopSequences] pass through when set.
 ///
 /// ## Tool calls
 ///
-/// OpenRouter returns native `tool_calls` in the response JSON. This client
-/// parses them and re-emits them as
-/// [InferenceResponse.toolCalls], so the harness's
-/// [DefaultGenerationHandler] could route
-/// them to the world's `toolExecutionSystem` — the same path as raw LLM
-/// backends. The client never executes tools itself.
-class OpenRouterInferenceClient implements InferenceClient {
-  OpenRouterInferenceClient({
-    this._apiKey = '',
-    this.defaultModel = 'openai/gpt-4o-mini',
-    this.baseUrl = 'https://openrouter.ai/api/v1',
+/// Anthropic returns `tool_use` content blocks. This client parses them and
+/// re-emits them as [InferenceResponse.toolCalls]; it never executes tools —
+/// the harness routes them the same way as every other backend. Streaming
+/// (SSE) is not implemented yet; the wire client is request/response only.
+class AnthropicInferenceClient implements InferenceClient {
+  AnthropicInferenceClient({
+    final String apiKey = '',
+    this.defaultModel = 'claude-sonnet-4-5',
+    this.baseUrl = 'https://api.anthropic.com',
+    this.anthropicVersion = '2023-06-01',
     final http.Client? httpClient,
     this.timeout = const Duration(seconds: 60),
     this.useMessagesCodec = true,
     this.onTransportDiagnostic,
-  }) : _httpClient = httpClient ?? http.Client(),
+    // A named parameter cannot spell the private initializing formal.
+    // ignore: prefer_initializing_formals
+  }) : _apiKey = apiKey,
+       _httpClient = httpClient ?? http.Client(),
        _ownsHttpClient = httpClient == null;
 
   final String _apiKey;
-  final String defaultModel;
-  final String baseUrl;
   final http.Client _httpClient;
   final bool _ownsHttpClient;
+
+  /// Fallback model when the request metadata carries no `model` override.
+  final String defaultModel;
+  final String baseUrl;
+  final String anthropicVersion;
   final Duration timeout;
 
   /// When true (default), projected context fragments are rendered into a
   /// native multi-turn `messages` array via [SituationMessagesCodec] instead
-  /// of a flattened `CONTEXT:` block inside the single user message. The
-  /// messages array is computed per call (codec, not state) — per
-  /// ADR 0013, native chat-completions shape is the default; the legacy
-  /// flattened path is kept only for the A/B against the old single-shot
-  /// shape (fair-comparison plan Step 1).
+  /// of a flattened `CONTEXT:` block inside the single user message.
   final bool useMessagesCodec;
 
-  /// Optional observer for the exact HTTP request body at the transport
-  /// boundary. Events omit headers and credentials. Observer errors are
-  /// ignored so diagnostics cannot change inference behavior.
+  /// Opt-in observer for exact POST bodies at the HTTP transport boundary.
+  /// Events contain request metadata but no credentials. Observer exceptions
+  /// are ignored.
   final void Function(Map<String, Object?> event)? onTransportDiagnostic;
 
-  @override
-  Future<void> load() async {
-    // No model download needed — OpenRouter is a hosted API.
-  }
+  static const String _messagesPath = '/v1/messages';
 
   @override
-  String get id => 'openrouter';
+  String get id => 'anthropic_messages';
 
   @override
   bool get isAvailable => _apiKey.isNotEmpty;
@@ -77,6 +79,7 @@ class OpenRouterInferenceClient implements InferenceClient {
   @override
   Set<InferenceTask> get supportedTasks => const <InferenceTask>{
     InferenceTask.text,
+    InferenceTask.implicitlyStructuredText,
     InferenceTask.nativelyStructuredText,
   };
 
@@ -84,14 +87,14 @@ class OpenRouterInferenceClient implements InferenceClient {
   Future<bool> refreshAvailability() async => isAvailable;
 
   @override
-  void resetAvailabilityCache() {
-    // No availability cache; API key checks happen during infer.
-  }
+  Future<void> load() async {}
 
+  @override
+  void resetAvailabilityCache() {}
+
+  /// Closes the owned HTTP client, if this client created one.
   Future<void> dispose() async {
-    if (_ownsHttpClient) {
-      _httpClient.close();
-    }
+    if (_ownsHttpClient) _httpClient.close();
   }
 
   @override
@@ -126,45 +129,49 @@ class OpenRouterInferenceClient implements InferenceClient {
     if (_apiKey.isEmpty) {
       return InferenceResult<InferenceResponse>.fail(
         code: 'auth_failed',
-        message: '$id requires an OpenRouter API key for HTTP inference',
+        message: '$id requires an Anthropic API key for HTTP inference',
+      );
+    }
+
+    final maxTokens = request.maxTokens;
+    if (maxTokens == null) {
+      // The Messages API rejects requests without max_tokens. The neutral
+      // request makes the budget explicit; inventing a provider default here
+      // would silently truncate generations.
+      return InferenceResult<InferenceResponse>.fail(
+        code: 'missing_max_tokens',
+        message:
+            'Anthropic requires an explicit max_tokens budget; set '
+            'InferenceRequest.maxTokens',
       );
     }
 
     final model = _resolveModel(request);
 
-    // Build the messages array. The actor's context fragments are appended as
-    // a trailing user message so the model sees the projected context.
-    // Structured tasks: many OpenRouter models silently ignore
-    // response_format=json_object — and the API itself requires the prompt to
-    // mention "json" — so the schema is also spelled out in the system
-    // message (same contract as PromptBuilder.writeStructuredOutputPrompt).
     final structured =
         request.task == InferenceTask.nativelyStructuredText &&
         request.outputSchema.isNotEmpty;
     var systemPrompt = request.systemPrompt;
-    Map<String, dynamic>? jsonSchemaFormat;
     if (structured) {
-      // Strict json_schema beats json_object: the API enforces the grammar
-      // server-side instead of hoping the model cooperates.
+      // Anthropic has no server-enforced response_format; the schema is
+      // spelled out in the system message (same contract as
+      // PromptBuilder.writeStructuredOutputPrompt) and the reply is parsed
+      // best-effort.
       final schema = bundleToJsonSchema(
         SchemaBundle.fromJson(request.outputSchema),
       );
-      jsonSchemaFormat = {
-        'type': 'json_schema',
-        'json_schema': {'name': 'response', 'strict': true, 'schema': schema},
-      };
       final schemaJson = const JsonEncoder.withIndent('  ').convert(schema);
       systemPrompt =
           '$systemPrompt\n\n'
           'You must respond with ONLY a valid JSON object (no markdown, no '
           'prose, no code fences) matching this JSON schema:\n$schemaJson';
     }
+
     final messages = <Map<String, dynamic>>[
-      if (systemPrompt.isNotEmpty) {'role': 'system', 'content': systemPrompt},
       if (useMessagesCodec)
         ...SituationMessagesCodec.render(
           prompt: request.prompt,
-          systemPrompt: '', // already emitted as the system message above
+          systemPrompt: '', // emitted as the top-level system parameter
           fragments: request.contextFragments,
         )
       else
@@ -173,20 +180,24 @@ class OpenRouterInferenceClient implements InferenceClient {
 
     final body = <String, dynamic>{
       'model': model,
+      'max_tokens': maxTokens,
+      if (systemPrompt.isNotEmpty) 'system': systemPrompt,
       'messages': messages,
-      if (toolRegistry != null &&
-          toolRegistry.tools.isNotEmpty) ...<String, dynamic>{
+      if (request.temperature != null) 'temperature': request.temperature,
+      if (request.stopSequences.isNotEmpty)
+        'stop_sequences': request.stopSequences,
+      if (toolRegistry != null && toolRegistry.tools.isNotEmpty) ...<
+        String, dynamic
+      >{
         'tools': _buildTools(toolRegistry),
-        'tool_choice': 'auto',
       },
-      'response_format': ?jsonSchemaFormat,
     };
 
     try {
-      final uri = Uri.https('openrouter.ai', '/api/v1/chat/completions');
+      final uri = Uri.parse('$baseUrl$_messagesPath');
       final encodedBody = jsonEncode(body);
       _notifyTransportDiagnostic(<String, Object?>{
-        'type': 'openrouter.post',
+        'type': 'anthropic.messages.post',
         'uri': uri.toString(),
         'body': encodedBody,
         'metadata': Map<String, Object?>.from(request.metadata),
@@ -195,7 +206,8 @@ class OpenRouterInferenceClient implements InferenceClient {
           .post(
             uri,
             headers: <String, String>{
-              'authorization': 'Bearer $_apiKey',
+              'x-api-key': _apiKey,
+              'anthropic-version': anthropicVersion,
               'content-type': 'application/json',
               'accept': 'application/json',
             },
@@ -206,7 +218,7 @@ class OpenRouterInferenceClient implements InferenceClient {
       if (response.statusCode < 200 || response.statusCode >= 300) {
         return InferenceResult<InferenceResponse>.fail(
           code: _mapHttpStatus(response.statusCode),
-          message: _errorMessage(response.body),
+          message: _errorMessage(response.body, response.statusCode),
           details: <String, dynamic>{
             'http_status': response.statusCode,
             'body': response.body,
@@ -219,16 +231,16 @@ class OpenRouterInferenceClient implements InferenceClient {
       if (decoded is! Map<String, dynamic>) {
         return InferenceResult<InferenceResponse>.fail(
           code: 'json_parse_failed',
-          message: 'OpenRouter returned a non-object response',
+          message: 'Anthropic returned a non-object response',
           meta: <String, dynamic>{'provider': id},
         );
       }
 
-      final parsed = _parseChatCompletion(decoded);
+      final parsed = _parseMessage(decoded);
       if (parsed == null) {
         return InferenceResult<InferenceResponse>.fail(
           code: 'output_empty',
-          message: 'OpenRouter returned no completion content',
+          message: 'Anthropic returned no message content',
           meta: <String, dynamic>{'provider': id},
         );
       }
@@ -240,20 +252,20 @@ class OpenRouterInferenceClient implements InferenceClient {
     } on TimeoutException catch (_) {
       return InferenceResult<InferenceResponse>.fail(
         code: 'engine_unavailable',
-        message: 'OpenRouter request timed out',
+        message: 'Anthropic request timed out',
         meta: <String, dynamic>{'provider': id},
       );
     } on SocketException catch (error) {
       return InferenceResult<InferenceResponse>.fail(
         code: 'engine_unavailable',
-        message: 'OpenRouter network connection failed',
+        message: 'Anthropic network connection failed',
         details: error.toString(),
         meta: <String, dynamic>{'provider': id},
       );
     } catch (error) {
       return InferenceResult<InferenceResponse>.fail(
         code: 'engine_unavailable',
-        message: 'OpenRouter request failed unexpectedly',
+        message: 'Anthropic request failed unexpectedly',
         details: error.toString(),
         meta: <String, dynamic>{'provider': id},
       );
@@ -279,76 +291,56 @@ class OpenRouterInferenceClient implements InferenceClient {
   String _buildUserContent(final InferenceRequest request) {
     final context = request.contextFragmentsJson;
     if (context.isEmpty) return request.prompt;
-    // TODO(arenukvern): this is wrong - and should be rewritten to messages
-    // (completion api)
     return '${request.prompt}\n\nCONTEXT:\n$context';
   }
 
   List<Map<String, dynamic>> _buildTools(final ToolRegistry registry) {
-    final functions = <Map<String, dynamic>>[];
+    final tools = <Map<String, dynamic>>[];
     for (var MapEntry(key: name, value: tool) in registry.tools.entries) {
-      functions.add(<String, dynamic>{
-        'type': 'function',
-        'function': {
-          'name': name.value,
-          'description': tool.description,
-          // Providers require standard JSON Schema here — the internal
-          // kind-tagged format is meaningless to them and silently breaks
-          // argument generation.
-          'parameters': bundleToJsonSchema(tool.argsSchema),
-        },
+      tools.add(<String, dynamic>{
+        'name': name.value,
+        'description': tool.description,
+        // Standard JSON Schema — the internal kind-tagged format is
+        // meaningless to the API and silently breaks argument generation.
+        'input_schema': bundleToJsonSchema(tool.argsSchema),
       });
     }
-
-    return functions;
+    return tools;
   }
 
-  /// Parse the OpenRouter chat completion response into an [InferenceResponse].
+  /// Parse a Messages API response into an [InferenceResponse].
   ///
-  /// Extracts the assistant message content and any native `tool_calls`.
-  /// Tool calls are returned as structured records on
-  /// [InferenceResponse.toolCalls] — no tag round-trip. The harness routes
-  /// them to the world's tool execution system directly.
-  InferenceResponse? _parseChatCompletion(final Map<String, dynamic> decoded) {
-    final choices = decoded['choices'];
-    if (choices is! List) return null;
-    final first = (choices).firstOrNull;
-    if (first is! Map<String, dynamic>) return null;
+  /// Concatenates `text` content blocks and extracts native `tool_use`
+  /// blocks as structured [ToolCall] records; the harness routes them to the
+  /// world's tool execution system directly.
+  InferenceResponse? _parseMessage(final Map<String, dynamic> decoded) {
+    final content = decoded['content'];
+    if (content is! List) return null;
 
-    final messageMap = (first)['message'];
-    if (messageMap is! Map<String, dynamic>) return null;
-
-    final content = messageMap['content'];
-    final contentStr = content is String ? content : '';
-
-    // Extract native tool_calls as structured records.
-    final toolCalls = messageMap['tool_calls'];
+    final textBuffer = StringBuffer();
     final parsedCalls = <ToolCall>[];
-    if (toolCalls is List) {
-      for (final call in toolCalls) {
-        if (call is! Map<String, dynamic>) continue;
-        final fnMap = (call)['function'];
-        if (fnMap is! Map<String, dynamic>) continue;
-        final name = fnMap['name'];
-        final arguments = fnMap['arguments'];
-        if (name is! String) continue;
-        parsedCalls.add(
-          ToolCall(name: ToolName(name), arguments: _parseArguments(arguments)),
-        );
+    for (final block in content) {
+      if (block is! Map<String, dynamic>) continue;
+      switch (block['type']) {
+        case 'text':
+          final text = block['text'];
+          if (text is String) textBuffer.write(text);
+        case 'tool_use':
+          final name = block['name'];
+          if (name is! String) continue;
+          parsedCalls.add(
+            ToolCall(
+              name: ToolName(name),
+              arguments: _parseArguments(block['input']),
+            ),
+          );
       }
     }
 
+    final contentStr = textBuffer.toString();
+    if (contentStr.isEmpty && parsedCalls.isEmpty) return null;
+
     final output = <String, dynamic>{};
-
-    // ignore: avoid_print
-    if (contentStr.isEmpty && parsedCalls.isEmpty) {
-      print(
-        '[OR-DBG] empty completion; messageKeys=${messageMap.keys.toList()} '
-        'content=${content == null ? '<null>' : jsonEncode(content)} '
-        'finish=${first['finish_reason']}',
-      );
-    }
-
     if (contentStr.isNotEmpty) {
       // For structured tasks, try to parse the content as JSON.
       final parsed = parseStrictJsonObject(contentStr);
@@ -366,32 +358,17 @@ class OpenRouterInferenceClient implements InferenceClient {
       toolCalls: parsedCalls,
       meta: <String, dynamic>{
         'provider': id,
-        // Provider-reported token usage passes through as reported; honest
-        // absence when the API response carries none.
+        'stop_reason': ?decoded['stop_reason'],
         if (decoded['usage'] is Map<String, dynamic>)
           'usage': decoded['usage'] as Map<String, dynamic>,
       },
     );
   }
 
-  /// Parse a tool call's `arguments` (a JSON string from OpenRouter) into a map.
-  Map<String, dynamic> _parseArguments(final Object? arguments) {
-    if (arguments is Map<String, dynamic>) return arguments;
-    if (arguments is Map) {
-      return arguments.map((k, v) => MapEntry('$k', v));
-    }
-    if (arguments is String) {
-      final trimmed = (arguments).trim();
-      if (trimmed.isEmpty) return <String, dynamic>{};
-      try {
-        final decoded = jsonDecode(trimmed);
-        if (decoded is Map<String, dynamic>) return decoded;
-        if (decoded is Map) {
-          return decoded.map((k, v) => MapEntry('$k', v));
-        }
-      } catch (_) {
-        // Fall through to empty.
-      }
+  Map<String, dynamic> _parseArguments(final Object? input) {
+    if (input is Map<String, dynamic>) return input;
+    if (input is Map) {
+      return input.map((k, v) => MapEntry('$k', v));
     }
     return <String, dynamic>{};
   }
@@ -403,19 +380,19 @@ class OpenRouterInferenceClient implements InferenceClient {
     _ => 'http_error',
   };
 
-  String _errorMessage(final String body) {
+  String _errorMessage(final String body, final int statusCode) {
     try {
       final decoded = jsonDecode(body);
       if (decoded is Map<String, dynamic>) {
-        final error = (decoded)['error'];
+        final error = decoded['error'];
         if (error is Map<String, dynamic>) {
-          final message = (error)['message'];
+          final message = error['message'];
           if (message is String) return message;
         }
       }
     } catch (_) {
-      // Fall through to raw body.
+      // Fall through to the status-line message.
     }
-    return 'OpenRouter request failed with status $body';
+    return 'Anthropic request failed with HTTP $statusCode';
   }
 }
