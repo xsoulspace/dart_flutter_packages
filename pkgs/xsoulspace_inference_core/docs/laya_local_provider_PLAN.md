@@ -203,12 +203,28 @@ through `dart:ffi` native assets — no Python anywhere in the path.
   attach-only for an external laya-serve). Boot line reports the endpoint
   and load time; a missing dylib or weights degrades honestly to
   attach-only.
-- **Measured (first record)**: 3-question email batch ≈ **307 ms p50**
-  JIT on this machine (M-series Apple Silicon, no `mx.compile`, batch
-  padded to the longest row) — `dart run
-  benchmark/laya_native_benchmark.dart`. Upstream reports ~13 ms/decision
-  on M3 Max with compile; the optimization lane (compile, padding
+- **Measured (2026-10-07, clean machine)**: 3-question email batch ≈
+  **167 ms p50 / 177 ms p99** — identical JIT and AOT (`dart run` vs
+  `dart build cli` bundle; ~55 ms per question, model inference
+  included). Earlier larger numbers (264–486 ms) were machine-load
+  artifacts from concurrent test gates. Upstream reports ~13 ms/decision
+  on M3 Max with `mx.compile`; the optimization lane (compile, padding
   policy) is open and does not affect parity.
+- **AOT delivery** (2026-10-07): `dart compile exe` in SDK 3.13.4 does
+  not bundle code assets (silently — no warning); the blessed path is
+  **`dart build cli`**, which runs the hooks and copies the dylib into
+  `bundle/lib/`. Two deployment shapes are proven:
+  1. `dart build cli` bundle — the metallib comes from the fleet cache
+     via the pin's fallback chain (the builder bundles only code assets
+     in this SDK, so ship `mlx.metallib` beside `bundle/lib/` for a
+     self-contained bundle);
+  2. `dart compile exe` + `liblaya_native.dylib` and `mlx.metallib` in
+     `<exe-dir>/lib/` — the engine preloads the dylib through
+     `DynamicLibrary.open` (probe-retry: no preload when the native-assets
+     manifest resolves, so the library is never loaded twice) and the
+     metallib pin resolves beside the loaded dylib.
+  The hook refreshes the fleet cache (`~/.cache/xsoulspace/laya/native/`)
+  with both files, which is the deploy-free load location.
 - Weights: `LAYA_MODEL_DIR` or `~/.cache/xsoulspace/laya-mlx` (fetch
   `aac6fef/laya-mlx`; the runtime never downloads). License Apache-2.0;
   attribution in the laya package NOTICE file.
@@ -228,6 +244,9 @@ through `dart:ffi` native assets — no Python anywhere in the path.
   artifacts are present), and token counts become measured inputs.
 - **The native runtime is macOS/Apple-silicon only** (MLX + Metal
   Toolchain). Other hosts keep the attach-only story (`laya-serve`).
+  AOT: `dart build cli` is the supported application shape; `dart
+  compile exe` needs the dylib + metallib shipped beside the executable
+  (the engine preloads them) — see the AOT delivery note above.
 - The native benchmark numbers are a first record, not a target: no
   `mx.compile`, naive padding; latency work is an open lane.
 - `score` and `noul` question kinds are not ON THE WIRE in the neutral

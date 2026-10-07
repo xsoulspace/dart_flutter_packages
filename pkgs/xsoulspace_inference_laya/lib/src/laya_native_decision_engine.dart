@@ -130,6 +130,7 @@ final class NativeLayaDecisionEngine implements LayaDecisionEngine {
   /// never downloads).
   static Future<NativeLayaDecisionEngine> load({final String? modelDir}) async {
     final dir = resolveModelDir(modelDir);
+    _ensureNativeBindingsAvailable();
     final dirNative = _toNative(dir);
     final handle = _layaNativeLoad(dirNative);
     malloc.free(dirNative);
@@ -358,6 +359,60 @@ String resolveModelDir(final String? override) {
 
 String _expand(final String path) =>
     path.startsWith('~') ? path.replaceFirst('~', _home()) : path;
+
+/// Guarantees the native symbols are callable before the first forward.
+///
+/// Under `dart run` / `dart build cli` the native-assets manifest resolves
+/// the bindings and the probe succeeds without any preload (preloading here
+/// anyway would load the dylib a second time through a different path —
+/// ObjC class duplication and split state). `dart compile exe` does not
+/// bundle code assets: its first call fails asset resolution, so we preload
+/// the dylib via [DynamicLibrary.open] from the resolver chain — a
+/// successful open registers the symbols in the process where the @Native
+/// bindings' RTLD_DEFAULT fallback finds them — and the probe retries.
+void _ensureNativeBindingsAvailable() {
+  try {
+    nfcNormalize('laya');
+    return;
+  } on Object {
+    _ensureDylibLoaded();
+  }
+  try {
+    nfcNormalize('laya');
+  } on Object {
+    throw StateError(
+      'laya native runtime unavailable: no native-assets code asset (build '
+      'with `dart build cli`, not `dart compile exe`) and no preloadable '
+      'dylib in the resolver chain (set LAYA_NATIVE_DYLIB, or place '
+      'liblaya_native.dylib + mlx.metallib beside the executable or in '
+      '~/.cache/xsoulspace/laya/native/)',
+    );
+  }
+}
+
+void _ensureDylibLoaded() {
+  const dylibName = 'liblaya_native.dylib';
+  final candidates = [
+    ?Platform.environment['LAYA_NATIVE_DYLIB'],
+    // Exe-adjacent: the `dart build cli` bundle shape (bundle/lib/).
+    '${File(Platform.resolvedExecutable).parent.path}/$dylibName',
+    '${File(Platform.resolvedExecutable).parent.path}/lib/$dylibName',
+    // Package build output (JIT development from the package root).
+    'native/laya_native/.build/release/libLayaNative.dylib',
+    '${_home()}/.cache/xsoulspace/laya/native/$dylibName',
+  ];
+  for (final candidate in candidates) {
+    final path = _expand(candidate);
+    if (!File(path).existsSync()) continue;
+    try {
+      DynamicLibrary.open(path);
+      return;
+    } on Object {
+      // Try the next candidate; the @Native resolution reports the final
+      // failure with the manifest context.
+    }
+  }
+}
 
 String _home() {
   final home = Platform.environment['HOME'];

@@ -13,6 +13,7 @@ resolution: workspace
 
 dependencies:
   code_assets: any
+  data_assets: any
   ffi: ^2.2.0
   hooks: any
   http: ^1.6.0

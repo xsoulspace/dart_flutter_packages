@@ -51,27 +51,39 @@ public func laya_native_load(_ modelDir: UnsafePointer<CChar>?) -> Int64 {
     }
 }
 
-/// Pins MLX's metallib override to the one colocated with THIS dylib.
+/// Pins MLX's metallib override before the first GPU op.
 ///
 /// mlx's automatic search checks `<current-binary-dir>/mlx.metallib`, where
 /// "current binary" is the main executable — a bare dart process — so the
 /// colocated file beside the loaded dylib is never found, and a bare dart
-/// process has no SwiftPM bundle for the bundle fallback. Resolving this
-/// dylib's own path with dladdr and setting the override before the first
-/// GPU op closes both gaps.
+/// process has no SwiftPM bundle for the bundle fallback. The pin resolves
+/// THIS dylib's own path with dladdr and sets the override, with fallbacks
+/// for deployments where the metallib is not beside the dylib: the
+/// LAYA_METALLIB environment variable, then the fleet cache.
 private func pinMetallibColocated() {
+    var candidates: [URL] = []
     var info = dl_info()
     let symbol = unsafeBitCast(
         laya_native_load as @convention(c) (UnsafePointer<CChar>?) -> Int64,
         to: UnsafeRawPointer.self)
-    guard dladdr(symbol, &info) != 0, let imagePath = info.dli_fname else {
-        return
+    if dladdr(symbol, &info) != 0, let imagePath = info.dli_fname {
+        candidates.append(
+            URL(fileURLWithPath: String(cString: imagePath))
+                .deletingLastPathComponent()
+                .appendingPathComponent("mlx.metallib"))
     }
-    let dir = URL(fileURLWithPath: String(cString: imagePath))
-        .deletingLastPathComponent()
-    let metallib = dir.appendingPathComponent("mlx.metallib")
-    if FileManager.default.fileExists(atPath: metallib.path) {
-        GPU.metallib = metallib
+    if let env = ProcessInfo.processInfo.environment["LAYA_METALLIB"] {
+        candidates.append(URL(fileURLWithPath: env))
+    }
+    if let home = ProcessInfo.processInfo.environment["HOME"] {
+        candidates.append(
+            URL(fileURLWithPath: home, isDirectory: true)
+                .appendingPathComponent(".cache/xsoulspace/laya/native/mlx.metallib"))
+    }
+    for candidate in candidates
+    where FileManager.default.fileExists(atPath: candidate.path) {
+        GPU.metallib = candidate
+        return
     }
 }
 
