@@ -72,6 +72,10 @@ final class ScriptedLayaDecisionEngine implements LayaDecisionEngine {
   final List<LayaDecisionQuery> requests = <LayaDecisionQuery>[];
   final Set<int> _consumed = <int>{};
 
+  /// Clears consumed pins so a fresh run replays the script from the start
+  /// (benchmarks and repeated fixtures).
+  void reset() => _consumed.clear();
+
   @override
   Map<String, String> answer(final LayaDecisionQuery query) {
     requests.add(query);
@@ -139,6 +143,10 @@ final class LayaDecisionServer {
 
   HttpServer? _server;
   var _requestCounter = 0;
+
+  /// Optional observer for served requests (demo logging, fixtures).
+  /// Observer errors are ignored.
+  void Function(LayaDecisionQuery query)? onRequest;
 
   /// The bound base URL (`http://127.0.0.1:<port>`), after [start].
   Uri get url {
@@ -262,6 +270,7 @@ final class LayaDecisionServer {
       state: state,
       questions: questions,
     );
+    onRequest?.call(query);
     final Map<String, String> chosen;
     try {
       chosen = _engine.answer(query);

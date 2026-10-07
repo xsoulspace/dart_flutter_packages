@@ -37,6 +37,30 @@ Bind it wherever a hosted decision provider would bind (the harness
 `jevDecisionBinding` seam); local-only policy admits it through the
 capability facts alone.
 
+## The native model runtime (default, no Python at all)
+
+`NativeLayaDecisionEngine` runs the REAL `aac6fef/laya-mlx` checkpoint
+(ModernBERT-large F16 + decision/scoring/action heads) on Apple-silicon MLX
+through a Swift dylib wired with Dart native assets:
+
+- `hook/build.dart` builds `native/laya_native` (Swift + mlx-swift) and
+  registers the code asset; the first build needs Xcode with the Metal
+  Toolchain (`xcodebuild -downloadComponent MetalToolchain`) and network
+  for the mlx-swift SPM fetch. Without them the package still analyzes and
+  its scripted tests pass; the golden test skips with that reason.
+- Weights: `LAYA_MODEL_DIR` or `~/.cache/xsoulspace/laya-mlx` — fetch
+  `aac6fef/laya-mlx` from Hugging Face (~842 MB FP16). The runtime never
+  downloads anything by itself.
+- Parity: `test/laya_native_golden_test.dart` reproduces the pinned
+  laya-mlx runtime's outputs for the 16 reference parity cases — 63/63
+  argmax, max probability error 0.0026 (FP16).
+- The daemon (`harnessd` in ecsai_harness) serves this engine by default
+  on a loopback `LayaDecisionServer`; `HARNESS_LAYA_ENGINE=off` reverts to
+  attach-only.
+
+The native port mirrors `laya_mlx/model.py` (github.com/mizorewww/laya-mlx,
+Apache-2.0); see NOTICE for attribution.
+
 ## Setup: pure Dart first, Python only for the trained weights
 
 **No Python is needed to run the decision path.** This package ships a

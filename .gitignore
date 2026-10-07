@@ -19,3 +19,6 @@ node_modules/
 # Flutter-generated build artifacts (machine-local paths, regenerated on build)
 **/Flutter/ephemeral/
 **/GeneratedPluginRegistrant.swift
+
+# SwiftPM local build + dependency checkouts (nested git repos; never commit)
+**/.build/

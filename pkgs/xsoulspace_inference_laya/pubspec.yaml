@@ -12,6 +12,9 @@ environment:
 resolution: workspace
 
 dependencies:
+  code_assets: any
+  ffi: ^2.2.0
+  hooks: any
   http: ^1.6.0
   # The local laya-serve runtime speaks the System One wire (the same
   # endpoint family as the hosted OpenRouter System One models), so the

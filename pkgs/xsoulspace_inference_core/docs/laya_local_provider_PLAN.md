@@ -140,29 +140,99 @@ Consequence: the whole integration path — clients, binding, handler,
 server, tests, lane — is Python-free. The trained checkpoints remain
 external (see non-claims).
 
+## Measured performance (2026-10-07, first record)
+
+`benchmark/laya_benchmark.dart` in the laya package (loopback, scripted
+engine, deterministic; min 200 ops / 3 s per scenario). Machine: Apple
+Silicon macOS 26, Dart 3.13.4. JIT = `dart run`, AOT = `dart compile exe`.
+
+| scenario | JIT | AOT |
+| --- | --- | --- |
+| engine.answer (16q × 8 options) | 731k ops/s | 650k ops/s |
+| wire POST /v1/systemone (16q, keep-alive) | 2,958 req/s, p50 0.28 ms | 3,729 req/s, p50 0.22 ms |
+| provider.decide (1 question) | 5,391/s, p50 0.16 ms, p99 0.50 ms | 6,653/s, p50 0.14 ms, p99 0.31 ms |
+| provider.decide (16 questions) | 1,316/s, p50 0.63 ms | 1,708/s, p50 0.55 ms |
+| questions/s through the validated provider path | ~21k | ~27k |
+
+Framing: the full Dart stack (HTTP + strict validation + normalization)
+costs ~0.15–0.6 ms per decision — single-digit percent of even the fastest
+measured model inference (upstream reports ~33 ms per laya question on a
+T4, ~13 ms MLX Apple Silicon). The wire is not the bottleneck; engine-only
+ceiling is >10M questions/s. Numbers are machine-relative; re-record with
+`dart run benchmark/laya_benchmark.dart` when hardware or the wire changes.
+
+## Third increment (2026-10-07): the native model runtime (laya-mlx via
+## Dart native assets)
+
+The `LayaDecisionEngine` seam now has a REAL model engine: the
+`aac6fef/laya-mlx` checkpoint (ModernBERT-large F16 + decision/scoring/action
+heads) runs on Apple-silicon MLX behind a Swift dylib that Dart reaches
+through `dart:ffi` native assets — no Python anywhere in the path.
+
+- **`xsoulspace_inference_laya/native/laya_native`** — a Swift package
+  (mlx-swift 0.32) porting `laya_mlx/model.py` op-for-op: embedding norm,
+  28 alternating full/sliding RoPE layers (boolean keep-masks, padded
+  queries see valid keys), gated MLP (gelu on the value chunk), the
+  pre-norm decision head with ReLU feed-forward (PyTorch
+  `TransformerEncoderLayer` default), scorer, action head, float32 logits.
+  A C ABI (`laya_native_load/forward/free/unload/normalize`) carries JSON
+  batches in, logits out; NFC normalization rides the same dylib.
+- **`hook/build.dart`** — Dart native-assets build hook: builds the SPM
+  package, registers the dylib as a code asset (`@Native(assetId:)`), and
+  colocates MLX's metallib beside every load candidate (mlx resolves its
+  kernels next to the loaded dylib; a bare dart process has no SwiftPM
+  bundle, so the loader path is pinned at load time via dladdr). Honest
+  degradation: without the Apple toolchain (swiftc + Metal Toolchain) the
+  hook registers no asset and says so; the golden test skips.
+- **Dart side owns everything around the model**: `LayaByteLevelTokenizer`
+  (GPT-2 byte-level BPE from `tokenizer.json`, pair-array merges, added
+  tokens, NFC via the dylib), `laya_prompt.dart` (typed
+  choice/score/noul prompt building + Python-fidelity JSON rendering and
+  temperature buckets with the laya-mlx honesty clamp [0.5, 5.0]), and
+  `NativeLayaDecisionEngine` (batching, calibration, the
+  `LayaDecisionEngine` seam).
+- **Fidelity (the oracle is the reference runtime itself)**: the golden
+  fixture (`test/fixtures/laya_golden_fp16.json`) records the pinned
+  laya-mlx runtime's outputs for the 16 parity cases on this machine; the
+  test reproduces **63/63 argmax agreements with max probability error
+  0.0026** (FP16, tolerance bar 0.005). Sequence lengths match the
+  reference token-for-token.
+- **Harness**: `harnessd` composes the engine by default — it serves a
+  loopback `LayaDecisionServer` with the native engine and binds the laya
+  palette entry to it (`HARNESS_LAYA_ENGINE=off` falls back to
+  attach-only for an external laya-serve). Boot line reports the endpoint
+  and load time; a missing dylib or weights degrades honestly to
+  attach-only.
+- **Measured (first record)**: 3-question email batch ≈ **307 ms p50**
+  JIT on this machine (M-series Apple Silicon, no `mx.compile`, batch
+  padded to the longest row) — `dart run
+  benchmark/laya_native_benchmark.dart`. Upstream reports ~13 ms/decision
+  on M3 Max with compile; the optimization lane (compile, padding
+  policy) is open and does not affect parity.
+- Weights: `LAYA_MODEL_DIR` or `~/.cache/xsoulspace/laya-mlx` (fetch
+  `aac6fef/laya-mlx`; the runtime never downloads). License Apache-2.0;
+  attribution in the laya package NOTICE file.
+
 ## Non-claims
 
-- **No live model has been evaluated from these packages.** All wire,
-  bounds, cancellation, and failure behavior is fixture-tested against fake
-  servers/processes. Accuracy, calibration, and latency are upstream
-  properties (see the `laya-mlx` validation report) and remain unmeasured
-  here. The hosted Jev pilot's evidence rules
+- **Model quality is the checkpoint's, not ours.** The native port is
+  validated for agreement with the laya-mlx runtime (argmax + calibrated
+  probabilities above); accuracy, calibration honesty, and task fit remain
+  upstream properties. The hosted Jev pilot's evidence rules
   ([jev_pilot_PLAN.md](../../xsoulspace_inference_openrouter/docs/jev_pilot_PLAN.md))
-  apply unchanged to any future Laya measurements.
-- **`LayaDecisionServer` is a wire server, not a model.** Its scripted
-  engine is deterministic; usage counts are estimates. The trained
-  checkpoints still need `laya-serve`/`laya-mlx` (Python/MLX) or a future
-  native engine on the `LayaDecisionEngine` seam. What is Python-free is
-  everything around the model: the client, the server wire, the harness
-  path, the tests, and the lane.
-- **No in-process native MLX bridge.** A from-scratch Swift port would mean
-  reimplementing laya's custom decision architecture (decision transformer,
-  scoring head, action head) that the `laya-mlx` runtime owns; the
-  local-server path delivers the capability today. Revisit only under
-  measured constraints (e.g. embedding decisions where no Python runtime
-  may run) — the engine seam above is the attach point.
-- `score` and `noul` question kinds are not modeled in the neutral contract
-  yet; sending them is impossible from Dart today, not silently degraded.
+  apply to any capability claims about the model's decisions.
+- **`LayaDecisionServer` with the scripted engine is still a wire server,
+  not a model.** The scripted engine remains the default for tests; usage
+  counts are estimates there. With `NativeLayaDecisionEngine` attached the
+  server serves real model decisions (that is the harness default when
+  artifacts are present), and token counts become measured inputs.
+- **The native runtime is macOS/Apple-silicon only** (MLX + Metal
+  Toolchain). Other hosts keep the attach-only story (`laya-serve`).
+- The native benchmark numbers are a first record, not a target: no
+  `mx.compile`, naive padding; latency work is an open lane.
+- `score` and `noul` question kinds are not ON THE WIRE in the neutral
+  contract yet (the model runs them through the typed engine path; the
+  harness wire serves choice).
 - SSE streaming for Anthropic is not implemented; the client is
   request/response only.
 
