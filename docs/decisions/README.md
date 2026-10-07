@@ -23,3 +23,5 @@ Harness product decisions (0002–0005, 0007, 0009, 0012–0028, 0030,
 | [0042](0042_content_addressed_chunk_store.md) | Accepted | Content-addressed chunk store — native binary deltas (amends 0010 §5) |
 | [0043](0043_storage_shrink_exploration_tracks.md) | Accepted | Storage-shrink and tooling exploration tracks (triggers + kill criteria) |
 | [0044](0044_behavior_dynamics_contract.md) | Accepted | Behavior dynamics contract — declarative input profiles for humans and agents (amends 0037/0038) |
+| [0045](0045_flutter_web_driving_primitives.md) | Accepted | Flutter-web driving primitives — live-DOM name location, focus restoration, JIT/AOT tier matrix |
+| [0046](0046_universal_automation_toolkit.md) | Accepted | `universal_automation_toolkit` — the family's agent surface: declarative plans, CLI, MCP |

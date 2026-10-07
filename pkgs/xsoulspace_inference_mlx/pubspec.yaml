@@ -1,0 +1,29 @@
+name: xsoulspace_inference_mlx
+description: >-
+  Local small text-model runtime composition for xsoulspace_inference_core:
+  a health-gated loopback MLX server (mlx_lm.server or any OpenAI-compatible
+  chat endpoint on this machine) bound as an InferenceClient, plus the
+  nap-drafting prompt and provenance-stamped draft contracts it serves.
+version: 0.1.0
+publish_to: none
+repository: https://github.com/xsoulspace/dart_flutter_packages
+issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
+
+environment:
+  sdk: ^3.12.0
+
+resolution: workspace
+
+dependencies:
+  http: ^1.6.0
+  # The serve skeleton (process lifecycle, health-gated loopback runtime,
+  # wire-server plumbing) is the shared local-serve core, the same one laya
+  # composes.
+  xsoulspace_inference_local_serve:
+    path: ../xsoulspace_inference_local_serve
+  xsoulspace_inference_core:
+    path: ../xsoulspace_inference_core
+
+dev_dependencies:
+  lints: ^6.1.0
+  test: ^1.31.2

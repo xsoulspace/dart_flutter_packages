@@ -1,7 +1,6 @@
-import 'dart:async';
-import 'dart:convert';
-import 'dart:io'
-    show ContentType, HttpServer, HttpRequest, InternetAddress, HttpStatus;
+import 'dart:io' show InternetAddress;
+
+import 'package:xsoulspace_inference_local_serve/xsoulspace_inference_local_serve.dart';
 
 /// One typed question rendered from a System One request body.
 final class LayaDecisionQuestion {
@@ -115,8 +114,11 @@ final class ScriptedLayaDecisionEngine implements LayaDecisionEngine {
 /// normalized into the strict shape our clients validate: one complete
 /// probability distribution per question, the chosen option at mass 1.
 ///
-/// This is a wire server, not a model: token counts are estimates, the
-/// engine is deterministic unless a real model engine is attached to
+/// The wire plumbing (loopback bind, health, auth, body decoding, crash
+/// containment) is the shared [LoopbackJsonServer] skeleton; this class
+/// owns the System One route and response normalization. It is a wire
+/// server, not a model: token counts are estimates, the engine is
+/// deterministic unless a real model engine is attached to
 /// [LayaDecisionEngine]. The `laya-serve`/`laya-mlx` Python runtimes remain
 /// the only way to run the trained checkpoints today.
 final class LayaDecisionServer {
@@ -141,7 +143,15 @@ final class LayaDecisionServer {
   final InternetAddress? address;
   final int port;
 
-  HttpServer? _server;
+  // A late final field can reference instance members (the route tear-off);
+  // a constructor initializer cannot.
+  late final LoopbackJsonServer _server = LoopbackJsonServer(
+    apiKey: apiKey,
+    address: address,
+    port: port,
+    healthPayload: () => <String, Object?>{'status': 'ok', 'model': model},
+    route: _handleSystemOne,
+  );
   var _requestCounter = 0;
 
   /// Optional observer for served requests (demo logging, fixtures).
@@ -149,97 +159,24 @@ final class LayaDecisionServer {
   void Function(LayaDecisionQuery query)? onRequest;
 
   /// The bound base URL (`http://127.0.0.1:<port>`), after [start].
-  Uri get url {
-    final server = _server;
-    if (server == null) {
-      throw StateError('LayaDecisionServer.start() first');
+  Uri get url => _server.url;
+
+  Future<void> start() => _server.start();
+
+  Future<void> stop() => _server.stop();
+
+  Future<LoopbackReply?> _handleSystemOne(
+    final LoopbackRequest request,
+  ) async {
+    if (request.method != 'POST' || request.path != '/v1/systemone') {
+      return null;
     }
-    return Uri.parse('http://${server.address.host}:${server.port}');
-  }
-
-  Future<void> start() async {
-    if (_server != null) return;
-    _server = await HttpServer.bind(
-      address ?? InternetAddress.loopbackIPv4,
-      port,
-    );
-    unawaited(_serve());
-  }
-
-  Future<void> stop() async {
-    final server = _server;
-    _server = null;
-    await server?.close(force: true);
-  }
-
-  Future<void> _serve() async {
-    final server = _server;
-    if (server == null) return;
-    await for (final request in server) {
-      try {
-        await _handle(request);
-      } on Object {
-        // A handler crash must not kill the server isolate; the 500 lands
-        // only when the handler did not already close the response.
-        try {
-          request.response.statusCode = HttpStatus.internalServerError;
-          await request.response.close();
-        } on Object {
-          // The handler already committed the response.
-        }
-      }
-    }
-  }
-
-  Future<void> _handle(final HttpRequest request) async {
-    switch ((request.method, request.uri.path)) {
-      case ('GET', '/health'):
-        request.response.headers.contentType = ContentType.json;
-        request.response.write(
-          jsonEncode(<String, String>{'status': 'ok', 'model': model}),
-        );
-        await request.response.close();
-      case ('POST', '/v1/systemone'):
-        await _handleSystemOne(request);
-      default:
-        request.response.statusCode = HttpStatus.notFound;
-        await request.response.close();
-    }
-  }
-
-  Future<void> _handleSystemOne(final HttpRequest request) async {
-    final expectedKey = apiKey;
-    if (expectedKey != null) {
-      final header = request.headers.value('authorization');
-      if (header != 'Bearer $expectedKey') {
-        request.response.statusCode = HttpStatus.unauthorized;
-        await request.response.close();
-        return;
-      }
-    }
-    final body = await utf8.decoder.bind(request).join();
-    final Map<String, dynamic> decoded;
-    try {
-      final value = jsonDecode(body);
-      if (value is! Map) {
-        request.response.statusCode = HttpStatus.unprocessableEntity;
-        await request.response.close();
-        return;
-      }
-      decoded = value.cast<String, dynamic>();
-    } on FormatException {
-      request.response.statusCode = HttpStatus.badRequest;
-      await request.response.close();
-      return;
-    }
-
+    final decoded = request.jsonBody!;
     final requestModel = decoded['model'];
     final state = decoded['state'];
     final rawQuestions = decoded['questions'];
     if (requestModel is! String || state is! String || rawQuestions is! Map) {
-      request.response.statusCode = HttpStatus.unprocessableEntity;
-      await request.response.close();
-      return;
+      return const LoopbackReply(422, <String, Object?>{});
     }
 
     final questions = <String, LayaDecisionQuestion>{};
@@ -247,16 +184,12 @@ final class LayaDecisionServer {
       final id = entry.key;
       final raw = entry.value;
       if (raw is! Map) {
-        request.response.statusCode = HttpStatus.unprocessableEntity;
-        await request.response.close();
-        return;
+        return const LoopbackReply(422, <String, Object?>{});
       }
       final question = raw.cast<String, dynamic>();
       final criteria = question['criteria'];
       if (criteria is! Map || criteria.isEmpty) {
-        request.response.statusCode = HttpStatus.unprocessableEntity;
-        await request.response.close();
-        return;
+        return const LoopbackReply(422, <String, Object?>{});
       }
       questions['$id'] = LayaDecisionQuestion(
         id: '$id',
@@ -270,14 +203,16 @@ final class LayaDecisionServer {
       state: state,
       questions: questions,
     );
-    onRequest?.call(query);
+    try {
+      onRequest?.call(query);
+    } on Object {
+      // Observer errors are ignored (demo logging, fixtures).
+    }
     final Map<String, String> chosen;
     try {
       chosen = _engine.answer(query);
     } on Object {
-      request.response.statusCode = HttpStatus.internalServerError;
-      await request.response.close();
-      return;
+      return const LoopbackReply(500, <String, Object?>{});
     }
 
     final answers = <String, Object?>{};
@@ -285,9 +220,7 @@ final class LayaDecisionServer {
       final question = entry.value;
       final optionId = chosen[entry.key];
       if (optionId == null || !question.criteria.containsKey(optionId)) {
-        request.response.statusCode = HttpStatus.unprocessableEntity;
-        await request.response.close();
-        return;
+        return const LoopbackReply(422, <String, Object?>{});
       }
       answers[entry.key] = <String, Object?>{
         'type': 'choice',
@@ -300,22 +233,18 @@ final class LayaDecisionServer {
       };
     }
 
-    request.response.headers.contentType = ContentType.json;
-    request.response.write(
-      jsonEncode(<String, Object?>{
-        'id': 'laya-dart-${++_requestCounter}',
-        'model': model,
-        'provider': 'laya_dart',
-        'answers': answers,
-        // Estimated, never reported as measured: the scripted engine does
-        // not run a tokenizer.
-        'usage': <String, Object?>{
-          'input_tokens': (state.length + _criteriaLength(questions)) ~/ 4,
-          'output_tokens': answers.length * 8,
-        },
-      }),
-    );
-    await request.response.close();
+    return LoopbackReply(200, <String, Object?>{
+      'id': 'laya-dart-${++_requestCounter}',
+      'model': model,
+      'provider': 'laya_dart',
+      'answers': answers,
+      // Estimated, never reported as measured: the scripted engine does
+      // not run a tokenizer.
+      'usage': <String, Object?>{
+        'input_tokens': (state.length + _criteriaLength(questions)) ~/ 4,
+        'output_tokens': answers.length * 8,
+      },
+    });
   }
 
   static int _criteriaLength(final Map<String, LayaDecisionQuestion> q) =>

@@ -17,6 +17,11 @@ dependencies:
   ffi: ^2.2.0
   hooks: any
   http: ^1.6.0
+  # The serve skeleton (process lifecycle, health-gated loopback runtime,
+  # wire-server plumbing) is the shared local-serve core; laya composes it
+  # instead of owning a private copy.
+  xsoulspace_inference_local_serve:
+    path: ../xsoulspace_inference_local_serve
   # The local laya-serve runtime speaks the System One wire (the same
   # endpoint family as the hosted OpenRouter System One models), so the
   # loopback adapter is composed from the shared wire implementation instead

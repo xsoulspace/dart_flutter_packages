@@ -1,0 +1,13 @@
+{
+  "name": "dev-dart-flutter-packages",
+  "plugins": [
+    {
+      "name": "universal-automation",
+      "source": "./universal-automation",
+      "version": "0.1.0",
+      "description": "Drive browsers, native apps, and Flutter surfaces through the universal_automation family: observe/act/verify CLI, MCP server, declarative composable plans, ADR-0044 behavior profiles.",
+      "displayName": "Universal Automation",
+      "category": "developer-tools"
+    }
+  ]
+}

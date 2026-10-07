@@ -61,10 +61,19 @@ final class LwwMapStrategy implements MergeStrategy {
 
   /// Reads the current value for [key]; returns `null` when missing or
   /// tombstoned.
-  static String? readValue(final Map<String, Object?> state, final String key) {
+  static String? readValue(final Map<String, Object?> state, final String key) =>
+      readDynamicValue(state, key) as String?;
+
+  /// Reads the full JSON-encodable register value for [key] without
+  /// assuming a String payload — the "structured JSON namespaces" case of
+  /// ADR 0011 §2 (maps, lists, manifests). Null when missing or tombstoned.
+  static Object? readDynamicValue(
+    final Map<String, Object?> state,
+    final String key,
+  ) {
     final entry = _readEntry(state[key]);
     if (entry == null || entry.$2) return null;
-    return entry.$3 as String?;
+    return entry.$3;
   }
 
   /// Reads the HLC that last wrote [key]; `null` when the key is absent.

@@ -1,0 +1,21 @@
+name: xsoulspace_permission_core
+description: >-
+  Composable permission contract shared across products: typed request kinds,
+  decisions (allow / deny / escalate), policy composition, grant stores and the
+  gate runner. Transport-free by design — ACP, doc routers and OS dialogs stay
+  product-side.
+version: 0.1.0
+publish_to: none
+repository: https://github.com/xsoulspace/dart_flutter_packages
+issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
+
+environment:
+  sdk: ^3.12.0
+
+resolution: workspace
+
+dependencies:
+
+dev_dependencies:
+  lints: ^6.1.0
+  test: ^1.31.2

@@ -1,0 +1,15 @@
+{
+  "name": "universal-automation",
+  "version": "0.1.0",
+  "description": "Drive browsers, native apps, and Flutter surfaces through the universal_automation family: observe/act/verify CLI, an MCP server, declarative composable plans, and ADR-0044 behavior profiles.",
+  "author": {
+    "name": "xsoulspace"
+  },
+  "skills": "./skills",
+  "mcpServers": {
+    "universal-automation": {
+      "command": "bash",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/tool/serve.sh"]
+    }
+  }
+}

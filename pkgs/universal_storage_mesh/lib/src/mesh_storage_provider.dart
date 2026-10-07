@@ -6,6 +6,7 @@ import 'package:meta/meta.dart';
 import 'package:universal_storage_convergence/universal_storage_convergence.dart';
 import 'package:universal_storage_interface/universal_storage_interface.dart';
 import 'package:universal_storage_mesh_transport/universal_storage_mesh_transport.dart';
+import 'package:universal_storage_world/universal_storage_world.dart';
 
 import 'mesh_kv_store.dart';
 import 'mesh_kv_store_factory.dart'
@@ -19,22 +20,54 @@ import 'mesh_sync_protocol.dart';
 ///
 /// - Local reads/writes never touch the network; every replica's local
 ///   store is authoritative for latency.
-/// - Each stored file is one convergence document (kernel LWW map with a
-///   single `content` register), giving deterministic object-level LWW
-///   convergence across replicas (ADR 0010 §5).
+/// - Each stored member is one convergence document whose content ↔ op
+///   mapping is owned by a [MemberCodec] (ADR 0047 §3; the default
+///   [SingleFieldMemberCodec] reproduces the original single-`content`
+///   register semantics exactly).
 /// - [sync] runs symmetric anti-entropy sessions over the attached
 ///   [MeshTransport]; unreachable peers are skipped silently — sync is
 ///   opportunistic, manual-trigger friendly, and never blocks local work.
+/// - Interest management (ADR 0048): each side publishes an
+///   [InterestSelection] every exchange; the peer's selection gates what
+///   we announce and send them, ours gates what they send us. No
+///   subscription frame (older peer) means the wildcard — full delivery.
 final class MeshStorageProvider implements StorageProvider {
   /// Overrides the platform-selected persistence backing. Production
   /// builds pick the backing via compile-time conditional import (file
   /// backed under `dart:io`, `localStorage`-backed on web); tests inject
   /// a store directly to exercise web semantics on the VM.
-  MeshStorageProvider({@visibleForTesting this._kvStoreFactory});
+  MeshStorageProvider({
+    final MemberCodec? memberCodec,
+    final UrnResolver? urnResolver,
+    @visibleForTesting this._kvStoreFactory,
+  }) : _memberCodec = memberCodec ?? const SingleFieldMemberCodec(),
+       _urnResolver = urnResolver ?? const PathUrnResolver();
 
   final MeshKeyValueStore Function(String root)? _kvStoreFactory;
 
-  static const _contentKey = 'content';
+  /// How this provider's member content maps to kernel doc state
+  /// (ADR 0047 §3). Default: the file-shaped single-register codec.
+  final MemberCodec _memberCodec;
+
+  /// docId ↔ [WorldUrn] naming (ADR 0047 §2). Default: identity.
+  final UrnResolver _urnResolver;
+
+  /// The member kind this replica stores (from its codec).
+  String get memberKind => _memberCodec.kind;
+
+  /// World-model naming for [docId] (pure naming layer; the wire and store
+  /// keys stay bare docIds).
+  WorldUrn urnOf(final String docId) => _urnResolver.urnForDoc(docId);
+
+  /// World-model refs of every LIVE local member — catalog and warm-plan
+  /// raw material (ADR 0047 §2).
+  Iterable<WorldMemberRef> memberRefs() sync* {
+    for (final doc in _docs.values) {
+      if (_memberCodec.hasLiveValue(doc)) {
+        yield WorldMemberRef(docId: doc.docId, version: doc.vv);
+      }
+    }
+  }
 
   MeshKeyValueStore? _store;
   MeshStorageConfig? _config;
@@ -44,6 +77,42 @@ final class MeshStorageProvider implements StorageProvider {
   final List<StreamSubscription<MeshSession>> _incomingSubscriptions = [];
   final Map<String, ConvergenceDoc> _docs = {};
   var _initialized = false;
+
+  // -- Interest management (ADR 0048) --------------------------------------
+
+  /// What WE want delivered; null = the wildcard. Published in every
+  /// exchange's `sub` frame.
+  InterestSelection? _interest;
+
+  /// Receiver-expressed ordering: docId → rank (ascending = delivered
+  /// first). We honor the PEER's map when building their delta.
+  Map<String, int> _deliveryPriority = const {};
+
+  /// The cap WE ask peers to honor when sending to us (published in our
+  /// sub frame); null = unlimited.
+  int? _incomingBudget;
+
+  /// Delivery rank for members the peer did not rank: after all ranked
+  /// ones, deterministically by docId.
+  static const _unrankedDeliveryRank = 1 << 30;
+
+  /// Publishes what this replica wants DELIVERED (ADR 0048 §2), resolved
+  /// from [policy] immediately. Re-set before every pulse — policies are
+  /// per-cycle resolvers (movement between zones re-subscribes without
+  /// protocol change). Null clears back to the wildcard.
+  void setInterest(final InterestPolicy? policy) =>
+      _interest = policy?.resolve();
+
+  /// Receiver-expressed delivery preference for the NEXT exchanges: the
+  /// peer sends these docIds' ops first (ascending rank). Optional;
+  /// unranked members follow deterministically after.
+  void setDeliveryPriority(final Map<String, int> priority) =>
+      _deliveryPriority = Map.unmodifiable(priority);
+
+  /// Asks peers to cap their delta to [maxOps] ops per exchange
+  /// (backpressure-lite: the remainder arrives on a later pulse). Null =
+  /// unlimited (the default, and the pre-0048 behavior).
+  void setIncomingBudget(final int? maxOps) => _incomingBudget = maxOps;
 
   /// Registers a transport for this replica and wires inbound sessions.
   /// Call once per transport after [initWithConfig]; a replica may hold
@@ -138,7 +207,7 @@ final class MeshStorageProvider implements StorageProvider {
     _ensureInitialized();
     final doc = _docs[normalizeMeshPath(path)];
     if (doc == null) return null;
-    return LwwMapStrategy.readValue(doc.state, _contentKey);
+    return _memberCodec.readValue(doc) as String?;
   }
 
   @override
@@ -149,7 +218,9 @@ final class MeshStorageProvider implements StorageProvider {
     _ensureInitialized();
     final docPath = normalizeMeshPath(path);
     final doc = _ensureDoc(docPath);
-    doc.applyLocal({'k': _contentKey, 'del': true}, DateTime.now());
+    for (final op in _memberCodec.deleteOps()) {
+      doc.applyLocal(op, DateTime.now());
+    }
     await _persist(doc);
     return FileOperationResult(path: docPath);
   }
@@ -161,11 +232,9 @@ final class MeshStorageProvider implements StorageProvider {
     final entries = <FileEntry>[];
     for (final docPath in _docs.keys) {
       if (!docPath.startsWith(prefix)) continue;
-      final value = LwwMapStrategy.readValue(
-        _docs[docPath]!.state,
-        _contentKey,
-      );
-      if (value == null && !_hasLiveValue(_docs[docPath]!)) continue;
+      final doc = _docs[docPath]!;
+      final value = _memberCodec.readValue(doc);
+      if (value == null && !_memberCodec.hasLiveValue(doc)) continue;
       entries.add(
         FileEntry(name: docPath.substring(prefix.length), isDirectory: false),
       );
@@ -241,24 +310,18 @@ final class MeshStorageProvider implements StorageProvider {
     final bool allowNew,
   ) async {
     final doc = _ensureDoc(docPath);
-    final hadEntry =
-        LwwMapStrategy.readHlc(doc.state, _contentKey) != null ||
-        _tombstoneExists(doc);
-    final op = doc.applyLocal({'k': _contentKey, 'v': content}, DateTime.now());
+    final hadEntry = _memberCodec.wasWritten(doc);
+    OpRecord? lastOp;
+    for (final op in _memberCodec.writeOps(content)) {
+      lastOp = doc.applyLocal(op, DateTime.now());
+    }
     await _persist(doc);
     return FileOperationResult(
       path: docPath,
-      revisionId: op.opId,
+      revisionId: lastOp?.opId ?? '',
       isNew: allowNew && !hadEntry,
     );
   }
-
-  bool _hasLiveValue(final ConvergenceDoc doc) =>
-      LwwMapStrategy.readValue(doc.state, _contentKey) != null;
-
-  bool _tombstoneExists(final ConvergenceDoc doc) =>
-      LwwMapStrategy.readHlc(doc.state, _contentKey) != null &&
-      !_hasLiveValue(doc);
 
   ConvergenceDoc _ensureDoc(final String docPath) => _docs.putIfAbsent(
     docPath,
@@ -266,13 +329,30 @@ final class MeshStorageProvider implements StorageProvider {
   );
 
   Future<void> _runExchange(final MeshSession session) async {
-    // Symmetric script: both sides send hello+vv, compute deltas, exchange.
+    // Symmetric script (ADR 0010 §4 + ADR 0048 §2): both sides send
+    // hello + sub + vv, compute deltas, exchange, close.
+    //
+    // The `sub` frame publishes what each side wants DELIVERED; the
+    // peer's selection gates our DELTA (the semantics). The vv stays
+    // unfiltered and goes out immediately — no handshake round-trip on
+    // the critical path, and a pre-0048 peer (which sends no sub) simply
+    // skips the unknown frame type while waiting for the vv, exactly as
+    // it always has.
     final self = _config!;
     await session.send(
       MeshSyncProtocol.encode(
         MeshSyncProtocol.hello(
           peerId: self.peerId,
           displayName: self.displayName,
+        ),
+      ),
+    );
+    await session.send(
+      MeshSyncProtocol.encode(
+        MeshSyncProtocol.sub(
+          selection: _interest ?? const InterestSelection.all(),
+          priority: _deliveryPriority,
+          budget: _incomingBudget,
         ),
       ),
     );
@@ -286,12 +366,46 @@ final class MeshStorageProvider implements StorageProvider {
 
     final inbound = StreamIterator<Uint8List>(session.inbound);
     await _recvOfType(inbound, MeshSyncProtocol.helloType);
-    final peerVvRaw = await _recvOfType(inbound, MeshSyncProtocol.vvType);
-    final peerVv = MeshSyncProtocol.parseVv(peerVvRaw);
 
+    // Consume the peer's optional `sub` (pre-0048 peers skip it) and
+    // their vv. Absent sub = wildcard (full delivery, old behavior).
+    var selection = const InterestSelection.all();
+    var priority = const <String, int>{};
+    int? budget;
+    Map<String, VersionVector>? peerVv;
+    while (peerVv == null && await inbound.moveNext()) {
+      final message = MeshSyncProtocol.decode(inbound.current);
+      switch (message['type']) {
+        case MeshSyncProtocol.subType:
+          final parsed = MeshSyncProtocol.parseSub(message);
+          selection = parsed.selection;
+          priority = parsed.priority;
+          budget = parsed.budget;
+        case MeshSyncProtocol.vvType:
+          peerVv = MeshSyncProtocol.parseVv(message);
+      }
+    }
+    if (peerVv == null) {
+      throw StateError('Session closed while waiting for "vv"');
+    }
+
+    // Our outgoing delta: gate = peer selection, order = peer priority,
+    // cap = peer budget (receiver-expressed, like the game relevancy
+    // filter). Unranked members follow in deterministic docId order.
+    final wanted =
+        _docs.values
+            .where((final doc) => selection.matchesDocId(doc.docId))
+            .toList()
+          ..sort((final a, final b) {
+            final rankA = priority[a.docId] ?? _unrankedDeliveryRank;
+            final rankB = priority[b.docId] ?? _unrankedDeliveryRank;
+            if (rankA != rankB) return rankA.compareTo(rankB);
+            return a.docId.compareTo(b.docId);
+          });
     final opsOut = <OpRecord>[];
     final statesOut = <Snapshot>[];
-    for (final doc in _docs.values) {
+    for (final doc in wanted) {
+      if (budget != null && opsOut.length >= budget) break;
       final theirs = peerVv[doc.docId];
       if (theirs == null) {
         if (doc.pendingOps.isNotEmpty) {
