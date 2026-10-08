@@ -41,11 +41,16 @@ pub struct RawVectorArray {
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
+pub struct RawClosure {
+    ctx: *mut c_void,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
 pub struct RawString {
     ctx: *mut c_void,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
 #[repr(C)]
 pub enum Dtype {
     Bool = 0,
@@ -238,7 +243,28 @@ extern "C" {
     fn mlx_vector_array_new() -> RawVectorArray;
     fn mlx_vector_array_append_value(vec: RawVectorArray, value: RawArray) -> Status;
     fn mlx_vector_array_get(res: *mut RawArray, vec: RawVectorArray, idx: usize) -> Status;
+    fn mlx_vector_array_size(vec: RawVectorArray) -> usize;
     fn mlx_vector_array_free(vec: RawVectorArray) -> Status;
+    // closure.h + compile.h (ADR 0054 R1 — fusion without kernels)
+    fn mlx_closure_new_func_payload(
+        fun: Option<
+            unsafe extern "C" fn(
+                res: *mut RawVectorArray,
+                input: RawVectorArray,
+                payload: *mut c_void,
+            ) -> Status,
+        >,
+        payload: *mut c_void,
+        dtor: Option<unsafe extern "C" fn(payload: *mut c_void)>,
+    ) -> RawClosure;
+    fn mlx_closure_apply(
+        res: *mut RawVectorArray,
+        cls: RawClosure,
+        input: RawVectorArray,
+    ) -> Status;
+    fn mlx_closure_free(cls: RawClosure) -> Status;
+    fn mlx_compile(res: *mut RawClosure, fun: RawClosure, shapeless: bool) -> Status;
+    fn mlx_vector_array_new_data(data: *const RawArray, size: usize) -> RawVectorArray;
     // fast.h
     fn mlx_fast_rope(
         res: *mut RawArray,
@@ -353,6 +379,18 @@ impl Array {
         }))
     }
 
+    pub fn from_data_f32(data: &[f32], shape: &[usize]) -> MlxResult<Array> {
+        let shape: Vec<i32> = shape.iter().map(|d| *d as i32).collect();
+        Ok(Array(unsafe {
+            mlx_array_new_data(
+                data.as_ptr() as *const c_void,
+                shape.as_ptr(),
+                shape.len() as i32,
+                Dtype::Float32,
+            )
+        }))
+    }
+
     pub fn scalar_f32(v: f32) -> Array {
         Array(unsafe { mlx_array_new_float(v) })
     }
@@ -446,7 +484,8 @@ impl Array {
         }
     }
 
-    fn raw(&self) -> RawArray {
+    /// The borrowed raw handle (for C calls taking arrays by value).
+    pub(crate) fn raw(&self) -> RawArray {
         self.0
     }
 
@@ -826,6 +865,112 @@ unsafe impl Send for RawArray {}
 unsafe impl Sync for RawArray {}
 unsafe impl Send for RawStream {}
 unsafe impl Sync for RawStream {}
+unsafe impl Send for RawClosure {}
+unsafe impl Sync for RawClosure {}
+
+/// A mlx compiled closure (ADR 0054 R1): wraps a Rust `Fn(&[&Array]) ->
+/// Vec<Array>` behind `mlx_closure_new_func_payload` + `mlx_compile`. The
+/// first apply per input-shape signature traces the function; mlx fuses the
+/// recorded graph and replays the fused kernel sequence on later calls.
+pub struct CompiledClosure {
+    raw: RawClosure,
+}
+
+unsafe extern "C" fn trampoline(
+    res: *mut RawVectorArray,
+    input: RawVectorArray,
+    payload: *mut c_void,
+) -> Status {
+    let payload = payload as *mut Box<dyn Fn(&[&Array]) -> MlxResult<Vec<Array>> + Send + Sync>;
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let n = unsafe { mlx_vector_array_size(input) };
+        let mut arrays = Vec::with_capacity(n);
+        for i in 0..n {
+            let mut a = unsafe { std::mem::zeroed() };
+            chk(unsafe { mlx_vector_array_get(&mut a, input, i) })?;
+            arrays.push(Array(a));
+        }
+        let refs: Vec<&Array> = arrays.iter().collect();
+        (*payload)(&refs)
+    }));
+    match result {
+        Ok(Ok(outs)) => {
+            let raws: Vec<RawArray> = outs.iter().map(|a| a.raw()).collect();
+            let vec = unsafe { mlx_vector_array_new_data(raws.as_ptr(), raws.len()) };
+            unsafe { *res = vec };
+            MLX_OK
+        }
+        Ok(Err(e)) => e.0,
+        Err(_) => -976, // panic inside the traced closure
+    }
+}
+
+unsafe extern "C" fn payload_dtor(payload: *mut c_void) {
+    drop(Box::from_raw(
+        payload as *mut Box<dyn Fn(&[&Array]) -> MlxResult<Vec<Array>> + Send + Sync>,
+    ));
+}
+
+impl CompiledClosure {
+    /// Compiles `f`. `shapeless=false`: mlx specializes per input-shape
+    /// signature and caches internally (right for laya — shapes repeat, and
+    /// shapeless tracing has restrictions we do not need).
+    pub fn compile<F>(f: F) -> MlxResult<CompiledClosure>
+    where
+        F: Fn(&[&Array]) -> MlxResult<Vec<Array>> + Send + Sync + 'static,
+    {
+        let boxed: Box<dyn Fn(&[&Array]) -> MlxResult<Vec<Array>> + Send + Sync> = Box::new(f);
+        let payload = Box::into_raw(Box::new(boxed));
+        let raw = unsafe {
+            mlx_closure_new_func_payload(Some(trampoline), payload as *mut c_void, Some(payload_dtor))
+        };
+        let mut compiled = unsafe { std::mem::zeroed() };
+        if let Err(e) = chk(unsafe { mlx_compile(&mut compiled, raw, false) }) {
+            // The payload's only owner is `raw`; freeing it runs the dtor.
+            unsafe { mlx_closure_free(raw) };
+            return Err(e);
+        }
+        chk(unsafe { mlx_closure_free(raw) })?;
+        Ok(CompiledClosure { raw: compiled })
+    }
+
+    /// Applies the compiled closure. Outputs arrive unmaterialized (lazy),
+    /// exactly like the eager walk's.
+    pub fn apply(&self, inputs: &[&Array]) -> MlxResult<Vec<Array>> {
+        let vec = unsafe { mlx_vector_array_new() };
+        for a in inputs {
+            chk(unsafe { mlx_vector_array_append_value(vec, a.raw()) })?;
+        }
+        let mut res = unsafe { std::mem::zeroed() };
+        let status = chk(unsafe { mlx_closure_apply(&mut res, self.raw, vec) });
+        unsafe { mlx_vector_array_free(vec) };
+        status?;
+        let n = unsafe { mlx_vector_array_size(res) };
+        let mut outs = Vec::with_capacity(n);
+        for i in 0..n {
+            let mut a = unsafe { std::mem::zeroed() };
+            chk(unsafe { mlx_vector_array_get(&mut a, res, i) })?;
+            outs.push(Array(a));
+        }
+        unsafe { mlx_vector_array_free(res) };
+        Ok(outs)
+    }
+}
+
+impl Drop for CompiledClosure {
+    fn drop(&mut self) {
+        // The compiled closure holds the payload via shared_ptr — freeing it
+        // runs our dtor exactly once.
+        unsafe { mlx_closure_free(self.raw) };
+    }
+}
+
+// SAFETY: the payload box is Send+Sync by bound, and the mlx closure ctx is
+// a refcounted C++ object; applies are serialized by the engine's forward
+// lock (lib.rs), matching the eager path's threading contract.
+unsafe impl Send for CompiledClosure {}
+unsafe impl Sync for CompiledClosure {}
+
 
 
 #[cfg(test)]

@@ -12,5 +12,7 @@ echo "target: $(md5 -q target/release/liblaya_native.dylib | cut -c1-8)"
 rm -rf "$W/.dart_tool/hooks_runner/xsoulspace_inference_laya" \
        "$W/.dart_tool/hooks_runner/shared/xsoulspace_inference_laya"
 cd "$L"
-echo "== dart test"
+echo "== dart test (eager)"
 env "$@" dart test test/laya_native_golden_test.dart 2>&1 | grep -E 'agreements|parity|MLX error|Some tests|All tests' | head -5
+echo "== dart test (LAYA_COMPILE=1 — R1 fused, ADR 0054)"
+env "$@" LAYA_COMPILE=1 dart test test/laya_native_golden_test.dart 2>&1 | grep -E 'agreements|parity|MLX error|Some tests|All tests' | head -5

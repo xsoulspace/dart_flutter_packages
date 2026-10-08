@@ -32,3 +32,4 @@ Harness product decisions (0002–0005, 0007, 0009, 0012–0028, 0030,
 | [0051](0051_mlx_c_rust_engine_and_model_mesh.md) | Accepted | mlx-c native inference engine (Rust host) behind the `laya_native` symbols + the model mesh ladder (phones join first, hosting capability-gated; routing = world concern) |
 | [0052](0052_semantic_view_grammar.md) | Accepted | `universal_automation_semantics` — the semantic view grammar: declarative views, ref-stable observations, diffs |
 | [0053](0053_coordinate_pointer_verbs.md) | Accepted | Coordinate pointer verbs — `clickAt`/`moveTo`/`drag`, capability-gated, MoE-lowered from day one |
+| [0054](0054_composition_api_and_optimization_ladder.md) | Accepted | The composition API — declared forward plans, binding tables keyed (op × chip × shape class × dtype), and the L5 optimization ladder R0–R5 |

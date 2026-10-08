@@ -15,6 +15,8 @@
 
 pub mod mlx;
 pub mod model;
+pub mod plan;
+pub mod bindings;
 
 #[cfg(test)]
 pub fn gelu_ref(x: &mlx::Array, s: mlx::Stream) -> mlx::MlxResult<mlx::Array> {
@@ -33,6 +35,64 @@ use mlx::{gpu, set_metallib_path, Array};
 use model::{Batch, LayaModel};
 use unicode_normalization::UnicodeNormalization;
 
+/// LAYA_DEBUG_DUMP support (ADR 0051 debugging): raw stage dumps (f32 host
+/// copies) land in the env dir under the plan nodes' historical stage names
+/// for diffing against the reference runtime.
+pub struct DebugDump {
+    dir: Option<PathBuf>,
+}
+
+static FORWARD_IDX: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+thread_local! {
+    static CURRENT_FW: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+impl DebugDump {
+    pub fn from_env() -> DebugDump {
+        DebugDump {
+            dir: std::env::var_os("LAYA_DEBUG_DUMP")
+                .filter(|value| !value.is_empty())
+                .map(PathBuf::from),
+        }
+    }
+
+    pub fn disabled() -> DebugDump {
+        DebugDump { dir: None }
+    }
+
+    /// One forward began — advance the dump-file index.
+    pub fn begin_forward() {
+        CURRENT_FW.with(|c| c.set(FORWARD_IDX.fetch_add(1, Ordering::SeqCst)));
+    }
+
+    pub fn active(&self) -> bool {
+        self.dir.is_some()
+    }
+
+    /// Diagnostic activations may contain actor-private evidence. Never
+    /// materialize or persist them without an explicit diagnostic destination.
+    pub fn stage(&self, name: &str, arr: &Array, s: mlx::Stream) {
+        let Some(dir) = &self.dir else { return };
+        let _ = std::fs::create_dir_all(dir);
+        let name = format!("fw{:02}_{name}", CURRENT_FW.with(|c| c.get()));
+        let dumped = arr.astype(mlx::Dtype::Float32, s).and_then(|a| a.to_f32_vec(s));
+        let vals = match dumped {
+            Ok(v) => v,
+            Err(e) => {
+                let _ = std::fs::write(dir.join(format!("DUMP_ERROR_{name}.txt")), format!("{e:?}"));
+                return;
+            }
+        };
+        let shape: Vec<usize> = (0..arr.ndim()).map(|d| arr.dim(d as i32)).collect();
+        let _ = std::fs::write(
+            dir.join(format!("{name}.json")),
+            serde_json::json!({ "shape": shape, "file": format!("{name}.bin") }).to_string(),
+        );
+        let bytes: Vec<u8> = vals.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let _ = std::fs::write(dir.join(format!("{name}.bin")), bytes);
+    }
+}
+
 #[derive(serde::Deserialize)]
 struct ForwardRequest {
     #[serde(default)]
@@ -48,6 +108,9 @@ struct BatchRow {
 
 struct Engine {
     model: Arc<LayaModel>,
+    /// The compiled forward (LAYA_COMPILE, ADR 0054 R1) is built lazily on
+    /// first use and lives as long as the engine handle.
+    compiled: Arc<OnceLock<model::CompiledForward>>,
 }
 
 static REGISTRY: OnceLock<Mutex<HashMap<i64, Engine>>> = OnceLock::new();
@@ -139,6 +202,7 @@ pub extern "C" fn laya_native_load(model_dir: *const c_char) -> i64 {
                 handle,
                 Engine {
                     model: Arc::new(model),
+                    compiled: Arc::new(OnceLock::new()),
                 },
             );
             handle
@@ -152,8 +216,8 @@ pub extern "C" fn laya_native_forward(handle: i64, request_json: *const c_char) 
     if request_json.is_null() {
         return fail("missing request");
     }
-    let engine = registry().lock().unwrap().get(&handle).map(|e| Arc::clone(&e.model));
-    let Some(model) = engine else {
+    let engine = registry().lock().unwrap().get(&handle).map(|e| (Arc::clone(&e.model), Arc::clone(&e.compiled)));
+    let Some((model, compiled_slot)) = engine else {
         return fail("unknown handle");
     };
     let raw = unsafe { CStr::from_ptr(request_json) }.to_bytes();
@@ -175,7 +239,24 @@ pub extern "C" fn laya_native_forward(handle: i64, request_json: *const c_char) 
         Err(message) => return fail(&message),
     };
 
-    let output = match model.forward(&batch, stream) {
+    // R1 (ADR 0054): LAYA_COMPILE routes the plan through mlx.compile. A
+    // compile failure is loud, never a silent eager fallback.
+    let output = if std::env::var_os("LAYA_COMPILE").is_some_and(|v| !v.is_empty()) {
+        let compiled = match compiled_slot.get() {
+            Some(c) => c,
+            None => match model::CompiledForward::new(Arc::clone(&model)) {
+                Ok(c) => {
+                    let _ = compiled_slot.set(c);
+                    compiled_slot.get().expect("compiled forward just inserted")
+                }
+                Err(e) => return fail(&format!("compile init failed: mlx status {}", e.0)),
+            },
+        };
+        compiled.forward(&batch, stream)
+    } else {
+        model.forward(&batch, stream)
+    };
+    let output = match output {
         Ok(o) => o,
         Err(e) => return fail(&format!("forward failed: mlx status {}", e.0)),
     };
@@ -449,6 +530,191 @@ mod perf_tests {
             t1.elapsed() / 10
         );
         assert_eq!(out.logits.len(), b);
+    }
+
+    /// R0 (ADR 0054): laya decision p50/p99 sweep B=1..20 over the fw13
+    /// shape (L=93, K=4), in-process eager. Inputs come from the fw13 dump
+    /// when present, else a synthetic vocab-bounded batch (say so when
+    /// reading the numbers). Run: cargo test --release -- --ignored --nocapture
+    #[test]
+    #[ignore]
+    fn r0_forward_sweep_b1_b20() {
+        let metallib = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("build/mlx-install/lib/mlx.metallib");
+        if metallib.is_file() {
+            super::set_metallib_path_pub(&metallib);
+        }
+        let s = crate::mlx::gpu().unwrap();
+        let model_dir = std::env::var("HOME").unwrap() + "/.cache/xsoulspace/laya-mlx";
+        let model = crate::model::LayaModel::load(std::path::Path::new(&model_dir), s).unwrap();
+
+        let (l, k, vocab) = (93usize, 4usize, 30522usize);
+        let synthetic = |b: usize| -> crate::model::Batch {
+            // Deterministic pseudo-batch in the fw13 shape: real ids when the
+            // dump exists (row 0 of it), else arange ids mod vocab.
+            let dump = PathBuf::from("/tmp/laya-dump/fw13_in_ids.json");
+            let mut ids: Vec<i32> = (0..b * l).map(|i| (i * 7 + 13) as i32 % vocab as i32).collect();
+            if dump.is_file() {
+                let meta: serde_json::Value =
+                    serde_json::from_str(&std::fs::read_to_string(&dump).unwrap()).unwrap();
+                let bytes = std::fs::read(PathBuf::from("/tmp/laya-dump").join(meta["file"].as_str().unwrap())).unwrap();
+                let real: Vec<f32> = bytes
+                    .chunks_exact(4)
+                    .map(|c| f32::from_le_bytes(c.try_into().unwrap()))
+                    .collect();
+                for r in 0..b {
+                    for i in 0..l {
+                        ids[r * l + i] = real[i] as i32;
+                    }
+                }
+            }
+            let mask = vec![1i32; b * l];
+            let pos: Vec<i32> = (0..b * k).map(|i| ((i * 11 + 17) % (l - 5)) as i32).collect();
+            let mmask: Vec<u8> = (0..b * k).map(|i| (i % k != k - 1) as u8).collect();
+            let qt: Vec<i32> = (0..b).map(|i| (i % 3) as i32).collect();
+            crate::model::Batch {
+                input_ids: Array::from_data_i32(&ids, &[b, l]).unwrap(),
+                attention_mask: Array::from_data_i32(&mask, &[b, l]).unwrap(),
+                marker_pos: Array::from_data_i32(&pos, &[b, k]).unwrap(),
+                marker_mask: Array::from_data_bool(&mmask, &[b, k]).unwrap(),
+                qtype: Array::from_data_i32(&qt, &[b]).unwrap(),
+            }
+        };
+
+        eprintln!("R0 sweep (fw13 shape L={l} K={k}):");
+        for b in [1usize, 2, 3, 5, 8, 12, 16, 20] {
+            let batch = synthetic(b);
+            // Plan stats: nodes submitted per forward (the dispatch pressure).
+            let (plan, _) = model.build_plan([
+                &batch.input_ids,
+                &batch.attention_mask,
+                &batch.marker_pos,
+                &batch.marker_mask,
+                &batch.qtype,
+            ]);
+            let nodes = plan.nodes.len();
+            // warmup
+            for _ in 0..3 {
+                model.forward(&batch, s).unwrap();
+            }
+            let iters = 10;
+            let mut samples = Vec::with_capacity(iters);
+            for _ in 0..iters {
+                let t = std::time::Instant::now();
+                model.forward(&batch, s).unwrap();
+                samples.push(t.elapsed().as_micros() as f64);
+            }
+            samples.sort_by(|a, b| a.partial_cmp(b).unwrap());
+            let p50 = samples[(iters - 1) / 2] / 1000.0;
+            let p99 = samples[iters - 1] / 1000.0;
+            eprintln!("  B={b:2}: p50={p50:8.2}ms p99={p99:8.2}ms plan_nodes={nodes}");
+        }
+    }
+
+    /// R0 (ADR 0054 §5): per-op profile DERIVED from the plan — every node
+    /// auto-derives a µbench from its plan slot. Prints the per-group table
+    /// sorted by total time. Run: cargo test --release -- --ignored --nocapture
+    #[test]
+    #[ignore]
+    fn r0_plan_derived_microbench() {
+        let metallib = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("build/mlx-install/lib/mlx.metallib");
+        if metallib.is_file() {
+            super::set_metallib_path_pub(&metallib);
+        }
+        let s = crate::mlx::gpu().unwrap();
+        let model_dir = std::env::var("HOME").unwrap() + "/.cache/xsoulspace/laya-mlx";
+        let model = crate::model::LayaModel::load(std::path::Path::new(&model_dir), s).unwrap();
+        let (b, l, k) = (20usize, 93usize, 4usize);
+        let batch = crate::model::Batch {
+            input_ids: Array::from_data_i32(&vec![13i32; b * l], &[b, l]).unwrap(),
+            attention_mask: Array::from_data_i32(&vec![1i32; b * l], &[b, l]).unwrap(),
+            marker_pos: Array::from_data_i32(&vec![7i32; b * k], &[b, k]).unwrap(),
+            marker_mask: Array::from_data_bool(&vec![1u8; b * k], &[b, k]).unwrap(),
+            qtype: Array::from_data_i32(&vec![0i32; b], &[b]).unwrap(),
+        };
+        let (plan, pool) = model.build_plan([
+            &batch.input_ids,
+            &batch.attention_mask,
+            &batch.marker_pos,
+            &batch.marker_mask,
+            &batch.qtype,
+        ]);
+        let table = crate::bindings::BindingTable::baseline();
+        let contracts = crate::plan::record_contracts(&plan, &pool, &table, s).unwrap();
+        eprintln!(
+            "R0 plan µbench: {} executable nodes, ctx {} arrays; per-op (µs, eval-per-run):",
+            contracts.len(),
+            plan.ctx.len()
+        );
+        let mut rows: Vec<(std::time::Duration, String, String, &'static str)> = Vec::new();
+        for c in &contracts {
+            let d = crate::plan::bench_node(c, 20, &table, s).unwrap();
+            rows.push((d, c.group.clone(), c.name.clone(), c.op.kind()));
+        }
+        rows.sort_by(|a, b| b.0.cmp(&a.0));
+        let total: std::time::Duration = rows.iter().map(|r| r.0).sum();
+        for (d, group, name, kind) in rows.iter().take(30) {
+            eprintln!("  {:>8.1}us {:>10} {:28} {}", d.as_nanos() as f64 / 1000.0, group, name, kind);
+        }
+        eprintln!("  sum-of-op-times (upper bound incl. per-op sync): {total:?}");
+    }
+
+    /// R1 (ADR 0054): eager vs compiled A/B, interleaved in one process so
+    /// slow thermal/power drift hits both modes equally. STATE THE POWER
+    /// STATE when recording numbers (battery throttles 4–10x, ADR 0051).
+    /// Run: cargo test --release r1_compile_ab -- --ignored --nocapture
+    #[test]
+    #[ignore]
+    fn r1_compile_ab_probe() {
+        let metallib = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("build/mlx-install/lib/mlx.metallib");
+        if metallib.is_file() {
+            super::set_metallib_path_pub(&metallib);
+        }
+        let s = crate::mlx::gpu().unwrap();
+        let model_dir = std::env::var("HOME").unwrap() + "/.cache/xsoulspace/laya-mlx";
+        let model = std::sync::Arc::new(
+            crate::model::LayaModel::load(std::path::Path::new(&model_dir), s).unwrap(),
+        );
+        let compiled = crate::model::CompiledForward::new(std::sync::Arc::clone(&model)).unwrap();
+
+        let (b, l, k) = (1usize, 93usize, 4usize);
+        let batch = crate::model::Batch {
+            input_ids: Array::from_data_i32(&vec![13i32; b * l], &[b, l]).unwrap(),
+            attention_mask: Array::from_data_i32(&vec![1i32; b * l], &[b, l]).unwrap(),
+            marker_pos: Array::from_data_i32(&vec![7i32; b * k], &[b, k]).unwrap(),
+            marker_mask: Array::from_data_bool(&vec![1u8; b * k], &[b, k]).unwrap(),
+            qtype: Array::from_data_i32(&vec![0i32; b], &[b]).unwrap(),
+        };
+        // Warmup both paths (compile traces + specializes per shape here).
+        model.forward(&batch, s).unwrap();
+        compiled.forward(&batch, s).unwrap();
+        compiled.forward(&batch, s).unwrap();
+
+        let mut eager = Vec::new();
+        let mut fused = Vec::new();
+        for _ in 0..7 {
+            for _ in 0..3 {
+                let t = std::time::Instant::now();
+                model.forward(&batch, s).unwrap();
+                eager.push(t.elapsed().as_micros() as f64);
+            }
+            for _ in 0..3 {
+                let t = std::time::Instant::now();
+                compiled.forward(&batch, s).unwrap();
+                fused.push(t.elapsed().as_micros() as f64);
+            }
+        }
+        let med = |v: &mut Vec<f64>| -> f64 {
+            v.sort_by(|a, b| a.partial_cmp(b).unwrap());
+            v[v.len() / 2] / 1000.0
+        };
+        let (eager_p50, fused_p50) = (med(&mut eager), med(&mut fused));
+        eprintln!(
+            "R1 A/B (B={b} L={l}, interleaved, 21 samples each): eager p50={eager_p50:.2}ms compiled p50={fused_p50:.2}ms ratio={:.2}x — STATE POWER STATE",
+            eager_p50 / fused_p50
+        );
     }
 }
 
