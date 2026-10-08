@@ -76,6 +76,23 @@ pub struct OptionalFloat {
     pub has_value: bool,
 }
 
+/// `mlx_optional_int` (optional.h): `{int value; bool has_value}` — the C
+/// value field is a 32-bit int.
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct OptionalInt {
+    pub value: i32,
+    pub has_value: bool,
+}
+
+/// `mlx_optional_dtype` (io_types.h).
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct OptionalDtype {
+    pub value: Dtype,
+    pub has_value: bool,
+}
+
 pub const MLX_CPU: i32 = 0;
 pub const MLX_GPU: i32 = 1;
 
@@ -156,6 +173,40 @@ extern "C" {
         s: RawStream,
     ) -> Status;
     fn mlx_softmax(res: *mut RawArray, a: RawArray, precise: bool, s: RawStream) -> Status;
+    fn mlx_sigmoid(res: *mut RawArray, a: RawArray, s: RawStream) -> Status;
+    fn mlx_argmax_axis(
+        res: *mut RawArray,
+        a: RawArray,
+        axis: i32,
+        keepdims: bool,
+        s: RawStream,
+    ) -> Status;
+    // ops.h — quantization (ADR 0054 R2: the same kernels the python
+    // reference runtime dispatches; mode strings match mlx's own).
+    fn mlx_quantized_matmul(
+        res: *mut RawArray,
+        x: RawArray,
+        w: RawArray,
+        scales: RawArray,
+        biases: RawArray,
+        transpose: bool,
+        group_size: i32,
+        bits: i32,
+        mode: *const std::ffi::c_char,
+        s: RawStream,
+    ) -> Status;
+    fn mlx_dequantize(
+        res: *mut RawArray,
+        w: RawArray,
+        scales: RawArray,
+        biases: RawArray,
+        group_size: OptionalInt,
+        bits: OptionalInt,
+        mode: *const std::ffi::c_char,
+        global_scale: RawArray,
+        dtype: OptionalDtype,
+        s: RawStream,
+    ) -> Status;
     fn mlx_sort_axis(res: *mut RawArray, a: RawArray, axis: i32, s: RawStream) -> Status;
     // ops.h — indexing / shape
     fn mlx_take(res: *mut RawArray, a: RawArray, indices: RawArray, s: RawStream) -> Status;
@@ -266,6 +317,13 @@ extern "C" {
     fn mlx_compile(res: *mut RawClosure, fun: RawClosure, shapeless: bool) -> Status;
     fn mlx_vector_array_new_data(data: *const RawArray, size: usize) -> RawVectorArray;
     // fast.h
+    fn mlx_fast_rms_norm(
+        res: *mut RawArray,
+        x: RawArray,
+        weight: RawArray,
+        eps: f32,
+        s: RawStream,
+    ) -> Status;
     fn mlx_fast_rope(
         res: *mut RawArray,
         x: RawArray,
@@ -375,6 +433,32 @@ impl Array {
                 shape.as_ptr(),
                 shape.len() as i32,
                 Dtype::Bool,
+            )
+        }))
+    }
+
+    /// Packed quantized weights (safetensors "U32") — host copy, no stream.
+    pub fn from_data_u32(data: &[u32], shape: &[usize]) -> MlxResult<Array> {
+        let shape: Vec<i32> = shape.iter().map(|d| *d as i32).collect();
+        Ok(Array(unsafe {
+            mlx_array_new_data(
+                data.as_ptr() as *const c_void,
+                shape.as_ptr(),
+                shape.len() as i32,
+                Dtype::UInt32,
+            )
+        }))
+    }
+
+    /// bfloat16 raw bytes (safetensors "BF16", u16 little-endian) — host copy.
+    pub fn from_data_bf16(data: &[u8], shape: &[usize]) -> MlxResult<Array> {
+        let shape: Vec<i32> = shape.iter().map(|d| *d as i32).collect();
+        Ok(Array(unsafe {
+            mlx_array_new_data(
+                data.as_ptr() as *const c_void,
+                shape.as_ptr(),
+                shape.len() as i32,
+                Dtype::BFloat16,
             )
         }))
     }
@@ -561,6 +645,18 @@ impl Array {
     pub fn erf(&self, s: Stream) -> MlxResult<Array> {
         let mut out = unsafe { std::mem::zeroed() };
         chk(unsafe { mlx_erf(&mut out, self.0, s.0) })?;
+        Ok(Array(out))
+    }
+
+    pub fn sigmoid(&self, s: Stream) -> MlxResult<Array> {
+        let mut out = unsafe { std::mem::zeroed() };
+        chk(unsafe { mlx_sigmoid(&mut out, self.0, s.0) })?;
+        Ok(Array(out))
+    }
+
+    pub fn argmax_axis(&self, axis: i32, keepdims: bool, s: Stream) -> MlxResult<Array> {
+        let mut out = unsafe { std::mem::zeroed() };
+        chk(unsafe { mlx_argmax_axis(&mut out, self.0, axis, keepdims, s.0) })?;
         Ok(Array(out))
     }
 
@@ -768,11 +864,27 @@ impl Array {
         mask: &Array,
         s: Stream,
     ) -> MlxResult<Array> {
+        Self::sdp_attention_mode(q, k, v, scale, "", Some(mask), s)
+    }
+
+    /// Mask-mode-aware sdpa: `""` applies a bool keep-mask array, `"causal"`
+    /// uses the kernel's native causal path (what python mlx-lm passes for
+    /// prefill), `None` mask with `""` is the no-mask decode call.
+    pub fn sdp_attention_mode(
+        q: &Array,
+        k: &Array,
+        v: &Array,
+        scale: f32,
+        mode: &str,
+        mask: Option<&Array>,
+        s: Stream,
+    ) -> MlxResult<Array> {
+        let mut mode_c = mode.as_bytes().to_vec();
+        mode_c.push(0);
         // mlx-swift passes the mask with an empty mode string — the C++
         // sdpa then applies the bool array directly (keep-mask semantics).
         // The explicit "array" mode takes a different (additive-float)
         // path and diverges numerically.
-        let mode = b"\0";
         let mut out = unsafe { std::mem::zeroed() };
         chk(unsafe {
             mlx_fast_scaled_dot_product_attention(
@@ -781,10 +893,80 @@ impl Array {
                 k.0,
                 v.0,
                 scale,
-                mode.as_ptr() as *const std::ffi::c_char,
-                mask.0,
+                mode_c.as_ptr() as *const std::ffi::c_char,
+                mask.map(|m| m.0).unwrap_or(std::mem::zeroed()),
                 std::mem::zeroed(),
                 false,
+                s.0,
+            )
+        })?;
+        Ok(Array(out))
+    }
+
+    /// `mx.fast.rms_norm` — what `nn.RMSNorm.__call__` runs (fp32 mean
+    /// accumulation inside the fused kernel).
+    pub fn rms_norm(x: &Array, weight: &Array, eps: f32, s: Stream) -> MlxResult<Array> {
+        let mut out = unsafe { std::mem::zeroed() };
+        chk(unsafe { mlx_fast_rms_norm(&mut out, x.0, weight.0, eps, s.0) })?;
+        Ok(Array(out))
+    }
+
+    /// `mx.quantized_matmul(..., transpose, group_size, bits, mode="affine")`
+    /// — the exact call `nn.QuantizedLinear` and `QuantizedEmbedding.as_linear`
+    /// make. `w` is [out, in] packed U32 when `transpose` is true.
+    #[allow(clippy::too_many_arguments)]
+    pub fn quantized_matmul(
+        x: &Array,
+        w: &Array,
+        scales: &Array,
+        biases: &Array,
+        transpose: bool,
+        group_size: i32,
+        bits: i32,
+        s: Stream,
+    ) -> MlxResult<Array> {
+        let mode = b"affine\0";
+        let mut out = unsafe { std::mem::zeroed() };
+        chk(unsafe {
+            mlx_quantized_matmul(
+                &mut out,
+                x.0,
+                w.0,
+                scales.0,
+                biases.0,
+                transpose,
+                group_size,
+                bits,
+                mode.as_ptr() as *const std::ffi::c_char,
+                s.0,
+            )
+        })?;
+        Ok(Array(out))
+    }
+
+    /// `mx.dequantize` (affine) — what `QuantizedEmbedding.__call__` runs on
+    /// its gathered rows.
+    pub fn dequantize(
+        w: &Array,
+        scales: &Array,
+        biases: &Array,
+        group_size: i32,
+        bits: i32,
+        s: Stream,
+    ) -> MlxResult<Array> {
+        let mode = b"affine\0";
+        let mut out = unsafe { std::mem::zeroed() };
+        chk(unsafe {
+            mlx_dequantize(
+                &mut out,
+                w.0,
+                scales.0,
+                biases.0,
+                OptionalInt { value: group_size, has_value: true },
+                OptionalInt { value: bits, has_value: true },
+                mode.as_ptr() as *const std::ffi::c_char,
+                std::mem::zeroed(),
+                OptionalDtype { value: Dtype::Float32, has_value: false },
                 s.0,
             )
         })?;

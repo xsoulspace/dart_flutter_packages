@@ -17,6 +17,8 @@ pub mod mlx;
 pub mod model;
 pub mod plan;
 pub mod bindings;
+pub mod qwen;
+pub mod bpe;
 
 #[cfg(test)]
 pub fn gelu_ref(x: &mlx::Array, s: mlx::Stream) -> mlx::MlxResult<mlx::Array> {
@@ -329,6 +331,120 @@ pub extern "C" fn laya_native_free(pointer: *mut c_char) {
 #[no_mangle]
 pub extern "C" fn laya_native_unload(handle: i64) {
     registry().lock().unwrap().remove(&handle);
+}
+
+// ---- qwen text engine (ADR 0054 R2) — same handle/JSON conventions ----
+
+struct QwenEngine {
+    model: Arc<crate::qwen::Qwen3>,
+    tokenizer: crate::bpe::Qwen3Tokenizer,
+}
+
+static QWEN_REGISTRY: OnceLock<Mutex<HashMap<i64, Arc<QwenEngine>>>> = OnceLock::new();
+static QWEN_NEXT_HANDLE: AtomicI64 = AtomicI64::new(1);
+
+fn qwen_registry() -> &'static Mutex<HashMap<i64, Arc<QwenEngine>>> {
+    QWEN_REGISTRY.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+#[derive(serde::Deserialize)]
+struct QwenGenerateRequest {
+    /// Raw text (tokenized by the checkpoint BPE) or explicit prompt ids.
+    #[serde(default)]
+    prompt: Option<String>,
+    #[serde(default)]
+    prompt_ids: Option<Vec<i32>>,
+    #[serde(default = "default_max_tokens")]
+    max_tokens: usize,
+}
+
+fn default_max_tokens() -> usize {
+    64
+}
+
+#[no_mangle]
+pub extern "C" fn laya_native_qwen_load(model_dir: *const c_char) -> i64 {
+    if model_dir.is_null() {
+        return -1;
+    }
+    pin_metallib_colocated();
+    let dir = PathBuf::from(unsafe { CStr::from_ptr(model_dir) }.to_string_lossy().to_string());
+    let model = match crate::qwen::Qwen3::load(&dir) {
+        Ok(m) => m,
+        Err(_) => return -2,
+    };
+    let tokenizer = match crate::bpe::Qwen3Tokenizer::load(&dir) {
+        Ok(t) => t,
+        Err(_) => return -2,
+    };
+    let handle = QWEN_NEXT_HANDLE.fetch_add(1, Ordering::SeqCst);
+    qwen_registry().lock().unwrap().insert(
+        handle,
+        Arc::new(QwenEngine { model: Arc::new(model), tokenizer }),
+    );
+    handle
+}
+
+/// Greedy text generation. Request: `{"prompt": "…", "max_tokens": 64}` (or
+/// `prompt_ids`). Response: `{"ids": [...], "text": "…", "prompt_ids": [...]}`
+/// or `{"error": "…"}`.
+#[no_mangle]
+pub extern "C" fn laya_native_qwen_generate(handle: i64, request_json: *const c_char) -> *mut c_char {
+    if request_json.is_null() {
+        return fail("missing request");
+    }
+    let engine = qwen_registry().lock().unwrap().get(&handle).map(Arc::clone);
+    let Some(engine) = engine else {
+        return fail("unknown handle");
+    };
+    let request: QwenGenerateRequest = match serde_json::from_slice(unsafe {
+        CStr::from_ptr(request_json)
+    }
+    .to_bytes())
+    {
+        Ok(r) => r,
+        Err(_) => return fail("unreadable request JSON"),
+    };
+    let _guard = forward_lock().lock().unwrap();
+    let stream = match gpu() {
+        Ok(stream) => stream,
+        Err(e) => return fail(&format!("stream initialization failed: mlx status {}", e.0)),
+    };
+    let prompt_ids = if let Some(ids) = request.prompt_ids {
+        ids
+    } else {
+        match &request.prompt {
+            Some(text) => match engine.tokenizer.encode(text) {
+                Ok(ids) => ids.into_iter().map(|i| i as i32).collect(),
+                Err(e) => return fail(&format!("tokenize failed: {e}")),
+            },
+            None => return fail("request needs prompt or prompt_ids"),
+        }
+    };
+    match engine.model.generate_greedy(&prompt_ids, request.max_tokens, stream) {
+        Ok(ids) => {
+            let text = engine
+                .tokenizer
+                .decode(&ids[prompt_ids.len()..].iter().map(|&i| i as u32).collect::<Vec<_>>())
+                .unwrap_or_default();
+            let payload = serde_json::json!({
+                "prompt_ids": prompt_ids,
+                "ids": ids,
+                "text": text,
+            })
+            .to_string();
+            match CString::new(payload) {
+                Ok(c) => c.into_raw(),
+                Err(_) => fail("encode"),
+            }
+        }
+        Err(e) => fail(&format!("generate failed: mlx status {}", e.0)),
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn laya_native_qwen_unload(handle: i64) {
+    qwen_registry().lock().unwrap().remove(&handle);
 }
 
 /// NFC (canonical composed) normalization — the checkpoint tokenizer's
@@ -664,6 +780,92 @@ mod perf_tests {
     /// slow thermal/power drift hits both modes equally. STATE THE POWER
     /// STATE when recording numbers (battery throttles 4–10x, ADR 0051).
     /// Run: cargo test --release r1_compile_ab -- --ignored --nocapture
+    fn qwen_snapshot_dir() -> Option<std::path::PathBuf> {
+        let home = std::env::var("HOME").ok()?;
+        let hub = std::path::PathBuf::from(home).join(".cache/huggingface/hub");
+        for e in std::fs::read_dir(&hub).ok()?.flatten() {
+            if e.file_name().to_string_lossy().contains("Qwen3-0.6B-4bit") {
+                for s in std::fs::read_dir(e.path().join("snapshots")).ok()?.flatten() {
+                    if s.path().join("config.json").is_file() {
+                        return Some(s.path());
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    /// R2 decode/perf shape (ADR 0054): chunked-prefill TTFT and greedy
+    /// decode rate for the fixture prompt and a ~2k-token prompt. BATTERY
+    /// RUNS ARE NON-CLAIMS (ADR 0051: battery throttles 4-10x) — the ADR
+    /// only records AC-power numbers as evidence.
+    #[test]
+    #[ignore]
+    fn r2_qwen_greedy_bench() {
+        let metallib = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("build/mlx-install/lib/mlx.metallib");
+        if metallib.is_file() {
+            super::set_metallib_path_pub(&metallib);
+        }
+        let Some(snap) = super::qwen_snapshot_dir_pub() else {
+            eprintln!("skipping: Qwen3-0.6B-4bit snapshot absent");
+            return;
+        };
+        let s = crate::mlx::gpu().unwrap();
+        let tok = crate::bpe::Qwen3Tokenizer::load(&snap).unwrap();
+        let model = crate::qwen::Qwen3::load(&snap).unwrap();
+
+        let fx: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(
+                PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("testdata/qwen3_06b_parity.json"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        let prompt: String = fx["prompt"].as_str().unwrap().to_string();
+        let prompt_ids: Vec<i32> = tok
+            .encode(&prompt)
+            .unwrap()
+            .into_iter()
+            .map(|i| i as i32)
+            .collect();
+
+        // ~2k-token prompt: fixture prompt repeated (BPE-stable repetition).
+        let mut long_ids = prompt_ids.clone();
+        while long_ids.len() < 2048 {
+            long_ids.extend_from_slice(&prompt_ids);
+        }
+        long_ids.truncate(2048);
+
+        for (tag, ids) in [("short", prompt_ids), ("2k", long_ids)] {
+            let mut cache = crate::qwen::KvCache::new(model.cfg.layers);
+            // Warmup.
+            let _ = model.generate_greedy(&ids, 4, s).unwrap();
+
+            // Prefill TTFT: chunked prefill + first decode step, 5 rounds.
+            let mut ttfts = Vec::new();
+            for _ in 0..5 {
+                let t0 = std::time::Instant::now();
+                let _ = model.generate_greedy(&ids, 1, s).unwrap();
+                ttfts.push(t0.elapsed().as_secs_f64() * 1e3);
+            }
+            ttfts.sort_by(|a, b| a.total_cmp(b));
+
+            // Decode: 32 tokens, per-step wall clock.
+            let t0 = std::time::Instant::now();
+            model.generate_greedy(&ids, 32, s).unwrap();
+            let decode_ms = t0.elapsed().as_secs_f64() * 1e3;
+            let per_tok = decode_ms / 32.0;
+            println!(
+                "r2 {tag}: prompt={} ttft_p50={:.1}ms decode={:.2}ms/tok ({:.1} tok/s) [power state not verified — see ADR 0051]",
+                ids.len(),
+                ttfts[2],
+                per_tok,
+                1000.0 / per_tok,
+            );
+        }
+    }
+
     #[test]
     #[ignore]
     fn r1_compile_ab_probe() {
@@ -719,6 +921,21 @@ mod perf_tests {
 }
 
 #[cfg(test)]
+pub fn qwen_snapshot_dir_pub() -> Option<std::path::PathBuf> {
+    let home = std::env::var("HOME").ok()?;
+    let hub = std::path::PathBuf::from(home).join(".cache/huggingface/hub");
+    for e in std::fs::read_dir(&hub).ok()?.flatten() {
+        if e.file_name().to_string_lossy().contains("Qwen3-0.6B-4bit") {
+            for s in std::fs::read_dir(e.path().join("snapshots")).ok()?.flatten() {
+                if s.path().join("config.json").is_file() {
+                    return Some(s.path());
+                }
+            }
+        }
+    }
+    None
+}
+
 pub fn set_metallib_path_pub(p: &std::path::Path) {
     let _ = mlx::set_metallib_path(p);
 }
@@ -728,7 +945,7 @@ mod op_profiles {
     use super::mlx::*;
     use std::path::PathBuf;
 
-    fn timed(name: &str, iters: usize, f: impl Fn() -> Array, s: Stream) {
+    fn timed(name: &str, iters: usize, f: impl Fn() -> Array, _s: Stream) {
         let _ = f().eval();
         let t = std::time::Instant::now();
         for _ in 0..iters {

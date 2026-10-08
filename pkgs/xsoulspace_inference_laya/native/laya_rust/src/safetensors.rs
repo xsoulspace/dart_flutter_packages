@@ -76,11 +76,74 @@ impl SafetensorsFile {
         }
     }
 
+    fn raw_bytes(&self, name: &str, want: &str) -> MlxResult<(&[u8], Vec<usize>)> {
+        let info = self.tensors.get(name).ok_or(MlxError(-13))?;
+        if info.dtype != want {
+            return Err(MlxError(-14));
+        }
+        Ok((&self.bytes[info.start..info.end], info.shape.clone()))
+    }
+
+    /// Packed quantized weight (safetensors "U32") — R2's Qwen3 weights.
+    pub fn take_u32(&self, name: &str) -> MlxResult<Array> {
+        let (data, shape) = self.raw_bytes(name, "U32")?;
+        let u32s: Vec<u32> = data
+            .chunks_exact(4)
+            .map(|c| u32::from_le_bytes(c.try_into().unwrap()))
+            .collect();
+        Array::from_data_u32(&u32s, &shape)
+    }
+
+    /// bfloat16 tensor (safetensors "BF16") — scales/biases/norm weights.
+    pub fn take_bf16(&self, name: &str) -> MlxResult<Array> {
+        let (data, shape) = self.raw_bytes(name, "BF16")?;
+        Array::from_data_bf16(data, &shape)
+    }
+
+    /// Plain checkpoint tensor in whatever float storage it ships as (fp16
+    /// or bf16) — the R2 fp16 rung's reader.
+    pub fn take_any(&self, name: &str) -> MlxResult<Array> {
+        let (data, shape, dtype) = {
+            let info = self.tensors.get(name).ok_or(MlxError(-13))?;
+            (
+                &self.bytes[info.start..info.end],
+                info.shape.clone(),
+                info.dtype.clone(),
+            )
+        };
+        match dtype.as_str() {
+            "F16" => Array::from_data_f16(data, &shape),
+            "BF16" => Array::from_data_bf16(data, &shape),
+            _ => Err(MlxError(-14)),
+        }
+    }
+
+    /// One affine-quantized linear/embedding weight: `name.weight` (U32
+    /// packed), `name.scales`, `name.biases` — the triple mlx's quantized
+    /// ops take.
+    pub fn take_quantized(&self, name: &str) -> MlxResult<QuantizedTensor> {
+        Ok(QuantizedTensor {
+            w: self.take_u32(&format!("{name}.weight"))?,
+            scales: self.take_bf16(&format!("{name}.scales"))?,
+            biases: self.take_bf16(&format!("{name}.biases"))?,
+        })
+    }
+
     #[allow(dead_code)]
     pub fn dtype_of(&self, name: &str) -> Option<Dtype> {
         match self.tensors.get(name)?.dtype.as_str() {
             "F16" => Some(Dtype::Float16),
+            "BF16" => Some(Dtype::BFloat16),
+            "U32" => Some(Dtype::UInt32),
             _ => None,
         }
     }
+}
+
+/// An affine-quantized weight triple as stored by MLX (weight packed U32,
+/// per-group scales/biases bf16).
+pub struct QuantizedTensor {
+    pub w: Array,
+    pub scales: Array,
+    pub biases: Array,
 }

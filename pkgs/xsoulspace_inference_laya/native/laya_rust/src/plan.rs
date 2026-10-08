@@ -89,6 +89,7 @@ pub enum UnaryKind {
     Sqrt,
     Softmax,
     Relu,
+    Sigmoid,
 }
 
 /// A typed op. Parameter values are concrete: a plan is built per request
@@ -134,7 +135,22 @@ pub enum Op {
     Stack { axis: i32 },
     Where,
     Rope { dims: i32, base: f32, offset: i32 },
-    Sdp { scale: f32 },
+    Sdp {
+        scale: f32,
+        /// false: a bool keep-mask array rides the inputs (laya). true: the
+        /// kernel's native causal path (python mlx-lm's prefill mask).
+        #[serde(default)]
+        causal: bool,
+    },
+    /// Affine quantized matmul (R2): inputs [x, w, scales, biases]; `w` is
+    /// [out, in] packed U32 when `transpose`. The R3 fused dequant-GEMV lands
+    /// as a new binding on this key.
+    QuantizedMatmul { group_size: i32, bits: i32, transpose: bool },
+    /// Affine dequantize (R2): inputs [w, scales, biases] — the quantized
+    /// embedding's row gather tail.
+    Dequantize { group_size: i32, bits: i32 },
+    /// `mx.fast.rms_norm` over the last axis: inputs [x, weight].
+    RmsNorm { eps: f32 },
 }
 
 /// mlx float promotion for our graph: f32 wins over f16, else unchanged.
@@ -184,6 +200,14 @@ impl Op {
                 _ => first(inputs),
             },
             Op::Matmul => promote(dtype_of(inputs[0]), dtype_of(inputs[1])),
+            Op::QuantizedMatmul { .. } => {
+                // Output follows x's dtype (scales share it in our models).
+                first(inputs)
+            }
+            // Dequantize's output takes the scales' dtype, not the packed
+            // U32 weight's.
+            Op::Dequantize { .. } => dtype_of(inputs[1]),
+            Op::RmsNorm { .. } => first(inputs),
             Op::Where => promote(dtype_of(inputs[1]), dtype_of(inputs[2])),
         }
     }
@@ -216,6 +240,7 @@ impl Op {
                 UnaryKind::Sqrt => "sqrt",
                 UnaryKind::Softmax => "softmax",
                 UnaryKind::Relu => "relu",
+                UnaryKind::Sigmoid => "sigmoid",
             },
             Op::Sort { .. } => "sort",
             Op::Cast { .. } => "cast",
@@ -234,6 +259,9 @@ impl Op {
             Op::Where => "where",
             Op::Rope { .. } => "rope",
             Op::Sdp { .. } => "sdp",
+            Op::QuantizedMatmul { .. } => "quantized_matmul",
+            Op::Dequantize { .. } => "dequantize",
+            Op::RmsNorm { .. } => "rms_norm",
         }
     }
 

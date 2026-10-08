@@ -255,7 +255,7 @@ fn encoder_attention<'a>(
     let qr = c.push(group, Op::Rope { dims: attn.head_dim as i32, base: attn.rope_base, offset: 0 }, &format!("{group}.rope_q"), &[q]);
     let kr = c.push(group, Op::Rope { dims: attn.head_dim as i32, base: attn.rope_base, offset: 0 }, &format!("{group}.rope_k"), &[k]);
     let scale = (attn.head_dim as f32).powf(-0.5);
-    let att = c.push(group, Op::Sdp { scale }, &format!("{group}.sdp"), &[at(qr), at(kr), v, at(mask)]);
+    let att = c.push(group, Op::Sdp { scale, causal: false }, &format!("{group}.sdp"), &[at(qr), at(kr), v, at(mask)]);
     let merged_t = c.push(group, Op::Transpose { axes: vec![0, 2, 1, 3] }, &format!("{group}.merge_t"), &[at(att)]);
     let merged = c.push(group, Op::Reshape { shape: vec![b, l, attn.num_heads * attn.head_dim] }, &format!("{group}.merge"), &[at(merged_t)]);
     c.linear(group, &format!("{group}.wo"), &attn.wo.weight, None, at(merged))
@@ -311,7 +311,7 @@ fn head_layer<'a>(
         let qkv = c.linear(&g, &format!("{g}.in_proj"), &sa.in_proj.weight, sa.in_proj.bias.as_ref(), at(normed))?;
         let [q, k, v] = c.split_heads(&g, &format!("{g}.attn"), at(qkv), b, l, sa.num_heads, sa.head_dim)?;
         let scale = (sa.head_dim as f32).powf(-0.5);
-        let att = c.push(&g, Op::Sdp { scale }, &format!("{g}.sdp"), &[q, k, v, at(head_mask)]);
+        let att = c.push(&g, Op::Sdp { scale, causal: false }, &format!("{g}.sdp"), &[q, k, v, at(head_mask)]);
         let merged_t = c.push(&g, Op::Transpose { axes: vec![0, 2, 1, 3] }, &format!("{g}.merge_t"), &[at(att)]);
         let merged = c.push(&g, Op::Reshape { shape: vec![b, l, hidden] }, &format!("{g}.merge"), &[at(merged_t)]);
         c.linear(&g, &format!("{g}.out_proj"), &sa.out_proj.weight, sa.out_proj.bias.as_ref(), at(merged))?

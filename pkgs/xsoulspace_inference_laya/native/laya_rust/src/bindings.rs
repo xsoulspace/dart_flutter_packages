@@ -83,6 +83,19 @@ impl ShapeClass {
                     ShapeClass::WideGemm
                 }
             }
+            // Same regime split as Matmul — decode steps are the SkinnyGemm
+            // rows R3's fused dequant-GEMV targets.
+            Op::QuantizedMatmul { .. } => {
+                let a = &ins[0];
+                let m: usize = (0..a.ndim().saturating_sub(1)).map(|d| a.dim(d as i32)).product();
+                if m > 0 && m <= 128 {
+                    ShapeClass::SkinnyGemm
+                } else {
+                    ShapeClass::WideGemm
+                }
+            }
+            Op::Dequantize { .. } => ShapeClass::Elementwise,
+            Op::RmsNorm { .. } => ShapeClass::Reduction,
             Op::Rope { .. } | Op::Sdp { .. } => ShapeClass::Attention,
             Op::Identity => ShapeClass::Shape,
             Op::MeanAxes { .. } | Op::SumAxes { .. } => ShapeClass::Reduction,
@@ -239,6 +252,8 @@ fn mlxc_eval(op: &Op, ins: &[&Array], s: Stream) -> MlxResult<Vec<Array>> {
                 UnaryKind::Softmax => a.softmax(s)?,
                 // MLXNN.relu == maximum(x, 0).
                 UnaryKind::Relu => a.max_elemwise(&Array::scalar_f32(0.0), s)?,
+                // MLXNN.silu == x * sigmoid(x) — kept as the same two ops.
+                UnaryKind::Sigmoid => a.sigmoid(s)?,
             }]);
         }
         Op::Sort { axis } => {
@@ -295,13 +310,42 @@ fn mlxc_eval(op: &Op, ins: &[&Array], s: Stream) -> MlxResult<Vec<Array>> {
         Op::Rope { dims, base, offset } => {
             return Ok(vec![one(ins)?.rope(*dims, *base, *offset, s)?]);
         }
-        Op::Sdp { scale } => {
-            match ins {
-                [q, k, v, mask] => {
-                    return Ok(vec![Array::sdp_attention(q, k, v, *scale, mask, s)?])
-                }
-                _ => return Err(MlxError(-978)),
+        Op::Sdp { scale, causal } => match (ins, *causal) {
+            // keep-mask path (laya), no-mask decode (qwen), native causal
+            // prefill (qwen).
+            ([q, k, v, mask], false) => {
+                return Ok(vec![Array::sdp_attention(q, k, v, *scale, mask, s)?])
             }
-        }
+            ([q, k, v], false) => {
+                return Ok(vec![Array::sdp_attention_mode(q, k, v, *scale, "", None, s)?])
+            }
+            ([q, k, v], true) => {
+                return Ok(vec![Array::sdp_attention_mode(q, k, v, *scale, "causal", None, s)?])
+            }
+            _ => return Err(MlxError(-978)),
+        },
+        Op::QuantizedMatmul { group_size, bits, transpose } => match ins {
+            [x, w, scales, biases] => Ok(vec![Array::quantized_matmul(
+                x,
+                w,
+                scales,
+                biases,
+                *transpose,
+                *group_size,
+                *bits,
+                s,
+            )?]),
+            _ => Err(MlxError(-978)),
+        },
+        Op::Dequantize { group_size, bits } => match ins {
+            [w, scales, biases] => {
+                return Ok(vec![Array::dequantize(w, scales, biases, *group_size, *bits, s)?])
+            }
+            _ => return Err(MlxError(-978)),
+        },
+        Op::RmsNorm { eps } => match ins {
+            [x, weight] => return Ok(vec![Array::rms_norm(x, weight, *eps, s)?]),
+            _ => return Err(MlxError(-978)),
+        },
     }
 }
