@@ -221,3 +221,43 @@ Observed (ADR 0032 protocol — appended as rungs land):
   (`laya_native_qwen_load/generate/unload`, JSON wire) and smoke-tested
   end-to-end; the Dart-side in-process client behind the serve wire
   (`mlx_serve_native` backend) is the next increment, designed, not landed.
+- **R3a (2026-10-09, KV-cache growth, qwen):** the per-step exact-size concat
+  (the recorded 5.6× long-context decode gap) is replaced by mlx_lm's
+  amortized policy — zero-padded buffers grown in steps of 256
+  (`slice_update` writes, strided views for reads; new binding ops
+  `slice`/`slice_update`). **Parity held: 64/64 greedy tokens** (cache
+  content is unchanged by the growth policy — the gate guards identity), and
+  two parity-load-bearing bugs were paid for: the shared cache offset was
+  bumped per layer (python keeps per-layer offsets in lockstep; now one bump
+  per step) and the post-update view sliced to the step's NEW length instead
+  of the total (decode steps saw a 1-token cache). AC numbers: short decode
+  16.6 → **9.9-16 ms/tok (60-100 tok/s)** — at or above python's ~11 ms/tok;
+  2k-context decode **380 → ~85-120 ms/tok** (2.5-4.5×). **A ~3-4×
+  long-context decode gap vs python REMAINS and is recorded as the next
+  investigation, owner: kernel-level attribution** — the evidence so far:
+  individual ops probed identical-or-slower on python (qmat lm_head 1.68 vs
+  2.16 ms, sdpa 0.33 vs 0.35, python slice_update 2.14 vs 0.555), Rust
+  enqueue is 1.6 µs/op (~1 ms/step), the gap only appears at T≈2048 (not at
+  T=30), is stable across fresh processes, and was NOT closed by cache-growth
+  policy or group-size changes — pointing at graph-shape/kernel-variant
+  differences that need MLX kernel capture (MX_METAL_DEBUG is not wired in
+  this vendored build). A sync-accurate section profiler ships under
+  `LAYA_QWEN_PROFILE=1` (diagnostic-only; it distorts pipelining and says
+  so).
+- **R3b (2026-10-09, q8 laya, CALIBRATION gate RED — recorded, not shipped):**
+  the infrastructure LANDED — `mlx_quantize`/`quantized_matmul` ABI
+  (`mlx_optional_int` again: the quantized_matmul extern declared plain i32s
+  and bits arrived as garbage 4 — same bug class as R2's, now paid twice),
+  `Linear.quantized` triples, `LayaModel::into_q8` (encoder-only scope after
+  evidence; the [_,1028] head in_proj is not 64-divisible and stays fp16),
+  the `LAYA_Q8=1` load path, and the gate
+  `LAYA_Q8=1 dart test test/laya_native_q8_calibration_test.dart`. **The
+  gate FAILS: 61/63** — both misses are marginal score/noul scalars (drift
+  0.026/0.039 vs gate 0.02) while every choice argmax holds. The failure is
+  stable across q8-g64-full, q8-g64-encoder-only, and q8-g32-encoder-only
+  (group 32 moved noul drift 0.0389 → 0.0377 — a systematic shift, not
+  weight noise), so per the ladder law the rung STOPS and records: owner for
+  the next attempt is a score/noul sensitivity study (per-layer error
+  budget, head-input re-centering, or fp16 final-encoder-layer) before any
+  q8 default. `LAYA_Q8` remains an opt-in diagnostic; the fp16 oracle is
+  untouched (63/63 @ 0.0 / 1.5e-8 re-verified after the linear-refactor).

@@ -199,6 +199,20 @@ pub extern "C" fn laya_native_load(model_dir: *const c_char) -> i64 {
     };
     match LayaModel::load(&dir, stream) {
         Ok(model) => {
+            // R3 calibration path: LAYA_Q8=1 quantizes every linear to
+            // 8-bit at load (ADR 0054 — gated by the calibration test).
+            let model = if std::env::var_os("LAYA_Q8").is_some_and(|v| !v.is_empty()) {
+                let qs = match gpu() {
+                    Ok(s2) => s2,
+                    Err(_) => return -2,
+                };
+                match model.into_q8(qs) {
+                    Ok(m) => m,
+                    Err(_) => return -2,
+                }
+            } else {
+                model
+            };
             let handle = NEXT_HANDLE.fetch_add(1, Ordering::SeqCst);
             registry().lock().unwrap().insert(
                 handle,

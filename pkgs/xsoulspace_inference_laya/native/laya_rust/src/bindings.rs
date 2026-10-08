@@ -96,6 +96,7 @@ impl ShapeClass {
             }
             Op::Dequantize { .. } => ShapeClass::Elementwise,
             Op::RmsNorm { .. } => ShapeClass::Reduction,
+            Op::Slice { .. } | Op::SliceUpdate { .. } => ShapeClass::Shape,
             Op::Rope { .. } | Op::Sdp { .. } => ShapeClass::Attention,
             Op::Identity => ShapeClass::Shape,
             Op::MeanAxes { .. } | Op::SumAxes { .. } => ShapeClass::Reduction,
@@ -345,6 +346,15 @@ fn mlxc_eval(op: &Op, ins: &[&Array], s: Stream) -> MlxResult<Vec<Array>> {
         },
         Op::RmsNorm { eps } => match ins {
             [x, weight] => return Ok(vec![Array::rms_norm(x, weight, *eps, s)?]),
+            _ => return Err(MlxError(-978)),
+        },
+        Op::Slice { start, stop, strides } => {
+            return Ok(vec![one(ins)?.slice(start, stop, strides, s)?]);
+        }
+        Op::SliceUpdate { start, stop, strides } => match ins {
+            [src, update] => {
+                return Ok(vec![Array::slice_update(src, update, start, stop, strides, s)?])
+            }
             _ => return Err(MlxError(-978)),
         },
     }

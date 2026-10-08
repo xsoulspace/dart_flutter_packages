@@ -183,6 +183,15 @@ extern "C" {
     ) -> Status;
     // ops.h — quantization (ADR 0054 R2: the same kernels the python
     // reference runtime dispatches; mode strings match mlx's own).
+    fn mlx_quantize(
+        res: *mut RawVectorArray,
+        w: RawArray,
+        group_size: OptionalInt,
+        bits: OptionalInt,
+        mode: *const std::ffi::c_char,
+        global_scale: RawArray,
+        s: RawStream,
+    ) -> Status;
     fn mlx_quantized_matmul(
         res: *mut RawArray,
         x: RawArray,
@@ -190,8 +199,10 @@ extern "C" {
         scales: RawArray,
         biases: RawArray,
         transpose: bool,
-        group_size: i32,
-        bits: i32,
+        // ops.h: mlx_optional_int — {int32 value; bool has_value}; plain
+        // i32s here scramble the ABI (bits read garbage).
+        group_size: crate::mlx::OptionalInt,
+        bits: crate::mlx::OptionalInt,
         mode: *const std::ffi::c_char,
         s: RawStream,
     ) -> Status;
@@ -316,6 +327,29 @@ extern "C" {
     fn mlx_closure_free(cls: RawClosure) -> Status;
     fn mlx_compile(res: *mut RawClosure, fun: RawClosure, shapeless: bool) -> Status;
     fn mlx_vector_array_new_data(data: *const RawArray, size: usize) -> RawVectorArray;
+    fn mlx_slice(
+        res: *mut RawArray,
+        a: RawArray,
+        start: *const i32,
+        start_num: usize,
+        stop: *const i32,
+        stop_num: usize,
+        strides: *const i32,
+        strides_num: usize,
+        s: RawStream,
+    ) -> Status;
+    fn mlx_slice_update(
+        res: *mut RawArray,
+        src: RawArray,
+        update: RawArray,
+        start: *const i32,
+        start_num: usize,
+        stop: *const i32,
+        stop_num: usize,
+        strides: *const i32,
+        strides_num: usize,
+        s: RawStream,
+    ) -> Status;
     // fast.h
     fn mlx_fast_rms_norm(
         res: *mut RawArray,
@@ -347,6 +381,13 @@ extern "C" {
         force_fused: bool,
         s: RawStream,
     ) -> Status;
+}
+
+/// Block until every op submitted on this stream has executed (profiler
+/// section attribution; the golden path never syncs mid-graph).
+pub fn synchronize_stream(s: Stream) -> MlxResult<()> {
+    chk(unsafe { mlx_synchronize(s.0) })?;
+    Ok(())
 }
 
 /// A fallible mlx call.
@@ -903,12 +944,100 @@ impl Array {
         Ok(Array(out))
     }
 
+    /// `mx.slice` — a strided view (no copy).
+    pub fn slice(
+        &self,
+        start: &[i32],
+        stop: &[i32],
+        strides: &[i32],
+        s: Stream,
+    ) -> MlxResult<Array> {
+        let mut out = unsafe { std::mem::zeroed() };
+        chk(unsafe {
+            mlx_slice(
+                &mut out,
+                self.0,
+                start.as_ptr(),
+                start.len(),
+                stop.as_ptr(),
+                stop.len(),
+                strides.as_ptr(),
+                strides.len(),
+                s.0,
+            )
+        })?;
+        Ok(Array(out))
+    }
+
+    /// `mx.slice_update` — the functional form of python's
+    /// `buf[..., a:b, :] = update` (one GPU op, no host copy).
+    pub fn slice_update(
+        src: &Array,
+        update: &Array,
+        start: &[i32],
+        stop: &[i32],
+        strides: &[i32],
+        s: Stream,
+    ) -> MlxResult<Array> {
+        let mut out = unsafe { std::mem::zeroed() };
+        chk(unsafe {
+            mlx_slice_update(
+                &mut out,
+                src.0,
+                update.0,
+                start.as_ptr(),
+                start.len(),
+                stop.as_ptr(),
+                stop.len(),
+                strides.as_ptr(),
+                strides.len(),
+                s.0,
+            )
+        })?;
+        Ok(Array(out))
+    }
+
     /// `mx.fast.rms_norm` — what `nn.RMSNorm.__call__` runs (fp32 mean
     /// accumulation inside the fused kernel).
     pub fn rms_norm(x: &Array, weight: &Array, eps: f32, s: Stream) -> MlxResult<Array> {
         let mut out = unsafe { std::mem::zeroed() };
         chk(unsafe { mlx_fast_rms_norm(&mut out, x.0, weight.0, eps, s.0) })?;
         Ok(Array(out))
+    }
+
+    /// `mx.quantize` (affine) → [w U32 packed, scales, biases] — the R3
+    /// calibration entry (q8 laya). Group 64, bits 8 in our use.
+    pub fn quantize(
+        w: &Array,
+        group_size: i32,
+        bits: i32,
+        s: Stream,
+    ) -> MlxResult<Vec<Array>> {
+        let mode = b"affine\0";
+        let mut vec = unsafe { mlx_vector_array_new() };
+        chk(unsafe {
+            mlx_quantize(
+                &mut vec,
+                w.0,
+                OptionalInt { value: group_size, has_value: true },
+                OptionalInt { value: bits, has_value: true },
+                mode.as_ptr() as *const std::ffi::c_char,
+                std::mem::zeroed(),
+                s.0,
+            )
+        })?;
+        let n = unsafe { mlx_vector_array_size(vec) };
+        let mut outs = Vec::with_capacity(n);
+        for i in 0..n {
+            let mut a = unsafe { std::mem::zeroed() };
+            chk(unsafe { mlx_vector_array_get(&mut a, vec, i) })?;
+            outs.push(Array(a));
+        }
+        unsafe { mlx_vector_array_free(vec) };
+        if outs.len() != 3 {
+            return Err(MlxError(-978));
+        }
+        Ok(outs)
     }
 
     /// `mx.quantized_matmul(..., transpose, group_size, bits, mode="affine")`
@@ -935,8 +1064,8 @@ impl Array {
                 scales.0,
                 biases.0,
                 transpose,
-                group_size,
-                bits,
+                OptionalInt { value: group_size, has_value: true },
+                OptionalInt { value: bits, has_value: true },
                 mode.as_ptr() as *const std::ffi::c_char,
                 s.0,
             )

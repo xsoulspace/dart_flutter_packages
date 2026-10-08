@@ -21,6 +21,66 @@ use crate::mlx::{Array, Dtype, MlxError, MlxResult, Stream};
 use crate::plan::{BinKind, Node, Op, UnaryKind};
 use crate::safetensors::{QuantizedTensor, SafetensorsFile};
 
+/// Env-gated step profiler (LAYA_QWEN_PROFILE=1): per-section wall time,
+/// accumulated across steps, printed by [`qwen_profile_flush`]. Diagnostic
+/// only — the golden path never pays for it beyond one env read per step.
+#[derive(Default)]
+pub struct StepProfile {
+    pub cache_us: u64,
+    pub attn_us: u64,
+    pub mlp_us: u64,
+    pub embed_us: u64,
+    pub head_us: u64,
+    pub steps: u64,
+}
+
+std::thread_local! {
+    static STEP_PROFILE: std::cell::RefCell<StepProfile> =
+        std::cell::RefCell::new(StepProfile::default());
+}
+
+fn qwen_profiling() -> bool {
+    use std::sync::OnceLock;
+    static ON: OnceLock<bool> = OnceLock::new();
+    *ON.get_or_init(|| std::env::var_os("LAYA_QWEN_PROFILE").is_some_and(|v| !v.is_empty()))
+}
+
+/// Prints and resets the accumulated profile (call after a decode loop).
+pub fn qwen_profile_flush() {
+    STEP_PROFILE.with(|p| {
+        let mut p = p.borrow_mut();
+        if p.steps > 0 {
+            eprintln!(
+                "qwen profile: {} steps | cache {:.1}ms attn {:.1}ms mlp {:.1}ms embed {:.1}ms head(readback) {:.1}ms | per-step total {:.1}ms",
+                p.steps,
+                p.cache_us as f64 / 1e3 / p.steps as f64,
+                p.attn_us as f64 / 1e3 / p.steps as f64,
+                p.mlp_us as f64 / 1e3 / p.steps as f64,
+                p.embed_us as f64 / 1e3 / p.steps as f64,
+                p.head_us as f64 / 1e3 / p.steps as f64,
+                (p.cache_us + p.attn_us + p.mlp_us + p.embed_us + p.head_us) as f64 / 1e3
+                    / p.steps as f64,
+            );
+        }
+        *p = StepProfile::default();
+    });
+}
+
+fn prof_add(section: &str, us: u64) {
+    STEP_PROFILE.with(|p| {
+        let mut p = p.borrow_mut();
+        match section {
+            "cache" => p.cache_us += us,
+            "attn" => p.attn_us += us,
+            "mlp" => p.mlp_us += us,
+            "embed" => p.embed_us += us,
+            "head" => p.head_us += us,
+            "step" => p.steps += 1,
+            _ => {}
+        }
+    });
+}
+
 /// Dispatches one op through the binding table. `ins` here are live array
 /// refs, not plan slots — the qwen walk binds them at call time.
 fn eval1(
@@ -113,19 +173,119 @@ pub struct Qwen3 {
     table: BindingTable,
 }
 
-/// Per-layer KV cache: the concatenated keys/values ([B, Hkv, T, D] bf16)
-/// and the token offset the next step ropes with.
+/// Per-layer KV cache mirroring mlx_lm's `KVCache` growth policy exactly:
+/// zero-padded buffers grown in steps of 256, slice-assignment writes,
+/// strided views for reads. The previous exact-size concat per step copied
+/// the whole cache every decode token — the measured 5.6x long-context
+/// decode gap vs python (ADR 0054 R2). Cache CONTENT is unchanged by the
+/// policy (padding is never read), so the parity gate guards identity.
 pub struct KvCache {
-    layers: Vec<(Option<Array>, Option<Array>)>,
+    layers: Vec<KvLayer>,
     pub offset: usize,
+}
+
+const KV_STEP: usize = 256;
+
+struct KvLayer {
+    /// Allocated buffer [B, Hkv, alloc, D] (alloc is a multiple of
+    /// KV_STEP); reads slice [..., :offset, :].
+    k: Option<Array>,
+    v: Option<Array>,
 }
 
 impl KvCache {
     pub fn new(layer_count: usize) -> KvCache {
         KvCache {
-            layers: (0..layer_count).map(|_| (None, None)).collect(),
+            layers: (0..layer_count)
+                .map(|_| KvLayer { k: None, v: None })
+                .collect(),
             offset: 0,
         }
+    }
+
+    fn update_one(
+        table: &BindingTable,
+        name: &str,
+        buf: &Option<Array>,
+        new: &Array,
+        prev: usize,
+        n: usize,
+        s: Stream,
+    ) -> MlxResult<Array> {
+        let b = new.dim(0) as usize;
+        let h = new.dim(1) as usize;
+        let d = new.dim(3) as usize;
+        let needs_grow = match buf {
+            None => true,
+            Some(bf) => prev + n > bf.dim(2) as usize,
+        };
+        let mut out = match (needs_grow, buf) {
+            (false, Some(bf)) => bf.identity(s)?,
+            // (false, None) is unreachable: needs_grow is true whenever the
+            // buffer is absent.
+            (false, None) => unreachable!("no buffer but no growth requested"),
+            (true, _) => {
+                let n_steps = (KV_STEP + n - 1) / KV_STEP;
+                let alloc = n_steps * KV_STEP;
+                let zeros = eval1(
+                    table,
+                    &format!("{name}.zeros"),
+                    "q.cache",
+                    Op::Full {
+                        value: 0.0,
+                        dtype: Dtype::BFloat16,
+                        shape: vec![b, h, alloc, d],
+                    },
+                    &[],
+                    s,
+                )?;
+                match buf {
+                    None => zeros,
+                    Some(bf) => {
+                        // Python trims the buffer to `prev` when it holds
+                        // padding, then appends the zero block.
+                        let trimmed = if prev % KV_STEP != 0 {
+                            eval1(
+                                table,
+                                &format!("{name}.trim"),
+                                "q.cache",
+                                Op::Slice {
+                                    start: vec![0, 0, 0, 0],
+                                    stop: vec![b as i32, h as i32, prev as i32, d as i32],
+                                    strides: vec![1, 1, 1, 1],
+                                },
+                                &[bf],
+                                s,
+                            )?
+                        } else {
+                            bf.identity(s)?
+                        };
+                        eval1(
+                            table,
+                            &format!("{name}.grow"),
+                            "q.cache",
+                            Op::Concatenate { axis: 2 },
+                            &[&trimmed, &zeros],
+                            s,
+                        )?
+                    }
+                }
+            }
+        };
+        // buf[..., prev:prev+n, :] = new (functional slice update).
+        out = eval1(
+            table,
+            &format!("{name}.write"),
+            "q.cache",
+            Op::SliceUpdate {
+                start: vec![0, 0, prev as i32, 0],
+                stop: vec![b as i32, h as i32, (prev + n) as i32, d as i32],
+                strides: vec![1, 1, 1, 1],
+            },
+            &[&out, new],
+            s,
+        )?;
+        Ok(out)
     }
 
     fn update(
@@ -136,33 +296,49 @@ impl KvCache {
         v: &Array,
         s: Stream,
     ) -> MlxResult<(Array, Array)> {
+        // All layers write at the same step offset (python keeps one offset
+        // per layer cache, and they stay in lockstep because every layer
+        // processes the same token count); the OWNER of the step —
+        // forward_step — bumps the shared offset once, never this method.
+        let prev = self.offset;
+        let n = k.dim(2) as usize;
         let slot = &mut self.layers[layer];
-        let kc = match &slot.0 {
-            None => k.identity(s)?,
-            Some(prev) => eval1(
-                table,
-                "cache.k",
-                "q.cache",
-                Op::Concatenate { axis: 2 },
-                &[prev, k],
-                s,
-            )?,
+        let t0 = std::time::Instant::now();
+        let kb = Self::update_one(table, "cache.k", &slot.k, k, prev, n, s)?;
+        let vb = Self::update_one(table, "cache.v", &slot.v, v, prev, n, s)?;
+        if qwen_profiling() {
+            // Diagnostic mode pays eval+sync so the section attributes real
+            // GPU time, not enqueue time.
+            let _ = kb.eval();
+            crate::mlx::synchronize_stream(s).ok();
+            prof_add("cache", t0.elapsed().as_micros() as u64);
+        }
+        *slot = KvLayer { k: Some(kb.identity(s)?), v: Some(vb.identity(s)?) };
+        // keys_and_values(): views down to the TOTAL written length
+        // (prev + n), never the raw allocation.
+        let total = prev + n;
+        let view = |nm: &str, buf: &Array| -> MlxResult<Array> {
+            if total < buf.dim(2) as usize {
+                let b = buf.dim(0) as i32;
+                let h = buf.dim(1) as i32;
+                let d = buf.dim(3) as i32;
+                eval1(
+                    table,
+                    nm,
+                    "q.cache",
+                    Op::Slice {
+                        start: vec![0, 0, 0, 0],
+                        stop: vec![b, h, total as i32, d],
+                        strides: vec![1, 1, 1, 1],
+                    },
+                    &[buf],
+                    s,
+                )
+            } else {
+                buf.identity(s)
+            }
         };
-        let vc = match &slot.1 {
-            None => v.identity(s)?,
-            Some(prev) => eval1(
-                table,
-                "cache.v",
-                "q.cache",
-                Op::Concatenate { axis: 2 },
-                &[prev, v],
-                s,
-            )?,
-        };
-        // Keep an owning alias of what the cache holds (identity views — no
-        // new tensor math), and hand the caller its own handles.
-        *slot = (Some(kc.identity(s)?), Some(vc.identity(s)?));
-        Ok((kc, vc))
+        Ok((view("cache.kv", &kb)?, view("cache.vv", &vb)?))
     }
 }
 
@@ -372,10 +548,19 @@ impl Qwen3 {
         let (n_h, n_kv, d) = (cfg.heads, cfg.kv_heads, cfg.head_dim);
         let scale = (d as f32).powf(-0.5);
 
+        let prof = qwen_profiling();
+        let t_head = std::time::Instant::now();
+        let t_embed = std::time::Instant::now();
         let mut h = self.embed(tokens, l, s)?;
+        if prof {
+            let _ = h.eval();
+            crate::mlx::synchronize_stream(s).ok();
+            prof_add("embed", t_embed.elapsed().as_micros() as u64);
+        }
 
         for (li, layer) in self.layers.iter().enumerate() {
             let g = format!("q.l{li:02}");
+            let t_attn = std::time::Instant::now();
 
             // --- attention ---
             let ln1 = self.rms(&format!("{g}.ln1"), &h, &layer.ln1, s)?;
@@ -466,6 +651,12 @@ impl Qwen3 {
                 &[&h, &o],
                 s,
             )?;
+            if prof {
+                let _ = h1.eval();
+                crate::mlx::synchronize_stream(s).ok();
+                prof_add("attn", t_attn.elapsed().as_micros() as u64);
+            }
+            let t_mlp = std::time::Instant::now();
 
             // --- mlp: down(silu(gate(x)) * up(x)) ---
             let ln2 = self.rms(&format!("{g}.ln2"), &h1, &layer.ln2, s)?;
@@ -504,9 +695,20 @@ impl Qwen3 {
                 &[&h1, &ff],
                 s,
             )?;
+            if prof {
+                let _ = h.eval();
+                crate::mlx::synchronize_stream(s).ok();
+                prof_add("mlp", t_mlp.elapsed().as_micros() as u64);
+            }
         }
 
         let t = self.rms("q.final_norm", &h, &self.norm, s)?;
+        // One offset bump per step (after the layer loop — see KvCache::update).
+        cache.offset += l;
+        if prof {
+            prof_add("head", t_head.elapsed().as_micros() as u64);
+            prof_add("step", 0);
+        }
         // Tied embeddings: the lm_head IS the (quantized) embedding table,
         // applied as_linear.
         self.linear("q.lm_head", &self.embed, &t, s)
@@ -539,7 +741,6 @@ impl Qwen3 {
             let n = PREFILL_STEP.min(rest.len() - 1);
             let t = Array::from_data_i32(&rest[..n], &[1, n])?;
             self.forward_step(&t, &mut cache, s)?;
-            cache.offset += n;
             rest = &rest[n..];
         }
 
@@ -549,13 +750,15 @@ impl Qwen3 {
         for _ in 0..max_tokens {
             let tokens = Array::from_data_i32(&[next], &[1, 1])?;
             let logits = self.forward_step(&tokens, &mut cache, s)?;
-            cache.offset += 1;
             let am = logits.argmax_axis(-1, false, s)?;
             let f = am.astype(Dtype::Float32, s)?;
             let v = f.to_f32_vec(s)?;
             let t = v.first().copied().ok_or(MlxError(-978))? as i32;
             next = t;
             out.push(t);
+        }
+        if qwen_profiling() {
+            qwen_profile_flush();
         }
         Ok(out)
     }

@@ -151,6 +151,19 @@ pub enum Op {
     Dequantize { group_size: i32, bits: i32 },
     /// `mx.fast.rms_norm` over the last axis: inputs [x, weight].
     RmsNorm { eps: f32 },
+    /// `mx.slice` — strided view (cache reads are views, python-parity).
+    Slice {
+        start: Vec<i32>,
+        stop: Vec<i32>,
+        strides: Vec<i32>,
+    },
+    /// `mx.slice_update` — python's `buf[..., a:b, :] = update`: inputs
+    /// [src, update].
+    SliceUpdate {
+        start: Vec<i32>,
+        stop: Vec<i32>,
+        strides: Vec<i32>,
+    },
 }
 
 /// mlx float promotion for our graph: f32 wins over f16, else unchanged.
@@ -200,6 +213,7 @@ impl Op {
                 _ => first(inputs),
             },
             Op::Matmul => promote(dtype_of(inputs[0]), dtype_of(inputs[1])),
+            Op::Slice { .. } | Op::SliceUpdate { .. } => first(inputs),
             Op::QuantizedMatmul { .. } => {
                 // Output follows x's dtype (scales share it in our models).
                 first(inputs)
@@ -262,6 +276,8 @@ impl Op {
             Op::QuantizedMatmul { .. } => "quantized_matmul",
             Op::Dequantize { .. } => "dequantize",
             Op::RmsNorm { .. } => "rms_norm",
+            Op::Slice { .. } => "slice",
+            Op::SliceUpdate { .. } => "slice_update",
         }
     }
 

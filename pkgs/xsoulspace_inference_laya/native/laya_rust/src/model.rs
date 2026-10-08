@@ -82,14 +82,35 @@ impl<'a> Composer<'a> {
         &mut self,
         group: &str,
         name: &str,
-        weight: &'a Array,
-        bias: Option<&'a Array>,
+        weight: &'a Linear,
         x: Slot,
     ) -> MlxResult<plan::NodeId> {
-        let w = self.weight(&format!("{name}.weight"), weight);
+        if let Some(q) = &weight.quantized {
+            // R3 calibration path: the packed triple rides the
+            // quantized_matmul binding (same key R3's fused dequant-GEMV
+            // will land on). Output dtype follows x (fp16), so the
+            // promotion chain and the f32 tail are unchanged in structure.
+            let wq = self.weight(&format!("{name}.q8"), &q.w);
+            let ws = self.weight(&format!("{name}.q8_scales"), &q.scales);
+            let wb = self.weight(&format!("{name}.q8_biases"), &q.biases);
+            let mm = self.push(
+                group,
+                Op::QuantizedMatmul { group_size: 64, bits: 8, transpose: true },
+                &format!("{name}.q8_matmul"),
+                &[x, at(wq), at(ws), at(wb)],
+            );
+            return match weight.bias.as_ref() {
+                Some(b) => {
+                    let bn = self.weight(&format!("{name}.bias"), b);
+                    Ok(self.push(group, Bin(BinKind::Add), &format!("{name}.bias_add"), &[at(mm), at(bn)]))
+                }
+                None => Ok(mm),
+            };
+        }
+        let w = self.weight(&format!("{name}.weight"), &weight.weight);
         let w_t = self.push(group, Op::Transpose { axes: vec![1, 0] }, &format!("{name}.w_t"), &[at(w)]);
         let mm = self.push(group, Op::Matmul, &format!("{name}.matmul"), &[x, at(w_t)]);
-        match bias {
+        match weight.bias.as_ref() {
             Some(b) => {
                 let bn = self.weight(&format!("{name}.bias"), b);
                 Ok(self.push(group, Bin(BinKind::Add), &format!("{name}.bias_add"), &[at(mm), at(bn)]))
@@ -250,7 +271,7 @@ fn encoder_attention<'a>(
     b: usize,
     l: usize,
 ) -> MlxResult<plan::NodeId> {
-    let qkv = c.linear(group, &format!("{group}.wqkv"), &attn.wqkv.weight, None, normed)?;
+    let qkv = c.linear(group, &format!("{group}.wqkv"), &attn.wqkv, normed)?;
     let [q, k, v] = c.split_heads(group, &format!("{group}.attn"), at(qkv), b, l, attn.num_heads, attn.head_dim)?;
     let qr = c.push(group, Op::Rope { dims: attn.head_dim as i32, base: attn.rope_base, offset: 0 }, &format!("{group}.rope_q"), &[q]);
     let kr = c.push(group, Op::Rope { dims: attn.head_dim as i32, base: attn.rope_base, offset: 0 }, &format!("{group}.rope_k"), &[k]);
@@ -258,7 +279,7 @@ fn encoder_attention<'a>(
     let att = c.push(group, Op::Sdp { scale, causal: false }, &format!("{group}.sdp"), &[at(qr), at(kr), v, at(mask)]);
     let merged_t = c.push(group, Op::Transpose { axes: vec![0, 2, 1, 3] }, &format!("{group}.merge_t"), &[at(att)]);
     let merged = c.push(group, Op::Reshape { shape: vec![b, l, attn.num_heads * attn.head_dim] }, &format!("{group}.merge"), &[at(merged_t)]);
-    c.linear(group, &format!("{group}.wo"), &attn.wo.weight, None, at(merged))
+    c.linear(group, &format!("{group}.wo"), &attn.wo, at(merged))
 }
 
 fn encoder_layer<'a>(
@@ -280,13 +301,13 @@ fn encoder_layer<'a>(
     let h1 = c.push(&g, Bin(BinKind::Add), &format!("{g}.attn_residual"), &[at(h), at(attn_out)]);
     let normed_mlp = c.layer_norm(&g, &format!("{g}.mlp_norm"), at(h1), &layer.mlp_norm, None, layer.eps)?;
     let mlp_out = {
-        let wi = c.linear(&g, &format!("{g}.wi"), &layer.mlp.wi.weight, None, at(normed_mlp))?;
+        let wi = c.linear(&g, &format!("{g}.wi"), &layer.mlp.wi, at(normed_mlp))?;
         c.b.nodes[wi].dump = Some(format!("mlp_wi_{index:02}"));
         let parts = c.push(&g, Op::Split { num: 2, axis: -1 }, &format!("{g}.wi_split"), &[at(wi)]);
         let activated = c.gelu(&g, &format!("{g}.gelu"), (parts, 0));
         c.b.nodes[activated].dump = Some(format!("mlp_gelu_{index:02}"));
         let gated = c.push(&g, Bin(BinKind::Mul), &format!("{g}.gate_mul"), &[at(activated), (parts, 1)]);
-        c.linear(&g, &format!("{g}.wo"), &layer.mlp.wo.weight, None, at(gated))?
+        c.linear(&g, &format!("{g}.wo"), &layer.mlp.wo, at(gated))?
     };
     c.b.nodes[mlp_out].dump = Some(format!("mlp_out_{index:02}"));
     let out = c.push(&g, Bin(BinKind::Add), &format!("{g}.mlp_residual"), &[at(h1), at(mlp_out)]);
@@ -308,19 +329,19 @@ fn head_layer<'a>(
     let normed = c.layer_norm(&g, &format!("{g}.norm1"), at(h), &layer.norm1, Some(&layer.norm1_bias), layer.eps)?;
     let attn_out = {
         let sa = &layer.self_attn;
-        let qkv = c.linear(&g, &format!("{g}.in_proj"), &sa.in_proj.weight, sa.in_proj.bias.as_ref(), at(normed))?;
+        let qkv = c.linear(&g, &format!("{g}.in_proj"), &sa.in_proj, at(normed))?;
         let [q, k, v] = c.split_heads(&g, &format!("{g}.attn"), at(qkv), b, l, sa.num_heads, sa.head_dim)?;
         let scale = (sa.head_dim as f32).powf(-0.5);
         let att = c.push(&g, Op::Sdp { scale, causal: false }, &format!("{g}.sdp"), &[q, k, v, at(head_mask)]);
         let merged_t = c.push(&g, Op::Transpose { axes: vec![0, 2, 1, 3] }, &format!("{g}.merge_t"), &[at(att)]);
         let merged = c.push(&g, Op::Reshape { shape: vec![b, l, hidden] }, &format!("{g}.merge"), &[at(merged_t)]);
-        c.linear(&g, &format!("{g}.out_proj"), &sa.out_proj.weight, sa.out_proj.bias.as_ref(), at(merged))?
+        c.linear(&g, &format!("{g}.out_proj"), &sa.out_proj, at(merged))?
     };
     let h1 = c.push(&g, Bin(BinKind::Add), &format!("{g}.attn_residual"), &[at(h), at(attn_out)]);
     let normed2 = c.layer_norm(&g, &format!("{g}.norm2"), at(h1), &layer.norm2, Some(&layer.norm2_bias), layer.eps)?;
-    let ff = c.linear(&g, &format!("{g}.linear1"), &layer.linear1.weight, layer.linear1.bias.as_ref(), at(normed2))?;
+    let ff = c.linear(&g, &format!("{g}.linear1"), &layer.linear1, at(normed2))?;
     let rel = c.push(&g, Op::Unary { kind: UnaryKind::Relu }, &format!("{g}.relu"), &[at(ff)]);
-    let ff2 = c.linear(&g, &format!("{g}.linear2"), &layer.linear2.weight, layer.linear2.bias.as_ref(), at(rel))?;
+    let ff2 = c.linear(&g, &format!("{g}.linear2"), &layer.linear2, at(rel))?;
     Ok(c.push(&g, Bin(BinKind::Add), &format!("{g}.ff_residual"), &[at(h1), at(ff2)]))
 }
 
@@ -329,6 +350,16 @@ pub struct Linear {
     /// view in mlx; no numeric or measurable perf difference).
     pub weight: Array,
     pub bias: Option<Array>,
+    /// Affine-quantized replacement (R3 calibration, q8): packed U32 weight
+    /// + scales + biases. The plan dispatches `quantized_matmul` when set.
+    pub quantized: Option<QuantTriple>,
+}
+
+/// One affine-quantized weight triple on the GPU (mlx `quantize` output).
+pub struct QuantTriple {
+    pub w: Array,
+    pub scales: Array,
+    pub biases: Array,
 }
 
 struct EncoderAttention {
@@ -420,6 +451,7 @@ fn take_linear(w: &crate::safetensors::SafetensorsFile, name: &str, bias: Option
             Some(b) => Some(w.take(b, s)?),
             None => None,
         },
+        quantized: None,
     })
 }
 
@@ -556,6 +588,47 @@ impl LayaModel {
     /// Declares the forward pass as a plan over `inputs` = [input_ids,
     /// attention_mask, marker_pos, marker_mask, qtype]. Every node's contract
     /// is concrete: a plan is built per request shape.
+    /// R3 calibration: affine-quantize every linear weight to 8-bit
+    /// (group 64). Consumes the model and returns the q8 variant; the fp16
+    /// weights stay resident but unused by the plan. The CALIBRATION gate
+    /// (63/63 argmax, choice-prob and score/noul drift ≤ 0.02) decides
+    /// whether this path ships — a failed gate is recorded, never shipped.
+    pub fn into_q8(mut self, s: Stream) -> MlxResult<LayaModel> {
+        fn q8(l: &mut Linear, s: Stream) -> MlxResult<()> {
+            // mlx affine quantization requires the input dim divisible by
+            // the group size; the head's in_proj [_, 1028] (hidden + 4
+            // concatenated features) is not — that linear stays fp16 and
+            // the calibration gate validates the mixed-precision forward.
+            // Standard affine q8 group 64. The CALIBRATION gate (63/63,
+            // drift ≤ 0.02) currently FAILS on two marginal score/noul
+            // scalars (~0.026/0.039, stable across g64/g32 and
+            // encoder-only/full scopes — a systematic shift, not weight
+            // noise). LAYA_Q8 stays opt-in until that analysis lands;
+            // ADR 0054 R3 records the red gate.
+            if l.weight.dim(1) % 64 != 0 {
+                return Ok(());
+            }
+            let outs = Array::quantize(&l.weight, 64, 8, s)?;
+            l.quantized = Some(QuantTriple {
+                w: outs[0].identity(s)?,
+                scales: outs[1].identity(s)?,
+                biases: outs[2].identity(s)?,
+            });
+            Ok(())
+        }
+        // The encoder holds nearly all the weight mass (the bandwidth win);
+        // the decision-head and scalar-regression linears are tiny and sit
+        // exactly where the calibration gate measures (score/noul drift
+        // 0.026/0.039 at gate 0.02 when quantized) — they stay fp16.
+        for layer in &mut self.encoder.layers {
+            q8(&mut layer.attn.wqkv, s)?;
+            q8(&mut layer.attn.wo, s)?;
+            q8(&mut layer.mlp.wi, s)?;
+            q8(&mut layer.mlp.wo, s)?;
+        }
+        Ok(self)
+    }
+
     pub fn build_plan<'a>(&'a self, inputs: [&'a Array; 5]) -> (Plan, ExecPool<'a>) {
         let mut c = Composer::new(inputs);
 
@@ -649,11 +722,11 @@ impl LayaModel {
             .layer_norm("scorer", "scorer.norm", at(markers), &self.scorer_norm, Some(&self.scorer_norm_bias), self.eps)
             .expect("scorer norm nodes");
         let sc1 = c
-            .linear("scorer", "scorer.fc1", &self.scorer_linear1.weight, self.scorer_linear1.bias.as_ref(), at(normed))
+            .linear("scorer", "scorer.fc1", &self.scorer_linear1, at(normed))
             .expect("scorer fc1 nodes");
         let scg = c.gelu("scorer", "scorer.gelu", at(sc1));
         let sc2 = c
-            .linear("scorer", "scorer.fc2", &self.scorer_linear2.weight, self.scorer_linear2.bias.as_ref(), at(scg))
+            .linear("scorer", "scorer.fc2", &self.scorer_linear2, at(scg))
             .expect("scorer fc2 nodes");
         let logits32 = {
             let resh = c.push("scorer", Op::Reshape { shape: vec![b, kmax] }, "scorer.reshape", &[at(sc2)]);
@@ -720,11 +793,11 @@ impl LayaModel {
             let pooled = c.push("act", Op::Concatenate { axis: -1 }, "act.pooled", &[at(first), at(features)]);
             let pooled16 = c.push("act", Cast(ACT_DTYPE), "act.pooled_f16", &[at(pooled)]);
             let a1 = c
-                .linear("act", "act.fc1", &self.act_linear1.weight, self.act_linear1.bias.as_ref(), at(pooled16))
+                .linear("act", "act.fc1", &self.act_linear1, at(pooled16))
                 .expect("act fc1 nodes");
             let ag = c.gelu("act", "act.gelu", at(a1));
             let a2 = c
-                .linear("act", "act.fc2", &self.act_linear2.weight, self.act_linear2.bias.as_ref(), at(ag))
+                .linear("act", "act.fc2", &self.act_linear2, at(ag))
                 .expect("act fc2 nodes");
             c.push("act", Cast(Dtype::Float32), "action", &[at(a2)])
         };

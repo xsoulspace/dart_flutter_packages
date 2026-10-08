@@ -103,7 +103,6 @@ fn logit_drift_probe() {
     let logits = model.forward_step(&tokens, &mut cache, s).unwrap();
     let got = last_logits(&model, &logits, s);
     report("prefill", &got, &_ref.prefill_last);
-    cache.offset += prompt_ids.len();
 
     let mut tok = top2(&got).0[0] as i32;
     for step in 0..3 {
@@ -119,7 +118,6 @@ fn logit_drift_probe() {
         }
         let (ids, vals) = top2(&got);
         println!("decode{step} tok={tok} top2_ids={ids:?} top2_vals={vals:?}");
-        cache.offset += 1;
         tok = ids[0] as i32;
     }
 }
