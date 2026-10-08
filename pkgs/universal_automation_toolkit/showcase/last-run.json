@@ -1,0 +1,100 @@
+{
+  "works": [
+    {
+      "index": 0,
+      "kind": "act",
+      "ok": true
+    },
+    {
+      "index": 1,
+      "kind": "wait",
+      "ok": true
+    },
+    {
+      "index": 2,
+      "kind": "intent",
+      "ok": true
+    },
+    {
+      "index": 3,
+      "kind": "verify",
+      "ok": true
+    },
+    {
+      "index": 4,
+      "kind": "intent",
+      "ok": true
+    },
+    {
+      "index": 5,
+      "kind": "verify",
+      "ok": true
+    },
+    {
+      "index": 6,
+      "kind": "intent",
+      "ok": true
+    },
+    {
+      "index": 7,
+      "kind": "verify",
+      "ok": true
+    },
+    {
+      "index": 8,
+      "kind": "intent",
+      "ok": true
+    },
+    {
+      "index": 9,
+      "kind": "verify",
+      "ok": true
+    },
+    {
+      "index": 10,
+      "kind": "intent",
+      "ok": true
+    },
+    {
+      "index": 11,
+      "kind": "verify",
+      "ok": true
+    },
+    {
+      "index": 12,
+      "kind": "intent",
+      "ok": true
+    },
+    {
+      "index": 13,
+      "kind": "intent",
+      "ok": true
+    },
+    {
+      "index": 14,
+      "kind": "verify",
+      "ok": true
+    }
+  ],
+  "breaks": [
+    {
+      "index": 0,
+      "kind": "act",
+      "ok": true,
+      "errorKind": null
+    },
+    {
+      "index": 1,
+      "kind": "intent",
+      "ok": false,
+      "errorKind": "elementNotFound"
+    },
+    {
+      "index": 2,
+      "kind": "intent",
+      "ok": false,
+      "errorKind": "protocol"
+    }
+  ],
+  "validateRefusal": "s step 1 (intent): missing required parameter 'text'"
+}

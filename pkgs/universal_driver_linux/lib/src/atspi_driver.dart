@@ -77,6 +77,13 @@ class AtspiDriver implements AutomationDriver {
         throw DriverUnsupportedException(
           'AT-SPI has no script surface (got ${expression.length} chars)',
         );
+      case ClickAtAction():
+      case MoveAction():
+      case DragAction():
+        throw const DriverUnsupportedException(
+          'coordinate pointer verbs (ADR 0053) are not wired for this '
+          'tier yet; use locator verbs',
+        );
       case InvokeAction(:final name):
         throw const DriverUnsupportedException(
           'the AT-SPI tier has no surface action registry; InvokeAction '

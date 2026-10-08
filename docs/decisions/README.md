@@ -25,3 +25,10 @@ Harness product decisions (0002–0005, 0007, 0009, 0012–0028, 0030,
 | [0044](0044_behavior_dynamics_contract.md) | Accepted | Behavior dynamics contract — declarative input profiles for humans and agents (amends 0037/0038) |
 | [0045](0045_flutter_web_driving_primitives.md) | Accepted | Flutter-web driving primitives — live-DOM name location, focus restoration, JIT/AOT tier matrix |
 | [0046](0046_universal_automation_toolkit.md) | Accepted | `universal_automation_toolkit` — the family's agent surface: declarative plans, CLI, MCP |
+| [0047](0047_world_layer_zone_journeys.md) | Accepted | The world layer — app- and game-agnostic zone journeys (`universal_storage_world`; MeshWorldSession; member-codec seam; host-driven pulse) |
+| [0048](0048_interest_managed_exchange.md) | Accepted | Interest-managed mesh exchange — the additive `sub` frame, priority, budget; absent sub = wildcard (amends 0010 §4) |
+| [0049](0049_binary_member_lane.md) | Accepted | Binary members — the manifest/lane split: `MeshBlobLane`, dialer-symmetric push/absorb chunks, claimed blob plane (implements 0042) |
+| [0050](0050_realtime_plane.md) | Accepted | The realtime event plane out of the box: `universal_storage_realtime` — envelope, link (heartbeats/droppable/reliable), host + arbiter seam (vosges = reference shape) |
+| [0051](0051_mlx_c_rust_engine_and_model_mesh.md) | Accepted | mlx-c native inference engine (Rust host) behind the `laya_native` symbols + the model mesh ladder (phones join first, hosting capability-gated; routing = world concern) |
+| [0052](0052_semantic_view_grammar.md) | Accepted | `universal_automation_semantics` — the semantic view grammar: declarative views, ref-stable observations, diffs |
+| [0053](0053_coordinate_pointer_verbs.md) | Accepted | Coordinate pointer verbs — `clickAt`/`moveTo`/`drag`, capability-gated, MoE-lowered from day one |

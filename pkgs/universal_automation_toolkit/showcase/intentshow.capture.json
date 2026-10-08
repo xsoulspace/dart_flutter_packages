@@ -1,0 +1,103 @@
+{
+  "comment": "Captured-shape tools payload: the dev.intentcall/automation _meta entries mirror intentcall_mcp's publish adapter projection (mcp_publish_adapter_test golden), aimed at the intentshow page.",
+  "tools": [
+    {
+      "name": "page_fill_email",
+      "description": "Fill the email field",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "text": {"type": "string", "description": "text to type"}
+        },
+        "required": ["text"]
+      },
+      "_meta": {
+        "dev.intentcall/automation": {
+          "driver": "cdp",
+          "action": "type",
+          "locator": {"css": "#email"}
+        }
+      }
+    },
+    {
+      "name": "page_buy",
+      "description": "Press the Buy button",
+      "inputSchema": {"type": "object", "properties": {}},
+      "_meta": {
+        "dev.intentcall/automation": {
+          "driver": "cdp",
+          "action": "click",
+          "locator": {"name": "Buy"}
+        }
+      }
+    },
+    {
+      "name": "page_checkout",
+      "description": "Invoke the page's checkout surface action",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sku": {"type": "string", "description": "stock keeping unit"}
+        },
+        "required": ["sku"]
+      },
+      "_meta": {
+        "dev.intentcall/automation": {
+          "driver": "cdp",
+          "action": "custom",
+          "locator": {"name": "checkout"}
+        }
+      }
+    },
+    {
+      "name": "page_stamp",
+      "description": "Stamp the status line via a read-only-ish expression",
+      "inputSchema": {"type": "object", "properties": {}},
+      "_meta": {
+        "dev.intentcall/automation": {
+          "driver": "cdp",
+          "action": "evaluate",
+          "locator": {
+            "expression": "document.getElementById('status').textContent = 'stamped'"
+          }
+        }
+      }
+    },
+    {
+      "name": "page_submit_email",
+      "description": "Press Enter in the email field",
+      "inputSchema": {"type": "object", "properties": {}},
+      "_meta": {
+        "dev.intentcall/automation": {
+          "driver": "cdp",
+          "action": "key",
+          "locator": {"key": "Enter"}
+        }
+      }
+    },
+    {
+      "name": "page_ghost_click",
+      "description": "KNOWN-BREAK: no such button exists",
+      "inputSchema": {"type": "object", "properties": {}},
+      "_meta": {
+        "dev.intentcall/automation": {
+          "driver": "cdp",
+          "action": "click",
+          "locator": {"name": "NoSuchButtonAnywhere"}
+        }
+      }
+    },
+    {
+      "name": "page_ghost_invoke",
+      "description": "KNOWN-BREAK: the page publishes no such catalog action",
+      "inputSchema": {"type": "object", "properties": {}},
+      "_meta": {
+        "dev.intentcall/automation": {
+          "driver": "cdp",
+          "action": "custom",
+          "locator": {"name": "no_such_action"}
+        }
+      }
+    }
+  ]
+}

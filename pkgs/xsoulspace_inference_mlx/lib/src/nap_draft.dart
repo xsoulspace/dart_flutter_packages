@@ -168,8 +168,7 @@ final class NapDraftStore {
     final latest = <int, NapDraftRecord>{};
     for (final record in load()) {
       final existing = latest[record.blockLo];
-      if (existing == null ||
-          record.createdAt.isAfter(existing.createdAt)) {
+      if (existing == null || record.createdAt.isAfter(existing.createdAt)) {
         latest[record.blockLo] = record;
       }
     }

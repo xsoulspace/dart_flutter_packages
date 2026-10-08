@@ -101,6 +101,55 @@ void main() {
     });
 
     test(
+      'calibrated engine probabilities and both confidences survive wire',
+      () async {
+        final server = LayaDecisionServer(engine: const _CalibratedEngine());
+        await server.start();
+        addTearDown(server.stop);
+        final response = await http.post(
+          server.url.replace(path: '/v1/systemone'),
+          body: jsonEncode(_requestBody()),
+          headers: {'content-type': 'application/json'},
+        );
+        final answer = jsonDecode(response.body)['answers']['next_operation'];
+        expect(answer['probabilities'], {
+          'apply_edit': .63,
+          'insufficient_evidence': .37,
+        });
+        expect(answer['confidence'], .049);
+        expect(answer['answer_confidence'], .63);
+        expect(answer['act_probability'], .42);
+        final provider = LayaServerDecisionProvider(
+          endpoint: server.url.replace(path: '/v1/systemone'),
+        );
+        addTearDown(provider.dispose);
+        final outcome = await provider.decide(_request()) as DecisionCompleted;
+        expect(outcome.answers.single.confidence, .049);
+      },
+    );
+
+    test(
+      'invalid calibrated distribution refuses with named failure',
+      () async {
+        final server = LayaDecisionServer(
+          engine: const _CalibratedEngine(invalid: true),
+        );
+        await server.start();
+        addTearDown(server.stop);
+        final response = await http.post(
+          server.url.replace(path: '/v1/systemone'),
+          body: jsonEncode(_requestBody()),
+          headers: {'content-type': 'application/json'},
+        );
+        expect(response.statusCode, 422);
+        expect(
+          jsonDecode(response.body)['error']['code'],
+          'laya_invalid_distribution',
+        );
+      },
+    );
+
+    test(
       'malformed bodies map to typed client failures, not crashes',
       () async {
         final server = LayaDecisionServer(
@@ -184,3 +233,25 @@ Map<String, Object?> _requestBody() => <String, Object?>{
     },
   },
 };
+
+final class _CalibratedEngine implements CalibratedLayaDecisionEngine {
+  const _CalibratedEngine({this.invalid = false});
+  final bool invalid;
+  @override
+  Map<String, String> answer(LayaDecisionQuery query) => {
+    'next_operation': 'apply_edit',
+  };
+  @override
+  Map<String, LayaDecisionResult> answerDecisions(LayaDecisionQuery query) => {
+    'next_operation': LayaDecisionResult(
+      optionId: 'apply_edit',
+      probabilities: {
+        'apply_edit': invalid ? double.nan : .63,
+        'insufficient_evidence': .37,
+      },
+      confidence: .049,
+      answerConfidence: .63,
+      actProbability: .42,
+    ),
+  };
+}

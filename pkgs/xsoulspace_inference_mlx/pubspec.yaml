@@ -4,7 +4,7 @@ description: >-
   a health-gated loopback MLX server (mlx_lm.server or any OpenAI-compatible
   chat endpoint on this machine) bound as an InferenceClient, plus the
   nap-drafting prompt and provenance-stamped draft contracts it serves.
-version: 0.1.0
+version: 0.1.1
 publish_to: none
 repository: https://github.com/xsoulspace/dart_flutter_packages
 issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
@@ -15,6 +15,7 @@ environment:
 resolution: workspace
 
 dependencies:
+  ffi: ^2.2.0
   http: ^1.6.0
   # The serve skeleton (process lifecycle, health-gated loopback runtime,
   # wire-server plumbing) is the shared local-serve core, the same one laya
@@ -23,6 +24,11 @@ dependencies:
     path: ../xsoulspace_inference_local_serve
   xsoulspace_inference_core:
     path: ../xsoulspace_inference_core
+  # The build hook compiles native/mlx_text_native via SPM and registers
+  # the dylib as a code asset (the laya hook pattern).
+  code_assets: any
+  data_assets: any
+  hooks: any
 
 dev_dependencies:
   lints: ^6.1.0

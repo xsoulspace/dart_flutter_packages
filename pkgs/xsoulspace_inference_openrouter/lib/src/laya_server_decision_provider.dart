@@ -49,6 +49,13 @@ final class LayaServerDecisionProvider extends SystemOneWireDecisionProvider {
     final int maxStateUtf8Bytes = 1 << 20,
     final int maxRequestUtf8Bytes = 2 << 20,
     final int maxQuestionsPerRequest = 64,
+    /// Capability facts for the ENDPOINT this provider answers. The loopback
+    /// default is local/none; a mesh peer's endpoint on another device is
+    /// still local execution but requires network (ADR 0051 meshPeer tier).
+    final DecisionExecutionLocation executionLocation =
+        DecisionExecutionLocation.local,
+    final DecisionNetworkRequirement networkRequirement =
+        DecisionNetworkRequirement.none,
   }) : super(
          apiKey: apiKey ?? '',
          model: model,
@@ -63,8 +70,8 @@ final class LayaServerDecisionProvider extends SystemOneWireDecisionProvider {
              maxQuestionsPerRequest: maxQuestionsPerRequest,
              maxOptionsPerQuestion: 255,
            ),
-           executionLocation: DecisionExecutionLocation.local,
-           networkRequirement: DecisionNetworkRequirement.none,
+           executionLocation: executionLocation,
+           networkRequirement: networkRequirement,
            supportsCancellation: true,
          ),
          providerId: 'laya_server',

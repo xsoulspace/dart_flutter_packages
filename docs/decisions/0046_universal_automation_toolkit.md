@@ -36,16 +36,19 @@ New package `pkgs/universal_automation_toolkit` — pure Dart, no Flutter
 surface, no process lifecycle. **One binary, two faces** (`bin/
 universal-automation`):
 
-0. **Composition is typed Dart code, primary** — the family's harness
-   grammar, following the mcp_flutter harness (steps composed in Dart
-   over a context) and oka (declarative typed specs) precedent and
-   flutter's own builder shape: scenarios are lists of typed step values
-   built with a lowercase grammar (`navigate`, `click`, `typeText`,
-   `verifyThat`, `waitFor`, `intent`), scenario composition is Dart
-   (`scenario('b').extend('a')`, loops, helpers). YAML/JSON documents are
-   the **wire form of the same values** for agents and MCP — parsed into
-   identical `PlanStep`/`VerifyCheck` values, executed by one runner. No
-   second engine, no closure/AST split.
+0. **Composition is typed Dart code, primary — and first-class code** —
+   the family's harness grammar, following the mcp_flutter harness and
+   oka precedent and flutter's own builder shape: scenarios are lists of
+   typed step values built with a lowercase grammar (`navigate`,
+   `click`, `typeText`, `verifyThat`, `waitFor`, `intent`, `record`,
+   `code`/`exec`), scenario composition is ordinary Dart. **Code steps**
+   carry closures — terminal commands (`exec`), oka calls, arbitrary
+   checks — everything a document cannot express; they are Dart-only by
+   design and cannot cross the snapshot boundary. YAML/JSON documents
+   are **snapshots** (the interchange for agents, MCP, and existing
+   scattered configs) via `planDocument(plan)`, which refuses to export
+   code steps; parsed snapshots become identical step values executed by
+   the one runner. No second engine, no closure/AST split.
 1. **Declarative plans** (`AutomationPlan`, a fail-closed value):
    - `sessions` — named **attach-only** endpoint bindings (transport +
      direct URI or oka-style handle name); the toolkit never spawns or
@@ -72,17 +75,34 @@ universal-automation`):
    `observe`, `act`, `verify`, `screenshot`, `run`, `validate`, `serve`.
    Documents only; Dart-composed plans run through a three-line runner
    call (see the showcase).
-4. **MCP stdio server** (`serve`): newline-delimited JSON-RPC 2.0, tools
-   `automation_observe`, `automation_act`, `automation_verify`,
-   `automation_screenshot`, `automation_validate_plan`,
-   `automation_run_plan`; tools-only server (no resources/prompts in v1).
-   The default endpoint comes from `--cdp`; tools accept a per-call
-   endpoint override so one server serves any reachable browser.
-5. **Transport registry**: v1 links the CDP tier
-   (`universal_browser_cdp`, including `BehavioralCdpDriver` when a step
-   declares a profile). Other transports are named in plans and fail at
-   resolution with a loud `TransportNotLinkedException` — plan format
-   stays stable while WebDriver/OS/VM-service tiers link in.
+4. **MCP server** (`serve`): newline-delimited JSON-RPC 2.0 over stdio,
+   or loopback HTTP (`serve --http <port>`; `POST /mcp`, one JSON
+   response per request — the stateless shape of the streamable-HTTP
+   transport) for clients that cannot spawn processes (ChatGPT
+   connectors). Tools `automation_observe`, `automation_act`,
+   `automation_verify`, `automation_screenshot`,
+   `automation_validate_plan`, `automation_run_plan`; tools-only server.
+   The default face comes from `--cdp`, `--webdriver`, or `--os` (the
+   endpoint-free desktop tier — macOS AX binds the focused
+   application); tools accept a per-call `endpoint` + `transport`
+   override, so one server serves any reachable browser or the focused
+   desktop app.
+5. **Transport registry**: injectable `DriverFactory` per transport;
+   built-ins link the CDP tier (incl. `BehavioralCdpDriver`), W3C
+   WebDriver, and the OS-native tier (macOS AX focused-app —
+   endpoint-free binding; Linux AT-SPI over the session D-Bus; Windows
+   UIA sidecar, refusing loudly off Windows). The macOS native-assets
+   hook no-ops off-Darwin, so one binary builds everywhere (AOT via
+   `dart build cli` only). `vmService` (the instrumented Flutter tier,
+   `ToolkitDriver` in mcp_flutter) resolves through registered
+   factories — composition roots link it without reversing ADR 0036's
+   dependency direction; unregistered transports fail loudly with
+   `TransportNotLinkedException`. Surface-action discovery (`actions`
+   verb) exposes a driver's `AutomationActionCatalog`; handle bindings
+   resolve from `--set` overrides or `session-<name>-handle` artifacts
+   under a handles directory (oka's publish convention). The screencast
+   plane lands as a `record` step (CDP → `FileRecorderSink`:
+   `.mjpeg` + receipt manifest).
 6. **Installable plugin with skills**: a ZCode plugin that carries the
    SKILL.md usage guide and the MCP registration, so any client installs
    the whole surface in one step; harness actors call the same binary via
@@ -108,13 +128,18 @@ universal-automation`):
   shape), not a package dependency: `universal_automation_toolkit` does
   not depend on intentcall packages; manifest files exported by
   intentcall parse verbatim. A typed adapter may link later.
-- v1 links the CDP tier only; `webdriver`, `osAccessibility`, and
-  `vmService` transports resolve to loud failures until their binding
-  lands.
+- Live proof is platform-bound: macOS + CDP are live-proven; the
+  Linux/Windows bindings are wired against their pure-Dart family
+  packages and proven through those packages' fakes, not live sessions.
+- The Flutter JIT tier ships no OOTB binding (composition-root
+  injection only); `SessionPacing` remains CDP-refused (ADR 0044 v1).
 - No OS-tier AOT proof: `dart compile exe` silently drops native code
   assets, so once the OS tier links, the binary must build via
   `dart build cli` — untested in this ADR (v1 is pure Dart).
 - MCP surface is tools-only; resources/prompts/sampling are future work.
+  The HTTP transport binds loopback only; exposing it beyond localhost
+  (ChatGPT connectors require a public HTTPS origin) is a deliberate
+  fronting/tunneling decision with auth, not part of this package.
 - Plan validation cannot check driver capabilities (no attach at validate
   time); capability mismatches surface at run time as loud failures.
 - No hot-reload story for Flutter apps (grep-verified family gap, ADR

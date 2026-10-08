@@ -209,6 +209,61 @@ void main() {
       expect(lastMove.y, closeTo(124, 0.01));
     });
 
+    test('coordinate drag humanizes the carried path (ADR 0053)', () {
+      final plan = synthesizeBehavior(
+        BehaviorProfile.humanPrior(7),
+        1,
+        const DragAction(10, 20, 300, 400),
+      );
+      final kinds = plan.steps.map((step) => step.kind).toList();
+      expect(kinds.first, 'dwell');
+      // Pressed once at the start, released once at the end, with the
+      // carried path animated between them.
+      expect(kinds.where((kind) => kind == 'pointerDown').length, 1);
+      expect(kinds.where((kind) => kind == 'pointerUp').length, 1);
+      expect(kinds.indexOf('pointerDown'),
+          lessThan(kinds.lastIndexOf('pointerMove')));
+      expect(kinds.last, 'pointerUp');
+      final moves = plan.steps.whereType<PointerMoveStep>().toList();
+      // The bezier approach departs near the from-point (curvature
+      // allowed) and lands exactly on the to-point.
+      expect(moves.first.x, closeTo(10, 30));
+      expect(moves.first.y, closeTo(20, 30));
+      expect(moves.last.x, closeTo(300, 0.01));
+      expect(moves.last.y, closeTo(400, 0.01));
+    });
+
+    test('double clickAt emits two presses with escalating clickCount', () {
+      final plan = synthesizeBehavior(
+        BehaviorProfile.agentImmediate,
+        1,
+        const ClickAtAction(50, 60, clickCount: 2),
+      );
+      final downs = plan.steps.whereType<PointerDownStep>().toList();
+      final ups = plan.steps.whereType<PointerUpStep>().toList();
+      expect(downs.length, 2);
+      expect(ups.length, 2);
+      expect(downs[0].clickCount, 1);
+      expect(downs[1].clickCount, 2);
+      expect(ups[1].clickCount, 2);
+      final move = plan.steps.whereType<PointerMoveStep>().single;
+      expect(move.x, 50);
+      expect(move.y, 60);
+    });
+
+    test('moveTo is a dwell plus an approach, no button events', () {
+      final plan = synthesizeBehavior(
+        BehaviorProfile.humanPrior(3),
+        1,
+        const MoveAction(200, 150),
+      );
+      expect(plan.steps.whereType<PointerDownStep>(), isEmpty);
+      expect(plan.steps.whereType<PointerUpStep>(), isEmpty);
+      final lastMove = plan.steps.whereType<PointerMoveStep>().last;
+      expect(lastMove.x, closeTo(200, 0.01));
+      expect(lastMove.y, closeTo(150, 0.01));
+    });
+
     test('typing emits per-key steps and submit adds Enter', () {
       final plan = synthesizeBehavior(
         BehaviorProfile.agentImmediate,

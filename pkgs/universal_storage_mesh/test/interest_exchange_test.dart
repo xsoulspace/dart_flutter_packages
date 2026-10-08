@@ -154,7 +154,9 @@ void main() {
 
     await expectLater(freshA.sync(), completes);
     expect(scripted.receivedDelta, isNotNull, reason: 'we served the elder');
-    expect(scripted.sawForeignSub, isFalse, reason: 'elder sends no sub');
+    // And the exchange completing AT ALL is the compat proof: the elder
+    // speaks the old script (hello + vv + delta, never a sub) while our
+    // side sent one — the sub frame is purely additive on the wire.
   });
 }
 
@@ -166,9 +168,6 @@ final class ScriptedOldPeerTransport implements MeshTransport {
 
   /// The delta we (the old peer) received from the real replica.
   Map<String, Object?>? receivedDelta;
-
-  /// Whether the old peer ever saw a `sub` frame (it must not need one).
-  bool sawForeignSub = false;
 
   @override
   Stream<MeshSession> get incoming => _incoming.stream;
@@ -182,7 +181,6 @@ final class ScriptedOldPeerTransport implements MeshTransport {
       onSend: fromPeer.add,
     );
     unawaited(_serve(fromPeer.stream, fromReplica));
-    _incoming.add(replicaSession);
     return replicaSession;
   }
 
@@ -196,8 +194,8 @@ final class ScriptedOldPeerTransport implements MeshTransport {
             jsonDecode(utf8.decode(frame)) as Map<dynamic, dynamic>,
           );
       switch (message['type']) {
-        case 'sub':
-          sawForeignSub = true;
+        case 'delta':
+          receivedDelta = message;
         case 'hello':
           toReplica.add(
             _frame({

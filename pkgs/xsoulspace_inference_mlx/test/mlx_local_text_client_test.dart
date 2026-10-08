@@ -21,46 +21,57 @@ void main() {
       await runtime.dispose();
     });
 
-    test('attach mode: ready server flips readiness without spawning',
-        () async {
-      final runtime = MlxServeRuntime(
-        httpClient: MockClient((_) async => http.Response('ok', 200)),
-        processStarter: (_, _, _) async => throw StateError('no spawn'),
-      );
-      expect(await runtime.ensureRunning(), isTrue);
-      expect(runtime.isReady, isTrue);
-      await runtime.dispose();
-    });
+    test(
+      'attach mode: ready server flips readiness without spawning',
+      () async {
+        final runtime = MlxServeRuntime(
+          httpClient: MockClient((_) async => http.Response('ok', 200)),
+          processStarter: (_, _, _) async => throw StateError('no spawn'),
+        );
+        expect(await runtime.ensureRunning(), isTrue);
+        expect(runtime.isReady, isTrue);
+        await runtime.dispose();
+      },
+    );
 
     test('serve arguments bind the model to the loopback port', () {
       expect(
         MlxServeArguments.command(model: 'org/model-4bit', port: 9000),
-        <String>['--model', 'org/model-4bit', '--host', '127.0.0.1', '--port', '9000'],
+        <String>[
+          '--model',
+          'org/model-4bit',
+          '--host',
+          '127.0.0.1',
+          '--port',
+          '9000',
+        ],
       );
     });
   });
 
   group('MlxLocalTextClient', () {
-    test('detached runtime infers as typed unavailable, no wire traffic',
-        () async {
-      var posts = 0;
-      final client = _client(
-        httpClient: MockClient((_) async {
-          posts++;
-          return http.Response('{}', 200);
-        }),
-      );
+    test(
+      'detached runtime infers as typed unavailable, no wire traffic',
+      () async {
+        var posts = 0;
+        final client = _client(
+          httpClient: MockClient((_) async {
+            posts++;
+            return http.Response('{}', 200);
+          }),
+        );
 
-      expect(client.id, 'mlx_local');
-      expect(client.isAvailable, isFalse);
-      expect(client.supportedTasks, <InferenceTask>{InferenceTask.text});
+        expect(client.id, 'mlx_local');
+        expect(client.isAvailable, isFalse);
+        expect(client.supportedTasks, <InferenceTask>{InferenceTask.text});
 
-      final result = await client.infer(_textRequest('compress this'));
-      expect(result.success, isFalse);
-      expect(result.error!.code, 'unavailable');
-      expect(posts, 0);
-      await client.dispose();
-    });
+        final result = await client.infer(_textRequest('compress this'));
+        expect(result.success, isFalse);
+        expect(result.error!.code, 'unavailable');
+        expect(posts, 0);
+        await client.dispose();
+      },
+    );
 
     test('non-text tasks are refused without touching the wire', () async {
       final client = _client();
@@ -121,9 +132,7 @@ void main() {
     });
 
     test('a 500 surfaces as a retryable transport failure', () async {
-      final server = FakeMlxChatServer(
-        engine: _ThrowingEngine(),
-      );
+      final server = FakeMlxChatServer(engine: _ThrowingEngine());
       await server.start();
       final runtime = MlxServeRuntime(
         healthEndpoint: server.url.replace(path: '/health'),
@@ -150,10 +159,7 @@ void main() {
     test('readiness names the runtime reason', () async {
       final client = _client();
       expect(client.readiness.state, InferenceReadinessState.unavailable);
-      expect(
-        client.readiness.issues.single.code,
-        'server_not_running',
-      );
+      expect(client.readiness.issues.single.code, 'server_not_running');
       await client.dispose();
     });
   });

@@ -1,0 +1,31 @@
+name: universal_automation_semantics
+description: >-
+  The semantic view grammar for the universal automation family:
+  declarative views over accessibility snapshots, ref-stable
+  observations, observation diffs, and compact text rendering. Pure
+  Dart, no Flutter, no protocol clients — every tier projects its tree
+  into the family Snapshot and shares this layer.
+version: 0.1.0
+homepage: https://github.com/xsoulspace/dart_flutter_packages
+repository: https://github.com/xsoulspace/dart_flutter_packages
+issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
+documentation: https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/universal_automation_semantics
+
+environment:
+  sdk: ^3.12.0
+
+resolution: workspace
+
+dependencies:
+  meta: ^1.19.0
+  universal_automation_interface: ^0.2.0
+
+dev_dependencies:
+  test: ^1.31.2
+  xsoulspace_lints: ^0.1.2
+
+topics:
+  - automation
+  - accessibility
+  - agents
+  - semantics

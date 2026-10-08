@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:universal_automation_interface/universal_automation_interface.dart';
+import 'package:universal_automation_semantics/universal_automation_semantics.dart';
 import 'package:universal_browser_cdp/universal_browser_cdp.dart';
+import 'package:universal_screencast/universal_screencast.dart';
 
 import '../plan/checks.dart';
 import '../plan/plan.dart';
@@ -23,6 +26,7 @@ final class StepResult {
     this.errorKind,
     this.errorMessage,
     this.detail = const {},
+    this.children = const [],
   }) : skipped = false;
 
   /// Creates a skipped-step record (after an aborting failure).
@@ -33,6 +37,7 @@ final class StepResult {
       errorKind = 'skipped',
       errorMessage = 'not run: an earlier step failed',
       detail = const {},
+      children = const [],
       skipped = true;
 
   /// 0-based position in the effective step list.
@@ -60,6 +65,9 @@ final class StepResult {
   /// Step-specific structured detail (snapshot summary, checks, outcome).
   final Map<String, Object?> detail;
 
+  /// Nested step records for [ScopeStep] runs (local indices).
+  final List<StepResult> children;
+
   /// Whether the step was skipped because an earlier step aborted.
   final bool skipped;
 
@@ -73,6 +81,8 @@ final class StepResult {
     if (errorKind != null) 'errorKind': errorKind,
     if (errorMessage != null) 'errorMessage': errorMessage,
     if (detail.isNotEmpty) 'detail': detail,
+    if (children.isNotEmpty)
+      'children': [for (final child in children) child.toJson()],
     if (skipped) 'skipped': true,
   };
 }
@@ -128,11 +138,19 @@ final class RunReport {
 /// steps run in order and stop at the first failure unless the step is
 /// marked continue-on-failure. Sessions are detached in every exit path.
 final class PlanRunner {
-  /// Creates a runner; [attachTimeout] bounds each session attach.
-  PlanRunner({this.attachTimeout = const Duration(seconds: 10)});
+  /// Creates a runner; [attachTimeout] bounds each session attach and
+  /// [handleBaseDirectory] names a directory of handle artifacts
+  /// (`session-<name>-handle` files holding endpoint URIs).
+  PlanRunner({
+    this.attachTimeout = const Duration(seconds: 10),
+    this.handleBaseDirectory,
+  });
 
   /// Attach deadline per session.
   final Duration attachTimeout;
+
+  /// Handle-artifact directory, when discovering published handles.
+  final String? handleBaseDirectory;
 
   /// Runs [scenarioName] (default: the plan's only scenario) and returns
   /// the structured report.
@@ -158,6 +176,7 @@ final class PlanRunner {
       bindings: plan.sessions,
       overrides: sessionOverrides,
       attachTimeout: attachTimeout,
+      handleBaseDirectory: handleBaseDirectory,
     );
     final startedAt = DateTime.now();
     final results = <StepResult>[];
@@ -201,14 +220,29 @@ final class PlanRunner {
     required int index,
     required String? outDir,
     required List<String> receipts,
+    String? sessionFallback,
   }) async {
     final watch = Stopwatch()..start();
     String? sessionName;
     try {
       final sessionBindingName = step.session ??
+          sessionFallback ??
           (plan.sessions.length == 1 ? plan.sessions.keys.single : null);
       final session = await registry.attach(sessionBindingName!);
       sessionName = sessionBindingName;
+      if (step is ScopeStep) {
+        return await _scope(
+          plan,
+          registry,
+          step,
+          session,
+          index: index,
+          sessionName: sessionName,
+          watch: watch,
+          outDir: outDir,
+          receipts: receipts,
+        );
+      }
       final detail = await switch (step) {
         ObserveStep() => _observe(session, step),
         ActStep() => _act(plan, session, step, index, outDir, receipts),
@@ -216,6 +250,9 @@ final class PlanRunner {
         VerifyStep() => _verify(session, step.checks),
         WaitStep() => _wait(session, step),
         ScreenshotStep() => _screenshot(session, step, outDir),
+        RecordStep() => _record(session, step, outDir),
+        CodeStep() => _code(session, step),
+        ScopeStep() => throw StateError('unreachable: scope handled above'),
       };
       return StepResult._(
         index: index,
@@ -263,12 +300,73 @@ final class PlanRunner {
     ObserveStep step,
   ) async {
     final snapshot = await session.driver.snapshot();
+    if (step.view != null) {
+      final observation = Observation.of(snapshot, step.view!);
+      return {
+        'nodeCount': snapshot.nodes.length,
+        'revision': snapshot.revision,
+        'capturedAt': snapshot.capturedAt.toIso8601String(),
+        'view': observation.toJson(),
+        if (step.save != null) step.save!: snapshot.toJson(),
+      };
+    }
     return {
       'nodeCount': snapshot.nodes.length,
       'revision': snapshot.revision,
       'capturedAt': snapshot.capturedAt.toIso8601String(),
       if (step.save != null) step.save!: snapshot.toJson(),
     };
+  }
+
+  /// The view-scoped step tree (ADR 0052): open with an observation,
+  /// run the children, close with the delta as the scope's evidence.
+  Future<StepResult> _scope(
+    AutomationPlan plan,
+    SessionRegistry registry,
+    ScopeStep step,
+    ResolvedSession session, {
+    required int index,
+    required String? sessionName,
+    required Stopwatch watch,
+    required String? outDir,
+    required List<String> receipts,
+  }) async {
+    final open = Observation.of(await session.driver.snapshot(), step.view);
+    final children = <StepResult>[];
+    var childOk = true;
+    for (var i = 0; i < step.steps.length; i++) {
+      final child = step.steps[i];
+      if (!childOk && !child.continueOnFailure) {
+        children.add(StepResult.skipped(index: i, kind: child.kind));
+        continue;
+      }
+      final result = await _runStep(
+        plan,
+        registry,
+        child,
+        index: i,
+        outDir: outDir,
+        receipts: receipts,
+        sessionFallback: sessionName,
+      );
+      children.add(result);
+      if (!result.ok && !child.continueOnFailure) childOk = false;
+    }
+    final close = Observation.of(await session.driver.snapshot(), step.view);
+    final delta = close.diff(open);
+    return StepResult._(
+      index: index,
+      kind: step.kind,
+      session: sessionName,
+      ok: childOk,
+      durationMs: watch.elapsedMilliseconds,
+      detail: {
+        'open': open.render(),
+        'delta': delta.render(),
+        'changed': !delta.isEmpty,
+      },
+      children: children,
+    );
   }
 
   Future<Map<String, Object?>> _act(
@@ -278,16 +376,26 @@ final class PlanRunner {
     int index,
     String? outDir,
     List<String> receipts,
-  ) => _dispatch(
-    plan,
-    session,
-    step.action,
-    profileName: step.profile,
-    seed: step.seed,
-    index: index,
-    outDir: outDir,
-    receipts: receipts,
-  );
+  ) async {
+    final detail = await _dispatch(
+      plan,
+      session,
+      step.action,
+      profileName: step.profile,
+      seed: step.seed,
+      index: index,
+      outDir: outDir,
+      receipts: receipts,
+    );
+    if (!step.returnState) return detail;
+    // The act loop's closing read: post-action state through the
+    // default view, in the same step result.
+    final observation = Observation.of(
+      await session.driver.snapshot(),
+      const SemanticView(maxNodes: 200),
+    );
+    return {...detail, 'state': observation.render()};
+  }
 
   Future<Map<String, Object?>> _actIntent(
     AutomationPlan plan,
@@ -426,6 +534,58 @@ final class PlanRunner {
     final bytes = await session.driver.screenshot();
     await file.writeAsBytes(bytes, flush: true);
     return {'path': file.path, 'bytes': bytes.length};
+  }
+
+  Future<Map<String, Object?>> _record(
+    ResolvedSession session,
+    RecordStep step,
+    String? outDir,
+  ) async {
+    final cdpDriver = session.driver;
+    if (cdpDriver is! CdpDriver) {
+      throw DriverUnsupportedException(
+        'record is linked for the CDP tier only (transport '
+        '"${session.binding.transport.name}"); screencast sources for '
+        'other tiers are future work',
+      );
+    }
+    final directory = outDir == null || step.out.startsWith('/')
+        ? step.out
+        : '$outDir/${step.out}';
+    final source = CdpScreencastFrameSource(
+      cdpDriver.page.connection,
+      revisionProbe: () => cdpDriver.page.revision,
+    );
+    final sink = FileRecorderSink(directory: directory, base: step.base);
+    final frames = source.start();
+    var written = 0;
+    // Strictly sequential pushes: the recorder performs overlapping
+    // async file writes if pushed concurrently.
+    Future<void> pump = Future.value();
+    final subscription = frames.listen((frame) {
+      written++;
+      pump = pump.then((_) => sink.push(frame));
+    });
+    await Future<void>.delayed(step.duration);
+    await source.stop();
+    await subscription.cancel();
+    await pump;
+    await sink.close();
+    return {
+      'frames': written,
+      'framesPath': sink.framesPath,
+      'metaPath': sink.metaPath,
+    };
+  }
+
+  Future<Map<String, Object?>> _code(
+    ResolvedSession session,
+    CodeStep step,
+  ) async {
+    final detail = await step.run(
+      CodeStepContext(driver: session.driver, url: session.url),
+    );
+    return detail is Map<String, Object?> ? detail : {'result': '$detail'};
   }
 }
 

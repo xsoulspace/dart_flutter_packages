@@ -1,4 +1,5 @@
 import 'package:universal_automation_interface/universal_automation_interface.dart';
+import 'package:universal_automation_semantics/universal_automation_semantics.dart';
 
 import 'checks.dart';
 
@@ -28,6 +29,7 @@ sealed class PlanStep {
       'wait',
       'screenshot',
       'intent',
+      'scope',
     }.contains(key)).toList();
     if (kindKeysProbe.length == 1) {
       final probed = json[kindKeysProbe.single];
@@ -46,6 +48,13 @@ sealed class PlanStep {
     }
     final session = _optionalString(json['session'], 'session');
     final continueOnFailure = json['continueOnFailure'] == true;
+    if (json.keys.contains('code')) {
+      throw const FormatException(
+        '"code" steps are Dart-only: they cannot be expressed in a plan '
+        'document (snapshot); compose them in Dart or export a snapshot '
+        'without them',
+      );
+    }
     final kindKeys = json.keys
         .where((key) => const {
           'observe',
@@ -54,6 +63,8 @@ sealed class PlanStep {
           'wait',
           'screenshot',
           'intent',
+          'record',
+          'scope',
         }.contains(key))
         .toList();
     if (kindKeys.length > 1) {
@@ -70,6 +81,9 @@ sealed class PlanStep {
           .where((key) => const {
             'navigate',
             'click',
+            'clickAt',
+            'moveTo',
+            'drag',
             'type',
             'key',
             'scroll',
@@ -85,7 +99,7 @@ sealed class PlanStep {
       }
       throw FormatException(
         'a step must carry exactly one of observe/act/verify/wait/screenshot/'
-        'intent or one action verb (got ${json.keys.join(', ')})',
+        'intent/scope or one action verb (got ${json.keys.join(', ')})',
       );
     }
     final body = json[kindKeys.single];
@@ -96,6 +110,8 @@ sealed class PlanStep {
       'wait' => WaitStep._(body: body),
       'screenshot' => ScreenshotStep._(body: body),
       'intent' => IntentStep._(body: body, json: json),
+      'record' => RecordStep._(body: body),
+      'scope' => ScopeStep._(body: body),
       _ => throw StateError('unreachable'),
     }.withCommon(session: session, continueOnFailure: continueOnFailure);
   }
@@ -129,30 +145,43 @@ String? _optionalString(Object? value, String field) {
   return value;
 }
 
-/// Capture one semantic snapshot. The report always carries a node count
-/// and revision; `save` additionally embeds the full snapshot JSON under
-/// that name.
+/// Capture one semantic snapshot — optionally through a
+/// [SemanticView] (ADR 0052): the report then carries the view's
+/// rendered text + ref index, while `save` keeps the raw snapshot.
 final class ObserveStep extends PlanStep {
   /// Creates an observe step.
-  const ObserveStep({super.session, super.continueOnFailure, this.save});
+  const ObserveStep({
+    super.session,
+    super.continueOnFailure,
+    this.save,
+    this.view,
+  });
 
   factory ObserveStep._({required Object? body}) {
     if (body != null && body is! Map<Object?, Object?>) {
       throw const FormatException('observe must be a map when present');
     }
     final map = (body as Map<Object?, Object?>?) ?? const {};
-    if (map.keys.any((key) => key != 'save')) {
+    if (map.keys.any((key) => key != 'save' && key != 'view')) {
       throw FormatException(
-        'observe supports only `save` (got ${map.keys.join(', ')})',
+        'observe supports only `save` and `view` '
+        '(got ${map.keys.join(', ')})',
       );
     }
     return ObserveStep(
       save: _optionalString(map['save'], 'save'),
+      view: map.containsKey('view')
+          ? SemanticView.fromJson(map['view'])
+          : null,
     );
   }
 
   /// Report name under which the full snapshot JSON is embedded.
   final String? save;
+
+  /// The view the observation renders through; `null` reports only
+  /// counts.
+  final SemanticView? view;
 
   @override
   String get kind => 'observe';
@@ -163,11 +192,15 @@ final class ObserveStep extends PlanStep {
         session: session,
         continueOnFailure: continueOnFailure,
         save: save,
+        view: view,
       );
 
   @override
   Map<String, Object?> toJson() => {
-    'observe': {if (save != null) 'save': save},
+    'observe': {
+      if (save != null) 'save': save,
+      if (view != null) 'view': view!.toJson(),
+    },
     if (session != null) 'session': session,
     if (continueOnFailure) 'continueOnFailure': true,
   };
@@ -182,6 +215,7 @@ final class ActStep extends PlanStep {
     super.continueOnFailure,
     this.profile,
     this.seed,
+    this.returnState = false,
   });
 
   factory ActStep._({required Object? body, required Map<Object?, Object?> json}) {
@@ -190,7 +224,13 @@ final class ActStep extends PlanStep {
     }
     // Common keys may ride inside the act map (`- act: {click: {...},
     // session: b}`) — lift them instead of demanding sibling placement.
-    const commonKeys = {'session', 'profile', 'seed', 'continueOnFailure'};
+    const commonKeys = {
+      'session',
+      'profile',
+      'seed',
+      'continueOnFailure',
+      'returnState',
+    };
     final actionBody = {
       for (final entry in body.entries)
         if (!commonKeys.contains(entry.key)) entry.key: entry.value,
@@ -205,10 +245,21 @@ final class ActStep extends PlanStep {
     if (seedValue != null && seedValue is! int) {
       throw const FormatException('seed must be an integer');
     }
+    final returnState = json['returnState'] ??
+        body['returnState'] ??
+        // The verb shorthand keeps extra keys inside the action map
+        // (`- click: {name: Go, returnState: true}`) — lift them here.
+        (actionBody.values.single is Map<Object?, Object?>
+            ? (actionBody.values.single as Map<Object?, Object?>)['returnState']
+            : null);
+    if (returnState != null && returnState is! bool) {
+      throw const FormatException('returnState must be a boolean');
+    }
     return ActStep(
       action: action,
       profile: profile,
       seed: seedValue as int?,
+      returnState: returnState == true,
     );
   }
 
@@ -223,6 +274,11 @@ final class ActStep extends PlanStep {
   /// fresh entropy (production posture).
   final int? seed;
 
+  /// When true, the step result carries the post-action state rendered
+  /// through the default view — the act loop's closing read in one
+  /// round trip (ADR 0052).
+  final bool returnState;
+
   @override
   String get kind => 'act';
 
@@ -234,6 +290,7 @@ final class ActStep extends PlanStep {
         continueOnFailure: continueOnFailure,
         profile: profile,
         seed: seed,
+        returnState: returnState,
       );
 
   @override
@@ -241,6 +298,7 @@ final class ActStep extends PlanStep {
     'act': actionToJson(action),
     if (profile != null) 'profile': profile,
     if (seed != null) 'seed': seed,
+    if (returnState) 'returnState': true,
     if (session != null) 'session': session,
     if (continueOnFailure) 'continueOnFailure': true,
   };
@@ -258,6 +316,33 @@ final class ActStep extends PlanStep {
             if (name != null) 'name': name,
           },
         },
+        ClickAtAction(:final x, :final y, :final button, :final clickCount) => {
+          'clickAt': {
+            'x': x,
+            'y': y,
+            if (button != 'left') 'button': button,
+            if (clickCount != 1) 'clickCount': clickCount,
+          },
+        },
+        MoveAction(:final x, :final y) => {
+          'moveTo': {'x': x, 'y': y},
+        },
+        DragAction(
+          :final fromX,
+          :final fromY,
+          :final toX,
+          :final toY,
+          :final button,
+        ) =>
+          {
+            'drag': {
+              'fromX': fromX,
+              'fromY': fromY,
+              'toX': toX,
+              'toY': toY,
+              if (button != 'left') 'button': button,
+            },
+          },
         TypeAction(:final text, :final css, :final submit) => {
           'type': {
             'text': text,
@@ -311,6 +396,26 @@ final class ActStep extends PlanStep {
           throw const FormatException('click needs css, role, or name');
         }
         return ClickAction(css: css, role: role, name: name);
+      case 'clickAt':
+        final params = _asMap(value, 'clickAt');
+        final (x, y) = _coords(params, 'clickAt');
+        return ClickAtAction(
+          x,
+          y,
+          button: _button(params),
+          clickCount: _clickCount(params),
+        );
+      case 'moveTo':
+        final params = _asMap(value, 'moveTo');
+        final (x, y) = _coords(params, 'moveTo');
+        return MoveAction(x, y);
+      case 'drag':
+        final params = _asMap(value, 'drag');
+        final fromX = _num(params['fromX'], 'drag.fromX');
+        final fromY = _num(params['fromY'], 'drag.fromY');
+        final toX = _num(params['toX'], 'drag.toX');
+        final toY = _num(params['toY'], 'drag.toY');
+        return DragAction(fromX, fromY, toX, toY, button: _button(params));
       case 'type':
         final params = _asMap(value, 'type');
         final text = _optionalString(params['text'], 'type.text');
@@ -375,6 +480,37 @@ Map<Object?, Object?> _asMap(Object? value, String field) {
     throw FormatException('$field must be a map');
   }
   return value;
+}
+
+double _num(Object? value, String field) {
+  if (value is! num) {
+    throw FormatException('$field must be a number');
+  }
+  return value.toDouble();
+}
+
+(double, double) _coords(Map<Object?, Object?> params, String field) =>
+    (_num(params['x'], '$field.x'), _num(params['y'], '$field.y'));
+
+String _button(Map<Object?, Object?> params) {
+  final button = params['button'];
+  if (button == null) return 'left';
+  if (button is! String ||
+      const {'left', 'right', 'middle'}.contains(button) == false) {
+    throw FormatException(
+      'button must be left, right, or middle (got $button)',
+    );
+  }
+  return button;
+}
+
+int _clickCount(Map<Object?, Object?> params) {
+  final count = params['clickCount'];
+  if (count == null) return 1;
+  if (count is! int || count < 1 || count > 3) {
+    throw const FormatException('clickCount must be an integer in 1..3');
+  }
+  return count;
 }
 
 /// Assert post-conditions against one fresh snapshot; any failed check
@@ -660,6 +796,228 @@ final class IntentStep extends PlanStep {
     },
     if (profile != null) 'profile': profile,
     if (seed != null) 'seed': seed,
+    if (session != null) 'session': session,
+    if (continueOnFailure) 'continueOnFailure': true,
+  };
+}
+
+
+/// Run a view-scoped step tree (ADR 0052) — the calling dimension of
+/// composition: the view opens with an observation, the child steps run
+/// against the same session, and the closing observation's delta is
+/// the scope's evidence. Composition nests the view tree AND the call
+/// tree; scopes nest.
+final class ScopeStep extends PlanStep {
+  /// Creates a scope step.
+  const ScopeStep({
+    required this.view,
+    required this.steps,
+    super.session,
+    super.continueOnFailure,
+  });
+
+  factory ScopeStep._({required Object? body}) {
+    final params = switch (body) {
+      Map<Object?, Object?> params => params,
+      _ => throw const FormatException('scope must be a map'),
+    };
+    final view = SemanticView.fromJson(params['view']);
+    final stepsValue = params['steps'];
+    if (stepsValue is! List<Object?> || stepsValue.isEmpty) {
+      throw const FormatException('scope needs a non-empty steps list');
+    }
+    return ScopeStep(
+      view: view,
+      steps: [for (final step in stepsValue) PlanStep.fromJson(step)],
+    );
+  }
+
+  /// The view the scope renders its opening/closing observations
+  /// through.
+  final SemanticView view;
+
+  /// The child steps (any kind except [CodeStep], which is Dart-only
+  /// and cannot cross the snapshot boundary — the parser refuses it
+  /// before this point).
+  final List<PlanStep> steps;
+
+  @override
+  String get kind => 'scope';
+
+  @override
+  PlanStep withCommon({String? session, required bool continueOnFailure}) =>
+      ScopeStep(
+        view: view,
+        steps: steps,
+        session: session,
+        continueOnFailure: continueOnFailure,
+      );
+
+  @override
+  Map<String, Object?> toJson() => {
+    'scope': {
+      'view': view.toJson(),
+      'steps': [for (final step in steps) step.toJson()],
+    },
+    if (session != null) 'session': session,
+    if (continueOnFailure) 'continueOnFailure': true,
+  };
+
+  @override
+  List<String> validate() {
+    final violations = <String>[];
+    if (steps.isEmpty) violations.add('scope needs a non-empty steps list');
+    for (var i = 0; i < steps.length; i++) {
+      final child = steps[i];
+      if (child is CodeStep) {
+        violations.add(
+          'scope.steps[$i] is a code step: code is Dart-only and cannot '
+          'cross the snapshot boundary',
+        );
+      }
+      violations.addAll([
+        for (final violation in child.validate()) 'scope.steps[$i]: $violation',
+      ]);
+    }
+    return violations;
+  }
+}
+
+/// Context handed to a [CodeStep] body: the attached driver (the full
+/// observe/act surface) and the live URL when the transport exposes one.
+final class CodeStepContext {
+  /// Creates the context.
+  const CodeStepContext({required this.driver, this.url});
+
+  /// The attached session driver.
+  final AutomationDriver driver;
+
+  /// The surface URL, when the transport exposes one.
+  final Uri? url;
+}
+
+/// A step whose body is Dart code — the first-class-code escape hatch
+/// (the oka posture): terminal commands, oka calls, arbitrary checks —
+/// everything a YAML document cannot express.
+///
+/// Code steps are **Dart-only by design**: [toJson] throws, and
+/// [planDocument] refuses to export a plan containing one. Snapshots
+/// are the interchange for agents; the code is the source of truth.
+final class CodeStep extends PlanStep {
+  /// Creates a code step.
+  CodeStep({
+    required this.run,
+    this.label,
+    super.session,
+    super.continueOnFailure,
+  });
+
+  /// The body. A thrown [CodeStepException] (or any [AutomationException])
+  /// fails the step; any other value returned becomes the step detail.
+  final Future<Object?> Function(CodeStepContext context) run;
+
+  /// Human-readable label used in reports and refusal messages.
+  final String? label;
+
+  @override
+  String get kind => 'code';
+
+  @override
+  PlanStep withCommon({String? session, required bool continueOnFailure}) =>
+      CodeStep(
+        run: run,
+        label: label,
+        session: session,
+        continueOnFailure: continueOnFailure,
+      );
+
+  @override
+  Map<String, Object?> toJson() => throw UnsupportedError(
+    'code steps are Dart-only and cannot cross the snapshot boundary; '
+    'export snapshots with planDocument after removing them '
+    '(${label ?? 'unlabeled code step'})',
+  );
+}
+
+/// A [CodeStep] body reported failure.
+class CodeStepException extends AutomationException {
+  /// Creates the failure.
+  const CodeStepException(this.stepLabel, String message, {this.details = const {}})
+    : super(message);
+
+  @override
+  String get kind => 'codeStepFailed';
+
+  /// The failing step's label, when given.
+  final String? stepLabel;
+
+  /// Structured details.
+  final Map<String, Object?> details;
+}
+
+/// Record the surface's frame stream for [duration] — the screencast
+/// plane (`frames != semantics`: recording, not observation) — into
+/// `out/<base>.mjpeg` + `<base>.meta.jsonl` (the family's file recorder
+/// sink). Linked for the CDP tier.
+final class RecordStep extends PlanStep {
+  /// Creates a record step.
+  const RecordStep({
+    required this.duration,
+    required this.out,
+    this.base = 'frames',
+    super.session,
+    super.continueOnFailure,
+  });
+
+  factory RecordStep._({required Object? body}) {
+    final params = switch (body) {
+      Map<Object?, Object?> params => params,
+      _ => throw const FormatException('record must be a map'),
+    };
+    final seconds = params['seconds'];
+    if (seconds is! num || seconds <= 0) {
+      throw const FormatException('record needs a positive seconds');
+    }
+    final out = _optionalString(params['out'], 'record.out');
+    if (out == null) {
+      throw const FormatException('record needs an out directory');
+    }
+    return RecordStep(
+      duration: Duration(microseconds: (seconds * 1e6).round()),
+      out: out,
+      base: _optionalString(params['base'], 'record.base') ?? 'frames',
+    );
+  }
+
+  /// How long to record.
+  final Duration duration;
+
+  /// Output directory.
+  final String out;
+
+  /// Artifact base name.
+  final String base;
+
+  @override
+  String get kind => 'record';
+
+  @override
+  PlanStep withCommon({String? session, required bool continueOnFailure}) =>
+      RecordStep(
+        duration: duration,
+        out: out,
+        base: base,
+        session: session,
+        continueOnFailure: continueOnFailure,
+      );
+
+  @override
+  Map<String, Object?> toJson() => {
+    'record': {
+      'seconds': duration.inMilliseconds / 1000,
+      'out': out,
+      'base': base,
+    },
     if (session != null) 'session': session,
     if (continueOnFailure) 'continueOnFailure': true,
   };

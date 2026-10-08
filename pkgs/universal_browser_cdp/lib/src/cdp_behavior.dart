@@ -184,22 +184,22 @@ final class CdpBehaviorScheduler {
             'y': y,
             'timestamp': timestampSec,
           });
-        case PointerDownStep(:final button):
+        case PointerDownStep(:final button, :final clickCount):
           await send('Input.dispatchMouseEvent', {
             'type': 'mousePressed',
             'x': pointerX,
             'y': pointerY,
             'button': button,
-            'clickCount': 1,
+            'clickCount': clickCount,
             'timestamp': timestampSec,
           });
-        case PointerUpStep(:final button):
+        case PointerUpStep(:final button, :final clickCount):
           await send('Input.dispatchMouseEvent', {
             'type': 'mouseReleased',
             'x': pointerX,
             'y': pointerY,
             'button': button,
-            'clickCount': 1,
+            'clickCount': clickCount,
             'timestamp': timestampSec,
           });
         case KeyDownStep(:final key, :final keyCode, :final text):

@@ -41,25 +41,32 @@ capability facts alone.
 
 `NativeLayaDecisionEngine` runs the REAL `aac6fef/laya-mlx` checkpoint
 (ModernBERT-large F16 + decision/scoring/action heads) on Apple-silicon MLX
-through a Swift dylib wired with Dart native assets:
+through a Rust-hosted mlx-c cdylib wired with Dart native assets
+([ADR 0051](../../../docs/decisions/0051_mlx_c_rust_engine_and_model_mesh.md)):
 
-- `hook/build.dart` builds `native/laya_native` (Swift + mlx-swift) and
-  registers the code asset; the first build needs Xcode with the Metal
-  Toolchain (`xcodebuild -downloadComponent MetalToolchain`) and network
-  for the mlx-swift SPM fetch. Without them the package still analyzes and
-  its scripted tests pass; the golden test skips with that reason.
+- `hook/build.dart` builds `native/laya_rust` (cargo; statically links the
+  pinned mlx 0.32.2 + mlx-c sources) and registers the cdylib as a code asset
+  with the same five `laya_native_*` symbols the Dart side has always bound —
+  the first build needs the Rust toolchain, cmake, and the Metal Toolchain
+  (`xcodebuild -downloadComponent MetalToolchain`) for the one-time mlx
+  kernel compile. Without them the package still analyzes and its scripted
+  tests pass; the golden test skips with that reason.
 - Weights: `LAYA_MODEL_DIR` or `~/.cache/xsoulspace/laya-mlx` — fetch
   `aac6fef/laya-mlx` from Hugging Face (~842 MB FP16). The runtime never
   downloads anything by itself.
 - Parity: `test/laya_native_golden_test.dart` reproduces the pinned
   laya-mlx runtime's outputs for the 16 reference parity cases — 63/63
-  argmax, max probability error 0.0026 (FP16).
+  argmax, max probability error 0.0026 (FP16). The fixture and its gates are
+  unchanged by the engine swap; the golden test is the acceptance oracle.
 - The daemon (`harnessd` in ecsai_harness) serves this engine by default
   on a loopback `LayaDecisionServer`; `HARNESS_LAYA_ENGINE=off` reverts to
   attach-only.
 
-The native port mirrors `laya_mlx/model.py` (github.com/mizorewww/laya-mlx,
-Apache-2.0); see NOTICE for attribution.
+The model port mirrors `laya_mlx/model.py` (github.com/mizorewww/laya-mlx,
+Apache-2.0); see NOTICE for attribution. The historical Swift + mlx-swift
+implementation of the same port remains documented in git history and stays
+the reference route for iOS (CMake-based consumers cannot yet build an
+iOS-compatible mlx metallib — ml-explore/mlx#3915).
 
 ## Setup: pure Dart first, Python only for the trained weights
 
@@ -101,12 +108,15 @@ deferred until the neutral decision contract grows those question kinds.
 
 ## Non-claims
 
-- No live model has been evaluated from this package. The wire, bounds,
-  cancellation, and failure mapping are fixture-tested against a fake
-  server; accuracy, latency, and calibration are upstream properties
-  (see the `laya-mlx` validation report) and remain unmeasured here.
-- No in-process native MLX bridge exists. A from-scratch Swift port would
-  mean reimplementing laya's custom decision architecture (decision
-  transformer, scoring head, action head) that the `laya-mlx` runtime
-  owns; the local-server path delivers the same capability today. Revisit
-  only if measured constraints require it.
+- No live model has been evaluated from this package beyond the golden
+  parity fixture. The wire, bounds, cancellation, and failure mapping are
+  fixture-tested against a fake server; accuracy, latency, and calibration
+  are upstream properties (see the `laya-mlx` validation report) and remain
+  unmeasured here.
+- No GGUF, MoE, vision/audio, training, or continuous batching. The engine
+  hosts laya's forward pass; the Qwen decode lane is a separate future ADR
+  ([ADR 0051](../../../docs/decisions/0051_mlx_c_rust_engine_and_model_mesh.md)
+  evidence ladder, L5).
+- No iOS or Android on-device inference in this phase: phones join the mesh
+  as participants with routing to an inference host (capability-gated
+  hosting is future work).

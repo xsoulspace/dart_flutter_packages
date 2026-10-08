@@ -26,10 +26,16 @@ final class LayaLocalDecisionProvider implements DecisionProvider {
     final int maxTransientRetries = 1,
     final http.Client? httpClient,
     final void Function(Map<String, Object?> event)? onDiagnosticEvent,
+    final DecisionExecutionLocation executionLocation =
+        DecisionExecutionLocation.local,
+    final DecisionNetworkRequirement networkRequirement =
+        DecisionNetworkRequirement.none,
   }) : _delegate = LayaServerDecisionProvider(
          apiKey: apiKey,
          model: model,
          endpoint: endpoint,
+         executionLocation: executionLocation,
+         networkRequirement: networkRequirement,
          timeout: timeout,
          maxTransientRetries: maxTransientRetries,
          httpClient: httpClient,

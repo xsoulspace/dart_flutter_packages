@@ -489,8 +489,12 @@ final class MeshStorageProvider implements StorageProvider {
 
   Future<void> _persist(final ConvergenceDoc doc) async {
     if (_inMemory) return;
+    final store = _store;
+    // An inbound exchange may still be finishing while dispose() runs —
+    // persisting is then moot, never a crash.
+    if (store == null) return;
     final fileName = encodeDocFileName(doc.docId);
-    await _store!.write(
+    await store.write(
       'docs/$fileName.json',
       jsonEncode({'path': doc.docId, 'doc': doc.toJson()}),
     );

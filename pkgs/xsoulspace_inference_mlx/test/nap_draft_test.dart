@@ -34,7 +34,10 @@ void main() {
       expect(restored.draft, record.draft);
       expect(restored.status, NapDraftStatus.pending);
       expect(restored.promptTokens, 340);
-      expect(restored.napArgument, '10-25 "transport v2 landed; mesh gate green"');
+      expect(
+        restored.napArgument,
+        '10-25 "transport v2 landed; mesh gate green"',
+      );
     });
   });
 
@@ -51,33 +54,37 @@ void main() {
       dir.deleteSync(recursive: true);
     });
 
-    test('append creates the queue; load returns records oldest first',
-        () async {
-      await store.append(_record('10-25-1', 10, 25, NapDraftStatus.pending));
-      await store.append(_record('26-41-2', 26, 41, NapDraftStatus.refused));
+    test(
+      'append creates the queue; load returns records oldest first',
+      () async {
+        await store.append(_record('10-25-1', 10, 25, NapDraftStatus.pending));
+        await store.append(_record('26-41-2', 26, 41, NapDraftStatus.refused));
 
-      final records = store.load();
-      expect(records, hasLength(2));
-      expect(records.first.id, '10-25-1');
-      expect(records.last.status, NapDraftStatus.refused);
-    });
+        final records = store.load();
+        expect(records, hasLength(2));
+        expect(records.first.id, '10-25-1');
+        expect(records.last.status, NapDraftStatus.refused);
+      },
+    );
 
-    test('latestPerBlock keeps one worklist entry per block, block order',
-        () async {
-      await store.append(_record('10-25-1', 10, 25, NapDraftStatus.tooLong));
-      await store.append(
-        _record('10-25-2', 10, 25, NapDraftStatus.pending, minutes: 5),
-      );
-      await store.append(_record('2-3-3', 2, 3, NapDraftStatus.pending));
+    test(
+      'latestPerBlock keeps one worklist entry per block, block order',
+      () async {
+        await store.append(_record('10-25-1', 10, 25, NapDraftStatus.tooLong));
+        await store.append(
+          _record('10-25-2', 10, 25, NapDraftStatus.pending, minutes: 5),
+        );
+        await store.append(_record('2-3-3', 2, 3, NapDraftStatus.pending));
 
-      final latest = store.latestPerBlock();
-      expect(latest, hasLength(2));
-      expect(latest[0].blockLo, 2);
-      expect(latest[1].blockLo, 10);
-      // The superseded too-long attempt is not the worklist entry.
-      expect(latest[1].id, '10-25-2');
-      expect(latest[1].status, NapDraftStatus.pending);
-    });
+        final latest = store.latestPerBlock();
+        expect(latest, hasLength(2));
+        expect(latest[0].blockLo, 2);
+        expect(latest[1].blockLo, 10);
+        // The superseded too-long attempt is not the worklist entry.
+        expect(latest[1].id, '10-25-2');
+        expect(latest[1].status, NapDraftStatus.pending);
+      },
+    );
 
     test('a missing queue loads as empty', () {
       expect(store.load(), isEmpty);

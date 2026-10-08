@@ -65,6 +65,13 @@ class WebDriverDriver implements AutomationDriver {
           'classic WebDriver has no script endpoint; got '
           '${expression.length} chars',
         );
+      case ClickAtAction():
+      case MoveAction():
+      case DragAction():
+        throw const DriverUnsupportedException(
+          'coordinate pointer verbs (ADR 0053) are not wired for this '
+          'tier yet; use locator verbs',
+        );
       case InvokeAction(:final name):
         throw DriverUnsupportedException(
           'the WebDriver tier has no surface action registry; '

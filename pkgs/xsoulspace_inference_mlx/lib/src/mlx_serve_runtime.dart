@@ -38,9 +38,7 @@ final class MlxServeRuntime {
   /// The default loopback port (laya owns 8000; MLX binds beside it).
   static const int defaultPort = 8765;
 
-  static Uri defaultEndpoint() => Uri.parse(
-    'http://127.0.0.1:$defaultPort',
-  );
+  static Uri defaultEndpoint() => Uri.parse('http://127.0.0.1:$defaultPort');
 
   MlxServeRuntime({
     final Uri? healthEndpoint,
@@ -57,8 +55,7 @@ final class MlxServeRuntime {
     ServeProcessStarter processStarter = ioStart,
   }) : _runtime = LocalServeRuntime(
          healthEndpoint:
-             healthEndpoint ??
-             defaultEndpoint().replace(path: '/health'),
+             healthEndpoint ?? defaultEndpoint().replace(path: '/health'),
          executable: executable,
          label: 'mlx-lm server',
          arguments: arguments,
@@ -79,6 +76,22 @@ final class MlxServeRuntime {
   final LocalServeRuntime _runtime;
 
   Uri get healthEndpoint => _runtime.healthEndpoint;
+
+  /// The base URL the server answers on, derived from [healthEndpoint] by
+  /// stripping the `/health` suffix. The text client derives its chat URL
+  /// from this, so ONE endpoint configuration drives both readiness and
+  /// dispatch (a lane that points the runtime at a fixture server must
+  /// never chat with the default port).
+  Uri get endpoint {
+    final health = _runtime.healthEndpoint;
+    final path = health.path;
+    return path.endsWith('/health')
+        ? health.replace(
+            path: path.substring(0, path.length - '/health'.length),
+          )
+        : health;
+  }
+
   List<String> get arguments => _runtime.arguments;
   Map<String, String> get environment => _runtime.environment;
 

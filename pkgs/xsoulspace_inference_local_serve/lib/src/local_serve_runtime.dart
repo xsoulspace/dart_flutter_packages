@@ -108,7 +108,7 @@ final class LocalServeRuntime {
     }
     _state = LocalServeState.starting;
     try {
-      _spawned = await _processStarter(executable, arguments, environment);
+      _spawned = await processStarter(executable, arguments, environment);
     } on Object catch (error) {
       _state = LocalServeState.unavailable;
       _unavailableReason = 'failed to start $executable: $error';

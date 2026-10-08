@@ -4,6 +4,10 @@ import 'dart:io';
 import 'package:meta/meta.dart';
 import 'package:universal_automation_interface/universal_automation_interface.dart';
 
+/// The MCP metadata key intentcall projects automation hints under
+/// (ADR 0038 wire projection; see intentcall_mcp's publish adapter).
+const intentcallAutomationMetaKey = 'dev.intentcall/automation';
+
 /// Driver verb an intent hint routes to — the intentcall
 /// `IntentAutomationAction` contract shape (`click`, `type`, `key`,
 /// `navigate`, `evaluate`, `custom`), parsed from the manifest wire form.
@@ -194,7 +198,21 @@ final class IntentHint {
   };
 
   @override
-  String toString() => 'IntentHint($driver, ${verb.name}, $locator)';
+  bool operator ==(Object other) =>
+      other is IntentHint &&
+      other.driver == driver &&
+      other.verb == verb &&
+      other.locator.length == locator.length &&
+      other.locator.entries.every(
+        (entry) => locator[entry.key] == entry.value,
+      );
+
+  @override
+  int get hashCode => Object.hash(
+    driver,
+    verb,
+    Object.hashAllUnordered(locator.entries),
+  );
 }
 
 /// One intent an app declares: name, display title, optional parameter
@@ -334,6 +352,85 @@ final class IntentRegistry {
       }
     }
     return IntentRegistry(manifests);
+  }
+
+  /// Builds a registry from a captured MCP `tools/list` payload — the
+  /// shape intentcall hints actually travel in (the ADR 0038 wire
+  /// projection: each tool's `_meta['dev.intentcall/automation']` carries
+  /// `IntentAutomationHint.toJson()`).
+  ///
+  /// Accepts the full result (`{tools: [...]}`) or a bare tool list.
+  /// Tools without the hint meta are skipped (they are plain MCP tools,
+  /// not automation intents); tools with an unparseable hint are skipped
+  /// too — intentcall's own projection guarantees parseable hints, so a
+  /// skip means the payload predates the projection. Throws
+  /// [FormatException] for duplicate tool names.
+  factory IntentRegistry.fromMcpToolsList(
+    Object? json, {
+    String app = 'app',
+  }) {
+    final tools = switch (json) {
+      {'tools': List<Object?> tools} => tools,
+      List<Object?> tools => tools,
+      _ => throw const FormatException(
+        'expected a tools/list payload ({tools: [...]} or a tool list)',
+      ),
+    };
+    final intents = <AppIntent>[];
+    final seen = <String>{};
+    for (final tool in tools) {
+      if (tool is! Map<Object?, Object?>) continue;
+      final name = tool['name'];
+      if (name is! String || name.isEmpty) continue;
+      if (!seen.add(name)) {
+        throw FormatException('duplicate tool name "$name" in capture');
+      }
+      final meta = tool['_meta'];
+      if (meta is! Map<Object?, Object?>) continue;
+      final hint = IntentHint.fromJson(meta[intentcallAutomationMetaKey]);
+      if (hint == null) continue;
+      final description = tool['description'];
+      final inputSchema = tool['inputSchema'];
+      intents.add(
+        AppIntent(
+          name: name,
+          title: description is String && description.isNotEmpty
+              ? description
+              : null,
+          hint: hint,
+          parameters: _parametersFromSchema(inputSchema),
+        ),
+      );
+    }
+    return IntentRegistry([IntentManifest(app: app, intents: intents)]);
+  }
+
+  /// Maps a JSON-schema `inputSchema` onto the intent parameter list.
+  static List<Map<String, Object?>> _parametersFromSchema(Object? schema) {
+    if (schema is! Map<Object?, Object?>) return const [];
+    final properties = schema['properties'];
+    if (properties is! Map<Object?, Object?>) return const [];
+    final required = schema['required'];
+    final requiredNames = required is List<Object?>
+        ? required.whereType<String>().toSet()
+        : <String>{};
+    return [
+      for (final entry in properties.entries)
+        () {
+          final parameter = <String, Object?>{'name': '${entry.key}'};
+          if (entry.value is Map<Object?, Object?>) {
+            final property = entry.value as Map<Object?, Object?>;
+            if (property['type'] is String) parameter['type'] = property['type'];
+            if (property['description'] is String) {
+              parameter['description'] = property['description'];
+            }
+          }
+          if (requiredNames.contains('${entry.key}')) {
+            parameter['required'] = true;
+          }
+          return parameter;
+        }(),
+    ];
   }
 
   final Map<String, IntentManifest> _manifests;

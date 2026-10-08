@@ -123,3 +123,27 @@ final class MeshSyncProtocol {
     );
   }
 }
+
+/// Byte-level plane classifier (ADR 0047 "one server, two planes"): whether
+/// a first inbound frame declares the WORLD-SYNC plane. The sync protocol
+/// sends its `hello` before anything else, and every sync frame carries
+/// the `type`/`v` pair — realtime app frames (e.g. gesture events) carry
+/// neither, so one decrypted first frame routes the session.
+bool looksLikeWorldSyncFrame(final Uint8List frame) {
+  return meshFrameTypeIs(frame, const {
+    MeshSyncProtocol.helloType,
+    MeshSyncProtocol.subType,
+    MeshSyncProtocol.vvType,
+    MeshSyncProtocol.deltaType,
+  });
+}
+
+bool meshFrameTypeIs(final Uint8List frame, final Set<String> types) {
+  try {
+    final decoded = jsonDecode(utf8.decode(frame));
+    if (decoded is! Map) return false;
+    return types.contains(decoded['type']);
+  } on FormatException {
+    return false;
+  }
+}

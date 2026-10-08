@@ -282,25 +282,70 @@ class CdpPage {
 
   /// Dispatches a click at explicit viewport coordinates: a move to the
   /// point, then press + release (hover states see the pointer arrive).
-  Future<void> clickAt(double x, double y) async {
+  /// [button] is `left` (default), `right`, or `middle`; [clickCount]
+  /// 2 = double-click, 3 = triple (ADR 0053 coordinate verbs).
+  Future<void> clickAt(
+    double x,
+    double y, {
+    String button = 'left',
+    int clickCount = 1,
+  }) async {
+    _ensureOpen();
+    await movePointerTo(x, y);
+    for (var press = 0; press < clickCount.clamp(1, 3); press++) {
+      await connection.send('Input.dispatchMouseEvent', {
+        'type': 'mousePressed',
+        'x': x,
+        'y': y,
+        'button': button,
+        'clickCount': press + 1,
+      });
+      await connection.send('Input.dispatchMouseEvent', {
+        'type': 'mouseReleased',
+        'x': x,
+        'y': y,
+        'button': button,
+        'clickCount': press + 1,
+      });
+    }
+  }
+
+  /// Moves the pointer to explicit viewport coordinates without
+  /// pressing — hover affordances, tooltips, drag pre-positioning.
+  Future<void> movePointerTo(double x, double y) async {
     _ensureOpen();
     await connection.send('Input.dispatchMouseEvent', {
       'type': 'mouseMoved',
       'x': x,
       'y': y,
     });
+  }
+
+  /// Presses at (fromX, fromY), moves to (toX, toY), releases — the
+  /// coordinate drag primitive (ADR 0053). Behavioral profiles lower
+  /// the carried path through humanized segments instead.
+  Future<void> dragAt(
+    double fromX,
+    double fromY,
+    double toX,
+    double toY, {
+    String button = 'left',
+  }) async {
+    _ensureOpen();
+    await movePointerTo(fromX, fromY);
     await connection.send('Input.dispatchMouseEvent', {
       'type': 'mousePressed',
-      'x': x,
-      'y': y,
-      'button': 'left',
+      'x': fromX,
+      'y': fromY,
+      'button': button,
       'clickCount': 1,
     });
+    await movePointerTo(toX, toY);
     await connection.send('Input.dispatchMouseEvent', {
       'type': 'mouseReleased',
-      'x': x,
-      'y': y,
-      'button': 'left',
+      'x': toX,
+      'y': toY,
+      'button': button,
       'clickCount': 1,
     });
   }

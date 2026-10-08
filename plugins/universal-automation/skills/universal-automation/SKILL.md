@@ -1,106 +1,131 @@
 ---
 name: universal-automation
 description: >
-  Drive browsers (CDP/WebDriver), native macOS/Windows/Linux apps, and
+  Drive browsers (CDP/WebDriver), native macOS/Linux/Windows apps, and
   Flutter surfaces through the universal_automation family: the
-  observe/act/verify loop, declarative composable plans, intent routing,
-  and humanized input dynamics (ADR-0044 behavior profiles). Use when a
-  task needs UI automation, browser driving, plan-based testing, or
-  app-intent invocation — via the `universal-automation` CLI or the
-  `automation_*` MCP tools.
+  observe/act/verify loop, declarative plans composed as typed Dart
+  (YAML snapshots for agents), intent routing, screencast recording, and
+  humanized input dynamics (ADR-0044 behavior profiles). Use when a task
+  needs UI automation, browser driving, plan-based testing, or
+  app-intent invocation — via the `universal-automation` CLI, the
+  `automation_*` MCP tools, or a Dart plan file.
 ---
 
 # Universal Automation Toolkit
 
 One vocabulary for the observe/act/verify loop across browser and OS
 tiers (ADR 0046). Attach-only: it never spawns or stops processes —
-launch targets yourself (or use oka-published session handles) and point
-the toolkit at the debug endpoint.
+launch targets yourself (or point at oka-published session handles) and
+aim the toolkit at the debug endpoint.
 
-## MCP tools (when the plugin's server is mounted)
+**Dart is the source of truth; YAML/JSON documents are snapshots** (the
+agent interchange). Code steps make plans first-class code: terminal
+commands, oka calls, arbitrary checks.
+
+## Linked tiers
+
+| Tier | Transport | Notes |
+| --- | --- | --- |
+| Chromium / Flutter web AOT | `cdp` | snapshots, semantic clicks, profiles, `record` |
+| Safari / WebDriver ends | `webdriver` | actions + screenshots; no a11y tree |
+| macOS apps | `osAccessibility` | focused app; Accessibility (+Screen Recording) TCC |
+| Linux apps | `osAccessibility` | session D-Bus AT-SPI |
+| Windows apps | `osAccessibility` | UIA sidecar binary; loud elsewhere |
+| Flutter JIT (debug) | `vmService` | inject `DriverFactory` (composition root) |
+
+## MCP tools (plugin server mounted)
 
 | Tool | Purpose |
 | --- | --- |
-| `automation_observe` | Semantic snapshot of a surface (read-only). |
-| `automation_act` | One action: navigate/click/type/key/scroll/evaluate/invoke; optional `profile` for ADR-0044 humanized delivery. |
-| `automation_verify` | Assert checks: `{exists: {role?, name?}}`, `{absent: …}`, `{value: {locator, equals/contains}}`, `{urlContains: s}`. |
-| `automation_screenshot` | PNG to a local path. |
-| `automation_validate_plan` | Fail-closed validation of a plan document. |
-| `automation_run_plan` | Run a scenario; structured JSON report + behavior receipts. |
+| `automation_observe` | Semantic snapshot of a surface (read-only). Pass `view` (`{subtreeOf, identifierPrefix, fields, maxNodes, panes}`) for a rendered, ref-stable observation instead of the raw tree; `diff: true` adds +/-/~ rows against the previous viewed observation (ADR 0052). |
+| `automation_act` | navigate/click/type/key/scroll/evaluate/invoke; optional `profile` (ADR-0044 humanized delivery) + `seed`; `returnState: true` attaches the post-action state render — act + observe in one call. |
+| `automation_verify` | Checks: `{exists: {role?, name?}}`, `{absent: …}`, `{value: {locator, equals/contains}}`, `{urlContains: s}`. |
+| `automation_screenshot` | PNG to a local path (opt-in pixels; the semantic channel is primary). |
+| `automation_validate_plan` | Fail-closed snapshot validation. |
+| `automation_run_plan` | Run a scenario; structured JSON report + receipts. |
 
-Every ad-hoc tool takes an `endpoint` (CDP HTTP base, e.g.
-`http://127.0.0.1:9222`); without it the server uses its `--cdp` default.
+Ad-hoc tools take a `transport` (`cdp | webdriver | osAccessibility`)
+plus an `endpoint` (HTTP base); `osAccessibility` is the desktop tier —
+it binds the **focused application** and needs no endpoint. Without
+arguments the server uses its `serve` default (`--cdp <base>`, or
+`--os` for the desktop tier).
 
-## CLI
+## The loop (semantic-first)
+
+Observe through a `view`, act with `returnState`, verify — the agent
+reads refs and deltas, not pixels. Each rendered node carries a stable
+`ref`; `diff: true` returns only what changed. Screenshots are opt-in
+enrichment, and coordinates are the fallback tier (canvas, games,
+surfaces no accessibility tree can see), not the primary path.
+
+## Dart plans (primary)
+
+```dart
+final plan = AutomationPlan(
+  sessions: [
+    cdp('browser', uri: Uri.parse('http://127.0.0.1:9222')),
+    SessionBinding(name: 'mac', transport: AutomationTransport.osAccessibility),
+  ],
+  profiles: {'humanish': BehaviorProfile.humanPrior(7)},
+  intents: IntentRegistry.fromFiles(['app.intents.json']),
+  scenarios: [
+    scenario('checkout', steps: [
+      navigate(Uri.parse('https://example.com/cart')),
+      waitFor([exists(role: 'button', name: 'Checkout')]),
+      intent('app', 'fill-email', args: {'text': 'a@b.c'}),
+      click(name: 'Checkout', profile: 'humanish', seed: 42),
+      exec('flutter', args: ['test']),                    // terminal step
+      code((context) async => {'oka': 'call anything'}),  // first-class code
+      verifyThat([absent(name: 'Error')]),
+      record(const Duration(seconds: 2), '/tmp/out'),      // screencast
+      shot('/tmp/cart.png'),
+    ]),
+  ],
+);
+final report = await PlanRunner().run(plan, scenarioName: 'checkout');
+```
+
+Snapshot export (for agents; refuses code steps):
+`planDocument(plan)` → YAML/JSON.
+
+## CLI (snapshots + ad-hoc)
 
 ```bash
 universal-automation observe  --cdp http://127.0.0.1:9222
 universal-automation act      --cdp http://127.0.0.1:9222 --click-name Submit
 universal-automation verify   --cdp http://127.0.0.1:9222 --exists role=button,name=Go
+universal-automation actions  --cdp http://127.0.0.1:9222
 universal-automation screenshot --cdp http://127.0.0.1:9222 --out /tmp/s.png
-universal-automation validate --plan plan.yaml
 universal-automation run      --plan plan.yaml --scenario checkout --out /tmp/out
+universal-automation run      --plan plan.yaml --handles-dir ~/.oka/handles
 universal-automation serve    --cdp http://127.0.0.1:9222   # MCP stdio
+universal-automation serve    --http 8931                    # MCP POST /mcp
+
+# Desktop tier (focused app; macOS AX / Linux AT-SPI / Windows UIA):
+universal-automation observe  --os
+universal-automation act      --os --click-name New\ Folder
+universal-automation serve    --os                           # MCP over the desktop tier
 ```
 
 Exit codes: 0 pass, 1 automation failure, 2 usage. Results are JSON on
-stdout; errors go to stderr. Without the AOT binary, prefix with
-`dart run` from `pkgs/universal_automation_toolkit/`.
-
-## Declarative plans (the harness face)
-
-Plans compose in **typed Dart** (primary — see
-`pkgs/universal_automation_toolkit/lib/compose.dart` and
-`example/showcase.dart`) and serialize to **YAML/JSON** for agents. Both
-faces are the same values; one runner executes both.
-
-```yaml
-sessions:                      # attach-only bindings; oka owns lifecycle
-  chrome: {transport: cdp, uri: 'http://127.0.0.1:9333'}
-  staged: {transport: cdp, handle: session-staged-handle}  # resolved via --set staged=<uri>
-profiles:                      # ADR-0044 behavior dynamics (canonical JSON)
-  humanish:
-    rhythm: {beforeAction: {kind: fixed, micros: 0}}
-    reaction: {floorUs: 150000}
-    pacing: {noiseEventGrid: 0, driftHourUs: 0}
-    pointer:
-      path: {kind: bezier, curvature: 12, overshootGrid: 300}
-      moveDuration: {kind: fixed, micros: 120000}
-      buttonHold: {kind: fixed, micros: 80000}
-      maxStepPx: 24
-    cadence:
-      digraph: {kind: fixed, micros: 0}
-      hold: {kind: fixed, micros: 0}
-intents:                       # app-owned locators (intentcall hint shape)
-  - app: page
-    intents:
-      - name: fill-email
-        hint: {driver: cdp, action: type, locator: {css: 'input'}}
-scenarios:
-  buy:
-    steps:
-      - navigate: {url: 'https://example.com/'}      # lone verbs are act steps
-      - wait: {checks: [{exists: {role: button, name: Buy}}], timeout: 5}
-      - intent: {app: page, name: fill-email, args: {text: 'a@b.c'}}
-      - act: {click: {name: Buy}, profile: humanish, seed: 42}
-      - verify: [{exists: {role: heading, name: Thanks}}]
-      - screenshot: shots/buy.png
-```
-
-Composition: `extends` (parent steps run first), `include` (file merge,
-conflicts are violations). `run --set <handle>=<uri>` resolves handle
-bindings. The report is structured JSON; profiled dispatches also write
-ADR-0044 receipts (`*.behavior.stream.jsonl`, `*.behavior.receipts.jsonl`
-— dispatch claims, not effect evidence).
+stdout. Without the binary on PATH, the plugin launcher falls back to
+`dart run` from the package (`plugins/universal-automation/install.sh`
+builds and symlinks the AOT binary — `dart build cli` is mandatory once
+a native tier is linked; `dart compile exe` silently drops native code
+assets).
 
 ## House rules and gotchas
 
 - **Fail closed**: every plan violation is reported before anything
   attaches; capability gaps fail loudly, never silently degrade.
 - **Borrowed sessions**: detaching never closes the target's process.
-- Locators are semantic (`role`/accessible `name`) first — snapshots, not
-  pixels; CSS is the fallback tier.
+- Locators are semantic (`role`/accessible `name`) first; CSS is the
+  fallback tier. `wait` instead of sleeps — deep links may resolve on
+  the previous page's load event.
+- macOS tier needs the Accessibility TCC grant for the *host process*
+  (the MCP client or terminal that spawned the binary).
+- Multi-session scenarios: `onSession('name', steps)` or per-step
+  `session:`; handle bindings resolve via `--set name=uri` or handle
+  artifacts under `--handles-dir`.
 - For hermetic tests, compose against the family's fake CDP server
   (`package:universal_browser_cdp/universal_browser_cdp_testing.dart`).
-- Deep links: `Page.loadEventFired` can be the previous page's — wait for
-  content (`exists`/`urlContains`), not navigation completion.

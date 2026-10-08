@@ -25,6 +25,7 @@ final class MlxChatRequest {
     this.temperature,
     this.topP,
     this.stop = const <String>[],
+    this.templateArgs,
   });
 
   final String model;
@@ -37,6 +38,10 @@ final class MlxChatRequest {
   final double? topP;
   final List<String> stop;
 
+  /// Chat-template kwargs (e.g. Qwen3's `enable_thinking: false`), passed
+  /// through engines that honor them; ignored where unsupported.
+  final Map<String, Object?>? templateArgs;
+
   Map<String, Object?> toJson() => <String, Object?>{
     'model': model,
     'messages': <Object?>[for (final m in messages) m.toJson()],
@@ -45,6 +50,7 @@ final class MlxChatRequest {
     'temperature': ?temperature,
     'top_p': ?topP,
     if (stop.isNotEmpty) 'stop': stop,
+    'template_args': ?templateArgs,
   };
 }
 
@@ -186,7 +192,10 @@ final class HttpMlxChatEndpoint implements MlxChatEndpoint {
           : '${first['finish_reason']}';
     }
     if (text == null) {
-      throw MlxChatException('response carried no completion', retryable: false);
+      throw MlxChatException(
+        'response carried no completion',
+        retryable: false,
+      );
     }
     final usage = decoded['usage'];
     final promptTokens = usage is Map ? usage['prompt_tokens'] : null;

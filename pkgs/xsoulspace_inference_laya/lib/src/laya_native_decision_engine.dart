@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:ffi';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:math' as math;
 
 import 'package:ffi/ffi.dart';
@@ -10,7 +11,7 @@ import 'laya_decision_server.dart';
 import 'laya_prompt.dart';
 
 // Native bindings — resolved through the package's native-assets code asset
-// (hook/build.dart builds `native/laya_native` via SPM and registers it).
+// (hook/build.dart builds the current Rust/MLX macOS backend and registers it).
 // On machines without the Apple toolchain the hook registers no asset and
 // these throw a named error at first call; the golden test skips honestly.
 
@@ -24,7 +25,10 @@ external int _layaNativeLoad(Pointer<Uint8> modelDir);
   symbol: 'laya_native_forward',
   assetId: 'package:xsoulspace_inference_laya/laya_native',
 )
-external Pointer<Uint8> _layaNativeForward(int handle, Pointer<Uint8> requestJson);
+external Pointer<Uint8> _layaNativeForward(
+  int handle,
+  Pointer<Uint8> requestJson,
+);
 
 @Native<Void Function(Pointer<Uint8>)>(
   symbol: 'laya_native_free',
@@ -110,7 +114,7 @@ int rowQtype(final String type) =>
 /// normalization (dispatched to the dylib), prompt construction, batching,
 /// and temperature calibration. The native side is a pure forward pass
 /// (ModernBERT-large + decision head) over token ids.
-final class NativeLayaDecisionEngine implements LayaDecisionEngine {
+final class NativeLayaDecisionEngine implements CalibratedLayaDecisionEngine {
   NativeLayaDecisionEngine._(
     this._handle,
     this._tokenizer,
@@ -130,7 +134,15 @@ final class NativeLayaDecisionEngine implements LayaDecisionEngine {
   /// never downloads).
   static Future<NativeLayaDecisionEngine> load({final String? modelDir}) async {
     final dir = resolveModelDir(modelDir);
-    _ensureNativeBindingsAvailable();
+    final library = await Isolate.resolvePackageUri(
+      Uri.parse(
+        'package:xsoulspace_inference_laya/xsoulspace_inference_laya.dart',
+      ),
+    );
+    final packageRoot = library == null
+        ? null
+        : File.fromUri(library).parent.parent.path;
+    _ensureNativeBindingsAvailable(packageRoot: packageRoot);
     final dirNative = _toNative(dir);
     final handle = _layaNativeLoad(dirNative);
     malloc.free(dirNative);
@@ -143,8 +155,7 @@ final class NativeLayaDecisionEngine implements LayaDecisionEngine {
         jsonDecode(File('$dir/rl_agent_config.json').readAsStringSync())
             as Map<String, dynamic>;
     final temps = [
-      for (final t
-          in config['temperature'] as List? ?? const [1.0, 1.0, 1.0])
+      for (final t in config['temperature'] as List? ?? const [1.0, 1.0, 1.0])
         clampTemperature((t as num).toDouble()),
     ];
     final buckets = <String, double>{};
@@ -166,6 +177,30 @@ final class NativeLayaDecisionEngine implements LayaDecisionEngine {
     };
   }
 
+  @override
+  Map<String, LayaDecisionResult> answerDecisions(LayaDecisionQuery query) {
+    final typed = decideTyped(
+      state: query.state,
+      questions: {
+        for (final entry in query.questions.entries)
+          entry.key: LayaTypedQuestion.choice(entry.value.instructions, {
+            for (final criterion in entry.value.criteria.entries)
+              criterion.key: renderLayaCriterion(criterion.value),
+          }),
+      },
+    );
+    return {
+      for (final entry in typed.entries)
+        entry.key: LayaDecisionResult(
+          optionId: entry.value.choice!,
+          probabilities: entry.value.probabilities,
+          confidence: entry.value.confidence,
+          answerConfidence: entry.value.answerConfidence,
+          actProbability: entry.value.actProbability,
+        ),
+    };
+  }
+
   /// The full calibrated distribution per choice question — the honest
   /// output the wire server and tests read.
   Map<String, LayaNativeDecision> decide(final LayaDecisionQuery query) {
@@ -173,13 +208,10 @@ final class NativeLayaDecisionEngine implements LayaDecisionEngine {
       state: query.state,
       questions: {
         for (final entry in query.questions.entries)
-          entry.key: LayaTypedQuestion.choice(
-            entry.value.instructions,
-            {
-              for (final criterion in entry.value.criteria.entries)
-                criterion.key: renderLayaCriterion(criterion.value),
-            },
-          ),
+          entry.key: LayaTypedQuestion.choice(entry.value.instructions, {
+            for (final criterion in entry.value.criteria.entries)
+              criterion.key: renderLayaCriterion(criterion.value),
+          }),
       },
     );
     return {
@@ -242,9 +274,7 @@ final class NativeLayaDecisionEngine implements LayaDecisionEngine {
           result[keys[r]] = LayaTypedDecision(
             type: 'choice',
             choice: labels[best],
-            probabilities: {
-              for (var i = 0; i < k; i++) labels[i]: probs[i],
-            },
+            probabilities: {for (var i = 0; i < k; i++) labels[i]: probs[i]},
             confidence: confidenceFromProbs(probs, k),
             answerConfidence: probs.reduce(math.max),
             actProbability: actExp[0] / actSum,
@@ -256,9 +286,7 @@ final class NativeLayaDecisionEngine implements LayaDecisionEngine {
           result[keys[r]] = LayaTypedDecision(
             type: 'score',
             score: scoreValue,
-            probabilities: {
-              for (var i = 0; i < k; i++) '$i': probs[i],
-            },
+            probabilities: {for (var i = 0; i < k; i++) '$i': probs[i]},
             confidence: confidenceFromProbs(probs, k),
             answerConfidence: probs.reduce(math.max),
             actProbability: actExp[0] / actSum,
@@ -277,9 +305,34 @@ final class NativeLayaDecisionEngine implements LayaDecisionEngine {
     return result;
   }
 
-  /// Raw float32 decision and action logits per row from the native forward
-  /// pass.
+  /// Raw float32 decision and action logits, in request-row order.
+  ///
+  /// The current native heterogeneous-batch path changes shorter question
+  /// outputs. Execute rows independently until that kernel's batch contract
+  /// passes the frozen oracle. This retains all question kinds and one shared
+  /// model, at the explicit cost of one native forward per question.
   (List<List<double>>, List<List<double>>) forwardRows(
+    final List<LayaPromptRow> rows,
+  ) {
+    if (rows.length <= 1) return _forwardBatch(rows);
+    final width = rows.fold<int>(
+      2,
+      (max, row) => math.max(max, row.markers.length),
+    );
+    final logits = <List<double>>[];
+    final actions = <List<double>>[];
+    for (final row in rows) {
+      final (rowLogits, rowActions) = _forwardBatch([row]);
+      logits.add([
+        ...rowLogits.single,
+        for (var i = rowLogits.single.length; i < width; i++) -1e4,
+      ]);
+      actions.add(rowActions.single);
+    }
+    return (logits, actions);
+  }
+
+  (List<List<double>>, List<List<double>>) _forwardBatch(
     final List<LayaPromptRow> rows,
   ) {
     final request = jsonEncode({
@@ -370,12 +423,12 @@ String _expand(final String path) =>
 /// the dylib via [DynamicLibrary.open] from the resolver chain — a
 /// successful open registers the symbols in the process where the @Native
 /// bindings' RTLD_DEFAULT fallback finds them — and the probe retries.
-void _ensureNativeBindingsAvailable() {
+void _ensureNativeBindingsAvailable({String? packageRoot}) {
   try {
     nfcNormalize('laya');
     return;
   } on Object {
-    _ensureDylibLoaded();
+    _ensureDylibLoaded(packageRoot: packageRoot);
   }
   try {
     nfcNormalize('laya');
@@ -390,14 +443,18 @@ void _ensureNativeBindingsAvailable() {
   }
 }
 
-void _ensureDylibLoaded() {
+void _ensureDylibLoaded({String? packageRoot}) {
   const dylibName = 'liblaya_native.dylib';
   final candidates = [
     ?Platform.environment['LAYA_NATIVE_DYLIB'],
     // Exe-adjacent: the `dart build cli` bundle shape (bundle/lib/).
     '${File(Platform.resolvedExecutable).parent.path}/$dylibName',
     '${File(Platform.resolvedExecutable).parent.path}/lib/$dylibName',
-    // Package build output (JIT development from the package root).
+    if (packageRoot != null)
+      '$packageRoot/native/laya_rust/target/release/$dylibName',
+    // Current macOS backend before the historical Swift/iOS reference.
+    // Test AOT isolates may need preload even when the parent has assets.
+    'native/laya_rust/target/release/liblaya_native.dylib',
     'native/laya_native/.build/release/libLayaNative.dylib',
     '${_home()}/.cache/xsoulspace/laya/native/$dylibName',
   ];

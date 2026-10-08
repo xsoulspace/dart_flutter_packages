@@ -31,9 +31,8 @@ final class LoopbackReply {
 }
 
 /// Handles one [LoopbackRequest]; returns null to decline (404).
-typedef LoopbackRoute = Future<LoopbackReply?> Function(
-  LoopbackRequest request,
-);
+typedef LoopbackRoute =
+    Future<LoopbackReply?> Function(LoopbackRequest request);
 
 /// A loopback JSON wire server skeleton in pure Dart.
 ///
@@ -55,11 +54,14 @@ final class LoopbackJsonServer {
     this.address,
     this.port = 0,
     this.healthPath = '/health',
+    this.maxConcurrentRequests = 1,
     Map<String, Object?> Function()? healthPayload,
-  }) : _route =
-           route ??
-           ((_) async => null),
-       _healthPayload = healthPayload ?? (() => <String, Object?>{});
+  }) : _route = route ?? ((_) async => null),
+       _healthPayload = healthPayload ?? (() => <String, Object?>{}) {
+    if (maxConcurrentRequests < 1) {
+      throw ArgumentError.value(maxConcurrentRequests, 'maxConcurrentRequests');
+    }
+  }
 
   /// When set, non-health routes require `Authorization: Bearer <apiKey>`;
   /// the health route stays open (the laya-serve contract).
@@ -72,6 +74,12 @@ final class LoopbackJsonServer {
   /// The open health route path. Set to a path the server never serves
   /// (e.g. `/__none__`) when the wire under test has no health route.
   final String healthPath;
+
+  /// Default one retains serial fixture semantics. Higher values allow
+  /// asynchronous routes to coexist with bounded admission; excess requests
+  /// get 429. Health stays available even when physical work is saturated.
+  final int maxConcurrentRequests;
+  var _activeRequests = 0;
 
   final Map<String, Object?> Function() _healthPayload;
   // A named parameter cannot spell the private initializing formal.
@@ -113,17 +121,48 @@ final class LoopbackJsonServer {
     final server = _server;
     if (server == null) return;
     await for (final request in server) {
+      if (maxConcurrentRequests == 1) {
+        await _handleSafely(request);
+        continue;
+      }
+      final health = request.method == 'GET' && request.uri.path == healthPath;
+      if (!health && _activeRequests >= maxConcurrentRequests) {
+        unawaited(_rejectBusy(request));
+        continue;
+      }
+      if (!health) _activeRequests++;
+      unawaited(
+        _handleSafely(request).whenComplete(() {
+          if (!health) _activeRequests--;
+        }),
+      );
+    }
+  }
+
+  Future<void> _rejectBusy(HttpRequest request) async {
+    try {
+      request.response.statusCode = HttpStatus.tooManyRequests;
+      request.response.headers.contentType = ContentType.json;
+      request.response.write(
+        jsonEncode({
+          'error': {'code': 'loopback_capacity_exhausted'},
+        }),
+      );
+      await request.response.close();
+    } on Object {
+      // A disconnected caller has no response to receive.
+    }
+  }
+
+  Future<void> _handleSafely(HttpRequest request) async {
+    try {
+      await _handle(request);
+    } on Object {
       try {
-        await _handle(request);
+        request.response.statusCode = HttpStatus.internalServerError;
+        await request.response.close();
       } on Object {
-        // A handler crash must not kill the server isolate; the 500 lands
-        // only when the handler did not already close the response.
-        try {
-          request.response.statusCode = HttpStatus.internalServerError;
-          await request.response.close();
-        } on Object {
-          // The handler already committed the response.
-        }
+        // The handler already committed or the caller disconnected.
       }
     }
   }

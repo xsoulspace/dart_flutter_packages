@@ -105,6 +105,72 @@ BehaviorPlan synthesizeBehavior(
       steps.add(PointerDownStep(plannedAtUs: cursorUs));
       advance(profile.pointer.buttonHold.sample(rng));
       steps.add(PointerUpStep(plannedAtUs: cursorUs));
+    case ClickAtAction(:final x, :final y, :final button, :final clickCount):
+      // Coordinate verbs (ADR 0053) ride the same humanized delivery:
+      // lead dwell, bezier move to the point, then clickCount presses.
+      leadDwell();
+      final before = steps.length;
+      moveTowards(x, y);
+      if (steps.length == before) {
+        steps.add(
+          PointerMoveStep(plannedAtUs: cursorUs, x: x, y: y, durationUs: 0),
+        );
+      }
+      for (var press = 0; press < clickCount.clamp(1, 3); press++) {
+        steps.add(
+          PointerDownStep(
+            plannedAtUs: cursorUs,
+            button: button,
+            clickCount: press + 1,
+          ),
+        );
+        advance(profile.pointer.buttonHold.sample(rng));
+        steps.add(
+          PointerUpStep(
+            plannedAtUs: cursorUs,
+            button: button,
+            clickCount: press + 1,
+          ),
+        );
+        if (press + 1 < clickCount) {
+          advance(profile.cadence.digraph.sample(rng));
+        }
+      }
+    case MoveAction(:final x, :final y):
+      leadDwell();
+      final before = steps.length;
+      moveTowards(x, y);
+      if (steps.length == before) {
+        steps.add(
+          PointerMoveStep(plannedAtUs: cursorUs, x: x, y: y, durationUs: 0),
+        );
+      }
+    case DragAction(
+      :final fromX,
+      :final fromY,
+      :final toX,
+      :final toY,
+      :final button,
+    ):
+      leadDwell();
+      final before = steps.length;
+      moveTowards(fromX, fromY);
+      if (steps.length == before) {
+        steps.add(
+          PointerMoveStep(
+            plannedAtUs: cursorUs,
+            x: fromX,
+            y: fromY,
+            durationUs: 0,
+          ),
+        );
+      }
+      steps.add(PointerDownStep(plannedAtUs: cursorUs, button: button));
+      advance(profile.pointer.buttonHold.sample(rng));
+      // The carried path humanizes too — a drag is a gesture, not a
+      // teleport with the button held.
+      moveTowards(toX, toY);
+      steps.add(PointerUpStep(plannedAtUs: cursorUs, button: button));
     case TypeAction(:final text, :final submit):
       leadDwell();
       for (final rune in text.runes) {

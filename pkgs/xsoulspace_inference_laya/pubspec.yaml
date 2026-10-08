@@ -1,7 +1,7 @@
 name: xsoulspace_inference_laya
 description: Local Laya decision-model runtime composition (laya-serve) for
   xsoulspace_inference_core.
-version: 0.1.0
+version: 0.2.0
 publish_to: none
 repository: https://github.com/xsoulspace/dart_flutter_packages
 issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
@@ -12,6 +12,8 @@ environment:
 resolution: workspace
 
 dependencies:
+  async_parallel:
+    path: /Users/antonio/xs/ecsly/plugins/async_parallel
   code_assets: any
   data_assets: any
   ffi: ^2.2.0

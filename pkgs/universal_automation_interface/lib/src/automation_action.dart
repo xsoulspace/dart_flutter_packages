@@ -120,6 +120,90 @@ final class EvaluateAction extends AutomationAction {
   String toString() => 'EvaluateAction(${expression.length} chars)';
 }
 
+/// Click at surface coordinates — the fallback tier for surfaces no
+/// accessibility tree can see (canvas, games) and for pixel-grounded
+/// agents (ADR 0053). Capability `pointerCoordinates`; drivers without
+/// it refuse loudly.
+@immutable
+final class ClickAtAction extends AutomationAction {
+  /// Creates a click at ([x], [y]) in surface coordinates.
+  const ClickAtAction(
+    this.x,
+    this.y, {
+    this.button = 'left',
+    this.clickCount = 1,
+  });
+
+  /// X in surface (CSS px on the web tier, screen points on OS tiers).
+  final double x;
+
+  /// Y in surface coordinates.
+  final double y;
+
+  /// Pointer button: `left` (default), `right`, or `middle`.
+  final String button;
+
+  /// 1 = click, 2 = double-click, 3 = triple.
+  final int clickCount;
+
+  @override
+  String toString() =>
+      'ClickAtAction($x, $y, $button, x$clickCount)';
+}
+
+/// Move the pointer to ([x], [y]) without pressing — hover affordances,
+/// tooltips, pre-positioning before a drag (ADR 0053).
+@immutable
+final class MoveAction extends AutomationAction {
+  /// Creates a pointer move to ([x], [y]).
+  const MoveAction(this.x, this.y);
+
+  /// X in surface coordinates.
+  final double x;
+
+  /// Y in surface coordinates.
+  final double y;
+
+  @override
+  String toString() => 'MoveAction($x, $y)';
+}
+
+/// Press at [fromX]/[fromY], move to [toX]/[toY], release — drag and
+/// drop, sliders, canvas gestures (ADR 0053). Behavioral profiles
+/// lower the whole path through humanized segments; plain dispatch is
+/// one press, one move, one release.
+@immutable
+final class DragAction extends AutomationAction {
+  /// Creates a drag from (fromX, fromY) to (toX, toY).
+  const DragAction(
+    this.fromX,
+    this.fromY,
+    this.toX,
+    this.toY, {
+    this.button = 'left',
+  });
+
+  /// Press X in surface coordinates.
+  final double fromX;
+
+  /// Press Y in surface coordinates.
+  final double fromY;
+
+  /// Release X in surface coordinates.
+  final double toX;
+
+  /// Release Y in surface coordinates.
+  final double toY;
+
+  /// Pointer button held through the drag: `left` (default), `right`,
+  /// or `middle`.
+  final String button;
+
+  @override
+  String toString() =>
+      'DragAction(($fromX, $fromY) → ($toX, $toY), $button)';
+}
+
 /// Invoke a named action the surface under test registered for automation
 /// (the `invoke` tier — the dynamic-registry shape for drivers).
 ///

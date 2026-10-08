@@ -1,0 +1,244 @@
+{
+  "sessions": {
+    "chrome": {
+      "transport": "cdp",
+      "uri": "http://127.0.0.1:9333"
+    }
+  },
+  "intents": [
+    {
+      "app": "page",
+      "intents": [
+        {
+          "name": "page_fill_email",
+          "title": "Fill the email field",
+          "hint": {
+            "driver": "cdp",
+            "action": "type",
+            "locator": {
+              "css": "#email"
+            }
+          },
+          "parameters": [
+            {
+              "name": "text",
+              "type": "string",
+              "description": "text to type",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "page_buy",
+          "title": "Press the Buy button",
+          "hint": {
+            "driver": "cdp",
+            "action": "click",
+            "locator": {
+              "name": "Buy"
+            }
+          }
+        },
+        {
+          "name": "page_checkout",
+          "title": "Invoke the page's checkout surface action",
+          "hint": {
+            "driver": "cdp",
+            "action": "custom",
+            "locator": {
+              "name": "checkout"
+            }
+          },
+          "parameters": [
+            {
+              "name": "sku",
+              "type": "string",
+              "description": "stock keeping unit",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "page_stamp",
+          "title": "Stamp the status line via a read-only-ish expression",
+          "hint": {
+            "driver": "cdp",
+            "action": "evaluate",
+            "locator": {
+              "expression": "document.getElementById('status').textContent = 'stamped'"
+            }
+          }
+        },
+        {
+          "name": "page_submit_email",
+          "title": "Press Enter in the email field",
+          "hint": {
+            "driver": "cdp",
+            "action": "key",
+            "locator": {
+              "key": "Enter"
+            }
+          }
+        },
+        {
+          "name": "page_ghost_click",
+          "title": "KNOWN-BREAK: no such button exists",
+          "hint": {
+            "driver": "cdp",
+            "action": "click",
+            "locator": {
+              "name": "NoSuchButtonAnywhere"
+            }
+          }
+        },
+        {
+          "name": "page_ghost_invoke",
+          "title": "KNOWN-BREAK: the page publishes no such catalog action",
+          "hint": {
+            "driver": "cdp",
+            "action": "custom",
+            "locator": {
+              "name": "no_such_action"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "scenarios": {
+    "works": {
+      "steps": [
+        {
+          "act": {
+            "navigate": {
+              "url": "data:text/html,%3C!DOCTYPE%20html%3E%3Chtml%3E%3Chead%3E%3Ctitle%3Eintentshow%3C/title%3E%3C/head%3E%3Cbody%3E%3Ch1%3Eintent%20showcase%3C/h1%3E%3Cinput%20id=%22email%22%20aria-label=%22Email%22%20onkeydown=%22if%20(event.key%20===%20'Enter')%20stamp('submitted')%22%3E%3Cbutton%20aria-label=%22Buy%22%20onclick=%22buy()%22%3EBuy%3C/button%3E%3Cdiv%20id=%22status%22%20aria-live=%22polite%22%3E%3C/div%3E%3Cscript%3Efunction%20buy()%20%7B%20stamp(%22bought%22);%20%7Dfunction%20stamp(text)%20%7B%20%20document.getElementById(%22status%22).textContent%20=%20text;%7Dwindow.__mcpActions%20=%20%7B%20%20checkout:%20%7B%20%20%20%20description:%20%22checkout%20the%20cart%22,%20%20%20%20invoke:%20async%20(args)%20=%3E%20stamp(%22checked-out:%22%20+%20args.sku),%20%20%7D,%7D;%3C/script%3E%3C/body%3E%3C/html%3E"
+            }
+          }
+        },
+        {
+          "wait": {
+            "checks": [
+              {
+                "exists": {
+                  "role": "heading",
+                  "name": "intent showcase"
+                }
+              }
+            ],
+            "timeout": 10.0,
+            "poll": 0.25
+          }
+        },
+        {
+          "intent": {
+            "app": "page",
+            "name": "page_fill_email",
+            "args": {
+              "text": "antonio@example.com"
+            }
+          }
+        },
+        {
+          "verify": [
+            {
+              "value": {
+                "locator": {
+                  "name": "Email"
+                },
+                "equals": "antonio@example.com"
+              }
+            }
+          ]
+        },
+        {
+          "intent": {
+            "app": "page",
+            "name": "page_buy"
+          }
+        },
+        {
+          "verify": [
+            {
+              "exists": {
+                "nameContains": "bought"
+              }
+            }
+          ]
+        },
+        {
+          "intent": {
+            "app": "page",
+            "name": "page_checkout",
+            "args": {
+              "sku": "SKU-1"
+            }
+          }
+        },
+        {
+          "verify": [
+            {
+              "exists": {
+                "nameContains": "checked-out:SKU-1"
+              }
+            }
+          ]
+        },
+        {
+          "intent": {
+            "app": "page",
+            "name": "page_stamp"
+          }
+        },
+        {
+          "verify": [
+            {
+              "exists": {
+                "nameContains": "stamped"
+              }
+            }
+          ]
+        },
+        {
+          "intent": {
+            "app": "page",
+            "name": "page_buy"
+          },
+          "session": "chrome"
+        },
+        {
+          "verify": [
+            {
+              "exists": {
+                "nameContains": "bought"
+              }
+            }
+          ]
+        },
+        {
+          "intent": {
+            "app": "page",
+            "name": "page_fill_email",
+            "args": {
+              "text": "x"
+            }
+          }
+        },
+        {
+          "intent": {
+            "app": "page",
+            "name": "page_submit_email"
+          }
+        },
+        {
+          "verify": [
+            {
+              "exists": {
+                "nameContains": "submitted"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

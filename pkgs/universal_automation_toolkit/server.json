@@ -1,0 +1,12 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.xsoulspace/universal-automation",
+  "title": "Universal Automation Toolkit",
+  "description": "Observe/act/verify UI automation across browsers, OS-native tiers, and Flutter: semantic snapshots, intent-level actions, declarative Dart plans with YAML snapshots, ADR-0044 behavior profiles with receipts.",
+  "repository": {
+    "url": "https://github.com/xsoulspace/dart_flutter_packages",
+    "source": "github",
+    "subfolder": "pkgs/universal_automation_toolkit"
+  },
+  "version": "0.1.0"
+}

@@ -1,0 +1,23 @@
+{
+  "name": "universal-automation",
+  "version": "0.1.0",
+  "description": "Drive browsers (CDP/WebDriver), native macOS/Linux/Windows apps, and Flutter surfaces through the universal_automation family: observe/act/verify CLI, MCP server, declarative Dart-composed plans with YAML snapshots, intent routing, and ADR-0044 behavior profiles.",
+  "author": {
+    "name": "xsoulspace"
+  },
+  "homepage": "https://github.com/xsoulspace/dart_flutter_packages",
+  "repository": "https://github.com/xsoulspace/dart_flutter_packages",
+  "license": "MIT",
+  "keywords": [
+    "automation",
+    "browser",
+    "cdp",
+    "webdriver",
+    "accessibility",
+    "mcp",
+    "flutter",
+    "computer-use"
+  ],
+  "skills": "./skills",
+  "mcpServers": "./mcp.json"
+}

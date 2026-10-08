@@ -45,17 +45,19 @@ final class MlxLocalTextClient implements InferenceClient {
     final int maxTransientRetries = 1,
     final void Function(Map<String, Object?> event)? onDiagnosticEvent,
     final http.Client? httpClient,
-  }) : _endpoint =
+  }) : _model = model,
+       _endpoint =
            endpoint ??
            HttpMlxChatEndpoint(
-             endpoint: MlxServeRuntime.defaultEndpoint(),
+             // Derived from the runtime's endpoint so one configuration
+             // drives both readiness and dispatch.
+             endpoint: runtime.endpoint,
              model: model,
              timeout: timeout,
              maxTransientRetries: maxTransientRetries,
              onDiagnosticEvent: onDiagnosticEvent,
              httpClient: httpClient,
-           ),
-       _model = model;
+           );
 
   final MlxServeRuntime runtime;
 

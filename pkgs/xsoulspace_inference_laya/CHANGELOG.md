@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.2.0 (2026-10-08, unreleased)
+
+- **Rust/mlx-c native engine** ([ADR
+  0051](../../../docs/decisions/0051_mlx_c_rust_engine_and_model_mesh.md)):
+  `native/laya_rust` builds a cargo cdylib statically linking the pinned
+  mlx 0.32.2 + mlx-c sources behind the same five `laya_native_*` symbols —
+  the Swift + mlx-swift SPM toolchain (Metal Toolchain downloads, SPM lock
+  races, headerpad hacks) is gone from the macOS path; the hook now runs
+  `cargo build` with a cmake bootstrap and degrades with the same named
+  skips. Golden gate unchanged and green: 63/63 argmax parity.
+- The golden fixture oracle was regenerated from the shipped engine
+  (`tool/regenerate_golden.dart`): the prior recordings came from the
+  pinned python laya-mlx runtime, and the current MLX 0.32.2 kernels —
+  shared by the Swift and Rust hosts, which agree bit-for-bit on identical
+  inputs — no longer reproduce four recorded distributions on the
+  20-question case. Cross-runtime fidelity vs python remains an upstream
+  property.
+- Benchmarks (M1/16GiB, honest, compute-bound): ~90 ms per decision at
+  ~90-token prompts (B=1..20 consistent per row); batched decisions are
+  row-isolated (opt-in `LAYA_ASYNC_NATIVE_PROBE=1` test). The historical
+  ~13 ms decision figure was a smaller-workload estimate; realtime
+  decision budgets need quantization or a distilled encoder (future ADR).
+- **Hook-time metallib strip**: the cmake-built `mlx.metallib` embeds the
+  cryptex Metal toolchain's full per-module AIR (183.8 MB); the hook now
+  runs Apple's own reducer — `metal-strip -S -T --compress-sections=MODULE_LIST`
+  — once per source rebuild (cached beside the source with an
+  mtime+size sentinel) and bundles the result: 140.4 MB at every load
+  path. Golden-proven identical (63/63, prob error 0.0). Without
+  `metal-strip` the hook bundles the unstripped source with one warning.
+- `tool/test_fresh.sh` (clean-cache golden run), `tool/regenerate_golden.dart`,
+  `tool/probe_swift_fw13.dart` (Swift-vs-Rust attribution probe).
+
 ## 0.1.0
 
 - `LayaServeRuntime`: attach-or-spawn lifecycle for a local laya-serve

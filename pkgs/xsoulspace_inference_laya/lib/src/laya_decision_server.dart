@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io' show InternetAddress;
 
 import 'package:xsoulspace_inference_local_serve/xsoulspace_inference_local_serve.dart';
@@ -34,14 +35,47 @@ final class LayaDecisionQuery {
 /// The decision seam of the pure-Dart laya server.
 ///
 /// The wire, health, auth, and response normalization live in
-/// [LayaDecisionServer]; an engine only answers. Today's engines are
-/// deterministic (the scripted engine below); the same seam is where a
-/// native model runtime (MLX via Dart native assets) attaches later without
-/// any change to clients or the harness path.
+/// [LayaDecisionServer]; an engine only answers. Scripted engines are
+/// deterministic fixtures; native calibrated engines and asynchronous shared
+/// model execution use the same seam without changing the client wire.
 abstract interface class LayaDecisionEngine {
-  /// Returns questionId -> chosen optionId. Implementations must answer
-  /// every question with an option from that question's criteria.
-  Map<String, String> answer(final LayaDecisionQuery query);
+  /// Returns questionId -> chosen optionId, synchronously or asynchronously.
+  /// Implementations must answer every question with an option from that question's criteria.
+  FutureOr<Map<String, String>> answer(final LayaDecisionQuery query);
+}
+
+/// Calibrated engine output. Abstention remains a grounded choice option;
+/// the transport never manufactures a confidence or an unoffered choice.
+final class LayaDecisionResult {
+  const LayaDecisionResult({
+    required this.optionId,
+    required this.probabilities,
+    required this.confidence,
+    required this.answerConfidence,
+    this.actProbability,
+  });
+  final String optionId;
+  final Map<String, double> probabilities;
+  final double confidence;
+  final double answerConfidence;
+  final double? actProbability;
+}
+
+/// Optional calibrated seam, including asynchronous physical inference.
+abstract interface class CalibratedLayaDecisionEngine
+    implements LayaDecisionEngine {
+  FutureOr<Map<String, LayaDecisionResult>> answerDecisions(
+    LayaDecisionQuery query,
+  );
+}
+
+/// Named serving failure; clients retain correlation in their typed outcome.
+final class LayaServingException implements Exception {
+  const LayaServingException(this.code, {this.statusCode = 503});
+  final String code;
+  final int statusCode;
+  @override
+  String toString() => 'LayaServingException($code)';
 }
 
 /// One pinned answer for [ScriptedLayaDecisionEngine], matched against the
@@ -112,15 +146,15 @@ final class ScriptedLayaDecisionEngine implements LayaDecisionEngine {
 /// the whole decision path (clients, bindings, the harness handler) runs and
 /// is tested with no Python runtime and no model weights. The response is
 /// normalized into the strict shape our clients validate: one complete
-/// probability distribution per question, the chosen option at mass 1.
+/// probability distribution per question, preserving calibrated engine output.
 ///
 /// The wire plumbing (loopback bind, health, auth, body decoding, crash
 /// containment) is the shared [LoopbackJsonServer] skeleton; this class
 /// owns the System One route and response normalization. It is a wire
 /// server, not a model: token counts are estimates, the engine is
 /// deterministic unless a real model engine is attached to
-/// [LayaDecisionEngine]. The `laya-serve`/`laya-mlx` Python runtimes remain
-/// the only way to run the trained checkpoints today.
+/// [LayaDecisionEngine]. The native engine preserves calibrated model output; scripted engines
+/// publish their deterministic distributions explicitly.
 final class LayaDecisionServer {
   LayaDecisionServer({
     required LayaDecisionEngine engine,
@@ -149,6 +183,7 @@ final class LayaDecisionServer {
     apiKey: apiKey,
     address: address,
     port: port,
+    maxConcurrentRequests: 64,
     healthPayload: () => <String, Object?>{'status': 'ok', 'model': model},
     route: _handleSystemOne,
   );
@@ -165,9 +200,7 @@ final class LayaDecisionServer {
 
   Future<void> stop() => _server.stop();
 
-  Future<LoopbackReply?> _handleSystemOne(
-    final LoopbackRequest request,
-  ) async {
+  Future<LoopbackReply?> _handleSystemOne(final LoopbackRequest request) async {
     if (request.method != 'POST' || request.path != '/v1/systemone') {
       return null;
     }
@@ -208,28 +241,57 @@ final class LayaDecisionServer {
     } on Object {
       // Observer errors are ignored (demo logging, fixtures).
     }
-    final Map<String, String> chosen;
+    final Map<String, LayaDecisionResult> decisions;
     try {
-      chosen = _engine.answer(query);
+      final engine = _engine;
+      if (engine is CalibratedLayaDecisionEngine) {
+        decisions = await engine.answerDecisions(query);
+      } else {
+        final chosen = await engine.answer(query);
+        decisions = {
+          for (final entry in chosen.entries)
+            entry.key: LayaDecisionResult(
+              optionId: entry.value,
+              probabilities: {
+                for (final candidate in questions[entry.key]!.criteria.keys)
+                  candidate: candidate == entry.value ? 1.0 : 0.0,
+              },
+              confidence: 1.0,
+              answerConfidence: 1.0,
+            ),
+        };
+      }
+    } on LayaServingException catch (error) {
+      return LoopbackReply(error.statusCode, {
+        'error': {'code': error.code},
+      });
     } on Object {
-      return const LoopbackReply(500, <String, Object?>{});
+      return const LoopbackReply(500, {
+        'error': {'code': 'laya_engine_failed'},
+      });
     }
 
     final answers = <String, Object?>{};
     for (final entry in questions.entries) {
       final question = entry.value;
-      final optionId = chosen[entry.key];
+      final decision = decisions[entry.key];
+      final optionId = decision?.optionId;
       if (optionId == null || !question.criteria.containsKey(optionId)) {
         return const LoopbackReply(422, <String, Object?>{});
+      }
+      if (!_validDistribution(decision!, question)) {
+        return const LoopbackReply(422, {
+          'error': {'code': 'laya_invalid_distribution'},
+        });
       }
       answers[entry.key] = <String, Object?>{
         'type': 'choice',
         'choice': optionId,
-        'confidence': 0.9,
-        'probabilities': <String, double>{
-          for (final candidate in question.criteria.keys)
-            candidate: candidate == optionId ? 1.0 : 0.0,
-        },
+        'confidence': decision.confidence,
+        'answer_confidence': decision.answerConfidence,
+        if (decision.actProbability != null)
+          'act_probability': decision.actProbability,
+        'probabilities': decision.probabilities,
       };
     }
 
@@ -245,6 +307,26 @@ final class LayaDecisionServer {
         'output_tokens': answers.length * 8,
       },
     });
+  }
+
+  static bool _validDistribution(
+    LayaDecisionResult decision,
+    LayaDecisionQuestion question,
+  ) {
+    bool probability(double value) =>
+        value.isFinite && value >= 0 && value <= 1;
+    final probabilities = decision.probabilities;
+    if (probabilities.length != question.criteria.length ||
+        !question.criteria.keys.every(probabilities.containsKey) ||
+        !probability(decision.confidence) ||
+        !probability(decision.answerConfidence) ||
+        (decision.actProbability != null &&
+            !probability(decision.actProbability!)) ||
+        !probabilities.values.every(probability)) {
+      return false;
+    }
+    final sum = probabilities.values.fold(0.0, (a, b) => a + b);
+    return (sum - 1).abs() <= 1e-6;
   }
 
   static int _criteriaLength(final Map<String, LayaDecisionQuestion> q) =>

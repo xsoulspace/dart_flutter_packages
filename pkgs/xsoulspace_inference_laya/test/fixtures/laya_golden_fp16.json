@@ -1,1718 +1,1439 @@
 [
- {
-  "case": "email",
-  "state": {
-   "from": "user@example.com",
-   "subject": "Duplicate charge on invoice #4411",
-   "body": "We were billed twice for March. Please refund the duplicate today or we will cancel our plan."
+  {
+    "state": {
+      "from": "user@example.com",
+      "subject": "Duplicate charge on invoice #4411",
+      "body": "We were billed twice for March. Please refund the duplicate today or we will cancel our plan."
+    },
+    "questions": {
+      "q0": {
+        "type": "choice",
+        "instructions": "Which department should handle this email?",
+        "criteria": {
+          "billing": "invoices, payments, refunds",
+          "technical": "bugs, outages, system errors",
+          "sales": "pricing, new contracts",
+          "other": "everything else"
+        }
+      },
+      "q1": {
+        "type": "score",
+        "instructions": "How urgent is this request?",
+        "criteria": [
+          "not urgent",
+          "soon",
+          "critical deadline or blocking issue"
+        ]
+      },
+      "q2": {
+        "type": "noul",
+        "instructions": "Does the customer ask for money back?"
+      }
+    },
+    "answers": {
+      "q0": {
+        "type": "choice",
+        "choice": "billing",
+        "probabilities": {
+          "billing": 0.9553489407578667,
+          "technical": 0.015266131320181175,
+          "sales": 0.01492864589291234,
+          "other": 0.01445628202903998
+        },
+        "confidence": 0.8330103921119746,
+        "answerConfidence": 0.9553489407578667,
+        "actProbability": 1.0
+      },
+      "q1": {
+        "type": "score",
+        "score": 1.4475840559989455,
+        "probabilities": {
+          "0": 0.09525437023816524,
+          "1": 0.36190720352472405,
+          "2": 0.5428384262371106
+        },
+        "confidence": 0.1594515709189689,
+        "answerConfidence": 0.5428384262371106,
+        "actProbability": 1.0
+      },
+      "q2": {
+        "type": "noul",
+        "noul": 0.8586849198528046,
+        "probabilities": {
+          "false": 0.1413150801471953,
+          "true": 0.8586849198528046
+        },
+        "confidence": 0.8586849198528046,
+        "answerConfidence": 0.8586849198528046,
+        "actProbability": 1.0
+      }
+    }
   },
-  "questions": {
-   "q0": {
-    "type": "choice",
-    "instructions": "Which department should handle this email?",
-    "criteria": {
-     "billing": "invoices, payments, refunds",
-     "technical": "bugs, outages, system errors",
-     "sales": "pricing, new contracts",
-     "other": "everything else"
+  {
+    "state": {
+      "message": "I was charged twice for invoice 4411, please refund it today."
+    },
+    "questions": {
+      "q0": {
+        "type": "choice",
+        "instructions": "Which department should handle this email?",
+        "criteria": {
+          "billing": "invoices, payments, refunds",
+          "technical": "bugs, outages, system errors",
+          "sales": "pricing, new contracts",
+          "other": "everything else"
+        }
+      },
+      "q1": {
+        "type": "score",
+        "instructions": "How urgent is this request?",
+        "criteria": [
+          "not urgent",
+          "soon",
+          "critical deadline or blocking issue"
+        ]
+      },
+      "q2": {
+        "type": "noul",
+        "instructions": "Does the customer ask for money back?"
+      }
+    },
+    "answers": {
+      "q0": {
+        "type": "choice",
+        "choice": "billing",
+        "probabilities": {
+          "billing": 0.9509298738952847,
+          "technical": 0.015549985677003305,
+          "sales": 0.01603034305250334,
+          "other": 0.017489797375208838
+        },
+        "confidence": 0.8199406248092949,
+        "answerConfidence": 0.9509298738952847,
+        "actProbability": 1.0
+      },
+      "q1": {
+        "type": "score",
+        "score": 1.2853778259674127,
+        "probabilities": {
+          "0": 0.10582032311721294,
+          "1": 0.5029815277981613,
+          "2": 0.39119814908462575
+        },
+        "confidence": 0.1348365964538375,
+        "answerConfidence": 0.5029815277981613,
+        "actProbability": 1.0
+      },
+      "q2": {
+        "type": "noul",
+        "noul": 0.9083875518096491,
+        "probabilities": {
+          "false": 0.09161244819035094,
+          "true": 0.9083875518096491
+        },
+        "confidence": 0.9083875518096491,
+        "answerConfidence": 0.9083875518096491,
+        "actProbability": 1.0
+      }
     }
-   },
-   "q1": {
-    "type": "score",
-    "instructions": "How urgent is this request?",
-    "criteria": [
-     "not urgent",
-     "soon",
-     "critical deadline or blocking issue"
-    ]
-   },
-   "q2": {
-    "type": "noul",
-    "instructions": "Does the customer ask for money back?"
-   }
   },
-  "sequence_lengths": [
-   93,
-   80,
-   81
-  ],
-  "answers": {
-   "q0": {
-    "type": "choice",
-    "confidence": 0.8332,
-    "answer_confidence": 0.9554,
-    "action": {
-     "act_probability": 1.0
+  {
+    "state": {
+      "message": "发票4411被重复扣款，请今天退款。"
     },
-    "choice": "billing",
-    "probabilities": {
-     "billing": 0.9554,
-     "technical": 0.0152,
-     "sales": 0.0149,
-     "other": 0.0144
+    "questions": {
+      "q0": {
+        "type": "choice",
+        "instructions": "Which department should handle this email?",
+        "criteria": {
+          "billing": "invoices, payments, refunds",
+          "technical": "bugs, outages, system errors",
+          "sales": "pricing, new contracts",
+          "other": "everything else"
+        }
+      },
+      "q1": {
+        "type": "score",
+        "instructions": "How urgent is this request?",
+        "criteria": [
+          "not urgent",
+          "soon",
+          "critical deadline or blocking issue"
+        ]
+      },
+      "q2": {
+        "type": "noul",
+        "instructions": "Does the customer ask for money back?"
+      }
+    },
+    "answers": {
+      "q0": {
+        "type": "choice",
+        "choice": "billing",
+        "probabilities": {
+          "billing": 0.7890520971349078,
+          "technical": 0.08622156502159779,
+          "sales": 0.07928613565642778,
+          "other": 0.04544020218706671
+        },
+        "confidence": 0.4664212372104687,
+        "answerConfidence": 0.7890520971349078,
+        "actProbability": 1.0
+      },
+      "q1": {
+        "type": "score",
+        "score": 1.2105255673344337,
+        "probabilities": {
+          "0": 0.20748178902032435,
+          "1": 0.3745108546249176,
+          "2": 0.41800735635475805
+        },
+        "confidence": 0.036294600336784555,
+        "answerConfidence": 0.41800735635475805,
+        "actProbability": 1.0
+      },
+      "q2": {
+        "type": "noul",
+        "noul": 0.9671807484405908,
+        "probabilities": {
+          "false": 0.03281925155940933,
+          "true": 0.9671807484405908
+        },
+        "confidence": 0.9671807484405908,
+        "answerConfidence": 0.9671807484405908,
+        "actProbability": 1.0
+      }
     }
-   },
-   "q1": {
-    "type": "score",
-    "confidence": 0.1594,
-    "answer_confidence": 0.543,
-    "action": {
-     "act_probability": 1.0
-    },
-    "score": 1.4477,
-    "legend": {
-     "0": "not urgent",
-     "1": "soon",
-     "2": "critical deadline or blocking issue"
-    },
-    "probabilities": {
-     "0": 0.0954,
-     "1": 0.3616,
-     "2": 0.543
-    }
-   },
-   "q2": {
-    "type": "noul",
-    "confidence": 0.859,
-    "answer_confidence": 0.859,
-    "action": {
-     "act_probability": 1.0
-    },
-    "noul": 0.859
-   }
   },
-  "usage_input_tokens": 254
- },
- {
-  "case": "en",
-  "state": {
-   "message": "I was charged twice for invoice 4411, please refund it today."
+  {
+    "state": {
+      "message": "Ich wurde zweimal für Rechnung 4411 belastet, bitte erstatten Sie den Betrag."
+    },
+    "questions": {
+      "q0": {
+        "type": "choice",
+        "instructions": "Which department should handle this email?",
+        "criteria": {
+          "billing": "invoices, payments, refunds",
+          "technical": "bugs, outages, system errors",
+          "sales": "pricing, new contracts",
+          "other": "everything else"
+        }
+      },
+      "q1": {
+        "type": "score",
+        "instructions": "How urgent is this request?",
+        "criteria": [
+          "not urgent",
+          "soon",
+          "critical deadline or blocking issue"
+        ]
+      },
+      "q2": {
+        "type": "noul",
+        "instructions": "Does the customer ask for money back?"
+      }
+    },
+    "answers": {
+      "q0": {
+        "type": "choice",
+        "choice": "billing",
+        "probabilities": {
+          "billing": 0.9181060414280274,
+          "technical": 0.022786456137351724,
+          "sales": 0.041632782634531185,
+          "other": 0.01747471980008954
+        },
+        "confidence": 0.7347753307617937,
+        "answerConfidence": 0.9181060414280274,
+        "actProbability": 1.0
+      },
+      "q1": {
+        "type": "score",
+        "score": 1.2568521424878958,
+        "probabilities": {
+          "0": 0.16509695500829247,
+          "1": 0.4129539474955192,
+          "2": 0.4219490974961883
+        },
+        "confidence": 0.06546812955571701,
+        "answerConfidence": 0.4219490974961883,
+        "actProbability": 1.0
+      },
+      "q2": {
+        "type": "noul",
+        "noul": 0.3035351157771133,
+        "probabilities": {
+          "false": 0.6964648842228868,
+          "true": 0.3035351157771133
+        },
+        "confidence": 0.6964648842228867,
+        "answerConfidence": 0.6964648842228868,
+        "actProbability": 1.0
+      }
+    }
   },
-  "questions": {
-   "q0": {
-    "type": "choice",
-    "instructions": "Which department should handle this email?",
-    "criteria": {
-     "billing": "invoices, payments, refunds",
-     "technical": "bugs, outages, system errors",
-     "sales": "pricing, new contracts",
-     "other": "everything else"
+  {
+    "state": {
+      "message": "J'ai été facturé deux fois pour la facture 4411, remboursez-moi s'il vous plaît."
+    },
+    "questions": {
+      "q0": {
+        "type": "choice",
+        "instructions": "Which department should handle this email?",
+        "criteria": {
+          "billing": "invoices, payments, refunds",
+          "technical": "bugs, outages, system errors",
+          "sales": "pricing, new contracts",
+          "other": "everything else"
+        }
+      },
+      "q1": {
+        "type": "score",
+        "instructions": "How urgent is this request?",
+        "criteria": [
+          "not urgent",
+          "soon",
+          "critical deadline or blocking issue"
+        ]
+      },
+      "q2": {
+        "type": "noul",
+        "instructions": "Does the customer ask for money back?"
+      }
+    },
+    "answers": {
+      "q0": {
+        "type": "choice",
+        "choice": "billing",
+        "probabilities": {
+          "billing": 0.9564976682541211,
+          "technical": 0.014066357897527856,
+          "sales": 0.017642333734447412,
+          "other": 0.011793640113903704
+        },
+        "confidence": 0.8368912314114476,
+        "answerConfidence": 0.9564976682541211,
+        "actProbability": 1.0
+      },
+      "q1": {
+        "type": "score",
+        "score": 1.0953083881287742,
+        "probabilities": {
+          "0": 0.23274244752462148,
+          "1": 0.4392067168219829,
+          "2": 0.3280508356533956
+        },
+        "confidence": 0.029401820966757808,
+        "answerConfidence": 0.4392067168219829,
+        "actProbability": 1.0
+      },
+      "q2": {
+        "type": "noul",
+        "noul": 0.9085999112880964,
+        "probabilities": {
+          "false": 0.09140008871190361,
+          "true": 0.9085999112880964
+        },
+        "confidence": 0.9085999112880964,
+        "answerConfidence": 0.9085999112880964,
+        "actProbability": 1.0
+      }
     }
-   },
-   "q1": {
-    "type": "score",
-    "instructions": "How urgent is this request?",
-    "criteria": [
-     "not urgent",
-     "soon",
-     "critical deadline or blocking issue"
-    ]
-   },
-   "q2": {
-    "type": "noul",
-    "instructions": "Does the customer ask for money back?"
-   }
   },
-  "sequence_lengths": [
-   65,
-   52,
-   53
-  ],
-  "answers": {
-   "q0": {
-    "type": "choice",
-    "confidence": 0.8203,
-    "answer_confidence": 0.9511,
-    "action": {
-     "act_probability": 1.0
+  {
+    "state": {
+      "message": "Me cobraron dos veces la factura 4411, por favor devuélvanme el dinero."
     },
-    "choice": "billing",
-    "probabilities": {
-     "billing": 0.9511,
-     "technical": 0.0155,
-     "sales": 0.016,
-     "other": 0.0175
+    "questions": {
+      "q0": {
+        "type": "choice",
+        "instructions": "Which department should handle this email?",
+        "criteria": {
+          "billing": "invoices, payments, refunds",
+          "technical": "bugs, outages, system errors",
+          "sales": "pricing, new contracts",
+          "other": "everything else"
+        }
+      },
+      "q1": {
+        "type": "score",
+        "instructions": "How urgent is this request?",
+        "criteria": [
+          "not urgent",
+          "soon",
+          "critical deadline or blocking issue"
+        ]
+      },
+      "q2": {
+        "type": "noul",
+        "instructions": "Does the customer ask for money back?"
+      }
+    },
+    "answers": {
+      "q0": {
+        "type": "choice",
+        "choice": "billing",
+        "probabilities": {
+          "billing": 0.9230420387322665,
+          "technical": 0.023841500392121316,
+          "sales": 0.04225893057558202,
+          "other": 0.01085753030003017
+        },
+        "confidence": 0.7505511682212085,
+        "answerConfidence": 0.9230420387322665,
+        "actProbability": 1.0
+      },
+      "q1": {
+        "type": "score",
+        "score": 1.4437211013099573,
+        "probabilities": {
+          "0": 0.09663365329015393,
+          "1": 0.36301159210973466,
+          "2": 0.5403547546001114
+        },
+        "confidence": 0.15687491509577478,
+        "answerConfidence": 0.5403547546001114,
+        "actProbability": 1.0
+      },
+      "q2": {
+        "type": "noul",
+        "noul": 0.8723709769459659,
+        "probabilities": {
+          "false": 0.12762902305403412,
+          "true": 0.8723709769459659
+        },
+        "confidence": 0.8723709769459659,
+        "answerConfidence": 0.8723709769459659,
+        "actProbability": 1.0
+      }
     }
-   },
-   "q1": {
-    "type": "score",
-    "confidence": 0.1348,
-    "answer_confidence": 0.5026,
-    "action": {
-     "act_probability": 1.0
-    },
-    "score": 1.2858,
-    "legend": {
-     "0": "not urgent",
-     "1": "soon",
-     "2": "critical deadline or blocking issue"
-    },
-    "probabilities": {
-     "0": 0.1058,
-     "1": 0.5026,
-     "2": 0.3916
-    }
-   },
-   "q2": {
-    "type": "noul",
-    "confidence": 0.9085,
-    "answer_confidence": 0.9085,
-    "action": {
-     "act_probability": 1.0
-    },
-    "noul": 0.9085
-   }
   },
-  "usage_input_tokens": 170
- },
- {
-  "case": "zh",
-  "state": {
-   "message": "发票4411被重复扣款，请今天退款。"
+  {
+    "state": {
+      "message": "मुझसे इनवॉइस 4411 के लिए दो बार शुल्क लिया गया, कृपया पैसे वापस करें।"
+    },
+    "questions": {
+      "q0": {
+        "type": "choice",
+        "instructions": "Which department should handle this email?",
+        "criteria": {
+          "billing": "invoices, payments, refunds",
+          "technical": "bugs, outages, system errors",
+          "sales": "pricing, new contracts",
+          "other": "everything else"
+        }
+      },
+      "q1": {
+        "type": "score",
+        "instructions": "How urgent is this request?",
+        "criteria": [
+          "not urgent",
+          "soon",
+          "critical deadline or blocking issue"
+        ]
+      },
+      "q2": {
+        "type": "noul",
+        "instructions": "Does the customer ask for money back?"
+      }
+    },
+    "answers": {
+      "q0": {
+        "type": "choice",
+        "choice": "billing",
+        "probabilities": {
+          "billing": 0.6389488718536349,
+          "technical": 0.13977860157348002,
+          "sales": 0.1171572941980225,
+          "other": 0.10411523237486259
+        },
+        "confidence": 0.24403129627183207,
+        "answerConfidence": 0.6389488718536349,
+        "actProbability": 1.0
+      },
+      "q1": {
+        "type": "score",
+        "score": 1.1842859014459757,
+        "probabilities": {
+          "0": 0.15515301927194988,
+          "1": 0.5054080600101243,
+          "2": 0.33943892071792575
+        },
+        "confidence": 0.08908816888365279,
+        "answerConfidence": 0.5054080600101243,
+        "actProbability": 1.0
+      },
+      "q2": {
+        "type": "noul",
+        "noul": 0.682564138221547,
+        "probabilities": {
+          "false": 0.317435861778453,
+          "true": 0.682564138221547
+        },
+        "confidence": 0.682564138221547,
+        "answerConfidence": 0.682564138221547,
+        "actProbability": 1.0
+      }
+    }
   },
-  "questions": {
-   "q0": {
-    "type": "choice",
-    "instructions": "Which department should handle this email?",
-    "criteria": {
-     "billing": "invoices, payments, refunds",
-     "technical": "bugs, outages, system errors",
-     "sales": "pricing, new contracts",
-     "other": "everything else"
+  {
+    "state": {
+      "message": "請求書4411で二重に請求されました。返金してください。"
+    },
+    "questions": {
+      "q0": {
+        "type": "choice",
+        "instructions": "Which department should handle this email?",
+        "criteria": {
+          "billing": "invoices, payments, refunds",
+          "technical": "bugs, outages, system errors",
+          "sales": "pricing, new contracts",
+          "other": "everything else"
+        }
+      },
+      "q1": {
+        "type": "score",
+        "instructions": "How urgent is this request?",
+        "criteria": [
+          "not urgent",
+          "soon",
+          "critical deadline or blocking issue"
+        ]
+      },
+      "q2": {
+        "type": "noul",
+        "instructions": "Does the customer ask for money back?"
+      }
+    },
+    "answers": {
+      "q0": {
+        "type": "choice",
+        "choice": "other",
+        "probabilities": {
+          "billing": 0.20676765093305846,
+          "technical": 0.2603941394813092,
+          "sales": 0.2247929612422701,
+          "other": 0.3080452483433622
+        },
+        "confidence": 0.008492795470373071,
+        "answerConfidence": 0.3080452483433622,
+        "actProbability": 1.0
+      },
+      "q1": {
+        "type": "score",
+        "score": 1.0251506877482919,
+        "probabilities": {
+          "0": 0.3126070381585373,
+          "1": 0.3496352359346337,
+          "2": 0.33775772590682906
+        },
+        "confidence": 0.0009827612401406283,
+        "answerConfidence": 0.3496352359346337,
+        "actProbability": 1.0
+      },
+      "q2": {
+        "type": "noul",
+        "noul": 0.7741929072836162,
+        "probabilities": {
+          "false": 0.22580709271638374,
+          "true": 0.7741929072836162
+        },
+        "confidence": 0.7741929072836162,
+        "answerConfidence": 0.7741929072836162,
+        "actProbability": 1.0
+      }
     }
-   },
-   "q1": {
-    "type": "score",
-    "instructions": "How urgent is this request?",
-    "criteria": [
-     "not urgent",
-     "soon",
-     "critical deadline or blocking issue"
-    ]
-   },
-   "q2": {
-    "type": "noul",
-    "instructions": "Does the customer ask for money back?"
-   }
   },
-  "sequence_lengths": [
-   73,
-   60,
-   61
-  ],
-  "answers": {
-   "q0": {
-    "type": "choice",
-    "confidence": 0.4657,
-    "answer_confidence": 0.7886,
-    "action": {
-     "act_probability": 1.0
+  {
+    "state": {
+      "message": "С меня дважды списали деньги по счёту 4411, верните деньги."
     },
-    "choice": "billing",
-    "probabilities": {
-     "billing": 0.7886,
-     "technical": 0.0863,
-     "sales": 0.0795,
-     "other": 0.0456
+    "questions": {
+      "q0": {
+        "type": "choice",
+        "instructions": "Which department should handle this email?",
+        "criteria": {
+          "billing": "invoices, payments, refunds",
+          "technical": "bugs, outages, system errors",
+          "sales": "pricing, new contracts",
+          "other": "everything else"
+        }
+      },
+      "q1": {
+        "type": "score",
+        "instructions": "How urgent is this request?",
+        "criteria": [
+          "not urgent",
+          "soon",
+          "critical deadline or blocking issue"
+        ]
+      },
+      "q2": {
+        "type": "noul",
+        "instructions": "Does the customer ask for money back?"
+      }
+    },
+    "answers": {
+      "q0": {
+        "type": "choice",
+        "choice": "billing",
+        "probabilities": {
+          "billing": 0.9834151710318351,
+          "technical": 0.006824596858769194,
+          "sales": 0.005063738367134988,
+          "other": 0.004696493742260525
+        },
+        "confidence": 0.9261159221844055,
+        "answerConfidence": 0.9834151710318351,
+        "actProbability": 1.0
+      },
+      "q1": {
+        "type": "score",
+        "score": 0.5801838860047317,
+        "probabilities": {
+          "0": 0.5275698592417162,
+          "1": 0.3646763955118358,
+          "2": 0.10775374524644794
+        },
+        "confidence": 0.13955271682230752,
+        "answerConfidence": 0.5275698592417162,
+        "actProbability": 1.0
+      },
+      "q2": {
+        "type": "noul",
+        "noul": 0.5835756249994809,
+        "probabilities": {
+          "false": 0.41642437500051904,
+          "true": 0.5835756249994809
+        },
+        "confidence": 0.5835756249994809,
+        "answerConfidence": 0.5835756249994809,
+        "actProbability": 1.0
+      }
     }
-   },
-   "q1": {
-    "type": "score",
-    "confidence": 0.036,
-    "answer_confidence": 0.4185,
-    "action": {
-     "act_probability": 1.0
-    },
-    "score": 1.2103,
-    "legend": {
-     "0": "not urgent",
-     "1": "soon",
-     "2": "critical deadline or blocking issue"
-    },
-    "probabilities": {
-     "0": 0.2081,
-     "1": 0.3734,
-     "2": 0.4185
-    }
-   },
-   "q2": {
-    "type": "noul",
-    "confidence": 0.9669,
-    "answer_confidence": 0.9669,
-    "action": {
-     "act_probability": 1.0
-    },
-    "noul": 0.9669
-   }
   },
-  "usage_input_tokens": 194
- },
- {
-  "case": "de",
-  "state": {
-   "message": "Ich wurde zweimal für Rechnung 4411 belastet, bitte erstatten Sie den Betrag."
+  {
+    "state": "",
+    "questions": {
+      "q0": {
+        "type": "choice",
+        "instructions": "Which department should handle this email?",
+        "criteria": {
+          "billing": "invoices, payments, refunds",
+          "technical": "bugs, outages, system errors",
+          "sales": "pricing, new contracts",
+          "other": "everything else"
+        }
+      },
+      "q1": {
+        "type": "score",
+        "instructions": "How urgent is this request?",
+        "criteria": [
+          "not urgent",
+          "soon",
+          "critical deadline or blocking issue"
+        ]
+      },
+      "q2": {
+        "type": "noul",
+        "instructions": "Does the customer ask for money back?"
+      }
+    },
+    "answers": {
+      "q0": {
+        "type": "choice",
+        "choice": "billing",
+        "probabilities": {
+          "billing": 0.3998263188196512,
+          "technical": 0.20477756666654315,
+          "sales": 0.19055049913676467,
+          "other": 0.20484561537704096
+        },
+        "confidence": 0.03919560867776073,
+        "answerConfidence": 0.3998263188196512,
+        "actProbability": 1.0
+      },
+      "q1": {
+        "type": "score",
+        "score": 1.2005415558903456,
+        "probabilities": {
+          "0": 0.1827230780604567,
+          "1": 0.43401228798874114,
+          "2": 0.3832646339508022
+        },
+        "confidence": 0.05297415895594615,
+        "answerConfidence": 0.43401228798874114,
+        "actProbability": 1.0
+      },
+      "q2": {
+        "type": "noul",
+        "noul": 0.14918831860659454,
+        "probabilities": {
+          "false": 0.8508116813934055,
+          "true": 0.14918831860659454
+        },
+        "confidence": 0.8508116813934055,
+        "answerConfidence": 0.8508116813934055,
+        "actProbability": 1.0
+      }
+    }
   },
-  "questions": {
-   "q0": {
-    "type": "choice",
-    "instructions": "Which department should handle this email?",
-    "criteria": {
-     "billing": "invoices, payments, refunds",
-     "technical": "bugs, outages, system errors",
-     "sales": "pricing, new contracts",
-     "other": "everything else"
+  {
+    "state": {
+      "from": "user@example.com",
+      "subject": "Duplicate charge on invoice #4411",
+      "body": "The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. "
+    },
+    "questions": {
+      "q0": {
+        "type": "choice",
+        "instructions": "Which department should handle this email?",
+        "criteria": {
+          "billing": "invoices, payments, refunds",
+          "technical": "bugs, outages, system errors",
+          "sales": "pricing, new contracts",
+          "other": "everything else"
+        }
+      },
+      "q1": {
+        "type": "score",
+        "instructions": "How urgent is this request?",
+        "criteria": [
+          "not urgent",
+          "soon",
+          "critical deadline or blocking issue"
+        ]
+      },
+      "q2": {
+        "type": "noul",
+        "instructions": "Does the customer ask for money back?"
+      }
+    },
+    "answers": {
+      "q0": {
+        "type": "choice",
+        "choice": "billing",
+        "probabilities": {
+          "billing": 0.9339062737948686,
+          "technical": 0.02461739875144103,
+          "sales": 0.0164835184584671,
+          "other": 0.02499280899522337
+        },
+        "confidence": 0.7728303345830414,
+        "answerConfidence": 0.9339062737948686,
+        "actProbability": 1.0
+      },
+      "q1": {
+        "type": "score",
+        "score": 1.0189140720199756,
+        "probabilities": {
+          "0": 0.29522023975582,
+          "1": 0.39064544846838434,
+          "2": 0.31413431177579565
+        },
+        "confidence": 0.006824573112986898,
+        "answerConfidence": 0.39064544846838434,
+        "actProbability": 1.0
+      },
+      "q2": {
+        "type": "noul",
+        "noul": 0.7504706144345165,
+        "probabilities": {
+          "false": 0.2495293855654835,
+          "true": 0.7504706144345165
+        },
+        "confidence": 0.7504706144345165,
+        "answerConfidence": 0.7504706144345165,
+        "actProbability": 1.0
+      }
     }
-   },
-   "q1": {
-    "type": "score",
-    "instructions": "How urgent is this request?",
-    "criteria": [
-     "not urgent",
-     "soon",
-     "critical deadline or blocking issue"
-    ]
-   },
-   "q2": {
-    "type": "noul",
-    "instructions": "Does the customer ask for money back?"
-   }
   },
-  "sequence_lengths": [
-   76,
-   63,
-   64
-  ],
-  "answers": {
-   "q0": {
-    "type": "choice",
-    "confidence": 0.7336,
-    "answer_confidence": 0.9176,
-    "action": {
-     "act_probability": 1.0
+  {
+    "state": [
+      {
+        "role": "user",
+        "content": "I was charged twice for invoice 4411, please refund it today."
+      }
+    ],
+    "questions": {
+      "q0": {
+        "type": "choice",
+        "instructions": "Which department should handle this email?",
+        "criteria": {
+          "billing": "invoices, payments, refunds",
+          "technical": "bugs, outages, system errors",
+          "sales": "pricing, new contracts",
+          "other": "everything else"
+        }
+      },
+      "q1": {
+        "type": "score",
+        "instructions": "How urgent is this request?",
+        "criteria": [
+          "not urgent",
+          "soon",
+          "critical deadline or blocking issue"
+        ]
+      },
+      "q2": {
+        "type": "noul",
+        "instructions": "Does the customer ask for money back?"
+      }
     },
-    "choice": "billing",
-    "probabilities": {
-     "billing": 0.9176,
-     "technical": 0.0228,
-     "sales": 0.042,
-     "other": 0.0175
+    "answers": {
+      "q0": {
+        "type": "choice",
+        "choice": "billing",
+        "probabilities": {
+          "billing": 0.9339215463988478,
+          "technical": 0.02077778611785496,
+          "sales": 0.023229071851135447,
+          "other": 0.022071595632161767
+        },
+        "confidence": 0.7721254994525102,
+        "answerConfidence": 0.9339215463988478,
+        "actProbability": 1.0
+      },
+      "q1": {
+        "type": "score",
+        "score": 1.261075659579946,
+        "probabilities": {
+          "0": 0.13112911837375651,
+          "1": 0.47666610367254103,
+          "2": 0.39220477795370245
+        },
+        "confidence": 0.10189313439786485,
+        "answerConfidence": 0.47666610367254103,
+        "actProbability": 1.0
+      },
+      "q2": {
+        "type": "noul",
+        "noul": 0.9124960615453349,
+        "probabilities": {
+          "false": 0.08750393845466517,
+          "true": 0.9124960615453349
+        },
+        "confidence": 0.9124960615453349,
+        "answerConfidence": 0.9124960615453349,
+        "actProbability": 1.0
+      }
     }
-   },
-   "q1": {
-    "type": "score",
-    "confidence": 0.0655,
-    "answer_confidence": 0.422,
-    "action": {
-     "act_probability": 1.0
-    },
-    "score": 1.2569,
-    "legend": {
-     "0": "not urgent",
-     "1": "soon",
-     "2": "critical deadline or blocking issue"
-    },
-    "probabilities": {
-     "0": 0.1651,
-     "1": 0.4129,
-     "2": 0.422
-    }
-   },
-   "q2": {
-    "type": "noul",
-    "confidence": 0.698,
-    "answer_confidence": 0.698,
-    "action": {
-     "act_probability": 1.0
-    },
-    "noul": 0.302
-   }
   },
-  "usage_input_tokens": 203
- },
- {
-  "case": "fr",
-  "state": {
-   "message": "J'ai été facturé deux fois pour la facture 4411, remboursez-moi s'il vous plaît."
+  {
+    "state": "[MASK] <mask> hello [MASK] <mask>",
+    "questions": {
+      "q0": {
+        "type": "choice",
+        "instructions": "Which department should handle this email?",
+        "criteria": {
+          "billing": "invoices, payments, refunds",
+          "technical": "bugs, outages, system errors",
+          "sales": "pricing, new contracts",
+          "other": "everything else"
+        }
+      },
+      "q1": {
+        "type": "score",
+        "instructions": "How urgent is this request?",
+        "criteria": [
+          "not urgent",
+          "soon",
+          "critical deadline or blocking issue"
+        ]
+      },
+      "q2": {
+        "type": "noul",
+        "instructions": "Does the customer ask for money back?"
+      }
+    },
+    "answers": {
+      "q0": {
+        "type": "choice",
+        "choice": "other",
+        "probabilities": {
+          "billing": 0.273778060956077,
+          "technical": 0.21106405969472178,
+          "sales": 0.18297805446063034,
+          "other": 0.33217982488857095
+        },
+        "confidence": 0.019076629294425884,
+        "answerConfidence": 0.33217982488857095,
+        "actProbability": 1.0
+      },
+      "q1": {
+        "type": "score",
+        "score": 0.9679622491079531,
+        "probabilities": {
+          "0": 0.31797384621638686,
+          "1": 0.396090058459273,
+          "2": 0.2859360953243401
+        },
+        "confidence": 0.008619589181073306,
+        "answerConfidence": 0.396090058459273,
+        "actProbability": 1.0
+      },
+      "q2": {
+        "type": "noul",
+        "noul": 0.000051574806038080185,
+        "probabilities": {
+          "false": 0.999948425193962,
+          "true": 0.000051574806038080185
+        },
+        "confidence": 0.9999484251939619,
+        "answerConfidence": 0.999948425193962,
+        "actProbability": 1.0
+      }
+    }
   },
-  "questions": {
-   "q0": {
-    "type": "choice",
-    "instructions": "Which department should handle this email?",
-    "criteria": {
-     "billing": "invoices, payments, refunds",
-     "technical": "bugs, outages, system errors",
-     "sales": "pricing, new contracts",
-     "other": "everything else"
+  {
+    "state": {
+      "from": "user@example.com",
+      "subject": "Duplicate charge on invoice #4411",
+      "body": "We were billed twice for March. Please refund the duplicate today or we will cancel our plan."
+    },
+    "questions": {
+      "q0": {
+        "type": "choice",
+        "instructions": "Which department should handle this email?",
+        "criteria": {
+          "billing": "invoices, payments, refunds",
+          "technical": "bugs, outages, system errors",
+          "sales": "pricing, new contracts",
+          "other": "everything else"
+        }
+      },
+      "q1": {
+        "type": "score",
+        "instructions": "How urgent is this request?",
+        "criteria": [
+          "not urgent",
+          "soon",
+          "critical deadline or blocking issue"
+        ]
+      },
+      "q2": {
+        "type": "noul",
+        "instructions": "Does the customer ask for money back?"
+      },
+      "q3": {
+        "type": "choice",
+        "instructions": "Which department should handle this email?",
+        "criteria": {
+          "billing": "invoices, payments, refunds",
+          "technical": "bugs, outages, system errors",
+          "sales": "pricing, new contracts",
+          "other": "everything else"
+        }
+      },
+      "q4": {
+        "type": "score",
+        "instructions": "How urgent is this request?",
+        "criteria": [
+          "not urgent",
+          "soon",
+          "critical deadline or blocking issue"
+        ]
+      },
+      "q5": {
+        "type": "noul",
+        "instructions": "Does the customer ask for money back?"
+      },
+      "q6": {
+        "type": "choice",
+        "instructions": "Which department should handle this email?",
+        "criteria": {
+          "billing": "invoices, payments, refunds",
+          "technical": "bugs, outages, system errors",
+          "sales": "pricing, new contracts",
+          "other": "everything else"
+        }
+      },
+      "q7": {
+        "type": "score",
+        "instructions": "How urgent is this request?",
+        "criteria": [
+          "not urgent",
+          "soon",
+          "critical deadline or blocking issue"
+        ]
+      },
+      "q8": {
+        "type": "noul",
+        "instructions": "Does the customer ask for money back?"
+      },
+      "q9": {
+        "type": "choice",
+        "instructions": "Which department should handle this email?",
+        "criteria": {
+          "billing": "invoices, payments, refunds",
+          "technical": "bugs, outages, system errors",
+          "sales": "pricing, new contracts",
+          "other": "everything else"
+        }
+      },
+      "q10": {
+        "type": "score",
+        "instructions": "How urgent is this request?",
+        "criteria": [
+          "not urgent",
+          "soon",
+          "critical deadline or blocking issue"
+        ]
+      },
+      "q11": {
+        "type": "noul",
+        "instructions": "Does the customer ask for money back?"
+      },
+      "q12": {
+        "type": "choice",
+        "instructions": "Which department should handle this email?",
+        "criteria": {
+          "billing": "invoices, payments, refunds",
+          "technical": "bugs, outages, system errors",
+          "sales": "pricing, new contracts",
+          "other": "everything else"
+        }
+      },
+      "q13": {
+        "type": "score",
+        "instructions": "How urgent is this request?",
+        "criteria": [
+          "not urgent",
+          "soon",
+          "critical deadline or blocking issue"
+        ]
+      },
+      "q14": {
+        "type": "noul",
+        "instructions": "Does the customer ask for money back?"
+      },
+      "q15": {
+        "type": "choice",
+        "instructions": "Which department should handle this email?",
+        "criteria": {
+          "billing": "invoices, payments, refunds",
+          "technical": "bugs, outages, system errors",
+          "sales": "pricing, new contracts",
+          "other": "everything else"
+        }
+      },
+      "q16": {
+        "type": "score",
+        "instructions": "How urgent is this request?",
+        "criteria": [
+          "not urgent",
+          "soon",
+          "critical deadline or blocking issue"
+        ]
+      },
+      "q17": {
+        "type": "noul",
+        "instructions": "Does the customer ask for money back?"
+      },
+      "q18": {
+        "type": "choice",
+        "instructions": "Which department should handle this email?",
+        "criteria": {
+          "billing": "invoices, payments, refunds",
+          "technical": "bugs, outages, system errors",
+          "sales": "pricing, new contracts",
+          "other": "everything else"
+        }
+      },
+      "q19": {
+        "type": "score",
+        "instructions": "How urgent is this request?",
+        "criteria": [
+          "not urgent",
+          "soon",
+          "critical deadline or blocking issue"
+        ]
+      }
+    },
+    "answers": {
+      "q0": {
+        "type": "choice",
+        "choice": "billing",
+        "probabilities": {
+          "billing": 0.9553489407578667,
+          "technical": 0.015266131320181175,
+          "sales": 0.01492864589291234,
+          "other": 0.01445628202903998
+        },
+        "confidence": 0.8330103921119746,
+        "answerConfidence": 0.9553489407578667,
+        "actProbability": 1.0
+      },
+      "q1": {
+        "type": "score",
+        "score": 1.4475840559989455,
+        "probabilities": {
+          "0": 0.09525437023816524,
+          "1": 0.36190720352472405,
+          "2": 0.5428384262371106
+        },
+        "confidence": 0.1594515709189689,
+        "answerConfidence": 0.5428384262371106,
+        "actProbability": 1.0
+      },
+      "q2": {
+        "type": "noul",
+        "noul": 0.8586849198528046,
+        "probabilities": {
+          "false": 0.1413150801471953,
+          "true": 0.8586849198528046
+        },
+        "confidence": 0.8586849198528046,
+        "answerConfidence": 0.8586849198528046,
+        "actProbability": 1.0
+      },
+      "q3": {
+        "type": "choice",
+        "choice": "billing",
+        "probabilities": {
+          "billing": 0.9553489407578667,
+          "technical": 0.015266131320181175,
+          "sales": 0.01492864589291234,
+          "other": 0.01445628202903998
+        },
+        "confidence": 0.8330103921119746,
+        "answerConfidence": 0.9553489407578667,
+        "actProbability": 1.0
+      },
+      "q4": {
+        "type": "score",
+        "score": 1.4475840559989455,
+        "probabilities": {
+          "0": 0.09525437023816524,
+          "1": 0.36190720352472405,
+          "2": 0.5428384262371106
+        },
+        "confidence": 0.1594515709189689,
+        "answerConfidence": 0.5428384262371106,
+        "actProbability": 1.0
+      },
+      "q5": {
+        "type": "noul",
+        "noul": 0.8586849198528046,
+        "probabilities": {
+          "false": 0.1413150801471953,
+          "true": 0.8586849198528046
+        },
+        "confidence": 0.8586849198528046,
+        "answerConfidence": 0.8586849198528046,
+        "actProbability": 1.0
+      },
+      "q6": {
+        "type": "choice",
+        "choice": "billing",
+        "probabilities": {
+          "billing": 0.9553489407578667,
+          "technical": 0.015266131320181175,
+          "sales": 0.01492864589291234,
+          "other": 0.01445628202903998
+        },
+        "confidence": 0.8330103921119746,
+        "answerConfidence": 0.9553489407578667,
+        "actProbability": 1.0
+      },
+      "q7": {
+        "type": "score",
+        "score": 1.4475840559989455,
+        "probabilities": {
+          "0": 0.09525437023816524,
+          "1": 0.36190720352472405,
+          "2": 0.5428384262371106
+        },
+        "confidence": 0.1594515709189689,
+        "answerConfidence": 0.5428384262371106,
+        "actProbability": 1.0
+      },
+      "q8": {
+        "type": "noul",
+        "noul": 0.8586849198528046,
+        "probabilities": {
+          "false": 0.1413150801471953,
+          "true": 0.8586849198528046
+        },
+        "confidence": 0.8586849198528046,
+        "answerConfidence": 0.8586849198528046,
+        "actProbability": 1.0
+      },
+      "q9": {
+        "type": "choice",
+        "choice": "billing",
+        "probabilities": {
+          "billing": 0.9553489407578667,
+          "technical": 0.015266131320181175,
+          "sales": 0.01492864589291234,
+          "other": 0.01445628202903998
+        },
+        "confidence": 0.8330103921119746,
+        "answerConfidence": 0.9553489407578667,
+        "actProbability": 1.0
+      },
+      "q10": {
+        "type": "score",
+        "score": 1.4475840559989455,
+        "probabilities": {
+          "0": 0.09525437023816524,
+          "1": 0.36190720352472405,
+          "2": 0.5428384262371106
+        },
+        "confidence": 0.1594515709189689,
+        "answerConfidence": 0.5428384262371106,
+        "actProbability": 1.0
+      },
+      "q11": {
+        "type": "noul",
+        "noul": 0.8586849198528046,
+        "probabilities": {
+          "false": 0.1413150801471953,
+          "true": 0.8586849198528046
+        },
+        "confidence": 0.8586849198528046,
+        "answerConfidence": 0.8586849198528046,
+        "actProbability": 1.0
+      },
+      "q12": {
+        "type": "choice",
+        "choice": "billing",
+        "probabilities": {
+          "billing": 0.9553489407578667,
+          "technical": 0.015266131320181175,
+          "sales": 0.01492864589291234,
+          "other": 0.01445628202903998
+        },
+        "confidence": 0.8330103921119746,
+        "answerConfidence": 0.9553489407578667,
+        "actProbability": 1.0
+      },
+      "q13": {
+        "type": "score",
+        "score": 1.4475840559989455,
+        "probabilities": {
+          "0": 0.09525437023816524,
+          "1": 0.36190720352472405,
+          "2": 0.5428384262371106
+        },
+        "confidence": 0.1594515709189689,
+        "answerConfidence": 0.5428384262371106,
+        "actProbability": 1.0
+      },
+      "q14": {
+        "type": "noul",
+        "noul": 0.8586849198528046,
+        "probabilities": {
+          "false": 0.1413150801471953,
+          "true": 0.8586849198528046
+        },
+        "confidence": 0.8586849198528046,
+        "answerConfidence": 0.8586849198528046,
+        "actProbability": 1.0
+      },
+      "q15": {
+        "type": "choice",
+        "choice": "billing",
+        "probabilities": {
+          "billing": 0.9553489407578667,
+          "technical": 0.015266131320181175,
+          "sales": 0.01492864589291234,
+          "other": 0.01445628202903998
+        },
+        "confidence": 0.8330103921119746,
+        "answerConfidence": 0.9553489407578667,
+        "actProbability": 1.0
+      },
+      "q16": {
+        "type": "score",
+        "score": 1.4475840559989455,
+        "probabilities": {
+          "0": 0.09525437023816524,
+          "1": 0.36190720352472405,
+          "2": 0.5428384262371106
+        },
+        "confidence": 0.1594515709189689,
+        "answerConfidence": 0.5428384262371106,
+        "actProbability": 1.0
+      },
+      "q17": {
+        "type": "noul",
+        "noul": 0.8586849198528046,
+        "probabilities": {
+          "false": 0.1413150801471953,
+          "true": 0.8586849198528046
+        },
+        "confidence": 0.8586849198528046,
+        "answerConfidence": 0.8586849198528046,
+        "actProbability": 1.0
+      },
+      "q18": {
+        "type": "choice",
+        "choice": "billing",
+        "probabilities": {
+          "billing": 0.9553489407578667,
+          "technical": 0.015266131320181175,
+          "sales": 0.01492864589291234,
+          "other": 0.01445628202903998
+        },
+        "confidence": 0.8330103921119746,
+        "answerConfidence": 0.9553489407578667,
+        "actProbability": 1.0
+      },
+      "q19": {
+        "type": "score",
+        "score": 1.4475840559989455,
+        "probabilities": {
+          "0": 0.09525437023816524,
+          "1": 0.36190720352472405,
+          "2": 0.5428384262371106
+        },
+        "confidence": 0.1594515709189689,
+        "answerConfidence": 0.5428384262371106,
+        "actProbability": 1.0
+      }
     }
-   },
-   "q1": {
-    "type": "score",
-    "instructions": "How urgent is this request?",
-    "criteria": [
-     "not urgent",
-     "soon",
-     "critical deadline or blocking issue"
-    ]
-   },
-   "q2": {
-    "type": "noul",
-    "instructions": "Does the customer ask for money back?"
-   }
   },
-  "sequence_lengths": [
-   81,
-   68,
-   69
-  ],
-  "answers": {
-   "q0": {
-    "type": "choice",
-    "confidence": 0.8371,
-    "answer_confidence": 0.9566,
-    "action": {
-     "act_probability": 1.0
+  {
+    "state": {
+      "from": "user@example.com",
+      "subject": "Duplicate charge on invoice #4411",
+      "body": "We were billed twice for March. Please refund the duplicate today or we will cancel our plan."
     },
-    "choice": "billing",
-    "probabilities": {
-     "billing": 0.9566,
-     "technical": 0.014,
-     "sales": 0.0176,
-     "other": 0.0118
+    "questions": {
+      "choice": {
+        "type": "choice",
+        "instructions": {
+          "task": "choose department"
+        },
+        "criteria": {
+          "billing": {
+            "description": "refunds"
+          },
+          "other": false
+        }
+      },
+      "score": {
+        "type": "score",
+        "instructions": "Urgency?",
+        "criteria": [
+          {
+            "level": "low"
+          },
+          "high"
+        ]
+      },
+      "noul": {
+        "type": "noul",
+        "instructions": "Refund?",
+        "criteria": {
+          "true": {
+            "reason": "money back"
+          }
+        }
+      }
+    },
+    "answers": {
+      "choice": {
+        "type": "choice",
+        "choice": "billing",
+        "probabilities": {
+          "billing": 0.971690964297796,
+          "other": 0.02830903570220399
+        },
+        "confidence": 0.8141604518331765,
+        "answerConfidence": 0.971690964297796,
+        "actProbability": 1.0
+      },
+      "score": {
+        "type": "score",
+        "score": 0.7141355364983552,
+        "probabilities": {
+          "0": 0.2858644635016448,
+          "1": 0.7141355364983552
+        },
+        "confidence": 0.13668098690585173,
+        "answerConfidence": 0.7141355364983552,
+        "actProbability": 1.0
+      },
+      "noul": {
+        "type": "noul",
+        "noul": 0.7841837879681522,
+        "probabilities": {
+          "false": 0.21581621203184775,
+          "true": 0.7841837879681522
+        },
+        "confidence": 0.7841837879681522,
+        "answerConfidence": 0.7841837879681522,
+        "actProbability": 1.0
+      }
     }
-   },
-   "q1": {
-    "type": "score",
-    "confidence": 0.0295,
-    "answer_confidence": 0.4399,
-    "action": {
-     "act_probability": 1.0
-    },
-    "score": 1.0944,
-    "legend": {
-     "0": "not urgent",
-     "1": "soon",
-     "2": "critical deadline or blocking issue"
-    },
-    "probabilities": {
-     "0": 0.2329,
-     "1": 0.4399,
-     "2": 0.3273
-    }
-   },
-   "q2": {
-    "type": "noul",
-    "confidence": 0.9085,
-    "answer_confidence": 0.9085,
-    "action": {
-     "act_probability": 1.0
-    },
-    "noul": 0.9085
-   }
   },
-  "usage_input_tokens": 218
- },
- {
-  "case": "es",
-  "state": {
-   "message": "Me cobraron dos veces la factura 4411, por favor devuélvanme el dinero."
-  },
-  "questions": {
-   "q0": {
-    "type": "choice",
-    "instructions": "Which department should handle this email?",
-    "criteria": {
-     "billing": "invoices, payments, refunds",
-     "technical": "bugs, outages, system errors",
-     "sales": "pricing, new contracts",
-     "other": "everything else"
+  {
+    "state": {
+      "from": "user@example.com",
+      "subject": "Duplicate charge on invoice #4411",
+      "body": "We were billed twice for March. Please refund the duplicate today or we will cancel our plan."
+    },
+    "questions": {
+      "choice": {
+        "type": "choice",
+        "instructions": "Which department handles billing?",
+        "criteria": [
+          "billing",
+          "department_0",
+          "department_1",
+          "department_2",
+          "department_3",
+          "department_4",
+          "department_5",
+          "department_6",
+          "department_7",
+          "department_8",
+          "department_9",
+          "department_10",
+          "department_11",
+          "department_12",
+          "department_13",
+          "department_14",
+          "department_15",
+          "department_16",
+          "department_17",
+          "department_18"
+        ]
+      }
+    },
+    "answers": {
+      "choice": {
+        "type": "choice",
+        "choice": "billing",
+        "probabilities": {
+          "billing": 0.9999973397620016,
+          "department_0": 9.92585634431969e-7,
+          "department_1": 1.9392550442383293e-7,
+          "department_2": 1.2796227640428376e-7,
+          "department_3": 1.328176272810376e-7,
+          "department_4": 1.0003972611934743e-7,
+          "department_5": 9.463742705651699e-8,
+          "department_6": 9.08827770291384e-8,
+          "department_7": 7.552979216578093e-8,
+          "department_8": 5.7142756886380274e-8,
+          "department_9": 6.788239267617501e-8,
+          "department_10": 7.944123420852627e-8,
+          "department_11": 8.652792996288495e-8,
+          "department_12": 8.220474118953244e-8,
+          "department_13": 9.707614134606525e-8,
+          "department_14": 7.880933759576452e-8,
+          "department_15": 1.204747756015517e-7,
+          "department_16": 6.63457644123592e-8,
+          "department_17": 6.180237606315547e-8,
+          "department_18": 5.414978310686965e-8
+        },
+        "confidence": 0.9999855487648531,
+        "answerConfidence": 0.9999973397620016,
+        "actProbability": 1.0
+      }
     }
-   },
-   "q1": {
-    "type": "score",
-    "instructions": "How urgent is this request?",
-    "criteria": [
-     "not urgent",
-     "soon",
-     "critical deadline or blocking issue"
-    ]
-   },
-   "q2": {
-    "type": "noul",
-    "instructions": "Does the customer ask for money back?"
-   }
-  },
-  "sequence_lengths": [
-   75,
-   62,
-   63
-  ],
-  "answers": {
-   "q0": {
-    "type": "choice",
-    "confidence": 0.7522,
-    "answer_confidence": 0.9237,
-    "action": {
-     "act_probability": 1.0
-    },
-    "choice": "billing",
-    "probabilities": {
-     "billing": 0.9237,
-     "technical": 0.0236,
-     "sales": 0.0418,
-     "other": 0.0108
-    }
-   },
-   "q1": {
-    "type": "score",
-    "confidence": 0.1565,
-    "answer_confidence": 0.5405,
-    "action": {
-     "act_probability": 1.0
-    },
-    "score": 1.4435,
-    "legend": {
-     "0": "not urgent",
-     "1": "soon",
-     "2": "critical deadline or blocking issue"
-    },
-    "probabilities": {
-     "0": 0.097,
-     "1": 0.3625,
-     "2": 0.5405
-    }
-   },
-   "q2": {
-    "type": "noul",
-    "confidence": 0.8716,
-    "answer_confidence": 0.8716,
-    "action": {
-     "act_probability": 1.0
-    },
-    "noul": 0.8716
-   }
-  },
-  "usage_input_tokens": 200
- },
- {
-  "case": "hi",
-  "state": {
-   "message": "मुझसे इनवॉइस 4411 के लिए दो बार शुल्क लिया गया, कृपया पैसे वापस करें।"
-  },
-  "questions": {
-   "q0": {
-    "type": "choice",
-    "instructions": "Which department should handle this email?",
-    "criteria": {
-     "billing": "invoices, payments, refunds",
-     "technical": "bugs, outages, system errors",
-     "sales": "pricing, new contracts",
-     "other": "everything else"
-    }
-   },
-   "q1": {
-    "type": "score",
-    "instructions": "How urgent is this request?",
-    "criteria": [
-     "not urgent",
-     "soon",
-     "critical deadline or blocking issue"
-    ]
-   },
-   "q2": {
-    "type": "noul",
-    "instructions": "Does the customer ask for money back?"
-   }
-  },
-  "sequence_lengths": [
-   119,
-   106,
-   107
-  ],
-  "answers": {
-   "q0": {
-    "type": "choice",
-    "confidence": 0.2441,
-    "answer_confidence": 0.639,
-    "action": {
-     "act_probability": 1.0
-    },
-    "choice": "billing",
-    "probabilities": {
-     "billing": 0.639,
-     "technical": 0.1397,
-     "sales": 0.1172,
-     "other": 0.1041
-    }
-   },
-   "q1": {
-    "type": "score",
-    "confidence": 0.0892,
-    "answer_confidence": 0.5064,
-    "action": {
-     "act_probability": 1.0
-    },
-    "score": 1.1825,
-    "legend": {
-     "0": "not urgent",
-     "1": "soon",
-     "2": "critical deadline or blocking issue"
-    },
-    "probabilities": {
-     "0": 0.1555,
-     "1": 0.5064,
-     "2": 0.338
-    }
-   },
-   "q2": {
-    "type": "noul",
-    "confidence": 0.6807,
-    "answer_confidence": 0.6807,
-    "action": {
-     "act_probability": 1.0
-    },
-    "noul": 0.6807
-   }
-  },
-  "usage_input_tokens": 332
- },
- {
-  "case": "ja",
-  "state": {
-   "message": "請求書4411で二重に請求されました。返金してください。"
-  },
-  "questions": {
-   "q0": {
-    "type": "choice",
-    "instructions": "Which department should handle this email?",
-    "criteria": {
-     "billing": "invoices, payments, refunds",
-     "technical": "bugs, outages, system errors",
-     "sales": "pricing, new contracts",
-     "other": "everything else"
-    }
-   },
-   "q1": {
-    "type": "score",
-    "instructions": "How urgent is this request?",
-    "criteria": [
-     "not urgent",
-     "soon",
-     "critical deadline or blocking issue"
-    ]
-   },
-   "q2": {
-    "type": "noul",
-    "instructions": "Does the customer ask for money back?"
-   }
-  },
-  "sequence_lengths": [
-   75,
-   62,
-   63
-  ],
-  "answers": {
-   "q0": {
-    "type": "choice",
-    "confidence": 0.0086,
-    "answer_confidence": 0.3085,
-    "action": {
-     "act_probability": 1.0
-    },
-    "choice": "other",
-    "probabilities": {
-     "billing": 0.2065,
-     "technical": 0.2607,
-     "sales": 0.2243,
-     "other": 0.3085
-    }
-   },
-   "q1": {
-    "type": "score",
-    "confidence": 0.0011,
-    "answer_confidence": 0.3494,
-    "action": {
-     "act_probability": 1.0
-    },
-    "score": 1.0279,
-    "legend": {
-     "0": "not urgent",
-     "1": "soon",
-     "2": "critical deadline or blocking issue"
-    },
-    "probabilities": {
-     "0": 0.3114,
-     "1": 0.3494,
-     "2": 0.3393
-    }
-   },
-   "q2": {
-    "type": "noul",
-    "confidence": 0.7751,
-    "answer_confidence": 0.7751,
-    "action": {
-     "act_probability": 1.0
-    },
-    "noul": 0.7751
-   }
-  },
-  "usage_input_tokens": 200
- },
- {
-  "case": "ru",
-  "state": {
-   "message": "С меня дважды списали деньги по счёту 4411, верните деньги."
-  },
-  "questions": {
-   "q0": {
-    "type": "choice",
-    "instructions": "Which department should handle this email?",
-    "criteria": {
-     "billing": "invoices, payments, refunds",
-     "technical": "bugs, outages, system errors",
-     "sales": "pricing, new contracts",
-     "other": "everything else"
-    }
-   },
-   "q1": {
-    "type": "score",
-    "instructions": "How urgent is this request?",
-    "criteria": [
-     "not urgent",
-     "soon",
-     "critical deadline or blocking issue"
-    ]
-   },
-   "q2": {
-    "type": "noul",
-    "instructions": "Does the customer ask for money back?"
-   }
-  },
-  "sequence_lengths": [
-   85,
-   72,
-   73
-  ],
-  "answers": {
-   "q0": {
-    "type": "choice",
-    "confidence": 0.9258,
-    "answer_confidence": 0.9833,
-    "action": {
-     "act_probability": 1.0
-    },
-    "choice": "billing",
-    "probabilities": {
-     "billing": 0.9833,
-     "technical": 0.0068,
-     "sales": 0.0051,
-     "other": 0.0047
-    }
-   },
-   "q1": {
-    "type": "score",
-    "confidence": 0.1381,
-    "answer_confidence": 0.5267,
-    "action": {
-     "act_probability": 1.0
-    },
-    "score": 0.5821,
-    "legend": {
-     "0": "not urgent",
-     "1": "soon",
-     "2": "critical deadline or blocking issue"
-    },
-    "probabilities": {
-     "0": 0.5267,
-     "1": 0.3644,
-     "2": 0.1088
-    }
-   },
-   "q2": {
-    "type": "noul",
-    "confidence": 0.5872,
-    "answer_confidence": 0.5872,
-    "action": {
-     "act_probability": 1.0
-    },
-    "noul": 0.5872
-   }
-  },
-  "usage_input_tokens": 230
- },
- {
-  "case": "empty_state",
-  "state": "",
-  "questions": {
-   "q0": {
-    "type": "choice",
-    "instructions": "Which department should handle this email?",
-    "criteria": {
-     "billing": "invoices, payments, refunds",
-     "technical": "bugs, outages, system errors",
-     "sales": "pricing, new contracts",
-     "other": "everything else"
-    }
-   },
-   "q1": {
-    "type": "score",
-    "instructions": "How urgent is this request?",
-    "criteria": [
-     "not urgent",
-     "soon",
-     "critical deadline or blocking issue"
-    ]
-   },
-   "q2": {
-    "type": "noul",
-    "instructions": "Does the customer ask for money back?"
-   }
-  },
-  "sequence_lengths": [
-   46,
-   33,
-   34
-  ],
-  "answers": {
-   "q0": {
-    "type": "choice",
-    "confidence": 0.0392,
-    "answer_confidence": 0.3998,
-    "action": {
-     "act_probability": 1.0
-    },
-    "choice": "billing",
-    "probabilities": {
-     "billing": 0.3998,
-     "technical": 0.2045,
-     "sales": 0.1908,
-     "other": 0.2049
-    }
-   },
-   "q1": {
-    "type": "score",
-    "confidence": 0.0526,
-    "answer_confidence": 0.4336,
-    "action": {
-     "act_probability": 1.0
-    },
-    "score": 1.2001,
-    "legend": {
-     "0": "not urgent",
-     "1": "soon",
-     "2": "critical deadline or blocking issue"
-    },
-    "probabilities": {
-     "0": 0.1832,
-     "1": 0.4336,
-     "2": 0.3833
-    }
-   },
-   "q2": {
-    "type": "noul",
-    "confidence": 0.8512,
-    "answer_confidence": 0.8512,
-    "action": {
-     "act_probability": 1.0
-    },
-    "noul": 0.1488
-   }
-  },
-  "usage_input_tokens": 113
- },
- {
-  "case": "long",
-  "state": {
-   "from": "user@example.com",
-   "subject": "Duplicate charge on invoice #4411",
-   "body": "The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. The customer reports duplicate billing and requests a refund today. "
-  },
-  "questions": {
-   "q0": {
-    "type": "choice",
-    "instructions": "Which department should handle this email?",
-    "criteria": {
-     "billing": "invoices, payments, refunds",
-     "technical": "bugs, outages, system errors",
-     "sales": "pricing, new contracts",
-     "other": "everything else"
-    }
-   },
-   "q1": {
-    "type": "score",
-    "instructions": "How urgent is this request?",
-    "criteria": [
-     "not urgent",
-     "soon",
-     "critical deadline or blocking issue"
-    ]
-   },
-   "q2": {
-    "type": "noul",
-    "instructions": "Does the customer ask for money back?"
-   }
-  },
-  "sequence_lengths": [
-   512,
-   512,
-   512
-  ],
-  "answers": {
-   "q0": {
-    "type": "choice",
-    "confidence": 0.7724,
-    "answer_confidence": 0.9337,
-    "action": {
-     "act_probability": 1.0
-    },
-    "choice": "billing",
-    "probabilities": {
-     "billing": 0.9337,
-     "technical": 0.0246,
-     "sales": 0.0166,
-     "other": 0.025
-    }
-   },
-   "q1": {
-    "type": "score",
-    "confidence": 0.0068,
-    "answer_confidence": 0.3904,
-    "action": {
-     "act_probability": 1.0
-    },
-    "score": 1.0185,
-    "legend": {
-     "0": "not urgent",
-     "1": "soon",
-     "2": "critical deadline or blocking issue"
-    },
-    "probabilities": {
-     "0": 0.2955,
-     "1": 0.3904,
-     "2": 0.3141
-    }
-   },
-   "q2": {
-    "type": "noul",
-    "confidence": 0.7498,
-    "answer_confidence": 0.7498,
-    "action": {
-     "act_probability": 1.0
-    },
-    "noul": 0.7498
-   }
-  },
-  "usage_input_tokens": 1536
- },
- {
-  "case": "conversation",
-  "state": [
-   {
-    "role": "user",
-    "content": "I was charged twice for invoice 4411, please refund it today."
-   }
-  ],
-  "questions": {
-   "q0": {
-    "type": "choice",
-    "instructions": "Which department should handle this email?",
-    "criteria": {
-     "billing": "invoices, payments, refunds",
-     "technical": "bugs, outages, system errors",
-     "sales": "pricing, new contracts",
-     "other": "everything else"
-    }
-   },
-   "q1": {
-    "type": "score",
-    "instructions": "How urgent is this request?",
-    "criteria": [
-     "not urgent",
-     "soon",
-     "critical deadline or blocking issue"
-    ]
-   },
-   "q2": {
-    "type": "noul",
-    "instructions": "Does the customer ask for money back?"
-   }
-  },
-  "sequence_lengths": [
-   72,
-   59,
-   60
-  ],
-  "answers": {
-   "q0": {
-    "type": "choice",
-    "confidence": 0.7723,
-    "answer_confidence": 0.934,
-    "action": {
-     "act_probability": 1.0
-    },
-    "choice": "billing",
-    "probabilities": {
-     "billing": 0.934,
-     "technical": 0.0207,
-     "sales": 0.0232,
-     "other": 0.0221
-    }
-   },
-   "q1": {
-    "type": "score",
-    "confidence": 0.102,
-    "answer_confidence": 0.4761,
-    "action": {
-     "act_probability": 1.0
-    },
-    "score": 1.262,
-    "legend": {
-     "0": "not urgent",
-     "1": "soon",
-     "2": "critical deadline or blocking issue"
-    },
-    "probabilities": {
-     "0": 0.1309,
-     "1": 0.4761,
-     "2": 0.393
-    }
-   },
-   "q2": {
-    "type": "noul",
-    "confidence": 0.913,
-    "answer_confidence": 0.913,
-    "action": {
-     "act_probability": 1.0
-    },
-    "noul": 0.913
-   }
-  },
-  "usage_input_tokens": 191
- },
- {
-  "case": "mask_literals",
-  "state": "[MASK] <mask> hello [MASK] <mask>",
-  "questions": {
-   "q0": {
-    "type": "choice",
-    "instructions": "Which department should handle this email?",
-    "criteria": {
-     "billing": "invoices, payments, refunds",
-     "technical": "bugs, outages, system errors",
-     "sales": "pricing, new contracts",
-     "other": "everything else"
-    }
-   },
-   "q1": {
-    "type": "score",
-    "instructions": "How urgent is this request?",
-    "criteria": [
-     "not urgent",
-     "soon",
-     "critical deadline or blocking issue"
-    ]
-   },
-   "q2": {
-    "type": "noul",
-    "instructions": "Does the customer ask for money back?"
-   }
-  },
-  "sequence_lengths": [
-   55,
-   42,
-   43
-  ],
-  "answers": {
-   "q0": {
-    "type": "choice",
-    "confidence": 0.0192,
-    "answer_confidence": 0.3327,
-    "action": {
-     "act_probability": 1.0
-    },
-    "choice": "other",
-    "probabilities": {
-     "billing": 0.2737,
-     "technical": 0.2107,
-     "sales": 0.183,
-     "other": 0.3327
-    }
-   },
-   "q1": {
-    "type": "score",
-    "confidence": 0.0087,
-    "answer_confidence": 0.3962,
-    "action": {
-     "act_probability": 1.0
-    },
-    "score": 0.967,
-    "legend": {
-     "0": "not urgent",
-     "1": "soon",
-     "2": "critical deadline or blocking issue"
-    },
-    "probabilities": {
-     "0": 0.3184,
-     "1": 0.3962,
-     "2": 0.2854
-    }
-   },
-   "q2": {
-    "type": "noul",
-    "confidence": 0.9999,
-    "answer_confidence": 0.9999,
-    "action": {
-     "act_probability": 1.0
-    },
-    "noul": 0.0001
-   }
-  },
-  "usage_input_tokens": 140
- },
- {
-  "case": "many_questions",
-  "state": {
-   "from": "user@example.com",
-   "subject": "Duplicate charge on invoice #4411",
-   "body": "We were billed twice for March. Please refund the duplicate today or we will cancel our plan."
-  },
-  "questions": {
-   "q0": {
-    "type": "choice",
-    "instructions": "Which department should handle this email?",
-    "criteria": {
-     "billing": "invoices, payments, refunds",
-     "technical": "bugs, outages, system errors",
-     "sales": "pricing, new contracts",
-     "other": "everything else"
-    }
-   },
-   "q1": {
-    "type": "score",
-    "instructions": "How urgent is this request?",
-    "criteria": [
-     "not urgent",
-     "soon",
-     "critical deadline or blocking issue"
-    ]
-   },
-   "q2": {
-    "type": "noul",
-    "instructions": "Does the customer ask for money back?"
-   },
-   "q3": {
-    "type": "choice",
-    "instructions": "Which department should handle this email?",
-    "criteria": {
-     "billing": "invoices, payments, refunds",
-     "technical": "bugs, outages, system errors",
-     "sales": "pricing, new contracts",
-     "other": "everything else"
-    }
-   },
-   "q4": {
-    "type": "score",
-    "instructions": "How urgent is this request?",
-    "criteria": [
-     "not urgent",
-     "soon",
-     "critical deadline or blocking issue"
-    ]
-   },
-   "q5": {
-    "type": "noul",
-    "instructions": "Does the customer ask for money back?"
-   },
-   "q6": {
-    "type": "choice",
-    "instructions": "Which department should handle this email?",
-    "criteria": {
-     "billing": "invoices, payments, refunds",
-     "technical": "bugs, outages, system errors",
-     "sales": "pricing, new contracts",
-     "other": "everything else"
-    }
-   },
-   "q7": {
-    "type": "score",
-    "instructions": "How urgent is this request?",
-    "criteria": [
-     "not urgent",
-     "soon",
-     "critical deadline or blocking issue"
-    ]
-   },
-   "q8": {
-    "type": "noul",
-    "instructions": "Does the customer ask for money back?"
-   },
-   "q9": {
-    "type": "choice",
-    "instructions": "Which department should handle this email?",
-    "criteria": {
-     "billing": "invoices, payments, refunds",
-     "technical": "bugs, outages, system errors",
-     "sales": "pricing, new contracts",
-     "other": "everything else"
-    }
-   },
-   "q10": {
-    "type": "score",
-    "instructions": "How urgent is this request?",
-    "criteria": [
-     "not urgent",
-     "soon",
-     "critical deadline or blocking issue"
-    ]
-   },
-   "q11": {
-    "type": "noul",
-    "instructions": "Does the customer ask for money back?"
-   },
-   "q12": {
-    "type": "choice",
-    "instructions": "Which department should handle this email?",
-    "criteria": {
-     "billing": "invoices, payments, refunds",
-     "technical": "bugs, outages, system errors",
-     "sales": "pricing, new contracts",
-     "other": "everything else"
-    }
-   },
-   "q13": {
-    "type": "score",
-    "instructions": "How urgent is this request?",
-    "criteria": [
-     "not urgent",
-     "soon",
-     "critical deadline or blocking issue"
-    ]
-   },
-   "q14": {
-    "type": "noul",
-    "instructions": "Does the customer ask for money back?"
-   },
-   "q15": {
-    "type": "choice",
-    "instructions": "Which department should handle this email?",
-    "criteria": {
-     "billing": "invoices, payments, refunds",
-     "technical": "bugs, outages, system errors",
-     "sales": "pricing, new contracts",
-     "other": "everything else"
-    }
-   },
-   "q16": {
-    "type": "score",
-    "instructions": "How urgent is this request?",
-    "criteria": [
-     "not urgent",
-     "soon",
-     "critical deadline or blocking issue"
-    ]
-   },
-   "q17": {
-    "type": "noul",
-    "instructions": "Does the customer ask for money back?"
-   },
-   "q18": {
-    "type": "choice",
-    "instructions": "Which department should handle this email?",
-    "criteria": {
-     "billing": "invoices, payments, refunds",
-     "technical": "bugs, outages, system errors",
-     "sales": "pricing, new contracts",
-     "other": "everything else"
-    }
-   },
-   "q19": {
-    "type": "score",
-    "instructions": "How urgent is this request?",
-    "criteria": [
-     "not urgent",
-     "soon",
-     "critical deadline or blocking issue"
-    ]
-   }
-  },
-  "sequence_lengths": [
-   93,
-   80,
-   81,
-   93,
-   80,
-   81,
-   93,
-   80,
-   81,
-   93,
-   80,
-   81,
-   93,
-   80,
-   81,
-   93,
-   80,
-   81,
-   93,
-   80
-  ],
-  "answers": {
-   "q0": {
-    "type": "choice",
-    "confidence": 0.8332,
-    "answer_confidence": 0.9554,
-    "action": {
-     "act_probability": 1.0
-    },
-    "choice": "billing",
-    "probabilities": {
-     "billing": 0.9554,
-     "technical": 0.0152,
-     "sales": 0.0149,
-     "other": 0.0144
-    }
-   },
-   "q1": {
-    "type": "score",
-    "confidence": 0.1594,
-    "answer_confidence": 0.543,
-    "action": {
-     "act_probability": 1.0
-    },
-    "score": 1.4477,
-    "legend": {
-     "0": "not urgent",
-     "1": "soon",
-     "2": "critical deadline or blocking issue"
-    },
-    "probabilities": {
-     "0": 0.0954,
-     "1": 0.3616,
-     "2": 0.543
-    }
-   },
-   "q2": {
-    "type": "noul",
-    "confidence": 0.859,
-    "answer_confidence": 0.859,
-    "action": {
-     "act_probability": 1.0
-    },
-    "noul": 0.859
-   },
-   "q3": {
-    "type": "choice",
-    "confidence": 0.8332,
-    "answer_confidence": 0.9554,
-    "action": {
-     "act_probability": 1.0
-    },
-    "choice": "billing",
-    "probabilities": {
-     "billing": 0.9554,
-     "technical": 0.0152,
-     "sales": 0.0149,
-     "other": 0.0144
-    }
-   },
-   "q4": {
-    "type": "score",
-    "confidence": 0.1594,
-    "answer_confidence": 0.543,
-    "action": {
-     "act_probability": 1.0
-    },
-    "score": 1.4477,
-    "legend": {
-     "0": "not urgent",
-     "1": "soon",
-     "2": "critical deadline or blocking issue"
-    },
-    "probabilities": {
-     "0": 0.0954,
-     "1": 0.3616,
-     "2": 0.543
-    }
-   },
-   "q5": {
-    "type": "noul",
-    "confidence": 0.859,
-    "answer_confidence": 0.859,
-    "action": {
-     "act_probability": 1.0
-    },
-    "noul": 0.859
-   },
-   "q6": {
-    "type": "choice",
-    "confidence": 0.8332,
-    "answer_confidence": 0.9554,
-    "action": {
-     "act_probability": 1.0
-    },
-    "choice": "billing",
-    "probabilities": {
-     "billing": 0.9554,
-     "technical": 0.0152,
-     "sales": 0.0149,
-     "other": 0.0144
-    }
-   },
-   "q7": {
-    "type": "score",
-    "confidence": 0.1594,
-    "answer_confidence": 0.543,
-    "action": {
-     "act_probability": 1.0
-    },
-    "score": 1.4477,
-    "legend": {
-     "0": "not urgent",
-     "1": "soon",
-     "2": "critical deadline or blocking issue"
-    },
-    "probabilities": {
-     "0": 0.0954,
-     "1": 0.3616,
-     "2": 0.543
-    }
-   },
-   "q8": {
-    "type": "noul",
-    "confidence": 0.859,
-    "answer_confidence": 0.859,
-    "action": {
-     "act_probability": 1.0
-    },
-    "noul": 0.859
-   },
-   "q9": {
-    "type": "choice",
-    "confidence": 0.8332,
-    "answer_confidence": 0.9554,
-    "action": {
-     "act_probability": 1.0
-    },
-    "choice": "billing",
-    "probabilities": {
-     "billing": 0.9554,
-     "technical": 0.0152,
-     "sales": 0.0149,
-     "other": 0.0144
-    }
-   },
-   "q10": {
-    "type": "score",
-    "confidence": 0.1594,
-    "answer_confidence": 0.543,
-    "action": {
-     "act_probability": 1.0
-    },
-    "score": 1.4477,
-    "legend": {
-     "0": "not urgent",
-     "1": "soon",
-     "2": "critical deadline or blocking issue"
-    },
-    "probabilities": {
-     "0": 0.0954,
-     "1": 0.3616,
-     "2": 0.543
-    }
-   },
-   "q11": {
-    "type": "noul",
-    "confidence": 0.859,
-    "answer_confidence": 0.859,
-    "action": {
-     "act_probability": 1.0
-    },
-    "noul": 0.859
-   },
-   "q12": {
-    "type": "choice",
-    "confidence": 0.8332,
-    "answer_confidence": 0.9554,
-    "action": {
-     "act_probability": 1.0
-    },
-    "choice": "billing",
-    "probabilities": {
-     "billing": 0.9554,
-     "technical": 0.0152,
-     "sales": 0.0149,
-     "other": 0.0144
-    }
-   },
-   "q13": {
-    "type": "score",
-    "confidence": 0.1594,
-    "answer_confidence": 0.543,
-    "action": {
-     "act_probability": 1.0
-    },
-    "score": 1.4477,
-    "legend": {
-     "0": "not urgent",
-     "1": "soon",
-     "2": "critical deadline or blocking issue"
-    },
-    "probabilities": {
-     "0": 0.0954,
-     "1": 0.3616,
-     "2": 0.543
-    }
-   },
-   "q14": {
-    "type": "noul",
-    "confidence": 0.859,
-    "answer_confidence": 0.859,
-    "action": {
-     "act_probability": 1.0
-    },
-    "noul": 0.859
-   },
-   "q15": {
-    "type": "choice",
-    "confidence": 0.8332,
-    "answer_confidence": 0.9554,
-    "action": {
-     "act_probability": 1.0
-    },
-    "choice": "billing",
-    "probabilities": {
-     "billing": 0.9554,
-     "technical": 0.0152,
-     "sales": 0.0149,
-     "other": 0.0144
-    }
-   },
-   "q16": {
-    "type": "score",
-    "confidence": 0.1594,
-    "answer_confidence": 0.543,
-    "action": {
-     "act_probability": 1.0
-    },
-    "score": 1.4477,
-    "legend": {
-     "0": "not urgent",
-     "1": "soon",
-     "2": "critical deadline or blocking issue"
-    },
-    "probabilities": {
-     "0": 0.0954,
-     "1": 0.3616,
-     "2": 0.543
-    }
-   },
-   "q17": {
-    "type": "noul",
-    "confidence": 0.859,
-    "answer_confidence": 0.859,
-    "action": {
-     "act_probability": 1.0
-    },
-    "noul": 0.859
-   },
-   "q18": {
-    "type": "choice",
-    "confidence": 0.8332,
-    "answer_confidence": 0.9554,
-    "action": {
-     "act_probability": 1.0
-    },
-    "choice": "billing",
-    "probabilities": {
-     "billing": 0.9554,
-     "technical": 0.0152,
-     "sales": 0.0149,
-     "other": 0.0144
-    }
-   },
-   "q19": {
-    "type": "score",
-    "confidence": 0.1594,
-    "answer_confidence": 0.543,
-    "action": {
-     "act_probability": 1.0
-    },
-    "score": 1.4477,
-    "legend": {
-     "0": "not urgent",
-     "1": "soon",
-     "2": "critical deadline or blocking issue"
-    },
-    "probabilities": {
-     "0": 0.0954,
-     "1": 0.3616,
-     "2": 0.543
-    }
-   }
-  },
-  "usage_input_tokens": 1697
- },
- {
-  "case": "structured",
-  "state": {
-   "from": "user@example.com",
-   "subject": "Duplicate charge on invoice #4411",
-   "body": "We were billed twice for March. Please refund the duplicate today or we will cancel our plan."
-  },
-  "questions": {
-   "choice": {
-    "type": "choice",
-    "instructions": {
-     "task": "choose department"
-    },
-    "criteria": {
-     "billing": {
-      "description": "refunds"
-     },
-     "other": false
-    }
-   },
-   "score": {
-    "type": "score",
-    "instructions": "Urgency?",
-    "criteria": [
-     {
-      "level": "low"
-     },
-     "high"
-    ]
-   },
-   "noul": {
-    "type": "noul",
-    "instructions": "Refund?",
-    "criteria": {
-     "true": {
-      "reason": "money back"
-     }
-    }
-   }
-  },
-  "sequence_lengths": [
-   75,
-   73,
-   78
-  ],
-  "answers": {
-   "choice": {
-    "type": "choice",
-    "confidence": 0.8136,
-    "answer_confidence": 0.9716,
-    "action": {
-     "act_probability": 1.0
-    },
-    "choice": "billing",
-    "probabilities": {
-     "billing": 0.9716,
-     "other": 0.0284
-    }
-   },
-   "score": {
-    "type": "score",
-    "confidence": 0.1367,
-    "answer_confidence": 0.7141,
-    "action": {
-     "act_probability": 1.0
-    },
-    "score": 0.7141,
-    "legend": {
-     "0": {
-      "level": "low"
-     },
-     "1": "high"
-    },
-    "probabilities": {
-     "0": 0.2859,
-     "1": 0.7141
-    }
-   },
-   "noul": {
-    "type": "noul",
-    "confidence": 0.7847,
-    "answer_confidence": 0.7847,
-    "action": {
-     "act_probability": 1.0
-    },
-    "noul": 0.7847
-   }
-  },
-  "usage_input_tokens": 226
- },
- {
-  "case": "twenty_options",
-  "state": {
-   "from": "user@example.com",
-   "subject": "Duplicate charge on invoice #4411",
-   "body": "We were billed twice for March. Please refund the duplicate today or we will cancel our plan."
-  },
-  "questions": {
-   "choice": {
-    "type": "choice",
-    "instructions": "Which department handles billing?",
-    "criteria": [
-     "billing",
-     "department_0",
-     "department_1",
-     "department_2",
-     "department_3",
-     "department_4",
-     "department_5",
-     "department_6",
-     "department_7",
-     "department_8",
-     "department_9",
-     "department_10",
-     "department_11",
-     "department_12",
-     "department_13",
-     "department_14",
-     "department_15",
-     "department_16",
-     "department_17",
-     "department_18"
-    ]
-   }
-  },
-  "sequence_lengths": [
-   137
-  ],
-  "answers": {
-   "choice": {
-    "type": "choice",
-    "confidence": 1.0,
-    "answer_confidence": 1.0,
-    "action": {
-     "act_probability": 1.0
-    },
-    "choice": "billing",
-    "probabilities": {
-     "billing": 1.0,
-     "department_0": 0.0,
-     "department_1": 0.0,
-     "department_2": 0.0,
-     "department_3": 0.0,
-     "department_4": 0.0,
-     "department_5": 0.0,
-     "department_6": 0.0,
-     "department_7": 0.0,
-     "department_8": 0.0,
-     "department_9": 0.0,
-     "department_10": 0.0,
-     "department_11": 0.0,
-     "department_12": 0.0,
-     "department_13": 0.0,
-     "department_14": 0.0,
-     "department_15": 0.0,
-     "department_16": 0.0,
-     "department_17": 0.0,
-     "department_18": 0.0
-    }
-   }
-  },
-  "usage_input_tokens": 137
- }
+  }
 ]

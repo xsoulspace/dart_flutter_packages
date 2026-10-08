@@ -8,8 +8,6 @@ import 'package:universal_storage_world/universal_storage_world.dart';
 
 import 'ephemeral_frame_transport.dart';
 import 'mesh_frame_auth.dart';
-import 'mesh_pairing_session.dart';
-import 'mesh_peer_registry.dart';
 import 'mesh_presence_observer.dart';
 import 'mesh_presence_session.dart';
 import 'mesh_presence_tracker.dart';
@@ -38,9 +36,7 @@ final class MeshWorldSession implements Pulseable {
   MeshWorldSession({
     required this.storage,
     required this.selfId,
-    Future<SimpleKeyPair> Function()? identityKeyPairProvider,
-  }) : _identityKeyPairProvider =
-           identityKeyPairProvider ?? PairingService.newIdentityKeyPair;
+  });
 
   /// The storage this session syncs (its provider runs the anti-entropy
   /// exchange; mesh-backed providers also serve [peers] and interest).
@@ -49,7 +45,14 @@ final class MeshWorldSession implements Pulseable {
   /// This replica's pairing peer id.
   final String selfId;
 
-  final Future<SimpleKeyPair> Function() _identityKeyPairProvider;
+  /// The identity keypair source for presence-frame signing. Settable
+  /// BEFORE first use: hosts funnel pairing and presence through ONE
+  /// keypair (an app registers peers by their pairing identity key, so
+  /// presence frames must be signed by that same identity). Default:
+  /// generate on first use.
+  Future<SimpleKeyPair> Function() identityKeyPairProvider =
+      PairingService.newIdentityKeyPair;
+
   SimpleKeyPair? _identityKeyPair;
   Future<SimpleKeyPair>? _identityFuture;
 
@@ -456,7 +459,7 @@ final class MeshWorldSession implements Pulseable {
   Future<SimpleKeyPair> _ensureIdentity() {
     final existing = _identityKeyPair;
     if (existing != null) return Future<SimpleKeyPair>.value(existing);
-    return _identityFuture ??= _identityKeyPairProvider().then(
+    return _identityFuture ??= identityKeyPairProvider().then(
       (final keyPair) {
         _identityKeyPair = keyPair;
         return keyPair;

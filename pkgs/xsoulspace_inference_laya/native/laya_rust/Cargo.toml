@@ -1,0 +1,18 @@
+[package]
+name = "laya_native"
+version = "0.1.0"
+edition = "2021"
+description = "Laya decision-model forward pass on mlx-c, exposing the laya_native_* C ABI for dart:ffi (ADR 0051)"
+
+[lib]
+name = "laya_native"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+unicode-normalization = "0.1"
+
+[profile.release]
+opt-level = 3
+lto = "thin"

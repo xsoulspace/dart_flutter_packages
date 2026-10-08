@@ -78,6 +78,44 @@ void main() {
     expect(code, exitUsage);
   });
 
+  test('observe --view-* renders the observation and exits 0', () async {
+    final code = await runToolkitCli([
+      'observe',
+      '--cdp',
+      '$endpoint',
+      '--view-subtree',
+      's_1',
+      '--view-fields',
+      'role,name',
+      '--view-max',
+      '2',
+    ]);
+    expect(code, exitOk);
+  });
+
+  test('observe --view-max not-an-int is a usage error (exit 2)', () async {
+    final code = await runToolkitCli([
+      'observe',
+      '--cdp',
+      '$endpoint',
+      '--view-max',
+      'many',
+    ]);
+    expect(code, exitUsage);
+  });
+
+  test('act --return-state exits 0 and closes the loop', () async {
+    final code = await runToolkitCli([
+      'act',
+      '--cdp',
+      '$endpoint',
+      '--click-name',
+      'Submit',
+      '--return-state',
+    ]);
+    expect(code, exitOk);
+  });
+
   test('verify passes when checks hold and fails (exit 1) when not',
       () async {
     final ok = await runToolkitCli([

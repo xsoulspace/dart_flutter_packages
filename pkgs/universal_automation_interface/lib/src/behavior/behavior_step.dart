@@ -136,10 +136,19 @@ final class PointerMoveStep extends BehaviorStep {
 @immutable
 final class PointerDownStep extends BehaviorStep {
   /// Creates a press step.
-  const PointerDownStep({required super.plannedAtUs, this.button = 'left'});
+  const PointerDownStep({
+    required super.plannedAtUs,
+    this.button = 'left',
+    this.clickCount = 1,
+  });
 
   /// Button name: `left`, `right`, or `middle`.
   final String button;
+
+  /// Which press of a multi-click sequence this is (1 = single,
+  /// 2 = the second press of a double-click — the transport's
+  /// `clickCount`, ADR 0053).
+  final int clickCount;
 
   @override
   String get kind => 'pointerDown';
@@ -149,6 +158,7 @@ final class PointerDownStep extends BehaviorStep {
     'kind': kind,
     'plannedAtUs': plannedAtUs,
     'button': button,
+    'clickCount': clickCount,
   };
 
   @override
@@ -159,10 +169,18 @@ final class PointerDownStep extends BehaviorStep {
 @immutable
 final class PointerUpStep extends BehaviorStep {
   /// Creates a release step.
-  const PointerUpStep({required super.plannedAtUs, this.button = 'left'});
+  const PointerUpStep({
+    required super.plannedAtUs,
+    this.button = 'left',
+    this.clickCount = 1,
+  });
 
   /// Button name: `left`, `right`, or `middle`.
   final String button;
+
+  /// Which release of a multi-click sequence this is (pairs with
+  /// [PointerDownStep.clickCount]).
+  final int clickCount;
 
   @override
   String get kind => 'pointerUp';
@@ -172,6 +190,7 @@ final class PointerUpStep extends BehaviorStep {
     'kind': kind,
     'plannedAtUs': plannedAtUs,
     'button': button,
+    'clickCount': clickCount,
   };
 
   @override

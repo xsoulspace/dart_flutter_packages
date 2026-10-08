@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "universal-automation": {
+      "command": "bash",
+      "args": [
+        "/Users/antonio/xs/storage_problem/dart_flutter_packages/plugins/universal-automation/tool/serve.sh"
+      ],
+      "env": {}
+    }
+  }
+}

@@ -13,6 +13,7 @@ class DriverCapabilities {
     this.inputSynthesis = false,
     this.evaluate = false,
     this.behaviorDynamics = false,
+    this.pointerCoordinates = false,
   });
 
   /// The canonical all-features set.
@@ -23,6 +24,7 @@ class DriverCapabilities {
     inputSynthesis: true,
     evaluate: true,
     behaviorDynamics: true,
+    pointerCoordinates: true,
   );
 
   /// Attaching to an existing target is supported.
@@ -46,6 +48,11 @@ class DriverCapabilities {
   /// Declarative behavior delivery (`BehavioralDriver.performWith`).
   final bool behaviorDynamics;
 
+  /// Coordinate pointer verbs (`ClickAtAction`, `MoveAction`,
+  /// `DragAction` — ADR 0053). False means those actions refuse loudly;
+  /// locator verbs are unaffected.
+  final bool pointerCoordinates;
+
   /// Serializes the capability set.
   Map<String, Object?> toJson() => {
     'attach': attach,
@@ -55,6 +62,7 @@ class DriverCapabilities {
     'inputSynthesis': inputSynthesis,
     'evaluate': evaluate,
     'behaviorDynamics': behaviorDynamics,
+    'pointerCoordinates': pointerCoordinates,
   };
 
   @override

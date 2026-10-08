@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:universal_automation_interface/universal_automation_interface.dart';
+import 'package:universal_automation_semantics/universal_automation_semantics.dart';
 
 import '../plan/checks.dart';
 import '../plan/plan.dart';
@@ -27,30 +28,35 @@ const mcpServerInfo = {
 /// protocol in-process.
 final class ToolkitMcpServer {
   /// Creates a server; [defaultEndpoint] backs ad-hoc verbs when a tool
-  /// call carries no explicit endpoint.
-  ToolkitMcpServer({Uri? defaultEndpoint, Map<String, String> overrides = const {}})
-    : _defaultEndpoint = defaultEndpoint,
-      _overrides = overrides;
+  /// call carries no explicit endpoint, and [defaultTransport] selects
+  /// the tier those verbs attach to (`--os` serve flag → the desktop
+  /// accessibility tier). [factories] extends or replaces the built-in
+  /// per-transport drivers (the composition-root seam, e.g. the
+  /// instrumented Flutter tier registered by mcp_flutter).
+  ToolkitMcpServer({
+    Uri? defaultEndpoint,
+    AutomationTransport defaultTransport = AutomationTransport.cdp,
+    Map<String, String> overrides = const {},
+    Map<AutomationTransport, DriverFactory>? factories,
+  }) : _defaultEndpoint = defaultEndpoint,
+       _defaultTransport = defaultTransport,
+       _overrides = overrides,
+       _extraFactories = factories;
 
   final Uri? _defaultEndpoint;
+  final AutomationTransport _defaultTransport;
   final Map<String, String> _overrides;
+  final Map<AutomationTransport, DriverFactory>? _extraFactories;
+  final Map<String, Observation> _lastObservations = {};
   SessionRegistry? _registry;
 
   SessionRegistry get _sessions {
     final existing = _registry;
     if (existing != null) return existing;
-    final endpoint = _defaultEndpoint;
     final registry = SessionRegistry(
-      bindings: endpoint == null
-          ? const {}
-          : {
-              'default': SessionBinding(
-                name: 'default',
-                transport: AutomationTransport.cdp,
-                uri: endpoint,
-              ),
-            },
+      bindings: const {},
       overrides: _overrides,
+      factories: _extraFactories,
     );
     _registry = registry;
     return registry;
@@ -152,30 +158,79 @@ final class ToolkitMcpServer {
     };
   }
 
+  /// Parses a per-call `transport` argument; `null` when absent, loud
+  /// on an unknown name.
+  static AutomationTransport? parseTransport(Object? value) {
+    if (value == null) return null;
+    final transport = switch ('$value') {
+      'cdp' => AutomationTransport.cdp,
+      'webdriver' => AutomationTransport.webdriver,
+      'os' || 'osAccessibility' => AutomationTransport.osAccessibility,
+      _ => null,
+    };
+    if (transport == null) {
+      throw McpToolError(
+        'unknown transport "$value" (cdp | webdriver | osAccessibility)',
+      );
+    }
+    return transport;
+  }
+
   Future<ResolvedSession> _session(Map<String, Object?> arguments) async {
+    final transport =
+        parseTransport(arguments['transport']) ?? _defaultTransport;
     final endpointValue = arguments['endpoint'];
-    if (endpointValue == null) {
-      if (_defaultEndpoint == null) {
-        throw const McpToolError(
-          'no endpoint: start serve with --cdp <uri> or pass "endpoint"',
+    if (transport == AutomationTransport.osAccessibility &&
+        endpointValue == null) {
+      // The desktop tier binds the focused application; no URI.
+      return _sessions.attachFocused(transport);
+    }
+    Uri? uri;
+    if (endpointValue != null) {
+      uri = Uri.tryParse('$endpointValue');
+      if (uri == null || !uri.hasScheme) {
+        throw McpToolError(
+          'endpoint must be an absolute URI: $endpointValue',
         );
       }
-      return _sessions.attach('default');
     }
-    final uri = Uri.tryParse('$endpointValue');
-    if (uri == null || !uri.hasScheme) {
-      throw McpToolError('endpoint must be an absolute URI: $endpointValue');
+    uri ??= _defaultEndpoint;
+    if (uri == null) {
+      throw const McpToolError(
+        'no endpoint: start serve with --cdp <uri> or --os (desktop '
+        'tier), or pass "endpoint"/"transport" per call',
+      );
     }
-    return _sessions.attachUri(uri, AutomationTransport.cdp);
+    return _sessions.attachUri(uri, transport);
   }
 
   Future<Map<String, Object?>> _observe(Map<String, Object?> arguments) async {
     final session = await _session(arguments);
     final snapshot = await session.driver.snapshot();
-    return {
-      'endpoint': '${session.binding.resolveUri(_overrides) ?? _defaultEndpoint}',
+    final base = {
+      'endpoint':
+          '${session.binding.resolveUri(_overrides) ?? _defaultEndpoint}',
+      'transport': session.binding.transport.name,
       'url': session.url?.toString(),
-      'snapshot': snapshot.toJson(),
+    };
+    final viewValue = arguments['view'];
+    if (viewValue == null) {
+      // No view: the raw tree (counts + full snapshot JSON).
+      return {...base, 'snapshot': snapshot.toJson()};
+    }
+    // A view asked: the rendered observation + ref index replace the
+    // raw tree (token economy; omit `view` for the raw form).
+    final observation = Observation.of(
+      snapshot,
+      SemanticView.fromJson(viewValue),
+    );
+    final key = session.binding.name;
+    final previous = arguments['diff'] == true ? _lastObservations[key] : null;
+    _lastObservations[key] = observation;
+    return {
+      ...base,
+      'view': observation.toJson(),
+      if (previous != null) 'delta': observation.diff(previous).render(),
     };
   }
 
@@ -193,6 +248,24 @@ final class ToolkitMcpServer {
           if (arguments['css'] != null) 'css': arguments['css'],
           if (arguments['role'] != null) 'role': arguments['role'],
           if (arguments['name'] != null) 'name': arguments['name'],
+        };
+      case 'clickAt':
+        actionBody['clickAt'] = {
+          'x': arguments['x'],
+          'y': arguments['y'],
+          if (arguments['button'] != null) 'button': arguments['button'],
+          if (arguments['clickCount'] != null)
+            'clickCount': arguments['clickCount'],
+        };
+      case 'moveTo':
+        actionBody['moveTo'] = {'x': arguments['x'], 'y': arguments['y']};
+      case 'drag':
+        actionBody['drag'] = {
+          'fromX': arguments['fromX'],
+          'fromY': arguments['fromY'],
+          'toX': arguments['toX'],
+          'toY': arguments['toY'],
+          if (arguments['button'] != null) 'button': arguments['button'],
         };
       case 'type':
         actionBody['type'] = {
@@ -221,11 +294,12 @@ final class ToolkitMcpServer {
     final automationAction = ActStep.actionFromJson(actionBody);
     final session = await _session(arguments);
     final profileName = arguments['profile'];
+    Map<String, Object?> payload;
     if (profileName == null) {
       await session.driver.perform(automationAction);
-      return {'ok': true, 'action': action};
-    }
-    final behavioral = session.asBehavioral();
+      payload = {'ok': true, 'action': action};
+    } else {
+      final behavioral = session.asBehavioral();
     if (behavioral == null) {
       throw const McpToolError(
         'this transport cannot honor behavior profiles',
@@ -252,8 +326,19 @@ final class ToolkitMcpServer {
       profile,
       seed: seed,
     );
-    return {'ok': true, 'action': action, 'behavior': outcome.toJson()};
+    payload = {'ok': true, 'action': action, 'behavior': outcome.toJson()};
   }
+  if (arguments['returnState'] == true) {
+    // The act loop's closing read: post-action state through the
+    // default view, in the same tool result.
+    final observation = Observation.of(
+      await session.driver.snapshot(),
+      const SemanticView(maxNodes: 200),
+    );
+    payload = {...payload, 'state': observation.render()};
+  }
+  return payload;
+}
 
   Future<Map<String, Object?>> _verify(Map<String, Object?> arguments) async {
     final rawChecks = arguments['checks'];
@@ -331,119 +416,206 @@ final class ToolkitMcpServer {
   }
 
   /// The tool descriptors (name, description, JSON Schema input).
-  static List<Map<String, Object?>> toolDescriptors() => [
-    {
-      'name': 'automation_observe',
-      'description':
-          'Capture a semantic (accessibility) snapshot of an automated '
-          'surface. Read-only; the observe half of observe/act/verify.',
-      'inputSchema': {
-        'type': 'object',
-        'properties': {
-          'endpoint': {
-            'type': 'string',
-            'description':
-                'CDP HTTP base (e.g. http://127.0.0.1:9222); defaults to '
-                'the serve --cdp endpoint',
+  static List<Map<String, Object?>> toolDescriptors() {
+    final transportOverride = {
+      'transport': {
+        'type': 'string',
+        'enum': ['cdp', 'webdriver', 'osAccessibility'],
+        'description':
+            'Overrides the serve transport for this call. '
+            'osAccessibility is the desktop tier (macOS AX / Linux '
+            'AT-SPI / Windows UIA): it binds the focused application '
+            'and needs no endpoint.',
+      },
+      'endpoint': {
+        'type': 'string',
+        'description':
+            'CDP/WebDriver HTTP base (e.g. http://127.0.0.1:9222); '
+            'defaults to the serve --cdp endpoint',
+      },
+    };
+    Map<String, Object?> tool(
+      String name,
+      String description,
+      Map<String, Object?> inputSchema,
+    ) => {
+      'name': name,
+      'description': description,
+      'inputSchema': inputSchema,
+    };
+    return [
+      tool(
+        'automation_observe',
+        'Capture a semantic (accessibility) snapshot of an automated '
+        'surface. Read-only; the observe half of observe/act/verify. '
+        'Over the desktop tier this is the focused application\'s tree. '
+        'Pass `view` (identifierPrefix/subtreeOf/fields/maxNodes/panes) '
+        'to get a rendered, ref-stable observation instead of the raw '
+        'tree; pass `diff: true` to also get +/-/~ rows against the '
+        'session\'s previous viewed observation.',
+        {
+          'type': 'object',
+          'properties': {
+            ...transportOverride,
+            'view': {
+              'type': 'object',
+              'description':
+                  'SemanticView wire form: fields (role/name/value/'
+                  'bounds), subtreeOf (a ref like s_3 or an identifier), '
+                  'identifierPrefix, maxNodes, panes {name: view}.',
+            },
+            'diff': {
+              'type': 'boolean',
+              'description':
+                  'With view: also return the delta against this '
+                  "session's previous viewed observation.",
+            },
           },
         },
-      },
-    },
-    {
-      'name': 'automation_act',
-      'description':
-          'Perform one intent-level action: navigate | click | type | key '
-          '| scroll | evaluate | invoke. Optional behavior profile '
-          "('humanPrior' or a canonical profile object) dispatches with "
-          'ADR 0044 input dynamics and reports the outcome.',
-      'inputSchema': {
-        'type': 'object',
-        'required': ['action'],
-        'properties': {
-          'action': {
-            'type': 'string',
-            'enum': ['navigate', 'click', 'type', 'key', 'scroll', 'evaluate', 'invoke'],
-          },
-          'url': {'type': 'string'},
-          'css': {'type': 'string'},
-          'role': {'type': 'string'},
-          'text': {'type': 'string'},
-          'submit': {'type': 'boolean'},
-          'key': {'type': 'string'},
-          'direction': {'type': 'string', 'enum': ['up', 'down', 'left', 'right']},
-          'distance': {'type': 'number'},
-          'expression': {'type': 'string'},
-          'name': {'type': 'string', 'description': 'click accessible name, or catalog action name for invoke'},
-          'args': {'type': 'object'},
-          'endpoint': {'type': 'string'},
-          'profile': {
-            'description': "'humanPrior' or a canonical BehaviorProfile object",
-          },
-          'seed': {'type': 'integer'},
-        },
-      },
-    },
-    {
-      'name': 'automation_verify',
-      'description':
-          'Assert post-conditions against one fresh snapshot: checks are '
-          '{exists: {role?, name?, nameContains?}} | {absent: {...}} | '
-          '{value: {locator: {...}, equals?|contains?}} | {urlContains: s}.',
-      'inputSchema': {
-        'type': 'object',
-        'required': ['checks'],
-        'properties': {
-          'checks': {'type': 'array', 'items': {'type': 'object'}},
-          'endpoint': {'type': 'string'},
-        },
-      },
-    },
-    {
-      'name': 'automation_screenshot',
-      'description': 'Capture one PNG frame to a local file path.',
-      'inputSchema': {
-        'type': 'object',
-        'required': ['path'],
-        'properties': {
-          'path': {'type': 'string'},
-          'endpoint': {'type': 'string'},
-        },
-      },
-    },
-    {
-      'name': 'automation_validate_plan',
-      'description':
-          'Validate a declarative plan document (.yaml/.yml/.json) '
-          'fail-closed: every violation is reported, nothing attaches.',
-      'inputSchema': {
-        'type': 'object',
-        'required': ['plan'],
-        'properties': {
-          'plan': {'type': 'string'},
-        },
-      },
-    },
-    {
-      'name': 'automation_run_plan',
-      'description':
-          'Run a scenario of a declarative plan: sessions attach lazily, '
-          'steps run in order, the report is structured JSON with per-step '
-          'status and behavior receipts.',
-      'inputSchema': {
-        'type': 'object',
-        'required': ['plan'],
-        'properties': {
-          'plan': {'type': 'string'},
-          'scenario': {'type': 'string'},
-          'out': {'type': 'string', 'description': 'output directory for screenshots and receipts'},
-          'set': {
-            'type': 'object',
-            'description': 'session handle overrides: {handleName: endpointUri}',
+      ),
+      tool(
+        'automation_act',
+        'Perform one intent-level action: navigate | click | type | key '
+        '| scroll | evaluate | invoke. Optional behavior profile '
+        "('humanPrior' or a canonical profile object) dispatches with "
+        'ADR 0044 input dynamics and reports the outcome (CDP only). '
+        'returnState attaches the post-action state render — the '
+        'act loop\'s closing read in one call.',
+        {
+          'type': 'object',
+          'required': ['action'],
+          'properties': {
+            'action': {
+              'type': 'string',
+              'enum': [
+                'navigate',
+                'click',
+                'clickAt',
+                'moveTo',
+                'drag',
+                'type',
+                'key',
+                'scroll',
+                'evaluate',
+                'invoke',
+              ],
+            },
+            'url': {'type': 'string'},
+            'css': {'type': 'string'},
+            'role': {'type': 'string'},
+            'text': {'type': 'string'},
+            'submit': {'type': 'boolean'},
+            'key': {'type': 'string'},
+            'direction': {
+              'type': 'string',
+              'enum': ['up', 'down', 'left', 'right'],
+            },
+            'distance': {'type': 'number'},
+            'expression': {'type': 'string'},
+            'x': {
+              'type': 'number',
+              'description': 'clickAt/moveTo: viewport X coordinate',
+            },
+            'y': {
+              'type': 'number',
+              'description': 'clickAt/moveTo: viewport Y coordinate',
+            },
+            'fromX': {'type': 'number', 'description': 'drag: press X'},
+            'fromY': {'type': 'number', 'description': 'drag: press Y'},
+            'toX': {'type': 'number', 'description': 'drag: release X'},
+            'toY': {'type': 'number', 'description': 'drag: release Y'},
+            'button': {
+              'type': 'string',
+              'enum': ['left', 'right', 'middle'],
+              'description': 'pointer button for coordinate verbs',
+            },
+            'clickCount': {
+              'type': 'integer',
+              'description': 'clickAt: 2 = double-click, 3 = triple',
+            },
+            'name': {
+              'type': 'string',
+              'description':
+                  'click accessible name, or catalog action name for invoke',
+            },
+            'args': {'type': 'object'},
+            'returnState': {
+              'type': 'boolean',
+              'description':
+                  'Return the post-action semantic state render with the '
+                  'result.',
+            },
+            ...transportOverride,
+            'profile': {
+              'description': "'humanPrior' or a canonical BehaviorProfile object",
+            },
+            'seed': {'type': 'integer'},
           },
         },
-      },
-    },
-  ];
+      ),
+      tool(
+        'automation_verify',
+        'Assert post-conditions against one fresh snapshot: checks are '
+        '{exists: {role?, name?, nameContains?}} | {absent: {...}} | '
+        '{value: {locator: {...}, equals?|contains?}} | {urlContains: s}.',
+        {
+          'type': 'object',
+          'required': ['checks'],
+          'properties': {
+            'checks': {'type': 'array', 'items': {'type': 'object'}},
+            ...transportOverride,
+          },
+        },
+      ),
+      tool(
+        'automation_screenshot',
+        'Capture one PNG frame to a local file path.',
+        {
+          'type': 'object',
+          'required': ['path'],
+          'properties': {
+            'path': {'type': 'string'},
+            ...transportOverride,
+          },
+        },
+      ),
+      tool(
+        'automation_validate_plan',
+        'Validate a declarative plan document (.yaml/.yml/.json) '
+        'fail-closed: every violation is reported, nothing attaches.',
+        {
+          'type': 'object',
+          'required': ['plan'],
+          'properties': {
+            'plan': {'type': 'string'},
+          },
+        },
+      ),
+      tool(
+        'automation_run_plan',
+        'Run a scenario of a declarative plan: sessions attach lazily, '
+        'steps run in order, the report is structured JSON with per-step '
+        'status and behavior receipts.',
+        {
+          'type': 'object',
+          'required': ['plan'],
+          'properties': {
+            'plan': {'type': 'string'},
+            'scenario': {'type': 'string'},
+            'out': {
+              'type': 'string',
+              'description': 'output directory for screenshots and receipts',
+            },
+            'set': {
+              'type': 'object',
+              'description':
+                  'session handle overrides: {handleName: endpointUri}',
+            },
+          },
+        },
+      ),
+    ];
+  }
 
   static Map<String, Object?> _result(Object? id, Object? result) => {
     'jsonrpc': '2.0',
@@ -474,10 +646,12 @@ class McpToolError implements Exception {
 /// writes responses to [stdout]. Returns when stdin closes.
 Future<void> serveMcpStdio({
   Uri? defaultEndpoint,
+  AutomationTransport defaultTransport = AutomationTransport.cdp,
   Map<String, String> overrides = const {},
 }) async {
   final server = ToolkitMcpServer(
     defaultEndpoint: defaultEndpoint,
+    defaultTransport: defaultTransport,
     overrides: overrides,
   );
   final lines = stdin
@@ -512,4 +686,75 @@ Future<void> serveMcpStdio({
     }
     await stdout.flush();
   }
+}
+
+/// Binds a loopback HTTP server exposing the same toolkit as MCP over
+/// HTTP: `POST /mcp` with one JSON-RPC message per request, one JSON
+/// response per reply (the stateless shape of the MCP streamable-HTTP
+/// transport; this server never sends server-initiated messages).
+///
+/// Loopback only. For remote clients (e.g. the ChatGPT connector, which
+/// requires a public HTTPS origin) front it with a tunnel deliberately —
+/// the surface can drive real UIs.
+Future<HttpServer> startMcpHttp({
+  required int port,
+  Uri? defaultEndpoint,
+  AutomationTransport defaultTransport = AutomationTransport.cdp,
+  Map<String, String> overrides = const {},
+}) async {
+  final server = ToolkitMcpServer(
+    defaultEndpoint: defaultEndpoint,
+    defaultTransport: defaultTransport,
+    overrides: overrides,
+  );
+  final httpServer = await HttpServer.bind(InternetAddress.loopbackIPv4, port);
+  httpServer.listen((request) => _handleHttpMessage(server, request));
+  return httpServer;
+}
+
+Future<void> _handleHttpMessage(
+  ToolkitMcpServer server,
+  HttpRequest request,
+) async {
+  final respond = (int status, Object? body) async {
+    request.response.statusCode = status;
+    if (body != null) {
+      request.response.headers.contentType = ContentType.json;
+      request.response.write(jsonEncode(body));
+    }
+    await request.response.close();
+  };
+  if (request.uri.path != '/mcp') {
+    await respond(404, {
+      'jsonrpc': '2.0',
+      'id': null,
+      'error': {'code': -32601, 'message': 'post to /mcp'},
+    });
+    return;
+  }
+  if (request.method != 'POST') {
+    await respond(405, null);
+    return;
+  }
+  final body = await utf8.decoder.bind(request).join();
+  Map<String, Object?> message;
+  try {
+    final decoded = jsonDecode(body);
+    if (decoded is! Map<String, Object?>) throw const FormatException('not a request object');
+    message = decoded;
+  } on FormatException catch (error) {
+    await respond(400, {
+      'jsonrpc': '2.0',
+      'id': null,
+      'error': {'code': -32700, 'message': 'parse error: ${error.message}'},
+    });
+    return;
+  }
+  final response = await server.handle(message);
+  if (response == null) {
+    // A notification (or malformed notification): accepted, no body.
+    await respond(202, null);
+    return;
+  }
+  await respond(200, response);
 }

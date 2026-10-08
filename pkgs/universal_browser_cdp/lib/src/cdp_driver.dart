@@ -32,6 +32,7 @@ class CdpDriver implements AutomationDriver, AutomationActionCatalog {
     a11yTree: true,
     inputSynthesis: true,
     evaluate: true,
+    pointerCoordinates: true,
   );
 
   /// The underlying page facade (screencast sources attach through it).
@@ -87,6 +88,18 @@ class CdpDriver implements AutomationDriver, AutomationActionCatalog {
         );
       case EvaluateAction(:final expression):
         await _page.evaluate(expression);
+      case ClickAtAction(:final x, :final y, :final button, :final clickCount):
+        await _page.clickAt(x, y, button: button, clickCount: clickCount);
+      case MoveAction(:final x, :final y):
+        await _page.movePointerTo(x, y);
+      case DragAction(
+        :final fromX,
+        :final fromY,
+        :final toX,
+        :final toY,
+        :final button,
+      ):
+        await _page.dragAt(fromX, fromY, toX, toY, button: button);
       case InvokeAction(:final name, :final args):
         await _invokeSurfaceAction(name, args);
     }

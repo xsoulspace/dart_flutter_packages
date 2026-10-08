@@ -1,0 +1,42 @@
+{
+  "name": "universal-automation",
+  "version": "0.1.0",
+  "description": "Drive browsers (CDP/WebDriver), native macOS/Linux/Windows apps, and Flutter surfaces through the universal_automation family: observe/act/verify CLI, MCP server, declarative Dart-composed plans with YAML snapshots, intent routing, and ADR-0044 behavior profiles.",
+  "author": {
+    "name": "xsoulspace"
+  },
+  "homepage": "https://github.com/xsoulspace/dart_flutter_packages",
+  "repository": "https://github.com/xsoulspace/dart_flutter_packages",
+  "license": "MIT",
+  "keywords": [
+    "automation",
+    "browser",
+    "cdp",
+    "webdriver",
+    "accessibility",
+    "mcp",
+    "flutter",
+    "computer-use"
+  ],
+  "skills": "./skills",
+  "mcpServers": "./mcp.json",
+  "interface": {
+    "displayName": "Universal Automation",
+    "shortDescription": "Observe/act/verify UI automation across browsers, OS-native tiers, and Flutter \u2014 declarative Dart plans, humanized input, receipts.",
+    "longDescription": "universal-automation drives real user surfaces through the universal_automation_* family: semantic (accessibility) snapshots, intent-level actions, fail-closed declarative plans composed as typed Dart (YAML snapshots for agents), ADR-0044 behavior profiles with dispatch receipts, screencast recording, and an intent layer where apps own their locators. Transports: CDP (Chromium, incl. Flutter web AOT), W3C WebDriver (Safari via safaridriver), macOS AX, Linux AT-SPI, Windows UIA sidecar. Requires the universal-automation binary (run plugins/universal-automation/install.sh) or dart on PATH.",
+    "developerName": "xsoulspace",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/xsoulspace/dart_flutter_packages",
+    "privacyPolicyURL": "https://github.com/xsoulspace/dart_flutter_packages/blob/main/LICENSE",
+    "termsOfServiceURL": "https://github.com/xsoulspace/dart_flutter_packages/blob/main/LICENSE",
+    "defaultPrompt": [
+      "Use universal-automation to observe the browser at http://127.0.0.1:9222 and click the Submit button.",
+      "Run the checkout scenario of my plan snapshot with universal-automation run and report which steps failed."
+    ],
+    "brandColor": "#02569B"
+  }
+}

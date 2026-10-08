@@ -246,6 +246,16 @@ class MacosDriver implements AutomationDriver {
           'the AX tier has no surface action registry; '
           'InvokeAction("$name") needs the instrumented or CDP tier',
         );
+      case ClickAtAction():
+      case MoveAction():
+      case DragAction():
+        // The native bridge's CGEvent surface covers type/key/scroll;
+        // coordinate pointer verbs need its extension (ADR 0053
+        // non-claim) — loud until it lands.
+        throw const DriverUnsupportedException(
+          'coordinate pointer verbs (ADR 0053) are not wired for the '
+          'macOS native bridge yet; click by role/name instead',
+        );
     }
   }
 
