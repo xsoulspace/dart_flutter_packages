@@ -11,3 +11,12 @@ import 'permission_request.dart';
 abstract interface class PermissionPolicy {
   PermissionDecision decide(final PermissionRequest request);
 }
+
+/// The async twin, for authorities that consult something across time —
+/// a model gate, an OS dialog, a paired peer. The same laws apply
+/// (total, never throws for a well-formed request, escalate instead of
+/// guessing); only the transport differs. Sync policies and async ones
+/// do NOT mix in one chain: the runner picks its lane.
+abstract interface class AsyncPermissionPolicy {
+  Future<PermissionDecision> decide(final PermissionRequest request);
+}

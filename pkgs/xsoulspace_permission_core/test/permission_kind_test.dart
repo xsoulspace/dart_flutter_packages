@@ -9,13 +9,13 @@ void main() {
   });
 
   test('tryParse is honest about unknown and absent names', () {
-    expect(PermissionKind.tryParse('camera'), isNull);
+    expect(PermissionKind.tryParse('teleport'), isNull);
     expect(PermissionKind.tryParse(null), isNull);
     expect(PermissionKind.tryParse(''), isNull);
   });
 
   test('coerce lands unknown and absent names on other', () {
-    expect(PermissionKind.coerce('camera'), PermissionKind.other);
+    expect(PermissionKind.coerce('teleport'), PermissionKind.other);
     expect(PermissionKind.coerce(null), PermissionKind.other);
     expect(PermissionKind.coerce('read'), PermissionKind.read);
   });
@@ -24,7 +24,7 @@ void main() {
     final request = PermissionRequest(
       id: 'r1',
       title: 'Camera access',
-      kind: PermissionKind.coerce('camera'),
+      kind: PermissionKind.coerce('teleport'),
       wireKindOverride: 'camera',
     );
     expect(request.kind, PermissionKind.other);
@@ -50,5 +50,23 @@ void main() {
     expect(a, equals(b));
     expect(a.hashCode, b.hashCode);
     expect(a, isNot(c));
+  });
+
+  test('OS consent kinds parse and never coerce away', () {
+    expect(
+      PermissionKind.coerce('accessibility'),
+      PermissionKind.accessibility,
+    );
+    expect(PermissionKind.coerce('camera'), PermissionKind.camera);
+    // workspaceEdits does not auto-allow OS consent — the stance list is
+    // the working set only, so an OS kind under it escalates.
+    final decision = PermissionStance.workspaceEdits.policy().decide(
+      PermissionRequest(
+        id: 'r1',
+        title: 'Input injection',
+        kind: PermissionKind.accessibility,
+      ),
+    );
+    expect(decision, isA<PermissionEscalate>());
   });
 }

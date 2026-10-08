@@ -26,6 +26,14 @@ enum PermissionKind {
   /// Destructive removals.
   delete('delete'),
 
+  /// Operating-system consent: the Accessibility TCC grant (input
+  /// injection on macOS/Windows). The system dialog is the consent
+  /// surface; a decision here records and routes it, never overrides it.
+  accessibility('accessibility'),
+
+  /// Operating-system consent: camera capture (vision pipelines).
+  camera('camera'),
+
   /// Anything the wire names but this vocabulary does not model yet.
   /// Unknown kinds land here through [coerce]; the raw string survives
   /// on the request so a policy can still specialize on it.
