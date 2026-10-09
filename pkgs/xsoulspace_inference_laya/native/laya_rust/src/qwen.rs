@@ -1243,4 +1243,116 @@ impl Qwen3 {
         }
         Ok(out)
     }
+
+    /// Draft-model speculative greedy decoding (ADR 0057, bottleneck 1 —
+    /// decode is weight-read-bandwidth-bound; the fix class is "don't read
+    /// all weights per token"). `draft` is a smaller same-tokenizer Qwen3
+    /// (e.g. 0.6B proposing for this 1.7B target); per round it proposes
+    /// `k` tokens greedily and ONE batched target forward over
+    /// [seed, d0..d_{k-1}] verifies all of them at once. Greedy
+    /// verification is token-EXACT: the output equals this model's plain
+    /// `generate_greedy` — the gate is self-consistency, no new fixture.
+    ///
+    /// Rollback needs no array snapshots: KV buffers are written with
+    /// in-place slice updates at [offset..offset+n], so rewinding
+    /// `cache.offset` is exact — the next forward overwrites the discarded
+    /// rows before any read (reads view [..offset]).
+    ///
+    /// No EOS stop here by design (the chat routes use plain greedy);
+    /// `k = 0` is rejected.
+    pub fn generate_greedy_speculative(
+        &self,
+        draft: &Qwen3,
+        prompt_ids: &[i32],
+        max_tokens: usize,
+        k: usize,
+        s: Stream,
+    ) -> MlxResult<Vec<i32>> {
+        if prompt_ids.is_empty() || k == 0 {
+            return Err(MlxError(-978));
+        }
+        let mut cache = KvCache::new(self.cfg.layers);
+        let mut dcache = KvCache::new(draft.cfg.layers);
+        // Whole-window reservation for BOTH engines (the spike lesson):
+        // prompt + the generation cap, so no growth ever lands mid-round.
+        let total = prompt_ids.len() + max_tokens;
+        cache.reserve(&self.table, self.cfg.kv_heads, self.cfg.head_dim, total, s)?;
+        dcache.reserve(&draft.table, draft.cfg.kv_heads, draft.cfg.head_dim, total, s)?;
+        let mut out: Vec<i32> = Vec::with_capacity(total);
+        out.extend_from_slice(prompt_ids);
+
+        const PREFILL_STEP: usize = 2048;
+        // Prefill BOTH caches on prompt[..len-1]; the last token is the
+        // round seed (its KV is written by the round's forwards).
+        let mut rest = prompt_ids;
+        while rest.len() > 1 {
+            let n = PREFILL_STEP.min(rest.len() - 1);
+            let t = Array::from_data_i32(&rest[..n], &[1, n])?;
+            self.forward_hidden(&t, &mut cache, s)?;
+            draft.forward_hidden(&t, &mut dcache, s)?;
+            rest = &rest[n..];
+        }
+        let mut seed: i32 = rest[0];
+        let mut pre = cache.offset;
+
+        let argmax1 = |logits: &Array| -> MlxResult<i32> {
+            let am = logits.argmax_axis(-1, false, s)?;
+            let f = am.astype(Dtype::Float32, s)?;
+            let v = f.to_f32_vec(s)?;
+            Ok(v.first().copied().ok_or(MlxError(-978))? as i32)
+        };
+
+        while out.len() - prompt_ids.len() < max_tokens {
+            // (a) Draft propose: k greedy steps on the draft engine.
+            let mut d = Vec::with_capacity(k);
+            let mut probe = seed;
+            for _ in 0..k {
+                let tokens = Array::from_data_i32(&[probe], &[1, 1])?;
+                let logits = draft.forward_step(&tokens, &mut dcache, s)?;
+                probe = argmax1(&logits)?;
+                d.push(probe);
+            }
+
+            // (b) Target verify: ONE forward over [seed, d0..d_{k-1}].
+            // logits[j] predicts the successor of consumed token j —
+            // t[0] should equal d0, t[j] should equal d_j.
+            let mut verify: Vec<i32> = Vec::with_capacity(k + 1);
+            verify.push(seed);
+            verify.extend_from_slice(&d);
+            let vt = Array::from_data_i32(&verify, &[1usize, k + 1])?;
+            let logits = self.forward_step(&vt, &mut cache, s)?;
+            let am = logits.argmax_axis(-1, false, s)?;
+            let af = am.astype(Dtype::Float32, s)?;
+            let av = af.to_f32_vec(s)?;
+            if av.len() < k + 1 {
+                return Err(MlxError(-978));
+            }
+            let t: Vec<i32> = av[..k + 1].iter().map(|&v| v as i32).collect();
+
+            // (c) Accept the longest verified prefix, take the correction
+            // (or, fully verified, the free extra token) as the bonus.
+            let mut a = 0usize;
+            while a < k && t[a] == d[a] {
+                a += 1;
+            }
+            let bonus = t[a];
+
+            // (d) Emit d[0..a] + bonus, capped by max_tokens.
+            let room = max_tokens - (out.len() - prompt_ids.len());
+            for &tok in d.iter().take(a).take(room) {
+                out.push(tok);
+            }
+            if out.len() - prompt_ids.len() < max_tokens {
+                out.push(bonus);
+            }
+
+            // (e) Rewind: seed + accepted tokens are consumed; the bonus
+            // is the next seed (its KV is written by the next round).
+            pre += a + 1;
+            cache.offset = pre;
+            dcache.offset = pre;
+            seed = bonus;
+        }
+        Ok(out)
+    }
 }

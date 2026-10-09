@@ -209,6 +209,42 @@ checkers.
    doesn't lose it: the fixture lives with the driver in the engine
    package.
 
+## Evidence (2026-10-09, this session)
+
+- **Bench scorecards (first two runs, both casts, Apple M1, AC):**
+  qwen-0.6B raw-completion cast: chat 3/10, decompression 0/10
+  (byte-cap/one-line violations), swe 0/5 (format breaks) at ~94–100
+  tok/s p50 — speed present, instruction-following absent.
+  LFM2.5-Instruct cast (fixture-gated chat template + EOS stop [7,2]):
+  chat **7/10**, decompression **9/10**, swe **3/5** at 22–40 tok/s.
+  The template+EOS discipline IS the quality lever; the instruct cast is
+  the production line for conversational/compression/SWE lanes.
+  Thresholds remain advisory until two same-cast runs exist.
+- **Cheap gaps landed (commit 3ed54164):** opt-in EOS stop (native
+  default OFF — every parity fixture byte-identical; new FFI-driven EOS
+  gate), LFM2.5 chat template (venv-recorded reference renders, byte-
+  exact; ChatML subset non-claims recorded), `LayaLfm2ChatServer`
+  (template + EOS on the loopback wire), async generate (isolate escape;
+  no decode parallelism — recorded). Gates: dart suite 31 pass/3 skip,
+  rust 8/8, test_fresh 63/63 @ 0.0/1.5e-8.
+- **Speculative decoding (bottleneck 1) — mechanism landed, pair
+  measured UNPROFITABLE.** `generate_greedy_speculative` (draft k-token
+  propose + ONE batched target verify; offset-arithmetic rollback —
+  slice-update buffers make it exact): token-EXACT vs plain greedy on
+  every leg (the gate). Interleaved same-process speed, Qwen3-0.6B
+  draft → 1.7B target, k sweep: k=2 0.42×, k=3 0.45×, k=4 0.63× (clean
+  two-leg mean), k=6 0.75× — all < 1×. Why: greedy acceptance beyond
+  the first token is low AND a 0.6B draft step costs ~40–45% of a 1.7B
+  target step. Verdict: bottleneck 1's resolution remains "smaller
+  weights" (q4 default, shipped); the speculative lane REOPENS only
+  with a target:draft size ratio ≥ ~4:1 (e.g. an 8B-class local model
+  with a 1.2B draft) AND a draft-acceptance probe run first. Cross-run
+  comparisons are thermal-contaminated (plain leg 27→6 tok/s across
+  consecutive runs) — interleaved law holds.
+- Prefill (bottleneck 2) and long-context (bottleneck 3): resolved by
+  the policy rows above (q4 default + 2k chunks; the hybrid for long
+  context), no new work.
+
 ## Non-claims
 
 - The physical package move (R1–R3) is NOT done in this ADR — the
@@ -216,6 +252,7 @@ checkers.
   lands after this session's increments (which touch the packages
   being moved).
 - The mlx Swift-lane consolidation is explicitly undecided here (R4).
-- No speculative-decoding numbers yet — the rung is named, not
-  measured.
+- The speculative mechanism is landed and token-exact, but no
+  profitable pair exists on this machine — the 0.6B→1.7B lane is
+  measured 0.42–0.75×; no production route uses it.
 - Bench thresholds are unmeasured until two scorecards exist.
