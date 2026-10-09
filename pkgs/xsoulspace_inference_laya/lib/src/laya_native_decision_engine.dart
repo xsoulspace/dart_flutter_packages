@@ -479,6 +479,38 @@ String _home() {
   return home;
 }
 
+/// Public shims for sibling native-client files (the qwen text engine).
+Pointer<Uint8> toNativeUtf8(final String text) => _toNative(text);
+
+String fromNativeUtf8(final Pointer<Uint8> pointer) => _fromNative(pointer);
+
+void ensureNativeBindingsAvailable({final String? packageRoot}) =>
+    _ensureNativeBindingsAvailable(packageRoot: packageRoot);
+
+/// The cached Qwen3 snapshot: [override], else `QWEN3_SNAPSHOT`, else the
+/// Qwen3-0.6B-4bit checkout under the HF hub cache (never downloads).
+String? resolveQwenSnapshotDir(final String? override) {
+  if (override != null) return override;
+  final env = Platform.environment['QWEN3_SNAPSHOT'];
+  if (env != null && env.isNotEmpty) return env;
+  final home = Platform.environment['HOME'];
+  if (home == null) return null;
+  final hub = Directory('$home/.cache/huggingface/hub');
+  if (!hub.existsSync()) return null;
+  for (final entry in hub.listSync()) {
+    if (entry.path.contains('Qwen3-0.6B-4bit')) {
+      final snapshots = Directory('${entry.path}/snapshots');
+      if (!snapshots.existsSync()) continue;
+      for (final snap in snapshots.listSync()) {
+        if (snap is Directory && File('${snap.path}/config.json').existsSync()) {
+          return snap.path;
+        }
+      }
+    }
+  }
+  return null;
+}
+
 Pointer<Uint8> _toNative(final String text) {
   final bytes = utf8.encode(text);
   final pointer = malloc<Uint8>(bytes.length + 1);
