@@ -45,11 +45,17 @@ fn qwen_profiling() -> bool {
     *ON.get_or_init(|| std::env::var_os("LAYA_QWEN_PROFILE").is_some_and(|v| !v.is_empty()))
 }
 
-/// LAYA_QWEN_PLAN=1 — the decode step runs as a declared plan (ADR 0055 P0).
+/// The declared step plan is the DEFAULT decode path (ADR 0055 P0, promoted
+/// after the bit-parity gate): `LAYA_QWEN_PLAN=0` reverts to the imperative
+/// walk for A/B — the same pattern as the RMSNorm kernel row.
 fn qwen_plan_mode() -> bool {
     use std::sync::OnceLock;
     static ON: OnceLock<bool> = OnceLock::new();
-    *ON.get_or_init(|| std::env::var_os("LAYA_QWEN_PLAN").is_some_and(|v| !v.is_empty()))
+    *ON.get_or_init(|| {
+        std::env::var_os("LAYA_QWEN_PLAN")
+            .map(|v| v != "0")
+            .unwrap_or(true)
+    })
 }
 
 /// One decode step's declared plan plus the extra pool entries that are not
@@ -567,6 +573,23 @@ impl Qwen3 {
     /// chunk — ~0.6 GB and hundreds of GFLOPs of pure waste per 2k-prompt
     /// prefill).
     pub fn forward_hidden(&self, tokens: &Array, cache: &mut KvCache, s: Stream) -> MlxResult<Array> {
+        self.hidden_states(tokens, cache, qwen_plan_mode(), s)
+    }
+
+    /// The whole transformer except the lm_head, on an explicit path —
+    /// `use_plan` runs the declared plan (decode l=1 or prefill chunk l>1,
+    /// ADR 0055), else the imperative walk. Bit-identity is the parity
+    /// tests' contract.
+    pub fn hidden_states(
+        &self,
+        tokens: &Array,
+        cache: &mut KvCache,
+        use_plan: bool,
+        s: Stream,
+    ) -> MlxResult<Array> {
+        if use_plan {
+            return self.forward_plan(tokens, cache, false, s);
+        }
         self.forward_impl(tokens, cache, s)
     }
 
@@ -588,7 +611,8 @@ impl Qwen3 {
         s: Stream,
     ) -> MlxResult<Array> {
         if use_plan {
-            return self.forward_step_plan(tokens, cache, s);
+            // The declared plan runs the head too; its tail IS the logits.
+            return self.forward_plan(tokens, cache, true, s);
         }
         let t = self.forward_impl(tokens, cache, s)?;
         // Tied embeddings: the lm_head IS the (quantized) embedding table,
@@ -596,29 +620,33 @@ impl Qwen3 {
         self.linear("q.lm_head", &self.embed, &t, s)
     }
 
-    /// LAYA_QWEN_PLAN=1 — the decode step runs as a declared plan (ADR 0055
-    /// P0) instead of the imperative walk. Both walks submit the same ops in
-    /// the same order through the same binding table; the parity test guards
-    /// bit-identity between them.
-    fn forward_step_plan(
+    /// The declared-plan path for any forward (decode l=1, prefill chunk
+    /// l>1 — ADR 0055 P0). Both walks submit the same ops through the same
+    /// binding table; the parity tests guard bit-identity between them.
+    /// The KV buffers are grown to `offset + l` FIRST (the imperative
+    /// update_one policy, applied outside the plan — allocation is not a
+    /// plan op), then the plan's functional slice_updates write into them.
+    fn forward_plan(
         &self,
         tokens: &Array,
         cache: &mut KvCache,
+        with_head: bool,
         s: Stream,
     ) -> MlxResult<Array> {
-        // Decode steps see post-prefill caches; a None buffer means the
-        // caller violated the prefill-first contract.
-        for slot in &cache.layers {
-            if slot.k.is_none() || slot.v.is_none() {
-                return Err(MlxError(-978));
+        let l = tokens.dim(1) as usize;
+        let offset = cache.offset; // constant for this plan (RoPE + slice bounds)
+        {
+            let table = &self.table;
+            for (li, slot) in cache.layers.iter_mut().enumerate() {
+                Self::ensure_capacity(table, &format!("cache.k{li}"), &mut slot.k, offset, l, (1, self.cfg.kv_heads, self.cfg.head_dim), s)?;
+                Self::ensure_capacity(table, &format!("cache.v{li}"), &mut slot.v, offset, l, (1, self.cfg.kv_heads, self.cfg.head_dim), s)?;
             }
         }
-        let offset = cache.offset; // constant for this plan (RoPE + slice bounds)
-        let plan = self.build_step_plan(tokens, cache, offset)?;
+        let plan = self.build_forward_plan(tokens, cache, offset, l, with_head)?;
         if let Some(path) = std::env::var_os("LAYA_QWEN_PLAN_DUMP") {
             let _ = std::fs::write(std::path::PathBuf::from(path), plan.plan.to_json());
         }
-        // Pool order mirrors build_step_plan's registration order: tokens,
+        // Pool order mirrors build_forward_plan's registration order: tokens,
         // then every pinned array (embed tables, per-layer cache buffers,
         // weights) in first-use order. Weight/cache arrays are owned by
         // `self`/`cache`, which outlive the execution.
@@ -638,35 +666,118 @@ impl Qwen3 {
             s,
             crate::plan::ExecOptions::runtime(),
         )?;
-        // Outputs: [k_0', v_0', ..., k_{L-1}', v_{L-1}', logits].
-        let l = cache.layers.len();
-        if outs.len() != 2 * l + 1 {
-            return Err(MlxError(-983));
-        }
+        // Outputs: [k_0', v_0', ..., k_{L-1}', v_{L-1}', (hidden | logits)].
+        let nl = cache.layers.len();
+        let tail = outs[2 * nl].identity(s)?;
         for (li, slot) in cache.layers.iter_mut().enumerate() {
             slot.k = Some(outs[2 * li].identity(s)?);
             slot.v = Some(outs[2 * li + 1].identity(s)?);
         }
-        cache.offset += 1;
-        Ok(outs[2 * l].identity(s)?)
+        cache.offset += l;
+        if with_head {
+            // Tied embeddings head already ran in the plan; the tail IS the
+            // logits.
+            Ok(tail)
+        } else {
+            Ok(tail)
+        }
     }
 
-    /// Declares the decode step (l = 1) as a plan: node-for-node the
-    /// imperative walk, with the RoPE offset and slice bounds as per-step
-    /// plan constants (the plan is rebuilt every step — the shape-keyed
-    /// compile route needs an offset-as-input op variant first, ADR 0055).
-    /// The KV buffers are plan inputs; the written buffers and logits are
-    /// the declared outputs (functional slice_update, python-parity order).
-    fn build_step_plan<'a>(
+    /// Grows one cache slot's buffer to hold `prev + n` tokens, byte-for-byte
+    /// the allocation policy of the imperative `update_one` (zero-padded
+    /// blocks of KV_STEP, trim-to-prev on misaligned growth, concat). Runs
+    /// OUTSIDE the declared plan: allocation is an engine concern, the plan
+    /// sees fixed buffers. `bhd` = (batch, kv_heads, head_dim) for fresh
+    /// allocations.
+    fn ensure_capacity(
+        table: &BindingTable,
+        name: &str,
+        slot: &mut Option<Array>,
+        prev: usize,
+        n: usize,
+        bhd: (usize, usize, usize),
+        s: Stream,
+    ) -> MlxResult<()> {
+        let needed = prev + n;
+        let buf = match slot {
+            Some(bf) if needed <= bf.dim(2) as usize => return Ok(()),
+            None => {
+                let (b, h, d) = bhd;
+                let alloc = (KV_STEP + n - 1) / KV_STEP * KV_STEP;
+                eval1(
+                    table,
+                    &format!("{name}.zeros"),
+                    "q.cache",
+                    Op::Full { value: 0.0, dtype: Dtype::BFloat16, shape: vec![b, h, alloc, d] },
+                    &[],
+                    s,
+                )?
+            }
+            Some(bf) => {
+                // Byte-for-byte update_one: append ONE ceil(n/256)*256 block
+                // to the trimmed (misaligned) or whole (aligned) buffer.
+                let block = (KV_STEP + n - 1) / KV_STEP * KV_STEP;
+                let b = bf.dim(0) as usize;
+                let h = bf.dim(1) as usize;
+                let d = bf.dim(3) as usize;
+                let trimmed = if prev % KV_STEP != 0 {
+                    eval1(
+                        table,
+                        &format!("{name}.trim"),
+                        "q.cache",
+                        Op::Slice {
+                            start: vec![0, 0, 0, 0],
+                            stop: vec![b as i32, h as i32, prev as i32, d as i32],
+                            strides: vec![1, 1, 1, 1],
+                        },
+                        &[bf],
+                        s,
+                    )?
+                } else {
+                    bf.identity(s)?
+                };
+                let zeros = eval1(
+                    table,
+                    &format!("{name}.zeros"),
+                    "q.cache",
+                    Op::Full { value: 0.0, dtype: Dtype::BFloat16, shape: vec![b, h, block, d] },
+                    &[],
+                    s,
+                )?;
+                eval1(
+                    table,
+                    &format!("{name}.grow"),
+                    "q.cache",
+                    Op::Concatenate { axis: 2 },
+                    &[&trimmed, &zeros],
+                    s,
+                )?
+            }
+        };
+        *slot = Some(buf);
+        Ok(())
+    }
+
+    /// Declares one forward (decode l = 1, or a prefill chunk l > 1) as a
+    /// plan: node-for-node the imperative walk, with the RoPE offset and
+    /// slice bounds as per-plan constants (the plan is rebuilt per call —
+    /// the shape-keyed compile route needs an offset-as-input op variant
+    /// first, ADR 0055). The KV buffers are plan inputs; the written
+    /// buffers plus (hidden | logits) are the declared outputs (functional
+    /// slice_update, python-parity order). Prefill chunks run KV-ONLY:
+    /// `with_head = false` ends the plan at the final norm (a chunk's
+    /// logits are never read — the R5 waste this exists to keep dead).
+    fn build_forward_plan<'a>(
         &'a self,
         tokens: &'a Array,
         cache: &'a KvCache,
         offset: usize,
+        l: usize,
+        with_head: bool,
     ) -> MlxResult<StepPlan<'a>> {
         let cfg = &self.cfg;
         let (n_h, n_kv, d) = (cfg.heads, cfg.kv_heads, cfg.head_dim);
-        let l = 1usize;
-        let total = offset + 1; // plan constant (RoPE + slice bounds)
+        let total = offset + l; // plan constant (RoPE + slice bounds)
         let scale = (d as f32).powf(-0.5);
         let mut b = crate::plan::PlanBuilder::default();
         let mut pool_weights: Vec<&'a Array> = Vec::new();
@@ -779,8 +890,8 @@ impl Qwen3 {
             // Cache write: buf[..., off:off+1, :] = new (functional).
             let bh = n_kv as i32;
             let dd = d as i32;
-            let kc = b.push(&g, Op::SliceUpdate { start: vec![0, 0, offset as i32, 0], stop: vec![1, bh, (offset + 1) as i32, dd], strides: vec![1, 1, 1, 1] }, &format!("{g}.k_write"), &[(kb_in, 0), (kr, 0)], None);
-            let vc = b.push(&g, Op::SliceUpdate { start: vec![0, 0, offset as i32, 0], stop: vec![1, bh, (offset + 1) as i32, dd], strides: vec![1, 1, 1, 1] }, &format!("{g}.v_write"), &[(vb_in, 0), (vt, 0)], None);
+            let kc = b.push(&g, Op::SliceUpdate { start: vec![0, 0, offset as i32, 0], stop: vec![1, bh, (offset + l) as i32, dd], strides: vec![1, 1, 1, 1] }, &format!("{g}.k_write"), &[(kb_in, 0), (kr, 0)], None);
+            let vc = b.push(&g, Op::SliceUpdate { start: vec![0, 0, offset as i32, 0], stop: vec![1, bh, (offset + l) as i32, dd], strides: vec![1, 1, 1, 1] }, &format!("{g}.v_write"), &[(vb_in, 0), (vt, 0)], None);
             new_k.push(kc);
             new_v.push(vc);
             // Read view: [.., :total, :] — identity when total fills the alloc
@@ -797,7 +908,7 @@ impl Qwen3 {
             let kc_view = view(&mut b, &format!("{g}.kv"), kc, k_alloc);
             let vc_view = view(&mut b, &format!("{g}.vv"), vc, v_alloc);
 
-            let att = b.push(&g, Op::Sdp { scale, causal: false }, &format!("{g}.sdp"), &[(qr, 0), (kc_view, 0), (vc_view, 0)], None);
+            let att = b.push(&g, Op::Sdp { scale, causal: l > 1 }, &format!("{g}.sdp"), &[(qr, 0), (kc_view, 0), (vc_view, 0)], None);
             let att_t = transpose(&mut b, &format!("{g}.att_t"), att);
             let att_r = b.push(&g, Op::Reshape { shape: vec![1, l, n_h * d] }, &format!("{g}.att_r"), &[(att_t, 0)], None);
             let o = linear(&mut b, &mut pool_weights, &format!("{g}.o"), &layer.o, (att_r, 0))?;
@@ -817,30 +928,36 @@ impl Qwen3 {
 
         let norm_w = pin(&mut b, &mut pool_weights, &self.norm, "q.final_norm.w");
         let t = b.push("q.norm", Op::RmsNorm { eps: cfg.rms_eps }, "q.final_norm", &[(h, 0), (norm_w, 0)], None);
-        let logits = match &self.embed {
-            Weight::Quant(q) => {
-                let wn = pin(&mut b, &mut pool_weights, &q.w, "q.lm_head.q8");
-                let sn = pin(&mut b, &mut pool_weights, &q.scales, "q.lm_head.q8_scales");
-                let bn = pin(&mut b, &mut pool_weights, &q.biases, "q.lm_head.q8_biases");
-                b.push("q.head", Op::QuantizedMatmul { group_size: cfg.group_size, bits: cfg.bits, transpose: true }, "q.lm_head", &[(t, 0), (wn, 0), (sn, 0), (bn, 0)], None)
+        // The tail output: logits when the head is wanted (decode), the
+        // final-norm hidden otherwise (KV-only prefill chunks — R5).
+        let tail = if with_head {
+            match &self.embed {
+                Weight::Quant(q) => {
+                    let wn = pin(&mut b, &mut pool_weights, &q.w, "q.lm_head.q8");
+                    let sn = pin(&mut b, &mut pool_weights, &q.scales, "q.lm_head.q8_scales");
+                    let bn = pin(&mut b, &mut pool_weights, &q.biases, "q.lm_head.q8_biases");
+                    b.push("q.head", Op::QuantizedMatmul { group_size: cfg.group_size, bits: cfg.bits, transpose: true }, "q.lm_head", &[(t, 0), (wn, 0), (sn, 0), (bn, 0)], None)
+                }
+                Weight::Plain(w) => {
+                    let wn = pin(&mut b, &mut pool_weights, w, "q.lm_head.w");
+                    let wt = b.push("q.head", Op::Transpose { axes: vec![1, 0] }, "q.lm_head.w_t", &[(wn, 0)], None);
+                    b.push("q.head", Op::Matmul, "q.lm_head", &[(t, 0), (wt, 0)], None)
+                }
             }
-            Weight::Plain(w) => {
-                let wn = pin(&mut b, &mut pool_weights, w, "q.lm_head.w");
-                let wt = b.push("q.head", Op::Transpose { axes: vec![1, 0] }, "q.lm_head.w_t", &[(wn, 0)], None);
-                b.push("q.head", Op::Matmul, "q.lm_head", &[(t, 0), (wt, 0)], None)
-            }
+        } else {
+            t
         };
         let mut outputs = Vec::with_capacity(2 * cfg.layers + 1);
         for li in 0..cfg.layers {
             outputs.push(new_k[li]);
             outputs.push(new_v[li]);
         }
-        outputs.push(logits);
+        outputs.push(tail);
         Ok(StepPlan {
             plan: crate::plan::Plan {
                 nodes: b.nodes,
-                logits,
-                act: logits,
+                logits: tail,
+                act: tail,
                 ctx: b.ctx,
                 outputs,
             },
