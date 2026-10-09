@@ -244,6 +244,14 @@ checkers.
 - Prefill (bottleneck 2) and long-context (bottleneck 3): resolved by
   the policy rows above (q4 default + 2k chunks; the hybrid for long
   context), no new work.
+- **Python retirement (commit ebe3e63e + harness 6a1d438; the role
+  table lives in `docs/py_retirement_2026-10-09.md`):** serving-role
+  defaults flipped native-first (attach-only law untouched; explicit
+  `*_MLX_SPAWN=1` escape hatches remain, labeled); napbench confirmed
+  native-only; live wire proof — native chat endpoint → loopback wire
+  server → `MlxLocalTextClient` completion with ZERO `mlx_lm`
+  processes. Python keeps exactly two roles: benchmark reference legs
+  and golden fixture recording.
 
 ## Non-claims
 
