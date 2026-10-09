@@ -186,14 +186,20 @@ pub struct KvCache {
 
 const KV_STEP: usize = 256;
 
-struct KvLayer {
+pub struct KvLayer {
     /// Allocated buffer [B, Hkv, alloc, D] (alloc is a multiple of
     /// KV_STEP); reads slice [..., :offset, :].
-    k: Option<Array>,
-    v: Option<Array>,
+    pub k: Option<Array>,
+    pub v: Option<Array>,
 }
 
 impl KvCache {
+    /// Read-only view of a layer's allocated (k, v) buffers — the awaited
+    /// arrays for a UI driver's per-chunk eval+sync.
+    pub fn layers_ref(&self) -> &[KvLayer] {
+        &self.layers
+    }
+
     pub fn new(layer_count: usize) -> KvCache {
         KvCache {
             layers: (0..layer_count)
@@ -539,9 +545,26 @@ impl Qwen3 {
         eval1(&self.table, name, "q.embed", Op::Take, &[&flat, &flat_idx], s)
     }
 
+    /// The final-norm hidden state for `tokens` ([1, L] i32) with the
+    /// cache — the whole transformer EXCEPT the lm_head. R5's chunked
+    /// prefill runs chunks through THIS (a chunk's logits are never read;
+    /// the old path materialized a [1, 2047, 151936] logit tensor per
+    /// chunk — ~0.6 GB and hundreds of GFLOPs of pure waste per 2k-prompt
+    /// prefill).
+    pub fn forward_hidden(&self, tokens: &Array, cache: &mut KvCache, s: Stream) -> MlxResult<Array> {
+        self.forward_impl(tokens, cache, s)
+    }
+
     /// One forward pass over `tokens` ([1, L] i32) with the cache. Returns
     /// logits [1, L, V] (unevaluated, like every plan output).
     pub fn forward_step(&self, tokens: &Array, cache: &mut KvCache, s: Stream) -> MlxResult<Array> {
+        let t = self.forward_impl(tokens, cache, s)?;
+        // Tied embeddings: the lm_head IS the (quantized) embedding table,
+        // applied as_linear.
+        self.linear("q.lm_head", &self.embed, &t, s)
+    }
+
+    fn forward_impl(&self, tokens: &Array, cache: &mut KvCache, s: Stream) -> MlxResult<Array> {
         let l = tokens.dim(1) as usize;
         let seq_group = if l > 1 { "q.prefill" } else { "q.decode" };
         let cfg = &self.cfg;
@@ -709,9 +732,7 @@ impl Qwen3 {
             prof_add("head", t_head.elapsed().as_micros() as u64);
             prof_add("step", 0);
         }
-        // Tied embeddings: the lm_head IS the (quantized) embedding table,
-        // applied as_linear.
-        self.linear("q.lm_head", &self.embed, &t, s)
+        Ok(t)
     }
 
     /// Greedy decode, token-for-token the reference pipeline. PARITY-
@@ -740,7 +761,8 @@ impl Qwen3 {
         while rest.len() > 1 {
             let n = PREFILL_STEP.min(rest.len() - 1);
             let t = Array::from_data_i32(&rest[..n], &[1, n])?;
-            self.forward_step(&t, &mut cache, s)?;
+            // KV-only chunk: no lm_head (a chunk's logits are never read).
+            self.forward_hidden(&t, &mut cache, s)?;
             rest = &rest[n..];
         }
 

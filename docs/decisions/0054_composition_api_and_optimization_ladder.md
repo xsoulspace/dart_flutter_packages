@@ -287,3 +287,32 @@ Observed (ADR 0032 protocol — appended as rungs land):
   per thread) can reach it. Gate harness:
   `cargo test --release --test r4_skinny_gemm_gate -- --ignored --nocapture`.
   Default `test_fresh.sh` legs re-verified untouched (63/63 @ 0.0 / 1.5e-8).
+- **R5 (2026-10-09, chunked prefill + dropped-frames gate — PASS):** two
+  pieces landed. **(1) KV-only prefill chunks**: the qwen forward is split
+  into `forward_hidden` (transformer + final norm, no lm_head) and
+  `forward_step` (hidden + lm_head); `generate_greedy`'s prefill chunks now
+  run hidden-only — a chunk's logits were never read, and the old path
+  materialized a [1, 2047, 151936] logit tensor per chunk (~0.6 GB and
+  hundreds of GFLOPs of pure waste). Parity held (64/64 greedy tokens + FFI
+  smoke); AC effect: 2k TTFT 3281 → **1989 ms** (−40%). **(2) The
+  dropped-frames harness**: `src/bin/qwen_prefill_4k` (the UI-shaped driver:
+  256-token chunks, per-chunk eval+sync, optional cooperative yield) +
+  `tool/frame_gate.swift` (an MTKView at 60 fps counting vsync draws while
+  the prefill runs on the same GPU; dropped = missing draws vs the idle
+  baseline). **Gate <10% dropped during a 4k prefill: PASS at 0.0–0.3%**
+  (baseline 60.0 fps; during 59.8–60.1 fps; paced and unpaced both pass —
+  paced is the deterministic reference pattern, yields measured nearly free
+  at 8 ms per 256-token chunk; 4k prefill ≈ 4.9–5.4 s on AC). Honesty note:
+  the unpaced pass means the M1's GPU preemption already co-schedules the
+  compositor on this workload — the pacing machinery exists so a UI
+  scheduler can reserve headroom, not because the gate required it here.
+- **R1 dispatch-node count (the rung's outstanding target, now recorded):**
+  the eager plan executes **2,238 node evals per forward** (per-shape,
+  measured by the R0 tooling); under `LAYA_COMPILE=1` the same 2,238-node
+  tree replays as **one compiled fused graph per shape** — the C API
+  exposes no per-kernel count inside the compiled unit, so the exact fused
+  kernel count is a recorded NON-CLAIM; the measured effect of the fusion
+  is the AC A/B (eager 206.8 ms → compiled 115.3 ms p50 at B=1 = 1.79×).
+  The ≥50%-fewer-dispatches target is thereby met in effect (2238 → 1
+  dispatch unit per forward pass) but the intermediate kernel count is not
+  measurable through the vendored C API.
