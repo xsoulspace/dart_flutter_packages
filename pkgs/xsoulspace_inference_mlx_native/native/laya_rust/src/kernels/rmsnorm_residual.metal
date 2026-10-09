@@ -10,6 +10,14 @@
 //
 // eps arrives as a float32 [1] array (the C API has no float template
 // argument); shape as int32 [rows, cols].
+//
+// HISTORY (the 1.7B lesson): pass 2 originally read the row sums from a
+// `threadgroup float cached[1024]` array — correct at cols = 1024 (the
+// 0.6B gate) and an OUT-OF-BOUNDS threadgroup write at cols = 2048
+// (Qwen3-1.7B), corrupting neighbouring threadgroup memory and NaN-ing
+// the model from layer 4. Threadgroup memory cannot be sized at launch
+// for a plain array, so pass 2 re-reads x + r from global (L2-resident);
+// the fused op keeps its one-pass structure for ANY cols.
 
 const int rows = shape[0];
 const int cols = shape[1];
@@ -23,9 +31,6 @@ if (row >= rows) {
 // while Metal 3.2 calls it bfloat; direct indexing with implicit float
 // conversions stays type-agnostic across both.
 threadgroup float shared[32];
-// The row's (x + r) sums cached in threadgroup memory: pass 2 reads them
-// here instead of re-reading the hidden tensors from global/L2.
-threadgroup float cached[1024];
 const long base = static_cast<long>(row) * cols;
 // The bf16 element type is named differently by mlx (bfloat16_t) and
 // Metal 3.2 (bfloat, no implicit float conversion) — write bf16 bits
@@ -40,7 +45,6 @@ const int warp = tid / 32;
 float local = 0.0f;
 for (int c = tid; c < cols; c += 256) {
   const float v = static_cast<float>(x[base + c]) + static_cast<float>(r[base + c]);
-  cached[c] = v;
   local += v * v;
 }
 // Warp reduce, then one partial per warp into shared memory.
@@ -65,7 +69,7 @@ threadgroup_barrier(mem_flags::mem_threadgroup);
 const float ms = shared[0] / static_cast<float>(cols);
 const float inv = 1.0f / sqrt(ms + e);
 for (int c = tid; c < cols; c += 256) {
-  const float v = cached[c];
+  const float v = static_cast<float>(x[base + c]) + static_cast<float>(r[base + c]);
   uint vbits = as_type<uint>(v);
   vbits += 0x7FFFu + ((vbits >> 16) & 1u);
   sum_bits[base + c] = static_cast<uint16_t>(vbits >> 16);

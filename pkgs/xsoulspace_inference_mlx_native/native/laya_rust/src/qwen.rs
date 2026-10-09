@@ -1100,9 +1100,10 @@ impl Qwen3 {
             )?;
             let o = self.linear(&format!("{g}.o"), &layer.o, &att_r, s)?;
             // Fused residual+RMSNorm (R4 epilogue): outputs [sum, normed].
-            // The default table's binding is the Add + RmsNorm composition
-            // it replaces — bit-identical; LAYA_MSL_NORM=1 swaps in the
-            // one-pass kernel.
+            // The one-pass MSL kernel IS the default binding (R4's 1.33x
+            // row); its kernel history — a fixed 1024-float threadgroup
+            // cache overflowed at cols=2048 and NaN-ed Qwen3-1.7B — is
+            // recorded in kernels/rmsnorm_residual.metal.
             let fused = {
                 let node = Node {
                     name: format!("{g}.res1_ln2"),

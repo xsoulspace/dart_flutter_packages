@@ -8,7 +8,8 @@
 
 use laya_native::bpe::ByteLevelBpe;
 use laya_native::mlx;
-use laya_native::qwen::Qwen3;
+use laya_native::mlx::{Array, Dtype};
+use laya_native::qwen::{KvCache, Qwen3};
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -19,6 +20,21 @@ struct ParityFixture {
     prompt_ids: Vec<i32>,
     greedy_ids: Vec<i32>,
     tokenizer_probes: std::collections::HashMap<String, Vec<u32>>,
+    /// Per-step reference top-2 (id + logits) — present in fixtures
+    /// recorded for a model whose greedy stream contains HARD ties
+    /// (top-2 gap at print precision; python flips them between its own
+    /// runs). When present, the gate is teacher-forced: each step
+    /// conditions on the REFERENCE prefix, and a mismatch passes only if
+    /// it is a recorded tie and the engine's token is the reference's
+    /// other top-2 member.
+    steps: Option<Vec<RefStep>>,
+}
+
+#[derive(serde::Deserialize)]
+struct RefStep {
+    r#ref: i32,
+    top2: [i32; 2],
+    logits: [f32; 2],
 }
 
 fn fixture() -> Option<ParityFixture> {
@@ -134,6 +150,63 @@ fn greedy_decode_matches_reference() {
     let model = Qwen3::load(&snap).expect("model loads");
     println!("model load: {:?}", t0.elapsed());
 
+    // Tie-aware fixtures (models with hard greedy ties — Qwen3-1.7B):
+    // teacher-forced per-step parity. The engine conditions on the
+    // REFERENCE prefix each step (prefill once, then step the reference
+    // tokens through the cache), so a fork at one tie cannot cascade.
+    if let Some(steps) = &fx.steps {
+        let mut cache = KvCache::new(model.cfg.layers);
+        cache
+            .reserve(
+                model.table(),
+                model.cfg.kv_heads,
+                model.cfg.head_dim,
+                fx.prompt_ids.len() + steps.len(),
+                s,
+            )
+            .expect("reserve");
+        // The prefill pass predicts step 0 (its lm_head tail is the
+        // whole-prefix head — forward_step handles l > 1); each later
+        // step consumes the PREVIOUS reference token.
+        let pre = Array::from_data_i32(&fx.prompt_ids, &[1, fx.prompt_ids.len()])
+            .expect("prefill tokens");
+        let mut logits = model.forward_step(&pre, &mut cache, s).expect("prefill");
+        let mut mismatches = Vec::new();
+        for (k, step) in steps.iter().enumerate() {
+            if k > 0 {
+                let prev: Vec<i32> = vec![steps[k - 1].r#ref];
+                let tokens = Array::from_data_i32(&prev, &[1, 1]).expect("step tokens");
+                logits = model.forward_step(&tokens, &mut cache, s).expect("step");
+            }
+            let l_len = logits.dim(1);
+            let last_pos = logits
+                .slice(&[0, (l_len - 1) as i32, 0], &[1, l_len as i32, logits.dim(2) as i32], &[1, 1, 1], s)
+                .expect("last position");
+            let am = last_pos.argmax_axis(-1, false, s).expect("argmax");
+            let f = am.astype(Dtype::Float32, s).expect("cast");
+            let v = f.to_f32_vec(s).expect("readback");
+            let got = v.first().copied().unwrap_or(f32::NAN) as i32;
+            let tie = (step.logits[0] - step.logits[1]).abs() <= 0.05;
+            let ok = got == step.r#ref
+                || (tie && (got == step.top2[0] || got == step.top2[1]));
+            if !ok {
+                mismatches.push((k, got, step.r#ref, tie));
+            }
+        }
+        assert!(
+            mismatches.is_empty(),
+            "teacher-forced parity FAILED: {mismatches:?} (of {} steps; ties pass only within the recorded top-2)",
+            steps.len()
+        );
+        println!(
+            "PARITY: {}/{} teacher-forced steps match (tie-aware: {} recorded top-2 ties accepted)",
+            steps.len(),
+            steps.len(),
+            steps.iter().filter(|st| (st.logits[0] - st.logits[1]).abs() <= 0.05).count()
+        );
+        return;
+    }
+
     let t0 = std::time::Instant::now();
     let ids = model
         .generate_greedy(&fx.prompt_ids, fx.greedy_ids.len(), None, s)
@@ -222,9 +295,20 @@ fn qwen_ffi_generate_smoke() {
         &fx.prompt_ids[..],
         "FFI prompt ids diverge from the tokenizer fixture"
     );
-    assert_eq!(
-        &ids[fx.prompt_ids.len()..],
-        &fx.greedy_ids[..8],
-        "FFI greedy ids diverge from the reference"
-    );
+    if fx.steps.is_some() {
+        // Tie-aware fixture (hard greedy ties): the FFI smoke's job is the
+        // ABI surface, not the stream — assert only the first token (the
+        // stream gate owns parity, teacher-forced above).
+        assert_eq!(
+            ids[fx.prompt_ids.len()],
+            fx.steps.as_ref().unwrap()[0].r#ref,
+            "FFI first greedy token diverges from the reference"
+        );
+    } else {
+        assert_eq!(
+            &ids[fx.prompt_ids.len()..],
+            &fx.greedy_ids[..8],
+            "FFI greedy ids diverge from the reference"
+        );
+    }
 }
