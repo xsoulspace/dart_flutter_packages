@@ -67,7 +67,7 @@ fn lfm2_greedy_matches_reference_and_gate() {
     let model = Lfm2::load(&snap).expect("lfm2 loads");
     let t0 = std::time::Instant::now();
     let ids = model
-        .generate_greedy(&fx.prompt_ids, fx.greedy_ids.len(), s)
+        .generate_greedy(&fx.prompt_ids, fx.greedy_ids.len(), None, s)
         .expect("greedy decode runs");
     let dt = t0.elapsed();
     let generated = &ids[fx.prompt_ids.len()..];
@@ -98,6 +98,99 @@ fn lfm2_greedy_matches_reference_and_gate() {
         );
     }
     let _ = Dtype::Float32;
+}
+
+/// Opt-in EOS stop (ADR 0055 gap): with `stop_on_eos` + `eos_ids=[7, 2]`
+/// (<|im_end|>, <|endoftext|>) the generate native stops AT the first eos in
+/// the pinned greedy stream — it emits that eos token, then breaks (HF
+/// convention). The fixture's stream runs THROUGH both eos ids (7 at index
+/// 21, 2 at 22) and continues to 64 tokens; the DEFAULT-OFF path is exactly
+/// what the fixture gate above pins. Driven through the FFI so the serde
+/// request wiring (`stop_on_eos`/`eos_ids`) is covered in the same gate.
+#[test]
+fn lfm2_generate_stops_at_eos_only_when_opted_in() {
+    let Some(fx) = fixture() else {
+        eprintln!("skipping: lfm2 parity fixture absent");
+        return;
+    };
+    let Some(snap) = snapshot_dir(&fx) else {
+        eprintln!("skipping: LFM2 snapshot absent");
+        return;
+    };
+    let Ok(_) = mlx::gpu() else {
+        eprintln!("skipping: no Metal device");
+        return;
+    };
+    let metallib = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("build/mlx-install/lib/mlx.metallib");
+    if metallib.is_file() {
+        laya_native::mlx::set_metallib_path(&metallib);
+    }
+
+    extern "C" {
+        fn laya_native_lfm2_load(model_dir: *const std::ffi::c_char) -> i64;
+        fn laya_native_lfm2_generate(
+            handle: i64,
+            request_json: *const std::ffi::c_char,
+        ) -> *mut std::ffi::c_char;
+        fn laya_native_lfm2_unload(handle: i64);
+        fn laya_native_free(pointer: *mut std::ffi::c_char);
+    }
+
+    let dir = std::ffi::CString::new(snap.to_str().unwrap()).unwrap();
+    let handle = unsafe { laya_native_lfm2_load(dir.as_ptr()) };
+    assert!(handle > 0, "lfm2 load failed: {handle}");
+
+    let eos_pos = fx
+        .greedy_ids
+        .iter()
+        .position(|t| *t == 7 || *t == 2)
+        .expect("fixture greedy stream contains <|im_end|> or <|endoftext|>");
+
+    let request = std::ffi::CString::new(
+        serde_json::json!({
+            "prompt_ids": fx.prompt_ids,
+            "max_tokens": fx.greedy_ids.len(),
+            "stop_on_eos": true,
+            "eos_ids": [7, 2],
+        })
+        .to_string(),
+    )
+    .unwrap();
+    let out = unsafe { laya_native_lfm2_generate(handle, request.as_ptr()) };
+    assert!(!out.is_null(), "generate returned null");
+    let payload = unsafe { std::ffi::CStr::from_ptr(out) }
+        .to_string_lossy()
+        .to_string();
+    unsafe { laya_native_free(out) };
+    unsafe { laya_native_lfm2_unload(handle) };
+
+    let parsed: serde_json::Value = serde_json::from_str(&payload).expect("response JSON");
+    assert!(
+        parsed.get("error").is_none(),
+        "generate errored: {parsed}"
+    );
+    let ids: Vec<i32> = parsed["ids"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_i64().unwrap() as i32)
+        .collect();
+    let generated = &ids[fx.prompt_ids.len()..];
+    assert_eq!(
+        generated,
+        &fx.greedy_ids[..=eos_pos],
+        "stop_on_eos must emit exactly the fixture prefix up to and including the first eos"
+    );
+    assert_eq!(
+        generated.last(),
+        Some(&fx.greedy_ids[eos_pos]),
+        "the eos token itself must be emitted before stopping"
+    );
+    assert!(
+        generated.len() < fx.greedy_ids.len(),
+        "generation must stop before the pinned stream ends (default OFF keeps it whole)"
+    );
 }
 
 /// The FFI rung's tokenizer gate: the hand-rolled byte-level BPE must

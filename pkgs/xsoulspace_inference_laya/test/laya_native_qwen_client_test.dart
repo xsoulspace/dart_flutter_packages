@@ -50,6 +50,34 @@ void main() {
     );
   }, timeout: const Timeout(Duration(minutes: 5)));
 
+  test('generateAsync returns the fixture prefix off the calling isolate', () async {
+    if (!fixtureFile.existsSync()) {
+      return markTestSkipped('parity fixture absent');
+    }
+    final NativeQwenTextEngine engine;
+    try {
+      engine = await NativeQwenTextEngine.load();
+    } on Object catch (error) {
+      return markTestSkipped('native qwen engine unavailable: $error');
+    }
+    addTearDown(engine.dispose);
+
+    final fixture =
+        jsonDecode(fixtureFile.readAsStringSync()) as Map<String, dynamic>;
+    final prompt = fixture['prompt'] as String;
+    final wantGreedy = <int>[
+      for (final v in fixture['greedy_ids'] as List) v as int,
+    ];
+
+    final completion = await engine.generateAsync(prompt: prompt, maxTokens: 8);
+    expect(
+      completion.ids.sublist(completion.promptIds.length),
+      wantGreedy.sublist(0, 8),
+      reason: 'async greedy ids diverge from the reference',
+    );
+    expect(completion.text, isNotEmpty);
+  }, timeout: const Timeout(Duration(minutes: 5)));
+
   test('wire: chat completions over the in-process engine', () async {
     if (snapshotDir == null) {
       return markTestSkipped('Qwen3-0.6B-4bit snapshot absent');

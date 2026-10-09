@@ -371,6 +371,14 @@ struct QwenGenerateRequest {
     prompt_ids: Option<Vec<i32>>,
     #[serde(default = "default_max_tokens")]
     max_tokens: usize,
+    /// Opt-in EOS stop (ADR 0055): when true, generation breaks right after
+    /// emitting any token in `eos_ids` (the eos token itself is kept — HF
+    /// convention). Default OFF: the parity fixtures pin full greedy streams
+    /// that run THROUGH `<|endoftext|>`, and must stay byte-identical.
+    #[serde(default)]
+    stop_on_eos: bool,
+    #[serde(default)]
+    eos_ids: Vec<i32>,
 }
 
 fn default_max_tokens() -> usize {
@@ -401,8 +409,9 @@ pub extern "C" fn laya_native_qwen_load(model_dir: *const c_char) -> i64 {
 }
 
 /// Greedy text generation. Request: `{"prompt": "…", "max_tokens": 64}` (or
-/// `prompt_ids`). Response: `{"ids": [...], "text": "…", "prompt_ids": [...]}`
-/// or `{"error": "…"}`.
+/// `prompt_ids`), optional `stop_on_eos` + `eos_ids` (default OFF — see
+/// `QwenGenerateRequest`). Response:
+/// `{"ids": [...], "text": "…", "prompt_ids": [...]}` or `{"error": "…"}`.
 #[no_mangle]
 pub extern "C" fn laya_native_qwen_generate(handle: i64, request_json: *const c_char) -> *mut c_char {
     if request_json.is_null() {
@@ -436,7 +445,15 @@ pub extern "C" fn laya_native_qwen_generate(handle: i64, request_json: *const c_
             None => return fail("request needs prompt or prompt_ids"),
         }
     };
-    match engine.model.generate_greedy(&prompt_ids, request.max_tokens, stream) {
+    let stop: Option<&[i32]> = if request.stop_on_eos {
+        Some(&request.eos_ids)
+    } else {
+        None
+    };
+    match engine
+        .model
+        .generate_greedy(&prompt_ids, request.max_tokens, stop, stream)
+    {
         Ok(ids) => {
             let text = engine
                 .tokenizer
@@ -507,7 +524,8 @@ pub extern "C" fn laya_native_lfm2_load(model_dir: *const c_char) -> i64 {
 }
 
 /// Greedy text generation. Request: `{"prompt": "…", "max_tokens": 64}` (or
-/// `prompt_ids`, used verbatim — no BOS added). Response:
+/// `prompt_ids`, used verbatim — no BOS added; optional `stop_on_eos` +
+/// `eos_ids`, default OFF — see `QwenGenerateRequest`). Response:
 /// `{"ids": [...], "text": "…", "prompt_ids": [...]}` or `{"error": "…"}`.
 #[no_mangle]
 pub extern "C" fn laya_native_lfm2_generate(handle: i64, request_json: *const c_char) -> *mut c_char {
@@ -546,9 +564,14 @@ pub extern "C" fn laya_native_lfm2_generate(handle: i64, request_json: *const c_
     if !had_explicit_ids {
         prompt_ids.insert(0, engine.bos as i32);
     }
+    let stop: Option<&[i32]> = if request.stop_on_eos {
+        Some(&request.eos_ids)
+    } else {
+        None
+    };
     match engine
         .model
-        .generate_greedy(&prompt_ids, request.max_tokens, stream)
+        .generate_greedy(&prompt_ids, request.max_tokens, stop, stream)
     {
         Ok(ids) => {
             let text = engine
@@ -977,20 +1000,20 @@ mod perf_tests {
         for (tag, ids) in [("short", prompt_ids), ("2k", long_ids)] {
             let mut cache = crate::qwen::KvCache::new(model.cfg.layers);
             // Warmup.
-            let _ = model.generate_greedy(&ids, 4, s).unwrap();
+            let _ = model.generate_greedy(&ids, 4, None, s).unwrap();
 
             // Prefill TTFT: chunked prefill + first decode step, 5 rounds.
             let mut ttfts = Vec::new();
             for _ in 0..5 {
                 let t0 = std::time::Instant::now();
-                let _ = model.generate_greedy(&ids, 1, s).unwrap();
+                let _ = model.generate_greedy(&ids, 1, None, s).unwrap();
                 ttfts.push(t0.elapsed().as_secs_f64() * 1e3);
             }
             ttfts.sort_by(|a, b| a.total_cmp(b));
 
             // Decode: 32 tokens, per-step wall clock.
             let t0 = std::time::Instant::now();
-            model.generate_greedy(&ids, 32, s).unwrap();
+            model.generate_greedy(&ids, 32, None, s).unwrap();
             let decode_ms = t0.elapsed().as_secs_f64() * 1e3;
             let per_tok = decode_ms / 32.0;
             println!(

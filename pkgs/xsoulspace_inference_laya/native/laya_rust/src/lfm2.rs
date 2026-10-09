@@ -716,10 +716,17 @@ impl Lfm2 {
     /// Greedy decode mirroring mlx_lm's generate_step shape (2048-token
     /// prefill chunks, last token through the decode loop). The conv
     /// window rides the cache; attention layers share the global offset.
+    ///
+    /// `stop` is the opt-in EOS stop (ADR 0055): when `Some(ids)`, the loop
+    /// breaks right after emitting a token in `ids` (the eos token itself is
+    /// kept — HF convention). None (every default call site: parity tests,
+    /// benches) never stops, so the fixture's pinned stream — which runs
+    /// THROUGH `<|im_end|>`/`<|endoftext|>` — stays byte-identical.
     pub fn generate_greedy(
         &self,
         prompt_ids: &[i32],
         max_tokens: usize,
+        stop: Option<&[i32]>,
         s: Stream,
     ) -> MlxResult<Vec<i32>> {
         if prompt_ids.is_empty() {
@@ -752,6 +759,9 @@ impl Lfm2 {
             let t = v.first().copied().ok_or(MlxError(-9712))? as i32;
             next = t;
             out.push(t);
+            if stop.is_some_and(|ids| ids.contains(&t)) {
+                break;
+            }
         }
         Ok(out)
     }

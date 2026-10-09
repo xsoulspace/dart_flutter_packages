@@ -4,8 +4,10 @@ import 'dart:io';
 import 'dart:isolate';
 
 import 'package:ffi/ffi.dart';
+import 'package:xsoulspace_inference_local_serve/xsoulspace_inference_local_serve.dart';
 
 import 'laya_native_decision_engine.dart';
+import 'laya_native_lfm2_chat_template.dart';
 
 // Native bindings over the LFM2 hybrid short-conv/GQA engine (ADR 0055
 // LFM2 rung): the SAME native-assets code asset the decision engine
@@ -78,7 +80,8 @@ final class NativeLfm2Completion {
 ///
 /// The engine is process-global and single-flight per generate call (the
 /// FFI serializes internally); each generate blocks its caller until the
-/// tokens are materialized.
+/// tokens are materialized — [generateAsync] moves that block off the
+/// calling isolate.
 final class NativeLfm2TextEngine {
   NativeLfm2TextEngine._(this._handle, this.snapshotDir);
 
@@ -116,19 +119,48 @@ final class NativeLfm2TextEngine {
 
   /// Greedy decode. Supply [prompt] (tokenized by the checkpoint BPE, with
   /// `<|startoftext|>` prepended natively) or explicit [promptIds];
-  /// [maxTokens] caps the generated length.
+  /// [maxTokens] caps the generated length. [stopOnEos] is strictly
+  /// opt-in (native default OFF — the parity fixtures pin streams that run
+  /// through EOS): when true, generation breaks right after emitting any
+  /// id in [eosIds], keeping that EOS token itself (HF convention — the
+  /// chat server stops at `<|im_end|>`/`<|endoftext|>` this way).
   NativeLfm2Completion generate({
     final String? prompt,
     final List<int>? promptIds,
     final int maxTokens = 64,
+    final bool stopOnEos = false,
+    final List<int>? eosIds,
+  }) =>
+      generateByHandle(
+        _handle,
+        prompt: prompt,
+        promptIds: promptIds,
+        maxTokens: maxTokens,
+        stopOnEos: stopOnEos,
+        eosIds: eosIds,
+      );
+
+  /// The [generate] FFI body, keyed by the process-global engine handle —
+  /// the handle lives inside the dylib, so ANY isolate (in this process,
+  /// after [load] opened the asset) can drive the engine with it. The
+  /// native side creates its MLX stream per call on the calling thread.
+  static NativeLfm2Completion generateByHandle(
+    final int handle, {
+    final String? prompt,
+    final List<int>? promptIds,
+    final int maxTokens = 64,
+    final bool stopOnEos = false,
+    final List<int>? eosIds,
   }) {
     final request = jsonEncode(<String, Object?>{
       'prompt': ?prompt,
       'prompt_ids': ?promptIds,
       'max_tokens': maxTokens,
+      'stop_on_eos': stopOnEos,
+      'eos_ids': ?eosIds,
     });
     final requestNative = toNativeUtf8(request);
-    final reply = _lfm2Generate(_handle, requestNative);
+    final reply = _lfm2Generate(handle, requestNative);
     final payload = fromNativeUtf8(reply);
     malloc.free(requestNative);
     final json = jsonDecode(payload) as Map<String, dynamic>;
@@ -144,7 +176,140 @@ final class NativeLfm2TextEngine {
     );
   }
 
+  /// [generate] off the caller's isolate: runs
+  /// [NativeLfm2TextEngine.generateByHandle] in a fresh isolate capturing
+  /// only the int handle plus plain sendable args, so a long decode never
+  /// blocks the calling isolate (e.g. the UI). Generation itself is
+  /// unchanged — same native serialization, same greedy path.
+  Future<NativeLfm2Completion> generateAsync({
+    final String? prompt,
+    final List<int>? promptIds,
+    final int maxTokens = 64,
+    final bool stopOnEos = false,
+    final List<int>? eosIds,
+  }) {
+    final handle = _handle;
+    return Isolate.run(
+      () => NativeLfm2TextEngine.generateByHandle(
+        handle,
+        prompt: prompt,
+        promptIds: promptIds,
+        maxTokens: maxTokens,
+        stopOnEos: stopOnEos,
+        eosIds: eosIds,
+      ),
+    );
+  }
+
   void dispose() {
     _lfm2Unload(_handle);
+  }
+}
+
+/// The LFM2 rung's in-process client behind the serve wire: the same
+/// OpenAI-compatible chat routes `mlx_lm.server` answers (`/health`,
+/// `POST /v1/chat/completions`), served from the in-process engine on the
+/// shared loopback core — no Python, no spawned process.
+///
+/// Wire mapping: messages render through the checkpoint's chat template
+/// ([renderLfm2ChatPrompt], fixture-pinned subset — the BOS is left to the
+/// native text path so exactly one `<|startoftext|>` lands in the ids),
+/// and generation runs with the opt-in EOS stop on `<|im_end|>`/`<|endoftext|>`
+/// so a chat completion ends at the model's own end-of-turn marker instead
+/// of barreling through it.
+final class LayaLfm2ChatServer {
+  LayaLfm2ChatServer({
+    required NativeLfm2TextEngine engine,
+    this.model = 'lfm2.5-1.2b-instruct-mlx-4bit',
+    this.defaultMaxTokens = 64,
+    final String? apiKey,
+    final InternetAddress? address,
+    final int port = 0,
+  }) : _server = LoopbackJsonServer(
+         apiKey: apiKey,
+         address: address,
+         port: port,
+         healthPayload: () => <String, Object?>{
+           'status': 'ok',
+           'model': model,
+           'engine': 'laya-native-lfm2',
+         },
+         route: (final LoopbackRequest request) async =>
+             _route(request, engine, model, defaultMaxTokens),
+       );
+
+  final String model;
+  final int defaultMaxTokens;
+  final LoopbackJsonServer _server;
+
+  /// The bound base URL (`http://127.0.0.1:<port>`), after [start].
+  Uri get url => _server.url;
+
+  Future<void> start() => _server.start();
+  Future<void> stop() => _server.stop();
+
+  static Future<LoopbackReply?> _route(
+    final LoopbackRequest request,
+    final NativeLfm2TextEngine engine,
+    final String model,
+    final int maxTokens,
+  ) async {
+    if (request.method != 'POST' || request.path != '/v1/chat/completions') {
+      return null;
+    }
+    final body = request.jsonBody!;
+    final messages = body['messages'];
+    if (messages is! List || messages.isEmpty) {
+      return const LoopbackReply(422, <String, Object?>{
+        'error': <String, Object?>{'message': 'messages required'},
+      });
+    }
+    final rendered = <Lfm2ChatMessage>[];
+    for (final raw in messages) {
+      if (raw is! Map) {
+        return const LoopbackReply(422, <String, Object?>{
+          'error': <String, Object?>{'message': 'messages must be objects'},
+        });
+      }
+      rendered.add(
+        Lfm2ChatMessage(
+          role: '${raw['role'] ?? 'user'}',
+          content: '${raw['content'] ?? ''}',
+        ),
+      );
+    }
+    final tools = body['tools'];
+    final prompt = renderLfm2ChatPrompt(
+      messages: rendered,
+      // Template renders carry the BOS text; the native text path adds the
+      // BOS id itself, so the render omits it (exactly one BOS in the ids).
+      includeBos: false,
+      tools: tools is List && tools.isNotEmpty ? tools : null,
+    );
+    final requested = body['max_tokens'];
+    final completion = engine.generate(
+      prompt: prompt,
+      maxTokens: requested is int ? requested : maxTokens,
+      stopOnEos: true,
+      eosIds: const <int>[7, 2], // <|im_end|>, <|endoftext|>
+    );
+    return LoopbackReply(200, <String, Object?>{
+      'id': 'chatcmpl-laya-lfm2',
+      'model': model,
+      'choices': <Object?>[
+        <String, Object?>{
+          'index': 0,
+          'finish_reason': 'stop',
+          'message': <String, Object?>{
+            'role': 'assistant',
+            'content': completion.text,
+          },
+        },
+      ],
+      'usage': <String, Object?>{
+        'prompt_tokens': completion.promptIds.length,
+        'completion_tokens': completion.ids.length - completion.promptIds.length,
+      },
+    });
   }
 }

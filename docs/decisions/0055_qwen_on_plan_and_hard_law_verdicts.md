@@ -259,3 +259,44 @@ next rung-sized increment after P0–P2, product-demand-gated.
   is the tell).
 
 <!-- EVIDENCE:APPEND -->
+
+- **Product gaps rung (2026-10-09) — opt-in EOS stop, LFM2.5-Instruct chat
+  template + chat server, async generate.** Native:
+  `QwenGenerateRequest` gains `stop_on_eos: bool` + `eos_ids: Vec<i32>`
+  (serde defaults — old requests parse unchanged; NATIVE default OFF), and
+  both `generate_greedy`s (qwen.rs, lfm2.rs) take
+  `stop: Option<&[i32]>` — emit the EOS token itself, then break (HF
+  convention). Every default call site (parity tests, benches) passes
+  None, so the pinned streams that run THROUGH `<|endoftext|>` stay
+  byte-identical; new FFI gate
+  `lfm2_generate_stops_at_eos_only_when_opted_in` proves the stopped run
+  emits exactly the fixture prefix through the first of [7, 2] and stops.
+  Dart: `stopOnEos`/`eosIds` passthrough on both engines;
+  `renderLfm2ChatPrompt` (lib/src/laya_native_lfm2_chat_template.dart) — a
+  constrained renderer for the LFM2.5-Instruct Jinja template, pinned
+  BYTE-EXACTLY against `native/laya_rust/testdata/lfm25_chat_template_fixtures.json`
+  (recorded 2026-10-09 via `~/.venvs/mlx-ref/bin/python`
+  `AutoTokenizer.apply_chat_template(tokenize=False, add_generation_prompt=True)`
+  on snapshot 7ccafdb04c36936f4f1c4685198c6c9a40275932: system+user,
+  think-strip multi-turn, 2 tools — the `a<b` description pins that the
+  reference chain does NOT htmlsafe-escape and uses Python json.dumps
+  separators); `LayaLfm2ChatServer` (LoopbackJsonServer /health +
+  /v1/chat/completions) renders WITHOUT the BOS text (the native text path
+  adds the BOS id — exactly one BOS) and generates with stopOnEos on
+  [7, 2] = `<|im_end|>`, `<|endoftext|>`; `generateByHandle` +
+  `generateAsync` on both engines (Isolate.run capturing only the int
+  handle + plain args — the engine is process-global in the dylib).
+  Gates: cargo parity battery 8/8 (lfm2 3 incl. the new EOS gate, qwen3 3,
+  plan 2), full dart suite 31 pass / 3 skip (baseline 25/3 intact — 6 new
+  tests, all green), dart analyze clean, tool/test_fresh.sh 63/63 eager
+  (max prob error 0.0) and 63/63 LAYA_COMPILE (1.5e-8). Non-claims: the
+  template renderer is NOT a Jinja engine — its supported subset is only
+  what the committed fixture pins (string content; leading-system folding;
+  tools as JSON-encodable objects; keep_past_thinking=false); tool-call
+  responses, list/multipart content, keep_past_thinking=true, custom
+  bos_token and any unpinned Jinja behavior are unsupported; async
+  generate does NOT add decode parallelism (the native forward lock still
+  serializes generation — Isolate.run only moves the block off the calling
+  isolate); the template fixture provenance is machine-local (HF cache +
+  mlx-ref venv on this machine, dated); no qwen chat-template claim (the
+  qwen server keeps its raw-completion prompt concatenation).

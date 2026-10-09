@@ -1185,10 +1185,16 @@ impl Qwen3 {
     /// at a bf16 logit tie (observed: "1990s" vs "2000s" at 20.375/20.375)
     /// a whole-prompt prefill breaks the tie the other way. Never merge
     /// the chunked prefill into one pass to save a call.
+    /// `stop` is the opt-in EOS stop (ADR 0055): when `Some(ids)`, the loop
+    /// breaks right after emitting a token in `ids` (the eos token itself is
+    /// kept — HF convention). None (every default call site: parity tests,
+    /// benches) never stops, so the parity fixtures' pinned streams — which
+    /// run THROUGH `<|endoftext|>` — stay byte-identical.
     pub fn generate_greedy(
         &self,
         prompt_ids: &[i32],
         max_tokens: usize,
+        stop: Option<&[i32]>,
         s: Stream,
     ) -> MlxResult<Vec<i32>> {
         if prompt_ids.is_empty() {
@@ -1228,6 +1234,9 @@ impl Qwen3 {
             let t = v.first().copied().ok_or(MlxError(-978))? as i32;
             next = t;
             out.push(t);
+            if stop.is_some_and(|ids| ids.contains(&t)) {
+                break;
+            }
         }
         if qwen_profiling() {
             qwen_profile_flush();

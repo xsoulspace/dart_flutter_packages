@@ -51,7 +51,8 @@ final class NativeQwenCompletion {
 ///
 /// The engine is process-global and single-flight per generate call (the
 /// FFI serializes internally); each generate blocks its caller until the
-/// tokens are materialized.
+/// tokens are materialized — [generateAsync] moves that block off the
+/// calling isolate.
 final class NativeQwenTextEngine {
   NativeQwenTextEngine._(this._handle, this.snapshotDir);
 
@@ -90,18 +91,47 @@ final class NativeQwenTextEngine {
 
   /// Greedy decode. Supply [prompt] (tokenized by the checkpoint BPE) or
   /// explicit [promptIds]; [maxTokens] caps the generated length.
+  /// [stopOnEos] is strictly opt-in (native default OFF — the parity
+  /// fixture pins a stream that runs through `<|endoftext|>`): when true,
+  /// generation breaks right after emitting any id in [eosIds], keeping
+  /// that EOS token itself (HF convention).
   NativeQwenCompletion generate({
     final String? prompt,
     final List<int>? promptIds,
     final int maxTokens = 64,
+    final bool stopOnEos = false,
+    final List<int>? eosIds,
+  }) =>
+      generateByHandle(
+        _handle,
+        prompt: prompt,
+        promptIds: promptIds,
+        maxTokens: maxTokens,
+        stopOnEos: stopOnEos,
+        eosIds: eosIds,
+      );
+
+  /// The [generate] FFI body, keyed by the process-global engine handle —
+  /// the handle lives inside the dylib, so ANY isolate (in this process,
+  /// after [load] opened the asset) can drive the engine with it. The
+  /// native side creates its MLX stream per call on the calling thread.
+  static NativeQwenCompletion generateByHandle(
+    final int handle, {
+    final String? prompt,
+    final List<int>? promptIds,
+    final int maxTokens = 64,
+    final bool stopOnEos = false,
+    final List<int>? eosIds,
   }) {
     final request = jsonEncode(<String, Object?>{
       'prompt': ?prompt,
       'prompt_ids': ?promptIds,
       'max_tokens': maxTokens,
+      'stop_on_eos': stopOnEos,
+      'eos_ids': ?eosIds,
     });
     final requestNative = toNativeUtf8(request);
-    final reply = _qwenGenerate(_handle, requestNative);
+    final reply = _qwenGenerate(handle, requestNative);
     final payload = fromNativeUtf8(reply);
     malloc.free(requestNative);
     final json = jsonDecode(payload) as Map<String, dynamic>;
@@ -114,6 +144,31 @@ final class NativeQwenTextEngine {
       ],
       ids: <int>[for (final v in json['ids'] as List) v as int],
       text: json['text'] as String? ?? '',
+    );
+  }
+
+  /// [generate] off the caller's isolate: runs
+  /// [NativeQwenTextEngine.generateByHandle] in a fresh isolate capturing
+  /// only the int handle plus plain sendable args, so a long decode never
+  /// blocks the calling isolate (e.g. the UI). Generation itself is
+  /// unchanged — same native serialization, same greedy path.
+  Future<NativeQwenCompletion> generateAsync({
+    final String? prompt,
+    final List<int>? promptIds,
+    final int maxTokens = 64,
+    final bool stopOnEos = false,
+    final List<int>? eosIds,
+  }) {
+    final handle = _handle;
+    return Isolate.run(
+      () => NativeQwenTextEngine.generateByHandle(
+        handle,
+        prompt: prompt,
+        promptIds: promptIds,
+        maxTokens: maxTokens,
+        stopOnEos: stopOnEos,
+        eosIds: eosIds,
+      ),
     );
   }
 

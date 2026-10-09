@@ -133,7 +133,7 @@ fn greedy_decode_matches_reference() {
 
     let t0 = std::time::Instant::now();
     let ids = model
-        .generate_greedy(&fx.prompt_ids, fx.greedy_ids.len(), s)
+        .generate_greedy(&fx.prompt_ids, fx.greedy_ids.len(), None, s)
         .expect("greedy decode runs");
     println!("greedy {} tokens: {:?}", fx.greedy_ids.len(), t0.elapsed());
 

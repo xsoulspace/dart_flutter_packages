@@ -185,7 +185,7 @@ fn decode_2k_fresh() {
     ids.truncate(2048);
     let _ = tok;
     let t0 = std::time::Instant::now();
-    let out = model.generate_greedy(&ids, 32, s).unwrap();
+    let out = model.generate_greedy(&ids, 32, None, s).unwrap();
     let total = t0.elapsed().as_secs_f64() * 1e3;
     println!(
         "fresh 2k: total={total:.0}ms (prefill+32) -> ~{:.2}ms/tok; last ids {:?}",

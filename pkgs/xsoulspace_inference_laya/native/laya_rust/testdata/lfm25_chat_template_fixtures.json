@@ -1,0 +1,14 @@
+{
+  "provenance": {
+    "tool": "~/.venvs/mlx-ref/bin/python (transformers) AutoTokenizer.apply_chat_template(tokenize=False, add_generation_prompt=True)",
+    "snapshot": "/Users/antonio/.cache/huggingface/hub/models--LiquidAI--LFM2.5-1.2B-Instruct-MLX-4bit/snapshots/7ccafdb04c36936f4f1c4685198c6c9a40275932",
+    "snapshot_hash_dir": "7ccafdb04c36936f4f1c4685198c6c9a40275932",
+    "date": "2026-10-09",
+    "note": "Recorded verbatim from the cached LiquidAI LFM2.5-1.2B-Instruct-MLX-4bit tokenizer chat_template (tokenizer_config.json). The Dart renderer (laya_native_lfm2_chat_template.dart) must reproduce these strings exactly for its supported subset; any template behavior outside the recorded cases is a non-claim."
+  },
+  "cases": {
+    "system_user": "<|startoftext|><|im_start|>system\nYou are a precise search assistant.<|im_end|>\n<|im_start|>user\nWhat is binary search?<|im_end|>\n<|im_start|>assistant\n",
+    "think_stripped_multiturn": "<|startoftext|><|im_start|>user\nWhat is binary search?<|im_end|>\n<|im_start|>assistant\nBinary search halves the range each step.<|im_end|>\n<|im_start|>user\nAnd its complexity?<|im_end|>\n<|im_start|>assistant\nO(log n) comparisons per lookup.<|im_end|>\n<|im_start|>user\nWhen does it fail?<|im_end|>\n<|im_start|>assistant\n",
+    "two_tools": "<|startoftext|><|im_start|>system\nList of tools: [{\"name\": \"web_search\", \"description\": \"Searches the web.\", \"parameters\": {\"query\": {\"type\": \"string\"}}}, {\"name\": \"calculator\", \"description\": \"Evaluates arithmetic like a<b comparison.\", \"parameters\": {\"expression\": {\"type\": \"string\"}}}]<|im_end|>\n<|im_start|>user\nSearch the web for laya.<|im_end|>\n<|im_start|>assistant\n"
+  }
+}
