@@ -5,7 +5,7 @@ import 'package:async_parallel/async_parallel.dart';
 import 'package:test/test.dart';
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'package:xsoulspace_inference_openrouter/laya_server.dart';
-import 'package:xsoulspace_inference_laya/xsoulspace_inference_laya.dart';
+import 'package:xsoulspace_inference_mlx_native/xsoulspace_inference_mlx_native.dart';
 
 void main() {
   test(

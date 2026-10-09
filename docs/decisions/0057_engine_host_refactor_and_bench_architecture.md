@@ -1,9 +1,11 @@
 # ADR 0057: Engine-host refactor (dependency inversion), production-line palette, and the model bench architecture
 
 Date: 2026-10-09
-Status: R1+R2 Accepted and executed (2026-10-09); R3 (shim drop) and R4
-(mlx Swift-lane consolidation) remain rung-gated. The cheap-gap and bench
-increments of this ADR landed with the original proposal.
+Status: R1+R2 Accepted and executed (2026-10-09); R3 (shim drop)
+EXECUTED 2026-10-09 alongside ADR 0058; R4 (mlx Swift-lane
+consolidation) remains rung-gated. The cheap-gap and bench increments of
+this ADR landed with the original proposal; thresholds pinned 2026-10-09
+(second same-cast run recorded, below).
 Related: 0051 (engine), 0054 (composition API), 0055 (qwen-on-plan, hard laws), 0056 (landscape)
 
 ## Context
@@ -387,13 +389,63 @@ and the chat-template serving layer.
   (the emitted EOS literal is stripped; `finish_reason: 'stop'` is the
   stop evidence), template-rendered, EOS-stopped.
 
+### Thresholds PINNED (2026-10-09, second same-cast run recorded)
+
+The gate law above ("advisory until two runs are recorded") is now
+satisfied. Two same-cast runs, template+EOS cells, Apple M1, AC,
+same lane files and checkers:
+
+| cast | chat | decompression | swe | tools |
+|---|---|---|---|---|
+| LFM2.5-1.2B | 7/10, 7/10 | 9/10, 9/10 | 3/5, 3/5 | —, 5/5 |
+| Qwen3-0.6B | 4/10, 4/10 | 8/10, 9/10 | 1/5, 1/5 | —, 4/5 |
+
+(Tools launched after the first pair — the tools column starts with the
+first recorded run.) Totals reproduce within ±1 on one borderline cell
+(decomp-incident's 280-byte cap: 342 vs ≤280 across runs — generation
+variance, recorded as the known wobbly case). Pinned regression floors
+for the production casts:
+
+- **lfm2 template+EOS (production default): chat ≥ 6/10, decompression
+  ≥ 8/10, swe ≥ 2/5, tools ≥ 4/5.**
+- **qwen template+EOS (0.6B): chat ≥ 3/10, decompression ≥ 7/10,
+  swe ≥ 0/5, tools ≥ 3/5.**
+
+Speed stays advisory-only (cross-run tok/s is thermal-contaminated — the
+interleaved law above); only pass rates pin. The tools lane verdicts
+(measured 2026-10-09): LFM2.5 emits its native signature format
+(`<|tool_call_start|>[name(arg="v")]<|tool_call_end|>`) 5/5 including the
+no-tool discipline case; Qwen3-0.6B 4/5 — it answers one weather case
+directly instead of calling, the honest 0.6B miss.
+
+### The LFM2.5-2.6B row (ADR 0058 rung; recorded 2026-10-09, AC)
+
+`mlx-community/LFM2.5-2.6B-4bit` rides the LFM2 driver (ADR 0058 lists
+the four read-never-guess fixes) with its own template variant and an
+implicit cast budget law (the 2.6B ALWAYS reasons before its answer —
+5× the case cap, floored at 384 tokens; without it the reasoning eats
+standard budgets and the wire answers come back empty). First recorded
+row, template+EOS, all four lanes: **chat 6/10, decompression 2/10,
+swe 2/5, tools 5/5 at 19–33 tok/s** — with thinking-padded walls
+(p50 up to 33.5 s on decompression). Verdict: on this bench family the
+2.6B instruct underperforms the 1.2B instruct cast on EVERY lane while
+running ~2× slower — the palette keeps LFM2.5-1.2B as the production
+cast; the driver/template/budget infrastructure stays (correct and
+fixture-gated), the 2.6B is a recorded row, not an adopted cast.
+Non-claim: no long-context or reasoning-heavy lane where a 2.6B might
+shine exists in the suite yet.
+
 ## Non-claims
 
-- R3 (shim drop) and R4 (mlx Swift-lane consolidation) are NOT done —
-  consumers still import `xsoulspace_inference_laya` and are absorbed by
-  the R2 shim.
+- R3 (shim drop) EXECUTED 2026-10-09: the laya barrel exports only the
+  product surface; afm/experiments/optmem-side consumers import
+  `xsoulspace_inference_mlx_native` directly. R4 (mlx Swift-lane
+  consolidation) remains undecided — the Swift line stays
+  benchmark/reference only.
 - The mlx Swift-lane consolidation is explicitly undecided here (R4).
 - The speculative mechanism is landed and token-exact, but no
   profitable pair exists on this machine — the 0.6B→1.7B lane is
   measured 0.42–0.75×; no production route uses it.
-- Bench thresholds are unmeasured until two scorecards exist.
+- Bench thresholds were pinned 2026-10-09 from two recorded same-cast
+  runs (above); the tools thresholds carry a single recorded run each and
+  stay advisory until their second.

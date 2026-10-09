@@ -18,7 +18,7 @@ import 'dart:math';
 
 import 'package:http/http.dart' as http;
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
-import 'package:xsoulspace_inference_laya/xsoulspace_inference_laya.dart';
+import 'package:xsoulspace_inference_mlx_native/xsoulspace_inference_mlx_native.dart';
 import 'package:xsoulspace_inference_openrouter/laya_server.dart';
 
 Future<void> main(final List<String> args) async {

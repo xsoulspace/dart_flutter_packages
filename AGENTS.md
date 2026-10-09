@@ -53,6 +53,8 @@ the harness. See [ADR 0036](docs/decisions/0036_harness_product_relocated.md).
 
 - `pkgs/xsoulspace_inference_core`: [AGENTS.md](pkgs/xsoulspace_inference_core/AGENTS.md)
 - `pkgs/xsoulspace_inference_apple_foundation`: [AGENTS.md](pkgs/xsoulspace_inference_apple_foundation/AGENTS.md)
+- `pkgs/xsoulspace_inference_mlx_native`: [AGENTS.md](pkgs/xsoulspace_inference_mlx_native/AGENTS.md) — the MLX-native engine host (ADR 0057/0058)
+- `pkgs/xsoulspace_inference_laya`: [AGENTS.md](pkgs/xsoulspace_inference_laya/AGENTS.md) — the laya decision product (engine lives in mlx_native)
 
 ## Active Skills
 

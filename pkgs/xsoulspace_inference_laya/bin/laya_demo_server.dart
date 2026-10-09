@@ -8,7 +8,7 @@
 // inference. Swap in a real engine on LayaDecisionEngine for live weights.
 import 'dart:io';
 
-import 'package:xsoulspace_inference_laya/xsoulspace_inference_laya.dart';
+import 'package:xsoulspace_inference_mlx_native/xsoulspace_inference_mlx_native.dart';
 
 Future<void> main(final List<String> args) async {
   final port = args.isEmpty ? 8000 : int.parse(args.first);

@@ -1,12 +1,12 @@
 library;
 
-// R2 shim (ADR 0057): the engine host (the Rust cdylib, the composition
-// API, the model drivers with their FFI clients and chat servers, and the
-// decision seam they serve) moved to `xsoulspace_inference_mlx_native`.
-// This re-export keeps harness consumers (afm, experiments) compiling
-// UNCHANGED for one deprecation cycle; R3 drops this shim — import the
-// engine package directly for engine symbols.
-export 'package:xsoulspace_inference_mlx_native/xsoulspace_inference_mlx_native.dart';
+// R3 (ADR 0057, executed 2026-10-09): the engine re-export shim is
+// DROPPED. Import engine symbols from the engine package directly:
+//
+//   import 'package:xsoulspace_inference_mlx_native/xsoulspace_inference_mlx_native.dart';
+//
+// This package keeps only the laya product surface: the local serve
+// runtime composition and the DecisionProvider bound to it.
 
 // The laya product surface: the local serve runtime composition and the
 // DecisionProvider bound to it.
