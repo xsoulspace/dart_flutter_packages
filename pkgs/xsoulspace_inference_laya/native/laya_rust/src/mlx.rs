@@ -69,12 +69,143 @@ pub enum Dtype {
     Complex64 = 13,
 }
 
+/// Opaque handle types for the fast-metal-kernel API (fast.h).
 #[derive(Copy, Clone)]
 #[repr(C)]
+pub struct RawMetalKernel {
+    ctx: *mut c_void,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct RawMetalKernelConfig {
+    ctx: *mut c_void,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct RawVectorString {
+    ctx: *mut c_void,
+}
+
 pub struct OptionalFloat {
     pub value: f32,
     pub has_value: bool,
 }
+
+/// A source-based MSL kernel through `mlx_fast_metal_kernel` (R4): mlx
+/// compiles the source with the Metal driver at first use and runs it on
+/// the graph's stream — no sync penalty, standard dispatch. The same
+/// source compiles via `xcrun metal` at build time as a syntax gate
+/// (colocated metallib = the proof artifact).
+pub struct MetalKernel {
+    raw: RawMetalKernel,
+    #[allow(dead_code)]
+    name: String,
+}
+
+impl MetalKernel {
+    pub fn new(
+        name: &str,
+        input_names: &[&str],
+        output_names: &[&str],
+        source: &str,
+    ) -> MlxResult<MetalKernel> {
+        let c = |v: &str| std::ffi::CString::new(v).map_err(|_| MlxError(-970));
+        let name_c = c(name)?;
+        let src = c(source)?;
+        let hdr = c("")?;
+        let vec_str = |items: &[&str]| -> MlxResult<RawVectorString> {
+            let cstrings: Vec<_> = items.iter().map(|it| c(it)).collect::<MlxResult<_>>()?;
+            let ptrs: Vec<*const std::ffi::c_char> =
+                cstrings.iter().map(|cs| cs.as_ptr()).collect();
+            Ok(unsafe { mlx_vector_string_new_data(ptrs.as_ptr(), ptrs.len()) })
+        };
+        let ins = vec_str(input_names)?;
+        let outs = vec_str(output_names)?;
+        let raw = unsafe {
+            mlx_fast_metal_kernel_new(
+                name_c.as_ptr(),
+                ins,
+                outs,
+                src.as_ptr(),
+                hdr.as_ptr(),
+                true,
+                false,
+            )
+        };
+        Ok(MetalKernel { raw, name: name.to_string() })
+    }
+
+    /// One dispatch. `out_shapes`/`out_dtype` describe every output; grid
+    /// and threadgroup are total thread counts per axis.
+    #[allow(clippy::too_many_arguments)]
+    pub fn apply(
+        &self,
+        inputs: &[&Array],
+        out_shapes: &[&[usize]],
+        out_dtype: Dtype,
+        grid: (i32, i32, i32),
+        threadgroup: (i32, i32, i32),
+        s: Stream,
+    ) -> MlxResult<Vec<Array>> {
+        let config = unsafe { mlx_fast_metal_kernel_config_new() };
+        let mut chk_cfg = |r: i32| -> MlxResult<()> {
+            if r != 0 {
+                unsafe { mlx_fast_metal_kernel_config_free(config) };
+                return Err(MlxError(r));
+            }
+            Ok(())
+        };
+        for shape in out_shapes {
+            let shape_i: Vec<i32> = shape.iter().map(|d| *d as i32).collect();
+            chk_cfg(unsafe {
+                mlx_fast_metal_kernel_config_add_output_arg(
+                    config,
+                    shape_i.as_ptr(),
+                    shape_i.len(),
+                    out_dtype,
+                )
+            })?;
+        }
+        chk_cfg(unsafe { mlx_fast_metal_kernel_config_set_grid(config, grid.0, grid.1, grid.2) })?;
+        chk_cfg(unsafe {
+            mlx_fast_metal_kernel_config_set_thread_group(
+                config, threadgroup.0, threadgroup.1, threadgroup.2,
+            )
+        })?;
+        let vec = unsafe { mlx_vector_array_new() };
+        for a in inputs {
+            chk(unsafe { mlx_vector_array_append_value(vec, a.0) })?;
+        }
+        let mut outs = unsafe { std::mem::zeroed() };
+        let result = chk(unsafe {
+            mlx_fast_metal_kernel_apply(&mut outs, self.raw, vec, config, s.0)
+        });
+        unsafe { mlx_vector_array_free(vec) };
+        unsafe { mlx_fast_metal_kernel_config_free(config) };
+        result?;
+        let n = unsafe { mlx_vector_array_size(outs) };
+        let mut arrs = Vec::with_capacity(n);
+        for i in 0..n {
+            let mut a = unsafe { std::mem::zeroed() };
+            chk(unsafe { mlx_vector_array_get(&mut a, outs, i) })?;
+            arrs.push(Array(a));
+        }
+        unsafe { mlx_vector_array_free(outs) };
+        Ok(arrs)
+    }
+}
+
+impl Drop for MetalKernel {
+    fn drop(&mut self) {
+        unsafe { mlx_fast_metal_kernel_free(self.raw) };
+    }
+}
+
+// SAFETY: the raw handle is an mlx-owned C++ kernel object with no
+// thread affinity (same justification as CompiledClosure — applies run
+// under the engine's forward lock / stream discipline).
+unsafe impl Send for MetalKernel {}
+unsafe impl Sync for MetalKernel {}
 
 /// `mlx_optional_int` (optional.h): `{int value; bool has_value}` — the C
 /// value field is a 32-bit int.
@@ -350,6 +481,45 @@ extern "C" {
         strides_num: usize,
         s: RawStream,
     ) -> Status;
+    fn mlx_fast_metal_kernel_new(
+        name: *const std::ffi::c_char,
+        input_names: RawVectorString,
+        output_names: RawVectorString,
+        source: *const std::ffi::c_char,
+        header: *const std::ffi::c_char,
+        ensure_row_contiguous: bool,
+        atomic_outputs: bool,
+    ) -> RawMetalKernel;
+    fn mlx_fast_metal_kernel_free(cls: RawMetalKernel) -> Status;
+    fn mlx_fast_metal_kernel_config_new() -> RawMetalKernelConfig;
+    fn mlx_fast_metal_kernel_config_free(cls: RawMetalKernelConfig) -> Status;
+    fn mlx_fast_metal_kernel_config_add_output_arg(
+        cls: RawMetalKernelConfig,
+        shape: *const i32,
+        size: usize,
+        dtype: Dtype,
+    ) -> Status;
+    fn mlx_fast_metal_kernel_config_set_grid(
+        cls: RawMetalKernelConfig,
+        g1: i32,
+        g2: i32,
+        g3: i32,
+    ) -> Status;
+    fn mlx_fast_metal_kernel_config_set_thread_group(
+        cls: RawMetalKernelConfig,
+        t1: i32,
+        t2: i32,
+        t3: i32,
+    ) -> Status;
+    fn mlx_fast_metal_kernel_apply(
+        outputs: *mut RawVectorArray,
+        cls: RawMetalKernel,
+        inputs: RawVectorArray,
+        config: RawMetalKernelConfig,
+        stream: RawStream,
+    ) -> Status;
+    fn mlx_vector_string_new() -> RawVectorString;
+    fn mlx_vector_string_new_data(data: *const *const std::ffi::c_char, size: usize) -> RawVectorString;
     // fast.h
     fn mlx_fast_rms_norm(
         res: *mut RawArray,

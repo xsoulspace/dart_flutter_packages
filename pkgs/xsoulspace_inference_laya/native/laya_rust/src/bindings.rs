@@ -124,6 +124,11 @@ impl ShapeClass {
 pub enum Backend {
     /// The vendored mlx 0.32.2 op set — the baseline binding.
     MlxC,
+    /// R4's custom MSL kernel: weight-stationary skinny GEMM (M ≤ 128,
+    /// fp16, f32 accumulate), source in `kernels/skinny_gemm.metal`,
+    /// xcrun-compiled as a build gate, dispatched on the graph's stream
+    /// through `mlx_fast_metal_kernel`.
+    SkinnyGemmMsl,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -144,13 +149,24 @@ pub struct BindingTable {
 
 impl BindingTable {
     /// The baseline: every key resolves to mlx-c. Rungs add rows via
-    /// [`BindingTable::install`].
+    /// [`BindingTable::install`]. LAYA_MSL=1 (the R4 gate's opt-in)
+    /// installs the skinny-GEMM MSL row so the parity leg exercises it;
+    /// the default table keeps mlx-c until the ≥1.3× µbench gate passes.
     pub fn baseline() -> BindingTable {
-        BindingTable {
+        let mut table = BindingTable {
             chip: ChipFamily::detect(),
             rows: HashMap::new(),
             fallback: Backend::MlxC,
+        };
+        if std::env::var_os("LAYA_MSL").is_some_and(|v| !v.is_empty()) {
+            table.install(
+                "matmul",
+                ShapeClass::SkinnyGemm,
+                Dtype::Float16,
+                Backend::SkinnyGemmMsl,
+            );
         }
+        table
     }
 
     pub fn chip(&self) -> Option<ChipFamily> {
@@ -198,7 +214,65 @@ pub fn eval(node: &Node, ins: &[&Array], table: &BindingTable, s: Stream) -> Mlx
     let backend = table.resolve(node.op.kind(), shape, dtype);
     match backend {
         Backend::MlxC => mlxc_eval(&node.op, ins, s),
+        Backend::SkinnyGemmMsl => skinny_gemm_eval(&node.op, ins, s),
     }
+}
+
+/// The skinny-GEMM MSL kernel's MSL source (xcrun-compiles clean; see
+/// tool/build_msl.sh for the build gate).
+const SKINNY_GEMM_MSL: &str = include_str!("kernels/skinny_gemm.metal");
+
+/// The R4 kernel binding for (matmul × SkinnyGemm × f16). C = A × B with
+/// B already the plan's post-transpose [K, N] view — no materialized
+/// transpose, weight-stationary streaming along K.
+fn skinny_gemm_eval(op: &Op, ins: &[&Array], s: Stream) -> MlxResult<Vec<Array>> {
+    use std::sync::OnceLock;
+    static KERNEL: OnceLock<Option<crate::mlx::MetalKernel>> = OnceLock::new();
+    if !matches!(op, Op::Matmul) {
+        return Err(MlxError(-975));
+    }
+    let [a, b] = ins else { return Err(MlxError(-978)) };
+
+    let m: usize = (0..a.ndim().saturating_sub(1)).map(|d| a.dim(d as i32)).product();
+    let k = a.dim(a.ndim() as i32 - 1) as usize;
+    let n = b.dim(1) as usize;
+
+    let kernel = KERNEL.get_or_init(|| {
+        crate::mlx::MetalKernel::new(
+            "laya_skinny_gemm",
+            &["a", "b", "mnk"],
+            &["out"],
+            SKINNY_GEMM_MSL,
+        )
+        .map(Some)
+        .unwrap_or_else(|e| {
+            eprintln!("skinny_gemm kernel init failed: {e:?}");
+            None
+        })
+    });
+    let Some(kernel) = kernel else { return Err(MlxError(-974)) };
+
+    let mnk = Array::from_data_i32(&[m as i32, n as i32, k as i32], &[3])?;
+    let ins_all: Vec<&Array> = vec![a, b, &mnk];
+    // Grid = total threads (flat 1-D), one 256-wide threadgroup per
+    // (m, n-tile); the kernel body derives (m, n) from the flat group id.
+    let n_tiles = n.div_ceil(256);
+    let total_threads = m * n_tiles * 256;
+    let outs = kernel.apply(
+        &ins_all,
+        &[&[m, n]],
+        crate::mlx::Dtype::Float16,
+        (total_threads as i32, 1, 1),
+        (256, 1, 1),
+        s,
+    )?;
+    // Restore the batch dims the plan's matmul contract promises (A's
+    // leading dims + N): flatten to [M, N] ran through the kernel; the
+    // plan expects [B, L, N] — reshape from the row-major [M, N] buffer.
+    let mut shape: Vec<usize> =
+        (0..a.ndim().saturating_sub(1)).map(|d| a.dim(d as i32) as usize).collect();
+    shape.push(n);
+    Ok(vec![outs.into_iter().next().ok_or(MlxError(-978))?.reshape(&shape, s)?])
 }
 
 /// The mlx-c binding: the exact op calls the imperative forward made
