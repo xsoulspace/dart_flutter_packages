@@ -56,7 +56,8 @@ void main(final List<String> args) async {
   }
 
   late final Uri base;
-  LayaQwenChatServer? server;
+  // Both chat servers expose start/stop/url (no shared supertype).
+  dynamic server;
   if (endpointArg != null) {
     base = Uri.parse(endpointArg);
     final health = await http.get(base.replace(path: '/health'));
@@ -64,17 +65,21 @@ void main(final List<String> args) async {
       _fail('endpoint $base /health returned ${health.statusCode}');
     }
   } else {
-    if (inProcess != 'qwen') {
-      _fail("in-process supports 'qwen' (the lfm2 chat server arrives with "
-          'the chat-template rung; --endpoint covers any wire server)');
+    if (inProcess != 'qwen' && inProcess != 'lfm2') {
+      _fail("in-process supports 'qwen' and 'lfm2' (the lfm2 route renders "
+          'the chat template and stops at <|im_end|>; --endpoint covers any '
+          'wire server)');
     }
     // The bundled native line: load + serve in-process, no python.
-    server = LayaQwenChatServer(
-      engine: await NativeQwenTextEngine.load(),
-    );
+    // (The two chat servers share the wire contract, not a supertype.)
+    if (inProcess == 'qwen') {
+      server = LayaQwenChatServer(engine: await NativeQwenTextEngine.load());
+    } else {
+      server = LayaLfm2ChatServer(engine: await NativeLfm2TextEngine.load());
+    }
     await server.start();
     base = server.url;
-    stderr.writeln('in-process native line at ${server.url}');
+    stderr.writeln('in-process native line ($inProcess) at ${server.url}');
   }
 
   final results = <_LaneResult>[];
