@@ -221,6 +221,32 @@ impl KvCache {
         &self.layers
     }
 
+    /// Pre-grows every layer's buffers to hold `total` tokens (ADR 0055
+    /// spike fix): a mid-decode growth costs a measured ~+20 ms step, and
+    /// callers that know their full window up front (generate_greedy does)
+    /// should move that cost into the prefill phase. Allocation only —
+    /// padding is never read, so numerics are untouched.
+    pub fn reserve(
+        &mut self,
+        table: &BindingTable,
+        kv_heads: usize,
+        head_dim: usize,
+        total: usize,
+        s: Stream,
+    ) -> MlxResult<()> {
+        let prev = self.offset;
+        let n = total.saturating_sub(prev);
+        if n == 0 {
+            return Ok(());
+        }
+        let bhd = (1, kv_heads, head_dim);
+        for (li, slot) in self.layers.iter_mut().enumerate() {
+            Qwen3::ensure_capacity(table, &format!("cache.k{li}"), &mut slot.k, prev, n, bhd, s)?;
+            Qwen3::ensure_capacity(table, &format!("cache.v{li}"), &mut slot.v, prev, n, bhd, s)?;
+        }
+        Ok(())
+    }
+
     pub fn new(layer_count: usize) -> KvCache {
         KvCache {
             layers: (0..layer_count)
@@ -370,6 +396,12 @@ impl KvCache {
 }
 
 impl Qwen3 {
+    /// The binding table (public read: drivers that drive the cache —
+    /// e.g. the decode bench's reserve A/B — need it for `KvCache::reserve`).
+    pub fn table(&self) -> &BindingTable {
+        &self.table
+    }
+
     /// Loads config.json + model.safetensors from an HF snapshot directory.
     pub fn load(dir: &Path) -> MlxResult<Qwen3> {
         let cfg_raw: ConfigJson = serde_json::from_str(
@@ -1163,6 +1195,14 @@ impl Qwen3 {
             return Err(MlxError(-978));
         }
         let mut cache = KvCache::new(self.cfg.layers);
+        // Reserve the WHOLE decode window up front (ADR 0055 spike fix):
+        // the prompt + generation length is known here, and a mid-decode
+        // cache growth costs a measured ~+20 ms step (buffer realloc +
+        // full-cache concat across 28 layers — steps 2049/2305/2561 in the
+        // 600-step trace). Padding is never read, so this changes
+        // allocation only, never numerics; the one growth lands inside the
+        // prefill phase, where its latency belongs.
+        cache.reserve(&self.table, self.cfg.kv_heads, self.cfg.head_dim, prompt_ids.len() + max_tokens, s)?;
         let mut out: Vec<i32> = Vec::with_capacity(prompt_ids.len() + max_tokens);
         out.extend_from_slice(prompt_ids);
 
