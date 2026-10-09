@@ -389,3 +389,29 @@ Observed (ADR 0032 protocol — appended as rungs land):
   recorded). Tests: in-process greedy ids equal the fixture prefix, and the
   wire serves health + completions with usage counts; both skip honestly
   without the dylib/snapshot.
+- **R3b closed (2026-10-09, score/noul sensitivity study → CALIBRATION gate
+  GREEN at a reduced scope — alternate encoder layers at group 32,
+  63/63 @ 0.0164):** the study the RED entry called for ran on
+  `LAYA_DEBUG_DUMP` stage dumps (fp16 vs q8, all 63 fixture forwards,
+  9198 stages per leg). Findings: (1) the accumulated error is ZERO-MEAN —
+  per-layer |mean error|/rms ≤ 0.02 everywhere, so the recorded
+  "systematic shift" is born at the scorer head, not in biased weights, and
+  bias correction is dead; (2) the deep-layer error jump (h err 1.2% → 4.9%
+  at L19) SURVIVES fully exempting layers 18–19 from q8 — their stage
+  errors move <5% — so drift is depth amplification of TOTAL accumulated
+  quantization noise and tracks the quantized weight fraction, not any
+  injection site (the earlier "stable across scopes" was this effect);
+  (3) measured scope scaling beats √: full-encoder g64 61/63 (0.039), 
+  alternate layers g64 62/63 (0.024), alternate layers g32 **63/63,
+  max prob/output drift 0.0164 ≤ 0.02** — the shipping q8 scope. Mechanics
+  paid for: `QuantTriple` now carries its pack-time `group` (the plan node
+  must dequantize with the same value); `QuantTriple`/`Op::QuantizedMatmul`
+  group threading is the only ABI change. **Latency verdict (honest,
+  `tool/q8_bench.dart`, interleaved fp16/q8, B=1): NO win measured** — q8
+  p50 within noise of fp16 (166–196 ms vs 159–171 ms over thermal drift);
+  the decision forward is compute-bound at B=1, not weights-bandwidth-bound,
+  so the ladder's "weights stream 12→6 ms" floor stays an ESTIMATE and the
+  q8 value proposition is resident-weight bytes, not decision latency.
+  `LAYA_Q8` stays opt-in; the default table remains the fp16/bf16
+  composition (all default gates re-verified green: test_fresh 63/63 @ 0.0
+  / 1.5e-8, full dart suite 23 passing).

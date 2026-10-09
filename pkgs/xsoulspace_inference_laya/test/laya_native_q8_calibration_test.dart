@@ -4,8 +4,9 @@ import 'dart:io';
 import 'package:test/test.dart';
 import 'package:xsoulspace_inference_laya/xsoulspace_inference_laya.dart';
 
-/// ADR 0054 R3 CALIBRATION gate: the engine with LAYA_Q8=1 (every linear
-/// affine-quantized to 8-bit at load) must hold
+/// ADR 0054 R3 CALIBRATION gate: the engine with LAYA_Q8=1 (alternate
+/// encoder layers affine-quantized to 8-bit at group 32 — the scope the
+/// 2026-10-09 sensitivity study landed, see into_q8) must hold
 ///   - argmax agreement on every golden question (63/63),
 ///   - choice-probability drift ≤ 2e-2 vs the fp16 fixture,
 ///   - score/noul drift < 2e-2 (the fixture's own tolerance),

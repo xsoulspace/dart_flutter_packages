@@ -95,7 +95,7 @@ impl<'a> Composer<'a> {
             let wb = self.weight(&format!("{name}.q8_biases"), &q.biases);
             let mm = self.push(
                 group,
-                Op::QuantizedMatmul { group_size: 64, bits: 8, transpose: true },
+                Op::QuantizedMatmul { group_size: q.group, bits: 8, transpose: true },
                 &format!("{name}.q8_matmul"),
                 &[x, at(wq), at(ws), at(wb)],
             );
@@ -360,6 +360,9 @@ pub struct QuantTriple {
     pub w: Array,
     pub scales: Array,
     pub biases: Array,
+    /// Group size the triple was packed at — the plan node must dequantize
+    /// with the same value or every weight reads as garbage.
+    pub group: i32,
 }
 
 struct EncoderAttention {
@@ -599,28 +602,40 @@ impl LayaModel {
             // the group size; the head's in_proj [_, 1028] (hidden + 4
             // concatenated features) is not — that linear stays fp16 and
             // the calibration gate validates the mixed-precision forward.
-            // Standard affine q8 group 64. The CALIBRATION gate (63/63,
-            // drift ≤ 0.02) currently FAILS on two marginal score/noul
-            // scalars (~0.026/0.039, stable across g64/g32 and
-            // encoder-only/full scopes — a systematic shift, not weight
-            // noise). LAYA_Q8 stays opt-in until that analysis lands;
-            // ADR 0054 R3 records the red gate.
-            if l.weight.dim(1) % 64 != 0 {
+            if l.weight.dim(1) % 32 != 0 {
                 return Ok(());
             }
-            let outs = Array::quantize(&l.weight, 64, 8, s)?;
+            let outs = Array::quantize(&l.weight, 32, 8, s)?;
             l.quantized = Some(QuantTriple {
                 w: outs[0].identity(s)?,
                 scales: outs[1].identity(s)?,
                 biases: outs[2].identity(s)?,
+                group: 32,
             });
             Ok(())
         }
-        // The encoder holds nearly all the weight mass (the bandwidth win);
-        // the decision-head and scalar-regression linears are tiny and sit
-        // exactly where the calibration gate measures (score/noul drift
-        // 0.026/0.039 at gate 0.02 when quantized) — they stay fp16.
-        for layer in &mut self.encoder.layers {
+        // The encoder holds nearly all the weight mass; the decision-head
+        // and scalar-regression linears are tiny and sit exactly where the
+        // calibration gate measures — they stay fp16.
+        //
+        // 2026-10-09 sensitivity study (LAYA_DEBUG_DUMP stage diff, fp16 vs
+        // q8 over the 63 fixture forwards, ADR 0054 R3b): accumulated
+        // stream error is zero-mean (per-layer |mean|/rms ≤ 0.02 — no bias
+        // to correct) and the deep-layer error jump (h err 1.2% → 4.9% at
+        // L19) SURVIVES exempting layers 18–19 from q8 entirely (<5% stage
+        // change) — drift is depth amplification of total accumulated
+        // quantization noise, so it tracks the quantized weight fraction,
+        // not any injection site. Scope experiments: full-encoder g64
+        // 61/63 (noul 0.039, score 0.026), alternate layers g64 62/63
+        // (0.024), alternate layers g32 63/63 @ 0.0164 ✓ — this scope.
+        // Latency verdict (tool/q8_bench.dart, interleaved, B=1): no win —
+        // q8 p50 within noise of fp16 (the decision forward is
+        // compute-bound, not weights-bandwidth-bound); the q8 value is
+        // resident-weight bytes, not decision latency.
+        for (i, layer) in self.encoder.layers.iter_mut().enumerate() {
+            if i % 2 == 0 {
+                continue;
+            }
             q8(&mut layer.attn.wqkv, s)?;
             q8(&mut layer.attn.wo, s)?;
             q8(&mut layer.mlp.wi, s)?;
