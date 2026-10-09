@@ -6,7 +6,7 @@
 //! not committed. RUNG LAW: a parity failure is a gate failure; record it in
 //! the ADR, never weaken the fixture.
 
-use laya_native::bpe::Qwen3Tokenizer;
+use laya_native::bpe::ByteLevelBpe;
 use laya_native::mlx;
 use laya_native::qwen::Qwen3;
 use serde::Deserialize;
@@ -80,7 +80,7 @@ fn bpe_matches_reference_probes() {
         eprintln!("skipping: Qwen3-0.6B-4bit snapshot absent");
         return;
     };
-    let tok = Qwen3Tokenizer::load(&snap).expect("tokenizer loads");
+    let tok = ByteLevelBpe::load(&snap).expect("tokenizer loads");
     for (text, want) in &fx.tokenizer_probes {
         let got = tok.encode(text).unwrap_or_else(|e| panic!("encode {text:?}: {e}"));
         assert_eq!(
@@ -115,7 +115,7 @@ fn greedy_decode_matches_reference() {
         laya_native::mlx::set_metallib_path(&metallib);
     }
 
-    let tok = Qwen3Tokenizer::load(&snap).expect("tokenizer loads");
+    let tok = ByteLevelBpe::load(&snap).expect("tokenizer loads");
     let prompt_ids = tok
         .encode(&fx.prompt)
         .expect("prompt encodes")

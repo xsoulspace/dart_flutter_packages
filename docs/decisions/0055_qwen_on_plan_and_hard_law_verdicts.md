@@ -212,4 +212,50 @@ next rung-sized increment after P0–P2, product-demand-gated.
   update's return value directly. Dart FFI for LFM2 = the follow-up
   increment (the qwen FFI pattern exists); not this rung.
 
+- **FFI rung (2026-10-09) — Dart FFI for LFM2 landed; the byte-level BPE
+  generalized.** `bpe.rs`: `Qwen3Tokenizer` → `ByteLevelBpe` (honest name
+  — it was always a generic GPT-2-style byte-level BPE), plus
+  `load_tokenizer_json` (LFM2.5 embeds vocab+merges inside
+  tokenizer.json; merge entries arrive as `"a b"` strings OR `[a, b]`
+  pairs), the pre-tokenizer's B3 parameterized (`\p{N}{1,digit_run}`:
+  qwen 1, LFM2.5 3), and a normalizer flag (qwen NFC; LFM2.5 declares
+  none). New natives `laya_native_lfm2_load/generate/unload` (the qwen
+  handle/JSON conventions; TEXT prompts get `<|startoftext|>` id 1
+  prepended natively — the fixture's pinned prompt_ids start with it;
+  explicit `prompt_ids` ride verbatim). Dart: `NativeLfm2TextEngine` +
+  `resolveLfm2SnapshotDir` (`LFM2_SNAPSHOT` env → HF hub cache, never
+  downloads). Gates: `lfm2_tokenizer_matches_reference` (hand-rolled
+  encode == the pinned reference ids — the fixture's empty
+  tokenizer_probes closed), Dart client 2/2 (fixture greedy prefix
+  through the full text→tokenize→generate→decode path; verbatim
+  prompt_ids), qwen client 2/2 unchanged, full dart suite 25 pass / 3
+  skip, release parity battery 7/7 (lfm2 2, qwen3 3, plan 2).
+  Non-claims: `generate_greedy` has NO EOS stop (continues through
+  `<|endoftext|>`, matching the mlx_lm reference token stream — a chat
+  route must add stopping first); LFM2-v1 config dialects
+  (`full_attn_idxs`, e.g. LFM2-700M) do NOT load — LFM2.5-style
+  `layer_types` only; no chat template (raw completion, same non-claim
+  as the qwen client).
+- **Consolidated bench (2026-10-09, `model_bench` bin, release, Apple
+  M1, AC) — the served-model matrix in one tool.** load s | prefill-512
+  tok/s | decode tok/s (p50 ms) | decode@2k tok/s (p50 ms):
+  Qwen3-0.6B q4: 0.16 | 1363 | 84.9 (10.7) | 67.7 (14.4). Qwen3-0.6B
+  bf16: 1.01 | 1590 | 38.7 (25.5) | 33.7 (28.8). Qwen3-1.7B q4: 0.66 |
+  468 | 44.9 (22.1) | 39.2 (25.3). LFM2.5-1.2B q4: 0.50 | 651 | 70.1
+  (13.8) | 64.3 (15.0). LFM2-700M: skip (config dialect, non-claim
+  above). Laya decision route: ADR 0051 AC evidence stands (B=1 p50
+  96.5 ms/decision; R1 A/B 1.79×); parity re-proven this session
+  (test_fresh 63/63 @ 0.0/1.5e-8). Readouts: q4 ≈ 2× bf16 decode at
+  equal size (dequant-in-kernel wins on M1 bandwidth); LFM2.5's context
+  curve is FLAT (70→64 tok/s fresh→2k — conv layers are O(1)/token and
+  only 6 of 16 blocks carry KV) vs qwen's 85→68; 1.7B ≈ 0.53× of 0.6B
+  (decode is bandwidth-linear in params). Same-run comparability only:
+  absolute tok/s vary with machine state (the ladder's generate-path
+  numbers — qwen ~50–55, lfm2 49–53 — carry argmax/decode-loop overhead
+  under different states). BENCH LESSON (paid for):
+  `mlx_synchronize` waits for SUBMITTED work only; an unevaluated lazy
+  graph must `.eval()` first — otherwise the first "measured" decode
+  step silently swallows the whole prefill (mean ≫ p50 with prefill ≈ 0
+  is the tell).
+
 <!-- EVIDENCE:APPEND -->

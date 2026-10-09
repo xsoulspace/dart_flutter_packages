@@ -99,3 +99,39 @@ fn lfm2_greedy_matches_reference_and_gate() {
     }
     let _ = Dtype::Float32;
 }
+
+/// The FFI rung's tokenizer gate: the hand-rolled byte-level BPE must
+/// reproduce the reference tokenizer ids for the fixture prompt (the
+/// fixture itself carries empty tokenizer_probes — this test is the
+/// probe). prompt_ids[0] is <|startoftext|> (BOS), added by generate,
+/// not by encode.
+#[test]
+fn lfm2_tokenizer_matches_reference() {
+    let Some(fx) = fixture() else {
+        eprintln!("skipping: lfm2 parity fixture absent");
+        return;
+    };
+    let Some(snap) = snapshot_dir(&fx) else {
+        eprintln!("skipping: LFM2 snapshot absent");
+        return;
+    };
+    let tok = laya_native::bpe::ByteLevelBpe::load_tokenizer_json(&snap)
+        .expect("tokenizer.json loads");
+    let raw = tok.encode(&fx.prompt).expect("encode");
+    let want: Vec<u32> = fx.prompt_ids[1..].iter().map(|&i| i as u32).collect();
+    assert_eq!(
+        fx.prompt_ids.first(),
+        Some(&1),
+        "fixture prompt_ids should start with <|startoftext|>"
+    );
+    assert_eq!(
+        raw, want,
+        "raw encode diverges from reference ids (BOS excluded)\n got  {raw:?}\n want {:?}",
+        &fx.prompt_ids[1..]
+    );
+    // Decode round trip over the generated suffix.
+    let text = tok.decode(&fx.greedy_ids.iter().map(|&i| i as u32).collect::<Vec<_>>())
+        .expect("decode");
+    assert!(!text.is_empty());
+    println!("lfm2 tokenizer parity: {} ids round trip; sample {text:?}", raw.len());
+}

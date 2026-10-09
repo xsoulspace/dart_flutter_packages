@@ -310,6 +310,13 @@ fn grow(
 }
 
 impl Lfm2 {
+    /// The binding table (public read: drivers that drive the cache —
+    /// e.g. the model bench's whole-window reserve — need it for
+    /// `Lfm2Cache::reserve`), mirroring `Qwen3::table`.
+    pub fn table(&self) -> &crate::bindings::BindingTable {
+        &self.table
+    }
+
     pub fn load(dir: &Path) -> MlxResult<Lfm2> {
         // The conv-weight sanitize (python's Model.sanitize) needs a stream;
         // this engine is GPU-only anyway.

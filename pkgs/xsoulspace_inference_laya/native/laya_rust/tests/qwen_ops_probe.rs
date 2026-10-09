@@ -163,7 +163,7 @@ fn decode_2k_fresh() {
     }
     let s = mlx::gpu().unwrap();
     let snap = snapshot();
-    let tok = laya_native::bpe::Qwen3Tokenizer::load(&snap).unwrap();
+    let tok = laya_native::bpe::ByteLevelBpe::load(&snap).unwrap();
     let model = Qwen3::load(&snap).unwrap();
     let fx: serde_json::Value = serde_json::from_str(
         &std::fs::read_to_string(

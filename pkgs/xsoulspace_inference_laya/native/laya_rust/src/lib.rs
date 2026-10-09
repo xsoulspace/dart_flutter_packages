@@ -352,7 +352,7 @@ pub extern "C" fn laya_native_unload(handle: i64) {
 
 struct QwenEngine {
     model: Arc<crate::qwen::Qwen3>,
-    tokenizer: crate::bpe::Qwen3Tokenizer,
+    tokenizer: crate::bpe::ByteLevelBpe,
 }
 
 static QWEN_REGISTRY: OnceLock<Mutex<HashMap<i64, Arc<QwenEngine>>>> = OnceLock::new();
@@ -388,7 +388,7 @@ pub extern "C" fn laya_native_qwen_load(model_dir: *const c_char) -> i64 {
         Ok(m) => m,
         Err(_) => return -2,
     };
-    let tokenizer = match crate::bpe::Qwen3Tokenizer::load(&dir) {
+    let tokenizer = match crate::bpe::ByteLevelBpe::load(&dir) {
         Ok(t) => t,
         Err(_) => return -2,
     };
@@ -460,6 +460,119 @@ pub extern "C" fn laya_native_qwen_generate(handle: i64, request_json: *const c_
 #[no_mangle]
 pub extern "C" fn laya_native_qwen_unload(handle: i64) {
     qwen_registry().lock().unwrap().remove(&handle);
+}
+
+// ---- lfm2 text engine (ADR 0055 LFM2 rung) — same handle/JSON conventions ----
+
+struct Lfm2Engine {
+    model: Arc<crate::lfm2::Lfm2>,
+    tokenizer: crate::bpe::ByteLevelBpe,
+    /// LFM2.5 prepends <|startoftext|> (id 1) to raw text (the parity
+    /// fixture's pinned prompt_ids start with it); qwen has no BOS.
+    bos: u32,
+}
+
+static LFM2_REGISTRY: OnceLock<Mutex<HashMap<i64, Arc<Lfm2Engine>>>> = OnceLock::new();
+static LFM2_NEXT_HANDLE: AtomicI64 = AtomicI64::new(1);
+
+fn lfm2_registry() -> &'static Mutex<HashMap<i64, Arc<Lfm2Engine>>> {
+    LFM2_REGISTRY.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+#[no_mangle]
+pub extern "C" fn laya_native_lfm2_load(model_dir: *const c_char) -> i64 {
+    if model_dir.is_null() {
+        return -1;
+    }
+    pin_metallib_colocated();
+    let dir = PathBuf::from(unsafe { CStr::from_ptr(model_dir) }.to_string_lossy().to_string());
+    let model = match crate::lfm2::Lfm2::load(&dir) {
+        Ok(m) => m,
+        Err(_) => return -2,
+    };
+    let tokenizer = match crate::bpe::ByteLevelBpe::load_tokenizer_json(&dir) {
+        Ok(t) => t,
+        Err(_) => return -3,
+    };
+    let handle = LFM2_NEXT_HANDLE.fetch_add(1, Ordering::SeqCst);
+    lfm2_registry().lock().unwrap().insert(
+        handle,
+        Arc::new(Lfm2Engine {
+            model: Arc::new(model),
+            tokenizer,
+            bos: 1,
+        }),
+    );
+    handle
+}
+
+/// Greedy text generation. Request: `{"prompt": "…", "max_tokens": 64}` (or
+/// `prompt_ids`, used verbatim — no BOS added). Response:
+/// `{"ids": [...], "text": "…", "prompt_ids": [...]}` or `{"error": "…"}`.
+#[no_mangle]
+pub extern "C" fn laya_native_lfm2_generate(handle: i64, request_json: *const c_char) -> *mut c_char {
+    if request_json.is_null() {
+        return fail("missing request");
+    }
+    let engine = lfm2_registry().lock().unwrap().get(&handle).map(Arc::clone);
+    let Some(engine) = engine else {
+        return fail("unknown handle");
+    };
+    let request: QwenGenerateRequest = match serde_json::from_slice(unsafe {
+        CStr::from_ptr(request_json)
+    }
+    .to_bytes())
+    {
+        Ok(r) => r,
+        Err(_) => return fail("unreadable request JSON"),
+    };
+    let _guard = forward_lock().lock().unwrap();
+    let stream = match gpu() {
+        Ok(stream) => stream,
+        Err(e) => return fail(&format!("stream initialization failed: mlx status {}", e.0)),
+    };
+    let had_explicit_ids = request.prompt_ids.is_some();
+    let mut prompt_ids = if let Some(ids) = request.prompt_ids {
+        ids
+    } else {
+        match &request.prompt {
+            Some(text) => match engine.tokenizer.encode(text) {
+                Ok(ids) => ids.into_iter().map(|i| i as i32).collect(),
+                Err(e) => return fail(&format!("tokenize failed: {e}")),
+            },
+            None => return fail("request needs prompt or prompt_ids"),
+        }
+    };
+    if !had_explicit_ids {
+        prompt_ids.insert(0, engine.bos as i32);
+    }
+    match engine
+        .model
+        .generate_greedy(&prompt_ids, request.max_tokens, stream)
+    {
+        Ok(ids) => {
+            let text = engine
+                .tokenizer
+                .decode(&ids[prompt_ids.len()..].iter().map(|&i| i as u32).collect::<Vec<_>>())
+                .unwrap_or_default();
+            let payload = serde_json::json!({
+                "prompt_ids": prompt_ids,
+                "ids": ids,
+                "text": text,
+            })
+            .to_string();
+            match CString::new(payload) {
+                Ok(c) => c.into_raw(),
+                Err(_) => fail("encode"),
+            }
+        }
+        Err(e) => fail(&format!("generate failed: mlx status {}", e.0)),
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn laya_native_lfm2_unload(handle: i64) {
+    lfm2_registry().lock().unwrap().remove(&handle);
 }
 
 /// NFC (canonical composed) normalization — the checkpoint tokenizer's
@@ -836,7 +949,7 @@ mod perf_tests {
             return;
         };
         let s = crate::mlx::gpu().unwrap();
-        let tok = crate::bpe::Qwen3Tokenizer::load(&snap).unwrap();
+        let tok = crate::bpe::ByteLevelBpe::load(&snap).unwrap();
         let model = crate::qwen::Qwen3::load(&snap).unwrap();
 
         let fx: serde_json::Value = serde_json::from_str(

@@ -1,14 +1,16 @@
-//! Byte-level BPE tokenizer for Qwen3 (ADR 0054 R2): vocab.json + merges.txt
-//! + the tokenizer.json pre-tokenizer, hand-rolled because the reference
-//! `tokenizers` crate is not in the offline cargo registry.
+//! Byte-level BPE tokenizer (ADR 0054 R2 qwen, ADR 0055 LFM2 rung): a
+//! hand-rolled GPT-2-style byte-level BPE, because the reference
+//! `tokenizers` crate is not in the offline cargo registry. Two snapshot
+//! layouts load: Qwen3's vocab.json + merges.txt (+ added tokens from
+//! tokenizer.json), and tokenizer.json-embedded vocab/merges (LFM2.5).
 //!
-//! The pre-tokenizer implements the exact alternation from this model's
-//! tokenizer.json (checked against the snapshot at load parity time):
+//! The pre-tokenizer implements the GPT-4-family alternation shared by both
+//! checkpoints (checked against the snapshots at load parity time):
 //!
 //! ```text
 //! (?i:'s|'t|'re|'ve|'m|'ll|'d)
 //! | [^\r\n\p{L}\p{N}]?\p{L}+
-//! | \p{N}
+//! | \p{N}{1,digit_run}      (qwen: 1, LFM2.5: 3)
 //! |  ?[^\s\p{L}\p{N}]+[\r\n]*
 //! | \s*[\r\n]+
 //! | \s+(?!\S)
@@ -24,15 +26,16 @@
 //! derived Alphabetic property (a slight superset of `\p{L}`) and
 //! `char::is_whitespace()` is the White_Space property (python `\s` also
 //! takes \x1c–\x1f). Exotic characters may branch differently; the parity
-//! fixture probes cover the common branches. Normalization is NFC (matching
-//! the tokenizer.json normalizer).
+//! fixtures probe the common branches. Qwen3 normalizes NFC (its
+//! tokenizer.json normalizer); LFM2.5 declares no normalizer and is loaded
+//! with normalization off.
 
 use std::collections::HashMap;
 use std::path::Path;
 
 use unicode_normalization::UnicodeNormalization;
 
-pub struct Qwen3Tokenizer {
+pub struct ByteLevelBpe {
     vocab: HashMap<String, u32>,
     id_to_token: Vec<String>,
     /// Byte-unicode space, rank = merge priority.
@@ -42,22 +45,81 @@ pub struct Qwen3Tokenizer {
     added_by_id: HashMap<u32, String>,
     byte_to_char: [char; 256],
     char_to_byte: HashMap<char, u8>,
+    /// B3 digit-run length: `\p{N}{1,digit_run}` (qwen 1, LFM2.5 3).
+    digit_run: usize,
+    /// Qwen3's tokenizer.json declares the NFC normalizer; LFM2.5 declares
+    /// none and must not normalize.
+    normalize_nfc: bool,
 }
 
-impl Qwen3Tokenizer {
-    /// Loads from an HF snapshot directory (vocab.json, merges.txt,
-    /// tokenizer.json for the added-token list).
-    pub fn load(dir: &Path) -> Result<Qwen3Tokenizer, String> {
+/// Shared tail of both loaders: added tokens, byte tables, reverse vocab.
+fn finish(
+    vocab: HashMap<String, u32>,
+    merges: HashMap<(String, String), u32>,
+    added_list: &serde_json::Value,
+    digit_run: usize,
+    normalize_nfc: bool,
+) -> ByteLevelBpe {
+    let mut added: Vec<(String, u32)> = Vec::new();
+    let mut added_by_id: HashMap<u32, String> = HashMap::new();
+    if let Some(list) = added_list.get("added_tokens").and_then(|v| v.as_array()) {
+        for t in list {
+            let id = t.get("id").and_then(|v| v.as_u64()).unwrap_or_default() as u32;
+            let content = t
+                .get("content")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default()
+                .to_string();
+            if !content.is_empty() {
+                added.push((content.clone(), id));
+                added_by_id.insert(id, content);
+            }
+        }
+    }
+    // Longest-first so "<|im_start|>" wins over any prefix.
+    added.sort_by(|a, b| b.0.chars().count().cmp(&a.0.chars().count()));
+
+    let (byte_to_char, char_to_byte) = byte_unicode_tables();
+
+    let mut max_id = 0usize;
+    for id in vocab.values() {
+        max_id = max_id.max(*id as usize);
+    }
+    let mut id_to_token = vec![String::new(); max_id + 1];
+    for (tok, id) in &vocab {
+        id_to_token[*id as usize] = tok.clone();
+    }
+
+    ByteLevelBpe {
+        vocab,
+        id_to_token,
+        merges,
+        added,
+        added_by_id,
+        byte_to_char,
+        char_to_byte,
+        digit_run,
+        normalize_nfc,
+    }
+}
+
+fn read_tokenizer_json(dir: &Path) -> Result<serde_json::Value, String> {
+    serde_json::from_str(
+        &std::fs::read_to_string(dir.join("tokenizer.json"))
+            .map_err(|e| format!("tokenizer.json: {e}"))?,
+    )
+    .map_err(|e| format!("tokenizer.json parse: {e}"))
+}
+
+impl ByteLevelBpe {
+    /// Loads a Qwen3 snapshot (vocab.json, merges.txt, tokenizer.json for
+    /// the added-token list): single-digit pre-tokens, NFC normalization.
+    pub fn load(dir: &Path) -> Result<ByteLevelBpe, String> {
         let vocab: HashMap<String, u32> = serde_json::from_str(
             &std::fs::read_to_string(dir.join("vocab.json"))
                 .map_err(|e| format!("vocab.json: {e}"))?,
         )
         .map_err(|e| format!("vocab.json parse: {e}"))?;
-
-        let mut max_id = 0usize;
-        for id in vocab.values() {
-            max_id = max_id.max(*id as usize);
-        }
 
         let mut merges = HashMap::new();
         let merges_txt = std::fs::read_to_string(dir.join("merges.txt"))
@@ -76,53 +138,67 @@ impl Qwen3Tokenizer {
             rank += 1;
         }
 
-        // Added/special tokens from tokenizer.json (id + literal content).
-        let tj: serde_json::Value = serde_json::from_str(
-            &std::fs::read_to_string(dir.join("tokenizer.json"))
-                .map_err(|e| format!("tokenizer.json: {e}"))?,
-        )
-        .map_err(|e| format!("tokenizer.json parse: {e}"))?;
-        let mut added: Vec<(String, u32)> = Vec::new();
-        let mut added_by_id: HashMap<u32, String> = HashMap::new();
-        if let Some(list) = tj.get("added_tokens").and_then(|v| v.as_array()) {
-            for t in list {
-                let id = t.get("id").and_then(|v| v.as_u64()).unwrap_or_default() as u32;
-                let content = t
-                    .get("content")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or_default()
-                    .to_string();
-                if !content.is_empty() {
-                    added.push((content.clone(), id));
-                    added_by_id.insert(id, content);
-                }
-            }
-        }
-        // Longest-first so "<|im_start|>" wins over any prefix.
-        added.sort_by(|a, b| b.0.chars().count().cmp(&a.0.chars().count()));
-
-        let (byte_to_char, char_to_byte) = byte_unicode_tables();
-
-        let mut id_to_token = vec![String::new(); max_id + 1];
-        for (tok, id) in &vocab {
-            id_to_token[*id as usize] = tok.clone();
-        }
-
-        Ok(Qwen3Tokenizer {
-            vocab,
-            id_to_token,
-            merges,
-            added,
-            added_by_id,
-            byte_to_char,
-            char_to_byte,
-        })
+        let tj = read_tokenizer_json(dir)?;
+        Ok(finish(vocab, merges, &tj, 1, true))
     }
 
-    /// Text → token ids: NFC-normalize, split on added tokens, pre-tokenize,
-    /// byte-encode, BPE-merge, look up.
+    /// Loads a snapshot that embeds vocab + merges inside tokenizer.json
+    /// (LFM2.5): three-digit pre-token runs, no normalization.
+    pub fn load_tokenizer_json(dir: &Path) -> Result<ByteLevelBpe, String> {
+        let tj = read_tokenizer_json(dir)?;
+        let model = tj
+            .get("model")
+            .ok_or_else(|| "tokenizer.json: no model".to_string())?;
+        if model.get("type").and_then(|v| v.as_str()) != Some("BPE") {
+            return Err(format!(
+                "tokenizer.json model type {:?} is not BPE",
+                model.get("type").and_then(|v| v.as_str())
+            ));
+        }
+        let vocab: HashMap<String, u32> = serde_json::from_value(
+            model
+                .get("vocab")
+                .cloned()
+                .ok_or_else(|| "tokenizer.json: no vocab".to_string())?,
+        )
+        .map_err(|e| format!("tokenizer.json vocab: {e}"))?;
+
+        let mut merges = HashMap::new();
+        let raw = model
+            .get("merges")
+            .and_then(|v| v.as_array())
+            .ok_or_else(|| "tokenizer.json: no merges".to_string())?;
+        let mut rank = 0u32;
+        for m in raw {
+            let (a, b) = match m {
+                serde_json::Value::String(s) => match s.split_once(' ') {
+                    Some((a, b)) => (a.to_string(), b.to_string()),
+                    None => continue,
+                },
+                serde_json::Value::Array(pair) if pair.len() == 2 => {
+                    let (Some(a), Some(b)) = (pair[0].as_str(), pair[1].as_str()) else {
+                        continue;
+                    };
+                    (a.to_string(), b.to_string())
+                }
+                _ => continue,
+            };
+            merges.insert((a, b), rank);
+            rank += 1;
+        }
+
+        Ok(finish(vocab, merges, &tj, 3, false))
+    }
+
+    /// Text → token ids: normalize (when the checkpoint declares a
+    /// normalizer), split on added tokens, pre-tokenize, byte-encode,
+    /// BPE-merge, look up.
     pub fn encode(&self, text: &str) -> Result<Vec<u32>, String> {
-        let normalized: String = text.nfc().collect();
+        let normalized: String = if self.normalize_nfc {
+            text.nfc().collect()
+        } else {
+            text.to_string()
+        };
         let chars: Vec<char> = normalized.chars().collect();
         let mut out = Vec::new();
         let mut i = 0usize;
@@ -132,7 +208,7 @@ impl Qwen3Tokenizer {
                 i += self.added_content_len(&chars[i..]);
                 continue;
             }
-            let len = pretoken_len(&chars[i..]).ok_or_else(|| {
+            let len = pretoken_len(&chars[i..], self.digit_run).ok_or_else(|| {
                 format!("no pretokenizer branch matched at offset {i} of {text:?}")
             })?;
             let piece: String = chars[i..i + len].iter().collect();
@@ -270,8 +346,8 @@ fn is_space(c: char) -> bool {
 /// The length (in chars) of the pre-token match at the start of `at`, per
 /// the ordered alternation. Every branch terminates, so the `None` case
 /// means the input has a character outside all classes — treated as an
-/// error by the caller.
-fn pretoken_len(at: &[char]) -> Option<usize> {
+/// error by the caller. `digit_run` is B3's `\p{N}{1,digit_run}` bound.
+fn pretoken_len(at: &[char], digit_run: usize) -> Option<usize> {
     let n = at.len();
     if n == 0 {
         return None;
@@ -309,9 +385,14 @@ fn pretoken_len(at: &[char]) -> Option<usize> {
         // optional-class membership), so B2 fails here.
     }
 
-    // B3: \p{N} — exactly one digit per pre-token.
+    // B3: \p{N}{1,digit_run} — up to digit_run digits per pre-token
+    // (greedy, so a shorter trailing run matches whatever remains).
     if is_number(at[0]) {
-        return Some(1);
+        let mut j = 0usize;
+        while j < n && j < digit_run && is_number(at[j]) {
+            j += 1;
+        }
+        return Some(j);
     }
 
     // B4:  ?[^\s\p{L}\p{N}]+[\r\n]*
@@ -391,11 +472,11 @@ fn pretoken_len(at: &[char]) -> Option<usize> {
 mod tests {
     use super::*;
 
-    fn tables() -> Qwen3Tokenizer {
+    fn tables() -> ByteLevelBpe {
         // Minimal hand-built tokenizer for scanner/table unit tests (no
         // model files needed).
         let (byte_to_char, char_to_byte) = byte_unicode_tables();
-        Qwen3Tokenizer {
+        ByteLevelBpe {
             vocab: HashMap::new(),
             id_to_token: Vec::new(),
             merges: HashMap::new(),
@@ -406,6 +487,8 @@ mod tests {
             )]),
             byte_to_char,
             char_to_byte,
+            digit_run: 1,
+            normalize_nfc: true,
         }
     }
 
@@ -423,34 +506,31 @@ mod tests {
 
     #[test]
     fn pretokenizer_branches() {
-        let cs: Vec<char> = "  leading".chars().collect();
-        assert_eq!(pretoken_len(&cs), Some(1)); // B6 leaves " leading" intact
-        let cs: Vec<char> = " leading".chars().collect();
-        assert_eq!(pretoken_len(&cs), Some(8)); // B2 space + letters
-        let cs: Vec<char> = "12345".chars().collect();
-        assert_eq!(pretoken_len(&cs), Some(1)); // B3 single digit
-        let cs: Vec<char> = "(x)".chars().collect();
-        assert_eq!(pretoken_len(&cs), Some(2)); // B2 optional punct + letters "(x"
-        let cs: Vec<char> = "(!)".chars().collect();
-        assert_eq!(pretoken_len(&cs), Some(3)); // B4 punct run swallows all
-        let cs: Vec<char> = "abc(x".chars().collect();
-        assert_eq!(pretoken_len(&cs), Some(3)); // B2 letters
-        let cs: Vec<char> = "it's".chars().collect();
-        assert_eq!(pretoken_len(&cs), Some(2)); // B2 "it"
-        let cs: Vec<char> = "'s".chars().collect();
-        assert_eq!(pretoken_len(&cs), Some(2)); // B1
-        let cs: Vec<char> = "'VE".chars().collect();
-        assert_eq!(pretoken_len(&cs), Some(3)); // B1 case-insensitive 've
-        let cs: Vec<char> = "\n\nx".chars().collect();
-        assert_eq!(pretoken_len(&cs), Some(2)); // B5 both newlines
-        let cs: Vec<char> = " \n ab".chars().collect();
-        assert_eq!(pretoken_len(&cs), Some(2)); // B5 " \n" (leaves " ab")
-        let cs: Vec<char> = "   ".chars().collect();
-        assert_eq!(pretoken_len(&cs), Some(3)); // B6 run to EOS
-        let cs: Vec<char> = " a".chars().collect();
-        assert_eq!(pretoken_len(&cs), Some(2)); // B2 space+letters wins over B6
-        let cs: Vec<char> = " 1".chars().collect();
-        assert_eq!(pretoken_len(&cs), Some(1)); // B7 lone space (digit next)
+        let f = |s: &str| pretoken_len(&s.chars().collect::<Vec<_>>(), 1);
+        assert_eq!(f("  leading"), Some(1)); // B6 leaves " leading" intact
+        assert_eq!(f(" leading"), Some(8)); // B2 space + letters
+        assert_eq!(f("12345"), Some(1)); // B3 single digit (qwen)
+        assert_eq!(f("(x)"), Some(2)); // B2 optional punct + letters "(x"
+        assert_eq!(f("(!)"), Some(3)); // B4 punct run swallows all
+        assert_eq!(f("abc(x"), Some(3)); // B2 letters
+        assert_eq!(f("it's"), Some(2)); // B2 "it"
+        assert_eq!(f("'s"), Some(2)); // B1
+        assert_eq!(f("'VE"), Some(3)); // B1 case-insensitive 've
+        assert_eq!(f("\n\nx"), Some(2)); // B5 both newlines
+        assert_eq!(f(" \n ab"), Some(2)); // B5 " \n" (leaves " ab")
+        assert_eq!(f("   "), Some(3)); // B6 run to EOS
+        assert_eq!(f(" a"), Some(2)); // B2 space+letters wins over B6
+        assert_eq!(f(" 1"), Some(1)); // B7 lone space (digit next)
+    }
+
+    #[test]
+    fn digit_run_three() {
+        // LFM2.5's \p{N}{1,3}: greedy three-digit runs.
+        let f3 = |s: &str| pretoken_len(&s.chars().collect::<Vec<_>>(), 3);
+        assert_eq!(f3("12345"), Some(3)); // "123", then "45"
+        assert_eq!(f3("12x"), Some(2)); // short trailing run
+        assert_eq!(f3("1"), Some(1));
+        assert_eq!(f3("123"), Some(3));
     }
 
     #[test]
