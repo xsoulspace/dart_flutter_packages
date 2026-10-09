@@ -32,7 +32,7 @@ fn metallib() {
     let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("build/mlx-install/lib/mlx.metallib");
     if path.is_file() {
-        let _ = laya_native::mlx::set_metallib_path(&path);
+        let _ = mlx_native::mlx::set_metallib_path(&path);
     }
 }
 
@@ -47,12 +47,12 @@ fn speculative_greedy_is_token_exact_and_faster() {
         return;
     };
     metallib();
-    let Ok(s) = laya_native::mlx::gpu() else {
+    let Ok(s) = mlx_native::mlx::gpu() else {
         eprintln!("skipping: no Metal device");
         return;
     };
-    let target = laya_native::qwen::Qwen3::load(&target_dir).expect("target loads");
-    let draft = laya_native::qwen::Qwen3::load(&draft_dir).expect("draft loads");
+    let target = mlx_native::qwen::Qwen3::load(&target_dir).expect("target loads");
+    let draft = mlx_native::qwen::Qwen3::load(&draft_dir).expect("draft loads");
 
     // A short prompt from the shared tokenizer (fixture prompt text,
     // tokenized by the checkpoint BPE — the same tokenizer both sizes

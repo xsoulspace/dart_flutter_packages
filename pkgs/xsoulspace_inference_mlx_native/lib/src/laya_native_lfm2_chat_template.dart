@@ -6,7 +6,7 @@
 /// turns, and the assistant generation prompt).
 ///
 /// This is a hand renderer for the SUPPORTED SUBSET, pinned byte-exactly
-/// by `native/laya_rust/testdata/lfm25_chat_template_fixtures.json`
+/// by `native/mlx_native/testdata/lfm25_chat_template_fixtures.json`
 /// (recorded from the reference tokenizer). It is NOT a Jinja engine.
 /// Supported:
 /// - string `content` on every message; roles system/user/assistant;

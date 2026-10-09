@@ -9,7 +9,7 @@ import 'package:xsoulspace_inference_mlx_native/xsoulspace_inference_mlx_native.
 /// every recorded case (venv-recorded fixtures — provenance in the file).
 void main() {
   final fixtureFile = File(
-    'native/laya_rust/testdata/qwen3_chat_template_fixtures.json',
+    'native/mlx_native/testdata/qwen3_chat_template_fixtures.json',
   );
   test('renderer reproduces the reference renders byte-exactly', () {
     if (!fixtureFile.existsSync()) {

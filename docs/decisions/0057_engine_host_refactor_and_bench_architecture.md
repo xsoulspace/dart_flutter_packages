@@ -334,6 +334,15 @@ checkers.
   controlled variable). The bench carries `--raw` to reproduce any
   cell; the qwen3 template renderer is fixture-gated byte-exactly like
   the lfm2 one (venv `apply_chat_template`, enable_thinking=false).
+- **Base-name debt resolved (2026-10-09, later the same session):** the
+  crate/dylib/asset base name `laya_native` recorded as debt above is
+  renamed to `mlx_native` — crate dir `native/laya_rust` →
+  `native/mlx_native`, dylib `libmlx_native.dylib`, assetId
+  `package:xsoulspace_inference_mlx_native/mlx_native`, all 11 C ABI
+  symbols `laya_native_*` → `mlx_native_*`. The Dart FILE/class names
+  (`laya_native_decision_engine.dart`, `NativeLayaDecisionEngine`, …)
+  are KEPT — they name the laya decision MODEL driver, which is
+  semantically correct, not shared infrastructure.
 ### The Swift line: benchmark/reference layer only (owner decision, 2026-10-09)
 
 The Swift engine (`xsoulspace_inference_mlx`'s `mlx_text_native`) is

@@ -15,20 +15,20 @@ import 'laya_native_lfm2_chat_template.dart';
 // tests skip honestly.
 
 @Native<Int64 Function(Pointer<Uint8>)>(
-  symbol: 'laya_native_lfm2_load',
-  assetId: 'package:xsoulspace_inference_mlx_native/laya_native',
+  symbol: 'mlx_native_lfm2_load',
+  assetId: 'package:xsoulspace_inference_mlx_native/mlx_native',
 )
 external int _lfm2Load(Pointer<Uint8> modelDir);
 
 @Native<Pointer<Uint8> Function(Int64, Pointer<Uint8>)>(
-  symbol: 'laya_native_lfm2_generate',
-  assetId: 'package:xsoulspace_inference_mlx_native/laya_native',
+  symbol: 'mlx_native_lfm2_generate',
+  assetId: 'package:xsoulspace_inference_mlx_native/mlx_native',
 )
 external Pointer<Uint8> _lfm2Generate(int handle, Pointer<Uint8> requestJson);
 
 @Native<Void Function(Int64)>(
-  symbol: 'laya_native_lfm2_unload',
-  assetId: 'package:xsoulspace_inference_mlx_native/laya_native',
+  symbol: 'mlx_native_lfm2_unload',
+  assetId: 'package:xsoulspace_inference_mlx_native/mlx_native',
 )
 external void _lfm2Unload(int handle);
 

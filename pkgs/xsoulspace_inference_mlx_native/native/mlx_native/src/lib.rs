@@ -1,6 +1,6 @@
 //! C ABI surface for dart:ffi — identical to the historical Swift contract
 //! (ADR 0051): JSON-in/JSON-out with C strings; returned strings are owned
-//! by the caller and released with `laya_native_free`.
+//! by the caller and released with `mlx_native_free`.
 //!
 //! Request (forward):
 //! ```json
@@ -188,7 +188,7 @@ fn current_dylib_dir() -> Option<PathBuf> {
 /// Loads the model from `model_dir`. Returns a positive handle, or negative
 /// codes matching the historical contract: -1 null arg, -2 load failure.
 #[no_mangle]
-pub extern "C" fn laya_native_load(model_dir: *const c_char) -> i64 {
+pub extern "C" fn mlx_native_load(model_dir: *const c_char) -> i64 {
     if model_dir.is_null() {
         return -1;
     }
@@ -229,7 +229,7 @@ pub extern "C" fn laya_native_load(model_dir: *const c_char) -> i64 {
 }
 
 #[no_mangle]
-pub extern "C" fn laya_native_forward(handle: i64, request_json: *const c_char) -> *mut c_char {
+pub extern "C" fn mlx_native_forward(handle: i64, request_json: *const c_char) -> *mut c_char {
     if request_json.is_null() {
         return fail("missing request");
     }
@@ -337,14 +337,14 @@ fn build_batch(request: &ForwardRequest) -> Result<Batch, String> {
 }
 
 #[no_mangle]
-pub extern "C" fn laya_native_free(pointer: *mut c_char) {
+pub extern "C" fn mlx_native_free(pointer: *mut c_char) {
     if !pointer.is_null() {
         unsafe { drop(CString::from_raw(pointer)) };
     }
 }
 
 #[no_mangle]
-pub extern "C" fn laya_native_unload(handle: i64) {
+pub extern "C" fn mlx_native_unload(handle: i64) {
     registry().lock().unwrap().remove(&handle);
 }
 
@@ -386,7 +386,7 @@ fn default_max_tokens() -> usize {
 }
 
 #[no_mangle]
-pub extern "C" fn laya_native_qwen_load(model_dir: *const c_char) -> i64 {
+pub extern "C" fn mlx_native_qwen_load(model_dir: *const c_char) -> i64 {
     if model_dir.is_null() {
         return -1;
     }
@@ -413,7 +413,7 @@ pub extern "C" fn laya_native_qwen_load(model_dir: *const c_char) -> i64 {
 /// `QwenGenerateRequest`). Response:
 /// `{"ids": [...], "text": "…", "prompt_ids": [...]}` or `{"error": "…"}`.
 #[no_mangle]
-pub extern "C" fn laya_native_qwen_generate(handle: i64, request_json: *const c_char) -> *mut c_char {
+pub extern "C" fn mlx_native_qwen_generate(handle: i64, request_json: *const c_char) -> *mut c_char {
     if request_json.is_null() {
         return fail("missing request");
     }
@@ -475,7 +475,7 @@ pub extern "C" fn laya_native_qwen_generate(handle: i64, request_json: *const c_
 }
 
 #[no_mangle]
-pub extern "C" fn laya_native_qwen_unload(handle: i64) {
+pub extern "C" fn mlx_native_qwen_unload(handle: i64) {
     qwen_registry().lock().unwrap().remove(&handle);
 }
 
@@ -497,7 +497,7 @@ fn lfm2_registry() -> &'static Mutex<HashMap<i64, Arc<Lfm2Engine>>> {
 }
 
 #[no_mangle]
-pub extern "C" fn laya_native_lfm2_load(model_dir: *const c_char) -> i64 {
+pub extern "C" fn mlx_native_lfm2_load(model_dir: *const c_char) -> i64 {
     if model_dir.is_null() {
         return -1;
     }
@@ -528,7 +528,7 @@ pub extern "C" fn laya_native_lfm2_load(model_dir: *const c_char) -> i64 {
 /// `eos_ids`, default OFF — see `QwenGenerateRequest`). Response:
 /// `{"ids": [...], "text": "…", "prompt_ids": [...]}` or `{"error": "…"}`.
 #[no_mangle]
-pub extern "C" fn laya_native_lfm2_generate(handle: i64, request_json: *const c_char) -> *mut c_char {
+pub extern "C" fn mlx_native_lfm2_generate(handle: i64, request_json: *const c_char) -> *mut c_char {
     if request_json.is_null() {
         return fail("missing request");
     }
@@ -594,7 +594,7 @@ pub extern "C" fn laya_native_lfm2_generate(handle: i64, request_json: *const c_
 }
 
 #[no_mangle]
-pub extern "C" fn laya_native_lfm2_unload(handle: i64) {
+pub extern "C" fn mlx_native_lfm2_unload(handle: i64) {
     lfm2_registry().lock().unwrap().remove(&handle);
 }
 
@@ -602,7 +602,7 @@ pub extern "C" fn laya_native_lfm2_unload(handle: i64) {
 /// normalizer. Output requires up to 4 bytes per input UTF-8 byte.
 /// Returns the number of bytes written, or -1 when out is too small.
 #[no_mangle]
-pub extern "C" fn laya_native_normalize(
+pub extern "C" fn mlx_native_normalize(
     src: *const c_char,
     out: *mut c_char,
     out_cap: c_int,
@@ -728,7 +728,7 @@ mod tests {
     fn nfc_normalization_composes() {
         let src = CString::new("e\u{301}").unwrap(); // 'e' + combining acute
         let mut buf = [0i8; 16];
-        let n = super::laya_native_normalize(src.as_ptr(), buf.as_mut_ptr(), 16);
+        let n = super::mlx_native_normalize(src.as_ptr(), buf.as_mut_ptr(), 16);
         assert!(n > 0);
         let out = unsafe { CStr::from_ptr(buf.as_ptr()) };
         assert_eq!(out.to_str().unwrap(), "\u{00e9}");

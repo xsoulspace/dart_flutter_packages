@@ -7,8 +7,8 @@
 //! Also runs the xcrun build gate (tool/build_msl.sh) as the syntax proof.
 //! Run: cargo test --release --test r4_skinny_gemm_gate -- --ignored --nocapture
 
-use laya_native::bindings::{Backend, BindingTable, ShapeClass};
-use laya_native::mlx::{self, Array, Dtype};
+use mlx_native::bindings::{Backend, BindingTable, ShapeClass};
+use mlx_native::mlx::{self, Array, Dtype};
 
 fn fp16_pattern(count: usize, modulus: u16) -> Vec<u8> {
     let mut v = vec![0u8; count * 2];
@@ -29,14 +29,14 @@ fn inputs(m: usize, k: usize, n: usize) -> (Array, Array) {
 }
 
 fn run(table: &BindingTable, a: &Array, b: &Array, s: mlx::Stream) -> Array {
-    let node = laya_native::plan::Node {
+    let node = mlx_native::plan::Node {
         name: "gate.matmul".into(),
         group: "gate".into(),
-        op: laya_native::plan::Op::Matmul,
+        op: mlx_native::plan::Op::Matmul,
         inputs: Vec::new(),
         dump: None,
     };
-    laya_native::bindings::eval(&node, &[a, b], table, s)
+    mlx_native::bindings::eval(&node, &[a, b], table, s)
         .unwrap()
         .into_iter()
         .next()
@@ -58,7 +58,7 @@ fn skinny_gemm_gate() {
     let metallib = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("build/mlx-install/lib/mlx.metallib");
     if metallib.is_file() {
-        laya_native::mlx::set_metallib_path(&metallib);
+        mlx_native::mlx::set_metallib_path(&metallib);
     }
     let s = mlx::gpu().expect("Metal");
 

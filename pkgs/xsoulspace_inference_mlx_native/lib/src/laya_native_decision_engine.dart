@@ -16,14 +16,14 @@ import 'laya_prompt.dart';
 // these throw a named error at first call; the golden test skips honestly.
 
 @Native<Int64 Function(Pointer<Uint8>)>(
-  symbol: 'laya_native_load',
-  assetId: 'package:xsoulspace_inference_mlx_native/laya_native',
+  symbol: 'mlx_native_load',
+  assetId: 'package:xsoulspace_inference_mlx_native/mlx_native',
 )
 external int _layaNativeLoad(Pointer<Uint8> modelDir);
 
 @Native<Pointer<Uint8> Function(Int64, Pointer<Uint8>)>(
-  symbol: 'laya_native_forward',
-  assetId: 'package:xsoulspace_inference_mlx_native/laya_native',
+  symbol: 'mlx_native_forward',
+  assetId: 'package:xsoulspace_inference_mlx_native/mlx_native',
 )
 external Pointer<Uint8> _layaNativeForward(
   int handle,
@@ -31,20 +31,20 @@ external Pointer<Uint8> _layaNativeForward(
 );
 
 @Native<Void Function(Pointer<Uint8>)>(
-  symbol: 'laya_native_free',
-  assetId: 'package:xsoulspace_inference_mlx_native/laya_native',
+  symbol: 'mlx_native_free',
+  assetId: 'package:xsoulspace_inference_mlx_native/mlx_native',
 )
 external void _layaNativeFree(Pointer<Uint8> pointer);
 
 @Native<Void Function(Int64)>(
-  symbol: 'laya_native_unload',
-  assetId: 'package:xsoulspace_inference_mlx_native/laya_native',
+  symbol: 'mlx_native_unload',
+  assetId: 'package:xsoulspace_inference_mlx_native/mlx_native',
 )
 external void _layaNativeUnload(int handle);
 
 @Native<Int32 Function(Pointer<Uint8>, Pointer<Uint8>, Int32)>(
-  symbol: 'laya_native_normalize',
-  assetId: 'package:xsoulspace_inference_mlx_native/laya_native',
+  symbol: 'mlx_native_normalize',
+  assetId: 'package:xsoulspace_inference_mlx_native/mlx_native',
 )
 external int _layaNativeNormalize(
   Pointer<Uint8> src,
@@ -437,25 +437,25 @@ void _ensureNativeBindingsAvailable({String? packageRoot}) {
       'laya native runtime unavailable: no native-assets code asset (build '
       'with `dart build cli`, not `dart compile exe`) and no preloadable '
       'dylib in the resolver chain (set LAYA_NATIVE_DYLIB, or place '
-      'liblaya_native.dylib + mlx.metallib beside the executable or in '
+      'libmlx_native.dylib + mlx.metallib beside the executable or in '
       '~/.cache/xsoulspace/laya/native/)',
     );
   }
 }
 
 void _ensureDylibLoaded({String? packageRoot}) {
-  const dylibName = 'liblaya_native.dylib';
+  const dylibName = 'libmlx_native.dylib';
   final candidates = [
     ?Platform.environment['LAYA_NATIVE_DYLIB'],
     // Exe-adjacent: the `dart build cli` bundle shape (bundle/lib/).
     '${File(Platform.resolvedExecutable).parent.path}/$dylibName',
     '${File(Platform.resolvedExecutable).parent.path}/lib/$dylibName',
     if (packageRoot != null)
-      '$packageRoot/native/laya_rust/target/release/$dylibName',
-    // Current macOS backend before the historical Swift/iOS reference.
+      '$packageRoot/native/mlx_native/target/release/$dylibName',
+    // Current macOS backend (crate-relative). The historical Swift host
+    // (libLayaNative.dylib) is git history only — no load candidate.
     // Test AOT isolates may need preload even when the parent has assets.
-    'native/laya_rust/target/release/liblaya_native.dylib',
-    'native/laya_native/.build/release/libLayaNative.dylib',
+    'native/mlx_native/target/release/libmlx_native.dylib',
     '${_home()}/.cache/xsoulspace/laya/native/$dylibName',
   ];
   for (final candidate in candidates) {

@@ -11,7 +11,7 @@ import 'package:xsoulspace_inference_mlx_native/xsoulspace_inference_mlx_native.
 ///
 /// Skips honestly when the dylib or the cached snapshot is absent.
 void main() {
-  final fixtureFile = File('native/laya_rust/testdata/lfm25_12b_parity.json');
+  final fixtureFile = File('native/mlx_native/testdata/lfm25_12b_parity.json');
   final snapshotDir = resolveLfm2SnapshotDir(null);
 
   test('engine reproduces the fixture greedy ids in-process', () async {

@@ -5,10 +5,10 @@
 set -e
 L="/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_mlx_native"
 W="/Users/antonio/xs/storage_problem/dart_flutter_packages"
-cd "$L/native/laya_rust"
+cd "$L/native/mlx_native"
 echo "== cargo build"
 cargo build --release 2>&1 | grep -E '^error' && exit 1 || true
-echo "target: $(md5 -q target/release/liblaya_native.dylib | cut -c1-8)"
+echo "target: $(md5 -q target/release/libmlx_native.dylib | cut -c1-8)"
 rm -rf "$W/.dart_tool/hooks_runner/xsoulspace_inference_mlx_native" \
        "$W/.dart_tool/hooks_runner/shared/xsoulspace_inference_mlx_native"
 cd "$L"

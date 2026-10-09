@@ -1,6 +1,6 @@
 #!/bin/zsh
 # ADR 0054 R4 build gate: every .metal kernel in
-# native/laya_rust/src/kernels must compile clean with Apple's metal
+# native/mlx_native/src/kernels must compile clean with Apple's metal
 # compiler; the colocated .metallib is the proof artifact (runtime
 # dispatch rides mlx_fast_metal_kernel on the same source - the C API
 # has no load-from-metallib entry for custom kernels; the deviation is
@@ -10,7 +10,7 @@
 # kernel file in as the BODY (attribute names detected verbatim), so the
 # gate wraps the body in the same signature before compiling.
 set -euo pipefail
-cd "$(dirname "$0")/../native/laya_rust"
+cd "$(dirname "$0")/../native/mlx_native"
 out_dir="build/msl-install"
 mkdir -p "$out_dir"
 rc=0

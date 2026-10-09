@@ -35,11 +35,11 @@ fn main() {
     let metallib = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("build/mlx-install/lib/mlx.metallib");
     if metallib.is_file() {
-        let _ = laya_native::mlx::set_metallib_path(&metallib);
+        let _ = mlx_native::mlx::set_metallib_path(&metallib);
     }
-    let s = laya_native::mlx::gpu().expect("Metal");
+    let s = mlx_native::mlx::gpu().expect("Metal");
     let snap = snapshot();
-    let model = laya_native::qwen::Qwen3::load(&snap).expect("model loads");
+    let model = mlx_native::qwen::Qwen3::load(&snap).expect("model loads");
 
     // 4k prompt: the fixture prompt repeated (BPE-stable).
     let fixture: serde_json::Value = serde_json::from_str(
@@ -62,25 +62,25 @@ fn main() {
     ids.truncate(4096);
 
     // Warmup so load-time compile costs don't pollute the window.
-    let mut cache = laya_native::qwen::KvCache::new(model.cfg.layers);
+    let mut cache = mlx_native::qwen::KvCache::new(model.cfg.layers);
     let warm = Array4k::from(&base[..8]);
     let _ = model.forward_hidden(&warm, &mut cache, s);
 
-    let mut cache = laya_native::qwen::KvCache::new(model.cfg.layers);
+    let mut cache = mlx_native::qwen::KvCache::new(model.cfg.layers);
     let t0 = std::time::Instant::now();
     let mut chunks = 0usize;
     let mut rest: &[i32] = &ids;
     const CHUNK: usize = 256;
     while rest.len() > 1 {
         let n = CHUNK.min(rest.len() - 1);
-        let t = laya_native::mlx::Array::from_data_i32(&rest[..n], &[1, n]).unwrap();
+        let t = mlx_native::mlx::Array::from_data_i32(&rest[..n], &[1, n]).unwrap();
         let _ = model.forward_hidden(&t, &mut cache, s).unwrap();
         // Await the chunk (what a UI driver does — the yield only means
         // something if the GPU work is actually submitted and done).
         if let Some(k0) = &cache.layers_ref()[0].k {
             let _ = k0.eval();
         }
-        laya_native::mlx::synchronize_stream(s).unwrap();
+        mlx_native::mlx::synchronize_stream(s).unwrap();
         rest = &rest[n..];
         chunks += 1;
         if pace_ms > 0 {
@@ -88,10 +88,10 @@ fn main() {
         }
     }
     // One final 1-token step (computes logits — the real TTFT tail).
-    let last = laya_native::mlx::Array::from_data_i32(&[rest[0]], &[1, 1]).unwrap();
+    let last = mlx_native::mlx::Array::from_data_i32(&[rest[0]], &[1, 1]).unwrap();
     let logits = model.forward_step(&last, &mut cache, s).unwrap();
     let _ = logits.eval();
-    laya_native::mlx::synchronize_stream(s).unwrap();
+    mlx_native::mlx::synchronize_stream(s).unwrap();
     let _ = cache.offset;
     println!(
         "{{\"ttft_ms\": {:.1}, \"chunks\": {}, \"pace_ms\": {}, \"prompt\": {}}}",
@@ -106,7 +106,7 @@ fn main() {
 /// paths everywhere.
 struct Array4k;
 impl Array4k {
-    fn from(ids: &[i32]) -> laya_native::mlx::Array {
-        laya_native::mlx::Array::from_data_i32(ids, &[1, ids.len()]).unwrap()
+    fn from(ids: &[i32]) -> mlx_native::mlx::Array {
+        mlx_native::mlx::Array::from_data_i32(ids, &[1, ids.len()]).unwrap()
     }
 }

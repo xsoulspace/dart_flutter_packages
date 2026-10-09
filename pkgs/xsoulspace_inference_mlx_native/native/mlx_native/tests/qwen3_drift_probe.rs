@@ -3,8 +3,8 @@
 //! /tmp/qwen_ref_dump.py, mlx-lm on the same snapshot). Run:
 //!   cargo test --release --test qwen3_drift_probe -- --nocapture
 
-use laya_native::mlx::{self, Array, Dtype};
-use laya_native::qwen::Qwen3;
+use mlx_native::mlx::{self, Array, Dtype};
+use mlx_native::qwen::Qwen3;
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -81,7 +81,7 @@ fn logit_drift_probe() {
     let metallib = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("build/mlx-install/lib/mlx.metallib");
     if metallib.is_file() {
-        laya_native::mlx::set_metallib_path(&metallib);
+        mlx_native::mlx::set_metallib_path(&metallib);
     }
     let s = mlx::gpu().expect("Metal");
     let fx: serde_json::Value = serde_json::from_str(
@@ -99,7 +99,7 @@ fn logit_drift_probe() {
         .collect();
 
     let model = Qwen3::load(&snapshot()).unwrap();
-    let mut cache = laya_native::qwen::KvCache::new(model.cfg.layers);
+    let mut cache = mlx_native::qwen::KvCache::new(model.cfg.layers);
 
     let tokens = Array::from_data_i32(&prompt_ids, &[1, prompt_ids.len()]).unwrap();
     let logits = model.forward_step(&tokens, &mut cache, s).unwrap();

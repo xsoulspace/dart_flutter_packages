@@ -3,8 +3,8 @@
 //! long-context decode gap vs the python reference. Run:
 //!   cargo test --release --test qwen_ops_probe -- --nocapture --ignored
 
-use laya_native::mlx::{self, Array, Dtype};
-use laya_native::qwen::Qwen3;
+use mlx_native::mlx::{self, Array, Dtype};
+use mlx_native::qwen::Qwen3;
 
 fn snapshot() -> std::path::PathBuf {
     let home = std::env::var("HOME").unwrap();
@@ -44,7 +44,7 @@ fn ops_probe() {
     let metallib = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("build/mlx-install/lib/mlx.metallib");
     if metallib.is_file() {
-        laya_native::mlx::set_metallib_path(&metallib);
+        mlx_native::mlx::set_metallib_path(&metallib);
     }
     let s = mlx::gpu().expect("Metal");
     let model = Qwen3::load(&snapshot()).unwrap();
@@ -70,7 +70,7 @@ fn ops_probe() {
         Array::from_data_bf16(&bf16_bytes(8 * 2304 * 128), &[1, kv, 2304, d]).unwrap();
 
     // 1. decode GEMV through quantized_matmul (the lm_head shape)
-    let embed_w = laya_native::safetensors::SafetensorsFile::open(
+    let embed_w = mlx_native::safetensors::SafetensorsFile::open(
         &snapshot().join("model.safetensors"),
     )
     .unwrap();
@@ -159,11 +159,11 @@ fn decode_2k_fresh() {
     let metallib = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("build/mlx-install/lib/mlx.metallib");
     if metallib.is_file() {
-        laya_native::mlx::set_metallib_path(&metallib);
+        mlx_native::mlx::set_metallib_path(&metallib);
     }
     let s = mlx::gpu().unwrap();
     let snap = snapshot();
-    let tok = laya_native::bpe::ByteLevelBpe::load(&snap).unwrap();
+    let tok = mlx_native::bpe::ByteLevelBpe::load(&snap).unwrap();
     let model = Qwen3::load(&snap).unwrap();
     let fx: serde_json::Value = serde_json::from_str(
         &std::fs::read_to_string(

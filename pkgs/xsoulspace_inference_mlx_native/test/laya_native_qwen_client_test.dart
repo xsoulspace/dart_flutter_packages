@@ -14,7 +14,7 @@ import 'package:xsoulspace_inference_mlx_native/xsoulspace_inference_mlx_native.
 /// Skips honestly when the dylib or the cached snapshot is absent.
 void main() {
   final fixtureFile = File(
-    'native/laya_rust/testdata/qwen3_06b_parity.json',
+    'native/mlx_native/testdata/qwen3_06b_parity.json',
   );
   final snapshotDir = resolveQwenSnapshotDir(null);
 

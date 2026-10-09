@@ -8,8 +8,8 @@
 //! fixture gate under plan routing runs as
 //! `LAYA_QWEN_PLAN=1 cargo test --test qwen3_parity`.
 
-use laya_native::mlx::{self, Dtype};
-use laya_native::qwen::Qwen3;
+use mlx_native::mlx::{self, Dtype};
+use mlx_native::qwen::Qwen3;
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -61,7 +61,7 @@ fn snapshot_dir() -> Option<std::path::PathBuf> {
 /// Prefill exactly like generate_greedy (the chunk split is parity-
 /// load-bearing): all-but-last token through KV-only chunks, last token
 /// rides the decode loop.
-fn prefill(model: &Qwen3, prompt: &[i32], cache: &mut laya_native::qwen::KvCache, s: mlx::Stream) {
+fn prefill(model: &Qwen3, prompt: &[i32], cache: &mut mlx_native::qwen::KvCache, s: mlx::Stream) {
     const PREFILL_STEP: usize = 2048;
     let mut rest = prompt;
     while rest.len() > 1 {
@@ -87,7 +87,7 @@ fn plan_step_bit_matches_imperative() {
     let metallib = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("build/mlx-install/lib/mlx.metallib");
     if metallib.is_file() {
-        laya_native::mlx::set_metallib_path(&metallib);
+        mlx_native::mlx::set_metallib_path(&metallib);
     }
     let Ok(s) = mlx::gpu() else {
         eprintln!("skipping: no Metal device");
@@ -99,7 +99,7 @@ fn plan_step_bit_matches_imperative() {
 
     // Leg A: the imperative walk.
     let model = Qwen3::load(&snap).expect("model loads");
-    let mut cache = laya_native::qwen::KvCache::new(model.cfg.layers);
+    let mut cache = mlx_native::qwen::KvCache::new(model.cfg.layers);
     prefill(&model, prompt, &mut cache, s);
     let mut next = *prompt.last().expect("non-empty prompt");
     let mut imp_bits: Vec<[u8; 4]> = Vec::new();
@@ -118,7 +118,7 @@ fn plan_step_bit_matches_imperative() {
 
     // Leg B: the declared step plan.
     let model = Qwen3::load(&snap).expect("model loads");
-    let mut cache = laya_native::qwen::KvCache::new(model.cfg.layers);
+    let mut cache = mlx_native::qwen::KvCache::new(model.cfg.layers);
     prefill(&model, prompt, &mut cache, s);
     let mut next = *prompt.last().expect("non-empty prompt");
     let mut plan_bits: Vec<[u8; 4]> = Vec::new();
@@ -167,7 +167,7 @@ fn prefill_plan_bit_matches_imperative() {
     let metallib = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("build/mlx-install/lib/mlx.metallib");
     if metallib.is_file() {
-        laya_native::mlx::set_metallib_path(&metallib);
+        mlx_native::mlx::set_metallib_path(&metallib);
     }
     let Ok(s) = mlx::gpu() else {
         eprintln!("skipping: no Metal device");
@@ -183,7 +183,7 @@ fn prefill_plan_bit_matches_imperative() {
     let (c1, c2) = ids.split_at(200); // second chunk crosses offset 256
 
     let read_cache = |model: &Qwen3,
-                      cache: &laya_native::qwen::KvCache,
+                      cache: &mlx_native::qwen::KvCache,
                       s: mlx::Stream|
      -> Vec<Vec<u16>> {
         let mut bits = Vec::new();
@@ -204,7 +204,7 @@ fn prefill_plan_bit_matches_imperative() {
 
     // Leg A: imperative.
     let model = Qwen3::load(&snap).expect("model loads");
-    let mut cache = laya_native::qwen::KvCache::new(model.cfg.layers);
+    let mut cache = mlx_native::qwen::KvCache::new(model.cfg.layers);
     for chunk in [c1, c2] {
         let t = mlx::Array::from_data_i32(chunk, &[1, chunk.len()]).expect("tokens");
         model.hidden_states(&t, &mut cache, false, s).expect("imperative prefill");
@@ -215,7 +215,7 @@ fn prefill_plan_bit_matches_imperative() {
 
     // Leg B: the declared plan.
     let model = Qwen3::load(&snap).expect("model loads");
-    let mut cache = laya_native::qwen::KvCache::new(model.cfg.layers);
+    let mut cache = mlx_native::qwen::KvCache::new(model.cfg.layers);
     for chunk in [c1, c2] {
         let t = mlx::Array::from_data_i32(chunk, &[1, chunk.len()]).expect("tokens");
         model.hidden_states(&t, &mut cache, true, s).expect("plan prefill");

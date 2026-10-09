@@ -4,10 +4,10 @@ fn q8_round_trip() {
     let metallib = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("build/mlx-install/lib/mlx.metallib");
     if metallib.is_file() {
-        laya_native::mlx::set_metallib_path(&metallib);
+        mlx_native::mlx::set_metallib_path(&metallib);
     }
-    let s = laya_native::mlx::gpu().unwrap();
-    use laya_native::mlx::Array;
+    let s = mlx_native::mlx::gpu().unwrap();
+    use mlx_native::mlx::Array;
     // [3072, 1024] fp16 like the encoder Wi
     let n = 3072 * 1024;
     let data: Vec<u8> = (0..n)

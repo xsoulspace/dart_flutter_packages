@@ -17,7 +17,7 @@ from mlx_lm.models import cache as lm_cache
 
 FIXTURE = pathlib.Path(
     "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/"
-    "xsoulspace_inference_mlx_native/native/laya_rust/testdata/qwen3_06b_parity.json"
+    "xsoulspace_inference_mlx_native/native/mlx_native/testdata/qwen3_06b_parity.json"
 )
 
 model_path = None

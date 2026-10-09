@@ -33,10 +33,10 @@ fn main() {
     let metallib = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("build/mlx-install/lib/mlx.metallib");
     if metallib.is_file() {
-        let _ = laya_native::mlx::set_metallib_path(&metallib);
+        let _ = mlx_native::mlx::set_metallib_path(&metallib);
     }
-    let s = laya_native::mlx::gpu().expect("Metal");
-    let model = laya_native::qwen::Qwen3::load(&snapshot()).expect("model loads");
+    let s = mlx_native::mlx::gpu().expect("Metal");
+    let model = mlx_native::qwen::Qwen3::load(&snapshot()).expect("model loads");
 
     let fixture: serde_json::Value = serde_json::from_str(
         &std::fs::read_to_string(
@@ -57,16 +57,16 @@ fn main() {
     }
     ids.truncate(ctx_len);
 
-    let mut cache = laya_native::qwen::KvCache::new(model.cfg.layers);
+    let mut cache = mlx_native::qwen::KvCache::new(model.cfg.layers);
     let mut rest: &[i32] = &ids;
     const CHUNK: usize = 2048;
     while rest.len() > 1 {
         let n = CHUNK.min(rest.len() - 1);
-        let t = laya_native::mlx::Array::from_data_i32(&rest[..n], &[1, n]).unwrap();
+        let t = mlx_native::mlx::Array::from_data_i32(&rest[..n], &[1, n]).unwrap();
         model.forward_hidden(&t, &mut cache, s).unwrap();
         rest = &rest[n..];
     }
-    laya_native::mlx::synchronize_stream(s).unwrap();
+    mlx_native::mlx::synchronize_stream(s).unwrap();
 
     let mut next = *rest.last().unwrap();
     let mut samples: Vec<f64> = Vec::with_capacity(steps);
@@ -75,7 +75,7 @@ fn main() {
     // growth reallocs, command-buffer cadence, and DVFS.
     let mut grew: Vec<bool> = Vec::with_capacity(steps);
     for i in 0..steps {
-        let tokens = laya_native::mlx::Array::from_data_i32(&[next], &[1, 1]).unwrap();
+        let tokens = mlx_native::mlx::Array::from_data_i32(&[next], &[1, 1]).unwrap();
         let grew_i = (cache.offset + 1) > cache
             .layers_ref()
             .first()
@@ -86,11 +86,11 @@ fn main() {
         let logits = model.forward_step(&tokens, &mut cache, s).unwrap();
         let am = logits.argmax_axis(-1, false, s).unwrap();
         let v = am
-            .astype(laya_native::mlx::Dtype::Float32, s)
+            .astype(mlx_native::mlx::Dtype::Float32, s)
             .unwrap()
             .to_f32_vec(s)
             .unwrap();
-        laya_native::mlx::synchronize_stream(s).unwrap();
+        mlx_native::mlx::synchronize_stream(s).unwrap();
         samples.push(t0.elapsed().as_secs_f64() * 1e3);
         grew.push(grew_i);
         next = v[0] as i32;
@@ -140,16 +140,16 @@ fn main() {
             .expect("reserve");
         let mut after: Vec<f64> = Vec::with_capacity(half);
         for _ in 0..half {
-            let tokens = laya_native::mlx::Array::from_data_i32(&[next], &[1, 1]).unwrap();
+            let tokens = mlx_native::mlx::Array::from_data_i32(&[next], &[1, 1]).unwrap();
             let t0 = std::time::Instant::now();
             let logits = model.forward_step(&tokens, &mut cache, s).unwrap();
             let am = logits.argmax_axis(-1, false, s).unwrap();
             let v = am
-                .astype(laya_native::mlx::Dtype::Float32, s)
+                .astype(mlx_native::mlx::Dtype::Float32, s)
                 .unwrap()
                 .to_f32_vec(s)
                 .unwrap();
-            laya_native::mlx::synchronize_stream(s).unwrap();
+            mlx_native::mlx::synchronize_stream(s).unwrap();
             after.push(t0.elapsed().as_secs_f64() * 1e3);
             next = v[0] as i32;
         }
@@ -169,6 +169,6 @@ fn main() {
         samples.len()
     );
     if std::env::var_os("LAYA_QWEN_PROFILE").is_some_and(|v| !v.is_empty()) {
-        laya_native::qwen::qwen_profile_flush();
+        mlx_native::qwen::qwen_profile_flush();
     }
 }

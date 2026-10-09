@@ -15,7 +15,7 @@
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-use laya_native::mlx::{self, Array, Dtype, Stream};
+use mlx_native::mlx::{self, Array, Dtype, Stream};
 
 fn find_snapshot(fragment: &str) -> Option<PathBuf> {
     let home = std::env::var("HOME").ok()?;
@@ -71,12 +71,12 @@ fn pct(samples: &[f64], p: f64) -> f64 {
 /// does), then `steps` greedy single-token passes; returns (prefill
 /// seconds, per-step ms).
 fn run_qwen(
-    model: &laya_native::qwen::Qwen3,
+    model: &mlx_native::qwen::Qwen3,
     ids: &[i32],
     steps: usize,
     s: Stream,
 ) -> Result<(f64, Vec<f64>), String> {
-    let mut cache = laya_native::qwen::KvCache::new(model.cfg.layers);
+    let mut cache = mlx_native::qwen::KvCache::new(model.cfg.layers);
     cache
         .reserve(model.table(), model.cfg.kv_heads, model.cfg.head_dim, ids.len() + steps, s)
         .map_err(|e| format!("reserve: mlx status {}", e.0))?;
@@ -112,12 +112,12 @@ fn run_qwen(
 
 /// Same shape for the LFM2 hybrid (conv-state layers ride `cache`).
 fn run_lfm2(
-    model: &laya_native::lfm2::Lfm2,
+    model: &mlx_native::lfm2::Lfm2,
     ids: &[i32],
     steps: usize,
     s: Stream,
 ) -> Result<(f64, Vec<f64>), String> {
-    let mut cache = laya_native::lfm2::Lfm2Cache::new(&model.cfg.layer_types);
+    let mut cache = mlx_native::lfm2::Lfm2Cache::new(&model.cfg.layer_types);
     cache
         .reserve(model.table(), model.cfg.kv_heads, model.cfg.head_dim, ids.len() + steps, s)
         .map_err(|e| format!("reserve: mlx status {}", e.0))?;
@@ -152,8 +152,8 @@ fn run_lfm2(
 }
 
 enum Engine {
-    Qwen(laya_native::qwen::Qwen3),
-    Lfm2(laya_native::lfm2::Lfm2),
+    Qwen(mlx_native::qwen::Qwen3),
+    Lfm2(mlx_native::lfm2::Lfm2),
 }
 
 impl Engine {
@@ -166,11 +166,11 @@ impl Engine {
             .map(|v| !v.is_null())
             .unwrap_or(false);
         if is_lfm2 {
-            laya_native::lfm2::Lfm2::load(dir)
+            mlx_native::lfm2::Lfm2::load(dir)
                 .map(Engine::Lfm2)
                 .map_err(|e| format!("mlx status {}", e.0))
         } else {
-            laya_native::qwen::Qwen3::load(dir)
+            mlx_native::qwen::Qwen3::load(dir)
                 .map(Engine::Qwen)
                 .map_err(|e| format!("mlx status {}", e.0))
         }
@@ -213,7 +213,7 @@ fn main() {
     let metallib = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("build/mlx-install/lib/mlx.metallib");
     if metallib.is_file() {
-        let _ = laya_native::mlx::set_metallib_path(&metallib);
+        let _ = mlx_native::mlx::set_metallib_path(&metallib);
     }
     let s = mlx::gpu().expect("Metal device");
     println!(

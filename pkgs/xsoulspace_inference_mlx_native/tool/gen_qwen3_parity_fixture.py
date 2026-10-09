@@ -1,7 +1,7 @@
 """ADR 0054 R2 parity reference — greedy token ids from mlx-lm for the
 cached Qwen3-0.6B-4bit snapshot, plus byte-level-BPE tokenizer probes.
 
-Writes testdata/qwen3_06b_parity.json next to the laya_rust crate. The
+Writes testdata/qwen3_06b_parity.json next to the mlx_native crate. The
 fixture contains a synthetic prompt and token ids only — no private data.
 
 Run: ~/.venvs/mlx-ref/bin/python tool/gen_qwen3_parity_fixture.py
@@ -72,7 +72,7 @@ def main() -> int:
             os.path.dirname(__file__),
             "..",
             "native",
-            "laya_rust",
+            "mlx_native",
             "testdata",
             "qwen3_06b_parity.json",
         ),

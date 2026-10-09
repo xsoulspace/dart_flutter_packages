@@ -4,10 +4,10 @@ fn dequant_debug_tiny() {
     let metallib = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("build/mlx-install/lib/mlx.metallib");
     if metallib.is_file() {
-        laya_native::mlx::set_metallib_path(&metallib);
+        mlx_native::mlx::set_metallib_path(&metallib);
     }
-    let s = laya_native::mlx::gpu().unwrap();
-    use laya_native::mlx::{Array, Dtype};
+    let s = mlx_native::mlx::gpu().unwrap();
+    use mlx_native::mlx::{Array, Dtype};
     let n = 8usize;
     let k = 64usize;
     // x = all 1.0 bf16
@@ -24,18 +24,18 @@ fn dequant_debug_tiny() {
     println!("wq dtype {:?} dims {}x{}", outs[0].dtype(), outs[0].dim(0), outs[0].dim(1));
     println!("scales dims {}x{} dtype {:?}", outs[1].dim(0), outs[1].dim(1), outs[1].dtype());
 
-    let node = laya_native::plan::Node {
+    let node = mlx_native::plan::Node {
         name: "d".into(),
         group: "g".into(),
-        op: laya_native::plan::Op::QuantizedMatmul { group_size: 64, bits: 4, transpose: true },
+        op: mlx_native::plan::Op::QuantizedMatmul { group_size: 64, bits: 4, transpose: true },
         inputs: vec![],
         dump: None,
     };
-    let mlxc = laya_native::bindings::BindingTable::baseline();
-    let mut msl = laya_native::bindings::BindingTable::baseline();
-    msl.install("quantized_matmul", laya_native::bindings::ShapeClass::Gemv, Dtype::BFloat16, laya_native::bindings::Backend::DequantGemmMsl);
-    let rc = laya_native::bindings::eval(&node, &[&x, &outs[0], &outs[1], &outs[2]], &mlxc, s).unwrap().remove(0);
-    let rm = laya_native::bindings::eval(&node, &[&x, &outs[0], &outs[1], &outs[2]], &msl, s).unwrap().remove(0);
+    let mlxc = mlx_native::bindings::BindingTable::baseline();
+    let mut msl = mlx_native::bindings::BindingTable::baseline();
+    msl.install("quantized_matmul", mlx_native::bindings::ShapeClass::Gemv, Dtype::BFloat16, mlx_native::bindings::Backend::DequantGemmMsl);
+    let rc = mlx_native::bindings::eval(&node, &[&x, &outs[0], &outs[1], &outs[2]], &mlxc, s).unwrap().remove(0);
+    let rm = mlx_native::bindings::eval(&node, &[&x, &outs[0], &outs[1], &outs[2]], &msl, s).unwrap().remove(0);
     let vc = rc.astype(Dtype::Float32, s).unwrap().to_f32_vec(s).unwrap();
     let vm = rm.astype(Dtype::Float32, s).unwrap().to_f32_vec(s).unwrap();
     println!("mlx : {:?}", &vc[..8]);

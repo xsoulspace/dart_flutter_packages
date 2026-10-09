@@ -11,7 +11,7 @@ import 'package:xsoulspace_inference_mlx_native/xsoulspace_inference_mlx_native.
 /// snapshot). Pure Dart — runs wherever the fixture is committed.
 void main() {
   final fixtureFile = File(
-    'native/laya_rust/testdata/lfm25_chat_template_fixtures.json',
+    'native/mlx_native/testdata/lfm25_chat_template_fixtures.json',
   );
 
   test('renderer reproduces the recorded reference renders exactly', () {

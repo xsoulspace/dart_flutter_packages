@@ -7,8 +7,8 @@
 //!      binding stays behind LAYA_MSL_NORM=1, opt-in only).
 //! Run: cargo test --release --test r4_rmsnorm_gate -- --ignored --nocapture
 
-use laya_native::bindings::{Backend, BindingTable, ShapeClass};
-use laya_native::mlx::{self, Array, Dtype};
+use mlx_native::bindings::{Backend, BindingTable, ShapeClass};
+use mlx_native::mlx::{self, Array, Dtype};
 
 fn bf16_bytes(count: usize, modulus: u16) -> Vec<u8> {
     let mut v = vec![0u8; count * 2];
@@ -21,14 +21,14 @@ fn bf16_bytes(count: usize, modulus: u16) -> Vec<u8> {
 }
 
 fn run(table: &BindingTable, x: &Array, r: &Array, w: &Array, s: mlx::Stream) -> (Array, Array) {
-    let node = laya_native::plan::Node {
+    let node = mlx_native::plan::Node {
         name: "gate.rmsres".into(),
         group: "gate".into(),
-        op: laya_native::plan::Op::RmsNormResidual { eps: 1e-6 },
+        op: mlx_native::plan::Op::RmsNormResidual { eps: 1e-6 },
         inputs: Vec::new(),
         dump: None,
     };
-    let outs = laya_native::bindings::eval(&node, &[x, r, w], table, s).unwrap();
+    let outs = mlx_native::bindings::eval(&node, &[x, r, w], table, s).unwrap();
     let mut it = outs.into_iter();
     (it.next().unwrap(), it.next().unwrap())
 }
@@ -39,7 +39,7 @@ fn rmsnorm_residual_gate() {
     let metallib = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("build/mlx-install/lib/mlx.metallib");
     if metallib.is_file() {
-        laya_native::mlx::set_metallib_path(&metallib);
+        mlx_native::mlx::set_metallib_path(&metallib);
     }
     let s = mlx::gpu().expect("Metal");
 

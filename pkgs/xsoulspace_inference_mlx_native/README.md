@@ -13,7 +13,7 @@ it depends on none of them ([ADR
 ## Model drivers
 
 All drivers ride the same crate, dylib, and FFI surface
-(`native/laya_rust`):
+(`native/mlx_native`):
 
 - **laya** — the `aac6fef/laya-mlx` decision op-chain (ModernBERT-large,
   typed `choice`/`score`/`noul` questions, calibrated probabilities in one
@@ -33,9 +33,10 @@ pure-Dart prompt-encoding helper.
 ## The assetId
 
 The cdylib registers as a code asset under
-`package:xsoulspace_inference_mlx_native/laya_native` (built by
-`hook/build.dart`; the crate/dylib base name stays `laya_native` this rung —
-recorded debt, ADR 0057). First build needs cargo, cmake, and the Metal
+`package:xsoulspace_inference_mlx_native/mlx_native` (built by
+`hook/build.dart`; crate, dylib, and C symbols share the `mlx_native` base
+name — the base-name debt recorded in ADR 0057 is resolved). First build
+needs cargo, cmake, and the Metal
 Toolchain (`xcodebuild -downloadComponent MetalToolchain`); without them the
 package still analyzes, its scripted tests pass, and the golden test skips
 with that reason. Weights: `LAYA_MODEL_DIR` or `~/.cache/xsoulspace/laya-mlx`

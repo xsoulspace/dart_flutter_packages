@@ -36,7 +36,7 @@ void main(List<String> args) async {
     // skip) must still register its inputs, or the runner caches an
     // input-less result and never re-runs on Rust source edits.
     final packageRoot = input.packageRoot.toFilePath();
-    final rustRoot = '$packageRoot/native/laya_rust';
+    final rustRoot = '$packageRoot/native/mlx_native';
     final sources = Directory('$rustRoot/src');
     if (sources.existsSync()) {
       await for (final entry in sources.list(recursive: true)) {
@@ -63,7 +63,7 @@ void main(List<String> args) async {
 
     // Resolve from the input's packageRoot, never from a cwd guess.
     final mlxBuildRoot = '$rustRoot/build';
-    final dylib = '$rustRoot/target/release/liblaya_native.dylib';
+    final dylib = '$rustRoot/target/release/libmlx_native.dylib';
     final metallibSource = '$mlxBuildRoot/mlx-install/lib/mlx.metallib';
 
     if (!Directory(rustRoot).existsSync()) {
@@ -176,7 +176,7 @@ void main(List<String> args) async {
       output.assets.code.add(
         CodeAsset(
           package: input.packageName,
-          name: 'laya_native',
+          name: 'mlx_native',
           file: Uri.file(bundledDylib),
           linkMode: DynamicLoadingBundled(),
         ),
@@ -265,8 +265,8 @@ Future<bool> _ensureMlxArtifacts(String mlxBuildRoot) async {
   if (sourceRoot == null || !Directory(sourceRoot).existsSync()) {
     stderr.writeln(
       '[laya hook] LAYA_MLX_SOURCE not set or missing — point it at the '
-      'pinned mlx 0.32.2 source tree (the mlx-swift Cmlx checkout: '
-      'native/laya_native/.build/checkouts/mlx-swift/Source/Cmlx/mlx); '
+      'pinned mlx 0.32.2 source tree (e.g. the mlx-swift Cmlx/mlx checkout '
+      'from the historical Swift host, kept in git history); '
       'skipping the native asset (named skip)',
     );
     return false;

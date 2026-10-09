@@ -1,11 +1,11 @@
 [package]
-name = "laya_native"
+name = "mlx_native"
 version = "0.1.0"
 edition = "2021"
-description = "Laya decision-model forward pass on mlx-c, exposing the laya_native_* C ABI for dart:ffi (ADR 0051)"
+description = "Laya decision-model forward pass on mlx-c, exposing the mlx_native_* C ABI for dart:ffi (ADR 0051)"
 
 [lib]
-name = "laya_native"
+name = "mlx_native"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]

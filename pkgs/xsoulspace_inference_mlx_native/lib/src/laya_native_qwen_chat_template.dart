@@ -5,7 +5,7 @@
 /// think-tag stripping on assistant history before the last user query).
 ///
 /// This is a hand renderer for the SUPPORTED SUBSET, pinned byte-exactly
-/// by `native/laya_rust/testdata/qwen3_chat_template_fixtures.json`
+/// by `native/mlx_native/testdata/qwen3_chat_template_fixtures.json`
 /// (recorded from the reference tokenizer's `apply_chat_template` with
 /// `enable_thinking=False`). It is NOT a Jinja engine. Supported:
 /// - string `content` on every message; roles system/user/assistant;

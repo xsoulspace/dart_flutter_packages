@@ -14,13 +14,13 @@ void main(List<String> args) {
 
   final load = lib
       .lookupFunction<Int Function(Pointer<Uint8>), int Function(Pointer<Uint8>)>(
-          'laya_native_load');
+          'mlx_native_load');
   final forward = lib
       .lookupFunction<Pointer<Uint8> Function(Int64, Pointer<Uint8>),
-          Pointer<Uint8> Function(int, Pointer<Uint8>)>('laya_native_forward');
+          Pointer<Uint8> Function(int, Pointer<Uint8>)>('mlx_native_forward');
   final free = lib
       .lookupFunction<Void Function(Pointer<Uint8>), void Function(Pointer<Uint8>)>(
-          'laya_native_free');
+          'mlx_native_free');
 
   Pointer<Uint8> toNative(String s) {
     final bytes = utf8.encode(s);

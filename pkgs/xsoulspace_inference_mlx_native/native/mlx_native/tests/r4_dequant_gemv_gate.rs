@@ -6,8 +6,8 @@
 //!      stays behind LAYA_MSL_GEMV=1, opt-in only).
 //! Run: cargo test --release --test r4_dequant_gemv_gate -- --ignored --nocapture
 
-use laya_native::bindings::{Backend, BindingTable, ShapeClass};
-use laya_native::mlx::{self, Array, Dtype};
+use mlx_native::bindings::{Backend, BindingTable, ShapeClass};
+use mlx_native::mlx::{self, Array, Dtype};
 
 fn bf16_bytes(count: usize, modulus: u16) -> Vec<u8> {
     // bf16 pattern ~0.5..1.x (exponent of 0.5, varying mantissa).
@@ -39,10 +39,10 @@ fn quantized_inputs(n: usize, k: usize) -> (Array, QWeights) {
 }
 
 fn run(table: &BindingTable, x: &Array, q: &QWeights, s: mlx::Stream) -> Array {
-    let node = laya_native::plan::Node {
+    let node = mlx_native::plan::Node {
         name: "gate.qmat".into(),
         group: "gate".into(),
-        op: laya_native::plan::Op::QuantizedMatmul {
+        op: mlx_native::plan::Op::QuantizedMatmul {
             group_size: 64,
             bits: 4,
             transpose: true,
@@ -50,7 +50,7 @@ fn run(table: &BindingTable, x: &Array, q: &QWeights, s: mlx::Stream) -> Array {
         inputs: Vec::new(),
         dump: None,
     };
-    laya_native::bindings::eval(&node, &[x, &q.w, &q.scales, &q.biases], table, s)
+    mlx_native::bindings::eval(&node, &[x, &q.w, &q.scales, &q.biases], table, s)
         .unwrap()
         .into_iter()
         .next()
@@ -63,7 +63,7 @@ fn dequant_gemv_gate() {
     let metallib = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("build/mlx-install/lib/mlx.metallib");
     if metallib.is_file() {
-        laya_native::mlx::set_metallib_path(&metallib);
+        mlx_native::mlx::set_metallib_path(&metallib);
     }
     let s = mlx::gpu().expect("Metal");
 

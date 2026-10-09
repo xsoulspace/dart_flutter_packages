@@ -6,10 +6,10 @@
 //! not committed. RUNG LAW: a parity failure is a gate failure; record it in
 //! the ADR, never weaken the fixture.
 
-use laya_native::bpe::ByteLevelBpe;
-use laya_native::mlx;
-use laya_native::mlx::{Array, Dtype};
-use laya_native::qwen::{KvCache, Qwen3};
+use mlx_native::bpe::ByteLevelBpe;
+use mlx_native::mlx;
+use mlx_native::mlx::{Array, Dtype};
+use mlx_native::qwen::{KvCache, Qwen3};
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -130,7 +130,7 @@ fn greedy_decode_matches_reference() {
     let metallib = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("build/mlx-install/lib/mlx.metallib");
     if metallib.is_file() {
-        laya_native::mlx::set_metallib_path(&metallib);
+        mlx_native::mlx::set_metallib_path(&metallib);
     }
     let Some(s) = gpu() else { return };
 
@@ -252,31 +252,31 @@ fn qwen_ffi_generate_smoke() {
     let metallib = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("build/mlx-install/lib/mlx.metallib");
     if metallib.is_file() {
-        laya_native::mlx::set_metallib_path(&metallib);
+        mlx_native::mlx::set_metallib_path(&metallib);
     }
 
     extern "C" {
-        fn laya_native_qwen_load(model_dir: *const std::ffi::c_char) -> i64;
-        fn laya_native_qwen_generate(
+        fn mlx_native_qwen_load(model_dir: *const std::ffi::c_char) -> i64;
+        fn mlx_native_qwen_generate(
             handle: i64,
             request_json: *const std::ffi::c_char,
         ) -> *mut std::ffi::c_char;
-        fn laya_native_qwen_unload(handle: i64);
-        fn laya_native_free(pointer: *mut std::ffi::c_char);
+        fn mlx_native_qwen_unload(handle: i64);
+        fn mlx_native_free(pointer: *mut std::ffi::c_char);
     }
 
     let dir = std::ffi::CString::new(snap.to_str().unwrap()).unwrap();
-    let handle = unsafe { laya_native_qwen_load(dir.as_ptr()) };
+    let handle = unsafe { mlx_native_qwen_load(dir.as_ptr()) };
     assert!(handle > 0, "qwen load failed: {handle}");
     let request = std::ffi::CString::new(
         serde_json::json!({ "prompt": fx.prompt, "max_tokens": 8 }).to_string(),
     )
     .unwrap();
-    let out = unsafe { laya_native_qwen_generate(handle, request.as_ptr()) };
+    let out = unsafe { mlx_native_qwen_generate(handle, request.as_ptr()) };
     assert!(!out.is_null(), "generate returned null");
     let payload = unsafe { std::ffi::CStr::from_ptr(out) }.to_string_lossy().to_string();
-    unsafe { laya_native_free(out) };
-    unsafe { laya_native_qwen_unload(handle) };
+    unsafe { mlx_native_free(out) };
+    unsafe { mlx_native_qwen_unload(handle) };
 
     let parsed: serde_json::Value = serde_json::from_str(&payload).expect("response JSON");
     assert!(

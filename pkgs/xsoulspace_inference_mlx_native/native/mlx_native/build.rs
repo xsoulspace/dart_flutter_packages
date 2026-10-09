@@ -11,7 +11,7 @@ fn main() {
     for dir in [&mlx_lib, &mlxc_lib] {
         if !dir.is_dir() {
             panic!(
-                "laya_native: mlx build artifacts missing at {} — run the mlx/mlx-c \
+                "mlx_native: mlx build artifacts missing at {} — run the mlx/mlx-c \
                  cmake build first (see hook/build.dart or ADR 0051)",
                 dir.display()
             );

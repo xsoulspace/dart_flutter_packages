@@ -7,8 +7,8 @@
 //! carries prompt_ids from the reference tokenizer — bpe.rs is
 //! Qwen-specific and deliberately NOT used here (empty tokenizer_probes).
 
-use laya_native::lfm2::Lfm2;
-use laya_native::mlx::{self, Dtype};
+use mlx_native::lfm2::Lfm2;
+use mlx_native::mlx::{self, Dtype};
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -60,7 +60,7 @@ fn lfm2_greedy_matches_reference_and_gate() {
     let metallib = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("build/mlx-install/lib/mlx.metallib");
     if metallib.is_file() {
-        laya_native::mlx::set_metallib_path(&metallib);
+        mlx_native::mlx::set_metallib_path(&metallib);
     }
     let Ok(s) = mlx::gpu() else {
         eprintln!("skipping: no Metal device");
@@ -125,7 +125,7 @@ fn lfm2_generate_stops_at_eos_only_when_opted_in() {
     let metallib = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("build/mlx-install/lib/mlx.metallib");
     if metallib.is_file() {
-        laya_native::mlx::set_metallib_path(&metallib);
+        mlx_native::mlx::set_metallib_path(&metallib);
     }
     let Ok(_) = mlx::gpu() else {
         eprintln!("skipping: no Metal device");
@@ -133,17 +133,17 @@ fn lfm2_generate_stops_at_eos_only_when_opted_in() {
     };
 
     extern "C" {
-        fn laya_native_lfm2_load(model_dir: *const std::ffi::c_char) -> i64;
-        fn laya_native_lfm2_generate(
+        fn mlx_native_lfm2_load(model_dir: *const std::ffi::c_char) -> i64;
+        fn mlx_native_lfm2_generate(
             handle: i64,
             request_json: *const std::ffi::c_char,
         ) -> *mut std::ffi::c_char;
-        fn laya_native_lfm2_unload(handle: i64);
-        fn laya_native_free(pointer: *mut std::ffi::c_char);
+        fn mlx_native_lfm2_unload(handle: i64);
+        fn mlx_native_free(pointer: *mut std::ffi::c_char);
     }
 
     let dir = std::ffi::CString::new(snap.to_str().unwrap()).unwrap();
-    let handle = unsafe { laya_native_lfm2_load(dir.as_ptr()) };
+    let handle = unsafe { mlx_native_lfm2_load(dir.as_ptr()) };
     assert!(handle > 0, "lfm2 load failed: {handle}");
 
     let eos_pos = fx
@@ -162,13 +162,13 @@ fn lfm2_generate_stops_at_eos_only_when_opted_in() {
         .to_string(),
     )
     .unwrap();
-    let out = unsafe { laya_native_lfm2_generate(handle, request.as_ptr()) };
+    let out = unsafe { mlx_native_lfm2_generate(handle, request.as_ptr()) };
     assert!(!out.is_null(), "generate returned null");
     let payload = unsafe { std::ffi::CStr::from_ptr(out) }
         .to_string_lossy()
         .to_string();
-    unsafe { laya_native_free(out) };
-    unsafe { laya_native_lfm2_unload(handle) };
+    unsafe { mlx_native_free(out) };
+    unsafe { mlx_native_lfm2_unload(handle) };
 
     let parsed: serde_json::Value = serde_json::from_str(&payload).expect("response JSON");
     assert!(
@@ -213,7 +213,7 @@ fn lfm2_tokenizer_matches_reference() {
         eprintln!("skipping: LFM2 snapshot absent");
         return;
     };
-    let tok = laya_native::bpe::ByteLevelBpe::load_tokenizer_json(&snap)
+    let tok = mlx_native::bpe::ByteLevelBpe::load_tokenizer_json(&snap)
         .expect("tokenizer.json loads");
     let raw = tok.encode(&fx.prompt).expect("encode");
     let want: Vec<u32> = fx.prompt_ids[1..].iter().map(|&i| i as u32).collect();
@@ -264,7 +264,7 @@ fn lfm2_700m_greedy_matches_reference() {
     let metallib = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("build/mlx-install/lib/mlx.metallib");
     if metallib.is_file() {
-        let _ = laya_native::mlx::set_metallib_path(&metallib);
+        let _ = mlx_native::mlx::set_metallib_path(&metallib);
     }
     let Ok(s) = mlx::gpu() else {
         eprintln!("skipping: no Metal device");

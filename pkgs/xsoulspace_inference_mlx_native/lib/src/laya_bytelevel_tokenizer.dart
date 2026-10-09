@@ -7,7 +7,7 @@ import 'dart:io';
 /// split regex, BPE merges, added tokens).
 ///
 /// The normalizer (NFC) is injected: pure Dart has no Unicode normalization,
-/// and the native runtime exposes one (`laya_native_normalize`). ASCII-only
+/// and the native runtime exposes one (`mlx_native_normalize`). ASCII-only
 /// callers work without it; multilingual text needs it for token parity.
 final class LayaByteLevelTokenizer {
   LayaByteLevelTokenizer._(
