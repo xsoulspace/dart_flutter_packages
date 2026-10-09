@@ -7,6 +7,7 @@ import 'package:ffi/ffi.dart';
 import 'package:xsoulspace_inference_local_serve/xsoulspace_inference_local_serve.dart';
 
 import 'laya_native_decision_engine.dart';
+import 'laya_native_qwen_chat_template.dart';
 
 // Native bindings over the R2 qwen engine (ADR 0054): the SAME
 // native-assets code asset the decision engine registers; on machines
@@ -191,6 +192,7 @@ final class LayaQwenChatServer {
     required NativeQwenTextEngine engine,
     this.model = 'qwen3-0.6b-4bit',
     this.defaultMaxTokens = 64,
+    this.useTemplate = true,
     final String? apiKey,
     final InternetAddress? address,
     final int port = 0,
@@ -204,11 +206,16 @@ final class LayaQwenChatServer {
            'engine': 'laya-native-qwen',
          },
          route: (final LoopbackRequest request) async =>
-             _route(request, engine, model, defaultMaxTokens),
+             _route(request, engine, model, defaultMaxTokens, useTemplate),
        );
 
   final String model;
   final int defaultMaxTokens;
+
+  /// Template mode (default) renders the checkpoint's chat template and
+  /// stops at `<|im_end|>`/`<|endoftext|>`. Raw mode is the legacy
+  /// role-prefixed concatenation with no EOS stop — the bench's raw cell.
+  final bool useTemplate;
   final LoopbackJsonServer _server;
 
   /// The bound base URL (`http://127.0.0.1:<port>`), after [start].
@@ -222,6 +229,7 @@ final class LayaQwenChatServer {
     final NativeQwenTextEngine engine,
     final String model,
     final int maxTokens,
+    final bool useTemplate,
   ) async {
     if (request.method != 'POST' || request.path != '/v1/chat/completions') {
       return null;
@@ -232,6 +240,35 @@ final class LayaQwenChatServer {
       return const LoopbackReply(422, <String, Object?>{
         'error': <String, Object?>{'message': 'messages required'},
       });
+    }
+    if (useTemplate) {
+      for (final raw in messages) {
+        if (raw is! Map) {
+          return const LoopbackReply(422, <String, Object?>{
+            'error': <String, Object?>{'message': 'messages must be objects'},
+          });
+        }
+      }
+      final rendered = <QwenChatMessage>[
+        for (final raw in messages)
+          QwenChatMessage(
+            role: '${raw['role'] ?? 'user'}',
+            content: '${raw['content'] ?? ''}',
+          ),
+      ];
+      final prompt = renderQwenChatPrompt(messages: rendered);
+      final requested = body['max_tokens'];
+      final completion = engine.generate(
+        prompt: prompt,
+        maxTokens: requested is int ? requested : maxTokens,
+        stopOnEos: true,
+        eosIds: const <int>[151645, 151643], // <|im_end|>, <|endoftext|>
+      );
+      return _completionReply(
+        id: 'chatcmpl-laya-qwen',
+        model: model,
+        completion: completion,
+      );
     }
     final promptBuffer = StringBuffer();
     for (final raw in messages) {
@@ -252,23 +289,33 @@ final class LayaQwenChatServer {
       prompt: promptBuffer.toString(),
       maxTokens: requested is int ? requested : maxTokens,
     );
-    return LoopbackReply(200, <String, Object?>{
-      'id': 'chatcmpl-laya-qwen',
-      'model': model,
-      'choices': <Object?>[
-        <String, Object?>{
-          'index': 0,
-          'finish_reason': 'stop',
-          'message': <String, Object?>{
-            'role': 'assistant',
-            'content': completion.text,
-          },
-        },
-      ],
-      'usage': <String, Object?>{
-        'prompt_tokens': completion.promptIds.length,
-        'completion_tokens': completion.ids.length - completion.promptIds.length,
-      },
-    });
+    return _completionReply(
+      id: 'chatcmpl-laya-qwen',
+      model: model,
+      completion: completion,
+    );
   }
+
+  static LoopbackReply _completionReply({
+    required final String id,
+    required final String model,
+    required final NativeQwenCompletion completion,
+  }) => LoopbackReply(200, <String, Object?>{
+    'id': id,
+    'model': model,
+    'choices': <Object?>[
+      <String, Object?>{
+        'index': 0,
+        'finish_reason': 'stop',
+        'message': <String, Object?>{
+          'role': 'assistant',
+          'content': completion.text,
+        },
+      },
+    ],
+    'usage': <String, Object?>{
+      'prompt_tokens': completion.promptIds.length,
+      'completion_tokens': completion.ids.length - completion.promptIds.length,
+    },
+  });
 }

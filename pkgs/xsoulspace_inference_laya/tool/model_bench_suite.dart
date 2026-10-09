@@ -29,6 +29,7 @@ const _lanes = ['chat', 'decompression', 'swe'];
 void main(final List<String> args) async {
   String? endpointArg;
   String? inProcess;
+  var raw = false;
   var lanes = _lanes.toList();
   var outDir = 'bench';
   for (var i = 0; i < args.length; i++) {
@@ -37,6 +38,8 @@ void main(final List<String> args) async {
         endpointArg = args[++i];
       case '--in-process':
         inProcess = args[++i];
+      case '--raw':
+        raw = true;
       case '--lane':
         lanes = args[++i].split(',');
       case '--out':
@@ -66,20 +69,30 @@ void main(final List<String> args) async {
     }
   } else {
     if (inProcess != 'qwen' && inProcess != 'lfm2') {
-      _fail("in-process supports 'qwen' and 'lfm2' (the lfm2 route renders "
-          'the chat template and stops at <|im_end|>; --endpoint covers any '
-          'wire server)');
+      _fail("--in-process supports qwen|lfm2, optional --raw "
+          '(legacy no-template cast); --endpoint covers any wire server)');
     }
     // The bundled native line: load + serve in-process, no python.
     // (The two chat servers share the wire contract, not a supertype.)
+    // `--raw` selects the legacy no-template/no-EOS cast — the bench's
+    // controlled comparison cell (ADR 0057: same model, same lanes).
     if (inProcess == 'qwen') {
-      server = LayaQwenChatServer(engine: await NativeQwenTextEngine.load());
+      server = LayaQwenChatServer(
+        engine: await NativeQwenTextEngine.load(),
+        useTemplate: !raw,
+      );
     } else {
-      server = LayaLfm2ChatServer(engine: await NativeLfm2TextEngine.load());
+      server = LayaLfm2ChatServer(
+        engine: await NativeLfm2TextEngine.load(),
+        useTemplate: !raw,
+      );
     }
     await server.start();
     base = server.url;
-    stderr.writeln('in-process native line ($inProcess) at ${server.url}');
+    stderr.writeln(
+      'in-process native line ($inProcess, template${raw ? ' off' : ''}) '
+      'at ${server.url}',
+    );
   }
 
   final results = <_LaneResult>[];

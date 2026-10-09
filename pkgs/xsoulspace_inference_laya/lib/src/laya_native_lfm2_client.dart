@@ -222,6 +222,7 @@ final class LayaLfm2ChatServer {
     required NativeLfm2TextEngine engine,
     this.model = 'lfm2.5-1.2b-instruct-mlx-4bit',
     this.defaultMaxTokens = 64,
+    this.useTemplate = true,
     final String? apiKey,
     final InternetAddress? address,
     final int port = 0,
@@ -235,11 +236,16 @@ final class LayaLfm2ChatServer {
            'engine': 'laya-native-lfm2',
          },
          route: (final LoopbackRequest request) async =>
-             _route(request, engine, model, defaultMaxTokens),
+             _route(request, engine, model, defaultMaxTokens, useTemplate),
        );
 
   final String model;
   final int defaultMaxTokens;
+
+  /// Template mode (default) renders the checkpoint's chat template and
+  /// stops at `<|im_end|>`/`<|endoftext|>`. Raw mode is the legacy
+  /// concatenation with no EOS stop — the bench's raw cell.
+  final bool useTemplate;
   final LoopbackJsonServer _server;
 
   /// The bound base URL (`http://127.0.0.1:<port>`), after [start].
@@ -253,6 +259,7 @@ final class LayaLfm2ChatServer {
     final NativeLfm2TextEngine engine,
     final String model,
     final int maxTokens,
+    final bool useTemplate,
   ) async {
     if (request.method != 'POST' || request.path != '/v1/chat/completions') {
       return null;
@@ -262,6 +269,46 @@ final class LayaLfm2ChatServer {
     if (messages is! List || messages.isEmpty) {
       return const LoopbackReply(422, <String, Object?>{
         'error': <String, Object?>{'message': 'messages required'},
+      });
+    }
+    if (!useTemplate) {
+      final promptBuffer = StringBuffer();
+      for (final raw in messages) {
+        if (raw is! Map) {
+          return const LoopbackReply(422, <String, Object?>{
+            'error': <String, Object?>{'message': 'messages must be objects'},
+          });
+        }
+        final role = '${raw['role'] ?? 'user'}';
+        final content = '${raw['content'] ?? ''}';
+        if (promptBuffer.isNotEmpty) {
+          promptBuffer.write('\n');
+        }
+        promptBuffer.write(role == 'user' ? content : '$role: $content');
+      }
+      final requested = body['max_tokens'];
+      final completion = engine.generate(
+        prompt: promptBuffer.toString(),
+        maxTokens: requested is int ? requested : maxTokens,
+      );
+      return LoopbackReply(200, <String, Object?>{
+        'id': 'chatcmpl-laya-lfm2',
+        'model': model,
+        'choices': <Object?>[
+          <String, Object?>{
+            'index': 0,
+            'finish_reason': 'stop',
+            'message': <String, Object?>{
+              'role': 'assistant',
+              'content': completion.text,
+            },
+          },
+        ],
+        'usage': <String, Object?>{
+          'prompt_tokens': completion.promptIds.length,
+          'completion_tokens':
+              completion.ids.length - completion.promptIds.length,
+        },
       });
     }
     final rendered = <Lfm2ChatMessage>[];

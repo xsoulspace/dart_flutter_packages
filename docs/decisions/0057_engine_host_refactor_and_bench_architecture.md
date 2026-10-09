@@ -253,6 +253,21 @@ checkers.
   processes. Python keeps exactly two roles: benchmark reference legs
   and golden fixture recording.
 
+- **Bench-methodology correction (owner review) — the 2×2 matrix.** The
+  first comparison crossed two variables (model AND serving shape) — a
+  confounded diagonal. Corrected design: same lane files, same checkers,
+  four cells — {qwen, lfm2} × {raw, template+EOS}. Results (M1, AC):
+  chat | decompression | swe — qwen raw 3/10 | 0/10 | 0/5; qwen
+  template+EOS 4/10 | 8/10 | 1/5; lfm2 raw 4/10 | 0/10 | 1/5; lfm2
+  template+EOS 7/10 | 9/10 | 3/5. Attribution: TEMPLATE+EOS IS THE
+  DOMINANT FACTOR — within-model raw→template moves decompression
+  0→8 and 0→9 respectively (the byte-cap/one-line/stop-at-turn-end
+  discipline is serving shape, not model quality); the model adds the
+  rest (lfm2-template 7/9/3 vs qwen-template 4/8/1 — that cell still
+  mixes size 1.2B vs 0.6B, so it is the product choice, not a
+  controlled variable). The bench carries `--raw` to reproduce any
+  cell; the qwen3 template renderer is fixture-gated byte-exactly like
+  the lfm2 one (venv `apply_chat_template`, enable_thinking=false).
 ## Non-claims
 
 - The physical package move (R1–R3) is NOT done in this ADR — the

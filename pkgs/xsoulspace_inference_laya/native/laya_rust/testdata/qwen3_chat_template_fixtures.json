@@ -1,0 +1,50 @@
+{
+  "snapshot": "/Users/antonio/.cache/huggingface/hub/models--mlx-community--Qwen3-0.6B-4bit/snapshots/73e3e38d981303bc594367cd910ea6eb48349da8",
+  "recorded": "2026-10-09",
+  "tool": "~/.venvs/mlx-ref/bin/python transformers AutoTokenizer.apply_chat_template(tokenize=False, add_generation_prompt=True, enable_thinking=False)",
+  "note": "Reference renders for the hand renderer's SUPPORTED SUBSET (no tools, string contents, enable_thinking=false). Byte-exact pins; provenance machine-local.",
+  "cases": [
+    {
+      "id": "system-user",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are a terse assistant. Answer in one sentence."
+        },
+        {
+          "role": "user",
+          "content": "What is a search algorithm?"
+        }
+      ],
+      "rendered": "<|im_start|>system\nYou are a terse assistant. Answer in one sentence.<|im_end|>\n<|im_start|>user\nWhat is a search algorithm?<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"
+    },
+    {
+      "id": "think-strip-multi-turn",
+      "messages": [
+        {
+          "role": "user",
+          "content": "My name is Antonia and I work on compilers. Just say hello."
+        },
+        {
+          "role": "assistant",
+          "content": "<think>\nuser wants a greeting\n</think>\n\nHello, Antonia!"
+        },
+        {
+          "role": "user",
+          "content": "What is my name and what do I work on?"
+        }
+      ],
+      "rendered": "<|im_start|>user\nMy name is Antonia and I work on compilers. Just say hello.<|im_end|>\n<|im_start|>assistant\nHello, Antonia!<|im_end|>\n<|im_start|>user\nWhat is my name and what do I work on?<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"
+    },
+    {
+      "id": "user-only",
+      "messages": [
+        {
+          "role": "user",
+          "content": "How many days are in a leap year? Answer with just the number."
+        }
+      ],
+      "rendered": "<|im_start|>user\nHow many days are in a leap year? Answer with just the number.<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"
+    }
+  ]
+}
