@@ -1,0 +1,102 @@
+{
+  "lane": "chat",
+  "description": "Short factual QA + retention — the 'common questions like in this chat' lane. Checkers are deterministic containment; no LLM judge.",
+  "cases": [
+    {
+      "id": "chat-def-search",
+      "messages": [
+        {"role": "user", "content": "Explain what a search algorithm is in two sentences."}
+      ],
+      "max_tokens": 96,
+      "expect_any": ["search", "find", "locate"],
+      "expect_all": ["algorithm"],
+      "max_wall_ms": 8000
+    },
+    {
+      "id": "chat-count",
+      "messages": [
+        {"role": "user", "content": "How many days are there in a leap year? Answer with just the number."}
+      ],
+      "max_tokens": 16,
+      "expect_any": ["366"],
+      "max_wall_ms": 5000
+    },
+    {
+      "id": "chat-capital",
+      "messages": [
+        {"role": "user", "content": "What is the capital of Japan? Answer in one word."}
+      ],
+      "max_tokens": 16,
+      "expect_any": ["Tokyo"],
+      "max_wall_ms": 5000
+    },
+    {
+      "id": "chat-sort-choose",
+      "messages": [
+        {"role": "user", "content": "Which sorting algorithm is fastest on already-sorted data: quicksort, mergesort, or insertion sort? Answer with one name."}
+      ],
+      "max_tokens": 24,
+      "expect_any": ["insertion"],
+      "max_wall_ms": 5000
+    },
+    {
+      "id": "chat-http-vs-ws",
+      "messages": [
+        {"role": "user", "content": "In one sentence: when would you pick WebSockets over plain HTTP requests?"}
+      ],
+      "max_tokens": 96,
+      "expect_all": ["real-time", "server"],
+      "expect_any": ["bidirectional", "push", "connection", "persistent", "real-time"],
+      "max_wall_ms": 8000
+    },
+    {
+      "id": "chat-retention-name",
+      "messages": [
+        {"role": "user", "content": "My name is Antonia and I work on compilers. Just say hello to me."},
+        {"role": "assistant", "content": "Hello, Antonia!"},
+        {"role": "user", "content": "What is my name and what do I work on?"}
+      ],
+      "max_tokens": 48,
+      "expect_all": ["Antonia", "compilers"],
+      "max_wall_ms": 6000
+    },
+    {
+      "id": "chat-retention-number",
+      "messages": [
+        {"role": "user", "content": "Remember the number 4711. Reply OK."},
+        {"role": "assistant", "content": "OK"},
+        {"role": "user", "content": "What number did I ask you to remember? Just the number."}
+      ],
+      "max_tokens": 16,
+      "expect_any": ["4711"],
+      "max_wall_ms": 5000
+    },
+    {
+      "id": "chat-git-undo",
+      "messages": [
+        {"role": "user", "content": "One command: undo the last git commit but keep my changes in the working tree."}
+      ],
+      "max_tokens": 32,
+      "expect_any": ["reset --soft", "reset HEAD~", "restore --staged"],
+      "max_wall_ms": 5000
+    },
+    {
+      "id": "chat-json-parse",
+      "messages": [
+        {"role": "user", "content": "Convert to JSON and output only the JSON: name Alice, age 30, city Berlin."}
+      ],
+      "max_tokens": 64,
+      "expect_all": ["Alice", "30", "Berlin"],
+      "max_wall_ms": 6000
+    },
+    {
+      "id": "chat-why-lazy",
+      "messages": [
+        {"role": "user", "content": "Why do GPU ML frameworks like MLX use lazy evaluation? Two sentences."}
+      ],
+      "max_tokens": 96,
+      "expect_any": ["graph", "fuse", "fusion", "kernel", "optimize", "defer"],
+      "max_wall_ms": 8000
+    }
+  ]
+}

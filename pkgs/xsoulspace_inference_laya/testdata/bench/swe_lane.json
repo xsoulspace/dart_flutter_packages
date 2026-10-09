@@ -1,0 +1,37 @@
+{
+  "lane": "swe",
+  "description": "Tiny executable code tasks: the model emits a Dart function (inside a code fence or bare); the runner compiles+runs it against asserts in a subprocess with a timeout. The strongest mechanical-SWE signal; deterministic checker.",
+  "timeout_seconds": 20,
+  "cases": [
+    {
+      "id": "swe-sum",
+      "prompt": "Write a Dart function `int sum(List<int> xs)` that returns the sum of the list (0 for empty). Output ONLY the function, no imports, no main.",
+      "harness": "int run() { assert(sum(<int>[]) == 0); assert(sum(<int>[1, 2, 3]) == 6); assert(sum(<int>[-5, 5, 10]) == 10); return 0; }",
+      "signature": "int sum(List<int> xs)"
+    },
+    {
+      "id": "swe-palindrome",
+      "prompt": "Write a Dart function `bool isPalindrome(String s)` that returns true if s reads the same forwards and backwards, ignoring case, spaces and punctuation. Output ONLY the function, no imports, no main.",
+      "harness": "int run() { assert(isPalindrome('A man, a plan, a canal: Panama')); assert(!isPalindrome('hello')); assert(isPalindrome('')); assert(isPalindrome('RaceCar')); return 0; }",
+      "signature": "bool isPalindrome(String s)"
+    },
+    {
+      "id": "swe-fib",
+      "prompt": "Write a Dart function `List<int> fibonacci(int n)` returning the first n Fibonacci numbers starting 0, 1 (empty for n<=0). Output ONLY the function, no imports, no main.",
+      "harness": "int run() { assert(fibonacci(0).isEmpty); assert(fibonacci(1).join(',') == '0'); assert(fibonacci(7).join(',') == '0,1,1,2,3,5,8'); return 0; }",
+      "signature": "List<int> fibonacci(int n)"
+    },
+    {
+      "id": "swe-brackets",
+      "prompt": "Write a Dart function `bool isBalanced(String s)` that returns true if every '(' has a matching ')' in order (nesting allowed, other characters ignored). Output ONLY the function, no imports, no main.",
+      "harness": "int run() { assert(isBalanced('(a(b)c)')); assert(!isBalanced('(()')); assert(!isBalanced('())')); assert(isBalanced('no parens')); return 0; }",
+      "signature": "bool isBalanced(String s)"
+    },
+    {
+      "id": "swe-groupby",
+      "prompt": "Write a Dart function `Map<String, int> countBy(List<String> xs)` returning how many times each string appears. Output ONLY the function, no imports, no main.",
+      "harness": "int run() { final r = countBy(<String>['a', 'b', 'a']); assert(r['a'] == 2 && r['b'] == 1 && r.length == 2); assert(countBy(<String>[]).isEmpty); return 0; }",
+      "signature": "Map<String, int> countBy(List<String> xs)"
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "lane": "decompression",
+  "description": "The harness's middle-out compression role: a memory/beat record in, a <=280-byte one-line summary out. Checker: byte cap + single line + entity recall (no LLM judge).",
+  "max_output_bytes": 280,
+  "min_entity_hits": 2,
+  "cases": [
+    {
+      "id": "decomp-claim-fix",
+      "record": "2026-10-06 ADR 0033 follow-ups SHIPPED: csharp namespace-equals-directory convention (decl+using rewrites for dead namespaces via ReferenceLineForm registry in module_model, alive-check excludes still-declared ns, csharp_parse apply gate reparses moved/rewritten files); dart_package_uri (package:<pkg>/<lib-rel> identity) and rust_crate_path (crate:: src-layout identity) providers with import-line relink; unmodeled-code check must consult provider registry (was falsely blocking dart before its models collected)",
+      "entities": ["ADR 0033", "csharp", "namespace", "providers", "registry"],
+      "max_tokens": 96
+    },
+    {
+      "id": "decomp-lesson",
+      "record": "LFM2 rung lesson: the KV cache update is FUNCTIONAL — written buffers must be stored back into the slots or every decode step attends to an empty cache; the prefill hides the bug because its single chunk consumes the update's return value directly. Found by per-layer dump bisect at layer 2 attention, decode step 1: the keys cache read all zeros.",
+      "entities": ["KV", "functional", "store", "prefill", "cache"],
+      "max_tokens": 96
+    },
+    {
+      "id": "decomp-deploy",
+      "record": "Deploy ba0fc970 pushed: compose --env-file root/.env, probe reads TRAEFIK_HTTP_PORT, temporal pinned to v1.9.1, 54 tests green. The panel image rebuilds from docker/x with build context joins fixed by contract assert; distr gate 9/9.",
+      "entities": ["ba0fc970", "compose", "temporal", "probe", "tests"],
+      "max_tokens": 96
+    },
+    {
+      "id": "decomp-bench",
+      "record": "model_bench on M1 AC: Qwen3-0.6B q4 decodes 84.9 tok/s fresh and 67.7 tok/s at 2k context; LFM2.5-1.2B holds 70.1 down to 64.3 because its conv layers are O(1) per token and only 6 of 16 blocks carry a KV cache; bf16 is 2x slower than q4 at equal size, which pins decode as weight-read-bandwidth-bound.",
+      "entities": ["LFM2.5", "q4", "tok/s", "conv", "bandwidth"],
+      "max_tokens": 96
+    },
+    {
+      "id": "decomp-crash",
+      "record": "laya hook/build.dart crashed all flutter tests: cwd-guess ../.. plus uncaught ProcessException on a missing native tree. Fix: packageRoot-resolved paths and a named skip when the native tree is absent; 209 plus 33 tests green after the fix. The chat ACP session-per-turn bug and the dead permission buttons were fixed in the same pass.",
+      "entities": ["build.dart", "cwd", "ProcessException", "skip", "tests"],
+      "max_tokens": 96
+    },
+    {
+      "id": "decomp-decision",
+      "record": "L4 scope call: a from-scratch Swift MLX laya port was DROPPED — it would mean reimplementing laya's custom decision architecture owned by the laya-mlx runtime; the local laya-serve composition (attach/spawn, health-gated) delivers the same capability. Non-claim recorded in laya_local_provider_PLAN.md.",
+      "entities": ["Swift", "port", "laya-serve", "composition", "decision"],
+      "max_tokens": 96
+    },
+    {
+      "id": "decomp-incident",
+      "record": "Panel 8080 boot hang diagnosed: shell frozen at restore-phase; all server primitives returned 200 from the page context (restore/snapshot/sign_in/revoke/WS); two rpcs fired then the phase never flipped; root cause sat inside a localization WIP batch; CP plus panel images were rebuilt and the local admin password was reset via the PG recipe.",
+      "entities": ["8080", "restore-phase", "rpc", "localization", "admin"],
+      "max_tokens": 96
+    },
+    {
+      "id": "decomp-research",
+      "record": "Hard-law research verdicts: continuous batching buys 2-4x throughput only at high concurrency but worsens p99 latency — wrong regime for B=1 products; GGUF loses 15-40% to mlx-native kernels on Apple Silicon; training and autodiff are a different product. Recorded as standing non-goals in ADR 0055.",
+      "entities": ["continuous batching", "GGUF", "p99", "B=1", "Apple"],
+      "max_tokens": 96
+    },
+    {
+      "id": "decomp-migration",
+      "record": "codemap adopted in three repos instead of gitnexus: ecsai_harness e48ad11 (AGENTS block swapped, 279MB of .gitnexus removed, index rebuilt at 3625 dart nodes over 994 files), dart_flutter_packages 787057ba (192MB removed), vosges 7155aba (1552 nodes over 214 files); the frozen AOT bundle now serves all five map_index tools globally over stdio.",
+      "entities": ["codemap", "gitnexus", "index", "AOT", "stdio"],
+      "max_tokens": 96
+    },
+    {
+      "id": "decomp-onboarding",
+      "record": "Presence runbook landed as ADR 0074: clean-slate install for any agent covers snapshot, admission auto-grant, the 6-client MCP table, charter sync, the keeper lane, and an orient smoke with a denial table. Owner-gone succession is a liveness protocol: heartbeat plus readiness, and arriving clients succeed unhealthy owners automatically.",
+      "entities": ["ADR 0074", "install", "agent", "owner", "succession"],
+      "max_tokens": 96
+    }
+  ]
+}
