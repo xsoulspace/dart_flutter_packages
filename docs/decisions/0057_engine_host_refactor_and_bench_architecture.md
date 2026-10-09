@@ -357,6 +357,36 @@ production engines for the same checkpoints double every gate, and the
 Rust host is the one with the parity fixtures, the composition API,
 and the chat-template serving layer.
 
+### The 1.7B fix + debt resolution (2026-10-09, later rungs)
+
+- **Qwen3-1.7B defect fixed.** Root cause: the R4 fused
+  `rmsnorm_residual` MSL kernel cached row sums in a hardcoded
+  `threadgroup float cached[1024]` — an out-of-bounds write at
+  cols = 2048 (the 0.6B's cols = 1024 fit exactly and masked it);
+  corrupted sums exploded the residual ~×10⁷/layer and NaN-ed every
+  logit from layer 4. Weights and embeddings verified checksum-exact
+  against the venv before the runtime tracer pinned the op. Fix:
+  pass 2 re-reads x + r (correct for any cols; history in the kernel
+  source). Gate: the 1.7B fixture is now TEACHER-FORCED TIE-AWARE —
+  python forks at 4 hard greedy ties (top-2 gap ≤ 0.05; its own cache
+  path and full forward disagree at step 1), so the fixture records
+  per-step reference top-2 and the gate accepts a mismatch only inside
+  a recorded tie: 64/64. The mid-class bench pair is valid: qwen3-1.7B
+  **8/10/3** (33–38 tok/s) vs LFM2.5-1.2B **7/9/3** (47–59 tok/s) —
+  the earlier 0/0/0 was purely the load defect.
+- **The assetId debt is resolved** (commit 796a5a9d): the crate is
+  `native/mlx_native`, the dylib `libmlx_native.dylib`, the asset
+  `package:xsoulspace_inference_mlx_native/mlx_native`, all 11 C
+  symbols `mlx_native_*`. Kept: the Dart file/class names
+  (`laya_native_decision_engine.dart`, `NativeLayaDecisionEngine`) —
+  they name the laya decision MODEL driver, which is what they are.
+- **General use, proven**: `dart run tool/serve_text.dart --engine
+  lfm2|qwen --port N` serves the OpenAI-compatible wire from the
+  engine package; a plain HTTP client (curl, the harness `mlx_local`
+  attach-only client, anything) completes against it — clean content
+  (the emitted EOS literal is stripped; `finish_reason: 'stop'` is the
+  stop evidence), template-rendered, EOS-stopped.
+
 ## Non-claims
 
 - R3 (shim drop) and R4 (mlx Swift-lane consolidation) are NOT done —
