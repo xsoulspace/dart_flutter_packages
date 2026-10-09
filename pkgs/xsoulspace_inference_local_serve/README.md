@@ -9,7 +9,9 @@ Consumers:
 - `xsoulspace_inference_laya` — the local System One decision server
   (`laya-serve` on loopback).
 - `xsoulspace_inference_mlx` — a local small text model behind an
-  OpenAI-compatible chat server (`mlx_lm.server` on loopback).
+  OpenAI-compatible chat server on loopback (the native in-process
+  engine via `mlx_serve_native.dart`; python `mlx_lm.server` is the
+  retired reference server, spawn escape hatch only).
 
 Both compose this core instead of growing second one-offs; the extraction
 keeps the laya public API byte-stable.

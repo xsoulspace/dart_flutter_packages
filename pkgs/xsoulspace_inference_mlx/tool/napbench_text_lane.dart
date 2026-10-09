@@ -15,6 +15,13 @@
 /// serve runtime uses — loopback transport overhead is not part of these
 /// numbers.
 ///
+/// Native-line confirmation (py-retirement 2026-10-09): this lane measures
+/// ONLY the in-process native engine (`NativeMlxTextEngine` — no python
+/// mlx_lm, no external server leg, no spawn). Python `mlx_lm` is retired
+/// to benchmark REFERENCE legs (run separately, compared against — e.g.
+/// the harness nap_draft_benchmark py-reference leg) and golden/fixture
+/// recording; it never appears as a row here.
+///
 /// Models resolve from the local HF cache (`mlx-community/Qwen3-0.6B-4bit`,
 /// `mlx-community/Qwen3-1.7B-4bit`, `LiquidAI/LFM2.5-1.2B-Instruct-MLX-4bit`)
 /// and are never downloaded. Qwen3 runs with thinking mode OFF (the napbench
