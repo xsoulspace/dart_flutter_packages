@@ -117,6 +117,21 @@ One engine host, products depend on it:
 - **R4 — mlx Swift-lane consolidation decision** (separate ADR, driver
   port vs provider split).
 
+### Why not one package per model (owner question, 2026-10-09)
+
+Splitting qwen/lfm2/laya into three packages would re-create the
+problem it fixes. Native assets are built and registered PER PACKAGE:
+one package per model means either N dylibs loaded in one process
+(duplicated mlx, duplicated weight loaders, N registries) or a shared
+package pretending to hold them — the engine-host shape. The drivers
+(qwen.rs, lfm2.rs, the laya op-chain) share one crate, one dylib, one
+binding table and one composition API; that sharing IS the engine, so
+the drivers live together and the PRODUCTS split. "Rename laya" alone
+is insufficient for the same reason: renaming to "engine" leaves the
+laya decision product homeless — the split is engine-host + laya
+product (two packages), with the mlx Swift lane's consolidation as the
+separate R4 decision.
+
 Non-goal: merging `xsoulspace_inference_core` (interfaces stay where
 they are; the engine package implements against them where applicable).
 
