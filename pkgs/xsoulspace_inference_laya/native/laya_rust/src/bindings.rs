@@ -98,7 +98,7 @@ impl ShapeClass {
                 }
             }
             Op::Dequantize { .. } => ShapeClass::Elementwise,
-            Op::RmsNorm { .. } => ShapeClass::Reduction,
+            Op::RmsNorm { .. } | Op::RmsNormResidual { .. } => ShapeClass::Reduction,
             Op::Slice { .. } | Op::SliceUpdate { .. } => ShapeClass::Shape,
             Op::Rope { .. } | Op::Sdp { .. } => ShapeClass::Attention,
             Op::Identity => ShapeClass::Shape,
@@ -136,6 +136,10 @@ pub enum Backend {
     /// packed weights stream once and dequantize in-register — the
     /// bandwidth-floor move. Source in `kernels/dequant_gemv.metal`.
     DequantGemmMsl,
+    /// R4's fused RMSNorm+residual epilogue (one pass over the hidden
+    /// tensor instead of Add-then-RmsNorm's two). Source in
+    /// `kernels/rmsnorm_residual.metal`.
+    RmsNormFusedMsl,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -171,6 +175,19 @@ impl BindingTable {
                 ShapeClass::SkinnyGemm,
                 Dtype::Float16,
                 Backend::SkinnyGemmMsl,
+            );
+        }
+        // R4's fused RMSNorm+residual PASSED its gate (≥1.3× µbench on the
+        // tuned family + 64/64 greedy parity with the kernel live — the
+        // round-to-nearest store matches mlx's conversion exactly), so per
+        // the gate design this row installs by default; LAYA_MSL_NORM=0
+        // keeps the mlx-c composition for A/B.
+        if std::env::var_os("LAYA_MSL_NORM").map(|v| v != "0").unwrap_or(true) {
+            table.install(
+                "rms_norm_residual",
+                ShapeClass::Reduction,
+                Dtype::BFloat16,
+                Backend::RmsNormFusedMsl,
             );
         }
         if std::env::var_os("LAYA_MSL_GEMV").is_some_and(|v| !v.is_empty()) {
@@ -231,6 +248,7 @@ pub fn eval(node: &Node, ins: &[&Array], table: &BindingTable, s: Stream) -> Mlx
         Backend::MlxC => mlxc_eval(&node.op, ins, s),
         Backend::SkinnyGemmMsl => skinny_gemm_eval(&node.op, ins, s),
         Backend::DequantGemmMsl => dequant_gemv_eval(&node.op, ins, s),
+        Backend::RmsNormFusedMsl => rmsnorm_residual_eval(&node.op, ins, s),
     }
 }
 
@@ -295,6 +313,66 @@ fn dequant_gemv_eval(op: &Op, ins: &[&Array], s: Stream) -> MlxResult<Vec<Array>
         .next()
         .ok_or(MlxError(-978))?
         .reshape(&[1, 1, n], s)?])
+}
+
+/// The fused RMSNorm+residual kernel's MSL source (body-only).
+const RMSNORM_RESIDUAL_MSL: &str = include_str!("kernels/rmsnorm_residual.metal");
+
+/// The R4 fused epilogue binding for (rms_norm_residual × Reduction ×
+/// bf16): out = rms_norm(x + residual, w) in one pass — one read of each
+/// input and one write, instead of the composition's two round trips.
+fn rmsnorm_residual_eval(op: &Op, ins: &[&Array], s: Stream) -> MlxResult<Vec<Array>> {
+    use std::sync::OnceLock;
+    static KERNEL: OnceLock<Option<crate::mlx::MetalKernel>> = OnceLock::new();
+    let Op::RmsNormResidual { eps } = op else {
+        return Err(MlxError(-975));
+    };
+    let [x, residual, weight] = ins else {
+        return Err(MlxError(-978));
+    };
+    let rows: usize = (0..x.ndim().saturating_sub(1)).map(|d| x.dim(d as i32)).product();
+    let cols = x.dim(x.ndim() as i32 - 1) as usize;
+
+    let kernel = KERNEL.get_or_init(|| {
+        crate::mlx::MetalKernel::new(
+            "laya_rmsnorm_residual",
+            &["x", "r", "w", "eps", "shape"],
+            &["sum", "out"],
+            RMSNORM_RESIDUAL_MSL,
+        )
+        .map(Some)
+        .unwrap_or_else(|e| {
+            eprintln!("rmsnorm_residual kernel init failed: {e:?}");
+            None
+        })
+    });
+    let Some(kernel) = kernel else { return Err(MlxError(-974)) };
+
+    let eps_arr = Array::from_data_f32(&[*eps], &[1])?;
+    let shape_arr = Array::from_data_i32(
+        &[rows as i32, cols as i32],
+        &[2],
+    )?;
+    let ins_all: Vec<&Array> = vec![x, residual, weight, &eps_arr, &shape_arr];
+    // One 256-wide threadgroup per row; cols are strided across threads.
+    // Grid = total threads (256 per row).
+    let total_threads = rows as i32 * 256;
+    // Outputs [sum, normed].
+    let outs = kernel.apply(
+        &ins_all,
+        &[&[rows, cols], &[rows, cols]],
+        crate::mlx::Dtype::BFloat16,
+        (total_threads, 1, 1),
+        (256, 1, 1),
+        s,
+    )?;
+    let mut shape: Vec<usize> =
+        (0..x.ndim().saturating_sub(1)).map(|d| x.dim(d as i32) as usize).collect();
+    shape.push(cols);
+    let mut arrays = outs.into_iter();
+    let sum = arrays.next().ok_or(MlxError(-978))?.reshape(&shape, s)?;
+    let normed = arrays.next().ok_or(MlxError(-978))?.reshape(&shape, s)?;
+    Ok(vec![sum, normed])
 }
 
 /// The skinny-GEMM MSL kernel's MSL source (xcrun-compiles clean; see
@@ -499,6 +577,16 @@ fn mlxc_eval(op: &Op, ins: &[&Array], s: Stream) -> MlxResult<Vec<Array>> {
         },
         Op::RmsNorm { eps } => match ins {
             [x, weight] => return Ok(vec![Array::rms_norm(x, weight, *eps, s)?]),
+            _ => return Err(MlxError(-978)),
+        },
+        Op::RmsNormResidual { eps } => match ins {
+            // The mlx-c binding: exactly the composition it replaces,
+            // outputs [sum, normed].
+            [x, residual, weight] => {
+                let sum = x.add(residual, s)?;
+                let normed = Array::rms_norm(&sum, weight, *eps, s)?;
+                return Ok(vec![sum, normed]);
+            }
             _ => return Err(MlxError(-978)),
         },
         Op::Slice { start, stop, strides } => {

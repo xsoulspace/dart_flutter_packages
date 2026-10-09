@@ -354,6 +354,31 @@ Observed (ADR 0032 protocol — appended as rungs land):
   same harness: `QWEN3_SNAPSHOT=<bf16-snap> QWEN3_FIXTURE=<fixture>
   cargo test --release --test qwen3_parity`. The committed fixture stays
   the q4 one (no oracle was touched).
+- **R4 fused RMSNorm+residual epilogue (2026-10-09) — the ladder's first
+  gate-PASSING MSL kernel: µbench 1.33× (both shapes), golden/decoder
+  parity 64/64 WITH the kernel installed — the row installs by default.**
+  `Op::RmsNormResidual` (inputs [x, residual, weight], outputs [sum,
+  normed] — the sum stays available for the next residual add, so the
+  fusion is a true replacement), mlx-c binding = the Add + RmsNorm
+  composition (bit-identical default), MSL row on (rms_norm_residual ×
+  Reduction × bf16) installed by DEFAULT (LAYA_MSL_NORM=0 keeps the
+  composition for A/B). Kernel: one 256-wide threadgroup per row, the
+  row's sums cached in threadgroup memory between the reduction and
+  normalize passes (the no-cache version measured 1.17–1.27× — FAILING;
+  the threadgroup cache closed it). Paid-for lessons: (1) the kernel
+  source is the function BODY — no helper definitions; (2) the bf16
+  element type is named differently by mlx (bfloat16_t) and Metal 3.2
+  (bfloat, no implicit float conversion) — write bf16 bits through a
+  uint16 view; (3) **round-to-nearest-even in the store matters for
+  parity**: a truncating store drifted the logits enough to flip the
+  known 1990s/2000s greedy tie (0/64→34/64 style failure); the RNE store
+  matches mlx's conversion exactly and parity went to 64/64 with the
+  kernel live; (4) grid = total threads (256/row), outputs declared by
+  name (sum, out). Gate harness:
+  `cargo test --release --test r4_rmsnorm_gate -- --ignored --nocapture`;
+  installed-row parity: `LAYA_MSL_NORM=1 cargo test ... qwen3_parity`
+  (64/64). All default gates re-verified (test_fresh 63/63 @ 0.0 / 1.5e-8;
+  qwen q4 64/64 with the kernel live by default).
 - **R2 in-process client behind the serve wire (2026-10-09, commit 8e477cb0)
   — LANDED:** `NativeQwenTextEngine` (Dart client over
   `laya_native_qwen_load/generate/unload`) and `LayaQwenChatServer` —

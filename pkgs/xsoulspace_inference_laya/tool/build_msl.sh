@@ -37,6 +37,16 @@ for src in src/kernels/*.metal; do
         echo '  const device int* nk [[buffer(4)]],'
         echo '  device bfloat* out [[buffer(5)]],'
         ;;
+      rmsnorm_residual)
+        echo "kernel void custom_kernel_${name}("
+        echo '  const device bfloat* x [[buffer(0)]],'
+        echo '  const device bfloat* r [[buffer(1)]],'
+        echo '  const device bfloat* w [[buffer(2)]],'
+        echo '  const device float* eps [[buffer(3)]],'
+        echo '  const device int* shape [[buffer(4)]],'
+        echo '  device bfloat* sum [[buffer(5)]],'
+        echo '  device bfloat* out [[buffer(6)]],'
+        ;;
     esac
     echo '  uint3 threadgroup_position_in_grid [[threadgroup_position_in_grid]],'
     echo '  uint thread_index_in_threadgroup [[thread_index_in_threadgroup]],'

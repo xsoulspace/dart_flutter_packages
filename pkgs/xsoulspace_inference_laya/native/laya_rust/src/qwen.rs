@@ -666,14 +666,23 @@ impl Qwen3 {
                 s,
             )?;
             let o = self.linear(&format!("{g}.o"), &layer.o, &att_r, s)?;
-            let h1 = eval1(
-                &self.table,
-                &format!("{g}.res1"),
-                seq_group,
-                Bin(BinKind::Add),
-                &[&h, &o],
-                s,
-            )?;
+            // Fused residual+RMSNorm (R4 epilogue): outputs [sum, normed].
+            // The default table's binding is the Add + RmsNorm composition
+            // it replaces — bit-identical; LAYA_MSL_NORM=1 swaps in the
+            // one-pass kernel.
+            let fused = {
+                let node = Node {
+                    name: format!("{g}.res1_ln2"),
+                    group: g.clone(),
+                    op: Op::RmsNormResidual { eps: cfg.rms_eps },
+                    inputs: Vec::new(),
+                    dump: None,
+                };
+                crate::bindings::eval(&node, &[&h, &o, &layer.ln2], &self.table, s)?
+            };
+            let mut fused = fused.into_iter();
+            let h1 = fused.next().ok_or(MlxError(-978))?;
+            let ln2_fused = fused.next().ok_or(MlxError(-978))?;
             if prof {
                 let _ = h1.eval();
                 crate::mlx::synchronize_stream(s).ok();
@@ -682,7 +691,7 @@ impl Qwen3 {
             let t_mlp = std::time::Instant::now();
 
             // --- mlp: down(silu(gate(x)) * up(x)) ---
-            let ln2 = self.rms(&format!("{g}.ln2"), &h1, &layer.ln2, s)?;
+            let ln2 = ln2_fused;
             let gate = self.linear(&format!("{g}.gate"), &layer.gate, &ln2, s)?;
             let up = self.linear(&format!("{g}.up"), &layer.up, &ln2, s)?;
             let sig = eval1(

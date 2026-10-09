@@ -151,6 +151,11 @@ pub enum Op {
     Dequantize { group_size: i32, bits: i32 },
     /// `mx.fast.rms_norm` over the last axis: inputs [x, weight].
     RmsNorm { eps: f32 },
+    /// Fused residual+RMSNorm (R4 epilogue): inputs [x, residual, weight],
+    /// outputs [x + residual, rms_norm(x + residual, weight)] — the sum
+    /// stays available for the next residual add. The mlx-c binding is
+    /// the Add + RmsNorm composition it replaces.
+    RmsNormResidual { eps: f32 },
     /// `mx.slice` — strided view (cache reads are views, python-parity).
     Slice {
         start: Vec<i32>,
@@ -214,6 +219,7 @@ impl Op {
             },
             Op::Matmul => promote(dtype_of(inputs[0]), dtype_of(inputs[1])),
             Op::Slice { .. } | Op::SliceUpdate { .. } => first(inputs),
+            Op::RmsNormResidual { .. } => first(inputs),
             Op::QuantizedMatmul { .. } => {
                 // Output follows x's dtype (scales share it in our models).
                 first(inputs)
@@ -276,6 +282,7 @@ impl Op {
             Op::QuantizedMatmul { .. } => "quantized_matmul",
             Op::Dequantize { .. } => "dequantize",
             Op::RmsNorm { .. } => "rms_norm",
+            Op::RmsNormResidual { .. } => "rms_norm_residual",
             Op::Slice { .. } => "slice",
             Op::SliceUpdate { .. } => "slice_update",
         }
@@ -284,6 +291,9 @@ impl Op {
     pub fn fanout(&self) -> u8 {
         match self {
             Op::Split { num, .. } => *num as u8,
+            // The fused residual+norm produces BOTH the sum (the residual
+            // stream's next add needs it) and the normed output.
+            Op::RmsNormResidual { .. } => 2,
             _ => 1,
         }
     }
