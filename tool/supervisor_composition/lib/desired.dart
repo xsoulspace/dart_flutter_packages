@@ -19,6 +19,8 @@
 /// this declaration moves.
 library;
 
+import 'dart:io';
+
 import 'package:oka_supervisor/oka_supervisor.dart';
 import 'package:resource_composition/resource_composition.dart';
 
@@ -70,16 +72,24 @@ abstract final class ModelServeFacts {
 /// Laws (oka ADR-0040 decision 5): foreign and hand-started processes
 /// produce findings, never signals. `start` throws (this composition
 /// never spawns); `stop` refuses (never signals); `inspect`/`reconcile`
-/// report `unknown` — report-never-guess, no probe is authorized here.
+/// either run the wired read-only TCP probe (connect, close, report —
+/// observing a socket mutates nothing) or report `unknown`
+/// (report-never-guess when no probe is wired).
 final class ObserveOnlyProvider implements ResourceProvider {
   /// Creates the provider; pure at composition time — nothing contacted.
-  const ObserveOnlyProvider();
+  const ObserveOnlyProvider({this.tcpProbePorts = const <String, int>{}});
 
   /// The provider name every spec in this composition declares.
   static const String name = 'observe-only';
 
+  /// Component id → port for the read-only readiness probe. Wiring a
+  /// probe also declares the `readinessProbe` capability, which the
+  /// substrate requires of any spec with a readiness dialect.
+  final Map<String, int> tcpProbePorts;
+
   @override
-  ProviderCapabilities get capabilities => const ProviderCapabilities();
+  ProviderCapabilities get capabilities =>
+      ProviderCapabilities(readinessProbe: tcpProbePorts.isNotEmpty);
 
   @override
   Future<StartReport> start(final StartRequest request) => Future.error(
@@ -87,14 +97,38 @@ final class ObserveOnlyProvider implements ResourceProvider {
   );
 
   @override
-  Future<Observation> inspect(final ResourceRef ref) => Future.value(
-    const Observation(
-      state: ResourceState.unknown,
-      cause: TerminalCause.unknown,
-      message: 'observe-only: liveness unprovable without a record from '
-          'a start; report-never-guess',
-    ),
-  );
+  Future<Observation> inspect(final ResourceRef ref) async {
+    final port = tcpProbePorts[ref.componentId];
+    if (port == null) {
+      return const Observation(
+        state: ResourceState.unknown,
+        cause: TerminalCause.unknown,
+        message:
+            'observe-only: liveness unprovable without a record from '
+            'a start; report-never-guess',
+      );
+    }
+    try {
+      final socket = await Socket.connect(
+        ModelServeFacts.host,
+        port,
+        timeout: const Duration(seconds: 2),
+      );
+      socket.destroy();
+      return Observation(
+        state: ResourceState.ready,
+        message:
+            'observe-only probe: tcp $port accepts connections '
+            '(connect-and-close; nothing sent)',
+      );
+    } on Object {
+      return Observation(
+        state: ResourceState.crashed,
+        cause: TerminalCause.unknown,
+        message: 'observe-only probe: tcp $port unreachable',
+      );
+    }
+  }
 
   @override
   Future<StopReport> stop(
@@ -110,6 +144,21 @@ final class ObserveOnlyProvider implements ResourceProvider {
   @override
   Future<Observation> reconcile(final ResourceRef ref) => inspect(ref);
 }
+
+/// The composition root's factory: resolves [ObserveOnlyProvider.name]
+/// only, wiring the read-only probe for the model-serve endpoint when
+/// [modelServePort] is given (the bin wires it; pure validation may
+/// leave it null — the capability then stays off and validation of a
+/// readiness-declaring spec correctly fails).
+ProviderFactory observeOnlyFactory({final int? modelServePort}) =>
+    (final name) {
+      if (name != ObserveOnlyProvider.name) {
+        throw ArgumentError('unknown provider name: $name');
+      }
+      return ObserveOnlyProvider(
+        tcpProbePorts: {'model-serve': ?modelServePort},
+      );
+    };
 
 /// The local model server as a service component: desired running, with
 /// the discovered readiness dialect. A connected socket means ready to
@@ -155,13 +204,11 @@ ComponentSpec modelServeSpec({final int port = ModelServeFacts.port}) =>
 const ComponentSpec nightlyModelAuditSpec = ComponentSpec(
   id: 'nightly-model-audit',
   providerName: ObserveOnlyProvider.name,
-  policy: SupervisionPolicy(
-    shape: SupervisionShape.job,
-    maxRestarts: 0,
-  ),
+  policy: SupervisionPolicy(shape: SupervisionShape.job, maxRestarts: 0),
   trigger: IntervalTrigger(period: Duration(hours: 24)),
   env: <String, String>{
-    'AUDIT_CARRIER': 'host cron 03:00 nightly (machine-level; not '
+    'AUDIT_CARRIER':
+        'host cron 03:00 nightly (machine-level; not '
         'declared in this repo)',
     'AUDIT_PRIMARY_MODEL': ModelServeFacts.qwenModelId,
   },

@@ -50,15 +50,17 @@ Future<void> main(final List<String> args) async {
   final events = CollectingEvidenceSink();
   final report = await supervisor.converge(
     desired: desired,
-    factory: _observeOnlyFactory,
+    factory: observeOnlyFactory(modelServePort: port),
     evidence: events,
     apply: false,
   );
 
   stdout
     ..writeln('project: $project (scope ${supervisor.scope})')
-    ..writeln('mode: observe-only (apply: false; never spawns, never '
-        'signals)')
+    ..writeln(
+      'mode: observe-only (apply: false; never spawns, never '
+      'signals)',
+    )
     ..write(report.describe());
 
   if (json) {
@@ -112,14 +114,6 @@ Future<void> main(final List<String> args) async {
   }
 
   if (report.invalid) exitCode = 2;
-}
-
-ResourceProvider _observeOnlyFactory(final String name) {
-  if (name == ObserveOnlyProvider.name) return const ObserveOnlyProvider();
-  throw ArgumentError(
-    'unknown provider name: $name (this composition binds only '
-    '${ObserveOnlyProvider.name})',
-  );
 }
 
 /// The dfp root that contains this package (bin/ -> package -> tool ->

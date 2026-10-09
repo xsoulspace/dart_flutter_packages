@@ -1,0 +1,56 @@
+# dfp supervisor composition — observe-only run 2026-10-10
+# desired: model-serve (TcpConnect 127.0.0.1:8765) + nightly-model-audit (interval 24h job)
+# apply:false — 0 started, 0 restarted, 0 failedStarts; nothing spawned, nothing signaled
+project: /Users/antonio/xs/storage_problem/dart_flutter_packages/ (scope ded2e1f38102)
+mode: observe-only (apply: false; never spawns, never signals)
+converge: 2 to start, 0 to restart, 0 finding(s)
+plan:
+  - start model-serve (declared service with no record)
+  - start nightly-model-audit (declared job with no record){
+  "project": "/Users/antonio/xs/storage_problem/dart_flutter_packages/",
+  "scope": "ded2e1f38102",
+  "status": {
+    "statuses": [
+      {
+        "componentId": "model-serve",
+        "present": false,
+        "provider": "observe-only",
+        "shape": "service",
+        "desiredRevisionHash": "22532747b4f9",
+        "trigger": "none",
+        "drifted": false
+      },
+      {
+        "componentId": "nightly-model-audit",
+        "present": false,
+        "provider": "observe-only",
+        "shape": "job",
+        "desiredRevisionHash": "bdc96b77f39e",
+        "trigger": "interval:86400s",
+        "drifted": false
+      }
+    ],
+    "corruptRecords": []
+  },
+  "converge": {
+    "apply": false,
+    "started": 0,
+    "restarted": 0,
+    "failedStarts": 0,
+    "invalid": false,
+    "actions": [
+      {
+        "kind": "start",
+        "componentId": "model-serve",
+        "reason": "declared service with no record"
+      },
+      {
+        "kind": "start",
+        "componentId": "nightly-model-audit",
+        "reason": "declared job with no record"
+      }
+    ],
+    "findings": [],
+    "events": []
+  }
+}

@@ -2,24 +2,32 @@ import 'dart:io';
 
 import 'package:oka_supervisor/oka_supervisor.dart';
 import 'package:resource_composition/resource_composition.dart';
+import 'package:supervisor_composition/desired.dart';
 import 'package:test/test.dart';
-
-import '../lib/desired.dart';
-
-ProviderFactory observeOnlyFactory(final String name) {
-  if (name == ObserveOnlyProvider.name) return const ObserveOnlyProvider();
-  throw ArgumentError('unknown provider name: $name');
-}
 
 void main() {
   test('desired state validates with zero side effects', () {
-    final report = desiredComposition().validate(factory);
+    final report = desiredComposition().validate(
+      observeOnlyFactory(modelServePort: ModelServeFacts.port),
+    );
     expect(report.ok, isTrue, reason: '${report.issues}');
+  });
+
+  test('validation fails without a wired probe (capability honesty)', () {
+    final report = desiredComposition().validate(observeOnlyFactory());
+    expect(report.ok, isFalse);
+    expect(
+      report.issues.map((final issue) => issue.code),
+      contains('capabilityReadiness'),
+    );
   });
 
   test('ObserveOnlyProvider.start throws; stop refuses', () async {
     final desired = desiredComposition();
-    final component = desired.composition(observeOnlyFactory).components.first;
+    final component = desired
+        .composition(observeOnlyFactory(modelServePort: ModelServeFacts.port))
+        .components
+        .first;
     const provider = ObserveOnlyProvider();
     await expectLater(
       provider.start(
@@ -41,81 +49,82 @@ void main() {
     expect(stop.stopped, isFalse);
   });
 
-  test('converge(apply: false) on a seeded registry plans no actions',
-      () async {
-    final desired = desiredComposition();
-    final root = await Directory.systemTemp.createTemp(
-      'supervisor_composition',
-    );
-    addTearDown(() => root.deleteSync(recursive: true));
-    final registry = MachineRegistry(root: root.path);
-    const projectRoot = '/tmp/supervisor-composition-seed';
-    final scope = registry.scopeFor(projectRoot);
-    final startedAt = DateTime.now().toUtc();
-    for (final spec in desired.specs) {
-      registry.upsert(
-        SupervisorRecord(
-          componentId: spec.id,
-          providerName: spec.providerName,
-          shape: spec.policy.shape.name,
-          revisionHash: spec.revisionHash,
-          epoch: 1,
-          killPolicy: KillPolicy.none,
-          startedAt: startedAt,
-          restartCount: 0,
-          windowStartedAt: startedAt,
-          trigger: spec.trigger.describe(),
-          pid: 4242,
-        ),
-        scope: scope,
+  test(
+    'converge(apply: false) on a seeded registry plans no actions',
+    () async {
+      final desired = desiredComposition();
+      final root = await Directory.systemTemp.createTemp(
+        'supervisor_composition',
       );
-    }
-    final supervisor = Supervisor(
-      projectRoot: projectRoot,
-      registry: registry,
-    );
-    final report = await supervisor.converge(
-      desired: desired,
-      factory: observeOnlyFactory,
-      apply: false,
-    );
-    expect(report.invalid, isFalse);
-    expect(report.plan.actions, isEmpty);
-    expect(report.started, 0);
-    expect(report.restarted, 0);
-    expect(report.failedStarts, 0);
-    final findings = report.plan.findings
-        .map((final finding) => finding.code)
-        .toSet();
-    expect(findings, isNot(contains('giveUp')));
-  });
+      addTearDown(() => root.deleteSync(recursive: true));
+      final registry = MachineRegistry(root: root.path);
+      const projectRoot = '/tmp/supervisor-composition-seed';
+      final scope = registry.scopeFor(projectRoot);
+      final startedAt = DateTime.now().toUtc();
+      for (final spec in desired.specs) {
+        registry.upsert(
+          SupervisorRecord(
+            componentId: spec.id,
+            providerName: spec.providerName,
+            shape: spec.policy.shape.name,
+            revisionHash: spec.revisionHash,
+            epoch: 1,
+            killPolicy: KillPolicy.none,
+            startedAt: startedAt,
+            restartCount: 0,
+            windowStartedAt: startedAt,
+            trigger: spec.trigger.describe(),
+            pid: 4242,
+          ),
+          scope: scope,
+        );
+      }
+      final supervisor = Supervisor(
+        projectRoot: projectRoot,
+        registry: registry,
+      );
+      final report = await supervisor.converge(
+        desired: desired,
+        factory: observeOnlyFactory(modelServePort: ModelServeFacts.port),
+        apply: false,
+      );
+      expect(report.invalid, isFalse);
+      expect(report.plan.actions, isEmpty);
+      expect(report.started, 0);
+      expect(report.restarted, 0);
+      expect(report.failedStarts, 0);
+      final findings = report.plan.findings
+          .map((final finding) => finding.code)
+          .toSet();
+      expect(findings, isNot(contains('giveUp')));
+    },
+  );
 
-  test('converge(apply: false) on an empty registry surfaces the gap',
-      () async {
-    final desired = desiredComposition();
-    final root = await Directory.systemTemp.createTemp(
-      'supervisor_composition',
-    );
-    addTearDown(() => root.deleteSync(recursive: true));
-    final registry = MachineRegistry(root: root.path);
-    final supervisor = Supervisor(
-      projectRoot: '/tmp/supervisor-composition-empty',
-      registry: registry,
-    );
-    final report = await supervisor.converge(
-      desired: desired,
-      factory: observeOnlyFactory,
-      apply: false,
-    );
-    expect(report.invalid, isFalse);
-    expect(report.plan.startCount, desired.specs.length);
-    expect(report.started, 0);
-    // Observe-only converge must not have written any record.
-    expect(
-      Directory('${root.path}/records').existsSync(),
-      isFalse,
-    );
-  });
+  test(
+    'converge(apply: false) on an empty registry surfaces the gap',
+    () async {
+      final desired = desiredComposition();
+      final root = await Directory.systemTemp.createTemp(
+        'supervisor_composition',
+      );
+      addTearDown(() => root.deleteSync(recursive: true));
+      final registry = MachineRegistry(root: root.path);
+      final supervisor = Supervisor(
+        projectRoot: '/tmp/supervisor-composition-empty',
+        registry: registry,
+      );
+      final report = await supervisor.converge(
+        desired: desired,
+        factory: observeOnlyFactory(modelServePort: ModelServeFacts.port),
+        apply: false,
+      );
+      expect(report.invalid, isFalse);
+      expect(report.plan.startCount, desired.specs.length);
+      expect(report.started, 0);
+      // Observe-only converge must not have written any record.
+      expect(Directory('${root.path}/records').existsSync(), isFalse);
+    },
+  );
 
   test('model-serve readiness matches the discovered dialect', () {
     final spec = desiredComposition().byId()['model-serve']!;
