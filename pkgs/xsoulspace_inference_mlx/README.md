@@ -140,3 +140,22 @@ The provider package is model-agnostic — the checkpoint id travels in
 configuration (`OPTMEM_MLX_MODEL` / `HARNESS_MLX_MODEL`) and MUST name
 what the server actually serves (`mlx_lm.server` resolves an unknown
 request model id as a Hugging Face repo at request time).
+
+## Isolated native preparation
+
+The build hook accepts `native_cache_root` through the root application's
+cache-tracked `hooks.user_defines` for this package:
+
+```yaml
+hooks:
+  user_defines:
+    xsoulspace_inference_mlx:
+      native_cache_root: /absolute/private/native-cache
+```
+
+The hook publishes into `<root>/mlx_text/native` instead of the default fleet
+cache. Empty, relative or non-string roots refuse before native compilation.
+Hook output assets and the resolving workspace's `.dart_tool/lib` are still
+populated. This is a build destination setting; runtime loaders are unchanged.
+Use the emitted bundle/assets for isolated execution. Custom environment
+variables are filtered by the SDK hook runner; use this user-define instead.

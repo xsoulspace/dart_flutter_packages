@@ -362,6 +362,67 @@ Future<void> main() async {
       contains('unknown transport'),
     );
   });
+
+  test('screenshot image blocks are opt-in; windowId refuses off-tier',
+      () async {
+    final server = ToolkitMcpServer(
+      factories: {
+        AutomationTransport.osAccessibility: (binding, endpoint, timeout) async {
+          return _FakeOsResolvedSession(binding);
+        },
+      },
+    );
+    final dir = await Directory.systemTemp.createTemp('uat-shot');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    final path = '${dir.path}/shot.png';
+
+    // Default: file only, no image content.
+    final plain = await call(server, 31, 'tools/call', {
+      'name': 'automation_screenshot',
+      'arguments': {'transport': 'osAccessibility', 'path': path},
+    });
+    final plainResult = plain!['result'] as Map<String, Object?>;
+    expect(plainResult['content'], hasLength(1));
+    expect(payloadOf(plain)['bytes'], 3);
+
+    // image: true appends an image content block; the reserved key
+    // never reaches the JSON text.
+    final withImage = await call(server, 32, 'tools/call', {
+      'name': 'automation_screenshot',
+      'arguments': {
+        'transport': 'osAccessibility',
+        'path': path,
+        'image': true,
+      },
+    });
+    final content = (withImage!['result'] as Map<String, Object?>)['content']
+        as List<Object?>;
+    expect(content, hasLength(2));
+    final image = content[1] as Map<String, Object?>;
+    expect(image['type'], 'image');
+    expect(image['mimeType'], 'image/png');
+    expect(image['data'], base64Encode([1, 2, 3]));
+    expect(
+      (content.first as Map<String, Object?>)['text'],
+      isNot(contains('_imageContent')),
+    );
+
+    // windowId on a non-OS-tier driver refuses loudly.
+    final windowed = await call(server, 33, 'tools/call', {
+      'name': 'automation_screenshot',
+      'arguments': {'transport': 'osAccessibility', 'path': path, 'windowId': 7},
+    });
+    expect(
+      ((windowed!['result'] as Map<String, Object?>)['content']
+              as List)
+          .single,
+      isA<Map<String, Object?>>().having(
+        (block) => block['text'],
+        'text',
+        contains('windowId needs the OS tier'),
+      ),
+    );
+  });
 }
 
 final class _FakeOsResolvedSession implements ResolvedSession {
@@ -402,7 +463,7 @@ final class _FakeOsDriver implements AutomationDriver {
   Future<void> perform(AutomationAction action) async {}
 
   @override
-  Future<Uint8List> screenshot() async => Uint8List(0);
+  Future<Uint8List> screenshot() async => Uint8List.fromList([1, 2, 3]);
 
   @override
   Future<void> close() async {}

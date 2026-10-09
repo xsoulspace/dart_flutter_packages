@@ -1,6 +1,7 @@
 # ADR 0052: `universal_automation_semantics` — the family's semantic view grammar
 
-- Status: Accepted
+- Status: Accepted (amended 2026-10-08, same day: full mcp_flutter
+  cutover; bounds grounding via `nodeAt`; intent view hints)
 - Date: 2026-10-08
 - North Star impact: `applies`
 - Builds on: [ADR 0037](0037_universal_automation_family.md) (family,
@@ -120,8 +121,12 @@ surface.
 - `universal_automation_interface` stays contracts-only; rendering and
   diffing change at product speed without republishing the contracts.
 - intentcall stays the WHAT (declared intents); this package is the HOW
-  of perception. A future composition point — intent hints carrying
-  view hints — references this package, not the reverse.
+  of perception. The composition point landed: intent hints carry
+  **view hints** — an optional `view` key in the family grammar
+  verbatim on `IntentHint`; the runner observes through it after
+  dispatch, so an app declares how its effect should be read. The
+  dependency points this way (hints reference the grammar), never the
+  reverse.
 
 ## Non-claims
 
@@ -129,16 +134,29 @@ surface.
   (reordering identified siblings reports no change); the positional
   chain remains the fallback for identifier-less nodes, where reordered
   identical siblings can still alias.
-- mcp_flutter adoption is its own change in its own repo (path dep on
-  the local checkout first, hosted pub when stable); this ADR governs
-  the family side only. Adoption v1 shares the declaration + wire
-  grammar (`SemanticSnapshotFilter.toView()`, contract tests,
-  `maxNodes`); the `fields` dimension stays toolkit-side there
-  (Flutter-shaped node keys) until the vmService tier unifies on the
-  family's `SemanticField`.
-- No coordinate actions here (ADR-first, family-wide verb growth).
-- Bounds-based coordinate grounding stays out: views are the semantic
-  channel; pixel grounding is a separate decision.
+- mcp_flutter adoption completed the same day: the **full cutover**
+  landed — [familySnapshotFromNodes], the ref dialect ([snapshotRef]),
+  and the node-map selection policy ([projectSnapshotNodes]) live in
+  this package; mcp_toolkit keeps only the Flutter mechanism (the
+  semantics walk, visibility metadata, the staleness contract, and the
+  gesture caches). Its published envelope keys are unchanged — the
+  cutover is internal, proven by their untouched contract tests. The
+  dependency stays a local path dep until the package publishes (an
+  owner-gated step); the `fields` dimension's node keys stay
+  Flutter-shaped (`label`, `hint`) by the same producer-stays-native
+  rule — the policy is shared, the vocabulary is the producer's.
+- No coordinate actions here (ADR-first, family-wide verb growth —
+  landed as ADR 0053).
+- Bounds-based coordinate grounding **landed** as
+  `Observation.nodeAt(x, y)`: the walked node whose bounds contain the
+  point, smallest area first, fail-closed on a miss. This reads the
+  tree's own geometry — no screenshots. Pixel grounding (screenshot →
+  coordinates) stays a client-side concern.
+- Screenshots ride as **opt-in image content blocks**
+  (`automation_screenshot` with `image: true`; `maxPx` caps the long
+  side, window-scoped capture on the OS tier). The semantic channel
+  stays primary; agents that do not render images never receive them
+  unprompted.
 
 ## Falsifier
 
@@ -146,4 +164,6 @@ If within a quarter only the toolkit adopts the package (mcp_flutter
 never bumps), and the layer stabilizes into two or three pure
 functions, demote it back into the toolkit or the interface package —
 one package fewer. The demotion stays cheap precisely because the
-package is small, Flutter-free, and has no plugin seams.
+package is small, Flutter-free, and has no plugin seams. (The full
+cutover — mcp_toolkit building its envelope through this package —
+resets that clock: two repos now ship on it.)

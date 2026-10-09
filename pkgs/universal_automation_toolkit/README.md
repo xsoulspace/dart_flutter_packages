@@ -140,6 +140,35 @@ Over MCP the same values ride `automation_observe` arguments
 (`view`, `diff: true`) and `automation_act` (`returnState: true`) —
 one schema across Dart, plan documents, and MCP.
 
+**Grounding** (ADR 0053): `observe(at: (x, y))` names the innermost
+walked node whose bounds contain the point — bounds grounding from the
+tree's own geometry, fail-closed on a miss (reobserve, never guess).
+MCP `automation_observe` takes the same `at` object; the CLI takes
+`--at x,y`. Pixel grounding (screenshot → coordinates) stays
+client-side.
+
+**Coordinate verbs + chords** (ADR 0053): `clickAt(x, y)`/`moveTo`/
+`dragTo` cover surfaces no tree can see; `modifiers: ['shift']`… hold
+a chord through clicks, drags, and keys. CDP, macOS (CGEvent), and
+WebDriver (W3C pointer actions) implement them — plain and under
+behavior profiles (a drag is a bezier gesture, not a teleport);
+Linux/Windows refuse loudly until their synthetic-input sidecars land.
+CLI: `--click-at`/`--move-to`/`--drag` with `--button`/`--click-count`/
+`--modifier`.
+
+**Intent view hints**: an intent hint may carry a `view` (the family
+view grammar verbatim). The runner observes through it after the
+action dispatch — the app declares how its effect should be read, and
+the step result carries the render (`state`).
+
+**Screenshots** are opt-in enrichment: `automation_screenshot` writes
+the PNG and, with `image: true`, attaches it as an image content block
+(`maxPx` caps the long side; window-scoped capture via `windowId` /
+`listWindows` on the OS tier, needing Screen Recording consent — a
+different TCC grant than Accessibility, surfaced as its own typed
+exception). CLI: `screenshot --list-windows` / `--window-id` /
+`--max-px`.
+
 Build note: the AOT binary **must** use `dart build cli` —
 `dart compile exe` silently drops the native code assets (the macOS
 driver dylib). `plugins/universal-automation/install.sh` builds and

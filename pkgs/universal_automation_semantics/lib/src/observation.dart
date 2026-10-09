@@ -162,6 +162,38 @@ final class Observation {
     return observed;
   }
 
+  /// Grounds a surface point back to a ref: the walked node whose
+  /// bounds contain ([x], [y]), smallest area first — the innermost
+  /// answer wins (the observe-at-point grounding aid, ADR 0053).
+  ///
+  /// This is *bounds* grounding, not pixel grounding: it reads the
+  /// tree's own geometry, so it needs no screenshots. A point no walked
+  /// node covers — or a tier that publishes no bounds — fails closed
+  /// with [SemanticRefUnavailableException] (reobserve, never guess).
+  ObservedNode nodeAt(double x, double y) {
+    ObservedNode? best;
+    var bestArea = double.infinity;
+    for (final observed in _byRef.values) {
+      final bounds = observed.node.bounds;
+      if (bounds == null) continue;
+      final contains =
+          x >= bounds.left &&
+          x <= bounds.left + bounds.width &&
+          y >= bounds.top &&
+          y <= bounds.top + bounds.height;
+      if (!contains) continue;
+      final area = bounds.width * bounds.height;
+      if (area < bestArea) {
+        best = observed;
+        bestArea = area;
+      }
+    }
+    if (best == null) {
+      throw SemanticRefUnavailableException('point($x, $y)', snapshot.revision);
+    }
+    return best;
+  }
+
   /// The compact numbered text a model reads: one line per shown node
   /// (`<ref> <role> "name" value=…`), two-space indent per depth, a
   /// header that admits trimming, and one `# pane <name>` section per

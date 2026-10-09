@@ -56,6 +56,34 @@ void main() {
       );
     });
 
+    group('view hints (ADR 0052 composition point)', () {
+      test('the family view grammar rides the hint verbatim', () {
+        final hint = IntentHint.fromJson({
+          'driver': 'toolkit',
+          'action': 'click',
+          'locator': {'name': 'Buy'},
+          'view': {'maxNodes': 8, 'subtreeOf': 's_1'},
+        })!;
+        expect(hint.viewHint!.maxNodes, 8);
+        expect(hint.viewHint!.subtreeOf, 's_1');
+        // Wire round-trip keeps the view.
+        final restored = IntentHint.fromJson(hint.toJson())!;
+        expect(restored.viewHint!.toJson(), hint.viewHint!.toJson());
+        expect(restored, hint);
+      });
+
+      test('a malformed view skips the whole hint (fail closed)', () {
+        expect(
+          IntentHint.fromJson({
+            'driver': 'toolkit',
+            'locator': {'name': 'Buy'},
+            'view': {'fields': ['aura']},
+          }),
+          isNull,
+        );
+      });
+    });
+
     test('lowering matches the intentcall invocation contract', () {
       // click by accessible name:
       final click = IntentHint(

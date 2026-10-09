@@ -357,7 +357,23 @@ private func keyCode(for rawKey: String) -> UInt16? {
     case "K": return 40
     case "N": return 45
     case "M": return 46
+    // Modifier names (the family chord vocabulary, ADR 0053).
+    case "SHIFT": return 56
+    case "CONTROL", "CTRL": return 59
+    case "ALT", "OPTION": return 58
+    case "META", "COMMAND", "CMD": return 55
     default: return nil
+    }
+}
+
+/// CGEventFlags raw value for a family modifier name; 0 outside it.
+private func cgModifierFlag(_ name: String) -> Int64 {
+    switch name.lowercased() {
+    case "shift": return 0x020000 // .maskShift
+    case "control", "ctrl": return 0x040000 // .maskControl
+    case "alt", "option": return 0x080000 // .maskAlternate
+    case "meta", "command", "cmd", "windows": return 0x100000 // .maskCommand
+    default: return 0
     }
 }
 
@@ -396,22 +412,262 @@ public func xs_axdrv_scroll(_ dx: Double, _ dy: Double) -> Int32 {
     return 0
 }
 
+// MARK: - Coordinate pointer verbs (ADR 0053). CGEvent synthesis for
+// clickAt/moveTo/drag, matching the type/key/scroll event tap above.
+
+/// Pointer buttons currently held down (0 left, 1 right, 2 middle).
+/// Moves dispatch as dragged events while any is set, so a carried drag
+/// looks like a gesture, not a hover.
+private var pointerButtonsDown: Set<Int> = []
+private var lastPointerX = 0.0
+private var lastPointerY = 0.0
+
+private func cgButton(_ name: String) -> CGMouseButton? {
+    switch name.lowercased() {
+    case "left": return .left
+    case "right": return .right
+    case "middle": return .center
+    default: return nil
+    }
+}
+
+private func mouseDownType(_ button: CGMouseButton) -> CGEventType {
+    switch button {
+    case .left: return .leftMouseDown
+    case .right: return .rightMouseDown
+    default: return .otherMouseDown
+    }
+}
+
+private func mouseUpType(_ button: CGMouseButton) -> CGEventType {
+    switch button {
+    case .left: return .leftMouseUp
+    case .right: return .rightMouseUp
+    default: return .otherMouseUp
+    }
+}
+
+private func postMouseEvent(
+    _ type: CGEventType,
+    at x: Double,
+    _ y: Double,
+    button: CGMouseButton,
+    clicks: Int64,
+    flags: Int64
+) -> Int32 {
+    guard let event = CGEvent(
+        mouseEventSource: nil,
+        mouseType: type,
+        mouseCursorPosition: CGPoint(x: x, y: y),
+        mouseButton: button
+    ) else { return 3 }
+    event.setIntegerValueField(.mouseEventClickState, value: clicks)
+    if flags != 0 {
+        event.flags = CGEventFlags(rawValue: UInt64(bitPattern: flags))
+    }
+    event.post(tap: .cghidEventTap)
+    return 0
+}
+
+/// Moves the pointer to (x, y). While a button is logically down the
+/// event is the matching dragged type (drag continuation); otherwise a
+/// plain move. [modifierFlags] is the raw CGEventFlags mask for an
+/// active chord (shift 0x020000, control 0x040000, alt 0x080000,
+/// command 0x100000).
+@_cdecl("xs_axdrv_pointer_move")
+public func xs_axdrv_pointer_move(
+    _ x: Double,
+    _ y: Double,
+    _ modifierFlags: Int64
+) -> Int32 {
+    guard AXIsProcessTrusted() else { return 10 }
+    let (type, button): (CGEventType, CGMouseButton)
+    if pointerButtonsDown.contains(0) {
+        (type, button) = (.leftMouseDragged, .left)
+    } else if pointerButtonsDown.contains(1) {
+        (type, button) = (.rightMouseDragged, .right)
+    } else if pointerButtonsDown.contains(2) {
+        (type, button) = (.otherMouseDragged, .center)
+    } else {
+        (type, button) = (.mouseMoved, .left)
+    }
+    let code = postMouseEvent(
+        type,
+        at: x,
+        y,
+        button: button,
+        clicks: 1,
+        flags: modifierFlags
+    )
+    if code == 0 {
+        lastPointerX = x
+        lastPointerY = y
+    }
+    return code
+}
+
+/// Presses or releases [button] (`left`/`right`/`middle`) at (x, y).
+/// clickCount 1-3 becomes the event's click state so the host's
+/// double/triple-click recognition fires; [modifierFlags] carries an
+/// active chord.
+@_cdecl("xs_axdrv_pointer_button")
+public func xs_axdrv_pointer_button(
+    _ x: Double,
+    _ y: Double,
+    _ buttonName: UnsafePointer<CChar>?,
+    _ down: Bool,
+    _ clickCount: Int32,
+    _ modifierFlags: Int64
+) -> Int32 {
+    guard let buttonName, let button = cgButton(String(cString: buttonName)) else {
+        return 1
+    }
+    guard AXIsProcessTrusted() else { return 10 }
+    let clicks = Int64(max(1, min(3, clickCount)))
+    let code = postMouseEvent(
+        down ? mouseDownType(button) : mouseUpType(button),
+        at: x,
+        y,
+        button: button,
+        clicks: clicks,
+        flags: modifierFlags
+    )
+    guard code == 0 else { return code }
+    let id = button == .left ? 0 : (button == .right ? 1 : 2)
+    if down {
+        pointerButtonsDown.insert(id)
+    } else {
+        pointerButtonsDown.remove(id)
+    }
+    lastPointerX = x
+    lastPointerY = y
+    return 0
+}
+
+@_cdecl("xs_axdrv_key_down")
+public func xs_axdrv_key_down(_ key: UnsafePointer<CChar>?) -> Int32 {
+    guard let key else { return 1 }
+    let name = String(cString: key)
+    guard let code = keyCode(for: name) else { return 1 }
+    guard let event = CGEvent(
+        keyboardEventSource: nil,
+        virtualKey: code,
+        keyDown: true
+    ) else { return 3 }
+    // A modifier key event announces its own flag so subsequent events
+    // (and the HID state) see the chord forming.
+    let flag = cgModifierFlag(name)
+    if flag != 0 {
+        event.flags = CGEventFlags(rawValue: UInt64(bitPattern: flag))
+    }
+    event.post(tap: .cghidEventTap)
+    return 0
+}
+
+@_cdecl("xs_axdrv_key_up")
+public func xs_axdrv_key_up(_ key: UnsafePointer<CChar>?) -> Int32 {
+    guard let key else { return 1 }
+    guard let code = keyCode(for: String(cString: key)) else { return 1 }
+    CGEvent(keyboardEventSource: nil, virtualKey: code, keyDown: false)?
+        .post(tap: .cghidEventTap)
+    return 0
+}
+
 /// Drops every cached element handle and scroll fraction. Called on
-/// session teardown and driver close.
+/// session teardown and driver close. Best-effort releases any
+/// logically-down pointer button at its last position, so a truncated
+/// gesture cannot leave the host with a stuck button.
 @_cdecl("xs_axdrv_release_all")
 public func xs_axdrv_release_all() {
+    for id in pointerButtonsDown {
+        let button: CGMouseButton
+        let type: CGEventType
+        switch id {
+        case 0:
+            button = .left
+            type = .leftMouseUp
+        case 1:
+            button = .right
+            type = .rightMouseUp
+        default:
+            button = .center
+            type = .otherMouseUp
+        }
+        _ = postMouseEvent(
+            type,
+            at: lastPointerX,
+            lastPointerY,
+            button: button,
+            clicks: 1,
+            flags: 0
+        )
+    }
+    pointerButtonsDown.removeAll()
     registry.reset()
     scrollRemainderX = 0
     scrollRemainderY = 0
 }
 
+/// One PNG encode with an optional long-side downscale (`maxPx` > 0
+/// caps the image budget agents receive; mcp_flutter's ~1024px
+/// convention). 3 = destination failed, 4 = encode failed,
+/// 5 = allocation failed.
+private func encodePng(
+    _ image: CGImage,
+    _ maxPx: Int32,
+    _ outData: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>?,
+    _ outLen: UnsafeMutablePointer<Int>?
+) -> Int32 {
+    var finalImage = image
+    if maxPx > 0 {
+        finalImage = downscaled(image, maxPx) ?? image
+    }
+    let data = NSMutableData()
+    guard let destination = CGImageDestinationCreateWithData(
+        data, "public.png" as CFString, 1, nil
+    ) else { return 3 }
+    CGImageDestinationAddImage(destination, finalImage, nil)
+    guard CGImageDestinationFinalize(destination) else { return 4 }
+    let length = data.length
+    guard let buffer = malloc(length) else { return 5 }
+    memcpy(buffer, data.bytes, length)
+    outData?.pointee = buffer.assumingMemoryBound(to: UInt8.self)
+    outLen?.pointee = length
+    return 0
+}
+
+/// High-quality long-side downscale through a bitmap context.
+private func downscaled(_ image: CGImage, _ maxPx: Int32) -> CGImage? {
+    let maxSide = CGFloat(max(maxPx, 1))
+    let scale = min(1, maxSide / CGFloat(max(image.width, image.height)))
+    if scale >= 1 { return image }
+    let targetW = max(1, Int((CGFloat(image.width) * scale).rounded()))
+    let targetH = max(1, Int((CGFloat(image.height) * scale).rounded()))
+    guard let context = CGContext(
+        data: nil,
+        width: targetW,
+        height: targetH,
+        bitsPerComponent: 8,
+        bytesPerRow: 0,
+        space: CGColorSpaceCreateDeviceRGB(),
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+    ) else { return nil }
+    context.interpolationQuality = .high
+    context.draw(
+        image,
+        in: CGRect(x: 0, y: 0, width: targetW, height: targetH)
+    )
+    return context.makeImage()
+}
+
 /// Captures one PNG frame of [displayId] (0 = main display) into a
 /// malloc'd buffer the caller frees with `xs_axdrv_free`. Requires screen
 /// recording permission: 10 = permission missing, 2 = image failed,
-/// 3 = destination failed, 4 = encode failed, 5 = allocation failed.
+/// then the encode table.
 @_cdecl("xs_axdrv_screenshot_png")
 public func xs_axdrv_screenshot_png(
     _ displayId: UInt32,
+    _ maxPx: Int32,
     _ outData: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>?,
     _ outLen: UnsafeMutablePointer<Int>?
 ) -> Int32 {
@@ -419,18 +675,74 @@ public func xs_axdrv_screenshot_png(
     guard CGPreflightScreenCaptureAccess() else { return 10 }
     let target = displayId == 0 ? CGMainDisplayID() : CGDirectDisplayID(displayId)
     guard let image = CGDisplayCreateImage(target) else { return 2 }
-    let data = NSMutableData()
-    guard let destination = CGImageDestinationCreateWithData(
-        data, "public.png" as CFString, 1, nil
-    ) else { return 3 }
-    CGImageDestinationAddImage(destination, image, nil)
-    guard CGImageDestinationFinalize(destination) else { return 4 }
-    let length = data.length
-    guard let buffer = malloc(length) else { return 5 }
-    memcpy(buffer, data.bytes, length)
-    outData.pointee = buffer.assumingMemoryBound(to: UInt8.self)
-    outLen.pointee = length
-    return 0
+    return encodePng(image, maxPx, outData, outLen)
+}
+
+/// Captures one PNG frame of a single [windowId] — the window-scoped
+/// capture display shots cannot do (occlusion included, exact window
+/// bounds). Requires screen recording permission: 10 = permission
+/// missing, 2 = image failed (unknown window), then the encode table.
+@_cdecl("xs_axdrv_screenshot_window_png")
+public func xs_axdrv_screenshot_window_png(
+    _ windowId: UInt32,
+    _ maxPx: Int32,
+    _ outData: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>?,
+    _ outLen: UnsafeMutablePointer<Int>?
+) -> Int32 {
+    guard let outData, let outLen else { return 1 }
+    guard CGPreflightScreenCaptureAccess() else { return 10 }
+    guard let image = CGWindowListCreateImage(
+        .null,
+        .optionIncludingWindow,
+        CGWindowID(windowId),
+        [.bestResolution]
+    ) else { return 2 }
+    return encodePng(image, maxPx, outData, outLen)
+}
+
+/// Serializes the on-screen, normal-layer windows owned by [pid]
+/// (0 = every regular app) to JSON:
+/// `[{windowId, pid, name, bounds{left,top,width,height}}, ...]`.
+/// Window ids and bounds need no consent; titles may be empty without
+/// Screen Recording.
+@_cdecl("xs_axdrv_windows_json")
+public func xs_axdrv_windows_json(
+    _ pid: Int32,
+    _ outJson: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+) -> Int32 {
+    guard let outJson else { return 1 }
+    let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
+    guard let list = CGWindowListCopyWindowInfo(options, kCGNullWindowID)
+        as? [[String: Any]]
+    else { return 3 }
+    var windows: [[String: Any]] = []
+    for info in list {
+        let owner = info[kCGWindowOwnerPID as String] as? Int32 ?? 0
+        if pid != 0 && owner != pid { continue }
+        let layer = info[kCGWindowLayer as String] as? Int ?? 0
+        if layer != 0 { continue } // normal-level windows only
+        let windowId = info[kCGWindowNumber as String] as? Int ?? 0
+        guard windowId != 0 else { continue }
+        var dict: [String: Any] = [
+            "windowId": windowId,
+            "pid": Int(owner),
+            "name": info[kCGWindowName as String] as? String ?? "",
+        ]
+        if let bounds = info[kCGWindowBounds as String] as? [String: NSNumber],
+           let x = bounds["X"]?.doubleValue,
+           let y = bounds["Y"]?.doubleValue,
+           let width = bounds["Width"]?.doubleValue,
+           let height = bounds["Height"]?.doubleValue {
+            dict["bounds"] = [
+                "left": x, "top": y, "width": width, "height": height,
+            ]
+        }
+        windows.append(dict)
+    }
+    guard let data = try? JSONSerialization.data(withJSONObject: windows),
+          let json = String(data: data, encoding: .utf8)
+    else { return 3 }
+    return strdupOut(json, outJson)
 }
 
 @_cdecl("xs_axdrv_free")

@@ -120,3 +120,22 @@ deferred until the neutral decision contract grows those question kinds.
 - No iOS or Android on-device inference in this phase: phones join the mesh
   as participants with routing to an inference host (capability-gated
   hosting is future work).
+
+## Isolated native preparation
+
+The build hook accepts `native_cache_root` through the root application's
+cache-tracked `hooks.user_defines` for this package:
+
+```yaml
+hooks:
+  user_defines:
+    xsoulspace_inference_laya:
+      native_cache_root: /absolute/private/native-cache
+```
+
+The hook publishes into `<root>/laya/native` instead of the default fleet
+cache. Empty, relative or non-string roots refuse before native compilation.
+Hook output assets and the resolving workspace's `.dart_tool/lib` are still
+populated. This is a build destination setting; runtime loaders are unchanged.
+Use the emitted bundle/assets for isolated execution. Custom environment
+variables are filtered by the SDK hook runner; use this user-define instead.

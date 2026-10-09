@@ -75,7 +75,7 @@ void behaviorSynthesisConformanceTests() {
       );
       final restored = BehaviorPlan.fromJson(plan.toJson());
       expect(restored.hash, plan.hash);
-      expect(BehaviorPlan.schemaId, 'behavior.plan/v1');
+      expect(BehaviorPlan.schemaId, 'behavior.plan/v2');
     });
 
     test('invalid profiles fail closed at construction', () {
@@ -109,7 +109,7 @@ void behaviorSynthesisConformanceTests() {
       // this vector must change only together with BehaviorPlan.schemaId.
       expect(
         plan.hash,
-        '6b8f1014e8e5bd82acdb3c608d656b104ac5338bb98952868d338bcaafdbe17c',
+        '62ac8db0ed242159a9f7bc91b748b237ea168bca652b65b00959b054e48d0a21',
       );
     });
   });

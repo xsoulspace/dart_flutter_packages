@@ -64,3 +64,33 @@ work in plan documents and MCP `automation_observe` arguments.
 {"subtreeOf": "s_1", "fields": ["role", "name", "value"], "maxNodes": 120,
  "panes": {"header": {"maxNodes": 5}}}
 ```
+
+## Producers: projecting a native walk (ADR 0052 full cutover)
+
+A producer's walk stays native; this package owns everything after the
+tree exists. For tiers that emit Flutter-shaped node maps
+(`type`/`label`/`value`/`bounds`, children as ref lists — mcp_flutter's
+`semantic_snapshot` today):
+
+- `snapshotRef(i)` — the one ref dialect (`s_N`, document order);
+- `familySnapshotFromNodes(nodes, snapshotId:, capturedAt:)` — the
+  projection into the family `Snapshot` (role/name/value/bounds on the
+  shared axis, the producer's vocabulary in `attributes`);
+- `projectSnapshotNodes(nodes, keep:, fields:)` — the envelope-side
+  selection policy (fields projection with `ref` always kept, children
+  pruned to kept refs, emptied children dropped).
+
+```dart
+final observation = Observation.of(
+  familySnapshotFromNodes(emitted, snapshotId: id, capturedAt: now),
+  view,
+);
+```
+
+## Grounding: `nodeAt` (ADR 0053)
+
+`observation.nodeAt(x, y)` answers "which element is at this point"
+from the tree's own bounds — the walked node containing the point,
+smallest area first (innermost wins), fail-closed with
+`SemanticRefUnavailableException` when nothing covers it. Bounds
+grounding needs no screenshots; pixel grounding stays client-side.

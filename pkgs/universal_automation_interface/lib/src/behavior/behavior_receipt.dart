@@ -59,7 +59,7 @@ abstract final class BehaviorReceipts {
   /// Independently versioned facets (they evolve at different rates;
   /// receipts pin which shape produced a stream).
   static const Map<String, String> facetVersions = {
-    'plan': 'behavior.plan/v1',
+    'plan': 'behavior.plan/v2',
     'timing': 'timing/v1',
     'pointerMotion': 'pointerMotion/v1',
     'keystrokeCadence': 'keystrokeCadence/v1',

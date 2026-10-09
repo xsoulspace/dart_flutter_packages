@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:meta/meta.dart';
 import 'package:universal_automation_interface/universal_automation_interface.dart';
+import 'package:universal_automation_semantics/universal_automation_semantics.dart';
 
 /// The MCP metadata key intentcall projects automation hints under
 /// (ADR 0038 wire projection; see intentcall_mcp's publish adapter).
@@ -50,6 +51,7 @@ final class IntentHint {
     required this.driver,
     required this.verb,
     required this.locator,
+    this.viewHint,
   }) {
     if (driver.trim().isEmpty) {
       throw ArgumentError.value(driver, 'driver', 'must not be empty');
@@ -99,7 +101,23 @@ final class IntentHint {
             entry.key! as String: entry.value! as String,
     };
     if (locator.isEmpty && _locatorRequired(verb)) return null;
-    return IntentHint(driver: driver, verb: verb, locator: locator);
+    // The view hint (ADR 0052's composition point) parses fail-closed:
+    // a malformed one skips the whole hint, exactly like a malformed
+    // locator — the projection upstream guarantees parseable hints.
+    SemanticView? viewHint;
+    if (json['view'] != null) {
+      try {
+        viewHint = SemanticView.fromJson(json['view']);
+      } on FormatException {
+        return null;
+      }
+    }
+    return IntentHint(
+      driver: driver,
+      verb: verb,
+      locator: locator,
+      viewHint: viewHint,
+    );
   }
 
   static bool _locatorRequired(IntentVerb verb) => switch (verb) {
@@ -120,6 +138,13 @@ final class IntentHint {
   /// Locator against the driver's snapshot (`css`, `role`, `name`,
   /// `key`, `route`, or the catalog action `name` for `custom`).
   final Map<String, String> locator;
+
+  /// The intent's perception hint — a [SemanticView] the runner
+  /// observes through after dispatch, so an app declares not only WHAT
+  /// it drives but HOW its effect should be read (the intent-acts /
+  /// semantics-perceives composition, ADR 0052). Wire form: the `view`
+  /// key in the family view grammar verbatim.
+  final SemanticView? viewHint;
 
   /// Lowers the hint to a driver action, feeding [args] (the invocation's
   /// runtime arguments — the operands that travel with the call, never
@@ -195,6 +220,7 @@ final class IntentHint {
     'driver': driver,
     'action': verb.name,
     'locator': locator,
+    if (viewHint != null) 'view': viewHint!.toJson(),
   };
 
   @override
@@ -205,13 +231,19 @@ final class IntentHint {
       other.locator.length == locator.length &&
       other.locator.entries.every(
         (entry) => locator[entry.key] == entry.value,
-      );
+      ) &&
+      _viewWire == other._viewWire;
+
+  String? get _viewWire => viewHint == null
+      ? null
+      : const JsonEncoder().convert(viewHint!.toJson());
 
   @override
   int get hashCode => Object.hash(
     driver,
     verb,
     Object.hashAllUnordered(locator.entries),
+    _viewWire,
   );
 }
 

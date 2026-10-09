@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:args/args.dart';
 import 'package:universal_automation_interface/universal_automation_interface.dart';
 import 'package:universal_automation_semantics/universal_automation_semantics.dart';
+import 'package:universal_driver_macos/universal_driver_macos.dart';
 
 import '../mcp/mcp_server.dart' as mcp;
 import '../plan/checks.dart';
@@ -176,6 +177,11 @@ Future<int> _dispatch(List<String> arguments) async {
       help: 'Comma-separated rendered fields among role,name,value,bounds.',
     )
     ..addOption(
+      'at',
+      help: 'Ground this x,y point to the innermost node covering it '
+          '(ADR 0053).',
+    )
+    ..addOption(
       'view-max',
       help: 'Cap on shown nodes; the render admits trimming.',
     );
@@ -205,6 +211,11 @@ Future<int> _dispatch(List<String> arguments) async {
       'click-count',
       help: 'click-at repeats: 2 = double-click, 3 = triple.',
     )
+    ..addMultiOption(
+      'modifier',
+      help: 'Keyboard modifier chord for click-at/drag/key: '
+          'shift/control/alt/meta (repeatable).',
+    )
     ..addOption('type-text', help: 'Type this text (caret or --type-css).')
     ..addOption('type-css', help: 'CSS selector to focus before typing.')
     ..addFlag('submit', negatable: false, help: 'Press Enter after typing.')
@@ -227,7 +238,20 @@ Future<int> _dispatch(List<String> arguments) async {
     ..addMultiOption('value', help: 'locator + equals=/contains= (repeatable).')
     ..addOption('url-contains', help: 'The surface URL must contain this.');
   parser.addCommand('screenshot')
-    ..addOption('out', mandatory: true, help: 'PNG destination path.');
+    ..addOption('out', mandatory: true, help: 'PNG destination path.')
+    ..addFlag(
+      'list-windows',
+      negatable: false,
+      help: 'List capturable windows (OS tier) instead of capturing.',
+    )
+    ..addOption(
+      'window-id',
+      help: 'Capture this window (OS tier) instead of the display.',
+    )
+    ..addOption(
+      'max-px',
+      help: 'Cap the long side in pixels (e.g. 1024; OS tier).',
+    );
   parser.addCommand('validate')
     ..addOption('plan', mandatory: true, help: 'Plan document path.');
   parser.addCommand('run')
@@ -333,16 +357,37 @@ Future<int> _dispatch(List<String> arguments) async {
       try {
         final snapshot = await session.driver.snapshot();
         final view = _viewFromArgs(command);
+        final atRaw = command['at'] as String?;
+        (double, double)? at;
+        if (atRaw != null) {
+          at = (
+            _coordPart(atRaw, 0, '--at'),
+            _coordPart(atRaw, 1, '--at'),
+          );
+        }
         final out = command['out'] as String?;
         if (out != null) {
           final file = File(out);
           await file.parent.create(recursive: true);
           await file.writeAsString(jsonEncode(snapshot.toJson()));
         }
-        if (view != null) {
+        if (view != null || at != null) {
           // A view asked: the rendered observation + ref index (the
-          // raw tree rides `--out` when given).
-          output({'observation': Observation.of(snapshot, view).toJson()});
+          // raw tree rides `--out` when given). A grounding point
+          // resolves against the same full walk.
+          final observation = Observation.of(snapshot, view ?? const SemanticView());
+          output({
+            'observation': observation.toJson(),
+            if (at case (final x, final y))
+              'at': {
+                'ref': observation.nodeAt(x, y).ref,
+                'role': observation.nodeAt(x, y).node.role,
+                if (observation.nodeAt(x, y).node.name != null)
+                  'name': observation.nodeAt(x, y).node.name,
+                'x': x,
+                'y': y,
+              },
+          });
         } else {
           output(snapshot.toJson());
         }
@@ -373,7 +418,39 @@ Future<int> _dispatch(List<String> arguments) async {
     case 'screenshot':
       final session = await _attachAdHoc(options);
       try {
-        final bytes = await session.driver.screenshot();
+        final driver = session.driver;
+        // An is-check cannot promote through the ResolvedSession seam:
+        // cast explicitly (the catalog gotcha).
+        final macos = driver is MacosDriver ? driver : null;
+        final listWindows = command['list-windows'] == true;
+        final windowId = command['window-id'] as String?;
+        final maxPx = int.tryParse(command['max-px'] as String? ?? '') ?? 0;
+        if (listWindows || windowId != null || maxPx > 0) {
+          // Window discovery, window capture, and resizing are the
+          // native tier's surface; plain display capture is not.
+          if (macos == null) {
+            throw const UsageException(
+              'window capture needs the OS tier (--os)',
+            );
+          }
+        }
+        if (listWindows) {
+          final windows = await macos!.windows();
+          output([
+            for (final window in windows)
+              {
+                'windowId': window.windowId,
+                'pid': window.pid,
+                'name': window.name,
+              },
+          ]);
+          return exitOk;
+        }
+        final bytes = windowId != null
+            ? await macos!.windowScreenshot(int.parse(windowId), maxPx: maxPx)
+            : maxPx > 0
+            ? await macos!.screenshot(maxPx: maxPx)
+            : await driver.screenshot();
         final file = File(command['out'] as String);
         await file.parent.create(recursive: true);
         await file.writeAsBytes(bytes, flush: true);
@@ -513,6 +590,17 @@ String _buttonOption(ArgResults command) {
   return button;
 }
 
+/// The chord modifier list for coordinate/key verbs; unknown names
+/// fail closed here (usage error) before any transport sees them.
+List<String> _modifierOption(ArgResults command) {
+  final raw = command['modifier'] as List<Object?>? ?? const [];
+  try {
+    return parseModifiers(raw);
+  } on FormatException catch (error) {
+    throw UsageException(error.message);
+  }
+}
+
 AutomationAction _actionFromArgs(ArgResults command) {
   final navigate = command['navigate'] as String?;
   if (navigate != null) {
@@ -528,6 +616,7 @@ AutomationAction _actionFromArgs(ArgResults command) {
   if (clickName != null || clickCss != null || clickRole != null) {
     return ClickAction(css: clickCss, role: clickRole, name: clickName);
   }
+  final modifiers = _modifierOption(command);
   final clickAt = command['click-at'] as String?;
   if (clickAt != null) {
     return ClickAtAction(
@@ -535,6 +624,7 @@ AutomationAction _actionFromArgs(ArgResults command) {
       _coordPart(clickAt, 1, '--click-at'),
       button: _buttonOption(command),
       clickCount: int.tryParse(command['click-count'] as String? ?? '') ?? 1,
+      modifiers: modifiers,
     );
   }
   final moveTo = command['move-to'] as String?;
@@ -553,6 +643,7 @@ AutomationAction _actionFromArgs(ArgResults command) {
       _coordPart(drag, 2, '--drag'),
       _coordPart(drag, 3, '--drag'),
       button: _buttonOption(command),
+      modifiers: modifiers,
     );
   }
   final typeText = command['type-text'] as String?;
@@ -564,7 +655,9 @@ AutomationAction _actionFromArgs(ArgResults command) {
     );
   }
   final key = command['key'] as String?;
-  if (key != null) return KeyPressAction(key);
+  if (key != null) {
+    return KeyPressAction(key, modifiers: _modifierOption(command));
+  }
   final scroll = command['scroll'] as String?;
   if (scroll != null) {
     return ScrollAction(

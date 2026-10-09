@@ -26,4 +26,5 @@ export 'package:universal_automation_interface/universal_automation_interface.da
 
 export 'src/driver_bridge.dart';
 export 'src/macos_app.dart';
+export 'src/macos_behavior.dart';
 export 'src/macos_driver.dart';

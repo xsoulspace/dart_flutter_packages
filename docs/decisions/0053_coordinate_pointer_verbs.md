@@ -1,6 +1,7 @@
 # ADR 0053: Coordinate pointer verbs — `clickAt`/`moveTo`/`drag`, MoE-lowered from day one
 
-- Status: Accepted
+- Status: Accepted (amended 2026-10-08, same day: modifier chords join
+  the verbs; macOS and WebDriver tiers wired)
 - Date: 2026-10-08
 - North Star impact: `applies`
 - Builds on: [ADR 0037](0037_universal_automation_family.md) (family,
@@ -51,18 +52,39 @@ segments, and receipts cover the whole dispatch. `PointerDownStep`/
 delivery. A plain (agent-immediate) dispatch is the degenerate profile:
 one move, one press, one release.
 
-Tier coverage in this wave: **CDP implemented** (`Input.dispatchMouseEvent`
-primitives `clickAt`/`movePointerTo`/`dragAt` — the same primitive the
-live-proven semantic clicks already used, now public). macOS (CGEvent
-pointer extension in the native bridge), WebDriver (W3C pointer
-actions), Linux AT-SPI and Windows UIA (synthetic input) **refuse
-loudly** until wired — the capability flag makes that checkable before
-attach.
+**Amendment — modifier chords.** `ClickAtAction`, `DragAction`, and
+`KeyPressAction` carry `modifiers`: a subset of the platform-agnostic
+vocabulary `shift`/`control`/`alt`/`meta` (aliases `ctrl`/`option`/
+`cmd`/`command`/`windows` normalize; unknown names fail closed at
+parse time — a dropped modifier is a misfired chord). Lowering is
+two-channel so every tier gets what it needs: the synthesizer emits
+key steps around the gesture (hold → act → release in reverse) AND
+rides the names on the pointer steps, so transports with a native
+modifier field (CDP's `Input` bitmask: alt 1, control 2, meta 4,
+shift 8) set it while transports without (W3C pointer actions, CGEvent)
+still see held keys. W3C chords are one multi-source dispatch — a
+keyboard source (`keyDown`s, `pause` padding, `keyUp`s) aligned so the
+release strictly follows the pointer's. CGEvent chords set the
+`CGEventFlags` mask on the pointer events; the modifier key events
+announce their own flags. Behavior-plan canonical form gains the new
+fields, so the plan dialect bumps to `behavior.plan/v2` (the golden
+vector repinned in the same change).
+
+Tier coverage: **CDP, macOS (CGEvent through the native bridge —
+`xs_axdrv_pointer_move`/`pointer_button` with dragged-move
+classification and stuck-button release on teardown), and WebDriver
+(W3C pointer actions, viewport origin) implemented** — plain and
+behavioral both. Linux AT-SPI and Windows UIA (synthetic input via
+XTEST/SendInput sidecars) **refuse loudly** until wired — the
+capability flag makes that checkable before attach. Keyboard chords on
+keys (`control`+`Tab`) lower on all three wired tiers' plain and
+behavioral paths.
 
 Surfacing mirrors ADR 0046/0052: plan verbs `clickAt`/`moveTo`/`drag`
-(round-trippable documents), MCP `automation_act` actions + parameters,
-CLI `--click-at x,y` / `--move-to x,y` / `--drag x1,y1,x2,y2` with
-`--button`/`--click-count`.
+(round-trippable documents, `modifiers` included), MCP
+`automation_act` actions + parameters (`modifiers` array), CLI
+`--click-at x,y` / `--move-to x,y` / `--drag x1,y1,x2,y2` with
+`--button`/`--click-count`/`--modifier` (repeatable).
 
 ## Consequences
 
@@ -76,13 +98,17 @@ CLI `--click-at x,y` / `--move-to x,y` / `--drag x1,y1,x2,y2` with
 
 ## Non-claims
 
-- macOS/WebDriver/AT-SPI/UIA implementations are future waves (the
-  capability flag is the contract; the refusals are loud today).
-- Keyboard modifier chords (`Cmd+click`) are not in this wave; the
-  `button` axis is pointer-only. Modifier composition is its own
-  decision once key coverage grows.
+- Linux AT-SPI and Windows UIA coordinate implementations stay future
+  waves (XTEST/SendInput synthetic input lives in platform-built
+  sidecars; the capability flag is the contract, the refusals are loud
+  today).
+- Keyboard modifier chords were the original non-claim; the amendment
+  above supersedes it for the coordinate verbs and named keys. Locator
+  `ClickAction` deliberately stays chord-free — the semantic click
+  composes with key steps in a plan when a chord is needed.
 - No pixel *grounding* here: these verbs take coordinates from the
-  caller (a vision model or a view's bounds). Turning screenshots into
+  caller (a vision model or a view's bounds — `Observation.nodeAt` is
+  the bounds-grounding aid, ADR 0052). Turning screenshots into
   coordinates stays a client-side concern.
 - `clickCount > 3` is clamped to 3 (the transport's triple-click).
 

@@ -283,15 +283,18 @@ class CdpPage {
   /// Dispatches a click at explicit viewport coordinates: a move to the
   /// point, then press + release (hover states see the pointer arrive).
   /// [button] is `left` (default), `right`, or `middle`; [clickCount]
-  /// 2 = double-click, 3 = triple (ADR 0053 coordinate verbs).
+  /// 2 = double-click, 3 = triple; [modifiers] holds the chord keys
+  /// (ADR 0053 coordinate verbs).
   Future<void> clickAt(
     double x,
     double y, {
     String button = 'left',
     int clickCount = 1,
+    Iterable<String> modifiers = const [],
   }) async {
     _ensureOpen();
-    await movePointerTo(x, y);
+    final mask = cdpModifierMask(modifiers);
+    await movePointerTo(x, y, modifiers: modifiers);
     for (var press = 0; press < clickCount.clamp(1, 3); press++) {
       await connection.send('Input.dispatchMouseEvent', {
         'type': 'mousePressed',
@@ -299,6 +302,7 @@ class CdpPage {
         'y': y,
         'button': button,
         'clickCount': press + 1,
+        if (mask != 0) 'modifiers': mask,
       });
       await connection.send('Input.dispatchMouseEvent', {
         'type': 'mouseReleased',
@@ -306,47 +310,59 @@ class CdpPage {
         'y': y,
         'button': button,
         'clickCount': press + 1,
+        if (mask != 0) 'modifiers': mask,
       });
     }
   }
 
   /// Moves the pointer to explicit viewport coordinates without
   /// pressing — hover affordances, tooltips, drag pre-positioning.
-  Future<void> movePointerTo(double x, double y) async {
+  Future<void> movePointerTo(
+    double x,
+    double y, {
+    Iterable<String> modifiers = const [],
+  }) async {
     _ensureOpen();
+    final mask = cdpModifierMask(modifiers);
     await connection.send('Input.dispatchMouseEvent', {
       'type': 'mouseMoved',
       'x': x,
       'y': y,
+      if (mask != 0) 'modifiers': mask,
     });
   }
 
   /// Presses at (fromX, fromY), moves to (toX, toY), releases — the
-  /// coordinate drag primitive (ADR 0053). Behavioral profiles lower
-  /// the carried path through humanized segments instead.
+  /// coordinate drag primitive (ADR 0053). [modifiers] holds the chord
+  /// keys. Behavioral profiles lower the carried path through humanized
+  /// segments instead.
   Future<void> dragAt(
     double fromX,
     double fromY,
     double toX,
     double toY, {
     String button = 'left',
+    Iterable<String> modifiers = const [],
   }) async {
     _ensureOpen();
-    await movePointerTo(fromX, fromY);
+    final mask = cdpModifierMask(modifiers);
+    await movePointerTo(fromX, fromY, modifiers: modifiers);
     await connection.send('Input.dispatchMouseEvent', {
       'type': 'mousePressed',
       'x': fromX,
       'y': fromY,
       'button': button,
       'clickCount': 1,
+      if (mask != 0) 'modifiers': mask,
     });
-    await movePointerTo(toX, toY);
+    await movePointerTo(toX, toY, modifiers: modifiers);
     await connection.send('Input.dispatchMouseEvent', {
       'type': 'mouseReleased',
       'x': toX,
       'y': toY,
       'button': button,
       'clickCount': 1,
+      if (mask != 0) 'modifiers': mask,
     });
   }
 
@@ -444,17 +460,53 @@ class CdpPage {
     if (code == null) {
       throw DriverUnsupportedException(
         'key "$key" is not in the supported set: Enter, Tab, Escape, '
-        'Backspace, ArrowLeft, ArrowUp, ArrowRight, ArrowDown',
+        'Backspace, ArrowLeft, ArrowUp, ArrowRight, ArrowDown, Shift, '
+        'Control, Alt, Meta',
       );
     }
+    await _dispatchKey(key, code, 'keyDown');
+    await _dispatchKey(key, code, 'keyUp');
+  }
+
+  /// Presses [key] under a modifier chord: the modifiers hold (keyDown
+  /// only) while the key taps, then release in reverse (ADR 0053).
+  Future<void> keyChord(String key, List<String> modifiers) async {
+    _ensureOpen();
+    final code = namedVirtualKeyCode(key);
+    if (code == null) {
+      throw DriverUnsupportedException(
+        'key "$key" is not in the supported set: Enter, Tab, Escape, '
+        'Backspace, ArrowLeft, ArrowUp, ArrowRight, ArrowDown, Shift, '
+        'Control, Alt, Meta',
+      );
+    }
+    Future<(String, int)> hold(String name) async {
+      final modCode = namedVirtualKeyCode(name);
+      if (modCode == null) {
+        throw DriverUnsupportedException(
+          'chord key "$name" is not in the supported set',
+        );
+      }
+      return (name, modCode);
+    }
+
+    final held = <(String, int)>[
+      for (final modifier in modifiers)
+        await hold(modifierKeyName(modifier)),
+    ];
+    for (final (name, modCode) in held) {
+      await _dispatchKey(name, modCode, 'keyDown');
+    }
+    await _dispatchKey(key, code, 'keyDown');
+    await _dispatchKey(key, code, 'keyUp');
+    for (final (name, modCode) in held.reversed) {
+      await _dispatchKey(name, modCode, 'keyUp');
+    }
+  }
+
+  Future<void> _dispatchKey(String key, int code, String type) async {
     await connection.send('Input.dispatchKeyEvent', {
-      'type': 'keyDown',
-      'key': key,
-      'code': key,
-      'windowsVirtualKeyCode': code,
-    });
-    await connection.send('Input.dispatchKeyEvent', {
-      'type': 'keyUp',
+      'type': type,
       'key': key,
       'code': key,
       'windowsVirtualKeyCode': code,
@@ -865,3 +917,19 @@ List<AxNode> _buildTree(List<Map<String, Object?>> raw) {
 
 String _jsString(String value) =>
     "'${value.replaceAll(r'\', r'\\').replaceAll("'", r"\'")}'";
+
+/// CDP `Input` modifier bitmask for the family's modifier names
+/// (Alt 1, Control 2, Meta 4, Shift 8); unknown names contribute 0.
+int cdpModifierMask(Iterable<String> modifiers) {
+  var mask = 0;
+  for (final modifier in modifiers) {
+    mask |= switch (modifier) {
+      'alt' => 1,
+      'control' => 2,
+      'meta' => 4,
+      'shift' => 8,
+      _ => 0,
+    };
+  }
+  return mask;
+}

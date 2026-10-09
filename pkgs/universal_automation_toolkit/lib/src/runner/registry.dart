@@ -236,7 +236,7 @@ final class SessionRegistry {
     Duration timeout,
   ) async {
     if (Platform.isMacOS) {
-      return _MacosResolvedSession(binding, MacosDriver());
+      return _MacosResolvedSession(binding, BehavioralMacosDriver());
     }
     if (Platform.isLinux) {
       final bus = DBusAtspiBus(
@@ -316,11 +316,14 @@ final class _WebdriverResolvedSession implements ResolvedSession {
 }
 
 final class _MacosResolvedSession implements ResolvedSession {
-  _MacosResolvedSession(this.binding, MacosDriver macosDriver)
-    : driver = macosDriver;
+  _MacosResolvedSession(this.binding, BehavioralMacosDriver macosDriver)
+    : macosDriver = macosDriver,
+      driver = macosDriver;
 
   @override
   final SessionBinding binding;
+
+  final BehavioralMacosDriver macosDriver;
 
   @override
   final AutomationDriver driver;
@@ -329,7 +332,7 @@ final class _MacosResolvedSession implements ResolvedSession {
   Uri? get url => null;
 
   @override
-  BehavioralDriver? asBehavioral() => null;
+  BehavioralDriver? asBehavioral() => macosDriver;
 
   @override
   Future<void> detach() => driver.close();

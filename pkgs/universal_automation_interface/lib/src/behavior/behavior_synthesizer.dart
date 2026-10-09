@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import '../automation_action.dart';
 import '../automation_exceptions.dart';
+import '../keyboard_modifiers.dart';
 import '../snapshot.dart';
 import 'behavior_profile.dart';
 import 'behavior_rng.dart';
@@ -48,6 +49,38 @@ BehaviorPlan synthesizeBehavior(
   // move steps at all — absence is the degenerate profile, not a
   // special-cased flag.
   final animatePointer = profile.pointer.moveDuration.meanUs > 0;
+
+  // Chord lowering (ADR 0053): modifiers become key steps around the
+  // gesture AND ride the pointer steps, so transports with a native
+  // modifier field (CDP) set it while transports without (W3C, CGEvent
+  // key events) still see the held keys.
+  void chordDown(List<String> modifiers) {
+    for (final modifier in modifiers) {
+      final key = modifierKeyName(modifier);
+      steps.add(
+        KeyDownStep(
+          plannedAtUs: cursorUs,
+          key: key,
+          keyCode: namedVirtualKeyCode(key),
+        ),
+      );
+      advance(profile.cadence.digraph.sample(rng));
+    }
+  }
+
+  void chordUp(List<String> modifiers) {
+    for (final modifier in modifiers.reversed) {
+      final key = modifierKeyName(modifier);
+      steps.add(
+        KeyUpStep(
+          plannedAtUs: cursorUs,
+          key: key,
+          keyCode: namedVirtualKeyCode(key),
+        ),
+      );
+      advance(profile.cadence.digraph.sample(rng));
+    }
+  }
 
   void moveTowards(double x, double y) {
     if (!animatePointer) {
@@ -105,7 +138,13 @@ BehaviorPlan synthesizeBehavior(
       steps.add(PointerDownStep(plannedAtUs: cursorUs));
       advance(profile.pointer.buttonHold.sample(rng));
       steps.add(PointerUpStep(plannedAtUs: cursorUs));
-    case ClickAtAction(:final x, :final y, :final button, :final clickCount):
+    case ClickAtAction(
+      :final x,
+      :final y,
+      :final button,
+      :final clickCount,
+      :final modifiers,
+    ):
       // Coordinate verbs (ADR 0053) ride the same humanized delivery:
       // lead dwell, bezier move to the point, then clickCount presses.
       leadDwell();
@@ -116,12 +155,14 @@ BehaviorPlan synthesizeBehavior(
           PointerMoveStep(plannedAtUs: cursorUs, x: x, y: y, durationUs: 0),
         );
       }
+      chordDown(modifiers);
       for (var press = 0; press < clickCount.clamp(1, 3); press++) {
         steps.add(
           PointerDownStep(
             plannedAtUs: cursorUs,
             button: button,
             clickCount: press + 1,
+            modifiers: modifiers,
           ),
         );
         advance(profile.pointer.buttonHold.sample(rng));
@@ -130,12 +171,14 @@ BehaviorPlan synthesizeBehavior(
             plannedAtUs: cursorUs,
             button: button,
             clickCount: press + 1,
+            modifiers: modifiers,
           ),
         );
         if (press + 1 < clickCount) {
           advance(profile.cadence.digraph.sample(rng));
         }
       }
+      chordUp(modifiers);
     case MoveAction(:final x, :final y):
       leadDwell();
       final before = steps.length;
@@ -151,6 +194,7 @@ BehaviorPlan synthesizeBehavior(
       :final toX,
       :final toY,
       :final button,
+      :final modifiers,
     ):
       leadDwell();
       final before = steps.length;
@@ -165,12 +209,26 @@ BehaviorPlan synthesizeBehavior(
           ),
         );
       }
-      steps.add(PointerDownStep(plannedAtUs: cursorUs, button: button));
+      chordDown(modifiers);
+      steps.add(
+        PointerDownStep(
+          plannedAtUs: cursorUs,
+          button: button,
+          modifiers: modifiers,
+        ),
+      );
       advance(profile.pointer.buttonHold.sample(rng));
       // The carried path humanizes too — a drag is a gesture, not a
       // teleport with the button held.
       moveTowards(toX, toY);
-      steps.add(PointerUpStep(plannedAtUs: cursorUs, button: button));
+      steps.add(
+        PointerUpStep(
+          plannedAtUs: cursorUs,
+          button: button,
+          modifiers: modifiers,
+        ),
+      );
+      chordUp(modifiers);
     case TypeAction(:final text, :final submit):
       leadDwell();
       for (final rune in text.runes) {
@@ -201,7 +259,7 @@ BehaviorPlan synthesizeBehavior(
         advance(profile.cadence.hold.sample(rng));
         steps.add(KeyUpStep(plannedAtUs: cursorUs, key: 'Enter', keyCode: 13));
       }
-    case KeyPressAction(:final key):
+    case KeyPressAction(:final key, :final modifiers):
       final keyCode = namedVirtualKeyCode(key);
       if (keyCode == null) {
         final message = 'KeyPressAction key "$key" has no synthesis '
@@ -209,9 +267,11 @@ BehaviorPlan synthesizeBehavior(
         throw SpecViolationException([message]);
       }
       leadDwell();
+      chordDown(modifiers);
       steps.add(KeyDownStep(plannedAtUs: cursorUs, key: key, keyCode: keyCode));
       advance(profile.cadence.hold.sample(rng));
       steps.add(KeyUpStep(plannedAtUs: cursorUs, key: key, keyCode: keyCode));
+      chordUp(modifiers);
     case ScrollAction(:final direction, :final distance):
       leadDwell();
       final amount = distance ?? 300;
@@ -401,7 +461,9 @@ const _punctuation = <String, int>{
 };
 
 /// Virtual key code for the family's named-key set (`Enter`, `Tab`,
-/// `Escape`, `Backspace`, arrows), or `null` outside it.
+/// `Escape`, `Backspace`, arrows, and the modifier names), or `null`
+/// outside it. Modifier codes follow the Windows VK conventions the
+/// web tiers use; OS tiers re-map onto their native codes.
 int? namedVirtualKeyCode(String key) => switch (key) {
   'Enter' => 13,
   'Tab' => 9,
@@ -411,5 +473,9 @@ int? namedVirtualKeyCode(String key) => switch (key) {
   'ArrowUp' => 38,
   'ArrowRight' => 39,
   'ArrowDown' => 40,
+  'Shift' => 16,
+  'Control' => 17,
+  'Alt' => 18,
+  'Meta' => 91,
   _ => null,
 };

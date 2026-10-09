@@ -12,6 +12,8 @@ through native-assets build hooks (the ADR 0001 pattern).
 |---|---|---|
 | `a11yTree` | yes | Focused application snapshot, depth- and node-bounded |
 | `inputSynthesis` | yes | AXPress clicks, unicode typing, keys, wheel scrolling |
+| `pointerCoordinates` | yes | `ClickAtAction`/`MoveAction`/`DragAction` as CGEvents (ADR 0053) |
+| `behaviorDynamics` | yes | `BehavioralMacosDriver` lowers humanized plans, gestures included |
 | `screenshot` | yes | Main display PNG; needs Screen Recording permission |
 | `screencast` | no | Use `universal_capture_macos` + `universal_screencast` |
 | `evaluate` | no | No AX equivalent; refused loudly |
@@ -23,7 +25,22 @@ through native-assets build hooks (the ADR 0001 pattern).
   `driver.axTrusted`, prompt once with `driver.requestTrust()`. Missing
   permission throws the typed
   `AccessibilityPermissionRequiredException`.
-- **Screen Recording**: only for `screenshot()`.
+- **Screen Recording**: a separate TCC grant, needed only for pixel
+  capture — `screenshot()`, `windowScreenshot(windowId)`. Missing
+  consent throws the typed
+  `ScreenRecordingPermissionRequiredException`; the
+  `screenRecording` consent kind in `xsoulspace_permission_core` is the
+  policy vocabulary for it.
+
+## Windows and window-scoped capture
+
+`windows({pid})` lists the on-screen, normal-layer windows (ids,
+bounds, titles — titles may be empty without Screen Recording;
+ids/bounds need no consent). `windowScreenshot(windowId, {maxPx})`
+captures one window — occlusion included, exact window bounds;
+`maxPx` caps the long side for agent-facing budgets (the ~1024px
+convention). A window that yields no image (some auxiliary surfaces)
+fails loudly, never silently empty.
 
 ## Coordinate convention
 

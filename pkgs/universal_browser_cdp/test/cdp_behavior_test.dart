@@ -234,7 +234,7 @@ void main() {
         ..removeWhere((line) => line.isEmpty);
       // Meta + teleport move + down + up.
       expect(streamLines.length, 4);
-      expect(streamLines.first, contains('"schema":"behavior.plan/v1"'));
+      expect(streamLines.first, contains('"schema":"behavior.plan/v2"'));
       // Envelope + 3 dispatched (move, down, up) + terminal.
       expect(receiptLines.length, 5);
       expect(receiptLines.first, contains('"driverId":"cdp"'));

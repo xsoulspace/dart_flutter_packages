@@ -79,8 +79,12 @@ class CdpDriver implements AutomationDriver, AutomationActionCatalog {
           await _page.insertText(text);
           if (submit) await _page.keyPress('Enter');
         }
-      case KeyPressAction(:final key):
-        await _page.keyPress(key);
+      case KeyPressAction(:final key, :final modifiers):
+        if (modifiers.isEmpty) {
+          await _page.keyPress(key);
+        } else {
+          await _page.keyChord(key, modifiers);
+        }
       case ScrollAction(:final direction, :final distance):
         await _page.scroll(
           direction: direction,
@@ -88,8 +92,20 @@ class CdpDriver implements AutomationDriver, AutomationActionCatalog {
         );
       case EvaluateAction(:final expression):
         await _page.evaluate(expression);
-      case ClickAtAction(:final x, :final y, :final button, :final clickCount):
-        await _page.clickAt(x, y, button: button, clickCount: clickCount);
+      case ClickAtAction(
+        :final x,
+        :final y,
+        :final button,
+        :final clickCount,
+        :final modifiers,
+      ):
+        await _page.clickAt(
+          x,
+          y,
+          button: button,
+          clickCount: clickCount,
+          modifiers: modifiers,
+        );
       case MoveAction(:final x, :final y):
         await _page.movePointerTo(x, y);
       case DragAction(
@@ -98,8 +114,16 @@ class CdpDriver implements AutomationDriver, AutomationActionCatalog {
         :final toX,
         :final toY,
         :final button,
+        :final modifiers,
       ):
-        await _page.dragAt(fromX, fromY, toX, toY, button: button);
+        await _page.dragAt(
+          fromX,
+          fromY,
+          toX,
+          toY,
+          button: button,
+          modifiers: modifiers,
+        );
       case InvokeAction(:final name, :final args):
         await _invokeSurfaceAction(name, args);
     }

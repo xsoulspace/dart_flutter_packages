@@ -34,6 +34,13 @@ enum PermissionKind {
   /// Operating-system consent: camera capture (vision pipelines).
   camera('camera'),
 
+  /// Operating-system consent: screen capture (window/display
+  /// screenshots, screencast). On macOS this is the Screen Recording
+  /// TCC grant — distinct from [accessibility], which only covers tree
+  /// reads and input injection. The system dialog is the consent
+  /// surface; a decision here records and routes it, never overrides it.
+  screenRecording('screenRecording'),
+
   /// Anything the wire names but this vocabulary does not model yet.
   /// Unknown kinds land here through [coerce]; the raw string survives
   /// on the request so a policy can still specialize on it.

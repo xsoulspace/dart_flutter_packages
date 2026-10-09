@@ -93,4 +93,44 @@ void main() {
     expect(released['y'], 400);
     await session.detach();
   });
+
+  test('shift+click sets the CDP modifier mask on every pointer event',
+      () async {
+    final session = await CdpBrowserSession.attach(server.httpBase);
+    await session.driver.perform(
+      const ClickAtAction(120, 80, modifiers: ['shift']),
+    );
+    for (final event in server.inputEvents) {
+      expect(event['modifiers'], 8, reason: '${event['type']} carries shift');
+    }
+    await session.detach();
+  });
+
+  test('behavioral chords dispatch key steps and flagged presses', () async {
+    final session = await CdpBrowserSession.attach(server.httpBase);
+    final behavioral = BehavioralCdpDriver(session.page);
+    final outcome = await behavioral.performWith(
+      const ClickAtAction(5, 6, modifiers: ['shift', 'control']),
+      BehaviorProfile.agentImmediate,
+      seed: 7,
+    );
+    expect(outcome.verdict, BehaviorVerdict.complete);
+    // The chord rides both channels: key steps for the transport-less
+    // representation, the mask field for the pointer events.
+    final keys = server.inputEvents
+        .where((event) => event['method'] == 'Input.dispatchKeyEvent')
+        .map((event) => '${event['type']}:${event['key']}')
+        .toList();
+    expect(keys, [
+      'keyDown:Shift',
+      'keyDown:Control',
+      'keyUp:Control',
+      'keyUp:Shift',
+    ]);
+    final pressed = server.inputEvents
+        .firstWhere((event) => event['type'] == 'mousePressed');
+    // shift 8 | control 2.
+    expect(pressed['modifiers'], 10);
+    await session.detach();
+  });
 }

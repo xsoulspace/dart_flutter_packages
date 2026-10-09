@@ -40,3 +40,11 @@ own timeout); the runtime owns the health deadline only.
 - Readiness is honest: a detached runtime surfaces as a typed unavailable,
   never a fake ready.
 - Diagnostics never carry content.
+
+## Native build cache destinations
+
+The separate `native_asset_cache.dart` entrypoint selects a directory without
+creating it. Laya and MLX hooks share it to validate their cache-tracked
+`native_cache_root` user-define. An explicit absolute root isolates preparation
+outputs; omitting it preserves the existing fleet cache. It configures build
+publication paths, not runtime library resolution or acceptance.

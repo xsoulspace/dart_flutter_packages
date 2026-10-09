@@ -44,9 +44,14 @@ export 'src/plan/steps.dart';
 
 /// Observe: capture one semantic snapshot — through a [view]
 /// ([SemanticView], ADR 0052) the report carries the rendered text and
-/// ref index; without one, only counts.
-ObserveStep observe({String? save, String? session, SemanticView? view}) =>
-    ObserveStep(save: save, session: session, view: view);
+/// ref index; without one, only counts. [at] grounds a surface point
+/// back to the innermost node covering it (ADR 0053).
+ObserveStep observe({
+  String? save,
+  String? session,
+  SemanticView? view,
+  (double, double)? at,
+}) => ObserveStep(save: save, session: session, view: view, at: at);
 
 /// Act: navigate the surface to [url].
 ActStep navigate(Uri url, {String? session, String? profile, int? seed}) =>
@@ -58,20 +63,28 @@ ActStep navigate(Uri url, {String? session, String? profile, int? seed}) =>
     );
 
 /// Act: click at surface coordinates ([x], [y]) — the fallback tier for
-/// canvas/games and pixel-grounded agents (ADR 0053). CDP tier today;
-/// other tiers refuse loudly.
+/// canvas/games and pixel-grounded agents (ADR 0053). [modifiers] holds
+/// a chord (shift/control/alt/meta). CDP, macOS, and WebDriver tiers
+/// today; others refuse loudly.
 ActStep clickAt(
   double x,
   double y, {
   String button = 'left',
   int clickCount = 1,
+  List<String> modifiers = const [],
   String? session,
   String? profile,
   int? seed,
   bool returnState = false,
 }) =>
     ActStep(
-      action: ClickAtAction(x, y, button: button, clickCount: clickCount),
+      action: ClickAtAction(
+        x,
+        y,
+        button: button,
+        clickCount: clickCount,
+        modifiers: modifiers,
+      ),
       session: session,
       profile: profile,
       seed: seed,
@@ -103,12 +116,20 @@ ActStep dragTo(
   double toX,
   double toY, {
   String button = 'left',
+  List<String> modifiers = const [],
   String? session,
   String? profile,
   int? seed,
 }) =>
     ActStep(
-      action: DragAction(fromX, fromY, toX, toY, button: button),
+      action: DragAction(
+        fromX,
+        fromY,
+        toX,
+        toY,
+        button: button,
+        modifiers: modifiers,
+      ),
       session: session,
       profile: profile,
       seed: seed,
@@ -150,10 +171,17 @@ ActStep typeText(
       seed: seed,
     );
 
-/// Act: press a named key.
-ActStep keyPress(String key, {String? session, String? profile, int? seed}) =>
+/// Act: press a named key, optionally under a modifier [modifiers]
+/// chord (e.g. `['control']` + `Tab`).
+ActStep keyPress(
+  String key, {
+  List<String> modifiers = const [],
+  String? session,
+  String? profile,
+  int? seed,
+}) =>
     ActStep(
-      action: KeyPressAction(key),
+      action: KeyPressAction(key, modifiers: modifiers),
       session: session,
       profile: profile,
       seed: seed,

@@ -185,4 +185,117 @@ scenarios:
     expect(lastPressed['x'], 42);
     expect(lastPressed['y'], 24);
   });
+
+  test('modifier chords ride plan documents and the MCP act tool',
+      () async {
+    final yaml = '''
+sessions:
+  browser:
+    transport: cdp
+    uri: $endpoint
+scenarios:
+  s:
+    steps:
+      - clickAt: {x: 10, y: 20, modifiers: [shift]}
+      - key: {key: Tab, modifiers: [control]}
+      - key: Enter
+''';
+    final file = File(
+      '${Directory.systemTemp.createTempSync('uat-chord').path}/plan.yaml',
+    );
+    addTearDown(() => file.parent.deleteSync(recursive: true));
+    await file.writeAsString(yaml);
+    final plan = await AutomationPlan.load(file.path);
+    final report = await PlanRunner().run(plan);
+    expect(report.ok, isTrue);
+    final pressed = fake.inputEvents.lastWhere(
+      (event) => event['type'] == 'mousePressed',
+    );
+    // shift 8.
+    expect(pressed['modifiers'], 8);
+    final keyEvents = fake.inputEvents
+        .where((event) => event['method'] == 'Input.dispatchKeyEvent')
+        .map((event) => '${event['type']}:${event['key']}')
+        .toList();
+    // Chord key steps + the plain Enter pair.
+    expect(keyEvents, [
+      'keyDown:Control',
+      'keyDown:Tab',
+      'keyUp:Tab',
+      'keyUp:Control',
+      'keyDown:Enter',
+      'keyUp:Enter',
+    ]);
+
+    // The MCP act tool carries the same chord arguments.
+    final server = ToolkitMcpServer(defaultEndpoint: endpoint);
+    final response = await server.handle({
+      'jsonrpc': '2.0',
+      'id': 40,
+      'method': 'tools/call',
+      'params': {
+        'name': 'automation_act',
+        'arguments': {
+          'action': 'key',
+          'key': 'Tab',
+          'modifiers': ['shift'],
+        },
+      },
+    });
+    expect((response!['result'] as Map<String, Object?>)['isError'], isFalse);
+    final keys = fake.inputEvents
+        .where((event) => event['method'] == 'Input.dispatchKeyEvent')
+        .map((event) => '${event['type']}:${event['key']}')
+        .toList();
+    // The MCP chord: Shift holds, Tab taps, Shift releases.
+    expect(keys.sublist(keys.length - 4), [
+      'keyDown:Shift',
+      'keyDown:Tab',
+      'keyUp:Tab',
+      'keyUp:Shift',
+    ]);
+  });
+
+  test('observe-at grounds a point to the innermost node', () async {
+    // The fake tree: document (0,0,800,600) over Submit (40,60,200,80)
+    // — (50,70) hits both, the button wins on area.
+    final report = await PlanRunner().run(
+      _plan([observe(at: (50, 70))]),
+    );
+    expect(report.ok, isTrue);
+    final detail = report.steps.single.detail;
+    expect(detail['at'], {
+      'ref': 's_1',
+      'role': 'button',
+      'name': 'Submit',
+      'x': 50.0,
+      'y': 70.0,
+    });
+
+    // A point nothing covers fails the step loudly.
+    final miss = await PlanRunner().run(_plan([observe(at: (5000, 5000))]));
+    expect(miss.ok, isFalse);
+    expect(miss.steps.single.errorKind, 'semanticRefUnavailable');
+
+    // The MCP observe tool takes the same `at` argument.
+    final server = ToolkitMcpServer(defaultEndpoint: endpoint);
+    final response = await server.handle({
+      'jsonrpc': '2.0',
+      'id': 50,
+      'method': 'tools/call',
+      'params': {
+        'name': 'automation_observe',
+        'arguments': {
+          'at': {'x': 50, 'y': 70},
+        },
+      },
+    });
+    final result = response!['result'] as Map<String, Object?>;
+    expect(result['isError'], isFalse);
+    expect(
+      ((result['content'] as List<Object?>).first
+          as Map<String, Object?>)['text'],
+      contains('"at":{"ref":"s_1"'),
+    );
+  });
 }

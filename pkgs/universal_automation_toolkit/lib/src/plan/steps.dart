@@ -155,6 +155,7 @@ final class ObserveStep extends PlanStep {
     super.continueOnFailure,
     this.save,
     this.view,
+    this.at,
   });
 
   factory ObserveStep._({required Object? body}) {
@@ -162,9 +163,10 @@ final class ObserveStep extends PlanStep {
       throw const FormatException('observe must be a map when present');
     }
     final map = (body as Map<Object?, Object?>?) ?? const {};
-    if (map.keys.any((key) => key != 'save' && key != 'view')) {
+    if (map.keys
+        .any((key) => key != 'save' && key != 'view' && key != 'at')) {
       throw FormatException(
-        'observe supports only `save` and `view` '
+        'observe supports only `save`, `view`, and `at` '
         '(got ${map.keys.join(', ')})',
       );
     }
@@ -173,6 +175,7 @@ final class ObserveStep extends PlanStep {
       view: map.containsKey('view')
           ? SemanticView.fromJson(map['view'])
           : null,
+      at: _atPoint(map['at']),
     );
   }
 
@@ -182,6 +185,10 @@ final class ObserveStep extends PlanStep {
   /// The view the observation renders through; `null` reports only
   /// counts.
   final SemanticView? view;
+
+  /// Grounding point (ADR 0053): when present, the result names the
+  /// innermost walked node whose bounds contain it.
+  final (double, double)? at;
 
   @override
   String get kind => 'observe';
@@ -193,6 +200,7 @@ final class ObserveStep extends PlanStep {
         continueOnFailure: continueOnFailure,
         save: save,
         view: view,
+        at: at,
       );
 
   @override
@@ -200,10 +208,25 @@ final class ObserveStep extends PlanStep {
     'observe': {
       if (save != null) 'save': save,
       if (view != null) 'view': view!.toJson(),
+      if (at case (final x, final y)) 'at': {'x': x, 'y': y},
     },
     if (session != null) 'session': session,
     if (continueOnFailure) 'continueOnFailure': true,
   };
+}
+
+/// Parses an observe `at` grounding point (`{x, y}` numbers).
+(double, double)? _atPoint(Object? raw) {
+  if (raw == null) return null;
+  if (raw is! Map<Object?, Object?>) {
+    throw const FormatException('observe.at must be an {x, y} map');
+  }
+  final x = raw['x'];
+  final y = raw['y'];
+  if (x is! num || y is! num) {
+    throw const FormatException('observe.at needs numeric x and y');
+  }
+  return (x.toDouble(), y.toDouble());
 }
 
 /// Perform one intent-level action.
@@ -316,14 +339,22 @@ final class ActStep extends PlanStep {
             if (name != null) 'name': name,
           },
         },
-        ClickAtAction(:final x, :final y, :final button, :final clickCount) => {
-          'clickAt': {
-            'x': x,
-            'y': y,
-            if (button != 'left') 'button': button,
-            if (clickCount != 1) 'clickCount': clickCount,
+        ClickAtAction(
+          :final x,
+          :final y,
+          :final button,
+          :final clickCount,
+          :final modifiers,
+        ) =>
+          {
+            'clickAt': {
+              'x': x,
+              'y': y,
+              if (button != 'left') 'button': button,
+              if (clickCount != 1) 'clickCount': clickCount,
+              if (modifiers.isNotEmpty) 'modifiers': modifiers,
+            },
           },
-        },
         MoveAction(:final x, :final y) => {
           'moveTo': {'x': x, 'y': y},
         },
@@ -333,6 +364,7 @@ final class ActStep extends PlanStep {
           :final toX,
           :final toY,
           :final button,
+          :final modifiers,
         ) =>
           {
             'drag': {
@@ -341,6 +373,7 @@ final class ActStep extends PlanStep {
               'toX': toX,
               'toY': toY,
               if (button != 'left') 'button': button,
+              if (modifiers.isNotEmpty) 'modifiers': modifiers,
             },
           },
         TypeAction(:final text, :final css, :final submit) => {
@@ -350,7 +383,10 @@ final class ActStep extends PlanStep {
             if (submit) 'submit': true,
           },
         },
-        KeyPressAction(:final key) => {'key': key},
+        KeyPressAction(:final key, :final modifiers) => {
+          'key': key,
+          if (modifiers.isNotEmpty) 'modifiers': modifiers,
+        },
         ScrollAction(:final direction, :final distance) => {
           'scroll': {
             'direction': direction,
@@ -404,6 +440,7 @@ final class ActStep extends PlanStep {
           y,
           button: _button(params),
           clickCount: _clickCount(params),
+          modifiers: _modifiers(params),
         );
       case 'moveTo':
         final params = _asMap(value, 'moveTo');
@@ -415,7 +452,14 @@ final class ActStep extends PlanStep {
         final fromY = _num(params['fromY'], 'drag.fromY');
         final toX = _num(params['toX'], 'drag.toX');
         final toY = _num(params['toY'], 'drag.toY');
-        return DragAction(fromX, fromY, toX, toY, button: _button(params));
+        return DragAction(
+          fromX,
+          fromY,
+          toX,
+          toY,
+          button: _button(params),
+          modifiers: _modifiers(params),
+        );
       case 'type':
         final params = _asMap(value, 'type');
         final text = _optionalString(params['text'], 'type.text');
@@ -428,13 +472,12 @@ final class ActStep extends PlanStep {
           submit: params['submit'] == true,
         );
       case 'key':
-        final key = value is String
-            ? value
-            : _optionalString(_asMap(value, 'key')['key'], 'key');
+        final params = _asMapOrString(value, 'key');
+        final key = _optionalString(params['key'], 'key');
         if (key == null || key.isEmpty) {
           throw const FormatException('key needs a key name');
         }
-        return KeyPressAction(key);
+        return KeyPressAction(key, modifiers: _modifiers(params));
       case 'scroll':
         final params = _asMap(value, 'scroll');
         final direction =
@@ -511,6 +554,24 @@ int _clickCount(Map<Object?, Object?> params) {
     throw const FormatException('clickCount must be an integer in 1..3');
   }
   return count;
+}
+
+/// Parses the chord modifier list (aliases normalize, unknown names
+/// fail closed — a dropped modifier is a misfired chord).
+List<String> _modifiers(Map<Object?, Object?> params) {
+  final raw = params['modifiers'];
+  if (raw == null) return const [];
+  if (raw is! List) {
+    throw const FormatException('modifiers must be a list of names');
+  }
+  return parseModifiers(raw);
+}
+
+/// Accepts either a map body or a bare string shorthand (`key: Enter`
+/// means `{key: Enter}`).
+Map<Object?, Object?> _asMapOrString(Object? value, String what) {
+  if (value is String) return {'key': value};
+  return _asMap(value, what);
 }
 
 /// Assert post-conditions against one fresh snapshot; any failed check

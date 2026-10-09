@@ -272,6 +272,18 @@ final class PlanRunner {
         errorKind: error.kind,
         errorMessage: error.message,
       );
+    } on SemanticRefUnavailableException catch (error) {
+      // Grounding misses (observe-at) fail the step loudly: the point
+      // resolved to nothing at this revision — reobserve, never guess.
+      return StepResult._(
+        index: index,
+        kind: step.kind,
+        session: sessionName,
+        ok: false,
+        durationMs: watch.elapsedMilliseconds,
+        errorKind: 'semanticRefUnavailable',
+        errorMessage: error.message,
+      );
     } on FormatException catch (error) {
       return StepResult._(
         index: index,
@@ -307,6 +319,19 @@ final class PlanRunner {
         'revision': snapshot.revision,
         'capturedAt': snapshot.capturedAt.toIso8601String(),
         'view': observation.toJson(),
+        if (step.at case (final x, final y))
+          'at': _groundedAt(observation, x, y),
+        if (step.save != null) step.save!: snapshot.toJson(),
+      };
+    }
+    if (step.at != null) {
+      // Grounding without a render still needs the observation's walk.
+      final observation = Observation.of(snapshot, const SemanticView());
+      return {
+        'nodeCount': snapshot.nodes.length,
+        'revision': snapshot.revision,
+        'capturedAt': snapshot.capturedAt.toIso8601String(),
+        'at': _groundedAt(observation, step.at!.$1, step.at!.$2),
         if (step.save != null) step.save!: snapshot.toJson(),
       };
     }
@@ -404,7 +429,7 @@ final class PlanRunner {
     int index,
     String? outDir,
     List<String> receipts,
-  ) {
+  ) async {
     final intent = plan.intents.intent(step.app, step.name);
     if (intent == null) {
       throw SpecViolationException([
@@ -415,7 +440,7 @@ final class PlanRunner {
       args: step.args,
       label: 'intent ${step.app}/${step.name}',
     );
-    return _dispatch(
+    final detail = await _dispatch(
       plan,
       session,
       action,
@@ -425,6 +450,13 @@ final class PlanRunner {
       outDir: outDir,
       receipts: receipts,
     );
+    final view = intent.hint.viewHint;
+    if (view == null) return detail;
+    // The hint's perception contract: the app declared HOW its effect
+    // should be read, so the runner closes the loop through that view
+    // (the intent-acts / semantics-perceives composition, ADR 0052).
+    final observation = Observation.of(await session.driver.snapshot(), view);
+    return {...detail, 'state': observation.render()};
   }
 
   Future<Map<String, Object?>> _dispatch(
@@ -470,6 +502,24 @@ final class PlanRunner {
       if (outcome.cause != null) 'cause': outcome.cause!.name,
       'dispatchedSteps': outcome.dispatched.length,
       'plannedSteps': outcome.plan.steps.length,
+    };
+  }
+
+  /// The observe-at grounding read: the innermost walked node whose
+  /// bounds contain the point (ADR 0053). Fails the step loudly when no
+  /// node covers it (reobserve, never guess).
+  Map<String, Object?> _groundedAt(
+    Observation observation,
+    double x,
+    double y,
+  ) {
+    final observed = observation.nodeAt(x, y);
+    return {
+      'ref': observed.ref,
+      'role': observed.node.role,
+      if (observed.node.name != null) 'name': observed.node.name,
+      'x': x,
+      'y': y,
     };
   }
 

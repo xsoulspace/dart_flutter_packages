@@ -12,6 +12,23 @@ typedef BridgeJsonResult = ({int code, String json});
 /// Outcome of one bridge screenshot call.
 typedef BridgeBytesResult = ({int code, Uint8List bytes});
 
+/// CGEventFlags raw mask for the family's modifier names (shift
+/// 0x020000, control 0x040000, alt/option 0x080000, meta/command
+/// 0x100000); unknown names contribute 0.
+int cgEventModifierMask(final Iterable<String> modifiers) {
+  var mask = 0;
+  for (final modifier in modifiers) {
+    mask |= switch (modifier) {
+      'shift' => 0x020000,
+      'control' => 0x040000,
+      'alt' => 0x080000,
+      'meta' => 0x100000,
+      _ => 0,
+    };
+  }
+  return mask;
+}
+
 /// The seam between [MacosDriver] and the native bridge.
 ///
 /// Injectable so the driver's action logic is unit-testable without the
@@ -75,11 +92,47 @@ abstract interface class AxDriverBridge {
   /// One scroll bundle in wheel lines (dy > 0 up, dx > 0 right).
   int scroll(double dx, double dy);
 
+  /// Moves the pointer to top-left-origin screen coordinates; the native
+  /// bridge posts a dragged event while a button is logically down.
+  /// [modifiers] carries an active chord.
+  int pointerMove({
+    required double x,
+    required double y,
+    Iterable<String> modifiers = const [],
+  });
+
+  /// Presses or releases [button] (`left`/`right`/`middle`) at (x, y);
+  /// [clickCount] feeds the host's multi-click recognition, [modifiers]
+  /// holds the chord keys.
+  int pointerButton({
+    required double x,
+    required double y,
+    required String button,
+    required bool down,
+    int clickCount = 1,
+    Iterable<String> modifiers = const [],
+  });
+
+  /// Presses (holds) one named key.
+  int keyDown(String key);
+
+  /// Releases one named key.
+  int keyUp(String key);
+
   /// Drops cached element handles and scroll fractions.
   void releaseAll();
 
-  /// One PNG frame of [displayId] (0 = main display).
-  BridgeBytesResult screenshotPng({int displayId = 0});
+  /// One PNG frame of [displayId] (0 = main display); `maxPx` caps the
+  /// long side (0/null = raw). Code 10 = Screen Recording consent.
+  BridgeBytesResult screenshotPng({int displayId = 0, int maxPx = 0});
+
+  /// One PNG frame of a single window. Code 10 = Screen Recording
+  /// consent, 2 = unknown window.
+  BridgeBytesResult screenshotWindowPng({required int windowId, int maxPx = 0});
+
+  /// The on-screen windows owned by [pid] (0 = every regular app) as a
+  /// JSON array.
+  BridgeJsonResult windowsJson({int pid = 0});
 }
 
 /// Production bridge: straight onto the native symbols.
@@ -212,14 +265,92 @@ final class NativeAxDriverBridge implements AxDriverBridge {
   int scroll(double dx, double dy) => axdrvScroll(dx, dy);
 
   @override
+  int pointerMove({
+    required double x,
+    required double y,
+    Iterable<String> modifiers = const [],
+  }) => axdrvPointerMove(x, y, cgEventModifierMask(modifiers));
+
+  @override
+  int pointerButton({
+    required double x,
+    required double y,
+    required String button,
+    required bool down,
+    int clickCount = 1,
+    Iterable<String> modifiers = const [],
+  }) {
+    final pointer = button.toNativeUtf8();
+    try {
+      return axdrvPointerButton(
+        x,
+        y,
+        pointer,
+        down,
+        clickCount,
+        cgEventModifierMask(modifiers),
+      );
+    } finally {
+      calloc.free(pointer);
+    }
+  }
+
+  @override
+  int keyDown(String key) {
+    final pointer = key.toNativeUtf8();
+    try {
+      return axdrvKeyDown(pointer);
+    } finally {
+      calloc.free(pointer);
+    }
+  }
+
+  @override
+  int keyUp(String key) {
+    final pointer = key.toNativeUtf8();
+    try {
+      return axdrvKeyUp(pointer);
+    } finally {
+      calloc.free(pointer);
+    }
+  }
+
+  @override
   void releaseAll() => axdrvReleaseAll();
 
   @override
-  BridgeBytesResult screenshotPng({int displayId = 0}) {
+  BridgeBytesResult screenshotPng({int displayId = 0, int maxPx = 0}) =>
+      _captureBytes((outData, outLen) =>
+          axdrvScreenshotPng(displayId, maxPx, outData, outLen));
+
+  @override
+  BridgeBytesResult screenshotWindowPng({
+    required int windowId,
+    int maxPx = 0,
+  }) => _captureBytes(
+    (outData, outLen) =>
+        axdrvScreenshotWindowPng(windowId, maxPx, outData, outLen),
+  );
+
+  @override
+  BridgeJsonResult windowsJson({int pid = 0}) {
+    final out = calloc<Pointer<Utf8>>();
+    try {
+      final code = axdrvWindowsJson(pid, out);
+      final json = code == 0 ? copyAndFreeCString(out.value) : '';
+      return (code: code, json: json);
+    } finally {
+      calloc.free(out);
+    }
+  }
+
+  BridgeBytesResult _captureBytes(
+    int Function(Pointer<Pointer<Uint8>>, Pointer<IntPtr>) call,
+  ) {
     final outData = calloc<Pointer<Uint8>>();
     final outLen = calloc<IntPtr>();
     try {
-      final code = axdrvScreenshotPng(displayId, outData, outLen);
+      final code = call(outData, outLen);
       final bytes = code == 0
           ? copyAndFreeBytes(outData.value, outLen.value)
           : Uint8List(0);

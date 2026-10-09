@@ -33,5 +33,6 @@ export 'src/behavior/canonical.dart';
 export 'src/behavior/timing.dart';
 export 'src/driver.dart';
 export 'src/driver_capabilities.dart';
+export 'src/keyboard_modifiers.dart';
 export 'src/snapshot.dart';
 export 'src/surface_action.dart';

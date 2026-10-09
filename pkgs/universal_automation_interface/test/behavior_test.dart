@@ -188,6 +188,78 @@ void main() {
       expect(move.y, 24);
     });
 
+    group('modifier chords (ADR 0053)', () {
+      test('shift+click lowers to key steps around a flagged press',
+          () async {
+        final plan = synthesizeBehavior(
+          BehaviorProfile.agentImmediate,
+          1,
+          const ClickAtAction(10, 20, modifiers: ['shift']),
+        );
+        final kinds = plan.steps.map((step) => step.kind).toList();
+        expect(kinds, [
+          'pointerMove',
+          'keyDown',
+          'pointerDown',
+          'pointerUp',
+          'keyUp',
+        ]);
+        final down = plan.steps.whereType<PointerDownStep>().single;
+        expect(down.modifiers, ['shift']);
+        final keyDown = plan.steps.whereType<KeyDownStep>().single;
+        expect(keyDown.key, 'Shift');
+        expect(keyDown.keyCode, namedVirtualKeyCode('Shift'));
+        // Round-trips through the canonical form.
+        expect(BehaviorStep.fromJson(down.toJson()).toJson(), down.toJson());
+      });
+
+      test('meta+drag holds the chord through the whole gesture', () async {
+        final plan = synthesizeBehavior(
+          BehaviorProfile.agentImmediate,
+          1,
+          const DragAction(0, 0, 40, 40, modifiers: ['meta']),
+        );
+        final kinds = plan.steps.map((step) => step.kind).toList();
+        expect(kinds.first, 'pointerMove');
+        expect(kinds, containsAll(['keyDown', 'pointerDown', 'keyUp']));
+        expect(kinds.indexOf('keyDown'), lessThan(kinds.indexOf('pointerDown')));
+        expect(kinds.lastIndexOf('keyUp'), greaterThan(kinds.indexOf('pointerUp')));
+        expect(
+          plan.steps.whereType<PointerUpStep>().single.modifiers,
+          ['meta'],
+        );
+      });
+
+      test('control+Tab is a key chord around the key', () async {
+        final plan = synthesizeBehavior(
+          BehaviorProfile.agentImmediate,
+          1,
+          const KeyPressAction('Tab', modifiers: ['control']),
+        );
+        final keys = plan.steps
+            .whereType<KeyDownStep>()
+            .map((step) => step.key)
+            .toList();
+        expect(keys, ['Control', 'Tab']);
+        final ups = plan.steps
+            .whereType<KeyUpStep>()
+            .map((step) => step.key)
+            .toList();
+        // Release order mirrors the press order.
+        expect(ups, ['Tab', 'Control']);
+      });
+
+      test('no-modifier plans stay byte-identical to the old shape', () async {
+        final plan = synthesizeBehavior(
+          BehaviorProfile.agentImmediate,
+          1,
+          const ClickAtAction(10, 20),
+        );
+        final down = plan.steps.whereType<PointerDownStep>().single;
+        expect(down.toJson(), isNot(contains('modifiers')));
+      });
+    });
+
     test('humanPrior click animates: dwell, moves, hold, up', () {
       final profile = BehaviorProfile.humanPrior(11);
       final plan = synthesizeBehavior(

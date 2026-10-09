@@ -27,6 +27,10 @@ class FakeWebDriverServer {
   /// Recorded action key values.
   final List<String> keyPresses = [];
 
+  /// Recorded pointer-action objects (pointerMove/pointerDown/pointerUp),
+  /// in arrival order.
+  final List<Map<String, Object?>> pointerActions = [];
+
   /// URL reported by `GET /session/{id}/url`; set by `POST .../url`.
   String currentUrl = 'about:blank';
 
@@ -237,11 +241,14 @@ class FakeWebDriverServer {
         final actions = body as Map<String, Object?>?;
         final inputs = actions?['actions'] as List<Object?>? ?? const [];
         for (final input in inputs) {
+          final inputMap = input as Map<String, Object?>?;
           final keys =
-              (input as Map<String, Object?>?)?['actions'] as List<Object?>? ??
-              const [];
+              inputMap?['actions'] as List<Object?>? ?? const [];
           for (final key in keys) {
             final map = key as Map<String, Object?>?;
+            if (inputMap?['type'] == 'pointer' && map != null) {
+              pointerActions.add(Map<String, Object?>.from(map));
+            }
             final isDown = map?['type'] == 'keyDown';
             final value = map?['value'] as String?;
             if (isDown && value != null) keyPresses.add(value);

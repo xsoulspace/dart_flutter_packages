@@ -211,6 +211,37 @@ void main() {
     );
   });
 
+  test('a view hint closes the intent loop through the declared view',
+      () async {
+    final plan = AutomationPlan(
+      sessions: [cdp('browser', uri: endpoint)],
+      intents: IntentRegistry([
+        IntentManifest(
+          app: 'webshop',
+          intents: [
+            AppIntent(
+              name: 'checkout',
+              hint: IntentHint(
+                driver: 'cdp',
+                verb: IntentVerb.click,
+                locator: {'name': 'Submit'},
+                viewHint: const SemanticView(maxNodes: 3),
+              ),
+            ),
+          ],
+        ),
+      ]),
+      scenarios: [
+        scenario('s', steps: [intent('webshop', 'checkout')]),
+      ],
+    );
+
+    final report = await PlanRunner().run(plan);
+    expect(report.ok, isTrue);
+    // The step result carries the post-action state render.
+    expect((report.steps.single.detail['state'] as String), contains('Submit'));
+  });
+
   test('screenshot writes the PNG artifact under outDir', () async {
     final outDir = Directory.systemTemp.createTempSync('uat-shot');
     addTearDown(() => outDir.deleteSync(recursive: true));

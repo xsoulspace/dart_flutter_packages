@@ -32,10 +32,16 @@ sealed class BehaviorStep {
         'pointerDown' => PointerDownStep(
           plannedAtUs: json['plannedAtUs']! as int,
           button: json['button']! as String? ?? 'left',
+          clickCount: json['clickCount'] as int? ?? 1,
+          modifiers:
+              (json['modifiers'] as List?)?.cast<String>() ?? const [],
         ),
         'pointerUp' => PointerUpStep(
           plannedAtUs: json['plannedAtUs']! as int,
           button: json['button']! as String? ?? 'left',
+          clickCount: json['clickCount'] as int? ?? 1,
+          modifiers:
+              (json['modifiers'] as List?)?.cast<String>() ?? const [],
         ),
         'keyDown' => KeyDownStep(
           plannedAtUs: json['plannedAtUs']! as int,
@@ -132,7 +138,8 @@ final class PointerMoveStep extends BehaviorStep {
       '${y.toStringAsFixed(1)}) over $durationUs us)';
 }
 
-/// Press a pointer [button] (`left` by default).
+/// Press a pointer [button] (`left` by default), optionally under
+/// keyboard [modifiers] — the step-level chord carrier (ADR 0053).
 @immutable
 final class PointerDownStep extends BehaviorStep {
   /// Creates a press step.
@@ -140,6 +147,7 @@ final class PointerDownStep extends BehaviorStep {
     required super.plannedAtUs,
     this.button = 'left',
     this.clickCount = 1,
+    this.modifiers = const [],
   });
 
   /// Button name: `left`, `right`, or `middle`.
@@ -150,6 +158,10 @@ final class PointerDownStep extends BehaviorStep {
   /// `clickCount`, ADR 0053).
   final int clickCount;
 
+  /// Keyboard modifiers held through the press: a subset of
+  /// `shift`/`control`/`alt`/`meta`.
+  final List<String> modifiers;
+
   @override
   String get kind => 'pointerDown';
 
@@ -159,13 +171,16 @@ final class PointerDownStep extends BehaviorStep {
     'plannedAtUs': plannedAtUs,
     'button': button,
     'clickCount': clickCount,
+    if (modifiers.isNotEmpty) 'modifiers': modifiers,
   };
 
   @override
-  String toString() => 'PointerDownStep(+$plannedAtUs us, $button)';
+  String toString() =>
+      'PointerDownStep(+$plannedAtUs us, $button'
+      '${modifiers.isEmpty ? '' : ' +${modifiers.join('+')}'})';
 }
 
-/// Release a pointer [button].
+/// Release a pointer [button], with the [modifiers] its press carried.
 @immutable
 final class PointerUpStep extends BehaviorStep {
   /// Creates a release step.
@@ -173,6 +188,7 @@ final class PointerUpStep extends BehaviorStep {
     required super.plannedAtUs,
     this.button = 'left',
     this.clickCount = 1,
+    this.modifiers = const [],
   });
 
   /// Button name: `left`, `right`, or `middle`.
@@ -181,6 +197,9 @@ final class PointerUpStep extends BehaviorStep {
   /// Which release of a multi-click sequence this is (pairs with
   /// [PointerDownStep.clickCount]).
   final int clickCount;
+
+  /// Keyboard modifiers held through the release.
+  final List<String> modifiers;
 
   @override
   String get kind => 'pointerUp';
@@ -191,10 +210,13 @@ final class PointerUpStep extends BehaviorStep {
     'plannedAtUs': plannedAtUs,
     'button': button,
     'clickCount': clickCount,
+    if (modifiers.isNotEmpty) 'modifiers': modifiers,
   };
 
   @override
-  String toString() => 'PointerUpStep(+$plannedAtUs us, $button)';
+  String toString() =>
+      'PointerUpStep(+$plannedAtUs us, $button'
+      '${modifiers.isEmpty ? '' : ' +${modifiers.join('+')}'})';
 }
 
 /// Press a key: named [key], optional platform [keyCode] and printable
@@ -359,7 +381,9 @@ final class BehaviorPlan {
   }
 
   /// Wire/format identifier pinned into hashes and receipts.
-  static const String schemaId = 'behavior.plan/v1';
+  /// v2: pointer steps carry `clickCount` and modifier `modifiers` in
+/// canonical form (the coordinate-verbs + chords waves).
+  static const String schemaId = 'behavior.plan/v2';
 
   /// The ordered steps.
   final List<BehaviorStep> steps;

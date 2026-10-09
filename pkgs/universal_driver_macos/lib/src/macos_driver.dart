@@ -22,6 +22,23 @@ final class AccessibilityPermissionRequiredException
   String get kind => 'permissionRequired';
 }
 
+/// [Screen Recording] consent is a separate TCC grant from
+/// Accessibility: tree reads and input injection need the latter, any
+/// pixel capture needs the former. The typed exceptions keep the two
+/// fixable states apart.
+final class ScreenRecordingPermissionRequiredException
+    extends AutomationException {
+  /// Creates the exception.
+  const ScreenRecordingPermissionRequiredException()
+    : super(
+        'Screen Recording permission required for capture; grant it in '
+        'System Settings → Privacy & Security → Screen & System Audio',
+      );
+
+  @override
+  String get kind => 'permissionRequired';
+}
+
 /// [AutomationDriver] over the macOS accessibility tree (AXUIElement) and
 /// CGEvent input synthesis.
 ///
@@ -55,13 +72,19 @@ class MacosDriver implements AutomationDriver {
   bool _closed = false;
   int _revision = 0;
   Snapshot? _lastSnapshot;
+  DateTime? _lastObservationAt;
 
   @override
   DriverCapabilities get capabilities => const DriverCapabilities(
     screenshot: true,
     a11yTree: true,
     inputSynthesis: true,
+    pointerCoordinates: true,
   );
+
+  /// When the last snapshot was taken — the reference point for the
+  /// behavior layer's reaction floor.
+  DateTime? get lastObservationAt => _lastObservationAt;
 
   /// Whether the process may query the accessibility tree right now.
   bool get axTrusted {
@@ -145,6 +168,39 @@ class MacosDriver implements AutomationDriver {
     }
   }
 
+  /// The on-screen, normal-layer windows owned by [pid]
+  /// (0 = every regular app) — the discovery record window-scoped
+  /// capture consumes.
+  Future<List<MacosWindow>> windows({int pid = 0}) async {
+    _ensureOpen();
+    final result = bridge.windowsJson(pid: pid);
+    if (result.code != 0) {
+      throw ProtocolException('windows failed', code: result.code);
+    }
+    return MacosWindow.listFromJson(result.json);
+  }
+
+  /// Captures one window's PNG (occlusion included, exact window
+  /// bounds); [maxPx] caps the long side when set. Needs Screen
+  /// Recording consent, not Accessibility.
+  Future<Uint8List> windowScreenshot(int windowId, {int? maxPx}) async {
+    _ensureOpen();
+    final result = bridge.screenshotWindowPng(
+      windowId: windowId,
+      maxPx: maxPx ?? 0,
+    );
+    if (result.code == 10) {
+      throw const ScreenRecordingPermissionRequiredException();
+    }
+    if (result.code == 2) {
+      throw ElementNotFoundException('window', 'screenshot #$windowId');
+    }
+    if (result.code != 0) {
+      throw ProtocolException('window screenshot failed', code: result.code);
+    }
+    return result.bytes;
+  }
+
   /// The accessibility element at top-left-origin screen coordinates
   /// (the same system CGEvent mouse coordinates use). This is the hover
   /// query: throttle it to pointer-cadence, never per frame.
@@ -192,6 +248,7 @@ class MacosDriver implements AutomationDriver {
   Snapshot _snapshotFrom(BridgeJsonResult result) {
     final root = _nodeFromResult(result, 'snapshot');
     _revision += 1;
+    _lastObservationAt = DateTime.now();
     _lastSnapshot = Snapshot(
       roots: [root],
       capturedAt: DateTime.now().toUtc(),
@@ -221,14 +278,38 @@ class MacosDriver implements AutomationDriver {
         }
         _check(bridge.typeText(text), 'type text');
         if (submit) _check(bridge.keyPress('Enter'), 'press Enter');
-      case KeyPressAction(:final key):
-        final code = bridge.keyPress(key);
-        if (code == 1) {
-          throw DriverUnsupportedException(
-            'key "$key" is not mapped by the macOS driver',
-          );
+      case KeyPressAction(:final key, :final modifiers):
+        if (modifiers.isEmpty) {
+          final code = bridge.keyPress(key);
+          if (code == 1) {
+            throw DriverUnsupportedException(
+              'key "$key" is not mapped by the macOS driver',
+            );
+          }
+          _check(code, 'press key $key');
+        } else {
+          // The chord: hold the modifiers, tap the key, release in
+          // reverse — each modifier key event announces its flag.
+          for (final modifier in modifiers) {
+            _check(
+              bridge.keyDown(modifierKeyName(modifier)),
+              'hold ${modifierKeyName(modifier)}',
+            );
+          }
+          final code = bridge.keyPress(key);
+          if (code == 1) {
+            throw DriverUnsupportedException(
+              'key "$key" is not mapped by the macOS driver',
+            );
+          }
+          _check(code, 'press key $key');
+          for (final modifier in modifiers.reversed) {
+            _check(
+              bridge.keyUp(modifierKeyName(modifier)),
+              'release ${modifierKeyName(modifier)}',
+            );
+          }
         }
-        _check(code, 'press key $key');
       case ScrollAction(:final direction, :final distance):
         await _scroll(direction, distance);
       case NavigateAction(:final url):
@@ -246,25 +327,119 @@ class MacosDriver implements AutomationDriver {
           'the AX tier has no surface action registry; '
           'InvokeAction("$name") needs the instrumented or CDP tier',
         );
-      case ClickAtAction():
-      case MoveAction():
-      case DragAction():
-        // The native bridge's CGEvent surface covers type/key/scroll;
-        // coordinate pointer verbs need its extension (ADR 0053
-        // non-claim) — loud until it lands.
-        throw const DriverUnsupportedException(
-          'coordinate pointer verbs (ADR 0053) are not wired for the '
-          'macOS native bridge yet; click by role/name instead',
+      case ClickAtAction(
+        :final x,
+        :final y,
+        :final button,
+        :final clickCount,
+        :final modifiers,
+      ):
+        // Chord lowering (ADR 0053): the bridge posts the modifier key
+        // events (each announces its CGEventFlag) and the pointer
+        // events carry the same mask, so the host sees one chord.
+        for (final modifier in modifiers) {
+          _check(
+            bridge.keyDown(modifierKeyName(modifier)),
+            'hold ${modifierKeyName(modifier)}',
+          );
+        }
+        _pointerCheck(
+          bridge.pointerMove(x: x, y: y, modifiers: modifiers),
+          'move pointer',
         );
+        for (var press = 1; press <= clickCount.clamp(1, 3); press++) {
+          _pointerCheck(
+            bridge.pointerButton(
+              x: x,
+              y: y,
+              button: button,
+              down: true,
+              clickCount: press,
+              modifiers: modifiers,
+            ),
+            'press $button (click $press)',
+          );
+          _pointerCheck(
+            bridge.pointerButton(
+              x: x,
+              y: y,
+              button: button,
+              down: false,
+              clickCount: press,
+              modifiers: modifiers,
+            ),
+            'release $button (click $press)',
+          );
+        }
+        for (final modifier in modifiers.reversed) {
+          _check(
+            bridge.keyUp(modifierKeyName(modifier)),
+            'release ${modifierKeyName(modifier)}',
+          );
+        }
+      case MoveAction(:final x, :final y):
+        _pointerCheck(bridge.pointerMove(x: x, y: y), 'move pointer');
+      case DragAction(
+        :final fromX,
+        :final fromY,
+        :final toX,
+        :final toY,
+        :final button,
+        :final modifiers,
+      ):
+        for (final modifier in modifiers) {
+          _check(
+            bridge.keyDown(modifierKeyName(modifier)),
+            'hold ${modifierKeyName(modifier)}',
+          );
+        }
+        _pointerCheck(
+          bridge.pointerMove(x: fromX, y: fromY, modifiers: modifiers),
+          'drag approach',
+        );
+        _pointerCheck(
+          bridge.pointerButton(
+            x: fromX,
+            y: fromY,
+            button: button,
+            down: true,
+            modifiers: modifiers,
+          ),
+          'press $button',
+        );
+        // The bridge posts carried moves as dragged events while the
+        // button is down, so this reads as one gesture on the host.
+        _pointerCheck(
+          bridge.pointerMove(x: toX, y: toY, modifiers: modifiers),
+          'drag carry',
+        );
+        _pointerCheck(
+          bridge.pointerButton(
+            x: toX,
+            y: toY,
+            button: button,
+            down: false,
+            modifiers: modifiers,
+          ),
+          'release $button',
+        );
+        for (final modifier in modifiers.reversed) {
+          _check(
+            bridge.keyUp(modifierKeyName(modifier)),
+            'release ${modifierKeyName(modifier)}',
+          );
+        }
     }
   }
 
+  /// Captures the main display; [maxPx] caps the long side when set
+  /// (the agent-facing image budget). Needs Screen Recording consent.
   @override
-  Future<Uint8List> screenshot() async {
+  Future<Uint8List> screenshot({int? maxPx}) async {
     _ensureOpen();
-    final result = bridge.screenshotPng();
+    final result = bridge.screenshotPng(maxPx: maxPx ?? 0);
     if (result.code == 10) {
-      throw const AccessibilityPermissionRequiredException();
+      throw const ScreenRecordingPermissionRequiredException();
     }
     if (result.code != 0) {
       throw ProtocolException('screenshot failed', code: result.code);
@@ -372,6 +547,22 @@ class MacosDriver implements AutomationDriver {
       throw ProtocolException(
         '$operation hit a stale element handle',
         code: code,
+      );
+    }
+    throw ProtocolException('$operation failed', code: code);
+  }
+
+  /// Pointer-verb bridge codes map to the same table, with the
+  /// Accessibility grant surfacing as the typed permission exception.
+  void _pointerCheck(int code, String operation) {
+    if (code == 0) return;
+    if (code == 10) {
+      throw const AccessibilityPermissionRequiredException();
+    }
+    if (code == 1) {
+      throw DriverUnsupportedException(
+        '$operation: the macOS bridge does not map that button name '
+        '(use left, right, or middle)',
       );
     }
     throw ProtocolException('$operation failed', code: code);

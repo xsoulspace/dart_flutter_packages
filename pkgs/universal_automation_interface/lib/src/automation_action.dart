@@ -1,5 +1,9 @@
 import 'package:meta/meta.dart';
 
+/// Renders the chord suffix for action toString output.
+String _chordSuffix(final List<String> modifiers) =>
+    modifiers.isEmpty ? '' : ' +${modifiers.join('+')}';
+
 /// Base class of driver actions.
 ///
 /// Actions are intent-level values; each driver maps them onto its protocol.
@@ -67,17 +71,23 @@ final class TypeAction extends AutomationAction {
 }
 
 /// Press a named key (`Enter`, `Tab`, `Escape`, `Backspace`,
-/// `ArrowUp`/`Down`/`Left`/`Right`).
+/// `ArrowUp`/`Down`/`Left`/`Right`, and the modifier names
+/// `Shift`/`Control`/`Alt`/`Meta`), optionally under [modifiers] — a
+/// chord like `control`+`T` (ADR 0053).
 @immutable
 final class KeyPressAction extends AutomationAction {
   /// Creates a key press action.
-  const KeyPressAction(this.key);
+  const KeyPressAction(this.key, {this.modifiers = const []});
 
   /// Logical key name; see the class docs for the supported set.
   final String key;
 
+  /// Keyboard modifiers held while the key presses: a subset of
+  /// `shift`/`control`/`alt`/`meta`, normalized lowercase.
+  final List<String> modifiers;
+
   @override
-  String toString() => 'KeyPressAction($key)';
+  String toString() => 'KeyPressAction($key${_chordSuffix(modifiers)})';
 }
 
 /// Scroll the surface (or the scrollable containing [css]) by
@@ -132,6 +142,7 @@ final class ClickAtAction extends AutomationAction {
     this.y, {
     this.button = 'left',
     this.clickCount = 1,
+    this.modifiers = const [],
   });
 
   /// X in surface (CSS px on the web tier, screen points on OS tiers).
@@ -146,9 +157,15 @@ final class ClickAtAction extends AutomationAction {
   /// 1 = click, 2 = double-click, 3 = triple.
   final int clickCount;
 
+  /// Keyboard modifiers held through the click (`shift`+click,
+  /// `meta`+click) — a subset of `shift`/`control`/`alt`/`meta`,
+  /// normalized lowercase (ADR 0053).
+  final List<String> modifiers;
+
   @override
   String toString() =>
-      'ClickAtAction($x, $y, $button, x$clickCount)';
+      'ClickAtAction($x, $y, $button, x$clickCount'
+      '${_chordSuffix(modifiers)})';
 }
 
 /// Move the pointer to ([x], [y]) without pressing — hover affordances,
@@ -181,6 +198,7 @@ final class DragAction extends AutomationAction {
     this.toX,
     this.toY, {
     this.button = 'left',
+    this.modifiers = const [],
   });
 
   /// Press X in surface coordinates.
@@ -199,9 +217,15 @@ final class DragAction extends AutomationAction {
   /// or `middle`.
   final String button;
 
+  /// Keyboard modifiers held through the drag (`meta`+drag for window
+  /// moves, `shift`+drag for constrained axes) — a subset of
+  /// `shift`/`control`/`alt`/`meta`, normalized lowercase (ADR 0053).
+  final List<String> modifiers;
+
   @override
   String toString() =>
-      'DragAction(($fromX, $fromY) → ($toX, $toY), $button)';
+      'DragAction(($fromX, $fromY) → ($toX, $toY), $button'
+      '${_chordSuffix(modifiers)})';
 }
 
 /// Invoke a named action the surface under test registered for automation

@@ -25,11 +25,23 @@ final class FakeBridge implements AxDriverBridge {
     code: 0,
     bytes: Uint8List.fromList([1, 2, 3]),
   );
+  BridgeBytesResult windowScreenshotResult = (
+    code: 0,
+    bytes: Uint8List.fromList([4, 5]),
+  );
+  BridgeJsonResult windowsResult = (code: 0, json: _windowsJson);
+  int? lastWindowId;
+  int? lastWindowMaxPx;
 
   double? lastScrollDx;
   double? lastScrollDy;
   String? lastTypedText;
   final pressedHandles = <int>[];
+
+  /// Structured record of every pointer event the bridge saw, in order.
+  final pointerEvents = <Map<String, Object?>>[];
+  int pointerResult = 0;
+  int keyResult = 0;
 
   @override
   String version() {
@@ -102,12 +114,80 @@ final class FakeBridge implements AxDriverBridge {
   }
 
   @override
+  int pointerMove({
+    required double x,
+    required double y,
+    Iterable<String> modifiers = const [],
+  }) {
+    calls.add('pointerMove($x,$y)');
+    pointerEvents.add({
+      'kind': 'move',
+      'x': x,
+      'y': y,
+      if (modifiers.isNotEmpty) 'modifiers': modifiers.toList(),
+    });
+    return pointerResult;
+  }
+
+  @override
+  int pointerButton({
+    required double x,
+    required double y,
+    required String button,
+    required bool down,
+    int clickCount = 1,
+    Iterable<String> modifiers = const [],
+  }) {
+    calls.add(
+      'pointerButton($x,$y,$button,${down ? 'down' : 'up'},$clickCount)',
+    );
+    pointerEvents.add({
+      'kind': down ? 'down' : 'up',
+      'x': x,
+      'y': y,
+      'button': button,
+      'clickCount': clickCount,
+      if (modifiers.isNotEmpty) 'modifiers': modifiers.toList(),
+    });
+    return pointerResult;
+  }
+
+  @override
+  int keyDown(String key) {
+    calls.add('keyDown($key)');
+    return keyResult;
+  }
+
+  @override
+  int keyUp(String key) {
+    calls.add('keyUp($key)');
+    return keyResult;
+  }
+
+  @override
   void releaseAll() => calls.add('releaseAll');
 
   @override
-  BridgeBytesResult screenshotPng({int displayId = 0}) {
+  BridgeBytesResult screenshotPng({int displayId = 0, int maxPx = 0}) {
     calls.add('screenshot($displayId)');
     return screenshotResult;
+  }
+
+  @override
+  BridgeBytesResult screenshotWindowPng({
+    required int windowId,
+    int maxPx = 0,
+  }) {
+    calls.add('windowScreenshot($windowId)');
+    lastWindowId = windowId;
+    lastWindowMaxPx = maxPx;
+    return windowScreenshotResult;
+  }
+
+  @override
+  BridgeJsonResult windowsJson({int pid = 0}) {
+    calls.add('windows(pid=$pid)');
+    return windowsResult;
   }
 
   // -- app management (scripted results + call log) --
@@ -172,6 +252,11 @@ const _buttonJson =
     '{"role":"button","name":"Save","attributes":{"axid":"0"},'
     '"bounds":{"left":10,"top":20,"width":80,"height":24}}';
 
+const _windowsJson =
+    '[{"windowId":77,"pid":42,"name":"Downloads",'
+    '"bounds":{"left":10,"top":20,"width":800,"height":600}},'
+    '{"windowId":88,"pid":42,"name":""}]';
+
 const _appsJson =
     '[{"pid":42,"bundleId":"com.appleFinder","name":"Finder",'
     '"active":true,"hidden":false},'
@@ -198,6 +283,118 @@ void main() {
     expect(driver.capabilities.inputSynthesis, isTrue);
     expect(driver.capabilities.screenshot, isTrue);
     expect(driver.capabilities.evaluate, isFalse);
+    expect(driver.capabilities.pointerCoordinates, isTrue);
+  });
+
+  test('clickAt moves, then presses with escalating click state', () async {
+    final bridge = FakeBridge();
+    final driver = driverWith(bridge);
+
+    await driver.perform(const ClickAtAction(120, 80));
+    expect(bridge.pointerEvents.map((event) => event['kind']).toList(), [
+      'move',
+      'down',
+      'up',
+    ]);
+    expect(bridge.pointerEvents[1]['x'], 120);
+    expect(bridge.pointerEvents[1]['y'], 80);
+    expect(bridge.pointerEvents[1]['clickCount'], 1);
+
+    bridge.pointerEvents.clear();
+    await driver.perform(const ClickAtAction(5, 6, clickCount: 2));
+    final presses = bridge.pointerEvents
+        .where((event) => event['kind'] == 'down')
+        .toList();
+    expect(presses.map((event) => event['clickCount']).toList(), [1, 2]);
+  });
+
+  test('clickAt preserves the button axis', () async {
+    final bridge = FakeBridge();
+    final driver = driverWith(bridge);
+
+    await driver.perform(const ClickAtAction(1, 2, button: 'right'));
+    expect(bridge.pointerEvents[1]['button'], 'right');
+    expect(bridge.pointerEvents[2]['button'], 'right');
+  });
+
+  test('moveTo posts a single move', () async {
+    final bridge = FakeBridge();
+    final driver = driverWith(bridge);
+
+    await driver.perform(const MoveAction(30, 40));
+    expect(bridge.pointerEvents, [
+      {'kind': 'move', 'x': 30.0, 'y': 40.0},
+    ]);
+  });
+
+  test('drag presses at the from-point and releases at the to-point',
+      () async {
+    final bridge = FakeBridge();
+    final driver = driverWith(bridge);
+
+    await driver.perform(const DragAction(10, 20, 300, 400));
+    expect(bridge.pointerEvents.map((event) => event['kind']).toList(), [
+      'move',
+      'down',
+      'move',
+      'up',
+    ]);
+    expect(bridge.pointerEvents[1]['x'], 10);
+    expect(bridge.pointerEvents[1]['y'], 20);
+    expect(bridge.pointerEvents[3]['x'], 300);
+    expect(bridge.pointerEvents[3]['y'], 400);
+  });
+
+  test('coordinate verbs surface the typed permission exception', () async {
+    final bridge = FakeBridge();
+    final driver = driverWith(bridge);
+    // The real bridge returns 10 when the Accessibility grant is absent.
+    bridge.pointerResult = 10;
+    await expectLater(
+      driver.perform(const MoveAction(1, 2)),
+      throwsA(isA<AccessibilityPermissionRequiredException>()),
+    );
+  });
+
+  test('unknown button names are refused loudly', () async {
+    final bridge = FakeBridge();
+    final driver = driverWith(bridge);
+    bridge.pointerResult = 1;
+    await expectLater(
+      driver.perform(const ClickAtAction(1, 2, button: 'pen')),
+      throwsA(isA<DriverUnsupportedException>()),
+    );
+  });
+
+  test('shift+click holds the chord key around flagged presses', () async {
+    final bridge = FakeBridge();
+    final driver = driverWith(bridge);
+
+    await driver.perform(const ClickAtAction(1, 2, modifiers: ['shift']));
+
+    expect(bridge.calls.where((call) => call.startsWith('key')), [
+      'keyDown(Shift)',
+      'keyUp(Shift)',
+    ]);
+    final press = bridge.pointerEvents
+        .firstWhere((event) => event['kind'] == 'down');
+    expect(press['modifiers'], ['shift']);
+  });
+
+  test('meta+drag holds the chord through press, carry, and release',
+      () async {
+    final bridge = FakeBridge();
+    final driver = driverWith(bridge);
+
+    await driver.perform(const DragAction(0, 0, 40, 40, modifiers: ['meta']));
+
+    expect(bridge.calls.where((call) => call.startsWith('key')), [
+      'keyDown(Meta)',
+      'keyUp(Meta)',
+    ]);
+    for (final event in bridge.pointerEvents.skip(1)) {
+      expect(event['modifiers'], ['meta'], reason: '${event['kind']} carries');
+    }
   });
 
   test('app management: discover/activate/launch/terminate/snapshot',
@@ -466,7 +663,7 @@ void main() {
     );
   });
 
-  test('screenshot returns bytes; missing permission is typed', () async {
+  test('screenshot returns bytes; missing consent is typed', () async {
     final bridge = FakeBridge();
     final driver = driverWith(bridge);
     expect(await driver.screenshot(), [1, 2, 3]);
@@ -474,7 +671,39 @@ void main() {
     bridge.screenshotResult = (code: 10, bytes: Uint8List(0));
     await expectLater(
       driver.screenshot(),
-      throwsA(isA<AccessibilityPermissionRequiredException>()),
+      throwsA(isA<ScreenRecordingPermissionRequiredException>()),
+    );
+  });
+
+  test('window discovery and window-scoped capture', () async {
+    final bridge = FakeBridge();
+    final driver = driverWith(bridge);
+
+    final windows = await driver.windows(pid: 42);
+    expect(bridge.calls, contains('windows(pid=42)'));
+    expect(windows, hasLength(2));
+    expect(windows.first.windowId, 77);
+    expect(windows.first.name, 'Downloads');
+    expect(windows.first.bounds!.width, 800);
+    expect(windows.last.name, '');
+
+    final bytes = await driver.windowScreenshot(77, maxPx: 1024);
+    expect(bytes, [4, 5]);
+    expect(bridge.lastWindowId, 77);
+    expect(bridge.lastWindowMaxPx, 1024);
+
+    bridge.windowScreenshotResult = (
+      code: 10,
+      bytes: Uint8List(0),
+    );
+    await expectLater(
+      driver.windowScreenshot(77),
+      throwsA(isA<ScreenRecordingPermissionRequiredException>()),
+    );
+    bridge.windowScreenshotResult = (code: 2, bytes: Uint8List(0));
+    await expectLater(
+      driver.windowScreenshot(999),
+      throwsA(isA<ElementNotFoundException>()),
     );
   });
 

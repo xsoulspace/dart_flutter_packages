@@ -222,6 +222,31 @@ class WebDriverClient {
     });
   }
 
+  /// Runs one pointer-action bundle through the W3C Actions API.
+  ///
+  /// [actions] are the inner action objects (pointerMove /
+  /// pointerDown / pointerUp); moves use viewport coordinates
+  /// (`origin: viewport`), the same top-left system the CDP and macOS
+  /// tiers use.
+  Future<void> runPointerActions(List<Map<String, Object?>> actions) async {
+    await runInputSources([
+      {
+        'type': 'pointer',
+        'id': 'mouse',
+        'parameters': {'pointerType': 'mouse'},
+        'actions': actions,
+      },
+    ]);
+  }
+
+  /// Runs a full multi-source W3C Actions dispatch — the chord shape:
+  /// a keyboard source holding modifiers alongside the pointer source.
+  Future<void> runInputSources(
+    List<Map<String, Object?>> sources,
+  ) async {
+    await _send('POST', '/actions', {'actions': sources});
+  }
+
   /// Captures a PNG screenshot of the current viewport.
   Future<Uint8List> screenshot() async {
     final result = await _send('GET', '/screenshot');

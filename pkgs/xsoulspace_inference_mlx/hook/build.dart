@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:code_assets/code_assets.dart';
 import 'package:data_assets/data_assets.dart';
 import 'package:hooks/hooks.dart';
+import 'package:xsoulspace_inference_local_serve/native_asset_cache.dart';
 
 /// Build hook: builds the native MLX text runtime (the Swift package under
 /// `native/mlx_text_native`, which wraps ml-explore/mlx-swift-lm) and
@@ -23,6 +24,12 @@ import 'package:hooks/hooks.dart';
 /// pass; the native test skips with that reason.
 void main(List<String> args) async {
   await build(args, (input, output) async {
+    // Read before heavy work: invalid overrides refuse, and user-defines are
+    // part of the SDK hook cache key (custom environment variables are stripped).
+    final fleetCache = nativeAssetCacheDirectory(
+      component: 'mlx_text',
+      configuredRoot: input.userDefines['native_cache_root'],
+    );
     // Declare the source tree FIRST — a hook run that early-returns (named
     // skip, failed swift build) must still register its inputs, or the
     // runner caches an input-less result and never re-runs on Swift source
@@ -162,12 +169,7 @@ void main(List<String> args) async {
     }
     final refreshTargets = <Directory>[
       if (dartTool != null) Directory('${dartTool.path}/lib'),
-      Directory(
-        '~/.cache/xsoulspace/mlx_text/native'.replaceFirst(
-          '~',
-          Platform.environment['HOME'] ?? '/tmp',
-        ),
-      ),
+      fleetCache,
     ];
     for (final loadDir in refreshTargets) {
       if (!loadDir.existsSync()) {

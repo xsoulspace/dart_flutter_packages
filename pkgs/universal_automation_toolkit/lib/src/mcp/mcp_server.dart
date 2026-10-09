@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:universal_automation_interface/universal_automation_interface.dart';
 import 'package:universal_automation_semantics/universal_automation_semantics.dart';
+import 'package:universal_driver_macos/universal_driver_macos.dart';
 
 import '../plan/checks.dart';
 import '../plan/plan.dart';
@@ -150,9 +152,13 @@ final class ToolkitMcpServer {
       // protocol errors (MCP contract).
       throw McpToolError('${error.kind}: ${error.message}');
     }
+    // A screenshot with `image: true` rides as a second content block;
+    // the reserved key never reaches the JSON text.
+    final image = payload.remove('_imageContent');
     return {
       'content': [
         {'type': 'text', 'text': jsonEncode(payload)},
+        if (image != null) image,
       ],
       'isError': false,
     };
@@ -214,15 +220,18 @@ final class ToolkitMcpServer {
       'url': session.url?.toString(),
     };
     final viewValue = arguments['view'];
-    if (viewValue == null) {
-      // No view: the raw tree (counts + full snapshot JSON).
+    final at = arguments['at'];
+    if (viewValue == null && at is! Map<Object?, Object?>) {
+      // No view, no grounding point: the raw tree (counts + full
+      // snapshot JSON).
       return {...base, 'snapshot': snapshot.toJson()};
     }
     // A view asked: the rendered observation + ref index replace the
-    // raw tree (token economy; omit `view` for the raw form).
+    // raw tree (token economy; omit `view` for the raw form). An `at`
+    // point grounds to the innermost node covering it (ADR 0053).
     final observation = Observation.of(
       snapshot,
-      SemanticView.fromJson(viewValue),
+      viewValue == null ? const SemanticView() : SemanticView.fromJson(viewValue),
     );
     final key = session.binding.name;
     final previous = arguments['diff'] == true ? _lastObservations[key] : null;
@@ -231,6 +240,28 @@ final class ToolkitMcpServer {
       ...base,
       'view': observation.toJson(),
       if (previous != null) 'delta': observation.diff(previous).render(),
+      if (at is Map<Object?, Object?> &&
+          at['x'] is num &&
+          at['y'] is num)
+        'at': _groundedAt(observation, (at['x']! as num).toDouble(),
+            (at['y']! as num).toDouble()),
+    };
+  }
+
+  /// The observe-at grounding read (ADR 0053): innermost walked node
+  /// whose bounds contain the point; a miss fails the tool call.
+  Map<String, Object?> _groundedAt(
+    Observation observation,
+    double x,
+    double y,
+  ) {
+    final observed = observation.nodeAt(x, y);
+    return {
+      'ref': observed.ref,
+      'role': observed.node.role,
+      if (observed.node.name != null) 'name': observed.node.name,
+      'x': x,
+      'y': y,
     };
   }
 
@@ -256,6 +287,7 @@ final class ToolkitMcpServer {
           if (arguments['button'] != null) 'button': arguments['button'],
           if (arguments['clickCount'] != null)
             'clickCount': arguments['clickCount'],
+          if (arguments['modifiers'] is List) 'modifiers': arguments['modifiers'],
         };
       case 'moveTo':
         actionBody['moveTo'] = {'x': arguments['x'], 'y': arguments['y']};
@@ -266,6 +298,7 @@ final class ToolkitMcpServer {
           'toX': arguments['toX'],
           'toY': arguments['toY'],
           if (arguments['button'] != null) 'button': arguments['button'],
+          if (arguments['modifiers'] is List) 'modifiers': arguments['modifiers'],
         };
       case 'type':
         actionBody['type'] = {
@@ -274,7 +307,10 @@ final class ToolkitMcpServer {
           if (arguments['submit'] == true) 'submit': true,
         };
       case 'key':
-        actionBody['key'] = arguments['key'];
+        actionBody['key'] = {
+          'key': arguments['key'],
+          if (arguments['modifiers'] is List) 'modifiers': arguments['modifiers'],
+        };
       case 'scroll':
         actionBody['scroll'] = {
           if (arguments['direction'] != null) 'direction': arguments['direction'],
@@ -365,19 +401,96 @@ final class ToolkitMcpServer {
   Future<Map<String, Object?>> _screenshot(
     Map<String, Object?> arguments,
   ) async {
-    final path = arguments['path'];
-    if (path is! String || path.isEmpty) {
-      throw const McpToolError('automation_screenshot needs a path');
-    }
     final session = await _session(arguments);
-    if (!session.driver.capabilities.screenshot) {
-      throw const McpToolError('this transport cannot capture screenshots');
+    final driver = session.driver;
+    final maxPx = arguments['maxPx'] is int ? arguments['maxPx']! as int : 0;
+    final imageBlocks = <Map<String, Object?>>[];
+
+    if (arguments['listWindows'] == true) {
+      if (driver is! MacosDriver) {
+        throw const McpToolError(
+          'listWindows needs the OS tier (transport "osAccessibility")',
+        );
+      }
+      final pid = arguments['pid'] is int ? arguments['pid']! as int : 0;
+      final windows = await driver.windows(pid: pid);
+      return {
+        'windows': [
+          for (final window in windows)
+            {
+              'windowId': window.windowId,
+              'pid': window.pid,
+              'name': window.name,
+              if (window.bounds != null)
+                'bounds': {
+                  'left': window.bounds!.left,
+                  'top': window.bounds!.top,
+                  'width': window.bounds!.width,
+                  'height': window.bounds!.height,
+                },
+            },
+        ],
+      };
     }
+
+    final path = arguments['path'];
+    Uint8List bytes;
+    if (arguments['windowId'] != null) {
+      if (arguments['windowId'] is! int) {
+        throw const McpToolError('windowId must be an integer');
+      }
+      if (driver is! MacosDriver) {
+        throw const McpToolError(
+          'windowId needs the OS tier (transport "osAccessibility")',
+        );
+      }
+      if (path is! String || path.isEmpty) {
+        throw const McpToolError('automation_screenshot needs a path');
+      }
+      bytes = await driver.windowScreenshot(
+        arguments['windowId']! as int,
+        maxPx: maxPx,
+      );
+    } else {
+      if (path is! String || path.isEmpty) {
+        throw const McpToolError('automation_screenshot needs a path');
+      }
+      if (!driver.capabilities.screenshot) {
+        throw const McpToolError(
+          'this transport cannot capture screenshots',
+        );
+      }
+      if (maxPx > 0) {
+        if (driver is! MacosDriver) {
+          throw const McpToolError(
+            'maxPx needs the OS tier; this transport cannot resize capture',
+          );
+        }
+        bytes = await driver.screenshot(maxPx: maxPx);
+      } else {
+        bytes = await driver.screenshot();
+      }
+    }
+
     final file = File(path);
     await file.parent.create(recursive: true);
-    final bytes = await session.driver.screenshot();
     await file.writeAsBytes(bytes, flush: true);
-    return {'ok': true, 'path': file.path, 'bytes': bytes.length};
+    // Opt-in image block (ADR 0052: images are enrichment, not the
+    // primary channel) — agents that render them read it from content,
+    // everyone else ignores it.
+    if (arguments['image'] == true) {
+      imageBlocks.add({
+        'type': 'image',
+        'mimeType': 'image/png',
+        'data': base64Encode(bytes),
+      });
+    }
+    return {
+      'ok': true,
+      'path': file.path,
+      'bytes': bytes.length,
+      if (imageBlocks.isNotEmpty) '_imageContent': imageBlocks.single,
+    };
   }
 
   Future<Map<String, Object?>> _validatePlan(
@@ -457,6 +570,17 @@ final class ToolkitMcpServer {
           'type': 'object',
           'properties': {
             ...transportOverride,
+            'at': {
+              'type': 'object',
+              'properties': {
+                'x': {'type': 'number'},
+                'y': {'type': 'number'},
+              },
+              'required': ['x', 'y'],
+              'description':
+                  'Ground this surface point to the innermost node '
+                  'covering it (ADR 0053)',
+            },
             'view': {
               'type': 'object',
               'description':
@@ -533,6 +657,15 @@ final class ToolkitMcpServer {
               'type': 'integer',
               'description': 'clickAt: 2 = double-click, 3 = triple',
             },
+            'modifiers': {
+              'type': 'array',
+              'items': {
+                'type': 'string',
+                'enum': ['shift', 'control', 'alt', 'meta'],
+              },
+              'description':
+                  'Keyboard chord for clickAt/drag/key (ADR 0053)',
+            },
             'name': {
               'type': 'string',
               'description':
@@ -569,12 +702,33 @@ final class ToolkitMcpServer {
       ),
       tool(
         'automation_screenshot',
-        'Capture one PNG frame to a local file path.',
+        'Capture one PNG frame to a local file path. `windowId` scopes '
+        'the capture to one window (OS tier); `image` attaches the PNG '
+        'as an opt-in image content block; `maxPx` caps the long side.',
         {
           'type': 'object',
           'required': ['path'],
           'properties': {
             'path': {'type': 'string'},
+            'windowId': {
+              'type': 'integer',
+              'description': 'Capture this window instead of the display '
+                  '(OS tier; discover ids via listWindows)',
+            },
+            'listWindows': {
+              'type': 'boolean',
+              'description': 'List capturable windows (OS tier) instead '
+                  'of capturing',
+            },
+            'image': {
+              'type': 'boolean',
+              'description': 'Attach the PNG as an image content block '
+                  '(opt-in; many agents prefer the semantic channel)',
+            },
+            'maxPx': {
+              'type': 'integer',
+              'description': 'Cap the long side in pixels (e.g. 1024)',
+            },
             ...transportOverride,
           },
         },

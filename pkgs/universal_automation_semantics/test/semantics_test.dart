@@ -308,6 +308,64 @@ void main() {
       throwsA(isA<FormatException>()),
     );
   });
+
+  group('nodeAt (bounds grounding, ADR 0053)', () {
+    AxNode bounded(
+      String role,
+      String name,
+      double left,
+      double top,
+      double width,
+      double height, [
+      List<AxNode> children = const [],
+    ]) => AxNode(
+      role: role,
+      name: name,
+      bounds: AxBounds(left: left, top: top, width: width, height: height),
+      children: children,
+    );
+
+    Snapshot grounded() => Snapshot(
+      roots: [
+        bounded('window', 'Main', 0, 0, 400, 300, [
+          bounded('toolbar', 'Bar', 0, 0, 400, 40),
+          bounded('button', 'Buy', 300, 250, 80, 30),
+        ]),
+      ],
+      capturedAt: DateTime.parse('2026-10-08T12:00:00Z'),
+      revision: 3,
+    );
+
+    test('the innermost node containing the point wins', () {
+      final observation = Observation.of(grounded(), const SemanticView());
+      // The corner hits window, toolbar, and nothing else — the
+      // smallest-area answer is the toolbar.
+      expect(observation.nodeAt(2, 2).ref, 's_1');
+      // The Buy button beats the window covering the same point.
+      expect(observation.nodeAt(310, 260).node.name, 'Buy');
+      // Window interior away from children resolves to the window.
+      expect(observation.nodeAt(100, 150).node.name, 'Main');
+    });
+
+    test('a point no walked node covers fails closed', () {
+      final observation = Observation.of(grounded(), const SemanticView());
+      expect(
+        () => observation.nodeAt(1000, 1000),
+        throwsA(isA<SemanticRefUnavailableException>()),
+      );
+    });
+
+    test('works through a trimmed view (refs stay full-walk)', () {
+      final observation = Observation.of(
+        grounded(),
+        const SemanticView(subtreeOf: 's_1'),
+      );
+      // The toolbar view never shows the window, yet the point inside
+      // the toolbar resolves; the button (not shown) still grounds.
+      expect(observation.nodeAt(310, 260).node.name, 'Buy');
+      expect(observation.nodeAt(2, 2).ref, 's_1');
+    });
+  });
 }
 
 extension on ObservationDelta {
