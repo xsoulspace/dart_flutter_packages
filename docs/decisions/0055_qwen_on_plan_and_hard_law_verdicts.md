@@ -169,5 +169,47 @@ next rung-sized increment after P0–P2, product-demand-gated.
   permanently per the two-same-evidence-failures law; the tables keep
   mlx-c. Any reopening needs NEW evidence class (a workload where these
   matmuls dominate a measured profile), not another attempt.
+- **1a/1b (2026-10-09, commit cdae93d9) — the declared plan promoted to
+  DEFAULT for decode AND prefill; composition-API unification complete.**
+  `LAYA_QWEN_PLAN=0` opts back out (the RMSNorm-row pattern). The plan
+  builder generalizes to prefill chunks: variable L, causal sdp, KV-only
+  tail (`with_head=false` keeps R5's dead-lm_head waste dead); cache
+  growth hoisted OUT of the plan into `KvCache::ensure_capacity` —
+  byte-for-byte `update_one`'s policy (the first draft's
+  `old_alloc + block − prev` math diverged and the bit-parity gate caught
+  it before any ship). Gates: decode plan logits BIT-IDENTICAL (8 live
+  steps, f32 bits), prefill plan caches bit-identical (2 chunks / 300
+  tokens crossing the growth boundary), 64/64 fixture under the DEFAULT
+  route and under `LAYA_QWEN_PLAN=0`, test_fresh 63/63 @ 0.0/1.5e-8,
+  q8 63/63 @ 0.0164.
+- **2 (2026-10-09, commit 14ed3f8f) — the decode p90 spikes attributed and
+  fixed.** Per-step sample dumps over 600-step runs pinned the spikes to
+  KV-cache GROWTH steps exactly (offsets 2049/2305/2561: 34–44 ms vs a
+  ~14.7 ms baseline; the update_one realloc — new buffer + trim/concat
+  across 56 buffers). In-process A/B via `KvCache::reserve`: spikes gone,
+  baseline unchanged. `generate_greedy` now reserves the whole
+  prompt+max_tokens window up front, moving the one growth into the
+  prefill phase. Residual end-of-run drift (~+1 ms over 600 steps) =
+  thermal, recorded not owned.
+- **LFM2 rung (2026-10-09) — the "≥45 tok/s 1.2B q4 class" gate is MET.**
+  `src/lfm2.rs`: the Liquid LFM2/LFM2.5 hybrid decoder op-for-op vs the
+  pinned venv's `mlx_lm/models/lfm2.py` — 10 double-gated short-conv
+  blocks (in_proj → split B/C/x → B·x → sliding conv state [last
+  L_cache−1 rows] → depthwise `conv1d` [new `Op::Conv1d` binding,
+  groups=channels] → C·conv → out_proj; O(n), NO KV cache) + 6 GQA
+  attention blocks (the qwen3 machinery reused: q/k layernorms, RoPE at
+  the shared offset, 256-step KV growth, causal chunked prefill), swiglu
+  MLPs, RMSNorms, quantized tied embedding as head. Fixture:
+  `testdata/lfm25_12b_parity.json` (venv-recorded prompt_ids +
+  greedy_ids; the Qwen-specific bpe.rs deliberately not used).
+  **Gate: 64/64 greedy tokens match the reference; decode 49–53 tok/s on
+  AC (reference leg 46.9) — the ADR 0051 row holds on the Rust host.**
+  THE PAID-FOR LESSON (found by per-layer dump bisect, layer 2 attention,
+  decode step 1: the keys cache read all zeros): `attn_update` is
+  FUNCTIONAL — the written buffers must be stored back into the slots
+  (`*k = Some(kc...)`) or every decode step attends to an empty cache;
+  the prefill HIDES the bug because its single chunk consumes the
+  update's return value directly. Dart FFI for LFM2 = the follow-up
+  increment (the qwen FFI pattern exists); not this rung.
 
 <!-- EVIDENCE:APPEND -->

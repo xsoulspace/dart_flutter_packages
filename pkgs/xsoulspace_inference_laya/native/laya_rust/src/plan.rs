@@ -169,6 +169,14 @@ pub enum Op {
         stop: Vec<i32>,
         strides: Vec<i32>,
     },
+    /// `mx.conv1d` (LFM2's depthwise short conv): inputs [input, weight];
+    /// weight [out_channels, kernel, in_channels/groups].
+    Conv1d {
+        stride: i32,
+        padding: i32,
+        dilation: i32,
+        groups: i32,
+    },
 }
 
 /// mlx float promotion for our graph: f32 wins over f16, else unchanged.
@@ -219,6 +227,7 @@ impl Op {
             },
             Op::Matmul => promote(dtype_of(inputs[0]), dtype_of(inputs[1])),
             Op::Slice { .. } | Op::SliceUpdate { .. } => first(inputs),
+            Op::Conv1d { .. } => first(inputs),
             Op::RmsNormResidual { .. } => first(inputs),
             Op::QuantizedMatmul { .. } => {
                 // Output follows x's dtype (scales share it in our models).
@@ -285,6 +294,7 @@ impl Op {
             Op::RmsNormResidual { .. } => "rms_norm_residual",
             Op::Slice { .. } => "slice",
             Op::SliceUpdate { .. } => "slice_update",
+            Op::Conv1d { .. } => "conv1d",
         }
     }
 

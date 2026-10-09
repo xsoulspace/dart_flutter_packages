@@ -262,6 +262,16 @@ extern "C" {
     // metal.h
     fn mlx_metal_is_available(res: *mut bool) -> Status;
     fn mlx_metal_set_metallib_path(path: *const std::ffi::c_char) -> Status;
+    fn mlx_conv1d(
+        res: *mut RawArray,
+        input: RawArray,
+        weight: RawArray,
+        stride: i32,
+        padding: i32,
+        dilation: i32,
+        groups: i32,
+        s: RawStream,
+    ) -> Status;
     fn mlx_metal_start_capture(path: *const std::ffi::c_char) -> Status;
     fn mlx_metal_stop_capture() -> Status;
 
@@ -621,6 +631,23 @@ pub fn start_capture(path: &std::path::Path) -> MlxResult<()> {
 /// Ends the GPU-trace capture started by [`start_capture`].
 pub fn stop_capture() -> MlxResult<()> {
     chk(unsafe { mlx_metal_stop_capture() })
+}
+
+/// `mx.conv1d`: input [..., W, C_in], weight [out, K, C_in/groups].
+pub fn conv1d(
+    input: &Array,
+    weight: &Array,
+    stride: i32,
+    padding: i32,
+    dilation: i32,
+    groups: i32,
+    s: Stream,
+) -> MlxResult<Array> {
+    let mut out = unsafe { std::mem::zeroed() };
+    chk(unsafe {
+        mlx_conv1d(&mut out, input.0, weight.0, stride, padding, dilation, groups, s.0)
+    })?;
+    Ok(Array(out))
 }
 
 use crate::safetensors::SafetensorsFile;

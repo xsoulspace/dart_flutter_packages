@@ -17,6 +17,7 @@ pub mod mlx;
 pub mod model;
 pub mod plan;
 pub mod bindings;
+pub mod lfm2;
 pub mod qwen;
 pub mod bpe;
 
