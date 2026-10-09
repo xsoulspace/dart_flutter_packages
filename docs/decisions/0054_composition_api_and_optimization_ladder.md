@@ -261,3 +261,29 @@ Observed (ADR 0032 protocol — appended as rungs land):
   budget, head-input re-centering, or fp16 final-encoder-layer) before any
   q8 default. `LAYA_Q8` remains an opt-in diagnostic; the fp16 oracle is
   untouched (63/63 @ 0.0 / 1.5e-8 re-verified after the linear-refactor).
+- **R4 (2026-10-09, skinny-GEMM MSL kernel — gate MEASURED: parity PASS,
+  µbench FAIL, the table keeps mlx-c):** the custom-kernel route LANDED
+  end-to-end — `MetalKernel` (mlx-c `mlx_fast_metal_kernel`: mlx generates
+  the kernel signature and splices the source file in as the BODY, detecting
+  thread-attribute names verbatim — the paid-for lesson), the
+  `Backend::SkinnyGemmMsl` binding row on (matmul × SkinnyGemm × f16)
+  installed via `LAYA_MSL=1`, and `tool/build_msl.sh` — the build-time
+  xcrun gate wraps the body in the same signature and compiles it with
+  Apple's toolchain to a colocated metallib (4.3 KB, the syntax proof;
+  runtime dispatch stays source-based because the C API has no
+  load-from-metallib entry — deviation recorded here). **Golden parity WITH
+  the binding installed: 63/63, max prob error 0.0027** (gate ≤0.005; the
+  kernel's f32-accumulate order differs from mlx-c's — exactly what the
+  tolerance exists for; the 0.0 oracle holds only for the mlx-c binding).
+  **µbench gate FAIL: 0.12–0.21× of mlx-c** on the tuned laya shapes (M=90:
+  0.72/0.36/0.83/0.87 ms mlx-c vs 4.9/1.7/6.3/7.0 ms MSL) — the naive
+  thread-per-output column kernel loses 5–8× to mlx's tiled simdgroup GEMM.
+  Per the ladder law the table KEEPS mlx-c; the binding stays opt-in.
+  Recorded for the next attempt (requires new evidence, e.g. a
+  simdgroup-tiled kernel): mlx-c runs these shapes 5–6× above the
+  weight-streaming floor (K=1024: 8 MB weights ≈ 0.13 ms at ~60 GB/s vs
+  0.72–0.83 ms measured), so ≥1.3× headroom exists on paper — but only a
+  properly tiled kernel (float4 loads, threadgroup A staging, multiple n
+  per thread) can reach it. Gate harness:
+  `cargo test --release --test r4_skinny_gemm_gate -- --ignored --nocapture`.
+  Default `test_fresh.sh` legs re-verified untouched (63/63 @ 0.0 / 1.5e-8).
