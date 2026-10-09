@@ -45,6 +45,21 @@ fn qwen_profiling() -> bool {
     *ON.get_or_init(|| std::env::var_os("LAYA_QWEN_PROFILE").is_some_and(|v| !v.is_empty()))
 }
 
+/// LAYA_QWEN_PLAN=1 — the decode step runs as a declared plan (ADR 0055 P0).
+fn qwen_plan_mode() -> bool {
+    use std::sync::OnceLock;
+    static ON: OnceLock<bool> = OnceLock::new();
+    *ON.get_or_init(|| std::env::var_os("LAYA_QWEN_PLAN").is_some_and(|v| !v.is_empty()))
+}
+
+/// One decode step's declared plan plus the extra pool entries that are not
+/// per-step inputs (the weights — owned by [`Qwen3`], which outlives the
+/// execution).
+pub struct StepPlan<'a> {
+    pub plan: crate::plan::Plan,
+    pub pool_weights: Vec<&'a Array>,
+}
+
 /// Prints and resets the accumulated profile (call after a decode loop).
 pub fn qwen_profile_flush() {
     STEP_PROFILE.with(|p| {
@@ -558,10 +573,279 @@ impl Qwen3 {
     /// One forward pass over `tokens` ([1, L] i32) with the cache. Returns
     /// logits [1, L, V] (unevaluated, like every plan output).
     pub fn forward_step(&self, tokens: &Array, cache: &mut KvCache, s: Stream) -> MlxResult<Array> {
+        self.step_logits(tokens, cache, qwen_plan_mode(), s)
+    }
+
+    /// The decode step on an explicit path: `use_plan` runs the declared
+    /// step plan (ADR 0055 P0), else the imperative walk. Both submit the
+    /// same ops through the same binding table — the parity test guards
+    /// bit-identity between them.
+    pub fn step_logits(
+        &self,
+        tokens: &Array,
+        cache: &mut KvCache,
+        use_plan: bool,
+        s: Stream,
+    ) -> MlxResult<Array> {
+        if use_plan {
+            return self.forward_step_plan(tokens, cache, s);
+        }
         let t = self.forward_impl(tokens, cache, s)?;
         // Tied embeddings: the lm_head IS the (quantized) embedding table,
         // applied as_linear.
         self.linear("q.lm_head", &self.embed, &t, s)
+    }
+
+    /// LAYA_QWEN_PLAN=1 — the decode step runs as a declared plan (ADR 0055
+    /// P0) instead of the imperative walk. Both walks submit the same ops in
+    /// the same order through the same binding table; the parity test guards
+    /// bit-identity between them.
+    fn forward_step_plan(
+        &self,
+        tokens: &Array,
+        cache: &mut KvCache,
+        s: Stream,
+    ) -> MlxResult<Array> {
+        // Decode steps see post-prefill caches; a None buffer means the
+        // caller violated the prefill-first contract.
+        for slot in &cache.layers {
+            if slot.k.is_none() || slot.v.is_none() {
+                return Err(MlxError(-978));
+            }
+        }
+        let offset = cache.offset; // constant for this plan (RoPE + slice bounds)
+        let plan = self.build_step_plan(tokens, cache, offset)?;
+        if let Some(path) = std::env::var_os("LAYA_QWEN_PLAN_DUMP") {
+            let _ = std::fs::write(std::path::PathBuf::from(path), plan.plan.to_json());
+        }
+        // Pool order mirrors build_step_plan's registration order: tokens,
+        // then every pinned array (embed tables, per-layer cache buffers,
+        // weights) in first-use order. Weight/cache arrays are owned by
+        // `self`/`cache`, which outlive the execution.
+        let mut pool: Vec<&Array> = Vec::with_capacity(plan.pool_weights.len() + 1);
+        pool.push(tokens);
+        pool.extend(plan.pool_weights.iter().copied());
+        if std::env::var_os("LAYA_QWEN_PLAN_DEBUG").is_some() {
+            for (i, name) in plan.plan.ctx.iter().enumerate() {
+                let a = pool[i];
+                eprintln!("pool[{i}] {name} shape {:?} ndim {}", (0..a.ndim()).map(|d| a.dim(d as i32)).collect::<Vec<_>>(), a.ndim());
+            }
+        }
+        let outs = crate::plan::execute_outputs(
+            &plan.plan,
+            &crate::plan::ExecPool { arrays: pool },
+            &self.table,
+            s,
+            crate::plan::ExecOptions::runtime(),
+        )?;
+        // Outputs: [k_0', v_0', ..., k_{L-1}', v_{L-1}', logits].
+        let l = cache.layers.len();
+        if outs.len() != 2 * l + 1 {
+            return Err(MlxError(-983));
+        }
+        for (li, slot) in cache.layers.iter_mut().enumerate() {
+            slot.k = Some(outs[2 * li].identity(s)?);
+            slot.v = Some(outs[2 * li + 1].identity(s)?);
+        }
+        cache.offset += 1;
+        Ok(outs[2 * l].identity(s)?)
+    }
+
+    /// Declares the decode step (l = 1) as a plan: node-for-node the
+    /// imperative walk, with the RoPE offset and slice bounds as per-step
+    /// plan constants (the plan is rebuilt every step — the shape-keyed
+    /// compile route needs an offset-as-input op variant first, ADR 0055).
+    /// The KV buffers are plan inputs; the written buffers and logits are
+    /// the declared outputs (functional slice_update, python-parity order).
+    fn build_step_plan<'a>(
+        &'a self,
+        tokens: &'a Array,
+        cache: &'a KvCache,
+        offset: usize,
+    ) -> MlxResult<StepPlan<'a>> {
+        let cfg = &self.cfg;
+        let (n_h, n_kv, d) = (cfg.heads, cfg.kv_heads, cfg.head_dim);
+        let l = 1usize;
+        let total = offset + 1; // plan constant (RoPE + slice bounds)
+        let scale = (d as f32).powf(-0.5);
+        let mut b = crate::plan::PlanBuilder::default();
+        let mut pool_weights: Vec<&'a Array> = Vec::new();
+        // Every non-weight array (weights included) enters the pool through
+        // an Input node; weights register lazily per use site — the executor
+        // skips Input nodes, so duplicates only cost pool slots.
+        let pin = |b: &mut crate::plan::PlanBuilder,
+                       pool: &mut Vec<&'a Array>,
+                       arr: &'a Array,
+                       name: &str|
+         -> crate::plan::NodeId { pool.push(arr); b.input(name, None) };
+
+        // pool[0]; NOT registered in pool_weights (the pool already carries it).
+        let tok = b.input("q.tokens", None);
+
+        // ---- embed (QuantizedEmbedding.__call__, op for op) ----
+        let emb_g = "q.embed";
+        let gather = |b: &mut crate::plan::PlanBuilder,
+                      pool: &mut Vec<&'a Array>,
+                      nm: &str,
+                      table_arr: &'a Array,
+                      cols: i32|
+         -> MlxResult<crate::plan::NodeId> {
+            let cols_c = b.push(emb_g, Op::ConstI32 { value: cols }, &format!("{nm}.cols"), &[], None);
+            let ids_col = b.push(emb_g, Op::Reshape { shape: vec![1, l, 1] }, &format!("{nm}.ids_col"), &[(tok, 0)], None);
+            let scaled = b.push(emb_g, Bin(BinKind::Mul), &format!("{nm}.ids_scaled"), &[(ids_col, 0), (cols_c, 0)], None);
+            let col_idx = b.push(emb_g, Op::ArangeI32 { start: 0, stop: cols }, &format!("{nm}.cols_idx"), &[], None);
+            let flat_idx = b.push(emb_g, Bin(BinKind::Add), &format!("{nm}.flat_idx"), &[(scaled, 0), (col_idx, 0)], None);
+            let tn = pin(b, pool, table_arr, &format!("{nm}.table"));
+            let count: usize = (0..table_arr.ndim()).map(|dd| table_arr.dim(dd as i32) as usize).product();
+            let flat = b.push(emb_g, Op::Reshape { shape: vec![count] }, &format!("{nm}.flat"), &[(tn, 0)], None);
+            Ok(b.push(emb_g, Op::Take, nm, &[(flat, 0), (flat_idx, 0)], None))
+        };
+        let h: crate::plan::NodeId = match &self.embed {
+            Weight::Quant(q) => {
+                let packed_row = q.w.dim(1) as i32;
+                let scale_row = q.scales.dim(1) as i32;
+                let wq = gather(&mut b, &mut pool_weights, "embed.w", &q.w, packed_row)?;
+                let ws = gather(&mut b, &mut pool_weights, "embed.s", &q.scales, scale_row)?;
+                let wb = gather(&mut b, &mut pool_weights, "embed.b", &q.biases, scale_row)?;
+                b.push(emb_g, Op::Dequantize { group_size: cfg.group_size, bits: cfg.bits }, "embed.deq", &[(wq, 0), (ws, 0), (wb, 0)], None)
+            }
+            Weight::Plain(w) => {
+                gather(&mut b, &mut pool_weights, "embed.plain", w, cfg.hidden_size as i32)?
+            }
+        };
+        let mut h = h;
+
+        // ---- per layer ----
+        let mut new_k: Vec<crate::plan::NodeId> = Vec::with_capacity(cfg.layers);
+        let mut new_v: Vec<crate::plan::NodeId> = Vec::with_capacity(cfg.layers);
+        for (li, layer) in self.layers.iter().enumerate() {
+            let g = format!("q.l{li:02}");
+            let cache_in = |b: &mut crate::plan::PlanBuilder,
+                            pool: &mut Vec<&'a Array>,
+                            nm: &str,
+                            buf: &'a Option<Array>|
+             -> crate::plan::NodeId {
+                let arr = buf.as_ref().expect("decode cache buffer");
+                pin(b, pool, arr, nm)
+            };
+            let kb_in = cache_in(&mut b, &mut pool_weights, &format!("{g}.kbuf"), &cache.layers[li].k);
+            let vb_in = cache_in(&mut b, &mut pool_weights, &format!("{g}.vbuf"), &cache.layers[li].v);
+
+            let ln1_w = pin(&mut b, &mut pool_weights, &layer.ln1, &format!("{g}.ln1.w"));
+            let ln1 = b.push(&g, Op::RmsNorm { eps: cfg.rms_eps }, &format!("{g}.ln1"), &[(h, 0), (ln1_w, 0)], None);
+            let linear = |b: &mut crate::plan::PlanBuilder,
+                          pool: &mut Vec<&'a Array>,
+                          nm: &str,
+                          w: &'a Weight,
+                          x: crate::plan::Slot|
+             -> MlxResult<crate::plan::NodeId> {
+                match w {
+                    Weight::Quant(q) => {
+                        let wn = pin(b, pool, &q.w, &format!("{nm}.q8"));
+                        let sn = pin(b, pool, &q.scales, &format!("{nm}.q8_scales"));
+                        let bn = pin(b, pool, &q.biases, &format!("{nm}.q8_biases"));
+                        Ok(b.push(&g, Op::QuantizedMatmul { group_size: cfg.group_size, bits: cfg.bits, transpose: true }, nm, &[x, (wn, 0), (sn, 0), (bn, 0)], None))
+                    }
+                    Weight::Plain(w) => {
+                        let wn = pin(b, pool, w, &format!("{nm}.w"));
+                        let wt = b.push(&g, Op::Transpose { axes: vec![1, 0] }, &format!("{nm}.w_t"), &[(wn, 0)], None);
+                        Ok(b.push(&g, Op::Matmul, nm, &[x, (wt, 0)], None))
+                    }
+                }
+            };
+            let q = linear(&mut b, &mut pool_weights, &format!("{g}.q"), &layer.q, (ln1, 0))?;
+            let k = linear(&mut b, &mut pool_weights, &format!("{g}.k"), &layer.k, (ln1, 0))?;
+            let v = linear(&mut b, &mut pool_weights, &format!("{g}.v"), &layer.v, (ln1, 0))?;
+
+            let reshape = |b: &mut crate::plan::PlanBuilder, nm: &str, src: crate::plan::NodeId, heads: usize| {
+                b.push(&g, Op::Reshape { shape: vec![1, l, heads, d] }, nm, &[(src, 0)], None)
+            };
+            let qh = reshape(&mut b, &format!("{g}.q_h"), q, n_h);
+            let kh = reshape(&mut b, &format!("{g}.k_h"), k, n_kv);
+            let vh = reshape(&mut b, &format!("{g}.v_h"), v, n_kv);
+            let qn_w = pin(&mut b, &mut pool_weights, &layer.q_norm, &format!("{g}.q_norm.w"));
+            let qn = b.push(&g, Op::RmsNorm { eps: cfg.rms_eps }, &format!("{g}.q_norm"), &[(qh, 0), (qn_w, 0)], None);
+            let kn_w = pin(&mut b, &mut pool_weights, &layer.k_norm, &format!("{g}.k_norm.w"));
+            let kn = b.push(&g, Op::RmsNorm { eps: cfg.rms_eps }, &format!("{g}.k_norm"), &[(kh, 0), (kn_w, 0)], None);
+            let transpose = |b: &mut crate::plan::PlanBuilder, nm: &str, src: crate::plan::NodeId| {
+                b.push(&g, Op::Transpose { axes: vec![0, 2, 1, 3] }, nm, &[(src, 0)], None)
+            };
+            let qt = transpose(&mut b, &format!("{g}.q_t"), qn);
+            let kt = transpose(&mut b, &format!("{g}.k_t"), kn);
+            let vt = transpose(&mut b, &format!("{g}.v_t"), vh);
+            let qr = b.push(&g, Op::Rope { dims: d as i32, base: cfg.rope_theta, offset: offset as i32 }, &format!("{g}.rope_q"), &[(qt, 0)], None);
+            let kr = b.push(&g, Op::Rope { dims: d as i32, base: cfg.rope_theta, offset: offset as i32 }, &format!("{g}.rope_k"), &[(kt, 0)], None);
+
+            // Cache write: buf[..., off:off+1, :] = new (functional).
+            let bh = n_kv as i32;
+            let dd = d as i32;
+            let kc = b.push(&g, Op::SliceUpdate { start: vec![0, 0, offset as i32, 0], stop: vec![1, bh, (offset + 1) as i32, dd], strides: vec![1, 1, 1, 1] }, &format!("{g}.k_write"), &[(kb_in, 0), (kr, 0)], None);
+            let vc = b.push(&g, Op::SliceUpdate { start: vec![0, 0, offset as i32, 0], stop: vec![1, bh, (offset + 1) as i32, dd], strides: vec![1, 1, 1, 1] }, &format!("{g}.v_write"), &[(vb_in, 0), (vt, 0)], None);
+            new_k.push(kc);
+            new_v.push(vc);
+            // Read view: [.., :total, :] — identity when total fills the alloc
+            // (mirrors KvCache::update exactly).
+            let k_alloc = cache.layers[li].k.as_ref().map(|a| a.dim(2) as usize).unwrap_or(0);
+            let v_alloc = cache.layers[li].v.as_ref().map(|a| a.dim(2) as usize).unwrap_or(0);
+            let view = |b: &mut crate::plan::PlanBuilder, nm: &str, src: crate::plan::NodeId, alloc: usize| {
+                if total < alloc {
+                    b.push(&g, Op::Slice { start: vec![0, 0, 0, 0], stop: vec![1, bh, total as i32, dd], strides: vec![1, 1, 1, 1] }, nm, &[(src, 0)], None)
+                } else {
+                    src
+                }
+            };
+            let kc_view = view(&mut b, &format!("{g}.kv"), kc, k_alloc);
+            let vc_view = view(&mut b, &format!("{g}.vv"), vc, v_alloc);
+
+            let att = b.push(&g, Op::Sdp { scale, causal: false }, &format!("{g}.sdp"), &[(qr, 0), (kc_view, 0), (vc_view, 0)], None);
+            let att_t = transpose(&mut b, &format!("{g}.att_t"), att);
+            let att_r = b.push(&g, Op::Reshape { shape: vec![1, l, n_h * d] }, &format!("{g}.att_r"), &[(att_t, 0)], None);
+            let o = linear(&mut b, &mut pool_weights, &format!("{g}.o"), &layer.o, (att_r, 0))?;
+            let ln2_w = pin(&mut b, &mut pool_weights, &layer.ln2, &format!("{g}.ln2.w"));
+            let fused = b.push(&g, Op::RmsNormResidual { eps: cfg.rms_eps }, &format!("{g}.res1_ln2"), &[(h, 0), (o, 0), (ln2_w, 0)], None);
+            let h1 = (fused, 0);
+            let ln2 = (fused, 1);
+
+            let gate = linear(&mut b, &mut pool_weights, &format!("{g}.gate"), &layer.gate, ln2)?;
+            let up = linear(&mut b, &mut pool_weights, &format!("{g}.up"), &layer.up, ln2)?;
+            let sig = b.push(&g, Op::Unary { kind: UnaryKind::Sigmoid }, &format!("{g}.sig"), &[(gate, 0)], None);
+            let silu = b.push(&g, Bin(BinKind::Mul), &format!("{g}.silu"), &[(gate, 0), (sig, 0)], None);
+            let ff_in = b.push(&g, Bin(BinKind::Mul), &format!("{g}.ff_in"), &[(silu, 0), (up, 0)], None);
+            let ff = linear(&mut b, &mut pool_weights, &format!("{g}.down"), &layer.down, (ff_in, 0))?;
+            h = b.push(&g, Bin(BinKind::Add), &format!("{g}.res2"), &[h1, (ff, 0)], None);
+        }
+
+        let norm_w = pin(&mut b, &mut pool_weights, &self.norm, "q.final_norm.w");
+        let t = b.push("q.norm", Op::RmsNorm { eps: cfg.rms_eps }, "q.final_norm", &[(h, 0), (norm_w, 0)], None);
+        let logits = match &self.embed {
+            Weight::Quant(q) => {
+                let wn = pin(&mut b, &mut pool_weights, &q.w, "q.lm_head.q8");
+                let sn = pin(&mut b, &mut pool_weights, &q.scales, "q.lm_head.q8_scales");
+                let bn = pin(&mut b, &mut pool_weights, &q.biases, "q.lm_head.q8_biases");
+                b.push("q.head", Op::QuantizedMatmul { group_size: cfg.group_size, bits: cfg.bits, transpose: true }, "q.lm_head", &[(t, 0), (wn, 0), (sn, 0), (bn, 0)], None)
+            }
+            Weight::Plain(w) => {
+                let wn = pin(&mut b, &mut pool_weights, w, "q.lm_head.w");
+                let wt = b.push("q.head", Op::Transpose { axes: vec![1, 0] }, "q.lm_head.w_t", &[(wn, 0)], None);
+                b.push("q.head", Op::Matmul, "q.lm_head", &[(t, 0), (wt, 0)], None)
+            }
+        };
+        let mut outputs = Vec::with_capacity(2 * cfg.layers + 1);
+        for li in 0..cfg.layers {
+            outputs.push(new_k[li]);
+            outputs.push(new_v[li]);
+        }
+        outputs.push(logits);
+        Ok(StepPlan {
+            plan: crate::plan::Plan {
+                nodes: b.nodes,
+                logits,
+                act: logits,
+                ctx: b.ctx,
+                outputs,
+            },
+            pool_weights,
+        })
     }
 
     fn forward_impl(&self, tokens: &Array, cache: &mut KvCache, s: Stream) -> MlxResult<Array> {

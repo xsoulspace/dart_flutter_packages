@@ -262,6 +262,8 @@ extern "C" {
     // metal.h
     fn mlx_metal_is_available(res: *mut bool) -> Status;
     fn mlx_metal_set_metallib_path(path: *const std::ffi::c_char) -> Status;
+    fn mlx_metal_start_capture(path: *const std::ffi::c_char) -> Status;
+    fn mlx_metal_stop_capture() -> Status;
 
 
     // ops.h — binary elementwise
@@ -603,6 +605,22 @@ pub fn set_metallib_path(path: &std::path::Path) -> MlxResult<()> {
     let c = std::ffi::CString::new(path.to_string_lossy().as_bytes())
         .map_err(|_| MlxError(-998))?;
     chk(unsafe { mlx_metal_set_metallib_path(c.as_ptr()) })
+}
+
+/// Starts an MTLCaptureManager GPU-trace capture into `path` (a `.gputrace`
+/// document Xcode Instruments can open; the package also carries per-command
+/// timings readable as JSON). Everything submitted on the GPU until
+/// [`stop_capture`] is recorded — bracket tightly around the section of
+/// interest (ADR 0055 P1).
+pub fn start_capture(path: &std::path::Path) -> MlxResult<()> {
+    let c = std::ffi::CString::new(path.to_string_lossy().as_bytes())
+        .map_err(|_| MlxError(-998))?;
+    chk(unsafe { mlx_metal_start_capture(c.as_ptr()) })
+}
+
+/// Ends the GPU-trace capture started by [`start_capture`].
+pub fn stop_capture() -> MlxResult<()> {
+    chk(unsafe { mlx_metal_stop_capture() })
 }
 
 use crate::safetensors::SafetensorsFile;

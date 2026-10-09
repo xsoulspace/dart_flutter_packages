@@ -605,8 +605,17 @@ mod perf_tests {
     use std::path::PathBuf;
 
     /// Engine forward cost in-process (no dart): gates the ADR 0051 p50.
+    /// Depends on a prior LAYA_DEBUG_DUMP run having populated /tmp/laya-dump
+    /// (the fw13 batch inputs); skips honestly when that artifact is absent.
     #[test]
     fn engine_forward_latency() {
+        if !PathBuf::from("/tmp/laya-dump/fw13_in_ids.json").is_file() {
+            eprintln!(
+                "skipping: /tmp/laya-dump/fw13_*.json absent — run a \
+                 LAYA_DEBUG_DUMP=/tmp/laya-dump golden pass first"
+            );
+            return;
+        }
         let metallib = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("build/mlx-install/lib/mlx.metallib");
         if metallib.is_file() {

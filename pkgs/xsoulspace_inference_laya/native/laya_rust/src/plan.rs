@@ -326,11 +326,25 @@ pub struct Plan {
     /// Execution-context manifest: name per pool entry (batch arrays first,
     /// then weights in registration order).
     pub ctx: Vec<String>,
+    /// Every live output the plan must keep alive and return (the qwen
+    /// decode step returns 2L updated cache buffers + logits; laya's two
+    /// outputs are `logits`/`act`). Empty on plans built before this field
+    /// existed — those run as [logits, act].
+    #[serde(default)]
+    pub outputs: Vec<NodeId>,
 }
 
 impl Plan {
     pub fn to_json(&self) -> String {
         serde_json::to_string_pretty(self).unwrap_or_default()
+    }
+
+    fn output_ids(&self) -> Vec<NodeId> {
+        if self.outputs.is_empty() {
+            vec![self.logits, self.act]
+        } else {
+            self.outputs.clone()
+        }
     }
 }
 
@@ -420,6 +434,24 @@ pub fn execute(
     s: Stream,
     opts: ExecOptions,
 ) -> MlxResult<(Array, Array)> {
+    let outs = execute_outputs(plan, pool, table, s, opts)?;
+    let mut it = outs.into_iter();
+    let logits = it.next().ok_or(crate::mlx::MlxError(-983))?;
+    let act = it.next().ok_or(crate::mlx::MlxError(-983))?;
+    Ok((logits, act))
+}
+
+/// Multi-output executor: runs the plan keeping every declared output alive.
+/// The qwen decode step returns the 2L updated cache buffers + logits; the
+/// laya two-output case is [`execute`].
+pub fn execute_outputs(
+    plan: &Plan,
+    pool: &ExecPool,
+    table: &crate::bindings::BindingTable,
+    s: Stream,
+    opts: ExecOptions,
+) -> MlxResult<Vec<Array>> {
+    let keep = plan.output_ids();
     let debug_dump = if opts.dump { crate::DebugDump::from_env() } else { crate::DebugDump::disabled() };
 
     let mut consumers = node_consumer_counts(plan);
@@ -440,7 +472,7 @@ pub fn execute(
                     refs.push(pool.arrays[index]);
                 } else {
                     let stored = values[src].as_ref().ok_or(crate::mlx::MlxError(-981))?;
-                    refs.push(stored.get(slot as usize).ok_or(crate::mlx::MlxError(-982))?);
+                    refs.push(stored.get(slot as usize).ok_or(crate::mlx::MlxError(-982))?)
                 }
             }
             let start = if opts.profile { Some(std::time::Instant::now()) } else { None };
@@ -459,10 +491,11 @@ pub fn execute(
             outs
         };
         values[id] = Some(outs);
-        // Release inputs whose last consumer just ran.
+        // Release inputs whose last consumer just ran (declared outputs stay
+        // alive for the caller).
         for &(src, _) in &node.inputs {
             consumers[src] -= 1;
-            if consumers[src] == 0 && src != plan.logits && src != plan.act {
+            if consumers[src] == 0 && !keep.contains(&src) {
                 values[src] = None;
             }
         }
@@ -485,9 +518,9 @@ pub fn execute(
         }
     }
 
-    let logits = alias_output(&mut values, plan.logits, s)?;
-    let act = alias_output(&mut values, plan.act, s)?;
-    Ok((logits, act))
+    keep.iter()
+        .map(|id| alias_output(&mut values, *id, s))
+        .collect()
 }
 
 /// Aliases an output array for readback (a lazy identity view — no new GPU
@@ -644,7 +677,7 @@ mod tests {
         let wt = b.push("g", Op::Transpose { axes: vec![1, 0] }, "w.t", &[(x, 0)], None);
         let mm = b.push("g", Op::Matmul, "xw", &[(x, 0), (wt, 0)], None);
         let _ = b.push("g", Op::Unary { kind: UnaryKind::Relu }, "out", &[(mm, 0)], None);
-        let plan = Plan { nodes: b.nodes, logits: 3, act: 3, ctx: b.ctx };
+        let plan = Plan { nodes: b.nodes, logits: 3, act: 3, ctx: b.ctx, outputs: Vec::new() };
         let json = plan.to_json();
         let back: Plan = serde_json::from_str(&json).unwrap();
         assert_eq!(back.nodes.len(), plan.nodes.len());
@@ -671,7 +704,7 @@ mod gpu_tests {
         let mut b = PlanBuilder::default();
         let x = b.input("x", None);
         let relu = b.push("g", Op::Unary { kind: UnaryKind::Relu }, "out", &[(x, 0)], None);
-        let plan = Plan { nodes: b.nodes, logits: relu, act: relu, ctx: b.ctx };
+        let plan = Plan { nodes: b.nodes, logits: relu, act: relu, ctx: b.ctx, outputs: Vec::new() };
         // f16 [-2.0, 1.0] little-endian.
         let a = Array::from_data_f16(&[0x00, 0xC0, 0x00, 0x3C], &[2]).unwrap();
         let pool = ExecPool { arrays: vec![&a] };

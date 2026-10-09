@@ -33,3 +33,4 @@ Harness product decisions (0002–0005, 0007, 0009, 0012–0028, 0030,
 | [0052](0052_semantic_view_grammar.md) | Accepted | `universal_automation_semantics` — the semantic view grammar: declarative views, ref-stable observations, diffs |
 | [0053](0053_coordinate_pointer_verbs.md) | Accepted | Coordinate pointer verbs — `clickAt`/`moveTo`/`drag`, capability-gated, MoE-lowered from day one |
 | [0054](0054_composition_api_and_optimization_ladder.md) | Accepted | The composition API — declared forward plans, binding tables keyed (op × chip × shape class × dtype), and the L5 optimization ladder R0–R5 |
+| [0055](0055_qwen_on_plan_and_hard_law_verdicts.md) | Accepted | Qwen decode step on the declared plan tree, GPU-capture attribution for the long-context decode gap, kernel-retry gates, and the hard-law research verdicts (continuous batching / GGUF / training / LFM2 path) |
