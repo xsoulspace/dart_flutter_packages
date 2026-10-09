@@ -38,15 +38,19 @@ PROBES = [
 
 
 def main() -> int:
-    snaps = glob.glob(
-        os.path.expanduser(
-            "~/.cache/huggingface/hub/models--mlx-community--Qwen3-0.6B-4bit/snapshots/*"
+    env_snap = os.environ.get("QWEN3_SNAPSHOT")
+    if env_snap:
+        snap = env_snap
+    else:
+        snaps = glob.glob(
+            os.path.expanduser(
+                "~/.cache/huggingface/hub/models--mlx-community--Qwen3-0.6B-4bit/snapshots/*"
+            )
         )
-    )
-    if not snaps:
-        print("Qwen3-0.6B-4bit snapshot not found in HF cache", file=sys.stderr)
-        return 1
-    snap = snaps[0]
+        if not snaps:
+            print("Qwen3-0.6B-4bit snapshot not found in HF cache", file=sys.stderr)
+            return 1
+        snap = snaps[0]
 
     model, tokenizer = load(snap)
     sampler = make_sampler(temp=0.0)
@@ -62,13 +66,16 @@ def main() -> int:
     for text in PROBES:
         probes[text] = [int(i) for i in tokenizer.encode(text)]
 
-    out_path = os.path.join(
-        os.path.dirname(__file__),
-        "..",
-        "native",
-        "laya_rust",
-        "testdata",
-        "qwen3_06b_parity.json",
+    out_path = os.environ.get(
+        "QWEN3_FIXTURE_OUT",
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "native",
+            "laya_rust",
+            "testdata",
+            "qwen3_06b_parity.json",
+        ),
     )
     fixture = {
         "snapshot": os.path.basename(os.path.normpath(snap)),

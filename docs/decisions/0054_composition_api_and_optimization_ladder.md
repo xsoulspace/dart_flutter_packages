@@ -342,3 +342,25 @@ Observed (ADR 0032 protocol — appended as rungs land):
   keeps such rows opt-in. Future-attempt levers (~35% gap to close):
   float4 loads, multi-row threadgroups, x preloaded to registers.
   Harness: `cargo test --release --test r4_dequant_gemv_gate -- --ignored --nocapture`.
+- **R2 fp16/bf16 parity leg (2026-10-09) — the "fp16 then q4" rung is now
+  complete on BOTH legs:** the unquantized `Qwen3-0.6B-bf16` snapshot
+  (downloaded to the HF cache; the runtime itself still never downloads)
+  runs the loader's `Weight::Plain` arm (bf16 tensors through the
+  Transpose+Matmul bindings) and reproduces the mlx-lm reference
+  **64/64 greedy tokens on the first gate run** after one paid-for fix
+  (the plain-tensor reader needed the same `.weight` suffix the quantized
+  triple already used). The fixture generator and the Rust gate take
+  `QWEN3_SNAPSHOT` / `QWEN3_FIXTURE` overrides, so both legs run off the
+  same harness: `QWEN3_SNAPSHOT=<bf16-snap> QWEN3_FIXTURE=<fixture>
+  cargo test --release --test qwen3_parity`. The committed fixture stays
+  the q4 one (no oracle was touched).
+- **R2 in-process client behind the serve wire (2026-10-09, commit 8e477cb0)
+  — LANDED:** `NativeQwenTextEngine` (Dart client over
+  `laya_native_qwen_load/generate/unload`) and `LayaQwenChatServer` —
+  `/health` + `POST /v1/chat/completions` composed from the shared
+  `LoopbackJsonServer` core, the same OpenAI-compatible wire
+  `mlx_lm.server` speaks, backed entirely by the in-process engine (raw-
+  completion mapping: message contents concatenated; no chat template —
+  recorded). Tests: in-process greedy ids equal the fixture prefix, and the
+  wire serves health + completions with usage counts; both skip honestly
+  without the dylib/snapshot.

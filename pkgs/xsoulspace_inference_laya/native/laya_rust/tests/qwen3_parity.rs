@@ -22,8 +22,12 @@ struct ParityFixture {
 }
 
 fn fixture() -> Option<ParityFixture> {
-    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("testdata/qwen3_06b_parity.json");
+    let path = std::env::var_os("QWEN3_FIXTURE")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| {
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("testdata/qwen3_06b_parity.json")
+        });
     let raw = std::fs::read_to_string(path).ok()?;
     Some(serde_json::from_str(&raw).expect("parity fixture parses"))
 }

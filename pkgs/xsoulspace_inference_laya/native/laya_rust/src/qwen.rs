@@ -381,7 +381,7 @@ impl Qwen3 {
             if st.dtype_of(&format!("{name}.scales")).is_some() {
                 Ok(Weight::Quant(st.take_quantized(name)?))
             } else {
-                Ok(Weight::Plain(st.take_any(name)?))
+                Ok(Weight::Plain(st.take_any(&format!("{name}.weight"))?))
             }
         };
 
