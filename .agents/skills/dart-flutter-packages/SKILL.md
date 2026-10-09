@@ -45,6 +45,21 @@ changes never land in the laya product or in
 
 - Unified use: `MlxNativeTextClient.loadLfm2()/loadQwen()` binds a loaded
   engine as `InferenceClient` (template+EOS cast, greedy, tools render).
+  The LAZY casts (`lazyLfm2()/lazyQwen()`) defer the weight load to
+  `load()` — composition never blocks, unavailability is a typed
+  retryable failure, and `unloadEngine()` frees the weights (ADR 0059).
+  Requests carry `messages` (real conversation render), request-level
+  `thinking`, `maxTokens`, `temperature`; core composes them through
+  `GenerationOptions`/`ChatMessage`/`copyWith` (ADR 0059).
+- Harness: the `lfm`/`qwen` palette entries bind through afm's
+  `lfmTextBinding()/qwenTextBinding()` (lazy, env knobs
+  `HARNESS_*_SNAPSHOT`, `HARNESS_*_ENGINE=off`, `HARNESS_QWEN_THINKING`);
+  Last Answer exposes them as RUNTIME chips (macOS only).
+- The Swift lane left the product graphs (ADR 0060): afm and LA no longer
+  depend on `xsoulspace_inference_mlx`, and its hook never writes the
+  shared `.dart_tool/lib/mlx.metallib` (the crossed-pair incident).
+  `pin_metallib_colocated` probes candidates for a real MLX kernel
+  before pinning.
 - Wire use: `dart run tool/serve_text.dart` in the engine package serves
   the OpenAI-compatible loopback (default cast LFM2.5 template+EOS).
 - Gates (sandbox OFF — dart build hooks hang under the sandbox):
@@ -56,3 +71,6 @@ changes never land in the laya product or in
 - New architecture = Rust port + venv-recorded parity fixture. Never
   weaken an oracle; special-token ids come from the checkpoint's own
   tokenizer, never hardcoded.
+- Perf-timing gates in `native/mlx_native` are AC-calibrated: on battery
+  (throttles 4-10×) or under heavy load they fail WITHOUT a code defect —
+  record the power state, rerun on AC, never weaken the threshold.

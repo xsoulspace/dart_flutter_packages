@@ -29,6 +29,25 @@ abstract class StorageProvider {
 
   Future<List<FileEntry>> listDirectory(final String directoryPath);
 
+  /// Appends [content] to the file at [path], creating it when missing.
+  ///
+  /// The append-mostly contract (logs, traces, journals): implementations
+  /// that can write only the new bytes SHOULD override this — the default
+  /// read-modify-write is O(file).
+  Future<FileOperationResult> appendFile(
+    final String path,
+    final String content, {
+    final String? commitMessage,
+  }) async {
+    final existing = await getFile(path);
+    final combined = (existing ?? '') + content;
+    try {
+      return await updateFile(path, combined, commitMessage: commitMessage);
+    } on FileNotFoundException {
+      return createFile(path, combined, commitMessage: commitMessage);
+    }
+  }
+
   Future<void> restore(final String path, {final String? versionId});
 
   /// Declared static capabilities. Providers should override to expose

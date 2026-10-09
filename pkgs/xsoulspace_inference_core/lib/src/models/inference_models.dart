@@ -5,7 +5,11 @@ import 'package:recase/recase.dart';
 
 import '../structured_output/structured_output.dart';
 import '../tools/tool_contracts.dart';
+import 'chat_message.dart';
+import 'generation_options.dart';
 
+export 'chat_message.dart';
+export 'generation_options.dart';
 export 'model_catalog.dart';
 
 /// The idea is that inference task should be as atomic as possible
@@ -74,27 +78,36 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     InferenceTask task = InferenceTask.text,
     InferenceAudioInput? audioInput,
     InferenceVoiceOptions? voiceOptions,
+    List<ChatMessage> messages = const [],
 
-    /// Upper bound on generated tokens. Providers with a required limit
-    /// (Anthropic `max_tokens`) reject the request when this is absent
-    /// instead of inventing a provider-specific default.
+    /// The full conversation (ADR 0059). Chat-native providers render it
+    /// directly; empty = synthesize from [systemPrompt] + [prompt] as
+    /// before.
     int? maxTokens,
     double? temperature,
     List<String> stopSequences = const [],
-  }) => InferenceRequest._({
-    'task': task.name,
-    'prompt': prompt,
-    'output_schema': outputSchema,
-    'working_directory': workingDirectory,
-    'system_prompt': systemPrompt,
-    'context_fragments': contextFragments,
-    'metadata': metadata,
-    'audio_input': ?audioInput?.toJson(),
-    'voice_options': ?voiceOptions?.toJson(),
-    'max_tokens': ?maxTokens,
-    'temperature': ?temperature,
-    if (stopSequences.isNotEmpty) 'stop_sequences': stopSequences,
-  });
+
+    /// Request-level reasoning switch (ADR 0059). Null = the provider's
+    /// own default.
+    bool? thinking,
+  }) => InferenceRequest._(
+    _buildRequestMap(
+      prompt: prompt,
+      outputSchema: outputSchema,
+      workingDirectory: workingDirectory,
+      systemPrompt: systemPrompt,
+      contextFragments: contextFragments,
+      metadata: metadata,
+      task: task,
+      audioInput: audioInput,
+      voiceOptions: voiceOptions,
+      messages: messages,
+      maxTokens: maxTokens,
+      temperature: temperature,
+      stopSequences: stopSequences,
+      thinking: thinking,
+    ),
+  );
   factory InferenceRequest.structured({
     required String prompt,
     SchemaBundle outputSchema = SchemaBundle.empty,
@@ -105,23 +118,30 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     InferenceTask task = InferenceTask.text,
     InferenceAudioInput? audioInput,
     InferenceVoiceOptions? voiceOptions,
+    List<ChatMessage> messages = const [],
     int? maxTokens,
     double? temperature,
     List<String> stopSequences = const [],
-  }) => InferenceRequest._({
-    'task': task.name,
-    'prompt': prompt,
-    'output_schema': outputSchema.toJson(),
-    'working_directory': workingDirectory,
-    'system_prompt': systemPrompt,
-    'context_fragments': contextFragments,
-    'metadata': metadata,
-    'audio_input': ?audioInput?.toJson(),
-    'voice_options': ?voiceOptions?.toJson(),
-    'max_tokens': ?maxTokens,
-    'temperature': ?temperature,
-    if (stopSequences.isNotEmpty) 'stop_sequences': stopSequences,
-  });
+    bool? thinking,
+  }) => InferenceRequest._(
+    _buildRequestMap(
+      prompt: prompt,
+      outputSchema: outputSchema.toJson(),
+      workingDirectory: workingDirectory,
+      systemPrompt: systemPrompt,
+      contextFragments: contextFragments,
+      metadata: metadata,
+      task: task,
+      audioInput: audioInput,
+      voiceOptions: voiceOptions,
+      messages: messages,
+      maxTokens: maxTokens,
+      temperature: temperature,
+      stopSequences: stopSequences,
+      thinking: thinking,
+    ),
+  );
+
   factory InferenceRequest.fromJson(final Map<String, dynamic> json) =>
       InferenceRequest._(json);
 
@@ -158,6 +178,43 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     voiceOptions: voiceOptions,
   );
 
+  /// The one request-map builder behind both public factories (ADR 0059
+  /// dedupe — the field list existed twice and drifted once already).
+  static Map<String, dynamic> _buildRequestMap({
+    required final String prompt,
+    required final Map<String, dynamic> outputSchema,
+    required final String workingDirectory,
+    required final String systemPrompt,
+    required final List<Object> contextFragments,
+    required final Map<String, dynamic> metadata,
+    required final InferenceTask task,
+    required final InferenceAudioInput? audioInput,
+    required final InferenceVoiceOptions? voiceOptions,
+    required final List<ChatMessage> messages,
+    required final int? maxTokens,
+    required final double? temperature,
+    required final List<String> stopSequences,
+    required final bool? thinking,
+  }) => <String, dynamic>{
+    'task': task.name,
+    'prompt': prompt,
+    'output_schema': outputSchema,
+    'working_directory': workingDirectory,
+    'system_prompt': systemPrompt,
+    'context_fragments': contextFragments,
+    'metadata': metadata,
+    'audio_input': ?audioInput?.toJson(),
+    'voice_options': ?voiceOptions?.toJson(),
+    if (messages.isNotEmpty)
+      'messages': <Map<String, dynamic>>[
+        for (final message in messages) message.toJson(),
+      ],
+    'max_tokens': ?maxTokens,
+    'temperature': ?temperature,
+    if (stopSequences.isNotEmpty) 'stop_sequences': stopSequences,
+    'thinking': ?thinking,
+  };
+
   String get prompt => jsonDecodeString(value['prompt']);
   Map<String, dynamic> get outputSchema =>
       jsonDecodeMapAs(value['output_schema']);
@@ -192,6 +249,61 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
   };
   List<String> get stopSequences =>
       jsonDecodeListAs<String>(value['stop_sequences']);
+  bool? get thinking => switch (value['thinking']) {
+    final bool thinking => thinking,
+    _ => null,
+  };
+  List<ChatMessage> get messages => <ChatMessage>[
+    for (final json in jsonDecodeListAs<Map<String, dynamic>>(
+      value['messages'],
+    ))
+      ChatMessage.fromJson(json),
+  ];
+
+  /// The flat generation fields viewed as one composable value (ADR 0059
+  /// — single storage: this map; the view never diverges from it).
+  GenerationOptions get generationOptions => GenerationOptions(
+    maxTokens: maxTokens,
+    temperature: temperature,
+    stopSequences: stopSequences,
+    thinking: thinking,
+  );
+
+  /// Derives a request with the given fields replaced (ADR 0059 — set-if-
+  /// provided, like [GenerationOptions.copyWith]; nothing clears to null).
+  InferenceRequest copyWith({
+    final String? prompt,
+    final Map<String, dynamic>? outputSchema,
+    final String? workingDirectory,
+    final String? systemPrompt,
+    final List<Object>? contextFragments,
+    final Map<String, dynamic>? metadata,
+    final InferenceTask? task,
+    final InferenceAudioInput? audioInput,
+    final InferenceVoiceOptions? voiceOptions,
+    final List<ChatMessage>? messages,
+    final int? maxTokens,
+    final double? temperature,
+    final List<String>? stopSequences,
+    final bool? thinking,
+  }) => InferenceRequest._(
+    _buildRequestMap(
+      prompt: prompt ?? this.prompt,
+      outputSchema: outputSchema ?? this.outputSchema,
+      workingDirectory: workingDirectory ?? this.workingDirectory,
+      systemPrompt: systemPrompt ?? this.systemPrompt,
+      contextFragments: contextFragments ?? this.contextFragments,
+      metadata: metadata ?? this.metadata,
+      task: task ?? this.task,
+      audioInput: audioInput ?? this.audioInput,
+      voiceOptions: voiceOptions ?? this.voiceOptions,
+      messages: messages ?? this.messages,
+      maxTokens: maxTokens ?? this.maxTokens,
+      temperature: temperature ?? this.temperature,
+      stopSequences: stopSequences ?? this.stopSequences,
+      thinking: thinking ?? this.thinking,
+    ),
+  );
 }
 
 class InferenceResponse {

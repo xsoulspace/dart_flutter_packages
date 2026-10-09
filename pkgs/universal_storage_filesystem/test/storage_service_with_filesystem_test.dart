@@ -333,10 +333,14 @@ void main() {
       await provider1.dispose();
 
       final provider2 = await createProvider();
+      expect(await provider2.getFile(relativePath), content);
       final report2 = readRecoveryReport();
       final totals2 = Map<String, dynamic>.from(report2['totals'] as Map);
+      // The journal is truncated after a clean recovery (it holds in-flight
+      // intents only), so the second restart has nothing to skip: the
+      // replayed intent became durable state on the first restart.
       expect(totals2['replayed_operations'], 0);
-      expect(totals2['duplicate_operations_skipped'], greaterThanOrEqualTo(1));
+      expect(totals2['duplicate_operations_skipped'], 0);
       await provider2.dispose();
     });
   });

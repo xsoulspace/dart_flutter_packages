@@ -29,8 +29,9 @@ pub mod safetensors;
 
 use std::collections::HashMap;
 use std::ffi::{c_char, CStr, CString};
+use std::fs::File;
 use std::os::raw::c_int;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 
@@ -148,7 +149,20 @@ fn ok_json(value: &serde_json::Value) -> *mut c_char {
 /// MLX's own colocated search looks beside the binary containing the mlx
 /// code — which is now this cdylib — so the first candidate is usually the
 /// same file the search would find; the explicit pin keeps the fallbacks.
+///
+/// The fleet shares one load-dir filename (`mlx.metallib`) across engine
+/// packages, and more than one hook refreshes it — so the first existing
+/// candidate can be a DIFFERENT engine's kernel library (measured
+/// 2026-10-10: the Swift text lane's 2.4 MB lib under this engine's dylib
+/// → "Unable to load kernel arangeint32" at first generate). Each
+/// candidate is therefore probed for a kernel MLX itself demands before
+/// it is pinned; a miss falls through to the next candidate, and only a
+/// set with no probed match degrades to the first existing file.
 fn pin_metallib_colocated() {
+    static PINNED: std::sync::OnceLock<()> = std::sync::OnceLock::new();
+    if PINNED.get().is_some() {
+        return;
+    }
     let mut candidates: Vec<PathBuf> = Vec::new();
     if let Some(dir) = current_dylib_dir() {
         candidates.push(dir.join("mlx.metallib"));
@@ -159,11 +173,54 @@ fn pin_metallib_colocated() {
     if let Ok(home) = std::env::var("HOME") {
         candidates.push(PathBuf::from(home).join(".cache/xsoulspace/laya/native/mlx.metallib"));
     }
-    for candidate in candidates {
+    let mut pin = |candidate: &PathBuf| {
         if candidate.is_file() {
-            let _ = set_metallib_path(&candidate);
+            let _ = set_metallib_path(candidate);
+            PINNED.set(()).ok();
+            true
+        } else {
+            false
+        }
+    };
+    for candidate in &candidates {
+        if looks_like_mlx_metallib(candidate) && pin(candidate) {
             return;
         }
+    }
+    for candidate in &candidates {
+        if pin(candidate) {
+            return;
+        }
+    }
+}
+
+/// Whether the file carries MLX's kernel library: the metallib embeds its
+/// kernel names, and `arangeint32` is one MLX demands on ordinary decode
+/// paths. A cheap chunked byte scan (the full lib is ~140 MB; impostors
+/// are megabytes and lack the name).
+fn looks_like_mlx_metallib(path: &Path) -> bool {
+    use std::io::Read;
+    const NEEDLE: &[u8] = b"arangeint32";
+    const CHUNK: usize = 4 << 20;
+    let Ok(mut file) = File::open(path) else {
+        return false;
+    };
+    let mut tail: Vec<u8> = Vec::new();
+    let mut chunk = vec![0u8; CHUNK];
+    loop {
+        let read = match file.read(&mut chunk) {
+            Ok(0) => return false,
+            Ok(n) => n,
+            Err(_) => return false,
+        };
+        let mut window = std::mem::take(&mut tail);
+        window.extend_from_slice(&chunk[..read]);
+        if window.windows(NEEDLE.len()).any(|w| w == NEEDLE) {
+            return true;
+        }
+        tail = window
+            [window.len().saturating_sub(NEEDLE.len() - 1)..]
+            .to_vec();
     }
 }
 

@@ -51,6 +51,16 @@ class StorageService {
   /// {@endtemplate}
   Future<String?> readFile(final String path) => _provider.getFile(path);
 
+  /// {@template storage_service.appendFile}
+  /// Appends [content] to the file at [path], creating it when missing.
+  /// Providers with a native append write only the new bytes.
+  /// {@endtemplate}
+  Future<FileOperationResult> appendFile(
+    final String path,
+    final String content, {
+    final String? message,
+  }) => _provider.appendFile(path, content, commitMessage: message);
+
   /// {@template storage_service.removeFile}
   /// Removes file at [path]. [message] for version-controlled storage.
   /// {@endtemplate}

@@ -66,6 +66,7 @@ class FileSystemStorageProvider extends StorageProvider implements LocalEngine {
     await _ensureDurabilityDirectories();
     _checkpointCache.clear();
     _lastRecoveryReport = await _recoverFromJournal();
+    await _truncateJournalsAfterRecovery();
     _isInitialized = true;
   }
 
@@ -156,6 +157,31 @@ class FileSystemStorageProvider extends StorageProvider implements LocalEngine {
 
     final metadata = await _durableDelete(relativePath: relativePath);
     return FileOperationResult.deleted(path: fullPath, metadata: metadata);
+  });
+
+  /// Native append: O(chunk), never O(file) — see [_durableAppend]. An
+  /// empty chunk is a no-op so flush bookkeeping cannot churn the journal.
+  @override
+  Future<FileOperationResult> appendFile(
+    final String filePath,
+    final String content, {
+    final String? commitMessage,
+  }) => _enqueueMutation<FileOperationResult>(() async {
+    _ensureInitialized();
+    final relativePath = _normalizeRelativePath(filePath);
+    if (content.isEmpty) {
+      return FileOperationResult.updated(
+        path: path.join(_basePath, relativePath),
+      );
+    }
+    final metadata = await _durableAppend(
+      relativePath: relativePath,
+      chunk: content,
+    );
+    return FileOperationResult.updated(
+      path: path.join(_basePath, relativePath),
+      metadata: metadata,
+    );
   });
 
   @override
@@ -370,6 +396,79 @@ class FileSystemStorageProvider extends StorageProvider implements LocalEngine {
     };
   }
 
+  /// Durable append: writes the CHUNK to a temp file, journals it with the
+  /// target's current byte size, appends the bytes, journals the commit.
+  /// O(chunk), not O(file) — the append-mostly contract for logs and
+  /// traces. Recovery ([_recoverPreparedAppend]) replays the chunk from
+  /// the temp copy, so a crash mid-append cannot tear the file.
+  Future<Map<String, dynamic>> _durableAppend({
+    required final String relativePath,
+    required final String chunk,
+  }) async {
+    final namespace = _namespaceForPath(relativePath);
+    final checkpoint = await _loadCheckpoint(namespace);
+    final sequence = checkpoint.lastSequence + 1;
+    final operationId = _operationId(
+      namespace: namespace,
+      sequence: sequence,
+      operationType: _DurabilityOperationType.append,
+    );
+    final targetFile = File(path.join(_basePath, relativePath));
+    final appendOffset = targetFile.existsSync()
+        ? targetFile.lengthSync()
+        : 0;
+    final chunkBytes = utf8.encode(chunk);
+
+    final tempRelativePath = _tempRelativePath(
+      namespace: namespace,
+      operationId: operationId,
+    );
+    final tempFile = File(path.join(_basePath, tempRelativePath));
+    if (!tempFile.parent.existsSync()) {
+      await tempFile.parent.create(recursive: true);
+    }
+    await tempFile.writeAsBytes(chunkBytes, flush: true);
+
+    final preparedEntry = _DurabilityJournalEntry(
+      schemaVersion: _durabilitySchemaVersion,
+      namespace: namespace,
+      operationId: operationId,
+      sequence: sequence,
+      operationType: _DurabilityOperationType.append,
+      stage: _DurabilityJournalStage.prepared,
+      relativePath: relativePath,
+      timestampUtc: DateTime.now().toUtc(),
+      tempRelativePath: tempRelativePath,
+      checksum: normalizedSha256Hex(chunk),
+      appendOffset: appendOffset,
+      appendSize: chunkBytes.length,
+    );
+    await _appendJournalEntry(preparedEntry);
+
+    if (!targetFile.parent.existsSync()) {
+      await targetFile.parent.create(recursive: true);
+    }
+    await targetFile.writeAsBytes(chunkBytes, mode: FileMode.append, flush: true);
+
+    await _appendJournalEntry(
+      preparedEntry.copyWith(stage: _DurabilityJournalStage.committed),
+    );
+    final updatedCheckpoint = checkpoint.markApplied(
+      operationId: operationId,
+      sequence: sequence,
+      retainedOperationIds: _checkpointRetainedOperationIds,
+    );
+    await _persistCheckpoint(updatedCheckpoint);
+
+    return <String, dynamic>{
+      'durability_protocol': 'journal_v1',
+      'durability_namespace': namespace,
+      'durability_sequence': sequence,
+      'durability_operation_id': operationId,
+      'durability_checkpoint_sequence': updatedCheckpoint.lastSequence,
+    };
+  }
+
   Future<Map<String, dynamic>> _recoverFromJournal() async {
     final startedAt = DateTime.now().toUtc();
     final namespaceEntries = <String, List<_DurabilityJournalEntry>>{};
@@ -475,6 +574,12 @@ class FileSystemStorageProvider extends StorageProvider implements LocalEngine {
           if (recovered) {
             namespaceRecoveredDeletes++;
           }
+        } else if (prepared.operationType ==
+            _DurabilityOperationType.append) {
+          recovered = await _recoverPreparedAppend(prepared);
+          if (recovered) {
+            namespaceRecoveredWrites++;
+          }
         } else {
           recovered = await _recoverPreparedWrite(prepared);
           if (recovered) {
@@ -544,6 +649,25 @@ class FileSystemStorageProvider extends StorageProvider implements LocalEngine {
     return report;
   }
 
+  /// The journal holds IN-FLIGHT intents only; after a successful recovery
+  /// every entry left in it is committed — its effect is on disk and in the
+  /// checkpoint. Truncating keeps boot O(checkpoint) instead of re-parsing
+  /// an unbounded log forever (trace flushes append two entries per flush).
+  /// A crash after truncation and before the next write leaves an empty
+  /// journal with an intact checkpoint: recovery finds nothing to do.
+  Future<void> _truncateJournalsAfterRecovery() async {
+    final journalDirectory = Directory(_journalRootPath);
+    if (!journalDirectory.existsSync()) {
+      return;
+    }
+    final entities = await journalDirectory.list().toList();
+    for (final entity in entities.whereType<File>()) {
+      if (entity.lengthSync() > 0) {
+        await entity.writeAsString('', flush: true);
+      }
+    }
+  }
+
   Future<bool> _recoverPreparedWrite(
     final _DurabilityJournalEntry prepared,
   ) async {
@@ -584,6 +708,75 @@ class FileSystemStorageProvider extends StorageProvider implements LocalEngine {
       await targetFile.delete();
     }
     return !targetFile.existsSync();
+  }
+
+  /// Replays a prepared (uncommitted) append: truncates the target back to
+  /// the append offset and re-appends the chunk from its temp copy. A torn
+  /// partial append (crash mid-`writeAsBytes`) lands between the two, so
+  /// truncate-and-replay is the only idempotent answer. Missing temp copy
+  /// with a fully-appended file is still a success (verify the tail).
+  Future<bool> _recoverPreparedAppend(
+    final _DurabilityJournalEntry prepared,
+  ) async {
+    final targetFile = File(path.join(_basePath, prepared.relativePath));
+    final expectedEnd = prepared.appendOffset + prepared.appendSize;
+    final size = targetFile.existsSync() ? targetFile.lengthSync() : 0;
+
+    final tempPath = prepared.tempRelativePath;
+    final tempFileExists =
+        tempPath != null &&
+        tempPath.isNotEmpty &&
+        File(path.join(_basePath, tempPath)).existsSync();
+    if (!tempFileExists) {
+      // No chunk copy to replay from: success only when the append already
+      // landed whole and the tail checksum agrees.
+      if (size == expectedEnd) {
+        if (prepared.checksum.isEmpty) {
+          return true;
+        }
+        return _tailChecksum(targetFile, prepared.appendSize) ==
+            prepared.checksum;
+      }
+      return false;
+    }
+
+    if (!targetFile.parent.existsSync()) {
+      await targetFile.parent.create(recursive: true);
+    }
+    if (prepared.appendOffset > size) {
+      // The base the append was measured against is gone — unrecoverable.
+      return false;
+    }
+    final random = await targetFile.open(mode: FileMode.append);
+    try {
+      await random.truncate(prepared.appendOffset);
+      await random.setPosition(prepared.appendOffset);
+      await random.writeFrom(
+        File(path.join(_basePath, tempPath)).readAsBytesSync(),
+      );
+      await random.flush();
+    } finally {
+      await random.close();
+    }
+    if (targetFile.lengthSync() != expectedEnd) {
+      return false;
+    }
+    if (prepared.checksum.isEmpty) {
+      return true;
+    }
+    return _tailChecksum(targetFile, prepared.appendSize) == prepared.checksum;
+  }
+
+  /// SHA-256 hex of the last [byteCount] bytes of [file], UTF-8 decoded.
+  String _tailChecksum(final File file, final int byteCount) {
+    final random = file.openSync();
+    try {
+      random.setPositionSync(file.lengthSync() - byteCount);
+      final bytes = random.readSync(byteCount);
+      return normalizedSha256Hex(utf8.decode(bytes));
+    } finally {
+      random.closeSync();
+    }
   }
 
   Future<_DurabilityCheckpoint> _loadCheckpoint(final String namespace) async {
@@ -737,7 +930,7 @@ class FileSystemStorageProvider extends StorageProvider implements LocalEngine {
   };
 }
 
-enum _DurabilityOperationType { create, update, delete }
+enum _DurabilityOperationType { create, update, delete, append }
 
 enum _DurabilityJournalStage { prepared, committed }
 
@@ -754,6 +947,8 @@ final class _DurabilityJournalEntry {
     this.tempRelativePath,
     this.checksum = '',
     this.recovered = false,
+    this.appendOffset = 0,
+    this.appendSize = 0,
   });
 
   static _DurabilityJournalEntry? tryParse(final String jsonLine) {
@@ -809,6 +1004,10 @@ final class _DurabilityJournalEntry {
         tempRelativePath: json['temp_relative_path']?.toString(),
         checksum: (json['checksum'] ?? '').toString(),
         recovered: json['recovered'] == true,
+        appendOffset: json['append_offset'] is int
+            ? json['append_offset'] as int
+            : 0,
+        appendSize: json['append_size'] is int ? json['append_size'] as int : 0,
       );
     } on FormatException {
       return null;
@@ -827,6 +1026,11 @@ final class _DurabilityJournalEntry {
   final String checksum;
   final bool recovered;
 
+  /// Append operations only: target byte size BEFORE the chunk, and the
+  /// chunk's byte size. Recovery truncates to [appendOffset] and replays.
+  final int appendOffset;
+  final int appendSize;
+
   _DurabilityJournalEntry copyWith({
     final _DurabilityJournalStage? stage,
     final bool? recovered,
@@ -842,6 +1046,8 @@ final class _DurabilityJournalEntry {
     tempRelativePath: tempRelativePath,
     checksum: checksum,
     recovered: recovered ?? this.recovered,
+    appendOffset: appendOffset,
+    appendSize: appendSize,
   );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
@@ -856,6 +1062,10 @@ final class _DurabilityJournalEntry {
     if (tempRelativePath != null) 'temp_relative_path': tempRelativePath,
     'checksum': checksum,
     'recovered': recovered,
+    if (operationType == _DurabilityOperationType.append) ...<String, dynamic>{
+      'append_offset': appendOffset,
+      'append_size': appendSize,
+    },
   };
 }
 

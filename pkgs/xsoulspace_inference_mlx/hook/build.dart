@@ -153,6 +153,11 @@ void main(List<String> args) async {
 
     // Refresh the resolving workspace's `.dart_tool/lib` (the dlopen-
     // preferred candidate the pipeline populates with registered files).
+    // ADR 0060: the metallib is NOT refreshed here — this engine's kernel
+    // library and the native engine's share the `mlx.metallib` filename in
+    // the shared load dir, and last-writer-wins produced a crossed pair
+    // (Rust dylib + this 2.4 MB lib) that failed at kernel-launch time.
+    // The Swift bench resolves through its own cache dir instead.
     Directory? dartTool;
     var dir = input.outputDirectory.toFilePath();
     while (dir != Directory(dir).parent.path) {
@@ -170,9 +175,13 @@ void main(List<String> args) async {
       if (!loadDir.existsSync()) {
         loadDir.createSync(recursive: true);
       }
+      final isSharedDartToolLib =
+          dartTool != null && loadDir.path == '${dartTool.path}/lib';
       for (final source in [
         if (buildCode) bundledDylib,
-        if (metallibReady) bundledMetallib,
+        // The shared load dir never sees this engine's metallib (ADR 0060);
+        // the fleet cache keeps it for the bench lanes.
+        if (metallibReady && !isSharedDartToolLib) bundledMetallib,
       ]) {
         final name = source.split('/').last;
         final temp =
