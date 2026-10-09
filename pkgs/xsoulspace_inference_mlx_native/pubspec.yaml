@@ -20,6 +20,10 @@ dependencies:
   ffi: ^2.2.0
   hooks: any
   http: ^1.6.0
+  # The unified provider interface (ADR 0058): the engine host implements
+  # InferenceClient directly — the provider-implements-core convention.
+  xsoulspace_inference_core:
+    path: ../xsoulspace_inference_core
   # The chat servers and the decision server compose the shared loopback
   # wire skeleton (process lifecycle, health-gated runtime, wire-server
   # plumbing); the engine host composes it instead of owning a private
