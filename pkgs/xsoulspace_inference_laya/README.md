@@ -52,9 +52,9 @@ cycle (the R2 shim), so existing
 `package:xsoulspace_inference_laya/xsoulspace_inference_laya.dart` imports —
 including the harness's `laya_binding` — keep compiling unchanged; R3 drops
 the shim and consumers import the engine package directly. The native
-engine registers as
-`package:xsoulspace_inference_mlx_native/laya_native` (the crate/dylib base
-name `laya_native` stays this rung — recorded debt).
+engine registers as `package:xsoulspace_inference_mlx_native/mlx_native`
+(crate `native/mlx_native`, dylib `libmlx_native.dylib` — the assetId debt
+was resolved right after the split, ADR 0057).
 
 The daemon (`harnessd` in ecsai_harness) serves the native laya engine by
 default on a loopback decision server; `HARNESS_LAYA_ENGINE=off` reverts to
