@@ -274,6 +274,11 @@ final class LayaQwenChatServer {
       ];
       final prompt = renderQwenChatPrompt(
         messages: rendered,
+        // OpenAI-style tool schemas render into the `# Tools` system block
+        // (fixture-gated, ADR 0058 tools rung).
+        tools: body['tools'] is List && (body['tools'] as List).isNotEmpty
+            ? (body['tools'] as List).toList()
+            : null,
         enableThinking: thinking,
       );
       final requested = body['max_tokens'];

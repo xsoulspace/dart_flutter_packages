@@ -24,15 +24,20 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:xsoulspace_inference_mlx_native/xsoulspace_inference_mlx_native.dart';
 
-const _lanes = ['chat', 'decompression', 'swe', 'laya'];
+const _lanes = ['chat', 'decompression', 'swe', 'tools', 'laya'];
+
+/// The cast budget switches, set by main() before lanes run (the lane
+/// runners read them via [_budgetFor]).
+var thinking = false;
+var lfm26bThinking = false;
 
 void main(final List<String> args) async {
   String? endpointArg;
   String? inProcess;
   var raw = false;
-  var thinking = false;
   String? qwenSnapshot;
   String? lfmSnapshot;
+  var lfm26b = false;
   var lanes = _lanes.toList();
   var outDir = 'bench';
   for (var i = 0; i < args.length; i++) {
@@ -49,6 +54,11 @@ void main(final List<String> args) async {
         qwenSnapshot = args[++i];
       case '--lfm-snapshot':
         lfmSnapshot = args[++i];
+      case '--lfm-26b':
+        lfm26b = true;
+        // The 2.6B variant always reasons (think-open generation prompt);
+        // its cast budget law follows automatically.
+        lfm26bThinking = true;
       case '--lane':
         lanes = args[++i].split(',');
       case '--out':
@@ -88,7 +98,8 @@ void main(final List<String> args) async {
   } else if (inProcess == 'qwen' || inProcess == 'lfm2') {
     if (thinking && inProcess != 'qwen') {
       _fail('--thinking applies to qwen only (LFM2.5-Instruct ships no '
-          'thinking switch — recorded non-claim)');
+          'thinking switch — recorded non-claim; --lfm-26b carries its own '
+          'reasoning budget automatically)');
     }
     if (inProcess == 'qwen') {
       server = LayaQwenChatServer(
@@ -100,12 +111,17 @@ void main(final List<String> args) async {
       server = LayaLfm2ChatServer(
         engine: await NativeLfm2TextEngine.load(snapshotDir: lfmSnapshot),
         useTemplate: !raw,
+        variant: lfm26b
+            ? Lfm2ChatTemplateVariant.lfm25_26b
+            : Lfm2ChatTemplateVariant.lfm25_12b,
+        model: lfm26b ? 'lfm2.5-2.6b-mlx-4bit' : 'lfm2.5-1.2b-instruct-mlx-4bit',
       );
     }
     await server.start();
     base = server.url;
     stderr.writeln(
-      'in-process native line ($inProcess, template${raw ? ' off' : ''}'
+      'in-process native line ($inProcess${lfm26b ? '-2.6b' : ''}, '
+      'template${raw ? ' off' : ''}'
       '${thinking ? ', thinking' : ''}) at ${server.url}',
     );
   } else {
@@ -133,6 +149,7 @@ void main(final List<String> args) async {
           'chat' => await _runChat(base, spec, thinking),
           'decompression' => await _runDecompression(base, spec, thinking),
           'swe' => await _runSwe(base, spec, thinking),
+          'tools' => await _runTools(base, spec, thinking),
           'laya' => await _runLaya(),
           _ => throw StateError('unreachable'),
         },
@@ -179,11 +196,23 @@ Never _fail(final String message) {
 
 // ---- one completion over the OpenAI-compatible wire ----
 
+/// The generation budget for one case. The lfm25-26b variant ALWAYS
+/// reasons before its answer (the template opens the think block), so its
+/// cast carries its own measured budget: 5× the case cap, floored at 384
+/// tokens (measured 2026-10-09: the 2.6B's reasoning alone exceeds 3× on
+/// the decompression records; with 400 it closes and answers cleanly).
+/// Qwen3's `--thinking` keeps its ×3 (the recorded thinking cells).
+int _budgetFor(final int base) =>
+    lfm26bThinking
+        ? (base * 5).clamp(384, 1 << 31)
+        : (thinking ? base * 3 : base);
+
 Future<_Completion> _complete(
   final Uri base,
   final List<Map<String, String>> messages,
-  final int maxTokens,
-) async {
+  final int maxTokens, {
+  final List<Object?>? tools,
+}) async {
   final t0 = DateTime.now();
   final reply = await http.post(
     base.replace(path: '/v1/chat/completions'),
@@ -193,6 +222,7 @@ Future<_Completion> _complete(
       'messages': messages,
       'max_tokens': maxTokens,
       'temperature': 0,
+      'tools': ?tools,
     }),
   );
   final wall = DateTime.now().difference(t0);
@@ -310,7 +340,7 @@ Future<_LaneResult> _runChat(
             'content': m['content'] as String,
           },
       ],
-      (c['max_tokens'] as int) * (thinking ? 3 : 1),
+      _budgetFor(c['max_tokens'] as int),
     );
     final check = _checkContains(c, _Completion(
       text: _answerOf(completion.text),
@@ -345,7 +375,7 @@ Future<_LaneResult> _runDecompression(
             'Summarize this memory record as ONE line of at most $cap bytes '
             '(keep the key facts and names):\n${c['record']}\nOne line:',
       },
-    ], (c['max_tokens'] as int) * (thinking ? 3 : 1));
+    ], _budgetFor(c['max_tokens'] as int));
     final text = _answerOf(completion.text);
     final bytes = utf8.encode(text).length;
     final oneLine = !text.contains('\n');
@@ -380,7 +410,7 @@ Future<_LaneResult> _runSwe(
     final c = raw as Map<String, dynamic>;
     final completion = await _complete(base, [
       {'role': 'user', 'content': c['prompt'] as String},
-    ], 256 * (thinking ? 3 : 1));
+    ], _budgetFor(256));
     final sweText = _answerOf(completion.text);
     final code = _extractDart(sweText);
     if (code == null) {
@@ -407,6 +437,192 @@ Future<_LaneResult> _runSwe(
     ));
   }
   return _LaneResult('swe', cases);
+}
+
+/// The tools lane (ADR 0058 tools rung): the model must emit its tool
+/// call in the checkpoint's own textual format. The checker is
+/// format-tolerant (Qwen3 `<tool_call>{json}</tool_call>`, Liquid
+/// `<|tool_call_start|>…<|tool_call_end|>`, bare JSON objects) and
+/// strict on semantics: the called name must equal the expected tool and
+/// every expected argument must match. A `call_tool: false` case fails
+/// when the model invents a call.
+Future<_LaneResult> _runTools(
+  final Uri base,
+  final Map<String, dynamic> spec,
+  final bool thinking,
+) async {
+  final cases = <_CaseResult>[];
+  for (final raw in spec['cases'] as List) {
+    final c = raw as Map<String, dynamic>;
+    final completion = await _complete(
+      base,
+      [
+        for (final m in c['messages'] as List)
+          {
+            'role': (m as Map)['role'] as String,
+            'content': m['content'] as String,
+          },
+      ],
+      _budgetFor(c['max_tokens'] as int),
+      tools: (c['tools'] as List?)?.toList(),
+    );
+    final text = completion.text;
+    final reasons = <String>[if (completion.error != null) completion.error!];
+    final wantTool = c['call_tool'] == false ? null : c['expect_tool'] as String;
+    final calls = _extractToolCalls(text);
+    if (wantTool == null) {
+      if (calls.isNotEmpty) {
+        reasons.add('expected no tool call, found ${calls.map((c) => c.name)}');
+      }
+    } else {
+      if (calls.isEmpty) {
+        reasons.add('no tool call found in output: <${text.trim()}>');
+      } else if (!calls.any((final call) => call.name == wantTool)) {
+        reasons.add(
+          'called ${calls.map((c) => c.name)} != expected $wantTool',
+        );
+      } else {
+        final call = calls.firstWhere((final call) => call.name == wantTool);
+        for (final entry in (c['expect_args'] as Map?)?.entries ??
+            const Iterable<MapEntry<dynamic, dynamic>>.empty()) {
+          final key = '${entry.key}';
+          final got = call.args[key];
+          final want = '${entry.value}';
+          if (got == null) {
+            reasons.add('missing argument $key');
+          } else if ('${got is num ? numToCompact(got) : got}' != want &&
+              '$got' != want) {
+            reasons.add('argument $key = $got != $want');
+          }
+        }
+      }
+    }
+    cases.add(_CaseResult(
+      id: c['id'] as String,
+      ok: reasons.isEmpty,
+      wallMs: completion.wall.inMilliseconds.toDouble(),
+      tokS: completion.tokS,
+      reason: reasons.isEmpty ? null : reasons.join('; '),
+    ));
+  }
+  return _LaneResult('tools', cases);
+}
+
+String numToCompact(final num n) =>
+    n is int ? '$n' : n.toStringAsFixed(0).replaceAll(RegExp(r'\.0$'), '');
+
+class _ToolCall {
+  _ToolCall(this.name, this.args);
+  final String name;
+  final Map<String, dynamic> args;
+}
+
+/// Pulls tool calls out of a completion in any of the shapes the local
+/// checkpoints emit: `<tool_call>{json}</tool_call>` (Qwen3),
+/// `<|tool_call_start|>[…]<|tool_call_end|>` (Liquid, python-repr or
+/// JSON), or a bare JSON object with name+arguments.
+List<_ToolCall> _extractToolCalls(final String text) {
+  final calls = <_ToolCall>[];
+  // End tags are optional in the match: a budget-capped completion may
+  // stop right after the call (measured on the 2.6B).
+  final block = RegExp(
+    r'<tool_call>\s*([\s\S]*?)\s*(?:</tool_call>|$)|'
+    r'<\|tool_call_start\|>\s*([\s\S]*?)\s*(?:<\|tool_call_end\|>|$)',
+  );
+  for (final m in block.allMatches(text)) {
+    final payload = (m.group(1) ?? m.group(2) ?? '').trim();
+    final call = _parseCallPayload(payload) ?? _scanCallName(payload);
+    if (call != null) calls.add(call);
+  }
+  if (calls.isEmpty) {
+    // Bare JSON object (no wrapper tags).
+    final brace = text.indexOf('{');
+    if (brace >= 0) {
+      final call = _parseCallPayload(text.substring(brace).trim());
+      if (call != null) calls.add(call);
+    }
+  }
+  return calls;
+}
+
+_ToolCall? _parseCallPayload(final String payload) {
+  for (final candidate in _jsonCandidates(payload)) {
+    try {
+      final decoded = jsonDecode(candidate);
+      if (decoded is List) {
+        for (final element in decoded) {
+          if (element is Map && element['name'] is String) {
+            return _ToolCall(
+              element['name'] as String,
+              element['arguments'] is Map
+                  ? (element['arguments'] as Map).cast<String, dynamic>()
+                  : const {},
+            );
+          }
+        }
+      } else if (decoded is Map && decoded['name'] is String) {
+        return _ToolCall(
+          decoded['name'] as String,
+          decoded['arguments'] is Map
+              ? (decoded['arguments'] as Map).cast<String, dynamic>()
+              : const {},
+        );
+      }
+    } on FormatException {
+      continue;
+    }
+  }
+  return _parseSignatureCall(payload);
+}
+
+/// The Liquid/LFM2.5 shape (measured 2026-10-09): a function-signature
+/// call — `[get_weather(city="Tokyo")]` or
+/// `get_weather(city="Tokyo", unit="celsius")`. Values are quoted
+/// strings, numbers, or True/False/None.
+_ToolCall? _parseSignatureCall(final String payload) {
+  var body = payload.trim();
+  // The measured Liquid shape wraps the call in a list: [name(args)].
+  if (body.startsWith('[') && body.endsWith(']')) {
+    body = body.substring(1, body.length - 1).trim();
+  }
+  final head = RegExp(r'([A-Za-z0-9_]+)\s*\(([\s\S]*)\)\s*$').firstMatch(body);
+  if (head == null) return null;
+  final args = <String, dynamic>{};
+  final pair = RegExp(
+    r'''([A-Za-z0-9_]+)\s*=\s*("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|-?\d+(?:\.\d+)?|True|False|None)''',
+  );
+  for (final m in pair.allMatches(head.group(2)!)) {
+    final rawValue = m.group(2)!;
+    Object? value;
+    if (rawValue.startsWith('"') || rawValue.startsWith("'")) {
+      value = rawValue.substring(1, rawValue.length - 1);
+    } else if (rawValue == 'True' || rawValue == 'False') {
+      value = rawValue == 'True';
+    } else if (rawValue == 'None') {
+      value = null;
+    } else {
+      value = num.tryParse(rawValue) ?? rawValue;
+    }
+    args[m.group(1)!] = value;
+  }
+  return _ToolCall(head.group(1)!, args);
+}
+
+/// JSON, then a python-repr normalisation (Liquid models may emit
+/// single-quoted dicts: `{'name': 'x', 'arguments': {'k': 'v'}}`).
+Iterable<String> _jsonCandidates(final String payload) sync* {
+  yield payload;
+  yield payload.replaceAll("'", '"');
+}
+
+/// Last resort: a name-shaped `"name": "x"` / `'name': 'x'` anywhere in
+/// the payload, no argument extraction.
+_ToolCall? _scanCallName(final String payload) {
+  final m =
+      RegExp(r'''["']name["']\s*:\s*["']([A-Za-z0-9_]+)["']''').firstMatch(
+    payload,
+  );
+  return m == null ? null : _ToolCall(m.group(1)!, const {});
 }
 
 /// Fenced block first, else the raw text (the model was told function-only).

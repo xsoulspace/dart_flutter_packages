@@ -1,50 +1,262 @@
 {
-  "snapshot": "/Users/antonio/.cache/huggingface/hub/models--mlx-community--Qwen3-0.6B-4bit/snapshots/73e3e38d981303bc594367cd910ea6eb48349da8",
-  "recorded": "2026-10-09",
-  "tool": "~/.venvs/mlx-ref/bin/python transformers AutoTokenizer.apply_chat_template(tokenize=False, add_generation_prompt=True, enable_thinking=False)",
-  "note": "Reference renders for the hand renderer's SUPPORTED SUBSET (no tools, string contents, enable_thinking=false). Byte-exact pins; provenance machine-local.",
-  "cases": [
+ "snapshot": "/Users/antonio/.cache/huggingface/hub/models--mlx-community--Qwen3-0.6B-4bit/snapshots/73e3e38d981303bc594367cd910ea6eb48349da8",
+ "recorded": "2026-10-09",
+ "tool": "~/.venvs/mlx-ref/bin/python transformers AutoTokenizer.apply_chat_template(tokenize=False, add_generation_prompt=True, enable_thinking=False)",
+ "note": "Reference renders for the hand renderer's SUPPORTED SUBSET (no tools, string contents, enable_thinking=false). Byte-exact pins; provenance machine-local. | tools cases added 2026-10-09 (ADR 0058): system # Tools block, json.dumps(ensure_ascii=False) tool lines, tool-role -> user <tool_response> wrapper (non-consecutive single tool turns), assistant <tool_call> history plain.",
+ "cases": [
+  {
+   "id": "system-user",
+   "messages": [
     {
-      "id": "system-user",
-      "messages": [
-        {
-          "role": "system",
-          "content": "You are a terse assistant. Answer in one sentence."
-        },
-        {
-          "role": "user",
-          "content": "What is a search algorithm?"
-        }
-      ],
-      "rendered": "<|im_start|>system\nYou are a terse assistant. Answer in one sentence.<|im_end|>\n<|im_start|>user\nWhat is a search algorithm?<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"
+     "role": "system",
+     "content": "You are a terse assistant. Answer in one sentence."
     },
     {
-      "id": "think-strip-multi-turn",
-      "messages": [
-        {
-          "role": "user",
-          "content": "My name is Antonia and I work on compilers. Just say hello."
-        },
-        {
-          "role": "assistant",
-          "content": "<think>\nuser wants a greeting\n</think>\n\nHello, Antonia!"
-        },
-        {
-          "role": "user",
-          "content": "What is my name and what do I work on?"
-        }
-      ],
-      "rendered": "<|im_start|>user\nMy name is Antonia and I work on compilers. Just say hello.<|im_end|>\n<|im_start|>assistant\nHello, Antonia!<|im_end|>\n<|im_start|>user\nWhat is my name and what do I work on?<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"
-    },
-    {
-      "id": "user-only",
-      "messages": [
-        {
-          "role": "user",
-          "content": "How many days are in a leap year? Answer with just the number."
-        }
-      ],
-      "rendered": "<|im_start|>user\nHow many days are in a leap year? Answer with just the number.<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"
+     "role": "user",
+     "content": "What is a search algorithm?"
     }
-  ]
+   ],
+   "rendered": "<|im_start|>system\nYou are a terse assistant. Answer in one sentence.<|im_end|>\n<|im_start|>user\nWhat is a search algorithm?<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"
+  },
+  {
+   "id": "think-strip-multi-turn",
+   "messages": [
+    {
+     "role": "user",
+     "content": "My name is Antonia and I work on compilers. Just say hello."
+    },
+    {
+     "role": "assistant",
+     "content": "<think>\nuser wants a greeting\n</think>\n\nHello, Antonia!"
+    },
+    {
+     "role": "user",
+     "content": "What is my name and what do I work on?"
+    }
+   ],
+   "rendered": "<|im_start|>user\nMy name is Antonia and I work on compilers. Just say hello.<|im_end|>\n<|im_start|>assistant\nHello, Antonia!<|im_end|>\n<|im_start|>user\nWhat is my name and what do I work on?<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"
+  },
+  {
+   "id": "user-only",
+   "messages": [
+    {
+     "role": "user",
+     "content": "How many days are in a leap year? Answer with just the number."
+    }
+   ],
+   "rendered": "<|im_start|>user\nHow many days are in a leap year? Answer with just the number.<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"
+  },
+  {
+   "id": "tools-user-only",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Tokyo?"
+    }
+   ],
+   "tools": [
+    {
+     "type": "function",
+     "function": {
+      "name": "get_weather",
+      "description": "Look up current weather for a city",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "city": {
+         "type": "string",
+         "description": "City name"
+        },
+        "unit": {
+         "type": "string",
+         "enum": [
+          "celsius",
+          "fahrenheit"
+         ]
+        }
+       },
+       "required": [
+        "city"
+       ]
+      }
+     }
+    },
+    {
+     "type": "function",
+     "function": {
+      "name": "read_file",
+      "description": "Read a file from the workspace",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "path": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "path"
+       ]
+      }
+     }
+    }
+   ],
+   "enable_thinking": false,
+   "rendered": "<|im_start|>system\n# Tools\n\nYou may call one or more functions to assist with the user query.\n\nYou are provided with function signatures within <tools></tools> XML tags:\n<tools>\n{\"type\": \"function\", \"function\": {\"name\": \"get_weather\", \"description\": \"Look up current weather for a city\", \"parameters\": {\"type\": \"object\", \"properties\": {\"city\": {\"type\": \"string\", \"description\": \"City name\"}, \"unit\": {\"type\": \"string\", \"enum\": [\"celsius\", \"fahrenheit\"]}}, \"required\": [\"city\"]}}}\n{\"type\": \"function\", \"function\": {\"name\": \"read_file\", \"description\": \"Read a file from the workspace\", \"parameters\": {\"type\": \"object\", \"properties\": {\"path\": {\"type\": \"string\"}}, \"required\": [\"path\"]}}}\n</tools>\n\nFor each function call, return a json object with function name and arguments within <tool_call></tool_call> XML tags:\n<tool_call>\n{\"name\": <function-name>, \"arguments\": <args-json-object>}\n</tool_call><|im_end|>\n<|im_start|>user\nWhat is the weather in Tokyo?<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"
+  },
+  {
+   "id": "tools-with-system",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are a helpful assistant."
+    },
+    {
+     "role": "user",
+     "content": "Read /etc/hosts for me."
+    }
+   ],
+   "tools": [
+    {
+     "type": "function",
+     "function": {
+      "name": "get_weather",
+      "description": "Look up current weather for a city",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "city": {
+         "type": "string",
+         "description": "City name"
+        },
+        "unit": {
+         "type": "string",
+         "enum": [
+          "celsius",
+          "fahrenheit"
+         ]
+        }
+       },
+       "required": [
+        "city"
+       ]
+      }
+     }
+    },
+    {
+     "type": "function",
+     "function": {
+      "name": "read_file",
+      "description": "Read a file from the workspace",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "path": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "path"
+       ]
+      }
+     }
+    }
+   ],
+   "enable_thinking": false,
+   "rendered": "<|im_start|>system\nYou are a helpful assistant.\n\n# Tools\n\nYou may call one or more functions to assist with the user query.\n\nYou are provided with function signatures within <tools></tools> XML tags:\n<tools>\n{\"type\": \"function\", \"function\": {\"name\": \"get_weather\", \"description\": \"Look up current weather for a city\", \"parameters\": {\"type\": \"object\", \"properties\": {\"city\": {\"type\": \"string\", \"description\": \"City name\"}, \"unit\": {\"type\": \"string\", \"enum\": [\"celsius\", \"fahrenheit\"]}}, \"required\": [\"city\"]}}}\n{\"type\": \"function\", \"function\": {\"name\": \"read_file\", \"description\": \"Read a file from the workspace\", \"parameters\": {\"type\": \"object\", \"properties\": {\"path\": {\"type\": \"string\"}}, \"required\": [\"path\"]}}}\n</tools>\n\nFor each function call, return a json object with function name and arguments within <tool_call></tool_call> XML tags:\n<tool_call>\n{\"name\": <function-name>, \"arguments\": <args-json-object>}\n</tool_call><|im_end|>\n<|im_start|>user\nRead /etc/hosts for me.<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"
+  },
+  {
+   "id": "tools-assistant-call-history",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Tokyo?"
+    },
+    {
+     "role": "assistant",
+     "content": "<tool_call>\n{\"name\": \"get_weather\", \"arguments\": {\"city\": \"Tokyo\", \"unit\": \"celsius\"}}\n</tool_call>"
+    },
+    {
+     "role": "tool",
+     "content": "{\"temp_c\": 18, \"sky\": \"clear\"}"
+    },
+    {
+     "role": "user",
+     "content": "Now what about Osaka?"
+    }
+   ],
+   "tools": [
+    {
+     "type": "function",
+     "function": {
+      "name": "get_weather",
+      "description": "Look up current weather for a city",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "city": {
+         "type": "string",
+         "description": "City name"
+        },
+        "unit": {
+         "type": "string",
+         "enum": [
+          "celsius",
+          "fahrenheit"
+         ]
+        }
+       },
+       "required": [
+        "city"
+       ]
+      }
+     }
+    },
+    {
+     "type": "function",
+     "function": {
+      "name": "read_file",
+      "description": "Read a file from the workspace",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "path": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "path"
+       ]
+      }
+     }
+    }
+   ],
+   "enable_thinking": false,
+   "rendered": "<|im_start|>system\n# Tools\n\nYou may call one or more functions to assist with the user query.\n\nYou are provided with function signatures within <tools></tools> XML tags:\n<tools>\n{\"type\": \"function\", \"function\": {\"name\": \"get_weather\", \"description\": \"Look up current weather for a city\", \"parameters\": {\"type\": \"object\", \"properties\": {\"city\": {\"type\": \"string\", \"description\": \"City name\"}, \"unit\": {\"type\": \"string\", \"enum\": [\"celsius\", \"fahrenheit\"]}}, \"required\": [\"city\"]}}}\n{\"type\": \"function\", \"function\": {\"name\": \"read_file\", \"description\": \"Read a file from the workspace\", \"parameters\": {\"type\": \"object\", \"properties\": {\"path\": {\"type\": \"string\"}}, \"required\": [\"path\"]}}}\n</tools>\n\nFor each function call, return a json object with function name and arguments within <tool_call></tool_call> XML tags:\n<tool_call>\n{\"name\": <function-name>, \"arguments\": <args-json-object>}\n</tool_call><|im_end|>\n<|im_start|>user\nWhat is the weather in Tokyo?<|im_end|>\n<|im_start|>assistant\n<tool_call>\n{\"name\": \"get_weather\", \"arguments\": {\"city\": \"Tokyo\", \"unit\": \"celsius\"}}\n</tool_call><|im_end|>\n<|im_start|>user\n<tool_response>\n{\"temp_c\": 18, \"sky\": \"clear\"}\n</tool_response><|im_end|>\n<|im_start|>user\nNow what about Osaka?<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"
+  },
+  {
+   "id": "tools-non-ascii",
+   "messages": [
+    {
+     "role": "user",
+     "content": "hi"
+    }
+   ],
+   "tools": [
+    {
+     "type": "function",
+     "function": {
+      "name": "t",
+      "description": "Gr\u00fc\u00dfe + \u4e2d\u6587",
+      "parameters": {
+       "type": "object",
+       "properties": {}
+      },
+      "required": []
+     }
+    }
+   ],
+   "enable_thinking": false,
+   "rendered": "<|im_start|>system\n# Tools\n\nYou may call one or more functions to assist with the user query.\n\nYou are provided with function signatures within <tools></tools> XML tags:\n<tools>\n{\"type\": \"function\", \"function\": {\"name\": \"t\", \"description\": \"Gr\u00fc\u00dfe + \u4e2d\u6587\", \"parameters\": {\"type\": \"object\", \"properties\": {}}, \"required\": []}}\n</tools>\n\nFor each function call, return a json object with function name and arguments within <tool_call></tool_call> XML tags:\n<tool_call>\n{\"name\": <function-name>, \"arguments\": <args-json-object>}\n</tool_call><|im_end|>\n<|im_start|>user\nhi<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"
+  }
+ ]
 }

@@ -26,7 +26,14 @@ void main() {
             content: m['content'] as String,
           ),
       ];
-      final rendered = renderQwenChatPrompt(messages: messages);
+      final tools = c['tools'] is List && (c['tools'] as List).isNotEmpty
+          ? (c['tools'] as List).toList()
+          : null;
+      final rendered = renderQwenChatPrompt(
+        messages: messages,
+        tools: tools,
+        enableThinking: c['enable_thinking'] as bool? ?? false,
+      );
       expect(
         rendered,
         c['rendered'] as String,

@@ -1,0 +1,67 @@
+{
+  "note": "tools lane (ADR 0058 tools rung): can the cast emit its checkpoint-format tool call? Checker = called-name equality + argument match; the no-tool case fails on any invented call. Deterministic, no LLM judge.",
+  "cases": [
+    {
+      "id": "weather-city",
+      "messages": [
+        {"role": "user", "content": "What is the weather in Tokyo right now?"}
+      ],
+      "tools": [
+        {"type": "function", "function": {"name": "get_weather", "description": "Look up current weather for a city", "parameters": {"type": "object", "properties": {"city": {"type": "string", "description": "City name"}, "unit": {"type": "string", "enum": ["celsius", "fahrenheit"]}}, "required": ["city"]}}}
+      ],
+      "max_tokens": 96,
+      "expect_tool": "get_weather",
+      "expect_args": {"city": "Tokyo"}
+    },
+    {
+      "id": "read-file",
+      "messages": [
+        {"role": "user", "content": "Please read the file /etc/hosts for me."}
+      ],
+      "tools": [
+        {"type": "function", "function": {"name": "read_file", "description": "Read a file from the workspace", "parameters": {"type": "object", "properties": {"path": {"type": "string", "description": "Absolute file path"}}, "required": ["path"]}}},
+        {"type": "function", "function": {"name": "write_file", "description": "Write content to a file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}, "required": ["path", "content"]}}}
+      ],
+      "max_tokens": 96,
+      "expect_tool": "read_file",
+      "expect_args": {"path": "/etc/hosts"}
+    },
+    {
+      "id": "add-numbers",
+      "messages": [
+        {"role": "user", "content": "Use the calculator to compute 17 + 25."}
+      ],
+      "tools": [
+        {"type": "function", "function": {"name": "calculator_add", "description": "Add two integers", "parameters": {"type": "object", "properties": {"a": {"type": "integer"}, "b": {"type": "integer"}}, "required": ["a", "b"]}}}
+      ],
+      "max_tokens": 96,
+      "expect_tool": "calculator_add",
+      "expect_args": {"a": "17", "b": "25"}
+    },
+    {
+      "id": "pick-among-three",
+      "messages": [
+        {"role": "user", "content": "Search the web for the release notes of MLX 0.32."}
+      ],
+      "tools": [
+        {"type": "function", "function": {"name": "web_search", "description": "Search the web for a query", "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}}},
+        {"type": "function", "function": {"name": "delete_file", "description": "Delete a file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}},
+        {"type": "function", "function": {"name": "run_tests", "description": "Run the test suite", "parameters": {"type": "object", "properties": {"filter": {"type": "string"}}, "required": []}}}
+      ],
+      "max_tokens": 96,
+      "expect_tool": "web_search",
+      "expect_args": {}
+    },
+    {
+      "id": "no-tool-needed",
+      "call_tool": false,
+      "messages": [
+        {"role": "user", "content": "What is 12 times 12? Answer directly, do not call any tool."}
+      ],
+      "tools": [
+        {"type": "function", "function": {"name": "calculator_add", "description": "Add two integers", "parameters": {"type": "object", "properties": {"a": {"type": "integer"}, "b": {"type": "integer"}}, "required": ["a", "b"]}}}
+      ],
+      "max_tokens": 48
+    }
+  ]
+}
