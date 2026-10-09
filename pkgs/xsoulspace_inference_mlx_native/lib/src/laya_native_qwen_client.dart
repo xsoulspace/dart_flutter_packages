@@ -187,6 +187,13 @@ final class NativeQwenTextEngine {
 /// so the message contents are concatenated in order (role prefixes for
 /// non-user turns) as the prompt. Generation is identical to the tested
 /// parity path; a chat template layer would be additive.
+/// The chat wire's answer text: the native EOS stop emits the EOS token
+/// itself (HF convention); its literal must not ride the wire.
+String _qwenWireText(final String text) => text
+    .replaceAll(RegExp(r'<\|im_end\|>$'), '')
+    .replaceAll(RegExp(r'<\|endoftext\|>$'), '')
+    .trim();
+
 final class LayaQwenChatServer {
   LayaQwenChatServer({
     required NativeQwenTextEngine engine,
@@ -321,7 +328,9 @@ final class LayaQwenChatServer {
         'finish_reason': 'stop',
         'message': <String, Object?>{
           'role': 'assistant',
-          'content': completion.text,
+          // Template mode stopped at EOS natively; the emitted EOS
+          // token's literal must not ride the wire answer.
+          'content': _qwenWireText(completion.text),
         },
       },
     ],

@@ -195,10 +195,14 @@ void main() {
     expect(usage['completion_tokens'], lessThanOrEqualTo(maxTokens));
     if ((usage['completion_tokens'] as int) < maxTokens) {
       // Generation ended before the cap — the only way the opt-in stop
-      // allows that is the EOS break, so the emitted eos literal must
-      // terminate the decoded text.
-      expect(content.endsWith('<|im_end|>'), isTrue,
-          reason: 'early wire completion must end at the im_end stop');
+      // allows that is the EOS break. The wire contract: the server
+      // answers CLEAN content (finish_reason 'stop' is the stop
+      // evidence; the engine-level test above pins the emit-then-stop
+      // behavior, literal included).
+      expect(body['choices'][0]['finish_reason'], 'stop',
+          reason: 'early stop must surface as finish_reason stop');
+      expect(content.endsWith('<|im_end|>'), isFalse,
+          reason: 'wire content must not carry the eos literal');
     }
   }, timeout: const Timeout(Duration(minutes: 5)));
 }

@@ -24,6 +24,8 @@ Future<void> main(final List<String> args) async {
       engine = arg.split('=').last;
     } else if (arg.startsWith('--port=')) {
       port = int.parse(arg.split('=').last);
+    } else if (arg == '--port' && i + 1 < args.length) {
+      port = int.parse(args[++i]);
     } else if (arg == '--raw') {
       raw = true;
     }

@@ -217,6 +217,13 @@ final class NativeLfm2TextEngine {
 /// and generation runs with the opt-in EOS stop on `<|im_end|>`/`<|endoftext|>`
 /// so a chat completion ends at the model's own end-of-turn marker instead
 /// of barreling through it.
+/// The chat wire's answer text: the native EOS stop emits the EOS token
+/// itself (HF convention); its literal must not ride the wire.
+String _wireText(final String text) => text
+    .replaceAll(RegExp(r'<\|im_end\|>$'), '')
+    .replaceAll(RegExp(r'<\|endoftext\|>$'), '')
+    .trim();
+
 final class LayaLfm2ChatServer {
   LayaLfm2ChatServer({
     required NativeLfm2TextEngine engine,
@@ -300,7 +307,9 @@ final class LayaLfm2ChatServer {
             'finish_reason': 'stop',
             'message': <String, Object?>{
               'role': 'assistant',
-              'content': completion.text,
+              // Template mode stopped at EOS natively; the emitted EOS
+            // token's literal must not ride the wire answer.
+            'content': _wireText(completion.text),
             },
           },
         ],
@@ -349,7 +358,9 @@ final class LayaLfm2ChatServer {
           'finish_reason': 'stop',
           'message': <String, Object?>{
             'role': 'assistant',
-            'content': completion.text,
+            // Template mode stopped at EOS natively; the emitted EOS
+            // token's literal must not ride the wire answer.
+            'content': _wireText(completion.text),
           },
         },
       ],
