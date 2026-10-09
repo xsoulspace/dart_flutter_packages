@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'native_build_lock.dart';
+
 import 'package:code_assets/code_assets.dart';
 import 'package:data_assets/data_assets.dart';
 import 'package:hooks/hooks.dart';
@@ -81,14 +83,11 @@ void main(List<String> args) async {
         );
         return;
       }
-      // Serialize exactly like the laya hook: SPM's on-disk build dir
-      // tolerates exactly one builder; retry once on racing invalidation.
+      // SPM's build tree permits one builder. Keep the lock inode stable
+      // while queued hook processes wait; retry once on racing invalidation.
       final lockFile = File('$spmRoot/.build/hook.lock');
-      lockFile.parent.createSync(recursive: true);
-      final lock = lockFile.openSync(mode: FileMode.write)
-        ..lockSync(FileLock.exclusive);
       var dylibReady = false;
-      try {
+      await withNativeBuildLock(lockFile, () async {
         for (var attempt = 0; attempt < 2 && !dylibReady; attempt++) {
           final build = await Process.run('swift', [
             'build',
@@ -118,11 +117,7 @@ void main(List<String> args) async {
           final built = File(dylib);
           dylibReady = built.existsSync() && built.lengthSync() > 0;
         }
-      } finally {
-        lock.unlockSync();
-        lock.closeSync();
-        lockFile.deleteSync();
-      }
+      });
       if (!dylibReady) {
         stderr.writeln(
           '[mlx hook] no dylib after build; registering no native asset '

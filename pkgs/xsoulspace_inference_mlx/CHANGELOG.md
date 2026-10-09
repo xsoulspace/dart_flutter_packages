@@ -2,6 +2,9 @@
 
 ## 0.1.1 (2026-10-08, unreleased)
 
+- Hook builders wait asynchronously on a persistent SPM lock file; queued
+  processes no longer fail immediately or split across deleted/recreated locks.
+
 - **Native text lane**: `NativeMlxTextEngine` (Swift mlx-swift-lm dylib via
   native assets) — `mlx_text_load/generate/free/unload` + the loopback
   `mlx_native_chat_endpoint` / `bin/mlx_serve_native.dart`, same

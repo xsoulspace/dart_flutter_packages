@@ -159,3 +159,9 @@ Hook output assets and the resolving workspace's `.dart_tool/lib` are still
 populated. This is a build destination setting; runtime loaders are unchanged.
 Use the emitted bundle/assets for isolated execution. Custom environment
 variables are filtered by the SDK hook runner; use this user-define instead.
+
+Native hook processes serialize Swift builds by waiting asynchronously on the
+persistent `.build/hook.lock` inode. The file remains after completion; its
+presence does not mean a builder is active. Keep the build directory intact
+while builders are running so queued processes retain the same lock. This
+coordination does not bound a cold Swift build's duration.
