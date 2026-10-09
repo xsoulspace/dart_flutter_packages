@@ -1,0 +1,6 @@
+The native MLX runtime under native/laya_rust ports the architecture of
+laya-mlx (https://github.com/mizorewww/laya-mlx, Apache-2.0), which itself
+converts Laya (https://huggingface.co/convaiinnovations/laya, Apache-2.0,
+by Convai Innovations and contributors). Model weights are fetched
+separately from aac6fef/laya-mlx (Apache-2.0) and are never redistributed
+by this package. MLX and mlx-swift are Apple software (MIT/Apache-2.0).

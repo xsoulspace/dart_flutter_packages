@@ -1,7 +1,8 @@
 name: xsoulspace_inference_laya
-description: Local Laya decision-model runtime composition (laya-serve) for
-  xsoulspace_inference_core.
-version: 0.2.0
+description: Local Laya decision-model product composition (laya-serve,
+  decision provider + serve runtime) for xsoulspace_inference_core; the
+  native engine host lives in xsoulspace_inference_mlx_native (ADR 0057).
+version: 0.3.0
 publish_to: none
 repository: https://github.com/xsoulspace/dart_flutter_packages
 issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues
@@ -12,12 +13,11 @@ environment:
 resolution: workspace
 
 dependencies:
-  async_parallel:
-    path: /Users/antonio/xs/ecsly/plugins/async_parallel
-  code_assets: any
-  data_assets: any
-  ffi: ^2.2.0
-  hooks: any
+  # R2 shim dep (ADR 0057): the barrel re-exports the engine host so harness
+  # consumers keep compiling unchanged; R3 drops this (consumers import the
+  # engine package directly).
+  xsoulspace_inference_mlx_native:
+    path: ../xsoulspace_inference_mlx_native
   http: ^1.6.0
   # The serve skeleton (process lifecycle, health-gated loopback runtime,
   # wire-server plumbing) is the shared local-serve core; laya composes it
@@ -36,3 +36,6 @@ dependencies:
 dev_dependencies:
   lints: ^6.1.0
   test: ^1.31.2
+  # The async-engine wire test drives the shared-executor seam directly.
+  async_parallel:
+    path: /Users/antonio/xs/ecsly/plugins/async_parallel

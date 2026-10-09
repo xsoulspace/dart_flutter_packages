@@ -1,6 +1,6 @@
 # xsoulspace_inference_laya
 
-Local **Laya** decision-model composition for
+Local **Laya** decision-model product composition for
 [xsoulspace_inference_core](https://github.com/xsoulspace/dart_flutter_packages/tree/main/pkgs/xsoulspace_inference_core)
 on macOS (and any host that can run a local `laya-serve`).
 
@@ -37,41 +37,33 @@ Bind it wherever a hosted decision provider would bind (the harness
 `jevDecisionBinding` seam); local-only policy admits it through the
 capability facts alone.
 
-## The native model runtime (default, no Python at all)
+## The engine host lives in `xsoulspace_inference_mlx_native`
 
-`NativeLayaDecisionEngine` runs the REAL `aac6fef/laya-mlx` checkpoint
-(ModernBERT-large F16 + decision/scoring/action heads) on Apple-silicon MLX
-through a Rust-hosted mlx-c cdylib wired with Dart native assets
-([ADR 0051](../../../docs/decisions/0051_mlx_c_rust_engine_and_model_mesh.md)):
+The MLX-native engine — the Rust cdylib (`native/laya_rust`), the
+native-assets build hook, the composition API, the model drivers (the laya
+decision op-chain, Qwen3, LFM2) with their Dart FFI clients and chat
+servers, the `LayaDecisionServer`/`ScriptedLayaDecisionEngine` decision
+seam, the golden fixtures, and the bench tooling — lives in
+[xsoulspace_inference_mlx_native](../xsoulspace_inference_mlx_native)
+([ADR 0057](../../../docs/decisions/0057_engine_host_refactor_and_bench_architecture.md)).
 
-- `hook/build.dart` builds `native/laya_rust` (cargo; statically links the
-  pinned mlx 0.32.2 + mlx-c sources) and registers the cdylib as a code asset
-  with the same five `laya_native_*` symbols the Dart side has always bound —
-  the first build needs the Rust toolchain, cmake, and the Metal Toolchain
-  (`xcodebuild -downloadComponent MetalToolchain`) for the one-time mlx
-  kernel compile. Without them the package still analyzes and its scripted
-  tests pass; the golden test skips with that reason.
-- Weights: `LAYA_MODEL_DIR` or `~/.cache/xsoulspace/laya-mlx` — fetch
-  `aac6fef/laya-mlx` from Hugging Face (~842 MB FP16). The runtime never
-  downloads anything by itself.
-- Parity: `test/laya_native_golden_test.dart` reproduces the pinned
-  laya-mlx runtime's outputs for the 16 reference parity cases — 63/63
-  argmax, max probability error 0.0026 (FP16). The fixture and its gates are
-  unchanged by the engine swap; the golden test is the acceptance oracle.
-- The daemon (`harnessd` in ecsai_harness) serves this engine by default
-  on a loopback `LayaDecisionServer`; `HARNESS_LAYA_ENGINE=off` reverts to
-  attach-only.
+This package's barrel re-exports the engine package for one deprecation
+cycle (the R2 shim), so existing
+`package:xsoulspace_inference_laya/xsoulspace_inference_laya.dart` imports —
+including the harness's `laya_binding` — keep compiling unchanged; R3 drops
+the shim and consumers import the engine package directly. The native
+engine registers as
+`package:xsoulspace_inference_mlx_native/laya_native` (the crate/dylib base
+name `laya_native` stays this rung — recorded debt).
 
-The model port mirrors `laya_mlx/model.py` (github.com/mizorewww/laya-mlx,
-Apache-2.0); see NOTICE for attribution. The historical Swift + mlx-swift
-implementation of the same port remains documented in git history and stays
-the reference route for iOS (CMake-based consumers cannot yet build an
-iOS-compatible mlx metallib — ml-explore/mlx#3915).
+The daemon (`harnessd` in ecsai_harness) serves the native laya engine by
+default on a loopback decision server; `HARNESS_LAYA_ENGINE=off` reverts to
+attach-only.
 
 ## Setup: pure Dart first, Python only for the trained weights
 
-**No Python is needed to run the decision path.** This package ships a
-laya-compatible System One server in pure Dart:
+**No Python is needed to run the decision path.** The engine package ships
+a laya-compatible System One server in pure Dart:
 
 ```dart
 final server = LayaDecisionServer(
@@ -84,7 +76,7 @@ await server.start(); // 127.0.0.1:<ephemeral>, GET /health + POST /v1/systemone
 
 `LayaDecisionEngine` is the seam: today's engines are deterministic
 (scripted pins matched against wire descriptions); a native model runtime
-attaches here later without touching clients or the harness. The harness
+attaches here without touching clients or the harness. The harness
 end-to-end proof lives in `xsoulspace_agentic_afm`
 (`test/laya_wire_integration_test.dart`, wired as the declarative
 `laya-integration` lane).
@@ -109,33 +101,13 @@ deferred until the neutral decision contract grows those question kinds.
 ## Non-claims
 
 - No live model has been evaluated from this package beyond the golden
-  parity fixture. The wire, bounds, cancellation, and failure mapping are
-  fixture-tested against a fake server; accuracy, latency, and calibration
-  are upstream properties (see the `laya-mlx` validation report) and remain
-  unmeasured here.
-- No GGUF, MoE, vision/audio, training, or continuous batching. The engine
-  hosts laya's forward pass; the Qwen decode lane is a separate future ADR
-  ([ADR 0051](../../../docs/decisions/0051_mlx_c_rust_engine_and_model_mesh.md)
-  evidence ladder, L5).
-- No iOS or Android on-device inference in this phase: phones join the mesh
-  as participants with routing to an inference host (capability-gated
-  hosting is future work).
+  parity fixture (which runs in the engine package). The wire, bounds,
+  cancellation, and failure mapping are fixture-tested against a fake
+  server; accuracy, latency, and calibration are upstream properties (see
+  the `laya-mlx` validation report) and remain unmeasured here.
+- No GGUF, MoE, vision/audio, training, or continuous batching. No iOS or
+  Android on-device inference in this phase: phones join the mesh as
+  participants with routing to an inference host (capability-gated hosting
+  is future work).
 
-## Isolated native preparation
-
-The build hook accepts `native_cache_root` through the root application's
-cache-tracked `hooks.user_defines` for this package:
-
-```yaml
-hooks:
-  user_defines:
-    xsoulspace_inference_laya:
-      native_cache_root: /absolute/private/native-cache
-```
-
-The hook publishes into `<root>/laya/native` instead of the default fleet
-cache. Empty, relative or non-string roots refuse before native compilation.
-Hook output assets and the resolving workspace's `.dart_tool/lib` are still
-populated. This is a build destination setting; runtime loaders are unchanged.
-Use the emitted bundle/assets for isolated execution. Custom environment
-variables are filtered by the SDK hook runner; use this user-define instead.
+See NOTICE for model attribution.

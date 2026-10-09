@@ -1,7 +1,9 @@
 # ADR 0057: Engine-host refactor (dependency inversion), production-line palette, and the model bench architecture
 
 Date: 2026-10-09
-Status: Proposed (analysis + rung plan); the cheap-gap and bench increments of this ADR land immediately, the physical package move is rung-gated
+Status: R1+R2 Accepted and executed (2026-10-09); R3 (shim drop) and R4
+(mlx Swift-lane consolidation) remain rung-gated. The cheap-gap and bench
+increments of this ADR landed with the original proposal.
 Related: 0051 (engine), 0054 (composition API), 0055 (qwen-on-plan, hard laws), 0056 (landscape)
 
 ## Context
@@ -226,6 +228,55 @@ checkers.
 
 ## Evidence (2026-10-09, this session)
 
+- **R1+R2 executed — the engine host is its own package.** The new
+  `pkgs/xsoulspace_inference_mlx_native` received (git mv, history
+  preserved): the whole `native/laya_rust` crate, the build hook, the
+  engine lib surface (`laya_native_decision_engine`, qwen/lfm2 FFI clients
+  + chat templates, byte-level tokenizer, async decision engine,
+  `laya_prompt`), the seven native test files + golden fixtures, the
+  engine tools (`test_fresh.sh`, `build_msl.sh`, `q8_bench.dart`,
+  `model_bench_suite.dart`, `gen_qwen3_parity_fixture.py`,
+  `probe_swift_fw13.dart`, `frame_gate.swift`, `regenerate_golden.dart`),
+  `testdata/bench`, and `benchmark/laya_native_benchmark.dart`. One
+  inventory deviation from the proposal, ADR-consistent: the dead Swift
+  reference tree `native/laya_native` was DELETED per the R1 disposition
+  above (not moved), together with `tool/build_laya_native.sh` whose only
+  target it was. A second deviation, forced by acyclicity: the decision
+  seam (`laya_decision_server.dart` — query/result types, engine
+  interfaces, scripted engine, wire server) moved engine-side too, because
+  the moved engine files import it and the engine must not depend on the
+  product (the proposal listed it as staying; pub forbids the cycle the
+  shim would create). Every `assetId` moved: 11
+  `package:xsoulspace_inference_laya/laya_native` →
+  `package:xsoulspace_inference_mlx_native/laya_native` (5 decision
+  engine, 3 qwen client, 3 lfm2 client), the three package-uri
+  resolutions re-pointed, `test_fresh.sh`'s hook-cache paths re-keyed to
+  the new package name; the crate/dylib base name `laya_native` stays this
+  rung (recorded debt). R2 shim: laya's barrel re-exports the engine
+  barrel (with the R3 drop note), laya's pubspec takes the engine path dep
+  and sheds `ffi`/`code_assets`/`data_assets`/`hooks`; harness afm +
+  experiments compile unchanged. Gates (all green, M1): cargo test
+  --release 22 passed / 0 failed (11 ignored by pre-existing probe
+  attributes; lib 11, lfm2 4 incl. 700M, qwen3 3, plan 2, spec 1, drift
+  1); dart test in the engine package 12 passed / 2 skipped and in the
+  shrunk laya product 20 passed / 1 skipped — the pre-split set (32/3)
+  exactly, split across the two homes; `tool/test_fresh.sh` 63/63 on both
+  eager (prob error 0.0) and `LAYA_COMPILE=1` legs (1.5e-8); `dart
+  analyze` clean in both packages;
+  `dart analyze pkgs/xsoulspace_agentic_afm
+  pkgs/xsoulspace_agentic_experiments` in the harness — no new issues (9
+  pre-existing style infos in afm's own `laya_permission_policy` files);
+  `model_bench_suite.dart --in-process laya` 16/16 (the moved decision
+  engine end-to-end). New `tool/serve_text.dart` is the production-line
+  serve binary (`--engine qwen|lfm2`, `--raw`, `--port`). One latent bug
+  the move exposed and this rung fixed: several engine tests called
+  `gpu()` before pinning the metallib — the pinning is process-global but
+  device/stream init is lazy, so a `gpu()`-first process died at stream
+  setup (mlx-c exits via its default error handler); ordering now pins
+  first (lfm2_parity ×3, qwen3_parity, qwen_plan_parity ×2,
+  qwen3_drift_probe), making the cargo suite deterministic at any
+  checkout path.
+
 - **Bench scorecards (first two runs, both casts, Apple M1, AC):**
   qwen-0.6B raw-completion cast: chat 3/10, decompression 0/10
   (byte-cap/one-line violations), swe 0/5 (format breaks) at ~94–100
@@ -285,10 +336,9 @@ checkers.
   the lfm2 one (venv `apply_chat_template`, enable_thinking=false).
 ## Non-claims
 
-- The physical package move (R1–R3) is NOT done in this ADR — the
-  analysis and gates are the deliverable; the move is rung-gated and
-  lands after this session's increments (which touch the packages
-  being moved).
+- R3 (shim drop) and R4 (mlx Swift-lane consolidation) are NOT done —
+  consumers still import `xsoulspace_inference_laya` and are absorbed by
+  the R2 shim.
 - The mlx Swift-lane consolidation is explicitly undecided here (R4).
 - The speculative mechanism is landed and token-exact, but no
   profitable pair exists on this machine — the 0.6B→1.7B lane is

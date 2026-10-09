@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.3.0 (2026-10-09, unreleased)
+
+- **Engine host split (ADR 0057 R1+R2):** the MLX-native engine host — the
+  Rust cdylib (`native/laya_rust`), the native-assets build hook, the
+  composition API, the model drivers (laya op-chain, Qwen3, LFM2) with
+  their FFI clients and chat servers, the decision seam/server, the golden
+  fixtures and bench tooling — moved to the new
+  `xsoulspace_inference_mlx_native` package. The code asset is now
+  registered as `package:xsoulspace_inference_mlx_native/laya_native`
+  (crate/dylib base name `laya_native` stays this rung — recorded debt).
+- This package shrinks to the laya PRODUCT: `LayaServeRuntime` +
+  `LayaLocalDecisionProvider`. Its barrel re-exports the engine package
+  (the R2 shim) so harness consumers compile unchanged; R3 drops the shim.
+- The dead `native/laya_native` Swift reference tree (ADR 0057 R1
+  disposition) and its `tool/build_laya_native.sh` were deleted; git
+  history keeps the iOS reference (ml-explore/mlx#3915).
+
 ## 0.2.0 (2026-10-08, unreleased)
 
 - **Rust/mlx-c native engine** ([ADR
