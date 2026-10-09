@@ -55,7 +55,11 @@ struct ConfigJson {
     num_attention_heads: usize,
     num_key_value_heads: usize,
     norm_eps: f64,
-    rope_theta: f64,
+    /// Top-level on the 1.2B/700M; the 2.6B nests it under
+    /// `rope_parameters.rope_theta` — resolved after parse.
+    rope_theta: Option<f64>,
+    #[serde(default)]
+    rope_parameters: Option<RopeParametersJson>,
     conv_bias: bool,
     conv_L_cache: usize,
     /// LFM2.5-style per-layer list; ABSENT in v1 configs (LFM2-700M),
@@ -74,10 +78,31 @@ struct ConfigJson {
     block_multiple_of: usize,
     #[serde(default)]
     tie_embedding: bool,
+    /// 1 for the low-id-special checkpoints, 124894 for the 2.6B's 128k
+    /// vocab — read, never guessed.
+    #[serde(default = "default_bos")]
+    bos_token_id: usize,
+}
+
+#[derive(Deserialize)]
+struct RopeParametersJson {
+    rope_theta: Option<f64>,
 }
 
 fn default_multiple_of() -> usize {
     256
+}
+
+fn default_bos() -> usize {
+    1
+}
+
+impl ConfigJson {
+    fn rope_theta_resolved(&self) -> f64 {
+        self.rope_theta
+            .or_else(|| self.rope_parameters.as_ref().and_then(|r| r.rope_theta))
+            .unwrap_or(1_000_000.0)
+    }
 }
 
 #[derive(Deserialize)]
@@ -101,6 +126,8 @@ pub struct Lfm2Config {
     pub layer_types: Vec<LayerKind>,
     pub group_size: i32,
     pub bits: i32,
+    /// The checkpoint's BOS id (1 low-id-special, 124894 on the 2.6B).
+    pub bos_token_id: usize,
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -376,15 +403,31 @@ impl Lfm2 {
             head_dim,
             ff_dim,
             norm_eps: cfg_raw.norm_eps as f32,
-            rope_theta: cfg_raw.rope_theta as f32,
+            rope_theta: cfg_raw.rope_theta_resolved() as f32,
             conv_l_cache: cfg_raw.conv_L_cache,
             conv_bias: cfg_raw.conv_bias,
             layer_types,
             group_size,
             bits,
+            bos_token_id: cfg_raw.bos_token_id,
         };
 
         let st = SafetensorsFile::open(&dir.join("model.safetensors"))?;
+        // Some mlx-community conversions wrap the text model for a
+        // multimodal container and prefix every weight with
+        // `language_model.` (the LFM2.5-2.6B ships an empty vision_config
+        // this way). Detect once from the embedding row; never guess per
+        // weight.
+        let prefix = if st.dtype_of("model.embed_tokens.weight").is_some() {
+            ""
+        } else if st
+            .dtype_of("language_model.model.embed_tokens.weight")
+            .is_some()
+        {
+            "language_model."
+        } else {
+            return Err(MlxError(-13));
+        };
         let weight = |name: &str| -> MlxResult<Weight> {
             if st.dtype_of(&format!("{name}.scales")).is_some() {
                 Ok(Weight::Quant(st.take_quantized(name)?))
@@ -395,7 +438,7 @@ impl Lfm2 {
 
         let mut layers = Vec::with_capacity(cfg.layers);
         for (li, kind) in cfg.layer_types.iter().enumerate() {
-            let p = format!("model.layers.{li}");
+            let p = format!("{prefix}model.layers.{li}");
             let (attn, conv) = match kind {
                 LayerKind::Attn => (
                     Some(AttnWeights {
@@ -439,9 +482,9 @@ impl Lfm2 {
 
         Ok(Lfm2 {
             cfg,
-            embed: weight("model.embed_tokens")?,
+            embed: weight(&format!("{prefix}model.embed_tokens"))?,
             layers,
-            embedding_norm: st.take_any("model.embedding_norm.weight")?,
+            embedding_norm: st.take_any(&format!("{prefix}model.embedding_norm.weight"))?,
             table: BindingTable::baseline(),
         })
     }

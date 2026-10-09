@@ -112,6 +112,15 @@ fn read_tokenizer_json(dir: &Path) -> Result<serde_json::Value, String> {
 }
 
 impl ByteLevelBpe {
+    /// The id of an added/special token by literal content (e.g.
+    /// "<|im_end|>") — None when the checkpoint has no such token.
+    pub fn added_id(&self, content: &str) -> Option<u32> {
+        self.added
+            .iter()
+            .find(|(c, _)| c == content)
+            .map(|(_, id)| *id)
+    }
+
     /// Loads a Qwen3 snapshot (vocab.json, merges.txt, tokenizer.json for
     /// the added-token list): single-digit pre-tokens, NFC normalization.
     pub fn load(dir: &Path) -> Result<ByteLevelBpe, String> {

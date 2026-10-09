@@ -35,6 +35,14 @@ final class Lfm2ChatMessage {
   final String content;
 }
 
+/// Which checkpoint's template variant renders. The two LFM2.5
+/// checkpoints differ in TWO pinned places: the generation prompt (the
+/// 2.6B opens a `<think>` block the model closes itself) and the
+/// think-strip rule (the 1.2B keeps thinking on the LAST assistant
+/// message; the 2.6B keeps it only on assistants AFTER the last user
+/// turn).
+enum Lfm2ChatTemplateVariant { lfm25_12b, lfm25_26b }
+
 /// Renders the messages into the exact raw prompt the checkpoint expects.
 ///
 /// [addGenerationPrompt] appends `<|im_start|>assistant\n` (the generation
@@ -48,6 +56,7 @@ String renderLfm2ChatPrompt({
   final List<Object?>? tools,
   final bool addGenerationPrompt = true,
   final bool includeBos = true,
+  final Lfm2ChatTemplateVariant variant = Lfm2ChatTemplateVariant.lfm25_12b,
 }) {
   final buffer = StringBuffer();
   if (includeBos) {
@@ -72,27 +81,44 @@ String renderLfm2ChatPrompt({
   }
 
   var lastAssistantIndex = -1;
+  var lastUserIndex = -1;
   for (var i = 0; i < turns.length; i++) {
     if (turns[i].role == 'assistant') {
       lastAssistantIndex = i;
+    }
+    if (turns[i].role == 'user') {
+      lastUserIndex = i;
     }
   }
   for (var i = 0; i < turns.length; i++) {
     final message = turns[i];
     buffer.write('<|im_start|>${message.role}\n');
     var content = message.content;
-    if (message.role == 'assistant' && i != lastAssistantIndex) {
-      // keep_past_thinking = false: keep only what follows the LAST
-      // `</think>` (Python `content.split("</think>")[-1] | trim`).
-      final marker = content.lastIndexOf('</think>');
-      if (marker >= 0) {
-        content = content.substring(marker + '</think>'.length).trim();
+    if (message.role == 'assistant') {
+      // keep_past_thinking = false, per variant: the 1.2B template strips
+      // every assistant except the LAST one; the 2.6B template keeps
+      // thinking only on assistants AFTER the last user turn (Python
+      // `content.split("</think>")[-1] | trim` in both).
+      final keepThinking = variant == Lfm2ChatTemplateVariant.lfm25_12b
+          ? i == lastAssistantIndex
+          : i > lastUserIndex;
+      if (!keepThinking) {
+        final marker = content.lastIndexOf('</think>');
+        if (marker >= 0) {
+          content = content.substring(marker + '</think>'.length).trim();
+        }
       }
     }
     buffer.write('$content<|im_end|>\n');
   }
   if (addGenerationPrompt) {
     buffer.write('<|im_start|>assistant\n');
+    // The 2.6B template opens a think block the model closes itself (its
+    // completion begins with the `</think>`); the 1.2B template ships the
+    // closed block inline.
+    if (variant == Lfm2ChatTemplateVariant.lfm25_26b) {
+      buffer.write('<think>');
+    }
   }
   return buffer.toString();
 }

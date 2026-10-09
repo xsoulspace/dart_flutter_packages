@@ -32,6 +32,35 @@ external Pointer<Uint8> _lfm2Generate(int handle, Pointer<Uint8> requestJson);
 )
 external void _lfm2Unload(int handle);
 
+@Native<Pointer<Uint8> Function(Int64)>(
+  symbol: 'mlx_native_lfm2_special_ids',
+  assetId: 'package:xsoulspace_inference_mlx_native/mlx_native',
+)
+external Pointer<Uint8> _lfm2SpecialIds(int handle);
+
+@Native<Pointer<Uint8> Function()>(
+  symbol: 'mlx_native_lfm2_last_load_error',
+  assetId: 'package:xsoulspace_inference_mlx_native/mlx_native',
+)
+external Pointer<Uint8> _lfm2LastLoadError();
+
+/// The checkpoint's special-token ids, resolved from its own tokenizer at
+/// load (never guessed across checkpoints — the low-id-special LFM2.5-1.2B
+/// vs the 2.6B's 128k vocab differ in every id).
+final class NativeLfm2SpecialIds {
+  const NativeLfm2SpecialIds({
+    required this.bos,
+    required this.imEnd,
+    required this.endoftext,
+  });
+
+  final int bos;
+  final int imEnd;
+  final int endoftext;
+
+  List<int> get chatStopIds => <int>[imEnd, endoftext];
+}
+
 /// Locates the cached LFM2.5 snapshot: [override], else `LFM2_SNAPSHOT`,
 /// else the LiquidAI LFM2.5-1.2B checkout under the HF hub cache (never
 /// downloads). Null when absent — callers skip honestly.
@@ -112,9 +141,30 @@ final class NativeLfm2TextEngine {
     final handle = _lfm2Load(dirNative);
     malloc.free(dirNative);
     if (handle <= 0) {
-      throw StateError('laya lfm2 load failed (code $handle) for snapshot $dir');
+      final detail = jsonDecode(
+        fromNativeUtf8(_lfm2LastLoadError()),
+      ) as Map<String, dynamic>;
+      throw StateError(
+        'laya lfm2 load failed (code $handle) for snapshot $dir: '
+        '${detail['error']}',
+      );
     }
     return NativeLfm2TextEngine._(handle, dir);
+  }
+
+  /// The checkpoint's own special-token ids (BOS, `<|im_end|>`,
+  /// `<|endoftext|>`).
+  NativeLfm2SpecialIds specialIds() {
+    final reply = fromNativeUtf8(_lfm2SpecialIds(_handle));
+    final json = jsonDecode(reply) as Map<String, dynamic>;
+    if (json['error'] != null) {
+      throw StateError('laya lfm2 special ids failed: ${json['error']}');
+    }
+    return NativeLfm2SpecialIds(
+      bos: json['bos'] as int,
+      imEnd: json['im_end'] as int,
+      endoftext: json['endoftext'] as int,
+    );
   }
 
   /// Greedy decode. Supply [prompt] (tokenized by the checkpoint BPE, with
@@ -219,10 +269,22 @@ final class NativeLfm2TextEngine {
 /// of barreling through it.
 /// The chat wire's answer text: the native EOS stop emits the EOS token
 /// itself (HF convention); its literal must not ride the wire.
-String _wireText(final String text) => text
-    .replaceAll(RegExp(r'<\|im_end\|>$'), '')
-    .replaceAll(RegExp(r'<\|endoftext\|>$'), '')
-    .trim();
+String _wireText(final String text, {final bool stripThinkClose = false}) {
+  var out = text;
+  if (stripThinkClose) {
+    // The 2.6B template opens the think block at the generation prompt;
+    // the model REASONS inside it, then closes it before the answer —
+    // the wire answer is everything AFTER the (unpaired) close. No close
+    // in the output means the budget ran out mid-reasoning: empty answer,
+    // honestly.
+    final close = out.indexOf('</think>');
+    out = close < 0 ? '' : out.substring(close + '</think>'.length);
+  }
+  return out
+      .replaceAll(RegExp(r'<\|im_end\|>$'), '')
+      .replaceAll(RegExp(r'<\|endoftext\|>$'), '')
+      .trim();
+}
 
 final class LayaLfm2ChatServer {
   LayaLfm2ChatServer({
@@ -230,6 +292,7 @@ final class LayaLfm2ChatServer {
     this.model = 'lfm2.5-1.2b-instruct-mlx-4bit',
     this.defaultMaxTokens = 64,
     this.useTemplate = true,
+    this.variant = Lfm2ChatTemplateVariant.lfm25_12b,
     final String? apiKey,
     final InternetAddress? address,
     final int port = 0,
@@ -242,8 +305,14 @@ final class LayaLfm2ChatServer {
            'model': model,
            'engine': 'laya-native-lfm2',
          },
-         route: (final LoopbackRequest request) async =>
-             _route(request, engine, model, defaultMaxTokens, useTemplate),
+         route: (final LoopbackRequest request) async => _route(
+           request,
+           engine,
+           model,
+           defaultMaxTokens,
+           useTemplate,
+           variant,
+         ),
        );
 
   final String model;
@@ -253,6 +322,11 @@ final class LayaLfm2ChatServer {
   /// stops at `<|im_end|>`/`<|endoftext|>`. Raw mode is the legacy
   /// concatenation with no EOS stop — the bench's raw cell.
   final bool useTemplate;
+
+  /// Which LFM2.5 template variant renders (the 2.6B checkpoint ships a
+  /// different one — think-open generation prompt and last-user-based
+  /// think strip; fixture-gated in testdata/lfm25_26b_chat_template_fixtures.json).
+  final Lfm2ChatTemplateVariant variant;
   final LoopbackJsonServer _server;
 
   /// The bound base URL (`http://127.0.0.1:<port>`), after [start].
@@ -267,6 +341,7 @@ final class LayaLfm2ChatServer {
     final String model,
     final int maxTokens,
     final bool useTemplate,
+    final Lfm2ChatTemplateVariant variant,
   ) async {
     if (request.method != 'POST' || request.path != '/v1/chat/completions') {
       return null;
@@ -341,13 +416,15 @@ final class LayaLfm2ChatServer {
       // BOS id itself, so the render omits it (exactly one BOS in the ids).
       includeBos: false,
       tools: tools is List && tools.isNotEmpty ? tools : null,
+      variant: variant,
     );
     final requested = body['max_tokens'];
     final completion = engine.generate(
       prompt: prompt,
       maxTokens: requested is int ? requested : maxTokens,
       stopOnEos: true,
-      eosIds: const <int>[7, 2], // <|im_end|>, <|endoftext|>
+      // The checkpoint's own ids (7/2 on the 1.2B; 124900/… on the 2.6B).
+      eosIds: engine.specialIds().chatStopIds,
     );
     return LoopbackReply(200, <String, Object?>{
       'id': 'chatcmpl-laya-lfm2',
@@ -359,8 +436,13 @@ final class LayaLfm2ChatServer {
           'message': <String, Object?>{
             'role': 'assistant',
             // Template mode stopped at EOS natively; the emitted EOS
-            // token's literal must not ride the wire answer.
-            'content': _wireText(completion.text),
+            // token's literal must not ride the wire answer. The 2.6B
+            // variant's completion opens with the model's own think
+            // close — the answer is the text after it.
+            'content': _wireText(
+              completion.text,
+              stripThinkClose: variant == Lfm2ChatTemplateVariant.lfm25_26b,
+            ),
           },
         },
       ],

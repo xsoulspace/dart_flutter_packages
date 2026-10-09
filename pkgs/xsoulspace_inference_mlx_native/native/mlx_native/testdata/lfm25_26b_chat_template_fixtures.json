@@ -1,0 +1,83 @@
+{
+ "snapshot": "mlx-community/LFM2.5-2.6B-4bit",
+ "recorded": "2026-10-09",
+ "tool": "~/.venvs/mlx-ref/bin/python transformers AutoTokenizer.apply_chat_template",
+ "note": "The 2.6B chat template (chat_template.jinja): SAME system folding, \"List of tools: [...]\" block, and tojson spacing as the 1.2B; the GENERATION PROMPT opens a think block the model closes itself (\"<|im_start|>assistant\\n<think>\"), and history assistants render with their <think> body stripped (keep_past_thinking=false). Pinned subset: string content, system/user/assistant, tools; non-claims: tool_calls history rendering, preserve_thinking=true, CONTINUE_FINAL_MESSAGE_TAG, image/multipart content.",
+ "cases": [
+  {
+   "id": "user-only",
+   "messages": [
+    {
+     "role": "user",
+     "content": "Reply with exactly one word: the sky color by day?"
+    }
+   ],
+   "tools": null,
+   "rendered": "<|startoftext|><|im_start|>user\nReply with exactly one word: the sky color by day?<|im_end|>\n<|im_start|>assistant\n<think>"
+  },
+  {
+   "id": "system-user",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are a helpful assistant."
+    },
+    {
+     "role": "user",
+     "content": "What is 2+2?"
+    }
+   ],
+   "tools": null,
+   "rendered": "<|startoftext|><|im_start|>system\nYou are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat is 2+2?<|im_end|>\n<|im_start|>assistant\n<think>"
+  },
+  {
+   "id": "tools-user",
+   "messages": [
+    {
+     "role": "user",
+     "content": "What is the weather in Tokyo?"
+    }
+   ],
+   "tools": [
+    {
+     "type": "function",
+     "function": {
+      "name": "get_weather",
+      "description": "Look up current weather for a city",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "city": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "city"
+       ]
+      }
+     }
+    }
+   ],
+   "rendered": "<|startoftext|><|im_start|>system\nList of tools: [{\"type\": \"function\", \"function\": {\"name\": \"get_weather\", \"description\": \"Look up current weather for a city\", \"parameters\": {\"type\": \"object\", \"properties\": {\"city\": {\"type\": \"string\"}}, \"required\": [\"city\"]}}}]<|im_end|>\n<|im_start|>user\nWhat is the weather in Tokyo?<|im_end|>\n<|im_start|>assistant\n<think>"
+  },
+  {
+   "id": "assistant-history",
+   "messages": [
+    {
+     "role": "user",
+     "content": "Hi"
+    },
+    {
+     "role": "assistant",
+     "content": "<think>\nworked it out\n</think>Hello!"
+    },
+    {
+     "role": "user",
+     "content": "What is 2+2?"
+    }
+   ],
+   "tools": null,
+   "rendered": "<|startoftext|><|im_start|>user\nHi<|im_end|>\n<|im_start|>assistant\nHello!<|im_end|>\n<|im_start|>user\nWhat is 2+2?<|im_end|>\n<|im_start|>assistant\n<think>"
+  }
+ ]
+}

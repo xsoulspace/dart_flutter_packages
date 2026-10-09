@@ -136,6 +136,13 @@ fn fail(message: &str) -> *mut c_char {
     }
 }
 
+fn ok_json(value: &serde_json::Value) -> *mut c_char {
+    match CString::new(value.to_string()) {
+        Ok(c) => c.into_raw(),
+        Err(_) => fail("encode"),
+    }
+}
+
 /// Pins MLX's metallib before the first GPU op, mirroring the historical
 /// Swift pin: beside THIS dylib, then `LAYA_METALLIB`, then the fleet cache.
 /// MLX's own colocated search looks beside the binary containing the mlx
@@ -484,8 +491,10 @@ pub extern "C" fn mlx_native_qwen_unload(handle: i64) {
 struct Lfm2Engine {
     model: Arc<crate::lfm2::Lfm2>,
     tokenizer: crate::bpe::ByteLevelBpe,
-    /// LFM2.5 prepends <|startoftext|> (id 1) to raw text (the parity
-    /// fixture's pinned prompt_ids start with it); qwen has no BOS.
+    /// LFM2.5 prepends <|startoftext|> to raw text (the parity fixture's
+    /// pinned prompt_ids start with it); qwen has no BOS. The id is the
+    /// checkpoint's `bos_token_id` (1 low-id-special, 124894 on the 2.6B
+    /// 128k vocab) — read from config, never guessed.
     bos: u32,
 }
 
@@ -494,6 +503,24 @@ static LFM2_NEXT_HANDLE: AtomicI64 = AtomicI64::new(1);
 
 fn lfm2_registry() -> &'static Mutex<HashMap<i64, Arc<Lfm2Engine>>> {
     LFM2_REGISTRY.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+static LFM2_LOAD_ERROR: Mutex<Option<String>> = Mutex::new(None);
+
+fn lfm2_load_error_set<E: std::fmt::Debug>(error: &E) {
+    *LFM2_LOAD_ERROR.lock().unwrap() = Some(format!("{error:?}"));
+}
+
+/// The last `mlx_native_lfm2_load` failure's error payload (a Debug print
+/// of the MlxError) — surfaced so a rejected checkpoint is diagnosable
+/// from Dart instead of a bare `-2`.
+#[no_mangle]
+pub extern "C" fn mlx_native_lfm2_last_load_error() -> *mut c_char {
+    let held = LFM2_LOAD_ERROR.lock().unwrap().clone();
+    match held {
+        Some(text) => ok_json(&serde_json::json!({ "error": text })),
+        None => ok_json(&serde_json::json!({ "error": null })),
+    }
 }
 
 #[no_mangle]
@@ -505,22 +532,57 @@ pub extern "C" fn mlx_native_lfm2_load(model_dir: *const c_char) -> i64 {
     let dir = PathBuf::from(unsafe { CStr::from_ptr(model_dir) }.to_string_lossy().to_string());
     let model = match crate::lfm2::Lfm2::load(&dir) {
         Ok(m) => m,
-        Err(_) => return -2,
+        Err(e) => {
+            lfm2_load_error_set(&e);
+            return -2;
+        }
     };
     let tokenizer = match crate::bpe::ByteLevelBpe::load_tokenizer_json(&dir) {
         Ok(t) => t,
         Err(_) => return -3,
     };
     let handle = LFM2_NEXT_HANDLE.fetch_add(1, Ordering::SeqCst);
+    let bos = model.cfg.bos_token_id as u32;
     lfm2_registry().lock().unwrap().insert(
         handle,
         Arc::new(Lfm2Engine {
             model: Arc::new(model),
             tokenizer,
-            bos: 1,
+            bos,
         }),
     );
     handle
+}
+
+/// The checkpoint's special-token ids, resolved from its own tokenizer
+/// (never guessed): `{"bos": N, "im_end": N, "endoftext": N}` — the chat
+/// EOS stop passes `im_end`/`endoftext` (id 7/2 on the low-id-special
+/// checkpoints, 124900/… on the 2.6B's 128k vocab). `{"error": …}` when a
+/// token is absent — callers must not fall back to another checkpoint's
+/// ids.
+#[no_mangle]
+pub extern "C" fn mlx_native_lfm2_special_ids(handle: i64) -> *mut c_char {
+    let registry = lfm2_registry();
+    let guard = registry.lock().unwrap();
+    let engine = match guard.get(&handle) {
+        Some(e) => e,
+        None => return fail("unknown lfm2 handle"),
+    };
+    let im_end = match engine.tokenizer.added_id("<|im_end|>") {
+        Some(id) => id,
+        None => return fail("checkpoint tokenizer has no <|im_end|>"),
+    };
+    let endoftext = match engine.tokenizer.added_id("<|endoftext|>") {
+        Some(id) => id,
+        None => return fail("checkpoint tokenizer has no <|endoftext|>"),
+    };
+    let (bos, im_end, endoftext) = (engine.bos, im_end, endoftext);
+    drop(guard);
+    ok_json(&serde_json::json!({
+        "bos": bos,
+        "im_end": im_end,
+        "endoftext": endoftext,
+    }))
 }
 
 /// Greedy text generation. Request: `{"prompt": "…", "max_tokens": 64}` (or
