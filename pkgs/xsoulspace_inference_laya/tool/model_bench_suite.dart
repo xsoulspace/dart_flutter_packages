@@ -24,12 +24,15 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:xsoulspace_inference_laya/xsoulspace_inference_laya.dart';
 
-const _lanes = ['chat', 'decompression', 'swe'];
+const _lanes = ['chat', 'decompression', 'swe', 'laya'];
 
 void main(final List<String> args) async {
   String? endpointArg;
   String? inProcess;
   var raw = false;
+  var thinking = false;
+  String? qwenSnapshot;
+  String? lfmSnapshot;
   var lanes = _lanes.toList();
   var outDir = 'bench';
   for (var i = 0; i < args.length; i++) {
@@ -40,6 +43,12 @@ void main(final List<String> args) async {
         inProcess = args[++i];
       case '--raw':
         raw = true;
+      case '--thinking':
+        thinking = true;
+      case '--qwen-snapshot':
+        qwenSnapshot = args[++i];
+      case '--lfm-snapshot':
+        lfmSnapshot = args[++i];
       case '--lane':
         lanes = args[++i].split(',');
       case '--out':
@@ -54,62 +63,77 @@ void main(final List<String> args) async {
   if (endpointArg == null && inProcess == null) {
     _fail('need --endpoint or --in-process\n$_usage');
   }
+  if (inProcess == 'laya') {
+    // The decision model is not a chat model — it runs its own lane over
+    // the golden fixture (agreement + decision latency), no wire.
+    lanes = ['laya'];
+  }
   if (lanes.any((final l) => !_lanes.contains(l))) {
     _fail('lanes must be a subset of $_lanes');
   }
 
-  late final Uri base;
+  late Uri base;
   // Both chat servers expose start/stop/url (no shared supertype).
   dynamic server;
-  if (endpointArg != null) {
+  if (inProcess == 'laya') {
+    // The decision model is not a chat model — its lane runs in-process
+    // over the golden fixture; no wire, no server.
+    base = Uri.parse('http://127.0.0.1:0');
+  } else if (endpointArg != null) {
     base = Uri.parse(endpointArg);
     final health = await http.get(base.replace(path: '/health'));
     if (health.statusCode != 200) {
       _fail('endpoint $base /health returned ${health.statusCode}');
     }
-  } else {
-    if (inProcess != 'qwen' && inProcess != 'lfm2') {
-      _fail("--in-process supports qwen|lfm2, optional --raw "
-          '(legacy no-template cast); --endpoint covers any wire server)');
+  } else if (inProcess == 'qwen' || inProcess == 'lfm2') {
+    if (thinking && inProcess != 'qwen') {
+      _fail('--thinking applies to qwen only (LFM2.5-Instruct ships no '
+          'thinking switch — recorded non-claim)');
     }
-    // The bundled native line: load + serve in-process, no python.
-    // (The two chat servers share the wire contract, not a supertype.)
-    // `--raw` selects the legacy no-template/no-EOS cast — the bench's
-    // controlled comparison cell (ADR 0057: same model, same lanes).
     if (inProcess == 'qwen') {
       server = LayaQwenChatServer(
-        engine: await NativeQwenTextEngine.load(),
+        engine: await NativeQwenTextEngine.load(snapshotDir: qwenSnapshot),
         useTemplate: !raw,
+        thinking: thinking,
       );
     } else {
       server = LayaLfm2ChatServer(
-        engine: await NativeLfm2TextEngine.load(),
+        engine: await NativeLfm2TextEngine.load(snapshotDir: lfmSnapshot),
         useTemplate: !raw,
       );
     }
     await server.start();
     base = server.url;
     stderr.writeln(
-      'in-process native line ($inProcess, template${raw ? ' off' : ''}) '
-      'at ${server.url}',
+      'in-process native line ($inProcess, template${raw ? ' off' : ''}'
+      '${thinking ? ', thinking' : ''}) at ${server.url}',
     );
+  } else {
+    _fail("--in-process supports qwen|lfm2|laya, optional --raw/--thinking; "
+        '--endpoint covers any wire server)');
   }
 
   final results = <_LaneResult>[];
   try {
     for (final lane in lanes) {
-      final file = File('testdata/bench/${lane}_lane.json');
-      if (!file.existsSync()) {
-        stderr.writeln('lane file missing: ${file.path} — skipping');
-        continue;
+      if (lane != 'laya') {
+        final file = File('testdata/bench/${lane}_lane.json');
+        if (!file.existsSync()) {
+          stderr.writeln('lane file missing: ${file.path} — skipping');
+          continue;
+        }
       }
-      final spec =
-          jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
+      final spec = lane == 'laya'
+          ? const <String, dynamic>{}
+          : jsonDecode(
+                  File('testdata/bench/${lane}_lane.json').readAsStringSync())
+              as Map<String, dynamic>;
       results.add(
         switch (lane) {
-          'chat' => await _runChat(base, spec),
-          'decompression' => await _runDecompression(base, spec),
-          'swe' => await _runSwe(base, spec),
+          'chat' => await _runChat(base, spec, thinking),
+          'decompression' => await _runDecompression(base, spec, thinking),
+          'swe' => await _runSwe(base, spec, thinking),
+          'laya' => await _runLaya(),
           _ => throw StateError('unreachable'),
         },
       );
@@ -193,6 +217,18 @@ Future<_Completion> _complete(
   );
 }
 
+/// Strips `<think>…</think>` reasoning so the checkers judge the answer;
+/// an unclosed `<think>` (the generation budget ran out mid-reasoning)
+/// cuts from its start — the case then honestly fails containment.
+String _answerOf(final String text) {
+  final stripped = text.replaceAll(
+    RegExp(r'<think>[\s\S]*?</think>'),
+    '',
+  );
+  final open = stripped.indexOf('<think>');
+  return (open >= 0 ? stripped.substring(0, open) : stripped).trim();
+}
+
 double _pct(final List<double> xs, final double p) {
   if (xs.isEmpty) return 0;
   final s = xs.toList()..sort();
@@ -260,6 +296,7 @@ class _Completion {
 Future<_LaneResult> _runChat(
   final Uri base,
   final Map<String, dynamic> spec,
+  final bool thinking,
 ) async {
   final cases = <_CaseResult>[];
   for (final raw in spec['cases'] as List) {
@@ -273,9 +310,13 @@ Future<_LaneResult> _runChat(
             'content': m['content'] as String,
           },
       ],
-      c['max_tokens'] as int,
+      (c['max_tokens'] as int) * (thinking ? 3 : 1),
     );
-    final check = _checkContains(c, completion);
+    final check = _checkContains(c, _Completion(
+      text: _answerOf(completion.text),
+      wall: completion.wall,
+      completionTokens: completion.completionTokens,
+    ));
     cases.add(_CaseResult(
       id: c['id'] as String,
       ok: check.ok,
@@ -290,6 +331,7 @@ Future<_LaneResult> _runChat(
 Future<_LaneResult> _runDecompression(
   final Uri base,
   final Map<String, dynamic> spec,
+  final bool thinking,
 ) async {
   final cap = spec['max_output_bytes'] as int;
   final minHits = spec['min_entity_hits'] as int;
@@ -303,8 +345,8 @@ Future<_LaneResult> _runDecompression(
             'Summarize this memory record as ONE line of at most $cap bytes '
             '(keep the key facts and names):\n${c['record']}\nOne line:',
       },
-    ], c['max_tokens'] as int);
-    final text = completion.text.trim();
+    ], (c['max_tokens'] as int) * (thinking ? 3 : 1));
+    final text = _answerOf(completion.text);
     final bytes = utf8.encode(text).length;
     final oneLine = !text.contains('\n');
     final entities = (c['entities'] as List).cast<String>();
@@ -330,6 +372,7 @@ Future<_LaneResult> _runDecompression(
 Future<_LaneResult> _runSwe(
   final Uri base,
   final Map<String, dynamic> spec,
+  final bool thinking,
 ) async {
   final timeoutSec = spec['timeout_seconds'] as int;
   final cases = <_CaseResult>[];
@@ -337,8 +380,9 @@ Future<_LaneResult> _runSwe(
     final c = raw as Map<String, dynamic>;
     final completion = await _complete(base, [
       {'role': 'user', 'content': c['prompt'] as String},
-    ], 256);
-    final code = _extractDart(completion.text);
+    ], 256 * (thinking ? 3 : 1));
+    final sweText = _answerOf(completion.text);
+    final code = _extractDart(sweText);
     if (code == null) {
       cases.add(_CaseResult(
         id: c['id'] as String,
@@ -392,6 +436,110 @@ Future<ProcessResult> _runDartHarness(
     ).timeout(timeout, onTimeout: () => ProcessResult(-1, -1, '', 'timed out'));
   } finally {
     dir.deleteSync(recursive: true);
+  }
+}
+
+/// The laya decision lane: the golden fixture (16 rows) through the
+/// native decision engine — per-question argmax agreement vs the pinned
+/// expectations, and per-row wall time. The numeric-parity gate
+/// (distributions to 0.02) lives in test/laya_native_golden_test.dart;
+/// this lane measures the model the way a cast uses it.
+Future<_LaneResult> _runLaya() async {
+  final fixtureFile = File('test/fixtures/laya_golden_fp16.json');
+  if (!fixtureFile.existsSync()) {
+    stderr.writeln('laya golden fixture absent — skipping');
+    return _LaneResult('laya-decision', const []);
+  }
+  final NativeLayaDecisionEngine engine;
+  try {
+    engine = await NativeLayaDecisionEngine.load();
+  } on Object catch (error) {
+    stderr.writeln('native laya engine unavailable: $error — skipping');
+    return _LaneResult('laya-decision', const []);
+  }
+  try {
+    final cases = jsonDecode(fixtureFile.readAsStringSync()) as List;
+    final results = <_CaseResult>[];
+    for (final rawCase in cases) {
+      final golden = rawCase as Map<String, dynamic>;
+      final state = golden['state'];
+      final t0 = DateTime.now();
+      final decisions = engine.decideTyped(
+        state: state is String ? state : renderLayaJson(state),
+        questions: {
+          for (final entry in (golden['questions'] as Map)
+              .entries
+              .cast<MapEntry<String, dynamic>>())
+            entry.key: _layaQuestion(entry.value as Map<String, dynamic>),
+        },
+      );
+      final wall = DateTime.now().difference(t0).inMilliseconds.toDouble();
+      final answers = golden['answers'] as Map<String, dynamic>;
+      final reasons = <String>[];
+      for (final entry in answers.entries) {
+        final expected = entry.value as Map<String, dynamic>;
+        final actual = decisions[entry.key];
+        if (actual == null) {
+          reasons.add('${entry.key}: no decision returned');
+          continue;
+        }
+        if (expected['type'] == 'choice' &&
+            expected['choice'] != actual.choice) {
+          reasons.add('${entry.key}: ${actual.choice} != ${expected['choice']}');
+        }
+      }
+      results.add(_CaseResult(
+        id: 'row${results.length}',
+        ok: reasons.isEmpty,
+        wallMs: wall,
+        tokS: 0,
+        reason: reasons.isEmpty ? null : reasons.join('; '),
+      ));
+    }
+    return _LaneResult('laya-decision', results);
+  } finally {
+    engine.dispose();
+  }
+}
+
+LayaTypedQuestion _layaQuestion(final Map<String, dynamic> definition) {
+  final type = definition['type'] as String;
+  final instructions = definition['instructions'];
+  final instructionText =
+      instructions is String ? instructions : renderLayaJson(instructions);
+  switch (type) {
+    case 'choice':
+      final crit = definition['criteria'];
+      return LayaTypedQuestion.choice(instructionText, {
+        if (crit is Map)
+          for (final entry in crit.entries.cast<MapEntry<dynamic, dynamic>>())
+            '${entry.key}': renderLayaCriterion(
+              entry.value == null || entry.value == '' ? '' : entry.value,
+            )
+        else
+          for (final label in crit as List) '$label': '',
+      });
+    case 'score':
+      return LayaTypedQuestion.score(instructionText, [
+        for (final level in definition['criteria'] as List)
+          renderLayaCriterion(level),
+      ]);
+    case 'noul':
+      final crit = definition['criteria'];
+      return LayaTypedQuestion.noul(
+        instructionText,
+        crit is Map
+            ? {
+                for (final entry
+                    in crit.entries.cast<MapEntry<dynamic, dynamic>>())
+                  '${entry.key}': entry.value == null
+                      ? ''
+                      : renderLayaCriterion(entry.value),
+              }
+            : null,
+      );
+    default:
+      throw StateError('unknown laya question type $type');
   }
 }
 

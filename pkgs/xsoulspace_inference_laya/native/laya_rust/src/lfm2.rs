@@ -58,12 +58,26 @@ struct ConfigJson {
     rope_theta: f64,
     conv_bias: bool,
     conv_L_cache: usize,
+    /// LFM2.5-style per-layer list; ABSENT in v1 configs (LFM2-700M),
+    /// which carry `full_attn_idxs` instead — derived below.
+    #[serde(default)]
     layer_types: Vec<String>,
+    #[serde(default)]
+    full_attn_idxs: Vec<usize>,
     quantization: Option<QuantizationJson>,
     block_ff_dim: Option<usize>,
     intermediate_size: Option<usize>,
+    /// The reference's `block_auto_adjust_ff_dim` rounds 2/3*ff up to a
+    /// multiple of this (256). LFM2.5-1.2B's 2*12288/3 = 8192 is exact, so
+    /// the ceiling was invisible until the 700M row.
+    #[serde(default = "default_multiple_of")]
+    block_multiple_of: usize,
     #[serde(default)]
     tie_embedding: bool,
+}
+
+fn default_multiple_of() -> usize {
+    256
 }
 
 #[derive(Deserialize)]
@@ -330,17 +344,30 @@ impl Lfm2 {
             None => (0, 0),
         };
         let head_dim = cfg_raw.hidden_size / cfg_raw.num_attention_heads;
-        // ff_dim mirrors the reference's auto-adjust: 2/3 of block_ff_dim
-        // (this snapshot: 2*12288/3 = 8192).
-        let ff_dim = (2 * cfg_raw.block_ff_dim.or(cfg_raw.intermediate_size).unwrap_or(8192)) / 3;
-        let layer_types = cfg_raw
-            .layer_types
-            .iter()
-            .map(|t| match t.as_str() {
-                "conv" => LayerKind::Conv,
-                _ => LayerKind::Attn,
-            })
-            .collect::<Vec<_>>();
+        // ff_dim mirrors the reference's auto-adjust: 2/3 of block_ff_dim,
+        // rounded UP to block_multiple_of (LFM2.5-1.2B: 2*12288/3 = 8192,
+        // exact; LFM2-700M: 2*10240/3 = 6826.67 -> 6912 — the ceiling was
+        // invisible until this row).
+        let ff_base = cfg_raw.block_ff_dim.or(cfg_raw.intermediate_size).unwrap_or(8192);
+        let m = cfg_raw.block_multiple_of;
+        let ff_dim = ((2 * ff_base) / 3).div_ceil(m) * m;
+        let layer_types = if !cfg_raw.layer_types.is_empty() {
+            cfg_raw
+                .layer_types
+                .iter()
+                .map(|t| match t.as_str() {
+                    "conv" => LayerKind::Conv,
+                    _ => LayerKind::Attn,
+                })
+                .collect::<Vec<_>>()
+        } else {
+            // v1 config dialect: full_attn_idxs lists the attention layers;
+            // everything else is a conv block.
+            let attn = |i: usize| cfg_raw.full_attn_idxs.contains(&i);
+            (0..cfg_raw.num_hidden_layers)
+                .map(|i| if attn(i) { LayerKind::Attn } else { LayerKind::Conv })
+                .collect::<Vec<_>>()
+        };
         let cfg = Lfm2Config {
             hidden_size: cfg_raw.hidden_size,
             layers: cfg_raw.num_hidden_layers,

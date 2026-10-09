@@ -228,3 +228,55 @@ fn lfm2_tokenizer_matches_reference() {
     assert!(!text.is_empty());
     println!("lfm2 tokenizer parity: {} ids round trip; sample {text:?}", raw.len());
 }
+
+/// The v1 config dialect (full_attn_idxs, e.g. LFM2-700M-4bit): the
+/// config-derivation gate. Same engine, different config shapes — the
+/// fixture pins the reference greedy stream (venv mlx_lm, BOS included in
+/// prompt_ids; the Rust text path prepends the same BOS).
+#[test]
+fn lfm2_700m_greedy_matches_reference() {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("testdata/lfm2_700m_parity.json");
+    let Ok(raw) = std::fs::read_to_string(&path) else {
+        eprintln!("skipping: 700m parity fixture absent");
+        return;
+    };
+    #[derive(Deserialize)]
+    struct Fx700 {
+        snapshot: String,
+        prompt_ids: Vec<i32>,
+        greedy_ids: Vec<i32>,
+    }
+    let fx: Fx700 = serde_json::from_str(&raw).expect("700m fixture parses");
+    let snap = std::env::var_os("LFM2_700M_SNAPSHOT")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| std::path::PathBuf::from(&fx.snapshot));
+    if !snap.is_dir() {
+        eprintln!("skipping: 700m snapshot absent");
+        return;
+    }
+    let Ok(s) = mlx::gpu() else {
+        eprintln!("skipping: no Metal device");
+        return;
+    };
+    let metallib = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("build/mlx-install/lib/mlx.metallib");
+    if metallib.is_file() {
+        let _ = laya_native::mlx::set_metallib_path(&metallib);
+    }
+    let model = match Lfm2::load(&snap) {
+        Ok(m) => m,
+        Err(e) => panic!("700m load failed (config derivation?): mlx status {}", e.0),
+    };
+    let ids = model
+        .generate_greedy(&fx.prompt_ids, fx.greedy_ids.len(), None, s)
+        .expect("700m greedy");
+    let got = &ids[fx.prompt_ids.len()..];
+    assert_eq!(
+        got,
+        fx.greedy_ids.as_slice(),
+        "700m greedy diverges (v1 config dialect)\n got  {got:?}\n want {:?}",
+        fx.greedy_ids
+    );
+    println!("lfm2 700m: {}/{} tokens match the v1-config reference", got.len(), fx.greedy_ids.len());
+}

@@ -193,6 +193,7 @@ final class LayaQwenChatServer {
     this.model = 'qwen3-0.6b-4bit',
     this.defaultMaxTokens = 64,
     this.useTemplate = true,
+    this.thinking = false,
     final String? apiKey,
     final InternetAddress? address,
     final int port = 0,
@@ -206,7 +207,8 @@ final class LayaQwenChatServer {
            'engine': 'laya-native-qwen',
          },
          route: (final LoopbackRequest request) async =>
-             _route(request, engine, model, defaultMaxTokens, useTemplate),
+             _route(
+                 request, engine, model, defaultMaxTokens, useTemplate, thinking),
        );
 
   final String model;
@@ -216,6 +218,12 @@ final class LayaQwenChatServer {
   /// stops at `<|im_end|>`/`<|endoftext|>`. Raw mode is the legacy
   /// role-prefixed concatenation with no EOS stop — the bench's raw cell.
   final bool useTemplate;
+
+  /// Qwen3's thinking switch: renders the generation prompt WITHOUT the
+  /// empty `<think></think>` prefix, so the model reasons before answering
+  /// (napbench's default is thinking OFF; the bench's thinking cells flip
+  /// this). LFM2.5-Instruct has no such switch — recorded as its non-claim.
+  final bool thinking;
   final LoopbackJsonServer _server;
 
   /// The bound base URL (`http://127.0.0.1:<port>`), after [start].
@@ -230,6 +238,7 @@ final class LayaQwenChatServer {
     final String model,
     final int maxTokens,
     final bool useTemplate,
+    final bool thinking,
   ) async {
     if (request.method != 'POST' || request.path != '/v1/chat/completions') {
       return null;
@@ -256,7 +265,10 @@ final class LayaQwenChatServer {
             content: '${raw['content'] ?? ''}',
           ),
       ];
-      final prompt = renderQwenChatPrompt(messages: rendered);
+      final prompt = renderQwenChatPrompt(
+        messages: rendered,
+        enableThinking: thinking,
+      );
       final requested = body['max_tokens'];
       final completion = engine.generate(
         prompt: prompt,
