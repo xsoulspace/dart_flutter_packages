@@ -334,6 +334,20 @@ checkers.
   controlled variable). The bench carries `--raw` to reproduce any
   cell; the qwen3 template renderer is fixture-gated byte-exactly like
   the lfm2 one (venv `apply_chat_template`, enable_thinking=false).
+### The Swift line: benchmark/reference layer only (owner decision, 2026-10-09)
+
+The Swift engine (`xsoulspace_inference_mlx`'s `mlx_text_native`) is
+NOT a production serving path. Production serving = the Rust engine
+host (in-process clients or `tool/serve_text.dart` in the engine
+package, which serves the same loopback wire the harness `mlx_local`
+attaches to). The Swift engine survives as a benchmark/reference leg
+(napbench's in-process engine, comparison rows) and no new capability
+lands in it; its full retirement folds into R4 — either the driver
+ports behind the binding table or the dylib is dropped. Rationale: two
+production engines for the same checkpoints double every gate, and the
+Rust host is the one with the parity fixtures, the composition API,
+and the chat-template serving layer.
+
 ## Non-claims
 
 - R3 (shim drop) and R4 (mlx Swift-lane consolidation) are NOT done —
