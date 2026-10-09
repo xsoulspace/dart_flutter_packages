@@ -823,6 +823,7 @@ impl LayaModel {
             logits,
             act: action,
             ctx: c.b.ctx,
+            outputs: Vec::new(),
         };
         (plan, ExecPool { arrays: c.pool })
     }
