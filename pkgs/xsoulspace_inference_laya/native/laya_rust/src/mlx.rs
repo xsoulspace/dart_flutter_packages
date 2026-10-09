@@ -166,6 +166,9 @@ impl MetalKernel {
                 )
             })?;
         }
+        if std::env::var_os("LAYA_MSL_VERBOSE").is_some_and(|v| !v.is_empty()) {
+            let _ = unsafe { mlx_fast_metal_kernel_config_set_verbose(config, true) };
+        }
         chk_cfg(unsafe { mlx_fast_metal_kernel_config_set_grid(config, grid.0, grid.1, grid.2) })?;
         chk_cfg(unsafe {
             mlx_fast_metal_kernel_config_set_thread_group(
@@ -498,6 +501,10 @@ extern "C" {
         shape: *const i32,
         size: usize,
         dtype: Dtype,
+    ) -> Status;
+    fn mlx_fast_metal_kernel_config_set_verbose(
+        cls: RawMetalKernelConfig,
+        verbose: bool,
     ) -> Status;
     fn mlx_fast_metal_kernel_config_set_grid(
         cls: RawMetalKernelConfig,

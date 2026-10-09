@@ -20,12 +20,26 @@ for src in src/kernels/*.metal; do
   {
     echo '#include <metal_stdlib>'
     echo 'using namespace metal;'
-    echo "kernel void custom_kernel_${name}("
-    echo '  const device half* a [[buffer(0)]],'
-    echo '  const device half* b [[buffer(1)]],'
-    echo '  const device int* mnk [[buffer(2)]],'
-    echo '  device half* out [[buffer(3)]],'
+    case "$name" in
+      skinny_gemm)
+        echo "kernel void custom_kernel_${name}("
+        echo '  const device half* a [[buffer(0)]],'
+        echo '  const device half* b [[buffer(1)]],'
+        echo '  const device int* mnk [[buffer(2)]],'
+        echo '  device half* out [[buffer(3)]],'
+        ;;
+      dequant_gemv)
+        echo "kernel void custom_kernel_${name}("
+        echo '  const device bfloat* x [[buffer(0)]],'
+        echo '  const device uint* w [[buffer(1)]],'
+        echo '  const device bfloat* scales [[buffer(2)]],'
+        echo '  const device bfloat* biases [[buffer(3)]],'
+        echo '  const device int* nk [[buffer(4)]],'
+        echo '  device bfloat* out [[buffer(5)]],'
+        ;;
+    esac
     echo '  uint3 threadgroup_position_in_grid [[threadgroup_position_in_grid]],'
+    echo '  uint thread_index_in_threadgroup [[thread_index_in_threadgroup]],'
     echo '  uint3 thread_position_in_threadgroup [[thread_position_in_threadgroup]]) {'
     awk 'c && !/^\/\// {p=1} /^\/\// {c=1} p' "$src"
     echo '}'

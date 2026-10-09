@@ -56,6 +56,9 @@ pub enum ShapeClass {
     /// Batched matmul whose effective M (product of batch dims) is small —
     /// the weight-stationary regime R4's skinny GEMM targets (M ≤ 128).
     SkinnyGemm,
+    /// Effective M == 1 — pure GEMV (decode): the fused dequant-GEMV
+    /// binding's regime (R3/R4).
+    Gemv,
     WideGemm,
     Attention,
     Elementwise,
@@ -83,15 +86,15 @@ impl ShapeClass {
                     ShapeClass::WideGemm
                 }
             }
-            // Same regime split as Matmul — decode steps are the SkinnyGemm
-            // rows R3's fused dequant-GEMV targets.
+            // M == 1 is the pure-GEMV decode regime (R3/R4's fused
+            // dequant-GEMV); 2..=128 stays the skinny-GEMM class.
             Op::QuantizedMatmul { .. } => {
                 let a = &ins[0];
                 let m: usize = (0..a.ndim().saturating_sub(1)).map(|d| a.dim(d as i32)).product();
-                if m > 0 && m <= 128 {
-                    ShapeClass::SkinnyGemm
-                } else {
-                    ShapeClass::WideGemm
+                match m {
+                    1 => ShapeClass::Gemv,
+                    2..=128 => ShapeClass::SkinnyGemm,
+                    _ => ShapeClass::WideGemm,
                 }
             }
             Op::Dequantize { .. } => ShapeClass::Elementwise,
@@ -129,6 +132,10 @@ pub enum Backend {
     /// xcrun-compiled as a build gate, dispatched on the graph's stream
     /// through `mlx_fast_metal_kernel`.
     SkinnyGemmMsl,
+    /// R3/R4's fused dequant-GEMV (M == 1, 4-bit affine, group 64): the
+    /// packed weights stream once and dequantize in-register — the
+    /// bandwidth-floor move. Source in `kernels/dequant_gemv.metal`.
+    DequantGemmMsl,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -164,6 +171,14 @@ impl BindingTable {
                 ShapeClass::SkinnyGemm,
                 Dtype::Float16,
                 Backend::SkinnyGemmMsl,
+            );
+        }
+        if std::env::var_os("LAYA_MSL_GEMV").is_some_and(|v| !v.is_empty()) {
+            table.install(
+                "quantized_matmul",
+                ShapeClass::Gemv,
+                Dtype::BFloat16,
+                Backend::DequantGemmMsl,
             );
         }
         table
@@ -215,7 +230,71 @@ pub fn eval(node: &Node, ins: &[&Array], table: &BindingTable, s: Stream) -> Mlx
     match backend {
         Backend::MlxC => mlxc_eval(&node.op, ins, s),
         Backend::SkinnyGemmMsl => skinny_gemm_eval(&node.op, ins, s),
+        Backend::DequantGemmMsl => dequant_gemv_eval(&node.op, ins, s),
     }
+}
+
+/// The dequant-GEMV kernel's MSL source (body-only; see build_msl.sh).
+const DEQUANT_GEMV_MSL: &str = include_str!("kernels/dequant_gemv.metal");
+
+/// The R3/R4 fused dequant-GEMV binding for (quantized_matmul × Gemv ×
+/// bf16): out[1, N] = x[1, K] × dequant(W). The packed U32 weights stream
+/// once, coalesced along K per warp; nibbles dequantize in-register —
+/// no fp16/bf16 weight materialization ever exists.
+fn dequant_gemv_eval(op: &Op, ins: &[&Array], s: Stream) -> MlxResult<Vec<Array>> {
+    use std::sync::OnceLock;
+    static KERNEL: OnceLock<Option<crate::mlx::MetalKernel>> = OnceLock::new();
+    let Op::QuantizedMatmul { group_size, bits, transpose: true } = op else {
+        return Err(MlxError(-975));
+    };
+    if *group_size != 64 || *bits != 4 {
+        // The kernel's nibble/group math is fixed at affine 4-bit / 64.
+        return Err(MlxError(-975));
+    }
+    let [x, w, scales, biases] = ins else {
+        return Err(MlxError(-978));
+    };
+
+    let m: usize = (0..x.ndim().saturating_sub(1)).map(|d| x.dim(d as i32)).product();
+    if m != 1 {
+        return Err(MlxError(-975)); // Gemv class only
+    }
+    let k = x.dim(x.ndim() as i32 - 1) as usize;
+    let n = w.dim(0) as usize;
+
+    let kernel = KERNEL.get_or_init(|| {
+        crate::mlx::MetalKernel::new(
+            "laya_dequant_gemv",
+            &["x", "w", "scales", "biases", "nk"],
+            &["out"],
+            DEQUANT_GEMV_MSL,
+        )
+        .map(Some)
+        .unwrap_or_else(|e| {
+            eprintln!("dequant_gemv kernel init failed: {e:?}");
+            None
+        })
+    });
+    let Some(kernel) = kernel else { return Err(MlxError(-974)) };
+
+    let nk = Array::from_data_i32(&[n as i32, k as i32], &[2])?;
+    let ins_all: Vec<&Array> = vec![x, w, scales, biases, &nk];
+    // One warp per output row n; threadgroups pack 8 warps.
+    let warps = n as i32;
+    let total_threads = warps * 32;
+    let outs = kernel.apply(
+        &ins_all,
+        &[&[1, n]],
+        crate::mlx::Dtype::BFloat16,
+        (total_threads, 1, 1),
+        (256, 1, 1),
+        s,
+    )?;
+    Ok(vec![outs
+        .into_iter()
+        .next()
+        .ok_or(MlxError(-978))?
+        .reshape(&[1, 1, n], s)?])
 }
 
 /// The skinny-GEMM MSL kernel's MSL source (xcrun-compiles clean; see

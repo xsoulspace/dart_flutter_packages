@@ -316,3 +316,29 @@ Observed (ADR 0032 protocol — appended as rungs land):
   The ≥50%-fewer-dispatches target is thereby met in effect (2238 → 1
   dispatch unit per forward pass) but the intermediate kernel count is not
   measurable through the vendored C API.
+- **R3/R4 fused dequant-GEMV binding (2026-10-09, gate MEASURED: parity at
+  1 bf16 ulp, µbench FAIL 0.83–0.98× — the table keeps mlx-c):** the
+  binding EXISTS and is correct — `ShapeClass::Gemv` (M == 1, split out of
+  SkinnyGemm), `Backend::DequantGemmMsl` on (quantized_matmul × Gemv ×
+  bf16) via `LAYA_MSL_GEMV=1`, kernel `kernels/dequant_gemv.metal` (one
+  warp per output row; lanes stride the packed U32 row coalesced;
+  nibbles dequantize in-register — the bf16 weight copy never exists).
+  Paid-for lessons, all recorded: (1) **MLX affine dequant is
+  `w = q·scale + bias`** (verified against mx.dequantize — not
+  (q−bias)·scale); (2) mlx passes bf16 arrays as its own `bfloat16_t`
+  type and small arrays via `constant` memory;
+  `thread_index_in_threadgroup` is a scalar uint; (3) lane arithmetic must
+  be WARP-local (`tid % 32`) — the threadgroup-wide index silently zeroed
+  all but the first warp's row. Correctness vs mlx-c on the qwen decode
+  shapes (N=1024..151936, K=1024/3072): max |diff| = 1 output bf16 ulp
+  (accumulate order). **µbench: 0.83–0.98× of mlx-c — under the 1.3×
+  gate**, the closest race yet (mlx's quantized GEMV runs ~1.4× above the
+  packed-stream floor on the lm_head shape; the per-layer shapes are
+  dispatch-floor-bound at ~0.27 ms). Installed-row observation: greedy
+  decode with the binding live matches 60/64 tokens — a near-tie argmax
+  flip from the ulp-level accumulate-order drift, the same sensitivity
+  class as the chunked-prefill tie lesson; non-bit-identical bindings and
+  greedy parity interact, and the gate design (parity + µbench) is what
+  keeps such rows opt-in. Future-attempt levers (~35% gap to close):
+  float4 loads, multi-row threadgroups, x preloaded to registers.
+  Harness: `cargo test --release --test r4_dequant_gemv_gate -- --ignored --nocapture`.
