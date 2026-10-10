@@ -2,7 +2,7 @@ name: xsoulspace_inference_mlx_native
 description: The MLX-native engine host — the Rust cdylib, composition API,
   MLX bindings, tokenizers, and model drivers (laya decision op-chain, Qwen3,
   LFM2), with their Dart FFI clients and chat servers. Knows no product.
-version: 0.1.0
+version: 0.1.1
 publish_to: none
 repository: https://github.com/xsoulspace/dart_flutter_packages
 issue_tracker: https://github.com/xsoulspace/dart_flutter_packages/issues

@@ -95,6 +95,7 @@ Each rung: implement → golden gate → bench → evidence appended here.
 | R3 | Quantization: laya q8 behind a **calibration gate** (63/63 argmax, choice-prob and score/noul drift ≤ 0.02 — fixture regeneration only with a provenance note); q4 fused dequant-GEMV for decode | calibration gate green on golden cases | weights-stream floor: fp16 ~11–12 ms → q8 ~6 ms → q4 ~3 ms on M1 |
 | R4 | Custom MSL kernels via the binding table: weight-stationary skinny GEMM (M ≤ 128), fused RMSNorm + epilogues, fused dequant-GEMV. Compiled at build (`xcrun metal` → colocated metallib; the hook already collocates) | per kernel: golden parity **and** ≥ 1.3× µbench vs the binding it replaces **on its tuned family** — else the table keeps mlx-c | kernels pay in latency/bandwidth-bound regimes (solo decisions, decode), not batched prefill |
 | R5 | UI coexistence: chunked prefill | < 10% dropped frames during 4k prefill (manual/Instruments, noted as such) | laya + generation + Flutter on one GPU |
+| R6 | LFM2-on-plan: the hybrid short-conv/GQA forward declared as a plan (`Conv1d` op; KV buffers AND conv states as functional outputs; `LAYA_LFM2_PLAN=0` opt-out) — plus the executor-transparency sweep | plan-vs-imperative bit-identity on the live model (decode logit bits; prefill caches incl. conv states across a growth boundary); fixture 64/64 under BOTH routing modes; `tests/plan_op_sweep.rs` cells bit-identical | every production forward (laya, qwen3, lfm2) rides one composition API and one binding table |
 
 ## Hard laws (carried from ADR 0051)
 
@@ -415,3 +416,58 @@ Observed (ADR 0032 protocol — appended as rungs land):
   `LAYA_Q8` stays opt-in; the default table remains the fp16/bf16
   composition (all default gates re-verified green: test_fresh 63/63 @ 0.0
   / 1.5e-8, full dart suite 23 passing).
+- **R6 (2026-10-11, LFM2.5-1.2B-4bit + LFM2-700M, mlx 0.32.x, AC→battery mid-run
+  — bit gates are power-independent): LFM2-on-plan LANDED; the composition API
+  now covers every production forward.** `lfm2.rs` gains `build_forward_plan` +
+  `forward_plan` (node-for-node the imperative walk — same ops, same order,
+  same names — with the RoPE offset and slice bounds as per-plan constants,
+  like the qwen step plan): attention layers write KV via functional
+  `SliceUpdate` + `Slice` views; conv layers concatenate state, slice the new
+  state, and run the depthwise `Conv1d` — **the conv state is a declared plan
+  output** (the qwen store-back lesson applies to the sliding window too).
+  The declared plan is the DEFAULT path (`LAYA_LFM2_PLAN=0` reverts to the
+  imperative walk for A/B, same pattern as `LAYA_QWEN_PLAN`). Gates, new
+  `tests/lfm2_plan_parity.rs`: decode-step logits **bit-identical** (raw f32
+  bits, 8 steps) and prefill caches **bit-identical** (2 chunks, 300 tokens,
+  the 256-growth boundary crossed, KV buffers AND conv states compared as
+  truncated bits) between the paths; the fixture battery is green under BOTH
+  routing modes (`cargo test --test lfm2_parity` default and
+  `LAYA_LFM2_PLAN=0`), including the 700M v1-config row and the opt-in EOS
+  gate. Throughput on AC: **64/64 tokens match, 64.8 tok/s through the plan**
+  (imperative reference recorded 49–53 tok/s — single-graph submission pays).
+  **The gate caught a real semantic divergence before it could ship:** the
+  plan initially declared the full written KV buffers as outputs while the
+  imperative `attn_update` stores the trimmed `[.., :total, :]` views — the
+  prefill cache comparison failed on buffer SIZE (456 vs 300 rows), which is
+  exactly the whole-forward-bit-gate class of catch. Battery note: the `l0`
+  AC-calibrated timing gate went red once mid-session when the machine
+  unplugged (the ADR 0060 recorded failure mode; never weakened) and passed
+  on the rerun.
+- **R1 default-flip verdict (2026-10-11): DECLINED, with the measurement that
+  decides it.** The cold-start leg added to `r1_compile_ab_probe`: eager first
+  call 483.7 ms, closure build 0.0 ms (tracing is lazy), **first traced call
+  per shape 6608 ms** (battery — a pessimistic upper bound), first replay
+  75.8 ms. Compile specializes PER SHAPE, so varied decision traffic re-traces;
+  steady-state wins ~1.15× battery / 1.79× AC ≈ 42 ms/decision — break-even is
+  150+ decisions per distinct shape, which phone-join sessions never reach.
+  `LAYA_COMPILE` stays opt-in for daemon-class long-lived workloads; eager
+  stays the default; the verdict is recorded at the gate site in `lib.rs`.
+- **Executor-transparency sweep (2026-10-11): `tests/plan_op_sweep.rs`, 23
+  cells bit-identical.** Every op kind the three drivers submit
+  (elementwise, `rms_norm`, the fused `rms_norm_residual` both slots,
+  q4 `quantized_matmul`/`dequantize`, `rope` two offsets, `sdp` causal and
+  no-mask, bf16 `slice_update`/`slice` cache ops, the `conv1d` depthwise cell,
+  `split`, gather/shape/const ops) is checked bit-for-bit between the direct
+  binding dispatch and the declared-plan executor, on model-realistic shapes
+  and dtypes. This is the durable parity infrastructure: the next model or Op
+  variant adds a cell and inherits the mechanical check (review law: keep the
+  cell list total over the enum). Executor contract surfaced by writing it:
+  declared outputs alias slot 0 of each node — extra fanout slots ride
+  `Identity` pass-throughs in the sweep, as they ride the graphs in the models.
+- **Serving non-claims recorded (2026-10-11):** the Rust text path has NO
+  cross-request KV common-prefix reuse — every `generate_greedy` builds a
+  fresh cache (the retired Swift engine had it; the napbench `--warm` shape
+  has no Rust equivalent yet) — and NO token streaming (no incremental
+  surface in the FFI or `MlxNativeTextClient`). Both are serving-loop
+  features, not forward-plan features; they stay open items, not parity
+  regressions.

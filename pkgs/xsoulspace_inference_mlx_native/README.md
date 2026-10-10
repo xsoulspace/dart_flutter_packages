@@ -84,3 +84,32 @@ documented in git history and stays the reference route for iOS
   in-process native line; scorecards land in `bench/` and are the palette's
   cited evidence (thresholds pinned in ADR 0057 once two runs exist).
 - `tool/test_fresh.sh` — the golden parity cycle (63/63 @ 0.0 / 1.5e-8).
+
+## The composition API (ADR 0054) — every forward is a declared plan
+
+All three drivers ride the same declared-plan executor and binding table,
+and the plan path is the DEFAULT for all of them (opt-outs are A/B switches,
+not legacy paths): laya's decision op-chain (R1; `LAYA_COMPILE` additionally
+fuses it — opt-in, default flip DECLINED 2026-10-11: the first traced call
+per shape costs seconds and break-even is 150+ decisions/shape), Qwen3
+decode + prefill (R2/R5, `LAYA_QWEN_PLAN=0` opt-out), and LFM2's hybrid
+short-conv/GQA forward (R6, `LAYA_LFM2_PLAN=0` opt-out) — attention KV
+buffers and the sliding conv state are both functional plan outputs.
+
+Parity law, mechanically enforced:
+
+- `tests/lfm2_plan_parity.rs` / `tests/qwen_plan_parity.rs` — the plan path
+  is bit-identical to the imperative walk on the live model (decode logit
+  bits; prefill caches including conv states across a cache-growth boundary),
+  and the fixtures pass under BOTH routing modes. R6's gate caught a real
+  store-back divergence (full buffers vs trimmed views) before it shipped.
+- `tests/plan_op_sweep.rs` — every op kind the drivers submit is
+  bit-identical between the direct binding dispatch and the plan executor
+  (23 cells, model-realistic shapes/dtypes). A new Op variant adds a cell.
+- Plan reviews read JSON: `LAYA_LFM2_PLAN_DUMP` / `LAYA_QWEN_PLAN_DUMP`
+  write the per-call plan; `LAYA_DEBUG_DUMP` keeps stage dumps aligned
+  between the paths.
+
+Recorded serving non-claims (open items, not regressions): no cross-request
+KV common-prefix reuse (fresh cache per generate — the retired Swift engine
+had it) and no token streaming.

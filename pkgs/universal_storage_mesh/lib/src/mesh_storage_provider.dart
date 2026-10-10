@@ -210,6 +210,24 @@ final class MeshStorageProvider implements StorageProvider {
     return _memberCodec.readValue(doc) as String?;
   }
 
+  /// A mesh member carries its whole content in one LWW register, so an
+  /// append IS a rewrite at the CRDT layer — the delta engine still ships
+  /// only the changed op. Purely local (the default seam) implementation
+  /// is enough; the append-mostly hot paths belong to local engines.
+  @override
+  Future<FileOperationResult> appendFile(
+    final String path,
+    final String content, {
+    final String? commitMessage,
+  }) async {
+    _ensureInitialized();
+    final docPath = normalizeMeshPath(path);
+    final existing = _docs[docPath] == null
+        ? null
+        : _memberCodec.readValue(_docs[docPath]!) as String?;
+    return _applyContentOp(docPath, (existing ?? '') + content, existing == null);
+  }
+
   @override
   Future<FileOperationResult> deleteFile(
     final String path, {

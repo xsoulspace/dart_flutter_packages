@@ -322,6 +322,14 @@ pub extern "C" fn mlx_native_forward(handle: i64, request_json: *const c_char) -
 
     // R1 (ADR 0054): LAYA_COMPILE routes the plan through mlx.compile. A
     // compile failure is loud, never a silent eager fallback.
+    // DEFAULT FLIP DECLINED (measured 2026-10-11, `r1_compile_ab_probe`
+    // cold-start leg): the first traced call per shape costs seconds
+    // (6608ms on battery — pessimistic bound; first replay 75.8ms), and
+    // the trace specializes PER SHAPE, so varied decision traffic re-traces.
+    // Steady state wins ~1.15x battery / 1.79x AC ≈ 42ms/decision —
+    // break-even is 150+ decisions per distinct shape, which phone-join
+    // sessions never reach. Opt-in stays for daemon-class long-lived
+    // workloads; eager stays the default.
     let output = if std::env::var_os("LAYA_COMPILE").is_some_and(|v| !v.is_empty()) {
         let compiled = match compiled_slot.get() {
             Some(c) => c,
@@ -1168,6 +1176,33 @@ mod perf_tests {
             marker_mask: Array::from_data_bool(&vec![1u8; b * k], &[b, k]).unwrap(),
             qtype: Array::from_data_i32(&vec![0i32; b], &[b]).unwrap(),
         };
+        // Cold-start leg (the default-flip question, ADR 0054 R1): first
+        // eager call, closure build, first traced call per shape (trace +
+        // specialize), first replay. Runs BEFORE any warmup so the numbers
+        // are the honest first-decision cost. Battery power makes this a
+        // PESSIMISTIC upper bound — acceptable here means acceptable.
+        let eager_first_ms = {
+            let t = std::time::Instant::now();
+            model.forward(&batch, s).unwrap();
+            t.elapsed().as_secs_f64() * 1e3
+        };
+        let closure_build_ms = {
+            let t = std::time::Instant::now();
+            let _ = crate::model::CompiledForward::new(std::sync::Arc::clone(&model)).unwrap();
+            t.elapsed().as_secs_f64() * 1e3
+        };
+        let compiled_cold = crate::model::CompiledForward::new(std::sync::Arc::clone(&model)).unwrap();
+        let (first_call_ms, replay_ms) = {
+            let t = std::time::Instant::now();
+            compiled_cold.forward(&batch, s).unwrap();
+            let first = t.elapsed().as_secs_f64() * 1e3;
+            let t = std::time::Instant::now();
+            compiled_cold.forward(&batch, s).unwrap();
+            (first, t.elapsed().as_secs_f64() * 1e3)
+        };
+        eprintln!(
+            "R1 cold start (B={b} L={l}): eager first {eager_first_ms:.1}ms | closure build {closure_build_ms:.1}ms | first traced call {first_call_ms:.1}ms | first replay {replay_ms:.1}ms"
+        );
         // Warmup both paths (compile traces + specializes per shape here).
         model.forward(&batch, s).unwrap();
         compiled.forward(&batch, s).unwrap();

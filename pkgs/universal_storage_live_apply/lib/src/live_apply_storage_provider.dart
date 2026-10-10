@@ -117,6 +117,21 @@ class LiveApplyStorageProvider implements StorageProvider {
         return result;
       });
 
+  /// Journaled append: the pre-state snapshot covers rollback; the inner
+  /// provider owns the O(chunk) fast path when it has one.
+  @override
+  Future<FileOperationResult> appendFile(
+    final String path,
+    final String content, {
+    final String? commitMessage,
+  }) =>
+      _journaled((final tx) async {
+        await tx.snapshot(path);
+        final result = await inner.appendFile(path, content);
+        await tx.recordPost(path, await inner.getFile(path));
+        return result;
+      });
+
   @override
   Future<FileOperationResult> deleteFile(
     final String path, {
