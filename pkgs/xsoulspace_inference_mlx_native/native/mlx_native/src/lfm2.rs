@@ -1187,11 +1187,13 @@ impl Lfm2 {
         out.extend_from_slice(prompt_ids);
 
         const PREFILL_STEP: usize = 2048;
+        let pacing = crate::power::PrefillPacing::for_request();
         let mut rest = prompt_ids;
         while rest.len() > 1 {
             let n = PREFILL_STEP.min(rest.len() - 1);
             let t = Array::from_data_i32(&rest[..n], &[1, n])?;
             self.forward_hidden(&t, &mut cache, s)?;
+            pacing.rest();
             rest = &rest[n..];
         }
 

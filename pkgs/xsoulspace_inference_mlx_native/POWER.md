@@ -51,12 +51,22 @@ gates keep asserting on `unknown` (no silent weakening).
 - iOS Low Power Mode: detect-only, no opt-out.
 - No energy measurements yet (IOReport = future work).
 
-## Named consumers (not yet built)
+## Consumers (live, ADR 0061)
 
-1. **Routing** — afm's tier ladder treats throttled/battery states as a
-   reason to move sustained lanes (2k–8k prefill, long decode) to
-   mesh/remote; laya's ~90 ms burst decisions stay local.
-2. **Pacing** — inter-chunk pacing on throttled states, on top of R5's
-   chunked prefill.
-3. **Energy probe** — IOReport Energy Model: joules per decision, the
-   dimension that would let rungs be judged on battery.
+1. **Routing** — afm's `RoutedDecisionProvider` takes a host-pushed
+   `powerPressure` (`none` = today's ladder; `throttled` demotes the local
+   tier below a ready mesh peer — a re-order, never a removal; hosted
+   stays last). Map facts with `decisionPowerPressureOf(PowerFacts)`, wire
+   with `startPowerPressurePolling(provider)` (one call, stop closure
+   returned). No production route set mixes local+peer today, so the
+   poller is dormant until a mixed topology lands.
+2. **Pacing** — `PrefillPacing` in the Rust generate loops: under battery
+   or an OS throttle confession, the prefill loop rests 8 ms between
+   chunks (`LAYA_POWER_PACING=0` disables, `LAYA_POWER_PACING_MS=N`
+   retunes). Zero effect on AC/unknown; prefill-only; one facts read per
+   generate call. Invisible to Dart.
+3. **Energy probe** — `cargo run --bin energy_probe` samples IOReport
+   Energy Model channels around N laya decisions. **Recorded gap: darwin
+   27 does not expose IOReport to unentitled processes** — the probe
+   prints `energy: NON-CLAIM on this host` and exits 0; the lane stands
+   for hosts where the framework is reachable.

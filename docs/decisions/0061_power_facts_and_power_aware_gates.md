@@ -52,14 +52,38 @@ sensed, recorded, gated on, routed by. Never commanded.
    an agent reading the log never has to re-derive why a number looks
    slow. The manual `pmset` law becomes mechanical; nothing about it is
    removed.
-4. **Route / pace / reduce-energy: recorded as consumers, not implemented
-   here.** The afm `RoutedDecisionProvider` tiers local → mesh → remote
-   from capability facts; power joins those facts when the throttle should
-   move sustained lanes (2k–8k prefill, long decode) off the local host
-   while laya's ~90 ms burst decisions stay local. Pacing tiers build on
-   R5's chunked prefill. An energy-per-decision probe (IOReport Energy
-   Model) is the missing measurement that would let rungs be judged in
-   joules. Each is its own change with its own gates.
+4. **Route / pace / probe-energy: the three consumers (implemented
+   2026-10-11).**
+   - **Routing** (afm `decision_routing.dart`): the router takes a
+     host-pushed `powerPressure` (`none` | `throttled`) — the readiness
+     pattern, never router-side I/O. `none` (the default) is byte-for-byte
+     today's ladder. `throttled` DEMOTES localHost routes below ready
+     meshPeer routes: a re-order, never a removal — local stays
+     dispatchable (failover returns to it; it serves when it is the only
+     option), hosted stays last. `decisionPowerPressureOf(PowerFacts)`
+     maps the facts (battery, or `cpuSpeedLimitPercent < 100` →
+     throttled); `startPowerPressurePolling` is the one-call host wiring.
+     Recorded reality: no production route set mixes local+peer on one
+     router today (desktop = single local binding, phone = single peer
+     route), so the poller is dead code until a mixed topology lands —
+     the seam exists so that landing is one call.
+   - **Pacing** (mlx_native `PrefillPacing`): under a real power ceiling
+     (battery, or the OS throttling now) the prefill loop rests 8 ms
+     between chunks — R5's frame gate proved paced chunks co-schedule
+     with the compositor essentially free. Zero effect on AC/unknown
+     (err toward speed), prefill-only (never per decode token), one facts
+     read per generate call (never per chunk), `LAYA_POWER_PACING=0`
+     disables, `LAYA_POWER_PACING_MS=N` retunes. Wired into both the
+     qwen and lfm2 `generate_greedy` chunk loops; invisible to Dart.
+   - **Energy probe** (`src/bin/energy_probe.rs`): samples IOReport's
+     "Energy Model" channels around N laya decisions. IOReport is a
+     PRIVATE framework — the probe dlopens it and, when absent, prints
+     `energy: NON-CLAIM on this host` and exits 0. **Recorded capability
+     gap (darwin 27, M1): the framework is not on disk and the symbols
+     are not in the process's default scope — an unentitled user process
+     cannot read energy here.** The reroute is an entitlement or a
+     root `powermetrics` lane; both are out of scope. The probe is the
+     standing lane for any host where IOReport IS reachable.
 
 ## Hard laws
 
@@ -81,7 +105,9 @@ sensed, recorded, gated on, routed by. Never commanded.
 - Battery level and age shift the cap — the same workload throttles
   differently at 20% vs 90%.
 - iOS Low Power Mode cannot be opted out of, only detected.
-- No energy measurements yet — IOReport is future work (consumer 4).
+- No energy measurements exist yet — on this host the IOReport gap makes
+  joules a non-claim (see consumer 3); the probe lane stands for hosts
+  where the framework is reachable.
 - The 6,608 ms first-traced-call figure (ADR 0054 R1 flip verdict) was
   measured on battery and is an upper bound; the verdict does not hinge
   on it.
@@ -114,3 +140,15 @@ All measured 2026-10-11, M1/16GiB.
   throttled `CPU_Speed_Limit`, garbage → `unknown`); `l0` on battery now
   prints the facts line and passes (assert held on the AC rerun); the
   Dart parser suite covers the same fixtures plus non-mac degrade.
+- Consumers (2026-10-11): routing — afm `decision_routing_test.dart`
+  18/18 (pressure mapping on all fact states, peer-first under throttle,
+  local-served-when-only, throttle-failover to local, the default ladder
+  unchanged, poll lifecycle); the 6 other afm reds are stash-proven
+  pre-existing (same tests fail on the clean-HEAD state of the two
+  touched files, 129+6 there vs 135+6 with the change). Pacing — the
+  `prefill_pacing_law` unit test pins every state and both env laws, and
+  both fixture batteries (lfm2 4/4, qwen3 3/3) stay green with pacing
+  wired into the loops (a sleep touches no math). Energy — the probe
+  compiles and its degrade is proven live on darwin 27
+  (`energy: NON-CLAIM on this host`); the sampling path stands for hosts
+  where the private framework is reachable.

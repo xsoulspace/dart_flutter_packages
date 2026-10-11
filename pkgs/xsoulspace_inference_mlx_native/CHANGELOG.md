@@ -15,6 +15,15 @@ by ADR 0061 (which DOES add a Dart surface).
   AC-calibrated `l0` gate went red twice on mid-run unplugs for the same
   code; battery throttles sustained work 4–10× (ADR 0051 L3). See
   [POWER.md](POWER.md).
+- **Pacing consumer (ADR 0061).** `PrefillPacing` rests 8 ms between
+  prefill chunks under battery/OS-throttle (zero effect on AC/unknown;
+  prefill-only; one facts read per generate; `LAYA_POWER_PACING=0`
+  disables, `LAYA_POWER_PACING_MS=N` retunes). Wired into both generate
+  loops; fixture parity untouched (a sleep touches no math).
+- **Energy probe (ADR 0061).** `cargo run --bin energy_probe` samples
+  IOReport Energy Model channels around N laya decisions, degrading to an
+  honest non-claim where the private framework is unreachable (the
+  recorded darwin 27 gap).
 
 - **LFM2/LFM2.5 forward is now a declared plan, and it is the DEFAULT
   path.** The hybrid short-conv/GQA forward rides the composition API's

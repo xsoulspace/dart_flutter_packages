@@ -157,6 +157,55 @@ pub fn perf_gate_with_facts(f: PowerFacts, gate: &str, ok: bool, detail: &str) {
     }
 }
 
+/// Prefill pacing (ADR 0061 consumer 2): under a real power ceiling
+/// (battery, or the OS throttling right now), pause briefly between
+/// prefill chunks so the GPU's current draw stays smooth — R5's frame gate
+/// proved paced chunks co-schedule with the compositor essentially free
+/// (0.0–0.3% dropped frames, paced AND unpaced). The safe-and-speed
+/// balance is explicit: ZERO effect on AC or unknown (pacing is comfort,
+/// not correctness — err toward speed when unsure), prefill-only (never
+/// per decode token — that would destroy tok/s), one facts read per
+/// generate call (an exec or two, never per chunk; mid-generate power
+/// changes take effect on the NEXT call — documented staleness), and
+/// `LAYA_POWER_PACING=0` disables / `LAYA_POWER_PACING_MS=N` retunes.
+#[derive(Clone, Copy, Debug)]
+pub struct PrefillPacing {
+    pause: Option<std::time::Duration>,
+}
+
+impl PrefillPacing {
+    /// Reads the facts once per generate call.
+    pub fn for_request() -> PrefillPacing {
+        let disable = std::env::var_os("LAYA_POWER_PACING").is_some_and(|v| v == "0");
+        let ms = std::env::var_os("LAYA_POWER_PACING_MS")
+            .and_then(|v| v.to_str().and_then(|s| s.parse::<u64>().ok()));
+        Self::resolve(facts(), disable, ms)
+    }
+
+    /// The law, testable on any power state and any env override.
+    pub fn resolve(f: PowerFacts, disable: bool, ms_override: Option<u64>) -> PrefillPacing {
+        if disable {
+            return PrefillPacing { pause: None };
+        }
+        let throttled =
+            f.source == PowerSource::Battery || f.cpu_speed_limit.is_some_and(|l| l < 100);
+        let pause = throttled.then(|| std::time::Duration::from_millis(ms_override.unwrap_or(8)));
+        PrefillPacing { pause }
+    }
+
+    /// Called between prefill chunks; a no-op unless pacing is active.
+    pub fn rest(&self) {
+        if let Some(d) = self.pause {
+            std::thread::sleep(d);
+        }
+    }
+
+    /// For benches/tests that want to report the active policy.
+    pub fn pause_duration(&self) -> Option<std::time::Duration> {
+        self.pause
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -194,6 +243,40 @@ mod tests {
         assert_eq!(batt.describe(), "battery 50% cpu_limit 58%");
         let unknown = PowerFacts { source: PowerSource::Unknown, battery_percent: None, cpu_speed_limit: None };
         assert_eq!(unknown.describe(), "unknown");
+    }
+
+    #[test]
+    fn prefill_pacing_law_on_every_state() {
+        let ac = PowerFacts { source: PowerSource::Ac, battery_percent: None, cpu_speed_limit: Some(100) };
+        let unknown = PowerFacts { source: PowerSource::Unknown, battery_percent: None, cpu_speed_limit: None };
+        let battery = PowerFacts {
+            source: PowerSource::Battery,
+            battery_percent: Some(50),
+            cpu_speed_limit: Some(100),
+        };
+        let throttled_ac = PowerFacts {
+            source: PowerSource::Ac,
+            battery_percent: None,
+            cpu_speed_limit: Some(58),
+        };
+        // AC and unknown: no pause (err toward speed).
+        for f in [ac, unknown] {
+            assert!(PrefillPacing::resolve(f, false, None).pause_duration().is_none());
+        }
+        // Battery, or the OS throttling on AC: the default 8ms rest.
+        for f in [battery, throttled_ac] {
+            assert_eq!(
+                PrefillPacing::resolve(f, false, None).pause_duration(),
+                Some(std::time::Duration::from_millis(8))
+            );
+        }
+        // Env law: disable wins over everything; the ms override retunes.
+        assert!(PrefillPacing::resolve(battery, true, None).pause_duration().is_none());
+        assert_eq!(
+            PrefillPacing::resolve(battery, false, Some(32)).pause_duration(),
+            Some(std::time::Duration::from_millis(32))
+        );
+        assert!(PrefillPacing::resolve(ac, true, Some(32)).pause_duration().is_none());
     }
 
     #[test]
