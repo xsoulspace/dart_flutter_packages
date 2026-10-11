@@ -167,7 +167,9 @@ final class _ParkedSession implements MeshSession {
 
   void _onDone() {
     if (_routed) {
-      _outbound.close();
+      // The consumer is going away; the close future is drainage, not a
+      // signal anyone waits on.
+      unawaited(_outbound.close());
       return;
     }
     // Died before declaring its plane: drop, never route (a dead session

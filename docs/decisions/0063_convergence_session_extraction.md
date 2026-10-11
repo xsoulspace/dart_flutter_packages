@@ -85,3 +85,6 @@ stack.
 - The kernel and this package are still not published to pub.dev; both
   ride the existing bootstrap path-resolution until publish (same clause
   as ecsly ADR 0001 §3).
+  *Resolution (2026-10-12): kernel, world layer, session core, and mesh
+  transport all published at 0.1.0-dev.1; the bootstrap path-resolution
+  is retired — consumers resolve hosted.*
