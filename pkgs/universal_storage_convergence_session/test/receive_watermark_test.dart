@@ -8,6 +8,15 @@ import 'package:universal_storage_convergence_session/universal_storage_converge
 /// for local writes after folding remote state), its raise-only
 /// monotonicity, durable restore, and the ahead-wall-clock scenario that
 /// motivates the whole type.
+///
+/// Coverage is a (wall, counter) notion, never a full-HLC compareTo: the
+/// watermark is re-anchored to the receiver's actor, so its HLC never
+/// travels and its actor never participates in ordering.
+bool covers(final Hlc watermark, final Hlc delivery) =>
+    watermark.wallMillis > delivery.wallMillis ||
+    (watermark.wallMillis == delivery.wallMillis &&
+        watermark.counter >= delivery.counter);
+
 void main() {
   final realNow = DateTime.fromMillisecondsSinceEpoch(1700000000000);
 
@@ -19,24 +28,24 @@ void main() {
     test('observe raises and keeps the receiver actor id', () {
       final wm = ReceiveWatermark(actorId: 'local');
       const remote = Hlc(1700000000005, 0, 'remote');
-      wm.observe(remote, now: realNow);
+      wm.observe(remote);
       final value = wm.value!;
       expect(value.actorId, 'local');
       expect(
-        value > remote,
+        covers(value, remote),
         isTrue,
-        reason: 'the watermark must order strictly above the delivery',
+        reason: 'the watermark must cover the delivery (wall, counter)',
       );
     });
 
     test('observe is raise-only: older or equal deliveries are no-ops', () {
       final wm = ReceiveWatermark(actorId: 'local');
       const ahead = Hlc(1700000000100, 7, 'remote');
-      wm.observe(ahead, now: realNow);
+      wm.observe(ahead);
       final after = wm.value!;
       wm
-        ..observe(const Hlc(1, 0, 'other'), now: realNow)
-        ..observe(ahead, now: realNow);
+        ..observe(const Hlc(1, 0, 'other'))
+        ..observe(ahead);
       expect(wm.value, after);
     });
 
@@ -50,16 +59,15 @@ void main() {
           state: const {},
           createdAt: createdAt,
         ),
-        now: realNow,
       );
-      expect(wm.value! > createdAt, isTrue);
+      expect(covers(wm.value!, createdAt), isTrue);
     });
 
     test('floorNow raises a behind clock to the watermark wall clock', () {
       final wm = ReceiveWatermark(actorId: 'local');
       expect(wm.floorNow(realNow), realNow); // nothing received yet
       const aheadWall = 4000000000000; // year 2096
-      wm.observe(const Hlc(aheadWall, 0, 'remote'), now: realNow);
+      wm.observe(const Hlc(aheadWall, 0, 'remote'));
       final behind = DateTime.fromMillisecondsSinceEpoch(1700000000001);
       final floored = wm.floorNow(behind);
       expect(floored.millisecondsSinceEpoch, aheadWall);
@@ -81,7 +89,7 @@ void main() {
 
       final wm = ReceiveWatermark(actorId: 'local');
       const remote = Hlc(1700000000005, 9, 'remote');
-      wm.observe(remote, now: realNow);
+      wm.observe(remote);
       final restored2 = ReceiveWatermark.fromJson(wm.toJson());
       expect(restored2.actorId, 'local');
       expect(restored2.value, wm.value);
@@ -93,7 +101,7 @@ void main() {
     test('a restored watermark keeps ordering later local writes', () {
       const aheadOpHlc = Hlc(4000000000000, 0, 'remote');
       final wm = ReceiveWatermark(actorId: 'local')
-        ..observe(aheadOpHlc, now: realNow);
+        ..observe(aheadOpHlc);
       final restored = ReceiveWatermark.fromJson(wm.toJson());
 
       final doc = ConvergenceDoc(docId: 'd', actorId: 'local');
@@ -131,7 +139,7 @@ void main() {
         final doc = ConvergenceDoc(docId: 'd', actorId: 'local')
           ..applyRemote([remoteOp]);
         final wm = ReceiveWatermark(actorId: 'local')
-          ..observe(remoteOp.hlc, now: realNow);
+          ..observe(remoteOp.hlc);
 
         final localOp = doc.applyLocal(
           const {'k': 'x', 'v': 'local-value'},
@@ -170,7 +178,7 @@ void main() {
         final wm = ReceiveWatermark(actorId: 'local');
         Hlc? previous;
         for (final delivery in deliveries) {
-          wm.observe(delivery, now: realNow);
+          wm.observe(delivery);
           final current = wm.value;
           expect(current, isNotNull);
           if (previous != null) {
@@ -184,7 +192,7 @@ void main() {
         }
         for (final delivery in deliveries) {
           expect(
-            wm.value! > delivery,
+            covers(wm.value!, delivery),
             isTrue,
             reason: 'watermark does not cover $delivery',
           );

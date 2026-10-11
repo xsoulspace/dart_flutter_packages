@@ -54,20 +54,34 @@ final class ReceiveWatermark {
   ///
   /// Raise-only: when the watermark already covers [remote], this is a
   /// no-op — restoration and redelivery can never regress the clock.
-  /// [now] anchors the receive on this replica's wall clock when it is
-  /// ahead of both inputs; a frozen or behind clock is fine — the
-  /// counter seam still lands strictly above [remote].
-  void observe(final Hlc remote, {final DateTime? now}) {
-    final base = _value ?? Hlc.zero(actorId);
-    if (base >= remote) return;
-    _value = base.receive(remote, now ?? DateTime.now());
+  ///
+  /// PURELY LOGICAL, on purpose: the watermark is the (wall, counter) max
+  /// of what this replica has RECEIVED, re-anchored to [actorId]. It never
+  /// consults the host clock. Anchoring receives to real time (the
+  /// textbook HLC receive) silently re-bases the watermark to the host's
+  /// wall clock — harmless when every replica's clock is truthful, but
+  /// wrong the moment clocks are fabricated (tests, simulations) or
+  /// skewed (offline devices): a receive would drag the watermark to the
+  /// host's "now" and reorder LWW outcomes for writes issued on any other
+  /// clock. Observed in the wild: last_answer's task-board suite pins this
+  /// (found during the ecsly ADR 0004 adoption, 2026-10-11). The
+  /// issue-time strictness instead comes from the kernel's `lastIssued`
+  /// tick seam — see [floorNow].
+  void observe(final Hlc remote) {
+    final current = _value;
+    if (current != null &&
+        (current.wallMillis > remote.wallMillis ||
+            (current.wallMillis == remote.wallMillis &&
+                current.counter >= remote.counter))) {
+      return;
+    }
+    _value = Hlc(remote.wallMillis, remote.counter, actorId);
   }
 
   /// Absorbs an adopted snapshot's creation timestamp, so local writes
   /// after adopting wholesale snapshot state order after the snapshot's
   /// content.
-  void observeSnapshot(final Snapshot snapshot, {final DateTime? now}) =>
-      observe(snapshot.createdAt, now: now);
+  void observeSnapshot(final Snapshot snapshot) => observe(snapshot.createdAt);
 
   /// Floors the time handed to the next local write at the watermark's
   /// wall clock: a `now` below the watermark comes back raised to it, a
