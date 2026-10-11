@@ -4,13 +4,14 @@ import 'package:crypto/crypto.dart' as crypto;
 import 'package:path/path.dart' as p;
 import 'package:universal_io/io.dart';
 
+import 'live_apply_exceptions.dart';
 import 'live_apply_models.dart';
 
 /// SHA-256 (hex) of UTF-8 [content].
 String liveApplySha256(final String content) =>
     crypto.sha256.convert(utf8.encode(content)).toString();
 
-/// Sentinel post-hash recorded for deletions (sha256 of the empty string).
+/// Legacy placeholder hash; schema v2 uses explicit presence for deletions.
 const String liveApplyDeletedSha256 =
     'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
 
@@ -21,15 +22,54 @@ const String liveApplyDeletedSha256 =
 /// Writes are atomic (temp file + rename) so a crash mid-write leaves the
 /// previous journal intact.
 class LiveApplyJournalStore {
-  /// {@macro live_apply_journal_store}
+  /// Store rooted at the local journal directory.
   LiveApplyJournalStore({required this.storePath});
+
+  static final Set<String> _activeStores = <String>{};
+
+  /// Cooperating callers serialize one complete check/journal/effect sequence.
+  /// The lock inode is retained. Bypassing providers need host writer
+  /// exclusion.
+  Future<T> withExclusive<T>(final Future<T> Function() action) async {
+    await ensureRoot();
+    final key = await Directory(storePath).resolveSymbolicLinks();
+    if (!_activeStores.add(key)) {
+      throw const LiveApplyRefusalException(
+        'live-apply store has an active writer',
+      );
+    }
+    RandomAccessFile? lock;
+    var locked = false;
+    try {
+      lock = await File(p.join(key, 'writer.lock')).open(mode: FileMode.append);
+      try {
+        await lock.lock();
+        locked = true;
+      } on FileSystemException {
+        throw const LiveApplyRefusalException(
+          'live-apply store has an active writer',
+        );
+      }
+      return await action();
+    } finally {
+      try {
+        if (locked) await lock!.unlock();
+      } finally {
+        try {
+          await lock?.close();
+        } finally {
+          _activeStores.remove(key);
+        }
+      }
+    }
+  }
 
   /// Directory under which undo runs are kept.
   final String storePath;
 
-  Directory get _runsRoot =>
-      Directory(p.join(storePath, 'undo'));
+  Directory get _runsRoot => Directory(p.join(storePath, 'undo'));
 
+  /// Directory holding the retained run.
   Directory runDirectory(final String runId) =>
       Directory(p.join(_runsRoot.path, runId));
 
@@ -67,8 +107,12 @@ class LiveApplyJournalStore {
       final decoded =
           jsonDecode(await file.readAsString()) as Map<String, dynamic>;
       return LiveApplyJournal.fromMap(decoded);
-    } on FormatException {
-      return null;
+    } on FormatException catch (error) {
+      throw LiveApplyRefusalException('invalid journal $runId: $error');
+      // Malformed persisted JSON is external data, not a programming error.
+      // ignore: avoid_catching_errors
+    } on TypeError catch (error) {
+      throw LiveApplyRefusalException('invalid journal $runId: $error');
     }
   }
 

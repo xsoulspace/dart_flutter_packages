@@ -1,20 +1,15 @@
+import 'dart:convert';
+
 import 'package:universal_storage_interface/universal_storage_interface.dart';
 
 import 'live_apply_exceptions.dart';
 import 'live_apply_journal.dart';
 import 'live_apply_models.dart';
 
-/// One live-apply run: mutations apply IN PLACE against [inner] while every
-/// touched path's prior content is journaled, so [rollback] can replay a
-/// verified inverse until [commit] freezes the state.
-///
-/// Refusal discipline (ADR 0014, applied to storage):
-/// - a prior state larger than `maxSnapshotFileBytes` refuses BEFORE the
-///   mutation happens (the big-file strategy is explicit, never a silently
-///   unrestorable write);
-/// - a rollback whose drift check fails refuses with
-///   [LiveApplyDriftException] listing the paths — external edits are never
-///   clobbered by the inverse.
+/// One footprint journal with write-ahead intent and restartable inverse
+/// replay.
+/// Cooperating operations use the store lock. The host must exclude writers
+/// bypassing that store; hash checks are not provider compare-and-swap.
 class LiveApplyTransaction {
   LiveApplyTransaction._({
     required this.inner,
@@ -23,31 +18,28 @@ class LiveApplyTransaction {
     this.maxSnapshotFileBytes,
   });
 
-  /// The provider the run mutates.
+  /// Provider receiving declared effects.
   final StorageProvider inner;
 
-  /// Where the journal is persisted.
+  /// Local recovery journal and cooperating writer exclusion.
   final LiveApplyJournalStore store;
 
-  /// The journal document (entries appended in first-touch order).
-  final LiveApplyJournal journal;
+  /// Latest durable run state, reloaded before each operation.
+  LiveApplyJournal journal;
 
-  /// Refusal threshold for snapshotting a path's prior content.
+  /// UTF-8 byte limit on retained prior content.
   final int? maxSnapshotFileBytes;
 
-  LiveApplyEntry _entryFor(final String path) => journal.entries
-      .firstWhere((final e) => e.path == path, orElse: () {
-        throw StateError('path $path was not snapshotted before mutation');
-      });
-
-  /// Starts a new run with a fresh journal on disk.
+  /// Persist a new run before any effect.
   static Future<LiveApplyTransaction> begin(
     final StorageProvider inner,
     final LiveApplyJournalStore store, {
     final int? maxSnapshotFileBytes,
-  }) async {
-    final runId =
-        'run-${DateTime.now().toUtc().microsecondsSinceEpoch}';
+  }) => store.withExclusive(() async {
+    final runId = 'run-${DateTime.now().toUtc().microsecondsSinceEpoch}';
+    if (await store.read(runId) != null) {
+      throw const LiveApplyRefusalException('run id collision');
+    }
     final journal = LiveApplyJournal(
       runId: runId,
       createdUtc: DateTime.now().toUtc().toIso8601String(),
@@ -59,26 +51,22 @@ class LiveApplyTransaction {
       journal: journal,
       maxSnapshotFileBytes: maxSnapshotFileBytes,
     );
-  }
+  });
 
-  /// Reopens an existing run from its journal — the crash-recovery and
-  /// rollback-window path. Refuses runs that are already closed.
+  /// Reopen a retained run without dispatching effects.
   static Future<LiveApplyTransaction> reopen(
     final StorageProvider inner,
     final LiveApplyJournalStore store,
     final String runId, {
     final int? maxSnapshotFileBytes,
-  }) async {
+  }) => store.withExclusive(() async {
     final journal = await store.read(runId);
     if (journal == null) {
       throw LiveApplyRefusalException('no live-apply run $runId in the store');
     }
-    if (journal.status != LiveApplyRunStatus.open &&
-        journal.status != LiveApplyRunStatus.applied) {
-      throw LiveApplyRefusalException(
-        'run $runId is ${journal.status.name}; only open or applied runs '
-        'can roll back',
-      );
+    if (journal.status == LiveApplyRunStatus.committed ||
+        journal.status == LiveApplyRunStatus.rolledBack) {
+      throw LiveApplyRefusalException('run $runId is ${journal.status.name}');
     }
     return LiveApplyTransaction._(
       inner: inner,
@@ -86,164 +74,261 @@ class LiveApplyTransaction {
       journal: journal,
       maxSnapshotFileBytes: maxSnapshotFileBytes,
     );
-  }
+  });
 
+  /// Durable identifier of this run.
   String get runId => journal.runId;
-  LiveApplyRunStatus get status => journal.status;
-  bool get _isClosed =>
-      journal.status == LiveApplyRunStatus.committed ||
-      journal.status == LiveApplyRunStatus.rolledBack;
 
-  Future<void> _snapshot(final String path) async {
-    if (_isClosed) {
-      throw LiveApplyRefusalException('run $runId is closed');
-    }
-    final existing = journal.entries.where((final e) => e.path == path);
-    if (existing.isNotEmpty) return; // first touch wins; already journaled
-    final prior = await inner.getFile(path);
-    if (prior != null &&
-        maxSnapshotFileBytes != null &&
-        prior.length > maxSnapshotFileBytes!) {
+  /// Last loaded lifecycle state.
+  LiveApplyRunStatus get status => journal.status;
+
+  Future<T> _exclusive<T>(final Future<T> Function() action) =>
+      store.withExclusive(() async {
+        final saved = await store.read(runId);
+        if (saved == null) {
+          throw LiveApplyRefusalException('run $runId is no longer retained');
+        }
+        journal = saved;
+        return action();
+      });
+
+  void _requireMutable() {
+    if (status != LiveApplyRunStatus.open) {
       throw LiveApplyRefusalException(
-        'path $path holds ${prior.length} bytes, above the '
-        'maxSnapshotFileBytes limit ($maxSnapshotFileBytes) — live apply '
-        'refuses rather than journal an unrestorable snapshot',
+        'run $runId is ${status.name}; cannot mutate',
       );
     }
-    journal.entries.add(
-      LiveApplyEntry(
-        path: path,
-        prior: prior == null
-            ? null
-            : LiveApplyPrior(
-                sha256: liveApplySha256(prior),
-                content: prior,
-              ),
-        postSha256: prior == null
-            ? liveApplyDeletedSha256
-            : liveApplySha256(prior),
-      ),
+    if (journal.entries.any((final e) => e.pending)) {
+      throw const LiveApplyRefusalException(
+        'unfinished mutation; roll back before further mutation',
+      );
+    }
+  }
+
+  bool _matches(final String? actual, final String? hash) => actual == null
+      ? hash == null
+      : hash != null && liveApplySha256(actual) == hash;
+  String? _post(final LiveApplyEntry e) => e.postAbsent ? null : e.postSha256;
+  String? _prior(final LiveApplyEntry e) => e.prior?.sha256;
+
+  Future<LiveApplyEntry> _snapshot(final String path) async {
+    final existing = journal.entries.where((final e) => e.path == path);
+    if (existing.isNotEmpty) return existing.first;
+    final prior = await inner.getFile(path);
+    final bytes = prior == null ? 0 : utf8.encode(prior).length;
+    if (maxSnapshotFileBytes != null && bytes > maxSnapshotFileBytes!) {
+      throw LiveApplyRefusalException(
+        'path $path holds $bytes bytes, above maxSnapshotFileBytes',
+      );
+    }
+    final entry = LiveApplyEntry(
+      path: path,
+      prior: prior == null
+          ? null
+          : LiveApplyPrior(sha256: liveApplySha256(prior), content: prior),
+      postSha256: prior == null
+          ? liveApplyDeletedSha256
+          : liveApplySha256(prior),
+      postAbsent: prior == null,
     );
+    journal.entries.add(entry);
     await store.write(journal);
+    return entry;
   }
 
-  /// Journals [path]'s prior state before its first mutation. Callers that
-  /// drive the inner provider directly (to preserve create/update
-  /// semantics) pair this with [recordPost].
-  Future<void> snapshot(final String path) => _snapshot(path);
+  /// Snapshot-only callers must use [mutate] to declare an effect before it
+  /// runs.
+  Future<void> snapshot(final String path) => _exclusive(() async {
+    _requireMutable();
+    await _snapshot(path);
+  });
 
-  /// Records the content hash a run left at a previously snapshotted path
-  /// (`null` records a deletion) and persists the journal.
-  Future<void> recordPost(final String path, final String? content) async {
-    _entryFor(path).postSha256 = content == null
-        ? liveApplyDeletedSha256
-        : liveApplySha256(content);
+  /// A post-only recording cannot make an earlier unjournaled write
+  /// recoverable.
+  /// Retained for source compatibility; callers migrate to [mutate].
+  @Deprecated('Use mutate to persist intended state before the provider effect')
+  Future<void> recordPost(final String path, final String? content) =>
+      Future<void>.error(
+        const LiveApplyRefusalException(
+          'post-only journaling is unsafe; use mutate with declared content',
+        ),
+      );
+
+  /// Execute one declared single-path effect, preserving provider semantics.
+  /// Intended presence/hash and the pre-operation hash persist BEFORE dispatch.
+  /// A thrown/unfinished operation retains both possible states for recovery.
+  Future<FileOperationResult> mutate(
+    final String path,
+    final String? content,
+    final Future<FileOperationResult> Function() effect,
+  ) => _exclusive(() => _mutate(path, content, effect));
+
+  Future<FileOperationResult> _mutate(
+    final String path,
+    final String? content,
+    final Future<FileOperationResult> Function() effect,
+  ) async {
+    _requireMutable();
+    final entry = await _snapshot(path);
+    final before = await inner.getFile(path);
+    if (!_matches(before, _post(entry))) {
+      throw LiveApplyDriftException('path changed before mutation', [path]);
+    }
+    entry
+      ..pendingPreSha256 = _post(entry)
+      ..postSha256 = content == null
+          ? liveApplyDeletedSha256
+          : liveApplySha256(content)
+      ..postAbsent = content == null
+      ..pending = true;
     await store.write(journal);
+    final result = await effect();
+    final actual = await inner.getFile(path);
+    if (!_matches(actual, _post(entry))) {
+      throw LiveApplyDriftException('provider did not realize declared state', [
+        path,
+      ]);
+    }
+    entry
+      ..pending = false
+      ..pendingPreSha256 = null;
+    await store.write(journal);
+    return result;
   }
 
-  /// Creates or updates [path] with [content] under the journal.
+  /// Create or update one path under write-ahead intent.
   Future<FileOperationResult> writeFile(
     final String path,
     final String content,
-  ) async {
-    await _snapshot(path);
-    final result = await _putFile(path, content);
-    _entryFor(path).postSha256 = liveApplySha256(content);
-    await store.write(journal);
-    return result;
-  }
+  ) => mutate(path, content, () => _putFile(path, content));
 
-  /// Deletes [path] under the journal.
-  Future<FileOperationResult> deleteFile(final String path) async {
-    await _snapshot(path);
-    final result = await inner.deleteFile(path);
-    _entryFor(path).postSha256 = liveApplyDeletedSha256;
-    await store.write(journal);
-    return result;
-  }
+  /// Delete one path under write-ahead intent.
+  Future<FileOperationResult> deleteFile(final String path) =>
+      mutate(path, null, () => inner.deleteFile(path));
 
-  /// Create-or-update against the inner provider, tolerating the race where
-  /// another writer created the path between the existence check and the
-  /// create call (the same discipline [StorageService.saveFile] uses).
+  /// Append is lowered from one current read while holding the same lock.
+  /// The provider still owns its append implementation and exception contract.
+  Future<FileOperationResult> appendFile(
+    final String path,
+    final String content, {
+    final String? commitMessage,
+  }) => _exclusive(() async {
+    _requireMutable();
+    final before = await inner.getFile(path);
+    return _mutate(
+      path,
+      '${before ?? ''}$content',
+      () => inner.appendFile(path, content, commitMessage: commitMessage),
+    );
+  });
+
   Future<FileOperationResult> _putFile(
     final String path,
     final String content,
   ) async {
     final existing = await inner.getFile(path);
-    if (existing != null) {
-      return inner.updateFile(path, content);
-    }
-    try {
-      return await inner.createFile(path, content);
-    } on FileAlreadyExistsException {
-      return inner.updateFile(path, content);
-    }
+    return existing == null
+        ? inner.createFile(path, content)
+        : inner.updateFile(path, content);
   }
 
-  /// Marks the run applied: it stays in the rollback window until
-  /// [commit] prunes it. Mutations have already happened by now.
-  Future<void> markApplied() async {
+  /// Seal forward work while retaining the inverse window.
+  Future<void> markApplied() => _exclusive(() async {
+    _requireMutable();
+    await _verifyPost();
     journal.status = LiveApplyRunStatus.applied;
     await store.write(journal);
-  }
+  });
 
-  /// Accepts the run: freezes the state and prunes the journal.
-  Future<void> commit() async {
-    if (_isClosed) {
-      throw LiveApplyRefusalException('run $runId is closed');
-    }
-    journal.status = LiveApplyRunStatus.committed;
-    await store.prune(runId);
-  }
-
-  /// Verifies the rollback window (current content must match what the run
-  /// left behind) and then replays the inverse in reverse first-touch
-  /// order. A drift refusal mutates nothing.
-  Future<void> rollback() async {
-    if (journal.status == LiveApplyRunStatus.rolledBack) {
-      throw LiveApplyRefusalException('run $runId was already rolled back');
-    }
-    if (_isClosed) {
-      throw LiveApplyRefusalException('run $runId is closed');
-    }
-    final drift = <String>[];
-    for (final entry in journal.entries) {
-      final current = await inner.getFile(entry.path);
-      final expectedDeletion = entry.postSha256 == liveApplyDeletedSha256;
-      if (expectedDeletion && current == null) continue;
-      if (!expectedDeletion && current != null) {
-        if (liveApplySha256(current) == entry.postSha256) continue;
-      }
-      drift.add(entry.path);
-    }
-    if (drift.isNotEmpty) {
-      throw LiveApplyDriftException(
-        'footprint changed after the apply — rollback refused, reconcile '
-        'manually: ${drift.take(10).join(', ')}',
-        drift,
+  /// Finalize only completed work and close the undo window.
+  Future<void> commit() => _exclusive(() async {
+    if ((status != LiveApplyRunStatus.open &&
+            status != LiveApplyRunStatus.applied) ||
+        journal.entries.any((final e) => e.pending)) {
+      throw const LiveApplyRefusalException(
+        'unfinished/closed run cannot finalize',
       );
     }
-    for (final entry in journal.entries.reversed) {
-      final prior = entry.prior;
-      if (prior == null) {
-        try {
-          await inner.deleteFile(entry.path);
-        } on FileNotFoundException {
-          // Already gone — the goal state is reached either way.
-        }
-        continue;
+    await _verifyPost();
+    // Persist the closed state before pruning, so a crash cannot regrant undo.
+    journal.status = LiveApplyRunStatus.committed;
+    await store.write(journal);
+    await store.prune(runId);
+  });
+
+  Future<void> _verifyPost() async {
+    final drift = <String>[];
+    for (final e in journal.entries) {
+      if (!_matches(await inner.getFile(e.path), _post(e))) drift.add(e.path);
+    }
+    if (drift.isNotEmpty) {
+      throw LiveApplyDriftException('footprint drift before settlement', drift);
+    }
+  }
+
+  /// Only discard a failed run after reading every footprint back unchanged.
+  Future<bool> discardIfUnchanged() => _exclusive(() async {
+    if (status != LiveApplyRunStatus.open) return false;
+    for (final e in journal.entries) {
+      if (!_matches(await inner.getFile(e.path), _prior(e))) return false;
+    }
+    await store.prune(runId);
+    return true;
+  });
+
+  bool _recoverable(final LiveApplyEntry e, final String? actual) {
+    if (e.restored) return _matches(actual, _prior(e));
+    if (e.inverseStarted && _matches(actual, _prior(e))) return true;
+    return _matches(actual, _post(e)) ||
+        (e.pending && _matches(actual, e.pendingPreSha256));
+  }
+
+  /// Resume verified inverse replay; refuse unexplained footprint drift.
+  Future<void> rollback() => _exclusive(() async {
+    if (status != LiveApplyRunStatus.open &&
+        status != LiveApplyRunStatus.applied &&
+        status != LiveApplyRunStatus.rollingBack) {
+      throw LiveApplyRefusalException(
+        'run $runId is ${status.name}; cannot rollback',
+      );
+    }
+    final drift = <String>[];
+    for (final e in journal.entries) {
+      if (!_recoverable(e, await inner.getFile(e.path))) drift.add(e.path);
+    }
+    if (drift.isNotEmpty) {
+      throw LiveApplyDriftException('footprint drift; rollback refused', drift);
+    }
+    journal.status = LiveApplyRunStatus.rollingBack;
+    await store.write(journal);
+    for (final e in journal.entries.reversed) {
+      if (e.restored) continue;
+      // Persist authorization for either side of this inverse before dispatch.
+      e.inverseStarted = true;
+      await store.write(journal);
+      final actual = await inner.getFile(e.path);
+      if (!_recoverable(e, actual)) {
+        throw LiveApplyDriftException('path changed during inverse', [e.path]);
       }
-      await _putFile(entry.path, prior.content);
-      final restored = await inner.getFile(entry.path);
-      if (restored == null || liveApplySha256(restored) != prior.sha256) {
+      if (!_matches(actual, _prior(e))) {
+        if (e.prior == null) {
+          await inner.deleteFile(e.path);
+        } else {
+          await _putFile(e.path, e.prior!.content);
+        }
+      }
+      if (!_matches(await inner.getFile(e.path), _prior(e))) {
         throw LiveApplyDriftException(
-          'restored content of ${entry.path} does not verify against the '
-          'journal',
-          [entry.path],
+          'inverse did not restore recorded state',
+          [e.path],
         );
       }
+      e
+        ..restored = true
+        ..pending = false;
+      await store.write(journal);
     }
     journal.status = LiveApplyRunStatus.rolledBack;
     await store.write(journal);
-  }
+  });
 }

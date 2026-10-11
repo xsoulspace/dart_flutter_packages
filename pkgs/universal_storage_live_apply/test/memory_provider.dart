@@ -59,12 +59,10 @@ class MemoryStorageProvider extends StorageProvider {
           .toList();
 
   @override
-  Future<void> restore(
-    final String path, {
-    final String? versionId,
-  }) async {
-    throw const UnsupportedOperationException('no restore in the fake');
-  }
+  Future<void> restore(final String path, {final String? versionId}) =>
+      Future<void>.error(
+        const UnsupportedOperationException('no restore in the fake'),
+      );
 
   @override
   Future<void> dispose() async {}

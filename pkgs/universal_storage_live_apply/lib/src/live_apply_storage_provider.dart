@@ -54,18 +54,17 @@ class LiveApplyStorageProvider implements StorageProvider {
 
   @override
   StorageCapabilities get declaredCapabilities => StorageCapabilities(
-        supportsDiff: inner.declaredCapabilities.supportsDiff,
-        supportsHistory: true,
-        supportsRevisionMetadata:
-            inner.declaredCapabilities.supportsRevisionMetadata,
-        supportsManualConflictResolution:
-            inner.declaredCapabilities.supportsManualConflictResolution,
-        supportsBackgroundSync:
-            inner.declaredCapabilities.supportsBackgroundSync,
-        supportsMigrationEndpoint:
-            inner.declaredCapabilities.supportsMigrationEndpoint,
-        syncAvailability: inner.declaredCapabilities.syncAvailability,
-      );
+    supportsDiff: inner.declaredCapabilities.supportsDiff,
+    supportsHistory: true,
+    supportsRevisionMetadata:
+        inner.declaredCapabilities.supportsRevisionMetadata,
+    supportsManualConflictResolution:
+        inner.declaredCapabilities.supportsManualConflictResolution,
+    supportsBackgroundSync: inner.declaredCapabilities.supportsBackgroundSync,
+    supportsMigrationEndpoint:
+        inner.declaredCapabilities.supportsMigrationEndpoint,
+    syncAvailability: inner.declaredCapabilities.syncAvailability,
+  );
 
   @override
   bool get supportsSync => inner.supportsSync;
@@ -74,11 +73,10 @@ class LiveApplyStorageProvider implements StorageProvider {
   Future<void> sync({
     final String? pullMergeStrategy,
     final String? pushConflictStrategy,
-  }) =>
-      inner.sync(
-        pullMergeStrategy: pullMergeStrategy,
-        pushConflictStrategy: pushConflictStrategy,
-      );
+  }) => inner.sync(
+    pullMergeStrategy: pullMergeStrategy,
+    pushConflictStrategy: pushConflictStrategy,
+  );
 
   @override
   Future<String?> getFile(final String path) => inner.getFile(path);
@@ -92,30 +90,26 @@ class LiveApplyStorageProvider implements StorageProvider {
     final String path,
     final String content, {
     final String? commitMessage,
-  }) =>
-      _journaled((final tx) async {
-        // The inner call runs directly (not through writeFile) so the
-        // contract's FileAlreadyExistsException semantics survive.
-        await tx.snapshot(path);
-        final result = await inner.createFile(path, content);
-        await tx.recordPost(path, content);
-        return result;
-      });
+  }) => _journaled(
+    (final tx) => tx.mutate(
+      path,
+      content,
+      () => inner.createFile(path, content, commitMessage: commitMessage),
+    ),
+  );
 
   @override
   Future<FileOperationResult> updateFile(
     final String path,
     final String content, {
     final String? commitMessage,
-  }) =>
-      _journaled((final tx) async {
-        // Direct inner update: FileNotFoundException on a missing path is
-        // the interface contract, not something live apply may blur.
-        await tx.snapshot(path);
-        final result = await inner.updateFile(path, content);
-        await tx.recordPost(path, content);
-        return result;
-      });
+  }) => _journaled(
+    (final tx) => tx.mutate(
+      path,
+      content,
+      () => inner.updateFile(path, content, commitMessage: commitMessage),
+    ),
+  );
 
   /// Journaled append: the pre-state snapshot covers rollback; the inner
   /// provider owns the O(chunk) fast path when it has one.
@@ -124,38 +118,30 @@ class LiveApplyStorageProvider implements StorageProvider {
     final String path,
     final String content, {
     final String? commitMessage,
-  }) =>
-      _journaled((final tx) async {
-        await tx.snapshot(path);
-        final result = await inner.appendFile(path, content);
-        await tx.recordPost(path, await inner.getFile(path));
-        return result;
-      });
+  }) => _journaled(
+    (final tx) => tx.appendFile(path, content, commitMessage: commitMessage),
+  );
 
   @override
   Future<FileOperationResult> deleteFile(
     final String path, {
     final String? commitMessage,
-  }) =>
-      _journaled((final tx) async {
-        await tx.snapshot(path);
-        final result = await inner.deleteFile(path);
-        await tx.recordPost(path, null);
-        return result;
-      });
+  }) => _journaled(
+    (final tx) => tx.mutate(
+      path,
+      null,
+      () => inner.deleteFile(path, commitMessage: commitMessage),
+    ),
+  );
 
   /// Restores [path]. A [versionId] naming a retained run rolls that run
   /// back (the only undo this layer owns); anything else delegates to the
   /// inner provider.
   @override
-  Future<void> restore(
-    final String path, {
-    final String? versionId,
-  }) async {
+  Future<void> restore(final String path, {final String? versionId}) async {
     if (versionId != null) {
       final journal = await store.read(versionId);
-      if (journal != null &&
-          journal.entries.any((final e) => e.path == path)) {
+      if (journal != null && journal.entries.any((final e) => e.path == path)) {
         final tx = await LiveApplyTransaction.reopen(
           inner,
           store,
@@ -170,21 +156,26 @@ class LiveApplyStorageProvider implements StorageProvider {
   }
 
   /// Runs one journaled operation as its own run, retaining it in the
-  /// rollback window. An inner failure discards the (mutation-free) run
-  /// and rethrows.
+  /// rollback window. Failed operations retain recovery evidence unless
+  /// locked read-back proves that the footprint is unchanged.
   Future<FileOperationResult> _journaled(
     final Future<FileOperationResult> Function(LiveApplyTransaction tx) op,
   ) async {
     final tx = await beginTransaction();
+    final previousRunId = _lastRunId;
+    _lastRunId = tx.runId;
     try {
       final result = await op(tx);
       await tx.markApplied();
       _lastRunId = tx.runId;
       return result;
-    } catch (_) {
-      if (tx.status == LiveApplyRunStatus.open) {
-        // Nothing mutated — the run never left `open`, so discard it.
-        await store.prune(tx.runId);
+    } on Object catch (_) {
+      // An exception can follow a provider effect or a journal failure.
+      // Retain recovery evidence unless read-back proves unchanged state.
+      try {
+        if (await tx.discardIfUnchanged()) _lastRunId = previousRunId;
+      } on Object catch (_) {
+        // Preserve the exception and recovery journal.
       }
       rethrow;
     }

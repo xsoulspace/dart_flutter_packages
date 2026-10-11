@@ -16,14 +16,14 @@ void main() {
     inner = MemoryStorageProvider();
   });
 
-  tearDown(() async {
-    if (await tmp.exists()) await tmp.delete(recursive: true);
+  tearDown(() {
+    if (tmp.existsSync()) tmp.deleteSync(recursive: true);
   });
 
   LiveApplyStorageProvider provider() => LiveApplyStorageProvider(
-        inner: inner,
-        journalStorePath: '${tmp.path}/journal',
-      );
+    inner: inner,
+    journalStorePath: '${tmp.path}/journal',
+  );
 
   test('per-operation mutations are rollback-window undoable', () async {
     final live = provider();
@@ -71,8 +71,11 @@ void main() {
       live.updateFile('missing.txt', 'x'),
       throwsA(isA<FileNotFoundException>()),
     );
-    expect(await live.listRuns(), isEmpty,
-        reason: 'a failed per-op run never left open — it is discarded');
+    expect(
+      await live.listRuns(),
+      isEmpty,
+      reason: 'a failed per-op run never left open — it is discarded',
+    );
   });
 
   test('restore with a retained run id rolls that run back', () async {
@@ -88,7 +91,7 @@ void main() {
     expect(inner.files['doc.txt'], 'v1');
   });
 
-  test('declared capabilities expose journal-backed history', () async {
+  test('declared capabilities expose journal-backed history', () {
     final live = provider();
     expect(live.declaredCapabilities.supportsHistory, isTrue);
   });

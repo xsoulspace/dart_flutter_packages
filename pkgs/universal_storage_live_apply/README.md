@@ -22,9 +22,16 @@ writer, a footprint journal, and a verified inverse.
   Nothing is ever "approximately" restored.
 - **Commit** — prunes the journal; the state is frozen. Rolled-back runs are
   retained as the audit record of the window.
-- **Crash recovery** — a run whose journal exists but never finished is
-  `open`; its journal alone is enough to `LiveApplyTransaction.reopen` and
-  roll it back.
+- **Write-ahead recovery** — schema v2 persists the pre-operation and intended
+  post-operation presence/hash before dispatch. Interrupted effects recover only
+  recognized states; unexplained drift refuses. Empty text and absence differ.
+- **Restartable inverse** — `rollingBack` and per-path inverse progress persist
+  around each restoration. Reopen resumes an interrupted inverse and verifies
+  restored content or absence, including removal of newly created files.
+- **Writer exclusion** — cooperating callers share a retained local store lock.
+  Hosts must exclude writers bypassing that store; this is not provider CAS or
+  distributed locking. Actual process-termination tests qualify POSIX recovery,
+  not storage-hardware power-loss guarantees.
 
 ## Usage
 
@@ -71,3 +78,23 @@ operation into a partial one.
 The mechanism mirrors codemap's live apply (ADR 0014 in the codemap repo):
 footprint snapshot, journal-before-mutate, two-phase apply with verified
 inverse replay, rollback window until commit.
+
+## Recovery compatibility (journal v2)
+
+Unambiguous v1 journals remain readable. Legacy empty/deleted hash sentinels
+are ambiguous and refuse with retained evidence; reconcile them explicitly.
+Unknown versions, malformed state and unknown lifecycle values also refuse.
+A failed provider call keeps its journal unless locked read-back proves the
+entire footprint unchanged. An exception is not proof that nothing happened.
+
+Direct callers use `mutate(path, intendedContent, effect)` for a single-path
+provider effect: intent is persisted before dispatch and realized state is
+verified afterward. The old `snapshot`/external-write/`recordPost` sequence is
+unsafe; `recordPost` is deprecated and refuses. Native create/update/delete
+exceptions and append behavior remain with the provider.
+
+`markApplied` retains undo; `commit` explicitly finalizes and prunes it. Pending
+or interrupted inverse work cannot finalize. Stale handles reload durable state
+before dispatch. Multi-file rollback can be visible incrementally to readers;
+it is restartable, not an atomic visibility transaction. See
+[ADR 0062](../../docs/decisions/0062_live_apply_write_ahead_recovery.md).

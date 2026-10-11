@@ -1,6 +1,7 @@
 /// Raised when a rollback refuses because a journaled path changed AFTER the
 /// run applied — the state no longer matches what the inverse was proven
-/// against. The offending paths are listed; nothing is mutated.
+/// against. Preflight refusal mutates nothing. A failure during inverse replay
+/// retains progress in the rollingBack journal for explicit recovery.
 ///
 /// These extend [Exception] rather than the interface's sealed
 /// [StorageException] hierarchy: sealed classes cannot be extended outside

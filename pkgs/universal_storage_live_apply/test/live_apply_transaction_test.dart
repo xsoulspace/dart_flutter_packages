@@ -16,8 +16,8 @@ void main() {
     store = LiveApplyJournalStore(storePath: '${tmp.path}/journal');
   });
 
-  tearDown(() async {
-    if (await tmp.exists()) await tmp.delete(recursive: true);
+  tearDown(() {
+    if (tmp.existsSync()) tmp.deleteSync(recursive: true);
   });
 
   test('rollback restores updated and created files byte-exactly', () async {
@@ -51,10 +51,7 @@ void main() {
     await tx.commit();
     expect(inner.files['kept.txt'], 'stays');
     expect(await store.read(tx.runId), isNull);
-    expect(
-      tx.rollback,
-      throwsA(isA<LiveApplyRefusalException>()),
-    );
+    expect(tx.rollback, throwsA(isA<LiveApplyRefusalException>()));
   });
 
   test('rollback refuses on external drift and mutates nothing', () async {
@@ -68,8 +65,11 @@ void main() {
     await expectLater(
       tx.rollback(),
       throwsA(
-        isA<LiveApplyDriftException>()
-            .having((final e) => e.paths, 'paths', contains('a.txt')),
+        isA<LiveApplyDriftException>().having(
+          (final e) => e.paths,
+          'paths',
+          contains('a.txt'),
+        ),
       ),
     );
     expect(inner.files['a.txt'], 'externally edited');
@@ -81,38 +81,47 @@ void main() {
     await tx.writeFile('a.txt', 'v2');
     await tx.markApplied();
     await tx.rollback();
-    expect(
-      tx.rollback,
-      throwsA(isA<LiveApplyRefusalException>()),
-    );
+    expect(tx.rollback, throwsA(isA<LiveApplyRefusalException>()));
   });
 
   test(
-      'a prior larger than maxSnapshotFileBytes refuses before any mutation',
-      () async {
-    await inner.createFile('big.txt', 'x' * 100);
-    final tx = await LiveApplyTransaction.begin(inner, store,
-        maxSnapshotFileBytes: 10);
-    await expectLater(
-      tx.writeFile('big.txt', 'smaller'),
-      throwsA(isA<LiveApplyRefusalException>()),
-    );
-    expect(inner.files['big.txt'], 'x' * 100, reason: 'nothing may mutate');
-  });
+    'a prior larger than maxSnapshotFileBytes refuses before any mutation',
+    () async {
+      await inner.createFile('big.txt', 'x' * 100);
+      final tx = await LiveApplyTransaction.begin(
+        inner,
+        store,
+        maxSnapshotFileBytes: 10,
+      );
+      await expectLater(
+        tx.writeFile('big.txt', 'smaller'),
+        throwsA(isA<LiveApplyRefusalException>()),
+      );
+      expect(inner.files['big.txt'], 'x' * 100, reason: 'nothing may mutate');
+    },
+  );
 
   test(
-      'reopen recovers an open run from its journal alone (crash recovery)',
-      () async {
-    await inner.createFile('a.txt', 'original');
-    final tx = await LiveApplyTransaction.begin(inner, store);
-    await tx.writeFile('a.txt', 'crashed mid-apply');
-    // No commit, no markApplied: a crash left the run `open`.
+    'reopen recovers an open run from its journal alone (crash recovery)',
+    () async {
+      await inner.createFile('a.txt', 'original');
+      final tx = await LiveApplyTransaction.begin(inner, store);
+      await tx.writeFile('a.txt', 'crashed mid-apply');
+      // No commit, no markApplied: a crash left the run `open`.
 
-    final recovered = await LiveApplyTransaction.reopen(inner, store, tx.runId);
-    await recovered.rollback();
-    expect(inner.files['a.txt'], 'original');
-    expect((await store.read(tx.runId))!.status, LiveApplyRunStatus.rolledBack);
-  });
+      final recovered = await LiveApplyTransaction.reopen(
+        inner,
+        store,
+        tx.runId,
+      );
+      await recovered.rollback();
+      expect(inner.files['a.txt'], 'original');
+      expect(
+        (await store.read(tx.runId))!.status,
+        LiveApplyRunStatus.rolledBack,
+      );
+    },
+  );
 
   test('deleteFile of a file the run created rolls back to absent', () async {
     final tx = await LiveApplyTransaction.begin(inner, store);
@@ -121,7 +130,10 @@ void main() {
     await tx.markApplied();
     expect(inner.files.containsKey('ephemeral.txt'), isFalse);
     await tx.rollback();
-    expect(inner.files.containsKey('ephemeral.txt'), isFalse,
-        reason: 'the inverse of create-then-delete is absent, not recreate');
+    expect(
+      inner.files.containsKey('ephemeral.txt'),
+      isFalse,
+      reason: 'the inverse of create-then-delete is absent, not recreate',
+    );
   });
 }
