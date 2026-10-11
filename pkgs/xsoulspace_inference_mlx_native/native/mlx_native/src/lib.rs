@@ -16,6 +16,7 @@
 pub mod mlx;
 pub mod model;
 pub mod plan;
+pub mod power;
 pub mod bindings;
 pub mod lfm2;
 pub mod qwen;
@@ -808,7 +809,13 @@ mod tests {
         // This is the sync round-trip (commit + wait + signal) per op — the
         // worst case. The forward path syncs once at the end, so the gate
         // that matters is the amortized submission cost below.
-        assert!(per_small_us < 400.0, "small-matmul eval+sync {per_small_us}us");
+        // Perf asserts are power-aware (ADR 0061): the oracle holds on AC,
+        // battery runs annotate non-baseline and pass.
+        crate::power::perf_gate(
+            "l0.small_matmul_eval_sync",
+            per_small_us < 400.0,
+            &format!("small-matmul eval+sync {per_small_us}us"),
+        );
 
         // Amortized submission: 100 ops enqueued without per-op eval, one
         // sync — measures pure graph/dispatch cost.
@@ -820,7 +827,11 @@ mod tests {
         last.eval().unwrap();
         let per_submitted_us =
             start.elapsed().as_micros() as f64 / (iters as f64 + 1.0);
-        assert!(per_submitted_us < 50.0, "submitted-op cost {per_submitted_us}us");
+        crate::power::perf_gate(
+            "l0.submitted_op",
+            per_submitted_us < 50.0,
+            &format!("submitted-op cost {per_submitted_us}us"),
+        );
 
         // Attention path: rope + sdp on [1,H,L,D].
         let heads = 8usize;
@@ -841,9 +852,14 @@ mod tests {
         // Worst-case sync probe on a real flash-attention kernel; the
         // forward syncs once for all 28 layers, so the golden p50 is the
         // binding gate — this only guards against pathological regressions.
-        assert!(per_attn_us < 4000.0, "rope+sdp eval+sync {per_attn_us}us");
+        crate::power::perf_gate(
+            "l0.rope_sdp_eval_sync",
+            per_attn_us < 4000.0,
+            &format!("rope+sdp eval+sync {per_attn_us}us"),
+        );
 
         // Observed numbers go into ADR 0051's evidence table.
+        println!("power: {}", crate::power::facts().describe());
         println!(
             "L0 spike: big matmul {per_big_us:.1}us ({tflops:.2} TFLOPS), \
              small matmul+eval {per_small_us:.1}us, submitted {per_submitted_us:.1}us, \
@@ -950,6 +966,7 @@ mod perf_tests {
         let s = crate::mlx::gpu().unwrap();
         let model_dir = std::env::var("HOME").unwrap() + "/.cache/xsoulspace/laya-mlx";
         let model = crate::model::LayaModel::load(std::path::Path::new(&model_dir), s).unwrap();
+        eprintln!("power: {}", crate::power::facts().describe());
 
         let (l, k, vocab) = (93usize, 4usize, 30522usize);
         let synthetic = |b: usize| -> crate::model::Batch {
@@ -1028,6 +1045,7 @@ mod perf_tests {
         let s = crate::mlx::gpu().unwrap();
         let model_dir = std::env::var("HOME").unwrap() + "/.cache/xsoulspace/laya-mlx";
         let model = crate::model::LayaModel::load(std::path::Path::new(&model_dir), s).unwrap();
+        eprintln!("power: {}", crate::power::facts().describe());
         let (b, l, k) = (20usize, 93usize, 4usize);
         let batch = crate::model::Batch {
             input_ids: Array::from_data_i32(&vec![13i32; b * l], &[b, l]).unwrap(),
@@ -1098,6 +1116,7 @@ mod perf_tests {
             eprintln!("skipping: Qwen3-0.6B-4bit snapshot absent");
             return;
         };
+        eprintln!("power: {}", crate::power::facts().describe());
         let s = crate::mlx::gpu().unwrap();
         let tok = crate::bpe::ByteLevelBpe::load(&snap).unwrap();
         let model = crate::qwen::Qwen3::load(&snap).unwrap();
@@ -1228,8 +1247,9 @@ mod perf_tests {
         };
         let (eager_p50, fused_p50) = (med(&mut eager), med(&mut fused));
         eprintln!(
-            "R1 A/B (B={b} L={l}, interleaved, 21 samples each): eager p50={eager_p50:.2}ms compiled p50={fused_p50:.2}ms ratio={:.2}x — STATE POWER STATE",
-            eager_p50 / fused_p50
+            "R1 A/B (B={b} L={l}, interleaved, 21 samples each): eager p50={eager_p50:.2}ms compiled p50={fused_p50:.2}ms ratio={:.2}x [power: {}]",
+            eager_p50 / fused_p50,
+            crate::power::facts().describe()
         );
     }
 }

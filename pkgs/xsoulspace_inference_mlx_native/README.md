@@ -11,6 +11,10 @@ lane) depend on this package; it depends on none of them ([ADR
 0057](../../../docs/decisions/0057_engine_host_refactor_and_bench_architecture.md),
 [ADR 0058](../../../docs/decisions/0058_native_engines_unified_inference_interface.md)).
 
+**Running benches or perf gates? Read [POWER.md](POWER.md) first** — the
+power laws (ADR 0061): sense/record/gate, never command; perf gates
+assert only on AC..
+
 ## Model drivers
 
 All drivers ride the same crate, dylib, and FFI surface

@@ -2,7 +2,19 @@
 
 ## 0.1.1 (2026-10-11)
 
-Engine change only — no Dart API change (ADR 0054 R6).
+Engine change only — no Dart API change (ADR 0054 R6). Extended same day
+by ADR 0061 (which DOES add a Dart surface).
+
+- **Power facts + power-aware gates (ADR 0061).** New `PowerFacts`
+  (`source`/`batteryPercent`/`cpuSpeedLimitPercent`, fresh read, unknown
+  on failure) exported from the barrel — one-to-one with the Rust
+  `power::facts()` the gates read. Perf gates (the three `l0` dispatch
+  asserts) now assert ONLY on AC; battery runs print a
+  `POWER-CONTAMINATED — non-baseline` banner beside the measurement and
+  pass. Bit/parity gates are never power-conditioned. Rationale: the
+  AC-calibrated `l0` gate went red twice on mid-run unplugs for the same
+  code; battery throttles sustained work 4–10× (ADR 0051 L3). See
+  [POWER.md](POWER.md).
 
 - **LFM2/LFM2.5 forward is now a declared plan, and it is the DEFAULT
   path.** The hybrid short-conv/GQA forward rides the composition API's

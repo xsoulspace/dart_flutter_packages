@@ -94,11 +94,13 @@ fn lfm2_greedy_matches_reference_and_gate() {
     );
     // ADR 0051's "LFM decode ≥45 tok/s" row — first honest measurement on
     // the Rust host. Print-only verdict here (power-state-dependent; the
-    // ADR records the number and the state).
+    // ADR records the number and the state, which now rides the output
+    // itself — ADR 0061).
+    eprintln!("power: {}", mlx_native::power::facts().describe());
     if tok_s < 45.0 {
         eprintln!(
-            "NOTE: {tok_s:.1} tok/s < 45 gate — record power state; the \
-             gate verdict belongs to the ADR, not a hard assert"
+            "NOTE: {tok_s:.1} tok/s < 45 gate — the gate verdict belongs to \
+             the ADR, not a hard assert (assert-on-AC law: ADR 0061)"
         );
     }
     let _ = Dtype::Float32;
