@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:meta/meta.dart';
 import 'package:universal_storage_convergence/universal_storage_convergence.dart';
+import 'package:universal_storage_convergence_session/universal_storage_convergence_session.dart';
 import 'package:universal_storage_interface/universal_storage_interface.dart';
 import 'package:universal_storage_mesh_transport/universal_storage_mesh_transport.dart';
 import 'package:universal_storage_world/universal_storage_world.dart';
@@ -14,7 +15,6 @@ import 'mesh_kv_store_factory.dart'
     if (dart.library.io) 'mesh_kv_store_io.dart';
 import 'mesh_path_utils.dart';
 import 'mesh_peer_registry.dart';
-import 'mesh_sync_protocol.dart';
 
 /// Serverless P2P storage provider (ADR 0010).
 ///
@@ -225,7 +225,11 @@ final class MeshStorageProvider implements StorageProvider {
     final existing = _docs[docPath] == null
         ? null
         : _memberCodec.readValue(_docs[docPath]!) as String?;
-    return _applyContentOp(docPath, (existing ?? '') + content, existing == null);
+    return _applyContentOp(
+      docPath,
+      (existing ?? '') + content,
+      existing == null,
+    );
   }
 
   @override
@@ -409,7 +413,10 @@ final class MeshStorageProvider implements StorageProvider {
 
     // Our outgoing delta: gate = peer selection, order = peer priority,
     // cap = peer budget (receiver-expressed, like the game relevancy
-    // filter). Unranked members follow in deterministic docId order.
+    // filter). Unranked members follow in deterministic docId order. The
+    // per-document decision itself is the shared session core's
+    // DeltaPlanner — the exact plan logic mesh always ran, now shared
+    // byte-identically with ecsly world sync.
     final wanted =
         _docs.values
             .where((final doc) => selection.matchesDocId(doc.docId))
@@ -420,29 +427,14 @@ final class MeshStorageProvider implements StorageProvider {
             if (rankA != rankB) return rankA.compareTo(rankB);
             return a.docId.compareTo(b.docId);
           });
-    final opsOut = <OpRecord>[];
-    final statesOut = <Snapshot>[];
-    for (final doc in wanted) {
-      if (budget != null && opsOut.length >= budget) break;
-      final theirs = peerVv[doc.docId];
-      if (theirs == null) {
-        if (doc.pendingOps.isNotEmpty) {
-          opsOut.addAll(doc.pendingOps);
-        } else {
-          statesOut.add(doc.snapshotFor());
-        }
-      } else {
-        final missing = doc.opsSince(theirs);
-        if (missing.isNotEmpty) {
-          opsOut.addAll(missing);
-        } else if (doc.needsSnapshotFor(theirs)) {
-          statesOut.add(doc.snapshotFor());
-        }
-      }
-    }
+    final plan = const DeltaPlanner().plan(
+      docs: wanted.map(_DocDeltaSource.new),
+      remoteVectors: peerVv,
+      maxOps: budget,
+    );
     await session.send(
       MeshSyncProtocol.encode(
-        MeshSyncProtocol.delta(ops: opsOut, states: statesOut),
+        MeshSyncProtocol.delta(ops: plan.ops, states: plan.states),
       ),
     );
 
@@ -525,4 +517,28 @@ final class MeshStorageProvider implements StorageProvider {
       );
     }
   }
+}
+
+/// One-line view of a mesh doc as the session core's [DeltaReplica] —
+/// `ConvergenceDoc` exposes exactly the members the planner needs, so the
+/// kernel itself never had to learn the session interface.
+final class _DocDeltaSource implements DeltaReplica {
+  const _DocDeltaSource(this._doc);
+
+  final ConvergenceDoc _doc;
+
+  @override
+  String get docId => _doc.docId;
+  @override
+  VersionVector get vv => _doc.vv;
+  @override
+  List<OpRecord> get pendingOps => _doc.pendingOps;
+  @override
+  List<OpRecord> opsSince(final VersionVector remoteVv) =>
+      _doc.opsSince(remoteVv);
+  @override
+  bool needsSnapshotFor(final VersionVector remoteVv) =>
+      _doc.needsSnapshotFor(remoteVv);
+  @override
+  Snapshot snapshotFor() => _doc.snapshotFor();
 }

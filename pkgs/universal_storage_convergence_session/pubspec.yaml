@@ -1,0 +1,27 @@
+name: universal_storage_convergence_session
+description: >-
+  Anti-entropy session core over the convergence kernel: wire codec, delta
+  planning, receive watermark. Pure Dart — knows nothing about transports
+  or storage.
+version: 0.1.0-dev.1
+homepage: https://github.com/xsoulspace/universal_storage_sync
+repository: https://github.com/xsoulspace/universal_storage_sync
+issue_tracker: https://github.com/xsoulspace/universal_storage_sync/issues
+
+environment:
+  sdk: ^3.12.0
+
+resolution: workspace
+
+dependencies:
+  meta: ^1.19.0
+  universal_storage_convergence: ^0.1.0-dev.1
+  # The `sub` wire envelope publishes an InterestSelection (ADR 0048 §2);
+  # the type lives in universal_storage_world, which is pure Dart over the
+  # kernel — same constraint class as the kernel itself.
+  universal_storage_world: ^0.1.0-dev.1
+
+dev_dependencies:
+  lints: ^6.1.0
+  test: ^1.26.2
+  xsoulspace_lints: ^0.1.2
