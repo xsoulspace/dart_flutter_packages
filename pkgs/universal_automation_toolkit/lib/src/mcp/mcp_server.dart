@@ -5,7 +5,9 @@ import 'dart:typed_data';
 import 'package:universal_automation_interface/universal_automation_interface.dart';
 import 'package:universal_automation_semantics/universal_automation_semantics.dart';
 import 'package:universal_driver_macos/universal_driver_macos.dart';
+import 'package:xsoulspace_permission_core/xsoulspace_permission_core.dart';
 
+import '../consent/consent_gated_driver.dart';
 import '../plan/checks.dart';
 import '../plan/plan.dart';
 import '../plan/steps.dart';
@@ -44,17 +46,29 @@ final class ToolkitMcpServer {
     Map<String, String> overrides = const {},
     Map<AutomationTransport, DriverFactory>? factories,
     String? jobsDirectory,
+    PermissionGate? consentGate,
+    this.consentOrigin = 'universal-automation-mcp',
   }) : _defaultEndpoint = defaultEndpoint,
        _defaultTransport = defaultTransport,
        _overrides = overrides,
        _extraFactories = factories,
-       _jobsDirectory =
-           jobsDirectory ?? _defaultJobsDirectory();
+       _consentGate = consentGate,
+       _jobsDirectory = jobsDirectory ?? _defaultJobsDirectory();
 
   final Uri? _defaultEndpoint;
   final AutomationTransport _defaultTransport;
   final Map<String, String> _overrides;
   final Map<AutomationTransport, DriverFactory>? _extraFactories;
+
+  /// The OS-consent chain for automation surfaces (ADR 0064's contract
+  /// half on the [ConsentGatedDriver]): when set, resolved sessions'
+  /// drivers ask `accessibility` before snapshots/acts and
+  /// `screenRecording` before screenshots. `null` composes no gate —
+  /// the drivers' typed TCC exceptions remain the only consent surface.
+  final PermissionGate? _consentGate;
+
+  /// Attribution for consent requests this server raises.
+  final String consentOrigin;
   final Map<String, Observation> _lastObservations = {};
   final String _jobsDirectory;
   SessionRegistry? _registry;
@@ -68,11 +82,10 @@ final class ToolkitMcpServer {
         : '$home/.uatk/jobs';
   }
 
-  JobQueue get _jobs =>
-      _jobQueue ??= JobQueue(
-        directory: _jobsDirectory,
-        factories: _extraFactories,
-      );
+  JobQueue get _jobs => _jobQueue ??= JobQueue(
+    directory: _jobsDirectory,
+    factories: _extraFactories,
+  );
 
   SessionRegistry get _sessions {
     final existing = _registry;
@@ -154,8 +167,8 @@ final class ToolkitMcpServer {
     if (name is! String) throw const McpToolError('tools/call needs a name');
     final arguments =
         (params['arguments'] as Map<Object?, Object?>? ?? const {}).map(
-      (key, value) => MapEntry('$key', value),
-    );
+          (key, value) => MapEntry('$key', value),
+        );
     final Map<String, Object?> payload;
     try {
       payload = await switch (name) {
@@ -208,6 +221,21 @@ final class ToolkitMcpServer {
   }
 
   Future<ResolvedSession> _session(Map<String, Object?> arguments) async {
+    final session = await _attachSession(arguments);
+    final gate = _consentGate;
+    if (gate == null) return session;
+    return _ConsentSession(
+      session,
+      ConsentGatedDriver(
+        session.driver,
+        gate: gate,
+        requestOrigin: consentOrigin,
+        subject: session.url?.toString(),
+      ),
+    );
+  }
+
+  Future<ResolvedSession> _attachSession(Map<String, Object?> arguments) async {
     final transport =
         parseTransport(arguments['transport']) ?? _defaultTransport;
     final endpointValue = arguments['endpoint'];
@@ -234,9 +262,7 @@ final class ToolkitMcpServer {
     if (endpointValue != null) {
       uri = Uri.tryParse('$endpointValue');
       if (uri == null || !uri.hasScheme) {
-        throw McpToolError(
-          'endpoint must be an absolute URI: $endpointValue',
-        );
+        throw McpToolError('endpoint must be an absolute URI: $endpointValue');
       }
     }
     uri ??= _defaultEndpoint;
@@ -270,7 +296,9 @@ final class ToolkitMcpServer {
     // point grounds to the innermost node covering it (ADR 0053).
     final observation = Observation.of(
       snapshot,
-      viewValue == null ? const SemanticView() : SemanticView.fromJson(viewValue),
+      viewValue == null
+          ? const SemanticView()
+          : SemanticView.fromJson(viewValue),
     );
     final key = session.binding.name;
     final previous = arguments['diff'] == true ? _lastObservations[key] : null;
@@ -279,11 +307,12 @@ final class ToolkitMcpServer {
       ...base,
       'view': observation.toJson(),
       if (previous != null) 'delta': observation.diff(previous).render(),
-      if (at is Map<Object?, Object?> &&
-          at['x'] is num &&
-          at['y'] is num)
-        'at': _groundedAt(observation, (at['x']! as num).toDouble(),
-            (at['y']! as num).toDouble()),
+      if (at is Map<Object?, Object?> && at['x'] is num && at['y'] is num)
+        'at': _groundedAt(
+          observation,
+          (at['x']! as num).toDouble(),
+          (at['y']! as num).toDouble(),
+        ),
     };
   }
 
@@ -326,7 +355,8 @@ final class ToolkitMcpServer {
           if (arguments['button'] != null) 'button': arguments['button'],
           if (arguments['clickCount'] != null)
             'clickCount': arguments['clickCount'],
-          if (arguments['modifiers'] is List) 'modifiers': arguments['modifiers'],
+          if (arguments['modifiers'] is List)
+            'modifiers': arguments['modifiers'],
         };
       case 'moveTo':
         actionBody['moveTo'] = {'x': arguments['x'], 'y': arguments['y']};
@@ -337,7 +367,8 @@ final class ToolkitMcpServer {
           'toX': arguments['toX'],
           'toY': arguments['toY'],
           if (arguments['button'] != null) 'button': arguments['button'],
-          if (arguments['modifiers'] is List) 'modifiers': arguments['modifiers'],
+          if (arguments['modifiers'] is List)
+            'modifiers': arguments['modifiers'],
         };
       case 'type':
         actionBody['type'] = {
@@ -365,11 +396,13 @@ final class ToolkitMcpServer {
       case 'key':
         actionBody['key'] = {
           'key': arguments['key'],
-          if (arguments['modifiers'] is List) 'modifiers': arguments['modifiers'],
+          if (arguments['modifiers'] is List)
+            'modifiers': arguments['modifiers'],
         };
       case 'scroll':
         actionBody['scroll'] = {
-          if (arguments['direction'] != null) 'direction': arguments['direction'],
+          if (arguments['direction'] != null)
+            'direction': arguments['direction'],
           if (arguments['distance'] != null) 'distance': arguments['distance'],
         };
       case 'evaluate':
@@ -394,45 +427,45 @@ final class ToolkitMcpServer {
       };
     } else {
       final behavioral = session.asBehavioral();
-    if (behavioral == null) {
-      throw const McpToolError(
-        'this transport cannot honor behavior profiles',
+      if (behavioral == null) {
+        throw const McpToolError(
+          'this transport cannot honor behavior profiles',
+        );
+      }
+      final profile = profileName is String
+          ? (profileName == 'humanPrior'
+                ? BehaviorProfile.humanPrior(
+                    (arguments['seed'] as int?) ??
+                        DateTime.now().microsecondsSinceEpoch,
+                  )
+                : throw const McpToolError(
+                    "string profile must be 'humanPrior'; pass a canonical "
+                    'profile object for explicit facets',
+                  ))
+          : BehaviorProfile.fromJson(
+              (profileName as Map<Object?, Object?>).map(
+                (key, value) => MapEntry('$key', value),
+              ),
+            );
+      final seed = arguments['seed'] as int?;
+      final outcome = await behavioral.performWith(
+        automationAction,
+        profile,
+        seed: seed,
       );
+      payload = {'ok': true, 'action': action, 'behavior': outcome.toJson()};
     }
-    final profile = profileName is String
-        ? (profileName == 'humanPrior'
-            ? BehaviorProfile.humanPrior(
-                (arguments['seed'] as int?) ??
-                    DateTime.now().microsecondsSinceEpoch,
-              )
-            : throw const McpToolError(
-                "string profile must be 'humanPrior'; pass a canonical "
-                'profile object for explicit facets',
-              ))
-        : BehaviorProfile.fromJson(
-            (profileName as Map<Object?, Object?>).map(
-              (key, value) => MapEntry('$key', value),
-            ),
-          );
-    final seed = arguments['seed'] as int?;
-    final outcome = await behavioral.performWith(
-      automationAction,
-      profile,
-      seed: seed,
-    );
-    payload = {'ok': true, 'action': action, 'behavior': outcome.toJson()};
+    if (arguments['returnState'] == true) {
+      // The act loop's closing read: post-action state through the
+      // default view, in the same tool result.
+      final observation = Observation.of(
+        await session.driver.snapshot(),
+        const SemanticView(maxNodes: 200),
+      );
+      payload = {...payload, 'state': observation.render()};
+    }
+    return payload;
   }
-  if (arguments['returnState'] == true) {
-    // The act loop's closing read: post-action state through the
-    // default view, in the same tool result.
-    final observation = Observation.of(
-      await session.driver.snapshot(),
-      const SemanticView(maxNodes: 200),
-    );
-    payload = {...payload, 'state': observation.render()};
-  }
-  return payload;
-}
 
   /// The ADR 0064 actuation ladder: semantic verbs act below the focus
   /// layer and dispatch directly; a global-event verb refused by the
@@ -461,9 +494,7 @@ final class ToolkitMcpServer {
   /// The anchor discovery record (ADR 0064): every running,
   /// anchorable application — the `app` argument of every OS-tier tool
   /// consumes one of these rows.
-  Future<Map<String, Object?>> _listApps(
-    Map<String, Object?> arguments,
-  ) async {
+  Future<Map<String, Object?>> _listApps(Map<String, Object?> arguments) async {
     final session = await _session({
       ...arguments,
       'transport': 'osAccessibility',
@@ -495,9 +526,7 @@ final class ToolkitMcpServer {
     if (rawChecks is! List<Object?> || rawChecks.isEmpty) {
       throw const McpToolError('automation_verify needs a checks list');
     }
-    final checks = [
-      for (final raw in rawChecks) VerifyCheck.fromJson(raw),
-    ];
+    final checks = [for (final raw in rawChecks) VerifyCheck.fromJson(raw)];
     final session = await _session(arguments);
     final snapshot = await session.driver.snapshot();
     final failures = [
@@ -570,9 +599,7 @@ final class ToolkitMcpServer {
         throw const McpToolError('automation_screenshot needs a path');
       }
       if (!driver.capabilities.screenshot) {
-        throw const McpToolError(
-          'this transport cannot capture screenshots',
-        );
+        throw const McpToolError('this transport cannot capture screenshots');
       }
       if (maxPx > 0) {
         if (driver is! MacosDriver) {
@@ -613,14 +640,17 @@ final class ToolkitMcpServer {
     final path = _planPath(arguments);
     try {
       final plan = await AutomationPlan.load(path);
-      return {'ok': true, 'plan': path, 'scenarios': plan.scenarios.keys.toList()};
+      return {
+        'ok': true,
+        'plan': path,
+        'scenarios': plan.scenarios.keys.toList(),
+      };
     } on SpecViolationException catch (error) {
       return {'ok': false, 'plan': path, 'violations': error.violations};
     }
   }
 
-  Future<Map<String, Object?>> _runPlan(Map<String, Object?> arguments)
-      async {
+  Future<Map<String, Object?>> _runPlan(Map<String, Object?> arguments) async {
     final path = _planPath(arguments);
     final plan = await AutomationPlan.load(path);
     final overrides = (arguments['set'] as Map<Object?, Object?>? ?? const {})
@@ -649,10 +679,8 @@ final class ToolkitMcpServer {
     Map<String, Object?> arguments,
   ) async {
     final path = _planPath(arguments);
-    final overrides =
-        (arguments['set'] as Map<Object?, Object?>? ?? const {}).map(
-      (key, value) => MapEntry('$key', '$value'),
-    );
+    final overrides = (arguments['set'] as Map<Object?, Object?>? ?? const {})
+        .map((key, value) => MapEntry('$key', '$value'));
     final job = _jobs.submit(
       planPath: path,
       scenario: arguments['scenario'] is String
@@ -723,21 +751,17 @@ final class ToolkitMcpServer {
       String name,
       String description,
       Map<String, Object?> inputSchema,
-    ) => {
-      'name': name,
-      'description': description,
-      'inputSchema': inputSchema,
-    };
+    ) => {'name': name, 'description': description, 'inputSchema': inputSchema};
     return [
       tool(
         'automation_observe',
         'Capture a semantic (accessibility) snapshot of an automated '
-        'surface. Read-only; the observe half of observe/act/verify. '
-        'Over the desktop tier this is the focused application\'s tree. '
-        'Pass `view` (identifierPrefix/subtreeOf/fields/maxNodes/panes) '
-        'to get a rendered, ref-stable observation instead of the raw '
-        'tree; pass `diff: true` to also get +/-/~ rows against the '
-        'session\'s previous viewed observation.',
+            'surface. Read-only; the observe half of observe/act/verify. '
+            'Over the desktop tier this is the focused application\'s tree. '
+            'Pass `view` (identifierPrefix/subtreeOf/fields/maxNodes/panes) '
+            'to get a rendered, ref-stable observation instead of the raw '
+            'tree; pass `diff: true` to also get +/-/~ rows against the '
+            'session\'s previous viewed observation.',
         {
           'type': 'object',
           'properties': {
@@ -772,16 +796,16 @@ final class ToolkitMcpServer {
       tool(
         'automation_act',
         'Perform one intent-level action: navigate | click | type | '
-        'setValue | elementAction | key | scroll | evaluate | invoke. '
-        'setValue/elementAction are the semantic write path (ADR 0064): '
-        'they act on the element below the focus layer, valid on '
-        'background applications — prefer them over type/key for text '
-        'and confirmations. Global-event verbs on a background target '
-        'refuse with foregroundRequired unless foreground: true (then '
-        'the anchor is activated and the retry recorded). Optional '
-        'behavior profile dispatches with ADR 0044 dynamics (event-stream '
-        'verbs only). returnState attaches the post-action state render '
-        '— the act loop\'s closing read in one call.',
+            'setValue | elementAction | key | scroll | evaluate | invoke. '
+            'setValue/elementAction are the semantic write path (ADR 0064): '
+            'they act on the element below the focus layer, valid on '
+            'background applications — prefer them over type/key for text '
+            'and confirmations. Global-event verbs on a background target '
+            'refuse with foregroundRequired unless foreground: true (then '
+            'the anchor is activated and the retry recorded). Optional '
+            'behavior profile dispatches with ADR 0044 dynamics (event-stream '
+            'verbs only). returnState attaches the post-action state render '
+            '— the act loop\'s closing read in one call.',
         {
           'type': 'object',
           'required': ['action'],
@@ -860,8 +884,7 @@ final class ToolkitMcpServer {
                 'type': 'string',
                 'enum': ['shift', 'control', 'alt', 'meta'],
               },
-              'description':
-                  'Keyboard chord for clickAt/drag/key (ADR 0053)',
+              'description': 'Keyboard chord for clickAt/drag/key (ADR 0053)',
             },
             'name': {
               'type': 'string',
@@ -877,7 +900,8 @@ final class ToolkitMcpServer {
             },
             ...transportOverride,
             'profile': {
-              'description': "'humanPrior' or a canonical BehaviorProfile object",
+              'description':
+                  "'humanPrior' or a canonical BehaviorProfile object",
             },
             'seed': {'type': 'integer'},
           },
@@ -886,13 +910,16 @@ final class ToolkitMcpServer {
       tool(
         'automation_verify',
         'Assert post-conditions against one fresh snapshot: checks are '
-        '{exists: {role?, name?, nameContains?}} | {absent: {...}} | '
-        '{value: {locator: {...}, equals?|contains?}} | {urlContains: s}.',
+            '{exists: {role?, name?, nameContains?}} | {absent: {...}} | '
+            '{value: {locator: {...}, equals?|contains?}} | {urlContains: s}.',
         {
           'type': 'object',
           'required': ['checks'],
           'properties': {
-            'checks': {'type': 'array', 'items': {'type': 'object'}},
+            'checks': {
+              'type': 'array',
+              'items': {'type': 'object'},
+            },
             ...transportOverride,
           },
         },
@@ -900,8 +927,8 @@ final class ToolkitMcpServer {
       tool(
         'automation_screenshot',
         'Capture one PNG frame to a local file path. `windowId` scopes '
-        'the capture to one window (OS tier); `image` attaches the PNG '
-        'as an opt-in image content block; `maxPx` caps the long side.',
+            'the capture to one window (OS tier); `image` attaches the PNG '
+            'as an opt-in image content block; `maxPx` caps the long side.',
         {
           'type': 'object',
           'required': ['path'],
@@ -909,17 +936,20 @@ final class ToolkitMcpServer {
             'path': {'type': 'string'},
             'windowId': {
               'type': 'integer',
-              'description': 'Capture this window instead of the display '
+              'description':
+                  'Capture this window instead of the display '
                   '(OS tier; discover ids via listWindows)',
             },
             'listWindows': {
               'type': 'boolean',
-              'description': 'List capturable windows (OS tier) instead '
+              'description':
+                  'List capturable windows (OS tier) instead '
                   'of capturing',
             },
             'image': {
               'type': 'boolean',
-              'description': 'Attach the PNG as an image content block '
+              'description':
+                  'Attach the PNG as an image content block '
                   '(opt-in; many agents prefer the semantic channel)',
             },
             'maxPx': {
@@ -933,10 +963,10 @@ final class ToolkitMcpServer {
       tool(
         'automation_list_apps',
         'List running, anchorable applications (macOS tier): pid, name, '
-        'bundleId, active, hidden. Feed a row into any OS-tier call\'s '
-        '`app` argument to anchor that application — observation and '
-        'semantic actions then work in background without stealing '
-        'focus (ADR 0064).',
+            'bundleId, active, hidden. Feed a row into any OS-tier call\'s '
+            '`app` argument to anchor that application — observation and '
+            'semantic actions then work in background without stealing '
+            'focus (ADR 0064).',
         {
           'type': 'object',
           'properties': {...transportOverride},
@@ -945,7 +975,7 @@ final class ToolkitMcpServer {
       tool(
         'automation_validate_plan',
         'Validate a declarative plan document (.yaml/.yml/.json) '
-        'fail-closed: every violation is reported, nothing attaches.',
+            'fail-closed: every violation is reported, nothing attaches.',
         {
           'type': 'object',
           'required': ['plan'],
@@ -957,8 +987,8 @@ final class ToolkitMcpServer {
       tool(
         'automation_run_plan',
         'Run a scenario of a declarative plan: sessions attach lazily, '
-        'steps run in order, the report is structured JSON with per-step '
-        'status and behavior receipts.',
+            'steps run in order, the report is structured JSON with per-step '
+            'status and behavior receipts.',
         {
           'type': 'object',
           'required': ['plan'],
@@ -980,10 +1010,10 @@ final class ToolkitMcpServer {
       tool(
         'automation_run_background',
         'Submit a plan run to the resident job plane and detach '
-        '(ADR 0064): returns a jobId immediately; the serve process '
-        'executes jobs FIFO and persists receipts. Poll with '
-        'automation_job. This is the background-connection shape: the '
-        'client is a control plane, the serve process owns execution.',
+            '(ADR 0064): returns a jobId immediately; the serve process '
+            'executes jobs FIFO and persists receipts. Poll with '
+            'automation_job. This is the background-connection shape: the '
+            'client is a control plane, the serve process owns execution.',
         {
           'type': 'object',
           'required': ['plan'],
@@ -1005,8 +1035,8 @@ final class ToolkitMcpServer {
       tool(
         'automation_job',
         'One background job\'s record: status (queued|running|succeeded|'
-        'failed) while in flight, the full run report when done. Reads '
-        'persisted receipts, so results survive a serve restart.',
+            'failed) while in flight, the full run report when done. Reads '
+            'persisted receipts, so results survive a serve restart.',
         {
           'type': 'object',
           'required': ['jobId'],
@@ -1057,9 +1087,7 @@ Future<void> serveMcpStdio({
     overrides: overrides,
     jobsDirectory: jobsDirectory,
   );
-  final lines = stdin
-      .transform(utf8.decoder)
-      .transform(const LineSplitter());
+  final lines = stdin.transform(utf8.decoder).transform(const LineSplitter());
   await for (final line in lines) {
     final trimmed = line.trim();
     if (trimmed.isEmpty) continue;
@@ -1067,20 +1095,24 @@ Future<void> serveMcpStdio({
     try {
       final decoded = jsonDecode(trimmed);
       if (decoded is! Map<String, Object?>) {
-        stdout.writeln(jsonEncode({
-          'jsonrpc': '2.0',
-          'id': null,
-          'error': {'code': -32600, 'message': 'not a request object'},
-        }));
+        stdout.writeln(
+          jsonEncode({
+            'jsonrpc': '2.0',
+            'id': null,
+            'error': {'code': -32600, 'message': 'not a request object'},
+          }),
+        );
         continue;
       }
       message = decoded;
     } on FormatException catch (error) {
-      stdout.writeln(jsonEncode({
-        'jsonrpc': '2.0',
-        'id': null,
-        'error': {'code': -32700, 'message': 'parse error: ${error.message}'},
-      }));
+      stdout.writeln(
+        jsonEncode({
+          'jsonrpc': '2.0',
+          'id': null,
+          'error': {'code': -32700, 'message': 'parse error: ${error.message}'},
+        }),
+      );
       continue;
     }
     final response = await server.handle(message);
@@ -1145,7 +1177,8 @@ Future<void> _handleHttpMessage(
   Map<String, Object?> message;
   try {
     final decoded = jsonDecode(body);
-    if (decoded is! Map<String, Object?>) throw const FormatException('not a request object');
+    if (decoded is! Map<String, Object?>)
+      throw const FormatException('not a request object');
     message = decoded;
   } on FormatException catch (error) {
     await respond(400, {
@@ -1162,4 +1195,32 @@ Future<void> _handleHttpMessage(
     return;
   }
   await respond(200, response);
+}
+
+/// A resolved session whose driver face is the consent-gated decorator;
+/// everything else (binding, detach, the behavioral face) delegates.
+///
+/// Non-claim: the behavioral face is NOT gated in v1 — ADR 0044
+/// profiles ride the inner driver directly, so composing a gate and a
+/// behavior profile on one session leaves the profile path ungated.
+final class _ConsentSession implements ResolvedSession {
+  _ConsentSession(this._inner, this._gated);
+
+  final ResolvedSession _inner;
+  final ConsentGatedDriver _gated;
+
+  @override
+  SessionBinding get binding => _inner.binding;
+
+  @override
+  AutomationDriver get driver => _gated;
+
+  @override
+  Uri? get url => _inner.url;
+
+  @override
+  BehavioralDriver? asBehavioral() => _inner.asBehavioral();
+
+  @override
+  Future<void> detach() => _inner.detach();
 }

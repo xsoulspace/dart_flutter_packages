@@ -158,13 +158,35 @@ Three recorded rungs landed, each with live or gate evidence:
   the substrate. The serve is a `ComponentSpec`
   (`SupervisionShape.service`, `TcpConnect` readiness, budgeted
   restarts) converged by the harness lane
-  (`~/xs/ecsai_harness/tool/uatk_serve.sh` → `uatk_serve_lane.dart`).
+  (`~/xs/ecsai_harness/.dart_tool/uatk/serve-lane.exe`, built by
+  `tool/build_uatk_lane.dart`).
   Live cycle in `docs/evidence/resident-plane-2026-10-12/`: failed
   start → budgeted restart → converged steady state → resident
   declarative-plan job `succeeded` with a durable receipt. Two
   environment lessons recorded there: the launcher must use the same
   dart SDK the workspace hooks were built with, and a converged lease
   must be spawned outside a sandboxed agent shell or it is reaped.
+- **Shell-free runtime and AOT live reload — landed.** Both MCP
+  clients (zcode, codex) and the plugin manifests exec the serve AOT
+  bundle directly (`build/cli/*/bundle/bin/universal_automation serve
+  --os`) — no shell wrapper, no `dart run`, no build hooks at boot;
+  the SDK-hash failure class is structurally gone. The supervisor lane
+  is itself an AOT exe that spawns the bundle; `--reload` is the AOT
+  live-reload verb: rebuild the bundle, stop the lease, converge under
+  a fresh policy revision (the planner records "declaration changed")
+  — proven live (old pid → new pid, tools answering). A process-managing
+  consumer (Last Answer first) drives the same ~20-line DesiredState
+  natively; in-process kernel reload remains the JIT live-patch story.
+- **Consent composition — landed.** The toolkit adapts
+  `xsoulspace_permission_core` (whose `accessibility` /
+  `screenRecording` kinds already model the TCC surfaces):
+  `ConsentGatedDriver` decorates any driver so snapshots/acts ask
+  `accessibility`, screenshots ask `screenRecording`; deny refuses
+  before the driver call, escalations resolve through the gate's sink,
+  and an allow is never mistaken for the OS grant (the drivers' typed
+  TCC exceptions still surface). `ToolkitMcpServer(consentGate:)`
+  composes it over MCP sessions, opt-in; the behavioral tier is not
+  gated in v1.
 - **Declarative test harness — the plan documents.** The acceptance
   lives as committed plan YAML (`pkgs/universal_automation_toolkit/
   plans/`), validated by tests and executable anywhere through the

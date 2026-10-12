@@ -119,9 +119,18 @@ it; the refusal names the rung. `serve` also hosts the resident job
 plane: `automation_run_background` submits a plan and detaches, and
 `automation_job` polls the durable receipt (default `~/.uatk/jobs`,
 `--jobs-dir` to move it). Residency is deployment, not protocol: the
-serve is kept up by oka supervisor convergence
-(`~/xs/ecsai_harness/tool/uatk_serve.sh` — one converge pass spawns it,
-restarts it within budget, or does nothing when already converged).
+serve is kept up by oka supervisor convergence — the harness lane exe
+(`~/xs/ecsai_harness/.dart_tool/uatk/serve-lane.exe`, built by
+`tool/build_uatk_lane.dart`) spawns this AOT bundle on converge,
+restarts it within budget, does nothing when already converged, and
+`--reload` rebuilds + replaces it (the AOT live-reload verb). Clients
+and the plugin manifests exec the bundle directly — no shell wrapper.
+
+OS consent composes through `xsoulspace_permission_core`
+(`ConsentGatedDriver`): snapshots/acts consult `accessibility`,
+screenshots `screenRecording`; a deny refuses before the driver call,
+an allow never overrides the OS grant (the typed TCC exceptions still
+surface). `ToolkitMcpServer(consentGate:)` wires it over MCP, opt-in.
 
 The declarative acceptance lives as committed plans: `plans/*.yaml`
 validate in tests and run anywhere via the `app` handle override
