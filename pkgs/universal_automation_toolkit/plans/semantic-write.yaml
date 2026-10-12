@@ -1,0 +1,28 @@
+# Semantic write acceptance (ADR 0064): the declarative wire forms of
+# setValue on an anchored OS-tier session — the write happens below the
+# focus layer, then the wait re-observes until the value reads back.
+# Validation is the committed gate; running it needs a live anchored app
+# with a textbox (override the `app` handle per environment; the typed-
+# event rung has its own live probe — plan semantics can't assume where
+# an app places its caret after setValue).
+#
+#   dart run bin/universal_automation.dart run --plan plans/semantic-write.yaml \
+#     --set app=ax://pid/<pid>
+sessions:
+  app:
+    transport: osAccessibility
+    handle: app
+scenarios:
+  main:
+    steps:
+      - observe:
+          save: before
+      - act:
+          setValue: {role: textbox, value: "declarative write"}
+          returnState: true
+      - wait:
+          timeout: 5
+          checks:
+            - value: {locator: {role: textbox}, contains: "declarative write"}
+      - observe:
+          save: after

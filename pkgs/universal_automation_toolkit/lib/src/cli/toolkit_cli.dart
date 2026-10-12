@@ -31,13 +31,12 @@ Future<int> runToolkitCli(List<String> arguments) async {
     stderr.writeln('usage: ${error.message}');
     code = exitUsage;
   } on SpecViolationException catch (error) {
-    stderr.writeln(jsonEncode({
-      'ok': false,
-      'violations': error.violations,
-    }));
+    stderr.writeln(jsonEncode({'ok': false, 'violations': error.violations}));
     code = exitFailure;
   } on AutomationException catch (error) {
-    stderr.writeln(jsonEncode({'ok': false, 'error': error.kind, 'message': error.message}));
+    stderr.writeln(
+      jsonEncode({'ok': false, 'error': error.kind, 'message': error.message}),
+    );
     code = exitFailure;
   }
   return code;
@@ -100,9 +99,32 @@ DefaultSurface _defaultSurface(ArgResults options) {
 
 Future<ResolvedSession> _attachAdHoc(ArgResults options) async {
   final (transport, endpoint) = _defaultSurface(options);
+  final registry = SessionRegistry(bindings: const {});
+  final appSpec = options['app'] as String?;
+  if (appSpec != null) {
+    if (transport != AutomationTransport.osAccessibility) {
+      throw const UsageException('--app anchors the OS tier (--os) only');
+    }
+    final eq = appSpec.indexOf('=');
+    if (eq <= 0) {
+      throw UsageException(
+        '--app must be pid=<n> | bundle=<id> | name=<name> (got $appSpec)',
+      );
+    }
+    final kind = appSpec.substring(0, eq);
+    final value = appSpec.substring(eq + 1);
+    return _DetachingSession(
+      await registry.attachApp(
+        transport,
+        pid: kind == 'pid' ? int.tryParse(value) : null,
+        bundleId: kind == 'bundle' ? value : null,
+        name: kind == 'name' ? value : null,
+      ),
+      registry,
+    );
+  }
   if (endpoint == null) {
     if (transport == AutomationTransport.osAccessibility) {
-      final registry = SessionRegistry(bindings: const {});
       return _DetachingSession(
         await registry.attachFocused(transport),
         registry,
@@ -113,7 +135,6 @@ Future<ResolvedSession> _attachAdHoc(ArgResults options) async {
       'or --os (the desktop accessibility tier of this host)',
     );
   }
-  final registry = SessionRegistry(bindings: const {});
   return _DetachingSession(
     await registry.attachUri(endpoint, transport),
     registry,
@@ -160,8 +181,15 @@ Future<int> _dispatch(List<String> arguments) async {
       'os',
       negatable: false,
       help:
-          'Drive the desktop accessibility tier of this host (macOS AX '
-          'focused app / Linux AT-SPI / Windows UIA); endpoint-free.',
+          'Drive the desktop accessibility tier of this host (macOS AX focused app / Linux AT-SPI / Windows UIA); endpoint-free.',
+    )
+    ..addOption(
+      'app',
+      help:
+          'OS tier: anchor to one running application instead of the '
+          'focused one — pid=<n> | bundle=<bundleId> | name=<name> '
+          '(ADR 0064; observation and semantic verbs then work in '
+          'background).',
     )
     ..addOption('timeout', help: 'Attach timeout seconds.', defaultsTo: '10')
     ..addFlag('pretty', negatable: false, help: 'Pretty-print JSON output.');
@@ -178,7 +206,8 @@ Future<int> _dispatch(List<String> arguments) async {
     )
     ..addOption(
       'at',
-      help: 'Ground this x,y point to the innermost node covering it '
+      help:
+          'Ground this x,y point to the innermost node covering it '
           '(ADR 0053).',
     )
     ..addOption(
@@ -194,17 +223,12 @@ Future<int> _dispatch(List<String> arguments) async {
       'click-at',
       help: 'Click at viewport coordinates: x,y (ADR 0053; CDP tier).',
     )
-    ..addOption(
-      'move-to',
-      help: 'Move the pointer to x,y without pressing.',
-    )
-    ..addOption(
-      'drag',
-      help: 'Drag from x1,y1 to x2,y2 (ADR 0053; CDP tier).',
-    )
+    ..addOption('move-to', help: 'Move the pointer to x,y without pressing.')
+    ..addOption('drag', help: 'Drag from x1,y1 to x2,y2 (ADR 0053; CDP tier).')
     ..addOption(
       'button',
-      help: 'Pointer button for coordinate verbs: left (default), right, '
+      help:
+          'Pointer button for coordinate verbs: left (default), right, '
           'middle.',
     )
     ..addOption(
@@ -213,12 +237,28 @@ Future<int> _dispatch(List<String> arguments) async {
     )
     ..addMultiOption(
       'modifier',
-      help: 'Keyboard modifier chord for click-at/drag/key: '
+      help:
+          'Keyboard modifier chord for click-at/drag/key: '
           'shift/control/alt/meta (repeatable).',
     )
     ..addOption('type-text', help: 'Type this text (caret or --type-css).')
     ..addOption('type-css', help: 'CSS selector to focus before typing.')
     ..addFlag('submit', negatable: false, help: 'Press Enter after typing.')
+    ..addOption(
+      'set-value',
+      help:
+          'Set this value into the element (semantic write, ADR 0064; '
+          'background-safe — prefer over --type-text).',
+    )
+    ..addOption('set-name', help: 'Accessible name for --set-value.')
+    ..addOption('set-css', help: 'CSS selector for --set-value.')
+    ..addOption('set-role', help: 'Semantic role for --set-value.')
+    ..addOption(
+      'element-action',
+      help:
+          'Perform this advertised element action (AXConfirm, …) on '
+          'the element named by --set-name/--set-css/--set-role.',
+    )
     ..addOption('key', help: 'Press this named key.')
     ..addOption('scroll', help: 'Scroll direction (down/up/left/right).')
     ..addOption('distance', help: 'Scroll distance in logical pixels.')
@@ -270,9 +310,16 @@ Future<int> _dispatch(List<String> arguments) async {
       help:
           'Serve MCP over loopback HTTP (POST /mcp) on this port instead '
           'of stdio; the connector URL is http://127.0.0.1:<port>/mcp.',
+    )
+    ..addOption(
+      'jobs-dir',
+      help:
+          'Directory for background job receipts (ADR 0064; default '
+          '~/.uatk/jobs).',
     );
 
-  if (arguments.isEmpty || arguments.contains('--help') ||
+  if (arguments.isEmpty ||
+      arguments.contains('--help') ||
       arguments.contains('-h')) {
     stderr.writeln(parser.usage);
     return exitUsage;
@@ -285,8 +332,10 @@ Future<int> _dispatch(List<String> arguments) async {
   }
   final command = options.command;
   if (command == null) {
-    throw const UsageException('a command is required (observe, act, '
-        'verify, screenshot, validate, run, serve)');
+    throw const UsageException(
+      'a command is required (observe, act, '
+      'verify, screenshot, validate, run, serve)',
+    );
   }
   final pretty = options['pretty'] == true;
   final output = (Object? payload) {
@@ -300,6 +349,7 @@ Future<int> _dispatch(List<String> arguments) async {
     case 'serve':
       final (defaultTransport, defaultEndpoint) = _defaultSurface(options);
       final httpPort = command['http'] as String?;
+      final jobsDir = command['jobs-dir'] as String?;
       if (httpPort != null) {
         final port = int.tryParse(httpPort);
         if (port == null || port < 0 || port > 65535) {
@@ -309,6 +359,7 @@ Future<int> _dispatch(List<String> arguments) async {
           port: port,
           defaultEndpoint: defaultEndpoint,
           defaultTransport: defaultTransport,
+          jobsDirectory: jobsDir,
         );
         stderr.writeln(
           jsonEncode({
@@ -323,6 +374,7 @@ Future<int> _dispatch(List<String> arguments) async {
       await mcp.serveMcpStdio(
         defaultEndpoint: defaultEndpoint,
         defaultTransport: defaultTransport,
+        jobsDirectory: jobsDir,
       );
       return exitOk;
     case 'validate':
@@ -339,17 +391,18 @@ Future<int> _dispatch(List<String> arguments) async {
         for (final entry in command['set'] as List<String>)
           if (entry.contains('=')) entry.split('=')[0]: entry.split('=')[1],
       };
-      final report = await PlanRunner(
-        attachTimeout: Duration(
-          seconds: int.tryParse(options['timeout'] as String) ?? 10,
-        ),
-        handleBaseDirectory: command['handles-dir'] as String?,
-      ).run(
-        plan,
-        scenarioName: command['scenario'] as String?,
-        sessionOverrides: overrides,
-        outDir: command['out'] as String?,
-      );
+      final report =
+          await PlanRunner(
+            attachTimeout: Duration(
+              seconds: int.tryParse(options['timeout'] as String) ?? 10,
+            ),
+            handleBaseDirectory: command['handles-dir'] as String?,
+          ).run(
+            plan,
+            scenarioName: command['scenario'] as String?,
+            sessionOverrides: overrides,
+            outDir: command['out'] as String?,
+          );
       output(report.toJson());
       return report.ok ? exitOk : exitFailure;
     case 'observe':
@@ -360,10 +413,7 @@ Future<int> _dispatch(List<String> arguments) async {
         final atRaw = command['at'] as String?;
         (double, double)? at;
         if (atRaw != null) {
-          at = (
-            _coordPart(atRaw, 0, '--at'),
-            _coordPart(atRaw, 1, '--at'),
-          );
+          at = (_coordPart(atRaw, 0, '--at'), _coordPart(atRaw, 1, '--at'));
         }
         final out = command['out'] as String?;
         if (out != null) {
@@ -375,7 +425,10 @@ Future<int> _dispatch(List<String> arguments) async {
           // A view asked: the rendered observation + ref index (the
           // raw tree rides `--out` when given). A grounding point
           // resolves against the same full walk.
-          final observation = Observation.of(snapshot, view ?? const SemanticView());
+          final observation = Observation.of(
+            snapshot,
+            view ?? const SemanticView(),
+          );
           output({
             'observation': observation.toJson(),
             if (at case (final x, final y))
@@ -547,7 +600,10 @@ SemanticView? _viewFromArgs(ArgResults command) {
   final prefix = command['view-prefix'] as String?;
   final fieldsRaw = command['view-fields'] as String?;
   final maxRaw = command['view-max'] as String?;
-  if (subtree == null && prefix == null && fieldsRaw == null && maxRaw == null) {
+  if (subtree == null &&
+      prefix == null &&
+      fieldsRaw == null &&
+      maxRaw == null) {
     return null;
   }
   final max = maxRaw == null ? null : int.tryParse(maxRaw);
@@ -629,7 +685,10 @@ AutomationAction _actionFromArgs(ArgResults command) {
   }
   final moveTo = command['move-to'] as String?;
   if (moveTo != null) {
-    return MoveAction(_coordPart(moveTo, 0, '--move-to'), _coordPart(moveTo, 1, '--move-to'));
+    return MoveAction(
+      _coordPart(moveTo, 0, '--move-to'),
+      _coordPart(moveTo, 1, '--move-to'),
+    );
   }
   final drag = command['drag'] as String?;
   if (drag != null) {
@@ -654,6 +713,31 @@ AutomationAction _actionFromArgs(ArgResults command) {
       submit: command['submit'] == true,
     );
   }
+  final setValue = command['set-value'] as String?;
+  if (setValue != null) {
+    final name = command['set-name'] as String?;
+    final css = command['set-css'] as String?;
+    final role = command['set-role'] as String?;
+    if (name == null && css == null && role == null) {
+      throw const UsageException(
+        '--set-value needs a locator: --set-name, --set-css, or --set-role',
+      );
+    }
+    return SetValueAction(setValue, css: css, role: role, name: name);
+  }
+  final elementAction = command['element-action'] as String?;
+  if (elementAction != null) {
+    final name = command['set-name'] as String?;
+    final css = command['set-css'] as String?;
+    final role = command['set-role'] as String?;
+    if (name == null && css == null && role == null) {
+      throw const UsageException(
+        '--element-action needs a locator: --set-name, --set-css, or '
+        '--set-role',
+      );
+    }
+    return ElementAction(elementAction, css: css, role: role, name: name);
+  }
   final key = command['key'] as String?;
   if (key != null) {
     return KeyPressAction(key, modifiers: _modifierOption(command));
@@ -669,15 +753,18 @@ AutomationAction _actionFromArgs(ArgResults command) {
   if (evaluate != null) return EvaluateAction(evaluate);
   final invoke = command['invoke'] as String?;
   if (invoke != null) {
-    return InvokeAction(invoke, args: {
-      for (final pair in command['arg'] as List<String>)
-        if (pair.contains('=')) pair.split('=')[0]: pair.split('=')[1],
-    });
+    return InvokeAction(
+      invoke,
+      args: {
+        for (final pair in command['arg'] as List<String>)
+          if (pair.contains('=')) pair.split('=')[0]: pair.split('=')[1],
+      },
+    );
   }
   throw const UsageException(
     'act needs one of --navigate, --click-name, --click-css, --click-role, '
-    '--click-at, --move-to, --drag, --type-text, --key, --scroll, '
-    '--evaluate, --invoke',
+    '--click-at, --move-to, --drag, --type-text, --set-value, '
+    '--element-action, --key, --scroll, --evaluate, --invoke',
   );
 }
 

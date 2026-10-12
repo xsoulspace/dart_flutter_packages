@@ -1,0 +1,19 @@
+# Desktop smoke — the declarative acceptance for an OS-tier anchor
+# (ADR 0064). Environment-neutral: the target comes from the `app`
+# handle override, not the plan, so the same document drives any app.
+#
+#   dart run bin/universal_automation.dart run --plan plans/desktop-smoke.yaml \
+#     --set app=ax://bundle/dev.xsoulspace.lastAnswer
+#   dart run bin/universal_automation.dart validate --plan plans/desktop-smoke.yaml
+sessions:
+  app:
+    transport: osAccessibility
+    handle: app
+scenarios:
+  main:
+    steps:
+      - observe:
+          save: observe
+      - verify:
+          - exists: {role: application}
+      - screenshot: build/automation/desktop-smoke.png

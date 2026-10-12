@@ -146,6 +146,47 @@ final class SessionRegistry {
     });
   }
 
+  /// Attaches (or returns the cached) ad-hoc session anchored to one
+  /// running application — the ADR 0064 target anchoring. [pid] binds
+  /// directly; [bundleId]/[name] resolve through the running-apps record
+  /// at attach. No target means the focused binding (the convenience
+  /// default, never a precondition). The anchor URI
+  /// (`ax://pid/<n>` / `ax://bundle/<id>` / `ax://name/<name>`) is the
+  /// plan-document shape too — a plan session with that uri lands here.
+  Future<ResolvedSession> attachApp(
+    AutomationTransport transport, {
+    int? pid,
+    String? bundleId,
+    String? name,
+  }) {
+    if (transport != AutomationTransport.osAccessibility) {
+      throw DriverUnsupportedException(
+        'app targeting is the OS-tier anchor vocabulary (ADR 0064); '
+        'transport "${transport.name}" has no application anchors — pass '
+        'an endpoint instead',
+      );
+    }
+    if (pid == null && bundleId == null && name == null) {
+      return attachFocused(transport);
+    }
+    if (pid != null) {
+      if (pid <= 0) {
+        throw SpecViolationException(const ['app.pid must be a positive pid']);
+      }
+      return attachUri(Uri.parse('ax://pid/$pid'), transport);
+    }
+    final value = bundleId ?? name;
+    if (value == null || value.isEmpty) {
+      throw SpecViolationException(const [
+        'app.bundleId / app.name must be non-empty when given',
+      ]);
+    }
+    return attachUri(
+      Uri.parse(bundleId != null ? 'ax://bundle/$value' : 'ax://name/$value'),
+      transport,
+    );
+  }
+
   /// Attaches (or returns the cached) ad-hoc session at [uri] — the
   /// per-call endpoint override used by MCP tools.
   Future<ResolvedSession> attachUri(Uri uri, AutomationTransport transport) {
@@ -236,7 +277,7 @@ final class SessionRegistry {
     Duration timeout,
   ) async {
     if (Platform.isMacOS) {
-      return _MacosResolvedSession(binding, BehavioralMacosDriver());
+      return _attachMacos(binding, endpoint);
     }
     if (Platform.isLinux) {
       final bus = DBusAtspiBus(
@@ -258,6 +299,70 @@ final class SessionRegistry {
       '${binding.transport.name} on ${Platform.operatingSystem}',
       sessionName: binding.name,
     );
+  }
+
+  /// The macOS attach: focused by default, or anchored to one running
+  /// application through an `ax://` URI (ADR 0064). Bundle/name anchors
+  /// resolve through the running-apps record at attach; an unknown
+  /// target is a loud element-not-found naming the search key.
+  static Future<ResolvedSession> _attachMacos(
+    SessionBinding binding,
+    Uri endpoint,
+  ) async {
+    final anchor = _parseAxAnchor(endpoint);
+    if (anchor == null) {
+      return _MacosResolvedSession(binding, BehavioralMacosDriver());
+    }
+    final (kind, value) = anchor;
+    var pid = switch (kind) {
+      'pid' => int.tryParse(value),
+      _ => null,
+    };
+    if (kind != 'pid') {
+      final probe = MacosDriver();
+      try {
+        final apps = await probe.runningApps();
+        MacosApp? match;
+        switch (kind) {
+          case 'bundle':
+            match = apps.where((app) => app.bundleId == value).firstOrNull;
+          case 'name':
+            match = apps.where((app) => app.name == value).firstOrNull;
+        }
+        if (match == null) {
+          throw ElementNotFoundException(
+            'application',
+            '$kind "$value" (running: '
+            '${apps.map((app) => app.name).join(", ")})',
+          );
+        }
+        pid = match.pid;
+      } finally {
+        await probe.close();
+      }
+    }
+    if (pid == null || pid <= 0) {
+      throw ElementNotFoundException('application', 'pid "$value"');
+    }
+    return _MacosResolvedSession(binding, BehavioralMacosDriver(targetPid: pid));
+  }
+
+  /// `(kind, value)` from an `ax://<kind>/<value>` anchor URI; `null`
+  /// for any other shape (the focused sentinel, a11y refinements). The
+  /// value percent-decodes (URIs encode spaces: `ax://name/Text%20Edit`).
+  static (String, String)? _parseAxAnchor(Uri endpoint) {
+    if (endpoint.scheme != 'ax') return null;
+    final kind = endpoint.host;
+    final raw = endpoint.path.startsWith('/')
+        ? endpoint.path.substring(1)
+        : endpoint.path;
+    if (raw.isEmpty || !const {'pid', 'bundle', 'name'}.contains(kind)) {
+      throw SpecViolationException([
+        'ax:// anchors are ax://pid/<pid>, ax://bundle/<bundleId>, or '
+        'ax://name/<name> (got $endpoint)',
+      ]);
+    }
+    return (kind, Uri.decodeComponent(raw));
   }
 
   /// Detaches every session this registry opened. Idempotent.

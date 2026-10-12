@@ -9,6 +9,7 @@ import 'package:universal_driver_macos/universal_driver_macos.dart';
 import '../plan/checks.dart';
 import '../plan/plan.dart';
 import '../plan/steps.dart';
+import '../runner/jobs.dart';
 import '../runner/registry.dart';
 import '../runner/runner.dart';
 
@@ -35,22 +36,43 @@ final class ToolkitMcpServer {
   /// accessibility tier). [factories] extends or replaces the built-in
   /// per-transport drivers (the composition-root seam, e.g. the
   /// instrumented Flutter tier registered by mcp_flutter).
+  /// [jobsDirectory] hosts the resident job plane's receipts (ADR 0064);
+  /// `null` defaults to `~/.uatk/jobs`.
   ToolkitMcpServer({
     Uri? defaultEndpoint,
     AutomationTransport defaultTransport = AutomationTransport.cdp,
     Map<String, String> overrides = const {},
     Map<AutomationTransport, DriverFactory>? factories,
+    String? jobsDirectory,
   }) : _defaultEndpoint = defaultEndpoint,
        _defaultTransport = defaultTransport,
        _overrides = overrides,
-       _extraFactories = factories;
+       _extraFactories = factories,
+       _jobsDirectory =
+           jobsDirectory ?? _defaultJobsDirectory();
 
   final Uri? _defaultEndpoint;
   final AutomationTransport _defaultTransport;
   final Map<String, String> _overrides;
   final Map<AutomationTransport, DriverFactory>? _extraFactories;
   final Map<String, Observation> _lastObservations = {};
+  final String _jobsDirectory;
   SessionRegistry? _registry;
+  JobQueue? _jobQueue;
+
+  /// `~/.uatk/jobs`, or a temp sibling when HOME is unavailable.
+  static String _defaultJobsDirectory() {
+    final home = Platform.environment['HOME'];
+    return home == null
+        ? '${Directory.systemTemp.path}/uatk-jobs'
+        : '$home/.uatk/jobs';
+  }
+
+  JobQueue get _jobs =>
+      _jobQueue ??= JobQueue(
+        directory: _jobsDirectory,
+        factories: _extraFactories,
+      );
 
   SessionRegistry get _sessions {
     final existing = _registry;
@@ -141,8 +163,11 @@ final class ToolkitMcpServer {
         'automation_act' => _act(arguments),
         'automation_verify' => _verify(arguments),
         'automation_screenshot' => _screenshot(arguments),
+        'automation_list_apps' => _listApps(arguments),
         'automation_validate_plan' => _validatePlan(arguments),
         'automation_run_plan' => _runPlan(arguments),
+        'automation_run_background' => _runBackground(arguments),
+        'automation_job' => _jobStatus(arguments),
         _ => throw McpToolError('unknown tool: $name'),
       };
     } on FormatException catch (error) {
@@ -186,10 +211,24 @@ final class ToolkitMcpServer {
     final transport =
         parseTransport(arguments['transport']) ?? _defaultTransport;
     final endpointValue = arguments['endpoint'];
-    if (transport == AutomationTransport.osAccessibility &&
-        endpointValue == null) {
-      // The desktop tier binds the focused application; no URI.
-      return _sessions.attachFocused(transport);
+    if (transport == AutomationTransport.osAccessibility) {
+      final app = arguments['app'];
+      if (app is Map<Object?, Object?>) {
+        // The ADR 0064 anchor: bind the named application, not focus.
+        final pid = app['pid'];
+        return _sessions.attachApp(
+          transport,
+          pid: pid is int ? pid : (pid is num ? pid.toInt() : null),
+          bundleId: app['bundleId'] is String
+              ? app['bundleId'] as String
+              : null,
+          name: app['name'] is String ? app['name'] as String : null,
+        );
+      }
+      if (endpointValue == null) {
+        // No anchor: the desktop tier binds the focused application.
+        return _sessions.attachFocused(transport);
+      }
     }
     Uri? uri;
     if (endpointValue != null) {
@@ -306,6 +345,23 @@ final class ToolkitMcpServer {
           if (arguments['css'] != null) 'css': arguments['css'],
           if (arguments['submit'] == true) 'submit': true,
         };
+      case 'setValue':
+        // The semantic write (ADR 0064): set an element's value in
+        // background — no keyboard focus, no event stream.
+        actionBody['setValue'] = {
+          'value': arguments['value'],
+          if (arguments['css'] != null) 'css': arguments['css'],
+          if (arguments['role'] != null) 'role': arguments['role'],
+          if (arguments['name'] != null) 'name': arguments['name'],
+        };
+      case 'elementAction':
+        // One advertised element action (AXConfirm, AXShowMenu, …).
+        actionBody['elementAction'] = {
+          'action': arguments['elementAction'],
+          if (arguments['css'] != null) 'css': arguments['css'],
+          if (arguments['role'] != null) 'role': arguments['role'],
+          if (arguments['name'] != null) 'name': arguments['name'],
+        };
       case 'key':
         actionBody['key'] = {
           'key': arguments['key'],
@@ -332,8 +388,10 @@ final class ToolkitMcpServer {
     final profileName = arguments['profile'];
     Map<String, Object?> payload;
     if (profileName == null) {
-      await session.driver.perform(automationAction);
-      payload = {'ok': true, 'action': action};
+      payload = {
+        ...await _performWithLadder(session, automationAction, arguments),
+        'action': action,
+      };
     } else {
       final behavioral = session.asBehavioral();
     if (behavioral == null) {
@@ -375,6 +433,62 @@ final class ToolkitMcpServer {
   }
   return payload;
 }
+
+  /// The ADR 0064 actuation ladder: semantic verbs act below the focus
+  /// layer and dispatch directly; a global-event verb refused by the
+  /// focus contract escalates ONLY when the caller explicitly asked
+  /// (`foreground: true`) — activate the anchor, retry once, and record
+  /// `focusContract: "activated"` so the cost stays visible. Default is
+  /// refuse.
+  Future<Map<String, Object?>> _performWithLadder(
+    ResolvedSession session,
+    AutomationAction automationAction,
+    Map<String, Object?> arguments,
+  ) async {
+    try {
+      await session.driver.perform(automationAction);
+      return {'ok': true};
+    } on ForegroundRequiredException catch (error) {
+      if (arguments['foreground'] != true) rethrow;
+      final driver = session.driver;
+      if (driver is! MacosDriver) rethrow;
+      await driver.activate(error.targetPid);
+      await driver.perform(automationAction);
+      return {'ok': true, 'focusContract': 'activated'};
+    }
+  }
+
+  /// The anchor discovery record (ADR 0064): every running,
+  /// anchorable application — the `app` argument of every OS-tier tool
+  /// consumes one of these rows.
+  Future<Map<String, Object?>> _listApps(
+    Map<String, Object?> arguments,
+  ) async {
+    final session = await _session({
+      ...arguments,
+      'transport': 'osAccessibility',
+    });
+    final driver = session.driver;
+    if (driver is! MacosDriver) {
+      throw const McpToolError(
+        'automation_list_apps is the macOS tier (runningApps); other OS '
+        'transports do not expose an application record yet',
+      );
+    }
+    final apps = await driver.runningApps();
+    return {
+      'apps': [
+        for (final app in apps)
+          {
+            'pid': app.pid,
+            'name': app.name,
+            if (app.bundleId != null) 'bundleId': app.bundleId,
+            'active': app.active,
+            'hidden': app.hidden,
+          },
+      ],
+    };
+  }
 
   Future<Map<String, Object?>> _verify(Map<String, Object?> arguments) async {
     final rawChecks = arguments['checks'];
@@ -528,6 +642,49 @@ final class ToolkitMcpServer {
     return path;
   }
 
+  /// Submit-and-detach plan execution (ADR 0064's resident job plane):
+  /// the call returns a jobId immediately; the serve process runs the
+  /// job FIFO and persists every transition under the jobs directory.
+  Future<Map<String, Object?>> _runBackground(
+    Map<String, Object?> arguments,
+  ) async {
+    final path = _planPath(arguments);
+    final overrides =
+        (arguments['set'] as Map<Object?, Object?>? ?? const {}).map(
+      (key, value) => MapEntry('$key', '$value'),
+    );
+    final job = _jobs.submit(
+      planPath: path,
+      scenario: arguments['scenario'] is String
+          ? arguments['scenario'] as String
+          : null,
+      overrides: overrides,
+      outDir: arguments['out'] is String ? arguments['out'] as String : null,
+    );
+    return {
+      'jobId': job.id,
+      'status': job.status,
+      'jobsDirectory': _jobsDirectory,
+    };
+  }
+
+  /// One job's record: status while in flight, the full run report when
+  /// done. Reads persisted receipts too, so results survive a serve
+  /// restart.
+  Future<Map<String, Object?>> _jobStatus(
+    Map<String, Object?> arguments,
+  ) async {
+    final id = arguments['jobId'];
+    if (id is! String || id.isEmpty) {
+      throw const McpToolError('automation_job needs a jobId');
+    }
+    final job = _jobs.status(id);
+    if (job == null) {
+      throw McpToolError('unknown job: $id');
+    }
+    return job.toJson();
+  }
+
   /// The tool descriptors (name, description, JSON Schema input).
   static List<Map<String, Object?>> toolDescriptors() {
     final transportOverride = {
@@ -536,9 +693,24 @@ final class ToolkitMcpServer {
         'enum': ['cdp', 'webdriver', 'osAccessibility'],
         'description':
             'Overrides the serve transport for this call. '
-            'osAccessibility is the desktop tier (macOS AX / Linux '
-            'AT-SPI / Windows UIA): it binds the focused application '
-            'and needs no endpoint.',
+            'osAccessibility is the desktop tier (macOS AX): semantic '
+            'verbs (click/setValue/elementAction) act below the focus '
+            'layer on background apps; global-event verbs (type/key/'
+            'scroll/clickAt/moveTo/drag) need the target frontmost or an '
+            'explicit foreground opt-in (ADR 0064).',
+      },
+      'app': {
+        'type': 'object',
+        'description':
+            'OS tier: anchor to one running application instead of the '
+            'focused one — {pid} | {bundleId} | {name}. Discover rows '
+            'via automation_list_apps. Anchored sessions read and act on '
+            'the app in background.',
+        'properties': {
+          'pid': {'type': 'integer'},
+          'bundleId': {'type': 'string'},
+          'name': {'type': 'string'},
+        },
       },
       'endpoint': {
         'type': 'string',
@@ -599,12 +771,17 @@ final class ToolkitMcpServer {
       ),
       tool(
         'automation_act',
-        'Perform one intent-level action: navigate | click | type | key '
-        '| scroll | evaluate | invoke. Optional behavior profile '
-        "('humanPrior' or a canonical profile object) dispatches with "
-        'ADR 0044 input dynamics and reports the outcome (CDP only). '
-        'returnState attaches the post-action state render — the '
-        'act loop\'s closing read in one call.',
+        'Perform one intent-level action: navigate | click | type | '
+        'setValue | elementAction | key | scroll | evaluate | invoke. '
+        'setValue/elementAction are the semantic write path (ADR 0064): '
+        'they act on the element below the focus layer, valid on '
+        'background applications — prefer them over type/key for text '
+        'and confirmations. Global-event verbs on a background target '
+        'refuse with foregroundRequired unless foreground: true (then '
+        'the anchor is activated and the retry recorded). Optional '
+        'behavior profile dispatches with ADR 0044 dynamics (event-stream '
+        'verbs only). returnState attaches the post-action state render '
+        '— the act loop\'s closing read in one call.',
         {
           'type': 'object',
           'required': ['action'],
@@ -618,6 +795,8 @@ final class ToolkitMcpServer {
                 'moveTo',
                 'drag',
                 'type',
+                'setValue',
+                'elementAction',
                 'key',
                 'scroll',
                 'evaluate',
@@ -628,6 +807,24 @@ final class ToolkitMcpServer {
             'css': {'type': 'string'},
             'role': {'type': 'string'},
             'text': {'type': 'string'},
+            'value': {
+              'type': 'string',
+              'description':
+                  'setValue: the full replacement value for the element',
+            },
+            'elementAction': {
+              'type': 'string',
+              'description':
+                  'elementAction: the advertised action name (AXConfirm, '
+                  'AXShowMenu, …) — read axActions from the snapshot',
+            },
+            'foreground': {
+              'type': 'boolean',
+              'description':
+                  'Explicit opt-in to steal focus: activate the anchored '
+                  'app and retry a focus-refused global verb once '
+                  '(ADR 0064 ladder; default false = refuse)',
+            },
             'submit': {'type': 'boolean'},
             'key': {'type': 'string'},
             'direction': {
@@ -734,6 +931,18 @@ final class ToolkitMcpServer {
         },
       ),
       tool(
+        'automation_list_apps',
+        'List running, anchorable applications (macOS tier): pid, name, '
+        'bundleId, active, hidden. Feed a row into any OS-tier call\'s '
+        '`app` argument to anchor that application — observation and '
+        'semantic actions then work in background without stealing '
+        'focus (ADR 0064).',
+        {
+          'type': 'object',
+          'properties': {...transportOverride},
+        },
+      ),
+      tool(
         'automation_validate_plan',
         'Validate a declarative plan document (.yaml/.yml/.json) '
         'fail-closed: every violation is reported, nothing attaches.',
@@ -765,6 +974,44 @@ final class ToolkitMcpServer {
               'description':
                   'session handle overrides: {handleName: endpointUri}',
             },
+          },
+        },
+      ),
+      tool(
+        'automation_run_background',
+        'Submit a plan run to the resident job plane and detach '
+        '(ADR 0064): returns a jobId immediately; the serve process '
+        'executes jobs FIFO and persists receipts. Poll with '
+        'automation_job. This is the background-connection shape: the '
+        'client is a control plane, the serve process owns execution.',
+        {
+          'type': 'object',
+          'required': ['plan'],
+          'properties': {
+            'plan': {'type': 'string'},
+            'scenario': {'type': 'string'},
+            'out': {
+              'type': 'string',
+              'description': 'output directory for screenshots and receipts',
+            },
+            'set': {
+              'type': 'object',
+              'description':
+                  'session handle overrides: {handleName: endpointUri}',
+            },
+          },
+        },
+      ),
+      tool(
+        'automation_job',
+        'One background job\'s record: status (queued|running|succeeded|'
+        'failed) while in flight, the full run report when done. Reads '
+        'persisted receipts, so results survive a serve restart.',
+        {
+          'type': 'object',
+          'required': ['jobId'],
+          'properties': {
+            'jobId': {'type': 'string'},
           },
         },
       ),
@@ -802,11 +1049,13 @@ Future<void> serveMcpStdio({
   Uri? defaultEndpoint,
   AutomationTransport defaultTransport = AutomationTransport.cdp,
   Map<String, String> overrides = const {},
+  String? jobsDirectory,
 }) async {
   final server = ToolkitMcpServer(
     defaultEndpoint: defaultEndpoint,
     defaultTransport: defaultTransport,
     overrides: overrides,
+    jobsDirectory: jobsDirectory,
   );
   final lines = stdin
       .transform(utf8.decoder)
@@ -855,11 +1104,13 @@ Future<HttpServer> startMcpHttp({
   Uri? defaultEndpoint,
   AutomationTransport defaultTransport = AutomationTransport.cdp,
   Map<String, String> overrides = const {},
+  String? jobsDirectory,
 }) async {
   final server = ToolkitMcpServer(
     defaultEndpoint: defaultEndpoint,
     defaultTransport: defaultTransport,
     overrides: overrides,
+    jobsDirectory: jobsDirectory,
   );
   final httpServer = await HttpServer.bind(InternetAddress.loopbackIPv4, port);
   httpServer.listen((request) => _handleHttpMessage(server, request));

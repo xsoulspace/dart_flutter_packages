@@ -141,16 +141,21 @@ final class PlanRunner {
   /// Creates a runner; [attachTimeout] bounds each session attach and
   /// [handleBaseDirectory] names a directory of handle artifacts
   /// (`session-<name>-handle` files holding endpoint URIs).
+  /// [factories] extends or replaces the built-in per-transport drivers
+  /// (the composition-root seam — the instrumented Flutter tier).
   PlanRunner({
     this.attachTimeout = const Duration(seconds: 10),
     this.handleBaseDirectory,
-  });
+    Map<AutomationTransport, DriverFactory>? factories,
+  }) : _factories = factories;
 
   /// Attach deadline per session.
   final Duration attachTimeout;
 
   /// Handle-artifact directory, when discovering published handles.
   final String? handleBaseDirectory;
+
+  final Map<AutomationTransport, DriverFactory>? _factories;
 
   /// Runs [scenarioName] (default: the plan's only scenario) and returns
   /// the structured report.
@@ -177,6 +182,7 @@ final class PlanRunner {
       overrides: sessionOverrides,
       attachTimeout: attachTimeout,
       handleBaseDirectory: handleBaseDirectory,
+      factories: _factories,
     );
     final startedAt = DateTime.now();
     final results = <StepResult>[];

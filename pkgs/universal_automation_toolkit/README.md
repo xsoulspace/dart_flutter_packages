@@ -16,7 +16,7 @@ Part of the `universal_automation_*` family
 | --- | --- | --- |
 | Chromium / Flutter web (AOT) | CDP (`universal_browser_cdp`) | **linked** — snapshots, semantic clicks, behavior profiles, screencast |
 | Safari / any WebDriver end | W3C WebDriver (`universal_browser_webdriver`) | **linked** — actions + screenshots; no a11y tree (protocol has none) |
-| macOS apps | AX/CGEvent (`universal_driver_macos`) | **linked** — focused app; needs Accessibility (+Screen Recording) TCC |
+| macOS apps | AX/CGEvent (`universal_driver_macos`) | **linked** — focused app or `ax://pid/bundle/name` anchors (background actuation, ADR 0064); needs Accessibility (+Screen Recording) TCC |
 | Linux apps | AT-SPI2 (`universal_driver_linux`) | **linked** — D-Bus session bus |
 | Windows apps | UIA sidecar (`universal_driver_windows`) | **linked** — needs the sidecar binary; refuses loudly elsewhere |
 | Flutter JIT (debug) | VM service (`ToolkitDriver`, mcp_flutter) | via **injected `DriverFactory`** (ADR 0036 direction) — `SessionRegistry.registerFactory` |
@@ -104,6 +104,29 @@ dart run bin/universal_automation.dart observe --os \
 dart run bin/universal_automation.dart act --os \
   --click-name "New Folder" --return-state                     # act + closing read
 ```
+
+Background actuation (ADR 0064): anchor a running app instead of focus —
+`--app pid=<n>` (CLI) / `app: {pid|bundleId|name}` (MCP) / `ax://pid/<n>`
+session URIs (plans) — then observation and the semantic write path
+(`setValue`, `elementAction`) work with the app in background, focus
+untouched. On macOS the anchor also carries keyboard events: anchored
+`type`/`key` post straight to the target's event queue
+(`pidScopedEvents` capability, fire-and-forget — apps that drop events
+while inactive need the explicit escape hatch). Pointer and scroll
+verbs (global screen coordinates) refuse on a background anchor
+(`foregroundRequired`) unless `foreground: true` explicitly activates
+it; the refusal names the rung. `serve` also hosts the resident job
+plane: `automation_run_background` submits a plan and detaches, and
+`automation_job` polls the durable receipt (default `~/.uatk/jobs`,
+`--jobs-dir` to move it). Residency is deployment, not protocol: the
+serve is kept up by oka supervisor convergence
+(`~/xs/ecsai_harness/tool/uatk_serve.sh` — one converge pass spawns it,
+restarts it within budget, or does nothing when already converged).
+
+The declarative acceptance lives as committed plans: `plans/*.yaml`
+validate in tests and run anywhere via the `app` handle override
+(`run --plan plans/desktop-smoke.yaml --set app=ax://bundle/<id>`);
+`automation_validate_plan` checks documents over the wire.
 
 Native-tier runs need the native asset built: use `dart run` or the
 AOT bundle, not a bare `dart bin/...` invocation.

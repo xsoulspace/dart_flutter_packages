@@ -397,6 +397,22 @@ final class ActStep extends PlanStep {
         InvokeAction(:final name, :final args) => {
           'invoke': {'name': name, 'args': args},
         },
+        SetValueAction(:final value, :final css, :final role, :final name) => {
+          'setValue': {
+            'value': value,
+            if (css != null) 'css': css,
+            if (role != null) 'role': role,
+            if (name != null) 'name': name,
+          },
+        },
+        ElementAction(:final action, :final css, :final role, :final name) => {
+          'elementAction': {
+            'action': action,
+            if (css != null) 'css': css,
+            if (role != null) 'role': role,
+            if (name != null) 'name': name,
+          },
+        },
       };
 
   /// Parses an action from the plan-document shape (the `act` body map
@@ -512,6 +528,34 @@ final class ActStep extends PlanStep {
               ? args.map((key, value) => MapEntry('$key', value))
               : const {},
         );
+      case 'setValue':
+        final params = _asMap(value, 'setValue');
+        final setValue = _optionalString(params['value'], 'setValue.value');
+        if (setValue == null) {
+          throw const FormatException('setValue needs a value');
+        }
+        final css = _optionalString(params['css'], 'setValue.css');
+        final role = _optionalString(params['role'], 'setValue.role');
+        final name = _optionalString(params['name'], 'setValue.name');
+        if (css == null && role == null && name == null) {
+          throw const FormatException('setValue needs css, role, or name');
+        }
+        return SetValueAction(setValue, css: css, role: role, name: name);
+      case 'elementAction':
+        final params = _asMap(value, 'elementAction');
+        final action = _optionalString(params['action'], 'elementAction.action');
+        if (action == null || action.isEmpty) {
+          throw const FormatException('elementAction needs an action name');
+        }
+        final css = _optionalString(params['css'], 'elementAction.css');
+        final role = _optionalString(params['role'], 'elementAction.role');
+        final name = _optionalString(params['name'], 'elementAction.name');
+        if (css == null && role == null && name == null) {
+          throw const FormatException(
+            'elementAction needs css, role, or name',
+          );
+        }
+        return ElementAction(action, css: css, role: role, name: name);
       default:
         throw FormatException('unknown action "${entry.key}"');
     }

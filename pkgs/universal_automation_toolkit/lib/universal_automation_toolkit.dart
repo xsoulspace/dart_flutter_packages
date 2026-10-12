@@ -16,5 +16,6 @@ export 'src/plan/checks.dart';
 export 'src/plan/intents.dart';
 export 'src/plan/plan.dart';
 export 'src/plan/steps.dart';
+export 'src/runner/jobs.dart';
 export 'src/runner/registry.dart';
 export 'src/runner/runner.dart';
