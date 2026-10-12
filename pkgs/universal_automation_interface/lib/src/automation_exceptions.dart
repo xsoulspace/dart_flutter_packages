@@ -87,6 +87,51 @@ class SinkClosedException extends AutomationException {
   final String sinkId;
 }
 
+/// A global-event verb was requested while the target application does
+/// not own the event stream (ADR 0064's focus contract).
+///
+/// Global-event verbs (`type`, `key`, `scroll`, `clickAt`, `moveTo`,
+/// `drag`) route through the OS event stream: they reach *the frontmost
+/// application*, whatever it is. When that is not the session's anchor,
+/// the driver refuses instead of silently driving the wrong app. The
+/// remedy is named in the message: activate the anchor (or pass the
+/// toolkit's explicit `foreground` opt-in), or use a semantic verb
+/// (`click`/`setValue`/`elementAction` by locator), which acts below
+/// the focus layer.
+@immutable
+class ForegroundRequiredException extends AutomationException {
+  /// Creates the exception for target [targetPid] with [frontmostPid]
+  /// holding the event stream. Not const: the details map carries the
+  /// pids.
+  ForegroundRequiredException({
+    required this.verb,
+    required this.targetPid,
+    required this.frontmostPid,
+  }) : super(
+          'foreground required for "$verb": the event stream would reach '
+          'pid $frontmostPid, not the anchored pid $targetPid — activate '
+          'the target first (or use a semantic verb: click / setValue / '
+          'elementAction, which act below the focus layer)',
+          details: {
+            'verb': verb,
+            'targetPid': targetPid,
+            'frontmostPid': frontmostPid,
+          },
+        );
+
+  @override
+  String get kind => 'foregroundRequired';
+
+  /// The refused global-event verb.
+  final String verb;
+
+  /// Pid of the application the session is anchored to.
+  final int targetPid;
+
+  /// Pid of the application that currently owns the event stream.
+  final int frontmostPid;
+}
+
 /// A locator matched no node in the driver's latest observation.
 ///
 /// Distinct from [DriverUnsupportedException]: the operation is supported,

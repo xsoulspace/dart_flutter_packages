@@ -120,6 +120,11 @@ BehaviorPlan synthesizeBehavior(
   switch (action) {
     case NavigateAction():
     case EvaluateAction():
+    // Semantic writes (ADR 0064) are not event-stream actions: the plan
+    // carries only the lead dwell and the transport performs them
+    // directly (or refuses, when it cannot honor them profiled).
+    case SetValueAction():
+    case ElementAction():
       leadDwell();
     case ClickAction():
       final bounds = target ?? nominalTarget;

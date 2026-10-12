@@ -14,6 +14,8 @@ class DriverCapabilities {
     this.evaluate = false,
     this.behaviorDynamics = false,
     this.pointerCoordinates = false,
+    this.semanticWrite = false,
+    this.pidScopedEvents = false,
   });
 
   /// The canonical all-features set.
@@ -25,6 +27,8 @@ class DriverCapabilities {
     evaluate: true,
     behaviorDynamics: true,
     pointerCoordinates: true,
+    semanticWrite: true,
+    pidScopedEvents: true,
   );
 
   /// Attaching to an existing target is supported.
@@ -53,6 +57,17 @@ class DriverCapabilities {
   /// locator verbs are unaffected.
   final bool pointerCoordinates;
 
+  /// Semantic element writes (`SetValueAction`, `ElementAction` —
+  /// ADR 0064): act below the focus layer, valid on background targets.
+  /// False means those actions refuse loudly.
+  final bool semanticWrite;
+
+  /// Keyboard events (`TypeAction`, `KeyPressAction`) can be delivered
+  /// to an anchored background target without moving focus (ADR 0064
+  /// rung — macOS `CGEventPostToPid`). Pointer/scroll verbs are not
+  /// covered: they carry global screen coordinates.
+  final bool pidScopedEvents;
+
   /// Serializes the capability set.
   Map<String, Object?> toJson() => {
     'attach': attach,
@@ -63,6 +78,8 @@ class DriverCapabilities {
     'evaluate': evaluate,
     'behaviorDynamics': behaviorDynamics,
     'pointerCoordinates': pointerCoordinates,
+    'semanticWrite': semanticWrite,
+    'pidScopedEvents': pidScopedEvents,
   };
 
   @override

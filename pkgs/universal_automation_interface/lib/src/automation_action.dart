@@ -228,6 +228,81 @@ final class DragAction extends AutomationAction {
       '${_chordSuffix(modifiers)})';
 }
 
+/// Set an element's value directly — the semantic write path (ADR 0064).
+///
+/// Maps onto each tier's value attribute: the AX value on OS tiers
+/// (no keyboard focus, no event stream — the background text path),
+/// UIA ValuePattern / AT-SPI Value where implemented, and
+/// `input.value` + input/change events on the web tiers. Distinct from
+/// [TypeAction], which synthesizes real keystrokes into the focused
+/// control and is therefore bound to the foreground contract.
+@immutable
+final class SetValueAction extends AutomationAction {
+  /// Creates a set-value action. At least one locator must be set.
+  const SetValueAction(this.value, {this.css, this.role, this.name})
+    : assert(
+        css != null || role != null || name != null,
+        'SetValueAction needs a css selector, role, or name',
+      );
+
+  /// The value to set (full replacement, not an append).
+  final String value;
+
+  /// CSS selector locator, when used.
+  final String? css;
+
+  /// Semantic role locator, when used.
+  final String? role;
+
+  /// Accessible-name locator, when used.
+  final String? name;
+
+  @override
+  String toString() =>
+      'SetValueAction(${value.length} chars, css: $css, role: $role, '
+      'name: $name)';
+}
+
+/// Perform one action an element *advertises* — `AXConfirm`,
+/// `AXShowMenu`, `AXPick`, `AXIncrement`, … (ADR 0064).
+///
+/// The advertised set comes from the snapshot (per-node `axActions`
+/// where the host reports it); performing an unadvertised action is a
+/// host-level refusal, surfaced as a protocol failure. `AXPress` is
+/// reachable through [ClickAction]; this case is for everything else
+/// the element names. Like [SetValueAction], this acts on the element
+/// itself and does not require keyboard focus.
+@immutable
+final class ElementAction extends AutomationAction {
+  /// Creates an element action. At least one locator must be set.
+  const ElementAction(this.action, {this.css, this.role, this.name})
+    : assert(
+        action != '',
+        'action must not be empty',
+      ),
+      assert(
+        css != null || role != null || name != null,
+        'ElementAction needs a css selector, role, or name',
+      );
+
+  /// The advertised action name, exactly as the host spells it
+  /// (`AXConfirm`, not `confirm`).
+  final String action;
+
+  /// CSS selector locator, when used.
+  final String? css;
+
+  /// Semantic role locator, when used.
+  final String? role;
+
+  /// Accessible-name locator, when used.
+  final String? name;
+
+  @override
+  String toString() =>
+      'ElementAction($action, css: $css, role: $role, name: $name)';
+}
+
 /// Invoke a named action the surface under test registered for automation
 /// (the `invoke` tier — the dynamic-registry shape for drivers).
 ///
