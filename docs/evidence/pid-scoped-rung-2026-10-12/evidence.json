@@ -1,0 +1,62 @@
+{
+  "schema": "pid-scoped-rung-evidence/v1",
+  "date": "2026-10-12T17:34:06.042675Z",
+  "launchTextEditBackground": {
+    "ok": true,
+    "detail": ""
+  },
+  "textEditRunning": {
+    "ok": true,
+    "detail": "pid=94525"
+  },
+  "frontmostBefore": {
+    "name": "TextEdit",
+    "pid": 16607
+  },
+  "textEditPid": 94525,
+  "capabilitiesDeclarePidScopedEvents": {
+    "ok": true
+  },
+  "anchoredObservation": {
+    "ok": true,
+    "detail": {
+      "nodeCount": 365,
+      "textboxName": null
+    }
+  },
+  "backgroundSetValue": {
+    "ok": true,
+    "detail": {
+      "after": "pid-scoped 2026-10-12T17:34:09.090523Z"
+    }
+  },
+  "pidScopedTyping": {
+    "ok": true,
+    "detail": {
+      "after": "pid-scoped 2026-10-12T17:34:09.090523Z + pid-typed",
+      "expectedSuffix": " + pid-typed"
+    }
+  },
+  "pointerVerbsStayFocusBound": {
+    "ok": true,
+    "detail": {
+      "targetPid": 94525,
+      "frontmostPid": 16607
+    }
+  },
+  "windowCapture": {
+    "ok": true,
+    "detail": {
+      "path": "/Users/antonio/xs/storage_problem/dart_flutter_packages/docs/evidence/pid-scoped-rung-2026-10-12/textedit-window.png",
+      "bytes": 118518
+    }
+  },
+  "focusUnchanged": {
+    "ok": true,
+    "detail": {
+      "before": "TextEdit (16607)",
+      "after": "TextEdit (16607)"
+    }
+  },
+  "allOk": true
+}

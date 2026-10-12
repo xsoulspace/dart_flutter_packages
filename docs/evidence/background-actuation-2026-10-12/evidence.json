@@ -1,0 +1,87 @@
+{
+  "schema": "background-actuation-evidence/v1",
+  "date": "2026-10-12T14:51:08.704679Z",
+  "frontmostBefore": "ChatGPT",
+  "launchTextEdit": {
+    "ok": true,
+    "detail": ""
+  },
+  "textEditRunning": {
+    "ok": true,
+    "detail": "pid=16607"
+  },
+  "backgroundObservation": {
+    "ok": true,
+    "detail": {
+      "pid": 16607,
+      "nodeCount": 376,
+      "textboxName": null,
+      "axActionsSample": []
+    }
+  },
+  "backgroundSetValue": {
+    "ok": true,
+    "detail": {
+      "before": "seed line\n",
+      "after": "bg-actuation 2026-10-12T14:51:11.100226Z"
+    }
+  },
+  "focusContractRefusal": {
+    "ok": true,
+    "detail": {
+      "targetPid": 16607,
+      "frontmostPid": 88448
+    }
+  },
+  "windowCapture": {
+    "ok": true,
+    "detail": {
+      "path": "../../docs/evidence/background-actuation-2026-10-12/textedit-window.png",
+      "bytes": 259291,
+      "windowName": "uat-bg-evidence.txt"
+    }
+  },
+  "focusUnchanged": {
+    "ok": true,
+    "detail": {
+      "before": "ChatGPT",
+      "after": "ChatGPT"
+    }
+  },
+  "residentJobPlane": {
+    "ok": true,
+    "detail": {
+      "jobId": "job-1791816671837-0",
+      "status": "succeeded",
+      "steps": [
+        {
+          "index": 0,
+          "kind": "act",
+          "session": "textedit",
+          "ok": true,
+          "durationMs": 565,
+          "detail": {
+            "state": "# observation rev=2 walked=377 shown=200 TRIMMED\n# pane main\ns_0 application \"TextEdit\"\n  s_1 window \"uat-bg-evidence.txt\"\n    s_2 scrollarea\n      s_3 textbox value=\"resident-job 2026-10-12T14:51:11.833049Z\"\n      s_4 generic value=\"0.1851851791143417\"\n      s_5 generic value=\"0.615384578704834\"\n    s_6 button\n    s_7 button\n      s_8 generic\n        s_9 generic\n    s_10 button\n    s_11 popupbutton \"document actions\"\n    s_12 image \"uat-bg-evidence.txt\"\n    s_13 text value=\"uat-bg-evidence.txt\"\n  s_14 menu\n    s_15 menuitem \"Apple\"\n      s_16 menu\n        s_17 menuitem \"About This Mac\"\n        s_18 menuitem \"System Information\"\n        s_19 menuitem\n        s_20 menuitem \"System Settings…, 1 update\"\n        s_21 menuitem \"App Store\"\n        s_22 menuitem\n        s_23 menuitem \"Recent Items\"\n          s_24 menu\n            s_25 menuitem \"Applications\"\n            s_26 menuitem \"ChatGPT\"\n            s_27 menuitem \"Show “ChatGPT” in Finder\"\n            s_28 menuitem \"Cursor\"\n            s_29 menuitem \"Show “Cursor” in Finder\"\n            s_30 menuitem \"Freeform\"\n            s_31 menuitem \"Show “Freeform” in Finder\"\n            s_32 menuitem \"last_answer\"\n            s_33 menuitem \"Show “last_answer” in Finder\"\n            s_34 menuitem \"LastAnswerWorkbenchCandidate\"\n            s_35 menuitem \"Show “LastAnswerWorkbenchCandidate” in Finder\"\n            s_36 menuitem \"Safari\"\n            s_37 menuitem \"Show “Safari” in Finder\"\n            s_38 menuitem \"TextEdit\"\n            s_39 menuitem \"Show “TextEdit” in Finder\"\n            s_40 menuitem \"vosges_desktop\"\n            s_41 menuitem \"Show “vosges_desktop” in Finder\"\n            s_42 menuitem \"ZCode\"\n            s_43 menuitem \"Show “ZCode” in Finder\"\n            s_44 menuitem \"Zed\"\n            s_45 menuitem \"Show “Zed” in Finder\"\n            s_46 menuitem\n            s_47 menuitem \"Documents\"\n            s_48 menuitem \"dart_flutter_packages\"\n            s_49 menuitem \"Show “dart_flutter_packages” in Finder\"\n            s_50 menuitem \"ecsai_harness\"\n            s_51 menuitem \"Show “ecsai_harness” in Finder\"\n            s_52 menuitem \"last_answer\"\n            s_53 menuitem \"Show “last_answer” in Finder\"\n            s_54 menuitem \"manifest.json\"\n            s_55 menuitem \"Show “manifest.json” in Finder\"\n            s_56 menuitem \"mcp_flutter\"\n            s_57 menuitem \"Show “mcp_flutter” in Finder\"\n            s_58 menuitem \"plagiarism\"\n            s_59 menuitem \"Show “plagiarism” in Finder\"\n            s_60 menuitem \"runner-selenium-uc.Dockerfile\"\n            s_61 menuitem \"Show “runner-selenium-uc.Dockerfile” in Finder\"\n            s_62 menuitem \"teaching\"\n            s_63 menuitem \"Show “teaching” in Finder\"\n            s_64 menuitem \"uat-bg-evidence.txt\"\n            s_65 menuitem \"Show “uat-bg-evidence.txt” in Finder\"\n            s_66 menuitem \"vosges\"\n            s_67 menuitem \"Show “vosges” in Finder\"\n            s_68 menuitem\n            s_69 menuitem \"Servers\"\n            s_70 menuitem \"Macintosh HD\"\n            s_71 menuitem\n            s_72 menuitem \"Clear Menu\"\n        s_73 menuitem\n        s_74 menuitem \"Force Quit…\"\n        s_75 menuitem \"Force Quit TextEdit\"\n        s_76 menuitem\n        s_77 menuitem \"Sleep\"\n        s_78 menuitem \"Restart…\"\n        s_79 menuitem \"Restart\"\n        s_80 menuitem \"Shut Down…\"\n        s_81 menuitem \"Shut Down\"\n        s_82 menuitem\n        s_83 menuitem \"Lock Screen\"\n        s_84 menuitem \"Log Out Antonio…\"\n        s_85 menuitem \"Log Out Antonio\"\n        s_86 menuitem\n    s_87 menuitem \"TextEdit\"\n      s_88 menu\n        s_89 menuitem \"About TextEdit\"\n        s_90 menuitem\n        s_91 menuitem \"Settings…\"\n        s_92 menuitem\n        s_93 menuitem \"Services\"\n          s_94 menu\n            s_95 menuitem \"Activity Monitor\"\n            s_96 menuitem \"Allocations & Leaks\"\n            s_97 menuitem \"File Activity\"\n            s_98 menuitem \"System Trace\"\n            s_99 menuitem \"Time Profile Active Application\"\n            s_100 menuitem \"Time Profile App Under Mouse\"\n            s_101 menuitem \"Time Profile Entire System\"\n            s_102 menuitem \"Toggle Instruments Recording\"\n            s_103 menuitem \"Animate Text on GIF\"\n            s_104 menuitem \"Copy Across Devices\"\n            s_105 menuitem \"Meme Maker\"\n            s_106 menuitem \"Sort Lines\"\n            s_107 menuitem \"Turn Text Into Audio\"\n            s_108 menuitem \"Services Settings…\"\n        s_109 menuitem\n        s_110 menuitem \"Hide TextEdit\"\n        s_111 menuitem \"Hide Others\"\n        s_112 menuitem \"Show All\"\n        s_113 menuitem\n        s_114 menuitem \"Quit TextEdit\"\n        s_115 menuitem \"Quit and Keep Windows\"\n    s_116 menuitem \"File\"\n      s_117 menu\n        s_118 menuitem \"New\"\n        s_119 menuitem \"Open…\"\n        s_120 menuitem \"Open Recent\"\n          s_121 menu\n            s_122 menuitem \"uat-bg-evidence.txt\"\n            s_123 menuitem \".zshrc\"\n            s_124 menuitem \"config\"\n            s_125 menuitem \".zshenv\"\n            s_126 menuitem \"config.toml\"\n            s_127 menuitem \"settings.yaml\"\n            s_128 menuitem\n            s_129 menuitem \"Clear Menu\"\n        s_130 menuitem\n        s_131 menuitem \"Close\"\n        s_132 menuitem \"Close All\"\n        s_133 menuitem \"Save\"\n        s_134 menuitem \"Save As…\"\n        s_135 menuitem \"Duplicate\"\n        s_136 menuitem \"Rename…\"\n        s_137 menuitem \"Move To…\"\n        s_138 menuitem \"Revert To\"\n          s_139 menu\n            s_140 menuitem \"Browse All Versions…\"\n        s_141 menuitem \"Export as PDF…\"\n        s_142 menuitem\n        s_143 menuitem \"Show Properties\"\n        s_144 menuitem\n        s_145 menuitem \"<<Import From Device - unlocalized>>\"\n          s_146 menu\n        s_147 menuitem\n        s_148 menuitem \"Share\"\n          s_149 menu\n            s_150 menuitem \"AirDrop\"\n            s_151 menuitem \"Mail\"\n            s_152 menuitem \"Messages\"\n            s_153 menuitem \"Notes\"\n            s_154 menuitem \"Freeform\"\n            s_155 menuitem \"Journal\"\n            s_156 menuitem \"Reminders\"\n            s_157 menuitem\n            s_158 menuitem \"More…\"\n        s_159 menuitem\n        s_160 menuitem \"Page Setup…\"\n        s_161 menuitem \"Print…\"\n    s_162 menuitem \"Edit\"\n      s_163 menu\n        s_164 menuitem \"Undo\"\n        s_165 menuitem \"Redo\"\n        s_166 menuitem\n        s_167 menuitem \"Cut\"\n        s_168 menuitem \"Copy\"\n        s_169 menuitem \"Paste\"\n        s_170 menuitem \"Paste and Match Style\"\n        s_171 menuitem \"Delete\"\n        s_172 menuitem \"Complete\"\n        s_173 menuitem \"Select All\"\n        s_174 menuitem\n        s_175 menuitem \"Insert\"\n          s_176 menu\n            s_177 menuitem \"Line Break\"\n            s_178 menuitem \"Paragraph Break\"\n            s_179 menuitem \"Page Break\"\n        s_180 menuitem \"Attach Files…\"\n        s_181 menuitem \"Add Link…\"\n        s_182 menuitem\n        s_183 menuitem \"Find\"\n          s_184 menu\n            s_185 menuitem \"Find…\"\n            s_186 menuitem \"Find and Replace…\"\n            s_187 menuitem \"Find Next\"\n            s_188 menuitem \"Find Previous\"\n            s_189 menuitem \"Use Selection for Find\"\n            s_190 menuitem \"Jump to Selection\"\n            s_191 menuitem \"Select Line...\"\n        s_192 menuitem\n        s_193 menuitem \"Spelling and Grammar\"\n          s_194 menu\n            s_195 menuitem \"Show Spelling and Grammar\"\n            s_196 menuitem \"Check Document Now\"\n            s_197 menuitem\n            s_198 menuitem \"Check Spelling While Typing\"\n            s_199 menuitem \"Check Grammar With Spelling\""
+          }
+        },
+        {
+          "index": 1,
+          "kind": "verify",
+          "session": "textedit",
+          "ok": true,
+          "durationMs": 373,
+          "detail": {
+            "checks": 1,
+            "revision": 3
+          }
+        }
+      ]
+    }
+  },
+  "residentJobEffect": {
+    "ok": true,
+    "detail": {
+      "marker": "resident-job 2026-10-12T14:51:11.833049Z"
+    }
+  }
+}

@@ -1,0 +1,12 @@
+sessions:
+  textedit:
+    transport: osAccessibility
+    uri: ax://pid/16607
+scenarios:
+  main:
+    steps:
+      - act:
+          setValue: {role: textbox, value: "resident-job 2026-10-12T14:51:11.833049Z"}
+          returnState: true
+      - verify:
+          - value: {locator: {role: textbox}, contains: "resident-job"}
