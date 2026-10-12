@@ -45,6 +45,36 @@ abstract interface class AtspiBus {
   /// Invokes action [index] on the node.
   Future<void> doAction(AtspiNodeRef ref, int index);
 
+  /// Advertised action names of [ref], in index order
+  /// (`Action.NActions` + `Action.GetName`).
+  Future<List<String>> actionNames(AtspiNodeRef ref);
+
+  /// `EditableText.SetTextContents` — replaces the whole text content of
+  /// [ref] (the semantic write for text fields). Throws
+  /// [AtspiInterfaceUnsupported] when the peer does not expose the
+  /// interface.
+  Future<void> setContents(AtspiNodeRef ref, String content);
+
+  /// Writes the numeric `Value.CurrentValue` property (sliders,
+  /// spinners). Throws [AtspiInterfaceUnsupported] when the peer does not
+  /// expose the interface.
+  Future<void> setCurrentValue(AtspiNodeRef ref, double value);
+
   /// Closes the bus connection. Idempotent.
   Future<void> close();
+}
+
+/// The peer does not expose the interface a write needs — the AT-SPI
+/// analogue of "attribute unsupported", so callers can ladder down
+/// (EditableText → Value → loud refusal) without importing D-Bus types.
+class AtspiInterfaceUnsupported implements Exception {
+  /// Creates the exception for [interface].
+  const AtspiInterfaceUnsupported(this.interface);
+
+  /// The AT-SPI interface name the peer refused
+  /// (`org.a11y.atspi.EditableText`, `org.a11y.atspi.Value`).
+  final String interface;
+
+  @override
+  String toString() => 'AtspiInterfaceUnsupported($interface)';
 }

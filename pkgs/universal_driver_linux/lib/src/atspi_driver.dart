@@ -8,9 +8,12 @@ import 'atspi_bus.dart';
 ///
 /// Observe: the D-Bus tree mapped to the family's [Snapshot]. Act:
 /// semantic clicks through the AT-SPI `Action` interface (the trusted
-/// path screen readers use — no synthetic X events). Verify: snapshot
-/// deltas. Navigation and free-form script evaluation have no AT-SPI
-/// equivalent and are refused loudly.
+/// path screen readers use — no synthetic X events); semantic writes
+/// (ADR 0064) via `EditableText.SetTextContents`, laddering to the
+/// numeric `Value` interface, and named advertised actions through
+/// `Action.DoAction`. Verify: snapshot deltas. Navigation, keyboard
+/// synthesis, and free-form script evaluation have no AT-SPI equivalent
+/// and are refused loudly.
 class AtspiDriver implements AutomationDriver {
   /// Creates a driver over [bus].
   AtspiDriver(this.bus);
@@ -21,9 +24,10 @@ class AtspiDriver implements AutomationDriver {
 
   @override
   DriverCapabilities get capabilities => const DriverCapabilities(
-        a11yTree: true,
-        inputSynthesis: true,
-      );
+    a11yTree: true,
+    inputSynthesis: true,
+    semanticWrite: true,
+  );
 
   @override
   Future<Snapshot> snapshot() async {
@@ -65,13 +69,9 @@ class AtspiDriver implements AutomationDriver {
           'it refuses loudly instead of silently dropping it',
         );
       case KeyPressAction(:final key):
-        throw const DriverUnsupportedException(
-          'AT-SPI exposes actions on nodes, not surface scrolling; this driver refuses scroll loudly '
-          'instead of silently dropping it',
-        );
         throw DriverUnsupportedException(
           'key "$key" needs keyboard synthesis, which AT-SPI does not '
-          'provide',
+          'provide; use an input-tier driver',
         );
       case EvaluateAction(:final expression):
         throw DriverUnsupportedException(
@@ -85,10 +85,26 @@ class AtspiDriver implements AutomationDriver {
           'tier yet; use locator verbs',
         );
       case InvokeAction(:final name):
-        throw const DriverUnsupportedException(
-          'the AT-SPI tier has no surface action registry; InvokeAction '
-          'needs the instrumented or CDP tier',
+        throw DriverUnsupportedException(
+          'the AT-SPI tier has no surface action registry; '
+          'InvokeAction("$name") needs the instrumented or CDP tier',
         );
+      case SetValueAction(:final value, :final css, :final role, :final name):
+        if (css != null) {
+          throw const DriverUnsupportedException(
+            'AT-SPI has no css locator; set the value by role or name '
+            '(resolved against the live tree)',
+          );
+        }
+        await _setValue(value, role: role, name: name);
+      case ElementAction(:final action, :final css, :final role, :final name):
+        if (css != null) {
+          throw const DriverUnsupportedException(
+            'AT-SPI has no css locator; act by role or name (resolved '
+            'against the live tree)',
+          );
+        }
+        await _elementAction(action, role: role, name: name);
     }
   }
 
@@ -126,6 +142,86 @@ class AtspiDriver implements AutomationDriver {
       queue.addAll(await bus.children(ref));
     }
     return null;
+  }
+
+  /// The semantic-write locator walk (ADR 0064): first node whose mapped
+  /// role and name match every locator given (both must match when
+  /// present). Unlike [_findActionable] this does not require exposed
+  /// actions — writable fields often carry none.
+  Future<AtspiNodeRef?> _findWritable({String? role, String? name}) async {
+    final rootRef = await bus.root();
+    final queue = <AtspiNodeRef>[rootRef];
+    var visited = 0;
+    while (queue.isNotEmpty && visited < _maxNodes) {
+      final ref = queue.removeAt(0);
+      visited++;
+      final roleMatches =
+          role == null || _mapRole(await bus.roleName(ref)) == role;
+      final nameMatches = name == null || await bus.name(ref) == name;
+      if (roleMatches && nameMatches) return ref;
+      queue.addAll(await bus.children(ref));
+    }
+    return null;
+  }
+
+  Future<void> _setValue(String value, {String? role, String? name}) async {
+    final ref = await _findWritable(role: role, name: name);
+    if (ref == null) {
+      throw ElementNotFoundException(
+        role != null ? 'role' : 'name',
+        role ?? name ?? '',
+      );
+    }
+    try {
+      await bus.setContents(ref, value);
+      return;
+    } on AtspiInterfaceUnsupported {
+      // Fall through to the numeric Value interface.
+    }
+    final numeric = double.tryParse(value);
+    if (numeric == null) {
+      throw DriverUnsupportedException(
+        'the AT-SPI target exposes no EditableText and "$value" is not a '
+        'number for the Value interface; setValue refused',
+      );
+    }
+    try {
+      await bus.setCurrentValue(ref, numeric);
+    } on AtspiInterfaceUnsupported {
+      throw const DriverUnsupportedException(
+        'the AT-SPI target exposes neither EditableText nor Value; '
+        'setValue refused loudly',
+      );
+    }
+  }
+
+  Future<void> _elementAction(
+    String action, {
+    String? role,
+    String? name,
+  }) async {
+    final ref = await _findWritable(role: role, name: name);
+    if (ref == null) {
+      throw ElementNotFoundException(
+        role != null ? 'role' : 'name',
+        role ?? name ?? '',
+      );
+    }
+    final advertised = await bus.actionNames(ref);
+    var index = advertised.indexOf(action);
+    if (index < 0) {
+      index = advertised.indexWhere(
+        (advertisedName) =>
+            advertisedName.toLowerCase() == action.toLowerCase(),
+      );
+    }
+    if (index < 0) {
+      throw ProtocolException(
+        'element action "$action" is not advertised by the target '
+        '(advertised: ${advertised.isEmpty ? 'none' : advertised.join(', ')})',
+      );
+    }
+    await bus.doAction(ref, index);
   }
 
   Future<List<AxNode>> _walk(AtspiNodeRef ref, int depth) async {

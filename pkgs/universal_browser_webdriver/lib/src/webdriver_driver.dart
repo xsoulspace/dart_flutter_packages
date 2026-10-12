@@ -22,6 +22,7 @@ class WebDriverDriver implements AutomationDriver {
     screenshot: true,
     inputSynthesis: true,
     pointerCoordinates: true,
+    semanticWrite: true,
   );
 
   /// The underlying client.
@@ -132,6 +133,21 @@ class WebDriverDriver implements AutomationDriver {
         throw DriverUnsupportedException(
           'the WebDriver tier has no surface action registry; '
           'InvokeAction("$name") needs the instrumented or CDP tier',
+        );
+      case SetValueAction(:final value, :final css) when css != null:
+        // Set-value semantics: replace, not append — clear first.
+        final element = await _client.findElementByCss(css);
+        await _client.clearElement(element);
+        await _client.sendKeys(element, value);
+      case SetValueAction():
+        throw const DriverUnsupportedException(
+          'the WebDriver tier sets values by css selector; role/name '
+          'semantic writes need the OS or instrumented tier (ADR 0064)',
+        );
+      case ElementAction(:final action):
+        throw DriverUnsupportedException(
+          'the WebDriver protocol has no advertised-action surface '
+          '(got "$action"); the OS tier is the element-action path',
         );
     }
   }

@@ -33,6 +33,7 @@ class CdpDriver implements AutomationDriver, AutomationActionCatalog {
     inputSynthesis: true,
     evaluate: true,
     pointerCoordinates: true,
+    semanticWrite: true,
   );
 
   /// The underlying page facade (screencast sources attach through it).
@@ -51,8 +52,8 @@ class CdpDriver implements AutomationDriver, AutomationActionCatalog {
     return [
       if (raw is List<Object?>)
         for (final entry in raw)
-          if (SurfaceActionDescriptor.fromJson(entry)
-              case final descriptor?) descriptor,
+          if (SurfaceActionDescriptor.fromJson(entry) case final descriptor?)
+            descriptor,
     ];
   }
 
@@ -86,10 +87,7 @@ class CdpDriver implements AutomationDriver, AutomationActionCatalog {
           await _page.keyChord(key, modifiers);
         }
       case ScrollAction(:final direction, :final distance):
-        await _page.scroll(
-          direction: direction,
-          distance: distance ?? 300,
-        );
+        await _page.scroll(direction: direction, distance: distance ?? 300);
       case EvaluateAction(:final expression):
         await _page.evaluate(expression);
       case ClickAtAction(
@@ -126,6 +124,52 @@ class CdpDriver implements AutomationDriver, AutomationActionCatalog {
         );
       case InvokeAction(:final name, :final args):
         await _invokeSurfaceAction(name, args);
+      case SetValueAction(:final value, :final css) when css != null:
+        await _setValueByCss(css, value);
+      case SetValueAction():
+        throw const DriverUnsupportedException(
+          'the CDP tier sets values by css selector; role/name semantic '
+          'writes need the instrumented tier or the OS tier (ADR 0064)',
+        );
+      case ElementAction(:final action):
+        throw DriverUnsupportedException(
+          'the web tier has no advertised-action surface (got "$action"); '
+          'evaluate or invoke is the extension path',
+        );
+    }
+  }
+
+  /// The semantic write path on the web tier (ADR 0064): set the value
+  /// through the prototype's own setter (React-safe) and fire input +
+  /// change, so framework state follows the DOM write.
+  Future<void> _setValueByCss(String css, String value) async {
+    final cssJson = jsonEncode(css);
+    final valueJson = jsonEncode(value);
+    final result = await _page.evaluate('''
+(() => {
+  const el = document.querySelector($cssJson);
+  if (!el) return 'no-element';
+  const proto = el instanceof HTMLTextAreaElement
+      ? HTMLTextAreaElement.prototype
+      : HTMLInputElement.prototype;
+  const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+  if (!setter) return 'not-settable';
+  setter.call(el, $valueJson);
+  el.dispatchEvent(new Event('input', {bubbles: true}));
+  el.dispatchEvent(new Event('change', {bubbles: true}));
+  return 'ok';
+})()''');
+    switch (result) {
+      case 'no-element':
+        throw ElementNotFoundException('css', css);
+      case 'not-settable':
+        throw const ProtocolException(
+          'setValue refused: the element is not a value input',
+        );
+      case 'ok':
+        return;
+      default:
+        throw ProtocolException('setValue returned unexpected: $result');
     }
   }
 
@@ -185,8 +229,9 @@ class CdpDriver implements AutomationDriver, AutomationActionCatalog {
           }
         }
         if (match != null) {
-          final backendNodeId =
-              int.tryParse(match.attributes['cdp.backendDOMNodeId'] ?? '');
+          final backendNodeId = int.tryParse(
+            match.attributes['cdp.backendDOMNodeId'] ?? '',
+          );
           if (backendNodeId != null) {
             final bounds = await _page.resolveNodeRect(backendNodeId);
             await _page.clickAt(bounds.center.$1, bounds.center.$2);

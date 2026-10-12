@@ -83,6 +83,14 @@ abstract interface class AxDriverBridge {
   /// Makes the cached element [handle] the focused control.
   int focus(int handle);
 
+  /// Sets the cached element's value attribute (semantic write,
+  /// ADR 0064). 0 ok · 5 unknown handle · 3 set refused.
+  int setValue(int handle, String value);
+
+  /// Performs the named advertised action on the cached element
+  /// (ADR 0064). 0 ok · 5 unknown handle · 1 invalid · 3 refused.
+  int performElementAction(int handle, String action);
+
   /// Types [text] into the focused control (single unicode CGEvent).
   int typeText(String text);
 
@@ -118,6 +126,20 @@ abstract interface class AxDriverBridge {
 
   /// Releases one named key.
   int keyUp(String key);
+
+  /// Types [text] into the process at [pid] without moving focus
+  /// (ADR 0064 rung; fire-and-forget — the API reports nothing, so 0
+  /// means posted, not delivered).
+  int typeTextToPid(int pid, String text);
+
+  /// Presses and releases one named key on the process at [pid].
+  int keyPressToPid(int pid, String key);
+
+  /// Presses (holds) one named key on the process at [pid].
+  int keyDownToPid(int pid, String key);
+
+  /// Releases one named key on the process at [pid].
+  int keyUpToPid(int pid, String key);
 
   /// Drops cached element handles and scroll fractions.
   void releaseAll();
@@ -242,6 +264,26 @@ final class NativeAxDriverBridge implements AxDriverBridge {
   int focus(int handle) => axdrvFocus(handle);
 
   @override
+  int setValue(int handle, String value) {
+    final pointer = value.toNativeUtf8();
+    try {
+      return axdrvSetValue(handle, pointer);
+    } finally {
+      calloc.free(pointer);
+    }
+  }
+
+  @override
+  int performElementAction(int handle, String action) {
+    final pointer = action.toNativeUtf8();
+    try {
+      return axdrvElementAction(handle, pointer);
+    } finally {
+      calloc.free(pointer);
+    }
+  }
+
+  @override
   int typeText(String text) {
     final pointer = text.toNativeUtf8();
     try {
@@ -300,6 +342,46 @@ final class NativeAxDriverBridge implements AxDriverBridge {
     final pointer = key.toNativeUtf8();
     try {
       return axdrvKeyDown(pointer);
+    } finally {
+      calloc.free(pointer);
+    }
+  }
+
+  @override
+  int typeTextToPid(int pid, String text) {
+    final pointer = text.toNativeUtf8();
+    try {
+      return axdrvTypeTextPid(pid, pointer);
+    } finally {
+      calloc.free(pointer);
+    }
+  }
+
+  @override
+  int keyPressToPid(int pid, String key) {
+    final pointer = key.toNativeUtf8();
+    try {
+      return axdrvKeyPressPid(pid, pointer);
+    } finally {
+      calloc.free(pointer);
+    }
+  }
+
+  @override
+  int keyDownToPid(int pid, String key) {
+    final pointer = key.toNativeUtf8();
+    try {
+      return axdrvKeyDownPid(pid, pointer);
+    } finally {
+      calloc.free(pointer);
+    }
+  }
+
+  @override
+  int keyUpToPid(int pid, String key) {
+    final pointer = key.toNativeUtf8();
+    try {
+      return axdrvKeyUpPid(pid, pointer);
     } finally {
       calloc.free(pointer);
     }

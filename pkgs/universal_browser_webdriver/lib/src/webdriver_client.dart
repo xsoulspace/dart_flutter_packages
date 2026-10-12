@@ -206,6 +206,12 @@ class WebDriverClient {
     await _send('POST', '/element/${element.id}/value', {'text': text});
   }
 
+  /// Clears an element's value (W3C Element Clear) — the first half of
+  /// set-value semantics (ADR 0064).
+  Future<void> clearElement(WebElement element) async {
+    await _send('POST', '/element/${element.id}/clear');
+  }
+
   /// Presses a key on the active element via the actions API.
   Future<void> keyPress(String key) async {
     await _send('POST', '/actions', {

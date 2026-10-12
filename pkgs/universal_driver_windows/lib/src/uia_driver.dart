@@ -113,6 +113,12 @@ class UiaDriver implements AutomationDriver {
           'the UIA tier has no surface action registry; '
           'InvokeAction("$name") needs the instrumented or CDP tier',
         );
+      case SetValueAction():
+      case ElementAction():
+        throw const DriverUnsupportedException(
+          'the UIA tier has no semantic write path yet (ValuePattern/'
+          'actions are the planned sidecar revision; ADR 0064 non-claim)',
+        );
     }
   }
 

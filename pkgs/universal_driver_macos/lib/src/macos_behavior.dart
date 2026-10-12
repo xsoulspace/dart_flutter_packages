@@ -27,8 +27,11 @@ import 'macos_driver.dart';
 final class BehavioralMacosDriver extends MacosDriver
     implements BehavioralDriver {
   /// Creates a behavioral driver over the native (or injected) bridge.
+  /// [targetPid] anchors every observation to that application (the
+  /// background read, ADR 0064).
   BehavioralMacosDriver({
     super.bridge,
+    super.targetPid,
     super.snapshotDepth,
     super.snapshotMaxNodes,
   });
@@ -42,6 +45,7 @@ final class BehavioralMacosDriver extends MacosDriver
     inputSynthesis: true,
     pointerCoordinates: true,
     behaviorDynamics: true,
+    semanticWrite: true,
   );
 
   /// The scheduler used for dispatches; overridable in tests.
@@ -58,6 +62,19 @@ final class BehavioralMacosDriver extends MacosDriver
     BehaviorProfile profile, {
     int? seed,
   }) async {
+    // The focus contract binds profiled dispatches too: the scheduler
+    // posts CGEvents into the global stream (ADR 0064).
+    if (MacosDriver.requiresForeground(action)) {
+      await ensureForeground(action);
+    }
+    // Semantic writes are not humanized events; a profiled dispatch
+    // would silently post nothing. Plain dispatch only.
+    if (action is SetValueAction || action is ElementAction) {
+      throw const DriverUnsupportedException(
+        'behavior profiles cover event-stream verbs only; dispatch '
+        'setValue/elementAction plainly (semantic writes, ADR 0064)',
+      );
+    }
     final floorUs = profile.reaction.floorUs;
     if (floorUs > 0) {
       final observedAt = lastObservationAt;

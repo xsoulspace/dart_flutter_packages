@@ -71,6 +71,21 @@ external int axdrvPress(int handle);
 /// Focuses the cached element handle.
 external int axdrvFocus(int handle);
 
+@Native<Int32 Function(Int32, Pointer<Utf8>)>(
+  symbol: 'xs_axdrv_set_value',
+  assetId: 'package:universal_driver_macos/xs_ax_driver',
+)
+/// Sets the cached element's value attribute (semantic write, ADR 0064).
+external int axdrvSetValue(int handle, Pointer<Utf8> value);
+
+@Native<Int32 Function(Int32, Pointer<Utf8>)>(
+  symbol: 'xs_axdrv_element_action',
+  assetId: 'package:universal_driver_macos/xs_ax_driver',
+)
+/// Performs the named advertised action on the cached element
+/// (ADR 0064).
+external int axdrvElementAction(int handle, Pointer<Utf8> action);
+
 @Native<Int32 Function(Pointer<Utf8>)>(
   symbol: 'xs_axdrv_type_text',
   assetId: 'package:universal_driver_macos/xs_ax_driver',
@@ -130,6 +145,35 @@ external int axdrvKeyDown(Pointer<Utf8> key);
 )
 /// Releases the named [key].
 external int axdrvKeyUp(Pointer<Utf8> key);
+
+@Native<Int32 Function(Int32, Pointer<Utf8>)>(
+  symbol: 'xs_axdrv_type_text_pid',
+  assetId: 'package:universal_driver_macos/xs_ax_driver',
+)
+/// Types [text] into the process at [pid] without moving focus
+/// (ADR 0064 rung; fire-and-forget delivery).
+external int axdrvTypeTextPid(int pid, Pointer<Utf8> text);
+
+@Native<Int32 Function(Int32, Pointer<Utf8>)>(
+  symbol: 'xs_axdrv_key_press_pid',
+  assetId: 'package:universal_driver_macos/xs_ax_driver',
+)
+/// Presses and releases the named [key] on the process at [pid].
+external int axdrvKeyPressPid(int pid, Pointer<Utf8> key);
+
+@Native<Int32 Function(Int32, Pointer<Utf8>)>(
+  symbol: 'xs_axdrv_key_down_pid',
+  assetId: 'package:universal_driver_macos/xs_ax_driver',
+)
+/// Presses (holds) the named [key] on the process at [pid].
+external int axdrvKeyDownPid(int pid, Pointer<Utf8> key);
+
+@Native<Int32 Function(Int32, Pointer<Utf8>)>(
+  symbol: 'xs_axdrv_key_up_pid',
+  assetId: 'package:universal_driver_macos/xs_ax_driver',
+)
+/// Releases the named [key] on the process at [pid].
+external int axdrvKeyUpPid(int pid, Pointer<Utf8> key);
 
 @Native<Void Function()>(
   symbol: 'xs_axdrv_release_all',

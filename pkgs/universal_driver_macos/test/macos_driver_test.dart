@@ -38,6 +38,17 @@ final class FakeBridge implements AxDriverBridge {
   String? lastTypedText;
   final pressedHandles = <int>[];
 
+  // -- semantic writes (ADR 0064) --
+  final setValues = <(int, String)>[];
+
+  /// Queued results (0 when empty); lets tests script one-shot staleness.
+  final setValueResults = <int>[];
+  final elementActionCalls = <(int, String)>[];
+  final elementActionResultQueue = <int>[];
+
+  // -- pid-scoped event delivery (ADR 0064 rung) --
+  final pidTypedText = <({int pid, String text})>[];
+
   /// Structured record of every pointer event the bridge saw, in order.
   final pointerEvents = <Map<String, Object?>>[];
   int pointerResult = 0;
@@ -90,6 +101,22 @@ final class FakeBridge implements AxDriverBridge {
   int focus(int handle) {
     calls.add('focus($handle)');
     return 0;
+  }
+
+  @override
+  int setValue(int handle, String value) {
+    calls.add('setValue($handle)');
+    setValues.add((handle, value));
+    return setValueResults.isEmpty ? 0 : setValueResults.removeAt(0);
+  }
+
+  @override
+  int performElementAction(int handle, String action) {
+    calls.add('elementAction($handle,$action)');
+    elementActionCalls.add((handle, action));
+    return elementActionResultQueue.isEmpty
+        ? 0
+        : elementActionResultQueue.removeAt(0);
   }
 
   @override
@@ -162,6 +189,31 @@ final class FakeBridge implements AxDriverBridge {
   int keyUp(String key) {
     calls.add('keyUp($key)');
     return keyResult;
+  }
+
+  @override
+  int typeTextToPid(int pid, String text) {
+    calls.add('typeTextToPid($pid)');
+    pidTypedText.add((pid: pid, text: text));
+    return 0;
+  }
+
+  @override
+  int keyPressToPid(int pid, String key) {
+    calls.add('keyPressToPid($pid,$key)');
+    return 0;
+  }
+
+  @override
+  int keyDownToPid(int pid, String key) {
+    calls.add('keyDownToPid($pid,$key)');
+    return 0;
+  }
+
+  @override
+  int keyUpToPid(int pid, String key) {
+    calls.add('keyUpToPid($pid,$key)');
+    return 0;
   }
 
   @override
@@ -266,6 +318,10 @@ const _safariJson =
     '{"pid":1234,"bundleId":"com.apple.Safari","name":"Safari",'
     '"active":true,"hidden":false}';
 
+const _finderJson =
+    '{"pid":42,"bundleId":"com.appleFinder","name":"Finder",'
+    '"active":false,"hidden":false}';
+
 const _appJson =
     '{"role":"application","name":"Finder","attributes":{"axid":"0"},'
     '"children":['
@@ -273,6 +329,16 @@ const _appJson =
     '{"role":"button","name":"Save","attributes":{"axid":"2"}},'
     '{"role":"textbox","name":"Search","value":"","attributes":{"axid":"3"}}'
     ']}]}';
+
+/// Root carries the observed pid (the bridge stamps it) — the focus
+/// contract's reference point for focused sessions.
+const _appJsonWithPid =
+    '{"role":"application","name":"Finder",'
+    '"attributes":{"axid":"0","pid":"42"},'
+    '"children":['
+    '{"role":"button","name":"Save","attributes":{"axid":"2"}},'
+    '{"role":"textbox","name":"Search","value":"","attributes":{"axid":"3"}}'
+    ']}';
 
 MacosDriver driverWith(FakeBridge bridge) => MacosDriver(bridge: bridge);
 
@@ -284,6 +350,7 @@ void main() {
     expect(driver.capabilities.screenshot, isTrue);
     expect(driver.capabilities.evaluate, isFalse);
     expect(driver.capabilities.pointerCoordinates, isTrue);
+    expect(driver.capabilities.semanticWrite, isTrue);
   });
 
   test('clickAt moves, then presses with escalating click state', () async {
@@ -717,5 +784,215 @@ void main() {
       snapshot.nodes.map((node) => node.name),
     );
     expect(jsonEncode(snapshot.toJson()), contains('Finder'));
+  });
+
+  // -- ADR 0064: the semantic write path and the focus contract --
+
+  test('setValue resolves the handle and writes in background', () async {
+    final bridge = FakeBridge();
+    final driver = driverWith(bridge);
+    await driver.snapshot();
+    bridge.calls.clear();
+
+    await driver.perform(const SetValueAction('hello', name: 'Search'));
+
+    expect(bridge.setValues, [(3, 'hello')]);
+    // Semantic verbs never consult the event stream's owner.
+    expect(bridge.calls.where((call) => call == 'frontmost'), isEmpty);
+  });
+
+  test('setValue with a css locator is refused loudly', () async {
+    final driver = driverWith(FakeBridge());
+    await expectLater(
+      driver.perform(const SetValueAction('x', css: '#field')),
+      throwsA(isA<DriverUnsupportedException>()),
+    );
+  });
+
+  test('setValue host refusal (not settable) is a clear protocol failure',
+      () async {
+    final bridge = FakeBridge();
+    final driver = driverWith(bridge);
+    await driver.snapshot();
+    bridge.setValueResults.add(3);
+    await expectLater(
+      driver.perform(const SetValueAction('x', name: 'Search')),
+      throwsA(
+        isA<ProtocolException>().having(
+          (error) => error.message,
+          'message',
+          contains('not settable'),
+        ),
+      ),
+    );
+  });
+
+  test('stale setValue handle re-observes once and retries', () async {
+    final bridge = FakeBridge();
+    final driver = driverWith(bridge);
+    await driver.snapshot();
+    bridge
+      ..setValueResults.addAll([5, 0]) // first write hits a stale handle
+      ..calls.clear();
+
+    await driver.perform(const SetValueAction('fresh', name: 'Search'));
+
+    expect(bridge.setValues, [(3, 'fresh'), (3, 'fresh')],
+        reason: 'stale write then the retried write on the fresh handle');
+    expect(
+      bridge.calls.where((call) => call.startsWith('snapshot')),
+      hasLength(1),
+    );
+  });
+
+  test('elementAction performs the advertised action by name', () async {
+    final bridge = FakeBridge();
+    final driver = driverWith(bridge);
+    await driver.snapshot();
+
+    await driver.perform(const ElementAction('AXConfirm', name: 'Save'));
+
+    expect(bridge.elementActionCalls, [(2, 'AXConfirm')]);
+  });
+
+  test('unadvertised element actions surface the host refusal', () async {
+    final bridge = FakeBridge();
+    final driver = driverWith(bridge);
+    await driver.snapshot();
+    bridge.elementActionResultQueue.add(3);
+    await expectLater(
+      driver.perform(const ElementAction('AXPick', name: 'Save')),
+      throwsA(isA<ProtocolException>()),
+    );
+  });
+
+  test('anchored driver observes the anchored pid, not the focused one',
+      () async {
+    final bridge = FakeBridge();
+    final driver = MacosDriver(bridge: bridge, targetPid: 42);
+
+    final snapshot = await driver.snapshot();
+
+    expect(bridge.lastSnapshotPid, 42);
+    expect(bridge.calls, isNot(contains('snapshot(depth=12,nodes=600)')),
+        reason: 'anchored sessions skip the focused-app walk');
+    expect(snapshot.roots.first.name, 'Finder');
+  });
+
+  test('focus contract: global verb on a background anchor is refused',
+      () async {
+    final bridge = FakeBridge();
+    final driver = driverWith(bridge);
+    // Observe Finder (root pid 42), then the user switches to Safari.
+    bridge
+      ..snapshotResult = (code: 0, json: _appJsonWithPid)
+      ..frontmostResult = (code: 0, json: _safariJson)
+      ..calls.clear();
+    await driver.snapshot();
+
+    await expectLater(
+      driver.perform(const TypeAction('hello')),
+      throwsA(
+        isA<ForegroundRequiredException>()
+            .having((error) => error.targetPid, 'targetPid', 42)
+            .having((error) => error.frontmostPid, 'frontmostPid', 1234)
+            .having((error) => error.kind, 'kind', 'foregroundRequired'),
+      ),
+    );
+    expect(bridge.lastTypedText, isNull,
+        reason: 'the refusal precedes any event synthesis');
+  });
+
+  test('focus contract: matching frontmost passes; no snapshot adopts '
+      'the frontmost app', () async {
+    final bridge = FakeBridge();
+    final driver = driverWith(bridge);
+    bridge.snapshotResult = (code: 0, json: _appJsonWithPid);
+    await driver.snapshot();
+
+    // Frontmost is Safari (1234) but the observation says pid 42.
+    bridge.frontmostResult = (code: 0, json: _finderJson);
+    await driver.perform(const TypeAction('ok'));
+    expect(bridge.lastTypedText, 'ok');
+
+    // A fresh session with no observation: the frontmost app at dispatch
+    // IS the target (the focused binding's meaning), recorded then used.
+    final fresh = driverWith(bridge);
+    await fresh.perform(const KeyPressAction('Escape'));
+    expect(bridge.calls, contains('keyPress(Escape)'));
+  });
+
+  test('focus contract: semantic verbs bypass the gate entirely', () async {
+    final bridge = FakeBridge();
+    final driver = driverWith(bridge);
+    bridge
+      ..snapshotResult = (code: 0, json: _appJsonWithPid)
+      ..frontmostResult = (code: 0, json: _safariJson);
+    await driver.snapshot();
+
+    // Frontmost (Safari) != anchor (Finder): a global verb would refuse,
+    // but locator verbs act below the focus layer.
+    await driver.perform(const ClickAction(name: 'Save'));
+    expect(bridge.pressedHandles, [2]);
+    await driver.perform(const SetValueAction('bg', name: 'Search'));
+    expect(bridge.setValues.last, (3, 'bg'));
+  });
+
+  test('pid-scoped rung: anchored typing posts to the target, focus '
+      'untouched', () async {
+    final bridge = FakeBridge();
+    // Anchored to pid 4242 while Finder owns the user's focus — the
+    // rung's whole point is that this still types.
+    final driver = MacosDriver(bridge: bridge, targetPid: 4242);
+    bridge.frontmostResult = (code: 0, json: _finderJson);
+
+    await driver.perform(const TypeAction('hello background', submit: true));
+
+    expect(bridge.pidTypedText, [(pid: 4242, text: 'hello background')]);
+    expect(bridge.calls, contains('keyPressToPid(4242,Enter)'));
+    expect(
+      bridge.calls.where((call) => call == 'frontmost'),
+      isEmpty,
+      reason: 'the rung routes around the focus gate, not through it',
+    );
+    expect(bridge.calls, isNot(contains('typeText')));
+    expect(driver.capabilities.pidScopedEvents, isTrue);
+  });
+
+  test('pid-scoped rung: chords post hold/tap/release to the pid in '
+      'order', () async {
+    final bridge = FakeBridge();
+    final driver = MacosDriver(bridge: bridge, targetPid: 77);
+
+    await driver.perform(
+      const KeyPressAction('c', modifiers: ['meta', 'shift']),
+    );
+
+    expect(
+      bridge.calls.where((call) => call.contains('(77')),
+      [
+        'keyDownToPid(77,Meta)',
+        'keyDownToPid(77,Shift)',
+        'keyPressToPid(77,c)',
+        'keyUpToPid(77,Shift)',
+        'keyUpToPid(77,Meta)',
+      ],
+      reason: 'modifiers hold before the tap and release in reverse after',
+    );
+    expect(bridge.calls.where((call) => call == 'frontmost'), isEmpty);
+  });
+
+  test('pid-scoped rung: pointer verbs stay focus-bound on an anchored '
+      'session', () async {
+    final bridge = FakeBridge();
+    final driver = MacosDriver(bridge: bridge, targetPid: 4242);
+    bridge.frontmostResult = (code: 0, json: _finderJson);
+
+    // Scroll carries global screen coordinates: still bound by the
+    // focus contract even though typing is not.
+    await expectLater(
+      driver.perform(const ScrollAction(distance: 3)),
+      throwsA(isA<ForegroundRequiredException>()),
+    );
   });
 }

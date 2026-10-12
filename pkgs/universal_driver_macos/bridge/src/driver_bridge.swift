@@ -134,15 +134,31 @@ private func accessibleBounds(_ element: AXUIElement) -> [String: Double]? {
     ]
 }
 
+/// Action names are a separate AX API, not an "AXActions" attribute.
+/// Using the attribute read falsely reports no actions on valid controls.
+private func advertisedActions(_ element: AXUIElement) -> [String] {
+    var raw: CFArray?
+    guard AXUIElementCopyActionNames(element, &raw) == .success,
+          let actions = raw as? [String]
+    else { return [] }
+    return actions
+}
+
 /// Serializes one element (no recursion). Registers a fresh handle so
-/// actions can address it later.
+/// actions can address it later. Advertised actions ride as a
+/// comma-joined string attribute (node attributes are string-valued on
+/// the Dart side), so the model sees pressable/settable/confirmable in
+/// the same read that produced the refs (ADR 0064).
 private func nodeDict(_ element: AXUIElement) -> [String: Any] {
     let roleRaw = optionalStringAttribute(element, kAXRoleAttribute as String)
     var node: [String: Any] = ["role": semanticRole(roleRaw)]
     if let name = accessibleName(element) { node["name"] = name }
     if let value = accessibleValue(element) { node["value"] = value }
     if let bounds = accessibleBounds(element) { node["bounds"] = bounds }
-    node["attributes"] = ["axid": String(registry.add(element))]
+    var attributes: [String: Any] = ["axid": String(registry.add(element))]
+    let actions = advertisedActions(element)
+    if !actions.isEmpty { attributes["axActions"] = actions.joined(separator: ",") }
+    node["attributes"] = attributes
     return node
 }
 
@@ -235,7 +251,16 @@ public func xs_axdrv_snapshot_json(
         return code == .cannotComplete ? 3 : (code == .noValue ? 2 : Int32(code.rawValue))
     }
     var budget = Int(maxNodes) - 1
-    let tree = walkTree(app, depth: 0, maxDepth: Int(maxDepth), budget: &budget)
+    var tree = walkTree(app, depth: 0, maxDepth: Int(maxDepth), budget: &budget)
+    // The observed pid rides on the root (string attribute): the Dart
+    // focus contract compares it against the frontmost app before any
+    // global-event dispatch (ADR 0064).
+    var appPid: pid_t = 0
+    AXUIElementGetPid(app, &appPid)
+    if var attrs = tree["attributes"] as? [String: Any] {
+        attrs["pid"] = String(appPid)
+        tree["attributes"] = attrs
+    }
     guard let data = try? JSONSerialization.data(withJSONObject: tree),
           let json = String(data: data, encoding: .utf8)
     else { return 3 }
@@ -573,6 +598,85 @@ public func xs_axdrv_key_up(_ key: UnsafePointer<CChar>?) -> Int32 {
     return 0
 }
 
+// MARK: - PID-scoped event delivery (ADR 0064 rung). CGEventPostToPid
+// hands keyboard events to ONE process's event queue without touching
+// the user's focus, so an anchored session (ax://pid/<n>) can type and
+// press keys into a background application. Delivery is fire-and-forget
+// (the API reports nothing): apps that drop events while inactive need
+// the explicit `foreground: true` ladder instead. Pointer and scroll
+// events stay HID-tapped — they carry global screen coordinates, and
+// posting those to a pid would act on whatever window sits under the
+// cursor, not the target.
+
+@_cdecl("xs_axdrv_type_text_pid")
+public func xs_axdrv_type_text_pid(
+    _ pid: Int32,
+    _ text: UnsafePointer<CChar>?
+) -> Int32 {
+    guard let text else { return 1 }
+    let value = String(cString: text)
+    guard !value.isEmpty else { return 0 }
+    let units = Array(value.utf16)
+    let down = CGEvent(keyboardEventSource: nil, virtualKey: 0, keyDown: true)
+    units.withUnsafeBufferPointer { buffer in
+        down?.keyboardSetUnicodeString(stringLength: units.count, unicodeString: buffer.baseAddress)
+    }
+    guard let down else { return 3 }
+    down.postToPid(pid_t(pid))
+    CGEvent(keyboardEventSource: nil, virtualKey: 0, keyDown: false)?
+        .postToPid(pid_t(pid))
+    return 0
+}
+
+@_cdecl("xs_axdrv_key_press_pid")
+public func xs_axdrv_key_press_pid(
+    _ pid: Int32,
+    _ key: UnsafePointer<CChar>?
+) -> Int32 {
+    guard let key else { return 1 }
+    guard let code = keyCode(for: String(cString: key)) else { return 1 }
+    CGEvent(keyboardEventSource: nil, virtualKey: code, keyDown: true)?
+        .postToPid(pid_t(pid))
+    CGEvent(keyboardEventSource: nil, virtualKey: code, keyDown: false)?
+        .postToPid(pid_t(pid))
+    return 0
+}
+
+@_cdecl("xs_axdrv_key_down_pid")
+public func xs_axdrv_key_down_pid(
+    _ pid: Int32,
+    _ key: UnsafePointer<CChar>?
+) -> Int32 {
+    guard let key else { return 1 }
+    let name = String(cString: key)
+    guard let code = keyCode(for: name) else { return 1 }
+    guard let event = CGEvent(
+        keyboardEventSource: nil,
+        virtualKey: code,
+        keyDown: true
+    ) else { return 3 }
+    // Same as the HID path: a modifier event announces its own flag so
+    // subsequent pid-posted events see the chord forming.
+    let flag = cgModifierFlag(name)
+    if flag != 0 {
+        event.flags = CGEventFlags(rawValue: UInt64(bitPattern: flag))
+    }
+    event.postToPid(pid_t(pid))
+    return 0
+}
+
+@_cdecl("xs_axdrv_key_up_pid")
+public func xs_axdrv_key_up_pid(
+    _ pid: Int32,
+    _ key: UnsafePointer<CChar>?
+) -> Int32 {
+    guard let key else { return 1 }
+    guard let code = keyCode(for: String(cString: key)) else { return 1 }
+    CGEvent(keyboardEventSource: nil, virtualKey: code, keyDown: false)?
+        .postToPid(pid_t(pid))
+    return 0
+}
+
 /// Drops every cached element handle and scroll fraction. Called on
 /// session teardown and driver close. Best-effort releases any
 /// logically-down pointer button at its last position, so a truncated
@@ -894,9 +998,84 @@ public func xs_axdrv_snapshot_app_json(
         return 7
     }
     var budget = Int(maxNodes) - 1
-    let tree = walkTree(app, depth: 0, maxDepth: Int(maxDepth), budget: &budget)
+    var tree = walkTree(app, depth: 0, maxDepth: Int(maxDepth), budget: &budget)
+    if var attrs = tree["attributes"] as? [String: Any] {
+        attrs["pid"] = String(pid)
+        tree["attributes"] = attrs
+    }
     guard let data = try? JSONSerialization.data(withJSONObject: tree),
           let json = String(data: data, encoding: .utf8)
     else { return 3 }
+    return strdupOut(json, outJson)
+}
+
+/// Sets the element's value attribute (kAXValueAttribute) — the semantic
+/// write path (ADR 0064): no keyboard focus, no event stream, valid on
+/// background applications. 0 ok · 5 unknown handle · 3 set refused.
+@_cdecl("xs_axdrv_set_value")
+public func xs_axdrv_set_value(
+    _ handle: Int32,
+    _ value: UnsafePointer<CChar>?
+) -> Int32 {
+    guard let element = resolvedElement(handle) else { return 5 }
+    guard let value else { return 1 }
+    let code = AXUIElementSetAttributeValue(
+        element, kAXValueAttribute as CFString, String(cString: value) as CFTypeRef
+    )
+    return code == .success ? 0 : 3
+}
+
+/// Performs the advertised action [actionName] (e.g. "AXConfirm",
+/// "AXShowMenu") on the element — the general form of `xs_axdrv_press`
+/// (ADR 0064). 0 ok · 5 unknown handle · 1 invalid argument · 3 action
+/// refused or unadvertised.
+@_cdecl("xs_axdrv_element_action")
+public func xs_axdrv_element_action(
+    _ handle: Int32,
+    _ actionName: UnsafePointer<CChar>?
+) -> Int32 {
+    guard let element = resolvedElement(handle) else { return 5 }
+    guard let actionName else { return 1 }
+    let name = String(cString: actionName)
+    guard !name.isEmpty else { return 1 }
+    let code = AXUIElementPerformAction(element, name as CFString)
+    return code == .success ? 0 : 3
+}
+
+/// Explicit, target-scoped assistive-client request. This does not activate
+/// the app, synthesize input, change TCC or enable global VoiceOver.
+/// Returns per-attribute codes rather than pretending unsupported apps comply.
+@_cdecl("xs_axdrv_request_accessibility_json")
+public func xs_axdrv_request_accessibility_json(
+    _ pid: Int32,
+    _ outJson: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+) -> Int32 {
+    guard pid > 0, let outJson else { return 1 }
+    guard AXIsProcessTrusted() else { return 10 }
+    ensureAppRegistered()
+    let app = AXUIElementCreateApplication(pid)
+    var requests: [[String: Any]] = []
+    for attribute in ["AXManualAccessibility", "AXEnhancedUserInterface"] {
+        var before: CFTypeRef?
+        let read = AXUIElementCopyAttributeValue(app, attribute as CFString, &before)
+        let set = AXUIElementSetAttributeValue(app, attribute as CFString, kCFBooleanTrue)
+        var after: CFTypeRef?
+        let reread = AXUIElementCopyAttributeValue(app, attribute as CFString, &after)
+        requests.append([
+            "attribute": attribute,
+            "readCode": read.rawValue,
+            "setCode": set.rawValue,
+            "rereadCode": reread.rawValue,
+            "before": (before as? NSNumber)?.boolValue as Any? ?? NSNull(),
+            "after": (after as? NSNumber)?.boolValue as Any? ?? NSNull()
+        ])
+    }
+    var windowsRaw: CFTypeRef?
+    let windowsCode = AXUIElementCopyAttributeValue(app, kAXWindowsAttribute as CFString, &windowsRaw)
+    let receipt: [String: Any] = ["pid": pid, "requests": requests,
+        "windowsCode": windowsCode.rawValue,
+        "windowsCount": (windowsRaw as? [AXUIElement])?.count as Any? ?? NSNull()]
+    guard let data = try? JSONSerialization.data(withJSONObject: receipt),
+          let json = String(data: data, encoding: .utf8) else { return 3 }
     return strdupOut(json, outJson)
 }

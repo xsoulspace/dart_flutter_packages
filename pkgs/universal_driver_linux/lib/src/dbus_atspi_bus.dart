@@ -48,7 +48,11 @@ class DBusAtspiBus implements AtspiBus {
     if (client == null) {
       throw StateError('connect first: call root() before other methods');
     }
-    return DBusRemoteObject(client, name: ref.destination, path: DBusObjectPath(ref.path));
+    return DBusRemoteObject(
+      client,
+      name: ref.destination,
+      path: DBusObjectPath(ref.path),
+    );
   }
 
   @override
@@ -96,10 +100,8 @@ class DBusAtspiBus implements AtspiBus {
       return reply.returnValues.first
           .asObjectPathArray()
           .map(
-            (path) => AtspiNodeRef(
-              destination: ref.destination,
-              path: path.value,
-            ),
+            (path) =>
+                AtspiNodeRef(destination: ref.destination, path: path.value),
           )
           .toList(growable: false);
     } on DBusMethodResponseException {
@@ -153,6 +155,72 @@ class DBusAtspiBus implements AtspiBus {
       name: 'DoAction',
       values: [DBusInt32(index)],
     );
+  }
+
+  @override
+  Future<List<String>> actionNames(AtspiNodeRef ref) async {
+    final object = _object(ref);
+    final count = await object
+        .getProperty('org.a11y.atspi.Action', 'NActions')
+        .catchError((Object _) => const DBusInt32(0));
+    final names = <String>[];
+    for (var index = 0; index < count.asInt32(); index++) {
+      final reply = await object.client.callMethod(
+        destination: ref.destination,
+        path: DBusObjectPath(ref.path),
+        interface: 'org.a11y.atspi.Action',
+        name: 'GetName',
+        values: [DBusInt32(index)],
+        replySignature: DBusSignature('s'),
+      );
+      names.add(reply.returnValues.first.asString());
+    }
+    return names;
+  }
+
+  @override
+  Future<void> setContents(AtspiNodeRef ref, String content) async {
+    final object = _object(ref);
+    try {
+      await object.client.callMethod(
+        destination: ref.destination,
+        path: DBusObjectPath(ref.path),
+        interface: 'org.a11y.atspi.EditableText',
+        name: 'SetTextContents',
+        values: [DBusString(content)],
+      );
+    } on DBusMethodResponseException {
+      // UnknownInterface / UnknownMethod = the peer does not expose
+      // EditableText; a genuine in-app refusal surfaces the same way
+      // over this wire, so the driver's message names what was tried.
+      throw AtspiInterfaceUnsupported('org.a11y.atspi.EditableText');
+    }
+  }
+
+  @override
+  Future<void> setCurrentValue(AtspiNodeRef ref, double value) async {
+    final object = _object(ref);
+    try {
+      // atspi2 >= 2.16 serves Value.CurrentValue as a writable property.
+      await object.setProperty(
+        'org.a11y.atspi.Value',
+        'CurrentValue',
+        DBusDouble(value),
+      );
+    } on DBusMethodResponseException {
+      try {
+        // Older peers only expose the SetCurrentValue method.
+        await object.client.callMethod(
+          destination: ref.destination,
+          path: DBusObjectPath(ref.path),
+          interface: 'org.a11y.atspi.Value',
+          name: 'SetCurrentValue',
+          values: [DBusDouble(value)],
+        );
+      } on DBusMethodResponseException {
+        throw AtspiInterfaceUnsupported('org.a11y.atspi.Value');
+      }
+    }
   }
 
   @override
