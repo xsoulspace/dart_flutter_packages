@@ -117,3 +117,45 @@ Parity law, mechanically enforced:
 Recorded serving non-claims (open items, not regressions): no cross-request
 KV common-prefix reuse (fresh cache per generate — the retired Swift engine
 had it) and no token streaming.
+
+## Native tool-call transport
+
+Qwen clients default to `ToolCallSyntax.qwenJson`: complete checkpoint JSON
+envelopes normalize into `InferenceResponse.toolCalls`, with raw output and
+source spans retained in metadata. Missing registries, unknown tool names,
+malformed/truncated calls and fenced examples produce named failures.
+Constructors accept an explicit `toolSyntax` for a qualified finetune; this
+selects the decoder, not a new tokenizer/chat template. The LFM default has
+no qualified production decoder for its Python-like signature format and
+refuses those envelopes as `tool_syntax_unsupported`. The permissive bench
+parser is not an execution parser.
+
+Without explicit messages, native clients use the existing core
+`SituationMessagesCodec` to render only the request's projected fragments.
+Explicit messages remain authoritative. Qwen tool-result turns use its
+fixture-gated renderer; LFM maps explicit tool turns to user turns and warns.
+The deterministic transport tests prove normalization and observation
+rendering, not useful model coding or real-model acceptance.
+
+## Prepared native CLI closure
+
+Developer preparation uses `tool/prepare_native_cli.dart` with four arguments:
+compiler, an already prepared SDK package config, output directory, and Dart
+entry point. It calls the existing SDK `build cli` and native build hook under
+`runBounded`; it does not download weights or create another engine build loop.
+
+Dart 3.13.2 CLI bundles the native code asset but omits the hook's Metal data
+asset. The helper finds the producer receipt inside that exact SDK profile,
+requires a complete image match, and packages only its colocated Metal file.
+For macOS SDK relocation, it reproduces install-ID rewriting and ad-hoc signing
+on a private copy and compares every transformed byte; a UUID or filename is
+not sufficient. Missing, mismatched or conflicting producer closures refuse.
+`bundle/native_closure.json` retains original and relocated image hashes,
+producer receipt hash, and Metal hash.
+
+`tool/native_runtime_preflight.dart` is a no-model diagnostic entry point:
+it performs harmless NFC through the native asset, uses `dladdr` to report the
+actual loaded image, and checks colocated Metal. This qualifies preparation
+and identity only. It does not load weights, execute GPU model inference,
+qualify other SDKs, or establish coding acceptance. Product integration should
+prepare/bundle this closure automatically rather than expose setup commands.

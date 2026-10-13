@@ -24,6 +24,7 @@ library;
 export 'package:universal_automation_interface/universal_automation_interface.dart'
     show AutomationAction, AxNode, Snapshot;
 
+export 'src/accessibility_activation.dart';
 export 'src/driver_bridge.dart';
 export 'src/macos_app.dart';
 export 'src/macos_behavior.dart';

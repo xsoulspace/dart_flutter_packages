@@ -132,7 +132,7 @@ final class LayaServerReadinessProbe {
       final response = await _httpClient
           .get(endpoint, headers: const <String, String>{'accept': 'application/json'})
           .timeout(timeout);
-      return response.statusCode >= 200 && response.statusCode < 500;
+      return response.statusCode >= 200 && response.statusCode < 300;
     } on Object {
       return false;
     }

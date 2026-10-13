@@ -192,11 +192,10 @@ final class LocalServeRuntime {
                 ? const Duration(seconds: 2)
                 : pollInterval * 2,
           );
-      // /health stays open on the wire (auth only guards deployment
-      // details); any answering status below 500 counts as alive. A 404
-      // from a server without a health route still proves the socket —
-      // and therefore the process — is up.
-      final ok = response.statusCode >= 200 && response.statusCode < 500;
+      // A reachable socket is insufficient: another service may own this port.
+      // The configured health route must succeed before attaching or
+      // declaring a spawned process ready.
+      final ok = response.statusCode >= 200 && response.statusCode < 300;
       _emit(
         'local_serve.health_probe',
         <String, Object?>{'endpoint': '$healthEndpoint', 'ok': ok},

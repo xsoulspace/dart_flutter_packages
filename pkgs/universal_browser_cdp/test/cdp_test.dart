@@ -134,6 +134,21 @@ void main() {
       expect(base64Encode(bytes), server.screenshotBase64);
     });
 
+    test('normalizes scalar AX values including numeric sliders', () async {
+      for (final value in <Object?>[0, 0.75, false, 'three', null]) {
+        server.axNodes = [
+          {
+            'nodeId': 'slider',
+            'role': {'type': 'role', 'value': 'slider'},
+            'name': {'type': 'computedString', 'value': 'Frequency'},
+            if (value != null) 'value': {'value': value},
+          },
+        ];
+        final snapshot = await session.page.accessibilitySnapshot();
+        expect(snapshot.roots.single.value, value?.toString());
+      }
+    });
+
     test('clicks dispatch trusted mouse events at the rect center', () async {
       await session.page.click(css: '#submit');
       final events = server.inputEvents;

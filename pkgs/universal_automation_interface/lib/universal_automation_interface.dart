@@ -36,3 +36,6 @@ export 'src/driver_capabilities.dart';
 export 'src/keyboard_modifiers.dart';
 export 'src/snapshot.dart';
 export 'src/surface_action.dart';
+export 'src/targeted_automation.dart';
+
+export 'src/interaction_session.dart';

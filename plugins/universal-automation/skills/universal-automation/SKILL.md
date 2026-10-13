@@ -108,11 +108,31 @@ universal-automation serve    --os                           # MCP over the desk
 ```
 
 Exit codes: 0 pass, 1 automation failure, 2 usage. Results are JSON on
-stdout. Without the binary on PATH, the plugin launcher falls back to
-`dart run` from the package (`plugins/universal-automation/install.sh`
-builds and symlinks the AOT binary — `dart build cli` is mandatory once
-a native tier is linked; `dart compile exe` silently drops native code
-assets).
+stdout.
+
+## MCP server setup
+
+For an installed MCP client, use `plugins/universal-automation/mcp.json` as
+the template. Set `command` to the absolute path to the toolkit's packaged
+`build/cli/<target>/bundle/bin/universal_automation` executable and keep the
+arguments `serve --os` for desktop automation. The bundled executable is the
+recommended route for the native tier because it carries the linked native
+assets. If the install script has created `~/.local/bin/universal-automation`,
+that stable path may be used instead.
+
+`plugins/universal-automation/install.sh` runs `dart pub get`, builds with
+`dart build cli`, then links the resulting binary into `~/.local/bin` (or
+`UNIVERSAL_AUTOMATION_BIN_DIR`). It does not install a source-mode fallback
+when the build produces no binary; correct the build first. For source
+development, run from `pkgs/universal_automation_toolkit`:
+
+```bash
+dart run bin/universal_automation.dart serve --os
+```
+
+That source command is a development route, not a fallback implied by the MCP
+client configuration. Rebuild and repoint/restart MCP clients after changing
+the toolkit or its native driver.
 
 ## House rules and gotchas
 

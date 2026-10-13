@@ -1,3 +1,4 @@
+import 'generation_options.dart';
 
 /// Any ML model.
 ///
@@ -10,6 +11,7 @@ class Model {
     this.name = DefaultModelNames.appleFoundation,
     this.tier = 0,
     this.maxInFlight = 1,
+    this.generationOptions = const GenerationOptions(),
   });
   static const empty = Model();
   final ModelId id;
@@ -22,6 +24,11 @@ class Model {
   /// this model. Declared by the backend's client (e.g. Apple Foundation
   /// Models serializes requests on-device -> 1; hosted APIs typically >= 8).
   final int maxInFlight;
+
+  /// Host-composed request options for this model resource. Provider defaults
+  /// apply to absent fields; tool arguments and diagnostic metadata cannot
+  /// select a larger output budget.
+  final GenerationOptions generationOptions;
 }
 
 /// Marker contract for provider model-name enums.

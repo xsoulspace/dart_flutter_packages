@@ -257,6 +257,58 @@ InferenceResult<void> validateSchemaDefinition(
     }
   }
 
+  final choices = schema['anyOf'];
+  if (schema.containsKey('anyOf')) {
+    if (choices is! List ||
+        choices.isEmpty ||
+        choices.any((choice) => choice is! Map<String, dynamic>)) {
+      return InferenceResult<void>.fail(
+        code: 'schema_invalid_any_of',
+        message: 'Schema "anyOf" must be a nonempty list of schemas',
+      );
+    }
+    for (var index = 0; index < choices.length; index++) {
+      final nested = validateSchemaDefinition(
+        choices[index] as Map<String, dynamic>,
+        path: '$path.anyOf[$index]',
+      );
+      if (!nested.success) return nested;
+    }
+  }
+  final additional = schema['additionalProperties'];
+  if (schema.containsKey('additionalProperties') &&
+      additional is! bool &&
+      additional is! Map<String, dynamic>) {
+    return InferenceResult<void>.fail(
+      code: 'schema_invalid_additional_properties',
+      message: 'Schema "additionalProperties" must be a boolean or schema',
+    );
+  }
+  if (additional is Map<String, dynamic>) {
+    final nested = validateSchemaDefinition(
+      additional,
+      path: '$path.additionalProperties',
+    );
+    if (!nested.success) return nested;
+  }
+  for (final bound in ['minItems', 'maxItems']) {
+    final limit = schema[bound];
+    if (schema.containsKey(bound) && (limit is! int || limit < 0)) {
+      return InferenceResult<void>.fail(
+        code: 'schema_invalid_array_bound',
+        message: 'Schema array bounds must be nonnegative integers',
+      );
+    }
+  }
+  if (schema['minItems'] is int &&
+      schema['maxItems'] is int &&
+      (schema['minItems'] as int) > (schema['maxItems'] as int)) {
+    return InferenceResult<void>.fail(
+      code: 'schema_invalid_array_bound',
+      message: 'Schema minimum array length exceeds maximum',
+    );
+  }
+
   return InferenceResult<void>.ok(null);
 }
 
@@ -276,6 +328,22 @@ InferenceResult<void> _validateJsonNode({
   required final Map<String, dynamic> schema,
   required final String path,
 }) {
+  if (schema['anyOf'] case final List<dynamic> choices) {
+    final matched = choices.any(
+      (choice) => _validateJsonNode(
+        value: value,
+        schema: choice as Map<String, dynamic>,
+        path: path,
+      ).success,
+    );
+    if (!matched) {
+      return InferenceResult<void>.fail(
+        code: 'schema_any_of_mismatch',
+        message: 'JSON value does not match any allowed schema',
+        details: {'path': path},
+      );
+    }
+  }
   final rawType = schema['type'];
   if (rawType is String) {
     final isTypeValid = switch (rawType) {
@@ -315,7 +383,7 @@ InferenceResult<void> _validateJsonNode({
         (schema['required'] as List?)?.whereType<String>() ??
         const Iterable<String>.empty();
     final missing = requiredKeys
-        .where((final key) => objectValue[key] == null)
+        .where((final key) => !objectValue.containsKey(key))
         .toList(growable: false);
     if (missing.isNotEmpty) {
       return InferenceResult<void>.fail(
@@ -326,6 +394,26 @@ InferenceResult<void> _validateJsonNode({
     }
 
     final properties = jsonDecodeMap(schema['properties']);
+    for (final key in objectValue.keys.where(
+      (key) => !properties.containsKey(key),
+    )) {
+      final additional = schema['additionalProperties'];
+      if (additional == false) {
+        return InferenceResult<void>.fail(
+          code: 'schema_additional_property',
+          message: 'JSON value has an undeclared property',
+          details: {'path': '$path.$key'},
+        );
+      }
+      if (additional is Map<String, dynamic>) {
+        final nested = _validateJsonNode(
+          value: objectValue[key],
+          schema: additional,
+          path: '$path.$key',
+        );
+        if (!nested.success) return nested;
+      }
+    }
     for (final MapEntry<String, dynamic>(key: propertyKey, value: propertyValue)
         in properties.entries) {
       if (!objectValue.containsKey(propertyKey)) {
@@ -345,6 +433,16 @@ InferenceResult<void> _validateJsonNode({
   }
 
   if (value case final List<dynamic> listValue) {
+    final minimum = schema['minItems'] as int?;
+    final maximum = schema['maxItems'] as int?;
+    if ((minimum != null && listValue.length < minimum) ||
+        (maximum != null && listValue.length > maximum)) {
+      return InferenceResult<void>.fail(
+        code: 'schema_array_length_mismatch',
+        message: 'JSON array length is outside the allowed bounds',
+        details: {'path': path},
+      );
+    }
     if (schema['items'] case final Map<String, dynamic> itemsSchema) {
       for (var index = 0; index < listValue.length; index++) {
         final nested = _validateJsonNode(

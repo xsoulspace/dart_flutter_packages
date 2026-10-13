@@ -1,0 +1,33 @@
+{
+  "kind": "file-state-recovery-source-cut/v1",
+  "acceptance": false,
+  "sourceHashes": {
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/universal_storage_interface/lib/src/storage_file_state.dart": "d22818aa4095fe37adaea75285b089099c4c1247bfa311ec925f943cf4fabfd0",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/universal_storage_interface/lib/universal_storage_interface.dart": "4c8283278ce1e2826e9709019f1d53ff152f6c883e68d552d8fcea17915d132f",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/universal_storage_live_apply/lib/src/live_apply_models.dart": "0bbee3661cc7aaa95e164ec04c14ba13dea2bde4a0166ffb13c57e1f2f914c5e",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/universal_storage_live_apply/lib/src/live_apply_transaction.dart": "8a9698c1a0fcf161b198456a57f3f5135cac193a02aa253266eca72934c2f2e3",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/universal_storage_filesystem/lib/src/filesystem_storage_provider.dart": "096759d858fc0e1cc4df19bdb8b9bb87519f879cc537134530d71b79162f92b9",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/universal_storage_filesystem/lib/src/posix_file_state_native.dart": "a66dcd67832e652466766c6545e77eb0cb3840bb4563e8d851129fd0bb091e20",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/universal_storage_filesystem/lib/src/posix_file_state_stub.dart": "16176a1cfbeaf46693746f7fb34db3871b75c7d826a38556d5d27246b85e7474",
+    "/Users/antonio/xs/ecsai_harness/pkgs/xsoulspace_agentic_workspace/lib/src/span_edit_recovery.dart": "59bdadc6ae0b86f11d862256bf88a7052aa34032d63feb995583ed1c23301e52",
+    "/Users/antonio/xs/ecsai_harness/pkgs/xsoulspace_agentic_workspace/lib/xsoulspace_agentic_workspace.dart": "8667fa7dda48653f4d7b33df4cac101f38cd57c0c982b01fc1b541d0cb904f84",
+    "/Users/antonio/xs/ecsai_harness/pkgs/xsoulspace_agentic_host/lib/src/conventional_change_tools.dart": "5235a000c67a9076cc3c2e0afebbbdb1a6c8c1849162caa8615e2cd5103cc6bb",
+    "/Users/antonio/xs/ecsai_harness/pkgs/xsoulspace_agentic_host/lib/src/meaning_span_tools.dart": "d3c67aed1af993cd841a7164f4b8e651665396aed0cfea7ac9d791484ab58ee4",
+    "/Users/antonio/xs/ecsai_harness/pkgs/xsoulspace_agentic_host/lib/src/harness_workspace_access.dart": "90d021802ea8ae7b6e9e3c6d951f0944c8acbe1478d3d887063f965930bc71cf",
+    "/Users/antonio/xs/ecsai_harness/pkgs/xsoulspace_agentic_host/pubspec.yaml": "a73c98169208db3a543c34a34542a2fcf474ec9694c6272a58554678530a094b"
+  },
+  "gates": {
+    "liveApply": "69 passed",
+    "filesystem": "61 passed",
+    "interface": "9 passed; full analysis blocked by existing infos",
+    "host": "1080 passed;3 skipped;analyzer clean",
+    "workspace": "320 passed;1 skipped;export ordering fix follows test cut"
+  },
+  "nonClaims": [
+    "real model coding",
+    "external coding handoff",
+    "fresh product build/launch",
+    "power-loss durability",
+    "other-platform execution"
+  ]
+}

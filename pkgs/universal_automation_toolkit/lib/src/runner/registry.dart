@@ -344,6 +344,11 @@ final class SessionRegistry {
     if (pid == null || pid <= 0) {
       throw ElementNotFoundException('application', 'pid "$value"');
     }
+    // Attaching an assistive client must enable the target's native tree.
+    // Flutter creates that tree lazily; merely enumerating AXWindows can
+    // otherwise return a window with no product controls. This request is
+    // scoped to the explicit app anchor and never activates the application.
+    requestAppAccessibility(pid);
     return _MacosResolvedSession(binding, BehavioralMacosDriver(targetPid: pid));
   }
 

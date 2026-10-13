@@ -1,0 +1,3 @@
+# Signed-identity setup is CPU intensive; avoid starving physical IO controls.
+# Preserve their deadlines while granting one local test lane at a time.
+concurrency: 1

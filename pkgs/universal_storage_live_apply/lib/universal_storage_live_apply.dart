@@ -17,5 +17,6 @@ library;
 export 'src/live_apply_exceptions.dart';
 export 'src/live_apply_journal.dart';
 export 'src/live_apply_models.dart';
+export 'src/live_apply_provider_receipt.dart';
 export 'src/live_apply_storage_provider.dart';
 export 'src/live_apply_transaction.dart';

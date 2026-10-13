@@ -1,0 +1,46 @@
+00:00 +0: loading pkgs/universal_storage_filesystem/test/filesystem_append_durability_test.dart
+00:00 +0: pkgs/universal_storage_filesystem/test/filesystem_append_durability_test.dart: appendFile creates a missing file with the chunk
+00:00 +1: pkgs/universal_storage_filesystem/test/conformance_test.dart: FileSystemStorageProvider conformance create → getFile round-trips content
+00:00 +2: pkgs/universal_storage_filesystem/test/filesystem_file_state_test.dart: POSIX state exclusive descriptor is0600 before and while private bytes are written
+00:00 +3: pkgs/universal_storage_filesystem/test/storage_service_with_filesystem_test.dart: FileSystemStorageProvider implements LocalEngine role for kernel profile routing
+00:00 +4: pkgs/universal_storage_filesystem/test/filesystem_append_durability_test.dart: appendFile appends without rewriting prior content
+00:00 +5: pkgs/universal_storage_filesystem/test/filesystem_append_durability_test.dart: appendFile appends without rewriting prior content
+00:00 +6: pkgs/universal_storage_filesystem/test/filesystem_append_durability_test.dart: appendFile appends without rewriting prior content
+00:00 +7: pkgs/universal_storage_filesystem/test/filesystem_file_state_test.dart: POSIX state new files are0644 and profile declares actual POSIX authority
+00:00 +8: pkgs/universal_storage_filesystem/test/storage_service_with_filesystem_test.dart: FileSystemStorageProvider should save and read a file
+00:00 +9: pkgs/universal_storage_filesystem/test/storage_service_with_filesystem_test.dart: FileSystemStorageProvider should save and read a file
+00:00 +10: pkgs/universal_storage_filesystem/test/storage_service_with_filesystem_test.dart: FileSystemStorageProvider should save and read a file
+00:00 +11: pkgs/universal_storage_filesystem/test/filesystem_file_state_test.dart: POSIX state update/delete/restore preserves actual mode384
+00:00 +12: pkgs/universal_storage_filesystem/test/filesystem_file_state_test.dart: POSIX state update/delete/restore preserves actual mode384
+00:00 +13: pkgs/universal_storage_filesystem/test/filesystem_file_state_test.dart: POSIX state update/delete/restore preserves actual mode384
+00:00 +14: pkgs/universal_storage_filesystem/test/storage_service_with_filesystem_test.dart: FileSystemStorageProvider should update an existing file
+00:00 +15: pkgs/universal_storage_filesystem/test/conformance_test.dart: FileSystemStorageProvider conformance paths are normalized: leading/trailing slashes tolerated
+00:00 +16: pkgs/universal_storage_filesystem/test/filesystem_append_durability_test.dart: appendFile StorageService.appendFile reaches the provider append
+00:00 +17: pkgs/universal_storage_filesystem/test/filesystem_file_state_test.dart: POSIX state update/delete/restore preserves actual mode420
+00:00 +18: pkgs/universal_storage_filesystem/test/filesystem_file_state_test.dart: POSIX state update/delete/restore preserves actual mode420
+00:00 +19: pkgs/universal_storage_filesystem/test/filesystem_file_state_test.dart: POSIX state update/delete/restore preserves actual mode420
+00:00 +20: pkgs/universal_storage_filesystem/test/filesystem_append_durability_test.dart: append crash recovery prepared-but-uncommitted append replays from the temp copy
+00:00 +21: pkgs/universal_storage_filesystem/test/filesystem_append_durability_test.dart: append crash recovery prepared-but-uncommitted append replays from the temp copy
+00:00 +22: pkgs/universal_storage_filesystem/test/conformance_test.dart: FileSystemStorageProvider conformance unicode and large payloads round-trip
+00:00 +23: pkgs/universal_storage_filesystem/test/conformance_test.dart: FileSystemStorageProvider conformance unicode and large payloads round-trip
+00:00 +24: pkgs/universal_storage_filesystem/test/conformance_test.dart: FileSystemStorageProvider conformance unicode and large payloads round-trip
+00:00 +25: pkgs/universal_storage_filesystem/test/conformance_test.dart: FileSystemStorageProvider conformance unicode and large payloads round-trip
+00:00 +26: pkgs/universal_storage_filesystem/test/conformance_test.dart: FileSystemStorageProvider conformance unicode and large payloads round-trip
+00:00 +27: pkgs/universal_storage_filesystem/test/conformance_test.dart: FileSystemStorageProvider conformance unicode and large payloads round-trip
+00:00 +28: pkgs/universal_storage_filesystem/test/conformance_test.dart: FileSystemStorageProvider conformance unicode and large payloads round-trip
+00:00 +29: pkgs/universal_storage_filesystem/test/conformance_test.dart: FileSystemStorageProvider conformance unicode and large payloads round-trip
+00:00 +30: pkgs/universal_storage_filesystem/test/filesystem_append_durability_test.dart: journal truncation boot truncates committed journals to empty
+00:00 +31: pkgs/universal_storage_filesystem/test/filesystem_file_state_test.dart: POSIX state preparedmode mismatch refuses stage without chmod
+00:00 +32: pkgs/universal_storage_filesystem/test/filesystem_file_state_test.dart: POSIX state preparedmode mismatch refuses stage without chmod
+00:00 +33: pkgs/universal_storage_filesystem/test/filesystem_file_state_test.dart: POSIX state preparedmode mismatch refuses stage without chmod
+00:00 +34: pkgs/universal_storage_filesystem/test/filesystem_file_state_test.dart: POSIX state preparedmode mismatch refuses stage without chmod
+00:00 +35: pkgs/universal_storage_filesystem/test/storage_service_with_filesystem_test.dart: FileSystemStorageProvider serializes concurrent updates to the same path deterministically
+00:00 +36: pkgs/universal_storage_filesystem/test/storage_service_with_filesystem_test.dart: FileSystemStorageProvider serializes concurrent updates to the same path deterministically
+00:00 +37: pkgs/universal_storage_filesystem/test/storage_service_with_filesystem_test.dart: FileSystemStorageProvider serializes concurrent updates to the same path deterministically
+00:00 +38: pkgs/universal_storage_filesystem/test/storage_service_with_filesystem_test.dart: FileSystemStorageProvider serializes concurrent updates to the same path deterministically
+00:00 +39: pkgs/universal_storage_filesystem/test/storage_service_with_filesystem_test.dart: FileSystemStorageProvider path access overrides calls custom resolver and release hooks
+00:00 +40: pkgs/universal_storage_filesystem/test/storage_service_with_filesystem_test.dart: FileSystemStorageProvider path access overrides supports callback-based path access override
+00:00 +41: pkgs/universal_storage_filesystem/test/storage_service_with_filesystem_test.dart: FileSystemStorageProvider durability recovery replays prepared write from journal on startup
+00:00 +42: pkgs/universal_storage_filesystem/test/storage_service_with_filesystem_test.dart: FileSystemStorageProvider durability recovery reports corrupted journal lines without crashing startup
+00:00 +43: pkgs/universal_storage_filesystem/test/storage_service_with_filesystem_test.dart: FileSystemStorageProvider durability recovery recovery is idempotent across restarts
+00:00 +44: All tests passed!

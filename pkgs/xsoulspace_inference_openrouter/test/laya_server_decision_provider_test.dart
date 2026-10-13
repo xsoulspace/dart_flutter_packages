@@ -353,6 +353,16 @@ void main() {
   });
 
   group('LayaServerReadinessProbe', () {
+    for (final status in [401, 404, 500]) {
+      test('error health response $status is not a ready model', () async {
+        final probe = LayaServerReadinessProbe(
+          httpClient: MockClient((_) async => http.Response('error', status)),
+        );
+        expect(await probe.ping(), isFalse);
+        await probe.dispose();
+      });
+    }
+
     test('answers true on a healthy local server', () async {
       final probe = LayaServerReadinessProbe(
         httpClient: MockClient((_) async => http.Response('{"status":"ok"}', 200)),

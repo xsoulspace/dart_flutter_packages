@@ -146,3 +146,49 @@ keeps only its product surface (decision provider, serve runtime).
   (no close in the output ⇒ empty answer, honestly). Load failures
   surface their real error through `mlx_native_lfm2_last_load_error`
   instead of a bare code. Bench row: see ADR 0057's scorecard section.
+
+### 2026-10-13: typed native tool transport
+
+Native text clients now opt into core's declarative `ToolCallSyntax`
+composition contract. Qwen selects its delimited JSON envelope; custom
+profiles are explicit constructor configuration, not global syntax guessing.
+Calls normalize to existing `ToolCall` values, with raw completion and source
+spans retained. Complete registry-bound parsing is atomic and bounded;
+malformed, truncated, ambiguous, unknown and unbound calls refuse. Parsing
+does not execute, validate actor authority, or replace host schema checks.
+
+The measured bench's tolerant Liquid/Python signature parser remains a
+benchmark aid. No LFM signature execution profile is qualified: it refuses
+explicitly until a separately tested grammar is installed. This does not
+change the recorded bench measurements or claim local coding acceptance.
+
+Native requests without explicit messages reconstruct only their projected
+context through `SituationMessagesCodec`; explicit messages keep precedence.
+Qwen's fixture-gated tool-role rendering is no longer incorrectly warned
+as an unsupported LFM approximation. No transcript, scheduler or world reader
+is added to either provider.
+
+### 2026-10-13: prepared CLI native closure
+
+The actual Dart 3.13.2 ARM64 CLI route copied the code asset but omitted the
+hook-produced Metal data asset. Native NFC resolved successfully while Metal
+colocation failed. A thin developer adapter now composes the existing prepared
+SDK profile, SDK CLI builder, native hook and bounded process runtime, then
+packages the exact producer's Metal closure. It does not select a fleet-cache
+file by name or add another compiler, journal or engine build loop.
+
+The SDK rewrites the Mach-O install ID and ad-hoc signature. Qualification
+reproduces these transformations on a private copy and requires byte-exact
+identity with the complete bundled dylib before admitting its producer Metal.
+Unknown images, missing Metal and conflicting matching producers refuse.
+Original/relocated image hashes, producer receipt hash and Metal hash persist
+in the native bundle receipt. Preparation now passes the harmless NFC + actual
+loaded-image + Metal-colocation probe; GPU/weight loading and real coding
+acceptance remain separate, unexecuted gates. Other SDK versions are unqualified.
+
+The subsequent bounded Qwen3-1.7B smoke qualified actual cached weight load and
+GPU generation through this prepared 3.13.2 ARM64 bundle: three tokens under a
+16-token cap, parent exit 0 with no survivors, and unchanged checkpoint/runtime
+hashes. The literal answer `Clear.` is not accepted as semantic correctness.
+See [the runtime smoke evidence](../evidence/native-qwen-smoke-2026-10-13.md).
+No tool cycle or coding acceptance is inferred from this smoke.

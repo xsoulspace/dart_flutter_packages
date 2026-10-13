@@ -1,0 +1,43 @@
+00:00 +0: loading test/conventional_change_tools_test.dart
+00:00 +0: private update uses v3 Apply and Undo without mode widening
+00:00 +1: foreign applied mode drift refuses Undo without overwriting it
+00:00 +2: private deletion uses v3 and fresh-owner Undo preserves mode
+00:00 +3: permission-time file mode drift refuses before a recovery run
+00:00 +4: dependency mode drift before consent invalidates native proposal
+00:01 +5: special permission modes retain explicit unsupported refusal
+00:01 +6: saved candidate adoption captures fresh permissions and fresh consent
+00:01 +7: fresh owner recovery requires matching native candidate and journal
+00:01 +8: owner recovery policy cannot admit a traversing run identifier
+00:01 +9: saved candidate requires fresh owner policy and checks after task loss
+00:01 +10: directory discovery pages reuse jail and refuse membership drift
+00:01 +11: native protected paths return typed refusals before effects
+00:01 +12: discovery does not read unrelated large or binary source
+00:01 +13: saved artifact cannot hide stale dependencies or tampering
+00:01 +14: fresh adoption does not trust a stored successful check
+00:01 +15: preview captures original before and after source for product review
+00:01 +16: unplanned checker files refuse before proposal or live effects
+00:01 +17: unsettled checker retains candidate and blocks subsequent promotion
+00:01 +18: real code multi-file create update delete preview apply undo fresh reapply
+00:02 +19: failed real compiler never creates approval or live effects
+00:02 +20: revision changes during permission refuse all effects
+00:02 +21: lock conflict before consent releases acquired dependency claims
+00:02 +22: context loss during approval leaves no run
+00:03 +23: denied consent is not bypassed by conventional route
+00:03 +24: foreign postimage prevents undo clobber and blocks new preview
+00:03 +25: new absent dependency appearing is not overwritten
+00:03 +26: revoked write policy after approval leaves no run
+00:03 +27: checker source mutation is refused before review
+00:03 +28: expired proposal cannot be refreshed by approval
+00:04 +29: unplanned new filename is explicitly declared absent before preview
+00:04 +30: existing file outside initial dependencies requires explicit read admission
+00:04 +31: project-scoped resource cannot inherit global or another project root
+00:04 +32: missing parent directories are explicitly refused until native recovery supports them
+00:04 +33: explicit finalize closes inverse and permits a distinct next proposal
+00:05 +34: recreated adapter can observe native run but recovery requires explicit owner grant
+00:05 +35: text recovery cannot silently strip a source UTF-8 BOM
+00:05 +36: lifecycle invalidation joins live candidate before teardown
+00:05 +37: known applied same-file stack preserves both inverse windows and exact reverse order
+00:05 +38: independent applied footprints can undo without committing the other
+00:06 +39: open native journal blocks continuation while applied history does not
+00:06 +40: finalizing overlapping history cannot silently discard older inverse witness
+00:07 +41: All tests passed!

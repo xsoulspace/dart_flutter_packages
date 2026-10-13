@@ -74,3 +74,37 @@ changes never land in the laya product or in
 - Perf-timing gates in `native/mlx_native` are AC-calibrated: on battery
   (throttles 4-10×) or under heavy load they fail WITHOUT a code defect —
   record the power state, rerun on AC, never weaken the threshold.
+
+## Native ChatGPT subscription lane (ADR 0067)
+
+`xsoulspace_inference_openai` is the native SIWC/Responses provider. Use the
+existing inference contracts; keep world context and action execution in callers.
+Subscription OAuth is its explicit credential route; no API-key billing fallback.
+Never read Codex auth files. Check signed identities, rotating refresh, late SSE
+failures and native cancellation with `just check xsoulspace_inference_openai`.
+Model-list presence and fixture passes do not prove real subscription access.
+Keep protected storage/account UI in the application and serialize refresh through
+one auth owner. Current preview controls come from linked official ADR sources.
+
+For native subscription composition, share one auth owner and allocate a separate
+`CancellableInferenceClient` per independently cancellable session. Settings
+catalog cancellation and signed-out registration reauthorization are provider
+regressions; product account selection and document consent stay in Last Answer.
+
+For crash-aware token storage use `RecoverableChatGptCredentialStore`: persist the
+mutation fence before token exchange/rotation, refuse ordinary reads while pending,
+and finish after publication. Preserve shared-refresh coalescing. Failed commits
+require explicit recovery; a new auth owner must not bypass the protected fence.
+
+Await native `cancelAuthorization` acknowledgment and subsequent settlement.
+Recoverable stores journal cancellation, reject ordinary cancelled commit and
+only admit explicit rollback completion. Failed recovery never unfreezes old
+credentials; local removal/new sign-in cannot erase unknown remote cleanup.
+
+For completed Responses with empty terminal output, inspect safe structural
+receipts and retain indexed final output-item-done originals. Gate reconstruction
+on completed terminal success; refuse gaps, conflicts and explicit noncompleted
+items. Do not log encrypted reasoning, text, arguments or IDs in observations.
+Keep observers quick and exception-isolated; settlement of a cast is not settlement
+of shared auth. Native IO controls require real flushing and unchanged deadlines;
+package test-lane serialization avoids starving them with RSA fixture setup.

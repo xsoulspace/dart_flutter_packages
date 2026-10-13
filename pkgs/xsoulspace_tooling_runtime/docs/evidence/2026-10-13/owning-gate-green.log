@@ -1,0 +1,177 @@
+Analyzing xsoulspace_tooling_runtime...                         
+No issues found! (ran in 6.4s)
+Resolving dependencies in `/Users/antonio/xs/storage_problem/dart_flutter_packages`...
+Downloading packages...
+  _fe_analyzer_shared 105.0.0 (109.0.0 available)
+  _flutterfire_internals 1.3.76 (1.3.77 available)
+! agentic_executables_wire 0.1.0 from path ../../../../agentic_executables/agentic_executables_wire (overridden)
+! analyzer 14.1.0 (overridden) (14.5.0 available)
+  analyzer_buffer 0.3.3 (0.3.4 available)
+  app_links 6.4.1 (7.2.2 available)
+  app_links_linux 1.0.3 (1.0.4 available)
+  app_links_web 1.0.4 (1.0.5 available)
+  app_settings 8.0.3 (9.0.0 available)
+  archive 4.0.9 (4.5.2 available)
+! async_parallel 0.1.0 from path ../../../../ecsly/plugins/async_parallel (overridden)
+  background_downloader 9.5.7 (9.6.4 available)
+  build 4.0.10 (4.0.11 available)
+  build_config 1.3.2 (1.3.3 available)
+  build_daemon 4.1.5 (4.1.6 available)
+  build_runner 2.16.0 (2.16.2 available)
+  built_collection 5.1.1 (5.1.2 available)
+  built_value 8.12.7 (8.13.0 available)
+  cli_util 0.4.2 (0.6.0 available)
+  clock 1.1.2 (1.1.3 available)
+  code_assets 1.2.1 (2.1.0 available)
+  connectivity_plus 7.3.1 (7.3.2 available)
+  cross_file 0.3.5+4 (0.4.0 available)
+  cupertino_icons 1.0.9 (2.0.0 available)
+! dart_acp_toolkit 0.1.0-dev.1 from path ../../../../../mcp/cline/intentcall/packages/acp_toolkit (overridden)
+  dart_style 3.1.12 (3.1.13 available)
+  dart_webrtc 1.8.1 (1.8.2 available)
+  dbus 0.7.14 (0.8.0 available)
+! device_info_plus 13.1.0 (overridden) (13.3.0 available)
+  dio 5.11.0 (5.11.1 available)
+  dio_web_adapter 2.2.1 (2.2.2 available)
+  directed_graph 0.5.6 (1.0.0 available)
+! ecsly 0.0.1-dev.13 from path ../../../../ecsly/core_packages/ecsly (overridden)
+! ecsly_app 0.1.0-dev.4 from path ../../../../ecsly/core_packages/ecsly_app (overridden)
+! ecsly_async_parallel 0.1.0 from path ../../../../ecsly/plugins/ecsly_async_parallel (overridden)
+! ecsly_codegen 0.1.0-dev.4 from path ../../../../ecsly/core_packages/ecsly_codegen (overridden)
+! ecsly_flutter 0.1.0-dev.4 from path ../../../../ecsly/core_packages/ecsly_flutter (overridden)
+! ecsly_serialization 0.1.0-dev.1 from path /Users/antonio/xs/ecsly/plugins/ecsly_serialization (overridden)
+  equatable 2.1.0 (3.0.0 available)
+  exception_templates 0.3.2 (1.1.0 available)
+  ffigen 20.1.1 (23.0.0 available)
+  ffmpeg_kit_flutter_new_min 2.1.0 (3.6.7 available)
+  file_selector_android 0.5.2+9 (0.5.2+11 available)
+  file_selector_ios 0.5.3+5 (0.5.3+6 available)
+  file_selector_linux 0.9.4 (0.9.4+1 available)
+  file_selector_macos 0.9.5 (0.9.5+1 available)
+  file_selector_windows 0.9.3+5 (0.9.3+6 available)
+  firebase_analytics 12.4.6 (12.6.0 available)
+  firebase_analytics_platform_interface 6.0.6 (6.0.7 available)
+  firebase_analytics_web 0.6.1+12 (0.6.1+13 available)
+  firebase_core 4.13.0 (4.15.0 available)
+  firebase_core_platform_interface 8.1.0 (8.1.1 available)
+  firebase_core_web 3.10.0 (3.12.0 available)
+  firebase_crashlytics 5.2.7 (5.4.0 available)
+  firebase_crashlytics_platform_interface 3.8.27 (3.9.0 available)
+  flutter_gemma 1.5.2 (1.11.4 available)
+  flutter_mcp_toolkit_core 5.1.0 (7.0.0 available)
+  flutter_rustore_review 10.5.0 (10.5.3 available)
+  flutter_secure_storage 10.3.1 (11.2.0 available)
+  flutter_secure_storage_darwin 0.3.2 (0.4.3 available)
+  flutter_secure_storage_linux 3.0.2 (3.0.3 available)
+  flutter_secure_storage_platform_interface 2.0.3 (2.1.1 available)
+  flutter_shaders 0.1.3 (0.1.5 available)
+  flutter_webrtc 1.6.0 (1.6.2+hotfix.4 available)
+  freezed 4.0.0-dev.3 (4.0.2 available)
+  frontend_server_client 4.0.0 (4.1.0 available)
+  glob 2.1.3 (2.2.0 available)
+  hooks 2.1.0 (2.2.0 available)
+  in_app_purchase 3.3.0 (3.3.1 available)
+  in_app_purchase_android 0.5.2 (0.5.3 available)
+  in_app_purchase_storekit 0.4.11 (0.4.13+1 available)
+! intentcall_bridge 1.0.0 from path /Users/antonio/mcp/cline/intentcall/packages/intentcall_bridge (overridden)
+! intentcall_core 1.1.0 from path /Users/antonio/mcp/cline/intentcall/packages/intentcall_core (overridden)
+! intentcall_platform 1.0.0 from path /Users/antonio/mcp/cline/intentcall/packages/intentcall_platform (overridden)
+! intentcall_platform_android 1.0.0 from path /Users/antonio/mcp/cline/intentcall/packages/intentcall_platform_android (overridden)
+! intentcall_platform_apple 1.0.0 from path /Users/antonio/mcp/cline/intentcall/packages/intentcall_platform_apple (overridden)
+! intentcall_platform_sync 1.0.0 from path /Users/antonio/mcp/cline/intentcall/packages/intentcall_platform_sync (overridden)
+! intentcall_schema 1.0.0 from path /Users/antonio/mcp/cline/intentcall/packages/intentcall_schema (overridden)
+! intentcall_session 1.0.0 from path /Users/antonio/mcp/cline/intentcall/packages/intentcall_session (overridden)
+! intl 0.20.3 (overridden)
+  io 1.0.5 (1.1.0 available)
+  jni 1.0.3 (1.1.0 available)
+  jni_flutter 1.0.2 (1.0.4+1 available)
+  json_schema_builder 0.1.6 (0.1.7 available)
+  large_file_handler 0.5.0 (0.5.2 available)
+  lazy_memo 0.2.5 (2.0.0 available)
+  livekit_client 2.10.0 (2.13.1 available)
+  logger 2.7.0 (2.8.0 available)
+  logging_appenders 1.4.0+1 (2.0.0+1 available)
+  macos_secure_bookmarks 0.2.1 (0.3.0 available)
+  material_color_utilities 0.13.0 (0.13.1 available)
+! mcp_toolkit 5.0.4 (overridden) (7.0.0 available)
+! meta 1.19.0 (overridden)
+  mime 2.0.0 (2.1.0 available)
+  nanoid2 2.0.1 (2.1.0 available)
+  nm 0.5.0 (0.6.0 available)
+  objective_c 9.5.0 (9.6.2 available)
+  package_config 2.2.0 (3.0.0 available)
+  package_info_plus 10.2.1 (10.2.2 available)
+  petitparser 7.0.2 (7.1.0 available)
+  pigeon 27.3.0 (29.0.8 available)
+  platform 3.1.6 (3.2.0 available)
+  pool 1.5.2 (1.5.3 available)
+  process 5.0.5 (5.0.6 available)
+  protobuf 6.0.0 (6.1.0 available)
+  pub_semver 2.2.0 (2.2.1 available)
+  pubspec_parse 1.5.0 (1.6.0 available)
+  quote_buffer 0.2.7 (1.1.0 available)
+  record_use 1.0.0 (1.1.1 available)
+  resource_composition 0.4.0 (0.6.0 available)
+  schemantic 0.2.3 (1.0.0 available)
+  sdp_transform 0.3.2 (0.4.0 available)
+  shared_preferences 2.5.5 (2.5.6 available)
+  shared_preferences_android 2.4.27 (2.4.28 available)
+  shared_preferences_foundation 2.5.6 (2.5.7 available)
+  source_gen 4.2.4 (4.3.0 available)
+  source_maps 0.10.13 (0.10.14 available)
+  stack_trace 1.12.1 (1.12.2 available)
+  stream_transform 2.1.1 (2.1.2 available)
+  synchronized 3.4.1+2 (3.4.2 available)
+  test 1.31.2 (1.33.0 available)
+! test_api 0.7.13 (overridden) (0.7.15 available)
+  test_core 0.6.19 (0.6.21 available)
+  url_launcher 6.3.2 (6.3.3 available)
+  url_launcher_android 6.3.32 (6.3.33 available)
+  url_launcher_ios 6.4.1 (6.4.2 available)
+  url_launcher_linux 3.2.2 (3.2.3 available)
+  url_launcher_macos 3.2.5 (3.2.6 available)
+  url_launcher_windows 3.1.5 (3.1.6 available)
+  vector_math 2.4.2 (2.4.3 available)
+  webdriver 3.1.0 (3.2.0 available)
+  whisper_ggml 2.6.0 (2.8.0 available)
+  xml 6.6.1 (7.1.0 available)
+  yaml 3.1.3 (3.1.4 available)
+  yandex_mobileads 8.3.0 (8.6.0 available)
+Got dependencies in `/Users/antonio/xs/storage_problem/dart_flutter_packages`!
+116 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+Resolving dependencies in `../../pkgs/rustore_billing_api/example`...
+Downloading packages...
+Got dependencies in `../../pkgs/rustore_billing_api/example`.
+Resolving dependencies in `../../pkgs/xsoulspace_inference_flutter/example`...
+Downloading packages...
+Got dependencies in `../../pkgs/xsoulspace_inference_flutter/example`.
+00:00 +0: loading /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_input_test.dart
+00:00 +0: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/workspace_path_policy_test.dart: same owner nested claims retain outer lease
+00:00 +1: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/workspace_path_policy_test.dart: resolves missing descendants and rejects symlink escapes
+00:00 +2: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_input_test.dart: admitted input reaches EOF with exact bytes
+00:00 +3: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_input_test.dart: admitted input reaches EOF with exact bytes
+00:02 +4: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_session_test.dart: deadline owns descendants after root exits closePipes=false
+00:02 +5: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_session_test.dart: deadline owns descendants after root exits closePipes=false
+00:03 +6: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_input_test.dart: early stdin close is a named failure even with exit zero
+00:04 +7: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_observer_test.dart: start observation permits real external tree cancellation
+00:05 +8: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_observer_test.dart: start observation permits real external tree cancellation
+00:06 +9: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_input_test.dart: blocked input drain remains deadline owned with physical root death
+00:07 +10: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_input_test.dart: blocked input drain remains deadline owned with physical root death
+00:08 +11: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_input_test.dart: blocked input drain remains deadline owned with physical root death
+00:08 +12: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_input_test.dart: blocked input drain remains deadline owned with physical root death
+00:11 +13: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_input_test.dart: blocked input drain remains deadline owned with physical root death
+00:11 +14: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_input_test.dart: blocked input drain remains deadline owned with physical root death
+00:13 +15: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_input_test.dart: blocked input drain remains deadline owned with physical root death
+00:13 +16: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_input_test.dart: blocked input drain remains deadline owned with physical root death
+00:14 +17: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_input_test.dart: blocked input drain remains deadline owned with physical root death
+00:15 +18: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/candidate_verification_test.dart: real SDK compiles and executes candidate with explicit read roots
+00:15 +19: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/candidate_verification_test.dart: real SDK compiles and executes candidate with explicit read roots
+00:16 +20: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/candidate_verification_test.dart: real SDK compiles and executes candidate with explicit read roots
+00:17 +21: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/candidate_verification_test.dart: real SDK compiles and executes candidate with explicit read roots
+00:20 +22: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/candidate_verification_test.dart: real SDK compiles and executes candidate with explicit read roots
+00:21 +23: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/candidate_verification_test.dart: real SDK compiles and executes candidate with explicit read roots
+00:21 +24: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/candidate_verification_test.dart: real SDK compiles and executes candidate with explicit read roots
+00:22 +25: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/candidate_verification_test.dart: no-fork session-leader target settles at deadline
+00:24 +26: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/candidate_verification_test.dart: Mach/AppleEvents service lookup refused without sending events
+00:27 +27: All tests passed!

@@ -1,0 +1,12 @@
+{
+  "profile": "acknowledged-provider-receipts-v1",
+  "scope": "Selected changed source/tests, not a complete dependency or release seal",
+  "files": {
+    "pkgs/universal_storage_live_apply/lib/src/live_apply_provider_receipt.dart": "34d5424e77446e3f42c82ee601b0892f2b0564d80e6a327dd4bfa929b990a4ed",
+    "pkgs/universal_storage_live_apply/lib/src/live_apply_models.dart": "9212dbb9eac8ffda090c6eb7b65a5e43046d8db6542d7822abcc799aa2fe26fb",
+    "pkgs/universal_storage_live_apply/lib/src/live_apply_transaction.dart": "1c16428b75e51f32400d612def2f113f2e8541a4b8aaaf91259e2128bbadfa97",
+    "pkgs/universal_storage_live_apply/lib/universal_storage_live_apply.dart": "edc08f8ac5ca8f101a5c919781155ee5d880958d12a646fd151bc6c7ceb149cc",
+    "pkgs/universal_storage_live_apply/test/provider_receipt_schema_test.dart": "046789ab5be3f4226c9b131a67f8234050c7b587668c76db0cedc0aeb2094ddb",
+    "pkgs/universal_storage_live_apply/test/provider_receipt_recovery_test.dart": "ffc793372a11448568bb15ad20190700163f9bd427793f8e2ad51c0a0591114a"
+  }
+}

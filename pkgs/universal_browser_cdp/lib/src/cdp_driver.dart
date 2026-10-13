@@ -6,6 +6,7 @@ import 'package:universal_automation_interface/universal_automation_interface.da
 import 'cdp_connection.dart';
 import 'cdp_discovery.dart';
 import 'cdp_page.dart';
+import 'cdp_semantic_targeting.dart';
 
 /// [AutomationDriver] over a CDP page: the observe/act/verify loop for
 /// Chromium-based browsers and webviews.
@@ -18,7 +19,11 @@ import 'cdp_page.dart';
 /// message. Action *results* are dropped by the observe/act/verify
 /// contract — a handler that wants to report state writes the surface
 /// (or a probe slot) and the caller observes.
-class CdpDriver implements AutomationDriver, AutomationActionCatalog {
+class CdpDriver
+    implements
+        AutomationDriver,
+        AutomationActionCatalog,
+        TargetedAutomationDriver {
   /// Creates a driver over an attached [CdpPage].
   CdpDriver(this._page);
 
@@ -191,96 +196,28 @@ class CdpDriver implements AutomationDriver, AutomationActionCatalog {
     );
   }
 
-  /// Resolves role/name locators to a click.
-  ///
-  /// Two resolution paths, tried per attempt with a FRESH snapshot each
-  /// time (Flutter web replaces semantics DOM nodes as the tree updates,
-  /// so a `backendDOMNodeId` can be dead the moment it is issued — the
-  /// actionability probe then reports `detached` forever):
-  ///
-  /// 1. The AX-snapshot path: match by exact role/name, resolve the
-  ///    node's `backendDOMNodeId` to actionable bounds, click the
-  ///    center. Works everywhere the AX cache is trustworthy.
-  /// 2. The live-DOM path ([CdpPage.resolveNamedRect]): find the element
-  ///    by aria-label/text content in the current DOM — Flutter web's
-  ///    `flt-semantics` included — and click its center. Last match
-  ///    wins, so a dialog's field beats page chrome.
-  ///
-  /// First match in snapshot order wins on path 1; exact name first,
-  /// then contains, on path 2 (Flutter tiles concatenate title + hint
-  /// into one accessible name).
+  /// Exact fresh targeting refuses duplicate names rather than choosing by order.
   Future<void> _clickSemantic({String? role, String? name}) async {
-    if (role == null && name == null) {
-      throw const DriverUnsupportedException(
-        'semantic click needs a role, a name, or both',
-      );
-    }
-    Object? lastError;
-    for (var attempt = 1; attempt <= 3; attempt++) {
-      try {
-        final snapshot = await _page.accessibilitySnapshot();
-        AxNode? match;
-        for (final node in snapshot.nodes) {
-          final roleOk = role == null || node.role == role;
-          final nameOk = name == null || node.name == name;
-          if (roleOk && nameOk) {
-            match = node;
-            break;
-          }
-        }
-        if (match != null) {
-          final backendNodeId = int.tryParse(
-            match.attributes['cdp.backendDOMNodeId'] ?? '',
-          );
-          if (backendNodeId != null) {
-            final bounds = await _page.resolveNodeRect(backendNodeId);
-            await _page.clickAt(bounds.center.$1, bounds.center.$2);
-            return;
-          }
-        }
-      } on ProtocolException catch (error) {
-        // Stale backend id / not actionable — fall through to the
-        // live-DOM path with a fresh snapshot next attempt.
-        lastError = error;
+    try {
+      await clickTarget(SemanticTarget(role: role, name: name));
+    } on TargetResolutionException catch (error) {
+      if (error.details['count'] == 0) {
+        throw ElementNotFoundException(
+          name == null ? 'role' : 'name',
+          name ?? role ?? '',
+        );
       }
-      if (name != null) {
-        try {
-          final bounds = await _page.resolveNamedRect(
-            name,
-            role: role,
-            match: NameMatch.exact,
-          );
-          await _page.clickAt(bounds.center.$1, bounds.center.$2);
-          return;
-        } on ElementNotFoundException {
-          // Absent from the live DOM too — the target is genuinely
-          // gone; retrying cannot conjure it. Refuse with the locator
-          // named.
-          rethrow;
-        } on ProtocolException catch (error) {
-          lastError = error;
-          if (attempt < 3) {
-            try {
-              final bounds = await _page.resolveNamedRect(
-                name,
-                role: role,
-                match: NameMatch.contains,
-              );
-              await _page.clickAt(bounds.center.$1, bounds.center.$2);
-              return;
-            } on ProtocolException catch (error2) {
-              lastError = error2;
-            }
-          }
-        }
-      }
+      rethrow;
     }
-    throw ProtocolException(
-      'semantic click "$role"/"$name" never landed after 3 attempts '
-      '(last error: $lastError)',
-      details: {'role': ?role, 'name': ?name},
-    );
   }
+
+  @override
+  Future<void> clickTarget(SemanticTarget target) =>
+      CdpSemanticTargeting(_page).clickTarget(target);
+
+  @override
+  Future<void> focusTarget(SemanticTarget target) =>
+      CdpSemanticTargeting(_page).focusTarget(target);
 
   @override
   Future<Uint8List> screenshot() => _page.screenshot();

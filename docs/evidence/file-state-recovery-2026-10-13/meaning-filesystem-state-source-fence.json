@@ -1,0 +1,21 @@
+{
+  "scope": "provider+conditionalnativehelper+newtests only",
+  "files": {
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/universal_storage_filesystem/lib/src/filesystem_storage_provider.dart": "735e1e2f9c00c2df0559a4b886e067663a2a924cf1152b39b60103485038d714",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/universal_storage_filesystem/lib/src/posix_file_state_native.dart": "f3fda791c59089847b51660deb8e00124197866fc756877ff9de08b0e6da72d4",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/universal_storage_filesystem/lib/src/posix_file_state_stub.dart": "69a46ec6cf4bcf3d8986c040afabd1654e07ab0da12173ee576c9fb60624a152",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/universal_storage_filesystem/test/filesystem_file_state_test.dart": "385dc589d3e0e4ac3eeadfd5c8a19c9f22ccd49fa1cf9b779ee6dc7085b9c8cb"
+  },
+  "sdk": "/Users/antonio/fvm/default/bin/dart 3.13.4 macos_arm64",
+  "checks": {
+    "focused_analyzer": "No issues found",
+    "full_native_package_tests": "55 passed",
+    "log": "/tmp/meaning-filesystem-state-frozen-owning.log"
+  },
+  "nonclaims": [
+    "process-kill/power-loss not established by these fixture replay tests",
+    "Linux implementation source supported, actual execution macOS only",
+    "owner-unreadable modes refuse; no arbitraryall-rwx success",
+    "no ACL/owner/group/inode/timestamp/xattr preservation"
+  ]
+}

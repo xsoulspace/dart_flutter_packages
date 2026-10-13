@@ -327,6 +327,12 @@ class InferenceResponse {
         rawOutput: jsonDecodeString(json['raw_output']),
         warnings: jsonDecodeListAs(json['warnings']),
         meta: jsonDecodeMap(json['meta']),
+        toolCalls: jsonDecodeListAs<Map<String, dynamic>>(
+          json['tool_calls'],
+        ).map(ToolCall.fromJson).toList(),
+        toolResults: jsonDecodeListAs<Map<String, dynamic>>(
+          json['tool_results'],
+        ).map(ToolExecutionResult.fromJson).toList(),
         task: InferenceTask.fromJson(json['task']),
         transcript: jsonDecodeString(json['transcript']),
         normalizedTranscript: jsonDecodeString(json['normalized_transcript']),
@@ -371,6 +377,8 @@ class InferenceResponse {
       'segments': segments.map((final segment) => segment.toJson()).toList(),
     if (audioArtifact != null) 'audio_artifact': audioArtifact!.toJson(),
     'tool_results': toolResults.map((e) => e.toJson()).toList(),
+    if (toolCalls.isNotEmpty)
+      'tool_calls': toolCalls.map((e) => e.toJson()).toList(),
     'warnings': warnings,
     'meta': meta,
   };

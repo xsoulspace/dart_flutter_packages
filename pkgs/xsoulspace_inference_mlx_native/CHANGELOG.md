@@ -1,3 +1,9 @@
+## Unreleased
+
+- Add bounded prepared CLI packaging for the exact native hook's Metal closure,
+  with byte-exact SDK relocation qualification and a no-model identity probe.
+- Normalize registry-bound Qwen calls into typed calls; render projected context through the core codec; refuse unqualified LFM tool syntax.
+
 # Changelog
 
 ## 0.1.1 (2026-10-11)

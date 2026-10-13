@@ -11,12 +11,12 @@
 /// family needed it.
 ///
 /// Conversion notes:
-/// - Objects get `additionalProperties: false` and every property listed in
-///   `required` — strict modes reject schemas without both.
-/// - Optional properties are still listed as required but typed to allow
-///   null via anyOf with `{"type": "null"}` where representNilExplicitly is
-///   set; smaller models handle plain-required more reliably, so optionality
-///   degrades to required-with-null.
+/// - Objects get `additionalProperties: false`; mandatory properties are listed
+///   in `required`, while optional properties may be omitted or null.
+/// - This inline subset does not fully encode primitive guides or
+///   `representNilExplicitly`. References must be resolved by the caller.
+/// - Wire providers requiring all properties in `required` must explicitly
+///   choose a compatible non-strict policy or another admitted schema profile.
 library;
 
 import 'foundation_schema.dart';
@@ -32,8 +32,7 @@ Map<String, dynamic> schemaToJsonSchema(final Schema schema) => switch (schema) 
     final required = <String>[];
     for (final p in o.properties) {
       var propSchema = schemaToJsonSchema(p.schema);
-      // Optional properties stay out of `required` but are typed to allow
-      // null so strict mode accepts their absence.
+      // Optional properties stay out of `required` and also permit null.
       if (p.isOptional && p.schema is! NullSchema) {
         propSchema = {
           'anyOf': [

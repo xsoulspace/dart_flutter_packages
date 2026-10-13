@@ -1,0 +1,26 @@
+## 0.1.0-dev.1
+
+- Reconcile indexed final streamed items against completed response output;
+  preserve final reasoning/call artifacts when the terminal array is empty.
+  Refuse conflicts, gaps and explicit noncompleted items before proposals.
+  Serialize package controls without widening physical deadlines.
+
+- Optional settled decision receipts distinguish streamed, terminal wire and
+  parsed output through counts and numeric usage; observer exceptions cannot
+  alter inference, and receipts carry no content, arguments, IDs or credentials.
+
+- Convert core schema bundles into wire JSON Schema, preserve optional fields
+  with explicit non-strict schemas, validate supported output constructs locally,
+  and refuse unresolved references before dispatch. Bound and redact HTTP error
+  diagnostics to numeric status and fixed category/parameter families.
+
+- Native SIWC browser PKCE, signed OIDC identity validation, account-specific
+  protected-storage seam, rotating refresh coalescing and revocation reporting.
+- Native stateless Responses HTTP/SSE provider, account model catalog, namespaced
+  tool definitions, correlated continuation codec and terminal usage receipts.
+- Explicit unsupported controls, response bounds, cancellation and physical
+  settlement. Contract controls do not establish live subscription eligibility.
+- Optional durable protected-store mutation fencing before token exchange/rotation;
+  interrupted state cannot regain inference authority through auth-owner restart.
+- Durable cancellation acknowledgment, guarded commit/rollback and persistent
+  remote-cleanup uncertainty; failed recovery cannot expose abandoned tokens.

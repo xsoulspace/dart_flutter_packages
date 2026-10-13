@@ -1,0 +1,50 @@
+Got dependencies in `/Users/antonio/xs/storage_problem/dart_flutter_packages`!
+116 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+Resolving dependencies in `../../pkgs/rustore_billing_api/example`...
+Downloading packages...
+Got dependencies in `../../pkgs/rustore_billing_api/example`.
+Resolving dependencies in `../../pkgs/xsoulspace_inference_flutter/example`...
+Downloading packages...
+Got dependencies in `../../pkgs/xsoulspace_inference_flutter/example`.
+00:00 +0: loading /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_input_test.dart
+00:00 +0: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_input_test.dart: admitted input reaches EOF with exact bytes
+00:00 +1: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_input_test.dart: oversized input refuses before starting process
+00:00 +2: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_input_test.dart: early stdin close is a named failure even with exit zero
+00:00 +3: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_input_test.dart: early stdin close is a named failure even with exit zero
+00:00 +4: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_input_test.dart: early stdin close is a named failure even with exit zero
+00:00 +5: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_input_test.dart: early stdin close is a named failure even with exit zero
+00:00 +6: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_input_test.dart: early stdin close is a named failure even with exit zero
+00:00 +7: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_input_test.dart: early stdin close is a named failure even with exit zero
+00:01 +8: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_input_test.dart: early stdin close is a named failure even with exit zero
+00:01 +9: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_input_test.dart: early stdin close is a named failure even with exit zero
+00:01 +10: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_input_test.dart: early stdin close is a named failure even with exit zero
+00:01 +11: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_input_test.dart: early stdin close is a named failure even with exit zero
+00:01 +12: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_observer_test.dart: observer failure preserves deadline ownership async=true
+00:01 +13: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_session_test.dart: external cancellation after root exit preserves unrelated process
+00:01 +14: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/candidate_verification_test.dart: pre-existing hardlink refuses before executing candidate
+00:01 +15: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_input_test.dart: blocked input drain remains deadline owned with physical root death
+00:01 +16: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_input_test.dart: blocked input drain remains deadline owned with physical root death
+00:01 +17: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_input_test.dart: blocked input drain remains deadline owned with physical root death
+00:01 +17 -1: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/candidate_verification_test.dart: real SDK compiles and executes candidate with explicit read roots
+00:01 +17 -1: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_input_test.dart: blocked input drain remains deadline owned with physical root death [E]
+  Expected: contains 'admitted stdin'
+    Actual: <null>
+     Which: is not a string, map or iterable
+  
+  package:matcher                            expect
+  test/bounded_process_input_test.dart 66:7  main.<fn>
+  
+00:02 +18 -1: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/candidate_verification_test.dart: real SDK compiles and executes candidate with explicit read roots
+00:02 +19 -1: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/candidate_verification_test.dart: real SDK compiles and executes candidate with explicit read roots
+00:02 +20 -1: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_test.dart: runBounded deadline kill: ZERO survivors — every signaled pid verified dead via kill -0
+00:03 +21 -1: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/candidate_verification_test.dart: no-fork session-leader target settles at deadline
+00:03 +22 -1: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_test.dart: runBounded a SIGTERM-ignoring child still dies: the KILL rung escalates
+00:03 +23 -1: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_test.dart: runBounded a SIGTERM-ignoring child still dies: the KILL rung escalates
+00:04 +24 -1: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_test.dart: runBounded spawn failure is named data, never a thrown error
+00:04 +25 -1: /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_test.dart: stopProcessTree kills a spawned child-and-grandchild tree and verifies death
+00:04 +26 -1: Some tests failed.
+
+Failing tests:
+  /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_tooling_runtime/test/bounded_process_input_test.dart: blocked input drain remains deadline owned with physical root death
+error: recipe `check` failed with exit code 1

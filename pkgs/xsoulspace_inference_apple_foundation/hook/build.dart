@@ -62,17 +62,15 @@ void main(List<String> args) async {
     final staleCandidate = Directory('.dart_tool/lib');
     if (staleCandidate.existsSync()) {
       try {
-        File(libPath).copy(
-          '${staleCandidate.path}/libxs_fm_bridge.dylib',
-        );
+        File(libPath).copy('${staleCandidate.path}/libxs_fm_bridge.dylib');
       } on Object catch (e) {
         stderr.writeln('[xs_fm hook] stale-candidate refresh skipped: $e');
       }
     }
 
     output.dependencies.addAll([
-      Uri.file('bridge/src/bridge.swift'),
-      Uri.file('bridge/src/DartSchemaMaterializer.swift'),
+      input.packageRoot.resolve('bridge/src/bridge.swift'),
+      input.packageRoot.resolve('bridge/src/DartSchemaMaterializer.swift'),
     ]);
     output.assets.code.add(
       CodeAsset(

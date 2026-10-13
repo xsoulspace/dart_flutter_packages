@@ -36,6 +36,28 @@ void main() {
       await runtime.dispose();
     });
 
+    for (final status in [401, 404, 500]) {
+      test(
+        'attach refuses an answering error health route ($status)',
+        () async {
+          var spawns = 0;
+          final runtime = LocalServeRuntime(
+            healthEndpoint: Uri.parse('http://127.0.0.1:8000/health'),
+            executable: 'some-serve',
+            httpClient: MockClient((_) async => http.Response('error', status)),
+            processStarter: (_, _, _) async {
+              spawns++;
+              throw StateError('attach must not spawn');
+            },
+          );
+          expect(await runtime.ensureRunning(), isFalse);
+          expect(runtime.status.$1, LocalServeState.unavailable);
+          expect(spawns, 0);
+          await runtime.dispose();
+        },
+      );
+    }
+
     test('attach mode: health miss records unavailable, no process', () async {
       final runtime = LocalServeRuntime(
         healthEndpoint: Uri.parse('http://127.0.0.1:8000/health'),
@@ -150,12 +172,23 @@ void main() {
   });
 
   group('LocalHealthProbe', () {
-    test('answering status below 500 counts as alive', () async {
+    for (final status in [200, 204, 401, 500]) {
+      test('health status $status has honest readiness', () async {
+        final probe = LocalHealthProbe(
+          endpoint: Uri.parse('http://127.0.0.1:8000/health'),
+          httpClient: MockClient((_) async => http.Response('', status)),
+        );
+        expect(await probe.ping(), status < 300);
+        await probe.dispose();
+      });
+    }
+
+    test('a missing health route does not prove readiness', () async {
       final probe = LocalHealthProbe(
         endpoint: Uri.parse('http://127.0.0.1:8000/health'),
         httpClient: MockClient((_) async => http.Response('not found', 404)),
       );
-      expect(await probe.ping(), isTrue);
+      expect(await probe.ping(), isFalse);
       await probe.dispose();
     });
 

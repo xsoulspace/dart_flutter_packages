@@ -878,8 +878,10 @@ List<AxNode> _buildTree(List<Map<String, Object?>> raw) {
         (node['role'] as Map<String, Object?>?)?['value'] as String? ??
         'generic';
     final name = (node['name'] as Map<String, Object?>?)?['value'] as String?;
+    // Chromium reports slider values as numbers, not only strings. The
+    // shared semantic model stores display values as text across transports.
     final value =
-        (node['value'] as Map<String, Object?>?)?['value'] as String?;
+        (node['value'] as Map<String, Object?>?)?['value']?.toString();
     final boundsJson = node['bounds'] as Map<String, Object?>?;
     final children = [
       for (final childId in childIds) ...build(childId),
@@ -899,6 +901,12 @@ List<AxNode> _buildTree(List<Map<String, Object?>> raw) {
                 height: (boundsJson['height']! as num).toDouble(),
               ),
         attributes: {
+          for (final property in
+              (node['properties'] as List<Object?>? ?? const [])
+                  .whereType<Map<String, Object?>>())
+            if (property['name'] is String && property['value'] is Map)
+              property['name']! as String:
+                  ((property['value']! as Map)['value'])?.toString() ?? '',
           // The semantic-locator handle: resolves to a DOM node for
           // coordinate dispatch (see `CdpPage.resolveNodeRect`).
           if (backendNodeId is int)

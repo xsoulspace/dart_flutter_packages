@@ -3,6 +3,7 @@ library;
 
 export 'src/exceptions.dart';
 export 'src/models/models.dart';
+export 'src/storage_file_state.dart';
 export 'src/storage_kernel_contracts.dart';
 export 'src/storage_service.dart';
 export 'src/storage_service_contracts.dart';

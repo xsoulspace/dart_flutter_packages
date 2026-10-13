@@ -32,5 +32,8 @@ dependencies:
     path: ../xsoulspace_inference_local_serve
 
 dev_dependencies:
+  crypto: ^3.0.7
   lints: ^6.1.0
   test: ^1.31.2
+  xsoulspace_tooling_runtime:
+    path: ../xsoulspace_tooling_runtime

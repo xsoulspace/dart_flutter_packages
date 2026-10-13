@@ -35,6 +35,20 @@ class _FaultProvider extends MemoryStorageProvider {
   }
 }
 
+// flutter test runs inside flutter_tester, which cannot launch a Dart script.
+// Resolve the Dart VM from that same SDK; direct dart test already uses it.
+String _dartExecutable() {
+  final executable = File(Platform.resolvedExecutable);
+  if (!executable.path.contains('flutter_tester')) return executable.path;
+  var directory = executable.parent;
+  for (var depth = 0; depth < 6; depth++) {
+    final dart = File('${directory.path}/dart-sdk/bin/dart');
+    if (dart.existsSync()) return dart.path;
+    directory = directory.parent;
+  }
+  throw StateError('cannot locate Dart VM beside Flutter test runner');
+}
+
 void main() {
   late Directory tmp;
   late _FaultProvider inner;
@@ -182,7 +196,7 @@ void main() {
     expect(inner.files['a'], 'éé');
   });
 
-  for (final mode in ['write', 'inverse', 'lock']) {
+  for (final mode in ['write', 'inverse', 'lock', 'delete', 'delete_inverse']) {
     test(
       'actual process termination at $mode boundary',
       () async {
@@ -192,7 +206,9 @@ void main() {
           FileSystemConfig(filePathConfig: FilePathConfig({'path': data})),
         );
         await fs.createFile('a', 'original');
-        final child = await Process.start(Platform.resolvedExecutable, [
+        final permission = await Process.run('/bin/chmod', ['0600', '$data/a']);
+        expect(permission.exitCode, 0);
+        final child = await Process.start(_dartExecutable(), [
           '--packages=../../.dart_tool/package_config.json',
           'test/support/recovery_worker.dart',
           mode,
@@ -221,12 +237,24 @@ void main() {
             isNot(0),
           );
           if (mode != 'lock') {
-            await (await LiveApplyTransaction.reopen(
-              fs,
-              store,
+            // exec preserves a single owned PID; a different umask must not
+            // replace recorded private modes with the new process default.
+            final resumed = await Process.run('/bin/sh', [
+              '-c',
+              'umask 077\nexec "\$@"',
+              'file-state-recovery',
+              _dartExecutable(),
+              '--packages=../../.dart_tool/package_config.json',
+              'test/support/recovery_worker.dart',
+              'restore',
+              data,
+              store.storePath,
               runId,
-            )).rollback();
+            ]);
+            expect(resumed.exitCode, 0, reason: '${resumed.stderr}');
+            expect('${resumed.stdout}'.trim(), '384');
             expect(await fs.getFile('a'), 'original');
+            expect((await fs.readFileState('a')).mode, 0x180);
           } else {
             await (await LiveApplyTransaction.begin(fs, store)).commit();
           }

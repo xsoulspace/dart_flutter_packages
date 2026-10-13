@@ -1,0 +1,8 @@
+00:00 +0: loading pkgs/universal_storage_filesystem/test/filesystem_file_state_process_test.dart
+00:00 +0: actual SIGKILL FileSystemWriteBoundary.stagedPrivateBytes declared384
+00:00 +1: actual SIGKILL FileSystemWriteBoundary.prepared declared384
+00:00 +2: actual SIGKILL FileSystemWriteBoundary.published declared384
+00:01 +3: actual SIGKILL FileSystemWriteBoundary.stagedPrivateBytes declared420
+00:01 +4: actual SIGKILL FileSystemWriteBoundary.prepared declared420
+00:02 +5: actual SIGKILL FileSystemWriteBoundary.published declared420
+00:02 +6: All tests passed!

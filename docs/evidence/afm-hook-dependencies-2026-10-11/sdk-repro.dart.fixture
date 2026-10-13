@@ -1,0 +1,39 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:file/local.dart';
+import 'file:///Users/antonio/.pub-cache/hosted/pub.dev/hooks_runner-1.5.0/lib/src/dependencies_hash_file/dependencies_hash_file.dart';
+
+Future<void> main() async {
+  const consumer = '/Users/antonio/xs/ecsai_harness';
+  final root = Uri.directory('/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_apple_foundation');
+  final relative = ['bridge/src/bridge.swift', 'bridge/src/DartSchemaMaterializer.swift'].map(Uri.file).toList();
+  final absolute = relative.map((u) => root.resolveUri(u)).toList();
+  final fs = LocalFileSystem()..currentDirectory = consumer;
+  final temp = await Directory.systemTemp.createTemp('meaning_hook_dependency_repro_');
+  final cutoff = DateTime.now();
+  await Future<void>.delayed(const Duration(milliseconds: 10));
+  for (var i = 0; i < relative.length; i++) {
+    if (fs.file(relative[i]).existsSync()) throw StateError('relative input unexpectedly exists');
+    if (!fs.file(absolute[i]).existsSync()) throw StateError('real provider source missing');
+    if (!fs.file(absolute[i]).lastModifiedSync().isBefore(cutoff)) throw StateError('source not settled before cutoff');
+  }
+  final redPath = temp.uri.resolve('relative.json');
+  final greenPath = temp.uri.resolve('absolute.json');
+  final red = await DependenciesHashFile(fs, fileUri: redPath).updateHashes(relative, cutoff, {});
+  final green = await DependenciesHashFile(fs, fileUri: greenPath).updateHashes(absolute, cutoff, {});
+  final redJson = jsonDecode(File.fromUri(redPath).readAsStringSync()) as Map;
+  final greenJson = jsonDecode(File.fromUri(greenPath).readAsStringSync()) as Map;
+  if (red == null || green != null) throw StateError('wrong modification diagnosis');
+  if (!(redJson['file_system'] as List).every((e) => e['hash'] == 1)) throw StateError('missing relative deps were not marked modified');
+  if (!(greenJson['file_system'] as List).every((e) => e['hash'] != 0 && e['hash'] != 1)) throw StateError('absolute deps not content hashed');
+  print(const JsonEncoder.withIndent('  ').convert({
+    'consumer': consumer,
+    'cutoff': cutoff.toIso8601String(),
+    'relative_modified': red.toString(),
+    'absolute_modified': green?.toString(),
+    'relative': redJson,
+    'absolute': greenJson,
+    'temporary_receipts': temp.path,
+    'result': 'relative missing inputs deterministically mark modified; package-root absolute inputs are stable content hashes',
+  }));
+}

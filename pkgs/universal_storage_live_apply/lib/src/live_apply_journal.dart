@@ -7,13 +7,11 @@ import 'package:universal_io/io.dart';
 import 'live_apply_exceptions.dart';
 import 'live_apply_models.dart';
 
+export 'live_apply_models.dart' show liveApplyDeletedSha256;
+
 /// SHA-256 (hex) of UTF-8 [content].
 String liveApplySha256(final String content) =>
     crypto.sha256.convert(utf8.encode(content)).toString();
-
-/// Legacy placeholder hash; schema v2 uses explicit presence for deletions.
-const String liveApplyDeletedSha256 =
-    'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
 
 /// On-disk store for run journals: `<storePath>/undo/<runId>/journal.json`.
 ///

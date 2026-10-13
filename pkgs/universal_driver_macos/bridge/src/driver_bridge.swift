@@ -876,11 +876,12 @@ private func appDict(_ app: NSRunningApplication) -> [String: Any] {
 private func runningRegularApps() -> [NSRunningApplication] {
     ensureAppRegistered()
     return NSWorkspace.shared.runningApplications.filter {
-        $0.activationPolicy == .regular
+        $0.activationPolicy == .regular || $0.activationPolicy == .accessory
     }
 }
 
-/// Serializes the running regular (Dock-able) applications to JSON:
+/// Serializes GUI applications, including nonactivating accessory panels.
+/// Prohibited/background-only processes remain excluded.
 /// `[{pid, bundleId, name, active, hidden}, ...]`.
 @_cdecl("xs_axdrv_apps_json")
 public func xs_axdrv_apps_json(

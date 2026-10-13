@@ -8,3 +8,4 @@
 library;
 
 export 'src/acp_inference_client.dart';
+export 'src/acp_session_persistence.dart';

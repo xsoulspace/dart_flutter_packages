@@ -3,6 +3,7 @@ export 'package:ecsly_app/ecsly_app.dart';
 
 export 'src/config/env_config.dart';
 export 'src/decision/decision.dart';
+export 'src/inference_cancellation.dart';
 export 'src/inference_client.dart';
 export 'src/inference_parallel_io.dart'
     if (dart.library.js_interop) 'src/inference_parallel_stub.dart';
@@ -19,5 +20,6 @@ export 'src/models/model_catalog.dart';
 export 'src/models/prompt_builder.dart';
 export 'src/models/situation_messages_codec.dart';
 export 'src/structured_output/structured_output.dart';
+export 'src/tools/tool_call_syntax.dart';
 export 'src/tools/tool_contracts.dart';
 export 'src/tools/tool_registry.dart';

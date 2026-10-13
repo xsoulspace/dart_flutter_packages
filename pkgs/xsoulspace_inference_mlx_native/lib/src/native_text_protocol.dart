@@ -1,0 +1,103 @@
+import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
+
+/// Reconstruct only the request's already-projected cut. Explicit messages
+/// remain authoritative, so no second transcript or hidden world read exists.
+List<ChatMessage> nativeTextMessages(final InferenceRequest request) =>
+    request.messages.isNotEmpty
+    ? request.messages
+    : SituationMessagesCodec.render(
+        prompt: request.prompt,
+        systemPrompt: request.systemPrompt,
+        fragments: request.contextFragments,
+      ).map(ChatMessage.fromJson).toList();
+
+final class NativeTextToolOutput {
+  const NativeTextToolOutput({this.calls = const [], this.sources = const []});
+  final List<ToolCall> calls;
+  final List<Map<String, Object>> sources;
+}
+
+InferenceResult<NativeTextToolOutput> normalizeNativeTextCalls({
+  required final String text,
+  required final ToolCallSyntax? syntax,
+  required final ToolRegistry? registry,
+  final bool thinkingPrefilled = false,
+}) {
+  var answer = text;
+  // The Qwen renderer, not raw substring guessing, declares an open thought
+  // in its generation prompt. Mask it without shifting original source spans.
+  if (thinkingPrefilled && !text.trimLeft().startsWith('<think>')) {
+    final close = text.indexOf('</think>');
+    if (close < 0) {
+      return InferenceResult.fail(
+        code: 'tool_thinking_truncated',
+        message: 'The checkpoint did not close its declared thinking region',
+      );
+    }
+    final end = close + '</think>'.length;
+    answer = '${' ' * end}${text.substring(end)}';
+  }
+  if (syntax == null) {
+    if (answer.contains('<|tool_call_start|>') ||
+        answer.contains('<tool_call>')) {
+      return InferenceResult.fail(
+        code: 'tool_syntax_unsupported',
+        message: 'This checkpoint has no qualified tool-call syntax profile',
+      );
+    }
+    return InferenceResult.ok(const NativeTextToolOutput());
+  }
+  final parsed = syntax.parse(
+    answer,
+    registry: registry,
+    requireRegistry: true,
+  );
+  if (!parsed.success) {
+    return InferenceResult.fail(
+      code: parsed.errorCode!,
+      message: 'Native output does not satisfy ${syntax.id}',
+      details: {'syntax': syntax.id, 'offset': parsed.errorOffset},
+    );
+  }
+  return InferenceResult.ok(
+    NativeTextToolOutput(
+      calls: parsed.calls,
+      sources: [
+        for (final node in parsed.nodes)
+          if (node.call != null)
+            {
+              'syntax': syntax.id,
+              'start': node.start,
+              'end': node.end,
+              'raw': node.raw,
+            },
+      ],
+    ),
+  );
+}
+
+/// A parser refusal remains a failure. Counters come from the native SDK's
+/// completion token arrays, never from estimating raw text or error messages.
+InferenceResult<InferenceResponse> nativeTextNormalizationRefusal({
+  required final InferenceResult<NativeTextToolOutput> normalized,
+  required final String rawOutput,
+  required final int promptTokens,
+  required final int completionTokens,
+}) {
+  if (normalized.success || normalized.error == null) {
+    throw ArgumentError('A normalization refusal is required');
+  }
+  final error = normalized.error!;
+  return InferenceResult.fail(
+    code: error.code,
+    message: error.message,
+    details: {
+      'protocol_error': error.details,
+      'raw_output': rawOutput,
+      'usage': {
+        'prompt_tokens': promptTokens,
+        'completion_tokens': completionTokens,
+      },
+    },
+  );
+}

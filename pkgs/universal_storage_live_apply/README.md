@@ -95,6 +95,46 @@ exceptions and append behavior remain with the provider.
 
 `markApplied` retains undo; `commit` explicitly finalizes and prunes it. Pending
 or interrupted inverse work cannot finalize. Stale handles reload durable state
-before dispatch. Multi-file rollback can be visible incrementally to readers;
+before dispatch. Hosts that verify after writing use `commit(requireApplied: true)`
+to refuse finalization before the durable applied state under the same store lock.
+The default preserves callers that finalize completed open work directly.
+Multi-file rollback can be visible incrementally to readers;
 it is restartable, not an atomic visibility transaction. See
 [ADR 0062](../../docs/decisions/0062_live_apply_write_ahead_recovery.md).
+
+## Permission-aware native recovery (journal v3)
+
+Providers with the optional `StorageFileStatePort` declare a supported profile.
+New qualified runs record prior, intended post and pending-pre modes alongside
+presence/content hashes. Drift checks, settlement and inverse preflight compare
+the complete declared state. The native POSIX provider restores bytes and mode
+through its existing atomic publication, including private 0600 files.
+
+Missing or incompatible capabilities refuse before effects. A metadata-aware
+provider also refuses a legacy journal whose historical modes are missing;
+it never guesses them from the current filesystem. Byte-only providers keep
+their original v1/v2 compatibility. Existing journals are retained, not rewritten
+or silently upgraded. See [ADR 0068](../../docs/decisions/0068_file_state_live_apply_recovery.md).
+
+The initial profile covers POSIX rwx bits for readable regular files. It does
+not preserve ACLs, ownership, timestamps, inode identity or arbitrary binary
+effects. A complete batch can still be visible incrementally, and these
+process-restart controls make no hardware power-loss claim.
+
+### Native operation observations
+
+Profile-qualified v3 entries optionally retain ordered `provider_receipts` from
+actual returned provider results. Each selects the durability protocol, namespace,
+sequence, operation ID and checkpoint sequence; the enclosing run/path and native
+forward/inverse phase provide correlation. Arbitrary metadata is not persisted.
+Legacy journals strip this unqualified extension. Each path permits 1024 receipts;
+forward admission reserves one slot for the inverse and refuses before another
+effect when capacity is exhausted.
+
+These are post-effect observations, not grants, custody authentication or
+write-ahead authorization. Missing or thrown results produce no invented receipt;
+malformed advertised metadata leaves the durable pending state recoverable. A
+crash or drift before the outer checkpoint can lose a returned receipt. Recognizing
+already-restored source after restart does not imply a new provider operation.
+Ordered IDs do not retain every intermediate source image, and a checkpoint may
+truncate native rows. Independent custody observation remains necessary.

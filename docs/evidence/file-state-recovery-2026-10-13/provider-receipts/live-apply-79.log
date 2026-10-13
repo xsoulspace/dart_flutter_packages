@@ -1,0 +1,81 @@
+00:00 +0: loading test/native_file_state_recovery_test.dart
+00:00 +0: test/native_file_state_recovery_test.dart: native deletion and fresh-owner Undo restores 0600
+00:00 +1: test/native_file_state_recovery_test.dart: native deletion and fresh-owner Undo restores 0600
+00:00 +2: test/native_file_state_recovery_test.dart: native deletion and fresh-owner Undo restores 0600
+00:00 +3: test/native_file_state_recovery_test.dart: native deletion and fresh-owner Undo restores 0600
+00:00 +4: test/native_file_state_recovery_test.dart: native deletion and fresh-owner Undo restores 0600
+00:00 +5: test/native_file_state_recovery_test.dart: native deletion and fresh-owner Undo restores 0600
+00:00 +6: test/file_state_recovery_test.dart: mode-only drift refuses whole footprint before inverse and finalization
+00:00 +7: test/native_file_state_recovery_test.dart: native update and Undo preserves 0600
+00:00 +8: test/native_file_state_recovery_test.dart: native update and Undo preserves 0600
+00:00 +9: test/native_file_state_recovery_test.dart: native update and Undo preserves 0600
+00:00 +10: test/file_state_recovery_test.dart: partial inverse with recorded bytes but unexplained mode refuses
+00:00 +11: test/native_file_state_recovery_test.dart: native deletion and fresh-owner Undo restores 0644
+00:00 +12: test/native_file_state_recovery_test.dart: native deletion and fresh-owner Undo restores 0644
+00:00 +13: test/native_file_state_recovery_test.dart: native deletion and fresh-owner Undo restores 0644
+00:00 +14: test/native_file_state_recovery_test.dart: native update and Undo preserves 0644
+00:00 +15: test/native_file_state_recovery_test.dart: native deletion and fresh-owner Undo restores 0755
+00:00 +16: test/native_file_state_recovery_test.dart: native update and Undo preserves 0755
+00:00 +17: test/native_file_state_recovery_test.dart: native mode-only drift blocks all inverse effects and finalization
+00:00 +18: test/journal_checkpoint_test.dart: journal fault at forward checkpoint 3 recovers
+00:00 +19: test/journal_checkpoint_test.dart: journal fault at forward checkpoint 3 recovers
+00:00 +20: test/journal_checkpoint_test.dart: journal fault at forward checkpoint 4 recovers
+00:00 +21: test/journal_checkpoint_test.dart: failed inverse completion checkpoint resumes restored content
+00:00 +22: test/journal_checkpoint_test.dart: settlement refuses drift and preserves the recovery journal
+00:00 +23: test/journal_checkpoint_test.dart: unknown journal versions and statuses refuse without deletion
+00:00 +24: test/journal_checkpoint_test.dart: failed create preserves provider exception and previous undo
+00:00 +25: test/file_state_schema_test.dart: qualified prior post and pending-pre modes round-trip as v3
+00:00 +26: test/file_state_schema_test.dart: creation deletion and absence retain explicit nullable modes
+00:00 +27: test/file_state_schema_test.dart: v3 requires declared supported profile and entries
+00:00 +28: test/file_state_schema_test.dart: v3 requires explicit post_mode and refuses malformed wire values
+00:00 +29: test/file_state_schema_test.dart: v3 requires explicit pending_pre_mode and refuses malformed wire values
+00:00 +30: test/file_state_schema_test.dart: v3 refuses missing prior permission and contradictory absence
+00:00 +31: test/file_state_schema_test.dart: malformed in-memory v3 cannot be persisted
+00:00 +32: test/file_state_schema_test.dart: legacy v2 remains content-only without guessed or extra modes
+00:00 +33: test/file_state_schema_test.dart: legacy v1 ambiguity refusal and unambiguous reading are unchanged
+00:00 +34: test/provider_receipt_recovery_test.dart: receipt capacity refuses before effects and reserves native Undo
+00:00 +35: test/provider_receipt_recovery_test.dart: receipt capacity refuses before effects and reserves native Undo
+00:00 +36: test/provider_receipt_recovery_test.dart: receipt capacity refuses before effects and reserves native Undo
+00:00 +37: test/provider_receipt_recovery_test.dart: receipt capacity refuses before effects and reserves native Undo
+00:00 +38: test/provider_receipt_recovery_test.dart: receipt capacity refuses before effects and reserves native Undo
+00:00 +39: test/live_apply_recovery_test.dart: interrupted inverse resumes without treating restoration as drift
+00:00 +40: test/provider_receipt_recovery_test.dart: native repeated effects and inverse retain actual IDs under each run
+00:00 +41: test/provider_receipt_recovery_test.dart: throw after publication leaves no invented receipt on recovery
+00:00 +42: test/provider_receipt_recovery_test.dart: malformed advertised metadata preserves pending recovery state
+00:00 +43: test/recovery_qualification_test.dart: pending pre-state recovers a failure before effect
+00:00 +44: test/recovery_qualification_test.dart: pending unexplained drift refuses every inverse write
+00:00 +45: test/provider_receipt_schema_test.dart: native selected metadata preserves repeated forward and inverse order
+00:00 +46: test/provider_receipt_schema_test.dart: native selected metadata preserves repeated forward and inverse order
+00:00 +47: test/provider_receipt_schema_test.dart: native selected metadata preserves repeated forward and inverse order
+00:00 +48: test/recovery_qualification_test.dart: overlapping store instances refuse a second writer
+00:00 +49: test/recovery_qualification_test.dart: overlapping store instances refuse a second writer
+00:00 +50: test/provider_receipt_schema_test.dart: partial malformed advertised receipts refuse rather than invent fields
+00:00 +51: test/recovery_qualification_test.dart: legacy ambiguous journal is retained and refuses
+00:00 +52: test/recovery_qualification_test.dart: legacy ambiguous journal is retained and refuses
+00:00 +53: test/recovery_qualification_test.dart: legacy ambiguous journal is retained and refuses
+00:00 +54: test/provider_receipt_schema_test.dart: bounded v3 history refuses oversized or non-list wire data
+00:00 +55: test/provider_receipt_schema_test.dart: bounded v3 history refuses oversized or non-list wire data
+00:00 +56: test/provider_receipt_schema_test.dart: bounded v3 history refuses oversized or non-list wire data
+00:00 +57: test/recovery_qualification_test.dart: actual process termination at write boundary
+00:00 +58: test/recovery_qualification_test.dart: actual process termination at write boundary
+00:00 +59: test/recovery_qualification_test.dart: actual process termination at write boundary
+00:00 +60: test/recovery_qualification_test.dart: actual process termination at write boundary
+00:00 +61: test/recovery_qualification_test.dart: actual process termination at write boundary
+00:00 +62: test/recovery_qualification_test.dart: actual process termination at write boundary
+00:00 +63: test/recovery_qualification_test.dart: actual process termination at write boundary
+00:00 +64: test/recovery_qualification_test.dart: actual process termination at write boundary
+00:00 +65: test/recovery_qualification_test.dart: actual process termination at write boundary
+00:00 +66: test/recovery_qualification_test.dart: actual process termination at write boundary
+00:01 +67: test/recovery_qualification_test.dart: actual process termination at write boundary
+00:01 +68: test/recovery_qualification_test.dart: actual process termination at write boundary
+00:01 +69: test/recovery_qualification_test.dart: actual process termination at write boundary
+00:01 +70: test/recovery_qualification_test.dart: actual process termination at write boundary
+00:01 +71: test/recovery_qualification_test.dart: actual process termination at write boundary
+00:01 +72: test/recovery_qualification_test.dart: actual process termination at write boundary
+00:01 +73: test/recovery_qualification_test.dart: actual process termination at write boundary
+00:01 +74: test/recovery_qualification_test.dart: actual process termination at write boundary
+00:01 +75: test/recovery_qualification_test.dart: actual process termination at inverse boundary
+00:02 +76: test/recovery_qualification_test.dart: actual process termination at lock boundary
+00:03 +77: test/recovery_qualification_test.dart: actual process termination at delete boundary
+00:04 +78: test/recovery_qualification_test.dart: actual process termination at delete_inverse boundary
+00:05 +79: All tests passed!

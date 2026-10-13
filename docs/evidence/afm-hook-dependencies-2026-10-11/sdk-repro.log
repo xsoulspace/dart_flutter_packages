@@ -1,0 +1,34 @@
+{
+  "consumer": "/Users/antonio/xs/ecsai_harness",
+  "cutoff": "2026-10-11T22:35:14.462121",
+  "relative_modified": "bridge/src/DartSchemaMaterializer.swift",
+  "absolute_modified": null,
+  "relative": {
+    "file_system": [
+      {
+        "path": "bridge/src/bridge.swift",
+        "hash": 1
+      },
+      {
+        "path": "bridge/src/DartSchemaMaterializer.swift",
+        "hash": 1
+      }
+    ],
+    "environment": []
+  },
+  "absolute": {
+    "file_system": [
+      {
+        "path": "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_apple_foundation/bridge/src/bridge.swift",
+        "hash": 4310887539350988897
+      },
+      {
+        "path": "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_apple_foundation/bridge/src/DartSchemaMaterializer.swift",
+        "hash": 8171484602699851664
+      }
+    ],
+    "environment": []
+  },
+  "temporary_receipts": "/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/meaning_hook_dependency_repro_oPUUZw",
+  "result": "relative missing inputs deterministically mark modified; package-root absolute inputs are stable content hashes"
+}

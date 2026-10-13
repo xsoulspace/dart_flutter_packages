@@ -6,8 +6,8 @@ import 'package:http/http.dart' as http;
 /// without loading state, so it is safe to call before constructing or
 /// dispatching through a client. This is a probe, not a readiness cache:
 /// runtimes keep reporting their local snapshot, and a failed probe must
-/// not be retried blindly. Any answering status below 500 counts as alive —
-/// a 404 from a server without a health route still proves the socket is up.
+/// not be retried blindly. Only a successful health response counts as ready;
+/// an answering socket with an error response does not identify a usable server.
 final class LocalHealthProbe {
   LocalHealthProbe({
     required this.endpoint,
@@ -29,7 +29,7 @@ final class LocalHealthProbe {
             headers: const <String, String>{'accept': 'application/json'},
           )
           .timeout(timeout);
-      return response.statusCode >= 200 && response.statusCode < 500;
+      return response.statusCode >= 200 && response.statusCode < 300;
     } on Object {
       return false;
     }

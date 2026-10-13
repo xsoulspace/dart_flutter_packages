@@ -4,6 +4,7 @@ import 'laya_native_lfm2_chat_template.dart';
 import 'laya_native_lfm2_client.dart';
 import 'laya_native_qwen_chat_template.dart';
 import 'laya_native_qwen_client.dart';
+import 'native_text_protocol.dart';
 
 export 'native_text_model_names.dart';
 
@@ -26,20 +27,20 @@ String _stripEosLiteral(final String text) => text
 /// one client serve both casts, eager or lazy).
 typedef _Generate =
     Future<({List<int> promptIds, List<int> ids, String text})> Function({
-    required String prompt,
-    required int maxTokens,
-    required bool stopOnEos,
-    required List<int> eosIds,
-  });
+      required String prompt,
+      required int maxTokens,
+      required bool stopOnEos,
+      required List<int> eosIds,
+    });
 
 typedef _Render =
     String Function({
-    required String system,
-    required String user,
-    required List<ChatMessage> messages,
-    required List<Object?>? tools,
-    required bool thinking,
-  });
+      required String system,
+      required String user,
+      required List<ChatMessage> messages,
+      required List<Object?>? tools,
+      required bool thinking,
+    });
 
 /// A native text engine (Qwen3 or LFM2.5) bound as an [InferenceClient]
 /// — the unified interface every provider in the monorepo answers to
@@ -57,10 +58,12 @@ typedef _Render =
 /// [InferenceResult.warnings] instead of being silently pretended; tool
 /// rendering is a template fact — both casts render a [ToolRegistry]
 /// into their fixture-gated template (ADR 0058 tools rung), and the
-/// model's answer carries its tool call in the checkpoint's own textual
-/// format. A request-level `thinking` overrides the cast's constructor
+/// Qwen's delimited JSON answer is normalized into typed tool calls with
+/// its raw source retained. Unqualified checkpoint formats refuse explicitly.
+/// A request-level `thinking` overrides the cast's constructor
 /// default on Qwen3 and draws an honest warning on LFM2.5 (no switch);
-/// non-empty `request.messages` render as the full conversation.
+/// non-empty `request.messages` render as the full conversation; otherwise
+/// only the projected context cut is reconstructed through the core codec.
 ///
 /// Loading is a construction detail, not a lifecycle requirement: the
 /// eager factories ([loadQwen]/[loadLfm2], a passed-in engine) hold a
@@ -84,6 +87,7 @@ final class MlxNativeTextClient implements InferenceClient {
     required this.model,
     required this.defaultMaxTokens,
     required this.defaultTemperature,
+    required this.toolSyntax,
     this._loadEngine,
   });
 
@@ -96,33 +100,36 @@ final class MlxNativeTextClient implements InferenceClient {
     final String model = 'qwen3-mlx-4bit',
     final int defaultMaxTokens = 320,
     final double defaultTemperature = 0.0,
+    final ToolCallSyntax? toolSyntax = ToolCallSyntax.qwenJson,
   }) => MlxNativeTextClient._(
     id: 'mlx_native_qwen',
     eosIds: () => const <int>[151645, 151643], // <|im_end|>, <|endoftext|>
-    generate: ({
-      required final String prompt,
-      required final int maxTokens,
-      required final bool stopOnEos,
-      required final List<int> eosIds,
-    }) async {
-      final completion = await engine.generateAsync(
-        prompt: prompt,
-        maxTokens: maxTokens,
-        stopOnEos: stopOnEos,
-        eosIds: eosIds,
-      );
-      return _toRecord(
-        completion.promptIds,
-        completion.ids,
-        completion.text,
-      );
-    },
+    generate:
+        ({
+          required final String prompt,
+          required final int maxTokens,
+          required final bool stopOnEos,
+          required final List<int> eosIds,
+        }) async {
+          final completion = await engine.generateAsync(
+            prompt: prompt,
+            maxTokens: maxTokens,
+            stopOnEos: stopOnEos,
+            eosIds: eosIds,
+          );
+          return _toRecord(
+            completion.promptIds,
+            completion.ids,
+            completion.text,
+          );
+        },
     render: _qwenRender,
     hasThinkingSwitch: true,
     thinking: thinking,
     model: model,
     defaultMaxTokens: defaultMaxTokens,
     defaultTemperature: defaultTemperature,
+    toolSyntax: toolSyntax,
   );
 
   /// The LFM2.5 cast: the fixture-gated instruct template (tools render
@@ -133,33 +140,36 @@ final class MlxNativeTextClient implements InferenceClient {
     final String model = 'lfm2.5-instruct-mlx-4bit',
     final int defaultMaxTokens = 320,
     final double defaultTemperature = 0.0,
+    final ToolCallSyntax? toolSyntax,
   }) => MlxNativeTextClient._(
     id: 'mlx_native_lfm2',
     eosIds: () => engine.specialIds().chatStopIds,
-    generate: ({
-      required final String prompt,
-      required final int maxTokens,
-      required final bool stopOnEos,
-      required final List<int> eosIds,
-    }) async {
-      final completion = await engine.generateAsync(
-        prompt: prompt,
-        maxTokens: maxTokens,
-        stopOnEos: stopOnEos,
-        eosIds: eosIds,
-      );
-      return _toRecord(
-        completion.promptIds,
-        completion.ids,
-        completion.text,
-      );
-    },
+    generate:
+        ({
+          required final String prompt,
+          required final int maxTokens,
+          required final bool stopOnEos,
+          required final List<int> eosIds,
+        }) async {
+          final completion = await engine.generateAsync(
+            prompt: prompt,
+            maxTokens: maxTokens,
+            stopOnEos: stopOnEos,
+            eosIds: eosIds,
+          );
+          return _toRecord(
+            completion.promptIds,
+            completion.ids,
+            completion.text,
+          );
+        },
     render: _lfmRender,
     hasThinkingSwitch: false,
     thinking: false,
     model: model,
     defaultMaxTokens: defaultMaxTokens,
     defaultTemperature: defaultTemperature,
+    toolSyntax: toolSyntax,
   );
 
   /// The lazy Qwen3 cast: the weight load happens on the first [load]
@@ -172,6 +182,7 @@ final class MlxNativeTextClient implements InferenceClient {
     final String model = 'qwen3-mlx-4bit',
     final int defaultMaxTokens = 320,
     final double defaultTemperature = 0.0,
+    final ToolCallSyntax? toolSyntax = ToolCallSyntax.qwenJson,
   }) {
     NativeQwenTextEngine? engine;
     final client = MlxNativeTextClient._(
@@ -184,6 +195,7 @@ final class MlxNativeTextClient implements InferenceClient {
       model: model,
       defaultMaxTokens: defaultMaxTokens,
       defaultTemperature: defaultTemperature,
+      toolSyntax: toolSyntax,
       loadEngine: () async {
         engine = await NativeQwenTextEngine.load(snapshotDir: snapshotDir);
       },
@@ -204,6 +216,7 @@ final class MlxNativeTextClient implements InferenceClient {
     final String model = 'lfm2.5-instruct-mlx-4bit',
     final int defaultMaxTokens = 320,
     final double defaultTemperature = 0.0,
+    final ToolCallSyntax? toolSyntax,
   }) {
     NativeLfm2TextEngine? engine;
     final client = MlxNativeTextClient._(
@@ -216,6 +229,7 @@ final class MlxNativeTextClient implements InferenceClient {
       model: model,
       defaultMaxTokens: defaultMaxTokens,
       defaultTemperature: defaultTemperature,
+      toolSyntax: toolSyntax,
       loadEngine: () async {
         engine = await NativeLfm2TextEngine.load(snapshotDir: snapshotDir);
       },
@@ -232,45 +246,47 @@ final class MlxNativeTextClient implements InferenceClient {
   /// fills ([infer] refuses before a generate when still null).
   static _Generate _boxedQwenGenerate(
     final NativeQwenTextEngine? Function() engineBox,
-  ) => ({
-    required final String prompt,
-    required final int maxTokens,
-    required final bool stopOnEos,
-    required final List<int> eosIds,
-  }) async {
-    final engine = engineBox();
-    if (engine == null) {
-      throw StateError('native engine not loaded for this client');
-    }
-    final completion = await engine.generateAsync(
-      prompt: prompt,
-      maxTokens: maxTokens,
-      stopOnEos: stopOnEos,
-      eosIds: eosIds,
-    );
-    return _toRecord(completion.promptIds, completion.ids, completion.text);
-  };
+  ) =>
+      ({
+        required final String prompt,
+        required final int maxTokens,
+        required final bool stopOnEos,
+        required final List<int> eosIds,
+      }) async {
+        final engine = engineBox();
+        if (engine == null) {
+          throw StateError('native engine not loaded for this client');
+        }
+        final completion = await engine.generateAsync(
+          prompt: prompt,
+          maxTokens: maxTokens,
+          stopOnEos: stopOnEos,
+          eosIds: eosIds,
+        );
+        return _toRecord(completion.promptIds, completion.ids, completion.text);
+      };
 
   static _Generate _boxedLfmGenerate(
     final NativeLfm2TextEngine? Function() engineBox,
-  ) => ({
-    required final String prompt,
-    required final int maxTokens,
-    required final bool stopOnEos,
-    required final List<int> eosIds,
-  }) async {
-    final engine = engineBox();
-    if (engine == null) {
-      throw StateError('native engine not loaded for this client');
-    }
-    final completion = await engine.generateAsync(
-      prompt: prompt,
-      maxTokens: maxTokens,
-      stopOnEos: stopOnEos,
-      eosIds: eosIds,
-    );
-    return _toRecord(completion.promptIds, completion.ids, completion.text);
-  };
+  ) =>
+      ({
+        required final String prompt,
+        required final int maxTokens,
+        required final bool stopOnEos,
+        required final List<int> eosIds,
+      }) async {
+        final engine = engineBox();
+        if (engine == null) {
+          throw StateError('native engine not loaded for this client');
+        }
+        final completion = await engine.generateAsync(
+          prompt: prompt,
+          maxTokens: maxTokens,
+          stopOnEos: stopOnEos,
+          eosIds: eosIds,
+        );
+        return _toRecord(completion.promptIds, completion.ids, completion.text);
+      };
 
   /// Qwen's fixture-gated ChatML render: the request's `messages` when
   /// present, else the synthesized system+user pair.
@@ -312,8 +328,7 @@ final class MlxNativeTextClient implements InferenceClient {
             content: message.content,
           )
       else ...[
-        if (system.isNotEmpty)
-          Lfm2ChatMessage(role: 'system', content: system),
+        if (system.isNotEmpty) Lfm2ChatMessage(role: 'system', content: system),
         Lfm2ChatMessage(role: 'user', content: user),
       ],
     ],
@@ -367,6 +382,9 @@ final class MlxNativeTextClient implements InferenceClient {
   final String model;
   final int defaultMaxTokens;
   final double defaultTemperature;
+
+  /// Explicit checkpoint/finetune syntax; null refuses unqualified envelopes.
+  final ToolCallSyntax? toolSyntax;
 
   bool _disposed = false;
   bool _loaded = false;
@@ -465,9 +483,9 @@ final class MlxNativeTextClient implements InferenceClient {
     if (toolRegistry != null && toolRegistry.tools.isNotEmpty) {
       tools = toolRegistry.getToolsJsons();
     }
-    if (request.messages.any(
-      (final message) => message.role == ChatRole.tool,
-    )) {
+    final messages = nativeTextMessages(request);
+    if (!hasThinkingSwitch &&
+        messages.any((final message) => message.role == ChatRole.tool)) {
       warnings.add(
         '$id has no fixture-gated tool-result rendering; tool turns '
         'render as user turns',
@@ -480,7 +498,7 @@ final class MlxNativeTextClient implements InferenceClient {
         prompt: _render(
           system: request.systemPrompt,
           user: request.prompt,
-          messages: request.messages,
+          messages: messages,
           tools: tools,
           thinking: effectiveThinking,
         ),
@@ -495,10 +513,26 @@ final class MlxNativeTextClient implements InferenceClient {
         details: <String, Object?>{'retryable': false},
       );
     }
+    final rawOutput = _stripEosLiteral(completion.text);
+    final normalized = normalizeNativeTextCalls(
+      text: rawOutput,
+      syntax: toolSyntax,
+      registry: toolRegistry,
+      thinkingPrefilled: hasThinkingSwitch && effectiveThinking,
+    );
+    if (!normalized.success) {
+      return nativeTextNormalizationRefusal(
+        normalized: normalized,
+        rawOutput: rawOutput,
+        promptTokens: completion.promptIds.length,
+        completionTokens: completion.ids.length - completion.promptIds.length,
+      );
+    }
     return InferenceResult.ok(
       InferenceResponse(
         task: InferenceTask.text,
-        rawOutput: _stripEosLiteral(completion.text),
+        rawOutput: rawOutput,
+        toolCalls: normalized.data!.calls,
         meta: <String, dynamic>{
           'usage': <String, dynamic>{
             'prompt_tokens': completion.promptIds.length,
@@ -506,6 +540,9 @@ final class MlxNativeTextClient implements InferenceClient {
                 completion.ids.length - completion.promptIds.length,
           },
           'model': model,
+          'tool_syntax': toolSyntax?.id,
+          'tool_calls_normalized': true,
+          'tool_call_sources': normalized.data!.sources,
           'finish_reason': 'stop',
         },
       ),

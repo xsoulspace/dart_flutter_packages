@@ -131,3 +131,24 @@ await CdpBehaviorReceiptWriter(directory: '/tmp/runs').write(
   `universal_browser_webdriver`.
 - No lifecycle ownership: this package never launches or kills browsers.
 - Web (dart2js/ddc) is not a target; the client requires `dart:io`.
+
+### Fresh exact semantic targeting
+
+`CdpDriver` also implements `TargetedAutomationDriver`. `clickTarget` resolves an
+exact, unique role/name target in a fresh AX tree, optionally within ordered
+ancestor scopes. Bounds must be stable and the center must be hittable before one
+pointer dispatch. Duplicate names refuse instead of selecting the first/last or
+using substring matches. A detached DOM handle may use a fresh, exact, scoped
+live-DOM lookup; that fallback never dispatches a second click after delivery.
+
+Flutter's semantics proxy is handled narrowly: its center can hit the rendering
+surface in the same `flt-glass-pane`, including a shadow-root host. Unrelated
+occluders remain refusals; this is not a global `force` policy. `focusTarget`
+focuses one element/control and checks `document.activeElement`; it does not
+claim OS foreground focus. AX properties such as focused/disabled/checked,
+range bounds and human-readable value text are retained in `AxNode.attributes`.
+
+Decision checkpoint (2026-10-13): north-star impact **applies**. Browser ownership
+stays with the session owner (for example Oka). Effect verification composes via
+`verifyEffect` over a caller's independent state oracle; pointer transport alone
+is not application-effect evidence.

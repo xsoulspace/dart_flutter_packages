@@ -1,0 +1,6 @@
+Running build hooks...Running build hooks...00:00 +0: loading pkgs/xsoulspace_agentic_harness/test/lifecycle/bounded_process_session_test.dart
+00:00 +0: deadline owns descendants after root exits closePipes=false
+00:00 +1: deadline owns descendants after root exits closePipes=true
+00:00 +2: external cancellation after root exit preserves unrelated process
+00:01 +3: session handshake does not alter target argv or stderr
+00:01 +4: All tests passed!

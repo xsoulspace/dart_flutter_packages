@@ -1,0 +1,30 @@
+{
+  "scope": "nativefilesystem boundary cut after frozen55 baseline",
+  "files": {
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/universal_storage_filesystem/lib/src/filesystem_storage_provider.dart": "096759d858fc0e1cc4df19bdb8b9bb87519f879cc537134530d71b79162f92b9",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/universal_storage_filesystem/lib/src/posix_file_state_native.dart": "a66dcd67832e652466766c6545e77eb0cb3840bb4563e8d851129fd0bb091e20",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/universal_storage_filesystem/lib/src/posix_file_state_stub.dart": "16176a1cfbeaf46693746f7fb34db3871b75c7d826a38556d5d27246b85e7474",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/universal_storage_filesystem/test/filesystem_file_state_test.dart": "385dc589d3e0e4ac3eeadfd5c8a19c9f22ccd49fa1cf9b779ee6dc7085b9c8cb",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/universal_storage_filesystem/test/filesystem_file_state_process_test.dart": "bf6ab0ca3d44bd159be78a63f13bd453f189e596f4d162e0d3f8cd62878c9ba1",
+    "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/universal_storage_filesystem/test/support/file_state_boundary_child.dart": "eadb2ee807b2927f24154b0c51f789f7524dbfd3a9e1ca6b080b74db89094746"
+  },
+  "receipts": {
+    "/tmp/meaning-filesystem-kill-prepared-420.json": "28b939b94daf4b642787ff3c68cb25c2e4b2da6813588e7ffed57e07ebdafeb6",
+    "/tmp/meaning-filesystem-kill-published-420.json": "6ae6bf5b3286446232c3af3403ab71fca88cc7063c07fe27eb43feceb1f61875",
+    "/tmp/meaning-filesystem-kill-stagedPrivateBytes-384.json": "eaf3990752f2f74850e79e0f142c7917be2c43a328ca11d88e7cd78ca021ff56",
+    "/tmp/meaning-filesystem-kill-published-384.json": "9da745ec0b937b571124706850a20fa4c1bca71abbd00d350af770be4c833e2b",
+    "/tmp/meaning-filesystem-kill-prepared-384.json": "31bb698f46b9dfa6171ce4328aee147c8d7872821d0d76ad71e9bf6c3a6468e6",
+    "/tmp/meaning-filesystem-kill-stagedPrivateBytes-420.json": "c4f81162fbf1896421981777206d4f3df4ad65b452b4cbdd2cc9665466d17aaf"
+  },
+  "sdk": "/Users/antonio/fvm/default/bin/dart 3.13.4 macos_arm64",
+  "process_cases": 6,
+  "full_package_pass": 61,
+  "source_analyzer": "ownedsource+newtest clean",
+  "full_log": "/tmp/meaning-filesystem-boundary-frozen-owning.log",
+  "limitations": [
+    "SIGKILL is not hardware powerloss",
+    "preprepared unrecorded0600 stage retained; no invented replayauthority",
+    "existingv1 append/delete unchanged",
+    "trustednative observer only; no tool/JSONauthority"
+  ]
+}

@@ -54,6 +54,22 @@ void main() {
     expect(tx.rollback, throwsA(isA<LiveApplyRefusalException>()));
   });
 
+  test('verified-host finalize requires durable applied state', () async {
+    final tx = await LiveApplyTransaction.begin(inner, store);
+    await tx.writeFile('kept.txt', 'stays');
+    final stale = await LiveApplyTransaction.reopen(inner, store, tx.runId);
+    await expectLater(
+      stale.commit(requireApplied: true),
+      throwsA(isA<LiveApplyRefusalException>()),
+    );
+    expect((await store.read(tx.runId))!.status, LiveApplyRunStatus.open);
+    await tx.markApplied();
+    // Admission uses durable state even though this handle last observed open.
+    await stale.commit(requireApplied: true);
+    expect(await store.read(tx.runId), isNull);
+    expect(inner.files['kept.txt'], 'stays');
+  });
+
   test('rollback refuses on external drift and mutates nothing', () async {
     await inner.createFile('a.txt', 'original');
     final tx = await LiveApplyTransaction.begin(inner, store);

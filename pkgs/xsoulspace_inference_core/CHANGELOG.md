@@ -1,3 +1,19 @@
+## Unreleased
+
+- Expose `decodeJsonWithUniqueKeys` for embedded tool payloads, reusing the
+  syntax parser guard to reject nested and escaped duplicate keys.
+
+- Validate JSON-Schema `anyOf`, additional properties and array bounds. Required
+  keys now mean presence, permitting explicitly declared nullable values. Reject
+  malformed or explicit-null definitions for these supported constructs.
+
+- Preserve optional native tool call IDs/namespaces and correlated execution
+  results through `InferenceResponse` serialization. Legacy calls remain valid.
+
+- Add declarative bounded tool-call syntax composition, explicit profiles, source spans and atomic named refusals.
+- Version the Qwen profile to v2 with explicit orphan-closing-marker refusals;
+  custom envelopes can opt into the same reserved-marker diagnostic.
+
 # Changelog
 
 All notable changes to this package will be documented in this file.

@@ -1,0 +1,15 @@
+00:00 +0: loading /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_apple_foundation/test/build_hook_dependencies_test.dart
+00:00 +0: actual hook records package-root dependencies for a different consumer
+{"compiler_exit":0,"consumer":"/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/afm_hook_regression_0nxFl8/consumer","copied_package":"/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/afm_hook_regression_0nxFl8/package","dependencies":["bridge/src/bridge.swift","bridge/src/DartSchemaMaterializer.swift"],"asset":{"file":"/var/folders/xz/5m9k4kc95mdgs9l24rzs1f_40000gn/T/afm_hook_regression_0nxFl8/shared/7ad245dadc//libxs_fm_bridge.dylib","id":"package:xsoulspace_inference_apple_foundation/swift_bridge","link_mode":{"type":"dynamic_loading_bundle"}},"source_sha256":{"bridge/src/bridge.swift":"82e4a105755fbe4697239151b41d6b16e07f74898b660251152328c09400fe47","bridge/src/DartSchemaMaterializer.swift":"4874b905634c4541f5cb58c64c4e0a3f078ccb4a438e4e9bb1bc3255c8fcb37c"}}
+00:05 +0 -1: actual hook records package-root dependencies for a different consumer [E]
+  Expected: true
+    Actual: <false>
+  consumer must not reinterpret provider-relative inputs
+  
+  package:matcher                               expect
+  test/build_hook_dependencies_test.dart 119:9  main.<fn>
+  
+00:05 +0 -1: Some tests failed.
+
+Failing tests:
+  /Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/xsoulspace_inference_apple_foundation/test/build_hook_dependencies_test.dart: actual hook records package-root dependencies for a different consumer

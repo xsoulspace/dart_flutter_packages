@@ -6,6 +6,13 @@ import 'package:universal_io/io.dart';
 import 'package:universal_storage_interface/universal_storage_interface.dart';
 
 import 'filesystem_path_access.dart';
+import 'posix_file_state_stub.dart'
+    if (dart.library.ffi) 'posix_file_state_native.dart'
+    as posix;
+
+/// Native durability observation boundaries, not mutation or replay authority.
+/// Trusted observers must not re-enter the provider. Normal clients omit them.
+enum FileSystemWriteBoundary { stagedPrivateBytes, prepared, published }
 
 /// {@template filesystem_storage_provider}
 /// A storage provider that uses the local file system for storage operations.
@@ -13,12 +20,17 @@ import 'filesystem_path_access.dart';
 ///
 /// This provider is not supported on web.
 /// {@endtemplate}
-class FileSystemStorageProvider extends StorageProvider implements LocalEngine {
+class FileSystemStorageProvider extends StorageProvider
+    implements LocalEngine, StorageFileStatePort {
   /// {@macro filesystem_storage_provider}
   FileSystemStorageProvider({
     this.maxReplayEntriesPerNamespace = 5000,
     final FileSystemPathAccess? pathAccess,
-  }) : _pathAccess = pathAccess ?? const DefaultFileSystemPathAccess();
+    final void Function(FileSystemWriteBoundary)? onWriteBoundary,
+  }) : _pathAccess = pathAccess ?? const DefaultFileSystemPathAccess(),
+       // Preserve a public constructor port backed by a private callback.
+       // ignore: prefer_initializing_formals
+       _onWriteBoundary = onWriteBoundary;
 
   static const _durabilitySchemaVersion = 1;
   static const _checkpointRetainedOperationIds = 2048;
@@ -27,6 +39,9 @@ class FileSystemStorageProvider extends StorageProvider implements LocalEngine {
   /// Bounded number of journal entries replayed during startup recovery.
   final int maxReplayEntriesPerNamespace;
   final FileSystemPathAccess _pathAccess;
+
+  /// Optional native trusted observer/test seam; never exposed as tool args.
+  final void Function(FileSystemWriteBoundary)? _onWriteBoundary;
 
   FileSystemConfig _config = FileSystemConfig.empty;
   String get _basePath => _config.basePath;
@@ -69,6 +84,91 @@ class FileSystemStorageProvider extends StorageProvider implements LocalEngine {
     await _truncateJournalsAfterRecovery();
     _isInitialized = true;
   }
+
+  @override
+  String? get fileStateProfile =>
+      posix.supportsPosixFileState ? storagePosixRwxProfile : null;
+
+  @override
+  Future<StorageFileState> readFileState(final String filePath) {
+    _ensureInitialized();
+    return _readFileState(filePath);
+  }
+
+  Future<StorageFileState> _readFileState(final String filePath) async {
+    if (fileStateProfile == null) {
+      throw const UnsupportedOperationException('POSIX file state unavailable');
+    }
+    final fullPath = path.join(_basePath, _normalizeRelativePath(filePath));
+    final type = FileSystemEntity.typeSync(fullPath, followLinks: false);
+    if (type == FileSystemEntityType.notFound) {
+      return const StorageFileState(content: null, mode: null);
+    }
+    if (type != FileSystemEntityType.file) {
+      throw const UnsupportedOperationException(
+        'File state requires a regular non-symlink file',
+      );
+    }
+    final file = File(fullPath);
+    final mode = file.statSync().mode & 0xfff;
+    StorageFileState(content: '', mode: mode).validatePosix();
+    _requireReadableMode(mode);
+    final state = StorageFileState(
+      content: await file.readAsString(),
+      mode: mode,
+    );
+    return state..validatePosix();
+  }
+
+  @override
+  StorageFileState intendedFileState(
+    final StorageFileState before,
+    final String? content,
+  ) {
+    if (fileStateProfile == null) {
+      throw const UnsupportedOperationException('POSIX file state unavailable');
+    }
+    before.validatePosix();
+    if (before.mode != null) _requireReadableMode(before.mode!);
+    return StorageFileState(
+      content: content,
+      mode: content == null ? null : before.mode ?? 0x1a4,
+    );
+  }
+
+  @override
+  Future<FileOperationResult> restoreFileState(
+    final String filePath,
+    final StorageFileState state,
+  ) => _enqueueMutation<FileOperationResult>(() async {
+    _ensureInitialized();
+    if (fileStateProfile == null) {
+      throw const UnsupportedOperationException('POSIX file state unavailable');
+    }
+    state.validatePosix();
+    if (state.mode != null) _requireReadableMode(state.mode!);
+    final before = await readFileState(filePath);
+    final relativePath = _normalizeRelativePath(filePath);
+    final fullPath = path.join(_basePath, relativePath);
+    if (state.content == null) {
+      if (before.content == null) {
+        return FileOperationResult.deleted(path: fullPath);
+      }
+      final metadata = await _durableDelete(relativePath: relativePath);
+      return FileOperationResult.deleted(path: fullPath, metadata: metadata);
+    }
+    final metadata = await _durableWrite(
+      relativePath: relativePath,
+      content: state.content!,
+      operationType: before.content == null
+          ? _DurabilityOperationType.create
+          : _DurabilityOperationType.update,
+      declaredMode: state.mode,
+    );
+    return before.content == null
+        ? FileOperationResult.created(path: fullPath, metadata: metadata)
+        : FileOperationResult.updated(path: fullPath, metadata: metadata);
+  });
 
   @override
   Future<bool> isAuthenticated() async => _isInitialized;
@@ -281,7 +381,15 @@ class FileSystemStorageProvider extends StorageProvider implements LocalEngine {
     required final String relativePath,
     required final String content,
     required final _DurabilityOperationType operationType,
+    final int? declaredMode,
   }) async {
+    final qualified = fileStateProfile != null;
+    final before = qualified ? await readFileState(relativePath) : null;
+    final mode = qualified ? declaredMode ?? before?.mode ?? 0x1a4 : null;
+    if (qualified) {
+      StorageFileState(content: content, mode: mode).validatePosix();
+      _requireReadableMode(mode!);
+    }
     final namespace = _namespaceForPath(relativePath);
     final checkpoint = await _loadCheckpoint(namespace);
     final sequence = checkpoint.lastSequence + 1;
@@ -301,10 +409,29 @@ class FileSystemStorageProvider extends StorageProvider implements LocalEngine {
     if (!tempFile.parent.existsSync()) {
       await tempFile.parent.create(recursive: true);
     }
-    await tempFile.writeAsString(content, flush: true);
+    if (qualified) {
+      posix.writePosixStage(
+        tempFullPath,
+        content,
+        mode!,
+        onPrivateBytes: _onWriteBoundary == null
+            ? null
+            : () =>
+                  _onWriteBoundary(FileSystemWriteBoundary.stagedPrivateBytes),
+      );
+      if (!_matchesFileState(tempFile, contentChecksum, mode)) {
+        throw const FileSystemException(
+          'Prepared content/mode verification failed',
+        );
+      }
+    } else {
+      await tempFile.writeAsString(content, flush: true);
+    }
 
     final preparedEntry = _DurabilityJournalEntry(
-      schemaVersion: _durabilitySchemaVersion,
+      schemaVersion: qualified ? 2 : _durabilitySchemaVersion,
+      fileMode: mode,
+      fileStateProfile: qualified ? storagePosixRwxProfile : null,
       namespace: namespace,
       operationId: operationId,
       sequence: sequence,
@@ -316,15 +443,18 @@ class FileSystemStorageProvider extends StorageProvider implements LocalEngine {
       checksum: contentChecksum,
     );
     await _appendJournalEntry(preparedEntry);
+    if (qualified) _onWriteBoundary?.call(FileSystemWriteBoundary.prepared);
 
     final targetFile = File(path.join(_basePath, relativePath));
     if (!targetFile.parent.existsSync()) {
       await targetFile.parent.create(recursive: true);
     }
-    if (targetFile.existsSync()) {
+    if (!qualified && targetFile.existsSync()) {
       await targetFile.delete();
     }
+    // Qualified POSIX rename replaces in the same filesystem atomically.
     await tempFile.rename(targetFile.path);
+    if (qualified) _onWriteBoundary?.call(FileSystemWriteBoundary.published);
 
     await _appendJournalEntry(
       preparedEntry.copyWith(stage: _DurabilityJournalStage.committed),
@@ -414,9 +544,7 @@ class FileSystemStorageProvider extends StorageProvider implements LocalEngine {
       operationType: _DurabilityOperationType.append,
     );
     final targetFile = File(path.join(_basePath, relativePath));
-    final appendOffset = targetFile.existsSync()
-        ? targetFile.lengthSync()
-        : 0;
+    final appendOffset = targetFile.existsSync() ? targetFile.lengthSync() : 0;
     final chunkBytes = utf8.encode(chunk);
 
     final tempRelativePath = _tempRelativePath(
@@ -448,7 +576,11 @@ class FileSystemStorageProvider extends StorageProvider implements LocalEngine {
     if (!targetFile.parent.existsSync()) {
       await targetFile.parent.create(recursive: true);
     }
-    await targetFile.writeAsBytes(chunkBytes, mode: FileMode.append, flush: true);
+    await targetFile.writeAsBytes(
+      chunkBytes,
+      mode: FileMode.append,
+      flush: true,
+    );
 
     await _appendJournalEntry(
       preparedEntry.copyWith(stage: _DurabilityJournalStage.committed),
@@ -574,8 +706,7 @@ class FileSystemStorageProvider extends StorageProvider implements LocalEngine {
           if (recovered) {
             namespaceRecoveredDeletes++;
           }
-        } else if (prepared.operationType ==
-            _DurabilityOperationType.append) {
+        } else if (prepared.operationType == _DurabilityOperationType.append) {
           recovered = await _recoverPreparedAppend(prepared);
           if (recovered) {
             namespaceRecoveredWrites++;
@@ -662,6 +793,16 @@ class FileSystemStorageProvider extends StorageProvider implements LocalEngine {
     }
     final entities = await journalDirectory.list().toList();
     for (final entity in entities.whereType<File>()) {
+      final namespace = _namespaceFromJournalFile(entity.path);
+      final reports = _lastRecoveryReport['namespaces'] as List;
+      final unresolved = reports.any(
+        (final raw) =>
+            raw is Map &&
+            raw['namespace'] == namespace &&
+            ((raw['issues'] as List).isNotEmpty ||
+                (raw['corrupted_journal_entries'] as int) > 0),
+      );
+      if (unresolved) continue;
       if (entity.lengthSync() > 0) {
         await entity.writeAsString('', flush: true);
       }
@@ -671,6 +812,38 @@ class FileSystemStorageProvider extends StorageProvider implements LocalEngine {
   Future<bool> _recoverPreparedWrite(
     final _DurabilityJournalEntry prepared,
   ) async {
+    if (prepared.schemaVersion == 2) {
+      if (fileStateProfile != prepared.fileStateProfile ||
+          prepared.fileMode == null) {
+        return false;
+      }
+      final target = File(path.join(_basePath, prepared.relativePath));
+      final tempPath = prepared.tempRelativePath;
+      if (tempPath != null && tempPath.isNotEmpty) {
+        final temp = File(path.join(_basePath, tempPath));
+        if (FileSystemEntity.typeSync(temp.path, followLinks: false) !=
+            FileSystemEntityType.notFound) {
+          if (!_matchesFileState(temp, prepared.checksum, prepared.fileMode!)) {
+            return false;
+          }
+          // Refuse symlinks/nonregular/special-bit targets before replacement.
+          try {
+            await _readFileState(prepared.relativePath);
+          } on Object {
+            return false;
+          }
+          await target.parent.create(recursive: true);
+          await temp.rename(target.path);
+          return _matchesFileState(
+            target,
+            prepared.checksum,
+            prepared.fileMode!,
+          );
+        }
+      }
+      // An already-published state is evidence only when BOTH properties agree.
+      return _matchesFileState(target, prepared.checksum, prepared.fileMode!);
+    }
     final targetFile = File(path.join(_basePath, prepared.relativePath));
     if (!targetFile.parent.existsSync()) {
       await targetFile.parent.create(recursive: true);
@@ -698,6 +871,32 @@ class FileSystemStorageProvider extends StorageProvider implements LocalEngine {
       return true;
     }
     return _fileChecksum(targetFile) == prepared.checksum;
+  }
+
+  void _requireReadableMode(final int mode) {
+    // This text provider verifies by reading published bytes as the owner.
+    // Do not publish an unreadable state and then claim complete recovery.
+    if (mode & 0x100 == 0) {
+      throw const UnsupportedOperationException(
+        'POSIX text file-state requires owner-read permission',
+      );
+    }
+  }
+
+  bool _matchesFileState(
+    final File file,
+    final String checksum,
+    final int mode,
+  ) {
+    if (FileSystemEntity.typeSync(file.path, followLinks: false) !=
+        FileSystemEntityType.file) {
+      return false;
+    }
+    if (mode & 0x100 == 0) return false;
+    final actualMode = file.statSync().mode & 0xfff;
+    return actualMode == mode &&
+        checksum.isNotEmpty &&
+        _fileChecksum(file) == checksum;
   }
 
   Future<bool> _recoverPreparedDelete(
@@ -949,6 +1148,8 @@ final class _DurabilityJournalEntry {
     this.recovered = false,
     this.appendOffset = 0,
     this.appendSize = 0,
+    this.fileMode,
+    this.fileStateProfile,
   });
 
   static _DurabilityJournalEntry? tryParse(final String jsonLine) {
@@ -990,10 +1191,35 @@ final class _DurabilityJournalEntry {
           )?.toUtc() ??
           DateTime.fromMillisecondsSinceEpoch(0).toUtc();
 
+      final schema = json['schema_version'] is int
+          ? json['schema_version'] as int
+          : 1;
+      if (schema != 1 && schema != 2) return null;
+      final mode = json['file_mode'];
+      final profile = json['file_state_profile'];
+      if (schema == 2 &&
+          (operationTypeName != operationType.name ||
+              stageName != stage.name ||
+              !RegExp(
+                r'^[0-9a-f]{64}$',
+              ).hasMatch((json['checksum'] ?? '').toString()))) {
+        return null;
+      }
+      if (schema == 2 &&
+          (mode is! int ||
+              mode < 0 ||
+              mode > 0x1ff ||
+              profile != storagePosixRwxProfile ||
+              (operationType != _DurabilityOperationType.create &&
+                  operationType != _DurabilityOperationType.update))) {
+        return null;
+      }
       return _DurabilityJournalEntry(
         schemaVersion: json['schema_version'] is int
             ? json['schema_version'] as int
             : 1,
+        fileMode: mode is int ? mode : null,
+        fileStateProfile: profile is String ? profile : null,
         namespace: namespace,
         operationId: operationId,
         sequence: sequence,
@@ -1015,6 +1241,8 @@ final class _DurabilityJournalEntry {
   }
 
   final int schemaVersion;
+  final int? fileMode;
+  final String? fileStateProfile;
   final String namespace;
   final String operationId;
   final int sequence;
@@ -1036,6 +1264,8 @@ final class _DurabilityJournalEntry {
     final bool? recovered,
   }) => _DurabilityJournalEntry(
     schemaVersion: schemaVersion,
+    fileMode: fileMode,
+    fileStateProfile: fileStateProfile,
     namespace: namespace,
     operationId: operationId,
     sequence: sequence,
@@ -1052,6 +1282,8 @@ final class _DurabilityJournalEntry {
 
   Map<String, dynamic> toJson() => <String, dynamic>{
     'schema_version': schemaVersion,
+    if (schemaVersion == 2) 'file_mode': fileMode,
+    if (schemaVersion == 2) 'file_state_profile': fileStateProfile,
     'namespace': namespace,
     'operation_id': operationId,
     'sequence': sequence,

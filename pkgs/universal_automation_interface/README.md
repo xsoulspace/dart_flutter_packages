@@ -45,3 +45,26 @@ final cdpPort = SessionHandles.sub('chrome', 'cdp-port');
 
 - This package performs no I/O and attaches to nothing.
 - It is not the oka lifecycle layer and never spawns or stops processes.
+
+### Exact targeting and effect receipts
+
+`SemanticTarget` uses exact role/name constraints and an ordered list of unique
+ancestor scopes. `resolveSemanticTarget` rejects missing or ambiguous scopes and
+nodes; it preserves adapter attributes such as refs and snapshot IDs.
+`TargetedAutomationDriver` is an optional capability, so adapters can add verified
+element focus without expanding the sealed action vocabulary. Element focus is
+separate from the operating system's foreground application.
+
+`verifyEffect<T>` observes a baseline, dispatches at most once, and observes a
+caller-owned postcondition within a monotonic deadline. `isSatisfied` can skip an
+already satisfied operation. Delivery completion and effect observation are
+separate fields: a lost delivery response can coexist with an observed effect.
+Timeouts never trigger replay. An asynchronous operation may finish after its
+Future times out; the caller must reconcile that uncertainty before another
+mutation. A baseline observation failure propagates before dispatch.
+
+Decision checkpoint (2026-10-13): north-star impact **applies**. These optional
+contracts reuse existing snapshots and drivers; they own neither session
+lifecycle, OS focus, action catalogs nor application state. Pure package tests
+prove ambiguity refusal and receipt behavior. Native/web consumer tests are
+required to establish adapter behavior in a specific application.

@@ -142,6 +142,9 @@ class CdpConnection implements CdpTransport {
       CdpFlatSession(this, sessionId);
 
   void _onData(data) {
+    // Frames already queued by the socket may arrive while close() drains.
+    // Neither responses nor events can be delivered after client shutdown.
+    if (_closed) return;
     if (data is! String) return;
     final Object? message;
     try {

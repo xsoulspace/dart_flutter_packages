@@ -14,6 +14,13 @@ or semantic composition as well as routing; each role requires its own evidence.
 
 ## Included API
 
+Native tool requests may carry optional `ToolCall.callId` and `namespace`.
+Execution results retain `callId` to reference an admitted call; names alone do
+not distinguish repeated requests. `InferenceResponse` serialization preserves
+calls/results and correlation, while legacy constructors remain compatible.
+The executing host owns admission and effects; a provider returning a call grants
+no authority. Native Responses transport lives in `xsoulspace_inference_openai`.
+
 - `InferenceTask`
 - `InferenceRequest`
 - `InferenceResponse`
@@ -184,3 +191,68 @@ dart test
 ## License
 
 MIT
+
+## Declarative tool-call syntax
+
+`ToolCallSyntax` composes explicitly selected `ToolSyntaxEnvelope` nodes.
+Use `qwenJson`, `legacyTags`, or a host-selected custom envelope; profiles
+do not guess another checkpoint's syntax. `renderCall` composes the selected
+envelope and `parse` produces typed calls plus original envelope spans.
+Parsing is bounded by bytes, nesting depth and node count, and any malformed
+or truncated envelope refuses the entire result. Fenced source examples
+refuse as ambiguous. Supply the current registry with `requireRegistry: true`
+when admitting calls; parsing never executes tools or grants authority.
+Argument-schema validation, consent and execution remain downstream.
+
+The Qwen profile is `qwen-delimited-json-v2`: unmatched dedicated closing
+markers produce an atomic named refusal instead of silently becoming text.
+Custom envelopes can declare `rejectOrphanClose: true` when their closing
+marker is reserved syntax. Leave it false for ordinary punctuation, as in
+legacy `>` tags. Opaque thoughts and JSON argument strings remain excluded
+from delimiter scanning; bare JSON does not become an executable call.
+
+`validateJsonAgainstSchema` supports the generated inline JSON-Schema subset:
+types, enum, required-key presence, `anyOf`, property schemas, additional-property
+policy and array item/length bounds. It is not a complete draft validator or a
+reference resolver. Core-to-JSON conversion preserves optional omission and adds
+nullable alternatives; primitive guides and `representNilExplicitly` semantics
+are not fully represented. Consumers retain authority over other constraints.
+
+A host can compose a checkpoint-specific envelope without changing execution:
+
+```dart
+const syntax = ToolCallSyntax(
+  id: 'trained-action-json-v1',
+  envelopes: [
+    ToolSyntaxEnvelope.opaque(open: '[thought]', close: '[/thought]'),
+    ToolSyntaxEnvelope.jsonCall(
+      open: '[action]',
+      close: '[/action]',
+      nameKey: 'function',
+      argumentsKey: 'parameters',
+    ),
+  ],
+);
+final text = syntax.renderCall(const ToolCall(
+  name: ToolName('readFile'),
+  arguments: {'path': 'lib/main.dart'},
+));
+final parsed = syntax.parse(
+  text,
+  registry: actorToolRegistry, // The host's current granted registry.
+  requireRegistry: true,
+);
+```
+
+`parsed.calls` contains existing typed calls; `parsed.nodes` preserves original
+regions and offsets. Opaque thought contents are not recursively interpreted,
+and an unfinished thought refuses the whole result. A provider that prefills
+thinking must declare it to its adapter; raw text does not grant a thinking
+channel. A syntax profile selects decoding, not tool authority or execution.
+
+For JSON serialized inside a declared tool string field, use
+`decodeJsonWithUniqueKeys` to retain the same duplicate-key refusal as envelope
+parsing. It validates JSON and rejects duplicate decoded keys in any object,
+including equivalent escapes. Source code held in string values remains opaque.
+The caller owns size/depth limits, payload schema and authority; decoding grants
+no tool execution or consent.

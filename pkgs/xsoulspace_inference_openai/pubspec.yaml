@@ -1,0 +1,16 @@
+name: xsoulspace_inference_openai
+description: Native Responses inference and ChatGPT plan OAuth for local applications.
+version: 0.1.0-dev.1
+publish_to: none
+environment:
+  sdk: ^3.12.0
+resolution: workspace
+dependencies:
+  crypto: ^3.0.7
+  http: ^1.6.0
+  pointycastle: ^4.0.0
+  xsoulspace_inference_core:
+    path: ../xsoulspace_inference_core
+dev_dependencies:
+  lints: ^6.1.0
+  test: ^1.31.2

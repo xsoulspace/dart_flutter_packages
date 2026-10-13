@@ -1,0 +1,7 @@
+00:00 +0: loading test/meaning_contract_test.dart
+00:00 +0: test/meaning_contract_test.dart: IntentCall owns validation; candidate snapshots resist argument drift
+00:00 +1: test/meaning_contract_test.dart: AE executable remains the same owned wire type and vocabulary
+00:00 +2: test/meaning_contract_test.dart: predicted evidence cannot establish exact mapping or applied result
+00:00 +3: test/meaning_contract_test.dart: malformed references, recovery and non-JSON operands refuse
+00:00 +4: test/meaning_contract_test.dart: read refusals retain the legacy wire and lazy op validation
+00:00 +5: All tests passed!
