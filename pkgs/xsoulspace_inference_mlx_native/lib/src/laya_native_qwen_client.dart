@@ -31,19 +31,37 @@ external Pointer<Uint8> _qwenGenerate(int handle, Pointer<Uint8> requestJson);
 )
 external void _qwenUnload(int handle);
 
+@Native<Int32 Function(Int64, Pointer<Uint8>)>(
+  symbol: 'mlx_native_qwen_clear_cache',
+  assetId: 'package:xsoulspace_inference_mlx_native/mlx_native',
+)
+external int _qwenClearCache(int handle, Pointer<Uint8> actor);
+
 /// One in-process greedy completion: prompt ids, full token sequence, and
 /// the generated text (decoded by the checkpoint's byte-level BPE in the
 /// dylib).
+/// Host-supplied binding, never inferred from model output. Include the trust
+/// realm/world in actor; rotate epoch when visibility or authorization changes.
+/// One engine retains at most four scopes, each at most 8192 reserved tokens.
+final class QwenCacheScope {
+  const QwenCacheScope({required this.actor, required this.epoch});
+  final String actor;
+  final String epoch;
+  Map<String, String> toJson() => {'actor': actor, 'epoch': epoch};
+}
+
 final class NativeQwenCompletion {
   const NativeQwenCompletion({
     required this.promptIds,
     required this.ids,
     required this.text,
+    this.cacheReusedTokens = 0,
   });
 
   final List<int> promptIds;
   final List<int> ids;
   final String text;
+  final int cacheReusedTokens;
 }
 
 /// The R2 dense text engine in-process: greedy decode over the cached
@@ -102,15 +120,18 @@ final class NativeQwenTextEngine {
     final int maxTokens = 64,
     final bool stopOnEos = false,
     final List<int>? eosIds,
-  }) =>
-      generateByHandle(
-        _handle,
-        prompt: prompt,
-        promptIds: promptIds,
-        maxTokens: maxTokens,
-        stopOnEos: stopOnEos,
-        eosIds: eosIds,
-      );
+    final QwenCacheScope? cacheScope,
+    final bool cacheReset = false,
+  }) => generateByHandle(
+    _handle,
+    prompt: prompt,
+    promptIds: promptIds,
+    maxTokens: maxTokens,
+    stopOnEos: stopOnEos,
+    eosIds: eosIds,
+    cacheScope: cacheScope,
+    cacheReset: cacheReset,
+  );
 
   /// The [generate] FFI body, keyed by the process-global engine handle —
   /// the handle lives inside the dylib, so ANY isolate (in this process,
@@ -123,6 +144,8 @@ final class NativeQwenTextEngine {
     final int maxTokens = 64,
     final bool stopOnEos = false,
     final List<int>? eosIds,
+    final QwenCacheScope? cacheScope,
+    final bool cacheReset = false,
   }) {
     final request = jsonEncode(<String, Object?>{
       'prompt': ?prompt,
@@ -130,6 +153,8 @@ final class NativeQwenTextEngine {
       'max_tokens': maxTokens,
       'stop_on_eos': stopOnEos,
       'eos_ids': ?eosIds,
+      'cache_scope': ?cacheScope?.toJson(),
+      'cache_reset': cacheReset,
     });
     final requestNative = toNativeUtf8(request);
     final reply = _qwenGenerate(handle, requestNative);
@@ -140,11 +165,10 @@ final class NativeQwenTextEngine {
       throw StateError('laya qwen generate failed: ${json['error']}');
     }
     return NativeQwenCompletion(
-      promptIds: <int>[
-        for (final v in json['prompt_ids'] as List) v as int,
-      ],
+      promptIds: <int>[for (final v in json['prompt_ids'] as List) v as int],
       ids: <int>[for (final v in json['ids'] as List) v as int],
       text: json['text'] as String? ?? '',
+      cacheReusedTokens: json['cache_reused_tokens'] as int? ?? 0,
     );
   }
 
@@ -159,6 +183,8 @@ final class NativeQwenTextEngine {
     final int maxTokens = 64,
     final bool stopOnEos = false,
     final List<int>? eosIds,
+    final QwenCacheScope? cacheScope,
+    final bool cacheReset = false,
   }) {
     final handle = _handle;
     return Isolate.run(
@@ -169,8 +195,22 @@ final class NativeQwenTextEngine {
         maxTokens: maxTokens,
         stopOnEos: stopOnEos,
         eosIds: eosIds,
+        cacheScope: cacheScope,
+        cacheReset: cacheReset,
       ),
     );
+  }
+
+  /// Purge all epochs for this host-bound actor after in-flight inference ends.
+  void clearCache(final String actor) {
+    final nativeActor = toNativeUtf8(actor);
+    try {
+      if (_qwenClearCache(_handle, nativeActor) != 0) {
+        throw StateError('qwen_cache_clear_failed');
+      }
+    } finally {
+      malloc.free(nativeActor);
+    }
   }
 
   void dispose() {
@@ -213,9 +253,14 @@ final class LayaQwenChatServer {
            'model': model,
            'engine': 'laya-native-qwen',
          },
-         route: (final LoopbackRequest request) async =>
-             _route(
-                 request, engine, model, defaultMaxTokens, useTemplate, thinking),
+         route: (final LoopbackRequest request) async => _route(
+           request,
+           engine,
+           model,
+           defaultMaxTokens,
+           useTemplate,
+           thinking,
+         ),
        );
 
   final String model;

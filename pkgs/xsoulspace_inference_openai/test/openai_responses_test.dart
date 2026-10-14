@@ -50,6 +50,56 @@ Future<OpenAiResponsesClient> client(
 }
 
 void main() {
+  test(
+    'explicit low effort reaches native transport with current context',
+    () async {
+      Map<String, dynamic>? sent;
+      final provider = await client(
+        MockClient((request) async {
+          sent = jsonDecode(request.body) as Map<String, dynamic>;
+          return http.Response(event(completed()), 200);
+        }),
+      );
+      addTearDown(provider.close);
+      addTearDown(provider.auth.close);
+      final result = await provider.infer(
+        InferenceRequest(
+          prompt: 'question',
+          contextFragments: ['mandatory correction'],
+          reasoningEffort: 'low',
+        ),
+      );
+      expect(result.success, isTrue);
+      expect(sent!['reasoning'], {'effort': 'low'});
+      expect(sent!['input'], [
+        {'role': 'user', 'content': 'mandatory correction'},
+        {'role': 'user', 'content': 'question'},
+      ]);
+      expect(
+        provider
+            .encodeRequest(InferenceRequest(prompt: 'default'))
+            .containsKey('reasoning'),
+        isFalse,
+      );
+    },
+  );
+
+  test('unsupported effort refuses without dispatch or substitution', () async {
+    var calls = 0;
+    final provider = await client(
+      MockClient((_) async {
+        calls++;
+        return http.Response('', 200);
+      }),
+    );
+    addTearDown(provider.close);
+    addTearDown(provider.auth.close);
+    final result = await provider.infer(
+      InferenceRequest(prompt: 'question', reasoningEffort: 'invented'),
+    );
+    expect(result.error!.code, 'reasoning_effort_unsupported');
+    expect(calls, 0);
+  });
   for (final status in ['in_progress', 'incomplete']) {
     test('noncompleted item $status cannot become a tool proposal', () async {
       final tools = ToolRegistry()

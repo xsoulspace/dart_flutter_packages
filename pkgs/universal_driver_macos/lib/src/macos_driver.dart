@@ -246,9 +246,23 @@ class MacosDriver implements AutomationDriver {
   /// The on-screen, normal-layer windows owned by [pid]
   /// (0 = every regular app) — the discovery record window-scoped
   /// capture consumes.
-  Future<List<MacosWindow>> windows({int pid = 0}) async {
+  /// Set [onScreenOnly] to false for other Spaces and hidden helper windows.
+  /// Custom bridges without that optional capability refuse this mode.
+  Future<List<MacosWindow>> windows({
+    int pid = 0,
+    bool onScreenOnly = true,
+  }) async {
     _ensureOpen();
-    final result = bridge.windowsJson(pid: pid);
+    final BridgeJsonResult result;
+    if (onScreenOnly) {
+      result = bridge.windowsJson(pid: pid);
+    } else if (bridge case final AllWindowListingBridge expanded) {
+      result = expanded.allWindowsJson(pid: pid);
+    } else {
+      throw const DriverUnsupportedException(
+        'This bridge does not support offscreen window discovery',
+      );
+    }
     if (result.code != 0) {
       throw ProtocolException('windows failed', code: result.code);
     }
@@ -308,7 +322,7 @@ class MacosDriver implements AutomationDriver {
   }
 
   /// Observes ANY running application's tree by pid — the background-app
-    /// read the focused-app-only [snapshot] could not do (7 = unknown pid).
+  /// read the focused-app-only [snapshot] could not do (7 = unknown pid).
   Future<Snapshot> snapshotOfApp(int pid) async {
     _ensureOpen();
     if (!bridge.axTrusted()) {
@@ -702,16 +716,22 @@ class MacosDriver implements AutomationDriver {
   int? _resolveHandle({String? role, String? name}) {
     final snapshot = _lastSnapshot;
     if (snapshot == null) return null;
-    for (final node in snapshot.nodes) {
-      final roleMatches = role == null || node.role == role.toLowerCase();
-      final nameMatches = name == null || node.name == name;
-      if (roleMatches && nameMatches) {
-        final raw = node.attributes['axid'];
-        final handle = raw == null ? null : int.tryParse(raw);
-        if (handle != null) return handle;
-      }
+    final matches = snapshot.nodes
+        .where(
+          (node) =>
+              (role == null || node.role == role.toLowerCase()) &&
+              (name == null || node.name == name),
+        )
+        .toList(growable: false);
+    if (matches.length > 1) {
+      throw ProtocolException(
+        'Ambiguous native element locator',
+        details: {'role': role, 'name': name, 'matches': matches.length},
+      );
     }
-    return null;
+    if (matches.isEmpty) return null;
+    final raw = matches.single.attributes['axid'];
+    return raw == null ? null : int.tryParse(raw);
   }
 
   Future<void> _scroll(String direction, double? distance) async {

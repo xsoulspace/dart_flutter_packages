@@ -20,6 +20,7 @@ pub mod power;
 pub mod bindings;
 pub mod lfm2;
 pub mod qwen;
+mod qwen_prefix;
 pub mod bpe;
 
 #[cfg(test)]
@@ -424,6 +425,7 @@ pub extern "C" fn mlx_native_unload(handle: i64) {
 // ---- qwen text engine (ADR 0054 R2) — same handle/JSON conventions ----
 
 struct QwenEngine {
+    prefixes: Mutex<qwen_prefix::PrefixPool>,
     model: Arc<crate::qwen::Qwen3>,
     tokenizer: crate::bpe::ByteLevelBpe,
 }
@@ -437,6 +439,10 @@ fn qwen_registry() -> &'static Mutex<HashMap<i64, Arc<QwenEngine>>> {
 
 #[derive(serde::Deserialize)]
 struct QwenGenerateRequest {
+    #[serde(default)]
+    cache_scope: Option<qwen_prefix::CacheScope>,
+    #[serde(default)]
+    cache_reset: bool,
     /// Raw text (tokenized by the checkpoint BPE) or explicit prompt ids.
     #[serde(default)]
     prompt: Option<String>,
@@ -476,7 +482,7 @@ pub extern "C" fn mlx_native_qwen_load(model_dir: *const c_char) -> i64 {
     let handle = QWEN_NEXT_HANDLE.fetch_add(1, Ordering::SeqCst);
     qwen_registry().lock().unwrap().insert(
         handle,
-        Arc::new(QwenEngine { model: Arc::new(model), tokenizer }),
+        Arc::new(QwenEngine { model: Arc::new(model), tokenizer, prefixes: Mutex::new(qwen_prefix::PrefixPool::default()) }),
     );
     handle
 }
@@ -523,16 +529,17 @@ pub extern "C" fn mlx_native_qwen_generate(handle: i64, request_json: *const c_c
     } else {
         None
     };
-    match engine
-        .model
-        .generate_greedy(&prompt_ids, request.max_tokens, stop, stream)
-    {
-        Ok(ids) => {
+    let mut prefixes = engine.prefixes.lock().unwrap();
+    let result = prefixes.generate(&engine.model, &prompt_ids, request.max_tokens,
+        stop, stream, request.cache_scope, request.cache_reset);
+    match result {
+        Ok((ids, reused)) => {
             let text = engine
                 .tokenizer
                 .decode(&ids[prompt_ids.len()..].iter().map(|&i| i as u32).collect::<Vec<_>>())
                 .unwrap_or_default();
             let payload = serde_json::json!({
+                "cache_reused_tokens": reused,
                 "prompt_ids": prompt_ids,
                 "ids": ids,
                 "text": text,
@@ -545,6 +552,18 @@ pub extern "C" fn mlx_native_qwen_generate(handle: i64, request_json: *const c_c
         }
         Err(e) => fail(&format!("generate failed: mlx status {}", e.0)),
     }
+}
+
+/// Synchronous host revocation: waits for any in-flight generation, then purges.
+#[no_mangle]
+pub extern "C" fn mlx_native_qwen_clear_cache(handle: i64, actor: *const c_char) -> i32 {
+    if actor.is_null() { return -1; }
+    let engine = qwen_registry().lock().unwrap().get(&handle).map(Arc::clone);
+    let Some(engine) = engine else { return -2; };
+    let actor = unsafe { CStr::from_ptr(actor) }.to_string_lossy();
+    let _guard = forward_lock().lock().unwrap();
+    engine.prefixes.lock().unwrap().clear_actor(&actor);
+    0
 }
 
 #[no_mangle]

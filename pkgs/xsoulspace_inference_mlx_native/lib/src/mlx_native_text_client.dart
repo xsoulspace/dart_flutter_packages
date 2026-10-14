@@ -97,6 +97,7 @@ final class MlxNativeTextClient implements InferenceClient {
   factory MlxNativeTextClient.qwen(
     final NativeQwenTextEngine engine, {
     final bool thinking = false,
+    final QwenCacheScope? cacheScope,
     final String model = 'qwen3-mlx-4bit',
     final int defaultMaxTokens = 320,
     final double defaultTemperature = 0.0,
@@ -113,6 +114,7 @@ final class MlxNativeTextClient implements InferenceClient {
         }) async {
           final completion = await engine.generateAsync(
             prompt: prompt,
+            cacheScope: cacheScope,
             maxTokens: maxTokens,
             stopOnEos: stopOnEos,
             eosIds: eosIds,
@@ -481,7 +483,7 @@ final class MlxNativeTextClient implements InferenceClient {
     }
     List<Object?>? tools;
     if (toolRegistry != null && toolRegistry.tools.isNotEmpty) {
-      tools = toolRegistry.getToolsJsons();
+      tools = nativeTextFunctionTools(toolRegistry);
     }
     final messages = nativeTextMessages(request);
     if (!hasThinkingSwitch &&
@@ -532,6 +534,7 @@ final class MlxNativeTextClient implements InferenceClient {
       InferenceResponse(
         task: InferenceTask.text,
         rawOutput: rawOutput,
+        presentationText: normalized.data!.presentationText,
         toolCalls: normalized.data!.calls,
         meta: <String, dynamic>{
           'usage': <String, dynamic>{

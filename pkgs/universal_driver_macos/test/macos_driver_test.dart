@@ -340,6 +340,15 @@ const _appJsonWithPid =
     '{"role":"textbox","name":"Search","value":"","attributes":{"axid":"3"}}'
     ']}';
 
+final class AllWindowsFakeBridge extends FakeBridge
+    implements AllWindowListingBridge {
+  @override
+  BridgeJsonResult allWindowsJson({int pid = 0}) {
+    calls.add('allWindows(pid=$pid)');
+    return windowsResult;
+  }
+}
+
 MacosDriver driverWith(FakeBridge bridge) => MacosDriver(bridge: bridge);
 
 void main() {
@@ -394,8 +403,7 @@ void main() {
     ]);
   });
 
-  test('drag presses at the from-point and releases at the to-point',
-      () async {
+  test('drag presses at the from-point and releases at the to-point', () async {
     final bridge = FakeBridge();
     final driver = driverWith(bridge);
 
@@ -443,13 +451,13 @@ void main() {
       'keyDown(Shift)',
       'keyUp(Shift)',
     ]);
-    final press = bridge.pointerEvents
-        .firstWhere((event) => event['kind'] == 'down');
+    final press = bridge.pointerEvents.firstWhere(
+      (event) => event['kind'] == 'down',
+    );
     expect(press['modifiers'], ['shift']);
   });
 
-  test('meta+drag holds the chord through press, carry, and release',
-      () async {
+  test('meta+drag holds the chord through press, carry, and release', () async {
     final bridge = FakeBridge();
     final driver = driverWith(bridge);
 
@@ -464,8 +472,7 @@ void main() {
     }
   });
 
-  test('app management: discover/activate/launch/terminate/snapshot',
-      () async {
+  test('app management: discover/activate/launch/terminate/snapshot', () async {
     final bridge = FakeBridge();
     final driver = driverWith(bridge);
 
@@ -503,10 +510,7 @@ void main() {
       driver.activate(99),
       throwsA(isA<ElementNotFoundException>()),
     );
-    await expectLater(
-      driver.terminate(99),
-      throwsA(isA<ProtocolException>()),
-    );
+    await expectLater(driver.terminate(99), throwsA(isA<ProtocolException>()));
     await expectLater(
       driver.launch('no.such.App'),
       throwsA(isA<ElementNotFoundException>()),
@@ -556,7 +560,7 @@ void main() {
     expect(bridge.calls, contains('press(2)'));
   });
 
-  test('click by role+name resolves the first match', () async {
+  test('click by role+name resolves a unique match', () async {
     final bridge = FakeBridge();
     final driver = driverWith(bridge);
     await driver.snapshot();
@@ -564,6 +568,64 @@ void main() {
     await driver.perform(const ClickAction(role: 'textbox', name: 'Search'));
 
     expect(bridge.pressedHandles, [3]);
+  });
+
+  for (final action in const <AutomationAction>[
+    ClickAction(role: 'button', name: 'Save'),
+    SetValueAction('x', role: 'button', name: 'Save'),
+    ElementAction('AXPress', role: 'button', name: 'Save'),
+  ]) {
+    test(
+      'ambiguous ${action.runtimeType} refuses before native mutation',
+      () async {
+        final tree = jsonDecode(_appJson) as Map<String, dynamic>;
+        final window = (tree['children'] as List).single as Map;
+        (window['children'] as List).add({
+          'role': 'button',
+          'name': 'Save',
+          'attributes': {'axid': '4'},
+        });
+        final bridge = FakeBridge()
+          ..snapshotResult = (code: 0, json: jsonEncode(tree));
+        final driver = driverWith(bridge);
+        await driver.snapshot();
+        await expectLater(
+          driver.perform(action),
+          throwsA(
+            isA<ProtocolException>().having(
+              (e) => e.details['matches'],
+              'matches',
+              2,
+            ),
+          ),
+        );
+        expect(bridge.pressedHandles, isEmpty);
+        expect(bridge.setValues, isEmpty);
+        expect(bridge.elementActionCalls, isEmpty);
+      },
+    );
+  }
+
+  test('stale click cannot retry into an ambiguous replacement tree', () async {
+    final bridge = FakeBridge();
+    final driver = driverWith(bridge);
+    await driver.snapshot();
+    final tree = jsonDecode(_appJson) as Map<String, dynamic>;
+    final window = (tree['children'] as List).single as Map;
+    (window['children'] as List).add({
+      'role': 'button',
+      'name': 'Save',
+      'attributes': {'axid': '4'},
+    });
+    bridge.snapshotResult = (code: 0, json: jsonEncode(tree));
+    bridge.pressResults.add(5);
+    await expectLater(
+      driver.perform(const ClickAction(name: 'Save')),
+      throwsA(isA<ProtocolException>()),
+    );
+    expect(bridge.pressedHandles, [
+      2,
+    ], reason: 'Only stale first handle attempted');
   });
 
   test('click with a css locator is refused loudly', () async {
@@ -759,10 +821,7 @@ void main() {
     expect(bridge.lastWindowId, 77);
     expect(bridge.lastWindowMaxPx, 1024);
 
-    bridge.windowScreenshotResult = (
-      code: 10,
-      bytes: Uint8List(0),
-    );
+    bridge.windowScreenshotResult = (code: 10, bytes: Uint8List(0));
     await expectLater(
       driver.windowScreenshot(77),
       throwsA(isA<ScreenRecordingPermissionRequiredException>()),
@@ -773,6 +832,46 @@ void main() {
       throwsA(isA<ElementNotFoundException>()),
     );
   });
+
+  test(
+    'offscreen listing preserves visibility states',
+    () async {
+      final bridge = AllWindowsFakeBridge()
+        ..windowsResult = (
+          code: 0,
+          json:
+              '[{"windowId":77,"pid":42,"name":"host","onScreen":true},'
+              '{"windowId":78,"pid":42,"name":"helper","onScreen":false},'
+              '{"windowId":79,"pid":42,"name":"unknown"}]',
+        );
+      final driver = driverWith(bridge);
+      final windows = await driver.windows(pid: 42, onScreenOnly: false);
+      expect(bridge.calls, ['allWindows(pid=42)']);
+      expect(windows.map((window) => window.onScreen), [true, false, null]);
+      expect(windows.last.toJson().containsKey('onScreen'), isFalse);
+      expect(windows[1].toJson()['onScreen'], isFalse);
+      bridge.windowsResult = (code: 3, json: '');
+      await expectLater(
+        driver.windows(onScreenOnly: false),
+        throwsA(isA<ProtocolException>()),
+      );
+    },
+  );
+
+  test(
+    'legacy custom bridge refuses offscreen listing before a bridge call',
+    () async {
+      final bridge = FakeBridge();
+      final driver = driverWith(bridge);
+      await expectLater(
+        driver.windows(pid: 42, onScreenOnly: false),
+        throwsA(isA<DriverUnsupportedException>()),
+      );
+      expect(bridge.calls, isEmpty);
+      await driver.windows(pid: 42);
+      expect(bridge.calls, ['windows(pid=42)']);
+    },
+  );
 
   test('snapshot json payload is round-trippable through the model', () async {
     final bridge = FakeBridge();
@@ -809,23 +908,25 @@ void main() {
     );
   });
 
-  test('setValue host refusal (not settable) is a clear protocol failure',
-      () async {
-    final bridge = FakeBridge();
-    final driver = driverWith(bridge);
-    await driver.snapshot();
-    bridge.setValueResults.add(3);
-    await expectLater(
-      driver.perform(const SetValueAction('x', name: 'Search')),
-      throwsA(
-        isA<ProtocolException>().having(
-          (error) => error.message,
-          'message',
-          contains('not settable'),
+  test(
+    'setValue host refusal (not settable) is a clear protocol failure',
+    () async {
+      final bridge = FakeBridge();
+      final driver = driverWith(bridge);
+      await driver.snapshot();
+      bridge.setValueResults.add(3);
+      await expectLater(
+        driver.perform(const SetValueAction('x', name: 'Search')),
+        throwsA(
+          isA<ProtocolException>().having(
+            (error) => error.message,
+            'message',
+            contains('not settable'),
+          ),
         ),
-      ),
-    );
-  });
+      );
+    },
+  );
 
   test('stale setValue handle re-observes once and retries', () async {
     final bridge = FakeBridge();
@@ -837,8 +938,10 @@ void main() {
 
     await driver.perform(const SetValueAction('fresh', name: 'Search'));
 
-    expect(bridge.setValues, [(3, 'fresh'), (3, 'fresh')],
-        reason: 'stale write then the retried write on the fresh handle');
+    expect(bridge.setValues, [
+      (3, 'fresh'),
+      (3, 'fresh'),
+    ], reason: 'stale write then the retried write on the fresh handle');
     expect(
       bridge.calls.where((call) => call.startsWith('snapshot')),
       hasLength(1),
@@ -866,42 +969,52 @@ void main() {
     );
   });
 
-  test('anchored driver observes the anchored pid, not the focused one',
-      () async {
-    final bridge = FakeBridge();
-    final driver = MacosDriver(bridge: bridge, targetPid: 42);
+  test(
+    'anchored driver observes the anchored pid, not the focused one',
+    () async {
+      final bridge = FakeBridge();
+      final driver = MacosDriver(bridge: bridge, targetPid: 42);
 
-    final snapshot = await driver.snapshot();
+      final snapshot = await driver.snapshot();
 
-    expect(bridge.lastSnapshotPid, 42);
-    expect(bridge.calls, isNot(contains('snapshot(depth=12,nodes=600)')),
-        reason: 'anchored sessions skip the focused-app walk');
-    expect(snapshot.roots.first.name, 'Finder');
-  });
+      expect(bridge.lastSnapshotPid, 42);
+      expect(
+        bridge.calls,
+        isNot(contains('snapshot(depth=12,nodes=600)')),
+        reason: 'anchored sessions skip the focused-app walk',
+      );
+      expect(snapshot.roots.first.name, 'Finder');
+    },
+  );
 
-  test('focus contract: global verb on a background anchor is refused',
-      () async {
-    final bridge = FakeBridge();
-    final driver = driverWith(bridge);
-    // Observe Finder (root pid 42), then the user switches to Safari.
-    bridge
-      ..snapshotResult = (code: 0, json: _appJsonWithPid)
-      ..frontmostResult = (code: 0, json: _safariJson)
-      ..calls.clear();
-    await driver.snapshot();
+  test(
+    'focus contract: global verb on a background anchor is refused',
+    () async {
+      final bridge = FakeBridge();
+      final driver = driverWith(bridge);
+      // Observe Finder (root pid 42), then the user switches to Safari.
+      bridge
+        ..snapshotResult = (code: 0, json: _appJsonWithPid)
+        ..frontmostResult = (code: 0, json: _safariJson)
+        ..calls.clear();
+      await driver.snapshot();
 
-    await expectLater(
-      driver.perform(const TypeAction('hello')),
-      throwsA(
-        isA<ForegroundRequiredException>()
-            .having((error) => error.targetPid, 'targetPid', 42)
-            .having((error) => error.frontmostPid, 'frontmostPid', 1234)
-            .having((error) => error.kind, 'kind', 'foregroundRequired'),
-      ),
-    );
-    expect(bridge.lastTypedText, isNull,
-        reason: 'the refusal precedes any event synthesis');
-  });
+      await expectLater(
+        driver.perform(const TypeAction('hello')),
+        throwsA(
+          isA<ForegroundRequiredException>()
+              .having((error) => error.targetPid, 'targetPid', 42)
+              .having((error) => error.frontmostPid, 'frontmostPid', 1234)
+              .having((error) => error.kind, 'kind', 'foregroundRequired'),
+        ),
+      );
+      expect(
+        bridge.lastTypedText,
+        isNull,
+        reason: 'the refusal precedes any event synthesis',
+      );
+    },
+  );
 
   test('focus contract: matching frontmost passes; no snapshot adopts '
       'the frontmost app', () async {
@@ -968,17 +1081,13 @@ void main() {
       const KeyPressAction('c', modifiers: ['meta', 'shift']),
     );
 
-    expect(
-      bridge.calls.where((call) => call.contains('(77')),
-      [
-        'keyDownToPid(77,Meta)',
-        'keyDownToPid(77,Shift)',
-        'keyPressToPid(77,c)',
-        'keyUpToPid(77,Shift)',
-        'keyUpToPid(77,Meta)',
-      ],
-      reason: 'modifiers hold before the tap and release in reverse after',
-    );
+    expect(bridge.calls.where((call) => call.contains('(77')), [
+      'keyDownToPid(77,Meta)',
+      'keyDownToPid(77,Shift)',
+      'keyPressToPid(77,c)',
+      'keyUpToPid(77,Shift)',
+      'keyUpToPid(77,Meta)',
+    ], reason: 'modifiers hold before the tap and release in reverse after');
     expect(bridge.calls.where((call) => call == 'frontmost'), isEmpty);
   });
 

@@ -25,3 +25,10 @@ abstract interface class InferenceClient {
     ToolRegistry? toolRegistry,
   });
 }
+
+/// Optional explicit reasoning control. Consumers refuse requested efforts
+/// absent from this set instead of silently relying on a provider default.
+abstract interface class ReasoningEffortInferenceClient
+    implements InferenceClient {
+  Set<String> get supportedReasoningEfforts;
+}

@@ -1,0 +1,75 @@
+{
+  "testExitCode": 0,
+  "files": [
+    {
+      "path": "oka-runtime/result.json",
+      "sha256": "472eb963e673f1f03680e59b764084b6c57419740f82a7a2341d81c198f6d294",
+      "source": "/Users/antonio/xs/ecsly/tool/visualization_dogfood/output/native-focus-key-2026-10-14-hookfix/result.json"
+    },
+    {
+      "path": "oka-runtime/launch.json",
+      "sha256": "3215a8b98b564d84d17e3800b8e56b62133385e3ac8a99b05fd094d87535de83",
+      "source": "/Users/antonio/xs/ecsly/tool/visualization_dogfood/output/native-focus-key-2026-10-14-hookfix/launch.json"
+    },
+    {
+      "path": "oka-runtime/toolkit-key-effect.json",
+      "sha256": "6aa3ba14b742faced34e1c2071096417c75fb89dc57a99ce55438bc798e6781b",
+      "source": "/Users/antonio/xs/ecsly/tool/visualization_dogfood/output/native-focus-key-2026-10-14-hookfix/toolkit-key-effect.json"
+    },
+    {
+      "path": "oka-runtime/supervisor-result.json",
+      "sha256": "4121edacf9a44e999a60614c9a78d93696390396bdeabd6fd30aaa467344ee30",
+      "source": "/Users/antonio/xs/ecsly/tool/visualization_dogfood/output/native-focus-key-2026-10-14-hookfix/supervisor-result.json"
+    },
+    {
+      "path": "oka-runtime/facts.jsonl",
+      "sha256": "d12ddc43088f06f0e7a704bbfe55bfec51cc52745f57a234b692a574ddae8766",
+      "source": "/Users/antonio/xs/ecsly/tool/visualization_dogfood/output/native-focus-key-2026-10-14-hookfix/facts.jsonl"
+    },
+    {
+      "path": "oka-runtime/foreground.json",
+      "sha256": "e5e99e8ce8695da1d03e07c0e8f921edea77728254f0bc3be01e9917b396cb19",
+      "source": "/Users/antonio/xs/ecsly/tool/visualization_dogfood/output/native-focus-monitor-2026-10-14-hookfix.json"
+    },
+    {
+      "path": "cache/result.json",
+      "sha256": "c78229a977674f880861be10f9c9b01cab4ec1285dce81316637e7b1d3b6d0f6",
+      "source": "/Users/antonio/xs/ecsly/tool/visualization_dogfood/output/native-hook-cache-2026-10-14-b/result.json"
+    },
+    {
+      "path": "cache/first.log",
+      "sha256": "dd35d399349c10aa3a96d7b290940c947560d0a57270cc0c46cfa73c85128ef6",
+      "source": "/Users/antonio/xs/ecsly/tool/visualization_dogfood/output/native-hook-cache-2026-10-14-b/first.log"
+    },
+    {
+      "path": "cache/warm.log",
+      "sha256": "dd35d399349c10aa3a96d7b290940c947560d0a57270cc0c46cfa73c85128ef6",
+      "source": "/Users/antonio/xs/ecsly/tool/visualization_dogfood/output/native-hook-cache-2026-10-14-b/warm.log"
+    },
+    {
+      "path": "cache/first-hashes.json",
+      "sha256": "ed22e4a6e9ebd3cb9da06bd0c7dac768d25fd3f3080e6145807e958c3a40c9c8",
+      "source": "/Users/antonio/xs/ecsly/tool/visualization_dogfood/output/native-hook-cache-2026-10-14-b/first-hashes.json"
+    },
+    {
+      "path": "cache/warm-hashes.json",
+      "sha256": "ed22e4a6e9ebd3cb9da06bd0c7dac768d25fd3f3080e6145807e958c3a40c9c8",
+      "source": "/Users/antonio/xs/ecsly/tool/visualization_dogfood/output/native-hook-cache-2026-10-14-b/warm-hashes.json"
+    },
+    {
+      "path": "source/hook/build.dart.txt",
+      "sha256": "533900b6ddbbb66a389beedd78d8b0252539e71e72d556c309ce92b2726bb675",
+      "source": "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/universal_driver_macos/hook/build.dart"
+    },
+    {
+      "path": "source/test/native_hook_test.dart.txt",
+      "sha256": "89f3c9b8efb57ad94526497f1feecf35f1eff5f95d06dac5a76d138557f1f509",
+      "source": "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/universal_driver_macos/test/native_hook_test.dart"
+    },
+    {
+      "path": "native-hook.log",
+      "sha256": "5a66666b87545b7291d743bcdf9dfae42fd29a484d2cee97641ad1dca5612638"
+    }
+  ],
+  "scope": "Local native hook and one owned consumer runtime; no publication or broad platform acceptance"
+}

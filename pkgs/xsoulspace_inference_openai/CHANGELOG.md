@@ -1,5 +1,9 @@
 ## 0.1.0-dev.1
 
+- Map explicit reasoning effort to native Responses, refuse unknown values
+  before dispatch, retain effort in safe receipts, and expose the shared optional
+  tool-streaming capability. Other unsupported generation knobs still refuse.
+
 - Reconcile indexed final streamed items against completed response output;
   preserve final reasoning/call artifacts when the terminal array is empty.
   Refuse conflicts, gaps and explicit noncompleted items before proposals.

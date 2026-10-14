@@ -5,6 +5,89 @@ import 'package:xsoulspace_inference_mlx_native/src/laya_native_qwen_chat_templa
 
 void main() {
   test(
+    'native function parameters use standard schema and preserve requirements',
+    () {
+      final registry = ToolRegistry()
+        ..register(
+          ToolDef.encode(
+            name: const ToolName('choose'),
+            description: 'Choose a supported action',
+            argsSchema: SchemaBundle(
+              root: FM.object(
+                'choose',
+                properties: () => [
+                  FM.prop(
+                    'action',
+                    FM.enum_('action', ['read', 'request_more']),
+                  ),
+                  FM.prop('note', FM.string(), optional: true),
+                ],
+              ),
+            ),
+            execute: (_) async => null,
+          ),
+        );
+      final tool = nativeTextFunctionTools(registry).single;
+      expect(tool['type'], 'function');
+      final function = tool['function']! as Map;
+      expect(function['name'], 'choose');
+      final parameters = function['parameters']! as Map;
+      expect(parameters['type'], 'object');
+      expect(parameters['required'], ['action']);
+      expect(parameters['additionalProperties'], false);
+      expect((parameters['properties'] as Map)['action'], {
+        'type': 'string',
+        'enum': ['read', 'request_more'],
+      });
+      expect(parameters.containsKey('root'), false);
+      expect(
+        registry.getToolsJsons().single['parameters'],
+        contains('root'),
+        reason: 'the internal host contract remains unchanged',
+      );
+    },
+  );
+  test(
+    'decoded presentation excludes profile spans and preserves prose/source',
+    () {
+      final registry = ToolRegistry()
+        ..register(
+          const ToolDefinition().toDef(
+            name: const ToolName('read'),
+            execute: (_) async => null,
+          ),
+        );
+      const envelope = '<tool_call>{"name":"read","arguments":{}}</tool_call>';
+      const raw = 'Before<think>private reasoning</think>$envelope After';
+      final result = normalizeNativeTextCalls(
+        text: raw,
+        syntax: ToolCallSyntax.qwenJson,
+        registry: registry,
+      );
+      expect(result.success, isTrue);
+      expect(result.data!.presentationText, 'Before After');
+      expect(result.data!.calls.single.name, const ToolName('read'));
+      expect(result.data!.sources.single['raw'], envelope);
+      final prefilled = normalizeNativeTextCalls(
+        text: 'Private prefill</think>$envelope Answer',
+        syntax: ToolCallSyntax.qwenJson,
+        registry: registry,
+        thinkingPrefilled: true,
+      );
+      expect(prefilled.data!.presentationText, ' Answer');
+      final plain = normalizeNativeTextCalls(
+        text: '[reference](https://example.com) [1, 2, 3]',
+        syntax: ToolCallSyntax.qwenJson,
+        registry: registry,
+      );
+      expect(
+        plain.data!.presentationText,
+        '[reference](https://example.com) [1, 2, 3]',
+      );
+    },
+  );
+
+  test(
     'normalization refusal retains actual supplied usage and raw diagnostics',
     () {
       final registry = ToolRegistry()

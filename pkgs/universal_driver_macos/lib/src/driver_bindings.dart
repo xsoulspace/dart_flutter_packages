@@ -221,6 +221,13 @@ external int axdrvScreenshotWindowPng(
 /// (0 = every regular app).
 external int axdrvWindowsJson(int pid, Pointer<Pointer<Utf8>> outJson);
 
+@Native<Int32 Function(Int32, Pointer<Pointer<Utf8>>)>(
+  symbol: 'xs_axdrv_windows_all_json',
+  assetId: 'package:universal_driver_macos/xs_ax_driver',
+)
+/// Lists all normal-layer windows for [pid], including offscreen windows.
+external int axdrvAllWindowsJson(int pid, Pointer<Pointer<Utf8>> outJson);
+
 @Native<Int32 Function(Pointer<Pointer<Utf8>>)>(
   symbol: 'xs_axdrv_apps_json',
   assetId: 'package:universal_driver_macos/xs_ax_driver',

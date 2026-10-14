@@ -814,8 +814,27 @@ public func xs_axdrv_windows_json(
     _ pid: Int32,
     _ outJson: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
 ) -> Int32 {
+    return windowListJson(pid, onScreenOnly: true, outJson)
+}
+
+/// Additive ABI: includes normal windows on other Spaces and hidden helpers.
+@_cdecl("xs_axdrv_windows_all_json")
+public func xs_axdrv_windows_all_json(
+    _ pid: Int32,
+    _ outJson: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+) -> Int32 {
+    return windowListJson(pid, onScreenOnly: false, outJson)
+}
+
+private func windowListJson(
+    _ pid: Int32,
+    onScreenOnly: Bool,
+    _ outJson: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+) -> Int32 {
     guard let outJson else { return 1 }
-    let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
+    let options: CGWindowListOption = onScreenOnly
+        ? [.optionOnScreenOnly, .excludeDesktopElements]
+        : [.optionAll, .excludeDesktopElements]
     guard let list = CGWindowListCopyWindowInfo(options, kCGNullWindowID)
         as? [[String: Any]]
     else { return 3 }
@@ -832,6 +851,9 @@ public func xs_axdrv_windows_json(
             "pid": Int(owner),
             "name": info[kCGWindowName as String] as? String ?? "",
         ]
+        if let onScreen = info[kCGWindowIsOnscreen as String] as? Bool {
+            dict["onScreen"] = onScreen
+        }
         if let bounds = info[kCGWindowBounds as String] as? [String: NSNumber],
            let x = bounds["X"]?.doubleValue,
            let y = bounds["Y"]?.doubleValue,

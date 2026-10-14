@@ -1,0 +1,26 @@
+[
+  {
+    "stage": "first",
+    "exitCode": 0,
+    "seconds": 5.503947208999307,
+    "warning": false,
+    "assetSha256": "6349e143eebe29ecec3f4cd39fee19fba5570b9e03cbdaf64e069a9eeedd33eb",
+    "assetMtimeNs": 1791954171526157217,
+    "dependencyPaths": [
+      "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/universal_driver_macos/bridge/src/driver_bridge.swift",
+      "/Users/antonio/xs/ecsly/tool/visualization_dogfood/native_capture/.dart_tool/hooks_runner/shared/universal_driver_macos/build/9fb02c5622/libxs_ax_driver.dylib"
+    ]
+  },
+  {
+    "stage": "warm",
+    "exitCode": 0,
+    "seconds": 2.810443292000855,
+    "warning": false,
+    "assetSha256": "6349e143eebe29ecec3f4cd39fee19fba5570b9e03cbdaf64e069a9eeedd33eb",
+    "assetMtimeNs": 1791954171526157217,
+    "dependencyPaths": [
+      "/Users/antonio/xs/storage_problem/dart_flutter_packages/pkgs/universal_driver_macos/bridge/src/driver_bridge.swift",
+      "/Users/antonio/xs/ecsly/tool/visualization_dogfood/native_capture/.dart_tool/hooks_runner/shared/universal_driver_macos/build/9fb02c5622/libxs_ax_driver.dylib"
+    ]
+  }
+]

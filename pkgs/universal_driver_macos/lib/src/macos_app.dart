@@ -63,7 +63,6 @@ final class MacosApp {
       'active: $active)';
 }
 
-
 /// One on-screen window of a running application — the discovery record
 /// for window-scoped capture.
 final class MacosWindow {
@@ -73,6 +72,7 @@ final class MacosWindow {
     required this.pid,
     required this.name,
     this.bounds,
+    this.onScreen,
   });
 
   /// Restores a window record from one bridge JSON object.
@@ -82,6 +82,7 @@ final class MacosWindow {
       windowId: (json['windowId']! as num).toInt(),
       pid: (json['pid']! as num).toInt(),
       name: json['name']! as String,
+      onScreen: json['onScreen'] as bool?,
       bounds: rawBounds is Map<String, Object?>
           ? AxBounds.fromJson({
               'left': (rawBounds['left']! as num).toDouble(),
@@ -104,6 +105,18 @@ final class MacosWindow {
 
   /// Global bounds, when the window list published them.
   final AxBounds? bounds;
+
+  /// OS visibility when published; absent metadata remains unknown.
+  final bool? onScreen;
+
+  /// Serializes observed window metadata without inventing visibility.
+  Map<String, Object?> toJson() => {
+    'windowId': windowId,
+    'pid': pid,
+    'name': name,
+    if (bounds != null) 'bounds': bounds!.toJson(),
+    if (onScreen != null) 'onScreen': onScreen,
+  };
 
   /// Decodes a bridge JSON array.
   static List<MacosWindow> listFromJson(String json) {

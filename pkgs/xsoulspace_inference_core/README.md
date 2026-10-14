@@ -14,6 +14,16 @@ or semantic composition as well as routing; each role requires its own evidence.
 
 ## Included API
 
+`GenerationOptions.reasoningEffort` and both `InferenceRequest` factories carry
+an explicit effort independently of `thinking`. `ReasoningEffortInferenceClient`
+advertises the adapter's supported wire values; consumers must refuse an absent
+capability rather than silently substitute defaults. Model-specific eligibility
+still belongs to the provider. Null retains existing behavior.
+
+`ToolStreamingInferenceClient` is an optional stream with a caller-owned tool
+registry. Text deltas are provisional; only a successful completed result can
+publish typed calls for the caller's ordinary validation/execution path.
+
 Native tool requests may carry optional `ToolCall.callId` and `namespace`.
 Execution results retain `callId` to reference an admitted call; names alone do
 not distinguish repeated requests. `InferenceResponse` serialization preserves
@@ -256,3 +266,12 @@ parsing. It validates JSON and rejects duplicate decoded keys in any object,
 including equivalent escapes. Source code held in string values remains opaque.
 The caller owns size/depth limits, payload schema and authority; decoding grants
 no tool execution or consent.
+
+### Original and presentation output
+
+`InferenceResponse.rawOutput` preserves provider source. Optional
+`presentationText` carries discussion decoded by the selected provider syntax
+profile: null retains legacy raw presentation; empty explicitly means no visible
+discussion. Structured `toolCalls` remain structured. Consumers must not reparse
+presentation into executable calls, erase originals, or treat streamed provisional
+text as a durable effect. Final settlement can correct provisional text.

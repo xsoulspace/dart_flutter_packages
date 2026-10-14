@@ -1,0 +1,3 @@
+Running build hooks...Running build hooks...00:00 +0: loading test/native_hook_test.dart
+00:00 +0: native hook builds, reuses outputs, and rebuilds changed Swift input
+00:06 +1: All tests passed!

@@ -6,6 +6,16 @@ over the real accessibility tree (AXUIElement) and CGEvent input
 synthesis. Pure Dart — no Flutter plugin surface, no FFI path hunting —
 through native-assets build hooks (the ADR 0001 pattern).
 
+## Native build/cache regression
+
+Run `XS_TEST_NATIVE_HOOK=1 dart test test/native_hook_test.dart` on macOS.
+It copies the package into an owned temporary fixture, builds a real Swift
+code asset, loads it through MacosDriver.frontmost, checks warm reuse, then
+changes only the copied Swift source and checks rebuilding. It refuses the
+"File modified during build" warning and checks absolute dependency paths.
+The fixture never activates an app or edits the repository bridge. The default
+suite skips this compiler-dependent test; unit driver tests are separate proof.
+
 ## What it can do
 
 | Capability | Status | Notes |
@@ -19,6 +29,14 @@ through native-assets build hooks (the ADR 0001 pattern).
 | `evaluate` | no | No AX equivalent; refused loudly |
 
 ## Permissions
+
+Semantic click/setValue/elementAction locators must match exactly one observed
+node. Duplicate role/name matches throw ProtocolException with locator and match
+count before native mutation; a stale-handle refresh applies the same rule.
+Add a unique accessible name or scope the app's controls instead of relying on
+tree order. Completion of AXPress is delivery evidence; verify the app effect
+independently. A rendered background window does not guarantee an exposed AX
+window/control subtree.
 
 - **Accessibility** (System Settings → Privacy & Security → Accessibility):
   required for `snapshot`/`elementAtPosition`/`perform`. Check with

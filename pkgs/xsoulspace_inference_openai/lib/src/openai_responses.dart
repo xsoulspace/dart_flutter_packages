@@ -54,6 +54,7 @@ final class ResponsesDecisionReceipt {
     required this.structuredKeys,
     required this.usage,
     required this.outcome,
+    this.reasoningEffort,
   });
 
   final int advertisedTools;
@@ -71,6 +72,7 @@ final class ResponsesDecisionReceipt {
   final int structuredKeys;
   final Map<String, int> usage;
   final String outcome;
+  final String? reasoningEffort;
 
   Map<String, Object?> toJson() => {
     'advertisedTools': advertisedTools,
@@ -88,6 +90,7 @@ final class ResponsesDecisionReceipt {
     'structuredKeys': structuredKeys,
     'usage': Map<String, int>.of(usage),
     'outcome': outcome,
+    if (reasoningEffort != null) 'reasoningEffort': reasoningEffort,
   };
 }
 
@@ -96,6 +99,8 @@ final class ResponsesDecisionReceipt {
 final class OpenAiResponsesClient
     implements
         StructuredTextStreamingInferenceClient,
+        ToolStreamingInferenceClient,
+        ReasoningEffortInferenceClient,
         CancellableInferenceClient {
   OpenAiResponsesClient({
     required this.auth,
@@ -111,6 +116,15 @@ final class OpenAiResponsesClient
   final ChatGptAuth auth;
   final String clientId;
   final String model;
+  @override
+  Set<String> get supportedReasoningEfforts => const {
+    'none',
+    'minimal',
+    'low',
+    'medium',
+    'high',
+    'xhigh',
+  };
   final http.Client _client;
   final bool _ownsClient;
   final Duration deadline;
@@ -262,6 +276,12 @@ final class OpenAiResponsesClient
     return session;
   }
 
+  @override
+  Future<InferenceStructuredTextStreamSession> streamWithTools(
+    InferenceRequest request, {
+    required ToolRegistry toolRegistry,
+  }) => streamResponses(request, toolRegistry: toolRegistry);
+
   Map<String, dynamic> encodeRequest(
     InferenceRequest request, {
     ToolRegistry? tools,
@@ -274,6 +294,10 @@ final class OpenAiResponsesClient
         request.stopSequences.isNotEmpty ||
         request.thinking != null) {
       throw const _ResponseFailure('generation_option_unsupported');
+    }
+    final effort = request.reasoningEffort;
+    if (effort != null && !supportedReasoningEfforts.contains(effort)) {
+      throw const _ResponseFailure('reasoning_effort_unsupported');
     }
     final instructions = <String>[
       if (request.systemPrompt.isNotEmpty) request.systemPrompt,
@@ -382,6 +406,7 @@ final class OpenAiResponsesClient
       'model': model,
       'store': false,
       'stream': true,
+      if (effort != null) 'reasoning': {'effort': effort},
       'input': input,
       if (instructions.isNotEmpty) 'instructions': instructions.join('\n\n'),
       if (definitions.isNotEmpty)
@@ -688,6 +713,10 @@ final class OpenAiResponsesClient
               schemaRequested: request.outputSchema.isNotEmpty,
               httpStatus: httpStatus,
               elapsedMs: elapsed.elapsedMilliseconds,
+              reasoningEffort:
+                  supportedReasoningEfforts.contains(request.reasoningEffort)
+                  ? request.reasoningEffort
+                  : null,
               outputKinds: Map.unmodifiable(outputKinds),
               eventKinds: Map.unmodifiable(eventKinds),
               terminalOutputItems: terminalOutputItems,

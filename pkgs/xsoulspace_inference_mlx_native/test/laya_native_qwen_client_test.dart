@@ -13,10 +13,44 @@ import 'package:xsoulspace_inference_mlx_native/xsoulspace_inference_mlx_native.
 ///
 /// Skips honestly when the dylib or the cached snapshot is absent.
 void main() {
-  final fixtureFile = File(
-    'native/mlx_native/testdata/qwen3_06b_parity.json',
-  );
+  final fixtureFile = File('native/mlx_native/testdata/qwen3_06b_parity.json');
   final snapshotDir = resolveQwenSnapshotDir(null);
+
+  test(
+    'actor-bound prefix reuse matches fresh and clearCache revokes it',
+    () async {
+      final NativeQwenTextEngine engine;
+      try {
+        engine = await NativeQwenTextEngine.load();
+      } on Object catch (error) {
+        return markTestSkipped('native qwen unavailable: $error');
+      }
+      addTearDown(engine.dispose);
+      const scope = QwenCacheScope(actor: 'test/alpha', epoch: '1');
+      const prompt = 'The capital of France is';
+      final fresh = await engine.generateAsync(prompt: prompt, maxTokens: 8);
+      final cold = await engine.generateAsync(
+        prompt: prompt,
+        maxTokens: 8,
+        cacheScope: scope,
+      );
+      final warm = await engine.generateAsync(
+        prompt: prompt,
+        maxTokens: 8,
+        cacheScope: scope,
+      );
+      expect(cold.cacheReusedTokens, 0);
+      expect(warm.cacheReusedTokens, warm.promptIds.length - 1);
+      expect(warm.ids, fresh.ids);
+      engine.clearCache(scope.actor);
+      expect(
+        engine
+            .generate(prompt: prompt, maxTokens: 8, cacheScope: scope)
+            .cacheReusedTokens,
+        0,
+      );
+    },
+  );
 
   test('engine reproduces the fixture greedy ids in-process', () async {
     if (!fixtureFile.existsSync()) {
@@ -41,8 +75,11 @@ void main() {
     ];
 
     final completion = engine.generate(prompt: prompt, maxTokens: 8);
-    expect(completion.promptIds, wantPromptIds,
-        reason: 'Dart-side prompt tokenization diverged');
+    expect(
+      completion.promptIds,
+      wantPromptIds,
+      reason: 'Dart-side prompt tokenization diverged',
+    );
     expect(
       completion.ids.sublist(wantPromptIds.length),
       wantGreedy.sublist(0, 8),
@@ -50,33 +87,40 @@ void main() {
     );
   }, timeout: const Timeout(Duration(minutes: 5)));
 
-  test('generateAsync returns the fixture prefix off the calling isolate', () async {
-    if (!fixtureFile.existsSync()) {
-      return markTestSkipped('parity fixture absent');
-    }
-    final NativeQwenTextEngine engine;
-    try {
-      engine = await NativeQwenTextEngine.load();
-    } on Object catch (error) {
-      return markTestSkipped('native qwen engine unavailable: $error');
-    }
-    addTearDown(engine.dispose);
+  test(
+    'generateAsync returns the fixture prefix off the calling isolate',
+    () async {
+      if (!fixtureFile.existsSync()) {
+        return markTestSkipped('parity fixture absent');
+      }
+      final NativeQwenTextEngine engine;
+      try {
+        engine = await NativeQwenTextEngine.load();
+      } on Object catch (error) {
+        return markTestSkipped('native qwen engine unavailable: $error');
+      }
+      addTearDown(engine.dispose);
 
-    final fixture =
-        jsonDecode(fixtureFile.readAsStringSync()) as Map<String, dynamic>;
-    final prompt = fixture['prompt'] as String;
-    final wantGreedy = <int>[
-      for (final v in fixture['greedy_ids'] as List) v as int,
-    ];
+      final fixture =
+          jsonDecode(fixtureFile.readAsStringSync()) as Map<String, dynamic>;
+      final prompt = fixture['prompt'] as String;
+      final wantGreedy = <int>[
+        for (final v in fixture['greedy_ids'] as List) v as int,
+      ];
 
-    final completion = await engine.generateAsync(prompt: prompt, maxTokens: 8);
-    expect(
-      completion.ids.sublist(completion.promptIds.length),
-      wantGreedy.sublist(0, 8),
-      reason: 'async greedy ids diverge from the reference',
-    );
-    expect(completion.text, isNotEmpty);
-  }, timeout: const Timeout(Duration(minutes: 5)));
+      final completion = await engine.generateAsync(
+        prompt: prompt,
+        maxTokens: 8,
+      );
+      expect(
+        completion.ids.sublist(completion.promptIds.length),
+        wantGreedy.sublist(0, 8),
+        reason: 'async greedy ids diverge from the reference',
+      );
+      expect(completion.text, isNotEmpty);
+    },
+    timeout: const Timeout(Duration(minutes: 5)),
+  );
 
   test('wire: chat completions over the in-process engine', () async {
     if (snapshotDir == null) {
@@ -116,8 +160,11 @@ void main() {
     expect(choices, isNotEmpty);
     final message = (choices.first as Map)['message'] as Map;
     expect(message['role'], 'assistant');
-    expect((message['content'] as String).isNotEmpty, isTrue,
-        reason: 'wire completion returned empty content');
+    expect(
+      (message['content'] as String).isNotEmpty,
+      isTrue,
+      reason: 'wire completion returned empty content',
+    );
     final usage = body['usage'] as Map;
     expect(usage['prompt_tokens'], greaterThan(0));
     expect(usage['completion_tokens'], 8);

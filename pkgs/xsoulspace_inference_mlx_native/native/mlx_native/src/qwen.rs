@@ -1202,6 +1202,18 @@ impl Qwen3 {
             return Err(MlxError(-978));
         }
         let mut cache = KvCache::new(self.cfg.layers);
+        self.generate_greedy_cached(prompt_ids, max_tokens, stop, s, &mut cache)
+    }
+
+    /// Continue from an exact, already computed prefix. Caller owns isolation
+    /// and must align cache.offset with the supplied prompt's token prefix.
+    pub(crate) fn generate_greedy_cached(
+        &self, prompt_ids: &[i32], max_tokens: usize, stop: Option<&[i32]>,
+        s: Stream, cache: &mut KvCache,
+    ) -> MlxResult<Vec<i32>> {
+        if prompt_ids.is_empty() || cache.offset >= prompt_ids.len() {
+            return Err(MlxError(-978));
+        }
         // Reserve the WHOLE decode window up front (ADR 0055 spike fix):
         // the prompt + generation length is known here, and a mid-decode
         // cache growth costs a measured ~+20 ms step (buffer realloc +
@@ -1215,12 +1227,12 @@ impl Qwen3 {
 
         const PREFILL_STEP: usize = 2048;
         let pacing = crate::power::PrefillPacing::for_request();
-        let mut rest = prompt_ids;
+        let mut rest = &prompt_ids[cache.offset..];
         while rest.len() > 1 {
             let n = PREFILL_STEP.min(rest.len() - 1);
             let t = Array::from_data_i32(&rest[..n], &[1, n])?;
             // KV-only chunk: no lm_head (a chunk's logits are never read).
-            self.forward_hidden(&t, &mut cache, s)?;
+            self.forward_hidden(&t, cache, s)?;
             pacing.rest();
             rest = &rest[n..];
         }
@@ -1230,7 +1242,7 @@ impl Qwen3 {
         let mut next: i32 = rest[0];
         for _ in 0..max_tokens {
             let tokens = Array::from_data_i32(&[next], &[1, 1])?;
-            let logits = self.forward_step(&tokens, &mut cache, s)?;
+            let logits = self.forward_step(&tokens, cache, s)?;
             let am = logits.argmax_axis(-1, false, s)?;
             let f = am.astype(Dtype::Float32, s)?;
             let v = f.to_f32_vec(s)?;

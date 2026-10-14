@@ -30,8 +30,9 @@ void main(List<String> args) async {
     };
     final target = '$arch-apple-macos$minMacos';
 
-    final libPath =
-        '${input.outputDirectory.toFilePath()}/libxs_ax_driver.dylib';
+    final source = input.packageRoot.resolve('bridge/src/driver_bridge.swift');
+    final library = input.outputDirectory.resolve('libxs_ax_driver.dylib');
+    final libPath = library.toFilePath();
     final result = await Process.run('swiftc', [
       '-emit-library',
       '-o',
@@ -49,7 +50,7 @@ void main(List<String> args) async {
       '-framework',
       'Foundation',
       '-parse-as-library',
-      'bridge/src/driver_bridge.swift',
+      source.toFilePath(),
     ]);
 
     if (result.exitCode != 0) {
@@ -76,12 +77,12 @@ void main(List<String> args) async {
       }
     }
 
-    output.dependencies.addAll([Uri.file('bridge/src/driver_bridge.swift')]);
+    output.dependencies.add(source);
     output.assets.code.add(
       CodeAsset(
         package: input.packageName,
         name: 'xs_ax_driver',
-        file: Uri.file(libPath),
+        file: library,
         linkMode: DynamicLoadingBundled(),
       ),
     );

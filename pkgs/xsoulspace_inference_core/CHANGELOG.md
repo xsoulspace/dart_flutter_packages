@@ -1,5 +1,12 @@
 ## Unreleased
 
+- Preserve original provider output separately from nullable presentation text;
+  explicit empty presentation carries no visible discussion.
+
+- Add explicit reasoning effort to composable generation/request codecs and an
+  optional provider capability; add caller-owned tool streaming without changing
+  the existing text-stream interface.
+
 - Expose `decodeJsonWithUniqueKeys` for embedded tool payloads, reusing the
   syntax parser guard to reject nested and escaped duplicate keys.
 

@@ -122,3 +122,11 @@ Package controls use one test lane so CPU-intensive identity fixtures do not
 starve bounded native IO controls. Physical deadlines remain unchanged. Test
 servers explicitly flush streaming output; a server flush does not prove that
 client headers were observed before interruption.
+
+Explicit `InferenceRequest(reasoningEffort: 'low', ...)` emits
+`reasoning: {effort: low}`. Null retains the endpoint default; `thinking` is not
+translated into effort. Supported wire values are advertised through the optional
+core capability; model eligibility remains a server decision. Unknown values
+refuse before dispatch. Safe decision receipts include only recognized effort.
+The shared `streamWithTools` capability forwards the existing SSE path and keeps
+completed typed calls/results intact; it never executes them.

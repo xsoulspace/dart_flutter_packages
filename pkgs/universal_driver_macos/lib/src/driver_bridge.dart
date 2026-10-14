@@ -157,8 +157,18 @@ abstract interface class AxDriverBridge {
   BridgeJsonResult windowsJson({int pid = 0});
 }
 
-/// Production bridge: straight onto the native symbols.
-final class NativeAxDriverBridge implements AxDriverBridge {
+/// Optional extension so custom bridges retain the original window-list ABI.
+// A nominal capability permits custom bridges without adding required members
+// to the original interface or coupling callers to a native top-level function.
+// ignore: one_member_abstracts
+abstract interface class AllWindowListingBridge {
+  /// Lists normal-layer windows without requiring that they be on screen.
+  BridgeJsonResult allWindowsJson({int pid = 0});
+}
+
+/// Native implementation of the driver and optional all-window discovery.
+final class NativeAxDriverBridge
+    implements AxDriverBridge, AllWindowListingBridge {
   @override
   String version() {
     final pointer = axdrvVersion();
@@ -402,8 +412,10 @@ final class NativeAxDriverBridge implements AxDriverBridge {
 
   @override
   BridgeBytesResult screenshotPng({int displayId = 0, int maxPx = 0}) =>
-      _captureBytes((outData, outLen) =>
-          axdrvScreenshotPng(displayId, maxPx, outData, outLen));
+      _captureBytes(
+        (outData, outLen) =>
+            axdrvScreenshotPng(displayId, maxPx, outData, outLen),
+      );
 
   @override
   BridgeBytesResult screenshotWindowPng({
@@ -419,6 +431,18 @@ final class NativeAxDriverBridge implements AxDriverBridge {
     final out = calloc<Pointer<Utf8>>();
     try {
       final code = axdrvWindowsJson(pid, out);
+      final json = code == 0 ? copyAndFreeCString(out.value) : '';
+      return (code: code, json: json);
+    } finally {
+      calloc.free(out);
+    }
+  }
+
+  @override
+  BridgeJsonResult allWindowsJson({int pid = 0}) {
+    final out = calloc<Pointer<Utf8>>();
+    try {
+      final code = axdrvAllWindowsJson(pid, out);
       final json = code == 0 ? copyAndFreeCString(out.value) : '';
       return (code: code, json: json);
     } finally {

@@ -16,6 +16,7 @@ class GenerationOptions {
     this.temperature,
     this.stopSequences = const <String>[],
     this.thinking,
+    this.reasoningEffort,
   });
 
   factory GenerationOptions.fromJson(final Map<String, dynamic> json) =>
@@ -33,6 +34,10 @@ class GenerationOptions {
           final bool thinking => thinking,
           _ => null,
         },
+        reasoningEffort: switch (json['reasoning_effort']) {
+          final String effort => effort,
+          _ => null,
+        },
       );
 
   /// Upper bound on generated tokens. Providers with a required limit
@@ -46,16 +51,23 @@ class GenerationOptions {
   /// whatever the provider's own default is.
   final bool? thinking;
 
+  /// Explicit provider-supported effort, independent of the thinking switch.
+  /// Null retains the provider default. Adapters must map or refuse this value;
+  /// callers must not infer an effort from [thinking].
+  final String? reasoningEffort;
+
   GenerationOptions copyWith({
     final int? maxTokens,
     final double? temperature,
     final List<String>? stopSequences,
     final bool? thinking,
+    final String? reasoningEffort,
   }) => GenerationOptions(
     maxTokens: maxTokens ?? this.maxTokens,
     temperature: temperature ?? this.temperature,
     stopSequences: stopSequences ?? this.stopSequences,
     thinking: thinking ?? this.thinking,
+    reasoningEffort: reasoningEffort ?? this.reasoningEffort,
   );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
@@ -63,5 +75,6 @@ class GenerationOptions {
     'temperature': ?temperature,
     if (stopSequences.isNotEmpty) 'stop_sequences': stopSequences,
     'thinking': ?thinking,
+    'reasoning_effort': ?reasoningEffort,
   };
 }

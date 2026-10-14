@@ -6,6 +6,33 @@ import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 /// ADR 0059 — the composable request surface: `GenerationOptions`,
 /// `ChatMessage`, request-level `thinking`, `messages`, and `copyWith`.
 void main() {
+  test('presentation text round-trips independently from raw evidence', () {
+    for (final text in [null, '', 'Answer']) {
+      final response = InferenceResponse(
+        rawOutput: 'Original provider output',
+        presentationText: text,
+      );
+      final restored = InferenceResponse.fromJson(response.toJson());
+      expect(restored.rawOutput, 'Original provider output');
+      expect(restored.presentationText, text);
+    }
+  });
+  test('explicit effort survives options and both request codecs', () {
+    const options = GenerationOptions(reasoningEffort: 'low');
+    expect(GenerationOptions.fromJson(options.toJson()).reasoningEffort, 'low');
+    expect(options.copyWith(maxTokens: 64).reasoningEffort, 'low');
+    for (final request in [
+      InferenceRequest(prompt: 'question', reasoningEffort: 'low'),
+      InferenceRequest.structured(prompt: 'question', reasoningEffort: 'low'),
+    ]) {
+      final restored = InferenceRequest.fromJson(
+        request.copyWith(prompt: 'next').value,
+      );
+      expect(restored.reasoningEffort, 'low');
+      expect(restored.generationOptions.reasoningEffort, 'low');
+      expect(restored.thinking, isNull);
+    }
+  });
   group('GenerationOptions', () {
     test('composes, copies, and JSON round-trips', () {
       const options = GenerationOptions(

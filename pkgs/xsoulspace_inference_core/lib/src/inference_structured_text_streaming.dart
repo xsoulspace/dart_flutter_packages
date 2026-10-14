@@ -214,6 +214,17 @@ abstract interface class StructuredTextStreamingInferenceClient
   );
 }
 
+/// Optional streaming with a caller-owned tool catalog. Streaming never grants
+/// permission to execute a proposal. Completed calls retain ordinary
+/// validation.
+abstract interface class ToolStreamingInferenceClient
+    implements InferenceClient {
+  Future<InferenceStructuredTextStreamSession> streamWithTools(
+    InferenceRequest request, {
+    required ToolRegistry toolRegistry,
+  });
+}
+
 extension InferenceStructuredTextStreamingClientX on InferenceClient {
   bool get supportsStructuredTextStreaming =>
       this is StructuredTextStreamingInferenceClient;

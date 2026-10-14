@@ -1,5 +1,19 @@
 import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 
+/// Native chat templates consume the same function signatures as wire APIs.
+/// The core kind-tagged schema is a host contract, not model-facing JSON Schema.
+List<Map<String, Object?>> nativeTextFunctionTools(ToolRegistry registry) => [
+  for (final tool in registry.tools.values)
+    {
+      'type': 'function',
+      'function': {
+        'name': tool.name.value,
+        'description': tool.description,
+        'parameters': bundleToJsonSchema(tool.argsSchema),
+      },
+    },
+];
+
 /// Reconstruct only the request's already-projected cut. Explicit messages
 /// remain authoritative, so no second transcript or hidden world read exists.
 List<ChatMessage> nativeTextMessages(final InferenceRequest request) =>
@@ -12,8 +26,13 @@ List<ChatMessage> nativeTextMessages(final InferenceRequest request) =>
       ).map(ChatMessage.fromJson).toList();
 
 final class NativeTextToolOutput {
-  const NativeTextToolOutput({this.calls = const [], this.sources = const []});
+  const NativeTextToolOutput({
+    this.calls = const [],
+    this.sources = const [],
+    this.presentationText = '',
+  });
   final List<ToolCall> calls;
+  final String presentationText;
   final List<Map<String, Object>> sources;
 }
 
@@ -24,6 +43,7 @@ InferenceResult<NativeTextToolOutput> normalizeNativeTextCalls({
   final bool thinkingPrefilled = false,
 }) {
   var answer = text;
+  var presentationStart = 0;
   // The Qwen renderer, not raw substring guessing, declares an open thought
   // in its generation prompt. Mask it without shifting original source spans.
   if (thinkingPrefilled && !text.trimLeft().startsWith('<think>')) {
@@ -36,6 +56,7 @@ InferenceResult<NativeTextToolOutput> normalizeNativeTextCalls({
     }
     final end = close + '</think>'.length;
     answer = '${' ' * end}${text.substring(end)}';
+    presentationStart = end;
   }
   if (syntax == null) {
     if (answer.contains('<|tool_call_start|>') ||
@@ -45,7 +66,9 @@ InferenceResult<NativeTextToolOutput> normalizeNativeTextCalls({
         message: 'This checkpoint has no qualified tool-call syntax profile',
       );
     }
-    return InferenceResult.ok(const NativeTextToolOutput());
+    return InferenceResult.ok(
+      NativeTextToolOutput(presentationText: text.substring(presentationStart)),
+    );
   }
   final parsed = syntax.parse(
     answer,
@@ -59,9 +82,21 @@ InferenceResult<NativeTextToolOutput> normalizeNativeTextCalls({
       details: {'syntax': syntax.id, 'offset': parsed.errorOffset},
     );
   }
+  // The already validated profile owns these spans. Presentation never parses
+  // again, and the exact original remains available separately as evidence.
+  final presentation = StringBuffer();
+  var cursor = presentationStart;
+  for (final node in parsed.nodes) {
+    if (node.end <= cursor) continue;
+    if (node.start > cursor)
+      presentation.write(text.substring(cursor, node.start));
+    cursor = node.end;
+  }
+  presentation.write(text.substring(cursor));
   return InferenceResult.ok(
     NativeTextToolOutput(
       calls: parsed.calls,
+      presentationText: presentation.toString(),
       sources: [
         for (final node in parsed.nodes)
           if (node.call != null)

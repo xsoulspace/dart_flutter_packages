@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- Resolve Swift source dependencies from packageRoot and native outputs from
+  outputDirectory. Consumer builds no longer treat a relative missing source
+  as modified during the build; unchanged inputs reuse the cached dylib.
+  An opt-in real native hook test verifies build, reuse and source invalidation
+  through an isolated consumer without editing repository inputs.
+
+- Refuse ambiguous role/name locators before native click, setValue, or element
+  actions, including refreshed targets after stale handles. ProtocolException
+  carries the locator and match count; unique locator behavior is unchanged.
+
 ## 0.2.0
 
 - **APP MANAGEMENT — the macOS rung** (manage applications, not only the

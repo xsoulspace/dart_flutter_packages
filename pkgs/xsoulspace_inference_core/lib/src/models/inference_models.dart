@@ -90,6 +90,7 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     /// Request-level reasoning switch (ADR 0059). Null = the provider's
     /// own default.
     bool? thinking,
+    String? reasoningEffort,
   }) => InferenceRequest._(
     _buildRequestMap(
       prompt: prompt,
@@ -106,6 +107,7 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
       temperature: temperature,
       stopSequences: stopSequences,
       thinking: thinking,
+      reasoningEffort: reasoningEffort,
     ),
   );
   factory InferenceRequest.structured({
@@ -123,6 +125,7 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     double? temperature,
     List<String> stopSequences = const [],
     bool? thinking,
+    String? reasoningEffort,
   }) => InferenceRequest._(
     _buildRequestMap(
       prompt: prompt,
@@ -139,6 +142,7 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
       temperature: temperature,
       stopSequences: stopSequences,
       thinking: thinking,
+      reasoningEffort: reasoningEffort,
     ),
   );
 
@@ -195,6 +199,7 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     required final double? temperature,
     required final List<String> stopSequences,
     required final bool? thinking,
+    required final String? reasoningEffort,
   }) => <String, dynamic>{
     'task': task.name,
     'prompt': prompt,
@@ -213,6 +218,7 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     'temperature': ?temperature,
     if (stopSequences.isNotEmpty) 'stop_sequences': stopSequences,
     'thinking': ?thinking,
+    'reasoning_effort': ?reasoningEffort,
   };
 
   String get prompt => jsonDecodeString(value['prompt']);
@@ -253,6 +259,10 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     final bool thinking => thinking,
     _ => null,
   };
+  String? get reasoningEffort => switch (value['reasoning_effort']) {
+    final String effort => effort,
+    _ => null,
+  };
   List<ChatMessage> get messages => <ChatMessage>[
     for (final json in jsonDecodeListAs<Map<String, dynamic>>(
       value['messages'],
@@ -267,6 +277,7 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     temperature: temperature,
     stopSequences: stopSequences,
     thinking: thinking,
+    reasoningEffort: reasoningEffort,
   );
 
   /// Derives a request with the given fields replaced (ADR 0059 — set-if-
@@ -286,6 +297,7 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     final double? temperature,
     final List<String>? stopSequences,
     final bool? thinking,
+    final String? reasoningEffort,
   }) => InferenceRequest._(
     _buildRequestMap(
       prompt: prompt ?? this.prompt,
@@ -302,6 +314,7 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
       temperature: temperature ?? this.temperature,
       stopSequences: stopSequences ?? this.stopSequences,
       thinking: thinking ?? this.thinking,
+      reasoningEffort: reasoningEffort ?? this.reasoningEffort,
     ),
   );
 }
@@ -310,6 +323,7 @@ class InferenceResponse {
   const InferenceResponse({
     this.structuredOutput = const {},
     this.rawOutput,
+    this.presentationText,
     this.warnings = const <String>[],
     this.meta = const <String, dynamic>{},
     this.task = InferenceTask.implicitlyStructuredText,
@@ -325,6 +339,7 @@ class InferenceResponse {
       InferenceResponse(
         structuredOutput: jsonDecodeMap(json['output']),
         rawOutput: jsonDecodeString(json['raw_output']),
+        presentationText: json['presentation_text'] as String?,
         warnings: jsonDecodeListAs(json['warnings']),
         meta: jsonDecodeMap(json['meta']),
         toolCalls: jsonDecodeListAs<Map<String, dynamic>>(
@@ -349,6 +364,10 @@ class InferenceResponse {
 
   final Map<String, dynamic> structuredOutput;
   final String? rawOutput;
+
+  /// Provider-decoded discussion text. Empty means no discussion; null retains
+  /// legacy raw presentation. Original evidence remains in [rawOutput].
+  final String? presentationText;
   final List<String> warnings;
   final Map<String, dynamic> meta;
   final InferenceTask task;
@@ -370,6 +389,7 @@ class InferenceResponse {
     'task': task.name,
     'output': structuredOutput,
     if (rawOutput != null) 'raw_output': rawOutput,
+    if (presentationText != null) 'presentation_text': presentationText,
     if (transcript != null) 'transcript': transcript,
     if (normalizedTranscript != null)
       'normalized_transcript': normalizedTranscript,
