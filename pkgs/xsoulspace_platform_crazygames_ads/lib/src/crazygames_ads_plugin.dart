@@ -105,7 +105,7 @@ final class CrazyGamesAdsPlatformClient implements PlatformClient {
   PlatformId get platformId => _baseClient.platformId;
 
   @override
-  Future<PlatformInitResult> init(final PlatformInitOptions options) async {
+  Future<PlatformInitResult> init(PlatformInitOptions options) async {
     final baseResult = await _baseClient.init(options);
     if (!baseResult.isSuccess) {
       return baseResult;
@@ -183,7 +183,7 @@ final class CrazyGamesAdsPlatformClient implements PlatformClient {
   @override
   Stream<PlatformEvent> get events => _baseClient.events;
 
-  T? _tryCast<T>(final Object? value) {
+  T? _tryCast<T>(Object? value) {
     if (value is T) {
       return value;
     }

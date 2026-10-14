@@ -20,11 +20,11 @@ final class UpstreamLock {
   final String declarationHash;
 
   UpstreamLock copyWith({
-    final String? packageName,
-    final String? version,
-    final String? integrity,
-    final String? tarballSha512,
-    final String? declarationHash,
+    String? packageName,
+    String? version,
+    String? integrity,
+    String? tarballSha512,
+    String? declarationHash,
   }) {
     return UpstreamLock(
       packageName: packageName ?? this.packageName,
@@ -43,7 +43,7 @@ final class UpstreamLock {
     'declarationHash': declarationHash,
   };
 
-  static UpstreamLock fromJson(final Map<String, Object?> json) {
+  static UpstreamLock fromJson(Map<String, Object?> json) {
     return UpstreamLock(
       packageName: json['package']! as String,
       version: json['version']! as String,
@@ -61,7 +61,7 @@ final class GenerateOptions {
   final bool bump;
 }
 
-Future<void> main(final List<String> args) async {
+Future<void> main(List<String> args) async {
   final options = _parseOptions(args);
   if (options == null) {
     exitCode = 2;
@@ -244,10 +244,10 @@ Future<void> main(final List<String> args) async {
 }
 
 Future<String> _flattenDiscordDeclarations({
-  required final String packageRoot,
-  required final Directory tempDir,
-  required final List<int> tarballBytes,
-  required final String version,
+  required String packageRoot,
+  required Directory tempDir,
+  required List<int> tarballBytes,
+  required String version,
 }) async {
   final tarballPath = p.join(tempDir.path, 'discord_sdk.tgz');
   File(tarballPath).writeAsBytesSync(tarballBytes, flush: true);
@@ -275,9 +275,9 @@ Future<String> _flattenDiscordDeclarations({
       outputDir
           .listSync(recursive: true)
           .whereType<File>()
-          .where((final file) => file.path.endsWith('.d.ts'))
+          .where((file) => file.path.endsWith('.d.ts'))
           .toList(growable: false)
-        ..sort((final a, final b) => a.path.compareTo(b.path));
+        ..sort((a, b) => a.path.compareTo(b.path));
 
   if (files.isEmpty) {
     throw StateError('No TypeScript declaration files found in Discord SDK.');
@@ -313,7 +313,7 @@ Future<String> _flattenDiscordDeclarations({
   return '${buffer.toString().trimRight()}\n';
 }
 
-String _normalizeDts(final String content) {
+String _normalizeDts(String content) {
   final lines = content.split('\n');
   final normalized = <String>[];
 
@@ -351,7 +351,7 @@ String _normalizeDts(final String content) {
   return normalized.join('\n');
 }
 
-GenerateOptions? _parseOptions(final List<String> args) {
+GenerateOptions? _parseOptions(List<String> args) {
   var checkOnly = false;
   var bump = false;
 
@@ -374,8 +374,8 @@ GenerateOptions? _parseOptions(final List<String> args) {
 }
 
 List<String> _lockMismatches(
-  final UpstreamLock lock,
-  final UpstreamLock expected,
+  UpstreamLock lock,
+  UpstreamLock expected,
 ) {
   final mismatches = <String>[];
 
@@ -401,7 +401,7 @@ List<String> _lockMismatches(
   return mismatches;
 }
 
-String _emitRawCode(final String sdkVersion) {
+String _emitRawCode(String sdkVersion) {
   return '''// GENERATED CODE - DO NOT MODIFY BY HAND.
 // Source: @discord/embedded-app-sdk@$sdkVersion
 // ignore_for_file: avoid_types_as_parameter_names, camel_case_types, non_constant_identifier_names, unused_element
@@ -435,8 +435,8 @@ extension type DiscordSdkRaw(JSObject _) implements JSObject {
 }
 
 List<String> _extractSymbols({
-  required final String dtsContent,
-  required final List<String> parserSymbols,
+  required String dtsContent,
+  required List<String> parserSymbols,
 }) {
   final symbols = <String>{...parserSymbols};
   final regex = RegExp(

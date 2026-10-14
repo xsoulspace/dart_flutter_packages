@@ -22,12 +22,12 @@ final class UpstreamLock {
   final String typesHash;
 
   UpstreamLock copyWith({
-    final String? packageName,
-    final String? version,
-    final String? integrity,
-    final String? tarballSha512,
-    final String? routesHash,
-    final String? typesHash,
+    String? packageName,
+    String? version,
+    String? integrity,
+    String? tarballSha512,
+    String? routesHash,
+    String? typesHash,
   }) {
     return UpstreamLock(
       packageName: packageName ?? this.packageName,
@@ -48,7 +48,7 @@ final class UpstreamLock {
     'typesHash': typesHash,
   };
 
-  static UpstreamLock fromJson(final Map<String, Object?> json) {
+  static UpstreamLock fromJson(Map<String, Object?> json) {
     return UpstreamLock(
       packageName: json['package']! as String,
       version: json['version']! as String,
@@ -67,7 +67,7 @@ final class GenerateOptions {
   final bool bump;
 }
 
-Future<void> main(final List<String> args) async {
+Future<void> main(List<String> args) async {
   final options = _parseOptions(args);
   if (options == null) {
     exitCode = 2;
@@ -162,10 +162,10 @@ Future<void> main(final List<String> args) async {
 
     final routeSymbols = (routeIndex['routes']! as List<dynamic>)
         .cast<String>()
-        .map((final value) => 'route:$value');
+        .map((value) => 'route:$value');
     final typeSymbols = (typeIndex['exportedSymbols']! as List<dynamic>)
         .cast<String>()
-        .map((final value) => 'type:$value');
+        .map((value) => 'type:$value');
 
     final symbols = <String>{...routeSymbols, ...typeSymbols}.toList()..sort();
 
@@ -250,8 +250,8 @@ Future<void> main(final List<String> args) async {
 }
 
 Future<String> _extractTarball({
-  required final Directory tempDir,
-  required final List<int> bytes,
+  required Directory tempDir,
+  required List<int> bytes,
 }) async {
   final tarballPath = p.join(tempDir.path, 'discord_api_types.tgz');
   File(tarballPath).writeAsBytesSync(bytes, flush: true);
@@ -278,8 +278,8 @@ Future<String> _extractTarball({
 }
 
 Map<String, Object?> _buildRouteIndex(
-  final String extractedRoot,
-  final UpstreamLock lock,
+  String extractedRoot,
+  UpstreamLock lock,
 ) {
   final interfacesPath = p.join(
     extractedRoot,
@@ -314,8 +314,8 @@ Map<String, Object?> _buildRouteIndex(
 }
 
 Map<String, Object?> _buildTypeIndex(
-  final String extractedRoot,
-  final UpstreamLock lock,
+  String extractedRoot,
+  UpstreamLock lock,
 ) {
   final restDir = Directory(p.join(extractedRoot, 'rest', 'v10'));
   final payloadDir = Directory(p.join(extractedRoot, 'payloads', 'v10'));
@@ -345,12 +345,12 @@ Map<String, Object?> _buildTypeIndex(
 
   final restRelative =
       restFiles
-          .map((final file) => p.relative(file.path, from: extractedRoot))
+          .map((file) => p.relative(file.path, from: extractedRoot))
           .toList()
         ..sort();
   final payloadRelative =
       payloadFiles
-          .map((final file) => p.relative(file.path, from: extractedRoot))
+          .map((file) => p.relative(file.path, from: extractedRoot))
           .toList()
         ..sort();
 
@@ -368,16 +368,16 @@ Map<String, Object?> _buildTypeIndex(
   };
 }
 
-List<File> _collectDtsFiles(final Directory root) {
+List<File> _collectDtsFiles(Directory root) {
   return root
       .listSync(recursive: true)
       .whereType<File>()
-      .where((final file) => file.path.endsWith('.d.ts'))
+      .where((file) => file.path.endsWith('.d.ts'))
       .toList(growable: false)
-    ..sort((final a, final b) => a.path.compareTo(b.path));
+    ..sort((a, b) => a.path.compareTo(b.path));
 }
 
-String _extractInterfaceBody(final String content, final String interfaceName) {
+String _extractInterfaceBody(String content, String interfaceName) {
   final marker = 'export interface $interfaceName';
   final start = content.indexOf(marker);
   if (start < 0) {
@@ -405,20 +405,20 @@ String _extractInterfaceBody(final String content, final String interfaceName) {
   throw StateError('Interface `$interfaceName` has no closing brace.');
 }
 
-List<String> _extractRouteMethodNames(final String interfaceBody) {
+List<String> _extractRouteMethodNames(String interfaceBody) {
   final methods = RegExp(
     r'^\s*([A-Za-z_][A-Za-z0-9_]*)\s*\(',
     multiLine: true,
   ).allMatches(interfaceBody);
 
   return methods
-      .map((final match) => match.group(1))
+      .map((match) => match.group(1))
       .whereType<String>()
       .toList(growable: false)
     ..sort();
 }
 
-GenerateOptions? _parseOptions(final List<String> args) {
+GenerateOptions? _parseOptions(List<String> args) {
   var checkOnly = false;
   var bump = false;
 
@@ -441,8 +441,8 @@ GenerateOptions? _parseOptions(final List<String> args) {
 }
 
 List<String> _lockMismatches(
-  final UpstreamLock lock,
-  final UpstreamLock expected,
+  UpstreamLock lock,
+  UpstreamLock expected,
 ) {
   final mismatches = <String>[];
 

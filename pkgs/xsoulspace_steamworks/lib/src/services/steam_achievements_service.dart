@@ -6,12 +6,12 @@ final class SteamAchievementsService {
 
   final SteamNativeApi _nativeApi;
 
-  bool? getAchievement(final String apiName) =>
+  bool? getAchievement(String apiName) =>
       _nativeApi.getAchievement(apiName);
 
-  bool setAchievement(final String apiName) =>
+  bool setAchievement(String apiName) =>
       _nativeApi.setAchievement(apiName);
 
-  bool clearAchievement(final String apiName) =>
+  bool clearAchievement(String apiName) =>
       _nativeApi.clearAchievement(apiName);
 }

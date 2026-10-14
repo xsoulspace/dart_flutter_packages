@@ -22,11 +22,11 @@ library;
 import 'foundation_schema.dart';
 
 /// Convert a [SchemaBundle] root to a JSON-Schema object.
-Map<String, dynamic> bundleToJsonSchema(final SchemaBundle bundle) =>
+Map<String, dynamic> bundleToJsonSchema(SchemaBundle bundle) =>
     schemaToJsonSchema(bundle.root);
 
 /// Convert a single [Schema] node.
-Map<String, dynamic> schemaToJsonSchema(final Schema schema) => switch (schema) {
+Map<String, dynamic> schemaToJsonSchema(Schema schema) => switch (schema) {
   final ObjectSchema o => () {
     final properties = <String, dynamic>{};
     final required = <String>[];

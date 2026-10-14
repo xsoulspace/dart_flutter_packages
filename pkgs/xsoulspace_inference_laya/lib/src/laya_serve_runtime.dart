@@ -37,14 +37,14 @@ typedef LayaRuntimeState = LocalServeState;
 /// the harness binding composes.
 final class LayaServeRuntime {
   LayaServeRuntime({
-    final Uri? healthEndpoint,
+    Uri? healthEndpoint,
     this.executable = 'laya-serve',
-    final List<String> arguments = const <String>[],
-    final Map<String, String> environment = const <String, String>{},
+    List<String> arguments = const <String>[],
+    Map<String, String> environment = const <String, String>{},
     this.spawnOnMiss = false,
     this.healthTimeout = const Duration(seconds: 30),
     this.pollInterval = const Duration(milliseconds: 200),
-    final void Function(Map<String, Object?> event)? onDiagnosticEvent,
+    void Function(Map<String, Object?> event)? onDiagnosticEvent,
     http.Client? httpClient,
     ServeProcessStarter processStarter = ioStart,
   }) : _runtime = LocalServeRuntime(

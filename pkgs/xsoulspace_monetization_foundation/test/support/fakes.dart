@@ -10,55 +10,55 @@ class FakeLocalDb implements LocalDbI {
   @override
   Future<void> clear() async => _store.clear();
   @override
-  Future<void> clearKey({required final String key}) async =>
+  Future<void> clearKey({required String key}) async =>
       _store.remove(key);
   @override
   Future<void> setMap({
-    required final String key,
-    required final Map<String, dynamic> value,
+    required String key,
+    required Map<String, dynamic> value,
   }) async => _store[key] = value;
   @override
-  Future<Map<String, dynamic>> getMap(final String key) async =>
+  Future<Map<String, dynamic>> getMap(String key) async =>
       (_store[key] as Map<String, dynamic>?) ?? <String, dynamic>{};
   @override
   Future<void> setString({
-    required final String key,
-    required final String value,
+    required String key,
+    required String value,
   }) async => _store[key] = value;
   @override
   Future<String> getString({
-    required final String key,
-    final String defaultValue = '',
+    required String key,
+    String defaultValue = '',
   }) async => (_store[key] as String?) ?? defaultValue;
   @override
   Future<void> setBool({
-    required final String key,
-    required final bool value,
+    required String key,
+    required bool value,
   }) async => _store[key] = value;
   @override
   Future<bool> getBool({
-    required final String key,
-    final bool defaultValue = false,
+    required String key,
+    bool defaultValue = false,
   }) async => (_store[key] as bool?) ?? defaultValue;
   @override
-  Future<void> setInt({required final String key, final int value = 0}) async =>
+  Future<void> setInt({required String key, int value = 0}) async =>
       _store[key] = value;
   @override
   Future<int> getInt({
-    required final String key,
-    final int defaultValue = 0,
+    required String key,
+    int defaultValue = 0,
   }) async => (_store[key] as int?) ?? defaultValue;
   @override
   Future<void> setItem<T>({
-    required final String key,
-    required final T value,
-    required final Map<String, dynamic> Function(T) toJson,
+    required String key,
+    required T value,
+    required Map<String, dynamic> Function(T) toJson,
   }) async => _store[key] = toJson(value);
   @override
   Future<T> getItem<T>({
-    required final String key,
-    required final T? Function(Map<String, dynamic>) fromJson,
-    required final T defaultValue,
+    required String key,
+    required T? Function(Map<String, dynamic>) fromJson,
+    required T defaultValue,
   }) async {
     final raw = _store[key];
     if (raw is Map<String, dynamic>) return fromJson(raw) ?? defaultValue;
@@ -67,15 +67,15 @@ class FakeLocalDb implements LocalDbI {
 
   @override
   Future<void> setItemsList<T>({
-    required final String key,
-    required final List<T> value,
-    required final Map<String, dynamic> Function(T) toJson,
+    required String key,
+    required List<T> value,
+    required Map<String, dynamic> Function(T) toJson,
   }) async => _store[key] = value.map(toJson).toList();
   @override
   Future<Iterable<T>> getItemsIterable<T>({
-    required final String key,
-    required final T Function(Map<String, dynamic>) fromJson,
-    final List<T> defaultValue = const [],
+    required String key,
+    required T Function(Map<String, dynamic>) fromJson,
+    List<T> defaultValue = const [],
   }) async {
     final raw = _store[key];
     if (raw is List) {
@@ -86,13 +86,13 @@ class FakeLocalDb implements LocalDbI {
 
   @override
   Future<void> setMapList({
-    required final String key,
-    required final List<Map<String, dynamic>> value,
+    required String key,
+    required List<Map<String, dynamic>> value,
   }) async => _store[key] = value;
   @override
   Future<Iterable<Map<String, dynamic>>> getMapIterable({
-    required final String key,
-    final List<Map<String, dynamic>> defaultValue = const [],
+    required String key,
+    List<Map<String, dynamic>> defaultValue = const [],
   }) async {
     final raw = _store[key];
     if (raw is List) return raw.whereType<Map<String, dynamic>>();
@@ -101,13 +101,13 @@ class FakeLocalDb implements LocalDbI {
 
   @override
   Future<void> setStringList({
-    required final String key,
-    required final List<String> value,
+    required String key,
+    required List<String> value,
   }) async => _store[key] = value;
   @override
   Future<Iterable<String>> getStringsIterable({
-    required final String key,
-    final List<String> defaultValue = const [],
+    required String key,
+    List<String> defaultValue = const [],
   }) async {
     final raw = _store[key];
     if (raw is List) return raw.whereType<String>();
@@ -153,34 +153,34 @@ class FakeProvider implements PurchaseProvider {
   Future<bool> isStoreInstalled() async => installed;
   @override
   Future<List<PurchaseProductDetailsModel>> getConsumables(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   ) async => [];
   @override
   Future<List<PurchaseProductDetailsModel>> getNonConsumables(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   ) async => [];
   @override
   Future<List<PurchaseProductDetailsModel>> getProductDetails(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   ) async => subscriptions;
   @override
   Future<List<PurchaseProductDetailsModel>> getSubscriptions(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   ) async => subscriptions;
   @override
   Future<PurchaseDetailsModel> getPurchaseDetails(
-    final PurchaseId productId,
+    PurchaseId productId,
   ) async => purchaseDetails ?? purchase(active: true);
   @override
   Future<PurchaseResultModel> purchaseNonConsumable(
-    final PurchaseProductDetailsModel productDetails,
+    PurchaseProductDetailsModel productDetails,
   ) async => PurchaseResultModel.failure('');
   @override
   Future<RestoreResultModel> restorePurchases() async =>
       restoreResult ?? RestoreResultModel.success(const []);
   @override
   Future<CompletePurchaseResultModel> completePurchase(
-    final PurchaseVerificationDtoModel purchase,
+    PurchaseVerificationDtoModel purchase,
   ) async {
     completeCalls++;
     return completeResult ?? CompletePurchaseResultModel.success();
@@ -188,14 +188,14 @@ class FakeProvider implements PurchaseProvider {
 
   @override
   Future<PurchaseResultModel> subscribe(
-    final PurchaseProductDetailsModel productDetails,
+    PurchaseProductDetailsModel productDetails,
   ) async {
     subscribeCalls++;
     return subscribeResult ?? PurchaseResultModel.failure('');
   }
 
   @override
-  Future<CancelResultModel> cancel(final String purchaseOrProductId) async {
+  Future<CancelResultModel> cancel(String purchaseOrProductId) async {
     cancelCalls++;
     return cancelResult ?? CancelResultModel.success();
   }
@@ -207,10 +207,10 @@ class FakeProvider implements PurchaseProvider {
 }
 
 PurchaseDetailsModel purchase({
-  final bool active = false,
-  final bool pendingConfirmation = false,
-  final bool cancelled = false,
-  final PurchaseProductType type = PurchaseProductType.subscription,
+  bool active = false,
+  bool pendingConfirmation = false,
+  bool cancelled = false,
+  PurchaseProductType type = PurchaseProductType.subscription,
 }) {
   final status = pendingConfirmation
       ? PurchaseStatus.pendingVerification

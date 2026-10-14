@@ -17,11 +17,11 @@ final class NativeMlxChatEndpoint implements MlxChatEndpoint {
   /// Loads the snapshot directory (HF checkout shape) and returns the
   /// endpoint. Throws a named error when the native asset or weights are
   /// absent.
-  static Future<NativeMlxChatEndpoint> load(final String modelDir) async =>
+  static Future<NativeMlxChatEndpoint> load(String modelDir) async =>
       NativeMlxChatEndpoint(await NativeMlxTextEngine.load(modelDir));
 
   @override
-  Future<MlxChatResult> complete(final MlxChatRequest request) async {
+  Future<MlxChatResult> complete(MlxChatRequest request) async {
     final generation = await engine.generate(
       MlxNativeRequest(
         prompt: request.messages.lastOrNull?.content ?? '',

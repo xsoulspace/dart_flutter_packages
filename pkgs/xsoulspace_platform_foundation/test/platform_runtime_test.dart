@@ -104,7 +104,7 @@ void main() {
       runtime.start(),
       throwsA(
         isA<PlatformException>().having(
-          (final e) => e.code,
+          (e) => e.code,
           'code',
           PlatformExceptionCode.initFailed,
         ),
@@ -168,7 +168,7 @@ void main() {
     await sub.cancel();
 
     final diagnostics = events
-        .where((final e) => e.name == 'runtime.startup.adapterAttempt')
+        .where((e) => e.name == 'runtime.startup.adapterAttempt')
         .toList(growable: false);
     expect(diagnostics, hasLength(2));
     expect(diagnostics.first.payload['platformId'], 'vkPlay');
@@ -243,7 +243,7 @@ void main() {
       () => runtime.require<_FakeCapability>(),
       throwsA(
         isA<MissingPlatformCapabilityException>().having(
-          (final e) => e.message,
+          (e) => e.message,
           'message',
           contains('_FakeCapability'),
         ),
@@ -304,7 +304,7 @@ final class _FakeClient implements PlatformClient {
   _FakeClient({
     required this.platformId,
     required this.initResult,
-    final Iterable<PlatformCapability> capabilities =
+    Iterable<PlatformCapability> capabilities =
         const <PlatformCapability>[],
   }) {
     for (final capability in capabilities) {
@@ -329,7 +329,7 @@ final class _FakeClient implements PlatformClient {
   Future<void> dispose() async {}
 
   @override
-  Future<PlatformInitResult> init(final PlatformInitOptions options) async =>
+  Future<PlatformInitResult> init(PlatformInitOptions options) async =>
       initResult;
 
   @override

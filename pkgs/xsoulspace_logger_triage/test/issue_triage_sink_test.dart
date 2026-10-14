@@ -132,7 +132,7 @@ void main() {
 
       final updated = sink.currentTopIssues();
       final criticalIssue = updated.firstWhere(
-        (final issue) => issue.highestLevel == LogLevel.critical,
+        (issue) => issue.highestLevel == LogLevel.critical,
       );
       expect(criticalIssue.escalated, isTrue);
 
@@ -144,7 +144,7 @@ void main() {
       await sink.init();
 
       final completer = Completer<List<IssueGroup>>();
-      final subscription = sink.watchTopIssues(limit: 1).listen((final groups) {
+      final subscription = sink.watchTopIssues(limit: 1).listen((groups) {
         if (groups.isNotEmpty && !completer.isCompleted) {
           completer.complete(groups);
         }
@@ -171,11 +171,11 @@ void main() {
 }
 
 LogRecord _record({
-  required final int sequence,
-  required final DateTime at,
-  required final LogLevel level,
-  required final String message,
-  final String category = 'db',
+  required int sequence,
+  required DateTime at,
+  required LogLevel level,
+  required String message,
+  String category = 'db',
 }) => LogRecord(
   sequence: sequence,
   timestampUtc: at.toUtc(),

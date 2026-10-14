@@ -2,9 +2,9 @@ import 'package:test/test.dart';
 import 'package:xsoulspace_permission_core/xsoulspace_permission_core.dart';
 
 PermissionRequest requestOf(
-  final PermissionKind kind, {
-  final String wireKind = 'read',
-  final String? subject,
+  PermissionKind kind, {
+  String wireKind = 'read',
+  String? subject,
 }) => PermissionRequest(
   id: 'r-${kind.wireName}',
   title: 't',

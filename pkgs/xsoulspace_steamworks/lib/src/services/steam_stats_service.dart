@@ -8,14 +8,14 @@ final class SteamStatsService {
 
   Future<bool> requestCurrentStats() async => _nativeApi.requestCurrentStats();
 
-  int? getIntStat(final String name) => _nativeApi.getStatInt32(name);
+  int? getIntStat(String name) => _nativeApi.getStatInt32(name);
 
-  double? getFloatStat(final String name) => _nativeApi.getStatFloat(name);
+  double? getFloatStat(String name) => _nativeApi.getStatFloat(name);
 
-  bool setIntStat(final String name, final int value) =>
+  bool setIntStat(String name, int value) =>
       _nativeApi.setStatInt32(name, value);
 
-  bool setFloatStat(final String name, final double value) =>
+  bool setFloatStat(String name, double value) =>
       _nativeApi.setStatFloat(name, value);
 
   Future<bool> storeStats() async => _nativeApi.storeStats();

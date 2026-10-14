@@ -47,7 +47,7 @@ final class VoskRawLibraryLoader {
     );
   }
 
-  static List<String> libraryNamesFor(final VoskRawDesktopPlatform platform) {
+  static List<String> libraryNamesFor(VoskRawDesktopPlatform platform) {
     switch (platform) {
       case VoskRawDesktopPlatform.macos:
         return const <String>['libvosk.dylib'];
@@ -64,7 +64,7 @@ final class VoskRawLibraryLoader {
       if ((runtimeConfig.libraryPath ?? '').trim().isNotEmpty)
         runtimeConfig.libraryPath!.trim(),
       ...runtimeConfig.librarySearchPaths.where(
-        (final value) => value.trim().isNotEmpty,
+        (value) => value.trim().isNotEmpty,
       ),
       if ((runtimeConfig.modelDirectory ?? '').trim().isNotEmpty)
         runtimeConfig.modelDirectory!.trim(),
@@ -73,7 +73,7 @@ final class VoskRawLibraryLoader {
     ];
     final candidates = <String>[];
     for (final root in roots) {
-      final looksLikeLibrary = names.any((final name) => root.endsWith(name));
+      final looksLikeLibrary = names.any((name) => root.endsWith(name));
       if (looksLikeLibrary) {
         candidates.add(root);
         continue;

@@ -141,7 +141,7 @@ void main() {
       ..register(
         const ToolDefinition().toDef(
           name: const ToolName('read'),
-          execute: (final _) async => null,
+          execute: (_) async => null,
         ),
       );
     const thought =
@@ -173,7 +173,7 @@ void main() {
       ..register(
         const ToolDefinition().toDef(
           name: const ToolName('read'),
-          execute: (final _) async {
+          execute: (_) async {
             executed++;
             return '{"revision":7}';
           },
@@ -238,7 +238,7 @@ void main() {
           ],
         ),
       );
-      expect(messages.map((final m) => m.content), ['explicit', 'result']);
+      expect(messages.map((m) => m.content), ['explicit', 'result']);
       expect(
         normalizeNativeTextCalls(
           text: '<think><tool_call>{}',

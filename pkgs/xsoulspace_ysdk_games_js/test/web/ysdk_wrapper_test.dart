@@ -87,9 +87,9 @@ void main() {
     ysdk.adv.showFullscreenAdv(
       callbacks: FullscreenAdvCallbacks(
         onOpen: () => fullscreenOpen = true,
-        onClose: (final wasShown) => fullscreenCloseWasShown = wasShown,
+        onClose: (wasShown) => fullscreenCloseWasShown = wasShown,
         onOffline: () => fullscreenOffline = true,
-        onError: (final error) => fullscreenError = error,
+        onError: (error) => fullscreenError = error,
       ),
     );
     expect(_sdkStub.fullscreenAdvCalls, 1);
@@ -107,7 +107,7 @@ void main() {
         onOpen: () => rewardedOpen = true,
         onClose: () => rewardedClose = true,
         onRewarded: () => rewardedDone = true,
-        onError: (final error) => rewardedError = error,
+        onError: (error) => rewardedError = error,
       ),
     );
     expect(_sdkStub.rewardedVideoCalls, 1);
@@ -408,10 +408,10 @@ class _SdkStubState {
   void install() {
     reset();
 
-    Object? jsPromise(final Object? value) => value;
+    Object? jsPromise(Object? value) => value;
 
     final player = jsify(<String, Object?>{
-      'getData': allowInterop(([final Object? keys]) {
+      'getData': allowInterop(([Object? keys]) {
         lastPlayerGetDataKeys = _asStringList(keys);
         return jsPromise(<String, Object?>{'coins': 99, 'xp': 7});
       }),
@@ -423,30 +423,30 @@ class _SdkStubState {
       'getMode': allowInterop(() => 'lite'),
       'getName': allowInterop(() => 'Player One'),
       'getPayingStatus': allowInterop(() => 'unknown'),
-      'getPhoto': allowInterop((final String size) => 'photo-$size'),
-      'getStats': allowInterop(([final Object? keys]) {
+      'getPhoto': allowInterop((String size) => 'photo-$size'),
+      'getStats': allowInterop(([Object? keys]) {
         lastPlayerGetStatsKeys = _asStringList(keys);
         return jsPromise(<String, Object?>{'score': 10});
       }),
       'getUniqueID': allowInterop(() => 'player-1'),
-      'incrementStats': allowInterop((final Object? stats) {
+      'incrementStats': allowInterop((Object? stats) {
         lastPlayerIncrementStats = _asMap(stats);
         return jsPromise(<String, Object?>{'score': 13});
       }),
       'isAuthorized': allowInterop(() => true),
-      'setData': allowInterop((final Object? data, [final bool flush = false]) {
+      'setData': allowInterop((Object? data, [bool flush = false]) {
         lastPlayerSetData = _asMap(data);
         lastPlayerSetDataFlush = flush;
         return jsPromise(null);
       }),
-      'setStats': allowInterop((final Object? stats) {
+      'setStats': allowInterop((Object? stats) {
         lastPlayerSetStats = _asMap(stats);
         return jsPromise(null);
       }),
     });
 
     final unsignedPayments = jsify(<String, Object?>{
-      'consumePurchase': allowInterop((final String token) {
+      'consumePurchase': allowInterop((String token) {
         lastConsumedToken = token;
         return jsPromise(null);
       }),
@@ -472,7 +472,7 @@ class _SdkStubState {
           },
         ]),
       ),
-      'purchase': allowInterop((final Object? opts) {
+      'purchase': allowInterop((Object? opts) {
         lastUnsignedPurchaseOptions = _asMap(opts);
         return jsPromise(<String, Object?>{
           'productID': 'prod-1',
@@ -484,7 +484,7 @@ class _SdkStubState {
     });
 
     final signedPayments = jsify(<String, Object?>{
-      'consumePurchase': allowInterop((final String token) {
+      'consumePurchase': allowInterop((String token) {
         lastConsumedToken = token;
         return jsPromise(null);
       }),
@@ -493,7 +493,7 @@ class _SdkStubState {
         () => jsPromise(<String, Object?>{'signature': 'signed-purchases'}),
       ),
       'purchase': allowInterop(
-        (final Object? opts) =>
+        (Object? opts) =>
             jsPromise(<String, Object?>{'signature': 'signed-purchase'}),
       ),
     });
@@ -503,9 +503,9 @@ class _SdkStubState {
 
     final leaderboards = jsify(<String, Object?>{
       'getDescription': allowInterop(
-        (final String name) => jsPromise(leaderboardDescription),
+        (String name) => jsPromise(leaderboardDescription),
       ),
-      'getEntries': allowInterop((final String name, [final Object? opts]) {
+      'getEntries': allowInterop((String name, [Object? opts]) {
         lastLeaderboardEntriesName = name;
         lastLeaderboardEntriesOptions = _asMap(opts);
         return jsPromise(<String, Object?>{
@@ -515,12 +515,12 @@ class _SdkStubState {
         });
       }),
       'getPlayerEntry': allowInterop(
-        (final String name) => jsPromise(leaderboardEntry),
+        (String name) => jsPromise(leaderboardEntry),
       ),
       'setScore': allowInterop((
-        final String name,
-        final int score, [
-        final String? extraData,
+        String name,
+        int score, [
+        String? extraData,
       ]) {
         lastSetScore = <String, Object?>{
           'name': name,
@@ -533,22 +533,22 @@ class _SdkStubState {
 
     final legacyLeaderboards = jsify(<String, Object?>{
       'getLeaderboardDescription': allowInterop(
-        (final String name) => jsPromise(leaderboardDescription),
+        (String name) => jsPromise(leaderboardDescription),
       ),
       'getLeaderboardEntries': allowInterop(
-        (final String name) => jsPromise(<String, Object?>{
+        (String name) => jsPromise(<String, Object?>{
           'entries': <Object?>[leaderboardEntry],
           'leaderboard': leaderboardDescription,
           'userRank': 2,
         }),
       ),
       'getLeaderboardPlayerEntry': allowInterop(
-        (final String name) => jsPromise(leaderboardEntry),
+        (String name) => jsPromise(leaderboardEntry),
       ),
       'setLeaderboardScore': allowInterop((
-        final String name,
-        final int score, [
-        final String? extraData,
+        String name,
+        int score, [
+        String? extraData,
       ]) {
         lastLegacySetScore = <String, Object?>{
           'name': name,
@@ -573,7 +573,7 @@ class _SdkStubState {
         'hideBannerAdv': allowInterop(
           () => jsPromise(<String, Object?>{'stickyAdvIsShowing': false}),
         ),
-        'showFullscreenAdv': allowInterop(([final Object? opts]) {
+        'showFullscreenAdv': allowInterop(([Object? opts]) {
           fullscreenAdvCalls += 1;
           final callbacks = opts == null ? null : prop(opts, 'callbacks');
           _callCallback(callbacks, 'onOpen');
@@ -581,7 +581,7 @@ class _SdkStubState {
           _callCallback(callbacks, 'onOffline');
           _callCallback(callbacks, 'onError', 'fullscreen-error');
         }),
-        'showRewardedVideo': allowInterop(([final Object? opts]) {
+        'showRewardedVideo': allowInterop(([Object? opts]) {
           rewardedVideoCalls += 1;
           final callbacks = opts == null ? null : prop(opts, 'callbacks');
           _callCallback(callbacks, 'onOpen');
@@ -597,7 +597,7 @@ class _SdkStubState {
         }),
       },
       'clipboard': <String, Object?>{
-        'writeText': allowInterop((final String text) {
+        'writeText': allowInterop((String text) {
           lastClipboardText = text;
         }),
       },
@@ -621,7 +621,7 @@ class _SdkStubState {
               ],
             }),
           ),
-          'getGameByID': allowInterop((final int id) {
+          'getGameByID': allowInterop((int id) {
             lastGameByIdRequest = id;
             return jsPromise(<String, Object?>{
               'isAvailable': true,
@@ -651,10 +651,10 @@ class _SdkStubState {
       'leaderboards': leaderboards,
       'multiplayer': <String, Object?>{
         'sessions': <String, Object?>{
-          'commit': allowInterop((final Object? payload) {
+          'commit': allowInterop((Object? payload) {
             lastMultiplayerCommitPayload = _asMap(payload);
           }),
-          'init': allowInterop(([final Object? opts]) {
+          'init': allowInterop(([Object? opts]) {
             lastMultiplayerInitOptions = _asMap(opts);
             return jsPromise(<Object?>[
               <String, Object?>{
@@ -669,7 +669,7 @@ class _SdkStubState {
               },
             ]);
           }),
-          'push': allowInterop((final Object? meta) {
+          'push': allowInterop((Object? meta) {
             lastMultiplayerPushMeta = _asMap(meta);
             return jsPromise(<String, Object?>{
               'status': 'ok',
@@ -715,22 +715,22 @@ class _SdkStubState {
         'payload': 'payload-1',
       },
       'dispatchEvent': allowInterop((
-        final String event, [
-        final Object? detail,
+        String event, [
+        Object? detail,
       ]) {
         lastDispatchEvent = event;
         lastDispatchDetail = _asMap(detail);
         return jsPromise(null);
       }),
-      'getFlags': allowInterop(([final Object? params]) {
+      'getFlags': allowInterop(([Object? params]) {
         final decoded = _asMap(params);
         final defaults = _asMap(decoded['defaultFlags']);
         final features = _asList(
           decoded['clientFeatures'],
         ).map(_asMap).toList();
         lastFlagsClientFeatureNames = features
-            .map((final feature) => feature['name']?.toString() ?? '')
-            .where((final name) => name.isNotEmpty)
+            .map((feature) => feature['name']?.toString() ?? '')
+            .where((name) => name.isNotEmpty)
             .toList(growable: false);
 
         final result = <String, Object?>{};
@@ -747,11 +747,11 @@ class _SdkStubState {
         return jsPromise(result);
       }),
       'getLeaderboards': allowInterop(() => jsPromise(legacyLeaderboards)),
-      'getPayments': allowInterop(([final Object? opts]) {
+      'getPayments': allowInterop(([Object? opts]) {
         final signed = _asMap(opts)['signed'] == true;
         return jsPromise(signed ? signedPayments : unsignedPayments);
       }),
-      'getPlayer': allowInterop(([final Object? opts]) {
+      'getPlayer': allowInterop(([Object? opts]) {
         final signed = _asMap(opts)['signed'] == true;
         if (signed) {
           return jsPromise(<String, Object?>{'signature': 'signed-player'});
@@ -762,13 +762,13 @@ class _SdkStubState {
         () => jsPromise(<String, Object?>{'slot': 'main'}),
       ),
       'isAvailableMethod': allowInterop(
-        (final String name) => jsPromise(name == 'known.method'),
+        (String name) => jsPromise(name == 'known.method'),
       ),
       'serverTime': allowInterop(() => 12345),
     });
 
     final yaGames = jsify(<String, Object?>{
-      'init': allowInterop(([final Object? opts]) {
+      'init': allowInterop(([Object? opts]) {
         initCalls += 1;
         lastInitSigned = _asMap(opts)['signed'] == true;
         return jsPromise(sdk);
@@ -807,9 +807,9 @@ Map<String, Object?> _leaderboardEntryJson() => <String, Object?>{
 };
 
 void _callCallback(
-  final Object? callbacks,
-  final String name, [
-  final Object? arg,
+  Object? callbacks,
+  String name, [
+  Object? arg,
 ]) {
   if (callbacks == null) {
     return;
@@ -827,7 +827,7 @@ void _callCallback(
   jsCall(callback, 'call', <Object?>[null, arg]);
 }
 
-Map<String, Object?> _asMap(final Object? value) {
+Map<String, Object?> _asMap(Object? value) {
   if (value == null) {
     return <String, Object?>{};
   }
@@ -848,7 +848,7 @@ Map<String, Object?> _asMap(final Object? value) {
   return <String, Object?>{};
 }
 
-List<Object?> _asList(final Object? value) {
+List<Object?> _asList(Object? value) {
   if (value == null) {
     return <Object?>[];
   }
@@ -869,5 +869,5 @@ List<Object?> _asList(final Object? value) {
   return <Object?>[];
 }
 
-List<String> _asStringList(final Object? value) =>
-    _asList(value).map((final item) => item?.toString() ?? '').toList();
+List<String> _asStringList(Object? value) =>
+    _asList(value).map((item) => item?.toString() ?? '').toList();

@@ -4,7 +4,7 @@ import 'package:xsoulspace_review_interface/xsoulspace_review_interface.dart';
 
 void main() {
   testWidgets('base StoreReviewer provides no-op defaults', (
-    final tester,
+    tester,
   ) async {
     const reviewer = StoreReviewer(packageName: 'dev.xsoulspace.app');
 
@@ -13,7 +13,7 @@ void main() {
       Directionality(
         textDirection: TextDirection.ltr,
         child: Builder(
-          builder: (final buildContext) {
+          builder: (buildContext) {
             context = buildContext;
             return const SizedBox.shrink();
           },

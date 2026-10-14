@@ -39,9 +39,9 @@ class _PurchaseGuardScreenState extends State<PurchaseGuardScreen> {
   Future<bool> _checkAccess() async => widget.hasAccess();
 
   @override
-  Widget build(final BuildContext context) => FutureBuilder<bool>(
+  Widget build(BuildContext context) => FutureBuilder<bool>(
     future: _accessFuture,
-    builder: (final context, final snapshot) {
+    builder: (context, snapshot) {
       if (snapshot.connectionState == ConnectionState.waiting) {
         return const CircularProgressIndicator();
       }

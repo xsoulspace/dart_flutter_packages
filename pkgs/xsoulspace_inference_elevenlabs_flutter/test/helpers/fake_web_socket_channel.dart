@@ -47,13 +47,13 @@ class FakeWebSocketChannel
     done: _outgoingController.done,
   );
 
-  void emitServerMessage(final Object message) {
+  void emitServerMessage(Object message) {
     if (!_incomingController.isClosed) {
       _incomingController.add(message);
     }
   }
 
-  Future<void> closeFromServer([final int? code, final String? reason]) async {
+  Future<void> closeFromServer([int? code, String? reason]) async {
     _closeCode = code;
     _closeReason = reason;
     await _closeSink(code, reason);
@@ -64,7 +64,7 @@ class FakeWebSocketChannel
     await _outgoingSubscription.cancel();
   }
 
-  Future<void> _closeSink(final int? code, final String? reason) async {
+  Future<void> _closeSink(int? code, String? reason) async {
     if (_closed) {
       return;
     }
@@ -92,20 +92,20 @@ class _FakeWebSocketSink implements WebSocketSink {
   Future<void> get done => _done;
 
   @override
-  void add(final dynamic data) {
+  void add(dynamic data) {
     _outgoingSink.add(data);
   }
 
   @override
-  Future<void> addStream(final Stream<dynamic> stream) =>
+  Future<void> addStream(Stream<dynamic> stream) =>
       _outgoingSink.addStream(stream);
 
   @override
-  void addError(final Object error, [final StackTrace? stackTrace]) {
+  void addError(Object error, [StackTrace? stackTrace]) {
     _outgoingSink.addError(error, stackTrace);
   }
 
   @override
-  Future<void> close([final int? closeCode, final String? closeReason]) =>
+  Future<void> close([int? closeCode, String? closeReason]) =>
       _closeImpl(closeCode, closeReason);
 }

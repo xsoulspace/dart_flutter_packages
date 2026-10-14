@@ -10,20 +10,20 @@ typedef VoskException = VoskRawException;
 typedef VoskLibraryLoader = VoskRawLibraryLoader;
 typedef VoskBindings = VoskRawBindings;
 
-VoskRawRuntimeConfig _toRawRuntimeConfig(final VoskRuntimeConfig value) =>
+VoskRawRuntimeConfig _toRawRuntimeConfig(VoskRuntimeConfig value) =>
     VoskRawRuntimeConfig(
       libraryPath: value.libraryPath,
       librarySearchPaths: value.librarySearchPaths,
       modelDirectory: value.modelDirectory,
     );
 
-VoskRawModelConfig _toRawModelConfig(final VoskModelConfig value) =>
+VoskRawModelConfig _toRawModelConfig(VoskModelConfig value) =>
     VoskRawModelConfig(
       modelPath: value.modelPath,
       providerExtras: value.providerExtras,
     );
 
-VoskRawRealtimeConfig _toRawRealtimeConfig(final VoskRealtimeConfig value) =>
+VoskRawRealtimeConfig _toRawRealtimeConfig(VoskRealtimeConfig value) =>
     VoskRawRealtimeConfig(
       sampleRate: value.sampleRate,
       emitPartialWords: value.emitPartialWords,
@@ -45,7 +45,7 @@ final class NativeVoskBatchBackend {
   final VoskRawBatchRuntime _runtime;
 
   Future<InferenceResult<InferenceResponse>> transcribe(
-    final InferenceRequest request,
+    InferenceRequest request,
   ) async {
     try {
       final input = await _resolveAudioInput(request.audioInput!);
@@ -61,7 +61,7 @@ final class NativeVoskBatchBackend {
           normalizedTranscript: normalizeTranscript(result.transcript),
           segments: result.segments
               .map(
-                (final segment) => InferenceSpeechSegment(
+                (segment) => InferenceSpeechSegment(
                   text: segment.text,
                   startMs: segment.startMs,
                   endMs: segment.endMs,
@@ -91,7 +91,7 @@ final class NativeVoskBatchBackend {
   }
 
   Future<VoskRawAudioInput> _resolveAudioInput(
-    final InferenceAudioInput input,
+    InferenceAudioInput input,
   ) async {
     switch (input.resolvedSource) {
       case InferenceAudioSource.bytes:
@@ -139,17 +139,17 @@ final class NativeVoskRealtimeBackend implements VoskRealtimeBackend {
 
   @override
   Future<void> start({
-    required final VoskModelConfig modelConfig,
-    required final VoskRuntimeConfig runtimeConfig,
-    required final VoskRealtimeConfig realtimeConfig,
-    required final void Function(InferenceTranscriptEvent event) emit,
+    required VoskModelConfig modelConfig,
+    required VoskRuntimeConfig runtimeConfig,
+    required VoskRealtimeConfig realtimeConfig,
+    required void Function(InferenceTranscriptEvent event) emit,
   }) async {
     _emit = emit;
     await _runtime.start();
   }
 
   @override
-  Future<void> sendAudioChunk(final List<int> audioBytes) async {
+  Future<void> sendAudioChunk(List<int> audioBytes) async {
     final result = _runtime.sendAudioChunk(audioBytes);
     if (result == null) {
       return;
@@ -173,7 +173,7 @@ final class NativeVoskRealtimeBackend implements VoskRealtimeBackend {
           if (result.segments.isNotEmpty)
             'segments': result.segments
                 .map(
-                  (final segment) => <String, dynamic>{
+                  (segment) => <String, dynamic>{
                     'text': segment.text,
                     'start_ms': segment.startMs,
                     'end_ms': segment.endMs,
@@ -208,7 +208,7 @@ final class NativeVoskRealtimeBackend implements VoskRealtimeBackend {
           if (result.segments.isNotEmpty)
             'segments': result.segments
                 .map(
-                  (final segment) => <String, dynamic>{
+                  (segment) => <String, dynamic>{
                     'text': segment.text,
                     'start_ms': segment.startMs,
                     'end_ms': segment.endMs,

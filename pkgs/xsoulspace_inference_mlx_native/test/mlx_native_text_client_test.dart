@@ -57,7 +57,7 @@ void main() {
           description: 'Look up current weather for a city',
         ).toDef(
           name: const ToolName('get_weather'),
-          execute: (final args) async => '{}',
+          execute: (args) async => '{}',
         ),
       );
     final result = await client.infer(
@@ -90,7 +90,7 @@ void main() {
     final registry = ToolRegistry()
       ..register(
         const ToolDefinition(description: 'echo')
-            .toDef(name: const ToolName('echo'), execute: (final a) async => ''),
+            .toDef(name: const ToolName('echo'), execute: (a) async => ''),
       );
     final withTools = await client.infer(
       InferenceRequest(

@@ -40,14 +40,14 @@ class AdManager {
   ///
   /// The user must watch the entire ad to receive the reward.
   /// Returns when the ad is completed or dismissed.
-  Future<void> showRewardedAd({required final String adUnitId}) =>
+  Future<void> showRewardedAd({required String adUnitId}) =>
       provider.showRewardedAd(adUnitId: adUnitId);
 
   /// Shows an interstitial ad to the user.
   ///
   /// Full-screen ad that can be dismissed by the user.
   /// Returns when the ad is completed or dismissed.
-  Future<void> showInterstitialAd({required final String adUnitId}) =>
+  Future<void> showInterstitialAd({required String adUnitId}) =>
       provider.showInterstitialAd(adUnitId: adUnitId);
 
   /// Builds a banner ad widget for display within the app.
@@ -55,7 +55,7 @@ class AdManager {
   /// Returns a widget that can be placed in the app's UI.
   /// The widget will automatically handle ad loading and display.
   Widget buildBannerAd({
-    required final String adUnitId,
-    required final Object adSize,
+    required String adUnitId,
+    required Object adSize,
   }) => provider.buildBannerAd(adUnitId: adUnitId, adSize: adSize);
 }

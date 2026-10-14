@@ -4,7 +4,7 @@ import 'package:xsoulspace_review_web/xsoulspace_review_web.dart';
 
 void main() {
   testWidgets('requestReview is a safe no-op on web fallback reviewer', (
-    final tester,
+    tester,
   ) async {
     const reviewer = WebStoreReviewer();
 
@@ -13,7 +13,7 @@ void main() {
       Directionality(
         textDirection: TextDirection.ltr,
         child: Builder(
-          builder: (final buildContext) {
+          builder: (buildContext) {
             context = buildContext;
             return const SizedBox.shrink();
           },

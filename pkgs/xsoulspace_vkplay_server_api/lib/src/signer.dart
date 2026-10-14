@@ -15,9 +15,9 @@ final class VkPlaySigner {
   final bool boolAsInt;
 
   String sign({
-    required final Map<String, Object?> params,
-    required final String secret,
-    final Iterable<String> excludedKeys = const <String>{'sig', 'signature'},
+    required Map<String, Object?> params,
+    required String secret,
+    Iterable<String> excludedKeys = const <String>{'sig', 'signature'},
   }) {
     return signWithDiagnostics(
       params: params,
@@ -27,12 +27,12 @@ final class VkPlaySigner {
   }
 
   VkPlaySignatureResult signWithDiagnostics({
-    required final Map<String, Object?> params,
-    required final String secret,
-    final Iterable<String> excludedKeys = const <String>{'sig', 'signature'},
+    required Map<String, Object?> params,
+    required String secret,
+    Iterable<String> excludedKeys = const <String>{'sig', 'signature'},
   }) {
     final excluded = excludedKeys.toSet();
-    final keys = params.keys.where((final k) => !excluded.contains(k)).toList()
+    final keys = params.keys.where((k) => !excluded.contains(k)).toList()
       ..sort();
 
     final skippedNullKeys = <String>[];
@@ -65,10 +65,10 @@ final class VkPlaySigner {
   }
 
   bool verify({
-    required final Map<String, Object?> params,
-    required final String secret,
-    required final String expectedSignature,
-    final Iterable<String> excludedKeys = const <String>{'sig', 'signature'},
+    required Map<String, Object?> params,
+    required String secret,
+    required String expectedSignature,
+    Iterable<String> excludedKeys = const <String>{'sig', 'signature'},
   }) {
     final actual = sign(
       params: params,
@@ -78,7 +78,7 @@ final class VkPlaySigner {
     return actual.toLowerCase() == expectedSignature.toLowerCase();
   }
 
-  String _serializeValue(final Object value) {
+  String _serializeValue(Object value) {
     if (value is bool) {
       if (boolAsInt) {
         return value ? '1' : '0';
@@ -96,10 +96,10 @@ final class VkPlaySigner {
 }
 
 bool verifyVkPlayCallbackSignature({
-  required final Map<String, Object?> payload,
-  required final String secret,
-  final String signatureKey = 'sig',
-  final VkPlaySigner signer = const VkPlaySigner(),
+  required Map<String, Object?> payload,
+  required String secret,
+  String signatureKey = 'sig',
+  VkPlaySigner signer = const VkPlaySigner(),
 }) {
   final provided = payload[signatureKey];
   if (provided == null) {

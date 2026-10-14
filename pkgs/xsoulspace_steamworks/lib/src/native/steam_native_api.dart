@@ -45,7 +45,7 @@ final class SteamApiCallResultPayload {
 
 /// Native API shape required by the manual wrapper runtime.
 abstract interface class SteamNativeApi {
-  bool restartAppIfNecessary(final int appId);
+  bool restartAppIfNecessary(int appId);
 
   SteamNativeInitResult initialize();
 
@@ -62,9 +62,9 @@ abstract interface class SteamNativeApi {
   List<SteamManualCallback> drainManualCallbacks();
 
   SteamApiCallResultPayload? getApiCallResult({
-    required final int apiCallHandle,
-    required final int expectedCallbackId,
-    required final int callbackBufferSize,
+    required int apiCallHandle,
+    required int expectedCallbackId,
+    required int callbackBufferSize,
   });
 
   bool userLoggedOn();
@@ -73,32 +73,32 @@ abstract interface class SteamNativeApi {
 
   String personaName();
 
-  int friendCount(final int flags);
+  int friendCount(int flags);
 
-  int friendByIndex(final int index, final int flags);
+  int friendByIndex(int index, int flags);
 
-  String friendPersonaName(final int steamId);
+  String friendPersonaName(int steamId);
 
   bool requestCurrentStats();
 
-  int? getStatInt32(final String name);
+  int? getStatInt32(String name);
 
-  double? getStatFloat(final String name);
+  double? getStatFloat(String name);
 
-  bool setStatInt32(final String name, final int value);
+  bool setStatInt32(String name, int value);
 
-  bool setStatFloat(final String name, final double value);
+  bool setStatFloat(String name, double value);
 
   bool storeStats();
 
-  bool? getAchievement(final String name);
+  bool? getAchievement(String name);
 
-  bool setAchievement(final String name);
+  bool setAchievement(String name);
 
-  bool clearAchievement(final String name);
+  bool clearAchievement(String name);
 }
 
 /// Factory creating native runtime adapters for a given init config.
 abstract interface class SteamNativeApiFactory {
-  SteamNativeApi create(final SteamInitConfig config);
+  SteamNativeApi create(SteamInitConfig config);
 }

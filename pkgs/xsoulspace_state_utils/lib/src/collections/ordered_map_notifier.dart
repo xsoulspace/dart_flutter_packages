@@ -86,7 +86,7 @@ class OrderedMapNotifier<K, V> extends ImmutableOrderedMap<K, V>
   /// {@endtemplate}
   @override
   @mustCallSuper
-  void upsert(final V value, {final bool putFirst = false, final K? key}) {
+  void upsert(V value, {bool putFirst = false, K? key}) {
     super.upsert(value, putFirst: putFirst, key: key);
     notifyListeners();
   }
@@ -117,9 +117,9 @@ class OrderedMapNotifier<K, V> extends ImmutableOrderedMap<K, V>
   @override
   @mustCallSuper
   void upsertAll(
-    final Iterable<V> values, {
-    final bool putFirst = false,
-    final K? Function(V)? toKey,
+    Iterable<V> values, {
+    bool putFirst = false,
+    K? Function(V)? toKey,
   }) {
     super.upsertAll(values, putFirst: putFirst, toKey: toKey);
     if (values.isNotEmpty) {
@@ -137,7 +137,7 @@ class OrderedMapNotifier<K, V> extends ImmutableOrderedMap<K, V>
   /// {@endtemplate}
   @override
   @mustCallSuper
-  void remove(final K key) {
+  void remove(K key) {
     final hadKey = containsKey(key);
     super.remove(key);
     if (hadKey) {
@@ -164,7 +164,7 @@ class OrderedMapNotifier<K, V> extends ImmutableOrderedMap<K, V>
   }
 
   @override
-  void assignAllOrdered(final Iterable<V> items) {
+  void assignAllOrdered(Iterable<V> items) {
     super.assignAllOrdered(items);
     notifyListeners();
   }

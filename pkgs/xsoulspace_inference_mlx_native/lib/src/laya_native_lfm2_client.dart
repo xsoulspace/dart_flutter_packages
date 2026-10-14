@@ -64,7 +64,7 @@ final class NativeLfm2SpecialIds {
 /// Locates the cached LFM2.5 snapshot: [override], else `LFM2_SNAPSHOT`,
 /// else the LiquidAI LFM2.5-1.2B checkout under the HF hub cache (never
 /// downloads). Null when absent — callers skip honestly.
-String? resolveLfm2SnapshotDir(final String? override) {
+String? resolveLfm2SnapshotDir(String? override) {
   if (override != null) return override;
   final env = Platform.environment['LFM2_SNAPSHOT'];
   if (env != null && env.isNotEmpty) return env;
@@ -120,7 +120,7 @@ final class NativeLfm2TextEngine {
   /// Loads the cached snapshot: [snapshotDir], else `LFM2_SNAPSHOT`, else
   /// the LiquidAI LFM2.5-1.2B checkout under the HF hub cache (never
   /// downloads).
-  static Future<NativeLfm2TextEngine> load({final String? snapshotDir}) async {
+  static Future<NativeLfm2TextEngine> load({String? snapshotDir}) async {
     final dir = resolveLfm2SnapshotDir(snapshotDir);
     if (dir == null) {
       throw StateError(
@@ -175,11 +175,11 @@ final class NativeLfm2TextEngine {
   /// id in [eosIds], keeping that EOS token itself (HF convention — the
   /// chat server stops at `<|im_end|>`/`<|endoftext|>` this way).
   NativeLfm2Completion generate({
-    final String? prompt,
-    final List<int>? promptIds,
-    final int maxTokens = 64,
-    final bool stopOnEos = false,
-    final List<int>? eosIds,
+    String? prompt,
+    List<int>? promptIds,
+    int maxTokens = 64,
+    bool stopOnEos = false,
+    List<int>? eosIds,
   }) =>
       generateByHandle(
         _handle,
@@ -195,12 +195,12 @@ final class NativeLfm2TextEngine {
   /// after [load] opened the asset) can drive the engine with it. The
   /// native side creates its MLX stream per call on the calling thread.
   static NativeLfm2Completion generateByHandle(
-    final int handle, {
-    final String? prompt,
-    final List<int>? promptIds,
-    final int maxTokens = 64,
-    final bool stopOnEos = false,
-    final List<int>? eosIds,
+    int handle, {
+    String? prompt,
+    List<int>? promptIds,
+    int maxTokens = 64,
+    bool stopOnEos = false,
+    List<int>? eosIds,
   }) {
     final request = jsonEncode(<String, Object?>{
       'prompt': ?prompt,
@@ -232,11 +232,11 @@ final class NativeLfm2TextEngine {
   /// blocks the calling isolate (e.g. the UI). Generation itself is
   /// unchanged — same native serialization, same greedy path.
   Future<NativeLfm2Completion> generateAsync({
-    final String? prompt,
-    final List<int>? promptIds,
-    final int maxTokens = 64,
-    final bool stopOnEos = false,
-    final List<int>? eosIds,
+    String? prompt,
+    List<int>? promptIds,
+    int maxTokens = 64,
+    bool stopOnEos = false,
+    List<int>? eosIds,
   }) {
     final handle = _handle;
     return Isolate.run(
@@ -269,7 +269,7 @@ final class NativeLfm2TextEngine {
 /// of barreling through it.
 /// The chat wire's answer text: the native EOS stop emits the EOS token
 /// itself (HF convention); its literal must not ride the wire.
-String _wireText(final String text, {final bool stripThinkClose = false}) {
+String _wireText(String text, {bool stripThinkClose = false}) {
   var out = text;
   if (stripThinkClose) {
     // The 2.6B template opens the think block at the generation prompt;
@@ -293,9 +293,9 @@ final class LayaLfm2ChatServer {
     this.defaultMaxTokens = 64,
     this.useTemplate = true,
     this.variant = Lfm2ChatTemplateVariant.lfm25_12b,
-    final String? apiKey,
-    final InternetAddress? address,
-    final int port = 0,
+    String? apiKey,
+    InternetAddress? address,
+    int port = 0,
   }) : _server = LoopbackJsonServer(
          apiKey: apiKey,
          address: address,
@@ -305,7 +305,7 @@ final class LayaLfm2ChatServer {
            'model': model,
            'engine': 'laya-native-lfm2',
          },
-         route: (final LoopbackRequest request) async => _route(
+         route: (LoopbackRequest request) async => _route(
            request,
            engine,
            model,
@@ -336,12 +336,12 @@ final class LayaLfm2ChatServer {
   Future<void> stop() => _server.stop();
 
   static Future<LoopbackReply?> _route(
-    final LoopbackRequest request,
-    final NativeLfm2TextEngine engine,
-    final String model,
-    final int maxTokens,
-    final bool useTemplate,
-    final Lfm2ChatTemplateVariant variant,
+    LoopbackRequest request,
+    NativeLfm2TextEngine engine,
+    String model,
+    int maxTokens,
+    bool useTemplate,
+    Lfm2ChatTemplateVariant variant,
   ) async {
     if (request.method != 'POST' || request.path != '/v1/chat/completions') {
       return null;

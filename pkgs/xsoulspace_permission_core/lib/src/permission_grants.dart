@@ -32,7 +32,7 @@ final class PermissionGrant {
   /// Whether this grant would cover [request] (without consuming).
   /// [now] defaults to the wall clock; stores with their own clocks
   /// pass theirs so expiry stays consistent with their reads.
-  bool covers(final PermissionRequest request, {final DateTime? now}) {
+  bool covers(PermissionRequest request, {DateTime? now}) {
     if (kind != request.kind) return false;
     if (subject != null && subject != request.subject) return false;
     final expiry = expiresAt;
@@ -43,7 +43,7 @@ final class PermissionGrant {
   }
 
   @override
-  bool operator ==(final Object other) =>
+  bool operator ==(Object other) =>
       other is PermissionGrant &&
       other.kind == kind &&
       other.scope == scope &&
@@ -69,15 +69,15 @@ final class PermissionGrant {
 abstract interface class PermissionGrantStore {
   /// The best matching grant for [request], consumed if it was
   /// single-use; `null` when nothing unexpired matches.
-  PermissionGrant? consumeMatching(final PermissionRequest request);
+  PermissionGrant? consumeMatching(PermissionRequest request);
 
   /// Records [grant]. Implementations may replace an equivalent
   /// existing grant (same kind + subject) — durability is theirs.
-  void record(final PermissionGrant grant);
+  void record(PermissionGrant grant);
 
   /// Drops grants: all of them when every filter is null, else only
   /// the matching ones.
-  void revoke({final PermissionKind? kind, final String? subject});
+  void revoke({PermissionKind? kind, String? subject});
 }
 
 /// In-memory [PermissionGrantStore] — session lifetime, no I/O. The
@@ -99,7 +99,7 @@ final class InMemoryPermissionGrantStore implements PermissionGrantStore {
   }
 
   @override
-  PermissionGrant? consumeMatching(final PermissionRequest request) {
+  PermissionGrant? consumeMatching(PermissionRequest request) {
     _dropExpired();
     for (var i = 0; i < _grants.length; i++) {
       final grant = _grants[i];
@@ -113,7 +113,7 @@ final class InMemoryPermissionGrantStore implements PermissionGrantStore {
   }
 
   @override
-  void record(final PermissionGrant grant) {
+  void record(PermissionGrant grant) {
     // One live grant per (kind, subject) — a new decision replaces the
     // old allowance instead of accumulating shadows.
     _grants.removeWhere(
@@ -124,7 +124,7 @@ final class InMemoryPermissionGrantStore implements PermissionGrantStore {
   }
 
   @override
-  void revoke({final PermissionKind? kind, final String? subject}) {
+  void revoke({PermissionKind? kind, String? subject}) {
     _grants.removeWhere(
       (grant) =>
           (kind == null || grant.kind == kind) &&

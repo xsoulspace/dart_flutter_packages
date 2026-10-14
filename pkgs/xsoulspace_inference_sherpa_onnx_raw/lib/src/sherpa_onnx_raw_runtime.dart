@@ -204,15 +204,15 @@ final class SherpaOnnxRawBindings {
   final _DestroyResultJsonDart destroyResultJson;
   final _InputFinishedDart inputFinished;
 
-  static SherpaOnnxRawBindings load(final SherpaOnnxRawRuntimeConfig config) =>
+  static SherpaOnnxRawBindings load(SherpaOnnxRawRuntimeConfig config) =>
       SherpaOnnxRawBindings._(
         SherpaOnnxRawLibraryLoader(runtimeConfig: config).load(),
       );
 }
 
 String? resolveSherpaOnnxRawModelRoot({
-  required final SherpaOnnxRawModelConfig modelConfig,
-  required final SherpaOnnxRawRuntimeConfig runtimeConfig,
+  required SherpaOnnxRawModelConfig modelConfig,
+  required SherpaOnnxRawRuntimeConfig runtimeConfig,
 }) {
   final root = (runtimeConfig.modelsDirectory ?? '').trim();
   final requiredFiles = <String>[
@@ -235,7 +235,7 @@ String? resolveSherpaOnnxRawModelRoot({
   return root.isNotEmpty ? root : p.dirname(checked.first);
 }
 
-String resolveSherpaOnnxRawPath(final String value, final String? root) {
+String resolveSherpaOnnxRawPath(String value, String? root) {
   if (File(value).existsSync()) {
     return value;
   }
@@ -249,8 +249,8 @@ String resolveSherpaOnnxRawPath(final String value, final String? root) {
 }
 
 void validateSherpaOnnxRawModelConfig({
-  required final SherpaOnnxRawModelConfig modelConfig,
-  required final SherpaOnnxRawRuntimeConfig runtimeConfig,
+  required SherpaOnnxRawModelConfig modelConfig,
+  required SherpaOnnxRawRuntimeConfig runtimeConfig,
 }) {
   final failures = <String, String>{
     'encoder': resolveSherpaOnnxRawPath(
@@ -271,8 +271,8 @@ void validateSherpaOnnxRawModelConfig({
     ),
   };
   final missing = failures.entries
-      .where((final entry) => !File(entry.value).existsSync())
-      .map((final entry) => MapEntry(entry.key, entry.value))
+      .where((entry) => !File(entry.value).existsSync())
+      .map((entry) => MapEntry(entry.key, entry.value))
       .toList(growable: false);
   if (missing.isNotEmpty) {
     throw SherpaOnnxRawException(
@@ -293,7 +293,7 @@ final class SherpaOnnxRawBatchRuntime {
   final SherpaOnnxRawModelConfig modelConfig;
 
   Future<SherpaOnnxRawRecognitionResult> transcribe(
-    final SherpaOnnxRawAudioInput input,
+    SherpaOnnxRawAudioInput input,
   ) async {
     validateSherpaOnnxRawModelConfig(
       modelConfig: modelConfig,
@@ -347,7 +347,7 @@ final class SherpaOnnxRawRealtimeRuntime {
     _runtime = runtime;
   }
 
-  SherpaOnnxRawRecognitionResult? sendAudioChunk(final List<int> audioBytes) {
+  SherpaOnnxRawRecognitionResult? sendAudioChunk(List<int> audioBytes) {
     if (audioBytes.isEmpty || audioBytes.length.isOdd) {
       throw const SherpaOnnxRawException(
         code: 'audio_input_invalid',
@@ -431,7 +431,7 @@ final class _SherpaRuntime {
     }
   }
 
-  void acceptSamples(final Float32List samples, final int sampleRate) {
+  void acceptSamples(Float32List samples, int sampleRate) {
     final ptr = calloc<Float>(samples.length);
     ptr.asTypedList(samples.length).setAll(0, samples);
     try {
@@ -451,7 +451,7 @@ final class _SherpaRuntime {
     bindings.inputFinished(stream);
   }
 
-  SherpaOnnxRawRecognitionResult currentResult({required final bool isFinal}) {
+  SherpaOnnxRawRecognitionResult currentResult({required bool isFinal}) {
     final ptr = bindings.getResultJson(recognizer, stream);
     if (ptr == nullptr) {
       return SherpaOnnxRawRecognitionResult(transcript: '', isFinal: isFinal);
@@ -478,7 +478,7 @@ final class _SherpaRuntime {
     _freeStrings();
   }
 
-  void _fillConfig(final _OnlineRecognizerConfig config) {
+  void _fillConfig(_OnlineRecognizerConfig config) {
     final extras = modelConfig.providerExtras;
     config.feat_config.sample_rate = realtimeConfig?.sampleRate ?? 16000;
     config.feat_config.feature_dim = _intExtra(extras, 'feature_dim', 80);
@@ -553,7 +553,7 @@ final class _SherpaRuntime {
     config.hr.rule_fsts = nullptr;
   }
 
-  Pointer<Utf8> _alloc(final String value) {
+  Pointer<Utf8> _alloc(String value) {
     final ptr = value.toNativeUtf8();
     _allocatedStrings.add(ptr);
     return ptr;
@@ -567,7 +567,7 @@ final class _SherpaRuntime {
   }
 }
 
-Float32List pcm16leToSherpaOnnxRawFloatSamples(final Uint8List pcmBytes) {
+Float32List pcm16leToSherpaOnnxRawFloatSamples(Uint8List pcmBytes) {
   final data = ByteData.sublistView(pcmBytes);
   final samples = Float32List(pcmBytes.length ~/ 2);
   for (var i = 0; i < samples.length; i++) {
@@ -576,7 +576,7 @@ Float32List pcm16leToSherpaOnnxRawFloatSamples(final Uint8List pcmBytes) {
   return samples;
 }
 
-Float32List extractSherpaOnnxRawFloatSamplesFromWav(final Uint8List wavBytes) {
+Float32List extractSherpaOnnxRawFloatSamplesFromWav(Uint8List wavBytes) {
   if (wavBytes.length < 44) {
     throw const SherpaOnnxRawException(
       code: 'audio_input_invalid',
@@ -633,8 +633,8 @@ Float32List extractSherpaOnnxRawFloatSamplesFromWav(final Uint8List wavBytes) {
 }
 
 SherpaOnnxRawRecognitionResult parseSherpaOnnxRawRecognitionResult(
-  final String jsonPayload, {
-  required final bool isFinal,
+  String jsonPayload, {
+  required bool isFinal,
 }) {
   if (jsonPayload.trim().isEmpty) {
     return SherpaOnnxRawRecognitionResult(transcript: '', isFinal: isFinal);
@@ -656,7 +656,7 @@ SherpaOnnxRawRecognitionResult parseSherpaOnnxRawRecognitionResult(
     _ => const <Map>[],
   };
   final segments = dynamicSegments
-      .map((final value) {
+      .map((value) {
         final text =
             ((value['text'] ??
                             value['token'] ??
@@ -677,7 +677,7 @@ SherpaOnnxRawRecognitionResult parseSherpaOnnxRawRecognitionResult(
           endMs: endMs < startMs ? startMs : endMs,
         );
       })
-      .where((final value) => value.text.isNotEmpty)
+      .where((value) => value.text.isNotEmpty)
       .toList(growable: false);
   return SherpaOnnxRawRecognitionResult(
     transcript: transcript,
@@ -687,7 +687,7 @@ SherpaOnnxRawRecognitionResult parseSherpaOnnxRawRecognitionResult(
   );
 }
 
-int _numToMs(final Object? value) {
+int _numToMs(Object? value) {
   if (value is int) {
     return value > 1000 ? value : value * 10;
   }
@@ -707,27 +707,27 @@ int _numToMs(final Object? value) {
 }
 
 String _stringExtra(
-  final Map<String, dynamic> extras,
-  final String key,
-  final String fallback,
+  Map<String, dynamic> extras,
+  String key,
+  String fallback,
 ) {
   final value = extras[key];
   return value is String && value.trim().isNotEmpty ? value.trim() : fallback;
 }
 
 int _intExtra(
-  final Map<String, dynamic> extras,
-  final String key,
-  final int fallback,
+  Map<String, dynamic> extras,
+  String key,
+  int fallback,
 ) {
   final value = extras[key];
   return value is num ? value.round() : fallback;
 }
 
 bool _boolExtra(
-  final Map<String, dynamic> extras,
-  final String key,
-  final bool fallback,
+  Map<String, dynamic> extras,
+  String key,
+  bool fallback,
 ) {
   final value = extras[key];
   return value is bool ? value : fallback;

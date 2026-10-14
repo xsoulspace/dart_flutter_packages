@@ -44,7 +44,7 @@ abstract interface class LocalDbI {
   /// [key] The unique identifier for the key to be cleared.
   ///
   /// @ai Ensure this method is called to clear a specific key from the local database.
-  Future<void> clearKey({required final String key});
+  Future<void> clearKey({required String key});
 
   /// Stores a map of key-value pairs in the database.
   ///
@@ -56,8 +56,8 @@ abstract interface class LocalDbI {
   ///
   /// @ai Implement this method to efficiently serialize and store the map.
   Future<void> setMap({
-    required final String key,
-    required final Map<String, dynamic> value,
+    required String key,
+    required Map<String, dynamic> value,
   });
 
   /// Retrieves a map of key-value pairs from the database.
@@ -69,7 +69,7 @@ abstract interface class LocalDbI {
   /// @returns A [Future] that completes with the retrieved map.
   ///
   /// @ai Implement this method to deserialize and return the stored map.
-  Future<Map<String, dynamic>> getMap(final String key);
+  Future<Map<String, dynamic>> getMap(String key);
 
   /// Stores a string value in the database.
   ///
@@ -82,8 +82,8 @@ abstract interface class LocalDbI {
   /// @ai Ensure this method handles empty strings appropriately to avoid
   /// unexpected behavior.
   Future<void> setString({
-    required final String key,
-    required final String value,
+    required String key,
+    required String value,
   });
 
   /// Retrieves a string value from the database.
@@ -97,8 +97,8 @@ abstract interface class LocalDbI {
   /// @ai Implement proper error handling for cases where the key is not found
   /// to ensure a smooth user experience.
   Future<String> getString({
-    required final String key,
-    final String defaultValue = '',
+    required String key,
+    String defaultValue = '',
   });
 
   /// Stores a boolean value in the database.
@@ -110,7 +110,7 @@ abstract interface class LocalDbI {
   /// [value] The boolean to be stored.
   ///
   /// @ai Ensure that the boolean value is correctly stored and retrieved.
-  Future<void> setBool({required final String key, required final bool value});
+  Future<void> setBool({required String key, required bool value});
 
   /// Retrieves a boolean value from the database.
   ///
@@ -123,8 +123,8 @@ abstract interface class LocalDbI {
   /// @ai Ensure that the default value is returned correctly when the key is
   /// not found.
   Future<bool> getBool({
-    required final String key,
-    final bool defaultValue = false,
+    required String key,
+    bool defaultValue = false,
   });
 
   /// Stores an integer value in the database.
@@ -136,7 +136,7 @@ abstract interface class LocalDbI {
   /// [value] The integer to be stored.
   ///
   /// @ai Ensure that the integer value is correctly stored and retrieved.
-  Future<void> setInt({required final String key, final int value = 0});
+  Future<void> setInt({required String key, int value = 0});
 
   /// Retrieves an integer value from the database.
   ///
@@ -148,7 +148,7 @@ abstract interface class LocalDbI {
   ///
   /// @ai Ensure that the default value is returned correctly when the key is
   /// not found.
-  Future<int> getInt({required final String key, final int defaultValue = 0});
+  Future<int> getInt({required String key, int defaultValue = 0});
 
   /// Stores a generic item in the database.
   ///
@@ -162,9 +162,9 @@ abstract interface class LocalDbI {
   /// @ai Ensure that the serialization function is efficient and handles all
   /// necessary fields.
   Future<void> setItem<T>({
-    required final String key,
-    required final T value,
-    required final Map<String, dynamic> Function(T) toJson,
+    required String key,
+    required T value,
+    required Map<String, dynamic> Function(T) toJson,
   });
 
   /// Retrieves a generic item from the database.
@@ -180,9 +180,9 @@ abstract interface class LocalDbI {
   /// @ai Ensure that the deserialization function is efficient and handles
   /// all necessary fields.
   Future<T> getItem<T>({
-    required final String key,
-    required final T? Function(Map<String, dynamic>) fromJson,
-    required final T defaultValue,
+    required String key,
+    required T? Function(Map<String, dynamic>) fromJson,
+    required T defaultValue,
   });
 
   /// Stores a list of generic items in the database.
@@ -197,9 +197,9 @@ abstract interface class LocalDbI {
   /// @ai Ensure that the serialization function is efficient and handles all
   /// necessary fields.
   Future<void> setItemsList<T>({
-    required final String key,
-    required final List<T> value,
-    required final Map<String, dynamic> Function(T) toJson,
+    required String key,
+    required List<T> value,
+    required Map<String, dynamic> Function(T) toJson,
   });
 
   /// Retrieves a list of generic items from the database.
@@ -216,9 +216,9 @@ abstract interface class LocalDbI {
   /// @ai Ensure that the deserialization function is efficient and handles
   /// all necessary fields.
   Future<Iterable<T>> getItemsIterable<T>({
-    required final String key,
-    required final T Function(Map<String, dynamic>) fromJson,
-    final List<T> defaultValue = const [],
+    required String key,
+    required T Function(Map<String, dynamic>) fromJson,
+    List<T> defaultValue = const [],
   });
 
   /// Stores a list of maps in the database.
@@ -232,8 +232,8 @@ abstract interface class LocalDbI {
   /// @ai Ensure that the serialization is efficient and handles all necessary
   /// fields.
   Future<void> setMapList({
-    required final String key,
-    required final List<Map<String, dynamic>> value,
+    required String key,
+    required List<Map<String, dynamic>> value,
   });
 
   /// Retrieves a list of maps from the database.
@@ -249,8 +249,8 @@ abstract interface class LocalDbI {
   /// @ai Ensure that the deserialization is efficient and handles all necessary
   /// fields.
   Future<Iterable<Map<String, dynamic>>> getMapIterable({
-    required final String key,
-    final List<Map<String, dynamic>> defaultValue = const [],
+    required String key,
+    List<Map<String, dynamic>> defaultValue = const [],
   });
 
   /// Stores a list of strings in the database.
@@ -263,8 +263,8 @@ abstract interface class LocalDbI {
   ///
   /// @ai Ensure that the list is correctly serialized and stored.
   Future<void> setStringList({
-    required final String key,
-    required final List<String> value,
+    required String key,
+    required List<String> value,
   });
 
   /// Retrieves a list of strings from the database.
@@ -279,7 +279,7 @@ abstract interface class LocalDbI {
   /// @ai Ensure that the default value is returned correctly when the key is
   /// not found.
   Future<Iterable<String>> getStringsIterable({
-    required final String key,
-    final List<String> defaultValue = const [],
+    required String key,
+    List<String> defaultValue = const [],
   });
 }

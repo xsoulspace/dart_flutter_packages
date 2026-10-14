@@ -18,42 +18,42 @@ abstract class FlutterTtsDriver {
 }
 
 class MethodChannelFlutterTtsDriver implements FlutterTtsDriver {
-  MethodChannelFlutterTtsDriver([final FlutterTts? flutterTts])
+  MethodChannelFlutterTtsDriver([FlutterTts? flutterTts])
     : _flutterTts = flutterTts ?? FlutterTts();
 
   final FlutterTts _flutterTts;
 
   @override
-  Future<dynamic> awaitSynthCompletion(final bool awaitCompletion) =>
+  Future<dynamic> awaitSynthCompletion(bool awaitCompletion) =>
       _flutterTts.awaitSynthCompletion(awaitCompletion);
 
   @override
   Future<dynamic> synthesizeToFile(
-    final String text,
-    final String fileName,
-    final bool isFullPath,
+    String text,
+    String fileName,
+    bool isFullPath,
   ) => _flutterTts.synthesizeToFile(text, fileName, isFullPath);
 
   @override
-  Future<dynamic> setLanguage(final String language) =>
+  Future<dynamic> setLanguage(String language) =>
       _flutterTts.setLanguage(language);
 
   @override
-  Future<dynamic> setSpeechRate(final double rate) =>
+  Future<dynamic> setSpeechRate(double rate) =>
       _flutterTts.setSpeechRate(rate);
 
   @override
-  Future<dynamic> setPitch(final double pitch) => _flutterTts.setPitch(pitch);
+  Future<dynamic> setPitch(double pitch) => _flutterTts.setPitch(pitch);
 
   @override
-  Future<dynamic> setVoice(final Map<String, String> voice) =>
+  Future<dynamic> setVoice(Map<String, String> voice) =>
       _flutterTts.setVoice(voice);
 }
 
 class FlutterTtsInferenceClient implements InferenceClient {
   FlutterTtsInferenceClient({
-    final FlutterTtsDriver? driver,
-    final bool Function()? isSupportedPlatform,
+    FlutterTtsDriver? driver,
+    bool Function()? isSupportedPlatform,
     DateTime Function()? now,
   }) : _driver = driver ?? MethodChannelFlutterTtsDriver(),
        _isSupportedPlatform = isSupportedPlatform ?? _defaultPlatformCheck,
@@ -88,7 +88,7 @@ class FlutterTtsInferenceClient implements InferenceClient {
 
   @override
   Future<InferenceResult<InferenceResponse>> infer(
-    final InferenceRequest request, {
+    InferenceRequest request, {
     ToolRegistry? toolRegistry,
   }) async {
     if (!supportedTasks.contains(request.task)) {
@@ -97,7 +97,7 @@ class FlutterTtsInferenceClient implements InferenceClient {
         message: 'Task ${request.task.name} is not supported by $id',
         details: <String, dynamic>{
           'supported_tasks': supportedTasks
-              .map((final task) => task.name)
+              .map((task) => task.name)
               .toList(),
           'requested_task': request.task.name,
         },
@@ -178,7 +178,7 @@ class FlutterTtsInferenceClient implements InferenceClient {
   }
 
   Future<void> _applyVoiceOptions(
-    final InferenceVoiceOptions? voiceOptions,
+    InferenceVoiceOptions? voiceOptions,
   ) async {
     if (voiceOptions == null) {
       return;
@@ -226,7 +226,7 @@ class FlutterTtsInferenceClient implements InferenceClient {
     }
   }
 
-  _OutputSpec _resolveOutputSpec(final InferenceRequest request) {
+  _OutputSpec _resolveOutputSpec(InferenceRequest request) {
     final metadataPath = request.metadata['output_file_path'];
     final metadataMime = request.metadata['output_mime_type'];
 
@@ -259,7 +259,7 @@ class FlutterTtsInferenceClient implements InferenceClient {
     return '.wav';
   }
 
-  String _mimeTypeFromPath(final String path) {
+  String _mimeTypeFromPath(String path) {
     final lower = path.toLowerCase();
     if (lower.endsWith('.caf')) return 'audio/x-caf';
     if (lower.endsWith('.wav')) return 'audio/wav';

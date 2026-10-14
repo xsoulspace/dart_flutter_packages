@@ -14,16 +14,16 @@ import 'package:from_json_to_json/from_json_to_json.dart';
 /// and device information access.
 extension type const DeviceInfo._(Map<String, dynamic> value) {
   /// {@macro device_info}
-  factory DeviceInfo.fromJson(final dynamic json) =>
+  factory DeviceInfo.fromJson(dynamic json) =>
       DeviceInfo._(jsonDecodeMapAs(json));
 
   /// {@macro device_info}
   factory DeviceInfo({
-    required final String platform,
-    required final String model,
-    required final String osVersion,
-    final String? manufacturer,
-    final String? deviceId,
+    required String platform,
+    required String model,
+    required String osVersion,
+    String? manufacturer,
+    String? deviceId,
   }) => DeviceInfo._({
     'platform': platform,
     'model': model,

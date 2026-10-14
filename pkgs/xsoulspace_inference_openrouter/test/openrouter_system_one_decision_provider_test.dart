@@ -36,7 +36,7 @@ void main() {
       () async {
         late http.Request captured;
         final provider = _provider(
-          MockClient((final request) async {
+          MockClient((request) async {
             captured = request;
             return _successResponse(
               extra: const <String, Object?>{'trace': 'ok'},
@@ -279,7 +279,7 @@ void main() {
         final tooManyQuestions = _request(
           questions: List<FiniteChoiceQuestion>.generate(
             65,
-            (final index) => FiniteChoiceQuestion(
+            (index) => FiniteChoiceQuestion(
               id: DecisionQuestionId('q$index'),
               version: const DecisionQuestionVersion('v1'),
               candidateSetId: const DecisionCandidateSetId('candidates-a'),
@@ -553,7 +553,7 @@ void main() {
         final started = Completer<void>();
         var requestCount = 0;
         final provider = _provider(
-          MockClient((final request) {
+          MockClient((request) {
             requestCount++;
             if (requestCount == 2 && !started.isCompleted) started.complete();
             final state =
@@ -614,10 +614,10 @@ void main() {
 }
 
 OpenRouterSystemOneDecisionProvider _provider(
-  final http.Client client, {
-  final String apiKey = 'test-key',
-  final int maxTransientRetries = 0,
-  final Duration timeout = const Duration(seconds: 1),
+  http.Client client, {
+  String apiKey = 'test-key',
+  int maxTransientRetries = 0,
+  Duration timeout = const Duration(seconds: 1),
 }) => OpenRouterSystemOneDecisionProvider(
   apiKey: apiKey,
   model: 'jev-1.13',
@@ -628,12 +628,12 @@ OpenRouterSystemOneDecisionProvider _provider(
 );
 
 DecisionRequest _request({
-  final String suffix = 'a',
-  final String state = 'Verification failed after the semantic edit.',
-  final DecisionCancellationId cancellationId = const DecisionCancellationId(
+  String suffix = 'a',
+  String state = 'Verification failed after the semantic edit.',
+  DecisionCancellationId cancellationId = const DecisionCancellationId(
     'cancel-a',
   ),
-  final List<FiniteChoiceQuestion>? questions,
+  List<FiniteChoiceQuestion>? questions,
 }) => DecisionRequest(
   correlation: DecisionCorrelation(
     requestId: DecisionRequestId('req-$suffix'),
@@ -663,11 +663,11 @@ FiniteChoiceQuestion _question() => FiniteChoiceQuestion(
   abstainOptionId: const DecisionOptionId('insufficient_evidence'),
 );
 
-http.Response _successResponse({final Map<String, Object?> extra = const {}}) =>
+http.Response _successResponse({Map<String, Object?> extra = const {}}) =>
     http.Response(jsonEncode(_successPayload()..addAll(extra)), 200);
 
 Map<String, Object?> _successPayload({
-  final Map<String, Object?> answerOverrides = const <String, Object?>{},
+  Map<String, Object?> answerOverrides = const <String, Object?>{},
 }) => <String, Object?>{
   'id': 'generation-1',
   'model': 'typesafe/jev-1.13-20260917',

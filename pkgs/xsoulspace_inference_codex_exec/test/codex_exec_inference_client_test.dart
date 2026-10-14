@@ -271,7 +271,7 @@ void main() {
       expect(result.success, isTrue);
       expect(
         events.any(
-          (final event) =>
+          (event) =>
               event.type == InferenceStructuredTextStreamEventType.raw &&
               event.rawChannel == InferenceStructuredTextRawChannel.stdout,
         ),
@@ -279,7 +279,7 @@ void main() {
       );
       expect(
         events.any(
-          (final event) =>
+          (event) =>
               event.type == InferenceStructuredTextStreamEventType.raw &&
               event.rawChannel == InferenceStructuredTextRawChannel.stderr,
         ),
@@ -287,7 +287,7 @@ void main() {
       );
       expect(
         events.any(
-          (final event) =>
+          (event) =>
               event.type ==
                   InferenceStructuredTextStreamEventType.partialOutput &&
               (event.textDelta ?? '').contains('streaming stdout chunk'),
@@ -330,7 +330,7 @@ void main() {
       expect(result.error?.code, 'codex_exec_timeout');
       expect(
         events.any(
-          (final event) =>
+          (event) =>
               event.type == InferenceStructuredTextStreamEventType.lifecycle &&
               event.lifecycleState ==
                   InferenceStructuredTextLifecycleState.timedOut,
@@ -584,7 +584,7 @@ void main() {
       final results = await Future.wait(
         List<Future<InferenceResult<InferenceResponse>>>.generate(
           8,
-          (final index) => client.infer(
+          (index) => client.infer(
             _request(
               temp.path,
               prompt: 'parallel request $index',
@@ -609,9 +609,9 @@ void main() {
 }
 
 InferenceRequest _request(
-  final String workingDirectory, {
-  final String prompt = 'return json',
-  required final Map<String, dynamic> outputSchema,
+  String workingDirectory, {
+  String prompt = 'return json',
+  required Map<String, dynamic> outputSchema,
 }) => InferenceRequest(
   prompt: prompt,
   outputSchema: outputSchema,
@@ -620,10 +620,10 @@ InferenceRequest _request(
 
 extension on InferenceRequest {
   InferenceRequest copyWith({
-    final String? prompt,
-    final Map<String, dynamic>? outputSchema,
-    final String? workingDirectory,
-    final Map<String, dynamic>? metadata,
+    String? prompt,
+    Map<String, dynamic>? outputSchema,
+    String? workingDirectory,
+    Map<String, dynamic>? metadata,
   }) => InferenceRequest(
     prompt: prompt ?? this.prompt,
     outputSchema: outputSchema ?? this.outputSchema,
@@ -633,8 +633,8 @@ extension on InferenceRequest {
 }
 
 Future<File> _createExecutableScript(
-  final Directory directory,
-  final String content,
+  Directory directory,
+  String content,
 ) async {
   final script = File('${directory.path}/codex');
   await script.writeAsString(content);
@@ -680,7 +680,7 @@ JSON
 exit 0
 ''';
 
-String _argumentCaptureScript(final String argsPath) =>
+String _argumentCaptureScript(String argsPath) =>
     '''#!/usr/bin/env bash
 printf '%s\n' "\$@" > "$argsPath"
 output=""

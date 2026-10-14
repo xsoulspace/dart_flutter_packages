@@ -21,12 +21,12 @@ class RustoreBillingAndroid extends RustoreBillingPlatform {
       _billingResultController.stream;
 
   @override
-  Future<void> initialize(final RustoreBillingConfig config) async {
+  Future<void> initialize(RustoreBillingConfig config) async {
     _callbackApi = RustoreBillingCallbackApiImpl(
-      onPurchaseResultCallback: (final result) {
+      onPurchaseResultCallback: (result) {
         _billingResultController.add(RustoreBillingResult.purchase(result));
       },
-      onPurchaseErrorCallback: (final error) {
+      onPurchaseErrorCallback: (error) {
         _billingResultController.add(RustoreBillingResult.error(error));
       },
     );
@@ -43,47 +43,47 @@ class RustoreBillingAndroid extends RustoreBillingPlatform {
       _api.getUserAuthorizationStatus();
 
   @override
-  Future<List<RustoreProduct>> getProducts(final List<String> productIds) =>
+  Future<List<RustoreProduct>> getProducts(List<String> productIds) =>
       _api.getProducts(productIds);
 
   @override
   Future<List<RustorePurchase>> getPurchases(
-    final RustorePurchaseFilter? filter,
+    RustorePurchaseFilter? filter,
   ) => _api.getPurchases(filter);
 
   @override
-  Future<RustorePurchase?> getPurchase(final String purchaseId) =>
+  Future<RustorePurchase?> getPurchase(String purchaseId) =>
       _api.getPurchase(purchaseId);
 
   @override
   Future<RustoreProductPurchaseResult> purchase(
-    final RustoreProductPurchaseParams params, {
-    final RustorePreferredPurchaseType preferredPurchaseType =
+    RustoreProductPurchaseParams params, {
+    RustorePreferredPurchaseType preferredPurchaseType =
         RustorePreferredPurchaseType.unknown,
-    final RustoreBillingTheme sdkTheme = RustoreBillingTheme.system,
+    RustoreBillingTheme sdkTheme = RustoreBillingTheme.system,
   }) => _api.purchase(params, preferredPurchaseType, sdkTheme);
 
   @override
   Future<RustoreProductPurchaseResult> purchaseTwoStep(
-    final RustoreProductPurchaseParams params, {
-    final RustoreBillingTheme sdkTheme = RustoreBillingTheme.system,
+    RustoreProductPurchaseParams params, {
+    RustoreBillingTheme sdkTheme = RustoreBillingTheme.system,
   }) => _api.purchaseTwoStep(params, sdkTheme);
 
   @override
   Future<void> confirmTwoStepPurchase(
-    final String purchaseId, {
-    final String? developerPayload,
+    String purchaseId, {
+    String? developerPayload,
   }) async {
     await _api.confirmTwoStepPurchase(purchaseId, developerPayload);
   }
 
   @override
-  Future<void> cancelTwoStepPurchase(final String purchaseId) async {
+  Future<void> cancelTwoStepPurchase(String purchaseId) async {
     await _api.cancelTwoStepPurchase(purchaseId);
   }
 
   @override
-  void setCallbackApi(final RustoreBillingCallbackApi callbackApi) {
+  void setCallbackApi(RustoreBillingCallbackApi callbackApi) {
     _callbackApi = callbackApi;
     RustoreBillingCallbackApi.setUp(callbackApi);
   }
@@ -106,12 +106,12 @@ class RustoreBillingCallbackApiImpl extends RustoreBillingCallbackApi {
   final void Function(RustorePurchaseError error) onPurchaseErrorCallback;
 
   @override
-  void onPurchaseResult(final RustoreProductPurchaseResult result) {
+  void onPurchaseResult(RustoreProductPurchaseResult result) {
     onPurchaseResultCallback(result);
   }
 
   @override
-  void onPurchaseError(final RustorePurchaseError error) {
+  void onPurchaseError(RustorePurchaseError error) {
     onPurchaseErrorCallback(error);
   }
 }

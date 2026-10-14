@@ -28,7 +28,7 @@ class SteamworksExampleApp extends StatelessWidget {
   final SteamClient? client;
 
   @override
-  Widget build(final BuildContext context) {
+  Widget build(BuildContext context) {
     final resolvedClient =
         client ??
         (useFakeBackend
@@ -65,7 +65,7 @@ class _SteamworksHomePageState extends State<SteamworksHomePage> {
   @override
   void initState() {
     super.initState();
-    _eventSubscription = _client.events.listen((final event) {
+    _eventSubscription = _client.events.listen((event) {
       setState(() {
         _lastEvent = event.runtimeType.toString();
       });
@@ -128,7 +128,7 @@ class _SteamworksHomePageState extends State<SteamworksHomePage> {
   }
 
   @override
-  Widget build(final BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Steamworks Desktop Example')),
     body: Padding(
       padding: const EdgeInsets.all(16),

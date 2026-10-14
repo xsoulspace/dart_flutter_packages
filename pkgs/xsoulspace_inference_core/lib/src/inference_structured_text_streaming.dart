@@ -11,12 +11,12 @@ enum InferenceStructuredTextStreamEventType {
   error,
   completion;
 
-  factory InferenceStructuredTextStreamEventType.fromJson(final Object? value) {
+  factory InferenceStructuredTextStreamEventType.fromJson(Object? value) {
     if (value is! String) {
       return InferenceStructuredTextStreamEventType.progress;
     }
     return InferenceStructuredTextStreamEventType.values.firstWhere(
-      (final candidate) => candidate.name == value,
+      (candidate) => candidate.name == value,
       orElse: () => InferenceStructuredTextStreamEventType.progress,
     );
   }
@@ -30,7 +30,7 @@ enum InferenceStructuredTextLifecycleState {
   completed,
   failed;
 
-  static InferenceStructuredTextLifecycleState? fromJson(final Object? value) {
+  static InferenceStructuredTextLifecycleState? fromJson(Object? value) {
     if (value is! String) {
       return null;
     }
@@ -47,7 +47,7 @@ enum InferenceStructuredTextRawChannel {
   stdout,
   stderr;
 
-  static InferenceStructuredTextRawChannel? fromJson(final Object? value) {
+  static InferenceStructuredTextRawChannel? fromJson(Object? value) {
     if (value is! String) {
       return null;
     }
@@ -67,7 +67,7 @@ class InferenceStructuredTextCompletion {
   });
 
   factory InferenceStructuredTextCompletion.fromJson(
-    final Map<String, dynamic> json,
+    Map<String, dynamic> json,
   ) {
     final resultJson =
         (json['result'] as Map?)?.cast<String, dynamic>() ??
@@ -108,7 +108,7 @@ class InferenceStructuredTextCompletion {
   final int? attemptCount;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-    'result': result.toJson((final value) => value.toJson()),
+    'result': result.toJson((value) => value.toJson()),
     if (attemptCount != null) 'attempt_count': attemptCount,
   };
 }
@@ -130,7 +130,7 @@ class InferenceStructuredTextStreamEvent {
   });
 
   factory InferenceStructuredTextStreamEvent.fromJson(
-    final Map<String, dynamic> json,
+    Map<String, dynamic> json,
   ) => InferenceStructuredTextStreamEvent(
     type: InferenceStructuredTextStreamEventType.fromJson(json['type']),
     timestamp:
@@ -230,7 +230,7 @@ extension InferenceStructuredTextStreamingClientX on InferenceClient {
       this is StructuredTextStreamingInferenceClient;
 
   Future<InferenceStructuredTextStreamSession> streamStructuredText(
-    final InferenceRequest request,
+    InferenceRequest request,
   ) {
     final client = this;
     if (client is StructuredTextStreamingInferenceClient) {

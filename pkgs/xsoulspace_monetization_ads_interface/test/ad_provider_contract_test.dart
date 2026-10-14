@@ -24,20 +24,20 @@ final class _TestAdProvider implements AdProvider {
 
   @override
   Widget buildBannerAd({
-    required final String adUnitId,
-    required final Object adSize,
+    required String adUnitId,
+    required Object adSize,
   }) => const SizedBox(width: 728, height: 90);
 
   @override
   Future<void> init() async => events.add('init');
 
   @override
-  Future<void> showInterstitialAd({required final String adUnitId}) async {
+  Future<void> showInterstitialAd({required String adUnitId}) async {
     events.add('interstitial');
   }
 
   @override
-  Future<void> showRewardedAd({required final String adUnitId}) async {
+  Future<void> showRewardedAd({required String adUnitId}) async {
     events.add('rewarded');
   }
 }

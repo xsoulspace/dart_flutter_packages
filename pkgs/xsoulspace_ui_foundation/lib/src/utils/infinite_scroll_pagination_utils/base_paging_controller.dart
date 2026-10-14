@@ -47,7 +47,7 @@ abstract base class BasePagingController<TItem> implements Disposable {
   final bool addEmptyFirstItem;
   final ValueGetter<TItem>? emptyItemBuilder;
   late final pager = HashPagingController<int, TItem>(
-    getNextPageKey: (final state) {
+    getNextPageKey: (state) {
       if (_isLastPage) return null;
       final lastKey = state.keys?.lastOrNull ?? 0;
       return lastKey + 1;
@@ -58,7 +58,7 @@ abstract base class BasePagingController<TItem> implements Disposable {
   List<TItem> get items {
     final pages = pager.value.pages;
     if (pages == null) return [];
-    return pages.expand((final page) => page).toList();
+    return pages.expand((page) => page).toList();
   }
 
   final _itemsCountListeners = <ValueChanged<int>>{};
@@ -79,16 +79,16 @@ abstract base class BasePagingController<TItem> implements Disposable {
     }
   }
 
-  void _onItemsCountChanged(final ValueChanged<int> listener) {
+  void _onItemsCountChanged(ValueChanged<int> listener) {
     listener(_lastItemsCount);
   }
 
   /// will be triggered when count changes
-  void addItemsCountListener(final ValueChanged<int> listener) {
+  void addItemsCountListener(ValueChanged<int> listener) {
     _itemsCountListeners.add(listener);
   }
 
-  void removeItemsCountListener(final ValueChanged<int> listener) {
+  void removeItemsCountListener(ValueChanged<int> listener) {
     _itemsCountListeners.remove(listener);
   }
 
@@ -96,7 +96,7 @@ abstract base class BasePagingController<TItem> implements Disposable {
   /// *      PAGER LISTENERS END
   /// ********************************************
 
-  Future<List<TItem>> _fetchPage(final int pageKey) async {
+  Future<List<TItem>> _fetchPage(int pageKey) async {
     final response = await requestBuilder.onLoadData(pageKey);
     final values = [...response.values];
 
@@ -131,15 +131,15 @@ abstract base class BasePagingController<TItem> implements Disposable {
     pager.refreshWithoutNotify();
   }
 
-  void insertItem(final TItem item, {final int at = 0}) =>
+  void insertItem(TItem item, {int at = 0}) =>
       pager.insertElements([item], at: at);
-  void insertItems(final List<TItem> items, {final int at = 0}) =>
+  void insertItems(List<TItem> items, {int at = 0}) =>
       pager.insertElements(items, at: at);
   void moveElementFirst({
-    required final TItem element,
-    final bool shouldAddOnNotFound = false,
+    required TItem element,
+    bool shouldAddOnNotFound = false,
   }) {
-    final index = items.indexWhere((final e) => e == element);
+    final index = items.indexWhere((e) => e == element);
     if (index >= 0) {
       moveElementByIndex(element: element, index: index);
     } else if (shouldAddOnNotFound) {
@@ -150,21 +150,21 @@ abstract base class BasePagingController<TItem> implements Disposable {
   /// removes element from listing at given [index], then reinserts it
   /// at [moveToIndex]
   void moveElementByIndex({
-    required final int index,
-    required final TItem element,
+    required int index,
+    required TItem element,
 
     /// target index after element removal
-    final int moveToIndex = 0,
+    int moveToIndex = 0,
   }) => pager.moveElementByIndex(
     element: element,
     newIndex: moveToIndex,
     oldIndex: index,
   );
   void replaceItem(
-    final TItem item, {
-    final bool shouldAddOnNotFound = false,
-    final bool Function(TItem a, TItem b)? equals,
-    final int? index,
+    TItem item, {
+    bool shouldAddOnNotFound = false,
+    bool Function(TItem a, TItem b)? equals,
+    int? index,
   }) => pager.replaceElement(
     element: item,
     shouldAddOnNotFound: shouldAddOnNotFound,
@@ -172,13 +172,13 @@ abstract base class BasePagingController<TItem> implements Disposable {
     index: index,
   );
 
-  void deleteItem(final TItem item) => pager.removeElement(element: item);
-  TItem? deleteItemWhere(final bool Function(TItem element) test) =>
+  void deleteItem(TItem item) => pager.removeElement(element: item);
+  TItem? deleteItemWhere(bool Function(TItem element) test) =>
       pager.removeElementWhere(test: test);
-  Iterable<TItem> deleteItemsWhere(final bool Function(TItem element) test) =>
+  Iterable<TItem> deleteItemsWhere(bool Function(TItem element) test) =>
       pager.removeElementsWhere(test: test);
-  void deleteItems(final List<TItem> items) => items.forEach(deleteItem);
-  ({TItem? item, int index}) getItem(final bool Function(TItem) test) {
+  void deleteItems(List<TItem> items) => items.forEach(deleteItem);
+  ({TItem? item, int index}) getItem(bool Function(TItem) test) {
     final index = items.indexWhere(test);
     if (index < 0) return (index: index, item: null);
     return (index: index, item: items[index]);

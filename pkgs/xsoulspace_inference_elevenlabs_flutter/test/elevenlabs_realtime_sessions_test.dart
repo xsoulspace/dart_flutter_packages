@@ -23,7 +23,7 @@ void main() {
             apiKey: 'api-key-fallback',
             bearerTokenProvider: () async => 'bearer-token',
           ),
-          webSocketConnector: (final uri, {final headers}) {
+          webSocketConnector: (uri, {headers}) {
             capturedUri = uri;
             capturedHeaders = headers;
             return fakeChannel;
@@ -50,7 +50,7 @@ void main() {
 
         final sentPayloads = fakeChannel.sentMessages
             .whereType<String>()
-            .map((final item) => jsonDecode(item) as Map<String, dynamic>)
+            .map((item) => jsonDecode(item) as Map<String, dynamic>)
             .toList();
 
         expect(sentPayloads[0]['text'], ' ');
@@ -66,7 +66,7 @@ void main() {
 
       final session = ElevenLabsRealtimeTtsSession(
         authConfig: const ElevenLabsAuthConfig(apiKey: 'api-key'),
-        webSocketConnector: (final uri, {final headers}) => fakeChannel,
+        webSocketConnector: (uri, {headers}) => fakeChannel,
       );
       addTearDown(session.dispose);
 
@@ -107,7 +107,7 @@ void main() {
 
         final session = ElevenLabsRealtimeSttSession(
           authConfig: const ElevenLabsAuthConfig(apiKey: 'api-key'),
-          webSocketConnector: (final uri, {final headers}) {
+          webSocketConnector: (uri, {headers}) {
             capturedUri = uri;
             capturedHeaders = headers;
             return fakeChannel;
@@ -130,7 +130,7 @@ void main() {
 
         final sentPayloads = fakeChannel.sentMessages
             .whereType<String>()
-            .map((final item) => jsonDecode(item) as Map<String, dynamic>)
+            .map((item) => jsonDecode(item) as Map<String, dynamic>)
             .toList();
 
         expect(sentPayloads[0]['message_type'], 'input_audio_chunk');
@@ -149,7 +149,7 @@ void main() {
 
       final session = ElevenLabsRealtimeSttSession(
         authConfig: const ElevenLabsAuthConfig(apiKey: 'api-key'),
-        webSocketConnector: (final uri, {final headers}) => fakeChannel,
+        webSocketConnector: (uri, {headers}) => fakeChannel,
       );
       addTearDown(session.dispose);
 

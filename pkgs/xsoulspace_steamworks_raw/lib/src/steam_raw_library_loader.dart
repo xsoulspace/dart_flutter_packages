@@ -42,7 +42,7 @@ final class SteamRawLibraryLoader {
       platformOverride ?? SteamDesktopPlatform.fromRuntime();
 
   /// Platform library names in resolution order.
-  static List<String> libraryNamesFor(final SteamDesktopPlatform platform) {
+  static List<String> libraryNamesFor(SteamDesktopPlatform platform) {
     switch (platform) {
       case SteamDesktopPlatform.windows:
         return const <String>['steam_api64.dll', 'steam_api.dll'];
@@ -65,7 +65,7 @@ final class SteamRawLibraryLoader {
     final names = libraryNamesFor(_platform);
     final candidates = <String>[];
 
-    void addPath(final String value) {
+    void addPath(String value) {
       if (value.trim().isEmpty) {
         return;
       }
@@ -78,7 +78,7 @@ final class SteamRawLibraryLoader {
         continue;
       }
       final looksLikeFile = names.any(
-        (final libName) =>
+        (libName) =>
             candidate.endsWith(libName) ||
             candidate.toLowerCase().endsWith('.dll') ||
             candidate.toLowerCase().endsWith('.dylib') ||

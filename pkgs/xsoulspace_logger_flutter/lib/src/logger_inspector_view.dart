@@ -40,7 +40,7 @@ final class _LoggerInspectorViewState extends State<LoggerInspectorView> {
   }
 
   @override
-  void didUpdateWidget(final LoggerInspectorView oldWidget) {
+  void didUpdateWidget(LoggerInspectorView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
       oldWidget.controller.removeListener(_onControllerChanged);
@@ -65,7 +65,7 @@ final class _LoggerInspectorViewState extends State<LoggerInspectorView> {
   }
 
   @override
-  Widget build(final BuildContext context) => DefaultTabController(
+  Widget build(BuildContext context) => DefaultTabController(
     length: 3,
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -91,10 +91,10 @@ final class _LoggerInspectorViewState extends State<LoggerInspectorView> {
     ),
   );
 
-  Widget _buildSearchAndFilters(final BuildContext context) {
+  Widget _buildSearchAndFilters(BuildContext context) {
     final categories =
         widget.controller.logs
-            .map((final record) => record.category)
+            .map((record) => record.category)
             .toSet()
             .toList(growable: false)
           ..sort();
@@ -106,7 +106,7 @@ final class _LoggerInspectorViewState extends State<LoggerInspectorView> {
         children: <Widget>[
           TextField(
             controller: _searchController,
-            onChanged: (final value) {
+            onChanged: (value) {
               setState(() {
                 _searchText = value.trim().toLowerCase();
               });
@@ -122,10 +122,10 @@ final class _LoggerInspectorViewState extends State<LoggerInspectorView> {
             runSpacing: 8,
             children: LogLevel.values
                 .map(
-                  (final level) => FilterChip(
+                  (level) => FilterChip(
                     label: Text(level.name),
                     selected: _selectedLevels.contains(level),
-                    onSelected: (final selected) {
+                    onSelected: (selected) {
                       setState(() {
                         if (selected) {
                           _selectedLevels.add(level);
@@ -146,13 +146,13 @@ final class _LoggerInspectorViewState extends State<LoggerInspectorView> {
             items: <DropdownMenuItem<String?>>[
               const DropdownMenuItem<String?>(child: Text('All categories')),
               ...categories.map(
-                (final category) => DropdownMenuItem<String?>(
+                (category) => DropdownMenuItem<String?>(
                   value: category,
                   child: Text(category),
                 ),
               ),
             ],
-            onChanged: (final value) {
+            onChanged: (value) {
               setState(() {
                 _selectedCategory = value;
               });
@@ -163,7 +163,7 @@ final class _LoggerInspectorViewState extends State<LoggerInspectorView> {
     );
   }
 
-  Widget _buildLogsTab(final BuildContext context) {
+  Widget _buildLogsTab(BuildContext context) {
     final logs = _filteredLogs();
 
     if (widget.controller.isLoading && logs.isEmpty) {
@@ -176,14 +176,14 @@ final class _LoggerInspectorViewState extends State<LoggerInspectorView> {
 
     return ListView.builder(
       itemCount: logs.length,
-      itemBuilder: (final context, final index) {
+      itemBuilder: (context, index) {
         final record = logs[index];
         return _buildLogTile(context, record);
       },
     );
   }
 
-  Widget _buildLogTile(final BuildContext context, final LogRecord record) {
+  Widget _buildLogTile(BuildContext context, LogRecord record) {
     final traceId = record.trace?.traceId;
 
     return ListTile(
@@ -217,7 +217,7 @@ final class _LoggerInspectorViewState extends State<LoggerInspectorView> {
     );
   }
 
-  Widget _buildTracesTab(final BuildContext context) {
+  Widget _buildTracesTab(BuildContext context) {
     final traceId = widget.controller.selectedTraceId;
     final traceRecords = widget.controller.traceRecords;
 
@@ -248,7 +248,7 @@ final class _LoggerInspectorViewState extends State<LoggerInspectorView> {
               ? const Center(child: Text('No records in this trace.'))
               : ListView.builder(
                   itemCount: traceRecords.length,
-                  itemBuilder: (final context, final index) {
+                  itemBuilder: (context, index) {
                     final record = traceRecords[index];
                     return ListTile(
                       leading: Text('${record.sequence}'),
@@ -264,7 +264,7 @@ final class _LoggerInspectorViewState extends State<LoggerInspectorView> {
     );
   }
 
-  Widget _buildIssuesTab(final BuildContext context) {
+  Widget _buildIssuesTab(BuildContext context) {
     final issues = widget.controller.issues;
     if (issues.isEmpty) {
       return const Center(child: Text('No grouped issues yet.'));
@@ -272,7 +272,7 @@ final class _LoggerInspectorViewState extends State<LoggerInspectorView> {
 
     return ListView.builder(
       itemCount: issues.length,
-      itemBuilder: (final context, final index) {
+      itemBuilder: (context, index) {
         final issue = issues[index];
         final fingerprintLabel = issue.fingerprint.length > 12
             ? issue.fingerprint.substring(0, 12)
@@ -300,7 +300,7 @@ final class _LoggerInspectorViewState extends State<LoggerInspectorView> {
   }
 
   List<LogRecord> _filteredLogs() => widget.controller.logs
-      .where((final record) {
+      .where((record) {
         if (!_selectedLevels.contains(record.level)) {
           return false;
         }
@@ -318,7 +318,7 @@ final class _LoggerInspectorViewState extends State<LoggerInspectorView> {
           ..write(' ')
           ..write(record.error?.toString() ?? '');
 
-        record.fields.forEach((final key, final value) {
+        record.fields.forEach((key, value) {
           haystack
             ..write(' ')
             ..write(key)
@@ -330,7 +330,7 @@ final class _LoggerInspectorViewState extends State<LoggerInspectorView> {
       })
       .toList(growable: false);
 
-  Color _levelColor(final LogLevel level) => switch (level) {
+  Color _levelColor(LogLevel level) => switch (level) {
     LogLevel.trace => Colors.blueGrey,
     LogLevel.debug => Colors.blue,
     LogLevel.info => Colors.green,

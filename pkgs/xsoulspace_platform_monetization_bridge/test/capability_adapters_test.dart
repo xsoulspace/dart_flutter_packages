@@ -49,32 +49,32 @@ final class _FakePurchaseProvider implements PurchaseProvider {
 
   @override
   Future<List<PurchaseProductDetailsModel>> getConsumables(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   ) async => const <PurchaseProductDetailsModel>[];
 
   @override
   Future<List<PurchaseProductDetailsModel>> getNonConsumables(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   ) async => const <PurchaseProductDetailsModel>[];
 
   @override
   Future<List<PurchaseProductDetailsModel>> getProductDetails(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   ) async => const <PurchaseProductDetailsModel>[];
 
   @override
   Future<List<PurchaseProductDetailsModel>> getSubscriptions(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   ) async => const <PurchaseProductDetailsModel>[];
 
   @override
-  Future<PurchaseDetailsModel> getPurchaseDetails(final PurchaseId productId) {
+  Future<PurchaseDetailsModel> getPurchaseDetails(PurchaseId productId) {
     throw UnimplementedError();
   }
 
   @override
   Future<PurchaseResultModel> purchaseNonConsumable(
-    final PurchaseProductDetailsModel productDetails,
+    PurchaseProductDetailsModel productDetails,
   ) async => PurchaseResultModel.failure('unsupported');
 
   @override
@@ -83,16 +83,16 @@ final class _FakePurchaseProvider implements PurchaseProvider {
 
   @override
   Future<CompletePurchaseResultModel> completePurchase(
-    final PurchaseVerificationDtoModel purchase,
+    PurchaseVerificationDtoModel purchase,
   ) async => CompletePurchaseResultModel.success();
 
   @override
   Future<PurchaseResultModel> subscribe(
-    final PurchaseProductDetailsModel productDetails,
+    PurchaseProductDetailsModel productDetails,
   ) async => PurchaseResultModel.failure('unsupported');
 
   @override
-  Future<CancelResultModel> cancel(final String purchaseOrProductId) async =>
+  Future<CancelResultModel> cancel(String purchaseOrProductId) async =>
       CancelResultModel.success();
 
   @override
@@ -107,15 +107,15 @@ final class _FakeAdProvider implements AdProvider {
   Future<void> init() async {}
 
   @override
-  Future<void> showRewardedAd({required final String adUnitId}) async {}
+  Future<void> showRewardedAd({required String adUnitId}) async {}
 
   @override
-  Future<void> showInterstitialAd({required final String adUnitId}) async {}
+  Future<void> showInterstitialAd({required String adUnitId}) async {}
 
   @override
   Widget buildBannerAd({
-    required final String adUnitId,
-    required final Object adSize,
+    required String adUnitId,
+    required Object adSize,
   }) {
     return const SizedBox.shrink();
   }

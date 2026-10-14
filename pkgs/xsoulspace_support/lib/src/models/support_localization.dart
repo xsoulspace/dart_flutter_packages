@@ -115,9 +115,9 @@ class SupportLocalization {
   /// If the language is not available, falls back to the default language.
   /// If the key is not found, returns the fallback string.
   static String getLocalizedString(
-    final String key,
-    final UiLanguage language,
-    final String fallback,
+    String key,
+    UiLanguage language,
+    String fallback,
   ) {
     final localization = defaultLocalization[key];
     if (localization == null) {
@@ -144,10 +144,10 @@ class SupportLocalization {
   /// It first tries to get the string from the custom localization,
   /// then falls back to the default localization.
   static String getLocalizedStringFromMap(
-    final LocalizedMap? customLocalization,
-    final String key,
-    final UiLanguage language,
-    final String fallback,
+    LocalizedMap? customLocalization,
+    String key,
+    UiLanguage language,
+    String fallback,
   ) {
     // Try custom localization first
     if (customLocalization != null) {
@@ -168,7 +168,7 @@ class SupportLocalization {
   }
 
   /// Checks if a language is supported
-  static bool isLanguageSupported(final UiLanguage language) =>
+  static bool isLanguageSupported(UiLanguage language) =>
       supportedLanguages.contains(language);
 
   /// Gets all supported languages

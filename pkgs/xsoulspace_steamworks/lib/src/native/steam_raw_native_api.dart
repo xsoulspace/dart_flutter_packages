@@ -14,7 +14,7 @@ final class SteamRawNativeApiFactory implements SteamNativeApiFactory {
   const SteamRawNativeApiFactory();
 
   @override
-  SteamNativeApi create(final SteamInitConfig config) {
+  SteamNativeApi create(SteamInitConfig config) {
     final loader = SteamRawLibraryLoader(
       librarySearchPaths: config.librarySearchPaths,
     );
@@ -89,7 +89,7 @@ final class SteamRawNativeApi implements SteamNativeApi {
     return resolved;
   }
 
-  void _log(final String message) {
+  void _log(String message) {
     if (!_enableVerboseLogs) {
       return;
     }
@@ -98,7 +98,7 @@ final class SteamRawNativeApi implements SteamNativeApi {
   }
 
   @override
-  bool restartAppIfNecessary(final int appId) =>
+  bool restartAppIfNecessary(int appId) =>
       _bindings.restartAppIfNecessary(appId);
 
   @override
@@ -208,9 +208,9 @@ final class SteamRawNativeApi implements SteamNativeApi {
 
   @override
   SteamApiCallResultPayload? getApiCallResult({
-    required final int apiCallHandle,
-    required final int expectedCallbackId,
-    required final int callbackBufferSize,
+    required int apiCallHandle,
+    required int expectedCallbackId,
+    required int callbackBufferSize,
   }) {
     final arena = SteamPointerArena();
     try {
@@ -256,15 +256,15 @@ final class SteamRawNativeApi implements SteamNativeApi {
   );
 
   @override
-  int friendCount(final int flags) =>
+  int friendCount(int flags) =>
       _bindings.friendsGetFriendCount(_requireSteamFriends(), flags);
 
   @override
-  int friendByIndex(final int index, final int flags) =>
+  int friendByIndex(int index, int flags) =>
       _bindings.friendsGetFriendByIndex(_requireSteamFriends(), index, flags);
 
   @override
-  String friendPersonaName(final int steamId) => _bindings.readNullableUtf8(
+  String friendPersonaName(int steamId) => _bindings.readNullableUtf8(
     _bindings.friendsGetFriendPersonaName(_requireSteamFriends(), steamId),
   );
 
@@ -273,7 +273,7 @@ final class SteamRawNativeApi implements SteamNativeApi {
       _bindings.userStatsRequestCurrentStats(_requireSteamUserStats());
 
   @override
-  int? getStatInt32(final String name) {
+  int? getStatInt32(String name) {
     final arena = SteamPointerArena();
     try {
       final namePtr = arena.allocUtf8(name);
@@ -290,7 +290,7 @@ final class SteamRawNativeApi implements SteamNativeApi {
   }
 
   @override
-  double? getStatFloat(final String name) {
+  double? getStatFloat(String name) {
     final arena = SteamPointerArena();
     try {
       final namePtr = arena.allocUtf8(name);
@@ -307,7 +307,7 @@ final class SteamRawNativeApi implements SteamNativeApi {
   }
 
   @override
-  bool setStatInt32(final String name, final int value) {
+  bool setStatInt32(String name, int value) {
     final arena = SteamPointerArena();
     try {
       final namePtr = arena.allocUtf8(name);
@@ -322,7 +322,7 @@ final class SteamRawNativeApi implements SteamNativeApi {
   }
 
   @override
-  bool setStatFloat(final String name, final double value) {
+  bool setStatFloat(String name, double value) {
     final arena = SteamPointerArena();
     try {
       final namePtr = arena.allocUtf8(name);
@@ -340,7 +340,7 @@ final class SteamRawNativeApi implements SteamNativeApi {
   bool storeStats() => _bindings.userStatsStoreStats(_requireSteamUserStats());
 
   @override
-  bool? getAchievement(final String name) {
+  bool? getAchievement(String name) {
     final arena = SteamPointerArena();
     try {
       final namePtr = arena.allocUtf8(name);
@@ -360,7 +360,7 @@ final class SteamRawNativeApi implements SteamNativeApi {
   }
 
   @override
-  bool setAchievement(final String name) {
+  bool setAchievement(String name) {
     final arena = SteamPointerArena();
     try {
       final namePtr = arena.allocUtf8(name);
@@ -374,7 +374,7 @@ final class SteamRawNativeApi implements SteamNativeApi {
   }
 
   @override
-  bool clearAchievement(final String name) {
+  bool clearAchievement(String name) {
     final arena = SteamPointerArena();
     try {
       final namePtr = arena.allocUtf8(name);

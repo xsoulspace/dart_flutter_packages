@@ -113,7 +113,7 @@ final class DiscordOAuthToken {
     this.metadata = const <String, Object?>{},
   });
 
-  factory DiscordOAuthToken.fromMap(final Map<String, Object?> map) {
+  factory DiscordOAuthToken.fromMap(Map<String, Object?> map) {
     return DiscordOAuthToken(
       accessToken: map['access_token']?.toString() ?? '',
       tokenType: map['token_type']?.toString() ?? 'Bearer',
@@ -143,7 +143,7 @@ final class DiscordCurrentUser {
     this.metadata = const <String, Object?>{},
   });
 
-  factory DiscordCurrentUser.fromMap(final Map<String, Object?> map) {
+  factory DiscordCurrentUser.fromMap(Map<String, Object?> map) {
     return DiscordCurrentUser(
       id: map['id']?.toString() ?? '',
       username: map['username']?.toString() ?? '',

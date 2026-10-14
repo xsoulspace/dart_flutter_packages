@@ -11,8 +11,8 @@ import 'package:xsoulspace_review_interface/xsoulspace_review_interface.dart';
 final class GoogleAppleStoreReviewer extends StoreReviewer {
   /// {@macro google_apple_store_reviewer}
   GoogleAppleStoreReviewer({
-    final Future<bool> Function()? isAvailable,
-    final Future<void> Function()? requestNativeReview,
+    Future<bool> Function()? isAvailable,
+    Future<void> Function()? requestNativeReview,
   }) : _isAvailable = isAvailable ?? InAppReview.instance.isAvailable,
        _requestNativeReview =
            requestNativeReview ?? InAppReview.instance.requestReview;
@@ -25,9 +25,9 @@ final class GoogleAppleStoreReviewer extends StoreReviewer {
 
   @override
   Future<void> requestReview(
-    final BuildContext context, {
-    final Locale? locale,
-    final bool force = false,
+    BuildContext context, {
+    Locale? locale,
+    bool force = false,
   }) async {
     if (await _isAvailable()) {
       await _requestNativeReview();

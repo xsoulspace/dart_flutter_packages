@@ -5,17 +5,17 @@ import 'dart:js_interop_unsafe';
 @JS('globalThis')
 external JSObject get globalThis;
 
-Future<T> promiseToFuture<T extends JSAny?>(final JSPromise<T> promise) =>
+Future<T> promiseToFuture<T extends JSAny?>(JSPromise<T> promise) =>
     promise.toDart;
 
-Object? dartify(final Object? value) {
+Object? dartify(Object? value) {
   if (value == null) {
     return null;
   }
   return (value as JSAny).dartify();
 }
 
-JSAny? jsifyAny(final Object? value) {
+JSAny? jsifyAny(Object? value) {
   if (value == null) {
     return null;
   }
@@ -25,7 +25,7 @@ JSAny? jsifyAny(final Object? value) {
   return value as JSAny;
 }
 
-JSAny? toJsArg(final Object? value) {
+JSAny? toJsArg(Object? value) {
   if (value == null) {
     return null;
   }
@@ -53,20 +53,20 @@ JSAny? toJsArg(final Object? value) {
   throw ArgumentError.value(value, 'value', 'Cannot convert to JSAny');
 }
 
-List<JSAny?> jsInteropArgs(final List<Object?> args) =>
+List<JSAny?> jsInteropArgs(List<Object?> args) =>
     args.map(toJsArg).toList();
 
-Map<String, Object?> asMap(final Object? value) {
+Map<String, Object?> asMap(Object? value) {
   final dart = dartify(value);
   if (dart is Map<Object?, Object?>) {
     return dart.map(
-      (final key, final mapValue) => MapEntry(key?.toString() ?? '', mapValue),
+      (key, mapValue) => MapEntry(key?.toString() ?? '', mapValue),
     );
   }
   return <String, Object?>{};
 }
 
-List<Object?> asList(final Object? value) {
+List<Object?> asList(Object? value) {
   final dart = dartify(value);
   if (dart is List<Object?>) {
     return dart;
@@ -77,14 +77,14 @@ List<Object?> asList(final Object? value) {
   return <Object?>[];
 }
 
-String asString(final Object? value, {final String fallback = ''}) {
+String asString(Object? value, {String fallback = ''}) {
   if (value is String) {
     return value;
   }
   return fallback;
 }
 
-int asInt(final Object? value, {final int fallback = 0}) {
+int asInt(Object? value, {int fallback = 0}) {
   if (value is int) {
     return value;
   }
@@ -94,7 +94,7 @@ int asInt(final Object? value, {final int fallback = 0}) {
   return fallback;
 }
 
-double asDouble(final Object? value, {final double fallback = 0}) {
+double asDouble(Object? value, {double fallback = 0}) {
   if (value is double) {
     return value;
   }
@@ -104,32 +104,32 @@ double asDouble(final Object? value, {final double fallback = 0}) {
   return fallback;
 }
 
-bool asBool(final Object? value, {final bool fallback = false}) {
+bool asBool(Object? value, {bool fallback = false}) {
   if (value is bool) {
     return value;
   }
   return fallback;
 }
 
-Object? prop(final Object? target, final String name) {
+Object? prop(Object? target, String name) {
   if (target == null) {
     return null;
   }
   return (target as JSObject)[name];
 }
 
-bool hasGlobalProperty(final String name) => globalThis.has(name);
+bool hasGlobalProperty(String name) => globalThis.has(name);
 
-Object? globalProperty(final String name) => globalThis[name];
+Object? globalProperty(String name) => globalThis[name];
 
-void setGlobalProperty(final String name, final Object? value) {
+void setGlobalProperty(String name, Object? value) {
   globalThis[name] = toJsArg(value);
 }
 
 Object? jsCall(
-  final Object? target,
-  final String methodName,
-  final List<Object?> args,
+  Object? target,
+  String methodName,
+  List<Object?> args,
 ) {
   if (target == null) {
     throw StateError('Cannot call `$methodName` on null JS target.');
@@ -138,15 +138,15 @@ Object? jsCall(
   return object.callMethodVarArgs<JSAny?>(methodName.toJS, jsInteropArgs(args));
 }
 
-Object? jsCallConstructor(final Object constructor, final List<Object?> args) =>
+Object? jsCallConstructor(Object constructor, List<Object?> args) =>
     (constructor as JSFunction).callAsConstructorVarArgs<JSObject>(
       jsInteropArgs(args),
     );
 
 Future<Object?> jsCallPromise(
-  final Object? target,
-  final String methodName, [
-  final List<Object?> args = const <Object?>[],
+  Object? target,
+  String methodName, [
+  List<Object?> args = const <Object?>[],
 ]) async {
   final result = jsCall(target, methodName, args);
   if (result == null) {
@@ -161,15 +161,15 @@ Future<Object?> jsCallPromise(
   return result;
 }
 
-JSAny? jsify(final Object? value) => jsifyAny(value);
+JSAny? jsify(Object? value) => jsifyAny(value);
 
-JSAny allowInterop(final Function fn) => fn.toJS;
+JSAny allowInterop(Function fn) => fn.toJS;
 
-void jsCallListener(final Object? listener, final List<Object?> args) {
+void jsCallListener(Object? listener, List<Object?> args) {
   jsCall(listener, 'call', args);
 }
 
-void runGuarded(final void Function() callback) {
+void runGuarded(void Function() callback) {
   try {
     callback();
   } catch (error, stackTrace) {

@@ -16,12 +16,12 @@ class PurchasesLocalApi {
   /// Saves the active subscription to the local database.
   /// {@endtemplate}
   Future<void> saveActiveSubscription(
-    final PurchaseDetailsModel purchase,
+    PurchaseDetailsModel purchase,
   ) async {
     await localDb.setItem(
       key: activeSubscriptionKey,
       value: purchase,
-      toJson: (final value) => value.toJson(),
+      toJson: (value) => value.toJson(),
     );
   }
 
@@ -43,6 +43,6 @@ class PurchasesLocalApi {
       localDb.setItem<PurchaseDetailsModel?>(
         key: activeSubscriptionKey,
         value: null,
-        toJson: (final value) => {},
+        toJson: (value) => {},
       );
 }

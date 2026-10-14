@@ -29,7 +29,7 @@ final class VkPlayPlatformClient implements PlatformClient {
   PlatformId get platformId => PlatformId.vkPlay;
 
   @override
-  Future<PlatformInitResult> init(final PlatformInitOptions options) async {
+  Future<PlatformInitResult> init(PlatformInitOptions options) async {
     final bool sdkReady;
     try {
       sdkReady = await _ensureSdkReady();
@@ -96,7 +96,7 @@ final class VkPlayPlatformClient implements PlatformClient {
         payload: <String, Object?>{
           'expectedSdkGlobal': config.expectedSdkGlobal,
           'capabilities': capabilityTypes
-              .map((final type) => type.toString())
+              .map((type) => type.toString())
               .toList(growable: false),
         },
       ),
@@ -233,8 +233,8 @@ final class _VkPlayFriendsCapability implements FriendsCapability {
 
   @override
   Future<List<PlayerFriend>> listFriends({
-    final int? limit,
-    final int? offset,
+    int? limit,
+    int? offset,
   }) async {
     final merged = <String, PlayerFriend>{};
     final requestedOffset = offset ?? 0;
@@ -266,7 +266,7 @@ final class _VkPlayFriendsCapability implements FriendsCapability {
         .toList(growable: false);
   }
 
-  PlayerFriend _mapFriend(final VkPlayFriend friend) {
+  PlayerFriend _mapFriend(VkPlayFriend friend) {
     return PlayerFriend(
       id: friend.id,
       displayName: friend.displayName,
@@ -276,7 +276,7 @@ final class _VkPlayFriendsCapability implements FriendsCapability {
 }
 
 extension on VkPlayPlatformClient {
-  void _emit(final PlatformEvent event) {
+  void _emit(PlatformEvent event) {
     if (_disposed || _eventsController.isClosed) {
       return;
     }
@@ -293,7 +293,7 @@ final class _VkPlayInviteCapability implements InviteCapability {
   String get capabilityName => 'invite';
 
   @override
-  Future<InviteResult> invite(final InviteRequest request) {
+  Future<InviteResult> invite(InviteRequest request) {
     return _gateway.invite(request);
   }
 }
@@ -307,7 +307,7 @@ final class _VkPlayFeedShareCapability implements FeedShareCapability {
   String get capabilityName => 'feed.share';
 
   @override
-  Future<FeedShareResult> shareToFeed(final FeedShareRequest request) {
+  Future<FeedShareResult> shareToFeed(FeedShareRequest request) {
     return _gateway.shareToFeed(request);
   }
 }
@@ -323,14 +323,14 @@ final class _VkPlayRawCapability implements VkPlayRawCapability {
 
   @override
   Future<Object?> callRaw(
-    final String methodName, {
-    final Map<String, Object?>? params,
+    String methodName, {
+    Map<String, Object?>? params,
   }) {
     return client.callRaw(methodName, params: params);
   }
 }
 
-String? _firstNotEmpty(final List<String?> values) {
+String? _firstNotEmpty(List<String?> values) {
   for (final value in values) {
     if (value != null && value.isNotEmpty) {
       return value;

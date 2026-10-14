@@ -64,17 +64,17 @@ const _filler =
     'workspace world; a stale index refuses loudly rather than answering '
     'from stale data. ';
 
-Never _fail(final String message) {
+Never _fail(String message) {
   stderr.writeln(message);
   exit(2);
 }
 
-String _argValue(final List<String> args, final String name) {
+String _argValue(List<String> args, String name) {
   final index = args.indexOf('--$name');
   return index >= 0 && index + 1 < args.length ? args[index + 1] : '';
 }
 
-Future<void> main(final List<String> arguments) async {
+Future<void> main(List<String> arguments) async {
   final modelKeys = _argValue(arguments, 'models').isEmpty
       ? const <String>['qwen06']
       : _argValue(arguments, 'models').split(',');
@@ -136,7 +136,7 @@ Future<void> main(final List<String> arguments) async {
   }
 }
 
-String _resolveSnapshot(final String repo) {
+String _resolveSnapshot(String repo) {
   final hub = Platform.environment['HF_HOME'] != null
       ? '${Platform.environment['HF_HOME']}/hub'
       : '${Platform.environment['HOME'] ?? ''}/.cache/huggingface/hub';
@@ -154,20 +154,20 @@ String _resolveSnapshot(final String repo) {
 }
 
 Future<String> _bench(
-  final _Model model,
-  final String snapshot,
-  final int runs,
-  final List<int> prefillTargets,
-  final int decodeTokens, {
-  final bool json = false,
-  final bool warm = false,
-  final int? prefillStep,
-  final bool unchunked = false,
-  final int prefillReps = 3,
+  _Model model,
+  String snapshot,
+  int runs,
+  List<int> prefillTargets,
+  int decodeTokens, {
+  bool json = false,
+  bool warm = false,
+  int? prefillStep,
+  bool unchunked = false,
+  int prefillReps = 3,
 }) async {
   MlxNativeRequest request({
-    required final String prompt,
-    required final int maxTokens,
+    required String prompt,
+    required int maxTokens,
   }) => MlxNativeRequest(
     prompt: prompt,
     maxTokens: maxTokens,
@@ -256,7 +256,7 @@ Future<String> _bench(
   }
 }
 
-String _fillerPrompt(final int targetTokens) {
+String _fillerPrompt(int targetTokens) {
   final buffer = StringBuffer();
   while (buffer.length < targetTokens * 4) {
     buffer.write(_filler);
@@ -265,27 +265,27 @@ String _fillerPrompt(final int targetTokens) {
   return buffer.toString();
 }
 
-int _p50(final List<int> values) {
+int _p50(List<int> values) {
   final sorted = List<int>.of(values)..sort();
   return sorted[(sorted.length * 0.5).floor().clamp(0, sorted.length - 1)];
 }
 
-double _percentile(final List<double> values, final double fraction) {
+double _percentile(List<double> values, double fraction) {
   final sorted = List<double>.of(values)..sort();
   final index = (fraction * (sorted.length - 1)).round();
   return sorted[index];
 }
 
 String _table(
-  final _Model model,
-  final int loadMs,
-  final int rssAfterLoad,
-  final int maxRss,
-  final List<Map<String, Object?>> prefillRows,
-  final int decodePromptTokens,
-  final List<double> tokPerSec,
-  final List<int> decodeWall, {
-  final String prefillMode = 'default',
+  _Model model,
+  int loadMs,
+  int rssAfterLoad,
+  int maxRss,
+  List<Map<String, Object?>> prefillRows,
+  int decodePromptTokens,
+  List<double> tokPerSec,
+  List<int> decodeWall, {
+  String prefillMode = 'default',
 }) {
   final buffer = StringBuffer()
     ..writeln(
@@ -317,14 +317,14 @@ String _table(
 }
 
 String _jsonLine(
-  final _Model model,
-  final int loadMs,
-  final int rssAfterLoad,
-  final int maxRss,
-  final List<Map<String, Object?>> prefillRows,
-  final int decodePromptTokens,
-  final List<double> tokPerSec,
-  final List<int> decodeWall,
+  _Model model,
+  int loadMs,
+  int rssAfterLoad,
+  int maxRss,
+  List<Map<String, Object?>> prefillRows,
+  int decodePromptTokens,
+  List<double> tokPerSec,
+  List<int> decodeWall,
 ) {
   return '''
 {"model": "${model.name}", "repo": "${model.repo}", "load_ms": $loadMs,
@@ -345,9 +345,9 @@ String _jsonLine(
 }
 
 String _verdict(
-  final _Model model,
-  final List<Map<String, Object?>> prefillRows,
-  final double decodeP50,
+  _Model model,
+  List<Map<String, Object?>> prefillRows,
+  double decodeP50,
 ) {
   final ttft4k = prefillRows
       .where((row) => (row['prompt_tokens'] as int) >= 3800)
@@ -370,4 +370,4 @@ String _verdict(
   return verdicts.isEmpty ? '' : 'verdict: ${verdicts.join('; ')}';
 }
 
-String _mb(final int bytes) => (bytes / (1024 * 1024)).round().toString();
+String _mb(int bytes) => (bytes / (1024 * 1024)).round().toString();

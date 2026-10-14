@@ -7,7 +7,7 @@ final class InferenceTranscriptNotifier extends ChangeNotifier {
   InferenceTranscriptNotifier()
     : _controller = InferenceTranscriptController() {
     _subscription = _controller.snapshots.listen(
-      (final _) => notifyListeners(),
+      (_) => notifyListeners(),
     );
   }
 
@@ -17,7 +17,7 @@ final class InferenceTranscriptNotifier extends ChangeNotifier {
   InferenceTranscriptSnapshot get snapshot => _controller.snapshot;
 
   Future<void> attach(
-    final InferenceRealtimeSession<InferenceTranscriptEvent> session,
+    InferenceRealtimeSession<InferenceTranscriptEvent> session,
   ) => _controller.attach(session);
 
   @override

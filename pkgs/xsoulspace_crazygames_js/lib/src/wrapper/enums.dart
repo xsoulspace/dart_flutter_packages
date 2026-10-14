@@ -7,7 +7,7 @@ enum Environment {
   const Environment(this.value);
   final String value;
 
-  static Environment fromValue(final String? value) {
+  static Environment fromValue(String? value) {
     if (value == null) return unknownValue;
     for (final item in values) {
       if (item.value == value) return item;
@@ -24,7 +24,7 @@ enum AdType {
   const AdType(this.value);
   final String value;
 
-  static AdType fromValue(final String? value) {
+  static AdType fromValue(String? value) {
     if (value == null) return unknownValue;
     for (final item in values) {
       if (item.value == value) return item;
@@ -40,7 +40,7 @@ enum AdblockPopupState {
   const AdblockPopupState(this.value);
   final String value;
 
-  static AdblockPopupState fromValue(final String? value) {
+  static AdblockPopupState fromValue(String? value) {
     if (value == null) return unknownValue;
     for (final item in values) {
       if (item.value == value) return item;
@@ -56,7 +56,7 @@ enum PaymentProvider {
   const PaymentProvider(this.value);
   final String value;
 
-  static PaymentProvider fromValue(final String? value) {
+  static PaymentProvider fromValue(String? value) {
     if (value == null) return unknownValue;
     for (final item in values) {
       if (item.value == value) return item;
@@ -74,7 +74,7 @@ enum DeviceType {
   const DeviceType(this.value);
   final String value;
 
-  static DeviceType fromValue(final String? value) {
+  static DeviceType fromValue(String? value) {
     if (value == null) return unknownValue;
     for (final item in values) {
       if (item.value == value) return item;
@@ -93,7 +93,7 @@ enum ApplicationType {
   const ApplicationType(this.value);
   final String value;
 
-  static ApplicationType fromValue(final String? value) {
+  static ApplicationType fromValue(String? value) {
     if (value == null) return unknownValue;
     for (final item in values) {
       if (item.value == value) return item;
@@ -110,7 +110,7 @@ enum AccountLinkAnswer {
   const AccountLinkAnswer(this.value);
   final String value;
 
-  static AccountLinkAnswer fromValue(final String? value) {
+  static AccountLinkAnswer fromValue(String? value) {
     if (value == null) return unknownValue;
     for (final item in values) {
       if (item.value == value) return item;

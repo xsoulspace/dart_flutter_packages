@@ -5,7 +5,7 @@ import 'package:path/path.dart' as p;
 const String errorCodeAuthFailed = 'auth_failed';
 const String errorCodeResourceNotFound = 'resource_not_found';
 
-String mapElevenLabsHttpStatusToCode(final int statusCode) {
+String mapElevenLabsHttpStatusToCode(int statusCode) {
   if (statusCode == 401 || statusCode == 403) {
     return errorCodeAuthFailed;
   }
@@ -22,8 +22,8 @@ String mapElevenLabsHttpStatusToCode(final int statusCode) {
 }
 
 String messageFromElevenLabsErrorBody({
-  required final List<int> bodyBytes,
-  required final String fallback,
+  required List<int> bodyBytes,
+  required String fallback,
 }) {
   if (bodyBytes.isEmpty) {
     return fallback;
@@ -58,7 +58,7 @@ String messageFromElevenLabsErrorBody({
   return fallback;
 }
 
-Object? detailsFromElevenLabsErrorBody(final List<int> bodyBytes) {
+Object? detailsFromElevenLabsErrorBody(List<int> bodyBytes) {
   if (bodyBytes.isEmpty) {
     return null;
   }
@@ -70,7 +70,7 @@ Object? detailsFromElevenLabsErrorBody(final List<int> bodyBytes) {
   }
 }
 
-String? nonEmptyString(final Object? value) {
+String? nonEmptyString(Object? value) {
   if (value is! String) {
     return null;
   }
@@ -83,7 +83,7 @@ String? nonEmptyString(final Object? value) {
   return trimmed;
 }
 
-bool? boolFromMap(final Map<String, dynamic> map, final String key) {
+bool? boolFromMap(Map<String, dynamic> map, String key) {
   final value = map[key];
   if (value is bool) {
     return value;
@@ -100,7 +100,7 @@ bool? boolFromMap(final Map<String, dynamic> map, final String key) {
   return null;
 }
 
-double? doubleFromMap(final Map<String, dynamic> map, final String key) {
+double? doubleFromMap(Map<String, dynamic> map, String key) {
   final value = map[key];
   if (value is num) {
     return value.toDouble();
@@ -111,7 +111,7 @@ double? doubleFromMap(final Map<String, dynamic> map, final String key) {
   return null;
 }
 
-int? intFromMap(final Map<String, dynamic> map, final String key) {
+int? intFromMap(Map<String, dynamic> map, String key) {
   final value = map[key];
   if (value is int) {
     return value;
@@ -125,7 +125,7 @@ int? intFromMap(final Map<String, dynamic> map, final String key) {
   return null;
 }
 
-String mimeTypeFromOutputPath(final String outputPath) {
+String mimeTypeFromOutputPath(String outputPath) {
   final lower = outputPath.toLowerCase();
   if (lower.endsWith('.mp3')) return 'audio/mpeg';
   if (lower.endsWith('.wav')) return 'audio/wav';
@@ -134,7 +134,7 @@ String mimeTypeFromOutputPath(final String outputPath) {
   return 'audio/octet-stream';
 }
 
-String extensionFromOutputFormat(final String outputFormat) {
+String extensionFromOutputFormat(String outputFormat) {
   if (outputFormat.startsWith('mp3_')) {
     return '.mp3';
   }
@@ -151,11 +151,11 @@ String extensionFromOutputFormat(final String outputFormat) {
 }
 
 String resolveOutputPath({
-  required final String workingDirectory,
-  required final Map<String, dynamic> metadata,
-  required final String defaultPrefix,
-  required final DateTime timestamp,
-  required final String outputFormat,
+  required String workingDirectory,
+  required Map<String, dynamic> metadata,
+  required String defaultPrefix,
+  required DateTime timestamp,
+  required String outputFormat,
 }) {
   final explicit = nonEmptyString(metadata['output_file_path']);
   if (explicit != null) {
@@ -170,8 +170,8 @@ String resolveOutputPath({
 }
 
 String? caseInsensitiveHeader(
-  final Map<String, String> headers,
-  final String key,
+  Map<String, String> headers,
+  String key,
 ) {
   final target = key.toLowerCase();
   for (final entry in headers.entries) {
@@ -182,10 +182,10 @@ String? caseInsensitiveHeader(
   return null;
 }
 
-Map<String, dynamic> mapWithStringKeys(final Object? value) {
+Map<String, dynamic> mapWithStringKeys(Object? value) {
   if (value is Map) {
     return value.map(
-      (final dynamic key, final dynamic value) =>
+      (dynamic key, dynamic value) =>
           MapEntry(key.toString(), value),
     );
   }

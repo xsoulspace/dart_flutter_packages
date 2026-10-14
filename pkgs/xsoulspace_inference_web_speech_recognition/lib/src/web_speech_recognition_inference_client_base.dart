@@ -33,7 +33,7 @@ class WebSpeechRecognitionInferenceClientBase implements InferenceClient {
 
   @override
   Future<InferenceResult<InferenceResponse>> infer(
-    final InferenceRequest request, {
+    InferenceRequest request, {
     ToolRegistry? toolRegistry,
   }) async {
     if (!supportedTasks.contains(request.task)) {
@@ -42,7 +42,7 @@ class WebSpeechRecognitionInferenceClientBase implements InferenceClient {
         message: 'Task ${request.task.name} is not supported by $id',
         details: <String, dynamic>{
           'supported_tasks': supportedTasks
-              .map((final task) => task.name)
+              .map((task) => task.name)
               .toList(),
           'requested_task': request.task.name,
         },
@@ -125,7 +125,7 @@ class WebSpeechRecognitionInferenceClientBase implements InferenceClient {
   WebSpeechLiveRecognitionSession? startLiveRecognition({String? language}) =>
       _adapter.startLiveRecognition(language: language);
 
-  String? _resolveLanguage(final InferenceRequest request) {
+  String? _resolveLanguage(InferenceRequest request) {
     final rawLanguage = request.metadata['language'];
     if (rawLanguage is! String) {
       return null;
@@ -136,7 +136,7 @@ class WebSpeechRecognitionInferenceClientBase implements InferenceClient {
   }
 
   InferenceResult<InferenceResponse> _mapAdapterFailure(
-    final WebSpeechRecognitionAdapterException error,
+    WebSpeechRecognitionAdapterException error,
   ) {
     final details = error.toDetails();
 

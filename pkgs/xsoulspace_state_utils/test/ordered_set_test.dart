@@ -182,10 +182,10 @@ void main() {
         set.add(2);
         set.add(3);
 
-        expect(set.where((final x) => x > 2), [3]);
-        expect(set.map((final x) => x * 2), [2, 4, 6]);
-        expect(set.any((final x) => x == 2), isTrue);
-        expect(set.every((final x) => x > 0), isTrue);
+        expect(set.where((x) => x > 2), [3]);
+        expect(set.map((x) => x * 2), [2, 4, 6]);
+        expect(set.any((x) => x == 2), isTrue);
+        expect(set.every((x) => x > 0), isTrue);
       });
     });
 
@@ -451,10 +451,10 @@ void main() {
         set.add(2);
         set.add(3);
 
-        expect(set.where((final x) => x > 2), [3]);
-        expect(set.map((final x) => x * 2), [2, 4, 6]);
-        expect(set.any((final x) => x == 2), isTrue);
-        expect(set.every((final x) => x > 0), isTrue);
+        expect(set.where((x) => x > 2), [3]);
+        expect(set.map((x) => x * 2), [2, 4, 6]);
+        expect(set.any((x) => x == 2), isTrue);
+        expect(set.every((x) => x > 0), isTrue);
       });
     });
 

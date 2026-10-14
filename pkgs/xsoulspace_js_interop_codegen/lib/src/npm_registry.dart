@@ -25,7 +25,7 @@ final class NpmLockConfig {
     'integrity': integrity,
   };
 
-  static NpmLockConfig fromJson(final Map<String, Object?> json) =>
+  static NpmLockConfig fromJson(Map<String, Object?> json) =>
       NpmLockConfig(
         packageName: json['package']! as String,
         version: json['version']! as String,
@@ -44,7 +44,7 @@ final class RegistryVersionInfo {
   final String tarball;
   final String integrity;
 
-  static RegistryVersionInfo fromRegistryJson(final Map<String, Object?> json) {
+  static RegistryVersionInfo fromRegistryJson(Map<String, Object?> json) {
     final dist = json['dist']! as Map<String, Object?>;
     return RegistryVersionInfo(
       version: json['version']! as String,
@@ -55,8 +55,8 @@ final class RegistryVersionInfo {
 }
 
 Future<RegistryVersionInfo> fetchRegistryVersionInfo(
-  final String packageEncoded,
-  final String version,
+  String packageEncoded,
+  String version,
 ) async {
   final uri = Uri.parse('https://registry.npmjs.org/$packageEncoded/$version');
   final response = await http.get(uri);
@@ -69,7 +69,7 @@ Future<RegistryVersionInfo> fetchRegistryVersionInfo(
   return RegistryVersionInfo.fromRegistryJson(decoded);
 }
 
-Future<Uint8List> downloadTarball(final String tarballUrl) async {
+Future<Uint8List> downloadTarball(String tarballUrl) async {
   final response = await http.get(Uri.parse(tarballUrl));
   if (response.statusCode != 200) {
     throw StateError('Failed to download tarball: ${response.statusCode}');
@@ -77,7 +77,7 @@ Future<Uint8List> downloadTarball(final String tarballUrl) async {
   return response.bodyBytes;
 }
 
-void verifyIntegrity(final String integrity, final Uint8List tarballBytes) {
+void verifyIntegrity(String integrity, Uint8List tarballBytes) {
   final parts = integrity.split('-');
   if (parts.length != 2 || parts.first != 'sha512') {
     throw StateError('Unsupported integrity format: $integrity');
@@ -90,11 +90,11 @@ void verifyIntegrity(final String integrity, final Uint8List tarballBytes) {
 }
 
 Future<String> extractTarGzFile({
-  required final String tempDir,
-  required final Uint8List tarballBytes,
-  required final bool Function(String path) selector,
-  required final String outputName,
-  required final String missingError,
+  required String tempDir,
+  required Uint8List tarballBytes,
+  required bool Function(String path) selector,
+  required String outputName,
+  required String missingError,
 }) async {
   final decodedTar = const GZipDecoder().decodeBytes(tarballBytes);
   final archive = TarDecoder().decodeBytes(decodedTar);

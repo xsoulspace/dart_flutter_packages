@@ -137,8 +137,8 @@ class _FakeTrackProvider implements WebSpeechRecognitionTrackProvider {
 
   @override
   Future<WebSpeechRecognitionAudioTrackHandle> fromFileUrl({
-    required final String fileUrl,
-    required final String mimeType,
+    required String fileUrl,
+    required String mimeType,
   }) async {
     fileCalls += 1;
     return _buildHandle();
@@ -146,8 +146,8 @@ class _FakeTrackProvider implements WebSpeechRecognitionTrackProvider {
 
   @override
   Future<WebSpeechRecognitionAudioTrackHandle> fromBytes({
-    required final List<int> bytes,
-    required final String mimeType,
+    required List<int> bytes,
+    required String mimeType,
   }) async {
     bytesCalls += 1;
     return _buildHandle();
@@ -164,7 +164,7 @@ class _FakeTrackProvider implements WebSpeechRecognitionTrackProvider {
 }
 
 class _SpeechRecognitionGlobalStub {
-  _SpeechRecognitionGlobalStub({required final List<String> transcripts})
+  _SpeechRecognitionGlobalStub({required List<String> transcripts})
     : _transcripts = Queue<String>.from(transcripts);
 
   final Queue<String> _transcripts;
@@ -191,7 +191,7 @@ class _SpeechRecognitionGlobalStub {
       recognition['onerror'] = null;
       recognition['onend'] = null;
 
-      recognition['start'] = (([final JSAny? track]) {
+      recognition['start'] = (([JSAny? track]) {
         startCallCount += 1;
         if (track != null) {
           startWithTrackCount += 1;
@@ -213,7 +213,7 @@ class _SpeechRecognitionGlobalStub {
     }).toJS;
   }
 
-  void _emitResult(final JSObject recognition, final String transcript) {
+  void _emitResult(JSObject recognition, String transcript) {
     final callback = recognition['onresult'];
     // ignore: invalid_runtime_check_with_js_interop_types
     if (callback is! JSObject) {
@@ -239,7 +239,7 @@ class _SpeechRecognitionGlobalStub {
     callback.callMethodVarArgs<JSAny?>('call'.toJS, <JSAny?>[null, event]);
   }
 
-  void _emitEnd(final JSObject recognition) {
+  void _emitEnd(JSObject recognition) {
     final callback = recognition['onend'];
     // ignore: invalid_runtime_check_with_js_interop_types
     if (callback is! JSObject) {

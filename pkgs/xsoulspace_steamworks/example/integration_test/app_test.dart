@@ -5,7 +5,7 @@ import 'package:xsoulspace_steamworks_example/app.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('smoke flow works with fake backend', (final tester) async {
+  testWidgets('smoke flow works with fake backend', (tester) async {
     await tester.pumpWidget(const SteamworksExampleApp(useFakeBackend: true));
     await tester.pumpAndSettle();
 

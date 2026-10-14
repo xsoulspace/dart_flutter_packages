@@ -30,7 +30,7 @@ Future<void> main() async {
   final start = await runtime.start();
   print('Active platform: ${start.activePlatform.name}');
   print(
-    'Capabilities: ${start.capabilityTypes.map((final e) => e.toString()).join(', ')}',
+    'Capabilities: ${start.capabilityTypes.map((e) => e.toString()).join(', ')}',
   );
 
   final identity = runtime.maybe<IdentityCapability>();

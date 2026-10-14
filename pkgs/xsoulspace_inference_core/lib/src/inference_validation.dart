@@ -12,7 +12,7 @@ const String errorCodeAudioInputInvalid = 'audio_input_invalid';
 const String errorCodeTtsTextEmpty = 'tts_text_empty';
 const String errorCodeAudioOutputUnavailable = 'audio_output_unavailable';
 
-InferenceResult<Map<String, dynamic>> parseStrictJsonObject(final String raw) {
+InferenceResult<Map<String, dynamic>> parseStrictJsonObject(String raw) {
   //TODO(arenukvern): move to safeguard -
   // sometimes LLM tend to wrap output in ```json``` tags
   var trimmed = raw.trim();
@@ -49,8 +49,8 @@ InferenceResult<Map<String, dynamic>> parseStrictJsonObject(final String raw) {
 }
 
 InferenceResult<void> validateRequiredKeys({
-  required final Map<String, dynamic> object,
-  required final Iterable<String> requiredKeys,
+  required Map<String, dynamic> object,
+  required Iterable<String> requiredKeys,
 }) {
   final missing = <String>[];
   for (final key in requiredKeys) {
@@ -71,7 +71,7 @@ InferenceResult<void> validateRequiredKeys({
   return InferenceResult<void>.ok(null);
 }
 
-InferenceResult<void> validateInferenceRequest(final InferenceRequest request) {
+InferenceResult<void> validateInferenceRequest(InferenceRequest request) {
   switch (request.task) {
     case .text:
 
@@ -115,7 +115,7 @@ InferenceResult<void> validateInferenceRequest(final InferenceRequest request) {
 }
 
 InferenceResult<void> validateInferenceAudioInput(
-  final InferenceAudioInput audioInput,
+  InferenceAudioInput audioInput,
 ) {
   final hasFilePath = (audioInput.filePath ?? '').trim().isNotEmpty;
   final hasBytes = (audioInput.bytes ?? const <int>[]).isNotEmpty;
@@ -181,7 +181,7 @@ InferenceResult<void> validateInferenceAudioInput(
   return InferenceResult<void>.ok(null);
 }
 
-String normalizeTranscript(final String transcript) {
+String normalizeTranscript(String transcript) {
   final punctuationStripped = transcript.replaceAll(
     RegExp(r'[^\p{L}\p{N}\s]+', unicode: true),
     ' ',
@@ -190,8 +190,8 @@ String normalizeTranscript(final String transcript) {
 }
 
 InferenceResult<void> validateSchemaDefinition(
-  final Map<String, dynamic> schema, {
-  final String path = r'$',
+  Map<String, dynamic> schema, {
+  String path = r'$',
 }) {
   final rawType = schema['type'];
   if (rawType != null && rawType is! String) {
@@ -205,7 +205,7 @@ InferenceResult<void> validateSchemaDefinition(
   final rawRequired = schema['required'];
   if (rawRequired != null &&
       (rawRequired is! List ||
-          rawRequired.any((final key) => key is! String))) {
+          rawRequired.any((key) => key is! String))) {
     return InferenceResult<void>.fail(
       code: 'schema_invalid_required_field',
       message: 'Schema "required" must be a list of strings',
@@ -313,8 +313,8 @@ InferenceResult<void> validateSchemaDefinition(
 }
 
 InferenceResult<void> validateJsonAgainstSchema({
-  required final Object? value,
-  required final Map<String, dynamic> schema,
+  required Object? value,
+  required Map<String, dynamic> schema,
 }) {
   final definitionValidation = validateSchemaDefinition(schema);
   if (!definitionValidation.success) {
@@ -324,9 +324,9 @@ InferenceResult<void> validateJsonAgainstSchema({
 }
 
 InferenceResult<void> _validateJsonNode({
-  required final Object? value,
-  required final Map<String, dynamic> schema,
-  required final String path,
+  required Object? value,
+  required Map<String, dynamic> schema,
+  required String path,
 }) {
   if (schema['anyOf'] case final List<dynamic> choices) {
     final matched = choices.any(
@@ -383,7 +383,7 @@ InferenceResult<void> _validateJsonNode({
         (schema['required'] as List?)?.whereType<String>() ??
         const Iterable<String>.empty();
     final missing = requiredKeys
-        .where((final key) => !objectValue.containsKey(key))
+        .where((key) => !objectValue.containsKey(key))
         .toList(growable: false);
     if (missing.isNotEmpty) {
       return InferenceResult<void>.fail(

@@ -4,8 +4,8 @@ import '../inference_result.dart';
 import 'decision_models.dart';
 
 InferenceResult<void> validateDecisionRequest(
-  final DecisionRequest request, {
-  final DecisionProviderCapabilities? againstCapabilities,
+  DecisionRequest request, {
+  DecisionProviderCapabilities? againstCapabilities,
 }) {
   final ids = <DecisionOpaqueId>[
     request.correlation.requestId,
@@ -13,7 +13,7 @@ InferenceResult<void> validateDecisionRequest(
     request.correlation.stateRevision,
     request.correlation.cancellationId,
   ];
-  final emptyId = ids.where((final id) => id.value.trim().isEmpty).firstOrNull;
+  final emptyId = ids.where((id) => id.value.trim().isEmpty).firstOrNull;
   if (emptyId != null) {
     return _invalid(
       'empty_correlation_id',
@@ -42,7 +42,7 @@ InferenceResult<void> validateDecisionRequest(
       question.candidateSetId,
       question.abstainOptionId,
     ];
-    if (questionIdsToCheck.any((final id) => id.value.trim().isEmpty)) {
+    if (questionIdsToCheck.any((id) => id.value.trim().isEmpty)) {
       return _invalid(
         'empty_question_id',
         'Question identifiers must be non-empty',
@@ -120,7 +120,7 @@ InferenceResult<void> validateDecisionRequest(
       );
     }
     if (request.questions.any(
-      (final question) =>
+      (question) =>
           question.options.length > bounds.maxOptionsPerQuestion,
     )) {
       return _unsupported(
@@ -133,10 +133,10 @@ InferenceResult<void> validateDecisionRequest(
 }
 
 InferenceResult<void> validateDecisionCompletion({
-  required final DecisionRequest request,
-  required final DecisionCompleted completion,
-  final bool requireCompleteProbabilityDistribution = false,
-  final double probabilitySumTolerance = 0.000001,
+  required DecisionRequest request,
+  required DecisionCompleted completion,
+  bool requireCompleteProbabilityDistribution = false,
+  double probabilitySumTolerance = 0.000001,
 }) {
   if (!probabilitySumTolerance.isFinite || probabilitySumTolerance < 0) {
     return _invalid(
@@ -178,7 +178,7 @@ InferenceResult<void> validateDecisionCompletion({
         details: answer.questionId.value,
       );
     }
-    final optionIds = question.options.map((final option) => option.id).toSet();
+    final optionIds = question.options.map((option) => option.id).toSet();
     if (!optionIds.contains(answer.selectedOptionId)) {
       return _invalid(
         'unknown_choice',
@@ -207,7 +207,7 @@ InferenceResult<void> validateDecisionCompletion({
     }
     final probabilities = answer.probabilities;
     if (probabilities != null) {
-      if (probabilities.keys.any((final id) => !optionIds.contains(id))) {
+      if (probabilities.keys.any((id) => !optionIds.contains(id))) {
         return _invalid(
           'unknown_probability_option',
           'Probabilities contain an option absent from the request',
@@ -215,7 +215,7 @@ InferenceResult<void> validateDecisionCompletion({
         );
       }
       if (probabilities.values.any(
-        (final value) => !value.isFinite || value < 0 || value > 1,
+        (value) => !value.isFinite || value < 0 || value > 1,
       )) {
         return _invalid(
           'invalid_probability',
@@ -234,7 +234,7 @@ InferenceResult<void> validateDecisionCompletion({
         }
         final sum = probabilities.values.fold<double>(
           0,
-          (final total, final value) => total + value,
+          (total, value) => total + value,
         );
         if ((sum - 1).abs() > probabilitySumTolerance) {
           return _invalid(
@@ -285,8 +285,8 @@ InferenceResult<void> validateDecisionCompletion({
 }
 
 bool _sameCorrelation(
-  final DecisionCorrelation left,
-  final DecisionCorrelation right,
+  DecisionCorrelation left,
+  DecisionCorrelation right,
 ) =>
     left.requestId == right.requestId &&
     left.cutId == right.cutId &&
@@ -294,11 +294,11 @@ bool _sameCorrelation(
     left.cancellationId == right.cancellationId;
 
 InferenceResult<void> _invalid(
-  final String code,
-  final String message, {
-  final Object? details,
+  String code,
+  String message, {
+  Object? details,
 }) =>
     InferenceResult<void>.fail(code: code, message: message, details: details);
 
-InferenceResult<void> _unsupported(final String code, final String message) =>
+InferenceResult<void> _unsupported(String code, String message) =>
     InferenceResult<void>.fail(code: code, message: message);

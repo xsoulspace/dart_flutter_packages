@@ -34,9 +34,9 @@ abstract final class SituationMessagesCodec {
   /// [systemPrompt] the actor's system prompt; [fragments] the projected,
   /// protocol-tagged cut (see [ContextFragmentProtocol]).
   static List<Map<String, String>> render({
-    required final String prompt,
-    required final String systemPrompt,
-    required final List<Object> fragments,
+    required String prompt,
+    required String systemPrompt,
+    required List<Object> fragments,
   }) {
     final assistant = <Map<String, String>>[];
     final toolNotes = <String>[];
@@ -87,8 +87,8 @@ abstract final class SituationMessagesCodec {
 
   /// True when every non-absence fragment carries a recognizable role tag —
   /// guards against silently rendering untagged legacy cuts as empty roles.
-  static bool isRenderable(final List<Object> fragments) =>
-      fragments.every((final f) {
+  static bool isRenderable(List<Object> fragments) =>
+      fragments.every((f) {
         final s = f.toString();
         return s.startsWith(ContextFragmentProtocol.assistantPrefix) ||
             s.startsWith(ContextFragmentProtocol.toolResultPrefix) ||

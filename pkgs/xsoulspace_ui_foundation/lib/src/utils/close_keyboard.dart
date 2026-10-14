@@ -14,7 +14,7 @@ import 'package:flutter/services.dart';
 ///
 /// @ai Use this function when you need to programmatically close the keyboard,
 /// such as after form submission or when transitioning between screens.
-void closeKeyboard({required final BuildContext context}) {
+void closeKeyboard({required BuildContext context}) {
   final FocusScopeNode currentFocus = FocusScope.of(context);
   if (!currentFocus.hasPrimaryFocus && currentFocus.focusedChild != null) {
     currentFocus.focusedChild?.unfocus();

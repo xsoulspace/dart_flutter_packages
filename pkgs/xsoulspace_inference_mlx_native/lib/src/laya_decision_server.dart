@@ -41,7 +41,7 @@ final class LayaDecisionQuery {
 abstract interface class LayaDecisionEngine {
   /// Returns questionId -> chosen optionId, synchronously or asynchronously.
   /// Implementations must answer every question with an option from that question's criteria.
-  FutureOr<Map<String, String>> answer(final LayaDecisionQuery query);
+  FutureOr<Map<String, String>> answer(LayaDecisionQuery query);
 }
 
 /// Calibrated engine output. Abstention remains a grounded choice option;
@@ -98,7 +98,7 @@ final class LayaDecisionPin {
 /// question id; an unpinned question falls back to its first criterion.
 /// Mirrors the semantics harness fixtures use for the hosted adapters.
 final class ScriptedLayaDecisionEngine implements LayaDecisionEngine {
-  ScriptedLayaDecisionEngine(final List<LayaDecisionPin> pins)
+  ScriptedLayaDecisionEngine(List<LayaDecisionPin> pins)
     : pins = List<LayaDecisionPin>.unmodifiable(pins);
 
   final List<LayaDecisionPin> pins;
@@ -110,7 +110,7 @@ final class ScriptedLayaDecisionEngine implements LayaDecisionEngine {
   void reset() => _consumed.clear();
 
   @override
-  Map<String, String> answer(final LayaDecisionQuery query) {
+  Map<String, String> answer(LayaDecisionQuery query) {
     requests.add(query);
     final answers = <String, String>{};
     for (final entry in query.questions.entries) {
@@ -200,7 +200,7 @@ final class LayaDecisionServer {
 
   Future<void> stop() => _server.stop();
 
-  Future<LoopbackReply?> _handleSystemOne(final LoopbackRequest request) async {
+  Future<LoopbackReply?> _handleSystemOne(LoopbackRequest request) async {
     if (request.method != 'POST' || request.path != '/v1/systemone') {
       return null;
     }
@@ -329,7 +329,7 @@ final class LayaDecisionServer {
     return (sum - 1).abs() <= 1e-6;
   }
 
-  static int _criteriaLength(final Map<String, LayaDecisionQuestion> q) =>
+  static int _criteriaLength(Map<String, LayaDecisionQuestion> q) =>
       q.values.fold(
         0,
         (total, question) =>

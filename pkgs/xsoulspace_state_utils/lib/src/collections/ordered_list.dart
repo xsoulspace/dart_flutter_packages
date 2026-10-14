@@ -34,7 +34,7 @@ class MutableOrderedList<V> with Iterable<V> {
   /// @ai Ensure proper validation is performed in subclasses before calling super.add().
   /// {@endtemplate}
   @mustCallSuper
-  void add(final V value) => _items.add(value);
+  void add(V value) => _items.add(value);
 
   /// {@template mutable_ordered_list_remove}
   /// Removes the first occurrence of the specified [value] from this ordered list.
@@ -45,7 +45,7 @@ class MutableOrderedList<V> with Iterable<V> {
   /// @ai Consider the performance implications when removing items from large collections.
   /// {@endtemplate}
   @mustCallSuper
-  void remove(final V value) => _items.remove(value);
+  void remove(V value) => _items.remove(value);
 
   /// {@template mutable_ordered_list_clear}
   /// Removes all items from this ordered list.
@@ -63,14 +63,14 @@ class MutableOrderedList<V> with Iterable<V> {
   ///
   /// @ai Use this operator for standard list access.
   /// {@endtemplate}
-  V operator [](final int index) => _items[index];
+  V operator [](int index) => _items[index];
 
   /// {@template mutable_ordered_list_setter}
   /// Sets the item at the specified [index] to the specified [value].
   ///
   /// @ai Use this operator for standard list mutation.
   /// {@endtemplate}
-  void operator []=(final int index, final V value) => _items[index] = value;
+  void operator []=(int index, V value) => _items[index] = value;
 }
 
 /// {@template immutable_ordered_list}
@@ -111,14 +111,14 @@ class ImmutableOrderedList<V> with Iterable<V> {
   ///
   /// @ai Use this operator for standard list access.
   /// {@endtemplate}
-  V operator [](final int index) => _items[index];
+  V operator [](int index) => _items[index];
 
   /// {@template immutable_ordered_list_setter}
   /// Sets the item at the specified [index] to the specified [value].
   ///
   /// @ai Use this operator for standard list access.
   /// {@endtemplate}
-  void operator []=(final int index, final V value) {
+  void operator []=(int index, V value) {
     _items = ([..._items]..[index] = value).unmodifiable;
   }
 
@@ -130,7 +130,7 @@ class ImmutableOrderedList<V> with Iterable<V> {
   ///
   /// @ai Use this method for bulk updates rather than multiple individual add() calls.
   /// {@endtemplate}
-  void assignAll(final List<V> items) => _items = items.unmodifiable;
+  void assignAll(List<V> items) => _items = items.unmodifiable;
 
   /// {@template immutable_ordered_list_add}
   /// Adds the specified [value] to the end of this ordered list.
@@ -141,7 +141,7 @@ class ImmutableOrderedList<V> with Iterable<V> {
   /// @ai This operation has O(n) time complexity due to list copying.
   /// {@endtemplate}
   @mustCallSuper
-  void add(final V value) => _items = [..._items, value].unmodifiable;
+  void add(V value) => _items = [..._items, value].unmodifiable;
 
   /// {@template immutable_ordered_list_add_unique}
   /// Adds the specified [value] to the end of this ordered list if it doesn't already exist.
@@ -152,7 +152,7 @@ class ImmutableOrderedList<V> with Iterable<V> {
   /// @ai Use this method when you need set-like behavior with ordered insertion.
   /// {@endtemplate}
   @mustCallSuper
-  bool addUnique(final V value) {
+  bool addUnique(V value) {
     // TODO(arenukvern): rewrite to use index
     if (_items.contains(value)) return false;
     add(value);
@@ -168,7 +168,7 @@ class ImmutableOrderedList<V> with Iterable<V> {
   /// @ai This operation has O(n) time complexity due to filtering and list creation.
   /// {@endtemplate}
   @mustCallSuper
-  void remove(final V value) {
+  void remove(V value) {
     final index = _items.indexOf(value);
     if (index == -1) return;
     final newItems = [..._items]..removeAt(index);
@@ -184,8 +184,8 @@ class ImmutableOrderedList<V> with Iterable<V> {
   /// @ai This operation has O(n) time complexity due to filtering and list creation.
   /// {@endtemplate}
   @mustCallSuper
-  void removeAll(final V value) =>
-      _items = [..._items].where((final v) => v != value).toList().unmodifiable;
+  void removeAll(V value) =>
+      _items = [..._items].where((v) => v != value).toList().unmodifiable;
 
   /// {@template immutable_ordered_list_clear}
   /// Removes all items from this ordered list.

@@ -6,7 +6,7 @@ void main() {
     ..register(
       const ToolDefinition().toDef(
         name: const ToolName('write'),
-        execute: (final _) async => null,
+        execute: (_) async => null,
       ),
     );
   test('declared thought regions exclude calls and preserve answer spans', () {
@@ -70,7 +70,7 @@ void main() {
       '<result|write|{"ok":true}>',
     );
     expect(result.success, isTrue);
-    expect(result.nodes.map((final n) => n.kind), [
+    expect(result.nodes.map((n) => n.kind), [
       ToolSyntaxKind.definition,
       ToolSyntaxKind.call,
       ToolSyntaxKind.result,

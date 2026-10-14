@@ -40,7 +40,7 @@ class NamedLocale extends Equatable {
 /// Converts language code string to Flutter locale.
 ///
 /// @ai Returns null for invalid/empty codes. Use for safe locale creation.
-Locale? localeFromString(final String? languageCode) {
+Locale? localeFromString(String? languageCode) {
   if (languageCode == null || languageCode.isEmpty) return null;
   return UiLanguage.byCode(languageCode)?.locale;
 }
@@ -48,7 +48,7 @@ Locale? localeFromString(final String? languageCode) {
 /// Converts Flutter locale to language code string.
 ///
 /// @ai Returns null for null locales. Use for serialization.
-String? localeToString(final Locale? locale) => locale?.languageCode;
+String? localeToString(Locale? locale) => locale?.languageCode;
 
 /// Converts dynamic map to localized value map.
 ///
@@ -56,7 +56,7 @@ String? localeToString(final Locale? locale) => locale?.languageCode;
 ///
 /// @ai Use for parsing localized content from JSON. Throws for
 /// unsupported types.
-LocalizedMap localeValueFromMap(final dynamic map) {
+LocalizedMap localeValueFromMap(dynamic map) {
   if (map case String _) {
     return LocalizedMap.fromLanguages();
   } else if (map case final Map map) {
@@ -78,8 +78,8 @@ LocalizedMap localeValueFromMap(final dynamic map) {
 /// Converts localized map to string map for JSON serialization.
 ///
 /// @ai Use for saving localized content to JSON format.
-Map<String, String> localeValueToMap(final Map<UiLanguage, String> locales) =>
-    locales.map((final key, final value) => MapEntry(key.code, value));
+Map<String, String> localeValueToMap(Map<UiLanguage, String> locales) =>
+    locales.map((key, value) => MapEntry(key.code, value));
 
 /// {@template localized_map}
 /// Type-safe container for localized string values.
@@ -105,7 +105,7 @@ class LocalizedMap {
   /// Creates from JSON with flexible input format.
   ///
   /// @ai Handles both direct maps and wrapped maps with 'value' key.
-  factory LocalizedMap.fromJson(final dynamic json) {
+  factory LocalizedMap.fromJson(dynamic json) {
     final decodedJson = jsonDecodeMapAs<String, dynamic>(json);
     final rawJson = switch (decodedJson) {
       {'value': final dynamic value} => value,
@@ -128,13 +128,13 @@ class LocalizedMap {
   /// Converts to JSON with 'value' wrapper. (keys are language codes)
   ///
   /// @ai Use for consistent JSON serialization format.
-  static Map<String, dynamic> toJsonValueMap(final LocalizedMap map) => {
+  static Map<String, dynamic> toJsonValueMap(LocalizedMap map) => {
     'value': localeValueToMap(map.value),
   };
 
   /// Converts to JSON map without wrapper.
   Map<String, dynamic> toJson() =>
-      value.map((final key, final value) => MapEntry(key.code, value));
+      value.map((key, value) => MapEntry(key.code, value));
 
   /// Empty localized map.
   static const empty = LocalizedMap({});
@@ -142,13 +142,13 @@ class LocalizedMap {
   /// Gets localized value for Flutter locale.
   ///
   /// @ai Converts locale to language and retrieves value with fallback.
-  String getValue(final Locale locale) =>
+  String getValue(Locale locale) =>
       getValueByLanguage(UiLanguage.byLocale(locale));
 
   /// Gets localized value for specific language.
   ///
   /// @ai Falls back to default language if requested language not found.
-  String getValueByLanguage([final UiLanguage? language]) {
+  String getValueByLanguage([UiLanguage? language]) {
     final lang = language ?? getCurrentLanguage();
     return value[lang] ??
         value[LocalizationConfig.instance.fallbackLanguage] ??
@@ -166,12 +166,12 @@ class LocalizedMap {
   /// Creates copy with optional value replacement.
   ///
   /// @ai Use for immutable updates to localized content.
-  LocalizedMap copyWith({final Map<UiLanguage, String>? value}) =>
+  LocalizedMap copyWith({Map<UiLanguage, String>? value}) =>
       value != null ? LocalizedMap(value) : this;
 
   /// Creates copy with optional value replacement.
   ///
   /// @ai Use for immutable updates to localized content.
-  LocalizedMap copyRawWith({final Map<String, String>? value}) =>
+  LocalizedMap copyRawWith({Map<String, String>? value}) =>
       value != null ? LocalizedMap.fromJson(value) : this;
 }

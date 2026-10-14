@@ -8,8 +8,8 @@ void main() {
       final provider = YandexGamesPurchaseProvider(
         initClient:
             ({
-              final bool signed = false,
-              final String expectedGlobal = 'YaGames',
+              bool signed = false,
+              String expectedGlobal = 'YaGames',
             }) async {
               throw StateError('sdk unavailable');
             },
@@ -23,8 +23,8 @@ void main() {
       final provider = YandexGamesPurchaseProvider(
         initClient:
             ({
-              final bool signed = false,
-              final String expectedGlobal = 'YaGames',
+              bool signed = false,
+              String expectedGlobal = 'YaGames',
             }) async {
               throw StateError('sdk unavailable');
             },

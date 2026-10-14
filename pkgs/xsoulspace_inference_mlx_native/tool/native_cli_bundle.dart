@@ -7,12 +7,12 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:xsoulspace_tooling_runtime/xsoulspace_tooling_runtime.dart';
 
-Future<String> _digest(final File file) async =>
+Future<String> _digest(File file) async =>
     (await sha256.bind(file.openRead()).first).toString();
 
 /// Reproduce the SDK's observed macOS CLI relocation on a private copy.
 /// Match the complete transformed bytes, never UUID/name-only identity.
-Future<String?> _relocatedDigest(final File source) async {
+Future<String?> _relocatedDigest(File source) async {
   if (!Platform.isMacOS) return null;
   final input = await source.open();
   final magic = await input.read(4);
@@ -57,8 +57,8 @@ Future<String?> _relocatedDigest(final File source) async {
 }
 
 Future<Map<String, Object>> completeNativeCliBundle({
-  required final Directory profile,
-  required final Directory bundle,
+  required Directory profile,
+  required Directory bundle,
 }) async {
   final image = File('${bundle.path}/lib/libmlx_native.dylib');
   if (!image.existsSync()) throw StateError('native_bundle_image_missing');

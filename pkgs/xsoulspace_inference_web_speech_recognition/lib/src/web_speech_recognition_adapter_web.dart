@@ -36,7 +36,7 @@ class BrowserWebSpeechLiveRecognitionSession
     }
   }
 
-  void _onResult(final JSAny? event) {
+  void _onResult(JSAny? event) {
     if (_controller.isClosed) return;
     final transcript = _extractTranscriptFromEvent(event);
     if (transcript != null && transcript.isNotEmpty) {
@@ -44,19 +44,19 @@ class BrowserWebSpeechLiveRecognitionSession
     }
   }
 
-  void _onEnd(final JSAny? _) {
+  void _onEnd(JSAny? _) {
     if (!_controller.isClosed) {
       _controller.close();
     }
   }
 
-  void _onError(final JSAny? _) {
+  void _onError(JSAny? _) {
     if (!_controller.isClosed) {
       _controller.close();
     }
   }
 
-  static String? _extractTranscriptFromEvent(final JSAny? event) {
+  static String? _extractTranscriptFromEvent(JSAny? event) {
     final eventObject = _asJsObject(event);
     final resultsObject = _asJsObject(eventObject?['results']);
     final resultCount = _asInt(resultsObject?['length']) ?? 0;
@@ -75,26 +75,26 @@ class BrowserWebSpeechLiveRecognitionSession
     return s.isEmpty ? null : s;
   }
 
-  static JSObject? _asJsObject(final JSAny? value) {
+  static JSObject? _asJsObject(JSAny? value) {
     // ignore: invalid_runtime_check_with_js_interop_types
     return value is JSObject ? value : null;
   }
 
-  static int? _asInt(final JSAny? value) {
+  static int? _asInt(JSAny? value) {
     final normalized = _dartify(value);
     if (normalized is int) return normalized;
     if (normalized is num) return (normalized).round();
     return null;
   }
 
-  static String? _asTrimmedString(final JSAny? value) {
+  static String? _asTrimmedString(JSAny? value) {
     final normalized = _dartify(value);
     if (normalized is! String) return null;
     final text = normalized.trim();
     return text.isEmpty ? null : text;
   }
 
-  static Object? _dartify(final JSAny? value) {
+  static Object? _dartify(JSAny? value) {
     if (value == null) return null;
     try {
       return value.dartify();
@@ -138,16 +138,16 @@ class BrowserWebSpeechRecognitionTrackProvider
 
   @override
   Future<WebSpeechRecognitionAudioTrackHandle> fromFileUrl({
-    required final String fileUrl,
-    required final String mimeType,
+    required String fileUrl,
+    required String mimeType,
   }) {
     return _buildTrackHandle(fileUrl: fileUrl, objectUrlToRevoke: null);
   }
 
   @override
   Future<WebSpeechRecognitionAudioTrackHandle> fromBytes({
-    required final List<int> bytes,
-    required final String mimeType,
+    required List<int> bytes,
+    required String mimeType,
   }) async {
     final typedBytes = Uint8List.fromList(bytes);
     final blob = web.Blob(
@@ -168,8 +168,8 @@ class BrowserWebSpeechRecognitionTrackProvider
   }
 
   Future<WebSpeechRecognitionAudioTrackHandle> _buildTrackHandle({
-    required final String fileUrl,
-    required final String? objectUrlToRevoke,
+    required String fileUrl,
+    required String? objectUrlToRevoke,
   }) async {
     final audio = web.HTMLAudioElement()
       ..preload = 'auto'
@@ -225,7 +225,7 @@ class BrowserWebSpeechRecognitionTrackProvider
     );
   }
 
-  Future<void> _waitUntilPlayable(final web.HTMLAudioElement audio) async {
+  Future<void> _waitUntilPlayable(web.HTMLAudioElement audio) async {
     final completer = Completer<void>();
 
     void completeReady() {
@@ -234,7 +234,7 @@ class BrowserWebSpeechRecognitionTrackProvider
       }
     }
 
-    void completeError(final Object error) {
+    void completeError(Object error) {
       if (!completer.isCompleted) {
         completer.completeError(error);
       }
@@ -276,8 +276,8 @@ class BrowserWebSpeechRecognitionTrackProvider
 class BrowserWebSpeechRecognitionAdapter
     implements WebSpeechRecognitionAdapter {
   BrowserWebSpeechRecognitionAdapter({
-    final WebSpeechRecognitionTrackProvider? audioTrackProvider,
-    final String Function()? userAgentProvider,
+    WebSpeechRecognitionTrackProvider? audioTrackProvider,
+    String Function()? userAgentProvider,
     this.sessionTimeout = const Duration(seconds: 30),
   }) : _audioTrackProvider =
            audioTrackProvider ??
@@ -297,8 +297,8 @@ class BrowserWebSpeechRecognitionAdapter
 
   @override
   Future<String> recognize({
-    required final InferenceAudioInput audioInput,
-    final String? language,
+    required InferenceAudioInput audioInput,
+    String? language,
   }) async {
     final source = audioInput.resolvedSource;
     if (source == null) {
@@ -367,7 +367,7 @@ class BrowserWebSpeechRecognitionAdapter
 
   @override
   WebSpeechLiveRecognitionSession? startLiveRecognition({
-    final String? language,
+    String? language,
   }) {
     if (!hasSpeechRecognitionApi) return null;
     try {
@@ -383,11 +383,11 @@ class BrowserWebSpeechRecognitionAdapter
         recognition: recognition,
         controller: controller,
       );
-      recognition.onresult = ((final JSAny? event) => session._onResult(
+      recognition.onresult = ((JSAny? event) => session._onResult(
         event,
       )).toJS;
-      recognition.onend = ((final JSAny? e) => session._onEnd(e)).toJS;
-      recognition.onerror = ((final JSAny? e) => session._onError(e)).toJS;
+      recognition.onend = ((JSAny? e) => session._onEnd(e)).toJS;
+      recognition.onerror = ((JSAny? e) => session._onError(e)).toJS;
       try {
         recognition.start();
       } catch (_) {
@@ -401,20 +401,20 @@ class BrowserWebSpeechRecognitionAdapter
   }
 
   Future<String> _runRecognitionSession({
-    required final raw.SpeechRecognitionRaw recognition,
-    required final bool withAudioTrack,
-    required final void Function() startRecognition,
+    required raw.SpeechRecognitionRaw recognition,
+    required bool withAudioTrack,
+    required void Function() startRecognition,
   }) async {
     final transcriptCompleter = Completer<String>();
     var sawFinalResult = false;
 
-    void completeError(final WebSpeechRecognitionAdapterException error) {
+    void completeError(WebSpeechRecognitionAdapterException error) {
       if (!transcriptCompleter.isCompleted) {
         transcriptCompleter.completeError(error);
       }
     }
 
-    recognition.onresult = ((final JSAny? event) {
+    recognition.onresult = ((JSAny? event) {
       final transcript = _extractFinalTranscript(event);
       if (transcript == null || transcript.isEmpty) {
         return;
@@ -426,11 +426,11 @@ class BrowserWebSpeechRecognitionAdapter
       }
     }).toJS;
 
-    recognition.onerror = ((final JSAny? event) {
+    recognition.onerror = ((JSAny? event) {
       completeError(_mapRecognitionErrorEvent(event));
     }).toJS;
 
-    recognition.onend = ((final JSAny? _) {
+    recognition.onend = ((JSAny? _) {
       if (!transcriptCompleter.isCompleted && !sawFinalResult) {
         completeError(
           const WebSpeechRecognitionAdapterException(
@@ -494,7 +494,7 @@ class BrowserWebSpeechRecognitionAdapter
       raw.speechRecognitionConstructor ??
       raw.webkitSpeechRecognitionConstructor;
 
-  void _validateBrowserLoadableUrl(final String fileUrl) {
+  void _validateBrowserLoadableUrl(String fileUrl) {
     if (fileUrl.isEmpty) {
       throw const WebSpeechRecognitionAdapterException(
         kind: WebSpeechRecognitionFailureKind.invalidCaptureOrInput,
@@ -527,8 +527,8 @@ class BrowserWebSpeechRecognitionAdapter
   }
 
   WebSpeechRecognitionAdapterException _mapStartFailure(
-    final Object error, {
-    required final bool withAudioTrack,
+    Object error, {
+    required bool withAudioTrack,
   }) {
     final rawError = error.toString();
     final lower = rawError.toLowerCase();
@@ -576,7 +576,7 @@ class BrowserWebSpeechRecognitionAdapter
   }
 
   WebSpeechRecognitionAdapterException _mapRecognitionErrorEvent(
-    final JSAny? event,
+    JSAny? event,
   ) {
     final eventObject = _asJsObject(event);
     final errorCode = _asTrimmedString(eventObject?['error'])?.toLowerCase();
@@ -622,7 +622,7 @@ class BrowserWebSpeechRecognitionAdapter
     }
   }
 
-  String? _extractFinalTranscript(final JSAny? event) {
+  String? _extractFinalTranscript(JSAny? event) {
     final eventObject = _asJsObject(event);
     final resultsObject = _asJsObject(eventObject?['results']);
     final resultCount = _asInt(resultsObject?['length']) ?? 0;
@@ -648,7 +648,7 @@ class BrowserWebSpeechRecognitionAdapter
     return null;
   }
 
-  static bool _containsAny(final String value, final Iterable<String> needles) {
+  static bool _containsAny(String value, Iterable<String> needles) {
     for (final needle in needles) {
       if (value.contains(needle)) {
         return true;
@@ -657,7 +657,7 @@ class BrowserWebSpeechRecognitionAdapter
     return false;
   }
 
-  static bool _looksLikeAudioTrackUnsupported(final String lowerError) {
+  static bool _looksLikeAudioTrackUnsupported(String lowerError) {
     return _containsAny(lowerError, const <String>[
       'too many arguments',
       'overload',
@@ -667,7 +667,7 @@ class BrowserWebSpeechRecognitionAdapter
     ]);
   }
 
-  static bool _isChromiumFamily(final String userAgent) {
+  static bool _isChromiumFamily(String userAgent) {
     final ua = userAgent.toLowerCase();
     return _containsAny(ua, const <String>[
       'chrome/',
@@ -678,12 +678,12 @@ class BrowserWebSpeechRecognitionAdapter
     ]);
   }
 
-  static JSObject? _asJsObject(final JSAny? value) {
+  static JSObject? _asJsObject(JSAny? value) {
     // ignore: invalid_runtime_check_with_js_interop_types
     return value is JSObject ? value : null;
   }
 
-  static bool? _asBool(final JSAny? value) {
+  static bool? _asBool(JSAny? value) {
     final normalized = _dartify(value);
     if (normalized is bool) {
       return normalized;
@@ -691,7 +691,7 @@ class BrowserWebSpeechRecognitionAdapter
     return null;
   }
 
-  static int? _asInt(final JSAny? value) {
+  static int? _asInt(JSAny? value) {
     final normalized = _dartify(value);
     if (normalized is int) {
       return normalized;
@@ -702,7 +702,7 @@ class BrowserWebSpeechRecognitionAdapter
     return null;
   }
 
-  static String? _asTrimmedString(final JSAny? value) {
+  static String? _asTrimmedString(JSAny? value) {
     final normalized = _dartify(value);
     if (normalized is! String) {
       return null;
@@ -712,7 +712,7 @@ class BrowserWebSpeechRecognitionAdapter
     return text.isEmpty ? null : text;
   }
 
-  static Object? _dartify(final JSAny? value) {
+  static Object? _dartify(JSAny? value) {
     if (value == null) {
       return null;
     }

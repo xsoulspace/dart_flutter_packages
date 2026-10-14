@@ -12,11 +12,11 @@ Never _unsupported() {
 /// Non-web fallback for Yandex Games wrapper.
 abstract final class YandexGames {
   static Future<YsdkClient> init({
-    final bool signed = false,
-    final String expectedGlobal = 'YaGames',
+    bool signed = false,
+    String expectedGlobal = 'YaGames',
   }) async => _unsupported();
 
-  static bool isAvailable({final String expectedGlobal = 'YaGames'}) => false;
+  static bool isAvailable({String expectedGlobal = 'YaGames'}) => false;
 }
 
 class YsdkClient {
@@ -26,8 +26,8 @@ class YsdkClient {
   YsdkPaymentsClient get payments => _unsupported();
 
   Future<Map<String, String>> getFlags({
-    final List<ClientFeatureModel>? clientFeatures,
-    final Map<String, String>? defaultFlags,
+    List<ClientFeatureModel>? clientFeatures,
+    Map<String, String>? defaultFlags,
   }) async => _unsupported();
 
   Future<YsdkPaymentsClient> getPaymentsUnsigned() async => _unsupported();
@@ -39,26 +39,26 @@ class YsdkClient {
 
 class YsdkPlayer {
   String getName() => _unsupported();
-  String getPhoto(final String size) => _unsupported();
+  String getPhoto(String size) => _unsupported();
   String getUniqueId() => _unsupported();
   bool isAuthorized() => _unsupported();
-  Future<Map<String, Object?>> getStats([final List<String>? keys]) async =>
+  Future<Map<String, Object?>> getStats([List<String>? keys]) async =>
       _unsupported();
-  Future<void> setStats(final Map<String, num> stats) async => _unsupported();
+  Future<void> setStats(Map<String, num> stats) async => _unsupported();
 }
 
 class YsdkPaymentsClient {
-  Future<void> consumePurchase(final String token) async => _unsupported();
+  Future<void> consumePurchase(String token) async => _unsupported();
   Future<List<ProductModel>> getCatalog() async => _unsupported();
   Future<List<PurchaseModel>> getPurchasesUnsigned() async => _unsupported();
   Future<SignatureModel> getPurchasesSigned() async => _unsupported();
   Future<PurchaseModel> purchaseUnsigned({
-    required final String id,
-    final String? developerPayload,
+    required String id,
+    String? developerPayload,
   }) async => _unsupported();
   Future<SignatureModel> purchaseSigned({
-    required final String id,
-    final String? developerPayload,
+    required String id,
+    String? developerPayload,
   }) async => _unsupported();
 }
 
@@ -68,20 +68,20 @@ class YsdkAdvClient {
 
 class YsdkLeaderboardsClient {
   Future<LeaderboardEntriesDataModel> getEntries(
-    final String leaderboardName, {
-    final bool? includeUser,
-    final int? quantityAround,
-    final int? quantityTop,
+    String leaderboardName, {
+    bool? includeUser,
+    int? quantityAround,
+    int? quantityTop,
   }) async => _unsupported();
 
   Future<LeaderboardEntryModel> getPlayerEntry(
-    final String leaderboardName,
+    String leaderboardName,
   ) async => _unsupported();
 
   Future<void> setScore(
-    final String leaderboardName,
-    final int score, {
-    final String? extraData,
+    String leaderboardName,
+    int score, {
+    String? extraData,
   }) async => _unsupported();
 }
 
@@ -90,13 +90,13 @@ class YsdkMultiplayerClient {
 }
 
 class YsdkMultiplayerSessionsClient {
-  void commit(final MultiplayerCommitPayloadModel payload) => _unsupported();
+  void commit(MultiplayerCommitPayloadModel payload) => _unsupported();
 
   Future<List<MultiplayerSessionOpponentModel>> init({
-    final MultiplayerInitOptionsModel? options,
+    MultiplayerInitOptionsModel? options,
   }) async => _unsupported();
 
   Future<CallbackBaseMessageDataModel> push(
-    final MultiplayerMetaModel meta,
+    MultiplayerMetaModel meta,
   ) async => _unsupported();
 }

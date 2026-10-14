@@ -72,7 +72,7 @@ void main() {
         () async {
       late http.Request captured;
       final client = _client(
-        MockClient((final request) async {
+        MockClient((request) async {
           captured = request;
           return _messageResponse();
         }),
@@ -126,7 +126,7 @@ void main() {
         'parses the JSON reply', () async {
       late http.Request captured;
       final client = _client(
-        MockClient((final request) async {
+        MockClient((request) async {
           captured = request;
           return http.Response(
             jsonEncode(<String, dynamic>{
@@ -172,7 +172,7 @@ void main() {
         () async {
       late http.Request captured;
       final client = _client(
-        MockClient((final request) async {
+        MockClient((request) async {
           captured = request;
           return http.Response(
             jsonEncode(<String, dynamic>{
@@ -231,7 +231,7 @@ void main() {
     test('renders assistant fragments as multi-turn messages', () async {
       late http.Request captured;
       final client = _client(
-        MockClient((final request) async {
+        MockClient((request) async {
           captured = request;
           return _messageResponse();
         }),
@@ -329,8 +329,8 @@ void main() {
 const String _prompt = 'Summarize the failing test.';
 
 AnthropicInferenceClient _client(
-  final http.Client client, {
-  final Duration timeout = const Duration(seconds: 1),
+  http.Client client, {
+  Duration timeout = const Duration(seconds: 1),
 }) => AnthropicInferenceClient(
   apiKey: 'test-key',
   httpClient: client,
@@ -338,11 +338,11 @@ AnthropicInferenceClient _client(
 );
 
 InferenceRequest _request({
-  final int? maxTokens,
-  final double? temperature,
-  final List<String> stopSequences = const <String>[],
-  final String systemPrompt = '',
-  final List<Object> contextFragments = const <Object>[],
+  int? maxTokens,
+  double? temperature,
+  List<String> stopSequences = const <String>[],
+  String systemPrompt = '',
+  List<Object> contextFragments = const <Object>[],
 }) => InferenceRequest(
   prompt: _prompt,
   maxTokens: maxTokens,

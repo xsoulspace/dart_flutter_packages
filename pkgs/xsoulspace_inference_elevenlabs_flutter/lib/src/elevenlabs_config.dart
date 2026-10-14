@@ -31,14 +31,14 @@ class ElevenLabsAuthConfig {
 
 class ElevenLabsEndpointConfig {
   ElevenLabsEndpointConfig({
-    final Uri? baseHttp,
+    Uri? baseHttp,
     this.timeout = const Duration(seconds: 30),
   }) : baseHttp = baseHttp ?? Uri.parse('https://api.elevenlabs.io');
 
   final Uri baseHttp;
   final Duration timeout;
 
-  Uri resolveHttpPath(final String path, {final Map<String, String>? query}) {
+  Uri resolveHttpPath(String path, {Map<String, String>? query}) {
     final normalizedPath = path.startsWith('/') ? path : '/$path';
     return baseHttp.replace(
       path: normalizedPath,
@@ -47,8 +47,8 @@ class ElevenLabsEndpointConfig {
   }
 
   Uri resolveWebSocketPath(
-    final String path, {
-    final Map<String, String>? query,
+    String path, {
+    Map<String, String>? query,
   }) {
     final normalizedPath = path.startsWith('/') ? path : '/$path';
     final scheme = switch (baseHttp.scheme) {

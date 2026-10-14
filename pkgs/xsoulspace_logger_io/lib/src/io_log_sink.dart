@@ -52,7 +52,7 @@ final class IoLogSink implements LogSink {
       return;
     }
 
-    segments.sort((final a, final b) => a.path.compareTo(b.path));
+    segments.sort((a, b) => a.path.compareTo(b.path));
 
     var maxSequence = await _recoverAndReadMaxSequence(segments.last);
     if (maxSequence == 0) {
@@ -74,7 +74,7 @@ final class IoLogSink implements LogSink {
   }
 
   @override
-  void enqueue(final LogRecord record) {
+  void enqueue(LogRecord record) {
     if (_closed || _disposed) {
       return;
     }
@@ -145,7 +145,7 @@ final class IoLogSink implements LogSink {
     }
   }
 
-  Map<String, Object?> _toPersistedRecord(final LogRecord record) {
+  Map<String, Object?> _toPersistedRecord(LogRecord record) {
     final nextSequence = _recoveredMaxSequence + 1;
     _recoveredMaxSequence = nextSequence;
 
@@ -208,7 +208,7 @@ final class IoLogSink implements LogSink {
     _urgentSyncRequested = false;
   }
 
-  Future<int> _recoverAndReadMaxSequence(final File file) async {
+  Future<int> _recoverAndReadMaxSequence(File file) async {
     final bytes = await file.readAsBytes();
     if (bytes.isEmpty) {
       return 0;
@@ -248,7 +248,7 @@ final class IoLogSink implements LogSink {
     return maxSequence;
   }
 
-  Future<int> _readMaxSequence(final File file) async {
+  Future<int> _readMaxSequence(File file) async {
     final lines = await file.readAsLines();
     var maxSequence = 0;
 
@@ -262,7 +262,7 @@ final class IoLogSink implements LogSink {
     return maxSequence;
   }
 
-  int? _extractSequence(final String line) {
+  int? _extractSequence(String line) {
     if (line.isEmpty) {
       return null;
     }
@@ -298,7 +298,7 @@ final class IoLogSink implements LogSink {
     return entities
         .whereType<File>()
         .where(
-          (final file) =>
+          (file) =>
               file.path.endsWith(config.segmentExtension) &&
               file.uri.pathSegments.last.startsWith(config.segmentPrefix),
         )
@@ -309,7 +309,7 @@ final class IoLogSink implements LogSink {
     final nowUtc = DateTime.now().toUtc();
 
     var segments = await _listSegments();
-    segments.sort((final a, final b) => a.path.compareTo(b.path));
+    segments.sort((a, b) => a.path.compareTo(b.path));
 
     for (final segment in segments) {
       if (_isActiveSegment(segment)) {
@@ -323,7 +323,7 @@ final class IoLogSink implements LogSink {
     }
 
     segments = await _listSegments();
-    segments.sort((final a, final b) => a.path.compareTo(b.path));
+    segments.sort((a, b) => a.path.compareTo(b.path));
 
     final sizeByPath = <String, int>{};
     var totalSize = 0;
@@ -349,6 +349,6 @@ final class IoLogSink implements LogSink {
     }
   }
 
-  bool _isActiveSegment(final File file) =>
+  bool _isActiveSegment(File file) =>
       _activeSegment != null && _activeSegment!.path == file.path;
 }

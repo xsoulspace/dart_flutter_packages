@@ -8,16 +8,16 @@ class _FakeVoskBackend implements VoskRealtimeBackend {
 
   @override
   Future<void> start({
-    required final VoskModelConfig modelConfig,
-    required final VoskRuntimeConfig runtimeConfig,
-    required final VoskRealtimeConfig realtimeConfig,
-    required final void Function(InferenceTranscriptEvent event) emit,
+    required VoskModelConfig modelConfig,
+    required VoskRuntimeConfig runtimeConfig,
+    required VoskRealtimeConfig realtimeConfig,
+    required void Function(InferenceTranscriptEvent event) emit,
   }) async {
     this.emit = emit;
   }
 
   @override
-  Future<void> sendAudioChunk(final List<int> audioBytes) async {
+  Future<void> sendAudioChunk(List<int> audioBytes) async {
     emit(
       InferenceTranscriptEvent(
         type: InferenceTranscriptEventType.partialTranscript,
@@ -51,9 +51,9 @@ void main() {
     final client = VoskInferenceClient(
       transcribe:
           ({
-            required final request,
-            required final modelConfig,
-            required final runtimeConfig,
+            required request,
+            required modelConfig,
+            required runtimeConfig,
           }) async {
             expect(modelConfig.preset, VoskModelPreset.smallEnUs015);
             return InferenceResult<InferenceResponse>.ok(
@@ -97,7 +97,7 @@ void main() {
 
       expect(
         events.any(
-          (final event) =>
+          (event) =>
               event.type == InferenceTranscriptEventType.partialTranscript &&
               event.transcript == 'tiny model',
         ),
@@ -105,7 +105,7 @@ void main() {
       );
       expect(
         events.any(
-          (final event) =>
+          (event) =>
               event.type == InferenceTranscriptEventType.finalTranscript &&
               event.transcript == 'tiny model final',
         ),
@@ -119,17 +119,17 @@ void main() {
       runtimeConfig: const VoskRuntimeConfig(),
       modelPathResolver: () => null,
       platformProbe: () => true,
-      loadProbe: (final _) => false,
+      loadProbe: (_) => false,
     );
 
     final snapshot = await probe.probe();
     expect(snapshot.isReady, isFalse);
     expect(
-      snapshot.issues.any((final issue) => issue.code == 'runtime_missing'),
+      snapshot.issues.any((issue) => issue.code == 'runtime_missing'),
       isTrue,
     );
     expect(
-      snapshot.issues.any((final issue) => issue.code == 'model_missing'),
+      snapshot.issues.any((issue) => issue.code == 'model_missing'),
       isTrue,
     );
   });

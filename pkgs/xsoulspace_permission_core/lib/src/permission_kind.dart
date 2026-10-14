@@ -53,7 +53,7 @@ enum PermissionKind {
 
   /// Parses a wire kind; `null` when the name is not in this vocabulary
   /// — the caller decides what an unknown kind means (usually [other]).
-  static PermissionKind? tryParse(final String? name) {
+  static PermissionKind? tryParse(String? name) {
     if (name == null) return null;
     for (final kind in PermissionKind.values) {
       if (kind.wireName == name) return kind;
@@ -64,6 +64,6 @@ enum PermissionKind {
   /// Total parse: unknown/absent names become [other], so a request is
   /// never lost to a vocabulary gap. Deny-by-default stays intact
   /// because `other` is never in an allow set by accident.
-  static PermissionKind coerce(final String? name) =>
+  static PermissionKind coerce(String? name) =>
       tryParse(name) ?? PermissionKind.other;
 }

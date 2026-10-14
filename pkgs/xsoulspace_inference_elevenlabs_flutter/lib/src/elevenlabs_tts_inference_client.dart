@@ -11,8 +11,8 @@ import 'elevenlabs_config.dart';
 class ElevenLabsTtsInferenceClient implements InferenceClient {
   ElevenLabsTtsInferenceClient({
     required this._authConfig,
-    final ElevenLabsEndpointConfig? endpointConfig,
-    final http.Client? httpClient,
+    ElevenLabsEndpointConfig? endpointConfig,
+    http.Client? httpClient,
     DateTime Function()? now,
   }) : _endpointConfig = endpointConfig ?? ElevenLabsEndpointConfig(),
        _httpClient = httpClient ?? http.Client(),
@@ -57,7 +57,7 @@ class ElevenLabsTtsInferenceClient implements InferenceClient {
 
   @override
   Future<InferenceResult<InferenceResponse>> infer(
-    final InferenceRequest request, {
+    InferenceRequest request, {
     ToolRegistry? toolRegistry,
   }) async {
     if (!supportedTasks.contains(request.task)) {
@@ -66,7 +66,7 @@ class ElevenLabsTtsInferenceClient implements InferenceClient {
         message: 'Task ${request.task.name} is not supported by $id',
         details: <String, dynamic>{
           'supported_tasks': supportedTasks
-              .map((final task) => task.name)
+              .map((task) => task.name)
               .toList(),
           'requested_task': request.task.name,
         },
@@ -232,8 +232,8 @@ class ElevenLabsTtsInferenceClient implements InferenceClient {
   }
 
   Map<String, String> _buildQuery(
-    final Map<String, dynamic> providerExtras,
-    final String outputFormat,
+    Map<String, dynamic> providerExtras,
+    String outputFormat,
   ) {
     final query = <String, String>{'output_format': outputFormat};
 
@@ -250,7 +250,7 @@ class ElevenLabsTtsInferenceClient implements InferenceClient {
   }
 
   Map<String, dynamic>? _buildVoiceSettings(
-    final Map<String, dynamic> providerExtras,
+    Map<String, dynamic> providerExtras,
   ) {
     final voiceSettings = <String, dynamic>{
       if (doubleFromMap(providerExtras, 'stability')

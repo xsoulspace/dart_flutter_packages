@@ -559,7 +559,7 @@ void main() {
       final results = await Future.wait(
         List<Future<InferenceResult<InferenceResponse>>>.generate(
           8,
-          (final index) => client.infer(
+          (index) => client.infer(
             _request(
               temp.path,
               prompt: 'parallel request $index',
@@ -584,10 +584,10 @@ void main() {
 }
 
 InferenceRequest _request(
-  final String workingDirectory, {
-  final String prompt = 'return json',
-  required final Map<String, dynamic> outputSchema,
-  final Map<String, dynamic> metadata = const <String, dynamic>{},
+  String workingDirectory, {
+  String prompt = 'return json',
+  required Map<String, dynamic> outputSchema,
+  Map<String, dynamic> metadata = const <String, dynamic>{},
 }) => InferenceRequest(
   prompt: prompt,
   outputSchema: outputSchema,
@@ -596,8 +596,8 @@ InferenceRequest _request(
 );
 
 Future<File> _createExecutableScript(
-  final Directory directory,
-  final String content,
+  Directory directory,
+  String content,
 ) async {
   final script = File('${directory.path}/cursor-agent');
   await script.writeAsString(content);
@@ -677,7 +677,7 @@ cat <<'JSON'
 JSON
 ''';
 
-String _argumentCaptureScript(final String argsPath) =>
+String _argumentCaptureScript(String argsPath) =>
     '''#!/usr/bin/env bash
 printf '%s\\n' "\$@" > "$argsPath"
 cat <<'JSON'

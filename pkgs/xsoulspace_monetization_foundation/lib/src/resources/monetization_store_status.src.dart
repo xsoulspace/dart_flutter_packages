@@ -43,7 +43,7 @@ class MonetizationStoreStatusResource extends ChangeNotifier {
   MonetizationStoreStatus get status => _status;
 
   /// Updates the monetization system status and notifies listeners.
-  void setStatus(final MonetizationStoreStatus value) {
+  void setStatus(MonetizationStoreStatus value) {
     _status = value;
     notifyListeners();
   }

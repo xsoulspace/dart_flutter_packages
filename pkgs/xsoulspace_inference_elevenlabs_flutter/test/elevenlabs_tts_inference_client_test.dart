@@ -14,7 +14,7 @@ void main() {
     test('supports only textToSpeech task', () {
       final client = ElevenLabsTtsInferenceClient(
         authConfig: const ElevenLabsAuthConfig(apiKey: 'key'),
-        httpClient: MockClient((final request) async => http.Response('', 500)),
+        httpClient: MockClient((request) async => http.Response('', 500)),
       );
 
       expect(client.supportedTasks, const <InferenceTask>{
@@ -25,7 +25,7 @@ void main() {
     test('returns task_unsupported for non-TTS request', () async {
       final client = ElevenLabsTtsInferenceClient(
         authConfig: const ElevenLabsAuthConfig(apiKey: 'key'),
-        httpClient: MockClient((final request) async => http.Response('', 500)),
+        httpClient: MockClient((request) async => http.Response('', 500)),
       );
 
       final result = await client.infer(
@@ -44,7 +44,7 @@ void main() {
     test('returns auth_failed when api key is missing', () async {
       final client = ElevenLabsTtsInferenceClient(
         authConfig: const ElevenLabsAuthConfig(),
-        httpClient: MockClient((final request) async => http.Response('', 500)),
+        httpClient: MockClient((request) async => http.Response('', 500)),
       );
 
       final result = await client.infer(
@@ -61,7 +61,7 @@ void main() {
     test('returns request_invalid when voiceId is missing', () async {
       final client = ElevenLabsTtsInferenceClient(
         authConfig: const ElevenLabsAuthConfig(apiKey: 'key'),
-        httpClient: MockClient((final request) async => http.Response('', 500)),
+        httpClient: MockClient((request) async => http.Response('', 500)),
       );
 
       final result = await client.infer(
@@ -95,7 +95,7 @@ void main() {
           baseHttp: Uri.parse('https://api.elevenlabs.io'),
           timeout: const Duration(seconds: 5),
         ),
-        httpClient: MockClient((final request) async {
+        httpClient: MockClient((request) async {
           requestUri = request.url;
           requestHeaders = request.headers;
           requestBody = jsonDecode(request.body) as Map<String, dynamic>;
@@ -152,7 +152,7 @@ void main() {
       final client = ElevenLabsTtsInferenceClient(
         authConfig: const ElevenLabsAuthConfig(apiKey: 'test-api-key'),
         httpClient: MockClient(
-          (final request) async => http.Response(
+          (request) async => http.Response(
             jsonEncode(<String, dynamic>{'detail': 'Invalid key'}),
             401,
             headers: <String, String>{'content-type': 'application/json'},

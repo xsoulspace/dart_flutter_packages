@@ -336,15 +336,15 @@ final class WhisperCppRawBindings {
   final _WhisperGetSegmentTimeDart getSegmentT0;
   final _WhisperGetSegmentTimeDart getSegmentT1;
 
-  static WhisperCppRawBindings load(final WhisperCppRawRuntimeConfig config) =>
+  static WhisperCppRawBindings load(WhisperCppRawRuntimeConfig config) =>
       WhisperCppRawBindings._(
         WhisperCppRawLibraryLoader(runtimeConfig: config).load(),
       );
 }
 
 String resolveWhisperCppRawModelPath({
-  required final WhisperCppRawModelConfig modelConfig,
-  required final WhisperCppRawRuntimeConfig runtimeConfig,
+  required WhisperCppRawModelConfig modelConfig,
+  required WhisperCppRawRuntimeConfig runtimeConfig,
 }) {
   final direct = modelConfig.modelPath.trim();
   if (File(direct).existsSync()) {
@@ -382,7 +382,7 @@ final class WhisperCppRawBatchRuntime {
   String version() => _bindings.version().toDartString();
 
   Future<WhisperCppRawRecognitionResult> transcribe(
-    final WhisperCppRawAudioInput input,
+    WhisperCppRawAudioInput input,
   ) async {
     final samples = input.isWavContainer
         ? extractWhisperCppRawFloatSamplesFromWav(input.bytes)
@@ -396,10 +396,10 @@ final class WhisperCppRawBatchRuntime {
   }
 
   WhisperCppRawRecognitionResult _decodeSamples({
-    required final Float32List samples,
-    required final int sampleRateHz,
-    required final WhisperCppRawRealtimeConfig config,
-    required final bool isFinal,
+    required Float32List samples,
+    required int sampleRateHz,
+    required WhisperCppRawRealtimeConfig config,
+    required bool isFinal,
   }) {
     if (sampleRateHz != 16000) {
       throw WhisperCppRawException(
@@ -560,7 +560,7 @@ final class WhisperCppRawRealtimeRuntime {
     _lastTranscript = '';
   }
 
-  WhisperCppRawRecognitionResult? sendAudioChunk(final List<int> audioBytes) {
+  WhisperCppRawRecognitionResult? sendAudioChunk(List<int> audioBytes) {
     if (audioBytes.isEmpty || audioBytes.length.isOdd) {
       throw const WhisperCppRawException(
         code: 'audio_input_invalid',
@@ -599,7 +599,7 @@ final class WhisperCppRawRealtimeRuntime {
   }
 
   WhisperCppRawRecognitionResult _decodeCurrentBuffer({
-    required final bool isFinal,
+    required bool isFinal,
   }) {
     final allBytes = _pcmBuffer.takeBytes();
     final retained = _retainTail(allBytes);
@@ -615,7 +615,7 @@ final class WhisperCppRawRealtimeRuntime {
     );
   }
 
-  Uint8List _retainTail(final Uint8List bytes) {
+  Uint8List _retainTail(Uint8List bytes) {
     final keepBytes =
         (realtimeConfig.sampleRate * 2 * realtimeConfig.keepMs) ~/ 1000;
     if (keepBytes <= 0 || bytes.length <= keepBytes) {
@@ -625,7 +625,7 @@ final class WhisperCppRawRealtimeRuntime {
   }
 }
 
-Float32List pcm16leToWhisperCppRawFloatSamples(final Uint8List pcmBytes) {
+Float32List pcm16leToWhisperCppRawFloatSamples(Uint8List pcmBytes) {
   final data = ByteData.sublistView(pcmBytes);
   final samples = Float32List(pcmBytes.length ~/ 2);
   for (var i = 0; i < samples.length; i++) {
@@ -634,7 +634,7 @@ Float32List pcm16leToWhisperCppRawFloatSamples(final Uint8List pcmBytes) {
   return samples;
 }
 
-Float32List extractWhisperCppRawFloatSamplesFromWav(final Uint8List wavBytes) {
+Float32List extractWhisperCppRawFloatSamplesFromWav(Uint8List wavBytes) {
   if (wavBytes.length < 44) {
     throw const WhisperCppRawException(
       code: 'audio_input_invalid',
@@ -687,22 +687,22 @@ Float32List extractWhisperCppRawFloatSamplesFromWav(final Uint8List wavBytes) {
   );
 }
 
-String _stringOrNull(final String value) =>
+String _stringOrNull(String value) =>
     value.trim().isEmpty ? 'auto' : value;
 
 bool _boolExtra(
-  final Map<String, dynamic> extras,
-  final String key,
-  final bool fallback,
+  Map<String, dynamic> extras,
+  String key,
+  bool fallback,
 ) {
   final value = extras[key];
   return value is bool ? value : fallback;
 }
 
 int _intExtra(
-  final Map<String, dynamic> extras,
-  final String key,
-  final int fallback,
+  Map<String, dynamic> extras,
+  String key,
+  int fallback,
 ) {
   final value = extras[key];
   return value is num ? value.toInt() : fallback;

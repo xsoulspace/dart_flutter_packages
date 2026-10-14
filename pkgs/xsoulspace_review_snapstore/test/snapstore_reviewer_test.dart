@@ -4,13 +4,13 @@ import 'package:xsoulspace_review_snapstore/xsoulspace_review_snapstore.dart';
 
 void main() {
   testWidgets('does not launch store when consent is denied', (
-    final tester,
+    tester,
   ) async {
     var launchCalls = 0;
     final reviewer = SnapStoreReviewer(
       packageName: 'xs-app',
-      consentBuilder: (final context, final locale) async => false,
-      launchSchemeAction: (final scheme) async {
+      consentBuilder: (context, locale) async => false,
+      launchSchemeAction: (scheme) async {
         launchCalls += 1;
       },
     );
@@ -20,7 +20,7 @@ void main() {
       Directionality(
         textDirection: TextDirection.ltr,
         child: Builder(
-          builder: (final buildContext) {
+          builder: (buildContext) {
             context = buildContext;
             return const SizedBox.shrink();
           },
@@ -34,13 +34,13 @@ void main() {
   });
 
   testWidgets('launches snap review scheme when consent is granted', (
-    final tester,
+    tester,
   ) async {
     var launchedScheme = '';
     final reviewer = SnapStoreReviewer(
       packageName: 'xs-app',
-      consentBuilder: (final context, final locale) async => true,
-      launchSchemeAction: (final scheme) async {
+      consentBuilder: (context, locale) async => true,
+      launchSchemeAction: (scheme) async {
         launchedScheme = scheme;
       },
     );
@@ -50,7 +50,7 @@ void main() {
       Directionality(
         textDirection: TextDirection.ltr,
         child: Builder(
-          builder: (final buildContext) {
+          builder: (buildContext) {
             context = buildContext;
             return const SizedBox.shrink();
           },

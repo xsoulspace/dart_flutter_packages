@@ -56,7 +56,7 @@ void main() {
             statusMatcher: isFreeStatus(),
           ),
         }
-        .forEach((final name, final testCase) {
+        .forEach((name, testCase) {
           test(name, () async {
             await env.givenLocalActiveSubscription(testCase.purchase());
             final cmd = env.makeRestoreLocalPurchasesCommand();

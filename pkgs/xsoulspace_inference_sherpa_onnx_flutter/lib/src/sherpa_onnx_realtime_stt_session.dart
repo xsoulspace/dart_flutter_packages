@@ -120,7 +120,7 @@ class SherpaOnnxRealtimeSttSession
 
   @override
   Future<InferenceResult<void>> sendAudioChunk(
-    final List<int> audioBytes,
+    List<int> audioBytes,
   ) async {
     if (!_isConnected) {
       return InferenceResult<void>.fail(

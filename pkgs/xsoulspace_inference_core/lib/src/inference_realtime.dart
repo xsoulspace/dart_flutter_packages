@@ -29,13 +29,13 @@ class InferenceTranscriptEvent {
     this.error,
   });
 
-  factory InferenceTranscriptEvent.fromJson(final Map<String, dynamic> json) {
+  factory InferenceTranscriptEvent.fromJson(Map<String, dynamic> json) {
     final typeName = json['type'] as String?;
     final stateName = json['session_state'] as String?;
 
     return InferenceTranscriptEvent(
       type: InferenceTranscriptEventType.values.firstWhere(
-        (final value) => value.name == typeName,
+        (value) => value.name == typeName,
         orElse: () => InferenceTranscriptEventType.warning,
       ),
       timestamp:
@@ -46,13 +46,13 @@ class InferenceTranscriptEvent {
       sessionState: stateName == null
           ? null
           : InferenceRealtimeSessionState.values.firstWhere(
-              (final value) => value.name == stateName,
+              (value) => value.name == stateName,
               orElse: () => InferenceRealtimeSessionState.idle,
             ),
       metrics:
           (json['metrics'] as Map?)
               ?.map(
-                (final key, final value) =>
+                (key, value) =>
                     MapEntry('$key', value is num ? value : 0),
               )
               .cast<String, num>() ??

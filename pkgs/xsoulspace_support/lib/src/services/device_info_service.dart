@@ -66,7 +66,7 @@ class DeviceInfoService {
 
   /// Retrieves Android-specific device information.
   Future<DeviceInfo> _getAndroidDeviceInfo(
-    final DeviceInfoPlugin plugin,
+    DeviceInfoPlugin plugin,
   ) async {
     final androidInfo = await plugin.androidInfo;
     return DeviceInfo(
@@ -80,7 +80,7 @@ class DeviceInfoService {
   }
 
   /// Retrieves iOS-specific device information.
-  Future<DeviceInfo> _getIOSDeviceInfo(final DeviceInfoPlugin plugin) async {
+  Future<DeviceInfo> _getIOSDeviceInfo(DeviceInfoPlugin plugin) async {
     final iosInfo = await plugin.iosInfo;
     return DeviceInfo(
       platform: 'iOS',
@@ -92,7 +92,7 @@ class DeviceInfoService {
   }
 
   /// Retrieves Web-specific device information.
-  Future<DeviceInfo> _getWebDeviceInfo(final DeviceInfoPlugin plugin) async {
+  Future<DeviceInfo> _getWebDeviceInfo(DeviceInfoPlugin plugin) async {
     final webInfo = await plugin.webBrowserInfo;
     return DeviceInfo(
       platform: 'Web',

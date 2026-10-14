@@ -22,7 +22,7 @@ class RustoreBillingClient {
     return const Stream.empty();
   }
 
-  Future<void> initialize(final RustoreBillingConfig config) async {
+  Future<void> initialize(RustoreBillingConfig config) async {
     try {
       await _platform.initialize(config);
     } catch (e, stackTrace) {
@@ -62,7 +62,7 @@ class RustoreBillingClient {
   }
 
   Future<List<RustoreProduct>> getProducts(
-    final List<String> productIds,
+    List<String> productIds,
   ) async {
     try {
       return await _platform.getProducts(productIds);
@@ -77,7 +77,7 @@ class RustoreBillingClient {
   }
 
   Future<List<RustorePurchase>> getPurchases({
-    final RustorePurchaseFilter? filter,
+    RustorePurchaseFilter? filter,
   }) async {
     try {
       return await _platform.getPurchases(filter);
@@ -91,7 +91,7 @@ class RustoreBillingClient {
     }
   }
 
-  Future<RustorePurchase?> getPurchase(final String purchaseId) async {
+  Future<RustorePurchase?> getPurchase(String purchaseId) async {
     try {
       return await _platform.getPurchase(purchaseId);
     } catch (e, stackTrace) {
@@ -105,10 +105,10 @@ class RustoreBillingClient {
   }
 
   Future<RustoreProductPurchaseResult> purchase(
-    final RustoreProductPurchaseParams params, {
-    final RustorePreferredPurchaseType preferredPurchaseType =
+    RustoreProductPurchaseParams params, {
+    RustorePreferredPurchaseType preferredPurchaseType =
         RustorePreferredPurchaseType.unknown,
-    final RustoreBillingTheme sdkTheme = RustoreBillingTheme.system,
+    RustoreBillingTheme sdkTheme = RustoreBillingTheme.system,
   }) async {
     try {
       return await _platform.purchase(
@@ -127,8 +127,8 @@ class RustoreBillingClient {
   }
 
   Future<RustoreProductPurchaseResult> purchaseTwoStep(
-    final RustoreProductPurchaseParams params, {
-    final RustoreBillingTheme sdkTheme = RustoreBillingTheme.system,
+    RustoreProductPurchaseParams params, {
+    RustoreBillingTheme sdkTheme = RustoreBillingTheme.system,
   }) async {
     try {
       return await _platform.purchaseTwoStep(params, sdkTheme: sdkTheme);
@@ -143,8 +143,8 @@ class RustoreBillingClient {
   }
 
   Future<void> confirmTwoStepPurchase(
-    final String purchaseId, {
-    final String? developerPayload,
+    String purchaseId, {
+    String? developerPayload,
   }) async {
     try {
       await _platform.confirmTwoStepPurchase(
@@ -161,7 +161,7 @@ class RustoreBillingClient {
     }
   }
 
-  Future<void> cancelTwoStepPurchase(final String purchaseId) async {
+  Future<void> cancelTwoStepPurchase(String purchaseId) async {
     try {
       await _platform.cancelTwoStepPurchase(purchaseId);
     } catch (e, stackTrace) {

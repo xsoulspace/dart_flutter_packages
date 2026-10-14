@@ -17,11 +17,11 @@ class CustomWiredashTranslationsDelegate
 
   /// You have to define all languages that should be overridden
   @override
-  bool isSupported(final Locale locale) =>
+  bool isSupported(Locale locale) =>
       ['en', 'ru', 'it'].contains(locale.languageCode);
 
   @override
-  Future<WiredashLocalizations> load(final Locale locale) =>
+  Future<WiredashLocalizations> load(Locale locale) =>
       switch (locale.languageCode) {
         'ru' => SynchronousFuture(_RuOverrides()),
         'it' => SynchronousFuture(WiredashLocalizationsIt()),
@@ -29,7 +29,7 @@ class CustomWiredashTranslationsDelegate
       };
 
   @override
-  bool shouldReload(final CustomWiredashTranslationsDelegate old) => false;
+  bool shouldReload(CustomWiredashTranslationsDelegate old) => false;
 }
 
 class _RuOverrides extends _RuDefaultOverrides {
@@ -188,7 +188,7 @@ class _RuDefaultOverrides extends WiredashLocalizationsEn {
   String get feedbackStep7SubmissionRetryButton => 'Повторить';
 
   @override
-  String feedbackStepXOfY(final int current, final int total) =>
+  String feedbackStepXOfY(int current, int total) =>
       'Шаг $current из $total';
 
   @override
@@ -219,7 +219,7 @@ class _RuDefaultOverrides extends WiredashLocalizationsEn {
       'Насколько вероятно, что вы порекомендуете нас своим друзьям и семье?';
 
   @override
-  String promoterScoreStep2MessageDescription(final int rating) =>
+  String promoterScoreStep2MessageDescription(int rating) =>
       'Не могли бы вы рассказать немного подробнее, почему вы выбрали $rating? Этот шаг необязателен.';
 
   @override

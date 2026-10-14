@@ -33,9 +33,9 @@ class CancelSubscriptionCommand {
   /// 4. On success: confirm purchase and return true
   /// {@endtemplate}
   Future<void> execute({
-    final PurchaseProductId productId = PurchaseProductId.empty,
-    final PurchaseId purchaseId = PurchaseId.empty,
-    final bool openSubscriptionManagement = true,
+    PurchaseProductId productId = PurchaseProductId.empty,
+    PurchaseId purchaseId = PurchaseId.empty,
+    bool openSubscriptionManagement = true,
   }) async {
     final oldStatus = subscriptionStatusResource.status;
     subscriptionStatusResource.set(SubscriptionStatus.cancelling);

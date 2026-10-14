@@ -11,7 +11,7 @@ enum ChatRole {
   assistant,
   tool;
 
-  static ChatRole? fromJson(final Object? value) => switch (value) {
+  static ChatRole? fromJson(Object? value) => switch (value) {
     'system' => ChatRole.system,
     'user' => ChatRole.user,
     'assistant' => ChatRole.assistant,
@@ -25,16 +25,16 @@ enum ChatRole {
 final class ChatMessage {
   const ChatMessage({required this.role, required this.content});
 
-  const ChatMessage.system(final String content)
+  const ChatMessage.system(String content)
     : this(role: ChatRole.system, content: content);
-  const ChatMessage.user(final String content)
+  const ChatMessage.user(String content)
     : this(role: ChatRole.user, content: content);
-  const ChatMessage.assistant(final String content)
+  const ChatMessage.assistant(String content)
     : this(role: ChatRole.assistant, content: content);
-  const ChatMessage.tool(final String content)
+  const ChatMessage.tool(String content)
     : this(role: ChatRole.tool, content: content);
 
-  factory ChatMessage.fromJson(final Map<String, dynamic> json) {
+  factory ChatMessage.fromJson(Map<String, dynamic> json) {
     final content = jsonDecodeString(json['content']);
     final role = ChatRole.fromJson(json['role']) ?? ChatRole.user;
     return ChatMessage(role: role, content: content);

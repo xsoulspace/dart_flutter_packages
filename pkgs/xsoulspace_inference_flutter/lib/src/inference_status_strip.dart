@@ -7,7 +7,7 @@ final class InferenceStatusStrip extends StatelessWidget {
   final InferenceTranscriptSnapshot snapshot;
 
   @override
-  Widget build(final BuildContext context) => Container(
+  Widget build(BuildContext context) => Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       color: Theme.of(context).colorScheme.surfaceContainerHighest,

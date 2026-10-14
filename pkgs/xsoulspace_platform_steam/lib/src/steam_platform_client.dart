@@ -25,7 +25,7 @@ final class SteamPlatformClient implements PlatformClient {
   PlatformId get platformId => PlatformId.steam;
 
   @override
-  Future<PlatformInitResult> init(final PlatformInitOptions options) async {
+  Future<PlatformInitResult> init(PlatformInitOptions options) async {
     if (_steamEventsSubscription == null) {
       _steamEventsSubscription = _steamClient.events.listen(_onSteamEvent);
     }
@@ -138,7 +138,7 @@ final class SteamPlatformClient implements PlatformClient {
     _capabilities.registerDynamic(statsSync.runtimeType, statsSync);
   }
 
-  void _onSteamEvent(final SteamEvent event) {
+  void _onSteamEvent(SteamEvent event) {
     if (_disposed || _eventsController.isClosed) {
       return;
     }
@@ -197,7 +197,7 @@ final class SteamPlatformClient implements PlatformClient {
     }
   }
 
-  void _emit(final PlatformEvent event) {
+  void _emit(PlatformEvent event) {
     if (_disposed || _eventsController.isClosed) {
       return;
     }
@@ -241,8 +241,8 @@ final class _SteamFriendsCapability implements FriendsCapability {
 
   @override
   Future<List<PlayerFriend>> listFriends({
-    final int? limit,
-    final int? offset,
+    int? limit,
+    int? offset,
   }) async {
     final ids = _client.friends.getFriendSteamIds();
     final safeOffset = (offset ?? 0).clamp(0, ids.length);
@@ -253,7 +253,7 @@ final class _SteamFriendsCapability implements FriendsCapability {
 
     return limited
         .map(
-          (final id) => PlayerFriend(
+          (id) => PlayerFriend(
             id: id.toString(),
             displayName: _client.friends.getFriendPersonaName(id),
           ),
@@ -272,7 +272,7 @@ final class _SteamAchievementReadCapability
   String get capabilityName => 'achievement.read';
 
   @override
-  Future<AchievementState?> getAchievement(final String id) async {
+  Future<AchievementState?> getAchievement(String id) async {
     final value = _client.achievements.getAchievement(id);
     if (value == null) {
       return null;
@@ -291,7 +291,7 @@ final class _SteamAchievementWriteCapability
   String get capabilityName => 'achievement.write';
 
   @override
-  Future<void> unlockAchievement(final String id) async {
+  Future<void> unlockAchievement(String id) async {
     final ok = _client.achievements.setAchievement(id);
     if (!ok) {
       throw PlatformException(
@@ -303,7 +303,7 @@ final class _SteamAchievementWriteCapability
   }
 
   @override
-  Future<void> clearAchievement(final String id) async {
+  Future<void> clearAchievement(String id) async {
     final ok = _client.achievements.clearAchievement(id);
     if (!ok) {
       throw PlatformException(
@@ -324,11 +324,11 @@ final class _SteamStatsReadCapability implements StatsReadCapability {
   String get capabilityName => 'stats.read';
 
   @override
-  Future<int?> getIntStat(final String name) async =>
+  Future<int?> getIntStat(String name) async =>
       _client.stats.getIntStat(name);
 
   @override
-  Future<double?> getDoubleStat(final String name) async =>
+  Future<double?> getDoubleStat(String name) async =>
       _client.stats.getFloatStat(name);
 }
 
@@ -341,7 +341,7 @@ final class _SteamStatsWriteCapability implements StatsWriteCapability {
   String get capabilityName => 'stats.write';
 
   @override
-  Future<void> setIntStat(final String name, final int value) async {
+  Future<void> setIntStat(String name, int value) async {
     final ok = _client.stats.setIntStat(name, value);
     if (!ok) {
       throw PlatformException(
@@ -353,7 +353,7 @@ final class _SteamStatsWriteCapability implements StatsWriteCapability {
   }
 
   @override
-  Future<void> setDoubleStat(final String name, final double value) async {
+  Future<void> setDoubleStat(String name, double value) async {
     final ok = _client.stats.setFloatStat(name, value);
     if (!ok) {
       throw PlatformException(

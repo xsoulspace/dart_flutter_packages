@@ -11,7 +11,7 @@ import 'package:http/http.dart' as http;
 final class LocalHealthProbe {
   LocalHealthProbe({
     required this.endpoint,
-    final http.Client? httpClient,
+    http.Client? httpClient,
     this.timeout = const Duration(seconds: 2),
   }) : _httpClient = httpClient ?? http.Client(),
        _ownsHttpClient = httpClient == null;

@@ -22,9 +22,9 @@ extension XSIterableX<E> on Iterable<E> {
   /// @returns A map with keys and their corresponding indices.
   ///
   /// @ai Use this method to create indexed maps for easier lookups.
-  Map<TId, int> toIndexedMap<TId>(final TId Function(E e) toId) {
+  Map<TId, int> toIndexedMap<TId>(TId Function(E e) toId) {
     final iterableEntries = mapIndexed(
-      (final index, final e) => MapEntry(toId(e), index),
+      (index, e) => MapEntry(toId(e), index),
     );
 
     return Map.fromEntries(iterableEntries);
@@ -53,10 +53,10 @@ extension XSIterableX<E> on Iterable<E> {
   ///
   /// @ai Use this method to create maps from collections for easier access.
   Map<TKey, TMapType> toMap<TKey, TMapType>({
-    required final TKey Function(E item) toKey,
-    required final TMapType Function(E item) toValue,
+    required TKey Function(E item) toKey,
+    required TMapType Function(E item) toValue,
   }) {
-    final iterableEntries = map((final e) {
+    final iterableEntries = map((e) {
       final key = toKey(e);
       final value = toValue(e);
 
@@ -73,7 +73,7 @@ extension XSIterableX<E> on Iterable<E> {
   ///
   /// @ai Use this method to transform collections asynchronously.
   Future<Iterable<TNew>> convert<TNew>(
-    final IterableConverter<E, TNew> converter,
+    IterableConverter<E, TNew> converter,
   ) async {
     final list = <TNew>[];
     for (final item in this) {

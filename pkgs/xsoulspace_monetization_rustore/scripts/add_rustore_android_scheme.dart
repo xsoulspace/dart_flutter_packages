@@ -64,4 +64,4 @@ Future<String> _getAppScheme() async {
   }
 }
 
-void main(final List<String> args) async => await addRustoreAndroidScheme();
+void main(List<String> args) async => await addRustoreAndroidScheme();

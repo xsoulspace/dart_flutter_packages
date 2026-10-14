@@ -137,13 +137,13 @@ final class VoskRawBindings {
   final _VoskSetMaxAlternativesDart setMaxAlternatives;
   final _VoskSetLogLevelDart setLogLevel;
 
-  static VoskRawBindings load(final VoskRawRuntimeConfig config) =>
+  static VoskRawBindings load(VoskRawRuntimeConfig config) =>
       VoskRawBindings._(VoskRawLibraryLoader(runtimeConfig: config).load());
 }
 
 String resolveVoskRawModelPath({
-  required final VoskRawModelConfig modelConfig,
-  required final VoskRawRuntimeConfig runtimeConfig,
+  required VoskRawModelConfig modelConfig,
+  required VoskRawRuntimeConfig runtimeConfig,
 }) {
   final direct = modelConfig.modelPath.trim();
   if (direct.isNotEmpty && Directory(direct).existsSync()) {
@@ -173,7 +173,7 @@ final class VoskRawBatchRuntime {
   final VoskRawModelConfig modelConfig;
 
   Future<VoskRawRecognitionResult> transcribe(
-    final VoskRawAudioInput input,
+    VoskRawAudioInput input,
   ) async {
     final pcm = input.isWavContainer
         ? _extractWavPcm16Le(input.bytes)
@@ -186,9 +186,9 @@ final class VoskRawBatchRuntime {
   }
 
   VoskRawRecognitionResult _runRecognition({
-    required final Uint8List pcmBytes,
-    required final int sampleRate,
-    required final bool finalize,
+    required Uint8List pcmBytes,
+    required int sampleRate,
+    required bool finalize,
   }) {
     if (sampleRate <= 0) {
       throw const VoskRawException(
@@ -248,9 +248,9 @@ final class VoskRawBatchRuntime {
   }
 
   Pointer<_VoskRecognizer> _createRecognizer(
-    final VoskRawBindings bindings,
-    final Pointer<_VoskModel> model,
-    final double sampleRate,
+    VoskRawBindings bindings,
+    Pointer<_VoskModel> model,
+    double sampleRate,
   ) {
     final grammar = modelConfig.providerExtras['grammar'];
     if (grammar is String && grammar.trim().isNotEmpty) {
@@ -269,7 +269,7 @@ final class VoskRawBatchRuntime {
       }
     }
     if (grammar is List && grammar.isNotEmpty) {
-      final normalized = jsonEncode(grammar.map((final e) => '$e').toList());
+      final normalized = jsonEncode(grammar.map((e) => '$e').toList());
       final ptr = normalized.toNativeUtf8();
       try {
         final recognizer = bindings.recognizerNewGrammar(
@@ -295,9 +295,9 @@ final class VoskRawBatchRuntime {
   }
 
   void _configureRecognizer(
-    final VoskRawBindings bindings,
-    final Pointer<_VoskRecognizer> recognizer, {
-    required final bool partialWords,
+    VoskRawBindings bindings,
+    Pointer<_VoskRecognizer> recognizer, {
+    required bool partialWords,
   }) {
     bindings.setPartialWords(recognizer, partialWords ? 1 : 0);
     bindings.setWords(recognizer, 1);
@@ -360,7 +360,7 @@ final class VoskRawRealtimeRuntime {
     _recognizer = recognizer;
   }
 
-  VoskRawRecognitionResult? sendAudioChunk(final List<int> audioBytes) {
+  VoskRawRecognitionResult? sendAudioChunk(List<int> audioBytes) {
     final bindings = _requireBindings();
     if (audioBytes.isEmpty || audioBytes.length.isOdd) {
       throw const VoskRawException(
@@ -435,8 +435,8 @@ final class VoskRawRealtimeRuntime {
 }
 
 VoskRawRecognitionResult parseVoskRawRecognitionResult(
-  final String jsonPayload, {
-  required final bool isFinal,
+  String jsonPayload, {
+  required bool isFinal,
 }) {
   if (jsonPayload.trim().isEmpty) {
     return VoskRawRecognitionResult(transcript: '', isFinal: isFinal);
@@ -457,8 +457,8 @@ VoskRawRecognitionResult parseVoskRawRecognitionResult(
       final List values =>
         values
             .whereType<Map>()
-            .map((final value) => (value['text'] as String? ?? '').trim())
-            .where((final value) => value.isNotEmpty),
+            .map((value) => (value['text'] as String? ?? '').trim())
+            .where((value) => value.isNotEmpty),
       _ => const Iterable<String>.empty(),
     },
   }.toList(growable: false);
@@ -469,14 +469,14 @@ VoskRawRecognitionResult parseVoskRawRecognitionResult(
   };
   final segments = rawWords
       .map(
-        (final value) => VoskRawWordSegment(
+        (value) => VoskRawWordSegment(
           text: (value['word'] as String? ?? '').trim(),
           startMs: ((value['start'] as num?)?.toDouble() ?? 0) * 1000 ~/ 1,
           endMs: ((value['end'] as num?)?.toDouble() ?? 0) * 1000 ~/ 1,
           confidence: (value['conf'] as num?)?.toDouble(),
         ),
       )
-      .where((final value) => value.text.isNotEmpty)
+      .where((value) => value.text.isNotEmpty)
       .toList(growable: false);
 
   return VoskRawRecognitionResult(
@@ -488,13 +488,13 @@ VoskRawRecognitionResult parseVoskRawRecognitionResult(
   );
 }
 
-Uint8List extractVoskRawPcm16LeFromWav(final Uint8List wavBytes) =>
+Uint8List extractVoskRawPcm16LeFromWav(Uint8List wavBytes) =>
     _extractWavPcm16Le(wavBytes);
 
 Future<Uint8List> readVoskRawAudioInput({
-  required final String? filePath,
-  required final List<int>? bytes,
-  required final bool isBytes,
+  required String? filePath,
+  required List<int>? bytes,
+  required bool isBytes,
 }) async {
   if (isBytes) {
     return _extractWavPcm16Le(Uint8List.fromList(bytes!));
@@ -510,7 +510,7 @@ Future<Uint8List> readVoskRawAudioInput({
   return _extractWavPcm16Le(await file.readAsBytes());
 }
 
-Uint8List _extractWavPcm16Le(final Uint8List wavBytes) {
+Uint8List _extractWavPcm16Le(Uint8List wavBytes) {
   if (wavBytes.length < 44) {
     throw const VoskRawException(
       code: 'audio_input_invalid',
@@ -557,9 +557,9 @@ Uint8List _extractWavPcm16Le(final Uint8List wavBytes) {
 }
 
 int _intExtra(
-  final Map<String, dynamic> values,
-  final String key,
-  final int fallback,
+  Map<String, dynamic> values,
+  String key,
+  int fallback,
 ) {
   final value = values[key];
   return value is num ? value.toInt() : fallback;

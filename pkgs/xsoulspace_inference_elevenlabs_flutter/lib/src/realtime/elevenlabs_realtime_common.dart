@@ -9,12 +9,12 @@ typedef ElevenLabsWebSocketConnector =
     WebSocketChannel Function(Uri uri, {Map<String, dynamic>? headers});
 
 WebSocketChannel defaultElevenLabsWebSocketConnector(
-  final Uri uri, {
-  final Map<String, dynamic>? headers,
+  Uri uri, {
+  Map<String, dynamic>? headers,
 }) => IOWebSocketChannel.connect(uri, headers: headers);
 
 Future<InferenceResult<Map<String, dynamic>>> resolveRealtimeAuthHeaders(
-  final ElevenLabsAuthConfig authConfig,
+  ElevenLabsAuthConfig authConfig,
 ) async {
   final token = await authConfig.resolveBearerToken();
   if (token != null) {

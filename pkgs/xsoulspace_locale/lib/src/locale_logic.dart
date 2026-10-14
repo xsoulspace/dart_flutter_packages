@@ -64,7 +64,7 @@ class LocaleLogic {
   ///
   /// @ai Call this once during app initialization.
   Future<void> initUiLocaleResource({
-    required final UiLocaleResource uiLocaleResource,
+    required UiLocaleResource uiLocaleResource,
   }) async {
     final defaultLocale = await _defaultLocale;
     uiLocaleResource.value = defaultLocale;
@@ -91,10 +91,10 @@ class LocaleLogic {
   /// @ai Use this for runtime locale changes. Always provide [onLocaleChanged]
   /// to reload Intl resources. Check return value to determine if update occurred.
   Future<({Locale? updatedLocale, Locale uiLocale})?> updateLocale({
-    required final Locale? newLocale,
-    required final Locale? oldLocale,
-    required final Locale uiLocale,
-    final ValueChanged<Locale>? onLocaleChanged,
+    required Locale? newLocale,
+    required Locale? oldLocale,
+    required Locale uiLocale,
+    ValueChanged<Locale>? onLocaleChanged,
   }) async {
     final didChanged =
         oldLocale?.languageCode != newLocale?.languageCode ||

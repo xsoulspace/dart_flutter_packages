@@ -24,8 +24,8 @@ class _FakeAdapter implements WebSpeechRecognitionAdapter {
 
   @override
   Future<String> recognize({
-    required final InferenceAudioInput audioInput,
-    final String? language,
+    required InferenceAudioInput audioInput,
+    String? language,
   }) async {
     lastAudioInput = audioInput;
     lastLanguage = language;

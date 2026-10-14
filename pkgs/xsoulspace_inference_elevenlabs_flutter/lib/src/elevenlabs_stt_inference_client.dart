@@ -12,8 +12,8 @@ import 'elevenlabs_config.dart';
 class ElevenLabsSttInferenceClient implements InferenceClient {
   ElevenLabsSttInferenceClient({
     required this._authConfig,
-    final ElevenLabsEndpointConfig? endpointConfig,
-    final http.Client? httpClient,
+    ElevenLabsEndpointConfig? endpointConfig,
+    http.Client? httpClient,
   }) : _endpointConfig = endpointConfig ?? ElevenLabsEndpointConfig(),
        _httpClient = httpClient ?? http.Client(),
        _ownsHttpClient = httpClient == null;
@@ -54,7 +54,7 @@ class ElevenLabsSttInferenceClient implements InferenceClient {
 
   @override
   Future<InferenceResult<InferenceResponse>> infer(
-    final InferenceRequest request, {
+    InferenceRequest request, {
     ToolRegistry? toolRegistry,
   }) async {
     if (!supportedTasks.contains(request.task)) {
@@ -63,7 +63,7 @@ class ElevenLabsSttInferenceClient implements InferenceClient {
         message: 'Task ${request.task.name} is not supported by $id',
         details: <String, dynamic>{
           'supported_tasks': supportedTasks
-              .map((final task) => task.name)
+              .map((task) => task.name)
               .toList(),
           'requested_task': request.task.name,
         },
@@ -254,7 +254,7 @@ class ElevenLabsSttInferenceClient implements InferenceClient {
   }
 
   Future<InferenceResult<http.MultipartFile>> _buildMultipartAudio(
-    final InferenceAudioInput input,
+    InferenceAudioInput input,
   ) async {
     final source = input.resolvedSource;
     if (source == InferenceAudioSource.filePath) {
@@ -308,7 +308,7 @@ class ElevenLabsSttInferenceClient implements InferenceClient {
     );
   }
 
-  String? _resolveTimestampsGranularity(final Map<String, dynamic> metadata) {
+  String? _resolveTimestampsGranularity(Map<String, dynamic> metadata) {
     final direct = nonEmptyString(metadata['timestamps_granularity']);
     if (direct != null) {
       return direct;
@@ -327,7 +327,7 @@ class ElevenLabsSttInferenceClient implements InferenceClient {
     return null;
   }
 
-  String _resolveTranscript(final Map<String, dynamic> json) {
+  String _resolveTranscript(Map<String, dynamic> json) {
     final direct = nonEmptyString(json['text']);
     if (direct != null) {
       return direct;
@@ -352,8 +352,8 @@ class ElevenLabsSttInferenceClient implements InferenceClient {
   }
 
   List<InferenceSpeechSegment> _resolveSegments(
-    final Map<String, dynamic> json,
-    final String transcript,
+    Map<String, dynamic> json,
+    String transcript,
   ) {
     final words = <Map<String, dynamic>>[];
 

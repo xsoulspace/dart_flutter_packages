@@ -18,12 +18,12 @@ class SherpaOnnxAvailabilityProbe implements InferenceReadinessProbe {
 
   bool isPlatformSupported() => platformProbe();
 
-  bool isConfigured(final SherpaOnnxRuntimeConfig runtimeConfig) =>
+  bool isConfigured(SherpaOnnxRuntimeConfig runtimeConfig) =>
       (runtimeConfig.libraryPath ?? '').trim().isNotEmpty ||
       runtimeConfig.librarySearchPaths.isNotEmpty ||
       runtimeConfig.ownsRuntimeResolution;
 
-  bool canLoad(final SherpaOnnxRuntimeConfig runtimeConfig) {
+  bool canLoad(SherpaOnnxRuntimeConfig runtimeConfig) {
     if (!isPlatformSupported() || !isConfigured(runtimeConfig)) {
       return false;
     }

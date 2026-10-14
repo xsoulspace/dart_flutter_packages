@@ -8,7 +8,7 @@ import 'capability_registry.dart';
 final class NoopPlatformClient implements PlatformClient {
   NoopPlatformClient({
     this._platformId = PlatformId.custom,
-    final Iterable<PlatformCapability>? capabilities,
+    Iterable<PlatformCapability>? capabilities,
   }) {
     for (final capability in capabilities ?? const <PlatformCapability>[]) {
       _registerCapability(capability);
@@ -24,7 +24,7 @@ final class NoopPlatformClient implements PlatformClient {
   PlatformId get platformId => _platformId;
 
   @override
-  Future<PlatformInitResult> init(final PlatformInitOptions options) async {
+  Future<PlatformInitResult> init(PlatformInitOptions options) async {
     _events.add(
       PlatformEvent.now(
         name: 'noop.init',
@@ -69,7 +69,7 @@ final class NoopPlatformClient implements PlatformClient {
   @override
   Stream<PlatformEvent> get events => _events.stream;
 
-  void _registerCapability(final PlatformCapability capability) {
+  void _registerCapability(PlatformCapability capability) {
     _registry.registerDynamic(capability.runtimeType, capability);
   }
 }

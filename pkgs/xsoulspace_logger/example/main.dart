@@ -5,7 +5,7 @@ final class StdoutSink implements LogSink {
   Future<void> init() async {}
 
   @override
-  void enqueue(final LogRecord record) {
+  void enqueue(LogRecord record) {
     print('[${record.level.name}] ${record.category}: ${record.message}');
   }
 

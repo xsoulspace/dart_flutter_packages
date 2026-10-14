@@ -9,7 +9,7 @@ import 'permission_request.dart';
 /// well-formed request, never performs I/O, and never consults a
 /// human: human-in-the-loop is what escalate routes TO.
 abstract interface class PermissionPolicy {
-  PermissionDecision decide(final PermissionRequest request);
+  PermissionDecision decide(PermissionRequest request);
 }
 
 /// The async twin, for authorities that consult something across time —
@@ -18,5 +18,5 @@ abstract interface class PermissionPolicy {
 /// guessing); only the transport differs. Sync policies and async ones
 /// do NOT mix in one chain: the runner picks its lane.
 abstract interface class AsyncPermissionPolicy {
-  Future<PermissionDecision> decide(final PermissionRequest request);
+  Future<PermissionDecision> decide(PermissionRequest request);
 }

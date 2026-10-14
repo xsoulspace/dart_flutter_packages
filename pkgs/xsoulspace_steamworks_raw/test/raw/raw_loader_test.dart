@@ -40,7 +40,7 @@ void main() {
       loader.load,
       throwsA(
         isA<SteamRawException>().having(
-          (final e) => e.code,
+          (e) => e.code,
           'code',
           SteamRawErrorCode.libraryNotFound,
         ),
@@ -56,12 +56,12 @@ void main() {
       throwsA(
         isA<SteamRawException>()
             .having(
-              (final e) => e.code,
+              (e) => e.code,
               'code',
               SteamRawErrorCode.symbolNotFound,
             )
             .having(
-              (final e) => e.symbol,
+              (e) => e.symbol,
               'symbol',
               'SteamAPI_RestartAppIfNecessary',
             ),
@@ -72,7 +72,7 @@ void main() {
 
 final class _MissingSymbolResolver implements SteamRawSymbolResolver {
   @override
-  Pointer<T> lookup<T extends NativeType>(final String symbolName) {
+  Pointer<T> lookup<T extends NativeType>(String symbolName) {
     throw ArgumentError('Missing symbol: $symbolName');
   }
 }

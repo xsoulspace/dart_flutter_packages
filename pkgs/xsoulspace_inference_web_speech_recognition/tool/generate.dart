@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:xsoulspace_js_interop_codegen/xsoulspace_js_interop_codegen.dart';
 
-Future<void> main(final List<String> args) async {
+Future<void> main(List<String> args) async {
   final checkOnly = _parseCheckOnly(args);
   if (checkOnly == null) {
     exitCode = 2;
@@ -55,8 +55,8 @@ Future<void> main(final List<String> args) async {
   final irGlobalSymbols =
       (ir['globalDeclarations'] as List<dynamic>? ?? <dynamic>[])
           .cast<Map<String, Object?>>()
-          .where((final value) => value['kind'] == 'variable')
-          .map((final value) => value['name'] as String?)
+          .where((value) => value['kind'] == 'variable')
+          .map((value) => value['name'] as String?)
           .whereType<String>();
   final globalSymbols = _extractGlobalSymbols(
     dtsContent: dtsContent,
@@ -133,7 +133,7 @@ Future<void> main(final List<String> args) async {
   }
 }
 
-bool? _parseCheckOnly(final List<String> args) {
+bool? _parseCheckOnly(List<String> args) {
   var checkOnly = false;
   for (final arg in args) {
     if (arg == '--check') {
@@ -222,8 +222,8 @@ extension type SpeechRecognitionRaw(JSObject _) implements JSObject {
 }
 
 List<String> _extractSymbols({
-  required final String dtsContent,
-  required final List<String> parserSymbols,
+  required String dtsContent,
+  required List<String> parserSymbols,
 }) {
   final symbols = <String>{...parserSymbols};
   final regex = RegExp(
@@ -241,8 +241,8 @@ List<String> _extractSymbols({
 }
 
 List<String> _extractGlobalSymbols({
-  required final String dtsContent,
-  required final Iterable<String> parserGlobalSymbols,
+  required String dtsContent,
+  required Iterable<String> parserGlobalSymbols,
 }) {
   final symbols = <String>{...parserGlobalSymbols};
   final regex = RegExp(

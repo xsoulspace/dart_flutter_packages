@@ -11,10 +11,10 @@ final class SteamFriendsService {
   /// Local persona display name.
   String get personaName => _nativeApi.personaName();
 
-  int getFriendCount({final int flags = friendFlagImmediate}) =>
+  int getFriendCount({int flags = friendFlagImmediate}) =>
       _nativeApi.friendCount(flags);
 
-  List<int> getFriendSteamIds({final int flags = friendFlagImmediate}) {
+  List<int> getFriendSteamIds({int flags = friendFlagImmediate}) {
     final count = _nativeApi.friendCount(flags);
     if (count <= 0) {
       return const <int>[];
@@ -27,6 +27,6 @@ final class SteamFriendsService {
     return List<int>.unmodifiable(friends);
   }
 
-  String getFriendPersonaName(final int steamId) =>
+  String getFriendPersonaName(int steamId) =>
       _nativeApi.friendPersonaName(steamId);
 }

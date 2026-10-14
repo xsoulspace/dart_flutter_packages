@@ -6,7 +6,7 @@ import 'package:xsoulspace_ysdk_games_js/xsoulspace_ysdk_games_js.dart';
 /// Purchase provider backed by Yandex Games web payments API.
 class YandexGamesPurchaseProvider implements PurchaseProvider {
   YandexGamesPurchaseProvider({
-    final Future<YsdkClient> Function({bool signed, String expectedGlobal})?
+    Future<YsdkClient> Function({bool signed, String expectedGlobal})?
     initClient,
     this.signed = false,
     this.expectedGlobal = 'YaGames',
@@ -61,31 +61,31 @@ class YandexGamesPurchaseProvider implements PurchaseProvider {
 
   @override
   Future<List<PurchaseProductDetailsModel>> getConsumables(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   ) async {
     final details = await getProductDetails(productIds);
     return details
         .where(
-          (final item) => item.productType == PurchaseProductType.consumable,
+          (item) => item.productType == PurchaseProductType.consumable,
         )
         .toList(growable: false);
   }
 
   @override
   Future<List<PurchaseProductDetailsModel>> getNonConsumables(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   ) async {
     final details = await getProductDetails(productIds);
     return details
         .where(
-          (final item) => item.productType == PurchaseProductType.nonConsumable,
+          (item) => item.productType == PurchaseProductType.nonConsumable,
         )
         .toList(growable: false);
   }
 
   @override
   Future<List<PurchaseProductDetailsModel>> getProductDetails(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   ) async {
     final payments = _requirePayments();
     final catalog = await payments.getCatalog();
@@ -93,28 +93,28 @@ class YandexGamesPurchaseProvider implements PurchaseProvider {
       return catalog.map(_mapProduct).toList(growable: false);
     }
 
-    final requested = productIds.map((final id) => id.value).toSet();
+    final requested = productIds.map((id) => id.value).toSet();
     return catalog
-        .where((final item) => requested.contains(item.id))
+        .where((item) => requested.contains(item.id))
         .map(_mapProduct)
         .toList(growable: false);
   }
 
   @override
   Future<List<PurchaseProductDetailsModel>> getSubscriptions(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   ) async {
     final details = await getProductDetails(productIds);
     return details
         .where(
-          (final item) => item.productType == PurchaseProductType.subscription,
+          (item) => item.productType == PurchaseProductType.subscription,
         )
         .toList(growable: false);
   }
 
   @override
   Future<PurchaseDetailsModel> getPurchaseDetails(
-    final PurchaseId productId,
+    PurchaseId productId,
   ) async {
     final purchases = await _getPurchases();
     for (final purchase in purchases) {
@@ -129,7 +129,7 @@ class YandexGamesPurchaseProvider implements PurchaseProvider {
 
   @override
   Future<PurchaseResultModel> purchaseNonConsumable(
-    final PurchaseProductDetailsModel productDetails,
+    PurchaseProductDetailsModel productDetails,
   ) async {
     final payments = _requirePayments();
 
@@ -188,7 +188,7 @@ class YandexGamesPurchaseProvider implements PurchaseProvider {
 
   @override
   Future<CompletePurchaseResultModel> completePurchase(
-    final PurchaseVerificationDtoModel purchase,
+    PurchaseVerificationDtoModel purchase,
   ) async {
     final payments = _requirePayments();
     final token = purchase.purchaseToken ?? '';
@@ -207,7 +207,7 @@ class YandexGamesPurchaseProvider implements PurchaseProvider {
 
   @override
   Future<PurchaseResultModel> subscribe(
-    final PurchaseProductDetailsModel productDetails,
+    PurchaseProductDetailsModel productDetails,
   ) {
     return purchaseNonConsumable(
       PurchaseProductDetailsModel(
@@ -226,7 +226,7 @@ class YandexGamesPurchaseProvider implements PurchaseProvider {
   }
 
   @override
-  Future<CancelResultModel> cancel(final String purchaseOrProductId) async {
+  Future<CancelResultModel> cancel(String purchaseOrProductId) async {
     return CancelResultModel.failure(
       'Cancel is not supported in Yandex Games.',
     );
@@ -258,7 +258,7 @@ class YandexGamesPurchaseProvider implements PurchaseProvider {
 
     final purchases = await payments.getPurchasesUnsigned();
     return purchases
-        .map((final item) {
+        .map((item) {
           final details = _mapPurchase(
             purchase: item,
             productDetails: PurchaseProductDetailsModel(
@@ -278,7 +278,7 @@ class YandexGamesPurchaseProvider implements PurchaseProvider {
         .toList(growable: false);
   }
 
-  PurchaseProductDetailsModel _mapProduct(final ProductModel item) {
+  PurchaseProductDetailsModel _mapProduct(ProductModel item) {
     return PurchaseProductDetailsModel(
       freeTrialDuration: PurchaseDurationModel.zero,
       productId: PurchaseProductId.fromJson(item.id),
@@ -293,9 +293,9 @@ class YandexGamesPurchaseProvider implements PurchaseProvider {
   }
 
   PurchaseDetailsModel _mapPurchase({
-    required final PurchaseModel purchase,
-    required final PurchaseProductDetailsModel productDetails,
-    required final PurchaseStatus status,
+    required PurchaseModel purchase,
+    required PurchaseProductDetailsModel productDetails,
+    required PurchaseStatus status,
   }) {
     return PurchaseDetailsModel(
       purchaseDate: DateTime.now().toUtc(),
@@ -315,7 +315,7 @@ class YandexGamesPurchaseProvider implements PurchaseProvider {
     );
   }
 
-  PurchaseProductType _inferProductType(final String productId) {
+  PurchaseProductType _inferProductType(String productId) {
     final lower = productId.toLowerCase();
     if (lower.contains('sub')) {
       return PurchaseProductType.subscription;

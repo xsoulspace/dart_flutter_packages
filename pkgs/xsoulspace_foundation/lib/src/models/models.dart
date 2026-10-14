@@ -16,8 +16,8 @@ part of '../foundation.dart';
 @freezed
 class LoadableContainer<T> with _$LoadableContainer<T> {
   const factory LoadableContainer({
-    required final T value,
-    @Default(false) final bool isLoaded,
+    required T value,
+    @Default(false) bool isLoaded,
   }) = _LoadableContainer<T>;
   const LoadableContainer._();
 
@@ -26,7 +26,7 @@ class LoadableContainer<T> with _$LoadableContainer<T> {
   /// [value] The value to be contained.
   ///
   /// @ai Use this factory method when you have an immediately available value.
-  factory LoadableContainer.loaded(final T value) =>
+  factory LoadableContainer.loaded(T value) =>
       LoadableContainer<T>(value: value, isLoaded: true);
 
   /// Whether the container is currently in a loading state.
@@ -46,8 +46,8 @@ class LoadableContainer<T> with _$LoadableContainer<T> {
 @freezed
 class FieldContainer<T> with _$FieldContainer<T> {
   const factory FieldContainer({
-    required final T value,
-    @Default('') final String errorText,
-    @Default(false) final bool isLoading,
+    required T value,
+    @Default('') String errorText,
+    @Default(false) bool isLoading,
   }) = _FieldContainer<T>;
 }

@@ -13,8 +13,8 @@ class NonWebSpeechRecognitionAdapter implements WebSpeechRecognitionAdapter {
 
   @override
   Future<String> recognize({
-    required final InferenceAudioInput audioInput,
-    final String? language,
+    required InferenceAudioInput audioInput,
+    String? language,
   }) async {
     throw const WebSpeechRecognitionAdapterException(
       kind: WebSpeechRecognitionFailureKind.unsupported,

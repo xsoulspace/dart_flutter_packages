@@ -18,12 +18,12 @@ class VoskAvailabilityProbe implements InferenceReadinessProbe {
 
   bool isPlatformSupported() => platformProbe();
 
-  bool isConfigured(final VoskRuntimeConfig runtimeConfig) =>
+  bool isConfigured(VoskRuntimeConfig runtimeConfig) =>
       (runtimeConfig.libraryPath ?? '').trim().isNotEmpty ||
       runtimeConfig.librarySearchPaths.isNotEmpty ||
       runtimeConfig.ownsRuntimeResolution;
 
-  bool canLoad(final VoskRuntimeConfig runtimeConfig) {
+  bool canLoad(VoskRuntimeConfig runtimeConfig) {
     if (!isPlatformSupported() || !isConfigured(runtimeConfig)) {
       return false;
     }

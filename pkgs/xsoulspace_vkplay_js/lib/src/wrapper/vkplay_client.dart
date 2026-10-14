@@ -7,7 +7,7 @@ class VkPlayClient {
 
   final Object _api;
 
-  Future<void> init({final String? appId}) async {
+  Future<void> init({String? appId}) async {
     final args = <Object?>[
       if (appId == null) null else jsify(<String, Object?>{'app_id': appId}),
     ];
@@ -54,8 +54,8 @@ class VkPlayClient {
   }
 
   Future<List<VkPlayFriend>> userFriends({
-    final int? limit,
-    final int? offset,
+    int? limit,
+    int? offset,
   }) async {
     return _readFriends(
       methodName: 'userFriends',
@@ -66,8 +66,8 @@ class VkPlayClient {
   }
 
   Future<List<VkPlayFriend>> userSocialFriends({
-    final int? limit,
-    final int? offset,
+    int? limit,
+    int? offset,
   }) async {
     return _readFriends(
       methodName: 'userSocialFriends',
@@ -77,7 +77,7 @@ class VkPlayClient {
     );
   }
 
-  Future<Map<String, Object?>> invite(final VkPlayInvitePayload payload) async {
+  Future<Map<String, Object?>> invite(VkPlayInvitePayload payload) async {
     final result = await _callFirstAvailable(<String>[
       'showInviteBox',
       'invite',
@@ -86,7 +86,7 @@ class VkPlayClient {
   }
 
   Future<Map<String, Object?>> shareToFeed(
-    final VkPlayFeedSharePayload payload,
+    VkPlayFeedSharePayload payload,
   ) async {
     final result = await _callFirstAvailable(<String>[
       'postToFeed',
@@ -97,8 +97,8 @@ class VkPlayClient {
   }
 
   Future<Object?> callRaw(
-    final String methodName, {
-    final Map<String, Object?>? params,
+    String methodName, {
+    Map<String, Object?>? params,
   }) async {
     if (!_hasMethod(methodName)) {
       throw StateError('VK Play SDK method `$methodName` is not available.');
@@ -111,10 +111,10 @@ class VkPlayClient {
   }
 
   Future<List<VkPlayFriend>> _readFriends({
-    required final String methodName,
-    required final bool isSocial,
-    final int? limit,
-    final int? offset,
+    required String methodName,
+    required bool isSocial,
+    int? limit,
+    int? offset,
   }) async {
     if (!_hasMethod(methodName)) {
       return const <VkPlayFriend>[];
@@ -139,15 +139,15 @@ class VkPlayClient {
 
     return list
         .map(asMap)
-        .where((final item) => item.isNotEmpty)
-        .map((final item) => VkPlayFriend.fromMap(item, isSocial: isSocial))
-        .where((final item) => item.id.isNotEmpty)
+        .where((item) => item.isNotEmpty)
+        .map((item) => VkPlayFriend.fromMap(item, isSocial: isSocial))
+        .where((item) => item.id.isNotEmpty)
         .toList(growable: false);
   }
 
   Future<Object?> _callFirstAvailable(
-    final List<String> methods,
-    final Map<String, Object?> payload,
+    List<String> methods,
+    Map<String, Object?> payload,
   ) async {
     for (final method in methods) {
       if (_hasMethod(method)) {
@@ -159,5 +159,5 @@ class VkPlayClient {
     );
   }
 
-  bool _hasMethod(final String methodName) => prop(_api, methodName) != null;
+  bool _hasMethod(String methodName) => prop(_api, methodName) != null;
 }

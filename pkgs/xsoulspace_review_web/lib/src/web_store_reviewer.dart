@@ -12,8 +12,8 @@ final class WebStoreReviewer extends StoreReviewer {
 
   @override
   Future<void> requestReview(
-    final BuildContext context, {
-    final Locale? locale,
-    final bool force = false,
+    BuildContext context, {
+    Locale? locale,
+    bool force = false,
   }) async {}
 }

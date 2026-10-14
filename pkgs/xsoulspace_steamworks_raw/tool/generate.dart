@@ -16,9 +16,9 @@ final class UpstreamLock {
   final String headerSha256;
 
   UpstreamLock copyWith({
-    final String? sdkVersion,
-    final String? flatHeaderRelativePath,
-    final String? headerSha256,
+    String? sdkVersion,
+    String? flatHeaderRelativePath,
+    String? headerSha256,
   }) => UpstreamLock(
     sdkVersion: sdkVersion ?? this.sdkVersion,
     flatHeaderRelativePath:
@@ -32,7 +32,7 @@ final class UpstreamLock {
     'headerSha256': headerSha256,
   };
 
-  static UpstreamLock fromJson(final Map<String, Object?> json) => UpstreamLock(
+  static UpstreamLock fromJson(Map<String, Object?> json) => UpstreamLock(
     sdkVersion: json['sdkVersion']! as String,
     flatHeaderRelativePath: json['flatHeaderRelativePath']! as String,
     headerSha256: json['headerSha256']! as String,
@@ -59,7 +59,7 @@ final class GenerateOptions {
   final String? ffigenExec;
 }
 
-Future<void> main(final List<String> args) async {
+Future<void> main(List<String> args) async {
   final options = _parseOptions(args);
   if (options == null) {
     exitCode = 2;
@@ -283,7 +283,7 @@ Future<void> main(final List<String> args) async {
   }
 }
 
-GenerateOptions? _parseOptions(final List<String> args) {
+GenerateOptions? _parseOptions(List<String> args) {
   var checkOnly = false;
   var bumpLock = false;
   String? packageRoot;
@@ -292,7 +292,7 @@ GenerateOptions? _parseOptions(final List<String> args) {
   String? mockFfigenOutput;
   String? ffigenExec;
 
-  String? readValue(final int index, final String flag) {
+  String? readValue(int index, String flag) {
     if (index + 1 >= args.length) {
       stderr.writeln('Missing value after $flag');
       return null;
@@ -377,7 +377,7 @@ Options:
   --help                    Print usage.
 ''';
 
-String _readVersionFile(final String sdkRoot) {
+String _readVersionFile(String sdkRoot) {
   final versionFile = File(p.join(sdkRoot, 'steamworks_sdk_version.txt'));
   if (!versionFile.existsSync()) {
     return '';
@@ -385,7 +385,7 @@ String _readVersionFile(final String sdkRoot) {
   return versionFile.readAsStringSync().trim();
 }
 
-String _resolvePath(final String base, final String value) {
+String _resolvePath(String base, String value) {
   if (p.isAbsolute(value)) {
     return value;
   }
@@ -405,23 +405,23 @@ String _buildShimHeader() => '''
 ''';
 
 String _buildFfigenConfig({
-  required final String template,
-  required final String outputPath,
-  required final String shimPath,
-  required final String sdkPublicPath,
+  required String template,
+  required String outputPath,
+  required String shimPath,
+  required String sdkPublicPath,
 }) => template
     .replaceAll('__OUTPUT_PATH__', _yamlPath(outputPath))
     .replaceAll('__SHIM_HEADER_PATH__', _yamlPath(shimPath))
     .replaceAll('__SDK_PUBLIC_PATH__', _yamlPath(sdkPublicPath));
 
-String _yamlPath(final String value) => value.replaceAll(r'\', '/');
+String _yamlPath(String value) => value.replaceAll(r'\', '/');
 
 Future<void> _runFfigen({
-  required final String packageRoot,
-  required final String ffigenConfigPath,
-  required final String outputPath,
-  required final String? mockOutputPath,
-  required final String? ffigenExec,
+  required String packageRoot,
+  required String ffigenConfigPath,
+  required String outputPath,
+  required String? mockOutputPath,
+  required String? ffigenExec,
 }) async {
   if (mockOutputPath != null) {
     final mock = File(mockOutputPath);
@@ -462,8 +462,8 @@ Future<void> _runFfigen({
 }
 
 String _postProcessGeneratedOutput(
-  final String source, {
-  required final String sdkPath,
+  String source, {
+  required String sdkPath,
 }) {
   var content = source.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
   content = content.replaceAll(
@@ -472,13 +472,13 @@ String _postProcessGeneratedOutput(
   );
   content = content
       .split('\n')
-      .map((final line) => line.replaceFirst(RegExp(r'[ \t]+$'), ''))
+      .map((line) => line.replaceFirst(RegExp(r'[ \t]+$'), ''))
       .join('\n')
       .trimRight();
   return '$content\n';
 }
 
-List<String> _extractSymbols(final String headerSource) {
+List<String> _extractSymbols(String headerSource) {
   final symbols = <String>{};
   final lines = const LineSplitter().convert(headerSource);
 
@@ -518,11 +518,11 @@ List<String> _extractSymbols(final String headerSource) {
 }
 
 void _checkOrWrite({
-  required final String path,
-  required final String content,
-  required final bool checkOnly,
-  required final List<String> touchedFiles,
-  required final List<String> mismatches,
+  required String path,
+  required String content,
+  required bool checkOnly,
+  required List<String> touchedFiles,
+  required List<String> mismatches,
 }) {
   final file = File(path);
   if (checkOnly) {

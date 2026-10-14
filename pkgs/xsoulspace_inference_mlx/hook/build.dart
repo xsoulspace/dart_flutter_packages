@@ -217,7 +217,7 @@ void main(List<String> args) async {
 }
 
 /// The newest Cmlx resource-bundle metallib under [spmRoot]/.build.
-String? _findMetallib(final String spmRoot) {
+String? _findMetallib(String spmRoot) {
   final buildDir = Directory('$spmRoot/.build');
   if (!buildDir.existsSync()) return null;
   String? best;

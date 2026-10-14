@@ -23,7 +23,7 @@ final class LogQuery {
   final String? fingerprint;
   final int? limit;
 
-  bool matches(final LogRecord record) {
+  bool matches(LogRecord record) {
     if (fromUtc != null && record.timestampUtc.isBefore(fromUtc!.toUtc())) {
       return false;
     }
@@ -55,7 +55,7 @@ final class LogQuery {
         ..write(' ')
         ..write(record.error?.toString() ?? '');
 
-      record.fields.forEach((final key, final value) {
+      record.fields.forEach((key, value) {
         haystack
           ..write(' ')
           ..write(key)

@@ -52,11 +52,11 @@ enum Lfm2ChatTemplateVariant { lfm25_12b, lfm25_26b }
 /// handing the render to [NativeLfm2TextEngine.generate] passes
 /// `includeBos: false` and lets the native side add exactly one BOS.
 String renderLfm2ChatPrompt({
-  required final List<Lfm2ChatMessage> messages,
-  final List<Object?>? tools,
-  final bool addGenerationPrompt = true,
-  final bool includeBos = true,
-  final Lfm2ChatTemplateVariant variant = Lfm2ChatTemplateVariant.lfm25_12b,
+  required List<Lfm2ChatMessage> messages,
+  List<Object?>? tools,
+  bool addGenerationPrompt = true,
+  bool includeBos = true,
+  Lfm2ChatTemplateVariant variant = Lfm2ChatTemplateVariant.lfm25_12b,
 }) {
   final buffer = StringBuffer();
   if (includeBos) {
@@ -130,7 +130,7 @@ String renderLfm2ChatPrompt({
 /// `\uXXXX` escape, surrogate pairs for astral runes). Note Dart's own
 /// `jsonEncode` differs on BOTH counts (compact separators, raw
 /// non-ASCII), which is why this encoder exists.
-String _templateJsonDumps(final Object? value) {
+String _templateJsonDumps(Object? value) {
   if (value == null) {
     return 'null';
   }
@@ -147,7 +147,7 @@ String _templateJsonDumps(final Object? value) {
     return '[${value.map(_templateJsonDumps).join(', ')}]';
   }
   if (value is Map) {
-    return '{${value.entries.map((final entry) {
+    return '{${value.entries.map((entry) {
       final key = entry.key;
       if (key is! String) {
         throw ArgumentError.value(
@@ -170,7 +170,7 @@ String _templateJsonDumps(final Object? value) {
 /// escaping: `\"`, `\\`, the `\b\t\n\f\r` shorthands, `\uXXXX` (lowercase
 /// hex) for every other rune outside printable ASCII (`\ -~`), and
 /// surrogate pairs for astral runes.
-String _templateJsonString(final String value) {
+String _templateJsonString(String value) {
   final buffer = StringBuffer('"');
   for (final rune in value.runes) {
     if (rune >= 0x20 && rune <= 0x7e) {

@@ -23,17 +23,17 @@ final class OpenRouterSystemOneDecisionProvider
   // facts) at this public boundary, so they cannot be plain super params.
   // ignore: use_super_parameters
   OpenRouterSystemOneDecisionProvider({
-    required final String apiKey,
-    required final String model,
-    final Uri? endpoint,
-    final http.Client? httpClient,
-    final Duration timeout = const Duration(seconds: 30),
-    final int maxTransientRetries = 0,
-    final Duration retryDelay = const Duration(milliseconds: 100),
-    final void Function(Map<String, Object?> event)? onDiagnosticEvent,
-    final int maxStateUtf8Bytes = 1 << 20,
-    final int maxRequestUtf8Bytes = 2 << 20,
-    final int maxQuestionsPerRequest = 64,
+    required String apiKey,
+    required String model,
+    Uri? endpoint,
+    http.Client? httpClient,
+    Duration timeout = const Duration(seconds: 30),
+    int maxTransientRetries = 0,
+    Duration retryDelay = const Duration(milliseconds: 100),
+    void Function(Map<String, Object?> event)? onDiagnosticEvent,
+    int maxStateUtf8Bytes = 1 << 20,
+    int maxRequestUtf8Bytes = 2 << 20,
+    int maxQuestionsPerRequest = 64,
   }) : super(
          apiKey: apiKey,
          model: model,

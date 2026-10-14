@@ -5,7 +5,7 @@ final class ExampleFakeSteamNativeApiFactory implements SteamNativeApiFactory {
   const ExampleFakeSteamNativeApiFactory();
 
   @override
-  SteamNativeApi create(final SteamInitConfig config) => _FakeSteamNativeApi();
+  SteamNativeApi create(SteamInitConfig config) => _FakeSteamNativeApi();
 }
 
 final class _FakeSteamNativeApi implements SteamNativeApi {
@@ -18,14 +18,14 @@ final class _FakeSteamNativeApi implements SteamNativeApi {
       const <SteamManualCallback>[];
 
   @override
-  int friendByIndex(final int index, final int flags) =>
+  int friendByIndex(int index, int flags) =>
       const <int>[1001, 1002, 1003][index];
 
   @override
-  int friendCount(final int flags) => 3;
+  int friendCount(int flags) => 3;
 
   @override
-  String friendPersonaName(final int steamId) {
+  String friendPersonaName(int steamId) {
     switch (steamId) {
       case 1001:
         return 'Alice';
@@ -39,26 +39,26 @@ final class _FakeSteamNativeApi implements SteamNativeApi {
   }
 
   @override
-  bool clearAchievement(final String name) {
+  bool clearAchievement(String name) {
     _achievements[name] = false;
     return true;
   }
 
   @override
   SteamApiCallResultPayload? getApiCallResult({
-    required final int apiCallHandle,
-    required final int expectedCallbackId,
-    required final int callbackBufferSize,
+    required int apiCallHandle,
+    required int expectedCallbackId,
+    required int callbackBufferSize,
   }) => null;
 
   @override
-  bool? getAchievement(final String name) => _achievements[name];
+  bool? getAchievement(String name) => _achievements[name];
 
   @override
-  double? getStatFloat(final String name) => _floatStats[name];
+  double? getStatFloat(String name) => _floatStats[name];
 
   @override
-  int? getStatInt32(final String name) => _intStats[name];
+  int? getStatInt32(String name) => _intStats[name];
 
   @override
   int get hSteamPipe => 1;
@@ -77,25 +77,25 @@ final class _FakeSteamNativeApi implements SteamNativeApi {
   bool requestCurrentStats() => true;
 
   @override
-  bool restartAppIfNecessary(final int appId) => false;
+  bool restartAppIfNecessary(int appId) => false;
 
   @override
   void runCallbacks() {}
 
   @override
-  bool setAchievement(final String name) {
+  bool setAchievement(String name) {
     _achievements[name] = true;
     return true;
   }
 
   @override
-  bool setStatFloat(final String name, final double value) {
+  bool setStatFloat(String name, double value) {
     _floatStats[name] = value;
     return true;
   }
 
   @override
-  bool setStatInt32(final String name, final int value) {
+  bool setStatInt32(String name, int value) {
     _intStats[name] = value;
     return true;
   }

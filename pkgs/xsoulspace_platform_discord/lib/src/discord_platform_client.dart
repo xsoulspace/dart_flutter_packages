@@ -39,7 +39,7 @@ final class DiscordPlatformClient implements PlatformClient {
   PlatformId get platformId => PlatformId.discord;
 
   @override
-  Future<PlatformInitResult> init(final PlatformInitOptions options) async {
+  Future<PlatformInitResult> init(PlatformInitOptions options) async {
     final bool sdkReady;
     try {
       sdkReady = await _ensureSdkReady();
@@ -136,7 +136,7 @@ final class DiscordPlatformClient implements PlatformClient {
         payload: <String, Object?>{
           'expectedSdkGlobal': config.expectedSdkGlobal,
           'capabilities': capabilityTypes
-              .map((final type) => type.toString())
+              .map((type) => type.toString())
               .toList(growable: false),
         },
       ),
@@ -214,7 +214,7 @@ final class DiscordPlatformClient implements PlatformClient {
     return Discord.isAvailable(expectedGlobal: config.expectedSdkGlobal);
   }
 
-  Future<bool> _hasActivityContext(final DiscordClient sdk) async {
+  Future<bool> _hasActivityContext(DiscordClient sdk) async {
     final probe = config.activityContextProbe;
     if (probe != null) {
       return probe(sdk);
@@ -228,7 +228,7 @@ final class DiscordPlatformClient implements PlatformClient {
     }
   }
 
-  Future<void> _runOAuthHandshakeIfNeeded(final DiscordClient sdk) async {
+  Future<void> _runOAuthHandshakeIfNeeded(DiscordClient sdk) async {
     final gateway = config.oauthGateway;
     if (gateway == null) {
       return;
@@ -277,8 +277,8 @@ final class DiscordPlatformClient implements PlatformClient {
     );
   }
 
-  Future<void> _bindSdkEvents(final DiscordClient sdk) async {
-    _currentUserSubscription = await sdk.onCurrentUserUpdate((final user) {
+  Future<void> _bindSdkEvents(DiscordClient sdk) async {
+    _currentUserSubscription = await sdk.onCurrentUserUpdate((user) {
       _currentIdentity = user == null ? null : _toIdentity(user);
       _emitAuth(_currentIdentity);
       _emit(
@@ -292,7 +292,7 @@ final class DiscordPlatformClient implements PlatformClient {
       );
     });
 
-    _relationshipSubscription = await sdk.onRelationshipUpdate((final value) {
+    _relationshipSubscription = await sdk.onRelationshipUpdate((value) {
       _emit(
         PlatformEvent.now(
           name: 'discord.relationship.updated',
@@ -305,7 +305,7 @@ final class DiscordPlatformClient implements PlatformClient {
     });
   }
 
-  PlayerIdentity _toIdentity(final DiscordUser user) {
+  PlayerIdentity _toIdentity(DiscordUser user) {
     return PlayerIdentity(
       id: user.id,
       displayName: user.displayName,
@@ -315,14 +315,14 @@ final class DiscordPlatformClient implements PlatformClient {
     );
   }
 
-  void _emit(final PlatformEvent event) {
+  void _emit(PlatformEvent event) {
     if (_disposed || _eventsController.isClosed) {
       return;
     }
     _eventsController.add(event);
   }
 
-  void _emitAuth(final PlayerIdentity? identity) {
+  void _emitAuth(PlayerIdentity? identity) {
     if (_disposed || _authController.isClosed) {
       return;
     }
@@ -357,15 +357,15 @@ final class _DiscordFriendsCapability implements FriendsCapability {
 
   @override
   Future<List<PlayerFriend>> listFriends({
-    final int? limit,
-    final int? offset,
+    int? limit,
+    int? offset,
   }) async {
     final relationships = await _sdk.getRelationships();
 
     final friends = relationships
-        .where((final value) => value.type == 1)
+        .where((value) => value.type == 1)
         .map(
-          (final value) => PlayerFriend(
+          (value) => PlayerFriend(
             id: value.user.id,
             displayName: value.user.displayName,
             avatarUrl: value.user.avatarUrl,
@@ -393,7 +393,7 @@ final class _DiscordInviteCapability implements InviteCapability {
   String get capabilityName => 'invite';
 
   @override
-  Future<InviteResult> invite(final InviteRequest request) async {
+  Future<InviteResult> invite(InviteRequest request) async {
     try {
       if (request.recipientIds.isNotEmpty) {
         final response = await _sdk.inviteUserEmbedded(
@@ -431,7 +431,7 @@ final class _DiscordFeedShareCapability implements FeedShareCapability {
   String get capabilityName => 'feed.share';
 
   @override
-  Future<FeedShareResult> shareToFeed(final FeedShareRequest request) async {
+  Future<FeedShareResult> shareToFeed(FeedShareRequest request) async {
     try {
       final message =
           request.message ?? request.linkUrl ?? 'Shared from Discord';
@@ -472,8 +472,8 @@ final class _DiscordRawCapabilityImpl implements DiscordRawCapability {
 
   @override
   Future<Object?> callRaw(
-    final String methodName, {
-    final Map<String, Object?>? params,
+    String methodName, {
+    Map<String, Object?>? params,
   }) {
     return client.callRawCommand(methodName, params: params);
   }

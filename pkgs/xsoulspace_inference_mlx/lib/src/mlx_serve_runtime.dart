@@ -16,9 +16,9 @@ final class MlxServeArguments {
 
   /// `--model <model> --host <host> --port <port>`.
   static List<String> command({
-    required final String model,
-    final String host = '127.0.0.1',
-    final int port = MlxServeRuntime.defaultPort,
+    required String model,
+    String host = '127.0.0.1',
+    int port = MlxServeRuntime.defaultPort,
   }) => <String>['--model', model, '--host', host, '--port', '$port'];
 }
 
@@ -41,16 +41,16 @@ final class MlxServeRuntime {
   static Uri defaultEndpoint() => Uri.parse('http://127.0.0.1:$defaultPort');
 
   MlxServeRuntime({
-    final Uri? healthEndpoint,
+    Uri? healthEndpoint,
     this.executable = 'mlx_lm.server',
-    final List<String> arguments = const <String>[],
-    final Map<String, String> environment = const <String, String>{},
+    List<String> arguments = const <String>[],
+    Map<String, String> environment = const <String, String>{},
     this.spawnOnMiss = false,
     // Model load on an M1-class machine takes tens of seconds; the health
     // deadline must cover a cold load, not just a socket wait.
     this.healthTimeout = const Duration(seconds: 120),
     this.pollInterval = const Duration(milliseconds: 250),
-    final void Function(Map<String, Object?> event)? onDiagnosticEvent,
+    void Function(Map<String, Object?> event)? onDiagnosticEvent,
     http.Client? httpClient,
     ServeProcessStarter processStarter = ioStart,
   }) : _runtime = LocalServeRuntime(

@@ -67,13 +67,13 @@ class CodexExecInferenceClient
 
   @override
   Future<InferenceResult<InferenceResponse>> infer(
-    final InferenceRequest request, {
+    InferenceRequest request, {
     ToolRegistry? toolRegistry,
   }) => _runInference(request);
 
   @override
   Future<InferenceStructuredTextStreamSession> streamStructuredText(
-    final InferenceRequest request,
+    InferenceRequest request,
   ) async {
     final session = _CodexStructuredTextStreamSession();
     session.start(
@@ -87,9 +87,9 @@ class CodexExecInferenceClient
   }
 
   Future<InferenceResult<InferenceResponse>> _runInference(
-    final InferenceRequest request, {
-    final void Function(InferenceStructuredTextStreamEvent event)? onEvent,
-    final _ExecutionControl? executionControl,
+    InferenceRequest request, {
+    void Function(InferenceStructuredTextStreamEvent event)? onEvent,
+    _ExecutionControl? executionControl,
   }) async {
     final preflightFailure = _validateRequest(request);
     if (preflightFailure != null) {
@@ -322,7 +322,7 @@ class CodexExecInferenceClient
         'execution_timeout_ms': executionTimeout.inMilliseconds,
         'output_source': rawOutputResult.data!.source,
         'output_bytes': rawOutputResult.data!.byteLength,
-        'attempts': attempts.map((final run) => run.toSummary()).toList(),
+        'attempts': attempts.map((run) => run.toSummary()).toList(),
         if (_resolveModel(request) != null) 'model': _resolveModel(request),
         if (_resolveReasoningEffort(request) != null)
           'reasoning_effort': _resolveReasoningEffort(request),
@@ -391,7 +391,7 @@ class CodexExecInferenceClient
   }
 
   InferenceResult<InferenceResponse>? _validateRequest(
-    final InferenceRequest request,
+    InferenceRequest request,
   ) {
     if (!supportedTasks.contains(request.task)) {
       return InferenceResult<InferenceResponse>.fail(
@@ -399,7 +399,7 @@ class CodexExecInferenceClient
         message: 'Task ${request.task.name} is not supported by $id',
         details: <String, dynamic>{
           'supported_tasks': supportedTasks
-              .map((final task) => task.name)
+              .map((task) => task.name)
               .toList(),
           'requested_task': request.task.name,
         },
@@ -436,9 +436,9 @@ class CodexExecInferenceClient
   }
 
   InferenceResult<InferenceResponse> _buildExecFailureResult({
-    required final _ExecRunResult result,
-    required final List<_ExecRunResult> attempts,
-    required final List<String> warnings,
+    required _ExecRunResult result,
+    required List<_ExecRunResult> attempts,
+    required List<String> warnings,
   }) {
     final authFailure = _isAuthFailure(result);
     final code = result.timedOut
@@ -465,14 +465,14 @@ class CodexExecInferenceClient
   }
 
   Future<_ExecRunResult> _runExec({
-    required final String binaryPath,
-    required final InferenceRequest request,
-    required final String schemaPath,
-    required final String outputPath,
-    required final List<String> autoArgs,
-    required final int attempt,
-    final void Function(InferenceStructuredTextStreamEvent event)? onEvent,
-    final _ExecutionControl? executionControl,
+    required String binaryPath,
+    required InferenceRequest request,
+    required String schemaPath,
+    required String outputPath,
+    required List<String> autoArgs,
+    required int attempt,
+    void Function(InferenceStructuredTextStreamEvent event)? onEvent,
+    _ExecutionControl? executionControl,
   }) async {
     final skipGitRepoCheck = !Directory(
       p.join(request.workingDirectory, '.git'),
@@ -534,8 +534,8 @@ class CodexExecInferenceClient
     late final StreamSubscription<String> stderrSub;
 
     void handleChunk(
-      final InferenceStructuredTextRawChannel channel,
-      final String chunk,
+      InferenceStructuredTextRawChannel channel,
+      String chunk,
     ) {
       if (chunk.isEmpty) {
         return;
@@ -570,10 +570,10 @@ class CodexExecInferenceClient
     stdoutSub = process.stdout
         .transform(utf8.decoder)
         .listen(
-          (final chunk) =>
+          (chunk) =>
               handleChunk(InferenceStructuredTextRawChannel.stdout, chunk),
           onDone: () => stdoutDone.complete(),
-          onError: (final Object error, final StackTrace stackTrace) {
+          onError: (Object error, StackTrace stackTrace) {
             stdoutBuffer.write('$error');
             if (!stdoutDone.isCompleted) {
               stdoutDone.complete();
@@ -584,10 +584,10 @@ class CodexExecInferenceClient
     stderrSub = process.stderr
         .transform(utf8.decoder)
         .listen(
-          (final chunk) =>
+          (chunk) =>
               handleChunk(InferenceStructuredTextRawChannel.stderr, chunk),
           onDone: () => stderrDone.complete(),
-          onError: (final Object error, final StackTrace stackTrace) {
+          onError: (Object error, StackTrace stackTrace) {
             stderrBuffer.write('$error');
             if (!stderrDone.isCompleted) {
               stderrDone.complete();
@@ -639,7 +639,7 @@ class CodexExecInferenceClient
     }
   }
 
-  String? _resolveModel(final InferenceRequest request) {
+  String? _resolveModel(InferenceRequest request) {
     final metadataValue =
         request.metadata['inferenceModel'] ??
         request.metadata['codexExecModel'];
@@ -649,7 +649,7 @@ class CodexExecInferenceClient
     return normalized ?? _normalizeConfigValue(defaultModel);
   }
 
-  String? _resolveReasoningEffort(final InferenceRequest request) {
+  String? _resolveReasoningEffort(InferenceRequest request) {
     final metadataValue =
         request.metadata['inferenceReasoningEffort'] ??
         request.metadata['codexExecReasoningEffort'];
@@ -659,10 +659,10 @@ class CodexExecInferenceClient
     return normalized ?? _normalizeReasoningEffort(defaultReasoningEffort);
   }
 
-  bool _hasText(final String? value) =>
+  bool _hasText(String? value) =>
       value != null && value.trim().isNotEmpty;
 
-  String? _normalizeConfigValue(final String? value) {
+  String? _normalizeConfigValue(String? value) {
     final trimmed = value?.trim();
     if (trimmed == null || trimmed.isEmpty) {
       return null;
@@ -670,7 +670,7 @@ class CodexExecInferenceClient
     return trimmed;
   }
 
-  String? _normalizeReasoningEffort(final String? value) {
+  String? _normalizeReasoningEffort(String? value) {
     final trimmed = _normalizeConfigValue(value)?.toLowerCase();
     return switch (trimmed) {
       null => null,
@@ -680,8 +680,8 @@ class CodexExecInferenceClient
   }
 
   Future<InferenceResult<_RawOutput>> _readRawOutput({
-    required final String outputPath,
-    required final String stdoutFallback,
+    required String outputPath,
+    required String stdoutFallback,
   }) async {
     final outputFile = File(outputPath);
     if (await outputFile.exists()) {
@@ -743,11 +743,11 @@ class CodexExecInferenceClient
   }
 
   void _emitLifecycle(
-    final void Function(InferenceStructuredTextStreamEvent event)? onEvent,
-    final InferenceStructuredTextLifecycleState state, {
-    required final String message,
-    required final int attempt,
-    final Map<String, dynamic> metadata = const <String, dynamic>{},
+    void Function(InferenceStructuredTextStreamEvent event)? onEvent,
+    InferenceStructuredTextLifecycleState state, {
+    required String message,
+    required int attempt,
+    Map<String, dynamic> metadata = const <String, dynamic>{},
   }) => _emitEvent(
     onEvent,
     InferenceStructuredTextStreamEvent(
@@ -761,10 +761,10 @@ class CodexExecInferenceClient
   );
 
   void _emitProgress(
-    final void Function(InferenceStructuredTextStreamEvent event)? onEvent,
-    final String message, {
-    required final int attempt,
-    final Map<String, dynamic> metadata = const <String, dynamic>{},
+    void Function(InferenceStructuredTextStreamEvent event)? onEvent,
+    String message, {
+    required int attempt,
+    Map<String, dynamic> metadata = const <String, dynamic>{},
   }) => _emitEvent(
     onEvent,
     InferenceStructuredTextStreamEvent(
@@ -777,9 +777,9 @@ class CodexExecInferenceClient
   );
 
   void _emitPartialOutput(
-    final void Function(InferenceStructuredTextStreamEvent event)? onEvent,
-    final String textDelta, {
-    required final int attempt,
+    void Function(InferenceStructuredTextStreamEvent event)? onEvent,
+    String textDelta, {
+    required int attempt,
   }) => _emitEvent(
     onEvent,
     InferenceStructuredTextStreamEvent(
@@ -791,11 +791,11 @@ class CodexExecInferenceClient
   );
 
   void _emitRaw(
-    final void Function(InferenceStructuredTextStreamEvent event)? onEvent,
-    final InferenceStructuredTextRawChannel channel,
-    final String rawText, {
-    required final int attempt,
-    final Map<String, dynamic> metadata = const <String, dynamic>{},
+    void Function(InferenceStructuredTextStreamEvent event)? onEvent,
+    InferenceStructuredTextRawChannel channel,
+    String rawText, {
+    required int attempt,
+    Map<String, dynamic> metadata = const <String, dynamic>{},
   }) => _emitEvent(
     onEvent,
     InferenceStructuredTextStreamEvent(
@@ -809,10 +809,10 @@ class CodexExecInferenceClient
   );
 
   void _emitWarning(
-    final void Function(InferenceStructuredTextStreamEvent event)? onEvent,
-    final String message, {
-    required final int attempt,
-    final bool isTransient = false,
+    void Function(InferenceStructuredTextStreamEvent event)? onEvent,
+    String message, {
+    required int attempt,
+    bool isTransient = false,
   }) => _emitEvent(
     onEvent,
     InferenceStructuredTextStreamEvent(
@@ -825,10 +825,10 @@ class CodexExecInferenceClient
   );
 
   void _emitFailure(
-    final void Function(InferenceStructuredTextStreamEvent event)? onEvent,
-    final InferenceResult<InferenceResponse> result, {
-    required final int attempt,
-    required final InferenceStructuredTextLifecycleState lifecycleState,
+    void Function(InferenceStructuredTextStreamEvent event)? onEvent,
+    InferenceResult<InferenceResponse> result, {
+    required int attempt,
+    required InferenceStructuredTextLifecycleState lifecycleState,
   }) {
     _emitLifecycle(
       onEvent,
@@ -851,9 +851,9 @@ class CodexExecInferenceClient
   }
 
   void _emitCompletion(
-    final void Function(InferenceStructuredTextStreamEvent event)? onEvent,
-    final InferenceResult<InferenceResponse> result, {
-    required final int attempt,
+    void Function(InferenceStructuredTextStreamEvent event)? onEvent,
+    InferenceResult<InferenceResponse> result, {
+    required int attempt,
   }) => _emitEvent(
     onEvent,
     InferenceStructuredTextStreamEvent(
@@ -869,8 +869,8 @@ class CodexExecInferenceClient
   );
 
   void _emitEvent(
-    final void Function(InferenceStructuredTextStreamEvent event)? onEvent,
-    final InferenceStructuredTextStreamEvent event,
+    void Function(InferenceStructuredTextStreamEvent event)? onEvent,
+    InferenceStructuredTextStreamEvent event,
   ) {
     if (onEvent == null) {
       return;
@@ -878,14 +878,14 @@ class CodexExecInferenceClient
     onEvent(event);
   }
 
-  bool _shouldRetryLegacy(final String stderr) {
+  bool _shouldRetryLegacy(String stderr) {
     final normalized = stderr.toLowerCase();
     return normalized.contains('unexpected argument') ||
         normalized.contains('found argument') ||
         normalized.contains('unrecognized option');
   }
 
-  bool _isTransientFailure(final _ExecRunResult result) {
+  bool _isTransientFailure(_ExecRunResult result) {
     if (result.timedOut) {
       return true;
     }
@@ -898,7 +898,7 @@ class CodexExecInferenceClient
         normalized.contains('resource busy');
   }
 
-  bool _isAuthFailure(final _ExecRunResult result) {
+  bool _isAuthFailure(_ExecRunResult result) {
     final normalized = '${result.stderr}\n${result.stdout}'.toLowerCase();
     return normalized.contains('401 unauthorized') ||
         normalized.contains('status: 401') ||
@@ -911,9 +911,9 @@ class CodexExecInferenceClient
   }
 
   Map<String, dynamic> _buildFailureDetails({
-    required final _ExecRunResult result,
-    required final List<_ExecRunResult> attempts,
-    required final bool authFailure,
+    required _ExecRunResult result,
+    required List<_ExecRunResult> attempts,
+    required bool authFailure,
   }) {
     final stderr = result.stderr.trim();
     final stdout = result.stdout.trim();
@@ -928,11 +928,11 @@ class CodexExecInferenceClient
           'Provide CODEX_API_KEY to codex exec.',
           'Or run codex login --with-api-key before running inference.',
         ],
-      'attempts': attempts.map((final run) => run.toSummary()).toList(),
+      'attempts': attempts.map((run) => run.toSummary()).toList(),
     };
   }
 
-  String _truncate(final String value, {final int max = 2000}) {
+  String _truncate(String value, {int max = 2000}) {
     if (value.length <= max) {
       return value;
     }
@@ -956,7 +956,7 @@ class CodexExecInferenceClient
 
     final pathSegments = pathEnv
         .split(Platform.isWindows ? ';' : ':')
-        .where((final segment) => segment.isNotEmpty);
+        .where((segment) => segment.isNotEmpty);
 
     for (final segment in pathSegments) {
       final candidate = p.join(segment, binaryName);
@@ -984,14 +984,14 @@ final class _ExecutionControl {
 
   bool get canceled => _canceled;
 
-  void attach(final Process process) {
+  void attach(Process process) {
     _process = process;
     if (_canceled) {
       _kill(process);
     }
   }
 
-  void detach(final Process process) {
+  void detach(Process process) {
     if (identical(_process, process)) {
       _process = null;
     }
@@ -1006,7 +1006,7 @@ final class _ExecutionControl {
     _kill(process);
   }
 
-  void _kill(final Process process) {
+  void _kill(Process process) {
     process.kill();
     try {
       process.kill(ProcessSignal.sigkill);
@@ -1034,14 +1034,14 @@ final class _CodexStructuredTextStreamSession
   Future<InferenceResult<InferenceResponse>> get result =>
       _resultCompleter.future;
 
-  void emit(final InferenceStructuredTextStreamEvent event) {
+  void emit(InferenceStructuredTextStreamEvent event) {
     if (_disposed || _controller.isClosed) {
       return;
     }
     _controller.add(event);
   }
 
-  void start(final Future<InferenceResult<InferenceResponse>> Function() run) {
+  void start(Future<InferenceResult<InferenceResponse>> Function() run) {
     unawaited(() async {
       try {
         final resolved = await run();

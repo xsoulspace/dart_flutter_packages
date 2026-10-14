@@ -46,7 +46,7 @@ void main() {
       () async {
         late http.Request captured;
         final provider = LayaServerDecisionProvider(
-          httpClient: MockClient((final request) async {
+          httpClient: MockClient((request) async {
             captured = request;
             return _successResponse(model: 'laya-en-20260918');
           }),
@@ -83,7 +83,7 @@ void main() {
       late http.Request captured;
       final provider = LayaServerDecisionProvider(
         apiKey: 'laya-key',
-        httpClient: MockClient((final request) async {
+        httpClient: MockClient((request) async {
           captured = request;
           return _successResponse();
         }),
@@ -100,11 +100,11 @@ void main() {
         late http.Request captured;
         final events = <Map<String, Object?>>[];
         final provider = LayaServerDecisionProvider(
-          httpClient: MockClient((final request) async {
+          httpClient: MockClient((request) async {
             captured = request;
             return _successResponse();
           }),
-          onDiagnosticEvent: (final event) {
+          onDiagnosticEvent: (event) {
             events.add(event);
             throw StateError('diagnostic sink unavailable');
           },
@@ -386,9 +386,9 @@ void main() {
 const String _state = 'Verification failed after the semantic edit.';
 
 LayaServerDecisionProvider _provider(
-  final http.Client client, {
-  final int maxTransientRetries = 0,
-  final Duration timeout = const Duration(seconds: 1),
+  http.Client client, {
+  int maxTransientRetries = 0,
+  Duration timeout = const Duration(seconds: 1),
 }) => LayaServerDecisionProvider(
   apiKey: 'laya-key',
   httpClient: client,
@@ -398,12 +398,12 @@ LayaServerDecisionProvider _provider(
 );
 
 DecisionRequest _request({
-  final String suffix = 'a',
-  final String state = _state,
-  final DecisionCancellationId cancellationId = const DecisionCancellationId(
+  String suffix = 'a',
+  String state = _state,
+  DecisionCancellationId cancellationId = const DecisionCancellationId(
     'cancel-a',
   ),
-  final List<FiniteChoiceQuestion>? questions,
+  List<FiniteChoiceQuestion>? questions,
 }) => DecisionRequest(
   correlation: DecisionCorrelation(
     requestId: DecisionRequestId('req-$suffix'),
@@ -444,9 +444,9 @@ Map<String, Object?> _answer() => <String, Object?>{
 };
 
 http.Response _successResponse({
-  final String? model,
-  final Map<String, Object?> answerOverrides = const <String, Object?>{},
-  final Map<String, Object?> extra = const <String, Object?>{},
+  String? model,
+  Map<String, Object?> answerOverrides = const <String, Object?>{},
+  Map<String, Object?> extra = const <String, Object?>{},
 }) => http.Response(
   jsonEncode(_successPayload(model: model, answerOverrides: answerOverrides)
     ..addAll(extra)),
@@ -454,8 +454,8 @@ http.Response _successResponse({
 );
 
 Map<String, Object?> _successPayload({
-  final String? model,
-  final Map<String, Object?> answerOverrides = const <String, Object?>{},
+  String? model,
+  Map<String, Object?> answerOverrides = const <String, Object?>{},
 }) => <String, Object?>{
   'id': 'generation-1',
   'model': model ?? 'laya-20260918',

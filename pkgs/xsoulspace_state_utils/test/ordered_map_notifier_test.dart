@@ -22,7 +22,7 @@ void main() {
     late String Function(String) stringToKey;
 
     setUp(() {
-      stringToKey = (final key) => key;
+      stringToKey = (key) => key;
     });
 
     group('initialization', () {
@@ -480,7 +480,7 @@ void main() {
     group('edge cases', () {
       test('in case if key is null, value is used', () {
         final notifier = env.makeOrderedMapNotifier<String?, String>(
-          (final k) => k,
+          (k) => k,
         );
 
         var notified = false;
@@ -537,7 +537,7 @@ void main() {
 
       test('handles duplicate keys from toKey function', () {
         final userNotifier = env.makeOrderedMapNotifier<String, TestUser>(
-          (final user) => 'same-key',
+          (user) => 'same-key',
         );
         final users = someTestUsers();
         var notified = false;
@@ -621,7 +621,7 @@ void main() {
           notifier.upsertAll([
             'value1',
             'value2',
-          ], toKey: (final v) => v.replaceAll('value', 'key'));
+          ], toKey: (v) => v.replaceAll('value', 'key'));
 
           expect(notifier, hasLength(2));
           expect(notifier['key1'], 'value1');
@@ -647,7 +647,7 @@ void main() {
           notifier.upsertAll([
             'updated1',
             'updated2',
-          ], toKey: (final v) => v.replaceAll('updated', 'key'));
+          ], toKey: (v) => v.replaceAll('updated', 'key'));
 
           expect(notifier, hasLength(2));
           expect(notifier['key1'], 'updated1');
@@ -672,7 +672,7 @@ void main() {
           notifier.upsertAll(
             ['value3', 'value4'],
             putFirst: true,
-            toKey: (final v) => v.replaceAll('value', 'key'),
+            toKey: (v) => v.replaceAll('value', 'key'),
           );
 
           expect(notifier, hasLength(4));
@@ -702,7 +702,7 @@ void main() {
 
           notifier.upsertAll(
             ['updated2', 'value3'],
-            toKey: (final v) => switch (v) {
+            toKey: (v) => switch (v) {
               'updated2' => 'key2',
               'value3' => 'key3',
               _ => throw ArgumentError.value(v, 'v', 'Invalid value'),
@@ -752,7 +752,7 @@ void main() {
           notifier.upsertAll([
             'value2',
             'value3',
-          ], toKey: (final v) => 'custom_${v.replaceAll('value', 'key')}');
+          ], toKey: (v) => 'custom_${v.replaceAll('value', 'key')}');
 
           expect(notifier, hasLength(3));
           expect(notifier['custom_key2'], 'value2');
@@ -774,10 +774,10 @@ void main() {
 
           notifier.addListener(() => notificationCount++);
 
-          final values = List.generate(count, (final i) => 'value$i');
+          final values = List.generate(count, (i) => 'value$i');
           notifier.upsertAll(
             values,
-            toKey: (final v) => v.replaceAll('value', 'key'),
+            toKey: (v) => v.replaceAll('value', 'key'),
           );
 
           expect(notifier, hasLength(count));
@@ -806,7 +806,7 @@ void main() {
 
           notifier.upsertAll(
             ['updated2', 'value3'],
-            toKey: (final v) => switch (v) {
+            toKey: (v) => switch (v) {
               'updated2' => 'key2',
               'value3' => 'key3',
               _ => throw ArgumentError.value(v, 'v', 'Invalid value'),
@@ -831,7 +831,7 @@ void main() {
 
           notifier.upsertAll(
             ['updated2', 'value3'],
-            toKey: (final v) => switch (v) {
+            toKey: (v) => switch (v) {
               'updated2' => 'key2',
               'value3' => 'key3',
               _ => throw ArgumentError.value(v, 'v', 'Invalid value'),
@@ -861,7 +861,7 @@ void main() {
             'value1',
             'value2',
             'value3',
-          ], toKey: (final v) => v.replaceAll('value', 'key'));
+          ], toKey: (v) => v.replaceAll('value', 'key'));
 
           // Individual operations
           notifier2.upsert('value1', key: 'key1');

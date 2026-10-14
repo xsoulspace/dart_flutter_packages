@@ -10,12 +10,12 @@ abstract class RustoreBillingPlatform extends PlatformInterface {
 
   static RustoreBillingPlatform get instance => _instance;
 
-  static set instance(final RustoreBillingPlatform instance) {
+  static set instance(RustoreBillingPlatform instance) {
     PlatformInterface.verify(instance, _token);
     _instance = instance;
   }
 
-  Future<void> initialize(final RustoreBillingConfig config) {
+  Future<void> initialize(RustoreBillingConfig config) {
     throw UnimplementedError('initialize() has not been implemented.');
   }
 
@@ -31,52 +31,52 @@ abstract class RustoreBillingPlatform extends PlatformInterface {
     );
   }
 
-  Future<List<RustoreProduct>> getProducts(final List<String> productIds) {
+  Future<List<RustoreProduct>> getProducts(List<String> productIds) {
     throw UnimplementedError('getProducts() has not been implemented.');
   }
 
   Future<List<RustorePurchase>> getPurchases(
-    final RustorePurchaseFilter? filter,
+    RustorePurchaseFilter? filter,
   ) {
     throw UnimplementedError('getPurchases() has not been implemented.');
   }
 
-  Future<RustorePurchase?> getPurchase(final String purchaseId) {
+  Future<RustorePurchase?> getPurchase(String purchaseId) {
     throw UnimplementedError('getPurchase() has not been implemented.');
   }
 
   Future<RustoreProductPurchaseResult> purchase(
-    final RustoreProductPurchaseParams params, {
-    final RustorePreferredPurchaseType preferredPurchaseType =
+    RustoreProductPurchaseParams params, {
+    RustorePreferredPurchaseType preferredPurchaseType =
         RustorePreferredPurchaseType.unknown,
-    final RustoreBillingTheme sdkTheme = RustoreBillingTheme.system,
+    RustoreBillingTheme sdkTheme = RustoreBillingTheme.system,
   }) {
     throw UnimplementedError('purchase() has not been implemented.');
   }
 
   Future<RustoreProductPurchaseResult> purchaseTwoStep(
-    final RustoreProductPurchaseParams params, {
-    final RustoreBillingTheme sdkTheme = RustoreBillingTheme.system,
+    RustoreProductPurchaseParams params, {
+    RustoreBillingTheme sdkTheme = RustoreBillingTheme.system,
   }) {
     throw UnimplementedError('purchaseTwoStep() has not been implemented.');
   }
 
   Future<void> confirmTwoStepPurchase(
-    final String purchaseId, {
-    final String? developerPayload,
+    String purchaseId, {
+    String? developerPayload,
   }) {
     throw UnimplementedError(
       'confirmTwoStepPurchase() has not been implemented.',
     );
   }
 
-  Future<void> cancelTwoStepPurchase(final String purchaseId) {
+  Future<void> cancelTwoStepPurchase(String purchaseId) {
     throw UnimplementedError(
       'cancelTwoStepPurchase() has not been implemented.',
     );
   }
 
-  void setCallbackApi(final RustoreBillingCallbackApi callbackApi) {
+  void setCallbackApi(RustoreBillingCallbackApi callbackApi) {
     throw UnimplementedError('setCallbackApi() has not been implemented.');
   }
 }

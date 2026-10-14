@@ -63,7 +63,7 @@ final class UniversalStorageSink implements LogSink {
   }
 
   @override
-  void enqueue(final LogRecord record) {
+  void enqueue(LogRecord record) {
     if (_closed || _disposed) {
       return;
     }
@@ -197,7 +197,7 @@ final class UniversalStorageSink implements LogSink {
     await service.saveFile(_appendPath, '', message: 'xsoulspace_logger reset');
   }
 
-  Map<String, Object?>? _decodeSnapshot(final String? raw) {
+  Map<String, Object?>? _decodeSnapshot(String? raw) {
     if (raw == null || raw.trim().isEmpty) {
       return null;
     }
@@ -214,7 +214,7 @@ final class UniversalStorageSink implements LogSink {
   }
 
   List<Map<String, Object?>> _decodeSnapshotRecords(
-    final Map<String, Object?> snapshot,
+    Map<String, Object?> snapshot,
   ) {
     final raw = snapshot['records'];
     if (raw is! List) {
@@ -227,7 +227,7 @@ final class UniversalStorageSink implements LogSink {
         .toList(growable: false);
   }
 
-  List<Map<String, Object?>> _decodeNdjsonRecords(final String content) {
+  List<Map<String, Object?>> _decodeNdjsonRecords(String content) {
     if (content.trim().isEmpty) {
       return <Map<String, Object?>>[];
     }
@@ -252,10 +252,10 @@ final class UniversalStorageSink implements LogSink {
     return records;
   }
 
-  int _maxSequenceFromNdjson(final String content) =>
+  int _maxSequenceFromNdjson(String content) =>
       _maxSequenceFromRecordMaps(_decodeNdjsonRecords(content));
 
-  int _maxSequenceFromRecordMaps(final List<Map<String, Object?>> records) {
+  int _maxSequenceFromRecordMaps(List<Map<String, Object?>> records) {
     var maxSequence = 0;
     for (final row in records) {
       final rawSequence = row['sequence'];

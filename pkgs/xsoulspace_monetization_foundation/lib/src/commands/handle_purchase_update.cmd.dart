@@ -72,7 +72,7 @@ class HandlePurchaseUpdateCommand {
   /// - `SubscriptionStatusResource`: Updated based on purchase status
   /// - `ActiveSubscriptionResource`: Cleared on cancellation
   /// {@endtemplate}
-  Future<void> execute(final PurchaseDetailsModel details) async {
+  Future<void> execute(PurchaseDetailsModel details) async {
     final dto = details.toVerificationDto();
     switch (dto.status) {
       case PurchaseStatus.pendingVerification:

@@ -76,7 +76,7 @@ final class MlxChatResult {
 /// The chat-generation seam. The HTTP endpoint implements it against a
 /// loopback server; tests substitute scripted endpoints.
 abstract interface class MlxChatEndpoint {
-  Future<MlxChatResult> complete(final MlxChatRequest request);
+  Future<MlxChatResult> complete(MlxChatRequest request);
 
   Future<void> dispose();
 }
@@ -92,13 +92,13 @@ typedef MlxWireDiagnostic = void Function(Map<String, Object?> event);
 /// after [retryDelay]; validation failures do not retry.
 final class HttpMlxChatEndpoint implements MlxChatEndpoint {
   HttpMlxChatEndpoint({
-    required final Uri endpoint,
+    required Uri endpoint,
     this.model = 'local',
     this.timeout = const Duration(seconds: 120),
     this.maxTransientRetries = 1,
     this.retryDelay = const Duration(milliseconds: 100),
     this.onDiagnosticEvent,
-    final http.Client? httpClient,
+    http.Client? httpClient,
   }) : _chatUrl = endpoint.replace(
          path: '${endpoint.path}/v1/chat/completions',
        ),
@@ -116,7 +116,7 @@ final class HttpMlxChatEndpoint implements MlxChatEndpoint {
   final bool _ownsHttpClient;
 
   @override
-  Future<MlxChatResult> complete(final MlxChatRequest request) async {
+  Future<MlxChatResult> complete(MlxChatRequest request) async {
     final body = utf8.encode(jsonEncode(request.toJson()));
     Object? lastError;
     for (var attempt = 0; attempt <= maxTransientRetries; attempt++) {
@@ -166,7 +166,7 @@ final class HttpMlxChatEndpoint implements MlxChatEndpoint {
     throw MlxChatException('$lastError', retryable: true);
   }
 
-  MlxChatResult _decode(final String responseBody) {
+  MlxChatResult _decode(String responseBody) {
     final Object? decoded;
     try {
       decoded = jsonDecode(responseBody);
@@ -209,7 +209,7 @@ final class HttpMlxChatEndpoint implements MlxChatEndpoint {
     );
   }
 
-  void _emit(final Map<String, Object?> event) {
+  void _emit(Map<String, Object?> event) {
     try {
       onDiagnosticEvent?.call(event);
     } on Object {

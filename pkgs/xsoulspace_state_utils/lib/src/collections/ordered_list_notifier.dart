@@ -63,7 +63,7 @@ class OrderedListNotifier<V> extends ImmutableOrderedList<V>
   /// {@endtemplate}
   @override
   @mustCallSuper
-  void add(final V value) {
+  void add(V value) {
     super.add(value);
     notifyListeners();
   }
@@ -79,7 +79,7 @@ class OrderedListNotifier<V> extends ImmutableOrderedList<V>
   /// {@endtemplate}
   @override
   @mustCallSuper
-  bool addUnique(final V value) => super.addUnique(value);
+  bool addUnique(V value) => super.addUnique(value);
 
   /// {@template ordered_list_notifier_remove}
   /// Removes the first occurrence of the specified [value] from this ordered list and notifies listeners.
@@ -91,7 +91,7 @@ class OrderedListNotifier<V> extends ImmutableOrderedList<V>
   /// {@endtemplate}
   @override
   @mustCallSuper
-  void remove(final V value) {
+  void remove(V value) {
     final previousLength = length;
     super.remove(value);
     if (length != previousLength) notifyListeners();

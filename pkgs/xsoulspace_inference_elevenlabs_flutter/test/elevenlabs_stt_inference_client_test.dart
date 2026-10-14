@@ -13,7 +13,7 @@ void main() {
     test('supports only speechToText task', () {
       final client = ElevenLabsSttInferenceClient(
         authConfig: const ElevenLabsAuthConfig(apiKey: 'key'),
-        httpClient: MockClient((final request) async => http.Response('', 500)),
+        httpClient: MockClient((request) async => http.Response('', 500)),
       );
 
       expect(client.supportedTasks, const <InferenceTask>{
@@ -24,7 +24,7 @@ void main() {
     test('returns task_unsupported for non-STT request', () async {
       final client = ElevenLabsSttInferenceClient(
         authConfig: const ElevenLabsAuthConfig(apiKey: 'key'),
-        httpClient: MockClient((final request) async => http.Response('', 500)),
+        httpClient: MockClient((request) async => http.Response('', 500)),
       );
 
       final result = await client.infer(
@@ -41,7 +41,7 @@ void main() {
     test('returns auth_failed when API key is missing', () async {
       final client = ElevenLabsSttInferenceClient(
         authConfig: const ElevenLabsAuthConfig(),
-        httpClient: MockClient((final request) async => http.Response('', 500)),
+        httpClient: MockClient((request) async => http.Response('', 500)),
       );
 
       final result = await client.infer(
@@ -60,7 +60,7 @@ void main() {
     test('returns task_unsupported for microphone source', () async {
       final client = ElevenLabsSttInferenceClient(
         authConfig: const ElevenLabsAuthConfig(apiKey: 'key'),
-        httpClient: MockClient((final request) async => http.Response('', 500)),
+        httpClient: MockClient((request) async => http.Response('', 500)),
       );
 
       final result = await client.infer(
@@ -85,7 +85,7 @@ void main() {
 
       final client = ElevenLabsSttInferenceClient(
         authConfig: const ElevenLabsAuthConfig(apiKey: 'test-api-key'),
-        httpClient: MockClient((final request) async {
+        httpClient: MockClient((request) async {
           requestUri = request.url;
           requestHeaders = request.headers;
           requestBody = request.body;
@@ -150,7 +150,7 @@ void main() {
       final client = ElevenLabsSttInferenceClient(
         authConfig: const ElevenLabsAuthConfig(apiKey: 'key'),
         httpClient: MockClient(
-          (final request) async => http.Response(
+          (request) async => http.Response(
             jsonEncode(<String, dynamic>{'detail': 'Model not found'}),
             404,
             headers: <String, String>{'content-type': 'application/json'},

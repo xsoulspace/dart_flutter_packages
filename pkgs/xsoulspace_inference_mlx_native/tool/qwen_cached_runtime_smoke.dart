@@ -10,10 +10,10 @@ import 'package:xsoulspace_inference_mlx_native/xsoulspace_inference_mlx_native.
 
 import 'native_runtime_preflight.dart';
 
-Future<String> digest(final File file) async =>
+Future<String> digest(File file) async =>
     (await sha256.bind(file.openRead()).first).toString();
 
-Future<void> main(final List<String> args) async {
+Future<void> main(List<String> args) async {
   if (args.length != 1) throw ArgumentError('EXPLICIT_QWEN_1_7B_SNAPSHOT');
   final snapshot = Directory(args.single).resolveSymbolicLinksSync();
   final config =

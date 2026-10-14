@@ -20,8 +20,8 @@ void main() {
   late String Function(int) intToKey;
 
   setUp(() {
-    stringToKey = (final key) => key;
-    intToKey = (final key) => key.toString();
+    stringToKey = (key) => key;
+    intToKey = (key) => key.toString();
   });
 
   group('MutableOrderedMap', () {
@@ -292,9 +292,9 @@ void main() {
 
         final entries = map.entries.toList();
         expect(entries.length, 2);
-        expect(entries.map((final e) => e.key), containsAll(['key1', 'key2']));
+        expect(entries.map((e) => e.key), containsAll(['key1', 'key2']));
         expect(
-          entries.map((final e) => e.value),
+          entries.map((e) => e.value),
           containsAll(['value1', 'value2']),
         );
       });
@@ -385,7 +385,7 @@ void main() {
         map.upsertAll([
           'value2',
           'value3',
-        ], toKey: (final v) => v.replaceAll('value', 'key'));
+        ], toKey: (v) => v.replaceAll('value', 'key'));
 
         expect(map, hasLength(3));
         expect(map['key1'], 'value1');
@@ -400,7 +400,7 @@ void main() {
         map.upsertAll([
           'value2',
           'value3',
-        ], toKey: (final v) => v.replaceAll('value', 'key'));
+        ], toKey: (v) => v.replaceAll('value', 'key'));
 
         expect(map.toList(), ['key1', 'key2', 'key3']);
         expect(map.orderedValues, ['value1', 'value2', 'value3']);
@@ -413,7 +413,7 @@ void main() {
 
         map.upsertAll(
           ['updated2', 'value3'],
-          toKey: (final v) => switch (v) {
+          toKey: (v) => switch (v) {
             'updated2' => 'key2',
             'value3' => 'key3',
             _ => throw ArgumentError.value(v, 'v', 'Invalid value'),
@@ -435,7 +435,7 @@ void main() {
 
         map.upsertAll(
           ['updated2', 'value4'],
-          toKey: (final v) => switch (v) {
+          toKey: (v) => switch (v) {
             'updated2' => 'key2',
             'value4' => 'key4',
             _ => throw ArgumentError.value(v, 'v', 'Invalid value'),
@@ -468,7 +468,7 @@ void main() {
         map.upsertAll([
           'value2',
           'value3',
-        ], toKey: (final v) => 'custom_${v.replaceAll('value', 'key')}');
+        ], toKey: (v) => 'custom_${v.replaceAll('value', 'key')}');
 
         expect(map, hasLength(3));
         expect(map['custom_key2'], 'value2');
@@ -480,7 +480,7 @@ void main() {
         final map = env.makeMutableOrderedMap<String, String>(null);
 
         expect(
-          () => map.upsertAll(['value1'], toKey: (final v) => null),
+          () => map.upsertAll(['value1'], toKey: (v) => null),
           throwsA(isA<ArgumentError>()),
         );
       });
@@ -488,9 +488,9 @@ void main() {
       test('handles large batch operations efficiently', () {
         final map = env.makeMutableOrderedMap<String, String>(stringToKey);
         const count = 1000;
-        final values = List.generate(count, (final i) => 'value$i');
+        final values = List.generate(count, (i) => 'value$i');
 
-        map.upsertAll(values, toKey: (final v) => v.replaceAll('value', 'key'));
+        map.upsertAll(values, toKey: (v) => v.replaceAll('value', 'key'));
 
         expect(map, hasLength(count));
         expect(map['key0'], 'value0');
@@ -511,7 +511,7 @@ void main() {
         map.upsertAll([
           'value2',
           'value3',
-        ], toKey: (final v) => v.replaceAll('value', 'key'));
+        ], toKey: (v) => v.replaceAll('value', 'key'));
 
         // Second call should create new cache
         final secondCall = map.orderedValues;
@@ -525,7 +525,7 @@ void main() {
     late String Function(String) stringToKey;
 
     setUp(() {
-      stringToKey = (final key) => key;
+      stringToKey = (key) => key;
     });
 
     group('initialization', () {
@@ -609,7 +609,7 @@ void main() {
 
       test('in case if key is null, value is used', () {
         final map = env.makeImmutableOrderedMap<String?, String>(
-          (final v) => v,
+          (v) => v,
         );
         map.upsert('nullValue', key: null);
 
@@ -712,7 +712,7 @@ void main() {
         userMap.assignAllOrdered(users);
 
         expect(userMap, hasLength(3));
-        expect(userMap.keys, users.map((final u) => u.id));
+        expect(userMap.keys, users.map((u) => u.id));
         expect(userMap.orderedValues, users);
       });
 
@@ -725,12 +725,12 @@ void main() {
         userMap.assignAllOrdered(reversedUsers);
 
         expect(userMap.orderedValues, reversedUsers);
-        expect(userMap.keys, reversedUsers.map((final u) => u.id));
+        expect(userMap.keys, reversedUsers.map((u) => u.id));
       });
 
       test('handles duplicate keys from toKey function', () {
         final userMap = env.makeImmutableOrderedMap<String, TestUser>(
-          (final user) => 'same-key',
+          (user) => 'same-key',
         );
 
         userMap.assignAllOrdered(someTestUsers());
@@ -921,7 +921,7 @@ void main() {
           map.upsertAll([
             'value2',
             'value3',
-          ], toKey: (final v) => v.replaceAll('value', 'key'));
+          ], toKey: (v) => v.replaceAll('value', 'key'));
 
           expect(map, hasLength(3));
           expect(map['key1'], 'value1');
@@ -938,7 +938,7 @@ void main() {
           map.upsertAll(
             ['value3', 'value4'],
             putFirst: true,
-            toKey: (final v) => v.replaceAll('value', 'key'),
+            toKey: (v) => v.replaceAll('value', 'key'),
           );
 
           expect(map, hasLength(4));
@@ -953,7 +953,7 @@ void main() {
           map.upsertAll(
             ['value2', 'value3'],
             putFirst: true,
-            toKey: (final v) => v.replaceAll('value', 'key'),
+            toKey: (v) => v.replaceAll('value', 'key'),
           );
 
           expect(map.keys, ['key2', 'key3', 'key1']);
@@ -967,7 +967,7 @@ void main() {
 
           map.upsertAll(
             ['updated2', 'value3'],
-            toKey: (final v) => switch (v) {
+            toKey: (v) => switch (v) {
               'updated2' => 'key2',
               'value3' => 'key3',
               _ => throw ArgumentError.value(v, 'v', 'Invalid value'),
@@ -989,7 +989,7 @@ void main() {
 
           map.upsertAll(
             ['updated2', 'value4'],
-            toKey: (final v) => switch (v) {
+            toKey: (v) => switch (v) {
               'updated2' => 'key2',
               'value4' => 'key4',
               _ => throw ArgumentError.value(v, 'v', 'Invalid value'),
@@ -1013,7 +1013,7 @@ void main() {
             map.upsertAll(
               ['updated2', 'value4'],
               putFirst: true,
-              toKey: (final v) => switch (v) {
+              toKey: (v) => switch (v) {
                 'updated2' => 'key2',
                 'value4' => 'key4',
                 _ => throw ArgumentError.value(v, 'v', 'Invalid value'),
@@ -1052,7 +1052,7 @@ void main() {
           map.upsertAll([
             'value2',
             'value3',
-          ], toKey: (final v) => 'custom_${v.replaceAll('value', 'key')}');
+          ], toKey: (v) => 'custom_${v.replaceAll('value', 'key')}');
 
           expect(map, hasLength(3));
           expect(map['custom_key2'], 'value2');
@@ -1063,11 +1063,11 @@ void main() {
         test('handles large batch operations efficiently', () {
           final map = env.makeImmutableOrderedMap<String, String>(stringToKey);
           const count = 100;
-          final values = List.generate(count, (final i) => 'value$i');
+          final values = List.generate(count, (i) => 'value$i');
 
           map.upsertAll(
             values,
-            toKey: (final v) => v.replaceAll('value', 'key'),
+            toKey: (v) => v.replaceAll('value', 'key'),
           );
 
           expect(map, hasLength(count));
@@ -1089,7 +1089,7 @@ void main() {
           map.upsertAll([
             'value2',
             'value3',
-          ], toKey: (final v) => v.replaceAll('value', 'key'));
+          ], toKey: (v) => v.replaceAll('value', 'key'));
 
           // Second call should create new cache
           final secondCall = map.orderedValues;
@@ -1108,7 +1108,7 @@ void main() {
           map.upsertAll([
             'value2',
             'value3',
-          ], toKey: (final v) => v.replaceAll('value', 'key'));
+          ], toKey: (v) => v.replaceAll('value', 'key'));
 
           expect(map, hasLength(3));
           expect(map.keys, isNot(equals(originalKeys)));
@@ -1122,7 +1122,7 @@ void main() {
     test('both maintain insertion order', () {
       final mutable = env.makeMutableOrderedMap<String, String>(stringToKey);
       final immutable = env.makeImmutableOrderedMap<String, String>(
-        (final v) => v,
+        (v) => v,
       );
 
       // Same operations
@@ -1139,7 +1139,7 @@ void main() {
     test('mutable allows direct mutation, immutable creates new instances', () {
       final mutable = env.makeMutableOrderedMap<String, String>(stringToKey);
       final immutable = env.makeImmutableOrderedMap<String, String>(
-        (final v) => v,
+        (v) => v,
       );
 
       // Mutable: direct mutation
@@ -1157,7 +1157,7 @@ void main() {
     test('immutable requires toKey function, mutable does not', () {
       final mutable = env.makeMutableOrderedMap<String, String>(stringToKey);
       final immutable = env.makeImmutableOrderedMap<String, String>(
-        (final v) => v,
+        (v) => v,
       );
 
       // Both can upsert with explicit keys

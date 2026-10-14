@@ -101,16 +101,16 @@ void main() {
 
       await logger.flush();
 
-      expect(sink.records.any((final r) => r.level == LogLevel.trace), isFalse);
-      expect(sink.records.any((final r) => r.level == LogLevel.debug), isFalse);
+      expect(sink.records.any((r) => r.level == LogLevel.trace), isFalse);
+      expect(sink.records.any((r) => r.level == LogLevel.debug), isFalse);
       expect(
-        sink.records.any((final r) => r.level == LogLevel.warning),
+        sink.records.any((r) => r.level == LogLevel.warning),
         isTrue,
       );
-      expect(sink.records.any((final r) => r.level == LogLevel.error), isTrue);
+      expect(sink.records.any((r) => r.level == LogLevel.error), isTrue);
       expect(
         sink.records.any(
-          (final r) => r.category == LoggerCategories.backpressure,
+          (r) => r.category == LoggerCategories.backpressure,
         ),
         isTrue,
       );
@@ -139,7 +139,7 @@ void main() {
 
       final chain = await logger.trace('trace-1');
       expect(chain.length, 3);
-      expect(chain.every((final r) => r.trace?.traceId == 'trace-1'), isTrue);
+      expect(chain.every((r) => r.trace?.traceId == 'trace-1'), isTrue);
       expect(chain[0].sequence < chain[1].sequence, isTrue);
       expect(chain[1].sequence < chain[2].sequence, isTrue);
 

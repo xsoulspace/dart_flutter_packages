@@ -25,13 +25,13 @@ final class IssueGroup {
   final bool escalated;
 
   IssueGroup copyWith({
-    final DateTime? firstSeen,
-    final DateTime? lastSeen,
-    final int? occurrences24h,
-    final LogLevel? highestLevel,
-    final IssueStatus? status,
-    final double? priorityScore,
-    final bool? escalated,
+    DateTime? firstSeen,
+    DateTime? lastSeen,
+    int? occurrences24h,
+    LogLevel? highestLevel,
+    IssueStatus? status,
+    double? priorityScore,
+    bool? escalated,
   }) => IssueGroup(
     fingerprint: fingerprint,
     firstSeen: firstSeen ?? this.firstSeen,

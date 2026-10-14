@@ -25,7 +25,7 @@ class SubscriptionStatusResource extends ChangeNotifier {
   SubscriptionStatus _value = SubscriptionStatus.free;
   SubscriptionStatus get status => _value;
 
-  void set(final SubscriptionStatus status) {
+  void set(SubscriptionStatus status) {
     _value = status;
     notifyListeners();
   }

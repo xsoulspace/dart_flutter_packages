@@ -11,13 +11,13 @@ Never _unsupported() {
 /// Non-web fallback for Discord wrapper.
 abstract final class Discord {
   static Future<DiscordClient> init({
-    required final String clientId,
-    final String expectedGlobal = 'DiscordSDK',
-    final Map<String, Object?> configuration = const <String, Object?>{},
-    final bool waitReady = true,
+    required String clientId,
+    String expectedGlobal = 'DiscordSDK',
+    Map<String, Object?> configuration = const <String, Object?>{},
+    bool waitReady = true,
   }) async => _unsupported();
 
-  static bool isAvailable({final String expectedGlobal = 'DiscordSDK'}) =>
+  static bool isAvailable({String expectedGlobal = 'DiscordSDK'}) =>
       false;
 }
 
@@ -27,14 +27,14 @@ class DiscordClient {
   Future<void> ready() async => _unsupported();
 
   Future<Map<String, Object?>> authorize(
-    final DiscordAuthorizeRequest request,
+    DiscordAuthorizeRequest request,
   ) async => _unsupported();
 
   Future<DiscordAuthenticateResult> authenticate({
-    final String? accessToken,
+    String? accessToken,
   }) async => _unsupported();
 
-  Future<DiscordUser?> getUser({required final String id}) async =>
+  Future<DiscordUser?> getUser({required String id}) async =>
       _unsupported();
 
   Future<List<DiscordRelationship>> getRelationships() async => _unsupported();
@@ -42,36 +42,36 @@ class DiscordClient {
   Future<Map<String, Object?>> openInviteDialog() async => _unsupported();
 
   Future<Map<String, Object?>> inviteUserEmbedded({
-    required final String userId,
-    final String? content,
+    required String userId,
+    String? content,
   }) async => _unsupported();
 
   Future<DiscordShareLinkResult> shareLink({
-    required final String message,
-    final String? customId,
-    final String? linkId,
+    required String message,
+    String? customId,
+    String? linkId,
   }) async => _unsupported();
 
   Future<Map<String, Object?>> openShareMomentDialog({
-    required final String mediaUrl,
+    required String mediaUrl,
   }) async => _unsupported();
 
   Future<DiscordEventSubscription> onCurrentUserUpdate(
-    final void Function(DiscordUser? user) listener,
+    void Function(DiscordUser? user) listener,
   ) async => _unsupported();
 
   Future<DiscordEventSubscription> onRelationshipUpdate(
-    final void Function(DiscordRelationship relationship) listener,
+    void Function(DiscordRelationship relationship) listener,
   ) async => _unsupported();
 
   Future<DiscordEventSubscription> onRawEvent(
-    final String event,
-    final void Function(DiscordEventData event) listener, {
-    final Map<String, Object?>? subscribeArgs,
+    String event,
+    void Function(DiscordEventData event) listener, {
+    Map<String, Object?>? subscribeArgs,
   }) async => _unsupported();
 
   Future<Object?> callRawCommand(
-    final String methodName, {
-    final Map<String, Object?>? params,
+    String methodName, {
+    Map<String, Object?>? params,
   }) async => _unsupported();
 }

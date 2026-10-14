@@ -2,7 +2,7 @@ import 'package:xsoulspace_platform_core_interface/xsoulspace_platform_core_inte
 
 /// Typed storage for capability instances.
 final class CapabilityRegistry {
-  CapabilityRegistry({final Iterable<PlatformCapability> seed = const []}) {
+  CapabilityRegistry({Iterable<PlatformCapability> seed = const []}) {
     for (final capability in seed) {
       registerDynamic(capability.runtimeType, capability);
     }
@@ -11,17 +11,17 @@ final class CapabilityRegistry {
   final Map<Type, PlatformCapability> _capabilities =
       <Type, PlatformCapability>{};
 
-  void register<T extends PlatformCapability>(final T capability) {
+  void register<T extends PlatformCapability>(T capability) {
     _capabilities[T] = capability;
   }
 
-  void registerDynamic(final Type type, final PlatformCapability capability) {
+  void registerDynamic(Type type, PlatformCapability capability) {
     _capabilities[type] = capability;
   }
 
   bool supports<T extends PlatformCapability>() => maybe<T>() != null;
 
-  bool supportsType(final Type type) => _capabilities.containsKey(type);
+  bool supportsType(Type type) => _capabilities.containsKey(type);
 
   T? maybe<T extends PlatformCapability>() {
     final direct = _capabilities[T];
@@ -37,7 +37,7 @@ final class CapabilityRegistry {
     return null;
   }
 
-  PlatformCapability? maybeType(final Type type) => _capabilities[type];
+  PlatformCapability? maybeType(Type type) => _capabilities[type];
 
   Set<Type> get types => Set<Type>.unmodifiable(_capabilities.keys);
 

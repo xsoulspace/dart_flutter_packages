@@ -21,7 +21,7 @@ import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 import 'package:xsoulspace_inference_mlx_native/xsoulspace_inference_mlx_native.dart';
 import 'package:xsoulspace_inference_openrouter/laya_server.dart';
 
-Future<void> main(final List<String> args) async {
+Future<void> main(List<String> args) async {
   final seconds = args
       .where((a) => a.startsWith('--seconds='))
       .map((a) => int.tryParse(a.split('=').last) ?? 3)
@@ -154,7 +154,7 @@ const String _state =
     'Verification failed after the semantic edit. The opChain must be '
     're-derived from the grounded symbols before the next proposal.';
 
-DecisionRequest _request({required final int questionCount}) => DecisionRequest(
+DecisionRequest _request({required int questionCount}) => DecisionRequest(
   correlation: DecisionCorrelation(
     requestId: DecisionRequestId(
       'bench-${DateTime.now().microsecondsSinceEpoch}',
@@ -189,7 +189,7 @@ int _uid = 0;
 
 typedef _Ops = (int, double, List<int>); // count, seconds, micros
 
-_Ops _measure({required final int seconds, required final void Function() op}) {
+_Ops _measure({required int seconds, required void Function() op}) {
   final micros = <int>[];
   final stopwatch = Stopwatch()..start();
   var ops = 0;
@@ -204,8 +204,8 @@ _Ops _measure({required final int seconds, required final void Function() op}) {
 }
 
 Future<_Ops> _measureAsync({
-  required final int seconds,
-  required final Future<Object?> Function() op,
+  required int seconds,
+  required Future<Object?> Function() op,
 }) async {
   final micros = <int>[];
   final stopwatch = Stopwatch()..start();
@@ -221,14 +221,14 @@ Future<_Ops> _measureAsync({
 }
 
 void _result(
-  final String label, {
-  required final int ops,
-  required final double seconds,
-  required final List<int> latencies,
-  final String unit = 'ops',
+  String label, {
+  required int ops,
+  required double seconds,
+  required List<int> latencies,
+  String unit = 'ops',
 }) {
   final sorted = List<int>.of(latencies)..sort();
-  double pct(final double p) =>
+  double pct(double p) =>
       sorted[min(sorted.length - 1, (p * sorted.length).floor())] / 1000.0;
   _line(
     '$label: ${ops.toStringAsFixed(0)} $unit in ${seconds.toStringAsFixed(2)}s '
@@ -240,6 +240,6 @@ void _result(
   );
 }
 
-void _banner(final String text) => _line('== $text ==');
+void _banner(String text) => _line('== $text ==');
 
-void _line(final String text) => stdout.writeln(text);
+void _line(String text) => stdout.writeln(text);

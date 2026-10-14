@@ -7,6 +7,6 @@ export 'web_speech_recognition_adapter.dart';
 class WebSpeechRecognitionInferenceClient
     extends WebSpeechRecognitionInferenceClientBase {
   WebSpeechRecognitionInferenceClient({
-    final WebSpeechRecognitionAdapter? adapter,
+    WebSpeechRecognitionAdapter? adapter,
   }) : super(adapter: adapter ?? const NonWebSpeechRecognitionAdapter());
 }

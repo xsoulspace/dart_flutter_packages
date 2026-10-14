@@ -22,12 +22,12 @@ final class UpstreamLock {
   final String declarationHash;
 
   UpstreamLock copyWith({
-    final String? sdkUrl,
-    final String? sdkSha512,
-    final String? sdkVersion,
-    final List<String>? docsUrls,
-    final String? docsHash,
-    final String? declarationHash,
+    String? sdkUrl,
+    String? sdkSha512,
+    String? sdkVersion,
+    List<String>? docsUrls,
+    String? docsHash,
+    String? declarationHash,
   }) {
     return UpstreamLock(
       sdkUrl: sdkUrl ?? this.sdkUrl,
@@ -48,7 +48,7 @@ final class UpstreamLock {
     'declarationHash': declarationHash,
   };
 
-  static UpstreamLock fromJson(final Map<String, Object?> json) {
+  static UpstreamLock fromJson(Map<String, Object?> json) {
     return UpstreamLock(
       sdkUrl: json['sdkUrl']! as String,
       sdkSha512: json['sdkSha512']! as String,
@@ -67,7 +67,7 @@ final class GenerateOptions {
   final bool bump;
 }
 
-Future<void> main(final List<String> args) async {
+Future<void> main(List<String> args) async {
   final options = _parseOptions(args);
   if (options == null) {
     exitCode = 2;
@@ -247,7 +247,7 @@ Future<void> main(final List<String> args) async {
   }
 }
 
-GenerateOptions? _parseOptions(final List<String> args) {
+GenerateOptions? _parseOptions(List<String> args) {
   var checkOnly = false;
   var bump = false;
 
@@ -270,8 +270,8 @@ GenerateOptions? _parseOptions(final List<String> args) {
 }
 
 List<String> _lockMismatches(
-  final UpstreamLock lock,
-  final UpstreamLock expected,
+  UpstreamLock lock,
+  UpstreamLock expected,
 ) {
   final mismatches = <String>[];
   if (lock.sdkSha512 != expected.sdkSha512) {
@@ -292,7 +292,7 @@ List<String> _lockMismatches(
   return mismatches;
 }
 
-String _emitRawCode(final String sdkVersion) {
+String _emitRawCode(String sdkVersion) {
   return '''// GENERATED CODE - DO NOT MODIFY BY HAND.
 // Source: vkplay-iframe-api@$sdkVersion
 // ignore_for_file: avoid_types_as_parameter_names, camel_case_types, non_constant_identifier_names, unused_element
@@ -319,8 +319,8 @@ extension type VkPlayApiRaw(JSObject _) implements JSObject {
 }
 
 List<String> _extractSymbols({
-  required final String dtsContent,
-  required final List<String> parserSymbols,
+  required String dtsContent,
+  required List<String> parserSymbols,
 }) {
   final symbols = <String>{...parserSymbols};
   final regex = RegExp(

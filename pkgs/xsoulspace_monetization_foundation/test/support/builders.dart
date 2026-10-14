@@ -2,10 +2,10 @@ import 'package:xsoulspace_monetization_interface/xsoulspace_monetization_interf
 
 /// Purchase details builder
 PurchaseDetailsModel aPurchase({
-  final bool active = false,
-  final bool pendingConfirmation = false,
-  final bool cancelled = false,
-  final PurchaseProductType type = PurchaseProductType.subscription,
+  bool active = false,
+  bool pendingConfirmation = false,
+  bool cancelled = false,
+  PurchaseProductType type = PurchaseProductType.subscription,
 }) {
   final status = pendingConfirmation
       ? PurchaseStatus.pendingVerification
@@ -25,14 +25,14 @@ PurchaseDetailsModel aPurchase({
 
 /// Product details builder
 PurchaseProductDetailsModel aProduct({
-  final PurchaseProductId? id,
-  final PurchasePriceId? priceId,
-  final String name = 'Product',
-  final double price = 1,
-  final String currency = 'USD',
-  final Duration duration = const Duration(days: 30),
-  final PurchaseDurationModel? freeTrial,
-  final PurchaseProductType type = PurchaseProductType.subscription,
+  PurchaseProductId? id,
+  PurchasePriceId? priceId,
+  String name = 'Product',
+  double price = 1,
+  String currency = 'USD',
+  Duration duration = const Duration(days: 30),
+  PurchaseDurationModel? freeTrial,
+  PurchaseProductType type = PurchaseProductType.subscription,
 }) => PurchaseProductDetailsModel(
   productId: id ?? PurchaseProductId.fromJson('prod'),
   priceId: priceId ?? PurchasePriceId.fromJson('price'),
@@ -46,8 +46,8 @@ PurchaseProductDetailsModel aProduct({
 
 /// Verification dto builder
 PurchaseVerificationDtoModel aVerification({
-  final PurchaseStatus status = PurchaseStatus.purchased,
-  final DateTime? date,
+  PurchaseStatus status = PurchaseStatus.purchased,
+  DateTime? date,
 }) => PurchaseVerificationDtoModel(
   transactionDate: date ?? DateTime.now(),
   status: status,

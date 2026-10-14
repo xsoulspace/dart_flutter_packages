@@ -103,7 +103,7 @@ final class LayaTypedDecision {
   final double actProbability;
 }
 
-int rowQtype(final String type) =>
+int rowQtype(String type) =>
     const {'choice': 0, 'score': 1, 'noul': 2}[type] ?? 0;
 
 /// The real Laya model (laya-mlx checkpoint) answering through the native
@@ -132,7 +132,7 @@ final class NativeLayaDecisionEngine implements CalibratedLayaDecisionEngine {
   /// Loads the model. Weights: [modelDir], else `LAYA_MODEL_DIR`, else
   /// `~/.cache/xsoulspace/laya-mlx` (fetch aac6fef/laya-mlx — the runtime
   /// never downloads).
-  static Future<NativeLayaDecisionEngine> load({final String? modelDir}) async {
+  static Future<NativeLayaDecisionEngine> load({String? modelDir}) async {
     final dir = resolveModelDir(modelDir);
     final library = await Isolate.resolvePackageUri(
       Uri.parse(
@@ -160,8 +160,8 @@ final class NativeLayaDecisionEngine implements CalibratedLayaDecisionEngine {
     ];
     final buckets = <String, double>{};
     (config['temperature_by_options'] as Map? ?? const {}).forEach((
-      final key,
-      final value,
+      key,
+      value,
     ) {
       buckets['$key'] = clampTemperature((value as num).toDouble());
     });
@@ -170,7 +170,7 @@ final class NativeLayaDecisionEngine implements CalibratedLayaDecisionEngine {
   }
 
   @override
-  Map<String, String> answer(final LayaDecisionQuery query) {
+  Map<String, String> answer(LayaDecisionQuery query) {
     final decisions = decide(query);
     return {
       for (final entry in decisions.entries) entry.key: entry.value.optionId,
@@ -203,7 +203,7 @@ final class NativeLayaDecisionEngine implements CalibratedLayaDecisionEngine {
 
   /// The full calibrated distribution per choice question — the honest
   /// output the wire server and tests read.
-  Map<String, LayaNativeDecision> decide(final LayaDecisionQuery query) {
+  Map<String, LayaNativeDecision> decide(LayaDecisionQuery query) {
     final typed = decideTyped(
       state: query.state,
       questions: {
@@ -227,8 +227,8 @@ final class NativeLayaDecisionEngine implements CalibratedLayaDecisionEngine {
 
   /// The full choice/score/noul surface over the typed prompt path.
   Map<String, LayaTypedDecision> decideTyped({
-    required final String state,
-    required final Map<String, LayaTypedQuestion> questions,
+    required String state,
+    required Map<String, LayaTypedQuestion> questions,
   }) {
     final rows = <LayaPromptRow>[];
     final keys = questions.keys.toList();
@@ -312,7 +312,7 @@ final class NativeLayaDecisionEngine implements CalibratedLayaDecisionEngine {
   /// passes the frozen oracle. This retains all question kinds and one shared
   /// model, at the explicit cost of one native forward per question.
   (List<List<double>>, List<List<double>>) forwardRows(
-    final List<LayaPromptRow> rows,
+    List<LayaPromptRow> rows,
   ) {
     if (rows.length <= 1) return _forwardBatch(rows);
     final width = rows.fold<int>(
@@ -333,7 +333,7 @@ final class NativeLayaDecisionEngine implements CalibratedLayaDecisionEngine {
   }
 
   (List<List<double>>, List<List<double>>) _forwardBatch(
-    final List<LayaPromptRow> rows,
+    List<LayaPromptRow> rows,
   ) {
     final request = jsonEncode({
       'batch': [
@@ -358,7 +358,7 @@ final class NativeLayaDecisionEngine implements CalibratedLayaDecisionEngine {
     if (logits is! List || act is! List) {
       throw StateError('laya native forward: missing logits/act');
     }
-    List<List<double>> rows2(final List source) => [
+    List<List<double>> rows2(List source) => [
       for (final row in source)
         [for (final v in row as List) (v as num).toDouble()],
     ];
@@ -372,7 +372,7 @@ final class NativeLayaDecisionEngine implements CalibratedLayaDecisionEngine {
 
 /// NFC (canonical composed) normalization through the dylib — the
 /// checkpoint tokenizer's normalizer.
-String nfcNormalize(final String text) {
+String nfcNormalize(String text) {
   final src = _toNative(text);
   var capacity = utf8.encode(text).length * 4 + 16;
   var out = malloc<Uint8>(capacity);
@@ -396,7 +396,7 @@ String nfcNormalize(final String text) {
 
 /// Resolves the weights directory: [override], else `LAYA_MODEL_DIR`, else
 /// the fleet cache.
-String resolveModelDir(final String? override) {
+String resolveModelDir(String? override) {
   final dir =
       override ??
       Platform.environment['LAYA_MODEL_DIR'] ??
@@ -410,7 +410,7 @@ String resolveModelDir(final String? override) {
   return _expand(dir);
 }
 
-String _expand(final String path) =>
+String _expand(String path) =>
     path.startsWith('~') ? path.replaceFirst('~', _home()) : path;
 
 /// Guarantees the native symbols are callable before the first forward.
@@ -480,16 +480,16 @@ String _home() {
 }
 
 /// Public shims for sibling native-client files (the qwen text engine).
-Pointer<Uint8> toNativeUtf8(final String text) => _toNative(text);
+Pointer<Uint8> toNativeUtf8(String text) => _toNative(text);
 
-String fromNativeUtf8(final Pointer<Uint8> pointer) => _fromNative(pointer);
+String fromNativeUtf8(Pointer<Uint8> pointer) => _fromNative(pointer);
 
-void ensureNativeBindingsAvailable({final String? packageRoot}) =>
+void ensureNativeBindingsAvailable({String? packageRoot}) =>
     _ensureNativeBindingsAvailable(packageRoot: packageRoot);
 
 /// The cached Qwen3 snapshot: [override], else `QWEN3_SNAPSHOT`, else the
 /// Qwen3-0.6B-4bit checkout under the HF hub cache (never downloads).
-String? resolveQwenSnapshotDir(final String? override) {
+String? resolveQwenSnapshotDir(String? override) {
   if (override != null) return override;
   final env = Platform.environment['QWEN3_SNAPSHOT'];
   if (env != null && env.isNotEmpty) return env;
@@ -511,7 +511,7 @@ String? resolveQwenSnapshotDir(final String? override) {
   return null;
 }
 
-Pointer<Uint8> _toNative(final String text) {
+Pointer<Uint8> _toNative(String text) {
   final bytes = utf8.encode(text);
   final pointer = malloc<Uint8>(bytes.length + 1);
   for (var i = 0; i < bytes.length; i++) {
@@ -521,7 +521,7 @@ Pointer<Uint8> _toNative(final String text) {
   return pointer;
 }
 
-String _fromNative(final Pointer<Uint8> pointer) {
+String _fromNative(Pointer<Uint8> pointer) {
   final bytes = <int>[];
   var i = 0;
   while (true) {

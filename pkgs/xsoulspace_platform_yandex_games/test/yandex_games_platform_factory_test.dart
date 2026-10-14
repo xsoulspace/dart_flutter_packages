@@ -9,7 +9,7 @@ void main() {
         expectedSdkGlobal: 'CustomYsdk',
         sdkInjected: true,
       ),
-      environmentProbe: (final expectedGlobal) {
+      environmentProbe: (expectedGlobal) {
         probeCalled = true;
         expect(expectedGlobal, 'CustomYsdk');
         return false;
@@ -27,7 +27,7 @@ void main() {
         config: YandexGamesPlatformConfig(
           autoLoadSdk: true,
           sdkUrl: Uri.parse('https://example.com/ysdk.js'),
-          sdkScriptLoader: (final _) async {},
+          sdkScriptLoader: (_) async {},
         ),
       );
 

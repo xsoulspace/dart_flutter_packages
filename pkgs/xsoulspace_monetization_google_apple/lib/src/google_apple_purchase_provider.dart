@@ -17,10 +17,10 @@ import 'apple_native_purchase_provider.dart';
 /// {@endtemplate}
 class GoogleApplePurchaseProvider implements PurchaseProvider {
   GoogleApplePurchaseProvider({
-    final AppleNativePurchaseProvider? appleNativeProvider,
-    final InAppPurchaseClient? inAppPurchaseClient,
-    final bool Function()? isIOS,
-    final Future<void> Function()? openSubscriptionManagement,
+    AppleNativePurchaseProvider? appleNativeProvider,
+    InAppPurchaseClient? inAppPurchaseClient,
+    bool Function()? isIOS,
+    Future<void> Function()? openSubscriptionManagement,
   }) : _appleNativeProvider =
            appleNativeProvider ?? AppleNativePurchaseProvider(),
        _inAppPurchaseClient =
@@ -49,14 +49,14 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
   @override
   Future<MonetizationStoreStatus> init() async {
     _purchaseSubscription = _inAppPurchaseClient.purchaseStream.listen(
-      (final purchaseDetailsList) {
+      (purchaseDetailsList) {
         final purchases = purchaseDetailsList
             .map(_mapToPurchaseDetails)
             .toList();
         _purchaseStreamController.add(purchases);
       },
       onDone: _purchaseStreamController.close,
-      onError: (final error) => _purchaseStreamController.addError(error),
+      onError: (error) => _purchaseStreamController.addError(error),
     );
 
     return MonetizationStoreStatus.loaded;
@@ -77,7 +77,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
 
   @override
   Future<CompletePurchaseResultModel> completePurchase(
-    final PurchaseVerificationDtoModel purchase,
+    PurchaseVerificationDtoModel purchase,
   ) async {
     // This is a simplified mapping. You might need a more robust way
     // to find the original iap.PurchaseDetails object.
@@ -118,13 +118,13 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
 
   @override
   Future<List<PurchaseProductDetailsModel>> getProductDetails(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   ) async {
     if (_isIOS()) {
       return _appleNativeProvider.fetchProducts(productIds);
     }
     final response = await _inAppPurchaseClient.queryProductDetails(
-      productIds.map((final id) => id.value).toSet(),
+      productIds.map((id) => id.value).toSet(),
     );
     if (response.error != null) {
       throw Exception(response.error!.message);
@@ -134,7 +134,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
 
   @override
   Future<PurchaseResultModel> purchaseNonConsumable(
-    final PurchaseProductDetailsModel productDetails,
+    PurchaseProductDetailsModel productDetails,
   ) async {
     // if (Platform.isIOS) {
     //   return _appleNativeProvider.purchaseProduct(productDetails);
@@ -202,7 +202,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
   }
 
   PurchaseProductDetailsModel _mapToProductDetails(
-    final iap.ProductDetails product,
+    iap.ProductDetails product,
   ) => PurchaseProductDetailsModel(
     productId: PurchaseProductId.fromJson(product.id),
     priceId: PurchasePriceId.fromJson(product.id),
@@ -240,7 +240,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
   /// }
   /// ```
   PurchaseDetailsModel _mapToPurchaseDetails(
-    final iap.PurchaseDetails purchase,
+    iap.PurchaseDetails purchase,
   ) {
     // Parse local verification data JSON to extract rich purchase information
     Map<String, dynamic>? verificationJson;
@@ -291,8 +291,8 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
 
   /// Extracts purchase date from verification data or falls back to transaction date
   DateTime _extractPurchaseDate(
-    final Map<String, dynamic>? verificationJson,
-    final String? transactionDate,
+    Map<String, dynamic>? verificationJson,
+    String? transactionDate,
   ) {
     if (verificationJson != null) {
       // Try to get purchaseDate from verification data (milliseconds since epoch)
@@ -309,7 +309,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
   }
 
   /// Extracts expiry date from verification data for subscriptions
-  DateTime? _extractExpiryDate(final Map<String, dynamic>? verificationJson) {
+  DateTime? _extractExpiryDate(Map<String, dynamic>? verificationJson) {
     if (verificationJson == null) return null;
 
     final expiresDateMs = jsonDecodeInt(verificationJson['expiresDate']);
@@ -322,8 +322,8 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
 
   /// Extracts purchase type from verification data
   PurchaseProductType _extractPurchaseType(
-    final Map<String, dynamic>? verificationJson,
-    final String productId,
+    Map<String, dynamic>? verificationJson,
+    String productId,
   ) {
     if (verificationJson != null) {
       final type = jsonDecodeString(verificationJson['type']);
@@ -347,7 +347,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
     return PurchaseProductType.nonConsumable;
   }
 
-  PurchaseStatus _mapPurchaseStatus(final iap.PurchaseStatus status) =>
+  PurchaseStatus _mapPurchaseStatus(iap.PurchaseStatus status) =>
       switch (status) {
         iap.PurchaseStatus.pending => PurchaseStatus.pendingVerification,
         iap.PurchaseStatus.purchased => PurchaseStatus.purchased,
@@ -356,7 +356,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
         iap.PurchaseStatus.canceled => PurchaseStatus.canceled,
       };
 
-  void _catchNoResponse(final iap.IAPError error) {
+  void _catchNoResponse(iap.IAPError error) {
     // iOS has no user signed
     if (error.code == 'storekit_no_response') {
       _isUserSignedInToStore = false;
@@ -365,11 +365,11 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
 
   @override
   Future<List<PurchaseProductDetailsModel>> getConsumables(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   ) async {
     // TODO(arenukvern): implement identification of consumables
     final response = await _inAppPurchaseClient.queryProductDetails(
-      productIds.map((final id) => id.value).toSet(),
+      productIds.map((id) => id.value).toSet(),
     );
     final error = response.error;
     if (error != null) {
@@ -381,13 +381,13 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
 
   @override
   Future<List<PurchaseProductDetailsModel>> getNonConsumables(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   ) async {
     if (_isIOS()) {
       final products = await _appleNativeProvider.fetchProducts(productIds);
       return products
           .where(
-            (final product) =>
+            (product) =>
                 product.productType == PurchaseProductType.nonConsumable ||
                 product.productType == PurchaseProductType.subscription,
           )
@@ -395,7 +395,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
     }
     // TODO(arenukvern): implement identification of non-consumables
     final response = await _inAppPurchaseClient.queryProductDetails(
-      productIds.map((final id) => id.value).toSet(),
+      productIds.map((id) => id.value).toSet(),
     );
     final error = response.error;
     if (error != null) {
@@ -407,20 +407,20 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
 
   @override
   Future<List<PurchaseProductDetailsModel>> getSubscriptions(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   ) async {
     if (_isIOS()) {
       final products = await _appleNativeProvider.fetchProducts(productIds);
       return products
           .where(
-            (final product) =>
+            (product) =>
                 product.productType == PurchaseProductType.subscription,
           )
           .toList();
     }
     // TODO(arenukvern): implement identification of subscriptions
     final response = await _inAppPurchaseClient.queryProductDetails(
-      productIds.map((final id) => id.value).toSet(),
+      productIds.map((id) => id.value).toSet(),
     );
     final error = response.error;
     if (error != null) {
@@ -432,7 +432,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
 
   @override
   Future<PurchaseResultModel> subscribe(
-    final PurchaseProductDetailsModel productDetails,
+    PurchaseProductDetailsModel productDetails,
   ) => purchaseNonConsumable(productDetails);
 
   @override
@@ -442,22 +442,22 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
 
   @override
   Future<PurchaseDetailsModel> getPurchaseDetails(
-    final PurchaseId purchaseId,
+    PurchaseId purchaseId,
   ) async {
     try {
       if (_isIOS()) {
         return _appleNativeProvider.getPurchaseDetailsByPurchaseId(purchaseId);
       }
       final purchases = await purchaseStream.firstWhere(
-        (final list) =>
-            list.any((final p) => p.purchaseId.value == purchaseId.value),
+        (list) =>
+            list.any((p) => p.purchaseId.value == purchaseId.value),
         orElse: () => throw Exception('Purchase not found'),
       );
       if (purchases.isEmpty) {
         throw Exception('Purchase not found');
       }
       return purchases.firstWhere(
-        (final p) => p.purchaseId.value == purchaseId.value,
+        (p) => p.purchaseId.value == purchaseId.value,
       );
     } catch (e) {
       throw Exception('Failed to get purchase details: $e');
@@ -465,7 +465,7 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
   }
 
   @override
-  Future<CancelResultModel> cancel(final String purchaseOrProductId) async {
+  Future<CancelResultModel> cancel(String purchaseOrProductId) async {
     try {
       if (_isIOS()) {
         return _appleNativeProvider.cancelSubscription();
@@ -491,19 +491,19 @@ class GoogleApplePurchaseProvider implements PurchaseProvider {
 
 abstract class InAppPurchaseClient {
   Stream<List<iap.PurchaseDetails>> get purchaseStream;
-  Future<void> completePurchase(final iap.PurchaseDetails purchase);
+  Future<void> completePurchase(iap.PurchaseDetails purchase);
   Future<iap.ProductDetailsResponse> queryProductDetails(
-    final Set<String> identifiers,
+    Set<String> identifiers,
   );
   Future<bool> buyNonConsumable({
-    required final iap.PurchaseParam purchaseParam,
+    required iap.PurchaseParam purchaseParam,
   });
   Future<void> restorePurchases();
   Future<bool> isAvailable();
 }
 
 class DefaultInAppPurchaseClient implements InAppPurchaseClient {
-  DefaultInAppPurchaseClient({final iap.InAppPurchase? inAppPurchase})
+  DefaultInAppPurchaseClient({iap.InAppPurchase? inAppPurchase})
     : _inAppPurchase = inAppPurchase ?? iap.InAppPurchase.instance;
 
   final iap.InAppPurchase _inAppPurchase;
@@ -513,17 +513,17 @@ class DefaultInAppPurchaseClient implements InAppPurchaseClient {
       _inAppPurchase.purchaseStream;
 
   @override
-  Future<void> completePurchase(final iap.PurchaseDetails purchase) =>
+  Future<void> completePurchase(iap.PurchaseDetails purchase) =>
       _inAppPurchase.completePurchase(purchase);
 
   @override
   Future<iap.ProductDetailsResponse> queryProductDetails(
-    final Set<String> identifiers,
+    Set<String> identifiers,
   ) => _inAppPurchase.queryProductDetails(identifiers);
 
   @override
   Future<bool> buyNonConsumable({
-    required final iap.PurchaseParam purchaseParam,
+    required iap.PurchaseParam purchaseParam,
   }) => _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
 
   @override
@@ -533,7 +533,7 @@ class DefaultInAppPurchaseClient implements InAppPurchaseClient {
   Future<bool> isAvailable() => _inAppPurchase.isAvailable();
 }
 
-PurchaseDurationModel _extractDurationFromProductId(final String productId) {
+PurchaseDurationModel _extractDurationFromProductId(String productId) {
   if (productId.contains('year')) {
     return PurchaseDurationModel(years: 1);
   } else if (productId.contains('month')) {

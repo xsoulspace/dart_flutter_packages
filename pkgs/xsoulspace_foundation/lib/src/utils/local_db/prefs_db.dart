@@ -43,18 +43,18 @@ class PrefsDb implements LocalDbI {
   }
 
   @override
-  Future<void> clearKey({required final String key}) async {
+  Future<void> clearKey({required String key}) async {
     await prefs.remove(key);
   }
 
   @override
   Future<void> setMap({
-    required final String key,
-    required final Map<String, dynamic> value,
+    required String key,
+    required Map<String, dynamic> value,
   }) => setString(key: key, value: jsonEncode(value));
 
   @override
-  Future<Map<String, dynamic>> getMap(final String key) async {
+  Future<Map<String, dynamic>> getMap(String key) async {
     final str = await getString(key: key);
     if (str.isEmpty) return {};
 
@@ -63,16 +63,16 @@ class PrefsDb implements LocalDbI {
 
   @override
   Future<void> setString({
-    required final String key,
-    required final String value,
+    required String key,
+    required String value,
   }) async {
     await prefs.setString(key, value);
   }
 
   @override
   Future<String> getString({
-    required final String key,
-    final String defaultValue = '',
+    required String key,
+    String defaultValue = '',
   }) async {
     final value = prefs.getString(key);
 
@@ -81,46 +81,46 @@ class PrefsDb implements LocalDbI {
 
   @override
   Future<void> setBool({
-    required final String key,
-    required final bool value,
+    required String key,
+    required bool value,
   }) async {
     await prefs.setBool(key, value);
   }
 
   @override
   Future<bool> getBool({
-    required final String key,
-    final bool defaultValue = false,
+    required String key,
+    bool defaultValue = false,
   }) async => prefs.getBool(key) ?? defaultValue;
 
   @override
-  Future<void> setInt({required final String key, final int value = 0}) async {
+  Future<void> setInt({required String key, int value = 0}) async {
     await prefs.setInt(key, value);
   }
 
   @override
   Future<int> getInt({
-    required final String key,
-    final int defaultValue = 0,
+    required String key,
+    int defaultValue = 0,
   }) async => prefs.getInt(key) ?? defaultValue;
 
   @override
   Future<Iterable<Map<String, dynamic>>> getMapIterable({
-    required final String key,
-    final List<Map<String, dynamic>> defaultValue = const [],
+    required String key,
+    List<Map<String, dynamic>> defaultValue = const [],
   }) async {
     final strings = await getStringsIterable(key: key);
 
     return strings.map(
-      (final e) =>
+      (e) =>
           Map.castFrom<dynamic, dynamic, String, dynamic>(jsonDecode(e)),
     );
   }
 
   @override
   Future<void> setMapList({
-    required final String key,
-    required final List<Map<String, dynamic>> value,
+    required String key,
+    required List<Map<String, dynamic>> value,
   }) async {
     final stringList = value.map(jsonEncode).toList();
     await setStringList(key: key, value: stringList);
@@ -128,32 +128,32 @@ class PrefsDb implements LocalDbI {
 
   @override
   Future<Iterable<String>> getStringsIterable({
-    required final String key,
-    final List<String> defaultValue = const [],
+    required String key,
+    List<String> defaultValue = const [],
   }) async => prefs.getStringList(key) ?? [];
 
   @override
   Future<void> setStringList({
-    required final String key,
-    required final List<String> value,
+    required String key,
+    required List<String> value,
   }) async {
     await prefs.setStringList(key, value);
   }
 
   @override
   Future<void> setItemsList<T>({
-    required final String key,
-    required final List<T> value,
-    required final Map<String, dynamic> Function(T e) toJson,
+    required String key,
+    required List<T> value,
+    required Map<String, dynamic> Function(T e) toJson,
   }) async {
     await setMapList(key: key, value: value.map(toJson).toList());
   }
 
   @override
   Future<Iterable<T>> getItemsIterable<T>({
-    required final String key,
-    required final T Function(Map<String, dynamic> json) fromJson,
-    final List<T> defaultValue = const [],
+    required String key,
+    required T Function(Map<String, dynamic> json) fromJson,
+    List<T> defaultValue = const [],
   }) async {
     final jsons = await getMapIterable(key: key);
     if (jsons.isEmpty) return defaultValue;
@@ -163,9 +163,9 @@ class PrefsDb implements LocalDbI {
 
   @override
   Future<T> getItem<T>({
-    required final String key,
-    required final T? Function(Map<String, dynamic> json) fromJson,
-    required final T defaultValue,
+    required String key,
+    required T? Function(Map<String, dynamic> json) fromJson,
+    required T defaultValue,
   }) async {
     final json = await getMap(key);
     if (json.isEmpty) return defaultValue;
@@ -175,9 +175,9 @@ class PrefsDb implements LocalDbI {
 
   @override
   Future<void> setItem<T>({
-    required final String key,
-    required final T value,
-    required final Map<String, dynamic> Function(T e) toJson,
+    required String key,
+    required T value,
+    required Map<String, dynamic> Function(T e) toJson,
   }) async {
     final json = toJson(value);
     await setMap(key: key, value: json);

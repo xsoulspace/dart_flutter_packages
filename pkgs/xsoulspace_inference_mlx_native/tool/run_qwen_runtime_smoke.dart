@@ -6,7 +6,7 @@ import 'dart:io';
 
 import 'package:xsoulspace_tooling_runtime/xsoulspace_tooling_runtime.dart';
 
-Future<void> main(final List<String> args) async {
+Future<void> main(List<String> args) async {
   if (args.length != 3) throw ArgumentError('BINARY SNAPSHOT EVIDENCE_JSON');
   final result = await runBounded(
     File(args[0]).absolute.path,

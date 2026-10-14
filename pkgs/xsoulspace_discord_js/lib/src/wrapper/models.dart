@@ -46,7 +46,7 @@ final class DiscordUser {
     this.metadata = const <String, Object?>{},
   });
 
-  factory DiscordUser.fromMap(final Map<String, Object?> map) {
+  factory DiscordUser.fromMap(Map<String, Object?> map) {
     final id = (map['id'] ?? map['user_id'])?.toString() ?? 'unknown';
     final username = map['username']?.toString();
     final globalName = map['global_name']?.toString();
@@ -84,14 +84,14 @@ final class DiscordRelationship {
     this.metadata = const <String, Object?>{},
   });
 
-  factory DiscordRelationship.fromMap(final Map<String, Object?> map) {
+  factory DiscordRelationship.fromMap(Map<String, Object?> map) {
     final userMap = map['user'];
     return DiscordRelationship(
       type: (map['type'] as num?)?.toInt() ?? 0,
       user: DiscordUser.fromMap(
         userMap is Map<Object?, Object?>
             ? userMap.map(
-                (final key, final value) => MapEntry(key.toString(), value),
+                (key, value) => MapEntry(key.toString(), value),
               )
             : const <String, Object?>{},
       ),
@@ -116,11 +116,11 @@ final class DiscordAuthenticateResult {
     this.metadata = const <String, Object?>{},
   });
 
-  factory DiscordAuthenticateResult.fromMap(final Map<String, Object?> map) {
+  factory DiscordAuthenticateResult.fromMap(Map<String, Object?> map) {
     final scopesRaw = map['scopes'];
     final scopes = scopesRaw is List
         ? scopesRaw
-              .map((final value) => value.toString())
+              .map((value) => value.toString())
               .toList(growable: false)
         : const <String>[];
 
@@ -128,7 +128,7 @@ final class DiscordAuthenticateResult {
     final application = appRaw is Map<Object?, Object?>
         ? Map<String, Object?>.unmodifiable(
             appRaw.map(
-              (final key, final value) => MapEntry(key.toString(), value),
+              (key, value) => MapEntry(key.toString(), value),
             ),
           )
         : const <String, Object?>{};
@@ -139,7 +139,7 @@ final class DiscordAuthenticateResult {
       user: DiscordUser.fromMap(
         map['user'] is Map<Object?, Object?>
             ? (map['user']! as Map<Object?, Object?>).map(
-                (final key, final value) => MapEntry(key.toString(), value),
+                (key, value) => MapEntry(key.toString(), value),
               )
             : const <String, Object?>{},
       ),
@@ -167,7 +167,7 @@ final class DiscordShareLinkResult {
     this.metadata = const <String, Object?>{},
   });
 
-  factory DiscordShareLinkResult.fromMap(final Map<String, Object?> map) {
+  factory DiscordShareLinkResult.fromMap(Map<String, Object?> map) {
     return DiscordShareLinkResult(
       success: map['success'] == true,
       didCopyLink: map['didCopyLink'] == true,
@@ -206,7 +206,7 @@ final class DiscordEventSubscription {
   }
 }
 
-String? _firstNonEmpty(final Iterable<String?> values) {
+String? _firstNonEmpty(Iterable<String?> values) {
   for (final value in values) {
     if (value != null && value.isNotEmpty) {
       return value;
@@ -215,7 +215,7 @@ String? _firstNonEmpty(final Iterable<String?> values) {
   return null;
 }
 
-String? _avatarUrl(final Map<String, Object?> map) {
+String? _avatarUrl(Map<String, Object?> map) {
   final explicit = map['avatarUrl']?.toString();
   if (explicit != null && explicit.isNotEmpty) {
     return explicit;

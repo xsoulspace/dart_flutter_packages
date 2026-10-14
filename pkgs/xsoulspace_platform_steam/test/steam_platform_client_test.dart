@@ -8,7 +8,7 @@ import 'package:xsoulspace_steamworks/xsoulspace_steamworks.dart';
 import 'support/fakes.dart';
 
 void main() {
-  SteamPlatformClient buildClient(final FakeSteamNativeApi api) {
+  SteamPlatformClient buildClient(FakeSteamNativeApi api) {
     final steamClient = SteamClient(
       nativeApiFactory: FakeSteamNativeApiFactory(api),
     );
@@ -46,7 +46,7 @@ void main() {
     expect(
       await read.getAchievement('ACH_WIN_ONE_GAME'),
       isA<AchievementState>().having(
-        (final state) => state.unlocked,
+        (state) => state.unlocked,
         'unlocked',
         isTrue,
       ),
@@ -56,7 +56,7 @@ void main() {
     expect(
       await read.getAchievement('ACH_WIN_ONE_GAME'),
       isA<AchievementState>().having(
-        (final state) => state.unlocked,
+        (state) => state.unlocked,
         'unlocked',
         isFalse,
       ),

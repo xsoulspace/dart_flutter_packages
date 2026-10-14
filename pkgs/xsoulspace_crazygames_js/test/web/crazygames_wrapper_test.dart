@@ -39,7 +39,7 @@ void main() {
       AdType.midgame,
       adStarted: () => adStarted = true,
       adFinished: () => adFinished = true,
-      adError: (final error) => adError = error,
+      adError: (error) => adError = error,
     );
     expect(_stub.lastAdType, 'midgame');
     expect(adStarted, isTrue);
@@ -51,7 +51,7 @@ void main() {
     expect(await cg.ad.hasAdblock(), isTrue);
 
     AdblockPopupState? popupState;
-    final adblockListener = cg.ad.addAdblockPopupListener((final state) {
+    final adblockListener = cg.ad.addAdblockPopupListener((state) {
       popupState = state;
     });
     _stub.emitAdblockPopup('open');
@@ -90,7 +90,7 @@ void main() {
           position: OverlayPoint(x: 0.0, y: 0.0),
         ),
       ],
-      callback: (final id, final event, final value) {
+      callback: (id, event, value) {
         _stub.lastOverlayCallback = <String, Object?>{
           'id': id,
           'event': event,
@@ -137,7 +137,7 @@ void main() {
     expect(cg.game.getInviteParam('roomId'), 'r-1');
 
     var settingsChanged = false;
-    final settingsListener = cg.game.addSettingsChangeListener((final value) {
+    final settingsListener = cg.game.addSettingsChangeListener((value) {
       settingsChanged = value.disableChat;
     });
     _stub.emitSettingsChanged(<String, Object?>{
@@ -148,7 +148,7 @@ void main() {
     cg.game.removeSettingsChangeListener(settingsListener);
 
     var joinedRoomId = '';
-    final joinRoomListener = cg.game.addJoinRoomListener((final inviteParams) {
+    final joinRoomListener = cg.game.addJoinRoomListener((inviteParams) {
       joinedRoomId = inviteParams['roomId'] ?? '';
     });
     _stub.emitJoinRoom(<String, String>{'roomId': 'room-77'});
@@ -183,7 +183,7 @@ void main() {
     );
 
     User? authUser;
-    final authListener = cg.user.addAuthListener((final user) {
+    final authListener = cg.user.addAuthListener((user) {
       authUser = user;
     });
     _stub.emitAuthChanged(<String, Object?>{
@@ -250,7 +250,7 @@ class _SdkStubState {
   void install() {
     final ad = jsify(<String, Object?>{
       'prefetchAd': allowInterop(prefetchedAdTypes.add),
-      'requestAd': allowInterop((final String adType, final Object? callbacks) {
+      'requestAd': allowInterop((String adType, Object? callbacks) {
         lastAdType = adType;
         if (callbacks != null) {
           final started = prop(callbacks, 'adStarted');
@@ -265,10 +265,10 @@ class _SdkStubState {
         return null;
       }),
       'hasAdblock': allowInterop(() => true),
-      'addAdblockPopupListener': allowInterop((final Object listener) {
+      'addAdblockPopupListener': allowInterop((Object listener) {
         _adblockPopupListener = listener;
       }),
-      'removeAdblockPopupListener': allowInterop((final Object listener) {
+      'removeAdblockPopupListener': allowInterop((Object listener) {
         if (identical(_adblockPopupListener, listener)) {
           _adblockPopupListener = null;
         }
@@ -277,10 +277,10 @@ class _SdkStubState {
     });
 
     final banner = jsify(<String, Object?>{
-      'prefetchBanner': allowInterop((final Object? request) {
+      'prefetchBanner': allowInterop((Object? request) {
         final map = dartify(request)! as Map<Object?, Object?>;
         lastPrefetchedBannerRequest = map.map(
-          (final key, final value) => MapEntry(key.toString(), value),
+          (key, value) => MapEntry(key.toString(), value),
         );
         return jsify(<String, Object?>{
           'id': map['id'],
@@ -288,17 +288,17 @@ class _SdkStubState {
           'renderOptions': jsify(<String, Object?>{'renderer': 'stub'}),
         });
       }),
-      'requestBanner': allowInterop((final Object? request) {
+      'requestBanner': allowInterop((Object? request) {
         final map = dartify(request)! as Map<Object?, Object?>;
         lastBannerRequest = map.map(
-          (final key, final value) => MapEntry(key.toString(), value),
+          (key, value) => MapEntry(key.toString(), value),
         );
         return null;
       }),
-      'prefetchResponsiveBanner': allowInterop((final Object? request) {
+      'prefetchResponsiveBanner': allowInterop((Object? request) {
         final map = dartify(request)! as Map<Object?, Object?>;
         lastPrefetchedResponsiveRequest = map.map(
-          (final key, final value) => MapEntry(key.toString(), value),
+          (key, value) => MapEntry(key.toString(), value),
         );
         return jsify(<String, Object?>{
           'id': map['id'],
@@ -306,14 +306,14 @@ class _SdkStubState {
           'renderOptions': jsify(<String, Object?>{'renderer': 'responsive'}),
         });
       }),
-      'requestResponsiveBanner': allowInterop((final String id) {
+      'requestResponsiveBanner': allowInterop((String id) {
         lastResponsiveBannerId = id;
         return null;
       }),
-      'renderPrefetchedBanner': allowInterop((final Object? request) {
+      'renderPrefetchedBanner': allowInterop((Object? request) {
         final map = dartify(request)! as Map<Object?, Object?>;
         lastRenderedPrefetchedBanner = map.map(
-          (final key, final value) => MapEntry(key.toString(), value),
+          (key, value) => MapEntry(key.toString(), value),
         );
         return null;
       }),
@@ -322,14 +322,14 @@ class _SdkStubState {
         clearAllBannersCalls++;
       }),
       'requestOverlayBanners': allowInterop((
-        final Object? banners,
-        final Object? callback,
+        Object? banners,
+        Object? callback,
       ) {
         final list = dartify(banners)! as List<Object?>;
         lastOverlayRequest = list
             .map(
-              (final item) => (item! as Map<Object?, Object?>).map(
-                (final key, final value) => MapEntry(key.toString(), value),
+              (item) => (item! as Map<Object?, Object?>).map(
+                (key, value) => MapEntry(key.toString(), value),
               ),
             )
             .toList(growable: false);
@@ -367,35 +367,35 @@ class _SdkStubState {
       'happytime': allowInterop(() {
         happytimeCalls++;
       }),
-      'inviteLink': allowInterop((final Object? params) {
+      'inviteLink': allowInterop((Object? params) {
         final map = dartify(params)! as Map<Object?, Object?>;
         return 'https://example.com/invite?roomId=${map['roomId']}';
       }),
-      'showInviteButton': allowInterop((final Object? params) {
+      'showInviteButton': allowInterop((Object? params) {
         final map = dartify(params)! as Map<Object?, Object?>;
         return 'https://example.com/button?roomId=${map['roomId']}';
       }),
       'hideInviteButton': allowInterop(() {
         hideInviteButtonCalls++;
       }),
-      'getInviteParam': allowInterop((final String key) {
+      'getInviteParam': allowInterop((String key) {
         if (key == 'roomId') {
           return 'r-1';
         }
         return null;
       }),
-      'addSettingsChangeListener': allowInterop((final Object listener) {
+      'addSettingsChangeListener': allowInterop((Object listener) {
         _settingsListener = listener;
       }),
-      'removeSettingsChangeListener': allowInterop((final Object listener) {
+      'removeSettingsChangeListener': allowInterop((Object listener) {
         if (identical(_settingsListener, listener)) {
           _settingsListener = null;
         }
       }),
-      'addJoinRoomListener': allowInterop((final Object listener) {
+      'addJoinRoomListener': allowInterop((Object listener) {
         _joinRoomListener = listener;
       }),
-      'removeJoinRoomListener': allowInterop((final Object listener) {
+      'removeJoinRoomListener': allowInterop((Object listener) {
         if (identical(_joinRoomListener, listener)) {
           _joinRoomListener = null;
         }
@@ -421,7 +421,7 @@ class _SdkStubState {
           'profilePictureUrl': 'https://example.com/avatar.png',
         }),
       ),
-      'listFriends': allowInterop((final Object? options) {
+      'listFriends': allowInterop((Object? options) {
         final map = dartify(options)! as Map<Object?, Object?>;
         return jsify(<String, Object?>{
           'friends': <Object?>[
@@ -448,40 +448,40 @@ class _SdkStubState {
       'showAccountLinkPrompt': allowInterop(
         () => jsify(<String, String>{'response': 'yes'}),
       ),
-      'addAuthListener': allowInterop((final Object listener) {
+      'addAuthListener': allowInterop((Object listener) {
         _authListener = listener;
       }),
-      'removeAuthListener': allowInterop((final Object listener) {
+      'removeAuthListener': allowInterop((Object listener) {
         if (identical(_authListener, listener)) {
           _authListener = null;
         }
       }),
-      'addScore': allowInterop((final int score) {
+      'addScore': allowInterop((int score) {
         lastScore = score;
       }),
       'addScoreEncrypted': allowInterop((
-        final int score,
-        final String encryptedScore,
+        int score,
+        String encryptedScore,
       ) {
         lastScore = score;
         lastEncryptedScore = encryptedScore;
       }),
-      'submitScore': allowInterop((final Object? payload) {
+      'submitScore': allowInterop((Object? payload) {
         final map = dartify(payload)! as Map<Object?, Object?>;
         lastSubmitScorePayload = map.map(
-          (final key, final value) => MapEntry(key.toString(), value),
+          (key, value) => MapEntry(key.toString(), value),
         );
       }),
     });
 
     final data = jsify(<String, Object?>{
       'clear': allowInterop(_data.clear),
-      'getItem': allowInterop((final String key) {
+      'getItem': allowInterop((String key) {
         final value = _data[key];
         return value == null ? null : '$value';
       }),
       'removeItem': allowInterop(_data.remove),
-      'setItem': allowInterop((final String key, final Object? value) {
+      'setItem': allowInterop((String key, Object? value) {
         _data[key] = value;
       }),
       'syncUnityGameData': allowInterop(() {
@@ -490,11 +490,11 @@ class _SdkStubState {
     });
 
     final analytics = jsify(<String, Object?>{
-      'trackOrder': allowInterop((final String provider, final Object? order) {
+      'trackOrder': allowInterop((String provider, Object? order) {
         lastTrackOrderProvider = provider;
         final map = dartify(order)! as Map<Object?, Object?>;
         lastTrackOrderPayload = map.map(
-          (final key, final value) => MapEntry(key.toString(), value),
+          (key, value) => MapEntry(key.toString(), value),
         );
       }),
     });
@@ -550,28 +550,28 @@ class _SdkStubState {
     _authListener = null;
   }
 
-  void emitSettingsChanged(final Map<String, Object?> settings) {
+  void emitSettingsChanged(Map<String, Object?> settings) {
     if (_settingsListener == null) {
       return;
     }
     jsCall(_settingsListener, 'call', <Object?>[null, jsify(settings)]);
   }
 
-  void emitJoinRoom(final Map<String, String> inviteParams) {
+  void emitJoinRoom(Map<String, String> inviteParams) {
     if (_joinRoomListener == null) {
       return;
     }
     jsCall(_joinRoomListener, 'call', <Object?>[null, jsify(inviteParams)]);
   }
 
-  void emitAuthChanged(final Map<String, Object?> user) {
+  void emitAuthChanged(Map<String, Object?> user) {
     if (_authListener == null) {
       return;
     }
     jsCall(_authListener, 'call', <Object?>[null, jsify(user)]);
   }
 
-  void emitAdblockPopup(final String state) {
+  void emitAdblockPopup(String state) {
     if (_adblockPopupListener == null) {
       return;
     }

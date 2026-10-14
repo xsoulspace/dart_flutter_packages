@@ -8,12 +8,12 @@ class AppleNativePurchaseProvider {
   );
 
   Future<List<PurchaseProductDetailsModel>> fetchProducts(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   ) async {
     try {
       final result = await _purchasesChannel.invokeMethod<List<dynamic>>(
         'fetchProducts',
-        productIds.map((final e) => e.value).toList(),
+        productIds.map((e) => e.value).toList(),
       );
       if (result == null) return [];
 
@@ -25,7 +25,7 @@ class AppleNativePurchaseProvider {
 
   /// Maps App Store Connect API product data to PurchaseProductDetailsModel
   PurchaseProductDetailsModel _mapStoreKitProductToModel(
-    final dynamic productDataRaw,
+    dynamic productDataRaw,
   ) {
     final productData = jsonDecodeMapAs<String, dynamic>(productDataRaw);
     if (productData.isEmpty) {
@@ -81,8 +81,8 @@ class AppleNativePurchaseProvider {
 
   /// Maps App Store Connect API kind to PurchaseProductType
   PurchaseProductType _mapAppStoreKindToProductType(
-    final String kind,
-    final bool isSubscription,
+    String kind,
+    bool isSubscription,
   ) {
     if (isSubscription) return PurchaseProductType.subscription;
     return switch (kind.toLowerCase()) {
@@ -100,7 +100,7 @@ class AppleNativePurchaseProvider {
   }
 
   Future<PurchaseResultModel> purchaseProduct(
-    final PurchaseProductDetailsModel productDetails,
+    PurchaseProductDetailsModel productDetails,
   ) async {
     try {
       final result = await _purchasesChannel.invokeMethod<String>(
@@ -156,7 +156,7 @@ class AppleNativePurchaseProvider {
   }
 
   Future<PurchaseDetailsModel> getPurchaseDetails(
-    final PurchaseProductId productId,
+    PurchaseProductId productId,
   ) async {
     try {
       final result = await _purchasesChannel.invokeMethod<String>(
@@ -176,7 +176,7 @@ class AppleNativePurchaseProvider {
   }
 
   Future<PurchaseDetailsModel> getPurchaseDetailsByPurchaseId(
-    final PurchaseId purchaseId,
+    PurchaseId purchaseId,
   ) async {
     try {
       final result = await _purchasesChannel.invokeMethod<String>(
@@ -196,7 +196,7 @@ class AppleNativePurchaseProvider {
   }
 
   PurchaseDetailsModel _mapTransactionToPurchaseDetails(
-    final Map<String, dynamic> transactionData,
+    Map<String, dynamic> transactionData,
   ) {
     final productData = jsonDecodeNullableMap(transactionData['product']);
     final attributes = jsonDecodeNullableMap(productData?['attributes']);

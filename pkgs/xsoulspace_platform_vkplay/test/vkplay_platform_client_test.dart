@@ -10,8 +10,8 @@ void main() {
       config: const VkPlayPlatformConfig(sdkInjected: true),
       initClient:
           ({
-            final String? appId,
-            final String expectedGlobal = 'iframeApi',
+            String? appId,
+            String expectedGlobal = 'iframeApi',
           }) async {
             throw UnsupportedError('web only');
           },
@@ -27,8 +27,8 @@ void main() {
       config: const VkPlayPlatformConfig(sdkInjected: true),
       initClient:
           ({
-            final String? appId,
-            final String expectedGlobal = 'iframeApi',
+            String? appId,
+            String expectedGlobal = 'iframeApi',
           }) async => sdk,
     );
 
@@ -62,8 +62,8 @@ void main() {
         config: const VkPlayPlatformConfig(sdkInjected: true),
         initClient:
             ({
-              final String? appId,
-              final String expectedGlobal = 'iframeApi',
+              String? appId,
+              String expectedGlobal = 'iframeApi',
             }) async => sdk,
       );
 
@@ -84,8 +84,8 @@ void main() {
       config: VkPlayPlatformConfig(sdkInjected: true, socialGateway: gateway),
       initClient:
           ({
-            final String? appId,
-            final String expectedGlobal = 'iframeApi',
+            String? appId,
+            String expectedGlobal = 'iframeApi',
           }) async => _FakeVkPlayClient(),
     );
 
@@ -110,8 +110,8 @@ void main() {
       config: const VkPlayPlatformConfig(sdkInjected: true),
       initClient:
           ({
-            final String? appId,
-            final String expectedGlobal = 'iframeApi',
+            String? appId,
+            String expectedGlobal = 'iframeApi',
           }) async => _FakeVkPlayClient(),
     );
 
@@ -127,8 +127,8 @@ void main() {
       config: const VkPlayPlatformConfig(sdkInjected: true),
       initClient:
           ({
-            final String? appId,
-            final String expectedGlobal = 'iframeApi',
+            String? appId,
+            String expectedGlobal = 'iframeApi',
           }) async => _FakeVkPlayClient(),
     );
     await client.init(const PlatformInitOptions());
@@ -142,7 +142,7 @@ final class _FakeVkPlayClient extends VkPlayClient {
   _FakeVkPlayClient();
 
   @override
-  Future<void> init({final String? appId}) async {}
+  Future<void> init({String? appId}) async {}
 
   @override
   Future<VkPlayLoginStatus> getLoginStatus() async {
@@ -169,8 +169,8 @@ final class _FakeVkPlayClient extends VkPlayClient {
 
   @override
   Future<List<VkPlayFriend>> userFriends({
-    final int? limit,
-    final int? offset,
+    int? limit,
+    int? offset,
   }) async {
     const friends = <VkPlayFriend>[
       VkPlayFriend(id: 'f-1', displayName: 'Friend 1'),
@@ -181,8 +181,8 @@ final class _FakeVkPlayClient extends VkPlayClient {
 
   @override
   Future<List<VkPlayFriend>> userSocialFriends({
-    final int? limit,
-    final int? offset,
+    int? limit,
+    int? offset,
   }) async {
     const friends = <VkPlayFriend>[
       VkPlayFriend(id: 'f-2', displayName: 'Friend 2 social', isSocial: true),
@@ -193,8 +193,8 @@ final class _FakeVkPlayClient extends VkPlayClient {
 
   @override
   Future<Object?> callRaw(
-    final String methodName, {
-    final Map<String, Object?>? params,
+    String methodName, {
+    Map<String, Object?>? params,
   }) async {
     if (methodName == 'customMethod') {
       return ((params?['value'] as int?) ?? 0) + 1;
@@ -203,9 +203,9 @@ final class _FakeVkPlayClient extends VkPlayClient {
   }
 
   List<VkPlayFriend> _sliceFriends(
-    final List<VkPlayFriend> source, {
-    final int? limit,
-    final int? offset,
+    List<VkPlayFriend> source, {
+    int? limit,
+    int? offset,
   }) {
     final safeOffset = (offset ?? 0).clamp(0, source.length);
     final start = source.skip(safeOffset);
@@ -221,13 +221,13 @@ final class _FakeGateway implements VkPlaySocialGateway {
   FeedShareRequest? lastFeedShare;
 
   @override
-  Future<InviteResult> invite(final InviteRequest request) async {
+  Future<InviteResult> invite(InviteRequest request) async {
     lastInvite = request;
     return const InviteResult(sent: true, inviteId: 'invite-1');
   }
 
   @override
-  Future<FeedShareResult> shareToFeed(final FeedShareRequest request) async {
+  Future<FeedShareResult> shareToFeed(FeedShareRequest request) async {
     lastFeedShare = request;
     return const FeedShareResult(shared: true, postId: 'post-1');
   }

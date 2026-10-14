@@ -51,9 +51,9 @@ base class StoreReviewer {
   /// logic.
   @mustBeOverridden
   Future<void> requestReview(
-    final BuildContext context, {
-    final Locale? locale,
-    final bool force = false,
+    BuildContext context, {
+    Locale? locale,
+    bool force = false,
   }) async {}
 
   /// Launches a scheme.
@@ -61,7 +61,7 @@ base class StoreReviewer {
   /// This method is used to launch a scheme in the app.
   ///
   /// @ai Use this method to launch a scheme in the app.
-  Future<void> launchScheme(final String scheme) async {
+  Future<void> launchScheme(String scheme) async {
     if (await canLaunchUrl(Uri.parse(scheme))) {
       await launchUrl(Uri.parse(scheme));
     }

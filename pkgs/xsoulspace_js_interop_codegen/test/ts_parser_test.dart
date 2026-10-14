@@ -37,7 +37,7 @@ declare global {
 
       final globals = (ir['globalDeclarations']! as List<dynamic>)
           .cast<Map<String, Object?>>();
-      expect(globals.any((final g) => g['name'] == 'CrazyGames'), isTrue);
+      expect(globals.any((g) => g['name'] == 'CrazyGames'), isTrue);
     },
     timeout: const Timeout(Duration(minutes: 2)),
   );

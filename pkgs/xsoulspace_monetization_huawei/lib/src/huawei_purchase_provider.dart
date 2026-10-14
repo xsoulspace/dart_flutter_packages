@@ -41,7 +41,7 @@ class HuaweiPurchaseProvider implements PurchaseProvider {
   }
 
   @override
-  Future<CancelResultModel> cancel(final String purchaseOrProductId) async {
+  Future<CancelResultModel> cancel(String purchaseOrProductId) async {
     try {
       // Huawei IAP doesn't provide direct API for subscription cancellation
       // Redirect user to subscription management page where they can cancel
@@ -78,7 +78,7 @@ class HuaweiPurchaseProvider implements PurchaseProvider {
 
   @override
   Future<CompletePurchaseResultModel> completePurchase(
-    final PurchaseVerificationDtoModel purchase,
+    PurchaseVerificationDtoModel purchase,
   ) async {
     try {
       if (purchase.productType != PurchaseProductType.consumable) {
@@ -101,12 +101,12 @@ class HuaweiPurchaseProvider implements PurchaseProvider {
 
   @override
   Future<List<PurchaseProductDetailsModel>> getProductDetails(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   ) async {
     final response = await IapClient.obtainProductInfo(
       ProductInfoReq(
         priceType: 1, // This needs to be dynamic based on product types
-        skuIds: productIds.map((final id) => id.value).toList(),
+        skuIds: productIds.map((id) => id.value).toList(),
       ),
     );
     if (response.status?.statusCode != 0) {
@@ -117,7 +117,7 @@ class HuaweiPurchaseProvider implements PurchaseProvider {
 
   @override
   Future<PurchaseResultModel> purchaseNonConsumable(
-    final PurchaseProductDetailsModel productDetails,
+    PurchaseProductDetailsModel productDetails,
   ) async {
     try {
       final result = await IapClient.createPurchaseIntent(
@@ -172,7 +172,7 @@ class HuaweiPurchaseProvider implements PurchaseProvider {
     }
   }
 
-  PurchaseProductDetailsModel _mapToProductDetails(final ProductInfo product) {
+  PurchaseProductDetailsModel _mapToProductDetails(ProductInfo product) {
     final duration = _getDurationFromPeriod(product.subPeriod ?? '');
 
     // Try to extract free trial period from Huawei's ProductInfo
@@ -194,8 +194,8 @@ class HuaweiPurchaseProvider implements PurchaseProvider {
   }
 
   PurchaseDetailsModel _mapIntentToPurchaseDetails(
-    final InAppPurchaseData data,
-    final PurchaseProductDetailsModel? product,
+    InAppPurchaseData data,
+    PurchaseProductDetailsModel? product,
   ) {
     final rawPurchaseTime = data.purchaseTime;
     final purchaseDate = rawPurchaseTime != null
@@ -232,7 +232,7 @@ class HuaweiPurchaseProvider implements PurchaseProvider {
   }
 
   PurchaseDetailsModel _mapOwnedToPurchaseDetails(
-    final InAppPurchaseData data,
+    InAppPurchaseData data,
   ) {
     final rawPurchaseTime = data.purchaseTime;
     final purchaseDate = rawPurchaseTime != null
@@ -269,13 +269,13 @@ class HuaweiPurchaseProvider implements PurchaseProvider {
   /// 1: Non-consumable
   /// 2: Auto-renewable subscription
 
-  int _mapProductTypeToHuawei(final PurchaseProductType type) => switch (type) {
+  int _mapProductTypeToHuawei(PurchaseProductType type) => switch (type) {
     PurchaseProductType.consumable => 0,
     PurchaseProductType.nonConsumable => 1,
     PurchaseProductType.subscription => 2,
   };
 
-  PurchaseProductType _mapHuaweiToProductType(final int? type) =>
+  PurchaseProductType _mapHuaweiToProductType(int? type) =>
       switch (type) {
         0 => PurchaseProductType.consumable,
         1 => PurchaseProductType.nonConsumable,
@@ -296,7 +296,7 @@ class HuaweiPurchaseProvider implements PurchaseProvider {
   /// - Active subscriptions have state 0 (purchased)
   /// - Expired subscriptions may have state 1 (canceled)
   /// - Grace period subscriptions remain in state 0
-  PurchaseStatus _mapHuaweiToPurchaseStatus(final int? state) =>
+  PurchaseStatus _mapHuaweiToPurchaseStatus(int? state) =>
       switch (state) {
         -1 => PurchaseStatus.pendingVerification, // Initial/pending purchase
         0 => PurchaseStatus.purchased, // Successfully purchased
@@ -306,14 +306,14 @@ class HuaweiPurchaseProvider implements PurchaseProvider {
       };
 
   /// Parses ISO 8601 duration format (e.g., P1Y, P1M, P7D)
-  Duration _getDurationFromPeriod(final String period) =>
+  Duration _getDurationFromPeriod(String period) =>
       jsonDecodeDurationFromISO8601(period);
 
   /// Extracts free trial duration from Huawei ProductInfo
   ///
   /// Huawei may provide trial period in various formats.
   /// This attempts to parse it similar to the subscription period.
-  PurchaseDurationModel _extractFreeTrialDuration(final ProductInfo product) {
+  PurchaseDurationModel _extractFreeTrialDuration(ProductInfo product) {
     try {
       // Attempt to access subFreeTrialPeriod or similar fields
       // Note: Actual field name may vary based on Huawei IAP SDK version
@@ -340,10 +340,10 @@ class HuaweiPurchaseProvider implements PurchaseProvider {
   /// 1. Huawei-provided expiry date (if available in InAppPurchaseData)
   /// 2. Purchase date + duration (fallback calculation)
   DateTime? _calculateExpiryDate(
-    final InAppPurchaseData data,
-    final DateTime purchaseDate,
-    final PurchaseProductType productType,
-    final Duration duration,
+    InAppPurchaseData data,
+    DateTime purchaseDate,
+    PurchaseProductType productType,
+    Duration duration,
   ) {
     // Only subscriptions have expiry dates
     if (productType != PurchaseProductType.subscription) {
@@ -372,12 +372,12 @@ class HuaweiPurchaseProvider implements PurchaseProvider {
 
   @override
   Future<List<PurchaseProductDetailsModel>> getConsumables(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   ) async {
     final response = await IapClient.obtainProductInfo(
       ProductInfoReq(
         priceType: 0, // Consumables
-        skuIds: productIds.map((final id) => id.value).toList(),
+        skuIds: productIds.map((id) => id.value).toList(),
       ),
     );
     return response.productInfoList?.map(_mapToProductDetails).toList() ?? [];
@@ -385,12 +385,12 @@ class HuaweiPurchaseProvider implements PurchaseProvider {
 
   @override
   Future<List<PurchaseProductDetailsModel>> getNonConsumables(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   ) async {
     final response = await IapClient.obtainProductInfo(
       ProductInfoReq(
         priceType: 1, // Non-consumables
-        skuIds: productIds.map((final id) => id.value).toList(),
+        skuIds: productIds.map((id) => id.value).toList(),
       ),
     );
     return response.productInfoList?.map(_mapToProductDetails).toList() ?? [];
@@ -398,12 +398,12 @@ class HuaweiPurchaseProvider implements PurchaseProvider {
 
   @override
   Future<List<PurchaseProductDetailsModel>> getSubscriptions(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   ) async {
     final response = await IapClient.obtainProductInfo(
       ProductInfoReq(
         priceType: 2, // Subscriptions
-        skuIds: productIds.map((final id) => id.value).toList(),
+        skuIds: productIds.map((id) => id.value).toList(),
       ),
     );
     return response.productInfoList?.map(_mapToProductDetails).toList() ?? [];
@@ -411,7 +411,7 @@ class HuaweiPurchaseProvider implements PurchaseProvider {
 
   @override
   Future<PurchaseResultModel> subscribe(
-    final PurchaseProductDetailsModel productDetails,
+    PurchaseProductDetailsModel productDetails,
   ) async => purchaseNonConsumable(productDetails);
 
   @override
@@ -439,7 +439,7 @@ class HuaweiPurchaseProvider implements PurchaseProvider {
 
   @override
   Future<PurchaseDetailsModel> getPurchaseDetails(
-    final PurchaseId purchaseId,
+    PurchaseId purchaseId,
   ) async {
     try {
       // Query all product types: 0 (consumable), 1 (non-consumable), 2 (subscription)
@@ -449,10 +449,10 @@ class HuaweiPurchaseProvider implements PurchaseProvider {
         IapClient.obtainOwnedPurchases(OwnedPurchasesReq(priceType: 2)),
       ]);
 
-      final results = responseResults.map((final response) {
+      final results = responseResults.map((response) {
         if (response.returnCode == '0') {
           final purchase = response.inAppPurchaseDataList?.firstWhereOrNull(
-            (final p) => p.orderId == purchaseId.value,
+            (p) => p.orderId == purchaseId.value,
           );
           if (purchase != null) {
             return _mapOwnedToPurchaseDetails(purchase);

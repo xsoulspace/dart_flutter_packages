@@ -3,7 +3,7 @@ import 'package:is_dart_empty_or_not/is_dart_empty_or_not.dart';
 
 /// Extension type that represents a unique identifier for a product.
 extension type const PurchaseProductId._(String value) {
-  factory PurchaseProductId.fromJson(final dynamic value) =>
+  factory PurchaseProductId.fromJson(dynamic value) =>
       PurchaseProductId._(jsonDecodeString(value));
   String toJson() => value;
   bool get isEmpty => value.isEmpty;
@@ -15,7 +15,7 @@ extension type const PurchaseProductId._(String value) {
 ///
 /// Usually one Product has multiple prices.
 extension type const PurchasePriceId._(String value) {
-  factory PurchasePriceId.fromJson(final dynamic value) =>
+  factory PurchasePriceId.fromJson(dynamic value) =>
       PurchasePriceId._(jsonDecodeString(value));
   String toJson() => value;
   bool get isEmpty => value.isEmpty;
@@ -26,12 +26,12 @@ extension type const PurchasePriceId._(String value) {
 /// Extension on List<PurchaseProductId> to convert to JSON.
 extension ProductListX on List<PurchaseProductId> {
   List<String> toJson() =>
-      map((final productId) => productId.toJson()).toList();
+      map((productId) => productId.toJson()).toList();
 }
 
 /// Extension type that represents a unique identifier for a purchase.
 extension type const PurchaseId._(String value) {
-  factory PurchaseId.fromJson(final dynamic value) =>
+  factory PurchaseId.fromJson(dynamic value) =>
       PurchaseId._(jsonDecodeString(value));
   String toJson() => value;
   bool get isEmpty => value.isEmpty;
@@ -41,12 +41,12 @@ extension type const PurchaseId._(String value) {
 
 /// Extension type that represents a purchase duration.
 extension type const PurchaseDurationModel._(Map<String, dynamic> value) {
-  factory PurchaseDurationModel.fromJson(final dynamic json) =>
+  factory PurchaseDurationModel.fromJson(dynamic json) =>
       PurchaseDurationModel._(jsonDecodeMapAs(json));
   factory PurchaseDurationModel({
-    final int years = 0,
-    final int months = 0,
-    final int days = 0,
+    int years = 0,
+    int months = 0,
+    int days = 0,
   }) =>
       PurchaseDurationModel._({'years': years, 'months': months, 'days': days});
   int get years => jsonDecodeInt(value['years']);
@@ -65,10 +65,10 @@ enum PurchaseProductType {
   subscription;
 
   String toJson() => name;
-  static PurchaseProductType fromJson(final dynamic value) {
+  static PurchaseProductType fromJson(dynamic value) {
     final str = jsonDecodeString(value);
     return PurchaseProductType.values.firstWhere(
-      (final e) => e.name == str,
+      (e) => e.name == str,
       orElse: () => PurchaseProductType.consumable,
     );
   }
@@ -76,19 +76,19 @@ enum PurchaseProductType {
 
 /// Extension type that represents the details of a purchasable product.
 extension type const PurchaseProductDetailsModel._(Map<String, dynamic> value) {
-  factory PurchaseProductDetailsModel.fromJson(final dynamic json) =>
+  factory PurchaseProductDetailsModel.fromJson(dynamic json) =>
       PurchaseProductDetailsModel._(jsonDecodeMapAs(json));
   factory PurchaseProductDetailsModel({
-    required final PurchaseDurationModel freeTrialDuration,
-    final PurchaseProductId productId = PurchaseProductId.empty,
-    final PurchasePriceId priceId = PurchasePriceId.empty,
-    final PurchaseProductType productType = PurchaseProductType.consumable,
-    final String name = '',
-    final String formattedPrice = '',
-    final double price = 0,
-    final String currency = '',
-    final String description = '',
-    final Duration duration = Duration.zero,
+    required PurchaseDurationModel freeTrialDuration,
+    PurchaseProductId productId = PurchaseProductId.empty,
+    PurchasePriceId priceId = PurchasePriceId.empty,
+    PurchaseProductType productType = PurchaseProductType.consumable,
+    String name = '',
+    String formattedPrice = '',
+    double price = 0,
+    String currency = '',
+    String description = '',
+    Duration duration = Duration.zero,
   }) => PurchaseProductDetailsModel._({
     'productId': productId.toJson(),
     'priceId': priceId.toJson(),
@@ -130,28 +130,28 @@ extension type const PurchaseProductDetailsModel._(Map<String, dynamic> value) {
 /// Wraps a `Map<String, dynamic>` for all purchase details fields.
 /// Uses from_json_to_json for type-safe JSON handling.
 extension type const PurchaseDetailsModel._(Map<String, dynamic> value) {
-  factory PurchaseDetailsModel.fromJson(final dynamic json) =>
+  factory PurchaseDetailsModel.fromJson(dynamic json) =>
       PurchaseDetailsModel._(
         jsonDecodeMapAs<String, dynamic>(json).whenEmptyUse(empty.toJson()),
       );
   factory PurchaseDetailsModel({
-    required final DateTime purchaseDate,
-    final PurchaseId purchaseId = PurchaseId.empty,
-    final PurchaseProductId productId = PurchaseProductId.empty,
-    final PurchasePriceId priceId = PurchasePriceId.empty,
-    final PurchaseStatus status = PurchaseStatus.pendingVerification,
-    final PurchaseProductType purchaseType = PurchaseProductType.consumable,
-    final Duration freeTrialDuration = Duration.zero,
-    final Duration duration = Duration.zero,
-    final DateTime? expiryDate,
-    final String localVerificationData = '',
-    final String serverVerificationData = '',
-    final String source = '',
-    final String name = '',
-    final String formattedPrice = '',
-    final double price = 0,
-    final String currency = '',
-    final String purchaseToken = '',
+    required DateTime purchaseDate,
+    PurchaseId purchaseId = PurchaseId.empty,
+    PurchaseProductId productId = PurchaseProductId.empty,
+    PurchasePriceId priceId = PurchasePriceId.empty,
+    PurchaseStatus status = PurchaseStatus.pendingVerification,
+    PurchaseProductType purchaseType = PurchaseProductType.consumable,
+    Duration freeTrialDuration = Duration.zero,
+    Duration duration = Duration.zero,
+    DateTime? expiryDate,
+    String localVerificationData = '',
+    String serverVerificationData = '',
+    String source = '',
+    String name = '',
+    String formattedPrice = '',
+    double price = 0,
+    String currency = '',
+    String purchaseToken = '',
   }) => PurchaseDetailsModel._({
     'purchaseId': purchaseId.toJson(),
     'productId': productId.toJson(),
@@ -248,10 +248,10 @@ enum PurchaseStatus {
 
 /// Helper for PurchaseStatus enum JSON decode.
 extension PurchaseStatusX on PurchaseStatus {
-  static PurchaseStatus fromJson(final dynamic value) {
+  static PurchaseStatus fromJson(dynamic value) {
     final str = jsonDecodeString(value);
     return PurchaseStatus.values.firstWhere(
-      (final e) => e.name == str,
+      (e) => e.name == str,
       orElse: () => PurchaseStatus.pendingVerification,
     );
   }
@@ -262,24 +262,24 @@ extension PurchaseStatusX on PurchaseStatus {
 /// Wraps a Map<String, dynamic> for result fields.
 /// Uses from_json_to_json for type-safe JSON handling.
 extension type const PurchaseResultModel._(Map<String, dynamic> value) {
-  factory PurchaseResultModel.fromJson(final dynamic json) =>
+  factory PurchaseResultModel.fromJson(dynamic json) =>
       PurchaseResultModel._(jsonDecodeMapAs(json));
   factory PurchaseResultModel({
-    final PurchaseDetailsModel? details,
-    final ResultType type = ResultType.success,
-    final String? error,
+    PurchaseDetailsModel? details,
+    ResultType type = ResultType.success,
+    String? error,
   }) => PurchaseResultModel._({
     'type': type.name,
     'details': details?.toJson(),
     'error': error,
   });
-  factory PurchaseResultModel.success(final PurchaseDetailsModel details) =>
+  factory PurchaseResultModel.success(PurchaseDetailsModel details) =>
       PurchaseResultModel(details: details);
-  factory PurchaseResultModel.failure(final String error) =>
+  factory PurchaseResultModel.failure(String error) =>
       PurchaseResultModel(error: error, type: ResultType.failure);
   bool get isSuccess => value['type'] == ResultType.success.name;
   ResultType get type => ResultType.values.firstWhere(
-    (final e) => e.name == jsonDecodeString(value['type']),
+    (e) => e.name == jsonDecodeString(value['type']),
     orElse: () => ResultType.failure,
   );
   PurchaseDetailsModel? get details =>
@@ -294,27 +294,27 @@ extension type const PurchaseResultModel._(Map<String, dynamic> value) {
 /// Wraps a Map<String, dynamic> for result fields.
 /// Uses from_json_to_json for type-safe JSON handling.
 extension type const RestoreResultModel._(Map<String, dynamic> value) {
-  factory RestoreResultModel.fromJson(final dynamic json) =>
+  factory RestoreResultModel.fromJson(dynamic json) =>
       RestoreResultModel._(jsonDecodeMapAs(json));
   factory RestoreResultModel({
-    final List<PurchaseDetailsModel> restoredPurchases = const [],
-    final ResultType type = ResultType.success,
-    final String? error,
+    List<PurchaseDetailsModel> restoredPurchases = const [],
+    ResultType type = ResultType.success,
+    String? error,
   }) => RestoreResultModel._({
     'type': type.name,
     'restoredPurchases': restoredPurchases
-        .map((final p) => p.toJson())
+        .map((p) => p.toJson())
         .toList(),
     'error': error,
   });
   factory RestoreResultModel.success(
-    final List<PurchaseDetailsModel> restoredPurchases,
+    List<PurchaseDetailsModel> restoredPurchases,
   ) => RestoreResultModel(restoredPurchases: restoredPurchases);
-  factory RestoreResultModel.failure(final String error) =>
+  factory RestoreResultModel.failure(String error) =>
       RestoreResultModel(error: error, type: ResultType.failure);
   bool get isSuccess => value['type'] == ResultType.success.name;
   ResultType get type => ResultType.values.firstWhere(
-    (final e) => e.name == jsonDecodeString(value['type']),
+    (e) => e.name == jsonDecodeString(value['type']),
     orElse: () => ResultType.failure,
   );
 
@@ -336,19 +336,19 @@ enum ResultType { success, failure }
 /// Wraps a Map<String, dynamic> for result fields.
 /// Uses from_json_to_json for type-safe JSON handling.
 extension type const CancelResultModel._(Map<String, dynamic> value) {
-  factory CancelResultModel.fromJson(final dynamic json) =>
+  factory CancelResultModel.fromJson(dynamic json) =>
       CancelResultModel._(jsonDecodeMapAs(json));
   factory CancelResultModel({
-    final ResultType type = ResultType.success,
-    final String? error,
+    ResultType type = ResultType.success,
+    String? error,
   }) => CancelResultModel._({'type': type.name, 'error': error});
   factory CancelResultModel.success() => CancelResultModel();
-  factory CancelResultModel.failure(final String error) =>
+  factory CancelResultModel.failure(String error) =>
       CancelResultModel(error: error, type: ResultType.failure);
   bool get isSuccess => type == ResultType.success;
   bool get isFailure => type == ResultType.failure;
   ResultType get type => ResultType.values.firstWhere(
-    (final e) => e.name == jsonDecodeString(value['type']),
+    (e) => e.name == jsonDecodeString(value['type']),
     orElse: () => ResultType.failure,
   );
   String get error => !isSuccess ? jsonDecodeString(value['error']) : '';
@@ -361,19 +361,19 @@ extension type const CancelResultModel._(Map<String, dynamic> value) {
 /// Wraps a Map<String, dynamic> for result fields.
 /// Uses from_json_to_json for type-safe JSON handling.
 extension type const CompletePurchaseResultModel._(Map<String, dynamic> value) {
-  factory CompletePurchaseResultModel.fromJson(final dynamic json) =>
+  factory CompletePurchaseResultModel.fromJson(dynamic json) =>
       CompletePurchaseResultModel._(jsonDecodeMapAs(json));
   factory CompletePurchaseResultModel({
-    final ResultType type = ResultType.success,
-    final String? error,
+    ResultType type = ResultType.success,
+    String? error,
   }) => CompletePurchaseResultModel._({'type': type.name, 'error': error});
   factory CompletePurchaseResultModel.success() =>
       CompletePurchaseResultModel();
-  factory CompletePurchaseResultModel.failure(final String error) =>
+  factory CompletePurchaseResultModel.failure(String error) =>
       CompletePurchaseResultModel(error: error, type: ResultType.failure);
   bool get isSuccess => value['type'] == ResultType.success.name;
   ResultType get type => ResultType.values.firstWhere(
-    (final e) => e.name == jsonDecodeString(value['type']),
+    (e) => e.name == jsonDecodeString(value['type']),
     orElse: () => ResultType.failure,
   );
   String get error => !isSuccess ? jsonDecodeString(value['error']) : '';
@@ -388,20 +388,20 @@ extension type const CompletePurchaseResultModel._(Map<String, dynamic> value) {
 extension type const PurchaseVerificationDtoModel._(
   Map<String, dynamic> value
 ) {
-  factory PurchaseVerificationDtoModel.fromJson(final dynamic json) =>
+  factory PurchaseVerificationDtoModel.fromJson(dynamic json) =>
       PurchaseVerificationDtoModel._(jsonDecodeMapAs(json));
   factory PurchaseVerificationDtoModel({
-    required final DateTime transactionDate,
-    final PurchaseId purchaseId = PurchaseId.empty,
-    final PurchaseProductId productId = PurchaseProductId.empty,
-    final PurchasePriceId priceId = PurchasePriceId.empty,
-    final PurchaseStatus status = PurchaseStatus.pendingVerification,
-    final PurchaseProductType productType = PurchaseProductType.consumable,
-    final String purchaseToken = '',
-    final DateTime? expiryDate,
-    final String? localVerificationData,
-    final String? serverVerificationData,
-    final String? source,
+    required DateTime transactionDate,
+    PurchaseId purchaseId = PurchaseId.empty,
+    PurchaseProductId productId = PurchaseProductId.empty,
+    PurchasePriceId priceId = PurchasePriceId.empty,
+    PurchaseStatus status = PurchaseStatus.pendingVerification,
+    PurchaseProductType productType = PurchaseProductType.consumable,
+    String purchaseToken = '',
+    DateTime? expiryDate,
+    String? localVerificationData,
+    String? serverVerificationData,
+    String? source,
   }) => PurchaseVerificationDtoModel._({
     'purchaseId': purchaseId.toJson(),
     'productId': productId.toJson(),

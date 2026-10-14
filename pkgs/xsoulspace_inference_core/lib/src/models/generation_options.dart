@@ -19,7 +19,7 @@ class GenerationOptions {
     this.reasoningEffort,
   });
 
-  factory GenerationOptions.fromJson(final Map<String, dynamic> json) =>
+  factory GenerationOptions.fromJson(Map<String, dynamic> json) =>
       GenerationOptions(
         maxTokens: switch (json['max_tokens']) {
           final int tokens => tokens,
@@ -57,11 +57,11 @@ class GenerationOptions {
   final String? reasoningEffort;
 
   GenerationOptions copyWith({
-    final int? maxTokens,
-    final double? temperature,
-    final List<String>? stopSequences,
-    final bool? thinking,
-    final String? reasoningEffort,
+    int? maxTokens,
+    double? temperature,
+    List<String>? stopSequences,
+    bool? thinking,
+    String? reasoningEffort,
   }) => GenerationOptions(
     maxTokens: maxTokens ?? this.maxTokens,
     temperature: temperature ?? this.temperature,

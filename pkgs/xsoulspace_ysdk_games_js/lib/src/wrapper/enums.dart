@@ -11,7 +11,7 @@ enum FeedbackError {
   const FeedbackError(this.value);
   final String value;
 
-  static FeedbackError fromValue(final String? value) {
+  static FeedbackError fromValue(String? value) {
     if (value == null) return unknownValue;
     for (final item in FeedbackError.values) {
       if (item.value == value) return item;
@@ -28,7 +28,7 @@ enum StickyAdvError {
   const StickyAdvError(this.value);
   final String value;
 
-  static StickyAdvError fromValue(final String? value) {
+  static StickyAdvError fromValue(String? value) {
     if (value == null) return unknownValue;
     for (final item in StickyAdvError.values) {
       if (item.value == value) return item;
@@ -45,7 +45,7 @@ enum SdkEventName {
   const SdkEventName(this.value);
   final String value;
 
-  static SdkEventName fromValue(final String? value) {
+  static SdkEventName fromValue(String? value) {
     if (value == null) return unknownValue;
     for (final item in SdkEventName.values) {
       if (item.value == value) return item;
@@ -130,7 +130,7 @@ enum ISO_639_1 {
   const ISO_639_1(this.value);
   final String value;
 
-  static ISO_639_1 fromValue(final String? value) {
+  static ISO_639_1 fromValue(String? value) {
     if (value == null) return unknownValue;
     for (final item in ISO_639_1.values) {
       if (item.value == value) return item;
@@ -164,7 +164,7 @@ enum TopLevelDomain {
   const TopLevelDomain(this.value);
   final String value;
 
-  static TopLevelDomain fromValue(final String? value) {
+  static TopLevelDomain fromValue(String? value) {
     if (value == null) return unknownValue;
     for (final item in TopLevelDomain.values) {
       if (item.value == value) return item;
@@ -183,7 +183,7 @@ enum DeviceType {
   const DeviceType(this.value);
   final String value;
 
-  static DeviceType fromValue(final String? value) {
+  static DeviceType fromValue(String? value) {
     if (value == null) return unknownValue;
     for (final item in DeviceType.values) {
       if (item.value == value) return item;

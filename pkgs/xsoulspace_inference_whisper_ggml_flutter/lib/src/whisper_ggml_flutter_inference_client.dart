@@ -18,12 +18,12 @@ typedef WhisperModelInitFn = Future<void> Function(WhisperModel model);
 
 class WhisperGgmlFlutterInferenceClient implements InferenceClient {
   WhisperGgmlFlutterInferenceClient({
-    final WhisperModel initialModel = WhisperModel.base,
-    final WhisperController? whisperController,
-    final WhisperModelPathResolver? resolveModelPath,
-    final WhisperModelDownloadFn? downloadModel,
-    final WhisperModelInitFn? initModel,
-    final WhisperTranscribeFn? transcribe,
+    WhisperModel initialModel = WhisperModel.base,
+    WhisperController? whisperController,
+    WhisperModelPathResolver? resolveModelPath,
+    WhisperModelDownloadFn? downloadModel,
+    WhisperModelInitFn? initModel,
+    WhisperTranscribeFn? transcribe,
     this.defaultLanguage = 'en',
   }) : _selectedModel = initialModel,
        _controller = whisperController ?? WhisperController(),
@@ -67,12 +67,12 @@ class WhisperGgmlFlutterInferenceClient implements InferenceClient {
 
   WhisperModel get selectedModel => _selectedModel;
 
-  Future<void> selectModel(final WhisperModel model) async {
+  Future<void> selectModel(WhisperModel model) async {
     await _runInitModel(model);
     _selectedModel = model;
   }
 
-  Future<bool> isModelInstalled(final WhisperModel model) async {
+  Future<bool> isModelInstalled(WhisperModel model) async {
     final modelPath = await _runResolveModelPath(model);
     return File(modelPath).existsSync();
   }
@@ -87,12 +87,12 @@ class WhisperGgmlFlutterInferenceClient implements InferenceClient {
     return installed;
   }
 
-  Future<String> downloadModel([final WhisperModel? model]) async {
+  Future<String> downloadModel([WhisperModel? model]) async {
     final targetModel = model ?? _selectedModel;
     return _runDownloadModel(targetModel);
   }
 
-  Future<bool> deleteModel([final WhisperModel? model]) async {
+  Future<bool> deleteModel([WhisperModel? model]) async {
     final targetModel = model ?? _selectedModel;
     final modelPath = await _runResolveModelPath(targetModel);
     final file = File(modelPath);
@@ -105,7 +105,7 @@ class WhisperGgmlFlutterInferenceClient implements InferenceClient {
 
   @override
   Future<InferenceResult<InferenceResponse>> infer(
-    final InferenceRequest request, {
+    InferenceRequest request, {
     ToolRegistry? toolRegistry,
   }) async {
     if (!supportedTasks.contains(request.task)) {
@@ -114,7 +114,7 @@ class WhisperGgmlFlutterInferenceClient implements InferenceClient {
         message: 'Task ${request.task.name} is not supported by $id',
         details: <String, dynamic>{
           'supported_tasks': supportedTasks
-              .map((final task) => task.name)
+              .map((task) => task.name)
               .toList(),
           'requested_task': request.task.name,
         },
@@ -189,7 +189,7 @@ class WhisperGgmlFlutterInferenceClient implements InferenceClient {
       final segments =
           (transcription.segments ?? const <WhisperTranscribeSegment>[])
               .map(
-                (final segment) => InferenceSpeechSegment(
+                (segment) => InferenceSpeechSegment(
                   text: segment.text,
                   startMs: segment.fromTs.inMilliseconds,
                   endMs: segment.toTs.inMilliseconds,
@@ -226,7 +226,7 @@ class WhisperGgmlFlutterInferenceClient implements InferenceClient {
     }
   }
 
-  String _resolveLanguage(final InferenceRequest request) {
+  String _resolveLanguage(InferenceRequest request) {
     final rawLanguage = request.metadata['language'];
     if (rawLanguage is String && rawLanguage.trim().isNotEmpty) {
       return rawLanguage.trim();
@@ -234,21 +234,21 @@ class WhisperGgmlFlutterInferenceClient implements InferenceClient {
     return defaultLanguage;
   }
 
-  Future<String> _runResolveModelPath(final WhisperModel model) async {
+  Future<String> _runResolveModelPath(WhisperModel model) async {
     if (_resolveModelPathOverride != null) {
       return _resolveModelPathOverride(model);
     }
     return _controller.getPath(model);
   }
 
-  Future<String> _runDownloadModel(final WhisperModel model) async {
+  Future<String> _runDownloadModel(WhisperModel model) async {
     if (_downloadModelOverride != null) {
       return _downloadModelOverride(model);
     }
     return _controller.downloadModel(model);
   }
 
-  Future<void> _runInitModel(final WhisperModel model) async {
+  Future<void> _runInitModel(WhisperModel model) async {
     if (_initModelOverride != null) {
       await _initModelOverride(model);
       return;
@@ -257,10 +257,10 @@ class WhisperGgmlFlutterInferenceClient implements InferenceClient {
   }
 
   Future<WhisperTranscribeResponse> _runTranscribe({
-    required final WhisperModel model,
-    required final String modelPath,
-    required final String audioPath,
-    required final String language,
+    required WhisperModel model,
+    required String modelPath,
+    required String audioPath,
+    required String language,
   }) async {
     if (_transcribeOverride != null) {
       return _transcribeOverride(
@@ -284,7 +284,7 @@ class WhisperGgmlFlutterInferenceClient implements InferenceClient {
   }
 
   Future<InferenceResult<_PreparedAudio>> _prepareAudioInput(
-    final InferenceAudioInput audioInput,
+    InferenceAudioInput audioInput,
   ) async {
     final filePath = audioInput.filePath?.trim() ?? '';
     if (filePath.isNotEmpty) {
@@ -321,7 +321,7 @@ class WhisperGgmlFlutterInferenceClient implements InferenceClient {
     );
   }
 
-  String _extensionForMimeType(final String mimeType) {
+  String _extensionForMimeType(String mimeType) {
     final normalized = mimeType.toLowerCase().trim();
     if (normalized.contains('wav')) {
       return '.wav';

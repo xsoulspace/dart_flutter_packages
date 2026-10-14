@@ -9,10 +9,10 @@ class PagingControllerPageModel<E> {
     required this.pagesCount,
   });
   factory PagingControllerPageModel.fromJson(
-    final Map<String, dynamic> json,
-    final E Function(Object? json) fromJsonT,
+    Map<String, dynamic> json,
+    E Function(Object? json) fromJsonT,
   ) => _$PagingControllerPageModelFromJson(json, fromJsonT);
-  Map<String, dynamic> toJson(final Map<String, dynamic> Function(E) toJsonT) =>
+  Map<String, dynamic> toJson(Map<String, dynamic> Function(E) toJsonT) =>
       _$PagingControllerPageModelToJson(this, toJsonT);
 
   final List<E> values;
@@ -20,9 +20,9 @@ class PagingControllerPageModel<E> {
   final int currentPage;
 
   PagingControllerPageModel<E> copyWith({
-    final List<E>? values,
-    final int? pagesCount,
-    final int? currentPage,
+    List<E>? values,
+    int? pagesCount,
+    int? currentPage,
   }) => PagingControllerPageModel<E>(
     values: values ?? this.values,
     pagesCount: pagesCount ?? this.pagesCount,
@@ -31,8 +31,8 @@ class PagingControllerPageModel<E> {
 }
 
 PagingControllerPageModel<E> _$PagingControllerPageModelFromJson<E>(
-  final Map<String, dynamic> json,
-  final E Function(Object? json) fromJsonE,
+  Map<String, dynamic> json,
+  E Function(Object? json) fromJsonE,
 ) => PagingControllerPageModel<E>(
   values: jsonDecodeListAs<dynamic>(json['values']).map(fromJsonE).toList(),
   currentPage: jsonDecodeInt(json['currentPage']),
@@ -40,8 +40,8 @@ PagingControllerPageModel<E> _$PagingControllerPageModelFromJson<E>(
 );
 
 Map<String, dynamic> _$PagingControllerPageModelToJson<E>(
-  final PagingControllerPageModel<E> instance,
-  final Object? Function(E value) toJsonE,
+  PagingControllerPageModel<E> instance,
+  Object? Function(E value) toJsonE,
 ) => <String, dynamic>{
   'values': instance.values.map(toJsonE).toList(),
   'pagesCount': instance.pagesCount,
@@ -51,7 +51,7 @@ Map<String, dynamic> _$PagingControllerPageModelToJson<E>(
 class PagingControllerRequestModel<TData> {
   PagingControllerRequestModel({this.page = 0, this.limit = 10, this.data});
   Map<String, dynamic> toJson(
-    final Map<String, dynamic> Function(TData?) toJsonT,
+    Map<String, dynamic> Function(TData?) toJsonT,
   ) => {'page': page, 'limit': limit, 'data': toJsonT(data)};
 
   final int page;

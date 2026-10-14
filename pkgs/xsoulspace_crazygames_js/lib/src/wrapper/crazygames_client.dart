@@ -25,15 +25,15 @@ class AdClient {
 
   final Object? _module;
 
-  void prefetchAd(final AdType type) {
+  void prefetchAd(AdType type) {
     jsCall(_module, 'prefetchAd', <Object?>[type.value]);
   }
 
   Future<void> requestAd(
-    final AdType type, {
-    final void Function()? adStarted,
-    final void Function(SdkError error)? adError,
-    final void Function()? adFinished,
+    AdType type, {
+    void Function()? adStarted,
+    void Function(SdkError error)? adError,
+    void Function()? adFinished,
   }) async {
     final callbacks = <String, Object?>{
       if (adStarted != null)
@@ -41,7 +41,7 @@ class AdClient {
           runGuarded(adStarted);
         }),
       if (adError != null)
-        'adError': allowInterop((final Object? error) {
+        'adError': allowInterop((Object? error) {
           runGuarded(() {
             final map = asMap(error);
             adError.call(
@@ -69,9 +69,9 @@ class AdClient {
   }
 
   Object addAdblockPopupListener(
-    final void Function(AdblockPopupState state) listener,
+    void Function(AdblockPopupState state) listener,
   ) {
-    final jsListener = allowInterop((final Object? state) {
+    final jsListener = allowInterop((Object? state) {
       runGuarded(() {
         listener.call(
           AdblockPopupState.fromValue(state is String ? state : null),
@@ -82,7 +82,7 @@ class AdClient {
     return jsListener;
   }
 
-  void removeAdblockPopupListener(final Object listener) {
+  void removeAdblockPopupListener(Object listener) {
     jsCall(_module, 'removeAdblockPopupListener', <Object?>[listener]);
   }
 
@@ -94,21 +94,21 @@ class BannerClient {
 
   final Object? _module;
 
-  Future<PrefetchedBanner> prefetchBanner(final BannerRequest request) async {
+  Future<PrefetchedBanner> prefetchBanner(BannerRequest request) async {
     final result = await jsCallPromise(_module, 'prefetchBanner', <Object?>[
       jsify(request.toJson()),
     ]);
     return PrefetchedBanner.fromMap(asMap(result));
   }
 
-  Future<void> requestBanner(final BannerRequest request) async {
+  Future<void> requestBanner(BannerRequest request) async {
     await jsCallPromise(_module, 'requestBanner', <Object?>[
       jsify(request.toJson()),
     ]);
   }
 
   Future<PrefetchedBanner> prefetchResponsiveBanner(
-    final BannerRequest request,
+    BannerRequest request,
   ) async {
     final result = await jsCallPromise(
       _module,
@@ -118,17 +118,17 @@ class BannerClient {
     return PrefetchedBanner.fromMap(asMap(result));
   }
 
-  Future<void> requestResponsiveBanner(final String id) async {
+  Future<void> requestResponsiveBanner(String id) async {
     await jsCallPromise(_module, 'requestResponsiveBanner', <Object?>[id]);
   }
 
-  Future<void> renderPrefetchedBanner(final PrefetchedBanner banner) async {
+  Future<void> renderPrefetchedBanner(PrefetchedBanner banner) async {
     await jsCallPromise(_module, 'renderPrefetchedBanner', <Object?>[
       jsify(banner.toJson()),
     ]);
   }
 
-  void clearBanner(final String id) {
+  void clearBanner(String id) {
     jsCall(_module, 'clearBanner', <Object?>[id]);
   }
 
@@ -137,11 +137,11 @@ class BannerClient {
   }
 
   void requestOverlayBanners(
-    final List<OverlayBannerRequest> banners, {
-    final void Function(String id, String event, String? value)? callback,
+    List<OverlayBannerRequest> banners, {
+    void Function(String id, String event, String? value)? callback,
   }) {
     final payload = banners
-        .map((final banner) => banner.toJson())
+        .map((banner) => banner.toJson())
         .toList(growable: false);
     if (callback == null) {
       jsCall(_module, 'requestOverlayBanners', <Object?>[jsify(payload)]);
@@ -149,9 +149,9 @@ class BannerClient {
     }
 
     final jsCallback = allowInterop((
-      final Object? id,
-      final Object? event,
-      final Object? value,
+      Object? id,
+      Object? event,
+      Object? value,
     ) {
       runGuarded(() {
         callback.call(
@@ -188,7 +188,7 @@ class GameClient {
     if (value.isEmpty) {
       return null;
     }
-    return value.map((final key, final item) => MapEntry(key, asString(item)));
+    return value.map((key, item) => MapEntry(key, asString(item)));
   }
 
   void gameplayStart() => jsCall(_module, 'gameplayStart', const <Object?>[]);
@@ -197,12 +197,12 @@ class GameClient {
   void loadingStop() => jsCall(_module, 'loadingStop', const <Object?>[]);
   void happytime() => jsCall(_module, 'happytime', const <Object?>[]);
 
-  String inviteLink(final Map<String, String> params) {
+  String inviteLink(Map<String, String> params) {
     final result = jsCall(_module, 'inviteLink', <Object?>[jsify(params)]);
     return asString(result);
   }
 
-  String showInviteButton(final Map<String, String> params) {
+  String showInviteButton(Map<String, String> params) {
     final result = jsCall(_module, 'showInviteButton', <Object?>[
       jsify(params),
     ]);
@@ -212,33 +212,33 @@ class GameClient {
   void hideInviteButton() =>
       jsCall(_module, 'hideInviteButton', const <Object?>[]);
 
-  String? getInviteParam(final String key) {
+  String? getInviteParam(String key) {
     final result = jsCall(_module, 'getInviteParam', <Object?>[key]);
     return result as String?;
   }
 
   Object addSettingsChangeListener(
-    final void Function(GameSettings settings) listener,
+    void Function(GameSettings settings) listener,
   ) {
-    final jsListener = allowInterop((final Object? value) {
+    final jsListener = allowInterop((Object? value) {
       runGuarded(() => listener.call(GameSettings.fromMap(asMap(value))));
     });
     jsCall(_module, 'addSettingsChangeListener', <Object?>[jsListener]);
     return jsListener;
   }
 
-  void removeSettingsChangeListener(final Object listener) {
+  void removeSettingsChangeListener(Object listener) {
     jsCall(_module, 'removeSettingsChangeListener', <Object?>[listener]);
   }
 
   Object addJoinRoomListener(
-    final void Function(Map<String, String> inviteParams) listener,
+    void Function(Map<String, String> inviteParams) listener,
   ) {
-    final jsListener = allowInterop((final Object? value) {
+    final jsListener = allowInterop((Object? value) {
       runGuarded(() {
         final map = asMap(
           value,
-        ).map((final key, final item) => MapEntry(key, asString(item)));
+        ).map((key, item) => MapEntry(key, asString(item)));
         listener.call(map);
       });
     });
@@ -246,7 +246,7 @@ class GameClient {
     return jsListener;
   }
 
-  void removeJoinRoomListener(final Object listener) {
+  void removeJoinRoomListener(Object listener) {
     jsCall(_module, 'removeJoinRoomListener', <Object?>[listener]);
   }
 }
@@ -274,8 +274,8 @@ class UserClient {
   }
 
   Future<FriendsPage> listFriends({
-    final int page = 1,
-    final int size = 10,
+    int page = 1,
+    int size = 10,
   }) async {
     final result = await jsCallPromise(_module, 'listFriends', <Object?>[
       jsify(FriendsPageOptions(page: page, size: size).toJson()),
@@ -310,8 +310,8 @@ class UserClient {
     return AccountLinkResponse.fromMap(asMap(result));
   }
 
-  Object addAuthListener(final void Function(User? user) listener) {
-    final jsListener = allowInterop((final Object? value) {
+  Object addAuthListener(void Function(User? user) listener) {
+    final jsListener = allowInterop((Object? value) {
       runGuarded(() {
         final map = asMap(value);
         if (map.isEmpty) {
@@ -325,19 +325,19 @@ class UserClient {
     return jsListener;
   }
 
-  void removeAuthListener(final Object listener) {
+  void removeAuthListener(Object listener) {
     jsCall(_module, 'removeAuthListener', <Object?>[listener]);
   }
 
-  void addScore(final int score) {
+  void addScore(int score) {
     jsCall(_module, 'addScore', <Object?>[score]);
   }
 
-  void addScoreEncrypted(final int score, final String encryptedScore) {
+  void addScoreEncrypted(int score, String encryptedScore) {
     jsCall(_module, 'addScoreEncrypted', <Object?>[score, encryptedScore]);
   }
 
-  void submitScore(final String encryptedScore) {
+  void submitScore(String encryptedScore) {
     jsCall(_module, 'submitScore', <Object?>[
       jsify(<String, Object?>{'encryptedScore': encryptedScore}),
     ]);
@@ -351,16 +351,16 @@ class DataClient {
 
   void clear() => jsCall(_module, 'clear', const <Object?>[]);
 
-  String? getItem(final String key) {
+  String? getItem(String key) {
     final result = jsCall(_module, 'getItem', <Object?>[key]);
     return result as String?;
   }
 
-  void removeItem(final String key) {
+  void removeItem(String key) {
     jsCall(_module, 'removeItem', <Object?>[key]);
   }
 
-  void setItem(final String key, final Object? value) {
+  void setItem(String key, Object? value) {
     jsCall(_module, 'setItem', <Object?>[key, value]);
   }
 
@@ -375,8 +375,8 @@ class AnalyticsClient {
   final Object? _module;
 
   void trackOrder(
-    final PaymentProvider provider,
-    final Map<String, Object?> order,
+    PaymentProvider provider,
+    Map<String, Object?> order,
   ) {
     jsCall(_module, 'trackOrder', <Object?>[provider.value, jsify(order)]);
   }

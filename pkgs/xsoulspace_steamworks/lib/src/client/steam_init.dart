@@ -75,10 +75,10 @@ final class SteamInitResult {
   factory SteamInitResult.success() => const SteamInitResult._(success: true);
 
   factory SteamInitResult.failure({
-    required final SteamInitErrorCode errorCode,
-    final String? message,
-    final int? nativeInitCode,
-    final bool restartRequired = false,
+    required SteamInitErrorCode errorCode,
+    String? message,
+    int? nativeInitCode,
+    bool restartRequired = false,
   }) => SteamInitResult._(
     success: false,
     errorCode: errorCode,

@@ -35,7 +35,7 @@ class MutableOrderedSet<V> with Iterable<V> {
   /// @ai Use this method for bulk updates rather than multiple individual add() calls.
   /// {@endtemplate}
   @mustCallSuper
-  void assignAll(final Iterable<V> items) => _items
+  void assignAll(Iterable<V> items) => _items
     ..clear()
     ..addAll(items);
 
@@ -49,7 +49,7 @@ class MutableOrderedSet<V> with Iterable<V> {
   /// @ai Ensure proper validation is performed in subclasses before calling super.addAll().
   /// {@endtemplate}
   @mustCallSuper
-  void addAll(final Iterable<V> items) => _items.addAll(items);
+  void addAll(Iterable<V> items) => _items.addAll(items);
 
   /// {@template mutable_ordered_set_add}
   /// Adds the specified [value] to this ordered set if it doesn't already exist.
@@ -61,7 +61,7 @@ class MutableOrderedSet<V> with Iterable<V> {
   /// @ai Ensure proper validation is performed in subclasses before calling super.add().
   /// {@endtemplate}
   @mustCallSuper
-  bool add(final V value) => _items.add(value);
+  bool add(V value) => _items.add(value);
 
   /// {@template mutable_ordered_set_remove}
   /// Removes the specified [value] from this ordered set if it exists.
@@ -72,7 +72,7 @@ class MutableOrderedSet<V> with Iterable<V> {
   /// @ai Consider the performance implications when removing items from large collections.
   /// {@endtemplate}
   @mustCallSuper
-  bool remove(final V value) => _items.remove(value);
+  bool remove(V value) => _items.remove(value);
 
   /// {@template mutable_ordered_set_clear}
   /// Removes all items from this ordered set.
@@ -91,7 +91,7 @@ class MutableOrderedSet<V> with Iterable<V> {
   /// @ai Use this method to check for existence before performing operations.
   /// {@endtemplate}
   @override
-  bool contains(final Object? value) => _items.contains(value);
+  bool contains(Object? value) => _items.contains(value);
 
   /// {@template mutable_ordered_set_length}
   /// Returns the number of elements in this set.
@@ -145,7 +145,7 @@ class ImmutableOrderedSet<V> with Iterable<V> {
   /// Duplicates in the provided items will be automatically removed, keeping only the first occurrence.
   /// The provided items will be made unmodifiable internally.
   /// {@endtemplate}
-  ImmutableOrderedSet([final Iterable<V>? items])
+  ImmutableOrderedSet([Iterable<V>? items])
     : _items = (items?.toSet() ?? <V>{}).unmodifiable;
 
   Set<V> _items;
@@ -161,7 +161,7 @@ class ImmutableOrderedSet<V> with Iterable<V> {
   ///
   /// @ai Use this method for bulk updates rather than multiple individual add() calls.
   /// {@endtemplate}
-  void assignAll(final Iterable<V> items) =>
+  void assignAll(Iterable<V> items) =>
       _items = items.toSet().unmodifiable;
 
   /// {@template immutable_ordered_set_add}
@@ -175,7 +175,7 @@ class ImmutableOrderedSet<V> with Iterable<V> {
   /// @ai This operation has O(n) time complexity due to set copying.
   /// {@endtemplate}
   @mustCallSuper
-  bool add(final V value) {
+  bool add(V value) {
     if (_items.contains(value)) return false;
     _items = {..._items, value}.unmodifiable;
     return true;
@@ -191,7 +191,7 @@ class ImmutableOrderedSet<V> with Iterable<V> {
   /// @ai This operation has O(n) time complexity due to filtering and set creation.
   /// {@endtemplate}
   @mustCallSuper
-  bool remove(final V value) {
+  bool remove(V value) {
     if (!_items.contains(value)) return false;
     final newItems = {..._items}..remove(value);
     _items = newItems.unmodifiable;
@@ -214,5 +214,5 @@ class ImmutableOrderedSet<V> with Iterable<V> {
   /// @ai Use this method to check for existence before performing operations.
   /// {@endtemplate}
   @override
-  bool contains(final Object? value) => _items.contains(value);
+  bool contains(Object? value) => _items.contains(value);
 }

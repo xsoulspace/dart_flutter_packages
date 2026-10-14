@@ -37,14 +37,14 @@ export 'mlx_chat_wire.dart'
 final class MlxLocalTextClient implements InferenceClient {
   MlxLocalTextClient({
     required this.runtime,
-    final MlxChatEndpoint? endpoint,
-    final String model = 'local',
+    MlxChatEndpoint? endpoint,
+    String model = 'local',
     this.defaultMaxTokens = 320,
     this.defaultTemperature = 0.0,
-    final Duration timeout = const Duration(seconds: 120),
-    final int maxTransientRetries = 1,
-    final void Function(Map<String, Object?> event)? onDiagnosticEvent,
-    final http.Client? httpClient,
+    Duration timeout = const Duration(seconds: 120),
+    int maxTransientRetries = 1,
+    void Function(Map<String, Object?> event)? onDiagnosticEvent,
+    http.Client? httpClient,
   }) : _model = model,
        _endpoint =
            endpoint ??
@@ -94,8 +94,8 @@ final class MlxLocalTextClient implements InferenceClient {
 
   @override
   Future<InferenceResult<InferenceResponse>> infer(
-    final InferenceRequest request, {
-    final ToolRegistry? toolRegistry,
+    InferenceRequest request, {
+    ToolRegistry? toolRegistry,
   }) async {
     if (request.task != InferenceTask.text) {
       return InferenceResult.fail(

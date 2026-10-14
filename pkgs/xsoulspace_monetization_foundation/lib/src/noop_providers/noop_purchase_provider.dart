@@ -19,28 +19,28 @@ class NoopPurchaseProvider implements PurchaseProvider {
 
   @override
   Future<CompletePurchaseResultModel> completePurchase(
-    final PurchaseVerificationDtoModel details,
+    PurchaseVerificationDtoModel details,
   ) async => CompletePurchaseResultModel.success();
 
   @override
   Future<PurchaseDetailsModel> getPurchaseDetails(
-    final PurchaseId purchaseId,
+    PurchaseId purchaseId,
   ) async => throw UnimplementedError(
     'getPurchaseDetails is not implemented in NoOpPurchaseProvider',
   );
 
   @override
   Future<List<PurchaseProductDetailsModel>> getSubscriptions(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   ) async => [];
 
   @override
   Future<List<PurchaseProductDetailsModel>> getNonConsumables(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   ) async => [];
 
   @override
-  Future<CancelResultModel> cancel(final String purchaseOrProductId) async =>
+  Future<CancelResultModel> cancel(String purchaseOrProductId) async =>
       CancelResultModel.success();
 
   @override
@@ -50,7 +50,7 @@ class NoopPurchaseProvider implements PurchaseProvider {
 
   @override
   Future<List<PurchaseProductDetailsModel>> getConsumables(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   ) async => [];
   @override
   Future<bool> isUserAuthorized() async => false;
@@ -61,7 +61,7 @@ class NoopPurchaseProvider implements PurchaseProvider {
 
   @override
   Future<PurchaseResultModel> purchaseNonConsumable(
-    final PurchaseProductDetailsModel productDetails,
+    PurchaseProductDetailsModel productDetails,
   ) async => PurchaseResultModel.failure('Not supported');
 
   @override
@@ -70,12 +70,12 @@ class NoopPurchaseProvider implements PurchaseProvider {
 
   @override
   Future<PurchaseResultModel> subscribe(
-    final PurchaseProductDetailsModel productDetails,
+    PurchaseProductDetailsModel productDetails,
   ) async => PurchaseResultModel.failure('Not supported');
 
   @override
   Future<List<PurchaseProductDetailsModel>> getProductDetails(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   ) async => [];
 
   @override

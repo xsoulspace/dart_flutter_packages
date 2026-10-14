@@ -126,7 +126,7 @@ void main() async {
 }
 
 /// Example function showing how to send a localized support email
-Future<void> _sendLocalizedSupportEmail(final SupportConfig config) async {
+Future<void> _sendLocalizedSupportEmail(SupportConfig config) async {
   // Send a comprehensive support email with English localization
   final success = await SupportManager.instance.sendSupportEmail(
     config: config,

@@ -40,7 +40,7 @@
 library;
 
 /// The `<think>`-head tail: Python's `.split('<think>')[-1]`.
-String splitThinkHead(final String head) =>
+String splitThinkHead(String head) =>
     head.contains('<think>') ? head.split('<think>').last : head;
 
 final class QwenChatMessage {
@@ -53,7 +53,7 @@ final class QwenChatMessage {
 /// The `# Tools` system block appended when a call passes tools (the
 /// template's exact instruction text — the `<tools>` lines are the tools
 /// JSON-dumped one per line, reference `tojson` spacing).
-String _toolsSystemBlock(final List<Object?> tools) =>
+String _toolsSystemBlock(List<Object?> tools) =>
     '# Tools\n\n'
     'You may call one or more functions to assist with the user query.\n\n'
     'You are provided with function signatures within <tools></tools> XML '
@@ -71,7 +71,7 @@ String _toolsSystemBlock(final List<Object?> tools) =>
 /// `", "`/`": "` separators, raw non-ASCII. (The LFM2.5 template's
 /// `tojson` is the ensure_ascii=True variant — its own encoder lives in
 /// that renderer.)
-String _templateJsonDumps(final Object? value) {
+String _templateJsonDumps(Object? value) {
   if (value == null) {
     return 'null';
   }
@@ -88,7 +88,7 @@ String _templateJsonDumps(final Object? value) {
     return '[${value.map(_templateJsonDumps).join(', ')}]';
   }
   if (value is Map) {
-    return '{${value.entries.map((final entry) {
+    return '{${value.entries.map((entry) {
       final key = entry.key;
       if (key is! String) {
         throw ArgumentError.value(
@@ -110,7 +110,7 @@ String _templateJsonDumps(final Object? value) {
 /// A JSON string literal with Python `json.dumps(ensure_ascii=False)`
 /// escaping: `\"`, `\\`, the `\b\t\n\f\r` shorthands, `\uXXXX` for
 /// control runes — every other rune (including non-ASCII) stays raw.
-String _templateJsonString(final String value) {
+String _templateJsonString(String value) {
   final buffer = StringBuffer('"');
   for (final rune in value.runes) {
     switch (rune) {
@@ -144,10 +144,10 @@ String _templateJsonString(final String value) {
 /// No BOS: the Qwen3 template does not use one, and the native generate
 /// path adds none for text prompts.
 String renderQwenChatPrompt({
-  required final List<QwenChatMessage> messages,
-  final List<Object?>? tools,
-  final bool addGenerationPrompt = true,
-  final bool enableThinking = false,
+  required List<QwenChatMessage> messages,
+  List<Object?>? tools,
+  bool addGenerationPrompt = true,
+  bool enableThinking = false,
 }) {
   final buffer = StringBuffer();
   final toolsBlock = (tools == null || tools.isEmpty)
@@ -184,7 +184,7 @@ String renderQwenChatPrompt({
 
   // Python str.strip/lstrip/rstrip('\n') equivalents (Dart's trim family
   // takes no character set).
-  String lstripNl(final String s) {
+  String lstripNl(String s) {
     var i = 0;
     while (i < s.length && s[i] == '\n') {
       i++;
@@ -192,7 +192,7 @@ String renderQwenChatPrompt({
     return s.substring(i);
   }
 
-  String rstripNl(final String s) {
+  String rstripNl(String s) {
     var e = s.length;
     while (e > 0 && s[e - 1] == '\n') {
       e--;

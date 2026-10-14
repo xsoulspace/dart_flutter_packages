@@ -153,10 +153,10 @@ void main() {
         list.add(2);
         list.add(3);
 
-        expect(list.where((final x) => x > 2), [3]);
-        expect(list.map((final x) => x * 2), [2, 4, 6]);
-        expect(list.any((final x) => x == 2), isTrue);
-        expect(list.every((final x) => x > 0), isTrue);
+        expect(list.where((x) => x > 2), [3]);
+        expect(list.map((x) => x * 2), [2, 4, 6]);
+        expect(list.any((x) => x == 2), isTrue);
+        expect(list.every((x) => x > 0), isTrue);
       });
     });
 
@@ -417,10 +417,10 @@ void main() {
         list.add(2);
         list.add(3);
 
-        expect(list.where((final x) => x > 2), [3]);
-        expect(list.map((final x) => x * 2), [2, 4, 6]);
-        expect(list.any((final x) => x == 2), isTrue);
-        expect(list.every((final x) => x > 0), isTrue);
+        expect(list.where((x) => x > 2), [3]);
+        expect(list.map((x) => x * 2), [2, 4, 6]);
+        expect(list.any((x) => x == 2), isTrue);
+        expect(list.every((x) => x > 0), isTrue);
       });
     });
 

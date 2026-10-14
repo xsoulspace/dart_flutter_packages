@@ -35,7 +35,7 @@ import 'resources/resources.dart';
 class MonetizationFoundation {
   /// {@macro monetization_foundation}
   MonetizationFoundation({
-    required final MonetizationResources resources,
+    required MonetizationResources resources,
     required this.purchaseProvider,
     required this.purchasesLocalApi,
   }) : srcs = resources;
@@ -66,7 +66,7 @@ class MonetizationFoundation {
   Future<bool> get initLocalFuture => _initLocalCompleter.future;
 
   final _productIds = <PurchaseProductId>[];
-  void _assignProductIds(final Iterable<PurchaseProductId> productIds) {
+  void _assignProductIds(Iterable<PurchaseProductId> productIds) {
     if (productIds.isEmpty) return;
     _productIds
       ..clear()
@@ -87,9 +87,9 @@ class MonetizationFoundation {
   /// Always call `initLocal` before `init` to ensure local state is restored.
   /// {@endtemplate}
   Future<void> init({
-    required final List<PurchaseProductId> productIds,
-    final bool restorePurchases = true,
-    final bool force = false,
+    required List<PurchaseProductId> productIds,
+    bool restorePurchases = true,
+    bool force = false,
   }) async {
     if (force) {
       if (!_initCompleter.isCompleted) {
@@ -164,7 +164,7 @@ class MonetizationFoundation {
 
   /// Loads products from the purchase provider.
   Future<void> loadSubscriptions({
-    final List<PurchaseProductId> productIds = const [],
+    List<PurchaseProductId> productIds = const [],
   }) async {
     _assignProductIds(productIds);
     await _loadSubscriptionsCommand.execute();
@@ -186,7 +186,7 @@ class MonetizationFoundation {
 
   /// Handles incoming purchase updates from the provider.
   Future<void> _handlePurchaseUpdate(
-    final List<PurchaseDetailsModel> purchases,
+    List<PurchaseDetailsModel> purchases,
   ) async {
     for (final purchase in purchases) {
       await _handlePurchaseUpdateCommand.execute(purchase);
@@ -210,8 +210,8 @@ class MonetizationFoundation {
   /// Redirects to store if subscription was not cancelled using API.
   /// {@endtemplate}
   Future<void> cancelSubscription({
-    final PurchaseProductId productId = PurchaseProductId.empty,
-    final PurchaseId purchaseId = PurchaseId.empty,
+    PurchaseProductId productId = PurchaseProductId.empty,
+    PurchaseId purchaseId = PurchaseId.empty,
   }) => _cancelSubscriptionCommand.execute(
     productId: productId,
     purchaseId: purchaseId,
@@ -220,7 +220,7 @@ class MonetizationFoundation {
   /// {@template subscribe}
   /// Subscribes to a product.
   /// {@endtemplate}
-  Future<void> subscribe(final PurchaseProductDetailsModel details) =>
+  Future<void> subscribe(PurchaseProductDetailsModel details) =>
       _subscribeCommand.execute(details);
 
   /// Opens the subscription management page.
@@ -229,7 +229,7 @@ class MonetizationFoundation {
 
   /// Check if user has an active subscription
   Future<void> checkActiveSubscription({
-    final bool shouldRestore = true,
+    bool shouldRestore = true,
   }) async {
     try {
       final isInitialized = await initFuture;

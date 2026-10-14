@@ -17,22 +17,22 @@ import 'package:xsoulspace_inference_core/xsoulspace_inference_core.dart';
 /// and readiness semantics; the wire vocabulary never leaves this package.
 abstract base class SystemOneWireDecisionProvider implements DecisionProvider {
   SystemOneWireDecisionProvider({
-    final String apiKey = '',
-    required final String model,
-    required final Uri endpoint,
-    required final DecisionProviderCapabilities capabilities,
+    String apiKey = '',
+    required String model,
+    required Uri endpoint,
+    required DecisionProviderCapabilities capabilities,
     required this.providerId,
     required this.wireLabel,
     required this.diagnosticEventType,
     this.requireAnswerConfidence = true,
-    final http.Client? httpClient,
+    http.Client? httpClient,
     this.timeout = const Duration(seconds: 30),
     this.maxTransientRetries = 0,
     this.retryDelay = const Duration(milliseconds: 100),
     this.onDiagnosticEvent,
-    final int maxStateUtf8Bytes = 1 << 20,
-    final int maxRequestUtf8Bytes = 2 << 20,
-    final int maxQuestionsPerRequest = 64,
+    int maxStateUtf8Bytes = 1 << 20,
+    int maxRequestUtf8Bytes = 2 << 20,
+    int maxQuestionsPerRequest = 64,
   }) : // A named parameter cannot spell the private initializing formal.
        // ignore: prefer_initializing_formals
        _apiKey = apiKey,
@@ -156,7 +156,7 @@ abstract base class SystemOneWireDecisionProvider implements DecisionProvider {
         );
 
   @override
-  Future<DecisionOutcome> decide(final DecisionRequest request) async {
+  Future<DecisionOutcome> decide(DecisionRequest request) async {
     final correlation = request.correlation;
     if (_disposed) {
       return _failed(
@@ -301,10 +301,10 @@ abstract base class SystemOneWireDecisionProvider implements DecisionProvider {
   }
 
   Future<_TransportResult> _send(
-    final String body,
-    final Duration remaining,
-    final DecisionCorrelation correlation,
-    final int attempt,
+    String body,
+    Duration remaining,
+    DecisionCorrelation correlation,
+    int attempt,
   ) async {
     try {
       _notifyDiagnosticEvent(<String, Object?>{
@@ -333,7 +333,7 @@ abstract base class SystemOneWireDecisionProvider implements DecisionProvider {
     }
   }
 
-  Map<String, Object?> _buildRequestBody(final DecisionRequest request) =>
+  Map<String, Object?> _buildRequestBody(DecisionRequest request) =>
       <String, Object?>{
         'model': model,
         'state': request.state,
@@ -351,9 +351,9 @@ abstract base class SystemOneWireDecisionProvider implements DecisionProvider {
       };
 
   DecisionOutcome _parseSuccess(
-    final DecisionRequest request,
-    final String body,
-    final Duration elapsed,
+    DecisionRequest request,
+    String body,
+    Duration elapsed,
   ) {
     final Map<String, dynamic> decoded;
     try {
@@ -377,7 +377,7 @@ abstract base class SystemOneWireDecisionProvider implements DecisionProvider {
       }
       final answersMap = rawAnswers.cast<String, dynamic>();
       final expectedIds = request.questions
-          .map((final question) => question.id.value)
+          .map((question) => question.id.value)
           .toSet();
       if (answersMap.keys.toSet().difference(expectedIds).isNotEmpty) {
         return _malformed(
@@ -525,7 +525,7 @@ abstract base class SystemOneWireDecisionProvider implements DecisionProvider {
     }
   }
 
-  DecisionUsage? _parseUsage(final Object? rawUsage) {
+  DecisionUsage? _parseUsage(Object? rawUsage) {
     if (rawUsage == null) return null;
     if (rawUsage is! Map) {
       throw const FormatException('usage must be an object');
@@ -557,7 +557,7 @@ abstract base class SystemOneWireDecisionProvider implements DecisionProvider {
     );
   }
 
-  DecisionFailure _httpFailure(final http.Response response) {
+  DecisionFailure _httpFailure(http.Response response) {
     final status = response.statusCode;
     final message = '$wireLabel request failed with HTTP $status';
     if (status == 401 || status == 403) {
@@ -595,9 +595,9 @@ abstract base class SystemOneWireDecisionProvider implements DecisionProvider {
   }
 
   Future<DecisionCancelled?> _waitBeforeRetry(
-    final DecisionCorrelation correlation,
-    final Stopwatch stopwatch,
-    final _CancellationSignal cancellationSignal,
+    DecisionCorrelation correlation,
+    Stopwatch stopwatch,
+    _CancellationSignal cancellationSignal,
   ) async {
     if (retryDelay > Duration.zero) {
       final remaining = timeout - stopwatch.elapsed;
@@ -620,8 +620,8 @@ abstract base class SystemOneWireDecisionProvider implements DecisionProvider {
   }
 
   DecisionOutcome _outcomeForFailure(
-    final DecisionCorrelation correlation,
-    final DecisionFailure failure,
+    DecisionCorrelation correlation,
+    DecisionFailure failure,
   ) => switch (failure.code) {
     DecisionFailureCode.authentication ||
     DecisionFailureCode.quotaExceeded ||
@@ -642,11 +642,11 @@ abstract base class SystemOneWireDecisionProvider implements DecisionProvider {
   };
 
   DecisionFailed _failed(
-    final DecisionCorrelation correlation,
-    final DecisionFailureCode code,
-    final String message, {
-    final bool retryable = false,
-    final Object? details,
+    DecisionCorrelation correlation,
+    DecisionFailureCode code,
+    String message, {
+    bool retryable = false,
+    Object? details,
   }) => DecisionFailed(
     correlation: correlation,
     failure: DecisionFailure(
@@ -658,9 +658,9 @@ abstract base class SystemOneWireDecisionProvider implements DecisionProvider {
   );
 
   DecisionFailed _malformed(
-    final DecisionRequest request,
-    final String message, {
-    final Object? details,
+    DecisionRequest request,
+    String message, {
+    Object? details,
   }) => _failed(
     request.correlation,
     DecisionFailureCode.malformedResponse,
@@ -669,8 +669,8 @@ abstract base class SystemOneWireDecisionProvider implements DecisionProvider {
   );
 
   DecisionCancelled _cancelled(
-    final DecisionCorrelation correlation,
-    final String message,
+    DecisionCorrelation correlation,
+    String message,
   ) => DecisionCancelled(
     correlation: correlation,
     failure: DecisionFailure(
@@ -680,7 +680,7 @@ abstract base class SystemOneWireDecisionProvider implements DecisionProvider {
   );
 
   @override
-  Future<void> cancel(final DecisionCancellationId cancellationId) async {
+  Future<void> cancel(DecisionCancellationId cancellationId) async {
     final signal = _activeSignals[cancellationId];
     if (signal != null) {
       signal.cancel();

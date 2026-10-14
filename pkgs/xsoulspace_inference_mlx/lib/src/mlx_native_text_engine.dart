@@ -123,12 +123,12 @@ final class NativeMlxTextEngine {
   /// Loads a local MLX snapshot directory (the Hugging Face checkout shape:
   /// config.json + model.safetensors + tokenizer files). Throws a named
   /// error when the native asset is absent or the weights are unusable.
-  static Future<NativeMlxTextEngine> load(final String modelDir) async {
+  static Future<NativeMlxTextEngine> load(String modelDir) async {
     final result = await Isolate.run(() => _loadSync(modelDir));
     return result;
   }
 
-  static NativeMlxTextEngine _loadSync(final String modelDir) {
+  static NativeMlxTextEngine _loadSync(String modelDir) {
     final pointer = modelDir.toNativeUtf8();
     try {
       final handle = _mlxTextLoad(pointer.cast<Uint8>());
@@ -146,7 +146,7 @@ final class NativeMlxTextEngine {
 
   /// Runs one generation. The engine is single-flight: concurrent callers
   /// serialize behind the native lock.
-  Future<MlxNativeGeneration> generate(final MlxNativeRequest request) async {
+  Future<MlxNativeGeneration> generate(MlxNativeRequest request) async {
     final handle = this.handle;
     if (_unloaded) {
       throw StateError('mlx_text_native engine was unloaded');
@@ -155,8 +155,8 @@ final class NativeMlxTextEngine {
   }
 
   static MlxNativeGeneration _generateSync(
-    final int handle,
-    final MlxNativeRequest request,
+    int handle,
+    MlxNativeRequest request,
   ) {
     final json = jsonEncode(request.toJson());
     final requestPointer = json.toNativeUtf8();
@@ -175,7 +175,7 @@ final class NativeMlxTextEngine {
       if (error != null) {
         throw StateError('mlx_text_native error: $error');
       }
-      int intOf(final Object? value, final String name) =>
+      int intOf(Object? value, String name) =>
           value is int ? value : (throw StateError('missing int "$name"'));
       return MlxNativeGeneration(
         text: '${decoded['text'] ?? ''}',

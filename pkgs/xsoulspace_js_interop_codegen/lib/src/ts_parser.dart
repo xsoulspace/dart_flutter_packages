@@ -12,7 +12,7 @@ final class TypeScriptIrParser {
   });
 
   factory TypeScriptIrParser.fromSharedCore({
-    required final String currentPackageRoot,
+    required String currentPackageRoot,
   }) {
     final coreRoot = resolvePackageRootFromPackageConfig(
       currentPackageRoot: currentPackageRoot,
@@ -49,7 +49,7 @@ final class TypeScriptIrParser {
     }
   }
 
-  Future<Map<String, Object?>> parseFileToIr(final String dtsPath) async {
+  Future<Map<String, Object?>> parseFileToIr(String dtsPath) async {
     final result = await Process.run('node', <String>[
       parserScriptPath,
       dtsPath,

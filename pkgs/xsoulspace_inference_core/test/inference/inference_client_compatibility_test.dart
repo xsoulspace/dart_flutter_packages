@@ -32,7 +32,7 @@ void main() {
 
     test('existing task enum gains no decision values', () {
       expect(
-        InferenceTask.values.map((final task) => task.name),
+        InferenceTask.values.map((task) => task.name),
         containsAll(<String>[
           'text',
           'implicitlyStructuredText',
@@ -43,7 +43,7 @@ void main() {
       );
       expect(
         InferenceTask.values
-            .where((final task) => task.name.toLowerCase().contains('decision'))
+            .where((task) => task.name.toLowerCase().contains('decision'))
             .length,
         0,
       );
@@ -107,8 +107,8 @@ final class _TextOnlyClient implements InferenceClient {
 
   @override
   Future<InferenceResult<InferenceResponse>> infer(
-    final InferenceRequest request, {
-    final ToolRegistry? toolRegistry,
+    InferenceRequest request, {
+    ToolRegistry? toolRegistry,
   }) async => InferenceResult<InferenceResponse>.ok(
     const InferenceResponse(rawOutput: 'ok', task: InferenceTask.text),
   );
@@ -142,7 +142,7 @@ final class _ChoiceOnlyProvider implements DecisionProvider {
       DecisionProviderReadiness(state: _state);
 
   @override
-  Future<DecisionOutcome> decide(final DecisionRequest request) async =>
+  Future<DecisionOutcome> decide(DecisionRequest request) async =>
       DecisionUnavailable(
         correlation: request.correlation,
         failure: const DecisionFailure(
@@ -152,7 +152,7 @@ final class _ChoiceOnlyProvider implements DecisionProvider {
       );
 
   @override
-  Future<void> cancel(final DecisionCancellationId cancellationId) async {
+  Future<void> cancel(DecisionCancellationId cancellationId) async {
     if (cancellationId.value == 'cancel-5') {
       cancelledIds.add(cancellationId);
     }

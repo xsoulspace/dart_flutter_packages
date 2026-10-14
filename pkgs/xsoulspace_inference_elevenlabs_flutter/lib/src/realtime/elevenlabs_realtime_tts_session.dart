@@ -25,8 +25,8 @@ class ElevenLabsRealtimeTtsEvent {
 class ElevenLabsRealtimeTtsSession {
   ElevenLabsRealtimeTtsSession({
     required this._authConfig,
-    final ElevenLabsEndpointConfig? endpointConfig,
-    final ElevenLabsWebSocketConnector? webSocketConnector,
+    ElevenLabsEndpointConfig? endpointConfig,
+    ElevenLabsWebSocketConnector? webSocketConnector,
   }) : _endpointConfig = endpointConfig ?? ElevenLabsEndpointConfig(),
        _webSocketConnector =
            webSocketConnector ?? defaultElevenLabsWebSocketConnector;
@@ -46,9 +46,9 @@ class ElevenLabsRealtimeTtsSession {
   bool get isConnected => _channel != null;
 
   Future<InferenceResult<void>> connect({
-    required final String voiceId,
-    final String? modelId,
-    final String outputFormat = 'mp3_44100_128',
+    required String voiceId,
+    String? modelId,
+    String outputFormat = 'mp3_44100_128',
   }) async {
     final normalizedVoiceId = voiceId.trim();
     if (normalizedVoiceId.isEmpty) {
@@ -106,8 +106,8 @@ class ElevenLabsRealtimeTtsSession {
   }
 
   Future<InferenceResult<void>> initialize({
-    final Map<String, dynamic>? voiceSettings,
-    final Map<String, dynamic>? generationConfig,
+    Map<String, dynamic>? voiceSettings,
+    Map<String, dynamic>? generationConfig,
   }) => _sendJson(<String, dynamic>{
     'text': ' ',
     if (voiceSettings case final Map<String, dynamic> settings)
@@ -117,11 +117,11 @@ class ElevenLabsRealtimeTtsSession {
   });
 
   Future<InferenceResult<void>> sendText({
-    required final String text,
-    final bool tryTriggerGeneration = false,
-    final bool flush = false,
-    final Map<String, dynamic>? voiceSettings,
-    final Map<String, dynamic>? generatorConfig,
+    required String text,
+    bool tryTriggerGeneration = false,
+    bool flush = false,
+    Map<String, dynamic>? voiceSettings,
+    Map<String, dynamic>? generatorConfig,
   }) {
     final payload = <String, dynamic>{
       'text': text,
@@ -149,7 +149,7 @@ class ElevenLabsRealtimeTtsSession {
   }
 
   Future<InferenceResult<void>> _sendJson(
-    final Map<String, dynamic> payload,
+    Map<String, dynamic> payload,
   ) async {
     final channel = _channel;
     if (channel == null) {
@@ -171,7 +171,7 @@ class ElevenLabsRealtimeTtsSession {
     }
   }
 
-  void _handleIncomingMessage(final Object? message) {
+  void _handleIncomingMessage(Object? message) {
     if (message is! String) {
       _eventsController.add(
         ElevenLabsRealtimeTtsEvent(
@@ -220,7 +220,7 @@ class ElevenLabsRealtimeTtsSession {
     }
   }
 
-  void _handleSocketError(final Object error, final StackTrace stackTrace) {
+  void _handleSocketError(Object error, StackTrace stackTrace) {
     _eventsController.add(
       ElevenLabsRealtimeTtsEvent(
         raw: const <String, dynamic>{'message_type': 'socket_error'},

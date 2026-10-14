@@ -12,7 +12,7 @@ extension _ListX<T> on List<T> {
   ///
   /// Always returns exactly [sublistCount] sublists, even if some are empty.
   /// If items cannot be divided evenly, the first pages will have one extra item.
-  Iterable<List<T>> splitIntoSublists(final int sublistCount) sync* {
+  Iterable<List<T>> splitIntoSublists(int sublistCount) sync* {
     if (sublistCount <= 0) return;
 
     final int totalItems = length;
@@ -41,13 +41,13 @@ class HashPagingController<TKey, TItem> extends PagingController<TKey, TItem> {
   /// {@macro hash_paging_controller}
   HashPagingController({
     required super.getNextPageKey,
-    required final FetchPageCallback<TKey, TItem> fetchPage,
+    required FetchPageCallback<TKey, TItem> fetchPage,
     super.value,
     this.hashFunction,
     this.equalityFunction,
   }) : _userFetchPage = fetchPage,
        _getNextPageKey = getNextPageKey,
-       super(fetchPage: (final pageKey) => []);
+       super(fetchPage: (pageKey) => []);
 
   final PagingControllerHashFunction<TItem>? hashFunction;
   final PagingControllerEqualityFunction<TItem>? equalityFunction;
@@ -85,7 +85,7 @@ class HashPagingController<TKey, TItem> extends PagingController<TKey, TItem> {
 
       // Apply deduplication before adding to state
       final existingItems =
-          state.pages?.expand((final page) => page).toList() ?? [];
+          state.pages?.expand((page) => page).toList() ?? [];
       final deduplicatedItems = _deduplicateItems(existingItems, newItems);
       final keys = [...?state.keys, nextPageKey];
       final pages = deduplicatedItems.splitIntoSublists(keys.length).toList();
@@ -106,13 +106,13 @@ class HashPagingController<TKey, TItem> extends PagingController<TKey, TItem> {
 
   /// Appends [newItems] to the previously loaded ones and sets hasNextPage
   /// to false.
-  void appendLastPage(final List<TItem> newItems) =>
+  void appendLastPage(List<TItem> newItems) =>
       appendPageWithDeduplication(newItems, hasNextPage: false);
 
   /// Appends [newItems] to the previously loaded ones.
   void appendPageWithDeduplication(
-    final List<TItem> newItems, {
-    required final bool hasNextPage,
+    List<TItem> newItems, {
+    required bool hasNextPage,
   }) {
     if (!_mounted) return;
     final deduplicatedItems = _deduplicateItems(items ?? [], newItems);
@@ -124,12 +124,12 @@ class HashPagingController<TKey, TItem> extends PagingController<TKey, TItem> {
 
   /// Prepends [newItems] to the previously loaded ones and sets hasNextPage
   /// to the provided value.
-  void prependLastPage(final List<TItem> newItems) =>
+  void prependLastPage(List<TItem> newItems) =>
       prependPage(newItems, hasNextPage: false);
 
   void prependPage(
-    final List<TItem> newItems, {
-    required final bool hasNextPage,
+    List<TItem> newItems, {
+    required bool hasNextPage,
   }) {
     if (!_mounted) return;
     final deduplicatedItems = _deduplicateItems(newItems, items ?? []);
@@ -140,15 +140,15 @@ class HashPagingController<TKey, TItem> extends PagingController<TKey, TItem> {
   }
 
   List<TItem> _deduplicateItems(
-    final List<TItem> existingItems,
-    final List<TItem> newItems,
+    List<TItem> existingItems,
+    List<TItem> newItems,
   ) {
     final allItems =
         LinkedHashSet<TItem>(
-            hashCode: hashFunction ?? (final e) => e.hashCode,
+            hashCode: hashFunction ?? (e) => e.hashCode,
             equals:
                 equalityFunction ??
-                (final a, final b) => a.hashCode == b.hashCode,
+                (a, b) => a.hashCode == b.hashCode,
           )
           ..addAll(existingItems)
           ..addAll(newItems);
@@ -159,12 +159,12 @@ class HashPagingController<TKey, TItem> extends PagingController<TKey, TItem> {
     value = value.reset();
   }
 
-  void insertElement(final TItem element, {final int at = 0}) {
+  void insertElement(TItem element, {int at = 0}) {
     final newItems = [...?items]..insert(at, element);
     _updateItemList(newItems);
   }
 
-  void insertElements(final Iterable<TItem> elements, {final int at = 0}) {
+  void insertElements(Iterable<TItem> elements, {int at = 0}) {
     final newItems = [...?items]..insertAll(at, elements);
     _updateItemList(newItems);
   }
@@ -172,11 +172,11 @@ class HashPagingController<TKey, TItem> extends PagingController<TKey, TItem> {
   /// removes element from listing at given [oldIndex], then reinserts it
   /// at [newIndex]
   void moveElementByIndex({
-    required final int oldIndex,
-    required final TItem element,
+    required int oldIndex,
+    required TItem element,
 
     /// target index after element removal
-    final int newIndex = 0,
+    int newIndex = 0,
   }) {
     if (oldIndex < 0) return;
     final newItems = [...?items]
@@ -186,7 +186,7 @@ class HashPagingController<TKey, TItem> extends PagingController<TKey, TItem> {
   }
 
   /// removes element from listing at given [index]
-  TItem? removeElementByIndex({required final int index}) {
+  TItem? removeElementByIndex({required int index}) {
     if (index < 0) return null;
     final currentItems = items ?? [];
     if (currentItems.isEmpty) return null;
@@ -197,44 +197,44 @@ class HashPagingController<TKey, TItem> extends PagingController<TKey, TItem> {
   }
 
   TItem? removeElementWhere({
-    required final bool Function(TItem element) test,
+    required bool Function(TItem element) test,
   }) {
     final int index = items?.indexWhere(test) ?? -1;
     return removeElementByIndex(index: index);
   }
 
   List<TItem> removeElementsWhere({
-    required final bool Function(TItem element) test,
+    required bool Function(TItem element) test,
   }) {
     final list = [...?items];
     if (list.isEmpty) return [];
-    final itemsToDelete = list.indexed.where((final e) => test(e.$2)).toList()
+    final itemsToDelete = list.indexed.where((e) => test(e.$2)).toList()
       ..sort(
         /// sort from max index to short index to
         /// make items removal easier
-        (final indexEl1, final indexEl2) => indexEl2.$1.compareTo(indexEl1.$1),
+        (indexEl1, indexEl2) => indexEl2.$1.compareTo(indexEl1.$1),
       );
     final deletedItems = itemsToDelete
-        .map((final e) => removeElementByIndex(index: e.$1))
+        .map((e) => removeElementByIndex(index: e.$1))
         .whereType<TItem>()
         .toList();
     return deletedItems;
   }
 
   void removeElement({
-    required final TItem element,
-    final bool Function(TItem element)? test,
+    required TItem element,
+    bool Function(TItem element)? test,
   }) {
-    final testCallback = test ?? (final a) => a == element;
+    final testCallback = test ?? (a) => a == element;
     final int index = items?.indexWhere(testCallback) ?? -1;
 
     removeElementByIndex(index: index);
   }
 
   void replaceElementByIndex({
-    required final int index,
-    required final TItem element,
-    final bool shouldAddOnNotFound = false,
+    required int index,
+    required TItem element,
+    bool shouldAddOnNotFound = false,
   }) {
     if (index < 0) {
       if (shouldAddOnNotFound) {
@@ -251,15 +251,15 @@ class HashPagingController<TKey, TItem> extends PagingController<TKey, TItem> {
   }
 
   void replaceElement({
-    required final TItem element,
-    final bool shouldAddOnNotFound = false,
-    final bool shouldMoveToFirst = false,
-    final bool Function(TItem a, TItem b)? equals,
-    final int? index,
+    required TItem element,
+    bool shouldAddOnNotFound = false,
+    bool shouldMoveToFirst = false,
+    bool Function(TItem a, TItem b)? equals,
+    int? index,
   }) {
     final bool Function(TItem) comparator = equals == null
-        ? ((final a) => a == element)
-        : (final a) => equals(a, element);
+        ? ((a) => a == element)
+        : (a) => equals(a, element);
     final int eIndex = index ?? (items?.indexWhere(comparator) ?? -1);
 
     replaceElementByIndex(
@@ -272,7 +272,7 @@ class HashPagingController<TKey, TItem> extends PagingController<TKey, TItem> {
     }
   }
 
-  void _updateItemList(final List<TItem> newItems) {
+  void _updateItemList(List<TItem> newItems) {
     final resettedState = value.reset();
     final key = value.keys?.firstOrNull;
     value = resettedState.copyWith(

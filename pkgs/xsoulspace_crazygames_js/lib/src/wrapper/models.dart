@@ -6,7 +6,7 @@ import 'enums.dart';
 class SdkError implements Exception {
   const SdkError({required this.code, required this.message, this.containerId});
 
-  factory SdkError.fromMap(final Map<String, Object?> map) => SdkError(
+  factory SdkError.fromMap(Map<String, Object?> map) => SdkError(
     code: (map['code'] as String?) ?? 'other',
     message: (map['message'] as String?) ?? 'Unknown error',
     containerId: map['containerId'] as String?,
@@ -28,7 +28,7 @@ class User {
     this.id,
   });
 
-  factory User.fromMap(final Map<String, Object?> map) => User(
+  factory User.fromMap(Map<String, Object?> map) => User(
     id: map['id'] as String?,
     username: (map['username'] as String?) ?? '',
     profilePictureUrl: (map['profilePictureUrl'] as String?) ?? '',
@@ -43,7 +43,7 @@ class User {
 class BrowserInfo {
   const BrowserInfo({required this.name, required this.version});
 
-  factory BrowserInfo.fromMap(final Map<String, Object?> map) => BrowserInfo(
+  factory BrowserInfo.fromMap(Map<String, Object?> map) => BrowserInfo(
     name: (map['name'] as String?) ?? '',
     version: (map['version'] as String?) ?? '',
   );
@@ -56,7 +56,7 @@ class BrowserInfo {
 class OsInfo {
   const OsInfo({required this.name, required this.version});
 
-  factory OsInfo.fromMap(final Map<String, Object?> map) => OsInfo(
+  factory OsInfo.fromMap(Map<String, Object?> map) => OsInfo(
     name: (map['name'] as String?) ?? '',
     version: (map['version'] as String?) ?? '',
   );
@@ -69,7 +69,7 @@ class OsInfo {
 class DeviceInfo {
   const DeviceInfo({required this.type});
 
-  factory DeviceInfo.fromMap(final Map<String, Object?> map) =>
+  factory DeviceInfo.fromMap(Map<String, Object?> map) =>
       DeviceInfo(type: DeviceType.fromValue(map['type'] as String?));
 
   final DeviceType type;
@@ -86,21 +86,21 @@ class SystemInfo {
     required this.applicationType,
   });
 
-  factory SystemInfo.fromMap(final Map<String, Object?> map) => SystemInfo(
+  factory SystemInfo.fromMap(Map<String, Object?> map) => SystemInfo(
     countryCode: (map['countryCode'] as String?) ?? '',
     locale: (map['locale'] as String?) ?? '',
     device: DeviceInfo.fromMap(
       (map['device'] as Map<Object?, Object?>? ?? const <Object?, Object?>{})
-          .map((final key, final value) => MapEntry(key.toString(), value)),
+          .map((key, value) => MapEntry(key.toString(), value)),
     ),
     os: OsInfo.fromMap(
       (map['os'] as Map<Object?, Object?>? ?? const <Object?, Object?>{}).map(
-        (final key, final value) => MapEntry(key.toString(), value),
+        (key, value) => MapEntry(key.toString(), value),
       ),
     ),
     browser: BrowserInfo.fromMap(
       (map['browser'] as Map<Object?, Object?>? ?? const <Object?, Object?>{})
-          .map((final key, final value) => MapEntry(key.toString(), value)),
+          .map((key, value) => MapEntry(key.toString(), value)),
     ),
     applicationType: ApplicationType.fromValue(
       map['applicationType'] as String?,
@@ -123,7 +123,7 @@ class Friend {
     required this.profilePictureUrl,
   });
 
-  factory Friend.fromMap(final Map<String, Object?> map) => Friend(
+  factory Friend.fromMap(Map<String, Object?> map) => Friend(
     id: (map['id'] as String?) ?? '',
     username: (map['username'] as String?) ?? '',
     profilePictureUrl: (map['profilePictureUrl'] as String?) ?? '',
@@ -144,13 +144,13 @@ class FriendsPage {
     required this.total,
   });
 
-  factory FriendsPage.fromMap(final Map<String, Object?> map) => FriendsPage(
+  factory FriendsPage.fromMap(Map<String, Object?> map) => FriendsPage(
     friends: (map['friends'] as List<dynamic>? ?? const <dynamic>[])
         .cast<Object?>()
         .map(
-          (final item) => Friend.fromMap(
+          (item) => Friend.fromMap(
             (item! as Map<Object?, Object?>).map(
-              (final key, final value) => MapEntry(key.toString(), value),
+              (key, value) => MapEntry(key.toString(), value),
             ),
           ),
         )
@@ -172,7 +172,7 @@ class FriendsPage {
 class AccountLinkResponse {
   const AccountLinkResponse({required this.answer});
 
-  factory AccountLinkResponse.fromMap(final Map<String, Object?> map) =>
+  factory AccountLinkResponse.fromMap(Map<String, Object?> map) =>
       AccountLinkResponse(
         answer: AccountLinkAnswer.fromValue(map['response'] as String?),
       );
@@ -184,7 +184,7 @@ class AccountLinkResponse {
 class GameSettings {
   const GameSettings({required this.disableChat, required this.muteAudio});
 
-  factory GameSettings.fromMap(final Map<String, Object?> map) => GameSettings(
+  factory GameSettings.fromMap(Map<String, Object?> map) => GameSettings(
     disableChat: map['disableChat'] as bool? ?? false,
     muteAudio: map['muteAudio'] as bool? ?? false,
   );
@@ -216,7 +216,7 @@ class BannerRequest {
     this.y,
   });
 
-  factory BannerRequest.fromMap(final Map<String, Object?> map) =>
+  factory BannerRequest.fromMap(Map<String, Object?> map) =>
       BannerRequest(
         id: (map['id'] as String?) ?? '',
         width: (map['width'] as num?)?.toInt() ?? 0,
@@ -283,14 +283,14 @@ class PrefetchedBanner {
     required this.renderOptions,
   });
 
-  factory PrefetchedBanner.fromMap(final Map<String, Object?> map) {
+  factory PrefetchedBanner.fromMap(Map<String, Object?> map) {
     final bannerMap =
         (map['banner'] as Map<Object?, Object?>? ?? const <Object?, Object?>{})
-            .map((final key, final value) => MapEntry(key.toString(), value));
+            .map((key, value) => MapEntry(key.toString(), value));
     final renderOptions =
         (map['renderOptions'] as Map<Object?, Object?>? ??
                 const <Object?, Object?>{})
-            .map((final key, final value) => MapEntry(key.toString(), value));
+            .map((key, value) => MapEntry(key.toString(), value));
 
     return PrefetchedBanner(
       id: (map['id'] as String?) ?? '',

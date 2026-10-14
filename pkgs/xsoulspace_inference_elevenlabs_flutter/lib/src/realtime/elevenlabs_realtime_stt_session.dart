@@ -25,8 +25,8 @@ class ElevenLabsRealtimeSttEvent {
 class ElevenLabsRealtimeSttSession {
   ElevenLabsRealtimeSttSession({
     required this._authConfig,
-    final ElevenLabsEndpointConfig? endpointConfig,
-    final ElevenLabsWebSocketConnector? webSocketConnector,
+    ElevenLabsEndpointConfig? endpointConfig,
+    ElevenLabsWebSocketConnector? webSocketConnector,
   }) : _endpointConfig = endpointConfig ?? ElevenLabsEndpointConfig(),
        _webSocketConnector =
            webSocketConnector ?? defaultElevenLabsWebSocketConnector;
@@ -47,16 +47,16 @@ class ElevenLabsRealtimeSttSession {
   bool get isConnected => _channel != null;
 
   Future<InferenceResult<void>> connect({
-    final String modelId = 'scribe_v1',
-    final String audioFormat = 'pcm_16000',
-    final int sampleRate = 16000,
-    final String commitStrategy = 'manual',
-    final String? languageCode,
-    final bool includeTimestamps = false,
-    final double? vadSilenceThresholdSecs,
-    final double? vadThreshold,
-    final int? minSpeechDurationMs,
-    final int? minSilenceDurationMs,
+    String modelId = 'scribe_v1',
+    String audioFormat = 'pcm_16000',
+    int sampleRate = 16000,
+    String commitStrategy = 'manual',
+    String? languageCode,
+    bool includeTimestamps = false,
+    double? vadSilenceThresholdSecs,
+    double? vadThreshold,
+    int? minSpeechDurationMs,
+    int? minSilenceDurationMs,
   }) async {
     final normalizedModelId = modelId.trim();
     if (normalizedModelId.isEmpty) {
@@ -132,9 +132,9 @@ class ElevenLabsRealtimeSttSession {
   }
 
   Future<InferenceResult<void>> sendAudioChunk(
-    final List<int> audioBytes, {
-    final String? previousText,
-    final bool commit = false,
+    List<int> audioBytes, {
+    String? previousText,
+    bool commit = false,
   }) {
     if (audioBytes.isEmpty && !commit) {
       return Future<InferenceResult<void>>.value(
@@ -170,7 +170,7 @@ class ElevenLabsRealtimeSttSession {
   }
 
   Future<InferenceResult<void>> _sendJson(
-    final Map<String, dynamic> payload,
+    Map<String, dynamic> payload,
   ) async {
     final channel = _channel;
     if (channel == null) {
@@ -192,7 +192,7 @@ class ElevenLabsRealtimeSttSession {
     }
   }
 
-  void _handleIncomingMessage(final Object? message) {
+  void _handleIncomingMessage(Object? message) {
     if (message is! String) {
       _eventsController.add(
         const ElevenLabsRealtimeSttEvent(
@@ -243,7 +243,7 @@ class ElevenLabsRealtimeSttSession {
     }
   }
 
-  void _handleSocketError(final Object error, final StackTrace stackTrace) {
+  void _handleSocketError(Object error, StackTrace stackTrace) {
     _eventsController.add(
       ElevenLabsRealtimeSttEvent(
         messageType: 'socket_error',

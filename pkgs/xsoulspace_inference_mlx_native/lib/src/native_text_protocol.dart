@@ -16,7 +16,7 @@ List<Map<String, Object?>> nativeTextFunctionTools(ToolRegistry registry) => [
 
 /// Reconstruct only the request's already-projected cut. Explicit messages
 /// remain authoritative, so no second transcript or hidden world read exists.
-List<ChatMessage> nativeTextMessages(final InferenceRequest request) =>
+List<ChatMessage> nativeTextMessages(InferenceRequest request) =>
     request.messages.isNotEmpty
     ? request.messages
     : SituationMessagesCodec.render(
@@ -37,10 +37,10 @@ final class NativeTextToolOutput {
 }
 
 InferenceResult<NativeTextToolOutput> normalizeNativeTextCalls({
-  required final String text,
-  required final ToolCallSyntax? syntax,
-  required final ToolRegistry? registry,
-  final bool thinkingPrefilled = false,
+  required String text,
+  required ToolCallSyntax? syntax,
+  required ToolRegistry? registry,
+  bool thinkingPrefilled = false,
 }) {
   var answer = text;
   var presentationStart = 0;
@@ -114,10 +114,10 @@ InferenceResult<NativeTextToolOutput> normalizeNativeTextCalls({
 /// A parser refusal remains a failure. Counters come from the native SDK's
 /// completion token arrays, never from estimating raw text or error messages.
 InferenceResult<InferenceResponse> nativeTextNormalizationRefusal({
-  required final InferenceResult<NativeTextToolOutput> normalized,
-  required final String rawOutput,
-  required final int promptTokens,
-  required final int completionTokens,
+  required InferenceResult<NativeTextToolOutput> normalized,
+  required String rawOutput,
+  required int promptTokens,
+  required int completionTokens,
 }) {
   if (normalized.success || normalized.error == null) {
     throw ArgumentError('A normalization refusal is required');

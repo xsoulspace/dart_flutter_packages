@@ -9,7 +9,7 @@ class MonetizationTypeResource extends ChangeNotifier {
   MonetizationTypeResource(this._type);
   MonetizationType _type;
   MonetizationType get type => _type;
-  void setType(final MonetizationType value) {
+  void setType(MonetizationType value) {
     _type = value;
     notifyListeners();
   }

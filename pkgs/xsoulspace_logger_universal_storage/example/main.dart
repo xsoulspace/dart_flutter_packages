@@ -17,48 +17,48 @@ Future<void> main() async {
 
 final class _NoopStorageProvider implements StorageProvider {
   @override
-  Future<void> initWithConfig(final StorageConfig config) async {}
+  Future<void> initWithConfig(StorageConfig config) async {}
 
   @override
   Future<bool> isAuthenticated() async => true;
 
   @override
   Future<FileOperationResult> createFile(
-    final String path,
-    final String content, {
-    final String? commitMessage,
+    String path,
+    String content, {
+    String? commitMessage,
   }) async => FileOperationResult.created(path: path);
 
   @override
-  Future<String?> getFile(final String path) async => null;
+  Future<String?> getFile(String path) async => null;
 
   @override
   Future<FileOperationResult> updateFile(
-    final String path,
-    final String content, {
-    final String? commitMessage,
+    String path,
+    String content, {
+    String? commitMessage,
   }) async => FileOperationResult.updated(path: path);
 
   @override
   Future<FileOperationResult> deleteFile(
-    final String path, {
-    final String? commitMessage,
+    String path, {
+    String? commitMessage,
   }) async => FileOperationResult.deleted(path: path);
 
   @override
-  Future<List<FileEntry>> listDirectory(final String directoryPath) async =>
+  Future<List<FileEntry>> listDirectory(String directoryPath) async =>
       <FileEntry>[];
 
   @override
-  Future<void> restore(final String path, {final String? versionId}) async {}
+  Future<void> restore(String path, {String? versionId}) async {}
 
   @override
   bool get supportsSync => false;
 
   @override
   Future<void> sync({
-    final String? pullMergeStrategy,
-    final String? pushConflictStrategy,
+    String? pullMergeStrategy,
+    String? pushConflictStrategy,
   }) async {}
 
   @override

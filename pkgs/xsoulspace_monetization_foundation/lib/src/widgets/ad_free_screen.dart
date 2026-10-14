@@ -4,7 +4,7 @@ class AdFreeScreen extends StatelessWidget {
   const AdFreeScreen({super.key});
 
   @override
-  Widget build(final BuildContext context) {
+  Widget build(BuildContext context) {
     // TODO(arenukvern): implement build
     throw UnimplementedError();
   }

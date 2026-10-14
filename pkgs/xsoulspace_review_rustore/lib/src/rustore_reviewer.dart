@@ -15,8 +15,8 @@ final class RuStoreReviewer extends StoreReviewer {
     required this.consentBuilder,
     super.defaultLocale,
     super.packageName,
-    final Future<void> Function()? requestReviewFlow,
-    final Future<void> Function()? launchNativeReviewFlow,
+    Future<void> Function()? requestReviewFlow,
+    Future<void> Function()? launchNativeReviewFlow,
     this._launchSchemeAction,
   }) : _requestReviewFlow = requestReviewFlow ?? RustoreReviewClient.request,
        _launchNativeReviewFlow =
@@ -36,9 +36,9 @@ final class RuStoreReviewer extends StoreReviewer {
 
   @override
   Future<void> requestReview(
-    final BuildContext context, {
-    final Locale? locale,
-    final bool force = false,
+    BuildContext context, {
+    Locale? locale,
+    bool force = false,
   }) async {
     try {
       await _requestReviewFlow();

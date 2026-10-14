@@ -70,14 +70,14 @@ final class LoggerInspectorController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> setQuery(final LogQuery query) async {
+  Future<void> setQuery(LogQuery query) async {
     _query = query;
     await _logSubscription?.cancel();
     _logSubscription = logger.watch(_query).listen(_onLogRecord);
     await refresh();
   }
 
-  Future<void> openTrace(final String traceId) async {
+  Future<void> openTrace(String traceId) async {
     _selectedTraceId = traceId;
     _traceRecords = await logger.trace(traceId);
     notifyListeners();
@@ -97,7 +97,7 @@ final class LoggerInspectorController extends ChangeNotifier {
     if (triageSink != null) {
       await _issuesSubscription?.cancel();
       _issuesSubscription = triageSink.watchTopIssues(limit: issueLimit).listen(
-        (final groups) {
+        (groups) {
           _issues = groups;
           notifyListeners();
         },
@@ -105,7 +105,7 @@ final class LoggerInspectorController extends ChangeNotifier {
     }
   }
 
-  void _onLogRecord(final LogRecord record) {
+  void _onLogRecord(LogRecord record) {
     _logs = <LogRecord>[..._logs, record];
     if (_logs.length > maxLogItems) {
       _logs = _logs.sublist(_logs.length - maxLogItems);

@@ -13,7 +13,7 @@ import 'triage_config.dart';
 final class IssueTriageSink implements LogSink {
   IssueTriageSink({
     this.config = const TriageConfig(),
-    final FingerprintGenerator? fingerprintGenerator,
+    FingerprintGenerator? fingerprintGenerator,
   }) : _fingerprintGenerator =
            fingerprintGenerator ?? const FingerprintGenerator();
 
@@ -34,7 +34,7 @@ final class IssueTriageSink implements LogSink {
   }
 
   @override
-  void enqueue(final LogRecord record) {
+  void enqueue(LogRecord record) {
     if (_disposed) {
       return;
     }
@@ -80,16 +80,16 @@ final class IssueTriageSink implements LogSink {
   }
 
   /// Streams sorted issue groups (highest score first).
-  Stream<List<IssueGroup>> watchTopIssues({final int limit = 50}) async* {
+  Stream<List<IssueGroup>> watchTopIssues({int limit = 50}) async* {
     yield currentTopIssues(limit: limit);
     yield* _groupsController.stream.map(
-      (final groups) =>
+      (groups) =>
           List<IssueGroup>.unmodifiable(groups.take(limit < 0 ? 0 : limit)),
     );
   }
 
   /// Snapshot of current top issues.
-  List<IssueGroup> currentTopIssues({final int limit = 50}) {
+  List<IssueGroup> currentTopIssues({int limit = 50}) {
     final sorted = _buildSortedGroups();
     if (limit >= 0 && sorted.length > limit) {
       return List<IssueGroup>.unmodifiable(sorted.take(limit));
@@ -98,7 +98,7 @@ final class IssueTriageSink implements LogSink {
   }
 
   /// Marks a fingerprint as resolved.
-  Future<void> markResolved(final String fingerprint) async {
+  Future<void> markResolved(String fingerprint) async {
     final state = _states[fingerprint];
     if (state == null) {
       return;
@@ -164,7 +164,7 @@ final class IssueTriageSink implements LogSink {
       );
     }
 
-    groups.sort((final a, final b) {
+    groups.sort((a, b) {
       final scoreCompare = b.priorityScore.compareTo(a.priorityScore);
       if (scoreCompare != 0) {
         return scoreCompare;
@@ -176,10 +176,10 @@ final class IssueTriageSink implements LogSink {
   }
 
   double _priorityScore({
-    required final LogLevel highestLevel,
-    required final int occurrences24h,
-    required final DateTime lastSeen,
-    required final DateTime nowUtc,
+    required LogLevel highestLevel,
+    required int occurrences24h,
+    required DateTime lastSeen,
+    required DateTime nowUtc,
   }) {
     final severityWeight = config.severityWeight(highestLevel).toDouble();
     final frequencyWeight = log(occurrences24h + 1) / ln10 * 15;
@@ -189,8 +189,8 @@ final class IssueTriageSink implements LogSink {
   }
 
   double _recencyBoost({
-    required final DateTime lastSeen,
-    required final DateTime nowUtc,
+    required DateTime lastSeen,
+    required DateTime nowUtc,
   }) {
     if (lastSeen.isAfter(nowUtc)) {
       return 25;
@@ -225,11 +225,11 @@ final class _IssueState {
 
   final ListQueue<DateTime> occurrences = ListQueue<DateTime>();
 
-  void addOccurrence(final DateTime timestampUtc) {
+  void addOccurrence(DateTime timestampUtc) {
     occurrences.addLast(timestampUtc);
   }
 
-  void pruneOlderThan(final DateTime thresholdUtc) {
+  void pruneOlderThan(DateTime thresholdUtc) {
     while (occurrences.isNotEmpty && occurrences.first.isBefore(thresholdUtc)) {
       occurrences.removeFirst();
     }

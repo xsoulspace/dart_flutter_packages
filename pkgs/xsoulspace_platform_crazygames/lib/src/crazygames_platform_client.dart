@@ -29,7 +29,7 @@ final class CrazyGamesPlatformClient implements PlatformClient {
   PlatformId get platformId => PlatformId.crazyGames;
 
   @override
-  Future<PlatformInitResult> init(final PlatformInitOptions options) async {
+  Future<PlatformInitResult> init(PlatformInitOptions options) async {
     final bool sdkReady;
     try {
       sdkReady = await _ensureSdkReady();
@@ -117,7 +117,7 @@ final class CrazyGamesPlatformClient implements PlatformClient {
   @override
   Stream<PlatformEvent> get events => _eventsController.stream;
 
-  void _emit(final PlatformEvent event) {
+  void _emit(PlatformEvent event) {
     if (_disposed || _eventsController.isClosed) {
       return;
     }
@@ -203,13 +203,13 @@ final class _CrazyIdentityCapability implements IdentityCapability {
     if (_listenerAttached) {
       return;
     }
-    _authListener = _client.user.addAuthListener((final user) {
+    _authListener = _client.user.addAuthListener((user) {
       _authController.add(user == null ? null : _mapUser(user));
     });
     _listenerAttached = true;
   }
 
-  PlayerIdentity _mapUser(final User user) {
+  PlayerIdentity _mapUser(User user) {
     final id = user.id;
     return PlayerIdentity(
       id: (id == null || id.isEmpty) ? 'anonymous' : id,
@@ -230,8 +230,8 @@ final class _CrazyFriendsCapability implements FriendsCapability {
 
   @override
   Future<List<PlayerFriend>> listFriends({
-    final int? limit,
-    final int? offset,
+    int? limit,
+    int? offset,
   }) async {
     final rawOffset = offset ?? 0;
     final requested = limit ?? 10;
@@ -243,7 +243,7 @@ final class _CrazyFriendsCapability implements FriendsCapability {
         .skip(rawOffset)
         .take(requested)
         .map(
-          (final friend) => PlayerFriend(
+          (friend) => PlayerFriend(
             id: friend.id,
             displayName: friend.username,
             avatarUrl: friend.profilePictureUrl,
@@ -264,9 +264,9 @@ final class _CrazyLeaderboardWriteCapability
 
   @override
   Future<void> submitScore(
-    final String leaderboardId,
-    final int score, {
-    final String? extraData,
+    String leaderboardId,
+    int score, {
+    String? extraData,
   }) async {
     if (extraData != null && extraData.isNotEmpty) {
       _client.user.addScoreEncrypted(score, extraData);

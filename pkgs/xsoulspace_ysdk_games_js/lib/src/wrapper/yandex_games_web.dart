@@ -9,8 +9,8 @@ export 'ysdk_client.dart';
 /// Wrapper entrypoint for Yandex Games SDK.
 abstract final class YandexGames {
   static Future<YsdkClient> init({
-    final bool signed = false,
-    final String expectedGlobal = 'YaGames',
+    bool signed = false,
+    String expectedGlobal = 'YaGames',
   }) async {
     final global = _resolveGlobal(expectedGlobal: expectedGlobal);
     if (global == null) {
@@ -27,10 +27,10 @@ abstract final class YandexGames {
     return YsdkClient.fromSdk(sdk, signed: signed);
   }
 
-  static bool isAvailable({final String expectedGlobal = 'YaGames'}) =>
+  static bool isAvailable({String expectedGlobal = 'YaGames'}) =>
       _resolveGlobal(expectedGlobal: expectedGlobal) != null;
 
-  static Object? _resolveGlobal({required final String expectedGlobal}) {
+  static Object? _resolveGlobal({required String expectedGlobal}) {
     if (!hasGlobalProperty(expectedGlobal)) {
       return null;
     }

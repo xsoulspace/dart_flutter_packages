@@ -24,7 +24,7 @@ void main() {
     });
 
     test('fetchProducts maps storekit payload to product model', () async {
-      binaryMessenger.setMockMethodCallHandler(channel, (final call) async {
+      binaryMessenger.setMockMethodCallHandler(channel, (call) async {
         expect(call.method, 'fetchProducts');
         expect(call.arguments, <String>['premium_year']);
 
@@ -65,7 +65,7 @@ void main() {
     test(
       'purchaseProduct returns canceled when store reports cancellation',
       () async {
-        binaryMessenger.setMockMethodCallHandler(channel, (final call) {
+        binaryMessenger.setMockMethodCallHandler(channel, (call) {
           expect(call.method, 'purchaseProduct');
           throw PlatformException(
             code: 'purchase_cancelled',
@@ -81,7 +81,7 @@ void main() {
     );
 
     test('cancelSubscription propagates platform failure', () async {
-      binaryMessenger.setMockMethodCallHandler(channel, (final call) {
+      binaryMessenger.setMockMethodCallHandler(channel, (call) {
         expect(call.method, 'showCancelSubscriptionSheet');
         throw PlatformException(
           code: 'unavailable',
@@ -98,7 +98,7 @@ void main() {
       final now = DateTime.now();
       final expiresAt = now.add(const Duration(days: 30));
 
-      binaryMessenger.setMockMethodCallHandler(channel, (final call) async {
+      binaryMessenger.setMockMethodCallHandler(channel, (call) async {
         expect(call.method, 'getPurchaseDetailsByPurchaseId');
         expect(call.arguments, 'purchase-abc');
 

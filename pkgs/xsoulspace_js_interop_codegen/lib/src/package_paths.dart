@@ -4,8 +4,8 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 
 String resolvePackageRootFromPackageConfig({
-  required final String currentPackageRoot,
-  required final String packageName,
+  required String currentPackageRoot,
+  required String packageName,
 }) {
   final packageConfigPath = p.join(
     currentPackageRoot,
@@ -23,7 +23,7 @@ String resolvePackageRootFromPackageConfig({
   final packages = (decoded['packages']! as List<dynamic>)
       .cast<Map<String, Object?>>();
   final target = packages
-      .where((final pkg) => pkg['name'] == packageName)
+      .where((pkg) => pkg['name'] == packageName)
       .firstOrNull;
   if (target == null) {
     throw StateError(

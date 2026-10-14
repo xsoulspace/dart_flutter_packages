@@ -47,7 +47,7 @@ enum PermissionStance {
 
   /// Parses a persisted stance name; unknown/absent → [ask] (the
   /// conservative reading of a value nobody vouches for).
-  static PermissionStance fromName(final String? name) =>
+  static PermissionStance fromName(String? name) =>
       PermissionStance.values.firstWhere(
         (stance) => stance.name == name,
         orElse: () => PermissionStance.ask,

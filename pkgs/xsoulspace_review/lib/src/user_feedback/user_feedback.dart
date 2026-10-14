@@ -77,7 +77,7 @@ class UserFeedback extends StatelessWidget {
   /// {@macro user_feedback}
   const UserFeedback.wiredash({
     required this.child,
-    required final UserFeedbackWiredashDto dto,
+    required UserFeedbackWiredashDto dto,
     this.logger,
     super.key,
   }) : wiredashDto = dto;
@@ -97,13 +97,13 @@ class UserFeedback extends StatelessWidget {
   ///
   /// [context] - Build context for accessing Wiredash
   /// [logger] - Optional logger for debugging
-  static Future<void> show(final BuildContext context, {final Logger? logger}) {
+  static Future<void> show(BuildContext context, {Logger? logger}) {
     logger.logFeedback('Opening feedback form');
     return Wiredash.of(context).show();
   }
 
   @override
-  Widget build(final BuildContext context) {
+  Widget build(BuildContext context) {
     logger.logFeedback(
       'Initializing Wiredash feedback system',
       data: {'projectId': wiredashDto.projectId},

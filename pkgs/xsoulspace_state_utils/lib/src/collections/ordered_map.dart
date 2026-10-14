@@ -80,7 +80,7 @@ class MutableOrderedMap<K, V> with Iterable<K> {
   ///
   /// @ai This method has O(1) average time complexity for hash-based keys.
   /// {@endtemplate}
-  bool containsKey(final K key) => _items.containsKey(key);
+  bool containsKey(K key) => _items.containsKey(key);
 
   /// {@template mutable_ordered_map_values}
   /// Returns an iterable of all values in this map.
@@ -115,7 +115,7 @@ class MutableOrderedMap<K, V> with Iterable<K> {
   /// @ai Ensure proper validation is performed in subclasses before calling super.upsert().
   /// {@endtemplate}
   @mustCallSuper
-  void upsert(final V value, {final K? key}) {
+  void upsert(V value, {K? key}) {
     final effectiveKey = key ?? toKey?.call(value);
     if (effectiveKey == null) {
       throw ArgumentError.value(value, 'key', 'Key not provided');
@@ -152,7 +152,7 @@ class MutableOrderedMap<K, V> with Iterable<K> {
   /// @ai Use this method for efficient batch updates instead of multiple individual upsert() calls.
   /// The [toKey] parameter is useful when you need different key extraction for specific operations.
   /// {@endtemplate}
-  void upsertAll(final Iterable<V> values, {final K? Function(V)? toKey}) {
+  void upsertAll(Iterable<V> values, {K? Function(V)? toKey}) {
     if (values.isEmpty) {
       return;
     }
@@ -176,9 +176,9 @@ class MutableOrderedMap<K, V> with Iterable<K> {
   /// @ai Use this method to update the value associated with a key in the map.
   /// {@endtemplate}
   V update(
-    final K key,
-    final V Function(V) update, {
-    final V Function()? ifAbsent,
+    K key,
+    V Function(V) update, {
+    V Function()? ifAbsent,
   }) {
     final value = _items[key];
     V? updatedValue;
@@ -203,7 +203,7 @@ class MutableOrderedMap<K, V> with Iterable<K> {
   ///
   /// @ai This provides the same functionality as standard map access.
   /// {@endtemplate}
-  V? operator [](final K key) => _items[key];
+  V? operator [](K key) => _items[key];
 
   /// {@template mutable_ordered_map_remove}
   /// Removes the mapping for the specified [key] if it exists.
@@ -214,7 +214,7 @@ class MutableOrderedMap<K, V> with Iterable<K> {
   /// @ai This operation maintains the relative order of remaining items.
   /// {@endtemplate}
   @mustCallSuper
-  void remove(final K key) {
+  void remove(K key) {
     _items.remove(key);
     _orderedKeys.remove(key);
     _valuesListCache = null;
@@ -225,7 +225,7 @@ class MutableOrderedMap<K, V> with Iterable<K> {
   ///
   /// @ai Use this method for bulk updates rather than multiple individual upsert() calls.
   /// {@endtemplate}
-  void assignAll(final Map<K, V> map) {
+  void assignAll(Map<K, V> map) {
     _items
       ..clear()
       ..addAll(map);
@@ -244,7 +244,7 @@ class MutableOrderedMap<K, V> with Iterable<K> {
   ///
   /// @ai Use this method when you have ordered data that needs key-based access.
   /// {@endtemplate}
-  void assignAllOrdered(final Iterable<V> items) {
+  void assignAllOrdered(Iterable<V> items) {
     final newKeys = <K>{};
     final map = <K, V>{};
     for (final item in items) {
@@ -331,14 +331,14 @@ class ImmutableOrderedMap<K, V> with Iterable<K> {
   final OrderedMapToKeyFunction<K, V>? toKey;
   Map<K, V> _items = const {};
   List<V>? _valuesListCache;
-  void _setItems(final Map<K, V> items) {
+  void _setItems(Map<K, V> items) {
     _items = items.unmodifiable;
     _valuesListCache = null;
   }
 
   Set<K> _orderedKeys = const {};
   List<K>? _orderedKeysListCache;
-  void _setOrderedKeys(final Set<K> keys) {
+  void _setOrderedKeys(Set<K> keys) {
     _orderedKeys = keys.unmodifiable;
     _orderedKeysListCache = null;
   }
@@ -350,7 +350,7 @@ class ImmutableOrderedMap<K, V> with Iterable<K> {
   ///
   /// @ai This method has O(1) average time complexity for hash-based keys.
   /// {@endtemplate}
-  bool containsKey(final K key) => _items.containsKey(key);
+  bool containsKey(K key) => _items.containsKey(key);
 
   @override
   Iterator<K> get iterator => _orderedKeys.iterator;
@@ -393,7 +393,7 @@ class ImmutableOrderedMap<K, V> with Iterable<K> {
   ///
   /// @ai This provides standard map access functionality with null safety.
   /// {@endtemplate}
-  V? operator [](final K key) => _items[key];
+  V? operator [](K key) => _items[key];
 
   /// {@template immutable_ordered_map_setter}
   /// Inserts or updates the mapping for the specified [key] and [value].
@@ -403,7 +403,7 @@ class ImmutableOrderedMap<K, V> with Iterable<K> {
   ///
   /// @ai Use this operator for simple insertions with default ordering behavior.
   /// {@endtemplate}
-  void operator []=(final K key, final V value) => upsert(value, key: key);
+  void operator []=(K key, V value) => upsert(value, key: key);
 
   /// {@template immutable_ordered_map_assign_all}
   /// Replaces all items in this collection with the provided [map].
@@ -414,7 +414,7 @@ class ImmutableOrderedMap<K, V> with Iterable<K> {
   ///
   /// @ai Use this method for bulk updates rather than multiple individual upsert() calls.
   /// {@endtemplate}
-  void assignAll(final Map<K, V> map) {
+  void assignAll(Map<K, V> map) {
     _setItems(map);
     _setOrderedKeys(map.keys.toSet());
   }
@@ -428,7 +428,7 @@ class ImmutableOrderedMap<K, V> with Iterable<K> {
   ///
   /// @ai Use this method when you have ordered data that needs key-based access.
   /// {@endtemplate}
-  void assignAllOrdered(final Iterable<V> items) {
+  void assignAllOrdered(Iterable<V> items) {
     final newKeys = <K>{};
     final map = <K, V>{};
     for (final item in items) {
@@ -454,7 +454,7 @@ class ImmutableOrderedMap<K, V> with Iterable<K> {
   /// Use [putFirst] to control insertion position in the ordered sequence.
   /// {@endtemplate}
   @mustCallSuper
-  void upsert(final V value, {final bool putFirst = false, final K? key}) {
+  void upsert(V value, {bool putFirst = false, K? key}) {
     final effectiveKey = key ?? toKey?.call(value);
     if (effectiveKey == null) {
       throw ArgumentError.value(value, 'key', 'Key not provided');
@@ -503,9 +503,9 @@ class ImmutableOrderedMap<K, V> with Iterable<K> {
   /// When [putFirst] is true, all new items are placed at the front in the order they appear in the iterable.
   /// {@endtemplate}
   void upsertAll(
-    final Iterable<V> values, {
-    final bool putFirst = false,
-    final K? Function(V)? toKey,
+    Iterable<V> values, {
+    bool putFirst = false,
+    K? Function(V)? toKey,
   }) {
     if (values.isEmpty) {
       return;
@@ -551,9 +551,9 @@ class ImmutableOrderedMap<K, V> with Iterable<K> {
   /// @ai Use this method to update the value associated with a key in the map.
   /// {@endtemplate}
   V update(
-    final K key,
-    final V Function(V) update, {
-    final V Function()? ifAbsent,
+    K key,
+    V Function(V) update, {
+    V Function()? ifAbsent,
   }) {
     final items = {..._items};
     final value = items[key];
@@ -580,7 +580,7 @@ class ImmutableOrderedMap<K, V> with Iterable<K> {
   /// @ai This operation has O(n) time complexity due to filtering and collection creation.
   /// {@endtemplate}
   @mustCallSuper
-  void remove(final K key) {
+  void remove(K key) {
     final items = {..._items}..remove(key);
     final orderedKeys = {..._orderedKeys}..remove(key);
     _setItems(items);

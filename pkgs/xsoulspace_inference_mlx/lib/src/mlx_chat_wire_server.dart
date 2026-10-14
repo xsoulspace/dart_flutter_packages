@@ -40,7 +40,7 @@ base class MlxChatWireServer {
 
   Future<void> stop() => _server.stop();
 
-  Future<LoopbackReply?> _route(final LoopbackRequest request) async {
+  Future<LoopbackReply?> _route(LoopbackRequest request) async {
     if (request.method != 'POST' || request.path != '/v1/chat/completions') {
       return null;
     }

@@ -7,7 +7,7 @@ import 'package:xsoulspace_logger_triage/xsoulspace_logger_triage.dart';
 
 void main() {
   testWidgets('controller drives logs/traces/issues updates', (
-    final tester,
+    tester,
   ) async {
     final memorySink = InMemoryLogSink();
     final triageSink = IssueTriageSink();

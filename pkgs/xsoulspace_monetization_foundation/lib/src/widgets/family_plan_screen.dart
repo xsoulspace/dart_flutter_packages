@@ -4,7 +4,7 @@ class FamilyPlanScreen extends StatelessWidget {
   const FamilyPlanScreen({super.key});
 
   @override
-  Widget build(final BuildContext context) {
+  Widget build(BuildContext context) {
     // TODO(arenukvern): implement build
     throw UnimplementedError();
   }

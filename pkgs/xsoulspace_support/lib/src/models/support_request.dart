@@ -17,14 +17,14 @@ import 'device_info.dart';
 /// and support request data management.
 extension type const SupportRequest._(Map<String, dynamic> value) {
   factory SupportRequest({
-    required final String subject,
-    required final String description,
-    required final AppInfo appInfo,
-    required final DeviceInfo deviceInfo,
-    final String? userEmail,
-    final String? userName,
-    final Map<String, String>? additionalContext,
-    final List<String>? attachments,
+    required String subject,
+    required String description,
+    required AppInfo appInfo,
+    required DeviceInfo deviceInfo,
+    String? userEmail,
+    String? userName,
+    Map<String, String>? additionalContext,
+    List<String>? attachments,
   }) => SupportRequest._({
     'subject': subject,
     'description': description,
@@ -36,7 +36,7 @@ extension type const SupportRequest._(Map<String, dynamic> value) {
     'attachments': attachments,
   });
 
-  factory SupportRequest.fromJson(final dynamic json) =>
+  factory SupportRequest.fromJson(dynamic json) =>
       SupportRequest._(jsonDecodeMap(json));
 
   /// The subject/title of the support request

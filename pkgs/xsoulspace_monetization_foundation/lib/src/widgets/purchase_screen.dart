@@ -18,12 +18,12 @@ class PurchaseScreen extends StatelessWidget {
   final List<PurchaseProductId> productIds;
 
   @override
-  Widget build(final BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Purchase Options')),
     body: FutureBuilder<List<PurchaseProductDetailsModel>>(
       // ignore: discarded_futures
       future: purchaseProvider.getNonConsumables(productIds),
-      builder: (final context, final snapshot) {
+      builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
@@ -33,7 +33,7 @@ class PurchaseScreen extends StatelessWidget {
         final purchases = snapshot.data ?? [];
         return ListView.builder(
           itemCount: purchases.length,
-          itemBuilder: (final context, final index) {
+          itemBuilder: (context, index) {
             final purchase = purchases[index];
             return ListTile(
               title: Text(purchase.name),

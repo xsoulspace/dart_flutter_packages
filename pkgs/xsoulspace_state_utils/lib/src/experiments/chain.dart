@@ -170,7 +170,7 @@ class Chain<TStartWith, TThenResult> {
   /// {@endtemplate}
   Chain({
     required this.startWith,
-    required final ChainCommands<TThenResult> then,
+    required ChainCommands<TThenResult> then,
   }) : _commands = then;
 
   /// {@template chain_start_with}
@@ -206,7 +206,7 @@ class Chain<TStartWith, TThenResult> {
   ///
   /// @ai Call this method to start the chain execution. The method completes when the chain terminates.
   /// {@endtemplate}
-  Future<void> call(final TStartWith arg) async {
+  Future<void> call(TStartWith arg) async {
     final result = await startWith(arg);
     if (result.type == null) return;
     ChainThenRecord<TThenResult> currentResult = result;

@@ -11,7 +11,7 @@ import 'package:pigeon/pigeon.dart';
 @HostApi()
 abstract class RustoreBillingApi {
   @async
-  void initialize(final RustoreBillingConfig config);
+  void initialize(RustoreBillingConfig config);
 
   @async
   RustorePurchaseAvailabilityResult getPurchaseAvailability();
@@ -20,42 +20,42 @@ abstract class RustoreBillingApi {
   bool getUserAuthorizationStatus();
 
   @async
-  List<RustoreProduct> getProducts(final List<String> productIds);
+  List<RustoreProduct> getProducts(List<String> productIds);
 
   @async
-  List<RustorePurchase> getPurchases(final RustorePurchaseFilter? filter);
+  List<RustorePurchase> getPurchases(RustorePurchaseFilter? filter);
 
   @async
-  RustorePurchase? getPurchase(final String purchaseId);
+  RustorePurchase? getPurchase(String purchaseId);
 
   @async
   RustoreProductPurchaseResult purchase(
-    final RustoreProductPurchaseParams params,
-    final RustorePreferredPurchaseType preferredPurchaseType,
-    final RustoreBillingTheme sdkTheme,
+    RustoreProductPurchaseParams params,
+    RustorePreferredPurchaseType preferredPurchaseType,
+    RustoreBillingTheme sdkTheme,
   );
 
   @async
   RustoreProductPurchaseResult purchaseTwoStep(
-    final RustoreProductPurchaseParams params,
-    final RustoreBillingTheme sdkTheme,
+    RustoreProductPurchaseParams params,
+    RustoreBillingTheme sdkTheme,
   );
 
   @async
   void confirmTwoStepPurchase(
-    final String purchaseId,
-    final String? developerPayload,
+    String purchaseId,
+    String? developerPayload,
   );
 
   @async
-  void cancelTwoStepPurchase(final String purchaseId);
+  void cancelTwoStepPurchase(String purchaseId);
 }
 
 @FlutterApi()
 abstract class RustoreBillingCallbackApi {
-  void onPurchaseResult(final RustoreProductPurchaseResult result);
+  void onPurchaseResult(RustoreProductPurchaseResult result);
 
-  void onPurchaseError(final RustorePurchaseError error);
+  void onPurchaseError(RustorePurchaseError error);
 }
 
 class RustoreBillingConfig {

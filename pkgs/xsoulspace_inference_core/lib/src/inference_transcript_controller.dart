@@ -29,15 +29,15 @@ final class InferenceTranscriptSnapshot {
   final Map<String, dynamic> metadata;
 
   InferenceTranscriptSnapshot copyWith({
-    final String? lastTranscript,
-    final String? partialTranscript,
-    final String? finalTranscript,
-    final InferenceTranscriptEvent? lastEvent,
-    final InferenceError? error,
-    final InferenceRealtimeSessionState? sessionState,
-    final Map<String, dynamic>? metadata,
-    final bool clearPartialTranscript = false,
-    final bool clearError = false,
+    String? lastTranscript,
+    String? partialTranscript,
+    String? finalTranscript,
+    InferenceTranscriptEvent? lastEvent,
+    InferenceError? error,
+    InferenceRealtimeSessionState? sessionState,
+    Map<String, dynamic>? metadata,
+    bool clearPartialTranscript = false,
+    bool clearError = false,
   }) => InferenceTranscriptSnapshot(
     lastTranscript: lastTranscript ?? this.lastTranscript,
     partialTranscript: clearPartialTranscript
@@ -64,7 +64,7 @@ final class InferenceTranscriptController {
       _snapshotsController.stream;
 
   Future<void> attach(
-    final InferenceRealtimeSession<InferenceTranscriptEvent> session,
+    InferenceRealtimeSession<InferenceTranscriptEvent> session,
   ) async {
     await _subscription?.cancel();
     _subscription = session.events.listen(_consumeEvent);
@@ -80,7 +80,7 @@ final class InferenceTranscriptController {
     await _snapshotsController.close();
   }
 
-  void _consumeEvent(final InferenceTranscriptEvent event) {
+  void _consumeEvent(InferenceTranscriptEvent event) {
     final nextState = event.sessionState ?? _snapshot.sessionState;
     switch (event.type) {
       case InferenceTranscriptEventType.partialTranscript:

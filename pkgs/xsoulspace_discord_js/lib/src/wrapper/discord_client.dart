@@ -14,14 +14,14 @@ class DiscordClient {
   }
 
   Future<Map<String, Object?>> authorize(
-    final DiscordAuthorizeRequest request,
+    DiscordAuthorizeRequest request,
   ) async {
     final result = await _callCommand('authorize', request.toJson());
     return asMap(result);
   }
 
   Future<DiscordAuthenticateResult> authenticate({
-    final String? accessToken,
+    String? accessToken,
   }) async {
     final payload = <String, Object?>{};
     if (accessToken != null && accessToken.isNotEmpty) {
@@ -36,7 +36,7 @@ class DiscordClient {
     return DiscordAuthenticateResult.fromMap(asMap(result));
   }
 
-  Future<DiscordUser?> getUser({required final String id}) async {
+  Future<DiscordUser?> getUser({required String id}) async {
     final result = await _callCommand('getUser', <String, Object?>{'id': id});
     final map = asMap(result);
     if (map.isEmpty) {
@@ -51,7 +51,7 @@ class DiscordClient {
 
     return relationships
         .map(asMap)
-        .where((final map) => map.isNotEmpty)
+        .where((map) => map.isNotEmpty)
         .map(DiscordRelationship.fromMap)
         .toList(growable: false);
   }
@@ -61,8 +61,8 @@ class DiscordClient {
   }
 
   Future<Map<String, Object?>> inviteUserEmbedded({
-    required final String userId,
-    final String? content,
+    required String userId,
+    String? content,
   }) async {
     return asMap(
       await _callCommand('inviteUserEmbedded', <String, Object?>{
@@ -73,9 +73,9 @@ class DiscordClient {
   }
 
   Future<DiscordShareLinkResult> shareLink({
-    required final String message,
-    final String? customId,
-    final String? linkId,
+    required String message,
+    String? customId,
+    String? linkId,
   }) async {
     final result = asMap(
       await _callCommand('shareLink', <String, Object?>{
@@ -88,7 +88,7 @@ class DiscordClient {
   }
 
   Future<Map<String, Object?>> openShareMomentDialog({
-    required final String mediaUrl,
+    required String mediaUrl,
   }) async {
     return asMap(
       await _callCommand('openShareMomentDialog', <String, Object?>{
@@ -98,9 +98,9 @@ class DiscordClient {
   }
 
   Future<DiscordEventSubscription> onCurrentUserUpdate(
-    final void Function(DiscordUser? user) listener,
+    void Function(DiscordUser? user) listener,
   ) {
-    return onRawEvent('CURRENT_USER_UPDATE', (final event) {
+    return onRawEvent('CURRENT_USER_UPDATE', (event) {
       final data = event.data['user'];
       final map = data == null ? event.data : asMap(data);
       if (map.isEmpty) {
@@ -112,9 +112,9 @@ class DiscordClient {
   }
 
   Future<DiscordEventSubscription> onRelationshipUpdate(
-    final void Function(DiscordRelationship relationship) listener,
+    void Function(DiscordRelationship relationship) listener,
   ) {
-    return onRawEvent('RELATIONSHIP_UPDATE', (final event) {
+    return onRawEvent('RELATIONSHIP_UPDATE', (event) {
       final relationshipMap = asMap(event.data['relationship']);
       final payload = relationshipMap.isEmpty ? event.data : relationshipMap;
       if (payload.isEmpty) {
@@ -125,11 +125,11 @@ class DiscordClient {
   }
 
   Future<DiscordEventSubscription> onRawEvent(
-    final String event,
-    final void Function(DiscordEventData event) listener, {
-    final Map<String, Object?>? subscribeArgs,
+    String event,
+    void Function(DiscordEventData event) listener, {
+    Map<String, Object?>? subscribeArgs,
   }) async {
-    final jsListener = allowInterop((final Object? payload) {
+    final jsListener = allowInterop((Object? payload) {
       runGuarded(() {
         listener(DiscordEventData(event: event, data: asMap(payload)));
       });
@@ -154,8 +154,8 @@ class DiscordClient {
   }
 
   Future<Object?> callRawCommand(
-    final String methodName, {
-    final Map<String, Object?>? params,
+    String methodName, {
+    Map<String, Object?>? params,
   }) async {
     final commands = _commandsObject();
 
@@ -174,8 +174,8 @@ class DiscordClient {
   }
 
   Future<Object?> _callCommand(
-    final String methodName, [
-    final Map<String, Object?>? payload,
+    String methodName, [
+    Map<String, Object?>? payload,
   ]) {
     final commands = _commandsObject();
     if (prop(commands, methodName) == null) {

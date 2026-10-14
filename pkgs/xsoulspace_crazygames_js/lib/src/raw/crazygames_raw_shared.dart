@@ -8,11 +8,11 @@ import 'package:xsoulspace_js_interop_runtime/xsoulspace_js_interop_runtime.dart
     as js_runtime;
 
 @internal
-Future<T> promiseToFuture<T extends JSAny?>(final JSPromise<T> promise) =>
+Future<T> promiseToFuture<T extends JSAny?>(JSPromise<T> promise) =>
     js_runtime.promiseToFuture<T>(promise);
 
 @internal
-Object? dartify(final Object? value) => js_runtime.dartify(value);
+Object? dartify(Object? value) => js_runtime.dartify(value);
 
 @internal
-JSAny? jsifyAny(final Object? value) => js_runtime.jsifyAny(value);
+JSAny? jsifyAny(Object? value) => js_runtime.jsifyAny(value);

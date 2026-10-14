@@ -34,9 +34,9 @@ typedef ServeProcessStarter =
     );
 
 Future<ManagedServeProcess> ioStart(
-  final String executable,
-  final List<String> arguments,
-  final Map<String, String> environment,
+  String executable,
+  List<String> arguments,
+  Map<String, String> environment,
 ) async {
   final process = await Process.start(
     executable,

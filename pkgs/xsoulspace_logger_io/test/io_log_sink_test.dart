@@ -81,9 +81,9 @@ void main() {
 
         final segments = await temp
             .list()
-            .where((final entity) => entity is File)
+            .where((entity) => entity is File)
             .cast<File>()
-            .where((final file) => file.path.endsWith('.ndjson'))
+            .where((file) => file.path.endsWith('.ndjson'))
             .toList();
         expect(segments.length, greaterThan(1));
 
@@ -91,7 +91,7 @@ void main() {
         expect(records.length, 200);
 
         final sequences = records
-            .map((final row) => (row['sequence']! as num).toInt())
+            .map((row) => (row['sequence']! as num).toInt())
             .toList(growable: false);
         final unique = sequences.toSet();
         expect(unique.length, sequences.length);
@@ -101,7 +101,7 @@ void main() {
         }
 
         final coreSequences = records
-            .map((final row) => (row['coreSequence']! as num).toInt())
+            .map((row) => (row['coreSequence']! as num).toInt())
             .toList(growable: false);
         expect(coreSequences.first, 1);
         expect(coreSequences.last, 200);
@@ -184,9 +184,9 @@ void main() {
 
       final segments = await temp
           .list()
-          .where((final entity) => entity is File)
+          .where((entity) => entity is File)
           .cast<File>()
-          .where((final file) => file.path.endsWith('.ndjson'))
+          .where((file) => file.path.endsWith('.ndjson'))
           .toList();
 
       int totalSize = 0;
@@ -201,16 +201,16 @@ void main() {
 }
 
 Future<List<Map<String, Object?>>> _readPersistedRecords(
-  final Directory directory,
+  Directory directory,
 ) async {
   final files = await directory
       .list()
-      .where((final entity) => entity is File)
+      .where((entity) => entity is File)
       .cast<File>()
-      .where((final file) => file.path.endsWith('.ndjson'))
+      .where((file) => file.path.endsWith('.ndjson'))
       .toList();
 
-  files.sort((final a, final b) => a.path.compareTo(b.path));
+  files.sort((a, b) => a.path.compareTo(b.path));
 
   final rows = <Map<String, Object?>>[];
   for (final file in files) {

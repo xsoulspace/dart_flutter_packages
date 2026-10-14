@@ -4,7 +4,7 @@ import 'package:xsoulspace_review_google_apple/xsoulspace_review_google_apple.da
 
 void main() {
   testWidgets('requests review only when native API is available', (
-    final tester,
+    tester,
   ) async {
     var requestCalls = 0;
     var available = false;
@@ -21,7 +21,7 @@ void main() {
       Directionality(
         textDirection: TextDirection.ltr,
         child: Builder(
-          builder: (final buildContext) {
+          builder: (buildContext) {
             context = buildContext;
             return const SizedBox.shrink();
           },

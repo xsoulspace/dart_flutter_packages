@@ -34,7 +34,7 @@ class _FakeSession
 
   @override
   Future<InferenceResult<void>> sendAudioChunk(
-    final List<int> audioBytes,
+    List<int> audioBytes,
   ) async => InferenceResult<void>.ok(null);
 }
 
@@ -42,7 +42,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('InferencePreflightPanel renders readiness summary', (
-    final tester,
+    tester,
   ) async {
     await tester.pumpWidget(
       const MaterialApp(
@@ -61,7 +61,7 @@ void main() {
   });
 
   testWidgets('InferenceTranscriptNotifier updates transcript widgets', (
-    final tester,
+    tester,
   ) async {
     final session = _FakeSession();
     final notifier = InferenceTranscriptNotifier();
@@ -82,7 +82,7 @@ void main() {
         home: Scaffold(
           body: AnimatedBuilder(
             animation: notifier,
-            builder: (final context, final _) =>
+            builder: (context, _) =>
                 InferenceTranscriptPanel(snapshot: notifier.snapshot),
           ),
         ),

@@ -75,7 +75,7 @@ class StoreReviewRequester extends ChangeNotifier {
 
   /// Whether the review functionality is available
   bool get isAvailable => _isAvailable;
-  set isAvailable(final bool value) {
+  set isAvailable(bool value) {
     _isAvailable = value;
     notifyListeners();
   }
@@ -85,7 +85,7 @@ class StoreReviewRequester extends ChangeNotifier {
   ///
   /// If no previous request exists, it schedules the first review request.
   /// Otherwise, it schedules based on the elapsed time and review count.
-  Future<void> onLoad({final StoreReviewer? storeReviewer}) async {
+  Future<void> onLoad({StoreReviewer? storeReviewer}) async {
     logger.logReviewDebug('Initializing review requester');
 
     if (storeReviewer != null) _storeReviewer = storeReviewer;
@@ -144,7 +144,7 @@ class StoreReviewRequester extends ChangeNotifier {
   }
 
   /// Schedules a review request after a specified delay.
-  void _scheduleReviewRequest({final Duration? initialDelay}) {
+  void _scheduleReviewRequest({Duration? initialDelay}) {
     if (!isAvailable) return;
     _timer?.cancel();
     final delay = initialDelay ?? reviewPeriod;
@@ -155,8 +155,8 @@ class StoreReviewRequester extends ChangeNotifier {
   /// Requests a review from the store reviewer if the maximum count hasn't
   /// been reached.
   Future<void> requestReview({
-    final BuildContext? context,
-    final Locale? locale,
+    BuildContext? context,
+    Locale? locale,
   }) async {
     if (!isAvailable) {
       logger.logReviewWarning('Review request skipped - not available');

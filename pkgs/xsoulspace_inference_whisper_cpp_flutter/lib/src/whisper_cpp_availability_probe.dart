@@ -18,12 +18,12 @@ class WhisperCppAvailabilityProbe implements InferenceReadinessProbe {
 
   bool isPlatformSupported() => platformProbe();
 
-  bool isConfigured(final WhisperCppRuntimeConfig runtimeConfig) =>
+  bool isConfigured(WhisperCppRuntimeConfig runtimeConfig) =>
       (runtimeConfig.libraryPath ?? '').trim().isNotEmpty ||
       runtimeConfig.librarySearchPaths.isNotEmpty ||
       runtimeConfig.ownsRuntimeResolution;
 
-  bool canLoad(final WhisperCppRuntimeConfig runtimeConfig) {
+  bool canLoad(WhisperCppRuntimeConfig runtimeConfig) {
     if (!isPlatformSupported() || !isConfigured(runtimeConfig)) {
       return false;
     }

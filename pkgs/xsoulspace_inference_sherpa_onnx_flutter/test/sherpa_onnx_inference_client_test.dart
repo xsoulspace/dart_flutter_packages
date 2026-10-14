@@ -10,16 +10,16 @@ class _FakeSherpaBackend implements SherpaOnnxRealtimeBackend {
 
   @override
   Future<void> start({
-    required final SherpaOnnxModelConfig modelConfig,
-    required final SherpaOnnxRuntimeConfig runtimeConfig,
-    required final SherpaOnnxRealtimeConfig realtimeConfig,
-    required final void Function(InferenceTranscriptEvent event) emit,
+    required SherpaOnnxModelConfig modelConfig,
+    required SherpaOnnxRuntimeConfig runtimeConfig,
+    required SherpaOnnxRealtimeConfig realtimeConfig,
+    required void Function(InferenceTranscriptEvent event) emit,
   }) async {
     this.emit = emit;
   }
 
   @override
-  Future<void> sendAudioChunk(final List<int> audioBytes) async {
+  Future<void> sendAudioChunk(List<int> audioBytes) async {
     chunks.add(audioBytes);
     emit(
       InferenceTranscriptEvent(
@@ -58,9 +58,9 @@ void main() {
     final client = SherpaOnnxInferenceClient(
       transcribe:
           ({
-            required final request,
-            required final modelConfig,
-            required final runtimeConfig,
+            required request,
+            required modelConfig,
+            required runtimeConfig,
           }) async {
             expect(
               modelConfig.preset,
@@ -130,7 +130,7 @@ void main() {
       expect(backend.committed, isTrue);
       expect(
         seen.any(
-          (final event) =>
+          (event) =>
               event.type == InferenceTranscriptEventType.partialTranscript &&
               event.transcript == 'hello',
         ),
@@ -138,7 +138,7 @@ void main() {
       );
       expect(
         seen.any(
-          (final event) =>
+          (event) =>
               event.type == InferenceTranscriptEventType.finalTranscript &&
               event.transcript == 'hello world',
         ),
@@ -152,17 +152,17 @@ void main() {
       runtimeConfig: const SherpaOnnxRuntimeConfig(),
       modelPathResolver: () => null,
       platformProbe: () => true,
-      loadProbe: (final _) => false,
+      loadProbe: (_) => false,
     );
 
     final snapshot = await probe.probe();
     expect(snapshot.isReady, isFalse);
     expect(
-      snapshot.issues.any((final issue) => issue.code == 'runtime_missing'),
+      snapshot.issues.any((issue) => issue.code == 'runtime_missing'),
       isTrue,
     );
     expect(
-      snapshot.issues.any((final issue) => issue.code == 'model_missing'),
+      snapshot.issues.any((issue) => issue.code == 'model_missing'),
       isTrue,
     );
   });

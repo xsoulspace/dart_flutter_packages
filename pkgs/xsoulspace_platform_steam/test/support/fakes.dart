@@ -7,7 +7,7 @@ final class FakeSteamNativeApiFactory implements SteamNativeApiFactory {
   final FakeSteamNativeApi api;
 
   @override
-  SteamNativeApi create(final SteamInitConfig config) => api;
+  SteamNativeApi create(SteamInitConfig config) => api;
 }
 
 final class FakeSteamNativeApi implements SteamNativeApi {
@@ -40,7 +40,7 @@ final class FakeSteamNativeApi implements SteamNativeApi {
       <int, SteamApiCallResultPayload>{};
 
   @override
-  bool restartAppIfNecessary(final int appId) => restartRequired;
+  bool restartAppIfNecessary(int appId) => restartRequired;
 
   @override
   SteamNativeInitResult initialize() {
@@ -68,7 +68,7 @@ final class FakeSteamNativeApi implements SteamNativeApi {
   @override
   int get hSteamPipe => _hSteamPipe;
 
-  set hSteamPipe(final int value) => _hSteamPipe = value;
+  set hSteamPipe(int value) => _hSteamPipe = value;
 
   @override
   List<SteamManualCallback> drainManualCallbacks() {
@@ -79,9 +79,9 @@ final class FakeSteamNativeApi implements SteamNativeApi {
 
   @override
   SteamApiCallResultPayload? getApiCallResult({
-    required final int apiCallHandle,
-    required final int expectedCallbackId,
-    required final int callbackBufferSize,
+    required int apiCallHandle,
+    required int expectedCallbackId,
+    required int callbackBufferSize,
   }) {
     return apiCallResults[apiCallHandle];
   }
@@ -96,32 +96,32 @@ final class FakeSteamNativeApi implements SteamNativeApi {
   String personaName() => localPersonaName;
 
   @override
-  int friendCount(final int flags) => friendIds.length;
+  int friendCount(int flags) => friendIds.length;
 
   @override
-  int friendByIndex(final int index, final int flags) => friendIds[index];
+  int friendByIndex(int index, int flags) => friendIds[index];
 
   @override
-  String friendPersonaName(final int steamId) =>
+  String friendPersonaName(int steamId) =>
       friendNames[steamId] ?? 'Unknown';
 
   @override
   bool requestCurrentStats() => true;
 
   @override
-  int? getStatInt32(final String name) => intStats[name];
+  int? getStatInt32(String name) => intStats[name];
 
   @override
-  double? getStatFloat(final String name) => floatStats[name];
+  double? getStatFloat(String name) => floatStats[name];
 
   @override
-  bool setStatInt32(final String name, final int value) {
+  bool setStatInt32(String name, int value) {
     intStats[name] = value;
     return true;
   }
 
   @override
-  bool setStatFloat(final String name, final double value) {
+  bool setStatFloat(String name, double value) {
     floatStats[name] = value;
     return true;
   }
@@ -130,16 +130,16 @@ final class FakeSteamNativeApi implements SteamNativeApi {
   bool storeStats() => true;
 
   @override
-  bool? getAchievement(final String name) => achievements[name];
+  bool? getAchievement(String name) => achievements[name];
 
   @override
-  bool setAchievement(final String name) {
+  bool setAchievement(String name) {
     achievements[name] = true;
     return true;
   }
 
   @override
-  bool clearAchievement(final String name) {
+  bool clearAchievement(String name) {
     achievements[name] = false;
     return true;
   }

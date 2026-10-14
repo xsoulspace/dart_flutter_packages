@@ -29,7 +29,7 @@ final class YandexGamesPlatformClient implements PlatformClient {
   PlatformId get platformId => PlatformId.yandexGames;
 
   @override
-  Future<PlatformInitResult> init(final PlatformInitOptions options) async {
+  Future<PlatformInitResult> init(PlatformInitOptions options) async {
     final bool sdkReady;
     try {
       sdkReady = await _ensureSdkReady();
@@ -129,7 +129,7 @@ final class YandexGamesPlatformClient implements PlatformClient {
   @override
   Stream<PlatformEvent> get events => _eventsController.stream;
 
-  void _emit(final PlatformEvent event) {
+  void _emit(PlatformEvent event) {
     if (_disposed || _eventsController.isClosed) {
       return;
     }
@@ -211,8 +211,8 @@ final class _YandexLeaderboardReadCapability
 
   @override
   Future<LeaderboardEntries> getEntries(
-    final String leaderboardId,
-    final LeaderboardQuery q,
+    String leaderboardId,
+    LeaderboardQuery q,
   ) async {
     final entries = await _sdk.leaderboards.getEntries(
       leaderboardId,
@@ -224,7 +224,7 @@ final class _YandexLeaderboardReadCapability
     return LeaderboardEntries(
       entries: entries.entries
           .map(
-            (final item) => LeaderboardEntry(
+            (item) => LeaderboardEntry(
               playerId: item.player.uniqueId,
               playerName: item.player.publicName,
               rank: item.rank,
@@ -239,7 +239,7 @@ final class _YandexLeaderboardReadCapability
   }
 
   @override
-  Future<LeaderboardEntry?> getPlayerEntry(final String leaderboardId) async {
+  Future<LeaderboardEntry?> getPlayerEntry(String leaderboardId) async {
     try {
       final entry = await _sdk.leaderboards.getPlayerEntry(leaderboardId);
       return LeaderboardEntry(
@@ -266,9 +266,9 @@ final class _YandexLeaderboardWriteCapability
 
   @override
   Future<void> submitScore(
-    final String leaderboardId,
-    final int score, {
-    final String? extraData,
+    String leaderboardId,
+    int score, {
+    String? extraData,
   }) async {
     await _sdk.leaderboards.setScore(
       leaderboardId,
@@ -287,7 +287,7 @@ final class _YandexStatsReadCapability implements StatsReadCapability {
   String get capabilityName => 'stats.read';
 
   @override
-  Future<int?> getIntStat(final String name) async {
+  Future<int?> getIntStat(String name) async {
     final value = await _getStat(name);
     if (value == null) {
       return null;
@@ -296,12 +296,12 @@ final class _YandexStatsReadCapability implements StatsReadCapability {
   }
 
   @override
-  Future<double?> getDoubleStat(final String name) async {
+  Future<double?> getDoubleStat(String name) async {
     final value = await _getStat(name);
     return value?.toDouble();
   }
 
-  Future<num?> _getStat(final String name) async {
+  Future<num?> _getStat(String name) async {
     final player = await _sdk.getPlayerUnsigned();
     final stats = await player.getStats(<String>[name]);
     final value = stats[name];
@@ -318,13 +318,13 @@ final class _YandexStatsWriteCapability implements StatsWriteCapability {
   String get capabilityName => 'stats.write';
 
   @override
-  Future<void> setIntStat(final String name, final int value) async {
+  Future<void> setIntStat(String name, int value) async {
     final player = await _sdk.getPlayerUnsigned();
     await player.setStats(<String, num>{name: value});
   }
 
   @override
-  Future<void> setDoubleStat(final String name, final double value) async {
+  Future<void> setDoubleStat(String name, double value) async {
     final player = await _sdk.getPlayerUnsigned();
     await player.setStats(<String, num>{name: value});
   }
@@ -341,7 +341,7 @@ final class _YandexMultiplayerSessionCapability
 
   @override
   Future<MultiplayerSessionInitResult> initSession(
-    final MultiplayerSessionInitRequest request,
+    MultiplayerSessionInitRequest request,
   ) async {
     final options = MultiplayerInitOptionsModel(
       count: request.count,
@@ -360,7 +360,7 @@ final class _YandexMultiplayerSessionCapability
     return MultiplayerSessionInitResult(
       opponents: opponents
           .map(
-            (final item) => MultiplayerSessionOpponent(
+            (item) => MultiplayerSessionOpponent(
               id: item.id,
               meta: MultiplayerMeta(
                 meta1: item.meta.meta1,
@@ -369,7 +369,7 @@ final class _YandexMultiplayerSessionCapability
               ),
               transactions: item.transactions
                   .map(
-                    (final tx) =>
+                    (tx) =>
                         MultiplayerTransaction(data: tx.data, time: tx.time),
                   )
                   .toList(growable: false),
@@ -380,14 +380,14 @@ final class _YandexMultiplayerSessionCapability
   }
 
   @override
-  Future<void> commitState(final MultiplayerCommitPayload payload) async {
+  Future<void> commitState(MultiplayerCommitPayload payload) async {
     _sdk.multiplayer.sessions.commit(
       MultiplayerCommitPayloadModel(data: payload.data, time: payload.time),
     );
   }
 
   @override
-  Future<MultiplayerPushResult> push(final MultiplayerMeta meta) async {
+  Future<MultiplayerPushResult> push(MultiplayerMeta meta) async {
     final result = await _sdk.multiplayer.sessions.push(
       MultiplayerMetaModel(
         meta1: meta.meta1 ?? 0,
@@ -403,7 +403,7 @@ final class _YandexMultiplayerSessionCapability
     );
   }
 
-  MultiplayerMetaRangeModel _rangeOrDefault(final MultiplayerMetaRange? range) {
+  MultiplayerMetaRangeModel _rangeOrDefault(MultiplayerMetaRange? range) {
     return MultiplayerMetaRangeModel(
       min: range?.min ?? 0,
       max: range?.max ?? 0,

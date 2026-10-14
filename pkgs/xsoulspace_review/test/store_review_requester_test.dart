@@ -23,7 +23,7 @@ void main() {
     });
 
     testWidgets('manual request updates counters and forwards to reviewer', (
-      final tester,
+      tester,
     ) async {
       final localDb = _MemoryLocalDb();
       final reviewer = _FakeStoreReviewer(available: true);
@@ -39,7 +39,7 @@ void main() {
         Directionality(
           textDirection: TextDirection.ltr,
           child: Builder(
-            builder: (final buildContext) {
+            builder: (buildContext) {
               context = buildContext;
               return const SizedBox.shrink();
             },
@@ -75,9 +75,9 @@ final class _FakeStoreReviewer extends StoreReviewer {
 
   @override
   Future<void> requestReview(
-    final BuildContext context, {
-    final Locale? locale,
-    final bool force = false,
+    BuildContext context, {
+    Locale? locale,
+    bool force = false,
   }) async {
     requestCalls += 1;
   }
@@ -93,75 +93,75 @@ final class _MemoryLocalDb implements LocalDbI {
   Future<void> clear() async => _store.clear();
 
   @override
-  Future<void> clearKey({required final String key}) async {
+  Future<void> clearKey({required String key}) async {
     _store.remove(key);
   }
 
   @override
   Future<void> setMap({
-    required final String key,
-    required final Map<String, dynamic> value,
+    required String key,
+    required Map<String, dynamic> value,
   }) async {
     _store[key] = value;
   }
 
   @override
-  Future<Map<String, dynamic>> getMap(final String key) async =>
+  Future<Map<String, dynamic>> getMap(String key) async =>
       (_store[key] as Map<String, dynamic>?) ?? <String, dynamic>{};
 
   @override
   Future<void> setString({
-    required final String key,
-    required final String value,
+    required String key,
+    required String value,
   }) async {
     _store[key] = value;
   }
 
   @override
   Future<String> getString({
-    required final String key,
-    final String defaultValue = '',
+    required String key,
+    String defaultValue = '',
   }) async => (_store[key] as String?) ?? defaultValue;
 
   @override
   Future<void> setBool({
-    required final String key,
-    required final bool value,
+    required String key,
+    required bool value,
   }) async {
     _store[key] = value;
   }
 
   @override
   Future<bool> getBool({
-    required final String key,
-    final bool defaultValue = false,
+    required String key,
+    bool defaultValue = false,
   }) async => (_store[key] as bool?) ?? defaultValue;
 
   @override
-  Future<void> setInt({required final String key, final int value = 0}) async {
+  Future<void> setInt({required String key, int value = 0}) async {
     _store[key] = value;
   }
 
   @override
   Future<int> getInt({
-    required final String key,
-    final int defaultValue = 0,
+    required String key,
+    int defaultValue = 0,
   }) async => (_store[key] as int?) ?? defaultValue;
 
   @override
   Future<void> setItem<T>({
-    required final String key,
-    required final T value,
-    required final Map<String, dynamic> Function(T) toJson,
+    required String key,
+    required T value,
+    required Map<String, dynamic> Function(T) toJson,
   }) async {
     _store[key] = toJson(value);
   }
 
   @override
   Future<T> getItem<T>({
-    required final String key,
-    required final T? Function(Map<String, dynamic>) fromJson,
-    required final T defaultValue,
+    required String key,
+    required T? Function(Map<String, dynamic>) fromJson,
+    required T defaultValue,
   }) async {
     final raw = _store[key];
     if (raw is Map<String, dynamic>) {
@@ -172,18 +172,18 @@ final class _MemoryLocalDb implements LocalDbI {
 
   @override
   Future<void> setItemsList<T>({
-    required final String key,
-    required final List<T> value,
-    required final Map<String, dynamic> Function(T) toJson,
+    required String key,
+    required List<T> value,
+    required Map<String, dynamic> Function(T) toJson,
   }) async {
     _store[key] = value.map(toJson).toList();
   }
 
   @override
   Future<Iterable<T>> getItemsIterable<T>({
-    required final String key,
-    required final T Function(Map<String, dynamic>) fromJson,
-    final List<T> defaultValue = const [],
+    required String key,
+    required T Function(Map<String, dynamic>) fromJson,
+    List<T> defaultValue = const [],
   }) async {
     final raw = _store[key];
     if (raw is List) {
@@ -194,16 +194,16 @@ final class _MemoryLocalDb implements LocalDbI {
 
   @override
   Future<void> setMapList({
-    required final String key,
-    required final List<Map<String, dynamic>> value,
+    required String key,
+    required List<Map<String, dynamic>> value,
   }) async {
     _store[key] = value;
   }
 
   @override
   Future<Iterable<Map<String, dynamic>>> getMapIterable({
-    required final String key,
-    final List<Map<String, dynamic>> defaultValue =
+    required String key,
+    List<Map<String, dynamic>> defaultValue =
         const <Map<String, dynamic>>[],
   }) async {
     final raw = _store[key];
@@ -215,16 +215,16 @@ final class _MemoryLocalDb implements LocalDbI {
 
   @override
   Future<void> setStringList({
-    required final String key,
-    required final List<String> value,
+    required String key,
+    required List<String> value,
   }) async {
     _store[key] = value;
   }
 
   @override
   Future<Iterable<String>> getStringsIterable({
-    required final String key,
-    final List<String> defaultValue = const <String>[],
+    required String key,
+    List<String> defaultValue = const <String>[],
   }) async {
     final raw = _store[key];
     if (raw is List) {

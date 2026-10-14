@@ -31,7 +31,7 @@ const _lanes = ['chat', 'decompression', 'swe', 'tools', 'laya'];
 var thinking = false;
 var lfm26bThinking = false;
 
-void main(final List<String> args) async {
+void main(List<String> args) async {
   String? endpointArg;
   String? inProcess;
   var raw = false;
@@ -78,7 +78,7 @@ void main(final List<String> args) async {
     // the golden fixture (agreement + decision latency), no wire.
     lanes = ['laya'];
   }
-  if (lanes.any((final l) => !_lanes.contains(l))) {
+  if (lanes.any((l) => !_lanes.contains(l))) {
     _fail('lanes must be a subset of $_lanes');
   }
 
@@ -189,7 +189,7 @@ String get _usage =>
     'usage: dart run tool/model_bench_suite.dart (--endpoint URL | '
     '--in-process qwen) [--lane chat,decompression,swe] [--out bench]';
 
-Never _fail(final String message) {
+Never _fail(String message) {
   stderr.writeln(message);
   exit(2);
 }
@@ -202,16 +202,16 @@ Never _fail(final String message) {
 /// tokens (measured 2026-10-09: the 2.6B's reasoning alone exceeds 3× on
 /// the decompression records; with 400 it closes and answers cleanly).
 /// Qwen3's `--thinking` keeps its ×3 (the recorded thinking cells).
-int _budgetFor(final int base) =>
+int _budgetFor(int base) =>
     lfm26bThinking
         ? (base * 5).clamp(384, 1 << 31)
         : (thinking ? base * 3 : base);
 
 Future<_Completion> _complete(
-  final Uri base,
-  final List<Map<String, String>> messages,
-  final int maxTokens, {
-  final List<Object?>? tools,
+  Uri base,
+  List<Map<String, String>> messages,
+  int maxTokens, {
+  List<Object?>? tools,
 }) async {
   final t0 = DateTime.now();
   final reply = await http.post(
@@ -250,7 +250,7 @@ Future<_Completion> _complete(
 /// Strips `<think>…</think>` reasoning so the checkers judge the answer;
 /// an unclosed `<think>` (the generation budget ran out mid-reasoning)
 /// cuts from its start — the case then honestly fails containment.
-String _answerOf(final String text) {
+String _answerOf(String text) {
   final stripped = text.replaceAll(
     RegExp(r'<think>[\s\S]*?</think>'),
     '',
@@ -259,7 +259,7 @@ String _answerOf(final String text) {
   return (open >= 0 ? stripped.substring(0, open) : stripped).trim();
 }
 
-double _pct(final List<double> xs, final double p) {
+double _pct(List<double> xs, double p) {
   if (xs.isEmpty) return 0;
   final s = xs.toList()..sort();
   return s[((s.length - 1) * p).round()];
@@ -293,7 +293,7 @@ class _CaseResult {
 
 class _LaneResult {
   _LaneResult(this.lane, this.cases)
-    : passed = cases.where((final c) => c.ok).length,
+    : passed = cases.where((c) => c.ok).length,
       total = cases.length,
       walls = [for (final c in cases) c.wallMs],
       tokRates = [for (final c in cases) c.tokS];
@@ -324,9 +324,9 @@ class _Completion {
 }
 
 Future<_LaneResult> _runChat(
-  final Uri base,
-  final Map<String, dynamic> spec,
-  final bool thinking,
+  Uri base,
+  Map<String, dynamic> spec,
+  bool thinking,
 ) async {
   final cases = <_CaseResult>[];
   for (final raw in spec['cases'] as List) {
@@ -359,9 +359,9 @@ Future<_LaneResult> _runChat(
 }
 
 Future<_LaneResult> _runDecompression(
-  final Uri base,
-  final Map<String, dynamic> spec,
-  final bool thinking,
+  Uri base,
+  Map<String, dynamic> spec,
+  bool thinking,
 ) async {
   final cap = spec['max_output_bytes'] as int;
   final minHits = spec['min_entity_hits'] as int;
@@ -400,9 +400,9 @@ Future<_LaneResult> _runDecompression(
 }
 
 Future<_LaneResult> _runSwe(
-  final Uri base,
-  final Map<String, dynamic> spec,
-  final bool thinking,
+  Uri base,
+  Map<String, dynamic> spec,
+  bool thinking,
 ) async {
   final timeoutSec = spec['timeout_seconds'] as int;
   final cases = <_CaseResult>[];
@@ -447,9 +447,9 @@ Future<_LaneResult> _runSwe(
 /// every expected argument must match. A `call_tool: false` case fails
 /// when the model invents a call.
 Future<_LaneResult> _runTools(
-  final Uri base,
-  final Map<String, dynamic> spec,
-  final bool thinking,
+  Uri base,
+  Map<String, dynamic> spec,
+  bool thinking,
 ) async {
   final cases = <_CaseResult>[];
   for (final raw in spec['cases'] as List) {
@@ -477,12 +477,12 @@ Future<_LaneResult> _runTools(
     } else {
       if (calls.isEmpty) {
         reasons.add('no tool call found in output: <${text.trim()}>');
-      } else if (!calls.any((final call) => call.name == wantTool)) {
+      } else if (!calls.any((call) => call.name == wantTool)) {
         reasons.add(
           'called ${calls.map((c) => c.name)} != expected $wantTool',
         );
       } else {
-        final call = calls.firstWhere((final call) => call.name == wantTool);
+        final call = calls.firstWhere((call) => call.name == wantTool);
         for (final entry in (c['expect_args'] as Map?)?.entries ??
             const Iterable<MapEntry<dynamic, dynamic>>.empty()) {
           final key = '${entry.key}';
@@ -508,7 +508,7 @@ Future<_LaneResult> _runTools(
   return _LaneResult('tools', cases);
 }
 
-String numToCompact(final num n) =>
+String numToCompact(num n) =>
     n is int ? '$n' : n.toStringAsFixed(0).replaceAll(RegExp(r'\.0$'), '');
 
 class _ToolCall {
@@ -521,7 +521,7 @@ class _ToolCall {
 /// checkpoints emit: `<tool_call>{json}</tool_call>` (Qwen3),
 /// `<|tool_call_start|>[…]<|tool_call_end|>` (Liquid, python-repr or
 /// JSON), or a bare JSON object with name+arguments.
-List<_ToolCall> _extractToolCalls(final String text) {
+List<_ToolCall> _extractToolCalls(String text) {
   final calls = <_ToolCall>[];
   // End tags are optional in the match: a budget-capped completion may
   // stop right after the call (measured on the 2.6B).
@@ -545,7 +545,7 @@ List<_ToolCall> _extractToolCalls(final String text) {
   return calls;
 }
 
-_ToolCall? _parseCallPayload(final String payload) {
+_ToolCall? _parseCallPayload(String payload) {
   for (final candidate in _jsonCandidates(payload)) {
     try {
       final decoded = jsonDecode(candidate);
@@ -579,7 +579,7 @@ _ToolCall? _parseCallPayload(final String payload) {
 /// call — `[get_weather(city="Tokyo")]` or
 /// `get_weather(city="Tokyo", unit="celsius")`. Values are quoted
 /// strings, numbers, or True/False/None.
-_ToolCall? _parseSignatureCall(final String payload) {
+_ToolCall? _parseSignatureCall(String payload) {
   var body = payload.trim();
   // The measured Liquid shape wraps the call in a list: [name(args)].
   if (body.startsWith('[') && body.endsWith(']')) {
@@ -610,14 +610,14 @@ _ToolCall? _parseSignatureCall(final String payload) {
 
 /// JSON, then a python-repr normalisation (Liquid models may emit
 /// single-quoted dicts: `{'name': 'x', 'arguments': {'k': 'v'}}`).
-Iterable<String> _jsonCandidates(final String payload) sync* {
+Iterable<String> _jsonCandidates(String payload) sync* {
   yield payload;
   yield payload.replaceAll("'", '"');
 }
 
 /// Last resort: a name-shaped `"name": "x"` / `'name': 'x'` anywhere in
 /// the payload, no argument extraction.
-_ToolCall? _scanCallName(final String payload) {
+_ToolCall? _scanCallName(String payload) {
   final m =
       RegExp(r'''["']name["']\s*:\s*["']([A-Za-z0-9_]+)["']''').firstMatch(
     payload,
@@ -626,7 +626,7 @@ _ToolCall? _scanCallName(final String payload) {
 }
 
 /// Fenced block first, else the raw text (the model was told function-only).
-String? _extractDart(final String text) {
+String? _extractDart(String text) {
   final fence = RegExp(r'```(?:dart)?\s*\n(.*?)```', dotAll: true)
       .firstMatch(text)
       ?.group(1)
@@ -636,9 +636,9 @@ String? _extractDart(final String text) {
 }
 
 Future<ProcessResult> _runDartHarness(
-  final String function,
-  final String harness,
-  final Duration timeout,
+  String function,
+  String harness,
+  Duration timeout,
 ) async {
   final dir = await Directory.systemTemp.createTemp('bench_swe_');
   try {
@@ -718,7 +718,7 @@ Future<_LaneResult> _runLaya() async {
   }
 }
 
-LayaTypedQuestion _layaQuestion(final Map<String, dynamic> definition) {
+LayaTypedQuestion _layaQuestion(Map<String, dynamic> definition) {
   final type = definition['type'] as String;
   final instructions = definition['instructions'];
   final instructionText =
@@ -761,8 +761,8 @@ LayaTypedQuestion _layaQuestion(final Map<String, dynamic> definition) {
 
 /// chat checker: containment on the completion text.
 _CheckResult _checkContains(
-  final Map<String, dynamic> c,
-  final _Completion completion,
+  Map<String, dynamic> c,
+  _Completion completion,
 ) {
   final text = completion.text;
   final reasons = <String>[
@@ -780,8 +780,8 @@ _CheckResult _checkContains(
 typedef _CheckResult = ({bool ok, String? reason});
 
 void _printMarkdown(
-  final Map<String, dynamic> scorecard,
-  final String path,
+  Map<String, dynamic> scorecard,
+  String path,
 ) {
   print('# model_bench_suite — ${scorecard['recorded_utc']}');
   print('endpoint: ${scorecard['endpoint']}');

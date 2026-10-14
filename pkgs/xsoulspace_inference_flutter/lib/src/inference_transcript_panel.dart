@@ -7,7 +7,7 @@ final class InferenceTranscriptPanel extends StatelessWidget {
   final InferenceTranscriptSnapshot snapshot;
 
   @override
-  Widget build(final BuildContext context) => Card(
+  Widget build(BuildContext context) => Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

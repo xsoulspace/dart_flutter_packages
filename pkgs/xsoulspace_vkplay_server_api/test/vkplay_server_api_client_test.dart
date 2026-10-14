@@ -82,7 +82,7 @@ final class _FakeTransport implements VkPlayTransport {
 
   @override
   Future<VkPlayTransportResponse> send(
-    final VkPlayTransportRequest request,
+    VkPlayTransportRequest request,
   ) async {
     lastRequest = request;
     return response;

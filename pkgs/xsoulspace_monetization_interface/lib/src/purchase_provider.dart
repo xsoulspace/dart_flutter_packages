@@ -56,34 +56,34 @@ abstract class PurchaseProvider {
 
   /// Retrieves the details of a list of consumables.
   Future<List<PurchaseProductDetailsModel>> getConsumables(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   );
 
   /// Retrieves the details of a list of non-consumables.
   Future<List<PurchaseProductDetailsModel>> getNonConsumables(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   );
 
   /// Retrieves the details of a list of products.
   ///
   /// - [productIds]: A list of [PurchaseProductId]s to fetch details for.
   Future<List<PurchaseProductDetailsModel>> getProductDetails(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   );
 
   /// Retrieves the details of a list of subscriptions.
   Future<List<PurchaseProductDetailsModel>> getSubscriptions(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   );
 
   /// Retrieves the details of a purchase.
-  Future<PurchaseDetailsModel> getPurchaseDetails(final PurchaseId productId);
+  Future<PurchaseDetailsModel> getPurchaseDetails(PurchaseId productId);
 
   /// Initiates the purchase flow for a given product.
   ///
   /// - [productDetails]: The [PurchaseProductDetails] of the item to buy.
   Future<PurchaseResultModel> purchaseNonConsumable(
-    final PurchaseProductDetailsModel productDetails,
+    PurchaseProductDetailsModel productDetails,
   );
 
   /// Restores any previously made non-consumable purchases.
@@ -96,12 +96,12 @@ abstract class PurchaseProvider {
   ///
   /// - [purchase]: The [PurchaseVerificationDto] of the purchase to complete.
   Future<CompletePurchaseResultModel> completePurchase(
-    final PurchaseVerificationDtoModel purchase,
+    PurchaseVerificationDtoModel purchase,
   );
 
   /// Subscribes to a product.
   Future<PurchaseResultModel> subscribe(
-    final PurchaseProductDetailsModel productDetails,
+    PurchaseProductDetailsModel productDetails,
   );
 
   /// Cancels a purchase.
@@ -109,7 +109,7 @@ abstract class PurchaseProvider {
   /// Can be purchaseId or productId but it depends on the provider implementation.
   ///
   /// For RuStore its purchaseId.
-  Future<CancelResultModel> cancel(final String purchaseOrProductId);
+  Future<CancelResultModel> cancel(String purchaseOrProductId);
 
   /// Opens the subscription management page.
   Future<void> openSubscriptionManagement();

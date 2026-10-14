@@ -16,7 +16,7 @@ import 'dart:io';
 
 import 'package:xsoulspace_inference_mlx_native/xsoulspace_inference_mlx_native.dart';
 
-Future<void> main(final List<String> args) async {
+Future<void> main(List<String> args) async {
   var engine = 'lfm2';
   var port = 8765;
   var raw = false;
@@ -65,20 +65,20 @@ Future<void> main(final List<String> args) async {
 }
 
 String _banner(
-  final String engine,
-  final bool raw,
-  final Uri url, {
-  final bool thinking = false,
+  String engine,
+  bool raw,
+  Uri url, {
+  bool thinking = false,
 }) =>
     'serving ${raw ? 'raw' : 'template+EOS'} $engine'
     '${thinking ? ' (thinking on)' : ''} on '
     '$url/v1/chat/completions (health: $url/health)';
 
 /// Completes when SIGINT/SIGTERM arrives, after [stop] runs once.
-Future<void> _untilInterrupted(final Future<void> Function() stop) {
+Future<void> _untilInterrupted(Future<void> Function() stop) {
   final done = Completer<void>();
   var stopping = false;
-  Future<void> shutdown(final ProcessSignal signal) async {
+  Future<void> shutdown(ProcessSignal signal) async {
     if (stopping) return;
     stopping = true;
     await stop();

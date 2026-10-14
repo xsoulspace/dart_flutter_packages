@@ -38,23 +38,23 @@ final class LayaServerDecisionProvider extends SystemOneWireDecisionProvider {
   // facts) at this public boundary, so they cannot be plain super params.
   // ignore: use_super_parameters
   LayaServerDecisionProvider({
-    final String? apiKey,
-    final String model = 'laya',
-    final Uri? endpoint,
-    final http.Client? httpClient,
-    final Duration timeout = const Duration(seconds: 10),
-    final int maxTransientRetries = 1,
-    final Duration retryDelay = const Duration(milliseconds: 50),
-    final void Function(Map<String, Object?> event)? onDiagnosticEvent,
-    final int maxStateUtf8Bytes = 1 << 20,
-    final int maxRequestUtf8Bytes = 2 << 20,
-    final int maxQuestionsPerRequest = 64,
+    String? apiKey,
+    String model = 'laya',
+    Uri? endpoint,
+    http.Client? httpClient,
+    Duration timeout = const Duration(seconds: 10),
+    int maxTransientRetries = 1,
+    Duration retryDelay = const Duration(milliseconds: 50),
+    void Function(Map<String, Object?> event)? onDiagnosticEvent,
+    int maxStateUtf8Bytes = 1 << 20,
+    int maxRequestUtf8Bytes = 2 << 20,
+    int maxQuestionsPerRequest = 64,
     /// Capability facts for the ENDPOINT this provider answers. The loopback
     /// default is local/none; a mesh peer's endpoint on another device is
     /// still local execution but requires network (ADR 0051 meshPeer tier).
-    final DecisionExecutionLocation executionLocation =
+    DecisionExecutionLocation executionLocation =
         DecisionExecutionLocation.local,
-    final DecisionNetworkRequirement networkRequirement =
+    DecisionNetworkRequirement networkRequirement =
         DecisionNetworkRequirement.none,
   }) : super(
          apiKey: apiKey ?? '',
@@ -114,8 +114,8 @@ final class LayaServerDecisionProvider extends SystemOneWireDecisionProvider {
 /// not be retried blindly.
 final class LayaServerReadinessProbe {
   LayaServerReadinessProbe({
-    final Uri? endpoint,
-    final http.Client? httpClient,
+    Uri? endpoint,
+    http.Client? httpClient,
     this.timeout = const Duration(seconds: 2),
   }) : endpoint =
            endpoint ?? Uri.parse('http://127.0.0.1:8000/health'),

@@ -12,7 +12,7 @@ void main() {
         clientId: 'app-1',
         sdkInjected: false,
       ),
-      initClient: ({required final clientId, required final expectedGlobal}) {
+      initClient: ({required clientId, required expectedGlobal}) {
         throw StateError('should not initialize');
       },
     );
@@ -27,7 +27,7 @@ void main() {
     final client = DiscordPlatformClient(
       config: const DiscordPlatformConfig(clientId: 'app-1', sdkInjected: true),
       initClient:
-          ({required final clientId, required final expectedGlobal}) async {
+          ({required clientId, required expectedGlobal}) async {
             return sdk;
           },
     );
@@ -47,7 +47,7 @@ void main() {
         oauthGateway: gateway,
       ),
       initClient:
-          ({required final clientId, required final expectedGlobal}) async {
+          ({required clientId, required expectedGlobal}) async {
             return sdk;
           },
     );
@@ -78,7 +78,7 @@ void main() {
     final client = DiscordPlatformClient(
       config: const DiscordPlatformConfig(clientId: 'app-1', sdkInjected: true),
       initClient:
-          ({required final clientId, required final expectedGlobal}) async {
+          ({required clientId, required expectedGlobal}) async {
             return sdk;
           },
     );
@@ -121,7 +121,7 @@ void main() {
         oauthGateway: gateway,
       ),
       initClient:
-          ({required final clientId, required final expectedGlobal}) async {
+          ({required clientId, required expectedGlobal}) async {
             return sdk;
           },
     );
@@ -142,9 +142,9 @@ void main() {
             oauthGateway: gateway,
             sdkInjected: true,
           ),
-          environmentProbe: (final expectedGlobal) => true,
+          environmentProbe: (expectedGlobal) => true,
           initClient:
-              ({required final clientId, required final expectedGlobal}) async {
+              ({required clientId, required expectedGlobal}) async {
                 return sdk;
               },
         ),
@@ -164,7 +164,7 @@ void main() {
     final client = DiscordPlatformClient(
       config: const DiscordPlatformConfig(clientId: 'app-1', sdkInjected: true),
       initClient:
-          ({required final clientId, required final expectedGlobal}) async {
+          ({required clientId, required expectedGlobal}) async {
             return _FakeDiscordClient();
           },
     );
@@ -183,7 +183,7 @@ final class _FakeOAuthGateway implements DiscordOAuthGateway {
 
   @override
   Future<DiscordOAuthExchangeResult> exchangeAuthorizationCode(
-    final DiscordOAuthExchangeRequest request,
+    DiscordOAuthExchangeRequest request,
   ) async {
     if (shouldThrow) {
       throw StateError('OAuth exchange failed');
@@ -209,14 +209,14 @@ final class _FakeDiscordClient extends DiscordClient {
 
   @override
   Future<Map<String, Object?>> authorize(
-    final DiscordAuthorizeRequest request,
+    DiscordAuthorizeRequest request,
   ) async {
     return <String, Object?>{'code': 'oauth-code-1'};
   }
 
   @override
   Future<DiscordAuthenticateResult> authenticate({
-    final String? accessToken,
+    String? accessToken,
   }) async {
     lastAuthenticatedToken = accessToken;
     return DiscordAuthenticateResult(
@@ -260,8 +260,8 @@ final class _FakeDiscordClient extends DiscordClient {
 
   @override
   Future<Map<String, Object?>> inviteUserEmbedded({
-    required final String userId,
-    final String? content,
+    required String userId,
+    String? content,
   }) async {
     lastInviteUserId = userId;
     return <String, Object?>{'sent': true, 'userId': userId};
@@ -269,9 +269,9 @@ final class _FakeDiscordClient extends DiscordClient {
 
   @override
   Future<DiscordShareLinkResult> shareLink({
-    required final String message,
-    final String? customId,
-    final String? linkId,
+    required String message,
+    String? customId,
+    String? linkId,
   }) async {
     if (shareShouldFail) {
       return const DiscordShareLinkResult(
@@ -289,7 +289,7 @@ final class _FakeDiscordClient extends DiscordClient {
 
   @override
   Future<Map<String, Object?>> openShareMomentDialog({
-    required final String mediaUrl,
+    required String mediaUrl,
   }) async {
     openShareMomentCalls += 1;
     return <String, Object?>{'opened': true, 'mediaUrl': mediaUrl};
@@ -297,22 +297,22 @@ final class _FakeDiscordClient extends DiscordClient {
 
   @override
   Future<DiscordEventSubscription> onCurrentUserUpdate(
-    final void Function(DiscordUser? user) listener,
+    void Function(DiscordUser? user) listener,
   ) async {
     return DiscordEventSubscription(onCancel: () async {});
   }
 
   @override
   Future<DiscordEventSubscription> onRelationshipUpdate(
-    final void Function(DiscordRelationship relationship) listener,
+    void Function(DiscordRelationship relationship) listener,
   ) async {
     return DiscordEventSubscription(onCancel: () async {});
   }
 
   @override
   Future<Object?> callRawCommand(
-    final String methodName, {
-    final Map<String, Object?>? params,
+    String methodName, {
+    Map<String, Object?>? params,
   }) async {
     if (methodName == 'getChannel') {
       if (!hasActivityContext) {

@@ -23,26 +23,26 @@ class NoopPurchaseProvider implements PurchaseProvider {
 
   @override
   Future<List<PurchaseProductDetailsModel>> getConsumables(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   ) async => const <PurchaseProductDetailsModel>[];
 
   @override
   Future<List<PurchaseProductDetailsModel>> getNonConsumables(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   ) async => const <PurchaseProductDetailsModel>[];
 
   @override
   Future<List<PurchaseProductDetailsModel>> getProductDetails(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   ) async => const <PurchaseProductDetailsModel>[];
 
   @override
   Future<List<PurchaseProductDetailsModel>> getSubscriptions(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   ) async => const <PurchaseProductDetailsModel>[];
 
   @override
-  Future<PurchaseDetailsModel> getPurchaseDetails(final PurchaseId productId) {
+  Future<PurchaseDetailsModel> getPurchaseDetails(PurchaseId productId) {
     return Future<PurchaseDetailsModel>.error(
       UnsupportedError('NoopPurchaseProvider does not store purchase details.'),
     );
@@ -50,7 +50,7 @@ class NoopPurchaseProvider implements PurchaseProvider {
 
   @override
   Future<PurchaseResultModel> purchaseNonConsumable(
-    final PurchaseProductDetailsModel productDetails,
+    PurchaseProductDetailsModel productDetails,
   ) async =>
       PurchaseResultModel.failure('Purchases are disabled in no-op mode.');
 
@@ -60,17 +60,17 @@ class NoopPurchaseProvider implements PurchaseProvider {
 
   @override
   Future<CompletePurchaseResultModel> completePurchase(
-    final PurchaseVerificationDtoModel purchase,
+    PurchaseVerificationDtoModel purchase,
   ) async => CompletePurchaseResultModel.success();
 
   @override
   Future<PurchaseResultModel> subscribe(
-    final PurchaseProductDetailsModel productDetails,
+    PurchaseProductDetailsModel productDetails,
   ) async =>
       PurchaseResultModel.failure('Subscriptions are disabled in no-op mode.');
 
   @override
-  Future<CancelResultModel> cancel(final String purchaseOrProductId) async =>
+  Future<CancelResultModel> cancel(String purchaseOrProductId) async =>
       CancelResultModel.success();
 
   @override

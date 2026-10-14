@@ -12,7 +12,7 @@ final class AllowAllPolicy implements PermissionPolicy {
   final PermissionGrantScope scope;
 
   @override
-  PermissionDecision decide(final PermissionRequest request) =>
+  PermissionDecision decide(PermissionRequest request) =>
       PermissionAllow(scope);
 }
 
@@ -32,7 +32,7 @@ final class KindAllowlistPolicy implements PermissionPolicy {
   final PermissionDecision otherwise;
 
   @override
-  PermissionDecision decide(final PermissionRequest request) =>
+  PermissionDecision decide(PermissionRequest request) =>
       allowed.contains(request.kind) ? const PermissionAllow() : otherwise;
 }
 
@@ -46,7 +46,7 @@ final class GrantPolicy implements PermissionPolicy {
   final PermissionGrantStore store;
 
   @override
-  PermissionDecision decide(final PermissionRequest request) {
+  PermissionDecision decide(PermissionRequest request) {
     final grant = store.consumeMatching(request);
     if (grant == null) {
       return const PermissionEscalate(to: 'user', reason: 'no grant');
@@ -66,7 +66,7 @@ final class FirstMatchPolicy implements PermissionPolicy {
   final List<PermissionPolicy> policies;
 
   @override
-  PermissionDecision decide(final PermissionRequest request) {
+  PermissionDecision decide(PermissionRequest request) {
     for (final policy in policies) {
       final decision = policy.decide(request);
       if (decision.isFinal) return decision;

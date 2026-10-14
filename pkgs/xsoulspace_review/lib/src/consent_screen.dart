@@ -38,7 +38,7 @@ class _ConsentScreen extends StatelessWidget {
   final Logger? logger;
 
   @override
-  Widget build(final BuildContext context) {
+  Widget build(BuildContext context) {
     logger.logConsent(
       'Displaying consent screen',
       data: {'locale': locale.toString()},
@@ -124,14 +124,14 @@ class _ConsentScreen extends StatelessWidget {
 /// @ai Use this function to handle user consent for feedback requests
 /// effectively.
 Future<bool> defaultFallbackConsentBuilder(
-  final BuildContext context,
-  final Locale locale, {
-  final Logger? logger,
+  BuildContext context,
+  Locale locale, {
+  Logger? logger,
 }) async {
   logger.logConsent('Showing consent dialog');
   final result = await showDialog<bool>(
     context: context,
-    builder: (final context) => _ConsentScreen(locale: locale, logger: logger),
+    builder: (context) => _ConsentScreen(locale: locale, logger: logger),
   );
   logger.logConsent('Consent dialog result', data: {'result': result ?? false});
   return result ?? false;

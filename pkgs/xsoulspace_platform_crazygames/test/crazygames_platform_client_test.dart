@@ -25,7 +25,7 @@ void main() {
           expectedSdkGlobal: 'MissingCrazyGamesGlobal',
           sdkInjected: false,
         ),
-        initClient: ({final String expectedGlobal = 'CrazyGames'}) async {
+        initClient: ({String expectedGlobal = 'CrazyGames'}) async {
           initCalled = true;
           throw StateError('should not be called');
         },
@@ -45,7 +45,7 @@ void main() {
     final fake = _FakeCrazyGamesClient();
     final client = CrazyGamesPlatformClient(
       config: const CrazyGamesPlatformConfig(sdkInjected: true),
-      initClient: ({final String expectedGlobal = 'CrazyGames'}) async => fake,
+      initClient: ({String expectedGlobal = 'CrazyGames'}) async => fake,
     );
 
     final init = await client.init(const PlatformInitOptions());
@@ -68,7 +68,7 @@ void main() {
 
     final changes = <String?>[];
     final sub = identity.authChanges.listen(
-      (final value) => changes.add(value?.displayName),
+      (value) => changes.add(value?.displayName),
     );
 
     fake.userClient.emitAuth(
@@ -88,7 +88,7 @@ void main() {
     final fake = _FakeCrazyGamesClient();
     final client = CrazyGamesPlatformClient(
       config: const CrazyGamesPlatformConfig(sdkInjected: true),
-      initClient: ({final String expectedGlobal = 'CrazyGames'}) async => fake,
+      initClient: ({String expectedGlobal = 'CrazyGames'}) async => fake,
     );
 
     await client.init(const PlatformInitOptions());
@@ -105,7 +105,7 @@ void main() {
     final fake = _FakeCrazyGamesClient();
     final client = CrazyGamesPlatformClient(
       config: const CrazyGamesPlatformConfig(sdkInjected: true),
-      initClient: ({final String expectedGlobal = 'CrazyGames'}) async => fake,
+      initClient: ({String expectedGlobal = 'CrazyGames'}) async => fake,
     );
 
     await client.init(const PlatformInitOptions());
@@ -121,7 +121,7 @@ void main() {
   test('dispose is idempotent', () async {
     final client = CrazyGamesPlatformClient(
       config: const CrazyGamesPlatformConfig(sdkInjected: true),
-      initClient: ({final String expectedGlobal = 'CrazyGames'}) async =>
+      initClient: ({String expectedGlobal = 'CrazyGames'}) async =>
           _FakeCrazyGamesClient(),
     );
 
@@ -159,8 +159,8 @@ final class _FakeUserClient extends UserClient {
 
   @override
   Future<FriendsPage> listFriends({
-    final int page = 1,
-    final int size = 10,
+    int page = 1,
+    int size = 10,
   }) async {
     final start = (page - 1) * size;
     final end = (start + size).clamp(0, _friends.length);
@@ -175,30 +175,30 @@ final class _FakeUserClient extends UserClient {
   }
 
   @override
-  void addScore(final int score) {
+  void addScore(int score) {
     lastAddScore = score;
   }
 
   @override
-  void addScoreEncrypted(final int score, final String encryptedScore) {
+  void addScoreEncrypted(int score, String encryptedScore) {
     lastAddScore = score;
     lastEncryptedScore = encryptedScore;
   }
 
   @override
-  Object addAuthListener(final void Function(User? user) listener) {
+  Object addAuthListener(void Function(User? user) listener) {
     _listener = listener;
     return listener;
   }
 
   @override
-  void removeAuthListener(final Object listener) {
+  void removeAuthListener(Object listener) {
     if (identical(_listener, listener)) {
       _listener = null;
     }
   }
 
-  void emitAuth(final User? user) {
+  void emitAuth(User? user) {
     final listener = _listener;
     if (listener is void Function(User? user)) {
       listener(user);

@@ -17,12 +17,12 @@ class SubscriptionScreen extends StatelessWidget {
   final PurchaseProvider purchaseProvider;
   final List<PurchaseProductId> productIds;
   @override
-  Widget build(final BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Subscription Options')),
     body: FutureBuilder<List<PurchaseProductDetailsModel>>(
       // ignore: discarded_futures
       future: purchaseProvider.getSubscriptions(productIds),
-      builder: (final context, final snapshot) {
+      builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
@@ -32,7 +32,7 @@ class SubscriptionScreen extends StatelessWidget {
         final subscriptions = snapshot.data ?? [];
         return ListView.builder(
           itemCount: subscriptions.length,
-          itemBuilder: (final context, final index) {
+          itemBuilder: (context, index) {
             final subscription = subscriptions[index];
             return ListTile(
               title: Text(subscription.name),

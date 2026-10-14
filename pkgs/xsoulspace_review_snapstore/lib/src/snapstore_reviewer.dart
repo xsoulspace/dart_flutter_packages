@@ -24,9 +24,9 @@ final class SnapStoreReviewer extends StoreReviewer {
 
   @override
   Future<void> requestReview(
-    final BuildContext context, {
-    final Locale? locale,
-    final bool force = false,
+    BuildContext context, {
+    Locale? locale,
+    bool force = false,
   }) async {
     final isConsent = await consentBuilder(context, locale ?? defaultLocale);
     if (!isConsent) return;

@@ -14,40 +14,40 @@ class _FakeFlutterTtsDriver implements FlutterTtsDriver {
   Future<void> Function(String text, String filePath)? onSynthesize;
 
   @override
-  Future<dynamic> awaitSynthCompletion(final bool awaitCompletion) async {
+  Future<dynamic> awaitSynthCompletion(bool awaitCompletion) async {
     awaitSynthCalled = awaitCompletion;
     return 1;
   }
 
   @override
-  Future<dynamic> setLanguage(final String language) async {
+  Future<dynamic> setLanguage(String language) async {
     this.language = language;
     return 1;
   }
 
   @override
-  Future<dynamic> setPitch(final double pitch) async {
+  Future<dynamic> setPitch(double pitch) async {
     this.pitch = pitch;
     return 1;
   }
 
   @override
-  Future<dynamic> setSpeechRate(final double rate) async {
+  Future<dynamic> setSpeechRate(double rate) async {
     speechRate = rate;
     return 1;
   }
 
   @override
-  Future<dynamic> setVoice(final Map<String, String> voice) async {
+  Future<dynamic> setVoice(Map<String, String> voice) async {
     this.voice = voice;
     return 1;
   }
 
   @override
   Future<dynamic> synthesizeToFile(
-    final String text,
-    final String fileName,
-    final bool isFullPath,
+    String text,
+    String fileName,
+    bool isFullPath,
   ) async {
     await onSynthesize?.call(text, fileName);
     return synthesizeResult;
@@ -77,7 +77,7 @@ void main() {
 
         final outputFile = File('${tempDir.path}/reply.wav');
         final driver = _FakeFlutterTtsDriver()
-          ..onSynthesize = (final text, final filePath) async {
+          ..onSynthesize = (text, filePath) async {
             expect(text, 'Hello from TTS');
             expect(filePath, outputFile.path);
             await File(filePath).writeAsBytes(<int>[1, 2, 3], flush: true);
@@ -130,7 +130,7 @@ void main() {
 
       final outputFile = File('${tempDir.path}/voice.wav');
       final driver = _FakeFlutterTtsDriver()
-        ..onSynthesize = (final text, final filePath) async {
+        ..onSynthesize = (text, filePath) async {
           await File(filePath).writeAsBytes(<int>[4, 5, 6], flush: true);
         };
 

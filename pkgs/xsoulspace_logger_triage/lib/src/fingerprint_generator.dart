@@ -19,7 +19,7 @@ final class FingerprintGenerator {
   static final RegExp _lineNumberPattern = RegExp(r':\d+(?::\d+)?');
   static final RegExp _whitespacePattern = RegExp(r'\s+');
 
-  String fingerprint(final LogRecord record, {final int topFrames = 5}) {
+  String fingerprint(LogRecord record, {int topFrames = 5}) {
     final errorType = _resolveErrorType(record.error);
     final messageTemplate = normalizeMessage(record.message);
     final appFrames = extractNormalizedFrames(record.stackTrace, topFrames);
@@ -36,7 +36,7 @@ final class FingerprintGenerator {
     return sha1.convert(utf8.encode(payload.toString())).toString();
   }
 
-  String normalizeMessage(final String message) {
+  String normalizeMessage(String message) {
     var normalized = message;
     normalized = normalized.replaceAll(_uuidPattern, '<uuid>');
     normalized = normalized.replaceAll(_hexPattern, '<hex>');
@@ -46,8 +46,8 @@ final class FingerprintGenerator {
   }
 
   List<String> extractNormalizedFrames(
-    final StackTrace? stackTrace,
-    final int topFrames,
+    StackTrace? stackTrace,
+    int topFrames,
   ) {
     if (stackTrace == null || topFrames <= 0) {
       return const <String>[];
@@ -56,19 +56,19 @@ final class FingerprintGenerator {
     final lines = stackTrace
         .toString()
         .split('\n')
-        .map((final line) => line.trim())
-        .where((final line) => line.isNotEmpty)
-        .where((final line) => !_isSdkFrame(line));
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty)
+        .where((line) => !_isSdkFrame(line));
 
     return lines.take(topFrames).map(_normalizeFrame).toList(growable: false);
   }
 
-  bool _isSdkFrame(final String line) =>
+  bool _isSdkFrame(String line) =>
       line.contains('dart:') ||
       line.contains('package:test') ||
       line.contains('package:flutter_test');
 
-  String _normalizeFrame(final String frame) {
+  String _normalizeFrame(String frame) {
     var normalized = frame;
     normalized = normalized.replaceAll(_lineNumberPattern, '');
     normalized = normalized.replaceAll(_hexPattern, '<hex>');
@@ -76,7 +76,7 @@ final class FingerprintGenerator {
     return normalized;
   }
 
-  String _resolveErrorType(final Object? error) {
+  String _resolveErrorType(Object? error) {
     if (error == null) {
       return 'none';
     }

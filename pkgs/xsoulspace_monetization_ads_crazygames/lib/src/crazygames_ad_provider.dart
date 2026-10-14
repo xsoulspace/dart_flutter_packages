@@ -15,7 +15,7 @@ final class CrazyGamesBannerSize {
 /// Ad provider backed by CrazyGames HTML5 SDK.
 class CrazyGamesAdProvider implements AdProvider {
   CrazyGamesAdProvider({
-    final Future<CrazyGamesClient> Function({String expectedGlobal})?
+    Future<CrazyGamesClient> Function({String expectedGlobal})?
     initClient,
     this.expectedGlobal = 'CrazyGames',
   }) : _initClient = initClient ?? CrazyGames.init;
@@ -30,21 +30,21 @@ class CrazyGamesAdProvider implements AdProvider {
   }
 
   @override
-  Future<void> showRewardedAd({required final String adUnitId}) async {
+  Future<void> showRewardedAd({required String adUnitId}) async {
     final client = await _ensureClient();
     await client.ad.requestAd(AdType.rewarded);
   }
 
   @override
-  Future<void> showInterstitialAd({required final String adUnitId}) async {
+  Future<void> showInterstitialAd({required String adUnitId}) async {
     final client = await _ensureClient();
     await client.ad.requestAd(AdType.midgame);
   }
 
   @override
   Widget buildBannerAd({
-    required final String adUnitId,
-    required final Object adSize,
+    required String adUnitId,
+    required Object adSize,
   }) {
     final resolved = switch (adSize) {
       CrazyGamesBannerSize value => value,
@@ -109,7 +109,7 @@ final class _CrazyGamesBannerWidgetState
   }
 
   @override
-  Widget build(final BuildContext context) {
+  Widget build(BuildContext context) {
     return SizedBox(
       width: widget.size.width.toDouble(),
       height: widget.size.height.toDouble(),

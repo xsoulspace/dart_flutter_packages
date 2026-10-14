@@ -25,8 +25,8 @@ final class LayaByteLevelTokenizer {
   /// Loads `tokenizer.json` + `tokenizer_config.json` from
   /// [modelDir]/tokenizer.
   factory LayaByteLevelTokenizer.load(
-    final String modelDir, {
-    final String Function(String)? nfc,
+    String modelDir, {
+    String Function(String)? nfc,
   }) {
     final raw =
         jsonDecode(File('$modelDir/tokenizer/tokenizer.json').readAsStringSync());
@@ -40,7 +40,7 @@ final class LayaByteLevelTokenizer {
       );
     }
     final vocab = <String, int>{};
-    (model['vocab'] as Map).forEach((final key, final value) {
+    (model['vocab'] as Map).forEach((key, value) {
       vocab['$key'] = value as int;
     });
     final ranks = <String, int>{};
@@ -63,11 +63,11 @@ final class LayaByteLevelTokenizer {
     }
     final config =
         jsonDecode(File('$modelDir/tokenizer/tokenizer_config.json').readAsStringSync());
-    String? contentOf(final Object? token) => token is Map
+    String? contentOf(Object? token) => token is Map
         ? (token['content'] ?? token['<mask>']) as String?
         : token as String?;
     final maskContent = contentOf(config['mask_token']);
-    int resolve(final String? content) {
+    int resolve(String? content) {
       if (content == null) return -1;
       return added[content] ?? vocab[content] ?? -1;
     }
@@ -134,7 +134,7 @@ final class LayaByteLevelTokenizer {
 
   /// Encodes [text] without special tokens (the runtime always passes
   /// `add_special_tokens=False`; CLS/SEP are added by the prompt builder).
-  List<int> encode(final String text) {
+  List<int> encode(String text) {
     final normalized = _nfc != null ? _nfc(text) : text;
     final ids = <int>[];
     var index = 0;
@@ -153,7 +153,7 @@ final class LayaByteLevelTokenizer {
   }
 
   /// Longest added-token match at [index], else null.
-  (String, int)? _matchAdded(final String text, final int index) {
+  (String, int)? _matchAdded(String text, int index) {
     (String, int)? best;
     for (final entry in _added.entries) {
       final content = entry.key;
@@ -168,13 +168,13 @@ final class LayaByteLevelTokenizer {
 
   /// The next plain segment: one regex pre-token when one matches at
   /// [index], else a single character (unmatched text cannot be encoded).
-  String _matchPlain(final String text, final int index) {
+  String _matchPlain(String text, int index) {
     final match = _split.matchAsPrefix(text, index);
     if (match != null) return text.substring(index, match.end);
     return text.substring(index, index + 1);
   }
 
-  List<int> _encodePlain(final String piece) {
+  List<int> _encodePlain(String piece) {
     final cached = _cache[piece];
     if (cached != null) return cached;
     final symbols = StringBuffer();

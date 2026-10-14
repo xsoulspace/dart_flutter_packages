@@ -22,14 +22,14 @@ final class FakeMlxChatServer extends MlxChatWireServer {
 /// answers a decoded [MlxChatRequest]. Deterministic engines keep the whole
 /// client path testable with no Python runtime and no model weights.
 abstract interface class MlxScriptedEngine {
-  MlxChatResult answer(final MlxChatRequest request);
+  MlxChatResult answer(MlxChatRequest request);
 }
 
 /// Replays pinned completions in order; an unpinned request falls back to
 /// the last pin (or the empty string). Mirrors the scripted-engine shape
 /// the laya server uses.
 final class ScriptedMlxChatEngine implements MlxScriptedEngine {
-  ScriptedMlxChatEngine(final List<String> completions)
+  ScriptedMlxChatEngine(List<String> completions)
     : completions = List<String>.unmodifiable(completions);
 
   final List<String> completions;
@@ -40,7 +40,7 @@ final class ScriptedMlxChatEngine implements MlxScriptedEngine {
   void reset() => _cursor = 0;
 
   @override
-  MlxChatResult answer(final MlxChatRequest request) {
+  MlxChatResult answer(MlxChatRequest request) {
     requests.add(request);
     final text = completions.isEmpty
         ? ''

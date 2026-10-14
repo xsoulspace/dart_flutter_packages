@@ -16,7 +16,7 @@ final class TriageConfig {
   final double escalationScoreThreshold;
 
   /// Weight contribution by highest observed level.
-  int severityWeight(final LogLevel level) => switch (level) {
+  int severityWeight(LogLevel level) => switch (level) {
     LogLevel.critical => 70,
     LogLevel.error => 50,
     LogLevel.warning => 25,

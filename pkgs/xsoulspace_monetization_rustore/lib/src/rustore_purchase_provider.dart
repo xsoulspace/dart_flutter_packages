@@ -46,7 +46,7 @@ class RustorePurchaseProvider implements PurchaseProvider {
           enableLogging: enableLogging,
         ),
       );
-      _client.updatesStream.listen((final event) async {
+      _client.updatesStream.listen((event) async {
         final purchaseResult = event.purchaseResult;
         final error = event.error;
         if (purchaseResult != null && purchaseResult.purchase != null) {
@@ -85,7 +85,7 @@ class RustorePurchaseProvider implements PurchaseProvider {
 
   @override
   Future<CompletePurchaseResultModel> completePurchase(
-    final PurchaseVerificationDtoModel purchase,
+    PurchaseVerificationDtoModel purchase,
   ) async {
     try {
       final rustorePurchase = await _client.getPurchase(
@@ -108,17 +108,17 @@ class RustorePurchaseProvider implements PurchaseProvider {
 
   @override
   Future<List<PurchaseProductDetailsModel>> getProductDetails(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   ) async {
     final products = await _client.getProducts(
-      productIds.map((final p) => p.value).toList(),
+      productIds.map((p) => p.value).toList(),
     );
     return products.map(_mapToPurchaseProductDetails).toList();
   }
 
   @override
   Future<PurchaseResultModel> purchaseNonConsumable(
-    final PurchaseProductDetailsModel productDetails,
+    PurchaseProductDetailsModel productDetails,
   ) async {
     final result = await _processPurchase(productDetails);
     final details = result.details;
@@ -129,7 +129,7 @@ class RustorePurchaseProvider implements PurchaseProvider {
   }
 
   Future<PurchaseResultModel> _processPurchase(
-    final PurchaseProductDetailsModel details,
+    PurchaseProductDetailsModel details,
   ) async {
     try {
       final preferredType =
@@ -174,7 +174,7 @@ class RustorePurchaseProvider implements PurchaseProvider {
     try {
       final purchases = await _client.getPurchases();
       final restored = await Future.wait(
-        purchases.map((final p) {
+        purchases.map((p) {
           final purchaseId = PurchaseId.fromJson(p.purchaseId);
           if (purchaseId.isEmpty) {
             return null;
@@ -190,7 +190,7 @@ class RustorePurchaseProvider implements PurchaseProvider {
   }
 
   PurchaseProductDetailsModel _mapToPurchaseProductDetails(
-    final RustoreProduct product,
+    RustoreProduct product,
   ) {
     final productId = PurchaseProductId.fromJson(product.productId);
     final periods =
@@ -233,7 +233,7 @@ class RustorePurchaseProvider implements PurchaseProvider {
   }
 
   PurchaseProductType _productTypeFromRustoreJson(
-    final RustoreProductType json,
+    RustoreProductType json,
   ) => switch (json) {
     RustoreProductType.nonConsumable => PurchaseProductType.nonConsumable,
     RustoreProductType.consumable => PurchaseProductType.consumable,
@@ -241,10 +241,10 @@ class RustorePurchaseProvider implements PurchaseProvider {
     RustoreProductType.unknown => PurchaseProductType.consumable,
   };
 
-  static Duration getDurationFromProductId(final PurchaseProductId id) {
+  static Duration getDurationFromProductId(PurchaseProductId id) {
     final parts = id.value.split('_');
     final unitIndex = parts.indexWhere(
-      (final part) => ['day', 'month', 'year'].contains(part),
+      (part) => ['day', 'month', 'year'].contains(part),
     );
     if (unitIndex == -1 || unitIndex + 1 >= parts.length) {
       return Duration.zero;
@@ -263,7 +263,7 @@ class RustorePurchaseProvider implements PurchaseProvider {
   }
 
   @override
-  Future<CancelResultModel> cancel(final String purchaseId) async {
+  Future<CancelResultModel> cancel(String purchaseId) async {
     try {
       final purchase = await _client.getPurchase(purchaseId);
       if (purchase == null) {
@@ -285,40 +285,40 @@ class RustorePurchaseProvider implements PurchaseProvider {
 
   @override
   Future<List<PurchaseProductDetailsModel>> getConsumables(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   ) async {
     final products = await _client.getProducts(
-      productIds.map((final p) => p.value).toList(),
+      productIds.map((p) => p.value).toList(),
     );
     return products
-        .where((final p) => p.productType == RustoreProductType.consumable)
+        .where((p) => p.productType == RustoreProductType.consumable)
         .map(_mapToPurchaseProductDetails)
         .toList();
   }
 
   @override
   Future<List<PurchaseProductDetailsModel>> getNonConsumables(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   ) async {
     final products = await _client.getProducts(
-      productIds.map((final p) => p.value).toList(),
+      productIds.map((p) => p.value).toList(),
     );
     return products
-        .where((final p) => p.productType == RustoreProductType.nonConsumable)
+        .where((p) => p.productType == RustoreProductType.nonConsumable)
         .map(_mapToPurchaseProductDetails)
         .toList();
   }
 
   @override
   Future<List<PurchaseProductDetailsModel>> getSubscriptions(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   ) async {
     try {
       final products = await _client.getProducts(
-        productIds.map((final p) => p.value).toList(),
+        productIds.map((p) => p.value).toList(),
       );
       return products
-          .where((final p) => p.productType == RustoreProductType.subscription)
+          .where((p) => p.productType == RustoreProductType.subscription)
           .map(_mapToPurchaseProductDetails)
           .toList();
     } on RustoreBillingException catch (e) {
@@ -333,7 +333,7 @@ class RustorePurchaseProvider implements PurchaseProvider {
 
   @override
   Future<PurchaseResultModel> subscribe(
-    final PurchaseProductDetailsModel productDetails,
+    PurchaseProductDetailsModel productDetails,
   ) => _processPurchase(productDetails);
 
   @override
@@ -343,7 +343,7 @@ class RustorePurchaseProvider implements PurchaseProvider {
 
   @override
   Future<PurchaseDetailsModel> getPurchaseDetails(
-    final PurchaseId purchaseId,
+    PurchaseId purchaseId,
   ) async {
     final purchase = await _client.getPurchase(purchaseId.value);
     if (purchase == null) {
@@ -352,7 +352,7 @@ class RustorePurchaseProvider implements PurchaseProvider {
     final productId = PurchaseProductId.fromJson(purchase.productId ?? '');
     final productDetails = await getProductDetails([productId]);
     final productDetail = productDetails.firstWhere(
-      (final p) => p.productId == productId,
+      (p) => p.productId == productId,
       orElse: () => PurchaseProductDetailsModel.empty,
     );
     return _mapRustorePurchaseToDetails(
@@ -376,8 +376,8 @@ class RustorePurchaseProvider implements PurchaseProvider {
   }
 
   PurchaseDetailsModel _mapRustorePurchaseToDetails({
-    required final RustorePurchase purchase,
-    required final PurchaseProductDetailsModel fallbackProductDetails,
+    required RustorePurchase purchase,
+    required PurchaseProductDetailsModel fallbackProductDetails,
   }) {
     final purchaseDate =
         dateTimeFromIso8601String(purchase.purchaseTime) ?? DateTime.now();
@@ -428,8 +428,8 @@ class RustorePurchaseProvider implements PurchaseProvider {
 /// so they map to `purchased`.
 @visibleForTesting
 PurchaseStatus purchaseStatusFromRustoreState(
-  final RustorePurchaseStatus state, {
-  required final RustorePurchaseType purchaseType,
+  RustorePurchaseStatus state, {
+  required RustorePurchaseType purchaseType,
 }) => switch (state) {
   RustorePurchaseStatus.created ||
   RustorePurchaseStatus.invoiceCreated => PurchaseStatus.pendingVerification,
@@ -448,7 +448,7 @@ PurchaseStatus purchaseStatusFromRustoreState(
   RustorePurchaseStatus.unknown => PurchaseStatus.error,
 };
 
-Duration _durationFromIso8601Period(final String period) {
+Duration _durationFromIso8601Period(String period) {
   final match = RegExp(
     r'^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)D)?$',
   ).firstMatch(period);
@@ -461,7 +461,7 @@ Duration _durationFromIso8601Period(final String period) {
   return Duration(days: years * 365 + months * 30 + days);
 }
 
-PurchaseDurationModel _durationModelFromIso8601(final String period) {
+PurchaseDurationModel _durationModelFromIso8601(String period) {
   final match = RegExp(
     r'^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)D)?$',
   ).firstMatch(period);

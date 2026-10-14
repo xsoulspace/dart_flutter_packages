@@ -12,14 +12,14 @@ typedef WhisperCppLibraryLoader = WhisperCppRawLibraryLoader;
 typedef WhisperCppBindings = WhisperCppRawBindings;
 
 WhisperCppRawRuntimeConfig _toRawRuntimeConfig(
-  final WhisperCppRuntimeConfig value,
+  WhisperCppRuntimeConfig value,
 ) => WhisperCppRawRuntimeConfig(
   libraryPath: value.libraryPath,
   librarySearchPaths: value.librarySearchPaths,
   modelsDirectory: value.modelsDirectory,
 );
 
-WhisperCppRawModelConfig _toRawModelConfig(final WhisperCppModelConfig value) =>
+WhisperCppRawModelConfig _toRawModelConfig(WhisperCppModelConfig value) =>
     WhisperCppRawModelConfig(
       preset: WhisperCppRawModelPreset.tinyEn,
       modelPath: value.modelPath,
@@ -27,7 +27,7 @@ WhisperCppRawModelConfig _toRawModelConfig(final WhisperCppModelConfig value) =>
     );
 
 WhisperCppRawRealtimeConfig _toRawRealtimeConfig(
-  final WhisperCppRealtimeConfig value,
+  WhisperCppRealtimeConfig value,
 ) => WhisperCppRawRealtimeConfig(
   sampleRate: value.sampleRate,
   stepMs: value.stepMs,
@@ -53,7 +53,7 @@ final class NativeWhisperCppBatchBackend {
   final WhisperCppRawBatchRuntime _runtime;
 
   Future<InferenceResult<InferenceResponse>> transcribe(
-    final InferenceRequest request,
+    InferenceRequest request,
   ) async {
     try {
       final input = await _resolveAudioInput(request.audioInput!);
@@ -66,7 +66,7 @@ final class NativeWhisperCppBatchBackend {
           normalizedTranscript: normalizeTranscript(result.transcript),
           segments: result.segments
               .map(
-                (final segment) => InferenceSpeechSegment(
+                (segment) => InferenceSpeechSegment(
                   text: segment.text,
                   startMs: segment.startMs,
                   endMs: segment.endMs,
@@ -96,7 +96,7 @@ final class NativeWhisperCppBatchBackend {
   }
 
   Future<WhisperCppRawAudioInput> _resolveAudioInput(
-    final InferenceAudioInput input,
+    InferenceAudioInput input,
   ) async {
     switch (input.resolvedSource) {
       case InferenceAudioSource.bytes:
@@ -141,17 +141,17 @@ final class NativeWhisperCppRealtimeBackend
 
   @override
   Future<void> start({
-    required final WhisperCppModelConfig modelConfig,
-    required final WhisperCppRuntimeConfig runtimeConfig,
-    required final WhisperCppRealtimeConfig realtimeConfig,
-    required final void Function(InferenceTranscriptEvent event) emit,
+    required WhisperCppModelConfig modelConfig,
+    required WhisperCppRuntimeConfig runtimeConfig,
+    required WhisperCppRealtimeConfig realtimeConfig,
+    required void Function(InferenceTranscriptEvent event) emit,
   }) async {
     _emit = emit;
     await _runtime.start();
   }
 
   @override
-  Future<void> sendAudioChunk(final List<int> audioBytes) async {
+  Future<void> sendAudioChunk(List<int> audioBytes) async {
     final result = _runtime.sendAudioChunk(audioBytes);
     if (result == null) {
       return;
@@ -167,7 +167,7 @@ final class NativeWhisperCppRealtimeBackend
           if (result.segments.isNotEmpty)
             'segments': result.segments
                 .map(
-                  (final segment) => <String, dynamic>{
+                  (segment) => <String, dynamic>{
                     'text': segment.text,
                     'start_ms': segment.startMs,
                     'end_ms': segment.endMs,
@@ -197,7 +197,7 @@ final class NativeWhisperCppRealtimeBackend
           if (result.segments.isNotEmpty)
             'segments': result.segments
                 .map(
-                  (final segment) => <String, dynamic>{
+                  (segment) => <String, dynamic>{
                     'text': segment.text,
                     'start_ms': segment.startMs,
                     'end_ms': segment.endMs,

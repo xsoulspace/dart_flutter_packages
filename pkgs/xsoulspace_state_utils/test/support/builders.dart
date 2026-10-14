@@ -15,7 +15,7 @@ class TestItem {
   final int value;
 
   @override
-  bool operator ==(final Object other) =>
+  bool operator ==(Object other) =>
       identical(this, other) ||
       other is TestItem &&
           runtimeType == other.runtimeType &&
@@ -44,10 +44,10 @@ class TestUser {
   final int age;
 
   TestUser copyWith({
-    final String? id,
-    final String? name,
-    final String? email,
-    final int? age,
+    String? id,
+    String? name,
+    String? email,
+    int? age,
   }) => TestUser(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -56,7 +56,7 @@ class TestUser {
   );
 
   @override
-  bool operator ==(final Object other) =>
+  bool operator ==(Object other) =>
       identical(this, other) ||
       other is TestUser &&
           runtimeType == other.runtimeType &&
@@ -75,8 +75,8 @@ class TestUser {
 }
 
 // Key extraction functions for test users
-String userToId(final TestUser user) => user.id;
-String userToName(final TestUser user) => user.name;
+String userToId(TestUser user) => user.id;
+String userToName(TestUser user) => user.name;
 
 /// {@template test_item_builders}
 /// Builders for creating TestItem instances with sensible defaults.
@@ -84,7 +84,7 @@ String userToName(final TestUser user) => user.name;
 
 /// Creates a TestItem with sensible defaults.
 /// Specify only the properties that matter for your test case.
-TestItem aTestItem({final String? id, final String? name, final int? value}) =>
+TestItem aTestItem({String? id, String? name, int? value}) =>
     TestItem(
       id: id ?? 'test-id-${DateTime.now().millisecondsSinceEpoch}',
       name: name ?? 'test-name',
@@ -93,11 +93,11 @@ TestItem aTestItem({final String? id, final String? name, final int? value}) =>
 
 /// Creates a list of TestItems for testing collections.
 List<TestItem> someTestItems([
-  final int count = 3,
-  final String prefix = 'item',
+  int count = 3,
+  String prefix = 'item',
 ]) => List.generate(
   count,
-  (final i) => TestItem(
+  (i) => TestItem(
     id: '$prefix-${i + 1}',
     name: '$prefix-name-${i + 1}',
     value: (i + 1) * 10,
@@ -111,10 +111,10 @@ List<TestItem> someTestItems([
 /// Creates a TestUser with sensible defaults.
 /// Specify only the properties that matter for your test case.
 TestUser aTestUser({
-  final String? id,
-  final String? name,
-  final String? email,
-  final int? age,
+  String? id,
+  String? name,
+  String? email,
+  int? age,
 }) => TestUser(
   id: id ?? 'user-${DateTime.now().millisecondsSinceEpoch}',
   name: name ?? 'Test User',
@@ -124,11 +124,11 @@ TestUser aTestUser({
 
 /// Creates a list of TestUsers for testing collections.
 List<TestUser> someTestUsers([
-  final int count = 3,
-  final String prefix = 'user',
+  int count = 3,
+  String prefix = 'user',
 ]) => List.generate(
   count,
-  (final i) => TestUser(
+  (i) => TestUser(
     id: '$prefix-${i + 1}',
     name: '$prefix-name-${i + 1}',
     email: '$prefix${i + 1}@example.com',
@@ -142,12 +142,12 @@ List<TestUser> someTestUsers([
 
 /// Creates a list of strings with the specified count.
 List<String> someStrings([
-  final int count = 3,
-  final String prefix = 'string',
-]) => List.generate(count, (final i) => '$prefix-${i + 1}');
+  int count = 3,
+  String prefix = 'string',
+]) => List.generate(count, (i) => '$prefix-${i + 1}');
 
 /// Creates a single string with a timestamp to ensure uniqueness.
-String aString([final String prefix = 'test']) =>
+String aString([String prefix = 'test']) =>
     '$prefix-${DateTime.now().millisecondsSinceEpoch}';
 
 /// {@template int_list_builders}
@@ -155,8 +155,8 @@ String aString([final String prefix = 'test']) =>
 /// {@endtemplate}
 
 /// Creates a list of integers with the specified count.
-List<int> someInts([final int count = 3, final int start = 1]) =>
-    List.generate(count, (final i) => start + i);
+List<int> someInts([int count = 3, int start = 1]) =>
+    List.generate(count, (i) => start + i);
 
 /// Creates a single integer.
-int anInt([final int value = 42]) => value;
+int anInt([int value = 42]) => value;

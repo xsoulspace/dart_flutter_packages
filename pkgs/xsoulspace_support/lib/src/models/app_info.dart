@@ -15,10 +15,10 @@ import 'package:from_json_to_json/from_json_to_json.dart';
 extension type const AppInfo._(Map<String, dynamic> value) {
   /// {@macro app_info}
   factory AppInfo({
-    required final String version,
-    required final String buildNumber,
-    required final String packageName,
-    final String? appName,
+    required String version,
+    required String buildNumber,
+    required String packageName,
+    String? appName,
   }) => AppInfo._({
     'version': version,
     'build_number': buildNumber,
@@ -27,7 +27,7 @@ extension type const AppInfo._(Map<String, dynamic> value) {
   });
 
   /// {@macro app_info}
-  factory AppInfo.fromJson(final dynamic json) =>
+  factory AppInfo.fromJson(dynamic json) =>
       AppInfo._(jsonDecodeMapAs(json));
 
   /// The semantic version of the app (e.g., "1.0.0")

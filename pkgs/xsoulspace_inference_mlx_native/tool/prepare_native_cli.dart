@@ -8,7 +8,7 @@ import 'package:xsoulspace_tooling_runtime/xsoulspace_tooling_runtime.dart';
 
 import 'native_cli_bundle.dart';
 
-Future<void> main(final List<String> args) async {
+Future<void> main(List<String> args) async {
   if (args.length != 4) {
     throw ArgumentError('COMPILER PREPARED_PACKAGE_CONFIG OUTPUT TARGET');
   }

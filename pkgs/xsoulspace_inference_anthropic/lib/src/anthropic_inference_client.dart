@@ -34,11 +34,11 @@ enum AnthropicModelNames implements ModelName { anthropic }
 /// (SSE) is not implemented yet; the wire client is request/response only.
 class AnthropicInferenceClient implements InferenceClient {
   AnthropicInferenceClient({
-    final String apiKey = '',
+    String apiKey = '',
     this.defaultModel = 'claude-sonnet-4-5',
     this.baseUrl = 'https://api.anthropic.com',
     this.anthropicVersion = '2023-06-01',
-    final http.Client? httpClient,
+    http.Client? httpClient,
     this.timeout = const Duration(seconds: 60),
     this.useMessagesCodec = true,
     this.onTransportDiagnostic,
@@ -99,7 +99,7 @@ class AnthropicInferenceClient implements InferenceClient {
 
   @override
   Future<InferenceResult<InferenceResponse>> infer(
-    final InferenceRequest request, {
+    InferenceRequest request, {
     ToolRegistry? toolRegistry,
   }) async {
     if (!supportedTasks.contains(request.task)) {
@@ -108,7 +108,7 @@ class AnthropicInferenceClient implements InferenceClient {
         message: 'Task ${request.task.name} is not supported by $id',
         details: <String, dynamic>{
           'supported_tasks': supportedTasks
-              .map((final task) => task.name)
+              .map((task) => task.name)
               .toList(),
           'requested_task': request.task.name,
         },
@@ -280,7 +280,7 @@ class AnthropicInferenceClient implements InferenceClient {
     }
   }
 
-  String _resolveModel(final InferenceRequest request) {
+  String _resolveModel(InferenceRequest request) {
     final metadataModel = request.metadata['model'];
     if (metadataModel is String && (metadataModel).isNotEmpty) {
       return metadataModel;
@@ -288,13 +288,13 @@ class AnthropicInferenceClient implements InferenceClient {
     return defaultModel;
   }
 
-  String _buildUserContent(final InferenceRequest request) {
+  String _buildUserContent(InferenceRequest request) {
     final context = request.contextFragmentsJson;
     if (context.isEmpty) return request.prompt;
     return '${request.prompt}\n\nCONTEXT:\n$context';
   }
 
-  List<Map<String, dynamic>> _buildTools(final ToolRegistry registry) {
+  List<Map<String, dynamic>> _buildTools(ToolRegistry registry) {
     final tools = <Map<String, dynamic>>[];
     for (var MapEntry(key: name, value: tool) in registry.tools.entries) {
       tools.add(<String, dynamic>{
@@ -313,7 +313,7 @@ class AnthropicInferenceClient implements InferenceClient {
   /// Concatenates `text` content blocks and extracts native `tool_use`
   /// blocks as structured [ToolCall] records; the harness routes them to the
   /// world's tool execution system directly.
-  InferenceResponse? _parseMessage(final Map<String, dynamic> decoded) {
+  InferenceResponse? _parseMessage(Map<String, dynamic> decoded) {
     final content = decoded['content'];
     if (content is! List) return null;
 
@@ -365,7 +365,7 @@ class AnthropicInferenceClient implements InferenceClient {
     );
   }
 
-  Map<String, dynamic> _parseArguments(final Object? input) {
+  Map<String, dynamic> _parseArguments(Object? input) {
     if (input is Map<String, dynamic>) return input;
     if (input is Map) {
       return input.map((k, v) => MapEntry('$k', v));
@@ -373,14 +373,14 @@ class AnthropicInferenceClient implements InferenceClient {
     return <String, dynamic>{};
   }
 
-  String _mapHttpStatus(final int statusCode) => switch (statusCode) {
+  String _mapHttpStatus(int statusCode) => switch (statusCode) {
     401 || 403 => 'auth_failed',
     429 => 'rate_limited',
     >= 500 => 'engine_unavailable',
     _ => 'http_error',
   };
 
-  String _errorMessage(final String body, final int statusCode) {
+  String _errorMessage(String body, int statusCode) {
     try {
       final decoded = jsonDecode(body);
       if (decoded is Map<String, dynamic>) {

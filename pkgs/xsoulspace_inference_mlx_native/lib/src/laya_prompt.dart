@@ -56,7 +56,7 @@ final class LayaTypedQuestion {
 /// Renders one criterion/instruction value as text — the reference's
 /// `render_criterion`: strings pass through; anything structured becomes
 /// `json.dumps(..., ensure_ascii=False, separators=(', ', ': '))`.
-String renderLayaCriterion(final Object? value) {
+String renderLayaCriterion(Object? value) {
   if (value is String) return value;
   return renderLayaJson(value);
 }
@@ -65,7 +65,7 @@ String renderLayaCriterion(final Object? value) {
 /// `', '` and `': '`), which the reference uses for structured instructions
 /// and state serialization. Dart's jsonEncode is compact, so the spaced
 /// form is rendered here — tokenization depends on those spaces.
-String renderLayaJson(final Object? value) {
+String renderLayaJson(Object? value) {
   if (value == null) return 'null';
   if (value is bool) return value ? 'true' : 'false';
   if (value is num) {
@@ -75,13 +75,13 @@ String renderLayaJson(final Object? value) {
   if (value is String) return '"${_jsonEscape(value)}"';
   if (value is List) return '[${value.map(renderLayaJson).join(', ')}]';
   if (value is Map) {
-    return '{${value.entries.map((final e) =>
+    return '{${value.entries.map((e) =>
         '${renderLayaJson('${e.key}')}: ${renderLayaJson(e.value)}').join(', ')}}';
   }
   return renderLayaJson('$value');
 }
 
-String _pythonDouble(final double value) {
+String _pythonDouble(double value) {
   // Python repr: 1.5 -> '1.5'; integral floats keep a trailing '.0'.
   if (value == value.truncateToDouble() && value.abs() < 1e16) {
     return '${value.truncate()}.0';
@@ -89,12 +89,12 @@ String _pythonDouble(final double value) {
   return '$value';
 }
 
-String _jsonEscape(final String text) =>
+String _jsonEscape(String text) =>
     jsonEncode(text).substring(1, jsonEncode(text).length - 1);
 
 /// `render_options` — the option texts in label-index order. Noul is always
 /// [false, true] so p[1] is the affirmative probability.
-List<String> renderTypedOptions(final LayaTypedQuestion question) {
+List<String> renderTypedOptions(LayaTypedQuestion question) {
   switch (question.type) {
     case 'choice':
       return [
@@ -134,7 +134,7 @@ LayaPromptRow buildTypedSequence({
   bool truncateLeft = false,
 }) {
   final optionTexts = renderTypedOptions(question);
-  List<List<int>> buildOptions(final int cap) => [
+  List<List<int>> buildOptions(int cap) => [
     for (final text in optionTexts)
       [
         tokenizer.maskTokenId,
@@ -214,13 +214,13 @@ LayaPromptRow buildChoiceSequence({
 const double tempMin = 0.5;
 const double tempMax = 5.0;
 
-double clampTemperature(final double value) {
+double clampTemperature(double value) {
   if (value.isNaN || value.isInfinite || value <= 0) return 1.0;
   return value.clamp(tempMin, tempMax);
 }
 
 /// `<type>:<size>` bucket key: 2 / 3-5 / 6-10 / 11+.
-String tempBucketKey(final int qtype, final int optionCount) {
+String tempBucketKey(int qtype, int optionCount) {
   final name = const {0: 'choice', 1: 'score', 2: 'noul'}[qtype] ?? 'choice';
   final size = optionCount <= 2
       ? '2'
@@ -234,7 +234,7 @@ String tempBucketKey(final int qtype, final int optionCount) {
 
 /// Normalized entropy confidence: `1 - H(p) / log(k)` over the first [k]
 /// probabilities.
-double confidenceFromProbs(final List<double> probs, final int k) {
+double confidenceFromProbs(List<double> probs, int k) {
   if (k < 2) return 1.0;
   var entropy = 0.0;
   for (var i = 0; i < k && i < probs.length; i++) {

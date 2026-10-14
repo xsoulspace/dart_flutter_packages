@@ -26,9 +26,9 @@ class InferenceResult<T> {
   });
 
   factory InferenceResult.ok(
-    final T data, {
-    final List<String> warnings = const <String>[],
-    final Map<String, dynamic> meta = const <String, dynamic>{},
+    T data, {
+    List<String> warnings = const <String>[],
+    Map<String, dynamic> meta = const <String, dynamic>{},
   }) => InferenceResult<T>(
     success: true,
     data: data,
@@ -37,11 +37,11 @@ class InferenceResult<T> {
   );
 
   factory InferenceResult.fail({
-    required final String code,
-    required final String message,
-    final Object? details,
-    final List<String> warnings = const <String>[],
-    final Map<String, dynamic> meta = const <String, dynamic>{},
+    required String code,
+    required String message,
+    Object? details,
+    List<String> warnings = const <String>[],
+    Map<String, dynamic> meta = const <String, dynamic>{},
   }) => InferenceResult<T>(
     success: false,
     error: InferenceError(code: code, message: message, details: details),
@@ -55,7 +55,7 @@ class InferenceResult<T> {
   final List<String> warnings;
   final Map<String, dynamic> meta;
 
-  Map<String, dynamic> toJson(final Object? Function(T value) toData) =>
+  Map<String, dynamic> toJson(Object? Function(T value) toData) =>
       <String, dynamic>{
         'success': success,
         'data': data == null ? null : toData(data as T),

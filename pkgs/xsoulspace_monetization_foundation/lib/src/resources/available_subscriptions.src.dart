@@ -8,11 +8,11 @@ class AvailableSubscriptionsResource extends ChangeNotifier {
       const LoadableContainer(value: []);
   LoadableContainer<List<PurchaseProductDetailsModel>> get subscriptions =>
       _value;
-  void set(final LoadableContainer<List<PurchaseProductDetailsModel>> value) {
+  void set(LoadableContainer<List<PurchaseProductDetailsModel>> value) {
     _value = value;
     notifyListeners();
   }
 
-  PurchaseProductDetailsModel? getSubscription(final PurchaseProductId id) =>
-      _value.value.firstWhereOrNull((final e) => e.productId == id);
+  PurchaseProductDetailsModel? getSubscription(PurchaseProductId id) =>
+      _value.value.firstWhereOrNull((e) => e.productId == id);
 }

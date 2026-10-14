@@ -6,7 +6,7 @@ final class TraceContext {
     this.parentSpanId,
   });
 
-  factory TraceContext.fromJson(final Map<String, Object?> json) =>
+  factory TraceContext.fromJson(Map<String, Object?> json) =>
       TraceContext(
         traceId: (json['traceId'] ?? '').toString(),
         spanId: (json['spanId'] ?? '').toString(),

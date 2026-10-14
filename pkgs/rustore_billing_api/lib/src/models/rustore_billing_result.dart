@@ -5,17 +5,17 @@ import '../rustore_api.g.dart';
 enum RustoreBillingResultType { purchase, error }
 
 extension type const RustoreBillingResult(Map<String, dynamic> value) {
-  factory RustoreBillingResult.fromJson(final dynamic json) =>
+  factory RustoreBillingResult.fromJson(dynamic json) =>
       RustoreBillingResult(jsonDecodeMap(json));
 
   factory RustoreBillingResult.purchase(
-    final RustoreProductPurchaseResult result,
+    RustoreProductPurchaseResult result,
   ) => RustoreBillingResult({
     'type': RustoreBillingResultType.purchase.name,
     'data': result,
   });
 
-  factory RustoreBillingResult.error(final RustorePurchaseError error) =>
+  factory RustoreBillingResult.error(RustorePurchaseError error) =>
       RustoreBillingResult({
         'type': RustoreBillingResultType.error.name,
         'data': error,
@@ -24,7 +24,7 @@ extension type const RustoreBillingResult(Map<String, dynamic> value) {
   RustoreBillingResultType get type {
     final rawType = jsonDecodeString(value['type']);
     return RustoreBillingResultType.values.firstWhere(
-      (final e) => e.name == rawType,
+      (e) => e.name == rawType,
       orElse: () => RustoreBillingResultType.error,
     );
   }

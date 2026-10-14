@@ -11,7 +11,7 @@ import 'trace_context.dart';
 
 /// Core logger with deterministic single-writer dispatch and inspection APIs.
 final class Logger {
-  Logger(final LoggerConfig config, final List<LogSink> sinks)
+  Logger(LoggerConfig config, List<LogSink> sinks)
     : _state = _LoggerState(
         config: config,
         sinks: List<LogSink>.unmodifiable(sinks),
@@ -23,7 +23,7 @@ final class Logger {
   Logger._child(
     this._state, {
     required this._defaultCategory,
-    required final Map<String, Object?> defaultFields,
+    required Map<String, Object?> defaultFields,
     required this._defaultTrace,
   }) : _defaultFields = Map<String, Object?>.unmodifiable(defaultFields);
 
@@ -39,9 +39,9 @@ final class Logger {
 
   /// Returns a child logger with merged context.
   Logger child({
-    final String? category,
-    final Map<String, Object?> fields = const <String, Object?>{},
-    final TraceContext? trace,
+    String? category,
+    Map<String, Object?> fields = const <String, Object?>{},
+    TraceContext? trace,
   }) {
     final mergedFields = <String, Object?>{};
     if (_defaultFields.isNotEmpty) {
@@ -61,27 +61,27 @@ final class Logger {
 
   /// Runs [action] with a trace-scoped child logger.
   T withTrace<T>(
-    final TraceContext trace,
-    final T Function(Logger logger) action,
+    TraceContext trace,
+    T Function(Logger logger) action,
   ) => action(child(trace: trace));
 
   /// Async variant of [withTrace].
   Future<T> withTraceAsync<T>(
-    final TraceContext trace,
-    final Future<T> Function(Logger logger) action,
+    TraceContext trace,
+    Future<T> Function(Logger logger) action,
   ) => action(child(trace: trace));
 
-  bool isEnabled(final LogLevel level) => level.isAtLeast(config.minLevel);
+  bool isEnabled(LogLevel level) => level.isAtLeast(config.minLevel);
 
   /// Emits a structured log record.
   void log(
-    final LogLevel level,
-    final String category,
-    final String message, {
-    final Map<String, Object?> fields = const <String, Object?>{},
-    final Object? error,
-    final StackTrace? stackTrace,
-    final TraceContext? trace,
+    LogLevel level,
+    String category,
+    String message, {
+    Map<String, Object?> fields = const <String, Object?>{},
+    Object? error,
+    StackTrace? stackTrace,
+    TraceContext? trace,
   }) {
     if (!isEnabled(level)) {
       return;
@@ -118,12 +118,12 @@ final class Logger {
   }
 
   void traceLog(
-    final String category,
-    final String message, {
-    final Map<String, Object?> fields = const <String, Object?>{},
-    final Object? error,
-    final StackTrace? stackTrace,
-    final TraceContext? trace,
+    String category,
+    String message, {
+    Map<String, Object?> fields = const <String, Object?>{},
+    Object? error,
+    StackTrace? stackTrace,
+    TraceContext? trace,
   }) => log(
     LogLevel.trace,
     category,
@@ -135,12 +135,12 @@ final class Logger {
   );
 
   void debug(
-    final String category,
-    final String message, {
-    final Map<String, Object?> fields = const <String, Object?>{},
-    final Object? error,
-    final StackTrace? stackTrace,
-    final TraceContext? trace,
+    String category,
+    String message, {
+    Map<String, Object?> fields = const <String, Object?>{},
+    Object? error,
+    StackTrace? stackTrace,
+    TraceContext? trace,
   }) => log(
     LogLevel.debug,
     category,
@@ -152,12 +152,12 @@ final class Logger {
   );
 
   void info(
-    final String category,
-    final String message, {
-    final Map<String, Object?> fields = const <String, Object?>{},
-    final Object? error,
-    final StackTrace? stackTrace,
-    final TraceContext? trace,
+    String category,
+    String message, {
+    Map<String, Object?> fields = const <String, Object?>{},
+    Object? error,
+    StackTrace? stackTrace,
+    TraceContext? trace,
   }) => log(
     LogLevel.info,
     category,
@@ -169,12 +169,12 @@ final class Logger {
   );
 
   void warning(
-    final String category,
-    final String message, {
-    final Map<String, Object?> fields = const <String, Object?>{},
-    final Object? error,
-    final StackTrace? stackTrace,
-    final TraceContext? trace,
+    String category,
+    String message, {
+    Map<String, Object?> fields = const <String, Object?>{},
+    Object? error,
+    StackTrace? stackTrace,
+    TraceContext? trace,
   }) => log(
     LogLevel.warning,
     category,
@@ -186,12 +186,12 @@ final class Logger {
   );
 
   void error(
-    final String category,
-    final String message, {
-    final Map<String, Object?> fields = const <String, Object?>{},
-    final Object? error,
-    final StackTrace? stackTrace,
-    final TraceContext? trace,
+    String category,
+    String message, {
+    Map<String, Object?> fields = const <String, Object?>{},
+    Object? error,
+    StackTrace? stackTrace,
+    TraceContext? trace,
   }) => log(
     LogLevel.error,
     category,
@@ -203,12 +203,12 @@ final class Logger {
   );
 
   void critical(
-    final String category,
-    final String message, {
-    final Map<String, Object?> fields = const <String, Object?>{},
-    final Object? error,
-    final StackTrace? stackTrace,
-    final TraceContext? trace,
+    String category,
+    String message, {
+    Map<String, Object?> fields = const <String, Object?>{},
+    Object? error,
+    StackTrace? stackTrace,
+    TraceContext? trace,
   }) => log(
     LogLevel.critical,
     category,
@@ -220,12 +220,12 @@ final class Logger {
   );
 
   void traceLazy(
-    final String category,
-    final String Function() messageBuilder, {
-    final Map<String, Object?> fields = const <String, Object?>{},
-    final Object? error,
-    final StackTrace? stackTrace,
-    final TraceContext? trace,
+    String category,
+    String Function() messageBuilder, {
+    Map<String, Object?> fields = const <String, Object?>{},
+    Object? error,
+    StackTrace? stackTrace,
+    TraceContext? trace,
   }) {
     if (!isEnabled(LogLevel.trace)) {
       return;
@@ -241,12 +241,12 @@ final class Logger {
   }
 
   void debugLazy(
-    final String category,
-    final String Function() messageBuilder, {
-    final Map<String, Object?> fields = const <String, Object?>{},
-    final Object? error,
-    final StackTrace? stackTrace,
-    final TraceContext? trace,
+    String category,
+    String Function() messageBuilder, {
+    Map<String, Object?> fields = const <String, Object?>{},
+    Object? error,
+    StackTrace? stackTrace,
+    TraceContext? trace,
   }) {
     if (!isEnabled(LogLevel.debug)) {
       return;
@@ -261,15 +261,15 @@ final class Logger {
     );
   }
 
-  Future<List<LogRecord>> query(final LogQuery query) => _state.query(query);
+  Future<List<LogRecord>> query(LogQuery query) => _state.query(query);
 
-  Stream<LogRecord> watch(final LogQuery query) => _state.watch(query);
+  Stream<LogRecord> watch(LogQuery query) => _state.watch(query);
 
-  Future<List<LogRecord>> traceQuery(final String traceId) =>
+  Future<List<LogRecord>> traceQuery(String traceId) =>
       _state.trace(traceId);
 
   /// Alias kept for plan naming compatibility.
-  Future<List<LogRecord>> trace(final String traceId) => _state.trace(traceId);
+  Future<List<LogRecord>> trace(String traceId) => _state.trace(traceId);
 
   Future<void> flush() => _state.flush();
 
@@ -307,7 +307,7 @@ final class _LoggerState {
 
   int nextSequence() => _sequence++;
 
-  void enqueue(final LogRecord record) {
+  void enqueue(LogRecord record) {
     if (_disposed || _closing) {
       return;
     }
@@ -349,7 +349,7 @@ final class _LoggerState {
     }
   }
 
-  Future<List<LogRecord>> query(final LogQuery query) async {
+  Future<List<LogRecord>> query(LogQuery query) async {
     final matches = _history.where(query.matches).toList(growable: false);
 
     final limit = query.limit;
@@ -362,12 +362,12 @@ final class _LoggerState {
     );
   }
 
-  Stream<LogRecord> watch(final LogQuery query) =>
+  Stream<LogRecord> watch(LogQuery query) =>
       _streamController.stream.where(query.matches);
 
-  Future<List<LogRecord>> trace(final String traceId) async {
+  Future<List<LogRecord>> trace(String traceId) async {
     final records = (await query(LogQuery(traceId: traceId))).toList();
-    records.sort((final a, final b) => a.sequence.compareTo(b.sequence));
+    records.sort((a, b) => a.sequence.compareTo(b.sequence));
     return List<LogRecord>.unmodifiable(records);
   }
 
@@ -419,7 +419,7 @@ final class _LoggerState {
     }
   }
 
-  bool _canAccept(final LogRecord incoming) {
+  bool _canAccept(LogRecord incoming) {
     if (_pending.length < config.queueCapacity) {
       return true;
     }
@@ -441,7 +441,7 @@ final class _LoggerState {
     return _pending.length < config.hardQueueCapacity;
   }
 
-  bool _isLowPriority(final LogLevel level) =>
+  bool _isLowPriority(LogLevel level) =>
       level == LogLevel.trace || level == LogLevel.debug;
 
   bool _dropOneLowPriorityFromQueue() {
@@ -496,7 +496,7 @@ final class _LoggerState {
     _enqueueBackpressureWarning(warning);
   }
 
-  void _enqueueBackpressureWarning(final LogRecord warning) {
+  void _enqueueBackpressureWarning(LogRecord warning) {
     if (_disposed) {
       return;
     }
@@ -610,7 +610,7 @@ final class _LoggerState {
     }
   }
 
-  void _appendHistory(final LogRecord record) {
+  void _appendHistory(LogRecord record) {
     _history.addLast(record);
     while (_history.length > config.historyCapacity) {
       _history.removeFirst();

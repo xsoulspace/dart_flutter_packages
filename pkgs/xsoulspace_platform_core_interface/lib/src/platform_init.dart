@@ -18,7 +18,7 @@ final class PlatformInitOptions {
   final Map<String, Object?> context;
 
   /// Reads a typed option from [context]. Returns `null` on mismatch.
-  T? read<T extends Object>(final String key) {
+  T? read<T extends Object>(String key) {
     final value = context[key];
     return value is T ? value : null;
   }
@@ -31,14 +31,14 @@ enum PlatformInitResultStatus { success, notAvailable, failure }
 final class PlatformInitResult {
   const PlatformInitResult._({required this.status, this.message, this.error});
 
-  factory PlatformInitResult.success({final String? message}) {
+  factory PlatformInitResult.success({String? message}) {
     return PlatformInitResult._(
       status: PlatformInitResultStatus.success,
       message: message,
     );
   }
 
-  factory PlatformInitResult.notAvailable({final String? message}) {
+  factory PlatformInitResult.notAvailable({String? message}) {
     return PlatformInitResult._(
       status: PlatformInitResultStatus.notAvailable,
       message: message,
@@ -46,8 +46,8 @@ final class PlatformInitResult {
   }
 
   factory PlatformInitResult.failure({
-    final String? message,
-    final Object? error,
+    String? message,
+    Object? error,
   }) {
     return PlatformInitResult._(
       status: PlatformInitResultStatus.failure,

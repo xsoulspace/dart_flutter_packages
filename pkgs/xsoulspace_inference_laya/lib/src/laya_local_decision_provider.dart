@@ -19,16 +19,16 @@ import 'laya_serve_runtime.dart';
 final class LayaLocalDecisionProvider implements DecisionProvider {
   LayaLocalDecisionProvider({
     required this.runtime,
-    final String? apiKey,
-    final String model = 'laya',
-    final Uri? endpoint,
-    final Duration timeout = const Duration(seconds: 10),
-    final int maxTransientRetries = 1,
-    final http.Client? httpClient,
-    final void Function(Map<String, Object?> event)? onDiagnosticEvent,
-    final DecisionExecutionLocation executionLocation =
+    String? apiKey,
+    String model = 'laya',
+    Uri? endpoint,
+    Duration timeout = const Duration(seconds: 10),
+    int maxTransientRetries = 1,
+    http.Client? httpClient,
+    void Function(Map<String, Object?> event)? onDiagnosticEvent,
+    DecisionExecutionLocation executionLocation =
         DecisionExecutionLocation.local,
-    final DecisionNetworkRequirement networkRequirement =
+    DecisionNetworkRequirement networkRequirement =
         DecisionNetworkRequirement.none,
   }) : _delegate = LayaServerDecisionProvider(
          apiKey: apiKey,
@@ -76,7 +76,7 @@ final class LayaLocalDecisionProvider implements DecisionProvider {
   /// callers that want auto-start compose [LayaServeRuntime.ensureRunning]
   /// explicitly — readiness getters never spawn or probe.
   @override
-  Future<DecisionOutcome> decide(final DecisionRequest request) async {
+  Future<DecisionOutcome> decide(DecisionRequest request) async {
     if (!runtime.isReady) {
       return DecisionUnavailable(
         correlation: request.correlation,
@@ -91,7 +91,7 @@ final class LayaLocalDecisionProvider implements DecisionProvider {
   }
 
   @override
-  Future<void> cancel(final DecisionCancellationId cancellationId) =>
+  Future<void> cancel(DecisionCancellationId cancellationId) =>
       _delegate.cancel(cancellationId);
 
   /// Stops the runtime (killing only spawned processes) and disposes the

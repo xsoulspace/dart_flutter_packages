@@ -161,7 +161,7 @@ void main() {
       final provider = LayaLocalDecisionProvider(
         runtime: runtime,
         apiKey: 'k',
-        httpClient: MockClient((final request) async {
+        httpClient: MockClient((request) async {
           captured = request;
           return http.Response(jsonEncode(_successPayload()), 200);
         }),
@@ -207,7 +207,7 @@ DecisionRequest _request() => DecisionRequest(
   ],
 );
 
-LayaLocalDecisionProvider _provider({final http.Client? httpClient}) =>
+LayaLocalDecisionProvider _provider({http.Client? httpClient}) =>
     LayaLocalDecisionProvider(
       runtime: LayaServeRuntime(
         httpClient:

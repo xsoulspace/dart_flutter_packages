@@ -24,14 +24,14 @@ final class UpstreamLock {
   final String? officialDtsUrl;
 
   UpstreamLock copyWith({
-    final String? sdkUrl,
-    final String? sdkSha512,
-    final String? sdkVersion,
-    final List<String>? docsUrls,
-    final String? docsHash,
-    final String? declarationHash,
-    final String? officialDtsUrl,
-    final bool clearOfficialDtsUrl = false,
+    String? sdkUrl,
+    String? sdkSha512,
+    String? sdkVersion,
+    List<String>? docsUrls,
+    String? docsHash,
+    String? declarationHash,
+    String? officialDtsUrl,
+    bool clearOfficialDtsUrl = false,
   }) => UpstreamLock(
     sdkUrl: sdkUrl ?? this.sdkUrl,
     sdkSha512: sdkSha512 ?? this.sdkSha512,
@@ -54,7 +54,7 @@ final class UpstreamLock {
     'officialDtsUrl': officialDtsUrl,
   };
 
-  static UpstreamLock fromJson(final Map<String, Object?> json) => UpstreamLock(
+  static UpstreamLock fromJson(Map<String, Object?> json) => UpstreamLock(
     sdkUrl: json['sdkUrl']! as String,
     sdkSha512: json['sdkSha512']! as String,
     sdkVersion: json['sdkVersion']! as String,
@@ -117,7 +117,7 @@ final class DtsResult {
   final String hash;
 }
 
-Future<void> main(final List<String> args) async {
+Future<void> main(List<String> args) async {
   final options = _parseOptions(args);
   if (options == null) {
     exitCode = 2;
@@ -281,7 +281,7 @@ Future<void> main(final List<String> args) async {
   }
 }
 
-GenerateOptions? _parseOptions(final List<String> args) {
+GenerateOptions? _parseOptions(List<String> args) {
   var checkOnly = false;
   var bump = false;
 
@@ -304,8 +304,8 @@ GenerateOptions? _parseOptions(final List<String> args) {
 }
 
 List<String> _lockMismatches(
-  final UpstreamLock lock,
-  final UpstreamLock expected,
+  UpstreamLock lock,
+  UpstreamLock expected,
 ) {
   final mismatches = <String>[];
   if (lock.sdkSha512 != expected.sdkSha512) {
@@ -336,7 +336,7 @@ List<String> _lockMismatches(
   return mismatches;
 }
 
-Future<DocsExtraction> _fetchDocs(final List<String> urls) async {
+Future<DocsExtraction> _fetchDocs(List<String> urls) async {
   final pages = <Uri, String>{};
   final normalizedForHash = <Uri, String>{};
 
@@ -379,7 +379,7 @@ Future<DocsExtraction> _fetchDocs(final List<String> urls) async {
   final concatenated = StringBuffer();
   for (final uri
       in normalizedForHash.keys.toList()
-        ..sort((final a, final b) => a.toString().compareTo(b.toString()))) {
+        ..sort((a, b) => a.toString().compareTo(b.toString()))) {
     concatenated
       ..writeln(uri)
       ..writeln(normalizedForHash[uri]);
@@ -392,7 +392,7 @@ Future<DocsExtraction> _fetchDocs(final List<String> urls) async {
   );
 }
 
-Future<RuntimeSurface> _fetchRuntime(final String sdkUrl) async {
+Future<RuntimeSurface> _fetchRuntime(String sdkUrl) async {
   final response = await _httpGet(Uri.parse(sdkUrl));
   if (response.statusCode != 200) {
     throw StateError(
@@ -440,9 +440,9 @@ Future<RuntimeSurface> _fetchRuntime(final String sdkUrl) async {
 }
 
 Future<DtsResult> _resolveDts({
-  required final DocsExtraction docs,
-  required final RuntimeSurface runtime,
-  required final UpstreamLock lock,
+  required DocsExtraction docs,
+  required RuntimeSurface runtime,
+  required UpstreamLock lock,
 }) async {
   final officialCandidates = <String>{
     if (lock.officialDtsUrl != null) lock.officialDtsUrl!,
@@ -482,8 +482,8 @@ Future<DtsResult> _resolveDts({
 }
 
 String _synthesizeDtsFromDocsAndRuntime({
-  required final DocsExtraction docs,
-  required final RuntimeSurface runtime,
+  required DocsExtraction docs,
+  required RuntimeSurface runtime,
 }) {
   final declaredMethods = <String, Set<String>>{
     'ad': <String>{
@@ -560,7 +560,7 @@ String _synthesizeDtsFromDocsAndRuntime({
     final ignored = ignoredRuntimeOnly[entry.key] ?? <String>{};
     final unknown = entry.value
         .where(
-          (final member) =>
+          (member) =>
               !ignored.contains(member.name) &&
               !declared.contains(member.name) &&
               !fromDocs.contains(member.name),
@@ -577,7 +577,7 @@ String _synthesizeDtsFromDocsAndRuntime({
     );
     for (final entry in runtimeOnly.entries) {
       stderr.writeln(
-        ' - ${entry.key}: ${entry.value.map((final m) => m.name).join(', ')}',
+        ' - ${entry.key}: ${entry.value.map((m) => m.name).join(', ')}',
       );
     }
   }
@@ -590,7 +590,7 @@ String _synthesizeDtsFromDocsAndRuntime({
     ..writeln('// SDK version: ${runtime.version}')
     ..writeln('// Docs URLs:')
     ..writeln(
-      '//  - ${docs.pages.keys.map((final u) => u.toString()).join('\n//  - ')}',
+      '//  - ${docs.pages.keys.map((u) => u.toString()).join('\n//  - ')}',
     )
     ..writeln()
     ..writeln('export type Environment = "crazygames" | "local" | "disabled";')
@@ -834,7 +834,7 @@ String _synthesizeDtsFromDocsAndRuntime({
   return _normalizeFileContent('$b');
 }
 
-String _runtimeExtrasTs(final List<RuntimeMember>? members) {
+String _runtimeExtrasTs(List<RuntimeMember>? members) {
   if (members == null || members.isEmpty) {
     return '';
   }
@@ -857,14 +857,14 @@ String _runtimeExtrasTs(final List<RuntimeMember>? members) {
   return _normalizeFileContent('$b');
 }
 
-String _tsPropertyKey(final String name) {
+String _tsPropertyKey(String name) {
   if (RegExp(r'^[A-Za-z_][A-Za-z0-9_]*$').hasMatch(name)) {
     return name;
   }
   return '"${name.replaceAll('"', r'\"')}"';
 }
 
-String? _extractFailModeModuleObject(final String source, final String module) {
+String? _extractFailModeModuleObject(String source, String module) {
   final token = 'get $module(){return{';
   final start = source.indexOf(token);
   if (start < 0) {
@@ -930,7 +930,7 @@ String? _extractFailModeModuleObject(final String source, final String module) {
   return null;
 }
 
-List<RuntimeMember> _parseTopLevelMembers(final String objectLiteral) {
+List<RuntimeMember> _parseTopLevelMembers(String objectLiteral) {
   final chunks = <String>[];
   final current = StringBuffer();
 
@@ -1063,7 +1063,7 @@ List<RuntimeMember> _parseTopLevelMembers(final String objectLiteral) {
   return members;
 }
 
-int _findTopLevelColon(final String input) {
+int _findTopLevelColon(String input) {
   var brace = 0;
   var bracket = 0;
   var paren = 0;
@@ -1144,7 +1144,7 @@ int _findTopLevelColon(final String input) {
   return -1;
 }
 
-List<String> _extractCodeBlocks(final String html) {
+List<String> _extractCodeBlocks(String html) {
   final blocks = <String>[];
   final pattern = RegExp(
     r'<div class="highlight"><pre>([\s\S]*?)</pre></div>',
@@ -1167,7 +1167,7 @@ List<String> _extractCodeBlocks(final String html) {
   return blocks;
 }
 
-String _decodeHtmlEntities(final String input) => input
+String _decodeHtmlEntities(String input) => input
     .replaceAll('&lt;', '<')
     .replaceAll('&gt;', '>')
     .replaceAll('&amp;', '&')
@@ -1175,11 +1175,11 @@ String _decodeHtmlEntities(final String input) => input
     .replaceAll('&#39;', "'")
     .replaceAll('&nbsp;', ' ');
 
-String _normalizeFileContent(final String content) {
+String _normalizeFileContent(String content) {
   var normalized = content.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
   normalized = normalized
       .split('\n')
-      .map((final line) => line.replaceFirst(RegExp(r'[ \t]+$'), ''))
+      .map((line) => line.replaceFirst(RegExp(r'[ \t]+$'), ''))
       .join('\n')
       .trimRight();
   return '$normalized\n';
@@ -1193,8 +1193,8 @@ final class _HttpTextResponse {
 }
 
 Future<_HttpTextResponse> _httpGet(
-  final Uri uri, {
-  final bool allow404 = false,
+  Uri uri, {
+  bool allow404 = false,
 }) async {
   final client = HttpClient();
   try {
@@ -1212,13 +1212,13 @@ Future<_HttpTextResponse> _httpGet(
   }
 }
 
-String emitRawCode(final Map<String, Object?> ir, final UpstreamLock lock) {
+String emitRawCode(Map<String, Object?> ir, UpstreamLock lock) {
   final declarations = (ir['declarations']! as List<dynamic>)
       .cast<Map<String, Object?>>();
   final globalDeclarations = (ir['globalDeclarations']! as List<dynamic>)
       .cast<Map<String, Object?>>();
   final knownTypes = declarations
-      .map((final d) => d['name']! as String)
+      .map((d) => d['name']! as String)
       .toSet();
 
   final b = StringBuffer()
@@ -1276,9 +1276,9 @@ String emitRawCode(final Map<String, Object?> ir, final UpstreamLock lock) {
 }
 
 void emitInterface(
-  final StringBuffer b,
-  final Map<String, Object?> declaration,
-  final Set<String> knownTypes,
+  StringBuffer b,
+  Map<String, Object?> declaration,
+  Set<String> knownTypes,
 ) {
   final name = declaration['name']! as String;
   final members = (declaration['members']! as List<dynamic>)
@@ -1295,10 +1295,10 @@ void emitInterface(
 }
 
 void emitMembers(
-  final StringBuffer b, {
-  required final Set<String> knownTypes,
-  required final List<Map<String, Object?>> members,
-  required final String indent,
+  StringBuffer b, {
+  required Set<String> knownTypes,
+  required List<Map<String, Object?>> members,
+  required String indent,
 }) {
   final signatures = <String>{};
 
@@ -1429,9 +1429,9 @@ void emitMembers(
 }
 
 void emitTypeAlias(
-  final StringBuffer b,
-  final Map<String, Object?> declaration,
-  final Set<String> knownTypes,
+  StringBuffer b,
+  Map<String, Object?> declaration,
+  Set<String> knownTypes,
 ) {
   final name = declaration['name']! as String;
   final rawName = '${name}Raw';
@@ -1482,7 +1482,7 @@ void emitTypeAlias(
   }
 }
 
-void emitEnum(final StringBuffer b, final Map<String, Object?> declaration) {
+void emitEnum(StringBuffer b, Map<String, Object?> declaration) {
   final name = declaration['name']! as String;
   final rawName = '${name}Raw';
   final valuesClass = '${rawName}Values';

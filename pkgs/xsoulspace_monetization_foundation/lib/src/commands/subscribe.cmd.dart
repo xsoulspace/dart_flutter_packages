@@ -53,7 +53,7 @@ class SubscribeCommand {
   ///
   /// The result will be sent to the stream.
   /// {@endtemplate}
-  Future<void> execute(final PurchaseProductDetailsModel details) async {
+  Future<void> execute(PurchaseProductDetailsModel details) async {
     if (subscriptionStatusResource.isSubscribed) return;
     final previousStatus = subscriptionStatusResource.status;
     subscriptionStatusResource.set(SubscriptionStatus.purchasing);

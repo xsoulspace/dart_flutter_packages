@@ -67,9 +67,9 @@ class ReviewFoundation {
   /// [locale] - Locale for localized consent dialogs
   /// [force] - If true, bypasses limits (for manual user-triggered reviews)
   Future<void> requestReview(
-    final BuildContext context, {
-    final Locale? locale,
-    final bool force = false,
+    BuildContext context, {
+    Locale? locale,
+    bool force = false,
   }) {
     logger.logReviewDebug(
       'Review requested via foundation',

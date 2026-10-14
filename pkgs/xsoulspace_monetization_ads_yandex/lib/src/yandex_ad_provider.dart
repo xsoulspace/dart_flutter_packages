@@ -22,7 +22,7 @@ class YandexAdProvider implements AdProvider {
   }
 
   @override
-  Future<void> showRewardedAd({required final String adUnitId}) async {
+  Future<void> showRewardedAd({required String adUnitId}) async {
     final completer = Completer<RewardedAd>();
     final loader = RewardedAdLoader();
     //TODO(arenukvern): fix implementation
@@ -37,19 +37,19 @@ class YandexAdProvider implements AdProvider {
     final ad = await completer.future;
     await ad.setAdEventListener(
       eventListener: RewardedAdEventListener(
-        onAdFailedToShow: (final error) => debugPrint(error.toString()),
+        onAdFailedToShow: (error) => debugPrint(error.toString()),
         onAdShown: () => debugPrint('ad shown'),
         onAdDismissed: () => debugPrint('ad dismissed'),
         onAdClicked: () => debugPrint('ad clicked'),
-        onAdImpression: (final data) => debugPrint(data.toString()),
-        onRewarded: (final reward) => debugPrint(reward.toString()),
+        onAdImpression: (data) => debugPrint(data.toString()),
+        onRewarded: (reward) => debugPrint(reward.toString()),
       ),
     );
     await ad.show();
   }
 
   @override
-  Future<void> showInterstitialAd({required final String adUnitId}) async {
+  Future<void> showInterstitialAd({required String adUnitId}) async {
     final completer = Completer<InterstitialAd>();
     final loader = InterstitialAdLoader();
     //TODO(arenukvern): fix implementation
@@ -64,11 +64,11 @@ class YandexAdProvider implements AdProvider {
     final ad = await completer.future;
     await ad.setAdEventListener(
       eventListener: InterstitialAdEventListener(
-        onAdFailedToShow: (final error) => debugPrint(error.toString()),
+        onAdFailedToShow: (error) => debugPrint(error.toString()),
         onAdShown: () => debugPrint('ad shown'),
         onAdDismissed: () => debugPrint('ad dismissed'),
         onAdClicked: () => debugPrint('ad clicked'),
-        onAdImpression: (final data) => debugPrint(data.toString()),
+        onAdImpression: (data) => debugPrint(data.toString()),
       ),
     );
     await ad.show();
@@ -76,8 +76,8 @@ class YandexAdProvider implements AdProvider {
 
   @override
   Widget buildBannerAd({
-    required final String adUnitId,
-    required final Object adSize,
+    required String adUnitId,
+    required Object adSize,
   }) {
     if (adSize is! BannerAdSize) {
       throw ArgumentError(

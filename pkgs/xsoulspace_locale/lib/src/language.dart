@@ -21,7 +21,7 @@ class Locales {
   /// Converts a [UiLanguage] to its corresponding [Locale].
   ///
   /// @ai Use this to convert between language and locale representations.
-  static Locale byLanguage(final UiLanguage language) => Locale(language.code);
+  static Locale byLanguage(UiLanguage language) => Locale(language.code);
 }
 
 /// Keyboard language representation for input methods.
@@ -37,13 +37,13 @@ class KeyboardLanguage extends Equatable {
   const KeyboardLanguage._(this.code);
 
   /// Creates keyboard language from UiLanguage.
-  factory KeyboardLanguage.fromLanguage(final UiLanguage? language) =>
+  factory KeyboardLanguage.fromLanguage(UiLanguage? language) =>
       language != null
       ? KeyboardLanguage.of(language.code)
       : KeyboardLanguage.defaultKeyboardLanguage();
 
   /// Creates or retrieves cached keyboard language by code.
-  factory KeyboardLanguage.of(final String code) =>
+  factory KeyboardLanguage.of(String code) =>
       _values.putIfAbsent(code, () => KeyboardLanguage._(code));
 
   /// Default keyboard language from fallback configuration.
@@ -74,14 +74,14 @@ class KeyboardLanguage extends Equatable {
 /// Extracts language code from language string.
 ///
 /// @ai Handles format like 'en_US' -> 'en'.
-String getLanguageCodeByStr(final String language) => language.split('_').first;
+String getLanguageCodeByStr(String language) => language.split('_').first;
 
 /// Maps supported languages to their named locale representations.
 ///
 /// @ai Use for language selection UI components.
 Map<UiLanguage, NamedLocale> get namedLocalesMap => Map.fromEntries(
   LocalizationConfig.instance.supportedLanguages.map(
-    (final lang) => MapEntry(
+    (lang) => MapEntry(
       lang,
       NamedLocale(name: lang.name, locale: Locales.byLanguage(lang)),
     ),
@@ -113,21 +113,21 @@ class UiLanguage extends Equatable {
       LocalizationConfig.instance.supportedLanguages;
 
   /// Finds language by code, returns null if not found.
-  static UiLanguage? byCode(final String languageCode) => LocalizationConfig
+  static UiLanguage? byCode(String languageCode) => LocalizationConfig
       .instance
       .supportedLanguages
-      .firstWhereOrNull((final lang) => lang.code == languageCode);
+      .firstWhereOrNull((lang) => lang.code == languageCode);
 
   /// Finds language by code with fallback to default.
   ///
   /// @ai Use this when you need a guaranteed valid language.
-  static UiLanguage byCodeWithFallback(final String languageCode) =>
+  static UiLanguage byCodeWithFallback(String languageCode) =>
       byCode(languageCode) ?? LocalizationConfig.instance.fallbackLanguage;
 
   /// Converts Flutter locale to UiLanguage with fallback.
   ///
   /// @ai Use this to convert from Flutter's Locale to package's UiLanguage.
-  static UiLanguage byLocale(final Locale locale) =>
+  static UiLanguage byLocale(Locale locale) =>
       byCodeWithFallback(locale.languageCode);
 
   /// Converts this language to Flutter locale.

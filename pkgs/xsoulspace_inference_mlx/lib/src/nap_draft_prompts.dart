@@ -46,7 +46,7 @@ final class NapDraftPrompts {
       '$material';
 
   /// Whether [text] is a faithful refusal (the exact token, trimmed).
-  static bool isRefusal(final String text) => text.trim() == refusalToken;
+  static bool isRefusal(String text) => text.trim() == refusalToken;
 
   /// Annotation prompt (topic derivation + clause-kind refinement over the
   /// mechanical segmentation). v1 ships the contract and the fake-server

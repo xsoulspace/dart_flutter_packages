@@ -45,7 +45,7 @@ class MonetizationTestEnv {
   // ---------- Configuration (Given) helpers ----------
 
   /// Configure provider to return subscribe success.
-  void givenSubscribeSuccess({final PurchaseDetailsModel? details}) {
+  void givenSubscribeSuccess({PurchaseDetailsModel? details}) {
     provider = FakeProvider(
       subscribeResult: PurchaseResultModel.success(
         details ?? aPurchase(pendingConfirmation: true),
@@ -55,8 +55,8 @@ class MonetizationTestEnv {
 
   /// Configure provider to return subscribe failure.
   void givenSubscribeFailure({
-    final String error = 'err',
-    final PurchaseDetailsModel? details,
+    String error = 'err',
+    PurchaseDetailsModel? details,
   }) {
     provider = FakeProvider(
       subscribeResult: PurchaseResultModel(
@@ -75,20 +75,20 @@ class MonetizationTestEnv {
   }
 
   /// Configure provider to return complete failure with [error].
-  void givenCompleteFailure([final String error = 'err']) {
+  void givenCompleteFailure([String error = 'err']) {
     provider = FakeProvider(
       completeResult: CompletePurchaseResultModel.failure(error),
     );
   }
 
   /// Configure provider to return restore failure with [error].
-  void givenRestoreFailure([final String error = 'err']) {
+  void givenRestoreFailure([String error = 'err']) {
     provider = FakeProvider(restoreResult: RestoreResultModel.failure(error));
   }
 
   /// Configure provider to return restore success with [purchases].
   void givenRestoreSuccess([
-    final List<PurchaseDetailsModel> purchases = const [],
+    List<PurchaseDetailsModel> purchases = const [],
   ]) {
     provider = FakeProvider(
       restoreResult: RestoreResultModel.success(purchases),
@@ -96,18 +96,18 @@ class MonetizationTestEnv {
   }
 
   /// Configure provider with available [products].
-  void withSubscriptions(final List<PurchaseProductDetailsModel> products) {
+  void withSubscriptions(List<PurchaseProductDetailsModel> products) {
     provider = FakeProvider(subscriptions: products);
   }
 
   /// Configure local API to return [subscription] for getActiveSubscription.
   Future<void> givenLocalActiveSubscription(
-    final PurchaseDetailsModel subscription,
+    PurchaseDetailsModel subscription,
   ) async {
     await localDb.setItem(
       key: PurchasesLocalApi.activeSubscriptionKey,
       value: subscription,
-      toJson: (final value) => value.toJson(),
+      toJson: (value) => value.toJson(),
     );
   }
 
@@ -153,7 +153,7 @@ class MonetizationTestEnv {
   );
 
   LoadSubscriptionsCommand makeLoadSubscriptionsCommand({
-    required final List<PurchaseProductId> productIds,
+    required List<PurchaseProductId> productIds,
   }) => LoadSubscriptionsCommand(
     purchaseProvider: provider,
     monetizationStatusResource: monetizationStatus,

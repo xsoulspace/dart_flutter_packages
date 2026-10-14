@@ -24,8 +24,8 @@ class PaywallSelectedSubscriptionResource extends ChangeNotifier {
       selectedProductId.isNotEmpty && selectedProductDetails != null;
 
   void setSelectedProductId({
-    required final PurchaseProductId selectedProductId,
-    required final PurchaseProductDetailsModel selectedProductDetails,
+    required PurchaseProductId selectedProductId,
+    required PurchaseProductDetailsModel selectedProductDetails,
   }) {
     _selectedProductId = selectedProductId;
     _selectedProductDetails = selectedProductDetails;

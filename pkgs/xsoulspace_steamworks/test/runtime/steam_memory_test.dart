@@ -44,31 +44,31 @@ final class _CountingAllocator implements SteamMemoryAllocator {
   int frees = 0;
 
   @override
-  Pointer<Uint8> allocateUint8(final int elementCount) {
+  Pointer<Uint8> allocateUint8(int elementCount) {
     allocations++;
     return calloc<Uint8>(elementCount);
   }
 
   @override
-  Pointer<Int8> allocateInt8(final int elementCount) {
+  Pointer<Int8> allocateInt8(int elementCount) {
     allocations++;
     return calloc<Int8>(elementCount);
   }
 
   @override
-  Pointer<Int32> allocateInt32(final int elementCount) {
+  Pointer<Int32> allocateInt32(int elementCount) {
     allocations++;
     return calloc<Int32>(elementCount);
   }
 
   @override
-  Pointer<Float> allocateFloat(final int elementCount) {
+  Pointer<Float> allocateFloat(int elementCount) {
     allocations++;
     return calloc<Float>(elementCount);
   }
 
   @override
-  void free(final Pointer<NativeType> pointer) {
+  void free(Pointer<NativeType> pointer) {
     frees++;
     calloc.free(pointer);
   }

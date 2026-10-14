@@ -371,7 +371,7 @@ class AcpInferenceClient
 
   @override
   Future<InferenceResult<InferenceResponse>> infer(
-    final InferenceRequest request, {
+    InferenceRequest request, {
     ToolRegistry? toolRegistry,
   }) async {
     final epoch = _cancelEpoch;
@@ -467,7 +467,7 @@ class AcpInferenceClient
 
   @override
   Future<InferenceStructuredTextStreamSession> streamStructuredText(
-    final InferenceRequest request,
+    InferenceRequest request,
   ) async {
     final cwd = request.workingDirectory.isEmpty
         ? (workingDirectory ?? '.')
@@ -503,7 +503,7 @@ class AcpInferenceClient
     return _disposeClient();
   }
 
-  void _setAvailability(final bool value) {
+  void _setAvailability(bool value) {
     _cachedAvailability = value;
     _availabilityCheckedAt = DateTime.now();
   }
@@ -612,12 +612,12 @@ final class _AcpStreamSession implements InferenceStructuredTextStreamSession {
   @override
   Future<InferenceResult<InferenceResponse>> get result => _completer.future;
 
-  void start(final List<AcpContentBlock> prompt) {
+  void start(List<AcpContentBlock> prompt) {
     _run(prompt).ignore();
   }
 
-  Future<void> _run(final List<AcpContentBlock> prompt) async {
-    void emit(final InferenceStructuredTextStreamEvent event) {
+  Future<void> _run(List<AcpContentBlock> prompt) async {
+    void emit(InferenceStructuredTextStreamEvent event) {
       if (!_events.isClosed) _events.add(event);
     }
 

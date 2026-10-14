@@ -19,15 +19,15 @@ import 'support_localization.dart';
 extension type const SupportConfig._(Map<String, dynamic> value) {
   /// {@macro support_config}
   factory SupportConfig({
-    required final String supportEmail,
-    required final String appName,
-    final String emailSubjectPrefix = 'Support Request',
-    final String? emailTemplate,
-    final bool includeDeviceInfo = true,
-    final bool includeAppInfo = true,
-    final Map<String, String>? additionalContext,
-    final Map<String, LocalizedMap>? localization,
-    final Logger? logger,
+    required String supportEmail,
+    required String appName,
+    String emailSubjectPrefix = 'Support Request',
+    String? emailTemplate,
+    bool includeDeviceInfo = true,
+    bool includeAppInfo = true,
+    Map<String, String>? additionalContext,
+    Map<String, LocalizedMap>? localization,
+    Logger? logger,
   }) => SupportConfig._({
     'support_email': supportEmail,
     'app_name': appName,
@@ -37,7 +37,7 @@ extension type const SupportConfig._(Map<String, dynamic> value) {
     'include_app_info': includeAppInfo,
     'additional_context': additionalContext,
     'localization': localization?.map(
-      (final key, final value) => MapEntry(key, value.toJson()),
+      (key, value) => MapEntry(key, value.toJson()),
     ),
     'logger': logger,
   });
@@ -48,7 +48,7 @@ extension type const SupportConfig._(Map<String, dynamic> value) {
   /// Defines email templates, support contact information,
   /// and customization options.
   /// {@endtemplate}
-  factory SupportConfig.fromJson(final dynamic json) =>
+  factory SupportConfig.fromJson(dynamic json) =>
       SupportConfig._(jsonDecodeMap(json));
 
   /// The support email address
@@ -78,7 +78,7 @@ extension type const SupportConfig._(Map<String, dynamic> value) {
   Map<String, LocalizedMap> get customLocalization {
     final locData = jsonDecodeMapAs<String, dynamic>(value['localization']);
     return locData.map(
-      (final key, final value) => MapEntry(key, LocalizedMap.fromJson(value)),
+      (key, value) => MapEntry(key, LocalizedMap.fromJson(value)),
     );
   }
 
@@ -91,9 +91,9 @@ extension type const SupportConfig._(Map<String, dynamic> value) {
   /// If the language is not available, falls back to the default language.
   /// If the key is not found, returns the fallback string.
   String getLocalizedString(
-    final String key,
-    final UiLanguage language,
-    final String fallback,
+    String key,
+    UiLanguage language,
+    String fallback,
   ) {
     // Try custom localization first
     final customLoc = customLocalization;

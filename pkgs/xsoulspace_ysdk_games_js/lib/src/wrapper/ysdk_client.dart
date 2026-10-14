@@ -27,8 +27,8 @@ class YsdkClient {
   YsdkEnvironment get environment => YsdkEnvironment(prop(_sdk, 'environment'));
 
   Future<void> dispatchEvent(
-    final SdkEventName eventName, {
-    final Map<String, Object?>? detail,
+    SdkEventName eventName, {
+    Map<String, Object?>? detail,
   }) async {
     await jsCallPromise(_sdk, 'dispatchEvent', <Object?>[
       eventName.value,
@@ -37,13 +37,13 @@ class YsdkClient {
   }
 
   Future<Map<String, String>> getFlags({
-    final List<ClientFeatureModel>? clientFeatures,
-    final Map<String, String>? defaultFlags,
+    List<ClientFeatureModel>? clientFeatures,
+    Map<String, String>? defaultFlags,
   }) async {
     final params = <String, Object?>{};
     if (clientFeatures != null) {
       params['clientFeatures'] = clientFeatures
-          .map((final item) => item.toJson())
+          .map((item) => item.toJson())
           .toList();
     }
     if (defaultFlags != null) {
@@ -57,7 +57,7 @@ class YsdkClient {
     );
 
     final map = asMap(result);
-    return map.map((final key, final value) => MapEntry(key, asString(value)));
+    return map.map((key, value) => MapEntry(key, asString(value)));
   }
 
   Future<YsdkLegacyLeaderboardsClient> getLegacyLeaderboards() async {
@@ -95,7 +95,7 @@ class YsdkClient {
 
   Future<Object?> getStorage() => jsCallPromise(_sdk, 'getStorage');
 
-  Future<bool> isAvailableMethod(final String methodName) async {
+  Future<bool> isAvailableMethod(String methodName) async {
     final result = await jsCallPromise(_sdk, 'isAvailableMethod', <Object?>[
       methodName,
     ]);
@@ -142,20 +142,20 @@ class YsdkAdvClient {
     );
   }
 
-  void showFullscreenAdv({final FullscreenAdvCallbacks? callbacks}) {
+  void showFullscreenAdv({FullscreenAdvCallbacks? callbacks}) {
     final jsCallbacks = <String, Object?>{
       if (callbacks?.onOpen != null)
         'onOpen': allowInterop(() => callbacks!.onOpen!.call()),
       if (callbacks?.onClose != null)
         'onClose': allowInterop(
-          (final Object? wasShown) =>
+          (Object? wasShown) =>
               callbacks!.onClose!.call(asBool(wasShown)),
         ),
       if (callbacks?.onOffline != null)
         'onOffline': allowInterop(() => callbacks!.onOffline!.call()),
       if (callbacks?.onError != null)
         'onError': allowInterop(
-          (final Object? error) => callbacks!.onError!.call(error),
+          (Object? error) => callbacks!.onError!.call(error),
         ),
     };
 
@@ -169,7 +169,7 @@ class YsdkAdvClient {
     ]);
   }
 
-  void showRewardedVideo({final RewardedVideoCallbacks? callbacks}) {
+  void showRewardedVideo({RewardedVideoCallbacks? callbacks}) {
     final jsCallbacks = <String, Object?>{
       if (callbacks?.onOpen != null)
         'onOpen': allowInterop(() => callbacks!.onOpen!.call()),
@@ -179,7 +179,7 @@ class YsdkAdvClient {
         'onRewarded': allowInterop(() => callbacks!.onRewarded!.call()),
       if (callbacks?.onError != null)
         'onError': allowInterop(
-          (final Object? error) => callbacks!.onError!.call(error),
+          (Object? error) => callbacks!.onError!.call(error),
         ),
     };
 
@@ -209,7 +209,7 @@ class YsdkClipboardClient {
 
   final Object? _module;
 
-  void writeText(final String text) {
+  void writeText(String text) {
     jsCall(_module, 'writeText', <Object?>[text]);
   }
 }
@@ -253,7 +253,7 @@ class YsdkGamesFeature {
     );
   }
 
-  Future<GameByIdResult> getGameById(final int id) async {
+  Future<GameByIdResult> getGameById(int id) async {
     final map = asMap(
       await jsCallPromise(_module, 'getGameByID', <Object?>[id]),
     );
@@ -300,7 +300,7 @@ class YsdkLeaderboardsClient {
   final Object? _module;
 
   Future<LeaderboardDescriptionModel> getDescription(
-    final String leaderboardName,
+    String leaderboardName,
   ) async {
     final map = asMap(
       await jsCallPromise(_module, 'getDescription', <Object?>[
@@ -311,10 +311,10 @@ class YsdkLeaderboardsClient {
   }
 
   Future<LeaderboardEntriesDataModel> getEntries(
-    final String leaderboardName, {
-    final bool? includeUser,
-    final int? quantityAround,
-    final int? quantityTop,
+    String leaderboardName, {
+    bool? includeUser,
+    int? quantityAround,
+    int? quantityTop,
   }) async {
     final opts = <String, Object?>{};
     if (includeUser != null) {
@@ -337,7 +337,7 @@ class YsdkLeaderboardsClient {
   }
 
   Future<LeaderboardEntryModel> getPlayerEntry(
-    final String leaderboardName,
+    String leaderboardName,
   ) async {
     final map = asMap(
       await jsCallPromise(_module, 'getPlayerEntry', <Object?>[
@@ -348,9 +348,9 @@ class YsdkLeaderboardsClient {
   }
 
   Future<void> setScore(
-    final String leaderboardName,
-    final int score, {
-    final String? extraData,
+    String leaderboardName,
+    int score, {
+    String? extraData,
   }) async {
     await jsCallPromise(_module, 'setScore', <Object?>[
       leaderboardName,
@@ -366,7 +366,7 @@ class YsdkLegacyLeaderboardsClient {
   final Object? _module;
 
   Future<LeaderboardDescriptionModel> getLeaderboardDescription(
-    final String leaderboardName,
+    String leaderboardName,
   ) async {
     final map = asMap(
       await jsCallPromise(_module, 'getLeaderboardDescription', <Object?>[
@@ -377,7 +377,7 @@ class YsdkLegacyLeaderboardsClient {
   }
 
   Future<LeaderboardEntriesDataModel> getLeaderboardEntries(
-    final String leaderboardName,
+    String leaderboardName,
   ) async {
     final map = asMap(
       await jsCallPromise(_module, 'getLeaderboardEntries', <Object?>[
@@ -388,7 +388,7 @@ class YsdkLegacyLeaderboardsClient {
   }
 
   Future<LeaderboardEntryModel> getLeaderboardPlayerEntry(
-    final String leaderboardName,
+    String leaderboardName,
   ) async {
     final map = asMap(
       await jsCallPromise(_module, 'getLeaderboardPlayerEntry', <Object?>[
@@ -399,9 +399,9 @@ class YsdkLegacyLeaderboardsClient {
   }
 
   Future<void> setLeaderboardScore(
-    final String leaderboardName,
-    final int score, {
-    final String? extraData,
+    String leaderboardName,
+    int score, {
+    String? extraData,
   }) async {
     await jsCallPromise(_module, 'setLeaderboardScore', <Object?>[
       leaderboardName,
@@ -417,7 +417,7 @@ class YsdkPaymentsClient {
   final Object? _module;
   final bool signed;
 
-  Future<void> consumePurchase(final String token) async {
+  Future<void> consumePurchase(String token) async {
     await jsCallPromise(_module, 'consumePurchase', <Object?>[token]);
   }
 
@@ -437,8 +437,8 @@ class YsdkPaymentsClient {
   }
 
   Future<PurchaseModel> purchaseUnsigned({
-    required final String id,
-    final String? developerPayload,
+    required String id,
+    String? developerPayload,
   }) async {
     final result = await jsCallPromise(_module, 'purchase', <Object?>[
       jsify(<String, Object?>{'id': id, 'developerPayload': ?developerPayload}),
@@ -447,8 +447,8 @@ class YsdkPaymentsClient {
   }
 
   Future<SignatureModel> purchaseSigned({
-    required final String id,
-    final String? developerPayload,
+    required String id,
+    String? developerPayload,
   }) async {
     final result = await jsCallPromise(_module, 'purchase', <Object?>[
       jsify(<String, Object?>{'id': id, 'developerPayload': ?developerPayload}),
@@ -514,12 +514,12 @@ class YsdkMultiplayerSessionsClient {
 
   final Object? _module;
 
-  void commit(final MultiplayerCommitPayloadModel payload) {
+  void commit(MultiplayerCommitPayloadModel payload) {
     jsCall(_module, 'commit', <Object?>[jsify(payload.toJson())]);
   }
 
   Future<List<MultiplayerSessionOpponentModel>> init({
-    final MultiplayerInitOptionsModel? options,
+    MultiplayerInitOptionsModel? options,
   }) async {
     final list = asList(
       await jsCallPromise(
@@ -532,10 +532,10 @@ class YsdkMultiplayerSessionsClient {
     );
 
     return list
-        .map((final item) {
+        .map((item) {
           final map = asMap(item);
           final tx = asList(map['transactions'])
-              .map((final txItem) {
+              .map((txItem) {
                 final txMap = asMap(txItem);
                 return MultiplayerCommitPayloadModel(
                   data: asMap(txMap['data']),
@@ -559,7 +559,7 @@ class YsdkMultiplayerSessionsClient {
   }
 
   Future<CallbackBaseMessageDataModel> push(
-    final MultiplayerMetaModel meta,
+    MultiplayerMetaModel meta,
   ) async {
     final map = asMap(
       await jsCallPromise(_module, 'push', <Object?>[jsify(meta.toJson())]),
@@ -579,7 +579,7 @@ class YsdkPlayer {
 
   final Object? _raw;
 
-  Future<Map<String, Object?>> getData([final List<String>? keys]) async {
+  Future<Map<String, Object?>> getData([List<String>? keys]) async {
     final result = await jsCallPromise(
       _raw,
       'getData',
@@ -600,10 +600,10 @@ class YsdkPlayer {
   String getPayingStatus() =>
       asString(jsCall(_raw, 'getPayingStatus', const <Object?>[]));
 
-  String getPhoto(final String size) =>
+  String getPhoto(String size) =>
       asString(jsCall(_raw, 'getPhoto', <Object?>[size]));
 
-  Future<Map<String, Object?>> getStats([final List<String>? keys]) async {
+  Future<Map<String, Object?>> getStats([List<String>? keys]) async {
     final result = await jsCallPromise(
       _raw,
       'getStats',
@@ -616,7 +616,7 @@ class YsdkPlayer {
       asString(jsCall(_raw, 'getUniqueID', const <Object?>[]));
 
   Future<Map<String, Object?>> incrementStats(
-    final Map<String, num> stats,
+    Map<String, num> stats,
   ) async {
     final result = await jsCallPromise(_raw, 'incrementStats', <Object?>[
       jsify(stats),
@@ -627,11 +627,11 @@ class YsdkPlayer {
   bool isAuthorized() =>
       asBool(jsCall(_raw, 'isAuthorized', const <Object?>[]));
 
-  Future<void> setData(final Object? data, {final bool flush = false}) async {
+  Future<void> setData(Object? data, {bool flush = false}) async {
     await jsCallPromise(_raw, 'setData', <Object?>[data, flush]);
   }
 
-  Future<void> setStats(final Map<String, num> stats) async {
+  Future<void> setStats(Map<String, num> stats) async {
     await jsCallPromise(_raw, 'setStats', <Object?>[jsify(stats)]);
   }
 }
@@ -670,7 +670,7 @@ class YsdkEnvironment {
 }
 
 LeaderboardDescriptionModel _parseLeaderboardDescription(
-  final Map<String, Object?> map,
+  Map<String, Object?> map,
 ) {
   final descriptionMap = asMap(map['description']);
   final scoreFormatMap = asMap(descriptionMap['score_format']);
@@ -685,12 +685,12 @@ LeaderboardDescriptionModel _parseLeaderboardDescription(
     decimalOffset: asInt(optionsMap['decimal_offset']),
     title: asMap(
       map['title'],
-    ).map((final key, final value) => MapEntry(key, asString(value))),
+    ).map((key, value) => MapEntry(key, asString(value))),
   );
 }
 
 LeaderboardEntriesDataModel _parseLeaderboardEntriesData(
-  final Map<String, Object?> map,
+  Map<String, Object?> map,
 ) {
   final entries = asList(
     map['entries'],
@@ -703,7 +703,7 @@ LeaderboardEntriesDataModel _parseLeaderboardEntriesData(
   );
 }
 
-LeaderboardEntryModel _parseLeaderboardEntry(final Map<String, Object?> map) {
+LeaderboardEntryModel _parseLeaderboardEntry(Map<String, Object?> map) {
   final playerMap = asMap(map['player']);
   final permissionsMap = asMap(playerMap['scopePermissions']);
 
@@ -715,7 +715,7 @@ LeaderboardEntryModel _parseLeaderboardEntry(final Map<String, Object?> map) {
       publicName: asString(playerMap['publicName']),
       uniqueId: asString(playerMap['uniqueID']),
       scopePermissions: permissionsMap.map(
-        (final key, final value) => MapEntry(key, asString(value)),
+        (key, value) => MapEntry(key, asString(value)),
       ),
     ),
     rank: asInt(map['rank']),

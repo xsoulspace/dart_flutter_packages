@@ -50,7 +50,7 @@ final class DiscordPlatformFactory implements PlatformAdapterFactory {
       config: config,
       initClient:
           initClient ??
-          ({required final clientId, required final expectedGlobal}) {
+          ({required clientId, required expectedGlobal}) {
             return Discord.init(
               clientId: clientId,
               expectedGlobal: expectedGlobal,

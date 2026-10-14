@@ -66,7 +66,7 @@ final class _FakeBaseClient implements PlatformClient {
   Future<void> dispose() async {}
 
   @override
-  Future<PlatformInitResult> init(final PlatformInitOptions options) async {
+  Future<PlatformInitResult> init(PlatformInitOptions options) async {
     return PlatformInitResult.success();
   }
 
@@ -92,15 +92,15 @@ final class _FakeAdProvider implements AdProvider {
   Future<void> init() async {}
 
   @override
-  Future<void> showRewardedAd({required final String adUnitId}) async {}
+  Future<void> showRewardedAd({required String adUnitId}) async {}
 
   @override
-  Future<void> showInterstitialAd({required final String adUnitId}) async {}
+  Future<void> showInterstitialAd({required String adUnitId}) async {}
 
   @override
   Widget buildBannerAd({
-    required final String adUnitId,
-    required final Object adSize,
+    required String adUnitId,
+    required Object adSize,
   }) {
     return const SizedBox.shrink();
   }

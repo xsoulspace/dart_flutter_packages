@@ -55,12 +55,12 @@ final class MissingPlatformCapabilityException extends PlatformException {
   final MissingCapabilityBehavior behavior;
 
   static String _buildMessage({
-    required final Type capabilityType,
-    required final Set<Type> supportedCapabilities,
-    required final MissingCapabilityBehavior behavior,
-    required final PlatformId? platformId,
+    required Type capabilityType,
+    required Set<Type> supportedCapabilities,
+    required MissingCapabilityBehavior behavior,
+    required PlatformId? platformId,
   }) {
-    final sorted = supportedCapabilities.map((final e) => e.toString()).toList()
+    final sorted = supportedCapabilities.map((e) => e.toString()).toList()
       ..sort();
     final platformText = platformId == null ? 'unknown' : platformId.name;
     return 'Capability $capabilityType is not supported on $platformText. '

@@ -69,7 +69,7 @@ final class _VkPlaySdkStub {
 
   void install() {
     final api = jsify(<String, Object?>{
-      'init': allowInterop((final Object? payload) {
+      'init': allowInterop((Object? payload) {
         initCalls += 1;
         if (payload != null) {
           lastInitPayload = Map<String, Object?>.from(dartify(payload)! as Map);
@@ -92,7 +92,7 @@ final class _VkPlaySdkStub {
           'avatarUrl': 'https://example.com/u1.png',
         });
       }),
-      'userFriends': allowInterop((final Object? payload) {
+      'userFriends': allowInterop((Object? payload) {
         final params = payload == null
             ? <String, Object?>{}
             : Map<String, Object?>.from(dartify(payload)! as Map);
@@ -109,18 +109,18 @@ final class _VkPlaySdkStub {
         final slice = all.sublist(offset.clamp(0, all.length), end);
         return jsify(slice);
       }),
-      'userSocialFriends': allowInterop((final Object? payload) {
+      'userSocialFriends': allowInterop((Object? payload) {
         return jsify(<Map<String, Object?>>[
           <String, Object?>{'id': 'sf-1', 'name': 'Social Friend 1'},
         ]);
       }),
-      'showInviteBox': allowInterop((final Object? payload) {
+      'showInviteBox': allowInterop((Object? payload) {
         return jsify(<String, Object?>{'sent': true});
       }),
-      'postToFeed': allowInterop((final Object? payload) {
+      'postToFeed': allowInterop((Object? payload) {
         return jsify(<String, Object?>{'shared': true});
       }),
-      'customMethod': allowInterop((final Object? payload) {
+      'customMethod': allowInterop((Object? payload) {
         final params = Map<String, Object?>.from(dartify(payload)! as Map);
         return (params['value']! as int) + 1;
       }),

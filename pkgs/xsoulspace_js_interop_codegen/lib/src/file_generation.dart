@@ -10,10 +10,10 @@ final class GenerationEdits {
 }
 
 void checkOrWriteGeneratedFile({
-  required final String path,
-  required final String content,
-  required final bool checkOnly,
-  required final GenerationEdits edits,
+  required String path,
+  required String content,
+  required bool checkOnly,
+  required GenerationEdits edits,
 }) {
   final file = File(path);
   if (checkOnly) {

@@ -9,7 +9,7 @@ export 'models.dart';
 /// Wrapper entrypoint for CrazyGames HTML5 SDK.
 abstract final class CrazyGames {
   static Future<CrazyGamesClient> init({
-    final String expectedGlobal = 'CrazyGames',
+    String expectedGlobal = 'CrazyGames',
   }) async {
     final sdk = _resolveSdk(expectedGlobal: expectedGlobal);
     if (sdk == null) {
@@ -21,10 +21,10 @@ abstract final class CrazyGames {
     return CrazyGamesClient(sdk);
   }
 
-  static bool isAvailable({final String expectedGlobal = 'CrazyGames'}) =>
+  static bool isAvailable({String expectedGlobal = 'CrazyGames'}) =>
       _resolveSdk(expectedGlobal: expectedGlobal) != null;
 
-  static Object? _resolveSdk({required final String expectedGlobal}) {
+  static Object? _resolveSdk({required String expectedGlobal}) {
     if (!hasGlobalProperty(expectedGlobal)) {
       return null;
     }

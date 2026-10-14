@@ -15,7 +15,7 @@ final class InferenceAudioStreamPump {
 
   Future<void> start() async {
     await stop();
-    _subscription = audioStream.listen((final chunk) {
+    _subscription = audioStream.listen((chunk) {
       unawaited(audioSink.sendAudioChunk(chunk));
     });
   }

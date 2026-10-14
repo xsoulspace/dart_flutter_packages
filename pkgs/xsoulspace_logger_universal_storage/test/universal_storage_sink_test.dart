@@ -28,7 +28,7 @@ void main() {
 
       final lines = append!
           .split('\n')
-          .where((final line) => line.trim().isNotEmpty)
+          .where((line) => line.trim().isNotEmpty)
           .toList(growable: false);
       expect(lines.length, 2);
 
@@ -145,8 +145,8 @@ void main() {
         final append = provider.files['logger/runtime/append.ndjson']!;
         final persisted = append
             .split('\n')
-            .where((final line) => line.trim().isNotEmpty)
-            .map((final line) => jsonDecode(line) as Map<String, dynamic>)
+            .where((line) => line.trim().isNotEmpty)
+            .map((line) => jsonDecode(line) as Map<String, dynamic>)
             .toList(growable: false);
         expect(persisted.last['sequence'], 4);
         expect(persisted.last['message'], 'four');
@@ -162,29 +162,29 @@ final class _MemoryStorageProvider implements StorageProvider {
   bool get supportsSync => false;
 
   @override
-  Future<void> initWithConfig(final StorageConfig config) async {}
+  Future<void> initWithConfig(StorageConfig config) async {}
 
   @override
   Future<bool> isAuthenticated() async => true;
 
   @override
   Future<FileOperationResult> createFile(
-    final String path,
-    final String content, {
-    final String? commitMessage,
+    String path,
+    String content, {
+    String? commitMessage,
   }) async {
     files[path] = content;
     return FileOperationResult.created(path: path);
   }
 
   @override
-  Future<String?> getFile(final String path) async => files[path];
+  Future<String?> getFile(String path) async => files[path];
 
   @override
   Future<FileOperationResult> updateFile(
-    final String path,
-    final String content, {
-    final String? commitMessage,
+    String path,
+    String content, {
+    String? commitMessage,
   }) async {
     files[path] = content;
     return FileOperationResult.updated(path: path);
@@ -192,23 +192,23 @@ final class _MemoryStorageProvider implements StorageProvider {
 
   @override
   Future<FileOperationResult> deleteFile(
-    final String path, {
-    final String? commitMessage,
+    String path, {
+    String? commitMessage,
   }) async {
     files.remove(path);
     return FileOperationResult.deleted(path: path);
   }
 
   @override
-  Future<List<FileEntry>> listDirectory(final String directoryPath) async {
+  Future<List<FileEntry>> listDirectory(String directoryPath) async {
     final prefix = directoryPath.endsWith('/')
         ? directoryPath
         : '$directoryPath/';
 
     return files.keys
-        .where((final path) => path.startsWith(prefix))
+        .where((path) => path.startsWith(prefix))
         .map(
-          (final path) => FileEntry(
+          (path) => FileEntry(
             name: path.substring(prefix.length),
             isDirectory: false,
             size: files[path]!.length,
@@ -218,12 +218,12 @@ final class _MemoryStorageProvider implements StorageProvider {
   }
 
   @override
-  Future<void> restore(final String path, {final String? versionId}) async {}
+  Future<void> restore(String path, {String? versionId}) async {}
 
   @override
   Future<void> sync({
-    final String? pullMergeStrategy,
-    final String? pushConflictStrategy,
+    String? pullMergeStrategy,
+    String? pushConflictStrategy,
   }) async {}
 
   @override

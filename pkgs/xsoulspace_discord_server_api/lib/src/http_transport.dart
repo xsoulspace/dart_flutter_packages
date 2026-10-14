@@ -4,14 +4,14 @@ import 'discord_transport.dart';
 import 'models.dart';
 
 final class HttpDiscordTransport implements DiscordTransport {
-  HttpDiscordTransport({final http.Client? client})
+  HttpDiscordTransport({http.Client? client})
     : _client = client ?? http.Client();
 
   final http.Client _client;
 
   @override
   Future<DiscordTransportResponse> send(
-    final DiscordTransportRequest request,
+    DiscordTransportRequest request,
   ) async {
     final uri = request.query.isEmpty
         ? request.uri

@@ -62,13 +62,13 @@ final class VoskRawAudioInput {
   });
 
   const VoskRawAudioInput.wav({
-    required final Uint8List bytes,
-    required final int sampleRateHz,
+    required Uint8List bytes,
+    required int sampleRateHz,
   }) : this._(bytes: bytes, sampleRateHz: sampleRateHz, isWavContainer: true);
 
   const VoskRawAudioInput.pcm16le({
-    required final Uint8List bytes,
-    required final int sampleRateHz,
+    required Uint8List bytes,
+    required int sampleRateHz,
   }) : this._(bytes: bytes, sampleRateHz: sampleRateHz, isWavContainer: false);
 
   final Uint8List bytes;

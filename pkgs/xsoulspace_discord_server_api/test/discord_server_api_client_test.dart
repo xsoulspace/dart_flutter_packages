@@ -138,9 +138,9 @@ void main() {
       () => client.request(method: 'GET', path: '/users/@me'),
       throwsA(
         isA<DiscordApiError>()
-            .having((final e) => e.statusCode, 'statusCode', 401)
-            .having((final e) => e.code, 'code', 40001)
-            .having((final e) => e.message, 'message', 'Unauthorized'),
+            .having((e) => e.statusCode, 'statusCode', 401)
+            .having((e) => e.code, 'code', 40001)
+            .having((e) => e.message, 'message', 'Unauthorized'),
       ),
     );
 
@@ -148,8 +148,8 @@ void main() {
       () => client.request(method: 'GET', path: '/users/@me'),
       throwsA(
         isA<DiscordApiError>()
-            .having((final e) => e.statusCode, 'statusCode', 403)
-            .having((final e) => e.code, 'code', 50013),
+            .having((e) => e.statusCode, 'statusCode', 403)
+            .having((e) => e.code, 'code', 50013),
       ),
     );
 
@@ -157,15 +157,15 @@ void main() {
       () => client.request(method: 'GET', path: '/users/@me'),
       throwsA(
         isA<DiscordApiError>()
-            .having((final e) => e.statusCode, 'statusCode', 429)
+            .having((e) => e.statusCode, 'statusCode', 429)
             .having(
-              (final e) => e.rateLimit.retryAfter,
+              (e) => e.rateLimit.retryAfter,
               'retryAfter',
               const Duration(milliseconds: 1500),
             )
-            .having((final e) => e.rateLimit.global, 'global', true)
-            .having((final e) => e.rateLimit.limit, 'limit', 5)
-            .having((final e) => e.rateLimit.remaining, 'remaining', 0),
+            .having((e) => e.rateLimit.global, 'global', true)
+            .having((e) => e.rateLimit.limit, 'limit', 5)
+            .having((e) => e.rateLimit.remaining, 'remaining', 0),
       ),
     );
   });
@@ -176,13 +176,13 @@ final class _FakeTransport implements DiscordTransport {
   final Queue<DiscordTransportResponse> _responses =
       Queue<DiscordTransportResponse>();
 
-  void enqueue(final DiscordTransportResponse response) {
+  void enqueue(DiscordTransportResponse response) {
     _responses.add(response);
   }
 
   @override
   Future<DiscordTransportResponse> send(
-    final DiscordTransportRequest request,
+    DiscordTransportRequest request,
   ) async {
     requests.add(request);
     if (_responses.isEmpty) {

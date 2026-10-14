@@ -12,11 +12,11 @@ void main() {
       );
 
       final json = original.toJson(
-        (final value) => <String, dynamic>{'v': value},
+        (value) => <String, dynamic>{'v': value},
       );
       final decoded = PagingControllerPageModel<int>.fromJson(
         json,
-        (final raw) => (raw! as Map<String, dynamic>)['v'] as int,
+        (raw) => (raw! as Map<String, dynamic>)['v'] as int,
       );
 
       expect(decoded.values, <int>[1, 2, 3]);

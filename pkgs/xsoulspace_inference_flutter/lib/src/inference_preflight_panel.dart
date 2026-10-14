@@ -11,7 +11,7 @@ final class InferencePreflightPanel extends StatelessWidget {
   final String title;
 
   @override
-  Widget build(final BuildContext context) {
+  Widget build(BuildContext context) {
     final issues = formatInferenceReadinessIssues(snapshot);
     return Card(
       child: Padding(

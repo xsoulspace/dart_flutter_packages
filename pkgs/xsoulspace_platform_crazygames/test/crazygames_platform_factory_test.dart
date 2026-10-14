@@ -9,7 +9,7 @@ void main() {
         expectedSdkGlobal: 'CustomCrazy',
         sdkInjected: true,
       ),
-      environmentProbe: (final expectedGlobal) {
+      environmentProbe: (expectedGlobal) {
         probeCalled = true;
         expect(expectedGlobal, 'CustomCrazy');
         return false;
@@ -27,7 +27,7 @@ void main() {
         config: CrazyGamesPlatformConfig(
           autoLoadSdk: true,
           sdkUrl: Uri.parse('https://example.com/crazygames-sdk.js'),
-          sdkScriptLoader: (final _) async {},
+          sdkScriptLoader: (_) async {},
         ),
       );
 

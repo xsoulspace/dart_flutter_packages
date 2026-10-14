@@ -43,7 +43,7 @@ final class _FakeAnalyticsPlugin extends AnalyticsServicePlugin {
   final List<Object?> intendedExceptions = <Object?>[];
 
   @override
-  Future<void> logAnalyticEvent(final AnalyticEvents event) async {
+  Future<void> logAnalyticEvent(AnalyticEvents event) async {
     loggedEvents.add(event);
   }
 
@@ -54,23 +54,23 @@ final class _FakeAnalyticsPlugin extends AnalyticsServicePlugin {
   Future<void> onLoad() async {}
 
   @override
-  void reportIntededException([final dynamic value]) {
+  void reportIntededException([dynamic value]) {
     intendedExceptions.add(value);
   }
 
   @override
   Future<void> recordError(
-    final dynamic exception,
-    final StackTrace? stack, {
-    final dynamic reason,
-    final Iterable<DiagnosticsNode> information = const <DiagnosticsNode>[],
-    final bool fatal = false,
-    final bool? printDetails,
+    dynamic exception,
+    StackTrace? stack, {
+    dynamic reason,
+    Iterable<DiagnosticsNode> information = const <DiagnosticsNode>[],
+    bool fatal = false,
+    bool? printDetails,
   }) async {}
 
   @override
   Future<void> recordFlutterError(
-    final FlutterErrorDetails flutterErrorDetails, {
-    final bool fatal = false,
+    FlutterErrorDetails flutterErrorDetails, {
+    bool fatal = false,
   }) async {}
 }

@@ -24,7 +24,7 @@ final class VkPlayServerApiClient {
   final Map<String, Object?> defaultParams;
 
   Future<VkPlayApiResponse> getCommunityProfile({
-    required final String communityId,
+    required String communityId,
   }) {
     return _sendSigned(
       endpointPath: 'community/profile',
@@ -32,7 +32,7 @@ final class VkPlayServerApiClient {
     );
   }
 
-  Future<VkPlayApiResponse> getUserProfile({required final String userId}) {
+  Future<VkPlayApiResponse> getUserProfile({required String userId}) {
     return _sendSigned(
       endpointPath: 'profile/get',
       params: <String, Object?>{'user_id': userId},
@@ -40,10 +40,10 @@ final class VkPlayServerApiClient {
   }
 
   Future<VkPlayApiResponse> sendInvite({
-    required final String userId,
-    required final String message,
-    final String? payload,
-    final Map<String, Object?> extra = const <String, Object?>{},
+    required String userId,
+    required String message,
+    String? payload,
+    Map<String, Object?> extra = const <String, Object?>{},
   }) {
     return _sendSigned(
       endpointPath: 'invite/send',
@@ -57,11 +57,11 @@ final class VkPlayServerApiClient {
   }
 
   Future<VkPlayApiResponse> shareToFeed({
-    required final String userId,
-    required final String message,
-    final String? linkUrl,
-    final String? imageUrl,
-    final Map<String, Object?> extra = const <String, Object?>{},
+    required String userId,
+    required String message,
+    String? linkUrl,
+    String? imageUrl,
+    Map<String, Object?> extra = const <String, Object?>{},
   }) {
     return _sendSigned(
       endpointPath: 'feed/share',
@@ -75,7 +75,7 @@ final class VkPlayServerApiClient {
     );
   }
 
-  Future<VkPlayApiResponse> getInventory({required final String userId}) {
+  Future<VkPlayApiResponse> getInventory({required String userId}) {
     return _sendSigned(
       endpointPath: 'inventory/get',
       params: <String, Object?>{'user_id': userId},
@@ -83,11 +83,11 @@ final class VkPlayServerApiClient {
   }
 
   Uri buildBillingUrl({
-    required final String userId,
-    required final String itemId,
-    final String? orderId,
-    final Map<String, Object?> extra = const <String, Object?>{},
-    final String endpointPath = 'billing/frame',
+    required String userId,
+    required String itemId,
+    String? orderId,
+    Map<String, Object?> extra = const <String, Object?>{},
+    String endpointPath = 'billing/frame',
   }) {
     final params = _baseParams(<String, Object?>{
       'user_id': userId,
@@ -106,8 +106,8 @@ final class VkPlayServerApiClient {
   }
 
   bool verifyBillingCallback({
-    required final Map<String, Object?> payload,
-    final String? signatureKey,
+    required Map<String, Object?> payload,
+    String? signatureKey,
   }) {
     return verifyVkPlayCallbackSignature(
       payload: payload,
@@ -118,8 +118,8 @@ final class VkPlayServerApiClient {
   }
 
   VkPlaySignatureDiagnostics describeCanonicalization({
-    required final Map<String, Object?> params,
-    final Iterable<String> excludedKeys = const <String>{'sig', 'signature'},
+    required Map<String, Object?> params,
+    Iterable<String> excludedKeys = const <String>{'sig', 'signature'},
   }) {
     return signer
         .signWithDiagnostics(
@@ -131,8 +131,8 @@ final class VkPlayServerApiClient {
   }
 
   Future<VkPlayApiResponse> _sendSigned({
-    required final String endpointPath,
-    required final Map<String, Object?> params,
+    required String endpointPath,
+    required Map<String, Object?> params,
   }) async {
     final payload = _baseParams(params);
     final signature = signer.sign(params: payload, secret: secret);
@@ -158,7 +158,7 @@ final class VkPlayServerApiClient {
     );
   }
 
-  Map<String, Object?> _baseParams(final Map<String, Object?> params) {
+  Map<String, Object?> _baseParams(Map<String, Object?> params) {
     return <String, Object?>{
       ...defaultParams,
       if (appId != null) 'app_id': appId,
@@ -166,8 +166,8 @@ final class VkPlayServerApiClient {
     };
   }
 
-  Map<String, String> _stringifyParams(final Map<String, Object?> params) {
-    return params.map((final key, final value) {
+  Map<String, String> _stringifyParams(Map<String, Object?> params) {
+    return params.map((key, value) {
       if (value == null) {
         return MapEntry<String, String>(key, '');
       }
@@ -178,7 +178,7 @@ final class VkPlayServerApiClient {
     });
   }
 
-  Map<String, Object?> _decodeBody(final String body) {
+  Map<String, Object?> _decodeBody(String body) {
     if (body.trim().isEmpty) {
       return const <String, Object?>{};
     }
@@ -187,7 +187,7 @@ final class VkPlayServerApiClient {
       final decoded = jsonDecode(body);
       if (decoded is Map<Object?, Object?>) {
         return decoded.map(
-          (final key, final value) => MapEntry(key?.toString() ?? '', value),
+          (key, value) => MapEntry(key?.toString() ?? '', value),
         );
       }
       return <String, Object?>{'data': decoded};

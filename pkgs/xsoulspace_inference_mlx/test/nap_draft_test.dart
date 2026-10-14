@@ -94,11 +94,11 @@ void main() {
 }
 
 NapDraftRecord _record(
-  final String id,
-  final int lo,
-  final int hi,
-  final NapDraftStatus status, {
-  final int minutes = 0,
+  String id,
+  int lo,
+  int hi,
+  NapDraftStatus status, {
+  int minutes = 0,
 }) => NapDraftRecord(
   id: id,
   createdAt: DateTime.utc(2026, 10, 8, 3, minutes),

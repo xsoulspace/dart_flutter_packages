@@ -16,7 +16,7 @@ final class LogRecord {
     this.fingerprint,
   }) : assert(sequence > 0);
 
-  factory LogRecord.fromJson(final Map<String, Object?> json) => LogRecord(
+  factory LogRecord.fromJson(Map<String, Object?> json) => LogRecord(
     sequence: (json['sequence'] as num?)?.toInt() ?? 0,
     timestampUtc:
         DateTime.tryParse((json['timestampUtc'] ?? '').toString())?.toUtc() ??
@@ -51,8 +51,8 @@ final class LogRecord {
   final String? fingerprint;
 
   Map<String, Object?> toJson({
-    final int schemaVersion = 1,
-    final int? maxStackTraceLines,
+    int schemaVersion = 1,
+    int? maxStackTraceLines,
   }) {
     final serializedStack = stackTrace?.toString();
     final stackForStorage =
@@ -76,16 +76,16 @@ final class LogRecord {
   }
 
   LogRecord copyWith({
-    final int? sequence,
-    final DateTime? timestampUtc,
-    final LogLevel? level,
-    final String? category,
-    final String? message,
-    final Map<String, Object?>? fields,
-    final Object? error,
-    final StackTrace? stackTrace,
-    final TraceContext? trace,
-    final String? fingerprint,
+    int? sequence,
+    DateTime? timestampUtc,
+    LogLevel? level,
+    String? category,
+    String? message,
+    Map<String, Object?>? fields,
+    Object? error,
+    StackTrace? stackTrace,
+    TraceContext? trace,
+    String? fingerprint,
   }) => LogRecord(
     sequence: sequence ?? this.sequence,
     timestampUtc: timestampUtc ?? this.timestampUtc,
@@ -100,8 +100,8 @@ final class LogRecord {
   );
 
   static String _truncateStackTrace(
-    final String stackTrace,
-    final int maxLines,
+    String stackTrace,
+    int maxLines,
   ) {
     final lines = stackTrace.split('\n');
     if (lines.length <= maxLines) {

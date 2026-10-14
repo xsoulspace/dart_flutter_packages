@@ -9,7 +9,7 @@ final class LoggerConfig {
     this.flushInterval = const Duration(seconds: 1),
     this.flushBatchSize = 256,
     this.queueCapacity = 20000,
-    final int? hardQueueCapacity,
+    int? hardQueueCapacity,
     this.redaction = const RedactionPolicy(),
     this.historyCapacity = 50000,
     this.disposeTimeout = const Duration(seconds: 5),

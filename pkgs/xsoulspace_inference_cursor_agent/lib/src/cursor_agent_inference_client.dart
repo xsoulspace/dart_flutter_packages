@@ -60,7 +60,7 @@ class CursorAgentInferenceClient implements InferenceClient {
 
   @override
   Future<InferenceResult<InferenceResponse>> infer(
-    final InferenceRequest request, {
+    InferenceRequest request, {
     ToolRegistry? toolRegistry,
   }) async {
     if (!supportedTasks.contains(request.task)) {
@@ -69,7 +69,7 @@ class CursorAgentInferenceClient implements InferenceClient {
         message: 'Task ${request.task.name} is not supported by $id',
         details: <String, dynamic>{
           'supported_tasks': supportedTasks
-              .map((final task) => task.name)
+              .map((task) => task.name)
               .toList(),
           'requested_task': request.task.name,
         },
@@ -226,7 +226,7 @@ class CursorAgentInferenceClient implements InferenceClient {
         'execution_timeout_ms': executionTimeout.inMilliseconds,
         'output_source': rawOutput.source,
         'output_bytes': rawOutput.byteLength,
-        'attempts': attempts.map((final run) => run.toSummary()).toList(),
+        'attempts': attempts.map((run) => run.toSummary()).toList(),
         if (rawOutput.sessionId != null)
           'cursor_session_id': rawOutput.sessionId,
       };
@@ -255,7 +255,7 @@ class CursorAgentInferenceClient implements InferenceClient {
     }
   }
 
-  String? _resolveModel(final InferenceRequest request) {
+  String? _resolveModel(InferenceRequest request) {
     final fromMeta = _stringFromMeta(
       request.metadata,
       'inferenceModel',
@@ -266,9 +266,9 @@ class CursorAgentInferenceClient implements InferenceClient {
   }
 
   static String? _stringFromMeta(
-    final Map<String, dynamic> meta,
-    final String primaryKey,
-    final String fallbackKey,
+    Map<String, dynamic> meta,
+    String primaryKey,
+    String fallbackKey,
   ) {
     final primary = meta[primaryKey];
     if (primary != null) return '$primary'.trim();
@@ -277,15 +277,15 @@ class CursorAgentInferenceClient implements InferenceClient {
     return null;
   }
 
-  static String? _normalizeConfigValue(final String? value) {
+  static String? _normalizeConfigValue(String? value) {
     final trimmed = value?.trim();
     if (trimmed == null || trimmed.isEmpty) return null;
     return trimmed;
   }
 
   Future<_ExecRunResult> _runExec({
-    required final String binaryPath,
-    required final InferenceRequest request,
+    required String binaryPath,
+    required InferenceRequest request,
   }) async {
     final model = _resolveModel(request);
     final args = <String>[
@@ -356,7 +356,7 @@ class CursorAgentInferenceClient implements InferenceClient {
     }
   }
 
-  InferenceResult<_RawOutput> _readRawOutput({required final String stdout}) {
+  InferenceResult<_RawOutput> _readRawOutput({required String stdout}) {
     final stdoutBytes = utf8.encode(stdout).length;
     if (stdoutBytes > maxOutputBytes) {
       return InferenceResult<_RawOutput>.fail(
@@ -421,15 +421,15 @@ class CursorAgentInferenceClient implements InferenceClient {
     );
   }
 
-  InferenceResult<_CursorEnvelope> _parseEnvelope(final String stdout) {
+  InferenceResult<_CursorEnvelope> _parseEnvelope(String stdout) {
     final parsed = parseStrictJsonObject(stdout);
     if (parsed.success && parsed.data != null) {
       return _decodeEnvelope(parsed.data!);
     }
 
     final nonEmptyLines = LineSplitter.split(stdout)
-        .map((final line) => line.trim())
-        .where((final line) => line.isNotEmpty)
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty)
         .toList(growable: false);
     if (nonEmptyLines.isEmpty) {
       return InferenceResult<_CursorEnvelope>.fail(
@@ -451,7 +451,7 @@ class CursorAgentInferenceClient implements InferenceClient {
   }
 
   InferenceResult<_CursorEnvelope> _decodeEnvelope(
-    final Map<String, dynamic> json,
+    Map<String, dynamic> json,
   ) {
     final type = json['type'];
     final result = json['result'];
@@ -477,7 +477,7 @@ class CursorAgentInferenceClient implements InferenceClient {
     );
   }
 
-  bool _isTransientFailure(final _ExecRunResult result) {
+  bool _isTransientFailure(_ExecRunResult result) {
     if (result.timedOut) {
       return true;
     }
@@ -492,7 +492,7 @@ class CursorAgentInferenceClient implements InferenceClient {
         normalized.contains('etimedout');
   }
 
-  bool _isAuthFailure(final _ExecRunResult result) {
+  bool _isAuthFailure(_ExecRunResult result) {
     final normalized = '${result.stderr}\n${result.stdout}'.toLowerCase();
     return normalized.contains('401 unauthorized') ||
         normalized.contains('status: 401') ||
@@ -508,9 +508,9 @@ class CursorAgentInferenceClient implements InferenceClient {
   }
 
   Map<String, dynamic> _buildFailureDetails({
-    required final _ExecRunResult result,
-    required final List<_ExecRunResult> attempts,
-    required final bool authFailure,
+    required _ExecRunResult result,
+    required List<_ExecRunResult> attempts,
+    required bool authFailure,
   }) {
     final stderr = result.stderr.trim();
     final stdout = result.stdout.trim();
@@ -525,11 +525,11 @@ class CursorAgentInferenceClient implements InferenceClient {
           'Provide CURSOR_API_KEY to cursor-agent.',
           'Or run cursor-agent login before running inference.',
         ],
-      'attempts': attempts.map((final run) => run.toSummary()).toList(),
+      'attempts': attempts.map((run) => run.toSummary()).toList(),
     };
   }
 
-  String _truncate(final String value, {final int max = 2000}) {
+  String _truncate(String value, {int max = 2000}) {
     if (value.length <= max) {
       return value;
     }
@@ -540,7 +540,7 @@ class CursorAgentInferenceClient implements InferenceClient {
     return '$head...[truncated ${value.length - max} chars]...$tail';
   }
 
-  String _normalizeAssistantText(final String value) {
+  String _normalizeAssistantText(String value) {
     final trimmed = value.trim();
     if (trimmed.isEmpty) {
       return trimmed;
@@ -564,7 +564,7 @@ class CursorAgentInferenceClient implements InferenceClient {
     return trimmed;
   }
 
-  String? _extractFencedJsonObject(final String value) {
+  String? _extractFencedJsonObject(String value) {
     final fencePattern = RegExp(
       r'```(?:json|javascript|js)?\s*([\s\S]*?)\s*```',
       caseSensitive: false,
@@ -582,7 +582,7 @@ class CursorAgentInferenceClient implements InferenceClient {
     return null;
   }
 
-  String? _extractEmbeddedJsonObject(final String value) {
+  String? _extractEmbeddedJsonObject(String value) {
     String? lastValid;
     var depth = 0;
     var start = -1;
@@ -641,8 +641,8 @@ class CursorAgentInferenceClient implements InferenceClient {
   }
 
   Object? _normalizeForSchema(
-    final Object? value,
-    final Map<String, dynamic> schema,
+    Object? value,
+    Map<String, dynamic> schema,
   ) {
     final rawType = schema['type'];
     return switch (rawType) {
@@ -654,8 +654,8 @@ class CursorAgentInferenceClient implements InferenceClient {
   }
 
   Object? _normalizeObjectForSchema(
-    final Object? value,
-    final Map<String, dynamic> schema,
+    Object? value,
+    Map<String, dynamic> schema,
   ) {
     if (value is! Map) {
       return value;
@@ -663,7 +663,7 @@ class CursorAgentInferenceClient implements InferenceClient {
 
     final normalized = <String, dynamic>{};
     final source = value.map(
-      (final key, final nestedValue) => MapEntry('$key', nestedValue),
+      (key, nestedValue) => MapEntry('$key', nestedValue),
     );
     final properties = schema['properties'];
     final propertySchemas = properties is Map<String, dynamic>
@@ -686,8 +686,8 @@ class CursorAgentInferenceClient implements InferenceClient {
   }
 
   Object? _normalizeArrayForSchema(
-    final Object? value,
-    final Map<String, dynamic> schema,
+    Object? value,
+    Map<String, dynamic> schema,
   ) {
     final itemSchema = schema['items'];
     final normalizedItemSchema = itemSchema is Map<String, dynamic>
@@ -699,7 +699,7 @@ class CursorAgentInferenceClient implements InferenceClient {
         return value;
       }
       return value
-          .map((final item) => _normalizeForSchema(item, normalizedItemSchema))
+          .map((item) => _normalizeForSchema(item, normalizedItemSchema))
           .toList(growable: false);
     }
 
@@ -714,16 +714,16 @@ class CursorAgentInferenceClient implements InferenceClient {
     return <Object?>[_normalizeForSchema(value, normalizedItemSchema)];
   }
 
-  Object? _normalizeStringForSchema(final Object? value) {
+  Object? _normalizeStringForSchema(Object? value) {
     if (value == null || value is String) {
       return value;
     }
     if (value is List) {
       final flattened = value
-          .map((final item) => _normalizeStringForSchema(item))
+          .map((item) => _normalizeStringForSchema(item))
           .whereType<String>()
-          .map((final item) => item.trim())
-          .where((final item) => item.isNotEmpty)
+          .map((item) => item.trim())
+          .where((item) => item.isNotEmpty)
           .toList(growable: false);
       if (flattened.isNotEmpty) {
         return flattened.join('\n');
@@ -743,7 +743,7 @@ class CursorAgentInferenceClient implements InferenceClient {
     return value;
   }
 
-  bool _hasText(final String? value) =>
+  bool _hasText(String? value) =>
       value != null && value.trim().isNotEmpty;
 
   String? _resolveBinaryPath() {
@@ -759,7 +759,7 @@ class CursorAgentInferenceClient implements InferenceClient {
 
     final pathSegments = pathEnv
         .split(Platform.isWindows ? ';' : ':')
-        .where((final segment) => segment.isNotEmpty);
+        .where((segment) => segment.isNotEmpty);
 
     for (final segment in pathSegments) {
       final candidate = p.join(segment, binaryName);

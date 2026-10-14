@@ -34,9 +34,9 @@ final class SteamAsyncCallRegistry {
   final Map<int, _PendingAsyncCall> _pendingCalls = <int, _PendingAsyncCall>{};
 
   Future<SteamAsyncCallResult> register({
-    required final int apiCallHandle,
-    required final int expectedCallbackId,
-    final Duration? timeout,
+    required int apiCallHandle,
+    required int expectedCallbackId,
+    Duration? timeout,
   }) {
     if (_pendingCalls.containsKey(apiCallHandle)) {
       throw StateError('SteamAPICall_t $apiCallHandle is already pending.');
@@ -67,10 +67,10 @@ final class SteamAsyncCallRegistry {
   }
 
   bool complete({
-    required final int apiCallHandle,
-    required final int callbackId,
-    required final List<int> payload,
-    required final bool failed,
+    required int apiCallHandle,
+    required int callbackId,
+    required List<int> payload,
+    required bool failed,
   }) {
     final pending = _pendingCalls[apiCallHandle];
     if (pending == null) {

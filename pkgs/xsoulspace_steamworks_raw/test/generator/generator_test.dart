@@ -15,8 +15,8 @@ void main() {
   );
 
   Future<ProcessResult> runGenerator(
-    final String workingPackageRoot, {
-    final bool check = false,
+    String workingPackageRoot, {
+    bool check = false,
   }) {
     final args = <String>[
       'run',
@@ -149,8 +149,8 @@ void main() {
 }
 
 Future<void> _copyDirectory(
-  final Directory source,
-  final Directory destination,
+  Directory source,
+  Directory destination,
 ) async {
   destination.createSync(recursive: true);
 

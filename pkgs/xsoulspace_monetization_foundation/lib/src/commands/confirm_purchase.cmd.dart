@@ -64,7 +64,7 @@ class ConfirmPurchaseCommand {
   /// - `ActiveSubscriptionResource`: Set to current purchase details
   /// - `SubscriptionStatusResource`: Set to subscribed status
   /// {@endtemplate}
-  Future<void> execute(final PurchaseVerificationDtoModel details) async {
+  Future<void> execute(PurchaseVerificationDtoModel details) async {
     final result = await purchaseProvider.completePurchase(details);
     switch (result.type) {
       case ResultType.success:

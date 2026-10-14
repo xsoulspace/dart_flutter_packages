@@ -39,7 +39,7 @@ final class RedactionPolicy {
   final AllowKeyPredicate? allowKey;
 
   /// Returns a recursively sanitized map suitable for persistence.
-  Map<String, Object?> sanitizeFields(final Map<String, Object?> fields) {
+  Map<String, Object?> sanitizeFields(Map<String, Object?> fields) {
     if (fields.isEmpty) {
       return const <String, Object?>{};
     }
@@ -47,7 +47,7 @@ final class RedactionPolicy {
     final seen = <Object>{};
     final sanitized = <String, Object?>{};
 
-    fields.forEach((final key, final value) {
+    fields.forEach((key, value) {
       final path = <String>[key];
       if (_shouldRedact(key, path)) {
         sanitized[key] = '[REDACTED]';
@@ -65,7 +65,7 @@ final class RedactionPolicy {
   }
 
   /// Returns a stack trace trimmed for persistence-safe storage.
-  StackTrace? sanitizeStackTrace(final StackTrace? stackTrace) {
+  StackTrace? sanitizeStackTrace(StackTrace? stackTrace) {
     if (stackTrace == null) {
       return null;
     }
@@ -79,10 +79,10 @@ final class RedactionPolicy {
   }
 
   Object? _sanitizeValue(
-    final Object? value, {
-    required final int depth,
-    required final List<String> path,
-    required final Set<Object> seen,
+    Object? value, {
+    required int depth,
+    required List<String> path,
+    required Set<Object> seen,
   }) {
     if (value == null || value is num || value is bool) {
       return value;
@@ -106,7 +106,7 @@ final class RedactionPolicy {
       }
 
       final result = <String, Object?>{};
-      value.forEach((final rawKey, final nestedValue) {
+      value.forEach((rawKey, nestedValue) {
         final key = rawKey.toString();
         final nestedPath = List<String>.from(path)..add(key);
         if (_shouldRedact(key, nestedPath)) {
@@ -147,7 +147,7 @@ final class RedactionPolicy {
     return _truncateSerialized(value.toString());
   }
 
-  bool _shouldRedact(final String key, final List<String> path) {
+  bool _shouldRedact(String key, List<String> path) {
     if (allowKey?.call(key, path) == true) {
       return false;
     }
@@ -165,7 +165,7 @@ final class RedactionPolicy {
     return false;
   }
 
-  String _truncateSerialized(final String value) {
+  String _truncateSerialized(String value) {
     final bytes = utf8.encode(value);
     if (bytes.length <= maxSerializedValueBytes) {
       return value;

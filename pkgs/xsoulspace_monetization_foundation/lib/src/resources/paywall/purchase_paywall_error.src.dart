@@ -17,7 +17,7 @@ class PurchasePaywallErrorResource extends ChangeNotifier {
 
   bool get hasError => _error.isNotEmpty;
 
-  set error(final String value) {
+  set error(String value) {
     _error = value;
     notifyListeners();
   }

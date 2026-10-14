@@ -167,7 +167,7 @@ final class LoopbackJsonServer {
     }
   }
 
-  Future<void> _handle(final HttpRequest request) async {
+  Future<void> _handle(HttpRequest request) async {
     switch ((request.method, request.uri.path)) {
       case ('GET', final path) when path == healthPath:
         request.response.headers.contentType = ContentType.json;
@@ -179,9 +179,9 @@ final class LoopbackJsonServer {
   }
 
   Future<void> _handleRoute(
-    final HttpRequest request,
-    final String method,
-    final String path,
+    HttpRequest request,
+    String method,
+    String path,
   ) async {
     final expectedKey = apiKey;
     if (expectedKey != null) {

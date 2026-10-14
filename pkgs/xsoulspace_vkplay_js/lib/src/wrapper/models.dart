@@ -8,7 +8,7 @@ final class VkPlayLoginStatus {
     this.metadata = const <String, Object?>{},
   });
 
-  factory VkPlayLoginStatus.fromMap(final Map<String, Object?> map) {
+  factory VkPlayLoginStatus.fromMap(Map<String, Object?> map) {
     final authorized =
         map['authorized'] == true ||
         map['isAuthorized'] == true ||
@@ -36,7 +36,7 @@ final class VkPlayUserInfo {
     this.metadata = const <String, Object?>{},
   });
 
-  factory VkPlayUserInfo.fromMap(final Map<String, Object?> map) {
+  factory VkPlayUserInfo.fromMap(Map<String, Object?> map) {
     final id =
         (map['id'] ?? map['userId'] ?? map['uid'])?.toString() ?? 'anonymous';
     final displayName =
@@ -68,7 +68,7 @@ final class VkPlayUserProfile {
     this.metadata = const <String, Object?>{},
   });
 
-  factory VkPlayUserProfile.fromMap(final Map<String, Object?> map) {
+  factory VkPlayUserProfile.fromMap(Map<String, Object?> map) {
     final id =
         (map['id'] ?? map['userId'] ?? map['uid'])?.toString() ?? 'anonymous';
     final displayName =
@@ -102,8 +102,8 @@ final class VkPlayFriend {
   });
 
   factory VkPlayFriend.fromMap(
-    final Map<String, Object?> map, {
-    final bool isSocial = false,
+    Map<String, Object?> map, {
+    bool isSocial = false,
   }) {
     final id = (map['id'] ?? map['uid'] ?? map['userId'])?.toString() ?? '';
     final displayName =

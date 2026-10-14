@@ -14,7 +14,7 @@ import 'dart:io';
 
 import 'package:xsoulspace_inference_mlx_native/xsoulspace_inference_mlx_native.dart';
 
-Future<void> main(final List<String> args) async {
+Future<void> main(List<String> args) async {
   final seconds = args
       .where((a) => a.startsWith('--seconds='))
       .map((a) => int.tryParse(a.split('=').last) ?? 3)
@@ -47,7 +47,7 @@ Future<void> main(final List<String> args) async {
     ops++;
   }
   latencies.sort();
-  double pct(final double p) =>
+  double pct(double p) =>
       latencies[(p * (latencies.length - 1)).round()] / 1000.0;
   // ignore: avoid_print
   print('native laya decideTyped (${questions.length} questions, '
@@ -58,7 +58,7 @@ Future<void> main(final List<String> args) async {
   engine.dispose();
 }
 
-LayaTypedQuestion _typed(final Map<String, dynamic> def) {
+LayaTypedQuestion _typed(Map<String, dynamic> def) {
   final instructions = def['instructions'];
   final text = instructions is String ? instructions : renderLayaJson(instructions);
   switch (def['type'] as String) {

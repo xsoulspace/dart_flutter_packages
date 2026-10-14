@@ -210,7 +210,7 @@ final class LocalServeRuntime {
     }
   }
 
-  void _emit(final String type, final Map<String, Object?> fields) {
+  void _emit(String type, Map<String, Object?> fields) {
     try {
       onDiagnosticEvent?.call(<String, Object?>{'type': type, ...fields});
     } on Object {

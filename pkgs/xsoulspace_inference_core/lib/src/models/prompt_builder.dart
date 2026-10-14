@@ -27,15 +27,15 @@ class PromptBuilder extends StringBuffer {
 
   static final empty = PromptBuilder('');
 
-  void skipLines({final int count = 2}) {
+  void skipLines({int count = 2}) {
     for (var i = 0; i < count; i++) {
       writeln();
     }
   }
 
   void writeStructuredOutputPrompt(
-    final Map<String, dynamic> outputSchema, {
-    final String indent = '  ',
+    Map<String, dynamic> outputSchema, {
+    String indent = '  ',
   }) {
     if (outputSchema.isEmpty || structuredOutputSystemPrompt.isEmpty) return;
 

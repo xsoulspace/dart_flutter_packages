@@ -7,14 +7,14 @@ abstract interface class VkPlayTransport {
 }
 
 final class HttpVkPlayTransport implements VkPlayTransport {
-  HttpVkPlayTransport({final http.Client? client})
+  HttpVkPlayTransport({http.Client? client})
     : _client = client ?? http.Client();
 
   final http.Client _client;
 
   @override
   Future<VkPlayTransportResponse> send(
-    final VkPlayTransportRequest request,
+    VkPlayTransportRequest request,
   ) async {
     final uri = request.query.isEmpty
         ? request.uri

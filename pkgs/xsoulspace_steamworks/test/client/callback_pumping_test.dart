@@ -88,7 +88,7 @@ void main() {
 
     expect(
       events.whereType<SteamCallbackEvent>().any(
-        (final e) => e.callbackId == 703,
+        (e) => e.callbackId == 703,
       ),
       true,
     );

@@ -68,13 +68,13 @@ final class WhisperCppRawAudioInput {
   });
 
   const WhisperCppRawAudioInput.wav({
-    required final Uint8List bytes,
-    required final int sampleRateHz,
+    required Uint8List bytes,
+    required int sampleRateHz,
   }) : this._(bytes: bytes, sampleRateHz: sampleRateHz, isWavContainer: true);
 
   const WhisperCppRawAudioInput.pcm16le({
-    required final Uint8List bytes,
-    required final int sampleRateHz,
+    required Uint8List bytes,
+    required int sampleRateHz,
   }) : this._(bytes: bytes, sampleRateHz: sampleRateHz, isWavContainer: false);
 
   final Uint8List bytes;

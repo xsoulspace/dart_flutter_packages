@@ -70,16 +70,16 @@ void main() {
       DiscordRelationship? updatedRelationship;
       String? rawEventName;
 
-      final currentUserSub = await client.onCurrentUserUpdate((final user) {
+      final currentUserSub = await client.onCurrentUserUpdate((user) {
         updatedUser = user;
       });
 
-      final relationshipSub = await client.onRelationshipUpdate((final value) {
+      final relationshipSub = await client.onRelationshipUpdate((value) {
         updatedRelationship = value;
       });
 
       final rawSub = await client.onRawEvent('CURRENT_USER_UPDATE', (
-        final event,
+        event,
       ) {
         rawEventName = event.event;
       });
@@ -118,10 +118,10 @@ final class _DiscordSdkStub {
 
   void install() {
     final commands = jsify(<String, Object?>{
-      'authorize': allowInterop((final Object? payload) {
+      'authorize': allowInterop((Object? payload) {
         return jsify(<String, Object?>{'code': 'oauth-code-1'});
       }),
-      'authenticate': allowInterop((final Object? payload) {
+      'authenticate': allowInterop((Object? payload) {
         final data = payload == null
             ? <String, Object?>{}
             : Map<String, Object?>.from(dartify(payload)! as Map);
@@ -136,7 +136,7 @@ final class _DiscordSdkStub {
           'application': <String, Object?>{'id': 'app-42'},
         });
       }),
-      'getUser': allowInterop((final Object? payload) {
+      'getUser': allowInterop((Object? payload) {
         final data = Map<String, Object?>.from(dartify(payload)! as Map);
         final id = data['id']?.toString() ?? 'unknown';
         return jsify(<String, Object?>{
@@ -145,7 +145,7 @@ final class _DiscordSdkStub {
           'global_name': 'User $id',
         });
       }),
-      'getRelationships': allowInterop(([final Object? payload]) {
+      'getRelationships': allowInterop(([Object? payload]) {
         return jsify(<String, Object?>{
           'relationships': <Map<String, Object?>>[
             <String, Object?>{
@@ -159,20 +159,20 @@ final class _DiscordSdkStub {
           ],
         });
       }),
-      'openInviteDialog': allowInterop(([final Object? payload]) {
+      'openInviteDialog': allowInterop(([Object? payload]) {
         return jsify(<String, Object?>{'opened': true});
       }),
-      'inviteUserEmbedded': allowInterop((final Object? payload) {
+      'inviteUserEmbedded': allowInterop((Object? payload) {
         return jsify(<String, Object?>{'sent': true});
       }),
-      'shareLink': allowInterop((final Object? payload) {
+      'shareLink': allowInterop((Object? payload) {
         return jsify(<String, Object?>{
           'success': true,
           'didCopyLink': true,
           'didSendMessage': true,
         });
       }),
-      'openShareMomentDialog': allowInterop((final Object? payload) {
+      'openShareMomentDialog': allowInterop((Object? payload) {
         return jsify(<String, Object?>{'opened': true});
       }),
     });
@@ -183,18 +183,18 @@ final class _DiscordSdkStub {
       }),
       'commands': commands,
       'subscribe': allowInterop((
-        final Object? event,
-        final Object listener, [
-        final Object? subscribeArgs,
+        Object? event,
+        Object listener, [
+        Object? subscribeArgs,
       ]) {
         subscribeCalls += 1;
         final key = event?.toString() ?? '';
         _listeners.putIfAbsent(key, () => <Object>[]).add(listener);
       }),
       'unsubscribe': allowInterop((
-        final Object? event,
-        final Object listener, [
-        final Object? unsubscribeArgs,
+        Object? event,
+        Object listener, [
+        Object? unsubscribeArgs,
       ]) {
         unsubscribeCalls += 1;
         final key = event?.toString() ?? '';
@@ -205,7 +205,7 @@ final class _DiscordSdkStub {
     setGlobalProperty('DiscordSDK', sdk);
   }
 
-  void emit(final String event, final Map<String, Object?> payload) {
+  void emit(String event, Map<String, Object?> payload) {
     final listeners = _listeners[event];
     if (listeners == null) {
       return;

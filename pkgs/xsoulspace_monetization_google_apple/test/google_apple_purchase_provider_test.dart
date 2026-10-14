@@ -361,7 +361,7 @@ void main() {
         PurchaseProductId.fromJson('subscription'),
       ]);
 
-      expect(result.map((final e) => e.productId.value), [
+      expect(result.map((e) => e.productId.value), [
         'non_consumable',
         'subscription',
       ]);
@@ -421,14 +421,14 @@ class _FakeInAppPurchaseClient implements InAppPurchaseClient {
   bool isAvailableResult = true;
 
   @override
-  Future<void> completePurchase(final iap.PurchaseDetails purchase) async {
+  Future<void> completePurchase(iap.PurchaseDetails purchase) async {
     if (completePurchaseError != null) throw completePurchaseError!;
     completedPurchases.add(purchase);
   }
 
   @override
   Future<iap.ProductDetailsResponse> queryProductDetails(
-    final Set<String> identifiers,
+    Set<String> identifiers,
   ) async {
     queryProductDetailsCalls += 1;
     if (queryProductDetailsError != null) throw queryProductDetailsError!;
@@ -437,7 +437,7 @@ class _FakeInAppPurchaseClient implements InAppPurchaseClient {
 
   @override
   Future<bool> buyNonConsumable({
-    required final iap.PurchaseParam purchaseParam,
+    required iap.PurchaseParam purchaseParam,
   }) async {
     lastPurchaseParam = purchaseParam;
     if (buyNonConsumableError != null) throw buyNonConsumableError!;
@@ -473,7 +473,7 @@ class _FakeAppleNativePurchaseProvider extends AppleNativePurchaseProvider {
 
   @override
   Future<List<PurchaseProductDetailsModel>> fetchProducts(
-    final List<PurchaseProductId> productIds,
+    List<PurchaseProductId> productIds,
   ) async {
     if (fetchProductsError != null) throw fetchProductsError!;
     return fetchProductsResult;
@@ -481,7 +481,7 @@ class _FakeAppleNativePurchaseProvider extends AppleNativePurchaseProvider {
 
   @override
   Future<PurchaseDetailsModel> getPurchaseDetailsByPurchaseId(
-    final PurchaseId purchaseId,
+    PurchaseId purchaseId,
   ) async {
     if (purchaseDetailsByIdError != null) throw purchaseDetailsByIdError!;
     return purchaseDetailsByIdResult;
@@ -495,10 +495,10 @@ class _FakeAppleNativePurchaseProvider extends AppleNativePurchaseProvider {
 }
 
 iap.PurchaseDetails _iapPurchase({
-  required final String purchaseId,
-  required final String productId,
-  required final iap.PurchaseStatus status,
-  required final String localVerificationData,
+  required String purchaseId,
+  required String productId,
+  required iap.PurchaseStatus status,
+  required String localVerificationData,
 }) => iap.PurchaseDetails(
   purchaseID: purchaseId,
   productID: productId,
@@ -512,9 +512,9 @@ iap.PurchaseDetails _iapPurchase({
 );
 
 PurchaseProductDetailsModel _productDetails({
-  required final String id,
-  final PurchaseProductType type = PurchaseProductType.subscription,
-  final Duration duration = const Duration(days: 30),
+  required String id,
+  PurchaseProductType type = PurchaseProductType.subscription,
+  Duration duration = const Duration(days: 30),
 }) => PurchaseProductDetailsModel(
   productId: PurchaseProductId.fromJson(id),
   priceId: PurchasePriceId.fromJson(id),

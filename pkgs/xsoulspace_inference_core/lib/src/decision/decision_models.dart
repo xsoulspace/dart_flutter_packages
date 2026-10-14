@@ -45,7 +45,7 @@ sealed class DecisionOpaqueId {
   final String value;
 
   @override
-  bool operator ==(final Object other) =>
+  bool operator ==(Object other) =>
       other.runtimeType == runtimeType &&
       other is DecisionOpaqueId &&
       other.value == value;
@@ -98,7 +98,7 @@ final class DecisionCorrelation {
     required this.cancellationId,
   });
 
-  factory DecisionCorrelation.fromJson(final Map<String, dynamic> json) =>
+  factory DecisionCorrelation.fromJson(Map<String, dynamic> json) =>
       DecisionCorrelation(
         requestId: DecisionRequestId(json['request_id'] as String),
         cutId: DecisionCutId(json['cut_id'] as String),
@@ -146,7 +146,7 @@ final class DecisionProviderBounds {
 /// Static capability facts. Reading this value must never perform I/O.
 final class DecisionProviderCapabilities {
   DecisionProviderCapabilities({
-    required final Set<DecisionQuestionKind> supportedQuestionKinds,
+    required Set<DecisionQuestionKind> supportedQuestionKinds,
     required this.bounds,
     required this.executionLocation,
     required this.networkRequirement,
@@ -163,7 +163,7 @@ final class DecisionProviderCapabilities {
 
   Map<String, dynamic> toJson() => <String, dynamic>{
     'supported_question_kinds': supportedQuestionKinds
-        .map((final value) => value.name)
+        .map((value) => value.name)
         .toList(growable: false),
     'bounds': bounds.toJson(),
     'execution_location': executionLocation.name,
@@ -190,7 +190,7 @@ final class DecisionProviderReadiness {
 final class DecisionOption {
   const DecisionOption({required this.id, required this.description});
 
-  factory DecisionOption.fromJson(final Map<String, dynamic> json) =>
+  factory DecisionOption.fromJson(Map<String, dynamic> json) =>
       DecisionOption(
         id: DecisionOptionId(json['id'] as String),
         description: json['description'] as String,
@@ -215,13 +215,13 @@ final class FiniteChoiceQuestion {
     required this.version,
     required this.candidateSetId,
     required this.instructions,
-    required final List<DecisionOption> options,
+    required List<DecisionOption> options,
     required this.abstainOptionId,
     this.isExhaustive = false,
   }) : options = List<DecisionOption>.unmodifiable(options);
 
   factory FiniteChoiceQuestion.fromJson(
-    final Map<String, dynamic> json,
+    Map<String, dynamic> json,
   ) => FiniteChoiceQuestion(
     id: DecisionQuestionId(json['id'] as String),
     version: DecisionQuestionVersion(json['version'] as String),
@@ -229,7 +229,7 @@ final class FiniteChoiceQuestion {
     instructions: json['instructions'] as String,
     options: (json['options'] as List<dynamic>)
         .map(
-          (final value) =>
+          (value) =>
               DecisionOption.fromJson((value as Map).cast<String, dynamic>()),
         )
         .toList(growable: false),
@@ -250,7 +250,7 @@ final class FiniteChoiceQuestion {
     'version': version.value,
     'candidate_set_id': candidateSetId.value,
     'instructions': instructions,
-    'options': options.map((final option) => option.toJson()).toList(),
+    'options': options.map((option) => option.toJson()).toList(),
     'abstain_option_id': abstainOptionId.value,
     'is_exhaustive': isExhaustive,
   };
@@ -261,10 +261,10 @@ final class DecisionRequest {
   DecisionRequest({
     required this.correlation,
     required this.state,
-    required final List<FiniteChoiceQuestion> questions,
+    required List<FiniteChoiceQuestion> questions,
   }) : questions = List<FiniteChoiceQuestion>.unmodifiable(questions);
 
-  factory DecisionRequest.fromJson(final Map<String, dynamic> json) =>
+  factory DecisionRequest.fromJson(Map<String, dynamic> json) =>
       DecisionRequest(
         correlation: DecisionCorrelation.fromJson(
           (json['correlation'] as Map).cast<String, dynamic>(),
@@ -272,7 +272,7 @@ final class DecisionRequest {
         state: json['state'] as String,
         questions: (json['questions'] as List<dynamic>)
             .map(
-              (final value) => FiniteChoiceQuestion.fromJson(
+              (value) => FiniteChoiceQuestion.fromJson(
                 (value as Map).cast<String, dynamic>(),
               ),
             )
@@ -286,7 +286,7 @@ final class DecisionRequest {
   Map<String, dynamic> toJson() => <String, dynamic>{
     'correlation': correlation.toJson(),
     'state': state,
-    'questions': questions.map((final question) => question.toJson()).toList(),
+    'questions': questions.map((question) => question.toJson()).toList(),
   };
 }
 
@@ -297,7 +297,7 @@ final class DecisionAnswer {
     required this.candidateSetId,
     required this.selectedOptionId,
     required this.disposition,
-    final Map<DecisionOptionId, double>? probabilities,
+    Map<DecisionOptionId, double>? probabilities,
     this.confidence,
   }) : probabilities = probabilities == null
            ? null
@@ -305,7 +305,7 @@ final class DecisionAnswer {
                Map<DecisionOptionId, double>.of(probabilities),
              );
 
-  factory DecisionAnswer.fromJson(final Map<String, dynamic> json) {
+  factory DecisionAnswer.fromJson(Map<String, dynamic> json) {
     final rawProbabilities = json['probabilities'] as Map?;
     return DecisionAnswer(
       questionId: DecisionQuestionId(json['question_id'] as String),
@@ -320,7 +320,7 @@ final class DecisionAnswer {
         json['disposition'] as String,
       ),
       probabilities: rawProbabilities?.map(
-        (final key, final value) => MapEntry(
+        (key, value) => MapEntry(
           DecisionOptionId(key as String),
           (value as num).toDouble(),
         ),
@@ -345,7 +345,7 @@ final class DecisionAnswer {
     'disposition': disposition.name,
     if (probabilities != null)
       'probabilities': probabilities!.map(
-        (final key, final value) => MapEntry(key.value, value),
+        (key, value) => MapEntry(key.value, value),
       ),
     if (confidence != null) 'confidence': confidence,
   };
@@ -393,7 +393,7 @@ final class DecisionResponseMetadata {
     this.resolvedModel,
     this.usage,
     this.timing,
-    final Map<String, Object?> additional = const <String, Object?>{},
+    Map<String, Object?> additional = const <String, Object?>{},
   }) : additional = UnmodifiableMapView<String, Object?>(
          Map<String, Object?>.of(additional),
        );
@@ -430,8 +430,8 @@ sealed class DecisionOutcome {
 final class DecisionCompleted extends DecisionOutcome {
   DecisionCompleted({
     required super.correlation,
-    required final List<DecisionAnswer> answers,
-    final DecisionResponseMetadata? metadata,
+    required List<DecisionAnswer> answers,
+    DecisionResponseMetadata? metadata,
   }) : answers = List<DecisionAnswer>.unmodifiable(answers),
        metadata = metadata ?? DecisionResponseMetadata();
 

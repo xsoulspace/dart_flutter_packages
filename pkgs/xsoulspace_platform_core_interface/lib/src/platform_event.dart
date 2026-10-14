@@ -7,8 +7,8 @@ final class PlatformEvent {
   });
 
   factory PlatformEvent.now({
-    required final String name,
-    final Map<String, Object?> payload = const <String, Object?>{},
+    required String name,
+    Map<String, Object?> payload = const <String, Object?>{},
   }) {
     return PlatformEvent(
       name: name,

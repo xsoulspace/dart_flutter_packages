@@ -17,7 +17,7 @@ void main() {
     iapCalls = <MethodCall>[];
     iapHandler = (_) async => throw PlatformException(code: 'unimplemented');
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(iapChannel, (final call) async {
+        .setMockMethodCallHandler(iapChannel, (call) async {
           iapCalls.add(call);
           return iapHandler(call);
         });
@@ -30,7 +30,7 @@ void main() {
 
   group('init', () {
     test('enables logger and loads when initialization succeeds', () async {
-      iapHandler = (final call) async {
+      iapHandler = (call) async {
         expect(call.method, 'enableLogger');
         return null;
       };
@@ -40,7 +40,7 @@ void main() {
       final result = await provider.init();
 
       expect(result, MonetizationStoreStatus.loaded);
-      expect(iapCalls.map((final call) => call.method), <String>[
+      expect(iapCalls.map((call) => call.method), <String>[
         'enableLogger',
       ]);
     });
@@ -48,7 +48,7 @@ void main() {
     test(
       'returns notAvailable when sandbox is required but not active',
       () async {
-        iapHandler = (final call) async {
+        iapHandler = (call) async {
           expect(call.method, 'isSandboxActivated');
           return _sandboxActivatedResponse(isSandboxApk: false);
         };
@@ -62,7 +62,7 @@ void main() {
     );
 
     test('returns loaded when sandbox is required and active', () async {
-      iapHandler = (final call) async {
+      iapHandler = (call) async {
         expect(call.method, 'isSandboxActivated');
         return _sandboxActivatedResponse(isSandboxApk: true);
       };
@@ -103,7 +103,7 @@ void main() {
   group('product queries', () {
     test('getSubscriptions maps Huawei product fields', () async {
       const productId = 'sub.premium.monthly';
-      iapHandler = (final call) async {
+      iapHandler = (call) async {
         if (call.method != 'obtainProductInfo') {
           throw PlatformException(
             code: 'unexpected_method',
@@ -148,7 +148,7 @@ void main() {
       expect(product.freeTrialDuration.days, 7);
 
       final call = iapCalls.singleWhere(
-        (final methodCall) => methodCall.method == 'obtainProductInfo',
+        (methodCall) => methodCall.method == 'obtainProductInfo',
       );
       final args = call.arguments as Map<dynamic, dynamic>;
       expect(args['priceType'], 2);
@@ -187,7 +187,7 @@ void main() {
         duration: const Duration(days: 30),
       );
 
-      iapHandler = (final call) async {
+      iapHandler = (call) async {
         if (call.method != 'createPurchaseIntent') {
           throw PlatformException(
             code: 'unexpected_method',
@@ -229,7 +229,7 @@ void main() {
       expect(streamBatch.single.purchaseId.value, 'order-1');
 
       final call = iapCalls.singleWhere(
-        (final methodCall) => methodCall.method == 'createPurchaseIntent',
+        (methodCall) => methodCall.method == 'createPurchaseIntent',
       );
       final args = call.arguments as Map<dynamic, dynamic>;
       expect(args['priceType'], 2);
@@ -239,7 +239,7 @@ void main() {
     test(
       'restorePurchases queries all Huawei product types and merges data',
       () async {
-        iapHandler = (final call) async {
+        iapHandler = (call) async {
           if (call.method != 'obtainOwnedPurchases') {
             throw PlatformException(
               code: 'unexpected_method',
@@ -293,14 +293,14 @@ void main() {
         expect(result.isSuccess, isTrue);
         expect(result.restoredPurchases, hasLength(2));
         expect(
-          result.restoredPurchases.map((final item) => item.purchaseId.value),
+          result.restoredPurchases.map((item) => item.purchaseId.value),
           containsAll(<String>['consumable-order', 'subscription-order']),
         );
         expect(streamBatch, hasLength(2));
 
         final calledPriceTypes = iapCalls
-            .where((final call) => call.method == 'obtainOwnedPurchases')
-            .map((final call) {
+            .where((call) => call.method == 'obtainOwnedPurchases')
+            .map((call) {
               final args = call.arguments as Map<dynamic, dynamic>;
               return args['priceType'];
             })
@@ -312,7 +312,7 @@ void main() {
     test(
       'getPurchaseDetails finds purchase across all Huawei price types',
       () async {
-        iapHandler = (final call) async {
+        iapHandler = (call) async {
           if (call.method != 'obtainOwnedPurchases') {
             throw PlatformException(
               code: 'unexpected_method',
@@ -357,8 +357,8 @@ void main() {
         );
 
         final calledPriceTypes = iapCalls
-            .where((final call) => call.method == 'obtainOwnedPurchases')
-            .map((final call) {
+            .where((call) => call.method == 'obtainOwnedPurchases')
+            .map((call) {
               final args = call.arguments as Map<dynamic, dynamic>;
               return args['priceType'];
             })
@@ -370,7 +370,7 @@ void main() {
 
   group('complete purchase', () {
     test('consumes consumables using Huawei consumeOwnedPurchase', () async {
-      iapHandler = (final call) async {
+      iapHandler = (call) async {
         expect(call.method, 'consumeOwnedPurchase');
         return _consumeOwnedPurchaseResponse(returnCode: '0');
       };
@@ -386,7 +386,7 @@ void main() {
 
       expect(result.isSuccess, isTrue);
       final call = iapCalls.singleWhere(
-        (final methodCall) => methodCall.method == 'consumeOwnedPurchase',
+        (methodCall) => methodCall.method == 'consumeOwnedPurchase',
       );
       final args = call.arguments as Map<dynamic, dynamic>;
       expect(args['purchaseToken'], 'token-consumable');
@@ -407,7 +407,7 @@ void main() {
 
       expect(result.isSuccess, isTrue);
       expect(
-        iapCalls.where((final call) => call.method == 'consumeOwnedPurchase'),
+        iapCalls.where((call) => call.method == 'consumeOwnedPurchase'),
         isEmpty,
       );
     });
@@ -417,7 +417,7 @@ void main() {
     test(
       'openSubscriptionManagement starts Huawei subscription manager activity',
       () async {
-        iapHandler = (final call) async {
+        iapHandler = (call) async {
           expect(call.method, 'startIapActivity');
           return null;
         };
@@ -427,7 +427,7 @@ void main() {
         await provider.openSubscriptionManagement();
 
         final call = iapCalls.singleWhere(
-          (final methodCall) => methodCall.method == 'startIapActivity',
+          (methodCall) => methodCall.method == 'startIapActivity',
         );
         final args = call.arguments as Map<dynamic, dynamic>;
         expect(args['type'], 2);
@@ -437,7 +437,7 @@ void main() {
     test(
       'cancel delegates to subscription management and returns success',
       () async {
-        iapHandler = (final call) async {
+        iapHandler = (call) async {
           expect(call.method, 'startIapActivity');
           return null;
         };
@@ -448,7 +448,7 @@ void main() {
 
         expect(result.isSuccess, isTrue);
         expect(
-          iapCalls.where((final call) => call.method == 'startIapActivity'),
+          iapCalls.where((call) => call.method == 'startIapActivity'),
           hasLength(1),
         );
       },
@@ -456,7 +456,7 @@ void main() {
   });
 }
 
-String _isEnvReadyResponse({required final int statusCode}) =>
+String _isEnvReadyResponse({required int statusCode}) =>
     jsonEncode(<String, dynamic>{
       'returnCode': statusCode == 0 ? '0' : '1',
       'status': <String, dynamic>{
@@ -465,7 +465,7 @@ String _isEnvReadyResponse({required final int statusCode}) =>
       },
     });
 
-String _sandboxActivatedResponse({required final bool isSandboxApk}) =>
+String _sandboxActivatedResponse({required bool isSandboxApk}) =>
     jsonEncode(<String, dynamic>{
       'returnCode': '0',
       'isSandboxApk': isSandboxApk,
@@ -474,8 +474,8 @@ String _sandboxActivatedResponse({required final bool isSandboxApk}) =>
     });
 
 String _productInfoResponse({
-  required final int statusCode,
-  required final List<Map<String, dynamic>> products,
+  required int statusCode,
+  required List<Map<String, dynamic>> products,
 }) => jsonEncode(<String, dynamic>{
   'returnCode': statusCode == 0 ? '0' : '1',
   'status': <String, dynamic>{
@@ -486,35 +486,35 @@ String _productInfoResponse({
 });
 
 String _purchaseIntentResponse({
-  required final Map<String, dynamic> purchaseData,
+  required Map<String, dynamic> purchaseData,
 }) => jsonEncode(<String, dynamic>{
   'returnCode': '0',
   'inAppPurchaseData': jsonEncode(purchaseData),
 });
 
 String _ownedPurchasesResponse({
-  required final List<Map<String, dynamic>> purchases,
-  final String returnCode = '0',
+  required List<Map<String, dynamic>> purchases,
+  String returnCode = '0',
 }) => jsonEncode(<String, dynamic>{
   'returnCode': returnCode,
   'inAppPurchaseDataList': purchases.map(jsonEncode).toList(),
   'itemList': purchases
-      .map((final purchase) => purchase['productId'])
+      .map((purchase) => purchase['productId'])
       .whereType<String>()
       .toList(),
 });
 
-String _consumeOwnedPurchaseResponse({required final String returnCode}) =>
+String _consumeOwnedPurchaseResponse({required String returnCode}) =>
     jsonEncode(<String, dynamic>{'returnCode': returnCode});
 
 Map<String, dynamic> _purchaseData({
-  required final String orderId,
-  required final String productId,
-  required final String purchaseToken,
-  required final int purchaseTimeMs,
-  required final int purchaseState,
-  required final int kind,
-  final int? expirationDateMs,
+  required String orderId,
+  required String productId,
+  required String purchaseToken,
+  required int purchaseTimeMs,
+  required int purchaseState,
+  required int kind,
+  int? expirationDateMs,
 }) => <String, dynamic>{
   'orderId': orderId,
   'productId': productId,

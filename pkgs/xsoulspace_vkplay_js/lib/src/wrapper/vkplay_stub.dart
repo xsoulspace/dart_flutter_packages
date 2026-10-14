@@ -11,15 +11,15 @@ Never _unsupported() {
 /// Non-web fallback for VK Play wrapper.
 abstract final class VkPlay {
   static Future<VkPlayClient> init({
-    final String? appId,
-    final String expectedGlobal = 'iframeApi',
+    String? appId,
+    String expectedGlobal = 'iframeApi',
   }) async => _unsupported();
 
-  static bool isAvailable({final String expectedGlobal = 'iframeApi'}) => false;
+  static bool isAvailable({String expectedGlobal = 'iframeApi'}) => false;
 }
 
 class VkPlayClient {
-  Future<void> init({final String? appId}) async => _unsupported();
+  Future<void> init({String? appId}) async => _unsupported();
 
   Future<VkPlayLoginStatus> getLoginStatus() async => _unsupported();
 
@@ -28,25 +28,25 @@ class VkPlayClient {
   Future<VkPlayUserProfile?> userProfile() async => _unsupported();
 
   Future<List<VkPlayFriend>> userFriends({
-    final int? limit,
-    final int? offset,
+    int? limit,
+    int? offset,
   }) async => _unsupported();
 
   Future<List<VkPlayFriend>> userSocialFriends({
-    final int? limit,
-    final int? offset,
+    int? limit,
+    int? offset,
   }) async => _unsupported();
 
   Future<Map<String, Object?>> invite(
-    final VkPlayInvitePayload payload,
+    VkPlayInvitePayload payload,
   ) async => _unsupported();
 
   Future<Map<String, Object?>> shareToFeed(
-    final VkPlayFeedSharePayload payload,
+    VkPlayFeedSharePayload payload,
   ) async => _unsupported();
 
   Future<Object?> callRaw(
-    final String methodName, {
-    final Map<String, Object?>? params,
+    String methodName, {
+    Map<String, Object?>? params,
   }) async => _unsupported();
 }

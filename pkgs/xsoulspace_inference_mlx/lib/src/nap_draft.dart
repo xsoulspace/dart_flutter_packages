@@ -93,7 +93,7 @@ final class NapDraftRecord {
     'error': ?error,
   };
 
-  static NapDraftRecord fromJson(final Map<String, Object?> json) {
+  static NapDraftRecord fromJson(Map<String, Object?> json) {
     final block = '${json['block']}';
     final dash = block.indexOf('-');
     final statusName = '${json['status']}';
@@ -132,7 +132,7 @@ final class NapDraftStore {
 
   final File file;
 
-  Future<void> append(final NapDraftRecord record) async {
+  Future<void> append(NapDraftRecord record) async {
     await file.parent.create(recursive: true);
     final sink = file.openWrite(mode: FileMode.append);
     try {

@@ -51,7 +51,7 @@ final class SherpaOnnxRawLibraryLoader {
   }
 
   static List<String> libraryNamesFor(
-    final SherpaOnnxRawDesktopPlatform platform,
+    SherpaOnnxRawDesktopPlatform platform,
   ) {
     switch (platform) {
       case SherpaOnnxRawDesktopPlatform.macos:
@@ -72,7 +72,7 @@ final class SherpaOnnxRawLibraryLoader {
       if ((runtimeConfig.libraryPath ?? '').trim().isNotEmpty)
         runtimeConfig.libraryPath!.trim(),
       ...runtimeConfig.librarySearchPaths.where(
-        (final value) => value.trim().isNotEmpty,
+        (value) => value.trim().isNotEmpty,
       ),
       if ((runtimeConfig.modelsDirectory ?? '').trim().isNotEmpty)
         runtimeConfig.modelsDirectory!.trim(),
@@ -81,7 +81,7 @@ final class SherpaOnnxRawLibraryLoader {
     ];
     final candidates = <String>[];
     for (final root in roots) {
-      final looksLikeLibrary = names.any((final name) => root.endsWith(name));
+      final looksLikeLibrary = names.any((name) => root.endsWith(name));
       if (looksLikeLibrary) {
         candidates.add(root);
         continue;

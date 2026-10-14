@@ -12,14 +12,14 @@ typedef SherpaOnnxLibraryLoader = SherpaOnnxRawLibraryLoader;
 typedef SherpaOnnxBindings = SherpaOnnxRawBindings;
 
 SherpaOnnxRawRuntimeConfig _toRawRuntimeConfig(
-  final SherpaOnnxRuntimeConfig value,
+  SherpaOnnxRuntimeConfig value,
 ) => SherpaOnnxRawRuntimeConfig(
   libraryPath: value.libraryPath,
   librarySearchPaths: value.librarySearchPaths,
   modelsDirectory: value.modelsDirectory,
 );
 
-SherpaOnnxRawModelConfig _toRawModelConfig(final SherpaOnnxModelConfig value) =>
+SherpaOnnxRawModelConfig _toRawModelConfig(SherpaOnnxModelConfig value) =>
     SherpaOnnxRawModelConfig(
       preset: SherpaOnnxRawPreset.streamingZipformerEn20230626,
       encoderPath: value.encoderPath,
@@ -30,7 +30,7 @@ SherpaOnnxRawModelConfig _toRawModelConfig(final SherpaOnnxModelConfig value) =>
     );
 
 SherpaOnnxRawRealtimeConfig _toRawRealtimeConfig(
-  final SherpaOnnxRealtimeConfig value,
+  SherpaOnnxRealtimeConfig value,
 ) => SherpaOnnxRawRealtimeConfig(
   sampleRate: value.sampleRate,
   featureChunkSize: value.featureChunkSize,
@@ -54,7 +54,7 @@ final class NativeSherpaOnnxBatchBackend {
   final SherpaOnnxRawBatchRuntime _runtime;
 
   Future<InferenceResult<InferenceResponse>> transcribe(
-    final InferenceRequest request,
+    InferenceRequest request,
   ) async {
     try {
       final input = await _resolveAudioInput(request.audioInput!);
@@ -67,7 +67,7 @@ final class NativeSherpaOnnxBatchBackend {
           normalizedTranscript: normalizeTranscript(result.transcript),
           segments: result.segments
               .map(
-                (final segment) => InferenceSpeechSegment(
+                (segment) => InferenceSpeechSegment(
                   text: segment.text,
                   startMs: segment.startMs,
                   endMs: segment.endMs,
@@ -97,7 +97,7 @@ final class NativeSherpaOnnxBatchBackend {
   }
 
   Future<SherpaOnnxRawAudioInput> _resolveAudioInput(
-    final InferenceAudioInput input,
+    InferenceAudioInput input,
   ) async {
     switch (input.resolvedSource) {
       case InferenceAudioSource.bytes:
@@ -142,17 +142,17 @@ final class NativeSherpaOnnxRealtimeBackend
 
   @override
   Future<void> start({
-    required final SherpaOnnxModelConfig modelConfig,
-    required final SherpaOnnxRuntimeConfig runtimeConfig,
-    required final SherpaOnnxRealtimeConfig realtimeConfig,
-    required final void Function(InferenceTranscriptEvent event) emit,
+    required SherpaOnnxModelConfig modelConfig,
+    required SherpaOnnxRuntimeConfig runtimeConfig,
+    required SherpaOnnxRealtimeConfig realtimeConfig,
+    required void Function(InferenceTranscriptEvent event) emit,
   }) async {
     _emit = emit;
     await _runtime.start();
   }
 
   @override
-  Future<void> sendAudioChunk(final List<int> audioBytes) async {
+  Future<void> sendAudioChunk(List<int> audioBytes) async {
     final result = _runtime.sendAudioChunk(audioBytes);
     if (result == null) {
       return;
@@ -169,7 +169,7 @@ final class NativeSherpaOnnxRealtimeBackend
           if (result.segments.isNotEmpty)
             'segments': result.segments
                 .map(
-                  (final segment) => <String, dynamic>{
+                  (segment) => <String, dynamic>{
                     'text': segment.text,
                     'start_ms': segment.startMs,
                     'end_ms': segment.endMs,
@@ -200,7 +200,7 @@ final class NativeSherpaOnnxRealtimeBackend
           if (result.segments.isNotEmpty)
             'segments': result.segments
                 .map(
-                  (final segment) => <String, dynamic>{
+                  (segment) => <String, dynamic>{
                     'text': segment.text,
                     'start_ms': segment.startMs,
                     'end_ms': segment.endMs,

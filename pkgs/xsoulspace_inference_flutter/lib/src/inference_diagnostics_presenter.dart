@@ -14,7 +14,7 @@ final class InferenceDiagnosticsPresenter extends StatelessWidget {
   final InferenceTranscriptSnapshot transcript;
 
   @override
-  Widget build(final BuildContext context) => Column(
+  Widget build(BuildContext context) => Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[

@@ -8,10 +8,10 @@ enum LogLevel {
   critical;
 
   /// Whether this level is enabled by [minimum].
-  bool isAtLeast(final LogLevel minimum) => index >= minimum.index;
+  bool isAtLeast(LogLevel minimum) => index >= minimum.index;
 
   /// Parses a level name, defaulting to [LogLevel.info].
-  static LogLevel fromName(final String value) {
+  static LogLevel fromName(String value) {
     for (final level in LogLevel.values) {
       if (level.name == value) {
         return level;

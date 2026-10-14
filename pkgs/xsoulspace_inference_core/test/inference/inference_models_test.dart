@@ -283,7 +283,7 @@ final class _FakeInferenceClient implements InferenceClient {
 
   @override
   Future<InferenceResult<InferenceResponse>> infer(
-    final InferenceRequest request, {
+    InferenceRequest request, {
     ToolRegistry? toolRegistry,
   }) async => InferenceResult<InferenceResponse>.fail(
     code: 'unsupported',
@@ -336,7 +336,7 @@ final class _FakeStructuredTextStreamingClient
 
   @override
   Future<InferenceResult<InferenceResponse>> infer(
-    final InferenceRequest request, {
+    InferenceRequest request, {
     ToolRegistry? toolRegistry,
   }) async => InferenceResult<InferenceResponse>.ok(
     const InferenceResponse(structuredOutput: <String, dynamic>{'ok': true}),
@@ -350,7 +350,7 @@ final class _FakeStructuredTextStreamingClient
 
   @override
   Future<InferenceStructuredTextStreamSession> streamStructuredText(
-    final InferenceRequest request,
+    InferenceRequest request,
   ) async => _FakeStructuredTextStreamSession();
 }
 

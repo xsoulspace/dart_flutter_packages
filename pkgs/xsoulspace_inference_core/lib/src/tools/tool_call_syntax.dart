@@ -141,9 +141,9 @@ final class ToolCallSyntax {
   final String id;
   final List<ToolSyntaxEnvelope> envelopes;
 
-  String renderCall(final ToolCall call) {
+  String renderCall(ToolCall call) {
     final envelope = envelopes.firstWhere(
-      (final node) => node.kind == ToolSyntaxKind.call,
+      (node) => node.kind == ToolSyntaxKind.call,
     );
     final payload = envelope.separator == null
         ? jsonEncode({
@@ -156,25 +156,25 @@ final class ToolCallSyntax {
   }
 
   ToolSyntaxParseResult parse(
-    final String text, {
-    final ToolRegistry? registry,
-    final bool requireRegistry = false,
-    final ToolSyntaxLimits limits = const ToolSyntaxLimits(),
+    String text, {
+    ToolRegistry? registry,
+    bool requireRegistry = false,
+    ToolSyntaxLimits limits = const ToolSyntaxLimits(),
   }) {
-    ToolSyntaxParseResult fail(final String code, final int offset) =>
+    ToolSyntaxParseResult fail(String code, int offset) =>
         ToolSyntaxParseResult._(errorCode: code, errorOffset: offset);
     if (limits.maxBytes <= 0 ||
         limits.maxNodes <= 0 ||
         limits.maxDepth <= 0 ||
         envelopes.isEmpty ||
         envelopes.any(
-          (final e) => e.open.isEmpty || e.close.isEmpty || e.separator == '',
+          (e) => e.open.isEmpty || e.close.isEmpty || e.separator == '',
         )) {
       return fail('tool_syntax_invalid_profile', 0);
     }
-    if (envelopes.map((final e) => e.open).toSet().length != envelopes.length ||
+    if (envelopes.map((e) => e.open).toSet().length != envelopes.length ||
         envelopes.any(
-          (final e) =>
+          (e) =>
               e.separator == null &&
               (e.nameKey.isEmpty ||
                   e.argumentsKey.isEmpty ||
@@ -312,7 +312,7 @@ final class ToolCallSyntax {
         } else {
           final decoded = jsonDecode(body) as Map;
           if (decoded.keys.any(
-            (final key) =>
+            (key) =>
                 key != envelope!.nameKey && key != envelope.argumentsKey,
           )) {
             return fail('tool_call_malformed', start);
@@ -364,7 +364,7 @@ final class ToolCallSyntax {
 ///
 /// Applies to every nested object and equivalent escaped key spelling. The
 /// caller still owns payload type, size/depth limits, schema and authority.
-Object? decodeJsonWithUniqueKeys(final String source) {
+Object? decodeJsonWithUniqueKeys(String source) {
   final decoded = jsonDecode(source);
   if (_hasDuplicateKeys(source)) {
     throw const FormatException('ambiguous duplicate JSON object key');
@@ -374,7 +374,7 @@ Object? decodeJsonWithUniqueKeys(final String source) {
 
 /// Called after JSON validation. Inspect the token stream before decoded
 /// maps lose duplicate keys (including equivalent escaped key spellings).
-bool _hasDuplicateKeys(final String json) {
+bool _hasDuplicateKeys(String json) {
   final frames = <Set<String>?>[];
   for (var i = 0; i < json.length; i++) {
     final character = json[i];

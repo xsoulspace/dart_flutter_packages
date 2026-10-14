@@ -26,13 +26,13 @@ class SupportManager {
   DeviceInfoService? _deviceInfoService;
   EmailService? _emailService;
 
-  AppInfoService _getAppInfoService(final Logger? logger) =>
+  AppInfoService _getAppInfoService(Logger? logger) =>
       _appInfoService ??= AppInfoService(logger: logger);
 
-  DeviceInfoService _getDeviceInfoService(final Logger? logger) =>
+  DeviceInfoService _getDeviceInfoService(Logger? logger) =>
       _deviceInfoService ??= DeviceInfoService(logger: logger);
 
-  EmailService _getEmailService(final Logger? logger) =>
+  EmailService _getEmailService(Logger? logger) =>
       _emailService ??= EmailService(logger: logger);
 
   /// {@template send_support_email}
@@ -45,13 +45,13 @@ class SupportManager {
   /// `false` if no email client is available or the operation failed.
   /// {@endtemplate}
   Future<bool> sendSupportEmail({
-    required final SupportConfig config,
-    required final String subject,
-    required final String description,
-    final String? userEmail,
-    final String? userName,
-    final Map<String, String>? additionalContext,
-    final UiLanguage? language,
+    required SupportConfig config,
+    required String subject,
+    required String description,
+    String? userEmail,
+    String? userName,
+    Map<String, String>? additionalContext,
+    UiLanguage? language,
   }) async {
     final logger = config.logger;
     logger?.info(
@@ -117,10 +117,10 @@ class SupportManager {
   /// Uses default subject and minimal user input required.
   /// {@endtemplate}
   Future<bool> sendSimpleSupportEmail({
-    required final SupportConfig config,
-    final String? userEmail,
-    final String? additionalInfo,
-    final UiLanguage? language,
+    required SupportConfig config,
+    String? userEmail,
+    String? additionalInfo,
+    UiLanguage? language,
   }) => sendSupportEmail(
     config: config,
     subject: _getLocalizedString(
@@ -148,12 +148,12 @@ class SupportManager {
   /// it with user-provided information.
   /// {@endtemplate}
   Future<SupportRequest> createSupportRequest({
-    required final SupportConfig config,
-    required final String subject,
-    required final String description,
-    final String? userEmail,
-    final String? userName,
-    final Map<String, String>? additionalContext,
+    required SupportConfig config,
+    required String subject,
+    required String description,
+    String? userEmail,
+    String? userName,
+    Map<String, String>? additionalContext,
   }) => _createSupportRequest(
     config: config,
     subject: subject,
@@ -165,12 +165,12 @@ class SupportManager {
 
   /// Creates a support request with automatic context collection.
   Future<SupportRequest> _createSupportRequest({
-    required final SupportConfig config,
-    required final String subject,
-    required final String description,
-    final String? userEmail,
-    final String? userName,
-    final Map<String, String>? additionalContext,
+    required SupportConfig config,
+    required String subject,
+    required String description,
+    String? userEmail,
+    String? userName,
+    Map<String, String>? additionalContext,
   }) async {
     final logger = config.logger;
     logger?.debug('SUPPORT_MANAGER', 'Creating support request');
@@ -214,9 +214,9 @@ class SupportManager {
 
   /// Composes the email body from a support request and configuration.
   static String _composeEmailBody(
-    final SupportRequest request,
-    final SupportConfig config,
-    final UiLanguage? language,
+    SupportRequest request,
+    SupportConfig config,
+    UiLanguage? language,
   ) {
     final logger = config.logger;
     logger?.debug(
@@ -234,10 +234,10 @@ class SupportManager {
 
   /// Applies a custom email template with support request data.
   static String _applyTemplate(
-    final String template,
-    final SupportRequest request,
-    final SupportConfig config,
-    final UiLanguage? language,
+    String template,
+    SupportRequest request,
+    SupportConfig config,
+    UiLanguage? language,
   ) => template
       .replaceAll('{{subject}}', request.subject)
       .replaceAll('{{description}}', request.description)
@@ -281,9 +281,9 @@ class SupportManager {
 
   /// Gets the default email template.
   static String _getDefaultEmailTemplate(
-    final SupportRequest request,
-    final SupportConfig config,
-    final UiLanguage? language,
+    SupportRequest request,
+    SupportConfig config,
+    UiLanguage? language,
   ) {
     final buffer = StringBuffer()
       ..writeln(
@@ -444,7 +444,7 @@ class SupportManager {
   }
 
   /// Gets default app info when collection fails.
-  static AppInfo _getDefaultAppInfo(final SupportConfig config) => AppInfo(
+  static AppInfo _getDefaultAppInfo(SupportConfig config) => AppInfo(
     version: _getLocalizedString(
       config,
       SupportLocalization.unknown,
@@ -462,7 +462,7 @@ class SupportManager {
   );
 
   /// Gets default device info when collection fails.
-  static DeviceInfo _getDefaultDeviceInfo(final SupportConfig config) =>
+  static DeviceInfo _getDefaultDeviceInfo(SupportConfig config) =>
       DeviceInfo(
         platform: _getLocalizedString(
           config,
@@ -486,10 +486,10 @@ class SupportManager {
 
   /// Gets a localized string from the config or falls back to default
   static String _getLocalizedString(
-    final SupportConfig config,
-    final String key,
-    final String fallback,
-    final UiLanguage? language,
+    SupportConfig config,
+    String key,
+    String fallback,
+    UiLanguage? language,
   ) {
     final targetLanguage = language ?? SupportLocalization.defaultLanguage;
     return config.getLocalizedString(key, targetLanguage, fallback);

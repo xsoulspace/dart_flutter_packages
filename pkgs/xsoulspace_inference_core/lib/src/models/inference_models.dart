@@ -26,7 +26,7 @@ enum InferenceTask {
   speechToText,
   textToSpeech;
 
-  factory InferenceTask.fromJson(final Object? value) {
+  factory InferenceTask.fromJson(Object? value) {
     if (value is! String) {
       return InferenceTask.implicitlyStructuredText;
     }
@@ -45,10 +45,10 @@ enum InferenceAudioSource {
   bytes,
   microphone;
 
-  static String toJson(final InferenceAudioSource source) =>
+  static String toJson(InferenceAudioSource source) =>
       source.name.snakeCase;
 
-  static InferenceAudioSource? fromJson(final Object? value) {
+  static InferenceAudioSource? fromJson(Object? value) {
     if (value is! String) {
       return null;
     }
@@ -146,15 +146,15 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
     ),
   );
 
-  factory InferenceRequest.fromJson(final Map<String, dynamic> json) =>
+  factory InferenceRequest.fromJson(Map<String, dynamic> json) =>
       InferenceRequest._(json);
 
   factory InferenceRequest.speechToText({
-    required final InferenceAudioInput audioInput,
-    final List<Object> contextFragments = const [],
-    final String systemPrompt = '',
-    final String workingDirectory = '.',
-    final Map<String, dynamic> metadata = const <String, dynamic>{},
+    required InferenceAudioInput audioInput,
+    List<Object> contextFragments = const [],
+    String systemPrompt = '',
+    String workingDirectory = '.',
+    Map<String, dynamic> metadata = const <String, dynamic>{},
   }) => InferenceRequest(
     prompt: '',
     contextFragments: contextFragments,
@@ -166,12 +166,12 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
   );
 
   factory InferenceRequest.textToSpeech({
-    required final String text,
-    final String workingDirectory = '.',
-    final String systemPrompt = '',
-    final InferenceVoiceOptions? voiceOptions,
-    final Map<String, dynamic> metadata = const <String, dynamic>{},
-    final List<Object> contextFragments = const [],
+    required String text,
+    String workingDirectory = '.',
+    String systemPrompt = '',
+    InferenceVoiceOptions? voiceOptions,
+    Map<String, dynamic> metadata = const <String, dynamic>{},
+    List<Object> contextFragments = const [],
   }) => InferenceRequest(
     prompt: text,
     contextFragments: contextFragments,
@@ -185,21 +185,21 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
   /// The one request-map builder behind both public factories (ADR 0059
   /// dedupe — the field list existed twice and drifted once already).
   static Map<String, dynamic> _buildRequestMap({
-    required final String prompt,
-    required final Map<String, dynamic> outputSchema,
-    required final String workingDirectory,
-    required final String systemPrompt,
-    required final List<Object> contextFragments,
-    required final Map<String, dynamic> metadata,
-    required final InferenceTask task,
-    required final InferenceAudioInput? audioInput,
-    required final InferenceVoiceOptions? voiceOptions,
-    required final List<ChatMessage> messages,
-    required final int? maxTokens,
-    required final double? temperature,
-    required final List<String> stopSequences,
-    required final bool? thinking,
-    required final String? reasoningEffort,
+    required String prompt,
+    required Map<String, dynamic> outputSchema,
+    required String workingDirectory,
+    required String systemPrompt,
+    required List<Object> contextFragments,
+    required Map<String, dynamic> metadata,
+    required InferenceTask task,
+    required InferenceAudioInput? audioInput,
+    required InferenceVoiceOptions? voiceOptions,
+    required List<ChatMessage> messages,
+    required int? maxTokens,
+    required double? temperature,
+    required List<String> stopSequences,
+    required bool? thinking,
+    required String? reasoningEffort,
   }) => <String, dynamic>{
     'task': task.name,
     'prompt': prompt,
@@ -283,21 +283,21 @@ extension type const InferenceRequest._(Map<String, dynamic> value) {
   /// Derives a request with the given fields replaced (ADR 0059 — set-if-
   /// provided, like [GenerationOptions.copyWith]; nothing clears to null).
   InferenceRequest copyWith({
-    final String? prompt,
-    final Map<String, dynamic>? outputSchema,
-    final String? workingDirectory,
-    final String? systemPrompt,
-    final List<Object>? contextFragments,
-    final Map<String, dynamic>? metadata,
-    final InferenceTask? task,
-    final InferenceAudioInput? audioInput,
-    final InferenceVoiceOptions? voiceOptions,
-    final List<ChatMessage>? messages,
-    final int? maxTokens,
-    final double? temperature,
-    final List<String>? stopSequences,
-    final bool? thinking,
-    final String? reasoningEffort,
+    String? prompt,
+    Map<String, dynamic>? outputSchema,
+    String? workingDirectory,
+    String? systemPrompt,
+    List<Object>? contextFragments,
+    Map<String, dynamic>? metadata,
+    InferenceTask? task,
+    InferenceAudioInput? audioInput,
+    InferenceVoiceOptions? voiceOptions,
+    List<ChatMessage>? messages,
+    int? maxTokens,
+    double? temperature,
+    List<String>? stopSequences,
+    bool? thinking,
+    String? reasoningEffort,
   }) => InferenceRequest._(
     _buildRequestMap(
       prompt: prompt ?? this.prompt,
@@ -335,7 +335,7 @@ class InferenceResponse {
     this.toolCalls = const [],
   });
 
-  factory InferenceResponse.fromJson(final Map<String, dynamic> json) =>
+  factory InferenceResponse.fromJson(Map<String, dynamic> json) =>
       InferenceResponse(
         structuredOutput: jsonDecodeMap(json['output']),
         rawOutput: jsonDecodeString(json['raw_output']),
@@ -394,7 +394,7 @@ class InferenceResponse {
     if (normalizedTranscript != null)
       'normalized_transcript': normalizedTranscript,
     if (segments.isNotEmpty)
-      'segments': segments.map((final segment) => segment.toJson()).toList(),
+      'segments': segments.map((segment) => segment.toJson()).toList(),
     if (audioArtifact != null) 'audio_artifact': audioArtifact!.toJson(),
     'tool_results': toolResults.map((e) => e.toJson()).toList(),
     if (toolCalls.isNotEmpty)
@@ -414,7 +414,7 @@ class InferenceAudioInput {
     this.channelCount,
   });
 
-  factory InferenceAudioInput.fromJson(final Map<String, dynamic> json) =>
+  factory InferenceAudioInput.fromJson(Map<String, dynamic> json) =>
       InferenceAudioInput(
         source: InferenceAudioSource.fromJson(json['source']),
         filePath: jsonDecodeString(json['file_path']),
@@ -493,7 +493,7 @@ class InferenceAudioArtifact {
     this.durationMs,
   });
 
-  factory InferenceAudioArtifact.fromJson(final Map<String, dynamic> json) =>
+  factory InferenceAudioArtifact.fromJson(Map<String, dynamic> json) =>
       InferenceAudioArtifact(
         filePath: jsonDecodeString(json['file_path']),
         mimeType: jsonDecodeString(json['mime_type']),
@@ -518,7 +518,7 @@ class InferenceSpeechSegment {
     required this.endMs,
   });
 
-  factory InferenceSpeechSegment.fromJson(final Map<String, dynamic> json) =>
+  factory InferenceSpeechSegment.fromJson(Map<String, dynamic> json) =>
       InferenceSpeechSegment(
         text: jsonDecodeString(json['text']),
         startMs: jsonDecodeInt(json['start_ms']),
@@ -545,7 +545,7 @@ class InferenceVoiceOptions {
     this.providerExtras = const <String, dynamic>{},
   });
 
-  factory InferenceVoiceOptions.fromJson(final Map<String, dynamic> json) =>
+  factory InferenceVoiceOptions.fromJson(Map<String, dynamic> json) =>
       InferenceVoiceOptions(
         voiceId: jsonDecodeString(json['voice_id']),
         locale: jsonDecodeString(json['locale']),

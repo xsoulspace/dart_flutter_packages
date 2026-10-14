@@ -94,10 +94,10 @@ void main() {
 
 /// The reference serializes non-string states with `json.dumps(...,
 /// ensure_ascii=False)` — the same rendering the Dart prompt builder uses.
-String _serializeState(final Object? state) =>
+String _serializeState(Object? state) =>
     state is String ? state : renderLayaJson(state);
 
-LayaTypedQuestion _typedQuestion(final Map<String, dynamic> definition) {
+LayaTypedQuestion _typedQuestion(Map<String, dynamic> definition) {
   final type = definition['type'] as String;
   final instructions = definition['instructions'];
   final instructionText = instructions is String
@@ -139,4 +139,4 @@ LayaTypedQuestion _typedQuestion(final Map<String, dynamic> definition) {
   throw FormatException('unknown golden question type $type');
 }
 
-double maxDouble(final double a, final double b) => a > b ? a : b;
+double maxDouble(double a, double b) => a > b ? a : b;

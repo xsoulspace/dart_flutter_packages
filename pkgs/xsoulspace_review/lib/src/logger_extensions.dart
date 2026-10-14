@@ -20,9 +20,9 @@ extension ReviewLoggerExtensions on Logger? {
   /// Logs to 'REVIEW' category with full error details including
   /// stack trace. Safe to call on null logger.
   void logReviewError(
-    final String message,
-    final Object error, [
-    final StackTrace? stackTrace,
+    String message,
+    Object error, [
+    StackTrace? stackTrace,
   ]) {
     this?.error(
       'REVIEW',
@@ -40,8 +40,8 @@ extension ReviewLoggerExtensions on Logger? {
   /// - [message] - Description of feedback event
   /// - [data] - Optional structured data
   void logFeedback(
-    final String message, {
-    final Map<String, Object?> data = const {},
+    String message, {
+    Map<String, Object?> data = const {},
   }) {
     this?.info('FEEDBACK', message, fields: data);
   }
@@ -54,8 +54,8 @@ extension ReviewLoggerExtensions on Logger? {
   /// - [message] - Description of consent event
   /// - [data] - Optional structured data (e.g., consent state)
   void logConsent(
-    final String message, {
-    final Map<String, Object?> data = const {},
+    String message, {
+    Map<String, Object?> data = const {},
   }) {
     this?.info('CONSENT', message, fields: data);
   }
@@ -68,8 +68,8 @@ extension ReviewLoggerExtensions on Logger? {
   /// - [message] - Debug message
   /// - [data] - Optional structured data
   void logReviewDebug(
-    final String message, {
-    final Map<String, Object?> data = const {},
+    String message, {
+    Map<String, Object?> data = const {},
   }) {
     this?.debug('REVIEW', message, fields: data);
   }
@@ -82,8 +82,8 @@ extension ReviewLoggerExtensions on Logger? {
   /// - [message] - Warning message
   /// - [data] - Optional structured data
   void logReviewWarning(
-    final String message, {
-    final Map<String, Object?> data = const {},
+    String message, {
+    Map<String, Object?> data = const {},
   }) {
     this?.warning('REVIEW', message, fields: data);
   }

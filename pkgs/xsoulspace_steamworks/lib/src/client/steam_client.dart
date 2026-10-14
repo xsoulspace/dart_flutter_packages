@@ -17,7 +17,7 @@ import 'steam_init.dart';
 
 /// Main Steamworks wrapper lifecycle entrypoint.
 final class SteamClient {
-  SteamClient({final SteamNativeApiFactory? nativeApiFactory})
+  SteamClient({SteamNativeApiFactory? nativeApiFactory})
     : _nativeApiFactory = nativeApiFactory ?? const SteamRawNativeApiFactory();
 
   final SteamNativeApiFactory _nativeApiFactory;
@@ -65,7 +65,7 @@ final class SteamClient {
   );
 
   /// Initializes Steam runtime and starts callback pumping based on config.
-  Future<SteamInitResult> initialize(final SteamInitConfig config) async {
+  Future<SteamInitResult> initialize(SteamInitConfig config) async {
     config.validate();
 
     if (!_isDesktopPlatform()) {
@@ -127,7 +127,7 @@ final class SteamClient {
 
       _asyncRegistry = SteamAsyncCallRegistry(
         onTimeout:
-            (final apiCallHandle, final expectedCallbackId, final timeout) {
+            (apiCallHandle, expectedCallbackId, timeout) {
               _emit(
                 SteamAsyncCallTimeoutEvent(
                   apiCallHandle: apiCallHandle,
@@ -218,7 +218,7 @@ final class SteamClient {
   bool _isDesktopPlatform() =>
       Platform.isWindows || Platform.isMacOS || Platform.isLinux;
 
-  SteamInitErrorCode? _mapNativeInitCode(final int code) {
+  SteamInitErrorCode? _mapNativeInitCode(int code) {
     switch (code) {
       case 0:
         return null;
@@ -233,7 +233,7 @@ final class SteamClient {
     }
   }
 
-  void _startAutoPump(final Duration interval) {
+  void _startAutoPump(Duration interval) {
     _autoPumpTimer?.cancel();
     _autoPumpTimer = Timer.periodic(interval, (_) {
       if (!_isInitialized) {
@@ -243,7 +243,7 @@ final class SteamClient {
     });
   }
 
-  void _safeShutdownNative(final SteamNativeApi nativeApi) {
+  void _safeShutdownNative(SteamNativeApi nativeApi) {
     try {
       nativeApi.shutdown();
     } on Object {
@@ -267,7 +267,7 @@ final class SteamClient {
     _isInitialized = false;
   }
 
-  T _requireService<T>(final T? value, final String message) {
+  T _requireService<T>(T? value, String message) {
     if (value == null) {
       throw SteamException(
         code: SteamExceptionCode.notInitialized,
@@ -277,14 +277,14 @@ final class SteamClient {
     return value;
   }
 
-  void _emit(final SteamEvent event) {
+  void _emit(SteamEvent event) {
     if (_eventsController.isClosed) {
       return;
     }
     _eventsController.add(event);
   }
 
-  void _log(final String message) {
+  void _log(String message) {
     if (!_verboseLogs) {
       return;
     }

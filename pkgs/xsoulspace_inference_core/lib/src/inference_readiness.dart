@@ -13,7 +13,7 @@ final class InferenceReadinessIssue {
     this.remediation,
   });
 
-  factory InferenceReadinessIssue.fromJson(final Map<String, dynamic> json) =>
+  factory InferenceReadinessIssue.fromJson(Map<String, dynamic> json) =>
       InferenceReadinessIssue(
         code: (json['code'] as String?) ?? 'readiness_issue',
         message: (json['message'] as String?) ?? 'Readiness issue',
@@ -45,18 +45,18 @@ final class InferenceReadinessSnapshot {
     this.metadata = const <String, dynamic>{},
   });
 
-  factory InferenceReadinessSnapshot.fromJson(final Map<String, dynamic> json) {
+  factory InferenceReadinessSnapshot.fromJson(Map<String, dynamic> json) {
     final stateName = json['state'] as String?;
     return InferenceReadinessSnapshot(
       state: InferenceReadinessState.values.firstWhere(
-        (final value) => value.name == stateName,
+        (value) => value.name == stateName,
         orElse: () => InferenceReadinessState.unavailable,
       ),
       summary: (json['summary'] as String?) ?? '',
       issues:
           (json['issues'] as List?)
               ?.map(
-                (final issue) => InferenceReadinessIssue.fromJson(
+                (issue) => InferenceReadinessIssue.fromJson(
                   (issue as Map).cast<String, dynamic>(),
                 ),
               )
@@ -78,7 +78,7 @@ final class InferenceReadinessSnapshot {
   Map<String, dynamic> toJson() => <String, dynamic>{
     'state': state.name,
     'summary': summary,
-    'issues': issues.map((final issue) => issue.toJson()).toList(),
+    'issues': issues.map((issue) => issue.toJson()).toList(),
     'metadata': metadata,
   };
 }
@@ -89,7 +89,7 @@ abstract interface class InferenceReadinessProbe {
 }
 
 String formatInferenceReadinessSummary(
-  final InferenceReadinessSnapshot snapshot,
+  InferenceReadinessSnapshot snapshot,
 ) {
   if (snapshot.summary.trim().isNotEmpty) {
     return snapshot.summary.trim();
@@ -105,9 +105,9 @@ String formatInferenceReadinessSummary(
 }
 
 List<String> formatInferenceReadinessIssues(
-  final InferenceReadinessSnapshot snapshot,
+  InferenceReadinessSnapshot snapshot,
 ) => snapshot.issues
-    .map((final issue) {
+    .map((issue) {
       final remediation = issue.remediation?.trim();
       return remediation == null || remediation.isEmpty
           ? issue.message
@@ -116,14 +116,14 @@ List<String> formatInferenceReadinessIssues(
     .toList(growable: false);
 
 InferenceResult<void> toInferenceReadinessResult(
-  final InferenceReadinessSnapshot snapshot,
+  InferenceReadinessSnapshot snapshot,
 ) {
   if (snapshot.isReady) {
     return InferenceResult<void>.ok(null);
   }
 
   final issue = snapshot.issues.firstWhere(
-    (final value) => value.isBlocking,
+    (value) => value.isBlocking,
     orElse: () => snapshot.issues.isEmpty
         ? const InferenceReadinessIssue(
             code: 'engine_unavailable',

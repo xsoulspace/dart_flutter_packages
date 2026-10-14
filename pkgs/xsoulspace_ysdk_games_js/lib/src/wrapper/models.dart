@@ -19,7 +19,7 @@ class ClientFeatureModel {
 class SignatureModel {
   const SignatureModel({required this.signature});
 
-  factory SignatureModel.fromMap(final Map<String, Object?> map) =>
+  factory SignatureModel.fromMap(Map<String, Object?> map) =>
       SignatureModel(signature: (map['signature'] as String?) ?? '');
 
   final String signature;
@@ -72,7 +72,7 @@ class GameModel {
     required this.url,
   });
 
-  factory GameModel.fromMap(final Map<String, Object?> map) => GameModel(
+  factory GameModel.fromMap(Map<String, Object?> map) => GameModel(
     appId: (map['appID'] as String?) ?? '',
     coverUrl: (map['coverURL'] as String?) ?? '',
     iconUrl: (map['iconURL'] as String?) ?? '',
@@ -115,7 +115,7 @@ class ProductModel {
     required this.title,
   });
 
-  factory ProductModel.fromMap(final Map<String, Object?> map) => ProductModel(
+  factory ProductModel.fromMap(Map<String, Object?> map) => ProductModel(
     description: (map['description'] as String?) ?? '',
     id: (map['id'] as String?) ?? '',
     imageUri: (map['imageURI'] as String?) ?? '',
@@ -142,7 +142,7 @@ class PurchaseModel {
     this.developerPayload,
   });
 
-  factory PurchaseModel.fromMap(final Map<String, Object?> map) =>
+  factory PurchaseModel.fromMap(Map<String, Object?> map) =>
       PurchaseModel(
         productId: (map['productID'] as String?) ?? '',
         purchaseToken: (map['purchaseToken'] as String?) ?? '',
@@ -176,7 +176,7 @@ enum PromptOutcome {
   const PromptOutcome(this.value);
   final String value;
 
-  static PromptOutcome fromValue(final String? value) {
+  static PromptOutcome fromValue(String? value) {
     for (final item in values) {
       if (item.value == value) {
         return item;

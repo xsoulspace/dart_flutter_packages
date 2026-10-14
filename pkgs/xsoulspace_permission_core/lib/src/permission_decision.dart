@@ -24,7 +24,7 @@ final class PermissionAllow extends PermissionDecision {
   final PermissionGrantScope scope;
 
   @override
-  bool operator ==(final Object other) =>
+  bool operator ==(Object other) =>
       other is PermissionAllow && other.scope == scope;
 
   @override
@@ -42,7 +42,7 @@ final class PermissionDeny extends PermissionDecision {
   final String? reason;
 
   @override
-  bool operator ==(final Object other) =>
+  bool operator ==(Object other) =>
       other is PermissionDeny && other.reason == reason;
 
   @override
@@ -68,7 +68,7 @@ final class PermissionEscalate extends PermissionDecision {
   final String? reason;
 
   @override
-  bool operator ==(final Object other) =>
+  bool operator ==(Object other) =>
       other is PermissionEscalate && other.to == to && other.reason == reason;
 
   @override

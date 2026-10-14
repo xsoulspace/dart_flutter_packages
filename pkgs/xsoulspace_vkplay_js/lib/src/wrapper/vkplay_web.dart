@@ -8,8 +8,8 @@ export 'vkplay_client.dart';
 /// Wrapper entrypoint for VK Play `iframeApi` SDK.
 abstract final class VkPlay {
   static Future<VkPlayClient> init({
-    final String? appId,
-    final String expectedGlobal = 'iframeApi',
+    String? appId,
+    String expectedGlobal = 'iframeApi',
   }) async {
     final sdk = _resolveSdk(expectedGlobal: expectedGlobal);
     if (sdk == null) {
@@ -23,11 +23,11 @@ abstract final class VkPlay {
     return client;
   }
 
-  static bool isAvailable({final String expectedGlobal = 'iframeApi'}) {
+  static bool isAvailable({String expectedGlobal = 'iframeApi'}) {
     return _resolveSdk(expectedGlobal: expectedGlobal) != null;
   }
 
-  static Object? _resolveSdk({required final String expectedGlobal}) {
+  static Object? _resolveSdk({required String expectedGlobal}) {
     if (expectedGlobal == 'iframeApi') {
       final known = raw.iframeApi;
       if (known != null) {

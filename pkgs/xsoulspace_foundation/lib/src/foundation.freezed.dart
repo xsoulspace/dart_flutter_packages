@@ -162,8 +162,8 @@ class _$LoadableContainerImpl<T> extends _LoadableContainer<T> {
 
 abstract class _LoadableContainer<T> extends LoadableContainer<T> {
   const factory _LoadableContainer({
-    required final T value,
-    final bool isLoaded,
+    required T value,
+    bool isLoaded,
   }) = _$LoadableContainerImpl<T>;
   const _LoadableContainer._() : super._();
 
@@ -348,9 +348,9 @@ class _$FieldContainerImpl<T> implements _FieldContainer<T> {
 
 abstract class _FieldContainer<T> implements FieldContainer<T> {
   const factory _FieldContainer({
-    required final T value,
-    final String errorText,
-    final bool isLoading,
+    required T value,
+    String errorText,
+    bool isLoading,
   }) = _$FieldContainerImpl<T>;
 
   @override

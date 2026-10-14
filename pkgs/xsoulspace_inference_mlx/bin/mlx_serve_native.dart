@@ -18,12 +18,12 @@ import 'dart:io';
 
 import 'package:xsoulspace_inference_mlx/xsoulspace_inference_mlx.dart';
 
-Never _fail(final String message) {
+Never _fail(String message) {
   stderr.writeln(message);
   exit(2);
 }
 
-Future<void> main(final List<String> arguments) async {
+Future<void> main(List<String> arguments) async {
   String? modelDir;
   var port = 8765;
   var maxTokens = 320;
@@ -31,7 +31,7 @@ Future<void> main(final List<String> arguments) async {
   String? apiKey;
   var noThink = false;
   for (var i = 0; i < arguments.length; i++) {
-    String? value(final String name) {
+    String? value(String name) {
       final prefix = '--$name=';
       return arguments[i].startsWith(prefix)
           ? arguments[i].substring(prefix.length)

@@ -20,11 +20,11 @@ class EmailService {
   /// subject, body, and optional CC/BCC recipients.
   /// {@endtemplate}
   String composeEmailUrl({
-    required final String to,
-    final String? subject,
-    final String? body,
-    final List<String>? cc,
-    final List<String>? bcc,
+    required String to,
+    String? subject,
+    String? body,
+    List<String>? cc,
+    List<String>? bcc,
   }) {
     final queryParams = <String, String>{};
 
@@ -45,7 +45,7 @@ class EmailService {
     }
 
     final queryString = queryParams.entries
-        .map((final entry) => '${entry.key}=${entry.value}')
+        .map((entry) => '${entry.key}=${entry.value}')
         .join('&');
 
     return queryString.isNotEmpty ? 'mailto:$to?$queryString' : 'mailto:$to';
@@ -58,11 +58,11 @@ class EmailService {
   /// `false` if no email client is available or the operation failed.
   /// {@endtemplate}
   Future<bool> sendEmail({
-    required final String to,
-    final String? subject,
-    final String? body,
-    final List<String>? cc,
-    final List<String>? bcc,
+    required String to,
+    String? subject,
+    String? body,
+    List<String>? cc,
+    List<String>? bcc,
   }) async {
     _logger?.debug(
       'EMAIL_SERVICE',
@@ -123,7 +123,7 @@ class EmailService {
   /// Note: This is a basic validation. For production use, consider
   /// more robust email validation libraries.
   /// {@endtemplate}
-  bool isValidEmail(final String email) {
+  bool isValidEmail(String email) {
     const emailRegex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$';
     return RegExp(emailRegex).hasMatch(email.trim());
   }
@@ -134,7 +134,7 @@ class EmailService {
   /// Converts plain text to email-friendly format with proper
   /// line breaks and paragraph separation.
   /// {@endtemplate}
-  String formatEmailBody(final String body) => body
+  String formatEmailBody(String body) => body
       .trim()
       .replaceAll(RegExp(r'\n\s*\n'), '\n\n') // Normalize paragraph breaks
       .replaceAll(RegExp(r'[ \t]+'), ' ') // Normalize whitespace
@@ -145,11 +145,11 @@ class EmailService {
   ///
   /// Trims whitespace and ensures the subject is not empty.
   /// {@endtemplate}
-  String formatEmailSubject(final String subject) => subject.trim();
+  String formatEmailSubject(String subject) => subject.trim();
 
   /// URL-encodes parameters for mailto links.
   ///
   /// Handles special characters that need to be encoded in URLs.
-  String _encodeUrlParameter(final String parameter) =>
+  String _encodeUrlParameter(String parameter) =>
       Uri.encodeComponent(parameter);
 }

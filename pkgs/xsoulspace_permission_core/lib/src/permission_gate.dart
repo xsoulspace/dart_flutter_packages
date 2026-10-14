@@ -28,7 +28,7 @@ final class PermissionGate {
   /// The authority requests land on when the whole chain escalates.
   final PermissionEscalationSink? onEscalate;
 
-  Future<PermissionDecision> resolve(final PermissionRequest request) async {
+  Future<PermissionDecision> resolve(PermissionRequest request) async {
     for (final policy in policies) {
       final decision = policy.decide(request);
       if (decision.isFinal) return decision;

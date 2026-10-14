@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:xsoulspace_review_huawei/xsoulspace_review_huawei.dart';
 
 void main() {
-  testWidgets('requestReview is a safe no-op fallback', (final tester) async {
+  testWidgets('requestReview is a safe no-op fallback', (tester) async {
     const reviewer = HuaweiStoreReviewer();
 
     BuildContext? context;
@@ -11,7 +11,7 @@ void main() {
       Directionality(
         textDirection: TextDirection.ltr,
         child: Builder(
-          builder: (final buildContext) {
+          builder: (buildContext) {
             context = buildContext;
             return const SizedBox.shrink();
           },

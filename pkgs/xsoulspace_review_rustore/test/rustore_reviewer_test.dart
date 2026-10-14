@@ -5,14 +5,14 @@ import 'package:xsoulspace_review_rustore/xsoulspace_review_rustore.dart';
 
 void main() {
   testWidgets('handles request limit without forcing fallback', (
-    final tester,
+    tester,
   ) async {
     var consentCalls = 0;
     var launchCalls = 0;
 
     final reviewer = RuStoreReviewer(
       packageName: 'dev.xsoulspace.app',
-      consentBuilder: (final context, final locale) async {
+      consentBuilder: (context, locale) async {
         consentCalls += 1;
         return true;
       },
@@ -23,7 +23,7 @@ void main() {
         );
       },
       launchNativeReviewFlow: () async {},
-      launchSchemeAction: (final scheme) async {
+      launchSchemeAction: (scheme) async {
         launchCalls += 1;
       },
     );
@@ -33,7 +33,7 @@ void main() {
       Directionality(
         textDirection: TextDirection.ltr,
         child: Builder(
-          builder: (final buildContext) {
+          builder: (buildContext) {
             context = buildContext;
             return const SizedBox.shrink();
           },
@@ -48,13 +48,13 @@ void main() {
   });
 
   testWidgets('opens store fallback when forced and consent is granted', (
-    final tester,
+    tester,
   ) async {
     var launchScheme = '';
 
     final reviewer = RuStoreReviewer(
       packageName: 'dev.xsoulspace.app',
-      consentBuilder: (final context, final locale) async => true,
+      consentBuilder: (context, locale) async => true,
       requestReviewFlow: () async {
         throw PlatformException(
           code: 'request_limit_reached',
@@ -62,7 +62,7 @@ void main() {
         );
       },
       launchNativeReviewFlow: () async {},
-      launchSchemeAction: (final scheme) async {
+      launchSchemeAction: (scheme) async {
         launchScheme = scheme;
       },
     );
@@ -72,7 +72,7 @@ void main() {
       Directionality(
         textDirection: TextDirection.ltr,
         child: Builder(
-          builder: (final buildContext) {
+          builder: (buildContext) {
             context = buildContext;
             return const SizedBox.shrink();
           },

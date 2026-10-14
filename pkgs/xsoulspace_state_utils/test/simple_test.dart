@@ -10,10 +10,10 @@ void main() {
     final mutableList = env.makeMutableOrderedList<String>();
     final immutableList = env.makeImmutableOrderedList<String>();
     final mutableMap = env.makeMutableOrderedMap<String, String>(
-      (final v) => v,
+      (v) => v,
     );
     final immutableMap = env.makeImmutableOrderedMap<String, String>(
-      (final v) => v,
+      (v) => v,
     );
 
     expect(mutableList, isNotNull);

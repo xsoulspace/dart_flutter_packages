@@ -55,7 +55,7 @@ final class PermissionRequest {
   final DateTime? requestedAt;
 
   @override
-  bool operator ==(final Object other) =>
+  bool operator ==(Object other) =>
       other is PermissionRequest &&
       other.id == id &&
       other.title == title &&

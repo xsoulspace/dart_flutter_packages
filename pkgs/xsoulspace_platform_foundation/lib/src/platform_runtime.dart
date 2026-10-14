@@ -10,9 +10,9 @@ import 'platform_start_result.dart';
 /// Selects exactly one active platform client by ordered priority.
 final class PlatformRuntime {
   PlatformRuntime({
-    required final List<PlatformAdapterFactory> factories,
+    required List<PlatformAdapterFactory> factories,
     this.initOptions = const PlatformInitOptions(),
-    final Iterable<PlatformCapability> permissiveFallbackCapabilities =
+    Iterable<PlatformCapability> permissiveFallbackCapabilities =
         const <PlatformCapability>[],
     this._fallbackClient,
   }) : _factories = List<PlatformAdapterFactory>.unmodifiable(factories) {
@@ -43,7 +43,7 @@ final class PlatformRuntime {
     final attemptedPlatforms = <PlatformId>[];
     final startupDiagnostics = <Map<String, Object?>>[];
     final orderedFactories = List<PlatformAdapterFactory>.of(_factories)
-      ..sort((final a, final b) => a.priority.compareTo(b.priority));
+      ..sort((a, b) => a.priority.compareTo(b.priority));
 
     PlatformInitResult? activeInitResult;
 
@@ -122,7 +122,7 @@ final class PlatformRuntime {
               'message':
                   'No platform adapter initialized successfully in strict mode.',
               'attemptedPlatforms': attemptedPlatforms
-                  .map((final id) => id.name)
+                  .map((id) => id.name)
                   .toList(growable: false),
               'startupDiagnostics': startupDiagnostics,
             },
@@ -239,7 +239,7 @@ final class PlatformRuntime {
 
   Stream<PlatformEvent> get events => _eventsController.stream;
 
-  Set<Type> _capabilityTypes(final PlatformClient activeClient) {
+  Set<Type> _capabilityTypes(PlatformClient activeClient) {
     final types = <Type>{...activeClient.capabilityTypes};
     if (initOptions.missingCapabilityBehavior ==
         MissingCapabilityBehavior.permissive) {
@@ -249,8 +249,8 @@ final class PlatformRuntime {
   }
 
   void _enforceRequiredCapabilities({
-    required final PlatformClient activeClient,
-    required final bool usedFallbackClient,
+    required PlatformClient activeClient,
+    required bool usedFallbackClient,
   }) {
     if (initOptions.requiredCapabilities.isEmpty) {
       return;
@@ -286,14 +286,14 @@ final class PlatformRuntime {
       PlatformEvent.now(
         name: 'runtime.requiredCapabilities.missing',
         payload: <String, Object?>{
-          'missing': missing.map((final e) => e.toString()).toList(),
+          'missing': missing.map((e) => e.toString()).toList(),
           'usedFallbackClient': usedFallbackClient,
         },
       ),
     );
   }
 
-  void _emitStartupDiagnostic(final Map<String, Object?> payload) {
+  void _emitStartupDiagnostic(Map<String, Object?> payload) {
     _eventsController.add(
       PlatformEvent.now(
         name: 'runtime.startup.adapterAttempt',

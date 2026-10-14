@@ -21,7 +21,7 @@ final class InMemoryLogSink implements LogSink {
   }
 
   @override
-  void enqueue(final LogRecord record) {
+  void enqueue(LogRecord record) {
     records.add(record);
     onEnqueue?.call(record);
   }

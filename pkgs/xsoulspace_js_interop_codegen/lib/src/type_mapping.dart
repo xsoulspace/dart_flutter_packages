@@ -1,7 +1,7 @@
 String mapTypeToDart(
-  final Map<String, Object?>? typeIr, {
-  required final Set<String> knownTypes,
-  required final bool forReturn,
+  Map<String, Object?>? typeIr, {
+  required Set<String> knownTypes,
+  required bool forReturn,
 }) {
   if (typeIr == null) {
     return 'JSAny?';
@@ -93,7 +93,7 @@ String mapTypeToDart(
       final allStringLiteral =
           nonNullable.isNotEmpty &&
           nonNullable.every(
-            (final t) => t['kind'] == 'literal' && t['valueType'] == 'string',
+            (t) => t['kind'] == 'literal' && t['valueType'] == 'string',
           );
       if (allStringLiteral) {
         return hasNullable ? 'JSString?' : 'JSString';
@@ -128,14 +128,14 @@ String mapTypeToDart(
   }
 }
 
-String makeNullable(final String typeName) {
+String makeNullable(String typeName) {
   if (typeName.endsWith('?') || typeName == 'void') {
     return typeName;
   }
   return '$typeName?';
 }
 
-String safeIdentifier(final String raw, {final String fallback = 'value'}) {
+String safeIdentifier(String raw, {String fallback = 'value'}) {
   final trimmed = raw.trim();
   if (trimmed.isEmpty) {
     return fallback;
@@ -228,7 +228,7 @@ String safeIdentifier(final String raw, {final String fallback = 'value'}) {
   return candidate;
 }
 
-String safeEnumCaseName(final String rawValue) {
+String safeEnumCaseName(String rawValue) {
   if (rawValue.isEmpty) {
     return 'empty';
   }
@@ -236,14 +236,14 @@ String safeEnumCaseName(final String rawValue) {
   return safeIdentifier(lowered);
 }
 
-String toLowerCamel(final String value) {
+String toLowerCamel(String value) {
   if (value.isEmpty) {
     return value;
   }
 
   final parts = value
       .split(RegExp('[^a-zA-Z0-9]+'))
-      .where((final part) => part.isNotEmpty)
+      .where((part) => part.isNotEmpty)
       .toList();
   if (parts.isEmpty) {
     return value;
@@ -253,10 +253,10 @@ String toLowerCamel(final String value) {
   final rest = parts
       .skip(1)
       .map(
-        (final part) => part[0].toUpperCase() + part.substring(1).toLowerCase(),
+        (part) => part[0].toUpperCase() + part.substring(1).toLowerCase(),
       )
       .join();
   return '$first$rest';
 }
 
-String escapeSingleQuotes(final String value) => value.replaceAll("'", r"\'");
+String escapeSingleQuotes(String value) => value.replaceAll("'", r"\'");

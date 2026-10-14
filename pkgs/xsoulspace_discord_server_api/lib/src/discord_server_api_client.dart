@@ -19,12 +19,12 @@ final class DiscordServerApiClient {
   final String? bearerToken;
 
   Future<DiscordApiResponse> request({
-    required final String method,
-    required final String path,
-    final Map<String, String> query = const <String, String>{},
-    final Map<String, String> headers = const <String, String>{},
-    final Map<String, Object?>? jsonBody,
-    final String? body,
+    required String method,
+    required String path,
+    Map<String, String> query = const <String, String>{},
+    Map<String, String> headers = const <String, String>{},
+    Map<String, Object?>? jsonBody,
+    String? body,
   }) async {
     final uri = _resolvePath(path);
 
@@ -66,7 +66,7 @@ final class DiscordServerApiClient {
     return DiscordCurrentUser.fromMap(response.data);
   }
 
-  Uri _resolvePath(final String path) {
+  Uri _resolvePath(String path) {
     final base = Uri.parse(baseUri);
     if (path.startsWith('http://') || path.startsWith('https://')) {
       return Uri.parse(path);

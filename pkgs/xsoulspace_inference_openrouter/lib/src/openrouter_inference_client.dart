@@ -35,7 +35,7 @@ class OpenRouterInferenceClient implements InferenceClient {
     this._apiKey = '',
     this.defaultModel = 'openai/gpt-4o-mini',
     this.baseUrl = 'https://openrouter.ai/api/v1',
-    final http.Client? httpClient,
+    http.Client? httpClient,
     this.timeout = const Duration(seconds: 60),
     this.useMessagesCodec = true,
     this.onTransportDiagnostic,
@@ -96,7 +96,7 @@ class OpenRouterInferenceClient implements InferenceClient {
 
   @override
   Future<InferenceResult<InferenceResponse>> infer(
-    final InferenceRequest request, {
+    InferenceRequest request, {
     ToolRegistry? toolRegistry,
   }) async {
     if (!supportedTasks.contains(request.task)) {
@@ -105,7 +105,7 @@ class OpenRouterInferenceClient implements InferenceClient {
         message: 'Task ${request.task.name} is not supported by $id',
         details: <String, dynamic>{
           'supported_tasks': supportedTasks
-              .map((final task) => task.name)
+              .map((task) => task.name)
               .toList(),
           'requested_task': request.task.name,
         },
@@ -268,7 +268,7 @@ class OpenRouterInferenceClient implements InferenceClient {
     }
   }
 
-  String _resolveModel(final InferenceRequest request) {
+  String _resolveModel(InferenceRequest request) {
     final metadataModel = request.metadata['model'];
     if (metadataModel is String && (metadataModel).isNotEmpty) {
       return metadataModel;
@@ -276,7 +276,7 @@ class OpenRouterInferenceClient implements InferenceClient {
     return defaultModel;
   }
 
-  String _buildUserContent(final InferenceRequest request) {
+  String _buildUserContent(InferenceRequest request) {
     final context = request.contextFragmentsJson;
     if (context.isEmpty) return request.prompt;
     // TODO(arenukvern): this is wrong - and should be rewritten to messages
@@ -284,7 +284,7 @@ class OpenRouterInferenceClient implements InferenceClient {
     return '${request.prompt}\n\nCONTEXT:\n$context';
   }
 
-  List<Map<String, dynamic>> _buildTools(final ToolRegistry registry) {
+  List<Map<String, dynamic>> _buildTools(ToolRegistry registry) {
     final functions = <Map<String, dynamic>>[];
     for (var MapEntry(key: name, value: tool) in registry.tools.entries) {
       functions.add(<String, dynamic>{
@@ -309,7 +309,7 @@ class OpenRouterInferenceClient implements InferenceClient {
   /// Tool calls are returned as structured records on
   /// [InferenceResponse.toolCalls] — no tag round-trip. The harness routes
   /// them to the world's tool execution system directly.
-  InferenceResponse? _parseChatCompletion(final Map<String, dynamic> decoded) {
+  InferenceResponse? _parseChatCompletion(Map<String, dynamic> decoded) {
     final choices = decoded['choices'];
     if (choices is! List) return null;
     final first = (choices).firstOrNull;
@@ -375,7 +375,7 @@ class OpenRouterInferenceClient implements InferenceClient {
   }
 
   /// Parse a tool call's `arguments` (a JSON string from OpenRouter) into a map.
-  Map<String, dynamic> _parseArguments(final Object? arguments) {
+  Map<String, dynamic> _parseArguments(Object? arguments) {
     if (arguments is Map<String, dynamic>) return arguments;
     if (arguments is Map) {
       return arguments.map((k, v) => MapEntry('$k', v));
@@ -396,14 +396,14 @@ class OpenRouterInferenceClient implements InferenceClient {
     return <String, dynamic>{};
   }
 
-  String _mapHttpStatus(final int statusCode) => switch (statusCode) {
+  String _mapHttpStatus(int statusCode) => switch (statusCode) {
     401 || 403 => 'auth_failed',
     429 => 'rate_limited',
     >= 500 => 'engine_unavailable',
     _ => 'http_error',
   };
 
-  String _errorMessage(final String body) {
+  String _errorMessage(String body) {
     try {
       final decoded = jsonDecode(body);
       if (decoded is Map<String, dynamic>) {

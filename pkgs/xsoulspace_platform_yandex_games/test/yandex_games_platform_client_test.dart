@@ -30,8 +30,8 @@ void main() {
         ),
         initClient:
             ({
-              final bool signed = false,
-              final String expectedGlobal = 'YaGames',
+              bool signed = false,
+              String expectedGlobal = 'YaGames',
             }) async {
               initCalled = true;
               throw StateError('should not be called');
@@ -54,8 +54,8 @@ void main() {
       config: const YandexGamesPlatformConfig(sdkInjected: true),
       initClient:
           ({
-            final bool signed = false,
-            final String expectedGlobal = 'YaGames',
+            bool signed = false,
+            String expectedGlobal = 'YaGames',
           }) async => fakeSdk,
     );
 
@@ -120,8 +120,8 @@ void main() {
       config: const YandexGamesPlatformConfig(sdkInjected: true),
       initClient:
           ({
-            final bool signed = false,
-            final String expectedGlobal = 'YaGames',
+            bool signed = false,
+            String expectedGlobal = 'YaGames',
           }) async => _FakeYsdkClient(),
     );
 
@@ -162,16 +162,16 @@ final class _FakeYsdkPlayer extends YsdkPlayer {
   String getName() => 'Player One';
 
   @override
-  String getPhoto(final String size) => 'https://example.com/player.png';
+  String getPhoto(String size) => 'https://example.com/player.png';
 
   @override
   bool isAuthorized() => true;
 
   @override
-  Future<Map<String, Object?>> getStats([final List<String>? keys]) async {
+  Future<Map<String, Object?>> getStats([List<String>? keys]) async {
     if (keys == null || keys.isEmpty) {
       return stats.map(
-        (final key, final value) => MapEntry<String, Object?>(key, value),
+        (key, value) => MapEntry<String, Object?>(key, value),
       );
     }
     return <String, Object?>{
@@ -181,7 +181,7 @@ final class _FakeYsdkPlayer extends YsdkPlayer {
   }
 
   @override
-  Future<void> setStats(final Map<String, num> nextStats) async {
+  Future<void> setStats(Map<String, num> nextStats) async {
     stats.addAll(nextStats);
   }
 }
@@ -193,10 +193,10 @@ final class _FakeLeaderboardsClient extends YsdkLeaderboardsClient {
 
   @override
   Future<LeaderboardEntriesDataModel> getEntries(
-    final String leaderboardName, {
-    final bool? includeUser,
-    final int? quantityAround,
-    final int? quantityTop,
+    String leaderboardName, {
+    bool? includeUser,
+    int? quantityAround,
+    int? quantityTop,
   }) async {
     return LeaderboardEntriesDataModel(
       entries: <LeaderboardEntryModel>[_entry()],
@@ -207,16 +207,16 @@ final class _FakeLeaderboardsClient extends YsdkLeaderboardsClient {
 
   @override
   Future<LeaderboardEntryModel> getPlayerEntry(
-    final String leaderboardName,
+    String leaderboardName,
   ) async {
     return _entry();
   }
 
   @override
   Future<void> setScore(
-    final String leaderboardName,
-    final int score, {
-    final String? extraData,
+    String leaderboardName,
+    int score, {
+    String? extraData,
   }) async {
     lastScoreName = leaderboardName;
     lastScoreValue = score;
@@ -264,13 +264,13 @@ final class _FakeMultiplayerSessionsClient
   MultiplayerCommitPayloadModel? lastCommitPayload;
 
   @override
-  void commit(final MultiplayerCommitPayloadModel payload) {
+  void commit(MultiplayerCommitPayloadModel payload) {
     lastCommitPayload = payload;
   }
 
   @override
   Future<List<MultiplayerSessionOpponentModel>> init({
-    final MultiplayerInitOptionsModel? options,
+    MultiplayerInitOptionsModel? options,
   }) async {
     return const <MultiplayerSessionOpponentModel>[
       MultiplayerSessionOpponentModel(
@@ -288,7 +288,7 @@ final class _FakeMultiplayerSessionsClient
 
   @override
   Future<CallbackBaseMessageDataModel> push(
-    final MultiplayerMetaModel meta,
+    MultiplayerMetaModel meta,
   ) async {
     return const CallbackBaseMessageDataModel(status: 'ok', data: null);
   }

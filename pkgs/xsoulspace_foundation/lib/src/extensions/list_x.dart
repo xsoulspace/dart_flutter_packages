@@ -12,7 +12,7 @@ extension XSListX<E> on List<E> {
   ///
   /// @ai Use this method to rearrange items in a list without creating a new
   /// list.
-  void reorder(final int oldIndex, int newIndex) {
+  void reorder(int oldIndex, int newIndex) {
     if (oldIndex < newIndex) {
       // removing the item at oldIndex will shorten the list by 1.
       // ignore: parameter_assignments

@@ -131,7 +131,7 @@ final class NativeQwenTextEngine {
 
   /// Loads the cached snapshot: [snapshotDir], else `QWEN3_SNAPSHOT`, else
   /// the Qwen3-0.6B-4bit checkout under the HF hub cache (never downloads).
-  static Future<NativeQwenTextEngine> load({final String? snapshotDir}) async {
+  static Future<NativeQwenTextEngine> load({String? snapshotDir}) async {
     final dir = resolveQwenSnapshotDir(snapshotDir);
     if (dir == null) {
       throw StateError(
@@ -166,13 +166,13 @@ final class NativeQwenTextEngine {
   /// generation breaks right after emitting any id in [eosIds], keeping
   /// that EOS token itself (HF convention).
   NativeQwenCompletion generate({
-    final String? prompt,
-    final List<int>? promptIds,
-    final int maxTokens = 64,
-    final bool stopOnEos = false,
-    final List<int>? eosIds,
-    final QwenCacheScope? cacheScope,
-    final bool cacheReset = false,
+    String? prompt,
+    List<int>? promptIds,
+    int maxTokens = 64,
+    bool stopOnEos = false,
+    List<int>? eosIds,
+    QwenCacheScope? cacheScope,
+    bool cacheReset = false,
   }) => generateByHandle(
     _handle,
     prompt: prompt,
@@ -189,14 +189,14 @@ final class NativeQwenTextEngine {
   /// after [load] opened the asset) can drive the engine with it. The
   /// native side creates its MLX stream per call on the calling thread.
   static NativeQwenCompletion generateByHandle(
-    final int handle, {
-    final String? prompt,
-    final List<int>? promptIds,
-    final int maxTokens = 64,
-    final bool stopOnEos = false,
-    final List<int>? eosIds,
-    final QwenCacheScope? cacheScope,
-    final bool cacheReset = false,
+    int handle, {
+    String? prompt,
+    List<int>? promptIds,
+    int maxTokens = 64,
+    bool stopOnEos = false,
+    List<int>? eosIds,
+    QwenCacheScope? cacheScope,
+    bool cacheReset = false,
   }) {
     final request = jsonEncode(<String, Object?>{
       'prompt': ?prompt,
@@ -229,13 +229,13 @@ final class NativeQwenTextEngine {
   /// blocks the calling isolate (e.g. the UI). Generation itself is
   /// unchanged — same native serialization, same greedy path.
   Future<NativeQwenCompletion> generateAsync({
-    final String? prompt,
-    final List<int>? promptIds,
-    final int maxTokens = 64,
-    final bool stopOnEos = false,
-    final List<int>? eosIds,
-    final QwenCacheScope? cacheScope,
-    final bool cacheReset = false,
+    String? prompt,
+    List<int>? promptIds,
+    int maxTokens = 64,
+    bool stopOnEos = false,
+    List<int>? eosIds,
+    QwenCacheScope? cacheScope,
+    bool cacheReset = false,
   }) {
     final handle = _handle;
     return Isolate.run(
@@ -256,14 +256,14 @@ final class NativeQwenTextEngine {
   /// request id is created synchronously before worker dispatch so a host
   /// cancellation cannot race ahead of native request registration.
   Future<NativeQwenCompletion> generateRequestAsync({
-    required final void Function(int requestId) onRequestCreated,
-    final String? prompt,
-    final List<int>? promptIds,
-    final int maxTokens = 64,
-    final bool stopOnEos = false,
-    final List<int>? eosIds,
-    final QwenCacheScope? cacheScope,
-    final bool cacheReset = false,
+    required void Function(int requestId) onRequestCreated,
+    String? prompt,
+    List<int>? promptIds,
+    int maxTokens = 64,
+    bool stopOnEos = false,
+    List<int>? eosIds,
+    QwenCacheScope? cacheScope,
+    bool cacheReset = false,
   }) {
     if (!supportsRequestCancellation) {
       throw const NativeQwenCancellationUnavailable();
@@ -296,9 +296,9 @@ final class NativeQwenTextEngine {
 
   /// Blocking request-scoped FFI entry used only by the worker isolate.
   static NativeQwenCompletion generateRequestByHandle(
-    final int handle,
-    final int requestId,
-    final String request,
+    int handle,
+    int requestId,
+    String request,
   ) {
     final requestNative = toNativeUtf8(request);
     try {
@@ -323,13 +323,13 @@ final class NativeQwenTextEngine {
   }
 
   /// Sets the native cancellation flag for exactly one registered request.
-  void cancelRequest(final int requestId) {
+  void cancelRequest(int requestId) {
     final result = _qwenRequestCancel(_handle, requestId);
     if (result == -1) throw StateError('native Qwen engine is unloaded');
   }
 
   /// Purge all epochs for this host-bound actor after in-flight inference ends.
-  void clearCache(final String actor) {
+  void clearCache(String actor) {
     final nativeActor = toNativeUtf8(actor);
     try {
       if (_qwenClearCache(_handle, nativeActor) != 0) {
@@ -356,7 +356,7 @@ final class NativeQwenTextEngine {
 /// parity path; a chat template layer would be additive.
 /// The chat wire's answer text: the native EOS stop emits the EOS token
 /// itself (HF convention); its literal must not ride the wire.
-String _qwenWireText(final String text) => text
+String _qwenWireText(String text) => text
     .replaceAll(RegExp(r'<\|im_end\|>$'), '')
     .replaceAll(RegExp(r'<\|endoftext\|>$'), '')
     .trim();
@@ -368,9 +368,9 @@ final class LayaQwenChatServer {
     this.defaultMaxTokens = 64,
     this.useTemplate = true,
     this.thinking = false,
-    final String? apiKey,
-    final InternetAddress? address,
-    final int port = 0,
+    String? apiKey,
+    InternetAddress? address,
+    int port = 0,
   }) : _server = LoopbackJsonServer(
          apiKey: apiKey,
          address: address,
@@ -380,7 +380,7 @@ final class LayaQwenChatServer {
            'model': model,
            'engine': 'laya-native-qwen',
          },
-         route: (final LoopbackRequest request) async => _route(
+         route: (LoopbackRequest request) async => _route(
            request,
            engine,
            model,
@@ -412,12 +412,12 @@ final class LayaQwenChatServer {
   Future<void> stop() => _server.stop();
 
   static Future<LoopbackReply?> _route(
-    final LoopbackRequest request,
-    final NativeQwenTextEngine engine,
-    final String model,
-    final int maxTokens,
-    final bool useTemplate,
-    final bool thinking,
+    LoopbackRequest request,
+    NativeQwenTextEngine engine,
+    String model,
+    int maxTokens,
+    bool useTemplate,
+    bool thinking,
   ) async {
     if (request.method != 'POST' || request.path != '/v1/chat/completions') {
       return null;
@@ -493,9 +493,9 @@ final class LayaQwenChatServer {
   }
 
   static LoopbackReply _completionReply({
-    required final String id,
-    required final String model,
-    required final NativeQwenCompletion completion,
+    required String id,
+    required String model,
+    required NativeQwenCompletion completion,
   }) => LoopbackReply(200, <String, Object?>{
     'id': id,
     'model': model,

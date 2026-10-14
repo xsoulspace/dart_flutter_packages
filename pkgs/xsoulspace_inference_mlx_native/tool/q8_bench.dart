@@ -6,7 +6,7 @@ import 'package:xsoulspace_inference_mlx_native/xsoulspace_inference_mlx_native.
 /// R3b q8 latency probe (ADR 0054 evidence): median decision latency of the
 /// loaded engine config (fp16, or LAYA_Q8=1 alternate-layer g32) over the
 /// golden fixture cases. One config per process; reps over all cases; p50/p90.
-LayaTypedQuestion _typedQuestion(final Map<String, dynamic> definition) {
+LayaTypedQuestion _typedQuestion(Map<String, dynamic> definition) {
   final type = definition['type'] as String;
   final instructions = definition['instructions'];
   final instructionText =

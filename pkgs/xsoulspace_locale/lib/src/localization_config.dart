@@ -40,7 +40,7 @@ class LocalizationConfig {
     required this.supportedLanguages,
     required this.fallbackLanguage,
   }) : supportedLocales = supportedLanguages
-           .map((final lang) => lang.locale)
+           .map((lang) => lang.locale)
            .toList();
 
   /// List of supported languages for the application.
@@ -58,7 +58,7 @@ class LocalizationConfig {
   ///
   /// @ai Call this once during app startup before any locale operations.
   // ignore: use_setters_to_change_properties
-  static void initialize(final LocalizationConfig config) {
+  static void initialize(LocalizationConfig config) {
     _instance = config;
   }
 
@@ -75,19 +75,19 @@ class LocalizationConfig {
   /// Validates if a Flutter locale is supported.
   ///
   /// @ai Checks both exact match and language code match for flexibility.
-  bool isLocaleSupported(final Locale locale) =>
+  bool isLocaleSupported(Locale locale) =>
       supportedLocales.contains(locale) ||
       supportedLocales.any(
-        (final supportedLocale) =>
+        (supportedLocale) =>
             supportedLocale.languageCode == locale.languageCode,
       );
 
   /// Validates if a UiLanguage is supported.
   ///
   /// @ai Checks both exact match and language code match for flexibility.
-  bool isLanguageSupported(final UiLanguage language) =>
+  bool isLanguageSupported(UiLanguage language) =>
       supportedLanguages.contains(language) ||
       supportedLanguages.any(
-        (final supportedLanguage) => supportedLanguage.code == language.code,
+        (supportedLanguage) => supportedLanguage.code == language.code,
       );
 }

@@ -24,8 +24,8 @@ final class DiscordOAuthClient {
   Uri get _revokeUri => Uri.parse(apiBaseUri).resolve('oauth2/token/revoke');
 
   Future<DiscordOAuthToken> exchangeAuthorizationCode({
-    required final String code,
-    final String? codeVerifier,
+    required String code,
+    String? codeVerifier,
   }) async {
     final response = await _sendForm(
       uri: _tokenUri,
@@ -44,7 +44,7 @@ final class DiscordOAuthClient {
   }
 
   Future<DiscordOAuthToken> refreshToken({
-    required final String refreshToken,
+    required String refreshToken,
   }) async {
     final response = await _sendForm(
       uri: _tokenUri,
@@ -60,8 +60,8 @@ final class DiscordOAuthClient {
   }
 
   Future<void> revokeToken({
-    required final String token,
-    final String tokenTypeHint = 'access_token',
+    required String token,
+    String tokenTypeHint = 'access_token',
   }) async {
     await _sendForm(
       uri: _revokeUri,
@@ -75,8 +75,8 @@ final class DiscordOAuthClient {
   }
 
   Future<DiscordApiResponse> _sendForm({
-    required final Uri uri,
-    required final Map<String, String> form,
+    required Uri uri,
+    required Map<String, String> form,
   }) async {
     final transportResponse = await transport.send(
       DiscordTransportRequest(

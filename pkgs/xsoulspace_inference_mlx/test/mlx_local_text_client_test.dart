@@ -199,7 +199,7 @@ void main() {
   });
 }
 
-MlxLocalTextClient _client({final http.Client? httpClient}) =>
+MlxLocalTextClient _client({http.Client? httpClient}) =>
     MlxLocalTextClient(
       runtime: MlxServeRuntime(
         httpClient:
@@ -208,7 +208,7 @@ MlxLocalTextClient _client({final http.Client? httpClient}) =>
       endpoint: _StaticEndpoint(),
     );
 
-InferenceRequest _textRequest(final String prompt) =>
+InferenceRequest _textRequest(String prompt) =>
     InferenceRequest(prompt: prompt);
 
 MlxChatRequest _chatRequest() => const MlxChatRequest(
@@ -218,14 +218,14 @@ MlxChatRequest _chatRequest() => const MlxChatRequest(
 
 final class _ThrowingEngine implements MlxScriptedEngine {
   @override
-  MlxChatResult answer(final MlxChatRequest request) =>
+  MlxChatResult answer(MlxChatRequest request) =>
       throw StateError('engine bug');
 }
 
 /// Endpoint stub for tests that never reach the wire (unavailable paths).
 final class _StaticEndpoint implements MlxChatEndpoint {
   @override
-  Future<MlxChatResult> complete(final MlxChatRequest request) =>
+  Future<MlxChatResult> complete(MlxChatRequest request) =>
       throw StateError('must not be reached');
 
   @override
