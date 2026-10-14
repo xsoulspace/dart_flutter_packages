@@ -3,7 +3,7 @@ description: Native Responses inference and ChatGPT plan OAuth for local applica
 version: 0.1.0-dev.1
 publish_to: none
 environment:
-  sdk: ^3.12.0
+  sdk: ^3.13.0
 resolution: workspace
 dependencies:
   crypto: ^3.0.7
